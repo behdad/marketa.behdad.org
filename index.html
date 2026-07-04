@@ -282,8 +282,8 @@ footer{margin-top:2.6rem}
 .scene.molly{animation:molly-glow 7s ease-in-out}
 @keyframes molly-glow{
   0%{filter:saturate(1) brightness(1) sepia(0)}
-  30%{filter:saturate(2) brightness(1.22) sepia(.28) hue-rotate(-14deg)}
-  60%{filter:saturate(2.3) brightness(1.28) sepia(.34) hue-rotate(-18deg)}
+  30%{filter:saturate(1.6) brightness(1.16) sepia(.2) hue-rotate(-11deg)}
+  60%{filter:saturate(1.8) brightness(1.2) sepia(.24) hue-rotate(-13deg)}
   100%{filter:saturate(1) brightness(1) sepia(0)}
 }
 #loft-couple.cuddle{animation:couple-cuddle 7s ease-in-out}
@@ -293,8 +293,9 @@ footer{margin-top:2.6rem}
   60%{transform:rotate(1.5deg)}
 }
 .flying-heart{pointer-events:none}
+.disco-ray{pointer-events:none}
 #loft-discoball{cursor:pointer}
-.disco-ball-spin{transform-origin:center}
+.disco-ball-spin{transform-origin:0px 0px}
 #loft-discoball.spin .disco-ball-spin{animation:discoball-spin 7s linear}
 @keyframes discoball-spin{
   0%{transform:rotate(0deg)}
@@ -483,25 +484,25 @@ body.completion-trip{animation:completion-spin 7s linear}
         <polyline points="675,152 684,174 616,226 641,143 92,114" fill="none" stroke="#4a6b94" stroke-width="3" stroke-dasharray="6 5" stroke-linecap="round" stroke-linejoin="round"/>
         <g font-family="Source Serif 4, serif" font-size="24" fill="#453a31">
           <circle cx="818" cy="288" r="6" fill="#c68e95"/>
-          <text x="806" y="284" text-anchor="end">Sari</text>
+          <text x="806" y="284" text-anchor="end" data-i="map_sari">Sari</text>
           <circle cx="820" cy="330" r="6" fill="#c68e95"/>
-          <text x="820" y="354" text-anchor="middle">Tehran</text>
+          <text x="820" y="354" text-anchor="middle" data-i="map_tehran">Tehran</text>
           <circle cx="248" cy="225" r="6" fill="#c68e95"/>
-          <text x="248" y="249" text-anchor="middle">Toronto</text>
+          <text x="248" y="249" text-anchor="middle" data-i="map_toronto">Toronto</text>
           <circle cx="53" cy="296" r="6" fill="#c68e95"/>
-          <text x="64" y="300" text-anchor="start">Menlo Park</text>
+          <text x="64" y="300" text-anchor="start" data-i="map_menlopark">Menlo Park</text>
           <circle cx="52" cy="181" r="6" fill="#c68e95"/>
-          <text x="52" y="166" text-anchor="middle">Seattle</text>
+          <text x="52" y="166" text-anchor="middle" data-i="map_seattle">Seattle</text>
           <circle cx="675" cy="152" r="6" fill="#4a6b94"/>
-          <text x="686" y="148" text-anchor="start">Prague</text>
+          <text x="686" y="148" text-anchor="start" data-i="map_prague">Prague</text>
           <circle cx="684" cy="174" r="6" fill="#4a6b94"/>
-          <text x="684" y="198" text-anchor="middle">Vienna</text>
+          <text x="684" y="198" text-anchor="middle" data-i="map_vienna">Vienna</text>
           <circle cx="616" cy="226" r="6" fill="#4a6b94"/>
-          <text x="616" y="250" text-anchor="middle">Toulouse</text>
+          <text x="616" y="250" text-anchor="middle" data-i="map_toulouse">Toulouse</text>
           <circle cx="641" cy="143" r="6" fill="#4a6b94"/>
-          <text x="630" y="127" text-anchor="end">Cologne</text>
+          <text x="630" y="127" text-anchor="end" data-i="map_cologne">Cologne</text>
           <circle cx="92" cy="114" r="8" fill="#8e3a4a"/>
-          <text x="92" y="98" text-anchor="middle" font-weight="bold">Edmonton ∞</text>
+          <text x="92" y="98" text-anchor="middle" font-weight="bold" data-i="map_edmonton">Edmonton ∞</text>
         </g>
       </svg>
       <p class="map-caption" data-i="map_caption">Two long paths, one shared address.</p>
@@ -1660,6 +1661,38 @@ function spawnHearts(svg, cx, cy) {
     })(i);
   }
 }
+function spawnDiscoRays(svg, cx, cy) {
+  var colors = ["#e6a8c4", "#f7d97a", "#a8c4e6", "#c9a3d9", "#8fd9c4", "#f0a97a"];
+  var count = 10;
+  for (var i = 0; i < count; i++) {
+    (function (i) {
+      var angle = Math.PI * 2 * i / count;
+      var len = 55 + Math.random() * 25;
+      var x2 = cx + Math.cos(angle) * len;
+      var y2 = cy + Math.sin(angle) * len;
+      var line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", cx);
+      line.setAttribute("y1", cy);
+      line.setAttribute("x2", x2);
+      line.setAttribute("y2", y2);
+      line.setAttribute("stroke", colors[i % colors.length]);
+      line.setAttribute("stroke-width", "3");
+      line.setAttribute("stroke-linecap", "round");
+      line.setAttribute("class", "disco-ray");
+      svg.appendChild(line);
+      if (line.animate) {
+        var anim = line.animate([
+          { opacity: 0 },
+          { opacity: .85, offset: .2 },
+          { opacity: 0 }
+        ], { duration: 900 + Math.random() * 400, easing: "ease-out" });
+        anim.onfinish = function () { if (line.parentNode) line.remove(); };
+      } else {
+        setTimeout(function () { if (line.parentNode) line.remove(); }, 1300);
+      }
+    })(i);
+  }
+}
 (function () {
   var mushroom = document.getElementById("garden-mushroom");
   var shroomIdx = 0;
@@ -1704,7 +1737,10 @@ function spawnHearts(svg, cx, cy) {
       setTimeout(function () { loftCouple.classList.remove("cuddle"); }, 7000);
     }
     var loftSvg = document.getElementById("loft-scene-svg");
-    if (loftSvg) spawnHearts(loftSvg, 350, 500);
+    if (loftSvg) {
+      spawnDiscoRays(loftSvg, 590, 80);
+      spawnHearts(loftSvg, 350, 500);
+    }
     setTimeout(function () {
       var lang = document.documentElement.lang;
       var jokes = (T[lang] && T[lang].molly_jokes) || T.en.molly_jokes;

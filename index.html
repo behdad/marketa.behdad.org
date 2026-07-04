@@ -287,18 +287,7 @@ footer{margin-top:2.6rem}
   0%,100%{transform:scale(0.85)}
   50%{transform:scale(1.15)}
 }
-.puffer-drift{animation:puffer-drift 12s ease-in-out infinite}
-@keyframes puffer-drift{
-  0%{transform:translate(14px,0)}
-  12.5%{transform:translate(10px,7px)}
-  25%{transform:translate(0,10px)}
-  37.5%{transform:translate(-10px,7px)}
-  50%{transform:translate(-14px,0)}
-  62.5%{transform:translate(-10px,-7px)}
-  75%{transform:translate(0,-10px)}
-  87.5%{transform:translate(10px,-7px)}
-  100%{transform:translate(14px,0)}
-}
+.puffer-drift{transition:transform 9s ease-in-out}
 .puffer-fill{animation:puffer-color 6s ease-in-out infinite}
 @keyframes puffer-color{
   0%,100%{fill:#c68e95}
@@ -731,6 +720,7 @@ body.completion-trip{animation:completion-spin 7s linear}
 <g id="garden-puffer-wrap" transform="translate(270,150)">
 <g class="puffer-drift">
 <g class="puffer-body">
+<circle cx="0" cy="0" r="30" fill="transparent"/>
 <ellipse class="puffer-fill" cx="0" cy="0" rx="18" ry="14" fill="#9fb8c9" stroke="#7a94a3" stroke-width="1.5"/>
 <line x1="-14" y1="-8" x2="-19" y2="-12" stroke="#7a94a3" stroke-width="1.2"/>
 <line x1="-16" y1="0" x2="-22" y2="0" stroke="#7a94a3" stroke-width="1.2"/>
@@ -1410,29 +1400,27 @@ function playTripMelody() {
     setTimeout(function () { ctx.close(); }, notes.length * noteDur * 1000 + 500);
   } catch (e) {}
 }
-function closestPufferVoice() {
+function pufferColorRatio() {
   try {
     var el = document.querySelector(".puffer-fill");
     var computed = getComputedStyle(el).fill;
     var m = computed.match(/\d+/g);
-    var r = +m[0], g = +m[1], b = +m[2];
-    var pink = [198, 142, 149], blue = [127, 158, 192];
-    var dPink = Math.pow(r - pink[0], 2) + Math.pow(g - pink[1], 2) + Math.pow(b - pink[2], 2);
-    var dBlue = Math.pow(r - blue[0], 2) + Math.pow(g - blue[1], 2) + Math.pow(b - blue[2], 2);
-    return dPink <= dBlue ? "pink" : "blue";
+    var b = +m[2];
+    var t = (b - 149) / (192 - 149);
+    return Math.max(0, Math.min(1, t));
   } catch (e) {
-    return "pink";
+    return 0;
   }
 }
 function sayFishu() {
   try {
     if (!window.speechSynthesis) return;
-    var which = closestPufferVoice();
+    var t = pufferColorRatio();
     var utter = new SpeechSynthesisUtterance("fishu");
     utter.rate = 0.85;
-    utter.pitch = which === "pink" ? 0.75 : 1.5;
+    utter.pitch = 0.75 + t * 0.75;
     var voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
-    var wantFemale = which === "blue";
+    var wantFemale = t >= 0.5;
     var pattern = wantFemale
       ? /female|woman|samantha|victoria|zira|karen|susan|tessa/i
       : /male|man|david|daniel|alex|fred|george/i;
@@ -1555,9 +1543,18 @@ function triggerTrip(sceneId, variant, eggId) {
   var puffer = document.getElementById("garden-puffer-wrap");
   if (puffer) puffer.addEventListener("click", function () {
     sayFishu();
-    eggBubble(puffer, "🐡");
     markFound("fish");
   });
+  var pufferDrift = document.querySelector(".puffer-drift");
+  var reducedMotionQuery = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+  if (pufferDrift && !(reducedMotionQuery && reducedMotionQuery.matches)) {
+    (function walk() {
+      var x = (Math.random() - 0.5) * 50;
+      var y = (Math.random() - 0.5) * 40;
+      pufferDrift.style.transform = "translate(" + x.toFixed(1) + "px," + y.toFixed(1) + "px)";
+      setTimeout(walk, 8000 + Math.random() * 4000);
+    })();
+  }
 })();
 (function () {
   var logo = document.getElementById("loft-harfbuzz-logo");

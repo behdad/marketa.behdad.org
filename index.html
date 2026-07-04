@@ -190,6 +190,20 @@ footer{margin-top:3.2rem}
 #garden-book{cursor:pointer}
 #garden-rabbit{cursor:pointer}
 #garden-camera{cursor:pointer}
+#garden-mushroom{cursor:pointer}
+#loft-tofu{cursor:pointer; pointer-events:all}
+#loft-tofu rect{pointer-events:all}
+.scene.psychedelic{animation:psychedelic-trip 3s linear}
+@keyframes psychedelic-trip{
+  0%{filter:hue-rotate(0deg) saturate(1)}
+  25%{filter:hue-rotate(180deg) saturate(2.5)}
+  50%{filter:hue-rotate(360deg) saturate(3)}
+  75%{filter:hue-rotate(540deg) saturate(2)}
+  100%{filter:hue-rotate(720deg) saturate(1)}
+}
+@media (prefers-reduced-motion: reduce){
+  .scene.psychedelic{animation:none}
+}
 #garden-flash{opacity:0}
 #garden-flash.flash{animation:camera-flash .4s ease-out}
 @keyframes camera-flash{
@@ -260,6 +274,7 @@ footer{margin-top:3.2rem}
         <li data-egg="harfbuzz">Type “harfbuzz” anywhere on the page</li>
         <li data-egg="print" value="14">Try printing the page</li>
         <li data-egg="rabbit">Follow the white rabbit</li>
+        <li data-egg="trip">Click the tofu box or the mushroom for a trip</li>
       </ol>
       <p class="close-hint">Press ? or Esc to close</p>
     </div>
@@ -469,7 +484,7 @@ footer{margin-top:3.2rem}
 <circle cx="430" cy="218" r="3.5" fill="#4a6b94"/>
 </g>
 </g>
-<g>
+<g id="loft-tofu">
 <rect x="30" y="595" width="20" height="27" fill="none" stroke="#3f3a35" stroke-width="2"/>
 <rect x="33" y="598" width="14" height="21" fill="none" stroke="#3f3a35" stroke-width="1.2"/>
 </g>
@@ -518,6 +533,13 @@ footer{margin-top:3.2rem}
 <circle cx="17" cy="19" r="5" fill="#5a7a9e"/>
 </g>
 <ellipse cx="340" cy="848" rx="255" ry="28" fill="#efe8d2"/>
+<g id="garden-mushroom" transform="translate(95,798)">
+<rect x="7" y="14" width="8" height="14" rx="2" fill="#f2e5c8" stroke="#c9bfa0" stroke-width="1"/>
+<path d="M0 14 Q0 -4 11 -4 Q22 -4 22 14 Q11 8 0 14 Z" fill="#c0392b" stroke="#8e2a1f" stroke-width="1.5"/>
+<circle cx="6" cy="4" r="2" fill="#f2e5c8"/>
+<circle cx="15" cy="2" r="1.8" fill="#f2e5c8"/>
+<circle cx="11" cy="8" r="1.5" fill="#f2e5c8"/>
+</g>
 <g id="garden-rabbit">
 <ellipse cx="520" cy="820" rx="15" ry="10" fill="#f8f6ef" stroke="#d8d3c4" stroke-width="1.5"/>
 <circle cx="534" cy="807" r="7.5" fill="#f8f6ef" stroke="#d8d3c4" stroke-width="1.5"/>
@@ -796,7 +818,7 @@ function eggToast(text) {
     setTimeout(function () { if (t.parentNode) t.remove(); }, 300);
   }, 2600);
 }
-var EGG_TOTAL = 14;
+var EGG_TOTAL = 15;
 function markFound(id) {
   var KEY = "foundEggs";
   var found;
@@ -1070,6 +1092,22 @@ function fallbackCopy(text) {
     playShutterSound();
     setTimeout(copyLinkToClipboard, 350);
   });
+})();
+function triggerTrip(sceneId) {
+  var svg = document.getElementById(sceneId);
+  if (!svg) return;
+  svg.classList.remove("psychedelic");
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () { svg.classList.add("psychedelic"); });
+  });
+  markFound("trip");
+  setTimeout(function () { svg.classList.remove("psychedelic"); }, 3000);
+}
+(function () {
+  var mushroom = document.getElementById("garden-mushroom");
+  if (mushroom) mushroom.addEventListener("click", function () { triggerTrip("garden-scene-svg"); });
+  var tofu = document.getElementById("loft-tofu");
+  if (tofu) tofu.addEventListener("click", function () { triggerTrip("loft-scene-svg"); });
 })();
 (function () {
   var guitar = document.getElementById("loft-guitar");

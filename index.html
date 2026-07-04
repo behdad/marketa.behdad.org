@@ -132,7 +132,7 @@ footer{margin-top:3.2rem}
     </g>
   </svg>
 
-  <h1>markéta <span class="amp">&amp;</span> behdad</h1>
+  <h1>markéta <span class="amp" data-title-i="amp_title">&amp;</span> behdad</h1>
   <p class="ipa">/ˈmar·kɛː·ta/ she / they &nbsp;·&nbsp; /behˈ·dɒːd/ he / they</p>
   <p class="tagline" data-i="tagline">We’re getting married. Save the dates —<br>come to one, or both.</p>
 
@@ -454,7 +454,15 @@ var T = {
     nav_lang_aria: "Language",
     caps_aria: "A pink flat cap and a blue baker boy cap, crossed",
     loft_aria: "The two of us holding hands in our loft, with a factory window, string lights, and a guitar",
-    garden_aria: "The two of us holding hands in a summerhouse garden"
+    garden_aria: "The two of us holding hands in a summerhouse garden",
+    amp_title: "et — Latin for “and,” and the OG OpenType ligature.",
+    inf_jokes: [
+      "Being-toward-wedding. (Heidegger never RSVP’d.)",
+      "∞ — the one quantifier phenomenology never doubted.",
+      "Reassembling the wedding, one guest at a time."
+    ],
+    footnote_text: "¹ See: Latour, B. (2027). Reassembling the Wedding. (Forthcoming, allegedly.)",
+    ipa_secret: "psst — “yes” in a few more of her languages: ano (cs) · oui (fr) · ja (de) · sí (es)"
   },
   cs: {
     tagline: "Bereme se. Poznamenejte si data \u2014<br>p\u0159ij\u010fte na jednu oslavu, nebo na ob\u011b.",
@@ -469,7 +477,15 @@ var T = {
     nav_lang_aria: "Jazyk",
     caps_aria: "R\u016f\u017eov\u00e1 \u010depice a modr\u00e1 \u010depice, zk\u0159\u00ed\u017een\u00e9",
     loft_aria: "My dva, dr\u017e\u00edme se za ruce v na\u0161em loftu, s tov\u00e1rn\u00edm oknem, sv\u011bteln\u00fdm \u0159et\u011bzem a kytarou",
-    garden_aria: "My dva, dr\u017e\u00edme se za ruce v zahrad\u011b letn\u00edho domu"
+    garden_aria: "My dva, dr\u017e\u00edme se za ruce v zahrad\u011b letn\u00edho domu",
+    amp_title: "et \u2014 latinsky \u201ea\u201c, praotec v\u0161ech OpenType ligatur.",
+    inf_jokes: [
+      "Byt\u00ed-k-svatb\u011b. (Heidegger se nikdy neomluvil.)",
+      "\u221e \u2014 jedin\u00fd kvantifik\u00e1tor, o kter\u00e9m fenomenologie nikdy nepochybovala.",
+      "Skl\u00e1d\u00e1me svatbu dohromady, host po hostu."
+    ],
+    footnote_text: "\u00b9 Viz: Latour, B. (2027). Skl\u00e1d\u00e1n\u00ed svatby dohromady. (\u00dadajn\u011b vyjde.)",
+    ipa_secret: "pst \u2014 \u201eano\u201c v p\u00e1r dal\u0161\u00edch jej\u00edch jazyc\u00edch: yes (en) \u00b7 oui (fr) \u00b7 ja (de) \u00b7 s\u00ed (es)"
   }
 };
 function setLang(l) {
@@ -489,6 +505,11 @@ function setLang(l) {
   for (var a = 0; a < ariaEls.length; a++) {
     var ak = ariaEls[a].getAttribute("data-aria-i");
     if (T[l][ak]) ariaEls[a].setAttribute("aria-label", T[l][ak]);
+  }
+  var titleEls = document.querySelectorAll("[data-title-i]");
+  for (var ti = 0; ti < titleEls.length; ti++) {
+    var tk = titleEls[ti].getAttribute("data-title-i");
+    if (T[l][tk]) titleEls[ti].setAttribute("title", T[l][tk]);
   }
   var btns = document.querySelectorAll(".langs button");
   for (var j = 0; j < btns.length; j++) {
@@ -521,6 +542,44 @@ function setLang(l) {
   console.log("%c  " + codepoints, "font-family:monospace; color:#8a7a68");
   console.log("%c  => 15 glyphs, 1 ligature (&), 0 known bugs (as of today)", "font-family:monospace; color:#8a7a68");
   console.log("// 20 years of Unicode bugs, 1 ligature. — Behdad");
+})();
+function eggBubble(anchor, text) {
+  var old = document.querySelector(".egg-bubble");
+  if (old) old.remove();
+  var b = document.createElement("div");
+  b.className = "egg-bubble";
+  b.textContent = text;
+  document.body.appendChild(b);
+  var r = anchor.getBoundingClientRect();
+  var left = Math.max(8, Math.min(window.innerWidth - 228, r.left + r.width / 2 - 110));
+  b.style.left = left + "px";
+  b.style.top = (r.bottom + 8) + "px";
+  requestAnimationFrame(function () { b.classList.add("show"); });
+  clearTimeout(b._t);
+  b._t = setTimeout(function () {
+    b.classList.remove("show");
+    setTimeout(function () { if (b.parentNode) b.remove(); }, 300);
+  }, 3200);
+  return b;
+}
+(function () {
+  var amp = document.querySelector(".amp");
+  if (!amp) return;
+  var orig = amp.textContent;
+  var swapped = false;
+  function swap(on) {
+    if (on === swapped) return;
+    swapped = on;
+    amp.style.transition = "opacity .2s ease";
+    amp.style.opacity = 0;
+    setTimeout(function () {
+      amp.textContent = on ? "et" : orig;
+      amp.style.opacity = 1;
+    }, 200);
+  }
+  amp.addEventListener("mouseenter", function () { swap(true); });
+  amp.addEventListener("mouseleave", function () { swap(false); });
+  amp.addEventListener("click", function () { swap(!swapped); });
 })();
 </script>
 </body>

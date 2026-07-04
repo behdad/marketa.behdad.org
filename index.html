@@ -1172,6 +1172,8 @@ function fallbackCopy(text) {
 (function () {
   var overlay = document.getElementById("egg-cheatsheet");
   if (!overlay) return;
+  var closeBtn = overlay.querySelector(".egg-close");
+  var lastFocused = null;
   function open() {
     var found;
     try { found = JSON.parse(localStorage.getItem("foundEggs") || "[]"); } catch (e) { found = []; }
@@ -1183,11 +1185,17 @@ function fallbackCopy(text) {
       var isFound = id === "rabbit" ? rabbitUnlocked : found.indexOf(id) !== -1;
       items[i].classList.toggle("found", isFound);
     }
+    lastFocused = document.activeElement;
     overlay.classList.add("show");
     overlay.setAttribute("aria-hidden", "false");
+    if (closeBtn) closeBtn.focus();
   }
   window.openEggCheatsheet = open;
-  function close() { overlay.classList.remove("show"); overlay.setAttribute("aria-hidden", "true"); }
+  function close() {
+    overlay.classList.remove("show");
+    overlay.setAttribute("aria-hidden", "true");
+    if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus();
+  }
   document.addEventListener("keydown", function (e) {
     if (e.key === "?") {
       e.preventDefault();
@@ -1199,7 +1207,6 @@ function fallbackCopy(text) {
   overlay.addEventListener("click", function (e) {
     if (e.target === overlay) close();
   });
-  var closeBtn = overlay.querySelector(".egg-close");
   if (closeBtn) closeBtn.addEventListener("click", close);
 })();
 window.addEventListener("beforeprint", function () { markFound("print"); });

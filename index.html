@@ -1395,10 +1395,13 @@ function triggerTrip(sceneId) {
   try { localStorage.setItem(KEY, "1"); } catch (e) {}
 })();
 (function () {
-  var KEY = "seenDiscoverHint";
-  var seen = true;
-  try { seen = localStorage.getItem(KEY) === "1"; } catch (e) {}
-  if (seen) return;
+  var COOLDOWN_MS = 5 * 60 * 1000;
+  try {
+    var found = JSON.parse(localStorage.getItem("foundEggs") || "[]");
+    if (found.length > 0) return;
+    var last = parseInt(localStorage.getItem("discoverHintLastShown") || "0", 10);
+    if (Date.now() - last < COOLDOWN_MS) return;
+  } catch (e) {}
   var fired = false;
   function fire() {
     if (fired) return;
@@ -1406,7 +1409,7 @@ function triggerTrip(sceneId) {
     var lang = document.documentElement.lang;
     var text = (T[lang] && T[lang].discover_hint) || T.en.discover_hint;
     eggToast(text, 6000);
-    try { localStorage.setItem(KEY, "1"); } catch (e) {}
+    try { localStorage.setItem("discoverHintLastShown", String(Date.now())); } catch (e) {}
     document.removeEventListener("click", cancel);
   }
   function cancel() {
@@ -1464,6 +1467,7 @@ function triggerTrip(sceneId) {
     try {
       localStorage.removeItem("foundEggs");
       localStorage.removeItem("rabbitUnlocked");
+      localStorage.removeItem("discoverHintLastShown");
     } catch (e) {}
     refreshChecklist();
   });

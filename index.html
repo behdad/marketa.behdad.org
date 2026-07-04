@@ -122,6 +122,11 @@ footer{margin-top:2.6rem}
   position:absolute; top:.6rem; right:.75rem; background:none; border:none;
   font-size:1.5rem; line-height:1; cursor:pointer; color:var(--soft);
 }
+.egg-reset{
+  position:absolute; top:.75rem; right:2.6rem; background:none; border:none;
+  font-size:1.15rem; line-height:1; cursor:pointer; color:var(--soft); opacity:.6;
+}
+.egg-reset:hover{opacity:1; color:var(--wine)}
 .egg-close:hover{color:var(--wine)}
 .egg-toast{
   position:fixed; left:50%; bottom:24px; z-index:50; pointer-events:none; white-space:nowrap;
@@ -282,6 +287,7 @@ footer{margin-top:2.6rem}
 
   <div id="egg-cheatsheet" aria-hidden="true">
     <div class="panel" role="dialog" aria-modal="true" aria-label="Easter egg cheatsheet">
+      <button type="button" class="egg-reset" aria-label="Reset progress" title="Reset progress">↺</button>
       <button type="button" class="egg-close" aria-label="Close">×</button>
       <h2>psst — here’s what’s hidden here</h2>
       <ol>
@@ -1285,8 +1291,9 @@ function triggerTrip(sceneId) {
   var overlay = document.getElementById("egg-cheatsheet");
   if (!overlay) return;
   var closeBtn = overlay.querySelector(".egg-close");
+  var resetBtn = overlay.querySelector(".egg-reset");
   var lastFocused = null;
-  function open() {
+  function refreshChecklist() {
     var found;
     try { found = JSON.parse(localStorage.getItem("foundEggs") || "[]"); } catch (e) { found = []; }
     var rabbitUnlocked = false;
@@ -1297,6 +1304,9 @@ function triggerTrip(sceneId) {
       var isFound = id === "rabbit" ? rabbitUnlocked : found.indexOf(id) !== -1;
       items[i].classList.toggle("found", isFound);
     }
+  }
+  function open() {
+    refreshChecklist();
     lastFocused = document.activeElement;
     overlay.classList.add("show");
     overlay.setAttribute("aria-hidden", "false");
@@ -1320,6 +1330,14 @@ function triggerTrip(sceneId) {
     if (e.target === overlay) close();
   });
   if (closeBtn) closeBtn.addEventListener("click", close);
+  if (resetBtn) resetBtn.addEventListener("click", function () {
+    if (!window.confirm("Reset your found-eggs progress?")) return;
+    try {
+      localStorage.removeItem("foundEggs");
+      localStorage.removeItem("rabbitUnlocked");
+    } catch (e) {}
+    refreshChecklist();
+  });
 })();
 window.addEventListener("beforeprint", function () { markFound("print"); });
 </script>

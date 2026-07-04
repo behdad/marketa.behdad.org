@@ -17,8 +17,10 @@ Take inspiration from their individual websites.
 ## Design system
 
 - Palette (CSS custom props in `:root`): cream `#f8f5ec`, paper `#fffdf8`, ink `#453a31`,
-  muted `#8a7a68`, soft `#9a8a78`, pink `#d9a6a6` / `#c68e95` (his suit), blue `#7f9ec0` /
-  `#4a6b94` (her suit), wine `#8e3a4a` (accent, links, `&`), rule `#e8dfcc`.
+  muted `#716455`, soft `#7d6e5d`, pink `#d9a6a6` / `#c68e95` (his suit), blue `#7f9ec0` /
+  `#4a6b94` (her suit), wine `#8e3a4a` (accent, links, `&`), rule `#e8dfcc`. muted/soft were
+  darkened from their original lighter values to clear WCAG AA 4.5:1 contrast on cream/paper
+  — keep any future tweak to those two above that threshold (muted stays darker than soft).
 - Type: Fraunces (display, via Google Fonts) + Source Serif 4 (body). Names are styled
   lowercase: "markéta & behdad", her name first, `&` in wine.
 - Signature elements: ∞ section anchors alternating wine/blue (borrowed from their personal
@@ -29,14 +31,35 @@ Take inspiration from their individual websites.
 - Copy uses manual `<br>` hard breaks (not CSS `text-wrap`) at chosen clause boundaries in
   the tagline/description/welcome lines — author's preference over browser wrap heuristics.
   `setLang()` sets `innerHTML` (not `textContent`) to support this; keep EN/CS breaks in sync
-  when editing that copy.
+  when editing that copy. Some lines need *different* break points at mobile vs. the desktop
+  two-column layout to avoid orphaned words — use `<br class="brk-sm">` (shown only below
+  760px) and `<br class="brk-lg">` (shown only at/above 760px) for those. Always render/check
+  both breakpoints (and both languages — CS strings are often longer than EN and may need
+  their own `brk-sm`) after editing any hard-broken copy; a break that's clean at one width
+  can orphan a single word at another.
+- Desktop (≥760px) shows the two party sections side by side (`.parties` flex row) with a
+  thin `.divider` (vertical rule + small ∞) between them; mobile stacks them and hides the
+  divider.
+- `.scene` illustrations have rounded corners + a subtle box-shadow and scale up slightly on
+  hover (disabled under `prefers-reduced-motion`). The `.caps` hero logo has a similar small
+  hover tilt.
+- `art/og-image.png` (1200×630) and `art/apple-touch-icon.png` (180×180) are generated
+  assets (rendered from small standalone HTML via headless Chrome, not hand-drawn like the
+  scene SVGs) — regenerate them if the palette, names, or tagline change materially. Referenced
+  from `<meta property="og:image">` / `twitter:image` and `<link rel="apple-touch-icon">`.
 
 ## i18n
 
 EN + CZ only (Persian explicitly dropped). Dictionary `T` in the inline script; elements
-carry `data-i="key"`. Language persists in localStorage, auto-selects `cs` for Czech
-browsers. When adding content, add EN + CS strings together. Markéta is a native Czech
-speaker — flag any new Czech copy for her review.
+carry `data-i="key"` for text (via `innerHTML`), `data-href-i="key"` for a translated link
+`href` (used by the footer's markéta link → marketajakesova.ca vs. /cs/), and
+`data-aria-i="key"` for a translated `aria-label` (used on the caps/scene SVGs and the lang
+nav). Language persists in localStorage; auto-detect checks the visitor's *entire*
+`navigator.languages` list (not just the primary language) and switches to `cs` if Czech
+appears anywhere in it. Always update the Czech translation in the same edit whenever
+English copy changes — never let `T.en`/`T.cs` (or a static HTML fallback) drift out of
+sync, even for small wording tweaks. Markéta will do a final review pass over all Czech
+copy at the end of the design work, so don't hold back on proposing/editing CS text.
 
 ## Illustrations
 

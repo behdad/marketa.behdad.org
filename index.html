@@ -1193,6 +1193,7 @@ function markFound(id) {
 }
 function triggerCompletionTrip() {
   var sx = window.scrollX, sy = window.scrollY;
+  playJackpotSound();
   document.body.classList.remove("completion-trip");
   requestAnimationFrame(function () {
     requestAnimationFrame(function () {
@@ -1436,6 +1437,30 @@ function playTripMelody() {
       osc.stop(t + noteDur * 2);
     });
     setTimeout(function () { ctx.close(); }, notes.length * noteDur * 1000 + 500);
+  } catch (e) {}
+}
+function playJackpotSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var notes = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98, 2093.0];
+    var noteDur = 0.09;
+    notes.forEach(function (freq, i) {
+      var t = ctx.currentTime + i * noteDur;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.09, t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + noteDur * 3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + noteDur * 3.2);
+    });
+    setTimeout(function () { ctx.close(); }, notes.length * noteDur * 1000 + 800);
   } catch (e) {}
 }
 function pufferColorRatio() {

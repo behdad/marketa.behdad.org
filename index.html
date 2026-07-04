@@ -293,7 +293,6 @@ footer{margin-top:2.6rem}
   60%{transform:rotate(1.5deg)}
 }
 .flying-heart{pointer-events:none}
-.disco-ray{pointer-events:none}
 #loft-discoball{cursor:pointer}
 .disco-ball-spin{transform-origin:0px 0px}
 #loft-discoball.spin .disco-ball-spin{animation:discoball-spin 7s linear}
@@ -614,9 +613,10 @@ body.completion-trip{animation:completion-spin 7s linear}
 <line x1="560" y1="119" x2="560" y2="128" stroke="#4a453d" stroke-width="2"/>
 <rect x="557" y="128" width="6" height="5" fill="#4a453d"/>
 <g id="loft-discoball" transform="translate(590,80)">
-<circle cx="0" cy="0" r="34" fill="transparent"/>
-<line x1="0" y1="-30" x2="0" y2="-15" stroke="#8a8a8a" stroke-width="1.5"/>
+<circle cx="0" cy="0" r="42" fill="transparent"/>
+<line x1="0" y1="-30" x2="0" y2="-20" stroke="#8a8a8a" stroke-width="1.5"/>
 <g class="disco-ball-spin">
+<g transform="scale(1.4)">
 <circle cx="0" cy="0" r="14" fill="#c8c8d0" stroke="#9a9aa5" stroke-width="1.5"/>
 <path d="M-14 0 H14 M-10 -10 H10 M-10 10 H10 M0 -14 V14" fill="none" stroke="#9a9aa5" stroke-width="1"/>
 <path d="M-9.9 -9.9 L9.9 9.9 M-9.9 9.9 L9.9 -9.9" fill="none" stroke="#9a9aa5" stroke-width="0.8"/>
@@ -624,14 +624,15 @@ body.completion-trip{animation:completion-spin 7s linear}
 <circle class="disco-sparkle" cx="4" cy="3" r="1" fill="#ffffff" opacity="0.6"/>
 <circle class="disco-sparkle" cx="-3" cy="6" r="0.9" fill="#ffffff" opacity="0.7"/>
 <g class="disco-rays">
-<line x1="0" y1="-14" x2="0" y2="-34" stroke="#f5b8c8" stroke-width="2" opacity="0.8"/>
-<line x1="9.9" y1="-9.9" x2="24" y2="-24" stroke="#f7d97a" stroke-width="2" opacity="0.8"/>
-<line x1="14" y1="0" x2="34" y2="0" stroke="#a8c4d4" stroke-width="2" opacity="0.8"/>
-<line x1="9.9" y1="9.9" x2="24" y2="24" stroke="#c9a3d9" stroke-width="2" opacity="0.8"/>
-<line x1="0" y1="14" x2="0" y2="34" stroke="#f5b8c8" stroke-width="2" opacity="0.8"/>
-<line x1="-9.9" y1="9.9" x2="-24" y2="24" stroke="#f7d97a" stroke-width="2" opacity="0.8"/>
-<line x1="-14" y1="0" x2="-34" y2="0" stroke="#a8c4d4" stroke-width="2" opacity="0.8"/>
-<line x1="-9.9" y1="-9.9" x2="-24" y2="-24" stroke="#c9a3d9" stroke-width="2" opacity="0.8"/>
+<line x1="0" y1="-14" x2="0" y2="-100" stroke="#f5b8c8" stroke-width="2.5" opacity="0.8"/>
+<line x1="9.9" y1="-9.9" x2="71" y2="-71" stroke="#f7d97a" stroke-width="2.5" opacity="0.8"/>
+<line x1="14" y1="0" x2="100" y2="0" stroke="#a8c4d4" stroke-width="2.5" opacity="0.8"/>
+<line x1="9.9" y1="9.9" x2="71" y2="71" stroke="#c9a3d9" stroke-width="2.5" opacity="0.8"/>
+<line x1="0" y1="14" x2="0" y2="100" stroke="#f5b8c8" stroke-width="2.5" opacity="0.8"/>
+<line x1="-9.9" y1="9.9" x2="-71" y2="71" stroke="#f7d97a" stroke-width="2.5" opacity="0.8"/>
+<line x1="-14" y1="0" x2="-100" y2="0" stroke="#a8c4d4" stroke-width="2.5" opacity="0.8"/>
+<line x1="-9.9" y1="-9.9" x2="-71" y2="-71" stroke="#c9a3d9" stroke-width="2.5" opacity="0.8"/>
+</g>
 </g>
 </g>
 </g>
@@ -1381,14 +1382,24 @@ function triggerCompletionTrip() {
   amp.addEventListener("mouseleave", function () { swap(false); });
   amp.addEventListener("click", function () { swap(!swapped); });
 })();
+function shuffledIndices(n) {
+  var arr = [];
+  for (var i = 0; i < n; i++) arr.push(i);
+  for (var i = arr.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+  }
+  return arr;
+}
 function wireJokeCycler(selector, jokesKey) {
   var el = document.querySelector(selector);
   if (!el) return;
   var idx = 0;
+  var order = shuffledIndices((T.en[jokesKey] || []).length);
   el.addEventListener("click", function () {
     var lang = document.documentElement.lang;
     var jokes = (T[lang] && T[lang][jokesKey]) || T.en[jokesKey];
-    eggBubble(el, jokes[idx % jokes.length]);
+    eggBubble(el, jokes[order[idx % order.length]]);
     idx++;
     markFound("inf");
   });
@@ -1742,7 +1753,7 @@ function spawnHearts(svg, cx, cy) {
       var t = document.createElementNS("http://www.w3.org/2000/svg", "text");
       t.setAttribute("x", cx);
       t.setAttribute("y", cy);
-      t.setAttribute("font-size", 16 + Math.random() * 10);
+      t.setAttribute("font-size", 26 + Math.random() * 14);
       t.setAttribute("fill", "#d9749a");
       t.setAttribute("class", "flying-heart");
       t.textContent = "♥";
@@ -1760,68 +1771,40 @@ function spawnHearts(svg, cx, cy) {
     })(i);
   }
 }
-function spawnDiscoRays(svg, cx, cy) {
-  var colors = ["#e6a8c4", "#f7d97a", "#a8c4e6", "#c9a3d9", "#8fd9c4", "#f0a97a"];
-  var count = 10;
-  for (var i = 0; i < count; i++) {
-    (function (i) {
-      var angle = Math.PI * 2 * i / count;
-      var len = 55 + Math.random() * 25;
-      var x2 = cx + Math.cos(angle) * len;
-      var y2 = cy + Math.sin(angle) * len;
-      var line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      line.setAttribute("x1", cx);
-      line.setAttribute("y1", cy);
-      line.setAttribute("x2", x2);
-      line.setAttribute("y2", y2);
-      line.setAttribute("stroke", colors[i % colors.length]);
-      line.setAttribute("stroke-width", "3");
-      line.setAttribute("stroke-linecap", "round");
-      line.setAttribute("class", "disco-ray");
-      svg.appendChild(line);
-      if (line.animate) {
-        var anim = line.animate([
-          { opacity: 0 },
-          { opacity: .85, offset: .2 },
-          { opacity: 0 }
-        ], { duration: 900 + Math.random() * 400, easing: "ease-out" });
-        anim.onfinish = function () { if (line.parentNode) line.remove(); };
-      } else {
-        setTimeout(function () { if (line.parentNode) line.remove(); }, 1300);
-      }
-    })(i);
-  }
-}
 (function () {
   var mushroom = document.getElementById("garden-mushroom");
   var shroomIdx = 0;
+  var shroomOrder = shuffledIndices((T.en.shroom_jokes || []).length);
   if (mushroom) mushroom.addEventListener("click", function () {
     triggerTrip("garden-scene-svg", "psychedelic");
     var lang = document.documentElement.lang;
     var jokes = (T[lang] && T[lang].shroom_jokes) || T.en.shroom_jokes;
-    eggBubble(mushroom, jokes[shroomIdx % jokes.length]);
+    eggBubble(mushroom, jokes[shroomOrder[shroomIdx % shroomOrder.length]]);
     shroomIdx++;
   });
   var tofu = document.getElementById("loft-tofu");
   var acidIdx = 0;
+  var acidOrder = shuffledIndices((T.en.acid_jokes || []).length);
   if (tofu) tofu.addEventListener("click", function () {
     triggerTrip("loft-scene-svg", "strobe");
     var lang = document.documentElement.lang;
     var jokes = (T[lang] && T[lang].acid_jokes) || T.en.acid_jokes;
-    eggBubble(tofu, jokes[acidIdx % jokes.length]);
+    eggBubble(tofu, jokes[acidOrder[acidIdx % acidOrder.length]]);
     acidIdx++;
   });
   var frog = document.getElementById("garden-frog");
   var meltIdx = 0;
+  var meltOrder = shuffledIndices((T.en.melt_jokes || []).length);
   if (frog) frog.addEventListener("click", function () {
     triggerTrip("garden-scene-svg", "melt");
     var lang = document.documentElement.lang;
     var jokes = (T[lang] && T[lang].melt_jokes) || T.en.melt_jokes;
-    eggBubble(frog, jokes[meltIdx % jokes.length]);
+    eggBubble(frog, jokes[meltOrder[meltIdx % meltOrder.length]]);
     meltIdx++;
   });
   var discoball = document.getElementById("loft-discoball");
   var mollyIdx = 0;
+  var mollyOrder = shuffledIndices((T.en.molly_jokes || []).length);
   if (discoball) discoball.addEventListener("click", function () {
     triggerTrip("loft-scene-svg", "molly");
     discoball.classList.remove("spin");
@@ -1836,14 +1819,11 @@ function spawnDiscoRays(svg, cx, cy) {
       setTimeout(function () { loftCouple.classList.remove("cuddle"); }, 7000);
     }
     var loftSvg = document.getElementById("loft-scene-svg");
-    if (loftSvg) {
-      spawnDiscoRays(loftSvg, 590, 80);
-      spawnHearts(loftSvg, 350, 500);
-    }
+    if (loftSvg) spawnHearts(loftSvg, 350, 500);
     setTimeout(function () {
       var lang = document.documentElement.lang;
       var jokes = (T[lang] && T[lang].molly_jokes) || T.en.molly_jokes;
-      eggBubble(discoball, jokes[mollyIdx % jokes.length]);
+      eggBubble(discoball, jokes[mollyOrder[mollyIdx % mollyOrder.length]]);
       mollyIdx++;
     }, 900);
   });

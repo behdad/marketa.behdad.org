@@ -1308,6 +1308,30 @@ function playGuitarPluck() {
     setTimeout(function () { ctx.close(); }, 1600);
   } catch (e) {}
 }
+function playTripMelody() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var notes = [392.0, 440.0, 523.25, 659.25, 587.33];
+    var noteDur = 0.18;
+    notes.forEach(function (freq, i) {
+      var t = ctx.currentTime + i * noteDur;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.05, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + noteDur * 1.8);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + noteDur * 2);
+    });
+    setTimeout(function () { ctx.close(); }, notes.length * noteDur * 1000 + 500);
+  } catch (e) {}
+}
 function playShutterSound() {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -1388,7 +1412,7 @@ function triggerTrip(sceneId, variant, eggId) {
     requestAnimationFrame(function () { svg.classList.add(cls); });
   });
   markFound(eggId || "trip");
-  playGuitarPluck();
+  playTripMelody();
   setTimeout(function () { svg.classList.remove(cls); }, 3000);
 }
 (function () {

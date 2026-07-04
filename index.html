@@ -115,7 +115,8 @@ footer{margin-top:2.6rem}
 }
 #egg-cheatsheet h2{font-family:"Fraunces",serif; font-weight:500; font-size:1.3rem; margin:0 0 .9rem}
 #egg-cheatsheet ol{margin:0; padding-left:1.3rem}
-#egg-cheatsheet li{margin-bottom:.55rem; font-size:.92rem; line-height:1.5}
+#egg-cheatsheet li{margin-bottom:.55rem; font-size:.92rem; line-height:1.5; cursor:pointer}
+#egg-cheatsheet li:hover{color:var(--wine)}
 #egg-cheatsheet li.found{color:var(--soft)}
 #egg-cheatsheet li.found::after{content:" ✓"; color:var(--wine); font-weight:bold}
 #egg-cheatsheet .close-hint{margin:1.1rem 0 0; font-size:.8rem; color:var(--soft); text-align:center}
@@ -280,9 +281,21 @@ footer{margin-top:2.6rem}
 }
 .scene.melt{filter:url(#melt-filter)}
 #garden-frog{cursor:pointer}
+body.completion-trip{animation:completion-spin 7s linear}
+@keyframes completion-spin{
+  0%{filter:url(#melt-filter) hue-rotate(0deg) saturate(1)}
+  15%{filter:url(#melt-filter) hue-rotate(200deg) saturate(2.5)}
+  30%{filter:url(#melt-filter) hue-rotate(400deg) saturate(3)}
+  45%{filter:url(#melt-filter) hue-rotate(600deg) saturate(2)}
+  60%{filter:url(#melt-filter) hue-rotate(800deg) saturate(3)}
+  75%{filter:url(#melt-filter) hue-rotate(1000deg) saturate(2.5)}
+  90%{filter:url(#melt-filter) hue-rotate(1200deg) saturate(2)}
+  100%{filter:url(#melt-filter) hue-rotate(1440deg) saturate(1)}
+}
 @media (prefers-reduced-motion: reduce){
   .scene.psychedelic .trip-trail, .scene.strobe .trip-trail, .scene.melt .trip-trail{animation:none}
   .scene.melt{filter:none}
+  body.completion-trip{animation:none}
 }
 #garden-flash{opacity:0}
 #garden-flash.flash{animation:camera-flash .4s ease-out}
@@ -1096,7 +1109,15 @@ function markFound(id) {
     eggToast(tmpl.replace("{n}", remaining));
   } else {
     eggToast((T[lang] && T[lang].egg_done) || T.en.egg_done);
+    triggerCompletionTrip();
   }
+}
+function triggerCompletionTrip() {
+  document.body.classList.remove("completion-trip");
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () { document.body.classList.add("completion-trip"); });
+  });
+  setTimeout(function () { document.body.classList.remove("completion-trip"); }, 7000);
 }
 (function () {
   var amp = document.querySelector(".amp");
@@ -1589,6 +1610,31 @@ function triggerTrip(sceneId, variant, eggId) {
       items[i].classList.toggle("found", isFound);
     }
   }
+  function toggleEggManually(id) {
+    var found;
+    try { found = JSON.parse(localStorage.getItem("foundEggs") || "[]"); } catch (e) { found = []; }
+    var idx = found.indexOf(id);
+    var nowFound;
+    if (idx === -1) {
+      found.push(id);
+      nowFound = true;
+    } else {
+      found.splice(idx, 1);
+      nowFound = false;
+    }
+    try { localStorage.setItem("foundEggs", JSON.stringify(found)); } catch (e) {}
+    if (id === "rabbit") {
+      try {
+        if (nowFound) localStorage.setItem("rabbitUnlocked", "1");
+        else localStorage.removeItem("rabbitUnlocked");
+      } catch (e) {}
+    }
+    refreshChecklist();
+    if (nowFound && found.length === EGG_TOTAL) triggerCompletionTrip();
+  }
+  overlay.querySelectorAll("li[data-egg]").forEach(function (li) {
+    li.addEventListener("click", function () { toggleEggManually(li.getAttribute("data-egg")); });
+  });
   function open() {
     refreshChecklist();
     lastFocused = document.activeElement;

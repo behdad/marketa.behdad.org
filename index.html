@@ -937,14 +937,26 @@ function eggBubble(anchor, text) {
   }
   b.style.left = left + "px";
   b.style.top = top + "px";
+  b._anchor = anchor;
   requestAnimationFrame(function () { b.classList.add("show"); });
   clearTimeout(b._t);
   b._t = setTimeout(function () {
-    b.classList.remove("show");
-    setTimeout(function () { if (b.parentNode) b.remove(); }, 300);
+    dismissEggBubble(b);
   }, 5000);
   return b;
 }
+function dismissEggBubble(b) {
+  clearTimeout(b._t);
+  b.classList.remove("show");
+  setTimeout(function () { if (b.parentNode) b.remove(); }, 300);
+}
+document.addEventListener("click", function (e) {
+  var b = document.querySelector(".egg-bubble");
+  if (!b) return;
+  var anchor = b._anchor;
+  if (anchor && (e.target === anchor || (anchor.contains && anchor.contains(e.target)))) return;
+  dismissEggBubble(b);
+});
 function eggToast(text) {
   var old = document.querySelector(".egg-toast");
   if (old) old.remove();

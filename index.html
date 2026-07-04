@@ -109,7 +109,7 @@ footer{margin-top:2.6rem}
 }
 #egg-cheatsheet.show{display:flex}
 #egg-cheatsheet .panel{
-  position:relative; background:var(--paper); color:var(--ink); border-radius:10px;
+  position:relative; background:rgba(255,253,248,.92); backdrop-filter:blur(6px); color:var(--ink); border-radius:10px;
   max-width:480px; width:100%; max-height:80vh; overflow:auto;
   padding:1.75rem 1.9rem; box-shadow:0 10px 40px rgba(0,0,0,.3);
 }
@@ -119,10 +119,6 @@ footer{margin-top:2.6rem}
 #egg-cheatsheet li:hover{color:var(--wine)}
 #egg-cheatsheet li.found{color:var(--soft)}
 #egg-cheatsheet li.found::after{content:" ✓"; color:var(--wine); font-weight:bold}
-#egg-cheatsheet .close-hint{display:none; margin:1.1rem 0 0; font-size:.8rem; color:var(--soft); text-align:center}
-@media (min-width:760px){
-  #egg-cheatsheet .close-hint{display:block}
-}
 .egg-close{
   position:absolute; top:.6rem; right:.75rem; background:none; border:none;
   font-size:1.5rem; line-height:1; cursor:pointer; color:var(--soft);
@@ -290,7 +286,7 @@ footer{margin-top:2.6rem}
   0%,100%{transform:scale(0.85)}
   50%{transform:scale(1.15)}
 }
-.puffer-drift{transition:transform 10s linear}
+.puffer-drift{transition:transform 3.2s linear; transform-origin:center}
 .puffer-fill{animation:puffer-color 3s ease-in-out infinite}
 @keyframes puffer-color{
   0%,100%{fill:#c68e95}
@@ -405,7 +401,7 @@ body.completion-trip{animation:completion-spin 7s linear}
       <ol>
         <li data-egg="caps">Click the crossed caps logo</li>
         <li data-egg="amp">Hover or tap the “&amp;” in the title</li>
-        <li data-egg="inf">Click the ∞ by “Edmonton” or “Prague” — a few times</li>
+        <li data-egg="inf">Click the ∞ by “Edmonton” or “Prague”</li>
         <li data-egg="footnote">Click the “¹” after “small or big”</li>
         <li data-egg="langnote">Click the “†” by the language toggle</li>
         <li data-egg="map">Click the ∞ between the two scenes</li>
@@ -422,7 +418,6 @@ body.completion-trip{animation:completion-spin 7s linear}
         <li data-egg="fish">Find the puffer fish hiding in the garden sky</li>
         <li data-egg="harfbuzz">Type “harfbuzz” anywhere on the page</li>
       </ol>
-      <p class="close-hint">Press ? or Esc to close</p>
     </div>
   </div>
 
@@ -720,7 +715,7 @@ body.completion-trip{animation:completion-spin 7s linear}
 <ellipse cx="410" cy="62" rx="26" ry="12" fill="#eef4fa" opacity="0.8"/>
 <ellipse cx="352" cy="64" rx="24" ry="11" fill="#dce7f2" opacity="0.75"/>
 </g>
-<g id="garden-puffer-wrap" transform="translate(270,150)">
+<g id="garden-puffer-wrap" transform="translate(220,95)">
 <g class="puffer-drift">
 <g class="puffer-body">
 <circle cx="0" cy="0" r="30" fill="transparent"/>
@@ -1144,16 +1139,34 @@ function eggToast(text, duration) {
   }, duration || 2600);
 }
 var EGG_TOTAL = 18;
+function validEggIds() {
+  return Array.prototype.map.call(document.querySelectorAll("#egg-cheatsheet li[data-egg]"), function (li) {
+    return li.getAttribute("data-egg");
+  });
+}
+function countFoundValid() {
+  var found;
+  try { found = JSON.parse(localStorage.getItem("foundEggs") || "[]"); } catch (e) { found = []; }
+  var rabbitUnlocked = false;
+  try { rabbitUnlocked = localStorage.getItem("rabbitUnlocked") === "1"; } catch (e) {}
+  var count = 0;
+  validEggIds().forEach(function (id) {
+    var isFound = id === "rabbit" ? rabbitUnlocked : found.indexOf(id) !== -1;
+    if (isFound) count++;
+  });
+  return count;
+}
 function markFound(id) {
   var KEY = "foundEggs";
   var found;
   try { found = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) { found = []; }
   if (found.indexOf(id) !== -1) return;
   found.push(id);
+  found = Array.from(new Set(found));
   try { localStorage.setItem(KEY, JSON.stringify(found)); } catch (e) {}
   if (id !== "guitar" && id !== "trip" && id !== "fish") playGuitarPluck();
   var lang = document.documentElement.lang;
-  var remaining = EGG_TOTAL - found.length;
+  var remaining = EGG_TOTAL - countFoundValid();
   if (remaining === 13) return;
   if (remaining > 0) {
     var tmpl = (T[lang] && T[lang].egg_more) || T.en.egg_more;
@@ -1552,14 +1565,33 @@ function triggerTrip(sceneId, variant, eggId) {
   var reducedMotionQuery = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
   if (pufferDrift && !(reducedMotionQuery && reducedMotionQuery.matches)) {
     (function () {
-      var bx = 0, by = 0;
-      var pull = 0.015;
-      var noise = 8;
+      var x = 0, y = 0;
+      var headingDeg = Math.random() * 360;
+      var boundsX = 45, boundsY = 30;
+      var stepDist = 6;
       (function step() {
-        bx += (Math.random() - 0.5) * noise - bx * pull;
-        by += (Math.random() - 0.5) * noise - by * pull;
-        pufferDrift.style.transform = "translate(" + bx.toFixed(1) + "px," + by.toFixed(1) + "px)";
-        setTimeout(step, 10000);
+        headingDeg += (Math.random() - 0.5) * 40;
+        var rad = headingDeg * Math.PI / 180;
+        var dx = Math.cos(rad) * stepDist;
+        var dy = Math.sin(rad) * stepDist;
+        var nx = x + dx, ny = y + dy;
+        if (nx > boundsX || nx < -boundsX) {
+          headingDeg = 180 - headingDeg;
+          rad = headingDeg * Math.PI / 180;
+          dx = Math.cos(rad) * stepDist;
+          nx = x + dx;
+        }
+        if (ny > boundsY || ny < -boundsY) {
+          headingDeg = -headingDeg;
+          rad = headingDeg * Math.PI / 180;
+          dy = Math.sin(rad) * stepDist;
+          ny = y + dy;
+        }
+        x = nx;
+        y = ny;
+        var facingRight = Math.cos(rad) >= 0;
+        pufferDrift.style.transform = "translate(" + x.toFixed(1) + "px," + y.toFixed(1) + "px) scaleX(" + (facingRight ? 1 : -1) + ")";
+        setTimeout(step, 3200);
       })();
     })();
   }
@@ -1710,9 +1742,13 @@ function triggerTrip(sceneId, variant, eggId) {
       items[i].classList.toggle("found", isFound);
     }
   }
+  function allCurrentlyFound() {
+    return countFoundValid() === validEggIds().length;
+  }
   function toggleEggManually(id) {
     var found;
     try { found = JSON.parse(localStorage.getItem("foundEggs") || "[]"); } catch (e) { found = []; }
+    found = Array.from(new Set(found));
     var idx = found.indexOf(id);
     var nowFound;
     if (idx === -1) {
@@ -1730,7 +1766,7 @@ function triggerTrip(sceneId, variant, eggId) {
       } catch (e) {}
     }
     refreshChecklist();
-    if (nowFound && found.length === EGG_TOTAL) triggerCompletionTrip();
+    if (nowFound && allCurrentlyFound()) triggerCompletionTrip();
   }
   overlay.querySelectorAll("li[data-egg]").forEach(function (li) {
     li.addEventListener("click", function () { toggleEggManually(li.getAttribute("data-egg")); });

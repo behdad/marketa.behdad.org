@@ -1410,12 +1410,34 @@ function playTripMelody() {
     setTimeout(function () { ctx.close(); }, notes.length * noteDur * 1000 + 500);
   } catch (e) {}
 }
+function closestPufferVoice() {
+  try {
+    var el = document.querySelector(".puffer-fill");
+    var computed = getComputedStyle(el).fill;
+    var m = computed.match(/\d+/g);
+    var r = +m[0], g = +m[1], b = +m[2];
+    var pink = [198, 142, 149], blue = [127, 158, 192];
+    var dPink = Math.pow(r - pink[0], 2) + Math.pow(g - pink[1], 2) + Math.pow(b - pink[2], 2);
+    var dBlue = Math.pow(r - blue[0], 2) + Math.pow(g - blue[1], 2) + Math.pow(b - blue[2], 2);
+    return dPink <= dBlue ? "pink" : "blue";
+  } catch (e) {
+    return "pink";
+  }
+}
 function sayFishu() {
   try {
     if (!window.speechSynthesis) return;
+    var which = closestPufferVoice();
     var utter = new SpeechSynthesisUtterance("fishu");
     utter.rate = 0.85;
-    utter.pitch = 1.3;
+    utter.pitch = which === "pink" ? 0.75 : 1.5;
+    var voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
+    var wantFemale = which === "blue";
+    var pattern = wantFemale
+      ? /female|woman|samantha|victoria|zira|karen|susan|tessa/i
+      : /male|man|david|daniel|alex|fred|george/i;
+    var match = voices.filter(function (v) { return pattern.test(v.name); })[0];
+    if (match) utter.voice = match;
     window.speechSynthesis.speak(utter);
   } catch (e) {}
 }

@@ -116,6 +116,29 @@ footer{margin-top:3.2rem}
 @media (prefers-reduced-motion: reduce){
   .shaping-glitch{animation:none}
 }
+.fig-leaf-extra{display:none}
+#loft-guitar{cursor:pointer; transform-origin:110px 700px}
+#loft-guitar.strum{animation:guitar-wiggle .5s ease}
+@keyframes guitar-wiggle{
+  0%{transform:rotate(0)}
+  20%{transform:rotate(-4deg)}
+  40%{transform:rotate(3deg)}
+  60%{transform:rotate(-2deg)}
+  100%{transform:rotate(0)}
+}
+.music-note{
+  pointer-events:none; font-family:"Source Serif 4",serif;
+  animation:note-float 1.2s ease-out forwards;
+}
+@keyframes note-float{
+  0%{opacity:0; transform:translateY(0)}
+  15%{opacity:1}
+  100%{opacity:0; transform:translateY(-60px)}
+}
+@media (prefers-reduced-motion: reduce){
+  #loft-guitar.strum{animation:none}
+  .music-note{animation:none; opacity:0}
+}
 @media print{
   body::after{
     content:"printed this? how delightfully pre-digital of you.";
@@ -216,6 +239,7 @@ footer{margin-top:3.2rem}
 <line x1="560" y1="119" x2="560" y2="128" stroke="#4a453d" stroke-width="2"/>
 <rect x="557" y="128" width="6" height="5" fill="#4a453d"/>
 <circle cx="560" cy="139" r="6" fill="#f0c46a" stroke="#c99b45" stroke-width="1.5"/>
+<g id="loft-plant">
 <ellipse cx="583" cy="702" rx="36" ry="8" fill="#cfc9ba"/>
 <polygon points="560,700 606,700 599,657 567,657" fill="#b9855e" stroke="#96683f" stroke-width="2"/>
 <rect x="561" y="648" width="44" height="9" fill="#a97a4e"/>
@@ -226,6 +250,11 @@ footer{margin-top:3.2rem}
 <ellipse cx="556" cy="590" rx="14" ry="22" fill="#6f8f60" transform="rotate(-40 556 590)"/>
 <ellipse cx="598" cy="588" rx="14" ry="22" fill="#7c9a6d" transform="rotate(40 598 588)"/>
 <ellipse cx="577" cy="575" rx="13" ry="20" fill="#86a377"/>
+<ellipse class="fig-leaf-extra" data-visit="2" cx="541" cy="540" rx="10" ry="16" fill="#86a377" transform="rotate(-30 541 540)"/>
+<ellipse class="fig-leaf-extra" data-visit="3" cx="612" cy="562" rx="10" ry="15" fill="#6f8f60" transform="rotate(35 612 562)"/>
+<ellipse class="fig-leaf-extra" data-visit="4" cx="577" cy="502" rx="10" ry="14" fill="#7c9a6d"/>
+</g>
+<g id="loft-guitar">
 <ellipse cx="110" cy="700" rx="36" ry="7" fill="#cfc9ba"/>
 <polygon points="134,492 148,489 152,468 138,471" fill="#6b4e2e"/>
 <line x1="116" y1="610" x2="140" y2="488" stroke="#8a6a44" stroke-width="8" stroke-linecap="round"/>
@@ -234,6 +263,7 @@ footer{margin-top:3.2rem}
 <ellipse cx="104" cy="666" rx="27" ry="31" fill="#cf9f63" stroke="#9a7440" stroke-width="2"/>
 <circle cx="108" cy="642" r="7.5" fill="#6b4e2e"/>
 <rect x="94" y="676" width="22" height="5" fill="#7a5a34"/>
+</g>
 <ellipse cx="345" cy="860" rx="195" ry="13" fill="#cfc9b8"/>
 <polygon points="232,556 228,822 254,822 258,556" fill="#e9bfc4" stroke="#c98f96" stroke-width="2"/>
 <polygon points="268,556 272,822 298,822 294,556" fill="#e9bfc4" stroke="#c98f96" stroke-width="2"/>
@@ -703,6 +733,45 @@ var animateCapsSwap = (function () {
       setTimeout(function () { h1.classList.remove("shaping-glitch"); }, 2000);
     }
   });
+})();
+(function () {
+  var guitar = document.getElementById("loft-guitar");
+  if (!guitar) return;
+  var svg = guitar.ownerSVGElement;
+  var notes = ["♪", "♫", "♩"];
+  guitar.addEventListener("click", function () {
+    guitar.classList.remove("strum");
+    void guitar.offsetWidth;
+    guitar.classList.add("strum");
+    for (var i = 0; i < 3; i++) {
+      (function (i) {
+        setTimeout(function () {
+          var t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          t.setAttribute("x", 100 + i * 16);
+          t.setAttribute("y", 600 - i * 10);
+          t.setAttribute("font-size", "22");
+          t.setAttribute("fill", "#8e3a4a");
+          t.setAttribute("class", "music-note");
+          t.textContent = notes[i];
+          svg.appendChild(t);
+          setTimeout(function () { if (t.parentNode) t.remove(); }, 1300);
+        }, i * 120);
+      })(i);
+    }
+  });
+})();
+(function () {
+  var KEY = "visitCount";
+  var count = 1;
+  try {
+    count = parseInt(localStorage.getItem(KEY) || "0", 10) + 1;
+    localStorage.setItem(KEY, String(count));
+  } catch (e) {}
+  var leaves = document.querySelectorAll(".fig-leaf-extra");
+  for (var i = 0; i < leaves.length; i++) {
+    var need = parseInt(leaves[i].getAttribute("data-visit"), 10);
+    leaves[i].style.display = count >= need ? "" : "none";
+  }
 })();
 </script>
 </body>

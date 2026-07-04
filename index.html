@@ -105,6 +105,17 @@ footer{margin-top:3.2rem}
 .ipa{cursor:pointer}
 .ipa-secret{display:block; max-height:0; overflow:hidden; opacity:0; transition:opacity .3s ease}
 .ipa-secret.show{max-height:2rem; opacity:1; margin-top:.2rem}
+.shaping-glitch{
+  direction:rtl; unicode-bidi:bidi-override; font-variant-ligatures:none;
+  animation:glyph-wobble .15s ease-in-out infinite alternate;
+}
+@keyframes glyph-wobble{
+  from{letter-spacing:-2px; transform:skewX(0deg)}
+  to{letter-spacing:3px; transform:skewX(-3deg)}
+}
+@media (prefers-reduced-motion: reduce){
+  .shaping-glitch{animation:none}
+}
 @media print{
   body::after{
     content:"printed this? how delightfully pre-digital of you.";
@@ -121,11 +132,11 @@ footer{margin-top:3.2rem}
   </nav>
 
   <svg class="caps" viewBox="0 0 160 100" role="img" aria-label="A pink flat cap and a blue baker boy cap, crossed" data-aria-i="caps_aria" xmlns="http://www.w3.org/2000/svg">
-    <g transform="translate(62,52) rotate(-12)">
+    <g id="cap-pink" transform="translate(62,52) rotate(-12)">
       <path d="M-32 6 Q-26 -22 0 -24 Q26 -22 32 6 Q0 -2 -32 6 Z" fill="#d9a6a6" stroke="#b8888c" stroke-width="2"/>
       <path d="M-33 7 Q0 17 34 6 L27 15 Q0 22 -26 14 Z" fill="#c79598" stroke="#b8888c" stroke-width="1.5"/>
     </g>
-    <g transform="translate(98,60) rotate(12)">
+    <g id="cap-blue" transform="translate(98,60) rotate(12)">
       <path d="M-30 4 Q-25 -26 0 -28 Q25 -26 30 4 Q0 -6 -30 4 Z" fill="#6f94bd" stroke="#4a6b94" stroke-width="2"/>
       <path d="M-35 5 Q0 15 35 4 L29 12 Q0 19 -29 12 Z" fill="#4a6b94"/>
       <circle cx="0" cy="-26" r="3" fill="#4a6b94"/>
@@ -624,6 +635,68 @@ function eggBubble(anchor, text) {
   ipa.addEventListener("click", function () {
     var secret = ipa.querySelector(".ipa-secret");
     if (secret) secret.classList.toggle("show");
+  });
+})();
+var animateCapsSwap = (function () {
+  var g1 = document.getElementById("cap-pink");
+  var g2 = document.getElementById("cap-blue");
+  var orig = { g1: { x: 62, y: 52, r: -12 }, g2: { x: 98, y: 60, r: 12 } };
+  var flipped = { g1: { x: 98, y: 60, r: 12 }, g2: { x: 62, y: 52, r: -12 } };
+  var reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  return function animateCapsSwap(toSwapped) {
+    if (!g1 || !g2) return;
+    var from = toSwapped ? orig : flipped;
+    var to = toSwapped ? flipped : orig;
+    var dur = reducedMotion ? 1 : 600;
+    var t0 = null;
+    function step(ts) {
+      if (!t0) t0 = ts;
+      var t = Math.min(1, (ts - t0) / dur);
+      var e = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+      ["g1", "g2"].forEach(function (key) {
+        var el = key === "g1" ? g1 : g2;
+        var a = from[key], b = to[key];
+        var x = a.x + (b.x - a.x) * e;
+        var y = a.y + (b.y - a.y) * e;
+        var r = a.r + (b.r - a.r) * e;
+        el.setAttribute("transform", "translate(" + x + "," + y + ") rotate(" + r + ")");
+      });
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  };
+})();
+(function () {
+  var caps = document.querySelector(".caps");
+  if (!caps) return;
+  var pressTimer = null;
+  function startPress() {
+    pressTimer = setTimeout(function () {
+      animateCapsSwap(true);
+      setTimeout(function () { animateCapsSwap(false); }, 1500);
+    }, 550);
+  }
+  function cancelPress() { clearTimeout(pressTimer); }
+  caps.addEventListener("pointerdown", startPress);
+  caps.addEventListener("pointerup", cancelPress);
+  caps.addEventListener("pointerleave", cancelPress);
+  caps.addEventListener("pointercancel", cancelPress);
+})();
+(function () {
+  var buffer = "";
+  var target = "harfbuzz";
+  document.addEventListener("keydown", function (e) {
+    if (!e.key || e.key.length !== 1) return;
+    buffer = (buffer + e.key.toLowerCase()).slice(-target.length);
+    if (buffer === target) {
+      buffer = "";
+      var h1 = document.querySelector("h1");
+      if (!h1) return;
+      console.log("%cthis is what your text looks like without a real shaping engine.", "font-style:italic");
+      console.log("— HarfBuzz has entered the chat. Restoring order shortly.");
+      h1.classList.add("shaping-glitch");
+      setTimeout(function () { h1.classList.remove("shaping-glitch"); }, 2000);
+    }
   });
 })();
 </script>

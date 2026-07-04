@@ -174,6 +174,9 @@ footer{margin-top:2.6rem}
 }
 .party-send:hover{background:#a5495a}
 .party-send svg{flex-shrink:0}
+@media (max-width:759px){
+  .party-gmail{display:none}
+}
 .party-close{
   position:absolute; top:.6rem; right:.75rem; background:none; border:none;
   font-size:1.5rem; line-height:1; cursor:pointer; color:var(--soft);
@@ -1140,7 +1143,8 @@ var T = {
     molly_jokes: [
       "Everything is warm now. Even the CSS.",
       "This hug was scientifically inevitable.",
-      "The disco ball takes no responsibility for what happens next."
+      "The disco ball takes no responsibility for what happens next.",
+      "Listen to the butterfly. Don’t listen to me."
     ],
     ipa_secret: "psst — “yes” in a few more of her languages: ano (cs) · oui (fr) · sim (pt) · sí (es) · بله (fa) · ja (de) · sì (it)",
     clapper_text: "Behdad & Markéta’s first collaboration was a short film, <em>Identity</em>. Their second was a loft concert for her birthday. This wedding is technically their third production.",
@@ -1245,7 +1249,8 @@ var T = {
     molly_jokes: [
       "Teď je všechno teplé. I to CSS.",
       "Objetí bylo vědecky nevyhnutelné.",
-      "Diskokoule za nic nemůže."
+      "Diskokoule za nic nemůže.",
+      "Poslouchej motýla. Mě neposlouchej."
     ],
     ipa_secret: "pst — „ano“ v pár dalších jejích jazycích: yes (en) · oui (fr) · sim (pt) · sí (es) · بله (fa) · ja (de) · sì (it)",
     clapper_text: "První společnou spoluprací Behdada a Markéty byl krátký film <em>Identity</em>. Druhou byl koncert v loftu k jejím narozeninám. Tahle svatba je technicky jejich třetí produkce.",
@@ -1762,10 +1767,10 @@ function pufferColorRatio() {
     return 0;
   }
 }
-function speakFishuWithVoices(voices) {
+function speakFishuWithVoices(voices, phrase) {
   try {
     var t = pufferColorRatio();
-    var utter = new SpeechSynthesisUtterance("fishu");
+    var utter = new SpeechSynthesisUtterance(phrase || "fishu");
     utter.rate = 0.85;
     utter.pitch = 0.75 + t * 0.75;
     var wantFemale = t >= 0.5;
@@ -1778,19 +1783,19 @@ function speakFishuWithVoices(voices) {
     window.speechSynthesis.speak(utter);
   } catch (e) {}
 }
-function sayFishu() {
+function sayFishu(phrase) {
   try {
     if (!window.speechSynthesis) return;
     var voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
     if (voices.length) {
-      speakFishuWithVoices(voices);
+      speakFishuWithVoices(voices, phrase);
     } else if (window.speechSynthesis.addEventListener) {
       window.speechSynthesis.addEventListener("voiceschanged", function once() {
         window.speechSynthesis.removeEventListener("voiceschanged", once);
-        speakFishuWithVoices(window.speechSynthesis.getVoices());
+        speakFishuWithVoices(window.speechSynthesis.getVoices(), phrase);
       });
     } else {
-      speakFishuWithVoices([]);
+      speakFishuWithVoices([], phrase);
     }
   } catch (e) {}
 }
@@ -2005,8 +2010,18 @@ function spawnButterflies(svg, cx, cy) {
     }, 900);
   });
   var puffer = document.getElementById("garden-puffer-wrap");
+  var pufferClickTimer = null;
   if (puffer) puffer.addEventListener("click", function () {
-    sayFishu();
+    clearTimeout(pufferClickTimer);
+    pufferClickTimer = setTimeout(function () {
+      sayFishu();
+      markFound("fish");
+    }, 260);
+  });
+  if (puffer) puffer.addEventListener("dblclick", function () {
+    clearTimeout(pufferClickTimer);
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    sayFishu("fish fishu");
     markFound("fish");
   });
 })();

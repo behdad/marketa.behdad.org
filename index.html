@@ -110,12 +110,14 @@ footer{margin-top:2.6rem}
 #egg-cheatsheet.show{display:flex}
 #egg-cheatsheet .panel{
   position:relative; background:rgba(255,253,248,.8); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); color:var(--ink); border-radius:10px;
-  max-width:480px; width:100%; max-height:80vh; overflow:auto;
+  max-width:480px; width:100%; max-height:92vh; overflow:auto;
   padding:1.75rem 1.9rem; box-shadow:0 10px 40px rgba(0,0,0,.3);
+  scrollbar-width:none;
 }
-#egg-cheatsheet h2{font-family:"Fraunces",serif; font-weight:500; font-size:1.3rem; margin:0 0 .9rem}
+#egg-cheatsheet .panel::-webkit-scrollbar{display:none}
+#egg-cheatsheet h2{font-family:"Fraunces",serif; font-weight:500; font-size:1.3rem; margin:0 0 .7rem}
 #egg-cheatsheet ol{margin:0; padding-left:1.3rem}
-#egg-cheatsheet li{margin-bottom:.55rem; font-size:.92rem; line-height:1.5; cursor:pointer}
+#egg-cheatsheet li{margin-bottom:.35rem; font-size:.92rem; line-height:1.3; cursor:pointer}
 #egg-cheatsheet li:hover{color:var(--wine)}
 #egg-cheatsheet li.found{color:var(--soft)}
 #egg-cheatsheet li.found::after{content:" ✓"; color:var(--wine); font-weight:bold}
@@ -484,6 +486,7 @@ body.completion-trip{animation:completion-spin 7s linear}
   100%{opacity:0}
 }
 #garden-sun{cursor:pointer}
+#loft-plant{cursor:pointer}
 @media (prefers-reduced-motion: reduce){
   .snowflake{animation:none}
   .cloud{animation:none}
@@ -544,6 +547,7 @@ body.completion-trip{animation:completion-spin 7s linear}
         <li data-egg="loved" data-i="cheat_loved">Click “All” in the welcome line</li>
         <li data-egg="fish" data-i="cheat_fish">Find the puffer fish hiding in the garden sky</li>
         <li data-egg="harfbuzz" data-i="cheat_harfbuzz">Type “harfbuzz” anywhere on the page</li>
+        <li data-egg="plant" data-i="cheat_plant">Click the fig plant in the loft scene</li>
       </ol>
     </div>
   </div>
@@ -1181,6 +1185,7 @@ var T = {
     cheat_loved: "Click “All” in the welcome line",
     cheat_fish: "Find the puffer fish hiding in the garden sky",
     cheat_harfbuzz: "Type “harfbuzz” anywhere on the page",
+    cheat_plant: "Click the fig plant in the loft scene",
     close_aria: "Close",
     reset_aria: "Reset progress",
     reset_confirm: "Reset your found-eggs progress?",
@@ -1287,6 +1292,7 @@ var T = {
     cheat_loved: "Klikni na „všichni“ v uvítacím řádku",
     cheat_fish: "Najdi nafukovací rybu schovanou v zahradní obloze",
     cheat_harfbuzz: "Napiš „harfbuzz“ kamkoli na stránce",
+    cheat_plant: "Klikni na fíkus v loftové scéně",
     close_aria: "Zavřít",
     reset_aria: "Resetovat postup",
     reset_confirm: "Opravdu chceš resetovat svůj postup?",
@@ -1434,7 +1440,7 @@ function eggToast(text, duration) {
     setTimeout(function () { if (t.parentNode) t.remove(); }, 300);
   }, duration || 2600);
 }
-var EGG_TOTAL = 18;
+var EGG_TOTAL = 19;
 function validEggIds() {
   return Array.prototype.map.call(document.querySelectorAll("#egg-cheatsheet li[data-egg]"), function (li) {
     return li.getAttribute("data-egg");
@@ -2100,10 +2106,19 @@ function spawnButterflies(svg, cx, cy) {
   var period = max * 2;
   var m = count % period;
   var shown = m <= max ? m : period - m;
-  for (var i = 0; i < leaves.length; i++) {
-    var rank = parseInt(leaves[i].getAttribute("data-rank"), 10);
-    leaves[i].style.display = rank <= shown ? "inline" : "none";
+  function render() {
+    for (var i = 0; i < leaves.length; i++) {
+      var rank = parseInt(leaves[i].getAttribute("data-rank"), 10);
+      leaves[i].style.display = rank <= shown ? "inline" : "none";
+    }
   }
+  render();
+  var plant = document.getElementById("loft-plant");
+  if (plant) plant.addEventListener("click", function () {
+    shown = shown >= max ? 0 : shown + 1;
+    render();
+    markFound("plant");
+  });
 })();
 (function () {
   function shake(el) {

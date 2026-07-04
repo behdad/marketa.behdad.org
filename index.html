@@ -166,11 +166,14 @@ footer{margin-top:2.6rem}
   border-radius:6px; background:var(--cream); color:var(--ink);
 }
 #party-form input:focus{outline:2px solid var(--wine); outline-offset:1px}
+.party-actions{display:flex; gap:.6rem; margin-top:1.2rem}
 .party-send{
-  margin-top:1.2rem; font:inherit; font-size:.95rem; padding:.6rem 1rem;
+  flex:1; display:flex; align-items:center; justify-content:center; gap:.45rem;
+  font:inherit; font-size:.88rem; padding:.6rem .7rem;
   background:var(--wine); color:var(--paper); border:none; border-radius:20px; cursor:pointer;
 }
 .party-send:hover{background:#a5495a}
+.party-send svg{flex-shrink:0}
 .party-close{
   position:absolute; top:.6rem; right:.75rem; background:none; border:none;
   font-size:1.5rem; line-height:1; cursor:pointer; color:var(--soft);
@@ -580,7 +583,16 @@ body.completion-trip{animation:completion-spin 7s linear}
       <form id="party-form">
         <label for="party-poison" data-i="party_poison_label">What’s your poison? Let us know!</label>
         <input type="text" id="party-poison" name="party-poison">
-        <button type="submit" class="party-send" data-i="party_send">Send</button>
+        <div class="party-actions">
+          <button type="button" class="party-send party-gmail" data-title-i="party_send_gmail_title" title="Opens a pre-filled email in Gmail, in a new tab">
+            <svg width="15" height="12" viewBox="0 0 20 16" aria-hidden="true"><rect x="1" y="1" width="18" height="14" rx="2" fill="#ffffff" stroke="#d6d0c0" stroke-width="1"/><path d="M1 2l9 7 9-7" fill="none" stroke="#c9483c" stroke-width="1.6"/><path d="M1 2v11l7-6z" fill="#4a6b94"/><path d="M19 2v11l-7-6z" fill="#7f9ec0"/></svg>
+            <span data-i="party_send_gmail">Open in Gmail</span>
+          </button>
+          <button type="button" class="party-send party-mail" data-title-i="party_send_mail_title" title="Opens a pre-filled email in your default mail app">
+            <svg width="15" height="12" viewBox="0 0 20 16" aria-hidden="true"><rect x="1" y="1" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M2 2l8 7 8-7" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+            <span data-i="party_send_mail">Email app</span>
+          </button>
+        </div>
       </form>
     </div>
   </div>
@@ -1161,7 +1173,10 @@ var T = {
     party_title: "you found it all! 🎉",
     party_sub: "Mind sharing a little something with us?",
     party_poison_label: "What’s your poison? Let us know!",
-    party_send: "Send",
+    party_send_gmail: "Open in Gmail",
+    party_send_gmail_title: "Opens a pre-filled email in Gmail, in a new tab",
+    party_send_mail: "Email app",
+    party_send_mail_title: "Opens a pre-filled email in your default mail app",
     discover_hint: "psst — there’s more here than meets the eye.",
     book_text: "Her translations (French → Czech): <em>Vetřelec</em> by Jean-Luc Nancy, <em>Kde to jsem?</em> by Bruno Latour (yes, that Latour), and <em>Dekoloniální feminismus</em> by Françoise Vergès.",
     egg_more: "🎉 {n} more to go",
@@ -1262,7 +1277,10 @@ var T = {
     party_title: "Podařilo se ti najít úplně všechno! 🎉",
     party_sub: "Nevadilo by ti se s námi podělit o maličkost?",
     party_poison_label: "Jaký je tvůj oblíbený „jed“? Dej nám vědět!",
-    party_send: "Odeslat",
+    party_send_gmail: "Otevřít v Gmailu",
+    party_send_gmail_title: "Otevře e-mail předvyplněný v Gmailu, na nové kartě",
+    party_send_mail: "E-mailová aplikace",
+    party_send_mail_title: "Otevře e-mail předvyplněný ve tvé výchozí e-mailové aplikaci",
     discover_hint: "pst — tahle stránka skrývá víc, než se na první pohled zdá.",
     book_text: "Její překlady (francouzština → čeština): <em>Vetřelec</em> od Jeana-Luca Nancyho, <em>Kde to jsem?</em> od Bruna Latoura (ano, ten Latour), a <em>Dekoloniální feminismus</em> od Françoise Vergès.",
     egg_more: "🎉 ještě jich zbývá {n}",
@@ -2221,14 +2239,26 @@ window.openPartyForm = openPartyForm;
     if (e.target === overlay) close();
   });
   if (closeBtn) closeBtn.addEventListener("click", close);
-  if (form) form.addEventListener("submit", function (e) {
-    e.preventDefault();
+  var gmailBtn = overlay.querySelector(".party-gmail");
+  var mailBtn = overlay.querySelector(".party-mail");
+  function poisonSubjectAndBody() {
     var poison = (document.getElementById("party-poison") || {}).value || "";
-    var subject = encodeURIComponent("What's your poison? 👋");
-    var body = encodeURIComponent("Poison of choice: " + poison + "\n\n...");
-    window.location.href = "mailto:marketa@behdad.org?subject=" + subject + "&body=" + body;
+    return {
+      subject: encodeURIComponent("What's your poison? 👋"),
+      body: encodeURIComponent("Poison of choice: " + poison + "\n\n...")
+    };
+  }
+  if (gmailBtn) gmailBtn.addEventListener("click", function () {
+    var sb = poisonSubjectAndBody();
+    window.open("https://mail.google.com/mail/?view=cm&fs=1&to=marketa@behdad.org&su=" + sb.subject + "&body=" + sb.body, "_blank");
     close();
   });
+  if (mailBtn) mailBtn.addEventListener("click", function () {
+    var sb = poisonSubjectAndBody();
+    window.location.href = "mailto:marketa@behdad.org?subject=" + sb.subject + "&body=" + sb.body;
+    close();
+  });
+  if (form) form.addEventListener("submit", function (e) { e.preventDefault(); });
 })();
 window.addEventListener("beforeprint", function () { markFound("print"); });
 </script>

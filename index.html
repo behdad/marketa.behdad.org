@@ -120,6 +120,13 @@ footer{margin-top:3.2rem}
   font-size:1.5rem; line-height:1; cursor:pointer; color:var(--soft);
 }
 .egg-close:hover{color:var(--wine)}
+.egg-toast{
+  position:fixed; left:50%; bottom:24px; z-index:50; pointer-events:none; white-space:nowrap;
+  background:var(--ink); color:var(--paper); font-family:"Source Serif 4",serif; font-size:.85rem;
+  padding:.6rem 1.1rem; border-radius:20px; box-shadow:0 4px 14px rgba(0,0,0,.25);
+  opacity:0; transform:translateX(-50%) translateY(20px); transition:opacity .3s ease, transform .3s ease;
+}
+.egg-toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
 .inf{cursor:pointer}
 .inf.hint{animation:inf-pulse 1.4s ease-in-out 2}
 @keyframes inf-pulse{
@@ -609,7 +616,9 @@ var T = {
     ipa_secret: "psst — “yes” in a few more of her languages: ano (cs) · oui (fr) · sim (pt) · sí (es) · بله (fa) · ja (de) · sì (it)",
     clapper_text: "Behdad & Markéta’s first collaboration was a short film, <em>Identity</em>. Their second was a loft concert for her birthday. This wedding is technically their third production.",
     lang_note_text: "translator’s note: “small or big” doesn’t survive translation gracefully in any of her other languages either.",
-    book_text: "Her translations (French → Czech): <em>Vetřelec</em> by Jean-Luc Nancy, <em>Kde to jsem?</em> by Bruno Latour (yes, that Latour), and <em>Dekoloniální feminismus</em> by Françoise Vergès."
+    book_text: "Her translations (French → Czech): <em>Vetřelec</em> by Jean-Luc Nancy, <em>Kde to jsem?</em> by Bruno Latour (yes, that Latour), and <em>Dekoloniální feminismus</em> by Françoise Vergès.",
+    egg_more: "{n} more to go",
+    egg_done: "You found every hidden thing on this page. ∞"
   },
   cs: {
     tagline: "Bereme se. Poznamenejte si data \u2014<br>p\u0159ij\u010fte na jednu oslavu, nebo na ob\u011b.",
@@ -635,7 +644,9 @@ var T = {
     ipa_secret: "pst \u2014 \u201eano\u201c v p\u00e1r dal\u0161\u00edch jej\u00edch jazyc\u00edch: yes (en) \u00b7 oui (fr) \u00b7 sim (pt) \u00b7 s\u00ed (es) \u00b7 \u0628\u0644\u0647 (fa) \u00b7 ja (de) \u00b7 s\u00ec (it)",
     clapper_text: "Prvn\u00ed spole\u010dnou spoluprac\u00ed Behdada a Mark\u00e9ty byl kr\u00e1tk\u00fd film <em>Identity</em>. Druhou byl koncert v loftu k jej\u00edm narozenin\u00e1m. Tahle svatba je technicky jejich t\u0159et\u00ed produkce.",
     lang_note_text: "pozn\u00e1mka p\u0159ekladatelky: \u201emal\u00ed i velc\u00ed\u201c se do \u017e\u00e1dn\u00e9ho z jej\u00edch dal\u0161\u00edch jazyk\u016f nep\u0159ekl\u00e1d\u00e1 o nic elegantn\u011bji.",
-    book_text: "Jej\u00ed p\u0159eklady (francouz\u0161tina \u2192 \u010de\u0161tina): <em>Vet\u0159elec</em> od Jeana-Luca Nancyho, <em>Kde to jsem?</em> od Bruna Latoura (ano, ten Latour), a <em>Dekoloni\u00e1ln\u00ed feminismus</em> od Fran\u00e7oise Verg\u00e8s."
+    book_text: "Jej\u00ed p\u0159eklady (francouz\u0161tina \u2192 \u010de\u0161tina): <em>Vet\u0159elec</em> od Jeana-Luca Nancyho, <em>Kde to jsem?</em> od Bruna Latoura (ano, ten Latour), a <em>Dekoloni\u00e1ln\u00ed feminismus</em> od Fran\u00e7oise Verg\u00e8s.",
+    egg_more: "je\u0161t\u011b jich zb\u00fdv\u00e1 {n}",
+    egg_done: "Na\u0161li jste \u00fapln\u011b v\u0161echno, co se na t\u00e9hle str\u00e1nce d\u00e1 naj\u00edt. \u221e"
   }
 };
 function setLang(l) {
@@ -721,6 +732,36 @@ function eggBubble(anchor, text) {
   }, 7000);
   return b;
 }
+function eggToast(text) {
+  var old = document.querySelector(".egg-toast");
+  if (old) old.remove();
+  var t = document.createElement("div");
+  t.className = "egg-toast";
+  t.textContent = text;
+  document.body.appendChild(t);
+  requestAnimationFrame(function () { t.classList.add("show"); });
+  setTimeout(function () {
+    t.classList.remove("show");
+    setTimeout(function () { if (t.parentNode) t.remove(); }, 300);
+  }, 2600);
+}
+var EGG_TOTAL = 12;
+function markFound(id) {
+  var KEY = "foundEggs";
+  var found;
+  try { found = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) { found = []; }
+  if (found.indexOf(id) !== -1) return;
+  found.push(id);
+  try { localStorage.setItem(KEY, JSON.stringify(found)); } catch (e) {}
+  var lang = document.documentElement.lang;
+  var remaining = EGG_TOTAL - found.length;
+  if (remaining > 0) {
+    var tmpl = (T[lang] && T[lang].egg_more) || T.en.egg_more;
+    eggToast(tmpl.replace("{n}", remaining));
+  } else {
+    eggToast((T[lang] && T[lang].egg_done) || T.en.egg_done);
+  }
+}
 (function () {
   var amp = document.querySelector(".amp");
   if (!amp) return;
@@ -729,6 +770,7 @@ function eggBubble(anchor, text) {
   function swap(on) {
     if (on === swapped) return;
     swapped = on;
+    if (on) markFound("amp");
     amp.style.transition = "opacity .2s ease";
     amp.style.opacity = 0;
     setTimeout(function () {
@@ -749,6 +791,7 @@ function eggBubble(anchor, text) {
       var jokes = (T[lang] && T[lang].inf_jokes) || T.en.inf_jokes;
       eggBubble(this, jokes[idx % jokes.length]);
       idx++;
+      markFound("inf");
     });
   }
 })();
@@ -758,6 +801,7 @@ function eggBubble(anchor, text) {
     var key = el.getAttribute("data-note-key") || "footnote_text";
     var text = (T[lang] && T[lang][key]) || (T.en && T.en[key]);
     if (text) eggBubble(el, text);
+    markFound(key === "lang_note_text" ? "langnote" : "footnote");
   }
   document.addEventListener("click", function (e) {
     if (e.target.classList.contains("footnote-mark")) showFootnote(e.target);
@@ -776,6 +820,7 @@ function eggBubble(anchor, text) {
     var lang = document.documentElement.lang;
     var text = (T[lang] && T[lang].clapper_text) || T.en.clapper_text;
     eggBubble(clapper, text);
+    markFound("clapper");
   });
 })();
 (function () {
@@ -785,6 +830,7 @@ function eggBubble(anchor, text) {
     var lang = document.documentElement.lang;
     var text = (T[lang] && T[lang].book_text) || T.en.book_text;
     eggBubble(book, text);
+    markFound("book");
   });
 })();
 (function () {
@@ -793,6 +839,7 @@ function eggBubble(anchor, text) {
   ipa.addEventListener("click", function () {
     var secret = ipa.querySelector(".ipa-secret");
     if (secret) secret.classList.toggle("show");
+    markFound("ipa");
   });
 })();
 var animateCapsSwap = (function () {
@@ -831,6 +878,7 @@ var animateCapsSwap = (function () {
   function startPress() {
     pressTimer = setTimeout(function () {
       animateCapsSwap(true);
+      markFound("caps");
       setTimeout(function () { animateCapsSwap(false); }, 1500);
     }, 550);
   }
@@ -854,6 +902,7 @@ var animateCapsSwap = (function () {
       console.log("— HarfBuzz has entered the chat. Restoring order shortly.");
       h1.classList.add("shaping-glitch");
       setTimeout(function () { h1.classList.remove("shaping-glitch"); }, 2000);
+      markFound("harfbuzz");
     }
   });
 })();
@@ -890,6 +939,7 @@ function playGuitarPluck() {
   var svg = guitar.ownerSVGElement;
   var notes = ["♪", "♫", "♩"];
   guitar.addEventListener("click", function () {
+    markFound("guitar");
     var audio = document.getElementById("guitar-audio");
     var played = false;
     if (audio) {
@@ -944,6 +994,7 @@ function playGuitarPluck() {
     el.classList.remove("shake");
     void el.offsetWidth;
     el.classList.add("shake");
+    markFound("head");
   }
   var ids = ["loft-behdad-head", "loft-marketa-head", "garden-behdad-head", "garden-marketa-head"];
   ids.forEach(function (id) {
@@ -979,6 +1030,7 @@ function playGuitarPluck() {
   var closeBtn = overlay.querySelector(".egg-close");
   if (closeBtn) closeBtn.addEventListener("click", close);
 })();
+window.addEventListener("beforeprint", function () { markFound("print"); });
 </script>
 </body>
 </html>

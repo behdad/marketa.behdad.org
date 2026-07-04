@@ -823,6 +823,7 @@ var T = {
     wink_text: "the plural in “loved ones” is doing some quiet extra work in that sentence.",
     map_title: "how we got here",
     map_caption: "Two long paths, one shared address.",
+    discover_hint: "psst — there’s more here than meets the eye.",
     book_text: "Her translations (French → Czech): <em>Vetřelec</em> by Jean-Luc Nancy, <em>Kde to jsem?</em> by Bruno Latour (yes, that Latour), and <em>Dekoloniální feminismus</em> by Françoise Vergès.",
     egg_more: "🎉 {n} more to go",
     egg_done: "🥳 You found every hidden thing on this page. ∞",
@@ -861,6 +862,7 @@ var T = {
     wink_text: "mno\u017en\u00e9 \u010d\u00edslo ve slov\u011b \u201ebl\u00edzc\u00ed\u201c v t\u00e9 v\u011bt\u011b odv\u00e1d\u00ed trochu tich\u00e9 pr\u00e1ce nav\u00edc.",
     map_title: "jak jsme se sem dostali",
     map_caption: "Dv\u011b dlouh\u00e9 cesty, jedna spole\u010dn\u00e1 adresa.",
+    discover_hint: "pst \u2014 tahle str\u00e1nka skr\u00fdv\u00e1 v\u00edc, ne\u017e se na prvn\u00ed pohled zd\u00e1.",
     book_text: "Jej\u00ed p\u0159eklady (francouz\u0161tina \u2192 \u010de\u0161tina): <em>Vet\u0159elec</em> od Jeana-Luca Nancyho, <em>Kde to jsem?</em> od Bruna Latoura (ano, ten Latour), a <em>Dekoloni\u00e1ln\u00ed feminismus</em> od Fran\u00e7oise Verg\u00e8s.",
     egg_more: "\ud83c\udf89 je\u0161t\u011b jich zb\u00fdv\u00e1 {n}",
     egg_done: "\ud83e\udd73 Na\u0161li jste \u00fapln\u011b v\u0161echno, co se na t\u00e9hle str\u00e1nce d\u00e1 naj\u00edt. \u221e",
@@ -1391,6 +1393,31 @@ function triggerTrip(sceneId) {
   var infs = document.querySelectorAll("#h-ed .inf, #h-pr .inf, .divider .inf");
   for (var i = 0; i < infs.length; i++) infs[i].classList.add("hint");
   try { localStorage.setItem(KEY, "1"); } catch (e) {}
+})();
+(function () {
+  var KEY = "seenDiscoverHint";
+  var seen = true;
+  try { seen = localStorage.getItem(KEY) === "1"; } catch (e) {}
+  if (seen) return;
+  var fired = false;
+  function fire() {
+    if (fired) return;
+    fired = true;
+    var lang = document.documentElement.lang;
+    var text = (T[lang] && T[lang].discover_hint) || T.en.discover_hint;
+    eggToast(text);
+    try { localStorage.setItem(KEY, "1"); } catch (e) {}
+    window.removeEventListener("scroll", cancel);
+    document.removeEventListener("click", cancel);
+  }
+  function cancel() {
+    clearTimeout(timer);
+    window.removeEventListener("scroll", cancel);
+    document.removeEventListener("click", cancel);
+  }
+  var timer = setTimeout(fire, 5000);
+  window.addEventListener("scroll", cancel, { once: true, passive: true });
+  document.addEventListener("click", cancel, { once: true });
 })();
 (function () {
   var overlay = document.getElementById("egg-cheatsheet");

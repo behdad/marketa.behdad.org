@@ -189,6 +189,16 @@ footer{margin-top:3.2rem}
 #loft-clapper{cursor:pointer}
 #garden-book{cursor:pointer}
 #garden-rabbit{cursor:pointer}
+#garden-camera{cursor:pointer}
+#garden-flash{opacity:0}
+#garden-flash.flash{animation:camera-flash .4s ease-out}
+@keyframes camera-flash{
+  0%{opacity:.85}
+  100%{opacity:0}
+}
+@media (prefers-reduced-motion: reduce){
+  #garden-flash.flash{animation:none}
+}
 #loft-guitar.strum{animation:guitar-wiggle .5s ease}
 @keyframes guitar-wiggle{
   0%{transform:rotate(0)}
@@ -473,7 +483,7 @@ footer{margin-top:3.2rem}
       <h2 id="h-pr"><span class="inf b">∞</span> <span data-i="pr_city">Prague</span></h2>
       <time class="date" datetime="2027-07-10" data-i="pr_date">July 10, 2027</time>
     </div>
-    <svg class="scene" viewBox="0 0 680 920" role="img" aria-label="The two of us holding hands in a summerhouse garden" data-aria-i="garden_aria" xmlns="http://www.w3.org/2000/svg">
+    <svg id="garden-scene-svg" class="scene" viewBox="0 0 680 920" role="img" aria-label="The two of us holding hands in a summerhouse garden" data-aria-i="garden_aria" xmlns="http://www.w3.org/2000/svg">
 <rect x="0" y="0" width="680" height="920" rx="14" fill="#f8f5ec"/>
 <ellipse cx="340" cy="240" rx="250" ry="140" fill="#f4f0da"/>
 <ellipse cx="88" cy="470" rx="110" ry="165" fill="#e6edd2"/>
@@ -500,7 +510,7 @@ footer{margin-top:3.2rem}
 <ellipse cx="612" cy="552" rx="5" ry="10" fill="#c4b98a"/>
 <ellipse cx="640" cy="582" rx="4" ry="9" fill="#c4b98a"/>
 <path d="M56 790 q4 -22 9 0 M70 792 q4 -18 8 0 M604 796 q4 -20 8 0 M620 798 q4 -16 8 0" fill="none" stroke="#9db77c" stroke-width="2" stroke-linecap="round"/>
-<g transform="translate(598,748) rotate(8)">
+<g id="garden-camera" transform="translate(598,748) rotate(8)">
 <rect x="4" y="0" width="10" height="8" rx="1" fill="#453a31" stroke="#2b241d" stroke-width="1"/>
 <rect x="0" y="8" width="34" height="22" rx="3" fill="#453a31" stroke="#2b241d" stroke-width="1.5"/>
 <circle cx="17" cy="19" r="9" fill="#2b241d" stroke="#151210" stroke-width="1.5"/>
@@ -608,6 +618,7 @@ footer{margin-top:3.2rem}
 <line x1="25" y1="16" x2="36" y2="14" stroke="#c2b696" stroke-width="0.8"/>
 <line x1="25" y1="21" x2="36" y2="19" stroke="#c2b696" stroke-width="0.8"/>
 </g>
+<rect id="garden-flash" x="0" y="0" width="680" height="920" rx="14" fill="#ffffff" opacity="0" pointer-events="none"/>
     </svg>
     <p class="desc" data-i="pr_desc">A garden party: dinner, music,<br class="brk-sm"> dancing, afterparty.</p>
   </section>
@@ -655,7 +666,8 @@ var T = {
     lang_note_text: "translator’s note: “small or big” doesn’t survive translation gracefully in any of her other languages either.",
     book_text: "Her translations (French → Czech): <em>Vetřelec</em> by Jean-Luc Nancy, <em>Kde to jsem?</em> by Bruno Latour (yes, that Latour), and <em>Dekoloniální feminismus</em> by Françoise Vergès.",
     egg_more: "🎉 {n} more to go",
-    egg_done: "🥳 You found every hidden thing on this page. ∞"
+    egg_done: "🥳 You found every hidden thing on this page. ∞",
+    link_copied: "Link copied!"
   },
   cs: {
     tagline: "Bereme se. Poznamenejte si data \u2014<br>p\u0159ij\u010fte na jednu oslavu, nebo na ob\u011b.",
@@ -683,7 +695,8 @@ var T = {
     lang_note_text: "pozn\u00e1mka p\u0159ekladatelky: \u201emal\u00ed i velc\u00ed\u201c se do \u017e\u00e1dn\u00e9ho z jej\u00edch dal\u0161\u00edch jazyk\u016f nep\u0159ekl\u00e1d\u00e1 o nic elegantn\u011bji.",
     book_text: "Jej\u00ed p\u0159eklady (francouz\u0161tina \u2192 \u010de\u0161tina): <em>Vet\u0159elec</em> od Jeana-Luca Nancyho, <em>Kde to jsem?</em> od Bruna Latoura (ano, ten Latour), a <em>Dekoloni\u00e1ln\u00ed feminismus</em> od Fran\u00e7oise Verg\u00e8s.",
     egg_more: "\ud83c\udf89 je\u0161t\u011b jich zb\u00fdv\u00e1 {n}",
-    egg_done: "\ud83e\udd73 Na\u0161li jste \u00fapln\u011b v\u0161echno, co se na t\u00e9hle str\u00e1nce d\u00e1 naj\u00edt. \u221e"
+    egg_done: "\ud83e\udd73 Na\u0161li jste \u00fapln\u011b v\u0161echno, co se na t\u00e9hle str\u00e1nce d\u00e1 naj\u00edt. \u221e",
+    link_copied: "Odkaz zkop\u00edrov\u00e1n!"
   }
 };
 function setLang(l) {
@@ -993,6 +1006,76 @@ function playGuitarPluck() {
     setTimeout(function () { ctx.close(); }, 1600);
   } catch (e) {}
 }
+function playShutterSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    [0, 0.09].forEach(function (t0) {
+      var t = ctx.currentTime + t0;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = "square";
+      osc.frequency.value = 1200;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.13, t + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.05);
+    });
+    setTimeout(function () { ctx.close(); }, 400);
+  } catch (e) {}
+}
+function copyLinkToClipboard() {
+  var url = location.href;
+  var lang = document.documentElement.lang;
+  var msg = (T[lang] && T[lang].link_copied) || T.en.link_copied;
+  var announced = false;
+  function done() {
+    if (announced) return;
+    announced = true;
+    eggToast(msg);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(done).catch(function () {
+      fallbackCopy(url);
+      done();
+    });
+    setTimeout(done, 500);
+  } else {
+    fallbackCopy(url);
+    done();
+  }
+}
+function fallbackCopy(text) {
+  try {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  } catch (e) {}
+}
+(function () {
+  var camera = document.getElementById("garden-camera");
+  var flash = document.getElementById("garden-flash");
+  if (!camera) return;
+  camera.addEventListener("click", function () {
+    if (flash) {
+      flash.classList.remove("flash");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { flash.classList.add("flash"); });
+      });
+    }
+    playShutterSound();
+    setTimeout(copyLinkToClipboard, 350);
+  });
+})();
 (function () {
   var guitar = document.getElementById("loft-guitar");
   if (!guitar) return;

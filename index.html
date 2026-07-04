@@ -47,8 +47,8 @@ h2{font-size:1.45rem; margin:0}
 .inf{font-family:"Source Serif 4",serif}
 .inf.p{color:var(--wine)}
 .inf.b{color:var(--blue-deep)}
-.langs{display:flex; justify-content:flex-end; align-items:center; gap:.2rem; font-size:.85rem; padding-top:.25rem}
-.langs button{font:inherit; background:none; border:none; padding:.5rem .5rem; cursor:pointer; color:var(--soft)}
+.langs{display:flex; justify-content:flex-end; align-items:center; gap:.1rem; font-size:.85rem; padding-top:.25rem}
+.langs button{font:inherit; background:none; border:none; padding:.5rem .3rem; cursor:pointer; color:var(--soft)}
 .langs button[aria-pressed="true"]{color:var(--wine); text-decoration:underline}
 .langs .sep{color:var(--rule)}
 .caps{display:block; width:150px; margin:.9rem auto .2rem; transition:transform .3s ease}
@@ -655,7 +655,7 @@ body.completion-trip{animation:completion-spin 7s linear}
 <line x1="560" y1="119" x2="560" y2="128" stroke="#4a453d" stroke-width="2"/>
 <rect x="557" y="128" width="6" height="5" fill="#4a453d"/>
 <g id="loft-discoball" transform="translate(590,80)">
-<circle cx="0" cy="0" r="42" fill="transparent"/>
+<circle id="loft-discoball-hit" cx="0" cy="0" r="42" fill="transparent"/>
 <line x1="0" y1="-30" x2="0" y2="-20" stroke="#8a8a8a" stroke-width="1.5"/>
 <g class="disco-ball-spin">
 <g transform="scale(1.4)">
@@ -1306,7 +1306,7 @@ function setLang(l) {
   console.log("%c  => 15 glyphs, 1 ligature (&), 0 known bugs (as of today)", "font-family:monospace; color:#8a7a68");
   console.log("// 20 years of Unicode bugs, 1 ligature. — Behdad");
 })();
-function eggBubble(anchor, text) {
+function eggBubble(anchor, text, placement) {
   var old = document.querySelector(".egg-bubble");
   if (old) old.remove();
   var b = document.createElement("div");
@@ -1314,15 +1314,21 @@ function eggBubble(anchor, text) {
   b.innerHTML = text;
   document.body.appendChild(b);
   var r = anchor.getBoundingClientRect();
+  var bW = b.offsetWidth || 220;
   var bH = b.offsetHeight || 60;
-  var left = Math.max(8, Math.min(window.innerWidth - 228, r.left + r.width / 2 - 110));
-  var top;
-  if (r.bottom + 8 + bH <= window.innerHeight) {
-    top = r.bottom + 8;
-  } else if (r.top - 8 - bH >= 0) {
-    top = r.top - 8 - bH;
+  var left, top;
+  if (placement === "left") {
+    left = Math.max(8, r.left - bW - 10);
+    top = Math.max(8, Math.min(window.innerHeight - bH - 8, r.top));
   } else {
-    top = Math.max(8, window.innerHeight - bH - 8);
+    left = Math.max(8, Math.min(window.innerWidth - 228, r.left + r.width / 2 - 110));
+    if (r.bottom + 8 + bH <= window.innerHeight) {
+      top = r.bottom + 8;
+    } else if (r.top - 8 - bH >= 0) {
+      top = r.top - 8 - bH;
+    } else {
+      top = Math.max(8, window.innerHeight - bH - 8);
+    }
   }
   b.style.left = left + "px";
   b.style.top = top + "px";
@@ -1876,7 +1882,8 @@ function spawnHearts(svg, cx, cy) {
     setTimeout(function () {
       var lang = document.documentElement.lang;
       var jokes = (T[lang] && T[lang].molly_jokes) || T.en.molly_jokes;
-      eggBubble(discoball, jokes[mollyOrder[mollyIdx % mollyOrder.length]]);
+      var hit = document.getElementById("loft-discoball-hit") || discoball;
+      eggBubble(hit, jokes[mollyOrder[mollyIdx % mollyOrder.length]], "left");
       mollyIdx++;
     }, 900);
   });

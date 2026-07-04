@@ -473,11 +473,20 @@ body.completion-trip{animation:completion-spin 7s linear}
   88%{opacity:0.85}
   100%{opacity:0}
 }
+.rainbow.burst{animation:rainbow-burst 4s ease-in-out}
+@keyframes rainbow-burst{
+  0%{opacity:0}
+  20%{opacity:0.9}
+  80%{opacity:0.9}
+  100%{opacity:0}
+}
+#garden-sun{cursor:pointer}
 @media (prefers-reduced-motion: reduce){
   .snowflake{animation:none}
   .cloud{animation:none}
   .sun-glow{animation:none}
   .rainbow{animation:none}
+  .rainbow.burst{animation:none}
 }
 @media print{
   body::after{
@@ -597,7 +606,7 @@ body.completion-trip{animation:completion-spin 7s linear}
     </div>
   </div>
 
-  <svg class="caps" viewBox="0 0 160 100" role="img" aria-label="A pink flat cap and a blue baker boy cap, crossed" data-aria-i="caps_aria" xmlns="http://www.w3.org/2000/svg">
+  <svg class="caps" viewBox="20 15 130 72" role="img" aria-label="A pink flat cap and a blue baker boy cap, crossed" data-aria-i="caps_aria" xmlns="http://www.w3.org/2000/svg">
     <g id="cap-pink" transform="translate(62,52) rotate(-12)">
       <path d="M-32 6 Q-26 -22 0 -24 Q26 -22 32 6 Q0 -2 -32 6 Z" fill="#d9a6a6" stroke="#b8888c" stroke-width="2"/>
       <path d="M-33 7 Q0 17 34 6 L27 15 Q0 22 -26 14 Z" fill="#c79598" stroke="#b8888c" stroke-width="1.5"/>
@@ -1753,21 +1762,36 @@ function pufferColorRatio() {
     return 0;
   }
 }
-function sayFishu() {
+function speakFishuWithVoices(voices) {
   try {
-    if (!window.speechSynthesis) return;
     var t = pufferColorRatio();
     var utter = new SpeechSynthesisUtterance("fishu");
     utter.rate = 0.85;
     utter.pitch = 0.75 + t * 0.75;
-    var voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
     var wantFemale = t >= 0.5;
-    var pattern = wantFemale
-      ? /female|woman|samantha|victoria|zira|karen|susan|tessa/i
-      : /male|man|david|daniel|alex|fred|george/i;
-    var match = voices.filter(function (v) { return pattern.test(v.name); })[0];
+    var femalePattern = /female|woman|samantha|victoria|zira|karen|susan|tessa|moira|fiona|allison|ava|serena/i;
+    var malePattern = /male|man|david|daniel|alex|fred|george|thomas|oliver|aaron|gordon|arthur/i;
+    var pattern = wantFemale ? femalePattern : malePattern;
+    var antiPattern = wantFemale ? malePattern : femalePattern;
+    var match = voices.filter(function (v) { return pattern.test(v.name) && !antiPattern.test(v.name); })[0];
     if (match) utter.voice = match;
     window.speechSynthesis.speak(utter);
+  } catch (e) {}
+}
+function sayFishu() {
+  try {
+    if (!window.speechSynthesis) return;
+    var voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
+    if (voices.length) {
+      speakFishuWithVoices(voices);
+    } else if (window.speechSynthesis.addEventListener) {
+      window.speechSynthesis.addEventListener("voiceschanged", function once() {
+        window.speechSynthesis.removeEventListener("voiceschanged", once);
+        speakFishuWithVoices(window.speechSynthesis.getVoices());
+      });
+    } else {
+      speakFishuWithVoices([]);
+    }
   } catch (e) {}
 }
 function playShutterSound() {
@@ -1912,6 +1936,16 @@ function spawnButterflies(svg, cx, cy) {
     })(i);
   }
 }
+(function () {
+  var gardenSun = document.getElementById("garden-sun");
+  var gardenRainbow = document.getElementById("garden-rainbow");
+  if (gardenSun && gardenRainbow) gardenSun.addEventListener("click", function () {
+    gardenRainbow.classList.remove("burst");
+    void gardenRainbow.offsetWidth;
+    gardenRainbow.classList.add("burst");
+    setTimeout(function () { gardenRainbow.classList.remove("burst"); }, 4000);
+  });
+})();
 (function () {
   var mushroom = document.getElementById("garden-mushroom");
   var shroomIdx = 0;

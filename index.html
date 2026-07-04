@@ -741,12 +741,40 @@ var animateCapsSwap = (function () {
     }
   });
 })();
+function playGuitarPluck() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var freqs = [196.0, 246.94, 293.66, 392.0, 493.88];
+    freqs.forEach(function (freq, i) {
+      var t = ctx.currentTime + i * 0.035;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      var filter = ctx.createBiquadFilter();
+      osc.type = "triangle";
+      osc.frequency.value = freq;
+      filter.type = "lowpass";
+      filter.frequency.value = 2200;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.16, t + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 1);
+    });
+    setTimeout(function () { ctx.close(); }, 1600);
+  } catch (e) {}
+}
 (function () {
   var guitar = document.getElementById("loft-guitar");
   if (!guitar) return;
   var svg = guitar.ownerSVGElement;
   var notes = ["♪", "♫", "♩"];
   guitar.addEventListener("click", function () {
+    playGuitarPluck();
     guitar.classList.remove("strum");
     void guitar.offsetWidth;
     guitar.classList.add("strum");

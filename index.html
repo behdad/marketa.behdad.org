@@ -307,12 +307,17 @@ footer{margin-top:2.6rem}
   85%{opacity:.4}
   100%{opacity:0}
 }
-.scene.melt{filter:url(#melt-filter)}
+.scene.melt{filter:url(#melt-filter); animation:melt-whiteout 3s ease-in-out}
+@keyframes melt-whiteout{
+  0%{filter:url(#melt-filter) brightness(1) saturate(1)}
+  50%{filter:url(#melt-filter) brightness(2.4) saturate(.2)}
+  100%{filter:url(#melt-filter) brightness(1) saturate(1)}
+}
 .scene.molly{animation:molly-glow 7s ease-in-out}
 @keyframes molly-glow{
   0%{filter:saturate(1) brightness(1) sepia(0)}
-  30%{filter:saturate(1.6) brightness(1.16) sepia(.2) hue-rotate(-11deg)}
-  60%{filter:saturate(1.8) brightness(1.2) sepia(.24) hue-rotate(-13deg)}
+  30%{filter:saturate(1.8) brightness(1.22) sepia(.26) hue-rotate(-12deg)}
+  60%{filter:saturate(2.05) brightness(1.28) sepia(.32) hue-rotate(-14deg)}
   100%{filter:saturate(1) brightness(1) sepia(0)}
 }
 #loft-couple.cuddle{animation:couple-cuddle 7s ease-in-out}
@@ -322,6 +327,7 @@ footer{margin-top:2.6rem}
   60%{transform:rotate(1.5deg)}
 }
 .flying-heart{pointer-events:none}
+.flying-butterfly{pointer-events:none}
 #loft-discoball{cursor:pointer}
 .disco-ball-spin{transform-origin:0px 0px}
 #loft-discoball.spin .disco-ball-spin{animation:discoball-spin 7s linear}
@@ -391,7 +397,7 @@ body.completion-trip{animation:completion-spin 7s linear}
 }
 @media (prefers-reduced-motion: reduce){
   .scene.psychedelic .trip-trail, .scene.strobe .trip-trail, .scene.melt .trip-trail{animation:none}
-  .scene.melt{filter:none}
+  .scene.melt{filter:none; animation:none}
   .scene.molly{animation:none}
   #loft-couple.cuddle{animation:none}
   #loft-discoball.spin .disco-ball-spin{animation:none}
@@ -445,10 +451,18 @@ body.completion-trip{animation:completion-spin 7s linear}
   0%{opacity:0.4; r:68px}
   100%{opacity:0.6; r:74px}
 }
+.rainbow{opacity:0; animation:rainbow-cycle 30s ease-in-out infinite}
+@keyframes rainbow-cycle{
+  0%, 68%{opacity:0}
+  76%{opacity:0.85}
+  88%{opacity:0.85}
+  100%{opacity:0}
+}
 @media (prefers-reduced-motion: reduce){
   .snowflake{animation:none}
   .cloud{animation:none}
   .sun-glow{animation:none}
+  .rainbow{animation:none}
 }
 @media print{
   body::after{
@@ -824,6 +838,14 @@ body.completion-trip{animation:completion-spin 7s linear}
     <svg id="garden-scene-svg" class="scene" viewBox="0 0 680 920" role="img" aria-label="The two of us holding hands in a summerhouse garden" data-aria-i="garden_aria" xmlns="http://www.w3.org/2000/svg">
 <rect x="0" y="0" width="680" height="920" rx="14" fill="#f8f5ec"/>
 <ellipse cx="340" cy="240" rx="250" ry="140" fill="#f4f0da"/>
+<clipPath id="rainbow-clip"><rect x="0" y="0" width="680" height="380"/></clipPath>
+<g id="garden-rainbow" class="rainbow" clip-path="url(#rainbow-clip)">
+<circle cx="260" cy="380" r="188" fill="none" stroke="#f0b8c4" stroke-width="16"/>
+<circle cx="260" cy="380" r="170" fill="none" stroke="#f7d97a" stroke-width="16"/>
+<circle cx="260" cy="380" r="152" fill="none" stroke="#c8dba9" stroke-width="16"/>
+<circle cx="260" cy="380" r="134" fill="none" stroke="#a8c4d4" stroke-width="16"/>
+<circle cx="260" cy="380" r="116" fill="none" stroke="#c9a3d9" stroke-width="16"/>
+</g>
 <g id="garden-sun">
 <circle class="sun-glow" cx="540" cy="120" r="70" fill="#fdf0c0" opacity="0.55"/>
 <circle cx="540" cy="120" r="42" fill="#f7d97a"/>
@@ -1830,6 +1852,35 @@ function spawnHearts(svg, cx, cy) {
     })(i);
   }
 }
+function spawnButterflies(svg, cx, cy) {
+  var count = 3;
+  for (var i = 0; i < count; i++) {
+    (function (i) {
+      var angle = -Math.PI / 2 + (i - 1) * 0.6 + (Math.random() - 0.5) * 0.3;
+      var dist = 140 + Math.random() * 80;
+      var dx = Math.cos(angle) * dist;
+      var dy = Math.sin(angle) * dist;
+      var t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      t.setAttribute("x", cx);
+      t.setAttribute("y", cy);
+      t.setAttribute("font-size", 20 + Math.random() * 8);
+      t.setAttribute("class", "flying-butterfly");
+      t.textContent = "🦋";
+      svg.appendChild(t);
+      if (t.animate) {
+        var anim = t.animate([
+          { transform: "translate(0px,0px) rotate(0deg) scale(.7)", opacity: 0 },
+          { transform: "translate(" + (dx * .3) + "px," + (dy * .3 - 10) + "px) rotate(-8deg) scale(1)", opacity: .9, offset: .3 },
+          { transform: "translate(" + (dx * .65) + "px," + (dy * .65 + 8) + "px) rotate(8deg) scale(1)", opacity: .9, offset: .65 },
+          { transform: "translate(" + dx + "px," + dy + "px) rotate(-6deg) scale(.85)", opacity: 0 }
+        ], { duration: 3200 + Math.random() * 800, easing: "ease-in-out" });
+        anim.onfinish = function () { if (t.parentNode) t.remove(); };
+      } else {
+        setTimeout(function () { if (t.parentNode) t.remove(); }, 4000);
+      }
+    })(i);
+  }
+}
 (function () {
   var mushroom = document.getElementById("garden-mushroom");
   var shroomIdx = 0;
@@ -1879,6 +1930,7 @@ function spawnHearts(svg, cx, cy) {
     }
     var loftSvg = document.getElementById("loft-scene-svg");
     if (loftSvg) spawnHearts(loftSvg, 350, 500);
+    if (loftSvg) spawnButterflies(loftSvg, 350, 500);
     setTimeout(function () {
       var lang = document.documentElement.lang;
       var jokes = (T[lang] && T[lang].molly_jokes) || T.en.molly_jokes;

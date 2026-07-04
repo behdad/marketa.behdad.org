@@ -147,6 +147,35 @@ footer{margin-top:2.6rem}
   font-size:1.5rem; line-height:1; cursor:pointer; color:var(--soft);
 }
 .map-close:hover{color:var(--wine)}
+#party-form-modal{
+  display:none; position:fixed; inset:0; background:rgba(40,32,26,.55); z-index:100;
+  align-items:center; justify-content:center; padding:1.5rem;
+}
+#party-form-modal.show{display:flex}
+#party-form-modal .panel{
+  position:relative; background:var(--paper); color:var(--ink); border-radius:10px;
+  max-width:420px; width:100%; max-height:88vh; overflow:auto;
+  padding:1.75rem 1.9rem; box-shadow:0 10px 40px rgba(0,0,0,.3);
+}
+#party-form-modal h2{font-family:"Fraunces",serif; font-weight:500; font-size:1.3rem; margin:0 0 .5rem; text-align:center}
+.party-sub{text-align:center; color:var(--soft); font-size:.92rem; margin:0 0 1.1rem}
+#party-form{display:flex; flex-direction:column; gap:.2rem}
+#party-form label{font-size:.85rem; color:var(--soft); margin-top:.7rem}
+#party-form input{
+  font:inherit; font-size:1rem; padding:.5rem .6rem; border:1px solid var(--rule);
+  border-radius:6px; background:var(--cream); color:var(--ink);
+}
+#party-form input:focus{outline:2px solid var(--wine); outline-offset:1px}
+.party-send{
+  margin-top:1.2rem; font:inherit; font-size:.95rem; padding:.6rem 1rem;
+  background:var(--wine); color:var(--paper); border:none; border-radius:20px; cursor:pointer;
+}
+.party-send:hover{background:#a5495a}
+.party-close{
+  position:absolute; top:.6rem; right:.75rem; background:none; border:none;
+  font-size:1.5rem; line-height:1; cursor:pointer; color:var(--soft);
+}
+.party-close:hover{color:var(--wine)}
 .egg-toast{
   position:fixed; left:50%; bottom:24px; z-index:50; pointer-events:none; white-space:nowrap;
   background:var(--ink); color:var(--paper); font-family:"Source Serif 4",serif; font-size:.85rem;
@@ -514,6 +543,19 @@ body.completion-trip{animation:completion-spin 7s linear}
         </g>
       </svg>
       <p class="map-caption" data-i="map_caption">Two long paths, one shared address.</p>
+    </div>
+  </div>
+
+  <div id="party-form-modal" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true" aria-label="Party form">
+      <button type="button" class="party-close" data-aria-i="close_aria" aria-label="Close">×</button>
+      <h2 data-i="party_title">you found it all! 🎉</h2>
+      <p class="party-sub" data-i="party_sub">Mind sharing a little something with us?</p>
+      <form id="party-form">
+        <label for="party-poison" data-i="party_poison_label">What’s your poison? Let us know!</label>
+        <input type="text" id="party-poison" name="party-poison">
+        <button type="submit" class="party-send" data-i="party_send">Send</button>
+      </form>
     </div>
   </div>
 
@@ -1081,6 +1123,10 @@ var T = {
     close_aria: "Close",
     reset_aria: "Reset progress",
     reset_confirm: "Reset your found-eggs progress?",
+    party_title: "you found it all! 🎉",
+    party_sub: "Mind sharing a little something with us?",
+    party_poison_label: "What’s your poison? Let us know!",
+    party_send: "Send",
     discover_hint: "psst — there’s more here than meets the eye.",
     book_text: "Her translations (French → Czech): <em>Vetřelec</em> by Jean-Luc Nancy, <em>Kde to jsem?</em> by Bruno Latour (yes, that Latour), and <em>Dekoloniální feminismus</em> by Françoise Vergès.",
     egg_more: "🎉 {n} more to go",
@@ -1178,6 +1224,10 @@ var T = {
     close_aria: "Zav\u0159\u00edt",
     reset_aria: "Resetovat postup",
     reset_confirm: "Opravdu chce\u0161 resetovat sv\u016fj postup?",
+    party_title: "Podařilo se ti najít úplně všechno! 🎉",
+    party_sub: "Nevadilo by ti se s námi podělit o maličkost?",
+    party_poison_label: "Jaký je tvůj oblíbený „jed“? Dej nám vědět!",
+    party_send: "Odeslat",
     discover_hint: "pst \u2014 tahle str\u00e1nka skr\u00fdv\u00e1 v\u00edc, ne\u017e se na prvn\u00ed pohled zd\u00e1.",
     book_text: "Jej\u00ed p\u0159eklady (francouz\u0161tina \u2192 \u010de\u0161tina): <em>Vet\u0159elec</em> od Jeana-Luca Nancyho, <em>Kde to jsem?</em> od Bruna Latoura (ano, ten Latour), a <em>Dekoloni\u00e1ln\u00ed feminismus</em> od Fran\u00e7oise Verg\u00e8s.",
     egg_more: "\ud83c\udf89 je\u0161t\u011b jich zb\u00fdv\u00e1 {n}",
@@ -1360,7 +1410,10 @@ function triggerCompletionTrip() {
   setTimeout(function () {
     document.body.classList.remove("completion-trip");
     window.scrollTo(sx, sy);
-  }, 7000);
+    var alreadySubmitted = false;
+    try { alreadySubmitted = localStorage.getItem("partyFormSubmitted") === "1"; } catch (e) {}
+    if (!alreadySubmitted && window.openPartyForm) window.openPartyForm();
+  }, 7300);
 }
 (function () {
   var amp = document.querySelector(".amp");
@@ -2070,6 +2123,43 @@ function openTravelMap() {
     if (e.target === overlay) close();
   });
   if (closeBtn) closeBtn.addEventListener("click", close);
+})();
+function openPartyForm() {
+  var overlay = document.getElementById("party-form-modal");
+  if (!overlay) return;
+  var input = overlay.querySelector("#party-poison");
+  overlay._lastFocused = document.activeElement;
+  overlay.classList.add("show");
+  overlay.setAttribute("aria-hidden", "false");
+  if (input) input.focus();
+}
+window.openPartyForm = openPartyForm;
+(function () {
+  var overlay = document.getElementById("party-form-modal");
+  if (!overlay) return;
+  var closeBtn = overlay.querySelector(".party-close");
+  var form = document.getElementById("party-form");
+  function close() {
+    overlay.classList.remove("show");
+    overlay.setAttribute("aria-hidden", "true");
+    if (overlay._lastFocused && typeof overlay._lastFocused.focus === "function") overlay._lastFocused.focus();
+  }
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && overlay.classList.contains("show")) close();
+  });
+  overlay.addEventListener("click", function (e) {
+    if (e.target === overlay) close();
+  });
+  if (closeBtn) closeBtn.addEventListener("click", close);
+  if (form) form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var poison = (document.getElementById("party-poison") || {}).value || "";
+    var subject = encodeURIComponent("What's your poison?");
+    var body = encodeURIComponent("Poison of choice: " + poison);
+    try { localStorage.setItem("partyFormSubmitted", "1"); } catch (err) {}
+    window.location.href = "mailto:marketa@behdad.org?subject=" + subject + "&body=" + body;
+    close();
+  });
 })();
 window.addEventListener("beforeprint", function () { markFound("print"); });
 </script>

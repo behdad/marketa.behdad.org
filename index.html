@@ -537,7 +537,7 @@ body.completion-trip{animation:completion-spin 7s linear}
       <button type="button" class="egg-reset" data-aria-i="reset_aria" data-title-i="reset_aria" aria-label="Reset progress" title="Reset progress">↺</button>
       <button type="button" class="egg-close" data-aria-i="close_aria" aria-label="Close">×</button>
       <h2 data-i="cheatsheet_title">psst — here’s what’s hidden here</h2>
-      <ol>
+      <ol start="0">
         <li data-egg="caps" data-i="cheat_caps">Click the crossed caps logo</li>
         <li data-egg="amp" data-i="cheat_amp">Hover or tap the “&amp;” in the title</li>
         <li data-egg="inf" data-i="cheat_inf">Click the ∞ by “Edmonton” or “Prague”</li>
@@ -550,13 +550,15 @@ body.completion-trip{animation:completion-spin 7s linear}
         <li data-egg="guitar" data-i="cheat_guitar">Click the guitar leaning in the loft scene</li>
         <li data-egg="clapper" data-i="cheat_clapper">Find the tiny clapperboard by the plant</li>
         <li data-egg="book" data-i="cheat_book">Find the open book in the garden grass</li>
-        <li data-egg="rabbit" value="14" data-i="cheat_rabbit">Follow the white rabbit</li>
+        <li data-egg="rabbit" data-i="cheat_rabbit">Follow the white rabbit</li>
         <li data-egg="print" data-i="cheat_print">Try printing the page</li>
         <li data-egg="trip" data-i="cheat_trip">Trip with the tofu, mushroom, frog, or disco ball</li>
         <li data-egg="loved" data-i="cheat_loved">Click “All” in the welcome line</li>
         <li data-egg="fish" data-i="cheat_fish">Find the puffer fish hiding in the sky</li>
         <li data-egg="harfbuzz" data-i="cheat_harfbuzz">Type “harfbuzz” anywhere on the page</li>
         <li data-egg="plant" data-i="cheat_plant">Click the fig plant in the loft scene</li>
+        <li data-egg="rainsnow" data-i="cheat_rainsnow">Click “Rain or snow.”</li>
+        <li data-egg="roach" data-i="cheat_roach">Find the cockroach scuttling on the loft floor</li>
       </ol>
     </div>
   </div>
@@ -1219,6 +1221,8 @@ var T = {
     cheat_fish: "Find the puffer fish hiding in the sky",
     cheat_harfbuzz: "Type “harfbuzz” anywhere on the page",
     cheat_plant: "Click the fig plant in the loft scene",
+    cheat_rainsnow: "Click “Rain or snow.”",
+    cheat_roach: "Find the cockroach scuttling on the loft floor",
     close_aria: "Close",
     reset_aria: "Reset progress",
     reset_confirm: "Reset your found-eggs progress?",
@@ -1326,6 +1330,8 @@ var T = {
     cheat_fish: "Najdi nafukovací rybu schovanou na obloze",
     cheat_harfbuzz: "Napiš „harfbuzz“ kamkoli na stránce",
     cheat_plant: "Klikni na fíkus v loftové scéně",
+    cheat_rainsnow: "Klikni na „Nemusí pršet, jen když kape.“",
+    cheat_roach: "Najdi švába pobíhajícího po podlaze loftu",
     close_aria: "Zavřít",
     reset_aria: "Resetovat postup",
     reset_confirm: "Opravdu chceš resetovat svůj postup?",
@@ -1473,7 +1479,7 @@ function eggToast(text, duration) {
     setTimeout(function () { if (t.parentNode) t.remove(); }, 300);
   }, duration || 2600);
 }
-var EGG_TOTAL = 19;
+var EGG_TOTAL = 21;
 function validEggIds() {
   return Array.prototype.map.call(document.querySelectorAll("#egg-cheatsheet li[data-egg]"), function (li) {
     return li.getAttribute("data-egg");
@@ -1992,22 +1998,29 @@ function spawnButterflies(svg, cx, cy) {
 })();
 (function () {
   var roach = document.getElementById("loft-roach");
-  if (!roach || !roach.animate) return;
+  if (!roach) return;
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reduceMotion) return;
-  var roachAnim = roach.animate([
-    { transform: "translate(-25px,0)" },
-    { transform: "translate(25px,0)" }
-  ], { duration: 9000, iterations: Infinity, direction: "alternate", easing: "ease-in-out" });
+  var roachAnim = null;
+  if (!reduceMotion && roach.animate) {
+    roachAnim = roach.animate([
+      { transform: "translate(-25px,0)" },
+      { transform: "translate(25px,0)" }
+    ], { duration: 9000, iterations: Infinity, direction: "alternate", easing: "ease-in-out" });
+  }
   var fled = false;
   roach.addEventListener("click", function () {
+    markFound("roach");
     if (fled) return;
     fled = true;
-    roachAnim.cancel();
-    roach.animate([
-      { transform: "translate(0,0)" },
-      { transform: "translate(-140px,6px)" }
-    ], { duration: 650, easing: "ease-in", fill: "forwards" });
+    if (roachAnim) roachAnim.cancel();
+    if (!reduceMotion && roach.animate) {
+      roach.animate([
+        { transform: "translate(0,0)" },
+        { transform: "translate(-140px,6px)" }
+      ], { duration: 650, easing: "ease-in", fill: "forwards" });
+    } else {
+      roach.style.display = "none";
+    }
   });
 })();
 (function () {
@@ -2016,6 +2029,7 @@ function spawnButterflies(svg, cx, cy) {
   var rain = document.getElementById("loft-rain");
   if (!toggle || !snow || !rain) return;
   function activate() {
+    markFound("rainsnow");
     var showRain = snow.style.display !== "none";
     snow.style.display = showRain ? "none" : "";
     rain.style.display = showRain ? "" : "none";

@@ -24,7 +24,12 @@ Take inspiration from their individual websites.
 - Signature elements: ∞ section anchors alternating wine/blue (borrowed from their personal
   sites), the crossed-caps motif (pink flat cap = Behdad, blue baker boy cap = Markéta),
   IPA pronunciations + pronouns under the names, pink/blue footer strip.
-- Footer credo: "hand-rolled HTML · home-made illustrations".
+- Footer credo ("hand-rolled HTML · home-made illustrations") removed for now — footer is
+  just the markéta ∞ behdad cross-link. Re-add if wanted later.
+- Copy uses manual `<br>` hard breaks (not CSS `text-wrap`) at chosen clause boundaries in
+  the tagline/description/welcome lines — author's preference over browser wrap heuristics.
+  `setLang()` sets `innerHTML` (not `textContent`) to support this; keep EN/CS breaks in sync
+  when editing that copy.
 
 ## i18n
 
@@ -49,7 +54,8 @@ as data URI).
 
 - Contact: marketa@behdad.org (live).
 - RSVP: deliberately absent in v1; plan is email or a Google Form later.
-- "Add to calendar" links are data-URI .ics files (all-day events) — update if times/venues land.
+- "Add to calendar" links removed for now (were data-URI .ics files, all-day events) —
+  re-add once times/venues are confirmed.
 
 ## v2 backlog (owners' words: "populated over time with new bells & whistles, fun stuff mostly")
 

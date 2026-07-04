@@ -188,6 +188,7 @@ footer{margin-top:3.2rem}
 }
 #loft-clapper{cursor:pointer}
 #garden-book{cursor:pointer}
+#garden-rabbit{cursor:pointer}
 #loft-guitar.strum{animation:guitar-wiggle .5s ease}
 @keyframes guitar-wiggle{
   0%{transform:rotate(0)}
@@ -246,6 +247,7 @@ footer{margin-top:3.2rem}
         <li data-egg="langnote">Click the “†” by the language toggle</li>
         <li data-egg="harfbuzz">Type “harfbuzz” anywhere on the page</li>
         <li data-egg="print">Try printing the page</li>
+        <li value="14" data-egg="rabbit">Find the white rabbit, and click it ten times</li>
       </ol>
       <p class="close-hint">Press ? or Esc to close</p>
     </div>
@@ -504,6 +506,16 @@ footer{margin-top:3.2rem}
 <circle cx="17" cy="19" r="5" fill="#5a7a9e"/>
 </g>
 <ellipse cx="340" cy="848" rx="255" ry="28" fill="#efe8d2"/>
+<g id="garden-rabbit">
+<ellipse cx="520" cy="820" rx="15" ry="10" fill="#f8f6ef" stroke="#d8d3c4" stroke-width="1.5"/>
+<circle cx="534" cy="807" r="7.5" fill="#f8f6ef" stroke="#d8d3c4" stroke-width="1.5"/>
+<ellipse cx="528" cy="793" rx="2.6" ry="9" fill="#f8f6ef" stroke="#d8d3c4" stroke-width="1" transform="rotate(-16 528 793)"/>
+<ellipse cx="538" cy="792" rx="2.6" ry="9" fill="#f8f6ef" stroke="#d8d3c4" stroke-width="1" transform="rotate(12 538 792)"/>
+<ellipse cx="528" cy="795" rx="1.1" ry="5" fill="#e8c9cf" transform="rotate(-16 528 795)"/>
+<ellipse cx="538" cy="794" rx="1.1" ry="5" fill="#e8c9cf" transform="rotate(12 538 794)"/>
+<circle cx="537.5" cy="805" r="1.1" fill="#8a7a68"/>
+<ellipse cx="506" cy="822" rx="4" ry="3" fill="#f8f6ef" stroke="#d8d3c4" stroke-width="1"/>
+</g>
 <g id="garden-couple">
 <ellipse cx="345" cy="858" rx="195" ry="12" fill="#e3dcc8"/>
 <polygon points="232,556 228,822 254,822 258,556" fill="#e9bfc4" stroke="#c98f96" stroke-width="2"/>
@@ -858,6 +870,28 @@ function markFound(id) {
   });
 })();
 (function () {
+  var rabbit = document.getElementById("garden-rabbit");
+  if (!rabbit) return;
+  var UNLOCK_KEY = "rabbitUnlocked";
+  var clicks = 0;
+  var NEEDED = 10;
+  rabbit.addEventListener("click", function () {
+    var unlocked = false;
+    try { unlocked = localStorage.getItem(UNLOCK_KEY) === "1"; } catch (e) {}
+    if (unlocked) {
+      if (window.openEggCheatsheet) window.openEggCheatsheet();
+      return;
+    }
+    clicks++;
+    if (clicks >= NEEDED) {
+      try { localStorage.setItem(UNLOCK_KEY, "1"); } catch (e) {}
+      if (window.openEggCheatsheet) window.openEggCheatsheet();
+    } else {
+      eggToast(String(NEEDED - clicks));
+    }
+  });
+})();
+(function () {
   var ipa = document.querySelector(".ipa");
   if (!ipa) return;
   ipa.addEventListener("click", function () {
@@ -1062,14 +1096,18 @@ function playGuitarPluck() {
   function open() {
     var found;
     try { found = JSON.parse(localStorage.getItem("foundEggs") || "[]"); } catch (e) { found = []; }
+    var rabbitUnlocked = false;
+    try { rabbitUnlocked = localStorage.getItem("rabbitUnlocked") === "1"; } catch (e) {}
     var items = overlay.querySelectorAll("li[data-egg]");
     for (var i = 0; i < items.length; i++) {
       var id = items[i].getAttribute("data-egg");
-      items[i].classList.toggle("found", found.indexOf(id) !== -1);
+      var isFound = id === "rabbit" ? rabbitUnlocked : found.indexOf(id) !== -1;
+      items[i].classList.toggle("found", isFound);
     }
     overlay.classList.add("show");
     overlay.setAttribute("aria-hidden", "false");
   }
+  window.openEggCheatsheet = open;
   function close() { overlay.classList.remove("show"); overlay.setAttribute("aria-hidden", "true"); }
   document.addEventListener("keydown", function (e) {
     if (e.key === "?") {

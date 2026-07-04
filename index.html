@@ -281,6 +281,13 @@ footer{margin-top:2.6rem}
 }
 .scene.melt{filter:url(#melt-filter)}
 #garden-frog{cursor:pointer}
+#garden-puffer-wrap{cursor:pointer}
+.puffer-body{animation:puffer-breathe 4s ease-in-out infinite; transform-origin:center}
+@keyframes puffer-breathe{
+  0%,100%{transform:scale(0.85)}
+  50%{transform:scale(1.15)}
+}
+@media (prefers-reduced-motion: reduce){.puffer-body{animation:none}}
 body.completion-trip{animation:completion-spin 7s linear}
 @keyframes completion-spin{
   0%{filter:url(#melt-filter) hue-rotate(0deg) saturate(1)}
@@ -399,6 +406,7 @@ body.completion-trip{animation:completion-spin 7s linear}
         <li data-egg="print" value="14">Try printing the page</li>
         <li data-egg="trip">Click the tofu box, the mushroom, or the frog for a trip</li>
         <li data-egg="loved">Click “All” in the welcome line</li>
+        <li data-egg="fish">Find the puffer fish hiding in the garden sky</li>
         <li data-egg="harfbuzz">Type “harfbuzz” anywhere on the page</li>
       </ol>
       <p class="close-hint">Press ? or Esc to close</p>
@@ -698,6 +706,21 @@ body.completion-trip{animation:completion-spin 7s linear}
 <ellipse cx="380" cy="70" rx="38" ry="16" fill="#e6eef6" opacity="0.8"/>
 <ellipse cx="410" cy="62" rx="26" ry="12" fill="#eef4fa" opacity="0.8"/>
 <ellipse cx="352" cy="64" rx="24" ry="11" fill="#dce7f2" opacity="0.75"/>
+</g>
+<g id="garden-puffer-wrap" transform="translate(270,150)">
+<g class="puffer-body">
+<ellipse cx="0" cy="0" rx="18" ry="14" fill="#9fb8c9" stroke="#7a94a3" stroke-width="1.5"/>
+<line x1="-14" y1="-8" x2="-19" y2="-12" stroke="#7a94a3" stroke-width="1.2"/>
+<line x1="-16" y1="0" x2="-22" y2="0" stroke="#7a94a3" stroke-width="1.2"/>
+<line x1="-14" y1="8" x2="-19" y2="12" stroke="#7a94a3" stroke-width="1.2"/>
+<line x1="0" y1="-13" x2="0" y2="-19" stroke="#7a94a3" stroke-width="1.2"/>
+<line x1="14" y1="-8" x2="19" y2="-12" stroke="#7a94a3" stroke-width="1.2"/>
+<line x1="16" y1="0" x2="22" y2="0" stroke="#7a94a3" stroke-width="1.2"/>
+<line x1="14" y1="8" x2="19" y2="12" stroke="#7a94a3" stroke-width="1.2"/>
+<line x1="0" y1="13" x2="0" y2="19" stroke="#7a94a3" stroke-width="1.2"/>
+<circle cx="8" cy="-4" r="2.2" fill="#2a2a2a"/>
+<path d="M-18 2 Q-24 -3 -22 6 Q-24 10 -18 6 Z" fill="#7a94a3"/>
+</g>
 </g>
 <ellipse cx="88" cy="470" rx="110" ry="165" fill="#e6edd2"/>
 <ellipse cx="592" cy="450" rx="110" ry="175" fill="#e6edd2"/>
@@ -1104,7 +1127,7 @@ function eggToast(text, duration) {
     setTimeout(function () { if (t.parentNode) t.remove(); }, 300);
   }, duration || 2600);
 }
-var EGG_TOTAL = 17;
+var EGG_TOTAL = 18;
 function markFound(id) {
   var KEY = "foundEggs";
   var found;
@@ -1112,7 +1135,7 @@ function markFound(id) {
   if (found.indexOf(id) !== -1) return;
   found.push(id);
   try { localStorage.setItem(KEY, JSON.stringify(found)); } catch (e) {}
-  if (id !== "guitar" && id !== "trip") playGuitarPluck();
+  if (id !== "guitar" && id !== "trip" && id !== "fish") playGuitarPluck();
   var lang = document.documentElement.lang;
   var remaining = EGG_TOTAL - found.length;
   if (remaining === 13) return;
@@ -1364,6 +1387,15 @@ function playTripMelody() {
     setTimeout(function () { ctx.close(); }, notes.length * noteDur * 1000 + 500);
   } catch (e) {}
 }
+function sayFishu() {
+  try {
+    if (!window.speechSynthesis) return;
+    var utter = new SpeechSynthesisUtterance("fishu");
+    utter.rate = 0.85;
+    utter.pitch = 1.3;
+    window.speechSynthesis.speak(utter);
+  } catch (e) {}
+}
 function playShutterSound() {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -1474,6 +1506,12 @@ function triggerTrip(sceneId, variant, eggId) {
     var jokes = (T[lang] && T[lang].melt_jokes) || T.en.melt_jokes;
     eggBubble(frog, jokes[meltIdx % jokes.length]);
     meltIdx++;
+  });
+  var puffer = document.getElementById("garden-puffer-wrap");
+  if (puffer) puffer.addEventListener("click", function () {
+    sayFishu();
+    eggBubble(puffer, "🐡");
+    markFound("fish");
   });
 })();
 (function () {

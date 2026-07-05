@@ -2788,6 +2788,8 @@ document.addEventListener("click", function (e) {
   if (radio) {
     var radioOn = false;
     var radioCtx = null, radioSource = null, radioGain = null;
+    var radioTuneInTimeout = null, radioMelodyInterval = null, radioMelodyGain = null;
+    var RADIO_MELODY = [523, 587, 659, 523, 659, 587, 494, 523];
     function startRadioStatic() {
       try {
         var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -2811,9 +2813,42 @@ document.addEventListener("click", function (e) {
         filter.connect(radioGain);
         radioGain.connect(radioCtx.destination);
         radioSource.start();
+        radioTuneInTimeout = setTimeout(function () {
+          if (radioGain && radioCtx) radioGain.gain.exponentialRampToValueAtTime(0.006, radioCtx.currentTime + 0.4);
+          playRadioMelodyLoop();
+        }, 1400);
       } catch (e) {}
     }
+    function playRadioMelodyOnce() {
+      if (!radioCtx) return;
+      var t = radioCtx.currentTime;
+      radioMelodyGain = radioCtx.createGain();
+      radioMelodyGain.gain.setValueAtTime(0.09, t);
+      radioMelodyGain.connect(radioCtx.destination);
+      RADIO_MELODY.forEach(function (freq, i) {
+        var t0 = t + i * 0.28;
+        var osc = radioCtx.createOscillator();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(freq, t0);
+        var noteGain = radioCtx.createGain();
+        noteGain.gain.setValueAtTime(0.0001, t0);
+        noteGain.gain.exponentialRampToValueAtTime(1, t0 + 0.03);
+        noteGain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.25);
+        osc.connect(noteGain);
+        noteGain.connect(radioMelodyGain);
+        osc.start(t0);
+        osc.stop(t0 + 0.26);
+      });
+    }
+    function playRadioMelodyLoop() {
+      playRadioMelodyOnce();
+      radioMelodyInterval = setInterval(playRadioMelodyOnce, RADIO_MELODY.length * 280 + 500);
+    }
     function stopRadioStatic() {
+      clearTimeout(radioTuneInTimeout);
+      clearInterval(radioMelodyInterval);
+      radioTuneInTimeout = null;
+      radioMelodyInterval = null;
       try {
         if (radioGain && radioCtx) {
           radioGain.gain.exponentialRampToValueAtTime(0.0001, radioCtx.currentTime + 0.15);

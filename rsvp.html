@@ -80,14 +80,13 @@ footer{margin-top:2.6rem}
 .hunt-nav:disabled{opacity:.3; cursor:default}
 .hunt-nav.locked{opacity:.3; cursor:default}
 .scene-caption{text-align:center; color:var(--soft); font-size:.9rem; margin:.7rem 0 0; font-style:italic; min-height:1.4em}
-.rsvp-nudge{text-align:center; margin:.3rem 0 0; min-height:1.4em; opacity:0; transition:opacity .8s ease}
-.rsvp-nudge a{color:var(--wine); text-decoration:none; border-bottom:1px dotted var(--wine); display:inline-block}
-.rsvp-nudge.show{opacity:1; animation:rsvp-nudge-float 2.4s ease-in-out infinite}
+.scene-caption a{color:var(--wine); text-decoration:none; border-bottom:1px dotted var(--wine); display:inline-block; font-style:normal}
+.scene-caption.rsvp-nudge{animation:rsvp-nudge-float 2.4s ease-in-out infinite}
 @keyframes rsvp-nudge-float{
   0%,100%{transform:translateY(0)}
   50%{transform:translateY(5px)}
 }
-@media (prefers-reduced-motion: reduce){.rsvp-nudge.show{animation:none}}
+@media (prefers-reduced-motion: reduce){.scene-caption.rsvp-nudge{animation:none}}
 .hunt-hit{cursor:pointer}
 .hunt-hit:focus, .hunt-hit:focus-visible{outline:none}
 #kitchen-lamarzocco.done, #kitchen-grinder.done, #kitchen-portafilter.done{opacity:.55}
@@ -1300,7 +1299,6 @@ section{margin:1.9rem 0}
   <button type="button" id="hunt-next" class="hunt-nav hunt-nav-next locked" aria-label="Next room">›</button>
   </div>
   <p class="scene-caption" id="hunt-caption">Power on the espresso machine, then grind, then pull a shot.</p>
-  <p class="rsvp-nudge" id="rsvp-nudge"><a href="#rsvp-anchor" data-i="rsvp_nudge_link">Don’t forget to RSVP ↓</a></p>
 
   <hr>
 
@@ -2300,9 +2298,20 @@ function spawnWaterDroplets(svg, cx, cy) {
   }
   function setCaption(key) {
     captionKey = key;
+    caption.classList.remove("rsvp-nudge");
     caption.textContent = huntText(key);
   }
-  window.refreshHuntCaption = function () { caption.textContent = huntText(captionKey); };
+  function showRsvpNudge() {
+    captionKey = "rsvp_nudge";
+    var l = document.documentElement.lang;
+    var link = (T[l] && T[l].rsvp_nudge_link) || T.en.rsvp_nudge_link;
+    caption.innerHTML = '<a href="#rsvp-anchor">' + link + '</a>';
+    caption.classList.add("rsvp-nudge");
+  }
+  window.refreshHuntCaption = function () {
+    if (captionKey === "rsvp_nudge") { showRsvpNudge(); return; }
+    caption.textContent = huntText(captionKey);
+  };
   function triggerBalconyFinale() {
     var butterfly = document.getElementById("balcony-butterfly");
     var rainbow = document.getElementById("balcony-rainbow");
@@ -2321,15 +2330,7 @@ function spawnWaterDroplets(svg, cx, cy) {
         });
       }, 1900);
     }
-    var nudge = document.getElementById("rsvp-nudge");
-    if (nudge) {
-      setTimeout(function () {
-        nudge.classList.remove("show");
-        requestAnimationFrame(function () {
-          requestAnimationFrame(function () { nudge.classList.add("show"); });
-        });
-      }, 6800);
-    }
+    setTimeout(showRsvpNudge, 6800);
   }
   function goToStage(name) {
     var idx = STAGES.indexOf(name);

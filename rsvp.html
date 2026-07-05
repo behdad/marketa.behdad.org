@@ -204,6 +204,29 @@ footer{margin-top:2.6rem}
   90%{transform:rotate(1deg)}
   100%{transform:rotate(0deg)}
 }
+#balcony-lighter-flame{transform-box:fill-box; transform-origin:center}
+#balcony-lighter-flame.lit{animation:lighter-flame-flicker 1.2s ease-in-out}
+@keyframes lighter-flame-flicker{
+  0%{opacity:0; transform:scale(.5)}
+  15%{opacity:1; transform:scale(1)}
+  30%{opacity:.85; transform:scale(.9,1.1)}
+  45%{opacity:1; transform:scale(1.05,.95)}
+  85%{opacity:.9; transform:scale(1)}
+  100%{opacity:0; transform:scale(.6)}
+}
+#balcony-phone-screen.buzz{animation:phone-screen-glow 1s ease-in-out}
+@keyframes phone-screen-glow{
+  0%{fill:#2d2d2d}
+  30%{fill:#8fe8d8}
+  100%{fill:#2d2d2d}
+}
+#balcony-phone.buzz{animation:phone-buzz .4s ease-in-out}
+@keyframes phone-buzz{
+  0%,100%{transform:translateX(0)}
+  25%{transform:translateX(-2px)}
+  50%{transform:translateX(2px)}
+  75%{transform:translateX(-1px)}
+}
 .office-lamp-glow, .office-lamp-bulb, .office-pendant-bulb{transition:opacity .4s ease, fill .4s ease}
 #office-lamp.dimmed .office-lamp-glow{opacity:0}
 #office-lamp.dimmed .office-lamp-bulb{fill:#9a948a; stroke:#7a746a}
@@ -250,6 +273,9 @@ footer{margin-top:2.6rem}
   #cuddly-octopus.popping-out{animation:none; opacity:1}
   #cuddly-trunk.opening{animation:none}
   #cuddly-pulley.swinging{animation:none}
+  #balcony-lighter-flame.lit{animation:none}
+  #balcony-phone-screen.buzz{animation:none}
+  #balcony-phone.buzz{animation:none}
   #balcony-butterfly.flying{animation:none}
   #balcony-rainbow.burst{animation:none}
   .watered{animation:none}
@@ -1270,12 +1296,15 @@ section{margin:1.9rem 0}
 <path d="M65 228 Q76 217 87 228" fill="#9a9a9a" stroke="#7a7a7a" stroke-width="1"/>
 <rect x="74" y="211" width="4" height="7" rx="1" fill="#6b6b6b"/>
 </g>
-<g id="balcony-lighter">
+<g id="balcony-lighter" class="hunt-hit" tabindex="0" role="button" aria-label="The lighter">
+<rect x="92" y="209" width="23" height="24" fill="transparent"/>
 <rect x="96" y="223" width="15" height="7" rx="2" fill="#c0392b" stroke="#8f2a20" stroke-width="1"/>
+<path id="balcony-lighter-flame" d="M103 223 Q100 218 103 213 Q106 218 103 223 Z" fill="#f0a04a" opacity="0"/>
 </g>
-<g id="balcony-phone">
+<g id="balcony-phone" class="hunt-hit" tabindex="0" role="button" aria-label="The phone">
+<rect x="112" y="217" width="32" height="19" fill="transparent"/>
 <rect x="116" y="221" width="24" height="11" rx="2" fill="#d9a6a6" stroke="#b8888c" stroke-width="1"/>
-<rect x="119" y="223" width="18" height="7" rx="1" fill="#2d2d2d"/>
+<rect id="balcony-phone-screen" x="119" y="223" width="18" height="7" rx="1" fill="#2d2d2d"/>
 </g>
 <ellipse cx="228" cy="300" rx="42" ry="7" fill="#8a9090" opacity="0.35"/>
 <g id="balcony-lounger" transform="translate(57,74.5) scale(0.75)">
@@ -1644,6 +1673,50 @@ document.addEventListener("click", function (e) {
   pulley.addEventListener("keydown", function (e) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); swing(); }
   });
+})();
+(function () {
+  var strip = document.getElementById("loft-game-strip");
+  var smoker = document.getElementById("balcony-smoker");
+  if (smoker) {
+    function puff() { spawnSteamWisps(strip, 3178, 110); }
+    smoker.addEventListener("click", puff);
+    smoker.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); puff(); }
+    });
+  }
+  var lighter = document.getElementById("balcony-lighter");
+  var flame = document.getElementById("balcony-lighter-flame");
+  if (lighter && flame) {
+    function flick() {
+      flame.classList.remove("lit");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { flame.classList.add("lit"); });
+      });
+      playSparkSound();
+    }
+    lighter.addEventListener("click", flick);
+    lighter.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flick(); }
+    });
+  }
+  var phone = document.getElementById("balcony-phone");
+  var phoneScreen = document.getElementById("balcony-phone-screen");
+  if (phone && phoneScreen) {
+    function buzz() {
+      phone.classList.remove("buzz");
+      phoneScreen.classList.remove("buzz");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          phone.classList.add("buzz");
+          phoneScreen.classList.add("buzz");
+        });
+      });
+    }
+    phone.addEventListener("click", buzz);
+    phone.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); buzz(); }
+    });
+  }
 })();
 (function () {
   var lampIds = ["office-lamp", "office-pendant"];

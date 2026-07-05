@@ -165,15 +165,20 @@ footer{margin-top:2.6rem}
   80%{transform:rotate(3deg) scale(0.99,1.01)}
   100%{transform:rotate(0) scale(1)}
 }
-#cuddly-octopus.jumping{animation:octopus-jump-in-chest 1.6s ease-in-out}
-@keyframes octopus-jump-in-chest{
+#cuddly-octopus.falling-in{animation:octopus-fall-in 1s ease-in forwards}
+@keyframes octopus-fall-in{
   0%{transform:translateY(0); opacity:1}
-  15%{transform:translateY(-14px); opacity:1}
-  35%{transform:translateY(-14px); opacity:1}
+  25%{transform:translateY(-14px); opacity:1}
   55%{transform:translateY(9px); opacity:1}
-  68%{transform:translateY(9px); opacity:0}
-  82%{transform:translateY(-5px); opacity:0}
-  90%{transform:translateY(-5px); opacity:1}
+  75%{transform:translateY(9px); opacity:0}
+  100%{transform:translateY(9px); opacity:0}
+}
+#cuddly-octopus.popping-out{animation:octopus-pop-out 1s ease-out forwards}
+@keyframes octopus-pop-out{
+  0%{transform:translateY(9px); opacity:0}
+  30%{transform:translateY(9px); opacity:0}
+  60%{transform:translateY(-10px); opacity:1}
+  85%{transform:translateY(3px); opacity:1}
   100%{transform:translateY(0); opacity:1}
 }
 #cuddly-octopus.camouflage{animation:octopus-camouflage 1.8s ease-in-out}
@@ -243,7 +248,8 @@ footer{margin-top:2.6rem}
   .puffer-drift{animation:none}
   .puffer-fill{animation:none}
   #cuddly-octopus.wobble{animation:none}
-  #cuddly-octopus.jumping{animation:none}
+  #cuddly-octopus.falling-in{animation:none; opacity:0}
+  #cuddly-octopus.popping-out{animation:none; opacity:1}
   #cuddly-octopus.camouflage{animation:none}
   #cuddly-trunk.opening{animation:none}
   #cuddly-pulley.swinging{animation:none}
@@ -1606,16 +1612,20 @@ document.addEventListener("click", function (e) {
   var trunk = document.getElementById("cuddly-trunk");
   var octopus = document.getElementById("cuddly-octopus");
   if (!trunk) return;
+  var octopusInChest = false;
   function openTrunk() {
     trunk.classList.remove("opening");
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { trunk.classList.add("opening"); });
     });
     if (octopus) {
-      octopus.classList.remove("jumping");
+      var nextClass = octopusInChest ? "popping-out" : "falling-in";
+      var prevClass = octopusInChest ? "falling-in" : "popping-out";
+      octopus.classList.remove(prevClass, nextClass);
       requestAnimationFrame(function () {
-        requestAnimationFrame(function () { octopus.classList.add("jumping"); });
+        requestAnimationFrame(function () { octopus.classList.add(nextClass); });
       });
+      octopusInChest = !octopusInChest;
     }
   }
   trunk.addEventListener("click", openTrunk);

@@ -2087,9 +2087,28 @@ document.addEventListener("click", function (e) {
   }
   var pans = document.getElementById("kitchen-pans");
   if (pans) {
-    pans.addEventListener("click", function () { playMetalClinkSound(); });
+    var panCenters = [
+      { x: 40, y: 60, r: 14 }, { x: 95, y: 45, r: 11 }, { x: 150, y: 70, r: 12 },
+      { x: 105, y: 103, r: 9 }, { x: 210, y: 55, r: 10 }, { x: 185, y: 109, r: 13 }
+    ];
+    function clinkPans(e) {
+      var mult = 1;
+      if (e && typeof e.clientX === "number") {
+        var rect = pans.getBoundingClientRect();
+        var localX = 25 + ((e.clientX - rect.left) / rect.width) * 200;
+        var localY = 10 + ((e.clientY - rect.top) / rect.height) * 115;
+        var nearest = panCenters[0], bestDist = Infinity;
+        panCenters.forEach(function (p) {
+          var d = Math.pow(p.x - localX, 2) + Math.pow(p.y - localY, 2);
+          if (d < bestDist) { bestDist = d; nearest = p; }
+        });
+        mult = 1.6 - nearest.r * 0.06;
+      }
+      playMetalClinkSound(mult);
+    }
+    pans.addEventListener("click", clinkPans);
     pans.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); playMetalClinkSound(); }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); clinkPans(); }
     });
   }
   var scoops = document.getElementById("kitchen-scoops");

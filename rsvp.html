@@ -78,9 +78,10 @@ footer{margin-top:2.6rem}
 }
 .hunt-nav:hover:not(:disabled){color:var(--wine); border-color:var(--wine)}
 .hunt-nav:disabled{opacity:.3; cursor:default}
+.hunt-nav.locked{opacity:.3; cursor:default}
 .scene-caption{text-align:center; color:var(--soft); font-size:.9rem; margin:.7rem 0 0; font-style:italic; min-height:1.4em}
 .hunt-hit{cursor:pointer}
-.hunt-hit:focus-visible{outline:3px solid var(--wine); outline-offset:2px}
+.hunt-hit:focus, .hunt-hit:focus-visible{outline:none}
 .hunt-hit.done{opacity:.55}
 #kitchen-lamarzocco.powered-on .kitchen-power-led{fill:#7fd97a}
 #garden-candles.lit .candle-flame{opacity:1}
@@ -147,7 +148,6 @@ footer{margin-top:2.6rem}
   50%{fill:#7f9ec0}
 }
 #cuddly-octopus{transform-origin:636px 240px}
-#cuddly-octopus:focus-visible, #office-typewriter:focus-visible{outline:none}
 #cuddly-octopus.wobble{animation:octopus-wobble .6s ease}
 @keyframes octopus-wobble{
   0%{transform:rotate(0) scale(1)}
@@ -172,8 +172,8 @@ footer{margin-top:2.6rem}
 #balcony-rainbow.burst{animation:balcony-rainbow-burst 4.5s ease-in-out}
 @keyframes balcony-rainbow-burst{
   0%{opacity:0}
-  30%{opacity:0.5}
-  70%{opacity:0.5}
+  30%{opacity:0.8}
+  70%{opacity:0.8}
   100%{opacity:0}
 }
 @media (prefers-reduced-motion: reduce){
@@ -1203,17 +1203,17 @@ section{margin:1.9rem 0}
 <rect x="252" y="196" width="28" height="8" rx="3" fill="#8a6244" transform="rotate(-45 266 200)"/>
 </g>
 <g id="balcony-rainbow" aria-hidden="true">
-<circle cx="560" cy="380" r="60" fill="none" stroke="#f0b8c4" stroke-width="9"/>
-<circle cx="560" cy="380" r="78" fill="none" stroke="#f7d97a" stroke-width="9"/>
-<circle cx="560" cy="380" r="96" fill="none" stroke="#c8dba9" stroke-width="9"/>
-<circle cx="560" cy="380" r="114" fill="none" stroke="#a8c4d4" stroke-width="9"/>
-<circle cx="560" cy="380" r="132" fill="none" stroke="#c9a3d9" stroke-width="9"/>
+<circle cx="560" cy="310" r="250" fill="none" stroke="#f0b8c4" stroke-width="13"/>
+<circle cx="560" cy="310" r="232" fill="none" stroke="#f7d97a" stroke-width="13"/>
+<circle cx="560" cy="310" r="214" fill="none" stroke="#c8dba9" stroke-width="13"/>
+<circle cx="560" cy="310" r="196" fill="none" stroke="#a8c4d4" stroke-width="13"/>
+<circle cx="560" cy="310" r="178" fill="none" stroke="#c9a3d9" stroke-width="13"/>
 </g>
 <text id="balcony-butterfly" aria-hidden="true" x="-20" y="150" font-size="24">🦋</text>
 </g>
     </svg>
   </div>
-  <button type="button" id="hunt-next" class="hunt-nav hunt-nav-next" aria-label="Next room" disabled>›</button>
+  <button type="button" id="hunt-next" class="hunt-nav hunt-nav-next locked" aria-label="Next room">›</button>
   </div>
   <p class="scene-caption" id="hunt-caption">Power on the espresso machine, then grind, then pull a shot.</p>
 
@@ -2020,7 +2020,7 @@ function spawnWaterDroplets(svg, cx, cy) {
   var captionKey = "kitchen";
   function updateNav() {
     if (prevBtn) prevBtn.disabled = stageIndex <= 0;
-    if (nextBtn) nextBtn.disabled = stageIndex >= maxUnlocked;
+    if (nextBtn) nextBtn.classList.toggle("locked", stageIndex >= maxUnlocked);
   }
   function setCaption(key) {
     captionKey = key;
@@ -2059,8 +2059,12 @@ function spawnWaterDroplets(svg, cx, cy) {
   if (prevBtn) prevBtn.addEventListener("click", function () {
     if (stageIndex > 0) goToStage(STAGES[stageIndex - 1]);
   });
-  if (nextBtn) nextBtn.addEventListener("click", function () {
-    if (stageIndex < maxUnlocked) goToStage(STAGES[stageIndex + 1]);
+  if (nextBtn) nextBtn.addEventListener("click", function (e) {
+    if (stageIndex < maxUnlocked) {
+      goToStage(STAGES[stageIndex + 1]);
+    } else if (e.detail >= 2 && stageIndex < STAGES.length - 1) {
+      goToStage(STAGES[stageIndex + 1]);
+    }
   });
 
   var GRIND_MS = 1200;

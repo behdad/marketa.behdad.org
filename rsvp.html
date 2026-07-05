@@ -344,7 +344,18 @@ footer{margin-top:2.6rem}
   50%{transform:rotate(4deg)}
   75%{transform:rotate(-2deg)}
 }
-@media (prefers-reduced-motion: reduce){#kitchen-grinder.grinding #kitchen-grinder-lid, #kitchen-grinder.lid-jiggle #kitchen-grinder-lid{animation:none}}
+.kitchen-bean-wobble{transform-box:fill-box; transform-origin:center}
+#kitchen-grinder.lid-jiggle .kitchen-bean-wobble{animation:bean-wobble .4s ease-in-out}
+#kitchen-grinder.lid-jiggle .kitchen-bean-wobble:nth-of-type(2){animation-delay:.02s}
+#kitchen-grinder.lid-jiggle .kitchen-bean-wobble:nth-of-type(3){animation-delay:.05s}
+#kitchen-grinder.lid-jiggle .kitchen-bean-wobble:nth-of-type(4){animation-delay:.01s}
+#kitchen-grinder.lid-jiggle .kitchen-bean-wobble:nth-of-type(5){animation-delay:.04s}
+@keyframes bean-wobble{
+  0%, 100%{transform:translate(0,0)}
+  30%{transform:translate(-0.8px,-0.6px)}
+  65%{transform:translate(0.6px,0.5px)}
+}
+@media (prefers-reduced-motion: reduce){#kitchen-grinder.grinding #kitchen-grinder-lid, #kitchen-grinder.lid-jiggle #kitchen-grinder-lid, .kitchen-bean-wobble{animation:none !important}}
 .kitchen-cup-wiggle{transform-box:fill-box; transform-origin:bottom center}
 #kitchen-cups.rattling .kitchen-cup-wiggle{animation:cups-wobble .4s ease-in-out}
 #kitchen-cups.rattling .kitchen-cup-wiggle:nth-of-type(2){animation-delay:.02s}
@@ -1048,11 +1059,11 @@ section{margin:1.9rem 0}
 <circle cx="348" cy="74" r="3" fill="#1f1f1f"/>
 </g>
 <path d="M330 85 L366 85 L360 118 L336 118 Z" fill="#ece2e2" stroke="#c4b2b2" stroke-width="1.5"/>
-<ellipse cx="342" cy="104" rx="3" ry="2.2" fill="#6b4a33"/>
-<ellipse cx="350" cy="100" rx="3" ry="2.2" fill="#6b4a33"/>
-<ellipse cx="357" cy="105" rx="3" ry="2.2" fill="#6b4a33"/>
-<ellipse cx="346" cy="111" rx="3" ry="2.2" fill="#6b4a33"/>
-<ellipse cx="354" cy="112" rx="3" ry="2.2" fill="#6b4a33"/>
+<g class="kitchen-bean-wobble"><ellipse cx="342" cy="104" rx="3" ry="2.2" fill="#6b4a33"/></g>
+<g class="kitchen-bean-wobble"><ellipse cx="350" cy="100" rx="3" ry="2.2" fill="#6b4a33"/></g>
+<g class="kitchen-bean-wobble"><ellipse cx="357" cy="105" rx="3" ry="2.2" fill="#6b4a33"/></g>
+<g class="kitchen-bean-wobble"><ellipse cx="346" cy="111" rx="3" ry="2.2" fill="#6b4a33"/></g>
+<g class="kitchen-bean-wobble"><ellipse cx="354" cy="112" rx="3" ry="2.2" fill="#6b4a33"/></g>
 <line x1="336" y1="90" x2="338" y2="114" stroke="#f8f2f2" stroke-width="2"/>
 <path d="M334 118 L362 118 Q357 135 354 148 L342 148 Q339 135 334 118 Z" fill="#d4d4d4" stroke="#a8a8a8" stroke-width="1"/>
 <line x1="344" y1="122" x2="345" y2="146" stroke="#eeeeee" stroke-width="2"/>
@@ -2327,7 +2338,7 @@ function eggBubble(anchor, text, placement) {
     left = Math.max(8, r.left - bW - 10);
     top = Math.max(8, Math.min(window.innerHeight - bH - 8, r.top));
   } else {
-    left = Math.max(8, Math.min(window.innerWidth - 228, r.left + r.width / 2 - 110));
+    left = Math.max(8, Math.min(window.innerWidth - bW - 8, r.left + r.width / 2 - bW / 2));
     if (r.bottom + 8 + bH <= window.innerHeight) {
       top = r.bottom + 8;
     } else if (r.top - 8 - bH >= 0) {
@@ -2408,7 +2419,7 @@ document.addEventListener("click", function (e) {
   if (typewriter) {
     var keyPitches = [1, 1.12, 0.94, 1.05, 0.88];
     var keyPitchIdx = 0;
-    var typeLineIdx = 0;
+    var typeLineIdx = Math.floor(Math.random() * (T.en.typewriter_lines.length || 1));
     function typeKey() {
       playTypewriterSound(keyPitches[keyPitchIdx % keyPitches.length]);
       keyPitchIdx++;
@@ -3949,7 +3960,7 @@ function spawnPowderBurst(svg, cx, cy) {
   var count = 14;
   for (var i = 0; i < count; i++) {
     (function (i) {
-      var angle = -70 + Math.random() * 50;
+      var angle = 100 + Math.random() * 70;
       var rad = angle * Math.PI / 180;
       var dist = 40 + Math.random() * 50;
       var dx = Math.cos(rad) * dist;
@@ -3961,6 +3972,8 @@ function spawnPowderBurst(svg, cx, cy) {
       circle.setAttribute("r", r);
       circle.setAttribute("fill", "#f5f2e8");
       circle.setAttribute("opacity", "0");
+      circle.style.transformBox = "fill-box";
+      circle.style.transformOrigin = "center";
       svg.appendChild(circle);
       if (circle.animate) {
         var anim = circle.animate([

@@ -97,7 +97,14 @@ footer{margin-top:2.6rem}
   40%{transform:scale(1.06)}
   70%{transform:scale(0.97)}
 }
+#office-dim-overlay{transition:opacity .8s ease; pointer-events:none}
+#office-stainedglass.zoomed{animation:office-zoom 1.2s ease-out forwards; transform-origin:530px 160px; filter:saturate(1.9)}
+@keyframes office-zoom{
+  0%{transform:scale(1)}
+  100%{transform:scale(1.12)}
+}
 @media (prefers-reduced-motion: reduce){
+  #office-stainedglass.zoomed{animation:none}
   #kitchen-grinder.grinding{animation:none}
   #kitchen-portafilter.brewing{animation:none}
   .watered{animation:none}
@@ -110,6 +117,15 @@ footer{margin-top:2.6rem}
     <button type="button" data-lang="en" aria-pressed="true">EN</button><span class="sep" aria-hidden="true">|</span>
     <button type="button" data-lang="cs" aria-pressed="false">CZ</button><sup class="footnote-mark lang-note" data-note-key="lang_note_text" tabindex="0" role="button">†</sup>
   </nav>
+
+  <audio id="guitar-song-audio" preload="none">
+    <source src="art/black-tornado.opus" type="audio/ogg; codecs=opus">
+    <source src="art/black-tornado.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="ukulele-song-audio" preload="none">
+    <source src="art/strange-and-beautiful-things.opus" type="audio/ogg; codecs=opus">
+    <source src="art/strange-and-beautiful-things.mp3" type="audio/mpeg">
+  </audio>
 
   <svg class="caps" viewBox="20 15 130 72" role="img" aria-label="A pink flat cap and a blue baker boy cap, crossed" data-aria-i="caps_aria" xmlns="http://www.w3.org/2000/svg">
     <g id="cap-pink" transform="translate(62,52) rotate(-12)">
@@ -125,7 +141,7 @@ footer{margin-top:2.6rem}
 
   <h1>markéta <span class="amp" data-title-i="amp_title" title="et — Latin for “and,” and the OG OpenType ligature.">&amp;</span> behdad</h1>
   <p class="ipa">/ˈmar·kɛː·ta/ she / they &nbsp;·&nbsp; /behˈ·dɒːd/ he / they<span class="ipa-secret" data-i="ipa_secret">psst — “yes” in a few more of her languages: ano (cs) · oui (fr) · sim (pt) · sí (es) · بله (fa) · ja (de) · sì (it)</span></p>
-  <p class="tagline" data-i="tagline">We’re getting married<br><strong>Save the dates</strong></p>
+  <p class="tagline" data-i="tagline">We’re getting married<br><strong>Will you be there?</strong></p>
 
   <hr>
 
@@ -478,6 +494,7 @@ footer{margin-top:2.6rem}
 <circle cx="220" cy="261" r="1.8" fill="#f0c46a"/>
 </g>
 <g id="garden-monstera" class="hunt-hit" tabindex="0" role="button" aria-label="A monstera plant">
+<rect x="215" y="185" width="105" height="145" fill="transparent"/>
 <rect x="264" y="230" width="8" height="60" fill="#a08a5e"/>
 <path d="M264 236 h8 M264 250 h8 M264 264 h8 M264 278 h8" stroke="#8a7448" stroke-width="1.5"/>
 <ellipse cx="242" cy="222" rx="16" ry="12" fill="#5a8a50" transform="rotate(-24 242 222)"/>
@@ -493,6 +510,7 @@ footer{margin-top:2.6rem}
 <path d="M240 296 Q268 302 296 296 M240 308 Q268 314 296 308" fill="none" stroke="#a8894e" stroke-width="1.5"/>
 </g>
 <g id="garden-peacelily" class="hunt-hit" tabindex="0" role="button" aria-label="A peace lily">
+<rect x="378" y="198" width="64" height="130" fill="transparent"/>
 <path d="M400 284 Q384 250 390 214 Q392 206 396 214 Q398 252 408 284 Z" fill="#3f6f4a"/>
 <path d="M418 284 Q430 254 424 222 Q423 212 429 222 Q438 258 426 284 Z" fill="#4a7a52"/>
 <path d="M410 284 Q406 246 412 220 Q414 212 417 220 Q418 250 418 284 Z" fill="#356344"/>
@@ -504,6 +522,7 @@ footer{margin-top:2.6rem}
 <path d="M390 298 Q410 303 430 298 M390 308 Q410 313 430 308" fill="none" stroke="#a8894e" stroke-width="1.5"/>
 </g>
 <g id="garden-dieffenbachia" class="hunt-hit" tabindex="0" role="button" aria-label="A dieffenbachia plant">
+<rect x="450" y="170" width="80" height="160" fill="transparent"/>
 <ellipse cx="470" cy="240" rx="13" ry="26" fill="#7fae62" transform="rotate(-25 470 240)"/>
 <ellipse cx="470" cy="240" rx="6" ry="18" fill="#c9dfa8" transform="rotate(-25 470 240)"/>
 <ellipse cx="506" cy="236" rx="13" ry="26" fill="#6f9f60" transform="rotate(20 506 236)"/>
@@ -897,6 +916,11 @@ footer{margin-top:2.6rem}
 <circle cx="263" cy="338" r="4" fill="#3a2a22"/>
 <circle cx="293" cy="338" r="4" fill="#3a2a22"/>
 </g>
+<mask id="office-spotlight-mask">
+<rect x="0" y="0" width="680" height="340" fill="#ffffff"/>
+<rect x="420" y="50" width="220" height="220" fill="#000000"/>
+</mask>
+<rect id="office-dim-overlay" x="0" y="0" width="680" height="340" fill="#1a1510" opacity="0" mask="url(#office-spotlight-mask)"/>
 </g>
 <g id="stage-balcony" transform="translate(2720,0)">
 
@@ -1460,6 +1484,58 @@ function spawnMusicNotes(svg, cx, cy) {
     })(i);
   }
 }
+function playWaterSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t = ctx.currentTime;
+    [0, 0.09, 0.16].forEach(function (t0, i) {
+      var freq = [1200, 1000, 1400][i];
+      var osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      var gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t + t0);
+      gain.gain.exponentialRampToValueAtTime(0.08, t + t0 + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + t0 + 0.18);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t + t0);
+      osc.stop(t + t0 + 0.2);
+    });
+    setTimeout(function () { ctx.close(); }, 500);
+  } catch (e) {}
+}
+function playCandleLightSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t = ctx.currentTime;
+    var bufferSize = ctx.sampleRate * 0.35;
+    var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    var data = buffer.getChannelData(0);
+    for (var i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 1.5);
+    var noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    var filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(2200, t);
+    filter.frequency.exponentialRampToValueAtTime(800, t + 0.3);
+    filter.Q.value = 0.8;
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.14, t + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.32);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    noise.start(t);
+    noise.stop(t + 0.35);
+    setTimeout(function () { ctx.close(); }, 500);
+  } catch (e) {}
+}
 function spawnWaterDroplets(svg, cx, cy) {
   if (!svg) return;
   for (var i = 0; i < 5; i++) {
@@ -1588,6 +1664,7 @@ function spawnWaterDroplets(svg, cx, cy) {
     onActivate(el, function () {
       gardenState.water = true;
       if (el) el.classList.add("done");
+      playWaterSound();
       spawnWaterDroplets(strip, spot.x, spot.y);
       if (el) {
         el.classList.remove("watered");
@@ -1599,8 +1676,8 @@ function spawnWaterDroplets(svg, cx, cy) {
     });
   });
   var instrumentSpots = {
-    "garden-guitar": { x: 750, y: 200 },
-    "garden-ukulele": { x: 735, y: 50 }
+    "garden-guitar": { x: 746, y: 270, audioId: "guitar-song-audio" },
+    "garden-ukulele": { x: 735, y: 88, audioId: "ukulele-song-audio" }
   };
   Object.keys(instrumentSpots).forEach(function (id) {
     var el = document.getElementById(id);
@@ -1608,8 +1685,23 @@ function spawnWaterDroplets(svg, cx, cy) {
     onActivate(el, function () {
       gardenState.music = true;
       if (el) el.classList.add("done");
-      playPluckSound();
       spawnMusicNotes(strip, spot.x, spot.y);
+      var audio = document.getElementById(spot.audioId);
+      var played = false;
+      if (audio) {
+        try {
+          Object.keys(instrumentSpots).forEach(function (otherId) {
+            if (otherId === id) return;
+            var other = document.getElementById(instrumentSpots[otherId].audioId);
+            if (other && !other.paused) other.pause();
+          });
+          audio.currentTime = 0;
+          var p = audio.play();
+          if (p && p.catch) p.catch(function () { playPluckSound(); });
+          played = true;
+        } catch (e) {}
+      }
+      if (!played) playPluckSound();
       checkGardenDone();
     });
   });
@@ -1617,6 +1709,7 @@ function spawnWaterDroplets(svg, cx, cy) {
   onActivate(candles, function () {
     gardenState.candles = true;
     if (candles) candles.classList.add("lit", "done");
+    playCandleLightSound();
     checkGardenDone();
   });
 
@@ -1629,8 +1722,10 @@ function spawnWaterDroplets(svg, cx, cy) {
   });
 
   var glass = document.getElementById("office-stainedglass");
+  var officeDim = document.getElementById("office-dim-overlay");
   onActivate(glass, function () {
-    if (glass) glass.classList.add("done");
+    if (glass) glass.classList.add("done", "zoomed");
+    if (officeDim) officeDim.style.opacity = "0.72";
     caption.textContent = CAPTIONS.complete;
   });
 

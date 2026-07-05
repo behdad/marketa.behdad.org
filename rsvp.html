@@ -178,6 +178,22 @@ footer{margin-top:2.6rem}
   75%{transform:rotate(-3deg)}
 }
 @media (prefers-reduced-motion: reduce){#kitchen-canister.jiggling #kitchen-canister-lid{animation:none}}
+#kitchen-grinder-lid{transform-box:fill-box; transform-origin:center}
+#kitchen-grinder.grinding #kitchen-grinder-lid{animation:grinder-lid-wobble .3s ease-in-out infinite}
+@keyframes grinder-lid-wobble{
+  0%, 100%{transform:rotate(0)}
+  25%{transform:rotate(-4deg)}
+  75%{transform:rotate(4deg)}
+}
+@media (prefers-reduced-motion: reduce){#kitchen-grinder.grinding #kitchen-grinder-lid{animation:none}}
+#cuddly-bolster, #cuddly-pillows{transform-box:fill-box; transform-origin:bottom center}
+#cuddly-bolster.squished, #cuddly-pillows.squished{animation:cushion-squish .4s ease-in-out}
+@keyframes cushion-squish{
+  0%, 100%{transform:scale(1,1)}
+  40%{transform:scale(1.08,.85)}
+  70%{transform:scale(.96,1.05)}
+}
+@media (prefers-reduced-motion: reduce){#cuddly-bolster.squished, #cuddly-pillows.squished{animation:none}}
 #balcony-doormat{transform-box:fill-box; transform-origin:center}
 #balcony-doormat.shaking{animation:doormat-shake .4s ease-in-out}
 @keyframes doormat-shake{
@@ -656,7 +672,8 @@ section{margin:1.9rem 0}
 <line x1="652" y1="110" x2="680" y2="110" stroke="#2d2d2d" stroke-width="2"/>
 <rect x="0" y="320" width="680" height="20" fill="#cf9a5f"/>
 <line x1="0" y1="330" x2="680" y2="330" stroke="#b57f47" stroke-width="1.5"/>
-<g id="kitchen-plant">
+<g id="kitchen-plant" class="hunt-hit" tabindex="0" role="button" aria-label="The kitchen plant">
+<rect x="640" y="250" width="46" height="72" fill="transparent"/>
 <ellipse cx="656" cy="276" rx="9" ry="16" fill="#7c9a6d" transform="rotate(-25 656 276)"/>
 <ellipse cx="672" cy="274" rx="9" ry="16" fill="#6f8f60" transform="rotate(25 672 274)"/>
 <ellipse cx="664" cy="264" rx="8" ry="15" fill="#86a377"/>
@@ -749,8 +766,10 @@ section{margin:1.9rem 0}
 </g>
 <g id="kitchen-grinder" class="hunt-hit" tabindex="0" role="button" aria-label="The coffee grinder">
 <g transform="translate(-31.2,0) scale(1.15,1)">
+<g id="kitchen-grinder-lid">
 <rect x="328" y="76" width="40" height="9" rx="4" fill="#2d2d2d"/>
 <circle cx="348" cy="74" r="3" fill="#1f1f1f"/>
+</g>
 <path d="M330 85 L366 85 L360 118 L336 118 Z" fill="#ece2e2" stroke="#c4b2b2" stroke-width="1.5"/>
 <ellipse cx="342" cy="104" rx="3" ry="2.2" fill="#6b4a33"/>
 <ellipse cx="350" cy="100" rx="3" ry="2.2" fill="#6b4a33"/>
@@ -1160,12 +1179,14 @@ section{margin:1.9rem 0}
 <path d="M74 260 H526 M74 270 H526 M74 280 H526 M74 290 H526 M74 300 H526" stroke="#cf6f3a" stroke-width="1.5"/>
 <rect x="84" y="306" width="436" height="9" fill="#4a3222"/>
 </g>
-<g id="cuddly-bolster">
+<g id="cuddly-bolster" class="hunt-hit" tabindex="0" role="button" aria-label="The bolster cushion">
+<rect x="428" y="216" width="138" height="46" fill="transparent"/>
 <rect x="428" y="220" width="134" height="38" rx="19" fill="#b85c2f" stroke="#8f4520" stroke-width="2"/>
 <path d="M444 222 V256 M460 222 V256 M476 222 V256 M492 222 V256 M508 222 V256 M524 222 V256 M540 222 V256" stroke="#cf6f3a" stroke-width="1.5"/>
 <ellipse cx="558" cy="239" rx="8" ry="17" fill="#cf6f3a" stroke="#8f4520" stroke-width="1.5"/>
 </g>
-<g id="cuddly-pillows">
+<g id="cuddly-pillows" class="hunt-hit" tabindex="0" role="button" aria-label="The pillows">
+<rect x="248" y="200" width="164" height="54" fill="transparent"/>
 <rect x="252" y="212" width="42" height="38" rx="6" fill="#b85c2f" stroke="#8f4520" stroke-width="1.5" transform="rotate(-4 273 231)"/>
 <path d="M260 216 V246 M270 215 V245 M280 214 V244" stroke="#cf6f3a" stroke-width="1.5" transform="rotate(-4 273 231)"/>
 <rect x="300" y="204" width="54" height="46" rx="7" fill="#c46333" stroke="#8f4520" stroke-width="1.5"/>
@@ -1958,6 +1979,22 @@ document.addEventListener("click", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); jiggleCanister(); }
     });
   }
+  var kitchenPlant = document.getElementById("kitchen-plant");
+  if (kitchenPlant) {
+    function waterKitchenPlant() {
+      var stripEl = document.getElementById("loft-game-strip");
+      kitchenPlant.classList.remove("watered");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { kitchenPlant.classList.add("watered"); });
+      });
+      playWaterSound();
+      spawnWaterDroplets(stripEl, 664, 250);
+    }
+    kitchenPlant.addEventListener("click", waterKitchenPlant);
+    kitchenPlant.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); waterKitchenPlant(); }
+    });
+  }
   var radio = document.getElementById("kitchen-scale");
   if (radio) {
     var radioOn = false;
@@ -2035,6 +2072,22 @@ document.addEventListener("click", function (e) {
   octopus.addEventListener("click", wobble);
   octopus.addEventListener("keydown", function (e) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); wobble(); }
+  });
+})();
+(function () {
+  ["cuddly-bolster", "cuddly-pillows"].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    function squish() {
+      el.classList.remove("squished");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { el.classList.add("squished"); });
+      });
+    }
+    el.addEventListener("click", squish);
+    el.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); squish(); }
+    });
   });
 })();
 (function () {
@@ -3464,6 +3517,7 @@ function spawnWaterDroplets(svg, cx, cy) {
     kitchenPowered = true;
     if (lamarzocco) lamarzocco.classList.add("powered-on", "done");
     playSparkSound();
+    playGlassClinkSound();
     spawnSparkFlare(strip, 465, 80);
   });
   onActivate(grinder, function () {

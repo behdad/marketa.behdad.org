@@ -576,6 +576,17 @@ footer{margin-top:2.6rem}
   100%{transform:rotate(0) translateY(0)}
 }
 @media (prefers-reduced-motion: reduce){#cuddly-blanket.tugged, #cuddly-yellowblanket.tugged, #cuddly-lapblanket.tugged{animation:none}}
+#cuddly-lapblanket.wiggling{animation:lapblanket-wiggle 1.1s ease-in-out}
+@keyframes lapblanket-wiggle{
+  0%, 100%{transform:rotate(0) translateY(0)}
+  15%{transform:rotate(-2deg) translateY(-1px)}
+  30%{transform:rotate(2.5deg) translateY(1px)}
+  45%{transform:rotate(-2deg) translateY(-1px)}
+  60%{transform:rotate(2.5deg) translateY(1px)}
+  75%{transform:rotate(-1.5deg) translateY(-0.5px)}
+  90%{transform:rotate(1deg)}
+}
+@media (prefers-reduced-motion: reduce){#cuddly-lapblanket.wiggling{animation:none}}
 #cuddly-octopus.popping-out{animation:octopus-pop-out 1s ease-out forwards}
 @keyframes octopus-pop-out{
   0%{transform:translateY(9px); opacity:0}
@@ -4434,6 +4445,29 @@ function spawnHearts(svg, cx, cy) {
     })(i);
   }
 }
+function playGiggleSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t = ctx.currentTime;
+    [523, 587, 659, 587].forEach(function (freq, i) {
+      var t0 = t + i * 0.09;
+      var osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, t0);
+      var gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(0.05, t0 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.09);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t0);
+      osc.stop(t0 + 0.1);
+    });
+    setTimeout(function () { ctx.close(); }, 700);
+  } catch (e) {}
+}
 function playHeartsSound() {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -5779,10 +5813,18 @@ function spawnWaterDroplets(svg, cx, cy) {
     var el = document.getElementById(id);
     onActivate(el, function () {
       if (el) {
-        el.classList.remove("tugged");
-        requestAnimationFrame(function () {
-          requestAnimationFrame(function () { el.classList.add("tugged"); });
-        });
+        if (id === "cuddly-lapblanket" && Math.random() < 0.3) {
+          el.classList.remove("wiggling");
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () { el.classList.add("wiggling"); });
+          });
+          playGiggleSound();
+        } else {
+          el.classList.remove("tugged");
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () { el.classList.add("tugged"); });
+          });
+        }
       }
       var octopus = document.getElementById("cuddly-octopus");
       if (!octopus || !octopus.classList.contains("played")) {

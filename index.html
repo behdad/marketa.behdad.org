@@ -506,14 +506,9 @@ body.completion-trip{animation:completion-spin 7s linear}
   88%{opacity:0.85}
   100%{opacity:0}
 }
-.rainbow.burst{animation:rainbow-burst 4s ease-in-out}
-@keyframes rainbow-burst{
-  0%{opacity:0}
-  20%{opacity:0.9}
-  80%{opacity:0.9}
-  100%{opacity:0}
-}
 #garden-sun{cursor:pointer}
+.cloud{cursor:pointer}
+.cloud-raindrop{pointer-events:none}
 #loft-plant{cursor:pointer}
 #loft-roach{cursor:pointer}
 .shoe-spark-target{cursor:pointer}
@@ -531,7 +526,6 @@ body.completion-trip{animation:completion-spin 7s linear}
   .sun-glow{animation:none}
   .shoe-spark-target.spark{animation:none}
   .rainbow{animation:none}
-  .rainbow.burst{animation:none}
 }
 @media print{
   body::after{
@@ -2095,6 +2089,38 @@ function spawnButterflies(svg, cx, cy) {
     })(i);
   }
 }
+function spawnCloudRain(svg, cx, cy) {
+  if (!svg) return;
+  var count = 4;
+  for (var i = 0; i < count; i++) {
+    (function (i) {
+      var dx = (i - (count - 1) / 2) * 12 + (Math.random() - 0.5) * 6;
+      var startY = cy + 18;
+      var dropLen = 14 + Math.random() * 8;
+      var fallDist = 60 + Math.random() * 30;
+      var line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", cx + dx);
+      line.setAttribute("y1", startY);
+      line.setAttribute("x2", cx + dx - 4);
+      line.setAttribute("y2", startY + dropLen);
+      line.setAttribute("stroke", "#a8c4d4");
+      line.setAttribute("stroke-width", "2");
+      line.setAttribute("stroke-linecap", "round");
+      line.setAttribute("class", "cloud-raindrop");
+      svg.appendChild(line);
+      if (line.animate) {
+        var anim = line.animate([
+          { transform: "translate(0px,0px)", opacity: 0 },
+          { transform: "translate(-6px," + (fallDist * .4) + "px)", opacity: .85, offset: .3 },
+          { transform: "translate(-14px," + fallDist + "px)", opacity: 0 }
+        ], { duration: 700 + Math.random() * 300, easing: "ease-in", delay: i * 90 });
+        anim.onfinish = function () { if (line.parentNode) line.remove(); };
+      } else {
+        setTimeout(function () { if (line.parentNode) line.remove(); }, 1200);
+      }
+    })(i);
+  }
+}
 function sparkShoes(svg, shoesId, cx, cy) {
   var el = document.getElementById(shoesId);
   if (!el) return;
@@ -2147,14 +2173,34 @@ function sparkShoes(svg, shoesId, cx, cy) {
 })();
 (function () {
   var gardenSun = document.getElementById("garden-sun");
-  var gardenRainbow = document.getElementById("garden-rainbow");
-  if (gardenSun && gardenRainbow) gardenSun.addEventListener("click", function () {
-    gardenRainbow.classList.remove("burst");
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () { gardenRainbow.classList.add("burst"); });
-    });
-    setTimeout(function () { gardenRainbow.classList.remove("burst"); }, 4000);
+  if (gardenSun) gardenSun.addEventListener("click", function () {
+    var sunGlow = document.querySelector(".sun-glow");
+    if (sunGlow) {
+      sunGlow.style.animation = "";
+      sunGlow.style.opacity = "";
+    }
   });
+})();
+(function () {
+  var gardenSvg = document.getElementById("garden-scene-svg");
+  var cloud1 = document.getElementById("garden-cloud-1");
+  var cloud2 = document.getElementById("garden-cloud-2");
+  if (cloud1) cloud1.addEventListener("click", function () { spawnCloudRain(gardenSvg, 150, 105); });
+  if (cloud2) cloud2.addEventListener("click", function () { spawnCloudRain(gardenSvg, 380, 68); });
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!reduceMotion && gardenSvg) {
+    (function loopCloudRain() {
+      setTimeout(function () {
+        spawnCloudRain(gardenSvg, 150, 105);
+        spawnCloudRain(gardenSvg, 380, 68);
+        loopCloudRain();
+      }, 30000);
+    })();
+    setTimeout(function () {
+      spawnCloudRain(gardenSvg, 150, 105);
+      spawnCloudRain(gardenSvg, 380, 68);
+    }, 18000);
+  }
 })();
 (function () {
   var roach = document.getElementById("loft-roach");

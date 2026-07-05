@@ -169,6 +169,7 @@ footer{margin-top:2.6rem}
 #office-lamp.dimmed .office-lamp-glow{opacity:0}
 #office-lamp.dimmed .office-lamp-bulb{fill:#9a948a; stroke:#7a746a}
 #office-pendant.dimmed .office-pendant-bulb{fill:#9a948a; stroke:#7a746a}
+#office-lamp-dim{transition:opacity .6s ease; pointer-events:none}
 #balcony-butterfly{opacity:0}
 #balcony-butterfly.flying{animation:balcony-butterfly-fly 3.2s ease-in-out forwards}
 @keyframes balcony-butterfly-fly{
@@ -1079,6 +1080,7 @@ section{margin:1.9rem 0}
 <rect x="420" y="50" width="220" height="220" fill="#000000"/>
 </mask>
 <rect id="office-dim-overlay" x="0" y="0" width="680" height="340" fill="#1a1510" opacity="0" mask="url(#office-spotlight-mask)"/>
+<rect id="office-lamp-dim" x="0" y="0" width="680" height="340" fill="#1a1510" opacity="0" pointer-events="none"/>
 </g>
 <g id="stage-balcony" transform="translate(2720,0)">
 
@@ -1539,11 +1541,22 @@ document.addEventListener("click", function (e) {
   });
 })();
 (function () {
+  var lampIds = ["office-lamp", "office-pendant"];
+  var roomDim = document.getElementById("office-lamp-dim");
+  function updateRoomDim() {
+    if (!roomDim) return;
+    var dimmedCount = lampIds.filter(function (id) {
+      var el = document.getElementById(id);
+      return el && el.classList.contains("dimmed");
+    }).length;
+    roomDim.style.opacity = dimmedCount === 0 ? "0" : dimmedCount === 1 ? "0.35" : "0.6";
+  }
   function toggleDim(el) {
     if (!el) return;
     el.classList.toggle("dimmed");
+    updateRoomDim();
   }
-  ["office-lamp", "office-pendant"].forEach(function (id) {
+  lampIds.forEach(function (id) {
     var el = document.getElementById(id);
     if (!el) return;
     el.addEventListener("click", function () { toggleDim(el); });

@@ -2171,16 +2171,61 @@ document.addEventListener("click", function (e) {
   if (kettle) {
     var kettleSteaming = false;
     var kettleInterval = null;
+    var kettleCtx = null, kettleSource = null, kettleGain = null;
     function kettlePuff() { spawnSteamWisps(document.getElementById("loft-game-strip"), 93, 197, 0.55); }
+    function startKettleHum() {
+      try {
+        var Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        kettleCtx = new Ctx();
+        var bufferSize = kettleCtx.sampleRate * 2;
+        var buffer = kettleCtx.createBuffer(1, bufferSize, kettleCtx.sampleRate);
+        var data = buffer.getChannelData(0);
+        for (var i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        kettleSource = kettleCtx.createBufferSource();
+        kettleSource.buffer = buffer;
+        kettleSource.loop = true;
+        var filter = kettleCtx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.frequency.value = 700;
+        filter.Q.value = 0.9;
+        kettleGain = kettleCtx.createGain();
+        kettleGain.gain.setValueAtTime(0.0001, kettleCtx.currentTime);
+        kettleGain.gain.exponentialRampToValueAtTime(0.07, kettleCtx.currentTime + 0.4);
+        kettleSource.connect(filter);
+        filter.connect(kettleGain);
+        kettleGain.connect(kettleCtx.destination);
+        kettleSource.start();
+      } catch (e) {}
+    }
+    function stopKettleHum() {
+      try {
+        if (kettleGain && kettleCtx) {
+          kettleGain.gain.exponentialRampToValueAtTime(0.0001, kettleCtx.currentTime + 0.2);
+        }
+        var src = kettleSource, ctxToClose = kettleCtx;
+        setTimeout(function () {
+          if (src) { try { src.stop(); } catch (e) {} }
+          if (ctxToClose) ctxToClose.close();
+        }, 300);
+      } catch (e) {}
+      kettleSource = null;
+      kettleGain = null;
+      kettleCtx = null;
+    }
     function toggleKettle() {
       kettleSteaming = !kettleSteaming;
       kettle.classList.toggle("steaming", kettleSteaming);
       if (kettleSteaming) {
         kettlePuff();
         kettleInterval = setInterval(kettlePuff, 1300);
-      } else if (kettleInterval) {
-        clearInterval(kettleInterval);
-        kettleInterval = null;
+        startKettleHum();
+      } else {
+        if (kettleInterval) {
+          clearInterval(kettleInterval);
+          kettleInterval = null;
+        }
+        stopKettleHum();
       }
     }
     kettle.addEventListener("click", toggleKettle);
@@ -2192,6 +2237,7 @@ document.addEventListener("click", function (e) {
       kettleInterval = null;
       kettleSteaming = false;
       kettle.classList.remove("steaming");
+      stopKettleHum();
     };
   }
   var gong = document.getElementById("kitchen-gong");

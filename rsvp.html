@@ -1084,7 +1084,15 @@ var T = {
     caps_aria: "A pink flat cap and a blue baker boy cap, crossed",
     amp_title: "et — Latin for “and,” and the OG OpenType ligature.",
     ipa_secret: "psst — “yes” in a few more of her languages: ano (cs) · oui (fr) · sim (pt) · sí (es) · بله (fa) · ja (de) · sì (it)",
-    lang_note_text: "translator’s note: the reference behind “small or far away” doesn’t survive translation gracefully in any of her other languages either."
+    lang_note_text: "translator’s note: the reference behind “small or far away” doesn’t survive translation gracefully in any of her other languages either.",
+    hunt: {
+      kitchen: "Power on the espresso machine, then grind, then pull a shot.",
+      garden: "Water a plant, play an instrument, and light the candles.",
+      cuddly: "Pull back a blanket.",
+      office: "Find the stained-glass butterfly.",
+      complete: "You made it through the whole loft. ♥",
+      balcony: "There will be BBQ 🔥🍖🌽🍷"
+    }
   },
   cs: {
     tagline: "Budeme se brát<br><strong>Budete tam?</strong>",
@@ -1094,7 +1102,15 @@ var T = {
     caps_aria: "Růžová čepice a modrá čepice, zkřížené",
     amp_title: "et — latinsky „a“, praotec všech OpenType ligatur.",
     ipa_secret: "pst — „ano“ v pár dalších jejích jazycích: yes (en) · oui (fr) · sim (pt) · sí (es) · بله (fa) · ja (de) · sì (it)",
-    lang_note_text: "poznámka překladatelky: odkaz skrytý v „malé nebo vzdálené“ se do žádného z jejích dalších jazyků nepřekládá o nic elegantněji."
+    lang_note_text: "poznámka překladatelky: odkaz skrytý v „malé nebo vzdálené“ se do žádného z jejích dalších jazyků nepřekládá o nic elegantněji.",
+    hunt: {
+      kitchen: "Zapni kávovar, pak umel kávu, pak stáhni espresso.",
+      garden: "Zalij kytku, zahraj na nástroj a zapal svíčky.",
+      cuddly: "Odhrň deku.",
+      office: "Najdi vitrážového motýla.",
+      complete: "Prošli jste celým bytem. ♥",
+      balcony: "Bude tu grilovačka 🔥🍖🌽🍷"
+    }
   }
 };
 function setLang(l) {
@@ -1571,13 +1587,11 @@ function spawnWaterDroplets(svg, cx, cy) {
   var nextBtn = document.getElementById("hunt-next");
   if (!strip || !caption) return;
   var STAGES = ["kitchen", "garden", "cuddly", "office", "balcony"];
-  var CAPTIONS = {
-    kitchen: "Power on the espresso machine, then grind, then pull a shot.",
-    garden: "Water a plant, play an instrument, and light the candles.",
-    cuddly: "Pull back a blanket.",
-    office: "Find the stained-glass butterfly.",
-    complete: "You made it through the whole loft. ♥"
-  };
+  function huntText(key) {
+    var l = document.documentElement.lang;
+    var dict = (T[l] && T[l].hunt) || T.en.hunt;
+    return (dict && dict[key]) || "";
+  }
   function onActivate(el, fn) {
     if (!el) return;
     el.addEventListener("click", fn);
@@ -1597,7 +1611,7 @@ function spawnWaterDroplets(svg, cx, cy) {
     stageIndex = idx;
     if (idx > maxUnlocked) maxUnlocked = idx;
     strip.style.transform = "translateX(-" + (idx * 20) + "%)";
-    caption.textContent = CAPTIONS[name] || "";
+    caption.textContent = huntText(name);
     updateNav();
   }
   if (prevBtn) prevBtn.addEventListener("click", function () {
@@ -1639,7 +1653,7 @@ function spawnWaterDroplets(svg, cx, cy) {
     brewing = true;
     if (portafilter) portafilter.classList.add("brewing");
     playBrewSound();
-    spawnSteamWisps(strip, 465, 205);
+    spawnSteamWisps(strip, 465, 213);
     setTimeout(function () {
       brewing = false;
       if (portafilter) { portafilter.classList.remove("brewing"); portafilter.classList.add("done"); }
@@ -1726,7 +1740,8 @@ function spawnWaterDroplets(svg, cx, cy) {
   onActivate(glass, function () {
     if (glass) glass.classList.add("done", "zoomed");
     if (officeDim) officeDim.style.opacity = "0.72";
-    caption.textContent = CAPTIONS.complete;
+    caption.textContent = huntText("complete");
+    setTimeout(function () { goToStage("balcony"); }, 2000);
   });
 
   goToStage("kitchen");

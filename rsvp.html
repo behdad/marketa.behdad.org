@@ -314,6 +314,16 @@ footer{margin-top:2.6rem}
   65%{transform:rotate(4deg)}
 }
 @media (prefers-reduced-motion: reduce){.wall-brick.wobbling{animation:none}}
+#kitchen-shotcup-coffee{opacity:0; transform-box:fill-box; transform-origin:bottom center; transition:opacity .3s ease}
+#kitchen-shotcup.filled #kitchen-shotcup-coffee{opacity:1}
+#kitchen-shotcup{transform-box:fill-box; transform-origin:bottom center}
+#kitchen-shotcup.sipping{animation:shotcup-sip .6s ease-in-out}
+@keyframes shotcup-sip{
+  0%, 100%{transform:rotate(0)}
+  40%{transform:rotate(-18deg)}
+  70%{transform:rotate(-4deg)}
+}
+@media (prefers-reduced-motion: reduce){#kitchen-shotcup.sipping{animation:none}}
 #cuddly-marketa{transform-origin:249px 254px}
 #cuddly-marketa.leaning{animation:marketa-lean 3s ease-in-out}
 @keyframes marketa-lean{
@@ -1010,7 +1020,7 @@ section{margin:1.9rem 0}
 <line x1="537" y1="206" x2="538" y2="215" stroke="#2d2d2d" stroke-width="5" stroke-linecap="round"/>
 </g>
 <g id="kitchen-portafilter" class="hunt-hit" tabindex="0" role="button" aria-label="The portafilter">
-<rect x="457" y="157" width="54" height="56" fill="transparent"/>
+<rect x="457" y="163" width="54" height="50" fill="transparent"/>
 <g id="kitchen-portafilter-dial">
 <circle cx="500" cy="168" r="11" fill="#f6f2e6" stroke="#8f8f8f" stroke-width="2.5"/>
 <path d="M494 162 L496 164 M500 158 L500 161 M506 162 L504 164" stroke="#5a5a5a" stroke-width="1"/>
@@ -1022,8 +1032,10 @@ section{margin:1.9rem 0}
 <circle cx="473" cy="201" r="3" fill="#c9c9c9"/>
 <line x1="475" y1="201" x2="504" y2="208" stroke="#1f1f1f" stroke-width="8" stroke-linecap="round"/>
 </g>
-<g id="kitchen-shotcup">
+<g id="kitchen-shotcup" class="hunt-hit" tabindex="0" role="button" aria-label="The espresso shot">
+<rect x="455" y="209" width="21" height="17" fill="transparent"/>
 <rect x="459" y="213" width="13" height="9" rx="1.5" fill="#fdfbf6" stroke="#d8cfbc" stroke-width="1"/>
+<rect id="kitchen-shotcup-coffee" x="460" y="217" width="11" height="4" rx="1" fill="#5a3825"/>
 </g>
 
 
@@ -1925,7 +1937,7 @@ section{margin:1.9rem 0}
   </div>
   <button type="button" id="hunt-next" class="hunt-nav hunt-nav-next locked" aria-label="Next room">›</button>
   </div>
-  <p class="scene-caption" id="hunt-caption">Power on the espresso machine, then grind, then pull a shot.</p>
+  <p class="scene-caption" id="hunt-caption">Power on the espresso machine, then grind coffee, then pull a shot.</p>
 
   <hr>
 
@@ -1995,7 +2007,8 @@ var T = {
     caps_aria: "A pink flat cap and a blue baker boy cap, crossed",
     ipa_secret: "psst — “yes” in a few more of her languages: ano (cs) · oui (fr) · sim (pt) · sí (es) · بله (fa) · ja (de) · sì (it)",
     hunt: {
-      kitchen: "Power on the espresso machine, then grind, then pull a shot.",
+      kitchen: "Power on the espresso machine, then grind coffee, then pull a shot.",
+      kitchen_sip: "Go on, sip it.",
       garden: "Water a plant, play an instrument, and light the candles.",
       cuddly: "Play with the Octi, pull back a blanket.",
       cuddly_hint: "Play with the Octi first.",
@@ -2033,6 +2046,7 @@ var T = {
     ipa_secret: "pst — „ano“ v pár dalších jejích jazycích: yes (en) · oui (fr) · sim (pt) · sí (es) · بله (fa) · ja (de) · sì (it)",
     hunt: {
       kitchen: "Zapni kávovar, pak umel kávu, pak stáhni espresso.",
+      kitchen_sip: "Tak si ho usrkni.",
       garden: "Zalij kytku, zahraj na nástroj a zapal svíčky.",
       cuddly: "Pohraj si s Octi, odhrň deku.",
       cuddly_hint: "Nejdřív si pohraj s Octi.",
@@ -2255,6 +2269,28 @@ document.addEventListener("click", function (e) {
     lounger.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); wobbleLounger(); }
     });
+  }
+  var shotcup = document.getElementById("kitchen-shotcup");
+  if (shotcup) {
+    function sipShotcup() {
+      if (!shotcup.classList.contains("filled")) return;
+      shotcup.classList.remove("filled");
+      shotcup.classList.remove("sipping");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { shotcup.classList.add("sipping"); });
+      });
+      playSipSound();
+      setTimeout(function () {
+        if (window.goToStage) window.goToStage("garden");
+      }, 700);
+    }
+    shotcup.addEventListener("click", sipShotcup);
+    shotcup.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sipShotcup(); }
+    });
+    window.resetShotcup = function () {
+      shotcup.classList.remove("filled", "sipping");
+    };
   }
   var soda = document.getElementById("kitchen-drinkmate");
   if (soda) {
@@ -4420,6 +4456,7 @@ function spawnWaterDroplets(svg, cx, cy) {
     updateNav();
     if (name === "balcony") triggerBalconyFinale();
   }
+  window.goToStage = goToStage;
   if (prevBtn) prevBtn.addEventListener("click", function () {
     if (stageIndex > 0) goToStage(STAGES[stageIndex - 1]);
   });
@@ -4467,7 +4504,9 @@ function spawnWaterDroplets(svg, cx, cy) {
     setTimeout(function () {
       brewing = false;
       if (portafilter) { portafilter.classList.remove("brewing"); portafilter.classList.add("done"); }
-      goToStage("garden");
+      var shotcup = document.getElementById("kitchen-shotcup");
+      if (shotcup) shotcup.classList.add("filled");
+      setCaption("kitchen_sip");
     }, BREW_MS);
   });
 
@@ -4619,6 +4658,7 @@ function spawnWaterDroplets(svg, cx, cy) {
     if (window.resetRadio) window.resetRadio();
     if (window.resetAC) window.resetAC();
     if (window.resetKettle) window.resetKettle();
+    if (window.resetShotcup) window.resetShotcup();
     maxUnlocked = 0;
     goToStage("kitchen");
   }

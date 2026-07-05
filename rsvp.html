@@ -244,7 +244,13 @@ footer{margin-top:2.6rem}
   35%{transform:rotate(-3deg)}
   70%{transform:rotate(2deg)}
 }
-@media (prefers-reduced-motion: reduce){#balcony-wineglass.wobbling, #balcony-winebottle.wobbling #balcony-winebottle-inner{animation:none}}
+#balcony-wineglass.cheers{animation:cheers-lean .6s ease-in-out}
+@keyframes cheers-lean{
+  0%, 100%{transform:rotate(0) translateX(0)}
+  35%{transform:rotate(-16deg) translateX(-7px)}
+  65%{transform:rotate(4deg) translateX(1px)}
+}
+@media (prefers-reduced-motion: reduce){#balcony-wineglass.wobbling, #balcony-winebottle.wobbling #balcony-winebottle-inner, #balcony-wineglass.cheers{animation:none}}
 #kitchen-gong-disc{transform-box:fill-box; transform-origin:center}
 #kitchen-gong.struck #kitchen-gong-disc{animation:gong-strike .6s ease-out}
 @keyframes gong-strike{
@@ -1208,9 +1214,12 @@ section{margin:1.9rem 0}
 <ellipse cx="310" cy="312" rx="140" ry="16" fill="#e8b96f" fill-opacity="0.45"/>
 <ellipse cx="150" cy="326" rx="70" ry="9" fill="#e8b96f" fill-opacity="0.4"/>
 <g id="garden-jacket" class="hunt-hit" tabindex="0" role="button" aria-label="The jacket">
-<rect x="0" y="126" width="36" height="68" fill="transparent"/>
-<line x1="18" y1="130" x2="18" y2="138" stroke="#4a453d" stroke-width="2.5"/>
-<circle cx="18" cy="129" r="2.5" fill="#4a453d"/>
+<rect x="0" y="100" width="36" height="130" fill="transparent"/>
+<line x1="18" y1="110" x2="18" y2="210" stroke="#6b4226" stroke-width="2.5"/>
+<circle cx="18" cy="107" r="2.5" fill="#6b4226"/>
+<line x1="18" y1="118" x2="29" y2="112" stroke="#6b4226" stroke-width="2" stroke-linecap="round"/>
+<line x1="18" y1="128" x2="7" y2="122" stroke="#6b4226" stroke-width="2" stroke-linecap="round"/>
+<path d="M18 210 L4 221 M18 210 L18 223 M18 210 L32 221" stroke="#6b4226" stroke-width="2" stroke-linecap="round"/>
 <path d="M8 146 Q8 138 18 138 Q28 138 28 146 L30 190 Q19 198 6 190 Z" fill="#e8d44a" stroke="#c9b52f" stroke-width="1.5"/>
 <path d="M8 154 Q18 158 29 154 M7 166 Q18 170 30 166 M7 178 Q18 182 30 178" fill="none" stroke="#c9b52f" stroke-width="1.5"/>
 </g>
@@ -3198,15 +3207,30 @@ document.addEventListener("click", function (e) {
   var winebottle = document.getElementById("balcony-winebottle");
   if (wineglass) {
     function sipGlass() {
-      if (!wineglass.classList.contains("empty")) {
+      var wasFull = !wineglass.classList.contains("empty");
+      if (wasFull) {
         wineglass.classList.add("empty");
         playSipSound();
       }
-      playGlassClinkSound(wineglass.classList.contains("empty") ? 1.35 : 1);
-      wineglass.classList.remove("wobbling");
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () { wineglass.classList.add("wobbling"); });
-      });
+      playGlassClinkSound(wasFull ? 1 : 1.35);
+      if (wasFull) {
+        wineglass.classList.remove("wobbling");
+        wineglass.classList.remove("cheers");
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { wineglass.classList.add("cheers"); });
+        });
+        if (winebottle) {
+          winebottle.classList.remove("wobbling");
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () { winebottle.classList.add("wobbling"); });
+          });
+        }
+      } else {
+        wineglass.classList.remove("wobbling");
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { wineglass.classList.add("wobbling"); });
+        });
+      }
     }
     wineglass.addEventListener("click", sipGlass);
     wineglass.addEventListener("keydown", function (e) {

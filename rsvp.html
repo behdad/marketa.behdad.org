@@ -553,7 +553,7 @@ section{margin:1.9rem 0}
 <path d="M8 146 Q8 138 18 138 Q28 138 28 146 L30 190 Q19 198 6 190 Z" fill="#e8d44a" stroke="#c9b52f" stroke-width="1.5"/>
 <path d="M8 154 Q18 158 29 154 M7 166 Q18 170 30 166 M7 178 Q18 182 30 178" fill="none" stroke="#c9b52f" stroke-width="1.5"/>
 </g>
-<g id="garden-ukulele" class="hunt-hit" tabindex="0" role="button" aria-label="The ukulele">
+<g id="garden-ukulele" class="hunt-hit" tabindex="0" role="button" aria-label="The ukulele" transform="translate(0,20)">
 <rect x="52" y="46" width="6" height="30" rx="2" fill="#8a6a44"/>
 <rect x="49" y="38" width="12" height="10" rx="2" fill="#6b4e2e"/>
 <ellipse cx="55" cy="82" rx="8" ry="9" fill="#d4a860" stroke="#a8813e" stroke-width="1.5"/>
@@ -1598,7 +1598,7 @@ document.addEventListener("click", function (e) {
     });
   }
   var mask = document.getElementById("garden-mask");
-  function hearts() { spawnHearts(strip, 1280, 108); }
+  function hearts() { spawnHearts(strip, 1280, 108); playHeartsSound(); }
   if (mask) {
     mask.addEventListener("click", hearts);
     mask.addEventListener("keydown", function (e) {
@@ -1969,6 +1969,29 @@ function spawnHearts(svg, cx, cy) {
     })(i);
   }
 }
+function playHeartsSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t = ctx.currentTime;
+    [[0, 587.33], [0.14, 783.99], [0.28, 987.77]].forEach(function (pair) {
+      var t0 = pair[0], freq = pair[1];
+      var osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      var gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t + t0);
+      gain.gain.exponentialRampToValueAtTime(0.16, t + t0 + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + t0 + 0.5);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t + t0);
+      osc.stop(t + t0 + 0.55);
+    });
+    setTimeout(function () { ctx.close(); }, 900);
+  } catch (e) {}
+}
 function playTripMelody() {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -2300,7 +2323,7 @@ function spawnWaterDroplets(svg, cx, cy) {
   });
   var instrumentSpots = {
     "garden-guitar": { x: 746, y: 270, audioId: "guitar-song-audio" },
-    "garden-ukulele": { x: 735, y: 88, audioId: "ukulele-song-audio" }
+    "garden-ukulele": { x: 735, y: 108, audioId: "ukulele-song-audio" }
   };
   Object.keys(instrumentSpots).forEach(function (id) {
     var el = document.getElementById(id);

@@ -184,6 +184,7 @@ footer{margin-top:2.6rem}
 #kitchen-pans.rattling .kitchen-pan-swing:nth-of-type(4){animation-delay:.05s}
 #kitchen-pans.rattling .kitchen-pan-swing:nth-of-type(5){animation-delay:.09s}
 #kitchen-pans.rattling .kitchen-pan-swing:nth-of-type(6){animation-delay:.02s}
+.kitchen-pan-swing.pan-clicked{animation:pan-swing .5s ease-in-out}
 @keyframes pan-swing{
   0%, 100%{transform:rotate(0)}
   30%{transform:rotate(-6deg)}
@@ -911,28 +912,28 @@ section{margin:1.9rem 0}
 <g id="kitchen-pans" class="hunt-hit" tabindex="0" role="button" aria-label="The hanging pans">
 <rect x="25" y="10" width="200" height="115" fill="transparent"/>
 <g transform="translate(-18,16) scale(1.65)">
-<g class="kitchen-pan-swing">
+<g id="kitchen-pan-1" class="kitchen-pan-swing">
 <rect x="37" y="26" width="6" height="18" rx="3" fill="#2b2724"/><circle cx="40" cy="31" r="1.5" fill="#8a6a55"/>
 <circle cx="40" cy="60" r="14" fill="#2b2724" stroke="#1a1715" stroke-width="1.5"/><circle cx="40" cy="60" r="11.4" fill="#3a3531"/>
 </g>
 </g>
-<g class="kitchen-pan-swing">
+<g id="kitchen-pan-2" class="kitchen-pan-swing">
 <rect x="92" y="16" width="6" height="16" rx="3" fill="#2b2724"/><circle cx="95" cy="20" r="1.5" fill="#8a6a55"/>
 <circle cx="95" cy="45" r="11" fill="#2b2724" stroke="#1a1715" stroke-width="1.5"/><circle cx="95" cy="45" r="7" fill="#3a3531"/>
 </g>
-<g class="kitchen-pan-swing">
+<g id="kitchen-pan-3" class="kitchen-pan-swing">
 <rect x="147" y="40" width="6" height="16" rx="3" fill="#2b2724"/><circle cx="150" cy="44" r="1.5" fill="#8a6a55"/>
 <circle cx="150" cy="70" r="12" fill="#2b2724" stroke="#1a1715" stroke-width="1.5"/><circle cx="150" cy="70" r="8" fill="#3a3531"/>
 </g>
-<g class="kitchen-pan-swing">
+<g id="kitchen-pan-4" class="kitchen-pan-swing">
 <rect x="102" y="80" width="6" height="14" rx="3" fill="#2b2724"/><circle cx="105" cy="84" r="1.5" fill="#8a6a55"/>
 <circle cx="105" cy="103" r="9" fill="#2b2724" stroke="#1a1715" stroke-width="1.5"/><circle cx="105" cy="103" r="5.5" fill="#3a3531"/>
 </g>
-<g class="kitchen-pan-swing">
+<g id="kitchen-pan-5" class="kitchen-pan-swing">
 <rect x="207" y="28" width="6" height="15" rx="3" fill="#2b2724"/><circle cx="210" cy="32" r="1.5" fill="#8a6a55"/>
 <circle cx="210" cy="55" r="10" fill="#2b2724" stroke="#1a1715" stroke-width="1.5"/><circle cx="210" cy="55" r="6.5" fill="#3a3531"/>
 </g>
-<g class="kitchen-pan-swing">
+<g id="kitchen-pan-6" class="kitchen-pan-swing">
 <rect x="182" y="80" width="6" height="16" rx="3" fill="#2b2724"/><circle cx="185" cy="84" r="1.5" fill="#8a6a55"/>
 <circle cx="185" cy="109" r="13" fill="#2b2724" stroke="#1a1715" stroke-width="1.5"/><circle cx="185" cy="109" r="9" fill="#3a3531"/>
 </g>
@@ -2541,18 +2542,26 @@ document.addEventListener("click", function (e) {
     ];
     function clinkPans(e) {
       var mult = 1;
+      var nearestIdx = 0;
       if (e && typeof e.clientX === "number") {
         var rect = pans.getBoundingClientRect();
         var localX = 25 + ((e.clientX - rect.left) / rect.width) * 200;
         var localY = 10 + ((e.clientY - rect.top) / rect.height) * 115;
         var nearest = panCenters[0], bestDist = Infinity;
-        panCenters.forEach(function (p) {
+        panCenters.forEach(function (p, i) {
           var d = Math.pow(p.x - localX, 2) + Math.pow(p.y - localY, 2);
-          if (d < bestDist) { bestDist = d; nearest = p; }
+          if (d < bestDist) { bestDist = d; nearest = p; nearestIdx = i; }
         });
         mult = 1.6 - nearest.r * 0.06;
       }
       playMetalClinkSound(mult);
+      var pan = document.getElementById("kitchen-pan-" + (nearestIdx + 1));
+      if (pan) {
+        pan.classList.remove("pan-clicked");
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { pan.classList.add("pan-clicked"); });
+        });
+      }
     }
     pans.addEventListener("click", clinkPans);
     pans.addEventListener("keydown", function (e) {
@@ -2574,9 +2583,15 @@ document.addEventListener("click", function (e) {
   }
   var boards = document.getElementById("kitchen-boards");
   if (boards) {
-    boards.addEventListener("click", playChopSound);
+    var boardPitches = [1, 1.15, 0.9, 1.05];
+    var boardPitchIdx = 0;
+    function chopBoard() {
+      playChopSound(boardPitches[boardPitchIdx % boardPitches.length]);
+      boardPitchIdx++;
+    }
+    boards.addEventListener("click", chopBoard);
     boards.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); playChopSound(); }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); chopBoard(); }
     });
   }
   var knockbox = document.getElementById("kitchen-knockbox");

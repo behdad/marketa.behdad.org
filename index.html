@@ -1860,7 +1860,7 @@ function playThunderSound() {
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
-    var bufferSize = ctx.sampleRate * 0.3;
+    var bufferSize = ctx.sampleRate * 0.35;
     var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     var data = buffer.getChannelData(0);
     for (var i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
@@ -1868,29 +1868,41 @@ function playThunderSound() {
     noise.buffer = buffer;
     var noiseFilter = ctx.createBiquadFilter();
     noiseFilter.type = "lowpass";
-    noiseFilter.frequency.setValueAtTime(1200, t);
-    noiseFilter.frequency.exponentialRampToValueAtTime(150, t + 0.6);
+    noiseFilter.frequency.setValueAtTime(1800, t);
+    noiseFilter.frequency.exponentialRampToValueAtTime(120, t + 0.7);
     var noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.35, t);
-    noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+    noiseGain.gain.setValueAtTime(0.6, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
     noise.connect(noiseFilter);
     noiseFilter.connect(noiseGain);
     noiseGain.connect(ctx.destination);
     noise.start(t);
-    noise.stop(t + 1.2);
+    noise.stop(t + 1.7);
     var osc = ctx.createOscillator();
     osc.type = "sine";
-    osc.frequency.setValueAtTime(70, t);
-    osc.frequency.exponentialRampToValueAtTime(35, t + 1.2);
+    osc.frequency.setValueAtTime(95, t);
+    osc.frequency.exponentialRampToValueAtTime(32, t + 1.6);
     var oscGain = ctx.createGain();
     oscGain.gain.setValueAtTime(0.0001, t);
-    oscGain.gain.exponentialRampToValueAtTime(0.25, t + 0.05);
-    oscGain.gain.exponentialRampToValueAtTime(0.0001, t + 1.3);
+    oscGain.gain.exponentialRampToValueAtTime(0.5, t + 0.06);
+    oscGain.gain.exponentialRampToValueAtTime(0.0001, t + 1.8);
     osc.connect(oscGain);
     oscGain.connect(ctx.destination);
     osc.start(t);
-    osc.stop(t + 1.3);
-    setTimeout(function () { ctx.close(); }, 1500);
+    osc.stop(t + 1.8);
+    var sub = ctx.createOscillator();
+    sub.type = "sine";
+    sub.frequency.setValueAtTime(48, t);
+    sub.frequency.exponentialRampToValueAtTime(22, t + 2);
+    var subGain = ctx.createGain();
+    subGain.gain.setValueAtTime(0.0001, t);
+    subGain.gain.exponentialRampToValueAtTime(0.4, t + 0.15);
+    subGain.gain.exponentialRampToValueAtTime(0.0001, t + 2.1);
+    sub.connect(subGain);
+    subGain.connect(ctx.destination);
+    sub.start(t);
+    sub.stop(t + 2.1);
+    setTimeout(function () { ctx.close(); }, 2400);
   } catch (e) {}
 }
 function playShutterSound() {
@@ -2040,8 +2052,9 @@ function spawnButterflies(svg, cx, cy) {
   var gardenRainbow = document.getElementById("garden-rainbow");
   if (gardenSun && gardenRainbow) gardenSun.addEventListener("click", function () {
     gardenRainbow.classList.remove("burst");
-    void gardenRainbow.offsetWidth;
-    gardenRainbow.classList.add("burst");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { gardenRainbow.classList.add("burst"); });
+    });
     setTimeout(function () { gardenRainbow.classList.remove("burst"); }, 4000);
   });
 })();
@@ -2084,8 +2097,9 @@ function spawnButterflies(svg, cx, cy) {
     thunderTimer = setTimeout(function () {
       if (flash) {
         flash.classList.remove("flash");
-        void flash.offsetWidth;
-        flash.classList.add("flash");
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { flash.classList.add("flash"); });
+        });
       }
       playThunderSound();
       scheduleThunder();
@@ -2161,14 +2175,16 @@ function spawnButterflies(svg, cx, cy) {
   if (discoball) discoball.addEventListener("click", function () {
     triggerTrip("loft-scene-svg", "molly");
     discoball.classList.remove("spin");
-    void discoball.offsetWidth;
-    discoball.classList.add("spin");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { discoball.classList.add("spin"); });
+    });
     setTimeout(function () { discoball.classList.remove("spin"); }, 7000);
     var loftCouple = document.getElementById("loft-couple");
     if (loftCouple) {
       loftCouple.classList.remove("cuddle");
-      void loftCouple.offsetWidth;
-      loftCouple.classList.add("cuddle");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { loftCouple.classList.add("cuddle"); });
+      });
       setTimeout(function () { loftCouple.classList.remove("cuddle"); }, 7000);
     }
     var loftSvg = document.getElementById("loft-scene-svg");
@@ -2221,8 +2237,9 @@ function spawnButterflies(svg, cx, cy) {
     }
     if (!played) playGuitarPluck();
     guitar.classList.remove("strum");
-    void guitar.offsetWidth;
-    guitar.classList.add("strum");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { guitar.classList.add("strum"); });
+    });
     for (var i = 0; i < 3; i++) {
       (function (i) {
         setTimeout(function () {
@@ -2291,8 +2308,9 @@ function spawnButterflies(svg, cx, cy) {
   function shake(el) {
     if (!el) return;
     el.classList.remove("shake");
-    void el.offsetWidth;
-    el.classList.add("shake");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { el.classList.add("shake"); });
+    });
     markFound("head");
   }
   var ids = ["loft-behdad-head", "loft-marketa-head", "garden-behdad-head", "garden-marketa-head"];

@@ -473,9 +473,7 @@ footer{margin-top:2.6rem}
 }
 @media (prefers-reduced-motion: reduce){#office-mic.wobbling{animation:none}}
 #office-desk-top, #office-typewriter, #office-laptop, #office-pc-desk-trio{transition:translate .6s ease}
-#office-desk.standing #office-desk-top, #office-typewriter.standing, #office-laptop.standing, #office-pc-desk-trio.standing{translate:0 -40px}
 .desk-leg-pole{transform-box:fill-box; transform-origin:bottom; transition:transform .6s ease}
-#office-desk.standing .desk-leg-pole{transform:scaleY(1.5)}
 .desk-led{transition:fill .15s ease}
 #office-desk-controls.moving .desk-led{animation:desk-led-blink .3s steps(2,jump-none) infinite}
 @keyframes desk-led-blink{
@@ -4418,24 +4416,81 @@ document.addEventListener("click", function (e) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); playPaperShuffleSound(); }
   });
   var controls = document.getElementById("office-desk-controls");
-  var deskItemIds = ["office-desk", "office-typewriter", "office-laptop", "office-pc-desk-trio"];
+  var risingIds = ["office-desk-top", "office-typewriter", "office-laptop", "office-pc-desk-trio"];
+  var MAX_LIFT = 40;
   var standing = false;
-  function toggleDeskHeight(e) {
-    if (e) e.stopPropagation();
-    standing = !standing;
-    playDeskMotorSound();
-    controls.classList.remove("moving");
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () { controls.classList.add("moving"); });
-    });
-    setTimeout(function () { controls.classList.remove("moving"); }, 650);
-    deskItemIds.forEach(function (id) {
+  var lift = 0;
+  function risingEls() {
+    return risingIds.map(function (id) { return document.getElementById(id); })
+      .concat(Array.prototype.slice.call(document.querySelectorAll(".desk-leg-pole")))
+      .filter(Boolean);
+  }
+  function blinkLeds(on) {
+    controls.classList.toggle("moving", on);
+  }
+  function setDeskLift(px) {
+    lift = Math.max(0, Math.min(MAX_LIFT, px));
+    risingIds.forEach(function (id) {
       var el = document.getElementById(id);
-      if (el) el.classList.toggle("standing", standing);
+      if (el) el.style.translate = "0px " + (-lift) + "px";
+    });
+    document.querySelectorAll(".desk-leg-pole").forEach(function (el) {
+      el.style.transform = "scaleY(" + (1 + lift / 80) + ")";
     });
   }
+  function setDeskTransitionsEnabled(on) {
+    risingEls().forEach(function (el) { el.style.transition = on ? "" : "none"; });
+  }
+  function settleDesk(toStanding) {
+    standing = toStanding;
+    setDeskTransitionsEnabled(true);
+    setDeskLift(standing ? MAX_LIFT : 0);
+    playDeskMotorSound();
+    blinkLeds(true);
+    setTimeout(function () { blinkLeds(false); }, 650);
+  }
+  function toggleDeskHeight(e) {
+    if (e) e.stopPropagation();
+    settleDesk(!standing);
+  }
+  var dragging = false, dragStartY = 0, dragStartLift = 0, dragMoved = false;
+  function pointerSvgY(e) {
+    var svg = document.getElementById("loft-game-strip");
+    var pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse()).y;
+  }
+  function onDeskPointerMove(e) {
+    if (!dragging) return;
+    var dy = dragStartY - pointerSvgY(e);
+    if (Math.abs(dy) > 2) dragMoved = true;
+    setDeskLift(dragStartLift + dy);
+  }
+  function onDeskPointerUp(e) {
+    if (!dragging) return;
+    dragging = false;
+    try { controls.releasePointerCapture(e.pointerId); } catch (err) {}
+    if (!dragMoved) {
+      toggleDeskHeight();
+    } else {
+      settleDesk(lift >= MAX_LIFT / 2);
+    }
+  }
   if (controls) {
-    controls.addEventListener("click", toggleDeskHeight);
+    controls.addEventListener("pointerdown", function (e) {
+      dragging = true;
+      dragMoved = false;
+      dragStartY = pointerSvgY(e);
+      dragStartLift = lift;
+      setDeskTransitionsEnabled(false);
+      try { controls.setPointerCapture(e.pointerId); } catch (err) {}
+      e.stopPropagation();
+    });
+    controls.addEventListener("pointermove", onDeskPointerMove);
+    controls.addEventListener("pointerup", onDeskPointerUp);
+    controls.addEventListener("pointercancel", onDeskPointerUp);
+    controls.addEventListener("click", function (e) { e.stopPropagation(); });
     controls.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleDeskHeight(e); }
     });

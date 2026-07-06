@@ -558,6 +558,12 @@ body.completion-trip{animation:completion-spin 7s linear}
   30%{filter:brightness(1.35) drop-shadow(0 0 2px #f7d97a)}
   100%{filter:brightness(1)}
 }
+#loft-behdad-shoes.dance-shine, #garden-behdad-shoes.dance-shine{animation:shoe-dance-shine-strong .5s ease-out}
+@keyframes shoe-dance-shine-strong{
+  0%{filter:brightness(1)}
+  30%{filter:brightness(2.1) drop-shadow(0 0 5px #f7d97a)}
+  100%{filter:brightness(1)}
+}
 .shoe-spark-particle{pointer-events:none}
 @media (prefers-reduced-motion: reduce){
   .snowflake{animation:none}
@@ -567,6 +573,7 @@ body.completion-trip{animation:completion-spin 7s linear}
   .sun-rays{animation:none}
   .shoe-spark-target.spark{animation:none}
   .shoe-spark-target.dance-shine{animation:none}
+  #loft-behdad-shoes.dance-shine, #garden-behdad-shoes.dance-shine{animation:none}
   .rainbow{animation:none}
 }
 @media print{
@@ -2609,25 +2616,34 @@ function sparkShoes(svg, shoesId, cx, cy) {
   function setDancing(on) {
     for (var i = 0; i < couples.length; i++) couples[i].classList.toggle("dancing", on);
   }
-  var shoeIds = ["loft-behdad-shoes", "loft-marketa-shoes", "garden-behdad-shoes", "garden-marketa-shoes"];
   var shoeShineTimer = null;
-  function shineShoes() {
-    shoeIds.forEach(function (id) {
-      var el = document.getElementById(id);
-      if (!el) return;
-      el.classList.remove("dance-shine");
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () { el.classList.add("dance-shine"); });
-      });
+  var shoeShineSubTimer = null;
+  function shineShoe(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove("dance-shine");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { el.classList.add("dance-shine"); });
     });
+  }
+  // Couple-dance lifts on a 1.1s loop (up at 25% and 75%); alternate whose shoes
+  // shine so it reads as each partner's shoe catching the light on their turn.
+  function shineCycle() {
+    shineShoe("loft-behdad-shoes");
+    shineShoe("garden-behdad-shoes");
+    shoeShineSubTimer = setTimeout(function () {
+      shineShoe("loft-marketa-shoes");
+      shineShoe("garden-marketa-shoes");
+    }, 550);
   }
   function startShoeShine() {
     if (shoeShineTimer) return;
-    shineShoes();
-    shoeShineTimer = setInterval(shineShoes, 1100);
+    shineCycle();
+    shoeShineTimer = setInterval(shineCycle, 1100);
   }
   function stopShoeShine() {
     clearInterval(shoeShineTimer);
+    clearTimeout(shoeShineSubTimer);
     shoeShineTimer = null;
   }
   audio.addEventListener("play", function () {
@@ -2715,6 +2731,12 @@ function sparkShoes(svg, shoesId, cx, cy) {
     el.classList.remove("body-wiggle");
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { el.classList.add("body-wiggle"); });
+    });
+    el.querySelectorAll(".shoe-spark-target").forEach(function (shoe) {
+      shoe.classList.remove("dance-shine");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { shoe.classList.add("dance-shine"); });
+      });
     });
   }
   var couples = document.querySelectorAll("#loft-couple, #garden-couple");

@@ -644,6 +644,12 @@ footer{margin-top:2.6rem}
 }
 @media (prefers-reduced-motion: reduce){.puffer-eye.grooving{animation:none}}
 #cuddly-octopus{transform-origin:636px 240px}
+#cuddly-octopus.grooving{animation:octopus-groove 1s ease-in-out infinite}
+@keyframes octopus-groove{
+  0%,100%{transform:rotate(0deg)}
+  50%{transform:rotate(4deg)}
+}
+@media (prefers-reduced-motion: reduce){#cuddly-octopus.grooving{animation:none}}
 #cuddly-octopus.wobble{animation:octopus-wobble .6s ease, octopus-camouflage 1.8s ease-in-out}
 @keyframes octopus-wobble{
   0%{transform:rotate(0) scale(1)}
@@ -3699,6 +3705,12 @@ document.addEventListener("click", function (e) {
     });
     if (!alreadyPlayed && window.setCaption) window.setCaption("cuddly_pull");
   }
+  octopus.addEventListener("animationend", function (e) {
+    if (e.animationName === "octopus-camouflage") {
+      octopus.classList.remove("wobble");
+      if (window.updateCuddlyGrooving) window.updateCuddlyGrooving();
+    }
+  });
   octopus.addEventListener("click", wobble);
   octopus.addEventListener("keydown", function (e) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); wobble(); }
@@ -6985,6 +6997,11 @@ function spawnWaterDroplets(svg, cx, cy) {
     document.querySelectorAll(".puffer-eye").forEach(function (eye) {
       eye.classList.toggle("grooving", anyPlaying);
     });
+    var octopusEl = document.getElementById("cuddly-octopus");
+    if (octopusEl) {
+      var octopusVisible = parseFloat(getComputedStyle(octopusEl).opacity) > 0.5;
+      octopusEl.classList.toggle("grooving", anyPlaying && octopusVisible);
+    }
   }
   window.updateCuddlyGrooving = updateCuddlyGrooving;
   Object.keys(instrumentSpots).forEach(function (id) {

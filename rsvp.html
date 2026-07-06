@@ -4249,18 +4249,14 @@ document.addEventListener("click", function (e) {
     });
   }
   var windowPanes = [
-    { id: "garden-window-pane-0", offsetX: 680 },
-    { id: "garden-window-pane-1", offsetX: 680 },
-    { id: "garden-window-pane-2", offsetX: 680 },
-    { id: "garden-window-pane-3", offsetX: 680 },
-    { id: "office-window-pane-1", offsetX: 2040 },
-    { id: "office-window-pane-2", offsetX: 2040 }
+    "garden-window-pane-0", "garden-window-pane-1", "garden-window-pane-2", "garden-window-pane-3",
+    "office-window-pane-1", "office-window-pane-2"
   ];
-  windowPanes.forEach(function (p) {
-    var pane = document.getElementById(p.id);
+  windowPanes.forEach(function (id) {
+    var pane = document.getElementById(id);
     if (!pane) return;
     function gleamPane() {
-      spawnPaneGleam(strip, pane, p.offsetX);
+      spawnPaneGleam(strip, pane);
     }
     pane.addEventListener("click", gleamPane);
     pane.addEventListener("keydown", function (e) {
@@ -4833,11 +4829,11 @@ function spawnSparkFlare(svg, cx, cy) {
     })(i);
   }
 }
-function spawnPaneGleam(svg, pane, offsetX) {
+function spawnPaneGleam(svg, pane) {
   if (!svg || !pane) return;
   try {
     var bbox = pane.getBBox();
-    var x = bbox.x + offsetX, y = bbox.y, w = bbox.width, h = bbox.height;
+    var x = bbox.x, y = bbox.y, w = bbox.width, h = bbox.height;
     var ns = "http://www.w3.org/2000/svg";
     var clipId = "gleam-clip-" + Math.random().toString(36).slice(2, 9);
     var defs = svg.querySelector("defs");
@@ -4894,7 +4890,10 @@ function spawnPaneGleam(svg, pane, offsetX) {
     core.style.transformBox = "fill-box";
     core.style.transformOrigin = "center";
     g.appendChild(core);
-    svg.appendChild(g);
+    var windowGroup = pane.parentNode;
+    var insertParent = (windowGroup && windowGroup.parentNode) || svg;
+    var beforeNode = windowGroup ? windowGroup.nextSibling : null;
+    insertParent.insertBefore(g, beforeNode);
     var travel = w + sw * 2;
     function cleanup() {
       if (g.parentNode) g.remove();

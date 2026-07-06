@@ -125,6 +125,19 @@ footer{margin-top:2.6rem}
 #kitchen-scale.on #kitchen-scale-screen{fill:#8fe8a0}
 #kitchen-scale.on #kitchen-scale-led{fill:#e8574a}
 .balcony-bulb, .balcony-bulb-glow{transition:opacity .3s ease}
+.balcony-bulb{transform-box:fill-box; transform-origin:center}
+.balcony-bulb-glow{transform-box:fill-box; transform-origin:center}
+.balcony-bulb.twinkle{animation:bulb-pop .7s ease-in-out}
+@keyframes bulb-pop{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.4)}
+}
+.balcony-bulb-glow.twinkle{animation:glow-pulse .7s ease-in-out}
+@keyframes glow-pulse{
+  0%,100%{transform:scale(1); opacity:.3}
+  50%{transform:scale(1.6); opacity:.6}
+}
+@media (prefers-reduced-motion: reduce){.balcony-bulb.twinkle, .balcony-bulb-glow.twinkle{animation:none}}
 #balcony-lights.off .balcony-bulb-glow{opacity:0}
 #balcony-lights.off .balcony-bulb{opacity:.25}
 #balcony-lights-groundglow{transition:opacity .3s ease}
@@ -725,7 +738,8 @@ footer{margin-top:2.6rem}
   75%{transform:translateY(9px); opacity:0}
   100%{transform:translateY(9px); opacity:0}
 }
-#cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket{transform-box:fill-box; transform-origin:bottom center}
+#cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket{transform-box:fill-box; transform-origin:bottom center; transition:translate .4s cubic-bezier(.34,1.56,.64,1)}
+@media (prefers-reduced-motion: reduce){#cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket{transition:none}}
 #cuddly-blanket.tugged, #cuddly-yellowblanket.tugged, #cuddly-lapblanket.tugged{animation:blanket-tug .5s ease}
 @keyframes blanket-tug{
   0%{transform:rotate(0) translateY(0)}
@@ -7388,6 +7402,36 @@ function spawnDustMote(container) {
       scheduleDustMotes();
     }, delay);
   })();
+  (function scheduleBulbTwinkle() {
+    var delay = 3000 + Math.random() * 4000;
+    setTimeout(function () {
+      var lights = document.getElementById("balcony-lights");
+      if (stageIndex === STAGES.indexOf("balcony") && lights && !lights.classList.contains("off") && document.visibilityState !== "hidden") {
+        var glows = lights.querySelectorAll(".balcony-bulb-glow");
+        var bulbs = lights.querySelectorAll(".balcony-bulb");
+        if (glows.length) {
+          var i = Math.floor(Math.random() * glows.length);
+          var glow = glows[i], bulb = bulbs[i];
+          glow.classList.remove("twinkle");
+          bulb.classList.remove("twinkle");
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () { glow.classList.add("twinkle"); bulb.classList.add("twinkle"); });
+          });
+          setTimeout(function () { glow.classList.remove("twinkle"); bulb.classList.remove("twinkle"); }, 700);
+        }
+      }
+      scheduleBulbTwinkle();
+    }, delay);
+  })();
+  (function scheduleGrillSmoke() {
+    var delay = 8000 + Math.random() * 10000;
+    setTimeout(function () {
+      if (stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden") {
+        spawnSteamWisps(strip, 3021, 230, 0.5, 1, -1, 3, 0.4);
+      }
+      scheduleGrillSmoke();
+    }, delay);
+  })();
   var instrumentSpots = {
     "garden-guitar": { x: 746, y: 270, audioId: "guitar-song-audio" },
     "garden-ukulele": { x: 735, y: 140, audioId: "ukulele-song-audio" }
@@ -7525,38 +7569,71 @@ function spawnDustMote(container) {
     });
   });
 
+  function pointerSvgPoint(e) {
+    var svg = document.getElementById("loft-game-strip");
+    var pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
   ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"].forEach(function (id) {
     var el = document.getElementById(id);
-    onActivate(el, function () {
-      if (el) {
-        if (id === "cuddly-lapblanket" && Math.random() < 0.5) {
-          el.classList.remove("wiggling", "tugged");
-          requestAnimationFrame(function () {
-            requestAnimationFrame(function () { el.classList.add("wiggling"); });
-          });
-          playGiggleSound();
-          var marketaHead = document.getElementById("cuddly-marketa-head");
-          var behdadHead = document.getElementById("cuddly-behdad-head");
-          if (marketaHead) marketaHead.classList.add("blushing");
-          if (behdadHead) behdadHead.classList.add("pleased");
-          setTimeout(function () {
-            if (marketaHead) marketaHead.classList.remove("blushing");
-            if (behdadHead) behdadHead.classList.remove("pleased");
-          }, 3000);
-        } else {
-          el.classList.remove("wiggling", "tugged");
-          requestAnimationFrame(function () {
-            requestAnimationFrame(function () { el.classList.add("tugged"); });
-          });
-        }
+    if (!el) return;
+    function triggerBlanketPull() {
+      if (id === "cuddly-lapblanket" && Math.random() < 0.5) {
+        el.classList.remove("wiggling", "tugged");
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { el.classList.add("wiggling"); });
+        });
+        playGiggleSound();
+        var marketaHead = document.getElementById("cuddly-marketa-head");
+        var behdadHead = document.getElementById("cuddly-behdad-head");
+        if (marketaHead) marketaHead.classList.add("blushing");
+        if (behdadHead) behdadHead.classList.add("pleased");
+        setTimeout(function () {
+          if (marketaHead) marketaHead.classList.remove("blushing");
+          if (behdadHead) behdadHead.classList.remove("pleased");
+        }, 3000);
+      } else {
+        el.classList.remove("wiggling", "tugged");
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { el.classList.add("tugged"); });
+        });
       }
       var octopus = document.getElementById("cuddly-octopus");
       if (!octopus || !octopus.classList.contains("played")) {
         setCaption("cuddly_hint");
         return;
       }
-      if (el) el.classList.add("done");
+      el.classList.add("done");
       setTimeout(function () { goToStage("office"); }, 700);
+    }
+    var dragging = false, dragStartPt = null;
+    el.addEventListener("pointerdown", function (e) {
+      dragging = true;
+      dragStartPt = pointerSvgPoint(e);
+      el.style.transition = "none";
+      try { el.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    el.addEventListener("pointermove", function (e) {
+      if (!dragging) return;
+      var cur = pointerSvgPoint(e);
+      var dx = Math.max(-60, Math.min(60, cur.x - dragStartPt.x));
+      var dy = Math.max(-60, Math.min(60, cur.y - dragStartPt.y));
+      el.style.translate = dx + "px " + dy + "px";
+    });
+    function onBlanketPointerUp(e) {
+      if (!dragging) return;
+      dragging = false;
+      try { el.releasePointerCapture(e.pointerId); } catch (err) {}
+      el.style.transition = "";
+      el.style.translate = "0px 0px";
+      triggerBlanketPull();
+    }
+    el.addEventListener("pointerup", onBlanketPointerUp);
+    el.addEventListener("pointercancel", onBlanketPointerUp);
+    el.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); triggerBlanketPull(); }
     });
   });
 

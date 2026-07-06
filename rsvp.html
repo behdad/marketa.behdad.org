@@ -1427,12 +1427,12 @@ section{margin:1.9rem 0}
 <g id="garden-window">
 <rect x="96" y="12" width="448" height="290" fill="#26221f"/>
 <rect x="104" y="20" width="424" height="272" fill="#b8d4e8"/>
-<rect x="104" y="120" width="140" height="172" fill="#eae6de"/>
+<rect id="garden-window-pane-1" class="hunt-hit window-pane" tabindex="0" role="button" aria-label="A window pane" x="104" y="120" width="140" height="172" fill="#eae6de"/>
 <path d="M112 140 h124 M112 170 h124 M112 200 h124 M112 230 h124 M112 260 h124" stroke="#c9c4ba" stroke-width="3"/>
-<rect x="250" y="70" width="136" height="222" fill="#dce6ea"/>
+<rect id="garden-window-pane-2" class="hunt-hit window-pane" tabindex="0" role="button" aria-label="A window pane" x="250" y="70" width="136" height="222" fill="#dce6ea"/>
 <path d="M272 70 V292 M294 70 V292 M316 70 V292 M338 70 V292 M360 70 V292" stroke="#b8c4cc" stroke-width="2"/>
 <path d="M250 110 h136 M250 160 h136 M250 210 h136" stroke="#b8c4cc" stroke-width="2"/>
-<rect x="392" y="130" width="136" height="162" fill="#e8e0d4"/>
+<rect id="garden-window-pane-3" class="hunt-hit window-pane" tabindex="0" role="button" aria-label="A window pane" x="392" y="130" width="136" height="162" fill="#e8e0d4"/>
 <path d="M398 160 h124 M398 214 h124 M398 268 h124" stroke="#a89a88" stroke-width="2.5"/>
 <path d="M402 152 V160 M414 152 V160 M426 152 V160 M438 152 V160 M450 152 V160 M462 152 V160 M474 152 V160 M486 152 V160 M498 152 V160 M510 152 V160" stroke="#a89a88" stroke-width="1.5"/>
 <g id="garden-birds" aria-hidden="true">
@@ -2180,7 +2180,7 @@ section{margin:1.9rem 0}
 </g>
 <g id="office-citywindow">
 <rect x="60" y="30" width="180" height="170" fill="#26221f"/>
-<rect x="70" y="40" width="160" height="150" fill="#c4d6e2"/>
+<rect id="office-window-pane-1" class="hunt-hit window-pane" tabindex="0" role="button" aria-label="A window pane" x="70" y="40" width="160" height="150" fill="#c4d6e2"/>
 <ellipse cx="102" cy="62" rx="22" ry="8" fill="#e8eef2"/>
 <rect x="86" y="50" width="44" height="140" fill="#d8cfc0"/>
 <path d="M92 60 h32 M92 74 h32 M92 88 h32 M92 102 h32 M92 116 h32 M92 130 h32" stroke="#b8ab98" stroke-width="2.5"/>
@@ -2188,7 +2188,7 @@ section{margin:1.9rem 0}
 <rect x="136" y="58" width="46" height="132" fill="#b3624a"/>
 <path d="M140 70 h38 M140 86 h38 M140 102 h38 M140 118 h38 M140 134 h38" stroke="#e8e0d4" stroke-width="2"/>
 <path d="M150 58 V140 M166 58 V140" stroke="#9a4e3a" stroke-width="1.5"/>
-<rect x="70" y="140" width="160" height="50" fill="#e4e2dc"/>
+<rect id="office-window-pane-2" class="hunt-hit window-pane" tabindex="0" role="button" aria-label="A window pane" x="70" y="140" width="160" height="50" fill="#e4e2dc"/>
 <path d="M78 140 V190 M86 140 V190 M94 140 V190 M102 140 V190 M110 140 V190 M118 140 V190 M126 140 V190 M134 140 V190 M142 140 V190 M150 140 V190 M158 140 V190 M166 140 V190 M174 140 V190 M182 140 V190 M190 140 V190 M198 140 V190 M206 140 V190 M214 140 V190 M222 140 V190" stroke="#cfcdc4" stroke-width="1.5"/>
 <rect x="84" y="152" width="18" height="12" fill="#6b7078"/>
 <rect x="112" y="152" width="18" height="12" fill="#6b7078"/>
@@ -4248,6 +4248,35 @@ document.addEventListener("click", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); glareMirror(); }
     });
   }
+  var windowPanes = [
+    { id: "garden-window-pane-1", offsetX: 680 },
+    { id: "garden-window-pane-2", offsetX: 680 },
+    { id: "garden-window-pane-3", offsetX: 680 },
+    { id: "office-window-pane-1", offsetX: 2040 },
+    { id: "office-window-pane-2", offsetX: 2040 }
+  ];
+  windowPanes.forEach(function (p) {
+    var pane = document.getElementById(p.id);
+    if (!pane) return;
+    function sparklePane(e) {
+      var bbox = pane.getBBox();
+      var localX = bbox.x + bbox.width / 2;
+      var localY = bbox.y + bbox.height / 2;
+      if (e && typeof e.clientX === "number") {
+        var rect = pane.getBoundingClientRect();
+        if (rect.width && rect.height) {
+          localX = bbox.x + ((e.clientX - rect.left) / rect.width) * bbox.width;
+          localY = bbox.y + ((e.clientY - rect.top) / rect.height) * bbox.height;
+        }
+      }
+      spawnSparkFlare(strip, localX + p.offsetX, localY);
+      playFairyChimeSound();
+    }
+    pane.addEventListener("click", sparklePane);
+    pane.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sparklePane(e); }
+    });
+  });
   var lamp = document.getElementById("garden-lamp");
   var lampRubCount = 0;
   function summonGenie() {

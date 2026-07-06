@@ -463,6 +463,24 @@ footer{margin-top:2.6rem}
   65%{transform:rotate(6deg)}
 }
 @media (prefers-reduced-motion: reduce){#office-wooden-head.wobbling #office-wooden-head-inner{animation:none}}
+#office-mic{transform-origin:10px 332px}
+#office-mic.wobbling{animation:mic-wobble .5s ease-in-out}
+@keyframes mic-wobble{
+  0%,100%{transform:rotate(0deg)}
+  30%{transform:rotate(-4deg)}
+  60%{transform:rotate(3deg)}
+  85%{transform:rotate(-1.5deg)}
+}
+@media (prefers-reduced-motion: reduce){#office-mic.wobbling{animation:none}}
+#office-desk{transform-box:fill-box; transform-origin:bottom center}
+#office-desk.shuffled{animation:desk-shuffle .4s ease-in-out}
+@keyframes desk-shuffle{
+  0%,100%{transform:translateX(0)}
+  25%{transform:translateX(-1.5px)}
+  50%{transform:translateX(1.5px)}
+  75%{transform:translateX(-1px)}
+}
+@media (prefers-reduced-motion: reduce){#office-desk.shuffled{animation:none}}
 #garden-rooster-inner{transform-box:fill-box; transform-origin:bottom center}
 #garden-rooster.wobbling #garden-rooster-inner{animation:rooster-wobble .5s ease-in-out}
 @keyframes rooster-wobble{
@@ -757,10 +775,16 @@ footer{margin-top:2.6rem}
 }
 .office-lamp-glow, .office-lamp-bulb, .office-pendant-bulb{transition:opacity .4s ease, fill .4s ease}
 #office-lamp.flicker .office-lamp-glow{animation:lamp-flicker .4s steps(6,end)}
+#office-pendant.flicker .office-pendant-bulb{animation:pendant-flicker .4s steps(6,end)}
 @keyframes lamp-flicker{
   0%{opacity:.25} 15%{opacity:.05} 30%{opacity:.25} 45%{opacity:.08} 60%{opacity:.22} 75%{opacity:.06} 100%{opacity:.25}
 }
-@media (prefers-reduced-motion: reduce){#office-lamp.flicker .office-lamp-glow{animation:none}}
+@keyframes pendant-flicker{
+  0%{opacity:1} 15%{opacity:.3} 30%{opacity:1} 45%{opacity:.35} 60%{opacity:.9} 75%{opacity:.3} 100%{opacity:1}
+}
+@media (prefers-reduced-motion: reduce){
+  #office-lamp.flicker .office-lamp-glow, #office-pendant.flicker .office-pendant-bulb{animation:none}
+}
 #office-lamp.dimmed .office-lamp-glow{opacity:0}
 #office-lamp.dimmed .office-lamp-bulb{fill:#9a948a; stroke:#7a746a}
 #office-pendant.dimmed .office-pendant-bulb{fill:#9a948a; stroke:#7a746a}
@@ -3176,9 +3200,16 @@ document.addEventListener("click", function (e) {
   }
   var mic = document.getElementById("office-mic");
   if (mic) {
-    mic.addEventListener("click", playBassBoomSound);
+    function boomMic() {
+      playBassBoomSound();
+      mic.classList.remove("wobbling");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { mic.classList.add("wobbling"); });
+      });
+    }
+    mic.addEventListener("click", boomMic);
     mic.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); playBassBoomSound(); }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); boomMic(); }
     });
   }
   var sprinkler = document.getElementById("office-sprinkler");
@@ -4000,18 +4031,24 @@ document.addEventListener("click", function (e) {
       filter.type = "lowpass";
       filter.frequency.value = 220;
       var gain = pcFanCtx.createGain();
-      gain.gain.value = 0.006;
+      gain.gain.setValueAtTime(0.0001, pcFanCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.045, pcFanCtx.currentTime + 0.3);
       noise.connect(filter);
       filter.connect(gain);
       gain.connect(pcFanCtx.destination);
       noise.start(0);
       pcFanCtx._noise = noise;
+      pcFanCtx._gain = gain;
     } catch (e) {}
   }
   function stopPcFan() {
     if (pcFanCtx) {
-      try { pcFanCtx._noise.stop(); } catch (e) {}
-      try { pcFanCtx.close(); } catch (e) {}
+      try { pcFanCtx._gain.gain.exponentialRampToValueAtTime(0.0001, pcFanCtx.currentTime + 0.2); } catch (e) {}
+      var ctxToClose = pcFanCtx, noiseToStop = pcFanCtx._noise;
+      setTimeout(function () {
+        if (noiseToStop) { try { noiseToStop.stop(); } catch (e) {} }
+        if (ctxToClose) { try { ctxToClose.close(); } catch (e) {} }
+      }, 300);
       pcFanCtx = null;
     }
   }
@@ -4359,9 +4396,16 @@ document.addEventListener("click", function (e) {
 (function () {
   var desk = document.getElementById("office-desk");
   if (!desk) return;
-  desk.addEventListener("click", playPaperShuffleSound);
+  function shuffleDesk() {
+    playPaperShuffleSound();
+    desk.classList.remove("shuffled");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { desk.classList.add("shuffled"); });
+    });
+  }
+  desk.addEventListener("click", shuffleDesk);
   desk.addEventListener("keydown", function (e) {
-    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); playPaperShuffleSound(); }
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); shuffleDesk(); }
   });
 })();
 (function () {
@@ -6701,6 +6745,35 @@ function spawnGardenButterfly(svg) {
     setTimeout(function () { if (g.parentNode) g.remove(); }, duration);
   }
 }
+function spawnDustMote(container) {
+  if (!container) return;
+  var startX = 100 + Math.random() * 100;
+  var startY = 150 + Math.random() * 30;
+  var drift = (Math.random() - 0.5) * 30;
+  var rise = 60 + Math.random() * 40;
+  var d = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  d.setAttribute("cx", startX);
+  d.setAttribute("cy", startY);
+  d.setAttribute("r", 1 + Math.random());
+  d.setAttribute("fill", "#f4e8c8");
+  d.setAttribute("opacity", "0");
+  d.setAttribute("aria-hidden", "true");
+  d.style.transformBox = "fill-box";
+  d.style.transformOrigin = "center";
+  container.appendChild(d);
+  var duration = 4000 + Math.random() * 2000;
+  if (d.animate) {
+    var anim = d.animate([
+      { transform: "translate(0px,0px)", opacity: 0 },
+      { transform: "translate(" + (drift * 0.3) + "px," + (-rise * 0.3) + "px)", opacity: 0.5, offset: .2 },
+      { transform: "translate(" + (drift * 0.7) + "px," + (-rise * 0.7) + "px)", opacity: 0.5, offset: .8 },
+      { transform: "translate(" + drift + "px," + (-rise) + "px)", opacity: 0 }
+    ], { duration: duration, easing: "linear" });
+    anim.onfinish = function () { if (d.parentNode) d.remove(); };
+  } else {
+    setTimeout(function () { if (d.parentNode) d.remove(); }, duration);
+  }
+}
 (function () {
   var strip = document.getElementById("loft-game-strip");
   var caption = document.getElementById("hunt-caption");
@@ -7031,15 +7104,26 @@ function spawnGardenButterfly(svg) {
   (function scheduleLampFlicker() {
     var delay = 10000 + Math.random() * 15000;
     setTimeout(function () {
-      var lamp = document.getElementById("office-lamp");
-      if (stageIndex === STAGES.indexOf("office") && lamp && !lamp.classList.contains("dimmed") && document.visibilityState !== "hidden") {
-        lamp.classList.remove("flicker");
+      var fixtureIds = ["office-lamp", "office-pendant"];
+      var id = fixtureIds[Math.floor(Math.random() * fixtureIds.length)];
+      var fixture = document.getElementById(id);
+      if (stageIndex === STAGES.indexOf("office") && fixture && !fixture.classList.contains("dimmed") && document.visibilityState !== "hidden") {
+        fixture.classList.remove("flicker");
         requestAnimationFrame(function () {
-          requestAnimationFrame(function () { lamp.classList.add("flicker"); });
+          requestAnimationFrame(function () { fixture.classList.add("flicker"); });
         });
-        setTimeout(function () { lamp.classList.remove("flicker"); }, 500);
+        setTimeout(function () { fixture.classList.remove("flicker"); }, 500);
       }
       scheduleLampFlicker();
+    }, delay);
+  })();
+  (function scheduleDustMotes() {
+    var delay = 2000 + Math.random() * 2000;
+    setTimeout(function () {
+      if (stageIndex === STAGES.indexOf("office") && document.visibilityState !== "hidden") {
+        spawnDustMote(document.getElementById("stage-office"));
+      }
+      scheduleDustMotes();
     }, delay);
   })();
   var instrumentSpots = {

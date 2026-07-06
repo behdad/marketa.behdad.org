@@ -266,14 +266,21 @@ footer{margin-top:2.6rem}
   #loft-couple.dancing, #garden-couple.dancing{animation:none}
 }
 #loft-couple, #garden-couple{cursor:pointer}
-#loft-couple.body-wiggle, #garden-couple.body-wiggle{animation:couple-body-wiggle .5s ease}
-@keyframes couple-body-wiggle{
+#loft-couple.body-wiggle-left, #garden-couple.body-wiggle-left{animation:couple-body-wiggle-left .5s ease}
+@keyframes couple-body-wiggle-left{
   0%, 100%{transform:rotate(0)}
   30%{transform:rotate(-2.5deg)}
   65%{transform:rotate(2deg)}
 }
+#loft-couple.body-wiggle-right, #garden-couple.body-wiggle-right{animation:couple-body-wiggle-right .5s ease}
+@keyframes couple-body-wiggle-right{
+  0%, 100%{transform:rotate(0)}
+  30%{transform:rotate(2.5deg)}
+  65%{transform:rotate(-2deg)}
+}
 @media (prefers-reduced-motion: reduce){
-  #loft-couple.body-wiggle, #garden-couple.body-wiggle{animation:none}
+  #loft-couple.body-wiggle-left, #garden-couple.body-wiggle-left,
+  #loft-couple.body-wiggle-right, #garden-couple.body-wiggle-right{animation:none}
 }
 #loft-clapper{cursor:pointer}
 #garden-book{cursor:pointer}
@@ -2618,6 +2625,7 @@ function sparkShoes(svg, shoesId, cx, cy) {
   }
   var shoeShineTimer = null;
   var shoeShineSubTimer = null;
+  var shoeShineSubTimer2 = null;
   function shineShoe(id) {
     var el = document.getElementById(id);
     if (!el) return;
@@ -2626,15 +2634,18 @@ function sparkShoes(svg, shoesId, cx, cy) {
       requestAnimationFrame(function () { el.classList.add("dance-shine"); });
     });
   }
-  // Couple-dance lifts on a 1.1s loop (up at 25% and 75%); alternate whose shoes
-  // shine so it reads as each partner's shoe catching the light on their turn.
+  // couple-dance lifts the couple (translateY(-4px)) at 25% and 75% of its 1.1s loop;
+  // rest/floor is at 0%/50%. Shine should land on those lifted moments, not the floor,
+  // and alternate whose shoes shine so each partner catches the light on their turn.
   function shineCycle() {
-    shineShoe("loft-behdad-shoes");
-    shineShoe("garden-behdad-shoes");
     shoeShineSubTimer = setTimeout(function () {
+      shineShoe("loft-behdad-shoes");
+      shineShoe("garden-behdad-shoes");
+    }, 275);
+    shoeShineSubTimer2 = setTimeout(function () {
       shineShoe("loft-marketa-shoes");
       shineShoe("garden-marketa-shoes");
-    }, 550);
+    }, 825);
   }
   function startShoeShine() {
     if (shoeShineTimer) return;
@@ -2644,6 +2655,7 @@ function sparkShoes(svg, shoesId, cx, cy) {
   function stopShoeShine() {
     clearInterval(shoeShineTimer);
     clearTimeout(shoeShineSubTimer);
+    clearTimeout(shoeShineSubTimer2);
     shoeShineTimer = null;
   }
   audio.addEventListener("play", function () {
@@ -2726,11 +2738,16 @@ function sparkShoes(svg, shoesId, cx, cy) {
   });
 })();
 (function () {
-  function wiggle(el) {
+  function wiggle(el, e) {
     if (!el) return;
-    el.classList.remove("body-wiggle");
+    var dir = "left";
+    if (e && typeof e.clientX === "number") {
+      var rect = el.getBoundingClientRect();
+      if (rect.width) dir = (e.clientX - rect.left) < rect.width / 2 ? "left" : "right";
+    }
+    el.classList.remove("body-wiggle-left", "body-wiggle-right");
     requestAnimationFrame(function () {
-      requestAnimationFrame(function () { el.classList.add("body-wiggle"); });
+      requestAnimationFrame(function () { el.classList.add("body-wiggle-" + dir); });
     });
     el.querySelectorAll(".shoe-spark-target").forEach(function (shoe) {
       shoe.classList.remove("dance-shine");
@@ -2742,7 +2759,11 @@ function sparkShoes(svg, shoesId, cx, cy) {
   var couples = document.querySelectorAll("#loft-couple, #garden-couple");
   for (var i = 0; i < couples.length; i++) {
     (function (el) {
-      el.addEventListener("click", function () { wiggle(el); });
+      el.addEventListener("animationend", function (e) {
+        if (e.target !== el) return;
+        el.classList.remove("body-wiggle-left", "body-wiggle-right");
+      });
+      el.addEventListener("click", function (e) { wiggle(el, e); });
     })(couples[i]);
   }
 })();

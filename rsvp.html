@@ -474,6 +474,28 @@ footer{margin-top:2.6rem}
   85%{transform:rotate(-1.5deg)}
 }
 @media (prefers-reduced-motion: reduce){#office-mic.wobbling{animation:none}}
+#garden-guitar{transform-box:fill-box; transform-origin:bottom center}
+#garden-guitar.playing{animation:guitar-sway 1s ease-in-out infinite}
+@keyframes guitar-sway{
+  0%,100%{transform:rotate(0deg)}
+  50%{transform:rotate(3deg)}
+}
+#garden-ukulele{transform-box:fill-box; transform-origin:top center}
+#garden-ukulele.playing{animation:uke-sway 1s ease-in-out infinite}
+@keyframes uke-sway{
+  0%,100%{transform:rotate(0deg)}
+  50%{transform:rotate(-4deg)}
+}
+#garden-guitar.tapped, #garden-ukulele.tapped, #garden-chanter.tapped{animation:instrument-tap-bump .3s ease-out}
+@keyframes instrument-tap-bump{
+  0%{translate:0 0}
+  40%{translate:0 -3px}
+  100%{translate:0 0}
+}
+@media (prefers-reduced-motion: reduce){
+  #garden-guitar.playing, #garden-ukulele.playing,
+  #garden-guitar.tapped, #garden-ukulele.tapped, #garden-chanter.tapped{animation:none}
+}
 #office-desk-top, #office-typewriter, #office-laptop, #office-pc-desk-trio{transition:translate .6s ease}
 .desk-leg-pole{transform-box:fill-box; transform-origin:bottom; transition:transform .6s ease}
 .desk-led{transition:fill .15s ease}
@@ -4910,7 +4932,14 @@ document.addEventListener("click", function (e) {
   }
   var chanter = document.getElementById("garden-chanter");
   if (chanter) {
+    function bumpChanter() {
+      chanter.classList.remove("tapped");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { chanter.classList.add("tapped"); });
+      });
+    }
     chanter.addEventListener("click", function (e) {
+      bumpChanter();
       var rect = chanter.getBoundingClientRect();
       var ratio = rect.height ? (e.clientY - rect.top) / rect.height : 0.5;
       ratio = Math.max(0, Math.min(1, ratio));
@@ -4918,7 +4947,7 @@ document.addEventListener("click", function (e) {
       playChanterTootSound(freq);
     });
     chanter.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); playChanterTootSound(); }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); bumpChanter(); playChanterTootSound(); }
     });
   }
   var blind = document.getElementById("garden-blind");
@@ -7370,6 +7399,12 @@ function spawnDustMote(container) {
         audio.pause();
         return;
       }
+      if (el) {
+        el.classList.remove("tapped");
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { el.classList.add("tapped"); });
+        });
+      }
       gardenState.music = true;
       if (el) el.classList.add("done");
       spawnMusicNotes(strip, spot.x, spot.y);
@@ -7454,12 +7489,22 @@ function spawnDustMote(container) {
       noteFlowTimer = null;
     }
   }
+  function updateInstrumentSway() {
+    Object.keys(instrumentSpots).forEach(function (id) {
+      var audio = document.getElementById(instrumentSpots[id].audioId);
+      var el = document.getElementById(id);
+      if (el) el.classList.toggle("playing", !!(audio && !audio.paused));
+    });
+  }
   Object.keys(instrumentSpots).forEach(function (id) {
     var audio = document.getElementById(instrumentSpots[id].audioId);
     if (!audio) return;
     audio.addEventListener("play", updateCuddlyGrooving);
     audio.addEventListener("pause", updateCuddlyGrooving);
     audio.addEventListener("ended", updateCuddlyGrooving);
+    audio.addEventListener("play", updateInstrumentSway);
+    audio.addEventListener("pause", updateInstrumentSway);
+    audio.addEventListener("ended", updateInstrumentSway);
     audio.addEventListener("play", updateNoteFlow);
     audio.addEventListener("pause", updateNoteFlow);
     audio.addEventListener("ended", updateNoteFlow);

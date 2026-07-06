@@ -347,7 +347,9 @@ footer{margin-top:2.6rem}
 }
 .scene.melt{filter:url(#melt-filter)}
 .melt-whiteout{opacity:0; pointer-events:none; fill:#fffdf8}
-.scene.melt .melt-whiteout{animation:melt-whiteout-fade 5s ease-in-out}
+.scene.melt:not(.blackout) .melt-whiteout{animation:melt-whiteout-fade 5s ease-in-out}
+.melt-blackout{opacity:0; pointer-events:none; fill:#0a0805}
+.scene.melt.blackout .melt-blackout{animation:melt-whiteout-fade 5s ease-in-out}
 @keyframes melt-whiteout-fade{
   0%{opacity:0}
   25%{opacity:.92}
@@ -441,6 +443,7 @@ body.completion-trip{animation:completion-spin 7s linear}
   .scene.melt .trip-trail{animation:none}
   .scene.melt{filter:none; animation:none}
   .scene.melt .melt-whiteout{animation:none}
+  .scene.melt .melt-blackout{animation:none}
   .scene.molly{animation:none}
   #loft-couple.cuddle{animation:none}
   #loft-discoball.spin .disco-ball-spin{animation:none}
@@ -1216,6 +1219,7 @@ body.completion-trip{animation:completion-spin 7s linear}
 </g>
 <rect id="garden-flash" x="0" y="0" width="680" height="920" rx="14" fill="#ffffff" opacity="0" pointer-events="none"/>
 <rect class="melt-whiteout" x="0" y="0" width="680" height="920" rx="14"/>
+<rect class="melt-blackout" x="0" y="0" width="680" height="920" rx="14"/>
     </svg>
     <p class="desc" data-i="pr_desc">A garden party: drinks, music,<br class="brk-sm"> dinner, dancing, afterparty.<br class="brk-sm"> <em class="quip" id="sun-reset-toggle" tabindex="0" role="button">Sunscreen provided.</em></p>
   </section>
@@ -1952,6 +1956,35 @@ function playThunderSound() {
     setTimeout(function () { ctx.close(); }, 4300);
   } catch (e) {}
 }
+function playScreamSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t = ctx.currentTime;
+    var osc = ctx.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(340, t);
+    osc.frequency.exponentialRampToValueAtTime(900, t + 0.12);
+    osc.frequency.exponentialRampToValueAtTime(500, t + 0.35);
+    osc.frequency.exponentialRampToValueAtTime(180, t + 0.65);
+    var filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 1200;
+    filter.Q.value = 1.2;
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.35, t + 0.08);
+    gain.gain.setValueAtTime(0.3, t + 0.4);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.72);
+    setTimeout(function () { ctx.close(); }, 800);
+  } catch (e) {}
+}
 function playShutterSound() {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -2300,7 +2333,11 @@ function sparkShoes(svg, shoesId, cx, cy) {
   var meltIdx = 0;
   var meltOrder = shuffledIndices((T.en.melt_jokes || []).length);
   if (frog) frog.addEventListener("click", function () {
+    var gardenSvg = document.getElementById("garden-scene-svg");
+    var blackout = Math.random() < 0.2;
+    if (gardenSvg) gardenSvg.classList.toggle("blackout", blackout);
     triggerTrip("garden-scene-svg", "melt");
+    if (blackout) setTimeout(playScreamSound, 1250);
     var lang = document.documentElement.lang;
     var jokes = (T[lang] && T[lang].melt_jokes) || T.en.melt_jokes;
     eggBubble(frog, jokes[meltOrder[meltIdx % meltOrder.length]]);

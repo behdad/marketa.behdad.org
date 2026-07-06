@@ -538,6 +538,22 @@ footer{margin-top:2.6rem}
 }
 #cuddly-behdad-head{transform-origin:194px 198px}
 #cuddly-marketa-head{transform-origin:243px 182px}
+#cuddly-behdad-head.grooving, #cuddly-marketa-head.grooving{animation:cuddly-head-bob .55s ease-in-out infinite}
+@keyframes cuddly-head-bob{
+  0%, 100%{transform:rotate(0) translateY(0)}
+  50%{transform:rotate(3deg) translateY(-1.5px)}
+}
+#cuddly-behdad-foot-1.grooving, #cuddly-behdad-foot-2.grooving,
+#cuddly-marketa-foot-1.grooving, #cuddly-marketa-foot-2.grooving{animation:cuddly-toe-tap .4s ease-in-out infinite}
+@keyframes cuddly-toe-tap{
+  0%, 100%{transform:rotate(0)}
+  50%{transform:rotate(-6deg)}
+}
+@media (prefers-reduced-motion: reduce){
+  #cuddly-behdad-head.grooving, #cuddly-marketa-head.grooving,
+  #cuddly-behdad-foot-1.grooving, #cuddly-behdad-foot-2.grooving,
+  #cuddly-marketa-foot-1.grooving, #cuddly-marketa-foot-2.grooving{animation:none}
+}
 .cuddly-marketa-blush-mark{opacity:0; transition:opacity .4s ease}
 #cuddly-marketa-head.blushing .cuddly-marketa-blush-mark{opacity:.75}
 .cuddly-behdad-pleased-mark{opacity:0; transition:opacity .4s ease}
@@ -6610,6 +6626,7 @@ function spawnWaterDroplets(svg, cx, cy) {
     window.currentStageIndex = idx;
     setCaption(name);
     updateNav();
+    if (name === "cuddly" && window.updateCuddlyGrooving) window.updateCuddlyGrooving();
     if (name === "balcony") triggerBalconyFinale();
   }
   window.goToStage = goToStage;
@@ -6770,6 +6787,25 @@ function spawnWaterDroplets(svg, cx, cy) {
       if (!played) playPluckSound();
       checkGardenDone();
     });
+  });
+  var cuddlyGrooveIds = ["cuddly-behdad-head", "cuddly-marketa-head", "cuddly-behdad-foot-1", "cuddly-behdad-foot-2", "cuddly-marketa-foot-1", "cuddly-marketa-foot-2"];
+  function updateCuddlyGrooving() {
+    var anyPlaying = Object.keys(instrumentSpots).some(function (id) {
+      var audio = document.getElementById(instrumentSpots[id].audioId);
+      return audio && !audio.paused;
+    });
+    cuddlyGrooveIds.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.classList.toggle("grooving", anyPlaying);
+    });
+  }
+  window.updateCuddlyGrooving = updateCuddlyGrooving;
+  Object.keys(instrumentSpots).forEach(function (id) {
+    var audio = document.getElementById(instrumentSpots[id].audioId);
+    if (!audio) return;
+    audio.addEventListener("play", updateCuddlyGrooving);
+    audio.addEventListener("pause", updateCuddlyGrooving);
+    audio.addEventListener("ended", updateCuddlyGrooving);
   });
   var candleIds = ["garden-candle-1", "garden-candle-2"];
   var candlesLit = {};

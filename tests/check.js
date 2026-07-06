@@ -1,0 +1,136 @@
+#!/usr/bin/env node
+// Zero-dependency sanity checks for index.html and rsvp.html.
+// Run with: node tests/check.js
+"use strict";
+
+var fs = require("fs");
+var path = require("path");
+var os = require("os");
+var execSync = require("child_process").execSync;
+
+var ROOT = path.join(__dirname, "..");
+var FILES = ["index.html", "rsvp.html"];
+var failures = 0;
+
+function pass(label) {
+  console.log("  ✓ " + label);
+}
+function fail(label, detail) {
+  failures++;
+  console.log("  ✗ " + label);
+  if (detail) console.log("      " + String(detail).split("\n").join("\n      "));
+}
+
+function extractScript(html) {
+  var m = html.match(/<script>([\s\S]*)<\/script>/);
+  return m ? m[1] : null;
+}
+
+function checkSyntax(file, script) {
+  if (!script) {
+    fail(file + ": inline <script> found");
+    return;
+  }
+  pass(file + ": inline <script> found");
+  var tmp = path.join(os.tmpdir(), "wedding-check-" + Date.now() + "-" + Math.random().toString(36).slice(2) + ".js");
+  fs.writeFileSync(tmp, script);
+  try {
+    execSync("node --check " + JSON.stringify(tmp), { stdio: "pipe" });
+    pass(file + ": node --check passed");
+  } catch (e) {
+    fail(file + ": node --check failed", e.stderr ? e.stderr.toString() : e.message);
+  } finally {
+    fs.unlinkSync(tmp);
+  }
+}
+
+function checkSvgTagBalance(file, html) {
+  var start = html.indexOf('<svg id="loft-game-strip"');
+  if (start === -1) return; // not applicable (index.html)
+  var end = html.indexOf("</svg>", start);
+  var svg = html.slice(start, end);
+  var opens = (svg.match(/<g[ >]/g) || []).length;
+  var closes = (svg.match(/<\/g>/g) || []).length;
+  if (opens === closes) {
+    pass(file + ": <g> tag balance (" + opens + " open / " + closes + " close)");
+  } else {
+    fail(file + ": <g> tag balance mismatch", opens + " open vs " + closes + " close");
+  }
+}
+
+// Extracts the top-level keys of a `en: { ... }` / `cs: { ... }` object literal
+// by brace-depth scanning from the line where it starts. Good enough for this
+// file's hand-written dictionaries; not a general JS parser.
+function extractDictKeys(script, label) {
+  var lines = script.split("\n");
+  var startIdx = -1;
+  var re = new RegExp("^\\s*" + label + "\\s*:\\s*\\{");
+  for (var i = 0; i < lines.length; i++) {
+    if (re.test(lines[i])) { startIdx = i; break; }
+  }
+  if (startIdx === -1) return null;
+  var keys = [];
+  var depth = 0;
+  for (var j = startIdx; j < lines.length; j++) {
+    var line = lines[j];
+    var opens = (line.match(/\{/g) || []).length;
+    var closes = (line.match(/\}/g) || []).length;
+    depth += opens - closes;
+    var m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:/);
+    if (m && depth >= 1 && j !== startIdx) keys.push(m[1]);
+    if (j > startIdx && depth <= 0) break;
+  }
+  return keys;
+}
+
+function checkDictParity(file, script) {
+  var enKeys = extractDictKeys(script, "en");
+  var csKeys = extractDictKeys(script, "cs");
+  if (!enKeys || !csKeys) {
+    fail(file + ": could not locate en:/cs: dictionaries to compare");
+    return;
+  }
+  var enSet = new Set(enKeys);
+  var csSet = new Set(csKeys);
+  var enOnly = enKeys.filter(function (k) { return !csSet.has(k); });
+  var csOnly = csKeys.filter(function (k) { return !enSet.has(k); });
+  if (enOnly.length === 0 && csOnly.length === 0) {
+    pass(file + ": EN/CS dictionary keys match (" + enKeys.length + " keys)");
+  } else {
+    fail(file + ": EN/CS dictionary key mismatch",
+      (enOnly.length ? "EN only: " + enOnly.join(", ") + "\n" : "") +
+      (csOnly.length ? "CS only: " + csOnly.join(", ") : ""));
+  }
+}
+
+function checkEggTotal(html, script) {
+  var totalMatch = script.match(/EGG_TOTAL\s*=\s*(\d+)/);
+  if (!totalMatch) return; // not applicable (rsvp.html)
+  var declared = parseInt(totalMatch[1], 10);
+  var liCount = (html.match(/<li[^>]*data-egg="/g) || []).length;
+  if (declared === liCount) {
+    pass("index.html: EGG_TOTAL matches cheatsheet <li data-egg> count (" + declared + ")");
+  } else {
+    fail("index.html: EGG_TOTAL (" + declared + ") does not match cheatsheet <li data-egg> count (" + liCount + ")");
+  }
+}
+
+FILES.forEach(function (file) {
+  console.log(file + ":");
+  var html = fs.readFileSync(path.join(ROOT, file), "utf8");
+  var script = extractScript(html);
+  checkSyntax(file, script);
+  if (script) {
+    checkDictParity(file, script);
+    checkEggTotal(html, script);
+  }
+  checkSvgTagBalance(file, html);
+  console.log("");
+});
+
+if (failures > 0) {
+  console.log(failures + " check(s) failed.");
+  process.exit(1);
+} else {
+  console.log("All checks passed.");
+}

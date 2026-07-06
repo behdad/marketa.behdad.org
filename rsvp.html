@@ -243,6 +243,8 @@ footer{margin-top:2.6rem}
 #balcony-wine-liquid{transform-box:fill-box; transform-origin:bottom center; transition:transform .5s ease}
 #balcony-winebottle-liquid{transform-box:fill-box; transform-origin:bottom center; transition:transform .5s ease}
 #garden-bottle-liquid-1, #garden-bottle-liquid-2, #garden-bottle-liquid-3{transform-box:fill-box; transform-origin:bottom center; transition:transform .5s ease}
+#garden-bottle-1, #garden-bottle-2, #garden-bottle-3{transition:translate .5s cubic-bezier(.34,1.56,.64,1)}
+@media (prefers-reduced-motion: reduce){#garden-bottle-1, #garden-bottle-2, #garden-bottle-3{transition:none}}
 #kitchen-waterbottle-liquid{transform-box:fill-box; transform-origin:bottom center; transition:transform .5s ease}
 #balcony-wineglass.empty #balcony-wine-liquid{transform:scaleY(0)}
 #balcony-wineglass, #balcony-winebottle-inner{transform-box:fill-box; transform-origin:bottom center}
@@ -1748,12 +1750,18 @@ section{margin:1.9rem 0}
 <line x1="170" y1="300" x2="226" y2="300" stroke="#f2e2b8" stroke-width="3"/>
 </g>
 <g id="garden-bottles" class="hunt-hit" tabindex="0" role="button" aria-label="The bottles" transform="translate(-9,0)">
+<g id="garden-bottle-1">
 <path d="M180 270 L180 252 Q180 246 184 244 L184 238 L188 238 L188 244 Q192 246 192 252 L192 270 Z" fill="#4a7a52" fill-opacity="0.85" stroke="#3a6042" stroke-width="1"/>
-<path d="M196 270 L196 250 Q196 244 200 242 L200 236 L204 236 L204 242 Q208 244 208 250 L208 270 Z" fill="#5f8f60" fill-opacity="0.85" stroke="#3a6042" stroke-width="1"/>
-<path d="M212 270 L212 254 Q212 248 215 246 L215 241 L219 241 L219 246 Q222 248 222 254 L222 270 Z" fill="#4a7a52" fill-opacity="0.85" stroke="#3a6042" stroke-width="1"/>
 <g id="garden-bottle-liquid-1"><rect x="181" y="246" width="10" height="24" fill="#cfe8f2" opacity="0.55"/></g>
+</g>
+<g id="garden-bottle-2">
+<path d="M196 270 L196 250 Q196 244 200 242 L200 236 L204 236 L204 242 Q208 244 208 250 L208 270 Z" fill="#5f8f60" fill-opacity="0.85" stroke="#3a6042" stroke-width="1"/>
 <g id="garden-bottle-liquid-2"><rect x="197" y="244" width="10" height="26" fill="#cfe8f2" opacity="0.55"/></g>
+</g>
+<g id="garden-bottle-3">
+<path d="M212 270 L212 254 Q212 248 215 246 L215 241 L219 241 L219 246 Q222 248 222 254 L222 270 Z" fill="#4a7a52" fill-opacity="0.85" stroke="#3a6042" stroke-width="1"/>
 <g id="garden-bottle-liquid-3"><rect x="213" y="248" width="8" height="22" fill="#cfe8f2" opacity="0.55"/></g>
+</g>
 <path d="M178 262 Q196 256 224 262" fill="none" stroke="#c9b52f" stroke-width="1"/>
 <circle cx="184" cy="260" r="1.8" fill="#f0c46a"/>
 <circle cx="196" cy="258" r="1.8" fill="#f0c46a"/>
@@ -4673,7 +4681,7 @@ document.addEventListener("click", function (e) {
         updateBottleLiquid(i);
       }
     };
-    function clinkBottles(e) {
+    function nearestBottleIdx(e) {
       var nearestIdx = 0;
       if (e && typeof e.clientX === "number") {
         var rect = bottles.getBoundingClientRect();
@@ -4684,6 +4692,10 @@ document.addEventListener("click", function (e) {
           if (d < bestDist) { bestDist = d; nearestIdx = i; }
         });
       }
+      return nearestIdx;
+    }
+    function clinkBottles(e) {
+      var nearestIdx = nearestBottleIdx(e);
       playGlassClinkSound(1 + (4 - bottlesWaterLeft[nearestIdx]) * 0.1);
       if (bottlesWaterLeft[nearestIdx] > 0) {
         bottlesWaterLeft[nearestIdx]--;
@@ -4693,10 +4705,63 @@ document.addEventListener("click", function (e) {
         if (window.markGardenWatered) window.markGardenWatered();
       }
     }
-    bottles.addEventListener("click", clinkBottles);
     bottles.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); clinkBottles(); }
     });
+    var draggingBottles = false, bottlesDragMoved = false, bottlesDragStartAbs = null, bottlesCurrentAbs = null;
+    function svgPointFromClient(clientX, clientY) {
+      var svg = document.getElementById("loft-game-strip");
+      var pt = svg.createSVGPoint();
+      pt.x = clientX;
+      pt.y = clientY;
+      return pt.matrixTransform(svg.getScreenCTM().inverse());
+    }
+    var draggedBottleEl = null;
+    bottles.addEventListener("pointerdown", function (e) {
+      draggingBottles = true;
+      bottlesDragMoved = false;
+      draggedBottleEl = document.getElementById("garden-bottle-" + (nearestBottleIdx(e) + 1));
+      bottlesDragStartAbs = svgPointFromClient(e.clientX, e.clientY);
+      bottlesCurrentAbs = bottlesDragStartAbs;
+      if (draggedBottleEl) draggedBottleEl.style.transition = "none";
+      try { bottles.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    bottles.addEventListener("pointermove", function (e) {
+      if (!draggingBottles || !draggedBottleEl) return;
+      bottlesCurrentAbs = svgPointFromClient(e.clientX, e.clientY);
+      var dx = bottlesCurrentAbs.x - bottlesDragStartAbs.x;
+      var dy = bottlesCurrentAbs.y - bottlesDragStartAbs.y;
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) bottlesDragMoved = true;
+      draggedBottleEl.style.translate = dx + "px " + dy + "px";
+    });
+    function onBottlesPointerUp(e) {
+      if (!draggingBottles) return;
+      draggingBottles = false;
+      try { bottles.releasePointerCapture(e.pointerId); } catch (err) {}
+      if (!bottlesDragMoved) {
+        clinkBottles(e);
+      } else {
+        var spots = window.gardenPlantSpots || {};
+        var nearestId = null, bestDist = Infinity;
+        Object.keys(spots).forEach(function (id) {
+          var s = spots[id];
+          var d = Math.hypot(s.x - bottlesCurrentAbs.x, s.y - bottlesCurrentAbs.y);
+          if (d < bestDist) { bestDist = d; nearestId = id; }
+        });
+        if (nearestId && bestDist <= 70 && window.waterSpecificPlant && window.waterSpecificPlant(nearestId)) {
+          // watered via waterSpecificPlant
+        } else {
+          playDryClickSound();
+        }
+      }
+      if (draggedBottleEl) {
+        draggedBottleEl.style.transition = "";
+        draggedBottleEl.style.translate = "0px 0px";
+      }
+      draggedBottleEl = null;
+    }
+    bottles.addEventListener("pointerup", onBottlesPointerUp);
+    bottles.addEventListener("pointercancel", onBottlesPointerUp);
   }
   var growlight = document.getElementById("garden-growlight");
   function toggleGrowlight() { growlight.classList.toggle("off"); }
@@ -7183,26 +7248,30 @@ function spawnDustMote(container) {
     "garden-smallpots": { x: 1148, y: 215 },
     "garden-potstand": { x: 820, y: 180 }
   };
-  Object.keys(plantSpots).forEach(function (id) {
+  function waterSpecificPlant(id) {
     var el = document.getElementById(id);
     var spot = plantSpots[id];
-    onActivate(el, function () {
-      if (!window.drainRandomBottle || !window.drainRandomBottle()) {
-        playDryClickSound();
-        return;
-      }
-      gardenState.water = true;
-      if (el) el.classList.add("done");
-      playWaterSound();
-      spawnWaterDroplets(strip, spot.x, spot.y);
-      if (el) {
-        el.classList.remove("watered");
-        requestAnimationFrame(function () {
-          requestAnimationFrame(function () { el.classList.add("watered"); });
-        });
-      }
-      checkGardenDone();
+    if (!el || !spot) return false;
+    if (!window.drainRandomBottle || !window.drainRandomBottle()) {
+      playDryClickSound();
+      return false;
+    }
+    gardenState.water = true;
+    el.classList.add("done");
+    playWaterSound();
+    spawnWaterDroplets(strip, spot.x, spot.y);
+    el.classList.remove("watered");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { el.classList.add("watered"); });
     });
+    checkGardenDone();
+    return true;
+  }
+  window.waterSpecificPlant = waterSpecificPlant;
+  window.gardenPlantSpots = plantSpots;
+  Object.keys(plantSpots).forEach(function (id) {
+    var el = document.getElementById(id);
+    onActivate(el, function () { waterSpecificPlant(id); });
   });
   (function scheduleAmbientPlantSway() {
     var delay = 6000 + Math.random() * 8000;

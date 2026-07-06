@@ -26,6 +26,11 @@ function extractScript(html) {
   return m ? m[1] : null;
 }
 
+function extractStyle(html) {
+  var m = html.match(/<style>([\s\S]*)<\/style>/);
+  return m ? m[1] : null;
+}
+
 function checkSyntax(file, script) {
   if (!script) {
     fail(file + ": inline <script> found");
@@ -162,15 +167,72 @@ function checkParticleTransformOrigin(file, script) {
   }
 }
 
+// Recurring historical bug (gong rattle, cuddly utensils/blanket, Marketa's
+// lean+bottom-wiggle): a one-shot CSS `animation:` class gets added via rAF/rAF but is
+// never explicitly removed anywhere in JS. If a sibling class targeting the same
+// property later comes later in CSS source order, the never-removed class permanently
+// wins the cascade and silently blocks the sibling's animation forever after the first
+// play. Heuristic: every class driving a non-infinite `animation:` should appear in at
+// least one `classList.remove(...)` or `classList.toggle(...)` call somewhere in the JS.
+function checkAnimationClassCleanup(file, style, script, html) {
+  if (!style) {
+    fail(file + ": could not locate <style> block");
+    return;
+  }
+  // Classes that appear in a static class="..." attribute are structural/base classes
+  // (always present on the element), not dynamically toggled state — exclude them, or
+  // almost everything with a shared base class (e.g. ".head-group.shake") gets flagged.
+  var staticClasses = new Set();
+  var classAttrRe = /\bclass="([^"]*)"/g;
+  var caMatch;
+  while ((caMatch = classAttrRe.exec(html))) {
+    caMatch[1].split(/\s+/).forEach(function (c) { if (c) staticClasses.add(c); });
+  }
+  var ruleRe = /([^{}]+)\{([^{}]*)\}/g;
+  var ruleMatch;
+  var classesSeen = new Set();
+  var issues = [];
+  while ((ruleMatch = ruleRe.exec(style))) {
+    var selector = ruleMatch[1];
+    var decl = ruleMatch[2];
+    var animMatch = decl.match(/animation\s*:\s*([^;]+)/);
+    if (!animMatch) continue;
+    if (/\binfinite\b/.test(animMatch[1])) continue; // looping, not one-shot
+    var classRe = /\.([A-Za-z][\w-]*)/g;
+    var cm;
+    while ((cm = classRe.exec(selector))) {
+      if (!staticClasses.has(cm[1])) classesSeen.add(cm[1]);
+    }
+  }
+  classesSeen.forEach(function (cls) {
+    var removeRe = new RegExp("classList\\.(remove|toggle)\\([^)]*[\"']" + cls + "[\"']");
+    if (removeRe.test(script)) return;
+    // Elements created via createElementNS + setAttribute("class", ...) and later
+    // destroyed outright (element.remove()) don't need their class removed first —
+    // the whole node is gone. Only flag classes toggled on persistent elements.
+    var transientRe = new RegExp("setAttribute\\(\\s*[\"']class[\"']\\s*,\\s*[\"']" + cls + "[\"']");
+    if (transientRe.test(script) && /\.remove\(\)/.test(script)) return;
+    issues.push(cls);
+  });
+  if (issues.length === 0) {
+    pass(file + ": all one-shot animation classes are removed somewhere in JS");
+  } else {
+    fail(file + ": one-shot animation class(es) never explicitly removed (risk of permanently blocking a sibling class)",
+      issues.join(", "));
+  }
+}
+
 FILES.forEach(function (file) {
   console.log(file + ":");
   var html = fs.readFileSync(path.join(ROOT, file), "utf8");
   var script = extractScript(html);
+  var style = extractStyle(html);
   checkSyntax(file, script);
   if (script) {
     checkDictParity(file, script);
     checkEggTotal(html, script);
     checkParticleTransformOrigin(file, script);
+    checkAnimationClassCleanup(file, style, script, html);
   }
   checkSvgTagBalance(file, html);
   console.log("");

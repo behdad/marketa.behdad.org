@@ -2558,8 +2558,9 @@ var T = {
       kitchen: "Power on the espresso machine, then grind coffee, then brew a shot.",
       kitchen_sip: "Go on, sip it.",
       garden: "Water a plant, play an instrument, and light the candles.",
-      cuddly: "Play with the Octi, pull back a blanket.",
-      cuddly_hint: "Play with the Octi first.",
+      cuddly: "Play with Octi, pull back a blanket.",
+      cuddly_hint: "Play with Octi first.",
+      cuddly_pull: "Now pull back any blanket.",
       office: "Turn off the lights, find the stained-glass butterfly.",
       office_hint: "The lights are still on — turn them both off first.",
       complete: "You made it through the whole loft. ♥",
@@ -2608,6 +2609,7 @@ var T = {
       garden: "Zalij kytku, zahraj na nástroj a zapal svíčky.",
       cuddly: "Pohraj si s Octi, odhrň deku.",
       cuddly_hint: "Nejdřív si pohraj s Octi.",
+      cuddly_pull: "Teď odhrň libovolnou deku.",
       office: "Zhasni světla, najdi vitrážového motýla.",
       office_hint: "Světla ještě svítí — nejdřív obě zhasni.",
       complete: "Prošli jste celým bytem. ♥",
@@ -3354,10 +3356,12 @@ document.addEventListener("click", function (e) {
   if (!octopus) return;
   function wobble() {
     if (octopus.classList.contains("falling-in")) return;
+    var alreadyPlayed = octopus.classList.contains("played");
     octopus.classList.remove("wobble", "popping-out");
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { octopus.classList.add("wobble", "played"); });
     });
+    if (!alreadyPlayed && window.setCaption) window.setCaption("cuddly_pull");
   }
   octopus.addEventListener("click", wobble);
   octopus.addEventListener("keydown", function (e) {
@@ -3393,9 +3397,13 @@ document.addEventListener("click", function (e) {
     if (octopus) {
       var nextClass = octopusInChest ? "popping-out" : "falling-in";
       var prevClass = octopusInChest ? "falling-in" : "popping-out";
+      var alreadyPlayed = octopus.classList.contains("played");
       octopus.classList.remove(prevClass, "wobble");
       octopus.classList.add(nextClass);
-      if (nextClass === "falling-in") octopus.classList.add("played");
+      if (nextClass === "falling-in") {
+        octopus.classList.add("played");
+        if (!alreadyPlayed && window.setCaption) window.setCaption("cuddly_pull");
+      }
       octopusInChest = !octopusInChest;
     }
   }
@@ -6023,6 +6031,7 @@ function spawnWaterDroplets(svg, cx, cy) {
     caption.innerHTML = '<a href="#rsvp-anchor">' + link + '</a>';
     caption.classList.add("rsvp-nudge");
   }
+  window.setCaption = setCaption;
   window.refreshHuntCaption = function () {
     if (captionKey === "rsvp_nudge") { showRsvpNudge(); return; }
     caption.textContent = huntText(captionKey);
@@ -6211,13 +6220,13 @@ function spawnWaterDroplets(svg, cx, cy) {
     onActivate(el, function () {
       if (el) {
         if (id === "cuddly-lapblanket" && Math.random() < 0.3) {
-          el.classList.remove("wiggling");
+          el.classList.remove("wiggling", "tugged");
           requestAnimationFrame(function () {
             requestAnimationFrame(function () { el.classList.add("wiggling"); });
           });
           playGiggleSound();
         } else {
-          el.classList.remove("tugged");
+          el.classList.remove("wiggling", "tugged");
           requestAnimationFrame(function () {
             requestAnimationFrame(function () { el.classList.add("tugged"); });
           });

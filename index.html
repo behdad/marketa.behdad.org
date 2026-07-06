@@ -1845,6 +1845,117 @@ function playTripMelody() {
     setTimeout(function () { ctx.close(); }, notes.length * noteDur * 1000 + 500);
   } catch (e) {}
 }
+function playBadTripSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var notes = [415.3, 392.0, 349.23, 311.13, 293.66];
+    var noteDur = 0.24;
+    var wobble = ctx.createOscillator();
+    wobble.type = "sine";
+    wobble.frequency.value = 6;
+    var wobbleGain = ctx.createGain();
+    wobbleGain.gain.value = 10;
+    wobble.connect(wobbleGain);
+    wobble.start(ctx.currentTime);
+    wobble.stop(ctx.currentTime + notes.length * noteDur + 0.5);
+    notes.forEach(function (freq, i) {
+      var t = ctx.currentTime + i * noteDur;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(freq, t);
+      wobbleGain.connect(osc.frequency);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.05, t + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + noteDur * 2);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + noteDur * 2.2);
+    });
+    setTimeout(function () { ctx.close(); }, notes.length * noteDur * 1000 + 700);
+  } catch (e) {}
+}
+function playStrobeTripSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var pulseCount = 10;
+    var pulseDur = 0.08;
+    for (var i = 0; i < pulseCount; i++) {
+      var t = ctx.currentTime + i * pulseDur;
+      var osc = ctx.createOscillator();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(i % 2 === 0 ? 220 : 660, t);
+      var gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.1, t + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + pulseDur * 0.9);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + pulseDur);
+    }
+    setTimeout(function () { ctx.close(); }, pulseCount * pulseDur * 1000 + 400);
+  } catch (e) {}
+}
+function playMeltTripSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t = ctx.currentTime;
+    var dur = 1.4;
+    var osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(660, t);
+    osc.frequency.exponentialRampToValueAtTime(220, t + dur);
+    var vibrato = ctx.createOscillator();
+    vibrato.type = "sine";
+    vibrato.frequency.value = 5;
+    var vibratoGain = ctx.createGain();
+    vibratoGain.gain.value = 24;
+    vibrato.connect(vibratoGain);
+    vibratoGain.connect(osc.frequency);
+    vibrato.start(t);
+    vibrato.stop(t + dur);
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.1, t + 0.05);
+    gain.gain.setValueAtTime(0.08, t + dur * 0.7);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + dur + 0.05);
+    setTimeout(function () { ctx.close(); }, (dur + 0.3) * 1000);
+  } catch (e) {}
+}
+function playMollyTripSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    [523.25, 659.25, 783.99, 1046.5].forEach(function (freq, i) {
+      var t = ctx.currentTime + i * 0.1;
+      var osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, t);
+      var gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.08, t + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.75);
+    });
+    setTimeout(function () { ctx.close(); }, 1000);
+  } catch (e) {}
+}
 function playJackpotSound() {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -2074,7 +2185,13 @@ function triggerTrip(sceneId, variant, eggId) {
     requestAnimationFrame(function () { svg.classList.add(cls); });
   });
   markFound(eggId || "trip");
-  playTripMelody();
+  var tripSounds = {
+    "psychedelic-bad": playBadTripSound,
+    strobe: playStrobeTripSound,
+    melt: playMeltTripSound,
+    molly: playMollyTripSound
+  };
+  (tripSounds[cls] || playTripMelody)();
   var duration = cls === "molly" ? 7000 : cls === "melt" ? 5000 : 3000;
   setTimeout(function () { svg.classList.remove(cls); }, duration);
 }

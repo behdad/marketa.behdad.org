@@ -3241,11 +3241,10 @@ document.addEventListener("click", function (e) {
   }
   var boards = document.getElementById("kitchen-boards");
   if (boards) {
-    var boardPitches = [1, 1.15, 0.9, 1.05];
-    var boardPitchIdx = 0;
     function chopBoard() {
-      playChopSound(boardPitches[boardPitchIdx % boardPitches.length]);
-      boardPitchIdx++;
+      var pitch = 0.85 + Math.random() * 0.3;
+      var hits = 1 + Math.floor(Math.random() * 4);
+      playChopSound(pitch, hits);
     }
     boards.addEventListener("click", chopBoard);
     boards.addEventListener("keydown", function (e) {
@@ -5567,14 +5566,17 @@ function sayFishu(phrase) {
     }
   } catch (e) {}
 }
-function playChopSound(pitchMult) {
+function playChopSound(pitchMult, hitCount) {
   pitchMult = pitchMult || 1;
+  hitCount = hitCount || 3;
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
-    [0, 0.16, 0.32].forEach(function (t0) {
+    var offsets = [];
+    for (var h = 0; h < hitCount; h++) offsets.push(h * 0.16);
+    offsets.forEach(function (t0) {
       var bufferSize = ctx.sampleRate * 0.08;
       var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       var data = buffer.getChannelData(0);

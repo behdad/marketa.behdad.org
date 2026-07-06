@@ -4854,31 +4854,63 @@ function spawnPaneGleam(svg, pane, offsetX) {
     clipRect.setAttribute("height", h);
     clip.appendChild(clipRect);
     defs.appendChild(clip);
+    var gradId = "gleam-grad-" + Math.random().toString(36).slice(2, 9);
+    var grad = document.createElementNS(ns, "linearGradient");
+    grad.setAttribute("id", gradId);
+    grad.setAttribute("x1", "0%"); grad.setAttribute("x2", "100%");
+    grad.setAttribute("y1", "0%"); grad.setAttribute("y2", "0%");
+    var stops = [
+      [0, "#ffffff", 0], [38, "#ffffff", 0.14], [50, "#ffffff", 0.4],
+      [62, "#ffffff", 0.14], [100, "#ffffff", 0]
+    ];
+    stops.forEach(function (s) {
+      var stop = document.createElementNS(ns, "stop");
+      stop.setAttribute("offset", s[0] + "%");
+      stop.setAttribute("stop-color", s[1]);
+      stop.setAttribute("stop-opacity", s[2]);
+      grad.appendChild(stop);
+    });
+    defs.appendChild(grad);
     var g = document.createElementNS(ns, "g");
     g.setAttribute("clip-path", "url(#" + clipId + ")");
-    var sw = Math.max(w, h) * 0.3;
+    var sw = Math.max(w, h) * 0.55;
     var streak = document.createElementNS(ns, "rect");
     streak.setAttribute("x", x - sw);
     streak.setAttribute("y", y - h * 0.6);
     streak.setAttribute("width", sw);
     streak.setAttribute("height", h * 2.2);
-    streak.setAttribute("fill", "#ffffff");
-    streak.setAttribute("opacity", "0.45");
+    streak.setAttribute("fill", "url(#" + gradId + ")");
     streak.style.transformBox = "fill-box";
     streak.style.transformOrigin = "center";
     g.appendChild(streak);
+    var core = document.createElementNS(ns, "rect");
+    var coreW = sw * 0.12;
+    core.setAttribute("x", x - sw + (sw - coreW) / 2);
+    core.setAttribute("y", y - h * 0.6);
+    core.setAttribute("width", coreW);
+    core.setAttribute("height", h * 2.2);
+    core.setAttribute("fill", "#ffffff");
+    core.setAttribute("opacity", "0.5");
+    core.style.transformBox = "fill-box";
+    core.style.transformOrigin = "center";
+    g.appendChild(core);
     svg.appendChild(g);
     var travel = w + sw * 2;
     function cleanup() {
       if (g.parentNode) g.remove();
       if (clip.parentNode) clip.remove();
+      if (grad.parentNode) grad.remove();
     }
     if (streak.animate) {
-      var anim = streak.animate([
+      streak.animate([
+        { transform: "translateX(0px) skewX(-24deg)" },
+        { transform: "translateX(" + travel + "px) skewX(-24deg)" }
+      ], { duration: 650, easing: "ease-in-out" });
+      var anim = core.animate([
         { transform: "translateX(0px) skewX(-24deg)", opacity: 0 },
-        { transform: "translateX(" + (travel * 0.5) + "px) skewX(-24deg)", opacity: 0.55, offset: 0.45 },
+        { transform: "translateX(" + (travel * 0.5) + "px) skewX(-24deg)", opacity: 0.6, offset: 0.5 },
         { transform: "translateX(" + travel + "px) skewX(-24deg)", opacity: 0 }
-      ], { duration: 600, easing: "ease-in-out" });
+      ], { duration: 650, easing: "ease-in-out" });
       anim.onfinish = cleanup;
     } else {
       setTimeout(cleanup, 700);

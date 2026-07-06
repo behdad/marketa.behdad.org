@@ -499,6 +499,11 @@ body.completion-trip{animation:completion-spin 7s linear}
   60%{transform:rotate(-2deg)}
   100%{transform:rotate(0)}
 }
+#loft-guitar.invite-pulse{animation:guitar-invite-pulse 1.8s ease-in-out infinite}
+@keyframes guitar-invite-pulse{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.045)}
+}
 .music-note{
   pointer-events:none; font-family:"Source Serif 4",serif;
   animation:note-float 1.2s ease-out forwards;
@@ -510,6 +515,7 @@ body.completion-trip{animation:completion-spin 7s linear}
 }
 @media (prefers-reduced-motion: reduce){
   #loft-guitar.strum{animation:none}
+  #loft-guitar.invite-pulse{animation:none}
   .music-note{animation:none; opacity:0}
 }
 .snowflake{animation:snow-fall 7s linear infinite}
@@ -2582,7 +2588,16 @@ function sparkShoes(svg, shoesId, cx, cy) {
   if (!guitar) return;
   var svg = guitar.ownerSVGElement;
   var notes = ["♪", "♫", "♩"];
+  var found;
+  try { found = JSON.parse(localStorage.getItem("foundEggs") || "[]"); } catch (e) { found = []; }
+  var pulseTimer = null;
+  if (found.indexOf("guitar") === -1) {
+    guitar.classList.add("invite-pulse");
+    pulseTimer = setTimeout(function () { guitar.classList.remove("invite-pulse"); }, 10000);
+  }
   guitar.addEventListener("click", function () {
+    clearTimeout(pulseTimer);
+    guitar.classList.remove("invite-pulse");
     markFound("guitar");
     var audio = document.getElementById("guitar-audio");
     if (audio && !audio.paused) {

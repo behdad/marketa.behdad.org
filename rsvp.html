@@ -341,7 +341,7 @@ footer{margin-top:2.6rem}
   65%{transform:rotate(3deg)}
 }
 @media (prefers-reduced-motion: reduce){#balcony-lounger.wobbling #balcony-lounger-inner{animation:none}}
-#office-chair{transform-box:fill-box; transform-origin:bottom center}
+#office-chair{transform-box:fill-box; transform-origin:bottom center; transition:translate .3s ease}
 #office-chair.spinning{animation:chair-spin .8s ease-in-out}
 @keyframes chair-spin{
   0%, 100%{transform:rotate(0)}
@@ -3262,7 +3262,51 @@ document.addEventListener("click", function (e) {
         playChairWhirlSound(1);
       }
     }
-    chair.addEventListener("click", spinChair);
+    var CHAIR_MIN_X = -180, CHAIR_MAX_X = 180;
+    var chairOffsetX = 0;
+    var chairDragging = false, chairDragStartX = 0, chairDragStartOffset = 0, chairDragMoved = false;
+    function pointerSvgX(e) {
+      var svg = document.getElementById("loft-game-strip");
+      var pt = svg.createSVGPoint();
+      pt.x = e.clientX;
+      pt.y = e.clientY;
+      return pt.matrixTransform(svg.getScreenCTM().inverse()).x;
+    }
+    function setChairOffset(x) {
+      chairOffsetX = Math.max(CHAIR_MIN_X, Math.min(CHAIR_MAX_X, x));
+      chair.style.translate = chairOffsetX + "px 0px";
+    }
+    window.resetChairPosition = function () {
+      chairOffsetX = 0;
+      chair.style.transition = "none";
+      chair.style.translate = "";
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { chair.style.transition = ""; });
+      });
+    };
+    chair.addEventListener("pointerdown", function (e) {
+      chairDragging = true;
+      chairDragMoved = false;
+      chairDragStartX = pointerSvgX(e);
+      chairDragStartOffset = chairOffsetX;
+      chair.style.transition = "none";
+      try { chair.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    chair.addEventListener("pointermove", function (e) {
+      if (!chairDragging) return;
+      var dx = pointerSvgX(e) - chairDragStartX;
+      if (Math.abs(dx) > 2) chairDragMoved = true;
+      setChairOffset(chairDragStartOffset + dx);
+    });
+    function onChairPointerUp(e) {
+      if (!chairDragging) return;
+      chairDragging = false;
+      try { chair.releasePointerCapture(e.pointerId); } catch (err) {}
+      chair.style.transition = "";
+      if (!chairDragMoved) spinChair();
+    }
+    chair.addEventListener("pointerup", onChairPointerUp);
+    chair.addEventListener("pointercancel", onChairPointerUp);
     chair.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); spinChair(); }
     });
@@ -7397,6 +7441,7 @@ function spawnDustMote(container) {
     var pcTowerReset = document.getElementById("office-pc-desk-trio");
     if (pcTowerReset) pcTowerReset.classList.remove("on");
     if (window.stopPcFan) window.stopPcFan();
+    if (window.resetChairPosition) window.resetChairPosition();
     gardenState.water = false;
     gardenState.music = false;
     gardenState.candles = false;

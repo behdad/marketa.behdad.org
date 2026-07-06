@@ -3758,9 +3758,44 @@ document.addEventListener("click", function (e) {
   }
   var pcTower = document.getElementById("office-pc-desk-trio");
   if (!pcTower) return;
+  var pcFanCtx = null;
+  function startPcFan() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      stopPcFan();
+      pcFanCtx = new Ctx();
+      var bufferSize = pcFanCtx.sampleRate * 2;
+      var buffer = pcFanCtx.createBuffer(1, bufferSize, pcFanCtx.sampleRate);
+      var data = buffer.getChannelData(0);
+      for (var i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      var noise = pcFanCtx.createBufferSource();
+      noise.buffer = buffer;
+      noise.loop = true;
+      var filter = pcFanCtx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = 220;
+      var gain = pcFanCtx.createGain();
+      gain.gain.value = 0.006;
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(pcFanCtx.destination);
+      noise.start(0);
+      pcFanCtx._noise = noise;
+    } catch (e) {}
+  }
+  function stopPcFan() {
+    if (pcFanCtx) {
+      try { pcFanCtx._noise.stop(); } catch (e) {}
+      try { pcFanCtx.close(); } catch (e) {}
+      pcFanCtx = null;
+    }
+  }
+  window.stopPcFan = stopPcFan;
   function togglePc() {
-    pcTower.classList.toggle("on");
+    var on = pcTower.classList.toggle("on");
     playSparkSound();
+    if (on) startPcFan(); else stopPcFan();
   }
   pcTower.addEventListener("click", togglePc);
   pcTower.addEventListener("keydown", function (e) {
@@ -6606,6 +6641,9 @@ function spawnWaterDroplets(svg, cx, cy) {
     if (lamarzocco) lamarzocco.classList.remove("powered-on", "done");
     if (grinder) grinder.classList.remove("grinding", "done");
     if (portafilter) portafilter.classList.remove("brewing", "done");
+    var pcTowerReset = document.getElementById("office-pc-desk-trio");
+    if (pcTowerReset) pcTowerReset.classList.remove("on");
+    if (window.stopPcFan) window.stopPcFan();
     gardenState.water = false;
     gardenState.music = false;
     gardenState.candles = false;

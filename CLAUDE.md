@@ -145,8 +145,9 @@ you've found, if any — a live checklist, not a static spoiler).
 ## v2 backlog
 
 Owners' words: "populated over time with new bells & whistles, fun stuff mostly." Kept
-brief here since the owners already know it: our-story section, travel/stay pages,
-photos, RSVP form, countdown(s), more scene variants, typeface-cocktail menu idea.
+brief here since the owners already know it: travel/stay pages, photos, RSVP form,
+countdown(s), more scene variants, typeface-cocktail menu idea. An "our story"
+(how-we-met) section was considered and rejected — not for public disclosure.
 
 ## Deploy
 

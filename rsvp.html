@@ -2650,6 +2650,8 @@ var T = {
       kitchen_grind: "Now grind the coffee.",
       kitchen_brew: "Now brew a shot.",
       kitchen_sip: "Go on, sip it.",
+      kitchen_need_power: "Turn on the espresso machine first.",
+      kitchen_need_grind: "Grind the coffee first.",
       garden: "Water a plant, play an instrument, and light the candles.",
       garden_need_music_candles: "Now play an instrument and light the candles.",
       garden_need_water_candles: "Now water a plant and light the candles.",
@@ -2708,6 +2710,8 @@ var T = {
       kitchen_grind: "Teď umel kávu.",
       kitchen_brew: "Teď uvař espresso.",
       kitchen_sip: "Tak si ho usrkni.",
+      kitchen_need_power: "Nejdřív zapni kávovar.",
+      kitchen_need_grind: "Nejdřív umel kávu.",
       garden: "Zalij kytku, zahraj na nástroj a zapal svíčky.",
       garden_need_music_candles: "Teď zahraj na nástroj a zapal svíčky.",
       garden_need_water_candles: "Teď zalij kytku a zapal svíčky.",
@@ -6475,7 +6479,12 @@ function spawnWaterDroplets(svg, cx, cy) {
     if (!alreadyPowered) setCaption("kitchen_grind");
   });
   onActivate(grinder, function () {
-    if (!kitchenPowered || grinding || kitchenGround) return;
+    if (!kitchenPowered) {
+      setCaption("kitchen_need_power");
+      playDryClickSound();
+      return;
+    }
+    if (grinding || kitchenGround) return;
     grinding = true;
     if (grinder) grinder.classList.add("grinding");
     playGrindSound();
@@ -6488,7 +6497,17 @@ function spawnWaterDroplets(svg, cx, cy) {
     }, GRIND_MS);
   });
   onActivate(portafilter, function () {
-    if (!kitchenPowered || !kitchenGround || brewing) return;
+    if (!kitchenPowered) {
+      setCaption("kitchen_need_power");
+      playDryClickSound();
+      return;
+    }
+    if (!kitchenGround) {
+      setCaption("kitchen_need_grind");
+      playDryClickSound();
+      return;
+    }
+    if (brewing) return;
     brewing = true;
     if (portafilter) portafilter.classList.add("brewing");
     playBrewSound();

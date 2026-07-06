@@ -7356,7 +7356,7 @@ function spawnDustMote(container) {
   })();
   var instrumentSpots = {
     "garden-guitar": { x: 746, y: 270, audioId: "guitar-song-audio" },
-    "garden-ukulele": { x: 735, y: 108, audioId: "ukulele-song-audio" }
+    "garden-ukulele": { x: 735, y: 140, audioId: "ukulele-song-audio" }
   };
   Object.keys(instrumentSpots).forEach(function (id) {
     var el = document.getElementById(id);
@@ -7430,12 +7430,36 @@ function spawnDustMote(container) {
     }
   }
   window.updateCuddlyGrooving = updateCuddlyGrooving;
+  var noteFlowTimer = null;
+  function updateNoteFlow() {
+    var anyPlaying = Object.keys(instrumentSpots).some(function (id) {
+      var audio = document.getElementById(instrumentSpots[id].audioId);
+      return audio && !audio.paused;
+    });
+    if (anyPlaying && !noteFlowTimer) {
+      noteFlowTimer = setInterval(function () {
+        var spot = null;
+        Object.keys(instrumentSpots).some(function (id) {
+          var audio = document.getElementById(instrumentSpots[id].audioId);
+          if (audio && !audio.paused) { spot = instrumentSpots[id]; return true; }
+          return false;
+        });
+        if (spot) spawnMusicNotes(strip, spot.x, spot.y);
+      }, 900);
+    } else if (!anyPlaying && noteFlowTimer) {
+      clearInterval(noteFlowTimer);
+      noteFlowTimer = null;
+    }
+  }
   Object.keys(instrumentSpots).forEach(function (id) {
     var audio = document.getElementById(instrumentSpots[id].audioId);
     if (!audio) return;
     audio.addEventListener("play", updateCuddlyGrooving);
     audio.addEventListener("pause", updateCuddlyGrooving);
     audio.addEventListener("ended", updateCuddlyGrooving);
+    audio.addEventListener("play", updateNoteFlow);
+    audio.addEventListener("pause", updateNoteFlow);
+    audio.addEventListener("ended", updateNoteFlow);
   });
   var candleIds = ["garden-candle-1", "garden-candle-2"];
   var candlesLit = {};

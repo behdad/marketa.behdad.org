@@ -2681,23 +2681,53 @@ function sparkShoes(svg, shoesId, cx, cy) {
     clearTimeout(shoeShineSubTimer2);
     shoeShineTimer = null;
   }
+  var noteFlowNotes = ["♪", "♫", "♩"];
+  var noteFlowTimer = null;
+  function spawnGuitarNotes() {
+    for (var i = 0; i < 3; i++) {
+      (function (i) {
+        setTimeout(function () {
+          var t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          t.setAttribute("x", 100 + i * 16);
+          t.setAttribute("y", 600 - i * 10);
+          t.setAttribute("font-size", "22");
+          t.setAttribute("fill", "#8e3a4a");
+          t.setAttribute("class", "music-note");
+          t.textContent = noteFlowNotes[i];
+          loftSvg.appendChild(t);
+          setTimeout(function () { if (t.parentNode) t.remove(); }, 1300);
+        }, i * 120);
+      })(i);
+    }
+  }
+  function startNoteFlow() {
+    if (noteFlowTimer) return;
+    noteFlowTimer = setInterval(spawnGuitarNotes, 900);
+  }
+  function stopNoteFlow() {
+    clearInterval(noteFlowTimer);
+    noteFlowTimer = null;
+  }
   audio.addEventListener("play", function () {
     loftSvg.classList.add("lights-blink");
     setDancing(true);
     startShoeShine();
     setPufferGrooving(true);
+    startNoteFlow();
   });
   audio.addEventListener("pause", function () {
     loftSvg.classList.remove("lights-blink");
     setDancing(false);
     stopShoeShine();
     setPufferGrooving(false);
+    stopNoteFlow();
   });
   audio.addEventListener("ended", function () {
     loftSvg.classList.remove("lights-blink");
     setDancing(false);
     stopShoeShine();
     setPufferGrooving(false);
+    stopNoteFlow();
   });
 })();
 (function () {

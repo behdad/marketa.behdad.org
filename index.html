@@ -295,6 +295,14 @@ footer{margin-top:2.6rem}
   75%{filter:hue-rotate(540deg) saturate(2)}
   100%{filter:hue-rotate(720deg) saturate(1)}
 }
+.scene.psychedelic-bad{animation:psychedelic-trip-bad 3s linear}
+@keyframes psychedelic-trip-bad{
+  0%{filter:hue-rotate(0deg) saturate(1) brightness(1) contrast(1)}
+  25%{filter:hue-rotate(-70deg) saturate(0.5) brightness(0.5) contrast(1.35)}
+  50%{filter:hue-rotate(-140deg) saturate(0.35) brightness(0.38) contrast(1.55)}
+  75%{filter:hue-rotate(-230deg) saturate(0.45) brightness(0.48) contrast(1.35)}
+  100%{filter:hue-rotate(-300deg) saturate(1) brightness(1) contrast(1)}
+}
 .scene.strobe{animation:strobe-trip 3s steps(1, end)}
 @keyframes strobe-trip{
   0%{filter:brightness(1) contrast(1) hue-rotate(0deg)}
@@ -325,7 +333,7 @@ footer{margin-top:2.6rem}
   100%{filter:brightness(1) contrast(1) hue-rotate(750deg) saturate(1)}
 }
 @media (prefers-reduced-motion: reduce){
-  .scene.psychedelic, .scene.strobe{animation:none}
+  .scene.psychedelic, .scene.psychedelic-bad, .scene.strobe{animation:none}
 }
 .trip-trail{opacity:0; pointer-events:none}
 .trip-trail-1{filter:hue-rotate(90deg) saturate(3)}
@@ -2061,7 +2069,7 @@ function triggerTrip(sceneId, variant, eggId) {
   var svg = document.getElementById(sceneId);
   if (!svg) return;
   var cls = variant || "psychedelic";
-  svg.classList.remove("psychedelic", "strobe", "melt", "molly");
+  svg.classList.remove("psychedelic", "psychedelic-bad", "strobe", "melt", "molly");
   requestAnimationFrame(function () {
     requestAnimationFrame(function () { svg.classList.add(cls); });
   });
@@ -2346,7 +2354,8 @@ function sparkShoes(svg, shoesId, cx, cy) {
   var shroomIdx = 0;
   var shroomOrder = shuffledIndices((T.en.shroom_jokes || []).length);
   if (mushroom) mushroom.addEventListener("click", function () {
-    triggerTrip("garden-scene-svg", "psychedelic");
+    var bad = shroomIdx >= 4 && (shroomIdx - 4) % 2 === 0;
+    triggerTrip("garden-scene-svg", bad ? "psychedelic-bad" : "psychedelic");
     var lang = document.documentElement.lang;
     var jokes = (T[lang] && T[lang].shroom_jokes) || T.en.shroom_jokes;
     eggBubble(mushroom, jokes[shroomOrder[shroomIdx % shroomOrder.length]]);

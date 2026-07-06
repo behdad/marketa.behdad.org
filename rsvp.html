@@ -478,9 +478,9 @@ footer{margin-top:2.6rem}
   100%{opacity:0; transform:translateY(10px)}
 }
 @media (prefers-reduced-motion: reduce){#balcony-minisplit.on #balcony-minisplit-blades{animation:none}#garden-minisplit.on .ac-airline{animation:none}}
-#garden-candles.lit .candle-flame{opacity:1; animation:candle-flicker 1.1s ease-in-out infinite}
 .candle-flame{opacity:0; transition:opacity .4s ease; transform-box:fill-box; transform-origin:bottom center}
-#garden-candles.lit .candle-flame:nth-of-type(4){animation:candle-flicker 0.9s ease-in-out -0.4s infinite}
+#garden-candle-1.lit .candle-flame{opacity:1; animation:candle-flicker 1.1s ease-in-out infinite}
+#garden-candle-2.lit .candle-flame{opacity:1; animation:candle-flicker 0.9s ease-in-out -0.4s infinite}
 @keyframes candle-flicker{
   0%, 100% { transform:scale(1,1); opacity:1 }
   8% { transform:scale(.7,1.3); opacity:.65 }
@@ -491,7 +491,7 @@ footer{margin-top:2.6rem}
   75% { transform:scale(1.1,.92); opacity:1 }
   88% { transform:scale(.88,1.12); opacity:.8 }
 }
-@media (prefers-reduced-motion: reduce){#garden-candles.lit .candle-flame{animation:none}}
+@media (prefers-reduced-motion: reduce){#garden-candle-1.lit .candle-flame, #garden-candle-2.lit .candle-flame{animation:none}}
 #kitchen-grinder.grinding{animation:kitchen-grind-shake .12s ease-in-out infinite}
 @keyframes kitchen-grind-shake{
   0%,100%{transform:translate(0,0)}
@@ -1737,17 +1737,23 @@ section{margin:1.9rem 0}
 <rect x="652" y="288" width="28" height="52" fill="transparent"/>
 <rect x="656" y="292" width="24" height="48" rx="8" fill="#6b8271" stroke="#55685a" stroke-width="2"/>
 </g>
-<g id="garden-candles" class="hunt-hit" tabindex="0" role="button" aria-label="The candles" transform="translate(30,18)">
+<g id="garden-candles" transform="translate(30,18)">
 <polygon points="0,322 128,308 148,340 0,340" fill="#6b4a33" stroke="#4a3222" stroke-width="1.5"/>
 <path d="M10 326 L128 313 M8 332 L136 320" stroke="#8a6244" stroke-width="1.5"/>
+<g id="garden-candle-1" class="hunt-hit" tabindex="0" role="button" aria-label="The tall candle">
+<rect x="50" y="286" width="36" height="42" fill="transparent"/>
 <rect x="58" y="296" width="20" height="22" rx="3" fill="#4a5a48" stroke="#36443a" stroke-width="1"/>
 <ellipse cx="68" cy="296" rx="10" ry="3" fill="#e8e0c9"/>
 <line x1="68" y1="294" x2="68" y2="289" stroke="#8a7a58" stroke-width="1.5"/>
 <ellipse class="candle-flame" cx="68" cy="286" rx="2" ry="3.5" fill="#f0c46a"/>
+</g>
+<g id="garden-candle-2" class="hunt-hit" tabindex="0" role="button" aria-label="The short candle">
+<rect x="84" y="292" width="28" height="30" fill="transparent"/>
 <rect x="92" y="302" width="16" height="16" rx="3" fill="#3f4f42" stroke="#2d3a30" stroke-width="1"/>
 <ellipse cx="100" cy="302" rx="8" ry="2.5" fill="#e8e0c9"/>
 <line x1="100" y1="300" x2="100" y2="295" stroke="#8a7a58" stroke-width="1.5"/>
 <ellipse class="candle-flame" cx="100" cy="292" rx="2" ry="3.5" fill="#f0c46a"/>
+</g>
 </g>
 <rect id="garden-light-overlay" x="0" y="0" width="680" height="340" fill="#f7d98a" opacity="0" pointer-events="none"/>
 </g>
@@ -5005,27 +5011,65 @@ function playCandleLightSound() {
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
+    var strikeDur = 0.16;
+    var strikeBuffer = ctx.createBuffer(1, ctx.sampleRate * strikeDur, ctx.sampleRate);
+    var strikeData = strikeBuffer.getChannelData(0);
+    for (var i = 0; i < strikeData.length; i++) {
+      var frac = i / strikeData.length;
+      strikeData[i] = (Math.random() * 2 - 1) * (0.5 + 0.5 * Math.sin(frac * Math.PI * 9));
+    }
+    var strike = ctx.createBufferSource();
+    strike.buffer = strikeBuffer;
+    var strikeFilter = ctx.createBiquadFilter();
+    strikeFilter.type = "bandpass";
+    strikeFilter.frequency.setValueAtTime(3600, t);
+    strikeFilter.frequency.linearRampToValueAtTime(4800, t + strikeDur);
+    strikeFilter.Q.value = 1.4;
+    var strikeGain = ctx.createGain();
+    strikeGain.gain.setValueAtTime(0.0001, t);
+    strikeGain.gain.exponentialRampToValueAtTime(0.22, t + 0.02);
+    strikeGain.gain.exponentialRampToValueAtTime(0.0001, t + strikeDur);
+    strike.connect(strikeFilter);
+    strikeFilter.connect(strikeGain);
+    strikeGain.connect(ctx.destination);
+    strike.start(t);
+    strike.stop(t + strikeDur + 0.02);
+
+    var flareStart = t + strikeDur + 0.03;
+    var flareOsc = ctx.createOscillator();
+    flareOsc.type = "sine";
+    flareOsc.frequency.setValueAtTime(1400, flareStart);
+    flareOsc.frequency.exponentialRampToValueAtTime(300, flareStart + 0.12);
+    var flareGain = ctx.createGain();
+    flareGain.gain.setValueAtTime(0.0001, flareStart);
+    flareGain.gain.exponentialRampToValueAtTime(0.18, flareStart + 0.015);
+    flareGain.gain.exponentialRampToValueAtTime(0.0001, flareStart + 0.14);
+    flareOsc.connect(flareGain);
+    flareGain.connect(ctx.destination);
+    flareOsc.start(flareStart);
+    flareOsc.stop(flareStart + 0.16);
+
     var bufferSize = ctx.sampleRate * 0.35;
     var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     var data = buffer.getChannelData(0);
-    for (var i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 1.5);
+    for (var j = 0; j < bufferSize; j++) data[j] = (Math.random() * 2 - 1) * Math.pow(1 - j / bufferSize, 1.5);
     var noise = ctx.createBufferSource();
     noise.buffer = buffer;
     var filter = ctx.createBiquadFilter();
     filter.type = "bandpass";
-    filter.frequency.setValueAtTime(2200, t);
-    filter.frequency.exponentialRampToValueAtTime(800, t + 0.3);
+    filter.frequency.setValueAtTime(2200, flareStart);
+    filter.frequency.exponentialRampToValueAtTime(800, flareStart + 0.3);
     filter.Q.value = 0.8;
     var gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.14, t + 0.03);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.32);
+    gain.gain.setValueAtTime(0.0001, flareStart);
+    gain.gain.exponentialRampToValueAtTime(0.16, flareStart + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, flareStart + 0.32);
     noise.connect(filter);
     filter.connect(gain);
     gain.connect(ctx.destination);
-    noise.start(t);
-    noise.stop(t + 0.35);
-    setTimeout(function () { ctx.close(); }, 500);
+    noise.start(flareStart);
+    noise.stop(flareStart + 0.35);
+    setTimeout(function () { ctx.close(); }, 700);
   } catch (e) {}
 }
 function pufferColorRatio() {
@@ -6270,12 +6314,18 @@ function spawnWaterDroplets(svg, cx, cy) {
       checkGardenDone();
     });
   });
-  var candles = document.getElementById("garden-candles");
-  onActivate(candles, function () {
-    gardenState.candles = true;
-    if (candles) candles.classList.add("lit", "done");
-    playCandleLightSound();
-    checkGardenDone();
+  var candleIds = ["garden-candle-1", "garden-candle-2"];
+  var candlesLit = {};
+  candleIds.forEach(function (id) {
+    var el = document.getElementById(id);
+    onActivate(el, function () {
+      if (candlesLit[id]) return;
+      candlesLit[id] = true;
+      if (el) el.classList.add("lit", "done");
+      playCandleLightSound();
+      gardenState.candles = candleIds.every(function (cid) { return candlesLit[cid]; });
+      checkGardenDone();
+    });
   });
 
   ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"].forEach(function (id) {
@@ -6345,7 +6395,11 @@ function spawnWaterDroplets(svg, cx, cy) {
       var audio = document.getElementById(instrumentSpots[id].audioId);
       if (audio) { audio.pause(); audio.currentTime = 0; }
     });
-    if (candles) candles.classList.remove("lit", "done");
+    candleIds.forEach(function (id) {
+      candlesLit[id] = false;
+      var el = document.getElementById(id);
+      if (el) el.classList.remove("lit", "done");
+    });
     ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.classList.remove("done");

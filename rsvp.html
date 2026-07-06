@@ -6796,15 +6796,37 @@ function spawnWaterDroplets(svg, cx, cy) {
       checkGardenDone();
     });
   });
-  var cuddlyGrooveIds = ["cuddly-behdad-head", "cuddly-marketa-head", "cuddly-behdad-foot-1", "cuddly-behdad-foot-2", "cuddly-marketa-foot-1", "cuddly-marketa-foot-2"];
+  var cuddlyGrooveHeadIds = ["cuddly-behdad-head", "cuddly-marketa-head"];
+  var cuddlyGrooveFootIds = ["cuddly-behdad-foot-1", "cuddly-behdad-foot-2", "cuddly-marketa-foot-1", "cuddly-marketa-foot-2"];
+  // Beat period derived from each song's actual measured tempo (guitar/black-tornado
+  // ~184.6bpm, ukulele/strange-and-beautiful-things ~126bpm). Above ~150bpm, animating
+  // every single beat looks frantic, so fast songs groove at half-time instead.
+  var GROOVE_BPM = { "guitar-song-audio": 184.6, "ukulele-song-audio": 126.0 };
+  function grooveDurations(bpm) {
+    var period = 60 / bpm;
+    if (period < 0.4) period *= 2;
+    return { toe: period, head: period * 1.4 };
+  }
   function updateCuddlyGrooving() {
-    var anyPlaying = Object.keys(instrumentSpots).some(function (id) {
+    var playingAudioId = null;
+    Object.keys(instrumentSpots).some(function (id) {
       var audio = document.getElementById(instrumentSpots[id].audioId);
-      return audio && !audio.paused;
+      if (audio && !audio.paused) { playingAudioId = instrumentSpots[id].audioId; return true; }
+      return false;
     });
-    cuddlyGrooveIds.forEach(function (id) {
+    var anyPlaying = !!playingAudioId;
+    var durations = grooveDurations(GROOVE_BPM[playingAudioId] || 126.0);
+    cuddlyGrooveHeadIds.forEach(function (id) {
       var el = document.getElementById(id);
-      if (el) el.classList.toggle("grooving", anyPlaying);
+      if (!el) return;
+      el.classList.toggle("grooving", anyPlaying);
+      el.style.animationDuration = durations.head + "s";
+    });
+    cuddlyGrooveFootIds.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.classList.toggle("grooving", anyPlaying);
+      el.style.animationDuration = durations.toe + "s";
     });
   }
   window.updateCuddlyGrooving = updateCuddlyGrooving;

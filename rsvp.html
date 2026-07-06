@@ -952,14 +952,17 @@ footer{margin-top:2.6rem}
   100%{opacity:0; transform:scale(0.9) translateY(-15px)}
 }
 @media (prefers-reduced-motion: reduce){#garden-lamp.genie-out #garden-genie{animation:none}}
-#balcony-dustpan{transform-box:fill-box; transform-origin:top center}
-#balcony-dustpan.wobbling{animation:dustpan-wobble .45s ease-in-out}
-@keyframes dustpan-wobble{
-  0%, 100%{transform:rotate(0)}
-  30%{transform:rotate(-5deg)}
-  65%{transform:rotate(4deg)}
+#balcony-walllamp-bulb{transition:fill .3s ease}
+#balcony-walllamp-glow{opacity:0; transition:opacity .4s ease}
+#balcony-walllamp.on #balcony-walllamp-glow{opacity:.85}
+#balcony-walllamp.on #balcony-walllamp-bulb{fill:#f4d8a0}
+#balcony-walllamp-flash{opacity:0; pointer-events:none; transform-box:fill-box; transform-origin:center}
+#balcony-walllamp.flash #balcony-walllamp-flash{animation:walllamp-flash .5s ease-out}
+@keyframes walllamp-flash{
+  0%{opacity:.9; transform:scale(.5)}
+  100%{opacity:0; transform:scale(2.4)}
 }
-@media (prefers-reduced-motion: reduce){#balcony-dustpan.wobbling{animation:none}}
+@media (prefers-reduced-motion: reduce){#balcony-walllamp.flash #balcony-walllamp-flash{animation:none}}
 #cuddly-mouse{opacity:0; pointer-events:none}
 #cuddly-mouse.scurrying{animation:mouse-scurry 1.1s ease-in forwards}
 @keyframes mouse-scurry{
@@ -2386,10 +2389,13 @@ section{margin:1.9rem 0}
 <line x1="185" y1="184" x2="185" y2="194" stroke="#c9c4ba" stroke-width="1.3"/>
 <line x1="178" y1="196" x2="192" y2="196" stroke="#c9c4ba" stroke-width="1.3"/>
 </g>
-<g id="balcony-dustpan" class="hunt-hit" tabindex="0" role="button" aria-label="The dustpan and broom">
+<g id="balcony-walllamp" class="hunt-hit" tabindex="0" role="button" aria-label="The wall lamp">
 <rect x="164" y="64" width="36" height="56" fill="transparent"/>
-<rect x="178" y="70" width="6" height="26" rx="2" fill="#8a8e92" stroke="#6a6e70" stroke-width="1"/>
-<polygon points="176,96 186,96 194,114 168,114" fill="#a8685a" stroke="#7a4a3f" stroke-width="1"/>
+<ellipse id="balcony-walllamp-flash" cx="181" cy="99" rx="20" ry="20" fill="#f7d98a"/>
+<ellipse id="balcony-walllamp-glow" cx="181" cy="104" rx="26" ry="14" fill="#f7d98a" fill-opacity="0.4"/>
+<rect x="179" y="70" width="4" height="12" rx="1.5" fill="#8a8e92" stroke="#6a6e70" stroke-width="1"/>
+<polygon points="176,82 186,82 194,100 168,100" fill="#a8685a" stroke="#7a4a3f" stroke-width="1"/>
+<circle id="balcony-walllamp-bulb" cx="181" cy="99" r="3" fill="#9a948a"/>
 </g>
 <g id="balcony-coveredgrill" class="hunt-hit" tabindex="0" role="button" aria-label="The covered grill" transform="translate(-99.2,0) scale(1.4,1)">
 <rect x="245" y="170" width="82" height="118" fill="transparent"/>
@@ -3796,19 +3802,23 @@ document.addEventListener("click", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); spawnSteamWisps(strip, 3021, 230, 0.7); }
     });
   }
-  var dustpan = document.getElementById("balcony-dustpan");
-  if (dustpan) {
-    function shakeDustpan() {
-      dustpan.classList.remove("wobbling");
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () { dustpan.classList.add("wobbling"); });
-      });
-      playSweepSound();
-      spawnPowderBurst(strip, 181, 110, "#9c8f7a", 8);
+  var wallLamp = document.getElementById("balcony-walllamp");
+  if (wallLamp) {
+    function toggleWallLamp() {
+      var on = wallLamp.classList.toggle("on");
+      playLaptopClickSound();
+      if (on) {
+        wallLamp.classList.remove("flash");
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { wallLamp.classList.add("flash"); });
+        });
+      } else {
+        wallLamp.classList.remove("flash");
+      }
     }
-    dustpan.addEventListener("click", shakeDustpan);
-    dustpan.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); shakeDustpan(); }
+    wallLamp.addEventListener("click", toggleWallLamp);
+    wallLamp.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleWallLamp(); }
     });
   }
   var doormat = document.getElementById("balcony-doormat");

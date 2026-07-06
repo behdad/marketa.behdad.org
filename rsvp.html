@@ -6690,6 +6690,27 @@ function spawnWaterDroplets(svg, cx, cy) {
     }
     setTimeout(showRsvpNudge, 9100);
   }
+  function restoreStageHint(name) {
+    if (name === "kitchen") {
+      if (!kitchenPowered) return;
+      if (!kitchenGround) { setCaption("kitchen_grind"); return; }
+      var portafilterEl = document.getElementById("kitchen-portafilter");
+      if (portafilterEl && !portafilterEl.classList.contains("done")) { setCaption("kitchen_brew"); return; }
+      setCaption("kitchen_sip");
+    } else if (name === "garden") {
+      updateGardenHint();
+    } else if (name === "cuddly") {
+      var octopusEl = document.getElementById("cuddly-octopus");
+      if (octopusEl && octopusEl.classList.contains("played")) setCaption("cuddly_pull");
+    } else if (name === "office") {
+      var lampsOff = ["office-lamp", "office-pendant"].every(function (id) {
+        var el = document.getElementById(id);
+        return el && el.classList.contains("dimmed");
+      });
+      var glassEl = document.getElementById("office-stainedglass");
+      if (lampsOff && glassEl && !glassEl.classList.contains("done")) setCaption("office_find");
+    }
+  }
   function goToStage(name) {
     var idx = STAGES.indexOf(name);
     if (idx === -1) return;
@@ -6698,6 +6719,7 @@ function spawnWaterDroplets(svg, cx, cy) {
     strip.style.transform = "translateX(-" + (idx * 20) + "%)";
     window.currentStageIndex = idx;
     setCaption(name);
+    restoreStageHint(name);
     updateNav();
     if (name === "cuddly" && window.updateCuddlyGrooving) window.updateCuddlyGrooving();
     if (name === "balcony") triggerBalconyFinale();

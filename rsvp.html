@@ -1426,7 +1426,7 @@ section{margin:1.9rem 0}
 </g>
 <g id="garden-window">
 <rect x="96" y="12" width="448" height="290" fill="#26221f"/>
-<rect x="104" y="20" width="424" height="272" fill="#b8d4e8"/>
+<rect id="garden-window-pane-0" class="hunt-hit window-pane" tabindex="0" role="button" aria-label="A window pane" x="104" y="20" width="424" height="272" fill="#b8d4e8"/>
 <rect id="garden-window-pane-1" class="hunt-hit window-pane" tabindex="0" role="button" aria-label="A window pane" x="104" y="120" width="140" height="172" fill="#eae6de"/>
 <path d="M112 140 h124 M112 170 h124 M112 200 h124 M112 230 h124 M112 260 h124" stroke="#c9c4ba" stroke-width="3"/>
 <rect id="garden-window-pane-2" class="hunt-hit window-pane" tabindex="0" role="button" aria-label="A window pane" x="250" y="70" width="136" height="222" fill="#dce6ea"/>
@@ -4249,6 +4249,7 @@ document.addEventListener("click", function (e) {
     });
   }
   var windowPanes = [
+    { id: "garden-window-pane-0", offsetX: 680 },
     { id: "garden-window-pane-1", offsetX: 680 },
     { id: "garden-window-pane-2", offsetX: 680 },
     { id: "garden-window-pane-3", offsetX: 680 },
@@ -4258,23 +4259,12 @@ document.addEventListener("click", function (e) {
   windowPanes.forEach(function (p) {
     var pane = document.getElementById(p.id);
     if (!pane) return;
-    function sparklePane(e) {
-      var bbox = pane.getBBox();
-      var localX = bbox.x + bbox.width / 2;
-      var localY = bbox.y + bbox.height / 2;
-      if (e && typeof e.clientX === "number") {
-        var rect = pane.getBoundingClientRect();
-        if (rect.width && rect.height) {
-          localX = bbox.x + ((e.clientX - rect.left) / rect.width) * bbox.width;
-          localY = bbox.y + ((e.clientY - rect.top) / rect.height) * bbox.height;
-        }
-      }
-      spawnSparkFlare(strip, localX + p.offsetX, localY);
-      playFairyChimeSound();
+    function gleamPane() {
+      spawnPaneGleam(strip, pane, p.offsetX);
     }
-    pane.addEventListener("click", sparklePane);
+    pane.addEventListener("click", gleamPane);
     pane.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sparklePane(e); }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); gleamPane(); }
     });
   });
   var lamp = document.getElementById("garden-lamp");
@@ -4842,6 +4832,58 @@ function spawnSparkFlare(svg, cx, cy) {
       }
     })(i);
   }
+}
+function spawnPaneGleam(svg, pane, offsetX) {
+  if (!svg || !pane) return;
+  try {
+    var bbox = pane.getBBox();
+    var x = bbox.x + offsetX, y = bbox.y, w = bbox.width, h = bbox.height;
+    var ns = "http://www.w3.org/2000/svg";
+    var clipId = "gleam-clip-" + Math.random().toString(36).slice(2, 9);
+    var defs = svg.querySelector("defs");
+    if (!defs) {
+      defs = document.createElementNS(ns, "defs");
+      svg.insertBefore(defs, svg.firstChild);
+    }
+    var clip = document.createElementNS(ns, "clipPath");
+    clip.setAttribute("id", clipId);
+    var clipRect = document.createElementNS(ns, "rect");
+    clipRect.setAttribute("x", x);
+    clipRect.setAttribute("y", y);
+    clipRect.setAttribute("width", w);
+    clipRect.setAttribute("height", h);
+    clip.appendChild(clipRect);
+    defs.appendChild(clip);
+    var g = document.createElementNS(ns, "g");
+    g.setAttribute("clip-path", "url(#" + clipId + ")");
+    var sw = Math.max(w, h) * 0.3;
+    var streak = document.createElementNS(ns, "rect");
+    streak.setAttribute("x", x - sw);
+    streak.setAttribute("y", y - h * 0.6);
+    streak.setAttribute("width", sw);
+    streak.setAttribute("height", h * 2.2);
+    streak.setAttribute("fill", "#ffffff");
+    streak.setAttribute("opacity", "0.45");
+    streak.style.transformBox = "fill-box";
+    streak.style.transformOrigin = "center";
+    g.appendChild(streak);
+    svg.appendChild(g);
+    var travel = w + sw * 2;
+    function cleanup() {
+      if (g.parentNode) g.remove();
+      if (clip.parentNode) clip.remove();
+    }
+    if (streak.animate) {
+      var anim = streak.animate([
+        { transform: "translateX(0px) skewX(-24deg)", opacity: 0 },
+        { transform: "translateX(" + (travel * 0.5) + "px) skewX(-24deg)", opacity: 0.55, offset: 0.45 },
+        { transform: "translateX(" + travel + "px) skewX(-24deg)", opacity: 0 }
+      ], { duration: 600, easing: "ease-in-out" });
+      anim.onfinish = cleanup;
+    } else {
+      setTimeout(cleanup, 700);
+    }
+  } catch (e) {}
 }
 function spawnSprinklerSpray(svg, cx, cy) {
   if (!svg) return;

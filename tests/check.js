@@ -115,6 +115,53 @@ function checkEggTotal(html, script) {
   }
 }
 
+// Recurring historical bug (fixed 3x: 4886f92, dd525fe, 6650508): an SVG element
+// animated via .animate() with a `transform` keyframe, without transformBox set to
+// "fill-box" first, pivots around the SVG viewport origin instead of its own center —
+// particles drift/swing wildly instead of scaling or rotating in place.
+function checkParticleTransformOrigin(file, script) {
+  var fnRe = /function\s+\w+\s*\([^)]*\)\s*\{/g;
+  var fnMatch;
+  var issues = [];
+  while ((fnMatch = fnRe.exec(script))) {
+    var bodyStart = fnMatch.index + fnMatch[0].length;
+    var depth = 1;
+    var i = bodyStart;
+    while (i < script.length && depth > 0) {
+      if (script[i] === "{") depth++;
+      else if (script[i] === "}") depth--;
+      i++;
+    }
+    var body = script.slice(bodyStart, i - 1);
+    var animateRe = /(\w+)\.animate\(\s*\[/g;
+    var aMatch;
+    while ((aMatch = animateRe.exec(body))) {
+      var varName = aMatch[1];
+      var kfStart = aMatch.index + aMatch[0].length - 1;
+      var bd = 1, j = kfStart + 1;
+      while (j < body.length && bd > 0) {
+        if (body[j] === "[") bd++;
+        else if (body[j] === "]") bd--;
+        j++;
+      }
+      var keyframes = body.slice(kfStart, j);
+      // Pure translate() is unaffected by transform-box/-origin; only scale/rotate/skew
+      // pivot around it, so only flag keyframes that use one of those.
+      if (!/transform\s*:[^,}]*(scale|rotate|skew)\w*\s*\(/.test(keyframes)) continue;
+      var boxRe = new RegExp("\\b" + varName + "\\.style\\.transformBox\\b");
+      var priorText = body.slice(0, aMatch.index);
+      if (!boxRe.test(priorText)) {
+        issues.push(varName + ".animate(...) with a transform keyframe, no " + varName + ".style.transformBox set first");
+      }
+    }
+  }
+  if (issues.length === 0) {
+    pass(file + ": no particle .animate() calls missing transform-box:fill-box");
+  } else {
+    fail(file + ": possible missing transform-box:fill-box before .animate()", issues.join("\n"));
+  }
+}
+
 FILES.forEach(function (file) {
   console.log(file + ":");
   var html = fs.readFileSync(path.join(ROOT, file), "utf8");
@@ -123,6 +170,7 @@ FILES.forEach(function (file) {
   if (script) {
     checkDictParity(file, script);
     checkEggTotal(html, script);
+    checkParticleTransformOrigin(file, script);
   }
   checkSvgTagBalance(file, html);
   console.log("");

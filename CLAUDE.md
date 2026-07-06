@@ -21,10 +21,19 @@ go inside `index.html` unless there's a strong reason not to.
   `T.cs` (or a static HTML fallback) drift out of sync, even for a one-word tweak.
   Markéta (native Czech speaker) reviews all Czech copy at the end, so don't hold back
   on proposing/editing CS text — she'll correct anything off.
-- **No test suite.** Verify changes by: extracting the inline `<script>` and running
-  `node --check` on it (catches syntax errors); rendering with headless
+- **Run `node tests/check.js` before every commit that touches `index.html` or
+  `rsvp.html`.** Zero-dependency script — `node --check` on each file's inline
+  `<script>`, EN/CS dictionary key parity, `EGG_TOTAL` vs. cheatsheet `<li data-egg>`
+  count, and `<g>`/`</g>` tag balance in rsvp.html's shared SVG strip. It's cheap
+  insurance against exactly the bugs that have bitten this project before (a dropped
+  `</g>` that silently broke every stage after the edited one, dictionary keys added to
+  one language and not the other). Add more checks to it over time as new bug classes
+  turn up — it's meant to grow, not stay frozen at today's coverage. `tests/` is blocked
+  from public access via `.htaccess`, same treatment as `CLAUDE.md`.
+- **The check script doesn't replace manual verification** for anything visual or
+  interactive: rendering with headless
   `google-chrome --headless --disable-gpu --window-size=W,H --screenshot=out.png` and
-  reading the PNG back; for click/keyboard-triggered behavior, copy `index.html` to a
+  reading the PNG back; for click/keyboard-triggered behavior, copy the file to a
   scratch file, inject a small `<script>` before `</body>` that dispatches the event
   after a `setTimeout`, then screenshot or `--dump-dom` it. Clean up scratch files after.
   Always check both language versions and both the mobile (~390px) and desktop (≥760px)

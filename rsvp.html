@@ -536,6 +536,14 @@ footer{margin-top:2.6rem}
   40%{transform:scale(1.06)}
   70%{transform:scale(0.97)}
 }
+.plant-sway{animation:plant-sway 1.6s ease-in-out; transform-box:fill-box; transform-origin:bottom center}
+@keyframes plant-sway{
+  0%,100%{transform:rotate(0)}
+  30%{transform:rotate(-2.2deg)}
+  60%{transform:rotate(1.6deg)}
+  85%{transform:rotate(-0.8deg)}
+}
+@media (prefers-reduced-motion: reduce){.plant-sway{animation:none}}
 #office-dim-overlay{transition:opacity .8s ease; pointer-events:none}
 #office-stainedglass.zoomed{filter:saturate(1.9)}
 #office-stainedglass.zoomed #office-butterfly-wing-left{animation:butterfly-flap-left 2.4s ease-in-out 3}
@@ -6890,6 +6898,24 @@ function spawnWaterDroplets(svg, cx, cy) {
       checkGardenDone();
     });
   });
+  (function scheduleAmbientPlantSway() {
+    var delay = 6000 + Math.random() * 8000;
+    setTimeout(function () {
+      if (stageIndex === STAGES.indexOf("garden") && document.visibilityState !== "hidden") {
+        var ids = Object.keys(plantSpots);
+        var id = ids[Math.floor(Math.random() * ids.length)];
+        var el = document.getElementById(id);
+        if (el) {
+          el.classList.remove("plant-sway");
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () { el.classList.add("plant-sway"); });
+          });
+          setTimeout(function () { el.classList.remove("plant-sway"); }, 1600);
+        }
+      }
+      scheduleAmbientPlantSway();
+    }, delay);
+  })();
   var instrumentSpots = {
     "garden-guitar": { x: 746, y: 270, audioId: "guitar-song-audio" },
     "garden-ukulele": { x: 735, y: 108, audioId: "ukulele-song-audio" }

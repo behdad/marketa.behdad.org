@@ -648,9 +648,9 @@ footer{margin-top:2.6rem}
 #loft-game-strip.psychedelic{animation:psychedelic-trip 3s linear}
 @keyframes psychedelic-trip{
   0%{filter:hue-rotate(0deg) saturate(1)}
-  25%{filter:hue-rotate(180deg) saturate(2.5)}
-  50%{filter:hue-rotate(360deg) saturate(3)}
-  75%{filter:hue-rotate(540deg) saturate(2)}
+  25%{filter:hue-rotate(180deg) saturate(2.5) drop-shadow(3px 0 0 rgba(255,0,80,.35)) drop-shadow(-3px 0 0 rgba(0,220,255,.35))}
+  50%{filter:hue-rotate(360deg) saturate(3) drop-shadow(-4px 0 0 rgba(255,0,80,.4)) drop-shadow(4px 0 0 rgba(0,220,255,.4))}
+  75%{filter:hue-rotate(540deg) saturate(2) drop-shadow(3px 0 0 rgba(255,0,80,.35)) drop-shadow(-3px 0 0 rgba(0,220,255,.35))}
   100%{filter:hue-rotate(720deg) saturate(1)}
 }
 #loft-game-strip.strobe{animation:strobe-trip 3s steps(1, end)}
@@ -1592,16 +1592,19 @@ section{margin:1.9rem 0}
 </g>
 <rect x="564" y="306" width="8" height="8" fill="#4a251e"/>
 <rect x="648" y="306" width="8" height="8" fill="#4a251e"/>
-<g id="garden-incense" class="hunt-hit" tabindex="0" role="button" aria-label="A white sage bundle and a palo santo stick in their dish">
-<rect x="574" y="218" width="42" height="28" fill="transparent"/>
 <ellipse cx="596" cy="241" rx="19" ry="5" fill="#c9a35c" stroke="#a8813e" stroke-width="1.5"/>
+<g id="garden-sage" class="hunt-hit" tabindex="0" role="button" aria-label="A white sage bundle">
+<rect x="570" y="220" width="28" height="24" fill="transparent"/>
 <g transform="rotate(-8 583 234)">
 <rect x="574" y="229" width="20" height="10" rx="5" fill="#d8e2cc" stroke="#a8b894" stroke-width="1"/>
 <path d="M576 231 L578 237 M580 230 L582 238 M584 230 L586 238 M588 231 L590 237" stroke="#9aab84" stroke-width="0.8"/>
 <line x1="580" y1="229" x2="580" y2="239" stroke="#8a6a44" stroke-width="1.3"/>
 <line x1="588" y1="229" x2="588" y2="239" stroke="#8a6a44" stroke-width="1.3"/>
 </g>
-<g transform="rotate(-15 602 233)">
+</g>
+<g id="garden-palosanto" class="hunt-hit" tabindex="0" role="button" aria-label="A palo santo stick">
+<rect x="592" y="220" width="24" height="24" fill="transparent"/>
+<g transform="translate(0,4) rotate(-15 602 233)">
 <rect x="596" y="230" width="20" height="6" rx="3" fill="#d9b87c" stroke="#a8813e" stroke-width="1"/>
 <line x1="602" y1="230" x2="602" y2="236" stroke="#a8813e" stroke-width="1"/>
 <ellipse cx="613" cy="233" rx="3" ry="3.2" fill="#3a2a1f"/>
@@ -3746,15 +3749,20 @@ document.addEventListener("click", function (e) {
 })();
 (function () {
   var strip = document.getElementById("loft-game-strip");
-  var incense = document.getElementById("garden-incense");
-  function smoke() {
-    spawnSteamWisps(strip, 1289, 229);
-    spawnSteamWisps(strip, 1272, 233, 0.7);
+  var palosanto = document.getElementById("garden-palosanto");
+  function smokePalosanto() { spawnSteamWisps(strip, 1289, 233, 1, 1, -1, 6, 0.7); }
+  if (palosanto) {
+    palosanto.addEventListener("click", smokePalosanto);
+    palosanto.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); smokePalosanto(); }
+    });
   }
-  if (incense) {
-    incense.addEventListener("click", smoke);
-    incense.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); smoke(); }
+  var sage = document.getElementById("garden-sage");
+  function smokeSage() { spawnSteamWisps(strip, 1272, 233, 0.6, 1, -1, 6, 0.4); }
+  if (sage) {
+    sage.addEventListener("click", smokeSage);
+    sage.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); smokeSage(); }
     });
   }
   var mask = document.getElementById("garden-mask");
@@ -4338,17 +4346,19 @@ function spawnGrindParticles(svg, cx, cy, color) {
     })(i);
   }
 }
-function spawnSteamWisps(svg, cx, cy, scale, xDir, yDir) {
+function spawnSteamWisps(svg, cx, cy, scale, xDir, yDir, count, peakOpacity) {
   if (!svg) return;
   var s = scale || 1;
   var d = xDir || 1;
   var vy = yDir || -1;
-  var count = 3;
+  count = count || 3;
+  peakOpacity = peakOpacity || 0.7;
   for (var i = 0; i < count; i++) {
     (function (i) {
       var delay = i * 450;
+      var fade = peakOpacity * (1 - (i / count) * 0.6);
       setTimeout(function () {
-        var dx = i * 7 * s * d;
+        var dx = (i % 4) * 7 * s * d;
         var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
         path.setAttribute("d", "M" + cx + " " + cy + " q" + (10 * s * d) + " " + (14 * s * vy) + " " + (6 * s * d) + " " + (28 * s * vy) + " q" + (10 * s * d) + " " + (14 * s * vy) + " " + (6 * s * d) + " " + (28 * s * vy));
         path.setAttribute("fill", "none");
@@ -4362,7 +4372,7 @@ function spawnSteamWisps(svg, cx, cy, scale, xDir, yDir) {
         if (path.animate) {
           var anim = path.animate([
             { transform: "translate(" + dx + "px,0px) scale(.6)", opacity: 0 },
-            { transform: "translate(" + (dx + 10 * s * d) + "px," + (16 * s * vy) + "px) scale(1)", opacity: .7, offset: .4 },
+            { transform: "translate(" + (dx + 10 * s * d) + "px," + (16 * s * vy) + "px) scale(1)", opacity: fade, offset: .4 },
             { transform: "translate(" + (dx + 24 * s * d) + "px," + (38 * s * vy) + "px) scale(1.3)", opacity: 0 }
           ], { duration: 2400, easing: "ease-out" });
           anim.onfinish = function () { if (path.parentNode) path.remove(); };

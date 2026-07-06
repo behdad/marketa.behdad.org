@@ -524,6 +524,12 @@ footer{margin-top:2.6rem}
   0%,100%{opacity:1}
   50%{opacity:.75}
 }
+.invite-pulse{animation:invite-pulse 1.8s ease-in-out infinite; transform-box:fill-box; transform-origin:center}
+@keyframes invite-pulse{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.045)}
+}
+@media (prefers-reduced-motion: reduce){.invite-pulse{animation:none}}
 .watered{animation:plant-perk .5s ease-in-out; transform-box:fill-box; transform-origin:center}
 @keyframes plant-perk{
   0%,100%{transform:scale(1)}
@@ -6746,12 +6752,28 @@ function spawnWaterDroplets(svg, cx, cy) {
   var grinder = document.getElementById("kitchen-grinder");
   var portafilter = document.getElementById("kitchen-portafilter");
   var steamwand = document.getElementById("kitchen-steamwand");
+  function updateKitchenInvite() {
+    var next;
+    if (!kitchenPowered) next = "kitchen-lamarzocco";
+    else if (!kitchenGround) next = "kitchen-grinder";
+    else if (!portafilter || !portafilter.classList.contains("done")) next = "kitchen-portafilter";
+    else {
+      var shotcupEl = document.getElementById("kitchen-shotcup");
+      next = (shotcupEl && shotcupEl.classList.contains("filled")) ? "kitchen-shotcup" : null;
+    }
+    ["kitchen-lamarzocco", "kitchen-grinder", "kitchen-portafilter", "kitchen-shotcup"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.classList.toggle("invite-pulse", id === next);
+    });
+  }
   window.resetCoffeeSequence = function () {
     kitchenGround = false;
     if (grinder) grinder.classList.remove("done");
     if (portafilter) portafilter.classList.remove("done");
     setCaption("kitchen_grind");
+    updateKitchenInvite();
   };
+  updateKitchenInvite();
   onActivate(steamwand, function () {
     playSteamWandHissSound();
     spawnSteamWisps(strip, 538, 216, 0.6, 1, 1);
@@ -6767,6 +6789,7 @@ function spawnWaterDroplets(svg, cx, cy) {
       if (needle) needle.classList.remove("zero");
     });
     setCaption("kitchen_grind");
+    updateKitchenInvite();
   });
   onActivate(grinder, function () {
     if (!kitchenPowered) {
@@ -6776,7 +6799,7 @@ function spawnWaterDroplets(svg, cx, cy) {
     }
     if (grinding || kitchenGround) return;
     grinding = true;
-    if (grinder) grinder.classList.add("grinding");
+    if (grinder) { grinder.classList.add("grinding"); grinder.classList.remove("invite-pulse"); }
     playGrindSound();
     spawnGrindParticles(strip, 369, 185);
     setTimeout(function () {
@@ -6784,6 +6807,7 @@ function spawnWaterDroplets(svg, cx, cy) {
       kitchenGround = true;
       if (grinder) { grinder.classList.remove("grinding"); grinder.classList.add("done"); }
       setCaption("kitchen_brew");
+      updateKitchenInvite();
     }, GRIND_MS);
   });
   onActivate(portafilter, function () {
@@ -6799,7 +6823,7 @@ function spawnWaterDroplets(svg, cx, cy) {
     }
     if (brewing || (portafilter && portafilter.classList.contains("done"))) return;
     brewing = true;
-    if (portafilter) portafilter.classList.add("brewing");
+    if (portafilter) { portafilter.classList.add("brewing"); portafilter.classList.remove("invite-pulse"); }
     playBrewSound();
     spawnSteamWisps(strip, 465, 213);
     setTimeout(function () {
@@ -6808,6 +6832,7 @@ function spawnWaterDroplets(svg, cx, cy) {
       var shotcup = document.getElementById("kitchen-shotcup");
       if (shotcup) shotcup.classList.add("filled");
       setCaption("kitchen_sip");
+      updateKitchenInvite();
     }, BREW_MS);
   });
 
@@ -7016,6 +7041,7 @@ function spawnWaterDroplets(svg, cx, cy) {
     });
     if (grinder) grinder.classList.remove("grinding", "done");
     if (portafilter) portafilter.classList.remove("brewing", "done");
+    updateKitchenInvite();
     var pcTowerReset = document.getElementById("office-pc-desk-trio");
     if (pcTowerReset) pcTowerReset.classList.remove("on");
     if (window.stopPcFan) window.stopPcFan();

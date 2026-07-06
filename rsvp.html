@@ -4675,6 +4675,13 @@ document.addEventListener("click", function (e) {
       playGlassClinkSound(1 + (4 - bottlesWaterLeft[idx]) * 0.1);
       return true;
     };
+    window.drainBottleByIndex = function (idx) {
+      if (bottlesWaterLeft[idx] <= 0) return false;
+      bottlesWaterLeft[idx]--;
+      updateBottleLiquid(idx);
+      playGlassClinkSound(1 + (4 - bottlesWaterLeft[idx]) * 0.1);
+      return true;
+    };
     window.resetBottles = function () {
       for (var i = 0; i < bottlesWaterLeft.length; i++) {
         bottlesWaterLeft[i] = 4;
@@ -4716,11 +4723,12 @@ document.addEventListener("click", function (e) {
       pt.y = clientY;
       return pt.matrixTransform(svg.getScreenCTM().inverse());
     }
-    var draggedBottleEl = null;
+    var draggedBottleEl = null, draggedBottleIdx = -1;
     bottles.addEventListener("pointerdown", function (e) {
       draggingBottles = true;
       bottlesDragMoved = false;
-      draggedBottleEl = document.getElementById("garden-bottle-" + (nearestBottleIdx(e) + 1));
+      draggedBottleIdx = nearestBottleIdx(e);
+      draggedBottleEl = document.getElementById("garden-bottle-" + (draggedBottleIdx + 1));
       bottlesDragStartAbs = svgPointFromClient(e.clientX, e.clientY);
       bottlesCurrentAbs = bottlesDragStartAbs;
       if (draggedBottleEl) draggedBottleEl.style.transition = "none";
@@ -4748,8 +4756,10 @@ document.addEventListener("click", function (e) {
           var d = Math.hypot(s.x - bottlesCurrentAbs.x, s.y - bottlesCurrentAbs.y);
           if (d < bestDist) { bestDist = d; nearestId = id; }
         });
-        if (nearestId && bestDist <= 70 && window.waterSpecificPlant && window.waterSpecificPlant(nearestId)) {
-          // watered via waterSpecificPlant
+        var idx = draggedBottleIdx;
+        var specificDrain = function () { return window.drainBottleByIndex(idx); };
+        if (nearestId && bestDist <= 70 && window.waterSpecificPlant && window.waterSpecificPlant(nearestId, specificDrain)) {
+          // watered via waterSpecificPlant, draining the dragged bottle specifically
         } else {
           playDryClickSound();
         }
@@ -7248,11 +7258,12 @@ function spawnDustMote(container) {
     "garden-smallpots": { x: 1148, y: 215 },
     "garden-potstand": { x: 820, y: 180 }
   };
-  function waterSpecificPlant(id) {
+  function waterSpecificPlant(id, drainFn) {
     var el = document.getElementById(id);
     var spot = plantSpots[id];
     if (!el || !spot) return false;
-    if (!window.drainRandomBottle || !window.drainRandomBottle()) {
+    var drain = drainFn || window.drainRandomBottle;
+    if (!drain || !drain()) {
       playDryClickSound();
       return false;
     }

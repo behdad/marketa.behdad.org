@@ -432,7 +432,18 @@ footer{margin-top:2.6rem}
   0%, 100%{transform:translate(0,0) rotate(0)}
   20%, 70%{transform:translate(-7px,2px) rotate(-5deg)}
 }
-@media (prefers-reduced-motion: reduce){#cuddly-marketa.leaning{animation:none}}
+#cuddly-marketa.bottom-wiggle{animation:cuddly-bottom-wiggle .5s ease-in-out}
+@media (prefers-reduced-motion: reduce){#cuddly-marketa.leaning, #cuddly-marketa.bottom-wiggle{animation:none}}
+#cuddly-marketa-feet{transform-box:fill-box; transform-origin:top center}
+#cuddly-marketa-feet.tickled{animation:feet-tickle .5s ease-in-out}
+@keyframes feet-tickle{
+  0%, 100%{transform:rotate(0)}
+  20%{transform:rotate(-8deg)}
+  40%{transform:rotate(7deg)}
+  60%{transform:rotate(-6deg)}
+  80%{transform:rotate(5deg)}
+}
+@media (prefers-reduced-motion: reduce){#cuddly-marketa-feet.tickled{animation:none}}
 #office-wooden-head-inner{transform-box:fill-box; transform-origin:bottom center}
 #office-wooden-head.wobbling #office-wooden-head-inner{animation:wooden-head-wobble .5s ease-in-out}
 @keyframes wooden-head-wobble{
@@ -1945,10 +1956,13 @@ section{margin:1.9rem 0}
 <path d="M288 263 V275 M293 263 V275" stroke="#7f9ec0" stroke-width="2"/>
 <rect x="236" y="251" width="124" height="15" rx="7.5" fill="#a9c3de" stroke="#7f9ec0" stroke-width="1.5" transform="rotate(2 298 258)"/>
 <rect x="236" y="264" width="112" height="14" rx="7" fill="#a9c3de" stroke="#7f9ec0" stroke-width="1.5" transform="rotate(-2 292 271)"/>
+<g id="cuddly-marketa-feet" class="hunt-hit" tabindex="0" role="button" aria-label="Markéta's feet">
+<rect x="338" y="244" width="42" height="36" fill="transparent"/>
 <rect x="354" y="248" width="22" height="15" rx="7" fill="#f4f0e4" stroke="#d8cfbc" stroke-width="1"/>
 <path d="M360 249 V262 M365 249 V262" stroke="#e8a0a8" stroke-width="2"/>
 <rect x="342" y="262" width="22" height="14" rx="7" fill="#f4f0e4" stroke="#d8cfbc" stroke-width="1"/>
 <path d="M348 263 V275 M353 263 V275" stroke="#e8a0a8" stroke-width="2"/>
+</g>
 </g>
 <g id="cuddly-lapblanket" class="hunt-hit" tabindex="0" role="button" aria-label="The lap blanket">
 <path d="M226 252 Q262 244 296 250 L292 282 Q258 290 230 282 Z" fill="#b3766a" stroke="#8f5a50" stroke-width="1.5"/>
@@ -1984,9 +1998,12 @@ section{margin:1.9rem 0}
 </g>
 </g>
 <g id="cuddly-marketa" class="hunt-hit" tabindex="0" role="button" aria-label="Markéta">
-<rect x="215" y="140" width="80" height="120" fill="transparent"/>
+<rect x="210" y="152" width="68" height="104" fill="transparent"/>
 <g transform="rotate(-6 249 224)">
 <rect x="224" y="194" width="50" height="60" rx="11" fill="#bcd1e7" stroke="#7f9ec0" stroke-width="2"/>
+<g id="cuddly-marketa-bottom" class="hunt-hit" tabindex="0" role="button" aria-label="Markéta's bottom">
+<rect x="226" y="224" width="46" height="30" fill="transparent"/>
+</g>
 <polygon points="240,198 256,198 248,213" fill="#f2e5c8"/>
 <path d="M236 198 L245 212 L248 200" fill="none" stroke="#7f9ec0" stroke-width="1.5"/>
 <path d="M260 198 L251 212 L248 200" fill="none" stroke="#7f9ec0" stroke-width="1.5"/>
@@ -2840,6 +2857,39 @@ document.addEventListener("click", function (e) {
   bottom.addEventListener("click", fart);
   bottom.addEventListener("keydown", function (e) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fart(e); }
+  });
+})();
+(function () {
+  var bottom = document.getElementById("cuddly-marketa-bottom");
+  var marketa = document.getElementById("cuddly-marketa");
+  if (!bottom || !marketa) return;
+  function fart(e) {
+    if (e) e.stopPropagation();
+    playFartSound(1.5, 0.6);
+    marketa.classList.remove("bottom-wiggle");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { marketa.classList.add("bottom-wiggle"); });
+    });
+  }
+  bottom.addEventListener("click", fart);
+  bottom.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fart(e); }
+  });
+})();
+(function () {
+  var feet = document.getElementById("cuddly-marketa-feet");
+  if (!feet) return;
+  function tickle(e) {
+    if (e) e.stopPropagation();
+    playGiggleSound();
+    feet.classList.remove("tickled");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { feet.classList.add("tickled"); });
+    });
+  }
+  feet.addEventListener("click", tickle);
+  feet.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tickle(e); }
   });
 })();
 (function () {
@@ -5426,31 +5476,32 @@ function playRoosterCrowSound(intensity) {
     setTimeout(function () { ctx.close(); }, 550);
   } catch (e) {}
 }
-function playFartSound() {
+function playFartSound(pitchMult, durMult) {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
-    var dur = 0.55;
+    var p = pitchMult || 1;
+    var dur = 0.55 * (durMult || 1);
     var osc = ctx.createOscillator();
     osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(130, t);
-    osc.frequency.linearRampToValueAtTime(90, t + 0.15);
-    osc.frequency.linearRampToValueAtTime(150, t + 0.3);
-    osc.frequency.linearRampToValueAtTime(70, t + dur);
+    osc.frequency.setValueAtTime(130 * p, t);
+    osc.frequency.linearRampToValueAtTime(90 * p, t + dur * 0.27);
+    osc.frequency.linearRampToValueAtTime(150 * p, t + dur * 0.55);
+    osc.frequency.linearRampToValueAtTime(70 * p, t + dur);
     var wobble = ctx.createOscillator();
     wobble.type = "sine";
     wobble.frequency.value = 28;
     var wobbleGain = ctx.createGain();
-    wobbleGain.gain.value = 18;
+    wobbleGain.gain.value = 18 * p;
     wobble.connect(wobbleGain);
     wobbleGain.connect(osc.frequency);
     wobble.start(t);
     wobble.stop(t + dur);
     var filter = ctx.createBiquadFilter();
     filter.type = "lowpass";
-    filter.frequency.value = 700;
+    filter.frequency.value = 700 * p;
     var gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, t);
     gain.gain.exponentialRampToValueAtTime(0.3, t + 0.03);

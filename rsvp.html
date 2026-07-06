@@ -114,7 +114,7 @@ footer{margin-top:2.6rem}
 .hunt-hit{cursor:pointer}
 .hunt-hit:focus, .hunt-hit:focus-visible{outline:none}
 #kitchen-lamarzocco.done, #kitchen-grinder.done, #kitchen-portafilter.done{opacity:.55}
-#kitchen-lamarzocco.done ~ #kitchen-portafilter #kitchen-portafilter-dial{opacity:.55}
+#kitchen-lamarzocco.done ~ #kitchen-portafilter-dial{opacity:.55}
 #kitchen-lamarzocco.powered-on .kitchen-power-led{fill:#ff2f3a}
 #kitchen-gauge-needle-1{transform-origin:430px 168px; transition:transform 1.1s cubic-bezier(.22,1.4,.36,1)}
 #kitchen-gauge-needle-2{transform-origin:500px 168px; transition:transform 1.1s cubic-bezier(.22,1.4,.36,1)}
@@ -1468,10 +1468,6 @@ section{margin:1.9rem 0}
 <path d="M523 178 Q540 188 537 206" fill="none" stroke="#c9c9c9" stroke-width="4" stroke-linecap="round"/>
 <line x1="537" y1="206" x2="538" y2="215" stroke="#2d2d2d" stroke-width="5" stroke-linecap="round"/>
 </g>
-<g id="kitchen-portafilter" class="hunt-hit" tabindex="0" role="button" aria-label="The portafilter">
-<rect x="457" y="163" width="54" height="50" fill="transparent"/>
-<ellipse cx="465" cy="181" rx="17" ry="5" fill="#d4d4d4" stroke="#9a9a9a" stroke-width="1"/>
-<rect x="450" y="181" width="30" height="16" rx="4" fill="#c4c4c4" stroke="#8f8f8f" stroke-width="1"/>
 <g id="kitchen-portafilter-dial">
 <circle cx="500" cy="168" r="11" fill="#f6f2e6" stroke="#8f8f8f" stroke-width="2.5"/>
 <path d="M494 162 L496 164 M500 158 L500 161 M506 162 L504 164" stroke="#5a5a5a" stroke-width="1"/>
@@ -1480,6 +1476,10 @@ section{margin:1.9rem 0}
 </g>
 <circle cx="500" cy="168" r="1.5" fill="#5a5a5a"/>
 </g>
+<g id="kitchen-portafilter" class="hunt-hit" tabindex="0" role="button" aria-label="The portafilter">
+<rect x="457" y="163" width="54" height="50" fill="transparent"/>
+<ellipse cx="465" cy="181" rx="17" ry="5" fill="#d4d4d4" stroke="#9a9a9a" stroke-width="1"/>
+<rect x="450" y="181" width="30" height="16" rx="4" fill="#c4c4c4" stroke="#8f8f8f" stroke-width="1"/>
 <circle cx="465" cy="200" r="8" fill="#3a3a3a" stroke="#c4c4c4" stroke-width="2"/>
 <polygon points="460,206 470,206 468,213 462,213" fill="#8f8f8f"/>
 <circle cx="473" cy="201" r="3" fill="#c9c9c9"/>
@@ -6752,14 +6752,17 @@ function spawnWaterDroplets(svg, cx, cy) {
   var grinder = document.getElementById("kitchen-grinder");
   var portafilter = document.getElementById("kitchen-portafilter");
   var steamwand = document.getElementById("kitchen-steamwand");
+  var kitchenSolved = false;
   function updateKitchenInvite() {
-    var next;
-    if (!kitchenPowered) next = "kitchen-lamarzocco";
-    else if (!kitchenGround) next = "kitchen-grinder";
-    else if (!portafilter || !portafilter.classList.contains("done")) next = "kitchen-portafilter";
-    else {
-      var shotcupEl = document.getElementById("kitchen-shotcup");
-      next = (shotcupEl && shotcupEl.classList.contains("filled")) ? "kitchen-shotcup" : null;
+    var next = null;
+    if (!kitchenSolved) {
+      if (!kitchenPowered) next = "kitchen-lamarzocco";
+      else if (!kitchenGround) next = "kitchen-grinder";
+      else if (!portafilter || !portafilter.classList.contains("done")) next = "kitchen-portafilter";
+      else {
+        var shotcupEl = document.getElementById("kitchen-shotcup");
+        next = (shotcupEl && shotcupEl.classList.contains("filled")) ? "kitchen-shotcup" : null;
+      }
     }
     ["kitchen-lamarzocco", "kitchen-grinder", "kitchen-portafilter", "kitchen-shotcup"].forEach(function (id) {
       var el = document.getElementById(id);
@@ -6767,6 +6770,7 @@ function spawnWaterDroplets(svg, cx, cy) {
     });
   }
   window.resetCoffeeSequence = function () {
+    kitchenSolved = true;
     kitchenGround = false;
     if (grinder) grinder.classList.remove("done");
     if (portafilter) portafilter.classList.remove("done");
@@ -7032,6 +7036,7 @@ function spawnWaterDroplets(svg, cx, cy) {
   function resetHunt() {
     kitchenPowered = false;
     kitchenGround = false;
+    kitchenSolved = false;
     grinding = false;
     brewing = false;
     if (lamarzocco) lamarzocco.classList.remove("powered-on", "done");

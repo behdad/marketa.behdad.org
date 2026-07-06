@@ -536,6 +536,12 @@ footer{margin-top:2.6rem}
   40%{transform:scale(1.06)}
   70%{transform:scale(0.97)}
 }
+.garden-ambient-butterfly .bfly-wing{animation:bfly-flap .2s ease-in-out infinite; transform-box:fill-box; transform-origin:center}
+@keyframes bfly-flap{
+  0%,100%{transform:scaleX(1)}
+  50%{transform:scaleX(.4)}
+}
+@media (prefers-reduced-motion: reduce){.garden-ambient-butterfly .bfly-wing{animation:none}}
 .plant-sway{animation:plant-sway 1.6s ease-in-out; transform-box:fill-box; transform-origin:bottom center}
 @keyframes plant-sway{
   0%,100%{transform:rotate(0)}
@@ -644,6 +650,13 @@ footer{margin-top:2.6rem}
 }
 @media (prefers-reduced-motion: reduce){.puffer-eye.grooving{animation:none}}
 #cuddly-octopus{transform-origin:636px 240px}
+#cuddly-octopus.twitch{animation:octopus-twitch .5s ease-in-out}
+@keyframes octopus-twitch{
+  0%,100%{transform:rotate(0deg)}
+  30%{transform:rotate(-3deg)}
+  60%{transform:rotate(2deg)}
+}
+@media (prefers-reduced-motion: reduce){#cuddly-octopus.twitch{animation:none}}
 #cuddly-octopus.grooving{animation:octopus-groove 1s ease-in-out infinite}
 @keyframes octopus-groove{
   0%,100%{transform:rotate(0deg)}
@@ -743,6 +756,11 @@ footer{margin-top:2.6rem}
   75%{transform:translateX(-1px)}
 }
 .office-lamp-glow, .office-lamp-bulb, .office-pendant-bulb{transition:opacity .4s ease, fill .4s ease}
+#office-lamp.flicker .office-lamp-glow{animation:lamp-flicker .4s steps(6,end)}
+@keyframes lamp-flicker{
+  0%{opacity:.25} 15%{opacity:.05} 30%{opacity:.25} 45%{opacity:.08} 60%{opacity:.22} 75%{opacity:.06} 100%{opacity:.25}
+}
+@media (prefers-reduced-motion: reduce){#office-lamp.flicker .office-lamp-glow{animation:none}}
 #office-lamp.dimmed .office-lamp-glow{opacity:0}
 #office-lamp.dimmed .office-lamp-bulb{fill:#9a948a; stroke:#7a746a}
 #office-pendant.dimmed .office-pendant-bulb{fill:#9a948a; stroke:#7a746a}
@@ -6652,6 +6670,36 @@ function spawnWaterDroplets(svg, cx, cy) {
     })(i);
   }
 }
+function spawnGardenButterfly(svg) {
+  if (!svg) return;
+  var startX = 700 + Math.random() * 100;
+  var startY = 40 + Math.random() * 60;
+  var endX = 1240 + Math.random() * 80;
+  var endY = 180 + Math.random() * 80;
+  var g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  g.setAttribute("class", "garden-ambient-butterfly");
+  g.setAttribute("aria-hidden", "true");
+  g.innerHTML =
+    '<ellipse cx="-4" cy="-3" rx="4.5" ry="3.2" fill="#e8b0c4" stroke="#c98fa8" stroke-width="0.8" class="bfly-wing"/>' +
+    '<ellipse cx="4" cy="-3" rx="4.5" ry="3.2" fill="#a9c3de" stroke="#7f9ec0" stroke-width="0.8" class="bfly-wing"/>' +
+    '<line x1="0" y1="-6" x2="0" y2="2" stroke="#453a31" stroke-width="1.2" stroke-linecap="round"/>';
+  g.style.transformBox = "fill-box";
+  g.style.transformOrigin = "center";
+  svg.appendChild(g);
+  var dx = endX - startX, dy = endY - startY;
+  var duration = 3800 + Math.random() * 1400;
+  if (g.animate) {
+    var anim = g.animate([
+      { transform: "translate(" + startX + "px," + startY + "px)", opacity: 0 },
+      { transform: "translate(" + (startX + dx * 0.3) + "px," + (startY + dy * 0.2) + "px)", opacity: 1, offset: .15 },
+      { transform: "translate(" + (startX + dx * 0.7) + "px," + (startY + dy * 0.8) + "px)", opacity: 1, offset: .85 },
+      { transform: "translate(" + endX + "px," + endY + "px)", opacity: 0 }
+    ], { duration: duration, easing: "ease-in-out" });
+    anim.onfinish = function () { if (g.parentNode) g.remove(); };
+  } else {
+    setTimeout(function () { if (g.parentNode) g.remove(); }, duration);
+  }
+}
 (function () {
   var strip = document.getElementById("loft-game-strip");
   var caption = document.getElementById("hunt-caption");
@@ -6875,6 +6923,16 @@ function spawnWaterDroplets(svg, cx, cy) {
       updateKitchenInvite();
     }, BREW_MS);
   });
+  (function scheduleShotcupSteam() {
+    var delay = 3000 + Math.random() * 5000;
+    setTimeout(function () {
+      var shotcupEl = document.getElementById("kitchen-shotcup");
+      if (stageIndex === STAGES.indexOf("kitchen") && shotcupEl && shotcupEl.classList.contains("filled") && document.visibilityState !== "hidden") {
+        spawnSteamWisps(strip, 465, 208, 0.45, 1, -1, 1, 0.35);
+      }
+      scheduleShotcupSteam();
+    }, delay);
+  })();
 
   var gardenState = { water: false, music: false, candles: false };
   function updateGardenHint() {
@@ -6940,6 +6998,47 @@ function spawnWaterDroplets(svg, cx, cy) {
         }
       }
       scheduleAmbientPlantSway();
+    }, delay);
+  })();
+  (function scheduleGardenButterfly() {
+    var delay = 9000 + Math.random() * 12000;
+    setTimeout(function () {
+      if (stageIndex === STAGES.indexOf("garden") && document.visibilityState !== "hidden") {
+        spawnGardenButterfly(strip);
+      }
+      scheduleGardenButterfly();
+    }, delay);
+  })();
+  (function scheduleOctopusTwitch() {
+    var delay = 8000 + Math.random() * 12000;
+    setTimeout(function () {
+      var octo = document.getElementById("cuddly-octopus");
+      if (stageIndex === STAGES.indexOf("cuddly") && octo && document.visibilityState !== "hidden") {
+        var visible = parseFloat(getComputedStyle(octo).opacity) > 0.5;
+        var busy = octo.classList.contains("wobble") || octo.classList.contains("grooving");
+        if (visible && !busy) {
+          octo.classList.remove("twitch");
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () { octo.classList.add("twitch"); });
+          });
+          setTimeout(function () { octo.classList.remove("twitch"); }, 500);
+        }
+      }
+      scheduleOctopusTwitch();
+    }, delay);
+  })();
+  (function scheduleLampFlicker() {
+    var delay = 10000 + Math.random() * 15000;
+    setTimeout(function () {
+      var lamp = document.getElementById("office-lamp");
+      if (stageIndex === STAGES.indexOf("office") && lamp && !lamp.classList.contains("dimmed") && document.visibilityState !== "hidden") {
+        lamp.classList.remove("flicker");
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { lamp.classList.add("flicker"); });
+        });
+        setTimeout(function () { lamp.classList.remove("flicker"); }, 500);
+      }
+      scheduleLampFlicker();
     }, delay);
   })();
   var instrumentSpots = {

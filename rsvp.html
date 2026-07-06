@@ -550,7 +550,12 @@ footer{margin-top:2.6rem}
   30%{transform:rotate(-3deg)}
   65%{transform:rotate(2.5deg)}
 }
-@media (prefers-reduced-motion: reduce){#cuddly-behdad.bottom-wiggle{animation:none}}
+#cuddly-behdad.leaning{animation:behdad-lean 3s ease-in-out}
+@keyframes behdad-lean{
+  0%, 100%{transform:translate(0,0) rotate(0)}
+  20%, 70%{transform:translate(7px,2px) rotate(5deg)}
+}
+@media (prefers-reduced-motion: reduce){#cuddly-behdad.bottom-wiggle, #cuddly-behdad.leaning{animation:none}}
 #cuddly-puffer-wrap{cursor:pointer}
 .puffer-body{animation:puffer-breathe 12s ease-in-out infinite; transform-box:fill-box; transform-origin:center}
 @keyframes puffer-breathe{
@@ -1978,7 +1983,7 @@ section{margin:1.9rem 0}
 <path d="M244 248 L240 285 M262 246 L260 287 M280 247 L278 285" stroke="#8f5a50" stroke-width="1.5"/>
 <path d="M228 262 Q262 254 294 260 M230 272 Q262 265 292 271" fill="none" stroke="#e8dcc0" stroke-width="1.5"/>
 </g>
-<g id="cuddly-behdad">
+<g id="cuddly-behdad" class="hunt-hit" tabindex="0" role="button" aria-label="Behdad">
 <rect x="168" y="196" width="52" height="58" rx="11" fill="#e9bfc4" stroke="#c68e95" stroke-width="2"/>
 <g id="cuddly-behdad-bottom" class="hunt-hit" tabindex="0" role="button" aria-label="Behdad's bottom">
 <rect x="170" y="224" width="48" height="32" fill="transparent"/>
@@ -2854,9 +2859,11 @@ document.addEventListener("click", function (e) {
 (function () {
   var bottom = document.getElementById("cuddly-behdad-bottom");
   var behdad = document.getElementById("cuddly-behdad");
+  var strip = document.getElementById("loft-game-strip");
   if (!bottom || !behdad) return;
-  behdad.addEventListener("animationend", function () {
-    behdad.classList.remove("bottom-wiggle");
+  behdad.addEventListener("animationend", function (e) {
+    if (e.target !== behdad) return;
+    behdad.classList.remove("bottom-wiggle", "leaning");
   });
   function fart(e) {
     if (e) e.stopPropagation();
@@ -2869,6 +2876,18 @@ document.addEventListener("click", function (e) {
   bottom.addEventListener("click", fart);
   bottom.addEventListener("keydown", function (e) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fart(e); }
+  });
+  function leanBehdad() {
+    if (behdad.classList.contains("leaning")) return;
+    behdad.classList.add("leaning");
+    setTimeout(function () {
+      spawnHearts(strip, 1580, 182);
+      playHeartsSound();
+    }, 900);
+  }
+  behdad.addEventListener("click", leanBehdad);
+  behdad.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); leanBehdad(); }
   });
 })();
 (function () {

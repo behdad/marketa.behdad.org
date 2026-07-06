@@ -265,6 +265,16 @@ footer{margin-top:2.6rem}
 @media (prefers-reduced-motion: reduce){
   #loft-couple.dancing, #garden-couple.dancing{animation:none}
 }
+#loft-couple, #garden-couple{cursor:pointer}
+#loft-couple.body-wiggle, #garden-couple.body-wiggle{animation:couple-body-wiggle .5s ease}
+@keyframes couple-body-wiggle{
+  0%, 100%{transform:rotate(0)}
+  30%{transform:rotate(-2.5deg)}
+  65%{transform:rotate(2deg)}
+}
+@media (prefers-reduced-motion: reduce){
+  #loft-couple.body-wiggle, #garden-couple.body-wiggle{animation:none}
+}
 #loft-clapper{cursor:pointer}
 #garden-book{cursor:pointer}
 #garden-rabbit{cursor:pointer}
@@ -2138,7 +2148,7 @@ function sparkShoes(svg, shoesId, cx, cy) {
   ];
   shoeTargets.forEach(function (t) {
     var el = document.getElementById(t.id);
-    if (el) el.addEventListener("click", function () { sparkShoes(t.svg, t.id, t.cx, t.cy); });
+    if (el) el.addEventListener("click", function (e) { e.stopPropagation(); sparkShoes(t.svg, t.id, t.cx, t.cy); });
   });
 })();
 (function () {
@@ -2469,8 +2479,23 @@ function sparkShoes(svg, shoesId, cx, cy) {
   var ids = ["loft-behdad-head", "loft-marketa-head", "garden-behdad-head", "garden-marketa-head"];
   ids.forEach(function (id) {
     var el = document.getElementById(id);
-    if (el) el.addEventListener("click", function () { shake(el); });
+    if (el) el.addEventListener("click", function (e) { e.stopPropagation(); shake(el); });
   });
+})();
+(function () {
+  function wiggle(el) {
+    if (!el) return;
+    el.classList.remove("body-wiggle");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { el.classList.add("body-wiggle"); });
+    });
+  }
+  var couples = document.querySelectorAll("#loft-couple, #garden-couple");
+  for (var i = 0; i < couples.length; i++) {
+    (function (el) {
+      el.addEventListener("click", function () { wiggle(el); });
+    })(couples[i]);
+  }
 })();
 (function () {
   var KEY = "seenInfHint";

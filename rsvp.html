@@ -532,6 +532,14 @@ footer{margin-top:2.6rem}
 }
 #cuddly-behdad-head{transform-origin:194px 198px}
 #cuddly-marketa-head{transform-origin:243px 182px}
+#cuddly-behdad{transform-box:fill-box; transform-origin:bottom center}
+#cuddly-behdad.bottom-wiggle{animation:cuddly-bottom-wiggle .5s ease-in-out}
+@keyframes cuddly-bottom-wiggle{
+  0%, 100%{transform:rotate(0)}
+  30%{transform:rotate(-3deg)}
+  65%{transform:rotate(2.5deg)}
+}
+@media (prefers-reduced-motion: reduce){#cuddly-behdad.bottom-wiggle{animation:none}}
 #cuddly-puffer-wrap{cursor:pointer}
 .puffer-body{animation:puffer-breathe 12s ease-in-out infinite; transform-box:fill-box; transform-origin:center}
 @keyframes puffer-breathe{
@@ -1949,6 +1957,9 @@ section{margin:1.9rem 0}
 </g>
 <g id="cuddly-behdad">
 <rect x="168" y="196" width="52" height="58" rx="11" fill="#e9bfc4" stroke="#c68e95" stroke-width="2"/>
+<g id="cuddly-behdad-bottom" class="hunt-hit" tabindex="0" role="button" aria-label="Behdad's bottom">
+<rect x="170" y="224" width="48" height="32" fill="transparent"/>
+</g>
 <polygon points="186,200 202,200 194,216" fill="#f6efdc"/>
 <path d="M180 200 L190 214 L194 203" fill="none" stroke="#c68e95" stroke-width="1.5"/>
 <path d="M208 200 L198 214 L194 203" fill="none" stroke="#c68e95" stroke-width="1.5"/>
@@ -2812,6 +2823,23 @@ document.addEventListener("click", function (e) {
   ["cuddly-behdad-head", "cuddly-marketa-head"].forEach(function (id) {
     var el = document.getElementById(id);
     if (el) el.addEventListener("click", function () { shake(el); });
+  });
+})();
+(function () {
+  var bottom = document.getElementById("cuddly-behdad-bottom");
+  var behdad = document.getElementById("cuddly-behdad");
+  if (!bottom || !behdad) return;
+  function fart(e) {
+    if (e) e.stopPropagation();
+    playFartSound();
+    behdad.classList.remove("bottom-wiggle");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { behdad.classList.add("bottom-wiggle"); });
+    });
+  }
+  bottom.addEventListener("click", fart);
+  bottom.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fart(e); }
   });
 })();
 (function () {
@@ -5396,6 +5424,44 @@ function playRoosterCrowSound(intensity) {
     osc.start(t);
     osc.stop(t + 0.41);
     setTimeout(function () { ctx.close(); }, 550);
+  } catch (e) {}
+}
+function playFartSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t = ctx.currentTime;
+    var dur = 0.55;
+    var osc = ctx.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(130, t);
+    osc.frequency.linearRampToValueAtTime(90, t + 0.15);
+    osc.frequency.linearRampToValueAtTime(150, t + 0.3);
+    osc.frequency.linearRampToValueAtTime(70, t + dur);
+    var wobble = ctx.createOscillator();
+    wobble.type = "sine";
+    wobble.frequency.value = 28;
+    var wobbleGain = ctx.createGain();
+    wobbleGain.gain.value = 18;
+    wobble.connect(wobbleGain);
+    wobbleGain.connect(osc.frequency);
+    wobble.start(t);
+    wobble.stop(t + dur);
+    var filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 700;
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.3, t + 0.03);
+    gain.gain.setValueAtTime(0.26, t + dur * 0.7);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + dur + 0.05);
+    setTimeout(function () { ctx.close(); }, (dur + 0.3) * 1000);
   } catch (e) {}
 }
 function playLaptopClickSound() {

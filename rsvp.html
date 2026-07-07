@@ -6528,9 +6528,9 @@ function playGongSound() {
     var washData = washBuf.getChannelData(0);
     for (var i = 0; i < washData.length; i++) washData[i] = Math.random() * 2 - 1;
     [
-      { f: 1300, q: 1.4, peak: 0.09, bloom: 0.5, d: 4.8, lfo: 3.6 },
-      { f: 2800, q: 1.1, peak: 0.11, bloom: 0.85, d: 5.8, lfo: 4.7 },
-      { f: 5200, q: 1.0, peak: 0.06, bloom: 1.2, d: 6.5, lfo: 5.9 }
+      { f: 1300, q: 3.2, peak: 0.10, bloom: 0.5, d: 4.8, lfo: 3.6 },
+      { f: 2800, q: 3.6, peak: 0.11, bloom: 0.85, d: 5.8, lfo: 4.7 },
+      { f: 5200, q: 4.5, peak: 0.035, bloom: 1.2, d: 6.5, lfo: 5.9 }
     ].forEach(function (L) {
       var src = ctx.createBufferSource();
       src.buffer = washBuf;
@@ -6621,7 +6621,7 @@ function playGongEchoSound(fade) {
     var bp = ctx.createBiquadFilter();
     bp.type = "bandpass";
     bp.frequency.value = 1900;
-    bp.Q.value = 1.2;
+    bp.Q.value = 3;
     var g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(0.05 * fade, t + 0.4);
@@ -7051,21 +7051,35 @@ function playFairyChimeSound() {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     var ctx = new Ctx();
+    var t0 = ctx.currentTime;
+    // Each note of the rising arpeggio is a tiny struck bell rather than a
+    // sine blip: an inharmonic partial stack (~1 : 2.76 : 5.4, the mode
+    // ratios of a struck bar) whose overtones die faster than the
+    // fundamental, plus a slightly detuned twin for shimmer, ringing out
+    // longer than the old 0.4s chirp.
     [880, 1108, 1318].forEach(function (freq, i) {
-      var t = ctx.currentTime + i * 0.09;
-      var osc = ctx.createOscillator();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, t);
-      var gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(0.12, t + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.42);
+      var t = t0 + i * 0.09;
+      [
+        { m: 1, g: 0.10, d: 0.9 },
+        { m: 1, g: 0.05, d: 0.8, dt: 9 },
+        { m: 2.76, g: 0.035, d: 0.35 },
+        { m: 5.4, g: 0.015, d: 0.15 }
+      ].forEach(function (p) {
+        var osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.value = freq * p.m;
+        if (p.dt) osc.detune.value = p.dt;
+        var gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(p.g, t + 0.008);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + p.d);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + p.d + 0.02);
+      });
     });
-    setTimeout(function () { ctx.close(); }, 700);
+    setTimeout(function () { ctx.close(); }, 1500);
   } catch (e) {}
 }
 function playCatMeowSound() {

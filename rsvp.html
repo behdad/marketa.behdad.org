@@ -8595,18 +8595,36 @@ function playGlassClinkSound(pitchMult) {
     var ctx = new Ctx();
     var t = ctx.currentTime;
     var mult = pitchMult || 1;
-    [2600 * mult, 3400 * mult].forEach(function (freq, i) {
+    // sharp contact tick at the moment of impact
+    var nlen = Math.floor(ctx.sampleRate * 0.012);
+    var nb = ctx.createBuffer(1, nlen, ctx.sampleRate);
+    var nd = nb.getChannelData(0);
+    for (var i = 0; i < nlen; i++) nd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / nlen, 3);
+    var noise = ctx.createBufferSource();
+    noise.buffer = nb;
+    var hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 4500 * Math.min(mult, 1.5);
+    var ng = ctx.createGain();
+    ng.gain.value = 0.06;
+    noise.connect(hp);
+    hp.connect(ng);
+    ng.connect(ctx.destination);
+    noise.start(t);
+    noise.stop(t + 0.02);
+    // glassy partials ring together; a faint high one adds sparkle
+    [{ f: 2600, g: 0.15, d: 0.4 }, { f: 3400, g: 0.11, d: 0.34 }, { f: 5200, g: 0.045, d: 0.2 }].forEach(function (p) {
       var osc = ctx.createOscillator();
       osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, t + i * 0.05);
+      osc.frequency.value = p.f * mult;
       var gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.0001, t + i * 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.15, t + i * 0.05 + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.05 + 0.35);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(p.g, t + 0.006);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + p.d);
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.start(t + i * 0.05);
-      osc.stop(t + i * 0.05 + 0.4);
+      osc.start(t);
+      osc.stop(t + p.d + 0.03);
     });
     setTimeout(function () { ctx.close(); }, 600);
   } catch (e) {}

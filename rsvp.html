@@ -620,7 +620,7 @@ footer{margin-top:2.6rem}
   0%, 100%{transform:scaleX(1)}
   50%{transform:scaleX(.72)}
 }
-.head-group{cursor:pointer}
+.head-group{cursor:pointer; transform-box:fill-box; transform-origin:center}
 .head-group.shake{animation:head-shake .5s ease}
 @keyframes head-shake{
   0%{transform:rotate(0)}
@@ -630,6 +630,8 @@ footer{margin-top:2.6rem}
   80%{transform:rotate(3deg)}
   100%{transform:rotate(0)}
 }
+.head-group.ouch{animation:octopus-ouch .5s ease-in-out}
+@media (prefers-reduced-motion: reduce){.head-group.ouch, .head-group.shake{animation:none}}
 #cuddly-behdad-head{transform-origin:194px 198px}
 #cuddly-marketa-head{transform-origin:243px 182px}
 #cuddly-behdad-head.grooving, #cuddly-marketa-head.grooving{animation:cuddly-head-bob .7s ease-in-out infinite}
@@ -674,6 +676,19 @@ footer{margin-top:2.6rem}
 }
 @media (prefers-reduced-motion: reduce){#cuddly-behdad.bottom-wiggle, #cuddly-behdad.leaning{animation:none}}
 #cuddly-puffer-wrap{cursor:pointer}
+#cuddly-puffer-wrap.flying-off{animation:fishu-fly-out 1.4s ease-in forwards}
+@keyframes fishu-fly-out{
+  0%{translate:0px 0px; rotate:0deg; opacity:1}
+  100%{translate:220px -260px; rotate:200deg; opacity:0}
+}
+@media (prefers-reduced-motion: reduce){#cuddly-puffer-wrap.flying-off{animation:none}}
+#cuddly-octopus.ouch{animation:octopus-ouch .5s ease-in-out}
+@keyframes octopus-ouch{
+  0%,100%{transform:rotate(0deg) scale(1)}
+  30%{transform:rotate(-10deg) scale(.94)}
+  60%{transform:rotate(7deg) scale(1.02)}
+}
+@media (prefers-reduced-motion: reduce){#cuddly-octopus.ouch{animation:none}}
 .puffer-body{animation:puffer-breathe 12s ease-in-out infinite; transform-box:fill-box; transform-origin:center}
 @keyframes puffer-breathe{
   0%,100%{transform:scale(0.94)}
@@ -3981,6 +3996,87 @@ document.addEventListener("click", function (e) {
   ledge.addEventListener("keydown", function (e) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); rattleLedge(); }
   });
+  var THROW_TARGETS = {
+    fishu: { x: 495 + 1360, y: 95 },
+    octi: { x: 636 + 1360, y: 240 },
+    behdad: { x: 194 + 1360, y: 172 },
+    marketa: { x: 243 + 1360, y: 170 }
+  };
+  function pointerSvgPointGlobal(e) {
+    var svg = document.getElementById("loft-game-strip");
+    var pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+  function triggerFishuFlyOut() {
+    var puffer = document.getElementById("cuddly-puffer-wrap");
+    if (!puffer || puffer.classList.contains("flying-off")) return;
+    puffer.classList.add("flying-off");
+    playSwishSound();
+  }
+  window.resetFishu = function () {
+    var puffer = document.getElementById("cuddly-puffer-wrap");
+    if (puffer) puffer.classList.remove("flying-off");
+  };
+  function triggerOctiOuch() {
+    var octopus = document.getElementById("cuddly-octopus");
+    if (!octopus) return;
+    octopus.classList.remove("ouch");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { octopus.classList.add("ouch"); });
+    });
+    playMouseSqueakSound();
+  }
+  function triggerCoupleOuch(headId) {
+    var head = document.getElementById(headId);
+    if (!head) return;
+    head.classList.remove("ouch");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { head.classList.add("ouch"); });
+    });
+    playGiggleSound();
+  }
+  function makeThrowable(el, wobbleFn) {
+    if (!el) return;
+    var dragging = false, dragMoved = false, releasePt = null, dragStartPt = null;
+    el.addEventListener("pointerdown", function (e) {
+      dragging = true;
+      dragMoved = false;
+      dragStartPt = pointerSvgPointGlobal(e);
+      el.style.transition = "none";
+      try { el.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    el.addEventListener("pointermove", function (e) {
+      if (!dragging) return;
+      dragMoved = true;
+      var cur = pointerSvgPointGlobal(e);
+      el.style.translate = (cur.x - dragStartPt.x) + "px " + (cur.y - dragStartPt.y) + "px";
+      releasePt = cur;
+    });
+    function onThrowablePointerUp(e) {
+      if (!dragging) return;
+      dragging = false;
+      try { el.releasePointerCapture(e.pointerId); } catch (err) {}
+      el.style.transition = "";
+      el.style.translate = "0px 0px";
+      wobbleFn();
+      if (dragMoved && releasePt) {
+        if (Math.hypot(releasePt.x - THROW_TARGETS.fishu.x, releasePt.y - THROW_TARGETS.fishu.y) <= 45) {
+          triggerFishuFlyOut();
+        } else if (Math.hypot(releasePt.x - THROW_TARGETS.octi.x, releasePt.y - THROW_TARGETS.octi.y) <= 45) {
+          triggerOctiOuch();
+        } else if (Math.hypot(releasePt.x - THROW_TARGETS.behdad.x, releasePt.y - THROW_TARGETS.behdad.y) <= 40) {
+          triggerCoupleOuch("cuddly-behdad-head");
+        } else if (Math.hypot(releasePt.x - THROW_TARGETS.marketa.x, releasePt.y - THROW_TARGETS.marketa.y) <= 40) {
+          triggerCoupleOuch("cuddly-marketa-head");
+        }
+      }
+    }
+    el.addEventListener("pointerup", onThrowablePointerUp);
+    el.addEventListener("pointercancel", onThrowablePointerUp);
+    el.addEventListener("click", function (e) { e.stopPropagation(); });
+  }
   ["cuddly-knife-1", "cuddly-knife-2", "cuddly-knife-3"].forEach(function (id) {
     var knife = document.getElementById(id);
     if (!knife) return;
@@ -4008,10 +4104,10 @@ document.addEventListener("click", function (e) {
       });
       playMetalClinkSound(1.1);
     }
-    utensil.addEventListener("click", wobbleUtensil);
     utensil.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); wobbleUtensil(e); }
     });
+    makeThrowable(utensil, wobbleUtensil);
   });
   ["cuddly-crock", "cuddly-pitcher"].forEach(function (id) {
     var item = document.getElementById(id);
@@ -7157,6 +7253,7 @@ function spawnDustMote(container) {
     restoreStageHint(name);
     updateNav();
     if (name === "cuddly" && window.updateCuddlyGrooving) window.updateCuddlyGrooving();
+    if (name === "cuddly" && window.resetFishu) window.resetFishu();
     if (name === "balcony") triggerBalconyFinale();
   }
   window.goToStage = goToStage;

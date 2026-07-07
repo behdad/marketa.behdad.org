@@ -6187,27 +6187,36 @@ function triggerRsvpTrip(e) {
   tripVariantIndex++;
   startTripVariant(variant);
 }
+// One water bubble: a short sine that chirps up in pitch as the bubble
+// collapses. Clouds of these (plus a flow bed) are what read as water.
+function waterBubble(ctx, dest, start, f0, dur, level) {
+  var osc = ctx.createOscillator();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(f0, start);
+  osc.frequency.exponentialRampToValueAtTime(f0 * (1.7 + Math.random() * 1.6), start + dur);
+  var g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, start);
+  g.gain.exponentialRampToValueAtTime(level, start + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+  osc.connect(g);
+  g.connect(dest);
+  osc.start(start);
+  osc.stop(start + dur + 0.01);
+}
 function playWaterSound() {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
-    [0, 0.09, 0.16].forEach(function (t0, i) {
-      var freq = [1200, 1000, 1400][i];
-      var osc = ctx.createOscillator();
-      osc.type = "sine";
-      osc.frequency.value = freq;
-      var gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.0001, t + t0);
-      gain.gain.exponentialRampToValueAtTime(0.08, t + t0 + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + t0 + 0.18);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(t + t0);
-      osc.stop(t + t0 + 0.2);
-    });
-    setTimeout(function () { ctx.close(); }, 500);
+    var master = ctx.createGain();
+    master.gain.value = 0.9;
+    master.connect(ctx.destination);
+    for (var i = 0; i < 11; i++) {
+      waterBubble(ctx, master, t + Math.random() * 0.34,
+        600 + Math.random() * 1800, 0.02 + Math.random() * 0.035, 0.05 + Math.random() * 0.04);
+    }
+    setTimeout(function () { ctx.close(); }, 600);
   } catch (e) {}
 }
 function playDryClickSound() {
@@ -6512,27 +6521,35 @@ function playPourSound() {
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
-    var bufferSize = ctx.sampleRate * 0.6;
-    var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    var data = buffer.getChannelData(0);
-    for (var i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 0.7);
+    var dur = 0.6;
+    var master = ctx.createGain();
+    master.gain.value = 0.85;
+    master.connect(ctx.destination);
+    // soft flow bed under a dense bubble stream
+    var buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     var noise = ctx.createBufferSource();
-    noise.buffer = buffer;
-    var filter = ctx.createBiquadFilter();
-    filter.type = "bandpass";
-    filter.frequency.value = 900;
-    filter.Q.value = 0.8;
-    var gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.14, t + 0.1);
-    gain.gain.setValueAtTime(0.12, t + 0.4);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
+    noise.buffer = buf;
+    var bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 800;
+    bp.Q.value = 0.6;
+    var ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.0001, t);
+    ng.gain.exponentialRampToValueAtTime(0.06, t + 0.12);
+    ng.gain.setValueAtTime(0.055, t + dur * 0.7);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    noise.connect(bp);
+    bp.connect(ng);
+    ng.connect(master);
     noise.start(t);
-    noise.stop(t + 0.6);
-    setTimeout(function () { ctx.close(); }, 700);
+    noise.stop(t + dur + 0.02);
+    for (var j = 0; j < 34; j++) {
+      waterBubble(ctx, master, t + Math.random() * (dur - 0.05),
+        400 + Math.random() * 1600, 0.015 + Math.random() * 0.04, 0.03 + Math.random() * 0.04);
+    }
+    setTimeout(function () { ctx.close(); }, 900);
   } catch (e) {}
 }
 function playSipSound() {
@@ -6541,26 +6558,37 @@ function playSipSound() {
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
-    var bufferSize = ctx.sampleRate * 0.3;
-    var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    var data = buffer.getChannelData(0);
-    for (var i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 1.4);
+    var dur = 0.34;
+    var master = ctx.createGain();
+    master.gain.value = 0.85;
+    master.connect(ctx.destination);
+    // suction slurp: lowpass noise whose cutoff sweeps up then back as the
+    // liquid is drawn in, over a few low gulp bubbles
+    var buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     var noise = ctx.createBufferSource();
-    noise.buffer = buffer;
-    var filter = ctx.createBiquadFilter();
-    filter.type = "bandpass";
-    filter.frequency.value = 600;
-    filter.Q.value = 1.2;
-    var gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.13, t + 0.04);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
+    noise.buffer = buf;
+    var lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(300, t);
+    lp.frequency.exponentialRampToValueAtTime(1400, t + dur * 0.7);
+    lp.frequency.exponentialRampToValueAtTime(500, t + dur);
+    lp.Q.value = 3;
+    var ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.0001, t);
+    ng.gain.exponentialRampToValueAtTime(0.09, t + 0.05);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    noise.connect(lp);
+    lp.connect(ng);
+    ng.connect(master);
     noise.start(t);
-    noise.stop(t + 0.3);
-    setTimeout(function () { ctx.close(); }, 400);
+    noise.stop(t + dur + 0.02);
+    for (var j = 0; j < 5; j++) {
+      waterBubble(ctx, master, t + 0.02 + Math.random() * 0.28,
+        250 + Math.random() * 700, 0.02 + Math.random() * 0.03, 0.04 + Math.random() * 0.03);
+    }
+    setTimeout(function () { ctx.close(); }, 600);
   } catch (e) {}
 }
 function playGongSound() {

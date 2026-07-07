@@ -102,6 +102,8 @@ footer{margin-top:2.6rem}
 @media (max-width:759px){
   .hunt-nav{width:1.9rem; height:1.9rem; font-size:1.2rem}
 }
+.device-hint{display:none; text-align:center; font-size:.8rem; font-style:italic; color:var(--soft); margin:.15rem 0 0}
+.device-hint.show{display:block}
 .hunt-dots{display:flex; justify-content:center; align-items:center; gap:.15rem; margin:.55rem 0 0}
 /* small visible dot inside a ~24px transparent tap target (dots double as
    click/tap navigation) */
@@ -1339,6 +1341,7 @@ section{margin:1.9rem 0}
   <hr>
 
   <p class="hunt-title" id="hunt-title" data-i="hunt_title">Loft Day</p>
+  <p class="device-hint" id="device-hint" data-i="device_hint"></p>
   <p class="scene-caption" id="hunt-caption">Power on the espresso machine, then grind coffee, then brew a shot.</p>
   <div class="hunt-frame">
   <button type="button" id="hunt-prev" class="hunt-nav hunt-nav-prev" aria-label="Previous room" disabled>‹</button>
@@ -2992,6 +2995,7 @@ var T = {
   en: {
     hunt_title: "Loft Day",
     tagline: "We’re getting married<br><strong>Will you be there?</strong>",
+    device_hint: "psst — the loft plays best on a laptop 💻",
     contact: "Questions? Write to us:",
     marketa_url: "https://marketajakesova.ca",
     nav_lang_aria: "Language",
@@ -3055,6 +3059,7 @@ var T = {
   cs: {
     hunt_title: "Den v podkroví",
     tagline: "Budeme se brát<br><strong>Budete tam?</strong>",
+    device_hint: "pst — v bytě se hraje nejlíp na počítači 💻",
     contact: "Dotazy? Napište nám:",
     marketa_url: "https://marketajakesova.ca/cs/",
     nav_lang_aria: "Jazyk",
@@ -3161,6 +3166,17 @@ function setLang(l) {
       if ((langs[n] || "").toLowerCase().indexOf("cs") === 0) { knowsCs = true; break; }
     }
     setLang(knowsCs ? "cs" : "en");
+  }
+})();
+(function () {
+  var hint = document.getElementById("device-hint");
+  if (!hint) return;
+  var coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+  var seen = true;
+  try { seen = localStorage.getItem("seenDeviceHint") === "1"; } catch (e) {}
+  if (coarse && !seen) {
+    hint.classList.add("show");
+    try { localStorage.setItem("seenDeviceHint", "1"); } catch (e) {}
   }
 })();
 function eggBubble(anchor, text, placement) {
@@ -5516,6 +5532,58 @@ function playThunderSound() {
     sub.stop(t + 5.8);
 
     setTimeout(function () { ctx.close(); }, 6200);
+  } catch (e) {}
+}
+function playFinishMelody() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t0 = ctx.currentTime;
+    var master = ctx.createGain();
+    master.gain.value = 0.9;
+    master.connect(ctx.destination);
+
+    // Warm rising bell arpeggio (C major, C-E-G-C) to mark finishing the loft:
+    // each note a struck bell (inharmonic partials, quick attack, long ring),
+    // the last held longest, over a soft low root for warmth.
+    var notes = [523.25, 659.25, 783.99, 1046.5];
+    notes.forEach(function (f, i) {
+      var t = t0 + i * 0.13;
+      var last = i === notes.length - 1;
+      [
+        { m: 1, g: 0.13, d: last ? 2.4 : 0.9 },
+        { m: 1, g: 0.06, d: last ? 2.1 : 0.8, dt: 8 },
+        { m: 2.76, g: 0.03, d: 0.4 },
+        { m: 5.4, g: 0.012, d: 0.18 }
+      ].forEach(function (p) {
+        var osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.value = f * p.m;
+        if (p.dt) osc.detune.value = p.dt;
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(p.g, t + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + p.d);
+        osc.connect(g);
+        g.connect(master);
+        osc.start(t);
+        osc.stop(t + p.d + 0.02);
+      });
+    });
+    var root = ctx.createOscillator();
+    root.type = "sine";
+    root.frequency.value = 130.81;
+    var rg = ctx.createGain();
+    rg.gain.setValueAtTime(0.0001, t0);
+    rg.gain.exponentialRampToValueAtTime(0.05, t0 + 0.05);
+    rg.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.6);
+    root.connect(rg);
+    rg.connect(master);
+    root.start(t0);
+    root.stop(t0 + 2.7);
+
+    setTimeout(function () { ctx.close(); }, 3000);
   } catch (e) {}
 }
 function playSparkSound() {
@@ -8113,22 +8181,8 @@ function spawnDustMote(container) {
       });
     }
     setTimeout(function () { spawnBalconyRain(strip); }, 500);
-    setTimeout(function () {
-      var flash = document.getElementById("balcony-thunder-flash");
-      if (flash) {
-        flash.classList.remove("flash");
-        requestAnimationFrame(function () {
-          requestAnimationFrame(function () { flash.classList.add("flash"); });
-        });
-      }
-      if (butterfly) {
-        butterfly.classList.remove("startled");
-        requestAnimationFrame(function () {
-          requestAnimationFrame(function () { butterfly.classList.add("startled"); });
-        });
-      }
-      setTimeout(playThunderSound, 600);
-    }, 2200);
+    // warm bell melody heralds the rainbow, just before it bursts at 4200
+    setTimeout(playFinishMelody, 3800);
     if (rainbow) {
       setTimeout(function () {
         rainbow.classList.remove("burst");

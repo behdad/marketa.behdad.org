@@ -44,6 +44,35 @@ go inside `index.html` unless there's a strong reason not to.
   shouldn't be public (notes, drafts, source assets), block them the same way rather
   than assuming they're private by default.
 
+## Recurring bug classes (each of these has bitten more than once)
+
+- **One-shot animations lose the cascade to id-based state rules.** Infinite state
+  animations like `#cuddly-behdad-head.grooving` (music playing) out-specify class-based
+  one-shots like `.head-group.chopped`, silently swallowing the reaction. Any one-shot
+  on an element that also has an id-based looping state must be id-qualified AND appear
+  later in source than the state rule. Also clear sibling one-shot classes before adding
+  one, and remove them on `animationend` (check.js verifies removal exists, but it can't
+  see specificity conflicts — check computed `animationName` with both classes applied).
+- **A CSS `transform` animation replaces the element's `transform` attribute** for its
+  duration — an element positioned via `transform="translate(...)"` jumps to its
+  unpositioned spot while animating. Bake position into path/rect coordinates, or hang
+  the static transform on a wrapper `<g>` (inside or outside) distinct from the animated
+  node. (Bit the mic, the lounger flip, the dustpan.)
+- **JS-spawned effects break when a target's group gains a transform.** `getBBox()` is
+  local coords; inserting the effect anywhere except the target's own parent group puts
+  it in a different coordinate system (bit the window-pane gleam after the office window
+  was scaled). Spawn effects into the same group as their target.
+- **`touch-action` is ignored on SVG children** (no CSS layout box), so it can't stop
+  mobile page-panning during object drags. Instead preventDefault a delegated non-passive
+  `touchmove` on the strip for touches whose target is a draggable (touch events retarget
+  every move to the touchstart element, so one listener covers all).
+- **Headless-Chrome testing gotchas**: under `--virtual-time-budget`, `requestAnimationFrame`
+  doesn't reliably tick (rAF-double class adds appear to never happen — monkeypatch
+  `window.requestAnimationFrame = function (cb) { cb(); return 0; }` in the scratch copy
+  before dispatching events), and WAAPI animations fast-forward (you can't screenshot one
+  mid-flight). Media queries may also not match the emulated width — verify with
+  `matchMedia` output, not assumptions, before trusting a mobile-layout screenshot.
+
 ## Design system
 
 - Palette (CSS custom props in `:root`): cream `#f8f5ec`, paper `#fffdf8`, ink `#453a31`,

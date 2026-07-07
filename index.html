@@ -2130,6 +2130,51 @@ function playThunderSound() {
     setTimeout(function () { ctx.close(); }, 4300);
   } catch (e) {}
 }
+var rainAudioCtx = null;
+var rainAudioNodes = null;
+function startRainSound() {
+  stopRainSound();
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var bufferSize = ctx.sampleRate * 2;
+    var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    var data = buffer.getChannelData(0);
+    for (var i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    var noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    noise.loop = true;
+    var filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 3200;
+    filter.Q.value = 0.7;
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 1.2);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    noise.start();
+    rainAudioCtx = ctx;
+    rainAudioNodes = { noise: noise, gain: gain };
+  } catch (e) {}
+}
+function stopRainSound() {
+  if (rainAudioNodes && rainAudioCtx) {
+    try {
+      var g = rainAudioNodes.gain;
+      var ctxRef = rainAudioCtx;
+      var t = ctxRef.currentTime;
+      g.gain.cancelScheduledValues(t);
+      g.gain.setValueAtTime(g.gain.value, t);
+      g.gain.linearRampToValueAtTime(0, t + 0.4);
+      setTimeout(function () { try { ctxRef.close(); } catch (e) {} }, 500);
+    } catch (e) {}
+  }
+  rainAudioCtx = null;
+  rainAudioNodes = null;
+}
 function playScreamSound() {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -2499,8 +2544,10 @@ function sparkShoes(svg, shoesId, cx, cy) {
     rain.style.display = showRain ? "" : "none";
     if (showRain) {
       scheduleThunder();
+      startRainSound();
     } else {
       stopThunder();
+      stopRainSound();
     }
   }
   toggle.addEventListener("click", activate);

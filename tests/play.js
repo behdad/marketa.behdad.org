@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-// Interaction smoke test for rsvp.html: solves the whole game start to
-// finish, then click-storms every interactive element, failing on any
-// uncaught JS error. Slower than check.js (spawns headless Chrome); run it
-// after changes that touch game logic or interactions.
+// Interaction smoke tests for both pages: each loads in headless Chrome with
+// errors collected, plays through its core flow, then click-storms every
+// interactive element. Fails on any uncaught JS error or broken flow.
+// Slower than check.js (~4s total); run after changes touching game logic
+// or interactions.
 //
 // Usage: node tests/play.js
 "use strict";
@@ -13,38 +14,87 @@ var os = require("os");
 var execSync = require("child_process").execSync;
 
 var ROOT = path.join(__dirname, "..");
-var html = fs.readFileSync(path.join(ROOT, "rsvp.html"), "utf8");
 
-// Head hook: error collectors, tab-open stub, and an rAF that runs via
-// setTimeout (sync rAF would make the monitor screensaver's loop recurse
-// forever; plain rAF never ticks under --virtual-time-budget).
-var HOOK = [
-  "<script>",
-  "window.__errs = [];",
-  "window.addEventListener('error', function (e) { window.__errs.push(String(e.message) + ' @' + (e.filename||'') + ':' + e.lineno); });",
-  "window.addEventListener('unhandledrejection', function (e) { window.__errs.push('rejection: ' + String(e.reason)); });",
-  "window.open = function () { window.__opened = (window.__opened || 0) + 1; return null; };",
-  "window.requestAnimationFrame = function (cb) { return setTimeout(function () { cb(performance.now()); }, 16); };",
-  "window.cancelAnimationFrame = function (id) { clearTimeout(id); };",
-  "</script>"
+// Head hook: error collectors, tab-open stub, link-navigation blocker. The rAF
+// line is spliced in only for pages that need it (rsvp): native rAF never ticks
+// under --virtual-time-budget, so patching it to setTimeout lets rsvp's monitor
+// screensaver advance — but that same patch keeps a per-frame loop alive so the
+// page never goes idle, which stalls index's virtual-time fast-forward. So index
+// keeps native (frozen) rAF and fast-forwards past its setTimeout timers.
+function hook(patchRaf) {
+  return [
+    "<script>",
+    "window.__errs = [];",
+    "window.addEventListener('error', function (e) { window.__errs.push(String(e.message) + ' @' + (e.filename||'') + ':' + e.lineno); });",
+    "window.addEventListener('unhandledrejection', function (e) { window.__errs.push('rejection: ' + String(e.reason)); });",
+    "window.open = function () { window.__opened = (window.__opened || 0) + 1; return null; };",
+    // A real confirm/alert/prompt blocks the main thread and suspends virtual
+    // time (the egg-reset button confirms), so stub them non-blocking.
+    "window.confirm = function () { return true; };",
+    "window.alert = function () {};",
+    "window.prompt = function () { return null; };",
+    patchRaf ? "window.requestAnimationFrame = function (cb) { return setTimeout(function () { cb(performance.now()); }, 16); };" : "",
+    patchRaf ? "window.cancelAnimationFrame = function (id) { clearTimeout(id); };" : "",
+    "document.addEventListener('click', function (e) {",
+    "  var t = e.target && e.target.closest && e.target.closest('a, .party-send');",
+    "  if (t) { e.preventDefault(); e.stopImmediatePropagation(); }",
+    "}, true);",
+    "</script>"
+  ].join("\n");
+}
+
+var COMMON = [
+  "function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }",
+  "function fire(el, type) {",
+  "  if (!el) return false;",
+  "  if (type === 'enter') el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));",
+  "  else el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }));",
+  "  return true;",
+  "}",
+  "function click(id) { return fire(document.getElementById(id), 'click'); }",
+  "function finish(report) {",
+  "  report.errors = window.__errs;",
+  "  document.getElementById('__report').textContent = JSON.stringify(report);",
+  "}",
+  "function pointerEls() {",
+  "  // cursor:pointer inherits, so match only the topmost pointer element in",
+  "  // each subtree (the actual clickable object, not every SVG child).",
+  "  return Array.prototype.filter.call(document.querySelectorAll('body *'), function (el) {",
+  "    try {",
+  "      if (getComputedStyle(el).cursor !== 'pointer') return false;",
+  "      var p = el.parentElement;",
+  "      while (p && p !== document.body) {",
+  "        if (getComputedStyle(p).cursor === 'pointer') return false;",
+  "        p = p.parentElement;",
+  "      }",
+  "      return true;",
+  "    } catch (e) { return false; }",
+  "  });",
+  "}",
+  "async function storm(report) {",
+  "  var els = pointerEls();",
+  "  for (var i = 0; i < els.length; i++) {",
+  "    fire(els[i], 'click');",
+  "    report.stormClicked++;",
+  "    if (i % 15 === 0) await sleep(150);",
+  "  }",
+  "  await sleep(1500);",
+  "  for (var j = 0; j < els.length; j++) {",
+  "    fire(els[j], 'dblclick');",
+  "    fire(els[j], 'enter');",
+  "    if (j % 15 === 0) await sleep(150);",
+  "  }",
+  "}"
 ].join("\n");
 
-var HARNESS = [
+var RSVP_HARNESS = [
   "<pre id=\"__report\" style=\"position:fixed;left:-9999px\">pending</pre>",
   "<script>",
   "(function () {",
-  "  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }",
-  "  function fire(el, type) {",
-  "    if (!el) return false;",
-  "    if (type === 'enter') el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));",
-  "    else el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }));",
-  "    return true;",
-  "  }",
-  "  function click(id) { return fire(document.getElementById(id), 'click'); }",
+  COMMON,
   "  var report = { errors: [], solve: {}, stormClicked: 0, missing: [] };",
   "  function expect(id) { if (!document.getElementById(id)) report.missing.push(id); return id; }",
   "  async function solve() {",
-  "    // kitchen: power -> grind -> brew -> sip",
   "    click(expect('kitchen-lamarzocco'));",
   "    click(expect('kitchen-grinder'));",
   "    await sleep(1600);",
@@ -53,87 +103,112 @@ var HARNESS = [
   "    click(expect('kitchen-shotcup'));",
   "    await sleep(1500);",
   "    report.solve.afterKitchen = window.currentStageIndex;",
-  "    // garden: water + music + candles",
   "    click(expect('garden-monstera'));",
   "    click(expect('garden-ukulele'));",
   "    click(expect('garden-candle-1'));",
   "    click(expect('garden-candle-2'));",
   "    await sleep(1500);",
   "    report.solve.afterGarden = window.currentStageIndex;",
-  "    // cuddly: play with Octi, pull a blanket (Enter = keyboard pull)",
   "    click(expect('cuddly-octopus'));",
   "    await sleep(400);",
   "    fire(document.getElementById(expect('cuddly-blanket')), 'enter');",
   "    await sleep(1200);",
   "    report.solve.afterCuddly = window.currentStageIndex;",
-  "    // office: lights out, find the butterfly",
   "    click(expect('office-lamp'));",
   "    click(expect('office-pendant'));",
   "    click(expect('office-stainedglass'));",
   "    await sleep(2600);",
   "    report.solve.afterOffice = window.currentStageIndex;",
-  "    // balcony finale runs ~9s of timers (rain, melody, rainbow, fireworks)",
-  "    await sleep(10000);",
+  "    await sleep(8000);", // let the finale timers (rain/melody/rainbow/fireworks) run
   "    report.solve.final = window.currentStageIndex;",
   "  }",
-  "  async function storm() {",
+  "  async function stormStages() {",
   "    var stages = ['kitchen', 'garden', 'cuddly', 'office', 'balcony'];",
   "    for (var s = 0; s < stages.length; s++) {",
   "      if (window.goToStage) window.goToStage(stages[s]);",
   "      await sleep(120);",
   "    }",
-  "    var hits = Array.prototype.slice.call(document.querySelectorAll('.hunt-hit'));",
-  "    for (var i = 0; i < hits.length; i++) {",
-  "      fire(hits[i], 'click');",
-  "      report.stormClicked++;",
-  "      if (i % 12 === 0) await sleep(180);",
-  "    }",
-  "    await sleep(1500);",
-  "    for (var j = 0; j < hits.length; j++) {",
-  "      fire(hits[j], 'dblclick');",
-  "      fire(hits[j], 'enter');",
-  "      if (j % 12 === 0) await sleep(180);",
-  "    }",
-  "    // let scheduled timers (boot sequences, thunder, echoes) flush",
-  "    await sleep(9000);",
+  "    await storm(report);",
+  "    await sleep(4000);", // flush scheduled timers (boot sequences, thunder, echoes)
   "  }",
   "  window.addEventListener('load', function () {",
   "    setTimeout(function () {",
-  "      solve().then(storm).catch(function (e) {",
+  "      solve().then(stormStages).catch(function (e) {",
   "        window.__errs.push('harness: ' + String(e && e.stack || e));",
-  "      }).then(function () {",
-  "        report.errors = window.__errs;",
-  "        document.getElementById('__report').textContent = JSON.stringify(report);",
-  "        document.title = 'PLAY-DONE';",
-  "      });",
+  "      }).then(function () { finish(report); });",
   "    }, 400);",
   "  });",
   "})();",
   "</script>"
 ].join("\n");
 
-var scratch = path.join(os.tmpdir(), "wedding-play-" + Date.now() + ".html");
-var patched = html.replace("<head>", "<head>" + HOOK);
-patched = patched.replace("</body>", HARNESS + "\n</body>");
-fs.writeFileSync(scratch, patched);
+var INDEX_HARNESS = [
+  "<pre id=\"__report\" style=\"position:fixed;left:-9999px\">pending</pre>",
+  "<script>",
+  "(function () {",
+  COMMON,
+  "  var report = { errors: [], found: [], cheatsheetOpen: false, stormClicked: 0, missing: [] };",
+  "  function expect(id) { if (!document.getElementById(id)) report.missing.push(id); return id; }",
+  "  async function collectEggs() {",
+  "    try { localStorage.clear(); } catch (e) {}",
+  "    var eggClicks = [",
+  "      ['head', 'loft-behdad-head'],",
+  "      ['guitar', 'loft-guitar'],",
+  "      ['shoes', 'loft-behdad-shoes'],",
+  "      ['plant', 'loft-plant'],",
+  "      ['clapper', 'loft-clapper'],",
+  "      ['book', 'garden-book'],",
+  "      ['fish', 'garden-puffer-wrap'],",
+  "      ['roach', 'loft-roach'],",
+  "      ['rabbit', 'garden-rabbit'],",
+  "      ['trip', 'loft-tofu']",
+  "    ];",
+  "    for (var i = 0; i < eggClicks.length; i++) {",
+  "      click(expect(eggClicks[i][1]));",
+  "      await sleep(400);",
+  "    }",
+  "    await sleep(900);",
+  "    try { report.found = JSON.parse(localStorage.getItem('foundEggs') || '[]').sort(); } catch (e) {}",
+  "    var sheet = document.getElementById('egg-cheatsheet');",
+  "    report.cheatsheetOpen = !!(sheet && sheet.classList.contains('show'));",
+  "    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));",
+  "    await sleep(200);",
+  "  }",
+  "  window.addEventListener('load', function () {",
+  "    setTimeout(function () {",
+  "      collectEggs().then(function () { return storm(report); }).then(function () {",
+  "        return sleep(4000);",
+  "      }).catch(function (e) {",
+  "        window.__errs.push('harness: ' + String(e && e.stack || e));",
+  "      }).then(function () { finish(report); });",
+  "    }, 400);",
+  "  });",
+  "})();",
+  "</script>"
+].join("\n");
 
-var dom;
-try {
-  dom = execSync(
-    "google-chrome --headless=new --disable-gpu --window-size=1100,900 " +
-    "--virtual-time-budget=120000 --dump-dom " + JSON.stringify("file://" + scratch),
-    { stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024, timeout: 120000 }
-  ).toString();
-} finally {
-  fs.unlinkSync(scratch);
+function runPage(file, harness, budgetMs, patchRaf) {
+  var html = fs.readFileSync(path.join(ROOT, file), "utf8");
+  var patched = html.replace("<head>", "<head>" + hook(patchRaf)).replace("</body>", harness + "\n</body>");
+  var scratch = path.join(os.tmpdir(), "wedding-play-" + file.replace(/\W/g, "") + "-" + Date.now() + ".html");
+  fs.writeFileSync(scratch, patched);
+  var dom;
+  try {
+    // The pages' many infinite CSS animations keep virtual time from fast-
+    // forwarding, so --dump-dom runs ~real-time to the budget: keep each budget
+    // just above what its harness needs (report is set well before the budget).
+    dom = execSync(
+      "google-chrome --headless=new --disable-gpu --window-size=1100,900 " +
+      "--virtual-time-budget=" + budgetMs + " --dump-dom " + JSON.stringify("file://" + scratch),
+      { stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024, timeout: budgetMs + 30000 }
+    ).toString();
+  } finally {
+    fs.unlinkSync(scratch);
+  }
+  var m = dom.match(/<pre id="__report"[^>]*>([\s\S]*?)<\/pre>/);
+  if (!m || m[1] === "pending") return null;
+  return JSON.parse(m[1].replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">"));
 }
-
-var m = dom.match(/<pre id="__report"[^>]*>([\s\S]*?)<\/pre>/);
-if (!m || m[1] === "pending") {
-  console.log("✗ play.js: harness never reported (page error before load, or budget too small)");
-  process.exit(1);
-}
-var report = JSON.parse(m[1].replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">"));
 
 var failures = 0;
 function pass(msg) { console.log("  ✓ " + msg); }
@@ -144,15 +219,41 @@ function fail(msg, detail) {
 }
 
 console.log("rsvp.html interaction playthrough:");
-if (report.missing.length) fail("all solve-path elements exist", "missing: " + report.missing.join(", "));
-else pass("all solve-path elements exist");
-if (report.solve.final === 4) pass("game solves start to finish (reached balcony)");
-else fail("game solves start to finish", "stage progression: " + JSON.stringify(report.solve));
-if (report.stormClicked >= 60) pass("click-stormed " + report.stormClicked + " interactive elements");
-else fail("interactive element count sanity", "only " + report.stormClicked + " .hunt-hit elements found");
-if (report.errors.length === 0) pass("no uncaught JS errors across the entire run");
-else fail("no uncaught JS errors", report.errors.slice(0, 12).join("\n"));
+var r = runPage("rsvp.html", RSVP_HARNESS, 40000, true);
+if (!r) {
+  fail("harness reported (page error before load, or budget too small)");
+} else {
+  if (r.missing.length) fail("all solve-path elements exist", "missing: " + r.missing.join(", "));
+  else pass("all solve-path elements exist");
+  if (r.solve.final === 4) pass("game solves start to finish (reached balcony)");
+  else fail("game solves start to finish", "stage progression: " + JSON.stringify(r.solve));
+  if (r.stormClicked >= 60) pass("click-stormed " + r.stormClicked + " interactive elements");
+  else fail("interactive element count sanity", "only " + r.stormClicked);
+  if (r.errors.length === 0) pass("no uncaught JS errors across the entire run");
+  else fail("no uncaught JS errors", r.errors.slice(0, 12).join("\n"));
+}
 
+console.log("");
+console.log("index.html egg hunt + storm:");
+var EGGS = ["book", "clapper", "fish", "guitar", "head", "plant", "rabbit", "roach", "shoes", "trip"];
+var x = runPage("index.html", INDEX_HARNESS, 30000, false);
+if (!x) {
+  fail("harness reported (page error before load, or budget too small)");
+} else {
+  if (x.missing.length) fail("all egg-target elements exist", "missing: " + x.missing.join(", "));
+  else pass("all egg-target elements exist");
+  var missingEggs = EGGS.filter(function (e) { return x.found.indexOf(e) === -1; });
+  if (missingEggs.length === 0 && x.found.length === EGGS.length) pass("all 10 eggs collectible (" + x.found.join(", ") + ")");
+  else fail("all 10 eggs collectible", "found: [" + x.found.join(", ") + "] missing: [" + missingEggs.join(", ") + "]");
+  if (x.cheatsheetOpen) pass("rabbit opened the cheatsheet");
+  else fail("rabbit opened the cheatsheet");
+  if (x.stormClicked >= 30) pass("click-stormed " + x.stormClicked + " interactive elements");
+  else fail("interactive element count sanity", "only " + x.stormClicked);
+  if (x.errors.length === 0) pass("no uncaught JS errors across the entire run");
+  else fail("no uncaught JS errors", x.errors.slice(0, 12).join("\n"));
+}
+
+console.log("");
 if (failures > 0) {
   console.log(failures + " check(s) failed.");
   process.exit(1);

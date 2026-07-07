@@ -2086,49 +2086,110 @@ function playThunderSound() {
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
-    var bufferSize = ctx.sampleRate * 0.35;
-    var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    var data = buffer.getChannelData(0);
-    for (var i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
-    var noise = ctx.createBufferSource();
-    noise.buffer = buffer;
-    var noiseFilter = ctx.createBiquadFilter();
-    noiseFilter.type = "lowpass";
-    noiseFilter.frequency.setValueAtTime(1800, t);
-    noiseFilter.frequency.exponentialRampToValueAtTime(110, t + 1.4);
-    var noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.6, t);
-    noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 3.2);
-    noise.connect(noiseFilter);
-    noiseFilter.connect(noiseGain);
-    noiseGain.connect(ctx.destination);
-    noise.start(t);
-    noise.stop(t + 3.3);
-    var osc = ctx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(95, t);
-    osc.frequency.exponentialRampToValueAtTime(30, t + 3.2);
-    var oscGain = ctx.createGain();
-    oscGain.gain.setValueAtTime(0.0001, t);
-    oscGain.gain.exponentialRampToValueAtTime(0.5, t + 0.06);
-    oscGain.gain.exponentialRampToValueAtTime(0.0001, t + 3.4);
-    osc.connect(oscGain);
-    oscGain.connect(ctx.destination);
-    osc.start(t);
-    osc.stop(t + 3.4);
-    var sub = ctx.createOscillator();
-    sub.type = "sine";
-    sub.frequency.setValueAtTime(48, t);
-    sub.frequency.exponentialRampToValueAtTime(20, t + 3.8);
-    var subGain = ctx.createGain();
-    subGain.gain.setValueAtTime(0.0001, t);
-    subGain.gain.exponentialRampToValueAtTime(0.4, t + 0.15);
-    subGain.gain.exponentialRampToValueAtTime(0.0001, t + 4);
-    sub.connect(subGain);
-    subGain.connect(ctx.destination);
-    sub.start(t);
-    sub.stop(t + 4);
-    setTimeout(function () { ctx.close(); }, 4300);
+
+    function noiseBurst(dur) {
+      var size = Math.max(1, Math.floor(ctx.sampleRate * dur));
+      var buf = ctx.createBuffer(1, size, ctx.sampleRate);
+      var data = buf.getChannelData(0);
+      for (var i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
+      var src = ctx.createBufferSource();
+      src.buffer = buf;
+      return src;
+    }
+
+    // Synthetic impulse response: a short, decaying noise burst fed through a
+    // convolver gives everything below a faint sense of distance/echo instead
+    // of sounding like dry oscillators plopped on top of each other.
+    var irLen = ctx.sampleRate * 1.2;
+    var ir = ctx.createBuffer(1, irLen, ctx.sampleRate);
+    var irData = ir.getChannelData(0);
+    for (var i = 0; i < irLen; i++) irData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / irLen, 2.5);
+    var convolver = ctx.createConvolver();
+    convolver.buffer = ir;
+    var wetGain = ctx.createGain();
+    wetGain.gain.value = 0.55;
+    convolver.connect(wetGain);
+    wetGain.connect(ctx.destination);
+
+    // Sharp initial crack: bright noise, fast attack, fast decay.
+    var crack = noiseBurst(0.3);
+    var crackFilter = ctx.createBiquadFilter();
+    crackFilter.type = "highpass";
+    crackFilter.frequency.setValueAtTime(1400, t);
+    crackFilter.frequency.exponentialRampToValueAtTime(300, t + 0.25);
+    var crackGain = ctx.createGain();
+    crackGain.gain.setValueAtTime(0.9, t);
+    crackGain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+    crack.connect(crackFilter);
+    crackFilter.connect(crackGain);
+    crackGain.connect(ctx.destination);
+    crackGain.connect(convolver);
+    crack.start(t);
+    crack.stop(t + 0.3);
+
+    // Rolling rumble: broadband noise through a lowpass filter whose cutoff
+    // wanders instead of sweeping in one direction, so it reads as a rolling
+    // boom rather than a synth filter sweep.
+    var rumble = noiseBurst(4.4);
+    var rumbleFilter = ctx.createBiquadFilter();
+    rumbleFilter.type = "lowpass";
+    rumbleFilter.Q.value = 0.7;
+    rumbleFilter.frequency.setValueAtTime(480, t + 0.08);
+    rumbleFilter.frequency.exponentialRampToValueAtTime(200, t + 0.9);
+    rumbleFilter.frequency.exponentialRampToValueAtTime(340, t + 1.8);
+    rumbleFilter.frequency.exponentialRampToValueAtTime(150, t + 2.9);
+    rumbleFilter.frequency.exponentialRampToValueAtTime(70, t + 4.2);
+    var rumbleGain = ctx.createGain();
+    rumbleGain.gain.setValueAtTime(0.0001, t);
+    rumbleGain.gain.exponentialRampToValueAtTime(0.6, t + 0.35);
+    rumbleGain.gain.exponentialRampToValueAtTime(0.38, t + 1.6);
+    rumbleGain.gain.exponentialRampToValueAtTime(0.0001, t + 4.3);
+    rumble.connect(rumbleFilter);
+    rumbleFilter.connect(rumbleGain);
+    rumbleGain.connect(ctx.destination);
+    rumbleGain.connect(convolver);
+    rumble.start(t + 0.05);
+    rumble.stop(t + 4.4);
+
+    // A couple of smaller secondary cracks inside the rumble, so it sounds
+    // like a rolling series of claps rather than a single smooth swell.
+    [0.55, 1.35].forEach(function (delay) {
+      var subCrack = noiseBurst(0.18);
+      var subFilter = ctx.createBiquadFilter();
+      subFilter.type = "bandpass";
+      subFilter.frequency.value = 450 + Math.random() * 350;
+      subFilter.Q.value = 1;
+      var subGain = ctx.createGain();
+      subGain.gain.setValueAtTime(0.001, t + delay);
+      subGain.gain.exponentialRampToValueAtTime(0.32, t + delay + 0.02);
+      subGain.gain.exponentialRampToValueAtTime(0.001, t + delay + 0.18);
+      subCrack.connect(subFilter);
+      subFilter.connect(subGain);
+      subGain.connect(ctx.destination);
+      subGain.connect(convolver);
+      subCrack.start(t + delay);
+      subCrack.stop(t + delay + 0.2);
+    });
+
+    // Sub-bass body as filtered noise rather than a pure sine sweep — a clean
+    // tone is what made the old version sound like a synth boing instead of
+    // weather.
+    var sub = noiseBurst(4.4);
+    var subFilter2 = ctx.createBiquadFilter();
+    subFilter2.type = "lowpass";
+    subFilter2.frequency.value = 85;
+    subFilter2.Q.value = 0.8;
+    var subGain2 = ctx.createGain();
+    subGain2.gain.setValueAtTime(0.0001, t);
+    subGain2.gain.exponentialRampToValueAtTime(0.55, t + 0.2);
+    subGain2.gain.exponentialRampToValueAtTime(0.0001, t + 4.4);
+    sub.connect(subFilter2);
+    subFilter2.connect(subGain2);
+    subGain2.connect(ctx.destination);
+    sub.start(t + 0.02);
+    sub.stop(t + 4.4);
+
+    setTimeout(function () { ctx.close(); }, 5000);
   } catch (e) {}
 }
 var rainAudioCtx = null;

@@ -1245,6 +1245,16 @@ footer{margin-top:2.6rem}
   100%{transform:translate(-60px,320px) scale(0.9); opacity:0}
 }
 @media (prefers-reduced-motion: reduce){#cuddly-mouse.scurrying{animation:none}}
+/* occasional wind ripple; hangs from the top rail so it pivots there */
+#balcony-pride-flag{transform-box:fill-box; transform-origin:50% 0}
+#balcony-pride-flag.waving{animation:flag-wave 2.4s ease-in-out}
+@keyframes flag-wave{
+  0%, 100%{transform:skewX(0)}
+  22%{transform:skewX(-3.5deg)}
+  48%{transform:skewX(2.2deg)}
+  72%{transform:skewX(-1.4deg)}
+}
+@media (prefers-reduced-motion: reduce){#balcony-pride-flag.waving{animation:none}}
 #balcony-rainbow{opacity:0; pointer-events:none}
 #balcony-rainbow.burst{animation:balcony-rainbow-burst 4.5s ease-in-out}
 @keyframes balcony-rainbow-burst{
@@ -8542,6 +8552,22 @@ function spawnDustMote(container) {
         }
       }
       scheduleAmbientPlantSway();
+    }, delay);
+  })();
+  var prideFlag = document.getElementById("balcony-pride-flag");
+  if (prideFlag) prideFlag.addEventListener("animationend", function () {
+    prideFlag.classList.remove("waving");
+  });
+  (function scheduleFlagWave() {
+    var delay = 6000 + Math.random() * 9000;
+    setTimeout(function () {
+      if (prideFlag && stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden") {
+        prideFlag.classList.remove("waving");
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { prideFlag.classList.add("waving"); });
+        });
+      }
+      scheduleFlagWave();
     }, delay);
   })();
   (function scheduleGardenButterfly() {

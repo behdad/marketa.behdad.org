@@ -7576,11 +7576,13 @@ function spawnDustMote(container) {
     pt.y = e.clientY;
     return pt.matrixTransform(svg.getScreenCTM().inverse());
   }
+  var blanketOffsets = {};
   ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"].forEach(function (id) {
     var el = document.getElementById(id);
     if (!el) return;
-    function triggerBlanketPull() {
-      if (id === "cuddly-lapblanket" && Math.random() < 0.5) {
+    blanketOffsets[id] = { x: 0, y: 0 };
+    function triggerBlanketPull(wasMoved) {
+      if (id === "cuddly-lapblanket" && wasMoved && Math.random() < 0.5) {
         el.classList.remove("wiggling", "tugged");
         requestAnimationFrame(function () {
           requestAnimationFrame(function () { el.classList.add("wiggling"); });
@@ -7608,18 +7610,23 @@ function spawnDustMote(container) {
       el.classList.add("done");
       setTimeout(function () { goToStage("office"); }, 700);
     }
-    var dragging = false, dragStartPt = null;
+    var dragging = false, dragStartPt = null, dragStartOffset = { x: 0, y: 0 }, dragMoved = false;
     el.addEventListener("pointerdown", function (e) {
       dragging = true;
+      dragMoved = false;
       dragStartPt = pointerSvgPoint(e);
+      dragStartOffset = { x: blanketOffsets[id].x, y: blanketOffsets[id].y };
       el.style.transition = "none";
       try { el.setPointerCapture(e.pointerId); } catch (err) {}
     });
     el.addEventListener("pointermove", function (e) {
       if (!dragging) return;
       var cur = pointerSvgPoint(e);
-      var dx = Math.max(-220, Math.min(220, cur.x - dragStartPt.x));
-      var dy = Math.max(-50, Math.min(50, cur.y - dragStartPt.y));
+      var dx = Math.max(-220, Math.min(220, dragStartOffset.x + (cur.x - dragStartPt.x)));
+      var dy = Math.max(-50, Math.min(50, dragStartOffset.y + (cur.y - dragStartPt.y)));
+      if (Math.abs(dx - dragStartOffset.x) > 4 || Math.abs(dy - dragStartOffset.y) > 4) dragMoved = true;
+      blanketOffsets[id].x = dx;
+      blanketOffsets[id].y = dy;
       el.style.translate = dx + "px " + dy + "px";
     });
     function onBlanketPointerUp(e) {
@@ -7627,18 +7634,19 @@ function spawnDustMote(container) {
       dragging = false;
       try { el.releasePointerCapture(e.pointerId); } catch (err) {}
       el.style.transition = "";
-      triggerBlanketPull();
+      triggerBlanketPull(dragMoved);
     }
     el.addEventListener("pointerup", onBlanketPointerUp);
     el.addEventListener("pointercancel", onBlanketPointerUp);
     el.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); triggerBlanketPull(); }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); triggerBlanketPull(true); }
     });
   });
   window.resetBlanketPositions = function () {
     ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"].forEach(function (id) {
       var el = document.getElementById(id);
       if (!el) return;
+      if (blanketOffsets[id]) { blanketOffsets[id].x = 0; blanketOffsets[id].y = 0; }
       el.style.transition = "none";
       el.style.translate = "0px 0px";
       requestAnimationFrame(function () {

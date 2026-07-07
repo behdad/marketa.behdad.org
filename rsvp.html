@@ -6870,19 +6870,79 @@ function playGhostBooSound() {
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
-    var osc = ctx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(500, t);
-    osc.frequency.exponentialRampToValueAtTime(180, t + 0.4);
-    var gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.16, t + 0.08);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(t);
-    osc.stop(t + 0.5);
-    setTimeout(function () { ctx.close(); }, 600);
+    var dur = 0.7;
+
+    // A ghostly "boooo" is a rounded, voiced "oo" that wavers and swoops, not
+    // a bare descending sine. Two slightly detuned saw voices give an eerie
+    // chorus shimmer; a pair of low "oo"-vowel formants makes it read as a
+    // voice; a slow vibrato adds the spooky waver; the whole thing swells in
+    // and out like a wail.
+    var master = ctx.createGain();
+    master.gain.setValueAtTime(0.0001, t);
+    master.gain.exponentialRampToValueAtTime(0.14, t + 0.14);
+    master.gain.setValueAtTime(0.14, t + 0.42);
+    master.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    master.connect(ctx.destination);
+
+    var vib = ctx.createOscillator();
+    vib.type = "sine";
+    vib.frequency.value = 5.5;
+    var vibDepth = ctx.createGain();
+    vibDepth.gain.value = 12;
+    vib.connect(vibDepth);
+    vib.start(t);
+    vib.stop(t + dur + 0.02);
+
+    function formant(freq, q, level) {
+      var bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = freq;
+      bp.Q.value = q;
+      var g = ctx.createGain();
+      g.gain.value = level;
+      bp.connect(g);
+      g.connect(master);
+      return bp;
+    }
+    var f1 = formant(320, 5, 1.0);
+    var f2 = formant(820, 6, 0.5);
+
+    [-7, 7].forEach(function (cents) {
+      var osc = ctx.createOscillator();
+      osc.type = "sawtooth";
+      osc.detune.value = cents;
+      osc.frequency.setValueAtTime(250, t);
+      osc.frequency.linearRampToValueAtTime(360, t + 0.25);
+      osc.frequency.linearRampToValueAtTime(190, t + dur);
+      vibDepth.connect(osc.frequency);
+      osc.connect(f1);
+      osc.connect(f2);
+      osc.start(t);
+      osc.stop(t + dur + 0.02);
+    });
+
+    // A breath of hollow band-limited noise for the haunted, airy edge.
+    var nSize = Math.max(1, Math.floor(ctx.sampleRate * dur));
+    var nBuf = ctx.createBuffer(1, nSize, ctx.sampleRate);
+    var nData = nBuf.getChannelData(0);
+    for (var i = 0; i < nSize; i++) nData[i] = Math.random() * 2 - 1;
+    var noise = ctx.createBufferSource();
+    noise.buffer = nBuf;
+    var nbp = ctx.createBiquadFilter();
+    nbp.type = "bandpass";
+    nbp.frequency.value = 500;
+    nbp.Q.value = 1.2;
+    var nG = ctx.createGain();
+    nG.gain.setValueAtTime(0.0001, t);
+    nG.gain.exponentialRampToValueAtTime(0.02, t + 0.15);
+    nG.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    noise.connect(nbp);
+    nbp.connect(nG);
+    nG.connect(ctx.destination);
+    noise.start(t);
+    noise.stop(t + dur + 0.02);
+
+    setTimeout(function () { ctx.close(); }, 850);
   } catch (e) {}
 }
 function playCreakSound() {

@@ -7247,18 +7247,47 @@ function playMetalClinkSound(pitchMult) {
     var ctx = new Ctx();
     var t = ctx.currentTime;
     var mult = pitchMult || 1;
-    var osc = ctx.createOscillator();
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(1800 * mult, t);
-    osc.frequency.exponentialRampToValueAtTime(900 * mult, t + 0.15);
-    var gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.2, t + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(t);
-    osc.stop(t + 0.3);
+    var base = 1500 * mult;
+    // inharmonic partials give a metallic ring instead of a pure-tone bloop;
+    // higher partials decay faster, and each glides down slightly as it settles
+    var partials = [
+      { r: 1.00, g: 0.16, d: 0.26 },
+      { r: 2.03, g: 0.11, d: 0.19 },
+      { r: 3.19, g: 0.08, d: 0.14 },
+      { r: 4.71, g: 0.05, d: 0.10 },
+      { r: 6.28, g: 0.03, d: 0.07 }
+    ];
+    partials.forEach(function (p) {
+      var osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(base * p.r, t);
+      osc.frequency.exponentialRampToValueAtTime(base * p.r * 0.94, t + p.d);
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(p.g, t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + p.d);
+      osc.connect(g);
+      g.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + p.d + 0.03);
+    });
+    // bright contact transient — the initial "tink" of metal meeting metal
+    var nlen = Math.floor(ctx.sampleRate * 0.02);
+    var nb = ctx.createBuffer(1, nlen, ctx.sampleRate);
+    var nd = nb.getChannelData(0);
+    for (var i = 0; i < nlen; i++) nd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / nlen, 2);
+    var noise = ctx.createBufferSource();
+    noise.buffer = nb;
+    var hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 3000 * Math.min(mult, 1.4);
+    var ng = ctx.createGain();
+    ng.gain.value = 0.12;
+    noise.connect(hp);
+    hp.connect(ng);
+    ng.connect(ctx.destination);
+    noise.start(t);
+    noise.stop(t + 0.03);
     setTimeout(function () { ctx.close(); }, 400);
   } catch (e) {}
 }

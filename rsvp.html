@@ -108,11 +108,8 @@ footer{margin-top:2.6rem}
      (avoids 100vw, which includes scrollbar width and overflows) */
   .hunt-frame{max-width:none; margin-left:-1.25rem; margin-right:-1.25rem; padding:0}
   .hunt-viewport{border-radius:0}
-  .hunt-nav{width:1.9rem; height:1.9rem; font-size:1.2rem}
-  /* no outward straddle at full-bleed (would clip off-screen); sit the
-     circles just inside the scene corners */
-  .hunt-nav-prev{left:.5rem; transform:translateY(-50%)}
-  .hunt-nav-next{right:.5rem; left:auto; transform:translateY(-50%)}
+  /* no arrows on mobile — swipe + dots handle navigation */
+  .hunt-nav{display:none}
 }
 .hunt-dots{display:flex; justify-content:center; align-items:center; gap:.15rem; margin:.55rem 0 0}
 /* small visible dot inside a ~24px transparent tap target (dots double as
@@ -8268,6 +8265,25 @@ function spawnDustMote(container) {
       down = false;
       if (engaged) { strip.style.transition = ""; setPct(base()); }
     });
+
+    // One-time hint on touch devices: nudge the strip to reveal the next room's
+    // edge, then snap back, so the strip reads as swipeable.
+    try {
+      var coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+      var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (coarse && !reduce && STAGES.length > 1 && !localStorage.getItem("seenScenePeek")) {
+        localStorage.setItem("seenScenePeek", "1");
+        setTimeout(function () {
+          if (stageIndex !== 0 || down) return;
+          strip.style.transition = "transform .55s ease";
+          setPct(base() - 5); // reveal ~25% of the next room
+          setTimeout(function () {
+            setPct(base());
+            setTimeout(function () { strip.style.transition = ""; }, 600);
+          }, 700);
+        }, 1300);
+      }
+    } catch (e) {}
   })();
 
   var GRIND_MS = 1200;

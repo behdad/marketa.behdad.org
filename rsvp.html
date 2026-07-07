@@ -1340,6 +1340,14 @@ footer{margin-top:2.6rem}
   100%{opacity:0; transform:scale(2.4)}
 }
 @media (prefers-reduced-motion: reduce){#balcony-walllamp.flash #balcony-walllamp-flash{animation:none}}
+/* dusk switch: click the sun to flip the balcony to evening */
+#balcony-dusk{transition:opacity 1s ease}
+#stage-balcony.dusk #balcony-dusk{opacity:0.4}
+#balcony-stars{transition:opacity 1.2s ease}
+#stage-balcony.dusk #balcony-stars{opacity:0.95}
+#balcony-sun-disc, #balcony-moon{transition:opacity .8s ease}
+#stage-balcony.dusk #balcony-sun-disc{opacity:0}
+#stage-balcony.dusk #balcony-moon{opacity:1}
 #cuddly-mouse{opacity:0; pointer-events:none}
 #cuddly-mouse.scurrying{animation:mouse-scurry 1.1s ease-in forwards}
 @keyframes mouse-scurry{
@@ -3184,6 +3192,31 @@ section{margin:1.9rem 0}
 <circle cx="-14" cy="137.5" r="0.8" fill="#453a31"/>
 </g>
 <rect x="0" y="0" width="680" height="340" fill="#5a3a6a" opacity="0.12" pointer-events="none"/>
+<defs>
+<linearGradient id="balcony-dusk-grad" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#141033"/>
+<stop offset="0.55" stop-color="#3d2450"/>
+<stop offset="1" stop-color="#7a3f45"/>
+</linearGradient>
+</defs>
+<rect id="balcony-dusk" x="0" y="0" width="680" height="340" fill="url(#balcony-dusk-grad)" opacity="0" pointer-events="none"/>
+<g id="balcony-stars" opacity="0" pointer-events="none" fill="#fdf6d8">
+<circle cx="440" cy="20" r="1.2"/><circle cx="470" cy="95" r="0.9"/><circle cx="500" cy="15" r="1.4"/><circle cx="535" cy="100" r="1"/><circle cx="560" cy="25" r="1.2"/><circle cx="585" cy="60" r="0.9"/><circle cx="450" cy="55" r="1"/><circle cx="575" cy="105" r="1.3"/><circle cx="430" cy="85" r="0.9"/><circle cx="590" cy="15" r="1.1"/>
+</g>
+<g id="balcony-sun" class="hunt-hit" tabindex="0" role="button" aria-label="The sun">
+<rect x="484" y="24" width="52" height="52" fill="transparent"/>
+<g id="balcony-sun-disc">
+<g stroke="#f6cf62" stroke-width="2.5" stroke-linecap="round">
+<line x1="510" y1="25" x2="510" y2="33"/><line x1="510" y1="67" x2="510" y2="75"/><line x1="485" y1="50" x2="493" y2="50"/><line x1="527" y1="50" x2="535" y2="50"/><line x1="492" y1="32" x2="497" y2="37"/><line x1="523" y1="63" x2="528" y2="68"/><line x1="492" y1="68" x2="497" y2="63"/><line x1="523" y1="37" x2="528" y2="32"/>
+</g>
+<circle cx="510" cy="50" r="13" fill="#f6cf62"/>
+</g>
+<g id="balcony-moon" opacity="0">
+<circle cx="510" cy="50" r="13" fill="#eae6d2"/>
+<circle cx="516" cy="46" r="11" fill="#241b3d"/>
+<circle cx="505" cy="47" r="0.9" fill="#c9c3ad"/><circle cx="508" cy="56" r="1.2" fill="#c9c3ad"/>
+</g>
+</g>
 </g>
 <rect id="balcony-thunder-flash" class="balcony-thunder-flash" x="2720" y="0" width="680" height="340" pointer-events="none"/>
 <rect class="trip-melt-whiteout" x="0" y="0" width="3400" height="340" pointer-events="none"/>
@@ -5151,6 +5184,31 @@ document.addEventListener("click", function (e) {
     lights.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleLights(); }
     });
+  }
+  var duskSun = document.getElementById("balcony-sun");
+  var stageBalcony = document.getElementById("stage-balcony");
+  if (duskSun && stageBalcony) {
+    // clicking the sun flips the balcony to evening and lights the lamps
+    function toggleDusk() {
+      var dusk = stageBalcony.classList.toggle("dusk");
+      playLampShimmerSound();
+      var wallLampEl = document.getElementById("balcony-walllamp");
+      if (dusk) {
+        if (lights) lights.classList.remove("off");
+        if (wallLampEl) wallLampEl.classList.add("on");
+      } else if (wallLampEl) {
+        wallLampEl.classList.remove("on");
+      }
+    }
+    duskSun.addEventListener("click", toggleDusk);
+    duskSun.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleDusk(); }
+    });
+    window.resetBalconyDusk = function () {
+      stageBalcony.classList.remove("dusk");
+      var wallLampEl = document.getElementById("balcony-walllamp");
+      if (wallLampEl) wallLampEl.classList.remove("on");
+    };
   }
   var ashtray = document.getElementById("balcony-ashtray");
   if (ashtray) {
@@ -9772,6 +9830,7 @@ function spawnDustMote(container) {
     if (rainbow) rainbow.classList.remove("burst");
     if (window.resetSmoker) window.resetSmoker();
     if (window.resetLaptop) window.resetLaptop();
+    if (window.resetBalconyDusk) window.resetBalconyDusk();
     if (window.resetRadio) window.resetRadio();
     if (window.resetAC) window.resetAC();
     if (window.resetKettle) window.resetKettle();

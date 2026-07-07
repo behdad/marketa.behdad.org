@@ -6703,20 +6703,54 @@ function playBowlRingSound() {
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
-    [329.63, 415.3, 493.88].forEach(function (freq, i) {
-      var osc = ctx.createOscillator();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, t);
-      var gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(0.32 - i * 0.05, t + 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 6.5);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(t);
-      osc.stop(t + 6.6);
+    var master = ctx.createGain();
+    master.gain.value = 0.5;
+    master.connect(ctx.destination);
+
+    // A singing bowl isn't a chord — it's one inharmonic fundamental whose
+    // slight asymmetry splits each mode into two near-identical frequencies,
+    // producing the signature slow "wah-wah" beat. Each mode is a detuned
+    // pair; the beat rate is the tiny frequency gap between the twins.
+    var modes = [
+      { f: 330,  beat: 1.4, g: 0.22, d: 7.5 },
+      { f: 908,  beat: 2.3, g: 0.10, d: 5.0 }, // inharmonic overtone ~2.75x
+      { f: 1784, beat: 3.1, g: 0.04, d: 3.0 }  // ~5.4x, faint high shimmer
+    ];
+    modes.forEach(function (m) {
+      [-m.beat / 2, m.beat / 2].forEach(function (off) {
+        var osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.value = m.f + off;
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(m.g, t + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + m.d);
+        osc.connect(g);
+        g.connect(master);
+        osc.start(t);
+        osc.stop(t + m.d + 0.05);
+      });
     });
-    setTimeout(function () { ctx.close(); }, 6800);
+
+    // Soft mallet tap at the onset — a brief, dull click.
+    var nSize = Math.max(1, Math.floor(ctx.sampleRate * 0.06));
+    var nBuf = ctx.createBuffer(1, nSize, ctx.sampleRate);
+    var nData = nBuf.getChannelData(0);
+    for (var i = 0; i < nSize; i++) nData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / nSize, 2);
+    var noise = ctx.createBufferSource();
+    noise.buffer = nBuf;
+    var nlp = ctx.createBiquadFilter();
+    nlp.type = "lowpass";
+    nlp.frequency.value = 1200;
+    var nG = ctx.createGain();
+    nG.gain.value = 0.06;
+    noise.connect(nlp);
+    nlp.connect(nG);
+    nG.connect(master);
+    noise.start(t);
+    noise.stop(t + 0.07);
+
+    setTimeout(function () { ctx.close(); }, 7800);
   } catch (e) {}
 }
 function playGeniePoofSound() {

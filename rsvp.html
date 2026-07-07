@@ -581,7 +581,12 @@ footer{margin-top:2.6rem}
 #office-monitor.show-caps #monitor-logo-caps{opacity:1}
 #office-monitor.show-harfbuzz #monitor-logo-harfbuzz{opacity:1}
 #office-monitor.show-behdad #monitor-logo-behdad{opacity:1}
+#office-monitor.show-nowplaying #monitor-logo-nowplaying{opacity:1}
 #office-monitor.show-saver #monitor-saver{opacity:1}
+.eq-bar{transform-box:fill-box; transform-origin:bottom center}
+#office-monitor.show-nowplaying .eq-bar{animation:eq-bounce .6s ease-in-out infinite}
+@keyframes eq-bounce{0%,100%{transform:scaleY(0.28)} 50%{transform:scaleY(1)}}
+@media (prefers-reduced-motion: reduce){#office-monitor.show-nowplaying .eq-bar{animation:none}}
 .desk-leg-pole{transform-box:fill-box; transform-origin:bottom; transition:transform .6s ease}
 .desk-led{transition:fill .15s ease}
 #office-desk-controls.moving .desk-led{animation:desk-led-blink .3s steps(2,jump-none) infinite}
@@ -2761,6 +2766,15 @@ section{margin:1.9rem 0}
 <g id="monitor-logo-behdad" class="boot-logo">
 <text x="316" y="178.5" text-anchor="middle" style="fill:#f0eee8; font-family:monospace; font-size:9px; font-weight:bold">behdad.org</text>
 </g>
+<g id="monitor-logo-nowplaying" class="boot-logo">
+<rect x="254" y="154" width="124" height="42" rx="1.5" fill="#1a1420"/>
+<text x="316" y="169" text-anchor="middle" style="fill:#e8b0c8; font-family:monospace; font-size:6px">&#9834; now playing</text>
+<rect class="eq-bar" x="300" y="176" width="4" height="13" rx="1" fill="#d9a6a6"/>
+<rect class="eq-bar" x="308" y="176" width="4" height="13" rx="1" fill="#e8b93a" style="animation-delay:.18s"/>
+<rect class="eq-bar" x="316" y="176" width="4" height="13" rx="1" fill="#7fb35c" style="animation-delay:.34s"/>
+<rect class="eq-bar" x="324" y="176" width="4" height="13" rx="1" fill="#6f94bd" style="animation-delay:.12s"/>
+<rect class="eq-bar" x="332" y="176" width="4" height="13" rx="1" fill="#9c6bb8" style="animation-delay:.42s"/>
+</g>
 </g>
 </g>
 <g id="office-laptop" class="hunt-hit" tabindex="0" role="button" aria-label="The laptop" transform="translate(-211,0)">
@@ -4832,7 +4846,7 @@ document.addEventListener("click", function (e) {
     bootTimers.forEach(clearTimeout);
     bootTimers = [];
     stopSaver();
-    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps");
+    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying");
   }
   // The monitor only lights up when the PC is on; it then boots Fedora →
   // Chrome → the caps, which stay up.
@@ -4850,8 +4864,24 @@ document.addEventListener("click", function (e) {
       monitor.classList.add("show-caps");
       monitorUrl = CAPS_URL;
       scheduleSaver();
+      updateNowPlaying();
     }, 5200));
   }
+  // While a room song plays and the monitor's on a site, it flips to a
+  // "now playing" equalizer; when the song stops it drops back to the site.
+  var songAudios = ["guitar-song-audio", "ukulele-song-audio"]
+    .map(function (id) { return document.getElementById(id); })
+    .filter(Boolean);
+  function updateNowPlaying() {
+    var playing = songAudios.some(function (a) { return a && !a.paused && !a.ended; });
+    if (playing && monitorShowingSite()) monitor.classList.add("show-nowplaying");
+    else monitor.classList.remove("show-nowplaying");
+  }
+  songAudios.forEach(function (a) {
+    a.addEventListener("play", updateNowPlaying);
+    a.addEventListener("pause", updateNowPlaying);
+    a.addEventListener("ended", updateNowPlaying);
+  });
   // The office logos "browse" to their site on the (already-on) monitor.
   function monitorShowingSite() {
     return monitor.classList.contains("screen-on") &&
@@ -4865,6 +4895,7 @@ document.addEventListener("click", function (e) {
     monitorUrl = url;
     if (siteKey === "caps") scheduleSaver();
     playLaptopClickSound();
+    updateNowPlaying();
     return true;
   };
   function swap(toMonitor) {

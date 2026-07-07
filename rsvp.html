@@ -700,9 +700,17 @@ footer{margin-top:2.6rem}
 #cuddly-puffer-wrap.flying-off{animation:fishu-fly-out 1.4s ease-in forwards}
 @keyframes fishu-fly-out{
   0%{translate:0px 0px; rotate:0deg; opacity:1}
-  100%{translate:220px -260px; rotate:200deg; opacity:0}
+  35%{translate:60px -34px; rotate:-12deg; opacity:1}
+  100%{translate:340px -70px; rotate:22deg; opacity:0}
 }
 @media (prefers-reduced-motion: reduce){#cuddly-puffer-wrap.flying-off{animation:none}}
+/* Fishu, having fled the cuddly nook rightward, turns up peeking in the
+   next room over (the office). Revealed via transition, not a keyframe, so
+   the animation-cleanup check leaves it alone; she swims in from the left
+   (the direction she fled from). */
+#office-fishu{opacity:0; pointer-events:none; translate:-80px 0; transition:opacity .6s ease, translate 1s ease}
+#office-fishu.here{opacity:1; translate:0px 0px; pointer-events:auto; cursor:pointer}
+@media (prefers-reduced-motion: reduce){#office-fishu{transition:none}}
 #cuddly-octopus.ouch{animation:octopus-ouch .5s ease-in-out}
 @keyframes octopus-ouch{
   0%,100%{transform:rotate(0deg) scale(1)}
@@ -2634,6 +2642,28 @@ section{margin:1.9rem 0}
 <rect x="0" y="0" width="680" height="340" fill="#ffffff"/>
 <rect x="420" y="50" width="220" height="220" fill="#000000"/>
 </mask>
+<g id="office-fishu" transform="translate(150,120)" aria-hidden="true">
+<g class="puffer-body">
+<circle cx="0" cy="0" r="30" fill="transparent"/>
+<ellipse class="puffer-fill" cx="0" cy="0" rx="18" ry="14" fill="#9fb8c9" stroke="#7a94a3" stroke-width="1.5"/>
+<line x1="-14" y1="-8" x2="-19" y2="-12" stroke="#7a94a3" stroke-width="1.2"/>
+<line x1="-16" y1="0" x2="-22" y2="0" stroke="#7a94a3" stroke-width="1.2"/>
+<line x1="-14" y1="8" x2="-19" y2="12" stroke="#7a94a3" stroke-width="1.2"/>
+<line x1="0" y1="-13" x2="0" y2="-19" stroke="#7a94a3" stroke-width="1.2"/>
+<line x1="14" y1="-8" x2="19" y2="-12" stroke="#7a94a3" stroke-width="1.2"/>
+<line x1="16" y1="0" x2="22" y2="0" stroke="#7a94a3" stroke-width="1.2"/>
+<line x1="14" y1="8" x2="19" y2="12" stroke="#7a94a3" stroke-width="1.2"/>
+<line x1="0" y1="13" x2="0" y2="19" stroke="#7a94a3" stroke-width="1.2"/>
+<circle class="puffer-eye" cx="8" cy="-4" r="2.2" fill="#2a2a2a"/>
+<path d="M-18 2 Q-24 -3 -22 6 Q-24 10 -18 6 Z" fill="#7a94a3"/>
+<g stroke="#b0424f" stroke-width="1.1" stroke-linecap="round" aria-hidden="true">
+<line x1="-8" y1="3" x2="-1" y2="10"/>
+<line x1="-8" y1="5.5" x2="-6" y2="3.5"/>
+<line x1="-6" y1="7.5" x2="-4" y2="5.5"/>
+<line x1="-4" y1="9.5" x2="-2" y2="7.5"/>
+</g>
+</g>
+</g>
 <rect id="office-dim-overlay" x="0" y="0" width="680" height="340" fill="#1a1510" opacity="0" mask="url(#office-spotlight-mask)"/>
 <rect id="office-lamp-dim" x="0" y="0" width="680" height="340" fill="#1a1510" opacity="0" pointer-events="none"/>
 <rect x="0" y="0" width="680" height="340" fill="#3a5a7a" opacity="0.08" pointer-events="none"/>
@@ -4082,15 +4112,26 @@ document.addEventListener("click", function (e) {
     pt.y = e.clientY;
     return pt.matrixTransform(svg.getScreenCTM().inverse());
   }
+  var fishuFled = false;
   function triggerFishuFlyOut() {
     var puffer = document.getElementById("cuddly-puffer-wrap");
     if (!puffer || puffer.classList.contains("flying-off")) return;
     puffer.classList.add("flying-off");
+    fishuFled = true;
     playSwishSound();
   }
+  // Fishu fled rightward toward the office; reveal her peeking there the next
+  // time that room comes into view.
+  window.revealOfficeFishuIfFled = function () {
+    var f = document.getElementById("office-fishu");
+    if (f && fishuFled) f.classList.add("here");
+  };
   window.resetFishu = function () {
     var puffer = document.getElementById("cuddly-puffer-wrap");
     if (puffer) puffer.classList.remove("flying-off");
+    fishuFled = false;
+    var f = document.getElementById("office-fishu");
+    if (f) f.classList.remove("here");
   };
   function triggerOctiOuch() {
     var octopus = document.getElementById("cuddly-octopus");
@@ -5212,6 +5253,18 @@ document.addEventListener("click", function (e) {
   });
   if (puffer) puffer.addEventListener("dblclick", function () {
     clearTimeout(pufferClickTimer);
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    sayFishu("fish fishu");
+  });
+  // The fled Fishu peeking in the office talks too, same as home.
+  var officeFishu = document.getElementById("office-fishu");
+  var officeFishuTimer = null;
+  if (officeFishu) officeFishu.addEventListener("click", function () {
+    clearTimeout(officeFishuTimer);
+    officeFishuTimer = setTimeout(function () { sayFishu(); }, 260);
+  });
+  if (officeFishu) officeFishu.addEventListener("dblclick", function () {
+    clearTimeout(officeFishuTimer);
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     sayFishu("fish fishu");
   });
@@ -7721,6 +7774,7 @@ function spawnDustMote(container) {
     updateNav();
     if (name === "cuddly" && window.updateCuddlyGrooving) window.updateCuddlyGrooving();
     if (name === "cuddly" && window.resetFishu) window.resetFishu();
+    if (name === "office" && window.revealOfficeFishuIfFled) window.revealOfficeFishuIfFled();
     if (name === "balcony") triggerBalconyFinale();
   }
   window.goToStage = goToStage;

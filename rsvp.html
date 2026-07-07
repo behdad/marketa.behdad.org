@@ -6701,27 +6701,59 @@ function playSatisfiedExhaleSound() {
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
-    var bufferSize = ctx.sampleRate * 0.4;
+    var dur = 1.0;
+
+    // A contented post-espresso "aahh": starts part-voiced — a soft sigh
+    // tone through "ah" formants, falling gently in pitch — and dissolves
+    // into pure breath by the end.
+    var voice = ctx.createOscillator();
+    voice.type = "sawtooth";
+    voice.frequency.setValueAtTime(165, t);
+    voice.frequency.exponentialRampToValueAtTime(115, t + 0.75);
+    var vMaster = ctx.createGain();
+    vMaster.gain.setValueAtTime(0.0001, t);
+    vMaster.gain.exponentialRampToValueAtTime(1, t + 0.12);
+    vMaster.gain.setValueAtTime(1, t + 0.35);
+    vMaster.gain.exponentialRampToValueAtTime(0.0001, t + 0.8); // voice dies before the breath does
+    vMaster.connect(ctx.destination);
+    [{ f: 700, q: 5, level: 0.07 }, { f: 1150, q: 6, level: 0.035 }].forEach(function (p) {
+      var bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = p.f;
+      bp.Q.value = p.q;
+      var g = ctx.createGain();
+      g.gain.value = p.level;
+      voice.connect(bp);
+      bp.connect(g);
+      g.connect(vMaster);
+    });
+    voice.start(t);
+    voice.stop(t + 0.85);
+
+    // Breath: slow swell, long taper, mouth resonance drifting down as the
+    // lips relax.
+    var bufferSize = Math.floor(ctx.sampleRate * dur);
     var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     var data = buffer.getChannelData(0);
-    for (var i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 1.2);
+    for (var i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
     var noise = ctx.createBufferSource();
     noise.buffer = buffer;
     var filter = ctx.createBiquadFilter();
     filter.type = "bandpass";
-    filter.frequency.setValueAtTime(700, t);
-    filter.frequency.exponentialRampToValueAtTime(350, t + 0.4);
-    filter.Q.value = 0.7;
+    filter.frequency.setValueAtTime(750, t);
+    filter.frequency.exponentialRampToValueAtTime(320, t + dur);
+    filter.Q.value = 0.8;
     var gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.14, t + 0.08);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+    gain.gain.exponentialRampToValueAtTime(0.1, t + 0.18);
+    gain.gain.setValueAtTime(0.1, t + 0.4);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     noise.connect(filter);
     filter.connect(gain);
     gain.connect(ctx.destination);
     noise.start(t);
-    noise.stop(t + 0.41);
-    setTimeout(function () { ctx.close(); }, 550);
+    noise.stop(t + dur + 0.02);
+    setTimeout(function () { ctx.close(); }, 1200);
   } catch (e) {}
 }
 function playRoosterCrowSound(intensity) {

@@ -7600,6 +7600,8 @@ function playRoosterCrowSound(intensity) {
     var master = ctx.createGain();
     master.gain.value = 0.9;
     master.connect(ctx.destination);
+    // random pitch per crow so repeated calls aren't identical
+    var pitch = intensity * (0.95 + Math.random() * 0.1);
 
     // A crow is a sequence of throaty syllables with glottal gaps between
     // them ("cock-a-doodle-DOO"), not one continuous glide. Each syllable is
@@ -7610,8 +7612,8 @@ function playRoosterCrowSound(intensity) {
     function syllable(startT, dur, f0, f1, peak, rasp) {
       var osc = ctx.createOscillator();
       osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(f0 * intensity, t + startT);
-      osc.frequency.linearRampToValueAtTime(f1 * intensity, t + startT + dur);
+      osc.frequency.setValueAtTime(f0 * pitch, t + startT);
+      osc.frequency.linearRampToValueAtTime(f1 * pitch, t + startT + dur);
       var bp = ctx.createBiquadFilter();
       bp.type = "bandpass";
       bp.Q.value = 3.5;
@@ -7629,7 +7631,7 @@ function playRoosterCrowSound(intensity) {
       if (rasp) {
         var trem = ctx.createOscillator();
         trem.type = "sine";
-        trem.frequency.value = 33;
+        trem.frequency.value = 30 + Math.random() * 7;
         var tremG = ctx.createGain();
         tremG.gain.value = peak * 0.4;
         trem.connect(tremG);
@@ -8114,15 +8116,18 @@ function playCatMeowSound() {
     // Glottal source: a harmonically rich sawtooth tracing the "mee-OW" arc
     // (rise to a peak, then fall) with a gentle vibrato warble on top — a
     // steady glide alone just reads as a siren.
+    // random pitch per call so repeated meows aren't identical (formants stay
+    // put, so the vowel/character is unchanged — only the cat's pitch shifts)
+    var vary = 0.93 + Math.random() * 0.14;
     var osc = ctx.createOscillator();
     osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(360, t);
-    osc.frequency.exponentialRampToValueAtTime(680, t + 0.14);
-    osc.frequency.setValueAtTime(680, t + 0.24);
-    osc.frequency.exponentialRampToValueAtTime(300, t + dur);
+    osc.frequency.setValueAtTime(360 * vary, t);
+    osc.frequency.exponentialRampToValueAtTime(680 * vary, t + 0.14);
+    osc.frequency.setValueAtTime(680 * vary, t + 0.24);
+    osc.frequency.exponentialRampToValueAtTime(300 * vary, t + dur);
     var vibrato = ctx.createOscillator();
     vibrato.type = "sine";
-    vibrato.frequency.value = 6;
+    vibrato.frequency.value = 5.4 + Math.random() * 1.4;
     var vibratoGain = ctx.createGain();
     vibratoGain.gain.value = 18;
     vibrato.connect(vibratoGain);
@@ -8181,9 +8186,11 @@ function playGhostBooSound() {
     master.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     master.connect(ctx.destination);
 
+    // random pitch + waver rate per wail so repeated boos aren't identical
+    var vary = 0.9 + Math.random() * 0.2;
     var vib = ctx.createOscillator();
     vib.type = "sine";
-    vib.frequency.value = 5.5;
+    vib.frequency.value = 4.8 + Math.random() * 1.6;
     var vibDepth = ctx.createGain();
     vibDepth.gain.value = 12;
     vib.connect(vibDepth);
@@ -8208,9 +8215,9 @@ function playGhostBooSound() {
       var osc = ctx.createOscillator();
       osc.type = "sawtooth";
       osc.detune.value = cents;
-      osc.frequency.setValueAtTime(250, t);
-      osc.frequency.linearRampToValueAtTime(360, t + 0.25);
-      osc.frequency.linearRampToValueAtTime(190, t + dur);
+      osc.frequency.setValueAtTime(250 * vary, t);
+      osc.frequency.linearRampToValueAtTime(360 * vary, t + 0.25);
+      osc.frequency.linearRampToValueAtTime(190 * vary, t + dur);
       vibDepth.connect(osc.frequency);
       osc.connect(f1);
       osc.connect(f2);

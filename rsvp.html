@@ -6377,20 +6377,64 @@ function playGongSound() {
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
-    [98, 147, 233, 294].forEach(function (freq, i) {
+    var master = ctx.createGain();
+    master.gain.value = 0.55;
+    master.connect(ctx.destination);
+
+    // A struck gong is inharmonic, and its bright high modes die faster than
+    // the low hum — that uneven decay is what makes the tone darken and bloom
+    // as it rings, instead of sitting there as a static chord. Detuned twins
+    // on a few modes (dt in cents) give the shimmering metallic beat.
+    var base = 110;
+    var partials = [
+      { m: 1.00, g: 0.16, d: 5.5, dt: 0,   atk: 0.004 },
+      { m: 1.00, g: 0.10, d: 5.2, dt: 16,  atk: 0.004 }, // beating twin of the hum
+      { m: 1.52, g: 0.13, d: 4.2, dt: 0,   atk: 0.02 },
+      { m: 2.14, g: 0.11, d: 3.3, dt: -12, atk: 0.03 },
+      { m: 2.97, g: 0.09, d: 2.4, dt: 0,   atk: 0.05 },
+      { m: 3.85, g: 0.07, d: 1.7, dt: 14,  atk: 0.07 },
+      { m: 5.07, g: 0.05, d: 1.1, dt: 0,   atk: 0.09 },
+      { m: 6.61, g: 0.04, d: 0.8, dt: 0,   atk: 0.11 }
+    ];
+    partials.forEach(function (p) {
       var osc = ctx.createOscillator();
       osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, t);
-      var gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(0.4 - i * 0.03, t + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 4.5);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+      osc.frequency.value = base * p.m;
+      osc.detune.value = p.dt;
+      var g = ctx.createGain();
+      // Higher partials bloom in slightly (energy transfers upward after the
+      // strike) rather than all starting at full.
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(p.g, t + p.atk);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + p.d);
+      osc.connect(g);
+      g.connect(master);
       osc.start(t);
-      osc.stop(t + 4.6);
+      osc.stop(t + p.d + 0.05);
     });
-    setTimeout(function () { ctx.close(); }, 4700);
+
+    // Bright metallic strike transient — a short noise clang at the onset.
+    var nSize = Math.max(1, Math.floor(ctx.sampleRate * 0.2));
+    var nBuf = ctx.createBuffer(1, nSize, ctx.sampleRate);
+    var nData = nBuf.getChannelData(0);
+    for (var i = 0; i < nSize; i++) nData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / nSize, 1.5);
+    var noise = ctx.createBufferSource();
+    noise.buffer = nBuf;
+    var nbp = ctx.createBiquadFilter();
+    nbp.type = "bandpass";
+    nbp.frequency.value = 2600;
+    nbp.Q.value = 0.8;
+    var nG = ctx.createGain();
+    nG.gain.setValueAtTime(0.0001, t);
+    nG.gain.exponentialRampToValueAtTime(0.13, t + 0.004);
+    nG.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    noise.connect(nbp);
+    nbp.connect(nG);
+    nG.connect(master);
+    noise.start(t);
+    noise.stop(t + 0.2);
+
+    setTimeout(function () { ctx.close(); }, 5800);
   } catch (e) {}
 }
 function playGongEchoSound(fade) {

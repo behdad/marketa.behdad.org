@@ -30,6 +30,11 @@ go inside `index.html` unless there's a strong reason not to.
   one language and not the other). Add more checks to it over time as new bug classes
   turn up — it's meant to grow, not stay frozen at today's coverage. `tests/` is blocked
   from public access via `.htaccess`, same treatment as `CLAUDE.md`.
+- **Run `node tests/play.js` after changes touching rsvp.html game logic/interactions.**
+  Headless end-to-end playthrough (~2s): solves the whole game kitchen→balcony, then
+  click-storms every `.hunt-hit` (click + dblclick + Enter), failing on any uncaught JS
+  error, a broken solve chain, or missing solve-path elements. It patches rAF to
+  setTimeout and stubs window.open — see its header before changing test plumbing.
 - **The check script doesn't replace manual verification** for anything visual or
   interactive: rendering with headless
   `google-chrome --headless --disable-gpu --window-size=W,H --screenshot=out.png` and

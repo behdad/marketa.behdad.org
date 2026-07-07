@@ -5744,39 +5744,73 @@ function playGrindSound() {
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
-    var osc = ctx.createOscillator();
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(180, t);
-    osc.frequency.linearRampToValueAtTime(220, t + 1.1);
-    var gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.1, t + 0.08);
-    gain.gain.setValueAtTime(0.1, t + 1.0);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.2);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(t);
-    osc.stop(t + 1.25);
-    var bufferSize = ctx.sampleRate * 1.2;
-    var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    var data = buffer.getChannelData(0);
-    for (var i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-    var noise = ctx.createBufferSource();
-    noise.buffer = buffer;
-    var filter = ctx.createBiquadFilter();
-    filter.type = "bandpass";
-    filter.frequency.value = 2500;
-    filter.Q.value = 1.2;
-    var noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.0001, t);
-    noiseGain.gain.exponentialRampToValueAtTime(0.07, t + 0.08);
-    noiseGain.gain.setValueAtTime(0.07, t + 1.0);
-    noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 1.2);
-    noise.connect(filter);
-    filter.connect(noiseGain);
-    noiseGain.connect(ctx.destination);
-    noise.start(t);
-    noise.stop(t + 1.25);
+    var master = ctx.createGain();
+    master.gain.value = 0.9;
+    master.connect(ctx.destination);
+
+    // Motor: two detuned saws that bog down as the beans feed in, then free
+    // up at the end — the pitch dip under load is what says "grinder".
+    [0, 9].forEach(function (dt) {
+      var osc = ctx.createOscillator();
+      osc.type = "sawtooth";
+      osc.detune.value = dt;
+      osc.frequency.setValueAtTime(150, t);
+      osc.frequency.linearRampToValueAtTime(126, t + 0.35);
+      osc.frequency.setValueAtTime(126, t + 0.85);
+      osc.frequency.linearRampToValueAtTime(168, t + 1.15);
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(dt ? 0.035 : 0.07, t + 0.06);
+      g.gain.setValueAtTime(dt ? 0.035 : 0.07, t + 1.05);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 1.2);
+      osc.connect(g);
+      g.connect(master);
+      osc.start(t);
+      osc.stop(t + 1.25);
+    });
+
+    // Mechanical rumble bed (low, not bright).
+    var bedBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 1.2), ctx.sampleRate);
+    var bedData = bedBuf.getChannelData(0);
+    for (var i = 0; i < bedData.length; i++) bedData[i] = Math.random() * 2 - 1;
+    var bed = ctx.createBufferSource();
+    bed.buffer = bedBuf;
+    var bedLp = ctx.createBiquadFilter();
+    bedLp.type = "lowpass";
+    bedLp.frequency.value = 750;
+    var bedG = ctx.createGain();
+    bedG.gain.setValueAtTime(0.0001, t);
+    bedG.gain.exponentialRampToValueAtTime(0.06, t + 0.08);
+    bedG.gain.setValueAtTime(0.06, t + 1.0);
+    bedG.gain.exponentialRampToValueAtTime(0.0001, t + 1.2);
+    bed.connect(bedLp);
+    bedLp.connect(bedG);
+    bedG.connect(master);
+    bed.start(t);
+    bed.stop(t + 1.25);
+
+    // Beans: irregular crackle ticks, densest mid-grind, thinning at the end.
+    var tickBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.03), ctx.sampleRate);
+    var tickData = tickBuf.getChannelData(0);
+    for (var j = 0; j < tickData.length; j++) tickData[j] = (Math.random() * 2 - 1) * (1 - j / tickData.length);
+    for (var k = 0; k < 22; k++) {
+      var frac = k / 22;
+      var at = t + 0.06 + frac * 1.0 + Math.random() * 0.05;
+      var tick = ctx.createBufferSource();
+      tick.buffer = tickBuf;
+      tick.playbackRate.value = 0.7 + Math.random() * 0.9;
+      var tg = ctx.createGain();
+      tg.gain.value = (0.05 + Math.random() * 0.06) * (frac < 0.75 ? 1 : 0.45);
+      var tbp = ctx.createBiquadFilter();
+      tbp.type = "bandpass";
+      tbp.frequency.value = 1800 + Math.random() * 2200;
+      tbp.Q.value = 0.9;
+      tick.connect(tbp);
+      tbp.connect(tg);
+      tg.connect(master);
+      tick.start(at);
+      tick.stop(at + 0.04);
+    }
     setTimeout(function () { ctx.close(); }, 1400);
   } catch (e) {}
 }
@@ -5786,26 +5820,64 @@ function playBrewSound() {
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
-    var bufferSize = ctx.sampleRate * 2.5;
+    var master = ctx.createGain();
+    master.gain.value = 0.9;
+    master.connect(ctx.destination);
+
+    // Pump: a low hum with a ~10 Hz throb — the espresso machine heartbeat.
+    var pump = ctx.createOscillator();
+    pump.type = "sawtooth";
+    pump.frequency.value = 55;
+    var pumpG = ctx.createGain();
+    pumpG.gain.setValueAtTime(0.0001, t);
+    pumpG.gain.exponentialRampToValueAtTime(0.09, t + 0.12);
+    pumpG.gain.setValueAtTime(0.09, t + 2.0);
+    pumpG.gain.exponentialRampToValueAtTime(0.0001, t + 2.35);
+    var throb = ctx.createOscillator();
+    throb.type = "sine";
+    throb.frequency.value = 10;
+    var throbDepth = ctx.createGain();
+    throbDepth.gain.value = 0.03;
+    throb.connect(throbDepth);
+    throbDepth.connect(pumpG.gain);
+    var pumpLp = ctx.createBiquadFilter();
+    pumpLp.type = "lowpass";
+    pumpLp.frequency.value = 300;
+    pump.connect(pumpLp);
+    pumpLp.connect(pumpG);
+    pumpG.connect(master);
+    pump.start(t);
+    pump.stop(t + 2.4);
+    throb.start(t);
+    throb.stop(t + 2.4);
+
+    // Flow: modest hiss settling downward as the shot pulls.
+    var bufferSize = Math.floor(ctx.sampleRate * 2.4);
     var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     var data = buffer.getChannelData(0);
     for (var i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
     var noise = ctx.createBufferSource();
     noise.buffer = buffer;
     var filter = ctx.createBiquadFilter();
-    filter.type = "highpass";
-    filter.frequency.setValueAtTime(1800, t);
-    filter.frequency.linearRampToValueAtTime(900, t + 2.3);
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(1600, t);
+    filter.frequency.linearRampToValueAtTime(950, t + 2.3);
+    filter.Q.value = 0.8;
     var gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.16, t + 0.15);
-    gain.gain.setValueAtTime(0.16, t + 2.0);
+    gain.gain.exponentialRampToValueAtTime(0.08, t + 0.25);
+    gain.gain.setValueAtTime(0.08, t + 2.0);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + 2.4);
     noise.connect(filter);
     filter.connect(gain);
     gain.connect(ctx.destination);
     noise.start(t);
-    noise.stop(t + 2.5);
+    noise.stop(t + 2.45);
+
+    // First drips into the cup as the shot starts, then a couple late ones.
+    [0.5, 0.75, 1.05, 1.9, 2.1].forEach(function (at) {
+      waterBubble(ctx, master, t + at + Math.random() * 0.08, 500 + Math.random() * 500, 0.025 + Math.random() * 0.02, 0.035);
+    });
     setTimeout(function () { ctx.close(); }, 2700);
   } catch (e) {}
 }
@@ -9008,6 +9080,7 @@ function spawnDustMote(container) {
             if (other && !other.paused) other.pause();
           });
           if (audio.ended) audio.currentTime = 0;
+          audio.volume = 0.45; // keep songs under the game's own sounds
           var p = audio.play();
           if (p && p.catch) p.catch(function () { playPluckSound(); });
           played = true;

@@ -503,7 +503,7 @@ footer{margin-top:2.6rem}
 #office-monitor{opacity:0; pointer-events:none}
 #office-monitor.here{opacity:1; pointer-events:auto}
 #office-typewriter.away{opacity:0; pointer-events:none}
-#office-typewriter, #office-monitor{transition:translate .6s ease, opacity .5s ease}
+#office-typewriter, #office-monitor{transition:translate .6s ease, opacity 1.1s ease}
 #office-monitor-bg{transition:fill .4s ease}
 #office-monitor.screen-on #office-monitor-bg{fill:#1e2a3a}
 #office-monitor.show-chrome #office-monitor-bg{fill:#ffffff}
@@ -4480,18 +4480,18 @@ document.addEventListener("click", function (e) {
     bootTimers.push(setTimeout(function () {
       monitor.classList.remove("show-fedora");
       monitor.classList.add("show-chrome");
-    }, 1600));
+    }, 2600));
     bootTimers.push(setTimeout(function () {
       monitor.classList.remove("show-chrome");
       monitor.classList.add("show-caps");
-    }, 3200));
+    }, 5200));
   }
   function swap(toMonitor) {
     monitor.classList.toggle("here", toMonitor);
     typewriter.classList.toggle("away", toMonitor);
     var bubble = document.querySelector(".egg-bubble");
     if (bubble && bubble._anchor === typewriter) dismissEggBubble(bubble);
-    playGeniePoofSound();
+    playGeniePoofSound(!toMonitor);
     updateScreen();
   }
   typewriter.addEventListener("dblclick", function () { swap(true); });
@@ -7248,7 +7248,7 @@ function playBowlRingSound() {
     setTimeout(function () { ctx.close(); }, 7800);
   } catch (e) {}
 }
-function playGeniePoofSound() {
+function playGeniePoofSound(reverse) {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
@@ -7262,18 +7262,20 @@ function playGeniePoofSound() {
     noise.buffer = buffer;
     var filter = ctx.createBiquadFilter();
     filter.type = "bandpass";
-    filter.frequency.setValueAtTime(1800, t);
-    filter.frequency.exponentialRampToValueAtTime(400, t + 0.3);
+    filter.frequency.setValueAtTime(reverse ? 400 : 1800, t);
+    filter.frequency.exponentialRampToValueAtTime(reverse ? 1800 : 400, t + 0.3);
     var noiseGain = ctx.createGain();
     noiseGain.gain.setValueAtTime(0.0001, t);
     noiseGain.gain.exponentialRampToValueAtTime(0.14, t + 0.02);
     noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
     noise.connect(filter);
-    filter.connect(noiseGain);
     noiseGain.connect(ctx.destination);
+    filter.connect(noiseGain);
     noise.start(t);
     noise.stop(t + 0.31);
-    [523, 659, 784, 1046, 1318].forEach(function (freq, i) {
+    var poofNotes = [523, 659, 784, 1046, 1318];
+    if (reverse) poofNotes = poofNotes.slice().reverse();
+    poofNotes.forEach(function (freq, i) {
       var t0 = t + 0.08 + i * 0.09;
       var osc = ctx.createOscillator();
       osc.type = "triangle";

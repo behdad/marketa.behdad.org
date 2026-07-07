@@ -499,6 +499,17 @@ footer{margin-top:2.6rem}
 }
 #office-desk, #office-chair, #garden-bottles, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife{touch-action:none}
 #office-desk-top, #office-typewriter, #office-laptop, #office-pc-desk-trio{transition:translate .6s ease}
+/* the typewriter's secret alter ego: an ultrawide monitor (double-click swaps) */
+#office-monitor{opacity:0; pointer-events:none}
+#office-monitor.here{opacity:1; pointer-events:auto}
+#office-typewriter.away{opacity:0; pointer-events:none}
+#office-typewriter, #office-monitor{transition:translate .6s ease, opacity .5s ease}
+#office-monitor-bg{transition:fill .4s ease}
+#office-monitor.screen-on #office-monitor-bg{fill:#1e2a3a}
+#office-monitor .boot-logo{opacity:0; transition:opacity .4s ease}
+#office-monitor.show-fedora #monitor-logo-fedora{opacity:1}
+#office-monitor.show-chrome #monitor-logo-chrome{opacity:1}
+#office-monitor.show-caps #monitor-logo-caps{opacity:1}
 .desk-leg-pole{transform-box:fill-box; transform-origin:bottom; transition:transform .6s ease}
 .desk-led{transition:fill .15s ease}
 #office-desk-controls.moving .desk-led{animation:desk-led-blink .3s steps(2,jump-none) infinite}
@@ -507,7 +518,7 @@ footer{margin-top:2.6rem}
   50%{fill:#f0a030}
 }
 @media (prefers-reduced-motion: reduce){
-  #office-desk-top, #office-typewriter, #office-laptop, #office-pc-desk-trio, .desk-leg-pole{transition:none}
+  #office-desk-top, #office-typewriter, #office-laptop, #office-pc-desk-trio, #office-monitor, .desk-leg-pole{transition:none}
   #office-desk-controls.moving .desk-led{animation:none}
 }
 #garden-rooster-inner{transform-box:fill-box; transform-origin:bottom center}
@@ -2572,7 +2583,33 @@ section{margin:1.9rem 0}
 <circle cx="288" cy="201" r="2.4" fill="#d8d4c8"/><circle cx="297" cy="201" r="2.4" fill="#d8d4c8"/><circle cx="306" cy="201" r="2.4" fill="#d8d4c8"/><circle cx="315" cy="201" r="2.4" fill="#d8d4c8"/><circle cx="324" cy="201" r="2.4" fill="#d8d4c8"/><circle cx="333" cy="201" r="2.4" fill="#d8d4c8"/><circle cx="342" cy="201" r="2.4" fill="#d8d4c8"/>
 <rect x="298" y="204" width="40" height="4" rx="2" fill="#d8d4c8"/>
 </g>
-<g id="office-laptop" class="hunt-hit" tabindex="0" role="button" aria-label="The laptop" transform="translate(-207,0)">
+<g id="office-monitor" class="hunt-hit" tabindex="0" role="button" aria-label="The ultrawide monitor">
+<clipPath id="office-monitor-clip"><rect x="254" y="154" width="124" height="42" rx="1.5"/></clipPath>
+<rect x="312" y="146.5" width="8" height="5" rx="1.5" fill="#2d2d2d"/>
+<circle cx="316" cy="148.8" r="0.9" fill="#4a4a4a"/>
+<rect x="312" y="200" width="8" height="5" fill="#3a3a3a"/>
+<rect x="294" y="204.5" width="44" height="3.5" rx="1.5" fill="#6b6b6b" stroke="#4a4a4a" stroke-width="1"/>
+<rect x="250" y="150" width="132" height="50" rx="3" fill="#1f1f1f" stroke="#0f0f0f" stroke-width="1.5"/>
+<rect id="office-monitor-bg" x="254" y="154" width="124" height="42" rx="1.5" fill="#14161a"/>
+<g clip-path="url(#office-monitor-clip)">
+<g id="monitor-logo-fedora" class="boot-logo">
+<path d="M309 162 H323 Q329 162 329 168 V182 Q329 188 323 188 H303 V168 Q303 162 309 162 Z" fill="#3c6eb4" stroke="#294172" stroke-width="1"/>
+<path d="M313.5 183 L313.5 173 Q313.5 167.5 319 167.5 L321.5 167.5" fill="none" stroke="#fdfbf6" stroke-width="2.6" stroke-linecap="round"/>
+<path d="M309.5 173.5 H318" fill="none" stroke="#fdfbf6" stroke-width="2.6" stroke-linecap="round"/>
+</g>
+<g id="monitor-logo-chrome" class="boot-logo">
+<path d="M316 175 L304.74 168.5 A13 13 0 0 1 327.26 168.5 Z" fill="#ea4335"/>
+<path d="M316 175 L304.74 168.5 A13 13 0 0 0 316 188 Z" fill="#34a853"/>
+<path d="M316 175 L316 188 A13 13 0 0 0 327.26 168.5 Z" fill="#fbbc05"/>
+<circle cx="316" cy="175" r="6" fill="#fdfbf6"/>
+<circle cx="316" cy="175" r="4.5" fill="#4285f4"/>
+</g>
+<g id="monitor-logo-caps" class="boot-logo">
+<g transform="translate(273.5,149.5) scale(0.5)"><use href="#cap-pink"/><use href="#cap-blue"/></g>
+</g>
+</g>
+</g>
+<g id="office-laptop" class="hunt-hit" tabindex="0" role="button" aria-label="The laptop" transform="translate(-211,0)">
 <g id="office-laptop-screen">
 <rect x="384" y="160" width="66" height="42" rx="2" fill="#2a2a2a" stroke="#1a1a1a" stroke-width="1.5"/>
 <rect x="388" y="164" width="58" height="34" rx="1" fill="#dcd8ce"/>
@@ -4420,6 +4457,55 @@ document.addEventListener("click", function (e) {
   });
 })();
 (function () {
+  var typewriter = document.getElementById("office-typewriter");
+  var monitor = document.getElementById("office-monitor");
+  var pcTower = document.getElementById("office-pc-desk-trio");
+  if (!typewriter || !monitor) return;
+  var bootTimers = [];
+  function clearBoot() {
+    bootTimers.forEach(clearTimeout);
+    bootTimers = [];
+    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps");
+  }
+  // The monitor only lights up when the PC is on; it then boots Fedora →
+  // Chrome → the caps, which stay up.
+  function updateScreen() {
+    clearBoot();
+    if (!monitor.classList.contains("here") || !pcTower || !pcTower.classList.contains("on")) return;
+    monitor.classList.add("screen-on", "show-fedora");
+    bootTimers.push(setTimeout(function () {
+      monitor.classList.remove("show-fedora");
+      monitor.classList.add("show-chrome");
+    }, 1600));
+    bootTimers.push(setTimeout(function () {
+      monitor.classList.remove("show-chrome");
+      monitor.classList.add("show-caps");
+    }, 3200));
+  }
+  function swap(toMonitor) {
+    monitor.classList.toggle("here", toMonitor);
+    typewriter.classList.toggle("away", toMonitor);
+    var bubble = document.querySelector(".egg-bubble");
+    if (bubble && bubble._anchor === typewriter) dismissEggBubble(bubble);
+    playGeniePoofSound();
+    updateScreen();
+  }
+  typewriter.addEventListener("dblclick", function () { swap(true); });
+  monitor.addEventListener("dblclick", function () { swap(false); });
+  monitor.addEventListener("click", function () { playLaptopClickSound(); });
+  if (pcTower) {
+    pcTower.addEventListener("click", updateScreen);
+    pcTower.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") updateScreen();
+    });
+  }
+  window.resetOfficeMonitor = function () {
+    clearBoot();
+    monitor.classList.remove("here");
+    typewriter.classList.remove("away");
+  };
+})();
+(function () {
   var marketa = document.getElementById("cuddly-marketa");
   if (!marketa) return;
   var strip = document.getElementById("loft-game-strip");
@@ -4788,7 +4874,7 @@ document.addEventListener("click", function (e) {
   var desk = document.getElementById("office-desk");
   if (!desk) return;
   var controls = document.getElementById("office-desk-controls");
-  var risingIds = ["office-desk-top", "office-typewriter", "office-laptop", "office-pc-desk-trio"];
+  var risingIds = ["office-desk-top", "office-typewriter", "office-laptop", "office-pc-desk-trio", "office-monitor"];
   var MAX_LIFT = 40;
   var standing = false;
   var lift = 0;
@@ -8769,6 +8855,7 @@ function spawnDustMote(container) {
     var pcTowerReset = document.getElementById("office-pc-desk-trio");
     if (pcTowerReset) pcTowerReset.classList.remove("on");
     if (window.stopPcFan) window.stopPcFan();
+    if (window.resetOfficeMonitor) window.resetOfficeMonitor();
     if (window.resetChairPosition) window.resetChairPosition();
     if (window.resetBlanketPositions) window.resetBlanketPositions();
     gardenState.water = false;

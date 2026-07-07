@@ -7695,27 +7695,83 @@ function playSodaHissSound() {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     var ctx = new Ctx();
-    var t = ctx.currentTime;
-    var bufferSize = ctx.sampleRate * 0.9;
-    var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    var data = buffer.getChannelData(0);
-    for (var i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 1.2);
-    var noise = ctx.createBufferSource();
-    noise.buffer = buffer;
-    var filter = ctx.createBiquadFilter();
-    filter.type = "highpass";
-    filter.frequency.setValueAtTime(2600, t);
-    var gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.22, t + 0.05);
-    gain.gain.exponentialRampToValueAtTime(0.18, t + 0.5);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-    noise.start(t);
-    noise.stop(t + 0.9);
-    setTimeout(function () { ctx.close(); }, 1000);
+    var t0 = ctx.currentTime;
+    var master = ctx.createGain();
+    master.gain.value = 0.85;
+    master.connect(ctx.destination);
+
+    var buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.5), ctx.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+
+    // Carbonating a bottle is a few button-press bursts of CO2 into water,
+    // not one smooth hiss: each press is a sharp gas hiss riding over a low
+    // gurgling rumble (the water bubbling), kicked off by a dull button tick.
+    function burst(at, dur, level) {
+      var start = t0 + at;
+      // mechanical button tick
+      var ck = ctx.createBufferSource();
+      ck.buffer = buf;
+      var cl = ctx.createBiquadFilter();
+      cl.type = "lowpass";
+      cl.frequency.value = 1000;
+      var cg = ctx.createGain();
+      cg.gain.setValueAtTime(0.09, start);
+      cg.gain.exponentialRampToValueAtTime(0.0001, start + 0.025);
+      ck.connect(cl);
+      cl.connect(cg);
+      cg.connect(master);
+      ck.start(start);
+      ck.stop(start + 0.03);
+
+      // high pressurized gas hiss
+      var hs = ctx.createBufferSource();
+      hs.buffer = buf;
+      var hp = ctx.createBiquadFilter();
+      hp.type = "highpass";
+      hp.frequency.value = 2400;
+      var hg = ctx.createGain();
+      hg.gain.setValueAtTime(0.0001, start);
+      hg.gain.exponentialRampToValueAtTime(level, start + 0.02);
+      hg.gain.setValueAtTime(level * 0.9, start + dur * 0.6);
+      hg.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+      hs.connect(hp);
+      hp.connect(hg);
+      hg.connect(master);
+      hs.start(start);
+      hs.stop(start + dur + 0.02);
+
+      // low gurgle/bubbling rumble under it, its amplitude fluttering
+      var gs = ctx.createBufferSource();
+      gs.buffer = buf;
+      var bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = 380;
+      bp.Q.value = 0.8;
+      var gg = ctx.createGain();
+      gg.gain.setValueAtTime(0.0001, start);
+      gg.gain.exponentialRampToValueAtTime(level * 0.7, start + 0.03);
+      gg.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+      var wob = ctx.createOscillator();
+      wob.type = "sine";
+      wob.frequency.value = 18;
+      var wobDepth = ctx.createGain();
+      wobDepth.gain.value = level * 0.3;
+      wob.connect(wobDepth);
+      wobDepth.connect(gg.gain);
+      wob.start(start);
+      wob.stop(start + dur);
+      gs.connect(bp);
+      bp.connect(gg);
+      gg.connect(master);
+      gs.start(start);
+      gs.stop(start + dur + 0.02);
+    }
+    burst(0.00, 0.30, 0.18);
+    burst(0.34, 0.28, 0.17);
+    burst(0.64, 0.34, 0.16);
+
+    setTimeout(function () { ctx.close(); }, 1300);
   } catch (e) {}
 }
 function playSteamWandHissSound() {

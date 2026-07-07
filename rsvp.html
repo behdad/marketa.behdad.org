@@ -4833,7 +4833,7 @@ document.addEventListener("click", function (e) {
 (function () {
   var strip = document.getElementById("loft-game-strip");
   var palosanto = document.getElementById("garden-palosanto");
-  function smokePalosanto() { spawnSteamWisps(strip, 1301, 237, 1, 1, -1, 10, 0.7); }
+  function smokePalosanto() { spawnSteamWisps(strip, 1301, 237, 1, 1, -1, 10, 0.7); playIncenseLightSound(); }
   if (palosanto) {
     palosanto.addEventListener("click", smokePalosanto);
     palosanto.addEventListener("keydown", function (e) {
@@ -4841,7 +4841,7 @@ document.addEventListener("click", function (e) {
     });
   }
   var sage = document.getElementById("garden-sage");
-  function smokeSage() { spawnSteamWisps(strip, 1277, 236, 0.6, 1, -1, 10, 0.4); }
+  function smokeSage() { spawnSteamWisps(strip, 1277, 236, 0.6, 1, -1, 10, 0.4); playIncenseLightSound(); }
   if (sage) {
     sage.addEventListener("click", smokeSage);
     sage.addEventListener("keydown", function (e) {
@@ -6230,6 +6230,75 @@ function playCandleLightSound() {
     noise.start(flareStart);
     noise.stop(flareStart + 0.35);
     setTimeout(function () { ctx.close(); }, 700);
+  } catch (e) {}
+}
+function playIncenseLightSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t = ctx.currentTime;
+
+    // Lighting a smudge stick: a soft, dull catch (not a bright match strike),
+    // a few faint ember crackles, then a gentle smolder tail as the smoke
+    // starts to rise. Kept quiet — it's a small, close sound.
+    var catchDur = 0.22;
+    var cBuf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * catchDur)), ctx.sampleRate);
+    var cData = cBuf.getChannelData(0);
+    for (var i = 0; i < cData.length; i++) cData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / cData.length, 1.2);
+    var caught = ctx.createBufferSource();
+    caught.buffer = cBuf;
+    var cbp = ctx.createBiquadFilter();
+    cbp.type = "bandpass";
+    cbp.frequency.setValueAtTime(1300, t);
+    cbp.frequency.exponentialRampToValueAtTime(600, t + catchDur);
+    cbp.Q.value = 0.9;
+    var cGain = ctx.createGain();
+    cGain.gain.setValueAtTime(0.0001, t);
+    cGain.gain.exponentialRampToValueAtTime(0.08, t + 0.02);
+    cGain.gain.exponentialRampToValueAtTime(0.0001, t + catchDur);
+    caught.connect(cbp);
+    cbp.connect(cGain);
+    cGain.connect(ctx.destination);
+    caught.start(t);
+    caught.stop(t + catchDur + 0.02);
+
+    // A few faint ember crackle pops.
+    [0.05, 0.12, 0.19, 0.28].forEach(function (d, k) {
+      var pop = ctx.createOscillator();
+      pop.type = "triangle";
+      pop.frequency.value = 900 + k * 220;
+      var pg = ctx.createGain();
+      pg.gain.setValueAtTime(0.0001, t + d);
+      pg.gain.exponentialRampToValueAtTime(0.03, t + d + 0.004);
+      pg.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.03);
+      pop.connect(pg);
+      pg.connect(ctx.destination);
+      pop.start(t + d);
+      pop.stop(t + d + 0.04);
+    });
+
+    // Gentle smolder tail — quiet low noise fading as the smoke rises.
+    var sDur = 0.5;
+    var sBuf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * sDur)), ctx.sampleRate);
+    var sData = sBuf.getChannelData(0);
+    for (var j = 0; j < sData.length; j++) sData[j] = Math.random() * 2 - 1;
+    var smolder = ctx.createBufferSource();
+    smolder.buffer = sBuf;
+    var slp = ctx.createBiquadFilter();
+    slp.type = "lowpass";
+    slp.frequency.value = 700;
+    var sGain = ctx.createGain();
+    sGain.gain.setValueAtTime(0.0001, t + 0.04);
+    sGain.gain.exponentialRampToValueAtTime(0.03, t + 0.16);
+    sGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.04 + sDur);
+    smolder.connect(slp);
+    slp.connect(sGain);
+    sGain.connect(ctx.destination);
+    smolder.start(t + 0.04);
+    smolder.stop(t + 0.04 + sDur + 0.02);
+
+    setTimeout(function () { ctx.close(); }, 800);
   } catch (e) {}
 }
 function pufferColorRatio() {

@@ -205,6 +205,12 @@ footer{margin-top:2.6rem}
 #balcony-smoker.open #balcony-smoker-food{opacity:1}
 .grill-patty{fill:#cf9a94; stroke:#a86f68; stroke-width:1; transition:fill 3s ease, stroke 3s ease}
 #balcony-smoker.cooked .grill-patty{fill:#6b4630; stroke:#452c1e}
+.grill-marks{opacity:0; transition:opacity 2s ease}
+#balcony-smoker.cooked .grill-marks{opacity:0.7}
+.smoker-burger{transform-box:fill-box; transform-origin:center; transition:transform .4s ease, opacity .4s ease}
+.smoker-burger.served{transform:translate(0,-16px) scale(0.25); opacity:0; pointer-events:none}
+#balcony-smoker.cooked .grill-patty{cursor:pointer}
+@media (prefers-reduced-motion: reduce){.grill-marks{transition:none} .smoker-burger{transition:none}}
 @media (prefers-reduced-motion: reduce){#balcony-smoker-lid{transition:none} .grill-patty{transition:none}}
 #kitchen-tongs-left, #kitchen-tongs-right{transform-origin:597px 138px}
 #kitchen-tongs.snap #kitchen-tongs-left{animation:tongs-snap-left .3s ease-in-out}
@@ -3065,9 +3071,9 @@ section{margin:1.9rem 0}
 <line x1="366" y1="189" x2="454" y2="189" stroke="#6a5f52" stroke-width="2"/>
 <path d="M372 189 v-4 M388 189 v-4 M404 189 v-4 M420 189 v-4 M436 189 v-4 M450 189 v-4" stroke="#5a5148" stroke-width="1.1"/>
 <g id="balcony-smoker-food">
-<ellipse class="grill-patty" cx="390" cy="186" rx="8" ry="3.5"/>
-<ellipse class="grill-patty" cx="411" cy="187" rx="8" ry="3.5"/>
-<ellipse class="grill-patty" cx="432" cy="186" rx="8" ry="3.5"/>
+<g class="smoker-burger"><ellipse class="grill-patty" cx="390" cy="186" rx="8" ry="3.5"/><path class="grill-marks" d="M385 185 l9 2.4 M389 183.8 l7 3" fill="none" stroke="#2a1a12" stroke-width="0.9" stroke-linecap="round"/></g>
+<g class="smoker-burger"><ellipse class="grill-patty" cx="411" cy="187" rx="8" ry="3.5"/><path class="grill-marks" d="M406 186 l9 2.4 M410 184.8 l7 3" fill="none" stroke="#2a1a12" stroke-width="0.9" stroke-linecap="round"/></g>
+<g class="smoker-burger"><ellipse class="grill-patty" cx="432" cy="186" rx="8" ry="3.5"/><path class="grill-marks" d="M427 185 l9 2.4 M431 183.8 l7 3" fill="none" stroke="#2a1a12" stroke-width="0.9" stroke-linecap="round"/></g>
 </g>
 <g id="balcony-smoker-lidtop">
 <path d="M362 189 L362 188 Q362 160 390 160 L430 160 Q458 160 458 188 L458 189 Z" fill="#26221f" stroke="#0f0f0f" stroke-width="2"/>
@@ -5022,6 +5028,22 @@ document.addEventListener("click", function (e) {
     smokerLid.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleLid(); }
     });
+    // once cooked and the lid's up, each burger can be served off the grate
+    var burgers = smoker.querySelectorAll(".smoker-burger");
+    function serveBurger(b, e) {
+      if (!smoker.classList.contains("open") || !smoker.classList.contains("cooked")) return;
+      if (b.classList.contains("served")) return;
+      if (e) e.stopPropagation();
+      b.classList.add("served");
+      playChopSound(0.7, 1);
+      spawnSteamWisps(strip, 3176, 178, 0.4, 1, -1, 1, 0.4);
+      var remaining = 0;
+      burgers.forEach(function (x) { if (!x.classList.contains("served")) remaining++; });
+      if (remaining === 0) setTimeout(function () { playSatisfiedExhaleSound(); }, 350);
+    }
+    burgers.forEach(function (b) {
+      b.addEventListener("click", function (e) { serveBurger(b, e); });
+    });
     window.resetSmoker = function () {
       if (smokeInterval) clearInterval(smokeInterval);
       if (sizzleTimer) clearInterval(sizzleTimer);
@@ -5031,6 +5053,7 @@ document.addEventListener("click", function (e) {
       lidOpen = false;
       cooked = false;
       smoker.classList.remove("smoking", "open", "cooked");
+      burgers.forEach(function (b) { b.classList.remove("served"); });
     };
   }
   var lighter = document.getElementById("balcony-lighter");

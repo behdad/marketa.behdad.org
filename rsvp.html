@@ -6452,25 +6452,53 @@ function playRoosterCrowSound(intensity) {
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
-    var osc = ctx.createOscillator();
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(320 * intensity, t);
-    osc.frequency.exponentialRampToValueAtTime(640 * intensity, t + 0.1);
-    osc.frequency.exponentialRampToValueAtTime(420 * intensity, t + 0.22);
-    osc.frequency.exponentialRampToValueAtTime(520 * intensity, t + 0.34);
-    var filter = ctx.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.value = 2200;
-    var gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.18, t + 0.04);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(t);
-    osc.stop(t + 0.41);
-    setTimeout(function () { ctx.close(); }, 550);
+    var master = ctx.createGain();
+    master.gain.value = 0.9;
+    master.connect(ctx.destination);
+
+    // A crow is a sequence of throaty syllables with glottal gaps between
+    // them ("cock-a-doodle-DOO"), not one continuous glide. Each syllable is
+    // a sawtooth through a vocal formant bandpass with its own short envelope;
+    // the silent gaps are what make it read as a bird call rather than a
+    // slide whistle. The long final note descends and carries a fast tremolo
+    // rasp.
+    function syllable(startT, dur, f0, f1, peak, rasp) {
+      var osc = ctx.createOscillator();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(f0 * intensity, t + startT);
+      osc.frequency.linearRampToValueAtTime(f1 * intensity, t + startT + dur);
+      var bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.Q.value = 3.5;
+      bp.frequency.value = 1500;
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t + startT);
+      g.gain.exponentialRampToValueAtTime(peak, t + startT + 0.03);
+      g.gain.setValueAtTime(peak, t + startT + dur - 0.05);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + startT + dur);
+      osc.connect(bp);
+      bp.connect(g);
+      g.connect(master);
+      osc.start(t + startT);
+      osc.stop(t + startT + dur + 0.02);
+      if (rasp) {
+        var trem = ctx.createOscillator();
+        trem.type = "sine";
+        trem.frequency.value = 33;
+        var tremG = ctx.createGain();
+        tremG.gain.value = peak * 0.4;
+        trem.connect(tremG);
+        tremG.connect(g.gain);
+        trem.start(t + startT);
+        trem.stop(t + startT + dur + 0.02);
+      }
+    }
+    syllable(0.00, 0.14, 340, 380, 0.16, false); // cock
+    syllable(0.18, 0.11, 430, 450, 0.15, false); // a
+    syllable(0.31, 0.14, 520, 540, 0.18, false); // doodle
+    syllable(0.47, 0.42, 540, 360, 0.17, true);  // dooooo (long, raspy, falling)
+
+    setTimeout(function () { ctx.close(); }, 1100);
   } catch (e) {}
 }
 function playFartSound(pitchMult, durMult) {

@@ -501,6 +501,15 @@ footer{margin-top:2.6rem}
 @media (prefers-reduced-motion: reduce){
   #office-skull.chattering #office-skull-jaw, #office-broken-glass.tinged, #office-spin-top.spinning{animation:none}
 }
+#office-mondrian .mondrian-bit{transform-box:fill-box; transform-origin:center}
+#office-mondrian.dancing .mondrian-bit{animation:mondrian-wobble .8s ease-in-out}
+@keyframes mondrian-wobble{
+  0%, 100%{transform:rotate(0) scale(1)}
+  25%{transform:rotate(-14deg) scale(1.12)}
+  55%{transform:rotate(10deg) scale(.94)}
+  80%{transform:rotate(-4deg) scale(1.04)}
+}
+@media (prefers-reduced-motion: reduce){#office-mondrian.dancing .mondrian-bit{animation:none}}
 #garden-guitar{transform-box:fill-box; transform-origin:bottom center}
 #garden-guitar.playing{animation:guitar-sway 1s ease-in-out infinite}
 @keyframes guitar-sway{
@@ -2740,6 +2749,7 @@ section{margin:1.9rem 0}
 <path d="M9.8 57.6 H12.2" fill="none" stroke="#26221f" stroke-width="1.1"/>
 </g>
 </g>
+<g id="office-mondrian" class="hunt-hit" tabindex="0" role="button" aria-label="The little abstract painting">
 <rect x="98" y="68" width="40" height="22" fill="#e8e6de" stroke="#1f1b18" stroke-width="2"/>
 <rect x="100" y="70" width="18" height="3.6" fill="#b82f4a"/>
 <rect x="100" y="73.6" width="18" height="3.6" fill="#d98a2f"/>
@@ -2749,11 +2759,12 @@ section{margin:1.9rem 0}
 <path d="M100 73.6 H118 M100 77.2 H118 M100 80.8 H118 M100 84.4 H118" fill="none" stroke="#1f1b18" stroke-width="0.9"/>
 <path d="M118.5 70 V88" fill="none" stroke="#1f1b18" stroke-width="1.4"/>
 <path d="M119 70 L136 88 M129 70 L125 88" fill="none" stroke="#1f1b18" stroke-width="1"/>
-<path d="M120.5 71 L128 71 L123.5 77.5 Z" fill="#2f8ab8" stroke="#1f1b18" stroke-width="0.9"/>
-<path d="M130.5 71 L135.5 74.5 L131 80 Z" fill="#e8c93a" stroke="#1f1b18" stroke-width="0.9"/>
-<path d="M120 77 L125.5 74 L127 81.5 L121 83 Z" fill="#3f8f45" stroke="#1f1b18" stroke-width="0.9"/>
-<path d="M129 81 L135 79 L134.5 86.5 L129.5 86 Z" fill="#d98a2f" stroke="#1f1b18" stroke-width="0.9"/>
-<path d="M120.5 84.5 L126.5 83.5 L126 87.5 L120.5 87 Z" fill="#b82f4a" stroke="#1f1b18" stroke-width="0.9"/>
+<path class="mondrian-bit" d="M120.5 71 L128 71 L123.5 77.5 Z" fill="#2f8ab8" stroke="#1f1b18" stroke-width="0.9"/>
+<path class="mondrian-bit" style="animation-delay:.07s" d="M130.5 71 L135.5 74.5 L131 80 Z" fill="#e8c93a" stroke="#1f1b18" stroke-width="0.9"/>
+<path class="mondrian-bit" style="animation-delay:.14s" d="M120 77 L125.5 74 L127 81.5 L121 83 Z" fill="#3f8f45" stroke="#1f1b18" stroke-width="0.9"/>
+<path class="mondrian-bit" style="animation-delay:.21s" d="M129 81 L135 79 L134.5 86.5 L129.5 86 Z" fill="#d98a2f" stroke="#1f1b18" stroke-width="0.9"/>
+<path class="mondrian-bit" style="animation-delay:.28s" d="M120.5 84.5 L126.5 83.5 L126 87.5 L120.5 87 Z" fill="#b82f4a" stroke="#1f1b18" stroke-width="0.9"/>
+</g>
 </g>
 <g id="office-chair" class="hunt-hit" tabindex="0" role="button" aria-label="The office chair">
 <rect x="238" y="222" width="80" height="112" fill="transparent"/>
@@ -3575,6 +3586,27 @@ document.addEventListener("click", function (e) {
   });
   wireTableToy("office-broken-glass", "tinged", function () { playGlassClinkSound(0.7); });
   wireTableToy("office-spin-top", "spinning", playAshtraySpinSound);
+  // the little abstract painting: its shapes wobble loose in a ripple.
+  // animationend can't clear this one (the first bit ending would cancel the
+  // still-delayed ones), so a timer outlasting the longest delay clears it.
+  var mondrian = document.getElementById("office-mondrian");
+  if (mondrian) {
+    var mondrianTimer = null;
+    function danceMondrian(e) {
+      if (e) e.stopPropagation();
+      clearTimeout(mondrianTimer);
+      mondrian.classList.remove("dancing");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { mondrian.classList.add("dancing"); });
+      });
+      mondrianTimer = setTimeout(function () { mondrian.classList.remove("dancing"); }, 1300);
+      playSwishSound();
+    }
+    mondrian.addEventListener("click", danceMondrian);
+    mondrian.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); danceMondrian(e); }
+    });
+  }
   var sprinkler = document.getElementById("office-sprinkler");
   if (sprinkler) {
     function triggerSprinkler() {

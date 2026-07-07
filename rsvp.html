@@ -204,12 +204,11 @@ footer{margin-top:2.6rem}
 #balcony-smoker-food{opacity:0; transition:opacity .35s ease .12s}
 #balcony-smoker.open #balcony-smoker-food{opacity:1}
 .grill-patty{fill:#cf9a94; stroke:#a86f68; stroke-width:1; transition:fill 3s ease, stroke 3s ease}
-#balcony-smoker.cooked .grill-patty{fill:#6b4630; stroke:#452c1e}
+.smoker-burger.done .grill-patty{fill:#6b4630; stroke:#452c1e; cursor:pointer}
 .grill-marks{opacity:0; transition:opacity 2s ease}
-#balcony-smoker.cooked .grill-marks{opacity:0.7}
+.smoker-burger.done .grill-marks{opacity:0.7}
 .smoker-burger{transform-box:fill-box; transform-origin:center; transition:transform .4s ease, opacity .4s ease}
 .smoker-burger.served{transform:translate(0,-16px) scale(0.25); opacity:0; pointer-events:none}
-#balcony-smoker.cooked .grill-patty{cursor:pointer}
 @media (prefers-reduced-motion: reduce){.grill-marks{transition:none} .smoker-burger{transition:none}}
 @media (prefers-reduced-motion: reduce){#balcony-smoker-lid{transition:none} .grill-patty{transition:none}}
 #kitchen-tongs-left, #kitchen-tongs-right{transform-origin:597px 138px}
@@ -5033,21 +5032,25 @@ document.addEventListener("click", function (e) {
   var smokerFirebox = document.getElementById("balcony-smoker-firebox");
   var smokerLid = document.getElementById("balcony-smoker-lid");
   if (smoker && smokerFirebox && smokerLid) {
-    var smoking = false, lidOpen = false, cooked = false;
+    var smoking = false, lidOpen = false;
     var smokeInterval = null, sizzleTimer = null;
+    var burgers = smoker.querySelectorAll(".smoker-burger");
     function puff() { spawnSteamWisps(strip, 3218, 110); }
-    // A covered smoker cooks with the lid down: once the fire's lit the
-    // burgers brown over ~3s, whether you're peeking under the lid or not.
+    function cookBurger(b) {
+      if (smoking && !b.classList.contains("served") && !b.classList.contains("done")) b.classList.add("done");
+    }
+    // A covered smoker cooks with the lid down: once the fire's lit each raw
+    // burger browns over ~3s, whether you're peeking under the lid or not.
     function startCooking() {
-      if (cooked || sizzleTimer) return;
-      cooked = true;
-      smoker.classList.add("cooked");
-      playSizzleSound();
-      var n = 0;
-      sizzleTimer = setInterval(function () {
-        spawnSteamWisps(strip, 3176, 190, 0.5, 1, -1, 2, 0.5);
-        if (++n >= 4) { clearInterval(sizzleTimer); sizzleTimer = null; }
-      }, 750);
+      if (!sizzleTimer) {
+        playSizzleSound();
+        var n = 0;
+        sizzleTimer = setInterval(function () {
+          spawnSteamWisps(strip, 3176, 190, 0.5, 1, -1, 2, 0.5);
+          if (++n >= 4) { clearInterval(sizzleTimer); sizzleTimer = null; }
+        }, 750);
+      }
+      burgers.forEach(cookBurger);
     }
     function toggleFire() {
       smoking = !smoking;
@@ -5075,18 +5078,24 @@ document.addEventListener("click", function (e) {
     smokerLid.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleLid(); }
     });
-    // once cooked and the lid's up, each burger can be served off the grate
-    var burgers = smoker.querySelectorAll(".smoker-burger");
+    // with the lid up, clicking a cooked burger serves it; a fresh raw patty
+    // takes its place and re-cooks if the fire's still going
     function serveBurger(b, e) {
-      if (!smoker.classList.contains("open") || !smoker.classList.contains("cooked")) return;
-      if (b.classList.contains("served")) return;
+      if (!smoker.classList.contains("open")) return;
+      if (!b.classList.contains("done") || b.classList.contains("served")) return;
       if (e) e.stopPropagation();
       b.classList.add("served");
       playChopSound(0.7, 1);
       spawnSteamWisps(strip, 3176, 178, 0.4, 1, -1, 1, 0.4);
-      var remaining = 0;
-      burgers.forEach(function (x) { if (!x.classList.contains("served")) remaining++; });
-      if (remaining === 0) setTimeout(function () { playSatisfiedExhaleSound(); }, 350);
+      setTimeout(function () {
+        // reset to raw with no fill fade (it's hidden mid-hop), then drop back in
+        var parts = [b.querySelector(".grill-patty"), b.querySelector(".grill-marks")];
+        parts.forEach(function (el) { if (el) el.style.transition = "none"; });
+        b.classList.remove("done");
+        parts.forEach(function (el) { if (el) { void el.getBoundingClientRect(); el.style.transition = ""; } });
+        b.classList.remove("served");
+        if (smoking) setTimeout(function () { cookBurger(b); }, 500);
+      }, 450);
     }
     burgers.forEach(function (b) {
       b.addEventListener("click", function (e) { serveBurger(b, e); });
@@ -5098,9 +5107,8 @@ document.addEventListener("click", function (e) {
       sizzleTimer = null;
       smoking = false;
       lidOpen = false;
-      cooked = false;
-      smoker.classList.remove("smoking", "open", "cooked");
-      burgers.forEach(function (b) { b.classList.remove("served"); });
+      smoker.classList.remove("smoking", "open");
+      burgers.forEach(function (b) { b.classList.remove("served", "done"); b.style.transition = ""; });
     };
   }
   var lighter = document.getElementById("balcony-lighter");

@@ -199,6 +199,13 @@ footer{margin-top:2.6rem}
   100%{transform:translateY(-14px); opacity:0}
 }
 @media (prefers-reduced-motion: reduce){#balcony-smoker.smoking .smoker-heat{animation:none}}
+#balcony-grill-lid{transform-box:fill-box; transform-origin:center; transition:transform .5s cubic-bezier(.34,1.1,.5,1)}
+#balcony-coveredgrill.open #balcony-grill-lid{transform:translate(2px,-46px) rotate(-9deg)}
+#balcony-grill-food{opacity:0; transition:opacity .35s ease .12s}
+#balcony-coveredgrill.open #balcony-grill-food{opacity:1}
+.grill-patty{fill:#cf9a94; stroke:#a86f68; stroke-width:1; transition:fill 3s ease, stroke 3s ease}
+#balcony-coveredgrill.cooked .grill-patty{fill:#6b4630; stroke:#452c1e}
+@media (prefers-reduced-motion: reduce){#balcony-grill-lid{transition:none} .grill-patty{transition:none}}
 #kitchen-tongs-left, #kitchen-tongs-right{transform-origin:597px 138px}
 #kitchen-tongs.snap #kitchen-tongs-left{animation:tongs-snap-left .3s ease-in-out}
 #kitchen-tongs.snap #kitchen-tongs-right{animation:tongs-snap-right .3s ease-in-out}
@@ -3005,11 +3012,22 @@ section{margin:1.9rem 0}
 </g>
 </g>
 <g id="balcony-coveredgrill" class="hunt-hit" tabindex="0" role="button" aria-label="The covered grill" transform="translate(-99.2,56.8) scale(1.4,0.8)">
-<rect x="245" y="170" width="82" height="118" fill="transparent"/>
-<path d="M250 196 Q250 176 272 174 L302 174 Q322 176 322 196 L324 284 L248 284 Z" fill="#4a4a48" stroke="#333331" stroke-width="2"/>
+<rect x="245" y="156" width="82" height="132" fill="transparent"/>
+<g id="balcony-grill-base">
+<path d="M250 266 L322 266 L320 284 L252 284 Z" fill="#33322f" stroke="#232220" stroke-width="1.5"/>
+<line x1="248" y1="264" x2="324" y2="264" stroke="#6a6a68" stroke-width="2.5"/>
+<path d="M256 264 v-4 M268 264 v-4 M280 264 v-4 M292 264 v-4 M304 264 v-4 M316 264 v-4" stroke="#5a5a58" stroke-width="1.2"/>
+<g id="balcony-grill-food">
+<ellipse class="grill-patty" cx="268" cy="261" rx="9" ry="4"/>
+<ellipse class="grill-patty" cx="287" cy="262" rx="9" ry="4"/>
+<ellipse class="grill-patty" cx="306" cy="261" rx="9" ry="4"/>
+</g>
+</g>
+<g id="balcony-grill-lid">
+<path d="M250 196 Q250 176 272 174 L302 174 Q322 176 322 196 L323 264 L249 264 Z" fill="#4a4a48" stroke="#333331" stroke-width="2"/>
 <path d="M254 210 Q286 204 320 210 M252 240 Q286 234 322 240" fill="none" stroke="#3a3a38" stroke-width="2"/>
-<line x1="250" y1="264" x2="323" y2="264" stroke="#2d2d2b" stroke-width="3"/>
 <rect x="266" y="166" width="40" height="10" rx="2" fill="#5a5a58"/>
+</g>
 </g>
 <g id="balcony-smoker" class="hunt-hit" tabindex="0" role="button" aria-label="The smoker grill" transform="translate(40,0)">
 <rect x="315" y="112" width="165" height="200" fill="transparent"/>
@@ -4848,6 +4866,7 @@ document.addEventListener("click", function (e) {
       if (smoking) {
         puff();
         smokeInterval = setInterval(puff, 1400);
+        if (typeof maybeCook === "function") maybeCook();
       } else {
         if (smokeInterval) {
           clearInterval(smokeInterval);
@@ -4983,12 +5002,46 @@ document.addEventListener("click", function (e) {
     });
   }
   var coveredgrill = document.getElementById("balcony-coveredgrill");
+  var grillOpen = false, grillCooked = false, sizzleTimer = null;
+  function smokerIsOn() { return smoker && smoker.classList.contains("smoking"); }
+  function startSizzle() {
+    if (sizzleTimer) return;
+    playSizzleSound();
+    var n = 0;
+    sizzleTimer = setInterval(function () {
+      spawnSteamWisps(strip, 3021, 236, 0.5, 1, -1, 2, 0.5);
+      if (++n >= 4) { clearInterval(sizzleTimer); sizzleTimer = null; }
+    }, 750);
+  }
+  // Food browns only while the lid is up AND the smoker is running.
+  function maybeCook() {
+    if (grillOpen && smokerIsOn() && !grillCooked) {
+      grillCooked = true;
+      coveredgrill.classList.add("cooked");
+      startSizzle();
+    }
+  }
+  function toggleGrill() {
+    grillOpen = !grillOpen;
+    coveredgrill.classList.toggle("open", grillOpen);
+    playMetalClinkSound(grillOpen ? 0.7 : 0.55);
+    if (grillOpen) {
+      spawnSteamWisps(strip, 3021, 236, 0.7);
+      maybeCook();
+    }
+  }
   if (coveredgrill) {
-    coveredgrill.addEventListener("click", function () { spawnSteamWisps(strip, 3021, 230, 0.7); });
+    coveredgrill.addEventListener("click", toggleGrill);
     coveredgrill.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); spawnSteamWisps(strip, 3021, 230, 0.7); }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleGrill(); }
     });
   }
+  window.resetGrill = function () {
+    grillOpen = false;
+    grillCooked = false;
+    if (sizzleTimer) { clearInterval(sizzleTimer); sizzleTimer = null; }
+    if (coveredgrill) coveredgrill.classList.remove("open", "cooked");
+  };
   var wallLamp = document.getElementById("balcony-walllamp");
   if (wallLamp) {
     function toggleWallLamp() {
@@ -7548,6 +7601,36 @@ function playBootChimeSound() {
     setTimeout(function () { ctx.close(); }, 1400);
   } catch (e) {}
 }
+// A soft grilling sizzle: high-passed crackly noise, ~0.7s.
+function playSizzleSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t = ctx.currentTime;
+    var dur = 0.75;
+    var bufferSize = Math.floor(ctx.sampleRate * dur);
+    var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    var data = buffer.getChannelData(0);
+    for (var i = 0; i < bufferSize; i++) {
+      var env = Math.min(1, i / (bufferSize * 0.08)) * (1 - i / bufferSize);
+      data[i] = (Math.random() * 2 - 1) * env * (Math.random() < 0.12 ? 1 : 0.35);
+    }
+    var noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    var filter = ctx.createBiquadFilter();
+    filter.type = "highpass";
+    filter.frequency.value = 2200;
+    var gain = ctx.createGain();
+    gain.gain.value = 0.09;
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    noise.start(t);
+    noise.stop(t + dur);
+    setTimeout(function () { ctx.close(); }, (dur + 0.1) * 1000);
+  } catch (e) {}
+}
 function playPackDropSound() {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -9427,6 +9510,7 @@ function spawnDustMote(container) {
     if (butterfly) butterfly.classList.remove("flying");
     if (rainbow) rainbow.classList.remove("burst");
     if (window.resetSmoker) window.resetSmoker();
+    if (window.resetGrill) window.resetGrill();
     if (window.resetRadio) window.resetRadio();
     if (window.resetAC) window.resetAC();
     if (window.resetKettle) window.resetKettle();

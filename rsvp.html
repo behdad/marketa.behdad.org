@@ -4715,6 +4715,7 @@ document.addEventListener("click", function (e) {
     clearBoot();
     if (!monitor.classList.contains("here") || !pcTower || !pcTower.classList.contains("on")) return;
     monitor.classList.add("screen-on", "show-fedora");
+    playBootChimeSound();
     bootTimers.push(setTimeout(function () {
       monitor.classList.remove("show-fedora");
       monitor.classList.add("show-chrome");
@@ -7506,6 +7507,45 @@ function playLaptopClickSound() {
     osc.start(t);
     osc.stop(t + 0.05);
     setTimeout(function () { ctx.close(); }, 200);
+  } catch (e) {}
+}
+// The monitor's power-on jingle: a low CRT swell under a soft rising arpeggio,
+// like a friendly Linux desktop finishing its boot.
+function playBootChimeSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t = ctx.currentTime;
+    // low power-on swell (the machine waking)
+    var hum = ctx.createOscillator();
+    hum.type = "sine";
+    hum.frequency.setValueAtTime(70, t);
+    hum.frequency.exponentialRampToValueAtTime(110, t + 0.5);
+    var humGain = ctx.createGain();
+    humGain.gain.setValueAtTime(0.0001, t);
+    humGain.gain.exponentialRampToValueAtTime(0.05, t + 0.12);
+    humGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+    hum.connect(humGain);
+    humGain.connect(ctx.destination);
+    hum.start(t);
+    hum.stop(t + 0.95);
+    // rising chime arpeggio (C5-E5-G5-C6)
+    [523.25, 659.25, 783.99, 1046.5].forEach(function (f, i) {
+      var t0 = t + 0.18 + i * 0.13;
+      var osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(f, t0);
+      var gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(i === 3 ? 0.11 : 0.07, t0 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + (i === 3 ? 0.7 : 0.4));
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t0);
+      osc.stop(t0 + 0.75);
+    });
+    setTimeout(function () { ctx.close(); }, 1400);
   } catch (e) {}
 }
 function playPackDropSound() {

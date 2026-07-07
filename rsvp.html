@@ -2884,6 +2884,7 @@ section{margin:1.9rem 0}
 <rect x="651" y="146" width="8" height="118" fill="#004dff"/>
 <rect x="659" y="146" width="8" height="118" fill="#750787"/>
 </g>
+<g id="balcony-fireworks" aria-hidden="true" pointer-events="none"></g>
 <g id="balcony-railing">
 <path d="M446 150 L680 278 M478 150 L680 260 M510 150 L680 242 M542 150 L680 226 M574 150 L680 208 M606 150 L680 190 M638 150 L680 172 M440 162 L662 280 M440 180 L630 280 M440 198 L598 280 M440 216 L566 280 M440 234 L532 280 M440 252 L500 280" stroke="#141414" stroke-width="1.2"/>
 <path d="M672 150 L440 278 M640 150 L440 260 M608 150 L440 242 M576 150 L440 226 M544 150 L440 208 M512 150 L440 190 M480 150 L440 172 M680 160 L458 280 M680 178 L490 280 M680 196 L522 280 M680 214 L554 280 M680 232 L586 280 M680 250 L618 280" stroke="#141414" stroke-width="1.2"/>
@@ -5981,6 +5982,42 @@ function spawnCloudRain(svg, cx, cy) {
     })(i);
   }
 }
+function spawnFirework(cx, cy, color) {
+  var host = document.getElementById("balcony-fireworks");
+  if (!host) return;
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var flash = document.createElementNS(SVGNS, "circle");
+  flash.setAttribute("cx", cx);
+  flash.setAttribute("cy", cy);
+  flash.setAttribute("r", 4);
+  flash.setAttribute("fill", "#fff8e0");
+  host.appendChild(flash);
+  if (flash.animate) {
+    var fa = flash.animate([{ opacity: 0.95 }, { opacity: 0 }], { duration: 320, easing: "ease-out" });
+    fa.onfinish = function () { flash.remove(); };
+  } else setTimeout(function () { flash.remove(); }, 350);
+  var n = 10;
+  for (var i = 0; i < n; i++) {
+    var ang = (Math.PI * 2 * i) / n + Math.random() * 0.4;
+    var dist = 16 + Math.random() * 12;
+    var p = document.createElementNS(SVGNS, "circle");
+    p.setAttribute("cx", cx);
+    p.setAttribute("cy", cy);
+    p.setAttribute("r", (1.2 + Math.random() * 0.9).toFixed(1));
+    p.setAttribute("fill", color);
+    host.appendChild(p);
+    (function (el, dx, dy) {
+      if (el.animate) {
+        var a = el.animate([
+          { transform: "translate(0,0)", opacity: 1 },
+          { transform: "translate(" + dx.toFixed(1) + "px," + (dy + 6).toFixed(1) + "px)", opacity: 0 }
+        ], { duration: 950 + Math.random() * 350, easing: "cubic-bezier(0.1,0.6,0.4,1)" });
+        a.onfinish = function () { el.remove(); };
+      } else setTimeout(function () { el.remove(); }, 1300);
+    })(p, Math.cos(ang) * dist, Math.sin(ang) * dist);
+  }
+}
 function spawnBalconyRain(svg) {
   if (!svg) return;
   var xs = [460, 520, 580, 640];
@@ -8521,6 +8558,10 @@ function spawnDustMote(container) {
         });
       }, 4200));
     }
+    // small fireworks over the city, behind the railing, as the rainbow shows
+    [[490, 62, "#f5b8c8", 4800], [566, 42, "#f7d97a", 5900], [527, 88, "#a8c4d4", 7000], [622, 56, "#f5b8c8", 8100]].forEach(function (fw) {
+      finaleTimers.push(setTimeout(function () { spawnFirework(fw[0], fw[1], fw[2]); }, fw[3]));
+    });
     finaleTimers.push(setTimeout(showRsvpNudge, 9100));
   }
   function restoreStageHint(name) {

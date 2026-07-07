@@ -8212,10 +8212,19 @@ function spawnDustMote(container) {
     function setPct(pct) { strip.style.transform = "translateX(" + pct + "%)"; }
     viewport.addEventListener("pointerdown", function (e) {
       if (e.pointerType === "mouse") return; // desktop mouse-drag felt finicky; use the arrows
+      // Never start a swipe on an interactive object — let it drag/tap. (Objects
+      // capture the pointer, but their events still bubble up here.)
+      if (e.target.closest && e.target.closest(".hunt-hit")) return;
+      // Only initiate from the left/right edge; the center is for playing with
+      // objects, the edges are the "grab to change rooms" zone.
+      var r = viewport.getBoundingClientRect();
+      var edge = Math.max(44, r.width * 0.14);
+      var x = e.clientX - r.left;
+      if (x > edge && x < r.width - edge) return;
       down = true; engaged = false; aborted = false;
       startX = lastX = e.clientX; startY = e.clientY;
       lastT = e.timeStamp; vel = 0;
-      vpW = viewport.getBoundingClientRect().width || 1;
+      vpW = r.width || 1;
     });
     viewport.addEventListener("pointermove", function (e) {
       if (!down || aborted) return;

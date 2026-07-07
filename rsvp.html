@@ -446,7 +446,8 @@ footer{margin-top:2.6rem}
   20%, 70%{transform:translate(-7px,2px) rotate(-5deg)}
 }
 #cuddly-marketa.bottom-wiggle{animation:cuddly-bottom-wiggle .5s ease-in-out}
-@media (prefers-reduced-motion: reduce){#cuddly-marketa.leaning, #cuddly-marketa.bottom-wiggle{animation:none}}
+#cuddly-marketa-right-arm.leaning{animation:marketa-lean 3s ease-in-out}
+@media (prefers-reduced-motion: reduce){#cuddly-marketa.leaning, #cuddly-marketa.bottom-wiggle, #cuddly-marketa-right-arm.leaning{animation:none}}
 #cuddly-marketa-foot-1, #cuddly-marketa-foot-2, #cuddly-behdad-foot-1, #cuddly-behdad-foot-2{transform-box:fill-box; transform-origin:top center}
 #cuddly-marketa-foot-1.tickled, #cuddly-marketa-foot-2.tickled, #cuddly-behdad-foot-1.tickled, #cuddly-behdad-foot-2.tickled{animation:feet-tickle .5s ease-in-out}
 @keyframes feet-tickle{
@@ -2273,6 +2274,7 @@ section{margin:1.9rem 0}
 <g id="cuddly-behdad-left-arm" style="transform-origin:214px 204px">
 <path d="M214 204 Q246 186 270 198" fill="none" stroke="#c68e95" stroke-width="15" stroke-linecap="round"/>
 <path d="M214 204 Q246 186 270 198" fill="none" stroke="#e9bfc4" stroke-width="11" stroke-linecap="round"/>
+<circle cx="271" cy="199" r="5.5" fill="#e6b489" stroke="#b9855e" stroke-width="1"/>
 </g>
 <g id="cuddly-behdad-head" class="head-group">
 <rect x="189" y="186" width="10" height="12" fill="#e6b489"/>
@@ -2299,14 +2301,6 @@ section{margin:1.9rem 0}
 <path d="M236 198 L245 212 L248 200" fill="none" stroke="#7f9ec0" stroke-width="1.5"/>
 <path d="M260 198 L251 212 L248 200" fill="none" stroke="#7f9ec0" stroke-width="1.5"/>
 </g>
-<g id="cuddly-behdad-right-arm" style="transform-origin:176px 208px">
-<path d="M176 208 Q168 230 196 242" fill="none" stroke="#c68e95" stroke-width="15" stroke-linecap="round"/>
-<path d="M176 208 Q168 230 196 242" fill="none" stroke="#e9bfc4" stroke-width="11" stroke-linecap="round"/>
-<circle cx="202" cy="244" r="6" fill="#e6b489" stroke="#b9855e" stroke-width="1"/>
-</g>
-<path d="M230 208 Q214 230 210 244" fill="none" stroke="#7f9ec0" stroke-width="14" stroke-linecap="round"/>
-<path d="M230 208 Q214 230 210 244" fill="none" stroke="#bcd1e7" stroke-width="10" stroke-linecap="round"/>
-<circle cx="210" cy="246" r="5.5" fill="#f2cfae" stroke="#c9a377" stroke-width="1"/>
 <path d="M262 210 Q272 232 258 246" fill="none" stroke="#7f9ec0" stroke-width="14" stroke-linecap="round"/>
 <path d="M262 210 Q272 232 258 246" fill="none" stroke="#bcd1e7" stroke-width="10" stroke-linecap="round"/>
 <circle cx="257" cy="248" r="5.5" fill="#f2cfae" stroke="#c9a377" stroke-width="1"/>
@@ -2329,7 +2323,16 @@ section{margin:1.9rem 0}
 </g>
 </g>
 </g>
-<circle cx="271" cy="199" r="5.5" fill="#e6b489" stroke="#b9855e" stroke-width="1"/>
+<g id="cuddly-behdad-right-arm" style="transform-origin:176px 208px">
+<path d="M176 208 Q168 230 196 242" fill="none" stroke="#c68e95" stroke-width="15" stroke-linecap="round"/>
+<path d="M176 208 Q168 230 196 242" fill="none" stroke="#e9bfc4" stroke-width="11" stroke-linecap="round"/>
+<circle cx="202" cy="244" r="6" fill="#e6b489" stroke="#b9855e" stroke-width="1"/>
+</g>
+<g id="cuddly-marketa-right-arm" style="transform-origin:230px 208px">
+<path d="M230 208 Q214 230 210 244" fill="none" stroke="#7f9ec0" stroke-width="14" stroke-linecap="round"/>
+<path d="M230 208 Q214 230 210 244" fill="none" stroke="#bcd1e7" stroke-width="10" stroke-linecap="round"/>
+<circle cx="210" cy="246" r="5.5" fill="#f2cfae" stroke="#c9a377" stroke-width="1"/>
+</g>
 </g>
 
 <g id="cuddly-trunk" class="hunt-hit" tabindex="0" role="button" aria-label="The trunk under the octopus">
@@ -4301,9 +4304,16 @@ document.addEventListener("click", function (e) {
   var marketa = document.getElementById("cuddly-marketa");
   if (!marketa) return;
   var strip = document.getElementById("loft-game-strip");
+  var marketaRightArm = document.getElementById("cuddly-marketa-right-arm");
   function leanMarketa() {
     if (marketa.classList.contains("leaning")) return;
     marketa.classList.add("leaning");
+    if (marketaRightArm) {
+      marketaRightArm.classList.remove("leaning");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { marketaRightArm.classList.add("leaning"); });
+      });
+    }
     setTimeout(function () {
       spawnHearts(strip, 1566, 183);
       playHeartsSound();
@@ -4313,6 +4323,11 @@ document.addEventListener("click", function (e) {
     if (e.target !== marketa) return;
     marketa.classList.remove("leaning", "bottom-wiggle");
   });
+  if (marketaRightArm) {
+    marketaRightArm.addEventListener("animationend", function (e) {
+      if (e.animationName === "marketa-lean") marketaRightArm.classList.remove("leaning");
+    });
+  }
   marketa.addEventListener("click", leanMarketa);
   marketa.addEventListener("keydown", function (e) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); leanMarketa(); }

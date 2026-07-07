@@ -617,8 +617,12 @@ footer{margin-top:2.6rem}
 }
 .head-group.ouch{animation:octopus-ouch .5s ease-in-out}
 @media (prefers-reduced-motion: reduce){.head-group.ouch, .head-group.shake{animation:none}}
-#cuddly-behdad-head{transform-origin:194px 198px}
-#cuddly-marketa-head{transform-origin:243px 182px}
+/* Under .head-group's transform-box:fill-box, a head-shake must pivot at the
+   neck = bottom-center of the head's own box (50% 100%). The old pixel values
+   (194/243px) were neck coords for the pre-fill-box default; once fill-box was
+   added they resolved to a point far outside the head, flinging it sideways
+   like a chop. Ouch and groove keep the base center pivot. */
+#cuddly-behdad-head.shake, #cuddly-marketa-head.shake{transform-origin:50% 100%}
 #cuddly-behdad-head.grooving, #cuddly-marketa-head.grooving{animation:cuddly-head-bob .7s ease-in-out infinite}
 @keyframes cuddly-head-bob{
   0%, 100%{transform:rotate(0) translateY(0)}
@@ -3222,14 +3226,25 @@ document.addEventListener("click", function (e) {
 (function () {
   function shake(el) {
     if (!el) return;
-    el.classList.remove("shake");
+    // Clear the sibling one-shot ("ouch") too: #head.shake (1,1,0) out-specifies
+    // .head-group.ouch (0,2,0), so a leftover class silently wins the cascade and
+    // blocks the other animation forever. Remove both, replay shake.
+    el.classList.remove("shake", "ouch");
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { el.classList.add("shake"); });
     });
   }
   ["cuddly-behdad-head", "cuddly-marketa-head"].forEach(function (id) {
     var el = document.getElementById(id);
-    if (el) el.addEventListener("click", function (e) { e.stopPropagation(); shake(el); });
+    if (!el) return;
+    el.addEventListener("click", function (e) { e.stopPropagation(); shake(el); });
+    // Strip the one-shot class when its animation ends so a resting head carries
+    // neither shake nor ouch (mirrors how the feet clear "tickled").
+    el.addEventListener("animationend", function (e) {
+      if (e.target !== el) return;
+      if (e.animationName === "head-shake") el.classList.remove("shake");
+      else if (e.animationName === "octopus-ouch") el.classList.remove("ouch");
+    });
   });
 })();
 (function () {
@@ -4146,7 +4161,9 @@ document.addEventListener("click", function (e) {
   function triggerCoupleOuch(headId) {
     var head = document.getElementById(headId);
     if (!head) return;
-    head.classList.remove("ouch");
+    // Clear "shake" first — otherwise #head.shake out-specifies .head-group.ouch
+    // and the chop reaction never shows. (animationend cleanup then strips ouch.)
+    head.classList.remove("ouch", "shake");
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { head.classList.add("ouch"); });
     });

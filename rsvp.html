@@ -6742,24 +6742,56 @@ function playCatMeowSound() {
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
+    var dur = 0.5;
+
+    // Glottal source: a harmonically rich sawtooth tracing the "mee-OW" arc
+    // (rise to a peak, then fall) with a gentle vibrato warble on top — a
+    // steady glide alone just reads as a siren.
     var osc = ctx.createOscillator();
     osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(520, t);
-    osc.frequency.linearRampToValueAtTime(760, t + 0.1);
-    osc.frequency.linearRampToValueAtTime(340, t + 0.32);
-    var filter = ctx.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.value = 1800;
-    var gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.14, t + 0.06);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(360, t);
+    osc.frequency.exponentialRampToValueAtTime(680, t + 0.14);
+    osc.frequency.setValueAtTime(680, t + 0.24);
+    osc.frequency.exponentialRampToValueAtTime(300, t + dur);
+    var vibrato = ctx.createOscillator();
+    vibrato.type = "sine";
+    vibrato.frequency.value = 6;
+    var vibratoGain = ctx.createGain();
+    vibratoGain.gain.value = 18;
+    vibrato.connect(vibratoGain);
+    vibratoGain.connect(osc.frequency);
+    vibrato.start(t);
+    vibrato.stop(t + dur);
+
+    var masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0.0001, t);
+    masterGain.gain.exponentialRampToValueAtTime(0.16, t + 0.05);
+    masterGain.gain.setValueAtTime(0.16, t + 0.22);
+    masterGain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    masterGain.connect(ctx.destination);
+
+    // Two parallel formant bandpass filters morph the vowel from a bright
+    // "ee" toward a rounded "ow" — the moving F2 in particular is what makes
+    // the ear hear a cat instead of a synth sweep.
+    function formant(startF, midF, endF, level) {
+      var bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.Q.value = 6;
+      bp.frequency.setValueAtTime(startF, t);
+      bp.frequency.linearRampToValueAtTime(midF, t + 0.18);
+      bp.frequency.linearRampToValueAtTime(endF, t + dur);
+      var g = ctx.createGain();
+      g.gain.value = level;
+      osc.connect(bp);
+      bp.connect(g);
+      g.connect(masterGain);
+    }
+    formant(750, 900, 700, 1.0);
+    formant(2100, 1700, 1000, 0.6);
+
     osc.start(t);
-    osc.stop(t + 0.36);
-    setTimeout(function () { ctx.close(); }, 450);
+    osc.stop(t + dur + 0.02);
+    setTimeout(function () { ctx.close(); }, 700);
   } catch (e) {}
 }
 function playGhostBooSound() {

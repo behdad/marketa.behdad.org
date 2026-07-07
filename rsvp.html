@@ -6891,26 +6891,83 @@ function playCreakSound() {
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
+    var dur = 0.42;
+
+    // A creak is stick-slip friction: the hinge grabs and releases in a rapid,
+    // accelerating stutter, not a smooth tone sweep. Model it as a rough
+    // sawtooth chopped by a tremolo whose rate speeds up over the creak (the
+    // door swinging faster), plus a wavering pitch and a little friction hiss.
     var osc = ctx.createOscillator();
     osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(180, t);
-    osc.frequency.linearRampToValueAtTime(240, t + 0.15);
-    osc.frequency.linearRampToValueAtTime(160, t + 0.35);
-    var filter = ctx.createBiquadFilter();
-    filter.type = "bandpass";
-    filter.frequency.value = 500;
-    filter.Q.value = 4;
-    var gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.06, t + 0.05);
-    gain.gain.setValueAtTime(0.05, t + 0.28);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(150, t);
+    osc.frequency.linearRampToValueAtTime(255, t + dur);
+
+    // Pitch waver — an unstable, wandering pitch is a strong creak cue.
+    var waver = ctx.createOscillator();
+    waver.type = "sine";
+    waver.frequency.value = 9;
+    var waverDepth = ctx.createGain();
+    waverDepth.gain.value = 13;
+    waver.connect(waverDepth);
+    waverDepth.connect(osc.frequency);
+    waver.start(t);
+    waver.stop(t + dur + 0.02);
+
+    // Woody/metallic resonance that opens up as the door swings.
+    var bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.Q.value = 5;
+    bp.frequency.setValueAtTime(650, t);
+    bp.frequency.linearRampToValueAtTime(1350, t + dur);
+
+    // Stick-slip grain: a tremolo gain node whose rate accelerates from a
+    // slow grind (15 Hz) to a fast chatter (46 Hz). Base 0.5 + depth 0.45
+    // swings the gain 0.05..0.95 without going negative.
+    var rough = ctx.createGain();
+    rough.gain.value = 0.5;
+    var trem = ctx.createOscillator();
+    trem.type = "sine";
+    trem.frequency.setValueAtTime(15, t);
+    trem.frequency.linearRampToValueAtTime(46, t + dur);
+    var tremDepth = ctx.createGain();
+    tremDepth.gain.value = 0.45;
+    trem.connect(tremDepth);
+    tremDepth.connect(rough.gain);
+    trem.start(t);
+    trem.stop(t + dur + 0.02);
+
+    var main = ctx.createGain();
+    main.gain.setValueAtTime(0.0001, t);
+    main.gain.exponentialRampToValueAtTime(0.06, t + 0.06);
+    main.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+    osc.connect(bp);
+    bp.connect(rough);
+
+    // Friction hiss, routed through the same grain so it stutters in sync.
+    var nSize = Math.max(1, Math.floor(ctx.sampleRate * dur));
+    var nBuf = ctx.createBuffer(1, nSize, ctx.sampleRate);
+    var nData = nBuf.getChannelData(0);
+    for (var i = 0; i < nSize; i++) nData[i] = Math.random() * 2 - 1;
+    var noise = ctx.createBufferSource();
+    noise.buffer = nBuf;
+    var hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 1600;
+    var nG = ctx.createGain();
+    nG.gain.value = 0.18;
+    noise.connect(hp);
+    hp.connect(nG);
+    nG.connect(rough);
+    noise.start(t);
+    noise.stop(t + dur + 0.02);
+
+    rough.connect(main);
+    main.connect(ctx.destination);
+
     osc.start(t);
-    osc.stop(t + 0.42);
-    setTimeout(function () { ctx.close(); }, 500);
+    osc.stop(t + dur + 0.02);
+    setTimeout(function () { ctx.close(); }, 550);
   } catch (e) {}
 }
 function playSweepSound() {

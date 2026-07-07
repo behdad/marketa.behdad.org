@@ -5890,21 +5890,72 @@ function playGiggleSound() {
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
-    [523, 587, 659, 587].forEach(function (freq, i) {
-      var t0 = t + i * 0.09;
+
+    // A giggle is a rapid run of voiced, breathy "he" pulses — not a melody.
+    // One shared vocal-tract filter (two "ee"-ish formants) shapes every
+    // pulse; the pitch arcs up then back down across the run, each pulse
+    // dips within itself, and the timing is slightly uneven.
+    var master = ctx.createGain();
+    master.gain.value = 0.9;
+    master.connect(ctx.destination);
+    function formant(freq, q, level) {
+      var bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = freq;
+      bp.Q.value = q;
+      var g = ctx.createGain();
+      g.gain.value = level;
+      bp.connect(g);
+      g.connect(master);
+      return bp;
+    }
+    var f1 = formant(430, 5, 1.0);
+    var f2 = formant(2400, 7, 0.35);
+
+    var pulses = [
+      { at: 0.00, f0: 360 },
+      { at: 0.085, f0: 395 },
+      { at: 0.165, f0: 420 },
+      { at: 0.255, f0: 390 },
+      { at: 0.345, f0: 350 }
+    ];
+    pulses.forEach(function (p) {
+      var start = t + p.at + (Math.random() - 0.5) * 0.012;
       var osc = ctx.createOscillator();
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(freq, t0);
-      var gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.0001, t0);
-      gain.gain.exponentialRampToValueAtTime(0.05, t0 + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.09);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(t0);
-      osc.stop(t0 + 0.1);
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(p.f0, start);
+      osc.frequency.exponentialRampToValueAtTime(p.f0 * 0.82, start + 0.07);
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, start);
+      g.gain.exponentialRampToValueAtTime(0.055, start + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, start + 0.075);
+      osc.connect(g);
+      g.connect(f1);
+      g.connect(f2);
+      osc.start(start);
+      osc.stop(start + 0.09);
+
+      // A whisper of breath under each pulse.
+      var nSize = Math.max(1, Math.floor(ctx.sampleRate * 0.07));
+      var nBuf = ctx.createBuffer(1, nSize, ctx.sampleRate);
+      var nData = nBuf.getChannelData(0);
+      for (var i = 0; i < nSize; i++) nData[i] = Math.random() * 2 - 1;
+      var noise = ctx.createBufferSource();
+      noise.buffer = nBuf;
+      var hp = ctx.createBiquadFilter();
+      hp.type = "highpass";
+      hp.frequency.value = 2500;
+      var nG = ctx.createGain();
+      nG.gain.setValueAtTime(0.0001, start);
+      nG.gain.exponentialRampToValueAtTime(0.012, start + 0.01);
+      nG.gain.exponentialRampToValueAtTime(0.0001, start + 0.07);
+      noise.connect(hp);
+      hp.connect(nG);
+      nG.connect(ctx.destination);
+      noise.start(start);
+      noise.stop(start + 0.08);
     });
-    setTimeout(function () { ctx.close(); }, 700);
+    setTimeout(function () { ctx.close(); }, 800);
   } catch (e) {}
 }
 function playHeartsSound() {

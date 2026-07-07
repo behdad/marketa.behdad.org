@@ -324,15 +324,6 @@ footer{margin-top:2.6rem}
   65%{transform:rotate(3deg)}
 }
 @media (prefers-reduced-motion: reduce){.cuddly-passthrough-plates.wobbling{animation:none}}
-#cuddly-kitchenledge{transform-box:fill-box; transform-origin:bottom center}
-#cuddly-kitchenledge.rattling{animation:ledge-rattle .4s ease-in-out}
-@keyframes ledge-rattle{
-  0%, 100%{transform:translateX(0)}
-  25%{transform:translateX(-1.5px)}
-  50%{transform:translateX(1.5px)}
-  75%{transform:translateX(-1px)}
-}
-@media (prefers-reduced-motion: reduce){#cuddly-kitchenledge.rattling{animation:none}}
 .cuddly-ledge-item{transform-box:fill-box; transform-origin:bottom center}
 .cuddly-ledge-item.wobbling{animation:ledge-item-wobble .4s ease-in-out}
 @keyframes ledge-item-wobble{
@@ -509,6 +500,7 @@ footer{margin-top:2.6rem}
   #garden-guitar.playing, #garden-ukulele.playing,
   #garden-guitar.tapped, #garden-ukulele.tapped, #garden-chanter.tapped{animation:none}
 }
+#office-desk, #office-chair, #garden-bottles, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-utensil{touch-action:none}
 #office-desk-top, #office-typewriter, #office-laptop, #office-pc-desk-trio{transition:translate .6s ease}
 .desk-leg-pole{transform-box:fill-box; transform-origin:bottom; transition:transform .6s ease}
 .desk-led{transition:fill .15s ease}
@@ -2106,14 +2098,9 @@ section{margin:1.9rem 0}
 <polygon points="41,156 47,156 45,172 43,172" fill="#8a8578"/>
 </g>
 </g>
-<g id="cuddly-kitchenledge" class="hunt-hit" tabindex="0" role="button" aria-label="The kitchen ledge items">
+<g id="cuddly-kitchenledge">
 <rect x="4" y="160" width="134" height="56" fill="transparent"/>
 <rect x="8" y="204" width="142" height="10" rx="2" fill="#f0ede4" stroke="#c9c4b8" stroke-width="1"/>
-<g id="cuddly-crock" class="hunt-hit cuddly-ledge-item" tabindex="0" role="button" aria-label="A utensil crock">
-<rect x="34" y="168" width="24" height="40" fill="transparent"/>
-<rect x="38" y="176" width="16" height="28" rx="2" fill="#3a3a3a"/>
-<ellipse cx="46" cy="176" rx="8" ry="4" fill="#5a5a5a"/>
-</g>
 <g id="cuddly-pitcher" class="hunt-hit cuddly-ledge-item" tabindex="0" role="button" aria-label="A pitcher">
 <rect x="52" y="180" width="42" height="24" fill="transparent"/>
 <rect x="64" y="184" width="22" height="20" rx="3" fill="#9a948a" stroke="#6b6258" stroke-width="1"/>
@@ -3984,18 +3971,7 @@ document.addEventListener("click", function (e) {
 (function () {
   var ledge = document.getElementById("cuddly-kitchenledge");
   if (!ledge) return;
-  function rattleLedge() {
-    ledge.classList.remove("rattling");
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () { ledge.classList.add("rattling"); });
-    });
-    playMetalClinkSound();
-    setTimeout(playMetalClinkSound, 90);
-  }
-  ledge.addEventListener("click", rattleLedge);
-  ledge.addEventListener("keydown", function (e) {
-    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); rattleLedge(); }
-  });
+  var strip = document.getElementById("loft-game-strip");
   var THROW_TARGETS = {
     fishu: { x: 495 + 1360, y: 95 },
     octi: { x: 636 + 1360, y: 240 },
@@ -4109,20 +4085,21 @@ document.addEventListener("click", function (e) {
     });
     makeThrowable(utensil, wobbleUtensil);
   });
-  ["cuddly-crock", "cuddly-pitcher"].forEach(function (id) {
+  ["cuddly-pitcher"].forEach(function (id) {
     var item = document.getElementById(id);
     if (!item) return;
-    function wobbleItem(e) {
+    function pourPitcher(e) {
       if (e && e.stopPropagation) e.stopPropagation();
       item.classList.remove("wobbling");
       requestAnimationFrame(function () {
         requestAnimationFrame(function () { item.classList.add("wobbling"); });
       });
-      playMetalClinkSound(0.8);
+      playWaterSound();
+      spawnWaterDroplets(strip, 1418, 196);
     }
-    item.addEventListener("click", wobbleItem);
+    item.addEventListener("click", pourPitcher);
     item.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); wobbleItem(e); }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pourPitcher(e); }
     });
   });
 })();

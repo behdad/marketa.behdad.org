@@ -674,12 +674,12 @@ footer{margin-top:2.6rem}
   50%{transform:rotate(20deg)}
 }
 #cuddly-behdad-right-arm.leaning{animation:behdad-lean 3s ease-in-out}
-#cuddly-behdad-right-arm.stroking{animation:right-arm-stroke-lean 3s ease-in-out}
-@keyframes right-arm-stroke-lean{
-  0%, 100%{transform:translate(0,0) rotate(0deg)}
-  20%, 70%{transform:translate(7px,2px) rotate(-50deg)}
+#cuddly-behdad-right-arm-inner.stroking{animation:right-arm-stroke 1.4s ease-in-out}
+@keyframes right-arm-stroke{
+  0%,100%{transform:rotate(0deg)}
+  50%{transform:rotate(-50deg)}
 }
-@media (prefers-reduced-motion: reduce){#cuddly-behdad-left-arm.reaching, #cuddly-behdad-right-arm.leaning, #cuddly-behdad-right-arm.stroking{animation:none}}
+@media (prefers-reduced-motion: reduce){#cuddly-behdad-left-arm.reaching, #cuddly-behdad-right-arm.leaning, #cuddly-behdad-right-arm-inner.stroking{animation:none}}
 #cuddly-puffer-wrap{cursor:pointer}
 #cuddly-puffer-wrap.flying-off{animation:fishu-fly-out 1.4s ease-in forwards}
 @keyframes fishu-fly-out{
@@ -2324,9 +2324,11 @@ section{margin:1.9rem 0}
 </g>
 </g>
 <g id="cuddly-behdad-right-arm" style="transform-origin:176px 208px">
+<g id="cuddly-behdad-right-arm-inner" style="transform-origin:176px 208px">
 <path d="M176 208 Q168 230 196 242" fill="none" stroke="#c68e95" stroke-width="15" stroke-linecap="round"/>
 <path d="M176 208 Q168 230 196 242" fill="none" stroke="#e9bfc4" stroke-width="11" stroke-linecap="round"/>
 <circle cx="202" cy="244" r="6" fill="#e6b489" stroke="#b9855e" stroke-width="1"/>
+</g>
 </g>
 <g id="cuddly-marketa-right-arm" style="transform-origin:230px 208px">
 <path d="M230 208 Q214 230 210 244" fill="none" stroke="#7f9ec0" stroke-width="14" stroke-linecap="round"/>
@@ -3226,19 +3228,21 @@ document.addEventListener("click", function (e) {
     });
   }
   if (rightArm) {
+    var rightArmInner = document.getElementById("cuddly-behdad-right-arm-inner");
     rightArm.addEventListener("animationend", function (e) {
       if (e.animationName === "behdad-lean") rightArm.classList.remove("leaning");
-      if (e.animationName === "right-arm-stroke-lean") rightArm.classList.remove("stroking");
+      if (e.animationName === "right-arm-stroke" && rightArmInner) rightArmInner.classList.remove("stroking");
     });
+    // The stroke lives on the inner group so it composes with (never restarts) the
+    // outer group's lean — restarting the lean mid-flight made the whole pose jump.
     function strokeArm() {
+      leanBehdad();
       clearTimeout(kissTimer);
-      behdad.classList.remove("leaning");
-      if (leftArm) leftArm.classList.remove("reaching");
-      rightArm.classList.remove("leaning", "stroking");
-      void behdad.getBoundingClientRect();
-      behdad.classList.add("leaning");
-      if (leftArm) leftArm.classList.add("reaching");
-      rightArm.classList.add("stroking");
+      if (rightArmInner) {
+        rightArmInner.classList.remove("stroking");
+        void rightArmInner.getBoundingClientRect();
+        rightArmInner.classList.add("stroking");
+      }
       playGiggleSound();
       var marketaHead = document.getElementById("cuddly-marketa-head");
       var behdadHead = document.getElementById("cuddly-behdad-head");

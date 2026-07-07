@@ -1253,6 +1253,16 @@ footer{margin-top:2.6rem}
 /* hide the screen face when closed so no white peeks out of the lid sliver */
 #office-laptop-face{opacity:0; transition:opacity .25s ease}
 #office-laptop.open #office-laptop-face{opacity:1}
+/* the mac's "installing a software update, restarting" gag */
+#laptop-update, #laptop-boot{opacity:0; transition:opacity .3s ease}
+#office-laptop.updating #laptop-update{opacity:1}
+#office-laptop.rebooting #laptop-boot{opacity:1}
+#laptop-progress-fill{transform-box:fill-box; transform-origin:left center; transform:scaleX(0); transition:transform 3.3s linear}
+#office-laptop.progress #laptop-progress-fill{transform:scaleX(1)}
+#laptop-spinner{transform-box:fill-box; transform-origin:center}
+#office-laptop.rebooting #laptop-spinner{animation:laptop-spin .8s linear infinite}
+@keyframes laptop-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){#laptop-progress-fill{transition:none} #office-laptop.rebooting #laptop-spinner{animation:none}}
 #rsvp-trip-ghost{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:4}
 #rsvp-trip-ghost-inner{opacity:0; transform-box:fill-box; transform-origin:center; filter:blur(1.5px)}
 #rsvp-trip-ghost-inner.roaming{animation:trip-ghost-roam 6s ease-in-out}
@@ -2745,6 +2755,19 @@ section{margin:1.9rem 0}
 <rect x="388" y="164" width="58" height="34" rx="1" fill="#dcd8ce"/>
 <path d="M405 182 Q405 174 413 174 Q421 174 421 182 Q413 178 405 182 Z" fill="#d9a6a6"/>
 <path d="M417 182 Q417 174 425 174 Q433 174 433 182 Q425 178 417 182 Z" fill="#7f9ec0"/>
+</g>
+<g id="laptop-update">
+<rect x="388" y="164" width="58" height="34" rx="1" fill="#1d1d1f"/>
+<path d="M414 173.5 C414 171 415.6 169.9 417 170.5 C418.4 169.9 420 171 420 173.5 C420 176.3 418.4 178.5 417 178.5 C415.6 178.5 414 176.3 414 173.5 Z" fill="#f0eee8"/>
+<path d="M417.5 170.1 q2.2 -2 3.8 -1.1 q-0.9 2.1 -3.8 1.1 Z" fill="#f0eee8"/>
+<rect x="402" y="188" width="30" height="3" rx="1.5" fill="#48484a"/>
+<rect id="laptop-progress-fill" x="402" y="188" width="30" height="3" rx="1.5" fill="#f0eee8"/>
+</g>
+<g id="laptop-boot">
+<rect x="388" y="164" width="58" height="34" rx="1" fill="#000000"/>
+<path d="M414 175.5 C414 173 415.6 171.9 417 172.5 C418.4 171.9 420 173 420 175.5 C420 178.3 418.4 180.5 417 180.5 C415.6 180.5 414 178.3 414 175.5 Z" fill="#f0eee8"/>
+<path d="M417.5 172.1 q2.2 -2 3.8 -1.1 q-0.9 2.1 -3.8 1.1 Z" fill="#f0eee8"/>
+<circle id="laptop-spinner" cx="417" cy="189" r="2.4" fill="none" stroke="#c8c8c8" stroke-width="1" stroke-dasharray="2.2 2.2"/>
 </g>
 </g>
 <polygon points="382,202 452,202 458,208 376,208" fill="#6b6b6b" stroke="#4a4a4a" stroke-width="1.5"/>
@@ -4601,14 +4624,61 @@ document.addEventListener("click", function (e) {
   }
   var laptop = document.getElementById("office-laptop");
   if (laptop) {
-    function toggleLaptop() {
-      laptop.classList.toggle("open");
-      playLaptopClickSound();
+    var laptopUpdateTimers = [];
+    var laptopAutoTimer = null;
+    function clearLaptopTimers() {
+      laptopUpdateTimers.forEach(clearTimeout);
+      laptopUpdateTimers = [];
+      if (laptopAutoTimer) { clearTimeout(laptopAutoTimer); laptopAutoTimer = null; }
     }
-    laptop.addEventListener("click", toggleLaptop);
-    laptop.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleLaptop(); }
+    function endLaptopUpdate() {
+      clearLaptopTimers();
+      laptop.classList.remove("updating", "progress", "rebooting");
+    }
+    // The gag: an open Mac decides to install a software update and reboot —
+    // progress bar fills, screen goes black with a spinner, then back to desktop.
+    function runLaptopUpdate() {
+      if (!laptop.classList.contains("open")) return;
+      if (laptop.classList.contains("updating") || laptop.classList.contains("rebooting")) return;
+      clearLaptopTimers();
+      laptop.classList.add("updating");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { laptop.classList.add("progress"); });
+      });
+      laptopUpdateTimers.push(setTimeout(function () {
+        laptop.classList.remove("updating", "progress");
+        laptop.classList.add("rebooting");
+        playLaptopClickSound();
+      }, 3600));
+      laptopUpdateTimers.push(setTimeout(function () {
+        laptop.classList.remove("rebooting");
+        playBootChimeSound();
+      }, 5300));
+    }
+    function toggleLaptop() {
+      var open = laptop.classList.toggle("open");
+      playLaptopClickSound();
+      // an open Mac always finds an update to install :)
+      if (open) laptopAutoTimer = setTimeout(runLaptopUpdate, 2600);
+      else endLaptopUpdate();
+    }
+    var laptopClickTimer = null;
+    laptop.addEventListener("click", function () {
+      clearTimeout(laptopClickTimer);
+      laptopClickTimer = setTimeout(toggleLaptop, 240);
     });
+    laptop.addEventListener("dblclick", function () {
+      clearTimeout(laptopClickTimer);
+      if (!laptop.classList.contains("open")) { laptop.classList.add("open"); playLaptopClickSound(); }
+      runLaptopUpdate();
+    });
+    laptop.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); clearTimeout(laptopClickTimer); toggleLaptop(); }
+    });
+    window.resetLaptop = function () {
+      endLaptopUpdate();
+      laptop.classList.remove("open");
+    };
   }
   var woodenHead = document.getElementById("office-wooden-head");
   if (woodenHead) {
@@ -9511,6 +9581,7 @@ function spawnDustMote(container) {
     if (rainbow) rainbow.classList.remove("burst");
     if (window.resetSmoker) window.resetSmoker();
     if (window.resetGrill) window.resetGrill();
+    if (window.resetLaptop) window.resetLaptop();
     if (window.resetRadio) window.resetRadio();
     if (window.resetAC) window.resetAC();
     if (window.resetKettle) window.resetKettle();

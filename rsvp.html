@@ -7774,18 +7774,17 @@ function playFairyChimeSound() {
     if (!Ctx) return;
     var ctx = new Ctx();
     var t0 = ctx.currentTime;
-    // Each note of the rising arpeggio is a tiny struck bell rather than a
-    // sine blip: an inharmonic partial stack (~1 : 2.76 : 5.4, the mode
-    // ratios of a struck bar) whose overtones die faster than the
-    // fundamental, plus a slightly detuned twin for shimmer, ringing out
-    // longer than the old 0.4s chirp.
-    [880, 1108, 1318].forEach(function (freq, i) {
-      var t = t0 + i * 0.09;
+    // A glitter cascade: a fast rising pentatonic run of tiny bells with
+    // slightly uneven timing (fairy dust, not a doorbell), each note an
+    // inharmonic mini-bell with a detuned shimmer twin, the last one held.
+    var run = [1046.5, 1174.7, 1318.5, 1568, 1760, 2093, 2637];
+    run.forEach(function (freq, i) {
+      var t = t0 + i * 0.065 + Math.random() * 0.02;
+      var last = i === run.length - 1;
       [
-        { m: 1, g: 0.10, d: 0.9 },
-        { m: 1, g: 0.05, d: 0.8, dt: 9 },
-        { m: 2.76, g: 0.035, d: 0.35 },
-        { m: 5.4, g: 0.015, d: 0.15 }
+        { m: 1, g: 0.055, d: last ? 1.5 : 0.7 },
+        { m: 1, g: 0.026, d: last ? 1.3 : 0.6, dt: 11 },
+        { m: 2.76, g: 0.012, d: 0.22 }
       ].forEach(function (p) {
         var osc = ctx.createOscillator();
         osc.type = "sine";
@@ -7793,7 +7792,7 @@ function playFairyChimeSound() {
         if (p.dt) osc.detune.value = p.dt;
         var gain = ctx.createGain();
         gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(p.g, t + 0.008);
+        gain.gain.exponentialRampToValueAtTime(p.g, t + 0.006);
         gain.gain.exponentialRampToValueAtTime(0.0001, t + p.d);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -7801,7 +7800,26 @@ function playFairyChimeSound() {
         osc.stop(t + p.d + 0.02);
       });
     });
-    setTimeout(function () { ctx.close(); }, 1500);
+    // a whisper of very high noise under the run — the dust sheen
+    var sheenDur = 0.55;
+    var buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * sheenDur), ctx.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    var sheen = ctx.createBufferSource();
+    sheen.buffer = buf;
+    var hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 6500;
+    var sg = ctx.createGain();
+    sg.gain.setValueAtTime(0.0001, t0);
+    sg.gain.exponentialRampToValueAtTime(0.016, t0 + 0.12);
+    sg.gain.exponentialRampToValueAtTime(0.0001, t0 + sheenDur);
+    sheen.connect(hp);
+    hp.connect(sg);
+    sg.connect(ctx.destination);
+    sheen.start(t0);
+    sheen.stop(t0 + sheenDur + 0.02);
+    setTimeout(function () { ctx.close(); }, 2200);
   } catch (e) {}
 }
 function playCatMeowSound() {
@@ -8799,16 +8817,17 @@ function spawnDustMote(container) {
     spawnSteamWisps(strip, 538, 216, 0.6, 1, 1);
   });
   onActivate(lamarzocco, function () {
-    if (kitchenPowered) return;
-    kitchenPowered = true;
-    if (lamarzocco) lamarzocco.classList.add("powered-on", "done");
+    kitchenPowered = !kitchenPowered;
+    if (lamarzocco) lamarzocco.classList.toggle("powered-on", kitchenPowered);
+    if (kitchenPowered && lamarzocco) lamarzocco.classList.add("done");
     playSparkSound();
-    spawnSparkFlare(strip, 465, 158);
+    if (kitchenPowered) spawnSparkFlare(strip, 465, 158);
     ["kitchen-gauge-needle-1", "kitchen-gauge-needle-2"].forEach(function (id) {
       var needle = document.getElementById(id);
-      if (needle) needle.classList.remove("zero");
+      if (needle) needle.classList.toggle("zero", !kitchenPowered);
     });
-    setCaption("kitchen_grind");
+    if (kitchenPowered) setCaption(kitchenGround ? "kitchen_brew" : "kitchen_grind");
+    else if (!kitchenSolved) setCaption("kitchen");
     updateKitchenInvite();
   });
   onActivate(grinder, function () {

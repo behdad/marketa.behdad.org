@@ -4497,10 +4497,19 @@ document.addEventListener("click", function (e) {
   typewriter.addEventListener("dblclick", function () { swap(true); });
   monitor.addEventListener("dblclick", function () { swap(false); });
   monitor.addEventListener("click", function () { playLaptopClickSound(); });
+  // Powering the PC summons the monitor (a computer needs a display) and
+  // powering off dissolves it back into the typewriter; double-click stays
+  // as the manual override either way.
+  function onPcToggled() {
+    var on = pcTower.classList.contains("on");
+    if (on && !monitor.classList.contains("here")) swap(true);
+    else if (!on && monitor.classList.contains("here")) swap(false);
+    else updateScreen();
+  }
   if (pcTower) {
-    pcTower.addEventListener("click", updateScreen);
+    pcTower.addEventListener("click", onPcToggled);
     pcTower.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") updateScreen();
+      if (e.key === "Enter" || e.key === " ") onPcToggled();
     });
   }
   window.resetOfficeMonitor = function () {

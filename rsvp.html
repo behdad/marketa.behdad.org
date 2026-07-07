@@ -601,6 +601,8 @@ footer{margin-top:2.6rem}
 #office-stainedglass.zoomed{filter:saturate(1.9)}
 #office-stainedglass.zoomed #office-butterfly-wing-left{animation:butterfly-flap-left 2.4s ease-in-out 3}
 #office-stainedglass.zoomed #office-butterfly-wing-right{animation:butterfly-flap-right 2.4s ease-in-out 3}
+#office-stainedglass.flap #office-butterfly-wing-left{animation:butterfly-flap-left .55s ease-in-out}
+#office-stainedglass.flap #office-butterfly-wing-right{animation:butterfly-flap-right .55s ease-in-out}
 @keyframes butterfly-flap-left{
   0%, 100%{transform:scaleX(1)}
   50%{transform:scaleX(.72)}
@@ -1235,7 +1237,8 @@ footer{margin-top:2.6rem}
   100%{opacity:0}
 }
 @media (prefers-reduced-motion: reduce){
-  #office-stainedglass.zoomed #office-butterfly-wing-left, #office-stainedglass.zoomed #office-butterfly-wing-right{animation:none}
+  #office-stainedglass.zoomed #office-butterfly-wing-left, #office-stainedglass.zoomed #office-butterfly-wing-right,
+  #office-stainedglass.flap #office-butterfly-wing-left, #office-stainedglass.flap #office-butterfly-wing-right{animation:none}
   #kitchen-grinder.grinding{animation:none}
   #kitchen-portafilter.brewing{animation:none}
   .head-group.shake{animation:none}
@@ -8716,6 +8719,16 @@ function spawnDustMote(container) {
 
   var glass = document.getElementById("office-stainedglass");
   var officeDim = document.getElementById("office-dim-overlay");
+  function flapButterfly() {
+    if (!glass) return;
+    glass.classList.remove("flap");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { glass.classList.add("flap"); });
+    });
+  }
+  if (glass) glass.addEventListener("animationend", function (e) {
+    if (e.animationName === "butterfly-flap-left" || e.animationName === "butterfly-flap-right") glass.classList.remove("flap");
+  });
   onActivate(glass, function () {
     var lampsOff = ["office-lamp", "office-pendant"].every(function (id) {
       var el = document.getElementById(id);
@@ -8723,6 +8736,7 @@ function spawnDustMote(container) {
     });
     if (!lampsOff) {
       setCaption("office_hint");
+      flapButterfly();
       return;
     }
     if (glass) glass.classList.add("done", "zoomed");

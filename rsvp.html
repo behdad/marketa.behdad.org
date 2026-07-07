@@ -6594,19 +6594,61 @@ function playMouseSqueakSound() {
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
-    [0, 0.1, 0.19].forEach(function (t0, i) {
+    var squeaks = [
+      { t0: 0.0,  base: 2500, dur: 0.09 },
+      { t0: 0.12, base: 2350, dur: 0.08 },
+      { t0: 0.22, base: 2200, dur: 0.07 }
+    ];
+    squeaks.forEach(function (s) {
+      var start = t + s.t0;
+      var end = start + s.dur;
+      // Triangle source with a quick up-then-down "eek" contour instead of a
+      // pure rising sine, which just beeps.
       var osc = ctx.createOscillator();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(2400 - i * 150, t + t0);
-      osc.frequency.exponentialRampToValueAtTime(3200 - i * 150, t + t0 + 0.06);
-      var gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.0001, t + t0);
-      gain.gain.exponentialRampToValueAtTime(0.05, t + t0 + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + t0 + 0.08);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(t + t0);
-      osc.stop(t + t0 + 0.09);
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(s.base * 0.8, start);
+      osc.frequency.exponentialRampToValueAtTime(s.base * 1.25, start + s.dur * 0.4);
+      osc.frequency.exponentialRampToValueAtTime(s.base * 0.9, end);
+      // Fast vibrato roughens the tone so it chitters like a rodent rather
+      // than beeping like a tone generator.
+      var vib = ctx.createOscillator();
+      vib.type = "sine";
+      vib.frequency.value = 45;
+      var vibG = ctx.createGain();
+      vibG.gain.value = 130;
+      vib.connect(vibG);
+      vibG.connect(osc.frequency);
+      vib.start(start);
+      vib.stop(end);
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, start);
+      g.gain.exponentialRampToValueAtTime(0.05, start + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, end);
+      osc.connect(g);
+      g.connect(ctx.destination);
+      osc.start(start);
+      osc.stop(end + 0.02);
+
+      // A whisper of high-passed noise under each squeak gives it a breathy,
+      // organic edge that a pure tone lacks.
+      var nSize = Math.max(1, Math.floor(ctx.sampleRate * s.dur));
+      var nBuf = ctx.createBuffer(1, nSize, ctx.sampleRate);
+      var nData = nBuf.getChannelData(0);
+      for (var i = 0; i < nSize; i++) nData[i] = Math.random() * 2 - 1;
+      var noise = ctx.createBufferSource();
+      noise.buffer = nBuf;
+      var hp = ctx.createBiquadFilter();
+      hp.type = "highpass";
+      hp.frequency.value = 2000;
+      var nG = ctx.createGain();
+      nG.gain.setValueAtTime(0.0001, start);
+      nG.gain.exponentialRampToValueAtTime(0.012, start + 0.012);
+      nG.gain.exponentialRampToValueAtTime(0.0001, end);
+      noise.connect(hp);
+      hp.connect(nG);
+      nG.connect(ctx.destination);
+      noise.start(start);
+      noise.stop(end + 0.02);
     });
     setTimeout(function () { ctx.close(); }, 500);
   } catch (e) {}

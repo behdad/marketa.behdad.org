@@ -7771,7 +7771,28 @@ function playSodaHissSound() {
     burst(0.34, 0.28, 0.17);
     burst(0.64, 0.34, 0.16);
 
-    setTimeout(function () { ctx.close(); }, 1300);
+    // Final pressure release: a smooth sustained hiss as the excess gas vents
+    // once the pulses stop (looping the short buffer to fill the tail).
+    var tail = t0 + 0.95;
+    var tailDur = 0.85;
+    var ts = ctx.createBufferSource();
+    ts.buffer = buf;
+    ts.loop = true;
+    var thp = ctx.createBiquadFilter();
+    thp.type = "highpass";
+    thp.frequency.value = 2600;
+    var tg = ctx.createGain();
+    tg.gain.setValueAtTime(0.0001, tail);
+    tg.gain.exponentialRampToValueAtTime(0.15, tail + 0.06);
+    tg.gain.setValueAtTime(0.13, tail + tailDur * 0.4);
+    tg.gain.exponentialRampToValueAtTime(0.0001, tail + tailDur);
+    ts.connect(thp);
+    thp.connect(tg);
+    tg.connect(master);
+    ts.start(tail);
+    ts.stop(tail + tailDur + 0.02);
+
+    setTimeout(function () { ctx.close(); }, 2100);
   } catch (e) {}
 }
 function playSteamWandHissSound() {

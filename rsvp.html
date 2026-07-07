@@ -68,7 +68,7 @@ footer{margin-top:2.6rem}
 .hunt-frame{position:relative; max-width:1140px; margin:1.5rem auto; padding:0 1.15rem}
 .hunt-viewport{
   position:relative; width:100%; overflow:hidden; border-radius:14px;
-  box-shadow:0 3px 10px rgba(69,58,49,.15); background:#f8f5ec;
+  box-shadow:0 3px 10px rgba(69,58,49,.15); background:#f8f5ec; touch-action:pan-y;
 }
 #hunt-wipe{
   position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none;
@@ -8198,6 +8198,77 @@ function spawnDustMote(container) {
       goToStage(STAGES[stageIndex + 1]);
     }
   });
+
+  // Drag/swipe between scenes. The strip follows the finger, then snaps to the
+  // nearest room (or flicks one over). In-scene draggables (bottles, knives,
+  // blankets) setPointerCapture on their own pointerdown, so their gestures
+  // never reach this viewport handler; only drags on the scene background do.
+  // touch-action:pan-y (set in CSS) lets vertical page-scroll through while we
+  // take horizontal gestures.
+  (function () {
+    var viewport = strip.parentElement;
+    if (!viewport) return;
+    var down = false, engaged = false, aborted = false;
+    var startX = 0, startY = 0, lastX = 0, lastT = 0, vel = 0, vpW = 1;
+    var THRESH = 8;
+    function base() { return -(stageIndex * 20); }
+    function setPct(pct) { strip.style.transform = "translateX(" + pct + "%)"; }
+    viewport.addEventListener("pointerdown", function (e) {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      down = true; engaged = false; aborted = false;
+      startX = lastX = e.clientX; startY = e.clientY;
+      lastT = e.timeStamp; vel = 0;
+      vpW = viewport.getBoundingClientRect().width || 1;
+    });
+    viewport.addEventListener("pointermove", function (e) {
+      if (!down || aborted) return;
+      var dx = e.clientX - startX, dy = e.clientY - startY;
+      if (!engaged) {
+        if (Math.abs(dx) < THRESH && Math.abs(dy) < THRESH) return;
+        if (Math.abs(dy) >= Math.abs(dx)) { aborted = true; return; } // vertical: let the page scroll
+        engaged = true;
+        strip.style.transition = "none";
+      }
+      var dt = e.timeStamp - lastT;
+      if (dt > 0) vel = (e.clientX - lastX) / dt;
+      lastX = e.clientX; lastT = e.timeStamp;
+      var pct = (dx / vpW) * 20;
+      // resist at the first room and at the locked frontier
+      if ((stageIndex <= 0 && dx > 0) || (stageIndex >= maxUnlocked && dx < 0)) pct *= 0.35;
+      setPct(base() + pct);
+      if (e.cancelable) e.preventDefault();
+    });
+    function finish(e) {
+      if (!down) return;
+      down = false;
+      if (!engaged) return; // it was a tap — let the click through
+      strip.style.transition = "";
+      var frac = (e.clientX - startX) / vpW;
+      var dir = 0;
+      if (Math.abs(vel) > 0.45) dir = vel < 0 ? 1 : -1;   // flick
+      else if (frac <= -0.5) dir = 1;                     // dragged left past halfway → next
+      else if (frac >= 0.5) dir = -1;                     // dragged right past halfway → prev
+      var target = stageIndex + dir;
+      if (target < 0) target = 0;
+      if (target > maxUnlocked) {
+        // a near-full drag across force-unlocks the next room (like the
+        // double-click-next cheat); a mere flick does not
+        if (dir === 1 && stageIndex === maxUnlocked && Math.abs(frac) >= 0.85 && stageIndex < STAGES.length - 1) {
+          target = stageIndex + 1;
+        } else {
+          target = maxUnlocked;
+        }
+      }
+      if (target === stageIndex) setPct(base()); // snap back, no goToStage re-trigger
+      else goToStage(STAGES[target]);
+    }
+    viewport.addEventListener("pointerup", finish);
+    viewport.addEventListener("pointercancel", function () {
+      if (!down) return;
+      down = false;
+      if (engaged) { strip.style.transition = ""; setPct(base()); }
+    });
+  })();
 
   var GRIND_MS = 1200;
   var BREW_MS = 2300;

@@ -586,7 +586,10 @@ footer{margin-top:2.6rem}
 .eq-bar{transform-box:fill-box; transform-origin:bottom center}
 #office-monitor.show-nowplaying .eq-bar{animation:eq-bounce .6s ease-in-out infinite}
 @keyframes eq-bounce{0%,100%{transform:scaleY(0.28)} 50%{transform:scaleY(1)}}
-@media (prefers-reduced-motion: reduce){#office-monitor.show-nowplaying .eq-bar{animation:none}}
+#monitor-np-marquee{transform:translateX(124px)}
+#office-monitor.show-nowplaying #monitor-np-marquee{animation:np-scroll 8s linear infinite}
+@keyframes np-scroll{from{transform:translateX(124px)} to{transform:translateX(-175px)}}
+@media (prefers-reduced-motion: reduce){#office-monitor.show-nowplaying .eq-bar{animation:none} #monitor-np-marquee{transform:translateX(4px)} #office-monitor.show-nowplaying #monitor-np-marquee{animation:none}}
 .desk-leg-pole{transform-box:fill-box; transform-origin:bottom; transition:transform .6s ease}
 .desk-led{transition:fill .15s ease}
 #office-desk-controls.moving .desk-led{animation:desk-led-blink .3s steps(2,jump-none) infinite}
@@ -2768,7 +2771,7 @@ section{margin:1.9rem 0}
 </g>
 <g id="monitor-logo-nowplaying" class="boot-logo">
 <rect x="254" y="154" width="124" height="42" rx="1.5" fill="#1a1420"/>
-<text x="316" y="169" text-anchor="middle" style="fill:#e8b0c8; font-family:monospace; font-size:6px">&#9834; now playing</text>
+<g id="monitor-np-marquee"><text id="monitor-np-title" x="254" y="169" style="fill:#e8b0c8; font-family:monospace; font-size:6px">&#9834; Black Tornado &#8212; Dan Bern</text></g>
 <rect class="eq-bar" x="300" y="176" width="4" height="13" rx="1" fill="#d9a6a6"/>
 <rect class="eq-bar" x="308" y="176" width="4" height="13" rx="1" fill="#e8b93a" style="animation-delay:.18s"/>
 <rect class="eq-bar" x="316" y="176" width="4" height="13" rx="1" fill="#7fb35c" style="animation-delay:.34s"/>
@@ -4872,10 +4875,23 @@ document.addEventListener("click", function (e) {
   var songAudios = ["guitar-song-audio", "ukulele-song-audio"]
     .map(function (id) { return document.getElementById(id); })
     .filter(Boolean);
+  // the actual artists' recordings from the loft concert for Markéta's birthday
+  var SONG_INFO = {
+    "guitar-song-audio": "♪ Black Tornado — Dan Bern",
+    "ukulele-song-audio": "♪ Strange & Beautiful Things — Orit Shimoni"
+  };
   function updateNowPlaying() {
-    var playing = songAudios.some(function (a) { return a && !a.paused && !a.ended; });
-    if (playing && monitorShowingSite()) monitor.classList.add("show-nowplaying");
-    else monitor.classList.remove("show-nowplaying");
+    var playingId = null;
+    for (var i = 0; i < songAudios.length; i++) {
+      if (songAudios[i] && !songAudios[i].paused && !songAudios[i].ended) { playingId = songAudios[i].id; break; }
+    }
+    if (playingId && monitorShowingSite()) {
+      var title = document.getElementById("monitor-np-title");
+      if (title) title.textContent = SONG_INFO[playingId] || "";
+      monitor.classList.add("show-nowplaying");
+    } else {
+      monitor.classList.remove("show-nowplaying");
+    }
   }
   songAudios.forEach(function (a) {
     a.addEventListener("play", updateNowPlaying);

@@ -616,7 +616,19 @@ footer{margin-top:2.6rem}
   100%{transform:rotate(0)}
 }
 .head-group.ouch{animation:octopus-ouch .5s ease-in-out}
-@media (prefers-reduced-motion: reduce){.head-group.ouch, .head-group.shake{animation:none}}
+/* Deliberate "chop": a hard sideways swing when a thrown knife lands on a
+   head, pivoting at the neck (50% 100%) so the whole head whips over and
+   recoils back — the dramatic fling the old broken pivot did by accident. */
+.head-group.chopped{animation:head-chop .6s ease-out; transform-origin:50% 100%}
+@keyframes head-chop{
+  0%{transform:rotate(0)}
+  18%{transform:rotate(-30deg)}
+  40%{transform:rotate(-8deg)}
+  60%{transform:rotate(-20deg)}
+  80%{transform:rotate(-5deg)}
+  100%{transform:rotate(0)}
+}
+@media (prefers-reduced-motion: reduce){.head-group.ouch, .head-group.shake, .head-group.chopped{animation:none}}
 /* Under .head-group's transform-box:fill-box, a head-shake must pivot at the
    neck = bottom-center of the head's own box (50% 100%). The old pixel values
    (194/243px) were neck coords for the pre-fill-box default; once fill-box was
@@ -3229,7 +3241,7 @@ document.addEventListener("click", function (e) {
     // Clear the sibling one-shot ("ouch") too: #head.shake (1,1,0) out-specifies
     // .head-group.ouch (0,2,0), so a leftover class silently wins the cascade and
     // blocks the other animation forever. Remove both, replay shake.
-    el.classList.remove("shake", "ouch");
+    el.classList.remove("shake", "ouch", "chopped");
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { el.classList.add("shake"); });
     });
@@ -3239,11 +3251,12 @@ document.addEventListener("click", function (e) {
     if (!el) return;
     el.addEventListener("click", function (e) { e.stopPropagation(); shake(el); });
     // Strip the one-shot class when its animation ends so a resting head carries
-    // neither shake nor ouch (mirrors how the feet clear "tickled").
+    // none of shake/ouch/chopped (mirrors how the feet clear "tickled").
     el.addEventListener("animationend", function (e) {
       if (e.target !== el) return;
       if (e.animationName === "head-shake") el.classList.remove("shake");
       else if (e.animationName === "octopus-ouch") el.classList.remove("ouch");
+      else if (e.animationName === "head-chop") el.classList.remove("chopped");
     });
   });
 })();
@@ -4161,11 +4174,11 @@ document.addEventListener("click", function (e) {
   function triggerCoupleOuch(headId) {
     var head = document.getElementById(headId);
     if (!head) return;
-    // Clear "shake" first — otherwise #head.shake out-specifies .head-group.ouch
-    // and the chop reaction never shows. (animationend cleanup then strips ouch.)
-    head.classList.remove("ouch", "shake");
+    // A thrown knife gives the head the dramatic "chop" swing. Clear the
+    // sibling one-shots first so none out-specifies head-chop in the cascade.
+    head.classList.remove("chopped", "ouch", "shake");
     requestAnimationFrame(function () {
-      requestAnimationFrame(function () { head.classList.add("ouch"); });
+      requestAnimationFrame(function () { head.classList.add("chopped"); });
     });
     playGiggleSound();
   }

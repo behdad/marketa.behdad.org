@@ -569,6 +569,7 @@ footer{margin-top:2.6rem}
 #office-monitor.show-fedora #monitor-logo-fedora{opacity:1}
 #office-monitor.show-chrome #monitor-logo-chrome{opacity:1}
 #office-monitor.show-caps #monitor-logo-caps{opacity:1}
+#office-monitor.show-saver #monitor-saver{opacity:1}
 .desk-leg-pole{transform-box:fill-box; transform-origin:bottom; transition:transform .6s ease}
 .desk-led{transition:fill .15s ease}
 #office-desk-controls.moving .desk-led{animation:desk-led-blink .3s steps(2,jump-none) infinite}
@@ -2725,6 +2726,9 @@ section{margin:1.9rem 0}
 <g id="monitor-logo-caps" class="boot-logo">
 <g transform="translate(273.5,149.5) scale(0.5)"><use href="#cap-pink"/><use href="#cap-blue"/></g>
 </g>
+<g id="monitor-saver" class="boot-logo">
+<g id="monitor-saver-caps" transform="translate(280,158) scale(0.28)"><use href="#cap-pink"/><use href="#cap-blue"/></g>
+</g>
 </g>
 </g>
 <g id="office-laptop" class="hunt-hit" tabindex="0" role="button" aria-label="The laptop" transform="translate(-211,0)">
@@ -4660,9 +4664,49 @@ document.addEventListener("click", function (e) {
   var pcTower = document.getElementById("office-pc-desk-trio");
   if (!typewriter || !monitor) return;
   var bootTimers = [];
+  // After the caps site has idled a while, the classic bounce screensaver
+  // takes over; any click on the monitor wakes it.
+  var saverTimer = null, saverRaf = null;
+  function stopSaver() {
+    clearTimeout(saverTimer);
+    saverTimer = null;
+    if (saverRaf) { cancelAnimationFrame(saverRaf); saverRaf = null; }
+    monitor.classList.remove("show-saver");
+  }
+  function scheduleSaver() {
+    clearTimeout(saverTimer);
+    saverTimer = setTimeout(startSaver, 30000);
+  }
+  function startSaver() {
+    if (!monitor.classList.contains("show-caps")) return;
+    var el = document.getElementById("monitor-saver-caps");
+    if (!el) return;
+    monitor.classList.remove("show-caps");
+    monitor.classList.add("show-saver");
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      el.setAttribute("transform", "translate(292,160) scale(0.28)");
+      return;
+    }
+    var px = 270, py = 158, vx = 0.035, vy = 0.028, last = null;
+    function step(t) {
+      if (last === null) last = t;
+      var dt = Math.min(t - last, 50);
+      last = t;
+      px += vx * dt;
+      py += vy * dt;
+      if (px <= 250.4) { px = 250.4; vx = Math.abs(vx); }
+      if (px >= 334) { px = 334; vx = -Math.abs(vx); }
+      if (py <= 151.8) { py = 151.8; vy = Math.abs(vy); }
+      if (py >= 169.6) { py = 169.6; vy = -Math.abs(vy); }
+      el.setAttribute("transform", "translate(" + px.toFixed(1) + "," + py.toFixed(1) + ") scale(0.28)");
+      saverRaf = requestAnimationFrame(step);
+    }
+    saverRaf = requestAnimationFrame(step);
+  }
   function clearBoot() {
     bootTimers.forEach(clearTimeout);
     bootTimers = [];
+    stopSaver();
     monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps");
   }
   // The monitor only lights up when the PC is on; it then boots Fedora →
@@ -4678,6 +4722,7 @@ document.addEventListener("click", function (e) {
     bootTimers.push(setTimeout(function () {
       monitor.classList.remove("show-chrome");
       monitor.classList.add("show-caps");
+      scheduleSaver();
     }, 5200));
   }
   function swap(toMonitor) {
@@ -4698,9 +4743,18 @@ document.addEventListener("click", function (e) {
   });
   monitor.addEventListener("click", function () {
     clearTimeout(monClickTimer);
+    if (monitor.classList.contains("show-saver")) {
+      stopSaver();
+      monitor.classList.add("show-caps");
+      scheduleSaver();
+      playLaptopClickSound();
+      return;
+    }
     monClickTimer = setTimeout(function () {
-      if (monitor.classList.contains("show-caps")) window.open("https://marketa.behdad.org/", "_blank");
-      else playLaptopClickSound();
+      if (monitor.classList.contains("show-caps")) {
+        scheduleSaver();
+        window.open("https://marketa.behdad.org/", "_blank");
+      } else playLaptopClickSound();
     }, 280);
   });
   // Powering the PC summons the monitor (a computer needs a display) and

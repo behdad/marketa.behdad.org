@@ -6489,23 +6489,19 @@ function playGongSound() {
     var ctx = new Ctx();
     var t = ctx.currentTime;
     var master = ctx.createGain();
-    master.gain.value = 0.55;
+    master.gain.value = 0.5;
     master.connect(ctx.destination);
 
-    // A struck gong is inharmonic, and its bright high modes die faster than
-    // the low hum — that uneven decay is what makes the tone darken and bloom
-    // as it rings, instead of sitting there as a static chord. Detuned twins
-    // on a few modes (dt in cents) give the shimmering metallic beat.
-    var base = 110;
+    // Low inharmonic body: the hum that carries the tail. Detuned twins (dt
+    // in cents) beat slowly against each other so even the hum isn't static.
+    var base = 96;
     var partials = [
-      { m: 1.00, g: 0.16, d: 5.5, dt: 0,   atk: 0.004 },
-      { m: 1.00, g: 0.10, d: 5.2, dt: 16,  atk: 0.004 }, // beating twin of the hum
-      { m: 1.52, g: 0.13, d: 4.2, dt: 0,   atk: 0.02 },
-      { m: 2.14, g: 0.11, d: 3.3, dt: -12, atk: 0.03 },
-      { m: 2.97, g: 0.09, d: 2.4, dt: 0,   atk: 0.05 },
-      { m: 3.85, g: 0.07, d: 1.7, dt: 14,  atk: 0.07 },
-      { m: 5.07, g: 0.05, d: 1.1, dt: 0,   atk: 0.09 },
-      { m: 6.61, g: 0.04, d: 0.8, dt: 0,   atk: 0.11 }
+      { m: 1.00, g: 0.15, d: 7.0, dt: 0 },
+      { m: 1.00, g: 0.09, d: 6.6, dt: 13 },
+      { m: 1.48, g: 0.10, d: 5.2, dt: -8 },
+      { m: 1.99, g: 0.08, d: 4.2, dt: 0 },
+      { m: 2.56, g: 0.06, d: 3.2, dt: 10 },
+      { m: 3.36, g: 0.05, d: 2.4, dt: 0 }
     ];
     partials.forEach(function (p) {
       var osc = ctx.createOscillator();
@@ -6513,10 +6509,8 @@ function playGongSound() {
       osc.frequency.value = base * p.m;
       osc.detune.value = p.dt;
       var g = ctx.createGain();
-      // Higher partials bloom in slightly (energy transfers upward after the
-      // strike) rather than all starting at full.
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(p.g, t + p.atk);
+      g.gain.exponentialRampToValueAtTime(p.g, t + 0.02);
       g.gain.exponentialRampToValueAtTime(0.0001, t + p.d);
       osc.connect(g);
       g.connect(master);
@@ -6524,28 +6518,72 @@ function playGongSound() {
       osc.stop(t + p.d + 0.05);
     });
 
-    // Bright metallic strike transient — a short noise clang at the onset.
-    var nSize = Math.max(1, Math.floor(ctx.sampleRate * 0.2));
+    // The tam-tam signature is the WASH: a dense, noise-like cloud of high
+    // modes that swells up ~0.5-1.2s AFTER the strike (nonlinear coupling
+    // pumps energy upward), undulating as it decays. Discrete sines can't do
+    // this — model it as noise through resonant bandpasses, each layer with a
+    // delayed bloom envelope and its own slow tremolo.
+    var washDur = 7;
+    var washBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * washDur), ctx.sampleRate);
+    var washData = washBuf.getChannelData(0);
+    for (var i = 0; i < washData.length; i++) washData[i] = Math.random() * 2 - 1;
+    [
+      { f: 1300, q: 1.4, peak: 0.09, bloom: 0.5, d: 4.8, lfo: 3.6 },
+      { f: 2800, q: 1.1, peak: 0.11, bloom: 0.85, d: 5.8, lfo: 4.7 },
+      { f: 5200, q: 1.0, peak: 0.06, bloom: 1.2, d: 6.5, lfo: 5.9 }
+    ].forEach(function (L) {
+      var src = ctx.createBufferSource();
+      src.buffer = washBuf;
+      var bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = L.f;
+      bp.Q.value = L.q;
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.004, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(L.peak, t + L.bloom);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + L.d);
+      // Slow tremolo so the wash shimmers instead of holding steady.
+      var lfo = ctx.createOscillator();
+      lfo.type = "sine";
+      lfo.frequency.value = L.lfo;
+      var lfoDepth = ctx.createGain();
+      lfoDepth.gain.setValueAtTime(0.002, t);
+      lfoDepth.gain.exponentialRampToValueAtTime(L.peak * 0.35, t + L.bloom);
+      lfoDepth.gain.exponentialRampToValueAtTime(0.0001, t + L.d);
+      lfo.connect(lfoDepth);
+      lfoDepth.connect(g.gain);
+      lfo.start(t);
+      lfo.stop(t + L.d + 0.05);
+      src.connect(bp);
+      bp.connect(g);
+      g.connect(master);
+      src.start(t);
+      src.stop(t + L.d + 0.05);
+    });
+
+    // Strike transient: a dull mid thump, not too bright — the brightness
+    // belongs to the wash that follows, not the mallet.
+    var nSize = Math.max(1, Math.floor(ctx.sampleRate * 0.15));
     var nBuf = ctx.createBuffer(1, nSize, ctx.sampleRate);
     var nData = nBuf.getChannelData(0);
-    for (var i = 0; i < nSize; i++) nData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / nSize, 1.5);
+    for (var j = 0; j < nSize; j++) nData[j] = (Math.random() * 2 - 1) * Math.pow(1 - j / nSize, 1.5);
     var noise = ctx.createBufferSource();
     noise.buffer = nBuf;
     var nbp = ctx.createBiquadFilter();
     nbp.type = "bandpass";
-    nbp.frequency.value = 2600;
-    nbp.Q.value = 0.8;
+    nbp.frequency.value = 900;
+    nbp.Q.value = 0.6;
     var nG = ctx.createGain();
     nG.gain.setValueAtTime(0.0001, t);
-    nG.gain.exponentialRampToValueAtTime(0.13, t + 0.004);
-    nG.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    nG.gain.exponentialRampToValueAtTime(0.16, t + 0.005);
+    nG.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
     noise.connect(nbp);
     nbp.connect(nG);
     nG.connect(master);
     noise.start(t);
-    noise.stop(t + 0.2);
+    noise.stop(t + 0.16);
 
-    setTimeout(function () { ctx.close(); }, 5800);
+    setTimeout(function () { ctx.close(); }, 7300);
   } catch (e) {}
 }
 function playGongEchoSound(fade) {
@@ -6555,20 +6593,55 @@ function playGongEchoSound(fade) {
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
-    [80, 120].forEach(function (freq, i) {
+
+    // These layer onto the main gong's tail at intervals, so they must blend
+    // into its wash rather than pulse over it — a soft dark hum plus a gentle
+    // undulating noise band, not the old clean-sine "wub".
+    [{ f: 96, g: 0.06 }, { f: 96, g: 0.035, dt: 13 }, { f: 142, g: 0.03 }].forEach(function (p) {
       var osc = ctx.createOscillator();
       osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, t);
-      var gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime((0.09 - i * 0.02) * fade, t + 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 3);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+      osc.frequency.value = p.f;
+      if (p.dt) osc.detune.value = p.dt;
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(p.g * fade, t + 0.25);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 2.8);
+      osc.connect(g);
+      g.connect(ctx.destination);
       osc.start(t);
-      osc.stop(t + 3.1);
+      osc.stop(t + 2.9);
     });
-    setTimeout(function () { ctx.close(); }, 3200);
+
+    var dur = 2.8;
+    var buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+    var data = buf.getChannelData(0);
+    for (var i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    var src = ctx.createBufferSource();
+    src.buffer = buf;
+    var bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 1900;
+    bp.Q.value = 1.2;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.05 * fade, t + 0.4);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    var lfo = ctx.createOscillator();
+    lfo.type = "sine";
+    lfo.frequency.value = 4.3;
+    var lfoDepth = ctx.createGain();
+    lfoDepth.gain.value = 0.018 * fade;
+    lfo.connect(lfoDepth);
+    lfoDepth.connect(g.gain);
+    lfo.start(t);
+    lfo.stop(t + dur);
+    src.connect(bp);
+    bp.connect(g);
+    g.connect(ctx.destination);
+    src.start(t);
+    src.stop(t + dur);
+
+    setTimeout(function () { ctx.close(); }, 3100);
   } catch (e) {}
 }
 function playSatisfiedExhaleSound() {

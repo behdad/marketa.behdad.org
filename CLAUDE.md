@@ -71,6 +71,16 @@ go inside `index.html` unless there's a strong reason not to.
   mobile page-panning during object drags. Instead preventDefault a delegated non-passive
   `touchmove` on the strip for touches whose target is a draggable (touch events retarget
   every move to the touchstart element, so one listener covers all).
+- **Timer-spawned WAAPI particles accumulate in a backgrounded/unfocused tab.** A
+  `setTimeout`-driven ambient spawner (rain, smoke, butterflies, dust motes, shooting
+  stars, fireflies, bubbles) keeps firing while the tab is hidden, but the particles'
+  animations pause so their `onfinish` removal never runs — they pile up into a freeze
+  on return. A `visibilityState !== "hidden"` gate on the spawner is not enough (a
+  visible-but-unfocused window still throttles frames). Fixes that actually hold: make
+  each particle **self-replenish on its own `onfinish`** (constant count, spawning
+  naturally pauses with the frames — used for rain/smoke), or **cap/clear-stale before
+  each spawn** (tag the particles with a class and drop the oldest / clear leftovers —
+  used for shooting stars, butterflies, dust motes, fireflies, bubbles). Bit repeatedly.
 - **Headless-Chrome testing gotchas**: under `--virtual-time-budget`, `requestAnimationFrame`
   doesn't reliably tick (rAF-double class adds appear to never happen — monkeypatch
   `window.requestAnimationFrame = function (cb) { cb(); return 0; }` in the scratch copy

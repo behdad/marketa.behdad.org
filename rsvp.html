@@ -1338,7 +1338,7 @@ footer{margin-top:2.6rem}
 @keyframes laptop-type{from{transform:scaleX(0)} to{transform:scaleX(1)}}
 #laptop-caret{opacity:0}
 #office-laptop.open:not(.updating):not(.rebooting):not(.calling):not(.connecting):not(.connected) #laptop-caret{animation:laptop-caret-ride 1.6s steps(10) forwards, laptop-caret-blink 1s step-end infinite}
-@keyframes laptop-caret-ride{from{transform:translateX(0)} to{transform:translateX(30px)}}
+@keyframes laptop-caret-ride{from{transform:translateX(0)} to{transform:translateX(21px)}}
 @keyframes laptop-caret-blink{0%,49%{opacity:1} 50%,100%{opacity:0}}
 @media (prefers-reduced-motion: reduce){
   #office-laptop.open #laptop-type-clip-rect{animation:none; transform:scaleX(1)}
@@ -3118,7 +3118,7 @@ section{margin:1.9rem 0}
 <stop offset="55%" stop-color="#f2f6ff" stop-opacity="0.45"/>
 <stop offset="100%" stop-color="#f2f6ff" stop-opacity="0"/>
 </radialGradient>
-<clipPath id="laptop-type-clip" clipPathUnits="userSpaceOnUse"><rect id="laptop-type-clip-rect" x="391.5" y="181" width="34" height="6.5"/></clipPath>
+<clipPath id="laptop-type-clip" clipPathUnits="userSpaceOnUse"><rect id="laptop-type-clip-rect" x="391.5" y="181" width="24" height="6.5"/></clipPath>
 </defs>
 <g id="office-laptop" class="hunt-hit" tabindex="0" role="button" aria-label="The laptop" transform="translate(-211,0)">
 <g id="office-laptop-screen">
@@ -3129,10 +3129,10 @@ section{margin:1.9rem 0}
 <!-- the translation editor: a real FR→CZ title of Markéta's, the Czech one typing itself on -->
 <g id="laptop-editor">
 <rect x="390" y="171" width="54" height="25" rx="1" fill="#fbfaf7"/>
-<text x="392.5" y="178" font-size="3.4" fill="#8f8a80">«L’Intrus»</text>
-<text x="392.5" y="186" font-size="5" fill="#2a2a2a" clip-path="url(#laptop-type-clip)">«Vetřelec»</text>
+<text x="392.5" y="178" font-size="3.4" fill="#8f8a80">«L’amour»</text>
+<text x="392.5" y="186" font-size="5" fill="#2a2a2a" clip-path="url(#laptop-type-clip)">«Láska»</text>
 <rect id="laptop-caret" x="392.6" y="181.4" width="0.9" height="5.2" fill="#2a2a2a"/>
-<text x="392.5" y="192.6" font-size="2.9" fill="#9a9388">— J.-L. Nancy</text>
+<text x="392.5" y="192.6" font-size="2.9" fill="#9a9388">— m ∞ b</text>
 </g>
 <!-- the Mac menu bar: app name at left, wifi/battery + a wedding-date clock at right -->
 <g id="laptop-menubar">
@@ -5228,6 +5228,7 @@ document.addEventListener("click", function (e) {
       if (laptopReduce) {
         laptop.classList.remove("calling", "connecting");
         laptop.classList.add("connected");
+        playCallLaughSound();
         return;
       }
       playPhoneRingSound();
@@ -5240,6 +5241,7 @@ document.addEventListener("click", function (e) {
         laptop.classList.remove("connecting");
         laptop.classList.add("connected");
         playBootChimeSound();
+        playCallLaughSound(); // the couple giggling across the ocean
       }, 3400));
     }
     function endCall() {
@@ -9104,6 +9106,49 @@ function playPhoneRingSound() {
       osc.stop(t + 0.45);
     });
     setTimeout(function () { ctx.close(); }, 1300);
+  } catch (e) {}
+}
+// When the Prague call connects: two happy giggling "voices" over a soft crackly
+// video-call noise bed — warm and playful, then the context closes itself.
+function playCallLaughSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t0 = ctx.currentTime;
+    var master = ctx.createGain(); master.gain.value = 0.55; master.connect(ctx.destination);
+    // soft "connection" noise bed
+    var nlen = Math.floor(ctx.sampleRate * 2.0);
+    var nbuf = ctx.createBuffer(1, nlen, ctx.sampleRate), nd = nbuf.getChannelData(0);
+    for (var i = 0; i < nlen; i++) nd[i] = Math.random() * 2 - 1;
+    var noise = ctx.createBufferSource(); noise.buffer = nbuf;
+    var nf = ctx.createBiquadFilter(); nf.type = "bandpass"; nf.frequency.value = 1500; nf.Q.value = 0.6;
+    var ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.0001, t0);
+    ng.gain.exponentialRampToValueAtTime(0.028, t0 + 0.2);
+    ng.gain.setValueAtTime(0.028, t0 + 1.4);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.0);
+    noise.connect(nf); nf.connect(ng); ng.connect(master);
+    noise.start(t0); noise.stop(t0 + 2.0);
+    // two giggling voices — quick bouncing syllables at different pitches
+    [{ base: 330, delay: 0.12 }, { base: 430, delay: 0.34 }].forEach(function (v) {
+      var syll = 5 + Math.floor(Math.random() * 2), tt = t0 + v.delay;
+      for (var s = 0; s < syll; s++) {
+        var osc = ctx.createOscillator(); osc.type = "triangle";
+        var f = v.base * (1 + Math.random() * 0.15);
+        osc.frequency.setValueAtTime(f * 0.9, tt);
+        osc.frequency.linearRampToValueAtTime(f * 1.28, tt + 0.04);
+        osc.frequency.linearRampToValueAtTime(f * 0.95, tt + 0.09);
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, tt);
+        g.gain.exponentialRampToValueAtTime(0.12, tt + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.11);
+        osc.connect(g); g.connect(master);
+        osc.start(tt); osc.stop(tt + 0.13);
+        tt += 0.12 + Math.random() * 0.06;
+      }
+    });
+    setTimeout(function () { ctx.close(); }, 2400);
   } catch (e) {}
 }
 // The monitor's power-on jingle: a low CRT swell under a soft rising arpeggio,

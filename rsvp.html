@@ -2028,7 +2028,10 @@ section{margin:1.9rem 0}
 <ellipse cx="55" cy="82" rx="8" ry="9" fill="#d4a860" stroke="#a8813e" stroke-width="1.5"/>
 <ellipse cx="55" cy="98" rx="11" ry="13" fill="#d4a860" stroke="#a8813e" stroke-width="1.5"/>
 <circle cx="55" cy="88" r="3.5" fill="#6b4e2e"/>
-<line x1="55" y1="48" x2="55" y2="86" stroke="#e8dcc0" stroke-width="1"/>
+<g id="garden-ukulele-strings" pointer-events="none">
+<line x1="53" y1="47" x2="53" y2="107" stroke="#e8dcc0" stroke-width="0.8"/>
+<line x1="57" y1="47" x2="57" y2="107" stroke="#e8dcc0" stroke-width="0.8"/>
+</g>
 </g>
 <g id="garden-chanter" class="hunt-hit" tabindex="0" role="button" aria-label="The chanter">
 <rect x="72" y="46" width="30" height="84" fill="transparent"/>
@@ -10845,55 +10848,37 @@ function spawnDustMote(container) {
     audio.addEventListener("pause", updateNoteFlow);
     audio.addEventListener("ended", updateNoteFlow);
   });
-  // Garden classical guitar: while a song plays, its strings shimmer on the beat
-  // (the guitarist strums along). Tempo comes from the playing song's real position
-  // via the same beat clock as the equalizer's tempo-synced fallback (period = 60/bpm,
-  // half-time above ~150bpm; kick = exp(-frac*5)) — not live audio analysis. The
-  // shimmer transform lives on an inner wrapper <g>, kept distinct from
-  // #garden-guitar's own .playing sway animation so the two never fight.
-  (function () {
-    var stringsWrap = document.getElementById("garden-guitar-strings");
-    if (!stringsWrap) return;
-    var STRING_BPM = { "guitar-song-audio": 184.6, "ukulele-song-audio": 126.0 };
-    var STRING_CX = 73; // horizontal centre of the string bundle (local guitar coords)
+  // Each instrument's strings shimmer on the beat ONLY while ITS OWN song plays
+  // (the guitar to Black Tornado, the uke to Strange & Beautiful Things). Tempo
+  // comes from that song's real position via the same beat clock as the equalizer's
+  // tempo-synced fallback (period = 60/bpm, half-time above ~150bpm; kick =
+  // exp(-frac*5)) — not audio analysis. The shimmer transform lives on an inner
+  // wrapper <g>, kept distinct from the instrument's own sway so the two never fight.
+  function wireInstrumentStrings(wrapId, audioId, bpm, cx) {
+    var stringsWrap = document.getElementById(wrapId);
+    var audio = document.getElementById(audioId);
+    if (!stringsWrap || !audio) return;
     var strRAF = null;
-    function playingSong() {
-      var ids = Object.keys(STRING_BPM);
-      for (var i = 0; i < ids.length; i++) {
-        var a = document.getElementById(ids[i]);
-        if (a && !a.paused && !a.ended) return a;
-      }
-      return null;
-    }
-    function settleStrings() {
-      stringsWrap.removeAttribute("transform");
-      stringsWrap.style.opacity = "";
-    }
-    function strFrame() {
+    function settle() { stringsWrap.removeAttribute("transform"); stringsWrap.style.opacity = ""; }
+    function frame() {
       if (document.hidden) { strRAF = null; return; } // don't spin while backgrounded
-      var a = playingSong();
-      if (!a) { settleStrings(); strRAF = null; return; }
-      var bpm = STRING_BPM[a.id] || 126.0;
+      if (audio.paused || audio.ended) { settle(); strRAF = null; return; }
       var period = 60 / bpm; if (period < 0.4) period *= 2; // half-time for fast songs
-      var t = a.currentTime;
-      var frac = (t % period) / period, kick = Math.exp(-frac * 5);
-      var wobble = Math.sin(t * 62) * kick;   // quick vibration, decays after each beat
-      var sx = 1 + wobble * 0.055;            // subtle horizontal shimmer, ~sub-pixel splay
+      var t = audio.currentTime, frac = (t % period) / period, kick = Math.exp(-frac * 5);
+      var sx = 1 + Math.sin(t * 62) * kick * 0.055; // subtle horizontal shimmer, decays each beat
       stringsWrap.setAttribute("transform",
-        "translate(" + STRING_CX + " 0) scale(" + sx.toFixed(4) + " 1) translate(" + (-STRING_CX) + " 0)");
+        "translate(" + cx + " 0) scale(" + sx.toFixed(4) + " 1) translate(" + (-cx) + " 0)");
       stringsWrap.style.opacity = (0.92 + kick * 0.08).toFixed(3); // brighten on the beat
-      strRAF = requestAnimationFrame(strFrame);
+      strRAF = requestAnimationFrame(frame);
     }
-    function pokeStrings() { if (strRAF == null) strRAF = requestAnimationFrame(strFrame); }
-    Object.keys(STRING_BPM).forEach(function (id) {
-      var a = document.getElementById(id);
-      if (!a) return;
-      a.addEventListener("play", pokeStrings);
-      a.addEventListener("pause", pokeStrings); // one more frame settles it back to static
-      a.addEventListener("ended", pokeStrings);
-    });
-    document.addEventListener("visibilitychange", function () { if (!document.hidden) pokeStrings(); });
-  })();
+    function poke() { if (strRAF == null) strRAF = requestAnimationFrame(frame); }
+    audio.addEventListener("play", poke);
+    audio.addEventListener("pause", poke); // one more frame settles it back to static
+    audio.addEventListener("ended", poke);
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) poke(); });
+  }
+  wireInstrumentStrings("garden-guitar-strings", "guitar-song-audio", 184.6, 73);
+  wireInstrumentStrings("garden-ukulele-strings", "ukulele-song-audio", 126.0, 55);
   var candleIds = ["garden-candle-1", "garden-candle-2"];
   var candlesLit = {};
   candleIds.forEach(function (id) {

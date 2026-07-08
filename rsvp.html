@@ -7543,10 +7543,52 @@ function spawnEclipseTotality() {
     }
   }
 }
+// a soft, distant firework: a low boom with a quick high crackle of sparks
+function playFireworkSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t = ctx.currentTime;
+    var boom = ctx.createOscillator();
+    boom.type = "sine";
+    var f0 = 90 + Math.random() * 45;
+    boom.frequency.setValueAtTime(f0, t);
+    boom.frequency.exponentialRampToValueAtTime(f0 * 0.5, t + 0.25);
+    var boomGain = ctx.createGain();
+    boomGain.gain.setValueAtTime(0.0001, t);
+    boomGain.gain.exponentialRampToValueAtTime(0.09, t + 0.02);
+    boomGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+    boom.connect(boomGain);
+    boomGain.connect(ctx.destination);
+    boom.start(t);
+    boom.stop(t + 0.45);
+    var buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.5), ctx.sampleRate);
+    var data = buf.getChannelData(0);
+    for (var i = 0; i < data.length; i++) {
+      var env = 1 - i / data.length;
+      data[i] = (Math.random() * 2 - 1) * (Math.random() < 0.06 ? 1 : 0.14) * env;
+    }
+    var noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    var hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 1800;
+    var noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.05, t + 0.08);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+    noise.connect(hp);
+    hp.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noise.start(t + 0.06);
+    setTimeout(function () { try { ctx.close(); } catch (e) {} }, 800);
+  } catch (e) {}
+}
 function spawnFirework(cx, cy, color) {
   var host = document.getElementById("balcony-fireworks");
   if (!host) return;
   if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  playFireworkSound();
   var SVGNS = "http://www.w3.org/2000/svg";
   var flash = document.createElementNS(SVGNS, "circle");
   flash.setAttribute("cx", cx);

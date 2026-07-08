@@ -4976,44 +4976,14 @@ document.addEventListener("click", function (e) {
     "guitar-song-audio": "♪ Black Tornado — Dan Bern",
     "ukulele-song-audio": "♪ Strange & Beautiful Things — Orit Shimoni"
   };
-  // Live equalizer: the playing song is routed through a Web Audio analyser and
-  // the bars are driven from its real frequency data (synthetic bounce fallback).
-  var eqCtx = null, eqAnalysers = {}, eqRAF = null;
-  function eqAnalyserFor(audioEl) {
-    if (!audioEl) return null;
-    try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return null;
-      if (!eqCtx) eqCtx = new Ctx();
-      if (eqAnalysers[audioEl.id]) return eqAnalysers[audioEl.id]; // already routed through the graph
-      if (eqCtx.state === "suspended") eqCtx.resume();
-      // Routing a media element into a non-running context silences it, so only
-      // capture it once the context is actually running (fall back to synthetic
-      // bounce until then — the gesture pre-warm below usually gets us there).
-      if (eqCtx.state !== "running") return null;
-      var src = eqCtx.createMediaElementSource(audioEl);
-      var an = eqCtx.createAnalyser();
-      an.fftSize = 64;
-      an.smoothingTimeConstant = 0.72;
-      src.connect(an);
-      an.connect(eqCtx.destination); // keep the song audible
-      eqAnalysers[audioEl.id] = an;
-      return an;
-    } catch (e) { return null; }
-  }
-  // warm/resume the analyser context on any gesture so it's running by the time
-  // a song needs capturing (otherwise capturing it mid-play would cut the sound)
-  ["pointerdown", "keydown"].forEach(function (ev) {
-    document.addEventListener(ev, function () {
-      try {
-        var Ctx = window.AudioContext || window.webkitAudioContext;
-        if (!eqCtx && Ctx) eqCtx = new Ctx();
-        if (eqCtx && eqCtx.state === "suspended") eqCtx.resume();
-      } catch (e) {}
-    }, true);
-  });
+  // Now-playing equalizer. NB: driving these bars from the song's *real*
+  // frequency data needs createMediaElementSource, which reroutes the <audio>
+  // into the Web Audio graph — and that reliably KILLED playback in testing
+  // (song stopped, bars flat). So the bars run a lightweight synthetic bounce
+  // that never touches the audio element. Musical-looking, playback-safe.
+  var eqRAF = null;
   function stopEq() { if (eqRAF) { cancelAnimationFrame(eqRAF); eqRAF = null; } }
-  function startEq(audioEl) {
+  function startEq() {
     stopEq();
     var bars = document.querySelectorAll("#monitor-logo-nowplaying .eq-bar");
     if (!bars.length) return;
@@ -5021,23 +4991,13 @@ document.addEventListener("click", function (e) {
       for (var b = 0; b < bars.length; b++) bars[b].style.transform = "scaleY(0.6)";
       return;
     }
-    var analyser = eqAnalyserFor(audioEl);
-    var data = analyser ? new Uint8Array(analyser.frequencyBinCount) : null;
-    var t = 0;
+    var n = bars.length, t = 0;
+    // each bar a different phase mix so it reads like a spectrum, not a wave
     function frame() {
-      var n = bars.length;
-      if (analyser && data) {
-        analyser.getByteFrequencyData(data);
-        var usable = Math.max(n, Math.floor(data.length * 0.7)); // skip the quiet top bins
-        for (var i = 0; i < n; i++) {
-          var lo = Math.floor(i / n * usable), hi = Math.floor((i + 1) / n * usable), sum = 0, cnt = 0;
-          for (var j = lo; j <= hi && j < data.length; j++) { sum += data[j]; cnt++; }
-          var v = cnt ? (sum / cnt) / 255 : 0;
-          bars[i].style.transform = "scaleY(" + Math.max(0.12, Math.min(1.25, 0.12 + v * 1.4)) + ")";
-        }
-      } else {
-        t += 0.13;
-        for (var k = 0; k < n; k++) bars[k].style.transform = "scaleY(" + Math.max(0.15, 0.5 + 0.42 * Math.sin(t + k * 1.3) * Math.sin(t * 0.7 + k)) + ")";
+      t += 0.13;
+      for (var k = 0; k < n; k++) {
+        var v = 0.5 + 0.42 * Math.sin(t + k * 1.3) * Math.sin(t * 0.7 + k) + 0.12 * Math.sin(t * 2.3 + k * 2);
+        bars[k].style.transform = "scaleY(" + Math.max(0.15, Math.min(1.2, v)) + ")";
       }
       eqRAF = requestAnimationFrame(frame);
     }
@@ -5056,7 +5016,7 @@ document.addEventListener("click", function (e) {
       var title = document.getElementById("monitor-np-title");
       if (title) title.textContent = SONG_INFO[playing.id] || "";
       monitor.classList.add("show-nowplaying");
-      startEq(playing);
+      startEq();
     } else {
       var was = monitor.classList.contains("show-nowplaying");
       monitor.classList.remove("show-nowplaying");
@@ -5383,8 +5343,10 @@ document.addEventListener("click", function (e) {
     // clicking the sun flips the balcony to evening and lights the lamps
     function toggleDusk() {
       var dusk = stageBalcony.classList.toggle("dusk");
-      var gardenStage = document.getElementById("stage-garden");
-      if (gardenStage) gardenStage.classList.toggle("dusk", dusk); // night is night everywhere
+      ["stage-garden", "stage-kitchen", "stage-cuddly", "stage-office"].forEach(function (id) {
+        var st = document.getElementById(id);
+        if (st) st.classList.toggle("dusk", dusk); // night is night everywhere
+      });
       playLampShimmerSound();
       var wallLampEl = document.getElementById("balcony-walllamp");
       if (dusk) {
@@ -5405,8 +5367,10 @@ document.addEventListener("click", function (e) {
     });
     window.resetBalconyDusk = function () {
       stageBalcony.classList.remove("dusk");
-      var gardenStage = document.getElementById("stage-garden");
-      if (gardenStage) gardenStage.classList.remove("dusk");
+      ["stage-garden", "stage-kitchen", "stage-cuddly", "stage-office"].forEach(function (id) {
+        var st = document.getElementById(id);
+        if (st) st.classList.remove("dusk");
+      });
       var wallLampEl = document.getElementById("balcony-walllamp");
       if (wallLampEl) wallLampEl.classList.remove("on");
       if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle();

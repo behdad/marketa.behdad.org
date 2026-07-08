@@ -684,6 +684,16 @@ footer{margin-top:2.6rem}
 }
 #office-desk, #office-chair, #garden-bottles, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife{touch-action:none}
 #office-desk-top, #office-typewriter, #office-laptop, #office-pc-desk-trio, #office-headphones{transition:translate .6s ease}
+#office-headphones{transform-origin:210px 219px}
+#office-headphones.wobbling{animation:headphones-wobble .6s ease-in-out}
+@keyframes headphones-wobble{
+  0%{transform:rotate(0deg)}
+  20%{transform:rotate(-9deg)}
+  45%{transform:rotate(7deg)}
+  70%{transform:rotate(-4deg)}
+  100%{transform:rotate(0deg)}
+}
+@media (prefers-reduced-motion: reduce){#office-headphones.wobbling{animation:none}}
 /* the ultrawide monitor is the office default; a double-click reveals its secret
    alter ego, the typewriter (and double-clicking the typewriter swaps back) */
 #office-monitor{opacity:0; pointer-events:none}
@@ -3617,7 +3627,8 @@ section{margin:1.9rem 0}
 </g>
 <!-- over-ear headphones (HD-6xx style) hung by their band from a small hook under
      the desk front edge, dangling below the laptop into the under-desk space -->
-<g id="office-headphones">
+<g id="office-headphones" class="hunt-hit">
+<rect x="186" y="215" width="48" height="90" fill="transparent"/>
 <!-- Sennheiser HD800S: large ROUND open-back cups with the concentric-ring grille + silver
      rim, thin minimalist headband, angular yokes. Rides the desk (in risingIds). -->
 <rect x="205.5" y="217" width="9" height="3.4" rx="1" fill="#2a2a2a"/>
@@ -4942,6 +4953,19 @@ document.addEventListener("click", function (e) {
   });
   wireTableToy("office-broken-glass", "tinged", function () { playGlassClinkSound(0.7); });
   wireTableToy("office-spin-top", "spinning", playAshtraySpinSound);
+  // the hanging headphones: a tap swings them on their hook and drops a quick bass riff,
+  // panned to where they hang.
+  var headphones = document.getElementById("office-headphones");
+  if (headphones) {
+    function wobbleHeadphones() {
+      headphones.classList.remove("wobbling");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { headphones.classList.add("wobbling"); });
+      });
+      playHeadphoneBassRiff();
+    }
+    headphones.addEventListener("click", wobbleHeadphones);
+  }
   // the little abstract painting: its shapes wobble loose in a ripple.
   // animationend can't clear this one (the first bit ending would cancel the
   // still-delayed ones), so a timer outlasting the longest delay clears it.
@@ -11324,6 +11348,40 @@ function playPaperShuffleSound() {
       noise.start(t);
       noise.stop(t + 0.28);
     });
+    setTimeout(function () { ctx.close(); }, 900);
+  } catch (e) {}
+}
+function playHeadphoneBassRiff() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t0 = ctx.currentTime;
+    var out = pannedOut(ctx, "office-headphones");
+    // a few plucky low notes
+    [110, 92.5, 73.4, 98].forEach(function (f, i) {
+      var t = t0 + i * 0.16;
+      var osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(f, t);
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+      osc.connect(g); g.connect(out);
+      osc.start(t); osc.stop(t + 0.24);
+    });
+    // a punchy sub boom under the first note
+    var boom = ctx.createOscillator();
+    boom.type = "sine";
+    boom.frequency.setValueAtTime(90, t0);
+    boom.frequency.exponentialRampToValueAtTime(38, t0 + 0.3);
+    var bg = ctx.createGain();
+    bg.gain.setValueAtTime(0.0001, t0);
+    bg.gain.exponentialRampToValueAtTime(0.3, t0 + 0.02);
+    bg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.35);
+    boom.connect(bg); bg.connect(out);
+    boom.start(t0); boom.stop(t0 + 0.4);
     setTimeout(function () { ctx.close(); }, 900);
   } catch (e) {}
 }

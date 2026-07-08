@@ -671,6 +671,11 @@ footer{margin-top:2.6rem}
 #stage-garden.dusk #garden-candle-2.lit .candle-glow{animation-duration:3.8s; animation-delay:-1.6s}
 @keyframes candle-glow-breathe{0%,100%{opacity:.95} 50%{opacity:.68}}
 @media (prefers-reduced-motion: reduce){#stage-garden.dusk #garden-candle-1.lit .candle-glow, #stage-garden.dusk #garden-candle-2.lit .candle-glow{animation:none}}
+/* the night glow rides ABOVE the dusk dimmer (the in-candle glow only handles day) */
+.candle-frontglow{opacity:0; pointer-events:none; transition:opacity .6s ease, transform .8s ease; transform-box:fill-box; transform-origin:center}
+#stage-garden.dusk.g-c1-lit #garden-frontglow-1{opacity:.95; transform:scale(1.9); animation:candle-glow-breathe 4.5s ease-in-out infinite}
+#stage-garden.dusk.g-c2-lit #garden-frontglow-2{opacity:.95; transform:scale(1.9); animation:candle-glow-breathe 3.8s ease-in-out -1.6s infinite}
+@media (prefers-reduced-motion: reduce){#stage-garden.dusk.g-c1-lit #garden-frontglow-1, #stage-garden.dusk.g-c2-lit #garden-frontglow-2{animation:none}}
 #kitchen-grinder.grinding{animation:kitchen-grind-shake .12s ease-in-out infinite}
 @keyframes kitchen-grind-shake{
   0%,100%{transform:translate(0,0)}
@@ -2334,6 +2339,12 @@ section{margin:1.9rem 0}
 </g>
 <rect id="garden-light-overlay" x="0" y="0" width="680" height="340" fill="#f7d98a" opacity="0" pointer-events="none"/>
 <rect id="garden-dusk" x="0" y="0" width="680" height="340" fill="#141830" opacity="0" pointer-events="none"/>
+<!-- candle glow lifted ABOVE the dusk dimmer so it reads as real light at night
+     (driven by g-c1-lit/g-c2-lit synced on the stage when each candle is lit) -->
+<g transform="translate(30,18)" pointer-events="none">
+<ellipse id="garden-frontglow-1" class="candle-frontglow" cx="68" cy="289" rx="19" ry="21" fill="url(#candle-glow-grad)"/>
+<ellipse id="garden-frontglow-2" class="candle-frontglow" cx="100" cy="295" rx="14" ry="16" fill="url(#candle-glow-grad)"/>
+</g>
 </g>
 <g id="stage-cuddly" transform="translate(1360,0)">
 
@@ -10524,6 +10535,8 @@ function spawnDustMote(container) {
       if (candlesLit[id]) return;
       candlesLit[id] = true;
       if (el) el.classList.add("lit", "done");
+      var gs = document.getElementById("stage-garden"); // light the above-dimmer night glow
+      if (gs) gs.classList.add(id === "garden-candle-1" ? "g-c1-lit" : "g-c2-lit");
       playCandleLightSound();
       gardenState.candles = candleIds.every(function (cid) { return candlesLit[cid]; });
       checkGardenDone();
@@ -10691,6 +10704,8 @@ function spawnDustMote(container) {
       var el = document.getElementById(id);
       if (el) el.classList.remove("lit", "done");
     });
+    var gsReset = document.getElementById("stage-garden");
+    if (gsReset) gsReset.classList.remove("g-c1-lit", "g-c2-lit");
     ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.classList.remove("done");

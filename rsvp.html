@@ -7421,16 +7421,29 @@ document.addEventListener("click", function (e) {
   function setDeskTransitionsEnabled(on) {
     risingEls().forEach(function (el) { el.style.transition = on ? "" : "none"; });
   }
+  // Ride the cat along with the desk's CSS-driven lift transition (~0.6s), not just
+  // correct it once at the end — a single post-transition snap read as the cat "jumping"
+  // to the desk's final height instead of moving WITH it. One short-lived rAF loop,
+  // self-terminating after `ms`; harmless if it overlaps a second desk-toggle's loop
+  // (each frame's correction is idempotent).
+  function driveDeskCatFollow(ms) {
+    if (!window.__deskCatFollow) return;
+    var start = null;
+    function frame(t) {
+      if (start === null) start = t;
+      window.__deskCatFollow();
+      if (t - start < ms) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
   function settleDesk(toStanding) {
     standing = toStanding;
     setDeskTransitionsEnabled(true);
     setDeskLift(standing ? MAX_LIFT : 0);
     playDeskMotorSound();
     blinkLeds(true);
-    setTimeout(function () {
-      blinkLeds(false);
-      if (window.__deskCatFollow) window.__deskCatFollow(); // desk has settled — re-sync the cat if it's up there
-    }, 650);
+    driveDeskCatFollow(650);
+    setTimeout(function () { blinkLeds(false); }, 650);
   }
   function toggleDeskHeight(e) {
     if (e) e.stopPropagation();

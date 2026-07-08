@@ -1385,6 +1385,15 @@ footer{margin-top:2.6rem}
 #stage-garden.dusk #garden-window-pane-0{fill:#1a2438}
 #garden-birds{transition:opacity .8s ease}
 #stage-garden.dusk #garden-birds{opacity:0}
+/* moon + stars appear in the garden window's upper sky at dusk (seen through
+   glass, so a touch smaller/simpler than the balcony's; reuses star-twinkle) */
+#garden-stars, #garden-moon{transition:opacity .9s ease}
+#stage-garden.dusk #garden-stars{opacity:1}
+#stage-garden.dusk #garden-moon{opacity:1}
+#stage-garden.dusk #garden-stars .twinkle{transform-box:fill-box; transform-origin:center; animation:star-twinkle 3s ease-in-out infinite}
+#stage-garden.dusk #garden-stars .twinkle.t2{animation-duration:4.3s; animation-delay:.7s}
+#stage-garden.dusk #garden-stars .twinkle.t3{animation-duration:2.4s; animation-delay:1.4s}
+@media (prefers-reduced-motion: reduce){#stage-garden.dusk #garden-stars .twinkle{animation:none}}
 /* night in the other rooms: a soft dusk wash. kitchen/office get a fuller dim;
    the cuddly nook just dims "a bit"; the office window sky darkens to night. */
 #kitchen-dusk,#cuddly-dusk,#office-dusk{transition:opacity .9s ease}
@@ -1918,6 +1927,21 @@ section{margin:1.9rem 0}
 <ellipse cx="164" cy="36" rx="14" ry="6" fill="#dce6ea"/>
 <ellipse cx="200" cy="60" rx="16" ry="6" fill="#dce6ea"/>
 </g>
+<defs>
+<radialGradient id="garden-moon-glow-grad">
+<stop offset="0.4" stop-color="#fff8e0" stop-opacity="1"/>
+<stop offset="1" stop-color="#fff8e0" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<g id="garden-stars" opacity="0" pointer-events="none" fill="#ffffff" aria-hidden="true">
+<circle cx="118" cy="28" r="1.3" opacity="0.95" class="twinkle"/><circle cx="138" cy="66" r="1" opacity="0.6"/><circle cx="162" cy="96" r="1.1" opacity="0.75" class="twinkle t2"/><circle cx="190" cy="30" r="1.5" opacity="1" class="twinkle t3"/><circle cx="224" cy="40" r="1.2" opacity="0.85"/><circle cx="248" cy="88" r="0.95" opacity="0.6" class="twinkle"/><circle cx="270" cy="32" r="1.3" opacity="0.9" class="twinkle t3"/><circle cx="300" cy="60" r="1" opacity="0.7"/><circle cx="336" cy="96" r="1.1" opacity="0.8" class="twinkle t2"/><circle cx="410" cy="40" r="1.2" opacity="0.85" class="twinkle"/><circle cx="442" cy="90" r="0.95" opacity="0.6"/><circle cx="470" cy="30" r="1.3" opacity="0.9" class="twinkle t3"/><circle cx="500" cy="64" r="1" opacity="0.7" class="twinkle t2"/><circle cx="128" cy="100" r="0.9" opacity="0.55"/>
+</g>
+<g id="garden-moon" opacity="0" pointer-events="none" aria-hidden="true">
+<circle id="garden-moon-glow" cx="370" cy="52" r="22" fill="url(#garden-moon-glow-grad)" opacity="0.5"/>
+<circle cx="370" cy="52" r="11" fill="#efece0"/>
+<circle cx="366" cy="49" r="0.9" fill="#c9c3ad"/><circle cx="373" cy="56" r="1.1" fill="#c9c3ad"/>
+</g>
+<g id="garden-skyfx" pointer-events="none" aria-hidden="true"></g>
 <rect x="210" y="20" width="8" height="272" fill="#26221f"/>
 <rect x="316" y="20" width="8" height="272" fill="#26221f"/>
 <rect x="422" y="20" width="8" height="272" fill="#26221f"/>
@@ -6900,6 +6924,44 @@ function spawnShootingStar() {
     setTimeout(function () { if (g.parentNode) g.remove(); }, 1400);
   }
 }
+function spawnGardenShootingStar() {
+  var container = document.getElementById("garden-skyfx");
+  if (!container) return;
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  // clear any stale streak first (if frames were paused while unfocused, an
+  // old one's onfinish may never have fired) so they can't pile up (cap 1)
+  while (container.firstChild) container.removeChild(container.firstChild);
+  var SVGNS = "http://www.w3.org/2000/svg";
+  // starts in the open sky band of the window (garden-local coords), arcs
+  // down-right within the panes; the mullions occlude it naturally
+  var x0 = 150 + Math.random() * 180, y0 = 26 + Math.random() * 16;
+  var g = document.createElementNS(SVGNS, "g");
+  var trail = document.createElementNS(SVGNS, "path");
+  trail.setAttribute("d", "M" + x0 + " " + y0 + " q -9 -1 -18 -7"); // gently curved streak
+  trail.setAttribute("fill", "none");
+  trail.setAttribute("stroke", "#ffffff");
+  trail.setAttribute("stroke-width", "2");
+  trail.setAttribute("stroke-linecap", "round");
+  var halo = document.createElementNS(SVGNS, "circle");
+  halo.setAttribute("cx", x0); halo.setAttribute("cy", y0); halo.setAttribute("r", "4");
+  halo.setAttribute("fill", "#fff8e0"); halo.setAttribute("opacity", "0.85");
+  var core = document.createElementNS(SVGNS, "circle");
+  core.setAttribute("cx", x0); core.setAttribute("cy", y0); core.setAttribute("r", "2.2");
+  core.setAttribute("fill", "#ffffff");
+  g.appendChild(trail); g.appendChild(halo); g.appendChild(core);
+  container.appendChild(g);
+  if (g.animate) {
+    var a = g.animate([
+      { transform: "translate(0px,0px)", opacity: 0 },
+      { transform: "translate(26px,8px)", opacity: 1, offset: 0.28 },
+      { transform: "translate(62px,26px)", opacity: 0.9, offset: 0.62 },
+      { transform: "translate(96px,50px)", opacity: 0 }
+    ], { duration: 950 + Math.random() * 300, easing: "ease-in" });
+    a.onfinish = function () { if (g.parentNode) g.remove(); };
+  } else {
+    setTimeout(function () { if (g.parentNode) g.remove(); }, 1350);
+  }
+}
 function spawnFirework(cx, cy, color) {
   var host = document.getElementById("balcony-fireworks");
   if (!host) return;
@@ -10133,6 +10195,18 @@ function spawnDustMote(container) {
         spawnFirefly(strip);
       }
       scheduleFireflies();
+    }, delay);
+  })();
+  // an occasional shooting star streaks the garden window's night sky (not during a storm)
+  (function scheduleGardenShootingStar() {
+    var delay = 15000 + Math.random() * 26000;
+    setTimeout(function () {
+      var gardenStage = document.getElementById("stage-garden");
+      if (gardenStage && gardenStage.classList.contains("dusk") && !window.__balconyStorm &&
+          stageIndex === STAGES.indexOf("garden") && document.visibilityState !== "hidden") {
+        spawnGardenShootingStar();
+      }
+      scheduleGardenShootingStar();
     }, delay);
   })();
   // Fishu blows the odd ambient bubble (it's a fish) while you're in the nook

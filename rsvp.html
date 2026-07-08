@@ -6681,6 +6681,13 @@ document.addEventListener("click", function (e) {
       if (!idle.length || idle.length !== songAudios.length) return; // one's already going — don't stack
       var pick = idle[Math.floor(Math.random() * idle.length)];
       try {
+        // app-owned level (monitor speaker button) — reapply it before every play, same
+        // as monitorSkip/the garden instrument tap below. Without this, a song primed
+        // silently by the cinematic's primeCinematicAudio (volume=0, self-healed only by
+        // actually reaching the garden-guitar beat) stays silent here if "Take over"
+        // interrupts the show before that beat fires — plays with no sound, looks
+        // unmuted, "fixed" only by nudging the volume button (which reapplies it too).
+        pick.volume = window.__songVolume ? window.__songVolume() : 0.5;
         // hook up the monitor equalizer's analyser here, inside the gesture, so
         // routing the song through Web Audio doesn't stall its playback
         if (window.__captureSongAudio) window.__captureSongAudio(pick);
@@ -6706,6 +6713,7 @@ document.addEventListener("click", function (e) {
       if (!song) return;
       try {
         if (song.paused) {
+          song.volume = window.__songVolume ? window.__songVolume() : 0.5; // app-owned level, same defensive reapply as every other play trigger
           if (window.__captureSongAudio) window.__captureSongAudio(song); // keep retrying the resume inside this gesture
           var p = song.play(); if (p && p.catch) p.catch(function () {});
         }

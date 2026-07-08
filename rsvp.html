@@ -5227,9 +5227,12 @@ document.addEventListener("click", function (e) {
         if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle();
       }
     }
-    duskSun.addEventListener("click", toggleDusk);
+    window.__autoToggleDusk = toggleDusk;
+    // a manual flip means the visitor's driving — stop the automatic cycle
+    function onSunClick() { toggleDusk(); if (window.__stopAutoDayNight) window.__stopAutoDayNight(); }
+    duskSun.addEventListener("click", onSunClick);
     duskSun.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleDusk(); }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSunClick(); }
     });
     window.resetBalconyDusk = function () {
       stageBalcony.classList.remove("dusk");
@@ -9672,6 +9675,22 @@ function spawnDustMote(container) {
       }
       scheduleShootingStar();
     }, delay);
+  })();
+  // Auto day/night: night after ~1 min of day, then flip every ~2 min — but
+  // only while the balcony's on-screen, and a manual sun/moon click stops it.
+  (function autoDayNight() {
+    var timer = null, stopped = false;
+    function tick() {
+      if (stopped) return;
+      if (stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden" && window.__autoToggleDusk) {
+        window.__autoToggleDusk();
+        timer = setTimeout(tick, 120000);
+      } else {
+        timer = setTimeout(tick, 6000); // wait until the balcony is being watched, then flip
+      }
+    }
+    window.__stopAutoDayNight = function () { stopped = true; clearTimeout(timer); };
+    timer = setTimeout(tick, 60000);
   })();
   var instrumentSpots = {
     "garden-guitar": { x: 746, y: 270, audioId: "guitar-song-audio" },

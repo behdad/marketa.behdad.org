@@ -934,13 +934,16 @@ footer{margin-top:2.6rem}
   60%{transform:rotate(2deg)}
 }
 @media (prefers-reduced-motion: reduce){#cuddly-octopus.twitch{animation:none}}
-#cuddly-octopus.grooving{animation:octopus-groove 1s ease-in-out infinite}
+/* the octopus sways to the beat on a wrapper distinct from #cuddly-octopus, so its
+   one-shot reactions (twitch, ouch, sneeze, wobble) animate a separate element and
+   keep their own CSS timing while the groove runs */
+#cuddly-octopus-groove{transform-origin:636px 240px}
+#cuddly-octopus-groove.grooving{animation:octopus-groove 1s ease-in-out infinite}
 @keyframes octopus-groove{
   0%,100%{transform:rotate(0deg)}
   50%{transform:rotate(4deg)}
 }
-@media (prefers-reduced-motion: reduce){#cuddly-octopus.grooving{animation:none}}
-/* after .grooving in the cascade so a knife hit still registers during music */
+@media (prefers-reduced-motion: reduce){#cuddly-octopus-groove.grooving{animation:none}}
 #cuddly-octopus.ouch{animation:octopus-ouch .5s ease-in-out}
 @media (prefers-reduced-motion: reduce){#cuddly-octopus.ouch{animation:none}}
 #cuddly-octopus.sneezing{animation:octopus-sneeze .6s ease-in-out}
@@ -2857,6 +2860,7 @@ section{margin:1.9rem 0}
 <polygon points="592,310 602,310 592,300" fill="#8a8578"/>
 <rect x="630" y="252" width="12" height="10" rx="2" fill="#8a8578"/>
 </g>
+<g id="cuddly-octopus-groove">
 <g id="cuddly-octopus" class="hunt-hit" tabindex="0" role="button" aria-label="The stuffed octopus toy">
 <circle cx="636" cy="234" r="11" fill="#e8a0a8" stroke="#d3808c" stroke-width="1"/>
 <circle cx="626" cy="246" r="4" fill="#e8a0a8"/>
@@ -2872,6 +2876,7 @@ section{margin:1.9rem 0}
 <line x1="641.4" y1="226.1" x2="643" y2="224.5"/>
 <line x1="642.7" y1="227.5" x2="644.3" y2="225.9"/>
 <line x1="644" y1="228.9" x2="645.6" y2="227.3"/>
+</g>
 </g>
 </g>
 <g id="cuddly-puffer-wrap" transform="translate(495,95)">
@@ -11518,10 +11523,11 @@ function spawnDustMote(container) {
     cuddlyGrooveFootIds.forEach(function (id) { setGroove(document.getElementById(id), durations.toe); });
     document.querySelectorAll(".puffer-eye").forEach(function (eye) { setGroove(eye, durations.toe); });
     var octopusEl = document.getElementById("cuddly-octopus");
-    if (octopusEl) {
+    var octopusGroove = document.getElementById("cuddly-octopus-groove");
+    if (octopusEl && octopusGroove) {
       var octopusVisible = parseFloat(getComputedStyle(octopusEl).opacity) > 0.5;
-      if (anyPlaying && octopusVisible) setGroove(octopusEl, durations.head * 1.4);
-      else octopusEl.classList.remove("grooving");
+      if (anyPlaying && octopusVisible) setGroove(octopusGroove, durations.head * 1.4);
+      else octopusGroove.classList.remove("grooving");
     }
     // the office gold skull nods to the beat too, phase-locked the same way
     setGroove(document.getElementById("office-skull"), durations.head);

@@ -4187,7 +4187,22 @@ var T = {
       office_find: "Find the stained-glass butterfly.",
       office_call: "Call Prague first.",
       complete: "You made it through the whole loft ♥",
-      balcony: "There will be BBQ 🔥🍖🌽🍷"
+      balcony: "There will be BBQ 🔥🍖🌽🍷",
+      // ── cinematic narration (the "Watch the loft" autoplay owns the caption while it runs) ──
+      cine_coffee: "Morning. Coffee first…",
+      cine_water: "She waters the plants…",
+      cine_song: "Then their song comes on…",
+      cine_bloom: "…and the garden blooms.",
+      cine_sway: "They sway together.",
+      cine_office: "A quick call to Prague…",
+      cine_dusk: "Day turns to night.",
+      cine_finale: "And the sky blooms.",
+      cine_eclipse: "The eclipse — where he proposed.",
+      cine_record: "Their song, once more…",
+      cine_play: "Whimsy in every corner…",
+      cine_fireworks: "Fireworks over the city…",
+      cine_grill: "Fire up the grill…",
+      cine_cheers: "Pour a glass — cheers."
     },
     ed_city: "Edmonton",
     ed_date1: "Sat, May 1 · 4pm–4am",
@@ -4265,7 +4280,22 @@ var T = {
       office_find: "Najdi vitrážového motýla.",
       office_call: "Nejdřív zavolej do Prahy.",
       complete: "Prošli jste celým bytem ♥",
-      balcony: "Bude tu grilovačka 🔥🍖🌽🍷"
+      balcony: "Bude tu grilovačka 🔥🍖🌽🍷",
+      // ── titulky filmečku (autoplay „Prohlédnout byt“ řídí titulek, dokud běží) ──
+      cine_coffee: "Ráno. Nejdřív kafe…",
+      cine_water: "Zalévá kytky…",
+      cine_song: "A pak zazní jejich píseň…",
+      cine_bloom: "…a zahrada rozkvete.",
+      cine_sway: "Kolébají se spolu.",
+      cine_office: "Rychlý hovor do Prahy…",
+      cine_dusk: "Den se mění v noc.",
+      cine_finale: "A nebe rozkvete.",
+      cine_eclipse: "Zatmění — kde ji požádal.",
+      cine_record: "Jejich píseň, ještě jednou…",
+      cine_play: "Kouzlo v každém koutě…",
+      cine_fireworks: "Ohňostroj nad městem…",
+      cine_grill: "Rozpálí se gril…",
+      cine_cheers: "Skleničku — na zdraví."
     },
     ed_city: "Edmonton",
     ed_date1: "So 1. května · 16–4 h",
@@ -11346,7 +11376,14 @@ function spawnDustMote(container) {
     updateDots();
   }
   updateDots();
-  function setCaption(key) {
+  function setCaption(key, force) {
+    // While the "Watch the loft" cinematic runs it OWNS the caption: the scripted
+    // interactions it fires (watering, music, calling Prague…) would otherwise stomp the
+    // narration with room hints, and the garden hint would linger stale once every task
+    // is done (updateGardenHint returns early). The cinematic passes force=true for its
+    // own captions; every other caller is a no-op until the show ends/cancels. Only
+    // showRsvpNudge stays unguarded, so the finale's graceful RSVP landing still lands.
+    if (window.__cinematic && !force) return;
     captionKey = key;
     caption.classList.remove("rsvp-nudge");
     caption.textContent = huntText(key);
@@ -12669,9 +12706,22 @@ function spawnDustMote(container) {
     window.__cinematic = false;
     cinematicTimers.forEach(clearTimeout);
     cinematicTimers = [];
+    // the balcony finale runs on its OWN finaleTimers (rain/rainbow/fireworks + a delayed
+    // showRsvpNudge). A mid-finale cancel must clear those too, or a late nudge would
+    // stomp the room caption we're about to restore. Only reached while the show ran, so
+    // normal (non-cinematic) play is untouched.
+    finaleTimers.forEach(clearTimeout);
+    finaleTimers = [];
     if (cinematicTeardown) { cinematicTeardown(); cinematicTeardown = null; }
     if (skipBtn) skipBtn.hidden = true;
     if (watchBtn) { watchBtn.hidden = false; watchBtn.classList.remove("nudge"); }
+    // Restore the ordinary caption for whatever room we cancelled on — but keep a
+    // graceful RSVP-nudge landing (reduced-motion ends on it; the play phase holds on it).
+    if (captionKey !== "rsvp_nudge") {
+      var here = STAGES[stageIndex];
+      setCaption(here);
+      restoreStageHint(here);
+    }
   }
 
   // ── timeline helpers ──
@@ -12685,6 +12735,9 @@ function spawnDustMote(container) {
   }
   function tap(id) { return function () { cineClick(id); }; }
   function visit(name) { return function () { goToStage(name); }; }
+  // a scheduled caption beat: forces our narration past the setCaption guard (still a
+  // no-op if the show was cancelled between scheduling and firing).
+  function cine(key) { return function () { if (window.__cinematic) setCaption(key, true); }; }
   function mushroomTrip() { // the garden plants lift off their pots and bloom hue-cycling fractals
     if (window.startTripVariant) window.startTripVariant("psychedelic");
     if (window.startTripBlooms) window.startTripBlooms();
@@ -12698,43 +12751,70 @@ function spawnDustMote(container) {
     [[490, 62, "#f5b8c8"], [566, 42, "#f7d97a"], [527, 88, "#a8c4d4"], [612, 56, "#f7d97a"]]
       .forEach(function (fw, i) { beat(i * 620, function () { spawnFirework(fw[0], fw[1], fw[2]); }); });
   }
+  // The couple's song is the show's best beat, but the garden-guitar tap that plays it
+  // lands ~20s after the Watch click — long outside the user gesture, so iOS/Safari (and
+  // sometimes others) block that late play(). Unlock the elements HERE, inside the trusted
+  // Watch gesture, with a silent play→pause: after this the deferred play() is allowed.
+  // volume=0 (NOT muted) so if a settle ever fails the instrument handler's own
+  // volume=0.45 reset self-heals it — muted would leave the song playing inaudibly. Guitar
+  // first: strict browsers unlock only the first media element per gesture, and guitar is
+  // the walkthrough's song. No audible blip (volume 0), and the settle resets to a clean
+  // paused/0 state so the later tap's play-toggle isn't fooled into pausing instead.
+  function primeCinematicAudio() {
+    ["guitar-song-audio", "ukulele-song-audio"].forEach(function (id) {
+      var a = document.getElementById(id);
+      if (!a) return;
+      try {
+        a.volume = 0;
+        var settle = function () { try { a.pause(); a.currentTime = 0; } catch (e) {} };
+        var p = a.play();
+        if (p && p.then) p.then(settle, settle); // handle both resolve and reject (no unhandledrejection)
+        else settle();
+      } catch (e) {}
+    });
+  }
 
   function runFullCinematic() {
     // A leisurely, whimsy-rich walkthrough: each interaction lands and its animation
     // plays before the next, with a held beat in every room, day → night on office
     // entry, into the built-in balcony finale — then it hands off to the play phase.
+    // Dedicated cine() narration beats sit at 0-gap after a room/interaction step, so
+    // they fire on the same tick without shifting any timing — and win over the guarded
+    // room hints the scripted taps would otherwise set.
+    setCaption("cine_coffee", true); // synchronous, so resetHunt's blocked caption never flashes stale
     var solveTotal = schedule([
       // KITCHEN — pull an espresso, start to finish
       [1400, tap("kitchen-lamarzocco")],                 // power on: spark + gauges swing
       [2600, tap("kitchen-grinder")],                    // grind (GRIND_MS) + coffee spray
       [GRIND_MS + 1700, tap("kitchen-portafilter")],     // brew (BREW_MS) + steam; the cup fills
       [BREW_MS + 1600, tap("kitchen-steamwand")],        // a hiss of steam while the shot rests
-      [2400, visit("garden")],
+      [2400, visit("garden")], [0, cine("cine_water")],
       // GARDEN — water the plants, light the candles, put the record on, a little magic
       [1700, tap("garden-monstera")],                    // water (droplets + bounce)
       [1900, tap("garden-peacelily")],                   // water another
       [1900, tap("garden-candle-1")],                    // light a candle
       [1500, tap("garden-candle-2")],                    // and the other
-      [2200, tap("garden-guitar")],                      // the couple's real song → everything grooves
+      [2200, tap("garden-guitar")], [0, cine("cine_song")], // the couple's real song → everything grooves
       [2400, tap("witchy-door-1")],                      // open the fairy chest → she dances to the beat
-      [2400, mushroomTrip],                              // the plants bloom fractals
-      [6800, visit("cuddly")],                           // hold on the trip, then move on
+      [2400, mushroomTrip], [0, cine("cine_bloom")],     // the plants bloom fractals
+      [6800, visit("cuddly")], [0, cine("cine_sway")],   // hold on the trip, then move on
       // CUDDLY — the couple sway to the song; play with Octi
       [2200, tap("cuddly-octopus")],                     // Octi wobbles
       [2000, tap("cuddly-pillow-1")],                    // squish a pillow
       [1700, tap("cuddly-trunk")],                       // Octi tumbles into the chest
-      [2600, visit("office")],
+      [2600, visit("office")], [0, cine("cine_office")],
       // OFFICE — boot the PC, ring Prague; the gold skull's already dancing to the song
       [1600, tap("office-pc-desk-trio")],                // power the PC → monitor boots Fedora → Chrome → caps
       [5600, tap("office-laptop")],                      // watch the boot, then open Markéta's Mac
       [1400, tap("laptop-calltile")],                    // Call Prague (calling → connecting → giggles)
       [4200, tap("office-lamp")],                        // watch the call, then dim the lights
       [1200, tap("office-pendant")],
-      [2000, function () { if (window.__autoToggleDusk) window.__autoToggleDusk(); }], // day → night
-      [2600, visit("balcony")]                           // → the built-in finale (rainbow → fireworks → RSVP nudge)
+      [2000, function () { if (window.__autoToggleDusk) window.__autoToggleDusk(); }], [0, cine("cine_dusk")], // day → night
+      [2600, visit("balcony")], [0, cine("cine_finale")] // → the built-in finale (rainbow → fireworks → RSVP nudge)
     ]);
-    // once the finale has settled on the RSVP nudge (~9.1s in), begin the endless play phase
-    beat(solveTotal + 11000, startPlayPhase);
+    // once the finale has settled on the RSVP nudge (~9.1s in) and it's had a moment to
+    // land, begin the endless play phase
+    beat(solveTotal + 13000, startPlayPhase);
   }
 
   // ── Play phase ──────────────────────────────────────────────────────────
@@ -12753,29 +12833,29 @@ function spawnDustMote(container) {
     var total = schedule([
       // BALCONY (day) — the total solar eclipse of 2017, under which a proposal happened
       [0, function () { setNight(false); }],
-      [1800, function () { if (window.__runSolarEclipse) window.__runSolarEclipse(); }],
-      [11000, visit("garden")],                          // hold through totality; the eclipse self-clears offscreen
+      [1800, function () { if (window.__runSolarEclipse) window.__runSolarEclipse(); }], [0, cine("cine_eclipse")],
+      [11000, visit("garden")], [0, cine("cine_record")], // hold through totality; the eclipse self-clears offscreen
       // GARDEN (day) — swap the record, another bloom, the deer bounds
       [1700, tap(instrument)],
       [2600, mushroomTrip],
       [4400, tap("garden-deer")],
-      [2600, visit("cuddly")],
+      [2600, visit("cuddly")], [0, cine("cine_sway")],
       // CUDDLY — the couple groove; Octi plays
       [1700, tap("cuddly-octopus")],
       [1700, tap("cuddly-pillow-2")],
       [1700, tap("cuddly-trunk")],
-      [2400, visit("office")],
+      [2400, visit("office")], [0, cine("cine_play")],
       // OFFICE — the skull dances to the beat; spin the top, bob the wooden head
       [1800, tap("office-spin-top")],
       [2000, tap("office-wooden-head")],
       [3000, visit("balcony")],
       // BALCONY (night) — fireworks, a wish on a star, fire up the grill, pour a wine, cheers
       [700, function () { setNight(true); }],
-      [1300, fireworksBurst],
+      [1300, fireworksBurst], [0, cine("cine_fireworks")],
       [1800, function () { if (window.spawnShootingStar) window.spawnShootingStar(); }],
-      [1800, tap("balcony-smoker-lid")],
+      [1800, tap("balcony-smoker-lid")], [0, cine("cine_grill")],
       [1100, tap("balcony-smoker-firebox")],
-      [2200, tap("balcony-wineglass")],
+      [2200, tap("balcony-wineglass")], [0, cine("cine_cheers")],
       [2400, tap("balcony-pride-flag")],
       [2400, showRsvpNudge]                              // graceful landing back on the nudge
     ]);
@@ -12788,13 +12868,16 @@ function spawnDustMote(container) {
     // solved, the day → night flip kept (a colour change, not motion), and the heavy
     // balcony flourish suppressed — end straight on the RSVP nudge.
     var D = 1700;
-    beat(300, function () { setCaption("kitchen"); });
-    beat(D, function () { goToStage("garden"); cineClick("garden-monstera"); });
-    beat(D * 2, function () { goToStage("cuddly"); cineClick("cuddly-octopus"); });
+    // same dedicated narration as the full show; set forced (past the guard). goToStage's
+    // own room caption is a no-op while the show runs, so set ours after each cut.
+    setCaption("cine_coffee", true); // synchronous — no stale flash after resetHunt
+    beat(D, function () { goToStage("garden"); cineClick("garden-monstera"); setCaption("cine_water", true); });
+    beat(D * 2, function () { goToStage("cuddly"); cineClick("cuddly-octopus"); setCaption("cine_sway", true); });
     beat(D * 3, function () {
       goToStage("office");
       cineClick("office-lamp"); cineClick("office-pendant");
       if (window.__autoToggleDusk) window.__autoToggleDusk();
+      setCaption("cine_dusk", true);
     });
     beat(D * 4, function () {
       balconyIntroSeen = true; // suppress the one-time arrival flourish (fireworks etc.)
@@ -12811,6 +12894,7 @@ function spawnDustMote(container) {
     if (skipBtn) skipBtn.hidden = false;
     if (window.__stopAutoDayNight) window.__stopAutoDayNight(); // freeze the background sky
     resetHunt(); // clean slate: day, kitchen, re-armed balcony finale (deterministic dusk flip later)
+    primeCinematicAudio(); // unlock the song inside this gesture so the later garden beat can play it
 
     // Cancel on any genuine user input. pointerdown/keydown ONLY (never click): our
     // own scripted el.click() beats fire no pointer/key events, so they can't

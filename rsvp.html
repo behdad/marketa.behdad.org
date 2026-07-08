@@ -507,6 +507,11 @@ footer{margin-top:2.6rem}
 @media (prefers-reduced-motion: reduce){#office-wooden-head.wobbling #office-wooden-head-inner{animation:none}}
 #office-skull-jaw{transform-box:fill-box; transform-origin:center}
 #office-skull.chattering #office-skull-jaw{animation:jaw-chatter .55s ease-out}
+/* the gold skull nods to the beat when a song plays (nod pivots at the neck) */
+#office-skull{transform-box:fill-box; transform-origin:bottom center}
+#office-skull.grooving{animation:skull-nod .7s ease-in-out infinite}
+@keyframes skull-nod{0%,100%{transform:translateY(0) rotate(0)} 50%{transform:translateY(-1.4px) rotate(3deg)}}
+@media (prefers-reduced-motion: reduce){#office-skull.grooving{animation:none}}
 @keyframes jaw-chatter{
   0%, 100%{transform:translateY(0)}
   15%{transform:translateY(1.6px)}
@@ -10792,34 +10797,41 @@ function spawnDustMote(container) {
     return { toe: period, head: period * 1.4 };
   }
   function updateCuddlyGrooving() {
-    var playingAudioId = null;
+    var playing = null;
     Object.keys(instrumentSpots).some(function (id) {
       var audio = document.getElementById(instrumentSpots[id].audioId);
-      if (audio && !audio.paused) { playingAudioId = instrumentSpots[id].audioId; return true; }
+      if (audio && !audio.paused) { playing = audio; return true; }
       return false;
     });
-    var anyPlaying = !!playingAudioId;
-    var durations = grooveDurations(GROOVE_BPM[playingAudioId] || 126.0);
-    cuddlyGrooveHeadIds.forEach(function (id) {
-      var el = document.getElementById(id);
+    var anyPlaying = !!playing;
+    var durations = grooveDurations(anyPlaying ? (GROOVE_BPM[playing.id] || 126.0) : 126.0);
+    var phaseT = anyPlaying ? playing.currentTime : 0;
+    // Phase-lock every groover to the song's real position (negative animation-delay
+    // seeks the CSS animation into phase) so they all hit ON the beat together — same
+    // beat clock as the equalizer / instrument strings. Restart-on-(re)start keeps it locked.
+    function setGroove(el, dur) {
       if (!el) return;
-      el.classList.toggle("grooving", anyPlaying);
-      el.style.animationDuration = durations.head + "s";
-    });
-    cuddlyGrooveFootIds.forEach(function (id) {
-      var el = document.getElementById(id);
-      if (!el) return;
-      el.classList.toggle("grooving", anyPlaying);
-      el.style.animationDuration = durations.toe + "s";
-    });
-    document.querySelectorAll(".puffer-eye").forEach(function (eye) {
-      eye.classList.toggle("grooving", anyPlaying);
-    });
+      if (anyPlaying) {
+        el.classList.remove("grooving");
+        void el.getBoundingClientRect(); // reflow so re-adding restarts the animation in-phase
+        el.style.animationDuration = dur + "s";
+        el.style.animationDelay = "-" + (((phaseT % dur) + dur) % dur).toFixed(3) + "s";
+        el.classList.add("grooving");
+      } else {
+        el.classList.remove("grooving");
+      }
+    }
+    cuddlyGrooveHeadIds.forEach(function (id) { setGroove(document.getElementById(id), durations.head); });
+    cuddlyGrooveFootIds.forEach(function (id) { setGroove(document.getElementById(id), durations.toe); });
+    document.querySelectorAll(".puffer-eye").forEach(function (eye) { setGroove(eye, durations.toe); });
     var octopusEl = document.getElementById("cuddly-octopus");
     if (octopusEl) {
       var octopusVisible = parseFloat(getComputedStyle(octopusEl).opacity) > 0.5;
-      octopusEl.classList.toggle("grooving", anyPlaying && octopusVisible);
+      if (anyPlaying && octopusVisible) setGroove(octopusEl, durations.head * 1.4);
+      else octopusEl.classList.remove("grooving");
     }
+    // the office gold skull nods to the beat too, phase-locked the same way
+    setGroove(document.getElementById("office-skull"), durations.head);
   }
   window.updateCuddlyGrooving = updateCuddlyGrooving;
   var noteFlowTimer = null;

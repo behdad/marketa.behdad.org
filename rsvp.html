@@ -5452,14 +5452,17 @@ document.addEventListener("click", function (e) {
     else { monitor.classList.remove("saver-fractal"); startCapsSaver(); }
   }
   function startSaver() {
-    if (monitor.classList.contains("show-nowplaying")) { scheduleSaver(); return; } // not while music's on
     // a visited site (harfbuzz/behdad) idles back to the caps "home" before the saver
     if (monitor.classList.contains("show-harfbuzz") || monitor.classList.contains("show-behdad")) {
       monitor.classList.remove("show-harfbuzz", "show-behdad");
       monitor.classList.add("show-caps");
       monitorUrl = CAPS_URL;
     }
-    if (!monitor.classList.contains("show-caps")) return;
+    // the screensaver takes over even while a song plays (it's the best part): the
+    // now-playing equalizer yields to it, and a click brings the equalizer back
+    var fromNowPlaying = monitor.classList.contains("show-nowplaying");
+    if (fromNowPlaying) { monitor.classList.remove("show-nowplaying"); stopEq(); }
+    if (!fromNowPlaying && !monitor.classList.contains("show-caps")) return;
     monitor.classList.remove("show-caps");
     monitor.classList.add("show-saver");
     showSaverMode(saverFractalNext = !saverFractalNext);
@@ -5685,6 +5688,7 @@ document.addEventListener("click", function (e) {
       if (title) title.textContent = SONG_INFO[playing.id] || "";
       monitor.classList.add("show-nowplaying");
       startEq(playing);
+      scheduleSaver(); // idle on the equalizer a while, then the screensaver takes over
     } else {
       var was = monitor.classList.contains("show-nowplaying");
       monitor.classList.remove("show-nowplaying");
@@ -5735,6 +5739,7 @@ document.addEventListener("click", function (e) {
     if (monitor.classList.contains("show-saver")) {
       stopSaver();
       monitor.classList.add("show-caps");
+      updateNowPlaying(); // if a song's still playing, bring the equalizer back
       scheduleSaver();
       playLaptopClickSound();
       return;

@@ -7497,6 +7497,138 @@ document.addEventListener("click", function (e) {
   tick();
 })();
 (function () {
+  // Ambient wind on the balcony: an airy, broad filtered-noise wash — deliberately NOT
+  // city hum's tight 260Hz "distant rumble" lowpass just above; wind wants higher/
+  // brighter content, so it's highpassed at 300Hz (above city hum's own <260Hz ceiling,
+  // so the two beds sit in distinct, non-overlapping bands instead of blurring into one
+  // rumble) and lowpassed much higher/broader, around 2.4-4kHz, for an open-air hiss.
+  // Present the whole time you're on the balcony, day or dusk alike (wind isn't a night-
+  // only cue like the crickets) — fixed centered pan, since wind is diffuse/all-around
+  // rather than coming from one spot, unlike most of this file's element-panned sounds.
+  // Two slow LFOs at unrelated, non-integer-ratio periods (~24s and ~63s) are summed and
+  // drive BOTH the gain and the filter cutoff together, so loudness and brightness swell
+  // in lockstep — an irregular, non-repeating gust feel rather than one steady pulse.
+  // Gently louder/gustier during a balcony storm (window.__balconyStorm) instead of a
+  // wholly separate system: the storm's own rain/thunder ambience (below) already owns
+  // the precipitation, this is just the air moving alongside it. No door-rattle hook is
+  // added here — the open balcony door already creaks in a storm gust via
+  // scheduleDoorCreak (below), so that reaction already exists and doesn't need
+  // duplicating. Not bled through the open door into the cuddly nook the way city hum/
+  // rain are (that nook is already layered with AC hum, fire crackle, and those two
+  // bleed-throughs; a plain outdoor wind bed doesn't earn a third). Polled every ~1s,
+  // same self-polling shape as city hum just above (no room-nav/storm-toggle call site
+  // to hook into, and a 1s worst-case lag hiding/showing the tab matches every other
+  // ambient loop in this file).
+  var windCtx = null, windSource = null, windGain = null, windFilter = null,
+      windLfoDepth = null, windLfo1 = null, windLfo2 = null, windFilterLfo = null,
+      windStormy = false;
+  var WIND_CALM = { gain: 0.011, depth: 0.003, filter: 2400 };
+  var WIND_STORM = { gain: 0.018, depth: 0.005, filter: 3200 };
+  function windWant() {
+    if (document.hidden) return false;
+    return window.currentStageIndex === 4;
+  }
+  // Ramp the loudness/gust-depth/brightness from the current level to the calm or
+  // stormy target over 1.5s, rather than snapping — used both when a storm rolls in or
+  // passes while wind is already playing, and to land on the right level after the
+  // initial fade-in.
+  function applyIntensity(stormy, atTime) {
+    if (!windCtx) return;
+    var target = stormy ? WIND_STORM : WIND_CALM;
+    try {
+      windGain.gain.cancelScheduledValues(atTime);
+      windGain.gain.setValueAtTime(windGain.gain.value, atTime);
+      windGain.gain.linearRampToValueAtTime(target.gain, atTime + 1.5);
+      windLfoDepth.gain.cancelScheduledValues(atTime);
+      windLfoDepth.gain.setValueAtTime(windLfoDepth.gain.value, atTime);
+      windLfoDepth.gain.linearRampToValueAtTime(target.depth, atTime + 1.5);
+      windFilter.frequency.cancelScheduledValues(atTime);
+      windFilter.frequency.setValueAtTime(windFilter.frequency.value, atTime);
+      windFilter.frequency.linearRampToValueAtTime(target.filter, atTime + 1.5);
+    } catch (e) {}
+    windStormy = stormy;
+  }
+  function startWind() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      stopWind();
+      windCtx = new Ctx();
+      var now = windCtx.currentTime;
+      windStormy = !!window.__balconyStorm;
+      var initial = windStormy ? WIND_STORM : WIND_CALM;
+      var bufferSize = windCtx.sampleRate * 2;
+      var buffer = windCtx.createBuffer(1, bufferSize, windCtx.sampleRate);
+      var data = buffer.getChannelData(0);
+      for (var i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      windSource = windCtx.createBufferSource();
+      windSource.buffer = buffer;
+      windSource.loop = true;
+      var hp = windCtx.createBiquadFilter();
+      hp.type = "highpass";
+      hp.frequency.value = 300; // trims low end more assertively than city hum's own <260Hz lowpass ceiling, so the two beds occupy distinct, non-overlapping bands instead of blurring into one rumble
+      windFilter = windCtx.createBiquadFilter();
+      windFilter.type = "lowpass";
+      windFilter.frequency.value = initial.filter; // broad/airy, well above city hum's 260Hz "distant" cutoff
+      windFilter.Q.value = 0.5;
+      windGain = windCtx.createGain();
+      windGain.gain.setValueAtTime(0.0001, now);
+      windGain.gain.exponentialRampToValueAtTime(initial.gain, now + 0.8);
+      // two summed LFOs at unrelated periods driving gain...
+      windLfo1 = windCtx.createOscillator();
+      windLfo1.type = "sine";
+      windLfo1.frequency.value = 1 / 24;
+      windLfo2 = windCtx.createOscillator();
+      windLfo2.type = "sine";
+      windLfo2.frequency.value = 1 / 63;
+      windLfoDepth = windCtx.createGain();
+      windLfoDepth.gain.value = initial.depth;
+      windLfo1.connect(windLfoDepth);
+      windLfo2.connect(windLfoDepth);
+      windLfoDepth.connect(windGain.gain);
+      // ...and a third, same-period-as-the-first LFO sweeping the filter cutoff in step,
+      // so a gust reads as louder AND brighter at once, like real wind picking up
+      windFilterLfo = windCtx.createOscillator();
+      windFilterLfo.type = "sine";
+      windFilterLfo.frequency.value = 1 / 24;
+      var filterLfoDepth = windCtx.createGain();
+      filterLfoDepth.gain.value = 750;
+      windFilterLfo.connect(filterLfoDepth);
+      filterLfoDepth.connect(windFilter.frequency);
+      windLfo1.start(); windLfo2.start(); windFilterLfo.start();
+      windSource.connect(hp); hp.connect(windFilter); windFilter.connect(windGain);
+      windGain.connect(pannedOut(windCtx, 0));
+      windSource.start();
+    } catch (e) {}
+  }
+  function stopWind() {
+    if (!windCtx) return;
+    try {
+      var t = windCtx.currentTime;
+      windGain.gain.cancelScheduledValues(t);
+      windGain.gain.setValueAtTime(windGain.gain.value, t);
+      windGain.gain.linearRampToValueAtTime(0.0001, t + 0.6);
+    } catch (e) {}
+    var nodes = [windSource, windLfo1, windLfo2, windFilterLfo], ctxToClose = windCtx;
+    setTimeout(function () {
+      nodes.forEach(function (n) { if (n) { try { n.stop(); } catch (e) {} } });
+      try { ctxToClose.close(); } catch (e) {}
+    }, 700);
+    windCtx = null; windSource = null; windGain = null; windFilter = null;
+    windLfoDepth = null; windLfo1 = null; windLfo2 = null; windFilterLfo = null;
+    windStormy = false;
+  }
+  function tick() {
+    var want = windWant();
+    if (want && !windCtx) startWind();
+    else if (want && windCtx && windStormy !== !!window.__balconyStorm) {
+      applyIntensity(!!window.__balconyStorm, windCtx.currentTime);
+    } else if (!want && windCtx) stopWind();
+    setTimeout(tick, 1000);
+  }
+  tick();
+})();
+(function () {
   var lampIds = ["office-lamp", "office-pendant"];
   var roomDim = document.getElementById("office-lamp-dim");
   function updateRoomDim() {

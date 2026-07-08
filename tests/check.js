@@ -261,6 +261,29 @@ function checkAnimationKeyframes(file, style) {
   }
 }
 
+// Every data-i / data-*-i / data-note-key attribute names a T dictionary key; a
+// typo'd or missing key renders blank text (setLang writes innerHTML from T[key]).
+// Verify each referenced key exists in the en dictionary (cs parity is checked above).
+function checkI18nKeys(file, script, html) {
+  if (!script) return;
+  var attrRe = /\bdata-(?:i|href-i|aria-i|title-i|note-key)="([^"]+)"/g;
+  var m, seen = new Set(), missing = [];
+  while ((m = attrRe.exec(html))) {
+    var key = m[1];
+    if (seen.has(key)) continue;
+    seen.add(key);
+    // a key is defined iff it appears as `key:` in the inline script's T dictionaries
+    // (matched directly, so keys sharing a line with another key still resolve)
+    var keyRe = new RegExp("\\b" + key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*:");
+    if (!keyRe.test(script)) missing.push(key);
+  }
+  if (missing.length === 0) {
+    pass(file + ": all data-i/data-note-key attributes resolve to a dictionary key");
+  } else {
+    fail(file + ": data-* i18n keys missing from the dictionary", missing.join(", "));
+  }
+}
+
 FILES.forEach(function (file) {
   console.log(file + ":");
   var html = fs.readFileSync(path.join(ROOT, file), "utf8");
@@ -272,6 +295,7 @@ FILES.forEach(function (file) {
     checkEggTotal(html, script);
     checkParticleTransformOrigin(file, script);
     checkAnimationClassCleanup(file, style, script, html);
+    checkI18nKeys(file, script, html);
   }
   checkAnimationKeyframes(file, style);
   checkSvgTagBalance(file, html);

@@ -7398,6 +7398,79 @@ document.addEventListener("click", function (e) {
   }
 })();
 (function () {
+  // Distant city hum: a soft ambient wash on the balcony, like a muffled skyline of
+  // traffic below — and, fainter, bleeding into the cuddly nook through an open balcony
+  // door, same two-room pattern as the storm rain ambience above. Polled every ~1s
+  // rather than hooked into every room-nav/door-toggle call site, mirroring rain/
+  // cricket ambience elsewhere in this file.
+  var cityCtx = null, citySource = null, cityGain = null, cityLfo = null, cityWhere = null;
+  function cuddlyDoorOpen() {
+    var front = document.getElementById("balcony-door"), nook = document.getElementById("cuddly-balcony-door");
+    return !!((front && front.classList.contains("open")) || (nook && nook.classList.contains("open")));
+  }
+  function cityHumWant() {
+    if (document.hidden) return null;
+    if (window.currentStageIndex === 4) return "balcony";
+    if (window.currentStageIndex === 2 && cuddlyDoorOpen()) return "cuddly";
+    return null;
+  }
+  function startCityHum(where) {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      stopCityHum();
+      cityCtx = new Ctx();
+      cityWhere = where;
+      var bufferSize = cityCtx.sampleRate * 2;
+      var buffer = cityCtx.createBuffer(1, bufferSize, cityCtx.sampleRate);
+      var data = buffer.getChannelData(0);
+      for (var i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      citySource = cityCtx.createBufferSource();
+      citySource.buffer = buffer;
+      citySource.loop = true;
+      var filter = cityCtx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = 260; // softer/lower than the AC hum — distant, not mechanical
+      filter.Q.value = 0.4;
+      cityGain = cityCtx.createGain();
+      cityGain.gain.setValueAtTime(0.0001, cityCtx.currentTime);
+      var peak = cityWhere === "cuddly" ? 0.008 : 0.02; // fainter heard through the door than out on the balcony
+      cityGain.gain.exponentialRampToValueAtTime(peak, cityCtx.currentTime + 0.6);
+      // a very slow amplitude wobble so it reads as living traffic swells, not a static drone
+      cityLfo = cityCtx.createOscillator();
+      cityLfo.type = "sine";
+      cityLfo.frequency.value = 0.07;
+      var lfoDepth = cityCtx.createGain();
+      lfoDepth.gain.value = peak * 0.3;
+      cityLfo.connect(lfoDepth);
+      lfoDepth.connect(cityGain.gain);
+      cityLfo.start();
+      citySource.connect(filter);
+      filter.connect(cityGain);
+      cityGain.connect(pannedOut(cityCtx, cityWhere === "cuddly" ? "cuddly-balcony-door" : 0));
+      citySource.start();
+    } catch (e) {}
+  }
+  function stopCityHum() {
+    if (!cityCtx) return;
+    try { cityGain.gain.exponentialRampToValueAtTime(0.0001, cityCtx.currentTime + 0.4); } catch (e) {}
+    var src = citySource, lfo = cityLfo, ctxToClose = cityCtx;
+    setTimeout(function () {
+      if (src) { try { src.stop(); } catch (e) {} }
+      if (lfo) { try { lfo.stop(); } catch (e) {} }
+      if (ctxToClose) { try { ctxToClose.close(); } catch (e) {} }
+    }, 500);
+    citySource = null; cityGain = null; cityCtx = null; cityLfo = null; cityWhere = null;
+  }
+  function tick() {
+    var want = cityHumWant();
+    if (want && want !== cityWhere) startCityHum(want);
+    else if (!want && cityCtx) stopCityHum();
+    setTimeout(tick, 1000);
+  }
+  tick();
+})();
+(function () {
   var lampIds = ["office-lamp", "office-pendant"];
   var roomDim = document.getElementById("office-lamp-dim");
   function updateRoomDim() {

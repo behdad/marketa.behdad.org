@@ -10435,6 +10435,51 @@ function spawnDustMote(container) {
     }
     setTimeout(tick, 1200);
   })();
+  // rain blows into the cuddly nook from the OPEN balcony door during a night storm —
+  // steeper/leftward drift (wind through the doorway), self-replenishing + seeded
+  var CUDDLY_RAIN_DROPS = 8;
+  function cuddlyRainActive() {
+    var sc = document.getElementById("stage-cuddly"), door = document.getElementById("balcony-door");
+    return sc && door && door.classList.contains("open") && sc.classList.contains("dusk") &&
+      window.__balconyStorm && stageIndex === STAGES.indexOf("cuddly") && document.visibilityState !== "hidden";
+  }
+  function spawnCuddlyRainDrop() {
+    var container = document.getElementById("cuddly-rainfx");
+    if (!container) return;
+    var SVGNS = "http://www.w3.org/2000/svg";
+    var cx = 500 + Math.random() * 175, cy = 18 + Math.random() * 96; // upper-right, by the door
+    var dropLen = 11 + Math.random() * 7, fallDist = 150 + Math.random() * 90;
+    var line = document.createElementNS(SVGNS, "line");
+    line.setAttribute("x1", cx); line.setAttribute("y1", cy);
+    line.setAttribute("x2", cx - 6); line.setAttribute("y2", cy + dropLen);
+    line.setAttribute("stroke", "#9fbcd0"); line.setAttribute("stroke-width", "1.6");
+    line.setAttribute("stroke-linecap", "round");
+    container.appendChild(line);
+    if (line.animate) {
+      var anim = line.animate([
+        { transform: "translate(0px,0px)", opacity: 0 },
+        { transform: "translate(-18px," + (fallDist * 0.4) + "px)", opacity: 0.6, offset: 0.3 },
+        { transform: "translate(-44px," + fallDist + "px)", opacity: 0 }
+      ], { duration: 720 + Math.random() * 340, easing: "ease-in", delay: Math.random() * 400 });
+      anim.onfinish = function () {
+        if (line.parentNode) line.remove();
+        if (cuddlyRainActive()) spawnCuddlyRainDrop(); // replenish 1:1
+      };
+    } else {
+      setTimeout(function () { if (line.parentNode) line.remove(); }, 1300);
+    }
+  }
+  (function seedCuddlyRain() {
+    function tick() {
+      if (cuddlyRainActive()) {
+        var container = document.getElementById("cuddly-rainfx");
+        var have = container ? container.childElementCount : 0;
+        for (var i = have; i < CUDDLY_RAIN_DROPS; i++) spawnCuddlyRainDrop();
+      }
+      setTimeout(tick, 1200);
+    }
+    setTimeout(tick, 1200);
+  })();
   // Occasional SOLAR eclipse during the DAY: the moon transits the sun, the sky
   // blacks out at totality with a bright corona, and the hearts burst — the total
   // eclipse of 2017 under which a proposal happened. CSS (.solar-eclipse) drives the

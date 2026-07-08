@@ -9099,6 +9099,26 @@ function playTripMelody(variant) {
       mg.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
       melt.connect(mg); mg.connect(bus);
       melt.start(t0); melt.stop(t0 + dur + 0.1);
+      // whiteout swoosh: the CSS whiteout (trip-melt-whiteout-fade, a fixed 5s keyframe)
+      // holds full-white 25%-65% then fades back to normal 65%-100% — sync a rising
+      // filtered-noise riser to that fade-back so the scene audibly "swooshes" home
+      var swT = t0 + 3.25, swDur = 0.9;
+      var swBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * swDur), ctx.sampleRate);
+      var swData = swBuf.getChannelData(0);
+      for (var wi = 0; wi < swData.length; wi++) swData[wi] = Math.random() * 2 - 1;
+      var swSrc = ctx.createBufferSource();
+      swSrc.buffer = swBuf;
+      var swBp = ctx.createBiquadFilter();
+      swBp.type = "bandpass";
+      swBp.Q.value = 1.4;
+      swBp.frequency.setValueAtTime(300, swT);
+      swBp.frequency.exponentialRampToValueAtTime(3200, swT + swDur * 0.85);
+      var swGain = ctx.createGain();
+      swGain.gain.setValueAtTime(0.0001, swT);
+      swGain.gain.exponentialRampToValueAtTime(0.05, swT + swDur * 0.5);
+      swGain.gain.exponentialRampToValueAtTime(0.0001, swT + swDur);
+      swSrc.connect(swBp); swBp.connect(swGain); swGain.connect(bus);
+      swSrc.start(swT); swSrc.stop(swT + swDur + 0.05);
     } else if (variant === "molly") {
       // molly's arpeggio is broken out per kiss — one cycle plays from each heart burst
       // (see the heart loop in startTripVariant → playMollyArpCycle); no upfront melody here.

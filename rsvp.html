@@ -12816,6 +12816,74 @@ function spawnDustMote(container) {
     };
     window.__stopBalconyStormCycle = clearAll;
   })();
+  (function () {
+    // Ambient rain patter during a balcony night storm: audible on the balcony itself
+    // (centered, all-around hiss) and — fainter, directional through the doorway — in the
+    // cuddly nook while the balcony door is open, mirroring the two independent VISUAL
+    // rain gates elsewhere in this file (spawnDrop's rainActive / spawnCuddlyRainDrop's
+    // cuddlyRainActive) without depending on their private state. Polled every ~1s rather
+    // than hooked into every storm-start/door-toggle/room-nav call site (there are many,
+    // scattered) — the same lighter-weight pattern already used for the cricket ambience
+    // in this file. One persistent loop; self-cancels the instant nothing wants it.
+    var rainCtx = null, rainGain = null, rainNoise = null, rainInCuddly = false;
+    function stageDusk(id) { var s = document.getElementById(id); return !!(s && s.classList.contains("dusk")); }
+    function cuddlyDoorOpen() {
+      var front = document.getElementById("balcony-door"), nook = document.getElementById("cuddly-balcony-door");
+      return !!((front && front.classList.contains("open")) || (nook && nook.classList.contains("open")));
+    }
+    function rainSoundWant() {
+      if (!window.__balconyStorm || document.hidden) return null;
+      if (window.currentStageIndex === 4 && stageDusk("stage-balcony")) return "balcony";
+      if (window.currentStageIndex === 2 && stageDusk("stage-cuddly") && cuddlyDoorOpen()) return "cuddly";
+      return null;
+    }
+    function startRain(where) {
+      try {
+        var Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        stopRain();
+        rainCtx = new Ctx();
+        rainInCuddly = where === "cuddly";
+        var bufferSize = rainCtx.sampleRate * 2;
+        var buffer = rainCtx.createBuffer(1, bufferSize, rainCtx.sampleRate);
+        var data = buffer.getChannelData(0);
+        for (var i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        rainNoise = rainCtx.createBufferSource();
+        rainNoise.buffer = buffer;
+        rainNoise.loop = true;
+        var hp = rainCtx.createBiquadFilter();
+        hp.type = "highpass";
+        hp.frequency.value = 1800; // bright hiss, not a rumble (thunder already owns the low end)
+        var lp = rainCtx.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.frequency.value = 7000;
+        rainGain = rainCtx.createGain();
+        rainGain.gain.setValueAtTime(0.0001, rainCtx.currentTime);
+        var peak = rainInCuddly ? 0.02 : 0.035; // fainter heard through the door than out on the balcony
+        rainGain.gain.exponentialRampToValueAtTime(peak, rainCtx.currentTime + 1.2);
+        var out = pannedOut(rainCtx, rainInCuddly ? "cuddly-balcony-door" : 0);
+        rainNoise.connect(hp); hp.connect(lp); lp.connect(rainGain); rainGain.connect(out);
+        rainNoise.start(0);
+      } catch (e) {}
+    }
+    function stopRain() {
+      if (!rainCtx) return;
+      try { rainGain.gain.exponentialRampToValueAtTime(0.0001, rainCtx.currentTime + 0.8); } catch (e) {}
+      var ctxToClose = rainCtx, noiseToStop = rainNoise;
+      setTimeout(function () {
+        if (noiseToStop) { try { noiseToStop.stop(); } catch (e) {} }
+        if (ctxToClose) { try { ctxToClose.close(); } catch (e) {} }
+      }, 900);
+      rainCtx = null; rainGain = null; rainNoise = null;
+    }
+    function tick() {
+      var want = rainSoundWant();
+      if (want && (!rainCtx || (want === "cuddly") !== rainInCuddly)) startRain(want);
+      else if (!want && rainCtx) stopRain();
+      setTimeout(tick, 1000);
+    }
+    tick();
+  })();
   // an occasional shooting star streaks the clear dusk sky (not during a storm)
   (function scheduleShootingStar() {
     var delay = 16000 + Math.random() * 26000;

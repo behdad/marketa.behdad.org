@@ -5120,11 +5120,14 @@ document.addEventListener("click", function (e) {
       tempTimer = setInterval(tempTick, on ? 450 : 1600); // heat fast, cool slow
       tempTick();
     }
-    function smokeActive() { return smoker.classList.contains("smoking") && !document.hidden; }
-    // A billowing plume from the chimney: soft grey puffs that rise while
-    // expanding and fading. Each replenishes itself on finish (constant count,
-    // auto-pauses when the tab is hidden), so it never piles up.
+    var smokeCount = 0;
+    // Smoke rises whenever the pit's warm (temp > 0) — so it keeps going through
+    // the cool-down, just fainter — and each puff's thickness scales with temp.
+    function smokeActive() { return temp > 0 && !document.hidden; }
+    // Soft grey puffs that rise while expanding and fading; each replenishes
+    // itself on finish (constant count, auto-pauses when hidden — no pile-up).
     function smokePuff() {
+      var intensity = Math.max(0.2, temp / 400);
       var cx = 3214 + (Math.random() - 0.5) * 5, cy = 114;
       var c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
       c.setAttribute("cx", cx); c.setAttribute("cy", cy); c.setAttribute("r", "4");
@@ -5132,23 +5135,27 @@ document.addEventListener("click", function (e) {
       c.setAttribute("opacity", "0"); // stays invisible during the stagger delay
       c.style.transformBox = "fill-box"; c.style.transformOrigin = "center";
       strip.appendChild(c);
+      smokeCount++;
       if (c.animate) {
         var driftX = (Math.random() - 0.35) * 30;
-        var rise = 64 + Math.random() * 46;
+        var rise = 60 + Math.random() * 46;
+        var peak = 0.2 + intensity * 0.5;         // fainter when cool, thick when hot
+        var endScale = 2.2 + intensity * 1.2;     // bigger billows when hotter
         var a = c.animate([
           { transform: "translate(0,0) scale(0.5)", opacity: 0 },
-          { transform: "translate(" + (driftX * 0.4) + "px," + (-rise * 0.4) + "px) scale(1.5)", opacity: 0.55, offset: 0.35 },
-          { transform: "translate(" + driftX + "px," + (-rise) + "px) scale(2.9)", opacity: 0 }
-        ], { duration: 2400 + Math.random() * 1000, easing: "ease-out", delay: Math.random() * 1300 });
+          { transform: "translate(" + (driftX * 0.4) + "px," + (-rise * 0.4) + "px) scale(1.5)", opacity: peak, offset: 0.35 },
+          { transform: "translate(" + driftX + "px," + (-rise) + "px) scale(" + endScale + ")", opacity: 0 }
+        ], { duration: 2200 + (1 - intensity) * 900 + Math.random() * 700, easing: "ease-out", delay: Math.random() * 1300 });
         a.onfinish = function () {
+          smokeCount--;
           if (c.parentNode) c.remove();
           if (smokeActive()) smokePuff(); // replenish 1:1
         };
       } else {
-        setTimeout(function () { if (c.parentNode) c.remove(); }, 3600);
+        setTimeout(function () { smokeCount--; if (c.parentNode) c.remove(); }, 3600);
       }
     }
-    function seedSmoke() { for (var i = 0; i < 6; i++) smokePuff(); }
+    function seedSmoke() { while (smokeCount < 6) smokePuff(); } // top the plume up to ~6
     function cookBurger(b) {
       if (smoking && !b.classList.contains("served") && !b.classList.contains("done")) b.classList.add("done");
     }
@@ -5168,11 +5175,11 @@ document.addEventListener("click", function (e) {
     function toggleFire() {
       smoking = !smoking;
       smoker.classList.toggle("smoking", smoking);
+      setFire(smoking); // heats up, or starts the slow cool-down
       if (smoking) {
-        seedSmoke(); // plume runs (and self-replenishes) until the fire's out
+        seedSmoke(); // top up the plume (it keeps going through the cool-down)
         startCooking();
       }
-      setFire(smoking); // heats up, or starts the slow cool-down
     }
     function toggleLid() {
       lidOpen = !lidOpen;
@@ -6793,6 +6800,40 @@ function spawnGrindParticles(svg, cx, cy, color) {
     })(i);
   }
 }
+// A short burst of soft grey smoke puffs (same look as the smoker's plume)
+// that drift sideways (dirX) while rising, expanding and fading.
+function spawnSmokeDrift(svg, cx, cy, count, dirX) {
+  if (!svg) return;
+  count = count || 3;
+  dirX = dirX || -1;
+  for (var s = 0; s < count; s++) {
+    (function (s) {
+      setTimeout(function () {
+        var c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        c.setAttribute("cx", cx + (Math.random() - 0.5) * 12);
+        c.setAttribute("cy", cy + (Math.random() - 0.5) * 26);
+        c.setAttribute("r", "5");
+        c.setAttribute("fill", "url(#smoke-grad)");
+        c.setAttribute("opacity", "0");
+        c.style.transformBox = "fill-box";
+        c.style.transformOrigin = "center";
+        svg.appendChild(c);
+        if (c.animate) {
+          var dx = dirX * (44 + Math.random() * 48);
+          var rise = 18 + Math.random() * 30;
+          var a = c.animate([
+            { transform: "translate(0,0) scale(0.5)", opacity: 0 },
+            { transform: "translate(" + (dx * 0.4) + "px," + (-rise * 0.4) + "px) scale(1.7)", opacity: 0.5, offset: 0.35 },
+            { transform: "translate(" + dx + "px," + (-rise) + "px) scale(3.1)", opacity: 0 }
+          ], { duration: 2600 + Math.random() * 900, easing: "ease-out" });
+          a.onfinish = function () { if (c.parentNode) c.remove(); };
+        } else {
+          setTimeout(function () { if (c.parentNode) c.remove(); }, 3600);
+        }
+      }, s * 320);
+    })(s);
+  }
+}
 function spawnSteamWisps(svg, cx, cy, scale, xDir, yDir, count, peakOpacity) {
   if (!svg) return;
   var s = scale || 1;
@@ -8019,42 +8060,53 @@ function playCoughSound() {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     var ctx = new Ctx();
-    var t0 = ctx.currentTime;
-    [0, 0.3].forEach(function (dt) {
-      var t = t0 + dt, dur = 0.14;
-      // throaty burst of band-limited noise
+    // One cough = a hard glottal burst that opens into turbulent air whose
+    // resonance sweeps down the throat, over a short voiced grunt that pitch-drops.
+    function cough(t, pitch, level) {
+      var dur = 0.26;
       var n = Math.floor(ctx.sampleRate * dur);
       var buf = ctx.createBuffer(1, n, ctx.sampleRate);
       var d = buf.getChannelData(0);
-      for (var i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 1.4);
+      for (var i = 0; i < n; i++) {
+        var frac = i / n;
+        // sharp burst spike + a rougher decaying rasp tail
+        var env = Math.exp(-frac * 16) * 0.75 + Math.exp(-frac * 4.5) * 0.32;
+        d[i] = (Math.random() * 2 - 1) * env;
+      }
       var src = ctx.createBufferSource();
       src.buffer = buf;
       var bp = ctx.createBiquadFilter();
       bp.type = "bandpass";
-      bp.frequency.value = 380 + Math.random() * 120;
-      bp.Q.value = 1.1;
+      bp.Q.value = 1.5;
+      bp.frequency.setValueAtTime(1200 * pitch, t);
+      bp.frequency.exponentialRampToValueAtTime(300 * pitch, t + 0.2);
+      var hp = ctx.createBiquadFilter();
+      hp.type = "highpass";
+      hp.frequency.value = 170;
       var g = ctx.createGain();
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.22, t + 0.012);
+      g.gain.setValueAtTime(0.3 * level, t);
       g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      src.connect(bp); bp.connect(g); g.connect(ctx.destination);
+      src.connect(bp); bp.connect(hp); hp.connect(g); g.connect(ctx.destination);
       src.start(t); src.stop(t + dur + 0.02);
-      // a low grunt underneath
+      // voiced cords: a low tone that drops in pitch (the "ugh")
       var osc = ctx.createOscillator();
       osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(150, t);
-      osc.frequency.exponentialRampToValueAtTime(85, t + dur);
+      osc.frequency.setValueAtTime(165 * pitch, t);
+      osc.frequency.exponentialRampToValueAtTime(72 * pitch, t + 0.13);
       var lp = ctx.createBiquadFilter();
       lp.type = "lowpass";
-      lp.frequency.value = 500;
+      lp.frequency.value = 720;
       var og = ctx.createGain();
       og.gain.setValueAtTime(0.0001, t);
-      og.gain.exponentialRampToValueAtTime(0.1, t + 0.012);
-      og.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      og.gain.exponentialRampToValueAtTime(0.15 * level, t + 0.008);
+      og.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
       osc.connect(lp); lp.connect(og); og.connect(ctx.destination);
-      osc.start(t); osc.stop(t + dur + 0.02);
-    });
-    setTimeout(function () { ctx.close(); }, 700);
+      osc.start(t); osc.stop(t + 0.16);
+    }
+    var t0 = ctx.currentTime;
+    cough(t0, 1.0, 1.0);
+    cough(t0 + 0.33, 0.86, 0.85);
+    setTimeout(function () { ctx.close(); }, 900);
   } catch (e) {}
 }
 function playSizzleSound() {
@@ -9802,7 +9854,7 @@ function spawnDustMote(container) {
       var smk = document.getElementById("balcony-smoker");
       if (door && smk && door.classList.contains("open") && smk.classList.contains("smoking") &&
           stageIndex === STAGES.indexOf("cuddly") && document.visibilityState !== "hidden") {
-        spawnSteamWisps(strip, 1560 + Math.random() * 100, 150, 0.7, 1, -1, 3, 0.5);
+        spawnSmokeDrift(strip, 1985, 150, 4, -1); // seeps in from the right (balcony side)
         ["cuddly-behdad-head", "cuddly-marketa-head"].forEach(function (id) {
           var h = document.getElementById(id);
           if (h) {

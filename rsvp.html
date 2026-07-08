@@ -6721,6 +6721,7 @@ document.addEventListener("click", function (e) {
     function buzz() {
       phone.classList.remove("buzz");
       phoneScreen.classList.remove("buzz");
+      playPhoneRingSound("balcony-phone"); // ringtone on tap, panned to the phone
       requestAnimationFrame(function () {
         requestAnimationFrame(function () {
           phone.classList.add("buzz");
@@ -10036,7 +10037,38 @@ function playLaptopClickSound() {
 }
 // A short synthesized ring for the "call Prague" gag: two brief dual-tone warbles,
 // then the context closes itself — no loop, no timer left running.
-function playPhoneRingSound() {
+function playButterflyFlutterSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t0 = ctx.currentTime;
+    var out = pannedOut(ctx, "office-stainedglass");
+    // two soft airy wing-beats: short band-passed noise puffs that swell and fall quickly
+    [0, 0.14].forEach(function (start, i) {
+      var t = t0 + start;
+      var size = Math.max(1, Math.floor(ctx.sampleRate * 0.13));
+      var buf = ctx.createBuffer(1, size, ctx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var j = 0; j < size; j++) d[j] = Math.random() * 2 - 1;
+      var src = ctx.createBufferSource();
+      src.buffer = buf;
+      var bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = 620 - i * 90; // second beat a touch lower
+      bp.Q.value = 0.9;
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.028, t + 0.04); // soft swell
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+      src.connect(bp); bp.connect(g); g.connect(out);
+      src.start(t);
+      src.stop(t + 0.13);
+    });
+    setTimeout(function () { ctx.close(); }, 500);
+  } catch (e) {}
+}
+function playPhoneRingSound(panId) {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
@@ -10056,7 +10088,7 @@ function playPhoneRingSound() {
       gain.gain.setValueAtTime(0.05, t + 0.34);
       gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
       osc.connect(gain);
-      gain.connect(pannedOut(ctx, "office-laptop"));
+      gain.connect(pannedOut(ctx, panId || "office-laptop"));
       osc.start(t);
       osc.stop(t + 0.45);
     });
@@ -12700,6 +12732,7 @@ function spawnDustMote(container) {
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { glass.classList.add("flap"); });
     });
+    playButterflyFlutterSound();
   }
   if (glass) glass.addEventListener("animationend", function (e) {
     if (e.animationName === "butterfly-flap-left" || e.animationName === "butterfly-flap-right") glass.classList.remove("flap");
@@ -13373,6 +13406,10 @@ function spawnDustMote(container) {
   // proximity to the screen, only while the nook is on-screen and the fire is on.
   var ws = document.getElementById("cuddly-wallscreen");
   var pf = document.getElementById("cuddly-puffer-wrap");
+  // keep the wall-mounted screen (and its fire) BEHIND the knives on the board in front of
+  // it — move it before the first knife so the knives (and Fishu) paint over the screen.
+  var k1 = document.getElementById("cuddly-knife-1");
+  if (ws && k1 && k1.parentNode === ws.parentNode) ws.parentNode.insertBefore(ws, k1);
   if (ws && pf && ws.parentNode) ws.parentNode.insertBefore(pf, ws.nextSibling);
   var body = pf && pf.querySelector(".puffer-body");
   var halo = document.getElementById("fishu-fire-halo");

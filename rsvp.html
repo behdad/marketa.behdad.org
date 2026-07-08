@@ -8973,11 +8973,8 @@ function playTripMelody(variant) {
       melt.connect(mg); mg.connect(bus);
       melt.start(t0); melt.stop(t0 + dur + 0.1);
     } else if (variant === "molly") {
-      var ma = [329.63, 415.30, 493.88, 659.25];
-      for (var mr = 0; mr < 3; mr++) {
-        var mt = t0 + mr * 1.7;
-        ma.forEach(function (f, i) { note("triangle", f, mt + i * 0.05, 0.045, 1.6, 0.15); });
-      }
+      // molly's arpeggio is broken out per kiss — one cycle plays from each heart burst
+      // (see the heart loop in startTripVariant → playMollyArpCycle); no upfront melody here.
     } else if (variant === "ketamine") {
       var kd = 0.9, ka = [220, 196, 174.6, 146.8, 130.8, 146.8];
       ka.forEach(function (f, i) { note("sine", f, t0 + i * kd, 0.05, kd * 1.6, 0.3, 4); });
@@ -9056,8 +9053,8 @@ function startTripVariant(variant) {
         var hx = stageIdx * 680 + 150 + Math.random() * 380;
         var hy = 150 + Math.random() * 180;
         spawnHearts(strip, hx, hy);
-        // the kiss pops from exactly where the hearts burst (pan by the heart's x in the room)
-        playKissPopSound(Math.max(-1, Math.min(1, ((hx - stageIdx * 680) / 680 * 2 - 1) * 0.85)));
+        // one cycle of molly's arp plays from exactly where the hearts burst (pan by x in the room)
+        playMollyArpCycle(Math.max(-1, Math.min(1, ((hx - stageIdx * 680) / 680 * 2 - 1) * 0.85)));
       }, delay);
     });
   }
@@ -10024,25 +10021,27 @@ function playLaptopClickSound() {
 }
 // A short synthesized ring for the "call Prague" gag: two brief dual-tone warbles,
 // then the context closes itself — no loop, no timer left running.
-function playKissPopSound(pan) {
+function playMollyArpCycle(pan) {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     var ctx = new Ctx();
-    var t = ctx.currentTime;
+    var t0 = ctx.currentTime;
     var out = pannedOut(ctx, typeof pan === "number" ? pan : 0);
-    // a soft little "mwah": a quick high blip with a downward pitch pop
-    var osc = ctx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(920, t);
-    osc.frequency.exponentialRampToValueAtTime(560, t + 0.09);
-    var g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.05, t + 0.012);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
-    osc.connect(g); g.connect(out);
-    osc.start(t); osc.stop(t + 0.16);
-    setTimeout(function () { ctx.close(); }, 300);
+    // one cycle of molly's warm arpeggio, played from wherever a kiss (heart) bursts
+    [329.63, 415.30, 493.88, 659.25].forEach(function (freq, i) {
+      var t = t0 + i * 0.05;
+      var osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, t);
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.045, t + 0.15);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 1.8);
+      osc.connect(g); g.connect(out);
+      osc.start(t); osc.stop(t + 1.9);
+    });
+    setTimeout(function () { ctx.close(); }, 2200);
   } catch (e) {}
 }
 function playPlushSquishSound() {

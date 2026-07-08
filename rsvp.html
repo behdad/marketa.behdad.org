@@ -395,6 +395,22 @@ footer{margin-top:2.6rem}
   60%{transform:rotate(4deg)}
   85%{transform:rotate(-2deg)}
 }
+/* napping (chair perch only): a slow breathing pulse on its own wrapper, distinct from
+   #witchy-chest-cat's own click-wobble, so the two `animation` shorthands never contend
+   for the same element (the cascade trap CLAUDE.md documents for id-vs-class state
+   rules) — this wrapper only ever scales, the innermost node only ever rotates, so a
+   poke-while-asleep still wobbles+meows normally. Eyes close via a plain (unanimated)
+   scale-to-0, keyed off the same class reaching across the wrapper boundary. */
+#witchy-chest-cat-breathe{transform-box:fill-box; transform-origin:bottom center}
+#witchy-chest-cat-breathe.napping{animation:cat-nap-breathe 3.6s ease-in-out infinite}
+@keyframes cat-nap-breathe{
+  0%, 100%{scale:1 1}
+  50%{scale:1 1.05}
+}
+#witchy-chest-cat-eye-l, #witchy-chest-cat-eye-r{transform-box:fill-box}
+#witchy-chest-cat-breathe.napping #witchy-chest-cat-eye-l,
+#witchy-chest-cat-breathe.napping #witchy-chest-cat-eye-r{scale:0}
+@media (prefers-reduced-motion: reduce){#witchy-chest-cat-breathe.napping{animation:none}}
 #witchy-chest-fairy{transform-box:fill-box; transform-origin:center}
 #witchy-chest-fairy.wobbling{animation:fairy-flutter .7s ease-in-out}
 @keyframes fairy-flutter{
@@ -2681,17 +2697,17 @@ section{margin:1.9rem 0}
 </g>
 <g id="garden-chest">
 <rect x="560" y="240" width="100" height="66" fill="#6b3a2f" stroke="#4a251e" stroke-width="2"/>
-<g id="witchy-chest-cat-pos"><g id="witchy-chest-cat-walk"><g id="witchy-chest-cat-groove">
+<g id="witchy-chest-cat-pos"><g id="witchy-chest-cat-walk"><g id="witchy-chest-cat-groove"><g id="witchy-chest-cat-breathe">
 <g id="witchy-chest-cat" aria-hidden="true">
 <path d="M624 292 Q622 278 633 275 Q644 278 642 292 Z" fill="#161311"/>
 <circle cx="633" cy="267" r="7.5" fill="#161311"/>
 <polygon points="627,262 629,254 633,261" fill="#161311"/>
 <polygon points="639,262 637,254 633,261" fill="#161311"/>
 <path d="M640 280 Q650 282 648 272" fill="none" stroke="#161311" stroke-width="2.5" stroke-linecap="round"/>
-<circle cx="630" cy="266" r="1.2" fill="#c9e85c"/>
-<circle cx="636" cy="266" r="1.2" fill="#c9e85c"/>
+<circle id="witchy-chest-cat-eye-l" cx="630" cy="266" r="1.2" fill="#c9e85c"/>
+<circle id="witchy-chest-cat-eye-r" cx="636" cy="266" r="1.2" fill="#c9e85c"/>
 </g>
-</g></g></g>
+</g></g></g></g>
 <g id="witchy-chest-fairy-dance">
 <g id="witchy-chest-fairy" aria-hidden="true">
 <ellipse cx="574" cy="279" rx="7" ry="4" fill="#dcd8f0" opacity="0.85" transform="rotate(-20 574 279)"/>
@@ -3799,7 +3815,7 @@ section{margin:1.9rem 0}
 <rect x="238" y="222" width="80" height="112" fill="transparent"/>
 <rect x="244" y="228" width="66" height="60" rx="22" fill="#8a5a3a" stroke="#6b4226" stroke-width="2"/>
 <rect x="252" y="236" width="50" height="44" rx="16" fill="#7a4a2e"/>
-<ellipse cx="278" cy="290" rx="42" ry="12" fill="#8a5a3a" stroke="#6b4226" stroke-width="2"/>
+<ellipse id="office-chair-seat" cx="278" cy="290" rx="42" ry="12" fill="#8a5a3a" stroke="#6b4226" stroke-width="2"/>
 <line x1="278" y1="300" x2="278" y2="318" stroke="#b08a4a" stroke-width="5"/>
 <line x1="278" y1="318" x2="248" y2="332" stroke="#b08a4a" stroke-width="4"/>
 <line x1="278" y1="318" x2="308" y2="332" stroke="#b08a4a" stroke-width="4"/>
@@ -5147,6 +5163,7 @@ document.addEventListener("click", function (e) {
       var dx = pointerSvgX(e) - chairDragStartX;
       if (Math.abs(dx) > 2) chairDragMoved = true;
       setChairOffset(chairDragStartOffset + dx);
+      if (window.__chairCatFollow) window.__chairCatFollow(); // dragging is instant (no transition) — resync every move
     });
     function onChairPointerUp(e) {
       if (!chairDragging) return;
@@ -14070,6 +14087,7 @@ function spawnDustMote(container) {
   // home + wide stroll (.roaming); other rooms = a tighter floor pace (.roaming-sm).
   var pos = document.getElementById("witchy-chest-cat-pos");
   var walk = document.getElementById("witchy-chest-cat-walk");
+  var breathe = document.getElementById("witchy-chest-cat-breathe"); // toggles .napping for the chair perch
   if (!pos || !walk) return;
   var homeParent = pos.parentNode;      // #garden-chest
   var homeNext = pos.nextSibling;       // the fairy group that follows the cat in the chest
@@ -14124,11 +14142,30 @@ function spawnDustMote(container) {
       return { x: p.x, y: p.y };
     } catch (e) { return { x: 462, y: 208 }; }         // static fallback matching the default desk
   }
+  // The chair is also user-draggable (horizontal .style.translate, same CTM-staleness gap
+  // as the desk-top above) — same live-geometry technique, targeted at the flat seat pan's
+  // (the ellipse, not the backrest cushion above it) top-center so the cat's feet land on
+  // the part of the chair a cat would actually sit on, not floating up near the backrest.
+  function officeChairPerch() {
+    try {
+      var seat = document.getElementById("office-chair-seat");
+      var svg = document.getElementById("loft-game-strip");
+      var stage = document.getElementById("stage-office");
+      if (!seat || !svg || !stage || !svg.createSVGPoint || !stage.getScreenCTM) return null;
+      var r = seat.getBoundingClientRect();
+      var pt = svg.createSVGPoint();
+      pt.x = r.left + r.width * 0.5; pt.y = r.top;      // top-center of the seat pan, in screen pixels
+      var p = pt.matrixTransform(stage.getScreenCTM().inverse()); // screen -> stage-office-local
+      return { x: p.x, y: p.y };
+    } catch (e) { return { x: 278, y: 273 }; }         // static fallback matching the default chair
+  }
   var PERCHES = {
     kitchen: [{ x: 48,  y: 230 }], // left end of the counter top, clear of the espresso gear
     garden:  [{ x: 610, y: 240 }], // the chest lid it climbed out of
     cuddly:  [{ x: 96,  y: 250 }], // front-left corner of the daybed seat, clear of the couple
-    office:  [officeDeskPerch],    // resolved live — the desk moves/resizes/re-tops
+    // the chair is weighted 3:1 over the desk — it gravitates toward the chair to nap far
+    // more often than it perches anywhere else (owner request); resolved live, both move.
+    office:  [officeDeskPerch, officeChairPerch, officeChairPerch, officeChairPerch],
     balcony: [{ x: 560, y: 140 }]  // up on the railing, against the skyline
   };
   // When the loose cat FOLLOWS the player into a room, it walks in from an edge
@@ -14144,8 +14181,11 @@ function spawnDustMote(container) {
     balcony: { sx: -499, sy: -24, dur: 1150, delay: "-8.25s" }  // in through the open door
   };
   var catRoom = "garden";                 // where the cat physically is (chest home = garden)
-  var jumpAnim = null, jumping = false, jumpTimer = null, isPerchJump = false;
-  var jumpCur = null, jumpApexX = 0, jumpApexY = 0; // the in-flight arc's fixed points, kept for __deskCatFollow to rebuild around
+  var jumpAnim = null, jumping = false, jumpTimer = null, isPerchJump = false, isNapJump = false;
+  var jumpCur = null, jumpApexX = 0, jumpApexY = 0; // the in-flight arc's fixed points, kept for __deskCatFollow/__chairCatFollow to rebuild around
+  function setNapping(on) {                // toggles the chair-nap look; no-op off the chair perch
+    if (breathe) breathe.classList.toggle("napping", on);
+  }
   function reducedMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
@@ -14175,6 +14215,8 @@ function spawnDustMote(container) {
   function finishJump() {                  // natural end of the hop-down
     jumpAnim = null; jumping = false;
     walk.style.animationPlayState = "";    // un-freeze the roam where it left off
+    if (isNapJump) setNapping(false);
+    isNapJump = false;
     scheduleJump();
   }
   function cancelJump() {                   // abort a hop in flight; safe no-op otherwise
@@ -14182,13 +14224,16 @@ function spawnDustMote(container) {
     if (jumpAnim) { jumpAnim.onfinish = null; jumpAnim.cancel(); jumpAnim = null; }
     jumping = false;
     walk.style.animationPlayState = "";
+    if (isNapJump) setNapping(false);
+    isNapJump = false;
     scheduleJump();
   }
   function startJump() {
     if (!walk.animate) { scheduleJump(); return; } // no WAAPI: just keep roaming
     var list = PERCHES[catRoom];
-    var perch = list[Math.floor(Math.random() * list.length)];
-    if (typeof perch === "function") perch = perch(); // resolve live-geometry perches
+    var chosen = list[Math.floor(Math.random() * list.length)];
+    var isNap = chosen === officeChairPerch;       // the nap-worthy perch: needs a longer sit + the sleeping look
+    var perch = typeof chosen === "function" ? chosen() : chosen; // resolve live-geometry perches
     if (!perch) { scheduleJump(); return; }           // couldn't resolve a surface — skip this cycle
     var b = baseFeet(catRoom);
     var Dx = perch.x - b.x, Dy = perch.y - b.y;    // walk-node offset that lands the feet on the surface
@@ -14197,8 +14242,13 @@ function spawnDustMote(container) {
     var apexY = Math.min(cur.y, Dy) - 24;          // arc peaks above the higher of floor/perch
     jumpCur = cur; jumpApexX = apexX; jumpApexY = apexY;
     function tf(x, y) { return "translate(" + x + "px," + y + "px)"; }
-    jumping = true; isPerchJump = true;
+    jumping = true; isPerchJump = true; isNapJump = isNap;
+    if (isNap) setNapping(true);                   // eyes close, slow breathing kicks in for the sit
     walk.style.animationPlayState = "paused";      // freeze the roam at `cur` for the duration
+    // a nap on the chair runs much longer than a quick sit-and-hop — stretching the total
+    // duration proportionally stretches the arc keyframes too, which reads as a slower,
+    // more deliberate settle-in rather than jarring slow motion.
+    var duration = isNap ? (9000 + Math.random() * 4000) : (4600 + Math.random() * 1600);
     jumpAnim = walk.animate([
       { offset: 0,    transform: tf(cur.x, cur.y),      easing: "cubic-bezier(.4,0,.7,.5)" },
       { offset: 0.05, transform: tf(apexX, apexY),      easing: "cubic-bezier(.25,.6,.4,1)" },
@@ -14206,21 +14256,21 @@ function spawnDustMote(container) {
       { offset: 0.86, transform: tf(Dx, Dy),            easing: "cubic-bezier(.4,0,.7,.5)" }, // sit a few seconds
       { offset: 0.91, transform: tf(apexX, apexY + 6),  easing: "cubic-bezier(.25,.6,.4,1)" }, // hop off
       { offset: 1,    transform: tf(cur.x, cur.y) }      // back to the floor, where the roam froze
-    ], { duration: 4600 + Math.random() * 1600, fill: "none" });
+    ], { duration: duration, fill: "none" });
     jumpAnim.onfinish = finishJump;
   }
-  // The office desk is height-adjustable — if it moves WHILE the cat is sitting on it
-  // (perched, not mid-arc), the cat would otherwise float at the stale landing height.
-  // Re-resolve the live desk-top position and retarget just the "sit" keyframes (the
-  // arc keyframes are brief transients, not worth recomputing) via setKeyframes, which
-  // re-interpolates from the animation's CURRENT playback position with no restart/snap.
-  // Called after the desk finishes moving (settleDesk's ~650ms settle, and on every
-  // pointermove while dragging, since drag-driven lift changes are instant, no transition
-  // to wait out). A no-op unless the cat is actually perched on the office desk right now.
-  window.__deskCatFollow = function () {
+  // The office desk is height-adjustable and the chair is horizontally draggable — if
+  // either moves WHILE the cat is sitting on it (perched, not mid-arc), the cat would
+  // otherwise float at the stale landing spot. Re-resolve `perchFn`'s live geometry and
+  // retarget just the "sit" keyframes (the arc keyframes are brief transients, not worth
+  // recomputing) via setKeyframes, which re-interpolates from the animation's CURRENT
+  // playback position with no restart/snap. Shared by both surfaces' follow hooks below,
+  // each gated to only its own perch so dragging one surface never disturbs a cat sitting
+  // on the other.
+  function retargetSitTo(perchFn) {
     if (!jumping || !isPerchJump || catRoom !== "office" || !jumpAnim || !jumpAnim.effect) return;
-    if (!jumpAnim.effect.setKeyframes) return; // feature-detect; stale height is a minor miss, not worth a fallback
-    var perch = officeDeskPerch();
+    if (!jumpAnim.effect.setKeyframes) return; // feature-detect; stale position is a minor miss, not worth a fallback
+    var perch = perchFn();
     if (!perch) return;
     var b = baseFeet("office");
     var Dx = perch.x - b.x, Dy = perch.y - b.y;
@@ -14235,6 +14285,17 @@ function spawnDustMote(container) {
         { offset: 1,    transform: tf(jumpCur.x, jumpCur.y) }
       ]);
     } catch (e) {}
+  }
+  // Called after the desk finishes moving (settleDesk's ~650ms settle, and on every
+  // pointermove while dragging, since drag-driven lift changes are instant, no transition
+  // to wait out). Skips a chair-nap in progress — that's the other surface's job below.
+  window.__deskCatFollow = function () {
+    if (!isNapJump) retargetSitTo(officeDeskPerch);
+  };
+  // Called on every pointermove while the chair is being dragged (same instant, no-
+  // transition reasoning as the desk). Only relevant while actually napping on the chair.
+  window.__chairCatFollow = function () {
+    if (isNapJump) retargetSitTo(officeChairPerch);
   };
   function canEnter(room) {                 // play the walk-in only when the room is actually on screen
     return !reducedMotion() && document.visibilityState !== "hidden" && !!walk.animate &&
@@ -14314,6 +14375,7 @@ function spawnDustMote(container) {
         var dur = jumpAnim.effect.getComputedTiming().duration;
         var descent = 0.86 * dur;
         if (Number(jumpAnim.currentTime) < descent) jumpAnim.currentTime = descent;
+        if (isNapJump) setNapping(false); // poked awake — eyes open for the hop down, not asleep
       }
       return;
     }

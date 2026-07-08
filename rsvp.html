@@ -4953,8 +4953,9 @@ document.addEventListener("click", function (e) {
   });
   wireTableToy("office-broken-glass", "tinged", function () { playGlassClinkSound(0.7); });
   wireTableToy("office-spin-top", "spinning", playAshtraySpinSound);
-  // the hanging headphones: a tap swings them on their hook and drops a quick bass riff,
-  // panned to where they hang.
+  // the hanging headphones: a tap swings them on their hook, and either folds
+  // whatever song is playing into "headphone mode" (bass-boosted, muffled, panned
+  // here) or — if nothing's playing — drops a quick bass riff panned here instead.
   var headphones = document.getElementById("office-headphones");
   if (headphones) {
     function wobbleHeadphones() {
@@ -4962,7 +4963,13 @@ document.addEventListener("click", function (e) {
       requestAnimationFrame(function () {
         requestAnimationFrame(function () { headphones.classList.add("wobbling"); });
       });
-      playHeadphoneBassRiff();
+      var ids = ["guitar-song-audio", "ukulele-song-audio"], playing = null;
+      for (var i = 0; i < ids.length; i++) {
+        var a = document.getElementById(ids[i]);
+        if (a && !a.paused && !a.ended) { playing = a; break; }
+      }
+      if (playing && window.__setHeadphoneMode) window.__setHeadphoneMode(!window.__headphoneModeOn());
+      else playHeadphoneBassRiff();
     }
     headphones.addEventListener("click", wobbleHeadphones);
   }
@@ -6322,35 +6329,114 @@ document.addEventListener("click", function (e) {
     }
     return null;
   }
-  // Live now-playing equalizer. The song is routed through a Web Audio analyser
-  // so the bars read its REAL spectrum. Two hard-won rules make this not kill
-  // playback (it did, twice): (1) build the media source inside the play gesture
-  // so the context is running — routing into a suspended context silences it;
-  // (2) keep the source node referenced (on the element) so GC can't mute it.
-  // If it ever misbehaves in some browser, flip USE_LIVE_ANALYSER to false and
-  // the tempo-synced fallback below (beat pulse from the song's real position)
-  // takes over without touching the audio graph.
-  var USE_LIVE_ANALYSER = false; // routing the song through the analyser kills its
-                                 // playback in this browser (silent audio); the
-                                 // tempo-synced beat pulse below is the safe path.
-  var eqRAF = null, eqAudioCtx = null;
-  window.__captureSongAudio = function (audioEl) {
-    if (!USE_LIVE_ANALYSER || !audioEl || audioEl._eqAnalyser) return;
+  // Live now-playing equalizer + a small headphone-mode effects chain, all sharing
+  // one persistent AudioContext: source -> lowshelf (bass) -> lowpass (muffle) ->
+  // masterGain -> StereoPanner -> analyser -> destination. Effects default to flat
+  // (0dB shelf, ~20kHz lowpass i.e. above hearing, centre pan) so routing through
+  // this graph makes no audible difference from plain native playback.
+  //
+  // Root cause of the earlier silent-audio bug: createMediaElementSource()
+  // IRREVOCABLY redirects an <audio> element's output into the Web Audio graph —
+  // once called, the element can never fall back to playing straight to the
+  // speakers again, even if you tear the graph back down. The old code called
+  // ctx.resume() (async, fire-and-forget, not awaited) and then IMMEDIATELY — same
+  // tick — created the MediaElementSource, wired it to destination, and started
+  // playback. A freshly-constructed AudioContext always starts "suspended", and
+  // resume() needs at least a microtask to flip the state; so the source node got
+  // permanently wired to a graph that was still suspended at the moment playback
+  // began. In the affected browser that left the element silent for good, even
+  // after resume() eventually resolved. Fix: never call createMediaElementSource
+  // until ctx.state is CONFIRMED "running" (checked after awaiting resume()).
+  // Until that's confirmed, playback stays on the plain native <audio> route —
+  // fully audible, just without the live analyser/effects — so audibility can
+  // never regress, and we keep retrying the resume on every subsequent play
+  // gesture in case it succeeds later (e.g. the very first gesture on the page
+  // was too early, or the context got suspended again after a backgrounded tab).
+  //
+  // AUDIO_PIPELINE_ENABLED is the owner's kill switch: flip to false to fully
+  // disable this pipeline and revert to plain native <audio> playback (and the
+  // tempo-synced beat-pulse equalizer fallback) with zero other code changes —
+  // no build step, just edit this one line and redeploy. Re-flip to true to try
+  // the pipeline again. Independent of git history either way.
+  var AUDIO_PIPELINE_ENABLED = true;
+  var USE_LIVE_ANALYSER = AUDIO_PIPELINE_ENABLED;
+  var eqRAF = null, eqAudioCtx = null, eqCtxFailed = false;
+  var eqBassShelf = null, eqMuffleFilter = null, eqMasterGain = null, eqPanner = null, eqAnalyser = null;
+  var headphoneModeOn = false;
+  var FLAT_BASS_DB = 0, FLAT_LOWPASS_HZ = 20000; // "no audible change vs today" defaults
+  var HP_BASS_DB = 8, HP_LOWPASS_HZ = 1800;      // headphone-mode targets
+  var FX_RAMP_S = 0.25;                          // setTargetAtTime time-constant — smooth, click-free
+
+  // Builds the persistent graph once. Safe to call repeatedly — a no-op after the
+  // first successful build, or after a confirmed (feature-detect) failure.
+  function ensureAudioGraph() {
+    if (eqAudioCtx || eqCtxFailed) return eqAudioCtx;
     try {
       var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
-      if (!eqAudioCtx) eqAudioCtx = new Ctx();
-      if (eqAudioCtx.state === "suspended") eqAudioCtx.resume();
-      var src = eqAudioCtx.createMediaElementSource(audioEl);
-      var an = eqAudioCtx.createAnalyser();
-      an.fftSize = 64;
-      an.smoothingTimeConstant = 0.7;
-      src.connect(an);
-      an.connect(eqAudioCtx.destination); // keep the song audible
-      audioEl._eqSource = src;            // hold refs so neither node is GC'd
-      audioEl._eqAnalyser = an;
+      if (!Ctx) { eqCtxFailed = true; return null; }
+      eqAudioCtx = new Ctx();
+      eqBassShelf = eqAudioCtx.createBiquadFilter();
+      eqBassShelf.type = "lowshelf";
+      eqBassShelf.frequency.value = 120;
+      eqBassShelf.gain.value = FLAT_BASS_DB;
+      eqMuffleFilter = eqAudioCtx.createBiquadFilter();
+      eqMuffleFilter.type = "lowpass";
+      eqMuffleFilter.frequency.value = FLAT_LOWPASS_HZ;
+      eqMasterGain = eqAudioCtx.createGain();
+      eqMasterGain.gain.value = 1;
+      eqPanner = eqAudioCtx.createStereoPanner ? eqAudioCtx.createStereoPanner() : null;
+      if (eqPanner) eqPanner.pan.value = 0;
+      eqAnalyser = eqAudioCtx.createAnalyser();
+      eqAnalyser.fftSize = 64;
+      eqAnalyser.smoothingTimeConstant = 0.7;
+      eqBassShelf.connect(eqMuffleFilter);
+      eqMuffleFilter.connect(eqMasterGain);
+      if (eqPanner) { eqMasterGain.connect(eqPanner); eqPanner.connect(eqAnalyser); }
+      else { eqMasterGain.connect(eqAnalyser); } // very old Safari: no StereoPanner, still analysed+audible
+      eqAnalyser.connect(eqAudioCtx.destination); // keep the song audible
+    } catch (e) {
+      eqAudioCtx = null;
+      eqCtxFailed = true;
+    }
+    return eqAudioCtx;
+  }
+  window.__captureSongAudio = function (audioEl) {
+    if (!USE_LIVE_ANALYSER || !audioEl || audioEl._eqFailed) return;
+    var ctx = ensureAudioGraph();
+    if (!ctx) { audioEl._eqFailed = true; return; }
+    try {
+      // Always (re)try resume — inside this play gesture — even for an already-wired
+      // element: the context can suspend again later (e.g. a backgrounded tab), and
+      // this is a cheap no-op once it's already running.
+      var resumeP = (ctx.state === "running") ? null : ctx.resume();
+      var wire = function () {
+        if (audioEl._eqAnalyser || audioEl._eqFailed) return; // already wired, or gave up — done
+        if (ctx.state !== "running") return; // never confirmed running: stay on native playback
+        try {
+          var src = ctx.createMediaElementSource(audioEl); // exactly once per element — throws if repeated
+          src.connect(eqBassShelf);
+          audioEl._eqSource = src;      // hold refs so neither node is GC'd
+          audioEl._eqAnalyser = eqAnalyser;
+        } catch (e) { audioEl._eqFailed = true; } // leave this element on native playback for good
+      };
+      if (resumeP && resumeP.then) resumeP.then(wire, function () {}); else wire();
+    } catch (e) { audioEl._eqFailed = true; }
+  };
+  // "Headphone mode": bass boost + muffle + pan to the on-screen headphones, ramped
+  // smoothly via setTargetAtTime (never a hard switch, so there's no click). A safe
+  // no-op if the audio graph never confirmed running — headphone mode then just
+  // wobbles visually, native playback (and its volume) is unaffected either way.
+  window.__setHeadphoneMode = function (on) {
+    headphoneModeOn = !!on;
+    if (!eqAudioCtx || !eqBassShelf) return; // don't force-build a graph just to ramp effects nothing's routed through
+    var now = eqAudioCtx.currentTime;
+    try {
+      eqBassShelf.gain.setTargetAtTime(on ? HP_BASS_DB : FLAT_BASS_DB, now, FX_RAMP_S);
+      eqMuffleFilter.frequency.setTargetAtTime(on ? HP_LOWPASS_HZ : FLAT_LOWPASS_HZ, now, FX_RAMP_S);
+      if (eqPanner) eqPanner.pan.setTargetAtTime(on ? panForElId("office-headphones") : 0, now, FX_RAMP_S);
     } catch (e) {}
   };
+  window.__headphoneModeOn = function () { return headphoneModeOn; }; // for the headphones' own click handler (different IIFE)
   function stopEq() { if (eqRAF) { cancelAnimationFrame(eqRAF); eqRAF = null; } }
   function startEq(audioEl) {
     stopEq();
@@ -6463,7 +6549,12 @@ document.addEventListener("click", function (e) {
       var idle = songAudios.filter(function (a) { return a && a.paused; });
       if (!idle.length || idle.length !== songAudios.length) return; // one's already going — don't stack
       var pick = idle[Math.floor(Math.random() * idle.length)];
-      try { var p = pick.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+      try {
+        // hook up the monitor equalizer's analyser here, inside the gesture, so
+        // routing the song through Web Audio doesn't stall its playback
+        if (window.__captureSongAudio) window.__captureSongAudio(pick);
+        var p = pick.play(); if (p && p.catch) p.catch(function () {});
+      } catch (e) {}
     }
     playBtn.addEventListener("click", function (e) { e.stopPropagation(); monitorPlayRandom(); });
     playBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); }); // don't let a double-tap swap the monitor away
@@ -6483,7 +6574,10 @@ document.addEventListener("click", function (e) {
       }
       if (!song) return;
       try {
-        if (song.paused) { var p = song.play(); if (p && p.catch) p.catch(function () {}); }
+        if (song.paused) {
+          if (window.__captureSongAudio) window.__captureSongAudio(song); // keep retrying the resume inside this gesture
+          var p = song.play(); if (p && p.catch) p.catch(function () {});
+        }
         else song.pause();
       } catch (e) {}
     }

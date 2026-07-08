@@ -1589,8 +1589,13 @@ footer{margin-top:2.6rem}
 #balcony-solar-moon{transform-box:fill-box; transform-origin:center; transform:translate(46px,-10px)}
 #balcony-solar-corona{transform-box:fill-box; transform-origin:center}
 #stage-balcony.solar-eclipse #balcony-solar{opacity:1}
-#stage-balcony.solar-eclipse #balcony-solar-moon{animation:solar-transit 16s ease-in-out}
-@keyframes solar-transit{0%{transform:translate(46px,-10px)} 50%{transform:translate(0,0)} 100%{transform:translate(-46px,10px)}}
+/* transit is split into two 8s halves so the "in" phase's animationend lands exactly
+   at dead-centre on the ANIMATION clock (immune to wall-clock/setTimeout drift + frame
+   throttling) — JS fires the totality burst on that event. ease-in then ease-out keeps
+   velocity continuous through centre (both halves are fastest at the seam). */
+#stage-balcony.solar-eclipse #balcony-solar-moon{animation:solar-transit-in 8s ease-in, solar-transit-out 8s ease-out 8s}
+@keyframes solar-transit-in{from{transform:translate(46px,-10px)} to{transform:translate(0,0)}}
+@keyframes solar-transit-out{from{transform:translate(0,0)} to{transform:translate(-46px,10px)}}
 #stage-balcony.solar-eclipse #balcony-solar-corona{animation:solar-corona 16s ease-in-out}
 @keyframes solar-corona{0%,38%,62%,100%{opacity:0} 50%{opacity:1}}
 #stage-balcony.solar-eclipse #balcony-sun-disc{animation:solar-sun-dim 16s ease-in-out}
@@ -11219,16 +11224,25 @@ function spawnDustMote(container) {
   // Occasional SOLAR eclipse during the DAY: the moon transits the sun, the sky
   // blacks out at totality with a bright corona, and the hearts burst — the total
   // eclipse of 2017 under which a proposal happened. CSS (.solar-eclipse) drives the
-  // disc transit / sky blackout / corona; JS times the class + the heart-burst at centre.
+  // disc transit / sky blackout / corona; the burst fires on the moon's "in" transit
+  // animationend — exactly at dead-centre on the animation clock, so it can't drift
+  // ahead of the visual (a wall-clock setTimeout raced the throttleable animation clock).
   var SOLAR_DUR = 16000;
   function runSolarEclipse() {
     var sb = document.getElementById("stage-balcony");
     if (!sb || sb.classList.contains("dusk") || sb.classList.contains("solar-eclipse")) return; // day only, one at a time
     sb.classList.add("solar-eclipse");
-    var heartTimer = setTimeout(function () { // totality (mid-transit): hearts around the blacked-out sun
+    var moon = document.getElementById("balcony-solar-moon");
+    function onCentre(e) { // fires at true totality: the "in" half's end == moon dead-centre
+      if (e.animationName !== "solar-transit-in") return; // ignore the "out" half / bubbled siblings
+      moon.removeEventListener("animationend", onCentre);
       if (stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden") spawnEclipseTotality();
-    }, SOLAR_DUR / 2);
-    setTimeout(function () { sb.classList.remove("solar-eclipse"); clearTimeout(heartTimer); }, SOLAR_DUR + 300);
+    }
+    if (moon) moon.addEventListener("animationend", onCentre);
+    setTimeout(function () { // safety net: clear the class + listener even if the burst was skipped
+      sb.classList.remove("solar-eclipse");
+      if (moon) moon.removeEventListener("animationend", onCentre);
+    }, SOLAR_DUR + 300);
   }
   window.__runSolarEclipse = runSolarEclipse;
   (function scheduleSolarEclipse() {

@@ -4985,19 +4985,33 @@ document.addEventListener("click", function (e) {
       var Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return null;
       if (!eqCtx) eqCtx = new Ctx();
+      if (eqAnalysers[audioEl.id]) return eqAnalysers[audioEl.id]; // already routed through the graph
       if (eqCtx.state === "suspended") eqCtx.resume();
-      if (!eqAnalysers[audioEl.id]) {
-        var src = eqCtx.createMediaElementSource(audioEl);
-        var an = eqCtx.createAnalyser();
-        an.fftSize = 64;
-        an.smoothingTimeConstant = 0.72;
-        src.connect(an);
-        an.connect(eqCtx.destination); // keep the song audible
-        eqAnalysers[audioEl.id] = an;
-      }
-      return eqAnalysers[audioEl.id];
+      // Routing a media element into a non-running context silences it, so only
+      // capture it once the context is actually running (fall back to synthetic
+      // bounce until then — the gesture pre-warm below usually gets us there).
+      if (eqCtx.state !== "running") return null;
+      var src = eqCtx.createMediaElementSource(audioEl);
+      var an = eqCtx.createAnalyser();
+      an.fftSize = 64;
+      an.smoothingTimeConstant = 0.72;
+      src.connect(an);
+      an.connect(eqCtx.destination); // keep the song audible
+      eqAnalysers[audioEl.id] = an;
+      return an;
     } catch (e) { return null; }
   }
+  // warm/resume the analyser context on any gesture so it's running by the time
+  // a song needs capturing (otherwise capturing it mid-play would cut the sound)
+  ["pointerdown", "keydown"].forEach(function (ev) {
+    document.addEventListener(ev, function () {
+      try {
+        var Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!eqCtx && Ctx) eqCtx = new Ctx();
+        if (eqCtx && eqCtx.state === "suspended") eqCtx.resume();
+      } catch (e) {}
+    }, true);
+  });
   function stopEq() { if (eqRAF) { cancelAnimationFrame(eqRAF); eqRAF = null; } }
   function startEq(audioEl) {
     stopEq();

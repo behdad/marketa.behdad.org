@@ -297,6 +297,11 @@ footer{margin-top:2.6rem}
 @media (prefers-reduced-motion: reduce){#kitchen-cabinet-surprise.wobbling{animation:none}}
 .witchy-door{transform-box:fill-box; transition:transform .5s ease}
 .witchy-door.open{transform:scaleX(.15)}
+/* the open balcony door rattles on its hinge in the wind during a storm (keeps the
+   .open scaleX base so the wobble composes instead of replacing it) */
+#stage-balcony.storming #balcony-door.open{animation:door-wobble 4s ease-in-out infinite}
+@keyframes door-wobble{0%,58%,100%{transform:scaleX(.15) rotate(0)} 68%{transform:scaleX(.15) rotate(-2.6deg)} 80%{transform:scaleX(.15) rotate(1.6deg)} 90%{transform:scaleX(.15) rotate(-0.9deg)}}
+@media (prefers-reduced-motion: reduce){#stage-balcony.storming #balcony-door.open{animation:none}}
 #balcony-wine-liquid{transform-box:fill-box; transform-origin:bottom center; transition:transform .5s ease}
 #balcony-winebottle-liquid{transform-box:fill-box; transform-origin:bottom center; transition:transform .5s ease}
 #garden-bottle-liquid-1, #garden-bottle-liquid-2, #garden-bottle-liquid-3{transform-box:fill-box; transform-origin:bottom center; transition:transform .5s ease}
@@ -10526,6 +10531,18 @@ function spawnDustMote(container) {
       setTimeout(tick, 1200);
     }
     setTimeout(tick, 1200);
+  })();
+  // the open balcony door creaks in the wind during a night storm (occasional, gentle)
+  (function scheduleDoorCreak() {
+    function tick() {
+      var sb = document.getElementById("stage-balcony"), door = document.getElementById("balcony-door");
+      if (sb && door && sb.classList.contains("storming") && door.classList.contains("open") &&
+          stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden") {
+        playCreakSound();
+      }
+      setTimeout(tick, 7000 + Math.random() * 6000);
+    }
+    setTimeout(tick, 7000 + Math.random() * 6000);
   })();
   // Occasional SOLAR eclipse during the DAY: the moon transits the sun, the sky
   // blacks out at totality with a bright corona, and the hearts burst — the total

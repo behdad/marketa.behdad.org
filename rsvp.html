@@ -1445,12 +1445,27 @@ footer{margin-top:2.6rem}
 @keyframes moon-eclipse-transit{0%,60%{transform:translate(-46px,14px)} 80%{transform:translate(0,0)} 100%{transform:translate(46px,-14px)}}
 #balcony-moon-glow{opacity:0.6}
 #stage-balcony.dusk #balcony-moon-glow{animation:moon-glow-transit 50s ease-in-out 8s infinite}
-/* at totality the glow BRIGHTENS into a corona ring around the dark disc */
-@keyframes moon-glow-transit{0%,60%,100%{opacity:0.6} 80%{opacity:1}}
+/* a gentle brightening at totality — the dramatic corona is saved for the SOLAR eclipse */
+@keyframes moon-glow-transit{0%,60%,100%{opacity:0.6} 80%{opacity:0.72}}
 @media (prefers-reduced-motion: reduce){#stage-balcony.dusk #balcony-moon-shadow{animation:none} #stage-balcony.dusk #balcony-moon-glow{animation:none}}
 /* shared sky: a storm hides the moon + stars (overcast) in BOTH windows at once */
 #stage-balcony.dusk.storming #balcony-moon, #stage-balcony.dusk.storming #balcony-stars,
 #stage-garden.dusk.storming #garden-moon, #stage-garden.dusk.storming #garden-stars{opacity:0; transition:opacity .8s ease}
+/* SOLAR eclipse (daytime): a dark moon transits the sun right->left (N hemisphere),
+   the sky blacks out at totality with a bright corona ring, then it passes. The
+   .solar-eclipse class is added by JS; the hearts burst at totality (the 2017 event). */
+#balcony-solar-moon{transform-box:fill-box; transform-origin:center; transform:translate(46px,-10px)}
+#balcony-solar-corona{transform-box:fill-box; transform-origin:center}
+#stage-balcony.solar-eclipse #balcony-solar{opacity:1}
+#stage-balcony.solar-eclipse #balcony-solar-moon{animation:solar-transit 16s ease-in-out}
+@keyframes solar-transit{0%{transform:translate(46px,-10px)} 50%{transform:translate(0,0)} 100%{transform:translate(-46px,10px)}}
+#stage-balcony.solar-eclipse #balcony-solar-corona{animation:solar-corona 16s ease-in-out}
+@keyframes solar-corona{0%,38%,62%,100%{opacity:0} 50%{opacity:1}}
+#stage-balcony.solar-eclipse #balcony-sun-disc{animation:solar-sun-dim 16s ease-in-out}
+@keyframes solar-sun-dim{0%,30%,70%,100%{opacity:1} 50%{opacity:0}}
+#stage-balcony.solar-eclipse #balcony-solar-dark{animation:solar-dark 16s ease-in-out}
+@keyframes solar-dark{0%,22%{opacity:0} 50%{opacity:0.85} 78%,100%{opacity:0}}
+@media (prefers-reduced-motion: reduce){#stage-balcony.solar-eclipse #balcony-solar-moon,#stage-balcony.solar-eclipse #balcony-solar-corona,#stage-balcony.solar-eclipse #balcony-sun-disc,#stage-balcony.solar-eclipse #balcony-solar-dark{animation:none}}
 #cuddly-mouse{opacity:0; pointer-events:none}
 #cuddly-mouse.scurrying{animation:mouse-scurry 1.1s ease-in forwards}
 @keyframes mouse-scurry{
@@ -3416,6 +3431,20 @@ section{margin:1.9rem 0}
 <circle cx="505" cy="47" r="0.9" fill="#c9c3ad"/><circle cx="508" cy="56" r="1.2" fill="#c9c3ad"/>
 <g clip-path="url(#balcony-moon-clip)"><circle id="balcony-moon-shadow" cx="510" cy="50" r="14" fill="#241b3d"/></g>
 </g>
+</g>
+<!-- SOLAR eclipse (daytime): sky blackout, then the dark moon + bright corona on top -->
+<rect id="balcony-solar-dark" x="0" y="0" width="680" height="340" fill="#05040a" opacity="0" pointer-events="none"/>
+<defs>
+<radialGradient id="solar-corona-grad">
+<stop offset="0.4" stop-color="#fff6e0" stop-opacity="0"/>
+<stop offset="0.5" stop-color="#fff6e0" stop-opacity="0.95"/>
+<stop offset="0.64" stop-color="#ffe9b0" stop-opacity="0.45"/>
+<stop offset="1" stop-color="#ffe9b0" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<g id="balcony-solar" opacity="0" pointer-events="none" aria-hidden="true">
+<circle id="balcony-solar-corona" cx="510" cy="50" r="36" fill="url(#solar-corona-grad)" opacity="0"/>
+<circle id="balcony-solar-moon" cx="510" cy="50" r="15" fill="#0a0812"/>
 </g>
 <g id="balcony-heartfx" pointer-events="none" aria-hidden="true"></g>
 </g>
@@ -10381,29 +10410,34 @@ function spawnDustMote(container) {
     }
     setTimeout(tick, 1200);
   })();
-  // watch for the moment of total eclipse (shadow dead-centre) and fire the
-  // heart-burst once per totality — reading the shadow's live position keeps it
-  // in sync with the CSS animation no matter when dusk started
-  (function watchEclipseTotality() {
-    var prevTx = null;
-    function tick() {
-      var sb = document.getElementById("stage-balcony");
-      var shadow = document.getElementById("balcony-moon-shadow");
-      var tx = null;
-      if (sb && shadow && sb.classList.contains("dusk") && !sb.classList.contains("storming") &&
-          stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden") {
-        var tr = getComputedStyle(shadow).transform;
-        if (tr && tr.indexOf("matrix") === 0) {
-          var p = tr.slice(tr.indexOf("(") + 1, tr.indexOf(")")).split(",");
-          tx = parseFloat(p[4]); // signed translateX: crosses 0 at dead-centre totality
+  // Occasional SOLAR eclipse during the DAY: the moon transits the sun, the sky
+  // blacks out at totality with a bright corona, and the hearts burst — the total
+  // eclipse of 2017 under which a proposal happened. CSS (.solar-eclipse) drives the
+  // disc transit / sky blackout / corona; JS times the class + the heart-burst at centre.
+  var SOLAR_DUR = 16000;
+  function runSolarEclipse() {
+    var sb = document.getElementById("stage-balcony");
+    if (!sb || sb.classList.contains("dusk") || sb.classList.contains("solar-eclipse")) return; // day only, one at a time
+    sb.classList.add("solar-eclipse");
+    var heartTimer = setTimeout(function () { // totality (mid-transit): hearts around the blacked-out sun
+      if (stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden") spawnEclipseTotality();
+    }, SOLAR_DUR / 2);
+    setTimeout(function () { sb.classList.remove("solar-eclipse"); clearTimeout(heartTimer); }, SOLAR_DUR + 300);
+  }
+  window.__runSolarEclipse = runSolarEclipse;
+  (function scheduleSolarEclipse() {
+    var seen = false;
+    function arm() {
+      var delay = seen ? (45000 + Math.random() * 60000) : (12000 + Math.random() * 9000); // first one soon, then rare
+      setTimeout(function () {
+        var sb = document.getElementById("stage-balcony");
+        if (sb && !sb.classList.contains("dusk") && stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden") {
+          runSolarEclipse(); seen = true;
         }
-      }
-      // fire exactly as the shadow passes dead-centre (translateX negative -> positive)
-      if (tx !== null && prevTx !== null && prevTx < 0 && tx >= 0) spawnEclipseTotality();
-      prevTx = tx;
-      setTimeout(tick, 180);
+        arm();
+      }, delay);
     }
-    setTimeout(tick, 2500);
+    arm();
   })();
   // Fishu blows the odd ambient bubble (it's a fish) while you're in the nook
   (function scheduleFishuBubble() {

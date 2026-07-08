@@ -5204,9 +5204,10 @@ document.addEventListener("click", function (e) {
       if (dusk) {
         if (lights) lights.classList.remove("off");
         if (wallLampEl) wallLampEl.classList.add("on");
-        if (window.triggerBalconyThunder) setTimeout(window.triggerBalconyThunder, 4500 + Math.random() * 3000);
-      } else if (wallLampEl) {
-        wallLampEl.classList.remove("on");
+        if (window.__startBalconyStormCycle) window.__startBalconyStormCycle();
+      } else {
+        if (wallLampEl) wallLampEl.classList.remove("on");
+        if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle();
       }
     }
     duskSun.addEventListener("click", toggleDusk);
@@ -5217,6 +5218,7 @@ document.addEventListener("click", function (e) {
       stageBalcony.classList.remove("dusk");
       var wallLampEl = document.getElementById("balcony-walllamp");
       if (wallLampEl) wallLampEl.classList.remove("on");
+      if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle();
     };
   }
   var ashtray = document.getElementById("balcony-ashtray");
@@ -9534,13 +9536,51 @@ function spawnDustMote(container) {
     }
     setTimeout(function () { playThunderSound(); }, 320 + Math.random() * 480);
   };
-  (function scheduleNightThunder() {
-    var delay = 22000 + Math.random() * 30000;
-    setTimeout(function () {
-      if (stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden") {
-        window.triggerBalconyThunder();
+  // Storm cycle: a storm rolls in ~15-21s after evening starts, brings rain +
+  // 2-3 thunders, passes, then the whole thing repeats a minute or two later.
+  (function balconyStorm() {
+    var timers = [];
+    function isDuskBalcony() {
+      var sb = document.getElementById("stage-balcony");
+      return !!(sb && sb.classList.contains("dusk"));
+    }
+    function clearAll() {
+      timers.forEach(clearTimeout);
+      timers = [];
+      window.__balconyStorm = false;
+    }
+    function endStorm() {
+      window.__balconyStorm = false; // rain tapers off
+      timers.push(setTimeout(startStorm, 60000 + Math.random() * 60000)); // next storm in 1-2 min
+    }
+    function startStorm() {
+      if (!isDuskBalcony()) { clearAll(); return; }
+      window.__balconyStorm = true; // rain begins (the rain scheduler picks it up)
+      var n = 2 + Math.floor(Math.random() * 2); // 2 or 3 thunderclaps
+      var when = 2000;
+      for (var i = 0; i < n; i++) {
+        when += 4000 + Math.random() * 5000;
+        timers.push(setTimeout(function () { window.triggerBalconyThunder(); }, when));
       }
-      scheduleNightThunder();
+      timers.push(setTimeout(endStorm, when + 5000 + Math.random() * 3000));
+    }
+    window.__startBalconyStormCycle = function () {
+      clearAll();
+      timers.push(setTimeout(startStorm, 15000 + Math.random() * 6000));
+    };
+    window.__stopBalconyStormCycle = clearAll;
+  })();
+  // steady rain falls across the balcony while it's dusk (an evening storm)
+  (function scheduleDuskRain() {
+    var delay = 440 + Math.random() * 320;
+    setTimeout(function () {
+      var sb = document.getElementById("stage-balcony");
+      if (sb && sb.classList.contains("dusk") && window.__balconyStorm && stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden") {
+        [2762, 2852, 2942, 3032, 3122, 3212, 3302, 3372].forEach(function (x) {
+          if (Math.random() < 0.7) spawnCloudRain(strip, x + (Math.random() - 0.5) * 34, 8 + Math.random() * 178);
+        });
+      }
+      scheduleDuskRain();
     }, delay);
   })();
   var instrumentSpots = {

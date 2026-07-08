@@ -2337,7 +2337,7 @@ section{margin:1.9rem 0}
 <rect x="5" y="37" width="16" height="3" rx="1" fill="#8a6228"/>
 </g>
 </g>
-<g id="garden-peacelily" class="hunt-hit" tabindex="0" role="button" aria-label="A peace lily">
+<g class="trip-plant-lift" id="garden-peacelily-lift"><g id="garden-peacelily" class="hunt-hit" tabindex="0" role="button" aria-label="A peace lily">
 <rect x="378" y="198" width="64" height="130" fill="transparent"/>
 <path d="M400 284 Q384 250 390 214 Q392 206 396 214 Q398 252 408 284 Z" fill="#3f6f4a"/>
 <path d="M394 280 Q388 250 392 218" fill="none" stroke="#2c4f34" stroke-width="1" opacity="0.5"/>
@@ -2351,8 +2351,10 @@ section{margin:1.9rem 0}
 <line x1="430" y1="224" x2="431" y2="212" stroke="#e8c97a" stroke-width="2.5"/>
 <path d="M388 316 Q384 290 392 286 L428 286 Q436 290 432 316 Q410 324 388 316 Z" fill="#c9a870" stroke="#a8894e" stroke-width="1.5"/>
 <path d="M390 298 Q410 303 430 298 M390 308 Q410 313 430 308" fill="none" stroke="#a8894e" stroke-width="1.5"/>
+<foreignObject class="trip-bloom-fo" x="349" y="184" width="124" height="124" style="opacity:0;overflow:visible;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" class="trip-bloom-canvas" width="128" height="128" style="width:84px;height:84px;margin:20px;border-radius:50%;display:block;mix-blend-mode:screen"></canvas></foreignObject>
 </g>
-<g id="garden-dieffenbachia" class="hunt-hit" tabindex="0" role="button" aria-label="A dieffenbachia plant">
+</g>
+<g class="trip-plant-lift" id="garden-dieffenbachia-lift"><g id="garden-dieffenbachia" class="hunt-hit" tabindex="0" role="button" aria-label="A dieffenbachia plant">
 <rect x="450" y="170" width="80" height="160" fill="transparent"/>
 <defs>
 <clipPath id="dieff-leaf-1-clip"><ellipse cx="470" cy="240" rx="13" ry="26" transform="rotate(-25 470 240)"/></clipPath>
@@ -2385,6 +2387,8 @@ section{margin:1.9rem 0}
 <circle cx="484" cy="220" r="1.5" fill="#dcedc0"/><circle cx="491" cy="224" r="1.3" fill="#dcedc0"/>
 </g>
 <rect x="468" y="286" width="40" height="34" rx="6" fill="#ece8dc" stroke="#c9c4b8" stroke-width="1.5"/>
+<foreignObject class="trip-bloom-fo" x="426" y="158" width="126" height="126" style="opacity:0;overflow:visible;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" class="trip-bloom-canvas" width="128" height="128" style="width:86px;height:86px;margin:20px;border-radius:50%;display:block;mix-blend-mode:screen"></canvas></foreignObject>
+</g>
 </g>
 <g id="garden-drugsbox" class="hunt-hit" tabindex="0" role="button" aria-label="The drugs box" transform="translate(-8,-2)">
 <rect x="530" y="294" width="30" height="30" fill="transparent"/>
@@ -8317,23 +8321,32 @@ function triggerRsvpTrip(e) {
   if (variant === "psychedelic") startTripBlooms();
 }
 // ── Mushroom-trip plant blooms ────────────────────────────────────────────
-// While a trip is active, three garden plants lift off their pots and grow a
+// While a trip is active, five garden plants lift off their pots and grow a
 // live, hue-cycling Julia-set "bloom" over their foliage. ONE shared rAF loop
 // drives both the float and every fractal canvas. The float rides a wrapper
 // <g> (garden-*-lift) — NOT the plant group itself — so it composes with the
 // inner plant's own psychedelic/ketamine CSS sway instead of replacing its
-// transform. The loop polls the global tripActive: it eases the plants up while
-// the trip runs, settles them back down when it clears, then cancels itself and
-// hides the canvases (no leftover floating plants, no spinning canvas). It only
-// renders while tripActive && !document.hidden, and there is a FIXED set of
-// three canvases (never per-frame spawns), so a hidden tab can't pile anything
-// up. Reduced motion: a single static bloom, no lift, no morph.
+// transform; the bloom canvas lives INSIDE that inner plant group, so it
+// sway-locks with the foliage. The loop polls the global tripActive: it eases
+// the plants up while the trip runs, settles them back down when it clears,
+// then cancels itself and hides the canvases (no leftover floating plants, no
+// spinning canvas). It only renders while tripActive && !document.hidden.
+// Cost is INDEPENDENT of plant count: it round-robins ONE canvas repaint per
+// draw tick (never per-frame spawns, never all-at-once), so five blooms cost
+// the same per tick as three did — each just repaints a little less often. The
+// morph is driven by a wall-clock phase (advanced by clamped dt, only while
+// visible), so hue/shape drift at one steady speed regardless of how often a
+// given canvas repaints or how many blooms share the loop, and a hidden tab
+// can't fast-forward it. Reduced motion: a single static bloom, no lift, no morph.
 var TRIP_BLOOM_CONFIG = [
-  { wrap: "garden-monstera-lift",   riseY: 54, pivotX: 266, pivotY: 316 },
-  { wrap: "garden-snakeplant-lift", riseY: 46, pivotX: 337, pivotY: 232 },
-  { wrap: "garden-potstand-lift",   riseY: 40, pivotX: 140, pivotY: 290 }
+  { wrap: "garden-monstera-lift",      riseY: 54, pivotX: 266, pivotY: 316 },
+  { wrap: "garden-snakeplant-lift",    riseY: 46, pivotX: 337, pivotY: 232 },
+  { wrap: "garden-potstand-lift",      riseY: 40, pivotX: 140, pivotY: 290 },
+  { wrap: "garden-peacelily-lift",     riseY: 44, pivotX: 411, pivotY: 306 },
+  { wrap: "garden-dieffenbachia-lift", riseY: 48, pivotX: 489, pivotY: 310 }
 ];
 var tripBloomItems = null, tripBloomRaf = null, tripBloomLastDraw = 0, tripBloomDrawIdx = 0;
+var tripBloomPhase = 0, tripBloomLastTs = 0;
 function tripBloomReduceMotion() {
   return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 }
@@ -8347,7 +8360,7 @@ function startTripBlooms() {
     var canvas = wrap.querySelector(".trip-bloom-canvas");
     if (!fo || !canvas) return;
     items.push({ wrap: wrap, fo: fo, canvas: canvas, cfg: cfg, lift: 0,
-      theta: Math.random() * 6.283, hue: Math.random(),
+      theta0: Math.random() * 6.283, hue0: Math.random(),
       pX: Math.random() * 6.283, pY: Math.random() * 6.283 });
   });
   if (!items.length) return;
@@ -8356,10 +8369,10 @@ function startTripBlooms() {
     var R0 = 0.7885;
     items.forEach(function (it) {
       it.fo.style.opacity = "1";
-      if (window.__renderJulia) window.__renderJulia(it.canvas, R0 * Math.cos(it.theta), R0 * Math.sin(it.theta), 70, 1.3, it.hue, true);
+      if (window.__renderJulia) window.__renderJulia(it.canvas, R0 * Math.cos(it.theta0), R0 * Math.sin(it.theta0), 70, 1.3, it.hue0, true);
     });
   }
-  tripBloomLastDraw = 0; tripBloomDrawIdx = 0;
+  tripBloomLastDraw = 0; tripBloomDrawIdx = 0; tripBloomPhase = 0; tripBloomLastTs = 0;
   tripBloomRaf = requestAnimationFrame(tripBloomLoop);
 }
 function stopTripBlooms() {
@@ -8379,8 +8392,13 @@ function tripBloomLoop(t) {
     tripBloomRaf = requestAnimationFrame(tripBloomLoop);
     return;
   }
-  var R = 0.7885;
-  var canDraw = tripActive && !document.hidden && (t - tripBloomLastDraw >= 55);
+  var R = 0.7885, THETA_RATE = 0.30, HUE_RATE = 0.055;
+  // Wall-clock morph phase (seconds). Clamp dt so a backgrounded gap can't
+  // fast-forward the fractal, and advance it only while visible.
+  var dt = tripBloomLastTs ? Math.min(0.1, (t - tripBloomLastTs) / 1000) : 0;
+  tripBloomLastTs = t;
+  if (!document.hidden) tripBloomPhase += dt;
+  var canDraw = tripActive && !document.hidden && (t - tripBloomLastDraw >= 45);
   if (canDraw) tripBloomLastDraw = t;
   var allSettled = !tripActive;
   for (var i = 0; i < tripBloomItems.length; i++) {
@@ -8397,15 +8415,16 @@ function tripBloomLoop(t) {
       ") rotate(" + rot.toFixed(2) + " " + it.cfg.pivotX + " " + it.cfg.pivotY + ")");
     it.fo.style.opacity = Math.min(1, lift * 1.25).toFixed(3);
   }
-  // Round-robin: render one canvas per draw tick (~1/3 the per-frame cost; each
-  // canvas still refreshes ~every 165ms — plenty for a slow morph, kind to mobile).
+  // Round-robin: repaint ONE canvas per draw tick, so per-tick cost stays flat no
+  // matter how many blooms exist. Each canvas samples the shared wall-clock phase,
+  // so hue/shape drift at one steady rate regardless of its own repaint cadence.
   if (canDraw && window.__renderJulia) {
     var d = tripBloomItems[tripBloomDrawIdx % tripBloomItems.length];
     tripBloomDrawIdx++;
     if (d.lift > 0.02) {
-      d.theta += 0.055;
-      d.hue = (d.hue + 0.010) % 1;
-      window.__renderJulia(d.canvas, R * Math.cos(d.theta), R * Math.sin(d.theta), 70, 1.3, d.hue, true);
+      var theta = d.theta0 + tripBloomPhase * THETA_RATE;
+      var hue = (d.hue0 + tripBloomPhase * HUE_RATE) % 1;
+      window.__renderJulia(d.canvas, R * Math.cos(theta), R * Math.sin(theta), 70, 1.3, hue, true);
     }
   }
   if (allSettled) { stopTripBlooms(); return; }

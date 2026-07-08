@@ -7428,6 +7428,11 @@ document.addEventListener("click", function (e) {
   var gardenChestNode = document.getElementById("garden-chest");
   var gardenFrontRef = document.getElementById("garden-potstand-lift");
   if (gardenChestNode && gardenFrontRef && gardenFrontRef.parentNode) gardenFrontRef.parentNode.insertBefore(gardenChestNode, gardenFrontRef);
+  // Keep the wall mirror BEHIND the cat: move it just before the chest, so the cat — and
+  // its perch-jump, which rises up into the mirror's height — paints in FRONT of the
+  // mirror, while still sitting behind the plants (the chest stays before the potstand).
+  var gardenMirror = document.getElementById("garden-mirror");
+  if (gardenMirror && gardenChestNode && gardenChestNode.parentNode) gardenChestNode.parentNode.insertBefore(gardenMirror, gardenChestNode);
   function wobbleEl(el) {
     el.classList.remove("wobbling");
     requestAnimationFrame(function () {
@@ -13130,7 +13135,7 @@ function spawnDustMote(container) {
     balcony: { sx: -499, sy: -24, dur: 1150, delay: "-8.25s" }  // in through the open door
   };
   var catRoom = "garden";                 // where the cat physically is (chest home = garden)
-  var jumpAnim = null, jumping = false, jumpTimer = null;
+  var jumpAnim = null, jumping = false, jumpTimer = null, isPerchJump = false;
   function reducedMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
@@ -13181,7 +13186,7 @@ function spawnDustMote(container) {
     var apexX = (cur.x + Dx) / 2;
     var apexY = Math.min(cur.y, Dy) - 24;          // arc peaks above the higher of floor/perch
     function tf(x, y) { return "translate(" + x + "px," + y + "px)"; }
-    jumping = true;
+    jumping = true; isPerchJump = true;
     walk.style.animationPlayState = "paused";      // freeze the roam at `cur` for the duration
     jumpAnim = walk.animate([
       { offset: 0,    transform: tf(cur.x, cur.y),      easing: "cubic-bezier(.4,0,.7,.5)" },
@@ -13205,7 +13210,7 @@ function spawnDustMote(container) {
     function tf(x, y) { return "translate(" + x + "px," + y + "px)"; }
     walk.style.animationDelay = e.delay;         // roam resumes at a 0-offset phase, same direction
     walk.style.animationPlayState = "paused";    // freeze it; the glide drives the walk node
-    jumping = true;
+    jumping = true; isPerchJump = false;
     jumpAnim = walk.animate([
       { offset: 0,   transform: tf(e.sx, e.sy),          easing: "cubic-bezier(.2,.7,.35,1)" },
       { offset: 0.5, transform: tf(e.sx * 0.4, e.sy * 0.4 - 3) }, // a small mid-stride bob
@@ -13264,7 +13269,17 @@ function spawnDustMote(container) {
   // a no-op when it's not out, off-screen, mid-hop, or under reduced motion).
   var catArt = document.getElementById("witchy-chest-cat");
   if (catArt) catArt.addEventListener("click", function () {
-    if (jumping || !canJumpNow()) return;
+    if (jumping) {
+      // already up on a perch → clicking cuts the sit short and hops it back down
+      // (skip to the descent keyframe at offset 0.86); ignore during an entrance glide.
+      if (isPerchJump && jumpAnim && jumpAnim.effect) {
+        var dur = jumpAnim.effect.getComputedTiming().duration;
+        var descent = 0.86 * dur;
+        if (Number(jumpAnim.currentTime) < descent) jumpAnim.currentTime = descent;
+      }
+      return;
+    }
+    if (!canJumpNow()) return;
     clearTimeout(jumpTimer);
     startJump();
   });

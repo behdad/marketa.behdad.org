@@ -3224,6 +3224,11 @@ section{margin:1.9rem 0}
 <stop offset="0.4" stop-color="#fff8e0" stop-opacity="1"/>
 <stop offset="1" stop-color="#fff8e0" stop-opacity="0"/>
 </radialGradient>
+<radialGradient id="smoke-grad">
+<stop offset="0" stop-color="#e0e0dc" stop-opacity="0.85"/>
+<stop offset="0.55" stop-color="#cfcfca" stop-opacity="0.4"/>
+<stop offset="1" stop-color="#cfcfca" stop-opacity="0"/>
+</radialGradient>
 </defs>
 <rect id="balcony-dusk" x="0" y="0" width="680" height="340" fill="url(#balcony-dusk-grad)" opacity="0" pointer-events="none"/>
 <g id="balcony-sun" class="hunt-hit" tabindex="0" role="button" aria-label="The sun">
@@ -5091,9 +5096,37 @@ document.addEventListener("click", function (e) {
   var smokerLid = document.getElementById("balcony-smoker-lid");
   if (smoker && smokerFirebox && smokerLid) {
     var smoking = false, lidOpen = false;
-    var smokeInterval = null, sizzleTimer = null;
+    var sizzleTimer = null;
     var burgers = smoker.querySelectorAll(".smoker-burger");
-    function puff() { spawnSteamWisps(strip, 3218, 110); }
+    function smokeActive() { return smoker.classList.contains("smoking") && !document.hidden; }
+    // A billowing plume from the chimney: soft grey puffs that rise while
+    // expanding and fading. Each replenishes itself on finish (constant count,
+    // auto-pauses when the tab is hidden), so it never piles up.
+    function smokePuff() {
+      var cx = 3214 + (Math.random() - 0.5) * 5, cy = 114;
+      var c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      c.setAttribute("cx", cx); c.setAttribute("cy", cy); c.setAttribute("r", "4");
+      c.setAttribute("fill", "url(#smoke-grad)");
+      c.setAttribute("opacity", "0"); // stays invisible during the stagger delay
+      c.style.transformBox = "fill-box"; c.style.transformOrigin = "center";
+      strip.appendChild(c);
+      if (c.animate) {
+        var driftX = (Math.random() - 0.35) * 30;
+        var rise = 64 + Math.random() * 46;
+        var a = c.animate([
+          { transform: "translate(0,0) scale(0.5)", opacity: 0 },
+          { transform: "translate(" + (driftX * 0.4) + "px," + (-rise * 0.4) + "px) scale(1.5)", opacity: 0.55, offset: 0.35 },
+          { transform: "translate(" + driftX + "px," + (-rise) + "px) scale(2.9)", opacity: 0 }
+        ], { duration: 2400 + Math.random() * 1000, easing: "ease-out", delay: Math.random() * 1300 });
+        a.onfinish = function () {
+          if (c.parentNode) c.remove();
+          if (smokeActive()) smokePuff(); // replenish 1:1
+        };
+      } else {
+        setTimeout(function () { if (c.parentNode) c.remove(); }, 3600);
+      }
+    }
+    function seedSmoke() { for (var i = 0; i < 6; i++) smokePuff(); }
     function cookBurger(b) {
       if (smoking && !b.classList.contains("served") && !b.classList.contains("done")) b.classList.add("done");
     }
@@ -5114,12 +5147,8 @@ document.addEventListener("click", function (e) {
       smoking = !smoking;
       smoker.classList.toggle("smoking", smoking);
       if (smoking) {
-        puff();
-        smokeInterval = setInterval(puff, 1400);
+        seedSmoke(); // plume runs (and self-replenishes) until the fire's out
         startCooking();
-      } else {
-        if (smokeInterval) { clearInterval(smokeInterval); smokeInterval = null; }
-        puff();
       }
     }
     function toggleLid() {
@@ -5159,9 +5188,7 @@ document.addEventListener("click", function (e) {
       b.addEventListener("click", function (e) { serveBurger(b, e); });
     });
     window.resetSmoker = function () {
-      if (smokeInterval) clearInterval(smokeInterval);
       if (sizzleTimer) clearInterval(sizzleTimer);
-      smokeInterval = null;
       sizzleTimer = null;
       smoking = false;
       lidOpen = false;

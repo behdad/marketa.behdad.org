@@ -10318,21 +10318,23 @@ function spawnDustMote(container) {
   // heart-burst once per totality — reading the shadow's live position keeps it
   // in sync with the CSS animation no matter when dusk started
   (function watchEclipseTotality() {
-    var fired = false;
+    var prevTx = null;
     function tick() {
       var sb = document.getElementById("stage-balcony");
       var shadow = document.getElementById("balcony-moon-shadow");
+      var tx = null;
       if (sb && shadow && sb.classList.contains("dusk") && !sb.classList.contains("storming") &&
           stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden") {
-        var tr = getComputedStyle(shadow).transform, tx = 999;
+        var tr = getComputedStyle(shadow).transform;
         if (tr && tr.indexOf("matrix") === 0) {
           var p = tr.slice(tr.indexOf("(") + 1, tr.indexOf(")")).split(",");
-          tx = Math.abs(parseFloat(p[4]) || 999); // e = translateX; ~0 at totality
+          tx = parseFloat(p[4]); // signed translateX: crosses 0 at dead-centre totality
         }
-        if (tx < 7 && !fired) { fired = true; spawnEclipseTotality(); }
-        else if (tx > 22) fired = false;
-      } else { fired = false; }
-      setTimeout(tick, 300);
+      }
+      // fire exactly as the shadow passes dead-centre (translateX negative -> positive)
+      if (tx !== null && prevTx !== null && prevTx < 0 && tx >= 0) spawnEclipseTotality();
+      prevTx = tx;
+      setTimeout(tick, 180);
     }
     setTimeout(tick, 2500);
   })();

@@ -86,7 +86,19 @@ go inside `index.html` unless there's a strong reason not to.
   `window.requestAnimationFrame = function (cb) { cb(); return 0; }` in the scratch copy
   before dispatching events), and WAAPI animations fast-forward (you can't screenshot one
   mid-flight). Media queries may also not match the emulated width — verify with
-  `matchMedia` output, not assumptions, before trusting a mobile-layout screenshot.
+  `matchMedia` output, not assumptions, before trusting a mobile-layout screenshot. Also:
+  once a WAAPI transform animation is actively fast-forwarding anywhere on the page,
+  `--virtual-time-budget` can make geometry reads (`getBoundingClientRect`, `getScreenCTM`)
+  on *any* element — even ones with no relation to the animating one — return stale values;
+  confirmed via a raw control query with no app code involved. If a live-geometry read looks
+  wrong only while a WAAPI animation is running under `--virtual-time-budget`, test that read
+  in isolation (no animation in flight) before concluding the app logic is buggy — separately,
+  `getScreenCTM()` on an element does not reliably reflect *that element's own* live CSS
+  `translate`/`rotate`/`scale` property (as opposed to the legacy `transform` property) in at
+  least one observed engine build, even outside any virtual-time interaction — prefer
+  `getBoundingClientRect()` (confirmed reliable) mapped through a *different, static* ancestor's
+  `getScreenCTM()` when you need a live-adjustable element's on-screen position (this is what
+  `panForElId` and `officeDeskPerch` do).
 
 ## Design system
 

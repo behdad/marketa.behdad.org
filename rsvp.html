@@ -2101,7 +2101,7 @@ section{margin:1.9rem 0}
 <line x1="69" y1="294" x2="88" y2="149" stroke="#ece4d6" stroke-width="0.5"/>
 </g>
 </g>
-<g id="garden-potstand" class="hunt-hit" tabindex="0" role="button" aria-label="A potted plant on a stand">
+<g class="trip-plant-lift" id="garden-potstand-lift"><g id="garden-potstand" class="hunt-hit" tabindex="0" role="button" aria-label="A potted plant on a stand">
 <rect x="106" y="196" width="68" height="98" fill="transparent"/>
 <line x1="140" y1="228" x2="128" y2="290" stroke="#4a453d" stroke-width="2.5"/>
 <line x1="140" y1="228" x2="152" y2="290" stroke="#4a453d" stroke-width="2.5"/>
@@ -2116,12 +2116,14 @@ section{margin:1.9rem 0}
 <circle cx="156" cy="234" r="4" fill="#6f9f60"/>
 <path d="M132 200 Q140 192 148 200 Q140 204 132 200 Z" fill="#7fae62"/>
 </g>
+<foreignObject class="trip-bloom-fo" x="83" y="167" width="114" height="114" style="opacity:0;overflow:visible;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" class="trip-bloom-canvas" width="128" height="128" style="width:74px;height:74px;margin:20px;border-radius:50%;display:block;box-shadow:0 0 14px 2px rgba(255,150,210,.5)"></canvas></foreignObject>
+</g>
 <g id="garden-bench">
 <rect x="150" y="232" width="360" height="8" rx="2" fill="#c99a5e" stroke="#a4763f" stroke-width="1.5"/>
 <rect x="166" y="240" width="8" height="50" fill="#a4763f"/>
 <rect x="486" y="240" width="8" height="50" fill="#a4763f"/>
 </g>
-<g id="garden-snakeplant" class="hunt-hit" tabindex="0" role="button" aria-label="A snake plant">
+<g class="trip-plant-lift" id="garden-snakeplant-lift"><g id="garden-snakeplant" class="hunt-hit" tabindex="0" role="button" aria-label="A snake plant">
 <rect x="310" y="140" width="55" height="95" fill="transparent"/>
 <defs>
 <clipPath id="snake-leaf-a-clip"><path d="M330 226 Q322 190 328 150 Q332 142 334 152 Q336 192 338 226 Z"/></clipPath>
@@ -2159,6 +2161,8 @@ section{margin:1.9rem 0}
 </g>
 <path d="M333 226 Q329 208 332 194 Q334 189 335 195 Q336 210 337 226 Z" fill="#7fae62"/>
 <rect x="318" y="210" width="40" height="22" rx="3" fill="#3a3a3a" stroke="#1f1f1f" stroke-width="1"/>
+</g>
+<foreignObject class="trip-bloom-fo" x="274" y="123" width="126" height="126" style="opacity:0;overflow:visible;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" class="trip-bloom-canvas" width="128" height="128" style="width:86px;height:86px;margin:20px;border-radius:50%;display:block;box-shadow:0 0 14px 2px rgba(120,200,255,.5)"></canvas></foreignObject>
 </g>
 <g id="garden-deer" class="hunt-hit" tabindex="0" role="button" aria-label="The little deer figurine">
 <rect x="424" y="205" width="30" height="32" fill="transparent"/>
@@ -2203,7 +2207,7 @@ section{margin:1.9rem 0}
 <circle cx="208" cy="258" r="1.8" fill="#f0c46a"/>
 <circle cx="220" cy="261" r="1.8" fill="#f0c46a"/>
 </g>
-<g id="garden-monstera" class="hunt-hit" tabindex="0" role="button" aria-label="A monstera plant">
+<g class="trip-plant-lift" id="garden-monstera-lift"><g id="garden-monstera" class="hunt-hit" tabindex="0" role="button" aria-label="A monstera plant">
 <rect x="215" y="185" width="105" height="145" fill="transparent"/>
 <rect x="264" y="230" width="8" height="60" fill="#a08a5e"/>
 <path d="M264 236 h8 M264 250 h8 M264 264 h8 M264 278 h8" stroke="#8a7448" stroke-width="1.5"/>
@@ -2225,6 +2229,8 @@ section{margin:1.9rem 0}
 <circle cx="240" cy="298" r="4" fill="#6f9f60"/>
 <path d="M238 318 Q234 288 244 284 L292 284 Q302 288 298 318 Q268 328 238 318 Z" fill="#d4b078" stroke="#a8894e" stroke-width="1.5"/>
 <path d="M240 296 Q268 302 296 296 M240 308 Q268 314 296 308" fill="none" stroke="#a8894e" stroke-width="1.5"/>
+</g>
+<foreignObject class="trip-bloom-fo" x="192" y="144" width="144" height="144" style="opacity:0;overflow:visible;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" class="trip-bloom-canvas" width="128" height="128" style="width:104px;height:104px;margin:20px;border-radius:50%;display:block;box-shadow:0 0 14px 2px rgba(200,120,255,.5)"></canvas></foreignObject>
 </g>
 <g id="garden-rooster" class="hunt-hit" tabindex="0" role="button" aria-label="A little ceramic rooster" transform="translate(180,192)">
 <rect x="-4" y="0" width="30" height="42" fill="transparent"/>
@@ -7972,6 +7978,102 @@ function triggerRsvpTrip(e) {
   var variant = TRIP_VARIANTS[tripVariantIndex % TRIP_VARIANTS.length];
   tripVariantIndex++;
   startTripVariant(variant);
+  startTripBlooms();
+}
+// ── Mushroom-trip plant blooms ────────────────────────────────────────────
+// While a trip is active, three garden plants lift off their pots and grow a
+// live, hue-cycling Julia-set "bloom" over their foliage. ONE shared rAF loop
+// drives both the float and every fractal canvas. The float rides a wrapper
+// <g> (garden-*-lift) — NOT the plant group itself — so it composes with the
+// inner plant's own psychedelic/ketamine CSS sway instead of replacing its
+// transform. The loop polls the global tripActive: it eases the plants up while
+// the trip runs, settles them back down when it clears, then cancels itself and
+// hides the canvases (no leftover floating plants, no spinning canvas). It only
+// renders while tripActive && !document.hidden, and there is a FIXED set of
+// three canvases (never per-frame spawns), so a hidden tab can't pile anything
+// up. Reduced motion: a single static bloom, no lift, no morph.
+var TRIP_BLOOM_CONFIG = [
+  { wrap: "garden-monstera-lift",   riseY: 54, pivotX: 266, pivotY: 316 },
+  { wrap: "garden-snakeplant-lift", riseY: 46, pivotX: 337, pivotY: 232 },
+  { wrap: "garden-potstand-lift",   riseY: 40, pivotX: 140, pivotY: 290 }
+];
+var tripBloomItems = null, tripBloomRaf = null, tripBloomLastDraw = 0, tripBloomDrawIdx = 0;
+function tripBloomReduceMotion() {
+  return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+}
+function startTripBlooms() {
+  if (tripBloomItems) return; // a loop is already live (fresh trip or mid-settle) — let it re-rise
+  var items = [];
+  TRIP_BLOOM_CONFIG.forEach(function (cfg) {
+    var wrap = document.getElementById(cfg.wrap);
+    if (!wrap) return;
+    var fo = wrap.querySelector(".trip-bloom-fo");
+    var canvas = wrap.querySelector(".trip-bloom-canvas");
+    if (!fo || !canvas) return;
+    items.push({ wrap: wrap, fo: fo, canvas: canvas, cfg: cfg, lift: 0,
+      theta: Math.random() * 6.283, hue: Math.random(),
+      pX: Math.random() * 6.283, pY: Math.random() * 6.283 });
+  });
+  if (!items.length) return;
+  tripBloomItems = items;
+  if (tripBloomReduceMotion()) {
+    var R0 = 0.7885;
+    items.forEach(function (it) {
+      it.fo.style.opacity = "1";
+      if (window.__renderJulia) window.__renderJulia(it.canvas, R0 * Math.cos(it.theta), R0 * Math.sin(it.theta), 70, 1.3, it.hue);
+    });
+  }
+  tripBloomLastDraw = 0; tripBloomDrawIdx = 0;
+  tripBloomRaf = requestAnimationFrame(tripBloomLoop);
+}
+function stopTripBlooms() {
+  if (tripBloomRaf) { cancelAnimationFrame(tripBloomRaf); tripBloomRaf = null; }
+  if (tripBloomItems) {
+    tripBloomItems.forEach(function (it) {
+      it.wrap.removeAttribute("transform");
+      it.fo.style.opacity = "0";
+    });
+    tripBloomItems = null;
+  }
+}
+function tripBloomLoop(t) {
+  if (!tripBloomItems) { tripBloomRaf = null; return; }
+  if (tripBloomReduceMotion()) { // static bloom just waits out the trip, then tears down
+    if (!tripActive) { stopTripBlooms(); return; }
+    tripBloomRaf = requestAnimationFrame(tripBloomLoop);
+    return;
+  }
+  var R = 0.7885;
+  var canDraw = tripActive && !document.hidden && (t - tripBloomLastDraw >= 55);
+  if (canDraw) tripBloomLastDraw = t;
+  var allSettled = !tripActive;
+  for (var i = 0; i < tripBloomItems.length; i++) {
+    var it = tripBloomItems[i];
+    var target = tripActive ? 1 : 0;
+    it.lift += (target - it.lift) * (target > it.lift ? 0.06 : 0.10);
+    if (it.lift < 0.005 && !tripActive) it.lift = 0;
+    if (it.lift > 0.005 && !tripActive) allSettled = false;
+    var lift = it.lift;
+    var ty = -it.cfg.riseY * lift + Math.sin(t / 900 + it.pY) * 5 * lift;
+    var tx = Math.sin(t / 1300 + it.pX) * 4 * lift;
+    var rot = Math.sin(t / 1700 + it.pX) * 2.2 * lift;
+    it.wrap.setAttribute("transform", "translate(" + tx.toFixed(2) + "," + ty.toFixed(2) +
+      ") rotate(" + rot.toFixed(2) + " " + it.cfg.pivotX + " " + it.cfg.pivotY + ")");
+    it.fo.style.opacity = Math.min(1, lift * 1.25).toFixed(3);
+  }
+  // Round-robin: render one canvas per draw tick (~1/3 the per-frame cost; each
+  // canvas still refreshes ~every 165ms — plenty for a slow morph, kind to mobile).
+  if (canDraw && window.__renderJulia) {
+    var d = tripBloomItems[tripBloomDrawIdx % tripBloomItems.length];
+    tripBloomDrawIdx++;
+    if (d.lift > 0.02) {
+      d.theta += 0.055;
+      d.hue = (d.hue + 0.010) % 1;
+      window.__renderJulia(d.canvas, R * Math.cos(d.theta), R * Math.sin(d.theta), 70, 1.3, d.hue);
+    }
+  }
+  if (allSettled) { stopTripBlooms(); return; }
+  tripBloomRaf = requestAnimationFrame(tripBloomLoop);
 }
 // One water bubble: a short sine that chirps up in pitch as the bubble
 // collapses. Clouds of these (plus a flow bed) are what read as water.

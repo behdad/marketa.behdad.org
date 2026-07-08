@@ -9741,9 +9741,13 @@ function spawnDustMote(container) {
     caption.textContent = huntText(captionKey);
   };
   var finaleTimers = [];
+  var balconyIntroSeen = false;
   function triggerBalconyFinale() {
-    // re-entering the balcony re-triggers the finale; clear any timers still
-    // pending from the previous run so melodies/rain don't stack
+    // the arrival flourish (butterfly, sun-shower, rainbow, fireworks, chime,
+    // RSVP nudge) plays only the FIRST time the balcony is shown per page load;
+    // every other balcony behavior (day/night, storm, ambient) runs on each visit
+    if (balconyIntroSeen) return;
+    balconyIntroSeen = true;
     finaleTimers.forEach(clearTimeout);
     finaleTimers = [];
     var butterfly = document.getElementById("balcony-butterfly");
@@ -10622,6 +10626,7 @@ function spawnDustMote(container) {
     var rainbow = document.getElementById("balcony-rainbow");
     if (butterfly) butterfly.classList.remove("flying");
     if (rainbow) rainbow.classList.remove("burst");
+    balconyIntroSeen = false; // a fresh playthrough replays the one-time arrival flourish
     if (window.resetSmoker) window.resetSmoker();
     if (window.resetLaptop) window.resetLaptop();
     if (window.resetBalconyDusk) window.resetBalconyDusk();

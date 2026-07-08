@@ -97,6 +97,10 @@ footer{margin-top:2.6rem}
   100%{opacity:0}
 }
 @media (prefers-reduced-motion: reduce){.balcony-thunder-flash.flash{animation:none}}
+/* the same storm lightning, seen through the windows of the other rooms */
+.window-storm-flash{opacity:0; pointer-events:none; fill:#dfeaff}
+.window-storm-flash.flash{animation:balcony-thunder-flash-fade .5s ease-out}
+@media (prefers-reduced-motion: reduce){.window-storm-flash.flash{animation:none}}
 @media (prefers-reduced-motion: reduce){#hunt-wipe{transition:none}}
 .hunt-nav{
   flex:0 0 auto; font:inherit; font-size:1.5rem; line-height:1; width:2.3rem; height:2.3rem;
@@ -1368,7 +1372,9 @@ footer{margin-top:2.6rem}
    the cuddly nook just dims "a bit"; the office window sky darkens to night. */
 #kitchen-dusk,#cuddly-dusk,#office-dusk{transition:opacity .9s ease}
 #stage-kitchen.dusk #kitchen-dusk{opacity:0.30}
-#stage-cuddly.dusk #cuddly-dusk{opacity:0.20}
+#kitchen-window-pane{transition:fill .9s ease}
+#stage-kitchen.dusk #kitchen-window-pane{fill:#1a2438}
+#stage-cuddly.dusk #cuddly-dusk{opacity:0.28}
 #stage-office.dusk #office-dusk{opacity:0.30}
 #office-window-pane-1{transition:fill .9s ease}
 #stage-office.dusk #office-window-pane-1{fill:#1a2438}
@@ -1599,7 +1605,8 @@ section{margin:1.9rem 0}
 <circle cx="185" cy="109" r="13" fill="#2b2724" stroke="#1a1715" stroke-width="1.5"/><circle cx="185" cy="109" r="9" fill="#3a3531"/>
 </g>
 </g>
-<rect x="652" y="20" width="28" height="180" fill="#eef2ee" stroke="#2d2d2d" stroke-width="3"/>
+<rect id="kitchen-window-pane" x="652" y="20" width="28" height="180" fill="#eef2ee" stroke="#2d2d2d" stroke-width="3"/>
+<rect id="kitchen-window-flash" class="window-storm-flash" x="653" y="21" width="26" height="178"/>
 <line x1="666" y1="20" x2="666" y2="200" stroke="#2d2d2d" stroke-width="2"/>
 <line x1="652" y1="110" x2="680" y2="110" stroke="#2d2d2d" stroke-width="2"/>
 <rect x="0" y="320" width="680" height="20" fill="#cf9a5f"/>
@@ -2664,6 +2671,7 @@ section{margin:1.9rem 0}
 <line x1="96" y1="140" x2="96" y2="118" stroke="#8a8578" stroke-width="2"/>
 <line x1="90" y1="124" x2="102" y2="124" stroke="#8a8578" stroke-width="1.5"/>
 <line x1="106" y1="140" x2="106" y2="126" stroke="#8a8578" stroke-width="2"/>
+<rect id="office-window-flash" class="window-storm-flash" x="70" y="40" width="160" height="150"/>
 </g>
 <g id="office-lamp" class="hunt-hit" tabindex="0" role="button" aria-label="The desk lamp">
 <ellipse class="office-lamp-glow" cx="40" cy="197" rx="48" ry="40" fill="#e88a3a" fill-opacity="0.18"/>
@@ -6383,12 +6391,17 @@ function playBrewSound() {
     setTimeout(function () { ctx.close(); }, 2700);
   } catch (e) {}
 }
-function playThunderSound() {
+function playThunderSound(volume) {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
+    // everything sums into a master gain so the whole clap can be scaled — quiet
+    // when heard through a window from another room, fuller out on the balcony
+    var master = ctx.createGain();
+    master.gain.value = (typeof volume === "number") ? volume : 1;
+    master.connect(ctx.destination);
 
     function noiseBurst(dur) {
       var size = Math.max(1, Math.floor(ctx.sampleRate * dur));
@@ -6412,7 +6425,7 @@ function playThunderSound() {
     var wetGain = ctx.createGain();
     wetGain.gain.value = 0.4;
     convolver.connect(wetGain);
-    wetGain.connect(ctx.destination);
+    wetGain.connect(master);
 
     // Sharp initial crack: bright noise, fast attack, fast decay.
     var crack = noiseBurst(0.3);
@@ -6425,7 +6438,7 @@ function playThunderSound() {
     crackGain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
     crack.connect(crackFilter);
     crackFilter.connect(crackGain);
-    crackGain.connect(ctx.destination);
+    crackGain.connect(master);
     crackGain.connect(convolver);
     crack.start(t);
     crack.stop(t + 0.3);
@@ -6449,7 +6462,7 @@ function playThunderSound() {
     rumbleGain.gain.exponentialRampToValueAtTime(0.0001, t + 5.5);
     rumble.connect(rumbleFilter);
     rumbleFilter.connect(rumbleGain);
-    rumbleGain.connect(ctx.destination);
+    rumbleGain.connect(master);
     rumbleGain.connect(convolver);
     rumble.start(t + 0.05);
     rumble.stop(t + 5.6);
@@ -6468,7 +6481,7 @@ function playThunderSound() {
       subGain.gain.exponentialRampToValueAtTime(0.001, t + delay + 0.18);
       subCrack.connect(subFilter);
       subFilter.connect(subGain);
-      subGain.connect(ctx.destination);
+      subGain.connect(master);
       subGain.connect(convolver);
       subCrack.start(t + delay);
       subCrack.stop(t + delay + 0.2);
@@ -6488,7 +6501,7 @@ function playThunderSound() {
     subGain2.gain.exponentialRampToValueAtTime(0.0001, t + 5.8);
     sub.connect(subFilter2);
     subFilter2.connect(subGain2);
-    subGain2.connect(ctx.destination);
+    subGain2.connect(master);
     sub.start(t + 0.02);
     sub.stop(t + 5.8);
 
@@ -9983,20 +9996,24 @@ function spawnDustMote(container) {
       scheduleGrillSmoke();
     }, delay);
   })();
-  // a distant lightning flash + the rolling rumble — only at dusk, on the balcony
+  // a distant lightning flash + rolling rumble during a night storm. The bolt is
+  // seen through every window (balcony sky + the kitchen/office windows), so the
+  // storm reads from any room; the rumble is full out on the balcony but much
+  // quieter — muffled through glass — when you're inside another room.
   window.triggerBalconyThunder = function () {
     var sb = document.getElementById("stage-balcony");
-    // only when you're actually watching the dusk balcony — no thunder in other rooms
-    if (!sb || !sb.classList.contains("dusk")) return;
-    if (stageIndex !== STAGES.indexOf("balcony") || document.visibilityState === "hidden") return;
-    var flash = document.getElementById("balcony-thunder-flash");
-    if (flash) {
-      flash.classList.remove("flash");
+    if (!sb || !sb.classList.contains("dusk")) return;   // only during a night storm
+    if (document.visibilityState === "hidden") return;    // don't rumble a hidden tab
+    ["balcony-thunder-flash", "kitchen-window-flash", "office-window-flash"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove("flash");
       requestAnimationFrame(function () {
-        requestAnimationFrame(function () { flash.classList.add("flash"); });
+        requestAnimationFrame(function () { el.classList.add("flash"); });
       });
-    }
-    setTimeout(function () { playThunderSound(); }, 320 + Math.random() * 480);
+    });
+    var onBalcony = stageIndex === STAGES.indexOf("balcony");
+    setTimeout(function () { playThunderSound(onBalcony ? 0.5 : 0.15); }, 320 + Math.random() * 480);
   };
   // Storm cycle: a storm rolls in ~15-21s after evening starts, brings rain +
   // 2-3 thunders, passes, then the whole thing repeats a minute or two later.

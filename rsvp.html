@@ -4465,7 +4465,122 @@ document.addEventListener("click", function (e) {
   // starts on, so the always-on cozy fireplace holds regardless of whether it's clicked.
   var screen = document.getElementById("cuddly-wallscreen");
   if (!screen) return;
-  function toggleFire() { screen.classList.toggle("off"); }
+
+  // Ambient fire sound: a soft low roar (looping lowpassed noise, gently breathing via a
+  // slow LFO) plus sparse bright bandpassed crackle pops — like sitting by a fireplace.
+  // Modeled on startPcFan (looping filtered-noise bed with a fade in/out, gated to its
+  // room + tab visibility) and playFireworkSound's per-sample re-triggering pop synthesis.
+  // Gate (mirrors __updatePcFan exactly): plays ONLY when the fire is on (not .off) AND
+  // we're in the cuddly nook AND the tab is visible. Leaving the room, hiding the tab, or
+  // toggling off fades it out and stops the crackle timer (no firing in a backgrounded tab).
+  var fireCtx = null, crackleTimer = null, fireInCuddly = false;
+  function fireWant() {
+    return fireInCuddly && !screen.classList.contains("off") &&
+      document.visibilityState !== "hidden";
+  }
+  function popCrackle() {
+    if (!fireCtx) return;
+    try {
+      var ctx = fireCtx, t = ctx.currentTime;
+      // a short cluster of sharp spark-snaps: a per-sample "pop amplitude" randomly
+      // re-triggers and rings down, so it reads as discrete pops, not a noise wash
+      var dur = 0.08 + Math.random() * 0.14;
+      var buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+      var d = buf.getChannelData(0);
+      var amp = 0, ring = 0.5 + Math.random() * 0.22, popRate = 0.004 + Math.random() * 0.004;
+      for (var i = 0; i < d.length; i++) {
+        var env = Math.pow(1 - i / d.length, 1.5);
+        if (Math.random() < popRate) amp = Math.random();
+        d[i] = (Math.random() * 2 - 1) * amp * env;
+        amp *= ring;
+      }
+      var src = ctx.createBufferSource();
+      src.buffer = buf;
+      var bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = 2200 + Math.random() * 1800; // ~2.2–4kHz: bright sparks
+      bp.Q.value = 3 + Math.random() * 4;
+      var g = ctx.createGain();
+      g.gain.value = 0.03 + Math.random() * 0.04;        // low, varied so it never loops
+      src.connect(bp); bp.connect(g); g.connect(ctx.destination);
+      src.start(t); // self-terminating short buffer — no refs held, no accumulation
+    } catch (e) {}
+  }
+  function scheduleCrackle() {
+    crackleTimer = setTimeout(function () {
+      crackleTimer = null;
+      if (!fireCtx) return;   // stopped meanwhile (leave room / hide tab / toggle off)
+      popCrackle();
+      scheduleCrackle();      // light self-rescheduling spawner, random gaps
+    }, 220 + Math.random() * 950);
+  }
+  function startFire() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      stopFire();
+      fireCtx = new Ctx();
+      // Web Audio needs a gesture; nav clicks / the toggle are gestures so the context is
+      // normally already running. Resume just in case, swallowing a blocked-context reject
+      // so it never throws or spams (a pre-gesture reload-into-cuddly path can hit this).
+      try { var p = fireCtx.resume && fireCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+      var now = fireCtx.currentTime;
+      // roar bed: warm lowpassed noise, a quiet ambient rumble that sits under the room
+      var bufferSize = fireCtx.sampleRate * 2;
+      var buffer = fireCtx.createBuffer(1, bufferSize, fireCtx.sampleRate);
+      var data = buffer.getChannelData(0);
+      for (var i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      var noise = fireCtx.createBufferSource();
+      noise.buffer = buffer;
+      noise.loop = true;
+      var lp = fireCtx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 180;                       // soft warm rumble, a couple hundred Hz
+      var roarGain = fireCtx.createGain();
+      roarGain.gain.setValueAtTime(0.0001, now);
+      roarGain.gain.exponentialRampToValueAtTime(0.015, now + 0.5); // low ambient level (~0.01–0.02); 180Hz cutoff keeps it soft
+      noise.connect(lp); lp.connect(roarGain); roarGain.connect(fireCtx.destination);
+      noise.start(0);
+      // slow LFO gently swelling the rumble so the roar "breathes" like a live fire
+      var lfo = fireCtx.createOscillator();
+      lfo.type = "sine";
+      lfo.frequency.value = 0.45;
+      var lfoGain = fireCtx.createGain();
+      lfoGain.gain.value = 0.005;
+      lfo.connect(lfoGain); lfoGain.connect(roarGain.gain);
+      lfo.start(0);
+      fireCtx._nodes = [noise, lfo];
+      fireCtx._roarGain = roarGain;
+      scheduleCrackle();
+    } catch (e) {}
+  }
+  function stopFire() {
+    if (crackleTimer) { clearTimeout(crackleTimer); crackleTimer = null; }
+    if (fireCtx) {
+      var ctx = fireCtx, roar = fireCtx._roarGain, nodes = fireCtx._nodes || [];
+      fireCtx = null; // null first so a racing scheduleCrackle callback bails
+      try { if (roar) roar.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.3); } catch (e) {}
+      setTimeout(function () {
+        nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
+        try { ctx.close(); } catch (e) {}
+      }, 400);
+    }
+  }
+  // (re)evaluate the gate and start/stop accordingly. goToStage passes the room boolean
+  // (mirrors __updatePcFan(inOffice)); visibilitychange + the toggle call it with no arg,
+  // keeping the last known room and just re-checking on/off + visibility.
+  window.__updateFireSound = function (inCuddly) {
+    if (typeof inCuddly === "boolean") fireInCuddly = inCuddly;
+    var want = fireWant();
+    if (want && !fireCtx) startFire();
+    else if (!want && fireCtx) stopFire();
+  };
+  document.addEventListener("visibilitychange", function () { window.__updateFireSound(); });
+
+  function toggleFire() {
+    screen.classList.toggle("off");
+    window.__updateFireSound(); // fade the crackle in/out with the on/off toggle
+  }
   screen.addEventListener("click", toggleFire);
   screen.addEventListener("keydown", function (e) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleFire(); }
@@ -11320,6 +11435,7 @@ function spawnDustMote(container) {
     if (name === "cuddly" && window.resetFishu) window.resetFishu();
     if (name === "office" && window.revealOfficeFishuIfFled) window.revealOfficeFishuIfFled();
     if (window.__updatePcFan) window.__updatePcFan(name === "office"); // hum only in the office
+    if (window.__updateFireSound) window.__updateFireSound(name === "cuddly"); // fire crackle only in the cuddly nook
     if (name === "balcony") triggerBalconyFinale();
   }
   window.goToStage = goToStage;

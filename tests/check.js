@@ -22,8 +22,13 @@ function fail(label, detail) {
 }
 
 function extractScript(html) {
-  var m = html.match(/<script>([\s\S]*)<\/script>/);
-  return m ? m[1] : null;
+  // Concatenate EVERY inline <script> block, not a greedy first-open..last-close span
+  // (that swallowed all the HTML in between once a second <script>, e.g. the head
+  // #reveal toggle, was added). Joined so node --check validates them all and the
+  // dictionary/i18n scans still see the main T-dictionary script.
+  var re = /<script\b[^>]*>([\s\S]*?)<\/script>/g, m, parts = [];
+  while ((m = re.exec(html))) if (m[1].trim()) parts.push(m[1]);
+  return parts.length ? parts.join("\n;\n") : null;
 }
 
 function extractStyle(html) {

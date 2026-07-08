@@ -884,6 +884,9 @@ footer{margin-top:2.6rem}
 /* after .grooving in the cascade so a knife hit still registers during music */
 #cuddly-octopus.ouch{animation:octopus-ouch .5s ease-in-out}
 @media (prefers-reduced-motion: reduce){#cuddly-octopus.ouch{animation:none}}
+#cuddly-octopus.sneezing{animation:octopus-sneeze .6s ease-in-out}
+@keyframes octopus-sneeze{0%,100%{transform:translate(0,0)} 32%{transform:translate(0,-5px)} 48%{transform:translate(0,-6px)} 62%{transform:translate(1.5px,4px)} 80%{transform:translate(-1px,1px)}}
+@media (prefers-reduced-motion: reduce){#cuddly-octopus.sneezing{animation:none}}
 #cuddly-octopus.wobble{animation:octopus-wobble .6s ease, octopus-camouflage 1.8s ease-in-out}
 @keyframes octopus-wobble{
   0%{transform:rotate(0) scale(1)}
@@ -5143,6 +5146,7 @@ document.addEventListener("click", function (e) {
       c.setAttribute("fill", "url(#smoke-grad)");
       c.setAttribute("opacity", "0"); // stays invisible during the stagger delay
       c.style.transformBox = "fill-box"; c.style.transformOrigin = "center";
+      c.style.pointerEvents = "none"; // never intercept clicks (e.g. the sun/moon)
       strip.appendChild(c);
       smokeCount++;
       if (c.animate) {
@@ -6826,6 +6830,7 @@ function spawnSmokeDrift(svg, cx, cy, count, dirX) {
         c.setAttribute("opacity", "0");
         c.style.transformBox = "fill-box";
         c.style.transformOrigin = "center";
+        c.style.pointerEvents = "none";
         svg.appendChild(c);
         if (c.animate) {
           var dx = dirX * (44 + Math.random() * 48);
@@ -6841,6 +6846,28 @@ function spawnSmokeDrift(svg, cx, cy, count, dirX) {
         }
       }, s * 320);
     })(s);
+  }
+}
+// a single bubble that wobbles up and pops (Fishu's cough)
+function spawnBubble(svg, cx, cy) {
+  if (!svg) return;
+  var b = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  b.setAttribute("cx", cx); b.setAttribute("cy", cy); b.setAttribute("r", "3");
+  b.setAttribute("fill", "#cfeaf5"); b.setAttribute("fill-opacity", "0.4");
+  b.setAttribute("stroke", "#bfe0f0"); b.setAttribute("stroke-width", "0.7");
+  b.style.transformBox = "fill-box"; b.style.transformOrigin = "center"; b.style.pointerEvents = "none";
+  svg.appendChild(b);
+  if (b.animate) {
+    var wob = (Math.random() - 0.5) * 9;
+    var a = b.animate([
+      { transform: "translate(0,0) scale(0.5)", opacity: 0 },
+      { transform: "translate(" + (wob * 0.5) + "px,-14px) scale(1)", opacity: 0.9, offset: 0.5 },
+      { transform: "translate(" + wob + "px,-28px) scale(1.15)", opacity: 0.85, offset: 0.9 },
+      { transform: "translate(" + wob + "px,-31px) scale(1.7)", opacity: 0 }
+    ], { duration: 1400 + Math.random() * 400, easing: "ease-out" });
+    a.onfinish = function () { if (b.parentNode) b.remove(); };
+  } else {
+    setTimeout(function () { if (b.parentNode) b.remove(); }, 1900);
   }
 }
 function spawnSteamWisps(svg, cx, cy, scale, xDir, yDir, count, peakOpacity) {
@@ -8114,6 +8141,54 @@ function playCoughSound(pitch) {
     }
     cough(ctx.currentTime, pitch || 1.0, 1.0);
     setTimeout(function () { ctx.close(); }, 500);
+  } catch (e) {}
+}
+function playSneezeSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t = ctx.currentTime;
+    // inhale build-up: airy noise rising in pitch
+    var bdur = 0.16, bn = Math.floor(ctx.sampleRate * bdur);
+    var bb = ctx.createBuffer(1, bn, ctx.sampleRate), bd = bb.getChannelData(0);
+    for (var i = 0; i < bn; i++) bd[i] = (Math.random() * 2 - 1) * (i / bn);
+    var bs = ctx.createBufferSource(); bs.buffer = bb;
+    var bhp = ctx.createBiquadFilter(); bhp.type = "highpass";
+    bhp.frequency.setValueAtTime(600, t); bhp.frequency.exponentialRampToValueAtTime(2100, t + bdur);
+    var bg = ctx.createGain(); bg.gain.value = 0.06;
+    bs.connect(bhp); bhp.connect(bg); bg.connect(ctx.destination); bs.start(t); bs.stop(t + bdur);
+    // the "-choo!": a sharp burst sweeping down + a voiced tone
+    var ct = t + bdur + 0.02, cdur = 0.22, cn = Math.floor(ctx.sampleRate * cdur);
+    var cbuf = ctx.createBuffer(1, cn, ctx.sampleRate), cd = cbuf.getChannelData(0);
+    for (var j = 0; j < cn; j++) { var fr = j / cn; cd[j] = (Math.random() * 2 - 1) * (Math.exp(-fr * 12) * 0.8 + Math.exp(-fr * 3.5) * 0.3); }
+    var cs = ctx.createBufferSource(); cs.buffer = cbuf;
+    var cbp = ctx.createBiquadFilter(); cbp.type = "bandpass"; cbp.Q.value = 1.2;
+    cbp.frequency.setValueAtTime(2200, ct); cbp.frequency.exponentialRampToValueAtTime(480, ct + 0.18);
+    var cg = ctx.createGain(); cg.gain.setValueAtTime(0.3, ct); cg.gain.exponentialRampToValueAtTime(0.0001, ct + cdur);
+    cs.connect(cbp); cbp.connect(cg); cg.connect(ctx.destination); cs.start(ct); cs.stop(ct + cdur + 0.02);
+    var osc = ctx.createOscillator(); osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(520, ct); osc.frequency.exponentialRampToValueAtTime(175, ct + 0.15);
+    var olp = ctx.createBiquadFilter(); olp.type = "lowpass"; olp.frequency.value = 1500;
+    var og = ctx.createGain(); og.gain.setValueAtTime(0.0001, ct); og.gain.exponentialRampToValueAtTime(0.12, ct + 0.01); og.gain.exponentialRampToValueAtTime(0.0001, ct + 0.16);
+    osc.connect(olp); olp.connect(og); og.connect(ctx.destination); osc.start(ct); osc.stop(ct + 0.18);
+    setTimeout(function () { ctx.close(); }, 700);
+  } catch (e) {}
+}
+function playBlubSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t = ctx.currentTime;
+    var osc = ctx.createOscillator(); osc.type = "sine";
+    osc.frequency.setValueAtTime(220, t); osc.frequency.exponentialRampToValueAtTime(620, t + 0.12);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.12, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    osc.connect(g); g.connect(ctx.destination); osc.start(t); osc.stop(t + 0.18);
+    setTimeout(function () { ctx.close(); }, 300);
   } catch (e) {}
 }
 function playSizzleSound() {
@@ -9783,6 +9858,7 @@ function spawnDustMote(container) {
       line.setAttribute("stroke", "#a8c4d4"); line.setAttribute("stroke-width", "2");
       line.setAttribute("stroke-linecap", "round");
       line.style.transformBox = "fill-box"; line.style.transformOrigin = "center";
+      line.style.pointerEvents = "none";
       strip.appendChild(line);
       if (line.animate) {
         var anim = line.animate([
@@ -9877,6 +9953,27 @@ function spawnDustMote(container) {
           : [["cuddly-marketa-head", 1.18], ["cuddly-behdad-head", 0.9]];
         coughHead(pair[0][0], pair[0][1]);
         setTimeout(function () { coughHead(pair[1][0], pair[1][1]); }, 480 + Math.random() * 260);
+        // Octi sneezes and/or Fishu coughs up a bubble a beat later
+        var extra = 1000;
+        if (Math.random() < 0.65) {
+          setTimeout(function () {
+            var o = document.getElementById("cuddly-octopus");
+            if (o && !o.classList.contains("wobble")) {
+              o.classList.remove("sneezing");
+              void o.getBoundingClientRect();
+              o.classList.add("sneezing");
+              setTimeout(function () { o.classList.remove("sneezing"); }, 650);
+              playSneezeSound();
+            }
+          }, extra);
+          extra += 560;
+        }
+        if (Math.random() < 0.65) {
+          setTimeout(function () {
+            spawnBubble(strip, 1872, 108); // a bubble from Fishu's mouth
+            playBlubSound();
+          }, extra + Math.random() * 220);
+        }
       }
       scheduleSmokeIntrusion();
     }, delay);

@@ -8055,7 +8055,7 @@ function playBootChimeSound() {
   } catch (e) {}
 }
 // A soft grilling sizzle: high-passed crackly noise, ~0.7s.
-function playCoughSound() {
+function playCoughSound(pitch) {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
@@ -8103,10 +8103,8 @@ function playCoughSound() {
       osc.connect(lp); lp.connect(og); og.connect(ctx.destination);
       osc.start(t); osc.stop(t + 0.16);
     }
-    var t0 = ctx.currentTime;
-    cough(t0, 1.0, 1.0);
-    cough(t0 + 0.33, 0.86, 0.85);
-    setTimeout(function () { ctx.close(); }, 900);
+    cough(ctx.currentTime, pitch || 1.0, 1.0);
+    setTimeout(function () { ctx.close(); }, 500);
   } catch (e) {}
 }
 function playSizzleSound() {
@@ -9855,16 +9853,21 @@ function spawnDustMote(container) {
       if (door && smk && door.classList.contains("open") && smk.classList.contains("smoking") &&
           stageIndex === STAGES.indexOf("cuddly") && document.visibilityState !== "hidden") {
         spawnSmokeDrift(strip, 1985, 150, 4, -1); // seeps in from the right (balcony side)
-        ["cuddly-behdad-head", "cuddly-marketa-head"].forEach(function (id) {
+        // one coughs, then the other a beat later (random who goes first)
+        function coughHead(id, pitch) {
           var h = document.getElementById(id);
-          if (h) {
-            h.classList.remove("coughing");
-            void h.getBoundingClientRect();
-            h.classList.add("coughing");
-            setTimeout(function () { h.classList.remove("coughing"); }, 650);
-          }
-        });
-        playCoughSound();
+          if (!h) return;
+          h.classList.remove("coughing");
+          void h.getBoundingClientRect();
+          h.classList.add("coughing");
+          setTimeout(function () { h.classList.remove("coughing"); }, 650);
+          playCoughSound(pitch);
+        }
+        var pair = Math.random() < 0.5
+          ? [["cuddly-behdad-head", 0.9], ["cuddly-marketa-head", 1.18]]
+          : [["cuddly-marketa-head", 1.18], ["cuddly-behdad-head", 0.9]];
+        coughHead(pair[0][0], pair[0][1]);
+        setTimeout(function () { coughHead(pair[1][0], pair[1][1]); }, 480 + Math.random() * 260);
       }
       scheduleSmokeIntrusion();
     }, delay);

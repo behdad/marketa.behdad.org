@@ -753,6 +753,10 @@ footer{margin-top:2.6rem}
 /* after .grooving in the cascade so knife chops land during music */
 #cuddly-behdad-head.chopped, #cuddly-marketa-head.chopped{animation:head-chop .6s ease-out}
 @media (prefers-reduced-motion: reduce){#cuddly-behdad-head.chopped, #cuddly-marketa-head.chopped{animation:none}}
+/* smoke drifting in from the balcony makes them cough (after .grooving too) */
+#cuddly-behdad-head.coughing, #cuddly-marketa-head.coughing{animation:head-cough .55s ease-in-out}
+@keyframes head-cough{0%,100%{transform:translate(0,0)} 25%{transform:translate(-0.6px,1.7px)} 50%{transform:translate(0.4px,-0.4px)} 75%{transform:translate(-0.6px,1.7px)}}
+@media (prefers-reduced-motion: reduce){#cuddly-behdad-head.coughing, #cuddly-marketa-head.coughing{animation:none}}
 #cuddly-marketa-foot-1.tickled, #cuddly-marketa-foot-2.tickled,
 #cuddly-behdad-foot-1.tickled, #cuddly-behdad-foot-2.tickled{animation:feet-tickle .5s ease-in-out}
 @media (prefers-reduced-motion: reduce){
@@ -5096,25 +5100,25 @@ document.addEventListener("click", function (e) {
   var smokerFirebox = document.getElementById("balcony-smoker-firebox");
   var smokerLid = document.getElementById("balcony-smoker-lid");
   if (smoker && smokerFirebox && smokerLid) {
-    var smoking = false, lidOpen = false;
+    var smoking = false, lidOpen = false, fireOn = false;
     var sizzleTimer = null, tempTimer = null, temp = 0;
     var burgers = smoker.querySelectorAll(".smoker-burger");
     var tempEl = document.getElementById("balcony-smoker-temp");
-    // the readout climbs to 400 in 50-degree jumps once the fire's lit
-    function climbTemp() {
-      if (tempTimer) clearInterval(tempTimer);
-      temp = 50;
-      if (tempEl) tempEl.textContent = temp + "°";
-      tempTimer = setInterval(function () {
-        if (temp >= 400) { clearInterval(tempTimer); tempTimer = null; return; }
-        temp += 50;
-        if (tempEl) tempEl.textContent = temp + "°";
-      }, 450);
+    function updateTemp() { if (tempEl) tempEl.textContent = temp > 0 ? temp + "°" : ""; }
+    // Heats quickly to 400 but cools slowly (stays warm a while), and always
+    // steps from the current temp — so a quick off/on resumes, not back to 50.
+    function tempTick() {
+      var target = fireOn ? 400 : 0;
+      if (temp < target) temp = Math.min(400, temp + 50);
+      else if (temp > target) temp = Math.max(0, temp - 50);
+      updateTemp();
+      if (temp === target && tempTimer) { clearInterval(tempTimer); tempTimer = null; }
     }
-    function coolTemp() {
-      if (tempTimer) { clearInterval(tempTimer); tempTimer = null; }
-      temp = 0;
-      if (tempEl) tempEl.textContent = "";
+    function setFire(on) {
+      fireOn = on;
+      if (tempTimer) clearInterval(tempTimer);
+      tempTimer = setInterval(tempTick, on ? 450 : 1600); // heat fast, cool slow
+      tempTick();
     }
     function smokeActive() { return smoker.classList.contains("smoking") && !document.hidden; }
     // A billowing plume from the chimney: soft grey puffs that rise while
@@ -5167,10 +5171,8 @@ document.addEventListener("click", function (e) {
       if (smoking) {
         seedSmoke(); // plume runs (and self-replenishes) until the fire's out
         startCooking();
-        climbTemp();
-      } else {
-        coolTemp();
       }
+      setFire(smoking); // heats up, or starts the slow cool-down
     }
     function toggleLid() {
       lidOpen = !lidOpen;
@@ -5210,8 +5212,12 @@ document.addEventListener("click", function (e) {
     });
     window.resetSmoker = function () {
       if (sizzleTimer) clearInterval(sizzleTimer);
+      if (tempTimer) clearInterval(tempTimer);
       sizzleTimer = null;
-      coolTemp();
+      tempTimer = null;
+      fireOn = false;
+      temp = 0;
+      updateTemp();
       smoking = false;
       lidOpen = false;
       smoker.classList.remove("smoking", "open");
@@ -8008,6 +8014,49 @@ function playBootChimeSound() {
   } catch (e) {}
 }
 // A soft grilling sizzle: high-passed crackly noise, ~0.7s.
+function playCoughSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t0 = ctx.currentTime;
+    [0, 0.3].forEach(function (dt) {
+      var t = t0 + dt, dur = 0.14;
+      // throaty burst of band-limited noise
+      var n = Math.floor(ctx.sampleRate * dur);
+      var buf = ctx.createBuffer(1, n, ctx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 1.4);
+      var src = ctx.createBufferSource();
+      src.buffer = buf;
+      var bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = 380 + Math.random() * 120;
+      bp.Q.value = 1.1;
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.22, t + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      src.connect(bp); bp.connect(g); g.connect(ctx.destination);
+      src.start(t); src.stop(t + dur + 0.02);
+      // a low grunt underneath
+      var osc = ctx.createOscillator();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(150, t);
+      osc.frequency.exponentialRampToValueAtTime(85, t + dur);
+      var lp = ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 500;
+      var og = ctx.createGain();
+      og.gain.setValueAtTime(0.0001, t);
+      og.gain.exponentialRampToValueAtTime(0.1, t + 0.012);
+      og.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.connect(lp); lp.connect(og); og.connect(ctx.destination);
+      osc.start(t); osc.stop(t + dur + 0.02);
+    });
+    setTimeout(function () { ctx.close(); }, 700);
+  } catch (e) {}
+}
 function playSizzleSound() {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -9743,6 +9792,30 @@ function spawnDustMote(container) {
     }
     window.__stopAutoDayNight = function () { stopped = true; clearTimeout(timer); };
     timer = setTimeout(tick, 60000);
+  })();
+  // Leave the balcony door open with the smoker going and the smoke seeps into
+  // the cuddly nook — the couple coughs (only felt while you're in that room).
+  (function scheduleSmokeIntrusion() {
+    var delay = 5000 + Math.random() * 4000;
+    setTimeout(function () {
+      var door = document.getElementById("balcony-door");
+      var smk = document.getElementById("balcony-smoker");
+      if (door && smk && door.classList.contains("open") && smk.classList.contains("smoking") &&
+          stageIndex === STAGES.indexOf("cuddly") && document.visibilityState !== "hidden") {
+        spawnSteamWisps(strip, 1560 + Math.random() * 100, 150, 0.7, 1, -1, 3, 0.5);
+        ["cuddly-behdad-head", "cuddly-marketa-head"].forEach(function (id) {
+          var h = document.getElementById(id);
+          if (h) {
+            h.classList.remove("coughing");
+            void h.getBoundingClientRect();
+            h.classList.add("coughing");
+            setTimeout(function () { h.classList.remove("coughing"); }, 650);
+          }
+        });
+        playCoughSound();
+      }
+      scheduleSmokeIntrusion();
+    }, delay);
   })();
   var instrumentSpots = {
     "garden-guitar": { x: 746, y: 270, audioId: "guitar-song-audio" },

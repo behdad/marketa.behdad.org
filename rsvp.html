@@ -12259,12 +12259,14 @@ function spawnDustMote(container) {
   }
 
   // ── "Day in the Loft" cinematic ──────────────────────────────────────────
-  // A hands-off autoplay that walks a passive visitor through all five rooms as
-  // the day turns to night, ending on the RSVP nudge. Declarative cancellable
-  // timeline: an array of setTimeout ids choreographed on wall-clock delays tuned
-  // to the known constants (GRIND_MS / BREW_MS / the 700ms slide) — cancel = clear
-  // them all (the finaleTimers idiom). window.__cinematic gates the game's own
-  // auto-advances + the balcony storm so they can't fight the scripted beats.
+  // A hands-off autoplay: a leisurely, whimsy-rich walkthrough of all five rooms as
+  // the day turns to night into the built-in balcony finale, then an endless "play
+  // phase" that wanders the loft showing off its whimsy, looping on the RSVP nudge
+  // until the viewer interacts. Declarative cancellable timeline: setTimeout ids
+  // choreographed on wall-clock delays tuned to the known constants (GRIND_MS /
+  // BREW_MS / the 700ms slide) — cancel = clear them all (the finaleTimers idiom).
+  // window.__cinematic gates the game's own auto-advances + the balcony storm so
+  // they can't fight the scripted beats.
   var watchBtn = document.getElementById("watch-loft-btn");
   var skipBtn = document.getElementById("watch-skip-btn");
   var cinematicTimers = [];
@@ -12289,26 +12291,112 @@ function spawnDustMote(container) {
     if (watchBtn) { watchBtn.hidden = false; watchBtn.classList.remove("nudge"); }
   }
 
+  // ── timeline helpers ──
+  // schedule([[gapMs, fn], ...]) fires each fn at the running sum of the gaps, all via
+  // beat() so every timer lands in cinematicTimers and cancels as one. Returns the total
+  // so the next phase can be chained after it.
+  function schedule(steps) {
+    var t = 0;
+    for (var i = 0; i < steps.length; i++) { t += steps[i][0]; if (steps[i][1]) beat(t, steps[i][1]); }
+    return t;
+  }
+  function tap(id) { return function () { cineClick(id); }; }
+  function visit(name) { return function () { goToStage(name); }; }
+  function mushroomTrip() { // the garden plants lift off their pots and bloom hue-cycling fractals
+    if (window.startTripVariant) window.startTripVariant("psychedelic");
+    if (window.startTripBlooms) window.startTripBlooms();
+  }
+  function setNight(want) { // flip the (global) sky only when it isn't already where we want it
+    var sb = document.getElementById("stage-balcony");
+    var isNight = !!(sb && sb.classList.contains("dusk"));
+    if (isNight !== want && window.__autoToggleDusk) window.__autoToggleDusk();
+  }
+  function fireworksBurst() { // a stagger of fireworks over the city (each timer in cinematicTimers)
+    [[490, 62, "#f5b8c8"], [566, 42, "#f7d97a"], [527, 88, "#a8c4d4"], [612, 56, "#f7d97a"]]
+      .forEach(function (fw, i) { beat(i * 620, function () { spawnFirework(fw[0], fw[1], fw[2]); }); });
+  }
+
   function runFullCinematic() {
-    // KITCHEN — power on → grind (GRIND_MS) → brew (BREW_MS) → advance
-    beat(1000, function () { cineClick("kitchen-lamarzocco"); });
-    beat(1900, function () { cineClick("kitchen-grinder"); });
-    beat(1900 + GRIND_MS + 400, function () { cineClick("kitchen-portafilter"); });
-    beat(1900 + GRIND_MS + 400 + BREW_MS + 600, function () { goToStage("garden"); }); // ~6400
-    // GARDEN — water a plant, then start the couple's real song (drives grooving onward)
-    beat(7300, function () { cineClick("garden-monstera"); });
-    beat(8400, function () { cineClick("garden-guitar"); });
-    beat(10200, function () { goToStage("cuddly"); });
-    // CUDDLY — grooving auto-runs on entry; play with Octi
-    beat(11200, function () { cineClick("cuddly-octopus"); });
-    beat(13400, function () { goToStage("office"); });
-    // OFFICE — lamps off, then flip day → night (screensaver + skull dance come free)
-    beat(14400, function () { cineClick("office-lamp"); });
-    beat(15000, function () { cineClick("office-pendant"); });
-    beat(15900, function () { if (window.__autoToggleDusk) window.__autoToggleDusk(); });
-    // BALCONY — the built-in finale (bell → rainbow → fireworks → RSVP nudge ~9.1s)
-    beat(17900, function () { goToStage("balcony"); });
-    beat(17900 + 9600, stopCinematic); // clean up once the finale has settled on the nudge
+    // A leisurely, whimsy-rich walkthrough: each interaction lands and its animation
+    // plays before the next, with a held beat in every room, day → night on office
+    // entry, into the built-in balcony finale — then it hands off to the play phase.
+    var solveTotal = schedule([
+      // KITCHEN — pull an espresso, start to finish
+      [1400, tap("kitchen-lamarzocco")],                 // power on: spark + gauges swing
+      [2600, tap("kitchen-grinder")],                    // grind (GRIND_MS) + coffee spray
+      [GRIND_MS + 1700, tap("kitchen-portafilter")],     // brew (BREW_MS) + steam; the cup fills
+      [BREW_MS + 1600, tap("kitchen-steamwand")],        // a hiss of steam while the shot rests
+      [2400, visit("garden")],
+      // GARDEN — water the plants, light the candles, put the record on, a little magic
+      [1700, tap("garden-monstera")],                    // water (droplets + bounce)
+      [1900, tap("garden-peacelily")],                   // water another
+      [1900, tap("garden-candle-1")],                    // light a candle
+      [1500, tap("garden-candle-2")],                    // and the other
+      [2200, tap("garden-guitar")],                      // the couple's real song → everything grooves
+      [2400, tap("witchy-door-1")],                      // open the fairy chest → she dances to the beat
+      [2400, mushroomTrip],                              // the plants bloom fractals
+      [6800, visit("cuddly")],                           // hold on the trip, then move on
+      // CUDDLY — the couple sway to the song; play with Octi
+      [2200, tap("cuddly-octopus")],                     // Octi wobbles
+      [2000, tap("cuddly-pillow-1")],                    // squish a pillow
+      [1700, tap("cuddly-trunk")],                       // Octi tumbles into the chest
+      [2600, visit("office")],
+      // OFFICE — boot the PC, ring Prague; the gold skull's already dancing to the song
+      [1600, tap("office-pc-desk-trio")],                // power the PC → monitor boots Fedora → Chrome → caps
+      [5600, tap("office-laptop")],                      // watch the boot, then open Markéta's Mac
+      [1400, tap("laptop-calltile")],                    // Call Prague (calling → connecting → giggles)
+      [4200, tap("office-lamp")],                        // watch the call, then dim the lights
+      [1200, tap("office-pendant")],
+      [2000, function () { if (window.__autoToggleDusk) window.__autoToggleDusk(); }], // day → night
+      [2600, visit("balcony")]                           // → the built-in finale (rainbow → fireworks → RSVP nudge)
+    ]);
+    // once the finale has settled on the RSVP nudge (~9.1s in), begin the endless play phase
+    beat(solveTotal + 11000, startPlayPhase);
+  }
+
+  // ── Play phase ──────────────────────────────────────────────────────────
+  // After the finale it doesn't stop — it wanders the loft showing off the whimsy: the
+  // proposal-day solar eclipse, fireworks, the record with everything grooving, the
+  // grill and a glass of wine — looping back to the balcony on the RSVP nudge until the
+  // viewer interacts. Each cycle schedules a bounded batch of beats then re-arms itself,
+  // so nothing accumulates; cancel clears it all like any other cinematicTimers. Every
+  // handler is real and __cinematic-gated, same as the walkthrough.
+  var playCycleN = 0;
+  function startPlayPhase() {
+    if (!window.__cinematic) return;
+    // alternate the record between cycles: re-clicking the instrument that's already
+    // playing would pause it, so pick the other one each time.
+    var instrument = (playCycleN++ % 2) ? "garden-guitar" : "garden-ukulele";
+    var total = schedule([
+      // BALCONY (day) — the total solar eclipse of 2017, under which a proposal happened
+      [0, function () { setNight(false); }],
+      [1800, function () { if (window.__runSolarEclipse) window.__runSolarEclipse(); }],
+      [11000, visit("garden")],                          // hold through totality; the eclipse self-clears offscreen
+      // GARDEN (day) — swap the record, another bloom, the deer bounds
+      [1700, tap(instrument)],
+      [2600, mushroomTrip],
+      [4400, tap("garden-deer")],
+      [2600, visit("cuddly")],
+      // CUDDLY — the couple groove; Octi plays
+      [1700, tap("cuddly-octopus")],
+      [1700, tap("cuddly-pillow-2")],
+      [1700, tap("cuddly-trunk")],
+      [2400, visit("office")],
+      // OFFICE — the skull dances to the beat; spin the top, bob the wooden head
+      [1800, tap("office-spin-top")],
+      [2000, tap("office-wooden-head")],
+      [3000, visit("balcony")],
+      // BALCONY (night) — fireworks, a wish on a star, fire up the grill, pour a wine, cheers
+      [700, function () { setNight(true); }],
+      [1300, fireworksBurst],
+      [1800, function () { if (window.spawnShootingStar) window.spawnShootingStar(); }],
+      [1800, tap("balcony-smoker-lid")],
+      [1100, tap("balcony-smoker-firebox")],
+      [2200, tap("balcony-wineglass")],
+      [2400, tap("balcony-pride-flag")],
+      [2400, showRsvpNudge]                              // graceful landing back on the nudge
+    ]);
+    beat(total + 6500, startPlayPhase);                  // hold on the nudge, then loop
   }
 
   function runReducedCinematic() {

@@ -629,6 +629,15 @@ footer{margin-top:2.6rem}
 #office-monitor.show-behdad #monitor-logo-behdad{opacity:1}
 #office-monitor.show-nowplaying #monitor-logo-nowplaying{opacity:1}
 #office-monitor.show-saver #monitor-saver{opacity:1}
+/* the resting caps "home" screen carries a small PLAY button (starts a random garden
+   song). It's the topmost screen child, so gate ITS OWN hit-testing to the caps state
+   and hide it whenever the equalizer/screensaver takes over — show-nowplaying can ride
+   on top of show-caps as a class, so re-hide there (later rule wins the tie). No need
+   to touch the other boot-logos' pointer-events: monitor clicks still delegate up. */
+#monitor-play-btn{opacity:0; visibility:hidden; pointer-events:none; cursor:pointer; transition:opacity .4s ease}
+#office-monitor.show-caps #monitor-play-btn{opacity:1; visibility:visible; pointer-events:auto}
+#office-monitor.show-nowplaying #monitor-play-btn, #office-monitor.show-saver #monitor-play-btn{opacity:0; visibility:hidden; pointer-events:none}
+#monitor-play-btn:hover circle{fill:#7a2f3d}
 /* the saver alternates between the bouncing caps and a live Julia fractal */
 #monitor-saver-fractal{opacity:0; pointer-events:none} /* clicks pass through to wake the monitor */
 #office-monitor.show-saver.saver-fractal #monitor-saver-caps{opacity:0}
@@ -3208,6 +3217,12 @@ section{margin:1.9rem 0}
 <rect class="eq-bar" x="324" y="176" width="4" height="13" rx="1" fill="#6f94bd" style="animation-delay:.12s"/>
 <rect class="eq-bar" x="332" y="176" width="4" height="13" rx="1" fill="#9c6bb8" style="animation-delay:.42s"/>
 </g>
+<!-- resting-caps PLAY button: last child = topmost, so it sits above every screen
+     state; CSS gates its visibility+hit-testing to show-caps (see #monitor-play-btn) -->
+<g id="monitor-play-btn" tabindex="0" role="button" aria-label="Play a song" data-aria-i="monitor_play_aria">
+<circle cx="363" cy="187" r="5.5" fill="#8e3a4a"/>
+<path d="M361 183.6 L361 190.4 L366.4 187 Z" fill="#f8f5ec"/>
+</g>
 </g>
 </g>
 <defs>
@@ -3861,6 +3876,7 @@ var T = {
     marketa_url: "https://marketajakesova.ca",
     nav_lang_aria: "Language",
     caps_aria: "A pink flat cap and a blue baker boy cap, crossed",
+    monitor_play_aria: "Play a song",
     laptop_date: "May 1",
     laptop_daysfx: "d",
     laptop_place: "Prague",
@@ -3935,6 +3951,7 @@ var T = {
     marketa_url: "https://marketajakesova.ca/cs/",
     nav_lang_aria: "Jazyk",
     caps_aria: "Růžová čepice a modrá čepice, zkřížené",
+    monitor_play_aria: "Přehrát píseň",
     laptop_date: "1. 5.",
     laptop_daysfx: "d",
     laptop_place: "Praha",
@@ -5515,6 +5532,11 @@ document.addEventListener("click", function (e) {
   // between the classic bouncing caps and a live Julia-set fractal ("electric
   // sheep" nod). Any click on the monitor wakes it.
   var saverTimer = null, saverRaf = null, saverCycleTimer = null, saverFractalNext = false;
+  // While a song plays, tapping a site logo shows that site briefly, then the
+  // now-playing equalizer slides back over it (see navigateMonitor). This timer
+  // drives that revert; it's cancelled if the song ends or the user navigates again.
+  var navRevertTimer = null, NAV_REVERT_MS = 3000;
+  function clearNavRevert() { if (navRevertTimer) { clearTimeout(navRevertTimer); navRevertTimer = null; } }
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   function stopSaver() {
     clearTimeout(saverTimer);
@@ -5758,6 +5780,7 @@ document.addEventListener("click", function (e) {
     frame();
   }
   function updateNowPlaying() {
+    clearNavRevert(); // deciding state directly now: any pending "show site then revert" is moot
     var playing = null;
     for (var i = 0; i < songAudios.length; i++) {
       if (songAudios[i] && !songAudios[i].paused && !songAudios[i].ended) { playing = songAudios[i]; break; }
@@ -5784,6 +5807,28 @@ document.addEventListener("click", function (e) {
     a.addEventListener("pause", updateNowPlaying);
     a.addEventListener("ended", updateNowPlaying);
   });
+  // The resting caps "home" screen carries a small PLAY button that kicks off a
+  // random garden song; the audio's own "play" listener (above) then flips the
+  // monitor to the now-playing equalizer. SVG nodes get no .click(), so wire real
+  // click + keyboard handlers, and stop the event reaching the monitor's own click
+  // handler (which would otherwise "open" marketa.behdad.org in a new tab).
+  var playBtn = document.getElementById("monitor-play-btn");
+  if (playBtn) {
+    function monitorPlayRandom() {
+      // only meaningful on the bare caps page (CSS already hides/inert-ifies it
+      // elsewhere; this guards a stray keyboard/dispatched event)
+      if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-nowplaying")) return;
+      var idle = songAudios.filter(function (a) { return a && a.paused; });
+      if (!idle.length || idle.length !== songAudios.length) return; // one's already going — don't stack
+      var pick = idle[Math.floor(Math.random() * idle.length)];
+      try { var p = pick.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+    }
+    playBtn.addEventListener("click", function (e) { e.stopPropagation(); monitorPlayRandom(); });
+    playBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); }); // don't let a double-tap swap the monitor away
+    playBtn.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); monitorPlayRandom(); }
+    });
+  }
   // The office logos "browse" to their site on the (already-on) monitor.
   function monitorShowingSite() {
     return monitor.classList.contains("screen-on") &&
@@ -5792,13 +5837,25 @@ document.addEventListener("click", function (e) {
   }
   window.navigateMonitor = function (siteKey, url) {
     if (!monitor.classList.contains("here") || !pcTower || !pcTower.classList.contains("on")) return false;
+    clearNavRevert(); // a fresh navigation supersedes any pending revert
     clearBoot();
-    monitor.classList.remove("show-caps", "show-harfbuzz", "show-behdad"); // one site at a time
+    monitor.classList.remove("show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying"); // one thing at a time
     monitor.classList.add("screen-on", "show-" + siteKey);
     monitorUrl = url;
     scheduleSaver(); // any visited site idles back to the screensaver after a while
     playLaptopClickSound();
-    updateNowPlaying();
+    if (playingSongSite()) {
+      // A song's playing: actually SHOW the artist's site for a moment, then let the
+      // now-playing equalizer slide back over it — rather than the equalizer instantly
+      // re-covering it (updateNowPlaying) or the site lingering till the screensaver.
+      stopEq(); // bars are hidden while the site shows; updateNowPlaying restarts them
+      navRevertTimer = setTimeout(function () {
+        navRevertTimer = null;
+        updateNowPlaying();
+      }, NAV_REVERT_MS);
+    } else {
+      updateNowPlaying();
+    }
     return true;
   };
   function swap(toMonitor) {

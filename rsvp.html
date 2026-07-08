@@ -6592,6 +6592,15 @@ document.addEventListener("click", function (e) {
     }
     frame();
   }
+  function restartMarquee() {
+    // toggling the CSS animation off/on (with a forced reflow in between) restarts it from
+    // its 0% keyframe — getBoundingClientRect forces the reflow (SVG <g> has no offsetWidth)
+    var m = document.getElementById("monitor-np-marquee");
+    if (!m) return;
+    m.style.animation = "none";
+    m.getBoundingClientRect();
+    m.style.animation = "";
+  }
   function updateNowPlaying() {
     clearNavRevert(); // deciding state directly now: any pending "show site then revert" is moot
     var playing = null, pausedMid = null;
@@ -6609,7 +6618,11 @@ document.addEventListener("click", function (e) {
     if (current && booted) {
       if (monitor.classList.contains("show-saver")) { stopSaver(); monitor.classList.add("show-caps"); monitorUrl = CAPS_URL; }
       var title = document.getElementById("monitor-np-title");
-      if (title) title.textContent = SONG_INFO[current.id] || "";
+      if (title) {
+        var newTitle = SONG_INFO[current.id] || "";
+        if (title.textContent !== newTitle) restartMarquee(); // new song -> marquee starts over
+        title.textContent = newTitle;
+      }
       monitor.classList.add("show-nowplaying");
       if (playing) {
         startEq(playing);
@@ -6709,7 +6722,8 @@ document.addEventListener("click", function (e) {
   // when a 3rd song joins someday). Mirrors the gesture-safe play pattern the garden
   // instrument clicks use (app-owned volume + analyser capture inside the click gesture)
   // — the audio's own play/pause listeners (above) repaint title/bars/pause-icon, so this
-  // only drives playback, it never touches the now-playing UI directly.
+  // mostly just drives playback (it only reaches directly for the marquee restart, since
+  // that needs to happen immediately rather than waiting on the next "play" event).
   function currentSongIndex() {
     var idx = -1;
     for (var i = 0; i < songAudios.length; i++) {
@@ -6724,7 +6738,7 @@ document.addEventListener("click", function (e) {
     var current = songAudios[idx];
     // prev restarts the CURRENT song (standard media-player convention) once you're a
     // few seconds in, instead of always jumping back to the other track
-    if (dir < 0 && current.currentTime >= 3) { current.currentTime = 0; return; }
+    if (dir < 0 && current.currentTime >= 3) { current.currentTime = 0; restartMarquee(); return; }
     if (songAudios.length < 2) return;
     var next = songAudios[(idx + dir + songAudios.length) % songAudios.length];
     if (!next || next === current) return;
@@ -6734,6 +6748,8 @@ document.addEventListener("click", function (e) {
       next.currentTime = 0;
       next.volume = window.__songVolume ? window.__songVolume() : 0.5; // app-owned level (monitor speaker button)
       if (window.__captureSongAudio) window.__captureSongAudio(next);
+      restartMarquee(); // also covered by updateNowPlaying's title-change check once next
+                         // starts playing, but calling it here makes the restart immediate
       var p = next.play();
       if (p && p.catch) p.catch(function () {});
     } catch (e) {}

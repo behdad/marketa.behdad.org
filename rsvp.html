@@ -10490,12 +10490,18 @@ function playMetalClinkSound(pitchMult, panId) {
 }
 // The balcony windchime, hanging under the wall lamp: 2-4 of its 4 tubes ring at once,
 // each its own inharmonic bar-overtone partial series (same idea as playMetalClinkSound
-// just above, but only 3 partials and a much slower decay — a struck tube sustains far
-// longer than a utensil clink). The 4 tube pitches (C6/Eb6/E6/G6) are deliberately not a
-// plain major triad — the Eb6/E6 half-step clash keeps the cluster bell-like and a
-// little dissonant, like real mismatched chime tubes, instead of a clean chord. Called
-// from the self-scheduling loop below; `stormy` just scales loudness/brightness up a
-// notch, mirroring the ambient wind bed's own calm/storm gain difference.
+// just above, but 4 partials — the classic 1 : 2.76 : 5.40 : 8.93 tubular-bell ratios —
+// and a much slower decay, since a struck tube sustains far longer than a utensil clink).
+// Each partial is a PAIR of sine oscillators a few cents apart rather than one oscillator:
+// real chime tubes ring with several close vibration modes at once, and the slow beating
+// between them is a big part of what makes a windchime shimmer instead of just "clink" —
+// a single (worse: triangle-wave, which stacks its own odd harmonics on top of an already
+// inharmonic partial series and reads as buzzy) oscillator per partial can't produce that.
+// The 4 tube pitches (C6/Eb6/E6/G6) are deliberately not a plain major triad — the Eb6/E6
+// half-step clash keeps the cluster bell-like and a little dissonant, like real mismatched
+// chime tubes, instead of a clean chord. Called from the self-scheduling loop below;
+// `stormy` just scales loudness/brightness up a notch, mirroring the ambient wind bed's
+// own calm/storm gain difference.
 function playWindchimeSound(stormy) {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -10512,23 +10518,29 @@ function playWindchimeSound(stormy) {
       var detune = 1 + (Math.random() * 0.03 - 0.015); // real tubes are never quite in tune with themselves
       var f = base * detune;
       var partials = [
-        { r: 1.00, g: 0.05 * loud, d: 1.1 + Math.random() * 0.5 },
-        { r: 2.76, g: 0.028 * loud, d: 0.8 + Math.random() * 0.4 },
-        { r: 5.40, g: 0.014 * loud, d: 0.5 + Math.random() * 0.3 }
+        { r: 1.00,  g: 0.055 * loud, d: 1.9 + Math.random() * 0.9 },
+        { r: 2.76,  g: 0.032 * loud, d: 1.4 + Math.random() * 0.6 },
+        { r: 5.40,  g: 0.017 * loud, d: 0.9 + Math.random() * 0.4 },
+        { r: 8.93,  g: 0.007 * loud, d: 0.5 + Math.random() * 0.25 }
       ];
       partials.forEach(function (p) {
-        var osc = ctx.createOscillator();
-        osc.type = "triangle";
-        osc.frequency.setValueAtTime(f * p.r, onset);
-        osc.frequency.exponentialRampToValueAtTime(f * p.r * 0.96, onset + p.d);
-        var g = ctx.createGain();
-        g.gain.setValueAtTime(0.0001, onset);
-        g.gain.exponentialRampToValueAtTime(p.g, onset + 0.008);
-        g.gain.exponentialRampToValueAtTime(0.0001, onset + p.d);
-        osc.connect(g);
-        g.connect(out);
-        osc.start(onset);
-        osc.stop(onset + p.d + 0.05);
+        // two sines a few cents apart, summed, instead of one oscillator — their slow
+        // beat is the "shimmer"; a plain single tone (or a triangle, with its own stacked
+        // harmonics) rings flatter and buzzier
+        [-0.004, 0.004].forEach(function (beat) {
+          var osc = ctx.createOscillator();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(f * p.r * (1 + beat), onset);
+          osc.frequency.exponentialRampToValueAtTime(f * p.r * (1 + beat) * 0.97, onset + p.d);
+          var g = ctx.createGain();
+          g.gain.setValueAtTime(0.0001, onset);
+          g.gain.exponentialRampToValueAtTime(p.g * 0.5, onset + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.0001, onset + p.d);
+          osc.connect(g);
+          g.connect(out);
+          osc.start(onset);
+          osc.stop(onset + p.d + 0.05);
+        });
       });
       // a soft contact tink on top of the ring, quieter/shorter than a close-up metal clink
       var nlen = Math.floor(ctx.sampleRate * 0.012);

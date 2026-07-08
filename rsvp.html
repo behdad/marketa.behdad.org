@@ -1906,6 +1906,7 @@ section{margin:1.9rem 0}
 <rect x="422" y="20" width="8" height="272" fill="#26221f"/>
 <rect x="104" y="110" width="424" height="8" fill="#26221f"/>
 <rect x="104" y="200" width="424" height="8" fill="#26221f"/>
+<rect id="garden-window-flash" class="window-storm-flash" x="104" y="20" width="424" height="272"/>
 </g>
 <g id="garden-blind" class="hunt-hit" tabindex="0" role="button" aria-label="The window blind">
 <rect x="426" y="20" width="102" height="88" fill="transparent"/>
@@ -10046,7 +10047,7 @@ function spawnDustMote(container) {
     var sb = document.getElementById("stage-balcony");
     if (!sb || !sb.classList.contains("dusk")) return;   // only during a night storm
     if (document.visibilityState === "hidden") return;    // don't rumble a hidden tab
-    ["balcony-thunder-flash", "kitchen-window-flash", "office-window-flash"].forEach(function (id) {
+    ["balcony-thunder-flash", "kitchen-window-flash", "office-window-flash", "garden-window-flash"].forEach(function (id) {
       var el = document.getElementById(id);
       if (!el) return;
       el.classList.remove("flash");
@@ -10105,23 +10106,23 @@ function spawnDustMote(container) {
     }
     function endStorm() {
       window.__balconyStorm = false; // drops stop replenishing -> rain fades in ~1s
-      timers.push(setTimeout(startStorm, 150000 + Math.random() * 150000)); // next storm in ~2.5-5 min
+      timers.push(setTimeout(startStorm, 55000 + Math.random() * 50000)); // next storm in ~1-1.75 min
     }
     function startStorm() {
       if (!isDuskBalcony()) { clearAll(); return; }
       window.__balconyStorm = true;
       for (var d = 0; d < RAIN_DROPS; d++) spawnDrop(); // seed the rain
-      var n = 1 + Math.floor(Math.random() * 2); // 1 or 2 thunderclaps
-      var when = 2000;
+      var n = 2 + Math.floor(Math.random() * 2); // 2 or 3 thunderclaps (quiet indoors, so lightning's the show)
+      var when = 1500;
       for (var i = 0; i < n; i++) {
-        when += 4000 + Math.random() * 5000;
+        when += 3500 + Math.random() * 4000;
         timers.push(setTimeout(function () { window.triggerBalconyThunder(); }, when));
       }
       timers.push(setTimeout(endStorm, when + 5000 + Math.random() * 3000));
     }
     window.__startBalconyStormCycle = function () {
       clearAll();
-      timers.push(setTimeout(startStorm, 15000 + Math.random() * 6000));
+      timers.push(setTimeout(startStorm, 9000 + Math.random() * 6000)); // first storm ~9-15s into the night
     };
     window.__stopBalconyStormCycle = clearAll;
   })();

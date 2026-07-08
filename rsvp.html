@@ -338,6 +338,13 @@ footer{margin-top:2.6rem}
 #stage-balcony.storming #balcony-windchime-swing{animation:windchime-sway-storm 1.9s ease-in-out infinite}
 @keyframes windchime-sway-storm{0%,100%{transform:rotate(0)} 22%{transform:rotate(-7deg)} 48%{transform:rotate(4deg)} 74%{transform:rotate(-5.5deg)} 90%{transform:rotate(2deg)}}
 @media (prefers-reduced-motion: reduce){#stage-balcony.storming #balcony-windchime-swing{animation:none}}
+/* click-to-ring: a one-shot extra kick, on its OWN inner wrapper distinct from
+   #balcony-windchime-swing's continuous loop, so the two `animation` shorthands never
+   contend for the same element (the id-vs-class cascade trap CLAUDE.md documents) */
+#balcony-windchime-kick{transform-box:fill-box; transform-origin:50% 0%}
+#balcony-windchime-kick.rung{animation:windchime-kick 0.9s ease-out}
+@keyframes windchime-kick{0%{transform:rotate(0)} 15%{transform:rotate(11deg)} 38%{transform:rotate(-8deg)} 60%{transform:rotate(4.5deg)} 80%{transform:rotate(-2deg)} 100%{transform:rotate(0)}}
+@media (prefers-reduced-motion: reduce){#balcony-windchime-kick.rung{animation:none}}
 /* the cuddly nook's own balcony door swings on its wall-side hinge (bottom-right of
    the leaf's bbox) into the room, its leaf passing over Octi. Position is baked into
    the leaf's coordinates, so this rotate can't clobber a transform= attribute. */
@@ -4048,9 +4055,14 @@ section{margin:1.9rem 0}
      down to a reddish-brown wind-catcher paddle that hangs lower than the tubes. All
      position is baked into these coordinates (none of it lives in a transform=), so the
      continuous sway below (#balcony-windchime-swing, a rotate) can't clobber a static
-     placement — see CLAUDE.md's transform-animation bug class. -->
-<g id="balcony-windchime" pointer-events="none">
+     placement — see CLAUDE.md's transform-animation bug class. Clickable: rings on tap,
+     via the SAME playWindchimeSound the ambient gust loop uses, plus a one-shot extra
+     kick on #balcony-windchime-kick (a wrapper distinct from -swing's own looping
+     animation, per the cascade rule above). -->
+<g id="balcony-windchime" class="hunt-hit" tabindex="0" role="button" aria-label="The windchime">
+<rect x="164" y="62" width="34" height="88" fill="transparent"/>
 <g id="balcony-windchime-swing">
+<g id="balcony-windchime-kick">
 <line x1="181" y1="66" x2="181" y2="77" stroke="#8a8578" stroke-width="1"/>
 <ellipse cx="181" cy="80" rx="6" ry="3" fill="#6b4226" stroke="#3a2415" stroke-width="1"/>
 <line x1="181" y1="83" x2="181" y2="130" stroke="#8a8578" stroke-width="0.8"/>
@@ -4067,6 +4079,7 @@ section{margin:1.9rem 0}
 <line x1="182" y1="83" x2="182" y2="88" stroke="#8a8578" stroke-width="0.8"/>
 <rect x="180" y="88" width="4.4" height="34" rx="2.2" fill="#3a3e42" stroke="#26292c" stroke-width="1"/>
 <line x1="181.6" y1="90.5" x2="181.6" y2="119" stroke="#565a5e" stroke-width="0.8"/>
+</g>
 </g>
 </g>
 <g id="balcony-dustpan" class="hunt-hit" tabindex="0" role="button" aria-label="The dusty dustpan">
@@ -7476,6 +7489,24 @@ document.addEventListener("click", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); shakeDustpan(e); }
     });
   }
+  var windchime = document.getElementById("balcony-windchime");
+  if (windchime) {
+    var windchimeKick = document.getElementById("balcony-windchime-kick");
+    function ringWindchime(e) {
+      if (e) e.stopPropagation();
+      if (windchimeKick) {
+        windchimeKick.classList.remove("rung");
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { windchimeKick.classList.add("rung"); });
+        });
+      }
+      playWindchimeSound(!!window.__balconyStorm);
+    }
+    windchime.addEventListener("click", ringWindchime);
+    windchime.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ringWindchime(e); }
+    });
+  }
   var doormat = document.getElementById("balcony-doormat");
   if (doormat) {
     function shakeDoormat() {
@@ -7797,10 +7828,10 @@ document.addEventListener("click", function (e) {
   function tick() {
     var stormy = !!window.__balconyStorm;
     if (want()) playWindchimeSound(stormy);
-    var delay = stormy ? (4500 + Math.random() * 6000) : (13000 + Math.random() * 16000);
+    var delay = stormy ? (1800 + Math.random() * 2800) : (3500 + Math.random() * 5000);
     setTimeout(tick, delay);
   }
-  setTimeout(tick, 6000 + Math.random() * 6000); // first ring a little after arriving
+  setTimeout(tick, 2000 + Math.random() * 2500); // first ring soon after arriving
 })();
 (function () {
   var lampIds = ["office-lamp", "office-pendant"];

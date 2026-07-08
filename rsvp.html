@@ -5932,12 +5932,26 @@ document.addEventListener("click", function (e) {
     bottles.addEventListener("pointercancel", onBottlesPointerUp);
   }
   var growlight = document.getElementById("garden-growlight");
-  function toggleGrowlight() { growlight.classList.toggle("off"); }
+  var growTimer = null;
+  // the grow light runs itself on a timer (long on-phase, shorter off), like a
+  // real plant light; a manual click just resets the schedule from there
+  function scheduleGrowCycle() {
+    if (!growlight) return;
+    clearTimeout(growTimer);
+    var on = !growlight.classList.contains("off");
+    var dur = on ? (34000 + Math.random() * 16000) : (20000 + Math.random() * 12000);
+    growTimer = setTimeout(function () {
+      if (document.visibilityState !== "hidden") growlight.classList.toggle("off");
+      scheduleGrowCycle();
+    }, dur);
+  }
+  function toggleGrowlight() { growlight.classList.toggle("off"); scheduleGrowCycle(); }
   if (growlight) {
     growlight.addEventListener("click", toggleGrowlight);
     growlight.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleGrowlight(); }
     });
+    scheduleGrowCycle();
   }
   var cat = document.getElementById("witchy-chest-cat");
   var fairy = document.getElementById("witchy-chest-fairy");

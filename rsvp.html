@@ -763,10 +763,9 @@ footer{margin-top:2.6rem}
 #monitor-prev-btn, #monitor-next-btn{opacity:0; visibility:hidden; pointer-events:none; cursor:pointer; transition:opacity .4s ease}
 #office-monitor.show-nowplaying #monitor-prev-btn, #office-monitor.show-nowplaying #monitor-next-btn{opacity:1; visibility:visible; pointer-events:auto}
 #monitor-prev-btn:hover circle, #monitor-next-btn:hover circle{fill:#7a2f3d}
-/* the saver alternates between the bouncing caps and a live Julia fractal */
+/* the idle screensaver: a live Julia fractal */
 #monitor-saver-fractal{opacity:0; pointer-events:none} /* clicks pass through to wake the monitor */
-#office-monitor.show-saver.saver-fractal #monitor-saver-caps{opacity:0}
-#office-monitor.show-saver.saver-fractal #monitor-saver-fractal{opacity:1}
+#office-monitor.show-saver #monitor-saver-fractal{opacity:1}
 .eq-bar{transform-box:fill-box; transform-origin:bottom center; transform:scaleY(0.28)}
 #monitor-np-marquee{transform:translateX(85px)}
 #office-monitor.show-nowplaying #monitor-np-marquee{animation:np-scroll 13s linear infinite}
@@ -1517,6 +1516,13 @@ footer{margin-top:2.6rem}
 /* hide the screen face when closed so no white peeks out of the lid sliver */
 #office-laptop-face{opacity:0; transition:opacity .25s ease}
 #office-laptop.open #office-laptop-face{opacity:1}
+/* the idle screensaver (bouncing-caps "DVD logo") takes over the face once the
+   laptop's been open and untouched for a while; pointer-events:none keeps the
+   (now-invisible) call tile from swallowing the wake click, same reasoning as
+   the call/update/boot overlays below */
+#office-laptop.show-saver #office-laptop-face{opacity:0; pointer-events:none}
+#laptop-saver{opacity:0; transition:opacity .3s ease}
+#office-laptop.show-saver #laptop-saver{opacity:1}
 /* the mac's "installing a software update, restarting" gag */
 #laptop-update, #laptop-boot{opacity:0; transition:opacity .3s ease}
 #office-laptop.updating #laptop-update{opacity:1}
@@ -1547,7 +1553,7 @@ footer{margin-top:2.6rem}
 /* the full-screen overlays sit ABOVE the desktop face, so keep them click-through —
    otherwise (even at opacity 0) they swallow the call-tile click and it bubbles to the
    lid, closing the laptop. Any click during a call/update still bubbles up to hang up/close. */
-#laptop-call, #laptop-update, #laptop-boot{pointer-events:none}
+#laptop-call, #laptop-update, #laptop-boot, #laptop-saver{pointer-events:none}
 #laptop-menubar text, #laptop-call text{font-family:sans-serif}
 #laptop-editor text{font-family:monospace}
 /* the editor's Czech title types itself on: a clip window scales open + a riding, blinking caret */
@@ -3534,7 +3540,6 @@ section{margin:1.9rem 0}
 <g transform="translate(273.5,149.5) scale(0.5)"><use href="#cap-pink"/><use href="#cap-blue"/></g>
 </g>
 <g id="monitor-saver" class="boot-logo">
-<g id="monitor-saver-caps" transform="translate(280,158) scale(0.28)"><use href="#cap-pink"/><use href="#cap-blue"/></g>
 <foreignObject id="monitor-saver-fractal" x="254" y="154" width="124" height="42">
 <canvas xmlns="http://www.w3.org/1999/xhtml" id="monitor-fractal-canvas" width="248" height="84" style="width:124px;height:42px;display:block"></canvas>
 </foreignObject>
@@ -3711,6 +3716,10 @@ section{margin:1.9rem 0}
 </g>
 <path id="laptop-boot-heart" d="M417 181.6 C415 179.1 411.5 177.1 411.5 173.9 C411.5 171.9 413 170.6 414.6 170.6 C415.8 170.6 416.6 171.3 417 172.1 C417.4 171.3 418.2 170.6 419.4 170.6 C421 170.6 422.5 171.9 422.5 173.9 C422.5 177.1 419 179.1 417 181.6 Z" fill="#e0637a"/>
 <circle id="laptop-spinner" cx="417" cy="189" r="2.4" fill="none" stroke="#c8c8c8" stroke-width="1" stroke-dasharray="2.2 2.2"/>
+</g>
+<!-- idle screensaver: the bouncing-caps "DVD logo" -->
+<g id="laptop-saver">
+<g id="laptop-saver-caps" transform="translate(405.1,173.9) scale(0.14)"><use href="#cap-pink"/><use href="#cap-blue"/></g>
 </g>
 </g>
 <polygon points="382,202 452,202 458,208 376,208" fill="#6b6b6b" stroke="#4a4a4a" stroke-width="1.5"/>
@@ -6026,6 +6035,48 @@ document.addEventListener("click", function (e) {
     function inCall() {
       return laptop.classList.contains("calling") || laptop.classList.contains("connecting") || laptop.classList.contains("connected");
     }
+    // After the laptop's been open and untouched a while, the bouncing-caps "DVD
+    // logo" screensaver takes over. Any click wakes it back to the normal
+    // TextEdit face.
+    var laptopSaverTimer = null, laptopSaverRaf = null;
+    function stopLaptopSaver() {
+      clearTimeout(laptopSaverTimer);
+      laptopSaverTimer = null;
+      if (laptopSaverRaf) { cancelAnimationFrame(laptopSaverRaf); laptopSaverRaf = null; }
+      laptop.classList.remove("show-saver");
+    }
+    function scheduleLaptopSaver(ms) {
+      clearTimeout(laptopSaverTimer);
+      laptopSaverTimer = setTimeout(startLaptopSaver, ms || 8000);
+    }
+    function startLaptopSaver() {
+      if (!laptop.classList.contains("open") || laptop.classList.contains("updating") ||
+          laptop.classList.contains("rebooting") || inCall()) return;
+      laptop.classList.add("show-saver");
+      startLaptopCapsSaver();
+    }
+    // Classic "DVD logo" bounce physics, confined to the laptop's inner screen
+    // rect (x:388..446, y:164..198).
+    function startLaptopCapsSaver() {
+      var el = document.getElementById("laptop-saver-caps");
+      if (!el) return;
+      if (laptopReduce) { el.setAttribute("transform", "translate(405.1,173.9) scale(0.14)"); return; }
+      var px = 405, py = 174, vx = 0.018, vy = 0.014, last = null;
+      function step(t) {
+        if (last === null) last = t;
+        var dt = Math.min(t - last, 50);
+        last = t;
+        px += vx * dt;
+        py += vy * dt;
+        if (px <= 387.2) { px = 387.2; vx = Math.abs(vx); }
+        if (px >= 423) { px = 423; vx = -Math.abs(vx); }
+        if (py <= 163.9) { py = 163.9; vy = Math.abs(vy); }
+        if (py >= 183.8) { py = 183.8; vy = -Math.abs(vy); }
+        el.setAttribute("transform", "translate(" + px.toFixed(1) + "," + py.toFixed(1) + ") scale(0.14)");
+        laptopSaverRaf = requestAnimationFrame(step);
+      }
+      laptopSaverRaf = requestAnimationFrame(step);
+    }
     // The monitor's boot ends by inviting the (closed, idle) laptop to pulse; any
     // interaction with the laptop clears the invite.
     function stopLaptopInvite() { laptop.classList.remove("inviting"); }
@@ -6041,6 +6092,7 @@ document.addEventListener("click", function (e) {
     // hang-up, and by window.resetLaptop.
     function endLaptopUpdate() {
       clearLaptopTimers();
+      stopLaptopSaver();
       laptop.classList.remove("updating", "progress", "rebooting", "sweet", "calling", "connecting", "connected");
     }
     // The gag: an open Mac decides to install a software update and reboot — now framed
@@ -6050,6 +6102,7 @@ document.addEventListener("click", function (e) {
       if (!laptop.classList.contains("open")) return;
       if (laptop.classList.contains("updating") || laptop.classList.contains("rebooting") || inCall()) return;
       clearLaptopTimers();
+      stopLaptopSaver();
       laptopUpdateCount++;
       var sweet = (laptopUpdateCount % 3 === 0);
       laptop.classList.add("updating");
@@ -6065,6 +6118,7 @@ document.addEventListener("click", function (e) {
       laptopUpdateTimers.push(setTimeout(function () {
         laptop.classList.remove("rebooting", "sweet");
         playBootChimeSound();
+        scheduleLaptopSaver(); // back to idle — the screensaver clock resumes
       }, 5300));
     }
     // Call the Prague garden: ring → connecting → the garden appears with the couple
@@ -6078,6 +6132,7 @@ document.addEventListener("click", function (e) {
       if (!laptop.classList.contains("open")) return;
       if (laptop.classList.contains("updating") || laptop.classList.contains("rebooting") || inCall()) return;
       clearLaptopTimers();
+      stopLaptopSaver();
       window.__pragueCalled = true; // satisfies the office finale's Call-Prague requirement
       // the "Call Prague first" caption otherwise only re-checks on a light toggle — if
       // the lights were ALREADY off when the call starts, nothing else would ever clear
@@ -6116,19 +6171,30 @@ document.addEventListener("click", function (e) {
     function endCall() {
       clearLaptopTimers();
       laptop.classList.remove("calling", "connecting", "connected");
+      if (laptop.classList.contains("open")) scheduleLaptopSaver(); // back to idle
     }
     function toggleLaptop() {
       if (inCall()) { endCall(); return; }
       var open = laptop.classList.toggle("open");
       playLaptopClickSound("office-laptop");
       // an open Mac always finds an update to install :)
-      if (open) laptopAutoTimer = setTimeout(runLaptopUpdate, 2600);
-      else endLaptopUpdate();
+      if (open) {
+        laptopAutoTimer = setTimeout(runLaptopUpdate, 2600);
+        scheduleLaptopSaver();
+      } else {
+        endLaptopUpdate();
+      }
     }
     var laptopClickTimer = null;
     laptop.addEventListener("click", function () {
       stopLaptopInvite();
       clearTimeout(laptopClickTimer);
+      if (laptop.classList.contains("show-saver")) {
+        stopLaptopSaver();
+        scheduleLaptopSaver(); // back to idle — the screensaver clock resumes
+        playLaptopClickSound("office-laptop");
+        return;
+      }
       laptopClickTimer = setTimeout(toggleLaptop, 240);
     });
     laptop.addEventListener("dblclick", function () {
@@ -6138,7 +6204,17 @@ document.addEventListener("click", function (e) {
       runLaptopUpdate();
     });
     laptop.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); stopLaptopInvite(); clearTimeout(laptopClickTimer); toggleLaptop(); }
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+      stopLaptopInvite();
+      clearTimeout(laptopClickTimer);
+      if (laptop.classList.contains("show-saver")) {
+        stopLaptopSaver();
+        scheduleLaptopSaver();
+        playLaptopClickSound("office-laptop");
+        return;
+      }
+      toggleLaptop();
     });
     // The call tile is its own control: start a call, or hang up if one's live.
     // stopImmediatePropagation keeps its click from also toggling the lid.
@@ -6261,10 +6337,9 @@ document.addEventListener("click", function (e) {
   var bootTimers = [];
   var CAPS_URL = "https://marketa.behdad.org/";
   var monitorUrl = CAPS_URL;
-  // After the caps site idles a while, a screensaver takes over — alternating
-  // between the classic bouncing caps and a live Julia-set fractal ("electric
-  // sheep" nod). Any click on the monitor wakes it.
-  var saverTimer = null, saverRaf = null, saverCycleTimer = null, saverFractalNext = false;
+  // After the caps site idles a while, a live Julia-set fractal screensaver takes
+  // over ("electric sheep" nod). Any click on the monitor wakes it.
+  var saverTimer = null, saverRaf = null;
   // While a song plays, tapping a site logo shows that site briefly, then the
   // now-playing equalizer slides back over it (see navigateMonitor). This timer
   // drives that revert; it's cancelled if the song ends or the user navigates again.
@@ -6274,19 +6349,12 @@ document.addEventListener("click", function (e) {
   function stopSaver() {
     clearTimeout(saverTimer);
     saverTimer = null;
-    clearTimeout(saverCycleTimer);
-    saverCycleTimer = null;
     if (saverRaf) { cancelAnimationFrame(saverRaf); saverRaf = null; }
-    monitor.classList.remove("show-saver", "saver-fractal");
+    monitor.classList.remove("show-saver");
   }
   function scheduleSaver(ms) {
     clearTimeout(saverTimer);
     saverTimer = setTimeout(startSaver, ms || 8000);
-  }
-  function showSaverMode(fractal) {
-    if (saverRaf) { cancelAnimationFrame(saverRaf); saverRaf = null; }
-    if (fractal) { monitor.classList.add("saver-fractal"); startFractalSaver(); }
-    else { monitor.classList.remove("saver-fractal"); startCapsSaver(); }
   }
   function startSaver() {
     // a visited site (harfbuzz/behdad) idles back to the caps "home" before the saver
@@ -6302,37 +6370,7 @@ document.addEventListener("click", function (e) {
     if (!fromNowPlaying && !monitor.classList.contains("show-caps")) return;
     monitor.classList.remove("show-caps");
     monitor.classList.add("show-saver");
-    showSaverMode(saverFractalNext = !saverFractalNext);
-    if (!reduceMotion) scheduleSaverFlip(); // keep swapping while idle
-  }
-  // the caps saver is a bit dull, so show it only briefly; linger on the fractal
-  function scheduleSaverFlip() {
-    clearTimeout(saverCycleTimer);
-    var dur = saverFractalNext ? 15000 : 5000; // fractal 15s, caps 5s
-    saverCycleTimer = setTimeout(function () {
-      showSaverMode(saverFractalNext = !saverFractalNext);
-      scheduleSaverFlip();
-    }, dur);
-  }
-  function startCapsSaver() {
-    var el = document.getElementById("monitor-saver-caps");
-    if (!el) return;
-    if (reduceMotion) { el.setAttribute("transform", "translate(292,160) scale(0.28)"); return; }
-    var px = 270, py = 158, vx = 0.035, vy = 0.028, last = null;
-    function step(t) {
-      if (last === null) last = t;
-      var dt = Math.min(t - last, 50);
-      last = t;
-      px += vx * dt;
-      py += vy * dt;
-      if (px <= 250.4) { px = 250.4; vx = Math.abs(vx); }
-      if (px >= 334) { px = 334; vx = -Math.abs(vx); }
-      if (py <= 151.8) { py = 151.8; vy = Math.abs(vy); }
-      if (py >= 169.6) { py = 169.6; vy = -Math.abs(vy); }
-      el.setAttribute("transform", "translate(" + px.toFixed(1) + "," + py.toFixed(1) + ") scale(0.28)");
-      saverRaf = requestAnimationFrame(step);
-    }
-    saverRaf = requestAnimationFrame(step);
+    startFractalSaver();
   }
   // Julia-set renderer — escape-time, smooth-colored, glowing on near-black
   // ("electric sheep" look). Reused by the mushroom-trip plants via window.__renderJulia.

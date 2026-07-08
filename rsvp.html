@@ -535,6 +535,17 @@ footer{margin-top:2.6rem}
 #office-skull.grooving{animation:skull-nod .7s ease-in-out infinite}
 @keyframes skull-nod{0%,100%{transform:translateY(0) rotate(0)} 50%{transform:translateY(-1.4px) rotate(3deg)}}
 @media (prefers-reduced-motion: reduce){#office-skull.grooving{animation:none}}
+/* once a song's played a while the skull escalates from a nod to a full dance: the
+   big sway rides a wrapper so it composes with (doesn't replace) the phase-locked nod */
+#office-skull-dance{transform-box:fill-box; transform-origin:bottom center}
+#office-skull-dance.dancing{animation:skull-dance 1.2s ease-in-out infinite}
+@keyframes skull-dance{
+  0%,100%{transform:translate(0,0) rotate(0)}
+  25%{transform:translate(-3px,-1px) rotate(-8deg)}
+  50%{transform:translate(0,-3px) rotate(0)}
+  75%{transform:translate(3px,-1px) rotate(8deg)}
+}
+@media (prefers-reduced-motion: reduce){#office-skull-dance.dancing{animation:none}}
 @keyframes jaw-chatter{
   0%, 100%{transform:translateY(0)}
   15%{transform:translateY(1.6px)}
@@ -3110,6 +3121,7 @@ section{margin:1.9rem 0}
 <rect x="101" y="296" width="34" height="6" rx="3" fill="#1f1f1f"/>
 <rect x="88" y="246" width="60" height="7" rx="3" fill="#3a2a22" stroke="#241a14" stroke-width="1.2"/>
 <line x1="92" y1="248.5" x2="144" y2="248.5" stroke="#54402f" stroke-width="1"/>
+<g id="office-skull-dance">
 <g id="office-skull" class="hunt-hit" tabindex="0" role="button" aria-label="The gold anatomy skull">
 <rect x="93" y="214" width="26" height="32" fill="transparent"/>
 <circle cx="106" cy="227" r="10" fill="#d4a93c" stroke="#a87f28" stroke-width="1.2"/>
@@ -3122,6 +3134,7 @@ section{margin:1.9rem 0}
 <rect x="99.5" y="235" width="13" height="11" rx="3" fill="#d4a93c" stroke="#a87f28" stroke-width="1.2"/>
 <path d="M103 238 V244 M106 238 V244 M109 238 V244" stroke="#a87f28" stroke-width="0.9"/>
 <path d="M99.5 240.5 H112.5" stroke="#a87f28" stroke-width="0.9"/>
+</g>
 </g>
 </g>
 <g id="office-broken-glass" class="hunt-hit" tabindex="0" role="button" aria-label="The broken coupe glass">
@@ -11791,6 +11804,7 @@ function spawnDustMote(container) {
     if (period < 0.4) period *= 2;
     return { toe: period, head: period * 1.4 };
   }
+  var skullDanceTimer = null; // arms while music plays; fires to escalate the skull into a dance
   function updateCuddlyGrooving() {
     var playing = null;
     Object.keys(instrumentSpots).some(function (id) {
@@ -11828,6 +11842,18 @@ function spawnDustMote(container) {
     }
     // the office gold skull nods to the beat too, phase-locked the same way
     setGroove(document.getElementById("office-skull"), durations.head);
+    // ...and after ~5s of continuous music it escalates into a full dance, on top of the nod
+    var skullDance = document.getElementById("office-skull-dance");
+    if (skullDance) {
+      if (anyPlaying) {
+        if (!skullDanceTimer && !skullDance.classList.contains("dancing")) {
+          skullDanceTimer = setTimeout(function () { skullDanceTimer = null; skullDance.classList.add("dancing"); }, 5000);
+        }
+      } else {
+        if (skullDanceTimer) { clearTimeout(skullDanceTimer); skullDanceTimer = null; }
+        skullDance.classList.remove("dancing");
+      }
+    }
     // kitchen water, balcony wine, and the wooden head bob on the beat, phase-locked
     setGroove(document.getElementById("kitchen-waterbottle-liquid-groove"), durations.head);
     setGroove(document.getElementById("balcony-wine-liquid-groove"), durations.head);

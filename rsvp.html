@@ -1662,6 +1662,8 @@ footer{margin-top:2.6rem}
 }
 @keyframes cuddly-fire-ember{0%,100%{transform:scaleX(1)} 50%{transform:scaleX(1.1)}}
 #cuddly-firelight{transition:opacity .5s ease}
+/* Fishu catches a warm halo from the fireplace when it drifts near (JS sets opacity by proximity) */
+#fishu-fire-halo{transition:opacity .5s ease}
 #stage-cuddly.dusk #cuddly-firelight{opacity:.62; animation:cuddly-fire-glow-breathe 4.6s ease-in-out infinite}
 @keyframes cuddly-fire-glow-breathe{0%,100%{opacity:.66} 50%{opacity:.46}}
 /* click the screen: the fire goes out, the panel goes dark, the room glow lifts */
@@ -3084,6 +3086,7 @@ section{margin:1.9rem 0}
 <g id="cuddly-puffer-wrap" transform="translate(495,95)">
 <g class="puffer-drift">
 <g transform="scale(0.845)">
+<ellipse id="fishu-fire-halo" cx="0" cy="0" rx="44" ry="37" fill="url(#cuddly-firelight-grad)" opacity="0" pointer-events="none" aria-hidden="true"/>
 <g class="puffer-puff">
 <g class="puffer-body">
 <circle cx="0" cy="0" r="30" fill="transparent"/>
@@ -12802,6 +12805,25 @@ function spawnDustMote(container) {
   strip.addEventListener("touchmove", function (e) {
     if (e.target.closest && e.target.closest(DRAG_SEL)) e.preventDefault();
   }, { passive: false });
+})();
+(function () {
+  // Fishu paints in FRONT of the fireplace projector (move it after the screen), and
+  // catches a warm halo from the fire when it drifts near — opacity by horizontal
+  // proximity to the screen, only while the nook is on-screen and the fire is on.
+  var ws = document.getElementById("cuddly-wallscreen");
+  var pf = document.getElementById("cuddly-puffer-wrap");
+  if (ws && pf && ws.parentNode) ws.parentNode.insertBefore(pf, ws.nextSibling);
+  var body = pf && pf.querySelector(".puffer-body");
+  var halo = document.getElementById("fishu-fire-halo");
+  if (!ws || !body || !halo) return;
+  setInterval(function () {
+    if (document.hidden || ws.classList.contains("off")) { halo.style.opacity = "0"; return; }
+    var f = ws.getBoundingClientRect();
+    if (!f.width || f.right < 0 || f.left > window.innerWidth) { halo.style.opacity = "0"; return; }
+    var b = body.getBoundingClientRect();
+    var dist = Math.abs((b.left + b.width / 2) - (f.left + f.width / 2));
+    halo.style.opacity = Math.max(0, Math.min(0.72, (f.width - dist) / f.width * 0.72)).toFixed(2);
+  }, 200);
 })();
 </script>
 </body>

@@ -9357,6 +9357,10 @@ function spawnWaterDroplets(svg, cx, cy) {
 }
 function spawnGardenButterfly(svg) {
   if (!svg) return;
+  // clear any stale butterflies (if frames paused while the tab was
+  // backgrounded, their onfinish may never have fired) so they can't pile up
+  var stale = svg.querySelectorAll(".garden-ambient-butterfly");
+  for (var q = 0; q < stale.length; q++) stale[q].remove();
   var startX = 700 + Math.random() * 100;
   var startY = 40 + Math.random() * 60;
   var endX = 1240 + Math.random() * 80;
@@ -9387,6 +9391,10 @@ function spawnGardenButterfly(svg) {
 }
 function spawnDustMote(container) {
   if (!container) return;
+  // cap live motes so a backgrounded tab (paused frames -> no onfinish) can't
+  // let them accumulate; drop the oldest once there are too many
+  var motes = container.querySelectorAll(".dust-mote");
+  if (motes.length >= 10) { motes[0].remove(); }
   var startX = 100 + Math.random() * 100;
   var startY = 150 + Math.random() * 30;
   var drift = (Math.random() - 0.5) * 30;
@@ -9397,6 +9405,7 @@ function spawnDustMote(container) {
   d.setAttribute("r", 1 + Math.random());
   d.setAttribute("fill", "#f4e8c8");
   d.setAttribute("opacity", "0");
+  d.setAttribute("class", "dust-mote");
   d.setAttribute("aria-hidden", "true");
   d.style.transformBox = "fill-box";
   d.style.transformOrigin = "center";

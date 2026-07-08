@@ -1419,6 +1419,7 @@ footer{margin-top:2.6rem}
 #garden-caterpillar{opacity:0; transition:opacity .9s ease; pointer-events:none}
 #stage-garden.dusk #garden-caterpillar{opacity:1; pointer-events:auto}
 #garden-caterpillar.metamorphosed{opacity:0 !important; pointer-events:none} /* clicked -> flew off as a butterfly */
+#garden-caterpillar:focus, #garden-caterpillar:focus-visible{outline:none}
 #stage-garden.dusk #garden-caterpillar .cat-crawl{animation:cat-crawl 19s ease-in-out infinite}
 #stage-garden.dusk #garden-caterpillar .cat-body{animation:cat-inch 2.3s ease-in-out infinite; transform-box:fill-box; transform-origin:50% 100%}
 @keyframes cat-crawl{0%,100%{transform:translateX(0)} 50%{transform:translateX(12px)}}
@@ -10366,6 +10367,36 @@ function spawnDustMote(container) {
     var el = document.getElementById(id);
     onActivate(el, function () { waterSpecificPlant(id); });
   });
+  // click the night caterpillar and it metamorphoses — flutters off as a butterfly
+  (function () {
+    var cat = document.getElementById("garden-caterpillar");
+    if (!cat) return;
+    onActivate(cat, function () {
+      if (cat.classList.contains("metamorphosed")) return;
+      cat.classList.add("metamorphosed");
+      if (typeof playFairyChimeSound === "function") playFairyChimeSound();
+      var SVGNS = "http://www.w3.org/2000/svg", sx = 1011, sy = 308; // strip coords at the caterpillar
+      var g = document.createElementNS(SVGNS, "g");
+      g.setAttribute("class", "garden-ambient-butterfly"); // reuse the wing-flap CSS
+      g.setAttribute("aria-hidden", "true");
+      g.style.pointerEvents = "none"; g.style.transformBox = "fill-box"; g.style.transformOrigin = "center";
+      g.innerHTML =
+        '<ellipse cx="-4" cy="-3" rx="5" ry="3.6" fill="#e8b0c4" stroke="#c98fa8" stroke-width="0.8" class="bfly-wing"/>' +
+        '<ellipse cx="4" cy="-3" rx="5" ry="3.6" fill="#a9c3de" stroke="#7f9ec0" stroke-width="0.8" class="bfly-wing"/>' +
+        '<line x1="0" y1="-6" x2="0" y2="2" stroke="#453a31" stroke-width="1.2" stroke-linecap="round"/>';
+      strip.appendChild(g);
+      if (g.animate) {
+        g.animate([
+          { transform: "translate(" + sx + "px," + sy + "px) scale(0.5)", opacity: 0.2 },
+          { transform: "translate(" + (sx + 24) + "px," + (sy - 44) + "px) scale(2.4)", opacity: 1, offset: 0.25 },
+          { transform: "translate(" + (sx + 96) + "px," + (sy - 150) + "px) scale(2.4)", opacity: 1, offset: 0.72 },
+          { transform: "translate(" + (sx + 168) + "px," + (sy - 250) + "px) scale(2.2)", opacity: 0 }
+        ], { duration: 3400, easing: "ease-in-out" }).onfinish = function () { if (g.parentNode) g.remove(); };
+      } else {
+        setTimeout(function () { if (g.parentNode) g.remove(); }, 3500);
+      }
+    });
+  })();
   (function scheduleAmbientPlantSway() {
     var delay = 6000 + Math.random() * 8000;
     setTimeout(function () {
@@ -11148,6 +11179,8 @@ function spawnDustMote(container) {
         requestAnimationFrame(function () { el.style.transition = ""; });
       });
     });
+    var mcat = document.getElementById("garden-caterpillar");
+    if (mcat) mcat.classList.remove("metamorphosed"); // a reset brings the caterpillar back
   };
 
   var glass = document.getElementById("office-stainedglass");

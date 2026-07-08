@@ -6381,7 +6381,8 @@ document.addEventListener("click", function (e) {
   // tempo-synced beat-pulse equalizer fallback) with zero other code changes —
   // no build step, just edit this one line and redeploy. Re-flip to true to try
   // the pipeline again. Independent of git history either way.
-  var AUDIO_PIPELINE_ENABLED = false; // 2026-07: songs went silent on real playback — disabled until root-caused
+  var AUDIO_PIPELINE_ENABLED = false; // 2026-07: confirmed broken even unmuted — real bug in the pipeline itself,
+                                       // not (only) the earlier mute-persistence red herring. Root cause not found.
   var USE_LIVE_ANALYSER = AUDIO_PIPELINE_ENABLED;
   var eqRAF = null, eqAudioCtx = null, eqCtxFailed = false;
   var eqBassShelf = null, eqMuffleFilter = null, eqMasterGain = null, eqPanner = null, eqAnalyser = null;
@@ -6679,7 +6680,13 @@ document.addEventListener("click", function (e) {
   var volIdx = 2; // default 0.5
   try {
     var savedVol = localStorage.getItem("songVolume");
-    if (savedVol !== null) { var vk = VOL_LEVELS.indexOf(parseFloat(savedVol)); if (vk >= 0) volIdx = vk; }
+    if (savedVol !== null) {
+      var vk = VOL_LEVELS.indexOf(parseFloat(savedVol));
+      // don't resurrect a saved MUTE across visits — a stray click (testing, or a guest's
+      // accidental tap) would otherwise silence the site for that browser indefinitely with
+      // no obvious way back. A real quiet/full pick (0.25/1.0) still persists normally.
+      if (vk > 0) volIdx = vk;
+    }
   } catch (e) {}
   window.__songVolume = function () { return VOL_LEVELS[volIdx]; };
   function applySongVolume() {

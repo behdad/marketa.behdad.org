@@ -408,7 +408,18 @@ footer{margin-top:2.6rem}
 #witchy-chest-cat-groove{transform-box:fill-box; transform-origin:bottom center}
 #witchy-chest-cat-groove.grooving{animation:cat-dance .5s ease-in-out infinite}
 @keyframes cat-dance{0%,100%{transform:rotate(0)} 25%{transform:rotate(-6deg)} 75%{transform:rotate(6deg)}}
-@media (prefers-reduced-motion: reduce){#witchy-chest-cat-walk.roaming, #witchy-chest-cat-groove.grooving{animation:none}}
+/* once the cat has FOLLOWED the player into another room (repositioned via the outer
+   #witchy-chest-cat-pos wrapper, so this walk transform never fights that base offset),
+   it paces a tighter floor band than the wide garden stroll — symmetric so its base can
+   be centered in each room's clear patch. */
+#witchy-chest-cat-walk.roaming-sm{animation:cat-roam-sm 11s ease-in-out infinite}
+@keyframes cat-roam-sm{
+  0%,100%{transform:translateX(55px) translateY(0)}
+  25%{transform:translateX(0) translateY(-1.5px)}
+  50%{transform:translateX(-55px) translateY(0)}
+  75%{transform:translateX(0) translateY(-1.5px)}
+}
+@media (prefers-reduced-motion: reduce){#witchy-chest-cat-walk.roaming, #witchy-chest-cat-walk.roaming-sm, #witchy-chest-cat-groove.grooving{animation:none}}
 .cuddly-knife.wobbling{animation:knife-wobble .4s ease-in-out}
 @keyframes knife-wobble{
   0%, 100%{transform:rotate(0)}
@@ -2547,7 +2558,7 @@ section{margin:1.9rem 0}
 </g>
 <g id="garden-chest">
 <rect x="560" y="240" width="100" height="66" fill="#6b3a2f" stroke="#4a251e" stroke-width="2"/>
-<g id="witchy-chest-cat-walk"><g id="witchy-chest-cat-groove">
+<g id="witchy-chest-cat-pos"><g id="witchy-chest-cat-walk"><g id="witchy-chest-cat-groove">
 <g id="witchy-chest-cat" aria-hidden="true">
 <path d="M624 292 Q622 278 633 275 Q644 278 642 292 Z" fill="#161311"/>
 <circle cx="633" cy="267" r="7.5" fill="#161311"/>
@@ -2557,7 +2568,7 @@ section{margin:1.9rem 0}
 <circle cx="630" cy="266" r="1.2" fill="#c9e85c"/>
 <circle cx="636" cy="266" r="1.2" fill="#c9e85c"/>
 </g>
-</g></g>
+</g></g></g>
 <g id="witchy-chest-fairy-dance">
 <g id="witchy-chest-fairy" aria-hidden="true">
 <ellipse cx="574" cy="279" rx="7" ry="4" fill="#dcd8f0" opacity="0.85" transform="rotate(-20 574 279)"/>
@@ -7095,6 +7106,8 @@ document.addEventListener("click", function (e) {
       balconyDoor.classList.toggle("open");
       playCreakSound();
       updateCuddlyDoorFx();
+      // a cat can only slip out onto the balcony through an open door
+      if (window.__homeCat) window.__homeCat("balcony");
     }
     balconyDoor.addEventListener("click", toggleBalconyDoor);
     balconyDoor.addEventListener("keydown", function (e) {
@@ -7120,7 +7133,9 @@ document.addEventListener("click", function (e) {
       if (id === "witchy-door-2" && el.classList.contains("open") && cat) {
         wobbleEl(cat);
         var catWalk = document.getElementById("witchy-chest-cat-walk");
-        if (catWalk) catWalk.classList.add("roaming"); // out of the bag — it strolls the garden now
+        // .out = the cat is loose (persists across rooms/resets until the fire-extinguisher);
+        // .roaming = the wide garden stroll. Follower rooms swap in .roaming-sm (see __homeCat).
+        if (catWalk) catWalk.classList.add("roaming", "out"); // out of the bag — it strolls the garden now
       }
       if (id === "witchy-door-1" && el.classList.contains("open") && fairy) wobbleEl(fairy);
       if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // revealing/hiding starts/stops their dance
@@ -11116,6 +11131,7 @@ function spawnDustMote(container) {
     setCaption(name);
     restoreStageHint(name);
     updateNav();
+    if (window.__homeCat) window.__homeCat(name); // the loose cat follows the player between rooms
     if (name === "cuddly" && window.updateCuddlyGrooving) window.updateCuddlyGrooving();
     if (name === "cuddly" && window.resetFishu) window.resetFishu();
     if (name === "office" && window.revealOfficeFishuIfFled) window.revealOfficeFishuIfFled();
@@ -11997,7 +12013,7 @@ function spawnDustMote(container) {
     var catGrooveEl = document.getElementById("witchy-chest-cat-groove");
     if (catWalkEl && catGrooveEl) {
       // sways to the beat while it keeps strolling (the sway composes on top of the walk)
-      if (anyPlaying && catWalkEl.classList.contains("roaming")) setGroove(catGrooveEl, durations.toe);
+      if (anyPlaying && catWalkEl.classList.contains("out")) setGroove(catGrooveEl, durations.toe);
       else catGrooveEl.classList.remove("grooving");
     }
     // kitchen water, balcony wine, and the wooden head bob on the beat, phase-locked
@@ -12230,8 +12246,7 @@ function spawnDustMote(container) {
 
   function resetHunt() {
     window.__pragueCalled = false;
-    var catWalkR = document.getElementById("witchy-chest-cat-walk");
-    if (catWalkR) catWalkR.classList.remove("roaming", "listening"); // cat back in the chest
+    if (window.__stowCat) window.__stowCat(); // cat back in the chest, wherever it had wandered
     kitchenPowered = false;
     kitchenGround = false;
     kitchenSolved = false;
@@ -12538,6 +12553,66 @@ function spawnDustMote(container) {
   if (skipBtn) skipBtn.addEventListener("click", stopCinematic);
 
   goToStage("kitchen");
+})();
+(function () {
+  // Once the chest cat is loose (.out), it FOLLOWS the player from room to room. There is
+  // exactly ONE cat node; goToStage() re-parents #witchy-chest-cat-pos into the destination
+  // room's stage group and hangs a room-local base offset on it. The base offset lives on
+  // this OUTER wrapper, distinct from the inner #witchy-chest-cat-walk (which the roam
+  // animation drives) — so the walk's animated transform never clobbers the base position,
+  // and the innermost #witchy-chest-cat keeps its own click-wobble. Garden = native chest
+  // home + wide stroll (.roaming); other rooms = a tighter floor pace (.roaming-sm).
+  var pos = document.getElementById("witchy-chest-cat-pos");
+  var walk = document.getElementById("witchy-chest-cat-walk");
+  if (!pos || !walk) return;
+  var homeParent = pos.parentNode;      // #garden-chest
+  var homeNext = pos.nextSibling;       // the fairy group that follows the cat in the chest
+  // per-room floor placement: dx/dy shift the cat (native center x~636, feet y~292) onto a
+  // clear floor band; `before` inserts it behind that room's finale dim so it darkens too.
+  var ROOMS = {
+    kitchen: { stage: "stage-kitchen", dx: -486, dy: 41 },  // floor in front of the base cabinets
+    cuddly:  { stage: "stage-cuddly",  dx: -436, dy: 40 },  // floor left of the daybed, clear of the couple/octopus
+    office:  { stage: "stage-office",  dx: -71,  dy: 38, before: "office-dim-overlay" }, // floor right of the desk, clear of the chair/Fishu
+    balcony: { stage: "stage-balcony", dx: -36, dy: 32 }    // floor apron front-right, clear of the table/lounger/smoker
+  };
+  function eligible(room) {
+    if (room === "kitchen" || room === "cuddly" || room === "office") return true;
+    if (room === "balcony") { var d = document.getElementById("balcony-door"); return !!(d && d.classList.contains("open")); }
+    return false; // garden (native home) and anything unexpected fall through to the chest
+  }
+  // move the cat into `room` if it's loose and that room is reachable; otherwise park it
+  // back in its garden chest (off-screen from wherever the player is). Idempotent: calling
+  // it repeatedly for the same room is a no-op and never restarts the pace or dupes a cat.
+  window.__homeCat = function (room) {
+    if (!walk.classList.contains("out")) return; // still in the bag
+    if (eligible(room)) {
+      var cfg = ROOMS[room];
+      var stage = document.getElementById(cfg.stage);
+      if (!stage) return;
+      var ref = cfg.before ? document.getElementById(cfg.before) : null;
+      if (ref && ref.parentNode === stage) {
+        if (ref.previousSibling !== pos) stage.insertBefore(pos, ref);
+      } else if (pos.parentNode !== stage || pos.nextSibling) {
+        stage.appendChild(pos); // otherwise pad along the front floor (last child)
+      }
+      pos.setAttribute("transform", "translate(" + cfg.dx + "," + cfg.dy + ")");
+      walk.classList.remove("roaming");
+      walk.classList.add("roaming-sm");
+    } else {
+      // back to the garden chest, native coordinates, wide stroll
+      if (pos.parentNode !== homeParent || pos.nextSibling !== homeNext) homeParent.insertBefore(pos, homeNext);
+      pos.removeAttribute("transform");
+      walk.classList.remove("roaming-sm");
+      walk.classList.add("roaming");
+    }
+    if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // re-sync its music sway to the new room
+  };
+  // the fire-extinguisher reset stuffs the cat back in the chest, wherever it wandered
+  window.__stowCat = function () {
+    walk.classList.remove("out", "roaming", "roaming-sm");
+    pos.removeAttribute("transform");
+    if (pos.parentNode !== homeParent || pos.nextSibling !== homeNext) homeParent.insertBefore(pos, homeNext);
+  };
 })();
 (function () {
   var gmailBtn = document.getElementById("rsvp-gmail-btn");

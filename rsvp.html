@@ -1401,6 +1401,11 @@ footer{margin-top:2.6rem}
 #kitchen-window-pane{transition:fill .9s ease}
 #stage-kitchen.dusk #kitchen-window-pane{fill:#1a2438}
 #stage-cuddly.dusk #cuddly-dusk{opacity:0.28}
+/* warm sun shafts bleed into the nook from the open balcony door (day only) */
+#cuddly-sunrays{transition:opacity 1.1s ease}
+#stage-cuddly.door-daylight #cuddly-sunrays{opacity:1; animation:cuddly-sunray-breathe 7s ease-in-out infinite}
+@keyframes cuddly-sunray-breathe{0%,100%{opacity:.85} 50%{opacity:1}}
+@media (prefers-reduced-motion: reduce){#stage-cuddly.door-daylight #cuddly-sunrays{animation:none}}
 #stage-office.dusk #office-dusk{opacity:0.30}
 #office-window-pane-1{transition:fill .9s ease}
 #stage-office.dusk #office-window-pane-1{fill:#1a2438}
@@ -2708,8 +2713,14 @@ section{margin:1.9rem 0}
 <line x1="130" y1="137" x2="128" y2="153" stroke="#2d2d2d" stroke-width="4" stroke-linecap="round"/>
 <polygon points="124.5,153 131.5,153 129.5,179 125.5,185" fill="#c6cad0" stroke="#8f959e" stroke-width="1"/>
 </g>
+<g id="cuddly-sunrays" opacity="0" pointer-events="none" aria-hidden="true">
+<polygon points="680,18 680,74 372,340 262,340" fill="#f8e3a0" opacity="0.13"/>
+<polygon points="680,58 680,104 486,340 402,340" fill="#f8e3a0" opacity="0.11"/>
+<polygon points="680,96 680,138 588,340 520,340" fill="#f8e3a0" opacity="0.09"/>
+</g>
 <rect x="0" y="0" width="680" height="340" fill="#e8935a" opacity="0.1" pointer-events="none"/>
 <rect id="cuddly-dusk" x="0" y="0" width="680" height="340" fill="#141830" opacity="0" pointer-events="none"/>
+<g id="cuddly-rainfx" pointer-events="none" aria-hidden="true"></g>
 </g>
 <g id="stage-office" transform="translate(2040,0)">
 
@@ -5583,6 +5594,7 @@ document.addEventListener("click", function (e) {
         var st = document.getElementById(id);
         if (st) st.classList.toggle("dusk", dusk); // night is night everywhere
       });
+      if (window.__updateCuddlyDoorFx) window.__updateCuddlyDoorFx(); // sun shafts are a day thing
       playLampShimmerSound();
       var wallLampEl = document.getElementById("balcony-walllamp");
       if (dusk) {
@@ -5607,6 +5619,7 @@ document.addEventListener("click", function (e) {
         var st = document.getElementById(id);
         if (st) st.classList.remove("dusk");
       });
+      if (window.__updateCuddlyDoorFx) window.__updateCuddlyDoorFx();
       var wallLampEl = document.getElementById("balcony-walllamp");
       if (wallLampEl) wallLampEl.classList.remove("on");
       if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle();
@@ -6323,12 +6336,23 @@ document.addEventListener("click", function (e) {
     function toggleBalconyDoor() {
       balconyDoor.classList.toggle("open");
       playCreakSound();
+      updateCuddlyDoorFx();
     }
     balconyDoor.addEventListener("click", toggleBalconyDoor);
     balconyDoor.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleBalconyDoor(); }
     });
   }
+  // an open balcony door lets the outside into the cuddly nook: warm sun shafts by
+  // day (rain intrusion during a night storm is handled by its own spawner)
+  function updateCuddlyDoorFx() {
+    var door = document.getElementById("balcony-door");
+    var sc = document.getElementById("stage-cuddly");
+    if (!door || !sc) return;
+    sc.classList.toggle("door-daylight", door.classList.contains("open") && !sc.classList.contains("dusk"));
+  }
+  window.__updateCuddlyDoorFx = updateCuddlyDoorFx;
+  updateCuddlyDoorFx();
   ["witchy-door-1", "witchy-door-2"].forEach(function (id) {
     var el = document.getElementById(id);
     if (!el) return;

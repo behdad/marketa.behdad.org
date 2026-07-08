@@ -7618,25 +7618,37 @@ function playFireworkSound() {
     boomGain.connect(ctx.destination);
     boom.start(t);
     boom.stop(t + 0.45);
-    var buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.5), ctx.sampleRate);
+    // crackle: discrete, sharp spark-pops scattered over ~0.8–1.2s. A per-sample
+    // "pop amplitude" randomly re-triggers (thinning out as the overall decay
+    // envelope fades) and rings down each sample, so it reads as separate pops
+    // rather than a flat noise wash; a bandpass around 4kHz makes each pop ring
+    // for that distant-firework "sparkle." Randomized so repeats differ.
+    var crackleDur = 0.8 + Math.random() * 0.4;
+    var buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * crackleDur), ctx.sampleRate);
     var data = buf.getChannelData(0);
+    var amp = 0;
+    var ring = 0.66 + Math.random() * 0.1;        // per-sample ring-down of each pop
+    var popRate = 0.006 + Math.random() * 0.004;  // chance a fresh pop fires each sample
     for (var i = 0; i < data.length; i++) {
-      var env = 1 - i / data.length;
-      data[i] = (Math.random() * 2 - 1) * (Math.random() < 0.06 ? 1 : 0.14) * env;
+      var env = Math.pow(1 - i / data.length, 2); // overall decay: pops thin out + soften
+      if (Math.random() < popRate * env) amp = Math.random();
+      data[i] = (Math.random() * 2 - 1) * amp * env;
+      amp *= ring;
     }
     var noise = ctx.createBufferSource();
     noise.buffer = buf;
-    var hp = ctx.createBiquadFilter();
-    hp.type = "highpass";
-    hp.frequency.value = 1800;
+    var bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 3400 + Math.random() * 1400;  // ~3.4–4.8kHz sparkle
+    bp.Q.value = 4 + Math.random() * 3;
     var noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.05, t + 0.08);
-    noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
-    noise.connect(hp);
-    hp.connect(noiseGain);
+    noiseGain.gain.value = 0.08;                  // modest — distant fireworks over the city
+    noise.connect(bp);
+    bp.connect(noiseGain);
     noiseGain.connect(ctx.destination);
     noise.start(t + 0.06);
-    setTimeout(function () { try { ctx.close(); } catch (e) {} }, 800);
+    // release the context only after the (now longer) crackle tail has finished
+    setTimeout(function () { try { ctx.close(); } catch (e) {} }, (0.06 + crackleDur) * 1000 + 250);
   } catch (e) {}
 }
 function spawnFirework(cx, cy, color) {

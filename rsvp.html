@@ -313,6 +313,12 @@ footer{margin-top:2.6rem}
 #stage-balcony.storming #balcony-door.open{animation:door-wobble 4s ease-in-out infinite}
 @keyframes door-wobble{0%,58%,100%{transform:scaleX(.15) rotate(0)} 68%{transform:scaleX(.15) rotate(-2.6deg)} 80%{transform:scaleX(.15) rotate(1.6deg)} 90%{transform:scaleX(.15) rotate(-0.9deg)}}
 @media (prefers-reduced-motion: reduce){#stage-balcony.storming #balcony-door.open{animation:none}}
+/* the cuddly nook's own balcony door swings on its wall-side hinge (bottom-right of
+   the leaf's bbox) into the room, its leaf passing over Octi. Position is baked into
+   the leaf's coordinates, so this rotate can't clobber a transform= attribute. */
+#cuddly-balcony-door{transform-box:fill-box; transform-origin:100% 100%; transition:transform .6s cubic-bezier(.34,1.05,.6,1)}
+#cuddly-balcony-door.open{transform:rotate(-46deg)}
+@media (prefers-reduced-motion: reduce){#cuddly-balcony-door{transition:none}}
 #balcony-wine-liquid{transform-box:fill-box; transform-origin:bottom center; transition:transform .5s ease}
 #balcony-winebottle-liquid{transform-box:fill-box; transform-origin:bottom center; transition:transform .5s ease}
 #garden-bottle-liquid-1, #garden-bottle-liquid-2, #garden-bottle-liquid-3{transform-box:fill-box; transform-origin:bottom center; transition:transform .5s ease}
@@ -3013,6 +3019,29 @@ section{margin:1.9rem 0}
 <line x1="644" y1="228.9" x2="645.6" y2="227.3"/>
 </g>
 </g>
+</g>
+<!-- Balcony door on the cuddly nook's right wall: a slim black-framed industrial
+     door. Closed, it reads as the black frame at the room's edge; click it and the
+     leaf swings into the room (rotating on its wall-side hinge, bottom-right) to
+     pass in front of Octi, clearing the doorway so daylight (day) / rain (night)
+     spills in — see updateCuddlyDoorFx + cuddlyRainActive, which OR this door with
+     the balcony stage's front door to drive the existing sun-ray / rain FX. The
+     leaf is positioned by coordinates, not a transform= attribute, so the CSS
+     rotate on .open can't clobber its placement. Frame + doorway backing are a
+     separate static group; only the leaf swings. Rendered after Octi so the open
+     leaf covers it, but before the sun-ray / dusk / rain washes so they tint it. -->
+<g id="cuddly-balcony-doorframe" aria-hidden="true">
+<rect x="654" y="48" width="26" height="190" fill="#cfe0ea"/>
+<rect x="648" y="40" width="6" height="210" fill="#141414"/>
+<rect x="648" y="40" width="32" height="8" fill="#141414"/>
+<rect x="648" y="242" width="32" height="8" fill="#1c1c1c"/>
+</g>
+<g id="cuddly-balcony-door" class="hunt-hit" tabindex="0" role="button" aria-label="The balcony door">
+<rect x="654" y="48" width="26" height="194" fill="#141414" stroke="#000000" stroke-width="1.5"/>
+<rect x="658" y="56" width="18" height="86" fill="#b8c8d4" stroke="#3a3a3a" stroke-width="2"/>
+<line x1="667" y1="56" x2="667" y2="142" stroke="#3a3a3a" stroke-width="1.5"/>
+<rect x="658" y="150" width="18" height="84" fill="none" stroke="#333333" stroke-width="2"/>
+<circle cx="660" cy="150" r="2.6" fill="#8a8578"/>
 </g>
 <g id="cuddly-puffer-wrap" transform="translate(495,95)">
 <g class="puffer-drift">
@@ -7114,13 +7143,29 @@ document.addEventListener("click", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleBalconyDoor(); }
     });
   }
+  // the cuddly nook's own balcony door: its leaf swings in to cover Octi and drives
+  // the same sun-ray / rain FX as the front door (updateCuddlyDoorFx ORs the two)
+  var cuddlyDoor = document.getElementById("cuddly-balcony-door");
+  if (cuddlyDoor) {
+    function toggleCuddlyDoor() {
+      cuddlyDoor.classList.toggle("open");
+      playCreakSound();
+      updateCuddlyDoorFx();
+    }
+    cuddlyDoor.addEventListener("click", toggleCuddlyDoor);
+    cuddlyDoor.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCuddlyDoor(); }
+    });
+  }
   // an open balcony door lets the outside into the cuddly nook: warm sun shafts by
   // day (rain intrusion during a night storm is handled by its own spawner)
   function updateCuddlyDoorFx() {
-    var door = document.getElementById("balcony-door");
     var sc = document.getElementById("stage-cuddly");
-    if (!door || !sc) return;
-    sc.classList.toggle("door-daylight", door.classList.contains("open") && !sc.classList.contains("dusk"));
+    if (!sc) return;
+    var front = document.getElementById("balcony-door");
+    var nook = document.getElementById("cuddly-balcony-door");
+    var open = (front && front.classList.contains("open")) || (nook && nook.classList.contains("open"));
+    sc.classList.toggle("door-daylight", open && !sc.classList.contains("dusk"));
   }
   window.__updateCuddlyDoorFx = updateCuddlyDoorFx;
   updateCuddlyDoorFx();
@@ -11502,8 +11547,10 @@ function spawnDustMote(container) {
   // steeper/leftward drift (wind through the doorway), self-replenishing + seeded
   var CUDDLY_RAIN_DROPS = 8;
   function cuddlyRainActive() {
-    var sc = document.getElementById("stage-cuddly"), door = document.getElementById("balcony-door");
-    return sc && door && door.classList.contains("open") && sc.classList.contains("dusk") &&
+    var sc = document.getElementById("stage-cuddly");
+    var front = document.getElementById("balcony-door"), nook = document.getElementById("cuddly-balcony-door");
+    var open = (front && front.classList.contains("open")) || (nook && nook.classList.contains("open"));
+    return sc && open && sc.classList.contains("dusk") &&
       window.__balconyStorm && stageIndex === STAGES.indexOf("cuddly") && document.visibilityState !== "hidden";
   }
   function spawnCuddlyRainDrop() {

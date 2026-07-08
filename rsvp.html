@@ -4966,6 +4966,7 @@ document.addEventListener("click", function (e) {
       var stripEl = document.getElementById("loft-game-strip");
       playWaterSound();
       spawnSprinklerSpray(stripEl, 2366, 61);
+      spawnMonitorDrip(stripEl); // the nozzle sits right above the monitor — a couple drops reach it
     }
     sprinkler.addEventListener("click", triggerSprinkler);
     sprinkler.addEventListener("keydown", function (e) {
@@ -8671,6 +8672,54 @@ function spawnSprinklerSpray(svg, cx, cy) {
       }, delay);
     })(i);
   }
+}
+// The ceiling sprinkler's nozzle sits directly above the monitor, so a couple of drops
+// fall past the spray and actually land on its top bezel — a brief wet gleam sells it.
+function spawnMonitorDrip(svg) {
+  if (!svg) return;
+  [-6, 5].forEach(function (jitter, i) {
+    var delay = 120 + i * 90 + Math.random() * 80;
+    setTimeout(function () {
+      var startX = 2366 + jitter * 0.4, endX = 2360 + jitter, endY = 152;
+      var d = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+      d.setAttribute("cx", startX);
+      d.setAttribute("cy", 61);
+      d.setAttribute("rx", "1.6");
+      d.setAttribute("ry", "2.6");
+      d.setAttribute("fill", "#7fb0d6");
+      d.setAttribute("opacity", "0.85");
+      d.style.transformBox = "fill-box";
+      d.style.transformOrigin = "center";
+      svg.appendChild(d);
+      var dx = endX - startX, dy = endY - 61;
+      var dur = 260 + Math.random() * 60;
+      if (d.animate) {
+        var anim = d.animate([
+          { transform: "translate(0px,0px) scaleY(1)" },
+          { transform: "translate(" + (dx * 0.9) + "px," + (dy * 0.9) + "px) scaleY(1.6)" },
+          { transform: "translate(" + dx + "px," + dy + "px) scaleY(0.3)", opacity: 0 }
+        ], { duration: dur, easing: "ease-in" });
+        anim.onfinish = function () {
+          d.remove();
+          // a small wet gleam on the bezel where it landed, fading over ~700ms
+          var g = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+          g.setAttribute("cx", endX);
+          g.setAttribute("cy", endY);
+          g.setAttribute("rx", "3");
+          g.setAttribute("ry", "1.2");
+          g.setAttribute("fill", "#bcdcf0");
+          g.setAttribute("opacity", "0.7");
+          svg.appendChild(g);
+          if (g.animate) {
+            var gAnim = g.animate([{ opacity: 0.7 }, { opacity: 0 }], { duration: 700, easing: "ease-out" });
+            gAnim.onfinish = function () { if (g.parentNode) g.remove(); };
+          } else setTimeout(function () { if (g.parentNode) g.remove(); }, 700);
+        };
+      } else {
+        setTimeout(function () { if (d.parentNode) d.remove(); }, dur);
+      }
+    }, delay);
+  });
 }
 function spawnGrindParticles(svg, cx, cy, color) {
   if (!svg) return;

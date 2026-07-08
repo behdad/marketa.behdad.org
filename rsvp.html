@@ -1350,10 +1350,10 @@ footer{margin-top:2.6rem}
 #balcony-sun-disc, #balcony-moon{transition:opacity .8s ease}
 #stage-balcony.dusk #balcony-sun-disc{opacity:0}
 #stage-balcony.dusk #balcony-moon{opacity:1}
-/* arrives eclipsed, then the shadow drifts off to reveal a full moon */
-#balcony-moon-shadow{transform-box:fill-box; transform-origin:center}
-#stage-balcony.dusk #balcony-moon-shadow{animation:moon-eclipse-pass 5s ease 1.4s forwards}
-@keyframes moon-eclipse-pass{from{transform:translate(0,0)} to{transform:translate(22px,-8px)}}
+/* arrives as a full moon, then the shadow drifts in to a partial eclipse and stays */
+#balcony-moon-shadow{transform-box:fill-box; transform-origin:center; transform:translate(22px,-8px)}
+#stage-balcony.dusk #balcony-moon-shadow{animation:moon-eclipse-in 5s ease 1.4s forwards}
+@keyframes moon-eclipse-in{from{transform:translate(22px,-8px)} to{transform:translate(0,0)}}
 @media (prefers-reduced-motion: reduce){#stage-balcony.dusk #balcony-moon-shadow{animation:none}}
 #cuddly-mouse{opacity:0; pointer-events:none}
 #cuddly-mouse.scurrying{animation:mouse-scurry 1.1s ease-in forwards}
@@ -6443,6 +6443,34 @@ function spawnCloudRain(svg, cx, cy) {
     })(i);
   }
 }
+function spawnShootingStar(svg) {
+  if (!svg) return;
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var x0 = 2790 + Math.random() * 260, y0 = 14 + Math.random() * 40;
+  var g = document.createElementNS(SVGNS, "g");
+  var trail = document.createElementNS(SVGNS, "line");
+  trail.setAttribute("x1", x0); trail.setAttribute("y1", y0);
+  trail.setAttribute("x2", x0 - 20); trail.setAttribute("y2", y0 - 7);
+  trail.setAttribute("stroke", "#fdf6d8");
+  trail.setAttribute("stroke-width", "1.4");
+  trail.setAttribute("stroke-linecap", "round");
+  var head = document.createElementNS(SVGNS, "circle");
+  head.setAttribute("cx", x0); head.setAttribute("cy", y0); head.setAttribute("r", "1.6");
+  head.setAttribute("fill", "#ffffff");
+  g.appendChild(trail); g.appendChild(head);
+  svg.appendChild(g);
+  if (g.animate) {
+    var a = g.animate([
+      { transform: "translate(0px,0px)", opacity: 0 },
+      { transform: "translate(38px,14px)", opacity: 1, offset: 0.25 },
+      { transform: "translate(150px,56px)", opacity: 0 }
+    ], { duration: 950 + Math.random() * 300, easing: "ease-in" });
+    a.onfinish = function () { if (g.parentNode) g.remove(); };
+  } else {
+    setTimeout(function () { if (g.parentNode) g.remove(); }, 1300);
+  }
+}
 function spawnFirework(cx, cy, color) {
   var host = document.getElementById("balcony-fireworks");
   if (!host) return;
@@ -9570,17 +9598,30 @@ function spawnDustMote(container) {
     };
     window.__stopBalconyStormCycle = clearAll;
   })();
-  // steady rain falls across the balcony while it's dusk (an evening storm)
+  // light rain across the balcony while a storm is active — kept sparse (a
+  // couple of columns per tick) so it never piles up enough to stutter
   (function scheduleDuskRain() {
-    var delay = 440 + Math.random() * 320;
+    var delay = 850 + Math.random() * 400;
     setTimeout(function () {
       var sb = document.getElementById("stage-balcony");
       if (sb && sb.classList.contains("dusk") && window.__balconyStorm && stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden") {
-        [2762, 2852, 2942, 3032, 3122, 3212, 3302, 3372].forEach(function (x) {
-          if (Math.random() < 0.7) spawnCloudRain(strip, x + (Math.random() - 0.5) * 34, 8 + Math.random() * 178);
-        });
+        var lanes = 2 + Math.floor(Math.random() * 2); // 2-3 columns per tick
+        for (var i = 0; i < lanes; i++) {
+          spawnCloudRain(strip, 2760 + Math.random() * 620, 8 + Math.random() * 178);
+        }
       }
       scheduleDuskRain();
+    }, delay);
+  })();
+  // an occasional shooting star streaks the clear dusk sky (not during a storm)
+  (function scheduleShootingStar() {
+    var delay = 16000 + Math.random() * 26000;
+    setTimeout(function () {
+      var sb = document.getElementById("stage-balcony");
+      if (sb && sb.classList.contains("dusk") && !window.__balconyStorm && stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden") {
+        spawnShootingStar(strip);
+      }
+      scheduleShootingStar();
     }, delay);
   })();
   var instrumentSpots = {

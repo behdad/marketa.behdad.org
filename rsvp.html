@@ -6666,6 +6666,56 @@ function playThunderSound(volume) {
     setTimeout(function () { ctx.close(); }, 6200);
   } catch (e) {}
 }
+// Quiet cricket night-ambience: 2-3 layered "crickets", each a narrow-bandpass
+// high tone (~4-5kHz) pulsed into a short trill, at slightly different pitch and
+// rhythm. Deliberately faint (well under the game sounds). One short context per
+// chirp, closed right after it finishes — see scheduleCrickets for the loop/gates.
+function playCricketChirp() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t0 = ctx.currentTime;
+    var master = ctx.createGain();
+    master.gain.value = 0.04; // ambient, barely-there
+    master.connect(ctx.destination);
+
+    var n = 2 + (Math.random() < 0.5 ? 1 : 0); // 2 or 3 crickets
+    var maxEnd = t0;
+    for (var c = 0; c < n; c++) {
+      var freq = 4100 + Math.random() * 900; // 4.1-5 kHz whistle
+      var osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.value = freq;
+      var bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = freq;
+      bp.Q.value = 12; // narrow -> pure insect whistle, not a buzz
+      var g = ctx.createGain();
+      g.gain.value = 0.0001;
+      osc.connect(bp); bp.connect(g); g.connect(master);
+
+      // each cricket starts a touch later and trills at its own rate/length
+      var start = t0 + c * (0.05 + Math.random() * 0.14);
+      var pulses = 12 + Math.floor(Math.random() * 10);
+      var pulseDur = 0.008 + Math.random() * 0.006;
+      var gap = 0.010 + Math.random() * 0.008;
+      var level = 0.5 + Math.random() * 0.5; // per-cricket relative loudness
+      var tt = start;
+      for (var p = 0; p < pulses; p++) {
+        g.gain.setValueAtTime(0.0001, tt);
+        g.gain.linearRampToValueAtTime(level, tt + pulseDur * 0.4);
+        g.gain.linearRampToValueAtTime(0.0001, tt + pulseDur);
+        tt += pulseDur + gap;
+      }
+      osc.start(start);
+      osc.stop(tt + 0.05);
+      if (tt > maxEnd) maxEnd = tt;
+    }
+    var closeMs = Math.ceil((maxEnd - t0) * 1000) + 140;
+    setTimeout(function () { try { ctx.close(); } catch (e) {} }, closeMs);
+  } catch (e) {}
+}
 function playFinishMelody() {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -10255,6 +10305,21 @@ function spawnDustMote(container) {
       }
       scheduleShootingStar();
     }, delay);
+  })();
+  // Quiet cricket night-ambience: chirps softly in ANY room while it's night
+  // (dusk) and the tab is visible, silent by day. Self-scheduling: each tick
+  // only builds a WebAudio context when the gate passes, so a hidden/daytime
+  // tick does zero audio work and just re-arms the single outstanding timer
+  // (no context/node/timeout pile-up). Skipped during a rainstorm.
+  (function scheduleCrickets() {
+    function tick() {
+      var sb = document.getElementById("stage-balcony");
+      if (sb && sb.classList.contains("dusk") && document.visibilityState !== "hidden" && !window.__balconyStorm) {
+        playCricketChirp();
+      }
+      setTimeout(tick, 900 + Math.random() * 1500); // re-arm (one timer at a time)
+    }
+    setTimeout(tick, 1200 + Math.random() * 1600);
   })();
   // Auto day/night: night after ~1 min of day, then flip every ~2 min — but
   // only while the balcony's on-screen, and a manual sun/moon click stops it.

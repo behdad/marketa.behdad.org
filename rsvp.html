@@ -723,6 +723,8 @@ footer{margin-top:2.6rem}
 #monitor-pause-btn .pp-tri{display:none}
 #monitor-pause-btn.paused .pp-bars{display:none}
 #monitor-pause-btn.paused .pp-tri{display:block}
+#monitor-volume-btn{opacity:0; visibility:hidden; pointer-events:none; cursor:pointer; transition:opacity .4s ease}
+#office-monitor.show-nowplaying #monitor-volume-btn{opacity:1; visibility:visible; pointer-events:auto}
 /* the saver alternates between the bouncing caps and a live Julia fractal */
 #monitor-saver-fractal{opacity:0; pointer-events:none} /* clicks pass through to wake the monitor */
 #office-monitor.show-saver.saver-fractal #monitor-saver-caps{opacity:0}
@@ -3482,14 +3484,22 @@ section{margin:1.9rem 0}
 </g>
 <!-- resting-caps PLAY button: last child = topmost, so it sits above every screen
      state; CSS gates its visibility+hit-testing to show-caps (see #monitor-play-btn) -->
-<g id="monitor-play-btn" tabindex="0" role="button" aria-label="Play a song" data-aria-i="monitor_play_aria">
+<g id="monitor-play-btn">
 <circle cx="363" cy="187" r="5.5" fill="#8e3a4a"/>
 <path d="M361 183.6 L361 190.4 L366.4 187 Z" fill="#f8f5ec"/>
 </g>
-<g id="monitor-pause-btn" tabindex="0" role="button" aria-label="Pause or resume the song" data-aria-i="monitor_pause_aria">
+<g id="monitor-pause-btn">
 <circle cx="363" cy="187" r="5.5" fill="#8e3a4a"/>
 <g class="pp-bars"><rect x="360.5" y="184" width="1.7" height="6" rx="0.6" fill="#f8f5ec"/><rect x="363.8" y="184" width="1.7" height="6" rx="0.6" fill="#f8f5ec"/></g>
 <path class="pp-tri" d="M361 183.6 L361 190.4 L366.4 187 Z" fill="#f8f5ec"/>
+</g>
+<g id="monitor-volume-btn">
+<rect x="255" y="179" width="24" height="16" fill="transparent"/>
+<path d="M259 185 L261.5 185 L264.5 182.5 L264.5 191.5 L261.5 189 L259 189 Z" fill="#f8f5ec"/>
+<path class="vol-wave" d="M266.5 184.5 Q268 187 266.5 189.5" fill="none" stroke="#f8f5ec" stroke-width="0.9" stroke-linecap="round"/>
+<path class="vol-wave" d="M268.5 183 Q271.5 187 268.5 191" fill="none" stroke="#f8f5ec" stroke-width="0.9" stroke-linecap="round"/>
+<path class="vol-wave" d="M270.5 181.5 Q275 187 270.5 192.5" fill="none" stroke="#f8f5ec" stroke-width="0.9" stroke-linecap="round"/>
+<path class="vol-mute" d="M266.5 184.5 L271.5 189.5 M271.5 184.5 L266.5 189.5" stroke="#e08a8a" stroke-width="1" stroke-linecap="round" style="display:none"/>
 </g>
 </g>
 </g>
@@ -4163,8 +4173,6 @@ var T = {
     marketa_url: "https://marketajakesova.ca",
     nav_lang_aria: "Language",
     caps_aria: "A pink flat cap and a blue baker boy cap, crossed",
-    monitor_play_aria: "Play a song",
-    monitor_pause_aria: "Pause or resume the song",
     laptop_date: "May 1",
     laptop_daysfx: "d",
     laptop_place: "Prague",
@@ -4256,8 +4264,6 @@ var T = {
     marketa_url: "https://marketajakesova.ca/cs/",
     nav_lang_aria: "Jazyk",
     caps_aria: "Růžová čepice a modrá čepice, zkřížené",
-    monitor_play_aria: "Přehrát píseň",
-    monitor_pause_aria: "Pozastavit nebo pokračovat",
     laptop_date: "1. 5.",
     laptop_daysfx: "d",
     laptop_place: "Praha",
@@ -6416,6 +6422,39 @@ document.addEventListener("click", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); monitorTogglePause(); }
     });
   }
+  // Monitor volume: a speaker button cycles mute → 0.25 → 0.5 → full. The level scales the
+  // song audio elements directly (audio.volume) — playback is native, not routed through Web
+  // Audio — so the app owns the level and the (full-volume, stereo) song files don't have to.
+  var VOL_LEVELS = [0, 0.25, 0.5, 1.0];
+  var volIdx = 2; // default 0.5
+  try {
+    var savedVol = localStorage.getItem("songVolume");
+    if (savedVol !== null) { var vk = VOL_LEVELS.indexOf(parseFloat(savedVol)); if (vk >= 0) volIdx = vk; }
+  } catch (e) {}
+  window.__songVolume = function () { return VOL_LEVELS[volIdx]; };
+  function applySongVolume() {
+    for (var vi = 0; vi < songAudios.length; vi++) if (songAudios[vi]) songAudios[vi].volume = VOL_LEVELS[volIdx];
+  }
+  function updateVolIcon() {
+    var vb = document.getElementById("monitor-volume-btn");
+    if (!vb) return;
+    var waves = vb.querySelectorAll(".vol-wave");
+    for (var wi = 0; wi < waves.length; wi++) waves[wi].style.display = (wi < volIdx) ? "" : "none";
+    var mute = vb.querySelector(".vol-mute");
+    if (mute) mute.style.display = (volIdx === 0) ? "" : "none";
+  }
+  var volBtn = document.getElementById("monitor-volume-btn");
+  if (volBtn) {
+    function cycleVolume() {
+      volIdx = (volIdx + 1) % VOL_LEVELS.length;
+      applySongVolume();
+      updateVolIcon();
+      try { localStorage.setItem("songVolume", String(VOL_LEVELS[volIdx])); } catch (e) {}
+    }
+    volBtn.addEventListener("click", function (e) { e.stopPropagation(); cycleVolume(); });
+    volBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+  updateVolIcon();
   // The office logos "browse" to their site on the (already-on) monitor.
   function monitorShowingSite() {
     return monitor.classList.contains("screen-on") &&
@@ -12526,7 +12565,7 @@ function spawnDustMote(container) {
             if (other && !other.paused) other.pause();
           });
           if (audio.ended) audio.currentTime = 0;
-          audio.volume = 0.45; // keep songs under the game's own sounds
+          audio.volume = window.__songVolume ? window.__songVolume() : 0.5; // app-owned level (monitor speaker button)
           // hook up the monitor equalizer's analyser here, inside the gesture,
           // so routing the song through Web Audio doesn't stall its playback
           if (window.__captureSongAudio) window.__captureSongAudio(audio);

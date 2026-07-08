@@ -776,6 +776,10 @@ footer{margin-top:2.6rem}
 /* the idle screensaver: a live Julia fractal */
 #monitor-saver-fractal{opacity:0; pointer-events:none} /* clicks pass through to wake the monitor */
 #office-monitor.show-saver #monitor-saver-fractal{opacity:1}
+/* mini corner equalizer over the screensaver: only while a song's actually playing
+   (JS toggles "eq-live" on #office-monitor alongside the shared startEq/stopEq loop) */
+#monitor-saver-eq{opacity:0; pointer-events:none}
+#office-monitor.show-saver.eq-live #monitor-saver-eq{opacity:1}
 .eq-bar{transform-box:fill-box; transform-origin:bottom center; transform:scaleY(0.28)}
 #monitor-np-marquee{transform:translateX(85px)}
 #office-monitor.show-nowplaying #monitor-np-marquee{animation:np-scroll 13s linear infinite}
@@ -3556,6 +3560,14 @@ section{margin:1.9rem 0}
 <foreignObject id="monitor-saver-fractal" x="254" y="154" width="124" height="42">
 <canvas xmlns="http://www.w3.org/1999/xhtml" id="monitor-fractal-canvas" width="248" height="84" style="width:124px;height:42px;display:block"></canvas>
 </foreignObject>
+<!-- mini equalizer accent: bottom-left corner of the screen, on top of the fractal
+     (later sibling paints over it). Shown only while a song's still playing under the
+     screensaver — see the "eq-live" class toggled by startEq/stopEq. -->
+<g id="monitor-saver-eq">
+<rect class="eq-bar" x="258" y="182" width="5" height="12" rx="1" fill="#d9a6a6"/>
+<rect class="eq-bar" x="265" y="182" width="5" height="12" rx="1" fill="#e8b93a"/>
+<rect class="eq-bar" x="272" y="182" width="5" height="12" rx="1" fill="#6f94bd"/>
+</g>
 </g>
 <g id="monitor-logo-harfbuzz" class="boot-logo">
 <text x="316" y="192" text-anchor="middle" style="fill:#4a3220; font-family:monospace; font-size:6.5px; font-weight:bold">harfbuzz-world.cc</text>
@@ -6404,9 +6416,12 @@ document.addEventListener("click", function (e) {
       monitorUrl = CAPS_URL;
     }
     // the screensaver takes over even while a song plays (it's the best part): the
-    // now-playing equalizer yields to it, and a click brings the equalizer back
+    // full now-playing equalizer/marquee yield to it, but if a song's still playing
+    // the shared eq loop (startEq) is left running — it just switches to driving the
+    // small #monitor-saver-eq corner accent instead (see the .eq-live CSS gate above).
+    // A click wakes the monitor and brings the full equalizer back.
     var fromNowPlaying = monitor.classList.contains("show-nowplaying");
-    if (fromNowPlaying) { monitor.classList.remove("show-nowplaying"); stopEq(); }
+    if (fromNowPlaying) monitor.classList.remove("show-nowplaying");
     if (!fromNowPlaying && !monitor.classList.contains("show-caps")) return;
     monitor.classList.remove("show-caps");
     monitor.classList.add("show-saver");
@@ -6418,9 +6433,12 @@ document.addEventListener("click", function (e) {
   // HSV->RGB (h,s,v in 0..1). Value ramps from 0 so the fast-escape background is
   // truly black — no green wash. Only a NARROW hue span across the fractal at any
   // instant (one/two hues -> smooth, no aliasing); hueBase cycles it over time.
-  function fractalColor(t, hueBase) {
+  function fractalColor(t, hueBase, kick) {
     var h = ((hueBase || 0) + t * 0.22) % 1;       // narrow spread; whole thing drifts via hueBase
-    var v = Math.min(1, Math.pow(t, 0.62) * 1.25); // 0 at background -> black; bright near set
+    // kick (0..1, from fractalBeatKick — the song's beat, 0 when nothing's playing)
+    // brightens the whole fractal right on the beat, decaying between beats; a subtle
+    // flash rather than a strobe, kept to a modest peak boost
+    var v = Math.min(1, Math.pow(t, 0.62) * 1.25 * (1 + (kick || 0) * 0.3)); // 0 at background -> black; bright near set
     var s = 0.88;
     var i = Math.floor(h * 6), f = h * 6 - i;
     var p = v * (1 - s), q = v * (1 - f * s), u = v * (1 - (1 - f) * s), r, g, b;
@@ -6434,7 +6452,7 @@ document.addEventListener("click", function (e) {
     }
     return [fractalClamp(r * 255), fractalClamp(g * 255), fractalClamp(b * 255)];
   }
-  function renderJulia(canvas, cRe, cIm, maxIter, zoom, hueBase, transparent) {
+  function renderJulia(canvas, cRe, cIm, maxIter, zoom, hueBase, transparent, kick) {
     var ctx = canvas.getContext("2d");
     if (!ctx) return;
     var w = canvas.width, h = canvas.height, img = ctx.createImageData(w, h), d = img.data;
@@ -6446,7 +6464,7 @@ document.addEventListener("click", function (e) {
         var o = (py * w + px) * 4;
         if (i >= maxIter) { d[o] = 8; d[o + 1] = 6; d[o + 2] = 14; d[o + 3] = transparent ? 0 : 255; }
         else {
-          var sm = i + 1 - Math.log(Math.log(Math.sqrt(zx * zx + zy * zy))) / LOG2, c = fractalColor((sm / maxIter) % 1, hueBase);
+          var sm = i + 1 - Math.log(Math.log(Math.sqrt(zx * zx + zy * zy))) / LOG2, c = fractalColor((sm / maxIter) % 1, hueBase, kick);
           // transparent mode: alpha tracks brightness so only the glowing filaments show,
           // composited over the plant (dark background -> transparent), not a black disc
           d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2];
@@ -6457,18 +6475,29 @@ document.addEventListener("click", function (e) {
     ctx.putImageData(img, 0, 0);
   }
   window.__renderJulia = renderJulia; // shared with the trip-plant fractals
+  // BPM-phase-locked "kick" envelope (1 right on the beat, decaying exponentially
+  // between beats; 0 when no song's playing) — same shape as startEq's synthetic
+  // pulse fallback, reused here to brighten the screensaver fractal on the beat.
+  // eqAudioEl is set/cleared by startEq/stopEq alongside the equalizer bars.
+  function fractalBeatKick() {
+    if (!eqAudioEl || eqAudioEl.paused) return 0;
+    var bpm = SONG_BPM[eqAudioEl.id] || 120;
+    var period = 60 / bpm; if (period < 0.4) period *= 2; // half-time for fast songs
+    var frac = (eqAudioEl.currentTime % period) / period;
+    return Math.exp(-frac * 5);
+  }
   function startFractalSaver() {
     var canvas = document.getElementById("monitor-fractal-canvas");
     if (!canvas) return;
     var R = 0.7885, theta = Math.random() * 6.283, hueBase = Math.random();
-    if (reduceMotion) { renderJulia(canvas, R * Math.cos(theta), R * Math.sin(theta), 90, 1.3, hueBase); return; }
+    if (reduceMotion) { renderJulia(canvas, R * Math.cos(theta), R * Math.sin(theta), 90, 1.3, hueBase, false, fractalBeatKick()); return; }
     var lastDraw = 0;
     function frame(t) {
       if (t - lastDraw >= 45) { // ~22fps: plenty for a slow morph, easy on the CPU
         lastDraw = t;
         theta += 0.02;              // shape morphs (full c-orbit ~ every 14s)
         hueBase = (hueBase + 0.003) % 1; // colour drifts through the spectrum ~ every 15s
-        renderJulia(canvas, R * Math.cos(theta), R * Math.sin(theta), 90, 1.3, hueBase);
+        renderJulia(canvas, R * Math.cos(theta), R * Math.sin(theta), 90, 1.3, hueBase, false, fractalBeatKick());
       }
       saverRaf = requestAnimationFrame(frame);
     }
@@ -6555,7 +6584,10 @@ document.addEventListener("click", function (e) {
   var AUDIO_PIPELINE_ENABLED = false; // 2026-07: confirmed broken even unmuted — real bug in the pipeline itself,
                                        // not (only) the earlier mute-persistence red herring. Root cause not found.
   var USE_LIVE_ANALYSER = AUDIO_PIPELINE_ENABLED;
-  var eqRAF = null, eqAudioCtx = null, eqCtxFailed = false;
+  // eqAudioEl: the audio element the shared equalizer loop is currently driving (set
+  // by startEq, cleared by stopEq) — also read by fractalBeatKick, above, to pulse the
+  // screensaver fractal's brightness on the beat while a song plays underneath it.
+  var eqRAF = null, eqAudioCtx = null, eqCtxFailed = false, eqAudioEl = null;
   var eqBassShelf = null, eqMuffleFilter = null, eqMasterGain = null, eqPanner = null, eqAnalyser = null;
   var headphoneModeOn = false;
   var FLAT_BASS_DB = 0, FLAT_LOWPASS_HZ = 20000; // "no audible change vs today" defaults
@@ -6654,23 +6686,37 @@ document.addEventListener("click", function (e) {
     if (!srcId) return;
     try { eqPanner.pan.setTargetAtTime(panForElId(srcId), eqAudioCtx.currentTime, FX_RAMP_S); } catch (e) {}
   };
-  function stopEq() { if (eqRAF) { cancelAnimationFrame(eqRAF); eqRAF = null; } }
+  function stopEq() {
+    if (eqRAF) { cancelAnimationFrame(eqRAF); eqRAF = null; }
+    monitor.classList.remove("eq-live"); // hides #monitor-saver-eq (its CSS gates on this) and silences the fractal's beat pulse
+    eqAudioEl = null;
+  }
   function startEq(audioEl) {
     stopEq();
-    var bars = document.querySelectorAll("#monitor-logo-nowplaying .eq-bar");
-    if (!bars.length) return;
+    // Drives two independent bar groups from one shared loop: the full now-playing
+    // equalizer and the screensaver's small corner accent (#monitor-saver-eq). show-
+    // nowplaying/show-saver are mutually exclusive (see startSaver), so only one group
+    // is ever visible at a time, but querying both here means screen transitions never
+    // need to stop/restart this loop — only an actual play/pause/end does (see
+    // updateNowPlaying) — so there's never a second loop reading the same analyser.
+    var sets = [
+      document.querySelectorAll("#monitor-logo-nowplaying .eq-bar"),
+      document.querySelectorAll("#monitor-saver-eq .eq-bar")
+    ].filter(function (bars) { return bars.length; });
+    if (!sets.length) return;
+    eqAudioEl = audioEl || null;
+    monitor.classList.add("eq-live");
     if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      for (var b = 0; b < bars.length; b++) bars[b].style.transform = "scaleY(0.6)";
+      sets.forEach(function (bars) { for (var b = 0; b < bars.length; b++) bars[b].style.transform = "scaleY(0.6)"; });
       return;
     }
-    var n = bars.length;
     var analyser = audioEl && audioEl._eqAnalyser;
     var data = analyser ? new Uint8Array(analyser.frequencyBinCount) : null;
     var bpm = (audioEl && SONG_BPM[audioEl.id]) || 120;
     var period = 60 / bpm; if (period < 0.4) period *= 2; // half-time for fast songs
-    function frame() {
+    function driveBars(bars) {
+      var n = bars.length;
       if (analyser && data) {
-        analyser.getByteFrequencyData(data);
         var usable = Math.max(n, Math.floor(data.length * 0.75)); // skip the near-silent top bins
         for (var i = 0; i < n; i++) {
           var lo = Math.floor(i / n * usable), hi = Math.floor((i + 1) / n * usable), sum = 0, cnt = 0;
@@ -6688,6 +6734,10 @@ document.addEventListener("click", function (e) {
           bars[k].style.transform = "scaleY(" + Math.max(0.14, Math.min(1.2, vv)) + ")";
         }
       }
+    }
+    function frame() {
+      if (analyser && data) analyser.getByteFrequencyData(data); // one read/frame, shared by both bar groups
+      sets.forEach(driveBars);
       eqRAF = requestAnimationFrame(frame);
     }
     frame();

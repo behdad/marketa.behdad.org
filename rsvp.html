@@ -6712,8 +6712,12 @@ document.addEventListener("click", function (e) {
   }
   function monitorSkip(dir) {
     var idx = currentSongIndex();
-    if (idx < 0 || songAudios.length < 2) return;
+    if (idx < 0) return;
     var current = songAudios[idx];
+    // prev restarts the CURRENT song (standard media-player convention) once you're a
+    // few seconds in, instead of always jumping back to the other track
+    if (dir < 0 && current.currentTime >= 3) { current.currentTime = 0; return; }
+    if (songAudios.length < 2) return;
     var next = songAudios[(idx + dir + songAudios.length) % songAudios.length];
     if (!next || next === current) return;
     try {

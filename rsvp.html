@@ -8939,9 +8939,10 @@ function playTripMelody(variant) {
     var t0 = ctx.currentTime;
     // how long each variant runs, and a two-sweep swirl over exactly that — wide, and
     // starting from a random side (see swirlBus); note() feeds every voice into the swirl.
-    var DUR = { strobe: 1.92, melt: 4.8, molly: 5.4, ketamine: 6.0, psychedelic: 3.84 };
+    var DUR = { strobe: 1.92, melt: 4.8, molly: 5.4, ketamine: 6.0, psychedelic: 7.1 };
     var dur = DUR[variant] || 3;
-    var bus = swirlBus(ctx, t0, dur, 2, (variant === "melt" || variant === "ketamine") ? 0.98 : 0.92);
+    var cycles = variant === "strobe" ? 6 : 2; // strobe: lots of quick back-and-forth pans
+    var bus = swirlBus(ctx, t0, dur, cycles, (variant === "melt" || variant === "ketamine") ? 0.98 : 0.92);
     function note(type, freq, t, peak, len, attack, vibrato) {
       var osc = ctx.createOscillator();
       osc.type = type;
@@ -8980,7 +8981,19 @@ function playTripMelody(variant) {
       ka.forEach(function (f, i) { note("sine", f, t0 + i * kd, 0.05, kd * 1.6, 0.3, 4); });
     } else {
       var pa = [392.0, 440.0, 523.25, 659.25, 587.33, 523.25, 440.0, 392.0], pd = 0.16;
-      for (var pr = 0; pr < 3; pr++) pa.forEach(function (f, i) { note("sine", f, t0 + (pr * pa.length + i) * pd, 0.05, pd * 1.8, 0.02); });
+      for (var pr = 0; pr < 4; pr++) pa.forEach(function (f, i) { note("sine", f, t0 + (pr * pa.length + i) * pd, 0.05, pd * 1.8, 0.02); });
+      // come-down tail: a slow descending drone that fades out as the trip settles
+      var tailT = t0 + 4 * pa.length * pd - 0.3;
+      var td = ctx.createOscillator();
+      td.type = "sine";
+      td.frequency.setValueAtTime(330, tailT);
+      td.frequency.exponentialRampToValueAtTime(110, tailT + 2.2);
+      var tgn = ctx.createGain();
+      tgn.gain.setValueAtTime(0.0001, tailT);
+      tgn.gain.exponentialRampToValueAtTime(0.05, tailT + 0.4);
+      tgn.gain.exponentialRampToValueAtTime(0.0001, tailT + 2.2);
+      td.connect(tgn); tgn.connect(bus);
+      td.start(tailT); td.stop(tailT + 2.3);
     }
     setTimeout(function () { ctx.close(); }, dur * 1000 + 800);
   } catch (e) {}

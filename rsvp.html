@@ -385,6 +385,21 @@ footer{margin-top:2.6rem}
   75%{transform:translate(2px,-3px) rotate(8deg)}
 }
 @media (prefers-reduced-motion: reduce){#witchy-chest-fairy-dance.grooving{animation:none}}
+/* the chest cat, once let out (door 2 opened), strolls the garden floor and turns at
+   each end; it pauses that stroll and sways in place while a song plays. Walk on the
+   outer wrapper, sway on the inner, so neither clobbers the cat's own click-wobble. */
+#witchy-chest-cat-walk{transform-box:fill-box; transform-origin:bottom center}
+#witchy-chest-cat-walk.roaming{animation:cat-roam 13s ease-in-out infinite}
+@keyframes cat-roam{
+  0%,100%{transform:translateX(0) translateY(0)}
+  25%{transform:translateX(-140px) translateY(-1.5px)}
+  50%{transform:translateX(-270px) translateY(0)}
+  75%{transform:translateX(-140px) translateY(-1.5px)}
+}
+#witchy-chest-cat-groove{transform-box:fill-box; transform-origin:bottom center}
+#witchy-chest-cat-groove.grooving{animation:cat-dance .5s ease-in-out infinite}
+@keyframes cat-dance{0%,100%{transform:rotate(0)} 25%{transform:rotate(-6deg)} 75%{transform:rotate(6deg)}}
+@media (prefers-reduced-motion: reduce){#witchy-chest-cat-walk.roaming, #witchy-chest-cat-groove.grooving{animation:none}}
 .cuddly-knife.wobbling{animation:knife-wobble .4s ease-in-out}
 @keyframes knife-wobble{
   0%, 100%{transform:rotate(0)}
@@ -2510,6 +2525,7 @@ section{margin:1.9rem 0}
 </g>
 <g id="garden-chest">
 <rect x="560" y="240" width="100" height="66" fill="#6b3a2f" stroke="#4a251e" stroke-width="2"/>
+<g id="witchy-chest-cat-walk"><g id="witchy-chest-cat-groove">
 <g id="witchy-chest-cat" aria-hidden="true">
 <path d="M624 292 Q622 278 633 275 Q644 278 642 292 Z" fill="#161311"/>
 <circle cx="633" cy="267" r="7.5" fill="#161311"/>
@@ -2519,6 +2535,7 @@ section{margin:1.9rem 0}
 <circle cx="630" cy="266" r="1.2" fill="#c9e85c"/>
 <circle cx="636" cy="266" r="1.2" fill="#c9e85c"/>
 </g>
+</g></g>
 <g id="witchy-chest-fairy-dance">
 <g id="witchy-chest-fairy" aria-hidden="true">
 <ellipse cx="574" cy="279" rx="7" ry="4" fill="#dcd8f0" opacity="0.85" transform="rotate(-20 574 279)"/>
@@ -6915,6 +6932,12 @@ document.addEventListener("click", function (e) {
   }
   var cat = document.getElementById("witchy-chest-cat");
   var fairy = document.getElementById("witchy-chest-fairy");
+  // the cat roams BEHIND the garden foreground (plants, bottles, boxes): re-home its
+  // walk-wrapper to just before the first plant (coords unchanged — same scene space).
+  // At home (translateX 0) the chest box then hides it "in the chest"; it emerges leftward.
+  var catWalkNode = document.getElementById("witchy-chest-cat-walk");
+  var gardenFrontRef = document.getElementById("garden-potstand-lift");
+  if (catWalkNode && gardenFrontRef && gardenFrontRef.parentNode) gardenFrontRef.parentNode.insertBefore(catWalkNode, gardenFrontRef);
   function wobbleEl(el) {
     el.classList.remove("wobbling");
     requestAnimationFrame(function () {
@@ -7032,9 +7055,13 @@ document.addEventListener("click", function (e) {
     function toggleWitchyDoor() {
       el.classList.toggle("open");
       playCreakSound();
-      if (id === "witchy-door-2" && el.classList.contains("open") && cat) wobbleEl(cat);
+      if (id === "witchy-door-2" && el.classList.contains("open") && cat) {
+        wobbleEl(cat);
+        var catWalk = document.getElementById("witchy-chest-cat-walk");
+        if (catWalk) catWalk.classList.add("roaming"); // out of the bag — it strolls the garden now
+      }
       if (id === "witchy-door-1" && el.classList.contains("open") && fairy) wobbleEl(fairy);
-      if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // revealing/hiding starts/stops her dance
+      if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // revealing/hiding starts/stops their dance
     }
     el.addEventListener("click", toggleWitchyDoor);
     el.addEventListener("keydown", function (e) {
@@ -11875,6 +11902,14 @@ function spawnDustMote(container) {
       if (anyPlaying && witchyDoor1 && witchyDoor1.classList.contains("open")) setGroove(fairyDance, durations.toe);
       else fairyDance.classList.remove("grooving");
     }
+    // the roamed-out cat stops mid-stride and sways in place while a song plays
+    var catWalkEl = document.getElementById("witchy-chest-cat-walk");
+    var catGrooveEl = document.getElementById("witchy-chest-cat-groove");
+    if (catWalkEl && catGrooveEl) {
+      // sways to the beat while it keeps strolling (the sway composes on top of the walk)
+      if (anyPlaying && catWalkEl.classList.contains("roaming")) setGroove(catGrooveEl, durations.toe);
+      else catGrooveEl.classList.remove("grooving");
+    }
     // kitchen water, balcony wine, and the wooden head bob on the beat, phase-locked
     setGroove(document.getElementById("kitchen-waterbottle-liquid-groove"), durations.head);
     setGroove(document.getElementById("balcony-wine-liquid-groove"), durations.head);
@@ -12104,6 +12139,8 @@ function spawnDustMote(container) {
 
   function resetHunt() {
     window.__pragueCalled = false;
+    var catWalkR = document.getElementById("witchy-chest-cat-walk");
+    if (catWalkR) catWalkR.classList.remove("roaming", "listening"); // cat back in the chest
     kitchenPowered = false;
     kitchenGround = false;
     kitchenSolved = false;

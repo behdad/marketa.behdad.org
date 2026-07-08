@@ -4995,14 +4995,37 @@ document.addEventListener("click", function (e) {
     "guitar-song-audio": "♪ Black Tornado — Dan Bern",
     "ukulele-song-audio": "♪ Strange & Beautiful Things — Orit Shimoni"
   };
-  // Now-playing equalizer. NB: driving these bars from the song's *real*
-  // frequency data needs createMediaElementSource, which reroutes the <audio>
-  // into the Web Audio graph — and that reliably KILLED playback in testing
-  // (song stopped, bars flat). So the bars run a lightweight synthetic bounce
-  // that never touches the audio element. Musical-looking, playback-safe.
-  var eqRAF = null;
+  // measured tempos (see GROOVE_BPM) — used by the equalizer's tempo-synced fallback
+  var SONG_BPM = { "guitar-song-audio": 184.6, "ukulele-song-audio": 126.0 };
+  // Live now-playing equalizer. The song is routed through a Web Audio analyser
+  // so the bars read its REAL spectrum. Two hard-won rules make this not kill
+  // playback (it did, twice): (1) build the media source inside the play gesture
+  // so the context is running — routing into a suspended context silences it;
+  // (2) keep the source node referenced (on the element) so GC can't mute it.
+  // If it ever misbehaves in some browser, flip USE_LIVE_ANALYSER to false and
+  // the tempo-synced fallback below (beat pulse from the song's real position)
+  // takes over without touching the audio graph.
+  var USE_LIVE_ANALYSER = true;
+  var eqRAF = null, eqAudioCtx = null;
+  window.__captureSongAudio = function (audioEl) {
+    if (!USE_LIVE_ANALYSER || !audioEl || audioEl._eqAnalyser) return;
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!eqAudioCtx) eqAudioCtx = new Ctx();
+      if (eqAudioCtx.state === "suspended") eqAudioCtx.resume();
+      var src = eqAudioCtx.createMediaElementSource(audioEl);
+      var an = eqAudioCtx.createAnalyser();
+      an.fftSize = 64;
+      an.smoothingTimeConstant = 0.7;
+      src.connect(an);
+      an.connect(eqAudioCtx.destination); // keep the song audible
+      audioEl._eqSource = src;            // hold refs so neither node is GC'd
+      audioEl._eqAnalyser = an;
+    } catch (e) {}
+  };
   function stopEq() { if (eqRAF) { cancelAnimationFrame(eqRAF); eqRAF = null; } }
-  function startEq() {
+  function startEq(audioEl) {
     stopEq();
     var bars = document.querySelectorAll("#monitor-logo-nowplaying .eq-bar");
     if (!bars.length) return;
@@ -5010,13 +5033,30 @@ document.addEventListener("click", function (e) {
       for (var b = 0; b < bars.length; b++) bars[b].style.transform = "scaleY(0.6)";
       return;
     }
-    var n = bars.length, t = 0;
-    // each bar a different phase mix so it reads like a spectrum, not a wave
+    var n = bars.length;
+    var analyser = audioEl && audioEl._eqAnalyser;
+    var data = analyser ? new Uint8Array(analyser.frequencyBinCount) : null;
+    var bpm = (audioEl && SONG_BPM[audioEl.id]) || 120;
+    var period = 60 / bpm; if (period < 0.4) period *= 2; // half-time for fast songs
     function frame() {
-      t += 0.13;
-      for (var k = 0; k < n; k++) {
-        var v = 0.5 + 0.42 * Math.sin(t + k * 1.3) * Math.sin(t * 0.7 + k) + 0.12 * Math.sin(t * 2.3 + k * 2);
-        bars[k].style.transform = "scaleY(" + Math.max(0.15, Math.min(1.2, v)) + ")";
+      if (analyser && data) {
+        analyser.getByteFrequencyData(data);
+        var usable = Math.max(n, Math.floor(data.length * 0.75)); // skip the near-silent top bins
+        for (var i = 0; i < n; i++) {
+          var lo = Math.floor(i / n * usable), hi = Math.floor((i + 1) / n * usable), sum = 0, cnt = 0;
+          for (var j = lo; j <= hi && j < data.length; j++) { sum += data[j]; cnt++; }
+          var v = cnt ? (sum / cnt) / 255 : 0;
+          bars[i].style.transform = "scaleY(" + Math.max(0.14, Math.min(1.3, 0.1 + v * 1.7)) + ")";
+        }
+      } else {
+        // no analyser: pulse on the beat, phase-locked to the song's real position
+        var tt = (audioEl && !audioEl.paused) ? audioEl.currentTime : 0;
+        var frac = (tt % period) / period, kick = Math.exp(-frac * 5);
+        for (var k = 0; k < n; k++) {
+          var w = 1 - k / n, flutter = 0.5 + 0.5 * Math.sin(tt * (6 + k * 3) + k);
+          var vv = 0.16 + kick * (0.55 * w + 0.2) + 0.2 * flutter * (0.4 + 0.6 * (k / n));
+          bars[k].style.transform = "scaleY(" + Math.max(0.14, Math.min(1.2, vv)) + ")";
+        }
       }
       eqRAF = requestAnimationFrame(frame);
     }
@@ -5035,7 +5075,7 @@ document.addEventListener("click", function (e) {
       var title = document.getElementById("monitor-np-title");
       if (title) title.textContent = SONG_INFO[playing.id] || "";
       monitor.classList.add("show-nowplaying");
-      startEq();
+      startEq(playing);
     } else {
       var was = monitor.classList.contains("show-nowplaying");
       monitor.classList.remove("show-nowplaying");
@@ -10194,6 +10234,9 @@ function spawnDustMote(container) {
           });
           if (audio.ended) audio.currentTime = 0;
           audio.volume = 0.45; // keep songs under the game's own sounds
+          // hook up the monitor equalizer's analyser here, inside the gesture,
+          // so routing the song through Web Audio doesn't stall its playback
+          if (window.__captureSongAudio) window.__captureSongAudio(audio);
           var p = audio.play();
           if (p && p.catch) p.catch(function () { playPluckSound(); });
           played = true;

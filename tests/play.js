@@ -114,6 +114,10 @@ var RSVP_HARNESS = [
   "    fire(document.getElementById(expect('cuddly-blanket')), 'enter');",
   "    await sleep(1200);",
   "    report.solve.afterCuddly = window.currentStageIndex;",
+  "    click(expect('office-laptop'));",      // open Markéta's Mac
+  "    await sleep(340);",                     // let the lid-open toggle (240ms) fire
+  "    click(expect('laptop-calltile'));",     // Call Prague — the required finale first step
+  "    await sleep(200);",
   "    click(expect('office-lamp'));",
   "    click(expect('office-pendant'));",
   "    click(expect('office-stainedglass'));",

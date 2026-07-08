@@ -3851,6 +3851,7 @@ var T = {
       office: "Call Prague → lights off → find Butterfly.",
       office_hint: "Turn off both lights first.",
       office_find: "Find the stained-glass butterfly.",
+      office_call: "Call Prague first.",
       complete: "You made it through the whole loft ♥",
       balcony: "There will be BBQ 🔥🍖🌽🍷"
     },
@@ -3924,6 +3925,7 @@ var T = {
       office: "Zavolej do Prahy → zhasni světla → najdi Butterfly.",
       office_hint: "Nejdřív obě světla zhasni.",
       office_find: "Najdi vitrážového motýla.",
+      office_call: "Nejdřív zavolej do Prahy.",
       complete: "Prošli jste celým bytem ♥",
       balcony: "Bude tu grilovačka 🔥🍖🌽🍷"
     },
@@ -5300,6 +5302,7 @@ document.addEventListener("click", function (e) {
       if (!laptop.classList.contains("open")) return;
       if (laptop.classList.contains("updating") || laptop.classList.contains("rebooting") || inCall()) return;
       clearLaptopTimers();
+      window.__pragueCalled = true; // satisfies the office finale's Call-Prague requirement
       laptop.classList.add("calling");
       setCallStatus("laptop_calling");
       if (laptopReduce) {
@@ -6353,7 +6356,7 @@ document.addEventListener("click", function (e) {
     });
     var glass = document.getElementById("office-stainedglass");
     if (lampsOff && glass && !glass.classList.contains("done") && window.setCaption) {
-      window.setCaption("office_find");
+      window.setCaption(window.__pragueCalled ? "office_find" : "office_call");
     }
   }
   lampIds.forEach(function (id) {
@@ -10787,7 +10790,7 @@ function spawnDustMote(container) {
         return el && el.classList.contains("dimmed");
       });
       var glassEl = document.getElementById("office-stainedglass");
-      if (lampsOff && glassEl && !glassEl.classList.contains("done")) setCaption("office_find");
+      if (lampsOff && glassEl && !glassEl.classList.contains("done")) setCaption(window.__pragueCalled ? "office_find" : "office_call");
     }
   }
   function goToStage(name) {
@@ -11855,6 +11858,11 @@ function spawnDustMote(container) {
     if (e.animationName === "butterfly-flap-left" || e.animationName === "butterfly-flap-right") glass.classList.remove("flap");
   });
   onActivate(glass, function () {
+    if (!window.__pragueCalled) { // the finale gates on calling Prague first
+      setCaption("office_call");
+      flapButterfly();
+      return;
+    }
     var lampsOff = ["office-lamp", "office-pendant"].every(function (id) {
       var el = document.getElementById(id);
       return el && el.classList.contains("dimmed");
@@ -11872,6 +11880,7 @@ function spawnDustMote(container) {
   });
 
   function resetHunt() {
+    window.__pragueCalled = false;
     kitchenPowered = false;
     kitchenGround = false;
     kitchenSolved = false;

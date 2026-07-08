@@ -9668,6 +9668,31 @@ function playSipSound() {
     setTimeout(function () { ctx.close(); }, 600);
   } catch (e) {}
 }
+// ── Stereo panning ──────────────────────────────────────────────────────────
+// Place a sound effect in the stereo field to match where its object sits on the
+// visible room: an object on the left of the screen sounds from the left ear.
+// panForElId maps the element's centre within the .hunt-viewport to [-1, 1]
+// (softened so nothing hard-pans). pannedOut returns a StereoPanner to route the
+// mix through (its output already reaches ctx.destination), or ctx.destination
+// itself on browsers without StereoPanner (mono fallback). Pass the scene element
+// id the sound comes from.
+function panForElId(elId) {
+  try {
+    var el = document.getElementById(elId), vp = document.querySelector(".hunt-viewport");
+    if (!el || !vp) return 0;
+    var r = el.getBoundingClientRect(), v = vp.getBoundingClientRect();
+    if (!v.width || !r.width) return 0;
+    var frac = ((r.left + r.width / 2) - v.left) / v.width; // 0 = left edge … 1 = right edge
+    return Math.max(-1, Math.min(1, (frac * 2 - 1) * 0.85)); // soften the hard extremes
+  } catch (e) { return 0; }
+}
+function pannedOut(ctx, elId) {
+  if (!ctx.createStereoPanner) return ctx.destination; // old Safari: mono
+  var p = ctx.createStereoPanner();
+  p.pan.value = panForElId(elId);
+  p.connect(ctx.destination);
+  return p;
+}
 function playGongSound() {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -9676,7 +9701,7 @@ function playGongSound() {
     var t = ctx.currentTime;
     var master = ctx.createGain();
     master.gain.value = 0.5;
-    master.connect(ctx.destination);
+    master.connect(pannedOut(ctx, "kitchen-gong")); // stereo: pan to the gong's screen position
 
     // Low inharmonic body: the hum that carries the tail. Detuned twins (dt
     // in cents) beat slowly against each other so even the hum isn't static.
@@ -9779,6 +9804,7 @@ function playGongEchoSound(fade) {
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
+    var out = pannedOut(ctx, "kitchen-gong"); // stereo: echoes track the gong's position too
 
     // These layer onto the main gong's tail at intervals, so they must blend
     // into its wash rather than pulse over it — a soft dark hum plus a gentle
@@ -9793,7 +9819,7 @@ function playGongEchoSound(fade) {
       g.gain.exponentialRampToValueAtTime(p.g * fade, t + 0.25);
       g.gain.exponentialRampToValueAtTime(0.0001, t + 2.8);
       osc.connect(g);
-      g.connect(ctx.destination);
+      g.connect(out);
       osc.start(t);
       osc.stop(t + 2.9);
     });
@@ -9823,7 +9849,7 @@ function playGongEchoSound(fade) {
     lfo.stop(t + dur);
     src.connect(bp);
     bp.connect(g);
-    g.connect(ctx.destination);
+    g.connect(out);
     src.start(t);
     src.stop(t + dur);
 
@@ -10365,7 +10391,7 @@ function playBowlRingSound() {
     var t = ctx.currentTime;
     var master = ctx.createGain();
     master.gain.value = 0.5;
-    master.connect(ctx.destination);
+    master.connect(pannedOut(ctx, "garden-bowl")); // stereo: pan to the bowl's screen position
 
     // A singing bowl isn't a chord — it's one inharmonic fundamental whose
     // slight asymmetry splits each mode into two near-identical frequencies,

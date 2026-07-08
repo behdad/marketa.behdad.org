@@ -7408,8 +7408,10 @@ function spawnGardenShootingStar() {
 function spawnGardenPlane() {
   var container = document.getElementById("garden-skyfx");
   if (!container) return;
+  if (window.__gardenPlaneBusy) return; // one plane at a time
   if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  while (container.firstChild) container.removeChild(container.firstChild); // clear stale (cap 1)
+  window.__gardenPlaneBusy = true;
+  while (container.firstChild) container.removeChild(container.firstChild);
   var SVGNS = "http://www.w3.org/2000/svg";
   var y0 = 30 + Math.random() * 26; // high in the open window sky
   var g = document.createElementNS(SVGNS, "g");
@@ -7435,9 +7437,9 @@ function spawnGardenPlane() {
       { transform: "translate(" + (endX - 55) + "px," + (y0 - 5) + "px)", opacity: 1, offset: 0.88 },
       { transform: "translate(" + endX + "px," + (y0 - 7) + "px)", opacity: 0 }
     ], { duration: 8500 + Math.random() * 3000, easing: "linear" });
-    a.onfinish = function () { if (g.parentNode) g.remove(); };
+    a.onfinish = function () { if (g.parentNode) g.remove(); window.__gardenPlaneBusy = false; };
   } else {
-    setTimeout(function () { if (g.parentNode) g.remove(); }, 11500);
+    setTimeout(function () { if (g.parentNode) g.remove(); window.__gardenPlaneBusy = false; }, 11500);
   }
 }
 // At the moment of TOTAL eclipse: a burst of hearts explodes around the moon with

@@ -8927,101 +8927,55 @@ function playTripMelody(variant) {
     if (!Ctx) return;
     var ctx = new Ctx();
     var t0 = ctx.currentTime;
-    // swirl the whole trip around the stereo field — an LFO-swept auto-pan, tuned per variant
-    var swirlRates = { strobe: 1.3, melt: 0.22, molly: 0.5, ketamine: 0.3 };
-    var bus = swirlBus(ctx, swirlRates[variant] || 0.7, (variant === "melt" || variant === "ketamine") ? 0.95 : 0.88);
+    // how long each variant runs, and a two-sweep swirl over exactly that — wide, and
+    // starting from a random side (see swirlBus); note() feeds every voice into the swirl.
+    var DUR = { strobe: 1.92, melt: 4.8, molly: 5.4, ketamine: 6.0, psychedelic: 3.84 };
+    var dur = DUR[variant] || 3;
+    var bus = swirlBus(ctx, t0, dur, 2, (variant === "melt" || variant === "ketamine") ? 0.98 : 0.92);
+    function note(type, freq, t, peak, len, attack, vibrato) {
+      var osc = ctx.createOscillator();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t);
+      if (vibrato) {
+        var vo = ctx.createOscillator(); vo.frequency.value = vibrato;
+        var vg = ctx.createGain(); vg.gain.value = 6;
+        vo.connect(vg); vg.connect(osc.frequency); vo.start(t); vo.stop(t + len + 0.05);
+      }
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + (attack || 0.01));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      osc.connect(g); g.connect(bus);
+      osc.start(t); osc.stop(t + len + 0.05);
+    }
     if (variant === "strobe") {
-      var notes = [523, 659, 784, 659, 880, 698, 932, 784];
-      var noteDur = 0.08;
-      notes.forEach(function (freq, i) {
-        var t = t0 + i * noteDur;
-        var osc = ctx.createOscillator();
-        osc.type = "square";
-        osc.frequency.setValueAtTime(freq, t);
-        var gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(0.04, t + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + noteDur * 0.9);
-        osc.connect(gain);
-        gain.connect(bus);
-        osc.start(t);
-        osc.stop(t + noteDur);
-      });
-      setTimeout(function () { ctx.close(); }, notes.length * noteDur * 1000 + 400);
+      var sn = [523, 659, 784, 659, 880, 698, 932, 784], sd = 0.08;
+      for (var sr = 0; sr < 3; sr++) sn.forEach(function (f, i) { note("square", f, t0 + (sr * sn.length + i) * sd, 0.04, sd * 0.9); });
     } else if (variant === "melt") {
       var melt = ctx.createOscillator();
       melt.type = "sine";
       melt.frequency.setValueAtTime(660, t0);
-      melt.frequency.exponentialRampToValueAtTime(220, t0 + 3.5);
-      var meltGain = ctx.createGain();
-      meltGain.gain.setValueAtTime(0.0001, t0);
-      meltGain.gain.exponentialRampToValueAtTime(0.06, t0 + 0.3);
-      meltGain.gain.exponentialRampToValueAtTime(0.0001, t0 + 3.6);
-      melt.connect(meltGain);
-      meltGain.connect(bus);
-      melt.start(t0);
-      melt.stop(t0 + 3.7);
-      setTimeout(function () { ctx.close(); }, 3900);
+      melt.frequency.exponentialRampToValueAtTime(210, t0 + dur * 0.95);
+      var mg = ctx.createGain();
+      mg.gain.setValueAtTime(0.0001, t0);
+      mg.gain.exponentialRampToValueAtTime(0.06, t0 + 0.3);
+      mg.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      melt.connect(mg); mg.connect(bus);
+      melt.start(t0); melt.stop(t0 + dur + 0.1);
     } else if (variant === "molly") {
-      [329.63, 415.30, 493.88, 659.25].forEach(function (freq, i) {
-        var t = t0 + i * 0.05;
-        var osc = ctx.createOscillator();
-        osc.type = "triangle";
-        osc.frequency.setValueAtTime(freq, t);
-        var gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(0.045, t + 0.15);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.8);
-        osc.connect(gain);
-        gain.connect(bus);
-        osc.start(t);
-        osc.stop(t + 1.9);
-      });
-      setTimeout(function () { ctx.close(); }, 2200);
+      var ma = [329.63, 415.30, 493.88, 659.25];
+      for (var mr = 0; mr < 3; mr++) {
+        var mt = t0 + mr * 1.7;
+        ma.forEach(function (f, i) { note("triangle", f, mt + i * 0.05, 0.045, 1.6, 0.15); });
+      }
     } else if (variant === "ketamine") {
-      var noteDur2 = 0.9;
-      [220, 196, 174.6, 146.8].forEach(function (freq, i) {
-        var t = t0 + i * noteDur2;
-        var osc = ctx.createOscillator();
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(freq, t);
-        var lfo = ctx.createOscillator();
-        lfo.frequency.value = 4;
-        var lfoGain = ctx.createGain();
-        lfoGain.gain.value = 6;
-        lfo.connect(lfoGain);
-        lfoGain.connect(osc.frequency);
-        var gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(0.05, t + 0.3);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + noteDur2 * 1.6);
-        osc.connect(gain);
-        gain.connect(bus);
-        lfo.start(t);
-        lfo.stop(t + noteDur2 * 1.7);
-        osc.start(t);
-        osc.stop(t + noteDur2 * 1.7);
-      });
-      setTimeout(function () { ctx.close(); }, 4 * noteDur2 * 1000 + 800);
+      var kd = 0.9, ka = [220, 196, 174.6, 146.8, 130.8, 146.8];
+      ka.forEach(function (f, i) { note("sine", f, t0 + i * kd, 0.05, kd * 1.6, 0.3, 4); });
     } else {
-      var swirl = [392.0, 440.0, 523.25, 659.25, 587.33, 523.25, 440.0, 392.0];
-      var swirlDur = 0.16;
-      swirl.forEach(function (freq, i) {
-        var t = t0 + i * swirlDur;
-        var osc = ctx.createOscillator();
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(freq, t);
-        var gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(0.05, t + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + swirlDur * 1.8);
-        osc.connect(gain);
-        gain.connect(bus);
-        osc.start(t);
-        osc.stop(t + swirlDur * 2);
-      });
-      setTimeout(function () { ctx.close(); }, swirl.length * swirlDur * 1000 + 500);
+      var pa = [392.0, 440.0, 523.25, 659.25, 587.33, 523.25, 440.0, 392.0], pd = 0.16;
+      for (var pr = 0; pr < 3; pr++) pa.forEach(function (f, i) { note("sine", f, t0 + (pr * pa.length + i) * pd, 0.05, pd * 1.8, 0.02); });
     }
+    setTimeout(function () { ctx.close(); }, dur * 1000 + 800);
   } catch (e) {}
 }
 var TRIP_VARIANTS = ["psychedelic", "strobe", "melt", "molly", "ketamine"];
@@ -9699,21 +9653,20 @@ function pannedOut(ctx, elIdOrPan) {
   p.connect(ctx.destination);
   return p;
 }
-// A swirling auto-pan bus for trippy sounds: a StereoPanner swept by a slow sine LFO so the
-// whole sound rotates L<->R. rate = LFO Hz (slow), depth 0..1. Voices connect into the
-// returned node; ctx.close() (which every trip variant already calls) tears the LFO down.
-// Mono fallback: ctx.destination on browsers without StereoPanner.
-function swirlBus(ctx, rate, depth) {
+// A swirling stereo bus for trippy sounds: pan follows a precomputed sine curve of `cycles`
+// full L<->R sweeps over `dur` seconds, starting at a RANDOM phase AND direction (so it
+// doesn't always begin heading the same way), width = depth (0..1). Voices connect into the
+// returned panner. Mono fallback: ctx.destination on browsers without StereoPanner.
+function swirlBus(ctx, t0, dur, cycles, depth) {
   if (!ctx.createStereoPanner) return ctx.destination;
   var pan = ctx.createStereoPanner();
   pan.connect(ctx.destination);
-  var lfo = ctx.createOscillator();
-  lfo.type = "sine";
-  lfo.frequency.value = rate;
-  var d = ctx.createGain();
-  d.gain.value = Math.max(0, Math.min(1, depth));
-  lfo.connect(d); d.connect(pan.pan);
-  lfo.start();
+  var N = 129, curve = new Float32Array(N);
+  var phase0 = Math.random() * Math.PI * 2;   // random start phase → the starting side varies
+  var dir = Math.random() < 0.5 ? -1 : 1;     // random direction (clockwise / counter)
+  var w = Math.max(0, Math.min(1, depth));
+  for (var i = 0; i < N; i++) curve[i] = dir * w * Math.sin(phase0 + (i / (N - 1)) * cycles * 2 * Math.PI);
+  try { pan.pan.setValueCurveAtTime(curve, t0, Math.max(0.05, dur)); } catch (e) { pan.pan.value = 0; }
   return pan;
 }
 function playGongSound() {

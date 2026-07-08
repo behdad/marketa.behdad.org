@@ -13033,7 +13033,7 @@ function spawnDustMote(container) {
   }
   function scheduleJump() {
     clearTimeout(jumpTimer);
-    jumpTimer = setTimeout(runJumpCycle, 10000 + Math.random() * 10000); // every ~10–20s
+    jumpTimer = setTimeout(runJumpCycle, 3300 + Math.random() * 3400); // every ~3.3–6.7s
   }
   function canJumpNow() {
     return walk.classList.contains("out") && !jumping && !reducedMotion() &&
@@ -13146,6 +13146,14 @@ function spawnDustMote(container) {
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "hidden") cancelJump(); // never leave a hop frozen mid-air in a hidden tab
     else scheduleJump();
+  });
+  // Clicking the loose cat pokes it into an immediate hop (composes with its wobble/meow;
+  // a no-op when it's not out, off-screen, mid-hop, or under reduced motion).
+  var catArt = document.getElementById("witchy-chest-cat");
+  if (catArt) catArt.addEventListener("click", function () {
+    if (jumping || !canJumpNow()) return;
+    clearTimeout(jumpTimer);
+    startJump();
   });
   scheduleJump(); // self-gating loop: acts only while the loose cat is on the viewed room
 })();

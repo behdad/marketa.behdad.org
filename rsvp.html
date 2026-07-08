@@ -1428,7 +1428,8 @@ footer{margin-top:2.6rem}
 @keyframes moon-eclipse-transit{0%,60%{transform:translate(-46px,14px)} 80%{transform:translate(0,0)} 100%{transform:translate(46px,-14px)}}
 #balcony-moon-glow{opacity:0.6}
 #stage-balcony.dusk #balcony-moon-glow{animation:moon-glow-transit 50s ease-in-out 8s infinite}
-@keyframes moon-glow-transit{0%,60%,100%{opacity:0.6} 80%{opacity:0.06}}
+/* at totality the glow BRIGHTENS into a corona ring around the dark disc */
+@keyframes moon-glow-transit{0%,60%,100%{opacity:0.6} 80%{opacity:1}}
 @media (prefers-reduced-motion: reduce){#stage-balcony.dusk #balcony-moon-shadow{animation:none} #stage-balcony.dusk #balcony-moon-glow{animation:none}}
 /* shared sky: a storm hides the moon + stars (overcast) in BOTH windows at once */
 #stage-balcony.dusk.storming #balcony-moon, #stage-balcony.dusk.storming #balcony-stars,
@@ -1948,6 +1949,7 @@ section{margin:1.9rem 0}
 <circle cx="366" cy="49" r="0.9" fill="#c9c3ad"/><circle cx="373" cy="56" r="1.1" fill="#c9c3ad"/>
 </g>
 <g id="garden-skyfx" pointer-events="none" aria-hidden="true"></g>
+<g id="garden-rainfx" pointer-events="none" aria-hidden="true"></g>
 <rect x="210" y="20" width="8" height="272" fill="#26221f"/>
 <rect x="316" y="20" width="8" height="272" fill="#26221f"/>
 <rect x="422" y="20" width="8" height="272" fill="#26221f"/>
@@ -10214,6 +10216,51 @@ function spawnDustMote(container) {
       }
       scheduleGardenShootingStar();
     }, delay);
+  })();
+  // rain in the garden window during the (shared) storm — self-replenishing so the
+  // count stays constant and spawning naturally pauses with the frames on a hidden tab
+  var GARDEN_RAIN_DROPS = 13;
+  function gardenRainActive() {
+    var gs = document.getElementById("stage-garden");
+    return window.__balconyStorm && gs && gs.classList.contains("dusk") &&
+      stageIndex === STAGES.indexOf("garden") && document.visibilityState !== "hidden";
+  }
+  function spawnGardenRainDrop() {
+    var container = document.getElementById("garden-rainfx");
+    if (!container) return;
+    var SVGNS = "http://www.w3.org/2000/svg";
+    var cx = 108 + Math.random() * 416, cy = 20 + Math.random() * 90;
+    var dropLen = 12 + Math.random() * 8, fallDist = 150 + Math.random() * 90;
+    var line = document.createElementNS(SVGNS, "line");
+    line.setAttribute("x1", cx); line.setAttribute("y1", cy);
+    line.setAttribute("x2", cx - 3); line.setAttribute("y2", cy + dropLen);
+    line.setAttribute("stroke", "#9fbcd0"); line.setAttribute("stroke-width", "1.6");
+    line.setAttribute("stroke-linecap", "round");
+    container.appendChild(line);
+    if (line.animate) {
+      var anim = line.animate([
+        { transform: "translate(0px,0px)", opacity: 0 },
+        { transform: "translate(-4px," + (fallDist * 0.4) + "px)", opacity: 0.65, offset: 0.3 },
+        { transform: "translate(-10px," + fallDist + "px)", opacity: 0 }
+      ], { duration: 700 + Math.random() * 340, easing: "ease-in", delay: Math.random() * 400 });
+      anim.onfinish = function () {
+        if (line.parentNode) line.remove();
+        if (gardenRainActive()) spawnGardenRainDrop(); // replenish 1:1
+      };
+    } else {
+      setTimeout(function () { if (line.parentNode) line.remove(); }, 1300);
+    }
+  }
+  (function seedGardenRain() {
+    function tick() {
+      if (gardenRainActive()) {
+        var container = document.getElementById("garden-rainfx");
+        var have = container ? container.childElementCount : 0;
+        for (var i = have; i < GARDEN_RAIN_DROPS; i++) spawnGardenRainDrop(); // top up
+      }
+      setTimeout(tick, 1200);
+    }
+    setTimeout(tick, 1200);
   })();
   // Fishu blows the odd ambient bubble (it's a fish) while you're in the nook
   (function scheduleFishuBubble() {

@@ -593,7 +593,7 @@ footer{margin-top:2.6rem}
 #office-monitor.show-chrome #office-monitor-bg{fill:#ffffff}
 #office-monitor.show-caps #office-monitor-bg{fill:#efe6cf}
 #office-monitor.show-harfbuzz #office-monitor-bg{fill:#c9974a}
-#office-monitor.show-behdad #office-monitor-bg{fill:#161a20}
+#office-monitor.show-behdad #office-monitor-bg{fill:#8e3a4a}
 #office-monitor .boot-logo{opacity:0; transition:opacity .4s ease}
 #office-monitor.show-fedora #monitor-logo-fedora{opacity:1}
 #office-monitor.show-chrome #monitor-logo-chrome{opacity:1}
@@ -1416,8 +1416,9 @@ footer{margin-top:2.6rem}
    gated to daytime). only shows + animates at dusk; the crawl (translateX) and
    inch/hump (scale) loops ride inner groups so they don't fight the wrapper's static
    transform attribute. infinite loops, and disabled under reduced-motion. */
-#garden-caterpillar{opacity:0; transition:opacity .9s ease}
-#stage-garden.dusk #garden-caterpillar{opacity:1}
+#garden-caterpillar{opacity:0; transition:opacity .9s ease; pointer-events:none}
+#stage-garden.dusk #garden-caterpillar{opacity:1; pointer-events:auto}
+#garden-caterpillar.metamorphosed{opacity:0 !important; pointer-events:none} /* clicked -> flew off as a butterfly */
 #stage-garden.dusk #garden-caterpillar .cat-crawl{animation:cat-crawl 19s ease-in-out infinite}
 #stage-garden.dusk #garden-caterpillar .cat-body{animation:cat-inch 2.3s ease-in-out infinite; transform-box:fill-box; transform-origin:50% 100%}
 @keyframes cat-crawl{0%,100%{transform:translateX(0)} 50%{transform:translateX(12px)}}
@@ -2466,7 +2467,8 @@ section{margin:1.9rem 0}
      floorboards in front of the bench (ambient butterflies are gated to daytime). its
      static floor position is on the wrapper group; the crawl + inch/hump transforms
      ride inner groups so neither collides with the wrapper's transform attribute. -->
-<g id="garden-caterpillar" transform="translate(312,316)" aria-hidden="true" pointer-events="none">
+<g id="garden-caterpillar" transform="translate(312,316)" role="button" tabindex="0" aria-label="A caterpillar" style="cursor:pointer">
+<rect x="-10" y="-19" width="58" height="26" fill="transparent"/>
 <g class="cat-crawl">
 <ellipse class="cat-shadow" cx="19" cy="1.6" rx="22" ry="2.6" fill="#1f2a14" opacity="0.18"/>
 <g class="cat-body">
@@ -3029,7 +3031,8 @@ section{margin:1.9rem 0}
 </foreignObject>
 </g>
 <g id="monitor-logo-harfbuzz" class="boot-logo">
-<g transform="translate(298.5,157.9) scale(0.05)" fill="#4a3220">
+<text x="316" y="192" text-anchor="middle" style="fill:#4a3220; font-family:monospace; font-size:6.5px; font-weight:bold">harfbuzz-world.cc</text>
+<g transform="translate(303,155) scale(0.042)" fill="#4a3220">
 <path d="M168 501L101 495L63 474L54 444L64 377L84 413L142 429L262 431L352 415L400 395L428 373L419 358L388 357L377 342L398 291L416 277L445 295L454 337L439 390L405 435L309 483L171 501ZM431 135L420 164L397 185L362 158L400 102L430 133ZM597 323L572 358L524 393L484 470L419 489L407 482L487 422L529 350L572 321L595 294L599 281L565 270L527 291L548 253L569 243L616 251L646 242L636 272L600 318Z"/>
 <path d="M229 300L254 247L259 280L273 299L292 299L311 269L316 273L300 335L272 367L240 355L229 301ZM287 586L278 612L255 634L220 610L254 553L286 580Z"/>
 <path d="M206 196L169 335L140 355L87 366L162 295L198 197L206 196ZM221 85L212 111L189 133L153 108L188 51L220 79ZM256 252L245 290L230 296L250 141L271 81L256 250Z"/>
@@ -5168,6 +5171,12 @@ document.addEventListener("click", function (e) {
   }
   function startSaver() {
     if (monitor.classList.contains("show-nowplaying")) { scheduleSaver(); return; } // not while music's on
+    // a visited site (harfbuzz/behdad) idles back to the caps "home" before the saver
+    if (monitor.classList.contains("show-harfbuzz") || monitor.classList.contains("show-behdad")) {
+      monitor.classList.remove("show-harfbuzz", "show-behdad");
+      monitor.classList.add("show-caps");
+      monitorUrl = CAPS_URL;
+    }
     if (!monitor.classList.contains("show-caps")) return;
     monitor.classList.remove("show-caps");
     monitor.classList.add("show-saver");
@@ -5412,9 +5421,10 @@ document.addEventListener("click", function (e) {
   window.navigateMonitor = function (siteKey, url) {
     if (!monitor.classList.contains("here") || !pcTower || !pcTower.classList.contains("on")) return false;
     clearBoot();
+    monitor.classList.remove("show-caps", "show-harfbuzz", "show-behdad"); // one site at a time
     monitor.classList.add("screen-on", "show-" + siteKey);
     monitorUrl = url;
-    if (siteKey === "caps") scheduleSaver();
+    scheduleSaver(); // any visited site idles back to the screensaver after a while
     playLaptopClickSound();
     updateNowPlaying();
     return true;

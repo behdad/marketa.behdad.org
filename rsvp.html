@@ -10773,14 +10773,21 @@ function spawnDustMote(container) {
   // tick does zero audio work and just re-arms the single outstanding timer
   // (no context/node/timeout pile-up). Skipped during a rainstorm.
   (function scheduleCrickets() {
-    function tick() {
+    var quiet = false;
+    function gate() {
       var sb = document.getElementById("stage-balcony");
-      if (sb && sb.classList.contains("dusk") && document.visibilityState !== "hidden" && !window.__balconyStorm) {
-        playCricketChirp();
-      }
-      setTimeout(tick, 900 + Math.random() * 1500); // re-arm (one timer at a time)
+      return sb && sb.classList.contains("dusk") && document.visibilityState !== "hidden" && !window.__balconyStorm;
     }
-    setTimeout(tick, 1200 + Math.random() * 1600);
+    function tick() {
+      if (!quiet && gate()) playCricketChirp();
+      // crickets don't chirp non-stop — now and then they lull into a quiet spell
+      var next;
+      if (quiet) { quiet = false; next = 1300 + Math.random() * 1800; }
+      else if (Math.random() < 0.2) { quiet = true; next = 7000 + Math.random() * 13000; } // a quiet stretch
+      else { next = 1300 + Math.random() * 2000; }
+      setTimeout(tick, next);
+    }
+    setTimeout(tick, 1500 + Math.random() * 1600);
   })();
   // Auto day/night: night after ~1 min of day, then flip every ~2 min — but
   // only while the balcony's on-screen, and a manual sun/moon click stops it.

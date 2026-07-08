@@ -9050,9 +9050,9 @@ function playTripMelody(variant) {
     var t0 = ctx.currentTime;
     // how long each variant runs, and a two-sweep swirl over exactly that — wide, and
     // starting from a random side (see swirlBus); note() feeds every voice into the swirl.
-    var DUR = { strobe: 1.92, melt: 4.8, molly: 5.4, ketamine: 6.0, psychedelic: 7.1 };
+    var DUR = { strobe: 3.16, melt: 4.8, molly: 5.4, ketamine: 6.0, psychedelic: 7.1 };
     var dur = DUR[variant] || 3;
-    var cycles = variant === "strobe" ? 6 : 2; // strobe: lots of quick back-and-forth pans
+    var cycles = variant === "strobe" ? 8 : 2; // strobe: lots of quick back-and-forth pans
     var bus = swirlBus(ctx, t0, dur, cycles, (variant === "melt" || variant === "ketamine") ? 0.98 : 0.92);
     function note(type, freq, t, peak, len, attack, vibrato) {
       var osc = ctx.createOscillator();
@@ -9072,7 +9072,19 @@ function playTripMelody(variant) {
     }
     if (variant === "strobe") {
       var sn = [523, 659, 784, 659, 880, 698, 932, 784], sd = 0.08;
-      for (var sr = 0; sr < 3; sr++) sn.forEach(function (f, i) { note("square", f, t0 + (sr * sn.length + i) * sd, 0.04, sd * 0.9); });
+      for (var sr = 0; sr < 4; sr++) sn.forEach(function (f, i) { note("square", f, t0 + (sr * sn.length + i) * sd, 0.04, sd * 0.9); });
+      // come-down: a bright square blip skidding down and fading, right after the flicker stops
+      var sTail = t0 + 4 * sn.length * sd - 0.02;
+      var sOsc = ctx.createOscillator();
+      sOsc.type = "square";
+      sOsc.frequency.setValueAtTime(700, sTail);
+      sOsc.frequency.exponentialRampToValueAtTime(220, sTail + 0.55);
+      var sGain = ctx.createGain();
+      sGain.gain.setValueAtTime(0.0001, sTail);
+      sGain.gain.exponentialRampToValueAtTime(0.045, sTail + 0.05);
+      sGain.gain.exponentialRampToValueAtTime(0.0001, sTail + 0.6);
+      sOsc.connect(sGain); sGain.connect(bus);
+      sOsc.start(sTail); sOsc.stop(sTail + 0.62);
     } else if (variant === "melt") {
       var melt = ctx.createOscillator();
       melt.type = "sine";

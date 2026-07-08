@@ -135,6 +135,8 @@ footer{margin-top:2.6rem}
 @media (prefers-reduced-motion: reduce){.scene-caption.rsvp-nudge{animation:none}}
 .hunt-hit{cursor:pointer}
 .hunt-hit:focus, .hunt-hit:focus-visible{outline:none}
+/* the game strip is a mouse/touch playground — no focus rings on any of its art */
+#loft-game-strip :focus, #loft-game-strip :focus-visible{outline:none}
 #kitchen-lamarzocco.done, #kitchen-grinder.done, #kitchen-portafilter.done{opacity:.55}
 #kitchen-lamarzocco.done ~ #kitchen-portafilter-dial{opacity:.55}
 #kitchen-lamarzocco.powered-on .kitchen-power-led{fill:#ff2f3a}
@@ -12191,6 +12193,11 @@ function spawnDustMote(container) {
 (function () {
   var strip = document.getElementById("loft-game-strip");
   if (!strip) return;
+  // The game is a mouse/touch playground; keyboard-tabbing through its hundreds of SVG
+  // hit-targets scrolls off-screen rooms into view (which breaks the strip's translate
+  // transform) and paints focus rings on the art. Drop every strip element out of the
+  // tab order — still clickable, just not tab-focusable.
+  strip.querySelectorAll("[tabindex]").forEach(function (el) { el.setAttribute("tabindex", "-1"); });
   // touch-action:none is ignored on SVG children (no CSS layout box), so
   // dragging an object would pan the page on touch screens. touchmove events
   // retarget to the touchstart element, so one non-passive listener covers

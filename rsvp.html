@@ -6887,8 +6887,10 @@ function spawnSmokeDrift(svg, cx, cy, count, dirX) {
 // a single bubble that wobbles up and pops (Fishu's cough)
 function spawnBubble(svg, cx, cy) {
   if (!svg) return;
+  if (svg.querySelectorAll(".fishu-bubble").length >= 3) return; // cap (no hidden-tab pile-up)
   var b = document.createElementNS("http://www.w3.org/2000/svg", "circle");
   b.setAttribute("cx", cx); b.setAttribute("cy", cy); b.setAttribute("r", "3");
+  b.setAttribute("class", "fishu-bubble");
   b.setAttribute("fill", "#cfeaf5"); b.setAttribute("fill-opacity", "0.4");
   b.setAttribute("stroke", "#bfe0f0"); b.setAttribute("stroke-width", "0.7");
   b.style.transformBox = "fill-box"; b.style.transformOrigin = "center"; b.style.pointerEvents = "none";
@@ -9846,6 +9848,17 @@ function spawnDustMote(container) {
         spawnFirefly(strip);
       }
       scheduleFireflies();
+    }, delay);
+  })();
+  // Fishu blows the odd ambient bubble (it's a fish) while you're in the nook
+  (function scheduleFishuBubble() {
+    var delay = 13000 + Math.random() * 13000;
+    setTimeout(function () {
+      var pd = document.querySelector("#cuddly-puffer-wrap .puffer-drift");
+      if (pd && stageIndex === STAGES.indexOf("cuddly") && document.visibilityState !== "hidden") {
+        spawnBubble(pd, 13.5, 1.7);
+      }
+      scheduleFishuBubble();
     }, delay);
   })();
   (function scheduleOctopusTwitch() {

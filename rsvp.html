@@ -592,6 +592,10 @@ footer{margin-top:2.6rem}
 #office-monitor.show-behdad #monitor-logo-behdad{opacity:1}
 #office-monitor.show-nowplaying #monitor-logo-nowplaying{opacity:1}
 #office-monitor.show-saver #monitor-saver{opacity:1}
+/* the saver alternates between the bouncing caps and a live Julia fractal */
+#monitor-saver-fractal{opacity:0}
+#office-monitor.show-saver.saver-fractal #monitor-saver-caps{opacity:0}
+#office-monitor.show-saver.saver-fractal #monitor-saver-fractal{opacity:1}
 .eq-bar{transform-box:fill-box; transform-origin:bottom center; transform:scaleY(0.28)}
 #monitor-np-marquee{transform:translateX(124px)}
 #office-monitor.show-nowplaying #monitor-np-marquee{animation:np-scroll 13s linear infinite}
@@ -2829,6 +2833,9 @@ section{margin:1.9rem 0}
 </g>
 <g id="monitor-saver" class="boot-logo">
 <g id="monitor-saver-caps" transform="translate(280,158) scale(0.28)"><use href="#cap-pink"/><use href="#cap-blue"/></g>
+<foreignObject id="monitor-saver-fractal" x="254" y="154" width="124" height="42">
+<canvas xmlns="http://www.w3.org/1999/xhtml" id="monitor-fractal-canvas" width="90" height="30" style="width:124px;height:42px;display:block;image-rendering:pixelated"></canvas>
+</foreignObject>
 </g>
 <g id="monitor-logo-harfbuzz" class="boot-logo">
 <g transform="translate(298.5,157.9) scale(0.05)" fill="#4a3220">
@@ -4921,30 +4928,44 @@ document.addEventListener("click", function (e) {
   var bootTimers = [];
   var CAPS_URL = "https://marketa.behdad.org/";
   var monitorUrl = CAPS_URL;
-  // After the caps site has idled a while, the classic bounce screensaver
-  // takes over; any click on the monitor wakes it.
-  var saverTimer = null, saverRaf = null;
+  // After the caps site idles a while, a screensaver takes over — alternating
+  // between the classic bouncing caps and a live Julia-set fractal ("electric
+  // sheep" nod). Any click on the monitor wakes it.
+  var saverTimer = null, saverRaf = null, saverCycleTimer = null, saverFractalNext = false;
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   function stopSaver() {
     clearTimeout(saverTimer);
     saverTimer = null;
+    clearInterval(saverCycleTimer);
+    saverCycleTimer = null;
     if (saverRaf) { cancelAnimationFrame(saverRaf); saverRaf = null; }
-    monitor.classList.remove("show-saver");
+    monitor.classList.remove("show-saver", "saver-fractal");
   }
   function scheduleSaver() {
     clearTimeout(saverTimer);
-    saverTimer = setTimeout(startSaver, 30000);
+    saverTimer = setTimeout(startSaver, 15000);
+  }
+  function showSaverMode(fractal) {
+    if (saverRaf) { cancelAnimationFrame(saverRaf); saverRaf = null; }
+    if (fractal) { monitor.classList.add("saver-fractal"); startFractalSaver(); }
+    else { monitor.classList.remove("saver-fractal"); startCapsSaver(); }
   }
   function startSaver() {
     if (monitor.classList.contains("show-nowplaying")) { scheduleSaver(); return; } // not while music's on
     if (!monitor.classList.contains("show-caps")) return;
-    var el = document.getElementById("monitor-saver-caps");
-    if (!el) return;
     monitor.classList.remove("show-caps");
     monitor.classList.add("show-saver");
-    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      el.setAttribute("transform", "translate(292,160) scale(0.28)");
-      return;
-    }
+    showSaverMode(saverFractalNext = !saverFractalNext);
+    // while it keeps idling, swap between the caps and the fractal every ~15s
+    clearInterval(saverCycleTimer);
+    if (!reduceMotion) saverCycleTimer = setInterval(function () {
+      showSaverMode(saverFractalNext = !saverFractalNext);
+    }, 10000);
+  }
+  function startCapsSaver() {
+    var el = document.getElementById("monitor-saver-caps");
+    if (!el) return;
+    if (reduceMotion) { el.setAttribute("transform", "translate(292,160) scale(0.28)"); return; }
     var px = 270, py = 158, vx = 0.035, vy = 0.028, last = null;
     function step(t) {
       if (last === null) last = t;
@@ -4960,6 +4981,51 @@ document.addEventListener("click", function (e) {
       saverRaf = requestAnimationFrame(step);
     }
     saverRaf = requestAnimationFrame(step);
+  }
+  // Julia-set renderer — escape-time, smooth-colored, glowing on near-black
+  // ("electric sheep" look). Reused by the mushroom-trip plants via window.__renderJulia.
+  function fractalClamp(v) { return v < 0 ? 0 : v > 255 ? 255 : v | 0; }
+  function fractalColor(t) {
+    var b = Math.pow(t, 0.55), hue = t * 3.0;
+    return [fractalClamp(b * (60 + 200 * (0.5 + 0.5 * Math.sin(6.283 * hue + 0.2)))),
+            fractalClamp(b * (30 + 150 * (0.5 + 0.5 * Math.sin(6.283 * hue + 2.3)))),
+            fractalClamp(b * (90 + 165 * (0.5 + 0.5 * Math.sin(6.283 * hue + 4.1))))];
+  }
+  function renderJulia(canvas, cRe, cIm, maxIter, zoom) {
+    var ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    var w = canvas.width, h = canvas.height, img = ctx.createImageData(w, h), d = img.data;
+    var scale = 3.0 / (zoom * Math.min(w, h)), LOG2 = Math.log(2);
+    for (var py = 0; py < h; py++) {
+      for (var px = 0; px < w; px++) {
+        var zx = (px - w / 2) * scale, zy = (py - h / 2) * scale, i = 0;
+        while (i < maxIter) { var x2 = zx * zx, y2 = zy * zy; if (x2 + y2 > 4) break; zy = 2 * zx * zy + cIm; zx = x2 - y2 + cRe; i++; }
+        var o = (py * w + px) * 4;
+        if (i >= maxIter) { d[o] = 8; d[o + 1] = 6; d[o + 2] = 14; d[o + 3] = 255; }
+        else {
+          var sm = i + 1 - Math.log(Math.log(Math.sqrt(zx * zx + zy * zy))) / LOG2, c = fractalColor((sm / maxIter) % 1);
+          d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = 255;
+        }
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+  window.__renderJulia = renderJulia; // shared with the trip-plant fractals
+  function startFractalSaver() {
+    var canvas = document.getElementById("monitor-fractal-canvas");
+    if (!canvas) return;
+    var R = 0.7885, theta = Math.random() * 6.283;
+    if (reduceMotion) { renderJulia(canvas, R * Math.cos(theta), R * Math.sin(theta), 70, 1.3); return; }
+    var lastDraw = 0;
+    function frame(t) {
+      if (t - lastDraw >= 45) { // ~22fps: plenty for a slow morph, easy on the CPU
+        lastDraw = t;
+        theta += 0.02; // full c-orbit ~ every 14s
+        renderJulia(canvas, R * Math.cos(theta), R * Math.sin(theta), 70, 1.3);
+      }
+      saverRaf = requestAnimationFrame(frame);
+    }
+    saverRaf = requestAnimationFrame(frame);
   }
   function clearBoot() {
     bootTimers.forEach(clearTimeout);

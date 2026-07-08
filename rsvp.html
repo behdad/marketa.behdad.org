@@ -5444,10 +5444,20 @@ document.addEventListener("click", function (e) {
     }
   }
   window.stopPcFan = stopPcFan;
+  // the fan hum is only audible in the office and while the tab's visible: leaving
+  // the room (or hiding the tab) stops it, and returning with the PC still on resumes it
+  var fanInOffice = false;
+  window.__updatePcFan = function (inOffice) {
+    if (typeof inOffice === "boolean") fanInOffice = inOffice;
+    var wantFan = pcTower.classList.contains("on") && fanInOffice && !document.hidden;
+    if (wantFan && !pcFanCtx) startPcFan();
+    else if (!wantFan && pcFanCtx) stopPcFan();
+  };
+  document.addEventListener("visibilitychange", function () { window.__updatePcFan(); });
   function togglePc() {
-    var on = pcTower.classList.toggle("on");
+    pcTower.classList.toggle("on");
     playSparkSound();
-    if (on) startPcFan(); else stopPcFan();
+    window.__updatePcFan();
   }
   pcTower.addEventListener("click", togglePc);
   pcTower.addEventListener("keydown", function (e) {
@@ -10810,6 +10820,7 @@ function spawnDustMote(container) {
     if (name === "cuddly" && window.updateCuddlyGrooving) window.updateCuddlyGrooving();
     if (name === "cuddly" && window.resetFishu) window.resetFishu();
     if (name === "office" && window.revealOfficeFishuIfFled) window.revealOfficeFishuIfFled();
+    if (window.__updatePcFan) window.__updatePcFan(name === "office"); // hum only in the office
     if (name === "balcony") triggerBalconyFinale();
   }
   window.goToStage = goToStage;

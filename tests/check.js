@@ -222,6 +222,45 @@ function checkAnimationClassCleanup(file, style, script, html) {
   }
 }
 
+// A CSS `animation: NAME ...` whose NAME has no matching `@keyframes NAME` silently
+// does nothing — a class of bug that bites on renames (rename the rule but not the
+// keyframes, or a plain typo). Bit the butterfly groove work (distinct groove keyframe
+// names). Extract every referenced animation-name and verify a @keyframes defines it.
+function checkAnimationKeyframes(file, style) {
+  if (!style) return;
+  var defined = new Set();
+  var kfRe = /@(?:-webkit-)?keyframes\s+([A-Za-z_][\w-]*)/g;
+  var km;
+  while ((km = kfRe.exec(style))) defined.add(km[1]);
+  // animation shorthand keywords (everything that ISN'T a custom animation-name);
+  // cubic-bezier()/steps() are stripped as function calls before tokenizing.
+  var KEYWORDS = new Set([
+    "ease", "ease-in", "ease-out", "ease-in-out", "linear", "step-start", "step-end",
+    "infinite", "normal", "reverse", "alternate", "alternate-reverse", "none",
+    "forwards", "backwards", "both", "running", "paused",
+    "initial", "inherit", "unset", "revert", "revert-layer"
+  ]);
+  var undefinedRefs = new Set();
+  var declRe = /animation(?:-name)?\s*:\s*([^;}]+)/g;
+  var dm;
+  while ((dm = declRe.exec(style))) {
+    var value = dm[1].replace(/[a-z-]+\([^)]*\)/gi, " "); // drop cubic-bezier()/steps()
+    value.split(",").forEach(function (part) {
+      part.trim().split(/\s+/).forEach(function (tok) {
+        if (!tok || KEYWORDS.has(tok)) return;
+        if (/^-?[\d.]+(m?s)?$/.test(tok)) return;          // duration / delay / count
+        if (!/^[A-Za-z_][\w-]*$/.test(tok)) return;         // not an identifier
+        if (!defined.has(tok)) undefinedRefs.add(tok);
+      });
+    });
+  }
+  if (undefinedRefs.size === 0) {
+    pass(file + ": every animation name has a matching @keyframes");
+  } else {
+    fail(file + ": animation references undefined @keyframes", Array.from(undefinedRefs).join(", "));
+  }
+}
+
 FILES.forEach(function (file) {
   console.log(file + ":");
   var html = fs.readFileSync(path.join(ROOT, file), "utf8");
@@ -234,6 +273,7 @@ FILES.forEach(function (file) {
     checkParticleTransformOrigin(file, script);
     checkAnimationClassCleanup(file, style, script, html);
   }
+  checkAnimationKeyframes(file, style);
   checkSvgTagBalance(file, html);
   console.log("");
 });

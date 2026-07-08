@@ -3214,6 +3214,13 @@ section{margin:1.9rem 0}
 <rect x="174" y="38" width="104" height="72" rx="5" fill="#3b2e26" stroke="#241c17" stroke-width="1.5"/>
 <rect x="178" y="42" width="96" height="64" rx="3" fill="#161311"/>
 <rect id="cuddly-screen-bg" x="180" y="44" width="92" height="60" rx="2" fill="url(#cuddly-screen-grad)"/>
+<!-- Bottom-seeded fire canvas, layered just under the hand-drawn CSS flames so it
+     reads as living additive fire rising behind them. Backing is a 3x supersample
+     (138x90) of the 92x60 panel; overflow:hidden clips it to the bezel so nothing
+     spills past the screen. pointer-events:none keeps the screen's off/on click
+     target intact; fire-live fades it with the off toggle. Driven by the
+     self-cancelling rAF loop in the "cuddly fireplace fire" IIFE. -->
+<foreignObject id="cuddly-flame-fo" class="fire-live" x="180" y="44" width="92" height="60" style="overflow:hidden;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" id="cuddly-flame-canvas" width="138" height="90" style="width:92px;height:60px;display:block;mix-blend-mode:screen"></canvas></foreignObject>
 <g pointer-events="none" aria-hidden="true">
 <ellipse id="cuddly-fire-ember" class="fire-live" cx="226" cy="100" rx="41" ry="12" fill="#f0a24a" fill-opacity="0.55"/>
 <rect x="203" y="97" width="46" height="8" rx="4" fill="#33251c" transform="rotate(-3 226 101)"/>
@@ -4610,11 +4617,115 @@ document.addEventListener("click", function (e) {
   function toggleFire() {
     screen.classList.toggle("off");
     window.__updateFireSound(); // fade the crackle in/out with the on/off toggle
+    // back on → restart the fractal-flame loop (it self-cancelled when the fire went off)
+    if (!screen.classList.contains("off") && window.startCuddlyFlame) window.startCuddlyFlame();
   }
   screen.addEventListener("click", toggleFire);
   screen.addEventListener("keydown", function (e) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleFire(); }
   });
+})();
+(function () {
+  // ── Cuddly fireplace fire ─────────────────────────────────────────────────
+  // A classic "seed the hot bottom row, propagate upward" fire on the wall-screen
+  // fireplace: the bottom row is re-seeded hot every frame, and each cell above
+  // pulls heat from the cell below (wind-shifted ±1) minus a small random cooling,
+  // so flames rise, waver, and taper. Heat is tone-mapped through a warm LUT (cool
+  // → transparent, then ember-red → orange → gold → pale-hot). Painted BELOW the
+  // hand-drawn CSS flame group (mix-blend-mode:screen, transparent bg) so the CSS
+  // core stays crisp on top and this reads as living fire behind it.
+  //
+  // Robustness (CLAUDE.md timer-pile-up class): ONE self-cancelling rAF. It runs
+  // ONLY while the cuddly room is on-screen (window.currentStageName) AND the tab
+  // is visible AND the fire isn't toggled off; the instant any of those is false
+  // it nulls its handle and returns — no accumulation, no leftover timer. It is
+  // (re)started idempotently from three triggers (entering cuddly, toggling the
+  // fire back on, tab becoming visible), each of which no-ops when not runnable.
+  // Reduced motion: a single static frame, no loop.
+  var canvas = document.getElementById("cuddly-flame-canvas");
+  var screen = document.getElementById("cuddly-wallscreen");
+  if (!canvas || !screen) return;
+  var ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  var W = canvas.width, H = canvas.height, N = W * H;
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var DRAW_MS = 33;    // ~30fps
+  var COOL = 0.03;     // max per-step cooling — the main knob for flame height (lower = taller)
+  var SEED_MIN = 0.82; // hot bottom row, re-seeded each frame with a little flicker
+  var heat = new Float32Array(N); // 0 (cool) … 1 (white-hot); row 0 = top, row H-1 = bottom
+  var img = ctx.createImageData(W, H), data = img.data;
+
+  // Warm fire LUT (heat 0→255): cool is fully transparent, alpha ramps up fast so the
+  // flame body reads vivid (not washed out); colour runs ember-red → orange → gold → pale.
+  var LUT = new Uint8Array(256 * 4);
+  (function buildLUT() {
+    var stops = [
+      [0.00,   0,   0,   0],
+      [0.12, 120,   8,   3],
+      [0.34, 214,  30,   8],
+      [0.55, 255,  96,  16],
+      [0.75, 255, 176,  56],
+      [1.00, 255, 240, 190]
+    ];
+    for (var i = 0; i < 256; i++) {
+      var t = i / 255, s = 0;
+      while (s < stops.length - 2 && t > stops[s + 1][0]) s++;
+      var a = stops[s], b = stops[s + 1], f = (t - a[0]) / (b[0] - a[0] || 1);
+      LUT[i * 4]     = a[1] + (b[1] - a[1]) * f;
+      LUT[i * 4 + 1] = a[2] + (b[2] - a[2]) * f;
+      LUT[i * 4 + 2] = a[3] + (b[3] - a[3]) * f;
+      LUT[i * 4 + 3] = Math.max(0, Math.min(1, (t - 0.04) * 3.4)) * 255; // <0.04 clear, opaque by ~0.34
+    }
+  })();
+
+  function seedBottom() {
+    var base = (H - 1) * W;
+    for (var x = 0; x < W; x++) heat[base + x] = SEED_MIN + Math.random() * (1 - SEED_MIN);
+  }
+  function spread() {
+    // each cell takes the cell below (wind-shifted ±1) minus a random cooling, so
+    // heat climbs one row per frame and the flames waver and thin as they rise.
+    for (var y = 0; y < H - 1; y++) {
+      var row = y * W, below = (y + 1) * W;
+      for (var x = 0; x < W; x++) {
+        var sx = x + ((Math.random() * 3) | 0) - 1;
+        if (sx < 0) sx = 0; else if (sx >= W) sx = W - 1;
+        var v = heat[below + sx] - Math.random() * COOL;
+        heat[row + x] = v > 0 ? v : 0;
+      }
+    }
+  }
+  function draw() {
+    for (var i = 0; i < N; i++) {
+      var h = heat[i]; if (h > 1) h = 1;
+      var li = ((h * 255) | 0) * 4, o = i * 4;
+      data[o] = LUT[li]; data[o + 1] = LUT[li + 1]; data[o + 2] = LUT[li + 2]; data[o + 3] = LUT[li + 3];
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  var raf = null, lastDraw = 0;
+  function fireOn() { return !screen.classList.contains("off"); }
+  function shouldRun() { return window.currentStageName === "cuddly" && !document.hidden && fireOn(); }
+  function frame(t) {
+    if (!shouldRun()) { raf = null; return; } // leaving the room / hiding / off → self-cancel, no leftover timer
+    if (t - lastDraw >= DRAW_MS) { lastDraw = t; seedBottom(); spread(); draw(); }
+    raf = requestAnimationFrame(frame);
+  }
+  function renderStatic() { // reduced motion: climb the flame once, paint a single frame, never loop
+    for (var p = 0; p < H; p++) { seedBottom(); spread(); }
+    draw();
+  }
+  function startCuddlyFlame() {
+    if (reduceMotion) { if (window.currentStageName === "cuddly") renderStatic(); return; }
+    if (raf || !shouldRun()) return; // already live, or not runnable right now
+    lastDraw = 0;
+    raf = requestAnimationFrame(frame);
+  }
+  window.startCuddlyFlame = startCuddlyFlame;
+  window.__cuddlyFlameRaf = function () { return raf; }; // test hook: null when the loop is stopped
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) startCuddlyFlame(); });
 })();
 (function () {
   var bottom = document.getElementById("cuddly-behdad-bottom");
@@ -11464,11 +11575,13 @@ function spawnDustMote(container) {
     if (idx > maxUnlocked) maxUnlocked = idx;
     strip.style.transform = "translateX(-" + (idx * 20) + "%)";
     window.currentStageIndex = idx;
+    window.currentStageName = name; // room-truth for gates that live outside this IIFE (e.g. the fractal-flame loop)
     setCaption(name);
     restoreStageHint(name);
     updateNav();
     if (window.__homeCat) window.__homeCat(name); // the loose cat follows the player between rooms
     if (name === "cuddly" && window.updateCuddlyGrooving) window.updateCuddlyGrooving();
+    if (name === "cuddly" && window.startCuddlyFlame) window.startCuddlyFlame(); // light the fireplace's fractal flames
     if (name === "cuddly" && window.resetFishu) window.resetFishu();
     if (name === "office" && window.revealOfficeFishuIfFled) window.revealOfficeFishuIfFled();
     if (window.__updatePcFan) window.__updatePcFan(name === "office"); // hum only in the office

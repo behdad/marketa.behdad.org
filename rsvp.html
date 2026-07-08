@@ -3082,6 +3082,7 @@ section{margin:1.9rem 0}
 </g>
 </g>
 
+<g transform="translate(-10,0)"><!-- nudge Octi + her trunk 10px left; static shift on a wrapper so it doesn't clobber their animations -->
 <g id="cuddly-trunk" class="hunt-hit" tabindex="0" role="button" aria-label="The trunk under the octopus">
 <rect x="592" y="244" width="88" height="66" fill="#4a5a48" stroke="#36443a" stroke-width="2"/>
 <line x1="592" y1="258" x2="680" y2="258" stroke="#36443a" stroke-width="2"/>
@@ -3107,6 +3108,7 @@ section{margin:1.9rem 0}
 <line x1="641.4" y1="226.1" x2="643" y2="224.5"/>
 <line x1="642.7" y1="227.5" x2="644.3" y2="225.9"/>
 <line x1="644" y1="228.9" x2="645.6" y2="227.3"/>
+</g>
 </g>
 </g>
 </g>
@@ -9054,6 +9056,8 @@ function startTripVariant(variant) {
         var hx = stageIdx * 680 + 150 + Math.random() * 380;
         var hy = 150 + Math.random() * 180;
         spawnHearts(strip, hx, hy);
+        // the kiss pops from exactly where the hearts burst (pan by the heart's x in the room)
+        playKissPopSound(Math.max(-1, Math.min(1, ((hx - stageIdx * 680) / 680 * 2 - 1) * 0.85)));
       }, delay);
     });
   }
@@ -10020,6 +10024,27 @@ function playLaptopClickSound() {
 }
 // A short synthesized ring for the "call Prague" gag: two brief dual-tone warbles,
 // then the context closes itself — no loop, no timer left running.
+function playKissPopSound(pan) {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t = ctx.currentTime;
+    var out = pannedOut(ctx, typeof pan === "number" ? pan : 0);
+    // a soft little "mwah": a quick high blip with a downward pitch pop
+    var osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(920, t);
+    osc.frequency.exponentialRampToValueAtTime(560, t + 0.09);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.05, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+    osc.connect(g); g.connect(out);
+    osc.start(t); osc.stop(t + 0.16);
+    setTimeout(function () { ctx.close(); }, 300);
+  } catch (e) {}
+}
 function playPlushSquishSound() {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;

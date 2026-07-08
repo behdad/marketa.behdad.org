@@ -593,7 +593,7 @@ footer{margin-top:2.6rem}
 #office-monitor.show-nowplaying #monitor-logo-nowplaying{opacity:1}
 #office-monitor.show-saver #monitor-saver{opacity:1}
 /* the saver alternates between the bouncing caps and a live Julia fractal */
-#monitor-saver-fractal{opacity:0}
+#monitor-saver-fractal{opacity:0; pointer-events:none} /* clicks pass through to wake the monitor */
 #office-monitor.show-saver.saver-fractal #monitor-saver-caps{opacity:0}
 #office-monitor.show-saver.saver-fractal #monitor-saver-fractal{opacity:1}
 .eq-bar{transform-box:fill-box; transform-origin:bottom center; transform:scaleY(0.28)}
@@ -4936,7 +4936,7 @@ document.addEventListener("click", function (e) {
   function stopSaver() {
     clearTimeout(saverTimer);
     saverTimer = null;
-    clearInterval(saverCycleTimer);
+    clearTimeout(saverCycleTimer);
     saverCycleTimer = null;
     if (saverRaf) { cancelAnimationFrame(saverRaf); saverRaf = null; }
     monitor.classList.remove("show-saver", "saver-fractal");
@@ -4956,11 +4956,16 @@ document.addEventListener("click", function (e) {
     monitor.classList.remove("show-caps");
     monitor.classList.add("show-saver");
     showSaverMode(saverFractalNext = !saverFractalNext);
-    // while it keeps idling, swap between the caps and the fractal every ~15s
-    clearInterval(saverCycleTimer);
-    if (!reduceMotion) saverCycleTimer = setInterval(function () {
+    if (!reduceMotion) scheduleSaverFlip(); // keep swapping while idle
+  }
+  // the caps saver is a bit dull, so show it only briefly; linger on the fractal
+  function scheduleSaverFlip() {
+    clearTimeout(saverCycleTimer);
+    var dur = saverFractalNext ? 15000 : 5000; // fractal 15s, caps 5s
+    saverCycleTimer = setTimeout(function () {
       showSaverMode(saverFractalNext = !saverFractalNext);
-    }, 10000);
+      scheduleSaverFlip();
+    }, dur);
   }
   function startCapsSaver() {
     var el = document.getElementById("monitor-saver-caps");
@@ -4986,10 +4991,12 @@ document.addEventListener("click", function (e) {
   // ("electric sheep" look). Reused by the mushroom-trip plants via window.__renderJulia.
   function fractalClamp(v) { return v < 0 ? 0 : v > 255 ? 255 : v | 0; }
   function fractalColor(t) {
-    var b = Math.pow(t, 0.55), hue = t * 3.0;
-    return [fractalClamp(b * (60 + 200 * (0.5 + 0.5 * Math.sin(6.283 * hue + 0.2)))),
-            fractalClamp(b * (30 + 150 * (0.5 + 0.5 * Math.sin(6.283 * hue + 2.3)))),
-            fractalClamp(b * (90 + 165 * (0.5 + 0.5 * Math.sin(6.283 * hue + 4.1))))];
+    // full-spectrum rainbow "sinebow": hue sweeps several bands with iteration,
+    // dark at the background (t~0), vivid toward the set (t~1)
+    var b = Math.pow(t, 0.5), hue = t * 5.0;
+    return [fractalClamp(255 * b * (0.5 + 0.5 * Math.sin(6.283 * hue + 0.0))),
+            fractalClamp(255 * b * (0.5 + 0.5 * Math.sin(6.283 * hue + 2.094))),
+            fractalClamp(255 * b * (0.5 + 0.5 * Math.sin(6.283 * hue + 4.189)))];
   }
   function renderJulia(canvas, cRe, cIm, maxIter, zoom) {
     var ctx = canvas.getContext("2d");

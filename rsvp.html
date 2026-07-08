@@ -3363,6 +3363,7 @@ section{margin:1.9rem 0}
 <g clip-path="url(#balcony-moon-clip)"><circle id="balcony-moon-shadow" cx="510" cy="50" r="14" fill="#241b3d"/></g>
 </g>
 </g>
+<g id="balcony-heartfx" pointer-events="none" aria-hidden="true"></g>
 </g>
 <rect id="balcony-thunder-flash" class="balcony-thunder-flash" x="2720" y="0" width="680" height="340" pointer-events="none"/>
 <rect class="trip-melt-whiteout" x="0" y="0" width="3400" height="340" pointer-events="none"/>
@@ -6970,6 +6971,57 @@ function spawnGardenShootingStar() {
     setTimeout(function () { if (g.parentNode) g.remove(); }, 1350);
   }
 }
+// At the moment of TOTAL eclipse: a burst of hearts explodes around the moon with
+// a tinkle of sparkles on the corona — a nod to a proposal under the 2017 totality.
+function spawnEclipseTotality() {
+  var host = document.getElementById("balcony-heartfx");
+  if (!host) return;
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  while (host.firstChild) host.removeChild(host.firstChild); // clear stale (cap the burst)
+  var SVGNS = "http://www.w3.org/2000/svg", cx = 510, cy = 50;
+  if (typeof playFairyChimeSound === "function") playFairyChimeSound();
+  // hearts radiating outward
+  var HEART = "M0 1.4 C -2.4 -2 -6 0.4 0 4.6 C 6 0.4 2.4 -2 0 1.4 Z";
+  var pinks = ["#d9a6a6", "#c68e95", "#8e3a4a"];
+  var N = 13;
+  for (var i = 0; i < N; i++) {
+    var ang = (i / N) * 6.283 + Math.random() * 0.5, dist = 30 + Math.random() * 30;
+    var dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist * 0.9;
+    var g = document.createElementNS(SVGNS, "g");
+    var path = document.createElementNS(SVGNS, "path");
+    path.setAttribute("d", HEART);
+    path.setAttribute("fill", pinks[i % pinks.length]);
+    g.appendChild(path);
+    host.appendChild(g);
+    if (g.animate) {
+      g.animate([
+        { transform: "translate(" + cx + "px," + cy + "px) scale(0) rotate(0deg)", opacity: 0 },
+        { transform: "translate(" + (cx + dx * 0.35) + "px," + (cy + dy * 0.35) + "px) scale(1) rotate(8deg)", opacity: 1, offset: 0.25 },
+        { transform: "translate(" + (cx + dx) + "px," + (cy + dy) + "px) scale(1.15) rotate(-6deg)", opacity: 0 }
+      ], { duration: 1500 + Math.random() * 600, easing: "cubic-bezier(.2,.7,.3,1)", delay: Math.random() * 150 })
+        .onfinish = (function (node) { return function () { if (node.parentNode) node.remove(); }; })(g);
+    }
+  }
+  // tinkle: a few sparkles twinkling on the corona ring
+  for (var s = 0; s < 7; s++) {
+    var sa = Math.random() * 6.283, sr = 17 + Math.random() * 9;
+    var sx = cx + Math.cos(sa) * sr, sy = cy + Math.sin(sa) * sr * 0.9;
+    var star = document.createElementNS(SVGNS, "circle");
+    star.setAttribute("cx", sx); star.setAttribute("cy", sy);
+    star.setAttribute("r", 0.8 + Math.random() * 0.9);
+    star.setAttribute("fill", "#fff8e0");
+    star.style.transformBox = "fill-box"; star.style.transformOrigin = "center"; // scale in place, not toward origin
+    host.appendChild(star);
+    if (star.animate) {
+      star.animate([
+        { opacity: 0, transform: "scale(0.4)" },
+        { opacity: 1, transform: "scale(1.3)", offset: 0.5 },
+        { opacity: 0, transform: "scale(0.4)" }
+      ], { duration: 700 + Math.random() * 700, iterations: 2, delay: Math.random() * 900, easing: "ease-in-out" })
+        .onfinish = (function (node) { return function () { if (node.parentNode) node.remove(); }; })(star);
+    }
+  }
+}
 function spawnFirework(cx, cy, color) {
   var host = document.getElementById("balcony-fireworks");
   if (!host) return;
@@ -10261,6 +10313,28 @@ function spawnDustMote(container) {
       setTimeout(tick, 1200);
     }
     setTimeout(tick, 1200);
+  })();
+  // watch for the moment of total eclipse (shadow dead-centre) and fire the
+  // heart-burst once per totality — reading the shadow's live position keeps it
+  // in sync with the CSS animation no matter when dusk started
+  (function watchEclipseTotality() {
+    var fired = false;
+    function tick() {
+      var sb = document.getElementById("stage-balcony");
+      var shadow = document.getElementById("balcony-moon-shadow");
+      if (sb && shadow && sb.classList.contains("dusk") && !sb.classList.contains("storming") &&
+          stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden") {
+        var tr = getComputedStyle(shadow).transform, tx = 999;
+        if (tr && tr.indexOf("matrix") === 0) {
+          var p = tr.slice(tr.indexOf("(") + 1, tr.indexOf(")")).split(",");
+          tx = Math.abs(parseFloat(p[4]) || 999); // e = translateX; ~0 at totality
+        }
+        if (tx < 7 && !fired) { fired = true; spawnEclipseTotality(); }
+        else if (tx > 22) fired = false;
+      } else { fired = false; }
+      setTimeout(tick, 300);
+    }
+    setTimeout(tick, 2500);
   })();
   // Fishu blows the odd ambient bubble (it's a fish) while you're in the nook
   (function scheduleFishuBubble() {

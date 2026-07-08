@@ -2116,7 +2116,7 @@ section{margin:1.9rem 0}
 <circle cx="156" cy="234" r="4" fill="#6f9f60"/>
 <path d="M132 200 Q140 192 148 200 Q140 204 132 200 Z" fill="#7fae62"/>
 </g>
-<foreignObject class="trip-bloom-fo" x="83" y="167" width="114" height="114" style="opacity:0;overflow:visible;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" class="trip-bloom-canvas" width="128" height="128" style="width:74px;height:74px;margin:20px;display:block;mix-blend-mode:screen"></canvas></foreignObject>
+<foreignObject class="trip-bloom-fo" x="83" y="167" width="114" height="114" style="opacity:0;overflow:visible;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" class="trip-bloom-canvas" width="128" height="128" style="width:74px;height:74px;margin:20px;border-radius:50%;display:block;mix-blend-mode:screen"></canvas></foreignObject>
 </g>
 <g id="garden-bench">
 <rect x="150" y="232" width="360" height="8" rx="2" fill="#c99a5e" stroke="#a4763f" stroke-width="1.5"/>
@@ -2162,7 +2162,7 @@ section{margin:1.9rem 0}
 <path d="M333 226 Q329 208 332 194 Q334 189 335 195 Q336 210 337 226 Z" fill="#7fae62"/>
 <rect x="318" y="210" width="40" height="22" rx="3" fill="#3a3a3a" stroke="#1f1f1f" stroke-width="1"/>
 </g>
-<foreignObject class="trip-bloom-fo" x="274" y="123" width="126" height="126" style="opacity:0;overflow:visible;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" class="trip-bloom-canvas" width="128" height="128" style="width:86px;height:86px;margin:20px;display:block;mix-blend-mode:screen"></canvas></foreignObject>
+<foreignObject class="trip-bloom-fo" x="274" y="123" width="126" height="126" style="opacity:0;overflow:visible;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" class="trip-bloom-canvas" width="128" height="128" style="width:86px;height:86px;margin:20px;border-radius:50%;display:block;mix-blend-mode:screen"></canvas></foreignObject>
 </g>
 <g id="garden-deer" class="hunt-hit" tabindex="0" role="button" aria-label="The little deer figurine">
 <rect x="424" y="205" width="30" height="32" fill="transparent"/>
@@ -2230,7 +2230,7 @@ section{margin:1.9rem 0}
 <path d="M238 318 Q234 288 244 284 L292 284 Q302 288 298 318 Q268 328 238 318 Z" fill="#d4b078" stroke="#a8894e" stroke-width="1.5"/>
 <path d="M240 296 Q268 302 296 296 M240 308 Q268 314 296 308" fill="none" stroke="#a8894e" stroke-width="1.5"/>
 </g>
-<foreignObject class="trip-bloom-fo" x="192" y="144" width="144" height="144" style="opacity:0;overflow:visible;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" class="trip-bloom-canvas" width="128" height="128" style="width:104px;height:104px;margin:20px;display:block;mix-blend-mode:screen"></canvas></foreignObject>
+<foreignObject class="trip-bloom-fo" x="192" y="144" width="144" height="144" style="opacity:0;overflow:visible;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" class="trip-bloom-canvas" width="128" height="128" style="width:104px;height:104px;margin:20px;border-radius:50%;display:block;mix-blend-mode:screen"></canvas></foreignObject>
 </g>
 <g id="garden-rooster" class="hunt-hit" tabindex="0" role="button" aria-label="A little ceramic rooster" transform="translate(180,192)">
 <rect x="-4" y="0" width="30" height="42" fill="transparent"/>
@@ -5754,6 +5754,7 @@ document.addEventListener("click", function (e) {
         if (st) st.classList.toggle("dusk", dusk); // night is night everywhere
       });
       if (window.__updateCuddlyDoorFx) window.__updateCuddlyDoorFx(); // sun shafts are a day thing
+      if (window.__updateGrowlightForNight) window.__updateGrowlightForNight(); // grow light off at night
       playLampShimmerSound();
       var wallLampEl = document.getElementById("balcony-walllamp");
       if (dusk) {
@@ -6396,10 +6397,19 @@ document.addEventListener("click", function (e) {
     var on = !growlight.classList.contains("off");
     var dur = on ? (34000 + Math.random() * 16000) : (20000 + Math.random() * 12000);
     growTimer = setTimeout(function () {
-      if (document.visibilityState !== "hidden") growlight.classList.toggle("off");
+      if (document.visibilityState !== "hidden") {
+        var gs = document.getElementById("stage-garden");
+        if (gs && gs.classList.contains("dusk")) growlight.classList.add("off"); // off at night
+        else growlight.classList.toggle("off");
+      }
       scheduleGrowCycle();
     }, dur);
   }
+  // night turns the grow light off right away (daytime lets the cycle light it again)
+  window.__updateGrowlightForNight = function () {
+    var gs = document.getElementById("stage-garden");
+    if (growlight && gs && gs.classList.contains("dusk")) growlight.classList.add("off");
+  };
   function toggleGrowlight() { growlight.classList.toggle("off"); scheduleGrowCycle(); }
   if (growlight) {
     growlight.addEventListener("click", toggleGrowlight);
@@ -7909,6 +7919,11 @@ function updateTripToleranceVeil() {
   var veil = document.getElementById("trip-tolerance-veil");
   if (veil) veil.style.opacity = (tripTolerance / TRIP_TOL_MAX) * 0.55;
 }
+function resetTripTolerance() { // molly's euphoria wipes the built-up comedown clean
+  tripTolerance = 0;
+  updateTripToleranceVeil();
+  clearInterval(tripToleranceDecay); tripToleranceDecay = null;
+}
 function bumpTripTolerance() {
   tripTolerance = Math.min(TRIP_TOL_MAX, tripTolerance + 1);
   updateTripToleranceVeil();
@@ -7977,9 +7992,12 @@ function triggerRsvpTrip(e) {
     return;
   }
   tripActive = true;
-  bumpTripTolerance(); // each trip deepens the comedown veil
   var variant = TRIP_VARIANTS[tripVariantIndex % TRIP_VARIANTS.length];
   tripVariantIndex++;
+  // each trip deepens the comedown veil — except molly (the kisses one), whose
+  // euphoria resets it back to clear
+  if (variant === "molly") resetTripTolerance();
+  else bumpTripTolerance();
   startTripVariant(variant);
   // fractal blooms only on the mushroom trip (the psychedelic / hue-rotating one)
   if (variant === "psychedelic") startTripBlooms();

@@ -2309,7 +2309,7 @@ section{margin:1.9rem 0}
 <ellipse class="growlight-bulb" cx="524" cy="172" rx="6" ry="3" fill="#f0c46a"/>
 <polygon class="growlight-beam" points="505,186 519,179 494,214 484,206" fill="#f0c46a" fill-opacity="0.22"/>
 </g>
-<g id="garden-mask" class="hunt-hit" tabindex="0" role="button" aria-label="The ceramic wall mask">
+<g id="garden-mask" class="hunt-hit" tabindex="0" role="button" aria-label="The ceramic wall mask" transform="translate(-20,-20)">
 <rect x="578" y="76" width="44" height="58" fill="transparent"/>
 <!-- darker glazed hair/crown band -->
 <path d="M589 95 Q592 82 600 81 Q608 82 611 95 Q600 91 589 95 Z" fill="#5f6f7e"/>
@@ -6197,6 +6197,15 @@ document.addEventListener("click", function (e) {
     if (!pane) return;
     function gleamPane() {
       spawnPaneGleam(strip, pane);
+      // clicking a GARDEN window pane also summons the KLM/Air Canada flight soon (daytime)
+      if (id.indexOf("garden-window") === 0 && typeof spawnGardenPlane === "function") {
+        var gs = document.getElementById("stage-garden");
+        if (gs && !gs.classList.contains("dusk")) {
+          setTimeout(function () {
+            if (!gs.classList.contains("dusk") && document.visibilityState !== "hidden") spawnGardenPlane();
+          }, 2200 + Math.random() * 2400);
+        }
+      }
     }
     pane.addEventListener("click", gleamPane);
     pane.addEventListener("keydown", function (e) {
@@ -7158,6 +7167,43 @@ function spawnGardenShootingStar() {
     a.onfinish = function () { if (g.parentNode) g.remove(); };
   } else {
     setTimeout(function () { if (g.parentNode) g.remove(); }, 1350);
+  }
+}
+// Once in a while, the KLM flight to Europe from Edmonton crosses the garden window
+// (daytime; a small airliner in KLM-blue livery trailing a thin contrail).
+function spawnGardenPlane() {
+  var container = document.getElementById("garden-skyfx");
+  if (!container) return;
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  while (container.firstChild) container.removeChild(container.firstChild); // clear stale (cap 1)
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var y0 = 30 + Math.random() * 26; // high in the open window sky
+  var g = document.createElementNS(SVGNS, "g");
+  g.setAttribute("aria-hidden", "true");
+  // randomly the KLM (blue tail + crown) or the Air Canada (red tail + maple-leaf rondelle) flight
+  var klm = Math.random() < 0.5;
+  var tailCol = klm ? "#4a6b94" : "#c41e3a";
+  g.innerHTML =
+    '<line x1="-14" y1="-0.5" x2="-54" y2="-2" stroke="#ffffff" stroke-width="1.3" stroke-linecap="round" opacity="0.45"/>' + // contrail
+    '<path d="M11 0 Q9 -2.2 0 -2.4 L-13 -2 Q-16 0 -13 2 L0 2.4 Q9 2.2 11 0 Z" fill="#e4ecf4" stroke="#9db6d2" stroke-width="0.5"/>' + // fuselage
+    '<path d="M0 -0.8 L-8 -6 L-3 -0.8 Z" fill="#93aecb"/>' + // far wing (up)
+    '<path d="M-1 1 L-8 6.5 L-2.5 1.2 Z" fill="#7f9ec0"/>' + // near wing (down)
+    '<path d="M-11 -1.5 L-16 -7.5 L-10.5 -1.5 Z" fill="' + tailCol + '"/>' + // tail fin (KLM blue / Air Canada red)
+    '<circle cx="-13.5" cy="-4.2" r="0.95" fill="#eef2f6"/>' + // tail mark (KLM crown / AC rondelle)
+    (klm ? '' : '<circle cx="-13.5" cy="-4.2" r="0.42" fill="#c41e3a"/>') + // AC: red maple-leaf centre in the rondelle
+    '<line x1="9" y1="-0.4" x2="-12" y2="-0.4" stroke="' + tailCol + '" stroke-width="0.6" opacity="0.6"/>'; // cheatline
+  container.appendChild(g);
+  var startX = 92, endX = 542; // enter left of the panes, exit right (window-local coords)
+  if (g.animate) {
+    var a = g.animate([
+      { transform: "translate(" + startX + "px," + y0 + "px)", opacity: 0 },
+      { transform: "translate(" + (startX + 55) + "px," + (y0 + 1) + "px)", opacity: 1, offset: 0.12 },
+      { transform: "translate(" + (endX - 55) + "px," + (y0 - 5) + "px)", opacity: 1, offset: 0.88 },
+      { transform: "translate(" + endX + "px," + (y0 - 7) + "px)", opacity: 0 }
+    ], { duration: 8500 + Math.random() * 3000, easing: "linear" });
+    a.onfinish = function () { if (g.parentNode) g.remove(); };
+  } else {
+    setTimeout(function () { if (g.parentNode) g.remove(); }, 11500);
   }
 }
 // At the moment of TOTAL eclipse: a burst of hearts explodes around the moon with
@@ -10501,6 +10547,18 @@ function spawnDustMote(container) {
         spawnGardenShootingStar();
       }
       scheduleGardenShootingStar();
+    }, delay);
+  })();
+  // the KLM flight to Europe crosses the daytime garden window every so often
+  (function scheduleGardenPlane() {
+    var delay = 50000 + Math.random() * 70000;
+    setTimeout(function () {
+      var gardenStage = document.getElementById("stage-garden");
+      if (gardenStage && !gardenStage.classList.contains("dusk") &&
+          stageIndex === STAGES.indexOf("garden") && document.visibilityState !== "hidden") {
+        spawnGardenPlane();
+      }
+      scheduleGardenPlane();
     }, delay);
   })();
   // rain in the garden window during the (shared) storm — self-replenishing so the

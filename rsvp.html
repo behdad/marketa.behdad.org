@@ -6617,6 +6617,12 @@ document.addEventListener("click", function (e) {
   // the pipeline again. Independent of git history either way.
   var AUDIO_PIPELINE_ENABLED = false; // 2026-07: confirmed broken even unmuted — real bug in the pipeline itself,
                                        // not (only) the earlier mute-persistence red herring. Root cause not found.
+                                       // When re-testing on a real device, watch the remote console: every silent-
+                                       // failure path in the song code logs a "[song-audio]" warning (play() rejects,
+                                       // skipped/failed captures, dead-context watchdog). On an iPhone, also flip the
+                                       // ringer switch OFF first — iOS mutes Web-Audio-routed output (but not plain
+                                       // <audio>) while the ringer is silenced (WebKit bug 237322), which mimics
+                                       // exactly this pipeline-only silence.
   var USE_LIVE_ANALYSER = AUDIO_PIPELINE_ENABLED;
   // eqAudioEl: the audio element the shared equalizer loop is currently driving (set
   // by startEq, cleared by stopEq) — also read by fractalBeatKick, above, to pulse the
@@ -6670,18 +6676,61 @@ document.addEventListener("click", function (e) {
       // element: the context can suspend again later (e.g. a backgrounded tab), and
       // this is a cheap no-op once it's already running.
       var resumeP = (ctx.state === "running") ? null : ctx.resume();
-      var wire = function () {
-        if (audioEl._eqAnalyser || audioEl._eqFailed) return; // already wired, or gave up — done
-        if (ctx.state !== "running") return; // never confirmed running: stay on native playback
-        try {
-          var src = ctx.createMediaElementSource(audioEl); // exactly once per element — throws if repeated
-          src.connect(eqBassShelf);
-          audioEl._eqSource = src;      // hold refs so neither node is GC'd
-          audioEl._eqAnalyser = eqAnalyser;
-        } catch (e) { audioEl._eqFailed = true; } // leave this element on native playback for good
+      // Console-only watchdog for an element that's already captured: capture is
+      // irreversible, so its audibility is hostage to this context forever — and a
+      // context can report "running" while its clock (and therefore its output) is
+      // frozen (OS audio-route change, iOS interruption). A stuck clock is the one
+      // symptom of that observable from JS, so surface it for remote-console debugging.
+      var watchWired = function () {
+        var t0 = ctx.currentTime;
+        setTimeout(function () {
+          if (ctx.state !== "running") {
+            console.warn("[song-audio] context state is '" + ctx.state + "' with " + audioEl.id + " captured — song is inaudible until the context resumes");
+          } else if (!(ctx.currentTime > t0)) {
+            console.warn("[song-audio] context clock stuck at " + t0 + " despite state 'running' — " + audioEl.id + " is captured into a context that isn't rendering (silent)");
+          }
+        }, 1200);
       };
-      if (resumeP && resumeP.then) resumeP.then(wire, function () {}); else wire();
-    } catch (e) { audioEl._eqFailed = true; }
+      var wire = function () {
+        if (audioEl._eqFailed) return; // gave up on this element for good — stays native
+        if (audioEl._eqAnalyser) { watchWired(); return; } // already captured — just sanity-check the context
+        if (ctx.state !== "running") { // never confirmed running: stay on native playback
+          console.warn("[song-audio] capture skipped: context state is '" + ctx.state + "' — staying on native playback");
+          return;
+        }
+        // "running" state alone is not proof the context renders: a zombie context
+        // (frozen clock) also reports "running", and capturing into one silences the
+        // element irreversibly. Require the clock to actually advance before the
+        // irreversible createMediaElementSource. Native playback (fully audible)
+        // continues during the probe, and the next play gesture retries if this bails.
+        if (audioEl._eqProbing) return;
+        audioEl._eqProbing = true;
+        var t0 = ctx.currentTime;
+        setTimeout(function () {
+          audioEl._eqProbing = false;
+          if (audioEl._eqAnalyser || audioEl._eqFailed) return;
+          if (ctx.state !== "running" || !(ctx.currentTime > t0)) {
+            console.warn("[song-audio] capture skipped: context not rendering (state '" + ctx.state + "', clock " + (ctx.currentTime > t0 ? "advancing" : "stuck") + ") — staying on native playback");
+            return;
+          }
+          try {
+            var src = ctx.createMediaElementSource(audioEl); // exactly once per element — throws if repeated
+            src.connect(eqBassShelf);
+            audioEl._eqSource = src;      // hold refs so neither node is GC'd
+            audioEl._eqAnalyser = eqAnalyser;
+            console.info("[song-audio] captured " + audioEl.id + " into the pipeline (context sampleRate " + ctx.sampleRate + ")");
+          } catch (e) {
+            audioEl._eqFailed = true; // leave this element on native playback for good
+            console.warn("[song-audio] createMediaElementSource failed for " + audioEl.id + ":", e);
+          }
+        }, 250);
+      };
+      if (resumeP && resumeP.then) resumeP.then(wire, function (e) { console.warn("[song-audio] resume() rejected:", e); });
+      else wire();
+    } catch (e) {
+      audioEl._eqFailed = true;
+      console.warn("[song-audio] capture failed for " + audioEl.id + ":", e);
+    }
   };
   // "Headphone mode": bass boost + muffle + pan to the on-screen headphones, ramped
   // smoothly via setTargetAtTime (never a hard switch, so there's no click). A safe
@@ -6843,7 +6892,7 @@ document.addEventListener("click", function (e) {
       next.volume = window.__songVolume ? window.__songVolume() : 0.5;
       if (window.__captureSongAudio) window.__captureSongAudio(next);
       var p = next.play();
-      if (p && p.catch) p.catch(function () {});
+      if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (auto-advance) for " + next.id + ":", e); });
     } catch (e) {}
   }
   window.__playSongAt = playSongAt; // shared with the monitor's prev/next transport buttons
@@ -6875,7 +6924,7 @@ document.addEventListener("click", function (e) {
         // hook up the monitor equalizer's analyser here, inside the gesture, so
         // routing the song through Web Audio doesn't stall its playback
         if (window.__captureSongAudio) window.__captureSongAudio(pick);
-        var p = pick.play(); if (p && p.catch) p.catch(function () {});
+        var p = pick.play(); if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (monitor play button) for " + pick.id + ":", e); });
       } catch (e) {}
     }
     playBtn.addEventListener("click", function (e) { e.stopPropagation(); monitorPlayRandom(); });
@@ -6899,7 +6948,7 @@ document.addEventListener("click", function (e) {
         if (song.paused) {
           song.volume = window.__songVolume ? window.__songVolume() : 0.5; // app-owned level, same defensive reapply as every other play trigger
           if (window.__captureSongAudio) window.__captureSongAudio(song); // keep retrying the resume inside this gesture
-          var p = song.play(); if (p && p.catch) p.catch(function () {});
+          var p = song.play(); if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (monitor resume) for " + song.id + ":", e); });
         }
         else song.pause();
       } catch (e) {}
@@ -6943,7 +6992,7 @@ document.addEventListener("click", function (e) {
       restartMarquee(); // also covered by updateNowPlaying's title-change check once next
                          // starts playing, but calling it here makes the restart immediate
       var p = next.play();
-      if (p && p.catch) p.catch(function () {});
+      if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (monitor skip) for " + next.id + ":", e); });
     } catch (e) {}
   }
   var prevBtn = document.getElementById("monitor-prev-btn");
@@ -13680,7 +13729,7 @@ function spawnDustMote(container) {
           // so routing the song through Web Audio doesn't stall its playback
           if (window.__captureSongAudio) window.__captureSongAudio(audio);
           var p = audio.play();
-          if (p && p.catch) p.catch(function () { playPluckSound(); });
+          if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (instrument tap) for " + audio.id + ":", e); playPluckSound(); });
           played = true;
         } catch (e) {}
       }
@@ -14178,7 +14227,9 @@ function spawnDustMote(container) {
         a.volume = 0;
         var settle = function () { try { a.pause(); a.currentTime = 0; } catch (e) {} };
         var p = a.play();
-        if (p && p.then) p.then(settle, settle); // handle both resolve and reject (no unhandledrejection)
+        // settle either way (no unhandledrejection); a reject here means the unlock
+        // trick failed and the cinematic's deferred garden-tap play() may be blocked
+        if (p && p.then) p.then(settle, function (e) { console.warn("[song-audio] unlock play() rejected for " + id + ":", e); settle(); });
         else settle();
       } catch (e) {}
     });

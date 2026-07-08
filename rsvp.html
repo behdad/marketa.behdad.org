@@ -441,6 +441,7 @@ footer{margin-top:2.6rem}
   75%{transform:translateX(0) translateY(-1.5px)}
 }
 @media (prefers-reduced-motion: reduce){#witchy-chest-cat-walk.roaming, #witchy-chest-cat-walk.roaming-sm, #witchy-chest-cat-groove.grooving{animation:none}}
+.cuddly-knife{transition:translate .35s cubic-bezier(.34,1.56,.64,1)}
 .cuddly-knife.wobbling{animation:knife-wobble .4s ease-in-out}
 @keyframes knife-wobble{
   0%, 100%{transform:rotate(0)}
@@ -5849,9 +5850,12 @@ document.addEventListener("click", function (e) {
       if (!dragging) return;
       dragging = false;
       try { el.releasePointerCapture(e.pointerId); } catch (err) {}
+      // read the pan at the drag position BEFORE resetting translate — panForElId reads
+      // live layout, so it must run while the knife is still visually at the drop point
+      var releasePan = dragMoved ? panForElId(el.id) : null;
       el.style.transition = "";
       el.style.translate = "0px 0px";
-      wobbleFn();
+      wobbleFn(e, releasePan);
       if (dragMoved && releasePt) {
         if (Math.hypot(releasePt.x - THROW_TARGETS.fishu.x, releasePt.y - THROW_TARGETS.fishu.y) <= 45) {
           triggerFishuFlyOut();
@@ -5875,13 +5879,16 @@ document.addEventListener("click", function (e) {
   ["cuddly-knife-1", "cuddly-knife-2"].forEach(function (id) {
     var knife = document.getElementById(id);
     if (!knife) return;
-    function wobbleKnife(e) {
+    function wobbleKnife(e, fromPan) {
       if (e && e.stopPropagation) e.stopPropagation();
       knife.classList.remove("wobbling");
       requestAnimationFrame(function () {
         requestAnimationFrame(function () { knife.classList.add("wobbling"); });
       });
-      playMetalClinkSound(1.3, id);
+      // dragged-and-released: sweep the clink's pan from the drop point back toward the
+      // board slot, matching the knife's own CSS snap-back (.cuddly-knife's transition)
+      if (typeof fromPan === "number") playMetalClinkSound(1.3, { from: fromPan, to: panForElId(id) });
+      else playMetalClinkSound(1.3, id);
     }
     knife.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); wobbleKnife(e); }
@@ -10066,7 +10073,11 @@ function playMetalClinkSound(pitchMult, panId) {
     var ctx = new Ctx();
     var t = ctx.currentTime;
     var mult = pitchMult || 1;
-    var out = pannedOut(ctx, panId);
+    // panId can be {from, to}: sweep the pan across the ring-down (a thrown/dragged-back
+    // knife's clink tracks its own flight/snap-back, rather than sitting at one fixed spot)
+    var out = (panId && typeof panId === "object")
+      ? pannedSweep(ctx, panId.from, panId.to, 0.3)
+      : pannedOut(ctx, panId);
     var base = 1500 * mult;
     // inharmonic partials give a metallic ring instead of a pure-tone bloop;
     // higher partials decay faster, and each glides down slightly as it settles
@@ -10214,6 +10225,17 @@ function pannedOut(ctx, elIdOrPan) {
   p.pan.value = (typeof elIdOrPan === "number")
     ? Math.max(-1, Math.min(1, elIdOrPan)) // a fixed pan (e.g. sky-wide thunder, a bit right)
     : panForElId(elIdOrPan);               // pan to the element's on-screen position
+  p.connect(ctx.destination);
+  return p;
+}
+// A linear pan sweep from fromPan to toPan over dur seconds — for a sound whose source is
+// itself moving (e.g. a dragged item snapping back to its rest slot).
+function pannedSweep(ctx, fromPan, toPan, dur) {
+  if (!ctx.createStereoPanner) return ctx.destination;
+  var p = ctx.createStereoPanner();
+  var t = ctx.currentTime;
+  p.pan.setValueAtTime(Math.max(-1, Math.min(1, fromPan)), t);
+  p.pan.linearRampToValueAtTime(Math.max(-1, Math.min(1, toPan)), t + Math.max(0.05, dur));
   p.connect(ctx.destination);
   return p;
 }

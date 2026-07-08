@@ -457,6 +457,8 @@ footer{margin-top:2.6rem}
   65%{transform:rotate(3deg)}
 }
 @media (prefers-reduced-motion: reduce){.cuddly-passthrough-plates.wobbling{animation:none}}
+.plate-crack{opacity:0; transition:opacity .3s ease}
+.plate-crack.cracked{opacity:1}
 .cuddly-ledge-item{transform-box:fill-box; transform-origin:bottom center}
 .cuddly-ledge-item.wobbling{animation:ledge-item-wobble .4s ease-in-out}
 @keyframes ledge-item-wobble{
@@ -2866,12 +2868,14 @@ section{margin:1.9rem 0}
 <ellipse cx="47" cy="104" rx="20" ry="6" fill="#f4f0e8" stroke="#d8d4c8" stroke-width="1.5"/>
 <ellipse cx="47" cy="99" rx="20" ry="6" fill="#f8f5ec" stroke="#d8d4c8" stroke-width="1.5"/>
 <ellipse cx="47" cy="94" rx="20" ry="6" fill="#f4f0e8" stroke="#d8d4c8" stroke-width="1.5"/>
+<path id="cuddly-passthrough-plates-1-crack" class="plate-crack" d="M31,93 L38,97 L44,92 L51,97 L58,92 L64,95" fill="none" stroke="#8a8578" stroke-width="1.3" stroke-linecap="round"/>
 </g>
 <g id="cuddly-passthrough-plates-2" class="hunt-hit cuddly-passthrough-plates" tabindex="0" role="button" aria-label="Plates">
 <rect x="84" y="87" width="42" height="22" fill="transparent"/>
 <ellipse cx="105" cy="104" rx="20" ry="6" fill="#f4f0e8" stroke="#d8d4c8" stroke-width="1.5"/>
 <ellipse cx="105" cy="99" rx="20" ry="6" fill="#f8f5ec" stroke="#d8d4c8" stroke-width="1.5"/>
 <ellipse cx="105" cy="94" rx="20" ry="6" fill="#f4f0e8" stroke="#d8d4c8" stroke-width="1.5"/>
+<path id="cuddly-passthrough-plates-2-crack" class="plate-crack" d="M89,93 L96,97 L102,92 L109,97 L116,92 L122,95" fill="none" stroke="#8a8578" stroke-width="1.3" stroke-linecap="round"/>
 </g>
 <g id="cuddly-passthrough-door-1" class="hunt-hit witchy-door" tabindex="0" role="button" aria-label="A cabinet door" style="transform-origin:0% 50%">
 <rect x="20" y="64" width="54" height="52" fill="#f4f0e8" stroke="#d8d4c8" stroke-width="1.5"/>
@@ -8091,14 +8095,25 @@ document.addEventListener("click", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); togglePassthroughDoor(); }
     });
   });
+  var PLATE_CRACK_CLICKS = 4; // quiet bonus find: enough clicks and one plate in the stack cracks for good
   ["cuddly-passthrough-plates-1", "cuddly-passthrough-plates-2"].forEach(function (id) {
     var plates = document.getElementById(id);
     if (!plates) return;
+    var crack = document.getElementById(id + "-crack");
+    var plateClicks = 0;
     function wobblePlates() {
       plates.classList.remove("wobbling");
       requestAnimationFrame(function () {
         requestAnimationFrame(function () { plates.classList.add("wobbling"); });
       });
+      if (crack && !crack.classList.contains("cracked")) {
+        plateClicks++;
+        if (plateClicks >= PLATE_CRACK_CLICKS) {
+          crack.classList.add("cracked"); // permanent — never removed once set
+          playGlassClinkSound(1.7, id); // sharper/higher-pitched than the normal clink, reads as a crack
+          return;
+        }
+      }
       playGlassClinkSound(null, id);
     }
     plates.addEventListener("click", wobblePlates);

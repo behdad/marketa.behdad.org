@@ -7392,7 +7392,10 @@ document.addEventListener("click", function (e) {
     setDeskLift(standing ? MAX_LIFT : 0);
     playDeskMotorSound();
     blinkLeds(true);
-    setTimeout(function () { blinkLeds(false); }, 650);
+    setTimeout(function () {
+      blinkLeds(false);
+      if (window.__deskCatFollow) window.__deskCatFollow(); // desk has settled — re-sync the cat if it's up there
+    }, 650);
   }
   function toggleDeskHeight(e) {
     if (e) e.stopPropagation();
@@ -7411,6 +7414,7 @@ document.addEventListener("click", function (e) {
     var dy = dragStartY - pointerSvgY(e);
     if (Math.abs(dy) > 2) dragMoved = true;
     setDeskLift(dragStartLift + dy);
+    if (window.__deskCatFollow) window.__deskCatFollow(); // dragging is instant (no transition) — resync every move
   }
   function onDeskPointerUp(e) {
     if (!dragging) return;
@@ -13739,12 +13743,19 @@ function spawnDustMote(container) {
   // hard-coded rect; the other surfaces here don't move, so they stay static.
   function officeDeskPerch() {
     try {
-      var stage = document.getElementById("stage-office");
       var top = document.getElementById("office-desk-top");
-      if (!stage || !top || !top.getBBox || !top.getScreenCTM || !stage.getScreenCTM) return null;
-      var bb = top.getBBox();                         // desk-top surface, its own local coords
-      var m = stage.getScreenCTM().inverse().multiply(top.getScreenCTM()); // -> stage-local
-      var p = new DOMPoint(bb.x + bb.width * 0.94, bb.y).matrixTransform(m); // right end, top edge
+      var svg = document.getElementById("loft-game-strip");
+      var stage = document.getElementById("stage-office");
+      if (!top || !svg || !stage || !svg.createSVGPoint || !stage.getScreenCTM) return null;
+      // office-desk-top's OWN getScreenCTM doesn't reliably pick up its live height-adjust
+      // .style.translate in every engine (a real gap we hit — visual rendering is correct,
+      // the CTM readback lags/caches stale). getBoundingClientRect() always reflects the
+      // live rendered position, so read the screen rect and map it through the STAGE's own
+      // (static, never itself translated) CTM instead of the desk-top's.
+      var r = top.getBoundingClientRect();
+      var pt = svg.createSVGPoint();
+      pt.x = r.left + r.width * 0.94; pt.y = r.top;    // right end, top edge, in screen pixels
+      var p = pt.matrixTransform(stage.getScreenCTM().inverse()); // screen -> stage-office-local
       return { x: p.x, y: p.y };
     } catch (e) { return { x: 462, y: 208 }; }         // static fallback matching the default desk
   }
@@ -13769,6 +13780,7 @@ function spawnDustMote(container) {
   };
   var catRoom = "garden";                 // where the cat physically is (chest home = garden)
   var jumpAnim = null, jumping = false, jumpTimer = null, isPerchJump = false;
+  var jumpCur = null, jumpApexX = 0, jumpApexY = 0; // the in-flight arc's fixed points, kept for __deskCatFollow to rebuild around
   function reducedMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
@@ -13818,6 +13830,7 @@ function spawnDustMote(container) {
     var cur = currentWalkOffset();                 // where the roam is right now
     var apexX = (cur.x + Dx) / 2;
     var apexY = Math.min(cur.y, Dy) - 24;          // arc peaks above the higher of floor/perch
+    jumpCur = cur; jumpApexX = apexX; jumpApexY = apexY;
     function tf(x, y) { return "translate(" + x + "px," + y + "px)"; }
     jumping = true; isPerchJump = true;
     walk.style.animationPlayState = "paused";      // freeze the roam at `cur` for the duration
@@ -13831,6 +13844,33 @@ function spawnDustMote(container) {
     ], { duration: 4600 + Math.random() * 1600, fill: "none" });
     jumpAnim.onfinish = finishJump;
   }
+  // The office desk is height-adjustable — if it moves WHILE the cat is sitting on it
+  // (perched, not mid-arc), the cat would otherwise float at the stale landing height.
+  // Re-resolve the live desk-top position and retarget just the "sit" keyframes (the
+  // arc keyframes are brief transients, not worth recomputing) via setKeyframes, which
+  // re-interpolates from the animation's CURRENT playback position with no restart/snap.
+  // Called after the desk finishes moving (settleDesk's ~650ms settle, and on every
+  // pointermove while dragging, since drag-driven lift changes are instant, no transition
+  // to wait out). A no-op unless the cat is actually perched on the office desk right now.
+  window.__deskCatFollow = function () {
+    if (!jumping || !isPerchJump || catRoom !== "office" || !jumpAnim || !jumpAnim.effect) return;
+    if (!jumpAnim.effect.setKeyframes) return; // feature-detect; stale height is a minor miss, not worth a fallback
+    var perch = officeDeskPerch();
+    if (!perch) return;
+    var b = baseFeet("office");
+    var Dx = perch.x - b.x, Dy = perch.y - b.y;
+    function tf(x, y) { return "translate(" + x + "px," + y + "px)"; }
+    try {
+      jumpAnim.effect.setKeyframes([
+        { offset: 0,    transform: tf(jumpCur.x, jumpCur.y),         easing: "cubic-bezier(.4,0,.7,.5)" },
+        { offset: 0.05, transform: tf(jumpApexX, jumpApexY),         easing: "cubic-bezier(.25,.6,.4,1)" },
+        { offset: 0.10, transform: tf(Dx, Dy) },
+        { offset: 0.86, transform: tf(Dx, Dy),                       easing: "cubic-bezier(.4,0,.7,.5)" },
+        { offset: 0.91, transform: tf(jumpApexX, jumpApexY + 6),     easing: "cubic-bezier(.25,.6,.4,1)" },
+        { offset: 1,    transform: tf(jumpCur.x, jumpCur.y) }
+      ]);
+    } catch (e) {}
+  };
   function canEnter(room) {                 // play the walk-in only when the room is actually on screen
     return !reducedMotion() && document.visibilityState !== "hidden" && !!walk.animate &&
       window.currentStageIndex === IDX[room] && !!ENTRANCES[room];

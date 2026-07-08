@@ -3265,6 +3265,7 @@ section{margin:1.9rem 0}
 <rect id="balcony-thunder-flash" class="balcony-thunder-flash" x="2720" y="0" width="680" height="340" pointer-events="none"/>
 <rect class="trip-melt-whiteout" x="0" y="0" width="3400" height="340" pointer-events="none"/>
 <rect class="trip-strobe-flash" x="0" y="0" width="3400" height="340" pointer-events="none"/>
+<rect id="trip-tolerance-veil" x="0" y="0" width="3400" height="340" fill="#0a0812" opacity="0" pointer-events="none" style="transition:opacity 2.5s ease"/>
     </svg>
     <svg id="rsvp-trip-ghost" aria-hidden="true" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid slice">
 <g id="rsvp-trip-ghost-inner">
@@ -7216,6 +7217,24 @@ var TRIP_DURATIONS = { psychedelic: 6000, strobe: 3000, melt: 5000, molly: 7000,
 var tripActive = false;
 var tripEndTimer = null;
 var currentTripVariant = null;
+// Tripping again and again builds up: the scene darkens a notch each time, then
+// slowly recovers a notch at a time if you lay off (a little tolerance/comedown).
+var tripTolerance = 0, tripToleranceDecay = null;
+var TRIP_TOL_MAX = 5;
+function updateTripToleranceVeil() {
+  var veil = document.getElementById("trip-tolerance-veil");
+  if (veil) veil.style.opacity = (tripTolerance / TRIP_TOL_MAX) * 0.55;
+}
+function bumpTripTolerance() {
+  tripTolerance = Math.min(TRIP_TOL_MAX, tripTolerance + 1);
+  updateTripToleranceVeil();
+  clearInterval(tripToleranceDecay);
+  tripToleranceDecay = setInterval(function () {
+    tripTolerance = Math.max(0, tripTolerance - 1);
+    updateTripToleranceVeil();
+    if (tripTolerance <= 0) { clearInterval(tripToleranceDecay); tripToleranceDecay = null; }
+  }, 12000); // recover one notch every 12s once you stop
+}
 function startTripVariant(variant) {
   var strip = document.getElementById("loft-game-strip");
   if (!strip) return;
@@ -7274,6 +7293,7 @@ function triggerRsvpTrip(e) {
     return;
   }
   tripActive = true;
+  bumpTripTolerance(); // each trip deepens the comedown veil
   var variant = TRIP_VARIANTS[tripVariantIndex % TRIP_VARIANTS.length];
   tripVariantIndex++;
   startTripVariant(variant);
@@ -9970,7 +9990,7 @@ function spawnDustMote(container) {
         }
         if (Math.random() < 0.65) {
           setTimeout(function () {
-            spawnBubble(strip, 1872, 108); // a bubble from Fishu's mouth
+            spawnBubble(strip, 1870, 96); // a bubble from Fishu's mouth (front-right)
             playBlubSound();
           }, extra + Math.random() * 220);
         }

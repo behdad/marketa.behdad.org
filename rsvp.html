@@ -4998,6 +4998,17 @@ document.addEventListener("click", function (e) {
   };
   // measured tempos (see GROOVE_BPM) — used by the equalizer's tempo-synced fallback
   var SONG_BPM = { "guitar-song-audio": 184.6, "ukulele-song-audio": 126.0 };
+  // while a song plays, the monitor "browses" the performing artist's own site
+  var SONG_SITE = {
+    "guitar-song-audio": "https://danbern.com/",       // Dan Bern — Black Tornado
+    "ukulele-song-audio": "https://oritshimoni.com/"   // Orit Shimoni — Strange & Beautiful Things
+  };
+  function playingSongSite() {
+    for (var i = 0; i < songAudios.length; i++) {
+      if (songAudios[i] && !songAudios[i].paused && !songAudios[i].ended) return SONG_SITE[songAudios[i].id] || null;
+    }
+    return null;
+  }
   // Live now-playing equalizer. The song is routed through a Web Audio analyser
   // so the bars read its REAL spectrum. Two hard-won rules make this not kill
   // playback (it did, twice): (1) build the media source inside the play gesture
@@ -5135,7 +5146,9 @@ document.addEventListener("click", function (e) {
     monClickTimer = setTimeout(function () {
       if (monitorShowingSite()) {
         if (monitor.classList.contains("show-caps")) scheduleSaver();
-        window.open(monitorUrl, "_blank");
+        // if a song's playing, the "now playing" screen links out to the artist
+        var songSite = monitor.classList.contains("show-nowplaying") && playingSongSite();
+        window.open(songSite || monitorUrl, "_blank");
       } else if (pcTower && !pcTower.classList.contains("on")) {
         // a blank screen: clicking it powers the computer on (SVG nodes have
         // no .click(), so dispatch a real event to run the PC's own handlers)

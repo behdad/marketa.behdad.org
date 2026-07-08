@@ -3107,6 +3107,7 @@ section{margin:1.9rem 0}
 <circle cx="348" cy="206" r="8" fill="#2d2d2d" stroke="#4a4a4a" stroke-width="1.5"/>
 <line x1="348" y1="206" x2="353" y2="200" stroke="#8a8578" stroke-width="1.5"/>
 <rect id="balcony-smoker-display" x="338" y="188" width="20" height="7" rx="1" fill="#3a5a7a"/>
+<text id="balcony-smoker-temp" x="348" y="193.4" text-anchor="middle" style="fill:#0a2a12; font-family:monospace; font-size:5px; font-weight:bold"></text>
 </g>
 <g id="balcony-smoker-lid" class="hunt-hit" tabindex="0" role="button" aria-label="The smoker lid">
 <path d="M362 189 L362 190 Q362 218 390 218 L430 218 Q458 218 458 190 L458 189 Z" fill="#171310" stroke="#0f0f0f" stroke-width="2"/>
@@ -5096,8 +5097,25 @@ document.addEventListener("click", function (e) {
   var smokerLid = document.getElementById("balcony-smoker-lid");
   if (smoker && smokerFirebox && smokerLid) {
     var smoking = false, lidOpen = false;
-    var sizzleTimer = null;
+    var sizzleTimer = null, tempTimer = null, temp = 0;
     var burgers = smoker.querySelectorAll(".smoker-burger");
+    var tempEl = document.getElementById("balcony-smoker-temp");
+    // the readout climbs to 400 in 50-degree jumps once the fire's lit
+    function climbTemp() {
+      if (tempTimer) clearInterval(tempTimer);
+      temp = 50;
+      if (tempEl) tempEl.textContent = temp + "°";
+      tempTimer = setInterval(function () {
+        if (temp >= 400) { clearInterval(tempTimer); tempTimer = null; return; }
+        temp += 50;
+        if (tempEl) tempEl.textContent = temp + "°";
+      }, 450);
+    }
+    function coolTemp() {
+      if (tempTimer) { clearInterval(tempTimer); tempTimer = null; }
+      temp = 0;
+      if (tempEl) tempEl.textContent = "";
+    }
     function smokeActive() { return smoker.classList.contains("smoking") && !document.hidden; }
     // A billowing plume from the chimney: soft grey puffs that rise while
     // expanding and fading. Each replenishes itself on finish (constant count,
@@ -5149,6 +5167,9 @@ document.addEventListener("click", function (e) {
       if (smoking) {
         seedSmoke(); // plume runs (and self-replenishes) until the fire's out
         startCooking();
+        climbTemp();
+      } else {
+        coolTemp();
       }
     }
     function toggleLid() {
@@ -5190,6 +5211,7 @@ document.addEventListener("click", function (e) {
     window.resetSmoker = function () {
       if (sizzleTimer) clearInterval(sizzleTimer);
       sizzleTimer = null;
+      coolTemp();
       smoking = false;
       lidOpen = false;
       smoker.classList.remove("smoking", "open");

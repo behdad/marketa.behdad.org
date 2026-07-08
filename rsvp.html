@@ -4637,26 +4637,24 @@ document.addEventListener("click", function (e) {
     if (!fireCtx) return;
     try {
       var ctx = fireCtx, t = ctx.currentTime;
-      // a short cluster of sharp spark-snaps: a per-sample "pop amplitude" randomly
-      // re-triggers and rings down, so it reads as discrete pops, not a noise wash
-      var dur = 0.08 + Math.random() * 0.14;
+      // a single short, sharply-decaying click — a re-triggering noise cluster read as a
+      // burst of static rather than a wood snap, so this fires one clean transient per
+      // call; scheduleCrackle occasionally calls it twice in quick succession for variety
+      var dur = 0.02 + Math.random() * 0.03;
       var buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
       var d = buf.getChannelData(0);
-      var amp = 0, ring = 0.5 + Math.random() * 0.22, popRate = 0.004 + Math.random() * 0.004;
       for (var i = 0; i < d.length; i++) {
-        var env = Math.pow(1 - i / d.length, 1.5);
-        if (Math.random() < popRate) amp = Math.random();
-        d[i] = (Math.random() * 2 - 1) * amp * env;
-        amp *= ring;
+        var env = Math.pow(1 - i / d.length, 3); // fast decay: a click, not a hiss tail
+        d[i] = (Math.random() * 2 - 1) * env;
       }
       var src = ctx.createBufferSource();
       src.buffer = buf;
       var bp = ctx.createBiquadFilter();
       bp.type = "bandpass";
-      bp.frequency.value = 2200 + Math.random() * 1800; // ~2.2–4kHz: bright sparks
-      bp.Q.value = 3 + Math.random() * 4;
+      bp.frequency.value = 900 + Math.random() * 2600; // vary the snap's "pitch", not just bright hiss
+      bp.Q.value = 5 + Math.random() * 5;               // narrower Q: tonal pop, not broadband noise
       var g = ctx.createGain();
-      g.gain.value = 0.03 + Math.random() * 0.04;        // low, varied so it never loops
+      g.gain.value = 0.035 + Math.random() * 0.045;
       src.connect(bp); bp.connect(g); g.connect(pannedOut(ctx, "cuddly-wallscreen"));
       src.start(t); // self-terminating short buffer — no refs held, no accumulation
     } catch (e) {}
@@ -4666,8 +4664,11 @@ document.addEventListener("click", function (e) {
       crackleTimer = null;
       if (!fireCtx) return;   // stopped meanwhile (leave room / hide tab / toggle off)
       popCrackle();
+      if (Math.random() < 0.3) {
+        setTimeout(function () { if (fireCtx) popCrackle(); }, 35 + Math.random() * 70); // occasional quick double-snap
+      }
       scheduleCrackle();      // light self-rescheduling spawner, random gaps
-    }, 220 + Math.random() * 950);
+    }, 500 + Math.random() * 2200);
   }
   function startFire() {
     try {

@@ -133,6 +133,15 @@ footer{margin-top:2.6rem}
   50%{transform:translateY(5px)}
 }
 @media (prefers-reduced-motion: reduce){.scene-caption.rsvp-nudge{animation:none}}
+.watch-controls{display:flex; justify-content:center; align-items:center; gap:.9rem; margin:.5rem 0 0; min-height:1.5rem}
+.watch-loft-btn, .watch-skip-btn{
+  font:inherit; font-size:.85rem; line-height:1.3; cursor:pointer; background:none;
+  border:none; padding:.1rem .15rem; color:var(--wine); border-bottom:1px dotted var(--wine);
+}
+.watch-loft-btn:hover, .watch-skip-btn:hover, .watch-loft-btn:focus-visible, .watch-skip-btn:focus-visible{color:var(--ink); border-bottom-color:var(--ink)}
+.watch-skip-btn{color:var(--muted); border-bottom-color:var(--muted)}
+.watch-loft-btn.nudge{animation:rsvp-nudge-float 2.4s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){.watch-loft-btn.nudge{animation:none}}
 .hunt-hit{cursor:pointer}
 .hunt-hit:focus, .hunt-hit:focus-visible{outline:none}
 /* the game strip is a mouse/touch playground — no focus rings on any of its art */
@@ -3859,6 +3868,10 @@ section{margin:1.9rem 0}
   <button type="button" id="hunt-next" class="hunt-nav hunt-nav-next locked" aria-label="Next room">›</button>
   </div>
   <div class="hunt-dots" id="hunt-dots" role="tablist" aria-label="Rooms"></div>
+  <div class="watch-controls">
+    <button type="button" id="watch-loft-btn" class="watch-loft-btn" data-i="watch_loft">▷ Watch the loft</button>
+    <button type="button" id="watch-skip-btn" class="watch-skip-btn" data-i="watch_skip" hidden>Skip</button>
+  </div>
 
   <hr>
 
@@ -3930,6 +3943,8 @@ var T = {
     hunt_title: "Loft Day",
     tagline: "We’re getting married<br><strong>Will you be there?</strong>",
     device_hint: "(best enjoyed on a laptop 💻)",
+    watch_loft: "▷ Watch the loft",
+    watch_skip: "Skip",
     contact: "Questions? Write to us:",
     marketa_url: "https://marketajakesova.ca",
     nav_lang_aria: "Language",
@@ -4006,6 +4021,8 @@ var T = {
     hunt_title: "Den v podkroví",
     tagline: "Budeme se brát<br><strong>Budete tam?</strong>",
     device_hint: "(nejlíp si to užiješ na počítači 💻)",
+    watch_loft: "▷ Prohlédnout byt",
+    watch_skip: "Přeskočit",
     contact: "Dotazy? Napište nám:",
     marketa_url: "https://marketajakesova.ca/cs/",
     nav_lang_aria: "Jazyk",
@@ -11173,6 +11190,7 @@ function spawnDustMote(container) {
   }
   function checkGardenDone() {
     updateGardenHint();
+    if (window.__cinematic) return; // the cinematic drives room changes itself
     if (gardenState.water && gardenState.music && gardenState.candles) {
       setTimeout(function () { goToStage("cuddly"); }, 700);
     }
@@ -11672,6 +11690,11 @@ function spawnDustMote(container) {
       timers.push(setTimeout(startStorm, 165000 + Math.random() * 135000)); // next storm in ~2.75-5 min
     }
     function startStorm() {
+      // Don't rain on the cinematic's finale. Reschedule rather than bare-return: a
+      // plain return would kill the storm chain for the whole session (auto-day/night
+      // is stopped during the show, so nothing else re-arms it) — this way storms
+      // resume the moment the show ends.
+      if (window.__cinematic) { timers.push(setTimeout(startStorm, 8000)); return; }
       if (!isDuskBalcony()) { clearAll(); return; }
       window.__balconyStorm = true;
       setStorming(true);
@@ -12117,6 +12140,7 @@ function spawnDustMote(container) {
     if (e.animationName === "butterfly-flap-left" || e.animationName === "butterfly-flap-right") glass.classList.remove("flap");
   });
   onActivate(glass, function () {
+    if (window.__cinematic) return; // the cinematic drives goToStage("balcony") itself
     if (!window.__pragueCalled) { // the finale gates on calling Prague first
       setCaption("office_call");
       flapButterfly();
@@ -12233,6 +12257,131 @@ function spawnDustMote(container) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activateExtinguisher(); }
     });
   }
+
+  // ── "Day in the Loft" cinematic ──────────────────────────────────────────
+  // A hands-off autoplay that walks a passive visitor through all five rooms as
+  // the day turns to night, ending on the RSVP nudge. Declarative cancellable
+  // timeline: an array of setTimeout ids choreographed on wall-clock delays tuned
+  // to the known constants (GRIND_MS / BREW_MS / the 700ms slide) — cancel = clear
+  // them all (the finaleTimers idiom). window.__cinematic gates the game's own
+  // auto-advances + the balcony storm so they can't fight the scripted beats.
+  var watchBtn = document.getElementById("watch-loft-btn");
+  var skipBtn = document.getElementById("watch-skip-btn");
+  var cinematicTimers = [];
+  var cinematicTeardown = null;
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function beat(ms, fn) { cinematicTimers.push(setTimeout(fn, ms)); }
+  // dispatch a click event rather than el.click() — SVGElement has no .click()
+  // method, and a dispatched click fires no pointer/key events so it never trips
+  // the show's own cancel listeners
+  function cineClick(id) {
+    var el = document.getElementById(id);
+    if (el) el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  }
+
+  function stopCinematic() {
+    if (!window.__cinematic) return;
+    window.__cinematic = false;
+    cinematicTimers.forEach(clearTimeout);
+    cinematicTimers = [];
+    if (cinematicTeardown) { cinematicTeardown(); cinematicTeardown = null; }
+    if (skipBtn) skipBtn.hidden = true;
+    if (watchBtn) { watchBtn.hidden = false; watchBtn.classList.remove("nudge"); }
+  }
+
+  function runFullCinematic() {
+    // KITCHEN — power on → grind (GRIND_MS) → brew (BREW_MS) → advance
+    beat(1000, function () { cineClick("kitchen-lamarzocco"); });
+    beat(1900, function () { cineClick("kitchen-grinder"); });
+    beat(1900 + GRIND_MS + 400, function () { cineClick("kitchen-portafilter"); });
+    beat(1900 + GRIND_MS + 400 + BREW_MS + 600, function () { goToStage("garden"); }); // ~6400
+    // GARDEN — water a plant, then start the couple's real song (drives grooving onward)
+    beat(7300, function () { cineClick("garden-monstera"); });
+    beat(8400, function () { cineClick("garden-guitar"); });
+    beat(10200, function () { goToStage("cuddly"); });
+    // CUDDLY — grooving auto-runs on entry; play with Octi
+    beat(11200, function () { cineClick("cuddly-octopus"); });
+    beat(13400, function () { goToStage("office"); });
+    // OFFICE — lamps off, then flip day → night (screensaver + skull dance come free)
+    beat(14400, function () { cineClick("office-lamp"); });
+    beat(15000, function () { cineClick("office-pendant"); });
+    beat(15900, function () { if (window.__autoToggleDusk) window.__autoToggleDusk(); });
+    // BALCONY — the built-in finale (bell → rainbow → fireworks → RSVP nudge ~9.1s)
+    beat(17900, function () { goToStage("balcony"); });
+    beat(17900 + 9600, stopCinematic); // clean up once the finale has settled on the nudge
+  }
+
+  function runReducedCinematic() {
+    // prefers-reduced-motion: a guided tour. Instant room cuts (the strip transition
+    // is already none), each room's key non-audio interactions fired so it looks
+    // solved, the day → night flip kept (a colour change, not motion), and the heavy
+    // balcony flourish suppressed — end straight on the RSVP nudge.
+    var D = 1700;
+    beat(300, function () { setCaption("kitchen"); });
+    beat(D, function () { goToStage("garden"); cineClick("garden-monstera"); });
+    beat(D * 2, function () { goToStage("cuddly"); cineClick("cuddly-octopus"); });
+    beat(D * 3, function () {
+      goToStage("office");
+      cineClick("office-lamp"); cineClick("office-pendant");
+      if (window.__autoToggleDusk) window.__autoToggleDusk();
+    });
+    beat(D * 4, function () {
+      balconyIntroSeen = true; // suppress the one-time arrival flourish (fireworks etc.)
+      goToStage("balcony");
+      showRsvpNudge();
+    });
+    beat(D * 4 + 500, stopCinematic);
+  }
+
+  function startCinematic() {
+    if (window.__cinematic) return;
+    window.__cinematic = true;
+    if (watchBtn) { watchBtn.classList.remove("nudge"); watchBtn.hidden = true; }
+    if (skipBtn) skipBtn.hidden = false;
+    if (window.__stopAutoDayNight) window.__stopAutoDayNight(); // freeze the background sky
+    resetHunt(); // clean slate: day, kitchen, re-armed balcony finale (deterministic dusk flip later)
+
+    // Cancel on any genuine user input. pointerdown/keydown ONLY (never click): our
+    // own scripted el.click() beats fire no pointer/key events, so they can't
+    // self-cancel; a real tap or keypress does. Abort if the tab is hidden (timers
+    // keep firing while animations pause → desync).
+    function onUserInput() { stopCinematic(); }
+    function onVisibility() { if (document.hidden) stopCinematic(); }
+    document.addEventListener("pointerdown", onUserInput, true);
+    document.addEventListener("keydown", onUserInput, true);
+    document.addEventListener("visibilitychange", onVisibility);
+    cinematicTeardown = function () {
+      document.removeEventListener("pointerdown", onUserInput, true);
+      document.removeEventListener("keydown", onUserInput, true);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+
+    if (reduceMotion) runReducedCinematic();
+    else runFullCinematic();
+  }
+  window.__startCinematic = startCinematic; // for headless driving / tests
+
+  if (watchBtn) {
+    // Only a trusted gesture starts the show: a synthetic click can't unlock song
+    // audio anyway, and this keeps play.js's click-storm from launching it.
+    watchBtn.addEventListener("click", function (e) {
+      if (e && e.isTrusted === false) return;
+      startCinematic();
+    });
+    // Idle nudge: after ~10s of no progress, gently float the Watch control so a
+    // passive visitor notices it. Gated on no progress ONLY (stageIndex 0 / nothing
+    // unlocked) so it never interrupts a mid-solve, and not while the show runs.
+    // Reuses the .rsvp-nudge float idiom (reduced-motion-guarded in CSS).
+    setTimeout(function () {
+      if (!window.__cinematic && stageIndex === 0 && maxUnlocked === 0) {
+        watchBtn.classList.add("nudge");
+        setTimeout(function () { watchBtn.classList.remove("nudge"); }, 9000); // a few gentle cycles, then rest
+      }
+    }, 10000);
+  }
+  // Skip is also covered by the global pointerdown/keydown cancel, but wire it
+  // explicitly so it reads as a real control.
+  if (skipBtn) skipBtn.addEventListener("click", stopCinematic);
 
   goToStage("kitchen");
 })();

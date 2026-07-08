@@ -5204,6 +5204,7 @@ document.addEventListener("click", function (e) {
       if (dusk) {
         if (lights) lights.classList.remove("off");
         if (wallLampEl) wallLampEl.classList.add("on");
+        if (window.triggerBalconyThunder) setTimeout(window.triggerBalconyThunder, 4500 + Math.random() * 3000);
       } else if (wallLampEl) {
         wallLampEl.classList.remove("on");
       }
@@ -9518,6 +9519,28 @@ function spawnDustMote(container) {
         spawnSteamWisps(strip, 3021, 230, 0.5, 1, -1, 3, 0.4);
       }
       scheduleGrillSmoke();
+    }, delay);
+  })();
+  // a distant lightning flash + the rolling rumble — only at dusk, on the balcony
+  window.triggerBalconyThunder = function () {
+    var sb = document.getElementById("stage-balcony");
+    if (!sb || !sb.classList.contains("dusk")) return;
+    var flash = document.getElementById("balcony-thunder-flash");
+    if (flash) {
+      flash.classList.remove("flash");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { flash.classList.add("flash"); });
+      });
+    }
+    setTimeout(function () { playThunderSound(); }, 320 + Math.random() * 480);
+  };
+  (function scheduleNightThunder() {
+    var delay = 22000 + Math.random() * 30000;
+    setTimeout(function () {
+      if (stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden") {
+        window.triggerBalconyThunder();
+      }
+      scheduleNightThunder();
     }, delay);
   })();
   var instrumentSpots = {

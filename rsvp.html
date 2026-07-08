@@ -12966,11 +12966,149 @@ function spawnDustMote(container) {
     if (room === "balcony") { var d = document.getElementById("balcony-door"); return !!(d && d.classList.contains("open")); }
     return false; // garden (native home) and anything unexpected fall through to the chest
   }
+  // --- occasional perch-jumps -----------------------------------------------
+  // While the loose cat is on the room the player is viewing, it now and then
+  // interrupts its floor pace to hop up onto a surface in an arc, sit a few
+  // seconds, then hop back down and resume roaming. The hop is a single
+  // Web-Animations pass on the WALK node — script animations outrank the CSS
+  // roam, so they compose over it without ever touching the base transform on
+  // #witchy-chest-cat-pos (per the transform-attribute-vs-animation rule). The
+  // roam is PAUSED (not cleared) for the duration and the arc starts/ends at the
+  // roam's current offset, so it resumes with no snap. Reduced-motion, a hidden
+  // tab, or the cat being off-screen all suppress it; a room change or reset
+  // cancels a hop in flight and drops the cat back to the floor.
+  var IDX = { kitchen: 0, garden: 1, cuddly: 2, office: 3, balcony: 4 };
+  // Each perch is the cat's FEET target on a surface, in that stage's LOCAL
+  // coords (feet at the surface's top edge). The walk-node offset is derived
+  // from the room's floor base below, so it tracks any later ROOMS dx/dy tweak.
+  // The office desk is height-adjustable (its top slides on a CSS `translate`),
+  // user-draggable, and swaps a monitor/typewriter on top — so its surface isn't
+  // at a fixed coordinate. Resolve that perch from the desk-top's LIVE geometry
+  // at jump time (its bbox mapped into the stage's coord space) instead of a
+  // hard-coded rect; the other surfaces here don't move, so they stay static.
+  function officeDeskPerch() {
+    try {
+      var stage = document.getElementById("stage-office");
+      var top = document.getElementById("office-desk-top");
+      if (!stage || !top || !top.getBBox || !top.getScreenCTM || !stage.getScreenCTM) return null;
+      var bb = top.getBBox();                         // desk-top surface, its own local coords
+      var m = stage.getScreenCTM().inverse().multiply(top.getScreenCTM()); // -> stage-local
+      var p = new DOMPoint(bb.x + bb.width * 0.94, bb.y).matrixTransform(m); // right end, top edge
+      return { x: p.x, y: p.y };
+    } catch (e) { return { x: 462, y: 208 }; }         // static fallback matching the default desk
+  }
+  var PERCHES = {
+    kitchen: [{ x: 48,  y: 230 }], // left end of the counter top, clear of the espresso gear
+    garden:  [{ x: 610, y: 240 }], // the chest lid it climbed out of
+    cuddly:  [{ x: 96,  y: 250 }], // front-left corner of the daybed seat, clear of the couple
+    office:  [officeDeskPerch],    // resolved live — the desk moves/resizes/re-tops
+    balcony: [{ x: 560, y: 140 }]  // up on the railing, against the skyline
+  };
+  // When the loose cat FOLLOWS the player into a room, it walks in from an edge
+  // instead of popping into place: `sx`/`sy` is the walk-node start offset (edge
+  // or, for the balcony, the open door), the glide settles at the roam-neutral
+  // base (0,0), and `delay` starts the roaming-sm cycle at a 0-offset phase whose
+  // travel direction continues the entrance (75% → moving right, 25% → moving
+  // left; roaming-sm's period is 11s) so the hand-off to the pace has no snap.
+  var ENTRANCES = {
+    kitchen: { sx: -144, sy: 0,   dur: 850,  delay: "-8.25s" }, // in from the left
+    cuddly:  { sx: -194, sy: 0,   dur: 900,  delay: "-8.25s" }, // in from the left
+    office:  { sx: 109,  sy: 0,   dur: 760,  delay: "-2.75s" }, // in from the right
+    balcony: { sx: -499, sy: -24, dur: 1150, delay: "-8.25s" }  // in through the open door
+  };
+  var catRoom = "garden";                 // where the cat physically is (chest home = garden)
+  var jumpAnim = null, jumping = false, jumpTimer = null;
+  function reducedMotion() {
+    return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+  function baseFeet(room) {                // the roam-neutral floor position of the cat's feet
+    var r = ROOMS[room];
+    return { x: 636 + (r ? r.dx : 0), y: 292 + (r ? r.dy : 0) };
+  }
+  function currentWalkOffset() {           // the roam's live translate, so a hop can start/return there
+    var m = (getComputedStyle(walk).transform || "").match(/matrix\(([^)]+)\)/);
+    if (!m) return { x: 0, y: 0 };
+    var p = m[1].split(",");
+    return { x: parseFloat(p[4]) || 0, y: parseFloat(p[5]) || 0 };
+  }
+  function scheduleJump() {
+    clearTimeout(jumpTimer);
+    jumpTimer = setTimeout(runJumpCycle, 10000 + Math.random() * 10000); // every ~10–20s
+  }
+  function canJumpNow() {
+    return walk.classList.contains("out") && !jumping && !reducedMotion() &&
+      document.visibilityState !== "hidden" &&
+      window.currentStageIndex === IDX[catRoom] && !!PERCHES[catRoom];
+  }
+  function runJumpCycle() {
+    if (canJumpNow()) startJump();
+    else scheduleJump();                   // conditions not met now — check again later
+  }
+  function finishJump() {                  // natural end of the hop-down
+    jumpAnim = null; jumping = false;
+    walk.style.animationPlayState = "";    // un-freeze the roam where it left off
+    scheduleJump();
+  }
+  function cancelJump() {                   // abort a hop in flight; safe no-op otherwise
+    if (!jumping) return;
+    if (jumpAnim) { jumpAnim.onfinish = null; jumpAnim.cancel(); jumpAnim = null; }
+    jumping = false;
+    walk.style.animationPlayState = "";
+    scheduleJump();
+  }
+  function startJump() {
+    if (!walk.animate) { scheduleJump(); return; } // no WAAPI: just keep roaming
+    var list = PERCHES[catRoom];
+    var perch = list[Math.floor(Math.random() * list.length)];
+    if (typeof perch === "function") perch = perch(); // resolve live-geometry perches
+    if (!perch) { scheduleJump(); return; }           // couldn't resolve a surface — skip this cycle
+    var b = baseFeet(catRoom);
+    var Dx = perch.x - b.x, Dy = perch.y - b.y;    // walk-node offset that lands the feet on the surface
+    var cur = currentWalkOffset();                 // where the roam is right now
+    var apexX = (cur.x + Dx) / 2;
+    var apexY = Math.min(cur.y, Dy) - 24;          // arc peaks above the higher of floor/perch
+    function tf(x, y) { return "translate(" + x + "px," + y + "px)"; }
+    jumping = true;
+    walk.style.animationPlayState = "paused";      // freeze the roam at `cur` for the duration
+    jumpAnim = walk.animate([
+      { offset: 0,    transform: tf(cur.x, cur.y),      easing: "cubic-bezier(.4,0,.7,.5)" },
+      { offset: 0.05, transform: tf(apexX, apexY),      easing: "cubic-bezier(.25,.6,.4,1)" },
+      { offset: 0.10, transform: tf(Dx, Dy) },          // land on the surface
+      { offset: 0.86, transform: tf(Dx, Dy),            easing: "cubic-bezier(.4,0,.7,.5)" }, // sit a few seconds
+      { offset: 0.91, transform: tf(apexX, apexY + 6),  easing: "cubic-bezier(.25,.6,.4,1)" }, // hop off
+      { offset: 1,    transform: tf(cur.x, cur.y) }      // back to the floor, where the roam froze
+    ], { duration: 4600 + Math.random() * 1600, fill: "none" });
+    jumpAnim.onfinish = finishJump;
+  }
+  function canEnter(room) {                 // play the walk-in only when the room is actually on screen
+    return !reducedMotion() && document.visibilityState !== "hidden" && !!walk.animate &&
+      window.currentStageIndex === IDX[room] && !!ENTRANCES[room];
+  }
+  // glide the cat in from `room`'s entrance edge/door, then hand off to the roam.
+  // Shares the busy-lock + finishJump cleanup with the perch-jump, and pauses the
+  // (freshly added) roam so the WAAPI glide composes over it without a snap.
+  function startEnter(room) {
+    var e = ENTRANCES[room];
+    function tf(x, y) { return "translate(" + x + "px," + y + "px)"; }
+    walk.style.animationDelay = e.delay;         // roam resumes at a 0-offset phase, same direction
+    walk.style.animationPlayState = "paused";    // freeze it; the glide drives the walk node
+    jumping = true;
+    jumpAnim = walk.animate([
+      { offset: 0,   transform: tf(e.sx, e.sy),          easing: "cubic-bezier(.2,.7,.35,1)" },
+      { offset: 0.5, transform: tf(e.sx * 0.4, e.sy * 0.4 - 3) }, // a small mid-stride bob
+      { offset: 1,   transform: tf(0, 0) }                        // settle onto the roam base
+    ], { duration: e.dur, fill: "backwards" }); // backwards: hold the edge pose pre-start, no 1-frame base flash
+    jumpAnim.onfinish = finishJump;
+  }
   // move the cat into `room` if it's loose and that room is reachable; otherwise park it
   // back in its garden chest (off-screen from wherever the player is). Idempotent: calling
   // it repeatedly for the same room is a no-op and never restarts the pace or dupes a cat.
   window.__homeCat = function (room) {
     if (!walk.classList.contains("out")) return; // still in the bag
+    var dest = eligible(room) ? room : "garden"; // where the cat will physically be
+    var changed = dest !== catRoom;
+    if (changed) cancelJump(); // a real room change drops any hop/entry mid-air; same-room re-nav keeps it
+    catRoom = dest;
     if (eligible(room)) {
       var cfg = ROOMS[room];
       var stage = document.getElementById(cfg.stage);
@@ -12984,10 +13122,13 @@ function spawnDustMote(container) {
       pos.setAttribute("transform", "translate(" + cfg.dx + "," + cfg.dy + ")");
       walk.classList.remove("roaming");
       walk.classList.add("roaming-sm");
+      if (changed && canEnter(room)) startEnter(room); // walk in from the edge/door, then pace
+      else walk.style.animationDelay = "";
     } else {
       // back to the garden chest, native coordinates, wide stroll
       if (pos.parentNode !== homeParent || pos.nextSibling !== homeNext) homeParent.insertBefore(pos, homeNext);
       pos.removeAttribute("transform");
+      walk.style.animationDelay = "";
       walk.classList.remove("roaming-sm");
       walk.classList.add("roaming");
     }
@@ -12995,10 +13136,18 @@ function spawnDustMote(container) {
   };
   // the fire-extinguisher reset stuffs the cat back in the chest, wherever it wandered
   window.__stowCat = function () {
+    cancelJump();
     walk.classList.remove("out", "roaming", "roaming-sm");
+    walk.style.animationDelay = "";
     pos.removeAttribute("transform");
     if (pos.parentNode !== homeParent || pos.nextSibling !== homeNext) homeParent.insertBefore(pos, homeNext);
+    catRoom = "garden";
   };
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") cancelJump(); // never leave a hop frozen mid-air in a hidden tab
+    else scheduleJump();
+  });
+  scheduleJump(); // self-gating loop: acts only while the loose cat is on the viewed room
 })();
 (function () {
   var gmailBtn = document.getElementById("rsvp-gmail-btn");

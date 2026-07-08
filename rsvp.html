@@ -374,6 +374,17 @@ footer{margin-top:2.6rem}
   80%{transform:translateY(-2px) rotate(-2deg)}
 }
 @media (prefers-reduced-motion: reduce){#witchy-chest-cat.wobbling, #witchy-chest-fairy.wobbling{animation:none}}
+/* when the chest door is open (fairy revealed) and a song plays, the fairy dances —
+   on a wrapper so it composes with, and doesn't corrupt, its click-flutter one-shot */
+#witchy-chest-fairy-dance{transform-box:fill-box; transform-origin:center}
+#witchy-chest-fairy-dance.grooving{animation:fairy-dance .5s ease-in-out infinite}
+@keyframes fairy-dance{
+  0%,100%{transform:translate(0,0) rotate(0)}
+  25%{transform:translate(-2px,-3px) rotate(-8deg)}
+  50%{transform:translate(0,-1px) rotate(0)}
+  75%{transform:translate(2px,-3px) rotate(8deg)}
+}
+@media (prefers-reduced-motion: reduce){#witchy-chest-fairy-dance.grooving{animation:none}}
 .cuddly-knife.wobbling{animation:knife-wobble .4s ease-in-out}
 @keyframes knife-wobble{
   0%, 100%{transform:rotate(0)}
@@ -2508,6 +2519,7 @@ section{margin:1.9rem 0}
 <circle cx="630" cy="266" r="1.2" fill="#c9e85c"/>
 <circle cx="636" cy="266" r="1.2" fill="#c9e85c"/>
 </g>
+<g id="witchy-chest-fairy-dance">
 <g id="witchy-chest-fairy" aria-hidden="true">
 <ellipse cx="574" cy="279" rx="7" ry="4" fill="#dcd8f0" opacity="0.85" transform="rotate(-20 574 279)"/>
 <ellipse cx="600" cy="279" rx="7" ry="4" fill="#dcd8f0" opacity="0.85" transform="rotate(20 600 279)"/>
@@ -2516,6 +2528,7 @@ section{margin:1.9rem 0}
 <path d="M587 262 Q582 257 587 254 Q592 257 587 262 Z" fill="#8a5a3a"/>
 <circle cx="596" cy="277" r="1.3" fill="#f7d97a"/>
 <circle cx="600" cy="272" r="0.8" fill="#f7d97a"/>
+</g>
 </g>
 <g id="witchy-door-1" class="hunt-hit witchy-door" tabindex="0" role="button" aria-label="A chest door" style="transform-origin:0% 50%">
 <rect x="568" y="248" width="38" height="50" fill="#7a4536" stroke="#8a5040" stroke-width="2"/>
@@ -7021,6 +7034,7 @@ document.addEventListener("click", function (e) {
       playCreakSound();
       if (id === "witchy-door-2" && el.classList.contains("open") && cat) wobbleEl(cat);
       if (id === "witchy-door-1" && el.classList.contains("open") && fairy) wobbleEl(fairy);
+      if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // revealing/hiding starts/stops her dance
     }
     el.addEventListener("click", toggleWitchyDoor);
     el.addEventListener("keydown", function (e) {
@@ -11853,6 +11867,13 @@ function spawnDustMote(container) {
         if (skullDanceTimer) { clearTimeout(skullDanceTimer); skullDanceTimer = null; }
         skullDance.classList.remove("dancing");
       }
+    }
+    // the garden fairy dances once she's revealed (chest door open) and a song plays
+    var fairyDance = document.getElementById("witchy-chest-fairy-dance");
+    var witchyDoor1 = document.getElementById("witchy-door-1");
+    if (fairyDance) {
+      if (anyPlaying && witchyDoor1 && witchyDoor1.classList.contains("open")) setGroove(fairyDance, durations.toe);
+      else fairyDance.classList.remove("grooving");
     }
     // kitchen water, balcony wine, and the wooden head bob on the beat, phase-locked
     setGroove(document.getElementById("kitchen-waterbottle-liquid-groove"), durations.head);

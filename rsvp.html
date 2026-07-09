@@ -14335,6 +14335,7 @@ function spawnDustMote(container) {
   // second to actually do it themselves with the hints still there, then off for good.
   var KITCHEN_HINT_ROUNDS = 2;
   var kitchenRounds = 0;
+  var knockboxInviteTimer = null;
   function kitchenReducedMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
@@ -14395,10 +14396,21 @@ function spawnDustMote(container) {
     // wrapper, not the element itself — see the CSS comments on #kitchen-portafilter-fly
     // and #kitchen-tamper-pos
     [["kitchen-lamarzocco", lamarzocco], ["kitchen-grinder", grinder], ["kitchen-tamper", tamperPos],
-     ["kitchen-knockbox", knockbox], ["kitchen-portafilter", portafilterFly], ["kitchen-shotcup", document.getElementById("kitchen-shotcup")]
+     ["kitchen-portafilter", portafilterFly], ["kitchen-shotcup", document.getElementById("kitchen-shotcup")]
     ].forEach(function (pair) {
       if (pair[1]) pair[1].classList.toggle("invite-pulse", pair[0] === next);
     });
+    // the knockbox's own arrow lands a beat after everything else's — it becomes "next"
+    // right as the shot's just been sipped (or the sequence reset), and popping the
+    // nudge in that same instant reads as premature; give the player a moment first.
+    clearTimeout(knockboxInviteTimer);
+    if (next === "kitchen-knockbox") {
+      knockboxInviteTimer = setTimeout(function () {
+        if (knockbox) knockbox.classList.add("invite-pulse");
+      }, 2000);
+    } else if (knockbox) {
+      knockbox.classList.remove("invite-pulse");
+    }
   }
   window.resetCoffeeSequence = function () {
     kitchenRounds++;
@@ -15779,6 +15791,7 @@ function spawnDustMote(container) {
     clearTimeout(warmupTimer);
     kitchenGround = false;
     kitchenRounds = 0;
+    clearTimeout(knockboxInviteTimer);
     grinderBeansLeft = GRINDER_BEAN_USES;
     GRINDER_BEAN_ORDER.forEach(function (id) {
       var bean = document.getElementById(id);

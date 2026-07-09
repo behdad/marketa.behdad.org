@@ -7647,6 +7647,9 @@ document.addEventListener("click", function (e) {
       }
       playWindchimeSound(!!window.__balconyStorm);
     }
+    // exposed so the loose cat's rare windchime-swat perch (a separate IIFE, no access to
+    // this closure) can trigger the exact same ring instead of duplicating the two lines
+    window.__ringWindchime = ringWindchime;
     windchime.addEventListener("click", ringWindchime);
     windchime.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ringWindchime(e); }
@@ -14559,6 +14562,13 @@ function spawnDustMote(container) {
       return { x: p.x, y: p.y };
     } catch (e) { return { x: 278, y: 273 }; }         // static fallback matching the default chair
   }
+  // The windchime hangs at a fixed spot (art/#balcony-windchime, its own #balcony-windchime-
+  // swing sway rotates it a couple degrees but never repositions it via a transform=), so —
+  // unlike the desk/chair above — a plain static {x,y} is enough; no live-geometry resolve
+  // needed. Feet land near the bottom of the longest (frontmost) tube, x181/y88-122 in the
+  // windchime's own local coords, so the cat visually reaches up into the tube cluster
+  // rather than floating above the wall-lamp cap it hangs from.
+  var windchimeSwatPerch = { x: 181, y: 122 };
   var PERCHES = {
     kitchen: [{ x: 48,  y: 230 }], // left end of the counter top, clear of the espresso gear
     garden:  [{ x: 610, y: 240 }], // the chest lid it climbed out of
@@ -14566,7 +14576,10 @@ function spawnDustMote(container) {
     // the chair is weighted 3:1 over the desk — it gravitates toward the chair to nap far
     // more often than it perches anywhere else (owner request); resolved live, both move.
     office:  [officeDeskPerch, officeChairPerch, officeChairPerch, officeChairPerch],
-    balcony: [{ x: 560, y: 140 }]  // up on the railing, against the skyline
+    // the windchime is a rare discovered moment (a quiet bonus find, not one of the tracked
+    // 12), not the cat's usual habit — weighted 1-in-4 against the railing's 3, so it swats
+    // the chime occasionally rather than every other balcony visit.
+    balcony: [{ x: 560, y: 140 }, { x: 560, y: 140 }, { x: 560, y: 140 }, windchimeSwatPerch]
   };
   // When the loose cat FOLLOWS the player into a room, it walks in from an edge
   // instead of popping into place: `sx`/`sy` is the walk-node start offset (edge
@@ -14633,6 +14646,7 @@ function spawnDustMote(container) {
     var list = PERCHES[catRoom];
     var chosen = list[Math.floor(Math.random() * list.length)];
     var isNap = chosen === officeChairPerch;       // the nap-worthy perch: needs a longer sit + the sleeping look
+    var isSwipe = chosen === windchimeSwatPerch;   // the windchime: a quick swat-and-ring, not a sit
     var perch = typeof chosen === "function" ? chosen() : chosen; // resolve live-geometry perches
     if (!perch) { scheduleJump(); return; }           // couldn't resolve a surface — skip this cycle
     var b = baseFeet(catRoom);
@@ -14647,8 +14661,11 @@ function spawnDustMote(container) {
     walk.style.animationPlayState = "paused";      // freeze the roam at `cur` for the duration
     // a nap on the chair runs much longer than a quick sit-and-hop — stretching the total
     // duration proportionally stretches the arc keyframes too, which reads as a slower,
-    // more deliberate settle-in rather than jarring slow motion.
-    var duration = isNap ? (9000 + Math.random() * 4000) : (4600 + Math.random() * 1600);
+    // more deliberate settle-in rather than jarring slow motion. The windchime swat is the
+    // opposite: even shorter than the default sit, since it's a quick poke-and-move-on, not
+    // a lingering perch.
+    var duration = isNap ? (9000 + Math.random() * 4000) :
+      isSwipe ? (2600 + Math.random() * 1000) : (4600 + Math.random() * 1600);
     jumpAnim = walk.animate([
       { offset: 0,    transform: tf(cur.x, cur.y),      easing: "cubic-bezier(.4,0,.7,.5)" },
       { offset: 0.05, transform: tf(apexX, apexY),      easing: "cubic-bezier(.25,.6,.4,1)" },
@@ -14658,6 +14675,27 @@ function spawnDustMote(container) {
       { offset: 1,    transform: tf(cur.x, cur.y) }      // back to the floor, where the roam froze
     ], { duration: duration, fill: "none" });
     jumpAnim.onfinish = finishJump;
+    // The paw connects a quarter of the way into the sit window (offsets 0.10-0.86), not the
+    // instant it lands — reads as "the cat settled, then swatted" rather than the chime
+    // ringing itself. Reuses the windchime's own click reaction (ring sound + kick animation,
+    // exposed as window.__ringWindchime since it lives in a different IIFE) and the cat's own
+    // existing click-wobble class, rather than inventing new art or sound for a one-off. The
+    // captured jumpAnim reference guards against a cancelled/superseded jump (room change,
+    // reset, or the player poking the cat mid-sit) firing a ring for a swat no longer in flight.
+    if (isSwipe) {
+      var thisJump = jumpAnim;
+      var ringAt = duration * (0.10 + (0.86 - 0.10) * 0.25); // ~29% into the total duration
+      setTimeout(function () {
+        if (!jumping || jumpAnim !== thisJump) return;
+        if (window.__ringWindchime) window.__ringWindchime();
+        if (catArt) {
+          catArt.classList.remove("wobbling");
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () { catArt.classList.add("wobbling"); });
+          });
+        }
+      }, ringAt);
+    }
   }
   // The office desk is height-adjustable and the chair is horizontally draggable — if
   // either moves WHILE the cat is sitting on it (perched, not mid-arc), the cat would

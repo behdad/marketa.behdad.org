@@ -7273,15 +7273,15 @@ document.addEventListener("click", function (e) {
   });
 })();
 (function () {
-  // Clicking an office logo "opens" that site on the monitor if it's on;
-  // otherwise (no monitor) it just opens the real site in a new tab.
+  // Clicking an office wall sign turns the computer on and boots it (Fedora → Chrome),
+  // landing the browser on that sign's page; if the monitor's already on and showing,
+  // it navigates there immediately. It never opens the real site in a new tab.
   var harfbuzzSign = document.getElementById("office-harfbuzz-sign");
   if (harfbuzzSign) {
     var HARFBUZZ_URL = "https://harfbuzz-world.cc/";
     function openHarfbuzzSite(e) {
       if (e) e.stopPropagation();
-      if (window.navigateMonitor && window.navigateMonitor("harfbuzz", HARFBUZZ_URL)) return;
-      window.open(HARFBUZZ_URL, "_blank");
+      if (window.bootToSite) window.bootToSite("harfbuzz", HARFBUZZ_URL);
     }
     harfbuzzSign.addEventListener("click", openHarfbuzzSite);
     harfbuzzSign.addEventListener("keydown", function (e) {
@@ -7293,8 +7293,7 @@ document.addEventListener("click", function (e) {
     var BEHDAD_URL = "https://behdad.org/";
     function openBehdadSite(e) {
       if (e) e.stopPropagation();
-      if (window.navigateMonitor && window.navigateMonitor("behdad", BEHDAD_URL)) return;
-      window.open(BEHDAD_URL, "_blank");
+      if (window.bootToSite) window.bootToSite("behdad", BEHDAD_URL);
     }
     behdadTag.addEventListener("click", openBehdadSite);
     behdadTag.addEventListener("keydown", function (e) {
@@ -7624,6 +7623,12 @@ document.addEventListener("click", function (e) {
   var bootTimers = [];
   var CAPS_URL = "https://marketa.behdad.org/";
   var monitorUrl = CAPS_URL;
+  // A wall sign (harfbuzz plaque / behdad.org tag) can ask the boot to finish on its own
+  // page instead of the caps default; bootToSite queues {key,url} here and the final boot
+  // step consumes it. Cleared whenever no boot will land it (screen off, swapped away,
+  // superseded by a direct navigation, or a game reset) so a later plain power-on still
+  // ends on caps.
+  var pendingBootSite = null;
   // After the caps site idles a while, a live Julia-set fractal screensaver takes
   // over ("electric sheep" nod). Any click on the monitor wakes it.
   var saverTimer = null, saverRaf = null;
@@ -7749,7 +7754,10 @@ document.addEventListener("click", function (e) {
   // Chrome → the caps, which stay up.
   function updateScreen() {
     clearBoot();
-    if (!monitor.classList.contains("here") || !pcTower || !pcTower.classList.contains("on")) return;
+    if (!monitor.classList.contains("here") || !pcTower || !pcTower.classList.contains("on")) {
+      pendingBootSite = null; // no boot will run to land it, so drop any queued sign target
+      return;
+    }
     monitor.classList.add("screen-on", "show-fedora");
     bootTimers.push(setTimeout(function () {
       monitor.classList.remove("show-fedora");
@@ -7758,8 +7766,16 @@ document.addEventListener("click", function (e) {
     }, 2600));
     bootTimers.push(setTimeout(function () {
       monitor.classList.remove("show-chrome");
-      monitor.classList.add("show-caps");
-      monitorUrl = CAPS_URL;
+      // a wall sign that triggered this boot lands the browser on its own page; a plain
+      // power-on lands on the caps "home"
+      if (pendingBootSite) {
+        monitor.classList.add("show-" + pendingBootSite.key);
+        monitorUrl = pendingBootSite.url;
+        pendingBootSite = null;
+      } else {
+        monitor.classList.add("show-caps");
+        monitorUrl = CAPS_URL;
+      }
       scheduleSaver();
       updateNowPlaying();
       if (window.__inviteLaptop) window.__inviteLaptop(); // the boot done, nudge the laptop → Call Prague
@@ -8764,6 +8780,28 @@ document.addEventListener("click", function (e) {
     }
     return true;
   };
+  // A wall sign wants its page on the monitor: if the PC's already on with the monitor
+  // showing, just browse there now (this also covers a click mid-boot — navigateMonitor
+  // supersedes the in-flight boot and jumps straight to the site). Otherwise queue the
+  // target and kick off the real power-on / monitor swap-in; updateScreen then boots
+  // Fedora → Chrome and lands on the queued page instead of the caps default.
+  window.bootToSite = function (siteKey, url) {
+    if (window.navigateMonitor && window.navigateMonitor(siteKey, url)) {
+      pendingBootSite = null; // a direct navigation supersedes any queued boot target
+      return;
+    }
+    pendingBootSite = { key: siteKey, url: url };
+    if (!pcTower) return;
+    if (!pcTower.classList.contains("on")) {
+      // PC off → power it on exactly as a user click would (spark + fan + boot). SVG nodes
+      // have no .click(); dispatch a real event so the PC's own handlers add .on and run
+      // onPcToggled, which boots honoring the queued target we just set.
+      pcTower.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    } else {
+      // PC on but the typewriter is showing → bring the monitor back; updateScreen boots.
+      swap(true);
+    }
+  };
   function swap(toMonitor) {
     monitor.classList.toggle("here", toMonitor);
     typewriter.classList.toggle("away", toMonitor);
@@ -8823,6 +8861,7 @@ document.addEventListener("click", function (e) {
   }
   window.resetOfficeMonitor = function () {
     clearBoot();
+    pendingBootSite = null; // reset never boots to a sign's page
     monitor.classList.add("here");
     typewriter.classList.add("away");
   };

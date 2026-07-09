@@ -15984,6 +15984,13 @@ function spawnDustMote(container) {
   var catRoom = "garden";                 // where the cat physically is (chest home = garden)
   var jumpAnim = null, jumping = false, jumpTimer = null, isPerchJump = false, isNapJump = false;
   var jumpCur = null, jumpApexX = 0, jumpApexY = 0; // the in-flight arc's fixed points, kept for __deskCatFollow/__chairCatFollow to rebuild around
+  // We don't actually have a cat — after enough balcony railing perches, the next one
+  // keeps going: a last beat on the rail, then a leap up and out into the night, gone
+  // for good. No code re-shows it afterward (see startFinalLeap's onfinish, which
+  // drops .out — everything else here, including __stowCat, already no-ops without it).
+  var BALCONY_FINAL_LEAP_AT = 3;
+  var balconyRailPerches = 0;
+  var catGoneForever = false;
   function setNapping(on) {                // toggles the chair-nap look; no-op off the chair perch
     if (breathe) breathe.classList.toggle("napping", on);
   }
@@ -16030,9 +16037,14 @@ function spawnDustMote(container) {
     scheduleJump();
   }
   function startJump() {
+    if (catGoneForever) return; // it's gone; nothing left to schedule
     if (!walk.animate) { scheduleJump(); return; } // no WAAPI: just keep roaming
     var list = PERCHES[catRoom];
     var chosen = list[Math.floor(Math.random() * list.length)];
+    if (catRoom === "balcony" && chosen !== windchimeSwatPerch) {
+      balconyRailPerches++;
+      if (balconyRailPerches >= BALCONY_FINAL_LEAP_AT) { startFinalLeap(); return; }
+    }
     var isNap = chosen === officeChairPerch;       // the nap-worthy perch: needs a longer sit + the sleeping look
     var isSwipe = chosen === windchimeSwatPerch;   // the windchime: a quick swat-and-ring, not a sit
     var perch = typeof chosen === "function" ? chosen() : chosen; // resolve live-geometry perches
@@ -16084,6 +16096,38 @@ function spawnDustMote(container) {
         }
       }, ringAt);
     }
+  }
+  // The cat's exit: one last beat on the railing (reusing that perch's own coordinates),
+  // then it keeps going — up and out past x=680 (off the 680-wide stage entirely) while
+  // fading out — instead of hopping back down. fill:"forwards" holds that final
+  // off-screen, invisible state once the animation ends (no onfinish snap-back to write),
+  // and dropping .out there is what makes every other piece of this cat system (roam,
+  // future jump cycles, room-follow on goToStage, __stowCat, the mouse pounce) treat it
+  // as back in the bag — so nothing else has to know this ever happened.
+  var FINAL_LEAP_TARGET = { x: 620, y: 20 }; // high over the rail, off the right edge of the stage
+  function startFinalLeap() {
+    var b = baseFeet("balcony");
+    var railDx = 560 - b.x, railDy = 140 - b.y; // PERCHES.balcony's own railing spot
+    var Dx = FINAL_LEAP_TARGET.x - b.x, Dy = FINAL_LEAP_TARGET.y - b.y;
+    var cur = currentWalkOffset();
+    var apexX = (cur.x + railDx) / 2, apexY = Math.min(cur.y, railDy) - 24;
+    function tf(x, y) { return "translate(" + x + "px," + y + "px)"; }
+    jumping = true; isPerchJump = false; isNapJump = false;
+    walk.style.animationPlayState = "paused";
+    jumpAnim = walk.animate([
+      { offset: 0,    transform: tf(cur.x, cur.y),     opacity: 1, easing: "cubic-bezier(.4,0,.7,.5)" },
+      { offset: 0.12, transform: tf(apexX, apexY),     opacity: 1, easing: "cubic-bezier(.25,.6,.4,1)" },
+      { offset: 0.22, transform: tf(railDx, railDy),   opacity: 1 },          // lands on the rail
+      { offset: 0.6,  transform: tf(railDx, railDy),   opacity: 1, easing: "cubic-bezier(.3,0,.7,.3)" }, // a last look out
+      { offset: 1,    transform: tf(Dx, Dy),           opacity: 0, easing: "cubic-bezier(.3,0,.8,.2)" }   // and it's gone
+    ], { duration: 5200, fill: "forwards" });
+    jumpAnim.onfinish = function () {
+      catGoneForever = true;
+      clearTimeout(jumpTimer);
+      walk.style.animationPlayState = "";
+      walk.classList.remove("roaming", "roaming-sm", "out");
+      jumping = false; jumpAnim = null;
+    };
   }
   // A one-off reaction to the cuddly cabinet's hidden mouse (see toggleCuddlyCabinet,
   // which calls this the instant the mouse starts its .scurrying dash): if the loose

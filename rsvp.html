@@ -1138,7 +1138,12 @@ footer{margin-top:2.6rem}
 #cuddly-behdad-joint-toke.toking{animation:joint-toke 1.6s ease-in-out}
 @keyframes joint-toke{
   0%, 100%{transform:rotate(0deg)}
-  45%, 62%{transform:rotate(-92deg)}
+  /* a pure rotation around the shoulder can't land the fist ON the mouth (the
+     fist's fixed reach traces a circle whose closest approach to the mouth is up
+     near eye/temple height, ~17px short and to the wrong side — confirmed by
+     screenshotting the raw rotate(-92deg) before this fix, fist landed at the
+     glasses). The small translate closes that last gap. */
+  45%, 62%{transform:translate(-12px, 13px) rotate(-102deg)}
 }
 @media (prefers-reduced-motion: reduce){#cuddly-behdad-joint-toke.toking{animation:none}}
 /* the joint itself + its idle wisp, hidden until he lights up. Gated by .lit on
@@ -3341,12 +3346,16 @@ section{margin:1.9rem 0}
 <path d="M176 208 Q168 230 196 242" fill="none" stroke="#e9bfc4" stroke-width="11" stroke-linecap="round"/>
 <path d="M191 234 L196 245" stroke="#c68e95" stroke-width="3.5" stroke-linecap="round"/>
 <circle cx="202" cy="244" r="6" fill="#e6b489" stroke="#b9855e" stroke-width="1"/>
-<!-- the joint (hidden until .lit), held between his fingers -->
+<!-- the joint (hidden until .lit), held between his fingers. Points down-right
+     from the fist in this local/rest frame — looks like a loose, lowered hold when
+     he's not actively toking (arm at rest, still .lit between puffs) — because the
+     .joint-toke rotation (~-102deg) flips that to up-and-right on screen at the
+     peak of a toke, away from his face, instead of back across it. -->
 <g id="cuddly-behdad-joint-prop">
-<path d="M204 240 L210 225" fill="none" stroke="#f4f0e4" stroke-width="3.2" stroke-linecap="round"/>
-<circle cx="210" cy="225" r="2.1" fill="#f0a04a" stroke="#c0392b" stroke-width=".7"/>
-<circle cx="209.3" cy="224.3" r=".7" fill="#f4d8a0" opacity=".85"/>
-<path id="cuddly-behdad-joint-wisp" d="M210 225 Q206 218 209 212 Q211 207 207 202" fill="none" stroke="#e8e2d0" stroke-width="1.4" stroke-linecap="round"/>
+<path d="M204 240 L210 260" fill="none" stroke="#f4f0e4" stroke-width="3.2" stroke-linecap="round"/>
+<circle cx="210" cy="260" r="2.1" fill="#f0a04a" stroke="#c0392b" stroke-width=".7"/>
+<circle cx="209.3" cy="259.3" r=".7" fill="#f4d8a0" opacity=".85"/>
+<path id="cuddly-behdad-joint-wisp" d="M210 260 Q206 253 209 247 Q211 242 207 237" fill="none" stroke="#e8e2d0" stroke-width="1.4" stroke-linecap="round"/>
 </g>
 </g>
 </g>
@@ -14248,7 +14257,8 @@ function spawnDustMote(container) {
   }
   var skullDanceTimer = null; // arms while music plays; fires to escalate the skull into a dance
   var behdadJointTimer = null; // same shape, for the occasional joint (see startBehdadJoint)
-  var behdadJointArmed = true; // re-armed each time music (re)starts from a stopped state
+  var BEHDAD_JOINT_MAX_PER_SONG = 3; // up to this many separate light-ups per continuous listen
+  var behdadJointCount = 0; // reset to 0 each time music (re)starts from a stopped state
   function updateCuddlyGrooving() {
     var playing = null;
     Object.keys(instrumentSpots).some(function (id) {
@@ -14299,20 +14309,17 @@ function spawnDustMote(container) {
       }
     }
     // Behdad occasionally lights up a joint once the music's been going a while — same
-    // escalation shape as the skull dance above, plus a weighted roll (2/3) so it's a
-    // "usually, not always" thing rather than every long listening session. Re-arms
+    // escalation shape as the skull dance above, plus a weighted roll (2/3) each attempt
+    // so it doesn't fire the instant the music starts. A missed roll retries itself in
+    // another ~8-15s (see scheduleBehdadJointRoll) rather than giving up for the whole
+    // session — he eventually lights up on any sufficiently long listening session, just
+    // not on a predictable beat, up to BEHDAD_JOINT_MAX_PER_SONG times. Count resets
     // once music stops and restarts, same as the skull's "not already dancing" check.
     if (anyPlaying) {
-      if (!behdadJointTimer && behdadJointArmed) {
-        behdadJointTimer = setTimeout(function () {
-          behdadJointTimer = null;
-          behdadJointArmed = false; // this session's had its roll — no repeat firing while it keeps playing
-          if (Math.random() < (2 / 3)) startBehdadJoint();
-        }, 8000 + Math.random() * 7000);
-      }
+      if (!behdadJointTimer && behdadJointCount < BEHDAD_JOINT_MAX_PER_SONG) scheduleBehdadJointRoll();
     } else {
       if (behdadJointTimer) { clearTimeout(behdadJointTimer); behdadJointTimer = null; }
-      behdadJointArmed = true;
+      behdadJointCount = 0;
       cancelBehdadJoint(); // music stopped mid-sequence — don't let him keep puffing into silence
     }
     // the garden fairy dances once she's revealed (chest door open) and a song plays
@@ -14376,7 +14383,7 @@ function spawnDustMote(container) {
     if (!behdad || !wrap || behdad.classList.contains("smoking-joint")) return;
     behdad.classList.add("smoking-joint"); // re-entrancy flag only — see the CSS comment on .lit for why
     if (prop) prop.classList.add("lit");
-    spawnSteamWisps(strip, 1570, 220, 0.28, 1, -1, 1, 0.3); // he's lit it — a first faint curl
+    spawnSteamWisps(strip, 1570, 260, 0.28, 1, -1, 1, 0.3); // he's lit it — a first faint curl, at the ember's rest position
     var puffs = 2 + Math.floor(Math.random() * 2); // 2 or 3 slow tokes
     var t = 500;
     for (var i = 0; i < puffs; i++) {
@@ -14386,7 +14393,7 @@ function spawnDustMote(container) {
           void wrap.getBoundingClientRect();
           wrap.classList.add("toking");
           behdadJointSeqTimers.push(setTimeout(function () {
-            spawnSteamWisps(strip, 1552, 173, 0.4, -1, -1, 2, 0.55); // released up near his mouth
+            spawnSteamWisps(strip, 1568, 177, 0.4, 1, -1, 2, 0.55); // released up near the ember at the toke's peak
             if (first && head) head.classList.add("pleased");
           }, 850)); // lands during the keyframe's 45%-62% hold at the top
         }, t));
@@ -14400,6 +14407,24 @@ function spawnDustMote(container) {
       if (head) head.classList.remove("pleased");
       behdadJointSeqTimers = [];
     }, t + 900)); // settle back to his normal grooving pose
+  }
+  // Rolls every ~8-15s while music keeps playing and he's under his per-song cap — a
+  // miss just reschedules itself, so he eventually lights up on any long enough
+  // listening session rather than getting exactly one shot at it. A hit also
+  // reschedules (if he hasn't hit the cap yet): the 8-15s minimum gap comfortably
+  // outlasts one light-up sequence (2-3 tokes, well under 6s total), so the next roll
+  // never lands mid-puff.
+  function scheduleBehdadJointRoll() {
+    behdadJointTimer = setTimeout(function () {
+      behdadJointTimer = null;
+      if (Math.random() < (2 / 3)) {
+        behdadJointCount++;
+        startBehdadJoint();
+        if (behdadJointCount < BEHDAD_JOINT_MAX_PER_SONG) scheduleBehdadJointRoll();
+      } else {
+        scheduleBehdadJointRoll();
+      }
+    }, 8000 + Math.random() * 7000);
   }
   var noteFlowTimer = null;
   function updateNoteFlow() {

@@ -2971,23 +2971,28 @@ function sparkShoes(svg, shoesId, cx, cy) {
   });
   // Global spacebar shortcut: same play/pause the guitar's own click handler above
   // does -- dispatching a real click reuses that logic exactly (egg marking, strum
-  // wiggle, notes) rather than duplicating it. Skipped when a focused control (lang
-  // toggle, fullscreen/volume buttons, etc.) already owns the spacebar as its own
-  // native/wired activation key.
-  function spaceBelongsToFocusedControl(ae) {
-    if (!ae || ae === document.body || ae === document.documentElement) return false;
+  // wiggle, notes) rather than duplicating it. Always fires regardless of what's
+  // focused (an earlier version deferred to a focused button/hunt-hit's own space-
+  // activation instead, but that meant "click something, then hit space" activated
+  // whatever was clicked rather than the music, which read as broken/unpredictable).
+  // Only exception: genuine text-input contexts, where hijacking space would break
+  // typing -- there's no live text input on this page today, but this is a harmless,
+  // cheap guard to keep.
+  function spaceIsTypingContext(ae) {
+    if (!ae) return false;
     var tag = ae.tagName;
-    if (tag === "BUTTON" || tag === "A" || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
-    if (ae.isContentEditable) return true;
-    if (ae.getAttribute && (ae.getAttribute("role") === "button" || ae.hasAttribute("tabindex"))) return true;
-    return false;
+    return tag === "INPUT" || tag === "TEXTAREA" || !!ae.isContentEditable;
   }
+  // Capture phase (the `true` below), not bubble: stops the event before it can reach
+  // a focused control's own native space-activation (e.g. a real <button>), same
+  // reasoning as rsvp.html's identical shortcut.
   document.addEventListener("keydown", function (e) {
     if ((e.key !== " " && e.key !== "Spacebar") || e.defaultPrevented) return;
-    if (spaceBelongsToFocusedControl(document.activeElement)) return;
+    if (spaceIsTypingContext(document.activeElement)) return;
     e.preventDefault(); // don't let space scroll the page
+    e.stopPropagation(); // ...or reach a focused control's own space-activation
     guitar.click();
-  });
+  }, true);
 })();
 (function () {
   var lights = document.getElementById("loft-stringlights");

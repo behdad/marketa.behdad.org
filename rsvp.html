@@ -1072,7 +1072,11 @@ footer{margin-top:2.6rem}
 .kitchen-step-arrow{opacity:0; pointer-events:none; transition:opacity .3s ease}
 #kitchen-lamarzocco.invite-pulse ~ #kitchen-lamarzocco-arrow,
 #kitchen-grinder.invite-pulse ~ #kitchen-grinder-arrow,
-#kitchen-tamper.invite-pulse ~ #kitchen-tamper-arrow,
+/* the tamper's static position moved to a wrapper (#kitchen-tamper-pos) to fix a
+   transform-attribute conflict with invite-pulse (see the comment on that wrapper), so
+   its invite-pulse now toggles there too instead of on #kitchen-tamper directly, same
+   "wrap breaks the sibling relationship" fix as the portafilter's own wrapper below */
+#kitchen-tamper-pos.invite-pulse ~ #kitchen-tamper-arrow,
 #kitchen-knockbox.invite-pulse ~ #kitchen-knockbox-arrow,
 /* the portafilter travels now, so its own invite-pulse is toggled on its fly-wrapper
    (a proper sibling of #kitchen-portafilter-arrow) rather than on #kitchen-portafilter
@@ -1085,7 +1089,7 @@ footer{margin-top:2.6rem}
 @media (prefers-reduced-motion: reduce){
   #kitchen-lamarzocco.invite-pulse ~ #kitchen-lamarzocco-arrow,
   #kitchen-grinder.invite-pulse ~ #kitchen-grinder-arrow,
-  #kitchen-tamper.invite-pulse ~ #kitchen-tamper-arrow,
+  #kitchen-tamper-pos.invite-pulse ~ #kitchen-tamper-arrow,
   #kitchen-knockbox.invite-pulse ~ #kitchen-knockbox-arrow,
   #kitchen-portafilter-fly.invite-pulse ~ #kitchen-portafilter-arrow{animation:none}
 }
@@ -2467,7 +2471,7 @@ section{margin:1.9rem 0}
      itself, invite-pulse silently snapped it to its unpositioned spot (41.5px left,
      4px up) for as long as the pulse was active, then jumped back on removal — same
      bug class documented in CLAUDE.md, bit the mic/lounger/dustpan before this. -->
-<g transform="translate(39.5,4)">
+<g id="kitchen-tamper-pos" transform="translate(39.5,4)">
 <g id="kitchen-tamper" class="hunt-hit" tabindex="0" role="button" aria-label="The tamper">
 <rect x="240" y="198" width="24" height="34" fill="transparent"/>
 <g id="kitchen-tamper-inner">
@@ -7707,24 +7711,28 @@ document.addEventListener("click", function (e) {
     } catch (e) {}
   }
   window.__toggleSongPlayback = toggleSongPlayback; // exposed for tests/other callers
-  // Skip elements that already own the spacebar themselves -- native <button>/<a>/form
-  // controls activate on space, and every hunt-hit control's own onActivate handler
-  // calls preventDefault() on space too (checked below), so this only fires when space
-  // isn't already somebody else's job.
-  function spaceBelongsToFocusedControl(ae) {
-    if (!ae || ae === document.body || ae === document.documentElement) return false;
+  // Spacebar always toggles the song, everywhere on the page -- deliberately NOT
+  // deferring to a focused hunt-hit/button's own space-activation (an earlier version
+  // did, but that meant "click something, then hit space" activated whatever was
+  // clicked instead of the music, which read as broken/unpredictable). Only exception:
+  // genuine text-input contexts, where hijacking space would break typing -- there's no
+  // live text input on this page today, but this is a harmless, cheap guard to keep.
+  function spaceIsTypingContext(ae) {
+    if (!ae) return false;
     var tag = ae.tagName;
-    if (tag === "BUTTON" || tag === "A" || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
-    if (ae.isContentEditable) return true;
-    if (ae.getAttribute && (ae.getAttribute("role") === "button" || ae.hasAttribute("tabindex"))) return true;
-    return false;
+    return tag === "INPUT" || tag === "TEXTAREA" || !!ae.isContentEditable;
   }
+  // Capture phase (the `true` below), not bubble: every hunt-hit's own onActivate
+  // keydown listener lives on the element itself, which only fires during the BUBBLE
+  // phase after capture has already run -- so this intercepts and stops it from ever
+  // reaching that listener at all, rather than racing it for preventDefault().
   document.addEventListener("keydown", function (e) {
     if ((e.key !== " " && e.key !== "Spacebar") || e.defaultPrevented) return;
-    if (spaceBelongsToFocusedControl(document.activeElement)) return;
+    if (spaceIsTypingContext(document.activeElement)) return;
     e.preventDefault(); // don't let space scroll the page
+    e.stopPropagation(); // ...or reach a focused control's own space-activation
     toggleSongPlayback();
-  });
+  }, true);
   // Prev/next transport: jumps to the other song in songAudios (wrapping both ways, for
   // when a 3rd song joins someday). Mirrors the gesture-safe play pattern the garden
   // instrument clicks use (app-owned volume + analyser capture inside the click gesture)
@@ -13785,17 +13793,21 @@ function spawnDustMote(container) {
   var brewing = false;
   var tamped = false;
   var portafilterSpent = false; // brewed & sipped; old grounds still in the basket, needs a knockout
-  var knockoutHinted = false; // the knockbox arrow gets ONE showing the first time a knockout's needed, even after kitchenSolved has otherwise turned off all hand-holding
   var portafilterPos = "grouphead"; // "grouphead" | "grinder" | "knockbox" — where it's currently docked
   var portafilterFlying = false;
   var lamarzocco = document.getElementById("kitchen-lamarzocco");
   var grinder = document.getElementById("kitchen-grinder");
   var tamper = document.getElementById("kitchen-tamper");
+  var tamperPos = document.getElementById("kitchen-tamper-pos"); // the wrapper that actually gets .invite-pulse now — see the CSS comment on it
   var knockbox = document.getElementById("kitchen-knockbox");
   var portafilter = document.getElementById("kitchen-portafilter");
   var portafilterFly = document.getElementById("kitchen-portafilter-fly");
   var steamwand = document.getElementById("kitchen-steamwand");
-  var kitchenSolved = false;
+  // The step arrows get two full rounds (power->grind->tamp->brew->sip, and once more
+  // including a knockout) before they stop -- one round to see the sequence done, a
+  // second to actually do it themselves with the hints still there, then off for good.
+  var KITCHEN_HINT_ROUNDS = 2;
+  var kitchenRounds = 0;
   function kitchenReducedMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
@@ -13835,7 +13847,7 @@ function spawnDustMote(container) {
   }
   function updateKitchenInvite() {
     var next = null;
-    if (!kitchenSolved) {
+    if (kitchenRounds < KITCHEN_HINT_ROUNDS) {
       if (!kitchenPowered) next = "kitchen-lamarzocco";
       else if (portafilterSpent) next = "kitchen-knockbox";
       else if (!kitchenGround) next = "kitchen-grinder";
@@ -13845,24 +13857,18 @@ function spawnDustMote(container) {
         var shotcupEl = document.getElementById("kitchen-shotcup");
         next = (shotcupEl && shotcupEl.classList.contains("filled")) ? "kitchen-shotcup" : null;
       }
-    } else if (portafilterSpent && !knockoutHinted) {
-      // kitchenSolved otherwise turns off every hint for good, but a first-time knockout
-      // is a genuinely new step nobody's been shown before — worth one arrow, for as
-      // long as this first spent period lasts (knockoutHinted itself only flips to true
-      // once the knockout actually completes, in __kitchenKnockout below — not here, or
-      // the very next updateKitchenInvite call would yank the arrow before it's used)
-      next = "kitchen-knockbox";
     }
-    // the portafilter's own invite-pulse toggles on its fly-wrapper, not itself — see
-    // the CSS comment on #kitchen-portafilter-fly.invite-pulse
-    [["kitchen-lamarzocco", lamarzocco], ["kitchen-grinder", grinder], ["kitchen-tamper", tamper],
+    // the portafilter's and tamper's own invite-pulse each toggle on a positioning
+    // wrapper, not the element itself — see the CSS comments on #kitchen-portafilter-fly
+    // and #kitchen-tamper-pos
+    [["kitchen-lamarzocco", lamarzocco], ["kitchen-grinder", grinder], ["kitchen-tamper", tamperPos],
      ["kitchen-knockbox", knockbox], ["kitchen-portafilter", portafilterFly], ["kitchen-shotcup", document.getElementById("kitchen-shotcup")]
     ].forEach(function (pair) {
       if (pair[1]) pair[1].classList.toggle("invite-pulse", pair[0] === next);
     });
   }
   window.resetCoffeeSequence = function () {
-    kitchenSolved = true;
+    kitchenRounds++;
     kitchenGround = false;
     tamped = false;
     portafilterSpent = true;
@@ -13892,7 +13898,7 @@ function spawnDustMote(container) {
       if (needle) needle.classList.toggle("zero", !kitchenPowered);
     });
     if (kitchenPowered) setCaption(kitchenCurrentCaption());
-    else if (!kitchenSolved) setCaption("kitchen");
+    else if (kitchenRounds < KITCHEN_HINT_ROUNDS) setCaption("kitchen");
     updateKitchenInvite();
   });
   onActivate(grinder, function () {
@@ -13930,7 +13936,7 @@ function spawnDustMote(container) {
     // on top, once there are fresh grounds sitting at the grinder to compress
     if (!kitchenGround || tamped || portafilterFlying || portafilterPos !== "grinder") return;
     tamped = true;
-    if (tamper) tamper.classList.remove("invite-pulse");
+    if (tamperPos) tamperPos.classList.remove("invite-pulse");
     flyPortafilterTo("grouphead", function () {
       setCaption("kitchen_brew");
       updateKitchenInvite();
@@ -13972,7 +13978,6 @@ function spawnDustMote(container) {
   // thump when this returns false (nothing to knock out yet).
   window.__kitchenKnockout = function () {
     if (!portafilterSpent || portafilterFlying || portafilterPos !== "grouphead") return false;
-    knockoutHinted = true; // the first-time arrow (see updateKitchenInvite) has done its job
     if (knockbox) knockbox.classList.remove("invite-pulse");
     flyPortafilterTo("knockbox", function () {
       playKnockboxThumpSound();
@@ -15208,12 +15213,11 @@ function spawnDustMote(container) {
     if (window.__stowCat) window.__stowCat(); // cat back in the chest, wherever it had wandered
     kitchenPowered = false;
     kitchenGround = false;
-    kitchenSolved = false;
+    kitchenRounds = 0;
     grinding = false;
     brewing = false;
     tamped = false;
     portafilterSpent = false;
-    knockoutHinted = false;
     portafilterPos = "grouphead";
     portafilterFlying = false;
     if (lamarzocco) lamarzocco.classList.remove("powered-on", "done");

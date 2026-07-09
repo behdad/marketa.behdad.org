@@ -534,6 +534,20 @@ footer{margin-top:2.6rem}
   100%{transform:scale(1)}
 }
 @media (prefers-reduced-motion: reduce){#kitchen-gong.struck #kitchen-gong-disc{animation:none}}
+/* the hanging disc (not the fixed hook/mallet) sways on its cord when struck; the pivot
+   is the hook at viewBox 285,10 — the kitchen stage sits at translate(0,0) so the gong's
+   local coords equal the strip viewBox, letting view-box place the origin exactly there */
+#kitchen-gong-swing{transform-box:view-box; transform-origin:285px 10px}
+#kitchen-gong.struck #kitchen-gong-swing{animation:gong-sway .9s ease-out}
+@keyframes gong-sway{
+  0%{transform:rotate(0deg)}
+  18%{transform:rotate(3.2deg)}
+  42%{transform:rotate(-2.1deg)}
+  64%{transform:rotate(1.3deg)}
+  82%{transform:rotate(-0.6deg)}
+  100%{transform:rotate(0deg)}
+}
+@media (prefers-reduced-motion: reduce){#kitchen-gong.struck #kitchen-gong-swing{animation:none}}
 #kitchen-gong-glint.flash{animation:gong-glint-flash .6s ease-out}
 @keyframes gong-glint-flash{
   0%{opacity:0; transform:scale(.6)}
@@ -2442,6 +2456,7 @@ section{margin:1.9rem 0}
 <rect x="245" y="8" width="80" height="92" fill="transparent"/>
 <line x1="285" y1="8" x2="285" y2="20" stroke="#4a3d32" stroke-width="3"/>
 <rect x="277" y="6" width="16" height="6" rx="2" fill="#4a3d32"/>
+<g id="kitchen-gong-swing">
 <circle id="kitchen-gong-disc" cx="285" cy="52" r="28" fill="#b8863c" stroke="#8a6228" stroke-width="2.5"/>
 <circle cx="285" cy="52" r="20" fill="none" stroke="#8a6228" stroke-width="1.5"/>
 <circle cx="285" cy="52" r="6" fill="#8a6228"/>
@@ -2458,6 +2473,7 @@ section{margin:1.9rem 0}
 <ellipse cx="277" cy="42" rx="11" ry="4.5" fill="#f4e4b8" opacity="0.55" transform="rotate(-30 277 42)" clip-path="url(#gong-disc-clip)" pointer-events="none"/>
 <ellipse cx="292" cy="63" rx="5" ry="2" fill="#f4e4b8" opacity="0.3" transform="rotate(-30 292 63)" clip-path="url(#gong-disc-clip)" pointer-events="none"/>
 <circle id="kitchen-gong-glint" cx="285" cy="52" r="24" fill="url(#gong-glint-gradient)" opacity="0" pointer-events="none" clip-path="url(#gong-disc-clip)"/>
+</g>
 <g id="kitchen-gong-mallet" aria-hidden="true">
 <line x1="248" y1="10" x2="248" y2="14" stroke="#6b6258" stroke-width="1" stroke-linecap="round"/>
 <line x1="248" y1="12" x2="248" y2="64" stroke="#6b4a2e" stroke-width="2.5" stroke-linecap="round"/>
@@ -2732,12 +2748,19 @@ section{margin:1.9rem 0}
 <polygon points="406,111 524,111 527,137 403,137" fill="#dcdcdc" stroke="#adadad" stroke-width="1.5"/>
 <line x1="407" y1="117" x2="523" y2="117" stroke="#f0f0f0" stroke-width="2"/>
 <line x1="405" y1="132" x2="525" y2="132" stroke="#bdbdbd" stroke-width="1.5"/>
-<path d="M403 137 L527 137 L520 195 Q519 203 512 203 L418 203 Q411 203 410 195 Z" fill="#b03040" stroke="#7d1f2c" stroke-width="2"/>
+<path d="M403 137 L527 137 L520 195 Q519 203 512 203 L418 203 Q411 203 410 195 Z" fill="url(#kitchen-lamarzocco-grad)" stroke="#7d1f2c" stroke-width="2"/>
 <line x1="407" y1="141" x2="523" y2="141" stroke="#c94a5a" stroke-width="2"/>
 <line x1="414" y1="139" x2="420" y2="201" stroke="#9c2836" stroke-width="1.5"/>
 <line x1="516" y1="139" x2="510" y2="201" stroke="#9c2836" stroke-width="1.5"/>
 <circle cx="415" cy="151" r="3" fill="#3a3a3a"/>
 <defs>
+<!-- top-lit vertical shading on the flat red body panel, harmonising with the shaded
+     red canister/SodaStream: lighter at the top edge, base red, a touch darker at the base -->
+<linearGradient id="kitchen-lamarzocco-grad" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#c14455"/>
+<stop offset="0.5" stop-color="#b03040"/>
+<stop offset="1" stop-color="#9a2a38"/>
+</linearGradient>
 <clipPath id="kitchen-lamarzocco-steamknob-clip">
 <circle cx="415" cy="151" r="3"/>
 </clipPath>
@@ -13555,6 +13578,27 @@ function playBlubSound() {
     setTimeout(function () { ctx.close(); }, 300);
   } catch (e) {}
 }
+// The ambient bubble Fishu blows now and then gets a soft, quiet "bloop" — a short sine
+// that lifts in pitch then settles, kept very low so it stays a subtle surprise (the
+// louder playBlubSound is reserved for the reactive cough-bubble).
+function playBubbleSound(panId) {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t = ctx.currentTime;
+    var osc = ctx.createOscillator(); osc.type = "sine";
+    osc.frequency.setValueAtTime(300, t);
+    osc.frequency.exponentialRampToValueAtTime(600, t + 0.05);
+    osc.frequency.exponentialRampToValueAtTime(500, t + 0.08);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.04, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+    osc.connect(g); g.connect(pannedOut(ctx, panId)); osc.start(t); osc.stop(t + 0.1);
+    setTimeout(function () { ctx.close(); }, 300);
+  } catch (e) {}
+}
 function playSizzleSound() {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -15735,6 +15779,7 @@ function spawnDustMote(container) {
       var pd = document.querySelector("#cuddly-puffer-wrap .puffer-drift");
       if (pd && stageIndex === STAGES.indexOf("cuddly") && document.visibilityState !== "hidden") {
         spawnBubble(pd, 13.5, 1.7);
+        playBubbleSound("cuddly-puffer-wrap");
       }
       scheduleFishuBubble();
     }, delay);

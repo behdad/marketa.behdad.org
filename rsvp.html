@@ -368,6 +368,26 @@ footer{margin-top:2.6rem}
 .kitchen-scoop-swing{transform-box:fill-box; transform-origin:50% 10%}
 .kitchen-scoop-swing.rattling{animation:pan-swing .5s ease-in-out}
 @media (prefers-reduced-motion: reduce){.kitchen-scoop-swing{animation:none !important}}
+.kitchen-board-wobble{transform-box:fill-box; transform-origin:50% 65%}
+.kitchen-board-wobble.chopped{animation:board-wobble .4s ease-in-out}
+#kitchen-boards.rattling .kitchen-board-wobble{animation:board-wobble .4s ease-in-out}
+#kitchen-boards.rattling .kitchen-board-wobble:nth-of-type(2){animation-delay:.04s}
+@keyframes board-wobble{
+  0%, 100%{transform:translate(0,0) rotate(0deg)}
+  25%{transform:translate(-1.2px,.6px) rotate(-1.4deg)}
+  50%{transform:translate(1px,-.4px) rotate(1deg)}
+  75%{transform:translate(-.6px,.3px) rotate(-.5deg)}
+}
+@media (prefers-reduced-motion: reduce){.kitchen-board-wobble{animation:none !important}}
+#kitchen-candle{transform-box:fill-box; transform-origin:50% 85%}
+#kitchen-candle.rattling{animation:candle-wobble .35s ease-in-out}
+@keyframes candle-wobble{
+  0%, 100%{transform:rotate(0)}
+  25%{transform:rotate(-.5deg)}
+  50%{transform:rotate(.4deg)}
+  75%{transform:rotate(-.2deg)}
+}
+@media (prefers-reduced-motion: reduce){#kitchen-candle.rattling{animation:none !important}}
 #balcony-hallway-jacket-inner{transform-box:fill-box; transform-origin:top center}
 #balcony-hallway-jacket.swaying #balcony-hallway-jacket-inner{animation:jacket-sway 1.4s ease-in-out}
 @media (prefers-reduced-motion: reduce){#balcony-hallway-jacket.swaying #balcony-hallway-jacket-inner{animation:none}}
@@ -1792,9 +1812,25 @@ footer{margin-top:2.6rem}
   30%{transform:translate(-0.4px,-0.3px)}
   65%{transform:translate(0.3px,0.25px)}
 }
+#kitchen-boards.rattling-faint .kitchen-board-wobble{animation:board-wobble-faint .4s ease-in-out}
+#kitchen-boards.rattling-faint .kitchen-board-wobble:nth-of-type(2){animation-delay:.04s}
+@keyframes board-wobble-faint{
+  0%, 100%{transform:translate(0,0) rotate(0deg)}
+  25%{transform:translate(-.5px,.25px) rotate(-.6deg)}
+  50%{transform:translate(.4px,-.2px) rotate(.4deg)}
+  75%{transform:translate(-.25px,.12px) rotate(-.2deg)}
+}
+#kitchen-candle.rattling-faint{animation:candle-wobble-faint .35s ease-in-out}
+@keyframes candle-wobble-faint{
+  0%, 100%{transform:rotate(0)}
+  25%{transform:rotate(-.2deg)}
+  50%{transform:rotate(.15deg)}
+  75%{transform:rotate(-.08deg)}
+}
 @media (prefers-reduced-motion: reduce){
   .kitchen-pan-swing, #kitchen-cups.rattling-faint .kitchen-cup-wiggle, #kitchen-waterbottle.rattling-faint #kitchen-waterbottle-inner,
-  #kitchen-canister.jiggling-faint #kitchen-canister-lid, #kitchen-grinder.lid-jiggle-faint #kitchen-grinder-lid, .kitchen-bean-wobble{animation:none !important}
+  #kitchen-canister.jiggling-faint #kitchen-canister-lid, #kitchen-grinder.lid-jiggle-faint #kitchen-grinder-lid, .kitchen-bean-wobble,
+  .kitchen-board-wobble, #kitchen-candle.rattling-faint{animation:none !important}
 }
 #office-laptop-screen{transform-box:fill-box; transform-origin:bottom center; transform:scaleY(0.04); transition:transform .5s ease}
 #office-laptop.open #office-laptop-screen{transform:scaleY(1)}
@@ -2444,11 +2480,15 @@ section{margin:1.9rem 0}
 </g>
 <g id="kitchen-boards" class="hunt-hit" tabindex="0" role="button" aria-label="The cutting boards">
 <rect x="8" y="158" width="52" height="76" fill="transparent"/>
+<g id="kitchen-board-1" class="kitchen-board-wobble">
 <polygon points="12,230 18,164 44,162 46,230" fill="#c9985c" stroke="#a4763f" stroke-width="1.5"/>
 <circle cx="31" cy="174" r="3" fill="#a4763f"/>
 <path d="M20 190 L45 188 M19 206 L45 205 M31 164 L30 230" stroke="#b5824a" stroke-width="1"/>
+</g>
+<g id="kitchen-board-2" class="kitchen-board-wobble">
 <polygon points="24,230 30,180 52,178 56,230" fill="#b9854a" stroke="#96662f" stroke-width="1.5"/>
 <path d="M31 196 L54 194 M29 212 L55 211" stroke="#a4713a" stroke-width="1"/>
+</g>
 </g>
 <g id="kitchen-brass">
 <g id="kitchen-kettle" class="hunt-hit" tabindex="0" role="button" aria-label="The gooseneck kettle" transform="translate(75.36,184.95) scale(0.68,0.85)">
@@ -6163,14 +6203,20 @@ document.addEventListener("click", function (e) {
   }
   var boards = document.getElementById("kitchen-boards");
   if (boards) {
-    function chopBoard() {
+    function chopBoard(e) {
       var pitch = 0.6 + Math.random() * 0.9;
       var hits = 1 + Math.floor(Math.random() * 4);
       playChopSound(pitch, hits, "kitchen-boards");
+      var board = (e && e.target && e.target.closest) ? e.target.closest(".kitchen-board-wobble") : null;
+      if (!board) board = document.getElementById("kitchen-board-2"); // front board — default for keyboard activation
+      board.classList.remove("chopped");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { board.classList.add("chopped"); });
+      });
     }
     boards.addEventListener("click", chopBoard);
     boards.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); chopBoard(); }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); chopBoard(e); }
     });
   }
   var knockbox = document.getElementById("kitchen-knockbox");
@@ -6324,7 +6370,7 @@ document.addEventListener("click", function (e) {
   if (gong) {
     function rattleKitchen(faint) {
       var rattleClass = faint ? "rattling-faint" : "rattling";
-      ["kitchen-pans", "kitchen-cups", "kitchen-waterbottle"].forEach(function (id) {
+      ["kitchen-pans", "kitchen-cups", "kitchen-waterbottle", "kitchen-boards", "kitchen-candle"].forEach(function (id) {
         var el = document.getElementById(id);
         if (!el) return;
         el.classList.remove("rattling", "rattling-faint");

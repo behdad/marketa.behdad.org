@@ -363,8 +363,8 @@ footer{margin-top:2.6rem}
    swing back with the others afterward */
 .kitchen-pan-swing.fallen{animation:none !important}
 .kitchen-crack{opacity:0}
-#kitchen-kettle.broken, #kitchen-waterbottle.broken #kitchen-waterbottle-inner{filter:saturate(.35) brightness(.8)}
-#kitchen-kettle.broken .kitchen-crack, #kitchen-waterbottle.broken .kitchen-crack{opacity:1}
+#kitchen-kettle.broken, #kitchen-waterbottle.broken #kitchen-waterbottle-inner, #kitchen-drinkmate.broken{filter:saturate(.35) brightness(.8)}
+#kitchen-kettle.broken .kitchen-crack, #kitchen-waterbottle.broken .kitchen-crack, #kitchen-drinkmate.broken .kitchen-crack{opacity:1}
 .kitchen-scoop-swing{transform-box:fill-box; transform-origin:50% 10%}
 .kitchen-scoop-swing.rattling{animation:pan-swing .5s ease-in-out}
 @media (prefers-reduced-motion: reduce){.kitchen-scoop-swing{animation:none !important}}
@@ -2488,6 +2488,7 @@ section{margin:1.9rem 0}
 <line x1="179" y1="148" x2="189" y2="148" stroke="#7d1f2c" stroke-width="2.5" stroke-linecap="round"/>
 <rect x="181" y="158" width="6" height="18" fill="#f2ead2"/>
 <rect x="178" y="192" width="12" height="5" rx="2" fill="#f2ead2"/>
+<path id="kitchen-drinkmate-crack" class="kitchen-crack" d="M177 165 L184 178 L179 195" fill="none" stroke="#eee" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
 </g>
 <!-- our kitchen candle: a wax-crusted wine-bottle candle holder (bottle-green glass, cream
      wax cascading down in drip streaks into a puddle spread past its base), unlike the
@@ -6001,9 +6002,13 @@ document.addEventListener("click", function (e) {
   }
   var soda = document.getElementById("kitchen-drinkmate");
   if (soda) {
-    soda.addEventListener("click", playSodaHissSound);
+    function fizzSoda() {
+      if (sodaBroken) { playDryClickSound("kitchen-drinkmate"); return; }
+      playSodaHissSound();
+    }
+    soda.addEventListener("click", fizzSoda);
     soda.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); playSodaHissSound(); }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fizzSoda(); }
     });
   }
   // A pan crashing down: staggered playMetalClinkSound bursts read as a clatter-bounce-
@@ -6014,7 +6019,7 @@ document.addEventListener("click", function (e) {
     setTimeout(function () { playMetalClinkSound(0.9, panId); }, 210);
     setTimeout(function () { playMetalClinkSound(1.3, panId); }, 340);
   }
-  var waterBottleBroken = false, kettleBroken = false, kitchenPanClicks = 0;
+  var waterBottleBroken = false, kettleBroken = false, sodaBroken = false;
   var fallenPanAnims = []; // kept so a full reset can cancel them (fill:"forwards" otherwise persists the landed pose)
   function panFallReducedMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -6027,7 +6032,7 @@ document.addEventListener("click", function (e) {
   // getting that composition wrong. Dividing by that same 1.65 converts the stage-local
   // delta into the pan's own local transform units (a delta is invariant to the parent
   // group's translate, only its scale matters).
-  function fallenPanTarget(panId, targetId) {
+  function fallenPanTarget(panId, targetId, offsetX, offsetY) {
     var pan = document.getElementById(panId);
     var target = document.getElementById(targetId);
     if (!pan || !target) return;
@@ -6041,7 +6046,7 @@ document.addEventListener("click", function (e) {
         var p2 = svg.createSVGPoint(); p2.x = tr.left + tr.width / 2; p2.y = tr.top + tr.height / 2;
         var inv = stage.getScreenCTM().inverse();
         var sp1 = p1.matrixTransform(inv), sp2 = p2.matrixTransform(inv);
-        dx = (sp2.x - sp1.x) / 1.65; dy = (sp2.y - sp1.y) / 1.65 + 32; // land lower, clearly on top of the target rather than at its center
+        dx = (sp2.x - sp1.x) / 1.65 + (offsetX || 0); dy = (sp2.y - sp1.y) / 1.65 + 32 + (offsetY || 0); // land lower, clearly on top of the target rather than at its center
       }
     } catch (e) {}
     pan.classList.add("fallen"); // stops it swinging along with the rest afterward
@@ -6062,6 +6067,24 @@ document.addEventListener("click", function (e) {
       target.classList.add("broken");
     }, panFallReducedMotion() ? 0 : 650);
   }
+  // Shared by clinkPans and the gong's strikeGong (below) — either one, clicked enough,
+  // knocks a pan loose. Each target has one dedicated pan (never reused across two
+  // falls) so the fallenPanTarget() flight path is always the same known-good one.
+  var kitchenPanClicks = 0;
+  function bumpKitchenPanClicks() {
+    kitchenPanClicks++;
+    if (kitchenPanClicks === 8 && !waterBottleBroken) {
+      waterBottleBroken = true;
+      fallenPanTarget("kitchen-pan-2", "kitchen-waterbottle");
+    } else if (kitchenPanClicks === 14 && !kettleBroken) {
+      if (typeof kettleSteaming !== "undefined" && kettleSteaming && typeof toggleKettle === "function") toggleKettle(); // off cleanly before it's marked broken
+      kettleBroken = true;
+      fallenPanTarget("kitchen-pan-4", "kitchen-kettle");
+    } else if (kitchenPanClicks === 20 && !sodaBroken) {
+      sodaBroken = true;
+      fallenPanTarget("kitchen-pan-5", "kitchen-drinkmate", -10, -10);
+    }
+  }
   // A full reset undoes the fall: cancel any in-flight/landed WAAPI animation (fill:
   // "forwards" otherwise keeps holding the last keyframe after the class is gone),
   // clear the fallback inline transform, and drop the fallen/broken visuals so the
@@ -6069,14 +6092,15 @@ document.addEventListener("click", function (e) {
   window.__resetKitchenPans = function () {
     waterBottleBroken = false;
     kettleBroken = false;
+    sodaBroken = false;
     kitchenPanClicks = 0;
     fallenPanAnims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
     fallenPanAnims = [];
-    ["kitchen-pan-2", "kitchen-pan-4"].forEach(function (id) {
+    ["kitchen-pan-1", "kitchen-pan-2", "kitchen-pan-3", "kitchen-pan-4", "kitchen-pan-5", "kitchen-pan-6"].forEach(function (id) {
       var p = document.getElementById(id);
       if (p) { p.classList.remove("fallen"); p.style.transform = ""; }
     });
-    ["kitchen-kettle", "kitchen-waterbottle"].forEach(function (id) {
+    ["kitchen-kettle", "kitchen-waterbottle", "kitchen-drinkmate"].forEach(function (id) {
       var t = document.getElementById(id);
       if (t) t.classList.remove("broken");
     });
@@ -6109,17 +6133,7 @@ document.addEventListener("click", function (e) {
           requestAnimationFrame(function () { pan.classList.add("pan-clicked"); });
         });
       }
-      // Clicking the pans a lot eventually knocks one loose onto the counter below —
-      // first the water bottle, then (with continued clicking) the kettle too.
-      kitchenPanClicks++;
-      if (kitchenPanClicks === 8 && !waterBottleBroken) {
-        waterBottleBroken = true;
-        fallenPanTarget("kitchen-pan-2", "kitchen-waterbottle");
-      } else if (kitchenPanClicks === 14 && !kettleBroken) {
-        if (typeof kettleSteaming !== "undefined" && kettleSteaming && typeof toggleKettle === "function") toggleKettle(); // off cleanly before it's marked broken
-        kettleBroken = true;
-        fallenPanTarget("kitchen-pan-4", "kitchen-kettle");
-      }
+      bumpKitchenPanClicks();
     }
     pans.addEventListener("click", clinkPans);
     pans.addEventListener("keydown", function (e) {
@@ -6352,6 +6366,7 @@ document.addEventListener("click", function (e) {
         setTimeout(function () { glint.classList.remove("flash"); }, 700);
       }
       playGongSound();
+      bumpKitchenPanClicks();
       setTimeout(function () { playGongEchoSound(1); rattleKitchen(true); }, 1500);
       setTimeout(function () { playGongEchoSound(0.45); }, 2900);
       setTimeout(function () { playGongEchoSound(0.22); }, 4300);

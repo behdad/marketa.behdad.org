@@ -2545,7 +2545,6 @@ section{margin:1.9rem 0}
 <path d="M316,149 L324,149 L324,162 L333,162 L320,181 L307,162 L316,162 Z" fill="#c0392b" stroke="#1f1f1f" stroke-width="2" stroke-linejoin="round"/>
 </g>
 <g id="kitchen-grinder" class="hunt-hit" tabindex="0" role="button" aria-label="The coffee grinder">
-<title>Mazzer grinder</title>
 <g transform="translate(-31.2,0) scale(1.15,1)">
 <g id="kitchen-grinder-lid">
 <rect x="328" y="76" width="40" height="9" rx="4" fill="#2d2d2d"/>
@@ -2594,7 +2593,6 @@ section{margin:1.9rem 0}
 <g id="kitchen-cup-7" class="kitchen-cup-wiggle"><rect x="513" y="86" width="11" height="16" rx="2" fill="#dfe8ea" stroke="#b8c4c9" stroke-width="1"/></g>
 </g>
 <g id="kitchen-lamarzocco" class="hunt-hit" tabindex="0" role="button" aria-label="The La Marzocco espresso machine">
-<title>La Marzocco Linea Micra espresso machine</title>
 <rect x="400" y="102" width="126" height="9" rx="3" fill="#cfcfcf" stroke="#9a9a9a" stroke-width="1.5"/>
 <path d="M408 106 h10 M426 106 h10 M444 106 h10 M462 106 h10 M480 106 h10 M498 106 h10 M516 106 h10" stroke="#9a9a9a" stroke-width="2"/>
 <polygon points="406,111 524,111 527,137 403,137" fill="#dcdcdc" stroke="#adadad" stroke-width="1.5"/>
@@ -5225,6 +5223,15 @@ function dismissEggBubble(b) {
   b.classList.remove("show");
   setTimeout(function () { if (b.parentNode) b.remove(); }, 300);
 }
+// A hover tooltip is just an eggBubble shown on mouseenter and dismissed on mouseleave
+// instead of on click+timeout — reuses its positioning/styling/innerHTML support
+// (native SVG <title> can't render markup like <em>, which is why this exists at all).
+function hoverTooltip(el, html, placement) {
+  if (!el) return;
+  var bubble = null;
+  el.addEventListener("mouseenter", function () { bubble = eggBubble(el, html, placement); });
+  el.addEventListener("mouseleave", function () { if (bubble) { dismissEggBubble(bubble); bubble = null; } });
+}
 document.addEventListener("click", function (e) {
   var b = document.querySelector(".egg-bubble");
   if (!b) return;
@@ -6458,6 +6465,7 @@ document.addEventListener("click", function (e) {
 (function () {
   var octopus = document.getElementById("cuddly-octopus");
   if (!octopus) return;
+  hoverTooltip(octopus, "<em>Octi</em>", "top");
   function wobble() {
     if (octopus.classList.contains("falling-in")) return;
     playPlushSquishSound();
@@ -9817,6 +9825,7 @@ document.addEventListener("click", function (e) {
     };
   }
   var puffer = document.getElementById("cuddly-puffer-wrap");
+  hoverTooltip(puffer, "<em>Fishu</em>", "top");
   var puffCuddly = wirePuff(puffer);
   var pufferClickTimer = null;
   if (puffer) puffer.addEventListener("click", function () {
@@ -14312,6 +14321,8 @@ function spawnDustMote(container) {
   }
   var lamarzocco = document.getElementById("kitchen-lamarzocco");
   var grinder = document.getElementById("kitchen-grinder");
+  hoverTooltip(lamarzocco, "<em>La Maz</em>, the espresso machine", "top");
+  hoverTooltip(grinder, "<em>El Maz</em>, the grinder", "top");
   var tamper = document.getElementById("kitchen-tamper");
   var tamperPos = document.getElementById("kitchen-tamper-pos"); // the wrapper that actually gets .invite-pulse now — see the CSS comment on it
   var knockbox = document.getElementById("kitchen-knockbox");

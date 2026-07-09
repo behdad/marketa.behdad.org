@@ -5603,6 +5603,11 @@ function hoverTooltip(el, html, placement, yOffset, xOffset) {
     positionEggBubble(bubble, el, placement, yOffset, xOffset);
     followRaf = requestAnimationFrame(follow);
   }
+  function clearTip() {
+    clearTimeout(showTimer); showTimer = null;
+    if (followRaf) { cancelAnimationFrame(followRaf); followRaf = null; }
+    if (bubble) { dismissEggBubble(bubble); bubble = null; }
+  }
   el.addEventListener("mouseenter", function () {
     clearTimeout(showTimer);
     // a short dwell before showing, so tooltips don't pop the instant the cursor grazes past
@@ -5612,11 +5617,10 @@ function hoverTooltip(el, html, placement, yOffset, xOffset) {
       followRaf = requestAnimationFrame(follow);
     }, 450);
   });
-  el.addEventListener("mouseleave", function () {
-    clearTimeout(showTimer); showTimer = null;
-    if (followRaf) { cancelAnimationFrame(followRaf); followRaf = null; }
-    if (bubble) { dismissEggBubble(bubble); bubble = null; }
-  });
+  el.addEventListener("mouseleave", clearTip);
+  // a click/tap means they're interacting (e.g. powering the machine on), not lingering —
+  // cancel the pending tooltip and dismiss any shown one so it doesn't pop over the action
+  el.addEventListener("mousedown", clearTip);
 }
 document.addEventListener("click", function (e) {
   var b = document.querySelector(".egg-bubble");

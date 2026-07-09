@@ -6998,6 +6998,43 @@ document.addEventListener("click", function (e) {
     faviconIsPlaying = isPlaying;
     faviconLink.href = isPlaying ? FAVICON_PLAYING : faviconNormalHref;
   }
+  // Media Session API: mirrors now-playing state to mobile lock-screens / desktop OS media
+  // widgets (title, artist, play/pause/skip) so they work even with the tab unfocused or
+  // backgrounded — the songs themselves already keep playing in that case (plain <audio>,
+  // not tied to the monitor's on-screen state). Support is inconsistent across browsers/
+  // webviews, so every touchpoint is feature-detected/try-catched and must be a total
+  // no-op, never throwing or affecting the native playback above.
+  // SONG_INFO packs "title — artist" into one display string for the marquee;
+  // MediaMetadata wants them separate, so parse rather than duplicate the artist names
+  // (keeps this from drifting out of sync with SONG_INFO if the songs ever change).
+  function songMeta(id) {
+    var raw = (SONG_INFO[id] || "").replace(/^\s*♪\s*/, ""); // strip leading "♪ "
+    var parts = raw.split(/\s+—\s+/); // " — " (em dash)
+    return { title: parts[0] || raw, artist: parts[1] || "" };
+  }
+  var mediaSessionSongId = null; // last song id pushed into navigator.mediaSession.metadata
+  function clearMediaSession() {
+    if (!("mediaSession" in navigator)) return;
+    mediaSessionSongId = null;
+    try { navigator.mediaSession.playbackState = "none"; } catch (e) {}
+    try { navigator.mediaSession.metadata = null; } catch (e) {}
+  }
+  function updateMediaSession(current, isPlaying) {
+    if (!("mediaSession" in navigator)) return;
+    if (!current) { clearMediaSession(); return; }
+    try {
+      if (mediaSessionSongId !== current.id) {
+        mediaSessionSongId = current.id;
+        var meta = songMeta(current.id);
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: meta.title,
+          artist: meta.artist,
+          artwork: [{ src: "art/apple-touch-icon.png", sizes: "180x180", type: "image/png" }]
+        });
+      }
+      navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+    } catch (e) {}
+  }
   function updateNowPlaying() {
     clearNavRevert(); // deciding state directly now: any pending "show site then revert" is moot
     var playing = null, pausedMid = null;
@@ -7009,6 +7046,9 @@ document.addEventListener("click", function (e) {
     }
     setPlayingFavicon(!!playing); // reuse the same playing/not-playing condition the UI branches on below
     var current = playing || pausedMid;
+    // OS-level lock-screen/media-key state tracks actual audio playback, independent of
+    // whether the monitor UI below is currently showing it (see comment above).
+    updateMediaSession(current, !!playing);
     // show once the monitor's booted (even over the screensaver, which we wake)
     var booted = monitor.classList.contains("screen-on") &&
       !monitor.classList.contains("show-fedora") && !monitor.classList.contains("show-chrome");
@@ -7169,6 +7209,27 @@ document.addEventListener("click", function (e) {
   if (nextBtn) {
     nextBtn.addEventListener("click", function (e) { e.stopPropagation(); scheduleSaver(15000); monitorSkip(1); });
     nextBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+  // Media Session action handlers: OS lock-screen/media-key play, pause, prev, next all
+  // drive the exact same functions as the monitor's own transport buttons above — no
+  // separate playback logic to keep in sync. setActionHandler can itself throw for an
+  // action type an engine doesn't recognize, so each is registered independently and
+  // defensively (one unsupported action must not skip the rest).
+  if ("mediaSession" in navigator) {
+    function setMediaSessionAction(action, handler) {
+      try { navigator.mediaSession.setActionHandler(action, handler); } catch (e) {}
+    }
+    setMediaSessionAction("play", function () { monitorTogglePause(); });
+    setMediaSessionAction("pause", function () { monitorTogglePause(); });
+    setMediaSessionAction("previoustrack", function () { monitorSkip(-1); });
+    setMediaSessionAction("nexttrack", function () { monitorSkip(1); });
+    setMediaSessionAction("stop", function () {
+      // no dedicated "stop" affordance in this UI (just play/pause) — pausing whichever
+      // song is actively playing is the closest equivalent; a no-op if already paused
+      for (var i = 0; i < songAudios.length; i++) {
+        if (songAudios[i] && !songAudios[i].paused) { songAudios[i].pause(); break; }
+      }
+    });
   }
   // Monitor volume: a speaker button cycles mute → 0.25 → 0.5 → full. The level scales the
   // song audio elements directly (audio.volume) — playback is native, not routed through Web

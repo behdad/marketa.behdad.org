@@ -3967,19 +3967,20 @@ section{margin:1.9rem 0}
      reads as "outside." Trolley traverse, load sway and the occasional load-drop are
      driven by a single self-cancelling rAF loop (startOfficeCrane); decorative, no
      pointer events, so it never blocks the window-pane click behind it. -->
-<g id="office-crane" pointer-events="none" fill="none" stroke="#6f7883" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9">
+<g id="office-crane" pointer-events="none" fill="none" stroke="#96795c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9">
+<rect id="office-crane-hit" class="hunt-hit" x="184" y="42" width="46" height="48" fill="transparent" stroke="none" pointer-events="all"/>
 <path d="M209.5 54 V140 M214.5 54 V140" stroke-width="1.4"/>
 <path d="M209.5 66 H214.5 M209.5 80 H214.5 M209.5 94 H214.5 M209.5 108 H214.5 M209.5 122 H214.5" stroke-width="0.9"/>
 <path d="M209.5 54 L214.5 66 M214.5 54 L209.5 66 M209.5 80 L214.5 94 M214.5 80 L209.5 94 M209.5 108 L214.5 122 M214.5 108 L209.5 122" stroke-width="0.7"/>
-<rect x="206.5" y="48" width="11" height="6" fill="#6f7883" stroke="none"/>
+<rect x="206.5" y="48" width="11" height="6" fill="#96795c" stroke="none"/>
 <path d="M212 43 L207 49 M212 43 L217 49"/>
 <path d="M212 43 L186 52 M212 43 L226 52" stroke-width="1"/>
 <path d="M186 52 H226" stroke-width="1.6"/>
 <path d="M188 54.5 H224" stroke-width="0.9"/>
 <path d="M190 52 V54.5 M198 52 V54.5 M206 52 V54.5 M218 52 V54.5" stroke-width="0.7"/>
-<rect x="220" y="49" width="7" height="6" fill="#6f7883" stroke="none"/>
+<rect x="220" y="49" width="7" height="6" fill="#96795c" stroke="none"/>
 <g id="office-crane-trolley" transform="translate(199,0)">
-<rect x="-3" y="51" width="6" height="4" fill="#6f7883" stroke="none"/>
+<rect x="-3" y="51" width="6" height="4" fill="#96795c" stroke="none"/>
 <g id="office-crane-swing">
 <line id="office-crane-cable" x1="0" y1="54" x2="0" y2="66" stroke-width="0.9"/>
 <rect x="-5.5" y="66" width="11" height="8" fill="#7c6f5c" stroke="#5f5647" stroke-width="0.8"/>
@@ -5920,7 +5921,8 @@ document.addEventListener("click", function (e) {
   var dropY = 0, dropVel = 0, banged = false;
   var nextDropAt = 15000 + Math.random() * 25000; // first drop 15-40s into the office
 
-  function shouldRun() { return window.currentStageName === "office" && !document.hidden && !reduceMotion; }
+  function officeNight() { var s = document.getElementById("stage-office"); return !!(s && s.classList.contains("dusk")); }
+  function shouldRun() { return window.currentStageName === "office" && !document.hidden && !reduceMotion && !officeNight(); } // construction is a daytime thing — the crane parks at night
 
   function frame(t) {
     if (!shouldRun()) { raf = null; return; } // leaving the room / hiding → self-cancel, no leftover timer
@@ -5968,6 +5970,13 @@ document.addEventListener("click", function (e) {
   }
   window.startOfficeCrane = startOfficeCrane;
   window.__officeCraneRaf = function () { return raf; }; // test hook: null when the loop is stopped
+  // clicking the crane drops its load on demand — but only while it's actually working
+  // (day, in-office, tab visible → the loop is live, i.e. raf set, and it's mid-carry)
+  window.__craneDropNow = function () {
+    if (raf && state === "carry") { state = "drop"; dropY = 0; dropVel = 0; banged = false; cable.setAttribute("opacity", "0"); }
+  };
+  var craneHit = document.getElementById("office-crane-hit");
+  if (craneHit) craneHit.addEventListener("click", function () { window.__craneDropNow(); });
   document.addEventListener("visibilitychange", function () { if (!document.hidden) startOfficeCrane(); });
 })();
 (function () {
@@ -9098,6 +9107,7 @@ document.addEventListener("click", function (e) {
       if (window.__updateCuddlyDoorFx) window.__updateCuddlyDoorFx(); // sun shafts are a day thing
       if (window.__updateGrowlightForNight) window.__updateGrowlightForNight(); // grow light off at night
       if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(); // birds quiet down at dusk
+      if (window.startOfficeCrane) window.startOfficeCrane(); // construction resumes in daylight (no-op at night / off-office)
       playLampShimmerSound("balcony-sun");
       var wallLampEl = document.getElementById("balcony-walllamp");
       if (dusk) {
@@ -12398,45 +12408,59 @@ function playMetalClinkSound(pitchMult, panId) {
 // of it. Panned to the window's on-screen position. Only ever called from the crane's
 // gated rAF loop, so it never sounds while the office is off-screen or the tab is hidden.
 function playCraneDropSound() {
-  playMetalClinkSound(0.30, "office-window-pane-1");
-  setTimeout(function () { playMetalClinkSound(0.22, "office-window-pane-1"); }, 130);
+  playMetalClinkSound(0.20, "office-window-pane-1");
+  setTimeout(function () { playMetalClinkSound(0.14, "office-window-pane-1"); }, 210);
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
     var out = pannedOut(ctx, "office-window-pane-1");
-    // deep boom: a low sine dropping in pitch as it decays — the ground-shake of impact
+    // deep boom: a low sine dropping in pitch as it decays — the ground-shake of impact,
+    // lower + longer than a clink so a dropped steel load lands with real weight
     var boom = ctx.createOscillator();
     boom.type = "sine";
-    boom.frequency.setValueAtTime(92, t);
-    boom.frequency.exponentialRampToValueAtTime(38, t + 0.2);
+    boom.frequency.setValueAtTime(64, t);
+    boom.frequency.exponentialRampToValueAtTime(22, t + 0.35);
     var bg = ctx.createGain();
     bg.gain.setValueAtTime(0.0001, t);
-    bg.gain.exponentialRampToValueAtTime(0.5, t + 0.012);
-    bg.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+    bg.gain.exponentialRampToValueAtTime(0.62, t + 0.02);
+    bg.gain.exponentialRampToValueAtTime(0.0001, t + 0.68);
     boom.connect(bg);
     bg.connect(out);
     boom.start(t);
-    boom.stop(t + 0.38);
-    // thud body: a short burst of low-passed noise for the dull "whump" of mass landing
-    var nlen = Math.floor(ctx.sampleRate * 0.2);
+    boom.stop(t + 0.72);
+    // sub-boom: an even deeper sine under it for the chest-thump low end
+    var sub = ctx.createOscillator();
+    sub.type = "sine";
+    sub.frequency.setValueAtTime(34, t);
+    sub.frequency.exponentialRampToValueAtTime(18, t + 0.5);
+    var sg = ctx.createGain();
+    sg.gain.setValueAtTime(0.0001, t);
+    sg.gain.exponentialRampToValueAtTime(0.34, t + 0.03);
+    sg.gain.exponentialRampToValueAtTime(0.0001, t + 0.62);
+    sub.connect(sg);
+    sg.connect(out);
+    sub.start(t);
+    sub.stop(t + 0.66);
+    // thud body: a burst of low-passed noise for the dull "whump" of mass landing
+    var nlen = Math.floor(ctx.sampleRate * 0.36);
     var nb = ctx.createBuffer(1, nlen, ctx.sampleRate);
     var nd = nb.getChannelData(0);
-    for (var i = 0; i < nlen; i++) nd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / nlen, 2.2);
+    for (var i = 0; i < nlen; i++) nd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / nlen, 2);
     var noise = ctx.createBufferSource();
     noise.buffer = nb;
     var lp = ctx.createBiquadFilter();
     lp.type = "lowpass";
-    lp.frequency.value = 190;
+    lp.frequency.value = 120;
     var ng = ctx.createGain();
-    ng.gain.value = 0.42;
+    ng.gain.value = 0.5;
     noise.connect(lp);
     lp.connect(ng);
     ng.connect(out);
     noise.start(t);
-    noise.stop(t + 0.22);
-    setTimeout(function () { ctx.close(); }, 500);
+    noise.stop(t + 0.38);
+    setTimeout(function () { ctx.close(); }, 850);
   } catch (e) {}
 }
 // The balcony windchime, hanging under the wall lamp: 2-4 of its 4 tubes ring at once,

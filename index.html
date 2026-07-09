@@ -3110,6 +3110,31 @@ function sparkShoes(svg, shoesId, cx, cy) {
     setPufferGrooving(false);
     stopNoteFlow();
   });
+  // Media Session API: mirrors play/pause state to mobile lock-screens / desktop OS
+  // media widgets, and lets their play/pause controls drive the exact same click the
+  // guitar's own handler above uses -- no separate playback logic to keep in sync.
+  // Support is inconsistent across browsers/webviews, so every touchpoint is feature-
+  // detected/try-catched and must be a total no-op, never throwing or affecting native
+  // playback. Real recording, real singer -- see CLAUDE.md's note on tumbala.opus/mp3.
+  if ("mediaSession" in navigator) {
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: "Tumbalalaika",
+        artist: "Markéta Jakešová",
+        artwork: [{ src: "art/apple-touch-icon.png", sizes: "180x180", type: "image/png" }]
+      });
+    } catch (e) {}
+    function setMediaSessionAction(action, handler) {
+      try { navigator.mediaSession.setActionHandler(action, handler); } catch (e) {}
+    }
+    var guitarEl = document.getElementById("loft-guitar");
+    var togglePlayback = function () { if (guitarEl) guitarEl.dispatchEvent(new MouseEvent("click", { bubbles: true })); };
+    setMediaSessionAction("play", togglePlayback);
+    setMediaSessionAction("pause", togglePlayback);
+    audio.addEventListener("play", function () { try { navigator.mediaSession.playbackState = "playing"; } catch (e) {} });
+    audio.addEventListener("pause", function () { try { navigator.mediaSession.playbackState = "paused"; } catch (e) {} });
+    audio.addEventListener("ended", function () { try { navigator.mediaSession.playbackState = "paused"; } catch (e) {} });
+  }
 })();
 (function () {
   var audio = document.getElementById("guitar-audio");

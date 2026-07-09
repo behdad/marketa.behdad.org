@@ -6295,6 +6295,7 @@ document.addEventListener("click", function (e) {
     // whatever was left over a couple seconds rather than snapping straight to empty.
     window.__leakWaterBottle = function () {
       waterBottleLeft = 0;
+      playWaterLeakSound();
       if (!waterBottleLiquid) return;
       waterBottleLiquid.style.transition = panFallReducedMotion() ? "none" : "transform 2.8s ease-in";
       waterBottleLiquid.style.transform = "scaleY(0)";
@@ -13931,6 +13932,57 @@ function playAshtraySpinSound(panId) {
     noise.start(t);
     noise.stop(t + 1);
     setTimeout(function () { ctx.close(); }, 1100);
+  } catch (e) {}
+}
+// A faint trickle bed under a few random higher plink "drips", timed to roughly
+// match the ~2.8s drain in window.__leakWaterBottle (rsvp.html kitchen).
+function playWaterLeakSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t0 = ctx.currentTime;
+    var dur = 2.8;
+    var out = pannedOut(ctx, "kitchen-waterbottle");
+    var master = ctx.createGain();
+    master.gain.setValueAtTime(0.0001, t0);
+    master.gain.exponentialRampToValueAtTime(0.045, t0 + 0.25);
+    master.gain.setValueAtTime(0.045, t0 + dur - 0.5);
+    master.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    master.connect(out);
+
+    var buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    var noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    var filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 2400;
+    filter.Q.value = 0.7;
+    noise.connect(filter);
+    filter.connect(master);
+    noise.start(t0);
+    noise.stop(t0 + dur);
+
+    var dripCount = 3 + Math.floor(Math.random() * 3);
+    for (var k = 0; k < dripCount; k++) {
+      var at = t0 + 0.3 + Math.random() * (dur - 0.6);
+      var freq = 900 + Math.random() * 500;
+      var osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, at);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.6, at + 0.12);
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(0.035, at + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + 0.14);
+      osc.connect(g);
+      g.connect(master);
+      osc.start(at);
+      osc.stop(at + 0.15);
+    }
+    setTimeout(function () { ctx.close(); }, (dur + 0.3) * 1000);
   } catch (e) {}
 }
 function playGlassClinkSound(pitchMult, panId) {

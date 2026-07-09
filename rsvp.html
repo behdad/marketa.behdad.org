@@ -9436,6 +9436,7 @@ document.addEventListener("click", function (e) {
           });
         }
         setTimeout(playMouseSqueakSound, 150);
+        if (window.__catPounceMouse) window.__catPounceMouse();
       }
     }
     el.addEventListener("click", toggleCuddlyCabinet);
@@ -16084,6 +16085,41 @@ function spawnDustMote(container) {
       }, ringAt);
     }
   }
+  // A one-off reaction to the cuddly cabinet's hidden mouse (see toggleCuddlyCabinet,
+  // which calls this the instant the mouse starts its .scurrying dash): if the loose
+  // cat happens to be in the cuddly room and on screen, it pounces toward the cabinet
+  // instead of waiting for its own perch-jump cycle. Reuses the perch-jump's arc
+  // machinery but with its own short, always-empty-pawed keyframes (isPerchJump stays
+  // false) since the mouse is long gone by the time the cat lands — this is a "huh,
+  // missed it" beat, not a sit.
+  var MOUSE_POUNCE_TARGET = { x: 40, y: 320 }; // the cabinet opening the mouse bolts from
+  window.__catPounceMouse = function () {
+    if (!walk.classList.contains("out") || jumping || reducedMotion() || !walk.animate) return;
+    if (document.visibilityState === "hidden" || catRoom !== "cuddly" || window.currentStageIndex !== IDX.cuddly) return;
+    clearTimeout(jumpTimer);
+    var b = baseFeet("cuddly");
+    var Dx = MOUSE_POUNCE_TARGET.x - b.x, Dy = MOUSE_POUNCE_TARGET.y - b.y;
+    var cur = currentWalkOffset();
+    var apexX = (cur.x + Dx) / 2, apexY = Math.min(cur.y, Dy) - 20;
+    jumpCur = cur; jumpApexX = apexX; jumpApexY = apexY;
+    function tf(x, y) { return "translate(" + x + "px," + y + "px)"; }
+    jumping = true; isPerchJump = false; isNapJump = false;
+    walk.style.animationPlayState = "paused";
+    jumpAnim = walk.animate([
+      { offset: 0,    transform: tf(cur.x, cur.y), easing: "cubic-bezier(.3,0,.6,.4)" },
+      { offset: 0.35, transform: tf(apexX, apexY), easing: "cubic-bezier(.3,.6,.4,1)" },
+      { offset: 0.55, transform: tf(Dx, Dy) },
+      { offset: 0.8,  transform: tf(Dx, Dy) },
+      { offset: 1,    transform: tf(cur.x, cur.y), easing: "cubic-bezier(.4,0,.7,.5)" }
+    ], { duration: 1100, fill: "none" });
+    jumpAnim.onfinish = finishJump;
+    if (catArt) {
+      catArt.classList.remove("wobbling");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { catArt.classList.add("wobbling"); });
+      });
+    }
+  };
   // The office desk is height-adjustable and the chair is horizontally draggable — if
   // either moves WHILE the cat is sitting on it (perched, not mid-arc), the cat would
   // otherwise float at the stale landing spot. Re-resolve `perchFn`'s live geometry and

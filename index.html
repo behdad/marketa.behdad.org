@@ -107,6 +107,16 @@ section{margin:1.9rem 0}
   background:rgba(69,58,49,.55); color:#fffdf8; cursor:pointer; opacity:.7; transition:opacity .2s ease, background .2s ease;
 }
 .scene-fullscreen-btn:hover, .scene-fullscreen-btn:focus-visible{opacity:1; background:rgba(69,58,49,.82)}
+/* the loft card's own mute toggle for the guitar audio, lower-right corner (the
+   fullscreen button owns the upper-right) -- opacity 0 until music has actually
+   played once, so it doesn't clutter the card before there's any sound to mute */
+.scene-volume-btn{position:absolute; top:auto; bottom:.6rem; right:.4rem; opacity:0; pointer-events:none; transition:opacity .2s ease, background .2s ease}
+.scene-volume-btn.shown{opacity:.7; pointer-events:auto}
+.scene-volume-btn.shown:hover, .scene-volume-btn.shown:focus-visible{opacity:1; background:rgba(69,58,49,.82)}
+.scene-volume-btn svg{display:block}
+.scene-volume-btn .vol-mute-x{display:none}
+.scene-volume-btn.muted .vol-wave-1, .scene-volume-btn.muted .vol-wave-2{display:none}
+.scene-volume-btn.muted .vol-mute-x{display:block}
 .parties.is-fullscreen, .parties:fullscreen, .parties:-webkit-full-screen{
   /* position:fixed detaches this from normal flow (escaping main's max-width:980px)
      and pins it to the actual viewport regardless of whether the browser also granted
@@ -1114,6 +1124,14 @@ body.completion-trip{animation:completion-spin 7s linear}
 </g>
 </svg>
     <button type="button" id="edmonton-fullscreen-btn" class="scene-fullscreen-btn" data-section="parties" aria-label="Enter fullscreen">⛶</button>
+    <button type="button" id="loft-volume-btn" class="scene-fullscreen-btn scene-volume-btn" aria-label="Mute music">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="3,9 3,15 8,15 13,20 13,4 8,9" fill="currentColor" stroke="none"/>
+        <path class="vol-wave-1" d="M16 8a5 5 0 0 1 0 8"/>
+        <path class="vol-wave-2" d="M19 5a9 9 0 0 1 0 14"/>
+        <path class="vol-mute-x" d="M16 9l5 6M21 9l-5 6"/>
+      </svg>
+    </button>
     </div>
     <p class="desc" data-i="ed_desc">The official wedding: ceremony,<br class="brk-sm"> dinner, concert,<br class="brk-lg"> dancing, afterparty.<br class="brk-sm"> <em class="quip" id="rain-snow-toggle" tabindex="0" role="button">Rain or snow.</em></p>
   </section>
@@ -1421,6 +1439,8 @@ var T = {
     game_title: "Save the Dates",
     fullscreen_enter: "Enter fullscreen",
     fullscreen_exit: "Exit fullscreen",
+    mute_music: "Mute music",
+    unmute_music: "Unmute music",
     ed_city: "Edmonton", ed_date: "May 1, 2027",
     ed_desc: "The official wedding: ceremony,<br class=\"brk-sm\"> dinner, concert,<br class=\"brk-lg\"> dancing, afterparty.<br class=\"brk-sm\"> <em class=\"quip\" id=\"rain-snow-toggle\" tabindex=\"0\" role=\"button\">Rain or snow.</em>",
     pr_city: "Prague", pr_date: "July 10, 2027",
@@ -1520,6 +1540,8 @@ var T = {
     game_title: "Zapište si data do diáře",
     fullscreen_enter: "Celá obrazovka",
     fullscreen_exit: "Ukončit celou obrazovku",
+    mute_music: "Ztlumit hudbu",
+    unmute_music: "Zapnout zvuk",
     ed_city: "Edmonton", ed_date: "1. května 2027",
     ed_desc: "Oficiální svatba: obřad,<br class=\"brk-sm\"> večeře, koncert,<br class=\"brk-lg\"> tanec a afterparty.<br class=\"brk-sm\"> <em class=\"quip\" id=\"rain-snow-toggle\" tabindex=\"0\" role=\"button\">Nemusí pršet, jen když kape.</em>",
     pr_city: "Praha", pr_date: "10. července 2027",
@@ -1660,6 +1682,7 @@ function setLang(l) {
   }
   try { localStorage.setItem("lang", l); } catch (e) {}
   if (window.refreshFullscreenLabels) window.refreshFullscreenLabels();
+  if (window.refreshVolumeBtnLabel) window.refreshVolumeBtnLabel();
 }
 (function () {
   var btns = document.querySelectorAll(".langs button");
@@ -3033,6 +3056,25 @@ function sparkShoes(svg, shoesId, cx, cy) {
     setPufferGrooving(false);
     stopNoteFlow();
   });
+})();
+(function () {
+  var audio = document.getElementById("guitar-audio");
+  var btn = document.getElementById("loft-volume-btn");
+  if (!audio || !btn) return;
+  function lang() { return T[document.documentElement.lang] ? document.documentElement.lang : "en"; }
+  function refresh() {
+    btn.classList.toggle("muted", audio.muted);
+    btn.setAttribute("aria-label", T[lang()][audio.muted ? "unmute_music" : "mute_music"]);
+  }
+  // hidden until the guitar's actually played once -- nothing to mute before then
+  audio.addEventListener("play", function () { btn.classList.add("shown"); }, { once: true });
+  btn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    audio.muted = !audio.muted;
+    refresh();
+  });
+  refresh();
+  window.refreshVolumeBtnLabel = refresh;
 })();
 (function () {
   var KEY = "visitCount";

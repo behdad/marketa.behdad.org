@@ -13342,7 +13342,14 @@ function spawnDustMote(container) {
     if (window.__updatePcFan) window.__updatePcFan(name === "office"); // hum only in the office
     if (window.__updateFireSound) window.__updateFireSound(name === "cuddly"); // fire crackle only in the cuddly nook
     if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(name === "balcony"); // string lights pulse with the beat only on the balcony
-    if (window.__updateSongRoomPan) window.__updateSongRoomPan(); // song pans toward the garden instrument from wherever you're viewing
+    if (window.__updateSongRoomPan) window.__updateSongRoomPan(); // room-fixed rooms settle immediately
+    // the balcony's pan reads the door's live on-screen position (see
+    // __updateSongRoomPan) -- the strip transform set above animates over its own
+    // #loft-game-strip{transition:transform .7s ease}, so an immediate read here
+    // lands mid-slide (or before it's even started) and captures the door's position
+    // relative to the room being left, not the one being entered. Re-settle once the
+    // slide has actually finished; the fixed-pan rooms just get redundantly re-applied.
+    setTimeout(function () { if (window.__updateSongRoomPan) window.__updateSongRoomPan(); }, 720);
     if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics(); // and gets quieter on the balcony specifically, while its door is shut
     if (name === "balcony") triggerBalconyFinale();
   }

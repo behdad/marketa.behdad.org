@@ -7349,11 +7349,48 @@ document.addEventListener("click", function (e) {
   var PAN_SMOOTH_TAU_S = 0.35; // similar feel to the old FX_RAMP_S=0.25 setTargetAtTime ramp
   var PAN_DRIFT_AMPLITUDE = 0.15;
   var PAN_DRIFT_PERIOD_S = 25;
-  // While tripping (see startTripVariant/tripActive, a global further down this file),
-  // the wobble widens and speeds way up -- the song swims around the room instead of
-  // just gently breathing, matching the rest of the trip's exaggerated everything.
-  var PAN_DRIFT_AMPLITUDE_TRIP = 0.8;
-  var PAN_DRIFT_PERIOD_TRIP_S = 4.5;
+  // While tripping (see startTripVariant/tripActive/currentTripVariant, globals further
+  // down this file), the song's wobble takes on each trip variant's own speed and
+  // character instead of one generic override, matching what's already on screen/in the
+  // melody for that variant: a slow wide swirl for the dreamy hue-rotating mushroom trip,
+  // a fast snappy ping-pong for the flicker (mirroring playTripMelody's own ~0.4s swirl
+  // cycle for strobe), one long lazy droop for melt (period longer than the trip itself,
+  // so it never completes a full round trip), a gentle sweep timed to the ~1.9s kiss
+  // cadence for molly (see the heart-burst delays in startTripVariant), and an unstable
+  // two-period drift for the dissociative ketamine k-hole. `period2`/`weight2` (ketamine
+  // only) layer a second, non-resonant sine on top via tripPanWave() so the combined path
+  // never quite repeats over its 18s run. `wave: "triangle"` (strobe only) swaps the
+  // smooth sine ease for sharper direction reversals at the turning points, echoing the
+  // melody's own square-wave flicker notes without going all the way to a jarring
+  // hard-panned square wave.
+  var TRIP_PAN = {
+    psychedelic: { amp: 0.70, period: 5.3 },
+    strobe:      { amp: 0.55, period: 0.4, wave: "triangle" },
+    melt:        { amp: 0.55, period: 8 },
+    molly:       { amp: 0.50, period: 1.9 },
+    ketamine:    { amp: 0.65, period: 9, period2: 15, weight2: 0.35 }
+  };
+  function triangleWave(phase) {
+    return (2 / Math.PI) * Math.asin(Math.sin(phase));
+  }
+  // Always returns a value within [-1, 1] -- panDriftFrame scales it by
+  // Math.min(amp, headroom), so that invariant (and the headroom-safety proof below) holds
+  // no matter how many sines a variant layers in, as long as any added weights sum to <=1.
+  function tripPanWave(cfg, t) {
+    var phase = t * (2 * Math.PI / cfg.period) + panDriftPhase;
+    var w = cfg.wave === "triangle" ? triangleWave(phase) : Math.sin(phase);
+    if (!cfg.period2) return w;
+    var phase2 = t * (2 * Math.PI / cfg.period2) + panDriftPhase * 1.7; // offset so it doesn't stay locked to the primary
+    var w2 = Math.sin(phase2);
+    var weight2 = cfg.weight2 || 0;
+    return (1 - weight2) * w + weight2 * w2;
+  }
+  // Factored out so a scratch-copy test can call this exact function (not a
+  // reimplementation) to inspect the pre-clamp sum -- keeps the headroom-safety math in
+  // exactly one place. See the "clamping would pin the sine's peak flat at the wall" note.
+  function panDriftAmount(amp, headroom, wave) {
+    return Math.min(amp, headroom) * wave;
+  }
   var panDriftPhase = Math.random() * Math.PI * 2; // so it's not in the same spot every visit
   var panDriftRAF = null, panDriftLastT = null;
   function anySongPlaying() {
@@ -7370,16 +7407,24 @@ document.addEventListener("click", function (e) {
     panDriftLastT = nowS;
     if (dt > 0) smoothedSongPan += (songBasePan - smoothedSongPan) * (1 - Math.exp(-dt / PAN_SMOOTH_TAU_S));
     var tripping = typeof tripActive !== "undefined" && tripActive;
-    var amp = tripping ? PAN_DRIFT_AMPLITUDE_TRIP : PAN_DRIFT_AMPLITUDE;
-    var period = tripping ? PAN_DRIFT_PERIOD_TRIP_S : PAN_DRIFT_PERIOD_S;
+    var tripCfg = tripping && typeof currentTripVariant !== "undefined" && TRIP_PAN[currentTripVariant];
+    var t = eqAudioCtx.currentTime;
+    var amp, wave;
+    if (tripCfg) {
+      amp = tripCfg.amp;
+      wave = tripPanWave(tripCfg, t);
+    } else {
+      amp = PAN_DRIFT_AMPLITUDE;
+      wave = Math.sin(t * (2 * Math.PI / PAN_DRIFT_PERIOD_S) + panDriftPhase);
+    }
     // Scale the swing to whatever headroom is left before ±1 (e.g. the balcony's base
     // pan already sits close to a hard edge, from panForElId("balcony-door")) instead of
     // clamping the sum -- clamping would hold the sine's peak pinned flat at the wall
     // for a chunk of every cycle (reported as the pan sounding "clipped" at the top of
-    // its sweep) rather than smoothly reversing there.
+    // its sweep) rather than smoothly reversing there. Holds for every trip variant since
+    // tripPanWave() always returns a value within [-1, 1].
     var headroom = 1 - Math.abs(smoothedSongPan);
-    var t = eqAudioCtx.currentTime;
-    var drift = Math.min(amp, headroom) * Math.sin(t * (2 * Math.PI / period) + panDriftPhase);
+    var drift = panDriftAmount(amp, headroom, wave);
     try { eqPanner.pan.value = Math.max(-1, Math.min(1, smoothedSongPan + drift)); } catch (e) {}
     panDriftRAF = requestAnimationFrame(panDriftFrame);
   }

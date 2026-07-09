@@ -7045,16 +7045,16 @@ document.addEventListener("click", function (e) {
     if (!on && window.__updateSongRoomPan) window.__updateSongRoomPan(); // hand the pan back to room-relative tracking
   };
   window.__headphoneModeOn = function () { return headphoneModeOn; }; // for the headphones' own click handler (different IIFE)
-  // Room-relative song panning: the songs' real source is an instrument in the garden
-  // (garden-guitar / garden-ukulele). panForElId reports a source's position relative to
-  // the CURRENTLY VIEWED room's viewport — for an element in a room that isn't on screen,
-  // that position clamps hard toward whichever edge it's off past, which is exactly the
-  // right cue here: leave the garden heading right (toward kitchen/cuddly) and the sound
-  // pans hard left (the garden, and the music, are behind you now), leave it heading left
-  // (toward office/balcony) and it pans hard right. A safe no-op if the audio graph never
-  // confirmed running (native fallback has no panner to drive), and skipped while
-  // headphone mode owns the pan.
-  var SONG_SOURCE_EL = { "guitar-song-audio": "garden-guitar", "ukulele-song-audio": "garden-ukulele" };
+  // Room-relative song panning: the song is heard as ambient to the whole loft, not
+  // tracked to a single instrument, so each room gets its own fixed spatial feel rather
+  // than following the physical position of an instrument that's often off-screen.
+  // Middle room (cuddly) and office are centered; kitchen and garden both come from the
+  // right side of the room; the balcony is outdoors, so it's placed around the door —
+  // the loft's boundary to it — via panForElId same as everything else that bleeds
+  // through that door. A safe no-op if the audio graph never confirmed running (native
+  // fallback has no panner to drive), and skipped while headphone mode owns the pan.
+  var ROOM_BY_STAGE_INDEX = ["kitchen", "garden", "cuddly", "office", "balcony"];
+  var SONG_ROOM_PAN = { kitchen: 0.6, garden: 0.6, cuddly: 0, office: 0 };
   window.__updateSongRoomPan = function () {
     if (!eqAudioCtx || !eqPanner || headphoneModeOn) return;
     var playing = null;
@@ -7062,9 +7062,9 @@ document.addEventListener("click", function (e) {
       if (songAudios[i] && !songAudios[i].paused && !songAudios[i].ended) { playing = songAudios[i]; break; }
     }
     if (!playing) return;
-    var srcId = SONG_SOURCE_EL[playing.id];
-    if (!srcId) return;
-    try { eqPanner.pan.setTargetAtTime(panForElId(srcId), eqAudioCtx.currentTime, FX_RAMP_S); } catch (e) {}
+    var room = ROOM_BY_STAGE_INDEX[window.currentStageIndex] || "kitchen";
+    var pan = room === "balcony" ? panForElId("balcony-door") : SONG_ROOM_PAN[room];
+    try { eqPanner.pan.setTargetAtTime(pan, eqAudioCtx.currentTime, FX_RAMP_S); } catch (e) {}
   };
   // The balcony's front door is the loft's boundary to "outside" — the song (playing
   // from a garden instrument, audible throughout the loft) should feel a bit cut off

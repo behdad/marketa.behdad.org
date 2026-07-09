@@ -4100,7 +4100,7 @@ section{margin:1.9rem 0}
 <g id="laptop-calltile">
 <rect x="417.4" y="180.9" width="27.6" height="16.1" rx="2.53" fill="#2b7a4b"/>
 <rect x="425.91" y="183.66" width="6.9" height="4.83" rx="0.92" fill="#eafaf0"/>
-<path d="M433.73 184.7 L430.97 186.08 L433.73 187.46 Z" fill="#eafaf0"/>
+<path d="M435.73 184.7 L432.97 186.08 L435.73 187.46 Z" fill="#eafaf0" stroke="#eafaf0" stroke-width="1" stroke-linejoin="round"/>
 <text id="laptop-calltile-label" x="431.2" y="194.7" text-anchor="middle" font-size="4.37" fill="#eafaf0"></text>
 </g>
 </g>
@@ -5184,7 +5184,7 @@ function setLang(l) {
 // Shared by eggBubble's initial placement and hoverTooltip's live-follow loop (for an
 // anchor that keeps moving under its own animation, e.g. Fishu's drift, a one-time
 // position read goes stale mid-hover) — same clamped left/top math either way.
-function positionEggBubble(b, anchor, placement) {
+function positionEggBubble(b, anchor, placement, yOffset) {
   var r = anchor.getBoundingClientRect();
   var bW = b.offsetWidth || 220;
   var bH = b.offsetHeight || 60;
@@ -5206,16 +5206,16 @@ function positionEggBubble(b, anchor, placement) {
     }
   }
   b.style.left = left + "px";
-  b.style.top = top + "px";
+  b.style.top = (top + (yOffset || 0)) + "px";
 }
-function eggBubble(anchor, text, placement) {
+function eggBubble(anchor, text, placement, yOffset) {
   var old = document.querySelector(".egg-bubble");
   if (old) old.remove();
   var b = document.createElement("div");
   b.className = "egg-bubble";
   b.innerHTML = text;
   document.body.appendChild(b);
-  positionEggBubble(b, anchor, placement);
+  positionEggBubble(b, anchor, placement, yOffset);
   b._anchor = anchor;
   requestAnimationFrame(function () { b.classList.add("show"); });
   clearTimeout(b._t);
@@ -5236,16 +5236,16 @@ function dismissEggBubble(b) {
 // mouseenter — some anchors (Fishu's ambient drift) keep moving under their own CSS
 // animation for as long as the tooltip stays open, and a one-time position read goes
 // visibly stale mid-hover otherwise.
-function hoverTooltip(el, html, placement) {
+function hoverTooltip(el, html, placement, yOffset) {
   if (!el) return;
   var bubble = null, followRaf = null;
   function follow() {
     if (!bubble) return;
-    positionEggBubble(bubble, el, placement);
+    positionEggBubble(bubble, el, placement, yOffset);
     followRaf = requestAnimationFrame(follow);
   }
   el.addEventListener("mouseenter", function () {
-    bubble = eggBubble(el, html, placement);
+    bubble = eggBubble(el, html, placement, yOffset);
     followRaf = requestAnimationFrame(follow);
   });
   el.addEventListener("mouseleave", function () {
@@ -9847,7 +9847,7 @@ document.addEventListener("click", function (e) {
     };
   }
   var puffer = document.getElementById("cuddly-puffer-wrap");
-  hoverTooltip(puffer, "<em>Fishu</em>", "top");
+  hoverTooltip(puffer, "<em>Fishu</em>", "top", 15);
   var puffCuddly = wirePuff(puffer);
   var pufferClickTimer = null;
   if (puffer) puffer.addEventListener("click", function () {

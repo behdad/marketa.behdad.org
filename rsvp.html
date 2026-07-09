@@ -167,15 +167,21 @@ footer{margin-top:2.6rem}
      applied to index.html's fullscreen). */
   position:fixed; inset:0; z-index:50;
   background:var(--cream); display:flex; flex-direction:column; align-items:center;
-  /* safe center: centers normally, but falls back to start alignment if the content
-     overflows the viewport height (mobile landscape especially — a short viewport with
-     the full frame + caption + dots easily taller than it) so the top/bottom don't get
-     pushed off-screen with no way to reach them. Unsupported browsers just drop this
-     whole declaration and fall back to the flex default (normal, i.e. flex-start) --
-     also safe, just without the nice centering when everything actually fits. overflow
-     auto is the actual escape hatch either way: something has to be scrollable for
-     content taller than the viewport to be reachable at all. */
-  justify-content:safe center; overflow:auto; width:100%; height:100%; padding:1.5rem; box-sizing:border-box;
+  /* plain center as the universally-supported baseline (confirmed: Firefox drops the
+     WHOLE declaration below rather than falling back to it, leaving content pinned to
+     the top instead of centered) -- overflow:auto is the real escape hatch for content
+     taller than the viewport either way, so this is never unreachable even without the
+     "safe" nicety. */
+  justify-content:center; overflow:auto; width:100%; height:100%; padding:1.5rem; box-sizing:border-box;
+}
+@supports (justify-content: safe center){
+  /* progressive enhancement where actually supported (mobile landscape especially — a
+     short viewport with the full frame + caption + dots easily taller than it): centers
+     normally, but falls back to start alignment if content overflows the viewport height,
+     so the top/bottom don't get pushed off-screen with no way to reach them. */
+  #hunt-fullscreen-area.is-fullscreen, #hunt-fullscreen-area:fullscreen, #hunt-fullscreen-area:-webkit-full-screen{
+    justify-content:safe center;
+  }
 }
 #hunt-fullscreen-area.is-fullscreen .hunt-frame,
 #hunt-fullscreen-area:fullscreen .hunt-frame,
@@ -5218,6 +5224,16 @@ function setLang(l) {
     btn.setAttribute("aria-label", T[lang()].fullscreen_enter);
     btn.textContent = "⛶";
     sizeFullscreenFrame();
+    // Firefox (confirmed live: black padding around an undersized frame) fires
+    // fullscreenchange before its own layout pass has caught up to the new fullscreen
+    // viewport, so the immediate measurement above reads stale (pre-fullscreen)
+    // dimensions -- re-measure a couple of frames later once it has settled. Harmless
+    // no-op re-measurement on browsers that already got it right the first time.
+    if (fs) {
+      requestAnimationFrame(function () {
+        requestAnimationFrame(sizeFullscreenFrame);
+      });
+    }
   }
   window.refreshFullscreenLabel = refreshLabel; // re-run by setLang() on every language switch
   window.__sizeFullscreenFrame = sizeFullscreenFrame; // test hook: isFullscreen() checks the real Fullscreen API, which headless test scripts that only toggle .is-fullscreen can't trigger

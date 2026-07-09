@@ -356,6 +356,15 @@ footer{margin-top:2.6rem}
   85%{transform:rotate(-2deg)}
 }
 @media (prefers-reduced-motion: reduce){.kitchen-pan-swing{animation:none !important}}
+/* clicking the hanging pans too many times knocks one loose (see kitchen-pans' click
+   handler) — a WAAPI animate() call drives the actual fall/tumble (script animation, so
+   it composes over the class-based swing/rattle rules above rather than fighting them,
+   same reasoning as the cat's perch-jump), this just marks the landed pan so it doesn't
+   swing back with the others afterward */
+.kitchen-pan-swing.fallen{animation:none !important}
+.kitchen-crack{opacity:0}
+#kitchen-kettle.broken, #kitchen-waterbottle.broken #kitchen-waterbottle-inner{filter:saturate(.35) brightness(.8)}
+#kitchen-kettle.broken .kitchen-crack, #kitchen-waterbottle.broken .kitchen-crack{opacity:1}
 .kitchen-scoop-swing{transform-box:fill-box; transform-origin:50% 10%}
 .kitchen-scoop-swing.rattling{animation:pan-swing .5s ease-in-out}
 @media (prefers-reduced-motion: reduce){.kitchen-scoop-swing{animation:none !important}}
@@ -2452,12 +2461,14 @@ section{margin:1.9rem 0}
 <path d="M33 25 C 21 26, 12.5 23, 10.8 12.5 Q10 7 6.2 8.8 L5.2 11.6 Q9 10.8 9.6 14 C 11.5 24.5, 18 30, 33 31 Z" fill="#2d2d2d" stroke="#1a1a1a" stroke-width="0.8"/>
 <rect x="60" y="18.5" width="7" height="5" rx="1.2" fill="#8a8578" stroke="#6e6a5e" stroke-width="0.8" transform="rotate(-28 63.5 21)"/>
 <ellipse cx="77" cy="13.5" rx="11" ry="5.2" fill="#1a1a1a" transform="rotate(-28 77 13.5)"/>
+<path id="kitchen-kettle-crack" class="kitchen-crack" d="M35 25 L42 35 L38 45" fill="none" stroke="#eee" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
 </g>
 <g id="kitchen-waterbottle" class="hunt-hit" tabindex="0" role="button" aria-label="The water bottle" transform="translate(25,0)">
 <rect x="120" y="164" width="26" height="70" fill="transparent"/>
 <g id="kitchen-waterbottle-inner">
 <path d="M124 230 L124 196 Q124 186 130 182 L130 172 Q130 168 133 168 Q136 168 136 172 L136 182 Q142 186 142 196 L142 230 Z" fill="#4a7a9e" stroke="#35586e" stroke-width="1.5"/>
 <g id="kitchen-waterbottle-liquid-groove"><path id="kitchen-waterbottle-liquid" d="M126 230 L126 198 Q126 190 130 187 L136 187 Q140 190 140 198 L140 230 Z" fill="#bfe0ee" opacity="0.6"/></g>
+<path id="kitchen-waterbottle-crack" class="kitchen-crack" d="M128 190 L134 205 L129 220" fill="none" stroke="#eee" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
 </g>
 </g>
 </g>
@@ -5995,6 +6006,81 @@ document.addEventListener("click", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); playSodaHissSound(); }
     });
   }
+  // A pan crashing down: staggered playMetalClinkSound bursts read as a clatter-bounce-
+  // settle rather than one clean clink, reusing that synthesis instead of duplicating it.
+  function playPanCrashSound(panId) {
+    playMetalClinkSound(0.75, panId);
+    setTimeout(function () { playMetalClinkSound(1.15, panId); }, 90);
+    setTimeout(function () { playMetalClinkSound(0.9, panId); }, 210);
+    setTimeout(function () { playMetalClinkSound(1.3, panId); }, 340);
+  }
+  var waterBottleBroken = false, kettleBroken = false, kitchenPanClicks = 0;
+  var fallenPanAnims = []; // kept so a full reset can cancel them (fill:"forwards" otherwise persists the landed pose)
+  function panFallReducedMotion() {
+    return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+  // Knocks a pan off its hook onto a counter item below. The delta is resolved from
+  // LIVE getBoundingClientRect() readings (mapped stage-local through stage-kitchen's
+  // static getScreenCTM(), same technique as officeDeskPerch/officeChairPerch) rather
+  // than hand-computed from the pan's raw pre-transform coordinates — the pans sit
+  // inside their own translate+scale(1.65) group, and a live geometry read sidesteps
+  // getting that composition wrong. Dividing by that same 1.65 converts the stage-local
+  // delta into the pan's own local transform units (a delta is invariant to the parent
+  // group's translate, only its scale matters).
+  function fallenPanTarget(panId, targetId) {
+    var pan = document.getElementById(panId);
+    var target = document.getElementById(targetId);
+    if (!pan || !target) return;
+    var dx = 0, dy = 0;
+    try {
+      var svg = document.getElementById("loft-game-strip");
+      var stage = document.getElementById("stage-kitchen");
+      if (svg && stage && svg.createSVGPoint && stage.getScreenCTM) {
+        var fr = pan.getBoundingClientRect(), tr = target.getBoundingClientRect();
+        var p1 = svg.createSVGPoint(); p1.x = fr.left + fr.width / 2; p1.y = fr.top + fr.height / 2;
+        var p2 = svg.createSVGPoint(); p2.x = tr.left + tr.width / 2; p2.y = tr.top + tr.height / 2;
+        var inv = stage.getScreenCTM().inverse();
+        var sp1 = p1.matrixTransform(inv), sp2 = p2.matrixTransform(inv);
+        dx = (sp2.x - sp1.x) / 1.65; dy = (sp2.y - sp1.y) / 1.65;
+      }
+    } catch (e) {}
+    pan.classList.add("fallen"); // stops it swinging along with the rest afterward
+    if (pan.animate && !panFallReducedMotion()) {
+      var anim = pan.animate([
+        { transform: "translate(0px,0px) rotate(0deg)" },
+        { transform: "translate(" + (dx * 0.08) + "px," + (dy * 0.12 + 5) + "px) rotate(-12deg)", offset: 0.12 },
+        { transform: "translate(" + (dx * 0.5) + "px," + (dy * 0.55) + "px) rotate(140deg)", offset: 0.6 },
+        { transform: "translate(" + dx + "px," + dy + "px) rotate(270deg)", offset: 0.85 },
+        { transform: "translate(" + dx + "px," + (dy - 3) + "px) rotate(264deg)" }
+      ], { duration: 850, easing: "cubic-bezier(.5,0,.85,.6)", fill: "forwards" });
+      fallenPanAnims.push(anim);
+    } else {
+      pan.style.transform = "translate(" + dx + "px," + dy + "px)";
+    }
+    setTimeout(function () {
+      playPanCrashSound(targetId);
+      target.classList.add("broken");
+    }, panFallReducedMotion() ? 0 : 650);
+  }
+  // A full reset undoes the fall: cancel any in-flight/landed WAAPI animation (fill:
+  // "forwards" otherwise keeps holding the last keyframe after the class is gone),
+  // clear the fallback inline transform, and drop the fallen/broken visuals so the
+  // scene starts clean on replay.
+  window.__resetKitchenPans = function () {
+    waterBottleBroken = false;
+    kettleBroken = false;
+    kitchenPanClicks = 0;
+    fallenPanAnims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
+    fallenPanAnims = [];
+    ["kitchen-pan-2", "kitchen-pan-4"].forEach(function (id) {
+      var p = document.getElementById(id);
+      if (p) { p.classList.remove("fallen"); p.style.transform = ""; }
+    });
+    ["kitchen-kettle", "kitchen-waterbottle"].forEach(function (id) {
+      var t = document.getElementById(id);
+      if (t) t.classList.remove("broken");
+    });
+  };
   var pans = document.getElementById("kitchen-pans");
   if (pans) {
     var panCenters = [
@@ -6022,6 +6108,17 @@ document.addEventListener("click", function (e) {
         requestAnimationFrame(function () {
           requestAnimationFrame(function () { pan.classList.add("pan-clicked"); });
         });
+      }
+      // Clicking the pans a lot eventually knocks one loose onto the counter below —
+      // first the water bottle, then (with continued clicking) the kettle too.
+      kitchenPanClicks++;
+      if (kitchenPanClicks === 8 && !waterBottleBroken) {
+        waterBottleBroken = true;
+        fallenPanTarget("kitchen-pan-2", "kitchen-waterbottle");
+      } else if (kitchenPanClicks === 14 && !kettleBroken) {
+        if (typeof kettleSteaming !== "undefined" && kettleSteaming && typeof toggleKettle === "function") toggleKettle(); // off cleanly before it's marked broken
+        kettleBroken = true;
+        fallenPanTarget("kitchen-pan-4", "kitchen-kettle");
       }
     }
     pans.addEventListener("click", clinkPans);
@@ -6121,6 +6218,7 @@ document.addEventListener("click", function (e) {
     var waterBottleLeft = 4;
     var waterBottleLiquid = document.getElementById("kitchen-waterbottle-liquid");
     function clinkWaterBottle() {
+      if (waterBottleBroken) { playDryClickSound("kitchen-waterbottle"); return; }
       playGlassClinkSound(1 + (4 - waterBottleLeft) * 0.1, "kitchen-waterbottle");
       if (waterBottleLeft > 0) {
         waterBottleLeft--;
@@ -6179,6 +6277,7 @@ document.addEventListener("click", function (e) {
       kettleCtx = null;
     }
     function toggleKettle() {
+      if (kettleBroken) { playDryClickSound("kitchen-kettle"); return; }
       kettleSteaming = !kettleSteaming;
       kettle.classList.toggle("steaming", kettleSteaming);
       if (kettleSteaming) {
@@ -15851,6 +15950,7 @@ function spawnDustMote(container) {
     gardenState.music = false;
     gardenState.candles = false;
     if (window.resetBottles) window.resetBottles();
+    if (window.__resetKitchenPans) window.__resetKitchenPans();
     Object.keys(plantSpots).forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.classList.remove("done", "watered");

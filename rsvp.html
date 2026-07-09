@@ -16579,23 +16579,15 @@ function spawnDustMote(container) {
     }, 25000 + Math.random() * 20000);
   }
   // Triple-click Behdad to light up on demand — single/double click on him are already
-  // leanBehdad/strokeArm (see the earlier IIFE), so triple is free. Gated only on music
-  // actually playing (this is a "while listening" gag). Unlike the automatic rolls, the
-  // manual triple-click ignores the per-song cap, so you can always make him smoke again;
-  // it still feeds the count so the auto-roll scheduler stays capped as before.
+  // leanBehdad/strokeArm (see the earlier IIFE), so triple is free. This always fires,
+  // unconditionally (no music / per-song-cap gate) — startBehdadJoint's own .smoking-joint
+  // flag is the only thing that stops it overlapping itself. The per-song cap still
+  // governs the separate automatic roll scheduler, which this doesn't touch.
   var cuddlyBehdadForJoint = document.getElementById("cuddly-behdad");
   if (cuddlyBehdadForJoint) {
     cuddlyBehdadForJoint.addEventListener("click", function (e) {
       if (e.detail < 3) return;
-      var anyPlaying = Object.keys(instrumentSpots).some(function (id) {
-        var audio = document.getElementById(instrumentSpots[id].audioId);
-        return audio && !audio.paused;
-      });
-      if (!anyPlaying) return;
-      if (behdadJointTimer) { clearTimeout(behdadJointTimer); behdadJointTimer = null; }
-      behdadJointCount++;
       startBehdadJoint();
-      if (behdadJointCount < BEHDAD_JOINT_MAX_PER_SONG) scheduleBehdadJointRoll();
     });
   }
   var noteFlowTimer = null;

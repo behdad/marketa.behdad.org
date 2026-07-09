@@ -238,8 +238,8 @@ footer{margin-top:2.6rem}
 #kitchen-lamarzocco.done, #kitchen-grinder.done, #kitchen-portafilter.done{opacity:.55}
 #kitchen-lamarzocco.done ~ #kitchen-portafilter-dial{opacity:.55}
 #kitchen-lamarzocco.powered-on .kitchen-power-led{fill:#ff2f3a}
-#kitchen-gauge-needle-1{transform-origin:430px 168px; transition:transform 1.1s cubic-bezier(.22,1.4,.36,1)}
-#kitchen-gauge-needle-2{transform-origin:500px 168px; transition:transform 1.1s cubic-bezier(.22,1.4,.36,1)}
+#kitchen-gauge-needle-1{transform-origin:430px 168px; transition:transform 2.6s cubic-bezier(.22,1.4,.36,1)}
+#kitchen-gauge-needle-2{transform-origin:500px 168px; transition:transform 2.6s cubic-bezier(.22,1.4,.36,1)}
 #kitchen-gauge-needle-1.zero{transform:rotate(-115deg)}
 #kitchen-gauge-needle-2.zero{transform:rotate(115deg)}
 @media (prefers-reduced-motion: reduce){#kitchen-gauge-needle-1, #kitchen-gauge-needle-2{transition:none}}
@@ -1024,7 +1024,7 @@ footer{margin-top:2.6rem}
    regardless of which docked position it's currently translated to. */
 #kitchen-portafilter-fly{transform-box:fill-box; transform-origin:center}
 #kitchen-portafilter-fly.at-grinder{transform:translate(-95px,23px)}
-#kitchen-portafilter-fly.at-tamper{transform:translate(-175px,42px)}
+#kitchen-portafilter-fly.at-tamper{transform:translate(-175px,47px)}
 #kitchen-portafilter-fly.at-knockbox{transform:translate(-145px,22px)}
 #kitchen-portafilter-fly.flying-grouphead-to-grinder{animation:portafilter-fly-gh-grinder .6s ease-in-out}
 #kitchen-portafilter-fly.flying-grinder-to-grouphead{animation:portafilter-fly-grinder-gh .6s ease-in-out}
@@ -1045,10 +1045,10 @@ footer{margin-top:2.6rem}
 @keyframes portafilter-fly-grinder-tamper{
   0%{transform:translate(-95px,23px)}
   50%{transform:translate(-136px,4px)}
-  100%{transform:translate(-175px,42px)}
+  100%{transform:translate(-175px,47px)}
 }
 @keyframes portafilter-fly-tamper-gh{
-  0%{transform:translate(-175px,42px)}
+  0%{transform:translate(-175px,47px)}
   50%{transform:translate(-88px,-6px)}
   100%{transform:translate(0,0)}
 }
@@ -4872,6 +4872,7 @@ var T = {
       kitchen_need_tamp: "Tamp the coffee first.",
       kitchen_need_knockout: "Empty the old grounds first.",
       kitchen_grinder_empty: "The grinder's out of beans.",
+      kitchen_warming_up: "Let it warm up first.",
       garden: "Water a plant, play music, light candles.",
       garden_need_music_candles: "Play music, light candles.",
       garden_need_water_candles: "Water a plant, light candles.",
@@ -4968,6 +4969,7 @@ var T = {
       kitchen_need_tamp: "Nejdřív upěchuj kávu.",
       kitchen_need_knockout: "Nejdřív vyklepej starou kávu.",
       kitchen_grinder_empty: "Mlýnku došla zrnková káva.",
+      kitchen_warming_up: "Nejdřív ho nech zahřát.",
       garden: "Zalij kytku, zahraj, zapal svíčky.",
       garden_need_music_candles: "Zahraj a zapal svíčky.",
       garden_need_water_candles: "Zalij kytku a zapal svíčky.",
@@ -14045,7 +14047,11 @@ function spawnDustMote(container) {
   var FLY_MS = 600; // portafilter flight duration between any two docks
   var KNOCK_MS = 500; // pause at the knockbox (wobble + grounds clearing) before flying back
   var TAMP_MS = 450; // pause under the tamper (wobble) before flying back, matches .wobbling's .4s
+  var WARMUP_MS = 2600; // matches #kitchen-gauge-needle-*'s own transition duration — the
+                         // machine isn't usable until the dials actually finish rising
   var kitchenPowered = false;
+  var kitchenWarmedUp = false;
+  var warmupTimer = null;
   var kitchenGround = false; // fresh grounds are in the basket, tamp/brew pending or in progress
   var grinding = false;
   var brewing = false;
@@ -14113,6 +14119,7 @@ function spawnDustMote(container) {
   // shared by restoreStageHint (room re-entry) and the power toggle below — used to be
   // two separately-hand-written copies of this same if-chain that could drift apart.
   function kitchenCurrentCaption() {
+    if (!kitchenWarmedUp) return "kitchen_warming_up";
     if (portafilterSpent) return "kitchen_need_knockout";
     if (!kitchenGround) return grinderBeansLeft <= 0 ? "kitchen_grinder_empty" : "kitchen_grind";
     if (!tamped) return "kitchen_need_tamp";
@@ -14123,6 +14130,7 @@ function spawnDustMote(container) {
     var next = null;
     if (kitchenRounds < KITCHEN_HINT_ROUNDS) {
       if (!kitchenPowered) next = "kitchen-lamarzocco";
+      else if (!kitchenWarmedUp) next = null; // warming up — nothing's actionable yet
       else if (portafilterSpent) next = "kitchen-knockbox";
       else if (!kitchenGround) next = "kitchen-grinder";
       else if (!tamped) next = "kitchen-tamper";
@@ -14171,6 +14179,16 @@ function spawnDustMote(container) {
       var needle = document.getElementById(id);
       if (needle) needle.classList.toggle("zero", !kitchenPowered);
     });
+    clearTimeout(warmupTimer);
+    if (kitchenPowered) {
+      kitchenWarmedUp = false;
+      warmupTimer = setTimeout(function () {
+        kitchenWarmedUp = true;
+        if (kitchenPowered) { setCaption(kitchenCurrentCaption()); updateKitchenInvite(); }
+      }, WARMUP_MS);
+    } else {
+      kitchenWarmedUp = false;
+    }
     if (kitchenPowered) setCaption(kitchenCurrentCaption());
     else if (kitchenRounds < KITCHEN_HINT_ROUNDS) setCaption("kitchen");
     updateKitchenInvite();
@@ -14178,6 +14196,11 @@ function spawnDustMote(container) {
   onActivate(grinder, function () {
     if (!kitchenPowered) {
       setCaption("kitchen_need_power");
+      playDryClickSound("kitchen-grinder");
+      return;
+    }
+    if (!kitchenWarmedUp) {
+      setCaption("kitchen_warming_up");
       playDryClickSound("kitchen-grinder");
       return;
     }
@@ -15501,6 +15524,8 @@ function spawnDustMote(container) {
     window.__pragueCalled = false;
     if (window.__stowCat) window.__stowCat(); // cat back in the chest, wherever it had wandered
     kitchenPowered = false;
+    kitchenWarmedUp = false;
+    clearTimeout(warmupTimer);
     kitchenGround = false;
     kitchenRounds = 0;
     grinderBeansLeft = GRINDER_BEAN_USES;

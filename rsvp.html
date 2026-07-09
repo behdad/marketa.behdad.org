@@ -143,12 +143,24 @@ footer{margin-top:2.6rem}
 .hunt-fullscreen-btn:hover, .hunt-fullscreen-btn:focus-visible{opacity:1; background:rgba(69,58,49,.82)}
 /* fullscreen wraps the frame (nav arrows + viewport) AND the room dots below it, not
    the whole page — the browser fills the screen with just this element's own box, so
-   give it a matching background + center the (still responsively-sized) frame in it */
-#hunt-fullscreen-area:fullscreen, #hunt-fullscreen-area:-webkit-full-screen{
+   give it a matching background + center the frame in it, SCALED to fill whichever
+   dimension (width or height) is the binding constraint at this screen's aspect ratio.
+   .is-fullscreen (toggled by JS in the fullscreenchange handler) drives this rather than
+   the :fullscreen pseudo-class alone, since pseudo-class + vendor-prefix support is less
+   predictable across engines than a plain class the JS controls directly; the pseudo-
+   class rules stay too as a harmless belt-and-braces fallback. */
+#hunt-fullscreen-area.is-fullscreen, #hunt-fullscreen-area:fullscreen, #hunt-fullscreen-area:-webkit-full-screen{
   background:var(--cream); display:flex; flex-direction:column; align-items:center;
-  justify-content:center; width:100%; height:100%; padding:2rem; box-sizing:border-box;
+  justify-content:center; width:100%; height:100%; padding:1.5rem; box-sizing:border-box;
 }
-#hunt-fullscreen-area:fullscreen .hunt-frame, #hunt-fullscreen-area:-webkit-full-screen .hunt-frame{max-width:1500px}
+#hunt-fullscreen-area.is-fullscreen .hunt-frame,
+#hunt-fullscreen-area:fullscreen .hunt-frame,
+#hunt-fullscreen-area:-webkit-full-screen .hunt-frame{
+  max-width:none; width:min(94vw, 190vh); margin:0;
+}
+#hunt-fullscreen-area.is-fullscreen .hunt-dots,
+#hunt-fullscreen-area:fullscreen .hunt-dots,
+#hunt-fullscreen-area:-webkit-full-screen .hunt-dots{margin-top:1rem}
 .device-hint{display:none; text-align:center; font-size:.8rem; color:var(--soft); margin:.15rem 0 0}
 .device-hint.show{display:block}
 .hunt-dots{display:flex; justify-content:center; align-items:center; gap:.15rem; margin:.55rem 0 0}
@@ -4724,9 +4736,11 @@ function setLang(l) {
   }
   function lang() { return T[document.documentElement.lang] ? document.documentElement.lang : "en"; }
   function refreshLabel() {
-    var key = isFullscreen() ? "fullscreen_exit" : "fullscreen_enter";
+    var fs = isFullscreen();
+    area.classList.toggle("is-fullscreen", fs); // primary driver for the scaling CSS — see comment there
+    var key = fs ? "fullscreen_exit" : "fullscreen_enter";
     btn.setAttribute("aria-label", T[lang()][key]);
-    btn.textContent = isFullscreen() ? "⤢" : "⛶";
+    btn.textContent = fs ? "⤢" : "⛶";
   }
   window.refreshFullscreenLabel = refreshLabel; // re-run by setLang() on every language switch
   btn.addEventListener("click", function (e) {

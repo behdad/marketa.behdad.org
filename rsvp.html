@@ -1127,6 +1127,39 @@ footer{margin-top:2.6rem}
   #cuddly-marketa-right-arm.leaning, #cuddly-marketa-right-arm-inner.stroking,
   #cuddly-behdad-right-arm.bottom-wiggle, #cuddly-marketa-right-arm.bottom-wiggle{animation:none}
 }
+/* Behdad occasionally lights up a joint once music's been going a while (see
+   startBehdadJoint). The raise-to-mouth gesture lives on its own wrapper,
+   #cuddly-behdad-joint-toke, nested around #cuddly-behdad-right-arm-inner rather
+   than reusing .stroking on that element directly — same fix as the cat's
+   nap-breathing wrapper (#witchy-chest-cat-breathe): a separate node composes
+   cleanly with whatever the hand/arm is already doing instead of fighting a
+   cascade/specificity war on one element. */
+#cuddly-behdad-joint-toke{transform-origin:176px 208px}
+#cuddly-behdad-joint-toke.toking{animation:joint-toke 1.6s ease-in-out}
+@keyframes joint-toke{
+  0%, 100%{transform:rotate(0deg)}
+  45%, 62%{transform:rotate(-92deg)}
+}
+@media (prefers-reduced-motion: reduce){#cuddly-behdad-joint-toke.toking{animation:none}}
+/* the joint itself + its idle wisp, hidden until he lights up. Gated by .lit on
+   #cuddly-behdad-joint-prop itself, NOT a #cuddly-behdad.smoking-joint ancestor
+   selector — #cuddly-behdad-right-arm (which holds the prop) is a *sibling* of
+   #cuddly-behdad in the markup, not a descendant (it's drawn after Marketa so it
+   paints over her shoulder for the cuddle pose), so a descendant selector off
+   #cuddly-behdad would never match it. .smoking-joint on #cuddly-behdad itself is
+   still set (see startBehdadJoint) as a plain re-entrancy flag. */
+#cuddly-behdad-joint-prop{opacity:0; transition:opacity .4s ease}
+#cuddly-behdad-joint-prop.lit{opacity:1}
+@media (prefers-reduced-motion: reduce){#cuddly-behdad-joint-prop{transition:none}}
+#cuddly-behdad-joint-wisp{transform-box:fill-box; transform-origin:center; opacity:0}
+#cuddly-behdad-joint-prop.lit #cuddly-behdad-joint-wisp{animation:joint-idle-wisp 2.4s ease-in-out infinite}
+@keyframes joint-idle-wisp{
+  0%{transform:translateY(0) scale(.6); opacity:0}
+  30%{opacity:.45}
+  70%{opacity:.15}
+  100%{transform:translateY(-10px) scale(1.3); opacity:0}
+}
+@media (prefers-reduced-motion: reduce){#cuddly-behdad-joint-prop.lit #cuddly-behdad-joint-wisp{animation:none}}
 #cuddly-puffer-wrap{cursor:pointer}
 #cuddly-puffer-wrap.flying-off{animation:fishu-fly-out 1.4s ease-in forwards}
 @keyframes fishu-fly-out{
@@ -3299,11 +3332,23 @@ section{margin:1.9rem 0}
 </g>
 </g>
 <g id="cuddly-behdad-right-arm" style="transform-origin:222.3px 256px">
+<!-- wraps -right-arm-inner (rather than animating that node directly) so the
+     occasional joint-raise gesture composes with .stroking instead of fighting
+     it for the "transform" property — see the CSS comment above .joint-toke -->
+<g id="cuddly-behdad-joint-toke" style="transform-origin:176px 208px">
 <g id="cuddly-behdad-right-arm-inner" style="transform-origin:176px 208px">
 <path d="M176 208 Q168 230 196 242" fill="none" stroke="#c68e95" stroke-width="15" stroke-linecap="round"/>
 <path d="M176 208 Q168 230 196 242" fill="none" stroke="#e9bfc4" stroke-width="11" stroke-linecap="round"/>
 <path d="M191 234 L196 245" stroke="#c68e95" stroke-width="3.5" stroke-linecap="round"/>
 <circle cx="202" cy="244" r="6" fill="#e6b489" stroke="#b9855e" stroke-width="1"/>
+<!-- the joint (hidden until .lit), held between his fingers -->
+<g id="cuddly-behdad-joint-prop">
+<path d="M204 240 L210 225" fill="none" stroke="#f4f0e4" stroke-width="3.2" stroke-linecap="round"/>
+<circle cx="210" cy="225" r="2.1" fill="#f0a04a" stroke="#c0392b" stroke-width=".7"/>
+<circle cx="209.3" cy="224.3" r=".7" fill="#f4d8a0" opacity=".85"/>
+<path id="cuddly-behdad-joint-wisp" d="M210 225 Q206 218 209 212 Q211 207 207 202" fill="none" stroke="#e8e2d0" stroke-width="1.4" stroke-linecap="round"/>
+</g>
+</g>
 </g>
 </g>
 <g id="cuddly-marketa-right-arm" style="transform-origin:249px 254px">
@@ -14195,6 +14240,8 @@ function spawnDustMote(container) {
     return { toe: period, head: period * 1.4 };
   }
   var skullDanceTimer = null; // arms while music plays; fires to escalate the skull into a dance
+  var behdadJointTimer = null; // same shape, for the occasional joint (see startBehdadJoint)
+  var behdadJointArmed = true; // re-armed each time music (re)starts from a stopped state
   function updateCuddlyGrooving() {
     var playing = null;
     Object.keys(instrumentSpots).some(function (id) {
@@ -14244,6 +14291,23 @@ function spawnDustMote(container) {
         skullDance.classList.remove("dancing");
       }
     }
+    // Behdad occasionally lights up a joint once the music's been going a while — same
+    // escalation shape as the skull dance above, plus a coin-flip so it's a "sometimes"
+    // thing (not every long listening session). Re-arms once music stops and restarts,
+    // same as the skull's "not already dancing" check.
+    if (anyPlaying) {
+      if (!behdadJointTimer && behdadJointArmed) {
+        behdadJointTimer = setTimeout(function () {
+          behdadJointTimer = null;
+          behdadJointArmed = false; // this session's had its roll — no repeat firing while it keeps playing
+          if (Math.random() < 0.45) startBehdadJoint();
+        }, 8000 + Math.random() * 7000);
+      }
+    } else {
+      if (behdadJointTimer) { clearTimeout(behdadJointTimer); behdadJointTimer = null; }
+      behdadJointArmed = true;
+      cancelBehdadJoint(); // music stopped mid-sequence — don't let him keep puffing into silence
+    }
     // the garden fairy dances once she's revealed (chest door open) and a song plays
     var fairyDance = document.getElementById("witchy-chest-fairy-dance");
     var witchyDoor1 = document.getElementById("witchy-door-1");
@@ -14270,6 +14334,66 @@ function spawnDustMote(container) {
     if (sg) sg.classList.toggle("grooving", anyPlaying);
   }
   window.updateCuddlyGrooving = updateCuddlyGrooving;
+  // A few slow tokes: the raise-to-mouth gesture plays 2-3 times on
+  // #cuddly-behdad-joint-toke (see its CSS), releasing a small puff near his mouth
+  // each time via the shared steam-wisp spawner, then settles back to normal.
+  // stage-cuddly sits at x=1360 in the shared strip, so local art coordinates need
+  // +1360 for spawnSteamWisps (which spawns straight into the strip's own space).
+  var behdadJointToke = document.getElementById("cuddly-behdad-joint-toke");
+  if (behdadJointToke) {
+    behdadJointToke.addEventListener("animationend", function (e) {
+      if (e.animationName === "joint-toke") behdadJointToke.classList.remove("toking");
+    });
+  }
+  // Pending setTimeouts for the in-flight toke sequence, so cancelBehdadJoint (called
+  // when the music stops mid-sequence) can kill the rest of it instead of letting him
+  // keep puffing/releasing smoke into a now-silent room.
+  var behdadJointSeqTimers = [];
+  function cancelBehdadJoint() {
+    behdadJointSeqTimers.forEach(function (id) { clearTimeout(id); });
+    behdadJointSeqTimers = [];
+    var behdad = document.getElementById("cuddly-behdad");
+    var wrap = document.getElementById("cuddly-behdad-joint-toke");
+    var prop = document.getElementById("cuddly-behdad-joint-prop");
+    var head = document.getElementById("cuddly-behdad-head");
+    if (behdad) behdad.classList.remove("smoking-joint");
+    if (prop) prop.classList.remove("lit");
+    if (wrap) wrap.classList.remove("toking");
+    if (head) head.classList.remove("pleased");
+  }
+  function startBehdadJoint() {
+    var behdad = document.getElementById("cuddly-behdad");
+    var wrap = document.getElementById("cuddly-behdad-joint-toke");
+    var prop = document.getElementById("cuddly-behdad-joint-prop");
+    var head = document.getElementById("cuddly-behdad-head");
+    if (!behdad || !wrap || behdad.classList.contains("smoking-joint")) return;
+    behdad.classList.add("smoking-joint"); // re-entrancy flag only — see the CSS comment on .lit for why
+    if (prop) prop.classList.add("lit");
+    spawnSteamWisps(strip, 1570, 220, 0.28, 1, -1, 1, 0.3); // he's lit it — a first faint curl
+    var puffs = 2 + Math.floor(Math.random() * 2); // 2 or 3 slow tokes
+    var t = 500;
+    for (var i = 0; i < puffs; i++) {
+      (function (first) {
+        behdadJointSeqTimers.push(setTimeout(function () {
+          wrap.classList.remove("toking");
+          void wrap.getBoundingClientRect();
+          wrap.classList.add("toking");
+          behdadJointSeqTimers.push(setTimeout(function () {
+            spawnSteamWisps(strip, 1552, 173, 0.4, -1, -1, 2, 0.55); // released up near his mouth
+            if (first && head) head.classList.add("pleased");
+          }, 850)); // lands during the keyframe's 45%-62% hold at the top
+        }, t));
+      })(i === 0);
+      t += 2100; // ~1.6s toke, then a beat of pause before the next
+    }
+    behdadJointSeqTimers.push(setTimeout(function () {
+      behdad.classList.remove("smoking-joint");
+      if (prop) prop.classList.remove("lit");
+      wrap.classList.remove("toking");
+      if (head) head.classList.remove("pleased");
+      behdadJointSeqTimers = [];
+    }, t + 900)); // settle back to his normal grooving pose
+  }
   var noteFlowTimer = null;
   function updateNoteFlow() {
     var anyPlaying = Object.keys(instrumentSpots).some(function (id) {

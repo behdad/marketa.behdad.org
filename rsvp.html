@@ -931,6 +931,12 @@ footer{margin-top:2.6rem}
 #stage-garden.dusk.g-c1-lit #garden-frontglow-1{opacity:.95; transform:scale(1.9); animation:candle-glow-breathe 4.5s ease-in-out infinite}
 #stage-garden.dusk.g-c2-lit #garden-frontglow-2{opacity:.95; transform:scale(1.9); animation:candle-glow-breathe 3.8s ease-in-out -1.6s infinite}
 @media (prefers-reduced-motion: reduce){#stage-garden.dusk.g-c1-lit #garden-frontglow-1, #stage-garden.dusk.g-c2-lit #garden-frontglow-2{animation:none}}
+/* our kitchen candle — a click-to-toggle (unlike the garden ones' one-time light),
+   same flame/glow treatment, brighter at dusk same as the garden pair */
+#kitchen-candle.lit .candle-flame{opacity:1; animation:candle-flicker 1s ease-in-out infinite}
+#kitchen-candle.lit .candle-glow{opacity:.42}
+#stage-kitchen.dusk #kitchen-candle.lit .candle-glow{opacity:.92; transform:scale(1.75); animation:candle-glow-breathe 4.2s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){#kitchen-candle.lit .candle-flame{animation:none} #stage-kitchen.dusk #kitchen-candle.lit .candle-glow{animation:none}}
 #kitchen-grinder.grinding{animation:kitchen-grind-shake .12s ease-in-out infinite}
 @keyframes kitchen-grind-shake{
   0%,100%{transform:translate(0,0)}
@@ -2262,7 +2268,7 @@ section{margin:1.9rem 0}
 <rect x="60" y="18.5" width="7" height="5" rx="1.2" fill="#8a8578" stroke="#6e6a5e" stroke-width="0.8" transform="rotate(-28 63.5 21)"/>
 <ellipse cx="77" cy="13.5" rx="11" ry="5.2" fill="#1a1a1a" transform="rotate(-28 77 13.5)"/>
 </g>
-<g id="kitchen-waterbottle" class="hunt-hit" tabindex="0" role="button" aria-label="The water bottle" transform="translate(50,0)">
+<g id="kitchen-waterbottle" class="hunt-hit" tabindex="0" role="button" aria-label="The water bottle" transform="translate(25,0)">
 <rect x="120" y="164" width="26" height="70" fill="transparent"/>
 <g id="kitchen-waterbottle-inner">
 <path d="M124 230 L124 196 Q124 186 130 182 L130 172 Q130 168 133 168 Q136 168 136 172 L136 182 Q142 186 142 196 L142 230 Z" fill="#4a7a9e" stroke="#35586e" stroke-width="1.5"/>
@@ -2270,7 +2276,7 @@ section{margin:1.9rem 0}
 </g>
 </g>
 </g>
-<g id="kitchen-canister" class="hunt-hit" tabindex="0" role="button" aria-label="The canister" transform="translate(50,0)">
+<g id="kitchen-canister" class="hunt-hit" tabindex="0" role="button" aria-label="The canister" transform="translate(25,0)">
 <rect x="140" y="190" width="34" height="46" fill="transparent"/>
 <rect x="147" y="204" width="20" height="26" rx="3" fill="#b03040" stroke="#7d1f2c" stroke-width="1.5"/>
 <g id="kitchen-canister-lid">
@@ -2278,13 +2284,25 @@ section{margin:1.9rem 0}
 <circle cx="157" cy="196" r="3" fill="#7d1f2c"/>
 </g>
 </g>
-<g id="kitchen-drinkmate" class="hunt-hit" tabindex="0" role="button" aria-label="The SodaStream" transform="translate(50,0)">
+<g id="kitchen-drinkmate" class="hunt-hit" tabindex="0" role="button" aria-label="The SodaStream" transform="translate(25,0)">
 <rect x="165" y="128" width="45" height="108" fill="transparent"/>
 <rect x="172" y="150" width="24" height="80" rx="11" fill="#b03040" stroke="#7d1f2c" stroke-width="1.5"/>
 <rect x="169" y="142" width="30" height="12" rx="6" fill="#b03040" stroke="#7d1f2c" stroke-width="1.5"/>
 <line x1="179" y1="148" x2="189" y2="148" stroke="#7d1f2c" stroke-width="2.5" stroke-linecap="round"/>
 <rect x="181" y="158" width="6" height="18" fill="#f2ead2"/>
 <rect x="178" y="192" width="12" height="5" rx="2" fill="#f2ead2"/>
+</g>
+<!-- our kitchen candle: same holder/wax/flame proportions and palette as the garden
+     candles, sitting on the counter between the drinkmate cluster and the tamper,
+     under the gong mallet — a toggle (unlike the garden ones' one-time light-and-done),
+     see the click handler for the .lit state and playCandleLightSound(panId). -->
+<g id="kitchen-candle" class="hunt-hit" tabindex="0" role="button" aria-label="The candle">
+<rect x="237" y="198" width="36" height="42" fill="transparent"/>
+<rect x="245" y="208" width="20" height="22" rx="3" fill="#4a5a48" stroke="#36443a" stroke-width="1"/>
+<ellipse cx="255" cy="208" rx="10" ry="3" fill="#e8e0c9"/>
+<line x1="255" y1="206" x2="255" y2="201" stroke="#8a7a58" stroke-width="1.5"/>
+<ellipse class="candle-glow" cx="255" cy="201" rx="19" ry="21" fill="url(#candle-glow-grad)"/>
+<ellipse class="candle-flame" cx="255" cy="198" rx="2" ry="3.5" fill="#f0c46a"/>
 </g>
 <g id="kitchen-tamper" class="hunt-hit" tabindex="0" role="button" aria-label="The tamper" transform="translate(41.5,4)">
 <rect x="240" y="198" width="24" height="34" fill="transparent"/>
@@ -5610,6 +5628,19 @@ document.addEventListener("click", function (e) {
     tamper.addEventListener("click", wobbleTamper);
     tamper.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); wobbleTamper(); }
+    });
+  }
+  var kitchenCandle = document.getElementById("kitchen-candle");
+  if (kitchenCandle) {
+    // a simple toggle (unlike the garden candles' one-time light-and-done) — click to
+    // light with a match-strike sound, click again to blow out silently
+    function toggleKitchenCandle() {
+      var lit = kitchenCandle.classList.toggle("lit");
+      if (lit) playCandleLightSound("kitchen-candle");
+    }
+    kitchenCandle.addEventListener("click", toggleKitchenCandle);
+    kitchenCandle.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleKitchenCandle(); }
     });
   }
   var waterbottle = document.getElementById("kitchen-waterbottle");
@@ -10654,12 +10685,13 @@ function playDryClickSound(panId) {
     setTimeout(function () { ctx.close(); }, 300);
   } catch (e) {}
 }
-function playCandleLightSound() {
+function playCandleLightSound(panId) {
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     var ctx = new Ctx();
     var t = ctx.currentTime;
+    panId = panId || "garden-candle-1";
     var strikeDur = 0.16;
     var strikeBuffer = ctx.createBuffer(1, ctx.sampleRate * strikeDur, ctx.sampleRate);
     var strikeData = strikeBuffer.getChannelData(0);
@@ -10680,7 +10712,7 @@ function playCandleLightSound() {
     strikeGain.gain.exponentialRampToValueAtTime(0.0001, t + strikeDur);
     strike.connect(strikeFilter);
     strikeFilter.connect(strikeGain);
-    strikeGain.connect(pannedOut(ctx, "garden-candle-1"));
+    strikeGain.connect(pannedOut(ctx, panId));
     strike.start(t);
     strike.stop(t + strikeDur + 0.02);
 
@@ -10694,7 +10726,7 @@ function playCandleLightSound() {
     flareGain.gain.exponentialRampToValueAtTime(0.18, flareStart + 0.015);
     flareGain.gain.exponentialRampToValueAtTime(0.0001, flareStart + 0.14);
     flareOsc.connect(flareGain);
-    flareGain.connect(pannedOut(ctx, "garden-candle-1"));
+    flareGain.connect(pannedOut(ctx, panId));
     flareOsc.start(flareStart);
     flareOsc.stop(flareStart + 0.16);
 
@@ -10715,7 +10747,7 @@ function playCandleLightSound() {
     gain.gain.exponentialRampToValueAtTime(0.0001, flareStart + 0.32);
     noise.connect(filter);
     filter.connect(gain);
-    gain.connect(pannedOut(ctx, "garden-candle-1"));
+    gain.connect(pannedOut(ctx, panId));
     noise.start(flareStart);
     noise.stop(flareStart + 0.35);
     setTimeout(function () { ctx.close(); }, 700);

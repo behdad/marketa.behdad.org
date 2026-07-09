@@ -6105,6 +6105,7 @@ document.addEventListener("click", function (e) {
     setTimeout(function () {
       playPanCrashSound(targetId);
       target.classList.add("broken");
+      if (targetId === "kitchen-waterbottle" && window.__leakWaterBottle) window.__leakWaterBottle();
     }, panFallReducedMotion() ? 0 : 650);
   }
   // Shared by clinkPans and the gong's strikeGong (below) — either one, clicked enough,
@@ -6144,6 +6145,7 @@ document.addEventListener("click", function (e) {
       var t = document.getElementById(id);
       if (t) t.classList.remove("broken");
     });
+    if (window.resetWaterBottle) window.resetWaterBottle();
   };
   var pans = document.getElementById("kitchen-pans");
   if (pans) {
@@ -6289,6 +6291,18 @@ document.addEventListener("click", function (e) {
     waterbottle.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); clinkWaterBottle(); }
     });
+    // Called once, right as the fallen pan lands on it (see fallenPanTarget) — drains
+    // whatever was left over a couple seconds rather than snapping straight to empty.
+    window.__leakWaterBottle = function () {
+      waterBottleLeft = 0;
+      if (!waterBottleLiquid) return;
+      waterBottleLiquid.style.transition = panFallReducedMotion() ? "none" : "transform 2.8s ease-in";
+      waterBottleLiquid.style.transform = "scaleY(0)";
+    };
+    window.resetWaterBottle = function () {
+      waterBottleLeft = 4;
+      if (waterBottleLiquid) { waterBottleLiquid.style.transition = ""; waterBottleLiquid.style.transform = ""; }
+    };
   }
   var kettle = document.getElementById("kitchen-kettle");
   if (kettle) {

@@ -3503,34 +3503,30 @@ section{margin:1.9rem 0}
 <rect x="0" y="44" width="170" height="14" fill="#b8b4ac"/>
 <g id="cuddly-passthrough">
 <rect x="14" y="58" width="130" height="146" fill="#f2e8d8" stroke="#8f5a42" stroke-width="3"/>
-<!-- a dim, mirrored glimpse of the kitchen through the pass-through, in silhouette:
-     dark hanging pans + espresso machine backlit by a faint far-wall window. Sits behind
-     the plates + cabinet doors (drawn after), so it reads in the open lower band by day
-     and is revealed above as the doors open. Clipped to the opening's inner face. -->
+<!-- the lower band of the opening is a counter-height pass-through window into the kitchen:
+     a dim, mirrored glimpse of the kitchen counter + espresso-machine silhouette, backlit
+     by a faint far window (no hanging pans — those are too high to see through here). The
+     cabinet above keeps its own solid cream back with the plates/doors. Clipped to the
+     lower opening; a wooden sill divides the cabinet from the window. -->
 <defs>
 <linearGradient id="cuddly-pt-depth" x1="0" y1="0" x2="0" y2="1">
 <stop offset="0" stop-color="#725841"/>
 <stop offset="0.55" stop-color="#906f52"/>
 <stop offset="1" stop-color="#634c37"/>
 </linearGradient>
-<clipPath id="cuddly-pt-clip"><rect x="16" y="60" width="126" height="142"/></clipPath>
+<clipPath id="cuddly-pt-clip"><rect x="16" y="118" width="126" height="84"/></clipPath>
 </defs>
 <g clip-path="url(#cuddly-pt-clip)" pointer-events="none" aria-hidden="true">
-<rect x="16" y="60" width="126" height="142" fill="url(#cuddly-pt-depth)"/>
-<rect x="99" y="72" width="34" height="44" fill="#9c8a6e" opacity="0.5"/>
-<line x1="116" y1="72" x2="116" y2="116" stroke="#7a6a52" stroke-width="1" opacity="0.5"/>
-<line x1="99" y1="94" x2="133" y2="94" stroke="#7a6a52" stroke-width="1" opacity="0.5"/>
-<line x1="22" y1="70" x2="126" y2="70" stroke="#33281f" stroke-width="1.6"/>
-<g fill="#241c15">
-<rect x="112" y="70" width="3.5" height="13"/><circle cx="113.7" cy="92" r="8.5"/>
-<rect x="84" y="70" width="3" height="15"/><circle cx="85.5" cy="96" r="6.5"/>
-<rect x="52" y="70" width="3.5" height="13"/><circle cx="53.7" cy="92" r="9.5"/>
+<rect x="16" y="118" width="126" height="84" fill="url(#cuddly-pt-depth)"/>
+<rect x="98" y="124" width="34" height="28" fill="#a08c6e" opacity="0.5"/>
+<circle cx="48" cy="111" r="14" fill="#2b2118"/>
+<rect x="16" y="171" width="126" height="31" fill="#463625"/>
+<path d="M40 171 L40 144 Q40 137 48 137 L74 137 Q82 137 82 144 L82 171 Z" fill="#2b2118"/>
+<rect x="54" y="171" width="13" height="8" fill="#2b2118"/>
+<circle cx="60" cy="153" r="4" fill="#4a3a29"/>
+<rect x="98" y="157" width="7" height="14" rx="2" fill="#2b2118"/>
 </g>
-<rect x="16" y="169" width="126" height="33" fill="#463625"/>
-<path d="M40 169 L40 143 Q40 135 48 135 L74 135 Q82 135 82 143 L82 169 Z" fill="#2b2118"/>
-<rect x="54" y="169" width="13" height="9" fill="#241c15"/>
-<circle cx="60" cy="151" r="4" fill="#33281f"/>
-</g>
+<rect x="15" y="115" width="128" height="4" fill="#8f5a42"/>
 <g transform="translate(3,0)">
 <g id="cuddly-passthrough-plates-1" class="hunt-hit cuddly-passthrough-plates" tabindex="0" role="button" aria-label="Plates">
 <rect x="26" y="87" width="42" height="22" fill="transparent"/>
@@ -5510,19 +5506,19 @@ function setLang(l) {
 // Shared by eggBubble's initial placement and hoverTooltip's live-follow loop (for an
 // anchor that keeps moving under its own animation, e.g. Fishu's drift, a one-time
 // position read goes stale mid-hover) — same clamped left/top math either way.
-function positionEggBubble(b, anchor, placement, yOffset) {
+function positionEggBubble(b, anchor, placement, yOffset, xOffset) {
   var r = anchor.getBoundingClientRect();
   var bW = b.offsetWidth || 220;
   var bH = b.offsetHeight || 60;
-  var left, top;
+  var left, top, xo = xOffset || 0; // xOffset recenters over an anchor whose bbox is lopsided (e.g. the portafilter's long handle)
   if (placement === "left") {
     left = Math.max(8, r.left - bW - 10);
     top = Math.max(8, Math.min(window.innerHeight - bH - 8, r.top));
   } else if (placement === "top") {
-    left = Math.max(8, Math.min(window.innerWidth - bW - 8, r.left + r.width / 2 - bW / 2));
+    left = Math.max(8, Math.min(window.innerWidth - bW - 8, r.left + r.width / 2 - bW / 2 + xo));
     top = Math.max(8, r.top - 8 - bH);
   } else {
-    left = Math.max(8, Math.min(window.innerWidth - bW - 8, r.left + r.width / 2 - bW / 2));
+    left = Math.max(8, Math.min(window.innerWidth - bW - 8, r.left + r.width / 2 - bW / 2 + xo));
     if (r.bottom + 8 + bH <= window.innerHeight) {
       top = r.bottom + 8;
     } else if (r.top - 8 - bH >= 0) {
@@ -5534,14 +5530,14 @@ function positionEggBubble(b, anchor, placement, yOffset) {
   b.style.left = left + "px";
   b.style.top = (top + (yOffset || 0)) + "px";
 }
-function eggBubble(anchor, text, placement, yOffset) {
+function eggBubble(anchor, text, placement, yOffset, xOffset) {
   var old = document.querySelector(".egg-bubble");
   if (old) old.remove();
   var b = document.createElement("div");
   b.className = "egg-bubble";
   b.innerHTML = text;
   document.body.appendChild(b);
-  positionEggBubble(b, anchor, placement, yOffset);
+  positionEggBubble(b, anchor, placement, yOffset, xOffset);
   b._anchor = anchor;
   requestAnimationFrame(function () { b.classList.add("show"); });
   clearTimeout(b._t);
@@ -5562,12 +5558,12 @@ function dismissEggBubble(b) {
 // mouseenter — some anchors (Fishu's ambient drift) keep moving under their own CSS
 // animation for as long as the tooltip stays open, and a one-time position read goes
 // visibly stale mid-hover otherwise.
-function hoverTooltip(el, html, placement, yOffset) {
+function hoverTooltip(el, html, placement, yOffset, xOffset) {
   if (!el) return;
   var bubble = null, followRaf = null, showTimer = null;
   function follow() {
     if (!bubble) return;
-    positionEggBubble(bubble, el, placement, yOffset);
+    positionEggBubble(bubble, el, placement, yOffset, xOffset);
     followRaf = requestAnimationFrame(follow);
   }
   el.addEventListener("mouseenter", function () {
@@ -5575,7 +5571,7 @@ function hoverTooltip(el, html, placement, yOffset) {
     // a short dwell before showing, so tooltips don't pop the instant the cursor grazes past
     showTimer = setTimeout(function () {
       showTimer = null;
-      bubble = eggBubble(el, html, placement, yOffset);
+      bubble = eggBubble(el, html, placement, yOffset, xOffset);
       followRaf = requestAnimationFrame(follow);
     }, 450);
   });
@@ -15122,8 +15118,8 @@ function spawnDustMote(container) {
   hoverTooltip(grinder, "<em>El Maz</em>, the grinder", "top");
   hoverTooltip(document.getElementById("kitchen-tamper"), "The tamper", "top");
   hoverTooltip(document.getElementById("kitchen-knockbox"), "The knock box", "top");
-  hoverTooltip(document.getElementById("kitchen-portafilter"), "The portafilter", "top");
-  hoverTooltip(document.getElementById("kitchen-drinkmate"), "SodaStream", "top");
+  hoverTooltip(document.getElementById("kitchen-portafilter"), "Portafilter", "top", 18, -18);
+  hoverTooltip(document.getElementById("kitchen-drinkmate"), "SodaStream", "top", 20);
   var tamper = document.getElementById("kitchen-tamper");
   var tamperPos = document.getElementById("kitchen-tamper-pos"); // the wrapper that actually gets .invite-pulse now — see the CSS comment on it
   var knockbox = document.getElementById("kitchen-knockbox");

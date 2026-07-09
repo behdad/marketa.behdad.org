@@ -6764,6 +6764,7 @@ document.addEventListener("click", function (e) {
     function endLaptopUpdate() {
       clearLaptopTimers();
       stopLaptopSaver();
+      stopCallAmbient();
       laptop.classList.remove("updating", "progress", "rebooting", "sweet", "calling", "connecting", "connected");
     }
     // The gag: an open Mac decides to install a software update and reboot — now framed
@@ -6825,6 +6826,7 @@ document.addEventListener("click", function (e) {
         laptop.classList.remove("calling", "connecting");
         laptop.classList.add("connected");
         playCallLaughSound();
+        startCallAmbient();
         return;
       }
       playPhoneRingSound();
@@ -6838,10 +6840,12 @@ document.addEventListener("click", function (e) {
         laptop.classList.add("connected");
         playBootChimeSound();
         playCallLaughSound(); // the couple giggling across the ocean
+        startCallAmbient(); // and the ongoing static/wind/giggling bed while it lasts
       }, 3400));
     }
     function endCall() {
       clearLaptopTimers();
+      stopCallAmbient();
       laptop.classList.remove("calling", "connecting", "connected");
       if (laptop.classList.contains("open")) scheduleLaptopSaver(); // back to idle
     }
@@ -12412,6 +12416,27 @@ function playPhoneRingSound(panId) {
     setTimeout(function () { ctx.close(); }, 1300);
   } catch (e) {}
 }
+// Shared by playCallLaughSound's connect moment and the ongoing ambient loop below:
+// two happy "voices" as quick bouncing syllables at different pitches.
+function spawnGiggleVoices(ctx, master, t0, loud) {
+  [{ base: 330, delay: 0.12 }, { base: 430, delay: 0.34 }].forEach(function (v) {
+    var syll = 5 + Math.floor(Math.random() * 2), tt = t0 + v.delay;
+    for (var s = 0; s < syll; s++) {
+      var osc = ctx.createOscillator(); osc.type = "triangle";
+      var f = v.base * (1 + Math.random() * 0.15);
+      osc.frequency.setValueAtTime(f * 0.9, tt);
+      osc.frequency.linearRampToValueAtTime(f * 1.28, tt + 0.04);
+      osc.frequency.linearRampToValueAtTime(f * 0.95, tt + 0.09);
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, tt);
+      g.gain.exponentialRampToValueAtTime(loud ? 0.12 : 0.07, tt + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.11);
+      osc.connect(g); g.connect(master);
+      osc.start(tt); osc.stop(tt + 0.13);
+      tt += 0.12 + Math.random() * 0.06;
+    }
+  });
+}
 // When the Prague call connects: two happy giggling "voices" over a soft crackly
 // video-call noise bed — warm and playful, then the context closes itself.
 function playCallLaughSound() {
@@ -12434,26 +12459,65 @@ function playCallLaughSound() {
     ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.0);
     noise.connect(nf); nf.connect(ng); ng.connect(master);
     noise.start(t0); noise.stop(t0 + 2.0);
-    // two giggling voices — quick bouncing syllables at different pitches
-    [{ base: 330, delay: 0.12 }, { base: 430, delay: 0.34 }].forEach(function (v) {
-      var syll = 5 + Math.floor(Math.random() * 2), tt = t0 + v.delay;
-      for (var s = 0; s < syll; s++) {
-        var osc = ctx.createOscillator(); osc.type = "triangle";
-        var f = v.base * (1 + Math.random() * 0.15);
-        osc.frequency.setValueAtTime(f * 0.9, tt);
-        osc.frequency.linearRampToValueAtTime(f * 1.28, tt + 0.04);
-        osc.frequency.linearRampToValueAtTime(f * 0.95, tt + 0.09);
-        var g = ctx.createGain();
-        g.gain.setValueAtTime(0.0001, tt);
-        g.gain.exponentialRampToValueAtTime(0.12, tt + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.11);
-        osc.connect(g); g.connect(master);
-        osc.start(tt); osc.stop(tt + 0.13);
-        tt += 0.12 + Math.random() * 0.06;
-      }
-    });
+    spawnGiggleVoices(ctx, master, t0, true);
     setTimeout(function () { ctx.close(); }, 2400);
   } catch (e) {}
+}
+// The ongoing bed for as long as the call stays connected: a quiet video-call static
+// hiss plus a slow gusting wind (the Prague end is outside, in the garden), with an
+// occasional giggle burst reusing spawnGiggleVoices above. One persistent AudioContext,
+// kept alive (unlike every other sound function here, which self-closes on a timer)
+// until stopCallAmbient tears it down — started alongside playCallLaughSound at
+// "connected" in startCall, stopped from endCall/endLaptopUpdate so it never outlives
+// the call, however it ends.
+var callAmbientCtx = null, callAmbientNodes = null, callGiggleTimer = null;
+function startCallAmbient() {
+  stopCallAmbient(); // never run two beds at once
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var master = ctx.createGain(); master.gain.value = 0.5; master.connect(pannedOut(ctx, "office-laptop"));
+
+    var slen = Math.floor(ctx.sampleRate * 2);
+    var sbuf = ctx.createBuffer(1, slen, ctx.sampleRate), sd = sbuf.getChannelData(0);
+    for (var i = 0; i < slen; i++) sd[i] = Math.random() * 2 - 1;
+    var staticSrc = ctx.createBufferSource(); staticSrc.buffer = sbuf; staticSrc.loop = true;
+    var staticFilter = ctx.createBiquadFilter(); staticFilter.type = "bandpass"; staticFilter.frequency.value = 2200; staticFilter.Q.value = 0.5;
+    var staticGain = ctx.createGain(); staticGain.gain.value = 0.018;
+    staticSrc.connect(staticFilter); staticFilter.connect(staticGain); staticGain.connect(master);
+    staticSrc.start();
+
+    var wlen = Math.floor(ctx.sampleRate * 4);
+    var wbuf = ctx.createBuffer(1, wlen, ctx.sampleRate), wd = wbuf.getChannelData(0);
+    for (var j = 0; j < wlen; j++) wd[j] = Math.random() * 2 - 1;
+    var windSrc = ctx.createBufferSource(); windSrc.buffer = wbuf; windSrc.loop = true;
+    var windFilter = ctx.createBiquadFilter(); windFilter.type = "lowpass"; windFilter.frequency.value = 450;
+    var windGain = ctx.createGain(); windGain.gain.value = 0.03;
+    windSrc.connect(windFilter); windFilter.connect(windGain); windGain.connect(master);
+    windSrc.start();
+    // a slow LFO gusts the wind gain up and down instead of a flat hiss
+    var windLfo = ctx.createOscillator(); windLfo.frequency.value = 0.12;
+    var windLfoGain = ctx.createGain(); windLfoGain.gain.value = 0.013;
+    windLfo.connect(windLfoGain); windLfoGain.connect(windGain.gain);
+    windLfo.start();
+
+    callAmbientCtx = ctx;
+    callAmbientNodes = [staticSrc, windSrc, windLfo];
+    (function scheduleGiggle() {
+      callGiggleTimer = setTimeout(function () {
+        if (callAmbientCtx !== ctx) return; // torn down or superseded — stop rescheduling
+        spawnGiggleVoices(ctx, master, ctx.currentTime, false);
+        scheduleGiggle();
+      }, 4000 + Math.random() * 5000);
+    })();
+  } catch (e) {}
+}
+function stopCallAmbient() {
+  clearTimeout(callGiggleTimer);
+  if (callAmbientNodes) callAmbientNodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
+  if (callAmbientCtx) { try { callAmbientCtx.close(); } catch (e) {} }
+  callAmbientCtx = null; callAmbientNodes = null;
 }
 // The monitor's power-on jingle: a low CRT swell under a soft rising arpeggio,
 // like a friendly Linux desktop finishing its boot.

@@ -4024,6 +4024,14 @@ section{margin:1.9rem 0}
 <polygon points="680,96 680,138 588,340 520,340" fill="#f8e3a0" opacity="0.09"/>
 </g>
 <rect x="0" y="0" width="680" height="340" fill="#e8935a" opacity="0.1" pointer-events="none"/>
+<!-- joint smoke: an accumulating haze (denser toward the ceiling) whose opacity JS
+     drives up with each toke and lets decay slowly back to clear (bumpCuddlySmoke) -->
+<linearGradient id="cuddly-smoke-grad" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#d6d9d4" stop-opacity="1"/>
+<stop offset="0.55" stop-color="#c9ccc7" stop-opacity="0.85"/>
+<stop offset="1" stop-color="#bcbfba" stop-opacity="0.5"/>
+</linearGradient>
+<rect id="cuddly-smoke-haze" x="0" y="0" width="680" height="340" fill="url(#cuddly-smoke-grad)" opacity="0" pointer-events="none" style="transition:opacity 1.3s ease"/>
 <rect id="cuddly-dusk" x="0" y="0" width="680" height="340" fill="#141830" opacity="0" pointer-events="none"/>
 <g id="cuddly-rainfx" pointer-events="none" aria-hidden="true"></g>
 <!-- Wall-mounted screen showing a virtual fireplace, centred on the wall above the
@@ -16462,6 +16470,34 @@ function spawnDustMote(container) {
   // when the music stops mid-sequence) can kill the rest of it instead of letting him
   // keep puffing/releasing smoke into a now-silent room.
   var behdadJointSeqTimers = [];
+  // Joint smoke haze: level rises with each toke (bumpCuddlySmoke) and decays slowly
+  // back to clear on a single self-stopping timer chain (no perpetual/background-tab
+  // spawner — just one rect's opacity). Filling the room takes a few light-ups.
+  var cuddlySmokeLevel = 0, cuddlySmokeDecayTimer = null;
+  var CUDDLY_SMOKE_MAX_OPACITY = 0.78;
+  function renderCuddlySmoke() {
+    var haze = document.getElementById("cuddly-smoke-haze");
+    if (haze) haze.style.opacity = (cuddlySmokeLevel * CUDDLY_SMOKE_MAX_OPACITY).toFixed(3);
+  }
+  function decayCuddlySmoke() {
+    cuddlySmokeDecayTimer = setTimeout(function () {
+      cuddlySmokeLevel = Math.max(0, cuddlySmokeLevel - 0.05);
+      renderCuddlySmoke();
+      if (cuddlySmokeLevel > 0.001) decayCuddlySmoke();
+      else { cuddlySmokeLevel = 0; cuddlySmokeDecayTimer = null; }
+    }, 3200); // slow lift: ~0.05 every 3.2s → a full room takes ~a minute to clear
+  }
+  function bumpCuddlySmoke(amount) {
+    cuddlySmokeLevel = Math.min(1, cuddlySmokeLevel + amount);
+    renderCuddlySmoke();
+    if (!cuddlySmokeDecayTimer) decayCuddlySmoke();
+  }
+  function clearCuddlySmoke() {
+    if (cuddlySmokeDecayTimer) { clearTimeout(cuddlySmokeDecayTimer); cuddlySmokeDecayTimer = null; }
+    cuddlySmokeLevel = 0;
+    renderCuddlySmoke();
+  }
+  window.__clearCuddlySmoke = clearCuddlySmoke; // reset hook
   function cancelBehdadJoint() {
     behdadJointSeqTimers.forEach(function (id) { clearTimeout(id); });
     behdadJointSeqTimers = [];
@@ -16493,6 +16529,8 @@ function spawnDustMote(container) {
           wrap.classList.add("toking");
           behdadJointSeqTimers.push(setTimeout(function () {
             spawnSteamWisps(strip, 1568, 177, 0.4, 1, -1, 2, 0.55); // released up near the ember at the toke's peak
+            bumpCuddlySmoke(0.16); // each puff thickens the room's haze a little
+
             if (first && head) head.classList.add("pleased");
             // she's right next to him — the first release always gets her, same
             // .coughing/playCoughSound reaction as the balcony-smoker bleed-through
@@ -16540,12 +16578,11 @@ function spawnDustMote(container) {
       }
     }, 25000 + Math.random() * 20000);
   }
-  // Triple-click Behdad to skip the wait and light up right now, instead of hoping a
-  // roll lands — single/double click on him are already leanBehdad/strokeArm (see the
-  // earlier IIFE), so triple is free. Still gated on music actually playing (this is a
-  // "while listening" gag, not an on-demand one) and the per-song cap, and folds into
-  // the same count/reschedule bookkeeping scheduleBehdadJointRoll uses so a manual
-  // light-up counts toward the cap same as a rolled one.
+  // Triple-click Behdad to light up on demand — single/double click on him are already
+  // leanBehdad/strokeArm (see the earlier IIFE), so triple is free. Gated only on music
+  // actually playing (this is a "while listening" gag). Unlike the automatic rolls, the
+  // manual triple-click ignores the per-song cap, so you can always make him smoke again;
+  // it still feeds the count so the auto-roll scheduler stays capped as before.
   var cuddlyBehdadForJoint = document.getElementById("cuddly-behdad");
   if (cuddlyBehdadForJoint) {
     cuddlyBehdadForJoint.addEventListener("click", function (e) {
@@ -16554,7 +16591,7 @@ function spawnDustMote(container) {
         var audio = document.getElementById(instrumentSpots[id].audioId);
         return audio && !audio.paused;
       });
-      if (!anyPlaying || behdadJointCount >= BEHDAD_JOINT_MAX_PER_SONG) return;
+      if (!anyPlaying) return;
       if (behdadJointTimer) { clearTimeout(behdadJointTimer); behdadJointTimer = null; }
       behdadJointCount++;
       startBehdadJoint();
@@ -16781,6 +16818,7 @@ function spawnDustMote(container) {
 
   function resetHunt() {
     window.__pragueCalled = false;
+    clearCuddlySmoke(); // clear any lingering joint haze
     if (window.__stowCat) window.__stowCat(); // cat back in the chest, wherever it had wandered
     kitchenPowered = false;
     kitchenWarmedUp = false;

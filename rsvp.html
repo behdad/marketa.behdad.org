@@ -1077,9 +1077,11 @@ footer{margin-top:2.6rem}
    been pulled, see .spent) shown as a small filled ellipse nested inside the rim —
    #kitchen-portafilter-grounds itself only ever toggles opacity/fill via these two
    classes, never removed from the DOM, so no JS class-removal bookkeeping needed */
-#kitchen-portafilter-grounds{opacity:0; transition:opacity .25s ease}
+#kitchen-portafilter-grounds{opacity:0; transition:opacity .25s ease, transform .3s ease; transform-box:fill-box; transform-origin:center bottom}
 #kitchen-portafilter.has-grounds #kitchen-portafilter-grounds,
 #kitchen-portafilter.spent #kitchen-portafilter-grounds{opacity:1}
+/* fresh grind mounds above the rim; the tamp (.grounds-flat) presses it flat */
+#kitchen-portafilter.has-grounds:not(.grounds-flat) #kitchen-portafilter-grounds{transform:scaleY(2)}
 #kitchen-portafilter.spent #kitchen-portafilter-grounds{fill:#3d2818}
 /* the portafilter physically travels between the grouphead (its drawn rest position,
    translate(0,0)), the grinder spout, under the tamper, and the knockbox opening — a dedicated wrapper
@@ -15392,7 +15394,7 @@ function spawnDustMote(container) {
         grinderBeansLeft--;
         hideNextGrinderBean();
         if (grinder) { grinder.classList.remove("grinding"); grinder.classList.add("done"); }
-        if (portafilter) portafilter.classList.add("has-grounds");
+        if (portafilter) { portafilter.classList.remove("grounds-flat", "spent"); portafilter.classList.add("has-grounds"); }
         setCaption("kitchen_need_tamp");
         updateKitchenInvite();
       }, GRIND_MS);
@@ -15410,6 +15412,10 @@ function spawnDustMote(container) {
     if (tamperPos) tamperPos.classList.remove("invite-pulse");
     flyPortafilterTo("tamper", function () {
       if (window.__wobbleTamper) window.__wobbleTamper();
+      // press the fresh mound flat, synced to the tamper's down-stroke
+      setTimeout(function () {
+        if (portafilter) portafilter.classList.add("grounds-flat");
+      }, 200);
       setTimeout(function () {
         flyPortafilterTo("grouphead", function () {
           setCaption("kitchen_brew");
@@ -15465,7 +15471,7 @@ function spawnDustMote(container) {
       }
       setTimeout(function () {
         if (portafilterFly) portafilterFly.classList.remove("knocking");
-        if (portafilter) portafilter.classList.remove("has-grounds", "spent");
+        if (portafilter) portafilter.classList.remove("has-grounds", "spent", "grounds-flat");
         portafilterSpent = false;
         kitchenGround = false;
         tamped = false;
@@ -16736,7 +16742,7 @@ function spawnDustMote(container) {
       if (needle) needle.classList.add("zero");
     });
     if (grinder) grinder.classList.remove("grinding", "done");
-    if (portafilter) portafilter.classList.remove("brewing", "done", "has-grounds", "spent");
+    if (portafilter) portafilter.classList.remove("brewing", "done", "has-grounds", "spent", "grounds-flat");
     if (portafilterFly) portafilterFly.classList.remove("flying-grouphead-to-grinder", "flying-grinder-to-grouphead",
       "flying-grinder-to-tamper", "flying-tamper-to-grouphead",
       "flying-grouphead-to-knockbox", "flying-knockbox-to-grouphead", "at-grinder", "at-tamper", "at-knockbox", "knocking");

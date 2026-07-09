@@ -105,17 +105,22 @@ section{margin:1.9rem 0}
   position:absolute; top:1.4rem; right:.4rem; z-index:2; font:inherit; font-size:1rem; line-height:1;
   width:1.9rem; height:1.9rem; padding:0; border-radius:50%; border:1.5px solid rgba(255,253,248,.7);
   background:rgba(69,58,49,.55); color:#fffdf8; cursor:pointer; opacity:.7; transition:opacity .2s ease, background .2s ease;
+  display:flex; align-items:center; justify-content:center;
 }
 .scene-fullscreen-btn:hover, .scene-fullscreen-btn:focus-visible{opacity:1; background:rgba(69,58,49,.82)}
-/* the loft card's own mute toggle for the guitar audio, lower-right corner (the
+/* the loft card's own volume control for the guitar audio, lower-right corner (the
    fullscreen button owns the upper-right) -- opacity 0 until music has actually
-   played once, so it doesn't clutter the card before there's any sound to mute */
+   played once, so it doesn't clutter the card before there's any sound to adjust.
+   Clicking cycles low -> medium -> high -> mute -> low..., icon showing 1/2/3 waves
+   or a crossed-out speaker for mute (see the click handler near guitar-audio). */
 .scene-volume-btn{position:absolute; top:auto; bottom:.6rem; right:.4rem; opacity:0; pointer-events:none; transition:opacity .2s ease, background .2s ease}
 .scene-volume-btn.shown{opacity:.7; pointer-events:auto}
 .scene-volume-btn.shown:hover, .scene-volume-btn.shown:focus-visible{opacity:1; background:rgba(69,58,49,.82)}
 .scene-volume-btn svg{display:block}
-.scene-volume-btn .vol-mute-x{display:none}
-.scene-volume-btn.muted .vol-wave-1, .scene-volume-btn.muted .vol-wave-2{display:none}
+.scene-volume-btn .vol-wave-1, .scene-volume-btn .vol-wave-2, .scene-volume-btn .vol-wave-3, .scene-volume-btn .vol-mute-x{display:none}
+.scene-volume-btn.vol-low .vol-wave-1{display:block}
+.scene-volume-btn.vol-medium .vol-wave-1, .scene-volume-btn.vol-medium .vol-wave-2{display:block}
+.scene-volume-btn.vol-high .vol-wave-1, .scene-volume-btn.vol-high .vol-wave-2, .scene-volume-btn.vol-high .vol-wave-3{display:block}
 .scene-volume-btn.muted .vol-mute-x{display:block}
 .parties.is-fullscreen, .parties:fullscreen, .parties:-webkit-full-screen{
   /* position:fixed detaches this from normal flow (escaping main's max-width:980px)
@@ -1124,12 +1129,13 @@ body.completion-trip{animation:completion-spin 7s linear}
 </g>
 </svg>
     <button type="button" id="edmonton-fullscreen-btn" class="scene-fullscreen-btn" data-section="parties" aria-label="Enter fullscreen">⛶</button>
-    <button type="button" id="loft-volume-btn" class="scene-fullscreen-btn scene-volume-btn" aria-label="Mute music">
-      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polygon points="3,9 3,15 8,15 13,20 13,4 8,9" fill="currentColor" stroke="none"/>
-        <path class="vol-wave-1" d="M16 8a5 5 0 0 1 0 8"/>
-        <path class="vol-wave-2" d="M19 5a9 9 0 0 1 0 14"/>
-        <path class="vol-mute-x" d="M16 9l5 6M21 9l-5 6"/>
+    <button type="button" id="loft-volume-btn" class="scene-fullscreen-btn scene-volume-btn" aria-label="Volume">
+      <svg viewBox="0 0 26 24" width="14" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="11,5 6,9 2,9 2,15 6,15 11,19" fill="currentColor" stroke="none"/>
+        <path class="vol-wave-1" d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        <path class="vol-wave-2" d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+        <path class="vol-wave-3" d="M20.49 3.51a12 12 0 0 1 0 16.97"/>
+        <path class="vol-mute-x" d="M15 9l6 6M21 9l-6 6"/>
       </svg>
     </button>
     </div>
@@ -1439,7 +1445,9 @@ var T = {
     game_title: "Save the Dates",
     fullscreen_enter: "Enter fullscreen",
     fullscreen_exit: "Exit fullscreen",
-    mute_music: "Mute music",
+    vol_low: "Volume: low",
+    vol_medium: "Volume: medium",
+    vol_high: "Volume: high",
     unmute_music: "Unmute music",
     ed_city: "Edmonton", ed_date: "May 1, 2027",
     ed_desc: "The official wedding: ceremony,<br class=\"brk-sm\"> dinner, concert,<br class=\"brk-lg\"> dancing, afterparty.<br class=\"brk-sm\"> <em class=\"quip\" id=\"rain-snow-toggle\" tabindex=\"0\" role=\"button\">Rain or snow.</em>",
@@ -1540,7 +1548,9 @@ var T = {
     game_title: "Zapište si data do diáře",
     fullscreen_enter: "Celá obrazovka",
     fullscreen_exit: "Ukončit celou obrazovku",
-    mute_music: "Ztlumit hudbu",
+    vol_low: "Hlasitost: nízká",
+    vol_medium: "Hlasitost: střední",
+    vol_high: "Hlasitost: vysoká",
     unmute_music: "Zapnout zvuk",
     ed_city: "Edmonton", ed_date: "1. května 2027",
     ed_desc: "Oficiální svatba: obřad,<br class=\"brk-sm\"> večeře, koncert,<br class=\"brk-lg\"> tanec a afterparty.<br class=\"brk-sm\"> <em class=\"quip\" id=\"rain-snow-toggle\" tabindex=\"0\" role=\"button\">Nemusí pršet, jen když kape.</em>",
@@ -3062,19 +3072,34 @@ function sparkShoes(svg, shoesId, cx, cy) {
   var btn = document.getElementById("loft-volume-btn");
   if (!audio || !btn) return;
   function lang() { return T[document.documentElement.lang] ? document.documentElement.lang : "en"; }
-  function refresh() {
-    btn.classList.toggle("muted", audio.muted);
-    btn.setAttribute("aria-label", T[lang()][audio.muted ? "unmute_music" : "mute_music"]);
+  // click cycles low -> medium -> high -> mute -> low...; starts at "high" since
+  // that's the audio element's own default (unmuted, volume 1)
+  var LEVELS = ["low", "medium", "high", "mute"];
+  var VOLUMES = { low: 0.33, medium: 0.66, high: 1 };
+  var levelIndex = 2;
+  function apply() {
+    var level = LEVELS[levelIndex];
+    btn.classList.remove("vol-low", "vol-medium", "vol-high", "muted");
+    if (level === "mute") {
+      audio.muted = true;
+      btn.classList.add("muted");
+      btn.setAttribute("aria-label", T[lang()].unmute_music);
+    } else {
+      audio.muted = false;
+      audio.volume = VOLUMES[level];
+      btn.classList.add("vol-" + level);
+      btn.setAttribute("aria-label", T[lang()]["vol_" + level]);
+    }
   }
-  // hidden until the guitar's actually played once -- nothing to mute before then
+  // hidden until the guitar's actually played once -- nothing to adjust before then
   audio.addEventListener("play", function () { btn.classList.add("shown"); }, { once: true });
   btn.addEventListener("click", function (e) {
     e.stopPropagation();
-    audio.muted = !audio.muted;
-    refresh();
+    levelIndex = (levelIndex + 1) % LEVELS.length;
+    apply();
   });
-  refresh();
-  window.refreshVolumeBtnLabel = refresh;
+  apply();
+  window.refreshVolumeBtnLabel = apply;
 })();
 (function () {
   var KEY = "visitCount";

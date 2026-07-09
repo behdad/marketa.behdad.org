@@ -994,7 +994,8 @@ footer{margin-top:2.6rem}
 #kitchen-candle.lit .candle-flame{opacity:1; animation:candle-flicker 1s ease-in-out infinite}
 #kitchen-candle.lit .candle-glow{opacity:.42}
 #stage-kitchen.dusk #kitchen-candle.lit .candle-glow{opacity:.92; transform:scale(1.75); animation:candle-glow-breathe 4.2s ease-in-out infinite}
-@media (prefers-reduced-motion: reduce){#kitchen-candle.lit .candle-flame{animation:none} #stage-kitchen.dusk #kitchen-candle.lit .candle-glow{animation:none}}
+#stage-kitchen.dusk.k-candle-lit #kitchen-frontglow{opacity:.95; transform:scale(1.9); animation:candle-glow-breathe 4.2s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){#kitchen-candle.lit .candle-flame{animation:none} #stage-kitchen.dusk #kitchen-candle.lit .candle-glow{animation:none} #stage-kitchen.dusk.k-candle-lit #kitchen-frontglow{animation:none}}
 #kitchen-grinder.grinding{animation:kitchen-grind-shake .12s ease-in-out infinite}
 @keyframes kitchen-grind-shake{
   0%,100%{transform:translate(0,0)}
@@ -2461,6 +2462,11 @@ section{margin:1.9rem 0}
      the CSS above and the garden candles also depend on. -->
 <g id="kitchen-candle" class="hunt-hit" tabindex="0" role="button" aria-label="The candle">
 <rect x="237" y="164" width="38" height="71" fill="transparent"/>
+<!-- the wick/flame sit above the main hit-rect's top edge, over a "loose brick" egg's
+     own hit-rect (x240 y150) -- without this, a click right on the wick fell through to
+     the brick instead of the candle. Narrow (not the brick's full width) so the brick
+     stays clickable to either side of it. -->
+<rect x="249" y="150" width="12" height="15" fill="transparent"/>
 <path d="M237 230 Q238 225 241 223 Q244 220 247 225 Q250 222 253 226 Q256 223 259 226 Q262 221 265 225 Q268 219 271 223 Q274 225 273 229 Q270 231 255 230 Q245 231 238 229 Z" fill="#f4f0e4" stroke="#d8cfbc" stroke-width="1"/>
 <path d="M246 229 L246 204 Q246 196 251 193 L251 177 L259 177 L259 193 Q264 196 264 204 L264 229 Z" fill="#3f4f36" stroke="#2b3626" stroke-width="1"/>
 <path d="M246 198 Q245 209.5 247.2 221 Q248 223 248.8 221 Q251 209.5 250 198 Z" fill="#f4f0e4" stroke="#d8cfbc" stroke-width="0.7"/>
@@ -2475,6 +2481,11 @@ section{margin:1.9rem 0}
 <ellipse class="candle-glow" cx="255" cy="158" rx="19" ry="21" fill="url(#candle-glow-grad)"/>
 <ellipse class="candle-flame" cx="255" cy="155" rx="2" ry="3.5" fill="#f0c46a" pointer-events="none"/>
 </g>
+<!-- a second, broader wash spilling across the counter at dusk, same "room-filling
+     light" pattern as the garden candles' #garden-frontglow-1/-2 (see .candle-frontglow
+     and the k-candle-lit class toggled on #stage-kitchen in toggleKitchenCandle) --
+     the candle's own small glow above reads fine up close but didn't cast far. -->
+<ellipse id="kitchen-frontglow" class="candle-frontglow" cx="255" cy="215" rx="34" ry="30" fill="url(#candle-glow-grad)"/>
 <!-- the static position lives on this wrapper, not on #kitchen-tamper itself --
      .invite-pulse sets a CSS transform directly on #kitchen-tamper (see
      updateKitchenInvite), and a CSS transform animation replaces an element's own
@@ -5918,6 +5929,8 @@ document.addEventListener("click", function (e) {
     function toggleKitchenCandle() {
       var lit = kitchenCandle.classList.toggle("lit");
       if (lit) playCandleLightSound("kitchen-candle");
+      var ks = document.getElementById("stage-kitchen"); // drives #kitchen-frontglow's dusk wash, see CSS
+      if (ks) ks.classList.toggle("k-candle-lit", lit);
     }
     kitchenCandle.addEventListener("click", toggleKitchenCandle);
     kitchenCandle.addEventListener("keydown", function (e) {

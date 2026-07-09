@@ -1696,6 +1696,20 @@ footer{margin-top:2.6rem}
   #loft-game-strip.psychedelic #garden-dieffenbachia,
   #loft-game-strip.psychedelic #garden-snakeplant{animation:none}
 }
+/* trip creatures — a whimsical frog and toadstool fade in during any trip and
+   linger 2s after it clears. static position rides the outer <g>; the gentle
+   bob rides an inner group so its CSS transform never collides with that
+   position attribute. Fade only under reduced motion (no bob). */
+#garden-trip-frog, #garden-trip-mushroom{opacity:0; transition:opacity .8s ease; pointer-events:none}
+#garden-trip-frog.trip-creature-show, #garden-trip-mushroom.trip-creature-show{opacity:1}
+#garden-trip-frog.trip-creature-show .trip-creature-bob{animation:trip-frog-hop 1.6s ease-in-out infinite}
+#garden-trip-mushroom.trip-creature-show .trip-creature-bob{animation:trip-shroom-bob 3.4s ease-in-out infinite}
+@keyframes trip-frog-hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes trip-shroom-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@media (prefers-reduced-motion: reduce){
+  #garden-trip-frog.trip-creature-show .trip-creature-bob,
+  #garden-trip-mushroom.trip-creature-show .trip-creature-bob{animation:none}
+}
 #balcony-butterfly{opacity:0; pointer-events:none}
 #balcony-butterfly.flying{animation:balcony-butterfly-fly 3.2s ease-in-out forwards}
 @keyframes balcony-butterfly-fly{
@@ -3328,6 +3342,37 @@ section{margin:1.9rem 0}
 <g transform="translate(30,18)" pointer-events="none">
 <ellipse id="garden-frontglow-1" class="candle-frontglow" cx="68" cy="289" rx="19" ry="21" fill="url(#candle-glow-grad)"/>
 <ellipse id="garden-frontglow-2" class="candle-frontglow" cx="100" cy="295" rx="14" ry="16" fill="url(#candle-glow-grad)"/>
+</g>
+<!-- hidden until a trip starts: a little frog on the floorboards and a red-cap
+     toadstool near the plants, both fading in for the trip and lingering 2s
+     after it clears (see showTripCreatures/hideTripCreatures). purely decorative. -->
+<g id="garden-trip-frog" transform="translate(250,300)">
+<g class="trip-creature-bob">
+<ellipse cx="0" cy="22" rx="18" ry="4" fill="#3a5228" opacity="0.22"/>
+<ellipse cx="0" cy="12" rx="18" ry="11" fill="#7fae62" stroke="#5c7a45" stroke-width="1.5"/>
+<ellipse cx="-14" cy="19" rx="6" ry="3.5" fill="#7fae62" stroke="#5c7a45" stroke-width="1.2"/>
+<ellipse cx="14" cy="19" rx="6" ry="3.5" fill="#7fae62" stroke="#5c7a45" stroke-width="1.2"/>
+<circle cx="-7" cy="-1" r="7.5" fill="#7fae62" stroke="#5c7a45" stroke-width="1.5"/>
+<circle cx="7" cy="-1" r="7.5" fill="#7fae62" stroke="#5c7a45" stroke-width="1.5"/>
+<circle cx="-7" cy="-3" r="3.4" fill="#f4f0da"/>
+<circle cx="7" cy="-3" r="3.4" fill="#f4f0da"/>
+<circle cx="-6.4" cy="-3" r="1.6" fill="#2a2a2a"/>
+<circle cx="7.6" cy="-3" r="1.6" fill="#2a2a2a"/>
+<path d="M-9 7 Q0 12 9 7" fill="none" stroke="#5c7a45" stroke-width="1.3" stroke-linecap="round"/>
+<circle cx="-3.5" cy="6" r="1.4" fill="#c68e95" opacity="0.55"/>
+<circle cx="3.5" cy="6" r="1.4" fill="#c68e95" opacity="0.55"/>
+</g>
+</g>
+<g id="garden-trip-mushroom" transform="translate(438,296)">
+<g class="trip-creature-bob">
+<ellipse cx="11" cy="31" rx="13" ry="3" fill="#3a5228" opacity="0.22"/>
+<rect x="7" y="14" width="9" height="16" rx="3" fill="#f2e5c8" stroke="#c9bfa0" stroke-width="1"/>
+<path d="M-1 15 Q-1 -5 11.5 -5 Q24 -5 24 15 Q11.5 8 -1 15 Z" fill="#c0392b" stroke="#8e2a1f" stroke-width="1.5"/>
+<circle cx="6" cy="4" r="2.2" fill="#f2e5c8"/>
+<circle cx="16" cy="2" r="1.9" fill="#f2e5c8"/>
+<circle cx="11" cy="8" r="1.6" fill="#f2e5c8"/>
+<circle cx="19" cy="9" r="1.3" fill="#f2e5c8"/>
+</g>
 </g>
 </g>
 <g id="stage-cuddly" transform="translate(1360,0)">
@@ -11540,6 +11585,38 @@ var TRIP_DURATIONS = { psychedelic: 6000, strobe: 3000, melt: 5000, molly: 7000,
 var tripActive = false;
 var tripEndTimer = null;
 var currentTripVariant = null;
+// The garden's decorative creatures each ride ONE trip, mirroring index.html's pairing:
+// the frog turns up for the melt (whiteout) trip, the toadstool for the psychedelic
+// (fractal-bloom) trip; the other variants get neither. Shown when their variant starts,
+// held through it, then faded out after a 2s linger. Re-triggering clears the pending
+// removal so they never blink out, and switches to the new variant's creature (if any).
+var tripCreatureHideTimer = null;
+function setTripCreature(id, show) {
+  var el = document.getElementById(id);
+  if (el) el.classList.toggle("trip-creature-show", show);
+}
+function hideAllTripCreatures() {
+  setTripCreature("garden-trip-frog", false);
+  setTripCreature("garden-trip-mushroom", false);
+}
+function showTripCreatures(variant) {
+  clearTimeout(tripCreatureHideTimer);
+  tripCreatureHideTimer = null;
+  setTripCreature("garden-trip-frog", variant === "melt");
+  setTripCreature("garden-trip-mushroom", variant === "psychedelic");
+}
+function hideTripCreaturesAfter(delay) {
+  clearTimeout(tripCreatureHideTimer);
+  tripCreatureHideTimer = setTimeout(function () {
+    tripCreatureHideTimer = null;
+    hideAllTripCreatures();
+  }, delay);
+}
+window.__resetTripCreatures = function () {
+  clearTimeout(tripCreatureHideTimer);
+  tripCreatureHideTimer = null;
+  hideAllTripCreatures();
+};
 // Tripping again and again builds up: the scene darkens a notch each time, then
 // slowly recovers a notch at a time if you lay off (a little tolerance/comedown).
 var tripTolerance = 0, tripToleranceDecay = null;
@@ -11567,6 +11644,7 @@ function startTripVariant(variant) {
   var strip = document.getElementById("loft-game-strip");
   if (!strip) return;
   currentTripVariant = variant;
+  showTripCreatures(variant);
   strip.classList.remove("psychedelic", "strobe", "melt", "molly", "ketamine");
   requestAnimationFrame(function () {
     requestAnimationFrame(function () { strip.classList.add(variant); });
@@ -11602,6 +11680,7 @@ function startTripVariant(variant) {
   clearTimeout(tripEndTimer);
   tripEndTimer = setTimeout(function () {
     strip.classList.remove(variant);
+    hideTripCreaturesAfter(2000); // the frog + toadstool linger a beat, then fade
     tripActive = false;
     currentTripVariant = null;
     // the comedown lands as the trip wears off: each trip deepens the veil, except
@@ -16139,6 +16218,7 @@ function spawnDustMote(container) {
     });
     var gsReset = document.getElementById("stage-garden");
     if (gsReset) gsReset.classList.remove("g-c1-lit", "g-c2-lit");
+    if (window.__resetTripCreatures) window.__resetTripCreatures();
     ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.classList.remove("done");

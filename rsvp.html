@@ -5699,14 +5699,19 @@ document.addEventListener("click", function (e) {
   if (anchor && (e.target === anchor || (anchor.contains && anchor.contains(e.target)))) return;
   dismissEggBubble(b);
 });
-// Caps Lock flips the UV / blacklight party mode. The lock state is only readable during a
-// key event, and toggling Caps Lock itself fires a keydown — so sync the class to the live
-// modifier state on every keydown (a no-op when it hasn't changed).
-document.addEventListener("keydown", function (e) {
-  if (!e.getModifierState) return;
+// Hold Shift to switch on the UV / blacklight "nightlight" — a momentary reveal that
+// restores when released. Momentary (vs. the old Caps-Lock toggle) means there's no
+// lingering state to get stuck, desync, or need resetting, and Shift's keydown/keyup fire
+// reliably — Caps Lock's lock-state read lagged a press, so the first press did nothing.
+function setUvMode(on) {
   var strip = document.getElementById("loft-game-strip");
-  if (strip) strip.classList.toggle("uv-mode", e.getModifierState("CapsLock"));
-});
+  if (strip) strip.classList.toggle("uv-mode", !!on);
+}
+window.__setUvMode = setUvMode; // reset / room-leave can force it off
+document.addEventListener("keydown", function (e) { if (e.key === "Shift") setUvMode(true); });
+document.addEventListener("keyup", function (e) { if (e.key === "Shift") setUvMode(false); });
+// if focus is lost while Shift is down (alt-tab), the keyup never arrives — clear it
+window.addEventListener("blur", function () { setUvMode(false); });
 document.addEventListener("click", function (e) {
   var link = e.target.closest && e.target.closest("#hunt-caption a");
   if (!link) return;

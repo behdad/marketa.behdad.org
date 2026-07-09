@@ -15434,27 +15434,40 @@ function spawnDustMote(container) {
     else if (kitchenRounds < KITCHEN_HINT_ROUNDS) setCaption("kitchen");
     updateKitchenInvite();
   });
+  // a rebuffed tap on the grinder rattles its lid + beans (skips while it's actually grinding)
+  function jiggleGrinderLid() {
+    if (!grinder || grinder.classList.contains("grinding")) return;
+    grinder.classList.remove("lid-jiggle", "lid-jiggle-faint");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { grinder.classList.add("lid-jiggle"); });
+    });
+    setTimeout(function () { grinder.classList.remove("lid-jiggle"); }, 900);
+  }
   onActivate(grinder, function () {
     if (!kitchenPowered) {
       setCaption("kitchen_need_power");
       playDryClickSound("kitchen-grinder");
+      jiggleGrinderLid();
       return;
     }
     if (!kitchenWarmedUp) {
       setCaption("kitchen_warming_up");
       playDryClickSound("kitchen-grinder");
+      jiggleGrinderLid();
       return;
     }
     if (portafilterSpent) {
       setCaption("kitchen_need_knockout");
       playDryClickSound("kitchen-grinder");
       updateKitchenInvite();
+      jiggleGrinderLid();
       return;
     }
-    if (grinding || kitchenGround || portafilterFlying) return;
+    if (grinding || kitchenGround || portafilterFlying) { jiggleGrinderLid(); return; }
     if (grinderBeansLeft <= 0) {
       setCaption("kitchen_grinder_empty");
       playEmptyGrindSound();
+      jiggleGrinderLid();
       return;
     }
     grinding = true;

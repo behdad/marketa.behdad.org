@@ -2648,7 +2648,6 @@ section{margin:1.9rem 0}
      bug class documented in CLAUDE.md, bit the mic/lounger/dustpan before this. -->
 <g id="kitchen-tamper-pos" transform="translate(39.5,4)">
 <g id="kitchen-tamper" class="hunt-hit" tabindex="0" role="button" aria-label="The tamper">
-<title>Tamper</title>
 <rect x="240" y="198" width="24" height="34" fill="transparent"/>
 <g id="kitchen-tamper-inner">
 <rect x="247" y="202" width="7" height="18" rx="3.5" fill="#c9c9c9" stroke="#4f4f4f" stroke-width="2"/>
@@ -2661,7 +2660,6 @@ section{margin:1.9rem 0}
 <path d="M286,153 L294,153 L294,166 L303,166 L290,185 L277,166 L286,166 Z" fill="#c0392b" stroke="#1f1f1f" stroke-width="2" stroke-linejoin="round"/>
 </g>
 <g id="kitchen-knockbox" class="hunt-hit" tabindex="0" role="button" aria-label="The knock box">
-<title>Knock box</title>
 <rect x="300" y="198" width="40" height="34" fill="transparent"/>
 <g id="kitchen-knockbox-inner">
 <defs>
@@ -5568,17 +5566,23 @@ function dismissEggBubble(b) {
 // visibly stale mid-hover otherwise.
 function hoverTooltip(el, html, placement, yOffset) {
   if (!el) return;
-  var bubble = null, followRaf = null;
+  var bubble = null, followRaf = null, showTimer = null;
   function follow() {
     if (!bubble) return;
     positionEggBubble(bubble, el, placement, yOffset);
     followRaf = requestAnimationFrame(follow);
   }
   el.addEventListener("mouseenter", function () {
-    bubble = eggBubble(el, html, placement, yOffset);
-    followRaf = requestAnimationFrame(follow);
+    clearTimeout(showTimer);
+    // a short dwell before showing, so tooltips don't pop the instant the cursor grazes past
+    showTimer = setTimeout(function () {
+      showTimer = null;
+      bubble = eggBubble(el, html, placement, yOffset);
+      followRaf = requestAnimationFrame(follow);
+    }, 450);
   });
   el.addEventListener("mouseleave", function () {
+    clearTimeout(showTimer); showTimer = null;
     if (followRaf) { cancelAnimationFrame(followRaf); followRaf = null; }
     if (bubble) { dismissEggBubble(bubble); bubble = null; }
   });
@@ -15118,6 +15122,8 @@ function spawnDustMote(container) {
   var grinder = document.getElementById("kitchen-grinder");
   hoverTooltip(lamarzocco, "<em>La Maz</em>, the espresso machine", "top");
   hoverTooltip(grinder, "<em>El Maz</em>, the grinder", "top");
+  hoverTooltip(document.getElementById("kitchen-tamper"), "The tamper", "top");
+  hoverTooltip(document.getElementById("kitchen-knockbox"), "The knock box", "top");
   var tamper = document.getElementById("kitchen-tamper");
   var tamperPos = document.getElementById("kitchen-tamper-pos"); // the wrapper that actually gets .invite-pulse now — see the CSS comment on it
   var knockbox = document.getElementById("kitchen-knockbox");

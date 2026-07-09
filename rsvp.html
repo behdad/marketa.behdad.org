@@ -242,6 +242,11 @@ footer{margin-top:2.6rem}
 #kitchen-lamarzocco.done, #kitchen-grinder.done, #kitchen-portafilter.done{opacity:.55}
 #kitchen-lamarzocco.done ~ #kitchen-portafilter-dial{opacity:.55}
 #kitchen-lamarzocco.powered-on .kitchen-power-led{fill:#ff2f3a}
+/* while it warms up (the ~2.6s before the grinder is usable), the power LED pulses amber
+   so the wait reads as "heating", then settles to the solid red above once it's ready */
+#kitchen-lamarzocco.warming-up .kitchen-power-led{fill:#ff9a2e; animation:kitchen-warmup-blink .7s ease-in-out infinite}
+@keyframes kitchen-warmup-blink{0%,100%{opacity:1} 50%{opacity:.25}}
+@media (prefers-reduced-motion: reduce){#kitchen-lamarzocco.warming-up .kitchen-power-led{animation:none}}
 #kitchen-gauge-needle-1{transform-origin:430px 168px; transition:transform 2.6s cubic-bezier(.4,0,.2,1)}
 #kitchen-gauge-needle-2{transform-origin:500px 168px; transition:transform 2.6s cubic-bezier(.4,0,.2,1)}
 #kitchen-gauge-needle-1.zero{transform:rotate(-115deg)}
@@ -5195,7 +5200,7 @@ var T = {
       kitchen: "Turn on the machine → grind → brew.",
       kitchen_grind: "Now grind coffee.",
       kitchen_brew: "Now brew a shot.",
-      kitchen_sip: "Go on, sip it.",
+      kitchen_sip: "Go on, sip it. ☕",
       kitchen_need_power: "Turn the machine on first.",
       kitchen_need_grind: "Grind the coffee first.",
       kitchen_need_tamp: "Tamp the coffee first.",
@@ -5291,7 +5296,7 @@ var T = {
       kitchen: "Zapni kávovar → umel → uvař.",
       kitchen_grind: "Teď umel kávu.",
       kitchen_brew: "Teď uvař espresso.",
-      kitchen_sip: "Tak si ho usrkni.",
+      kitchen_sip: "Tak si ho usrkni. ☕",
       kitchen_need_power: "Nejdřív zapni kávovar.",
       kitchen_need_grind: "Nejdřív umel kávu.",
       kitchen_need_tamp: "Nejdřív upěchuj kávu.",
@@ -15288,6 +15293,7 @@ function spawnDustMote(container) {
     if (lamarzocco) {
       lamarzocco.classList.toggle("powered-on", kitchenPowered);
       lamarzocco.classList.toggle("done", kitchenPowered);
+      lamarzocco.classList.toggle("warming-up", kitchenPowered); // pulses the LED amber until warmed up
     }
     playSparkSound("kitchen-lamarzocco");
     if (kitchenPowered) spawnSparkFlare(strip, 465, 158);
@@ -15300,6 +15306,7 @@ function spawnDustMote(container) {
       kitchenWarmedUp = false;
       warmupTimer = setTimeout(function () {
         kitchenWarmedUp = true;
+        if (lamarzocco) lamarzocco.classList.remove("warming-up"); // ready — LED settles to solid red
         if (kitchenPowered) { setCaption(kitchenCurrentCaption()); updateKitchenInvite(); }
       }, WARMUP_MS);
     } else {
@@ -16657,7 +16664,7 @@ function spawnDustMote(container) {
     portafilterSpent = false;
     portafilterPos = "grouphead";
     portafilterFlying = false;
-    if (lamarzocco) lamarzocco.classList.remove("powered-on", "done");
+    if (lamarzocco) lamarzocco.classList.remove("powered-on", "done", "warming-up");
     ["kitchen-gauge-needle-1", "kitchen-gauge-needle-2"].forEach(function (id) {
       var needle = document.getElementById(id);
       if (needle) needle.classList.add("zero");

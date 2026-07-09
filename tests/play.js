@@ -96,8 +96,10 @@ var RSVP_HARNESS = [
   "  function expect(id) { if (!document.getElementById(id)) report.missing.push(id); return id; }",
   "  async function solve() {",
   "    click(expect('kitchen-lamarzocco'));",
-  "    click(expect('kitchen-grinder'));",
-  "    await sleep(1600);",
+  "    click(expect('kitchen-grinder'));",           // flies to the grinder (FLY_MS), then grinds (GRIND_MS)
+  "    await sleep(2100);",
+  "    click(expect('kitchen-tamper'));",            // tamps, then flies back to the grouphead (FLY_MS)
+  "    await sleep(900);",
   "    click(expect('kitchen-portafilter'));",
   "    await sleep(2700);",
   "    click(expect('kitchen-shotcup'));",

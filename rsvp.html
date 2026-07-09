@@ -994,6 +994,59 @@ footer{margin-top:2.6rem}
   0%,100%{opacity:1}
   50%{opacity:.75}
 }
+/* the portafilter's basket, freshly ground coffee (or spent grounds after a shot's
+   been pulled, see .spent) shown as a small filled ellipse nested inside the rim —
+   #kitchen-portafilter-grounds itself only ever toggles opacity/fill via these two
+   classes, never removed from the DOM, so no JS class-removal bookkeeping needed */
+#kitchen-portafilter-grounds{opacity:0; transition:opacity .25s ease}
+#kitchen-portafilter.has-grounds #kitchen-portafilter-grounds,
+#kitchen-portafilter.spent #kitchen-portafilter-grounds{opacity:1}
+#kitchen-portafilter.spent #kitchen-portafilter-grounds{fill:#3d2818}
+/* the portafilter physically travels between the grouphead (its drawn rest position,
+   translate(0,0)), the grinder spout, and the knockbox opening — a dedicated wrapper
+   around #kitchen-portafilter (not the element itself) so the flight's `transform`
+   never fights the hunt-hit content or a future static transform on it, same fix as
+   #witchy-chest-cat-breathe/#cuddly-behdad-joint-toke. transform-box:fill-box + center
+   keeps the knock wobble's rotation pivoting on the portafilter's own geometry
+   regardless of which docked position it's currently translated to. */
+#kitchen-portafilter-fly{transform-box:fill-box; transform-origin:center}
+#kitchen-portafilter-fly.at-grinder{transform:translate(-82px,28px)}
+#kitchen-portafilter-fly.at-knockbox{transform:translate(-145px,22px)}
+#kitchen-portafilter-fly.flying-grouphead-to-grinder{animation:portafilter-fly-gh-grinder .6s ease-in-out}
+#kitchen-portafilter-fly.flying-grinder-to-grouphead{animation:portafilter-fly-grinder-gh .6s ease-in-out}
+#kitchen-portafilter-fly.flying-grouphead-to-knockbox{animation:portafilter-fly-gh-knockbox .6s ease-in-out}
+#kitchen-portafilter-fly.flying-knockbox-to-grouphead{animation:portafilter-fly-knockbox-gh .6s ease-in-out}
+@keyframes portafilter-fly-gh-grinder{
+  0%{transform:translate(0,0)}
+  50%{transform:translate(-41px,0)}
+  100%{transform:translate(-82px,28px)}
+}
+@keyframes portafilter-fly-grinder-gh{
+  0%{transform:translate(-82px,28px)}
+  50%{transform:translate(-41px,0)}
+  100%{transform:translate(0,0)}
+}
+@keyframes portafilter-fly-gh-knockbox{
+  0%{transform:translate(0,0)}
+  50%{transform:translate(-72.5px,-5px)}
+  100%{transform:translate(-145px,22px)}
+}
+@keyframes portafilter-fly-knockbox-gh{
+  0%{transform:translate(-145px,22px)}
+  50%{transform:translate(-72.5px,-5px)}
+  100%{transform:translate(0,0)}
+}
+@media (prefers-reduced-motion: reduce){
+  #kitchen-portafilter-fly.flying-grouphead-to-grinder, #kitchen-portafilter-fly.flying-grinder-to-grouphead,
+  #kitchen-portafilter-fly.flying-grouphead-to-knockbox, #kitchen-portafilter-fly.flying-knockbox-to-grouphead{animation:none}
+}
+/* a quick invert/tap wobble at the knockbox, analogous to the tamper's own wobble */
+#kitchen-portafilter-fly.knocking{animation:portafilter-knock .4s ease-in-out}
+@keyframes portafilter-knock{
+  0%,100%{transform:translate(-145px,22px) rotate(0deg)}
+  50%{transform:translate(-145px,22px) rotate(15deg)}
+}
+@media (prefers-reduced-motion: reduce){#kitchen-portafilter-fly.knocking{animation:none}}
 .invite-pulse{animation:invite-pulse 1.8s ease-in-out infinite; transform-box:fill-box; transform-origin:center}
 @keyframes invite-pulse{
   0%,100%{transform:scale(1)}
@@ -1008,7 +1061,12 @@ footer{margin-top:2.6rem}
 .kitchen-step-arrow{opacity:0; pointer-events:none; transition:opacity .3s ease}
 #kitchen-lamarzocco.invite-pulse ~ #kitchen-lamarzocco-arrow,
 #kitchen-grinder.invite-pulse ~ #kitchen-grinder-arrow,
-#kitchen-portafilter.invite-pulse ~ #kitchen-portafilter-arrow{opacity:1; pointer-events:auto; animation:kitchen-arrow-bounce 0.9s ease-in-out infinite}
+#kitchen-tamper.invite-pulse ~ #kitchen-tamper-arrow,
+#kitchen-knockbox.invite-pulse ~ #kitchen-knockbox-arrow,
+/* the portafilter travels now, so its own invite-pulse is toggled on its fly-wrapper
+   (a proper sibling of #kitchen-portafilter-arrow) rather than on #kitchen-portafilter
+   itself, which after the wrap is no longer that arrow's sibling — see updateKitchenInvite */
+#kitchen-portafilter-fly.invite-pulse ~ #kitchen-portafilter-arrow{opacity:1; pointer-events:auto; animation:kitchen-arrow-bounce 0.9s ease-in-out infinite}
 @keyframes kitchen-arrow-bounce{
   0%,100%{transform:translateY(0)}
   50%{transform:translateY(10px)}
@@ -1016,7 +1074,9 @@ footer{margin-top:2.6rem}
 @media (prefers-reduced-motion: reduce){
   #kitchen-lamarzocco.invite-pulse ~ #kitchen-lamarzocco-arrow,
   #kitchen-grinder.invite-pulse ~ #kitchen-grinder-arrow,
-  #kitchen-portafilter.invite-pulse ~ #kitchen-portafilter-arrow{animation:none}
+  #kitchen-tamper.invite-pulse ~ #kitchen-tamper-arrow,
+  #kitchen-knockbox.invite-pulse ~ #kitchen-knockbox-arrow,
+  #kitchen-portafilter-fly.invite-pulse ~ #kitchen-portafilter-arrow{animation:none}
 }
 .watered{animation:plant-perk .5s ease-in-out; transform-box:fill-box; transform-origin:center}
 @keyframes plant-perk{
@@ -2396,10 +2456,18 @@ section{margin:1.9rem 0}
 <ellipse cx="250.5" cy="223" rx="9" ry="4" fill="#b9b9b9" stroke="#8a8a8a" stroke-width="1"/>
 </g>
 </g>
+<g id="kitchen-tamper-arrow" class="hunt-hit kitchen-step-arrow">
+<rect x="273" y="150" width="40" height="42" fill="transparent"/>
+<path d="M289,153 L297,153 L297,166 L306,166 L293,185 L280,166 L289,166 Z" fill="#c0392b" stroke="#1f1f1f" stroke-width="2" stroke-linejoin="round"/>
+</g>
 <g id="kitchen-knockbox" class="hunt-hit" tabindex="0" role="button" aria-label="The knock box">
 <rect x="300" y="198" width="40" height="34" fill="transparent"/>
 <rect x="307" y="206" width="26" height="24" rx="4" fill="#26221f" stroke="#141210" stroke-width="1.5"/>
 <rect x="311" y="202" width="18" height="6" rx="3" fill="#3a3531"/>
+</g>
+<g id="kitchen-knockbox-arrow" class="hunt-hit kitchen-step-arrow">
+<rect x="300" y="146" width="40" height="42" fill="transparent"/>
+<path d="M316,149 L324,149 L324,162 L333,162 L320,181 L307,162 L316,162 Z" fill="#c0392b" stroke="#1f1f1f" stroke-width="2" stroke-linejoin="round"/>
 </g>
 <g id="kitchen-grinder" class="hunt-hit" tabindex="0" role="button" aria-label="The coffee grinder">
 <g transform="translate(-31.2,0) scale(1.15,1)">
@@ -2493,6 +2561,11 @@ section{margin:1.9rem 0}
 </g>
 <circle cx="500" cy="168" r="1.5" fill="#5a5a5a"/>
 </g>
+<!-- flies between the grouphead (this drawn position, translate(0,0)), the grinder
+     spout, and the knockbox opening — see the CSS above #kitchen-portafilter-grounds
+     for the wrapper rationale. #kitchen-portafilter itself (hitbox, content, id) is
+     untouched by the wrap. -->
+<g id="kitchen-portafilter-fly">
 <g id="kitchen-portafilter" class="hunt-hit" tabindex="0" role="button" aria-label="The portafilter">
 <rect x="457" y="163" width="54" height="50" fill="transparent"/>
 <ellipse cx="465" cy="181" rx="17" ry="5" fill="#d4d4d4" stroke="#9a9a9a" stroke-width="1"/>
@@ -2504,11 +2577,14 @@ section{margin:1.9rem 0}
 <!-- a static polished-metal highlight — the rim read completely flat/matte without one -->
 <ellipse cx="460.1" cy="179.2" rx="6.6" ry="1.95" fill="#f0eee8" opacity="0.55" transform="rotate(-20 460.1 179.2)" clip-path="url(#kitchen-portafilter-rim-clip)" pointer-events="none"/>
 <ellipse cx="469.3" cy="183" rx="3.1" ry="0.9" fill="#f0eee8" opacity="0.3" transform="rotate(-20 469.3 183)" clip-path="url(#kitchen-portafilter-rim-clip)" pointer-events="none"/>
+<!-- fresh (or, once .spent, old) grounds sitting in the basket, nested inside the rim -->
+<ellipse id="kitchen-portafilter-grounds" cx="465" cy="181.5" rx="13" ry="3.3" fill="#5a3825" pointer-events="none"/>
 <rect x="450" y="181" width="30" height="16" rx="4" fill="#c4c4c4" stroke="#8f8f8f" stroke-width="1"/>
 <circle cx="465" cy="200" r="8" fill="#3a3a3a" stroke="#c4c4c4" stroke-width="2"/>
 <polygon points="460,206 470,206 468,213 462,213" fill="#8f8f8f"/>
 <circle cx="473" cy="201" r="3" fill="#c9c9c9"/>
 <line x1="475" y1="201" x2="504" y2="208" stroke="#1f1f1f" stroke-width="8" stroke-linecap="round"/>
+</g>
 </g>
 <g id="kitchen-portafilter-arrow" class="hunt-hit kitchen-step-arrow">
 <rect x="445" y="107" width="40" height="42" fill="transparent"/>
@@ -4694,6 +4770,8 @@ var T = {
       kitchen_sip: "Go on, sip it.",
       kitchen_need_power: "Turn the machine on first.",
       kitchen_need_grind: "Grind the coffee first.",
+      kitchen_need_tamp: "Tamp the coffee first.",
+      kitchen_need_knockout: "Empty the old grounds first.",
       garden: "Water a plant, play music, light candles.",
       garden_need_music_candles: "Play music, light candles.",
       garden_need_water_candles: "Water a plant, light candles.",
@@ -4787,6 +4865,8 @@ var T = {
       kitchen_sip: "Tak si ho usrkni.",
       kitchen_need_power: "Nejdřív zapni kávovar.",
       kitchen_need_grind: "Nejdřív umel kávu.",
+      kitchen_need_tamp: "Nejdřív upěchuj kávu.",
+      kitchen_need_knockout: "Nejdřív vyklepej starou kávu.",
       garden: "Zalij kytku, zahraj, zapal svíčky.",
       garden_need_music_candles: "Zahraj a zapal svíčky.",
       garden_need_water_candles: "Zalij kytku a zapal svíčky.",
@@ -5763,9 +5843,17 @@ document.addEventListener("click", function (e) {
   }
   var knockbox = document.getElementById("kitchen-knockbox");
   if (knockbox) {
-    knockbox.addEventListener("click", playKnockboxThumpSound);
+    // A meaningful knockout (spent portafilter docked at the grouphead) times its own
+    // thump to the portafilter's arrival — see window.__kitchenKnockout in the coffee
+    // state machine below. Otherwise this is just a decorative tap, same as any other
+    // idle click on the box.
+    function tapKnockbox() {
+      if (window.__kitchenKnockout && window.__kitchenKnockout()) return;
+      playKnockboxThumpSound();
+    }
+    knockbox.addEventListener("click", tapKnockbox);
     knockbox.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); playKnockboxThumpSound(); }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tapKnockbox(); }
     });
   }
   var tamper = document.getElementById("kitchen-tamper");
@@ -13587,10 +13675,7 @@ function spawnDustMote(container) {
   function restoreStageHint(name) {
     if (name === "kitchen") {
       if (!kitchenPowered) return;
-      if (!kitchenGround) { setCaption("kitchen_grind"); return; }
-      var portafilterEl = document.getElementById("kitchen-portafilter");
-      if (portafilterEl && !portafilterEl.classList.contains("done")) { setCaption("kitchen_brew"); return; }
-      setCaption("kitchen_sip");
+      setCaption(kitchenCurrentCaption());
     } else if (name === "garden") {
       updateGardenHint();
     } else if (name === "cuddly") {
@@ -13649,37 +13734,93 @@ function spawnDustMote(container) {
 
   var GRIND_MS = 1200;
   var BREW_MS = 2300;
+  var FLY_MS = 600; // portafilter flight duration, grouphead<->grinder or grouphead<->knockbox
+  var KNOCK_MS = 500; // pause at the knockbox (wobble + grounds clearing) before flying back
   var kitchenPowered = false;
-  var kitchenGround = false;
+  var kitchenGround = false; // fresh grounds are in the basket, tamp/brew pending or in progress
   var grinding = false;
   var brewing = false;
+  var tamped = false;
+  var portafilterSpent = false; // brewed & sipped; old grounds still in the basket, needs a knockout
+  var portafilterPos = "grouphead"; // "grouphead" | "grinder" | "knockbox" — where it's currently docked
+  var portafilterFlying = false;
   var lamarzocco = document.getElementById("kitchen-lamarzocco");
   var grinder = document.getElementById("kitchen-grinder");
+  var tamper = document.getElementById("kitchen-tamper");
+  var knockbox = document.getElementById("kitchen-knockbox");
   var portafilter = document.getElementById("kitchen-portafilter");
+  var portafilterFly = document.getElementById("kitchen-portafilter-fly");
   var steamwand = document.getElementById("kitchen-steamwand");
   var kitchenSolved = false;
+  function kitchenReducedMotion() {
+    return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+  // Flies the portafilter wrapper between its three docks. Only ever called once the
+  // caller's own gating has confirmed the move is legal; portafilterFlying blocks any
+  // overlapping flight. Reduced motion skips straight to the landed state (a snap, not
+  // a skip — see CLAUDE.md's testing-gotchas note on this file's usual convention).
+  function flyPortafilterTo(dest, cb) {
+    if (!portafilterFly || portafilterFlying || portafilterPos === dest) { if (cb) cb(); return; }
+    var from = portafilterPos;
+    portafilterFlying = true;
+    function land() {
+      portafilterFly.classList.remove("flying-grouphead-to-grinder", "flying-grinder-to-grouphead",
+        "flying-grouphead-to-knockbox", "flying-knockbox-to-grouphead", "at-grinder", "at-knockbox");
+      if (dest === "grinder") portafilterFly.classList.add("at-grinder");
+      else if (dest === "knockbox") portafilterFly.classList.add("at-knockbox");
+      portafilterPos = dest;
+      portafilterFlying = false;
+      if (cb) cb();
+    }
+    if (kitchenReducedMotion()) { setTimeout(land, 0); return; }
+    if (from === "grouphead" && dest === "grinder") portafilterFly.classList.add("flying-grouphead-to-grinder");
+    else if (from === "grinder" && dest === "grouphead") portafilterFly.classList.add("flying-grinder-to-grouphead");
+    else if (from === "grouphead" && dest === "knockbox") portafilterFly.classList.add("flying-grouphead-to-knockbox");
+    else if (from === "knockbox" && dest === "grouphead") portafilterFly.classList.add("flying-knockbox-to-grouphead");
+    setTimeout(land, FLY_MS);
+  }
+  // The single source of truth for "what should the kitchen caption say right now",
+  // shared by restoreStageHint (room re-entry) and the power toggle below — used to be
+  // two separately-hand-written copies of this same if-chain that could drift apart.
+  function kitchenCurrentCaption() {
+    if (portafilterSpent) return "kitchen_need_knockout";
+    if (!kitchenGround) return "kitchen_grind";
+    if (!tamped) return "kitchen_need_tamp";
+    if (portafilter && !portafilter.classList.contains("done")) return "kitchen_brew";
+    return "kitchen_sip";
+  }
   function updateKitchenInvite() {
     var next = null;
     if (!kitchenSolved) {
       if (!kitchenPowered) next = "kitchen-lamarzocco";
+      else if (portafilterSpent) next = "kitchen-knockbox";
       else if (!kitchenGround) next = "kitchen-grinder";
+      else if (!tamped) next = "kitchen-tamper";
       else if (!portafilter || !portafilter.classList.contains("done")) next = "kitchen-portafilter";
       else {
         var shotcupEl = document.getElementById("kitchen-shotcup");
         next = (shotcupEl && shotcupEl.classList.contains("filled")) ? "kitchen-shotcup" : null;
       }
     }
-    ["kitchen-lamarzocco", "kitchen-grinder", "kitchen-portafilter", "kitchen-shotcup"].forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el) el.classList.toggle("invite-pulse", id === next);
+    // the portafilter's own invite-pulse toggles on its fly-wrapper, not itself — see
+    // the CSS comment on #kitchen-portafilter-fly.invite-pulse
+    [["kitchen-lamarzocco", lamarzocco], ["kitchen-grinder", grinder], ["kitchen-tamper", tamper],
+     ["kitchen-knockbox", knockbox], ["kitchen-portafilter", portafilterFly], ["kitchen-shotcup", document.getElementById("kitchen-shotcup")]
+    ].forEach(function (pair) {
+      if (pair[1]) pair[1].classList.toggle("invite-pulse", pair[0] === next);
     });
   }
   window.resetCoffeeSequence = function () {
     kitchenSolved = true;
     kitchenGround = false;
+    tamped = false;
+    portafilterSpent = true;
     if (grinder) grinder.classList.remove("done");
-    if (portafilter) portafilter.classList.remove("done");
-    setCaption("kitchen_grind");
+    if (portafilter) {
+      portafilter.classList.remove("done", "has-grounds");
+      portafilter.classList.add("spent");
+    }
+    setCaption("kitchen_need_knockout");
     updateKitchenInvite();
   };
   updateKitchenInvite();
@@ -13699,7 +13840,7 @@ function spawnDustMote(container) {
       var needle = document.getElementById(id);
       if (needle) needle.classList.toggle("zero", !kitchenPowered);
     });
-    if (kitchenPowered) setCaption(kitchenGround ? "kitchen_brew" : "kitchen_grind");
+    if (kitchenPowered) setCaption(kitchenCurrentCaption());
     else if (!kitchenSolved) setCaption("kitchen");
     updateKitchenInvite();
   });
@@ -13709,18 +13850,40 @@ function spawnDustMote(container) {
       playDryClickSound("kitchen-grinder");
       return;
     }
-    if (grinding || kitchenGround) return;
+    if (portafilterSpent) {
+      setCaption("kitchen_need_knockout");
+      playDryClickSound("kitchen-grinder");
+      updateKitchenInvite();
+      return;
+    }
+    if (grinding || kitchenGround || portafilterFlying) return;
     grinding = true;
-    if (grinder) { grinder.classList.add("grinding"); grinder.classList.remove("invite-pulse"); }
-    playGrindSound();
-    spawnGrindParticles(strip, 369, 185);
-    setTimeout(function () {
-      grinding = false;
-      kitchenGround = true;
-      if (grinder) { grinder.classList.remove("grinding"); grinder.classList.add("done"); }
+    if (grinder) grinder.classList.remove("invite-pulse");
+    flyPortafilterTo("grinder", function () {
+      if (grinder) grinder.classList.add("grinding");
+      playGrindSound();
+      spawnGrindParticles(strip, 369, 185);
+      setTimeout(function () {
+        grinding = false;
+        kitchenGround = true;
+        if (grinder) { grinder.classList.remove("grinding"); grinder.classList.add("done"); }
+        if (portafilter) portafilter.classList.add("has-grounds");
+        setCaption("kitchen_need_tamp");
+        updateKitchenInvite();
+      }, GRIND_MS);
+    });
+  });
+  onActivate(tamper, function () {
+    // the tamper's own wobble+sound always plays regardless of state (see the plain
+    // click/keydown listener elsewhere) — this only layers the tamp-state transition
+    // on top, once there are fresh grounds sitting at the grinder to compress
+    if (!kitchenGround || tamped || portafilterFlying || portafilterPos !== "grinder") return;
+    tamped = true;
+    if (tamper) tamper.classList.remove("invite-pulse");
+    flyPortafilterTo("grouphead", function () {
       setCaption("kitchen_brew");
       updateKitchenInvite();
-    }, GRIND_MS);
+    });
   });
   onActivate(portafilter, function () {
     if (!kitchenPowered) {
@@ -13733,9 +13896,15 @@ function spawnDustMote(container) {
       playDryClickSound("kitchen-portafilter");
       return;
     }
-    if (brewing || (portafilter && portafilter.classList.contains("done"))) return;
+    if (!tamped) {
+      setCaption("kitchen_need_tamp");
+      playDryClickSound("kitchen-portafilter");
+      return;
+    }
+    if (portafilterFlying || brewing || (portafilter && portafilter.classList.contains("done"))) return;
     brewing = true;
-    if (portafilter) { portafilter.classList.add("brewing"); portafilter.classList.remove("invite-pulse"); }
+    if (portafilter) portafilter.classList.add("brewing");
+    if (portafilterFly) portafilterFly.classList.remove("invite-pulse");
     playBrewSound();
     spawnSteamWisps(strip, 465, 213);
     setTimeout(function () {
@@ -13747,11 +13916,40 @@ function spawnDustMote(container) {
       updateKitchenInvite();
     }, BREW_MS);
   });
+  // Meaningful knockout: spent portafilter, docked at the grouphead. Called from the
+  // plain knockbox click listener elsewhere, which falls back to its own decorative
+  // thump when this returns false (nothing to knock out yet).
+  window.__kitchenKnockout = function () {
+    if (!portafilterSpent || portafilterFlying || portafilterPos !== "grouphead") return false;
+    if (knockbox) knockbox.classList.remove("invite-pulse");
+    flyPortafilterTo("knockbox", function () {
+      playKnockboxThumpSound();
+      if (portafilterFly) {
+        portafilterFly.classList.remove("knocking");
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { portafilterFly.classList.add("knocking"); });
+        });
+      }
+      setTimeout(function () {
+        if (portafilterFly) portafilterFly.classList.remove("knocking");
+        if (portafilter) portafilter.classList.remove("has-grounds", "spent");
+        portafilterSpent = false;
+        kitchenGround = false;
+        tamped = false;
+        flyPortafilterTo("grouphead", function () {
+          setCaption("kitchen_grind");
+          updateKitchenInvite();
+        });
+      }, KNOCK_MS);
+    });
+    return true;
+  };
   // Each step's bouncing arrow is itself a click target (only while visible — the CSS
   // gate already makes a hidden one pointer-events:none) that forwards straight to its
   // object's own click handler, so tapping the arrow counts exactly like tapping the
   // object it's pointing at.
-  [["kitchen-lamarzocco-arrow", lamarzocco], ["kitchen-grinder-arrow", grinder], ["kitchen-portafilter-arrow", portafilter]].forEach(function (pair) {
+  [["kitchen-lamarzocco-arrow", lamarzocco], ["kitchen-grinder-arrow", grinder], ["kitchen-tamper-arrow", tamper],
+   ["kitchen-knockbox-arrow", knockbox], ["kitchen-portafilter-arrow", portafilter]].forEach(function (pair) {
     var arrow = document.getElementById(pair[0]), target = pair[1];
     if (arrow && target) arrow.addEventListener("click", function () {
       target.dispatchEvent(new MouseEvent("click", { bubbles: true })); // SVG <g> has no .click()
@@ -14961,13 +15159,19 @@ function spawnDustMote(container) {
     kitchenSolved = false;
     grinding = false;
     brewing = false;
+    tamped = false;
+    portafilterSpent = false;
+    portafilterPos = "grouphead";
+    portafilterFlying = false;
     if (lamarzocco) lamarzocco.classList.remove("powered-on", "done");
     ["kitchen-gauge-needle-1", "kitchen-gauge-needle-2"].forEach(function (id) {
       var needle = document.getElementById(id);
       if (needle) needle.classList.add("zero");
     });
     if (grinder) grinder.classList.remove("grinding", "done");
-    if (portafilter) portafilter.classList.remove("brewing", "done");
+    if (portafilter) portafilter.classList.remove("brewing", "done", "has-grounds", "spent");
+    if (portafilterFly) portafilterFly.classList.remove("flying-grouphead-to-grinder", "flying-grinder-to-grouphead",
+      "flying-grouphead-to-knockbox", "flying-knockbox-to-grouphead", "at-grinder", "at-knockbox", "knocking");
     updateKitchenInvite();
     var pcTowerReset = document.getElementById("office-pc-desk-trio");
     if (pcTowerReset) pcTowerReset.classList.remove("on");

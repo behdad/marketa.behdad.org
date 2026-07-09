@@ -4100,10 +4100,10 @@ section{margin:1.9rem 0}
 </g>
 <!-- the call tile: places a video call to the Prague garden -->
 <g id="laptop-calltile">
-<rect x="421" y="183" width="24" height="14" rx="2.2" fill="#2b7a4b"/>
-<rect x="428.4" y="185.4" width="6" height="4.2" rx="0.8" fill="#eafaf0"/>
-<path d="M435.2 186.3 L437.6 187.5 L435.2 188.7 Z" fill="#eafaf0"/>
-<text id="laptop-calltile-label" x="433" y="195" text-anchor="middle" font-size="3.8" fill="#eafaf0"></text>
+<rect x="417.4" y="180.9" width="27.6" height="16.1" rx="2.53" fill="#2b7a4b"/>
+<rect x="425.91" y="183.66" width="6.9" height="4.83" rx="0.92" fill="#eafaf0"/>
+<path d="M433.73 184.7 L436.49 186.08 L433.73 187.46 Z" fill="#eafaf0"/>
+<text id="laptop-calltile-label" x="431.2" y="194.7" text-anchor="middle" font-size="4.37" fill="#eafaf0"></text>
 </g>
 </g>
 <!-- calling Prague: ring → connecting → the garden with the couple waving -->
@@ -6846,6 +6846,7 @@ document.addEventListener("click", function (e) {
     function endCall() {
       clearLaptopTimers();
       stopCallAmbient();
+      playCallHangupSound();
       laptop.classList.remove("calling", "connecting", "connected");
       if (laptop.classList.contains("open")) scheduleLaptopSaver(); // back to idle
     }
@@ -12484,7 +12485,7 @@ function startCallAmbient() {
     for (var i = 0; i < slen; i++) sd[i] = Math.random() * 2 - 1;
     var staticSrc = ctx.createBufferSource(); staticSrc.buffer = sbuf; staticSrc.loop = true;
     var staticFilter = ctx.createBiquadFilter(); staticFilter.type = "bandpass"; staticFilter.frequency.value = 2200; staticFilter.Q.value = 0.5;
-    var staticGain = ctx.createGain(); staticGain.gain.value = 0.018;
+    var staticGain = ctx.createGain(); staticGain.gain.value = 0.005;
     staticSrc.connect(staticFilter); staticFilter.connect(staticGain); staticGain.connect(master);
     staticSrc.start();
 
@@ -12518,6 +12519,30 @@ function stopCallAmbient() {
   if (callAmbientNodes) callAmbientNodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
   if (callAmbientCtx) { try { callAmbientCtx.close(); } catch (e) {} }
   callAmbientCtx = null; callAmbientNodes = null;
+}
+// Hanging up: two quick descending tones, the mirror image of playPhoneRingSound's
+// ascending ring — a "call ended" cue distinct from every other laptop sound here.
+function playCallHangupSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t = ctx.currentTime;
+    var master = ctx.createGain(); master.gain.value = 0.5; master.connect(pannedOut(ctx, "office-laptop"));
+    [{ f0: 480, f1: 420, at: 0 }, { f0: 420, f1: 320, at: 0.14 }].forEach(function (tone) {
+      var osc = ctx.createOscillator(); osc.type = "sine";
+      var tt = t + tone.at;
+      osc.frequency.setValueAtTime(tone.f0, tt);
+      osc.frequency.exponentialRampToValueAtTime(tone.f1, tt + 0.14);
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, tt);
+      g.gain.exponentialRampToValueAtTime(0.06, tt + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.18);
+      osc.connect(g); g.connect(master);
+      osc.start(tt); osc.stop(tt + 0.2);
+    });
+    setTimeout(function () { ctx.close(); }, 700);
+  } catch (e) {}
 }
 // The monitor's power-on jingle: a low CRT swell under a soft rising arpeggio,
 // like a friendly Linux desktop finishing its boot.

@@ -133,6 +133,22 @@ footer{margin-top:2.6rem}
 @media (max-width:759px){
   .hunt-nav{width:1.9rem; height:1.9rem; font-size:1.2rem}
 }
+/* overlaid on the viewport's own top-right corner (position:absolute — costs zero
+   page layout space, unlike a control living in the flow above/below the game) */
+.hunt-fullscreen-btn{
+  position:absolute; top:.5rem; right:.5rem; z-index:6; font:inherit; font-size:1rem; line-height:1;
+  width:1.9rem; height:1.9rem; padding:0; border-radius:50%; border:1.5px solid rgba(255,253,248,.7);
+  background:rgba(69,58,49,.55); color:#fffdf8; cursor:pointer; opacity:.7; transition:opacity .2s ease, background .2s ease;
+}
+.hunt-fullscreen-btn:hover, .hunt-fullscreen-btn:focus-visible{opacity:1; background:rgba(69,58,49,.82)}
+/* fullscreen wraps the frame (nav arrows + viewport) AND the room dots below it, not
+   the whole page — the browser fills the screen with just this element's own box, so
+   give it a matching background + center the (still responsively-sized) frame in it */
+#hunt-fullscreen-area:fullscreen, #hunt-fullscreen-area:-webkit-full-screen{
+  background:var(--cream); display:flex; flex-direction:column; align-items:center;
+  justify-content:center; width:100%; height:100%; padding:2rem; box-sizing:border-box;
+}
+#hunt-fullscreen-area:fullscreen .hunt-frame, #hunt-fullscreen-area:-webkit-full-screen .hunt-frame{max-width:1500px}
 .device-hint{display:none; text-align:center; font-size:.8rem; color:var(--soft); margin:.15rem 0 0}
 .device-hint.show{display:block}
 .hunt-dots{display:flex; justify-content:center; align-items:center; gap:.15rem; margin:.55rem 0 0}
@@ -2032,6 +2048,7 @@ section{margin:1.9rem 0}
   <p class="hunt-title" id="hunt-title" data-i="hunt_title">Loft Day</p>
   <p class="device-hint" id="device-hint" data-i="device_hint"></p>
   <p class="scene-caption" id="hunt-caption">Power on the espresso machine, then grind coffee, then brew a shot.</p>
+  <div id="hunt-fullscreen-area">
   <div class="hunt-frame">
   <button type="button" id="hunt-prev" class="hunt-nav hunt-nav-prev" aria-label="Previous room" disabled>‹</button>
   <div class="hunt-viewport">
@@ -4360,10 +4377,12 @@ section{margin:1.9rem 0}
 </g>
     </svg>
     <div id="hunt-wipe" aria-hidden="true"></div>
+    <button type="button" id="hunt-fullscreen-btn" class="hunt-fullscreen-btn" aria-label="Enter fullscreen">⛶</button>
   </div>
   <button type="button" id="hunt-next" class="hunt-nav hunt-nav-next locked" aria-label="Next room">›</button>
   </div>
   <div class="hunt-dots" id="hunt-dots" role="tablist" aria-label="Rooms"></div>
+  </div>
   <div class="watch-controls">
     <button type="button" id="watch-loft-btn" class="watch-loft-btn" data-i="watch_loft">▶ Watch the loft</button>
     <button type="button" id="watch-skip-btn" class="watch-skip-btn" data-i="watch_skip" hidden>■ Take over</button>
@@ -4444,6 +4463,8 @@ var T = {
     contact: "Questions? Write to us:",
     marketa_url: "https://marketajakesova.ca",
     nav_lang_aria: "Language",
+    fullscreen_enter: "Enter fullscreen",
+    fullscreen_exit: "Exit fullscreen",
     caps_aria: "A pink flat cap and a blue baker boy cap, crossed",
     laptop_date: "May 1",
     laptop_daysfx: "d",
@@ -4535,6 +4556,8 @@ var T = {
     contact: "Dotazy? Napište nám:",
     marketa_url: "https://marketajakesova.ca/cs/",
     nav_lang_aria: "Jazyk",
+    fullscreen_enter: "Celá obrazovka",
+    fullscreen_exit: "Ukončit celou obrazovku",
     caps_aria: "Růžová čepice a modrá čepice, zkřížené",
     laptop_date: "1. 5.",
     laptop_daysfx: "d",
@@ -4648,6 +4671,7 @@ function setLang(l) {
   try { localStorage.setItem("lang", l); } catch (e) {}
   if (window.refreshHuntCaption) window.refreshHuntCaption();
   if (window.refreshLaptopClock) window.refreshLaptopClock();
+  if (window.refreshFullscreenLabel) window.refreshFullscreenLabel();
 }
 (function () {
   var btns = document.querySelectorAll(".langs button");
@@ -4684,6 +4708,37 @@ function setLang(l) {
   var hint = document.getElementById("device-hint");
   if (!hint) return;
   if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) hint.classList.add("show");
+})();
+(function () {
+  // Fullscreens #hunt-fullscreen-area (the nav-frame + viewport + room dots together,
+  // not the whole page) rather than just the SVG viewport, so the prev/next arrows and
+  // room-dot indicators stay usable in fullscreen too.
+  var btn = document.getElementById("hunt-fullscreen-btn");
+  var area = document.getElementById("hunt-fullscreen-area");
+  if (!btn || !area) return;
+  var requestFs = area.requestFullscreen || area.webkitRequestFullscreen;
+  var exitFs = document.exitFullscreen || document.webkitExitFullscreen;
+  if (!requestFs || !exitFs) { btn.remove(); return; } // no Fullscreen API support: don't show a dead button
+  function isFullscreen() {
+    return (document.fullscreenElement || document.webkitFullscreenElement) === area;
+  }
+  function lang() { return T[document.documentElement.lang] ? document.documentElement.lang : "en"; }
+  function refreshLabel() {
+    var key = isFullscreen() ? "fullscreen_exit" : "fullscreen_enter";
+    btn.setAttribute("aria-label", T[lang()][key]);
+    btn.textContent = isFullscreen() ? "⤢" : "⛶";
+  }
+  window.refreshFullscreenLabel = refreshLabel; // re-run by setLang() on every language switch
+  btn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    try {
+      var p = isFullscreen() ? exitFs.call(document) : requestFs.call(area);
+      if (p && p.catch) p.catch(function () {}); // e.g. denied outside a trusted gesture
+    } catch (err) {}
+  });
+  document.addEventListener("fullscreenchange", refreshLabel);
+  document.addEventListener("webkitfullscreenchange", refreshLabel);
+  refreshLabel();
 })();
 function eggBubble(anchor, text, placement) {
   var old = document.querySelector(".egg-bubble");

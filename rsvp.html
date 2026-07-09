@@ -15119,15 +15119,17 @@ function spawnDustMote(container) {
       goToStage(STAGES[stageIndex + 1]);
     }
   });
-  // Keyboard room nav: ←/→ move between rooms. If the next room is still locked, a
-  // second → within 600ms unlocks it (mirrors the arrow/dot double-click-to-unlock).
-  // 'd' flips day↔night. All ignored while typing or with a modifier held.
+  // Keyboard room nav: →/Tab forward, ←/` back. At a locked frontier a second forward
+  // within 600ms unlocks it (mirrors the arrow/dot double-click-to-unlock). d/↑/↓ flip
+  // day↔night, 1-5 jump to a room, q to the finale, r resets. Ignored while typing / with
+  // a modifier. (Tab is repurposed here — the game strip has no tab targets — but form
+  // fields still get it via the typing guard below.)
   var lastLockedRightAt = 0;
   document.addEventListener("keydown", function (e) {
     if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
     var t = e.target;
     if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
-    if (e.key === "ArrowRight") {
+    if (e.key === "ArrowRight" || e.key === "Tab") {
       e.preventDefault();
       if (stageIndex < maxUnlocked) { goToStage(STAGES[stageIndex + 1]); lastLockedRightAt = 0; }
       else if (stageIndex < STAGES.length - 1) {
@@ -15135,7 +15137,7 @@ function spawnDustMote(container) {
         if (now - lastLockedRightAt < 600) { goToStage(STAGES[stageIndex + 1]); lastLockedRightAt = 0; } // second press unlocks
         else lastLockedRightAt = now; // first press at the locked frontier — arm the unlock
       }
-    } else if (e.key === "ArrowLeft") {
+    } else if (e.key === "ArrowLeft" || e.key === "`") {
       e.preventDefault();
       if (stageIndex > 0) goToStage(STAGES[stageIndex - 1]);
     } else if (e.key === "d" || e.key === "D" || e.key === "ArrowUp" || e.key === "ArrowDown") {
@@ -15147,6 +15149,9 @@ function spawnDustMote(container) {
     } else if (e.key >= "1" && e.key <= "5") {
       e.preventDefault();
       goToStage(STAGES[parseInt(e.key, 10) - 1]); // jump straight to room 1-5, unlocking it if needed
+    } else if (e.key === "r" || e.key === "R") {
+      e.preventDefault();
+      resetHunt(); // full game reset
     }
   });
 

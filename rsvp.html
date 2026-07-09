@@ -1748,6 +1748,11 @@ footer{margin-top:2.6rem}
    to the plant groups themselves, so the trip-bloom canvases (siblings inside the same
    lift wrapper) are untouched. */
 #garden-monstera, #garden-peacelily, #garden-dieffenbachia, #garden-snakeplant, #garden-potstand, #kitchen-plant{filter:saturate(1.16) brightness(1.02)}
+/* caps-lock flips a UV / blacklight "party mode" over the whole strip: a dark, cool violet
+   wash with everything shifted + oversaturated (toggled by the caps-lock keydown handler,
+   which is the only place the lock state is readable). Instant flip — a filter transition
+   here would also animate the trip variants' own filter changes. */
+#loft-game-strip.uv-mode{filter:brightness(0.5) saturate(2.6) hue-rotate(220deg) contrast(1.3)}
 #balcony-butterfly{opacity:0; pointer-events:none}
 #balcony-butterfly.flying{animation:balcony-butterfly-fly 3.2s ease-in-out forwards}
 @keyframes balcony-butterfly-fly{
@@ -5610,6 +5615,14 @@ document.addEventListener("click", function (e) {
   var anchor = b._anchor;
   if (anchor && (e.target === anchor || (anchor.contains && anchor.contains(e.target)))) return;
   dismissEggBubble(b);
+});
+// Caps Lock flips the UV / blacklight party mode. The lock state is only readable during a
+// key event, and toggling Caps Lock itself fires a keydown — so sync the class to the live
+// modifier state on every keydown (a no-op when it hasn't changed).
+document.addEventListener("keydown", function (e) {
+  if (!e.getModifierState) return;
+  var strip = document.getElementById("loft-game-strip");
+  if (strip) strip.classList.toggle("uv-mode", e.getModifierState("CapsLock"));
 });
 document.addEventListener("click", function (e) {
   var link = e.target.closest && e.target.closest("#hunt-caption a");

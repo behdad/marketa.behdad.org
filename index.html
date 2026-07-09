@@ -1760,6 +1760,20 @@ function setLang(l) {
     refresh();
   }
   for (var i = 0; i < fsBtns.length; i++) wireOne(fsBtns[i]);
+  // 'f' toggles fullscreen for the parties block from anywhere (both scene buttons target
+  // the same section); a keydown is a trusted gesture so requestFullscreen is allowed.
+  // Ignored while typing or with a modifier held.
+  var fsSection = fsBtns[0] && document.getElementById(fsBtns[0].getAttribute("data-section"));
+  document.addEventListener("keydown", function (e) {
+    if ((e.key !== "f" && e.key !== "F") || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || !fsSection) return;
+    var t = e.target;
+    if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+    e.preventDefault();
+    try {
+      var p = isFullscreen(fsSection) ? document[exitFs]() : fsSection[requestFs]();
+      if (p && p.catch) p.catch(function () {});
+    } catch (err) {}
+  });
   window.refreshFullscreenLabels = function () {
     for (var w = 0; w < wired.length; w++) wired[w]();
   };

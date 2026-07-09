@@ -5447,12 +5447,21 @@ function setLang(l) {
   }
   window.refreshFullscreenLabel = refreshLabel; // re-run by setLang() on every language switch
   window.__sizeFullscreenFrame = sizeFullscreenFrame; // test hook: isFullscreen() checks the real Fullscreen API, which headless test scripts that only toggle .is-fullscreen can't trigger
-  btn.addEventListener("click", function (e) {
-    e.stopPropagation();
+  function toggleFs() {
     try {
       var p = isFullscreen() ? exitFs.call(document) : requestFs.call(area);
       if (p && p.catch) p.catch(function () {}); // e.g. denied outside a trusted gesture
     } catch (err) {}
+  }
+  btn.addEventListener("click", function (e) { e.stopPropagation(); toggleFs(); });
+  // 'f' toggles fullscreen from anywhere (a keydown is a trusted gesture, so the
+  // requestFullscreen call is allowed); ignored while typing or with a modifier held.
+  document.addEventListener("keydown", function (e) {
+    if ((e.key !== "f" && e.key !== "F") || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+    var t = e.target;
+    if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+    e.preventDefault();
+    toggleFs();
   });
   document.addEventListener("fullscreenchange", refreshLabel);
   document.addEventListener("webkitfullscreenchange", refreshLabel);
@@ -9189,6 +9198,7 @@ document.addEventListener("click", function (e) {
     window.__autoToggleDusk = toggleDusk;
     // a manual flip means the visitor's driving — stop the automatic cycle
     function onSunClick() { toggleDusk(); if (window.__stopAutoDayNight) window.__stopAutoDayNight(); }
+    window.__toggleDayNight = onSunClick; // 'd' key hook (see the hunt-nav keydown handler)
     duskSun.addEventListener("click", onSunClick);
     duskSun.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSunClick(); }
@@ -15002,6 +15012,30 @@ function spawnDustMote(container) {
       goToStage(STAGES[stageIndex + 1]);
     } else if (e.detail >= 2 && stageIndex < STAGES.length - 1) {
       goToStage(STAGES[stageIndex + 1]);
+    }
+  });
+  // Keyboard room nav: ←/→ move between rooms. If the next room is still locked, a
+  // second → within 600ms unlocks it (mirrors the arrow/dot double-click-to-unlock).
+  // 'd' flips day↔night. All ignored while typing or with a modifier held.
+  var lastLockedRightAt = 0;
+  document.addEventListener("keydown", function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+    var t = e.target;
+    if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      if (stageIndex < maxUnlocked) { goToStage(STAGES[stageIndex + 1]); lastLockedRightAt = 0; }
+      else if (stageIndex < STAGES.length - 1) {
+        var now = Date.now();
+        if (now - lastLockedRightAt < 600) { goToStage(STAGES[stageIndex + 1]); lastLockedRightAt = 0; } // second press unlocks
+        else lastLockedRightAt = now; // first press at the locked frontier — arm the unlock
+      }
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      if (stageIndex > 0) goToStage(STAGES[stageIndex - 1]);
+    } else if (e.key === "d" || e.key === "D" || e.key === "ArrowUp" || e.key === "ArrowDown") {
+      e.preventDefault();
+      if (window.__toggleDayNight) window.__toggleDayNight();
     }
   });
 

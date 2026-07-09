@@ -7180,6 +7180,9 @@ document.addEventListener("click", function (e) {
   // screensaver fractal's brightness on the beat while a song plays underneath it.
   var eqRAF = null, eqAudioCtx = null, eqCtxFailed = false, eqAudioEl = null;
   var eqBassShelf = null, eqMuffleFilter = null, eqMasterGain = null, eqCompressor = null, eqPanner = null, eqAnalyser = null;
+  // Stereo-width stage nodes (mid-side-style narrowing) -- see ensureAudioGraph for the
+  // splitter/4-gain/merger wiring and __updateSongRoomWidth for what drives the gains.
+  var eqWidthSplitter = null, eqWidthMerger = null, eqWidthL2L = null, eqWidthR2R = null, eqWidthL2R = null, eqWidthR2L = null;
   var headphoneModeOn = false;
   var FLAT_BASS_DB = 0, FLAT_LOWPASS_HZ = 20000; // "no audible change vs today" defaults
   var HP_BASS_DB = 8, HP_LOWPASS_HZ = 1800;      // headphone-mode targets
@@ -7223,7 +7226,35 @@ document.addEventListener("click", function (e) {
       eqAnalyser.fftSize = 64;
       eqAnalyser.smoothingTimeConstant = 0.7;
       eqBassShelf.connect(eqMuffleFilter);
-      eqMuffleFilter.connect(eqMasterGain);
+      // Stereo-width stage (mid-side-style narrowing), spliced in right after the muffle
+      // filter and before the master gain/compressor/panner -- width is a spatial property
+      // of the "dry" filtered signal, applied before those touch it. There's no dedicated
+      // Web Audio "width" node, so this is the standard split -> weighted 4-gain remix ->
+      // merge construction. Room-driven via SONG_ROOM_WIDTH/__updateSongRoomWidth below;
+      // at width=1 the four gains are exactly {1,1,0,0} (same-channel=1, cross-channel=0),
+      // an exact identity pass-through, so every room but office is provably untouched --
+      // for STEREO input. createChannelSplitter(2) is fixed to discrete interpretation, so
+      // a mono source would land only in "channel 0" (silence in "channel 1"), and width=1
+      // would then paste that silence into R' too: hard-left instead of centered. Confirmed
+      // (ffprobe) both actual songAudios files -- guitar-song-audio/Black Tornado and
+      // ukulele-song-audio/Strange & Beautiful Things -- are stereo, so this doesn't bite
+      // today; re-check with ffprobe before ever routing a mono file through this pipeline.
+      eqWidthSplitter = eqAudioCtx.createChannelSplitter(2);
+      eqWidthMerger = eqAudioCtx.createChannelMerger(2);
+      eqWidthL2L = eqAudioCtx.createGain(); eqWidthL2L.gain.value = 1;
+      eqWidthR2R = eqAudioCtx.createGain(); eqWidthR2R.gain.value = 1;
+      eqWidthL2R = eqAudioCtx.createGain(); eqWidthL2R.gain.value = 0;
+      eqWidthR2L = eqAudioCtx.createGain(); eqWidthR2L.gain.value = 0;
+      eqMuffleFilter.connect(eqWidthSplitter);
+      eqWidthSplitter.connect(eqWidthL2L, 0); // splitter output 0 (L) -> L2L gain
+      eqWidthSplitter.connect(eqWidthL2R, 0); // splitter output 0 (L) -> L2R gain
+      eqWidthSplitter.connect(eqWidthR2L, 1); // splitter output 1 (R) -> R2L gain
+      eqWidthSplitter.connect(eqWidthR2R, 1); // splitter output 1 (R) -> R2R gain
+      eqWidthL2L.connect(eqWidthMerger, 0, 0); // -> merger input 0 (L')
+      eqWidthR2L.connect(eqWidthMerger, 0, 0); // -> merger input 0 (L'), sums with L2L
+      eqWidthL2R.connect(eqWidthMerger, 0, 1); // -> merger input 1 (R')
+      eqWidthR2R.connect(eqWidthMerger, 0, 1); // -> merger input 1 (R'), sums with L2R
+      eqWidthMerger.connect(eqMasterGain);
       var postGain = eqMasterGain;
       if (eqCompressor) { eqMasterGain.connect(eqCompressor); postGain = eqCompressor; }
       if (eqPanner) { postGain.connect(eqPanner); eqPanner.connect(eqAnalyser); }
@@ -7352,8 +7383,20 @@ document.addEventListener("click", function (e) {
       eqBassShelf.gain.setTargetAtTime(on ? HP_BASS_DB : FLAT_BASS_DB, now, FX_RAMP_S);
       eqMuffleFilter.frequency.setTargetAtTime(on ? HP_LOWPASS_HZ : FLAT_LOWPASS_HZ, now, FX_RAMP_S);
       if (eqPanner) eqPanner.pan.setTargetAtTime(on ? panForElId("office-headphones") : 0, now, FX_RAMP_S);
+      // Headphones mean full presence regardless of in-game room -- snap width back to 1
+      // the same way pan snaps to the headphones' fixed spot, just above. (Turning OFF
+      // hands width back to room-relative tracking via __updateSongRoomWidth below, same
+      // as pan does -- __updateSongRoomWidth itself no-ops while headphoneModeOn is true,
+      // so the "on" case is set explicitly here instead.)
+      if (on && eqWidthL2L) {
+        eqWidthL2L.gain.setTargetAtTime(1, now, FX_RAMP_S);
+        eqWidthR2R.gain.setTargetAtTime(1, now, FX_RAMP_S);
+        eqWidthL2R.gain.setTargetAtTime(0, now, FX_RAMP_S);
+        eqWidthR2L.gain.setTargetAtTime(0, now, FX_RAMP_S);
+      }
     } catch (e) {}
     if (!on && window.__updateSongRoomPan) window.__updateSongRoomPan(); // hand the pan back to room-relative tracking
+    if (!on && window.__updateSongRoomWidth) window.__updateSongRoomWidth(); // ...and the width
   };
   window.__headphoneModeOn = function () { return headphoneModeOn; }; // for the headphones' own click handler (different IIFE)
   // Room-relative song panning: the song is heard as ambient to the whole loft, not
@@ -7472,6 +7515,29 @@ document.addEventListener("click", function (e) {
     var room = ROOM_BY_STAGE_INDEX[window.currentStageIndex] || "kitchen";
     songBasePan = room === "balcony" ? panForElId("balcony-door") : SONG_ROOM_PAN[room];
     ensurePanDrift();
+  };
+  // Room-relative stereo width: cuddly (the middle room, where the couple actually is)
+  // keeps full, present stereo width; office -- further from the garden instrument the
+  // song originates from -- gets a bit narrower, reading as more distant/enclosed (closer
+  // to mono = like hearing it through a wall). Deliberately a small nudge, not full mono.
+  // See the width-stage comment in ensureAudioGraph for the {1,1,0,0}-at-width=1 identity
+  // guarantee that keeps every other room provably untouched. Balcony isn't listed here
+  // (falls through to the same default as everywhere but office) -- width tracks room
+  // distance from the instrument, not the door-acoustics bleed-through story that gives
+  // balcony its own pan formula above.
+  var SONG_ROOM_WIDTH = { kitchen: 1, garden: 1, cuddly: 1, office: 0.55 };
+  window.__updateSongRoomWidth = function () {
+    if (!eqAudioCtx || !eqWidthL2L || headphoneModeOn) return;
+    var room = ROOM_BY_STAGE_INDEX[window.currentStageIndex] || "kitchen";
+    var width = SONG_ROOM_WIDTH[room] != null ? SONG_ROOM_WIDTH[room] : 1;
+    var same = 0.5 + 0.5 * width, cross = 0.5 - 0.5 * width;
+    var now = eqAudioCtx.currentTime;
+    try {
+      eqWidthL2L.gain.setTargetAtTime(same, now, FX_RAMP_S);
+      eqWidthR2R.gain.setTargetAtTime(same, now, FX_RAMP_S);
+      eqWidthL2R.gain.setTargetAtTime(cross, now, FX_RAMP_S);
+      eqWidthR2L.gain.setTargetAtTime(cross, now, FX_RAMP_S);
+    } catch (e) {}
   };
   // The balcony's front door is the loft's boundary to "outside" — the song (playing
   // from a garden instrument, audible throughout the loft) should feel a bit cut off
@@ -7646,6 +7712,7 @@ document.addEventListener("click", function (e) {
     if (playing) {
       startEq(playing);
       if (window.__updateSongRoomPan) window.__updateSongRoomPan(); // a fresh/switched song starts panned to its room-relative spot
+      if (window.__updateSongRoomWidth) window.__updateSongRoomWidth(); // ...and at its room-relative stereo width
       if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics(); // and at the right volume for wherever/however-sealed-off you're viewing it from
     } else {
       stopEq(); // freeze the bars while paused
@@ -13835,13 +13902,17 @@ function spawnDustMote(container) {
     if (window.__updateFireSound) window.__updateFireSound(name === "cuddly"); // fire crackle only in the cuddly nook
     if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(name === "balcony"); // string lights pulse with the beat only on the balcony
     if (window.__updateSongRoomPan) window.__updateSongRoomPan(); // room-fixed rooms settle immediately
+    if (window.__updateSongRoomWidth) window.__updateSongRoomWidth(); // width follows the same room-fixed table, no transition dependency
     // the balcony's pan reads the door's live on-screen position (see
     // __updateSongRoomPan) -- the strip transform set above animates over its own
     // #loft-game-strip{transition:transform .7s ease}, so an immediate read here
     // lands mid-slide (or before it's even started) and captures the door's position
     // relative to the room being left, not the one being entered. Re-settle once the
     // slide has actually finished; the fixed-pan rooms just get redundantly re-applied.
-    setTimeout(function () { if (window.__updateSongRoomPan) window.__updateSongRoomPan(); }, 720);
+    setTimeout(function () {
+      if (window.__updateSongRoomPan) window.__updateSongRoomPan();
+      if (window.__updateSongRoomWidth) window.__updateSongRoomWidth();
+    }, 720);
     if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics(); // and gets quieter on the balcony specifically, while its door is shut
     if (name === "balcony") triggerBalconyFinale();
   }

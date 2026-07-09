@@ -3961,6 +3961,32 @@ section{margin:1.9rem 0}
 <circle cx="84" cy="46" r="0.9" opacity="0.9" class="twinkle"/><circle cx="120" cy="44" r="0.8" opacity="0.7"/><circle cx="158" cy="47" r="1" opacity="0.85" class="twinkle t2"/><circle cx="200" cy="45" r="0.85" opacity="0.75" class="twinkle t3"/><circle cx="216" cy="66" r="0.9" opacity="0.8" class="twinkle"/><circle cx="196" cy="82" r="0.75" opacity="0.65" class="twinkle t2"/>
 </g>
 <ellipse cx="102" cy="62" rx="22" ry="8" fill="#e8eef2"/>
+<!-- A distant tower crane on the skyline (Edmonton is one big construction site),
+     seen through the glass in the open sky right of the buildings. It sits before
+     pane-2 in document order, so a dropped load vanishes behind that lower pane and
+     reads as "outside." Trolley traverse, load sway and the occasional load-drop are
+     driven by a single self-cancelling rAF loop (startOfficeCrane); decorative, no
+     pointer events, so it never blocks the window-pane click behind it. -->
+<g id="office-crane" pointer-events="none" fill="none" stroke="#6f7883" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9">
+<path d="M209.5 54 V140 M214.5 54 V140" stroke-width="1.4"/>
+<path d="M209.5 66 H214.5 M209.5 80 H214.5 M209.5 94 H214.5 M209.5 108 H214.5 M209.5 122 H214.5" stroke-width="0.9"/>
+<path d="M209.5 54 L214.5 66 M214.5 54 L209.5 66 M209.5 80 L214.5 94 M214.5 80 L209.5 94 M209.5 108 L214.5 122 M214.5 108 L209.5 122" stroke-width="0.7"/>
+<rect x="206.5" y="48" width="11" height="6" fill="#6f7883" stroke="none"/>
+<path d="M212 43 L207 49 M212 43 L217 49"/>
+<path d="M212 43 L186 52 M212 43 L226 52" stroke-width="1"/>
+<path d="M186 52 H226" stroke-width="1.6"/>
+<path d="M188 54.5 H224" stroke-width="0.9"/>
+<path d="M190 52 V54.5 M198 52 V54.5 M206 52 V54.5 M218 52 V54.5" stroke-width="0.7"/>
+<rect x="220" y="49" width="7" height="6" fill="#6f7883" stroke="none"/>
+<g id="office-crane-trolley" transform="translate(199,0)">
+<rect x="-3" y="51" width="6" height="4" fill="#6f7883" stroke="none"/>
+<g id="office-crane-swing">
+<line id="office-crane-cable" x1="0" y1="54" x2="0" y2="66" stroke-width="0.9"/>
+<rect x="-5.5" y="66" width="11" height="8" fill="#7c6f5c" stroke="#5f5647" stroke-width="0.8"/>
+<path d="M-5.5 70 H5.5" stroke="#5f5647" stroke-width="0.6"/>
+</g>
+</g>
+</g>
 <rect x="86" y="50" width="44" height="140" fill="#d8cfc0"/>
 <path d="M92 60 h32 M92 74 h32 M92 88 h32 M92 102 h32 M92 116 h32 M92 130 h32" stroke="#b8ab98" stroke-width="2.5"/>
 <path d="M100 50 V140 M112 50 V140" stroke="#b8ab98" stroke-width="1.5"/>
@@ -5858,6 +5884,91 @@ document.addEventListener("click", function (e) {
   window.startCuddlyFlame = startCuddlyFlame;
   window.__cuddlyFlameRaf = function () { return raf; }; // test hook: null when the loop is stopped
   document.addEventListener("visibilitychange", function () { if (!document.hidden) startCuddlyFlame(); });
+})();
+(function () {
+  // The distant tower crane through the office window: the trolley traverses the jib, the
+  // load sways beneath it, and now and then the load drops out of sight with a bang.
+  //
+  // Robustness (CLAUDE.md timer-pile-up class): ONE self-cancelling rAF, exactly like the
+  // fireplace flame above. It runs ONLY while the office is on-screen (window.currentStageName)
+  // AND the tab is visible; the instant either is false it nulls its handle and returns — no
+  // accumulation, no leftover timer, and the bang can never sound off-screen or in a hidden
+  // tab. Restarted idempotently on entering the office and on the tab becoming visible.
+  // Every moving part is positioned by writing SVG transform ATTRIBUTES here in JS (never a
+  // CSS transform), so the "CSS transform replaces the transform attribute" trap can't bite.
+  // Reduced motion: the loop never starts, leaving the authored static frame (trolley parked
+  // mid-jib, load resting on the hook) — no traverse, no sway, no auto-drop.
+  var trolley = document.getElementById("office-crane-trolley");
+  var swing = document.getElementById("office-crane-swing");
+  var cable = document.getElementById("office-crane-cable");
+  if (!trolley || !swing || !cable) return;
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // geometry in office-citywindow local coords (the crane <g> shares that space)
+  var TR_MID = 199, TR_AMP = 9;      // trolley slides between x190 and x208 (open sky, right of the buildings)
+  var TR_W = 2 * Math.PI / 12000;    // one full left-right-left traverse every ~12s
+  var SWAY_AMP = 7;                  // load sway, degrees, lagging the trolley's motion
+  var PIVOT_Y = 54;                  // hook point the load swings about (cable top)
+  var GRAV = 0.00029;                // load-drop acceleration, px per ms^2
+  var FALL_DIST = 82;                // fall until the load is well behind pane-2 (out of view) then land
+  var RELOAD_MS = 1200;              // empty-hook beat before a fresh load appears
+
+  var raf = null, lastT = 0;
+  var trolleyClock = 0;              // advances only while carrying → traverse + drop scheduling freeze during a drop
+  var reloadTimer = 0;
+  var state = "carry";              // carry | drop | reload
+  var dropY = 0, dropVel = 0, banged = false;
+  var nextDropAt = 15000 + Math.random() * 25000; // first drop 15-40s into the office
+
+  function shouldRun() { return window.currentStageName === "office" && !document.hidden && !reduceMotion; }
+
+  function frame(t) {
+    if (!shouldRun()) { raf = null; return; } // leaving the room / hiding → self-cancel, no leftover timer
+    var dt = lastT ? Math.min(60, t - lastT) : 16;
+    lastT = t;
+    if (state === "carry") {
+      trolleyClock += dt;
+      var tx = TR_MID + TR_AMP * Math.sin(trolleyClock * TR_W);
+      var sway = SWAY_AMP * Math.sin(trolleyClock * TR_W - 0.6);
+      trolley.setAttribute("transform", "translate(" + tx.toFixed(2) + ",0)");
+      swing.setAttribute("transform", "rotate(" + sway.toFixed(2) + " 0 " + PIVOT_Y + ")");
+      // only release when the trolley is at/left of centre, so the load falls clear of the mast
+      if (trolleyClock >= nextDropAt && tx <= TR_MID) {
+        state = "drop"; dropY = 0; dropVel = 0; banged = false;
+        cable.setAttribute("opacity", "0"); // load has released — no cable on the way down
+      }
+    } else if (state === "drop") {
+      dropVel += GRAV * dt;
+      dropY += dropVel * dt;
+      swing.setAttribute("transform", "translate(0," + dropY.toFixed(2) + ")");
+      if (dropY >= FALL_DIST) {
+        dropY = FALL_DIST;
+        if (!banged) {
+          banged = true;
+          if (!document.hidden && window.currentStageName === "office") playCraneDropSound();
+        }
+        state = "reload"; reloadTimer = 0;
+      }
+    } else { // reload: hook hangs empty for a beat, then a fresh load appears at rest
+      reloadTimer += dt;
+      if (reloadTimer >= RELOAD_MS) {
+        cable.setAttribute("opacity", "1");
+        swing.setAttribute("transform", "rotate(0 0 " + PIVOT_Y + ")");
+        nextDropAt = trolleyClock + 15000 + Math.random() * 25000;
+        state = "carry";
+      }
+    }
+    raf = requestAnimationFrame(frame);
+  }
+  function startOfficeCrane() {
+    if (reduceMotion) return;        // authored static frame only — no loop
+    if (raf || !shouldRun()) return; // already live, or not runnable right now
+    lastT = 0;
+    raf = requestAnimationFrame(frame);
+  }
+  window.startOfficeCrane = startOfficeCrane;
+  window.__officeCraneRaf = function () { return raf; }; // test hook: null when the loop is stopped
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) startOfficeCrane(); });
 })();
 (function () {
   var bottom = document.getElementById("cuddly-behdad-bottom");
@@ -12280,6 +12391,54 @@ function playMetalClinkSound(pitchMult, panId) {
     setTimeout(function () { ctx.close(); }, 400);
   } catch (e) {}
 }
+// A construction load hitting the deck, heard through the office window: a heavy,
+// bass-shifted take on the metal-clink/pan-crash family. Two low, slow-ringing metal
+// clangs a beat apart (reusing playMetalClinkSound at deep pitch multipliers), layered
+// over a deep thud — a low sine boom plus a short low-passed noise body — for the weight
+// of it. Panned to the window's on-screen position. Only ever called from the crane's
+// gated rAF loop, so it never sounds while the office is off-screen or the tab is hidden.
+function playCraneDropSound() {
+  playMetalClinkSound(0.30, "office-window-pane-1");
+  setTimeout(function () { playMetalClinkSound(0.22, "office-window-pane-1"); }, 130);
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t = ctx.currentTime;
+    var out = pannedOut(ctx, "office-window-pane-1");
+    // deep boom: a low sine dropping in pitch as it decays — the ground-shake of impact
+    var boom = ctx.createOscillator();
+    boom.type = "sine";
+    boom.frequency.setValueAtTime(92, t);
+    boom.frequency.exponentialRampToValueAtTime(38, t + 0.2);
+    var bg = ctx.createGain();
+    bg.gain.setValueAtTime(0.0001, t);
+    bg.gain.exponentialRampToValueAtTime(0.5, t + 0.012);
+    bg.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+    boom.connect(bg);
+    bg.connect(out);
+    boom.start(t);
+    boom.stop(t + 0.38);
+    // thud body: a short burst of low-passed noise for the dull "whump" of mass landing
+    var nlen = Math.floor(ctx.sampleRate * 0.2);
+    var nb = ctx.createBuffer(1, nlen, ctx.sampleRate);
+    var nd = nb.getChannelData(0);
+    for (var i = 0; i < nlen; i++) nd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / nlen, 2.2);
+    var noise = ctx.createBufferSource();
+    noise.buffer = nb;
+    var lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 190;
+    var ng = ctx.createGain();
+    ng.gain.value = 0.42;
+    noise.connect(lp);
+    lp.connect(ng);
+    ng.connect(out);
+    noise.start(t);
+    noise.stop(t + 0.22);
+    setTimeout(function () { ctx.close(); }, 500);
+  } catch (e) {}
+}
 // The balcony windchime, hanging under the wall lamp: 2-4 of its 4 tubes ring at once,
 // each its own inharmonic bar-overtone partial series (same idea as playMetalClinkSound
 // just above, but 4 partials — the classic 1 : 2.76 : 5.40 : 8.93 tubular-bell ratios —
@@ -14723,6 +14882,7 @@ function spawnDustMote(container) {
     if (name === "cuddly" && window.startCuddlyFlame) window.startCuddlyFlame(); // light the fireplace's fractal flames
     if (name === "cuddly" && window.resetFishu) window.resetFishu();
     if (name === "office" && window.revealOfficeFishuIfFled) window.revealOfficeFishuIfFled();
+    if (name === "office" && window.startOfficeCrane) window.startOfficeCrane(); // resume the skyline crane's traverse/drop loop
     if (window.__updatePcFan) window.__updatePcFan(name === "office"); // hum only in the office
     if (window.__updateFireSound) window.__updateFireSound(name === "cuddly"); // fire crackle only in the cuddly nook
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(name === "garden"); // birdsong only in the garden, and only by day

@@ -139,8 +139,16 @@ footer{margin-top:2.6rem}
   position:absolute; top:.5rem; right:.5rem; z-index:6; font:inherit; font-size:1rem; line-height:1;
   width:1.9rem; height:1.9rem; padding:0; border-radius:50%; border:1.5px solid rgba(255,253,248,.7);
   background:rgba(69,58,49,.55); color:#fffdf8; cursor:pointer; opacity:.7; transition:opacity .2s ease, background .2s ease;
+  display:flex; align-items:center; justify-content:center;
 }
 .hunt-fullscreen-btn:hover, .hunt-fullscreen-btn:focus-visible{opacity:1; background:rgba(69,58,49,.82)}
+/* the cross-room song volume control, bottom-right of the viewport (fullscreen owns
+   top-right) -- hidden until a song's actually played once, same as index.html's loft
+   volume button. Cycles the SAME mute->0.25->0.5->1.0 level as the office monitor's own
+   speaker button (see cycleVolume/updateVolIcon) -- one shared level, two triggers. */
+.song-volume-btn{top:auto; bottom:.5rem; right:.5rem; opacity:0; pointer-events:none}
+.song-volume-btn.shown{opacity:.7; pointer-events:auto}
+.song-volume-btn.shown:hover, .song-volume-btn.shown:focus-visible{opacity:1}
 /* fullscreen wraps the frame (nav arrows + viewport) AND the room dots below it, not
    the whole page — the browser fills the screen with just this element's own box, so
    give it a matching background + center the frame in it, SCALED to fill whichever
@@ -150,6 +158,14 @@ footer{margin-top:2.6rem}
    predictable across engines than a plain class the JS controls directly; the pseudo-
    class rules stay too as a harmless belt-and-braces fallback. */
 #hunt-fullscreen-area.is-fullscreen, #hunt-fullscreen-area:fullscreen, #hunt-fullscreen-area:-webkit-full-screen{
+  /* position:fixed detaches this from normal flow (escaping any ancestor max-width) and
+     pins it to the actual viewport regardless of whether the browser also granted real
+     top-layer fullscreen treatment -- real :fullscreen gets that automatically, but the
+     .is-fullscreen class fallback does not (confirmed: without this, width/height:100%
+     resolved against the normal in-flow parent, not the viewport, in a synthetic test
+     that toggles the class without a real requestFullscreen() call — same fix already
+     applied to index.html's fullscreen). */
+  position:fixed; inset:0; z-index:50;
   background:var(--cream); display:flex; flex-direction:column; align-items:center;
   /* safe center: centers normally, but falls back to start alignment if the content
      overflows the viewport height (mobile landscape especially — a short viewport with
@@ -164,7 +180,17 @@ footer{margin-top:2.6rem}
 #hunt-fullscreen-area.is-fullscreen .hunt-frame,
 #hunt-fullscreen-area:fullscreen .hunt-frame,
 #hunt-fullscreen-area:-webkit-full-screen .hunt-frame{
-  max-width:none; width:min(94vw, 190vh); margin:0;
+  /* the room viewport is a fixed 2:1 shape (680x340 per room in the strip's viewBox),
+     so deriving width from a HEIGHT budget of "100vh minus the caption/dots/watch-
+     controls/padding chrome around it" (times 2, for the aspect ratio) guarantees the
+     frame always leaves room for that chrome, at ANY viewport height -- the old plain
+     `190vh` was a percentage, so its leftover margin shrank right along with the
+     viewport and the chrome got squeezed off (needing a scroll, or worse, unreachable —
+     see the safe-center comment above) on plenty of ordinary desktop window sizes, not
+     just mobile. 11.5rem ~= padding (3rem) + caption (~2.4rem) + dots incl. margin
+     (~2.5rem) + .watch-controls incl. margin (~2rem), rounded up for a little slack.
+     Still capped by width via 94vw same as before. */
+  max-width:none; width:min(94vw, calc(2 * (100vh - 11.5rem))); margin:0;
 }
 #hunt-fullscreen-area.is-fullscreen .hunt-dots,
 #hunt-fullscreen-area:fullscreen .hunt-dots,
@@ -802,6 +828,14 @@ footer{margin-top:2.6rem}
   100%{transform:rotate(0deg)}
 }
 @media (prefers-reduced-motion: reduce){#office-headphones.wobbling{animation:none}}
+/* the cups pulse to the ACTUAL beat while headphone mode is on -- driven by direct
+   per-frame transform writes off the real analyser data (see headphoneBeatFrame),
+   same technique as the equalizer bars' driveBars, not a precomputed CSS keyframe loop.
+   A separate wrapper around just the cups (not #office-headphones itself, which already
+   owns .wobbling's one-shot rotate) so the two transforms don't fight for the same
+   element's transform property, same fix as everywhere else in this file that pairs a
+   looping state effect with a one-shot gesture. */
+#office-headphones-cups{transform-box:fill-box; transform-origin:center}
 /* the ultrawide monitor is the office default; a double-click reveals its secret
    alter ego, the typewriter (and double-clicking the typewriter swaps back) */
 #office-monitor{opacity:0; pointer-events:none}
@@ -3978,6 +4012,7 @@ section{margin:1.9rem 0}
 <path d="M201 244 A9 21.3 0 0 1 219 244" fill="none" stroke="#454545" stroke-width="1" stroke-linecap="round"/>
 <path d="M201 242 L199 247" stroke="#8a8a8a" stroke-width="1.5" stroke-linecap="round"/>
 <path d="M219 242 L221 247" stroke="#8a8a8a" stroke-width="1.5" stroke-linecap="round"/>
+<g id="office-headphones-cups">
 <circle cx="198" cy="248" r="8.6" fill="#242424" stroke="#0f0f0f" stroke-width="0.7"/>
 <circle cx="198" cy="248" r="8.6" fill="none" stroke="#9c9c9c" stroke-width="1.1"/>
 <circle cx="198" cy="248" r="6.1" fill="none" stroke="#666666" stroke-width="0.6"/>
@@ -3988,6 +4023,7 @@ section{margin:1.9rem 0}
 <circle cx="222" cy="248" r="6.1" fill="none" stroke="#666666" stroke-width="0.6"/>
 <circle cx="222" cy="248" r="3.9" fill="none" stroke="#666666" stroke-width="0.6"/>
 <circle cx="222" cy="248" r="1.7" fill="#3a3a3a"/>
+</g>
 </g>
 <g id="office-pc-desk-trio" class="hunt-hit" tabindex="0" role="button" aria-label="The retro computer" transform="translate(378,143) scale(0.72)">
 <g transform="translate(0,90) scale(1,0.75) translate(0,-90)">
@@ -4540,6 +4576,15 @@ section{margin:1.9rem 0}
     </svg>
     <div id="hunt-wipe" aria-hidden="true"></div>
     <button type="button" id="hunt-fullscreen-btn" class="hunt-fullscreen-btn" aria-label="Enter fullscreen">⛶</button>
+    <button type="button" id="hunt-volume-btn" class="hunt-fullscreen-btn song-volume-btn" aria-label="Volume">
+      <svg viewBox="0 0 26 24" width="14" height="13" fill="none" stroke="#f8f5ec" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="11,5 6,9 2,9 2,15 6,15 11,19" fill="#f8f5ec" stroke="none"/>
+        <path class="vol-wave" d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        <path class="vol-wave" d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+        <path class="vol-wave" d="M20.49 3.51a12 12 0 0 1 0 16.97"/>
+        <path class="vol-mute" d="M15 9l6 6M21 9l-6 6" stroke="#e08a8a" style="display:none"/>
+      </svg>
+    </button>
   </div>
   <button type="button" id="hunt-next" class="hunt-nav hunt-nav-next locked" aria-label="Next room">›</button>
   </div>
@@ -6942,7 +6987,7 @@ document.addEventListener("click", function (e) {
   // by startEq, cleared by stopEq) — also read by fractalBeatKick, above, to pulse the
   // screensaver fractal's brightness on the beat while a song plays underneath it.
   var eqRAF = null, eqAudioCtx = null, eqCtxFailed = false, eqAudioEl = null;
-  var eqBassShelf = null, eqMuffleFilter = null, eqMasterGain = null, eqPanner = null, eqAnalyser = null;
+  var eqBassShelf = null, eqMuffleFilter = null, eqMasterGain = null, eqCompressor = null, eqPanner = null, eqAnalyser = null;
   var headphoneModeOn = false;
   var FLAT_BASS_DB = 0, FLAT_LOWPASS_HZ = 20000; // "no audible change vs today" defaults
   var HP_BASS_DB = 8, HP_LOWPASS_HZ = 1800;      // headphone-mode targets
@@ -6965,6 +7010,21 @@ document.addEventListener("click", function (e) {
       eqMuffleFilter.frequency.value = FLAT_LOWPASS_HZ;
       eqMasterGain = eqAudioCtx.createGain();
       eqMasterGain.gain.value = 1;
+      // Gentle loudness normalizer: the two recordings measure within ~0.7 LUFS of each
+      // other already (checked directly with ffmpeg's loudnorm filter), so this isn't
+      // fixing an audible track-to-track mismatch -- it's a safety margin against
+      // headphone mode's +8dB bass shelf pushing a bass-heavy passage toward 0dBFS
+      // (reported as clipping/distortion), plus it evens out the overall feel a bit
+      // regardless. Mild settings (soft knee, 3:1 ratio) so it levels without an
+      // audible pumping/breathing artifact.
+      eqCompressor = eqAudioCtx.createDynamicsCompressor ? eqAudioCtx.createDynamicsCompressor() : null;
+      if (eqCompressor) {
+        eqCompressor.threshold.value = -24;
+        eqCompressor.knee.value = 12;
+        eqCompressor.ratio.value = 3;
+        eqCompressor.attack.value = 0.02;
+        eqCompressor.release.value = 0.25;
+      }
       eqPanner = eqAudioCtx.createStereoPanner ? eqAudioCtx.createStereoPanner() : null;
       if (eqPanner) eqPanner.pan.value = 0;
       eqAnalyser = eqAudioCtx.createAnalyser();
@@ -6972,8 +7032,10 @@ document.addEventListener("click", function (e) {
       eqAnalyser.smoothingTimeConstant = 0.7;
       eqBassShelf.connect(eqMuffleFilter);
       eqMuffleFilter.connect(eqMasterGain);
-      if (eqPanner) { eqMasterGain.connect(eqPanner); eqPanner.connect(eqAnalyser); }
-      else { eqMasterGain.connect(eqAnalyser); } // very old Safari: no StereoPanner, still analysed+audible
+      var postGain = eqMasterGain;
+      if (eqCompressor) { eqMasterGain.connect(eqCompressor); postGain = eqCompressor; }
+      if (eqPanner) { postGain.connect(eqPanner); eqPanner.connect(eqAnalyser); }
+      else { postGain.connect(eqAnalyser); } // very old Safari: no StereoPanner, still analysed+audible
       eqAnalyser.connect(eqAudioCtx.destination); // keep the song audible
     } catch (e) {
       eqAudioCtx = null;
@@ -7046,12 +7108,52 @@ document.addEventListener("click", function (e) {
       console.warn("[song-audio] capture failed for " + audioEl.id + ":", e);
     }
   };
+  // The headphone cups pulse to the ACTUAL beat while headphone mode is on: reads real
+  // low-frequency (kick/bass range) energy off the SAME analyser the equalizer bars use
+  // (eqAudioEl._eqAnalyser, populated by startEq regardless of whether the monitor
+  // happens to be booted — see updateNowPlaying) every frame, the same technique as the
+  // bars' own driveBars, not a precomputed fixed-BPM loop. Falls back to
+  // window.__songBeatKick() (the BPM-phase-locked envelope also used by e.g. the
+  // balcony string lights) only on platforms with no live analyser wired.
+  var headphoneBeatRAF = null, headphoneBeatData = null;
+  function headphoneBeatFrame() {
+    headphoneBeatRAF = null;
+    if (!headphoneModeOn) return; // stopped -- __setHeadphoneMode(true) restarts it
+    var cups = document.getElementById("office-headphones-cups");
+    if (!cups) return;
+    var kick = 0;
+    var analyser = eqAudioEl && eqAudioEl._eqAnalyser;
+    if (analyser) {
+      if (!headphoneBeatData || headphoneBeatData.length !== analyser.frequencyBinCount) {
+        headphoneBeatData = new Uint8Array(analyser.frequencyBinCount);
+      }
+      analyser.getByteFrequencyData(headphoneBeatData);
+      var bassBins = Math.max(1, Math.floor(headphoneBeatData.length * 0.35)); // kick/bass range only
+      var sum = 0;
+      for (var i = 0; i < bassBins; i++) sum += headphoneBeatData[i];
+      kick = (sum / bassBins) / 255;
+    } else if (window.__songBeatKick) {
+      kick = window.__songBeatKick();
+    }
+    cups.style.transform = "scale(" + (1 + Math.max(0, Math.min(1, kick)) * 0.16).toFixed(3) + ")";
+    headphoneBeatRAF = requestAnimationFrame(headphoneBeatFrame);
+  }
+  function ensureHeadphoneBeat() {
+    if (headphoneBeatRAF != null) return;
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    headphoneBeatRAF = requestAnimationFrame(headphoneBeatFrame);
+  }
   // "Headphone mode": bass boost + muffle + pan to the on-screen headphones, ramped
   // smoothly via setTargetAtTime (never a hard switch, so there's no click). A safe
   // no-op if the audio graph never confirmed running — headphone mode then just
   // wobbles visually, native playback (and its volume) is unaffected either way.
   window.__setHeadphoneMode = function (on) {
     headphoneModeOn = !!on;
+    if (on) ensureHeadphoneBeat();
+    else {
+      var cups = document.getElementById("office-headphones-cups");
+      if (cups) cups.style.transform = ""; // settle back flat -- the rAF loop above stops itself on its next tick
+    }
     if (!eqAudioCtx || !eqBassShelf) return; // don't force-build a graph just to ramp effects nothing's routed through
     var now = eqAudioCtx.currentTime;
     try {
@@ -7072,16 +7174,67 @@ document.addEventListener("click", function (e) {
   // fallback has no panner to drive), and skipped while headphone mode owns the pan.
   var ROOM_BY_STAGE_INDEX = ["kitchen", "garden", "cuddly", "office", "balcony"];
   var SONG_ROOM_PAN = { kitchen: 0.6, garden: 0.6, cuddly: 0, office: 0 };
+  // songBasePan is the room's fixed target; panDriftFrame smooths toward it AND layers
+  // a slow sine wobble on top, so a long listen isn't pinned to one static spot in the
+  // stereo field. Both live on the SAME rAF loop because they write the SAME AudioParam
+  // every frame -- mixing that with setTargetAtTime-scheduled automation on the same
+  // param would fight it (a direct .value write cancels any in-flight scheduled ramp),
+  // so the loop does its own frame-rate-independent exponential smoothing instead of
+  // relying on setTargetAtTime for the room-change transition.
+  var songBasePan = 0;
+  var smoothedSongPan = 0;
+  var PAN_SMOOTH_TAU_S = 0.35; // similar feel to the old FX_RAMP_S=0.25 setTargetAtTime ramp
+  var PAN_DRIFT_AMPLITUDE = 0.15;
+  var PAN_DRIFT_PERIOD_S = 25;
+  // While tripping (see startTripVariant/tripActive, a global further down this file),
+  // the wobble widens and speeds way up -- the song swims around the room instead of
+  // just gently breathing, matching the rest of the trip's exaggerated everything.
+  var PAN_DRIFT_AMPLITUDE_TRIP = 0.8;
+  var PAN_DRIFT_PERIOD_TRIP_S = 4.5;
+  var panDriftPhase = Math.random() * Math.PI * 2; // so it's not in the same spot every visit
+  var panDriftRAF = null, panDriftLastT = null;
+  function anySongPlaying() {
+    for (var i = 0; i < songAudios.length; i++) {
+      if (songAudios[i] && !songAudios[i].paused) return true;
+    }
+    return false;
+  }
+  function panDriftFrame(now) {
+    panDriftRAF = null;
+    if (!eqAudioCtx || !eqPanner || headphoneModeOn || !anySongPlaying()) return; // stopped -- ensurePanDrift restarts it
+    var nowS = now / 1000;
+    var dt = panDriftLastT == null ? 0 : Math.min(0.25, nowS - panDriftLastT);
+    panDriftLastT = nowS;
+    if (dt > 0) smoothedSongPan += (songBasePan - smoothedSongPan) * (1 - Math.exp(-dt / PAN_SMOOTH_TAU_S));
+    var tripping = typeof tripActive !== "undefined" && tripActive;
+    var amp = tripping ? PAN_DRIFT_AMPLITUDE_TRIP : PAN_DRIFT_AMPLITUDE;
+    var period = tripping ? PAN_DRIFT_PERIOD_TRIP_S : PAN_DRIFT_PERIOD_S;
+    // Scale the swing to whatever headroom is left before ±1 (e.g. the balcony's base
+    // pan already sits close to a hard edge, from panForElId("balcony-door")) instead of
+    // clamping the sum -- clamping would hold the sine's peak pinned flat at the wall
+    // for a chunk of every cycle (reported as the pan sounding "clipped" at the top of
+    // its sweep) rather than smoothly reversing there.
+    var headroom = 1 - Math.abs(smoothedSongPan);
+    var t = eqAudioCtx.currentTime;
+    var drift = Math.min(amp, headroom) * Math.sin(t * (2 * Math.PI / period) + panDriftPhase);
+    try { eqPanner.pan.value = Math.max(-1, Math.min(1, smoothedSongPan + drift)); } catch (e) {}
+    panDriftRAF = requestAnimationFrame(panDriftFrame);
+  }
+  function ensurePanDrift() {
+    if (panDriftRAF != null || headphoneModeOn || !eqPanner) return;
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      try { eqPanner.pan.value = songBasePan; } catch (e) {} // snap, no wobble, no loop
+      return;
+    }
+    panDriftLastT = null;
+    panDriftRAF = requestAnimationFrame(panDriftFrame);
+  }
   window.__updateSongRoomPan = function () {
     if (!eqAudioCtx || !eqPanner || headphoneModeOn) return;
-    var playing = null;
-    for (var i = 0; i < songAudios.length; i++) {
-      if (songAudios[i] && !songAudios[i].paused && !songAudios[i].ended) { playing = songAudios[i]; break; }
-    }
-    if (!playing) return;
+    if (!anySongPlaying()) return;
     var room = ROOM_BY_STAGE_INDEX[window.currentStageIndex] || "kitchen";
-    var pan = room === "balcony" ? panForElId("balcony-door") : SONG_ROOM_PAN[room];
-    try { eqPanner.pan.setTargetAtTime(pan, eqAudioCtx.currentTime, FX_RAMP_S); } catch (e) {}
+    songBasePan = room === "balcony" ? panForElId("balcony-door") : SONG_ROOM_PAN[room];
+    ensurePanDrift();
   };
   // The balcony's front door is the loft's boundary to "outside" — the song (playing
   // from a garden instrument, audible throughout the loft) should feel a bit cut off
@@ -7232,6 +7385,19 @@ document.addEventListener("click", function (e) {
     // OS-level lock-screen/media-key state tracks actual audio playback, independent of
     // whether the monitor UI below is currently showing it (see comment above).
     updateMediaSession(current, !!playing);
+    // The analyser/eq loop, room pan, and door acoustics all track actual playback --
+    // they used to be nested inside the "monitor booted" branch below, which meant none
+    // of them ever ran unless the office PC happened to be on: no live analyser data
+    // (blocking anything analyser-driven elsewhere, e.g. real beat detection for other
+    // room elements), no room-relative pan, no door muffling. None of that should depend
+    // on whether anyone's looked at the monitor.
+    if (playing) {
+      startEq(playing);
+      if (window.__updateSongRoomPan) window.__updateSongRoomPan(); // a fresh/switched song starts panned to its room-relative spot
+      if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics(); // and at the right volume for wherever/however-sealed-off you're viewing it from
+    } else {
+      stopEq(); // freeze the bars while paused
+    }
     // show once the monitor's booted (even over the screensaver, which we wake)
     var booted = monitor.classList.contains("screen-on") &&
       !monitor.classList.contains("show-fedora") && !monitor.classList.contains("show-chrome");
@@ -7246,20 +7412,15 @@ document.addEventListener("click", function (e) {
       }
       monitor.classList.add("show-nowplaying");
       if (playing) {
-        startEq(playing);
-        if (window.__updateSongRoomPan) window.__updateSongRoomPan(); // a fresh/switched song starts panned to its room-relative spot
-        if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics(); // and at the right volume for wherever/however-sealed-off you're viewing it from
         if (pauseBtn) pauseBtn.classList.remove("paused"); // playing → show the pause icon
         scheduleSaver(15000); // idle on the equalizer a while (longer than the default 8s), then the screensaver takes over
       } else {
-        stopEq(); // freeze the bars while paused
         if (pauseBtn) pauseBtn.classList.add("paused"); // paused → show the play icon (click to resume)
         clearTimeout(saverTimer); saverTimer = null; // keep the paused player up (don't idle to the saver)
       }
     } else {
       var was = monitor.classList.contains("show-nowplaying");
       monitor.classList.remove("show-nowplaying");
-      stopEq();
       if (was && monitor.classList.contains("show-caps")) scheduleSaver(); // music done -> resume idle cycle
     }
   }
@@ -7434,24 +7595,37 @@ document.addEventListener("click", function (e) {
   function applySongVolume() {
     for (var vi = 0; vi < songAudios.length; vi++) if (songAudios[vi]) songAudios[vi].volume = VOL_LEVELS[volIdx];
   }
+  // Two triggers share one volume: the office monitor's own speaker button (SVG, inside
+  // the game scene) and #hunt-volume-btn (real HTML button, visible from any room). Both
+  // carry class "song-volume-btn" so this updates them together.
   function updateVolIcon() {
-    var vb = document.getElementById("monitor-volume-btn");
-    if (!vb) return;
-    var waves = vb.querySelectorAll(".vol-wave");
-    for (var wi = 0; wi < waves.length; wi++) waves[wi].style.display = (wi < volIdx) ? "" : "none";
-    var mute = vb.querySelector(".vol-mute");
-    if (mute) mute.style.display = (volIdx === 0) ? "" : "none";
+    var btns = document.querySelectorAll(".song-volume-btn");
+    for (var bi = 0; bi < btns.length; bi++) {
+      var vb = btns[bi];
+      var waves = vb.querySelectorAll(".vol-wave");
+      for (var wi = 0; wi < waves.length; wi++) waves[wi].style.display = (wi < volIdx) ? "" : "none";
+      var mute = vb.querySelector(".vol-mute");
+      if (mute) mute.style.display = (volIdx === 0) ? "" : "none";
+    }
+  }
+  function cycleVolume() {
+    volIdx = (volIdx + 1) % VOL_LEVELS.length;
+    applySongVolume();
+    updateVolIcon();
+    try { localStorage.setItem("songVolume", String(VOL_LEVELS[volIdx])); } catch (e) {}
   }
   var volBtn = document.getElementById("monitor-volume-btn");
   if (volBtn) {
-    function cycleVolume() {
-      volIdx = (volIdx + 1) % VOL_LEVELS.length;
-      applySongVolume();
-      updateVolIcon();
-      try { localStorage.setItem("songVolume", String(VOL_LEVELS[volIdx])); } catch (e) {}
-    }
     volBtn.addEventListener("click", function (e) { e.stopPropagation(); scheduleSaver(15000); cycleVolume(); });
     volBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+  var huntVolBtn = document.getElementById("hunt-volume-btn");
+  if (huntVolBtn) {
+    huntVolBtn.addEventListener("click", function (e) { e.stopPropagation(); cycleVolume(); });
+    // hidden until a song's actually played once -- nothing to adjust before then
+    songAudios.forEach(function (a) {
+      a.addEventListener("play", function () { huntVolBtn.classList.add("shown"); }, { once: true });
+    });
   }
   updateVolIcon();
   // The office logos "browse" to their site on the (already-on) monitor.

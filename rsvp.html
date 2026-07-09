@@ -180,24 +180,29 @@ footer{margin-top:2.6rem}
 #hunt-fullscreen-area.is-fullscreen .hunt-frame,
 #hunt-fullscreen-area:fullscreen .hunt-frame,
 #hunt-fullscreen-area:-webkit-full-screen .hunt-frame{
-  /* the room viewport is a fixed 2:1 shape (680x340 per room in the strip's viewBox),
-     so deriving width from a HEIGHT budget of "100vh minus the caption/dots/watch-
-     controls/padding chrome around it" (times 2, for the aspect ratio) guarantees the
-     frame always leaves room for that chrome, at ANY viewport height -- the old plain
-     `190vh` was a percentage, so its leftover margin shrank right along with the
-     viewport and the chrome got squeezed off (needing a scroll, or worse, unreachable —
-     see the safe-center comment above) on plenty of ordinary desktop window sizes, not
-     just mobile. 11.5rem ~= padding (3rem) + caption (~2.4rem) + dots incl. margin
-     (~2.5rem) + .watch-controls incl. margin (~2rem), rounded up for a little slack.
-     Still capped by width via 94vw same as before. */
-  max-width:none; width:min(94vw, calc(2 * (100vh - 11.5rem))); margin:0;
+  /* width/height are set as inline px styles by JS (sizeFullscreenFrame) instead of pure
+     CSS -- three straight rounds of aspect-ratio/flex-grow/flex-shrink combos each broke
+     a different way (wasted space from an overly conservative fixed budget; a shrink-to-
+     fit ancestor letting a child balloon past the real screen width; align-items:stretch
+     locking height independently of flex-shrink's width reduction, leaving the visible
+     room small and stuck top-left of an oversized box). Measuring the actual available
+     box in JS and setting explicit pixel dimensions sidesteps all of that. flex:0 0 auto
+     so it doesn't grow/shrink on its own once sized. */
+  max-width:none; margin:0; flex:0 0 auto;
+}
+#hunt-fullscreen-area.is-fullscreen .scene-caption, #hunt-fullscreen-area.is-fullscreen .hunt-dots,
+#hunt-fullscreen-area:fullscreen .scene-caption, #hunt-fullscreen-area:fullscreen .hunt-dots,
+#hunt-fullscreen-area:-webkit-full-screen .scene-caption, #hunt-fullscreen-area:-webkit-full-screen .hunt-dots{
+  flex:0 0 auto;
 }
 #hunt-fullscreen-area.is-fullscreen .hunt-dots,
 #hunt-fullscreen-area:fullscreen .hunt-dots,
 #hunt-fullscreen-area:-webkit-full-screen .hunt-dots{margin-top:1rem}
 #hunt-fullscreen-area.is-fullscreen .scene-caption,
 #hunt-fullscreen-area:fullscreen .scene-caption,
-#hunt-fullscreen-area:-webkit-full-screen .scene-caption{margin:0 0 .9rem}
+#hunt-fullscreen-area:-webkit-full-screen .scene-caption{
+  margin:0 0 .9rem; font-size:1.15rem;
+}
 .device-hint{display:none; text-align:center; font-size:.8rem; color:var(--soft); margin:.15rem 0 0}
 .device-hint.show{display:block}
 .hunt-dots{display:flex; justify-content:center; align-items:center; gap:.15rem; margin:.55rem 0 0}
@@ -209,7 +214,7 @@ footer{margin-top:2.6rem}
 .hunt-dot.active{background:radial-gradient(circle, var(--wine) 0 .4rem, transparent .43rem); opacity:1; transform:scale(1.12)}
 .hunt-dot.locked{opacity:.2; cursor:default}
 .hunt-dot:not(.active):not(.locked):hover{opacity:.9}
-.scene-caption{text-align:center; color:var(--soft); font-size:.9rem; margin:.7rem 0 0; font-style:italic; min-height:1.7em}
+.scene-caption{text-align:center; color:var(--soft); font-size:1rem; margin:.7rem 0 0; font-weight:600; min-height:1.7em}
 .scene-caption a{color:var(--wine); text-decoration:none; border-bottom:1px dotted var(--wine); display:inline-block; font-style:normal}
 .scene-caption.rsvp-nudge{animation:rsvp-nudge-float 2.4s ease-in-out infinite}
 @keyframes rsvp-nudge-float{
@@ -4591,8 +4596,8 @@ section{margin:1.9rem 0}
   <div class="hunt-dots" id="hunt-dots" role="tablist" aria-label="Rooms"></div>
   </div>
   <div class="watch-controls">
-    <button type="button" id="watch-loft-btn" class="watch-loft-btn" data-i="watch_loft">▶ Watch the loft</button>
-    <button type="button" id="watch-skip-btn" class="watch-skip-btn" data-i="watch_skip" hidden>■ Take over</button>
+    <button type="button" id="watch-loft-btn" class="watch-loft-btn" data-i="watch_loft">▷ Watch the loft</button>
+    <button type="button" id="watch-skip-btn" class="watch-skip-btn" data-i="watch_skip" hidden>□ Take over</button>
   </div>
 
   <hr>
@@ -4665,8 +4670,8 @@ var T = {
     hunt_title: "Loft Day",
     tagline: "We’re getting married<br><strong>Will you be there?</strong>",
     device_hint: "(best enjoyed on a laptop 💻)",
-    watch_loft: "▶ Watch the loft",
-    watch_skip: "■ Take over",
+    watch_loft: "▷ Watch the loft",
+    watch_skip: "□ Take over",
     contact: "Questions? Write to us:",
     marketa_url: "https://marketajakesova.ca",
     nav_lang_aria: "Language",
@@ -4758,8 +4763,8 @@ var T = {
     hunt_title: "Den v podkroví",
     tagline: "Budeme se brát<br><strong>Budete tam?</strong>",
     device_hint: "(nejlíp si to užiješ na počítači 💻)",
-    watch_loft: "▶ Prohlédnout byt",
-    watch_skip: "■ Převzít",
+    watch_loft: "▷ Prohlédnout byt",
+    watch_skip: "□ Převzít",
     contact: "Dotazy? Napište nám:",
     marketa_url: "https://marketajakesova.ca/cs/",
     nav_lang_aria: "Jazyk",
@@ -4930,14 +4935,57 @@ function setLang(l) {
     return (document.fullscreenElement || document.webkitFullscreenElement) === area;
   }
   function lang() { return T[document.documentElement.lang] ? document.documentElement.lang : "en"; }
+  // Measures the actual space available in fullscreen (area's content box minus the
+  // caption/dots, which are flex:0 0 auto and keep their natural size) and sets the
+  // frame's width/height as explicit px, rather than deriving them through CSS
+  // aspect-ratio/flex-grow/flex-shrink -- see the long comment on .hunt-frame's
+  // fullscreen rule for why three rounds of pure-CSS attempts each broke differently.
+  var frame = document.querySelector(".hunt-frame");
+  var viewport = document.querySelector(".hunt-viewport");
+  var caption = document.getElementById("hunt-caption");
+  var dots = document.getElementById("hunt-dots");
+  var prevBtn = document.getElementById("hunt-prev");
+  function outerHeight(el) {
+    if (!el) return 0;
+    var s = getComputedStyle(el);
+    return el.offsetHeight + (parseFloat(s.marginTop) || 0) + (parseFloat(s.marginBottom) || 0);
+  }
+  function sizeFullscreenFrame() {
+    // checks the class (not just isFullscreen()) so it also works from a synthetic
+    // test that toggles .is-fullscreen without a real requestFullscreen() call --
+    // headless Chrome denies that outside a trusted user gesture anyway; in real
+    // production use the class only ever gets set by refreshLabel() based on the
+    // genuine Fullscreen API state, so this doesn't change real behavior at all.
+    if (!area.classList.contains("is-fullscreen") || !frame || !viewport || !caption || !dots) {
+      if (frame) { frame.style.width = ""; frame.style.height = ""; }
+      return;
+    }
+    var areaStyle = getComputedStyle(area);
+    var padX = (parseFloat(areaStyle.paddingLeft) || 0) + (parseFloat(areaStyle.paddingRight) || 0);
+    var padY = (parseFloat(areaStyle.paddingTop) || 0) + (parseFloat(areaStyle.paddingBottom) || 0);
+    var areaW = area.clientWidth - padX;
+    var areaH = area.clientHeight - padY - outerHeight(caption) - outerHeight(dots);
+    if (areaW <= 0 || areaH <= 0) return;
+    var navW = prevBtn ? prevBtn.offsetWidth : 0;
+    var frameGap = parseFloat(getComputedStyle(frame).columnGap || getComputedStyle(frame).gap) || 0;
+    var chrome = navW * 2 + frameGap * 2; // the two nav buttons + the gaps flanking the viewport
+    // room viewport is a fixed 2:1 shape (680x340 per room in the strip's viewBox);
+    // fit that ratio into (areaW - chrome) x areaH, whichever dimension binds
+    var viewportW = Math.min(areaW - chrome, areaH * 2);
+    var viewportH = viewportW / 2;
+    frame.style.width = (viewportW + chrome) + "px";
+    frame.style.height = viewportH + "px";
+  }
   function refreshLabel() {
     var fs = isFullscreen();
     area.classList.toggle("is-fullscreen", fs); // primary driver for the scaling CSS — see comment there
     var key = fs ? "fullscreen_exit" : "fullscreen_enter";
     btn.setAttribute("aria-label", T[lang()][key]);
     btn.textContent = fs ? "⤢" : "⛶";
+    sizeFullscreenFrame();
   }
   window.refreshFullscreenLabel = refreshLabel; // re-run by setLang() on every language switch
+  window.__sizeFullscreenFrame = sizeFullscreenFrame; // test hook: isFullscreen() checks the real Fullscreen API, which headless test scripts that only toggle .is-fullscreen can't trigger
   btn.addEventListener("click", function (e) {
     e.stopPropagation();
     try {
@@ -4947,6 +4995,7 @@ function setLang(l) {
   });
   document.addEventListener("fullscreenchange", refreshLabel);
   document.addEventListener("webkitfullscreenchange", refreshLabel);
+  window.addEventListener("resize", sizeFullscreenFrame); // orientation change / DevTools resize while fullscreen
   refreshLabel();
 })();
 function eggBubble(anchor, text, placement) {
@@ -7509,6 +7558,48 @@ document.addEventListener("click", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); monitorTogglePause(); }
     });
   }
+  // Global spacebar shortcut: pause/resume whichever song is current, same rule as
+  // monitorTogglePause, but if nothing's ever been started, pick one at random and start
+  // it -- monitorPlayRandom (above) is gated on the monitor's own screen state (only
+  // meaningful from the bare caps page), which doesn't apply to a keyboard shortcut that
+  // should work from anywhere in the game.
+  function toggleSongPlayback() {
+    var song = null;
+    for (var i = 0; i < songAudios.length; i++) {
+      var a = songAudios[i];
+      if (a && !a.ended && (!a.paused || a.currentTime > 0)) { song = a; if (!a.paused) break; }
+    }
+    if (!song) song = songAudios[Math.floor(Math.random() * songAudios.length)];
+    if (!song) return;
+    try {
+      if (song.paused) {
+        song.volume = window.__songVolume ? window.__songVolume() : 0.5; // app-owned level, same defensive reapply as every other play trigger
+        if (window.__captureSongAudio) window.__captureSongAudio(song); // keep retrying the resume inside this gesture
+        var p = song.play(); if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (spacebar) for " + song.id + ":", e); });
+      } else {
+        song.pause();
+      }
+    } catch (e) {}
+  }
+  window.__toggleSongPlayback = toggleSongPlayback; // exposed for tests/other callers
+  // Skip elements that already own the spacebar themselves -- native <button>/<a>/form
+  // controls activate on space, and every hunt-hit control's own onActivate handler
+  // calls preventDefault() on space too (checked below), so this only fires when space
+  // isn't already somebody else's job.
+  function spaceBelongsToFocusedControl(ae) {
+    if (!ae || ae === document.body || ae === document.documentElement) return false;
+    var tag = ae.tagName;
+    if (tag === "BUTTON" || tag === "A" || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+    if (ae.isContentEditable) return true;
+    if (ae.getAttribute && (ae.getAttribute("role") === "button" || ae.hasAttribute("tabindex"))) return true;
+    return false;
+  }
+  document.addEventListener("keydown", function (e) {
+    if ((e.key !== " " && e.key !== "Spacebar") || e.defaultPrevented) return;
+    if (spaceBelongsToFocusedControl(document.activeElement)) return;
+    e.preventDefault(); // don't let space scroll the page
+    toggleSongPlayback();
+  });
   // Prev/next transport: jumps to the other song in songAudios (wrapping both ways, for
   // when a 3rd song joins someday). Mirrors the gesture-safe play pattern the garden
   // instrument clicks use (app-owned volume + analyser capture inside the click gesture)

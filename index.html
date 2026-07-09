@@ -2969,6 +2969,25 @@ function sparkShoes(svg, shoesId, cx, cy) {
       })(i);
     }
   });
+  // Global spacebar shortcut: same play/pause the guitar's own click handler above
+  // does -- dispatching a real click reuses that logic exactly (egg marking, strum
+  // wiggle, notes) rather than duplicating it. Skipped when a focused control (lang
+  // toggle, fullscreen/volume buttons, etc.) already owns the spacebar as its own
+  // native/wired activation key.
+  function spaceBelongsToFocusedControl(ae) {
+    if (!ae || ae === document.body || ae === document.documentElement) return false;
+    var tag = ae.tagName;
+    if (tag === "BUTTON" || tag === "A" || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+    if (ae.isContentEditable) return true;
+    if (ae.getAttribute && (ae.getAttribute("role") === "button" || ae.hasAttribute("tabindex"))) return true;
+    return false;
+  }
+  document.addEventListener("keydown", function (e) {
+    if ((e.key !== " " && e.key !== "Spacebar") || e.defaultPrevented) return;
+    if (spaceBelongsToFocusedControl(document.activeElement)) return;
+    e.preventDefault(); // don't let space scroll the page
+    guitar.click();
+  });
 })();
 (function () {
   var lights = document.getElementById("loft-stringlights");

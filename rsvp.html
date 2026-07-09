@@ -623,6 +623,17 @@ footer{margin-top:2.6rem}
   70%{transform:translateY(-1px)}
 }
 @media (prefers-reduced-motion: reduce){#kitchen-tamper.wobbling #kitchen-tamper-inner{animation:none}}
+/* the box hops up between its own two thump sounds (playKnockboxThumpSound fires them
+   at t=0 and t=0.16s) -- .32s total with the peak at 50% lands the jump's highest point
+   right at t=0.16s, so the visible hop happens in the gap between the two hits and
+   comes back down as the second one lands. */
+#kitchen-knockbox-inner{transform-box:fill-box; transform-origin:bottom center}
+#kitchen-knockbox.jumping #kitchen-knockbox-inner{animation:knockbox-jump .32s ease-in-out}
+@keyframes knockbox-jump{
+  0%, 100%{transform:translateY(0)}
+  50%{transform:translateY(-5px)}
+}
+@media (prefers-reduced-motion: reduce){#kitchen-knockbox.jumping #kitchen-knockbox-inner{animation:none}}
 #kitchen-grinder-lid{transform-box:fill-box; transform-origin:center}
 #kitchen-grinder.grinding #kitchen-grinder-lid{animation:grinder-lid-wobble .3s ease-in-out infinite}
 @keyframes grinder-lid-wobble{
@@ -2449,11 +2460,20 @@ section{margin:1.9rem 0}
 <ellipse class="candle-glow" cx="255" cy="201" rx="19" ry="21" fill="url(#candle-glow-grad)"/>
 <ellipse class="candle-flame" cx="255" cy="198" rx="2" ry="3.5" fill="#f0c46a"/>
 </g>
-<g id="kitchen-tamper" class="hunt-hit" tabindex="0" role="button" aria-label="The tamper" transform="translate(41.5,4)">
+<!-- the static position lives on this wrapper, not on #kitchen-tamper itself --
+     .invite-pulse sets a CSS transform directly on #kitchen-tamper (see
+     updateKitchenInvite), and a CSS transform animation replaces an element's own
+     transform ATTRIBUTE for its duration; with the position baked into #kitchen-tamper
+     itself, invite-pulse silently snapped it to its unpositioned spot (41.5px left,
+     4px up) for as long as the pulse was active, then jumped back on removal — same
+     bug class documented in CLAUDE.md, bit the mic/lounger/dustpan before this. -->
+<g transform="translate(39.5,4)">
+<g id="kitchen-tamper" class="hunt-hit" tabindex="0" role="button" aria-label="The tamper">
 <rect x="240" y="198" width="24" height="34" fill="transparent"/>
 <g id="kitchen-tamper-inner">
 <rect x="247" y="202" width="7" height="18" rx="3.5" fill="#d6d6d6" stroke="#9a9a9a" stroke-width="1"/>
 <ellipse cx="250.5" cy="223" rx="9" ry="2.4" fill="#b9b9b9" stroke="#8a8a8a" stroke-width="1"/>
+</g>
 </g>
 </g>
 <g id="kitchen-tamper-arrow" class="hunt-hit kitchen-step-arrow">
@@ -2462,8 +2482,10 @@ section{margin:1.9rem 0}
 </g>
 <g id="kitchen-knockbox" class="hunt-hit" tabindex="0" role="button" aria-label="The knock box">
 <rect x="300" y="198" width="40" height="34" fill="transparent"/>
+<g id="kitchen-knockbox-inner">
 <rect x="307" y="206" width="26" height="24" rx="4" fill="#26221f" stroke="#141210" stroke-width="1.5"/>
 <rect x="311" y="202" width="18" height="6" rx="3" fill="#3a3531"/>
+</g>
 </g>
 <g id="kitchen-knockbox-arrow" class="hunt-hit kitchen-step-arrow">
 <rect x="300" y="146" width="40" height="42" fill="transparent"/>
@@ -12997,6 +13019,12 @@ function playCanCrushSound() {
   } catch (e) {}
 }
 function playKnockboxThumpSound() {
+  var knockboxEl = document.getElementById("kitchen-knockbox");
+  if (knockboxEl) {
+    knockboxEl.classList.remove("jumping");
+    void knockboxEl.getBoundingClientRect();
+    knockboxEl.classList.add("jumping");
+  }
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
@@ -13757,6 +13785,7 @@ function spawnDustMote(container) {
   var brewing = false;
   var tamped = false;
   var portafilterSpent = false; // brewed & sipped; old grounds still in the basket, needs a knockout
+  var knockoutHinted = false; // the knockbox arrow gets ONE showing the first time a knockout's needed, even after kitchenSolved has otherwise turned off all hand-holding
   var portafilterPos = "grouphead"; // "grouphead" | "grinder" | "knockbox" — where it's currently docked
   var portafilterFlying = false;
   var lamarzocco = document.getElementById("kitchen-lamarzocco");
@@ -13816,6 +13845,13 @@ function spawnDustMote(container) {
         var shotcupEl = document.getElementById("kitchen-shotcup");
         next = (shotcupEl && shotcupEl.classList.contains("filled")) ? "kitchen-shotcup" : null;
       }
+    } else if (portafilterSpent && !knockoutHinted) {
+      // kitchenSolved otherwise turns off every hint for good, but a first-time knockout
+      // is a genuinely new step nobody's been shown before — worth one arrow, for as
+      // long as this first spent period lasts (knockoutHinted itself only flips to true
+      // once the knockout actually completes, in __kitchenKnockout below — not here, or
+      // the very next updateKitchenInvite call would yank the arrow before it's used)
+      next = "kitchen-knockbox";
     }
     // the portafilter's own invite-pulse toggles on its fly-wrapper, not itself — see
     // the CSS comment on #kitchen-portafilter-fly.invite-pulse
@@ -13936,6 +13972,7 @@ function spawnDustMote(container) {
   // thump when this returns false (nothing to knock out yet).
   window.__kitchenKnockout = function () {
     if (!portafilterSpent || portafilterFlying || portafilterPos !== "grouphead") return false;
+    knockoutHinted = true; // the first-time arrow (see updateKitchenInvite) has done its job
     if (knockbox) knockbox.classList.remove("invite-pulse");
     flyPortafilterTo("knockbox", function () {
       playKnockboxThumpSound();
@@ -15176,6 +15213,7 @@ function spawnDustMote(container) {
     brewing = false;
     tamped = false;
     portafilterSpent = false;
+    knockoutHinted = false;
     portafilterPos = "grouphead";
     portafilterFlying = false;
     if (lamarzocco) lamarzocco.classList.remove("powered-on", "done");

@@ -6520,6 +6520,7 @@ document.addEventListener("click", function (e) {
     var frac = (eqAudioEl.currentTime % period) / period;
     return Math.exp(-frac * 5);
   }
+  window.__songBeatKick = fractalBeatKick; // exposed so other rooms' independent IIFEs can pulse in time with the song too (e.g. the balcony string lights)
   function startFractalSaver() {
     var canvas = document.getElementById("monitor-fractal-canvas");
     if (!canvas) return;
@@ -7390,12 +7391,64 @@ document.addEventListener("click", function (e) {
   }
   var lights = document.getElementById("balcony-lights");
   if (lights) {
-    function toggleLights() { lights.classList.toggle("off"); }
+    function toggleLights() {
+      lights.classList.toggle("off");
+      if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(); // re-check: pulsing a dark string is pointless
+    }
     lights.addEventListener("click", toggleLights);
     lights.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleLights(); }
     });
   }
+  (function () {
+    // Beat-reactive string lights: while viewing the balcony (and lights are on), gently
+    // pulse each glow halo's scale in time with fractalBeatKick's phase-locked envelope —
+    // the same BPM-synced kick the monitor screensaver fractal pulses on, shared via
+    // window.__songBeatKick (0 when no song is playing, which naturally reads as "no
+    // pulse" — see that function's own comment for the envelope shape). Explicit
+    // start/stop of the rAF chain (not a perpetual self-polling loop) so it only spins
+    // while it can actually do something, mirroring startEq/stopEq's eqRAF lifecycle.
+    if (!lights) return;
+    var glows = lights.querySelectorAll(".balcony-bulb-glow");
+    if (!glows.length) return;
+    var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var pulseRaf = null, pulseOnBalcony = false, lastDraw = 0, kickHistory = [];
+    function pulseWant() {
+      return pulseOnBalcony && document.visibilityState !== "hidden" &&
+        !lights.classList.contains("off") && !reduceMotion;
+    }
+    function resetGlows() {
+      for (var i = 0; i < glows.length; i++) glows[i].style.transform = "";
+    }
+    function frame(t) {
+      if (t - lastDraw >= 45) { // ~22fps, same cadence as the fractal screensaver loop
+        lastDraw = t;
+        var kick = window.__songBeatKick ? window.__songBeatKick() : 0;
+        kickHistory.unshift(kick);
+        if (kickHistory.length > 8) kickHistory.length = 8;
+        for (var i = 0; i < glows.length; i++) {
+          // each bulb reads a slightly older sample (a little time-lag) plus its own
+          // amplitude, so the four don't blink in robotic unison
+          var lagIdx = Math.min(kickHistory.length - 1, i * 2);
+          var amp = 0.12 + (i % 2) * 0.03;
+          glows[i].style.transform = "scale(" + (1 + kickHistory[lagIdx] * amp).toFixed(3) + ")";
+        }
+      }
+      pulseRaf = requestAnimationFrame(frame);
+    }
+    function startPulse() { kickHistory = []; lastDraw = 0; pulseRaf = requestAnimationFrame(frame); }
+    function stopPulse() { if (pulseRaf) { cancelAnimationFrame(pulseRaf); pulseRaf = null; } resetGlows(); }
+    // goToStage passes the room boolean (mirrors __updatePcFan/__updateFireSound);
+    // visibilitychange + the lights toggle call it with no arg, keeping the last known
+    // room and just re-checking on/off + visibility.
+    window.__updateBalconyLightPulse = function (onBalcony) {
+      if (typeof onBalcony === "boolean") pulseOnBalcony = onBalcony;
+      var want = pulseWant();
+      if (want && !pulseRaf) startPulse();
+      else if (!want && pulseRaf) stopPulse();
+    };
+    document.addEventListener("visibilitychange", function () { window.__updateBalconyLightPulse(); });
+  })();
   var duskSun = document.getElementById("balcony-sun");
   var stageBalcony = document.getElementById("stage-balcony");
   if (duskSun && stageBalcony) {
@@ -12874,6 +12927,7 @@ function spawnDustMote(container) {
     if (name === "office" && window.revealOfficeFishuIfFled) window.revealOfficeFishuIfFled();
     if (window.__updatePcFan) window.__updatePcFan(name === "office"); // hum only in the office
     if (window.__updateFireSound) window.__updateFireSound(name === "cuddly"); // fire crackle only in the cuddly nook
+    if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(name === "balcony"); // string lights pulse with the beat only on the balcony
     if (window.__updateSongRoomPan) window.__updateSongRoomPan(); // song pans toward the garden instrument from wherever you're viewing
     if (name === "balcony") triggerBalconyFinale();
   }

@@ -616,11 +616,11 @@ footer{margin-top:2.6rem}
 }
 @media (prefers-reduced-motion: reduce){#office-chair.spinning{animation:none}}
 #kitchen-tamper-inner{transform-box:fill-box; transform-origin:bottom center}
-#kitchen-tamper.wobbling #kitchen-tamper-inner{animation:tamper-wobble .4s ease-in-out}
-@keyframes tamper-wobble{
-  0%, 100%{transform:rotate(0)}
-  30%{transform:rotate(-6deg)}
-  65%{transform:rotate(4deg)}
+#kitchen-tamper.wobbling #kitchen-tamper-inner{animation:tamper-tamp .4s ease-in-out}
+@keyframes tamper-tamp{
+  0%, 100%{transform:translateY(0)}
+  40%{transform:translateY(4px)}
+  70%{transform:translateY(-1px)}
 }
 @media (prefers-reduced-motion: reduce){#kitchen-tamper.wobbling #kitchen-tamper-inner{animation:none}}
 #kitchen-grinder-lid{transform-box:fill-box; transform-origin:center}
@@ -2453,7 +2453,7 @@ section{margin:1.9rem 0}
 <rect x="240" y="198" width="24" height="34" fill="transparent"/>
 <g id="kitchen-tamper-inner">
 <rect x="247" y="202" width="7" height="18" rx="3.5" fill="#d6d6d6" stroke="#9a9a9a" stroke-width="1"/>
-<ellipse cx="250.5" cy="223" rx="9" ry="4" fill="#b9b9b9" stroke="#8a8a8a" stroke-width="1"/>
+<ellipse cx="250.5" cy="223" rx="9" ry="2.4" fill="#b9b9b9" stroke="#8a8a8a" stroke-width="1"/>
 </g>
 </g>
 <g id="kitchen-tamper-arrow" class="hunt-hit kitchen-step-arrow">
@@ -7395,6 +7395,21 @@ document.addEventListener("click", function (e) {
   };
   function stopEq() {
     if (eqRAF) { cancelAnimationFrame(eqRAF); eqRAF = null; }
+    // let the bars visibly fall to zero instead of freezing at whatever height they
+    // were mid-song -- driveBars sets .style.transform directly every frame with no
+    // CSS transition (so live updates stay instant, not laggy), so without this the
+    // frozen height was only noticeable during #monitor-saver-eq/show-nowplaying's own
+    // fade-out, but noticeable it was. One-off transition applied just for this
+    // settle, then cleared so it doesn't linger and drag on the next live frame.
+    var bars = document.querySelectorAll("#monitor-logo-nowplaying .eq-bar, #monitor-saver-eq .eq-bar");
+    var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    for (var i = 0; i < bars.length; i++) {
+      bars[i].style.transition = reduceMotion ? "none" : "transform .35s ease";
+      bars[i].style.transform = "scaleY(0)";
+    }
+    setTimeout(function () {
+      for (var i = 0; i < bars.length; i++) bars[i].style.transition = "";
+    }, 360);
     monitor.classList.remove("eq-live"); // hides #monitor-saver-eq (its CSS gates on this) and silences the fractal's beat pulse
     eqAudioEl = null;
   }

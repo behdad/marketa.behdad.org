@@ -2053,15 +2053,7 @@ function triggerHarfbuzzGlitch() {
     }
   });
 })();
-// Shared by every synthesized sound effect below: the volume button's "mute" state
-// is a page-wide mute, not just the song's -- these otherwise all route through their
-// own independent AudioContext, with no shared master gain to duck instead.
-function pageMuted() {
-  var btn = document.getElementById("loft-volume-btn");
-  return !!(btn && btn.classList.contains("muted"));
-}
 function playGuitarPluck() {
-  if (pageMuted()) return;
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
@@ -2089,7 +2081,6 @@ function playGuitarPluck() {
   } catch (e) {}
 }
 function playTripMelody() {
-  if (pageMuted()) return;
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
@@ -2114,7 +2105,6 @@ function playTripMelody() {
   } catch (e) {}
 }
 function playBadTripSound() {
-  if (pageMuted()) return;
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
@@ -2148,7 +2138,6 @@ function playBadTripSound() {
   } catch (e) {}
 }
 function playStrobeTripSound() {
-  if (pageMuted()) return;
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
@@ -2173,7 +2162,6 @@ function playStrobeTripSound() {
   } catch (e) {}
 }
 function playMeltTripSound() {
-  if (pageMuted()) return;
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
@@ -2206,7 +2194,6 @@ function playMeltTripSound() {
   } catch (e) {}
 }
 function playMollyTripSound() {
-  if (pageMuted()) return;
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
@@ -2229,7 +2216,6 @@ function playMollyTripSound() {
   } catch (e) {}
 }
 function playJackpotSound() {
-  if (pageMuted()) return;
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
@@ -2298,7 +2284,6 @@ function sayFishu(phrase) {
   } catch (e) {}
 }
 function playThunderSound() {
-  if (pageMuted()) return;
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
@@ -2456,7 +2441,6 @@ function stopRainSound() {
   rainAudioNodes = null;
 }
 function playScreamSound() {
-  if (pageMuted()) return;
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
@@ -2519,7 +2503,6 @@ function playScreamSound() {
   } catch (e) {}
 }
 function playShutterSound() {
-  if (pageMuted()) return;
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
@@ -3151,9 +3134,8 @@ function sparkShoes(svg, shoesId, cx, cy) {
       btn.setAttribute("aria-label", T[lang()]["vol_" + level]);
     }
   }
-  // always visible -- a returning muted visitor (or anyone wanting to preset the
-  // level) shouldn't have to start the music first just to find the control
-  btn.classList.add("shown");
+  // hidden until the guitar's actually played once -- nothing to adjust before then
+  audio.addEventListener("play", function () { btn.classList.add("shown"); }, { once: true });
   btn.addEventListener("click", function (e) {
     e.stopPropagation();
     levelIndex = (levelIndex + 1) % LEVELS.length;

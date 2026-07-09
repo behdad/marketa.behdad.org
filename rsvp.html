@@ -5203,6 +5203,24 @@ function setLang(l) {
     var padY = (parseFloat(areaStyle.paddingTop) || 0) + (parseFloat(areaStyle.paddingBottom) || 0);
     var areaW = area.clientWidth - padX;
     var areaH = area.clientHeight - padY - outerHeight(caption) - outerHeight(dots);
+    // TEMPORARY on-screen diagnostic for the live Firefox fullscreen bug hunt — opt-in via
+    // ?fsdebug so real visitors never see it. Remove once the Firefox fix is confirmed.
+    if (/[?&]fsdebug/.test(location.search)) {
+      var dbg = document.getElementById("fs-debug-box");
+      if (!dbg) {
+        dbg = document.createElement("div");
+        dbg.id = "fs-debug-box";
+        dbg.style.cssText = "position:fixed;top:4px;left:4px;z-index:99999;background:rgba(0,0,0,.85);color:#0f0;font:11px monospace;padding:6px;white-space:pre;pointer-events:none";
+        document.body.appendChild(dbg);
+      }
+      dbg.textContent = JSON.stringify({
+        position: areaStyle.position, justifyContent: areaStyle.justifyContent,
+        areaClientWH: [area.clientWidth, area.clientHeight], padXY: [padX, padY],
+        captionH: outerHeight(caption), dotsH: outerHeight(dots), areaWH: [areaW, areaH],
+        winWH: [window.innerWidth, window.innerHeight], screenWH: [screen.width, screen.height],
+        fsEl: document.fullscreenElement && document.fullscreenElement.id
+      }, null, 1);
+    }
     if (areaW <= 0 || areaH <= 0) return;
     var navW = prevBtn ? prevBtn.offsetWidth : 0;
     var frameGap = parseFloat(getComputedStyle(frame).columnGap || getComputedStyle(frame).gap) || 0;

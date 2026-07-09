@@ -151,7 +151,15 @@ footer{margin-top:2.6rem}
    class rules stay too as a harmless belt-and-braces fallback. */
 #hunt-fullscreen-area.is-fullscreen, #hunt-fullscreen-area:fullscreen, #hunt-fullscreen-area:-webkit-full-screen{
   background:var(--cream); display:flex; flex-direction:column; align-items:center;
-  justify-content:center; width:100%; height:100%; padding:1.5rem; box-sizing:border-box;
+  /* safe center: centers normally, but falls back to start alignment if the content
+     overflows the viewport height (mobile landscape especially — a short viewport with
+     the full frame + caption + dots easily taller than it) so the top/bottom don't get
+     pushed off-screen with no way to reach them. Unsupported browsers just drop this
+     whole declaration and fall back to the flex default (normal, i.e. flex-start) --
+     also safe, just without the nice centering when everything actually fits. overflow
+     auto is the actual escape hatch either way: something has to be scrollable for
+     content taller than the viewport to be reachable at all. */
+  justify-content:safe center; overflow:auto; width:100%; height:100%; padding:1.5rem; box-sizing:border-box;
 }
 #hunt-fullscreen-area.is-fullscreen .hunt-frame,
 #hunt-fullscreen-area:fullscreen .hunt-frame,
@@ -14395,6 +14403,20 @@ function spawnDustMote(container) {
           behdadJointSeqTimers.push(setTimeout(function () {
             spawnSteamWisps(strip, 1568, 177, 0.4, 1, -1, 2, 0.55); // released up near the ember at the toke's peak
             if (first && head) head.classList.add("pleased");
+            // she's right next to him — sometimes the first release gets her, same
+            // .coughing/playCoughSound reaction as the balcony-smoker bleed-through
+            // (see scheduleSmokeIntrusion's coughHead)
+            if (first && Math.random() < 0.35) {
+              behdadJointSeqTimers.push(setTimeout(function () {
+                var mh = document.getElementById("cuddly-marketa-head");
+                if (!mh) return;
+                mh.classList.remove("coughing");
+                void mh.getBoundingClientRect();
+                mh.classList.add("coughing");
+                setTimeout(function () { mh.classList.remove("coughing"); }, 650);
+                playCoughSound(1.18);
+              }, 300 + Math.random() * 300));
+            }
           }, 850)); // lands during the keyframe's 45%-62% hold at the top
         }, t));
       })(i === 0);

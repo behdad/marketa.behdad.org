@@ -7938,6 +7938,16 @@ document.addEventListener("click", function (e) {
     e.stopPropagation(); // ...or reach a focused control's own space-activation
     toggleSongPlayback();
   }, true);
+  // Escape: unconditional stop, not a toggle like space above -- a "get me out of
+  // this" gesture that only ever silences, never (re)starts, whichever song is playing.
+  document.addEventListener("keydown", function (e) {
+    if ((e.key !== "Escape" && e.key !== "Esc") || e.defaultPrevented) return;
+    if (spaceIsTypingContext(document.activeElement)) return;
+    for (var i = 0; i < songAudios.length; i++) {
+      var a = songAudios[i];
+      if (a && !a.paused) a.pause();
+    }
+  }, true);
   // Prev/next transport: jumps to the other song in songAudios (wrapping both ways, for
   // when a 3rd song joins someday). Mirrors the gesture-safe play pattern the garden
   // instrument clicks use (app-owned volume + analyser capture inside the click gesture)
@@ -8051,10 +8061,9 @@ document.addEventListener("click", function (e) {
   var huntVolBtn = document.getElementById("hunt-volume-btn");
   if (huntVolBtn) {
     huntVolBtn.addEventListener("click", function (e) { e.stopPropagation(); cycleVolume(); });
-    // hidden until a song's actually played once -- nothing to adjust before then
-    songAudios.forEach(function (a) {
-      a.addEventListener("play", function () { huntVolBtn.classList.add("shown"); }, { once: true });
-    });
+    // always visible -- a returning muted visitor (or anyone wanting to preset the
+    // level) shouldn't have to start a song first just to find the control
+    huntVolBtn.classList.add("shown");
   }
   updateVolIcon();
   // The office logos "browse" to their site on the (already-on) monitor.
@@ -8851,8 +8860,8 @@ document.addEventListener("click", function (e) {
   var windCtx = null, windSource = null, windGain = null, windFilter = null,
       windLfoDepth = null, windLfo1 = null, windLfo2 = null, windFilterLfo = null,
       windStormy = false, windWhere = null;
-  var WIND_CALM = { gain: 0.011, depth: 0.003, filter: 2400 };
-  var WIND_STORM = { gain: 0.018, depth: 0.005, filter: 3200 };
+  var WIND_CALM = { gain: 0.006, depth: 0.003, filter: 2400 };
+  var WIND_STORM = { gain: 0.01, depth: 0.005, filter: 3200 };
   var WIND_CUDDLY_SCALE = 0.4; // fainter heard through the door than out on the balcony itself
   function cuddlyDoorOpenForWind() {
     var front = document.getElementById("balcony-door"), nook = document.getElementById("cuddly-balcony-door");

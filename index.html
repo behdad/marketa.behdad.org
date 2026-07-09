@@ -94,10 +94,12 @@ section{margin:1.9rem 0}
 .scene:hover{transform:scale(1.035)}
 @media (prefers-reduced-motion: reduce){.scene:hover{transform:none}}
 .desc{margin:.2rem 0 .4rem}
-/* fullscreen: the button sits over the illustration's own corner, but the fullscreen
-   TARGET is the whole enclosing <section> (heading/date/description too — a fullscreened
-   scene with no caption/date visible would be a regression, learned from the same fix on
-   the rsvp.html game page) */
+/* fullscreen: the button sits over each illustration's own corner, but BOTH buttons
+   target the shared .parties container (not their own <section>) so fullscreen shows
+   both cards together, same as the normal side-by-side desktop layout just scaled up —
+   heading/date/description stay visible too, not just the bare SVGs (a fullscreened
+   scene with no caption/date visible would be a regression, learned from the same fix
+   on the rsvp.html game page). */
 .scene-wrap{position:relative}
 .scene-fullscreen-btn{
   position:absolute; top:1.4rem; right:.4rem; z-index:2; font:inherit; font-size:1rem; line-height:1;
@@ -105,14 +107,32 @@ section{margin:1.9rem 0}
   background:rgba(69,58,49,.55); color:#fffdf8; cursor:pointer; opacity:.7; transition:opacity .2s ease, background .2s ease;
 }
 .scene-fullscreen-btn:hover, .scene-fullscreen-btn:focus-visible{opacity:1; background:rgba(69,58,49,.82)}
-.parties section.is-fullscreen, .parties section:fullscreen, .parties section:-webkit-full-screen{
-  background:var(--cream); display:flex; flex-direction:column; align-items:center;
-  justify-content:center; width:100%; height:100%; padding:1.5rem; box-sizing:border-box; margin:0;
+.parties.is-fullscreen, .parties:fullscreen, .parties:-webkit-full-screen{
+  /* position:fixed detaches this from normal flow (escaping main's max-width:980px)
+     and pins it to the actual viewport regardless of whether the browser also granted
+     real top-layer fullscreen treatment -- real :fullscreen gets that automatically,
+     but the .is-fullscreen class fallback does not, so this can't rely on it */
+  position:fixed; inset:0; z-index:50;
+  background:var(--cream); align-items:center; justify-content:center; overflow:auto;
+  width:100%; height:100%; padding:1.5rem; box-sizing:border-box; margin:0; gap:1.5rem;
 }
-.parties section.is-fullscreen .scene,
-.parties section:fullscreen .scene,
-.parties section:-webkit-full-screen .scene{
-  width:min(90vw, 66vh); max-width:none; margin:.6rem auto;
+/* the normal desktop layout's flex:1 1 0 stretches each section to an equal share of
+   the row, leaving the (now much smaller, capped-by-vh) illustration centered inside an
+   oversized box -- a big gap between the two cards even with the tight `gap` above.
+   Shrink each section to its own content size instead, so they sit close together. */
+.parties.is-fullscreen > section, .parties:fullscreen > section, .parties:-webkit-full-screen > section{
+  flex:0 0 auto;
+}
+/* stacked (mobile fullscreen): one column, so each scene can use most of the width */
+.parties.is-fullscreen .scene, .parties:fullscreen .scene, .parties:-webkit-full-screen .scene{
+  width:min(85vw, 60vh); max-width:none; margin:.6rem auto;
+}
+/* side by side (desktop fullscreen, same >=760px breakpoint .parties itself switches
+   at): halve the width budget so both scenes fit together, same aspect-ratio math */
+@media (min-width:760px){
+  .parties.is-fullscreen .scene, .parties:fullscreen .scene, .parties:-webkit-full-screen .scene{
+    width:min(42vw, 62vh);
+  }
 }
 .quip{font-style:italic; color:var(--soft); font-size:.9rem}
 .welcome{
@@ -810,7 +830,7 @@ body.completion-trip{animation:completion-spin 7s linear}
 
   <p class="game-title" data-i="game_title">Save the Dates</p>
 
-  <div class="parties">
+  <div class="parties" id="parties">
   <section id="edmonton" aria-labelledby="h-ed">
     <div class="sec-head">
       <h2 id="h-ed"><span class="inf p">∞</span> <span data-i="ed_city">Edmonton</span></h2>
@@ -1093,7 +1113,7 @@ body.completion-trip{animation:completion-spin 7s linear}
 <rect class="eq-bar" x="55" y="878" width="6" height="20" rx="2" fill="#4a6b94"/>
 </g>
 </svg>
-    <button type="button" id="edmonton-fullscreen-btn" class="scene-fullscreen-btn" data-section="edmonton" aria-label="Enter fullscreen">⛶</button>
+    <button type="button" id="edmonton-fullscreen-btn" class="scene-fullscreen-btn" data-section="parties" aria-label="Enter fullscreen">⛶</button>
     </div>
     <p class="desc" data-i="ed_desc">The official wedding: ceremony,<br class="brk-sm"> dinner, concert,<br class="brk-lg"> dancing, afterparty.<br class="brk-sm"> <em class="quip" id="rain-snow-toggle" tabindex="0" role="button">Rain or snow.</em></p>
   </section>
@@ -1374,7 +1394,7 @@ body.completion-trip{animation:completion-spin 7s linear}
 <rect class="melt-whiteout" x="0" y="0" width="680" height="920" rx="14"/>
 <rect class="melt-blackout" x="0" y="0" width="680" height="920" rx="14"/>
     </svg>
-    <button type="button" id="prague-fullscreen-btn" class="scene-fullscreen-btn" data-section="prague" aria-label="Enter fullscreen">⛶</button>
+    <button type="button" id="prague-fullscreen-btn" class="scene-fullscreen-btn" data-section="parties" aria-label="Enter fullscreen">⛶</button>
     </div>
     <p class="desc" data-i="pr_desc">A garden party: drinks, music,<br class="brk-sm"> dinner, dancing, afterparty.<br class="brk-sm"> <em class="quip" id="sun-reset-toggle" tabindex="0" role="button">Sunscreen provided.</em></p>
   </section>

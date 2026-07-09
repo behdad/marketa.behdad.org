@@ -5181,13 +5181,10 @@ function setLang(l) {
   window.addEventListener("resize", sizeFullscreenFrame); // orientation change / DevTools resize while fullscreen
   refreshLabel();
 })();
-function eggBubble(anchor, text, placement) {
-  var old = document.querySelector(".egg-bubble");
-  if (old) old.remove();
-  var b = document.createElement("div");
-  b.className = "egg-bubble";
-  b.innerHTML = text;
-  document.body.appendChild(b);
+// Shared by eggBubble's initial placement and hoverTooltip's live-follow loop (for an
+// anchor that keeps moving under its own animation, e.g. Fishu's drift, a one-time
+// position read goes stale mid-hover) — same clamped left/top math either way.
+function positionEggBubble(b, anchor, placement) {
   var r = anchor.getBoundingClientRect();
   var bW = b.offsetWidth || 220;
   var bH = b.offsetHeight || 60;
@@ -5210,6 +5207,15 @@ function eggBubble(anchor, text, placement) {
   }
   b.style.left = left + "px";
   b.style.top = top + "px";
+}
+function eggBubble(anchor, text, placement) {
+  var old = document.querySelector(".egg-bubble");
+  if (old) old.remove();
+  var b = document.createElement("div");
+  b.className = "egg-bubble";
+  b.innerHTML = text;
+  document.body.appendChild(b);
+  positionEggBubble(b, anchor, placement);
   b._anchor = anchor;
   requestAnimationFrame(function () { b.classList.add("show"); });
   clearTimeout(b._t);
@@ -5226,11 +5232,26 @@ function dismissEggBubble(b) {
 // A hover tooltip is just an eggBubble shown on mouseenter and dismissed on mouseleave
 // instead of on click+timeout — reuses its positioning/styling/innerHTML support
 // (native SVG <title> can't render markup like <em>, which is why this exists at all).
+// The anchor's own getBoundingClientRect() is re-read every frame rather than once at
+// mouseenter — some anchors (Fishu's ambient drift) keep moving under their own CSS
+// animation for as long as the tooltip stays open, and a one-time position read goes
+// visibly stale mid-hover otherwise.
 function hoverTooltip(el, html, placement) {
   if (!el) return;
-  var bubble = null;
-  el.addEventListener("mouseenter", function () { bubble = eggBubble(el, html, placement); });
-  el.addEventListener("mouseleave", function () { if (bubble) { dismissEggBubble(bubble); bubble = null; } });
+  var bubble = null, followRaf = null;
+  function follow() {
+    if (!bubble) return;
+    positionEggBubble(bubble, el, placement);
+    followRaf = requestAnimationFrame(follow);
+  }
+  el.addEventListener("mouseenter", function () {
+    bubble = eggBubble(el, html, placement);
+    followRaf = requestAnimationFrame(follow);
+  });
+  el.addEventListener("mouseleave", function () {
+    if (followRaf) { cancelAnimationFrame(followRaf); followRaf = null; }
+    if (bubble) { dismissEggBubble(bubble); bubble = null; }
+  });
 }
 document.addEventListener("click", function (e) {
   var b = document.querySelector(".egg-bubble");

@@ -6987,6 +6987,26 @@ document.addEventListener("click", function (e) {
     if (!srcId) return;
     try { eqPanner.pan.setTargetAtTime(panForElId(srcId), eqAudioCtx.currentTime, FX_RAMP_S); } catch (e) {}
   };
+  // The balcony's front door is the loft's boundary to "outside" — the song (playing
+  // from a garden instrument, audible throughout the loft) should feel a bit cut off
+  // out there with the door shut, and swell back to full presence the moment it's open,
+  // same "acoustics change with the door" idea as the wind/city-hum/rain/windchime
+  // bleed-throughs elsewhere in this file. Volume-only, not a filter-based muffle: a
+  // MediaElementSourceNode doesn't bypass its source element's own .volume (the pipeline
+  // routes AROUND it, not through it), so this one mechanism works correctly whether or
+  // not the Web Audio pipeline happens to be engaged for a given song.
+  var SONG_BALCONY_DOOR_CLOSED_SCALE = 0.38;
+  function balconyDoorOpenForSong() {
+    var d = document.getElementById("balcony-door");
+    return !!(d && d.classList.contains("open"));
+  }
+  window.__updateSongDoorAcoustics = function () {
+    var base = window.__songVolume ? window.__songVolume() : 0.5;
+    var scale = (window.currentStageIndex === 4 && !balconyDoorOpenForSong()) ? SONG_BALCONY_DOOR_CLOSED_SCALE : 1;
+    for (var i = 0; i < songAudios.length; i++) {
+      if (songAudios[i] && !songAudios[i].paused) songAudios[i].volume = base * scale;
+    }
+  };
   function stopEq() {
     if (eqRAF) { cancelAnimationFrame(eqRAF); eqRAF = null; }
     monitor.classList.remove("eq-live"); // hides #monitor-saver-eq (its CSS gates on this) and silences the fractal's beat pulse
@@ -7132,6 +7152,7 @@ document.addEventListener("click", function (e) {
       if (playing) {
         startEq(playing);
         if (window.__updateSongRoomPan) window.__updateSongRoomPan(); // a fresh/switched song starts panned to its room-relative spot
+        if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics(); // and at the right volume for wherever/however-sealed-off you're viewing it from
         if (pauseBtn) pauseBtn.classList.remove("paused"); // playing → show the pause icon
         scheduleSaver(15000); // idle on the equalizer a while (longer than the default 8s), then the screensaver takes over
       } else {
@@ -8812,6 +8833,7 @@ document.addEventListener("click", function (e) {
       updateCuddlyDoorFx();
       // a cat can only slip out onto the balcony through an open door
       if (window.__homeCat) window.__homeCat("balcony");
+      if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics(); // song swells/recedes with the door
     }
     balconyDoor.addEventListener("click", toggleBalconyDoor);
     balconyDoor.addEventListener("keydown", function (e) {
@@ -13241,6 +13263,7 @@ function spawnDustMote(container) {
     if (window.__updateFireSound) window.__updateFireSound(name === "cuddly"); // fire crackle only in the cuddly nook
     if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(name === "balcony"); // string lights pulse with the beat only on the balcony
     if (window.__updateSongRoomPan) window.__updateSongRoomPan(); // song pans toward the garden instrument from wherever you're viewing
+    if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics(); // and gets quieter on the balcony specifically, while its door is shut
     if (name === "balcony") triggerBalconyFinale();
   }
   window.goToStage = goToStage;

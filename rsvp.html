@@ -6895,6 +6895,19 @@ document.addEventListener("click", function (e) {
     m.getBoundingClientRect();
     m.style.animation = "";
   }
+  // Tab-favicon swap: a small equalizer glyph while a song is actually playing (not just
+  // paused-mid), so the "now playing" state is noticeable from a backgrounded tab too.
+  // faviconNormalHref is read off the existing <link> rather than duplicated here, so
+  // there's only ever one copy of the site's real (crossed-caps) favicon markup.
+  var faviconLink = document.querySelector('link[rel="icon"]');
+  var faviconNormalHref = faviconLink ? faviconLink.href : "";
+  var FAVICON_PLAYING = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="10" y="30" width="12" height="20" rx="6" fill="%23d9a6a6"/><rect x="26" y="10" width="12" height="40" rx="6" fill="%237f9ec0"/><rect x="42" y="22" width="12" height="28" rx="6" fill="%238e3a4a"/></svg>';
+  var faviconIsPlaying = false;
+  function setPlayingFavicon(isPlaying) {
+    if (!faviconLink || isPlaying === faviconIsPlaying) return;
+    faviconIsPlaying = isPlaying;
+    faviconLink.href = isPlaying ? FAVICON_PLAYING : faviconNormalHref;
+  }
   function updateNowPlaying() {
     clearNavRevert(); // deciding state directly now: any pending "show site then revert" is moot
     var playing = null, pausedMid = null;
@@ -6904,6 +6917,7 @@ document.addEventListener("click", function (e) {
       if (!a.paused) { playing = a; break; }
       if (a.currentTime > 0) pausedMid = a; // paused part-way through — still the "current" song
     }
+    setPlayingFavicon(!!playing); // reuse the same playing/not-playing condition the UI branches on below
     var current = playing || pausedMid;
     // show once the monitor's booted (even over the screensaver, which we wake)
     var booted = monitor.classList.contains("screen-on") &&

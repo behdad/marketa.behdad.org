@@ -4852,7 +4852,6 @@ var T = {
     marketa_url: "https://marketajakesova.ca",
     nav_lang_aria: "Language",
     fullscreen_enter: "Enter fullscreen",
-    fullscreen_exit: "Exit fullscreen",
     caps_aria: "A pink flat cap and a blue baker boy cap, crossed",
     laptop_date: "May 1",
     laptop_daysfx: "d",
@@ -4949,7 +4948,6 @@ var T = {
     marketa_url: "https://marketajakesova.ca/cs/",
     nav_lang_aria: "Jazyk",
     fullscreen_enter: "Celá obrazovka",
-    fullscreen_exit: "Ukončit celou obrazovku",
     caps_aria: "Růžová čepice a modrá čepice, zkřížené",
     laptop_date: "1. 5.",
     laptop_daysfx: "d",
@@ -5163,9 +5161,12 @@ function setLang(l) {
   function refreshLabel() {
     var fs = isFullscreen();
     area.classList.toggle("is-fullscreen", fs); // primary driver for the scaling CSS — see comment there
-    var key = fs ? "fullscreen_exit" : "fullscreen_enter";
-    btn.setAttribute("aria-label", T[lang()][key]);
-    btn.textContent = fs ? "⤢" : "⛶";
+    // no exit-fullscreen affordance needed: Escape (desktop) and the mobile back
+    // button/gesture both already exit fullscreen natively, so the button only ever
+    // needs to offer entering it -- hide it entirely once inside instead of relabeling.
+    btn.style.display = fs ? "none" : "";
+    btn.setAttribute("aria-label", T[lang()].fullscreen_enter);
+    btn.textContent = "⛶";
     sizeFullscreenFrame();
   }
   window.refreshFullscreenLabel = refreshLabel; // re-run by setLang() on every language switch
@@ -5313,23 +5314,37 @@ document.addEventListener("click", function (e) {
       // a single short, sharply-decaying click — a re-triggering noise cluster read as a
       // burst of static rather than a wood snap, so this fires one clean transient per
       // call; scheduleCrackle occasionally calls it twice in quick succession for variety
-      var dur = 0.02 + Math.random() * 0.03;
+      var dur = 0.018 + Math.random() * 0.026;
       var buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
       var d = buf.getChannelData(0);
       for (var i = 0; i < d.length; i++) {
-        var env = Math.pow(1 - i / d.length, 3); // fast decay: a click, not a hiss tail
+        var env = Math.pow(1 - i / d.length, 4); // steeper decay: a crisper click
         d[i] = (Math.random() * 2 - 1) * env;
       }
       var src = ctx.createBufferSource();
       src.buffer = buf;
       var bp = ctx.createBiquadFilter();
       bp.type = "bandpass";
-      bp.frequency.value = 900 + Math.random() * 2600; // vary the snap's "pitch", not just bright hiss
-      bp.Q.value = 5 + Math.random() * 5;               // narrower Q: tonal pop, not broadband noise
+      bp.frequency.value = 1600 + Math.random() * 3400; // brighter/higher snap than before
+      bp.Q.value = 6 + Math.random() * 6;                // narrower Q: tonal pop, not broadband noise
       var g = ctx.createGain();
       g.gain.value = 0.035 + Math.random() * 0.045;
       src.connect(bp); bp.connect(g); g.connect(pannedOut(ctx, "cuddly-wallscreen"));
       src.start(t); // self-terminating short buffer — no refs held, no accumulation
+      // a brief pitched "tick" layered under the noise burst — real wood snaps have a
+      // faint resonant ring, not just static; this is what keeps it from reading as a
+      // generic click regardless of how bright/narrow the bandpass above lands
+      var tick = ctx.createOscillator();
+      tick.type = "triangle";
+      var tickFreq = 1800 + Math.random() * 2600;
+      tick.frequency.setValueAtTime(tickFreq, t);
+      tick.frequency.exponentialRampToValueAtTime(tickFreq * 0.6, t + 0.025);
+      var tg = ctx.createGain();
+      tg.gain.setValueAtTime(0.0001, t);
+      tg.gain.exponentialRampToValueAtTime(0.018 + Math.random() * 0.014, t + 0.002);
+      tg.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+      tick.connect(tg); tg.connect(pannedOut(ctx, "cuddly-wallscreen"));
+      tick.start(t); tick.stop(t + 0.035);
     } catch (e) {}
   }
   function scheduleCrackle() {
@@ -5337,11 +5352,11 @@ document.addEventListener("click", function (e) {
       crackleTimer = null;
       if (!fireCtx) return;   // stopped meanwhile (leave room / hide tab / toggle off)
       popCrackle();
-      if (Math.random() < 0.3) {
-        setTimeout(function () { if (fireCtx) popCrackle(); }, 35 + Math.random() * 70); // occasional quick double-snap
+      if (Math.random() < 0.35) {
+        setTimeout(function () { if (fireCtx) popCrackle(); }, 30 + Math.random() * 60); // occasional quick double-snap
       }
       scheduleCrackle();      // light self-rescheduling spawner, random gaps
-    }, 500 + Math.random() * 2200);
+    }, 250 + Math.random() * 1100); // more frequent than before (was 500-2700ms)
   }
   function startFire() {
     try {

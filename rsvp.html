@@ -7909,28 +7909,36 @@ document.addEventListener("click", function (e) {
     songBasePan = room === "balcony" ? panForElId("balcony-door") : SONG_ROOM_PAN[room];
     ensurePanDrift();
   };
-  // Room-relative stereo width: cuddly (the middle room, where the couple actually is)
-  // keeps full, present stereo width; office -- further from the garden instrument the
-  // song originates from -- gets narrower, reading as more distant/enclosed (closer to
-  // mono = like hearing it through a wall). 0.55 (a subtle nudge) turned out inaudible in
-  // practice on real playback, so this leans noticeably narrower instead -- still short of
-  // full mono. See the width-stage comment in ensureAudioGraph for the {1,1,0,0}-at-
-  // width=1 identity guarantee that keeps every other room provably untouched. Balcony
-  // isn't listed here (falls through to the same default as everywhere but office) --
-  // width tracks room distance from the instrument, not the door-acoustics bleed-through
-  // story that gives balcony its own pan formula above.
-  var SONG_ROOM_WIDTH = { kitchen: 1, garden: 1, cuddly: 1, office: 0.2 };
+  // Room-relative stereo image: cuddly (the middle room, where the couple actually is)
+  // keeps full, present stereo width. Office sits ACROSS the loft from the cuddly room,
+  // so from there you're hearing the same song from the opposite side -- its speakers
+  // face the other way. It gets a moderate width (0.5) AND a left/right channel swap:
+  // the swap (not width alone -- an earlier near-mono 0.2 read as no change on real
+  // playback) is what actually makes the office feel like a different vantage point.
+  // swap:true routes each input channel mostly to the OPPOSITE output (the "same"
+  // coefficient drives the cross paths, "cross" drives the same paths). See the width-
+  // stage comment in ensureAudioGraph for the {1,1,0,0}-at-width=1 identity guarantee
+  // that keeps every non-office room provably untouched. Balcony isn't listed here
+  // (falls through to the width=1 default) -- width tracks room distance/orientation,
+  // not the door-acoustics bleed-through story that gives balcony its own pan formula.
+  var SONG_ROOM_WIDTH = { kitchen: 1, garden: 1, cuddly: 1, office: { width: 0.5, swap: true } };
   window.__updateSongRoomWidth = function () {
     if (!eqAudioCtx || !eqWidthL2L || headphoneModeOn) return;
     var room = ROOM_BY_STAGE_INDEX[window.currentStageIndex] || "kitchen";
-    var width = SONG_ROOM_WIDTH[room] != null ? SONG_ROOM_WIDTH[room] : 1;
+    var cfg = SONG_ROOM_WIDTH[room] != null ? SONG_ROOM_WIDTH[room] : 1;
+    var width = typeof cfg === "number" ? cfg : cfg.width;
+    var swap = typeof cfg === "object" && !!cfg.swap;
     var same = 0.5 + 0.5 * width, cross = 0.5 - 0.5 * width;
+    // swap sends "same" (the dominant share) down the cross paths and vice versa, so
+    // L ends up mostly in the right output and R mostly in the left.
+    var l2l = swap ? cross : same, r2r = swap ? cross : same;
+    var l2r = swap ? same : cross, r2l = swap ? same : cross;
     var now = eqAudioCtx.currentTime;
     try {
-      eqWidthL2L.gain.setTargetAtTime(same, now, FX_RAMP_S);
-      eqWidthR2R.gain.setTargetAtTime(same, now, FX_RAMP_S);
-      eqWidthL2R.gain.setTargetAtTime(cross, now, FX_RAMP_S);
-      eqWidthR2L.gain.setTargetAtTime(cross, now, FX_RAMP_S);
+      eqWidthL2L.gain.setTargetAtTime(l2l, now, FX_RAMP_S);
+      eqWidthR2R.gain.setTargetAtTime(r2r, now, FX_RAMP_S);
+      eqWidthL2R.gain.setTargetAtTime(l2r, now, FX_RAMP_S);
+      eqWidthR2L.gain.setTargetAtTime(r2l, now, FX_RAMP_S);
     } catch (e) {}
   };
   // The balcony's front door is the loft's boundary to "outside" — the song (playing

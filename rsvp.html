@@ -14426,6 +14426,27 @@ function spawnDustMote(container) {
       }
     }, 8000 + Math.random() * 7000);
   }
+  // Triple-click Behdad to skip the wait and light up right now, instead of hoping a
+  // roll lands — single/double click on him are already leanBehdad/strokeArm (see the
+  // earlier IIFE), so triple is free. Still gated on music actually playing (this is a
+  // "while listening" gag, not an on-demand one) and the per-song cap, and folds into
+  // the same count/reschedule bookkeeping scheduleBehdadJointRoll uses so a manual
+  // light-up counts toward the cap same as a rolled one.
+  var cuddlyBehdadForJoint = document.getElementById("cuddly-behdad");
+  if (cuddlyBehdadForJoint) {
+    cuddlyBehdadForJoint.addEventListener("click", function (e) {
+      if (e.detail < 3) return;
+      var anyPlaying = Object.keys(instrumentSpots).some(function (id) {
+        var audio = document.getElementById(instrumentSpots[id].audioId);
+        return audio && !audio.paused;
+      });
+      if (!anyPlaying || behdadJointCount >= BEHDAD_JOINT_MAX_PER_SONG) return;
+      if (behdadJointTimer) { clearTimeout(behdadJointTimer); behdadJointTimer = null; }
+      behdadJointCount++;
+      startBehdadJoint();
+      if (behdadJointCount < BEHDAD_JOINT_MAX_PER_SONG) scheduleBehdadJointRoll();
+    });
+  }
   var noteFlowTimer = null;
   function updateNoteFlow() {
     var anyPlaying = Object.keys(instrumentSpots).some(function (id) {

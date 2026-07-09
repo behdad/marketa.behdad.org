@@ -5433,6 +5433,80 @@ document.addEventListener("click", function (e) {
   });
 })();
 (function () {
+  // Ambient garden birdsong: sparse gentle chirps during the day, gated off at dusk
+  // (mirrors #garden-birds itself fading out then) and outside the garden room —
+  // same self-rescheduling setTimeout spawner as the cuddly fireplace's crackle pops
+  // above, just chirps instead, and no continuous bed underneath (birds don't roar).
+  var gardenStage = document.getElementById("stage-garden");
+  if (!gardenStage) return;
+  var birdCtx = null, chirpTimer = null, inGarden = false;
+  function birdsWant() {
+    return inGarden && !gardenStage.classList.contains("dusk") &&
+      document.visibilityState !== "hidden";
+  }
+  function popChirp() {
+    if (!birdCtx) return;
+    try {
+      var ctx = birdCtx, t = ctx.currentTime;
+      // a short warbling whistle — a few quick up/down pitch hops, like a real chirp
+      var hops = 2 + Math.floor(Math.random() * 3);
+      var baseFreq = 2200 + Math.random() * 1800;
+      var tt = t;
+      for (var i = 0; i < hops; i++) {
+        var osc = ctx.createOscillator();
+        osc.type = "sine";
+        var f0 = baseFreq * (0.85 + Math.random() * 0.3);
+        var f1 = f0 * (1.15 + Math.random() * 0.25);
+        osc.frequency.setValueAtTime(f0, tt);
+        osc.frequency.exponentialRampToValueAtTime(f1, tt + 0.05);
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, tt);
+        g.gain.exponentialRampToValueAtTime(0.02 + Math.random() * 0.015, tt + 0.008);
+        g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.06);
+        osc.connect(g); g.connect(pannedOut(ctx, "garden-birds"));
+        osc.start(tt); osc.stop(tt + 0.07);
+        tt += 0.07 + Math.random() * 0.03;
+      }
+    } catch (e) {}
+  }
+  function scheduleChirp() {
+    chirpTimer = setTimeout(function () {
+      chirpTimer = null;
+      if (!birdCtx) return; // stopped meanwhile (leave room / hide tab / dusk falls)
+      popChirp();
+      scheduleChirp();
+    }, 2500 + Math.random() * 5500); // sparse — a fireplace crackles constantly, birds don't
+  }
+  function startBirdsong() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      stopBirdsong();
+      birdCtx = new Ctx();
+      try { var p = birdCtx.resume && birdCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+      scheduleChirp();
+    } catch (e) {}
+  }
+  function stopBirdsong() {
+    if (chirpTimer) { clearTimeout(chirpTimer); chirpTimer = null; }
+    if (birdCtx) {
+      var ctx = birdCtx;
+      birdCtx = null; // null first so a racing scheduleChirp callback bails
+      setTimeout(function () { try { ctx.close(); } catch (e) {} }, 150);
+    }
+  }
+  // (re)evaluate the gate and start/stop accordingly — same shape as __updateFireSound:
+  // goToStage passes the room boolean, visibilitychange + toggleDusk call it with no
+  // arg, keeping the last known room and just re-checking dusk + visibility.
+  window.__updateGardenBirdsong = function (onGarden) {
+    if (typeof onGarden === "boolean") inGarden = onGarden;
+    var want = birdsWant();
+    if (want && !birdCtx) startBirdsong();
+    else if (!want && birdCtx) stopBirdsong();
+  };
+  document.addEventListener("visibilitychange", function () { window.__updateGardenBirdsong(); });
+})();
+(function () {
   // ── Cuddly fireplace fire ─────────────────────────────────────────────────
   // A classic "seed the hot bottom row, propagate upward" fire on the wall-screen
   // fireplace: the bottom row is re-seeded hot every frame, and each cell above
@@ -8527,6 +8601,7 @@ document.addEventListener("click", function (e) {
       });
       if (window.__updateCuddlyDoorFx) window.__updateCuddlyDoorFx(); // sun shafts are a day thing
       if (window.__updateGrowlightForNight) window.__updateGrowlightForNight(); // grow light off at night
+      if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(); // birds quiet down at dusk
       playLampShimmerSound("balcony-sun");
       var wallLampEl = document.getElementById("balcony-walllamp");
       if (dusk) {
@@ -14177,6 +14252,7 @@ function spawnDustMote(container) {
     if (name === "office" && window.revealOfficeFishuIfFled) window.revealOfficeFishuIfFled();
     if (window.__updatePcFan) window.__updatePcFan(name === "office"); // hum only in the office
     if (window.__updateFireSound) window.__updateFireSound(name === "cuddly"); // fire crackle only in the cuddly nook
+    if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(name === "garden"); // birdsong only in the garden, and only by day
     if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(name === "balcony"); // string lights pulse with the beat only on the balcony
     if (window.__updateSongRoomPan) window.__updateSongRoomPan(); // room-fixed rooms settle immediately
     if (window.__updateSongRoomWidth) window.__updateSongRoomWidth(); // width follows the same room-fixed table, no transition dependency

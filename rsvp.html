@@ -5090,7 +5090,7 @@ section{margin:1.9rem 0}
 <g clip-path="url(#balcony-solar-clip)"><circle id="balcony-solar-moon" cx="510" cy="50" r="15" fill="#0a0812"/></g>
 </g>
 <!-- LUNAR eclipse (night): Earth's umbra sweeps across the moon (clipped to the disc), reddening it to a dim coppery blood moon at totality -->
-<g id="balcony-lunar" clip-path="url(#balcony-moon-clip)" pointer-events="none"><circle id="balcony-lunar-umbra" cx="510" cy="50" r="15" fill="#7a2a1c"/></g>
+<g id="balcony-lunar" clip-path="url(#balcony-moon-clip)" pointer-events="none"><circle id="balcony-lunar-umbra" cx="510" cy="50" r="15" fill="#210d09"/></g>
 <g id="balcony-heartfx" pointer-events="none" aria-hidden="true"></g>
 </g>
 <rect id="balcony-thunder-flash" class="balcony-thunder-flash" x="2720" y="0" width="680" height="340" pointer-events="none"/>
@@ -11259,6 +11259,35 @@ function spawnEclipseTotality() {
     }
   }
 }
+// the lunar eclipse's payoff: a cool moonlit twinkle around the blood-moon —
+// the sparkle tinkle of the solar totality, silvered and without the proposal hearts
+function spawnLunarSparkles() {
+  var host = document.getElementById("balcony-heartfx");
+  if (!host) return;
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  while (host.firstChild) host.removeChild(host.firstChild); // clear stale (cap the burst)
+  var SVGNS = "http://www.w3.org/2000/svg", cx = 510, cy = 50;
+  if (typeof playFairyChimeSound === "function") playFairyChimeSound("balcony-lunar-umbra");
+  var tints = ["#dfe8ff", "#eaf1ff", "#fff8e0", "#cdd8f5"]; // moonlit silvers + a warm one
+  for (var s = 0; s < 14; s++) {
+    var sa = Math.random() * 6.283, sr = 15 + Math.random() * 15;
+    var sx = cx + Math.cos(sa) * sr, sy = cy + Math.sin(sa) * sr * 0.9;
+    var star = document.createElementNS(SVGNS, "circle");
+    star.setAttribute("cx", sx); star.setAttribute("cy", sy);
+    star.setAttribute("r", 0.7 + Math.random() * 1.1);
+    star.setAttribute("fill", tints[s % tints.length]);
+    star.style.transformBox = "fill-box"; star.style.transformOrigin = "center"; // scale in place, not toward origin
+    host.appendChild(star);
+    if (star.animate) {
+      star.animate([
+        { opacity: 0, transform: "scale(0.4)" },
+        { opacity: 1, transform: "scale(1.35)", offset: 0.5 },
+        { opacity: 0, transform: "scale(0.4)" }
+      ], { duration: 800 + Math.random() * 800, iterations: 2, delay: Math.random() * 1100, easing: "ease-in-out" })
+        .onfinish = (function (node) { return function () { if (node.parentNode) node.remove(); }; })(star);
+    }
+  }
+}
 // a soft, distant firework: a low boom with a quick high crackle of sparks
 function playFireworkSound() {
   try {
@@ -15839,7 +15868,17 @@ function spawnDustMote(container) {
     var sb = document.getElementById("stage-balcony");
     if (!sb || !sb.classList.contains("dusk") || sb.classList.contains("lunar-eclipse") || sb.classList.contains("solar-eclipse")) return; // night only, one eclipse at a time
     sb.classList.add("lunar-eclipse");
-    eclipseTimers.push(setTimeout(function () { sb.classList.remove("lunar-eclipse"); }, SOLAR_DUR + 300));
+    var umbra = document.getElementById("balcony-lunar-umbra");
+    function onCentre(e) { // the umbra's "in" half ends at dead-centre totality — same clock trick as the solar burst
+      if (e.animationName !== "solar-transit-in") return; // ignore the "out" half / bubbled siblings
+      umbra.removeEventListener("animationend", onCentre);
+      if (stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden") spawnLunarSparkles();
+    }
+    if (umbra) umbra.addEventListener("animationend", onCentre);
+    eclipseTimers.push(setTimeout(function () {
+      sb.classList.remove("lunar-eclipse");
+      if (umbra) umbra.removeEventListener("animationend", onCentre);
+    }, SOLAR_DUR + 300));
   }
   window.__runLunarEclipse = runLunarEclipse;
   // double-click the sun/moon runs whichever eclipse fits the current sky

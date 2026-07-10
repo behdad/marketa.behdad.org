@@ -1041,8 +1041,8 @@ footer{margin-top:2.6rem}
 .meq-thumb{pointer-events:none}
 /* the marquee's artist link-out: hit-testable only while the player is up (boot-logo
    children stay pointer-transparent otherwise, so hidden layers can't eat clicks) */
-#monitor-np-marquee-hit{pointer-events:none; cursor:pointer}
-#office-monitor.show-nowplaying #monitor-np-marquee-hit{pointer-events:auto}
+#monitor-np-marquee-hit, #monitor-eq-hit{pointer-events:none; cursor:pointer}
+#office-monitor.show-nowplaying #monitor-np-marquee-hit, #office-monitor.show-nowplaying #monitor-eq-hit{pointer-events:auto}
 /* the idle screensaver: a live Julia fractal */
 #monitor-saver-fractal{opacity:0; pointer-events:none} /* clicks pass through to wake the monitor */
 #office-monitor.show-saver #monitor-saver-fractal{opacity:1}
@@ -1079,7 +1079,7 @@ footer{margin-top:2.6rem}
 #office-monitor.photobooth #monitor-eq-reset,
 #office-monitor.photobooth #monitor-transport-pill,
 #office-monitor.photobooth #monitor-manual-eq{opacity:0 !important; visibility:hidden; pointer-events:none !important}
-#office-monitor.photobooth #monitor-np-marquee-hit{pointer-events:none !important}
+#office-monitor.photobooth #monitor-np-marquee-hit, #office-monitor.photobooth #monitor-eq-hit{pointer-events:none !important}
 /* the live feed fills the screen's LEFT zone (62×42) at its TRUE aspect ratio —
    object-fit:contain letterboxes rather than crops — mirrored selfie-style */
 .pb-video-wrap{width:62px; height:42px; position:relative; overflow:hidden; background:#0a0d12}
@@ -5356,6 +5356,8 @@ section{margin:1.9rem 0}
 <!-- the artist link-out lives on the marquee itself (not the whole screen): a transparent
      hit rect over the title, pointer-gated to the nowplaying state -->
 <rect id="monitor-np-marquee-hit" x="254" y="154" width="81" height="16" fill="transparent"/>
+<!-- the equalizer column below it is one big play/pause target -->
+<rect id="monitor-eq-hit" x="254" y="170" width="81" height="26" fill="transparent"/>
 <!-- title marquee is clipped to the left side only (x254-335), clear of the controls to
      its right; the equalizer fills the full remaining height below it, bottom-anchored
      at y194 — even at JS's max scaleY(1.3) a bar's top stays clear of the marquee. The
@@ -6513,7 +6515,7 @@ var T = {
       cuddly: "Play with Octi, pull back a blanket.",
       cuddly_hint: "Play with Octi first.",
       cuddly_pull: "Now pull back any blanket.",
-      office: "Call Prague → lights off → find Butterfly.",
+      office: "Call Prague first — it's on the laptop.",
       office_hint: "Now turn off both lights.",
       office_find: "Find the stained-glass butterfly.",
       office_call: "Call Prague first — it's on the laptop.",
@@ -6643,7 +6645,7 @@ var T = {
       cuddly: "Pohraj si s Octi, odhrň deku.",
       cuddly_hint: "Nejdřív si pohraj s Octi.",
       cuddly_pull: "Teď odhrň libovolnou deku.",
-      office: "Zavolej do Prahy → zhasni světla → najdi Butterfly.",
+      office: "Nejdřív zavolej do Prahy — hovor je na notebooku.",
       office_hint: "Teď zhasni obě světla.",
       office_find: "Najdi vitrážového motýla.",
       office_call: "Nejdřív zavolej do Prahy — hovor je na notebooku.",
@@ -10263,36 +10265,27 @@ document.addEventListener("click", function (e) {
   // monitor to the now-playing equalizer. SVG nodes get no .click(), so wire real
   // click + keyboard handlers, and stop the event reaching the monitor's own click
   // handler (which would otherwise "open" marketa.behdad.org in a new tab).
-  function monitorPlayRandom() {
-    // only meaningful on the bare caps desktop (CSS already hides/inert-ifies the dock
-    // elsewhere; this guards a stray dispatched event)
+  function openMusicApp() {
+    // opens the player VIEW only — it never auto-starts music. With a song current
+    // (playing or paused mid-track) the view re-opens on it; otherwise the player
+    // opens idle with the play triangle, and pressing it starts a song.
     if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-nowplaying")) return;
-    var idle = songAudios.filter(function (a) { return a && a.paused; });
-    // one's already going — don't stack a second song; re-open the player view instead
-    // (the close x hides it without stopping the music, so the music app doubles as
-    // the way back in)
-    if (!idle.length || idle.length !== songAudios.length) { updateNowPlaying(); return; }
-    var pick = idle[Math.floor(Math.random() * idle.length)];
-    try {
-      // app-owned level (monitor speaker button) — reapply it before every play, same
-      // as monitorSkip/the garden instrument tap below. Without this, a song primed
-      // silently by the cinematic's primeCinematicAudio (volume=0, self-healed only by
-      // actually reaching the garden-guitar beat) stays silent here if "Take over"
-      // interrupts the show before that beat fires — plays with no sound, looks
-      // unmuted, "fixed" only by nudging the volume button (which reapplies it too).
-      pick.volume = window.__songVolume ? window.__songVolume() : 0.5;
-      // hook up the monitor equalizer's analyser here, inside the gesture, so
-      // routing the song through Web Audio doesn't stall its playback
-      if (window.__captureSongAudio) window.__captureSongAudio(pick);
-      var p = pick.play(); if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (music app) for " + pick.id + ":", e); });
-    } catch (e) {}
+    var current = songAudios.some(function (a) { return a && !a.ended && (!a.paused || a.currentTime > 0); });
+    if (current) { updateNowPlaying(); return; }
+    stopSaver();
+    monitor.classList.add("show-nowplaying");
+    var pauseBtn = document.getElementById("monitor-pause-btn");
+    if (pauseBtn) pauseBtn.classList.add("paused"); // idle player shows the play triangle
+    var title = document.getElementById("monitor-np-title");
+    if (title) title.textContent = "";
+    clearTimeout(saverTimer); saverTimer = null; // an idle player stays up, like a paused one
   }
   // ── DESKTOP DOCK ─────────────────────────────────────────────────────────────────
   // The caps home screen is a desktop: a dock of app launchers built from this array,
   // so a future app is one more entry. Icons are SVG text glyphs; labels carry data-i
   // keys so setLang localizes them like all other copy.
   var DESKTOP_APPS = [
-    { id: "music", labelKey: "app_music", glyph: "\u266A", tile: "#8e3a4a", color: "#f8f5ec", glyphSize: "8.5", glyphY: 178.8, open: function () { monitorPlayRandom(); } },
+    { id: "music", labelKey: "app_music", glyph: "\u266A", tile: "#8e3a4a", color: "#f8f5ec", glyphSize: "8.5", glyphY: 178.8, open: function () { openMusicApp(); } },
     { id: "photobooth", labelKey: "app_photobooth", glyph: "\uD83D\uDCF7", tile: "#7f9ec0", glyphSize: "7", glyphY: 178.2, open: function () {
       // same entry as tapping the bezel webcam (its handler owns the whole flow)
       var wc = document.getElementById("office-webcam");
@@ -10498,6 +10491,8 @@ document.addEventListener("click", function (e) {
         var a = songAudios[i];
         if (a && !a.ended && (!a.paused || a.currentTime > 0)) { song = a; if (!a.paused) break; }
       }
+      // idle player (opened from the dock with nothing current): play starts a song
+      if (!song) song = songAudios[Math.floor(Math.random() * songAudios.length)];
       if (!song) return;
       try {
         if (song.paused) {
@@ -10795,6 +10790,12 @@ document.addEventListener("click", function (e) {
       if (site) { try { window.open(site, "_blank"); } catch (err) {} }
     });
     npMarqueeHit.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+  // the equalizer column doubles as a big play/pause toggle
+  var eqHit = document.getElementById("monitor-eq-hit");
+  if (eqHit) {
+    eqHit.addEventListener("click", function (e) { e.stopPropagation(); scheduleSaver(15000); monitorTogglePause(); });
+    eqHit.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   var huntVolBtn = document.getElementById("hunt-volume-btn");
   if (huntVolBtn) {

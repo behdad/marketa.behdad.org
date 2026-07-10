@@ -7049,7 +7049,8 @@ var T = {
     app_video: "video",
     video_absent: "the film isn\u2019t loaded yet \u2014 come back soon",
     term_welcome: "loft console \u2014 real JavaScript, running right here in your page. try: help",
-    term_help: "commands: help \u00b7 clear \u00b7 any JavaScript (try 2+2, document.title, loft.couple, loft.weddings)",
+    term_help: "commands: help \u00b7 clear \u00b7 laser() \u00b7 any JavaScript (try 2+2, document.title, loft.couple, loft.weddings)",
+    term_laser: "bzzzt \u2014 red dot on the loose for 10 seconds. good luck, cat.",
     app_mail: "mail",
     mail_inbox_title: "inbox",
     mail_back: "\u2039 inbox",
@@ -7199,7 +7200,8 @@ var T = {
     app_video: "video",
     video_absent: "film je\u0161t\u011b nen\u00ed nahran\u00fd \u2014 vra\u0165te se brzy",
     term_welcome: "loftov\u00e1 konzole \u2014 opravdov\u00fd JavaScript, b\u011b\u017e\u00ed p\u0159\u00edmo tady ve str\u00e1nce. zkuste: help",
-    term_help: "p\u0159\u00edkazy: help \u00b7 clear \u00b7 jak\u00fdkoli JavaScript (zkuste 2+2, document.title, loft.couple, loft.weddings)",
+    term_help: "p\u0159\u00edkazy: help \u00b7 clear \u00b7 laser() \u00b7 jak\u00fdkoli JavaScript (zkuste 2+2, document.title, loft.couple, loft.weddings)",
+    term_laser: "bzzzt \u2014 \u010derven\u00e1 te\u010dka je na 10 sekund venku. hodn\u011b \u0161t\u011bst\u00ed, ko\u010dko.",
     app_mail: "po\u0161ta",
     mail_inbox_title: "doru\u010den\u00e1",
     mail_back: "\u2039 doru\u010den\u00e1",
@@ -10973,6 +10975,11 @@ document.addEventListener("click", function (e) {
     updateConsoleTile();
     if (/^help(\(\))?$/.test(c)) { termPrint(termT("term_help"), "term-dim"); return; }
     if (/^clear(\(\))?$/.test(c)) { if (termOut) termOut.innerHTML = ""; termLastCmd = ""; updateConsoleTile(); return; }
+    if (/^laser(\(\))?$/.test(c)) {
+      if (window.__laserPointer) window.__laserPointer();
+      termPrint(termT("term_laser"), "term-dim");
+      return;
+    }
     var out;
     try {
       out = window.eval(c); // indirect eval -> global scope, so var/function persist across commands
@@ -19016,6 +19023,7 @@ function spawnDustMote(container) {
     restoreStageHint(name);
     updateNav();
     if (window.__homeCat) window.__homeCat(name); // the loose cat follows the player between rooms
+    if (window.__laserOff) window.__laserOff(); // the laser dot doesn't follow between rooms
     if (name === "cuddly" && window.updateCuddlyGrooving) window.updateCuddlyGrooving();
     if (name === "cuddly" && window.startCuddlyFlame) window.startCuddlyFlame(); // light the fireplace's fractal flames
     if (name === "cuddly" && window.resetFishu) window.resetFishu();
@@ -20719,6 +20727,7 @@ function spawnDustMote(container) {
     window.__pragueCalled = false;
     clearCuddlySmoke(); // clear any lingering joint haze
     if (window.__stowCat) window.__stowCat(); // cat back in the chest, wherever it had wandered
+    if (window.__laserOff) window.__laserOff(); // any console laser dot mid-dart goes with it
     kitchenPowered = false;
     kitchenWarmedUp = false;
     clearTimeout(warmupTimer);
@@ -21738,6 +21747,35 @@ function spawnDustMote(container) {
       });
     }
   };
+  // The console laser()'s chase hook: one best-effort pounce toward a floor-adjacent
+  // point in the cat's own room. Shares the perch-jump's busy-lock, guards (loose, on
+  // the viewed room, not mid-hop, reduced motion, hidden tab — all via canJumpNow) and
+  // finishJump cleanup, so however the laser ends the roam resumes on its own. The
+  // lunge is stride-capped and its target snapped onto the floor band: the dot can
+  // climb walls, the cat can't, and each pounce lands back where the roam froze — the
+  // dot simply outruns it, which is the whole joke.
+  window.__catChaseTo = function (x, y) {
+    if (catGoneForever || !walk.animate || !canJumpNow()) return;
+    clearTimeout(jumpTimer);
+    var b = baseFeet();
+    var cur = currentWalkOffset();
+    var stepX = Math.max(-110, Math.min(110, x - (b.x + cur.x))); // one hop's stride, not a teleport
+    var Dx = cur.x + stepX;
+    var Dy = Math.max(-30, Math.min(6, y - b.y)); // floor-adjacent: never up a wall after the dot
+    var apexX = (cur.x + Dx) / 2, apexY = Math.min(cur.y, Dy) - 16;
+    jumpCur = cur; jumpApexX = apexX; jumpApexY = apexY;
+    function tf(x2, y2) { return "translate(" + x2 + "px," + y2 + "px)"; }
+    jumping = true; isPerchJump = false; isNapJump = false;
+    walk.style.animationPlayState = "paused";
+    jumpAnim = walk.animate([
+      { offset: 0,    transform: tf(cur.x, cur.y), easing: "cubic-bezier(.3,0,.6,.4)" },
+      { offset: 0.3,  transform: tf(apexX, apexY), easing: "cubic-bezier(.3,.6,.4,1)" },
+      { offset: 0.5,  transform: tf(Dx, Dy) },
+      { offset: 0.72, transform: tf(Dx, Dy),       easing: "cubic-bezier(.35,0,.6,.5)" }, // a beat of "where'd it go"
+      { offset: 1,    transform: tf(cur.x, cur.y) }
+    ], { duration: 950, fill: "none" });
+    jumpAnim.onfinish = finishJump;
+  };
   // The office desk is height-adjustable and the chair is horizontally draggable — if
   // either moves WHILE the cat is sitting on it (perched, not mid-arc), the cat would
   // otherwise float at the stale landing spot. Re-resolve `perchFn`'s live geometry and
@@ -21890,6 +21928,77 @@ function spawnDustMote(container) {
     startJump();
   });
   scheduleJump(); // self-gating loop: acts only while the loose cat is on the viewed room
+})();
+(function () {
+  // The console's laser() command: a red dot loose in the CURRENTLY VIEWED room for
+  // ~10 seconds, darting between random spots in quick WAAPI glides with jittery
+  // pauses, then gone. It spawns INTO the current stage group (the spawn-in-parent
+  // rule — stage-local coords match everything it dances over) and every teardown
+  // path removes it and clears its timers: the natural end, a repeat laser()
+  // (restart — never two dots), a room change (goToStage), the extinguisher reset
+  // (resetHunt), and a hidden tab (same visibilitychange rule as the cat's hops).
+  // Each new spot is also offered to the loose cat via __catChaseTo — a best-effort
+  // chase, since the dot re-darts faster than a pounce completes.
+  var LASER_MS = 10000;
+  var dot = null, dartTimer = null, endTimer = null, dartAnim = null;
+  var dotX = 0, dotY = 0;
+  window.__laserOff = function () {
+    clearTimeout(dartTimer); dartTimer = null;
+    clearTimeout(endTimer); endTimer = null;
+    if (dartAnim) { dartAnim.cancel(); dartAnim = null; }
+    if (dot && dot.parentNode) dot.parentNode.removeChild(dot);
+    dot = null;
+  };
+  function randomSpot() { // anywhere on the room's walls/furniture band, clear of the frame edges
+    return { x: 50 + Math.random() * 580, y: 70 + Math.random() * 240 };
+  }
+  function reducedMotion() {
+    return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+  function dart() {
+    if (!dot) return;
+    var from = { x: dotX, y: dotY };
+    var to = randomSpot();
+    dotX = to.x; dotY = to.y;
+    var glide = 130 + Math.random() * 200;
+    dot.style.transform = "translate(" + to.x + "px," + to.y + "px)"; // the rest pose; the glide composes over it
+    if (dot.animate && !reducedMotion()) {
+      if (dartAnim) dartAnim.cancel();
+      dartAnim = dot.animate([
+        { transform: "translate(" + from.x + "px," + from.y + "px)" },
+        { transform: "translate(" + to.x + "px," + to.y + "px)" }
+      ], { duration: glide, easing: "cubic-bezier(.3,0,.2,1)", fill: "none" });
+    }
+    if (window.__catChaseTo) window.__catChaseTo(to.x, to.y);
+    dartTimer = setTimeout(dart, glide + 90 + Math.random() * 420); // jitter pause between darts
+  }
+  window.__laserPointer = function () {
+    window.__laserOff();
+    var stage = document.getElementById("stage-" + (window.currentStageName || "kitchen"));
+    if (!stage) return;
+    var NS = "http://www.w3.org/2000/svg";
+    dot = document.createElementNS(NS, "g");
+    dot.setAttribute("class", "laser-dot");
+    dot.setAttribute("pointer-events", "none");
+    // bright core + soft halo, ~4 units across (cat-eye scale)
+    [["2", "#ff2418", "0.3"], ["1.1", "#ff2418", "0.85"], ["0.5", "#ffc9c0", "1"]].forEach(function (c) {
+      var circ = document.createElementNS(NS, "circle");
+      circ.setAttribute("r", c[0]);
+      circ.setAttribute("fill", c[1]);
+      circ.setAttribute("opacity", c[2]);
+      dot.appendChild(circ);
+    });
+    var first = randomSpot();
+    dotX = first.x; dotY = first.y;
+    dot.style.transform = "translate(" + first.x + "px," + first.y + "px)";
+    stage.appendChild(dot); // last child: the dot paints over the room, like a real laser would
+    endTimer = setTimeout(window.__laserOff, LASER_MS);
+    dartTimer = setTimeout(dart, 260 + Math.random() * 240);
+  };
+  window.laser = window.__laserPointer; // devtools users get the toy too
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") window.__laserOff(); // no timer pile-up in a hidden tab
+  });
 })();
 (function () {
   var gmailBtn = document.getElementById("rsvp-gmail-btn");

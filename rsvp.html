@@ -1043,22 +1043,34 @@ footer{margin-top:2.6rem}
 #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .4s ease}
 #office-monitor.show-caps #monitor-desktop-dock{opacity:1; visibility:visible; pointer-events:auto}
 #office-monitor.show-nowplaying #monitor-desktop-dock, #office-monitor.show-saver #monitor-desktop-dock, #office-monitor.show-terminal #monitor-desktop-dock, #office-monitor.show-mail #monitor-desktop-dock, #office-monitor.show-video #monitor-desktop-dock, #office-monitor.show-calendar #monitor-desktop-dock, #office-monitor.show-python #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none}
-.dock-app{cursor:pointer; transition:transform .15s ease}
+/* the dock is an HTML app grid in a foreignObject below the menu bar: 4 columns, and a
+   thin right-side scrollbar once the apps outgrow the screen (overflow-y:auto shows it
+   only then). overscroll-behavior + the grid's own wheel/touchmove stopPropagation keep
+   scrolling inside the grid instead of panning the room/page. */
+.dock-grid{width:100%; height:100%; box-sizing:border-box; display:grid; grid-template-columns:repeat(4,1fr); align-content:start; padding:1.2px 2px; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; touch-action:pan-y; background:rgba(255,253,248,0.72); border:0.4px solid rgba(69,58,49,0.2); border-radius:0 0 1.5px 1.5px}
+.dock-grid::-webkit-scrollbar{width:2px}
+.dock-grid::-webkit-scrollbar-track{background:transparent}
+.dock-grid::-webkit-scrollbar-thumb{background:rgba(69,58,49,.35); border-radius:1px}
+/* Firefox only: Chrome drops ::-webkit-scrollbar styling (buttons and all native chrome
+   come back) whenever scrollbar-width/color are non-auto, so gate these to engines
+   without the pseudo-element */
+@supports not selector(::-webkit-scrollbar){
+.dock-grid{scrollbar-width:thin; scrollbar-color:rgba(69,58,49,.35) transparent}
+}
+.dock-app{display:flex; flex-direction:column; align-items:center; gap:0.3px; padding-top:0.4px; cursor:pointer; transition:transform .15s ease}
 .dock-app:hover{transform:translateY(-1px)}
-.dock-tray{fill:rgba(255,253,248,0.72); stroke:rgba(69,58,49,0.2); stroke-width:0.7}
 .desk-bar-text{fill:#f8f5ec; font-family:sans-serif; font-size:3.2px; letter-spacing:0.2px}
 .desk-brand{cursor:pointer}
 .desk-brand:hover .desk-bar-text{fill:#d9a6a6}
-.dock-tile{stroke:rgba(0,0,0,0.18); stroke-width:0.5}
-.dock-glyph{font-family:sans-serif}
-.dock-cam-fo{pointer-events:none}
-.dock-cam-wrap{width:15px; height:15px; border-radius:4px; overflow:hidden; background:#000; display:none}
+.dock-tile{position:relative; width:11px; height:11px; border-radius:3px; box-shadow:inset 0 0 0 0.4px rgba(0,0,0,0.18); display:flex; align-items:center; justify-content:center}
+.dock-glyph{font-family:sans-serif; line-height:1; color:#f8f5ec}
+.dock-cam-wrap{position:absolute; inset:0; border-radius:3px; overflow:hidden; background:#000; display:none}
 .dock-app-photobooth.live .dock-cam-wrap{display:block}
 .dock-cam{width:100%; height:100%; object-fit:cover; transform:scaleX(-1); display:block}
-.dock-mini-eq{opacity:0; transition:opacity .3s ease}
+.dock-mini-eq{position:absolute; left:50%; top:50%; margin:-4.5px 0 0 -4.5px; opacity:0; transition:opacity .3s ease}
 #office-monitor.eq-live .dock-mini-eq{opacity:1}
 #office-monitor.eq-live .dock-app-music .dock-glyph{opacity:0}
-.dock-label{fill:#716455; font-family:sans-serif; font-size:5.5px; letter-spacing:0.1px}
+.dock-label{max-width:100%; font-size:4.2px; line-height:1; letter-spacing:0.1px; color:#716455; font-family:sans-serif; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 /* terminal app: a tiny JS REPL over the screen */
 #monitor-terminal{opacity:0; pointer-events:none; transition:opacity .25s ease}
 #office-monitor.show-terminal #monitor-terminal{opacity:1; pointer-events:auto}
@@ -11073,25 +11085,25 @@ document.addEventListener("click", function (e) {
     clearTimeout(saverTimer); saverTimer = null; // an idle player stays up, like a paused one
   }
   // ── DESKTOP DOCK ─────────────────────────────────────────────────────────────────
-  // The caps home screen is a desktop: a dock of app launchers built from this array,
-  // so a future app is one more entry. Icons are SVG text glyphs; labels carry data-i
-  // keys so setLang localizes them like all other copy.
+  // The caps home screen is a desktop: an app grid built from this array, so a future
+  // app is one more entry. Icons are text glyphs (glyphSize = font-size in screen px);
+  // labels carry data-i keys so setLang localizes them like all other copy.
   var DESKTOP_APPS = [
-    { id: "music", labelKey: "app_music", glyph: "\u266A", tile: "#8e3a4a", color: "#f8f5ec", glyphSize: "8.5", glyphY: 178.8, open: function () { openMusicApp(); } },
-    { id: "photobooth", labelKey: "app_photobooth", glyph: "\uD83D\uDCF7", tile: "#7f9ec0", glyphSize: "7", glyphY: 178.2, open: function () {
+    { id: "music", labelKey: "app_music", glyph: "\u266A", tile: "#8e3a4a", color: "#f8f5ec", glyphSize: "6.2", open: function () { openMusicApp(); } },
+    { id: "photobooth", labelKey: "app_photobooth", glyph: "\uD83D\uDCF7", tile: "#7f9ec0", glyphSize: "5.2", open: function () {
       // same entry as tapping the bezel webcam (its handler owns the whole flow)
       var wc = document.getElementById("office-webcam");
       if (wc) wc.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     } },
-    { id: "album", labelKey: "app_album", glyph: "\uD83D\uDDBC\uFE0F", tile: "#d9a6a6", glyphSize: "7", glyphY: 178.2, open: function () { try { window.open("https://photos.app.goo.gl/gBQpsw4nrh9RwdQu9", "_blank"); } catch (err) {} } },
-    { id: "calendar", labelKey: "app_calendar", glyph: "\uD83D\uDCC5", tile: "#c68e95", glyphSize: "7", glyphY: 178.2, open: function () { openCalendar(); } },
-    { id: "video", labelKey: "app_video", glyph: "\u25B6", tile: "#4a6b94", glyphSize: "6.5", glyphY: 178.1, open: function () { openVideoApp(); } },
-    { id: "terminal", labelKey: "app_terminal", glyph: "\u276F_", tile: "#2e2823", color: "#8fd070", mono: true, glyphSize: "5.2", glyphY: 177.6, open: function () { openTerminal(); } },
-    { id: "python", labelKey: "app_python", glyph: ">>>", tile: "#306998", color: "#ffd43b", mono: true, glyphSize: "4.6", glyphY: 177.2, open: function () { openPython(); } },
-    { id: "mail", labelKey: "app_mail", glyph: "\u2709\uFE0F", tile: "#4a6b94", glyphSize: "7", glyphY: 178.4, open: function () { openMailApp(); } }
+    { id: "album", labelKey: "app_album", glyph: "\uD83D\uDDBC\uFE0F", tile: "#d9a6a6", glyphSize: "5.2", open: function () { try { window.open("https://photos.app.goo.gl/gBQpsw4nrh9RwdQu9", "_blank"); } catch (err) {} } },
+    { id: "calendar", labelKey: "app_calendar", glyph: "\uD83D\uDCC5", tile: "#c68e95", glyphSize: "5.2", open: function () { openCalendar(); } },
+    { id: "video", labelKey: "app_video", glyph: "\u25B6", tile: "#4a6b94", glyphSize: "4.8", open: function () { openVideoApp(); } },
+    { id: "terminal", labelKey: "app_terminal", glyph: "\u276F_", tile: "#2e2823", color: "#8fd070", mono: true, glyphSize: "4", open: function () { openTerminal(); } },
+    { id: "python", labelKey: "app_python", glyph: ">>>", tile: "#306998", color: "#ffd43b", mono: true, glyphSize: "3.5", open: function () { openPython(); } },
+    { id: "mail", labelKey: "app_mail", glyph: "\u2709\uFE0F", tile: "#4a6b94", glyphSize: "5.2", open: function () { openMailApp(); } }
   ];
   var dock = document.getElementById("monitor-desktop-dock");
-  var dockGlyphEls = {}; // per-app glyph <text>, for tiles that show live state
+  var dockGlyphEls = {}; // per-app glyph element, for tiles that show live state
   var tileCamVideo = null, tileCamGroup = null;
   // stamped whenever a dock icon swaps the screen layer; the monitor's dblclick swap and
   // the photobooth's consent button both ignore inputs landing within this grace window,
@@ -11166,48 +11178,68 @@ document.addEventListener("click", function (e) {
       var g = deskWeatherGlyph();
       if (deskWeather.textContent !== g) deskWeather.textContent = g;
     }, 1000);
-    // dock tray + app icons; the pitch narrows as apps are added so the row always fits
-    // the 124px screen (3 apps = the classic 36px pitch)
-    var dockPitch = Math.min(36, 118 / DESKTOP_APPS.length);
-    mkEl("rect", { x: 316 - DESKTOP_APPS.length * dockPitch / 2, y: 165.5, width: DESKTOP_APPS.length * dockPitch, height: 28, rx: 5, "class": "dock-tray" }, dock);
-    DESKTOP_APPS.forEach(function (app, i) {
-      var cx = 316 + (i - (DESKTOP_APPS.length - 1) / 2) * dockPitch;
-      var g = mkEl("g", { "class": "dock-app dock-app-" + app.id }, dock);
-      mkEl("rect", { "class": "dock-tile", x: cx - 7.5, y: 168, width: 15, height: 15, rx: 4, fill: app.tile }, g);
-      var glyph = mkEl("text", { "class": "dock-glyph", x: cx, y: app.glyphY, "text-anchor": "middle", fill: app.color || "#f8f5ec", "font-size": app.glyphSize }, g);
-      if (app.mono) glyph.setAttribute("font-family", "ui-monospace, monospace");
+    // app grid: one foreignObject filling the screen below the menu bar; .dock-grid
+    // lays the tiles out 4-across and grows a thin right scrollbar when they overflow
+    var dockFo = mkEl("foreignObject", { x: 254, y: 160.5, width: 124, height: 35.5 }, dock);
+    var dockGrid = document.createElement("div");
+    dockGrid.className = "dock-grid";
+    dockFo.appendChild(dockGrid);
+    // grid scrolling stays in the grid — never pans the room or the page underneath
+    dockGrid.addEventListener("wheel", function (e) { e.stopPropagation(); });
+    dockGrid.addEventListener("touchmove", function (e) { e.stopPropagation(); }, { passive: true });
+    DESKTOP_APPS.forEach(function (app) {
+      var cell = document.createElement("div");
+      cell.className = "dock-app dock-app-" + app.id;
+      var tile = document.createElement("div");
+      tile.className = "dock-tile";
+      tile.style.background = app.tile;
+      cell.appendChild(tile);
+      var glyph = document.createElement("span");
+      glyph.className = "dock-glyph";
+      glyph.style.fontSize = app.glyphSize + "px";
+      if (app.color) glyph.style.color = app.color;
+      if (app.mono) glyph.style.fontFamily = "ui-monospace, monospace";
       glyph.textContent = app.glyph;
+      tile.appendChild(glyph);
       dockGlyphEls[app.id] = glyph;
       if (app.id === "photobooth") {
-        // when camera permission is ALREADY granted, the icon becomes a tiny mirrored
+        // when camera permission is ALREADY granted, the tile becomes a tiny mirrored
         // viewfinder while the desktop is up (the tile-cam module drives it)
-        var camFo = mkEl("foreignObject", { x: cx - 7.5, y: 168, width: 15, height: 15, "class": "dock-cam-fo" }, g);
         var camWrap = document.createElement("div");
         camWrap.className = "dock-cam-wrap";
         var camVid = document.createElement("video");
         camVid.className = "dock-cam";
         camVid.autoplay = true; camVid.muted = true; camVid.playsInline = true;
         camWrap.appendChild(camVid);
-        camFo.appendChild(camWrap);
+        tile.appendChild(camWrap);
         tileCamVideo = camVid;
-        tileCamGroup = g;
+        tileCamGroup = cell;
       }
       if (app.id === "music") {
-        // while a song plays, the note gives way to a live 3-bar mini equalizer
-        // (joined to startEq's shared analyser loop via the .eq-bar class)
-        var mini = mkEl("g", { "class": "dock-mini-eq" }, g);
-        [-4.5, -1.25, 2].forEach(function (bx) {
-          mkEl("rect", { "class": "eq-bar", x: cx + bx, y: 171.5, width: 2.5, height: 9, rx: 0.8, fill: "#f8f5ec" }, mini);
+        // while a song plays, the note gives way to a live 3-bar mini equalizer — kept
+        // as a tiny inline SVG so startEq's shared analyser loop drives its .eq-bar
+        // rects (style.transform scaleY) exactly like the full-size displays
+        var mini = document.createElementNS(SVGNS, "svg");
+        mini.setAttribute("class", "dock-mini-eq");
+        mini.setAttribute("viewBox", "0 0 9 9");
+        mini.setAttribute("width", "9");
+        mini.setAttribute("height", "9");
+        [0, 3.25, 6.5].forEach(function (bx) {
+          mkEl("rect", { "class": "eq-bar", x: bx, y: 0, width: 2.5, height: 9, rx: 0.8, fill: "#f8f5ec" }, mini);
         });
+        tile.appendChild(mini);
       }
-      var label = mkEl("text", { "class": "dock-label", x: cx, y: 190.8, "text-anchor": "middle", "data-i": app.labelKey }, g);
+      var label = document.createElement("div");
+      label.className = "dock-label";
+      label.setAttribute("data-i", app.labelKey);
       // setLang has already run by the time the dock is built — paint the current
       // language now; data-i keeps future toggles in sync
       var lang = document.documentElement.lang;
       label.textContent = (T[lang] && T[lang][app.labelKey]) || T.en[app.labelKey] || "";
-      mkEl("rect", { x: cx - 12, y: 166, width: 24, height: 27, fill: "transparent" }, g);
-      g.addEventListener("click", function (e) { e.stopPropagation(); appOpenTs = Date.now(); app.open(); });
-      g.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+      cell.appendChild(label);
+      cell.addEventListener("click", function (e) { e.stopPropagation(); appOpenTs = Date.now(); app.open(); });
+      cell.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+      dockGrid.appendChild(cell);
     });
   }
   // ── TERMINAL APP ─────────────────────────────────────────────────────────────────

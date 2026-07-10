@@ -6538,10 +6538,11 @@ var T = {
       cuddly_hint: "Play with Octi first.",
       cuddly_pull: "Now pull back any blanket.",
       office: "Call Prague first — it's on the laptop.",
-      office_hint: "Now turn off both lights.",
+      office_hint: "Next, turn off both lights.",
       office_find: "Find the stained-glass butterfly.",
       office_call: "Call Prague first — it's on the laptop.",
       office_computer: "Play with the computer.",
+      office_hangup: "Hang up now.",
       complete: "You made it through the whole loft ♥",
       balcony: "There will be BBQ 🔥🍖🌽🍷",
       // ── cinematic narration (the "Watch the loft" autoplay owns the caption while it runs) ──
@@ -6668,10 +6669,11 @@ var T = {
       cuddly_hint: "Nejdřív si pohraj s Octi.",
       cuddly_pull: "Teď odhrň libovolnou deku.",
       office: "Nejdřív zavolej do Prahy — hovor je na notebooku.",
-      office_hint: "Teď zhasni obě světla.",
+      office_hint: "Pak zhasni obě světla.",
       office_find: "Najdi vitrážového motýla.",
       office_call: "Nejdřív zavolej do Prahy — hovor je na notebooku.",
       office_computer: "Pohraj si s počítačem.",
+      office_hangup: "Teď zavěs.",
       complete: "Prošli jste celým bytem ♥",
       balcony: "Bude tu grilovačka 🔥🍖🌽🍷",
       // ── titulky filmečku (autoplay „Prohlédnout byt“ řídí titulek, dokud běží) ──
@@ -8992,15 +8994,14 @@ document.addEventListener("click", function (e) {
     function markPragueCalled() {
       if (window.__pragueCalled) return;
       window.__pragueCalled = true; // satisfies the office finale's Call-Prague requirement
-      var lampsOff = ["office-lamp", "office-pendant"].every(function (id) {
-        var el = document.getElementById(id);
-        return el && el.classList.contains("dimmed");
-      });
-      var glass = document.getElementById("office-stainedglass");
-      if (glass && !glass.classList.contains("done") && window.setCaption) {
-        window.setCaption(!window.__pcPlayed ? "office_computer" : (lampsOff ? "office_find" : "office_hint"));
-      }
-      if (window.__updateOfficeNudges) window.__updateOfficeNudges();
+      // the caption advances only once the call is DISCONNECTED (see dropLine); while
+      // the couple's still on screen, a gentle hang-up nudge after a few seconds
+      laptopUpdateTimers.push(setTimeout(function () {
+        var glass = document.getElementById("office-stainedglass");
+        if (inCall() && glass && !glass.classList.contains("done") && window.setCaption) {
+          window.setCaption("office_hangup");
+        }
+      }, 3000));
     }
     function startCall() {
       if (!laptop.classList.contains("open")) return;
@@ -9042,6 +9043,16 @@ document.addEventListener("click", function (e) {
         playCallHangupSound();
         laptop.classList.remove("calling", "connecting", "connected");
         if (laptop.classList.contains("open")) scheduleLaptopSaver(); // back to idle
+        // the sequence advances on disconnect, not connect: point at the computer next
+        var glass = document.getElementById("office-stainedglass");
+        if (window.__pragueCalled && glass && !glass.classList.contains("done") && window.setCaption) {
+          var lampsOff = ["office-lamp", "office-pendant"].every(function (id) {
+            var el = document.getElementById(id);
+            return el && el.classList.contains("dimmed");
+          });
+          window.setCaption(!window.__pcPlayed ? "office_computer" : (lampsOff ? "office_find" : "office_hint"));
+        }
+        if (window.__updateOfficeNudges) window.__updateOfficeNudges();
       }
       if (wasConnected) {
         // let the "I love you" play in full, THEN drop the line (hangup tone + disconnect)
@@ -9370,14 +9381,19 @@ document.addEventListener("click", function (e) {
       window.__pcPlayed = true; // the office sequence's "play with the computer" beat (the butterfly gates on it)
       // ...and powering on advances the office hint to the next step (the caption
       // system elsewhere only re-evaluates on lamp/call/entry events)
-      var seqGlass = document.getElementById("office-stainedglass");
-      if (seqGlass && !seqGlass.classList.contains("done") && window.__pragueCalled && window.setCaption) {
-        var seqLampsOff = ["office-lamp", "office-pendant"].every(function (id) {
-          var el = document.getElementById(id);
-          return el && el.classList.contains("dimmed");
-        });
-        window.setCaption(seqLampsOff ? "office_find" : "office_hint");
-      }
+      // let them actually play for a bit — the lights hint arrives after 10s
+      // (the guards make a post-reset firing a no-op: reset clears both flags)
+      setTimeout(function () {
+        if (!window.__pcPlayed || !window.__pragueCalled) return;
+        var seqGlass = document.getElementById("office-stainedglass");
+        if (seqGlass && !seqGlass.classList.contains("done") && window.setCaption) {
+          var seqLampsOff = ["office-lamp", "office-pendant"].every(function (id) {
+            var el = document.getElementById(id);
+            return el && el.classList.contains("dimmed");
+          });
+          window.setCaption(seqLampsOff ? "office_find" : "office_hint");
+        }
+      }, 10000);
       if (window.__updateOfficeNudges) window.__updateOfficeNudges();
     }
     monitor.classList.add("screen-on", "show-fedora");
@@ -15488,8 +15504,10 @@ function playSipSound(panId) {
 function updateOfficeNudges() {
   var glass = document.getElementById("office-stainedglass");
   var done = !!(glass && glass.classList.contains("done"));
+  var lap = document.getElementById("office-laptop");
+  var callLive = !!(lap && (lap.classList.contains("calling") || lap.classList.contains("connecting") || lap.classList.contains("connected")));
   var wantLaptop = !done && !window.__pragueCalled;
-  var wantPc = !done && !!window.__pragueCalled && !window.__pcPlayed;
+  var wantPc = !done && !callLive && !!window.__pragueCalled && !window.__pcPlayed;
   if (wantLaptop) { if (window.__inviteLaptop) window.__inviteLaptop(); }
   else if (window.__stopLaptopInvite) window.__stopLaptopInvite();
   var pc = document.getElementById("office-pc-desk-trio");

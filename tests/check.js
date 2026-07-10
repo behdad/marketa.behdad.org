@@ -266,6 +266,95 @@ function checkAnimationKeyframes(file, style) {
   }
 }
 
+// Recurring historical bug (the mic, the lounger flip, the dustpan, the garden
+// ukulele): a CSS animation whose @keyframes set the `transform` PROPERTY, applied
+// to an element that also carries a static `transform="..."` ATTRIBUTE. The CSS
+// property overrides the attribute for the animation's whole duration, so the
+// element snaps to its unpositioned spot while animating (the uke sat 50px high
+// mid-sway). Safe fixes this check will NOT flag: animate the individual
+// `rotate:`/`translate:`/`scale:` properties instead, or hang the static transform
+// on a wrapper <g> distinct from the animated node (ancestor transforms are fine —
+// only the animated node itself carrying the attribute is the bug).
+//
+// Heuristic resolution of "which element does this animation run on": for each
+// selector referencing an offending @keyframes, take the rightmost compound
+// selector; if it has an #id, check that element's tag; otherwise check every
+// element whose static class attribute contains any of the compound's classes
+// (state classes like `.playing` are added dynamically and match nothing static —
+// the stable base class or id is what locates the element).
+var TRANSFORM_CLOBBER_ALLOW = [
+  // "element-id" or ".class-name" entries for vetted false positives.
+];
+function checkTransformClobber(file, style, html) {
+  if (!style) return;
+  // 1. @keyframes whose (brace-matched) body sets the `transform:` property.
+  var clobberKf = new Set();
+  var kfRe = /@(?:-webkit-)?keyframes\s+([A-Za-z_][\w-]*)\s*\{/g;
+  var km;
+  while ((km = kfRe.exec(style))) {
+    var depth = 1, i = kfRe.lastIndex;
+    while (i < style.length && depth > 0) {
+      if (style[i] === "{") depth++;
+      else if (style[i] === "}") depth--;
+      i++;
+    }
+    // `(?:^|[;{\s])` keeps transform-origin/transform-box/text-transform unmatched.
+    if (/(?:^|[;{\s])transform\s*:/.test(style.slice(kfRe.lastIndex, i - 1))) clobberKf.add(km[1]);
+  }
+  // 2. every rule whose animation/animation-name references one of those keyframes.
+  var ruleRe = /([^{}]+)\{([^{}]*)\}/g;
+  var rm;
+  var issues = [];
+  var seen = new Set();
+  while ((rm = ruleRe.exec(style))) {
+    var decl = rm[2];
+    var declRe = /animation(?:-name)?\s*:\s*([^;]+)/g, dm;
+    var names = [];
+    while ((dm = declRe.exec(decl))) {
+      dm[1].replace(/[a-z-]+\([^)]*\)/gi, " ").split(/[\s,]+/).forEach(function (tok) {
+        if (clobberKf.has(tok)) names.push(tok);
+      });
+    }
+    if (!names.length) continue;
+    // 3. rightmost compound of each selector -> static elements -> transform attr?
+    rm[1].split(",").forEach(function (sel) {
+      sel = sel.trim().replace(/::?[\w-]+(\([^)]*\))?/g, ""); // strip pseudos
+      var compounds = sel.split(/[\s>+~]+/).filter(Boolean);
+      var last = compounds[compounds.length - 1] || "";
+      var idm = last.match(/#([\w-]+)/);
+      var tags = []; // [label, openingTag]
+      if (idm) {
+        if (TRANSFORM_CLOBBER_ALLOW.indexOf(idm[1]) !== -1) return;
+        var tm = html.match(new RegExp('<[a-zA-Z][^>]*\\bid="' + idm[1] + '"[^>]*>'));
+        if (tm) tags.push(["#" + idm[1], tm[0]]);
+      } else {
+        var cre = /\.([\w-]+)/g, cm;
+        while ((cm = cre.exec(last))) {
+          if (TRANSFORM_CLOBBER_ALLOW.indexOf("." + cm[1]) !== -1) continue;
+          var tagRe = new RegExp('<[a-zA-Z][^>]*\\bclass="[^"]*\\b' + cm[1] + '\\b[^"]*"[^>]*>', "g");
+          var tm2;
+          while ((tm2 = tagRe.exec(html))) {
+            var idIn = tm2[0].match(/\bid="([\w-]+)"/);
+            tags.push([(idIn ? "#" + idIn[1] : "." + cm[1]), tm2[0]]);
+          }
+        }
+      }
+      tags.forEach(function (t) {
+        if (!/\btransform="/.test(t[1])) return;
+        var msg = t[0] + " has a static transform= attribute but animates @keyframes " +
+          names.join("/") + " (via " + sel + ") which set the transform property";
+        if (!seen.has(msg)) { seen.add(msg); issues.push(msg); }
+      });
+    });
+  }
+  if (issues.length === 0) {
+    pass(file + ": no transform-property animation on an element with a static transform attribute");
+  } else {
+    fail(file + ": CSS transform animation clobbers a static transform= attribute (element will jump while animating — use rotate:/translate:/scale: keyframes or a wrapper <g>)",
+      issues.join("\n"));
+  }
+}
+
 // Every data-i / data-*-i / data-note-key attribute names a T dictionary key; a
 // typo'd or missing key renders blank text (setLang writes innerHTML from T[key]).
 // Verify each referenced key exists in the en dictionary (cs parity is checked above).
@@ -303,6 +392,7 @@ FILES.forEach(function (file) {
     checkI18nKeys(file, script, html);
   }
   checkAnimationKeyframes(file, style);
+  checkTransformClobber(file, style, html);
   checkSvgTagBalance(file, html);
   console.log("");
 });

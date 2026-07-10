@@ -1992,7 +1992,7 @@ body:has(#loft-game-strip.psychedelic) #garden-buddha{animation:buddha-apparitio
 #iboga-layer{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:4}
 /* each photo is cold-tinted (blue-gray / white-gray), kept faint, and edge-feathered
    by an oval mask so it reads as a surfacing memory rather than a rectangle */
-.iboga-slide{opacity:0; transition:opacity 1.2s ease; filter:grayscale(1) brightness(1.05) sepia(.25) hue-rotate(175deg) saturate(.6)}
+.iboga-slide{opacity:0; transition:opacity 2s ease; filter:grayscale(1) brightness(1.05) sepia(.25) hue-rotate(175deg) saturate(.6)}
 .iboga-slide.iboga-slide-show{opacity:.45}
 .bird-fly-a{transform-box:fill-box; animation:bird-fly-a 16s linear infinite; opacity:0}
 .bird-fly-b{transform-box:fill-box; animation:bird-fly-b 20s linear infinite 6s; opacity:0}
@@ -6544,7 +6544,7 @@ section{margin:1.9rem 0}
     </svg>
     <!-- the iboga trip's memory photos: their own overlay ABOVE the strip, so the
          gray-out filter never dims them (same layering trick as the buddha). The
-         three slots get href/position from startIbogaSlideshow at trip time. -->
+         one slot at a time gets href/position from the slideshow chain at trip time. -->
     <svg id="iboga-layer" aria-hidden="true" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid slice">
 <defs>
 <radialGradient id="iboga-fade-grad" cx="0.5" cy="0.5" r="0.5">
@@ -6555,8 +6555,6 @@ section{margin:1.9rem 0}
 <rect x="0" y="0" width="1" height="1" fill="url(#iboga-fade-grad)"/>
 </mask>
 </defs>
-<image class="iboga-slide" width="204" height="140" preserveAspectRatio="xMidYMid slice" mask="url(#iboga-fade-mask)"/>
-<image class="iboga-slide" width="204" height="140" preserveAspectRatio="xMidYMid slice" mask="url(#iboga-fade-mask)"/>
 <image class="iboga-slide" width="204" height="140" preserveAspectRatio="xMidYMid slice" mask="url(#iboga-fade-mask)"/>
     </svg>
     <svg id="rsvp-trip-ghost" aria-hidden="true" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid slice">
@@ -15027,40 +15025,38 @@ function stopIbogaSlideshow() {
   });
 }
 window.__stopIbogaSlideshow = stopIbogaSlideshow; // resetHunt clears any in-flight trio through this
-function showIbogaTrio() {
+var ibogaPool = [];
+function ibogaNextSlide() {
   if (!tripActive || currentTripVariant !== "iboga") { stopIbogaSlideshow(); return; }
   var slides = ibogaSlides();
   if (!slides.length) return;
-  // 3 distinct photos from the manifest: shuffle a copy, take the head
-  var pool = IBOGA_PHOTOS.slice();
-  for (var i = pool.length - 1; i > 0; i--) {
-    var j = Math.floor(Math.random() * (i + 1));
-    var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+  var img = slides[0]; // one memory at a time
+  if (!img.__ibogaGuarded) { // a 404'd photo hides itself, with no console throw
+    img.__ibogaGuarded = true;
+    img.addEventListener("error", function () { img.classList.remove("iboga-slide-show"); });
   }
-  Array.prototype.forEach.call(slides, function (img, k) {
-    if (!img.__ibogaGuarded) { // a 404'd photo hides only its own slot, with no console throw
-      img.__ibogaGuarded = true;
-      img.addEventListener("error", function () { img.classList.remove("iboga-slide-show"); });
+  // draw without repeats until the manifest is exhausted, then reshuffle
+  if (!ibogaPool.length) {
+    ibogaPool = IBOGA_PHOTOS.slice();
+    for (var i = ibogaPool.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = ibogaPool[i]; ibogaPool[i] = ibogaPool[j]; ibogaPool[j] = tmp;
     }
-    // one slot per loose horizontal third (view 680x340, slide 204x140), jittered
-    // within it so the trio never piles up: third k spans x = k*226 .. k*226+226
-    img.setAttribute("x", (k * 226 + 4 + Math.random() * 18).toFixed(1));
-    img.setAttribute("y", (8 + Math.random() * 184).toFixed(1));
-    img.setAttribute("href", pool[k]);
-    img.classList.add("iboga-slide-show"); // 1.2s CSS fade-in
-  });
+  }
+  // anywhere fully on screen (view 680x340, slide 204x140)
+  img.setAttribute("x", (4 + Math.random() * 468).toFixed(1));
+  img.setAttribute("y", (8 + Math.random() * 188).toFixed(1));
+  img.setAttribute("href", ibogaPool.pop());
+  img.classList.add("iboga-slide-show");            // 2s CSS fade-in
+  ibogaSlideTimer = setTimeout(function () {
+    img.classList.remove("iboga-slide-show");       // 2s fade-out after a short gaze
+    ibogaSlideTimer = setTimeout(ibogaNextSlide, 2300); // let it dissolve, then the next memory
+  }, 4200);
 }
 function startIbogaSlideshow() {
   stopIbogaSlideshow();
-  showIbogaTrio(); // first trio rides the gray-out in
-  ibogaSlideTimer = setTimeout(function () {
-    Array.prototype.forEach.call(ibogaSlides(), function (img) {
-      img.classList.remove("iboga-slide-show"); // 1.2s fade-out
-    });
-    // let the old trio dissolve, then surface a fresh one at fresh spots;
-    // it holds until the trip-end teardown fades it with the gray-out
-    ibogaSlideTimer = setTimeout(showIbogaTrio, 1500);
-  }, 9000); // ~half the 20s trip
+  ibogaPool = [];
+  ibogaNextSlide(); // the first memory rides the gray-out in
 }
 // Tripping again and again builds up: the scene darkens a notch each time, then
 // slowly recovers a notch at a time if you lay off (a little tolerance/comedown).

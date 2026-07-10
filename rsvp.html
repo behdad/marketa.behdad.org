@@ -9243,6 +9243,7 @@ document.addEventListener("click", function (e) {
     saverRaf = requestAnimationFrame(frame);
   }
   function clearBoot() {
+    closeTerminal(); // blurs the REPL input too — an invisible focused input eats every keyboard shortcut
     bootTimers.forEach(clearTimeout);
     bootTimers = [];
     stopSaver();
@@ -10166,6 +10167,10 @@ document.addEventListener("click", function (e) {
     { id: "terminal", labelKey: "app_terminal", glyph: "\u276F_", tile: "#2e2823", color: "#8fd070", mono: true, glyphSize: "5.2", glyphY: 177.6, open: function () { openTerminal(); } }
   ];
   var dock = document.getElementById("monitor-desktop-dock");
+  // stamped whenever a dock icon swaps the screen layer; the monitor's dblclick swap and
+  // the photobooth's consent button both ignore inputs landing within this grace window,
+  // so the second click of a double-click can't hit whatever appeared under it
+  var appOpenTs = 0;
   var SVGNS = "http://www.w3.org/2000/svg";
   function mkEl(tag, attrs, parent) {
     var n = document.createElementNS(SVGNS, tag);
@@ -10208,7 +10213,7 @@ document.addEventListener("click", function (e) {
       var lang = document.documentElement.lang;
       label.textContent = (T[lang] && T[lang][app.labelKey]) || T.en[app.labelKey] || "";
       mkEl("rect", { x: cx - 12, y: 166, width: 24, height: 27, fill: "transparent" }, g);
-      g.addEventListener("click", function (e) { e.stopPropagation(); app.open(); });
+      g.addEventListener("click", function (e) { e.stopPropagation(); appOpenTs = Date.now(); app.open(); });
       g.addEventListener("dblclick", function (e) { e.stopPropagation(); });
     });
   }
@@ -10269,6 +10274,14 @@ document.addEventListener("click", function (e) {
     } catch (e) {
       termPrint(e && e.name ? e.name + ": " + e.message : String(e), "term-err");
     }
+  }
+  // iOS auto-zooms the page when a focused input's font-size is under 16px — which the
+  // 4.6px REPL input always is. maximum-scale=1 suppresses only that auto-zoom on iOS
+  // (pinch-zoom still works there); other platforms keep the meta untouched since they
+  // treat maximum-scale as a hard pinch limit.
+  if (termIn && /iPhone|iPad|iPod/.test(navigator.userAgent)) {
+    var vpMeta = document.querySelector('meta[name="viewport"]');
+    if (vpMeta && vpMeta.content.indexOf("maximum-scale") < 0) vpMeta.content += ", maximum-scale=1";
   }
   if (termIn) {
     termIn.addEventListener("keydown", function (e) {
@@ -10521,8 +10534,9 @@ document.addEventListener("click", function (e) {
       hit.addEventListener("pointerdown", function (ev) {
         ev.stopPropagation(); ev.preventDefault();
         try { hit.setPointerCapture(ev.pointerId); } catch (e) {}
+        scheduleSaver(15000); // adjusting the EQ is player activity — hold the screensaver off
         setManualEqBand(i, dbFromPointer(ev)); paintThumb();
-        function onMove(mv) { setManualEqBand(i, dbFromPointer(mv)); paintThumb(); }
+        function onMove(mv) { scheduleSaver(15000); setManualEqBand(i, dbFromPointer(mv)); paintThumb(); }
         function onUp() {
           hit.removeEventListener("pointermove", onMove);
           hit.removeEventListener("pointerup", onUp);
@@ -10533,7 +10547,7 @@ document.addEventListener("click", function (e) {
         hit.addEventListener("pointercancel", onUp);
       });
       hit.addEventListener("click", function (ev) { ev.stopPropagation(); });
-      hit.addEventListener("dblclick", function (ev) { ev.stopPropagation(); setManualEqBand(i, 0); paintThumb(); });
+      hit.addEventListener("dblclick", function (ev) { ev.stopPropagation(); scheduleSaver(15000); setManualEqBand(i, 0); paintThumb(); });
     });
   }
   // Tapping the scrolling title opens the performing artist's site — the player's only
@@ -10624,6 +10638,9 @@ document.addEventListener("click", function (e) {
   monitor.addEventListener("dblclick", function () {
     clearTimeout(monClickTimer);
     if (monitor.classList.contains("photobooth")) return; // don't swap to the typewriter mid-photobooth
+    // a habitual desktop double-click on a dock icon swaps the screen layer between the
+    // two clicks — the second click must not banish the monitor to the typewriter
+    if (Date.now() - appOpenTs < 450) return;
     swap(false);
   });
   monitor.addEventListener("click", function () {
@@ -10643,10 +10660,11 @@ document.addEventListener("click", function (e) {
     monClickTimer = setTimeout(function () {
       if (monitorShowingSite()) {
         if (monitor.classList.contains("show-caps")) scheduleSaver();
-        // a screen click opens the visited wall-sign site (harfbuzz/behdad); the caps
-        // home screen is a desktop, not a browser — it links nowhere. The artist
-        // link-out lives on the marquee's own hit rect.
-        var linkOut = monitor.classList.contains("show-caps") ? null : monitorUrl;
+        // a screen click opens the visited wall-sign site (harfbuzz/behdad) only while
+        // that site is the visible layer: the caps home screen is a desktop, not a
+        // browser, and the now-playing player covers whatever page is under it (its own
+        // link-out is the marquee's hit rect).
+        var linkOut = (monitor.classList.contains("show-caps") || monitor.classList.contains("show-nowplaying")) ? null : monitorUrl;
         if (linkOut) window.open(linkOut, "_blank");
         else playLaptopClickSound("office-monitor");
       } else if (pcTower && !pcTower.classList.contains("on")) {
@@ -10735,6 +10753,7 @@ document.addEventListener("click", function (e) {
   // whatever the screen showed before
   function showPbConfirm() {
     if (window.__closeMonitorTerminal) window.__closeMonitorTerminal(); // the booth takes the screen — don't leave the REPL focused underneath
+    appOpenTs = Date.now(); // consent button ignores clicks in the grace window (see below)
     monitor.classList.remove("pb-error");
     monitor.classList.add("pb-confirm");
   }
@@ -11087,7 +11106,12 @@ document.addEventListener("click", function (e) {
   pbCtrl("monitor-pb-shutter", runCountdownCapture);
   pbCtrl("monitor-pb-close", closePhotobooth);
   pbCtrl("monitor-pb-retake", runCountdownCapture);         // re-shoot from the picker
-  pbCtrl("monitor-pb-confirm-yes", function () { hidePbConfirm(); openPhotobooth(); }); // the ONE getUserMedia entry point (a real user gesture)
+  pbCtrl("monitor-pb-confirm-yes", function () {
+    // the second click of a habitual double-click on the dock icon lands exactly here —
+    // consenting to the camera must always be its own deliberate click
+    if (Date.now() - appOpenTs < 450) return;
+    hidePbConfirm(); openPhotobooth();
+  }); // the ONE getUserMedia entry point (a real user gesture)
   pbCtrl("monitor-pb-confirm-no", hidePbConfirm);
   pbCtrl("monitor-pb-confirm-bg", hidePbConfirm);           // tapping past the buttons = cancel
   pbCtrl("monitor-pb-error-ok", hidePbError);

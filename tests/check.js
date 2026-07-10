@@ -355,6 +355,204 @@ function checkTransformClobber(file, style, html) {
   }
 }
 
+// The room-gated ambient drones (PC fan, AC hum, kitchen radio, kettle hum,
+// fireplace crackle) all stop the same way: ramp the master gain to ~0 over a
+// fade, then a setTimeout stops the source and closes the AudioContext. THE
+// invariant: the close delay (ms) must be >= the ramp end (secs * 1000), or
+// the source is cut mid-ramp — reintroducing the exact abrupt cut the
+// room-change fade exists to remove. Today both sides derive from the same
+// fade variable (`ctx.currentTime + f` vs `f * 1000 + 100`) so they can't
+// drift, but a future edit can bump one side and not the other.
+//
+// Two tiers:
+//  - FADE_STOP_FNS (the room-gated stops in rsvp.html) are checked strictly:
+//    every silence-ramp end and close delay must parse in terms of ONE shared
+//    fade variable, the variable must appear on BOTH sides (a stop that
+//    ignores its fadeSecs silently breaks goToStage's ROOM_FADE), and the
+//    inequality must hold at every sampled fade value 0..5s (any caller).
+//    Any shape drift — a rename, a second variable, an unparseable
+//    expression — fails loudly instead of silently skipping, so this can't
+//    rot into a no-op. New room-gated drones belong in the list.
+//  - Every other function that ramps a gain to silence at an anchored
+//    `<ctx>.currentTime + <offset>` AND setTimeout-closes a context gets a
+//    constants-only lower-bound check: compare only pure-numeric ramp ends
+//    against pure-numeric close delays (anything symbolic is skipped, so no
+//    false positives). ~50 one-shot SFX closers get this for free.
+var FADE_STOP_FNS = ["stopFire", "stopKettleHum", "stopRadioStatic", "stopPcFan", "stopACHum"];
+var FADE_CLOSE_ALLOW = [
+  // "functionName" entries for vetted false positives of the constants-only tier.
+];
+var FADE_SAMPLES = [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.5, 0.75, 1, 1.5, 2, 3, 5];
+function checkAudioFadeCloseRace(file, script) {
+  function matchParen(s, openIdx) { // s[openIdx] === "(" -> index of matching ")"
+    var d = 0;
+    for (var i = openIdx; i < s.length; i++) {
+      if (s[i] === "(") d++;
+      else if (s[i] === ")") { d--; if (d === 0) return i; }
+    }
+    return -1;
+  }
+  function splitTopComma(s) {
+    var parts = [], d = 0, start = 0;
+    for (var i = 0; i < s.length; i++) {
+      var c = s[i];
+      if (c === "(" || c === "[" || c === "{") d++;
+      else if (c === ")" || c === "]" || c === "}") d--;
+      else if (c === "," && d === 0) { parts.push(s.slice(start, i)); start = i + 1; }
+    }
+    parts.push(s.slice(start));
+    return parts.map(function (p) { return p.trim(); });
+  }
+  function evalWith(expr, varName, value) {
+    /* jshint evil: true */
+    return new Function(varName, '"use strict"; return (' + expr + ");")(value);
+  }
+  // named functions: declarations and `name = function (...)` expressions
+  var fns = [];
+  var fre = /(?:function\s+([A-Za-z_$][\w$]*)|([A-Za-z_$][\w$]*)\s*=\s*function)\s*\([^)]*\)\s*\{/g;
+  var fm;
+  while ((fm = fre.exec(script))) {
+    var bodyStart = fm.index + fm[0].length;
+    var depth = 1, bi = bodyStart;
+    while (bi < script.length && depth > 0) {
+      if (script[bi] === "{") depth++;
+      else if (script[bi] === "}") depth--;
+      bi++;
+    }
+    fns.push({ name: fm[1] || fm[2], body: script.slice(bodyStart, bi - 1) });
+  }
+  var issues = [];
+  var strictSeen = {};
+  var strictChecked = 0, constChecked = 0;
+  fns.forEach(function (fn) {
+    var body = fn.body;
+    var strict = file === "rsvp.html" && FADE_STOP_FNS.indexOf(fn.name) !== -1;
+    if (strict) strictSeen[fn.name] = true;
+    // fade-to-silence ramps: RampToValueAtTime(<target ~0>, <time>)
+    var rampTimes = [];
+    var rre = /\.(?:exponentialRampToValueAtTime|linearRampToValueAtTime)\s*\(/g;
+    var m;
+    while ((m = rre.exec(body))) {
+      var rEnd = matchParen(body, rre.lastIndex - 1);
+      if (rEnd === -1) continue;
+      var rArgs = splitTopComma(body.slice(rre.lastIndex, rEnd));
+      if (rArgs.length !== 2) continue;
+      var target = parseFloat(rArgs[0]);
+      if (!(isFinite(target) && target <= 0.001)) continue; // only fades to silence
+      rampTimes.push(rArgs[1]);
+    }
+    // close timers: setTimeout whose callback calls .close(...)
+    var delays = [];
+    var sre = /setTimeout\s*\(/g;
+    while ((m = sre.exec(body))) {
+      var sEnd = matchParen(body, sre.lastIndex - 1);
+      if (sEnd === -1) continue;
+      var sArgs = splitTopComma(body.slice(sre.lastIndex, sEnd));
+      if (sArgs.length < 2) continue;
+      if (!/\.close\s*\(/.test(sArgs.slice(0, -1).join(","))) continue;
+      delays.push(sArgs[sArgs.length - 1]);
+    }
+    if (!rampTimes.length || !delays.length) {
+      if (strict) {
+        issues.push(fn.name + ": expected a gain ramp to silence + a setTimeout that closes the ctx, found " +
+          rampTimes.length + " ramp(s) / " + delays.length + " close timer(s) — the stop's shape changed, update this check");
+      }
+      return;
+    }
+    // anchor each ramp end at currentTime -> its offset expression (in seconds);
+    // resolves one level of `var t = <ctx>.currentTime;` indirection
+    var offsets = rampTimes.map(function (t) {
+      t = t.trim();
+      var am = t.match(/^[\w$.]+\.currentTime\s*(?:\+\s*([\s\S]+))?$/);
+      if (am) return am[1] || "0";
+      var vm = t.match(/^([A-Za-z_$][\w$]*)\s*(?:\+\s*([\s\S]+))?$/);
+      if (vm && new RegExp("(?:var|let|const)\\s+" + vm[1] + "\\s*=\\s*[\\w$.]+\\.currentTime\\s*[;,)]").test(body)) {
+        return vm[2] || "0";
+      }
+      return null; // not currentTime-anchored (loop-relative note starts etc.)
+    });
+    if (strict) {
+      if (offsets.some(function (o) { return o === null; })) {
+        issues.push(fn.name + ": a fade ramp's end isn't `<ctx>.currentTime + <fade>` — the stop's shape changed, update this check");
+        return;
+      }
+      var vars = {};
+      offsets.concat(delays).forEach(function (e) {
+        (e.match(/[A-Za-z_$][\w$]*/g) || []).forEach(function (id) { vars[id] = true; });
+      });
+      var varNames = Object.keys(vars);
+      if (varNames.length !== 1) {
+        issues.push(fn.name + ": expected ONE shared fade variable across the ramp end and the close delay, found [" +
+          varNames.join(", ") + "] — update this check if the shape legitimately changed");
+        return;
+      }
+      var v = varNames[0];
+      var vRe = new RegExp("\\b" + v + "\\b");
+      var inRamp = offsets.some(function (e) { return vRe.test(e); });
+      var inDelay = delays.some(function (e) { return vRe.test(e); });
+      if (!inRamp || !inDelay) {
+        issues.push(fn.name + ": the fade variable `" + v + "` must drive BOTH the ramp end and the close delay (found in " +
+          (inRamp ? "the ramp only" : "the close delay only") + ") — the other side was hardcoded and can now cut the fade short");
+        return;
+      }
+      try {
+        for (var s = 0; s < FADE_SAMPLES.length; s++) {
+          var f = FADE_SAMPLES[s];
+          var rampMs = Math.max.apply(null, offsets.map(function (e) { return evalWith(e, v, f) * 1000; }));
+          var delayMs = Math.min.apply(null, delays.map(function (e) { return evalWith(e, v, f); }));
+          if (!isFinite(rampMs) || !isFinite(delayMs)) throw new Error("non-numeric result");
+          if (delayMs + 1e-6 < rampMs) {
+            issues.push(fn.name + ": close timer fires at " + delayMs + "ms but the fade ramp ends at " + rampMs +
+              "ms (" + v + "=" + f + ") — the source is cut mid-fade");
+            return;
+          }
+        }
+      } catch (e) {
+        issues.push(fn.name + ": could not evaluate ramp/close expressions (" + e.message + ") — update this check");
+        return;
+      }
+      strictChecked++;
+    } else {
+      if (FADE_CLOSE_ALLOW.indexOf(fn.name) !== -1) return;
+      var constOffsets = [], constDelays = [];
+      offsets.forEach(function (e) {
+        if (e === null || /[A-Za-z_$]/.test(e)) return;
+        try { var n = evalWith(e, "_", 0); if (isFinite(n)) constOffsets.push(n); } catch (err) {}
+      });
+      delays.forEach(function (e) {
+        if (/[A-Za-z_$]/.test(e)) return;
+        try { var n2 = evalWith(e, "_", 0); if (isFinite(n2)) constDelays.push(n2); } catch (err) {}
+      });
+      if (!constOffsets.length || !constDelays.length) return;
+      constChecked++;
+      var maxRampMs = Math.max.apply(null, constOffsets) * 1000;
+      var minDelayMs = Math.min.apply(null, constDelays);
+      if (minDelayMs + 1e-6 < maxRampMs) {
+        issues.push(fn.name + ": close timer fires at " + minDelayMs + "ms but a fade ramp ends at " + maxRampMs +
+          "ms — the sound is cut mid-fade");
+      }
+    }
+  });
+  if (file === "rsvp.html") {
+    FADE_STOP_FNS.forEach(function (name) {
+      if (!strictSeen[name]) {
+        issues.push(name + ": no such function found — renamed? update FADE_STOP_FNS so the room-gated stops stay covered");
+      }
+    });
+    // floor so parser rot can't silently drop the constants tier to zero coverage
+    if (constChecked < 20) {
+      issues.push("constants tier only matched " + constChecked + " function(s) (expected >= 20) — extraction broken?");
+    }
+  }
+  if (issues.length === 0) {
+    pass(file + ": every audio ctx-close timer waits out its gain-fade ramp (" +
+      strictChecked + " room-gated stop(s) strict, " + constChecked + " const-checked)");
+  } else {
+    fail(file + ": audio fade/close race — an AudioContext can be closed before its fade ramp ends (abrupt cut mid-fade)",
+      issues.join("\n"));
+  }
+}
+
 // Every data-i / data-*-i / data-note-key attribute names a T dictionary key; a
 // typo'd or missing key renders blank text (setLang writes innerHTML from T[key]).
 // Verify each referenced key exists in the en dictionary (cs parity is checked above).
@@ -389,6 +587,7 @@ FILES.forEach(function (file) {
     checkEggTotal(html, script);
     checkParticleTransformOrigin(file, script);
     checkAnimationClassCleanup(file, style, script, html);
+    checkAudioFadeCloseRace(file, script);
     checkI18nKeys(file, script, html);
   }
   checkAnimationKeyframes(file, style);

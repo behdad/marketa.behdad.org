@@ -14932,6 +14932,24 @@ function triggerRsvpTrip(e) {
   // fractal blooms only on the mushroom trip (the psychedelic / hue-rotating one)
   if (variant === "psychedelic") startTripBlooms();
 }
+// Shift+1..5 launches a SPECIFIC trip (canonical order: psychedelic, strobe, melt,
+// molly, ketamine — the pre-shuffle TRIP_VARIANTS order). Same one-at-a-time rule as
+// the drugs box: a running trip ignores the request. e.code keeps it layout-safe
+// (Shift+1 types "!" as e.key).
+document.addEventListener("keydown", function (e) {
+  if (!e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+  var m = /^Digit([1-5])$/.exec(e.code || "");
+  if (!m) return;
+  var ae = document.activeElement;
+  if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return;
+  if (tripActive) return;
+  e.preventDefault();
+  var variant = ["psychedelic", "strobe", "melt", "molly", "ketamine"][+m[1] - 1];
+  tripActive = true;
+  window.__tripActive = true;
+  startTripVariant(variant);
+  if (variant === "psychedelic") startTripBlooms();
+});
 // ── Mushroom-trip plant blooms ────────────────────────────────────────────
 // While a trip is active, five garden plants lift off their pots and grow a
 // live, hue-cycling Julia-set "bloom" over their foliage. ONE shared rAF loop

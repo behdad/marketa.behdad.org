@@ -15834,6 +15834,13 @@ updateOfficeNudges(); // initial state: the office opens on the laptop step
 var sfxCtx = null, sfxCtxFailed = false;
 function getSfxCtx() {
   if (sfxCtxFailed) return null;
+  // Hidden-tab choke point: every one-shot fetches the context through here, so refusing
+  // while hidden silences them all — timer-driven ambients (cat, rooster, chimes, phone)
+  // and cinematic-mode scripted clicks included — without per-call-site guards (every
+  // caller already handles a null return). It also keeps the resume() below from undoing
+  // the visibilitychange suspend. Nothing gets scheduled, so nothing bursts on return;
+  // the first call after the tab is visible again resumes as normal.
+  if (document.visibilityState === "hidden") return null;
   if (!sfxCtx) {
     try {
       var Ctx = window.AudioContext || window.webkitAudioContext;

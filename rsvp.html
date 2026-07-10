@@ -3068,8 +3068,8 @@ section{margin:1.9rem 0}
 <rect x="10.5" y="21.6" width="65" height="2" rx="1" fill="#fffdf8" opacity="0.7" pointer-events="none"/>
 <path d="M14 38 h58 M14 32 h58" stroke="#c8c4b8" stroke-width="1.4"/>
 <ellipse cx="24" cy="27" rx="12" ry="3.4" fill="#ffffff" opacity="0.26" transform="rotate(-6 24 27)" pointer-events="none"/>
-<rect id="garden-thermo-lcd" x="12" y="23" width="26" height="9" rx="2" fill="#0f1c16" stroke="#2c3a30" stroke-width="0.5" pointer-events="none"/>
-<text id="garden-thermo-text" x="25" y="27.6" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="8.2" font-weight="700" letter-spacing="-0.5" fill="#8fd070" pointer-events="none">24°C</text>
+<rect id="garden-thermo-lcd" x="12" y="22" width="26" height="8" rx="2" fill="#0f1c16" stroke="#2c3a30" stroke-width="0.5" pointer-events="none"/>
+<text id="garden-thermo-text" x="25" y="26.1" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="5" font-weight="700" letter-spacing="-0.5" fill="#6fb0e0" pointer-events="none">19°C</text>
 <circle id="garden-minisplit-led" cx="72" cy="26" r="2.2" fill="#7a3230"/>
 <g id="garden-minisplit-airlines">
 <path class="ac-airline" d="M20 44 Q14 62 20 78" fill="none" stroke="#dfeef6" stroke-width="2.5" stroke-linecap="round"/>
@@ -10776,49 +10776,39 @@ document.addEventListener("click", function (e) {
   }
 })();
 (function gardenThermo() {
-  // Passive LCD readout on the garden mini-split. Derives a "room temperature" from
-  // live room state and eases the shown value 1 degree per tick toward that target,
-  // thermostat-style, so poking the room visibly nudges the number. Decorative only:
-  // no hit target, no aria, and it makes NO sound. It reads DOM/globals each tick and
+  // Passive LCD readout on the garden mini-split. Shows a steady, cool room
+  // temperature and eases the shown value 1 degree per tick toward its target,
+  // thermostat-style. Only a molly trip moves the number: it overshoots to a
+  // "baking" 38 and drifts back down when the trip ends. Decorative only: no hit
+  // target, no aria, and it makes NO sound. It reads DOM/globals each tick and
   // spawns nothing, so it's safe to keep ticking in a hidden/unfocused tab (no
   // particle-accumulation class of bug applies here).
   var textEl = document.getElementById("garden-thermo-text");
   if (!textEl) return;
 
-  // The loft is heated, so the realistic band sits ~21-28 C: cooling factors bottom
-  // out at the 21 floor, a warm day with the sun-blind up and the projector fireplace
-  // on tops out at the 28 ceiling. A molly trip is a deliberate overshoot to 38 (the
-  // room "feels like it's baking") well above the realistic ceiling.
-  var FLOOR = 21, CEIL = 28, TRIP_TARGET = 38, HARD_MIN = 5, HARD_MAX = 40;
+  // Early May in Edmonton is still cold outside, so the heated loft holds a cool,
+  // steady 19. Raising the sun-blind lets daylight stream in and warms it a few
+  // degrees; a molly trip is the big overshoot to 38 (the room "feels like it's
+  // baking") and overrides everything else.
+  var BASE = 19, WARM_SUN = 3, TRIP_TARGET = 38, HARD_MIN = 5, HARD_MAX = 40;
   function computeTarget() {
-    var t;
-    if (window.__tripActive) {
-      t = TRIP_TARGET; // overshoot gag, escapes the realistic band
-    } else {
-      var stage = document.getElementById("stage-garden");
-      var blind = document.getElementById("garden-blind");
-      var unit = document.getElementById("garden-minisplit");
-      var screen = document.getElementById("cuddly-wallscreen");
-      t = 24; // comfortable heated base (daytime)
-      if (stage && stage.classList.contains("dusk")) t -= 3;   // night cools
-      if (unit && unit.classList.contains("on")) t -= 3;       // AC cooling
-      if (window.__balconyStorm) t -= 2;                       // storm / overcast cools
-      if (blind && blind.classList.contains("raised")) t += 3; // sun streaming in warms
-      if (screen && !screen.classList.contains("off")) t += 3; // projector fireplace running gives off heat
-      t = Math.max(FLOOR, Math.min(CEIL, t)); // clamp the realistic band to 21-28
-    }
+    var t = BASE; // cool, steady heated-loft base
+    var blind = document.getElementById("garden-blind");
+    if (blind && blind.classList.contains("raised")) t += WARM_SUN; // sun streaming in warms it
+    if (window.__tripActive) t = TRIP_TARGET; // a trip overshoots past everything
     return Math.max(HARD_MIN, Math.min(HARD_MAX, t)); // overall hard safety clamp
   }
 
-  // blue (cool/comfortable) across the realistic 21-28 band, tipping into orange/red
-  // only in the trip-only overshoot zone above 28 so a soaring number reads as "off".
+  // blue (cool) at the steady base, warming through green into red only as a trip
+  // pushes the number up toward 38 so a soaring reading looks "off".
   var COLD = [111, 176, 224], MID = [143, 208, 112], HOT = [224, 96, 60];
+  var MIDPT = (BASE + TRIP_TARGET) / 2; // ~28.5, the green midpoint of the blue->red ramp
   function lerp(a, b, f) { return Math.round(a + (b - a) * f); }
   function hex2(v) { v = Math.max(0, Math.min(255, v)).toString(16); return v.length < 2 ? "0" + v : v; }
   function colorForTemp(t) {
     var f, a, b;
-    if (t <= CEIL) { f = (t - FLOOR) / (CEIL - FLOOR); a = COLD; b = MID; }        // 21 blue -> 28 green
-    else { f = (t - CEIL) / (TRIP_TARGET - CEIL); a = MID; b = HOT; }             // 28 green -> 38 red
+    if (t <= MIDPT) { f = (t - BASE) / (MIDPT - BASE); a = COLD; b = MID; }        // 19 blue -> 28.5 green
+    else { f = (t - MIDPT) / (TRIP_TARGET - MIDPT); a = MID; b = HOT; }           // 28.5 green -> 38 red
     f = Math.max(0, Math.min(1, f));
     return "#" + hex2(lerp(a[0], b[0], f)) + hex2(lerp(a[1], b[1], f)) + hex2(lerp(a[2], b[2], f));
   }

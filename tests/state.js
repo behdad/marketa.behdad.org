@@ -12,7 +12,18 @@
 //    the cascade while both classes are present. Classes are restored after
 //    each pair, nothing paints in between.
 //
-// 2. PROBES (own load, stateful): hardcoded cross-room consequences —
+// 2. GATES (own load, stateful): the room-gated ambient-drone wiring — every
+//    window.__updateXxx gate (PC fan, AC hum, radio, kettle, fire, birdsong)
+//    exists, and goToStage hands each one its correct room boolean plus a
+//    positive fade duration on EVERY room change (asserted via forwarding
+//    spies, synchronously per goToStage call so ambient no-arg re-checks
+//    can't muddy the record). Then a storm phase: all drone devices on,
+//    rapid room cycling so every drone's start overlaps its room-change
+//    fade-stop, settle past the close timers, and toggle the devices off —
+//    headless has no audible output, so the assertion is wiring + liveness
+//    (no uncaught errors, strip lands where asked), not sound.
+//
+// 3. PROBES (own load, stateful): hardcoded cross-room consequences —
 //    - instrument: tap the ukulele -> audio unpaused + .playing sway + .grooving
 //      on the cuddly heads and the office skull; tap again -> all of it stops.
 //    - dusk: click the balcony sun -> every #stage-* gains .dusk; click again ->
@@ -37,6 +48,7 @@
 // Usage:
 //   node tests/state.js                # run everything
 //   node tests/state.js --only cascade # just the cascade invariant
+//   node tests/state.js --only gates   # just the drone room-gate wiring
 //   node tests/state.js --only probes  # just the consequence/liveness probes
 "use strict";
 
@@ -235,6 +247,105 @@ var CASCADE_HARNESS = [
   "</script>"
 ].join("\n");
 
+// ── drone room-gate wiring harness ──────────────────────────────────────────
+var GATES_HARNESS = [
+  '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
+  "<script>",
+  "(function () {",
+  "  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }",
+  "  var report = { errors: [], asserts: [] };",
+  "  function finish() { report.errors = window.__errs; document.getElementById('__report').textContent = JSON.stringify(report); }",
+  "  function ok(label, cond, detail) { report.asserts.push({ label: label, ok: !!cond, detail: cond ? '' : String(detail || '') }); }",
+  "  function click(id) { var e = document.getElementById(id); if (!e) return false; e.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); return true; }",
+  "  // which rooms each gate's drone is audible in — this mapping IS the invariant",
+  "  // (goToStage's gate lines encode the same table; a drone leaking into the",
+  "  // wrong room or gone silent in its own shows up here as a boolean mismatch)",
+  "  var OWNERS = {",
+  "    __updatePcFan: ['office'],",
+  "    __updateACHum: ['garden', 'balcony'],",
+  "    __updateRadioSound: ['kitchen'],",
+  "    __updateKettleHum: ['kitchen'],",
+  "    __updateFireSound: ['cuddly'],",
+  "    __updateGardenBirdsong: ['garden']", // discrete chirps: room boolean only, no fade arg
+  "  };",
+  "  var FADED = ['__updatePcFan', '__updateACHum', '__updateRadioSound', '__updateKettleHum', '__updateFireSound'];",
+  "  var GATES = Object.keys(OWNERS);",
+  "  async function run() {",
+  "    await sleep(900);",
+  "    ok('gates: window.goToStage exists', typeof window.goToStage === 'function');",
+  "    GATES.forEach(function (g) { ok('gates: window.' + g + ' exists', typeof window[g] === 'function'); });",
+  "    if (typeof window.goToStage !== 'function') return;",
+  "",
+  "    // spy phase: wrap each gate (forwarding, so real gate logic still runs) and",
+  "    // walk every room; goToStage calls the gates synchronously, so resetting the",
+  "    // record right before each call and reading it right after keeps ambient",
+  "    // no-arg re-checks (visibilitychange, device toggles) out of the sample —",
+  "    // and only calls whose first arg is a boolean count as room-gate calls.",
+  "    var originals = {}, calls = {};",
+  "    GATES.forEach(function (g) {",
+  "      if (typeof window[g] !== 'function') return;",
+  "      originals[g] = window[g];",
+  "      window[g] = function () {",
+  "        (calls[g] = calls[g] || []).push(Array.prototype.slice.call(arguments));",
+  "        return originals[g].apply(this, arguments);",
+  "      };",
+  "    });",
+  "    var CYCLE = ['garden', 'cuddly', 'office', 'balcony', 'kitchen'];", // every room once, ending back at the load default
+  "    var boolBad = {}, fadeBad = {};",
+  "    for (var i = 0; i < CYCLE.length; i++) {",
+  "      var room = CYCLE[i];",
+  "      calls = {};",
+  "      window.goToStage(room);",
+  "      GATES.forEach(function (g) {",
+  "        if (!originals[g]) return;", // existence assert above already covers it
+  "        var expected = OWNERS[g].indexOf(room) !== -1;",
+  "        var roomCalls = (calls[g] || []).filter(function (a) { return typeof a[0] === 'boolean'; });",
+  "        if (!(roomCalls.length > 0 && roomCalls.every(function (a) { return a[0] === expected; }))) {",
+  "          (boolBad[g] = boolBad[g] || []).push(room + ' wanted ' + expected + ', got ' + (roomCalls.length ? JSON.stringify(roomCalls) : 'no boolean-arg call'));",
+  "        }",
+  "        if (FADED.indexOf(g) !== -1 && !(roomCalls.length > 0 && roomCalls.every(function (a) { return typeof a[1] === 'number' && isFinite(a[1]) && a[1] > 0; }))) {",
+  "          (fadeBad[g] = fadeBad[g] || []).push(room + ': ' + JSON.stringify(roomCalls));",
+  "        }",
+  "      });",
+  "      await sleep(80);",
+  "    }",
+  "    GATES.forEach(function (g) {",
+  "      if (!originals[g]) return;",
+  "      ok('gates: goToStage hands ' + g + ' its room boolean in every room', !boolBad[g], (boolBad[g] || []).join(' | '));",
+  "      if (FADED.indexOf(g) !== -1) {",
+  "        ok('gates: goToStage passes ' + g + ' a positive fade on every room change', !fadeBad[g], (fadeBad[g] || []).join(' | '));",
+  "      }",
+  "      window[g] = originals[g];", // hand the real gates back before the storm
+  "    });",
+  "",
+  "    // storm phase: every drone device on (fire is on by default), then rapid room",
+  "    // cycling so each drone's start overlaps its room-change fade-stop, settle",
+  "    // past the ~600ms close timers, then device-toggle stops (short default fade)",
+  "    click('kitchen-scale');       // radio on",
+  "    click('kitchen-kettle');      // kettle steaming",
+  "    click('garden-minisplit');    // AC on",
+  "    click('office-pc-desk-trio'); // PC (fan) on",
+  "    var errsBefore = window.__errs.length;",
+  "    var STORM = ['kitchen', 'garden', 'cuddly', 'office', 'balcony', 'kitchen', 'office', 'cuddly', 'garden', 'kitchen'];",
+  "    for (var s = 0; s < STORM.length; s++) { window.goToStage(STORM[s]); await sleep(60); }",
+  "    await sleep(1200);", // > ROOM_FADE * 1000 + 100 close timers, with slack
+  "    click('kitchen-scale');",
+  "    click('kitchen-kettle');",
+  "    click('garden-minisplit');",
+  "    click('office-pc-desk-trio');",
+  "    await sleep(700);", // > default device-toggle fades (~0.15-0.3s) + close margin
+  "    ok('gates: drone start/fade-stop storm across all rooms throws no errors', window.__errs.length === errsBefore, window.__errs.slice(errsBefore).join('; '));",
+  "    ok('gates: strip lands where asked after the storm', window.currentStageIndex === 0, 'currentStageIndex=' + window.currentStageIndex);",
+  "  }",
+  "  window.addEventListener('load', function () {",
+  "    setTimeout(function () {",
+  "      run().catch(function (e) { window.__errs.push('harness: ' + String(e && e.stack || e)); }).then(finish);",
+  "    }, 200);",
+  "  });",
+  "})();",
+  "</script>"
+].join("\n");
+
 // ── consequence/liveness probe harness ──────────────────────────────────────
 var PROBE_HARNESS = [
   '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
@@ -352,9 +463,10 @@ function fail(msg, detail) {
   console.log("rsvp.html state invariants" + (ONLY ? " (--only " + ONLY + ")" : "") + ":");
   var jobs = {};
   if (!ONLY || "cascade".indexOf(ONLY) === 0) jobs.cascade = lib.runPage("rsvp.html", CASCADE_HARNESS, 9000, CHROME_OPTS);
+  if (!ONLY || "gates".indexOf(ONLY) === 0) jobs.gates = lib.runPage("rsvp.html", GATES_HARNESS, 12000, CHROME_OPTS);
   if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 14000, CHROME_OPTS);
   if (!Object.keys(jobs).length) {
-    fail("unknown --only value: " + ONLY + " (use cascade|probes)");
+    fail("unknown --only value: " + ONLY + " (use cascade|gates|probes)");
   }
   var names = Object.keys(jobs);
   var results = {};
@@ -381,6 +493,20 @@ function fail(msg, detail) {
             return f.el + ": " + f.oneShot + " (wants " + f.oneShotNames.join(",") + ") loses to " + f.state + " -> computed animationName: " + f.computed;
           }).join("\n"));
       }
+    }
+  }
+
+  if (results.gates !== undefined) {
+    var g = results.gates;
+    if (!g) {
+      fail("gates harness reported (page error before load, or budget too small)");
+    } else {
+      if (g.errors.length) fail("gates: no uncaught JS errors", g.errors.slice(0, 12).join("\n"));
+      else pass("gates: no uncaught JS errors");
+      g.asserts.forEach(function (a) {
+        if (a.ok) pass(a.label);
+        else fail(a.label, a.detail);
+      });
     }
   }
 

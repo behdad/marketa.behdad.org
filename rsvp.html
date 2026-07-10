@@ -14723,7 +14723,7 @@ function playILoveYouSound(panId) {
     var t0 = ctx.currentTime;
     var out = pannedOut(ctx, panId || "office-laptop");
     var source = ctx.createGain(); source.gain.value = 1;
-    [-6, 6].forEach(function (dt) {
+    [-6, 7].forEach(function (dt) {
       var osc = ctx.createOscillator();
       osc.type = "sawtooth"; osc.detune.value = dt;
       // f0: I -> love(peak) -> you(fall), a gentle spoken contour (raised for a feminine voice)
@@ -14736,6 +14736,10 @@ function playILoveYouSound(panId) {
       osc.connect(source);
       osc.start(t0); osc.stop(t0 + 1.16);
     });
+    // spectral tilt — de-buzz the sawtooth glottal source (same trick as playPhoneVoiceSound)
+    var tilt = ctx.createBiquadFilter();
+    tilt.type = "lowpass"; tilt.frequency.value = 2700; tilt.Q.value = 0.5;
+    source.connect(tilt);
     // amplitude: I / lo / ve / you bumps with dips for /l/, /v/ and the word gaps
     var master = ctx.createGain(); var m = master.gain;
     m.setValueAtTime(0.0001, t0);
@@ -14750,20 +14754,46 @@ function playILoveYouSound(panId) {
     m.setValueAtTime(0.08, t0 + 1.0);
     m.exponentialRampToValueAtTime(0.0001, t0 + 1.14);
     master.connect(out);
-    // three parallel bandpass formants gliding through the words
+    // five parallel bandpass formants gliding through the words; F4/F5 fixed + faint add warmth
     [
-      { q: 7,  g: 1.0,  pts: [[0,840],[0.24,345],[0.34,415],[0.5,735],[0.66,690],[0.8,345],[1.08,345]] },      // F1 (feminine: higher formants)
-      { q: 9,  g: 0.5,  pts: [[0,1265],[0.24,2530],[0.34,1380],[0.5,1370],[0.66,1495],[0.8,2300],[1.08,1000]] }, // F2
-      { q: 11, g: 0.16, pts: [[0,2930],[0.24,3335],[0.5,2875],[1.08,2760]] }                                    // F3
+      { q: 7,  g: 1.0,   pts: [[0,840],[0.24,345],[0.34,415],[0.5,735],[0.66,690],[0.8,345],[1.08,345]] },      // F1 (feminine: higher formants)
+      { q: 9,  g: 0.5,   pts: [[0,1265],[0.24,2530],[0.34,1380],[0.5,1370],[0.66,1495],[0.8,2300],[1.08,1000]] }, // F2
+      { q: 11, g: 0.16,  pts: [[0,2930],[0.24,3335],[0.5,2875],[1.08,2760]] },                                   // F3
+      { q: 16, g: 0.09,  pts: [[0,3700]] },                                                                       // F4
+      { q: 17, g: 0.045, pts: [[0,4800]] }                                                                        // F5
     ].forEach(function (f) {
       var bp = ctx.createBiquadFilter();
       bp.type = "bandpass"; bp.Q.value = f.q;
       bp.frequency.setValueAtTime(f.pts[0][1], t0);
       for (var i = 1; i < f.pts.length; i++) bp.frequency.linearRampToValueAtTime(f.pts[i][1], t0 + f.pts[i][0]);
       var fg = ctx.createGain(); fg.gain.value = f.g;
-      source.connect(bp); bp.connect(fg); fg.connect(master);
+      tilt.connect(bp); bp.connect(fg); fg.connect(master);
     });
-    setTimeout(function () { ctx.close(); }, 1400);
+    // shared noise for consonant frication + breath
+    var nb = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 1.2), ctx.sampleRate);
+    var nd = nb.getChannelData(0);
+    for (var i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+    // /v/ — a short voiced labiodental frication buzz during "ve" (was just a silent gap)
+    var vsrc = ctx.createBufferSource(); vsrc.buffer = nb;
+    var vf = ctx.createBiquadFilter(); vf.type = "bandpass"; vf.frequency.value = 1400; vf.Q.value = 0.8;
+    var vg = ctx.createGain();
+    vg.gain.setValueAtTime(0.0001, t0 + 0.56);
+    vg.gain.exponentialRampToValueAtTime(0.02, t0 + 0.6);
+    vg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.7);
+    vsrc.connect(vf); vf.connect(vg); vg.connect(out);
+    vsrc.start(t0 + 0.55); vsrc.stop(t0 + 0.72);
+    // faint breath under the whole phrase
+    var bsrc = ctx.createBufferSource(); bsrc.buffer = nb;
+    var bf = ctx.createBiquadFilter(); bf.type = "bandpass"; bf.frequency.value = 1900; bf.Q.value = 0.5;
+    var bg = ctx.createGain();
+    bg.gain.setValueAtTime(0.007, t0);
+    bg.gain.exponentialRampToValueAtTime(0.011, t0 + 0.04);
+    bg.gain.exponentialRampToValueAtTime(0.004, t0 + 0.5);
+    bg.gain.exponentialRampToValueAtTime(0.008, t0 + 0.85);
+    bg.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.14);
+    bsrc.connect(bf); bf.connect(bg); bg.connect(out);
+    bsrc.start(t0); bsrc.stop(t0 + 1.16);
+    setTimeout(function () { ctx.close(); }, 1500);
   } catch (e) {}
 }
 // Shared by playCallLaughSound's connect moment and the ongoing ambient loop below:

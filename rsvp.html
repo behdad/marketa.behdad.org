@@ -6804,7 +6804,10 @@ document.addEventListener("click", function (e) {
     chirpTimer = setTimeout(function () {
       chirpTimer = null;
       if (!birdCtx) return; // stopped meanwhile (leave room / hide tab / dusk falls)
-      popChirp();
+      // skip (but keep re-arming) while the window is unfocused: an unattended-but-
+      // "visible" window (covered on X11 — no occlusion detection) shouldn't keep
+      // chirping one-shots at nobody; same rule as the crickets/crane
+      if (document.hasFocus()) popChirp();
       scheduleChirp();
     }, 2500 + Math.random() * 5500); // sparse — a fireplace crackles constantly, birds don't
   }
@@ -9246,6 +9249,32 @@ document.addEventListener("click", function (e) {
     }
     return false;
   }
+  // The pipeline's context is deliberately permanent (capture is irreversible — see
+  // ensureAudioGraph), but permanent shouldn't mean always rendering: while the tab
+  // is hidden AND no song is playing, park it suspended instead of holding a live,
+  // silent OS audio stream open from a background-throttled renderer (a prime
+  // underrun/crackle source on some platforms' audio stacks). It must stay RUNNING
+  // while a song plays hidden — backgrounded playback is a feature, see the Media
+  // Session block below — and it resumes the moment the tab shows again OR a song
+  // starts while hidden (a lock-screen/media-key play: a captured element is
+  // inaudible until its context renders again). resume() can be rejected by autoplay
+  // policy outside a gesture — swallowed; __captureSongAudio retries on every play
+  // gesture anyway, same keep-retrying stance as its own per-gesture resume.
+  function updateEqCtxIdle() {
+    if (!eqAudioCtx) return;
+    try {
+      if (document.hidden && !anySongPlaying()) {
+        if (eqAudioCtx.state === "running") {
+          var s = eqAudioCtx.suspend();
+          if (s && s.catch) s.catch(function () {});
+        }
+      } else if (eqAudioCtx.state === "suspended") {
+        var r = eqAudioCtx.resume();
+        if (r && r.catch) r.catch(function () {});
+      }
+    } catch (e) {}
+  }
+  document.addEventListener("visibilitychange", updateEqCtxIdle);
   function panDriftFrame(now) {
     panDriftRAF = null;
     if (!eqAudioCtx || !eqPanner || headphoneModeOn || !anySongPlaying()) return; // stopped -- ensurePanDrift restarts it
@@ -9588,6 +9617,9 @@ document.addEventListener("click", function (e) {
     } else {
       stopEq(); // freeze the bars while paused
     }
+    // play/pause/ended flip whether the pipeline context may idle suspended (these
+    // events still fire in a hidden tab, e.g. from a lock-screen media control)
+    updateEqCtxIdle();
     // show once the monitor's booted (even over the screensaver, which we wake)
     var booted = monitor.classList.contains("screen-on") &&
       !monitor.classList.contains("show-fedora") && !monitor.classList.contains("show-chrome");
@@ -10889,8 +10921,8 @@ document.addEventListener("click", function (e) {
 })();
 (function () {
   // Occasional windchime ring, hanging under the balcony wall lamp: rings while idle on
-  // the balcony (day or dusk alike, gated the same as the wind bed just above — room +
-  // tab-visible, nothing about lighting), more often and a touch louder/brighter during
+  // the balcony (day or dusk alike — room + tab-visible + window-focused, nothing about
+  // lighting), more often and a touch louder/brighter during
   // a storm — and, fainter and duller, from the cuddly nook too when the balcony door is
   // open (same two-room coupling as the wind/city-hum/rain ambience). Self-rescheduling
   // setTimeout, same shape as scheduleShootingStar/scheduleCrickets further below: each
@@ -10903,7 +10935,10 @@ document.addEventListener("click", function (e) {
     return !!((front && front.classList.contains("open")) || (nook && nook.classList.contains("open")));
   }
   function want() {
-    if (document.hidden) return null;
+    // hidden OR unfocused = unattended: each ring is a one-shot context of its own,
+    // and an unattended-but-"visible" window (covered on X11 — no occlusion
+    // detection) would otherwise ring them forever; same rule as the crickets/crane
+    if (document.hidden || !document.hasFocus()) return null;
     if (window.currentStageIndex === 4) return "balcony";
     if (window.currentStageIndex === 2 && cuddlyDoorOpenForChime()) return "cuddly";
     return null;
@@ -17124,7 +17159,8 @@ function spawnDustMote(container) {
     function tick() {
       var sb = document.getElementById("stage-balcony"), door = document.getElementById("balcony-door");
       if (sb && door && sb.classList.contains("storming") && door.classList.contains("open") &&
-          stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden") {
+          stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden" &&
+          document.hasFocus()) { // unfocused = unattended one-shot, same rule as the crickets/crane
         playCreakSound("balcony-door");
       }
       setTimeout(tick, 7000 + Math.random() * 6000);
@@ -17209,7 +17245,8 @@ function spawnDustMote(container) {
     var delay = 13000 + Math.random() * 13000;
     setTimeout(function () {
       var pd = document.querySelector("#cuddly-puffer-wrap .puffer-drift");
-      if (pd && stageIndex === STAGES.indexOf("cuddly") && document.visibilityState !== "hidden") {
+      if (pd && stageIndex === STAGES.indexOf("cuddly") && document.visibilityState !== "hidden" &&
+          document.hasFocus()) { // unfocused = unattended one-shot, same rule as the crickets/crane
         spawnBubble(pd, 13.5, 1.7);
         playBubbleSound("cuddly-puffer-wrap");
       }
@@ -17493,15 +17530,24 @@ function spawnDustMote(container) {
     }, delay);
   })();
   // Quiet cricket night-ambience: chirps softly in ANY room while it's night
-  // (dusk) and the tab is visible, silent by day. Self-scheduling: each tick
-  // only builds a WebAudio context when the gate passes, so a hidden/daytime
-  // tick does zero audio work and just re-arms the single outstanding timer
-  // (no context/node/timeout pile-up). Skipped during a rainstorm.
+  // (dusk) and the window is actually being watched, silent by day. hasFocus
+  // too, not just visibilityState (the crane-drop/thunder rule): this is the
+  // one ambient sound with no room gate at all, and visibilityState alone
+  // misses a window that's merely covered by other windows — Linux/X11 Chrome
+  // has no window-occlusion detection, so a fully covered window reports
+  // "visible" indefinitely. Each chirp there is a fresh AudioContext (a fresh
+  // OS audio stream) playing a faint 4-5kHz pulse train — from an unattended
+  // window that reads as an endless stream of crackle/pop artifacts, not as
+  // crickets. Self-scheduling: each tick only builds a WebAudio context when
+  // the gate passes, so a hidden/unfocused/daytime tick does zero audio work
+  // and just re-arms the single outstanding timer (no context/node/timeout
+  // pile-up). Skipped during a rainstorm.
   (function scheduleCrickets() {
     var quiet = false;
     function gate() {
       var sb = document.getElementById("stage-balcony");
-      return sb && sb.classList.contains("dusk") && document.visibilityState !== "hidden" && !window.__balconyStorm;
+      return sb && sb.classList.contains("dusk") && document.visibilityState !== "hidden" &&
+        document.hasFocus() && !window.__balconyStorm;
     }
     function tick() {
       if (!quiet && gate()) playCricketChirp();
@@ -17538,7 +17584,8 @@ function spawnDustMote(container) {
       var door = document.getElementById("balcony-door");
       var smk = document.getElementById("balcony-smoker");
       if (door && smk && door.classList.contains("open") && smk.classList.contains("smoking") &&
-          stageIndex === STAGES.indexOf("cuddly") && document.visibilityState !== "hidden") {
+          stageIndex === STAGES.indexOf("cuddly") && document.visibilityState !== "hidden" &&
+          document.hasFocus()) { // unfocused = unattended one-shots (coughs/sneeze), same rule as the crickets/crane
         spawnSmokeDrift(strip, 1985, 150, 4, -1); // seeps in from the right (balcony side)
         // one coughs, then the other a beat later (random who goes first)
         function coughHead(id, pitch) {

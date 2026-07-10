@@ -9284,6 +9284,7 @@ document.addEventListener("click", function (e) {
   // After the caps site idles a while, a live Julia-set fractal screensaver takes
   // over ("electric sheep" nod). Any click on the monitor wakes it.
   var saverTimer = null, saverRaf = null;
+  var saverCameFrom = "desktop"; // which screen the saver took over (see startSaver/wake)
   // While a song plays, tapping a site logo shows that site briefly, then the
   // now-playing equalizer slides back over it (see navigateMonitor). This timer
   // drives that revert; it's cancelled if the song ends or the user navigates again.
@@ -9316,6 +9317,7 @@ document.addEventListener("click", function (e) {
     var fromNowPlaying = monitor.classList.contains("show-nowplaying");
     if (fromNowPlaying) monitor.classList.remove("show-nowplaying");
     if (!fromNowPlaying && !monitor.classList.contains("show-caps")) return;
+    saverCameFrom = fromNowPlaying ? "nowplaying" : "desktop"; // waking restores whichever app the saver covered
     monitor.classList.remove("show-caps");
     monitor.classList.add("show-saver");
     startFractalSaver();
@@ -10998,7 +11000,9 @@ document.addEventListener("click", function (e) {
     if (monitor.classList.contains("show-saver")) {
       stopSaver();
       monitor.classList.add("show-caps");
-      updateNowPlaying(); // if a song's still playing, bring the equalizer back
+      // wake back to whatever the saver covered: the player only if it was up before
+      // (a desktop that idled into the saver stays a desktop)
+      if (saverCameFrom === "nowplaying") updateNowPlaying();
       scheduleSaver();
       playLaptopClickSound("office-monitor");
       return;
@@ -15558,6 +15562,7 @@ function updateOfficeNudges() {
   if (mon) mon.classList.toggle("await-turn", wantLaptop); // no standby pulse while the laptop step is up
 }
 window.__updateOfficeNudges = updateOfficeNudges;
+updateOfficeNudges(); // initial state: the office opens on the laptop step
 // ── Shared effects AudioContext ─────────────────────────────────────────────
 // Every one-shot effect used to spin up its own AudioContext and close it after
 // its envelope — dozens of OS audio-stream connects/disconnects a minute, which

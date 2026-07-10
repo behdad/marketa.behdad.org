@@ -14626,51 +14626,89 @@ function playPhoneVoiceSound(panId) {
     var t0 = ctx.currentTime;
     var out = pannedOut(ctx, panId || "balcony-phone");
 
-    // glottal source: two detuned sawtooths for a touch of warmth, summed at `source`
+    // ── glottal source: two detuned sawtooths, then a spectral-tilt lowpass so it reads as
+    //    a soft voice rather than a buzzer (real vocal folds roll off ~-12dB/oct, a bare
+    //    sawtooth only ~-6, and that surplus high energy is the "robot buzz") ──
     var source = ctx.createGain();
     source.gain.value = 1;
-    [-6, 6].forEach(function (dt) {
+    [-6, 7].forEach(function (dt) {
       var osc = ctx.createOscillator();
       osc.type = "sawtooth";
       osc.detune.value = dt;
-      // f0 contour: mid on "a", dipping slightly, then rising into "lo?" (question)
+      // question contour: mid on "a", dip through the /l/, then rise into "lo?"; a couple
+      // of tiny jitter points keep it from sounding dead-flat
       osc.frequency.setValueAtTime(200, t0);
-      osc.frequency.linearRampToValueAtTime(190, t0 + 0.18);
-      osc.frequency.linearRampToValueAtTime(285, t0 + 0.52);
+      osc.frequency.linearRampToValueAtTime(188, t0 + 0.18);
+      osc.frequency.linearRampToValueAtTime(197, t0 + 0.30);
+      osc.frequency.linearRampToValueAtTime(258, t0 + 0.44);
+      osc.frequency.linearRampToValueAtTime(292, t0 + 0.54);
       osc.connect(source);
       osc.start(t0);
       osc.stop(t0 + 0.62);
     });
+    var tilt = ctx.createBiquadFilter();
+    tilt.type = "lowpass";
+    tilt.frequency.value = 2600;
+    tilt.Q.value = 0.5;
+    source.connect(tilt);
 
-    // master amplitude: two syllable bumps ("a" then "lo") with a dip for the /l/
+    // master amplitude: syllable bumps "a" … /l/ dip … "o"
     var master = ctx.createGain();
     master.gain.setValueAtTime(0.0001, t0);
-    master.gain.exponentialRampToValueAtTime(0.075, t0 + 0.04); // "a" onset
-    master.gain.setValueAtTime(0.075, t0 + 0.15);
-    master.gain.exponentialRampToValueAtTime(0.022, t0 + 0.24); // /l/ constriction
-    master.gain.exponentialRampToValueAtTime(0.08, t0 + 0.32);  // "o" onset
-    master.gain.setValueAtTime(0.08, t0 + 0.44);
+    master.gain.exponentialRampToValueAtTime(0.08, t0 + 0.04);  // "a" onset
+    master.gain.setValueAtTime(0.08, t0 + 0.15);
+    master.gain.exponentialRampToValueAtTime(0.03, t0 + 0.24);  // /l/ constriction
+    master.gain.exponentialRampToValueAtTime(0.085, t0 + 0.33); // "o" onset
+    master.gain.setValueAtTime(0.085, t0 + 0.44);
     master.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.6);
     master.connect(out);
 
-    // three parallel bandpass formants, F1 loudest, gliding /a/ -> /o/ through the /l/
+    // ── five formants gliding /a/ → /l/ → /o/. The /l/ gets its OWN targets (low F1, mid
+    //    F2) so it reads as a lateral, not a hole; F4/F5 (fixed, faint) add voice-like
+    //    warmth. Q = centre/bandwidth uses realistic formant bandwidths. ──
     [
-      { a: 730, o: 570, q: 8, g: 1.0 },
-      { a: 1090, o: 840, q: 9, g: 0.5 },
-      { a: 2440, o: 2410, q: 10, g: 0.16 }
+      { a: 730,  l: 360,  o: 570,  bw: 80,  g: 1.0 },
+      { a: 1090, l: 1250, o: 840,  bw: 90,  g: 0.55 },
+      { a: 2440, l: 2650, o: 2410, bw: 140, g: 0.22 },
+      { a: 3400, l: 3400, o: 3300, bw: 200, g: 0.10 },
+      { a: 4500, l: 4500, o: 4400, bw: 260, g: 0.05 }
     ].forEach(function (f) {
       var bp = ctx.createBiquadFilter();
       bp.type = "bandpass";
-      bp.Q.value = f.q;
+      bp.Q.value = f.a / f.bw;
       bp.frequency.setValueAtTime(f.a, t0);
-      bp.frequency.setValueAtTime(f.a, t0 + 0.18);
-      bp.frequency.linearRampToValueAtTime(f.o, t0 + 0.3);
+      bp.frequency.setValueAtTime(f.a, t0 + 0.16);
+      bp.frequency.linearRampToValueAtTime(f.l, t0 + 0.24); // into the /l/
+      bp.frequency.linearRampToValueAtTime(f.o, t0 + 0.34); // out to /o/
       var fg = ctx.createGain();
       fg.gain.value = f.g;
-      source.connect(bp);
+      tilt.connect(bp);
       bp.connect(fg);
       fg.connect(master);
     });
+
+    // ── a faint breath layer (band-limited noise) under the voice, breathier at the onset
+    //    and the questioning release, so it doesn't ring as a pure synthetic tone ──
+    var nb = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.7), ctx.sampleRate);
+    var nd = nb.getChannelData(0);
+    for (var i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+    var noise = ctx.createBufferSource();
+    noise.buffer = nb;
+    var nbp = ctx.createBiquadFilter();
+    nbp.type = "bandpass";
+    nbp.frequency.value = 1700;
+    nbp.Q.value = 0.5;
+    var ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.008, t0);
+    ng.gain.exponentialRampToValueAtTime(0.013, t0 + 0.04); // breathy onset
+    ng.gain.exponentialRampToValueAtTime(0.003, t0 + 0.2);
+    ng.gain.exponentialRampToValueAtTime(0.009, t0 + 0.5);  // breath on the "?" release
+    ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.62);
+    noise.connect(nbp);
+    nbp.connect(ng);
+    ng.connect(out);
+    noise.start(t0);
+    noise.stop(t0 + 0.64);
 
     setTimeout(function () { ctx.close(); }, 900);
   } catch (e) {}

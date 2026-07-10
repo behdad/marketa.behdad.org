@@ -7647,6 +7647,9 @@ document.addEventListener("click", function (e) {
       requestAnimationFrame(function () {
         requestAnimationFrame(function () { headphones.classList.add("wobbling"); });
       });
+      // PC off → the headphones are a shortcut: boot straight into the music player,
+      // song started inside this same gesture
+      if (window.__bootToMusic && window.__bootToMusic()) return;
       var ids = ["guitar-song-audio", "ukulele-song-audio"], playing = null;
       for (var i = 0; i < ids.length; i++) {
         var a = document.getElementById(ids[i]);
@@ -9145,6 +9148,9 @@ document.addEventListener("click", function (e) {
   // superseded by a direct navigation, or a game reset) so a later plain power-on still
   // ends on caps.
   var pendingBootSite = null;
+  // A headphones click while the PC is off asks the boot to finish on the music player
+  // instead of the desktop (see __bootToMusic below).
+  var pendingBootMusic = false;
   // After the caps site idles a while, a live Julia-set fractal screensaver takes
   // over ("electric sheep" nod). Any click on the monitor wakes it.
   var saverTimer = null, saverRaf = null;
@@ -9273,7 +9279,8 @@ document.addEventListener("click", function (e) {
   function updateScreen() {
     clearBoot();
     if (!monitor.classList.contains("here") || !pcTower || !pcTower.classList.contains("on")) {
-      pendingBootSite = null; // no boot will run to land it, so drop any queued sign target
+      pendingBootSite = null; // no boot will run to land these, so drop any queued targets
+      pendingBootMusic = false;
       return;
     }
     monitor.classList.add("screen-on", "show-fedora");
@@ -9295,7 +9302,10 @@ document.addEventListener("click", function (e) {
         monitorUrl = CAPS_URL;
       }
       scheduleSaver();
-      updateNowPlaying();
+      // the boot always lands on the desktop, even mid-song — the dock is how visitors
+      // find the photobooth. Only a headphones-summoned boot goes straight to the player
+      // (a later play/pause still re-opens it via updateNowPlaying's own listeners).
+      if (pendingBootMusic) { pendingBootMusic = false; updateNowPlaying(); }
       if (window.__inviteLaptop) window.__inviteLaptop(); // the boot done, nudge the laptop → Call Prague
     }, 3800));
   }
@@ -10682,6 +10692,26 @@ document.addEventListener("click", function (e) {
   // supersedes the in-flight boot and jumps straight to the site). Otherwise queue the
   // target and kick off the real power-on / monitor swap-in; updateScreen then boots
   // Fedora → Chrome and lands on the queued page instead of the caps default.
+  // Headphones shortcut: PC off → start a song inside THIS gesture (a play() four
+  // seconds later, after the boot, would fall outside the user-activation window and
+  // risk an autoplay block), queue the player as the boot target, and power on.
+  // Returns false when the PC is already on so the caller keeps its normal behavior.
+  window.__bootToMusic = function () {
+    if (!pcTower || pcTower.classList.contains("on")) return false;
+    pendingBootMusic = true;
+    var current = songAudios.some(function (a) { return a && !a.paused && !a.ended; });
+    var idle = songAudios.filter(function (a) { return a && a.paused; });
+    if (!current && idle.length) {
+      var pick = idle[Math.floor(Math.random() * idle.length)];
+      try {
+        pick.volume = window.__songVolume ? window.__songVolume() : 0.5;
+        if (window.__captureSongAudio) window.__captureSongAudio(pick);
+        var p = pick.play(); if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (headphones boot) for " + pick.id + ":", e); });
+      } catch (e) {}
+    }
+    pcTower.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    return true;
+  };
   window.bootToSite = function (siteKey, url) {
     if (window.navigateMonitor && window.navigateMonitor(siteKey, url)) {
       pendingBootSite = null; // a direct navigation supersedes any queued boot target

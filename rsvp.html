@@ -1127,6 +1127,24 @@ footer{margin-top:2.6rem}
 .vid-wrap.paused .vid-play{opacity:1}
 .vid-wrap.absent .vid-note{display:flex}
 .vid-wrap.absent .vid-el, .vid-wrap.absent .vid-play{display:none}
+/* ── video control strip (begin) — self-contained with the .vid-ctrl div and its JS
+   block; delete all three together if the film is ever swapped for a Vimeo iframe.
+   Slim translucent player chrome along the bottom of the 124×42 screen (visitors see
+   it ~4× zoomed): play/pause glyph, seekable progress bar, current time, mute glyph,
+   volume slider. Auto-hides (.ctrl-idle on the wrap) after idle while playing. ── */
+.vid-ctrl{position:absolute; left:0; right:0; bottom:0; height:6px; display:flex; align-items:center; gap:1.6px; padding:0 1.6px; box-sizing:border-box; background:rgba(10,8,6,0.62); color:#f8f5ec; font-family:sans-serif; cursor:default; transition:opacity .3s ease}
+.vid-wrap.ctrl-idle .vid-ctrl{opacity:0; pointer-events:none}
+.vid-wrap.absent .vid-ctrl{display:none}
+.vid-ctrl-pp{font-size:3.6px; line-height:1; width:4px; text-align:center; cursor:pointer}
+.vid-ctrl-bar, .vid-ctrl-vol{align-self:stretch; display:flex; align-items:center; cursor:pointer; touch-action:none}
+.vid-ctrl-bar{flex:1}
+.vid-ctrl-vol{width:14px; flex:none}
+.vid-ctrl-track{width:100%; height:1.6px; background:rgba(248,245,236,0.28); border-radius:0.8px; pointer-events:none}
+.vid-ctrl-fill{width:0%; height:100%; background:#c68e95; border-radius:0.8px}
+.vid-ctrl-vol .vid-ctrl-fill{background:#f8f5ec}
+.vid-ctrl-time{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:3px; line-height:1; min-width:7.5px; text-align:right}
+.vid-ctrl-mute{font-size:3.4px; line-height:1; cursor:pointer}
+/* ── video control strip (end) ── */
 /* calendar app: the wedding date cards + .ics download over the screen */
 #monitor-calendar{opacity:0; pointer-events:none; transition:opacity .25s ease}
 #office-monitor.show-calendar #monitor-calendar{opacity:1; pointer-events:auto}
@@ -5892,6 +5910,16 @@ section{margin:1.9rem 0}
 <video id="monitor-video-el" class="vid-el" preload="metadata" playsinline="playsinline"></video>
 <div class="vid-note" data-i="video_absent">the film isn&#8217;t loaded yet &#8212; come back soon</div>
 <div class="vid-play">&#9654;</div>
+<!-- video control strip (begin) — self-contained with its CSS rules and JS block;
+     delete all three together if the film is ever swapped for a Vimeo iframe -->
+<div class="vid-ctrl">
+<span class="vid-ctrl-pp">&#9654;</span>
+<div class="vid-ctrl-bar"><div class="vid-ctrl-track"><div class="vid-ctrl-fill"></div></div></div>
+<span class="vid-ctrl-time">0:00</span>
+<span class="vid-ctrl-mute">&#128266;</span>
+<div class="vid-ctrl-vol"><div class="vid-ctrl-track"><div class="vid-ctrl-fill"></div></div></div>
+</div>
+<!-- video control strip (end) -->
 </div>
 </foreignObject>
 <g id="monitor-video-close">
@@ -12106,7 +12134,8 @@ document.addEventListener("click", function (e) {
     try {
       if (vidEl.paused) {
         for (var i = 0; i < songAudios.length; i++) { var a = songAudios[i]; if (a && !a.paused) a.pause(); } // the film takes the speakers
-        vidEl.volume = window.__songVolume ? window.__songVolume() : 0.5; // app-owned level, same defensive reapply as every other play trigger
+        var ctrlVol = window.__vidCtrlVolume ? window.__vidCtrlVolume() : null; // control-strip override once the visitor touches its slider
+        vidEl.volume = (ctrlVol != null) ? ctrlVol : (window.__songVolume ? window.__songVolume() : 0.5); // otherwise app-owned level, same defensive reapply as every other play trigger
         var p = vidEl.play(); if (p && p.catch) p.catch(function (e) { console.warn("[video-app] play() rejected:", e); });
       } else vidEl.pause();
     } catch (e) {}
@@ -12129,6 +12158,98 @@ document.addEventListener("click", function (e) {
     vidCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeVideoApp(); playLaptopClickSound("office-monitor"); });
     vidCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
+  // ── video control strip (begin) ───────────────────────────────────────────────────
+  // Progress/seek bar, current time, mute glyph, and volume slider along the bottom of
+  // the film, auto-hiding (.ctrl-idle) after 2.5s idle while playing and always visible
+  // while paused. Self-contained with the .vid-ctrl CSS rules and the .vid-ctrl div in
+  // the wrap — delete all three together if the film is ever swapped for a Vimeo
+  // iframe; toggleVideoApp's __vidCtrlVolume lookup degrades to the app default when
+  // this block is gone.
+  (function () {
+    var ctrl = vidWrap && vidWrap.querySelector(".vid-ctrl");
+    if (!vidEl || !ctrl) return;
+    var ppBtn = ctrl.querySelector(".vid-ctrl-pp");
+    var bar = ctrl.querySelector(".vid-ctrl-bar");
+    var barFill = bar.querySelector(".vid-ctrl-fill");
+    var timeEl = ctrl.querySelector(".vid-ctrl-time");
+    var muteBtn = ctrl.querySelector(".vid-ctrl-mute");
+    var vol = ctrl.querySelector(".vid-ctrl-vol");
+    var volFill = vol.querySelector(".vid-ctrl-fill");
+    var userVol = null; // set once the visitor touches the slider; overrides the app-owned default for the session
+    window.__vidCtrlVolume = function () { return userVol; };
+    // nothing on the strip reaches the wrap (its tap toggles play/pause) or the room (pan)
+    ["pointerdown", "click", "dblclick", "touchstart"].forEach(function (t) {
+      ctrl.addEventListener(t, function (e) { e.stopPropagation(); });
+    });
+    ctrl.addEventListener("touchmove", function (e) { e.stopPropagation(); e.preventDefault(); }, { passive: false }); // slider drags never pan the page
+    // auto-hide: any pointer activity over the film shows the strip; while playing it
+    // fades back out after 2.5s idle (pausing always clears the fade and stops the timer)
+    var idleTimer = null;
+    function wake() {
+      vidWrap.classList.remove("ctrl-idle");
+      clearTimeout(idleTimer); idleTimer = null;
+      if (!vidEl.paused) idleTimer = setTimeout(function () { if (!vidEl.paused) vidWrap.classList.add("ctrl-idle"); }, 2500);
+    }
+    vidWrap.addEventListener("pointermove", wake);
+    vidWrap.addEventListener("pointerdown", wake);
+    vidEl.addEventListener("play", wake);
+    vidEl.addEventListener("pause", wake);
+    function fmtTime(s) {
+      if (!isFinite(s) || s < 0) s = 0;
+      var m = Math.floor(s / 60), r = Math.floor(s % 60);
+      return m + ":" + (r < 10 ? "0" : "") + r;
+    }
+    function paintProgress() {
+      var d = vidEl.duration;
+      var frac = (isFinite(d) && d > 0) ? Math.min(1, vidEl.currentTime / d) : 0;
+      barFill.style.width = (frac * 100).toFixed(2) + "%";
+      timeEl.textContent = fmtTime(vidEl.currentTime);
+    }
+    vidEl.addEventListener("timeupdate", paintProgress);
+    vidEl.addEventListener("loadedmetadata", paintProgress);
+    vidEl.addEventListener("seeked", paintProgress);
+    function paintPP() { ppBtn.textContent = vidEl.paused ? "▶" : "⏸"; }
+    vidEl.addEventListener("play", paintPP);
+    vidEl.addEventListener("pause", paintPP);
+    ppBtn.addEventListener("click", function () { toggleVideoApp(); });
+    function paintVol() {
+      var silent = vidEl.muted || vidEl.volume === 0;
+      muteBtn.textContent = silent ? "🔇" : "🔊";
+      volFill.style.width = ((vidEl.muted ? 0 : vidEl.volume) * 100).toFixed(0) + "%";
+    }
+    vidEl.addEventListener("volumechange", paintVol); // covers programmatic changes (e.g. toggleVideoApp's reapply)
+    muteBtn.addEventListener("click", function () { vidEl.muted = !vidEl.muted; paintVol(); wake(); });
+    // shared slider plumbing: pointer capture on the track, fraction from the pointer's
+    // x within the track's screen rect (scale-proof — both are screen coords)
+    function fracFrom(el, e) {
+      var r = el.getBoundingClientRect();
+      if (!(r.width > 0)) return 0;
+      return Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    }
+    function wireSlider(el, apply) {
+      el.addEventListener("pointerdown", function (e) {
+        e.stopPropagation(); e.preventDefault();
+        try { el.setPointerCapture(e.pointerId); } catch (err) {}
+        apply(fracFrom(el, e)); wake();
+      });
+      el.addEventListener("pointermove", function (e) {
+        if (el.hasPointerCapture && el.hasPointerCapture(e.pointerId)) { apply(fracFrom(el, e)); wake(); }
+      });
+    }
+    wireSlider(bar, function (frac) {
+      var d = vidEl.duration;
+      if (!isFinite(d) || d <= 0) return; // no metadata yet — nowhere to seek
+      try { vidEl.currentTime = frac * d; } catch (err) {}
+      paintProgress();
+    });
+    wireSlider(vol, function (frac) {
+      userVol = frac;
+      try { vidEl.volume = frac; vidEl.muted = false; } catch (err) {}
+      paintVol(); // volumechange arrives async — repaint now so the drag tracks the finger
+    });
+    paintProgress(); paintPP(); paintVol();
+  })();
+  // ── video control strip (end) ─────────────────────────────────────────────────────
   // ── CALENDAR APP ─────────────────────────────────────────────────────────────────
   // The two wedding weekends as compact date cards over the screen, plus a Download
   // .ics button handing the visitor all four events as one VCALENDAR file. Same

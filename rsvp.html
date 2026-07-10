@@ -1032,6 +1032,30 @@ footer{margin-top:2.6rem}
 #monitor-pb-flash.snapping{animation:pb-snap-flash .5s ease}
 @keyframes pb-snap-flash{0%{opacity:0} 8%{opacity:.95} 100%{opacity:0}}
 @media (prefers-reduced-motion: reduce){.pb-ctrl{transition:none} .pb-ctrl:hover{transform:none}}
+/* post-snap action panel — a small floating card (not over the live preview); Download / Gmail /
+   Email, plus a paste-hint. Dismissable via its x, a click away, or the booth closing. */
+.pb-panel{
+  position:fixed; z-index:21; max-width:266px; background:var(--ink); color:var(--paper);
+  font-family:"Source Serif 4",serif; font-size:.78rem; line-height:1.35; padding:.5rem .6rem .55rem;
+  border-radius:8px; box-shadow:0 5px 16px rgba(0,0,0,.3); opacity:0; transition:opacity .25s ease;
+  pointer-events:auto; text-align:center;
+}
+.pb-panel.show{opacity:1}
+.pb-panel-x{
+  position:absolute; top:.1rem; right:.28rem; background:none; border:none; color:var(--paper);
+  font-size:.85rem; line-height:1; padding:.12rem .22rem; cursor:pointer; opacity:.6;
+}
+.pb-panel-x:hover{opacity:1}
+.pb-panel-lead{margin:.05rem .9rem .45rem; font-size:.8rem}
+.pb-panel-row{display:flex; gap:.3rem; justify-content:center; flex-wrap:wrap}
+.pb-panel-btn{
+  font:inherit; font-size:.74rem; cursor:pointer; color:var(--ink); background:var(--paper);
+  border:none; border-radius:14px; padding:.28rem .5rem; white-space:nowrap;
+  box-shadow:0 1px 3px rgba(0,0,0,.2); transition:background .15s ease, transform .1s ease;
+}
+.pb-panel-btn:hover{background:#fff; transform:translateY(-1px)}
+.pb-panel-hint{margin-top:.42rem; font-size:.68rem; opacity:.82}
+@media (prefers-reduced-motion: reduce){.pb-panel-btn{transition:none} .pb-panel-btn:hover{transform:none}}
 .eq-bar{transform-box:fill-box; transform-origin:bottom center; transform:scaleY(0.28)}
 #monitor-np-marquee{transform:translateX(85px)}
 #office-monitor.show-nowplaying #monitor-np-marquee{animation:np-scroll 13s linear infinite}
@@ -6313,7 +6337,14 @@ var T = {
     pb_ask: "📷 Say cheese? — your camera, just for you.<br>Nothing is sent anywhere.",
     pb_live: "Smile — you're on camera! 📸",
     pb_denied: "no worries — camera stays off 🙂",
-    pb_saved: "saved! 💌 love it? email it to us —<br><a href=\"mailto:marketa@behdad.org\">marketa@behdad.org</a>",
+    pb_panel_lead: "Love it? Send it to us 💌",
+    pb_hint_copied: "photo copied — paste it into your email 📋",
+    pb_hint_nocopy: "tap Download, then attach it to your email ⬇",
+    pb_btn_download: "⬇ Download",
+    pb_btn_gmail: "Gmail",
+    pb_btn_email: "✉ Email",
+    pb_email_subject: "Loft photobooth 📸",
+    pb_email_body: "A snap from your loft photobooth — pasting it in below!",
     pb_fx_normal: "Normal",
     pb_fx_bw: "Black &amp; white",
     pb_fx_sepia: "Sepia",
@@ -6419,7 +6450,14 @@ var T = {
     pb_ask: "📷 Úsměv? — tvoje kamera, jen pro tebe.<br>Nikam se nic neposílá.",
     pb_live: "Úsměv — jsi na kameře! 📸",
     pb_denied: "nic se neděje — kamera zůstane vypnutá 🙂",
-    pb_saved: "uloženo! 💌 líbí se ti? pošli nám ho —<br><a href=\"mailto:marketa@behdad.org\">marketa@behdad.org</a>",
+    pb_panel_lead: "Líbí se ti? Pošli nám ho 💌",
+    pb_hint_copied: "fotka zkopírována — vlož ji do e-mailu 📋",
+    pb_hint_nocopy: "klikni na Stáhnout a přilož ji k e-mailu ⬇",
+    pb_btn_download: "⬇ Stáhnout",
+    pb_btn_gmail: "Gmail",
+    pb_btn_email: "✉ E-mail",
+    pb_email_subject: "Fotokoutek v loftu 📸",
+    pb_email_body: "Fotka z vašeho loftového fotokoutku — vkládám ji níže!",
     pb_fx_normal: "Normální",
     pb_fx_bw: "Černobílá",
     pb_fx_sepia: "Sépie",
@@ -10212,6 +10250,7 @@ document.addEventListener("click", function (e) {
   var pbStarting = false; // getUserMedia is pending (its permission prompt is up)
   var pbWant = false;     // the visitor still wants it on — cleared the instant they close/leave
   var pbFxIndex = 0;
+  var pbPanel = null;     // the post-snap action panel (Download/Gmail/Email), or null
   var PB_EFFECTS = [
     { key: "pb_fx_normal", css: "none" },
     { key: "pb_fx_bw", css: "grayscale(1)" },
@@ -10252,7 +10291,11 @@ document.addEventListener("click", function (e) {
     catch (err) { p = Promise.reject(err); } // never throw synchronously
     p.then(function (stream) {
       pbStarting = false;
-      if (!pbWant) { stream.getTracks().forEach(function (t) { t.stop(); }); return; } // they closed/left while the prompt was up
+      // Stop this stream if they've since closed/left (pbWant false) OR another concurrent
+      // getUserMedia already won the session (pbStream set) — an open->close-while-pending->
+      // open triple-tap can leave two calls in flight; whichever lands first wins, the other's
+      // tracks are stopped here so no camera is ever orphaned. Order-independent.
+      if (!pbWant || pbStream) { stream.getTracks().forEach(function (t) { t.stop(); }); return; }
       pbStream = stream;
       if (pbVideo) {
         pbVideo.srcObject = stream;
@@ -10275,6 +10318,7 @@ document.addEventListener("click", function (e) {
   function closePhotobooth() {
     pbWant = false;
     pbStarting = false;
+    dismissPhotoActions(); // the post-snap panel goes away with the booth
     if (pbStream) { pbStream.getTracks().forEach(function (t) { t.stop(); }); pbStream = null; } // release the camera (light off)
     if (pbVideo) { try { pbVideo.pause(); } catch (e) {} pbVideo.srcObject = null; pbVideo.style.filter = "none"; } // drop the last frame
     var wasActive = pbActive;
@@ -10319,20 +10363,102 @@ document.addEventListener("click", function (e) {
       pbFlash.classList.add("snapping");
     }
     playLaptopClickSound("office-monitor"); // soft shutter click
+    // A single blob feeds both the clipboard copy and the Download button. Wrap toBlob in a
+    // promise so the clipboard write can be issued synchronously in this click gesture (its
+    // ClipboardItem takes the still-pending blob promise — the shape Safari needs).
+    var blobPromise = new Promise(function (resolve, reject) {
+      try { canvas.toBlob(function (b) { b ? resolve(b) : reject(new Error("no blob")); }, "image/png"); }
+      catch (e) { reject(e); }
+    });
+    var copyPromise = copyImageToClipboard(blobPromise); // Promise<boolean>, never throws
+    blobPromise.then(function (blob) {
+      copyPromise.then(function (copied) { showPhotoActions(blob, copied); });
+    }, function () { /* no blob (rare) — skip the panel; the flash already fired */ });
+  }
+  // Copy the PNG to the clipboard. Accepts a blob PROMISE so the write stays inside the
+  // snap gesture. Feature-detected and fully try/catch-wrapped — resolves false on any
+  // failure (older browsers, Firefox's spotty image write, denied permission) so download
+  // stays the reliable path and clipboard is a pure bonus. Never throws, never rejects.
+  function copyImageToClipboard(blobPromise) {
     try {
-      canvas.toBlob(function (blob) {
-        if (!blob) return;
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement("a");
-        a.href = url;
-        a.download = "loft-photobooth-marketa-behdad.png";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
-      }, "image/png");
+      if (!navigator.clipboard || !navigator.clipboard.write || typeof ClipboardItem === "undefined") return Promise.resolve(false);
+      var item;
+      try { item = new ClipboardItem({ "image/png": blobPromise }); } // promise value: best cross-browser (Safari/Chrome)
+      catch (e1) {
+        // an engine that rejects a promise value — write once the blob has resolved instead
+        return blobPromise.then(function (blob) {
+          try { return navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]).then(function () { return true; }, function () { return false; }); }
+          catch (e2) { return false; }
+        }, function () { return false; });
+      }
+      return navigator.clipboard.write([item]).then(function () { return true; }, function () { return false; });
+    } catch (e) { return Promise.resolve(false); }
+  }
+  function downloadPhoto(blob) {
+    if (!blob) return;
+    try {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "loft-photobooth-marketa-behdad.png";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
     } catch (e) {}
-    eggBubble(pbAnchor, pbText("pb_saved")); // "saved! love it? email it to us"
+  }
+  function openGmailCompose() {
+    try { window.open("https://mail.google.com/mail/?view=cm&fs=1&to=marketa@behdad.org&su=" +
+      encodeURIComponent(pbText("pb_email_subject")) + "&body=" + encodeURIComponent(pbText("pb_email_body")), "_blank"); } catch (e) {}
+  }
+  function openMailto() {
+    try { window.location.href = "mailto:marketa@behdad.org?subject=" +
+      encodeURIComponent(pbText("pb_email_subject")) + "&body=" + encodeURIComponent(pbText("pb_email_body")); } catch (e) {}
+  }
+  function pbPanelAway(e) { if (pbPanel && !pbPanel.contains(e.target)) dismissPhotoActions(); }
+  function dismissPhotoActions() {
+    document.removeEventListener("click", pbPanelAway);
+    if (!pbPanel) return;
+    var p = pbPanel; pbPanel = null;
+    p.classList.remove("show");
+    setTimeout(function () { if (p.parentNode) p.remove(); }, 250);
+  }
+  function showPhotoActions(blob, copied) {
+    dismissPhotoActions();
+    var eb = document.querySelector(".egg-bubble"); if (eb) dismissEggBubble(eb); // clear the "on camera" bubble under it
+    var panel = document.createElement("div");
+    panel.className = "pb-panel";
+    panel.dir = "auto";
+    panel.innerHTML =
+      '<button type="button" class="pb-panel-x" aria-label="close">✕</button>' +
+      '<div class="pb-panel-lead">' + pbText("pb_panel_lead") + '</div>' +
+      '<div class="pb-panel-row">' +
+        '<button type="button" class="pb-panel-btn" data-act="download">' + pbText("pb_btn_download") + '</button>' +
+        '<button type="button" class="pb-panel-btn" data-act="gmail">' + pbText("pb_btn_gmail") + '</button>' +
+        '<button type="button" class="pb-panel-btn" data-act="email">' + pbText("pb_btn_email") + '</button>' +
+      '</div>' +
+      '<div class="pb-panel-hint">' + pbText(copied ? "pb_hint_copied" : "pb_hint_nocopy") + '</div>';
+    // same fullscreen-aware host + positioning as eggBubble; anchored BELOW the monitor so
+    // the panel never covers the live camera preview up in the screen.
+    var fsHost = document.fullscreenElement || document.webkitFullscreenElement ||
+                 document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
+    fsHost.appendChild(panel);
+    positionEggBubble(panel, monitor);
+    pbPanel = panel;
+    requestAnimationFrame(function () { panel.classList.add("show"); });
+    panel.querySelector(".pb-panel-x").addEventListener("click", function (e) { e.stopPropagation(); dismissPhotoActions(); });
+    var btns = panel.querySelectorAll(".pb-panel-btn");
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].addEventListener("click", function (e) {
+        e.stopPropagation(); // keep the panel open (and off the click-away handler) so they can pick more than one
+        var act = this.getAttribute("data-act");
+        if (act === "download") downloadPhoto(blob);
+        else if (act === "gmail") openGmailCompose();
+        else if (act === "email") openMailto();
+      });
+    }
+    // click-away dismissal, armed next tick so the creating click can't instantly close it
+    setTimeout(function () { document.addEventListener("click", pbPanelAway); }, 0);
   }
   if (webcam) {
     webcam.addEventListener("click", function (e) {

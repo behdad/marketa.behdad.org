@@ -1087,8 +1087,10 @@ footer{margin-top:2.6rem}
 /* manual equalizer sliders: same show-nowplaying gating as the transports; .inert =
    the audio pipeline is disabled on this platform, so the bands can't color playback —
    shown ghosted, not interactive */
-#office-monitor.show-nowplaying #monitor-manual-eq.inert{opacity:.35; pointer-events:none}
-#office-monitor.show-nowplaying #monitor-eq-reset.inert{opacity:.35; pointer-events:none}
+#office-monitor.show-nowplaying #monitor-manual-eq.inert{opacity:.35}
+#office-monitor.show-nowplaying #monitor-eq-reset.inert{opacity:.35}
+#monitor-manual-eq.inert .meq-band{cursor:help}
+#monitor-eq-reset.inert{cursor:help}
 /* manual equalizer sliders: same show-nowplaying gating as the transports */
 #monitor-manual-eq{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .4s ease}
 #office-monitor.show-nowplaying #monitor-manual-eq{opacity:1; visibility:visible; pointer-events:auto}
@@ -6723,7 +6725,8 @@ var T = {
     app_photobooth: "photobooth",
     app_terminal: "console",
     term_welcome: "loft console \u2014 real JavaScript, running right here in your page. try: help",
-    term_help: "commands: help \u00b7 clear \u00b7 any JavaScript (try 2+2, document.title, loft.couple, loft.weddings)"
+    term_help: "commands: help \u00b7 clear \u00b7 any JavaScript (try 2+2, document.title, loft.couple, loft.weddings)",
+    eq_off_note: "This browser plays the songs directly \u2014 there's no audio pipeline for the equalizer to pull on. Try it on another device \ud83c\udf9a"
   },
   cs: {
     hunt_title: "Den v podkroví",
@@ -6854,7 +6857,8 @@ var T = {
     app_photobooth: "fotokoutek",
     app_terminal: "konzole",
     term_welcome: "loftov\u00e1 konzole \u2014 opravdov\u00fd JavaScript, b\u011b\u017e\u00ed p\u0159\u00edmo tady ve str\u00e1nce. zkuste: help",
-    term_help: "p\u0159\u00edkazy: help \u00b7 clear \u00b7 jak\u00fdkoli JavaScript (zkuste 2+2, document.title, loft.couple, loft.weddings)"
+    term_help: "p\u0159\u00edkazy: help \u00b7 clear \u00b7 jak\u00fdkoli JavaScript (zkuste 2+2, document.title, loft.couple, loft.weddings)",
+    eq_off_note: "Tenhle prohl\u00ed\u017ee\u010d p\u0159ehr\u00e1v\u00e1 p\u00edsni\u010dky nap\u0159\u00edmo \u2014 ekvaliz\u00e9r tu nem\u00e1 za co tahat. Zkus to na jin\u00e9m za\u0159\u00edzen\u00ed \ud83c\udf9a"
   }
 };
 function setLang(l) {
@@ -10903,6 +10907,11 @@ document.addEventListener("click", function (e) {
       }
       hit.addEventListener("pointerdown", function (ev) {
         ev.stopPropagation(); ev.preventDefault();
+        if (!USE_LIVE_ANALYSER) { // ghosted: explain why instead of adjusting
+          var lang = document.documentElement.lang;
+          eggBubble(manualEqG, (T[lang] && T[lang].eq_off_note) || T.en.eq_off_note);
+          return;
+        }
         try { hit.setPointerCapture(ev.pointerId); } catch (e) {}
         scheduleSaver(15000); // adjusting the EQ is player activity — hold the screensaver off
         setManualEqBand(i, dbFromPointer(ev)); paintThumb();
@@ -10931,6 +10940,11 @@ document.addEventListener("click", function (e) {
   if (eqResetBtn) {
     eqResetBtn.addEventListener("click", function (e) {
       e.stopPropagation();
+      if (!USE_LIVE_ANALYSER) { // ghosted: same explanation as the sliders
+        var lang = document.documentElement.lang;
+        eggBubble(eqResetBtn, (T[lang] && T[lang].eq_off_note) || T.en.eq_off_note);
+        return;
+      }
       scheduleSaver(15000);
       for (var ri = 0; ri < MANUAL_EQ_FREQS.length; ri++) setManualEqBand(ri, 0);
       meqRepaints.forEach(function (fn) { fn(); });

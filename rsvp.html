@@ -1003,6 +1003,35 @@ footer{margin-top:2.6rem}
    (JS toggles "eq-live" on #office-monitor alongside the shared startEq/stopEq loop) */
 #monitor-saver-eq{opacity:0; pointer-events:none}
 #office-monitor.show-saver.eq-live #monitor-saver-eq{opacity:1}
+/* ── loft photobooth (the visitor's own camera, live in the monitor) ──
+   All gated on the .photobooth class, which is added only while a live session runs and
+   removed in every teardown path (close, re-click, leave-room, hidden, pagehide, PC-off,
+   reset) — so the camera-live LED and the live video die together with the stream. */
+#office-webcam{cursor:pointer}
+#office-webcam-led{transition:fill .3s ease, filter .3s ease}
+#office-monitor.photobooth #office-webcam-led{fill:#ff3b30; filter:drop-shadow(0 0 1.7px #ff3b30)}
+#monitor-photobooth{opacity:0; pointer-events:none; transition:opacity .25s ease}
+#office-monitor.photobooth #monitor-photobooth{opacity:1; pointer-events:auto}
+/* while live, the booth owns the whole screen — hide every boot/site/transport layer under it */
+#office-monitor.photobooth .boot-logo,
+#office-monitor.photobooth #monitor-play-btn,
+#office-monitor.photobooth #monitor-pause-btn,
+#office-monitor.photobooth #monitor-volume-btn,
+#office-monitor.photobooth #monitor-prev-btn,
+#office-monitor.photobooth #monitor-next-btn{opacity:0 !important; visibility:hidden; pointer-events:none !important}
+.pb-video-wrap{width:124px; height:42px; position:relative; overflow:hidden; background:#0a0d12}
+.pb-video{width:100%; height:100%; object-fit:cover; transform:scaleX(-1); display:block; background:#0a0d12}
+/* subtle CRT scanlines over the feed */
+.pb-scanlines{position:absolute; inset:0; pointer-events:none; opacity:.5; mix-blend-mode:multiply;
+  background:repeating-linear-gradient(to bottom, rgba(0,0,0,.16) 0, rgba(0,0,0,.16) 1px, transparent 1px, transparent 3px)}
+.pb-ctrl{cursor:pointer; transform-box:fill-box; transform-origin:center; transition:transform .15s ease}
+.pb-ctrl:hover{transform:scale(1.12)}
+#monitor-pb-label{opacity:0; pointer-events:none}
+#monitor-pb-label.flash{animation:pb-label-flash 1.5s ease forwards}
+@keyframes pb-label-flash{0%{opacity:0} 12%{opacity:1} 68%{opacity:1} 100%{opacity:0}}
+#monitor-pb-flash.snapping{animation:pb-snap-flash .5s ease}
+@keyframes pb-snap-flash{0%{opacity:0} 8%{opacity:.95} 100%{opacity:0}}
+@media (prefers-reduced-motion: reduce){.pb-ctrl{transition:none} .pb-ctrl:hover{transform:none}}
 .eq-bar{transform-box:fill-box; transform-origin:bottom center; transform:scaleY(0.28)}
 #monitor-np-marquee{transform:translateX(85px)}
 #office-monitor.show-nowplaying #monitor-np-marquee{animation:np-scroll 13s linear infinite}
@@ -5105,6 +5134,9 @@ section{margin:1.9rem 0}
 <clipPath id="office-monitor-clip"><rect x="254" y="154" width="124" height="42" rx="1.5"/></clipPath>
 <rect x="312" y="146.5" width="8" height="5" rx="1.5" fill="#2d2d2d"/>
 <circle cx="316" cy="148.8" r="0.9" fill="#4a4a4a"/>
+<!-- webcam "camera live" LED: dark until a photobooth session is running, then glows
+     red (mirrors the laptop's green-during-call LED — a call is green, self-cam is red) -->
+<circle id="office-webcam-led" cx="318.6" cy="148.8" r="0.65" fill="#2a2a2a"/>
 <rect x="312" y="200" width="8" height="5" fill="#3a3a3a"/>
 <rect x="294" y="204.5" width="44" height="3.5" rx="1.5" fill="#6b6b6b" stroke="#4a4a4a" stroke-width="1"/>
 <rect x="250" y="150" width="132" height="50" rx="3" fill="#1f1f1f" stroke="#0f0f0f" stroke-width="1.5"/>
@@ -5236,6 +5268,43 @@ section{margin:1.9rem 0}
 <path d="M369.4 165.5 L366.08 160.93 L366.08 170.07 Z" fill="#f8f5ec"/>
 <path d="M366.08 165.5 L362.88 160.93 L362.88 170.07 Z" fill="#f8f5ec"/>
 </g>
+<!-- LOFT PHOTOBOOTH: the visitor's own camera, live inside the monitor. Shown only while a
+     session is running (the .photobooth class on #office-monitor). The live <video> lives in
+     a foreignObject over the screen, exactly like #monitor-saver-fractal. Nothing is uploaded:
+     preview, effects, and snap->download are all client-side. Topmost screen child so the
+     controls sit above every other screen state. -->
+<g id="monitor-photobooth">
+<foreignObject id="monitor-pb-fo" x="254" y="154" width="124" height="42">
+<div xmlns="http://www.w3.org/1999/xhtml" class="pb-video-wrap">
+<video id="monitor-pb-video" class="pb-video" autoplay="autoplay" muted="muted" playsinline="playsinline"></video>
+<div class="pb-scanlines"></div>
+</div>
+</foreignObject>
+<!-- effect-name flash label (top centre) -->
+<g id="monitor-pb-label">
+<rect x="288" y="156.5" width="56" height="9" rx="4.5" fill="#000" fill-opacity="0.42"/>
+<text id="monitor-pb-label-text" x="316" y="162.9" text-anchor="middle" style="fill:#f6f2ea; font-family:monospace; font-size:5.4px; letter-spacing:0.2px"></text>
+</g>
+<!-- close (x), top-right -->
+<g id="monitor-pb-close" class="pb-ctrl">
+<circle cx="372" cy="159.5" r="4.6" fill="#000" fill-opacity="0.45"/>
+<path d="M369.9 157.4 L374.1 161.6 M374.1 157.4 L369.9 161.6" stroke="#f6f2ea" stroke-width="1.1" stroke-linecap="round"/>
+</g>
+<!-- shutter, bottom-right -->
+<g id="monitor-pb-shutter" class="pb-ctrl">
+<circle cx="368" cy="189" r="6.2" fill="#000" fill-opacity="0.4"/>
+<circle cx="368" cy="189" r="5" fill="none" stroke="#f6f2ea" stroke-width="1.2"/>
+<circle cx="368" cy="189" r="2.4" fill="#f6f2ea"/>
+</g>
+<!-- white snap flash (topmost, click-through) -->
+<rect id="monitor-pb-flash" x="254" y="154" width="124" height="42" fill="#ffffff" opacity="0" pointer-events="none"/>
+</g>
+</g>
+<!-- webcam launch target: a generous transparent hit area over the top bezel around the lens,
+     kept entirely ABOVE the screen (y154) so it never steals the monitor's boot-gag clicks.
+     Its own click handler stopPropagation()s, so tapping here opens the photobooth only. -->
+<g id="office-webcam">
+<rect id="office-webcam-hit" x="300" y="143" width="36" height="10" fill="transparent"/>
 </g>
 </g>
 <defs>
@@ -6240,7 +6309,17 @@ var T = {
     typewriter_patience_line: "Still here? That's the whole vow, honestly.",
     cheers_text: "Cheers! 🥂",
     can_streak_text: "Nice toss streak! 🥫",
-    trip_no_mix_text: "Please don't mix. Enjoy responsibly. 🙃"
+    trip_no_mix_text: "Please don't mix. Enjoy responsibly. 🙃",
+    pb_ask: "📷 Say cheese? — your camera, just for you.<br>Nothing is sent anywhere.",
+    pb_live: "Smile — you're on camera! 📸",
+    pb_denied: "no worries — camera stays off 🙂",
+    pb_saved: "saved! 💌 love it? email it to us —<br><a href=\"mailto:marketa@behdad.org\">marketa@behdad.org</a>",
+    pb_fx_normal: "Normal",
+    pb_fx_bw: "Black &amp; white",
+    pb_fx_sepia: "Sepia",
+    pb_fx_negative: "Negative",
+    pb_fx_night: "Night vision",
+    pb_fx_glow: "Loft glow"
   },
   cs: {
     hunt_title: "Den v podkroví",
@@ -6336,7 +6415,17 @@ var T = {
     typewriter_patience_line: "Pořád tu jsi? To je celý slib, popravdě.",
     cheers_text: "Na zdraví! 🥂",
     can_streak_text: "Pěkná série hodů! 🥫",
-    trip_no_mix_text: "Prosím nemíchat. Užívejte s mírou. 🙃"
+    trip_no_mix_text: "Prosím nemíchat. Užívejte s mírou. 🙃",
+    pb_ask: "📷 Úsměv? — tvoje kamera, jen pro tebe.<br>Nikam se nic neposílá.",
+    pb_live: "Úsměv — jsi na kameře! 📸",
+    pb_denied: "nic se neděje — kamera zůstane vypnutá 🙂",
+    pb_saved: "uloženo! 💌 líbí se ti? pošli nám ho —<br><a href=\"mailto:marketa@behdad.org\">marketa@behdad.org</a>",
+    pb_fx_normal: "Normální",
+    pb_fx_bw: "Černobílá",
+    pb_fx_sepia: "Sépie",
+    pb_fx_negative: "Negativ",
+    pb_fx_night: "Noční vidění",
+    pb_fx_glow: "Zář loftu"
   }
 };
 function setLang(l) {
@@ -10045,6 +10134,7 @@ document.addEventListener("click", function (e) {
     }
   };
   function swap(toMonitor) {
+    if (!toMonitor) closePhotobooth(); // swapping away to the typewriter (or PC power-off) must stop any live camera
     monitor.classList.toggle("here", toMonitor);
     typewriter.classList.toggle("away", toMonitor);
     var bubble = document.querySelector(".egg-bubble");
@@ -10058,10 +10148,12 @@ document.addEventListener("click", function (e) {
   var monClickTimer = null;
   monitor.addEventListener("dblclick", function () {
     clearTimeout(monClickTimer);
+    if (monitor.classList.contains("photobooth")) return; // don't swap to the typewriter mid-photobooth
     swap(false);
   });
   monitor.addEventListener("click", function () {
     clearTimeout(monClickTimer);
+    if (monitor.classList.contains("photobooth")) { cyclePhotoboothEffect(); return; } // a screen tap cycles the effect
     if (monitor.classList.contains("show-saver")) {
       stopSaver();
       monitor.classList.add("show-caps");
@@ -10101,7 +10193,172 @@ document.addEventListener("click", function (e) {
       if (e.key === "Enter" || e.key === " ") onPcToggled();
     });
   }
+  // ── LOFT PHOTOBOOTH ──────────────────────────────────────────────────────────────
+  // The bezel webcam turns on the VISITOR'S own camera, shows it live inside the monitor,
+  // cycles fun filters, snaps a photo that DOWNLOADS to their device, then suggests
+  // emailing it to the couple. Everything is client-side — nothing is uploaded or
+  // auto-sent. The .photobooth class drives every visual (live video + red LED), so the
+  // camera can never outlive it: every teardown path removes the class AND stops the
+  // tracks (close x, webcam re-click, leaving the office, tab hidden, pagehide, PC off,
+  // game reset).
+  var webcam = document.getElementById("office-webcam");
+  var pbAnchor = webcam || monitor;
+  var pbVideo = document.getElementById("monitor-pb-video");
+  var pbLabelG = document.getElementById("monitor-pb-label");
+  var pbLabelText = document.getElementById("monitor-pb-label-text");
+  var pbFlash = document.getElementById("monitor-pb-flash");
+  var pbStream = null;    // the live MediaStream (null when off)
+  var pbActive = false;   // a session is live (video showing)
+  var pbStarting = false; // getUserMedia is pending (its permission prompt is up)
+  var pbWant = false;     // the visitor still wants it on — cleared the instant they close/leave
+  var pbFxIndex = 0;
+  var PB_EFFECTS = [
+    { key: "pb_fx_normal", css: "none" },
+    { key: "pb_fx_bw", css: "grayscale(1)" },
+    { key: "pb_fx_sepia", css: "sepia(0.75)" },
+    { key: "pb_fx_negative", css: "invert(1)" },
+    { key: "pb_fx_night", css: "hue-rotate(90deg) saturate(1.6) contrast(1.3) brightness(1.05)" },
+    { key: "pb_fx_glow", css: "sepia(0.4) saturate(1.4) contrast(1.1) brightness(1.05)" }
+  ];
+  function pbText(key) {
+    var l = document.documentElement.lang;
+    return (T[l] && T[l][key]) || T.en[key] || "";
+  }
+  function applyPbEffect() { if (pbVideo) pbVideo.style.filter = PB_EFFECTS[pbFxIndex].css; }
+  function flashPbLabel() {
+    if (!pbLabelG || !pbLabelText) return;
+    pbLabelText.textContent = pbText(PB_EFFECTS[pbFxIndex].key);
+    pbLabelG.classList.remove("flash");
+    void pbLabelG.getBoundingClientRect(); // reflow so the fade restarts on every cycle
+    pbLabelG.classList.add("flash");
+  }
+  if (pbLabelG) pbLabelG.addEventListener("animationend", function () { pbLabelG.classList.remove("flash"); });
+  if (pbFlash) pbFlash.addEventListener("animationend", function () { pbFlash.classList.remove("snapping"); });
+  function cyclePhotoboothEffect() {
+    if (!pbActive) return;
+    pbFxIndex = (pbFxIndex + 1) % PB_EFFECTS.length;
+    applyPbEffect();
+    flashPbLabel();
+  }
+  function openPhotobooth() {
+    if (pbActive || pbStarting) return;
+    var md = navigator.mediaDevices;
+    if (!md || !md.getUserMedia) { eggBubble(pbAnchor, pbText("pb_denied")); return; } // no camera API / insecure context
+    pbStarting = true;
+    pbWant = true;
+    eggBubble(pbAnchor, pbText("pb_ask")); // friendly heads-up alongside the browser's own permission prompt
+    var p;
+    try { p = md.getUserMedia({ video: { facingMode: "user" }, audio: false }); }
+    catch (err) { p = Promise.reject(err); } // never throw synchronously
+    p.then(function (stream) {
+      pbStarting = false;
+      if (!pbWant) { stream.getTracks().forEach(function (t) { t.stop(); }); return; } // they closed/left while the prompt was up
+      pbStream = stream;
+      if (pbVideo) {
+        pbVideo.srcObject = stream;
+        pbVideo.muted = true;
+        var pl = pbVideo.play();
+        if (pl && pl.catch) pl.catch(function () {});
+      }
+      stopSaver(); // the fractal loop yields to the live feed
+      pbFxIndex = 0;
+      applyPbEffect();
+      pbActive = true;
+      monitor.classList.add("photobooth"); // shows the video + lights the red LED
+      eggBubble(pbAnchor, pbText("pb_live")); // "Smile — you're on camera!"
+    }).catch(function () {
+      pbStarting = false;
+      if (pbWant) eggBubble(pbAnchor, pbText("pb_denied")); // denied / no device / error — never throws
+      pbWant = false;
+    });
+  }
+  function closePhotobooth() {
+    pbWant = false;
+    pbStarting = false;
+    if (pbStream) { pbStream.getTracks().forEach(function (t) { t.stop(); }); pbStream = null; } // release the camera (light off)
+    if (pbVideo) { try { pbVideo.pause(); } catch (e) {} pbVideo.srcObject = null; pbVideo.style.filter = "none"; } // drop the last frame
+    var wasActive = pbActive;
+    pbActive = false;
+    monitor.classList.remove("photobooth"); // red LED + live video go dark together with the stream
+    if (!wasActive) return;
+    // restore the screen underneath: idle back to the caps "home" if the PC's still on,
+    // otherwise the now-class-free screen returns to its dark standby on its own.
+    if (monitor.classList.contains("here") && pcTower && pcTower.classList.contains("on")) {
+      monitor.classList.add("screen-on", "show-caps");
+      monitorUrl = CAPS_URL;
+      updateNowPlaying();
+      scheduleSaver();
+    }
+  }
+  function snapPhotobooth() {
+    if (!pbActive || !pbVideo) return;
+    var w = pbVideo.videoWidth, h = pbVideo.videoHeight;
+    if (!w || !h) return; // no frame yet
+    var canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    var ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.filter = PB_EFFECTS[pbFxIndex].css; // same effect as the live preview
+    ctx.translate(w, 0); ctx.scale(-1, 1);  // mirror to match the on-screen selfie view
+    ctx.drawImage(pbVideo, 0, 0, w, h);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.filter = "none";
+    var fs = Math.max(11, Math.round(h * 0.045));
+    ctx.font = "600 " + fs + "px Georgia, 'Times New Roman', serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+    var cap = "markéta ∞ behdad · loft photobooth";
+    var capY = h - Math.round(h * 0.04);
+    ctx.fillStyle = "rgba(0,0,0,0.4)";
+    ctx.fillText(cap, w / 2 + 1, capY + 1);
+    ctx.fillStyle = "rgba(255,255,255,0.94)";
+    ctx.fillText(cap, w / 2, capY);
+    if (pbFlash) { // white shutter flash over the screen
+      pbFlash.classList.remove("snapping");
+      void pbFlash.getBoundingClientRect();
+      pbFlash.classList.add("snapping");
+    }
+    playLaptopClickSound("office-monitor"); // soft shutter click
+    try {
+      canvas.toBlob(function (blob) {
+        if (!blob) return;
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "loft-photobooth-marketa-behdad.png";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+      }, "image/png");
+    } catch (e) {}
+    eggBubble(pbAnchor, pbText("pb_saved")); // "saved! love it? email it to us"
+  }
+  if (webcam) {
+    webcam.addEventListener("click", function (e) {
+      e.stopPropagation(); // never fall through to the monitor's boot gag
+      if (pbActive || pbStarting) closePhotobooth();
+      else openPhotobooth();
+    });
+    webcam.addEventListener("dblclick", function (e) { e.stopPropagation(); }); // and never trigger the swap-to-typewriter dblclick
+  }
+  var pbShutter = document.getElementById("monitor-pb-shutter");
+  if (pbShutter) {
+    pbShutter.addEventListener("click", function (e) { e.stopPropagation(); snapPhotobooth(); });
+    pbShutter.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+  var pbClose = document.getElementById("monitor-pb-close");
+  if (pbClose) {
+    pbClose.addEventListener("click", function (e) { e.stopPropagation(); closePhotobooth(); });
+    pbClose.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+  // Privacy backstops: stop the camera when the tab is hidden or the page is torn down,
+  // on top of the room-leave hook (goToStage calls window.__closeOfficePhotobooth).
+  document.addEventListener("visibilitychange", function () { if (document.hidden) closePhotobooth(); });
+  window.addEventListener("pagehide", function () { closePhotobooth(); });
+  window.__closeOfficePhotobooth = closePhotobooth;
   window.resetOfficeMonitor = function () {
+    closePhotobooth(); // a reset must never leave the camera running
     clearBoot();
     pendingBootSite = null; // reset never boots to a sign's page
     monitor.classList.add("here");
@@ -16747,6 +17004,7 @@ function spawnDustMote(container) {
     // snappy device-toggle fade, so the sound slowly recedes as you move to the next room.
     var ROOM_FADE = 3;
     if (window.__updatePcFan) window.__updatePcFan(name === "office", ROOM_FADE); // hum only in the office
+    if (name !== "office" && window.__closeOfficePhotobooth) window.__closeOfficePhotobooth(); // leaving the office stops the photobooth camera
     if (window.__updateACHum) window.__updateACHum(name, ROOM_FADE); // AC hum only in garden + balcony, panned to that room's unit
     if (window.__updateRadioSound) window.__updateRadioSound(name === "kitchen", ROOM_FADE); // radio audible only in the kitchen
     if (window.__updateKettleHum) window.__updateKettleHum(name === "kitchen", ROOM_FADE); // kettle hum only in the kitchen

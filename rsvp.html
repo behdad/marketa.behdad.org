@@ -6624,7 +6624,9 @@ document.addEventListener("click", function (e) {
     if (fireCtx) {
       var ctx = fireCtx, roar = fireCtx._roarGain, nodes = fireCtx._nodes || [];
       fireCtx = null; // null first so a racing scheduleCrackle callback bails
-      try { if (roar) roar.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + f); } catch (e) {}
+      // linear (not exponential) ramp so the roar stays audible across the whole fade
+      // instead of dropping below hearing in the first third of a long room-change fade
+      try { if (roar) { var t = ctx.currentTime; roar.gain.cancelScheduledValues(t); roar.gain.setValueAtTime(roar.gain.value, t); roar.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
       setTimeout(function () {
         nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
         try { ctx.close(); } catch (e) {}
@@ -7574,7 +7576,12 @@ document.addEventListener("click", function (e) {
       var f = (typeof fadeSecs === "number") ? fadeSecs : 0.2;
       try {
         if (kettleGain && kettleCtx) {
-          kettleGain.gain.exponentialRampToValueAtTime(0.0001, kettleCtx.currentTime + f);
+          // linear (not exponential) ramp so the hum stays audible across the whole
+          // fade instead of dropping below hearing in the first third of a long fade
+          var t = kettleCtx.currentTime;
+          kettleGain.gain.cancelScheduledValues(t);
+          kettleGain.gain.setValueAtTime(kettleGain.gain.value, t);
+          kettleGain.gain.linearRampToValueAtTime(0.0001, t + f);
         }
         var src = kettleSource, ctxToClose = kettleCtx;
         setTimeout(function () {
@@ -7871,7 +7878,12 @@ document.addEventListener("click", function (e) {
       radioMelodyInterval = null;
       try {
         if (radioGain && radioCtx) {
-          radioGain.gain.exponentialRampToValueAtTime(0.0001, radioCtx.currentTime + f);
+          // linear (not exponential) ramp so the static stays audible across the whole
+          // fade instead of dropping below hearing in the first third of a long fade
+          var t = radioCtx.currentTime;
+          radioGain.gain.cancelScheduledValues(t);
+          radioGain.gain.setValueAtTime(radioGain.gain.value, t);
+          radioGain.gain.linearRampToValueAtTime(0.0001, t + f);
         }
         var src = radioSource, ctxToClose = radioCtx;
         setTimeout(function () {
@@ -8536,7 +8548,9 @@ document.addEventListener("click", function (e) {
   function stopPcFan(fadeSecs) {
     if (pcFanCtx) {
       var f = (typeof fadeSecs === "number") ? fadeSecs : 0.2;
-      try { pcFanCtx._gain.gain.exponentialRampToValueAtTime(0.0001, pcFanCtx.currentTime + f); } catch (e) {}
+      // linear (not exponential) ramp so the fan hum stays audible across the whole fade
+      // instead of dropping below hearing in the first third of a long room-change fade
+      try { var t = pcFanCtx.currentTime; pcFanCtx._gain.gain.cancelScheduledValues(t); pcFanCtx._gain.gain.setValueAtTime(pcFanCtx._gain.gain.value, t); pcFanCtx._gain.gain.linearRampToValueAtTime(0.0001, t + f); } catch (e) {}
       var ctxToClose = pcFanCtx, noiseToStop = pcFanCtx._noise;
       setTimeout(function () {
         if (noiseToStop) { try { noiseToStop.stop(); } catch (e) {} }
@@ -10684,29 +10698,39 @@ document.addEventListener("click", function (e) {
       windSource.start();
     } catch (e) {}
   }
-  function stopWind() {
+  function stopWind(fadeSecs) {
     if (!windCtx) return;
+    var f = (typeof fadeSecs === "number") ? fadeSecs : 0.6;
     try {
       var t = windCtx.currentTime;
       windGain.gain.cancelScheduledValues(t);
       windGain.gain.setValueAtTime(windGain.gain.value, t);
-      windGain.gain.linearRampToValueAtTime(0.0001, t + 0.6);
+      windGain.gain.linearRampToValueAtTime(0.0001, t + f);
     } catch (e) {}
     var nodes = [windSource, windLfo1, windLfo2, windFilterLfo], ctxToClose = windCtx;
     setTimeout(function () {
       nodes.forEach(function (n) { if (n) { try { n.stop(); } catch (e) {} } });
       try { ctxToClose.close(); } catch (e) {}
-    }, 700);
+    }, f * 1000 + 100);
     windCtx = null; windSource = null; windGain = null; windFilter = null;
     windLfoDepth = null; windLfo1 = null; windLfo2 = null; windFilterLfo = null;
     windStormy = false; windWhere = null;
   }
-  function tick() {
+  // (re)evaluate the wind gate and start/stop/re-level accordingly. The self-polling
+  // tick() calls it with no arg (default 0.6s fade); goToStage calls it via
+  // window.__updateWind(ROOM_FADE) so leaving the balcony fades the wind out over the
+  // same slow room-change duration as the other drones, instead of the ~1s poll lag +
+  // snappy default cut.
+  function evaluateWind(stopFade) {
     var want = windWant();
     if (want && (!windCtx || want !== windWhere)) startWind(want);
     else if (want && windCtx && windStormy !== !!window.__balconyStorm) {
       applyIntensity(!!window.__balconyStorm, windCtx.currentTime);
-    } else if (!want && windCtx) stopWind();
+    } else if (!want && windCtx) stopWind(stopFade);
+  }
+  window.__updateWind = evaluateWind;
+  function tick() {
+    evaluateWind();
     setTimeout(tick, 1000);
   }
   tick();
@@ -16220,12 +16244,13 @@ function spawnDustMote(container) {
     if (name === "office" && window.startOfficeCrane) window.startOfficeCrane(); // resume the skyline crane's traverse/drop loop
     // leaving a room fades its ambient drone out over several seconds rather than the
     // snappy device-toggle fade, so the sound slowly recedes as you move to the next room.
-    var ROOM_FADE = 6;
+    var ROOM_FADE = 5;
     if (window.__updatePcFan) window.__updatePcFan(name === "office", ROOM_FADE); // hum only in the office
     if (window.__updateACHum) window.__updateACHum(name === "garden" || name === "balcony", ROOM_FADE); // AC hum only in garden + balcony
     if (window.__updateRadioSound) window.__updateRadioSound(name === "kitchen", ROOM_FADE); // radio audible only in the kitchen
     if (window.__updateKettleHum) window.__updateKettleHum(name === "kitchen", ROOM_FADE); // kettle hum only in the kitchen
     if (window.__updateFireSound) window.__updateFireSound(name === "cuddly", ROOM_FADE); // fire crackle only in the cuddly nook
+    if (window.__updateWind) window.__updateWind(ROOM_FADE); // wind bed (balcony, + through the cuddly door) fades out over the room change too
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(name === "garden"); // birdsong only in the garden, and only by day
     if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(name === "balcony"); // string lights pulse with the beat only on the balcony
     if (window.__updateSongRoomPan) window.__updateSongRoomPan(); // room-fixed rooms settle immediately

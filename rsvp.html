@@ -971,15 +971,32 @@ footer{margin-top:2.6rem}
 #office-monitor.show-behdad #monitor-logo-behdad{opacity:1}
 #office-monitor.show-nowplaying #monitor-logo-nowplaying{opacity:1}
 #office-monitor.show-saver #monitor-saver{opacity:1}
-/* the resting caps "home" screen carries a small PLAY button (starts a random garden
-   song). It's the topmost screen child, so gate ITS OWN hit-testing to the caps state
-   and hide it whenever the equalizer/screensaver takes over — show-nowplaying can ride
-   on top of show-caps as a class, so re-hide there (later rule wins the tie). No need
-   to touch the other boot-logos' pointer-events: monitor clicks still delegate up. */
-#monitor-play-btn{opacity:0; visibility:hidden; pointer-events:none; cursor:pointer; transition:opacity .4s ease}
-#office-monitor.show-caps #monitor-play-btn{opacity:1; visibility:visible; pointer-events:auto}
-#office-monitor.show-nowplaying #monitor-play-btn, #office-monitor.show-saver #monitor-play-btn{opacity:0; visibility:hidden; pointer-events:none}
-#monitor-play-btn:hover circle{fill:#7a2f3d}
+/* the caps "home" screen is a little desktop: a dock of app launchers (built by JS from
+   DESKTOP_APPS). It's the topmost screen child, so gate ITS OWN hit-testing to the caps
+   state and hide it whenever an app or the screensaver owns the screen — show-nowplaying
+   can ride on top of show-caps as a class, so re-hide there (later rule wins the tie).
+   No need to touch the other boot-logos' pointer-events: monitor clicks still delegate up. */
+#monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .4s ease}
+#office-monitor.show-caps #monitor-desktop-dock{opacity:1; visibility:visible; pointer-events:auto}
+#office-monitor.show-nowplaying #monitor-desktop-dock, #office-monitor.show-saver #monitor-desktop-dock, #office-monitor.show-terminal #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none}
+.dock-app{cursor:pointer}
+.dock-tile{fill:rgba(255,253,248,0.78); stroke:rgba(69,58,49,0.28); stroke-width:0.7; transition:fill .15s ease}
+.dock-app:hover .dock-tile{fill:#fffdf8}
+.dock-glyph{font-family:"Source Serif 4",serif; font-size:7px}
+.dock-label{fill:#716455; font-family:monospace; font-size:3.8px; letter-spacing:0.1px}
+/* terminal app: a tiny JS REPL over the screen */
+#monitor-terminal{opacity:0; pointer-events:none; transition:opacity .25s ease}
+#office-monitor.show-terminal #monitor-terminal{opacity:1; pointer-events:auto}
+#monitor-term-close{cursor:pointer}
+#monitor-term-close:hover .seg-hover{opacity:.55}
+.term-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#0c1014; padding:2.5px 3px 2px; font-family:ui-monospace,Menlo,monospace; font-size:4.6px; line-height:1.4; color:#cfe3cf}
+.term-out{flex:1; overflow-y:auto; white-space:pre-wrap; word-break:break-word; scrollbar-width:none}
+.term-out::-webkit-scrollbar{display:none}
+.term-dim{color:#8fa98f}
+.term-err{color:#e08a8a}
+.term-row{display:flex; align-items:center; gap:1.5px}
+.term-ps{color:#8fd070}
+.term-in{flex:1; min-width:0; background:transparent; border:none; outline:none; padding:0; color:inherit; font:inherit; caret-color:#8fd070}
 /* the now-playing screen carries a pause/play toggle: pause bars while the song plays,
    a play triangle when it's paused (JS adds .paused). Shown only over show-nowplaying. */
 #monitor-pause-btn{opacity:0; visibility:hidden; pointer-events:none; cursor:pointer; transition:opacity .4s ease}
@@ -1022,7 +1039,8 @@ footer{margin-top:2.6rem}
 #office-monitor.photobooth #monitor-photobooth{opacity:1; pointer-events:auto}
 /* while live, the booth owns the whole screen — hide every boot/site/transport layer under it */
 #office-monitor.photobooth .boot-logo,
-#office-monitor.photobooth #monitor-play-btn,
+#office-monitor.photobooth #monitor-desktop-dock,
+#office-monitor.photobooth #monitor-terminal,
 #office-monitor.photobooth #monitor-pause-btn,
 #office-monitor.photobooth #monitor-volume-btn,
 #office-monitor.photobooth #monitor-prev-btn,
@@ -5213,7 +5231,7 @@ section{margin:1.9rem 0}
 <circle cx="316" cy="175" r="4.5" fill="#4285f4"/>
 </g>
 <g id="monitor-logo-caps" class="boot-logo">
-<g transform="translate(273.5,149.5) scale(0.5)"><use href="#cap-pink"/><use href="#cap-blue"/></g>
+<g transform="translate(256,161) scale(0.24)"><use href="#cap-pink"/><use href="#cap-blue"/></g>
 </g>
 <g id="monitor-saver" class="boot-logo">
 <foreignObject id="monitor-saver-fractal" x="254" y="154" width="124" height="42">
@@ -5291,12 +5309,9 @@ section{margin:1.9rem 0}
 <rect class="eq-bar" x="310" y="165" width="11" height="29" rx="2" fill="#6f94bd" style="animation-delay:.4s"/>
 <rect class="eq-bar" x="323" y="165" width="11" height="29" rx="2" fill="#9c6bb8" style="animation-delay:.25s"/>
 </g>
-<!-- resting-caps PLAY button: last child = topmost, so it sits above every screen
-     state; CSS gates its visibility+hit-testing to show-caps (see #monitor-play-btn) -->
-<g id="monitor-play-btn">
-<circle cx="367" cy="185.5" r="8" fill="#8e3a4a"/>
-<path d="M364.09 180.55 L364.09 190.45 L371.95 185.5 Z" fill="#f8f5ec"/>
-</g>
+<!-- desktop dock: app launchers on the caps home screen, built by JS from DESKTOP_APPS;
+     last child = topmost, so it sits above every screen state (CSS gates it to show-caps) -->
+<g id="monitor-desktop-dock"></g>
 <!-- now-playing player controls, right side: a clean aligned stack of two equal-width
      beveled pills (x335-377) — volume on top (the big control, the whole pill is its
      hit target), the segmented prev/play-pause/next transport below — with a small
@@ -5353,6 +5368,22 @@ section{margin:1.9rem 0}
 <rect x="369.75" y="160.93" width="1.37" height="9.03" fill="#f8f5ec"/>
 <path d="M369.4 165.5 L366.08 160.93 L366.08 170.07 Z" fill="#f8f5ec"/>
 <path d="M366.08 165.5 L362.88 160.93 L362.88 170.07 Z" fill="#f8f5ec"/>
+</g>
+</g>
+<!-- TERMINAL app: a tiny JS REPL in a foreignObject over the screen, with the same
+     mini close pill as the player -->
+<g id="monitor-terminal">
+<foreignObject x="254" y="154" width="124" height="42">
+<div xmlns="http://www.w3.org/1999/xhtml" id="monitor-term-wrap" class="term-wrap">
+<div id="monitor-term-out" class="term-out"></div>
+<div class="term-row"><span class="term-ps">&#10095;</span><input id="monitor-term-in" class="term-in" autocomplete="off" autocapitalize="off" spellcheck="false"/></div>
+</div>
+</foreignObject>
+<g id="monitor-term-close">
+<rect x="367" y="156.5" width="10" height="11" rx="5" fill="#8e3a4a" stroke="#6e2836" stroke-width="0.9"/>
+<rect x="368.2" y="157.6" width="7.6" height="4.2" rx="2.1" fill="#ffffff" opacity="0.16"/>
+<rect class="seg-hover" x="367" y="156.5" width="10" height="11" rx="5" fill="#5f2230" opacity="0"/>
+<path d="M369.9 159.9 L374.1 164.1 M374.1 159.9 L369.9 164.1" stroke="#f8f5ec" stroke-width="1.1" stroke-linecap="round"/>
 </g>
 </g>
 <!-- LOFT PHOTOBOOTH: the visitor's own camera, live inside the monitor. Shown only while a
@@ -6429,7 +6460,12 @@ var T = {
     pb_fx_glow: "Loft glow",
     pb_fx_psy: "Psychedelic",
     pb_fx_kaleido: "Kaleidoscope",
-    pb_strip_caption: "loft photobooth"
+    pb_strip_caption: "loft photobooth",
+    app_music: "music",
+    app_photobooth: "photobooth",
+    app_terminal: "terminal",
+    term_welcome: "loft terminal \u2014 real JavaScript, running right here in your page. try: help",
+    term_help: "commands: help \u00b7 clear \u00b7 any JavaScript (try 2+2, document.title, loft.couple, loft.weddings)"
   },
   cs: {
     hunt_title: "Den v podkroví",
@@ -6545,7 +6581,12 @@ var T = {
     pb_fx_glow: "Zář loftu",
     pb_fx_psy: "Psychedelie",
     pb_fx_kaleido: "Kaleidoskop",
-    pb_strip_caption: "fotokoutek v loftu"
+    pb_strip_caption: "fotokoutek v loftu",
+    app_music: "hudba",
+    app_photobooth: "fotokoutek",
+    app_terminal: "termin\u00e1l",
+    term_welcome: "loftov\u00fd termin\u00e1l \u2014 opravdov\u00fd JavaScript, b\u011b\u017e\u00ed p\u0159\u00edmo tady ve str\u00e1nce. zkuste: help",
+    term_help: "p\u0159\u00edkazy: help \u00b7 clear \u00b7 jak\u00fdkoli JavaScript (zkuste 2+2, document.title, loft.couple, loft.weddings)"
   }
 };
 function setLang(l) {
@@ -9019,6 +9060,7 @@ document.addEventListener("click", function (e) {
     saverTimer = setTimeout(startSaver, ms || 8000);
   }
   function startSaver() {
+    if (monitor.classList.contains("show-terminal")) { scheduleSaver(30000); return; } // never over someone typing
     // a visited site (harfbuzz/behdad) idles back to the caps "home" before the saver
     if (monitor.classList.contains("show-harfbuzz") || monitor.classList.contains("show-behdad")) {
       monitor.classList.remove("show-harfbuzz", "show-behdad");
@@ -9118,7 +9160,7 @@ document.addEventListener("click", function (e) {
     bootTimers.forEach(clearTimeout);
     bootTimers = [];
     stopSaver();
-    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying");
+    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying", "show-terminal");
   }
   // The monitor only lights up when the PC is on; it then boots Fedora →
   // Chrome → the caps, which stay up.
@@ -9966,37 +10008,152 @@ document.addEventListener("click", function (e) {
   // monitor to the now-playing equalizer. SVG nodes get no .click(), so wire real
   // click + keyboard handlers, and stop the event reaching the monitor's own click
   // handler (which would otherwise "open" marketa.behdad.org in a new tab).
-  var playBtn = document.getElementById("monitor-play-btn");
-  if (playBtn) {
-    function monitorPlayRandom() {
-      // only meaningful on the bare caps page (CSS already hides/inert-ifies it
-      // elsewhere; this guards a stray keyboard/dispatched event)
-      if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-nowplaying")) return;
-      var idle = songAudios.filter(function (a) { return a && a.paused; });
-      // one's already going — don't stack a second song; instead re-open the player view
-      // (the close x above hides it without stopping the music, so the home play button
-      // doubles as the way back in)
-      if (!idle.length || idle.length !== songAudios.length) { updateNowPlaying(); return; }
-      var pick = idle[Math.floor(Math.random() * idle.length)];
-      try {
-        // app-owned level (monitor speaker button) — reapply it before every play, same
-        // as monitorSkip/the garden instrument tap below. Without this, a song primed
-        // silently by the cinematic's primeCinematicAudio (volume=0, self-healed only by
-        // actually reaching the garden-guitar beat) stays silent here if "Take over"
-        // interrupts the show before that beat fires — plays with no sound, looks
-        // unmuted, "fixed" only by nudging the volume button (which reapplies it too).
-        pick.volume = window.__songVolume ? window.__songVolume() : 0.5;
-        // hook up the monitor equalizer's analyser here, inside the gesture, so
-        // routing the song through Web Audio doesn't stall its playback
-        if (window.__captureSongAudio) window.__captureSongAudio(pick);
-        var p = pick.play(); if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (monitor play button) for " + pick.id + ":", e); });
-      } catch (e) {}
-    }
-    playBtn.addEventListener("click", function (e) { e.stopPropagation(); monitorPlayRandom(); });
-    playBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); }); // don't let a double-tap swap the monitor away
-    playBtn.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); monitorPlayRandom(); }
+  function monitorPlayRandom() {
+    // only meaningful on the bare caps desktop (CSS already hides/inert-ifies the dock
+    // elsewhere; this guards a stray dispatched event)
+    if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-nowplaying")) return;
+    var idle = songAudios.filter(function (a) { return a && a.paused; });
+    // one's already going — don't stack a second song; re-open the player view instead
+    // (the close x hides it without stopping the music, so the music app doubles as
+    // the way back in)
+    if (!idle.length || idle.length !== songAudios.length) { updateNowPlaying(); return; }
+    var pick = idle[Math.floor(Math.random() * idle.length)];
+    try {
+      // app-owned level (monitor speaker button) — reapply it before every play, same
+      // as monitorSkip/the garden instrument tap below. Without this, a song primed
+      // silently by the cinematic's primeCinematicAudio (volume=0, self-healed only by
+      // actually reaching the garden-guitar beat) stays silent here if "Take over"
+      // interrupts the show before that beat fires — plays with no sound, looks
+      // unmuted, "fixed" only by nudging the volume button (which reapplies it too).
+      pick.volume = window.__songVolume ? window.__songVolume() : 0.5;
+      // hook up the monitor equalizer's analyser here, inside the gesture, so
+      // routing the song through Web Audio doesn't stall its playback
+      if (window.__captureSongAudio) window.__captureSongAudio(pick);
+      var p = pick.play(); if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (music app) for " + pick.id + ":", e); });
+    } catch (e) {}
+  }
+  // ── DESKTOP DOCK ─────────────────────────────────────────────────────────────────
+  // The caps home screen is a desktop: a dock of app launchers built from this array,
+  // so a future app is one more entry. Icons are SVG text glyphs; labels carry data-i
+  // keys so setLang localizes them like all other copy.
+  var DESKTOP_APPS = [
+    { id: "music", labelKey: "app_music", glyph: "\u266A", color: "#8e3a4a", glyphSize: "9.5", open: function () { monitorPlayRandom(); } },
+    { id: "photobooth", labelKey: "app_photobooth", glyph: "\uD83D\uDCF7", open: function () {
+      // same entry as tapping the bezel webcam (its handler owns the whole flow)
+      var wc = document.getElementById("office-webcam");
+      if (wc) wc.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    } },
+    { id: "terminal", labelKey: "app_terminal", glyph: "\u276F_", color: "#4a6b94", open: function () { openTerminal(); } }
+  ];
+  var dock = document.getElementById("monitor-desktop-dock");
+  if (dock) {
+    var SVGNS = "http://www.w3.org/2000/svg";
+    DESKTOP_APPS.forEach(function (app, i) {
+      var cx = 337 + (i - (DESKTOP_APPS.length - 1) / 2) * 30;
+      var g = document.createElementNS(SVGNS, "g");
+      g.setAttribute("class", "dock-app");
+      var tile = document.createElementNS(SVGNS, "rect");
+      tile.setAttribute("class", "dock-tile");
+      tile.setAttribute("x", cx - 10); tile.setAttribute("y", "170");
+      tile.setAttribute("width", "20"); tile.setAttribute("height", "14");
+      tile.setAttribute("rx", "3");
+      g.appendChild(tile);
+      var glyph = document.createElementNS(SVGNS, "text");
+      glyph.setAttribute("class", "dock-glyph");
+      glyph.setAttribute("x", cx); glyph.setAttribute("y", "179.8");
+      glyph.setAttribute("text-anchor", "middle");
+      glyph.setAttribute("fill", app.color || "#453a31");
+      if (app.glyphSize) glyph.setAttribute("font-size", app.glyphSize);
+      glyph.textContent = app.glyph;
+      g.appendChild(glyph);
+      var label = document.createElementNS(SVGNS, "text");
+      label.setAttribute("class", "dock-label");
+      label.setAttribute("x", cx); label.setAttribute("y", "190.5");
+      label.setAttribute("text-anchor", "middle");
+      label.setAttribute("data-i", app.labelKey);
+      // setLang has already run by the time the dock is built — paint the current
+      // language now; data-i keeps future toggles in sync
+      var lang = document.documentElement.lang;
+      label.textContent = (T[lang] && T[lang][app.labelKey]) || T.en[app.labelKey] || "";
+      g.appendChild(label);
+      g.addEventListener("click", function (e) { e.stopPropagation(); app.open(); });
+      g.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+      dock.appendChild(g);
     });
+  }
+  // ── TERMINAL APP ─────────────────────────────────────────────────────────────────
+  // A real (tiny) JavaScript REPL: input line + scrollback, evaluated with indirect
+  // eval in global scope — exactly the blast radius of the visitor's own devtools
+  // console, nothing more. help/clear are intercepted; everything else is JS.
+  var termOut = document.getElementById("monitor-term-out");
+  var termIn = document.getElementById("monitor-term-in");
+  var termWrap = document.getElementById("monitor-term-wrap");
+  var termCloseBtn = document.getElementById("monitor-term-close");
+  var termHist = [], termHistIdx = 0, termWelcomed = false;
+  if (!window.loft) window.loft = {
+    couple: "mark\u00e9ta \u221e behdad",
+    weddings: ["2027-05-01 \u00b7 Edmonton", "2027-07-10 \u00b7 Praha"],
+    site: "https://marketa.behdad.org/"
+  };
+  function termT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
+  function termPrint(txt, cls) {
+    if (!termOut) return;
+    var d = document.createElement("div");
+    if (cls) d.className = cls;
+    d.textContent = txt;
+    termOut.appendChild(d);
+    while (termOut.childNodes.length > 150) termOut.removeChild(termOut.firstChild);
+    termOut.scrollTop = termOut.scrollHeight;
+  }
+  function openTerminal() {
+    if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-terminal")) return;
+    stopSaver();
+    clearTimeout(saverTimer); saverTimer = null; // no screensaver over someone typing
+    monitor.classList.add("show-terminal");
+    if (!termWelcomed) { termWelcomed = true; termPrint(termT("term_welcome"), "term-dim"); }
+    if (termIn) setTimeout(function () { try { termIn.focus(); } catch (e) {} }, 60);
+    playLaptopClickSound("office-monitor");
+  }
+  function closeTerminal() {
+    if (!monitor.classList.contains("show-terminal")) return;
+    monitor.classList.remove("show-terminal");
+    if (termIn) { try { termIn.blur(); } catch (e) {} }
+    scheduleSaver();
+  }
+  window.__closeMonitorTerminal = closeTerminal; // other monitor apps close the REPL before taking the screen
+  function termRun(cmd) {
+    termPrint("\u276F " + cmd);
+    var c = cmd.trim();
+    if (!c) return;
+    termHist.push(cmd); termHistIdx = termHist.length;
+    if (/^help(\(\))?$/.test(c)) { termPrint(termT("term_help"), "term-dim"); return; }
+    if (/^clear(\(\))?$/.test(c)) { if (termOut) termOut.innerHTML = ""; return; }
+    var out;
+    try {
+      out = window.eval(c); // indirect eval -> global scope, so var/function persist across commands
+      if (out === undefined) out = "undefined";
+      else if (typeof out === "object") { try { out = JSON.stringify(out); } catch (e2) { out = String(out); } }
+      else out = String(out);
+      termPrint(out);
+    } catch (e) {
+      termPrint(e && e.name ? e.name + ": " + e.message : String(e), "term-err");
+    }
+  }
+  if (termIn) {
+    termIn.addEventListener("keydown", function (e) {
+      e.stopPropagation(); // game shortcuts don't fire while typing
+      if (e.key === "Enter") { var v = termIn.value; termIn.value = ""; termRun(v); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); if (termHistIdx > 0) { termHistIdx--; termIn.value = termHist[termHistIdx] || ""; } }
+      else if (e.key === "ArrowDown") { e.preventDefault(); if (termHistIdx < termHist.length) { termHistIdx++; termIn.value = termHist[termHistIdx] || ""; } }
+    });
+  }
+  if (termWrap) {
+    termWrap.addEventListener("click", function (e) { e.stopPropagation(); if (termIn) { try { termIn.focus(); } catch (err) {} } });
+    termWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+  if (termCloseBtn) {
+    termCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeTerminal(); playLaptopClickSound("office-monitor"); });
+    termCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   // The now-playing screen's pause/play toggle: pauses the current song, or resumes it
   // if paused. play()/pause() fire the listeners above, which repaint the button + bars.
@@ -10207,9 +10364,8 @@ document.addEventListener("click", function (e) {
     });
     npCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
-  // Tapping the scrolling title opens the performing artist's site — the one remaining
-  // link-out on the player (the whole-screen click used to do this; owner asked for the
-  // marquee to be the only target).
+  // Tapping the scrolling title opens the performing artist's site — the player's only
+  // link-out.
   var npMarqueeHit = document.getElementById("monitor-np-marquee-hit");
   if (npMarqueeHit) {
     npMarqueeHit.addEventListener("click", function (e) {
@@ -10237,6 +10393,7 @@ document.addEventListener("click", function (e) {
   window.navigateMonitor = function (siteKey, url) {
     if (!monitor.classList.contains("here") || !pcTower || !pcTower.classList.contains("on")) return false;
     clearNavRevert(); // a fresh navigation supersedes any pending revert
+    closeTerminal();
     clearBoot();
     monitor.classList.remove("show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying"); // one thing at a time
     monitor.classList.add("screen-on", "show-" + siteKey);
@@ -10311,9 +10468,9 @@ document.addEventListener("click", function (e) {
     monClickTimer = setTimeout(function () {
       if (monitorShowingSite()) {
         if (monitor.classList.contains("show-caps")) scheduleSaver();
-        // the visited wall-sign sites (harfbuzz/behdad) open theirs on a screen click;
-        // the caps home screen links nowhere anymore (owner call: it's a desktop now,
-        // not a browser), and the artist link-out moved to the marquee's own hit rect
+        // a screen click opens the visited wall-sign site (harfbuzz/behdad); the caps
+        // home screen is a desktop, not a browser — it links nowhere. The artist
+        // link-out lives on the marquee's own hit rect.
         var linkOut = monitor.classList.contains("show-caps") ? null : monitorUrl;
         if (linkOut) window.open(linkOut, "_blank");
         else playLaptopClickSound("office-monitor");

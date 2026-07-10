@@ -8651,13 +8651,17 @@ document.addEventListener("click", function (e) {
           bars[i].style.transform = "scaleY(" + (0.14 + 0.76 * (1 - Math.exp(-v * 1.4))).toFixed(3) + ")";
         }
       } else {
-        // no analyser: pulse on the beat, phase-locked to the song's real position
+        // no analyser: pulse on the beat, phase-locked to the song's real position. Scale the
+        // excursion to the selected monitor volume so the fake bars track the level, and go flat
+        // (stop) when muted — the real analyser bars get this for free from the audio itself.
+        var vol = window.__songVolume ? window.__songVolume() : 0.5;
         var tt = (audioEl && !audioEl.paused) ? audioEl.currentTime : 0;
         var frac = (tt % period) / period, kick = Math.exp(-frac * 5);
         for (var k = 0; k < n; k++) {
           var w = 1 - k / n, flutter = 0.5 + 0.5 * Math.sin(tt * (6 + k * 3) + k);
           var vv = 0.16 + kick * (0.55 * w + 0.2) + 0.2 * flutter * (0.4 + 0.6 * (k / n));
-          bars[k].style.transform = "scaleY(" + Math.max(0.14, Math.min(1.2, vv)) + ")";
+          var scaled = 0.14 + (Math.min(1.2, vv) - 0.14) * vol; // 0 (muted) → flat idle
+          bars[k].style.transform = "scaleY(" + Math.max(0.14, scaled) + ")";
         }
       }
     }
@@ -9060,7 +9064,9 @@ document.addEventListener("click", function (e) {
   // the game scene) and #hunt-volume-btn (real HTML button, visible from any room). Both
   // carry class "song-volume-btn" so this updates them together.
   function updateVolIcon() {
-    var btns = document.querySelectorAll(".song-volume-btn");
+    // include the monitor's own SVG speaker button (id, not class — it can't carry
+    // .song-volume-btn, whose absolute-positioning CSS would hide the in-scene button)
+    var btns = document.querySelectorAll(".song-volume-btn, #monitor-volume-btn");
     for (var bi = 0; bi < btns.length; bi++) {
       var vb = btns[bi];
       var waves = vb.querySelectorAll(".vol-wave");

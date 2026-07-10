@@ -269,6 +269,7 @@ var GATES_HARNESS = [
   "    __updateGardenBirdsong: ['garden']", // discrete chirps: room boolean only, no fade arg
   "  };",
   "  var FADED = ['__updatePcFan', '__updateACHum', '__updateRadioSound', '__updateKettleHum', '__updateFireSound'];",
+  "  var ROOM_NAME_GATES = ['__updateACHum'];", // AC gets the room NAME (to pick its per-room pan), the rest a boolean
   "  var GATES = Object.keys(OWNERS);",
   "  async function run() {",
   "    await sleep(900);",
@@ -298,10 +299,12 @@ var GATES_HARNESS = [
   "      window.goToStage(room);",
   "      GATES.forEach(function (g) {",
   "        if (!originals[g]) return;", // existence assert above already covers it
+  "        var usesName = ROOM_NAME_GATES.indexOf(g) !== -1;",
   "        var expected = OWNERS[g].indexOf(room) !== -1;",
-  "        var roomCalls = (calls[g] || []).filter(function (a) { return typeof a[0] === 'boolean'; });",
-  "        if (!(roomCalls.length > 0 && roomCalls.every(function (a) { return a[0] === expected; }))) {",
-  "          (boolBad[g] = boolBad[g] || []).push(room + ' wanted ' + expected + ', got ' + (roomCalls.length ? JSON.stringify(roomCalls) : 'no boolean-arg call'));",
+  "        var wanted = usesName ? room : expected;", // AC gets the room NAME; the rest a boolean
+  "        var roomCalls = (calls[g] || []).filter(function (a) { return typeof a[0] === (usesName ? 'string' : 'boolean'); });",
+  "        if (!(roomCalls.length > 0 && roomCalls.every(function (a) { return a[0] === wanted; }))) {",
+  "          (boolBad[g] = boolBad[g] || []).push(room + ' wanted ' + wanted + ', got ' + (roomCalls.length ? JSON.stringify(roomCalls) : 'no room-arg call'));",
   "        }",
   "        if (FADED.indexOf(g) !== -1 && !(roomCalls.length > 0 && roomCalls.every(function (a) { return typeof a[1] === 'number' && isFinite(a[1]) && a[1] > 0; }))) {",
   "          (fadeBad[g] = fadeBad[g] || []).push(room + ': ' + JSON.stringify(roomCalls));",
@@ -311,7 +314,7 @@ var GATES_HARNESS = [
   "    }",
   "    GATES.forEach(function (g) {",
   "      if (!originals[g]) return;",
-  "      ok('gates: goToStage hands ' + g + ' its room boolean in every room', !boolBad[g], (boolBad[g] || []).join(' | '));",
+  "      ok('gates: goToStage hands ' + g + ' its correct room arg in every room', !boolBad[g], (boolBad[g] || []).join(' | '));",
   "      if (FADED.indexOf(g) !== -1) {",
   "        ok('gates: goToStage passes ' + g + ' a positive fade on every room change', !fadeBad[g], (fadeBad[g] || []).join(' | '));",
   "      }",

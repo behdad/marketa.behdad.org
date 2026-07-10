@@ -10572,7 +10572,7 @@ document.addEventListener("click", function (e) {
         acGain.gain.exponentialRampToValueAtTime(0.045, acCtx.currentTime + 0.3);
         acSource.connect(filter);
         filter.connect(acGain);
-        acGain.connect(pannedOut(acCtx, "garden-minisplit"));
+        acGain.connect(pannedOut(acCtx, AC_ROOM_PAN[acRoom] != null ? AC_ROOM_PAN[acRoom] : 0));
         acSource.start();
       } catch (e) {}
     }
@@ -10598,10 +10598,16 @@ document.addEventListener("click", function (e) {
       acCtx = null;
     }
     // the hum is only audible from the garden (indoor unit) and balcony (outdoor unit),
-    // not the other rooms — mirrors __updatePcFan's room gate.
-    var acInAudibleRoom = false;
-    window.__updateACHum = function (inRoom, fadeSecs) {
-      if (typeof inRoom === "boolean") acInAudibleRoom = inRoom;
+    // not the other rooms — mirrors __updatePcFan's room gate. Panned to a fixed spot
+    // per room (its unit's side) so it settles instantly, instead of reading the unit's
+    // mid-scroll on-screen position — same idea as the concert song's SONG_ROOM_PAN.
+    var acInAudibleRoom = false, acRoom = "garden";
+    var AC_ROOM_PAN = { garden: -0.7, balcony: -0.45 }; // both units sit left of centre
+    window.__updateACHum = function (roomName, fadeSecs) {
+      if (typeof roomName === "string") {
+        acInAudibleRoom = (roomName === "garden" || roomName === "balcony");
+        if (acInAudibleRoom) acRoom = roomName; // remember which unit to pan toward
+      }
       var wantHum = acOn && acInAudibleRoom && !document.hidden;
       if (wantHum && !acCtx) startACHum();
       else if (!wantHum && acCtx) stopACHum(fadeSecs);
@@ -16409,7 +16415,7 @@ function spawnDustMote(container) {
     // snappy device-toggle fade, so the sound slowly recedes as you move to the next room.
     var ROOM_FADE = 3;
     if (window.__updatePcFan) window.__updatePcFan(name === "office", ROOM_FADE); // hum only in the office
-    if (window.__updateACHum) window.__updateACHum(name === "garden" || name === "balcony", ROOM_FADE); // AC hum only in garden + balcony
+    if (window.__updateACHum) window.__updateACHum(name, ROOM_FADE); // AC hum only in garden + balcony, panned to that room's unit
     if (window.__updateRadioSound) window.__updateRadioSound(name === "kitchen", ROOM_FADE); // radio audible only in the kitchen
     if (window.__updateKettleHum) window.__updateKettleHum(name === "kitchen", ROOM_FADE); // kettle hum only in the kitchen
     if (window.__updateFireSound) window.__updateFireSound(name === "cuddly", ROOM_FADE); // fire crackle only in the cuddly nook

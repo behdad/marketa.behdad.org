@@ -7742,8 +7742,7 @@ document.addEventListener("click", function (e) {
       if (laptopReduce) {
         laptop.classList.remove("calling", "connecting");
         laptop.classList.add("connected");
-        playILoveYouSound("office-laptop");
-        laptopUpdateTimers.push(setTimeout(function () { playCallLaughSound(); }, 1400));
+        playCallLaughSound();
         startCallAmbient();
         return;
       }
@@ -7757,15 +7756,20 @@ document.addEventListener("click", function (e) {
         laptop.classList.remove("connecting");
         laptop.classList.add("connected");
         playBootChimeSound();
-        playILoveYouSound("office-laptop"); // the answer across the ocean: a synth "I love you"
-        laptopUpdateTimers.push(setTimeout(function () { playCallLaughSound(); }, 1400)); // then the giggle, after it lands
+        playCallLaughSound(); // the couple giggling across the ocean
         startCallAmbient(); // and the ongoing static/wind/giggling bed while it lasts
       }, 3400));
     }
     function endCall() {
       clearLaptopTimers();
+      var wasConnected = laptop.classList.contains("connected");
       stopCallAmbient();
-      playCallHangupSound();
+      if (wasConnected) {
+        playILoveYouSound("office-laptop"); // a goodbye "I love you" just before the line drops
+        laptopUpdateTimers.push(setTimeout(playCallHangupSound, 1300));
+      } else {
+        playCallHangupSound(); // hung up mid-ring: just the click, no goodbye
+      }
       laptop.classList.remove("calling", "connecting", "connected");
       if (laptop.classList.contains("open")) scheduleLaptopSaver(); // back to idle
     }
@@ -13708,13 +13712,13 @@ function playILoveYouSound(panId) {
     [-6, 6].forEach(function (dt) {
       var osc = ctx.createOscillator();
       osc.type = "sawtooth"; osc.detune.value = dt;
-      // f0: I -> love(peak) -> you(fall), a gentle spoken contour
-      osc.frequency.setValueAtTime(228, t0);
-      osc.frequency.linearRampToValueAtTime(240, t0 + 0.24);
-      osc.frequency.linearRampToValueAtTime(258, t0 + 0.5);
-      osc.frequency.linearRampToValueAtTime(236, t0 + 0.66);
-      osc.frequency.linearRampToValueAtTime(250, t0 + 0.8);
-      osc.frequency.linearRampToValueAtTime(196, t0 + 1.1);
+      // f0: I -> love(peak) -> you(fall), a gentle spoken contour (raised for a feminine voice)
+      osc.frequency.setValueAtTime(276, t0);
+      osc.frequency.linearRampToValueAtTime(290, t0 + 0.24);
+      osc.frequency.linearRampToValueAtTime(312, t0 + 0.5);
+      osc.frequency.linearRampToValueAtTime(286, t0 + 0.66);
+      osc.frequency.linearRampToValueAtTime(300, t0 + 0.8);
+      osc.frequency.linearRampToValueAtTime(240, t0 + 1.1);
       osc.connect(source);
       osc.start(t0); osc.stop(t0 + 1.16);
     });
@@ -13734,9 +13738,9 @@ function playILoveYouSound(panId) {
     master.connect(out);
     // three parallel bandpass formants gliding through the words
     [
-      { q: 7,  g: 1.0,  pts: [[0,730],[0.24,300],[0.34,360],[0.5,640],[0.66,600],[0.8,300],[1.08,300]] },     // F1
-      { q: 9,  g: 0.5,  pts: [[0,1100],[0.24,2200],[0.34,1200],[0.5,1190],[0.66,1300],[0.8,2000],[1.08,870]] }, // F2
-      { q: 11, g: 0.16, pts: [[0,2550],[0.24,2900],[0.5,2500],[1.08,2400]] }                                   // F3
+      { q: 7,  g: 1.0,  pts: [[0,840],[0.24,345],[0.34,415],[0.5,735],[0.66,690],[0.8,345],[1.08,345]] },      // F1 (feminine: higher formants)
+      { q: 9,  g: 0.5,  pts: [[0,1265],[0.24,2530],[0.34,1380],[0.5,1370],[0.66,1495],[0.8,2300],[1.08,1000]] }, // F2
+      { q: 11, g: 0.16, pts: [[0,2930],[0.24,3335],[0.5,2875],[1.08,2760]] }                                    // F3
     ].forEach(function (f) {
       var bp = ctx.createBiquadFilter();
       bp.type = "bandpass"; bp.Q.value = f.q;

@@ -8640,15 +8640,18 @@ document.addEventListener("click", function (e) {
     function driveBars(bars, bands) {
       var n = bars.length;
       if (analyser && data) {
+        // getByteFrequencyData is already dB-compressed, which squashes both the song's
+        // dynamics AND the (linear) volume changes. So: subtract a noise floor and EXPAND
+        // for visible fluctuation; scale by the app-owned volume so the three levels read
+        // clearly different (flat when muted); then a soft-knee that approaches — but never
+        // reaches — the 0.9 ceiling, so no bar clamps flat and they clear the marquee.
+        var rvol = window.__songVolume ? window.__songVolume() : 0.5;
         for (var i = 0; i < n; i++) {
           var band = bands[i], sum = 0, cnt = 0;
           for (var j = band.lo; j < band.hi && j < data.length; j++) { sum += data[j]; cnt++; }
-          var v = (cnt ? (sum / cnt) / 255 : 0) * band.gain; // log-binned level, fixed HF tilt applied
-          // soft-knee response: approaches — but never reaches — the 0.9 ceiling, so bars never
-          // clamp flat at the top. Keeps them clear of the marquee (text y157-166, bars grow up
-          // from y194) and lets the real spectrum show, so a bass boost reads as one/two tall
-          // low bars instead of four maxed ones. (Real-analyser branch only; the synthetic one below is untouched.)
-          bars[i].style.transform = "scaleY(" + (0.14 + 0.76 * (1 - Math.exp(-v * 1.4))).toFixed(3) + ")";
+          var raw = cnt ? (sum / cnt) / 255 : 0;                          // dB-compressed level, 0-1
+          var e = Math.max(0, raw * band.gain - 0.1) * 3.1 * rvol;        // floor-subtract, expand, volume-scale
+          bars[i].style.transform = "scaleY(" + (0.14 + 0.76 * (1 - Math.exp(-e))).toFixed(3) + ")";
         }
       } else {
         // no analyser: pulse on the beat, phase-locked to the song's real position. Scale the

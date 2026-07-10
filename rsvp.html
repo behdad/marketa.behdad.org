@@ -10395,12 +10395,12 @@ document.addEventListener("click", function (e) {
     site: "https://marketa.behdad.org/"
   };
   function termT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
+  var termLastCmd = "";
   function updateConsoleTile() {
-    // once the console's been used, its dock tile wears the last line's first three chars
+    // once the console's been used, its dock tile wears the last command's first three chars
     var glyph = dockGlyphEls.terminal;
     if (!glyph) return;
-    var last = termOut && termOut.lastChild ? String(termOut.lastChild.textContent || "").trim() : "";
-    glyph.textContent = last ? last.slice(0, 3) : "\u276F_";
+    glyph.textContent = termLastCmd ? termLastCmd.slice(0, 3) : "\u276F_";
   }
   function termPrint(txt, cls) {
     if (!termOut) return;
@@ -10410,7 +10410,6 @@ document.addEventListener("click", function (e) {
     termOut.appendChild(d);
     while (termOut.childNodes.length > 150) termOut.removeChild(termOut.firstChild);
     termOut.scrollTop = termOut.scrollHeight;
-    updateConsoleTile();
   }
   function openTerminal() {
     if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-terminal")) return;
@@ -10433,8 +10432,10 @@ document.addEventListener("click", function (e) {
     var c = cmd.trim();
     if (!c) return;
     termHist.push(cmd); termHistIdx = termHist.length;
+    termLastCmd = c;
+    updateConsoleTile();
     if (/^help(\(\))?$/.test(c)) { termPrint(termT("term_help"), "term-dim"); return; }
-    if (/^clear(\(\))?$/.test(c)) { if (termOut) termOut.innerHTML = ""; updateConsoleTile(); return; }
+    if (/^clear(\(\))?$/.test(c)) { if (termOut) termOut.innerHTML = ""; termLastCmd = ""; updateConsoleTile(); return; }
     var out;
     try {
       out = window.eval(c); // indirect eval -> global scope, so var/function persist across commands
@@ -11063,6 +11064,10 @@ document.addEventListener("click", function (e) {
     pbStarting = false;
     hidePbConfirm();         // a pending ask or error note dies with the booth
     hidePbError();
+    // song events fired while the booth owned the screen re-add show-nowplaying
+    // UNDER it — drop it so closing lands on the desktop (music keeps playing;
+    // the music tile is the way back into the player)
+    monitor.classList.remove("show-nowplaying");
     cancelCapture();         // stop any in-progress countdown / close the picker
     pbBaseFrame = null;      // drop the captured frame — nothing of the camera lingers
     dismissPolaroidDialog(); // the polaroid dialog goes away with the booth
@@ -11366,7 +11371,7 @@ document.addEventListener("click", function (e) {
   // and the desktop is actually on screen in the office. Torn down the moment anything
   // covers the desktop; the bezel LED lights whenever this stream is live, same as a
   // booth session, so camera use is always signalled.
-  var tileCamStream = null, tileCamPending = false;
+  var tileCamStream = null, tileCamPending = 0; // timestamp; a stuck getUserMedia expires after 8s
   function tileCamWanted() {
     return !pbActive && !pbStarting &&
       window.currentStageIndex === 3 &&
@@ -11387,14 +11392,14 @@ document.addEventListener("click", function (e) {
   }
   setInterval(function () {
     if (!tileCamWanted()) { if (tileCamStream) stopTileCam(); return; }
-    if (tileCamStream || tileCamPending) return;
+    if (tileCamStream || (tileCamPending && Date.now() - tileCamPending < 8000)) return;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !navigator.permissions || !navigator.permissions.query) return;
-    tileCamPending = true;
+    tileCamPending = Date.now();
     try {
       navigator.permissions.query({ name: "camera" }).then(function (st) {
-        if (st.state !== "granted" || !tileCamWanted()) { tileCamPending = false; return; }
+        if (st.state !== "granted" || !tileCamWanted()) { tileCamPending = 0; return; }
         navigator.mediaDevices.getUserMedia({ video: { width: 240, height: 240 }, audio: false }).then(function (stream) {
-          tileCamPending = false;
+          tileCamPending = 0;
           if (!tileCamWanted()) { try { stream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {} return; }
           tileCamStream = stream;
           if (tileCamVideo) {
@@ -11403,8 +11408,8 @@ document.addEventListener("click", function (e) {
           }
           if (tileCamGroup) tileCamGroup.classList.add("live");
           monitor.classList.add("tile-cam");
-        }, function () { tileCamPending = false; });
-      }, function () { tileCamPending = false; });
+        }, function () { tileCamPending = 0; });
+      }, function () { tileCamPending = 0; });
     } catch (e) { tileCamPending = false; }
   }, 1500);
   window.addEventListener("pagehide", stopTileCam);

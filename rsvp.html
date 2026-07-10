@@ -5860,6 +5860,17 @@ section{margin:1.9rem 0}
 <ellipse cx="440" cy="313" rx="90" ry="10" fill="#8a9090" opacity="0.35"/>
 <ellipse id="balcony-lights-groundglow" cx="620" cy="306" rx="42" ry="8" fill="#e8c98a" fill-opacity="0.35"/>
 <rect x="58" y="52" width="86" height="212" fill="#0a0806"/>
+<!-- outdoor thermometer on the wall left of the front door: red-column tube + a small
+     readout, both driven by the shared loftTemperature model -->
+<g id="balcony-thermometer" aria-hidden="true">
+<rect x="35" y="108" width="18" height="62" rx="3" fill="#f4efe4" stroke="#b8ac96" stroke-width="1"/>
+<circle cx="44" cy="111.8" r="0.8" fill="#b8ac96"/>
+<line x1="44" y1="114" x2="44" y2="150" stroke="#ddd6c4" stroke-width="2.6" stroke-linecap="round"/>
+<rect id="balcony-thermo-column" x="42.9" y="125.9" width="2.2" height="22.6" fill="#c0392b"/>
+<circle cx="44" cy="152.5" r="3.4" fill="#c0392b"/>
+<path d="M46.5 148 h3 M46.5 139.5 h2 M46.5 131 h3 M46.5 122.5 h2 M46.5 114 h3" stroke="#8a7f6a" stroke-width="0.7"/>
+<text id="balcony-thermo-text" x="44" y="166" text-anchor="middle" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="4.8" font-weight="700" fill="#8fd070" pointer-events="none">16&#176;</text>
+</g>
 <g id="balcony-hallway-rack">
 <line x1="101" y1="78" x2="101" y2="248" stroke="#6b4226" stroke-width="4"/>
 <circle cx="101" cy="75" r="4" fill="#6b4226"/>
@@ -11650,66 +11661,104 @@ document.addEventListener("click", function (e) {
     });
   }
 })();
-(function gardenThermo() {
-  // Passive LCD readout on the garden mini-split. Shows a steady, cool room
-  // temperature and eases the shown value 1 degree per tick toward its target,
-  // thermostat-style. Only a molly trip moves the number: it overshoots to a
-  // "baking" 38 and drifts back down when the trip ends. Decorative only: no hit
-  // target, no aria, and it makes NO sound. It reads DOM/globals each tick and
-  // spawns nothing, so it's safe to keep ticking in a hidden/unfocused tab (no
-  // particle-accumulation class of bug applies here).
-  var textEl = document.getElementById("garden-thermo-text");
-  if (!textEl) return;
+(function loftTemperature() {
+  // One weather model drives two passive readouts: the digital LCD on the garden
+  // mini-split (indoor) and the tube thermometer on the wall left of the balcony
+  // front door (outdoor). Decorative only: no hit targets, no sound; each tick reads
+  // DOM/globals and repaints text/attrs — nothing spawns, so it's safe to keep
+  // ticking in a hidden/unfocused tab.
+  var inText = document.getElementById("garden-thermo-text");
+  var outText = document.getElementById("balcony-thermo-text");
+  var outCol = document.getElementById("balcony-thermo-column");
+  if (!inText && !outText) return;
 
-  // Early May in Edmonton is still cold outside, so the heated loft holds a cool,
-  // steady 19. Raising the sun-blind lets daylight stream in and warms it a few
-  // degrees; running the AC cools it a few degrees; a molly trip is the big
-  // overshoot to 38 (the room "feels like it's baking") and overrides everything.
-  var BASE = 19, WARM_SUN = 3, COOL_AC = 3, TRIP_TARGET = 38, HARD_MIN = 5, HARD_MAX = 40;
-  function computeTarget() {
-    var t = BASE; // cool, steady heated-loft base
+  // Early-May Edmonton: mild days, cold nights, storms colder still. The loft holds
+  // a heated ~19 with a small thermostat night-setback; sun through the raised blind
+  // adds a few degrees by day (no sun to let in after dark); the AC pulls it down; a
+  // storm leaks a little cold through the old windows; a molly trip overrides
+  // everything at a baking 38.
+  var OUT_DAY = 16, OUT_NIGHT = 5, STORM_OUT = -4, STORM_IN = -1;
+  var IN_BASE = 19, NIGHT_SETBACK = -2, SUN_GAIN = 3, AC_COOL = -3, TRIP_TARGET = 38;
+  var HARD_MIN = -20, HARD_MAX = 40;
+  // slow random walks so the numbers feel alive instead of pinned to constants
+  var wanderOut = 0, wanderIn = 0;
+  function wander(w, amp) {
+    w += (Math.random() - 0.5) * 0.5;
+    return Math.max(-amp, Math.min(amp, w));
+  }
+  function isDusk(stageId) {
+    var el = document.getElementById(stageId);
+    return !!(el && el.classList.contains("dusk"));
+  }
+  function outdoorTarget() {
+    var t = isDusk("stage-balcony") ? OUT_NIGHT : OUT_DAY;
+    if (window.__balconyStorm) t += STORM_OUT;
+    return Math.round(Math.max(HARD_MIN, Math.min(HARD_MAX, t + wanderOut)));
+  }
+  function indoorTarget() {
+    if (window.__tripActive) return TRIP_TARGET; // overshoots past everything
+    var night = isDusk("stage-garden");
+    var t = IN_BASE;
+    if (night) t += NIGHT_SETBACK;
     var blind = document.getElementById("garden-blind");
+    if (!night && blind && blind.classList.contains("raised")) t += SUN_GAIN;
     var unit = document.getElementById("garden-minisplit");
-    if (blind && blind.classList.contains("raised")) t += WARM_SUN; // sun streaming in warms it
-    if (unit && unit.classList.contains("on")) t -= COOL_AC;        // AC running cools it
-    if (window.__tripActive) t = TRIP_TARGET; // a trip overshoots past everything
-    return Math.max(HARD_MIN, Math.min(HARD_MAX, t)); // overall hard safety clamp
+    if (unit && unit.classList.contains("on")) t += AC_COOL;
+    if (window.__balconyStorm) t += STORM_IN;
+    return Math.round(Math.max(HARD_MIN, Math.min(HARD_MAX, t + wanderIn)));
   }
 
-  // blue (cool) at the steady base, warming through green into red only as a trip
-  // pushes the number up toward 38 so a soaring reading looks "off".
-  var COLD = [111, 176, 224], MID = [143, 208, 112], HOT = [224, 96, 60];
-  var MIDPT = (BASE + TRIP_TARGET) / 2; // ~28.5, the green midpoint of the blue->red ramp
   function lerp(a, b, f) { return Math.round(a + (b - a) * f); }
   function hex2(v) { v = Math.max(0, Math.min(255, v)).toString(16); return v.length < 2 ? "0" + v : v; }
-  function colorForTemp(t) {
+  var COLD = [111, 176, 224], MILD = [143, 208, 112], HOT = [224, 96, 60];
+  // blue below the ramp's midpoint, green at it, tipping orange/red above — the indoor
+  // ramp only leaves green in the trip-only zone, so a soaring reading looks "off"
+  function ramp(t, lo, mid, hi) {
     var f, a, b;
-    if (t <= MIDPT) { f = (t - BASE) / (MIDPT - BASE); a = COLD; b = MID; }        // 19 blue -> 28.5 green
-    else { f = (t - MIDPT) / (TRIP_TARGET - MIDPT); a = MID; b = HOT; }           // 28.5 green -> 38 red
+    if (t <= mid) { f = (t - lo) / (mid - lo); a = COLD; b = MILD; }
+    else { f = (t - mid) / (hi - mid); a = MILD; b = HOT; }
     f = Math.max(0, Math.min(1, f));
     return "#" + hex2(lerp(a[0], b[0], f)) + hex2(lerp(a[1], b[1], f)) + hex2(lerp(a[2], b[2], f));
   }
 
-  var shown = null;
-  function paint(v) {
-    textEl.textContent = v + "°C";
-    textEl.setAttribute("fill", colorForTemp(v));
+  var shownIn = null, shownOut = null;
+  function paintIndoor(v) {
+    if (!inText) return;
+    inText.textContent = v + "\u00b0C";
+    inText.setAttribute("fill", ramp(v, 19, 28.5, 38));
   }
-  // Snap the display straight to the current target (no drift). Runs once on load so the
-  // first paint is correct, and is exposed for deterministic testing: set some room
-  // state, call it, then read the <text> value.
-  window.__gardenThermoSet = function () {
-    shown = computeTarget();
-    paint(shown);
-    return shown;
+  function paintOutdoor(v) {
+    if (outText) {
+      outText.textContent = v + "\u00b0";
+      outText.setAttribute("fill", ramp(v, -5, 10, 25));
+    }
+    if (outCol) {
+      // red column: -10..30 C maps to tube y148..114 (0.85px per degree)
+      var top = 148 - (Math.max(-10, Math.min(30, v)) + 10) * 0.85;
+      outCol.setAttribute("y", top);
+      outCol.setAttribute("height", 148 - top + 0.5);
+    }
+  }
+  // Snap both displays straight to their current targets (no drift). Runs once on
+  // load so the first paint is correct, and is exposed for deterministic testing:
+  // set some room state, call it, then read the <text> values.
+  window.__loftTempSet = function () {
+    shownIn = indoorTarget();
+    shownOut = outdoorTarget();
+    paintIndoor(shownIn);
+    paintOutdoor(shownOut);
+    return [shownIn, shownOut];
   };
-  window.__gardenThermoSet();
+  window.__gardenThermoSet = function () { return window.__loftTempSet()[0]; };
+  window.__loftTempSet();
   setInterval(function () {
-    var target = computeTarget();
-    if (shown < target) shown++;
-    else if (shown > target) shown--;
-    else return; // already at target -- leave the DOM untouched
-    paint(shown);
+    wanderOut = wander(wanderOut, 1.5);
+    wanderIn = wander(wanderIn, 0.7);
+    var ti = indoorTarget(), to = outdoorTarget();
+    if (shownIn < ti) paintIndoor(++shownIn);
+    else if (shownIn > ti) paintIndoor(--shownIn);
+    if (shownOut < to) paintOutdoor(++shownOut);
+    else if (shownOut > to) paintOutdoor(--shownOut);
   }, 1200);
 })();
 (function () {

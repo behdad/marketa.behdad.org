@@ -15606,12 +15606,17 @@ function getSfxCtx() {
     } catch (e) { sfxCtxFailed = true; return null; }
   }
   try { if (sfxCtx.state !== "running") { var rp = sfxCtx.resume(); if (rp && rp.catch) rp.catch(function () {}); } } catch (e) {}
+  // bounded stream lifetime: a context held running for a whole session accumulates
+  // underrun crackle on Linux Chrome (the documented long-held-stream failure that
+  // got the ambient beds focus-gated). 20s after the last effect it suspends; the
+  // machine-side S/PDIF always-process fix keeps the DAC locked through the gap, so
+  // the resume no longer pops.
+  clearTimeout(sfxIdleTimer);
+  sfxIdleTimer = setTimeout(suspendSfxCtx, 20000);
   return sfxCtx;
 }
-// The context stays RUNNING through quiet stretches while the page is attended —
-// suspend/resume seams are themselves audible on some stacks (a cork/uncork blip on
-// the first sound after quiet), so the stream is released only when the page is
-// genuinely unattended. getSfxCtx resumes it on the next effect.
+var sfxIdleTimer = null;
+// ...and the stream is released immediately when the page is genuinely unattended.
 function suspendSfxCtx() {
   try { if (sfxCtx && sfxCtx.state === "running") { var sp = sfxCtx.suspend(); if (sp && sp.catch) sp.catch(function () {}); } } catch (e) {}
 }

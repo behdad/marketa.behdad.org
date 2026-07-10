@@ -17016,6 +17016,12 @@ function spawnDustMote(container) {
   Object.keys(instrumentSpots).forEach(function (id) {
     var el = document.getElementById(id);
     var spot = instrumentSpots[id];
+    // the .tapped bump and the .playing sway are both `animation` on the same node with equal
+    // specificity, so .tapped (later in source) swallows the sway. Drop .tapped when its bump
+    // finishes so the sway shows through afterwards.
+    if (el) el.addEventListener("animationend", function (e) {
+      if (e.animationName === "instrument-tap-bump") el.classList.remove("tapped");
+    });
     onActivate(el, function () {
       var audio = document.getElementById(spot.audioId);
       if (audio && !audio.paused) {

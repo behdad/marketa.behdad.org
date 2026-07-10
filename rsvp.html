@@ -17229,25 +17229,26 @@ function playGhostWhisperSound(panId) {
     // quiet + breathy (the /k/ itself is a separate burst below)
     var master = ctx.createGain(); var m = master.gain;
     m.setValueAtTime(0.0001, t0);
-    m.exponentialRampToValueAtTime(0.035, t0 + 0.05); // [kh] aspiration
-    m.exponentialRampToValueAtTime(0.06, t0 + 0.24);  // "oo"
-    m.setValueAtTime(0.06, t0 + 0.5);
-    m.exponentialRampToValueAtTime(0.038, t0 + 0.66); // dark l
+    m.setValueAtTime(0.0001, t0 + 0.055);             // closure: a beat of silence after the /k/ release
+    m.exponentialRampToValueAtTime(0.04, t0 + 0.12);  // [kh] aspiration into the vowel
+    m.exponentialRampToValueAtTime(0.065, t0 + 0.28); // "oo"
+    m.setValueAtTime(0.065, t0 + 0.5);
+    m.exponentialRampToValueAtTime(0.04, t0 + 0.66);  // dark l
     m.exponentialRampToValueAtTime(0.0001, t0 + 0.9);
     // a gentle top-end shave so the whisper reads as breath, not hiss
     var soften = ctx.createBiquadFilter();
     soften.type = "lowpass";
-    soften.frequency.value = 3800;
+    soften.frequency.value = 2700;
     soften.Q.value = 0.4;
     master.connect(soften);
     soften.connect(out);
     // whispered vowel formants gliding /u/ -> dark /l/ (coda l is velarized: F2 falls,
     // it doesn't rise) — bandpass-filtered noise, no oscillator
     [
-      { q: 6,  g: 1.0,  pts: [[0.05,310],[0.5,300],[0.9,420]] },  // F1
-      { q: 8,  g: 0.55, pts: [[0.05,880],[0.5,850],[0.9,760]] },  // F2: oo -> dark l
-      { q: 10, g: 0.22, pts: [[0.05,2250],[0.9,2500]] },          // F3
-      { q: 12, g: 0.1,  pts: [[0.05,3300],[0.9,3300]] }           // F4: a little air
+      { q: 10, g: 1.0,  pts: [[0.12,300],[0.5,295],[0.9,430]] },  // F1 (narrow = rounder oo, less breath)
+      { q: 12, g: 0.7,  pts: [[0.12,850],[0.5,820],[0.9,700]] },  // F2: oo -> dark l (deeper dip)
+      { q: 12, g: 0.16, pts: [[0.12,2250],[0.9,2450]] },          // F3
+      { q: 12, g: 0.05, pts: [[0.12,3300],[0.9,3300]] }           // F4: only a whisper of air
     ].forEach(function (f) {
       var bp = ctx.createBiquadFilter();
       bp.type = "bandpass"; bp.Q.value = f.q;
@@ -17263,8 +17264,8 @@ function playGhostWhisperSound(panId) {
     var kBp = ctx.createBiquadFilter();
     kBp.type = "bandpass"; kBp.frequency.value = 1700; kBp.Q.value = 2;
     var kG = ctx.createGain();
-    kG.gain.setValueAtTime(0.09, t0);
-    kG.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.045);
+    kG.gain.setValueAtTime(0.14, t0);
+    kG.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.035);
     kSrc.connect(kBp); kBp.connect(kG); kG.connect(soften);
     kSrc.start(t0); kSrc.stop(t0 + 0.06);
   } catch (e) {}

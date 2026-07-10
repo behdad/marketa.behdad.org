@@ -2163,6 +2163,28 @@ footer{margin-top:2.6rem}
   50%{filter:drop-shadow(0 1px 5px rgba(198,142,149,0.85))}
 }
 @media (prefers-reduced-motion: reduce){#office-laptop.inviting{animation:none}}
+/* mondrian tap → the butterfly's wing panes ripple: a per-pane wobble (the flap
+   rotates whole wing groups; this jiggles the individual leaded panes) */
+#office-stainedglass.jiggling #office-butterfly-wing-left path,
+#office-stainedglass.jiggling #office-butterfly-wing-right path{
+  transform-box:fill-box; transform-origin:center; animation:sg-pane-jiggle .85s ease-in-out;
+}
+#office-stainedglass.jiggling #office-butterfly-wing-left path:nth-of-type(2n),
+#office-stainedglass.jiggling #office-butterfly-wing-right path:nth-of-type(2n){animation-delay:.09s}
+#office-stainedglass.jiggling #office-butterfly-wing-left path:nth-of-type(3n),
+#office-stainedglass.jiggling #office-butterfly-wing-right path:nth-of-type(3n){animation-delay:.18s}
+@keyframes sg-pane-jiggle{
+  0%,100%{transform:rotate(0deg) scale(1)}
+  30%{transform:rotate(2.2deg) scale(1.03)}
+  65%{transform:rotate(-1.8deg) scale(0.985)}
+}
+@media (prefers-reduced-motion: reduce){#office-stainedglass.jiggling #office-butterfly-wing-left path, #office-stainedglass.jiggling #office-butterfly-wing-right path{animation:none}}
+#office-pc-desk-trio.inviting{animation:pc-invite 1.7s ease-in-out infinite}
+@keyframes pc-invite{
+  0%,100%{filter:drop-shadow(0 0 0 rgba(127,158,192,0))}
+  50%{filter:drop-shadow(0 1px 5px rgba(127,158,192,0.9))}
+}
+@media (prefers-reduced-motion: reduce){#office-pc-desk-trio.inviting{animation:none}}
 /* Markéta's Mac: menu-bar clock, translation editor, call-to-Prague, sweet-update punchline */
 /* the full-screen overlays sit ABOVE the desktop face, so keep them click-through —
    otherwise (even at opacity 0) they swallow the call-tile click and it bubbles to the
@@ -7712,10 +7734,22 @@ document.addEventListener("click", function (e) {
   var mondrian = document.getElementById("office-mondrian");
   if (mondrian) {
     var mondrianTimer = null;
+    var glassJiggleTimer = null;
     function danceMondrian(e) {
       if (e) e.stopPropagation();
       clearTimeout(mondrianTimer);
       mondrian.classList.remove("dancing");
+      // the butterfly window answers in kind: its wing panes ripple (a pane-level
+      // wobble, distinct from the wings' flap)
+      var glassJ = document.getElementById("office-stainedglass");
+      if (glassJ) {
+        clearTimeout(glassJiggleTimer);
+        glassJ.classList.remove("jiggling");
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { glassJ.classList.add("jiggling"); });
+        });
+        glassJiggleTimer = setTimeout(function () { glassJ.classList.remove("jiggling"); }, 1400);
+      }
       requestAnimationFrame(function () {
         requestAnimationFrame(function () { mondrian.classList.add("dancing"); });
       });
@@ -8952,31 +8986,33 @@ document.addEventListener("click", function (e) {
       var el = document.getElementById("laptop-call-status");
       if (el) el.textContent = T[laptopLang()][key] || "";
     }
+    // The sequence advances when the call actually CONNECTS (the couple appears) —
+    // not when the ring starts. The room hint otherwise only re-checks on a light
+    // toggle or a glass click, so set it here too.
+    function markPragueCalled() {
+      if (window.__pragueCalled) return;
+      window.__pragueCalled = true; // satisfies the office finale's Call-Prague requirement
+      var lampsOff = ["office-lamp", "office-pendant"].every(function (id) {
+        var el = document.getElementById(id);
+        return el && el.classList.contains("dimmed");
+      });
+      var glass = document.getElementById("office-stainedglass");
+      if (glass && !glass.classList.contains("done") && window.setCaption) {
+        window.setCaption(!window.__pcPlayed ? "office_computer" : (lampsOff ? "office_find" : "office_hint"));
+      }
+      if (window.__updateOfficeNudges) window.__updateOfficeNudges();
+    }
     function startCall() {
       if (!laptop.classList.contains("open")) return;
       if (laptop.classList.contains("updating") || laptop.classList.contains("rebooting") || inCall()) return;
       clearLaptopTimers();
       stopLaptopSaver();
-      window.__pragueCalled = true; // satisfies the office finale's Call-Prague requirement
-      // The room hint otherwise only re-checks on a light toggle or a glass click — call
-      // it right here too so the caption advances the instant the call starts, whether
-      // the lights are already off (jump straight to "find it") or still on (advance
-      // from "call Prague first" to "turn off both lights").
-      (function () {
-        var lampsOff = ["office-lamp", "office-pendant"].every(function (id) {
-          var el = document.getElementById(id);
-          return el && el.classList.contains("dimmed");
-        });
-        var glass = document.getElementById("office-stainedglass");
-        if (glass && !glass.classList.contains("done") && window.setCaption) {
-          window.setCaption(!window.__pcPlayed ? "office_computer" : (lampsOff ? "office_find" : "office_hint"));
-        }
-      })();
       laptop.classList.add("calling");
       setCallStatus("laptop_calling");
       if (laptopReduce) {
         laptop.classList.remove("calling", "connecting");
         laptop.classList.add("connected");
+        markPragueCalled();
         playCallLaughSound();
         startCallAmbient();
         return;
@@ -8990,6 +9026,7 @@ document.addEventListener("click", function (e) {
       laptopUpdateTimers.push(setTimeout(function () {
         laptop.classList.remove("connecting");
         laptop.classList.add("connected");
+        markPragueCalled();
         playBootChimeSound();
         playCallLaughSound(); // the couple giggling across the ocean
         startCallAmbient(); // and the ongoing static/wind/giggling bed while it lasts
@@ -9341,6 +9378,7 @@ document.addEventListener("click", function (e) {
         });
         window.setCaption(seqLampsOff ? "office_find" : "office_hint");
       }
+      if (window.__updateOfficeNudges) window.__updateOfficeNudges();
     }
     monitor.classList.add("screen-on", "show-fedora");
     bootTimers.push(setTimeout(function () {
@@ -11487,6 +11525,9 @@ document.addEventListener("click", function (e) {
     pendingBootSite = null; // reset never boots to a sign's page
     monitor.classList.add("here");
     typewriter.classList.add("away");
+    window.__pragueCalled = false; // a fresh game walks the office sequence again
+    window.__pcPlayed = false;
+    if (window.__updateOfficeNudges) window.__updateOfficeNudges();
   };
 })();
 (function () {
@@ -15441,6 +15482,20 @@ function playSipSound(panId) {
     }
   } catch (e) {}
 }
+// ── Office sequence nudges ──────────────────────────────────────────────────
+// The current step's device pulses: the laptop until Prague answers, then the PC
+// until it's been powered on — the room always points at what's next.
+function updateOfficeNudges() {
+  var glass = document.getElementById("office-stainedglass");
+  var done = !!(glass && glass.classList.contains("done"));
+  var wantLaptop = !done && !window.__pragueCalled;
+  var wantPc = !done && !!window.__pragueCalled && !window.__pcPlayed;
+  if (wantLaptop) { if (window.__inviteLaptop) window.__inviteLaptop(); }
+  else if (window.__stopLaptopInvite) window.__stopLaptopInvite();
+  var pc = document.getElementById("office-pc-desk-trio");
+  if (pc) pc.classList.toggle("inviting", wantPc);
+}
+window.__updateOfficeNudges = updateOfficeNudges;
 // ── Shared effects AudioContext ─────────────────────────────────────────────
 // Every one-shot effect used to spin up its own AudioContext and close it after
 // its envelope — dozens of OS audio-stream connects/disconnects a minute, which
@@ -18078,6 +18133,7 @@ function spawnDustMote(container) {
       if (glassEl && !glassEl.classList.contains("done")) {
         if (lampsOff) setCaption(!window.__pragueCalled ? "office_call" : (!window.__pcPlayed ? "office_computer" : "office_find"));
         else if (window.__pragueCalled) setCaption(!window.__pcPlayed ? "office_computer" : "office_hint");
+        if (window.__updateOfficeNudges) window.__updateOfficeNudges();
       }
     }
   }

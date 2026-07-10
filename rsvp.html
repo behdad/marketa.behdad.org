@@ -7356,6 +7356,15 @@ document.addEventListener("click", function (e) {
       kettleGain = null;
       kettleCtx = null;
     }
+    // the kettle hum is audible only in the kitchen (mirrors __updatePcFan's room gate)
+    var kettleInKitchen = true; // kitchen is the default room at load
+    window.__updateKettleHum = function (inKitchen) {
+      if (typeof inKitchen === "boolean") kettleInKitchen = inKitchen;
+      var want = kettleSteaming && kettleInKitchen && !document.hidden;
+      if (want && !kettleCtx) startKettleHum();
+      else if (!want && kettleCtx) stopKettleHum();
+    };
+    document.addEventListener("visibilitychange", function () { window.__updateKettleHum(); });
     function toggleKettle() {
       if (kettleBroken) { playDryClickSound("kitchen-kettle"); return; }
       kettleSteaming = !kettleSteaming;
@@ -7363,7 +7372,7 @@ document.addEventListener("click", function (e) {
       if (kettleSteaming) {
         kettlePuff();
         kettleInterval = setInterval(kettlePuff, 1300);
-        startKettleHum();
+        window.__updateKettleHum(); // hum only if in the kitchen
         var radioEl = document.getElementById("kitchen-scale");
         if (radioEl && radioEl.classList.contains("on")) spawnMusicNotes(document.getElementById("loft-game-strip"), 100, 190);
       } else {
@@ -7371,7 +7380,7 @@ document.addEventListener("click", function (e) {
           clearInterval(kettleInterval);
           kettleInterval = null;
         }
-        stopKettleHum();
+        window.__updateKettleHum();
       }
     }
     kettle.addEventListener("click", toggleKettle);
@@ -7643,15 +7652,22 @@ document.addEventListener("click", function (e) {
       radioGain = null;
       radioCtx = null;
     }
+    // the radio is audible only in the kitchen (mirrors __updatePcFan's room gate)
+    var radioInKitchen = true; // kitchen is the default room at load
+    window.__updateRadioSound = function (inKitchen) {
+      if (typeof inKitchen === "boolean") radioInKitchen = inKitchen;
+      var want = radioOn && radioInKitchen && !document.hidden;
+      if (want && !radioCtx) startRadioStatic();
+      else if (!want && radioCtx) stopRadioStatic();
+    };
+    document.addEventListener("visibilitychange", function () { window.__updateRadioSound(); });
     function toggleRadio() {
       radioOn = !radioOn;
       radio.classList.toggle("on", radioOn);
+      window.__updateRadioSound(); // start/stop based on the current room + radioOn
       if (radioOn) {
-        startRadioStatic();
         var kettleEl = document.getElementById("kitchen-kettle");
         if (kettleEl && kettleEl.classList.contains("steaming")) spawnMusicNotes(document.getElementById("loft-game-strip"), 100, 190);
-      } else {
-        stopRadioStatic();
       }
     }
     window.resetRadio = function () {
@@ -10210,11 +10226,21 @@ document.addEventListener("click", function (e) {
       acGain = null;
       acCtx = null;
     }
+    // the hum is only audible from the garden (indoor unit) and balcony (outdoor unit),
+    // not the other rooms — mirrors __updatePcFan's room gate.
+    var acInAudibleRoom = false;
+    window.__updateACHum = function (inRoom) {
+      if (typeof inRoom === "boolean") acInAudibleRoom = inRoom;
+      var wantHum = acOn && acInAudibleRoom && !document.hidden;
+      if (wantHum && !acCtx) startACHum();
+      else if (!wantHum && acCtx) stopACHum();
+    };
+    document.addEventListener("visibilitychange", function () { window.__updateACHum(); });
     function toggleAC() {
       acOn = !acOn;
       ac.classList.toggle("on", acOn);
       if (acOutdoor) acOutdoor.classList.toggle("on", acOn);
-      if (acOn) { startACHum(); } else { stopACHum(); }
+      window.__updateACHum(); // start/stop based on the current room + acOn
     }
     window.resetAC = function () {
       stopACHum();
@@ -15955,6 +15981,9 @@ function spawnDustMote(container) {
     if (name === "office" && window.revealOfficeFishuIfFled) window.revealOfficeFishuIfFled();
     if (name === "office" && window.startOfficeCrane) window.startOfficeCrane(); // resume the skyline crane's traverse/drop loop
     if (window.__updatePcFan) window.__updatePcFan(name === "office"); // hum only in the office
+    if (window.__updateACHum) window.__updateACHum(name === "garden" || name === "balcony"); // AC hum only in garden + balcony
+    if (window.__updateRadioSound) window.__updateRadioSound(name === "kitchen"); // radio audible only in the kitchen
+    if (window.__updateKettleHum) window.__updateKettleHum(name === "kitchen"); // kettle hum only in the kitchen
     if (window.__updateFireSound) window.__updateFireSound(name === "cuddly"); // fire crackle only in the cuddly nook
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(name === "garden"); // birdsong only in the garden, and only by day
     if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(name === "balcony"); // string lights pulse with the beat only on the balcony

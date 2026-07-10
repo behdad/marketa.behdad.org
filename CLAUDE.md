@@ -35,6 +35,13 @@ go inside `index.html` unless there's a strong reason not to.
   click-storms every `.hunt-hit` (click + dblclick + Enter), failing on any uncaught JS
   error, a broken solve chain, or missing solve-path elements. It patches rAF to
   setTimeout and stubs window.open — see its header before changing test plumbing.
+- **`node tests/visual.js` is an optional, advisory spot-check** — never part of the
+  must-pass-before-commit chain: it renders the five rsvp.html rooms and index.html's
+  two scenes headlessly (animations/transitions frozen, clock and RNG pinned) and
+  pixel-diffs them against `tests/baselines/`, catching neighboring-room breakage that
+  eyeballing a single screenshot misses. After an *intentional* art change, rerun with
+  `--update` to refresh the baselines; if it ever gets flaky, distrust it before
+  distrusting your change.
 - **The check script doesn't replace manual verification** for anything visual or
   interactive: rendering with headless
   `google-chrome --headless --disable-gpu --window-size=W,H --screenshot=out.png` and

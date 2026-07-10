@@ -1961,6 +1961,20 @@ body:has(#loft-game-strip.psychedelic) #garden-buddha{animation:buddha-apparitio
   95%{transform:rotate(1deg)}
   100%{transform:rotate(0)}
 }
+/* iboga: the world drains to gray and holds there while faint blue-gray memory
+   photos surface one at a time on #iboga-layer (see startIbogaSlideshow) */
+#loft-game-strip.iboga{animation:iboga-trip 20s ease-in-out}
+@keyframes iboga-trip{
+  0%{filter:saturate(1) brightness(1) contrast(1)}
+  15%{filter:saturate(.12) brightness(.88) contrast(.96)}
+  85%{filter:saturate(.12) brightness(.88) contrast(.96)}
+  100%{filter:saturate(1) brightness(1) contrast(1)}
+}
+#iboga-layer{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:4}
+/* each photo is cold-tinted (blue-gray / white-gray), kept faint, and edge-feathered
+   by an oval mask so it reads as a surfacing memory rather than a rectangle */
+.iboga-slide{opacity:0; transition:opacity 1.2s ease; filter:grayscale(1) brightness(1.05) sepia(.25) hue-rotate(175deg) saturate(.6)}
+.iboga-slide.iboga-slide-show{opacity:.45}
 .bird-fly-a{transform-box:fill-box; animation:bird-fly-a 16s linear infinite; opacity:0}
 .bird-fly-b{transform-box:fill-box; animation:bird-fly-b 20s linear infinite 6s; opacity:0}
 @keyframes bird-fly-a{
@@ -1980,8 +1994,9 @@ body:has(#loft-game-strip.psychedelic) #garden-buddha{animation:buddha-apparitio
 @media (prefers-reduced-motion: reduce){.bird-fly-a, .bird-fly-b{animation:none; opacity:0}}
 @media (prefers-reduced-motion: reduce){#loft-game-strip.psychedelic{animation:none}}
 @media (prefers-reduced-motion: reduce){
-  #loft-game-strip.strobe, #loft-game-strip.molly, #loft-game-strip.melt, #loft-game-strip.ketamine{animation:none; filter:none}
+  #loft-game-strip.strobe, #loft-game-strip.molly, #loft-game-strip.melt, #loft-game-strip.ketamine, #loft-game-strip.iboga{animation:none; filter:none}
   #loft-game-strip.strobe .trip-strobe-flash{animation:none}
+  .iboga-slide{transition:none}
   #loft-game-strip.melt .trip-melt-whiteout{animation:none}
   #loft-game-strip.ketamine #garden-monstera,
   #loft-game-strip.ketamine #garden-peacelily,
@@ -6493,6 +6508,23 @@ section{margin:1.9rem 0}
 <ellipse cx="320" cy="178.6" rx="4" ry="1.8" fill="#c9a13b"/>
 <path d="M290 188.5 Q320 181 350 188.5 M296 192.5 Q320 186.5 344 192.5" fill="none" stroke="#a8842a" stroke-width="1" stroke-linecap="round"/>
 </g>
+    </svg>
+    <!-- the iboga trip's memory photos: their own overlay ABOVE the strip, so the
+         gray-out filter never dims them (same layering trick as the buddha). The
+         three slots get href/position from startIbogaSlideshow at trip time. -->
+    <svg id="iboga-layer" aria-hidden="true" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid slice">
+<defs>
+<radialGradient id="iboga-fade-grad" cx="0.5" cy="0.5" r="0.5">
+<stop offset="0.45" stop-color="#ffffff"/>
+<stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+</radialGradient>
+<mask id="iboga-fade-mask" maskContentUnits="objectBoundingBox">
+<rect x="0" y="0" width="1" height="1" fill="url(#iboga-fade-grad)"/>
+</mask>
+</defs>
+<image class="iboga-slide" width="204" height="140" preserveAspectRatio="xMidYMid slice" mask="url(#iboga-fade-mask)"/>
+<image class="iboga-slide" width="204" height="140" preserveAspectRatio="xMidYMid slice" mask="url(#iboga-fade-mask)"/>
+<image class="iboga-slide" width="204" height="140" preserveAspectRatio="xMidYMid slice" mask="url(#iboga-fade-mask)"/>
     </svg>
     <svg id="rsvp-trip-ghost" aria-hidden="true" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid slice">
 <g id="rsvp-trip-ghost-inner">
@@ -14782,10 +14814,10 @@ function playTripMelody(variant) {
     var t0 = ctx.currentTime;
     // how long each variant runs, and a two-sweep swirl over exactly that — wide, and
     // starting from a random side (see swirlBus); note() feeds every voice into the swirl.
-    var DUR = { strobe: 3.16, melt: 4.8, molly: 5.4, ketamine: 6.0, psychedelic: 7.1 };
+    var DUR = { strobe: 3.16, melt: 4.8, molly: 5.4, ketamine: 6.0, psychedelic: 7.1, iboga: 19.0 };
     var dur = DUR[variant] || 3;
     var cycles = variant === "strobe" ? 8 : 2; // strobe: lots of quick back-and-forth pans
-    var bus = swirlBus(ctx, t0, dur, cycles, (variant === "melt" || variant === "ketamine") ? 0.98 : 0.92);
+    var bus = swirlBus(ctx, t0, dur, cycles, (variant === "melt" || variant === "ketamine" || variant === "iboga") ? 0.98 : 0.92);
     function note(type, freq, t, peak, len, attack, vibrato) {
       var osc = ctx.createOscillator();
       osc.type = type;
@@ -14854,6 +14886,21 @@ function playTripMelody(variant) {
     } else if (variant === "ketamine") {
       var kd = 0.9, ka = [220, 196, 174.6, 146.8, 130.8, 146.8];
       ka.forEach(function (f, i) { note("sine", f, t0 + i * kd, 0.05, kd * 1.6, 0.3, 4); });
+    } else if (variant === "iboga") {
+      // iboga: near-stillness. Two low drones a fifth apart (A1 + E2) swell in over
+      // ~3.5s and decay across the whole trip, a soft heartbeat lub-dubs underneath,
+      // and three lone "memory chimes" surface as the photos do. Everything quiet.
+      [55, 82.41].forEach(function (f, i) {
+        note("sine", f, t0 + i * 0.6, 0.05, dur - i * 0.6, 3.5);
+      });
+      for (var ib = 0; ib < 8; ib++) {
+        var ibT = t0 + 1.5 + ib * 2.1;
+        note("sine", 52, ibT, 0.045, 0.22, 0.015);        // lub
+        note("sine", 46, ibT + 0.3, 0.032, 0.2, 0.015);   // dub
+      }
+      [[5.5, 523.25], [10.8, 392.0], [15.2, 329.63]].forEach(function (c) {
+        note("sine", c[1], t0 + c[0], 0.02, 2.6, 0.5, 3);
+      });
     } else {
       var pa = [392.0, 440.0, 523.25, 659.25, 587.33, 523.25, 440.0, 392.0], pd = 0.16;
       for (var pr = 0; pr < 4; pr++) pa.forEach(function (f, i) { note("sine", f, t0 + (pr * pa.length + i) * pd, 0.05, pd * 1.8, 0.02); });
@@ -14872,7 +14919,7 @@ function playTripMelody(variant) {
     }
   } catch (e) {}
 }
-var TRIP_VARIANTS = ["psychedelic", "strobe", "melt", "molly", "ketamine"];
+var TRIP_VARIANTS = ["psychedelic", "strobe", "melt", "molly", "ketamine", "iboga"];
 (function shuffleTripVariants() {
   for (var i = TRIP_VARIANTS.length - 1; i > 0; i--) {
     var j = Math.floor(Math.random() * (i + 1));
@@ -14882,7 +14929,7 @@ var TRIP_VARIANTS = ["psychedelic", "strobe", "melt", "molly", "ketamine"];
   }
 })();
 var tripVariantIndex = 0;
-var TRIP_DURATIONS = { psychedelic: 6000, strobe: 3000, melt: 5000, molly: 7000, ketamine: 18000 };
+var TRIP_DURATIONS = { psychedelic: 6000, strobe: 3000, melt: 5000, molly: 7000, ketamine: 18000, iboga: 20000 };
 var tripActive = false;
 var tripEndTimer = null;
 var currentTripVariant = null;
@@ -14920,6 +14967,68 @@ window.__resetTripCreatures = function () {
   tripCreatureHideTimer = null;
   hideAllTripCreatures();
 };
+// ── Iboga memory slideshow ─────────────────────────────────────────────────
+// While the iboga trip drains the strip to gray, three faint photos surface
+// TOGETHER on #iboga-layer — an overlay ABOVE the strip filter, so they keep
+// their own cold blue-gray tint while everything under them desaturates. Each
+// trio is 3 distinct photos drawn at random from the 6-file manifest, one per
+// loose horizontal third of the view (jittered, fully on-screen, no heavy
+// overlap); halfway through the trip the trio fades out and a fresh random trio
+// fades in at fresh spots. The three <image> slots are fixed and reused (nothing
+// spawns, so a hidden tab can't accumulate anything), one timer drives the whole
+// chain, and every hop re-checks that the iboga trip is still the active one —
+// trip end and the extinguisher reset both stop it cold. A photo file that fails
+// to load just hides its own slot (the onerror guard below), silently.
+var IBOGA_PHOTOS = ["art/iboga/iboga-1.jpg", "art/iboga/iboga-2.jpg", "art/iboga/iboga-3.jpg",
+  "art/iboga/iboga-4.jpg", "art/iboga/iboga-5.jpg", "art/iboga/iboga-6.jpg"];
+var ibogaSlideTimer = null;
+function ibogaSlides() {
+  var layer = document.getElementById("iboga-layer");
+  return layer ? layer.querySelectorAll(".iboga-slide") : [];
+}
+function stopIbogaSlideshow() {
+  clearTimeout(ibogaSlideTimer);
+  ibogaSlideTimer = null;
+  Array.prototype.forEach.call(ibogaSlides(), function (img) {
+    img.classList.remove("iboga-slide-show");
+  });
+}
+window.__stopIbogaSlideshow = stopIbogaSlideshow; // resetHunt clears any in-flight trio through this
+function showIbogaTrio() {
+  if (!tripActive || currentTripVariant !== "iboga") { stopIbogaSlideshow(); return; }
+  var slides = ibogaSlides();
+  if (!slides.length) return;
+  // 3 distinct photos from the manifest: shuffle a copy, take the head
+  var pool = IBOGA_PHOTOS.slice();
+  for (var i = pool.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+  }
+  Array.prototype.forEach.call(slides, function (img, k) {
+    if (!img.__ibogaGuarded) { // a 404'd photo hides only its own slot, with no console throw
+      img.__ibogaGuarded = true;
+      img.addEventListener("error", function () { img.classList.remove("iboga-slide-show"); });
+    }
+    // one slot per loose horizontal third (view 680x340, slide 204x140), jittered
+    // within it so the trio never piles up: third k spans x = k*226 .. k*226+226
+    img.setAttribute("x", (k * 226 + 4 + Math.random() * 18).toFixed(1));
+    img.setAttribute("y", (8 + Math.random() * 184).toFixed(1));
+    img.setAttribute("href", pool[k]);
+    img.classList.add("iboga-slide-show"); // 1.2s CSS fade-in
+  });
+}
+function startIbogaSlideshow() {
+  stopIbogaSlideshow();
+  showIbogaTrio(); // first trio rides the gray-out in
+  ibogaSlideTimer = setTimeout(function () {
+    Array.prototype.forEach.call(ibogaSlides(), function (img) {
+      img.classList.remove("iboga-slide-show"); // 1.2s fade-out
+    });
+    // let the old trio dissolve, then surface a fresh one at fresh spots;
+    // it holds until the trip-end teardown fades it with the gray-out
+    ibogaSlideTimer = setTimeout(showIbogaTrio, 1500);
+  }, 9000); // ~half the 20s trip
+}
 // Tripping again and again builds up: the scene darkens a notch each time, then
 // slowly recovers a notch at a time if you lay off (a little tolerance/comedown).
 var tripTolerance = 0, tripToleranceDecay = null;
@@ -14948,11 +15057,12 @@ function startTripVariant(variant) {
   if (!strip) return;
   currentTripVariant = variant;
   showTripCreatures(variant);
-  strip.classList.remove("psychedelic", "strobe", "melt", "molly", "ketamine");
+  strip.classList.remove("psychedelic", "strobe", "melt", "molly", "ketamine", "iboga");
   requestAnimationFrame(function () {
     requestAnimationFrame(function () { strip.classList.add(variant); });
   });
   playTripMelody(variant);
+  if (variant === "iboga") startIbogaSlideshow();
   if (variant === "ketamine") {
     setTimeout(function () {
       var ghostInner = document.getElementById("rsvp-trip-ghost-inner");
@@ -14984,14 +15094,16 @@ function startTripVariant(variant) {
   clearTimeout(tripEndTimer);
   tripEndTimer = setTimeout(function () {
     strip.classList.remove(variant);
+    if (variant === "iboga") stopIbogaSlideshow(); // the photos fade with the gray-out
     hideTripCreaturesAfter(2000); // the trip creature lingers a beat, then fades
     tripActive = false;
     window.__tripActive = false; // mirror for the garden thermometer readout (see gardenThermo)
     currentTripVariant = null;
     // the comedown lands as the trip wears off: each trip deepens the veil, except
-    // molly (the kisses one), whose euphoria wipes the built-up comedown clean
+    // molly (the kisses one), whose euphoria wipes the built-up comedown clean, and
+    // iboga, whose contemplative journey doesn't fry you — it neither darkens nor heals
     if (variant === "molly") resetTripTolerance();
-    else bumpTripTolerance();
+    else if (variant !== "iboga") bumpTripTolerance();
   }, TRIP_DURATIONS[variant] || 3000);
 }
 function triggerRsvpTrip(e) {
@@ -15018,19 +15130,19 @@ function triggerRsvpTrip(e) {
   // fractal blooms only on the mushroom trip (the psychedelic / hue-rotating one)
   if (variant === "psychedelic") startTripBlooms();
 }
-// Shift+1..5 launches a SPECIFIC trip (canonical order: psychedelic, strobe, melt,
-// molly, ketamine — the pre-shuffle TRIP_VARIANTS order). Same one-at-a-time rule as
-// the drugs box: a running trip ignores the request. e.code keeps it layout-safe
-// (Shift+1 types "!" as e.key).
+// Shift+1..6 launches a SPECIFIC trip (canonical order: psychedelic, strobe, melt,
+// molly, ketamine, iboga — the pre-shuffle TRIP_VARIANTS order). Same one-at-a-time
+// rule as the drugs box: a running trip ignores the request. e.code keeps it
+// layout-safe (Shift+1 types "!" as e.key).
 document.addEventListener("keydown", function (e) {
   if (!e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
-  var m = /^Digit([1-5])$/.exec(e.code || "");
+  var m = /^Digit([1-6])$/.exec(e.code || "");
   if (!m) return;
   var ae = document.activeElement;
   if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return;
   if (tripActive) return;
   e.preventDefault();
-  var variant = ["psychedelic", "strobe", "melt", "molly", "ketamine"][+m[1] - 1];
+  var variant = ["psychedelic", "strobe", "melt", "molly", "ketamine", "iboga"][+m[1] - 1];
   tripActive = true;
   window.__tripActive = true;
   startTripVariant(variant);
@@ -20184,6 +20296,7 @@ function spawnDustMote(container) {
     var gsReset = document.getElementById("stage-garden");
     if (gsReset) gsReset.classList.remove("g-c1-lit", "g-c2-lit");
     if (window.__resetTripCreatures) window.__resetTripCreatures();
+    if (window.__stopIbogaSlideshow) window.__stopIbogaSlideshow();
     ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.classList.remove("done");

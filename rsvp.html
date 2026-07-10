@@ -979,11 +979,13 @@ footer{margin-top:2.6rem}
 #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .4s ease}
 #office-monitor.show-caps #monitor-desktop-dock{opacity:1; visibility:visible; pointer-events:auto}
 #office-monitor.show-nowplaying #monitor-desktop-dock, #office-monitor.show-saver #monitor-desktop-dock, #office-monitor.show-terminal #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none}
-.dock-app{cursor:pointer}
-.dock-tile{fill:rgba(255,253,248,0.78); stroke:rgba(69,58,49,0.28); stroke-width:0.7; transition:fill .15s ease}
-.dock-app:hover .dock-tile{fill:#fffdf8}
-.dock-glyph{font-family:"Source Serif 4",serif; font-size:7px}
-.dock-label{fill:#716455; font-family:monospace; font-size:3.8px; letter-spacing:0.1px}
+.dock-app{cursor:pointer; transition:transform .15s ease}
+.dock-app:hover{transform:translateY(-1px)}
+.dock-tray{fill:rgba(255,253,248,0.72); stroke:rgba(69,58,49,0.2); stroke-width:0.7}
+.desk-bar-text{fill:#f8f5ec; font-family:monospace; font-size:3.2px; letter-spacing:0.2px}
+.dock-tile{stroke:rgba(0,0,0,0.18); stroke-width:0.5}
+.dock-glyph{font-family:"Source Serif 4",serif}
+.dock-label{fill:#716455; font-family:monospace; font-size:3.6px; letter-spacing:0.1px}
 /* terminal app: a tiny JS REPL over the screen */
 #monitor-terminal{opacity:0; pointer-events:none; transition:opacity .25s ease}
 #office-monitor.show-terminal #monitor-terminal{opacity:1; pointer-events:auto}
@@ -1017,6 +1019,12 @@ footer{margin-top:2.6rem}
 #office-monitor.show-nowplaying #monitor-prev-btn, #office-monitor.show-nowplaying #monitor-next-btn, #office-monitor.show-nowplaying #monitor-np-close{opacity:1; visibility:visible; pointer-events:auto}
 #office-monitor.show-nowplaying #monitor-transport-pill{opacity:1; visibility:visible}
 #monitor-np-close:hover .seg-hover{opacity:.55}
+/* manual equalizer sliders: same show-nowplaying gating as the transports */
+#monitor-manual-eq{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .4s ease}
+#office-monitor.show-nowplaying #monitor-manual-eq{opacity:1; visibility:visible; pointer-events:auto}
+.meq-band{cursor:ns-resize}
+.meq-track{stroke:#5a3a46; stroke-width:1; stroke-linecap:round}
+.meq-thumb{pointer-events:none}
 /* the marquee's artist link-out: hit-testable only while the player is up (boot-logo
    children stay pointer-transparent otherwise, so hidden layers can't eat clicks) */
 #monitor-np-marquee-hit{pointer-events:none; cursor:pointer}
@@ -1046,7 +1054,8 @@ footer{margin-top:2.6rem}
 #office-monitor.photobooth #monitor-prev-btn,
 #office-monitor.photobooth #monitor-next-btn,
 #office-monitor.photobooth #monitor-np-close,
-#office-monitor.photobooth #monitor-transport-pill{opacity:0 !important; visibility:hidden; pointer-events:none !important}
+#office-monitor.photobooth #monitor-transport-pill,
+#office-monitor.photobooth #monitor-manual-eq{opacity:0 !important; visibility:hidden; pointer-events:none !important}
 #office-monitor.photobooth #monitor-np-marquee-hit{pointer-events:none !important}
 .pb-video-wrap{width:124px; height:42px; position:relative; overflow:hidden; background:#0a0d12}
 .pb-video{width:100%; height:100%; object-fit:cover; transform:scaleX(-1); display:block; background:#0a0d12}
@@ -5231,7 +5240,7 @@ section{margin:1.9rem 0}
 <circle cx="316" cy="175" r="4.5" fill="#4285f4"/>
 </g>
 <g id="monitor-logo-caps" class="boot-logo">
-<g transform="translate(256,161) scale(0.24)"><use href="#cap-pink"/><use href="#cap-blue"/></g>
+<g transform="translate(273.5,149.5) scale(0.5)"><use href="#cap-pink"/><use href="#cap-blue"/></g>
 </g>
 <g id="monitor-saver" class="boot-logo">
 <foreignObject id="monitor-saver-fractal" x="254" y="154" width="124" height="42">
@@ -5337,6 +5346,9 @@ section{margin:1.9rem 0}
 <rect class="seg-hover" x="367" y="156.5" width="10" height="11" rx="5" fill="#5f2230" opacity="0"/>
 <path d="M369.9 159.9 L374.1 164.1 M374.1 159.9 L369.9 164.1" stroke="#f8f5ec" stroke-width="1.1" stroke-linecap="round"/>
 </g>
+<!-- manual equalizer: six band sliders in the middle row, built by JS (colors match the
+     visualizer bars); drag sets the matching pipeline band, double-tap resets it -->
+<g id="monitor-manual-eq"></g>
 <!-- the three transports share one beveled pill (a segmented control), not three separate
      circles: pill base + top bevel highlight + separator ticks, then one hover-seg rect per
      button (clipped to the pill's rounded shape) under each glyph -->
@@ -9285,6 +9297,29 @@ document.addEventListener("click", function (e) {
   // splitter/4-gain/merger wiring and __updateSongRoomWidth for what drives the gains.
   var eqWidthSplitter = null, eqWidthMerger = null, eqWidthL2L = null, eqWidthR2R = null, eqWidthL2R = null, eqWidthR2L = null;
   var headphoneModeOn = false;
+  // Manual six-band EQ (the player's middle-row sliders): lowshelf + 4 peaking +
+  // highshelf between the headphone bass shelf and the muffle filter. All 0dB = an
+  // exact identity pass-through. Persisted; on platforms where the pipeline is
+  // skipped (USE_LIVE_ANALYSER false) the sliders still remember but don't color
+  // native playback.
+  var MANUAL_EQ_FREQS = [60, 150, 400, 1000, 2500, 6500];
+  var MANUAL_EQ_MAX_DB = 9;
+  var manualEqDb = [0, 0, 0, 0, 0, 0];
+  var manualEqFilters = null;
+  try {
+    var mEq = JSON.parse(localStorage.getItem("songEqBands") || "[]");
+    for (var mi = 0; mi < MANUAL_EQ_FREQS.length; mi++) {
+      if (typeof mEq[mi] === "number" && isFinite(mEq[mi])) manualEqDb[mi] = Math.max(-MANUAL_EQ_MAX_DB, Math.min(MANUAL_EQ_MAX_DB, mEq[mi]));
+    }
+  } catch (e) {}
+  function setManualEqBand(i, db) {
+    db = Math.max(-MANUAL_EQ_MAX_DB, Math.min(MANUAL_EQ_MAX_DB, db));
+    manualEqDb[i] = db;
+    if (manualEqFilters && manualEqFilters[i] && eqAudioCtx) {
+      try { manualEqFilters[i].gain.setTargetAtTime(db, eqAudioCtx.currentTime, FX_RAMP_S); } catch (e) {}
+    }
+    try { localStorage.setItem("songEqBands", JSON.stringify(manualEqDb)); } catch (e) {}
+  }
   var FLAT_BASS_DB = 0, FLAT_LOWPASS_HZ = 20000; // "no audible change vs today" defaults
   var HP_BASS_DB = 8, HP_LOWPASS_HZ = 1800;      // headphone-mode targets
   var FX_RAMP_S = 0.25;                          // setTargetAtTime time-constant — smooth, click-free
@@ -9326,7 +9361,18 @@ document.addEventListener("click", function (e) {
       eqAnalyser = eqAudioCtx.createAnalyser();
       eqAnalyser.fftSize = 128; // 64 bins — enough resolution for the equalizer's log-frequency binning to separate bass/mid/treble
       eqAnalyser.smoothingTimeConstant = 0.7;
-      eqBassShelf.connect(eqMuffleFilter);
+      // manual six-band chain: bassShelf -> band0..band5 -> muffle
+      manualEqFilters = MANUAL_EQ_FREQS.map(function (fq, fi) {
+        var f = eqAudioCtx.createBiquadFilter();
+        f.type = fi === 0 ? "lowshelf" : (fi === MANUAL_EQ_FREQS.length - 1 ? "highshelf" : "peaking");
+        f.frequency.value = fq;
+        if (f.type === "peaking") f.Q.value = 1;
+        f.gain.value = manualEqDb[fi];
+        return f;
+      });
+      var mePrev = eqBassShelf;
+      manualEqFilters.forEach(function (f) { mePrev.connect(f); mePrev = f; });
+      mePrev.connect(eqMuffleFilter);
       // Stereo-width stage (mid-side-style narrowing), spliced in right after the muffle
       // filter and before the master gain/compressor/panner -- width is a spatial property
       // of the "dry" filtered signal, applied before those touch it. There's no dedicated
@@ -10037,48 +10083,59 @@ document.addEventListener("click", function (e) {
   // so a future app is one more entry. Icons are SVG text glyphs; labels carry data-i
   // keys so setLang localizes them like all other copy.
   var DESKTOP_APPS = [
-    { id: "music", labelKey: "app_music", glyph: "\u266A", color: "#8e3a4a", glyphSize: "9.5", open: function () { monitorPlayRandom(); } },
-    { id: "photobooth", labelKey: "app_photobooth", glyph: "\uD83D\uDCF7", open: function () {
+    { id: "music", labelKey: "app_music", glyph: "\u266A", tile: "#8e3a4a", color: "#f8f5ec", glyphSize: "8.5", glyphY: 178.8, open: function () { monitorPlayRandom(); } },
+    { id: "photobooth", labelKey: "app_photobooth", glyph: "\uD83D\uDCF7", tile: "#7f9ec0", glyphSize: "7", glyphY: 178.2, open: function () {
       // same entry as tapping the bezel webcam (its handler owns the whole flow)
       var wc = document.getElementById("office-webcam");
       if (wc) wc.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     } },
-    { id: "terminal", labelKey: "app_terminal", glyph: "\u276F_", color: "#4a6b94", open: function () { openTerminal(); } }
+    { id: "terminal", labelKey: "app_terminal", glyph: "\u276F_", tile: "#2e2823", color: "#8fd070", mono: true, glyphSize: "5.2", glyphY: 177.6, open: function () { openTerminal(); } }
   ];
   var dock = document.getElementById("monitor-desktop-dock");
+  var SVGNS = "http://www.w3.org/2000/svg";
+  function mkEl(tag, attrs, parent) {
+    var n = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  }
   if (dock) {
-    var SVGNS = "http://www.w3.org/2000/svg";
+    // wallpaper: cream base, soft his/hers color washes, the caps as a faint watermark
+    mkEl("rect", { x: 254, y: 154, width: 124, height: 42, rx: 1.5, fill: "#efe6cf" }, dock);
+    mkEl("ellipse", { cx: 286, cy: 172, rx: 40, ry: 22, fill: "#d9a6a6", opacity: 0.12 }, dock);
+    mkEl("ellipse", { cx: 350, cy: 181, rx: 42, ry: 24, fill: "#7f9ec0", opacity: 0.12 }, dock);
+    var capsWm = mkEl("g", { opacity: 0.2, transform: "translate(292,156.5) scale(0.28)" }, dock);
+    mkEl("use", { href: "#cap-pink" }, capsWm);
+    mkEl("use", { href: "#cap-blue" }, capsWm);
+    // menu bar: brand at left, a live clock at right
+    mkEl("rect", { x: 254, y: 154, width: 124, height: 5.5, fill: "#453a31", opacity: 0.92 }, dock);
+    var deskBrand = mkEl("text", { x: 257, y: 158.3, "class": "desk-bar-text" }, dock);
+    deskBrand.textContent = "m \u221e b";
+    var deskClock = mkEl("text", { x: 375, y: 158.3, "text-anchor": "end", "class": "desk-bar-text" }, dock);
+    function paintDeskClock() {
+      var d = new Date();
+      var z = function (n) { return (n < 10 ? "0" : "") + n; };
+      deskClock.textContent = z(d.getHours()) + ":" + z(d.getMinutes());
+    }
+    paintDeskClock();
+    setInterval(paintDeskClock, 30000); // text-only repaint; nothing spawns, so a hidden tab can't pile anything up
+    // dock tray + app icons
+    mkEl("rect", { x: 276.5, y: 165.5, width: 79, height: 28, rx: 5, "class": "dock-tray" }, dock);
     DESKTOP_APPS.forEach(function (app, i) {
-      var cx = 337 + (i - (DESKTOP_APPS.length - 1) / 2) * 30;
-      var g = document.createElementNS(SVGNS, "g");
-      g.setAttribute("class", "dock-app");
-      var tile = document.createElementNS(SVGNS, "rect");
-      tile.setAttribute("class", "dock-tile");
-      tile.setAttribute("x", cx - 10); tile.setAttribute("y", "170");
-      tile.setAttribute("width", "20"); tile.setAttribute("height", "14");
-      tile.setAttribute("rx", "3");
-      g.appendChild(tile);
-      var glyph = document.createElementNS(SVGNS, "text");
-      glyph.setAttribute("class", "dock-glyph");
-      glyph.setAttribute("x", cx); glyph.setAttribute("y", "179.8");
-      glyph.setAttribute("text-anchor", "middle");
-      glyph.setAttribute("fill", app.color || "#453a31");
-      if (app.glyphSize) glyph.setAttribute("font-size", app.glyphSize);
+      var cx = 316 + (i - (DESKTOP_APPS.length - 1) / 2) * 25;
+      var g = mkEl("g", { "class": "dock-app" }, dock);
+      mkEl("rect", { "class": "dock-tile", x: cx - 7.5, y: 168, width: 15, height: 15, rx: 4, fill: app.tile }, g);
+      var glyph = mkEl("text", { "class": "dock-glyph", x: cx, y: app.glyphY, "text-anchor": "middle", fill: app.color || "#f8f5ec", "font-size": app.glyphSize }, g);
+      if (app.mono) glyph.setAttribute("font-family", "ui-monospace, monospace");
       glyph.textContent = app.glyph;
-      g.appendChild(glyph);
-      var label = document.createElementNS(SVGNS, "text");
-      label.setAttribute("class", "dock-label");
-      label.setAttribute("x", cx); label.setAttribute("y", "190.5");
-      label.setAttribute("text-anchor", "middle");
-      label.setAttribute("data-i", app.labelKey);
+      var label = mkEl("text", { "class": "dock-label", x: cx, y: 190.8, "text-anchor": "middle", "data-i": app.labelKey }, g);
       // setLang has already run by the time the dock is built — paint the current
       // language now; data-i keeps future toggles in sync
       var lang = document.documentElement.lang;
       label.textContent = (T[lang] && T[lang][app.labelKey]) || T.en[app.labelKey] || "";
-      g.appendChild(label);
+      mkEl("rect", { x: cx - 12, y: 166, width: 24, height: 27, fill: "transparent" }, g);
       g.addEventListener("click", function (e) { e.stopPropagation(); app.open(); });
       g.addEventListener("dblclick", function (e) { e.stopPropagation(); });
-      dock.appendChild(g);
     });
   }
   // ── TERMINAL APP ─────────────────────────────────────────────────────────────────
@@ -10363,6 +10420,47 @@ document.addEventListener("click", function (e) {
       scheduleSaver();
     });
     npCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+  // ── MANUAL EQUALIZER UI ── six draggable band sliders (lowshelf/peaking/highshelf,
+  // see MANUAL_EQ_FREQS above), colored like the visualizer bars. Vertical drag maps to
+  // ±9dB; double-tap a slider to zero its band.
+  var manualEqG = document.getElementById("monitor-manual-eq");
+  if (manualEqG) {
+    var MEQ_COLORS = ["#d9a6a6", "#e0935a", "#e8b93a", "#7fb35c", "#6f94bd", "#9c6bb8"];
+    var MEQ_TOP = 169.5, MEQ_H = 12, MEQ_MID = MEQ_TOP + MEQ_H / 2;
+    MANUAL_EQ_FREQS.forEach(function (fq, i) {
+      var cx = 340.5 + i * 6.5;
+      var g = mkEl("g", { "class": "meq-band" }, manualEqG);
+      mkEl("line", { "class": "meq-track", x1: cx, x2: cx, y1: MEQ_TOP, y2: MEQ_TOP + MEQ_H }, g);
+      var thumb = mkEl("rect", { "class": "meq-thumb", x: cx - 2.4, width: 4.8, height: 2, rx: 0.8, fill: MEQ_COLORS[i] }, g);
+      var hit = mkEl("rect", { x: cx - 3.25, y: MEQ_TOP - 1.5, width: 6.5, height: MEQ_H + 3, fill: "transparent" }, g);
+      function paintThumb() {
+        thumb.setAttribute("y", MEQ_MID - (manualEqDb[i] / MANUAL_EQ_MAX_DB) * (MEQ_H / 2) - 1);
+      }
+      paintThumb();
+      function dbFromPointer(ev) {
+        var r = hit.getBoundingClientRect();
+        if (!r.height) return manualEqDb[i];
+        var f = 1 - 2 * ((ev.clientY - r.top) / r.height); // +1 at the top, -1 at the bottom
+        return Math.round(Math.max(-1, Math.min(1, f)) * MANUAL_EQ_MAX_DB);
+      }
+      hit.addEventListener("pointerdown", function (ev) {
+        ev.stopPropagation(); ev.preventDefault();
+        try { hit.setPointerCapture(ev.pointerId); } catch (e) {}
+        setManualEqBand(i, dbFromPointer(ev)); paintThumb();
+        function onMove(mv) { setManualEqBand(i, dbFromPointer(mv)); paintThumb(); }
+        function onUp() {
+          hit.removeEventListener("pointermove", onMove);
+          hit.removeEventListener("pointerup", onUp);
+          hit.removeEventListener("pointercancel", onUp);
+        }
+        hit.addEventListener("pointermove", onMove);
+        hit.addEventListener("pointerup", onUp);
+        hit.addEventListener("pointercancel", onUp);
+      });
+      hit.addEventListener("click", function (ev) { ev.stopPropagation(); });
+      hit.addEventListener("dblclick", function (ev) { ev.stopPropagation(); setManualEqBand(i, 0); paintThumb(); });
+    });
   }
   // Tapping the scrolling title opens the performing artist's site — the player's only
   // link-out.
@@ -20064,7 +20162,7 @@ function spawnDustMote(container) {
   // dragging an object would pan the page on touch screens. touchmove events
   // retarget to the touchstart element, so one non-passive listener covers
   // every draggable; touches starting elsewhere still scroll normally.
-  var DRAG_SEL = "#office-desk, #office-chair, #garden-bottles, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife";
+  var DRAG_SEL = "#office-desk, #office-chair, #garden-bottles, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife, #monitor-manual-eq";
   strip.addEventListener("touchmove", function (e) {
     if (e.target.closest && e.target.closest(DRAG_SEL)) e.preventDefault();
   }, { passive: false });

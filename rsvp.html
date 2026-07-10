@@ -987,6 +987,9 @@ footer{margin-top:2.6rem}
 .desk-brand:hover .desk-bar-text{fill:#d9a6a6}
 .dock-tile{stroke:rgba(0,0,0,0.18); stroke-width:0.5}
 .dock-glyph{font-family:sans-serif}
+.dock-mini-eq{opacity:0; transition:opacity .3s ease}
+#office-monitor.eq-live .dock-mini-eq{opacity:1}
+#office-monitor.eq-live .dock-app-music .dock-glyph{opacity:0}
 .dock-label{fill:#716455; font-family:sans-serif; font-size:5.5px; letter-spacing:0.1px}
 /* terminal app: a tiny JS REPL over the screen */
 #monitor-terminal{opacity:0; pointer-events:none; transition:opacity .25s ease}
@@ -1105,7 +1108,14 @@ footer{margin-top:2.6rem}
 #office-monitor.picking #monitor-pb-brand{opacity:0} /* the grid owns the whole screen */
 #monitor-pb-retake{opacity:0; pointer-events:none}
 #office-monitor.picking #monitor-pb-retake{opacity:1; pointer-events:auto}
-.pb-picker{width:124px; height:42px; box-sizing:border-box; display:grid; grid-template-columns:repeat(3,1fr); grid-auto-rows:19.5px; gap:1px; padding:1px; background:#0a0d12; overflow-y:auto; scrollbar-width:thin; scrollbar-color:rgba(248,245,236,0.45) transparent}
+/* 4 near-square cells per row (the polaroid crops square — thumbs should match) and a
+   PERMANENT scrollbar as the "there's more" cue: overflow-y:scroll + webkit styling
+   (no scrollbar-width property — setting it makes Chrome ignore the webkit pseudos
+   and fall back to overlay bars that hide on macOS) */
+.pb-picker{width:124px; height:42px; box-sizing:border-box; display:grid; grid-template-columns:repeat(4,1fr); grid-auto-rows:28px; gap:1px; padding:1px; background:#0a0d12; overflow-y:scroll}
+.pb-picker::-webkit-scrollbar{width:3px}
+.pb-picker::-webkit-scrollbar-track{background:rgba(255,253,248,0.08)}
+.pb-picker::-webkit-scrollbar-thumb{background:rgba(248,245,236,0.45); border-radius:1.5px}
 .pb-thumb{padding:0; margin:0; border:none; cursor:pointer; overflow:hidden; background:#000; border-radius:1px; outline:0 solid #d9a6a6; transition:outline-width .1s ease}
 .pb-thumb canvas{width:100%; height:100%; display:block; object-fit:cover}
 .pb-thumb:hover{outline-width:1.5px}
@@ -5482,8 +5492,10 @@ section{margin:1.9rem 0}
 <!-- retake (re-run the countdown), top-left; shown only in .picking -->
 <g id="monitor-pb-retake" class="pb-ctrl">
 <circle cx="260" cy="159.5" r="4.6" fill="#000" fill-opacity="0.45"/>
+<g transform="translate(520,0) scale(-1,1)">
 <path d="M262.5 157.3 A2.7 2.7 0 1 0 263 161.7" fill="none" stroke="#f6f2ea" stroke-width="1" stroke-linecap="round"/>
 <path d="M262.9 155.7 L263 157.7 L261 157.6 Z" fill="#f6f2ea"/>
+</g>
 </g>
 <!-- lingering on the picker fades this in: the thumbnails ARE the choices -->
 <g id="monitor-pb-pick-hint">
@@ -9926,7 +9938,8 @@ document.addEventListener("click", function (e) {
     // updateNowPlaying) — so there's never a second loop reading the same analyser.
     var sets = [
       document.querySelectorAll("#monitor-logo-nowplaying .eq-bar"),
-      document.querySelectorAll("#monitor-saver-eq .eq-bar")
+      document.querySelectorAll("#monitor-saver-eq .eq-bar"),
+      document.querySelectorAll("#monitor-desktop-dock .eq-bar") // the music tile's mini eq
     ].filter(function (bars) { return bars.length; });
     if (!sets.length) return;
     eqAudioEl = audioEl || null;
@@ -10329,11 +10342,19 @@ document.addEventListener("click", function (e) {
     mkEl("rect", { x: 262, y: 165.5, width: 108, height: 28, rx: 5, "class": "dock-tray" }, dock);
     DESKTOP_APPS.forEach(function (app, i) {
       var cx = 316 + (i - (DESKTOP_APPS.length - 1) / 2) * 36;
-      var g = mkEl("g", { "class": "dock-app" }, dock);
+      var g = mkEl("g", { "class": "dock-app dock-app-" + app.id }, dock);
       mkEl("rect", { "class": "dock-tile", x: cx - 7.5, y: 168, width: 15, height: 15, rx: 4, fill: app.tile }, g);
       var glyph = mkEl("text", { "class": "dock-glyph", x: cx, y: app.glyphY, "text-anchor": "middle", fill: app.color || "#f8f5ec", "font-size": app.glyphSize }, g);
       if (app.mono) glyph.setAttribute("font-family", "ui-monospace, monospace");
       glyph.textContent = app.glyph;
+      if (app.id === "music") {
+        // while a song plays, the note gives way to a live 3-bar mini equalizer
+        // (joined to startEq's shared analyser loop via the .eq-bar class)
+        var mini = mkEl("g", { "class": "dock-mini-eq" }, g);
+        [-4.5, -1.25, 2].forEach(function (bx) {
+          mkEl("rect", { "class": "eq-bar", x: cx + bx, y: 171.5, width: 2.5, height: 9, rx: 0.8, fill: "#f8f5ec" }, mini);
+        });
+      }
       var label = mkEl("text", { "class": "dock-label", x: cx, y: 190.8, "text-anchor": "middle", "data-i": app.labelKey }, g);
       // setLang has already run by the time the dock is built — paint the current
       // language now; data-i keeps future toggles in sync
@@ -11102,12 +11123,12 @@ document.addEventListener("click", function (e) {
     g.font = "700 54px Georgia, 'Times New Roman', serif";
     g.fillText("markéta ∞ behdad", W / 2, baseY);
     g.fillStyle = "#716455";                                 // muted
-    g.font = "400 30px Georgia, 'Times New Roman', serif";
+    g.font = "400 38px Georgia, 'Times New Roman', serif";
     // full ISO capture date — the same string in both languages
     var d = new Date();
     function pad(n) { return (n < 10 ? "0" : "") + n; }
     var dateStr = d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
-    g.fillText(pbText("pb_strip_caption") + " · " + dateStr, W / 2, baseY + 42);
+    g.fillText(pbText("pb_strip_caption") + " · " + dateStr, W / 2, baseY + 58);
     return c;
   }
   function cancelCapture() {
@@ -11148,9 +11169,9 @@ document.addEventListener("click", function (e) {
     pbPickerGrid.innerHTML = "";
     PB_EFFECTS.forEach(function (fx) {
       var tc = document.createElement("canvas");
-      tc.width = 132; tc.height = 84;
+      tc.width = 96; tc.height = 96; // square, like the polaroid window
       var tg = tc.getContext("2d");
-      if (tg) drawCover(tg, pbBaseFrame, 0, 0, 132, 84, fx.css);
+      if (tg) drawCover(tg, pbBaseFrame, 0, 0, 96, 96, fx.css);
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "pb-thumb";
@@ -11241,6 +11262,14 @@ document.addEventListener("click", function (e) {
   // composed polaroid big, with Download / Gmail / Email / Retake / Cancel. Retake goes
   // back to live + countdown; Cancel/✕/backdrop-tap go back to the live view (camera
   // still on — the monitor's own ✕ closes the whole booth).
+  // Esc closes the dialog — capture phase so it wins over the global Escape
+  // stop-the-music handler while the dialog is up
+  document.addEventListener("keydown", function (e) {
+    if ((e.key !== "Escape" && e.key !== "Esc") || !pbDialog) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dismissPolaroidDialog();
+  }, true);
   function dismissPolaroidDialog() {
     if (!pbDialog) return;
     var d = pbDialog; pbDialog = null;

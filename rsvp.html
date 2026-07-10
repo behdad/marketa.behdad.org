@@ -1042,7 +1042,7 @@ footer{margin-top:2.6rem}
    No need to touch the other boot-logos' pointer-events: monitor clicks still delegate up. */
 #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .4s ease}
 #office-monitor.show-caps #monitor-desktop-dock{opacity:1; visibility:visible; pointer-events:auto}
-#office-monitor.show-nowplaying #monitor-desktop-dock, #office-monitor.show-saver #monitor-desktop-dock, #office-monitor.show-terminal #monitor-desktop-dock, #office-monitor.show-mail #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none}
+#office-monitor.show-nowplaying #monitor-desktop-dock, #office-monitor.show-saver #monitor-desktop-dock, #office-monitor.show-terminal #monitor-desktop-dock, #office-monitor.show-mail #monitor-desktop-dock, #office-monitor.show-video #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none}
 .dock-app{cursor:pointer; transition:transform .15s ease}
 .dock-app:hover{transform:translateY(-1px)}
 .dock-tray{fill:rgba(255,253,248,0.72); stroke:rgba(69,58,49,0.2); stroke-width:0.7}
@@ -1099,6 +1099,20 @@ footer{margin-top:2.6rem}
 .mail-body::-webkit-scrollbar{display:none}
 .mail-reply-btn{float:right; background:#8e3a4a; color:#f8f5ec; border-radius:2.5px; padding:1.2px 4px 1.4px; margin:1.2px 0 0 2px; cursor:pointer} /* action pill in the reading-view head, clear of the close pill via the head's right padding */
 .mail-reply-btn:hover{background:#7a2f3e}
+/* video app: markéta's tumbalalaika home movie, letterboxed in a foreignObject over the
+   screen (tap = play/pause); .absent on the wrap = the file isn't on the server, so a
+   bilingual note takes the screen instead */
+#monitor-video{opacity:0; pointer-events:none; transition:opacity .25s ease}
+#office-monitor.show-video #monitor-video{opacity:1; pointer-events:auto}
+#monitor-video-close{cursor:pointer}
+#monitor-video-close:hover .seg-hover{opacity:.55}
+.vid-wrap{position:relative; width:124px; height:42px; background:#000; cursor:pointer}
+.vid-el{width:100%; height:100%; object-fit:contain; display:block}
+.vid-note{position:absolute; inset:0; display:none; align-items:center; justify-content:center; text-align:center; padding:0 12px; box-sizing:border-box; color:#cfc4b4; font-family:sans-serif; font-size:4.8px; line-height:1.5}
+.vid-play{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; color:rgba(248,245,236,0.92); font-family:sans-serif; font-size:13px; text-shadow:0 0 3px rgba(0,0,0,0.8); opacity:0; transition:opacity .2s ease}
+.vid-wrap.paused .vid-play{opacity:1}
+.vid-wrap.absent .vid-note{display:flex}
+.vid-wrap.absent .vid-el, .vid-wrap.absent .vid-play{display:none}
 /* the now-playing screen carries a pause/play toggle: pause bars while the song plays,
    a play triangle when it's paused (JS adds .paused). Shown only over show-nowplaying. */
 #monitor-pause-btn{opacity:0; visibility:hidden; pointer-events:none; cursor:pointer; transition:opacity .4s ease}
@@ -1165,6 +1179,7 @@ footer{margin-top:2.6rem}
 #office-monitor.photobooth #monitor-desktop-dock,
 #office-monitor.photobooth #monitor-terminal,
 #office-monitor.photobooth #monitor-mail,
+#office-monitor.photobooth #monitor-video,
 #office-monitor.photobooth #monitor-pause-btn,
 #office-monitor.photobooth #monitor-volume-btn,
 #office-monitor.photobooth #monitor-prev-btn,
@@ -5752,6 +5767,25 @@ section{margin:1.9rem 0}
 <path d="M369.9 159.9 L374.1 164.1 M374.1 159.9 L369.9 164.1" stroke="#f8f5ec" stroke-width="1.1" stroke-linecap="round"/>
 </g>
 </g>
+<!-- VIDEO app: markéta performing tumbalalaika — the home movie the guitar egg's audio
+     was extracted from — letterboxed in a foreignObject over the screen, with the same
+     mini close pill as the player. The <video> gets its src on first open (openVideoApp);
+     .absent on the wrap swaps in the bilingual not-loaded-yet note. -->
+<g id="monitor-video">
+<foreignObject x="254" y="154" width="124" height="42">
+<div xmlns="http://www.w3.org/1999/xhtml" id="monitor-video-wrap" class="vid-wrap paused">
+<video id="monitor-video-el" class="vid-el" preload="metadata" playsinline="playsinline"></video>
+<div class="vid-note" data-i="video_absent">the film isn&#8217;t loaded yet &#8212; come back soon</div>
+<div class="vid-play">&#9654;</div>
+</div>
+</foreignObject>
+<g id="monitor-video-close">
+<rect x="367" y="156.5" width="10" height="11" rx="5" fill="#8e3a4a" stroke="#6e2836" stroke-width="0.9"/>
+<rect x="368.2" y="157.6" width="7.6" height="4.2" rx="2.1" fill="#ffffff" opacity="0.16"/>
+<rect class="seg-hover" x="367" y="156.5" width="10" height="11" rx="5" fill="#5f2230" opacity="0"/>
+<path d="M369.9 159.9 L374.1 164.1 M374.1 159.9 L369.9 164.1" stroke="#f8f5ec" stroke-width="1.1" stroke-linecap="round"/>
+</g>
+</g>
 <!-- LOFT PHOTOBOOTH: the visitor's own camera, live inside the monitor. Shown only while a
      session is running (the .photobooth class on #office-monitor). The live <video> sits in
      a foreignObject over the screen's LEFT zone (x254–316) at its true aspect ratio; the
@@ -7012,6 +7046,8 @@ var T = {
     app_photobooth: "photobooth",
     app_album: "album",
     app_terminal: "console",
+    app_video: "video",
+    video_absent: "the film isn\u2019t loaded yet \u2014 come back soon",
     term_welcome: "loft console \u2014 real JavaScript, running right here in your page. try: help",
     term_help: "commands: help \u00b7 clear \u00b7 any JavaScript (try 2+2, document.title, loft.couple, loft.weddings)",
     app_mail: "mail",
@@ -7160,6 +7196,8 @@ var T = {
     app_photobooth: "fotokoutek",
     app_album: "album",
     app_terminal: "konzole",
+    app_video: "video",
+    video_absent: "film je\u0161t\u011b nen\u00ed nahran\u00fd \u2014 vra\u0165te se brzy",
     term_welcome: "loftov\u00e1 konzole \u2014 opravdov\u00fd JavaScript, b\u011b\u017e\u00ed p\u0159\u00edmo tady ve str\u00e1nce. zkuste: help",
     term_help: "p\u0159\u00edkazy: help \u00b7 clear \u00b7 jak\u00fdkoli JavaScript (zkuste 2+2, document.title, loft.couple, loft.weddings)",
     app_mail: "po\u0161ta",
@@ -9692,7 +9730,7 @@ document.addEventListener("click", function (e) {
     saverTimer = setTimeout(startSaver, ms || 8000);
   }
   function startSaver() {
-    if (monitor.classList.contains("show-terminal") || monitor.classList.contains("show-mail")) { scheduleSaver(30000); return; } // never over someone typing or reading mail
+    if (monitor.classList.contains("show-terminal") || monitor.classList.contains("show-mail") || monitor.classList.contains("show-video")) { scheduleSaver(30000); return; } // never over someone typing, reading mail, or the film
     // a visited site (harfbuzz/behdad) idles back to the caps "home" before the saver
     if (monitor.classList.contains("show-harfbuzz") || monitor.classList.contains("show-behdad")) {
       monitor.classList.remove("show-harfbuzz", "show-behdad");
@@ -9792,10 +9830,11 @@ document.addEventListener("click", function (e) {
   function clearBoot() {
     closeTerminal(); // blurs the REPL input too — an invisible focused input eats every keyboard shortcut
     closeMailApp();
+    closeVideoApp(); // pauses the film too — it never plays behind a dark/rebooting screen
     bootTimers.forEach(clearTimeout);
     bootTimers = [];
     stopSaver();
-    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying", "show-terminal", "show-mail");
+    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying", "show-terminal", "show-mail", "show-video");
   }
   // The monitor only lights up when the PC is on; it then boots Fedora →
   // Chrome → the caps, which stay up.
@@ -10775,6 +10814,7 @@ document.addEventListener("click", function (e) {
       if (wc) wc.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     } },
     { id: "album", labelKey: "app_album", glyph: "\uD83D\uDDBC\uFE0F", tile: "#d9a6a6", glyphSize: "7", glyphY: 178.2, open: function () { try { window.open("https://photos.app.goo.gl/gBQpsw4nrh9RwdQu9", "_blank"); } catch (err) {} } },
+    { id: "video", labelKey: "app_video", glyph: "\u25B6", tile: "#4a6b94", glyphSize: "6.5", glyphY: 178.1, open: function () { openVideoApp(); } },
     { id: "terminal", labelKey: "app_terminal", glyph: "\u276F_", tile: "#2e2823", color: "#8fd070", mono: true, glyphSize: "5.2", glyphY: 177.6, open: function () { openTerminal(); } },
     { id: "mail", labelKey: "app_mail", glyph: "\u2709\uFE0F", tile: "#4a6b94", glyphSize: "7", glyphY: 178.4, open: function () { openMailApp(); } }
   ];
@@ -11044,6 +11084,68 @@ document.addEventListener("click", function (e) {
   if (mailCloseBtn) {
     mailCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeMailApp(); playLaptopClickSound("office-monitor"); });
     mailCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+  // ── VIDEO APP ────────────────────────────────────────────────────────────────────
+  // Markéta performing Tumbalalaika — the home movie the guitar egg's audio
+  // (art/tumbala.{opus,mp3}) was extracted from. The <video> only gets its src on the
+  // app's first open, so visitors who never open it fetch nothing; if the file isn't on
+  // the server (or fails to decode), the error handler swaps in the bilingual note —
+  // no uncaught errors either way. Opens paused on the first frame; tapping the picture
+  // toggles play/pause. The film and the songs never sound together: starting one
+  // pauses the other.
+  var vidEl = document.getElementById("monitor-video-el");
+  var vidWrap = document.getElementById("monitor-video-wrap");
+  var vidCloseBtn = document.getElementById("monitor-video-close");
+  var vidSrcSet = false;
+  function pauseVideoApp() {
+    if (vidEl && !vidEl.paused) { try { vidEl.pause(); } catch (e) {} }
+  }
+  function openVideoApp() {
+    if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-video")) return;
+    stopSaver();
+    clearTimeout(saverTimer); saverTimer = null; // no screensaver over the film
+    monitor.classList.add("show-video");
+    if (!vidSrcSet && vidEl) {
+      vidSrcSet = true;
+      vidEl.src = "art/tumbala.mp4"; // preload="metadata" fetches just enough for the first frame
+    }
+    playLaptopClickSound("office-monitor");
+  }
+  function closeVideoApp() {
+    if (!monitor.classList.contains("show-video")) return;
+    monitor.classList.remove("show-video");
+    pauseVideoApp(); // the film never plays unattended
+    scheduleSaver();
+  }
+  window.__closeMonitorVideo = closeVideoApp; // other monitor apps close the film before taking the screen
+  window.__pauseMonitorVideo = pauseVideoApp; // room-leave hook: pause playback without closing the app view
+  function toggleVideoApp() {
+    if (!vidEl || vidWrap.classList.contains("absent")) return;
+    try {
+      if (vidEl.paused) {
+        for (var i = 0; i < songAudios.length; i++) { var a = songAudios[i]; if (a && !a.paused) a.pause(); } // the film takes the speakers
+        vidEl.volume = window.__songVolume ? window.__songVolume() : 0.5; // app-owned level, same defensive reapply as every other play trigger
+        var p = vidEl.play(); if (p && p.catch) p.catch(function (e) { console.warn("[video-app] play() rejected:", e); });
+      } else vidEl.pause();
+    } catch (e) {}
+  }
+  if (vidEl && vidWrap) {
+    vidEl.addEventListener("error", function () { vidWrap.classList.add("absent"); }); // 404/undecodable → the note takes the screen
+    vidEl.addEventListener("loadedmetadata", function () {
+      vidWrap.classList.remove("absent");
+      try { if (vidEl.currentTime === 0) vidEl.currentTime = 0.001; } catch (e) {} // nudge a seek so the first frame actually paints
+    });
+    vidEl.addEventListener("play", function () { vidWrap.classList.remove("paused"); });
+    vidEl.addEventListener("pause", function () { vidWrap.classList.add("paused"); });
+    // a song starting (spacebar, headphones, garden instruments…) takes the screen for the
+    // player — close the film so it never keeps playing (or lingering) underneath
+    songAudios.forEach(function (a) { if (a) a.addEventListener("play", closeVideoApp); });
+    vidWrap.addEventListener("click", function (e) { e.stopPropagation(); toggleVideoApp(); });
+    vidWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+  if (vidCloseBtn) {
+    vidCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeVideoApp(); playLaptopClickSound("office-monitor"); });
+    vidCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   // The now-playing screen's pause/play toggle: pauses the current song, or resumes it
   // if paused. play()/pause() fire the listeners above, which repaint the button + bars.
@@ -11595,6 +11697,7 @@ document.addEventListener("click", function (e) {
   function showPbConfirm() {
     if (window.__closeMonitorTerminal) window.__closeMonitorTerminal(); // the booth takes the screen — don't leave the REPL focused underneath
     if (window.__closeMonitorMail) window.__closeMonitorMail();
+    if (window.__closeMonitorVideo) window.__closeMonitorVideo(); // ...or the film playing underneath
     appOpenTs = Date.now(); // consent button ignores clicks in the grace window (see below)
     monitor.classList.remove("pb-error");
     monitor.classList.add("pb-confirm");
@@ -11623,6 +11726,7 @@ document.addEventListener("click", function (e) {
     // below runs inside a real user gesture and the browser's permission prompt can show
     if (pbActive || pbStarting) return;
     stopTileCam(); // the booth takes the camera over — one stream at a time
+    if (window.__closeMonitorVideo) window.__closeMonitorVideo(); // the granted-permission path skips the confirm, so close the film here too
     var md = navigator.mediaDevices;
     if (!md || !md.getUserMedia) { showPbError(); return; } // no camera API / insecure context
     pbStarting = true;
@@ -11978,6 +12082,7 @@ document.addEventListener("click", function (e) {
       !monitor.classList.contains("show-nowplaying") &&
       !monitor.classList.contains("show-terminal") &&
       !monitor.classList.contains("show-mail") &&
+      !monitor.classList.contains("show-video") &&
       !monitor.classList.contains("pb-confirm") &&
       !monitor.classList.contains("pb-error");
   }
@@ -18914,6 +19019,7 @@ function spawnDustMote(container) {
     var ROOM_FADE = 3;
     if (window.__updatePcFan) window.__updatePcFan(name === "office", ROOM_FADE); // hum only in the office
     if (name !== "office" && window.__closeOfficePhotobooth) window.__closeOfficePhotobooth(); // leaving the office stops the photobooth camera
+    if (name !== "office" && window.__pauseMonitorVideo) window.__pauseMonitorVideo(); // ...and pauses the home movie (the app view stays for the return)
     if (window.__updateACHum) window.__updateACHum(name, ROOM_FADE); // AC hum only in garden + balcony, panned to that room's unit
     if (window.__updateRadioSound) window.__updateRadioSound(name === "kitchen", ROOM_FADE); // radio audible only in the kitchen
     if (window.__updateKettleHum) window.__updateKettleHum(name === "kitchen", ROOM_FADE); // kettle hum only in the kitchen

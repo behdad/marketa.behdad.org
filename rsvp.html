@@ -9515,9 +9515,9 @@ document.addEventListener("click", function (e) {
       eqPanner = eqAudioCtx.createStereoPanner ? eqAudioCtx.createStereoPanner() : null;
       if (eqPanner) eqPanner.pan.value = 0;
       eqAnalyser = eqAudioCtx.createAnalyser();
-      eqAnalyser.fftSize = 512; // 256 bins (~93Hz each) — the visual bars sit AFTER the manual
-                                // EQ, and its 60/150/400Hz bands need this resolution to move
-                                // their own bar instead of smearing into one giant bass bin
+      eqAnalyser.fftSize = 1024; // 512 bins (~47Hz each) — the visual bars sit AFTER the manual
+                                 // EQ, and its 60/150/400Hz bands need this resolution to move
+                                 // their own bar instead of smearing into one giant bass bin
       eqAnalyser.smoothingTimeConstant = 0.7;
       // manual six-band chain: bassShelf -> band0..band5 -> muffle
       manualEqFilters = MANUAL_EQ_FREQS.map(function (fq, fi) {
@@ -10027,7 +10027,7 @@ document.addEventListener("click", function (e) {
           var band = bands[i], sum = 0, cnt = 0;
           for (var j = band.lo; j < band.hi && j < data.length; j++) { sum += data[j]; cnt++; }
           var raw = cnt ? (sum / cnt) / 255 : 0;                          // dB-compressed level, 0-1
-          var e = Math.max(0, raw * band.gain - 0.1) * 3.1 * rvol;        // floor-subtract, expand, volume-scale
+          var e = Math.max(0, raw * band.gain - 0.22) * 2.2 * rvol;       // floor-subtract, expand, volume-scale
           var mdb = (band.bandIdx != null) ? manualEqDb[band.bandIdx] : manualEqDbAt(band.fc);
           e *= Math.pow(10, mdb / 20);                                    // manual-EQ display emphasis (see manualEqDbAt)
           bars[i].style.transform = "scaleY(" + (0.14 + 0.76 * (1 - Math.exp(-e))).toFixed(3) + ")";

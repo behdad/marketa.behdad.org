@@ -9282,7 +9282,7 @@ document.addEventListener("click", function (e) {
     function buzz() {
       phone.classList.remove("buzz");
       phoneScreen.classList.remove("buzz");
-      playPhoneRingSound("balcony-phone"); // ringtone on tap, panned to the phone
+      playPhoneVoiceSound("balcony-phone"); // a little synth "alo?" (answering the phone), panned to the phone
       requestAnimationFrame(function () {
         requestAnimationFrame(function () {
           phone.classList.add("buzz");
@@ -13471,6 +13471,71 @@ function playPhoneRingSound(panId) {
       osc.stop(t + 0.45);
     });
     setTimeout(function () { ctx.close(); }, 1300);
+  } catch (e) {}
+}
+// A tiny formant-synth "alo?" — the balcony phone answering itself when tapped.
+// One buzzy glottal source (two slightly detuned sawtooths) is fed through three
+// parallel bandpass "formants" whose centre frequencies glide from the vowel /a/
+// (F1 730, F2 1090, F3 2440 Hz) to /o/ (570, 840, 2410) across the two syllables,
+// with a rising f0 contour so the prosody reads as a question ("alo?" = the way you
+// answer a phone). Deliberately robotic/toy-phone: intelligible speech from bare
+// oscillators isn't a realistic target, so the pitch contour carries the meaning.
+// One-shot, self-closing ctx, no timer/loop left running (no accumulation risk).
+function playPhoneVoiceSound(panId) {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t0 = ctx.currentTime;
+    var out = pannedOut(ctx, panId || "balcony-phone");
+
+    // glottal source: two detuned sawtooths for a touch of warmth, summed at `source`
+    var source = ctx.createGain();
+    source.gain.value = 1;
+    [-6, 6].forEach(function (dt) {
+      var osc = ctx.createOscillator();
+      osc.type = "sawtooth";
+      osc.detune.value = dt;
+      // f0 contour: mid on "a", dipping slightly, then rising into "lo?" (question)
+      osc.frequency.setValueAtTime(150, t0);
+      osc.frequency.linearRampToValueAtTime(144, t0 + 0.18);
+      osc.frequency.linearRampToValueAtTime(210, t0 + 0.52);
+      osc.connect(source);
+      osc.start(t0);
+      osc.stop(t0 + 0.62);
+    });
+
+    // master amplitude: two syllable bumps ("a" then "lo") with a dip for the /l/
+    var master = ctx.createGain();
+    master.gain.setValueAtTime(0.0001, t0);
+    master.gain.exponentialRampToValueAtTime(0.075, t0 + 0.04); // "a" onset
+    master.gain.setValueAtTime(0.075, t0 + 0.15);
+    master.gain.exponentialRampToValueAtTime(0.022, t0 + 0.24); // /l/ constriction
+    master.gain.exponentialRampToValueAtTime(0.08, t0 + 0.32);  // "o" onset
+    master.gain.setValueAtTime(0.08, t0 + 0.44);
+    master.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.6);
+    master.connect(out);
+
+    // three parallel bandpass formants, F1 loudest, gliding /a/ -> /o/ through the /l/
+    [
+      { a: 730, o: 570, q: 8, g: 1.0 },
+      { a: 1090, o: 840, q: 9, g: 0.5 },
+      { a: 2440, o: 2410, q: 10, g: 0.16 }
+    ].forEach(function (f) {
+      var bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.Q.value = f.q;
+      bp.frequency.setValueAtTime(f.a, t0);
+      bp.frequency.setValueAtTime(f.a, t0 + 0.18);
+      bp.frequency.linearRampToValueAtTime(f.o, t0 + 0.3);
+      var fg = ctx.createGain();
+      fg.gain.value = f.g;
+      source.connect(bp);
+      bp.connect(fg);
+      fg.connect(master);
+    });
+
+    setTimeout(function () { ctx.close(); }, 900);
   } catch (e) {}
 }
 // Shared by playCallLaughSound's connect moment and the ongoing ambient loop below:

@@ -6585,11 +6585,12 @@ function setUvMode(on) {
   var strip = document.getElementById("loft-game-strip");
   if (strip) strip.classList.toggle("uv-mode", !!on);
 }
-// Two independent sources drive the same blacklight look and must compose: the balcony
-// party switch (persistent, #balcony-partyswitch) and holding Shift (momentary). Track each
-// as its own boolean and OR them, so a Shift keyup can't switch off a switch-enabled party.
+// Two independent sources drive the same blacklight look: the balcony party switch
+// (persistent, #balcony-partyswitch) and holding Shift (momentary). XOR them — Shift toggles
+// the current state, so with the party switch ON, holding Shift momentarily flips back to
+// normal (a peek out of the blacklight), and with it off, Shift peeks into the blacklight.
 var uvPartyOn = false, uvShiftHeld = false;
-function applyUvMode() { setUvMode(uvPartyOn || uvShiftHeld); }
+function applyUvMode() { setUvMode(uvPartyOn !== uvShiftHeld); }
 window.__setUvMode = setUvMode; // reset / room-leave can force the raw class off
 window.__setUvParty = function (on) { uvPartyOn = !!on; applyUvMode(); }; // the balcony switch
 document.addEventListener("keydown", function (e) { if (e.key === "Shift") { uvShiftHeld = true; applyUvMode(); } });
@@ -18278,6 +18279,9 @@ function spawnDustMote(container) {
     if (window.resetSmoker) window.resetSmoker();
     if (window.resetLaptop) window.resetLaptop();
     if (window.resetBalconyDusk) window.resetBalconyDusk();
+    if (window.__setUvParty) window.__setUvParty(false); // drop out of the blacklight party
+    var partyswitch = document.getElementById("balcony-partyswitch");
+    if (partyswitch) partyswitch.classList.remove("on");
     if (window.resetRadio) window.resetRadio();
     if (window.resetAC) window.resetAC();
     if (window.resetKettle) window.resetKettle();

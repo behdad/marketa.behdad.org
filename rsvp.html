@@ -17211,78 +17211,111 @@ function playGhostBooSound() {
 
   } catch (e) {}
 }
-// The ketamine-trip ghost breathes a whispered "cool" — unvoiced (no pitch), so it's
-// filtered NOISE through gliding /k-uu-l/ vowel formants: breathy and eerie, quiet.
+// The ketamine-trip ghost murmurs a hushed "cool" — built exactly like the kitchen
+// ghost's approved "boo" (detuned saw chorus -> spectral-tilt lowpass -> vowel formants,
+// with a slow waver), but quieter, darker, and drawled: a /k/ click, then a rounded
+// /u:/ sagging into a dark coda /l/.
 function playGhostWhisperSound(panId) {
   try {
     var ctx = getSfxCtx();
     if (!ctx) return;
     var t0 = ctx.currentTime;
     var out = pannedOut(ctx, panId || "rsvp-trip-ghost");
-    var dur = 0.95;
-    var buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
+    var dur = 0.9;
+
+    var master = ctx.createGain();
+    master.gain.setValueAtTime(0.0001, t0);
+    master.gain.setValueAtTime(0.0001, t0 + 0.05);            // closure after the /k/ click
+    master.gain.exponentialRampToValueAtTime(0.07, t0 + 0.18); // swell into the oo
+    master.gain.setValueAtTime(0.07, t0 + 0.5);
+    master.gain.exponentialRampToValueAtTime(0.045, t0 + 0.68); // the dark l
+    master.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    master.connect(out);
+
+    // slow, shallow waver — spectral character shared with the boo, but sleepier
+    var vib = ctx.createOscillator();
+    vib.type = "sine";
+    vib.frequency.value = 4.2;
+    var vibDepth = ctx.createGain();
+    vibDepth.gain.value = 5;
+    vib.connect(vibDepth);
+    vib.start(t0);
+    vib.stop(t0 + dur + 0.02);
+
+    function formant(freq, q, level) {
+      var bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = freq;
+      bp.Q.value = q;
+      var g = ctx.createGain();
+      g.gain.value = level;
+      bp.connect(g);
+      g.connect(master);
+      return bp;
+    }
+    // /k/ -> /u:/ -> dark /l/: F2 launches from the velar locus, rounds into the oo,
+    // then sinks for the velarized coda l
+    var f1 = formant(320, 7, 1.0);
+    f1.frequency.setValueAtTime(300, t0 + 0.05);
+    f1.frequency.linearRampToValueAtTime(320, t0 + 0.2);
+    f1.frequency.linearRampToValueAtTime(400, t0 + dur);
+    var f2 = formant(780, 9, 0.5);
+    f2.frequency.setValueAtTime(1050, t0 + 0.05);
+    f2.frequency.linearRampToValueAtTime(780, t0 + 0.16);
+    f2.frequency.linearRampToValueAtTime(690, t0 + dur);
+    var f3 = formant(2300, 10, 0.1);
+
+    // real voices fall off far faster than a raw saw — darker tilt than the boo keeps
+    // this one hushed
+    var tilt = ctx.createBiquadFilter();
+    tilt.type = "lowpass";
+    tilt.frequency.value = 2100;
+    tilt.Q.value = 0.5;
+    tilt.connect(f1);
+    tilt.connect(f2);
+    tilt.connect(f3);
+
+    [-6, 6].forEach(function (cents) {
+      var osc = ctx.createOscillator();
+      osc.type = "sawtooth";
+      osc.detune.value = cents;
+      osc.frequency.setValueAtTime(175, t0 + 0.05);
+      osc.frequency.linearRampToValueAtTime(190, t0 + 0.22);  // the "coo—"
+      osc.frequency.linearRampToValueAtTime(135, t0 + dur);   // ...sags drawled into the l
+      vibDepth.connect(osc.frequency);
+      osc.connect(tilt);
+      osc.start(t0 + 0.05);
+      osc.stop(t0 + dur + 0.02);
+    });
+
+    // a soft breath bed through the same formants keeps it ghostly rather than sung
+    var bDur = dur;
+    var buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * bDur), ctx.sampleRate);
     var d = buf.getChannelData(0);
-    // pink-ish breath (leaky integrator + a touch of white): white noise reads as pure
-    // "hhh" — the low-weighted spectrum lets the formants ring through as a vowel
     var pb = 0;
     for (var i = 0; i < d.length; i++) {
       var w = Math.random() * 2 - 1;
       pb = 0.97 * pb + 0.03 * w;
-      d[i] = pb * 9 + w * 0.18;
+      d[i] = pb * 9 + w * 0.12; // pink-weighted: breath, not hiss
     }
-    var noise = ctx.createBufferSource();
-    noise.buffer = buf;
-    // envelope: aspiration after the /k/ release, the long "oo", then the dark-l tail —
-    // quiet + breathy (the /k/ itself is a separate burst below)
-    var master = ctx.createGain(); var m = master.gain;
-    m.setValueAtTime(0.0001, t0);
-    m.setValueAtTime(0.0001, t0 + 0.055);             // closure: a beat of silence after the /k/ release
-    m.exponentialRampToValueAtTime(0.04, t0 + 0.12);  // [kh] aspiration into the vowel
-    m.exponentialRampToValueAtTime(0.065, t0 + 0.28); // "oo"
-    m.setValueAtTime(0.065, t0 + 0.5);
-    m.exponentialRampToValueAtTime(0.04, t0 + 0.66);  // dark l
-    m.exponentialRampToValueAtTime(0.0001, t0 + 0.9);
-    // a gentle top-end shave so the whisper reads as breath, not hiss
-    var soften = ctx.createBiquadFilter();
-    soften.type = "lowpass";
-    soften.frequency.value = 2700;
-    soften.Q.value = 0.4;
-    master.connect(soften);
-    soften.connect(out);
-    // a hushed voiced undertone (the murmur that makes the vowel legible — pure
-    // filtered noise reads as breath no matter how narrow the formants)
-    var murmur = ctx.createOscillator();
-    murmur.type = "triangle";
-    murmur.frequency.setValueAtTime(108, t0 + 0.06);
-    murmur.frequency.linearRampToValueAtTime(92, t0 + dur); // a sighing droop
-    var murmurG = ctx.createGain();
-    murmurG.gain.value = 0.55;
-    // whispered vowel formants gliding /u/ -> dark /l/ (coda l is velarized: F2 falls,
-    // it doesn't rise) — pinked breath + murmur through the same bank
-    [
-      { q: 10, g: 1.0,  pts: [[0.12,300],[0.5,295],[0.9,430]] },  // F1 (narrow = rounder oo, less breath)
-      { q: 12, g: 0.7,  pts: [[0.12,850],[0.5,820],[0.9,700]] },  // F2: oo -> dark l (deeper dip)
-      { q: 12, g: 0.16, pts: [[0.12,2250],[0.9,2450]] },          // F3
-      { q: 12, g: 0.05, pts: [[0.12,3300],[0.9,3300]] }           // F4: only a whisper of air
-    ].forEach(function (f) {
-      var bp = ctx.createBiquadFilter();
-      bp.type = "bandpass"; bp.Q.value = f.q;
-      bp.frequency.setValueAtTime(f.pts[0][1], t0);
-      for (var k = 1; k < f.pts.length; k++) bp.frequency.linearRampToValueAtTime(f.pts[k][1], t0 + f.pts[k][0]);
-      var fg = ctx.createGain(); fg.gain.value = f.g;
-      noise.connect(bp); murmurG.connect(bp); bp.connect(fg); fg.connect(master);
-    });
-    noise.start(t0); noise.stop(t0 + dur);
-    murmur.start(t0 + 0.06); murmur.stop(t0 + dur);
-    // the /k/ release itself: a tight little mid-band click before the breath swells
+    var breath = ctx.createBufferSource();
+    breath.buffer = buf;
+    var breathG = ctx.createGain();
+    breathG.gain.value = 0.3;
+    breath.connect(breathG);
+    breathG.connect(tilt);
+    breath.start(t0);
+    breath.stop(t0 + bDur);
+
+    // the /k/ release itself: one tight mid-band click before the voice swells
     var kSrc = ctx.createBufferSource();
     kSrc.buffer = buf;
     var kBp = ctx.createBiquadFilter();
-    kBp.type = "bandpass"; kBp.frequency.value = 1700; kBp.Q.value = 2;
+    kBp.type = "bandpass"; kBp.frequency.value = 1500; kBp.Q.value = 2;
     var kG = ctx.createGain();
-    kG.gain.setValueAtTime(0.14, t0);
+    kG.gain.setValueAtTime(0.12, t0);
     kG.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.035);
-    kSrc.connect(kBp); kBp.connect(kG); kG.connect(soften);
+    kSrc.connect(kBp); kBp.connect(kG); kG.connect(out);
     kSrc.start(t0); kSrc.stop(t0 + 0.06);
   } catch (e) {}
 }

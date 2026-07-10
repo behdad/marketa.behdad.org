@@ -2571,6 +2571,35 @@ body:has(#loft-game-strip.psychedelic) #garden-buddha{animation:buddha-apparitio
 /* shared sky: a storm hides the moon + stars (overcast) in BOTH windows at once */
 #stage-balcony.dusk.storming #balcony-moon, #stage-balcony.dusk.storming #balcony-stars,
 #stage-garden.dusk.storming #garden-moon, #stage-garden.dusk.storming #garden-stars{opacity:0; transition:opacity .8s ease}
+/* ...and the storm shows through the garden window too (#stage-garden gets .storming
+   from the storm lifecycle's setStorming — same as the moon/stars rule above — and from
+   the realWeather poll when it's actually raining in Edmonton): sky + frosted panes tint
+   toward storm grey, the sun ducks behind the overcast, the birds sit it out. The
+   .dusk.storming sky rule out-specifies the plain .dusk one on purpose — a night storm
+   is a shade darker than a clear night. */
+#garden-window-pane-1, #garden-window-pane-2, #garden-window-pane-3{transition:fill .9s ease}
+#stage-garden.storming #garden-window-pane-0{fill:#93a6b4}
+#stage-garden.dusk.storming #garden-window-pane-0{fill:#151d2c}
+#stage-garden.storming #garden-window-pane-1{fill:#d6d3ca}
+#stage-garden.storming #garden-window-pane-2{fill:#c3ced4}
+#stage-garden.storming #garden-window-pane-3{fill:#d4cdc1}
+#stage-garden.storming #garden-window-sun{opacity:0}
+#stage-garden.storming #garden-birds{opacity:0; transition:opacity .8s ease}
+/* rain streaks run down the panes while it storms: static <line>s (positioned via
+   x/y attributes, no transform= — the CSS animation owns transform) clipped to the
+   pane area, pure-CSS infinite loops so a hidden tab can't accumulate anything.
+   Negative delays start the shower mid-fall instead of with an empty beat. */
+#garden-pane-streaks .pane-streak{opacity:0}
+#stage-garden.storming #garden-pane-streaks .pane-streak{animation:pane-streak-run 2.7s linear infinite}
+#stage-garden.storming #garden-pane-streaks .pane-streak:nth-child(2){animation-duration:3.3s; animation-delay:-1.1s}
+#stage-garden.storming #garden-pane-streaks .pane-streak:nth-child(3){animation-duration:2.4s; animation-delay:-1.9s}
+#stage-garden.storming #garden-pane-streaks .pane-streak:nth-child(4){animation-duration:3.6s; animation-delay:-0.6s}
+#stage-garden.storming #garden-pane-streaks .pane-streak:nth-child(5){animation-duration:2.9s; animation-delay:-2.3s}
+#stage-garden.storming #garden-pane-streaks .pane-streak:nth-child(6){animation-duration:3.1s; animation-delay:-1.5s}
+#stage-garden.storming #garden-pane-streaks .pane-streak:nth-child(7){animation-duration:2.6s; animation-delay:-0.3s}
+@keyframes pane-streak-run{0%{transform:translateY(0)} 8%{opacity:0.75} 88%{opacity:0.6} 100%{transform:translateY(390px); opacity:0}}
+/* reduced motion: the static storm tint still lands, the streaks stay invisible (base opacity 0) */
+@media (prefers-reduced-motion: reduce){#stage-garden.storming #garden-pane-streaks .pane-streak{animation:none}}
 /* SOLAR eclipse (daytime): a dark moon transits the sun right->left (N hemisphere),
    the sky blacks out at totality with a bright corona ring, then it passes. The
    .solar-eclipse class is added by JS; the hearts burst at totality (the 2017 event). */
@@ -3413,6 +3442,17 @@ section{margin:1.9rem 0}
 </g>
 <g id="garden-skyfx" clip-path="url(#garden-window-clip)" pointer-events="none" aria-hidden="true"></g>
 <g id="garden-rainfx" clip-path="url(#garden-window-clip)" pointer-events="none" aria-hidden="true"></g>
+<!-- storm rain streaks on the glass: lines start above the clip and a CSS loop (gated on
+     #stage-garden.storming) carries them down through the panes; invisible otherwise -->
+<g id="garden-pane-streaks" clip-path="url(#garden-window-clip)" pointer-events="none">
+<line class="pane-streak" x1="132" y1="-54" x2="130" y2="-22" stroke="#d3e4ef" stroke-width="1.6" stroke-linecap="round"/>
+<line class="pane-streak" x1="196" y1="-70" x2="194" y2="-32" stroke="#d3e4ef" stroke-width="1.6" stroke-linecap="round"/>
+<line class="pane-streak" x1="262" y1="-48" x2="260" y2="-18" stroke="#d3e4ef" stroke-width="1.6" stroke-linecap="round"/>
+<line class="pane-streak" x1="330" y1="-64" x2="328" y2="-28" stroke="#d3e4ef" stroke-width="1.6" stroke-linecap="round"/>
+<line class="pane-streak" x1="392" y1="-52" x2="390" y2="-20" stroke="#d3e4ef" stroke-width="1.6" stroke-linecap="round"/>
+<line class="pane-streak" x1="452" y1="-68" x2="450" y2="-30" stroke="#d3e4ef" stroke-width="1.6" stroke-linecap="round"/>
+<line class="pane-streak" x1="508" y1="-50" x2="506" y2="-20" stroke="#d3e4ef" stroke-width="1.6" stroke-linecap="round"/>
+</g>
 <rect x="210" y="20" width="8" height="272" fill="#26221f"/>
 <rect x="316" y="20" width="8" height="272" fill="#26221f"/>
 <rect x="422" y="20" width="8" height="272" fill="#26221f"/>
@@ -10558,11 +10598,30 @@ document.addEventListener("click", function (e) {
     brandG.addEventListener("click", function (e) { e.stopPropagation(); try { window.open(CAPS_URL, "_blank"); } catch (err) {} });
     brandG.addEventListener("dblclick", function (e) { e.stopPropagation(); });
     var deskClock = mkEl("text", { x: 375, y: 158.3, "text-anchor": "end", "class": "desk-bar-text" }, dock);
+    var deskWeather = mkEl("text", { x: 361, y: 158.3, "text-anchor": "end", "class": "desk-bar-text" }, dock);
     var deskCount = mkEl("text", { x: 316, y: 158.3, "text-anchor": "middle", "class": "desk-bar-text" }, dock);
+    // menu-bar forecast: what the sky outside is doing right now. Precedence (see the
+    // realWeather IIFE): the game's own storm outranks everything (an overcast night
+    // shows the storm, not the moon — same shared-sky logic as the windows' moon/stars
+    // hiding), then REAL Edmonton weather if a fetch has landed, then clear skies split
+    // day/night on the in-game dusk (also the no-network fallback).
+    function deskWeatherGlyph() {
+      if (window.__balconyStorm) return "⛈";
+      var w = window.__realWx;
+      if (w) {
+        if (w.code >= 95) return "⛈"; // thunderstorm
+        if ((w.code >= 51 && w.code <= 67) || (w.code >= 80 && w.code <= 82)) return "🌧"; // drizzle/rain/showers
+        if ((w.code >= 71 && w.code <= 77) || w.code === 85 || w.code === 86) return "❄"; // snow
+        if (w.code === 2 || w.code === 3 || w.code === 45 || w.code === 48) return "⛅"; // clouds/fog
+      }
+      var sb = document.getElementById("stage-balcony");
+      return sb && sb.classList.contains("dusk") ? "🌙" : "☀";
+    }
     function paintDeskClock() {
       var d = new Date();
       var z = function (n) { return (n < 10 ? "0" : "") + n; };
       deskClock.textContent = z(d.getHours()) + ":" + z(d.getMinutes());
+      deskWeather.textContent = deskWeatherGlyph();
       // days to the Edmonton wedding (2027-05-01), then to each May 1 anniversary after
       // it — same fixed-date-first shape as the laptop's July 10 / Prague countdown
       var days = Math.ceil((new Date(2027, 4, 1) - d) / 86400000);
@@ -10576,6 +10635,13 @@ document.addEventListener("click", function (e) {
     paintDeskClock();
     window.refreshDeskClock = paintDeskClock; // language toggle repaints the countdown label
     setInterval(paintDeskClock, 30000); // text-only repaint; nothing spawns, so a hidden tab can't pile anything up
+    // weather flips (a storm rolling in/out, day/night) shouldn't wait out the 30s clock
+    // tick — poll every ~1s, same lighter-weight pattern as the rain/city-hum ambience
+    // gates. Still text-only, so it's just as hidden-tab safe as the clock repaint.
+    setInterval(function () {
+      var g = deskWeatherGlyph();
+      if (deskWeather.textContent !== g) deskWeather.textContent = g;
+    }, 1000);
     // dock tray + app icons
     mkEl("rect", { x: 262, y: 165.5, width: 108, height: 28, rx: 5, "class": "dock-tray" }, dock);
     DESKTOP_APPS.forEach(function (app, i) {
@@ -12404,6 +12470,55 @@ document.addEventListener("click", function (e) {
     });
   }
 })();
+(function realWeather() {
+  // REAL Edmonton weather (Open-Meteo: free, keyless, CORS-open) feeding three passive
+  // consumers: the desktop menu-bar forecast glyph, the garden window's storm view, and
+  // the outdoor tube thermometer (outdoorTarget below). FAILURE IS SILENT by design —
+  // offline, headless test runs, an API change — every consumer checks for null state
+  // and falls back to the fully simulated behavior, so no network is the tested baseline.
+  //
+  // Precedence (shared by every consumer): the game's OWN storm (window.__balconyStorm,
+  // the dusk storm cycle) always wins while it runs — real weather only ever SUGGESTS
+  // when the game is idle, it never clears game state. The balcony storm lifecycle
+  // itself is deliberately NOT nudged from here: its only public entries re-arm or kill
+  // the whole dusk-owned timer chain (there's no "start/end this storm now"), so real
+  // rain drives the garden window's view + the glyph only.
+  window.__realWx = null; // {code: WMO weather code} once a fetch lands
+  window.__realOutdoorC = null; // real temperature, or null -> simulated model
+  window.__realWxRainy = function () {
+    // WMO: 51-67 drizzle/rain (incl. freezing), 80-82 showers, 95+ thunderstorm
+    var w = window.__realWx;
+    return !!w && ((w.code >= 51 && w.code <= 67) || (w.code >= 80 && w.code <= 82) || w.code >= 95);
+  };
+  function fetchWx() {
+    try {
+      if (!window.fetch) return;
+      window.fetch("https://api.open-meteo.com/v1/forecast?latitude=53.5461&longitude=-113.4937&current=weather_code,temperature_2m")
+        .then(function (r) { return r && r.ok ? r.json() : null; })
+        .then(function (j) {
+          var c = j && j.current;
+          if (!c || typeof c.weather_code !== "number") return;
+          window.__realWx = { code: c.weather_code };
+          window.__realOutdoorC = (typeof c.temperature_2m === "number" && isFinite(c.temperature_2m)) ? c.temperature_2m : null;
+        })
+        .catch(function () {});
+    } catch (e) {}
+  }
+  setTimeout(fetchWx, 4000); // a few seconds after init, off the load path
+  setInterval(fetchWx, 30 * 60000); // fetch + set state only — nothing spawns, hidden-tab safe
+  // real rain outside shows through the garden window even when the game's storm is
+  // idle: ~1s poll toggles the same .storming class the storm lifecycle's setStorming
+  // puts on #stage-garden (same lighter-weight pattern as the rain/city-hum ambience
+  // gates). The game storm term keeps the two writers agreeing instead of fighting.
+  (function tick() {
+    var gs = document.getElementById("stage-garden");
+    if (gs) {
+      var on = !!window.__balconyStorm || window.__realWxRainy();
+      if (on !== gs.classList.contains("storming")) gs.classList.toggle("storming", on);
+    }
+    setTimeout(tick, 1000);
+  })();
+})();
 (function loftTemperature() {
   // One weather model drives two passive readouts: the digital LCD on the garden
   // mini-split (indoor) and the tube thermometer on the wall left of the balcony
@@ -12434,6 +12549,9 @@ document.addEventListener("click", function (e) {
     return !!(el && el.classList.contains("dusk"));
   }
   function outdoorTarget() {
+    // the REAL Edmonton temperature when the weather fetch has one (see realWeather
+    // above); the simulated early-May model is the offline/headless fallback
+    if (typeof window.__realOutdoorC === "number") return Math.round(Math.max(HARD_MIN, Math.min(HARD_MAX, window.__realOutdoorC)));
     var t = isDusk("stage-balcony") ? OUT_NIGHT : OUT_DAY;
     if (window.__balconyStorm) t += STORM_OUT;
     return Math.round(Math.max(HARD_MIN, Math.min(HARD_MAX, t + wanderOut)));

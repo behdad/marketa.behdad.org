@@ -6524,12 +6524,9 @@ var T = {
       cine_office: "A quick call to Prague…",
       cine_dusk: "Day turns to night.",
       cine_finale: "And the sky blooms.",
-      cine_eclipse: "The eclipse — where he proposed.",
-      cine_record: "Their song, once more…",
-      cine_play: "Whimsy in every corner…",
+      cine_encore: "Encore — the loft in blacklight…",
       cine_fireworks: "Fireworks over the city…",
-      cine_grill: "Fire up the grill…",
-      cine_cheers: "Pour a glass — cheers."
+      cine_encore_end: "And that's their day. Again tomorrow…"
     },
     ed_city: "Edmonton",
     ed_date1: "Sat, May 1 · 4pm–4am",
@@ -6657,12 +6654,9 @@ var T = {
       cine_office: "Rychlý hovor do Prahy…",
       cine_dusk: "Den se mění v noc.",
       cine_finale: "A nebe rozkvete.",
-      cine_eclipse: "Zatmění — kde ji požádal.",
-      cine_record: "Jejich píseň, ještě jednou…",
-      cine_play: "Kouzlo v každém koutě…",
+      cine_encore: "Přídavek — loft v černém světle…",
       cine_fireworks: "Ohňostroj nad městem…",
-      cine_grill: "Rozpálí se gril…",
-      cine_cheers: "Skleničku — na zdraví."
+      cine_encore_end: "A to je jejich den. Zítra zas…"
     },
     ed_city: "Edmonton",
     ed_date1: "So 1. května · 16–4 h",
@@ -19919,9 +19913,10 @@ function spawnDustMote(container) {
 
   // ── "Day in the Loft" cinematic ──────────────────────────────────────────
   // A hands-off autoplay: a leisurely, whimsy-rich walkthrough of all five rooms as
-  // the day turns to night into the built-in balcony finale, then an endless "play
-  // phase" that wanders the loft showing off its whimsy, looping on the RSVP nudge
-  // until the viewer interacts. Declarative cancellable timeline: setTimeout ids
+  // the day turns to night into the built-in balcony finale, then an encore — the
+  // record flips to the couple's other song, the blacklight comes on, and the show
+  // wanders the loft once more before the extinguisher resets it to a fresh morning.
+  // Declarative cancellable timeline: setTimeout ids
   // choreographed on wall-clock delays tuned to the known constants (GRIND_MS /
   // BREW_MS / the 700ms slide) — cancel = clear them all (the finaleTimers idiom).
   // window.__cinematic gates the game's own auto-advances + the balcony storm so
@@ -19951,11 +19946,15 @@ function spawnDustMote(container) {
     // normal (non-cinematic) play is untouched.
     finaleTimers.forEach(clearTimeout);
     finaleTimers = [];
+    // the encore owns the blacklight — hand it back off on any cancel (idempotent, and
+    // a no-op before the encore has switched it on; keeps the party switch in sync too)
+    setEncoreUv(false);
     if (cinematicTeardown) { cinematicTeardown(); cinematicTeardown = null; }
     if (skipBtn) skipBtn.hidden = true;
     if (watchBtn) { watchBtn.hidden = false; watchBtn.classList.remove("nudge"); }
     // Restore the ordinary caption for whatever room we cancelled on — but keep a
-    // graceful RSVP-nudge landing (reduced-motion ends on it; the play phase holds on it).
+    // graceful RSVP-nudge landing (reduced-motion ends on it; the finale holds on it
+    // until the encore takes over).
     if (captionKey !== "rsvp_nudge") {
       var here = STAGES[stageIndex];
       setCaption(here);
@@ -19980,11 +19979,6 @@ function spawnDustMote(container) {
   function mushroomTrip() { // the garden plants lift off their pots and bloom hue-cycling fractals
     if (window.startTripVariant) window.startTripVariant("psychedelic");
     if (window.startTripBlooms) window.startTripBlooms();
-  }
-  function setNight(want) { // flip the (global) sky only when it isn't already where we want it
-    var sb = document.getElementById("stage-balcony");
-    var isNight = !!(sb && sb.classList.contains("dusk"));
-    if (isNight !== want && window.__autoToggleDusk) window.__autoToggleDusk();
   }
   function fireworksBurst() { // a stagger of fireworks over the city (each timer in cinematicTimers)
     [[490, 62, "#f5b8c8"], [566, 42, "#f7d97a"], [527, 88, "#a8c4d4"], [612, 56, "#f7d97a"]]
@@ -20018,7 +20012,7 @@ function spawnDustMote(container) {
   function runFullCinematic() {
     // A leisurely, whimsy-rich walkthrough: each interaction lands and its animation
     // plays before the next, with a held beat in every room, day → night on office
-    // entry, into the built-in balcony finale — then it hands off to the play phase.
+    // entry, into the built-in balcony finale — then it hands off to the encore.
     // Dedicated cine() narration beats sit at 0-gap after a room/interaction step, so
     // they fire on the same tick without shifting any timing — and win over the guarded
     // room hints the scripted taps would otherwise set.
@@ -20054,53 +20048,107 @@ function spawnDustMote(container) {
       [2600, visit("balcony")], [0, cine("cine_finale")] // → the built-in finale (rainbow → fireworks → RSVP nudge)
     ]);
     // once the finale has settled on the RSVP nudge (~9.1s in) and it's had a moment to
-    // land, begin the endless play phase
-    beat(solveTotal + 13000, startPlayPhase);
+    // land, the encore takes the stage
+    beat(solveTotal + 13000, startEncore);
   }
 
-  // ── Play phase ──────────────────────────────────────────────────────────
-  // After the finale it doesn't stop — it wanders the loft showing off the whimsy: the
-  // proposal-day solar eclipse, fireworks, the record with everything grooving, the
-  // grill and a glass of wine — looping back to the balcony on the RSVP nudge until the
-  // viewer interacts. Each cycle schedules a bounded batch of beats then re-arms itself,
-  // so nothing accumulates; cancel clears it all like any other cinematicTimers. Every
-  // handler is real and __cinematic-gated, same as the walkthrough.
-  var playCycleN = 0;
-  function startPlayPhase() {
+  // ── Encore ──────────────────────────────────────────────────────────────
+  // After the finale it doesn't just stop: the record flips to the couple's OTHER song
+  // (a monitor-skip-style crossfade), the balcony's blacklight switches on, and the show
+  // wanders the loft once more, kitchen → balcony, playing with a few randomly chosen
+  // objects in every room — a different set and rhythm each run. Back where the day
+  // began it fades the song out, holds a beat of stillness, and pulls the extinguisher:
+  // the game's own reset is the closing gag, landing the viewer on a fresh loft. Every
+  // step is a beat() so a take-over cancels the whole encore in one sweep; the chained
+  // song-start inside the crossfade callback is __cinematic-gated for the same reason.
+  // The pools hold only self-contained delights — nothing that resets, navigates,
+  // toggles day/night or a device audio bed, touches PC/monitor/webcam state, moves the
+  // doors the song's acoustics listen to, or plays/pauses the record (the show owns
+  // music and blacklight itself).
+  var ENCORE_POOLS = {
+    kitchen: ["kitchen-gong", "kitchen-pans", "kitchen-cups", "kitchen-plant",
+              "kitchen-boards", "kitchen-steamwand", "kitchen-waterbottle", "kitchen-drinkmate"],
+    garden:  ["garden-deer", "garden-rooster", "garden-bowl", "garden-mask",
+              "garden-mirror", "garden-crystals", "garden-chanter", "witchy-chest-fairy"],
+    cuddly:  ["cuddly-octopus", "cuddly-trunk", "cuddly-pillow-1", "cuddly-pillow-3",
+              "cuddly-pitcher", "cuddly-pulley", "cuddly-behdad-foot-1", "cuddly-marketa-foot-2"],
+    office:  ["office-skull", "office-spin-top", "office-wooden-head", "office-mondrian",
+              "office-typewriter", "office-sprinkler", "office-broken-glass", "office-crane-hit"],
+    balcony: ["balcony-windchime", "balcony-wineglass", "balcony-ashtray", "balcony-doormat",
+              "balcony-pride-flag", "balcony-can", "balcony-lounger", "balcony-skyclick"]
+  };
+  // The same blacklight the balcony party switch drives — flip the switch's own class
+  // with it so the knob always shows the state the show set.
+  function setEncoreUv(on) {
+    var sw = document.getElementById("balcony-partyswitch");
+    if (sw) sw.classList.toggle("on", !!on);
+    if (window.__setUvParty) window.__setUvParty(!!on);
+  }
+  // monitorSkip's crossfade, show-driven: the walkthrough's song out, the other one in.
+  // The "in" half only runs if the show is still on, so a take-over mid-fade can never
+  // start a song after the viewer has the wheel.
+  function encoreSongSwap() {
+    var cur = document.getElementById("guitar-song-audio");
+    var next = document.getElementById("ukulele-song-audio");
+    if (!cur || !next || !window.__fadeSongTo) return;
+    var appVol = window.__songVolume ? window.__songVolume() : 0.5;
+    if (window.__captureSongAudio) window.__captureSongAudio(next);
+    window.__fadeSongTo(cur, 0, 600, function () {
+      try {
+        cur.pause();
+        cur.currentTime = 0;
+        cur.volume = appVol; // restore for its next play
+        if (!window.__cinematic) return;
+        next.currentTime = 0;
+        next.volume = 0;
+        var p = next.play();
+        if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (encore) for " + next.id + ":", e); });
+        window.__fadeSongTo(next, appVol, 600);
+      } catch (e) {}
+    });
+  }
+  // Wind the encore song down before the extinguisher pull, so the reset's hard pause
+  // lands on an already-silent track.
+  function encoreSongOut() {
+    var a = document.getElementById("ukulele-song-audio");
+    if (!a || !window.__fadeSongTo) return;
+    var appVol = window.__songVolume ? window.__songVolume() : 0.5;
+    window.__fadeSongTo(a, 0, 600, function () {
+      try { a.pause(); a.currentTime = 0; a.volume = appVol; } catch (e) {}
+    });
+  }
+  // 2-4 distinct objects from the room's pool, each on its own jittered beat.
+  function encoreRoomSteps(room) {
+    var pool = ENCORE_POOLS[room].slice();
+    var picks = 2 + Math.floor(Math.random() * 3);
+    var steps = [];
+    while (picks-- > 0 && pool.length) {
+      var id = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+      steps.push([1500 + Math.floor(Math.random() * 900), tap(id)]);
+    }
+    return steps;
+  }
+  function startEncore() {
     if (!window.__cinematic) return;
-    // alternate the record between cycles: re-clicking the instrument that's already
-    // playing would pause it, so pick the other one each time.
-    var instrument = (playCycleN++ % 2) ? "garden-guitar" : "garden-ukulele";
-    var total = schedule([
-      // BALCONY (day) — the total solar eclipse of 2017, under which a proposal happened
-      [0, function () { setNight(false); }],
-      [1800, function () { if (window.__runSolarEclipse) window.__runSolarEclipse(); }], [0, cine("cine_eclipse")],
-      [11000, visit("garden")], [0, cine("cine_record")], // hold through totality; the eclipse self-clears offscreen
-      // GARDEN (day) — swap the record, another bloom, the deer bounds
-      [1700, tap(instrument)],
-      [2600, mushroomTrip],
-      [4400, tap("garden-deer")],
-      [2600, visit("cuddly")], [0, cine("cine_sway")],
-      // CUDDLY — the couple groove; Octi plays
-      [1700, tap("cuddly-octopus")],
-      [1700, tap("cuddly-pillow-2")],
-      [1700, tap("cuddly-trunk")],
-      [2400, visit("office")], [0, cine("cine_play")],
-      // OFFICE — the skull dances to the beat; spin the top, bob the wooden head
-      [1800, tap("office-spin-top")],
-      [2000, tap("office-wooden-head")],
-      [3000, visit("balcony")],
-      // BALCONY (night) — fireworks, a wish on a star, fire up the grill, pour a wine, cheers
-      [700, function () { setNight(true); }],
-      [1300, fireworksBurst], [0, cine("cine_fireworks")],
-      [1800, function () { if (window.spawnShootingStar) window.spawnShootingStar(); }],
-      [1800, tap("balcony-smoker-lid")], [0, cine("cine_grill")],
-      [1100, tap("balcony-smoker-firebox")],
-      [2200, tap("balcony-wineglass")], [0, cine("cine_cheers")],
-      [2400, tap("balcony-pride-flag")],
-      [2400, showRsvpNudge]                              // graceful landing back on the nudge
-    ]);
-    beat(total + 6500, startPlayPhase);                  // hold on the nudge, then loop
+    var steps = [
+      [0, encoreSongSwap],
+      [700, function () { setEncoreUv(true); }], [0, cine("cine_encore")],
+      [1500, visit("kitchen")]
+    ];
+    STAGES.forEach(function (room, i) {
+      steps = steps.concat(encoreRoomSteps(room));
+      if (room === "balcony") steps.push([1800, fireworksBurst], [0, cine("cine_fireworks")]);
+      else steps.push([2100, visit(STAGES[i + 1])]);
+    });
+    steps.push(
+      // curtain call: back where the day began, a held beat of stillness, the song
+      // fades out — then the show formally ends and the extinguisher pull runs through
+      // the game's real handler, exactly as a player's own pull would.
+      [3600, visit("kitchen")], [0, cine("cine_encore_end")],
+      [2600, encoreSongOut],
+      [2400, function () { stopCinematic(); cineClick("kitchen-extinguisher"); }]
+    );
+    schedule(steps);
   }
 
   function runReducedCinematic() {

@@ -2075,6 +2075,16 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
    centre as the pivot (frog/mushroom translate-only and don't need it) */
 #garden-trip-moth.trip-creature-show .trip-creature-bob{transform-box:fill-box; transform-origin:center; animation:trip-moth-flutter .9s ease-in-out infinite}
 #garden-trip-jellyfish.trip-creature-show .trip-creature-bob{transform-box:fill-box; transform-origin:center; animation:trip-jelly-drift 3.6s ease-in-out infinite}
+/* the strobe's acid flask: fades in with the other creatures but, like the strobe
+   trails, hangs on an extra beat when dismissed (.6s delay on the fade-out only) so
+   it melts away after the moth. glow pulse + one lazy bubble loop only while shown;
+   the bubble rides its own transform (positioned by cx/cy, so nothing collides). */
+#garden-trip-flask{opacity:0; transition:opacity .8s ease .6s; pointer-events:none}
+#garden-trip-flask.trip-creature-show{opacity:1; transition:opacity .8s ease}
+#garden-trip-flask.trip-creature-show .trip-flask-glow{animation:trip-flask-glow 3.2s ease-in-out infinite}
+#garden-trip-flask.trip-creature-show .trip-flask-bubble{animation:trip-flask-bubble 4.5s ease-in infinite}
+@keyframes trip-flask-glow{0%,100%{opacity:.13}50%{opacity:.3}}
+@keyframes trip-flask-bubble{0%,55%{transform:translateY(0); opacity:0}62%{opacity:.8}88%{transform:translateY(-4.5px); opacity:.6}94%,100%{transform:translateY(-5.5px); opacity:0}}
 @keyframes trip-frog-hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 @keyframes trip-shroom-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 @keyframes trip-moth-flutter{0%,100%{transform:translate(0,0) rotate(0) scaleX(1)}18%{transform:translate(-3px,-4px) rotate(-4deg) scaleX(.72)}36%{transform:translate(4px,-2px) rotate(3deg) scaleX(.9)}54%{transform:translate(-2px,4px) rotate(-2deg) scaleX(.6)}72%{transform:translate(3px,-3px) rotate(4deg) scaleX(.85)}88%{transform:translate(-4px,1px) rotate(-3deg) scaleX(.7)}}
@@ -2083,7 +2093,9 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
   #garden-trip-frog.trip-creature-show .trip-creature-bob,
   #garden-trip-mushroom.trip-creature-show .trip-creature-bob,
   #garden-trip-moth.trip-creature-show .trip-creature-bob,
-  #garden-trip-jellyfish.trip-creature-show .trip-creature-bob{animation:none}
+  #garden-trip-jellyfish.trip-creature-show .trip-creature-bob,
+  #garden-trip-flask.trip-creature-show .trip-flask-glow,
+  #garden-trip-flask.trip-creature-show .trip-flask-bubble{animation:none}
 }
 /* nudge the plant foliage a touch more vivid — the ambient lights washed it out. Scoped
    to the plant groups themselves, so the trip-bloom canvases (siblings inside the same
@@ -4354,7 +4366,8 @@ section{margin:1.9rem 0}
 <!-- hidden until a trip starts: little creatures — a frog and a red-cap toadstool on
      the floorboards, a moth up by the window and a jellyfish drifting mid-air — each
      keyed to one trip variant, fading in for the trip and lingering 2s after it clears
-     (see showTripCreatures/hideTripCreatures). purely decorative. -->
+     (see showTripCreatures/hideTripCreatures). the strobe also conjures an acid flask
+     (the pun is the point) on the bench below the moth. purely decorative. -->
 <g id="garden-trip-frog" transform="translate(250,300)">
 <g class="trip-creature-bob">
 <ellipse cx="0" cy="22" rx="18" ry="4" fill="#3a5228" opacity="0.22"/>
@@ -4421,6 +4434,19 @@ section{margin:1.9rem 0}
 <path d="M-8 -6 Q0 -10 8 -6" fill="none" stroke="#d98a95" stroke-width="1" opacity="0.35"/>
 <path d="M-12 -20 Q-4 -27 6 -24" fill="none" stroke="#fff2ef" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
 </g>
+</g>
+<!-- the strobe's second apparition: an Erlenmeyer flask of faintly glowing "acid",
+     parked on the bench in the gap between the rooster and the monstera. base sits
+     at local y0 so the group translate lands it on the bench top (y232). -->
+<g id="garden-trip-flask" transform="translate(214,232)">
+<ellipse class="trip-flask-glow" cx="0" cy="-7" rx="13" ry="10" fill="#cdf05a" opacity="0.18"/>
+<ellipse cx="0" cy="-0.6" rx="9.5" ry="1.7" fill="#5e3f1e" opacity="0.18"/>
+<path d="M-5 -8 L5 -8 L8 -2.4 Q8.8 -0.8 7 -0.8 L-7 -0.8 Q-8.8 -0.8 -8 -2.4 Z" fill="#b9e04e" opacity="0.85"/>
+<ellipse cx="0" cy="-8" rx="5" ry="1" fill="#e2f68a" opacity="0.9"/>
+<circle class="trip-flask-bubble" cx="1.6" cy="-2.6" r="1.1" fill="#f2fbc0" opacity="0"/>
+<path d="M-2.6 -26 L-2.6 -14 L-9.2 -2.8 Q-10.2 0 -6.9 0 L6.9 0 Q10.2 0 9.2 -2.8 L2.6 -14 L2.6 -26 Z" fill="#dce8ee" fill-opacity="0.28" stroke="#7d8a93" stroke-width="1.1"/>
+<rect x="-3.7" y="-28" width="7.4" height="2.6" rx="1.3" fill="#dce8ee" fill-opacity="0.5" stroke="#7d8a93" stroke-width="1"/>
+<path d="M-1.1 -24 L-1.1 -15 L-5.6 -6.5" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
 </g>
 </g>
 <g id="stage-cuddly" transform="translate(1360,0)">
@@ -15047,13 +15073,14 @@ var TRIP_DURATIONS = { psychedelic: 6000, strobe: 3000, melt: 5000, molly: 7000,
 var tripActive = false;
 var tripEndTimer = null;
 var currentTripVariant = null;
-// The garden's decorative creatures each ride ONE trip, mirroring index.html's pairing:
-// the frog turns up for the melt (whiteout) trip, the toadstool for the psychedelic
-// (fractal-bloom) trip; the other variants get neither. Shown when their variant starts,
-// held through it, then faded out after a 2s linger. Re-triggering clears the pending
-// removal so they never blink out, and switches to the new variant's creature (if any).
+// The garden's decorative creatures each ride ONE trip: the frog turns up for the melt
+// (whiteout) trip, the toadstool for the psychedelic (fractal-bloom) trip, the jellyfish
+// for molly, and the strobe conjures a pair — the moth plus the acid flask on the bench.
+// Shown when their variant starts, held through it, then faded out after a 2s linger.
+// Re-triggering clears the pending removal so they never blink out, and switches to the
+// new variant's creature (if any).
 var tripCreatureHideTimer = null;
-var TRIP_CREATURE_IDS = ["garden-trip-frog", "garden-trip-mushroom", "garden-trip-moth", "garden-trip-jellyfish"];
+var TRIP_CREATURE_IDS = ["garden-trip-frog", "garden-trip-mushroom", "garden-trip-moth", "garden-trip-jellyfish", "garden-trip-flask"];
 function setTripCreature(id, show) {
   var el = document.getElementById(id);
   if (el) el.classList.toggle("trip-creature-show", show);
@@ -15067,6 +15094,7 @@ function showTripCreatures(variant) {
   setTripCreature("garden-trip-frog", variant === "melt");
   setTripCreature("garden-trip-mushroom", variant === "psychedelic");
   setTripCreature("garden-trip-moth", variant === "strobe");
+  setTripCreature("garden-trip-flask", variant === "strobe"); // the strobe brings two: the moth AND a flask of acid
   setTripCreature("garden-trip-jellyfish", variant === "molly");
 }
 function hideTripCreaturesAfter(delay) {

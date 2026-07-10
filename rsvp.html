@@ -7215,7 +7215,8 @@ var T = {
     py_welcome: "loft python \u2014 real CPython, right here in your page (Pyodide/WebAssembly).",
     py_loading: "summoning the snake\u2026 ~10 MB, first time only",
     py_wait: "the snake is still on its way\u2026",
-    py_ready: "Python {v} ready. try: 2+2 \u00b7 import this \u00b7 await micropip.install('fonttools') \u2014 yes, the groom's fonttools.",
+    py_ready: "Python {v} ready. try: 2+2 \u00b7 import this",
+    py_fonttools: "fontTools {v} is already imported \u2014 the groom insisted.",
     py_fail: "couldn't fetch Python \u2014 offline, or the CDN is blocked. close and reopen to retry.",
     py_busy: "still chewing on the last one\u2026",
   },
@@ -7400,7 +7401,8 @@ var T = {
     py_welcome: "loftov\u00fd python \u2014 opravdov\u00fd CPython, p\u0159\u00edmo tady ve str\u00e1nce (Pyodide/WebAssembly).",
     py_loading: "p\u0159ivol\u00e1v\u00e1me hada\u2026 ~10 MB, jen napoprv\u00e9",
     py_wait: "had je po\u0159\u00e1d na cest\u011b\u2026",
-    py_ready: "Python {v} p\u0159ipraven. zkuste: 2+2 \u00b7 import this \u00b7 await micropip.install('fonttools') \u2014 ano, \u017eenichovy fonttools.",
+    py_ready: "Python {v} p\u0159ipraven. zkuste: 2+2 \u00b7 import this",
+    py_fonttools: "fontTools {v} je u\u017e naimportovan\u00fd \u2014 \u017eenich trval na sv\u00e9m.",
     py_fail: "Python se nepoda\u0159ilo st\u00e1hnout \u2014 offline, nebo je CDN blokovan\u00e9. zav\u0159ete a otev\u0159ete znovu.",
     py_busy: "je\u0161t\u011b \u017ev\u00fdk\u00e1m ten p\u0159edchoz\u00ed\u2026",
   }
@@ -10105,6 +10107,7 @@ document.addEventListener("click", function (e) {
     bootTimers = [];
     stopSaver();
     monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying", "show-terminal", "show-mail", "show-video", "show-calendar", "show-python");
+    if (window.__monitorZoomOut) window.__monitorZoomOut(); // a dark screen never holds the zoom
   }
   // The monitor only lights up when the PC is on; it then boots Fedora →
   // Chrome → the caps, which stay up.
@@ -10135,6 +10138,7 @@ document.addEventListener("click", function (e) {
       if (window.__updateOfficeNudges) window.__updateOfficeNudges();
     }
     monitor.classList.add("screen-on", "show-fedora");
+    if (window.__monitorZoomIn) window.__monitorZoomIn(); // booting pulls the view up to the screen
     bootTimers.push(setTimeout(function () {
       monitor.classList.remove("show-fedora");
       monitor.classList.add("show-chrome");
@@ -11616,6 +11620,10 @@ document.addEventListener("click", function (e) {
         var ver = "";
         try { ver = py.runPython("__import__('sys').version.split()[0]"); } catch (e) {}
         pyPrint(pyT("py_ready").replace("{v}", ver || "3"), "term-dim");
+        // the groom's own library comes pre-imported: fetched in the background so
+        // `fontTools` just works at the first prompt; a failed fetch stays silent
+        py.runPythonAsync("import micropip\nawait micropip.install('fonttools')\nimport fontTools\nfontTools.version")
+          .then(function (v) { pyPrint(pyT("py_fonttools").replace("{v}", String(v)), "term-dim"); }, function () {});
       }).catch(function () { pyLoadFailed(); });
     };
     document.head.appendChild(s);
@@ -12715,6 +12723,52 @@ document.addEventListener("click", function (e) {
     window.__pcPlayed = false;
     if (window.__updateOfficeNudges) window.__updateOfficeNudges();
   };
+})();
+// ── MONITOR ZOOM ── while the office screen is lit, the room view glides up to the
+// monitor: engaged by the PC booting (or tapping the lit monitor), released by tapping
+// anywhere outside the monitor, leaving the office, or the screen going dark. It rides
+// #loft-game-strip's own transform transition, so the glide matches the room slide;
+// translation is origin-independent, so the room transform never needs the origin cleared.
+(function () {
+  var strip = document.getElementById("loft-game-strip");
+  var vp = document.querySelector(".hunt-viewport");
+  var monitor = document.getElementById("office-monitor");
+  if (!strip || !vp || !monitor) return;
+  var zoomed = false;
+  // monitor-screen centre in strip user units (office tile starts at 3*680=2040; the
+  // screen spans x254\u2013378 y154\u2013196), nudged down 3 units so bezel + stand stay in frame
+  var CX = 2040 + 316, CY = 178, SCALE = 4.2;
+  function apply() {
+    var r = vp.getBoundingClientRect();
+    if (!r.width) return;
+    var tx = CX / 3400 * (r.width * 5), ty = CY / 340 * r.height; // strip lays out at 500% viewport width
+    strip.style.transformOrigin = tx + "px " + ty + "px";
+    strip.style.transform = "translate(" + (r.width / 2 - tx) + "px, " + (r.height / 2 - ty) + "px) scale(" + SCALE + ")";
+  }
+  function zoomIn() {
+    if (window.currentStageName !== "office" || !monitor.classList.contains("screen-on")) return;
+    zoomed = true;
+    apply();
+  }
+  function zoomOut() {
+    if (!zoomed) return;
+    zoomed = false;
+    strip.style.transformOrigin = "";
+    strip.style.transform = "translateX(-" + ((window.currentStageIndex || 0) * 20) + "%)";
+  }
+  window.__monitorZoomIn = zoomIn;
+  window.__monitorZoomOut = zoomOut;
+  // a tap landing anywhere outside the monitor hands the room back (capture phase, so a
+  // target's own stopPropagation can't strand the zoom)
+  vp.addEventListener("pointerdown", function (e) {
+    if (zoomed && !monitor.contains(e.target)) zoomOut();
+  }, true);
+  // ...and tapping the lit monitor pulls the view back up
+  monitor.addEventListener("pointerdown", function () {
+    if (!zoomed) zoomIn();
+  });
+  window.addEventListener("resize", function () { if (zoomed) apply(); });
+  document.addEventListener("fullscreenchange", function () { if (zoomed) setTimeout(apply, 60); }); // measure after the box settles
 })();
 (function () {
   var marketa = document.getElementById("cuddly-marketa");
@@ -19601,6 +19655,7 @@ function spawnDustMote(container) {
     if (idx === -1) return;
     stageIndex = idx;
     if (idx > maxUnlocked) maxUnlocked = idx;
+    if (window.__monitorZoomOut) window.__monitorZoomOut(); // the zoomed-up monitor never travels between rooms
     strip.style.transform = "translateX(-" + (idx * 20) + "%)";
     window.currentStageIndex = idx;
     window.currentStageName = name; // room-truth for gates that live outside this IIFE (e.g. the fractal-flame loop)

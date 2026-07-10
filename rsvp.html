@@ -984,18 +984,26 @@ footer{margin-top:2.6rem}
    a play triangle when it's paused (JS adds .paused). Shown only over show-nowplaying. */
 #monitor-pause-btn{opacity:0; visibility:hidden; pointer-events:none; cursor:pointer; transition:opacity .4s ease}
 #office-monitor.show-nowplaying #monitor-pause-btn{opacity:1; visibility:visible; pointer-events:auto}
-#monitor-pause-btn:hover circle{fill:#7a2f3d}
+/* pill segments brighten per-button via their own hover overlay rect */
+#monitor-volume-btn:hover .seg-hover, #monitor-prev-btn:hover .seg-hover,
+#monitor-pause-btn:hover .seg-hover, #monitor-next-btn:hover .seg-hover{opacity:.55}
+.seg-hover{transition:opacity .15s ease}
 #monitor-pause-btn .pp-tri{display:none}
 #monitor-pause-btn.paused .pp-bars{display:none}
 #monitor-pause-btn.paused .pp-tri{display:block}
 #monitor-volume-btn{opacity:0; visibility:hidden; pointer-events:none; cursor:pointer; transition:opacity .4s ease}
 #office-monitor.show-nowplaying #monitor-volume-btn{opacity:1; visibility:visible; pointer-events:auto}
-#monitor-volume-btn:hover circle{fill:#7a2f3d}
-/* prev/next transport: same gating pattern as pause/volume above, only shown over the
-   now-playing equalizer */
-#monitor-prev-btn, #monitor-next-btn{opacity:0; visibility:hidden; pointer-events:none; cursor:pointer; transition:opacity .4s ease}
-#office-monitor.show-nowplaying #monitor-prev-btn, #office-monitor.show-nowplaying #monitor-next-btn{opacity:1; visibility:visible; pointer-events:auto}
-#monitor-prev-btn:hover circle, #monitor-next-btn:hover circle{fill:#7a2f3d}
+/* prev/next transport, the shared pill base, + the player's close x: same gating pattern
+   as pause/volume above, only shown over the now-playing equalizer */
+#monitor-prev-btn, #monitor-next-btn, #monitor-np-close, #monitor-transport-pill{opacity:0; visibility:hidden; pointer-events:none; cursor:pointer; transition:opacity .4s ease}
+#monitor-transport-pill{pointer-events:none}
+#office-monitor.show-nowplaying #monitor-prev-btn, #office-monitor.show-nowplaying #monitor-next-btn, #office-monitor.show-nowplaying #monitor-np-close{opacity:1; visibility:visible; pointer-events:auto}
+#office-monitor.show-nowplaying #monitor-transport-pill{opacity:1; visibility:visible}
+#monitor-np-close:hover .seg-hover{opacity:.55}
+/* the marquee's artist link-out: hit-testable only while the player is up (boot-logo
+   children stay pointer-transparent otherwise, so hidden layers can't eat clicks) */
+#monitor-np-marquee-hit{pointer-events:none; cursor:pointer}
+#office-monitor.show-nowplaying #monitor-np-marquee-hit{pointer-events:auto}
 /* the idle screensaver: a live Julia fractal */
 #monitor-saver-fractal{opacity:0; pointer-events:none} /* clicks pass through to wake the monitor */
 #office-monitor.show-saver #monitor-saver-fractal{opacity:1}
@@ -1018,7 +1026,10 @@ footer{margin-top:2.6rem}
 #office-monitor.photobooth #monitor-pause-btn,
 #office-monitor.photobooth #monitor-volume-btn,
 #office-monitor.photobooth #monitor-prev-btn,
-#office-monitor.photobooth #monitor-next-btn{opacity:0 !important; visibility:hidden; pointer-events:none !important}
+#office-monitor.photobooth #monitor-next-btn,
+#office-monitor.photobooth #monitor-np-close,
+#office-monitor.photobooth #monitor-transport-pill{opacity:0 !important; visibility:hidden; pointer-events:none !important}
+#office-monitor.photobooth #monitor-np-marquee-hit{pointer-events:none !important}
 .pb-video-wrap{width:124px; height:42px; position:relative; overflow:hidden; background:#0a0d12}
 .pb-video{width:100%; height:100%; object-fit:cover; transform:scaleX(-1); display:block; background:#0a0d12}
 /* subtle CRT scanlines over the feed */
@@ -5265,6 +5276,9 @@ section{margin:1.9rem 0}
 <g clip-path="url(#monitor-marquee-clip)">
 <g id="monitor-np-marquee"><text id="monitor-np-title" x="254" y="166" style="fill:#e8b0c8; font-family:monospace; font-size:9px">&#9834; Black Tornado &#8212; Dan Bern</text></g>
 </g>
+<!-- the artist link-out lives on the marquee itself (not the whole screen): a transparent
+     hit rect over the title, pointer-gated to the nowplaying state -->
+<rect id="monitor-np-marquee-hit" x="254" y="154" width="81" height="16" fill="transparent"/>
 <!-- title marquee is clipped to the left side only (x254-335), clear of the controls to
      its right; the equalizer fills the full remaining height below it, bottom-anchored
      at y194 — even at JS's max scaleY(1.3) a bar's top stays clear of the marquee. The
@@ -5283,35 +5297,63 @@ section{margin:1.9rem 0}
 <circle cx="367" cy="185.5" r="8" fill="#8e3a4a"/>
 <path d="M364.09 180.55 L364.09 190.45 L371.95 185.5 Z" fill="#f8f5ec"/>
 </g>
-<!-- now-playing transport: 2x2 grid using the screen's FULL height, right side — prev/next
-     on the top row, volume/pause(play) on the bottom row, r9 circles on a 23-unit column
-     pitch (cx 343/366) and 24-unit row pitch (cy 163/187, top/bottom edges flush with the
-     content area's own y154/y196); grid spans x334-375/y154-196, clear of the marquee+eq
-     column to its left (see that comment above) -->
+<!-- now-playing player controls, right side: a clean aligned stack of two equal-width
+     beveled pills (x335-377) — volume on top (the big control, the whole pill is its
+     hit target), the segmented prev/play-pause/next transport below — with a small
+     close x tucked in the top corner (returns the home screen; the music keeps going).
+     Icons keep their original path coords and are repositioned/scaled by static
+     wrapper-g transforms (nothing here animates transform, so the clobber trap doesn't
+     apply). Sits clear of the marquee+eq column to its left (see that comment above) -->
 <g id="monitor-volume-btn">
-<circle cx="348" cy="185.5" r="8" fill="#8e3a4a"/>
+<rect x="337" y="156.5" width="27" height="11" rx="5.5" fill="#8e3a4a" stroke="#6e2836" stroke-width="0.9"/>
+<rect x="338.4" y="157.6" width="24.2" height="4.2" rx="2.1" fill="#ffffff" opacity="0.16"/>
+<rect class="seg-hover" x="337" y="156.5" width="27" height="11" rx="5.5" fill="#5f2230" opacity="0"/>
+<g transform="translate(1.64,-23.5)">
 <path d="M342.75 183.55 L345.03 183.55 L347.65 180.93 L347.65 190.07 L345.03 187.45 L342.75 187.45 Z" fill="#f8f5ec"/>
 <path class="vol-wave" d="M349.03 183.78 Q350.4 185.5 349.03 187.22" fill="none" stroke="#f8f5ec" stroke-width="1.6" stroke-linecap="round"/>
 <path class="vol-wave" d="M350.28 182.42 Q352.57 185.5 350.28 188.58" fill="none" stroke="#f8f5ec" stroke-width="1.6" stroke-linecap="round"/>
 <path class="vol-wave" d="M351.43 180.93 Q354.97 185.5 351.43 190.07" fill="none" stroke="#f8f5ec" stroke-width="1.6" stroke-linecap="round"/>
 <path class="vol-mute" d="M349.03 182.42 L353.25 188.58 M353.25 182.42 L349.03 188.58" stroke="#e08a8a" stroke-width="1.72" stroke-linecap="round" style="display:none"/>
 </g>
+</g>
+<g id="monitor-np-close">
+<rect x="367" y="156.5" width="10" height="11" rx="5" fill="#8e3a4a" stroke="#6e2836" stroke-width="0.9"/>
+<rect x="368.2" y="157.6" width="7.6" height="4.2" rx="2.1" fill="#ffffff" opacity="0.16"/>
+<rect class="seg-hover" x="367" y="156.5" width="10" height="11" rx="5" fill="#5f2230" opacity="0"/>
+<path d="M369.9 159.9 L374.1 164.1 M374.1 159.9 L369.9 164.1" stroke="#f8f5ec" stroke-width="1.1" stroke-linecap="round"/>
+</g>
+<!-- the three transports share one beveled pill (a segmented control), not three separate
+     circles: pill base + top bevel highlight + separator ticks, then one hover-seg rect per
+     button (clipped to the pill's rounded shape) under each glyph -->
+<g id="monitor-transport-pill">
+<clipPath id="monitor-transport-clip"><rect x="337" y="183.5" width="40" height="11" rx="5.5"/></clipPath>
+<rect x="337" y="183.5" width="40" height="11" rx="5.5" fill="#8e3a4a" stroke="#6e2836" stroke-width="0.9"/>
+<rect x="338.4" y="184.6" width="37.2" height="4.2" rx="2.1" fill="#ffffff" opacity="0.16"/>
+<line x1="350.33" y1="185.6" x2="350.33" y2="192.4" stroke="#6e2836" stroke-width="0.8"/>
+<line x1="363.67" y1="185.6" x2="363.67" y2="192.4" stroke="#6e2836" stroke-width="0.8"/>
+</g>
 <g id="monitor-prev-btn">
-<circle cx="348" cy="165.5" r="8" fill="#8e3a4a"/>
+<rect class="seg-hover" x="337" y="183.5" width="13.33" height="11" clip-path="url(#monitor-transport-clip)" fill="#5f2230" opacity="0"/>
+<g transform="translate(100.07,73.15) scale(0.7)">
 <rect x="343.88" y="160.93" width="1.37" height="9.03" fill="#f8f5ec"/>
 <path d="M345.6 165.5 L348.92 160.93 L348.92 170.07 Z" fill="#f8f5ec"/>
 <path d="M348.92 165.5 L352.23 160.93 L352.23 170.07 Z" fill="#f8f5ec"/>
 </g>
+</g>
 <g id="monitor-pause-btn">
-<circle cx="367" cy="185.5" r="8" fill="#8e3a4a"/>
+<rect class="seg-hover" x="350.33" y="183.5" width="13.34" height="11" fill="#5f2230" opacity="0"/>
+<g transform="translate(100.1,59.15) scale(0.7)">
 <g class="pp-bars"><rect x="363.35" y="181.15" width="2.4" height="8.68" rx="0.8" fill="#f8f5ec"/><rect x="368.25" y="181.15" width="2.4" height="8.68" rx="0.8" fill="#f8f5ec"/></g>
 <path class="pp-tri" d="M364.03 180.58 L364.03 190.42 L371.92 185.5 Z" fill="#f8f5ec"/>
 </g>
+</g>
 <g id="monitor-next-btn">
-<circle cx="367" cy="165.5" r="8" fill="#8e3a4a"/>
+<rect class="seg-hover" x="363.67" y="183.5" width="13.33" height="11" clip-path="url(#monitor-transport-clip)" fill="#5f2230" opacity="0"/>
+<g transform="translate(113.43,73.15) scale(0.7)">
 <rect x="369.75" y="160.93" width="1.37" height="9.03" fill="#f8f5ec"/>
 <path d="M369.4 165.5 L366.08 160.93 L366.08 170.07 Z" fill="#f8f5ec"/>
 <path d="M366.08 165.5 L362.88 160.93 L362.88 170.07 Z" fill="#f8f5ec"/>
+</g>
 </g>
 <!-- LOFT PHOTOBOOTH: the visitor's own camera, live inside the monitor. Shown only while a
      session is running (the .photobooth class on #office-monitor). The live <video> lives in
@@ -9931,7 +9973,10 @@ document.addEventListener("click", function (e) {
       // elsewhere; this guards a stray keyboard/dispatched event)
       if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-nowplaying")) return;
       var idle = songAudios.filter(function (a) { return a && a.paused; });
-      if (!idle.length || idle.length !== songAudios.length) return; // one's already going — don't stack
+      // one's already going — don't stack a second song; instead re-open the player view
+      // (the close x above hides it without stopping the music, so the home play button
+      // doubles as the way back in)
+      if (!idle.length || idle.length !== songAudios.length) { updateNowPlaying(); return; }
       var pick = idle[Math.floor(Math.random() * idle.length)];
       try {
         // app-owned level (monitor speaker button) — reapply it before every play, same
@@ -10147,6 +10192,33 @@ document.addEventListener("click", function (e) {
     volBtn.addEventListener("click", function (e) { e.stopPropagation(); scheduleSaver(15000); cycleVolume(); });
     volBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
+  // The player's close x: a view action only — the music keeps going (closing the player
+  // window doesn't stop the stereo). The screen returns to whatever the player was riding
+  // on (usually the caps home) and the idle cycle brings the screensaver back over it.
+  // Any later music interaction (pause/resume/ended, or the home play button below)
+  // re-opens the player via updateNowPlaying.
+  var npCloseBtn = document.getElementById("monitor-np-close");
+  if (npCloseBtn) {
+    npCloseBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      monitor.classList.remove("show-nowplaying");
+      playLaptopClickSound("office-monitor");
+      scheduleSaver();
+    });
+    npCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+  // Tapping the scrolling title opens the performing artist's site — the one remaining
+  // link-out on the player (the whole-screen click used to do this; owner asked for the
+  // marquee to be the only target).
+  var npMarqueeHit = document.getElementById("monitor-np-marquee-hit");
+  if (npMarqueeHit) {
+    npMarqueeHit.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var site = playingSongSite();
+      if (site) { try { window.open(site, "_blank"); } catch (err) {} }
+    });
+    npMarqueeHit.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
   var huntVolBtn = document.getElementById("hunt-volume-btn");
   if (huntVolBtn) {
     huntVolBtn.addEventListener("click", function (e) { e.stopPropagation(); cycleVolume(); });
@@ -10239,9 +10311,12 @@ document.addEventListener("click", function (e) {
     monClickTimer = setTimeout(function () {
       if (monitorShowingSite()) {
         if (monitor.classList.contains("show-caps")) scheduleSaver();
-        // if a song's playing, the "now playing" screen links out to the artist
-        var songSite = monitor.classList.contains("show-nowplaying") && playingSongSite();
-        window.open(songSite || monitorUrl, "_blank");
+        // the visited wall-sign sites (harfbuzz/behdad) open theirs on a screen click;
+        // the caps home screen links nowhere anymore (owner call: it's a desktop now,
+        // not a browser), and the artist link-out moved to the marquee's own hit rect
+        var linkOut = monitor.classList.contains("show-caps") ? null : monitorUrl;
+        if (linkOut) window.open(linkOut, "_blank");
+        else playLaptopClickSound("office-monitor");
       } else if (pcTower && !pcTower.classList.contains("on")) {
         // a blank screen: clicking it powers the computer on (SVG nodes have
         // no .click(), so dispatch a real event to run the PC's own handlers)

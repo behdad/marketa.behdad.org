@@ -9949,15 +9949,33 @@ document.addEventListener("click", function (e) {
     var EQ_TILT_TOP = 2.3;   // treble band's gain relative to the (unboosted) bass band
     var EQ_TILT_CURVE = 1.4; // >1: keep low-mids near natural, concentrate the lift toward the top
     function eqBands(n, binCount) {
+      var nyq = (eqAudioCtx ? eqAudioCtx.sampleRate : 48000) / 2;
+      var out = [], i, t;
+      if (n === MANUAL_EQ_FREQS.length) {
+        // the full-size display: band edges at the geometric midpoints between the manual
+        // sliders' frequencies, so visual bar i IS slider i's territory — the same log
+        // spacing to the eye, but a drag moves its own column, not a neighbour's
+        var binHz = nyq / binCount;
+        var edges = [0]; // DC/sub-bass folds into bar 0
+        for (i = 1; i < n; i++) {
+          var f = Math.sqrt(MANUAL_EQ_FREQS[i - 1] * MANUAL_EQ_FREQS[i]);
+          edges.push(Math.max(edges[i - 1] + 1, Math.round(f / binHz)));
+        }
+        edges.push(Math.max(edges[n - 1] + 1, Math.floor(binCount * 0.8))); // drop the near-silent top ~20%
+        for (i = 0; i < n; i++) {
+          t = (n > 1) ? Math.pow(i / (n - 1), EQ_TILT_CURVE) : 0;
+          out.push({ lo: edges[i], hi: edges[i + 1], gain: 1 + (EQ_TILT_TOP - 1) * t, bandIdx: i });
+        }
+        return out;
+      }
+      // other bar counts (the screensaver's mini corner eq): plain log spacing
       var minBin = 1;                                              // a log scale can't start at bin 0
       var maxBin = Math.max(minBin + n, Math.floor(binCount * 0.8)); // drop the near-silent top ~20% of bins
-      var out = [];
-      for (var i = 0; i < n; i++) {
+      for (i = 0; i < n; i++) {
         var lo = (i === 0) ? 0 : Math.floor(minBin * Math.pow(maxBin / minBin, i / n)); // fold DC/sub-bass into bar 0
         var hi = Math.floor(minBin * Math.pow(maxBin / minBin, (i + 1) / n));
         if (hi <= lo) hi = lo + 1;                                 // guarantee >=1 bin per bar
-        var t = (n > 1) ? Math.pow(i / (n - 1), EQ_TILT_CURVE) : 0;
-        var nyq = (eqAudioCtx ? eqAudioCtx.sampleRate : 48000) / 2;
+        t = (n > 1) ? Math.pow(i / (n - 1), EQ_TILT_CURVE) : 0;
         out.push({ lo: lo, hi: hi, gain: 1 + (EQ_TILT_TOP - 1) * t, fc: ((lo + hi) / 2) * nyq / binCount });
       }
       return out;
@@ -9996,7 +10014,8 @@ document.addEventListener("click", function (e) {
           for (var j = band.lo; j < band.hi && j < data.length; j++) { sum += data[j]; cnt++; }
           var raw = cnt ? (sum / cnt) / 255 : 0;                          // dB-compressed level, 0-1
           var e = Math.max(0, raw * band.gain - 0.1) * 3.1 * rvol;        // floor-subtract, expand, volume-scale
-          e *= Math.pow(10, manualEqDbAt(band.fc) / 20);                  // manual-EQ display emphasis (see manualEqDbAt)
+          var mdb = (band.bandIdx != null) ? manualEqDb[band.bandIdx] : manualEqDbAt(band.fc);
+          e *= Math.pow(10, mdb / 20);                                    // manual-EQ display emphasis (see manualEqDbAt)
           bars[i].style.transform = "scaleY(" + (0.14 + 0.76 * (1 - Math.exp(-e))).toFixed(3) + ")";
         }
       } else {

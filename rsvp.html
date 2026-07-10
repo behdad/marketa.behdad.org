@@ -11015,9 +11015,11 @@ document.addEventListener("click", function (e) {
     try { g.drawImage(src, dx + (dw - w) / 2, dy + (dh - h) / 2, w, h); } catch (e) {}
     g.filter = "none";
   }
+  var pbCaptureTime = null; // when the frame was actually shot — names the download
   function captureBaseFrame() {
     var w = pbVideo.videoWidth, h = pbVideo.videoHeight;
     if (!w || !h) return null;
+    pbCaptureTime = new Date();
     var c = document.createElement("canvas");
     c.width = w; c.height = h;
     var g = c.getContext("2d");
@@ -11167,7 +11169,10 @@ document.addEventListener("click", function (e) {
       var url = URL.createObjectURL(blob);
       var a = document.createElement("a");
       a.href = url;
-      a.download = "loft-photobooth-marketa-behdad.png";
+      var dt = pbCaptureTime || new Date();
+      var z = function (n) { return (n < 10 ? "0" : "") + n; };
+      a.download = "loft-photobooth-" + dt.getFullYear() + "-" + z(dt.getMonth() + 1) + "-" + z(dt.getDate()) +
+        "-" + z(dt.getHours()) + z(dt.getMinutes()) + z(dt.getSeconds()) + ".png";
       document.body.appendChild(a);
       a.click();
       a.remove();

@@ -7504,6 +7504,7 @@ document.addEventListener("click", function (e) {
       playPanCrashSound(targetId);
       target.classList.add("broken");
       if (targetId === "kitchen-waterbottle" && window.__leakWaterBottle) window.__leakWaterBottle();
+      if (targetId === "kitchen-drinkmate") playSodaDepressurizeSound(); // all the CO2 blows out
     }, panFallReducedMotion() ? 0 : 650);
   }
   // Shared by clinkPans and the gong's strikeGong (below) — either one, clicked enough,
@@ -16056,6 +16057,73 @@ function playWaterLeakSound() {
       osc.stop(at + 0.15);
     }
     setTimeout(function () { ctx.close(); }, (dur + 0.3) * 1000);
+  } catch (e) {}
+}
+// when the SodaStream is smashed, the pressurized CO2 canister blows out all at once:
+// a sharp seal-break, then a long hiss whose filter cutoff falls as the pressure bleeds
+// off (bright -> deep whoosh), trailing into a few dying sputters as it empties.
+function playSodaDepressurizeSound() {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t0 = ctx.currentTime;
+    var DUR = 2.0;
+    var master = ctx.createGain();
+    master.gain.value = 0.9;
+    master.connect(pannedOut(ctx, "kitchen-drinkmate"));
+    var buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.5), ctx.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    // the escaping gas: looping noise, highpass+bandpass cutoffs falling as pressure drops
+    var src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.loop = true;
+    var hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.setValueAtTime(3200, t0);
+    hp.frequency.exponentialRampToValueAtTime(500, t0 + DUR);
+    var bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.setValueAtTime(3000, t0);
+    bp.frequency.exponentialRampToValueAtTime(650, t0 + DUR);
+    bp.Q.value = 0.6;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.55, t0 + 0.03); // the seal blows — sharp onset
+    g.gain.setValueAtTime(0.5, t0 + 0.55);
+    g.gain.exponentialRampToValueAtTime(0.05, t0 + DUR * 0.85); // bleeds off as it empties
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + DUR);
+    src.connect(hp); hp.connect(bp); bp.connect(g); g.connect(master);
+    src.start(t0);
+    src.stop(t0 + DUR + 0.1);
+    // a low water gurgle under it (the carbonated liquid churning as the gas rushes out)
+    var lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 320;
+    var lg = ctx.createGain();
+    lg.gain.setValueAtTime(0.0001, t0);
+    lg.gain.exponentialRampToValueAtTime(0.14, t0 + 0.08);
+    lg.gain.exponentialRampToValueAtTime(0.0001, t0 + DUR * 0.7);
+    var lsrc = ctx.createBufferSource();
+    lsrc.buffer = buf; lsrc.loop = true;
+    lsrc.connect(lp); lp.connect(lg); lg.connect(master);
+    lsrc.start(t0); lsrc.stop(t0 + DUR);
+    // dying sputters — the last gasps of gas as the canister empties
+    [DUR * 0.72, DUR * 0.83, DUR * 0.92].forEach(function (at, i) {
+      var s = ctx.createBufferSource();
+      s.buffer = buf;
+      var f = ctx.createBiquadFilter();
+      f.type = "highpass";
+      f.frequency.value = 1600 - i * 350;
+      var sg = ctx.createGain();
+      sg.gain.setValueAtTime(0.0001, t0 + at);
+      sg.gain.exponentialRampToValueAtTime(0.13 * (1 - i * 0.25), t0 + at + 0.012);
+      sg.gain.exponentialRampToValueAtTime(0.0001, t0 + at + 0.09);
+      s.connect(f); f.connect(sg); sg.connect(master);
+      s.start(t0 + at); s.stop(t0 + at + 0.12);
+    });
+    setTimeout(function () { try { ctx.close(); } catch (e) {} }, (DUR + 0.3) * 1000);
   } catch (e) {}
 }
 function playGlassClinkSound(pitchMult, panId) {

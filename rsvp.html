@@ -142,6 +142,23 @@ footer{margin-top:2.6rem}
   display:flex; align-items:center; justify-content:center;
 }
 .hunt-fullscreen-btn:hover, .hunt-fullscreen-btn:focus-visible{opacity:1; background:rgba(69,58,49,.82)}
+/* the cinematic's ghost cursor: a cream dot with a wine ring that glides between the
+   show's tap targets, plus a one-shot ripple ring at each click. Both live inside
+   .hunt-viewport (inside #hunt-fullscreen-area, so fullscreen keeps them; positions are
+   inline transforms computed from live getBoundingClientRect deltas against the
+   viewport, so they survive room pans and the fullscreen resize) and are
+   pointer-events:none so they can never intercept a real click. Motion is WAAPI from
+   JS (self-cleaning, reduced-motion-gated there), not CSS animation. */
+#cine-cursor{
+  position:absolute; left:-7px; top:-7px; width:14px; height:14px; border-radius:50%;
+  background:var(--cream); border:2px solid var(--wine); box-sizing:border-box;
+  box-shadow:0 1px 4px rgba(69,58,49,.4); pointer-events:none; z-index:7; opacity:0;
+}
+#cine-cursor.visible{opacity:.92}
+.cine-ripple{
+  position:absolute; left:-16px; top:-16px; width:32px; height:32px; border-radius:50%;
+  border:2px solid var(--wine); box-sizing:border-box; pointer-events:none; z-index:7; opacity:0;
+}
 /* the cross-room song volume control, bottom-right of the viewport (fullscreen owns
    top-right) -- hidden until a song's actually played once, same as index.html's loft
    volume button. Cycles the SAME mute->0.25->0.5->1.0 level as the office monitor's own
@@ -20153,9 +20170,13 @@ function spawnDustMote(container) {
   // the day turns to night into the built-in balcony finale, then an encore — the
   // record flips to the couple's other song, the blacklight comes on, and the show
   // wanders the loft once more before the extinguisher resets it to a fresh morning.
-  // Declarative cancellable timeline: setTimeout ids
-  // choreographed on wall-clock delays tuned to the known constants (GRIND_MS /
-  // BREW_MS / the 700ms slide) — cancel = clear them all (the finaleTimers idiom).
+  // Sequential cancellable timeline: pacing gaps are wall-clock beats, but every real
+  // solve gate (the espresso warm-up, grind/tamp/brew, the Prague call connecting and
+  // dropping, the PC boot) is a waitFor() poll against the game's own state, so the
+  // show can never outrun the handlers it drives. Every timer — beats and poll ticks
+  // alike — lands in cinematicTimers, so cancel = clear them all (the finaleTimers
+  // idiom). A ghost cursor glides to each scripted tap and pulses a ripple there, so
+  // the viewer can see the show's hands.
   // window.__cinematic gates the game's own auto-advances + the balcony storm so
   // they can't fight the scripted beats.
   var watchBtn = document.getElementById("watch-loft-btn");
@@ -20164,12 +20185,106 @@ function spawnDustMote(container) {
   var cinematicTeardown = null;
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   function beat(ms, fn) { cinematicTimers.push(setTimeout(fn, ms)); }
+  // ── ghost cursor ──
+  // The show's taps are synthetic, so nothing on screen would betray them; this small
+  // cream-and-wine dot is the show's visible hand. It lives inside .hunt-viewport —
+  // which sits inside #hunt-fullscreen-area, so fullscreen keeps it — and every
+  // position is a live getBoundingClientRect delta against the viewport (reliable
+  // where getScreenCTM on live-transformed elements is not), so it lands right through
+  // room pans and the fullscreen resize. Glides are WAAPI on the dot's transform (an
+  // HTML element with no static transform attribute to clobber) in a single slot — a
+  // new glide cancels the old — and ripples self-remove onfinish with a spawn-time
+  // stale sweep, per the throttled-tab particle rule. cursorTeardown() (called from
+  // stopCinematic) cancels the glide and removes every cursor element at once.
+  var cursorEl = null, cursorAnim = null, cursorX = 0, cursorY = 0;
+  var CURSOR_GLIDE_MS = 450;
+  function cursorHost() { return document.querySelector(".hunt-viewport"); }
+  function cursorPointFor(id) {
+    var el = document.getElementById(id), host = cursorHost();
+    if (!el || !host || !el.getBoundingClientRect) return null;
+    var r = el.getBoundingClientRect(), h = host.getBoundingClientRect();
+    if (!r.width && !r.height) return null;
+    return { x: r.left + r.width / 2 - h.left, y: r.top + r.height / 2 - h.top };
+  }
+  function ensureCursor() {
+    if (cursorEl) return cursorEl;
+    var host = cursorHost();
+    if (!host) return null;
+    cursorEl = document.createElement("div");
+    cursorEl.id = "cine-cursor";
+    host.appendChild(cursorEl);
+    return cursorEl;
+  }
+  function cursorPlace(x, y) {
+    var c = ensureCursor();
+    if (!c) return;
+    if (cursorAnim) { cursorAnim.cancel(); cursorAnim = null; }
+    cursorX = x; cursorY = y;
+    c.style.transform = "translate(" + x.toFixed(1) + "px," + y.toFixed(1) + "px)";
+    c.classList.add("visible");
+  }
+  function cursorGlideTo(id, ms) {
+    var p = cursorPointFor(id);
+    if (!p) return;
+    var c = ensureCursor();
+    if (!c) return;
+    // no glide when it wouldn't visibly travel: reduced motion, a fresh appearance
+    // after a room change, or no WAAPI — just appear at the target
+    if (reduceMotion || !c.classList.contains("visible") || !c.animate) { cursorPlace(p.x, p.y); return; }
+    if (cursorAnim) cursorAnim.cancel(); // single slot: at most one glide alive
+    var from = "translate(" + cursorX.toFixed(1) + "px," + cursorY.toFixed(1) + "px)";
+    cursorX = p.x; cursorY = p.y;
+    var to = "translate(" + p.x.toFixed(1) + "px," + p.y.toFixed(1) + "px)";
+    c.style.transform = to; // the landing pose is the style; the glide animates over it
+    cursorAnim = c.animate([{ transform: from }, { transform: to }],
+      { duration: ms || CURSOR_GLIDE_MS, easing: "cubic-bezier(.4,0,.2,1)" });
+    cursorAnim.onfinish = function () { cursorAnim = null; };
+  }
+  function cursorHide() {
+    if (cursorAnim) { cursorAnim.cancel(); cursorAnim = null; }
+    if (cursorEl) cursorEl.classList.remove("visible");
+  }
+  function cursorRipple(x, y) {
+    if (reduceMotion) return;
+    var host = cursorHost();
+    if (!host) return;
+    // cap before spawning: a throttled (visible-but-unfocused) window can stall the
+    // onfinish removals, so drop the oldest leftovers rather than piling up
+    var stale = host.querySelectorAll(".cine-ripple");
+    for (var i = 0; i <= stale.length - 4; i++) stale[i].remove();
+    var r = document.createElement("div");
+    r.className = "cine-ripple";
+    // an HTML div scales around its own center regardless, but set the box explicitly
+    // so the scale keyframes below match the particle-animate convention
+    r.style.transformBox = "fill-box";
+    var tr = "translate(" + x.toFixed(1) + "px," + y.toFixed(1) + "px)";
+    r.style.transform = tr;
+    host.appendChild(r);
+    if (!r.animate) { r.remove(); return; }
+    var a = r.animate([
+      { transform: tr + " scale(.3)", opacity: 0.85 },
+      { transform: tr + " scale(1)", opacity: 0 }
+    ], { duration: 500, easing: "ease-out" });
+    a.onfinish = function () { r.remove(); };
+  }
+  function cursorTeardown() {
+    if (cursorAnim) { cursorAnim.cancel(); cursorAnim = null; }
+    if (cursorEl) { cursorEl.remove(); cursorEl = null; }
+    var host = cursorHost();
+    if (host) host.querySelectorAll(".cine-ripple").forEach(function (el) { el.remove(); });
+  }
   // dispatch a click event rather than el.click() — SVGElement has no .click()
   // method, and a dispatched click fires no pointer/key events so it never trips
-  // the show's own cancel listeners
+  // the show's own cancel listeners. While the show runs, the ghost cursor snaps to
+  // the target's live center (correcting any drift from a finished glide) and pulses.
   function cineClick(id) {
     var el = document.getElementById(id);
-    if (el) el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    if (!el) return;
+    if (window.__cinematic) {
+      var p = cursorPointFor(id);
+      if (p) { cursorPlace(p.x, p.y); cursorRipple(p.x, p.y); }
+    }
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
   }
 
   function stopCinematic() {
@@ -20177,6 +20292,7 @@ function spawnDustMote(container) {
     window.__cinematic = false;
     cinematicTimers.forEach(clearTimeout);
     cinematicTimers = [];
+    cursorTeardown(); // the ghost cursor and any ripples vanish with the show
     // the balcony finale runs on its OWN finaleTimers (rain/rainbow/fireworks + a delayed
     // showRsvpNudge). A mid-finale cancel must clear those too, or a late nudge would
     // stomp the room caption we're about to restore. Only reached while the show ran, so
@@ -20200,19 +20316,53 @@ function spawnDustMote(container) {
   }
 
   // ── timeline helpers ──
-  // schedule([[gapMs, fn], ...]) fires each fn at the running sum of the gaps, all via
-  // beat() so every timer lands in cinematicTimers and cancels as one. Returns the total
-  // so the next phase can be chained after it.
-  function schedule(steps) {
-    var t = 0;
-    for (var i = 0; i < steps.length; i++) { t += steps[i][0]; if (steps[i][1]) beat(t, steps[i][1]); }
-    return t;
+  // runSteps(steps[, done]) plays a sequence strictly in order. Three step shapes:
+  //   [gapMs, fn]              — wait gapMs, then fn (pacing / dramatic beats)
+  //   tapAt(gapMs, id)         — wait gapMs (the ghost cursor gliding in over the
+  //                              last CURSOR_GLIDE_MS of it), then click id
+  //   waitFor(pred, timeoutMs) — poll the game's own state every 150ms until pred()
+  //                              is true, or skip forward at timeoutMs (a stalled
+  //                              gate must never hang the show)
+  // Every delay and every poll tick runs through beat(), so the whole sequence lives
+  // in cinematicTimers and cancels as one; a cancelled runner simply never advances.
+  function runSteps(steps, done) {
+    var i = 0;
+    function next() {
+      if (!window.__cinematic) return;
+      if (i >= steps.length) { if (done) done(); return; }
+      var s = steps[i++];
+      if (s.wait) {
+        var deadline = Date.now() + s.timeout;
+        (function poll() {
+          if (s.wait() || Date.now() >= deadline) next();
+          else beat(150, poll);
+        })();
+      } else if (s.tap) {
+        var lead = Math.min(CURSOR_GLIDE_MS, s.gap);
+        if (lead > 0) beat(s.gap - lead, function () { cursorGlideTo(s.tap, lead); });
+        beat(s.gap, function () { cineClick(s.tap); next(); });
+      } else {
+        beat(s[0], function () { if (s[1]) s[1](); next(); });
+      }
+    }
+    next();
   }
-  function tap(id) { return function () { cineClick(id); }; }
-  function visit(name) { return function () { goToStage(name); }; }
+  function tapAt(gapMs, id) { return { tap: id, gap: gapMs }; }
+  function waitFor(pred, timeoutMs) { return { wait: pred, timeout: timeoutMs }; }
+  // the cursor hides over a room pan and re-appears at the next room's first tap
+  function visit(name) { return function () { cursorHide(); goToStage(name); }; }
   // a scheduled caption beat: forces our narration past the setCaption guard (still a
   // no-op if the show was cancelled between scheduling and firing).
   function cine(key) { return function () { if (window.__cinematic) setCaption(key, true); }; }
+  // the laptop's call state lives in another closure; read the classes it drives
+  function laptopIsOpen() {
+    var l = document.getElementById("office-laptop");
+    return !!(l && l.classList.contains("open"));
+  }
+  function laptopInCall() {
+    var l = document.getElementById("office-laptop");
+    return !!(l && (l.classList.contains("calling") || l.classList.contains("connecting") || l.classList.contains("connected")));
+  }
   function mushroomTrip() { // the garden plants lift off their pots and bloom hue-cycling fractals
     if (window.startTripVariant) window.startTripVariant("psychedelic");
     if (window.startTripBlooms) window.startTripBlooms();
@@ -20247,46 +20397,60 @@ function spawnDustMote(container) {
   }
 
   function runFullCinematic() {
-    // A leisurely, whimsy-rich walkthrough: each interaction lands and its animation
-    // plays before the next, with a held beat in every room, day → night on office
-    // entry, into the built-in balcony finale — then it hands off to the encore.
-    // Dedicated cine() narration beats sit at 0-gap after a room/interaction step, so
-    // they fire on the same tick without shifting any timing — and win over the guarded
-    // room hints the scripted taps would otherwise set.
+    // A leisurely, whimsy-rich walkthrough that plays by the game's real rules: every
+    // gated step waits on the game's own state via waitFor (never a guessed delay),
+    // pacing gaps carry the rhythm, and the ghost cursor shows each tap. Dedicated
+    // cine() narration beats sit at 0-gap after a room/interaction step, so they win
+    // over the guarded room hints the scripted taps would otherwise set.
     setCaption("cine_coffee", true); // synchronous, so resetHunt's blocked caption never flashes stale
-    var solveTotal = schedule([
-      // KITCHEN — pull an espresso, start to finish
-      [1400, tap("kitchen-lamarzocco")],                 // power on: spark + gauges swing
-      [2600, tap("kitchen-grinder")],                    // grind (GRIND_MS) + coffee spray
-      [GRIND_MS + 1700, tap("kitchen-portafilter")],     // brew (BREW_MS) + steam; the cup fills
-      [BREW_MS + 1600, tap("kitchen-steamwand")],        // a hiss of steam while the shot rests
-      [2400, visit("garden")], [0, cine("cine_water")],
+    runSteps([
+      // KITCHEN — pull a real espresso, start to finish, by the machine's own rules
+      tapAt(1400, "kitchen-lamarzocco"),                 // power on: spark + gauges swing
+      waitFor(function () { return kitchenWarmedUp; }, WARMUP_MS + 2000), // "Let it warm up first."
+      tapAt(900, "kitchen-grinder"),                     // fly to the grinder, grind a dose
+      waitFor(function () { return kitchenGround; }, FLY_MS + GRIND_MS + 2000),
+      tapAt(800, "kitchen-tamper"),                      // tamp (docked at the grinder), fly home
+      waitFor(function () { return tamped && portafilterPos === "grouphead" && !portafilterFlying; }, FLY_MS * 2 + TAMP_MS + 2000),
+      tapAt(700, "kitchen-portafilter"),                 // brew (BREW_MS) + steam; the cup fills
+      waitFor(function () { return !!(portafilter && portafilter.classList.contains("done")); }, BREW_MS + 2000),
+      tapAt(900, "kitchen-steamwand"),                   // a hiss of steam while the shot rests
+      tapAt(1700, "kitchen-shotcup"),                    // sip — the game's own advance carries us to the garden
+      waitFor(function () { return window.currentStageName === "garden"; }, 2500),
+      [0, function () { if (window.currentStageName !== "garden") { cursorHide(); goToStage("garden"); } }], // if the sip was rebuffed, walk there anyway
+      [0, cine("cine_water")],
       // GARDEN — water the plants, light the candles, put the record on, a little magic
-      [1700, tap("garden-monstera")],                    // water (droplets + bounce)
-      [1900, tap("garden-peacelily")],                   // water another
-      [1900, tap("garden-candle-1")],                    // light a candle
-      [1500, tap("garden-candle-2")],                    // and the other
-      [2200, tap("garden-guitar")], [0, cine("cine_song")], // the couple's real song → everything grooves
-      [2400, tap("witchy-door-1")],                      // open the fairy chest → she dances to the beat
+      tapAt(1700, "garden-monstera"),                    // water (droplets + bounce)
+      tapAt(1900, "garden-peacelily"),                   // water another
+      tapAt(1900, "garden-candle-1"),                    // light a candle
+      tapAt(1500, "garden-candle-2"),                    // and the other
+      tapAt(2200, "garden-guitar"), [0, cine("cine_song")], // the couple's real song → everything grooves
+      tapAt(2400, "witchy-door-1"),                      // open the fairy chest → she dances to the beat
       [2400, mushroomTrip], [0, cine("cine_bloom")],     // the plants bloom fractals
       [6800, visit("cuddly")], [0, cine("cine_sway")],   // hold on the trip, then move on
       // CUDDLY — the couple sway to the song; play with Octi
-      [2200, tap("cuddly-octopus")],                     // Octi wobbles
-      [2000, tap("cuddly-pillow-1")],                    // squish a pillow
-      [1700, tap("cuddly-trunk")],                       // Octi tumbles into the chest
+      tapAt(2200, "cuddly-octopus"),                     // Octi wobbles
+      tapAt(2000, "cuddly-pillow-1"),                    // squish a pillow
+      tapAt(1700, "cuddly-trunk"),                       // Octi tumbles into the chest
       [2600, visit("office")], [0, cine("cine_office")],
-      // OFFICE — boot the PC, ring Prague; the gold skull's already dancing to the song
-      [1600, tap("office-pc-desk-trio")],                // power the PC → monitor boots Fedora → Chrome → caps
-      [5600, tap("office-laptop")],                      // watch the boot, then open Markéta's Mac
-      [1400, tap("laptop-calltile")],                    // Call Prague (calling → connecting → giggles)
-      [4200, tap("office-lamp")],                        // watch the call, then dim the lights
-      [1200, tap("office-pendant")],
+      // OFFICE — the game's own order: call Prague, hang up, then play with the PC
+      tapAt(1600, "office-laptop"),                      // open Markéta's Mac (the lid toggle lands a beat later)
+      waitFor(laptopIsOpen, 1500),
+      tapAt(1100, "laptop-calltile"),                    // Call Prague (calling → connecting → giggles) — before the Mac finds an update to install
+      waitFor(function () { return !!window.__pragueCalled; }, 6500), // the sequence gate sets on CONNECT (~3.4s in)
+      tapAt(3400, "laptop-calltile"),                    // linger with the couple, then hang up ("I love you"…)
+      waitFor(function () { return !laptopInCall(); }, 4000), // …and wait for the line to actually drop
+      tapAt(1400, "office-pc-desk-trio"),                // power the PC → monitor boots Fedora → Chrome → caps
+      waitFor(function () { return !!window.__pcPlayed; }, 2500), // the stained-glass butterfly's other gate
+      [4300, null],                                      // watch the boot land on the caps
+      tapAt(600, "office-lamp"),                         // then dim the lights
+      tapAt(1200, "office-pendant"),
       [2000, function () { if (window.__autoToggleDusk) window.__autoToggleDusk(); }], [0, cine("cine_dusk")], // day → night
       [2600, visit("balcony")], [0, cine("cine_finale")] // → the built-in finale (rainbow → fireworks → RSVP nudge)
-    ]);
-    // once the finale has settled on the RSVP nudge (~9.1s in) and it's had a moment to
-    // land, the encore takes the stage
-    beat(solveTotal + 13000, startEncore);
+    ], function () {
+      // once the finale has settled on the RSVP nudge (~9.1s in) and it's had a
+      // moment to land, the encore takes the stage
+      beat(13000, startEncore);
+    });
   }
 
   // ── Encore ──────────────────────────────────────────────────────────────
@@ -20354,14 +20518,14 @@ function spawnDustMote(container) {
       try { a.pause(); a.currentTime = 0; a.volume = appVol; } catch (e) {}
     });
   }
-  // 2-4 distinct objects from the room's pool, each on its own jittered beat.
+  // 2-4 distinct objects from the room's pool, each a cursor tap on its own jittered beat.
   function encoreRoomSteps(room) {
     var pool = ENCORE_POOLS[room].slice();
     var picks = 2 + Math.floor(Math.random() * 3);
     var steps = [];
     while (picks-- > 0 && pool.length) {
       var id = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
-      steps.push([1500 + Math.floor(Math.random() * 900), tap(id)]);
+      steps.push(tapAt(1500 + Math.floor(Math.random() * 900), id));
     }
     return steps;
   }
@@ -20379,13 +20543,15 @@ function spawnDustMote(container) {
     });
     steps.push(
       // curtain call: back where the day began, a held beat of stillness, the song
-      // fades out — then the show formally ends and the extinguisher pull runs through
-      // the game's real handler, exactly as a player's own pull would.
+      // fades out and the cursor settles on the extinguisher — then the show formally
+      // ends and the pull runs through the game's real handler, exactly as a player's
+      // own pull would (the cursor goes down with the show, the wipe covers the rest).
       [3600, visit("kitchen")], [0, cine("cine_encore_end")],
       [2600, encoreSongOut],
-      [2400, function () { stopCinematic(); cineClick("kitchen-extinguisher"); }]
+      [1900, function () { cursorGlideTo("kitchen-extinguisher", 500); }],
+      [700, function () { stopCinematic(); cineClick("kitchen-extinguisher"); }]
     );
-    schedule(steps);
+    runSteps(steps);
   }
 
   function runReducedCinematic() {

@@ -6391,26 +6391,27 @@ document.addEventListener("click", function (e) {
       scheduleCrackle();
     } catch (e) {}
   }
-  function stopFire() {
+  function stopFire(fadeSecs) {
+    var f = (typeof fadeSecs === "number") ? fadeSecs : 0.3;
     if (crackleTimer) { clearTimeout(crackleTimer); crackleTimer = null; }
     if (fireCtx) {
       var ctx = fireCtx, roar = fireCtx._roarGain, nodes = fireCtx._nodes || [];
       fireCtx = null; // null first so a racing scheduleCrackle callback bails
-      try { if (roar) roar.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.3); } catch (e) {}
+      try { if (roar) roar.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + f); } catch (e) {}
       setTimeout(function () {
         nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
         try { ctx.close(); } catch (e) {}
-      }, 400);
+      }, f * 1000 + 100);
     }
   }
   // (re)evaluate the gate and start/stop accordingly. goToStage passes the room boolean
   // (mirrors __updatePcFan(inOffice)); visibilitychange + the toggle call it with no arg,
   // keeping the last known room and just re-checking on/off + visibility.
-  window.__updateFireSound = function (inCuddly) {
+  window.__updateFireSound = function (inCuddly, fadeSecs) {
     if (typeof inCuddly === "boolean") fireInCuddly = inCuddly;
     var want = fireWant();
     if (want && !fireCtx) startFire();
-    else if (!want && fireCtx) stopFire();
+    else if (!want && fireCtx) stopFire(fadeSecs);
   };
   document.addEventListener("visibilitychange", function () { window.__updateFireSound(); });
 
@@ -7342,16 +7343,17 @@ document.addEventListener("click", function (e) {
         kettleSource.start();
       } catch (e) {}
     }
-    function stopKettleHum() {
+    function stopKettleHum(fadeSecs) {
+      var f = (typeof fadeSecs === "number") ? fadeSecs : 0.2;
       try {
         if (kettleGain && kettleCtx) {
-          kettleGain.gain.exponentialRampToValueAtTime(0.0001, kettleCtx.currentTime + 0.2);
+          kettleGain.gain.exponentialRampToValueAtTime(0.0001, kettleCtx.currentTime + f);
         }
         var src = kettleSource, ctxToClose = kettleCtx;
         setTimeout(function () {
           if (src) { try { src.stop(); } catch (e) {} }
           if (ctxToClose) ctxToClose.close();
-        }, 300);
+        }, f * 1000 + 100);
       } catch (e) {}
       kettleSource = null;
       kettleGain = null;
@@ -7359,11 +7361,11 @@ document.addEventListener("click", function (e) {
     }
     // the kettle hum is audible only in the kitchen (mirrors __updatePcFan's room gate)
     var kettleInKitchen = true; // kitchen is the default room at load
-    window.__updateKettleHum = function (inKitchen) {
+    window.__updateKettleHum = function (inKitchen, fadeSecs) {
       if (typeof inKitchen === "boolean") kettleInKitchen = inKitchen;
       var want = kettleSteaming && kettleInKitchen && !document.hidden;
       if (want && !kettleCtx) startKettleHum();
-      else if (!want && kettleCtx) stopKettleHum();
+      else if (!want && kettleCtx) stopKettleHum(fadeSecs);
     };
     document.addEventListener("visibilitychange", function () { window.__updateKettleHum(); });
     function toggleKettle() {
@@ -7634,20 +7636,21 @@ document.addEventListener("click", function (e) {
       playRadioMelodyOnce();
       radioMelodyInterval = setInterval(playRadioMelodyOnce, RADIO_MELODY.length * 280 + 500);
     }
-    function stopRadioStatic() {
+    function stopRadioStatic(fadeSecs) {
+      var f = (typeof fadeSecs === "number") ? fadeSecs : 0.15;
       clearTimeout(radioTuneInTimeout);
       clearInterval(radioMelodyInterval);
       radioTuneInTimeout = null;
       radioMelodyInterval = null;
       try {
         if (radioGain && radioCtx) {
-          radioGain.gain.exponentialRampToValueAtTime(0.0001, radioCtx.currentTime + 0.15);
+          radioGain.gain.exponentialRampToValueAtTime(0.0001, radioCtx.currentTime + f);
         }
         var src = radioSource, ctxToClose = radioCtx;
         setTimeout(function () {
           if (src) { try { src.stop(); } catch (e) {} }
           if (ctxToClose) ctxToClose.close();
-        }, 200);
+        }, f * 1000 + 100);
       } catch (e) {}
       radioSource = null;
       radioGain = null;
@@ -7655,11 +7658,11 @@ document.addEventListener("click", function (e) {
     }
     // the radio is audible only in the kitchen (mirrors __updatePcFan's room gate)
     var radioInKitchen = true; // kitchen is the default room at load
-    window.__updateRadioSound = function (inKitchen) {
+    window.__updateRadioSound = function (inKitchen, fadeSecs) {
       if (typeof inKitchen === "boolean") radioInKitchen = inKitchen;
       var want = radioOn && radioInKitchen && !document.hidden;
       if (want && !radioCtx) startRadioStatic();
-      else if (!want && radioCtx) stopRadioStatic();
+      else if (!want && radioCtx) stopRadioStatic(fadeSecs);
     };
     document.addEventListener("visibilitychange", function () { window.__updateRadioSound(); });
     function toggleRadio() {
@@ -8303,14 +8306,15 @@ document.addEventListener("click", function (e) {
       pcFanCtx._gain = gain;
     } catch (e) {}
   }
-  function stopPcFan() {
+  function stopPcFan(fadeSecs) {
     if (pcFanCtx) {
-      try { pcFanCtx._gain.gain.exponentialRampToValueAtTime(0.0001, pcFanCtx.currentTime + 0.2); } catch (e) {}
+      var f = (typeof fadeSecs === "number") ? fadeSecs : 0.2;
+      try { pcFanCtx._gain.gain.exponentialRampToValueAtTime(0.0001, pcFanCtx.currentTime + f); } catch (e) {}
       var ctxToClose = pcFanCtx, noiseToStop = pcFanCtx._noise;
       setTimeout(function () {
         if (noiseToStop) { try { noiseToStop.stop(); } catch (e) {} }
         if (ctxToClose) { try { ctxToClose.close(); } catch (e) {} }
-      }, 300);
+      }, f * 1000 + 100);
       pcFanCtx = null;
     }
   }
@@ -8318,11 +8322,11 @@ document.addEventListener("click", function (e) {
   // the fan hum is only audible in the office and while the tab's visible: leaving
   // the room (or hiding the tab) stops it, and returning with the PC still on resumes it
   var fanInOffice = false;
-  window.__updatePcFan = function (inOffice) {
+  window.__updatePcFan = function (inOffice, fadeSecs) {
     if (typeof inOffice === "boolean") fanInOffice = inOffice;
     var wantFan = pcTower.classList.contains("on") && fanInOffice && !document.hidden;
     if (wantFan && !pcFanCtx) startPcFan();
-    else if (!wantFan && pcFanCtx) stopPcFan();
+    else if (!wantFan && pcFanCtx) stopPcFan(fadeSecs);
   };
   document.addEventListener("visibilitychange", function () { window.__updatePcFan(); });
   function togglePc() {
@@ -10212,16 +10216,17 @@ document.addEventListener("click", function (e) {
         acSource.start();
       } catch (e) {}
     }
-    function stopACHum() {
+    function stopACHum(fadeSecs) {
+      var f = (typeof fadeSecs === "number") ? fadeSecs : 0.2;
       try {
         if (acGain && acCtx) {
-          acGain.gain.exponentialRampToValueAtTime(0.0001, acCtx.currentTime + 0.2);
+          acGain.gain.exponentialRampToValueAtTime(0.0001, acCtx.currentTime + f);
         }
         var src = acSource, ctxToClose = acCtx;
         setTimeout(function () {
           if (src) { try { src.stop(); } catch (e) {} }
           if (ctxToClose) ctxToClose.close();
-        }, 300);
+        }, f * 1000 + 100);
       } catch (e) {}
       acSource = null;
       acGain = null;
@@ -10230,11 +10235,11 @@ document.addEventListener("click", function (e) {
     // the hum is only audible from the garden (indoor unit) and balcony (outdoor unit),
     // not the other rooms — mirrors __updatePcFan's room gate.
     var acInAudibleRoom = false;
-    window.__updateACHum = function (inRoom) {
+    window.__updateACHum = function (inRoom, fadeSecs) {
       if (typeof inRoom === "boolean") acInAudibleRoom = inRoom;
       var wantHum = acOn && acInAudibleRoom && !document.hidden;
       if (wantHum && !acCtx) startACHum();
-      else if (!wantHum && acCtx) stopACHum();
+      else if (!wantHum && acCtx) stopACHum(fadeSecs);
     };
     document.addEventListener("visibilitychange", function () { window.__updateACHum(); });
     function toggleAC() {
@@ -15981,11 +15986,14 @@ function spawnDustMote(container) {
     if (name === "cuddly" && window.resetFishu) window.resetFishu();
     if (name === "office" && window.revealOfficeFishuIfFled) window.revealOfficeFishuIfFled();
     if (name === "office" && window.startOfficeCrane) window.startOfficeCrane(); // resume the skyline crane's traverse/drop loop
-    if (window.__updatePcFan) window.__updatePcFan(name === "office"); // hum only in the office
-    if (window.__updateACHum) window.__updateACHum(name === "garden" || name === "balcony"); // AC hum only in garden + balcony
-    if (window.__updateRadioSound) window.__updateRadioSound(name === "kitchen"); // radio audible only in the kitchen
-    if (window.__updateKettleHum) window.__updateKettleHum(name === "kitchen"); // kettle hum only in the kitchen
-    if (window.__updateFireSound) window.__updateFireSound(name === "cuddly"); // fire crackle only in the cuddly nook
+    // leaving a room fades its ambient drone out over ~the room-slide duration rather
+    // than the snappy device-toggle fade, so the sound recedes as the room slides away.
+    var ROOM_FADE = 0.5;
+    if (window.__updatePcFan) window.__updatePcFan(name === "office", ROOM_FADE); // hum only in the office
+    if (window.__updateACHum) window.__updateACHum(name === "garden" || name === "balcony", ROOM_FADE); // AC hum only in garden + balcony
+    if (window.__updateRadioSound) window.__updateRadioSound(name === "kitchen", ROOM_FADE); // radio audible only in the kitchen
+    if (window.__updateKettleHum) window.__updateKettleHum(name === "kitchen", ROOM_FADE); // kettle hum only in the kitchen
+    if (window.__updateFireSound) window.__updateFireSound(name === "cuddly", ROOM_FADE); // fire crackle only in the cuddly nook
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(name === "garden"); // birdsong only in the garden, and only by day
     if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(name === "balcony"); // string lights pulse with the beat only on the balcony
     if (window.__updateSongRoomPan) window.__updateSongRoomPan(); // room-fixed rooms settle immediately

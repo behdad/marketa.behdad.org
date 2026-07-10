@@ -12388,6 +12388,7 @@ function startTripVariant(variant) {
         requestAnimationFrame(function () {
           requestAnimationFrame(function () { ghostInner.classList.add("roaming"); });
         });
+        setTimeout(function () { playGhostWhisperSound("rsvp-trip-ghost"); }, 700); // it breathes a whispered "cool" as it drifts in
       }
     }, 4000);
   }
@@ -14592,6 +14593,48 @@ function playGhostBooSound() {
     noise.stop(t + dur + 0.02);
 
     setTimeout(function () { ctx.close(); }, 850);
+  } catch (e) {}
+}
+// The ketamine-trip ghost breathes a whispered "cool" — unvoiced (no pitch), so it's
+// filtered NOISE through gliding /k-uu-l/ vowel formants: breathy and eerie, quiet.
+function playGhostWhisperSound(panId) {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t0 = ctx.currentTime;
+    var out = pannedOut(ctx, panId || "rsvp-trip-ghost");
+    var dur = 0.95;
+    var buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; // white-noise breath
+    var noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    // envelope: soft /k/ breath burst, the long "oo", then the "l" tail — quiet + breathy
+    var master = ctx.createGain(); var m = master.gain;
+    m.setValueAtTime(0.0001, t0);
+    m.exponentialRampToValueAtTime(0.05, t0 + 0.03);  // /k/
+    m.exponentialRampToValueAtTime(0.022, t0 + 0.1);
+    m.exponentialRampToValueAtTime(0.06, t0 + 0.24);  // "oo"
+    m.setValueAtTime(0.06, t0 + 0.5);
+    m.exponentialRampToValueAtTime(0.038, t0 + 0.66); // "l"
+    m.exponentialRampToValueAtTime(0.0001, t0 + 0.9);
+    master.connect(out);
+    // whispered vowel formants gliding /u/ -> /l/ (bandpass-filtered noise, no oscillator)
+    [
+      { q: 6,  g: 1.0,  pts: [[0.05,330],[0.5,300],[0.9,360]] },   // F1
+      { q: 8,  g: 0.55, pts: [[0.05,900],[0.5,870],[0.9,1250]] },  // F2: oo -> l
+      { q: 10, g: 0.22, pts: [[0.05,2400],[0.9,2550]] }            // F3
+    ].forEach(function (f) {
+      var bp = ctx.createBiquadFilter();
+      bp.type = "bandpass"; bp.Q.value = f.q;
+      bp.frequency.setValueAtTime(f.pts[0][1], t0);
+      for (var k = 1; k < f.pts.length; k++) bp.frequency.linearRampToValueAtTime(f.pts[k][1], t0 + f.pts[k][0]);
+      var fg = ctx.createGain(); fg.gain.value = f.g;
+      noise.connect(bp); bp.connect(fg); fg.connect(master);
+    });
+    noise.start(t0); noise.stop(t0 + dur);
+    setTimeout(function () { ctx.close(); }, 1200);
   } catch (e) {}
 }
 function playCreakSound(panId) {

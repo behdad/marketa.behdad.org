@@ -20425,7 +20425,14 @@ function spawnDustMote(container) {
       tapAt(1500, "garden-candle-2"),                    // and the other
       tapAt(2200, "garden-guitar"), [0, cine("cine_song")], // the couple's real song → everything grooves
       tapAt(2400, "witchy-door-1"),                      // open the fairy chest → she dances to the beat
-      [2400, mushroomTrip], [0, cine("cine_bloom")],     // the plants bloom fractals
+      [1950, function () { cursorGlideTo("garden-drugsbox", 450); }],
+      [450, function () {
+        // show the tap (glide + ripple) but trip via the scripted variant — a real
+        // drugsbox click draws from the shuffled deck instead of the bloom
+        var pd = cursorPointFor("garden-drugsbox");
+        if (pd) cursorRipple(pd.x, pd.y);
+        mushroomTrip();
+      }], [0, cine("cine_bloom")],                       // the plants bloom fractals
       [6800, visit("cuddly")], [0, cine("cine_sway")],   // hold on the trip, then move on
       // CUDDLY — the couple sway to the song; play with Octi
       tapAt(2200, "cuddly-octopus"),                     // Octi wobbles
@@ -20588,18 +20595,29 @@ function spawnDustMote(container) {
     resetHunt(); // clean slate: day, kitchen, re-armed balcony finale (deterministic dusk flip later)
     primeCinematicAudio(); // unlock the song inside this gesture so the later garden beat can play it
 
-    // Cancel on any genuine user input. pointerdown/keydown ONLY (never click): our
-    // own scripted el.click() beats fire no pointer/key events, so they can't
-    // self-cancel; a real tap or keypress does. Abort if the tab is hidden (timers
-    // keep firing while animations pause → desync).
-    function onUserInput() { stopCinematic(); }
+    // The show is NOT stopped by stray input — only the explicit skip/take-over
+    // control ends it. Pointer events aimed at the game scene are swallowed while
+    // the show runs (a real tap mid-choreography would corrupt the scripted state);
+    // the frame's HTML controls (fullscreen, volume, skip) live outside the SVG and
+    // keep working. Scripted el.click() beats fire no pointer events, so the
+    // swallower never sees them. Abort if the tab is hidden (timers keep firing
+    // while animations pause → desync).
+    function swallowSceneInput(e) {
+      if (!window.__cinematic) return;
+      if (!e.isTrusted) return; // the show's own scripted clicks must pass through
+      var t = e.target;
+      if (t && t.closest && t.closest("#loft-game-strip")) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }
     function onVisibility() { if (document.hidden) stopCinematic(); }
-    document.addEventListener("pointerdown", onUserInput, true);
-    document.addEventListener("keydown", onUserInput, true);
+    document.addEventListener("pointerdown", swallowSceneInput, true);
+    document.addEventListener("click", swallowSceneInput, true);
     document.addEventListener("visibilitychange", onVisibility);
     cinematicTeardown = function () {
-      document.removeEventListener("pointerdown", onUserInput, true);
-      document.removeEventListener("keydown", onUserInput, true);
+      document.removeEventListener("pointerdown", swallowSceneInput, true);
+      document.removeEventListener("click", swallowSceneInput, true);
       document.removeEventListener("visibilitychange", onVisibility);
     };
 

@@ -7277,6 +7277,7 @@ var T = {
     py_wait: "the snake is still on its way\u2026",
     py_ready: "Python {v} ready. try: 2+2 \u00b7 import this",
     py_fonttools: "fontTools {v} is already imported \u2014 the groom insisted.",
+    py_fonts: "the page's fonts are mounted at /fonts \u2014 try TTFont('/fonts/{f}')",
     py_fail: "couldn't fetch Python \u2014 offline, or the CDN is blocked. close and reopen to retry.",
     py_busy: "still chewing on the last one\u2026",
   },
@@ -7470,6 +7471,7 @@ var T = {
     py_wait: "had je po\u0159\u00e1d na cest\u011b\u2026",
     py_ready: "Python {v} p\u0159ipraven. zkuste: 2+2 \u00b7 import this",
     py_fonttools: "fontTools {v} je u\u017e naimportovan\u00fd \u2014 \u017eenich trval na sv\u00e9m.",
+    py_fonts: "fonty str\u00e1nky jsou p\u0159ipojen\u00e9 v /fonts \u2014 zkuste TTFont('/fonts/{f}')",
     py_fail: "Python se nepoda\u0159ilo st\u00e1hnout \u2014 offline, nebo je CDN blokovan\u00e9. zav\u0159ete a otev\u0159ete znovu.",
     py_busy: "je\u0161t\u011b \u017ev\u00fdk\u00e1m ten p\u0159edchoz\u00ed\u2026",
   }
@@ -11687,10 +11689,42 @@ document.addEventListener("click", function (e) {
         var ver = "";
         try { ver = py.runPython("__import__('sys').version.split()[0]"); } catch (e) {}
         pyPrint(pyT("py_ready").replace("{v}", ver || "3"), "term-dim");
+        // the page's own webfonts, mounted so TTFont has something real to chew
+        // on: the same (cached) css2 stylesheet the <link> loads names one
+        // latin-subset variable woff2 per family+style; offline, the fetches
+        // reject and the whole thing stays silent, same as the install below
+        var fontsLink = document.querySelector('link[href*="fonts.googleapis.com/css2"]');
+        var pyFonts = !fontsLink ? Promise.reject() : fetch(fontsLink.href)
+          .then(function (r) { if (!r.ok) throw 0; return r.text(); })
+          .then(function (css) {
+            var files = {}, re = /\/\*\s*latin\s*\*\/\s*@font-face\s*\{([^}]*)\}/g, m;
+            while ((m = re.exec(css))) {
+              var fam = /font-family:\s*'([^']+)'/.exec(m[1]);
+              var url = /url\((https:[^)\s]+\.woff2)\)/.exec(m[1]);
+              if (fam && url) files[fam[1].toLowerCase().replace(/ /g, "-") + (/font-style:\s*italic/.test(m[1]) ? "-italic" : "") + ".woff2"] = url[1];
+            }
+            var names = Object.keys(files);
+            if (!names.length) throw 0;
+            return Promise.all(names.map(function (n) {
+              return fetch(files[n]).then(function (r) { if (!r.ok) throw 0; return r.arrayBuffer(); });
+            })).then(function (bufs) {
+              py.FS.mkdirTree("/fonts");
+              for (var i = 0; i < names.length; i++) py.FS.writeFile("/fonts/" + names[i], new Uint8Array(bufs[i]));
+              return names;
+            });
+          });
+        pyFonts.catch(function () {}); // handled again below, after the install resolves
         // the groom's own library comes pre-imported: fetched in the background so
-        // `fontTools` just works at the first prompt; a failed fetch stays silent
-        py.runPythonAsync("import micropip\nawait micropip.install('fonttools')\nimport fontTools\nfontTools.version")
-          .then(function (v) { pyPrint(pyT("py_fonttools").replace("{v}", String(v)), "term-dim"); }, function () {});
+        // `fontTools` (and the TTFont the fonts line suggests) just works at the
+        // first prompt; brotli lets TTFont open the woff2 files directly. a failed
+        // fetch stays silent
+        py.runPythonAsync("import micropip\nawait micropip.install(['fonttools', 'brotli'])\nimport fontTools\nfrom fontTools.ttLib import TTFont\nfontTools.version")
+          .then(function (v) { pyPrint(pyT("py_fonttools").replace("{v}", String(v)), "term-dim"); return pyFonts; })
+          .then(function (names) {
+            var ex = names.indexOf("fraunces.woff2") >= 0 ? "fraunces.woff2" : names[0];
+            pyPrint(pyT("py_fonts").replace("{f}", ex), "term-dim");
+          })
+          .catch(function () {});
       }).catch(function () { pyLoadFailed(); });
     };
     document.head.appendChild(s);

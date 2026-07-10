@@ -3789,8 +3789,10 @@ section{margin:1.9rem 0}
 </g>
 </g>
 <!-- amethyst cluster tucked in the middle of the altar, peeking out from behind the sage
-     & palo santo (drawn before them so they sit in front). static, inert. -->
-<g id="garden-crystals" pointer-events="none" transform="translate(-23,0)">
+     & palo santo (drawn before them so they sit in front). click it for a quiet sparkle
+     (decorative bonus, not a tracked egg). transparent rect below gives a comfy tap area. -->
+<g id="garden-crystals" transform="translate(-23,0)" style="cursor:pointer">
+<rect x="589" y="231" width="23" height="19" fill="transparent"/>
 <ellipse cx="600" cy="246.5" rx="9" ry="2.2" fill="#2f1c12" opacity="0.22"/>
 <path d="M593 246 L595.5 237 L598 246 Z" fill="#7d5aa0"/>
 <path d="M595.5 237 L598 246 L596.6 240 Z" fill="#a687cb"/>
@@ -11023,6 +11025,8 @@ document.addEventListener("click", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); hearts(); }
     });
   }
+  var crystals = document.getElementById("garden-crystals");
+  if (crystals) crystals.addEventListener("click", spawnCrystalSparkle); // quiet decorative glint, click-only (untracked bonus)
   var drugsBox = document.getElementById("garden-drugsbox");
   if (drugsBox) {
     drugsBox.addEventListener("click", triggerRsvpTrip);
@@ -12222,6 +12226,47 @@ function spawnLunarSparkles() {
         { opacity: 0, transform: "scale(0.4)" }
       ], { duration: 800 + Math.random() * 800, iterations: 2, delay: Math.random() * 1100, easing: "ease-in-out" })
         .onfinish = (function (node) { return function () { if (node.parentNode) node.remove(); }; })(star);
+    }
+  }
+}
+// A quiet decorative glint: tapping the amethyst cluster scatters a few twinkling
+// sparkles over the crystals (same scale-in/out tinkle as the eclipse corona, with a
+// bright crystalline clink). The sparkles are appended into the crystals' OWN group so
+// they inherit its translate(-23,0) and share the getBBox coordinate system — spawning
+// them anywhere else would land them in a different space. Untracked bonus: no markFound,
+// not in the ? cheatsheet.
+function spawnCrystalSparkle() {
+  var host = document.getElementById("garden-crystals");
+  if (!host) return;
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (typeof playGlassClinkSound === "function") playGlassClinkSound(1.7, "garden-crystals");
+  var ns = "http://www.w3.org/2000/svg";
+  var box;
+  try { box = host.getBBox(); } catch (e) { return; }
+  var cx = box.x + box.width / 2, cy = box.y + box.height * 0.32; // bias toward the crystal tips
+  var tints = ["#f0e6f7", "#c9aee6", "#b79ad9", "#fff8e0"]; // amethyst lilacs + a warm glint
+  var old = host.querySelectorAll(".crystal-spark"); // clear any leftover from a rapid re-click (cap the burst)
+  for (var k = 0; k < old.length; k++) old[k].remove();
+  for (var s = 0; s < 6; s++) {
+    var sa = Math.random() * 6.283, sr = box.width * (0.12 + Math.random() * 0.42);
+    var sx = cx + Math.cos(sa) * sr, sy = cy + Math.sin(sa) * sr * 0.8;
+    var star = document.createElementNS(ns, "circle");
+    star.setAttribute("class", "crystal-spark");
+    star.setAttribute("cx", sx); star.setAttribute("cy", sy);
+    star.setAttribute("r", 0.5 + Math.random() * 0.8);
+    star.setAttribute("fill", tints[s % tints.length]);
+    star.setAttribute("pointer-events", "none");
+    star.style.transformBox = "fill-box"; star.style.transformOrigin = "center"; // scale in place, not toward origin
+    host.appendChild(star);
+    if (star.animate) {
+      star.animate([
+        { opacity: 0, transform: "scale(0.4)" },
+        { opacity: 1, transform: "scale(1.4)", offset: 0.5 },
+        { opacity: 0, transform: "scale(0.4)" }
+      ], { duration: 560 + Math.random() * 460, iterations: 2, delay: Math.random() * 380, easing: "ease-in-out" })
+        .onfinish = (function (node) { return function () { if (node.parentNode) node.remove(); }; })(star);
+    } else {
+      host.removeChild(star); // no WAAPI: don't leave a static dot behind
     }
   }
 }

@@ -7078,7 +7078,8 @@ document.addEventListener("click", function (e) {
           // hasFocus too, not just !hidden: a visible-but-UNFOCUSED window (second
           // monitor, partially covered) still runs this rAF loop, and the drop boom is
           // the loudest sound in the file — it must never fire from an unwatched window
-          if (!document.hidden && document.hasFocus() && window.currentStageName === "office") playCraneDropSound();
+          // don't thud over the music — the boom's sub-bass masks the song's low end
+          if (!document.hidden && document.hasFocus() && window.currentStageName === "office" && !(window.__anySongPlaying && window.__anySongPlaying())) playCraneDropSound();
         }
         state = "reload"; reloadTimer = 0;
       }
@@ -9327,6 +9328,7 @@ document.addEventListener("click", function (e) {
     }
     return false;
   }
+  window.__anySongPlaying = anySongPlaying; // so the crane drop can hush its boom during a song
   // The pipeline's context is deliberately permanent (capture is irreversible — see
   // ensureAudioGraph), but permanent shouldn't mean always rendering: while the tab
   // is hidden AND no song is playing, park it suspended instead of holding a live,

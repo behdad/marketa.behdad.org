@@ -6627,8 +6627,12 @@ document.addEventListener("click", function (e) {
   // toggling off fades it out and stops the crackle timer (no firing in a backgrounded tab).
   var fireCtx = null, crackleTimer = null, fireInCuddly = false;
   function fireWant() {
+    // hasFocus too, not just visibility: a continuous bed holds a live OS audio
+    // stream open, and an unattended-but-"visible" window (covered on X11 — no
+    // occlusion detection) would otherwise hold it forever, where it underruns
+    // into crackle on Linux; same rule as the one-shot spawners (crickets/crane)
     return fireInCuddly && !screen.classList.contains("off") &&
-      document.visibilityState !== "hidden";
+      document.visibilityState !== "hidden" && document.hasFocus();
   }
   function popCrackle() {
     if (!fireCtx) return;
@@ -6772,8 +6776,10 @@ document.addEventListener("click", function (e) {
   if (!gardenStage) return;
   var birdCtx = null, chirpTimer = null, inGarden = false;
   function birdsWant() {
+    // hasFocus too: even between chirps the idling context holds a live OS audio
+    // stream open, which underruns into crackle in an unattended window on Linux
     return inGarden && !gardenStage.classList.contains("dusk") &&
-      document.visibilityState !== "hidden";
+      document.visibilityState !== "hidden" && document.hasFocus();
   }
   function popChirp() {
     if (!birdCtx) return;
@@ -7711,7 +7717,10 @@ document.addEventListener("click", function (e) {
     var kettleInKitchen = true; // kitchen is the default room at load
     window.__updateKettleHum = function (inKitchen, fadeSecs) {
       if (typeof inKitchen === "boolean") kettleInKitchen = inKitchen;
-      var want = kettleSteaming && kettleInKitchen && !document.hidden;
+      // hasFocus too (all the continuous beds share this rule): a bed left on in an
+      // unattended-but-"visible" window (covered on X11) holds a live OS audio
+      // stream open indefinitely, where it underruns into crackle on Linux
+      var want = kettleSteaming && kettleInKitchen && !document.hidden && document.hasFocus();
       if (want && !kettleCtx) startKettleHum();
       else if (!want && kettleCtx) stopKettleHum(fadeSecs);
     };
@@ -8021,7 +8030,8 @@ document.addEventListener("click", function (e) {
     var radioInKitchen = true; // kitchen is the default room at load
     window.__updateRadioSound = function (inKitchen, fadeSecs) {
       if (typeof inKitchen === "boolean") radioInKitchen = inKitchen;
-      var want = radioOn && radioInKitchen && !document.hidden;
+      // hasFocus: continuous-bed rule, see __updateKettleHum
+      var want = radioOn && radioInKitchen && !document.hidden && document.hasFocus();
       if (want && !radioCtx) startRadioStatic();
       else if (!want && radioCtx) stopRadioStatic(fadeSecs);
     };
@@ -8687,7 +8697,8 @@ document.addEventListener("click", function (e) {
   var fanInOffice = false;
   window.__updatePcFan = function (inOffice, fadeSecs) {
     if (typeof inOffice === "boolean") fanInOffice = inOffice;
-    var wantFan = pcTower.classList.contains("on") && fanInOffice && !document.hidden;
+    // hasFocus: continuous-bed rule, see __updateKettleHum
+    var wantFan = pcTower.classList.contains("on") && fanInOffice && !document.hidden && document.hasFocus();
     if (wantFan && !pcFanCtx) startPcFan();
     else if (!wantFan && pcFanCtx) stopPcFan(fadeSecs);
   };
@@ -9263,7 +9274,11 @@ document.addEventListener("click", function (e) {
   function updateEqCtxIdle() {
     if (!eqAudioCtx) return;
     try {
-      if (document.hidden && !anySongPlaying()) {
+      // unfocused counts as idle too (X11 has no occlusion detection, so a covered
+      // window stays "visible" forever) — but NEVER while a song plays: backgrounded/
+      // unfocused playback is a feature, and a captured element is inaudible while
+      // its context is suspended.
+      if ((document.hidden || !document.hasFocus()) && !anySongPlaying()) {
         if (eqAudioCtx.state === "running") {
           var s = eqAudioCtx.suspend();
           if (s && s.catch) s.catch(function () {});
@@ -9275,6 +9290,7 @@ document.addEventListener("click", function (e) {
     } catch (e) {}
   }
   document.addEventListener("visibilitychange", updateEqCtxIdle);
+  window.__updateEqCtxIdle = updateEqCtxIdle; // the shared focus watcher re-checks it on blur/focus too
   function panDriftFrame(now) {
     panDriftRAF = null;
     if (!eqAudioCtx || !eqPanner || headphoneModeOn || !anySongPlaying()) return; // stopped -- ensurePanDrift restarts it
@@ -10332,7 +10348,10 @@ document.addEventListener("click", function (e) {
       if (window.__updateGrowlightForNight) window.__updateGrowlightForNight(); // grow light off at night
       if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(); // birds quiet down at dusk
       if (window.startOfficeCrane) window.startOfficeCrane(); // construction resumes in daylight (no-op at night / off-office)
-      playLampShimmerSound("balcony-sun");
+      // autoDayNight also flips dusk in a visible-but-UNFOCUSED window (covered on
+      // X11) — skip the shimmer one-shot there (crickets/crane rule); a focused
+      // click (or a watched auto-flip) still gets it
+      if (document.hasFocus()) playLampShimmerSound("balcony-sun");
       var wallLampEl = document.getElementById("balcony-walllamp");
       if (dusk) {
         if (lights) lights.classList.remove("off");
@@ -10533,7 +10552,7 @@ document.addEventListener("click", function (e) {
   var windchime = document.getElementById("balcony-windchime");
   if (windchime) {
     var windchimeKick = document.getElementById("balcony-windchime-kick");
-    function ringWindchime(e) {
+    function ringWindchime(e, silent) {
       if (e) e.stopPropagation();
       if (windchimeKick) {
         windchimeKick.classList.remove("rung");
@@ -10541,7 +10560,9 @@ document.addEventListener("click", function (e) {
           requestAnimationFrame(function () { windchimeKick.classList.add("rung"); });
         });
       }
-      playWindchimeSound(!!window.__balconyStorm);
+      // silent: the cat's swat in an unfocused window — keep the visual kick,
+      // skip the ring one-shot (crickets/crane rule for unattended sounds)
+      if (!silent) playWindchimeSound(!!window.__balconyStorm);
     }
     // exposed so the loose cat's rare windchime-swat perch (a separate IIFE, no access to
     // this closure) can trigger the exact same ring instead of duplicating the two lines
@@ -10653,7 +10674,8 @@ document.addEventListener("click", function (e) {
         acInAudibleRoom = (roomName === "garden" || roomName === "balcony");
         if (acInAudibleRoom) acRoom = roomName; // remember which unit to pan toward
       }
-      var wantHum = acOn && acInAudibleRoom && !document.hidden;
+      // hasFocus: continuous-bed rule, see __updateKettleHum
+      var wantHum = acOn && acInAudibleRoom && !document.hidden && document.hasFocus();
       if (wantHum && !acCtx) startACHum();
       else if (!wantHum && acCtx) stopACHum(fadeSecs);
     };
@@ -10688,7 +10710,9 @@ document.addEventListener("click", function (e) {
     return !!((front && front.classList.contains("open")) || (nook && nook.classList.contains("open")));
   }
   function cityHumWant() {
-    if (document.hidden) return null;
+    // hasFocus: continuous-bed rule, see __updateKettleHum (the ~1s poll below
+    // picks the change up without any blur/focus listener)
+    if (document.hidden || !document.hasFocus()) return null;
     if (window.currentStageIndex === 4) return "balcony";
     if (window.currentStageIndex === 2 && cuddlyDoorOpen()) return "cuddly";
     return null;
@@ -10791,7 +10815,8 @@ document.addEventListener("click", function (e) {
     return !!((front && front.classList.contains("open")) || (nook && nook.classList.contains("open")));
   }
   function windWant() {
-    if (document.hidden) return null;
+    // hasFocus: continuous-bed rule, see __updateKettleHum (picked up by the poll)
+    if (document.hidden || !document.hasFocus()) return null;
     if (window.currentStageIndex === 4) return "balcony";
     if (window.currentStageIndex === 2 && cuddlyDoorOpenForWind()) return "cuddly";
     return null;
@@ -12487,7 +12512,9 @@ function spawnFirework(cx, cy, color) {
   var host = document.getElementById("balcony-fireworks");
   if (!host) return;
   if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  playFireworkSound();
+  // every caller reaches here on a wall-clock timer that can outlive a blur; the visual
+  // burst is fine unattended, but the crackle one-shot follows the crickets/crane rule
+  if (document.hasFocus()) playFireworkSound();
   var SVGNS = "http://www.w3.org/2000/svg";
   var flash = document.createElementNS(SVGNS, "circle");
   flash.setAttribute("cx", cx);
@@ -14036,6 +14063,34 @@ function pannedSweep(ctx, fromPan, toPan, dur) {
   p.connect(ctx.destination);
   return p;
 }
+// Shared focus watcher for the continuous audio beds. Every bed's want-gate includes
+// document.hasFocus() (an unattended-but-"visible" window — covered on X11, which has
+// no occlusion detection — otherwise holds a live OS audio stream open indefinitely,
+// where it underruns into crackle on Linux Chrome), but hasFocus is a poll, not an
+// event: the event-driven beds need something to re-run their updaters when focus
+// changes. window blur/focus do that immediately, and a slow interval backstops them
+// (some X11 WMs deliver blur unreliably). The self-polling beds (city hum, wind, rain)
+// re-check themselves every ~1s and need no wiring here. Each updater is an idempotent
+// re-evaluation of its own gate, so redundant calls are no-ops.
+(function () {
+  var lastFocused = null;
+  function updateFocusGatedAudio() {
+    var focused = document.hasFocus();
+    if (focused === lastFocused) return;
+    lastFocused = focused;
+    if (window.__updateFireSound) window.__updateFireSound();
+    if (window.__updateGardenBirdsong) window.__updateGardenBirdsong();
+    if (window.__updateKettleHum) window.__updateKettleHum();
+    if (window.__updateRadioSound) window.__updateRadioSound();
+    if (window.__updatePcFan) window.__updatePcFan();
+    if (window.__updateACHum) window.__updateACHum();
+    if (window.__updateCallAmbient) window.__updateCallAmbient();
+    if (window.__updateEqCtxIdle) window.__updateEqCtxIdle();
+  }
+  window.addEventListener("focus", updateFocusGatedAudio);
+  window.addEventListener("blur", updateFocusGatedAudio);
+  setInterval(updateFocusGatedAudio, 2000);
+})();
 // A swirling stereo bus for trippy sounds: pan follows a precomputed sine curve of `cycles`
 // full L<->R sweeps over `dur` seconds, starting at a RANDOM phase AND direction (so it
 // doesn't always begin heading the same way), width = depth (0..1). Voices connect into the
@@ -14712,10 +14767,18 @@ function playCallLaughSound() {
 // kept alive (unlike every other sound function here, which self-closes on a timer)
 // until stopCallAmbient tears it down — started alongside playCallLaughSound at
 // "connected" in startCall, stopped from endCall/endLaptopUpdate so it never outlives
-// the call, however it ends.
-var callAmbientCtx = null, callAmbientNodes = null, callGiggleTimer = null;
+// the call, however it ends. Focus-gated like every other continuous bed (see
+// __updateKettleHum): callAmbientWanted remembers that a call is live across a blur,
+// buildCallAmbient/teardownCallAmbient park and rebuild the bed as focus goes and
+// comes, and __updateCallAmbient is the re-check the shared focus watcher calls.
+var callAmbientCtx = null, callAmbientNodes = null, callGiggleTimer = null, callAmbientWanted = false;
 function startCallAmbient() {
-  stopCallAmbient(); // never run two beds at once
+  callAmbientWanted = true;
+  buildCallAmbient();
+}
+function buildCallAmbient() {
+  teardownCallAmbient(); // never run two beds at once
+  if (!document.hasFocus()) return; // unattended window: stay silent until refocus
   try {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
@@ -14757,11 +14820,23 @@ function startCallAmbient() {
   } catch (e) {}
 }
 function stopCallAmbient() {
+  callAmbientWanted = false;
+  teardownCallAmbient();
+}
+function teardownCallAmbient() {
   clearTimeout(callGiggleTimer);
   if (callAmbientNodes) callAmbientNodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
   if (callAmbientCtx) { try { callAmbientCtx.close(); } catch (e) {} }
   callAmbientCtx = null; callAmbientNodes = null;
 }
+// Focus went or came: park a live bed, or rebuild one a blur parked — only while the
+// call itself is still wanted (startCallAmbient..stopCallAmbient), so a refocus during
+// the hang-up goodbye can't resurrect it.
+window.__updateCallAmbient = function () {
+  if (!callAmbientWanted) return;
+  if (!document.hasFocus()) { if (callAmbientCtx) teardownCallAmbient(); }
+  else if (!callAmbientCtx) buildCallAmbient();
+};
 // Hanging up: two quick descending tones, the mirror image of playPhoneRingSound's
 // ascending ring — a "call ended" cue distinct from every other laptop sound here.
 function playCallHangupSound() {
@@ -16404,8 +16479,10 @@ function spawnDustMote(container) {
       });
     }
     finaleTimers.push(setTimeout(function () { spawnBalconyRain(strip); }, 500));
-    // warm bell melody heralds the rainbow, just before it bursts at 4200
-    finaleTimers.push(setTimeout(playFinishMelody, 3800));
+    // warm bell melody heralds the rainbow, just before it bursts at 4200 — gate at
+    // FIRE time, not arrival: these timers outlive a quick room-change/blur, and an
+    // unattended window shouldn't get a surprise melody (crickets/crane rule)
+    finaleTimers.push(setTimeout(function () { if (document.hasFocus()) playFinishMelody(); }, 3800));
     if (rainbow) {
       finaleTimers.push(setTimeout(function () {
         rainbow.classList.remove("burst");
@@ -17466,7 +17543,8 @@ function spawnDustMote(container) {
       return !!((front && front.classList.contains("open")) || (nook && nook.classList.contains("open")));
     }
     function rainSoundWant() {
-      if (!window.__balconyStorm || document.hidden) return null;
+      // hasFocus: continuous-bed rule, see __updateKettleHum (picked up by the poll)
+      if (!window.__balconyStorm || document.hidden || !document.hasFocus()) return null;
       if (window.currentStageIndex === 4 && stageDusk("stage-balcony")) return "balcony";
       if (window.currentStageIndex === 2 && stageDusk("stage-cuddly") && cuddlyDoorOpen()) return "cuddly";
       return null;
@@ -18735,7 +18813,7 @@ function spawnDustMote(container) {
       var ringAt = duration * (0.10 + (0.86 - 0.10) * 0.25); // ~29% into the total duration
       setTimeout(function () {
         if (!jumping || jumpAnim !== thisJump) return;
-        if (window.__ringWindchime) window.__ringWindchime();
+        if (window.__ringWindchime) window.__ringWindchime(null, !document.hasFocus());
         if (catArt) {
           catArt.classList.remove("wobbling");
           requestAnimationFrame(function () {

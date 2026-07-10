@@ -10368,6 +10368,20 @@ document.addEventListener("click", function (e) {
   var wineglass = document.getElementById("balcony-wineglass");
   var winebottle = document.getElementById("balcony-winebottle");
   if (wineglass) {
+    // toast in all four tongues — English, Czech, Persian (نوش), German — dealt from a
+    // shuffled deck so each shows once per cycle before any repeats (a random pick missed some)
+    var CHEERS = [T.en.cheers_text, T.cs.cheers_text, "نوش! 🥂", "Prost! 🥂"];
+    var cheersDeck = [];
+    function nextCheers() {
+      if (!cheersDeck.length) {
+        cheersDeck = CHEERS.slice();
+        for (var i = cheersDeck.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1)), tmp = cheersDeck[i];
+          cheersDeck[i] = cheersDeck[j]; cheersDeck[j] = tmp;
+        }
+      }
+      return cheersDeck.shift();
+    }
     function sipGlass() {
       var wasFull = !wineglass.classList.contains("empty");
       if (wasFull) {
@@ -10387,15 +10401,14 @@ document.addEventListener("click", function (e) {
             requestAnimationFrame(function () { winebottle.classList.add("wobbling"); });
           });
         }
-        // a toast in a random one of four tongues — English, Czech, Persian (نوش), German
-        var CHEERS = [T.en.cheers_text, T.cs.cheers_text, "نوش! 🥂", "Prost! 🥂"];
-        eggBubble(wineglass, CHEERS[Math.floor(Math.random() * CHEERS.length)]);
       } else {
         wineglass.classList.remove("wobbling");
         requestAnimationFrame(function () {
           requestAnimationFrame(function () { wineglass.classList.add("wobbling"); });
         });
       }
+      // toast on every click — full glass or empty — so the cheers bubble always shows
+      eggBubble(wineglass, nextCheers());
     }
     wineglass.addEventListener("click", sipGlass);
     wineglass.addEventListener("keydown", function (e) {

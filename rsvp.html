@@ -16519,11 +16519,13 @@ function playGhostBooSound() {
     var t = ctx.currentTime;
     var dur = 0.7;
 
-    // A ghostly "boooo" is a rounded, voiced "oo" that wavers and swoops, not
-    // a bare descending sine. Two slightly detuned saw voices give an eerie
-    // chorus shimmer; a pair of low "oo"-vowel formants makes it read as a
-    // voice; a slow vibrato adds the spooky waver; the whole thing swells in
-    // and out like a wail.
+    // A ghostly "boooo" is a rounded, voiced "oo" that wavers and swoops, not a
+    // bare descending sine. Two slightly detuned saw voices give an eerie chorus
+    // shimmer; a spectral-tilt lowpass tames the raw saw buzz into something
+    // throatier; a /b/ onset (lip-pop thump + fast F1/F2 transitions from the
+    // bilabial locus) makes the word start as a consonant; three "oo"-vowel
+    // formants make it read as a voice; a slow vibrato adds the spooky waver;
+    // the whole thing swells in and out like a wail.
     var master = ctx.createGain();
     master.gain.setValueAtTime(0.0001, t);
     master.gain.exponentialRampToValueAtTime(0.14, t + 0.14);
@@ -16553,8 +16555,25 @@ function playGhostBooSound() {
       g.connect(master);
       return bp;
     }
+    // /b/ -> /u:/ formant transitions: F1/F2 launch from the bilabial locus and
+    // settle into the vowel within the first few tens of ms
     var f1 = formant(320, 5, 1.0);
+    f1.frequency.setValueAtTime(250, t);
+    f1.frequency.linearRampToValueAtTime(320, t + 0.06);
     var f2 = formant(820, 6, 0.5);
+    f2.frequency.setValueAtTime(600, t);
+    f2.frequency.linearRampToValueAtTime(820, t + 0.08);
+    var f3 = formant(2350, 9, 0.14); // a little presence so it isn't a woolly hum
+
+    // spectral tilt on the glottal source: real voices fall off far faster than a raw
+    // saw, and this is what keeps the formants from sounding like a buzzer
+    var tilt = ctx.createBiquadFilter();
+    tilt.type = "lowpass";
+    tilt.frequency.value = 2600;
+    tilt.Q.value = 0.5;
+    tilt.connect(f1);
+    tilt.connect(f2);
+    tilt.connect(f3);
 
     [-7, 7].forEach(function (cents) {
       var osc = ctx.createOscillator();
@@ -16564,11 +16583,23 @@ function playGhostBooSound() {
       osc.frequency.linearRampToValueAtTime(360 * vary, t + 0.25);
       osc.frequency.linearRampToValueAtTime(190 * vary, t + dur);
       vibDepth.connect(osc.frequency);
-      osc.connect(f1);
-      osc.connect(f2);
+      osc.connect(tilt);
       osc.start(t);
       osc.stop(t + dur + 0.02);
     });
+
+    // the /b/ lip-pop: one soft low thump right at onset
+    var pop = ctx.createOscillator();
+    pop.type = "sine";
+    pop.frequency.setValueAtTime(150, t);
+    pop.frequency.exponentialRampToValueAtTime(70, t + 0.05);
+    var popG = ctx.createGain();
+    popG.gain.setValueAtTime(0.09, t);
+    popG.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+    pop.connect(popG);
+    popG.connect(master);
+    pop.start(t);
+    pop.stop(t + 0.08);
 
     // A breath of hollow band-limited noise for the haunted, airy edge.
     var nSize = Math.max(1, Math.floor(ctx.sampleRate * dur));
@@ -16609,21 +16640,29 @@ function playGhostWhisperSound(panId) {
     for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; // white-noise breath
     var noise = ctx.createBufferSource();
     noise.buffer = buf;
-    // envelope: soft /k/ breath burst, the long "oo", then the "l" tail — quiet + breathy
+    // envelope: aspiration after the /k/ release, the long "oo", then the dark-l tail —
+    // quiet + breathy (the /k/ itself is a separate burst below)
     var master = ctx.createGain(); var m = master.gain;
     m.setValueAtTime(0.0001, t0);
-    m.exponentialRampToValueAtTime(0.05, t0 + 0.03);  // /k/
-    m.exponentialRampToValueAtTime(0.022, t0 + 0.1);
+    m.exponentialRampToValueAtTime(0.035, t0 + 0.05); // [kh] aspiration
     m.exponentialRampToValueAtTime(0.06, t0 + 0.24);  // "oo"
     m.setValueAtTime(0.06, t0 + 0.5);
-    m.exponentialRampToValueAtTime(0.038, t0 + 0.66); // "l"
+    m.exponentialRampToValueAtTime(0.038, t0 + 0.66); // dark l
     m.exponentialRampToValueAtTime(0.0001, t0 + 0.9);
-    master.connect(out);
-    // whispered vowel formants gliding /u/ -> /l/ (bandpass-filtered noise, no oscillator)
+    // a gentle top-end shave so the whisper reads as breath, not hiss
+    var soften = ctx.createBiquadFilter();
+    soften.type = "lowpass";
+    soften.frequency.value = 3800;
+    soften.Q.value = 0.4;
+    master.connect(soften);
+    soften.connect(out);
+    // whispered vowel formants gliding /u/ -> dark /l/ (coda l is velarized: F2 falls,
+    // it doesn't rise) — bandpass-filtered noise, no oscillator
     [
-      { q: 6,  g: 1.0,  pts: [[0.05,330],[0.5,300],[0.9,360]] },   // F1
-      { q: 8,  g: 0.55, pts: [[0.05,900],[0.5,870],[0.9,1250]] },  // F2: oo -> l
-      { q: 10, g: 0.22, pts: [[0.05,2400],[0.9,2550]] }            // F3
+      { q: 6,  g: 1.0,  pts: [[0.05,310],[0.5,300],[0.9,420]] },  // F1
+      { q: 8,  g: 0.55, pts: [[0.05,880],[0.5,850],[0.9,760]] },  // F2: oo -> dark l
+      { q: 10, g: 0.22, pts: [[0.05,2250],[0.9,2500]] },          // F3
+      { q: 12, g: 0.1,  pts: [[0.05,3300],[0.9,3300]] }           // F4: a little air
     ].forEach(function (f) {
       var bp = ctx.createBiquadFilter();
       bp.type = "bandpass"; bp.Q.value = f.q;
@@ -16633,6 +16672,16 @@ function playGhostWhisperSound(panId) {
       noise.connect(bp); bp.connect(fg); fg.connect(master);
     });
     noise.start(t0); noise.stop(t0 + dur);
+    // the /k/ release itself: a tight little mid-band click before the breath swells
+    var kSrc = ctx.createBufferSource();
+    kSrc.buffer = buf;
+    var kBp = ctx.createBiquadFilter();
+    kBp.type = "bandpass"; kBp.frequency.value = 1700; kBp.Q.value = 2;
+    var kG = ctx.createGain();
+    kG.gain.setValueAtTime(0.09, t0);
+    kG.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.045);
+    kSrc.connect(kBp); kBp.connect(kG); kG.connect(soften);
+    kSrc.start(t0); kSrc.stop(t0 + 0.06);
     setTimeout(function () { ctx.close(); }, 1200);
   } catch (e) {}
 }

@@ -6438,8 +6438,9 @@ var T = {
     nav_lang_aria: "Language",
     fullscreen_enter: "Enter fullscreen",
     caps_aria: "A pink flat cap and a blue baker boy cap, crossed",
-    laptop_date: "May 1",
+    laptop_date: "July 10",
     laptop_daysfx: "d",
+    desk_date: "May 1",
     laptop_place: "Prague",
     laptop_calling: "Calling…",
     laptop_connecting: "Connecting…",
@@ -6562,8 +6563,9 @@ var T = {
     nav_lang_aria: "Jazyk",
     fullscreen_enter: "Celá obrazovka",
     caps_aria: "Růžová čepice a modrá čepice, zkřížené",
-    laptop_date: "1. 5.",
+    laptop_date: "10. 7.",
     laptop_daysfx: "d",
+    desk_date: "1. 5.",
     laptop_place: "Praha",
     laptop_calling: "Volání…",
     laptop_connecting: "Spojuji…",
@@ -6706,6 +6708,7 @@ function setLang(l) {
   try { localStorage.setItem("lang", l); } catch (e) {}
   if (window.refreshHuntCaption) window.refreshHuntCaption();
   if (window.refreshLaptopClock) window.refreshLaptopClock();
+  if (window.refreshDeskClock) window.refreshDeskClock();
   if (window.refreshFullscreenLabel) window.refreshFullscreenLabel();
   if (window.refreshPhotoboothText) window.refreshPhotoboothText();
 }
@@ -9012,10 +9015,15 @@ document.addEventListener("click", function (e) {
     // the call labels are set from the dictionary here so they follow the language toggle.
     window.refreshLaptopClock = function () {
       var t = T[laptopLang()];
-      // days to the next May 1 — counts down to the wedding, then to each anniversary
+      // days to the Prague garden party (2027-07-10), then to each July 10 anniversary
+      // after it — the desktop menu bar does the same for May 1 / Edmonton. Counting to
+      // the fixed 2027 date first keeps a pre-wedding July 10 from reading "0 d".
       var now = new Date();
-      var days = Math.ceil((new Date(now.getFullYear(), 4, 1) - now) / 86400000);
-      if (days < 0) days = Math.ceil((new Date(now.getFullYear() + 1, 4, 1) - now) / 86400000);
+      var days = Math.ceil((new Date(2027, 6, 10) - now) / 86400000);
+      if (days < 0) {
+        days = Math.ceil((new Date(now.getFullYear(), 6, 10) - now) / 86400000);
+        if (days < 0) days = Math.ceil((new Date(now.getFullYear() + 1, 6, 10) - now) / 86400000);
+      }
       function set(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
       set("laptop-clock", t.laptop_date + " · " + days + " " + t.laptop_daysfx);
       set("laptop-calltile-label", t.laptop_place);
@@ -9436,7 +9444,9 @@ document.addEventListener("click", function (e) {
       eqPanner = eqAudioCtx.createStereoPanner ? eqAudioCtx.createStereoPanner() : null;
       if (eqPanner) eqPanner.pan.value = 0;
       eqAnalyser = eqAudioCtx.createAnalyser();
-      eqAnalyser.fftSize = 128; // 64 bins — enough resolution for the equalizer's log-frequency binning to separate bass/mid/treble
+      eqAnalyser.fftSize = 512; // 256 bins (~93Hz each) — the visual bars sit AFTER the manual
+                                // EQ, and its 60/150/400Hz bands need this resolution to move
+                                // their own bar instead of smearing into one giant bass bin
       eqAnalyser.smoothingTimeConstant = 0.7;
       // manual six-band chain: bassShelf -> band0..band5 -> muffle
       manualEqFilters = MANUAL_EQ_FREQS.map(function (fq, fi) {
@@ -10198,12 +10208,23 @@ document.addEventListener("click", function (e) {
     brandG.addEventListener("click", function (e) { e.stopPropagation(); try { window.open(CAPS_URL, "_blank"); } catch (err) {} });
     brandG.addEventListener("dblclick", function (e) { e.stopPropagation(); });
     var deskClock = mkEl("text", { x: 375, y: 158.3, "text-anchor": "end", "class": "desk-bar-text" }, dock);
+    var deskCount = mkEl("text", { x: 316, y: 158.3, "text-anchor": "middle", "class": "desk-bar-text" }, dock);
     function paintDeskClock() {
       var d = new Date();
       var z = function (n) { return (n < 10 ? "0" : "") + n; };
       deskClock.textContent = z(d.getHours()) + ":" + z(d.getMinutes());
+      // days to the Edmonton wedding (2027-05-01), then to each May 1 anniversary after
+      // it — same fixed-date-first shape as the laptop's July 10 / Prague countdown
+      var days = Math.ceil((new Date(2027, 4, 1) - d) / 86400000);
+      if (days < 0) {
+        days = Math.ceil((new Date(d.getFullYear(), 4, 1) - d) / 86400000);
+        if (days < 0) days = Math.ceil((new Date(d.getFullYear() + 1, 4, 1) - d) / 86400000);
+      }
+      var tl = T[document.documentElement.lang] || T.en;
+      deskCount.textContent = (tl.desk_date || T.en.desk_date) + " \u00b7 " + days + " " + (tl.laptop_daysfx || T.en.laptop_daysfx);
     }
     paintDeskClock();
+    window.refreshDeskClock = paintDeskClock; // language toggle repaints the countdown label
     setInterval(paintDeskClock, 30000); // text-only repaint; nothing spawns, so a hidden tab can't pile anything up
     // dock tray + app icons
     mkEl("rect", { x: 262, y: 165.5, width: 108, height: 28, rx: 5, "class": "dock-tray" }, dock);

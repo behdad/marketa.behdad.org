@@ -1021,6 +1021,11 @@ footer{margin-top:2.6rem}
 #office-monitor.show-nowplaying #monitor-prev-btn, #office-monitor.show-nowplaying #monitor-next-btn, #office-monitor.show-nowplaying #monitor-np-close, #office-monitor.show-nowplaying #monitor-eq-reset{opacity:1; visibility:visible; pointer-events:auto}
 #office-monitor.show-nowplaying #monitor-transport-pill{opacity:1; visibility:visible}
 #monitor-np-close:hover .seg-hover, #monitor-eq-reset:hover .seg-hover{opacity:.55}
+/* manual equalizer sliders: same show-nowplaying gating as the transports; .inert =
+   the audio pipeline is disabled on this platform, so the bands can't color playback —
+   shown ghosted, not interactive */
+#office-monitor.show-nowplaying #monitor-manual-eq.inert{opacity:.35; pointer-events:none}
+#office-monitor.show-nowplaying #monitor-eq-reset.inert{opacity:.35; pointer-events:none}
 /* manual equalizer sliders: same show-nowplaying gating as the transports */
 #monitor-manual-eq{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .4s ease}
 #office-monitor.show-nowplaying #monitor-manual-eq{opacity:1; visibility:visible; pointer-events:auto}
@@ -10651,6 +10656,12 @@ document.addEventListener("click", function (e) {
   }
   // the reset button beside the volume circle: all six bands back to flat
   var eqResetBtn = document.getElementById("monitor-eq-reset");
+  if (!USE_LIVE_ANALYSER) {
+    // pipeline skipped (platform sniff / kill switch / ?pipeline=off): the sliders would
+    // move nothing audible, so ghost them and the reset with them
+    if (manualEqG) manualEqG.classList.add("inert");
+    if (eqResetBtn) eqResetBtn.classList.add("inert");
+  }
   if (eqResetBtn) {
     eqResetBtn.addEventListener("click", function (e) {
       e.stopPropagation();

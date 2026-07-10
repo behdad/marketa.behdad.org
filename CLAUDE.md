@@ -98,7 +98,11 @@ go inside `index.html` unless there's a strong reason not to.
   least one observed engine build, even outside any virtual-time interaction — prefer
   `getBoundingClientRect()` (confirmed reliable) mapped through a *different, static* ancestor's
   `getScreenCTM()` when you need a live-adjustable element's on-screen position (this is what
-  `panForElId` and `officeDeskPerch` do).
+  `panForElId` and `officeDeskPerch` do). Also: a CSS *transition* triggered by a
+  `setTimeout`-added class may never advance under `--virtual-time-budget` — computed
+  opacity stays at the start value even though the rule matches (verified via
+  `el.matches()` + stylesheet dump). Before concluding a cascade bug, re-probe with
+  `transition:none !important` injected; if the value flips, it's this artifact.
 
 ## Design system
 

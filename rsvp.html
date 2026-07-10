@@ -1092,10 +1092,15 @@ footer{margin-top:2.6rem}
 #monitor-pb-picker{opacity:0; pointer-events:none; transition:opacity .2s ease}
 #office-monitor.picking #monitor-pb-picker{opacity:1; pointer-events:auto}
 #office-monitor.picking #monitor-pb-shutter{opacity:0; pointer-events:none} /* can't re-snap while choosing */
+#office-monitor.picking #monitor-pb-close{opacity:0; pointer-events:none} /* choosing means picking or retaking — a close x here read as "cancel" and testers bailed */
+/* the "pick one" nudge: only fades in when someone lingers on the picker without choosing
+   (the screen's too small for an always-on caption) */
+#monitor-pb-pick-hint{opacity:0; pointer-events:none; transition:opacity .45s ease}
+#office-monitor.picking.pick-hint #monitor-pb-pick-hint{opacity:1}
 #office-monitor.picking #monitor-pb-brand{opacity:0} /* the grid owns the whole screen */
 #monitor-pb-retake{opacity:0; pointer-events:none}
 #office-monitor.picking #monitor-pb-retake{opacity:1; pointer-events:auto}
-.pb-picker{width:124px; height:42px; box-sizing:border-box; display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(2,1fr); gap:1px; padding:1px; background:#0a0d12}
+.pb-picker{width:124px; height:42px; box-sizing:border-box; display:grid; grid-template-columns:repeat(3,1fr); grid-auto-rows:19.5px; gap:1px; padding:1px; background:#0a0d12; overflow-y:auto; scrollbar-width:thin; scrollbar-color:rgba(248,245,236,0.45) transparent}
 .pb-thumb{padding:0; margin:0; border:none; cursor:pointer; overflow:hidden; background:#000; border-radius:1px; outline:0 solid #d9a6a6; transition:outline-width .1s ease}
 .pb-thumb canvas{width:100%; height:100%; display:block; object-fit:cover}
 .pb-thumb:hover{outline-width:1.5px}
@@ -5473,6 +5478,11 @@ section{margin:1.9rem 0}
 <path d="M262.5 157.3 A2.7 2.7 0 1 0 263 161.7" fill="none" stroke="#f6f2ea" stroke-width="1" stroke-linecap="round"/>
 <path d="M262.9 155.7 L263 157.7 L261 157.6 Z" fill="#f6f2ea"/>
 </g>
+<!-- lingering on the picker fades this in: the thumbnails ARE the choices -->
+<g id="monitor-pb-pick-hint">
+<rect x="296" y="155" width="40" height="9" rx="4.5" fill="#000" fill-opacity="0.55"/>
+<text id="monitor-pb-pick-hint-text" x="316" y="161.4" text-anchor="middle" style="fill:#f6f2ea; font-family:'Source Serif 4',serif; font-size:5px; letter-spacing:0.2px"></text>
+</g>
 <!-- shutter, centered in the right zone (transparent circle widens the tap target) -->
 <g id="monitor-pb-shutter" class="pb-ctrl">
 <circle cx="347" cy="186.5" r="9" fill="transparent"/>
@@ -6546,6 +6556,7 @@ var T = {
     pb_btn_email: "Email",
     pb_btn_retake: "↺ Retake",
     pb_btn_cancel: "Cancel",
+    pb_pick_hint: "pick one ✨",
     pb_email_subject: "A photo from your loft photobooth 📸",
     pb_email_body: "Hi Markéta & Behdad!\n\nPaste the picture now — it's on your clipboard (Ctrl/Cmd+V).\n\nSee you at the wedding!",
     pb_fx_normal: "Normal",
@@ -6554,6 +6565,12 @@ var T = {
     pb_fx_night: "Night vision",
     pb_fx_psy: "Psychedelic",
     pb_fx_kaleido: "Kaleidoscope",
+    pb_fx_acid: "Acid",
+    pb_fx_neon: "Neon",
+    pb_fx_vapor: "Vaporwave",
+    pb_fx_infra: "Infra",
+    pb_fx_dream: "Dreamy",
+    pb_fx_poster: "Poster",
     pb_strip_caption: "loft photobooth",
     app_music: "music",
     app_photobooth: "photobooth",
@@ -6671,6 +6688,7 @@ var T = {
     pb_btn_email: "E-mail",
     pb_btn_retake: "↺ Znovu",
     pb_btn_cancel: "Zrušit",
+    pb_pick_hint: "vyber si ✨",
     pb_email_subject: "Fotka z vašeho fotokoutku v loftu 📸",
     pb_email_body: "Ahoj Markéto a Behdade!\n\nTeď sem vlož fotku — máš ji ve schránce (Ctrl/Cmd+V).\n\nUvidíme se na svatbě!",
     pb_fx_normal: "Normální",
@@ -6679,6 +6697,12 @@ var T = {
     pb_fx_night: "Noční vidění",
     pb_fx_psy: "Psychedelie",
     pb_fx_kaleido: "Kaleidoskop",
+    pb_fx_acid: "Acid",
+    pb_fx_neon: "Neon",
+    pb_fx_vapor: "Vaporwave",
+    pb_fx_infra: "Infra",
+    pb_fx_dream: "Zasněná",
+    pb_fx_poster: "Plakát",
     pb_strip_caption: "fotokoutek v loftu",
     app_music: "hudba",
     app_photobooth: "fotokoutek",
@@ -10818,6 +10842,7 @@ document.addEventListener("click", function (e) {
   var pbStream = null;    // the live MediaStream (null when off)
   var pbActive = false;   // a session is live (video showing)
   var pbStarting = false; // getUserMedia is pending (its permission prompt is up)
+  var pbPickHintTimer = null; // linger nudge on the filter picker
   var pbWant = false;     // the visitor still wants it on — cleared the instant they close/leave
   var pbFxIndex = 0;
   var pbDialog = null;    // the polaroid dialog's backdrop element, or null
@@ -10835,7 +10860,13 @@ document.addEventListener("click", function (e) {
     { key: "pb_fx_sepia", css: "sepia(0.75)" },
     { key: "pb_fx_psy", css: "hue-rotate(140deg) saturate(2.4) contrast(1.2)" },
     { key: "pb_fx_night", css: "hue-rotate(75deg) saturate(1.8) contrast(1.5) brightness(1.15)" },
-    { key: "pb_fx_kaleido", css: "hue-rotate(260deg) saturate(2.8) contrast(1.15) brightness(1.05)" }
+    { key: "pb_fx_kaleido", css: "hue-rotate(260deg) saturate(2.8) contrast(1.15) brightness(1.05)" },
+    { key: "pb_fx_acid", css: "hue-rotate(300deg) saturate(3) contrast(1.35)" },
+    { key: "pb_fx_neon", css: "saturate(2.6) contrast(1.7) brightness(1.2) hue-rotate(35deg)" },
+    { key: "pb_fx_vapor", css: "hue-rotate(200deg) saturate(2.1) brightness(1.12) contrast(1.05)" },
+    { key: "pb_fx_infra", css: "invert(1) hue-rotate(180deg) saturate(1.7)" },
+    { key: "pb_fx_dream", css: "brightness(1.14) saturate(1.35) contrast(0.82) sepia(0.28)" },
+    { key: "pb_fx_poster", css: "contrast(2.4) saturate(1.7) brightness(1.05)" }
   ];
   function pbText(key) {
     var l = document.documentElement.lang;
@@ -10853,6 +10884,7 @@ document.addEventListener("click", function (e) {
     set("monitor-pb-error-1", "pb_err_1");
     set("monitor-pb-error-2", "pb_err_2");
     set("monitor-pb-error-ok-text", "pb_err_ok");
+    set("monitor-pb-pick-hint-text", "pb_pick_hint");
   };
   window.refreshPhotoboothText();
   // the pre-permission confirm and the no-camera note: pure class toggles, both drawn by
@@ -11020,14 +11052,16 @@ document.addEventListener("click", function (e) {
     pbTimers.forEach(clearTimeout);
     pbTimers = [];
     hideCount();
-    monitor.classList.remove("picking");
+    clearTimeout(pbPickHintTimer);
+    monitor.classList.remove("picking", "pick-hint");
   }
   function runCountdownCapture() {
     if (!pbActive || !pbVideo || pbCapturing) return;
     if (!pbVideo.videoWidth || !pbVideo.videoHeight) return; // no frame yet
     pbCapturing = true;
     pbPicking = false;
-    monitor.classList.remove("picking"); // in case this is a retake
+    clearTimeout(pbPickHintTimer);
+    monitor.classList.remove("picking", "pick-hint"); // in case this is a retake
     dismissPolaroidDialog();             // a retake from the dialog closes it first
     var n = 3;
     (function countdown() {
@@ -11063,11 +11097,17 @@ document.addEventListener("click", function (e) {
     });
     pbPicking = true;
     monitor.classList.add("picking");
+    // linger nudge: fade the "pick one" pill in only if nothing's been chosen for a while
+    clearTimeout(pbPickHintTimer);
+    pbPickHintTimer = setTimeout(function () {
+      if (pbPicking) monitor.classList.add("pick-hint");
+    }, 3000);
   }
   function pickPolaroid(fx) {
     if (!pbPicking) return;
     pbPicking = false;
-    monitor.classList.remove("picking");
+    clearTimeout(pbPickHintTimer);
+    monitor.classList.remove("picking", "pick-hint");
     var pol = composePolaroid(pbBaseFrame, fx.css);
     if (!pol) return;
     // One blob (the composed polaroid) feeds the dialog <img>, the clipboard, and Download.

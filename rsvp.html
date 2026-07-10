@@ -10425,7 +10425,12 @@ document.addEventListener("click", function (e) {
       var f = (typeof fadeSecs === "number") ? fadeSecs : 0.2;
       try {
         if (acGain && acCtx) {
-          acGain.gain.exponentialRampToValueAtTime(0.0001, acCtx.currentTime + f);
+          // linear (not exponential) ramp so the hiss stays audible across the whole
+          // fade instead of dropping below hearing in the first third of a long fade
+          var t = acCtx.currentTime;
+          acGain.gain.cancelScheduledValues(t);
+          acGain.gain.setValueAtTime(acGain.gain.value, t);
+          acGain.gain.linearRampToValueAtTime(0.0001, t + f);
         }
         var src = acSource, ctxToClose = acCtx;
         setTimeout(function () {

@@ -1031,7 +1031,12 @@ footer{margin-top:2.6rem}
 @keyframes pb-label-flash{0%{opacity:0} 12%{opacity:1} 68%{opacity:1} 100%{opacity:0}}
 #monitor-pb-flash.snapping{animation:pb-snap-flash .5s ease}
 @keyframes pb-snap-flash{0%{opacity:0} 8%{opacity:.95} 100%{opacity:0}}
-@media (prefers-reduced-motion: reduce){.pb-ctrl{transition:none} .pb-ctrl:hover{transform:none}}
+/* the strip countdown digit — JS sets .tick per number (base opacity 1 so it shows even
+   with reduced motion; the pop is the enhancement) */
+#monitor-pb-count{opacity:0; pointer-events:none; transform-box:fill-box; transform-origin:center; font-family:"Fraunces",serif; font-weight:700}
+#monitor-pb-count.tick{opacity:1; animation:pb-count-pop .55s ease}
+@keyframes pb-count-pop{0%{opacity:.15; transform:scale(1.55)} 25%{opacity:1} 100%{opacity:.8; transform:scale(1)}}
+@media (prefers-reduced-motion: reduce){.pb-ctrl{transition:none} .pb-ctrl:hover{transform:none} #monitor-pb-count.tick{animation:none; opacity:1; transform:none}}
 /* post-snap action panel — a small floating card (not over the live preview); Download / Gmail /
    Email, plus a paste-hint. Dismissable via its x, a click away, or the booth closing. */
 .pb-panel{
@@ -5309,6 +5314,8 @@ section{margin:1.9rem 0}
 <rect x="288" y="156.5" width="56" height="9" rx="4.5" fill="#000" fill-opacity="0.42"/>
 <text id="monitor-pb-label-text" x="316" y="162.9" text-anchor="middle" style="fill:#f6f2ea; font-family:monospace; font-size:5.4px; letter-spacing:0.2px"></text>
 </g>
+<!-- big 3-2-1 countdown before each strip frame -->
+<text id="monitor-pb-count" x="316" y="184" text-anchor="middle" style="font-size:26px; fill:#fffdf8; paint-order:stroke; stroke:rgba(0,0,0,0.55); stroke-width:2.4px; stroke-linejoin:round"></text>
 <!-- close (x), top-right -->
 <g id="monitor-pb-close" class="pb-ctrl">
 <circle cx="372" cy="159.5" r="4.6" fill="#000" fill-opacity="0.45"/>
@@ -6344,13 +6351,15 @@ var T = {
     pb_btn_gmail: "Gmail",
     pb_btn_email: "✉ Email",
     pb_email_subject: "Loft photobooth 📸",
-    pb_email_body: "A snap from your loft photobooth — pasting it in below!",
+    pb_email_body: "A snap from your loft photobooth 📸",
     pb_fx_normal: "Normal",
     pb_fx_bw: "Black &amp; white",
     pb_fx_sepia: "Sepia",
     pb_fx_negative: "Negative",
     pb_fx_night: "Night vision",
-    pb_fx_glow: "Loft glow"
+    pb_fx_glow: "Loft glow",
+    pb_fx_psy: "Psychedelic",
+    pb_strip_caption: "loft photobooth"
   },
   cs: {
     hunt_title: "Den v podkroví",
@@ -6457,13 +6466,15 @@ var T = {
     pb_btn_gmail: "Gmail",
     pb_btn_email: "✉ E-mail",
     pb_email_subject: "Fotokoutek v loftu 📸",
-    pb_email_body: "Fotka z vašeho loftového fotokoutku — vkládám ji níže!",
+    pb_email_body: "Fotka z vašeho loftového fotokoutku 📸",
     pb_fx_normal: "Normální",
     pb_fx_bw: "Černobílá",
     pb_fx_sepia: "Sépie",
     pb_fx_negative: "Negativ",
     pb_fx_night: "Noční vidění",
-    pb_fx_glow: "Zář loftu"
+    pb_fx_glow: "Zář loftu",
+    pb_fx_psy: "Psychedelie",
+    pb_strip_caption: "fotokoutek v loftu"
   }
 };
 function setLang(l) {
@@ -10251,6 +10262,16 @@ document.addEventListener("click", function (e) {
   var pbWant = false;     // the visitor still wants it on — cleared the instant they close/leave
   var pbFxIndex = 0;
   var pbPanel = null;     // the post-snap action panel (Download/Gmail/Email), or null
+  var pbCount = document.getElementById("monitor-pb-count");
+  var pbCapturing = false; // a 4-frame strip capture is in progress
+  var pbTimers = [];       // countdown/capture timers, cancelled on teardown
+  // the reel: 4 frames, one clean + three "trip" looks, composited into a vertical strip
+  var STRIP_FX = [
+    { key: "pb_fx_normal", css: "none" },
+    { key: "pb_fx_psy", css: "hue-rotate(90deg) saturate(3) contrast(1.3)" },
+    { key: "pb_fx_night", css: "hue-rotate(75deg) saturate(1.8) contrast(1.5) brightness(1.15)" },
+    { key: "pb_fx_negative", css: "invert(1) hue-rotate(160deg) saturate(1.6) contrast(1.1)" }
+  ];
   var PB_EFFECTS = [
     { key: "pb_fx_normal", css: "none" },
     { key: "pb_fx_bw", css: "grayscale(1)" },
@@ -10274,7 +10295,7 @@ document.addEventListener("click", function (e) {
   if (pbLabelG) pbLabelG.addEventListener("animationend", function () { pbLabelG.classList.remove("flash"); });
   if (pbFlash) pbFlash.addEventListener("animationend", function () { pbFlash.classList.remove("snapping"); });
   function cyclePhotoboothEffect() {
-    if (!pbActive) return;
+    if (!pbActive || pbCapturing) return; // the strip owns the preview filter mid-capture
     pbFxIndex = (pbFxIndex + 1) % PB_EFFECTS.length;
     applyPbEffect();
     flashPbLabel();
@@ -10318,6 +10339,7 @@ document.addEventListener("click", function (e) {
   function closePhotobooth() {
     pbWant = false;
     pbStarting = false;
+    cancelStrip();         // stop any in-progress countdown/capture sequence
     dismissPhotoActions(); // the post-snap panel goes away with the booth
     if (pbStream) { pbStream.getTracks().forEach(function (t) { t.stop(); }); pbStream = null; } // release the camera (light off)
     if (pbVideo) { try { pbVideo.pause(); } catch (e) {} pbVideo.srcObject = null; pbVideo.style.filter = "none"; } // drop the last frame
@@ -10334,51 +10356,146 @@ document.addEventListener("click", function (e) {
       scheduleSaver();
     }
   }
-  function snapPhotobooth() {
-    if (!pbActive || !pbVideo) return;
+  // ── strip capture ── hitting the shutter runs a classic photobooth reel: a 3-2-1
+  // countdown then a flash+capture, four times, each frame a different look (one clean +
+  // three trip looks). The four frames composite into a single vertical strip which is the
+  // ONE output the Download/Gmail/Email buttons + clipboard all operate on.
+  function stripPushTimer(fn, ms) { var id = setTimeout(fn, ms); pbTimers.push(id); return id; }
+  function showCount(n) {
+    if (!pbCount) return;
+    pbCount.textContent = String(n);
+    pbCount.classList.remove("tick");
+    void pbCount.getBoundingClientRect(); // reflow so the pop restarts each digit
+    pbCount.classList.add("tick");
+  }
+  function hideCount() { if (pbCount) pbCount.classList.remove("tick"); }
+  function flashScreen() {
+    if (!pbFlash) return;
+    pbFlash.classList.remove("snapping");
+    void pbFlash.getBoundingClientRect();
+    pbFlash.classList.add("snapping");
+  }
+  function showStripLabel(key, idx) {
+    if (!pbLabelG || !pbLabelText) return;
+    pbLabelText.textContent = pbText(key) + " · " + (idx + 1) + "/" + STRIP_FX.length;
+    pbLabelG.classList.remove("flash");
+    void pbLabelG.getBoundingClientRect();
+    pbLabelG.classList.add("flash");
+  }
+  function captureFrame(fxCss) {
     var w = pbVideo.videoWidth, h = pbVideo.videoHeight;
-    if (!w || !h) return; // no frame yet
-    var canvas = document.createElement("canvas");
-    canvas.width = w; canvas.height = h;
-    var ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.filter = PB_EFFECTS[pbFxIndex].css; // same effect as the live preview
-    ctx.translate(w, 0); ctx.scale(-1, 1);  // mirror to match the on-screen selfie view
-    ctx.drawImage(pbVideo, 0, 0, w, h);
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.filter = "none";
-    var fs = Math.max(11, Math.round(h * 0.045));
-    ctx.font = "600 " + fs + "px Georgia, 'Times New Roman', serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "alphabetic";
-    var cap = "markéta ∞ behdad · loft photobooth";
-    var capY = h - Math.round(h * 0.04);
-    ctx.fillStyle = "rgba(0,0,0,0.4)";
-    ctx.fillText(cap, w / 2 + 1, capY + 1);
-    ctx.fillStyle = "rgba(255,255,255,0.94)";
-    ctx.fillText(cap, w / 2, capY);
-    if (pbFlash) { // white shutter flash over the screen
-      pbFlash.classList.remove("snapping");
-      void pbFlash.getBoundingClientRect();
-      pbFlash.classList.add("snapping");
+    if (!w || !h) return null;
+    var c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    var g = c.getContext("2d");
+    if (!g) return null;
+    try {
+      g.filter = fxCss;                    // same look as the live preview for this frame
+      g.translate(w, 0); g.scale(-1, 1);   // mirror to match the selfie view
+      g.drawImage(pbVideo, 0, 0, w, h);
+    } catch (e) { return null; }
+    return c;
+  }
+  // composite the frames into a vertical reel: cream ground, paper-bordered frames, a
+  // wine + muted caption band at the bottom
+  function composeStrip(frames) {
+    if (!frames.length) return null;
+    var fw = frames[0].width, fh = frames[0].height;
+    var W_FRAME = 440, m = 14, capH = 70;
+    var hFrame = Math.round(fh * W_FRAME / fw);
+    var W = W_FRAME + m * 2;
+    var H = m + frames.length * (hFrame + m) + capH;
+    var c = document.createElement("canvas");
+    c.width = W; c.height = H;
+    var g = c.getContext("2d");
+    if (!g) return null;
+    g.fillStyle = "#f8f5ec"; g.fillRect(0, 0, W, H);          // cream ground
+    for (var i = 0; i < frames.length; i++) {
+      var y = m + i * (hFrame + m);
+      g.fillStyle = "#fffdf8"; g.fillRect(m - 2, y - 2, W_FRAME + 4, hFrame + 4); // paper backing
+      try { g.drawImage(frames[i], m, y, W_FRAME, hFrame); } catch (e) {}
+      g.strokeStyle = "#e8dfcc"; g.lineWidth = 1.5;           // thin rule border
+      g.strokeRect(m + 0.75, y + 0.75, W_FRAME - 1.5, hFrame - 1.5);
     }
-    playLaptopClickSound("office-monitor"); // soft shutter click
-    // A single blob feeds both the clipboard copy and the Download button. Wrap toBlob in a
-    // promise so the clipboard write can be issued synchronously in this click gesture (its
+    var baseY = H - capH + 30;
+    g.textAlign = "center";
+    g.fillStyle = "#8e3a4a";                                  // wine
+    g.font = "700 27px Georgia, 'Times New Roman', serif";
+    g.fillText("markéta ∞ behdad", W / 2, baseY);
+    g.fillStyle = "#716455";                                  // muted
+    g.font = "400 15px Georgia, 'Times New Roman', serif";
+    g.fillText(pbText("pb_strip_caption") + " · 2027", W / 2, baseY + 22);
+    return c;
+  }
+  function cancelStrip() {
+    pbCapturing = false;
+    pbTimers.forEach(clearTimeout);
+    pbTimers = [];
+    hideCount();
+  }
+  function runPhotoStrip() {
+    if (!pbActive || !pbVideo || pbCapturing) return;
+    if (!pbVideo.videoWidth || !pbVideo.videoHeight) return; // no frame yet
+    pbCapturing = true;
+    dismissPhotoActions(); // clear any previous reel's panel
+    var frames = [], idx = 0;
+    function nextFrame() {
+      if (!pbActive) { cancelStrip(); return; }               // camera closed mid-reel -> abort
+      if (idx >= STRIP_FX.length) { finishStrip(frames); return; }
+      var fx = STRIP_FX[idx];
+      if (pbVideo) pbVideo.style.filter = fx.css;             // live preview morphs to this frame's look
+      showStripLabel(fx.key, idx);
+      var n = 3;
+      (function countdown() {
+        if (!pbActive) { cancelStrip(); return; }
+        if (n <= 0) {
+          hideCount();
+          flashScreen();
+          playLaptopClickSound("office-monitor");             // shutter click
+          var frame = captureFrame(fx.css);
+          if (frame) frames.push(frame);
+          idx++;
+          stripPushTimer(nextFrame, 430);                     // brief beat before the next frame
+          return;
+        }
+        showCount(n); n--;
+        stripPushTimer(countdown, 480);
+      })();
+    }
+    nextFrame();
+  }
+  function finishStrip(frames) {
+    pbCapturing = false;
+    pbTimers = [];
+    hideCount();
+    if (pbActive) applyPbEffect(); // restore the live preview to the user's cycled effect
+    var strip = composeStrip(frames);
+    if (!strip) return;
+    // One blob (the composed reel) feeds both the clipboard copy and the Download button.
+    // Wrap toBlob in a promise so the clipboard write is issued synchronously (its
     // ClipboardItem takes the still-pending blob promise — the shape Safari needs).
     var blobPromise = new Promise(function (resolve, reject) {
-      try { canvas.toBlob(function (b) { b ? resolve(b) : reject(new Error("no blob")); }, "image/png"); }
+      try { strip.toBlob(function (b) { b ? resolve(b) : reject(new Error("no blob")); }, "image/png"); }
       catch (e) { reject(e); }
     });
-    var copyPromise = copyImageToClipboard(blobPromise); // Promise<boolean>, never throws
+    // Best-effort immediate copy — but the 3-2-1x4 reel runs well past the shutter click's
+    // transient-activation window, so this write is usually stale/denied. The copy that
+    // actually lands is re-issued inside the Gmail/Email button gesture (see showPhotoActions).
+    // So the paste hint keys off clipboard *support*, not this write's result.
+    copyImageToClipboard(blobPromise);
     blobPromise.then(function (blob) {
-      copyPromise.then(function (copied) { showPhotoActions(blob, copied); });
-    }, function () { /* no blob (rare) — skip the panel; the flash already fired */ });
+      showPhotoActions(blob, clipboardSupported());
+    }, function () { /* no blob (rare) — skip the panel */ });
   }
-  // Copy the PNG to the clipboard. Accepts a blob PROMISE so the write stays inside the
-  // snap gesture. Feature-detected and fully try/catch-wrapped — resolves false on any
-  // failure (older browsers, Firefox's spotty image write, denied permission) so download
-  // stays the reliable path and clipboard is a pure bonus. Never throws, never rejects.
+  function clipboardSupported() {
+    try { return !!(navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== "undefined"); }
+    catch (e) { return false; }
+  }
+  // Copy the reel PNG to the clipboard. Accepts a blob (or blob PROMISE) so the write can be
+  // issued inside a fresh gesture. Feature-detected and fully try/catch-wrapped — resolves
+  // false on any failure (older browsers, Firefox's spotty image write, stale activation,
+  // denied permission) so download stays the reliable path and clipboard is a pure bonus.
+  // Never throws, never rejects.
   function copyImageToClipboard(blobPromise) {
     try {
       if (!navigator.clipboard || !navigator.clipboard.write || typeof ClipboardItem === "undefined") return Promise.resolve(false);
@@ -10400,7 +10517,7 @@ document.addEventListener("click", function (e) {
       var url = URL.createObjectURL(blob);
       var a = document.createElement("a");
       a.href = url;
-      a.download = "loft-photobooth-marketa-behdad.png";
+      a.download = "loft-photobooth-strip-marketa-behdad.png";
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -10452,9 +10569,11 @@ document.addEventListener("click", function (e) {
       btns[i].addEventListener("click", function (e) {
         e.stopPropagation(); // keep the panel open (and off the click-away handler) so they can pick more than one
         var act = this.getAttribute("data-act");
+        // re-copy the reel inside this fresh click gesture so it's actually on the clipboard
+        // when they land in the compose window (the copy at capture time was likely stale)
         if (act === "download") downloadPhoto(blob);
-        else if (act === "gmail") openGmailCompose();
-        else if (act === "email") openMailto();
+        else if (act === "gmail") { copyImageToClipboard(Promise.resolve(blob)); openGmailCompose(); }
+        else if (act === "email") { copyImageToClipboard(Promise.resolve(blob)); openMailto(); }
       });
     }
     // click-away dismissal, armed next tick so the creating click can't instantly close it
@@ -10470,7 +10589,7 @@ document.addEventListener("click", function (e) {
   }
   var pbShutter = document.getElementById("monitor-pb-shutter");
   if (pbShutter) {
-    pbShutter.addEventListener("click", function (e) { e.stopPropagation(); snapPhotobooth(); });
+    pbShutter.addEventListener("click", function (e) { e.stopPropagation(); runPhotoStrip(); });
     pbShutter.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   var pbClose = document.getElementById("monitor-pb-close");

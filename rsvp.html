@@ -7742,7 +7742,8 @@ document.addEventListener("click", function (e) {
       if (laptopReduce) {
         laptop.classList.remove("calling", "connecting");
         laptop.classList.add("connected");
-        playCallLaughSound();
+        playILoveYouSound("office-laptop");
+        laptopUpdateTimers.push(setTimeout(function () { playCallLaughSound(); }, 1400));
         startCallAmbient();
         return;
       }
@@ -7756,7 +7757,8 @@ document.addEventListener("click", function (e) {
         laptop.classList.remove("connecting");
         laptop.classList.add("connected");
         playBootChimeSound();
-        playCallLaughSound(); // the couple giggling across the ocean
+        playILoveYouSound("office-laptop"); // the answer across the ocean: a synth "I love you"
+        laptopUpdateTimers.push(setTimeout(function () { playCallLaughSound(); }, 1400)); // then the giggle, after it lands
         startCallAmbient(); // and the ongoing static/wind/giggling bed while it lasts
       }, 3400));
     }
@@ -13691,6 +13693,59 @@ function playPhoneVoiceSound(panId) {
     });
 
     setTimeout(function () { ctx.close(); }, 900);
+  } catch (e) {}
+}
+// A synthesized "I love you" (formant synthesis, same technique as playPhoneVoiceSound but
+// gliding through three words) — the Prague call's answer. Deliberately a soft robotic voice.
+function playILoveYouSound(panId) {
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t0 = ctx.currentTime;
+    var out = pannedOut(ctx, panId || "office-laptop");
+    var source = ctx.createGain(); source.gain.value = 1;
+    [-6, 6].forEach(function (dt) {
+      var osc = ctx.createOscillator();
+      osc.type = "sawtooth"; osc.detune.value = dt;
+      // f0: I -> love(peak) -> you(fall), a gentle spoken contour
+      osc.frequency.setValueAtTime(228, t0);
+      osc.frequency.linearRampToValueAtTime(240, t0 + 0.24);
+      osc.frequency.linearRampToValueAtTime(258, t0 + 0.5);
+      osc.frequency.linearRampToValueAtTime(236, t0 + 0.66);
+      osc.frequency.linearRampToValueAtTime(250, t0 + 0.8);
+      osc.frequency.linearRampToValueAtTime(196, t0 + 1.1);
+      osc.connect(source);
+      osc.start(t0); osc.stop(t0 + 1.16);
+    });
+    // amplitude: I / lo / ve / you bumps with dips for /l/, /v/ and the word gaps
+    var master = ctx.createGain(); var m = master.gain;
+    m.setValueAtTime(0.0001, t0);
+    m.exponentialRampToValueAtTime(0.07, t0 + 0.04);   // "I"
+    m.setValueAtTime(0.07, t0 + 0.2);
+    m.exponentialRampToValueAtTime(0.016, t0 + 0.3);   // /l/
+    m.exponentialRampToValueAtTime(0.078, t0 + 0.38);  // "lo"
+    m.setValueAtTime(0.078, t0 + 0.52);
+    m.exponentialRampToValueAtTime(0.022, t0 + 0.62);  // /v/
+    m.exponentialRampToValueAtTime(0.014, t0 + 0.7);   // gap
+    m.exponentialRampToValueAtTime(0.08, t0 + 0.8);    // "you"
+    m.setValueAtTime(0.08, t0 + 1.0);
+    m.exponentialRampToValueAtTime(0.0001, t0 + 1.14);
+    master.connect(out);
+    // three parallel bandpass formants gliding through the words
+    [
+      { q: 7,  g: 1.0,  pts: [[0,730],[0.24,300],[0.34,360],[0.5,640],[0.66,600],[0.8,300],[1.08,300]] },     // F1
+      { q: 9,  g: 0.5,  pts: [[0,1100],[0.24,2200],[0.34,1200],[0.5,1190],[0.66,1300],[0.8,2000],[1.08,870]] }, // F2
+      { q: 11, g: 0.16, pts: [[0,2550],[0.24,2900],[0.5,2500],[1.08,2400]] }                                   // F3
+    ].forEach(function (f) {
+      var bp = ctx.createBiquadFilter();
+      bp.type = "bandpass"; bp.Q.value = f.q;
+      bp.frequency.setValueAtTime(f.pts[0][1], t0);
+      for (var i = 1; i < f.pts.length; i++) bp.frequency.linearRampToValueAtTime(f.pts[i][1], t0 + f.pts[i][0]);
+      var fg = ctx.createGain(); fg.gain.value = f.g;
+      source.connect(bp); bp.connect(fg); fg.connect(master);
+    });
+    setTimeout(function () { ctx.close(); }, 1400);
   } catch (e) {}
 }
 // Shared by playCallLaughSound's connect moment and the ongoing ambient loop below:

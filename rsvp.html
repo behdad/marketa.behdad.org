@@ -8967,7 +8967,7 @@ document.addEventListener("click", function (e) {
         });
         var glass = document.getElementById("office-stainedglass");
         if (glass && !glass.classList.contains("done") && window.setCaption) {
-          window.setCaption(lampsOff ? "office_find" : "office_hint");
+          window.setCaption(!window.__pcPlayed ? "office_computer" : (lampsOff ? "office_find" : "office_hint"));
         }
       })();
       laptop.classList.add("calling");
@@ -9327,7 +9327,19 @@ document.addEventListener("click", function (e) {
       pendingBootMusic = false;
       return;
     }
-    window.__pcPlayed = true; // the office sequence's "play with the computer" beat (the butterfly gates on it)
+    if (!window.__pcPlayed) {
+      window.__pcPlayed = true; // the office sequence's "play with the computer" beat (the butterfly gates on it)
+      // ...and powering on advances the office hint to the next step (the caption
+      // system elsewhere only re-evaluates on lamp/call/entry events)
+      var seqGlass = document.getElementById("office-stainedglass");
+      if (seqGlass && !seqGlass.classList.contains("done") && window.__pragueCalled && window.setCaption) {
+        var seqLampsOff = ["office-lamp", "office-pendant"].every(function (id) {
+          var el = document.getElementById(id);
+          return el && el.classList.contains("dimmed");
+        });
+        window.setCaption(seqLampsOff ? "office_find" : "office_hint");
+      }
+    }
     monitor.classList.add("screen-on", "show-fedora");
     bootTimers.push(setTimeout(function () {
       monitor.classList.remove("show-fedora");
@@ -11419,6 +11431,19 @@ document.addEventListener("click", function (e) {
       if (pbActive || pbStarting) { closePhotobooth(); return; } // live session → the cam is the off switch
       if (monitor.classList.contains("pb-confirm")) { hidePbConfirm(); return; } // second tap = never mind
       hidePbError();
+      // permission already granted → skip the ask (the confirm exists so the browser's
+      // permission prompt never surprises anyone — with a standing grant there's no
+      // prompt to be surprised by). getUserMedia with a granted permission also doesn't
+      // need the click's transient activation, so the async query is safe here.
+      if (navigator.permissions && navigator.permissions.query && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          navigator.permissions.query({ name: "camera" }).then(function (st) {
+            if (st.state === "granted") openPhotobooth();
+            else showPbConfirm();
+          }, function () { showPbConfirm(); });
+          return;
+        } catch (e) {}
+      }
       showPbConfirm(); // the ON-SCREEN ask — getUserMedia waits for its "Open camera" button
     });
     webcam.addEventListener("dblclick", function (e) { e.stopPropagation(); }); // and never trigger the swap-to-typewriter dblclick
@@ -12526,8 +12551,8 @@ document.addEventListener("click", function (e) {
     });
     var glass = document.getElementById("office-stainedglass");
     if (glass && !glass.classList.contains("done") && window.setCaption) {
-      if (lampsOff) window.setCaption(window.__pragueCalled ? "office_find" : "office_call");
-      else window.setCaption(window.__pragueCalled ? "office_hint" : "office_call"); // lights back on: keep pointing at the call (or the lights)
+      if (lampsOff) window.setCaption(!window.__pragueCalled ? "office_call" : (!window.__pcPlayed ? "office_computer" : "office_find"));
+      else window.setCaption(!window.__pragueCalled ? "office_call" : (!window.__pcPlayed ? "office_computer" : "office_hint")); // lights back on: keep pointing at the current step
     }
   }
   lampIds.forEach(function (id) {
@@ -18045,8 +18070,8 @@ function spawnDustMote(container) {
       });
       var glassEl = document.getElementById("office-stainedglass");
       if (glassEl && !glassEl.classList.contains("done")) {
-        if (lampsOff) setCaption(window.__pragueCalled ? "office_find" : "office_call");
-        else if (window.__pragueCalled) setCaption("office_hint");
+        if (lampsOff) setCaption(!window.__pragueCalled ? "office_call" : (!window.__pcPlayed ? "office_computer" : "office_find"));
+        else if (window.__pragueCalled) setCaption(!window.__pcPlayed ? "office_computer" : "office_hint");
       }
     }
   }

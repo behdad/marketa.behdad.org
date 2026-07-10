@@ -3068,6 +3068,8 @@ section{margin:1.9rem 0}
 <rect x="10.5" y="21.6" width="65" height="2" rx="1" fill="#fffdf8" opacity="0.7" pointer-events="none"/>
 <path d="M14 38 h58 M14 32 h58" stroke="#c8c4b8" stroke-width="1.4"/>
 <ellipse cx="24" cy="27" rx="12" ry="3.4" fill="#ffffff" opacity="0.26" transform="rotate(-6 24 27)" pointer-events="none"/>
+<rect id="garden-thermo-lcd" x="12" y="23" width="26" height="9" rx="2" fill="#0f1c16" stroke="#2c3a30" stroke-width="0.5" pointer-events="none"/>
+<text id="garden-thermo-text" x="25" y="27.6" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="8.2" font-weight="700" letter-spacing="-0.5" fill="#8fd070" pointer-events="none">24°C</text>
 <circle id="garden-minisplit-led" cx="72" cy="26" r="2.2" fill="#7a3230"/>
 <g id="garden-minisplit-airlines">
 <path class="ac-airline" d="M20 44 Q14 62 20 78" fill="none" stroke="#dfeef6" stroke-width="2.5" stroke-linecap="round"/>
@@ -10771,6 +10773,76 @@ document.addEventListener("click", function (e) {
     });
   }
 })();
+(function gardenThermo() {
+  // Passive LCD readout on the garden mini-split. Derives a "room temperature" from
+  // live room state and eases the shown value 1 degree per tick toward that target,
+  // thermostat-style, so poking the room visibly nudges the number. Decorative only:
+  // no hit target, no aria, and it makes NO sound. It reads DOM/globals each tick and
+  // spawns nothing, so it's safe to keep ticking in a hidden/unfocused tab (no
+  // particle-accumulation class of bug applies here).
+  var textEl = document.getElementById("garden-thermo-text");
+  if (!textEl) return;
+
+  // The loft is heated, so the realistic band sits ~21-28 C: cooling factors bottom
+  // out at the 21 floor, a warm day with the sun-blind up and the projector fireplace
+  // on tops out at the 28 ceiling. A molly trip is a deliberate overshoot to 38 (the
+  // room "feels like it's baking") well above the realistic ceiling.
+  var FLOOR = 21, CEIL = 28, TRIP_TARGET = 38, HARD_MIN = 5, HARD_MAX = 40;
+  function computeTarget() {
+    var t;
+    if (window.__tripActive) {
+      t = TRIP_TARGET; // overshoot gag, escapes the realistic band
+    } else {
+      var stage = document.getElementById("stage-garden");
+      var blind = document.getElementById("garden-blind");
+      var unit = document.getElementById("garden-minisplit");
+      var screen = document.getElementById("cuddly-wallscreen");
+      t = 24; // comfortable heated base (daytime)
+      if (stage && stage.classList.contains("dusk")) t -= 3;   // night cools
+      if (unit && unit.classList.contains("on")) t -= 3;       // AC cooling
+      if (window.__balconyStorm) t -= 2;                       // storm / overcast cools
+      if (blind && blind.classList.contains("raised")) t += 3; // sun streaming in warms
+      if (screen && !screen.classList.contains("off")) t += 3; // projector fireplace running gives off heat
+      t = Math.max(FLOOR, Math.min(CEIL, t)); // clamp the realistic band to 21-28
+    }
+    return Math.max(HARD_MIN, Math.min(HARD_MAX, t)); // overall hard safety clamp
+  }
+
+  // blue (cool/comfortable) across the realistic 21-28 band, tipping into orange/red
+  // only in the trip-only overshoot zone above 28 so a soaring number reads as "off".
+  var COLD = [111, 176, 224], MID = [143, 208, 112], HOT = [224, 96, 60];
+  function lerp(a, b, f) { return Math.round(a + (b - a) * f); }
+  function hex2(v) { v = Math.max(0, Math.min(255, v)).toString(16); return v.length < 2 ? "0" + v : v; }
+  function colorForTemp(t) {
+    var f, a, b;
+    if (t <= CEIL) { f = (t - FLOOR) / (CEIL - FLOOR); a = COLD; b = MID; }        // 21 blue -> 28 green
+    else { f = (t - CEIL) / (TRIP_TARGET - CEIL); a = MID; b = HOT; }             // 28 green -> 38 red
+    f = Math.max(0, Math.min(1, f));
+    return "#" + hex2(lerp(a[0], b[0], f)) + hex2(lerp(a[1], b[1], f)) + hex2(lerp(a[2], b[2], f));
+  }
+
+  var shown = null;
+  function paint(v) {
+    textEl.textContent = v + "°C";
+    textEl.setAttribute("fill", colorForTemp(v));
+  }
+  // Snap the display straight to the current target (no drift). Runs once on load so the
+  // first paint is correct, and is exposed for deterministic testing: set some room
+  // state, call it, then read the <text> value.
+  window.__gardenThermoSet = function () {
+    shown = computeTarget();
+    paint(shown);
+    return shown;
+  };
+  window.__gardenThermoSet();
+  setInterval(function () {
+    var target = computeTarget();
+    if (shown < target) shown++;
+    else if (shown > target) shown--;
+    else return; // already at target -- leave the DOM untouched
+    paint(shown);
+  }, 1200);
+})();
 (function () {
   // Distant city hum: a soft ambient wash on the balcony, like a muffled skyline of
   // traffic below — and, fainter, bleeding into the cuddly nook through an open balcony
@@ -13328,6 +13400,7 @@ function startTripVariant(variant) {
     strip.classList.remove(variant);
     hideTripCreaturesAfter(2000); // the trip creature lingers a beat, then fades
     tripActive = false;
+    window.__tripActive = false; // mirror for the garden thermometer readout (see gardenThermo)
     currentTripVariant = null;
     // the comedown lands as the trip wears off: each trip deepens the veil, except
     // molly (the kisses one), whose euphoria wipes the built-up comedown clean
@@ -13352,6 +13425,7 @@ function triggerRsvpTrip(e) {
     return;
   }
   tripActive = true;
+  window.__tripActive = true; // mirror for the garden thermometer readout (see gardenThermo)
   var variant = TRIP_VARIANTS[tripVariantIndex % TRIP_VARIANTS.length];
   tripVariantIndex++;
   startTripVariant(variant);

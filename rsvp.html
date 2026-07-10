@@ -1226,6 +1226,19 @@ footer{margin-top:2.6rem}
 @keyframes pb-hint-flash{0%,100%{opacity:.82} 30%{opacity:.12} 60%{opacity:1}}
 @media (prefers-reduced-motion: reduce){.pb-dlg-hint{animation:none}}
 @media (prefers-reduced-motion: reduce){.pb-dialog-backdrop{transition:none} .pb-dlg-btn{transition:none} .pb-dlg-btn:hover{transform:none}}
+/* the keyboard-shortcuts card ('?') — same backdrop / ink card / ✕ language as the
+   polaroid dialog above, plus a key-chip + description grid (left-aligned list). */
+.kbd-dialog{text-align:left; max-width:min(430px, 94vw)}
+.kbd-dialog .pb-dlg-lead{text-align:center; margin-bottom:.7rem}
+.kbd-rows{display:grid; grid-template-columns:auto 1fr; gap:.34rem .75rem; align-items:center}
+.kbd-keys{white-space:nowrap; justify-self:start}
+.kbd-keys kbd{
+  font-family:inherit; font-size:.72rem; line-height:1; display:inline-block;
+  color:var(--ink); background:var(--paper); border-radius:6px; padding:.16rem .42rem;
+  box-shadow:0 1px 3px rgba(0,0,0,.25), inset 0 -1px 0 rgba(0,0,0,.18);
+}
+.kbd-keys kbd + kbd{margin-left:.22rem}
+.kbd-note{margin-top:.75rem; font-size:.72rem; opacity:.78; text-align:center}
 .eq-bar{transform-box:fill-box; transform-origin:bottom center; transform:scaleY(0.28)}
 #monitor-np-marquee{transform:translateX(85px)}
 #office-monitor.show-nowplaying #monitor-np-marquee{animation:np-scroll 13s linear infinite}
@@ -6798,7 +6811,20 @@ var T = {
     app_terminal: "console",
     term_welcome: "loft console \u2014 real JavaScript, running right here in your page. try: help",
     term_help: "commands: help \u00b7 clear \u00b7 any JavaScript (try 2+2, document.title, loft.couple, loft.weddings)",
-    eq_off_note: "This browser plays the songs directly \u2014 there's no audio pipeline for the equalizer to pull on. Try it on another device \ud83c\udf9a"
+    eq_off_note: "This browser plays the songs directly \u2014 there's no audio pipeline for the equalizer to pull on. Try it on another device \ud83c\udf9a",
+    kbd_title: "Keyboard shortcuts",
+    kbd_space: "play / pause the music",
+    kbd_esc: "stop the music",
+    kbd_f: "fullscreen",
+    kbd_shift: "hold for the blacklight",
+    kbd_arrows: "previous / next room",
+    kbd_digits: "jump to a room",
+    kbd_q: "skip to the balcony finale",
+    kbd_d: "day \u2194 night (or \u2191 / \u2193)",
+    kbd_r: "reset the loft",
+    kbd_trips: "a trip: psychedelic \u00b7 strobe \u00b7 melt \u00b7 molly \u00b7 ketamine \u00b7 iboga",
+    kbd_qm: "this list",
+    kbd_console_note: "In the console: \u2191 / \u2193 browse command history."
   },
   cs: {
     hunt_title: "Den v podkroví",
@@ -6931,7 +6957,20 @@ var T = {
     app_terminal: "konzole",
     term_welcome: "loftov\u00e1 konzole \u2014 opravdov\u00fd JavaScript, b\u011b\u017e\u00ed p\u0159\u00edmo tady ve str\u00e1nce. zkuste: help",
     term_help: "p\u0159\u00edkazy: help \u00b7 clear \u00b7 jak\u00fdkoli JavaScript (zkuste 2+2, document.title, loft.couple, loft.weddings)",
-    eq_off_note: "Tenhle prohl\u00ed\u017ee\u010d p\u0159ehr\u00e1v\u00e1 p\u00edsni\u010dky nap\u0159\u00edmo \u2014 ekvaliz\u00e9r tu nem\u00e1 za co tahat. Zkus to na jin\u00e9m za\u0159\u00edzen\u00ed \ud83c\udf9a"
+    eq_off_note: "Tenhle prohl\u00ed\u017ee\u010d p\u0159ehr\u00e1v\u00e1 p\u00edsni\u010dky nap\u0159\u00edmo \u2014 ekvaliz\u00e9r tu nem\u00e1 za co tahat. Zkus to na jin\u00e9m za\u0159\u00edzen\u00ed \ud83c\udf9a",
+    kbd_title: "Kl\u00e1vesov\u00e9 zkratky",
+    kbd_space: "p\u0159ehr\u00e1t / pozastavit hudbu",
+    kbd_esc: "zastavit hudbu",
+    kbd_f: "cel\u00e1 obrazovka",
+    kbd_shift: "podr\u017eet pro UV sv\u011btlo",
+    kbd_arrows: "p\u0159edchoz\u00ed / dal\u0161\u00ed m\u00edstnost",
+    kbd_digits: "skok do m\u00edstnosti",
+    kbd_q: "rovnou na fin\u00e1le na balkon\u011b",
+    kbd_d: "den \u2194 noc (nebo \u2191 / \u2193)",
+    kbd_r: "resetovat loft",
+    kbd_trips: "trip: psychedelie \u00b7 strobo \u00b7 t\u00e1n\u00ed \u00b7 molly \u00b7 ketamin \u00b7 iboga",
+    kbd_qm: "tento seznam",
+    kbd_console_note: "V konzoli: \u2191 / \u2193 proch\u00e1zen\u00ed historie p\u0159\u00edkaz\u016f."
   }
 };
 function setLang(l) {
@@ -7102,6 +7141,86 @@ function setLang(l) {
   document.addEventListener("webkitfullscreenchange", refreshLabel);
   window.addEventListener("resize", sizeFullscreenFrame); // orientation change / DevTools resize while fullscreen
   refreshLabel();
+})();
+// ── Keyboard-shortcuts card ── '?' toggles a small overlay listing the game's global
+// shortcuts, in the polaroid dialog's visual language (same backdrop/ink-card/✕ classes,
+// same fullscreen-host trick). Rebuilt from the T dict on every open, so it always
+// renders in the current language. Closed by '?', Escape, the ✕, or a backdrop click.
+(function () {
+  var kbdOverlay = null;
+  function kbdText(key) {
+    var l = document.documentElement.lang;
+    return (T[l] && T[l][key]) || T.en[key] || "";
+  }
+  function closeKbdHelp() {
+    if (!kbdOverlay) return;
+    var d = kbdOverlay; kbdOverlay = null;
+    d.classList.remove("show");
+    setTimeout(function () { if (d.parentNode) d.remove(); }, 250);
+  }
+  function openKbdHelp() {
+    closeKbdHelp();
+    // [key-chip HTML, T description key] — chips are language-neutral key names
+    var ROWS = [
+      ["<kbd>Space</kbd>", "kbd_space"],
+      ["<kbd>Esc</kbd>", "kbd_esc"],
+      ["<kbd>F</kbd>", "kbd_f"],
+      ["<kbd>Shift</kbd>", "kbd_shift"],
+      ["<kbd>←</kbd><kbd>→</kbd>", "kbd_arrows"],
+      ["<kbd>1</kbd>–<kbd>5</kbd>", "kbd_digits"],
+      ["<kbd>Q</kbd>", "kbd_q"],
+      ["<kbd>D</kbd>", "kbd_d"],
+      ["<kbd>R</kbd>", "kbd_r"],
+      ["<kbd>Shift</kbd>+<kbd>1…6</kbd>", "kbd_trips"],
+      ["<kbd>?</kbd>", "kbd_qm"]
+    ];
+    var rowsHtml = "";
+    for (var i = 0; i < ROWS.length; i++) {
+      rowsHtml += '<span class="kbd-keys">' + ROWS[i][0] + '</span><span>' + kbdText(ROWS[i][1]) + '</span>';
+    }
+    var bd = document.createElement("div");
+    bd.className = "pb-dialog-backdrop kbd-backdrop";
+    bd.innerHTML =
+      '<div class="pb-dialog kbd-dialog" dir="auto">' +
+        '<button type="button" class="pb-dlg-x" aria-label="close">✕</button>' +
+        '<div class="pb-dlg-lead">' + kbdText("kbd_title") + '</div>' +
+        '<div class="kbd-rows">' + rowsHtml + '</div>' +
+        '<div class="kbd-note">' + kbdText("kbd_console_note") + '</div>' +
+      '</div>';
+    // in fullscreen the card must live INSIDE the fullscreen element (the top layer) or
+    // it renders behind it and never shows — same host trick as the polaroid dialog
+    var fsHost = document.fullscreenElement || document.webkitFullscreenElement ||
+                 document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
+    fsHost.appendChild(bd);
+    kbdOverlay = bd;
+    requestAnimationFrame(function () { bd.classList.add("show"); });
+    // the backdrop swallows every click; a click on the backdrop itself dismisses
+    bd.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (e.target === bd) closeKbdHelp();
+    });
+    bd.querySelector(".pb-dlg-x").addEventListener("click", function () { closeKbdHelp(); });
+  }
+  // '?' toggles the card; ignored while typing (the console must be able to type "?")
+  // or with a non-Shift modifier held (Shift itself is how '?' is typed).
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "?" || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+    var t = e.target;
+    if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+    e.preventDefault();
+    if (kbdOverlay) closeKbdHelp(); else openKbdHelp();
+  });
+  // Escape closes the card WITHOUT also stopping the music. It listens on window
+  // (capture), not document: the stop-the-music Escape listener is a capture listener
+  // on document, and same-node capture listeners run in registration order — only an
+  // ancestor's capture phase is guaranteed to run first, and stopping propagation here
+  // keeps the event from ever reaching the document-level handlers.
+  window.addEventListener("keydown", function (e) {
+    if ((e.key !== "Escape" && e.key !== "Esc") || !kbdOverlay) return;
+    e.preventDefault();
+    e.stopPropagation();
+    closeKbdHelp();
+  }, true);
 })();
 // Shared by eggBubble's initial placement and hoverTooltip's live-follow loop (for an
 // anchor that keeps moving under its own animation, e.g. Fishu's drift, a one-time

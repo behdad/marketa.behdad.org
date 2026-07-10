@@ -5408,7 +5408,7 @@ section{margin:1.9rem 0}
 <foreignObject x="254" y="154" width="124" height="42">
 <div xmlns="http://www.w3.org/1999/xhtml" id="monitor-term-wrap" class="term-wrap">
 <div id="monitor-term-out" class="term-out"></div>
-<div class="term-row"><span class="term-ps">&#10095;</span><input id="monitor-term-in" class="term-in" autocomplete="off" autocapitalize="off" spellcheck="false"/></div>
+<div class="term-row"><span class="term-ps">&#10095;</span><input id="monitor-term-in" class="term-in" tabindex="-1" autocomplete="off" autocapitalize="off" spellcheck="false"/></div>
 </div>
 </foreignObject>
 <g id="monitor-term-close">
@@ -10242,7 +10242,7 @@ document.addEventListener("click", function (e) {
     clearTimeout(saverTimer); saverTimer = null; // no screensaver over someone typing
     monitor.classList.add("show-terminal");
     if (!termWelcomed) { termWelcomed = true; termPrint(termT("term_welcome"), "term-dim"); }
-    if (termIn) setTimeout(function () { try { termIn.focus(); } catch (e) {} }, 60);
+    if (termIn) setTimeout(function () { try { termIn.focus({ preventScroll: true }); } catch (e) {} }, 60);
     playLaptopClickSound("office-monitor");
   }
   function closeTerminal() {
@@ -10279,7 +10279,7 @@ document.addEventListener("click", function (e) {
     });
   }
   if (termWrap) {
-    termWrap.addEventListener("click", function (e) { e.stopPropagation(); if (termIn) { try { termIn.focus(); } catch (err) {} } });
+    termWrap.addEventListener("click", function (e) { e.stopPropagation(); if (termIn) { try { termIn.focus({ preventScroll: true }); } catch (err) {} } });
     termWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   if (termCloseBtn) {
@@ -10733,7 +10733,11 @@ document.addEventListener("click", function (e) {
   // the pre-permission confirm and the no-camera note: pure class toggles, both drawn by
   // the SCREEN itself (never a browser popup, never a bubble); dismissing one uncovers
   // whatever the screen showed before
-  function showPbConfirm() { monitor.classList.remove("pb-error"); monitor.classList.add("pb-confirm"); }
+  function showPbConfirm() {
+    if (window.__closeMonitorTerminal) window.__closeMonitorTerminal(); // the booth takes the screen — don't leave the REPL focused underneath
+    monitor.classList.remove("pb-error");
+    monitor.classList.add("pb-confirm");
+  }
   function hidePbConfirm() { monitor.classList.remove("pb-confirm"); }
   function showPbError() { monitor.classList.remove("pb-confirm"); monitor.classList.add("pb-error"); }
   function hidePbError() { monitor.classList.remove("pb-error"); }

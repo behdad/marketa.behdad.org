@@ -8109,7 +8109,7 @@ document.addEventListener("click", function (e) {
       eqPanner = eqAudioCtx.createStereoPanner ? eqAudioCtx.createStereoPanner() : null;
       if (eqPanner) eqPanner.pan.value = 0;
       eqAnalyser = eqAudioCtx.createAnalyser();
-      eqAnalyser.fftSize = 64;
+      eqAnalyser.fftSize = 128; // 64 bins — enough resolution for the equalizer's log-frequency binning to separate bass/mid/treble
       eqAnalyser.smoothingTimeConstant = 0.7;
       eqBassShelf.connect(eqMuffleFilter);
       // Stereo-width stage (mid-side-style narrowing), spliced in right after the muffle
@@ -8497,17 +8497,44 @@ document.addEventListener("click", function (e) {
     }
     var analyser = audioEl && audioEl._eqAnalyser;
     var data = analyser ? new Uint8Array(analyser.frequencyBinCount) : null;
+    // Real-analyser display: log-frequency binning + a FIXED per-band tilt gain that
+    // rises with frequency. A raw linear FFT looks bass-heavy — linear bins pack most
+    // of the spectrum's octaves into the first couple of bars (so the low bar pins and
+    // the rest slope down), and on top of that music's amplitude naturally rolls off
+    // toward the treble. Log-spaced bands give bass, mids and highs their own bars, and
+    // the tilt lifts the quieter high bands so every bar dances. Both the band edges and
+    // the gain are FIXED — they depend only on the band index, never on the live signal.
+    // That's deliberate: headphone mode applies a real +8 dB low-shelf and the low bars
+    // must still visibly rise with it, so the bass band's gain is left at 1.0 and only
+    // the higher bands are boosted. An adaptive per-band normalizer would flatten that
+    // intentional boost away. (Note byte data is already dB-scaled by getByteFrequencyData,
+    // so the gain is a display multiplier, not a literal dB/octave tilt.)
+    var EQ_TILT_TOP = 2.3;   // treble band's gain relative to the (unboosted) bass band
+    var EQ_TILT_CURVE = 1.4; // >1: keep low-mids near natural, concentrate the lift toward the top
+    function eqBands(n, binCount) {
+      var minBin = 1;                                              // a log scale can't start at bin 0
+      var maxBin = Math.max(minBin + n, Math.floor(binCount * 0.8)); // drop the near-silent top ~20% of bins
+      var out = [];
+      for (var i = 0; i < n; i++) {
+        var lo = (i === 0) ? 0 : Math.floor(minBin * Math.pow(maxBin / minBin, i / n)); // fold DC/sub-bass into bar 0
+        var hi = Math.floor(minBin * Math.pow(maxBin / minBin, (i + 1) / n));
+        if (hi <= lo) hi = lo + 1;                                 // guarantee >=1 bin per bar
+        var t = (n > 1) ? Math.pow(i / (n - 1), EQ_TILT_CURVE) : 0;
+        out.push({ lo: lo, hi: hi, gain: 1 + (EQ_TILT_TOP - 1) * t });
+      }
+      return out;
+    }
+    var bandsBySet = (analyser && data) ? sets.map(function (bars) { return eqBands(bars.length, data.length); }) : null;
     var bpm = (audioEl && SONG_BPM[audioEl.id]) || 120;
     var period = 60 / bpm; if (period < 0.4) period *= 2; // half-time for fast songs
-    function driveBars(bars) {
+    function driveBars(bars, bands) {
       var n = bars.length;
       if (analyser && data) {
-        var usable = Math.max(n, Math.floor(data.length * 0.75)); // skip the near-silent top bins
         for (var i = 0; i < n; i++) {
-          var lo = Math.floor(i / n * usable), hi = Math.floor((i + 1) / n * usable), sum = 0, cnt = 0;
-          for (var j = lo; j <= hi && j < data.length; j++) { sum += data[j]; cnt++; }
-          var v = cnt ? (sum / cnt) / 255 : 0;
-          bars[i].style.transform = "scaleY(" + Math.max(0.14, Math.min(1.3, 0.1 + v * 1.7)) + ")";
+          var band = bands[i], sum = 0, cnt = 0;
+          for (var j = band.lo; j < band.hi && j < data.length; j++) { sum += data[j]; cnt++; }
+          var v = (cnt ? (sum / cnt) / 255 : 0) * band.gain; // log-binned level, fixed HF tilt applied
+          bars[i].style.transform = "scaleY(" + Math.max(0.14, Math.min(1.3, 0.1 + v * 1.3)) + ")";
         }
       } else {
         // no analyser: pulse on the beat, phase-locked to the song's real position
@@ -8522,7 +8549,7 @@ document.addEventListener("click", function (e) {
     }
     function frame() {
       if (analyser && data) analyser.getByteFrequencyData(data); // one read/frame, shared by both bar groups
-      sets.forEach(driveBars);
+      sets.forEach(function (bars, si) { driveBars(bars, bandsBySet && bandsBySet[si]); });
       eqRAF = requestAnimationFrame(frame);
     }
     frame();

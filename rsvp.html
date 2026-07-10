@@ -7760,18 +7760,25 @@ document.addEventListener("click", function (e) {
         startCallAmbient(); // and the ongoing static/wind/giggling bed while it lasts
       }, 3400));
     }
+    var callHangingUp = false;
     function endCall() {
+      if (callHangingUp) return; // already saying goodbye — ignore repeat taps
       clearLaptopTimers();
       var wasConnected = laptop.classList.contains("connected");
       stopCallAmbient();
-      if (wasConnected) {
-        playILoveYouSound("office-laptop"); // a goodbye "I love you" just before the line drops
-        laptopUpdateTimers.push(setTimeout(playCallHangupSound, 1300));
-      } else {
-        playCallHangupSound(); // hung up mid-ring: just the click, no goodbye
+      function dropLine() {
+        playCallHangupSound();
+        laptop.classList.remove("calling", "connecting", "connected");
+        if (laptop.classList.contains("open")) scheduleLaptopSaver(); // back to idle
       }
-      laptop.classList.remove("calling", "connecting", "connected");
-      if (laptop.classList.contains("open")) scheduleLaptopSaver(); // back to idle
+      if (wasConnected) {
+        // let the "I love you" play in full, THEN drop the line (hangup tone + disconnect)
+        callHangingUp = true;
+        playILoveYouSound("office-laptop");
+        setTimeout(function () { callHangingUp = false; dropLine(); }, 1500);
+      } else {
+        dropLine(); // hung up mid-ring: just the click, no goodbye
+      }
     }
     function toggleLaptop() {
       if (inCall()) { endCall(); return; }

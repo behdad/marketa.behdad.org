@@ -7294,7 +7294,6 @@ document.addEventListener("click", function (e) {
     if (birdCtx) {
       var ctx = birdCtx;
       birdCtx = null; // null first so a racing scheduleChirp callback bails
-      setTimeout(function () { try { ctx.close(); } catch (e) {} }, 150);
     }
   }
   // (re)evaluate the gate and start/stop accordingly — same shape as __updateFireSound:
@@ -11332,7 +11331,7 @@ document.addEventListener("click", function (e) {
         if (act === "download") downloadPhoto(blob);
         else if (act === "gmail") { copyImageToClipboard(Promise.resolve(blob)); openGmailCompose(); }
         else if (act === "email") { copyImageToClipboard(Promise.resolve(blob)); openMailto(); }
-        else if (act === "retake") { dismissPolaroidDialog(); runCountdownCapture(); }
+        else if (act === "retake") { dismissPolaroidDialog(); cancelCapture(); } // back to the live view — the visitor presses the shutter themselves
         else if (act === "cancel") dismissPolaroidDialog();
       });
     }
@@ -13185,9 +13184,8 @@ var animateCapsSwap = (function () {
 })();
 function playGrindSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var master = ctx.createGain();
     master.gain.value = 0.9;
@@ -13256,14 +13254,12 @@ function playGrindSound() {
       tick.start(at);
       tick.stop(at + 0.04);
     }
-    setTimeout(function () { ctx.close(); }, 1400);
   } catch (e) {}
 }
 function playEmptyGrindSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var master = ctx.createGain();
     master.gain.value = 0.9;
@@ -13308,14 +13304,12 @@ function playEmptyGrindSound() {
       tick.start(t + off);
       tick.stop(t + off + 0.03);
     });
-    setTimeout(function () { ctx.close(); }, 800);
   } catch (e) {}
 }
 function playBrewSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var master = ctx.createGain();
     master.gain.value = 0.9;
@@ -13375,14 +13369,12 @@ function playBrewSound() {
     [0.5, 0.75, 1.05, 1.9, 2.1].forEach(function (at) {
       waterBubble(ctx, master, t + at + Math.random() * 0.08, 500 + Math.random() * 500, 0.025 + Math.random() * 0.02, 0.035);
     });
-    setTimeout(function () { ctx.close(); }, 2700);
   } catch (e) {}
 }
 function playThunderSound(volume) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     // everything sums into a master gain so the whole clap can be scaled — quiet
     // when heard through a window from another room, fuller out on the balcony
@@ -13492,7 +13484,6 @@ function playThunderSound(volume) {
     sub.start(t + 0.02);
     sub.stop(t + 5.8);
 
-    setTimeout(function () { ctx.close(); }, 6200);
   } catch (e) {}
 }
 // Quiet cricket night-ambience: 2-3 layered "crickets", each a narrow-bandpass
@@ -13501,9 +13492,8 @@ function playThunderSound(volume) {
 // chirp, closed right after it finishes — see scheduleCrickets for the loop/gates.
 function playCricketChirp() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t0 = ctx.currentTime;
     var master = ctx.createGain();
     master.gain.value = 0.04; // ambient, barely-there
@@ -13548,14 +13538,12 @@ function playCricketChirp() {
       if (tt > maxEnd) maxEnd = tt;
     }
     var closeMs = Math.ceil((maxEnd - t0) * 1000) + 140;
-    setTimeout(function () { try { ctx.close(); } catch (e) {} }, closeMs);
   } catch (e) {}
 }
 function playFinishMelody() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t0 = ctx.currentTime;
     var master = ctx.createGain();
     master.gain.value = 0.9;
@@ -13607,14 +13595,12 @@ function playFinishMelody() {
     root.start(t0);
     root.stop(t0 + 3.3);
 
-    setTimeout(function () { ctx.close(); }, 3800);
   } catch (e) {}
 }
 function playSparkSound(panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var out = pannedOut(ctx, panId);
     var osc = ctx.createOscillator();
@@ -13628,14 +13614,12 @@ function playSparkSound(panId) {
     gain.connect(out);
     osc.start(t);
     osc.stop(t + 0.22);
-    setTimeout(function () { ctx.close(); }, 400);
   } catch (e) {}
 }
 function playPluckSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     [0, 0.09, 0.18].forEach(function (t0, i) {
       var freq = [329.6, 392.0, 493.9][i];
@@ -13651,7 +13635,6 @@ function playPluckSound() {
       osc.start(t + t0);
       osc.stop(t + t0 + 0.65);
     });
-    setTimeout(function () { ctx.close(); }, 900);
   } catch (e) {}
 }
 function spawnCloudRain(svg, cx, cy) {
@@ -14398,9 +14381,8 @@ function spawnHearts(svg, cx, cy) {
 }
 function playGiggleSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
 
     // A giggle is a rapid run of voiced, breathy "he" pulses — not a melody.
@@ -14467,14 +14449,12 @@ function playGiggleSound() {
       noise.start(start);
       noise.stop(start + 0.08);
     });
-    setTimeout(function () { ctx.close(); }, 800);
   } catch (e) {}
 }
 function playHeartsSound(panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var out = pannedOut(ctx, panId);
     [[0, 587.33], [0.14, 783.99], [0.28, 987.77]].forEach(function (pair) {
@@ -14491,14 +14471,12 @@ function playHeartsSound(panId) {
       osc.start(t + t0);
       osc.stop(t + t0 + 0.55);
     });
-    setTimeout(function () { ctx.close(); }, 900);
   } catch (e) {}
 }
 function playTripMelody(variant) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t0 = ctx.currentTime;
     // how long each variant runs, and a two-sweep swirl over exactly that — wide, and
     // starting from a random side (see swirlBus); note() feeds every voice into the swirl.
@@ -14590,7 +14568,6 @@ function playTripMelody(variant) {
       td.connect(tgn); tgn.connect(bus);
       td.start(tailT); td.stop(tailT + 2.3);
     }
-    setTimeout(function () { ctx.close(); }, dur * 1000 + 800);
   } catch (e) {}
 }
 var TRIP_VARIANTS = ["psychedelic", "strobe", "melt", "molly", "ketamine"];
@@ -14867,9 +14844,8 @@ function waterBubble(ctx, dest, start, f0, dur, level) {
 }
 function playWaterSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var master = ctx.createGain();
     master.gain.value = 0.9;
@@ -14878,14 +14854,12 @@ function playWaterSound() {
       waterBubble(ctx, master, t + Math.random() * 0.34,
         600 + Math.random() * 1800, 0.02 + Math.random() * 0.035, 0.05 + Math.random() * 0.04);
     }
-    setTimeout(function () { ctx.close(); }, 600);
   } catch (e) {}
 }
 function playDryClickSound(panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var out = pannedOut(ctx, panId);
     var osc = ctx.createOscillator();
@@ -14904,14 +14878,12 @@ function playDryClickSound(panId) {
     gain.connect(out);
     osc.start(t);
     osc.stop(t + 0.12);
-    setTimeout(function () { ctx.close(); }, 300);
   } catch (e) {}
 }
 function playCandleLightSound(panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     panId = panId || "garden-candle-1";
     var strikeDur = 0.16;
@@ -14972,14 +14944,12 @@ function playCandleLightSound(panId) {
     gain.connect(pannedOut(ctx, panId));
     noise.start(flareStart);
     noise.stop(flareStart + 0.35);
-    setTimeout(function () { ctx.close(); }, 700);
   } catch (e) {}
 }
 function playIncenseLightSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
 
     // Lighting a smudge stick: a soft, dull catch (not a bright match strike),
@@ -15041,7 +15011,6 @@ function playIncenseLightSound() {
     smolder.start(t + 0.04);
     smolder.stop(t + 0.04 + sDur + 0.02);
 
-    setTimeout(function () { ctx.close(); }, 800);
   } catch (e) {}
 }
 function pufferColorRatio() {
@@ -15092,9 +15061,8 @@ function playChopSound(pitchMult, hitCount, panId) {
   pitchMult = pitchMult || 1;
   hitCount = hitCount || 3;
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var out = pannedOut(ctx, panId);
     var offsets = [];
@@ -15118,14 +15086,12 @@ function playChopSound(pitchMult, hitCount, panId) {
       noise.start(t + t0);
       noise.stop(t + t0 + 0.09);
     });
-    setTimeout(function () { ctx.close(); }, 600);
   } catch (e) {}
 }
 function playTampSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var bufferSize = ctx.sampleRate * 0.1;
     var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -15155,14 +15121,12 @@ function playTampSound() {
     thudGain.connect(pannedOut(ctx, "kitchen-tamper"));
     thud.start(t);
     thud.stop(t + 0.11);
-    setTimeout(function () { ctx.close(); }, 400);
   } catch (e) {}
 }
 function playMetalClinkSound(pitchMult, panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var mult = pitchMult || 1;
     // panId can be {from, to}: sweep the pan across the ring-down (a thrown/dragged-back
@@ -15211,7 +15175,6 @@ function playMetalClinkSound(pitchMult, panId) {
     ng.connect(out);
     noise.start(t);
     noise.stop(t + 0.03);
-    setTimeout(function () { ctx.close(); }, 400);
   } catch (e) {}
 }
 // The balcony windchime, hanging under the wall lamp: 2-4 of its 4 tubes ring at once,
@@ -15233,9 +15196,8 @@ function playMetalClinkSound(pitchMult, panId) {
 // same "fainter, muffled" treatment the rain/city-hum bleed-throughs already use.
 function playWindchimeSound(stormy, throughDoor) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var out = pannedOut(ctx, throughDoor ? "cuddly-balcony-door" : "balcony-windchime");
     if (throughDoor) {
@@ -15296,14 +15258,12 @@ function playWindchimeSound(stormy, throughDoor) {
       noise.start(onset);
       noise.stop(onset + 0.02);
     });
-    setTimeout(function () { ctx.close(); }, 2200);
   } catch (e) {}
 }
 function playPourSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var dur = 0.6;
     var master = ctx.createGain();
@@ -15333,14 +15293,12 @@ function playPourSound() {
       waterBubble(ctx, master, t + Math.random() * (dur - 0.05),
         400 + Math.random() * 1600, 0.015 + Math.random() * 0.04, 0.03 + Math.random() * 0.04);
     }
-    setTimeout(function () { ctx.close(); }, 900);
   } catch (e) {}
 }
 function playSipSound(panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var out = pannedOut(ctx, panId);
     var dur = 0.34;
@@ -15373,8 +15331,33 @@ function playSipSound(panId) {
       waterBubble(ctx, master, t + 0.02 + Math.random() * 0.28,
         250 + Math.random() * 700, 0.02 + Math.random() * 0.03, 0.04 + Math.random() * 0.03);
     }
-    setTimeout(function () { ctx.close(); }, 600);
   } catch (e) {}
+}
+// ── Shared effects AudioContext ─────────────────────────────────────────────
+// Every one-shot effect used to spin up its own AudioContext and close it after
+// its envelope — dozens of OS audio-stream connects/disconnects a minute, which
+// Chrome's audio service can audibly glitch on (Linux especially; PipeWire's own
+// xrun counters stay clean, the discontinuity is Chrome-side). All one-shots now
+// share ONE lazily-created context: a single stream, connected once, suspended
+// after ~15s of quiet so an idle page holds no live output stream.
+var sfxCtx = null, sfxCtxFailed = false, sfxIdleTimer = null;
+function getSfxCtx() {
+  if (sfxCtxFailed) return null;
+  if (!sfxCtx) {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) { sfxCtxFailed = true; return null; }
+      sfxCtx = new Ctx();
+      // leftover per-effect close() calls must never kill the shared context
+      sfxCtx.close = function () { return Promise.resolve(); };
+    } catch (e) { sfxCtxFailed = true; return null; }
+  }
+  try { if (sfxCtx.state !== "running") { var rp = sfxCtx.resume(); if (rp && rp.catch) rp.catch(function () {}); } } catch (e) {}
+  clearTimeout(sfxIdleTimer);
+  sfxIdleTimer = setTimeout(function () {
+    try { if (sfxCtx && sfxCtx.state === "running") { var sp = sfxCtx.suspend(); if (sp && sp.catch) sp.catch(function () {}); } } catch (e) {}
+  }, 15000);
+  return sfxCtx;
 }
 // ── Stereo panning ──────────────────────────────────────────────────────────
 // Place a sound effect in the stereo field to match where its object sits on the
@@ -15462,9 +15445,8 @@ function swirlBus(ctx, t0, dur, cycles, depth) {
 }
 function playGongSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var master = ctx.createGain();
     master.gain.value = 0.5;
@@ -15561,15 +15543,13 @@ function playGongSound() {
     noise.start(t);
     noise.stop(t + 0.16);
 
-    setTimeout(function () { ctx.close(); }, 7300);
   } catch (e) {}
 }
 function playGongEchoSound(fade) {
   fade = fade || 1;
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var out = pannedOut(ctx, "kitchen-gong"); // stereo: echoes track the gong's position too
 
@@ -15620,14 +15600,12 @@ function playGongEchoSound(fade) {
     src.start(t);
     src.stop(t + dur);
 
-    setTimeout(function () { ctx.close(); }, 3100);
   } catch (e) {}
 }
 function playSatisfiedExhaleSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var dur = 1.0;
 
@@ -15681,15 +15659,13 @@ function playSatisfiedExhaleSound() {
     gain.connect(pannedOut(ctx, "kitchen-shotcup"));
     noise.start(t);
     noise.stop(t + dur + 0.02);
-    setTimeout(function () { ctx.close(); }, 1200);
   } catch (e) {}
 }
 function playRoosterCrowSound(intensity) {
   intensity = intensity || 1;
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var master = ctx.createGain();
     master.gain.value = 0.9;
@@ -15739,14 +15715,12 @@ function playRoosterCrowSound(intensity) {
     syllable(0.31, 0.14, 520, 540, 0.18, false); // doodle
     syllable(0.47, 0.42, 540, 360, 0.17, true);  // dooooo (long, raspy, falling)
 
-    setTimeout(function () { ctx.close(); }, 1100);
   } catch (e) {}
 }
 function playFartSound(pitchMult, durMult) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var p = pitchMult || 1;
     var dur = 0.55 * (durMult || 1);
@@ -15778,14 +15752,12 @@ function playFartSound(pitchMult, durMult) {
     gain.connect(pannedOut(ctx, "cuddly-behdad-bottom"));
     osc.start(t);
     osc.stop(t + dur + 0.05);
-    setTimeout(function () { ctx.close(); }, (dur + 0.3) * 1000);
   } catch (e) {}
 }
 function playLaptopClickSound(panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var out = pannedOut(ctx, panId);
     var osc = ctx.createOscillator();
@@ -15799,16 +15771,14 @@ function playLaptopClickSound(panId) {
     gain.connect(out);
     osc.start(t);
     osc.stop(t + 0.05);
-    setTimeout(function () { ctx.close(); }, 200);
   } catch (e) {}
 }
 // A short synthesized ring for the "call Prague" gag: two brief dual-tone warbles,
 // then the context closes itself — no loop, no timer left running.
 function playMollyArpCycle(pan) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t0 = ctx.currentTime;
     var out = pannedOut(ctx, typeof pan === "number" ? pan : 0);
     // one cycle of molly's warm arpeggio, played from wherever a kiss (heart) bursts
@@ -15824,14 +15794,12 @@ function playMollyArpCycle(pan) {
       osc.connect(g); g.connect(out);
       osc.start(t); osc.stop(t + 1.9);
     });
-    setTimeout(function () { ctx.close(); }, 2200);
   } catch (e) {}
 }
 function playPlushSquishSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var out = pannedOut(ctx, "cuddly-octopus");
     // a soft plush squeeze: a low sine that bends down quickly, plus a muffled fabric puff
@@ -15854,14 +15822,12 @@ function playPlushSquishSound() {
     var ng = ctx.createGain(); ng.gain.value = 0.04;
     src.connect(lp); lp.connect(ng); ng.connect(out);
     src.start(t); src.stop(t + 0.13);
-    setTimeout(function () { ctx.close(); }, 400);
   } catch (e) {}
 }
 function playTrunkOpenSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var out = pannedOut(ctx, "cuddly-trunk");
     // a short wooden creak (band-passed noise sweeping up as the lid swings) + a soft low thud
@@ -15888,14 +15854,12 @@ function playTrunkOpenSound() {
     tg.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
     thud.connect(tg); tg.connect(out);
     thud.start(t + 0.04); thud.stop(t + 0.42);
-    setTimeout(function () { ctx.close(); }, 600);
   } catch (e) {}
 }
 function playButterflyFlutterSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t0 = ctx.currentTime;
     var out = pannedOut(ctx, "office-stainedglass");
     // two soft airy wing-beats: short band-passed noise puffs that swell and fall quickly
@@ -15919,14 +15883,12 @@ function playButterflyFlutterSound() {
       src.start(t);
       src.stop(t + 0.13);
     });
-    setTimeout(function () { ctx.close(); }, 500);
   } catch (e) {}
 }
 function playPhoneRingSound(panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t0 = ctx.currentTime;
     [0, 0.7].forEach(function (start) {
       var t = t0 + start;
@@ -15946,7 +15908,6 @@ function playPhoneRingSound(panId) {
       osc.start(t);
       osc.stop(t + 0.45);
     });
-    setTimeout(function () { ctx.close(); }, 1300);
   } catch (e) {}
 }
 // A tiny formant-synth "alo?" — the balcony phone answering itself when tapped.
@@ -15959,9 +15920,8 @@ function playPhoneRingSound(panId) {
 // One-shot, self-closing ctx, no timer/loop left running (no accumulation risk).
 function playPhoneVoiceSound(panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t0 = ctx.currentTime;
     var out = pannedOut(ctx, panId || "balcony-phone");
 
@@ -16049,16 +16009,14 @@ function playPhoneVoiceSound(panId) {
     noise.start(t0);
     noise.stop(t0 + 0.64);
 
-    setTimeout(function () { ctx.close(); }, 900);
   } catch (e) {}
 }
 // A synthesized "I love you" (formant synthesis, same technique as playPhoneVoiceSound but
 // gliding through three words) — the Prague call's answer. Deliberately a soft robotic voice.
 function playILoveYouSound(panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t0 = ctx.currentTime;
     var out = pannedOut(ctx, panId || "office-laptop");
     var source = ctx.createGain(); source.gain.value = 1;
@@ -16132,7 +16090,6 @@ function playILoveYouSound(panId) {
     bg.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.14);
     bsrc.connect(bf); bf.connect(bg); bg.connect(out);
     bsrc.start(t0); bsrc.stop(t0 + 1.16);
-    setTimeout(function () { ctx.close(); }, 1500);
   } catch (e) {}
 }
 // Shared by playCallLaughSound's connect moment and the ongoing ambient loop below:
@@ -16160,9 +16117,8 @@ function spawnGiggleVoices(ctx, master, t0, loud) {
 // video-call noise bed — warm and playful, then the context closes itself.
 function playCallLaughSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t0 = ctx.currentTime;
     var master = ctx.createGain(); master.gain.value = 0.55; master.connect(pannedOut(ctx, "office-laptop"));
     // soft "connection" noise bed
@@ -16179,7 +16135,6 @@ function playCallLaughSound() {
     noise.connect(nf); nf.connect(ng); ng.connect(master);
     noise.start(t0); noise.stop(t0 + 2.0);
     spawnGiggleVoices(ctx, master, t0, true);
-    setTimeout(function () { ctx.close(); }, 2400);
   } catch (e) {}
 }
 // The ongoing bed for as long as the call stays connected: a quiet video-call static
@@ -16201,9 +16156,8 @@ function buildCallAmbient() {
   teardownCallAmbient(); // never run two beds at once
   if (!document.hasFocus()) return; // unattended window: stay silent until refocus
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var master = ctx.createGain(); master.gain.value = 0.5; master.connect(pannedOut(ctx, "office-laptop"));
 
     var slen = Math.floor(ctx.sampleRate * 2);
@@ -16262,9 +16216,8 @@ window.__updateCallAmbient = function () {
 // ascending ring — a "call ended" cue distinct from every other laptop sound here.
 function playCallHangupSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var master = ctx.createGain(); master.gain.value = 0.5; master.connect(pannedOut(ctx, "office-laptop"));
     [{ f0: 480, f1: 420, at: 0 }, { f0: 420, f1: 320, at: 0.14 }].forEach(function (tone) {
@@ -16279,16 +16232,14 @@ function playCallHangupSound() {
       osc.connect(g); g.connect(master);
       osc.start(tt); osc.stop(tt + 0.2);
     });
-    setTimeout(function () { ctx.close(); }, 700);
   } catch (e) {}
 }
 // The monitor's power-on jingle: a low CRT swell under a soft rising arpeggio,
 // like a friendly Linux desktop finishing its boot.
 function playBootChimeSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     // low power-on swell (the machine waking)
     var hum = ctx.createOscillator();
@@ -16318,15 +16269,13 @@ function playBootChimeSound() {
       osc.start(t0);
       osc.stop(t0 + 0.75);
     });
-    setTimeout(function () { ctx.close(); }, 1400);
   } catch (e) {}
 }
 // A soft grilling sizzle: high-passed crackly noise, ~0.7s.
 function playCoughSound(pitch) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     // One cough = a hard glottal burst that opens into turbulent air whose
     // resonance sweeps down the throat, over a short voiced grunt that pitch-drops.
     function cough(t, pitch, level) {
@@ -16371,14 +16320,12 @@ function playCoughSound(pitch) {
       osc.start(t); osc.stop(t + 0.16);
     }
     cough(ctx.currentTime, pitch || 1.0, 1.0);
-    setTimeout(function () { ctx.close(); }, 500);
   } catch (e) {}
 }
 function playSneezeSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     // inhale build-up: airy noise rising in pitch
     var bdur = 0.16, bn = Math.floor(ctx.sampleRate * bdur);
@@ -16403,14 +16350,12 @@ function playSneezeSound() {
     var olp = ctx.createBiquadFilter(); olp.type = "lowpass"; olp.frequency.value = 1500;
     var og = ctx.createGain(); og.gain.setValueAtTime(0.0001, ct); og.gain.exponentialRampToValueAtTime(0.12, ct + 0.01); og.gain.exponentialRampToValueAtTime(0.0001, ct + 0.16);
     osc.connect(olp); olp.connect(og); og.connect(pannedOut(ctx, "cuddly-octopus")); osc.start(ct); osc.stop(ct + 0.18);
-    setTimeout(function () { ctx.close(); }, 700);
   } catch (e) {}
 }
 function playBlubSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var osc = ctx.createOscillator(); osc.type = "sine";
     osc.frequency.setValueAtTime(220, t); osc.frequency.exponentialRampToValueAtTime(620, t + 0.12);
@@ -16419,7 +16364,6 @@ function playBlubSound() {
     g.gain.exponentialRampToValueAtTime(0.12, t + 0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
     osc.connect(g); g.connect(pannedOut(ctx, "cuddly-puffer-wrap")); osc.start(t); osc.stop(t + 0.18);
-    setTimeout(function () { ctx.close(); }, 300);
   } catch (e) {}
 }
 // The ambient bubble Fishu blows now and then gets a soft, quiet "bloop" — a short sine
@@ -16427,9 +16371,8 @@ function playBlubSound() {
 // louder playBlubSound is reserved for the reactive cough-bubble).
 function playBubbleSound(panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var osc = ctx.createOscillator(); osc.type = "sine";
     osc.frequency.setValueAtTime(300, t);
@@ -16440,14 +16383,12 @@ function playBubbleSound(panId) {
     g.gain.exponentialRampToValueAtTime(0.04, t + 0.012);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
     osc.connect(g); g.connect(pannedOut(ctx, panId)); osc.start(t); osc.stop(t + 0.1);
-    setTimeout(function () { ctx.close(); }, 300);
   } catch (e) {}
 }
 function playSizzleSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var dur = 0.8;
     var sr = ctx.sampleRate;
@@ -16484,14 +16425,12 @@ function playSizzleSound() {
     gain.connect(pannedOut(ctx, "balcony-smoker"));
     noise.start(t);
     noise.stop(t + dur);
-    setTimeout(function () { ctx.close(); }, (dur + 0.1) * 1000);
   } catch (e) {}
 }
 function playPackDropSound(panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var out = pannedOut(ctx, panId);
     var bufferSize = ctx.sampleRate * 0.12;
@@ -16513,14 +16452,12 @@ function playPackDropSound(panId) {
     gain.connect(out);
     noise.start(t);
     noise.stop(t + 0.13);
-    setTimeout(function () { ctx.close(); }, 300);
   } catch (e) {}
 }
 function playMouseSqueakSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var squeaks = [
       { t0: 0.0,  base: 2500, dur: 0.09 },
@@ -16578,14 +16515,12 @@ function playMouseSqueakSound() {
       noise.start(start);
       noise.stop(end + 0.02);
     });
-    setTimeout(function () { ctx.close(); }, 500);
   } catch (e) {}
 }
 function playBowlRingSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var master = ctx.createGain();
     master.gain.value = 0.5;
@@ -16634,14 +16569,12 @@ function playBowlRingSound() {
     noise.start(t);
     noise.stop(t + 0.07);
 
-    setTimeout(function () { ctx.close(); }, 7800);
   } catch (e) {}
 }
 function playGeniePoofSound(reverse, panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var out = pannedOut(ctx, panId);
     var bufferSize = ctx.sampleRate * 0.3;
@@ -16679,14 +16612,12 @@ function playGeniePoofSound(reverse, panId) {
       osc.start(t0);
       osc.stop(t0 + 0.65);
     });
-    setTimeout(function () { ctx.close(); }, 1200);
   } catch (e) {}
 }
 function playLampShimmerSound(panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var out = pannedOut(ctx, panId);
     [1046.5, 1318.5, 1568, 2093].forEach(function (freq, i) {
@@ -16703,7 +16634,6 @@ function playLampShimmerSound(panId) {
       osc.start(t0);
       osc.stop(t0 + 0.55);
     });
-    setTimeout(function () { ctx.close(); }, 900);
   } catch (e) {}
 }
 // the day<->night toggle: a soft, warm three-note bell chime (sine fundamental + a lightly
@@ -16712,9 +16642,8 @@ function playLampShimmerSound(panId) {
 // rather than a piercing twinkle.
 function playDayNightChime(toNight, panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t0 = ctx.currentTime;
     var out = pannedOut(ctx, panId);
     function bell(f, t, peak, dur) {
@@ -16737,15 +16666,13 @@ function playDayNightChime(toNight, panId) {
     var notes = toNight ? [784, 659, 523] : [523, 659, 784];
     var peak = toNight ? 0.042 : 0.048;
     notes.forEach(function (f, i) { bell(f, t0 + i * 0.13, peak * (1 - i * 0.1), 1.3); });
-    setTimeout(function () { try { ctx.close(); } catch (e) {} }, 1900);
   } catch (e) {}
 }
 function playChairWhirlSound(pitchMult) {
   pitchMult = pitchMult || 1;
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var osc = ctx.createOscillator();
     osc.type = "triangle";
@@ -16760,14 +16687,12 @@ function playChairWhirlSound(pitchMult) {
     gain.connect(pannedOut(ctx, "office-chair"));
     osc.start(t);
     osc.stop(t + 0.81);
-    setTimeout(function () { ctx.close(); }, 900);
   } catch (e) {}
 }
 function playDeskMotorSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var osc = ctx.createOscillator();
     osc.type = "square";
@@ -16781,14 +16706,12 @@ function playDeskMotorSound() {
     gain.connect(pannedOut(ctx, "office-desk"));
     osc.start(t);
     osc.stop(t + 0.7);
-    setTimeout(function () { ctx.close(); }, 800);
   } catch (e) {}
 }
 function playFairyChimeSound(panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t0 = ctx.currentTime;
     var out = pannedOut(ctx, panId);
     // A glitter cascade: a fast rising pentatonic run of tiny bells with
@@ -16836,14 +16759,12 @@ function playFairyChimeSound(panId) {
     sg.connect(out);
     sheen.start(t0);
     sheen.stop(t0 + sheenDur + 0.02);
-    setTimeout(function () { ctx.close(); }, 2200);
   } catch (e) {}
 }
 function playCatMeowSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var dur = 0.5;
 
@@ -16897,14 +16818,12 @@ function playCatMeowSound() {
 
     osc.start(t);
     osc.stop(t + dur + 0.02);
-    setTimeout(function () { ctx.close(); }, 700);
   } catch (e) {}
 }
 function playGhostBooSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var dur = 0.7;
 
@@ -17011,16 +16930,14 @@ function playGhostBooSound() {
     noise.start(t);
     noise.stop(t + dur + 0.02);
 
-    setTimeout(function () { ctx.close(); }, 850);
   } catch (e) {}
 }
 // The ketamine-trip ghost breathes a whispered "cool" — unvoiced (no pitch), so it's
 // filtered NOISE through gliding /k-uu-l/ vowel formants: breathy and eerie, quiet.
 function playGhostWhisperSound(panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t0 = ctx.currentTime;
     var out = pannedOut(ctx, panId || "rsvp-trip-ghost");
     var dur = 0.95;
@@ -17071,14 +16988,12 @@ function playGhostWhisperSound(panId) {
     kG.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.045);
     kSrc.connect(kBp); kBp.connect(kG); kG.connect(soften);
     kSrc.start(t0); kSrc.stop(t0 + 0.06);
-    setTimeout(function () { ctx.close(); }, 1200);
   } catch (e) {}
 }
 function playCreakSound(panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var dur = 0.42;
     var out = pannedOut(ctx, panId);
@@ -17157,14 +17072,12 @@ function playCreakSound(panId) {
 
     osc.start(t);
     osc.stop(t + dur + 0.02);
-    setTimeout(function () { ctx.close(); }, 550);
   } catch (e) {}
 }
 function playSweepSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     [0, 0.22, 0.44].forEach(function (offset) {
       var t = ctx.currentTime + offset;
       var bufferSize = ctx.sampleRate * 0.2;
@@ -17190,14 +17103,12 @@ function playSweepSound() {
       noise.start(t);
       noise.stop(t + 0.2);
     });
-    setTimeout(function () { ctx.close(); }, 800);
   } catch (e) {}
 }
 function playSwishSound(panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var out = pannedOut(ctx, panId);
     var bufferSize = ctx.sampleRate * 0.4;
@@ -17220,14 +17131,12 @@ function playSwishSound(panId) {
     gain.connect(out);
     noise.start(t);
     noise.stop(t + 0.4);
-    setTimeout(function () { ctx.close(); }, 500);
   } catch (e) {}
 }
 function playCanCrushSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var bufferSize = ctx.sampleRate * 0.35;
     var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -17249,7 +17158,6 @@ function playCanCrushSound() {
     gain.connect(pannedOut(ctx, "balcony-can"));
     noise.start(t);
     noise.stop(t + 0.35);
-    setTimeout(function () { ctx.close(); }, 450);
   } catch (e) {}
 }
 function playKnockboxThumpSound() {
@@ -17260,9 +17168,8 @@ function playKnockboxThumpSound() {
     knockboxEl.classList.add("jumping");
   }
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     [0, 0.16].forEach(function (offset) {
       var t = ctx.currentTime + offset;
       var bufferSize = ctx.sampleRate * 0.06;
@@ -17296,14 +17203,12 @@ function playKnockboxThumpSound() {
       osc.start(t);
       osc.stop(t + 0.15);
     });
-    setTimeout(function () { ctx.close(); }, 500);
   } catch (e) {}
 }
 function playTongsClackSound(panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var out = pannedOut(ctx, panId);
     var osc = ctx.createOscillator();
@@ -17318,14 +17223,12 @@ function playTongsClackSound(panId) {
     gain.connect(out);
     osc.start(t);
     osc.stop(t + 0.09);
-    setTimeout(function () { ctx.close(); }, 200);
   } catch (e) {}
 }
 function playChanterTootSound(freq) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var osc = ctx.createOscillator();
     osc.type = "sawtooth";
@@ -17343,14 +17246,12 @@ function playChanterTootSound(freq) {
     gain.connect(pannedOut(ctx, "garden-chanter"));
     osc.start(t);
     osc.stop(t + 0.38);
-    setTimeout(function () { ctx.close(); }, 500);
   } catch (e) {}
 }
 function playOutletBuzzSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var osc = ctx.createOscillator();
     osc.type = "sawtooth";
@@ -17364,14 +17265,12 @@ function playOutletBuzzSound() {
     gain.connect(pannedOut(ctx, "cuddly-outlet"));
     osc.start(t);
     osc.stop(t + 0.46);
-    setTimeout(function () { ctx.close(); }, 550);
   } catch (e) {}
 }
 function playPaperShuffleSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     [0, 0.24, 0.48].forEach(function (offset) {
       var t = ctx.currentTime + offset;
       var bufferSize = ctx.sampleRate * 0.28;
@@ -17395,14 +17294,12 @@ function playPaperShuffleSound() {
       noise.start(t);
       noise.stop(t + 0.28);
     });
-    setTimeout(function () { ctx.close(); }, 900);
   } catch (e) {}
 }
 function playHeadphoneBassRiff() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t0 = ctx.currentTime;
     var out = pannedOut(ctx, "office-headphones");
     // a few plucky low notes
@@ -17429,14 +17326,12 @@ function playHeadphoneBassRiff() {
     bg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.35);
     boom.connect(bg); bg.connect(out);
     boom.start(t0); boom.stop(t0 + 0.4);
-    setTimeout(function () { ctx.close(); }, 900);
   } catch (e) {}
 }
 function playAshtraySpinSound(panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var out = pannedOut(ctx, panId);
     var bufferSize = ctx.sampleRate * 1;
@@ -17461,16 +17356,14 @@ function playAshtraySpinSound(panId) {
     gain.connect(out);
     noise.start(t);
     noise.stop(t + 1);
-    setTimeout(function () { ctx.close(); }, 1100);
   } catch (e) {}
 }
 // A faint trickle bed under a few random higher plink "drips", timed to roughly
 // match the ~2.8s drain in window.__leakWaterBottle (rsvp.html kitchen).
 function playWaterLeakSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t0 = ctx.currentTime;
     var dur = 2.8;
     var out = pannedOut(ctx, "kitchen-waterbottle");
@@ -17512,7 +17405,6 @@ function playWaterLeakSound() {
       osc.start(at);
       osc.stop(at + 0.15);
     }
-    setTimeout(function () { ctx.close(); }, (dur + 0.3) * 1000);
   } catch (e) {}
 }
 // when the SodaStream is smashed, the pressurized CO2 canister blows out all at once:
@@ -17520,9 +17412,8 @@ function playWaterLeakSound() {
 // off (bright -> deep whoosh), trailing into a few dying sputters as it empties.
 function playSodaDepressurizeSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t0 = ctx.currentTime;
     var DUR = 2.0;
     var master = ctx.createGain();
@@ -17579,14 +17470,12 @@ function playSodaDepressurizeSound() {
       s.connect(f); f.connect(sg); sg.connect(master);
       s.start(t0 + at); s.stop(t0 + at + 0.12);
     });
-    setTimeout(function () { try { ctx.close(); } catch (e) {} }, (DUR + 0.3) * 1000);
   } catch (e) {}
 }
 function playGlassClinkSound(pitchMult, panId) {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var mult = pitchMult || 1;
     var out = pannedOut(ctx, panId);
@@ -17621,14 +17510,12 @@ function playGlassClinkSound(pitchMult, panId) {
       osc.start(t);
       osc.stop(t + p.d + 0.03);
     });
-    setTimeout(function () { ctx.close(); }, 600);
   } catch (e) {}
 }
 function playSodaHissSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t0 = ctx.currentTime;
     var master = ctx.createGain();
     master.gain.value = 0.85;
@@ -17726,14 +17613,12 @@ function playSodaHissSound() {
     ts.start(tail);
     ts.stop(tail + tailDur + 0.02);
 
-    setTimeout(function () { ctx.close(); }, 2600);
   } catch (e) {}
 }
 function playSteamWandHissSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var bufferSize = ctx.sampleRate * 0.35;
     var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -17753,14 +17638,12 @@ function playSteamWandHissSound() {
     gain.connect(pannedOut(ctx, "kitchen-steamwand"));
     noise.start(t);
     noise.stop(t + 0.35);
-    setTimeout(function () { ctx.close(); }, 500);
   } catch (e) {}
 }
 function playExtinguisherHissSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var bufferSize = ctx.sampleRate * 0.6;
     var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -17780,14 +17663,12 @@ function playExtinguisherHissSound() {
     gain.connect(pannedOut(ctx, "kitchen-extinguisher"));
     noise.start(t);
     noise.stop(t + 0.6);
-    setTimeout(function () { ctx.close(); }, 800);
   } catch (e) {}
 }
 function playBassBoomSound() {
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     var osc = ctx.createOscillator();
     osc.type = "sine";
@@ -17801,15 +17682,13 @@ function playBassBoomSound() {
     gain.connect(ctx.destination);
     osc.start(t);
     osc.stop(t + 0.45);
-    setTimeout(function () { ctx.close(); }, 600);
   } catch (e) {}
 }
 function playTypewriterSound(pitchMult) {
   pitchMult = pitchMult || 1;
   try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
+    var ctx = getSfxCtx();
+    if (!ctx) return;
     var t = ctx.currentTime;
     [[0, 1500], [0.09, 950]].forEach(function (pair) {
       var t0 = pair[0], freq = pair[1] * pitchMult;
@@ -17825,7 +17704,6 @@ function playTypewriterSound(pitchMult) {
       osc.start(t + t0);
       osc.stop(t + t0 + 0.06);
     });
-    setTimeout(function () { ctx.close(); }, 400);
   } catch (e) {}
 }
 function spawnWaterDroplets(svg, cx, cy) {

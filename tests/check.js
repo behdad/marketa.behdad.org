@@ -539,9 +539,18 @@ function checkAudioFadeCloseRace(file, script) {
         issues.push(name + ": no such function found — renamed? update FADE_STOP_FNS so the room-gated stops stay covered");
       }
     });
-    // floor so parser rot can't silently drop the constants tier to zero coverage
-    if (constChecked < 20) {
-      issues.push("constants tier only matched " + constChecked + " function(s) (expected >= 20) — extraction broken?");
+    // floor so parser rot can't silently drop the constants tier to zero coverage.
+    // One-shot effects share a single never-closed AudioContext (getSfxCtx), so only
+    // the persistent beds' teardowns still pair a close timer with a fade ramp.
+    if (constChecked < 2) {
+      issues.push("constants tier only matched " + constChecked + " function(s) (expected >= 2) — extraction broken?");
+    }
+    // the shared-context invariant itself: `new Ctx()` is reserved for the persistent
+    // beds/pipeline (and getSfxCtx). A one-shot spinning up its own context regresses
+    // the stream-churn fix — new effects must use getSfxCtx().
+    var ctxSites = (script.match(/new Ctx\(\)/g) || []).length;
+    if (ctxSites > 11) {
+      issues.push("found " + ctxSites + " `new Ctx()` sites (expected <= 11: the beds, the song pipeline, and getSfxCtx) — one-shot effects must use getSfxCtx()");
     }
   }
   if (issues.length === 0) {

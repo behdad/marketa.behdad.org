@@ -10522,6 +10522,25 @@ document.addEventListener("click", function (e) {
     }
     return idx;
   }
+  // Fade an <audio>'s element volume to a target over ms, then call done. Element
+  // volume applies both to native playback and through createMediaElementSource, so
+  // the fade works with and without the pipeline. One fade per element at a time.
+  function fadeSongTo(a, target, ms, done) {
+    if (!a) { if (done) done(); return; }
+    if (a._fadeTimer) { clearInterval(a._fadeTimer); a._fadeTimer = null; }
+    var from = a.volume, t0 = Date.now();
+    if (ms <= 0 || Math.abs(from - target) < 0.01) {
+      try { a.volume = target; } catch (e) {}
+      if (done) done();
+      return;
+    }
+    a._fadeTimer = setInterval(function () {
+      var f = Math.min(1, (Date.now() - t0) / ms);
+      try { a.volume = from + (target - from) * f; } catch (e) {}
+      if (f >= 1) { clearInterval(a._fadeTimer); a._fadeTimer = null; if (done) done(); }
+    }, 40);
+  }
+  window.__fadeSongTo = fadeSongTo; // shared with the cinematic's song switch
   function monitorSkip(dir) {
     var idx = currentSongIndex();
     if (idx < 0) return;
@@ -10533,15 +10552,22 @@ document.addEventListener("click", function (e) {
     var next = songAudios[(idx + dir + songAudios.length) % songAudios.length];
     if (!next || next === current) return;
     try {
-      current.pause();
-      current.currentTime = 0;
-      next.currentTime = 0;
-      next.volume = window.__songVolume ? window.__songVolume() : 0.5; // app-owned level (monitor speaker button)
-      if (window.__captureSongAudio) window.__captureSongAudio(next);
+      if (window.__captureSongAudio) window.__captureSongAudio(next); // wire inside the gesture, before the fade delays playback
       restartMarquee(); // also covered by updateNowPlaying's title-change check once next
                          // starts playing, but calling it here makes the restart immediate
-      var p = next.play();
-      if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (monitor skip) for " + next.id + ":", e); });
+      var appVol = window.__songVolume ? window.__songVolume() : 0.5; // app-owned level (monitor speaker button)
+      fadeSongTo(current, 0, 320, function () {
+        try {
+          current.pause();
+          current.currentTime = 0;
+          current.volume = appVol; // restore for its next play
+          next.currentTime = 0;
+          next.volume = 0;
+          var p = next.play();
+          if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (monitor skip) for " + next.id + ":", e); });
+          fadeSongTo(next, appVol, 320); // ...and in
+        } catch (e) {}
+      });
     } catch (e) {}
   }
   var prevBtn = document.getElementById("monitor-prev-btn");

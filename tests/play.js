@@ -87,6 +87,8 @@ var RSVP_HARNESS = [
   "    await sleep(340);",                     // let the lid-open toggle (240ms) fire
   "    click(expect('laptop-calltile'));",     // Call Prague — the required finale first step
   "    await sleep(200);",
+  "    click(expect('office-pc-desk-trio'));",  // power the PC — the finale also gates on playing with the computer
+  "    await sleep(200);",
   "    click(expect('office-lamp'));",
   "    click(expect('office-pendant'));",
   "    click(expect('office-stainedglass'));",

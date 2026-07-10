@@ -612,6 +612,41 @@ footer{margin-top:2.6rem}
 #witchy-chest-cat-breathe.napping #witchy-chest-cat-eye-l,
 #witchy-chest-cat-breathe.napping #witchy-chest-cat-eye-r{scale:0}
 @media (prefers-reduced-motion: reduce){#witchy-chest-cat-breathe.napping{animation:none}}
+/* wake-up stretch: a long arch-and-settle right after the chair nap's hop-down lands.
+   Same node as the nap breathing, so it's id-qualified and AFTER the .napping rule to
+   win the cascade while both classes are present; JS removes it on animationend so a
+   leftover class can't block the next nap's breathing loop. */
+#witchy-chest-cat-breathe.stretching{animation:cat-stretch 1.2s ease-in-out}
+@keyframes cat-stretch{
+  0%, 100%{scale:1 1}
+  35%{scale:1.14 0.88}
+  65%{scale:0.96 1.07}
+}
+@media (prefers-reduced-motion: reduce){#witchy-chest-cat-breathe.stretching{animation:none}}
+/* tail flick: a quick up-and-settle swish, its own node so it composes with the
+   walk/groove/breathe wrappers and the cat's click-wobble without contention */
+#witchy-chest-cat-tail{transform-box:fill-box; transform-origin:left bottom}
+#witchy-chest-cat-tail.flicking{animation:cat-tail-flick .9s ease-in-out}
+@keyframes cat-tail-flick{
+  0%, 100%{transform:rotate(0)}
+  30%{transform:rotate(24deg)}
+  55%{transform:rotate(-10deg)}
+  80%{transform:rotate(12deg)}
+}
+@media (prefers-reduced-motion: reduce){#witchy-chest-cat-tail.flicking{animation:none}}
+/* idle slow-blink: both eyes shut for a beat every few seconds. Gated off while
+   napping via :not() rather than cascade order — an animation would out-rank the
+   plain scale:0 eyes-shut declaration the nap look relies on. */
+#witchy-chest-cat-breathe:not(.napping) #witchy-chest-cat-eye-l,
+#witchy-chest-cat-breathe:not(.napping) #witchy-chest-cat-eye-r{animation:cat-slow-blink 7s linear infinite}
+@keyframes cat-slow-blink{
+  0%, 93.5%, 100%{scale:1 1}
+  95.5%, 97.5%{scale:1 0.08}
+}
+@media (prefers-reduced-motion: reduce){
+  #witchy-chest-cat-breathe:not(.napping) #witchy-chest-cat-eye-l,
+  #witchy-chest-cat-breathe:not(.napping) #witchy-chest-cat-eye-r{animation:none}
+}
 #witchy-chest-fairy{transform-box:fill-box; transform-origin:center}
 #witchy-chest-fairy.wobbling{animation:fairy-flutter .7s ease-in-out}
 @keyframes fairy-flutter{
@@ -3894,7 +3929,7 @@ section{margin:1.9rem 0}
 <circle cx="633" cy="267" r="7.5" fill="#161311"/>
 <polygon points="627,262 629,254 633,261" fill="#161311"/>
 <polygon points="639,262 637,254 633,261" fill="#161311"/>
-<path d="M640 280 Q650 282 648 272" fill="none" stroke="#161311" stroke-width="2.5" stroke-linecap="round"/>
+<path id="witchy-chest-cat-tail" d="M640 280 Q650 282 648 272" fill="none" stroke="#161311" stroke-width="2.5" stroke-linecap="round"/>
 <circle id="witchy-chest-cat-eye-l" cx="630" cy="266" r="1.2" fill="#c9e85c"/>
 <circle id="witchy-chest-cat-eye-r" cx="636" cy="266" r="1.2" fill="#c9e85c"/>
 </g>
@@ -13174,11 +13209,17 @@ document.addEventListener("click", function (e) {
     function toggleWitchyDoor() {
       el.classList.toggle("open");
       playCreakSound(id);
-      if (id === "witchy-door-1" && el.classList.contains("open") && cat) { // cat lives behind the moon door
+      // a cat left waiting outside (a reset fired while both doors were shut) slips
+      // back in through whichever door just opened — and that open is "used up" by
+      // the slip-in, so it doesn't also let the cat straight back out below.
+      var catSlippedIn = !!(window.__chestDoorChanged && window.__chestDoorChanged());
+      if (id === "witchy-door-1" && el.classList.contains("open") && cat && !catSlippedIn) { // cat lives behind the moon door
         wobbleEl(cat);
         var catWalk = document.getElementById("witchy-chest-cat-walk");
         // .out = the cat is loose (persists across rooms/resets until the fire-extinguisher);
         // .roaming = the wide garden stroll. Follower rooms swap in .roaming-sm (see __homeCat).
+        // Emergence is gated on THIS door's freshly-read open state — through a shut
+        // chest the cat never comes out (and never goes back in; see __stowCat).
         if (catWalk) catWalk.classList.add("roaming", "out"); // out of the bag — it strolls the garden now
       }
       if (id === "witchy-door-2" && el.classList.contains("open") && fairy) wobbleEl(fairy); // fairy behind the sun door
@@ -17006,6 +17047,45 @@ function playCatMeowSound() {
     osc.stop(t + dur + 0.02);
   } catch (e) {}
 }
+// The cat's staccato hunting chatter (the "kekekeke" cats do at birds), for the
+// rooster stare-down: a short irregular burst of tiny formant-filtered chirps, far
+// quieter than the meow — an under-the-breath sound, not a call. Irregular gaps and
+// per-chirp pitch keep it organic; a trill with even spacing reads as an alarm.
+function playCatChatterSound() {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var master = ctx.createGain();
+    master.gain.value = 1;
+    master.connect(pannedOut(ctx, "witchy-chest-cat"));
+    var n = 5 + Math.floor(Math.random() * 3);
+    var at = 0;
+    for (var i = 0; i < n; i++) {
+      (function (startT) {
+        var osc = ctx.createOscillator();
+        osc.type = "sawtooth";
+        var f = (880 + Math.random() * 260);
+        osc.frequency.setValueAtTime(f, t + startT);
+        osc.frequency.exponentialRampToValueAtTime(f * 0.72, t + startT + 0.045);
+        var bp = ctx.createBiquadFilter();
+        bp.type = "bandpass";
+        bp.Q.value = 5;
+        bp.frequency.value = 1400;
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t + startT);
+        g.gain.exponentialRampToValueAtTime(0.05, t + startT + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + startT + 0.05);
+        osc.connect(bp);
+        bp.connect(g);
+        g.connect(master);
+        osc.start(t + startT);
+        osc.stop(t + startT + 0.06);
+      })(at);
+      at += 0.055 + Math.random() * 0.05;
+    }
+  } catch (e) {}
+}
 function playGhostBooSound() {
   try {
     var ctx = getSfxCtx();
@@ -20389,9 +20469,18 @@ function spawnDustMote(container) {
   // windchime's own local coords, so the cat visually reaches up into the tube cluster
   // rather than floating above the wall-lamp cap it hangs from.
   var windchimeSwatPerch = { x: 181, y: 122 };
+  // The rooster figurine on the garden plant bench (art/#garden-rooster, static at
+  // translate(176,192), bench top y≈232): the cat sits in the bench gap just right of
+  // the rooster's tail fan (which ends near x≈204), nose-to-tailfeathers, eyes clear of
+  // the fan and body tucked in before the monstera's first leaves (x≈217+ — the cat
+  // paints behind the plant layer, so a leaf over its rump reads as depth, not a bug).
+  // Same static-{x,y} reasoning as the windchime above.
+  var roosterStarePerch = { x: 216, y: 232 };
   var PERCHES = {
     kitchen: [{ x: 48,  y: 230 }], // left end of the counter top, clear of the espresso gear
-    garden:  [{ x: 610, y: 240 }], // the chest lid it climbed out of
+    // the rooster stare-down is a rare discovered moment, same idea (and same 1-in-4
+    // weighting) as the balcony windchime swat below — the chest lid stays its habit.
+    garden:  [{ x: 610, y: 240 }, { x: 610, y: 240 }, { x: 610, y: 240 }, roosterStarePerch],
     cuddly:  [{ x: 96,  y: 250 }], // front-left corner of the daybed seat, clear of the couple
     // the chair is weighted 3:1 over the desk — it gravitates toward the chair to nap far
     // more often than it perches anywhere else (owner request); resolved live, both move.
@@ -20424,14 +20513,34 @@ function spawnDustMote(container) {
   var balconyRailPerches = 0;
   var catGoneForever = false;
   function setNapping(on) {                // toggles the chair-nap look; no-op off the chair perch
-    if (breathe) breathe.classList.toggle("napping", on);
+    if (!breathe) return;
+    if (on) breathe.classList.remove("stretching"); // a stale stretch would out-cascade the nap's breathing loop
+    breathe.classList.toggle("napping", on);
   }
+  // wake-up stretch: plays once the nap's hop-down has landed (natural finish only —
+  // a cancelled hop mid-room-change shouldn't leave the cat stretching in the new room).
+  // Removed on animationend so the class can't linger and block the next nap's loop.
+  function stretchAfterNap() {
+    if (!breathe || reducedMotion()) return;
+    breathe.classList.remove("stretching");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { breathe.classList.add("stretching"); });
+    });
+  }
+  if (breathe) breathe.addEventListener("animationend", function (e) {
+    if (e.animationName === "cat-stretch") breathe.classList.remove("stretching");
+  });
   function reducedMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
-  function baseFeet(room) {                // the roam-neutral floor position of the cat's feet
-    var r = ROOMS[room];
-    return { x: 636 + (r ? r.dx : 0), y: 292 + (r ? r.dy : 0) };
+  function baseFeet() {                    // the roam-neutral floor position of the cat's feet
+    // Read the LIVE base offset from #witchy-chest-cat-pos rather than the ROOMS table:
+    // a freshly-emerged cat still carries the chest's native translate(-46,0) until a
+    // room change normalizes it, and a perch computed against the table lands 46px left
+    // of its target (a shrug on the wide chest lid, a lamp collision in the rooster gap).
+    // In follower rooms the attribute holds exactly the ROOMS dx/dy, so nothing changes.
+    var m = (pos.getAttribute("transform") || "").match(/translate\(\s*(-?[\d.]+)[ ,]+(-?[\d.]+)/);
+    return { x: 636 + (m ? parseFloat(m[1]) : 0), y: 292 + (m ? parseFloat(m[2]) : 0) };
   }
   function currentWalkOffset() {           // the roam's live translate, so a hop can start/return there
     var m = (getComputedStyle(walk).transform || "").match(/matrix\(([^)]+)\)/);
@@ -20455,7 +20564,7 @@ function spawnDustMote(container) {
   function finishJump() {                  // natural end of the hop-down
     jumpAnim = null; jumping = false;
     walk.style.animationPlayState = "";    // un-freeze the roam where it left off
-    if (isNapJump) setNapping(false);
+    if (isNapJump) { setNapping(false); stretchAfterNap(); }
     isNapJump = false;
     scheduleJump();
   }
@@ -20479,9 +20588,10 @@ function spawnDustMote(container) {
     }
     var isNap = chosen === officeChairPerch;       // the nap-worthy perch: needs a longer sit + the sleeping look
     var isSwipe = chosen === windchimeSwatPerch;   // the windchime: a quick swat-and-ring, not a sit
+    var isStare = chosen === roosterStarePerch;    // the rooster: a normal-length sit spent locked onto the figurine
     var perch = typeof chosen === "function" ? chosen() : chosen; // resolve live-geometry perches
     if (!perch) { scheduleJump(); return; }           // couldn't resolve a surface — skip this cycle
-    var b = baseFeet(catRoom);
+    var b = baseFeet();
     var Dx = perch.x - b.x, Dy = perch.y - b.y;    // walk-node offset that lands the feet on the surface
     var cur = currentWalkOffset();                 // where the roam is right now
     var apexX = (cur.x + Dx) / 2;
@@ -20528,6 +20638,47 @@ function spawnDustMote(container) {
         }
       }, ringAt);
     }
+    // The rooster stare-down plays out in two beats across the sit window: the cat
+    // settles, then chatters under its breath (the kekekeke cats do at birds — quiet,
+    // hasFocus-gated like every autonomous sound) with a tail flick; a beat later the
+    // rooster answers with its own nervous wobble (the class only — the full click
+    // reaction's crow + startled birds/deer stays a click-owned spectacle). Both
+    // timeouts carry the same captured-jumpAnim guard as the windchime ring above.
+    if (isStare) {
+      var thisStare = jumpAnim;
+      setTimeout(function () {
+        if (!jumping || jumpAnim !== thisStare) return;
+        flickTail();
+        if (document.hasFocus()) playCatChatterSound();
+      }, duration * (0.10 + (0.86 - 0.10) * 0.25));
+      setTimeout(function () {
+        if (!jumping || jumpAnim !== thisStare) return;
+        var rooster = document.getElementById("garden-rooster");
+        if (rooster) {
+          rooster.classList.remove("wobbling", "wobbling2");
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () { rooster.classList.add("wobbling2"); });
+          });
+        }
+      }, duration * (0.10 + (0.86 - 0.10) * 0.55));
+    }
+    // ordinary sits sometimes get one idle tail swish partway through — enough that
+    // a lingering perch reads as alive, not so often it becomes a metronome
+    if (!isSwipe && !isStare && !isNap && Math.random() < 0.45) {
+      var thisSit = jumpAnim;
+      setTimeout(function () {
+        if (!jumping || jumpAnim !== thisSit) return;
+        flickTail();
+      }, duration * (0.10 + (0.86 - 0.10) * (0.3 + Math.random() * 0.4)));
+    }
+  }
+  function flickTail() {                    // one-shot tail swish; safe no-op without the node
+    var tail = document.getElementById("witchy-chest-cat-tail");
+    if (!tail) return;
+    tail.classList.remove("flicking");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { tail.classList.add("flicking"); });
+    });
   }
   // The cat's exit: one last beat on the railing (reusing that perch's own coordinates),
   // then it keeps going — up and out past x=680 (off the 680-wide stage entirely) while
@@ -20538,7 +20689,7 @@ function spawnDustMote(container) {
   // as back in the bag — so nothing else has to know this ever happened.
   var FINAL_LEAP_TARGET = { x: 620, y: 20 }; // high over the rail, off the right edge of the stage
   function startFinalLeap() {
-    var b = baseFeet("balcony");
+    var b = baseFeet();
     var railDx = 560 - b.x, railDy = 140 - b.y; // PERCHES.balcony's own railing spot
     var Dx = FINAL_LEAP_TARGET.x - b.x, Dy = FINAL_LEAP_TARGET.y - b.y;
     var cur = currentWalkOffset();
@@ -20573,7 +20724,7 @@ function spawnDustMote(container) {
     if (!walk.classList.contains("out") || jumping || reducedMotion() || !walk.animate) return;
     if (document.visibilityState === "hidden" || catRoom !== "cuddly" || window.currentStageIndex !== IDX.cuddly) return;
     clearTimeout(jumpTimer);
-    var b = baseFeet("cuddly");
+    var b = baseFeet();
     var Dx = MOUSE_POUNCE_TARGET.x - b.x, Dy = MOUSE_POUNCE_TARGET.y - b.y;
     var cur = currentWalkOffset();
     var apexX = (cur.x + Dx) / 2, apexY = Math.min(cur.y, Dy) - 20;
@@ -20609,7 +20760,7 @@ function spawnDustMote(container) {
     if (!jumpAnim.effect.setKeyframes) return; // feature-detect; stale position is a minor miss, not worth a fallback
     var perch = perchFn();
     if (!perch) return;
-    var b = baseFeet("office");
+    var b = baseFeet();
     var Dx = perch.x - b.x, Dy = perch.y - b.y;
     function tf(x, y) { return "translate(" + x + "px," + y + "px)"; }
     try {
@@ -20688,14 +20839,40 @@ function spawnDustMote(container) {
     }
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // re-sync its music sway to the new room
   };
-  // the fire-extinguisher reset stuffs the cat back in the chest, wherever it wandered
+  // The chest doors are physical: with BOTH shut the cat can neither come out nor get
+  // back in. Emergence already lives inside witchy-door-1's own open handler (so it
+  // only ever fires through an opening door); this is the return side of the same
+  // rule, read fresh from the doors' real .open classes each time it matters.
+  function chestDoorsOpen() {
+    var d1 = document.getElementById("witchy-door-1"), d2 = document.getElementById("witchy-door-2");
+    return !!((d1 && d1.classList.contains("open")) || (d2 && d2.classList.contains("open")));
+  }
+  var stowWaiting = false; // a stow arrived while both doors were shut; completes on the next door-open
+  // the fire-extinguisher reset stuffs the cat back in the chest, wherever it wandered —
+  // unless both chest doors are shut, in which case it waits outside (parked loose in
+  // the garden, its home room, still pacing) and slips in when a door next opens.
   window.__stowCat = function () {
+    if (!walk.classList.contains("out")) return; // already inside (or gone for good) — nothing to stow
     cancelJump();
+    if (!chestDoorsOpen()) {
+      stowWaiting = true;
+      window.__homeCat("garden");
+      return;
+    }
+    stowWaiting = false;
     walk.classList.remove("out", "roaming", "roaming-sm");
     walk.style.animationDelay = "";
-    pos.removeAttribute("transform");
+    pos.setAttribute("transform", "translate(-46,0)"); // the native inside-the-chest pose, behind the moon door
     if (pos.parentNode !== homeParent || pos.nextSibling !== homeNext) homeParent.insertBefore(pos, homeNext);
     catRoom = "garden";
+  };
+  // called by the chest-door toggles: a waiting cat slips in through the first door
+  // that opens. Returns true when it did, so witchy-door-1's open handler can treat
+  // that open as "used up" instead of also letting the cat right back out.
+  window.__chestDoorChanged = function () {
+    if (!stowWaiting || !chestDoorsOpen()) return false;
+    window.__stowCat();
+    return true;
   };
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "hidden") cancelJump(); // never leave a hop frozen mid-air in a hidden tab

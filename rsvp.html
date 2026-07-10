@@ -9915,13 +9915,31 @@ document.addEventListener("click", function (e) {
         var hi = Math.floor(minBin * Math.pow(maxBin / minBin, (i + 1) / n));
         if (hi <= lo) hi = lo + 1;                                 // guarantee >=1 bin per bar
         var t = (n > 1) ? Math.pow(i / (n - 1), EQ_TILT_CURVE) : 0;
-        out.push({ lo: lo, hi: hi, gain: 1 + (EQ_TILT_TOP - 1) * t });
+        var nyq = (eqAudioCtx ? eqAudioCtx.sampleRate : 48000) / 2;
+        out.push({ lo: lo, hi: hi, gain: 1 + (EQ_TILT_TOP - 1) * t, fc: ((lo + hi) / 2) * nyq / binCount });
       }
       return out;
     }
     var bandsBySet = (analyser && data) ? sets.map(function (bars) { return eqBands(bars.length, data.length); }) : null;
     var bpm = (audioEl && SONG_BPM[audioEl.id]) || 120;
     var period = 60 / bpm; if (period < 0.4) period *= 2; // half-time for fast songs
+    // The analyser sits after the manual EQ, but getByteFrequencyData's dB scaling +
+    // the soft-knee below crush a ±9dB band change to a few percent of bar height —
+    // physically present, visually dead. So the bars re-apply the manual curve as a
+    // display emphasis (piecewise-linear in log frequency between the six band points),
+    // making the spectrum visibly bend with the sliders.
+    function manualEqDbAt(freq) {
+      var F = MANUAL_EQ_FREQS, D = manualEqDb;
+      if (!freq || freq <= F[0]) return D[0];
+      if (freq >= F[F.length - 1]) return D[F.length - 1];
+      for (var k = 0; k < F.length - 1; k++) {
+        if (freq <= F[k + 1]) {
+          var t = (Math.log(freq) - Math.log(F[k])) / (Math.log(F[k + 1]) - Math.log(F[k]));
+          return D[k] + (D[k + 1] - D[k]) * t;
+        }
+      }
+      return 0;
+    }
     function driveBars(bars, bands) {
       var n = bars.length;
       if (analyser && data) {
@@ -9936,6 +9954,7 @@ document.addEventListener("click", function (e) {
           for (var j = band.lo; j < band.hi && j < data.length; j++) { sum += data[j]; cnt++; }
           var raw = cnt ? (sum / cnt) / 255 : 0;                          // dB-compressed level, 0-1
           var e = Math.max(0, raw * band.gain - 0.1) * 3.1 * rvol;        // floor-subtract, expand, volume-scale
+          e *= Math.pow(10, manualEqDbAt(band.fc) / 20);                  // manual-EQ display emphasis (see manualEqDbAt)
           bars[i].style.transform = "scaleY(" + (0.14 + 0.76 * (1 - Math.exp(-e))).toFixed(3) + ")";
         }
       } else {

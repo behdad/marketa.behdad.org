@@ -17222,7 +17222,14 @@ function playGhostWhisperSound(panId) {
     var dur = 0.95;
     var buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
     var d = buf.getChannelData(0);
-    for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; // white-noise breath
+    // pink-ish breath (leaky integrator + a touch of white): white noise reads as pure
+    // "hhh" — the low-weighted spectrum lets the formants ring through as a vowel
+    var pb = 0;
+    for (var i = 0; i < d.length; i++) {
+      var w = Math.random() * 2 - 1;
+      pb = 0.97 * pb + 0.03 * w;
+      d[i] = pb * 9 + w * 0.18;
+    }
     var noise = ctx.createBufferSource();
     noise.buffer = buf;
     // envelope: aspiration after the /k/ release, the long "oo", then the dark-l tail —
@@ -17242,8 +17249,16 @@ function playGhostWhisperSound(panId) {
     soften.Q.value = 0.4;
     master.connect(soften);
     soften.connect(out);
+    // a hushed voiced undertone (the murmur that makes the vowel legible — pure
+    // filtered noise reads as breath no matter how narrow the formants)
+    var murmur = ctx.createOscillator();
+    murmur.type = "triangle";
+    murmur.frequency.setValueAtTime(108, t0 + 0.06);
+    murmur.frequency.linearRampToValueAtTime(92, t0 + dur); // a sighing droop
+    var murmurG = ctx.createGain();
+    murmurG.gain.value = 0.55;
     // whispered vowel formants gliding /u/ -> dark /l/ (coda l is velarized: F2 falls,
-    // it doesn't rise) — bandpass-filtered noise, no oscillator
+    // it doesn't rise) — pinked breath + murmur through the same bank
     [
       { q: 10, g: 1.0,  pts: [[0.12,300],[0.5,295],[0.9,430]] },  // F1 (narrow = rounder oo, less breath)
       { q: 12, g: 0.7,  pts: [[0.12,850],[0.5,820],[0.9,700]] },  // F2: oo -> dark l (deeper dip)
@@ -17255,9 +17270,10 @@ function playGhostWhisperSound(panId) {
       bp.frequency.setValueAtTime(f.pts[0][1], t0);
       for (var k = 1; k < f.pts.length; k++) bp.frequency.linearRampToValueAtTime(f.pts[k][1], t0 + f.pts[k][0]);
       var fg = ctx.createGain(); fg.gain.value = f.g;
-      noise.connect(bp); bp.connect(fg); fg.connect(master);
+      noise.connect(bp); murmurG.connect(bp); bp.connect(fg); fg.connect(master);
     });
     noise.start(t0); noise.stop(t0 + dur);
+    murmur.start(t0 + 0.06); murmur.stop(t0 + dur);
     // the /k/ release itself: a tight little mid-band click before the breath swells
     var kSrc = ctx.createBufferSource();
     kSrc.buffer = buf;

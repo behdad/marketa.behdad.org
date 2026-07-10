@@ -298,6 +298,17 @@ footer{margin-top:2.6rem}
 @media (prefers-reduced-motion: reduce){#balcony-ashtray.spinning{animation:none}}
 #balcony-minisplit-fan, #balcony-minisplit-blades{transform-box:fill-box; transform-origin:center}
 #balcony-minisplit.on #balcony-minisplit-blades{animation:ac-fan-spin .6s linear infinite}
+/* balcony junction-box "party" switch: rocker up=off / down=on; LED + box halo glow
+   UV-violet when the blacklight party is on. The rocker travel is a CSS transform on a node
+   with no static transform= attr, so it can't clobber a baked placement (CLAUDE.md trap);
+   short transitions all round. */
+#balcony-partyswitch-rocker{transform-box:fill-box; transform-origin:center; transition:transform .25s ease; transform:translateY(-2.5px)} /* off: rocker up */
+#balcony-partyswitch.on #balcony-partyswitch-rocker{transform:translateY(4px)} /* on: rocker down */
+#balcony-partyswitch-led{fill:#6a675f; transition:fill .25s ease, filter .25s ease}
+#balcony-partyswitch.on #balcony-partyswitch-led{fill:#e070ff; filter:drop-shadow(0 0 2.5px #e070ff)}
+#balcony-partyswitch-glow{opacity:0; transition:opacity .3s ease; pointer-events:none}
+#balcony-partyswitch.on #balcony-partyswitch-glow{opacity:1}
+@media (prefers-reduced-motion: reduce){#balcony-partyswitch-rocker{transition:none}#balcony-partyswitch-glow{transition:none}}
 .ac-airline{opacity:0; transition:opacity .3s ease}
 #garden-minisplit.on .ac-airline{animation:ac-airline-blow 1.1s ease-in infinite}
 #balcony-can{transform-box:fill-box; transform-origin:bottom center}
@@ -5688,6 +5699,25 @@ section{margin:1.9rem 0}
 <rect x="152" y="264" width="8" height="8" fill="#c4c0b8"/>
 <rect x="226" y="264" width="8" height="8" fill="#c4c0b8"/>
 </g>
+<!-- A rocker "party" switch on the junction box (drawn as its own group AFTER the minisplit
+     so it sits on top of the box, without restructuring it). Rocker up=off / down=on; the
+     travel is a CSS transform on a node with no static transform= (per CLAUDE.md's clobber
+     rule), position baked into x/y. LED + a soft radial halo round the box glow UV-violet
+     when the balcony blacklight party is on. Click-only, no keyboard (game-SVG a11y rule). -->
+<g id="balcony-partyswitch" class="hunt-hit" style="cursor:pointer">
+<defs>
+<radialGradient id="balcony-partyswitch-glow-grad">
+<stop offset="0" stop-color="#e070ff" stop-opacity="0.6"/>
+<stop offset="0.55" stop-color="#c060ff" stop-opacity="0.3"/>
+<stop offset="1" stop-color="#c060ff" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<rect x="199" y="104" width="24" height="36" fill="transparent"/>
+<ellipse id="balcony-partyswitch-glow" cx="209" cy="121" rx="23" ry="24" fill="url(#balcony-partyswitch-glow-grad)"/>
+<rect x="202.5" y="112" width="13" height="18" rx="2" fill="#33302b" stroke="#211f1b" stroke-width="0.8"/>
+<rect id="balcony-partyswitch-rocker" x="205" y="115" width="8" height="7" rx="1.5" fill="#d8cfbc" stroke="#b0a690" stroke-width="0.7"/>
+<circle id="balcony-partyswitch-led" cx="209" cy="127.5" r="1.4" fill="#6a675f"/>
+</g>
 <g id="balcony-winebottle" class="hunt-hit" tabindex="0" role="button" aria-label="The wine bottle" transform="translate(4,-2)">
 <rect x="145" y="152" width="24" height="48" fill="transparent"/>
 <g id="balcony-winebottle-inner">
@@ -6550,11 +6580,17 @@ function setUvMode(on) {
   var strip = document.getElementById("loft-game-strip");
   if (strip) strip.classList.toggle("uv-mode", !!on);
 }
-window.__setUvMode = setUvMode; // reset / room-leave can force it off
-document.addEventListener("keydown", function (e) { if (e.key === "Shift") setUvMode(true); });
-document.addEventListener("keyup", function (e) { if (e.key === "Shift") setUvMode(false); });
+// Two independent sources drive the same blacklight look and must compose: the balcony
+// party switch (persistent, #balcony-partyswitch) and holding Shift (momentary). Track each
+// as its own boolean and OR them, so a Shift keyup can't switch off a switch-enabled party.
+var uvPartyOn = false, uvShiftHeld = false;
+function applyUvMode() { setUvMode(uvPartyOn || uvShiftHeld); }
+window.__setUvMode = setUvMode; // reset / room-leave can force the raw class off
+window.__setUvParty = function (on) { uvPartyOn = !!on; applyUvMode(); }; // the balcony switch
+document.addEventListener("keydown", function (e) { if (e.key === "Shift") { uvShiftHeld = true; applyUvMode(); } });
+document.addEventListener("keyup", function (e) { if (e.key === "Shift") { uvShiftHeld = false; applyUvMode(); } });
 // if focus is lost while Shift is down (alt-tab), the keyup never arrives — clear it
-window.addEventListener("blur", function () { setUvMode(false); });
+window.addEventListener("blur", function () { uvShiftHeld = false; applyUvMode(); });
 document.addEventListener("click", function (e) {
   var link = e.target.closest && e.target.closest("#hunt-caption a");
   if (!link) return;
@@ -10517,6 +10553,17 @@ document.addEventListener("click", function (e) {
     windchime.addEventListener("click", ringWindchime);
     windchime.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ringWindchime(e); }
+    });
+  }
+  var partyswitch = document.getElementById("balcony-partyswitch");
+  if (partyswitch) {
+    // Flip the persistent UV "party" — the same blacklight Shift reveals momentarily, made
+    // a real tappable toggle (works on touch, and it sticks). The toggle() return value is
+    // the source of truth; the guard means a play.js storm click can never throw. Click-only
+    // (no keydown/tabindex/role/aria) per the game-SVG a11y rule.
+    partyswitch.addEventListener("click", function () {
+      var isOn = partyswitch.classList.toggle("on");
+      if (window.__setUvParty) window.__setUvParty(isOn);
     });
   }
   var doormat = document.getElementById("balcony-doormat");

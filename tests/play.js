@@ -8,40 +8,7 @@
 // Usage: node tests/play.js
 "use strict";
 
-var fs = require("fs");
-var path = require("path");
-var os = require("os");
-var execSync = require("child_process").execSync;
-
-var ROOT = path.join(__dirname, "..");
-
-// Head hook: error collectors, tab-open stub, link-navigation blocker. The rAF
-// line is spliced in only for pages that need it (rsvp): native rAF never ticks
-// under --virtual-time-budget, so patching it to setTimeout lets rsvp's monitor
-// screensaver advance — but that same patch keeps a per-frame loop alive so the
-// page never goes idle, which stalls index's virtual-time fast-forward. So index
-// keeps native (frozen) rAF and fast-forwards past its setTimeout timers.
-function hook(patchRaf) {
-  return [
-    "<script>",
-    "window.__errs = [];",
-    "window.addEventListener('error', function (e) { window.__errs.push(String(e.message) + ' @' + (e.filename||'') + ':' + e.lineno); });",
-    "window.addEventListener('unhandledrejection', function (e) { window.__errs.push('rejection: ' + String(e.reason)); });",
-    "window.open = function () { window.__opened = (window.__opened || 0) + 1; return null; };",
-    // A real confirm/alert/prompt blocks the main thread and suspends virtual
-    // time (the egg-reset button confirms), so stub them non-blocking.
-    "window.confirm = function () { return true; };",
-    "window.alert = function () {};",
-    "window.prompt = function () { return null; };",
-    patchRaf ? "window.requestAnimationFrame = function (cb) { return setTimeout(function () { cb(performance.now()); }, 16); };" : "",
-    patchRaf ? "window.cancelAnimationFrame = function (id) { clearTimeout(id); };" : "",
-    "document.addEventListener('click', function (e) {",
-    "  var t = e.target && e.target.closest && e.target.closest('a, .party-send');",
-    "  if (t) { e.preventDefault(); e.stopImmediatePropagation(); }",
-    "}, true);",
-    "</script>"
-  ].join("\n");
-}
+var lib = require("./lib"); // head hook + scratch-copy page runner (shared with state.js)
 
 var COMMON = [
   "function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }",
@@ -194,26 +161,7 @@ var INDEX_HARNESS = [
 ].join("\n");
 
 function runPage(file, harness, budgetMs, patchRaf) {
-  var html = fs.readFileSync(path.join(ROOT, file), "utf8");
-  var patched = html.replace("<head>", "<head>" + hook(patchRaf)).replace("</body>", harness + "\n</body>");
-  var scratch = path.join(os.tmpdir(), "wedding-play-" + file.replace(/\W/g, "") + "-" + Date.now() + ".html");
-  fs.writeFileSync(scratch, patched);
-  var dom;
-  try {
-    // The pages' many infinite CSS animations keep virtual time from fast-
-    // forwarding, so --dump-dom runs ~real-time to the budget: keep each budget
-    // just above what its harness needs (report is set well before the budget).
-    dom = execSync(
-      "google-chrome --headless=new --disable-gpu --window-size=1100,900 " +
-      "--virtual-time-budget=" + budgetMs + " --dump-dom " + JSON.stringify("file://" + scratch),
-      { stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024, timeout: budgetMs + 30000 }
-    ).toString();
-  } finally {
-    fs.unlinkSync(scratch);
-  }
-  var m = dom.match(/<pre id="__report"[^>]*>([\s\S]*?)<\/pre>/);
-  if (!m || m[1] === "pending") return null;
-  return JSON.parse(m[1].replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">"));
+  return lib.runPageSync(file, harness, budgetMs, { patchRaf: patchRaf });
 }
 
 var failures = 0;

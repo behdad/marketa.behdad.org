@@ -13576,35 +13576,51 @@ document.addEventListener("click", function (e) {
     if (window.__updateOfficeNudges) window.__updateOfficeNudges();
   };
 })();
-// ── MONITOR ZOOM ── while the office screen is lit, the room view glides up to the
-// monitor: engaged by the PC booting (or tapping the lit monitor), released by tapping
-// anywhere outside the monitor, leaving the office, or the screen going dark. It rides
-// #loft-game-strip's own transform transition, so the glide matches the room slide;
-// translation is origin-independent, so the room transform never needs the origin cleared.
+// ── DESK ZOOM ── while an office device holds attention, the room view glides up to
+// it: the MONITOR (engaged by the PC booting or tapping the lit screen) and the LAPTOP
+// (engaged by tapping it — the Prague call happens zoomed). Released by tapping anywhere
+// outside the zoomed device, leaving the office, or (monitor) the screen going dark.
+// Rides #loft-game-strip's own transform transition, so the glide matches the room
+// slide. Targets measure their LIVE bounding box at engage time (desk items shift
+// during the typewriter/monitor swaps, so static centres would drift) mapped through
+// the strip's rect — the same transform-immune ratio mapping the laser uses.
 (function () {
   var strip = document.getElementById("loft-game-strip");
   var vp = document.querySelector(".hunt-viewport");
   var monitor = document.getElementById("office-monitor");
+  var laptop = document.getElementById("office-laptop");
   if (!strip || !vp || !monitor) return;
-  var zoomed = false;
-  // monitor-screen centre in strip user units (office tile starts at 3*680=2040; the
-  // screen spans x254\u2013378 y154\u2013196), nudged down 3 units so bezel + stand stay in frame
-  var CX = 2040 + 316, CY = 178, SCALE = 4.2;
-  function apply() {
-    var r = vp.getBoundingClientRect();
-    if (!r.width) return;
-    var tx = CX / 3400 * (r.width * 5), ty = CY / 340 * r.height; // strip lays out at 500% viewport width
-    strip.style.transformOrigin = tx + "px " + ty + "px";
-    strip.style.transform = "translate(" + (r.width / 2 - tx) + "px, " + (r.height / 2 - ty) + "px) scale(" + SCALE + ")";
+  var zoomEl = null; // the device the view is zoomed onto (null = zoomed out)
+  var TARGETS = [
+    { el: monitor, padX: 10, padY: 7, maxS: 4.2, when: function () { return monitor.classList.contains("screen-on"); } },
+    { el: laptop, padX: 12, padY: 9, maxS: 5, when: function () { return true; } }
+  ];
+  function targetFor(el) {
+    for (var i = 0; i < TARGETS.length; i++) if (TARGETS[i].el === el) return TARGETS[i];
+    return null;
   }
-  function zoomIn() {
-    if (window.currentStageName !== "office" || !monitor.classList.contains("screen-on")) return;
-    zoomed = true;
+  function apply() {
+    var t = targetFor(zoomEl);
+    if (!t) return;
+    var r = zoomEl.getBoundingClientRect(), sr = strip.getBoundingClientRect(), v = vp.getBoundingClientRect();
+    if (!r.width || !sr.width || !v.width) return;
+    var ux = ((r.left + r.right) / 2 - sr.left) / sr.width * 3400;
+    var uy = ((r.top + r.bottom) / 2 - sr.top) / sr.height * 340;
+    var s = Math.min(680 / (r.width / sr.width * 3400 + t.padX * 2), 340 / (r.height / sr.height * 340 + t.padY * 2), t.maxS);
+    var tx = ux / 3400 * (v.width * 5), ty = uy / 340 * v.height; // strip lays out at 500% viewport width
+    strip.style.transformOrigin = tx + "px " + ty + "px";
+    strip.style.transform = "translate(" + (v.width / 2 - tx) + "px, " + (v.height / 2 - ty) + "px) scale(" + s + ")";
+  }
+  function zoomIn(el) {
+    if (window.currentStageName !== "office") return;
+    var t = targetFor(el);
+    if (!t || !t.el || !t.when()) return;
+    zoomEl = el;
     apply();
   }
   function zoomOut() {
-    if (!zoomed) return;
-    zoomed = false;
+    if (!zoomEl) return;
+    zoomEl = null;
     // the origin must survive the glide out (scale interpolates about it; clearing it
     // mid-transition snaps the start pose sideways) — drive the transition in px, which
     // lands exactly where translateX(-idx*20%) does, then restore the canonical % form
@@ -13612,27 +13628,32 @@ document.addEventListener("click", function (e) {
     var r = vp.getBoundingClientRect();
     strip.style.transform = "translate(" + (-idx * r.width) + "px, 0px) scale(1)";
     setTimeout(function () {
-      if (zoomed) return; // re-zoomed mid-glide: its transform owns the strip now
+      if (zoomEl) return; // re-zoomed mid-glide: its transform owns the strip now
       strip.style.transformOrigin = "";
       strip.style.transform = "translateX(-" + ((window.currentStageIndex || 0) * 20) + "%)";
     }, 760);
   }
-  window.__monitorZoomIn = zoomIn;
+  window.__monitorZoomIn = function () { zoomIn(monitor); };
   window.__monitorZoomOut = zoomOut;
-  // a tap landing anywhere outside the monitor hands the room back (capture phase, so a
-  // target's own stopPropagation can't strand the zoom)
+  // a tap landing outside the zoomed device hands the room back — unless it lands on
+  // the OTHER device (glide over) or on viewport chrome (capture phase, so a target's
+  // own stopPropagation can't strand the zoom)
   vp.addEventListener("pointerdown", function (e) {
-    if (!zoomed) return;
-    if (monitor.contains(e.target)) return;
+    if (!zoomEl || (e.target && zoomEl.contains(e.target))) return;
     if (e.target && e.target.closest && e.target.closest("#hunt-fullscreen-btn")) return; // viewport chrome, not the room
+    var other = zoomEl === monitor ? laptop : monitor;
+    if (other && other.contains(e.target)) { zoomIn(other); return; }
     zoomOut();
   }, true);
-  // ...and tapping the lit monitor pulls the view back up
+  // ...and tapping either device pulls the view up to it
   monitor.addEventListener("pointerdown", function () {
-    if (!zoomed) zoomIn();
+    if (!zoomEl) zoomIn(monitor);
   });
-  window.addEventListener("resize", function () { if (zoomed) apply(); });
-  document.addEventListener("fullscreenchange", function () { if (zoomed) setTimeout(apply, 60); }); // measure after the box settles
+  if (laptop) laptop.addEventListener("pointerdown", function () {
+    if (!zoomEl) zoomIn(laptop);
+  });
+  window.addEventListener("resize", function () { if (zoomEl) apply(); });
+  document.addEventListener("fullscreenchange", function () { if (zoomEl) setTimeout(apply, 60); }); // measure after the box settles
 })();
 (function () {
   var marketa = document.getElementById("cuddly-marketa");

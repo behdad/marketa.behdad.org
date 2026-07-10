@@ -1037,14 +1037,22 @@ footer{margin-top:2.6rem}
 #monitor-saver-eq{opacity:0; pointer-events:none}
 #office-monitor.show-saver.eq-live #monitor-saver-eq{opacity:1}
 /* ── loft photobooth (the visitor's own camera, live in the monitor) ──
-   All gated on the .photobooth class, which is added only while a live session runs and
-   removed in every teardown path (close, re-click, leave-room, hidden, pagehide, PC-off,
-   reset) — so the camera-live LED and the live video die together with the stream. */
+   Three class-gated screen states on #office-monitor: .pb-confirm (the on-screen
+   "Open the photobooth?" ask, shown BEFORE any getUserMedia call), .pb-error (the
+   friendly no-camera/denied panel), and .photobooth (a live session: video letterboxed
+   at true aspect in the screen's left zone, wordmark + shutter in the right zone).
+   Only .photobooth means the camera is live — it drives the red LED, and every teardown
+   path (close, re-click, leave-room, hidden, pagehide, PC-off, reset) removes it AND
+   stops the stream, so the LED and the video die together. The confirm/error panels
+   draw their own opaque card OVER whatever the screen shows, so dismissing them
+   restores the previous screen for free. */
 #office-webcam{cursor:pointer}
 #office-webcam-led{transition:fill .3s ease, filter .3s ease}
 #office-monitor.photobooth #office-webcam-led{fill:#ff3b30; filter:drop-shadow(0 0 1.7px #ff3b30)}
-#monitor-photobooth{opacity:0; pointer-events:none; transition:opacity .25s ease}
-#office-monitor.photobooth #monitor-photobooth{opacity:1; pointer-events:auto}
+#monitor-photobooth, #monitor-pb-confirm, #monitor-pb-error{opacity:0; pointer-events:none; transition:opacity .25s ease}
+#office-monitor.photobooth #monitor-photobooth,
+#office-monitor.pb-confirm #monitor-pb-confirm,
+#office-monitor.pb-error #monitor-pb-error{opacity:1; pointer-events:auto}
 /* while live, the booth owns the whole screen — hide every boot/site/transport layer under it */
 #office-monitor.photobooth .boot-logo,
 #office-monitor.photobooth #monitor-desktop-dock,
@@ -1057,8 +1065,10 @@ footer{margin-top:2.6rem}
 #office-monitor.photobooth #monitor-transport-pill,
 #office-monitor.photobooth #monitor-manual-eq{opacity:0 !important; visibility:hidden; pointer-events:none !important}
 #office-monitor.photobooth #monitor-np-marquee-hit{pointer-events:none !important}
-.pb-video-wrap{width:124px; height:42px; position:relative; overflow:hidden; background:#0a0d12}
-.pb-video{width:100%; height:100%; object-fit:cover; transform:scaleX(-1); display:block; background:#0a0d12}
+/* the live feed fills the screen's LEFT zone (62×42) at its TRUE aspect ratio —
+   object-fit:contain letterboxes rather than crops — mirrored selfie-style */
+.pb-video-wrap{width:62px; height:42px; position:relative; overflow:hidden; background:#0a0d12}
+.pb-video{width:100%; height:100%; object-fit:contain; transform:scaleX(-1); display:block; background:#0a0d12}
 /* subtle CRT scanlines over the feed */
 .pb-scanlines{position:absolute; inset:0; pointer-events:none; opacity:.5; mix-blend-mode:multiply;
   background:repeating-linear-gradient(to bottom, rgba(0,0,0,.16) 0, rgba(0,0,0,.16) 1px, transparent 1px, transparent 3px)}
@@ -1079,6 +1089,7 @@ footer{margin-top:2.6rem}
 #monitor-pb-picker{opacity:0; pointer-events:none; transition:opacity .2s ease}
 #office-monitor.picking #monitor-pb-picker{opacity:1; pointer-events:auto}
 #office-monitor.picking #monitor-pb-shutter{opacity:0; pointer-events:none} /* can't re-snap while choosing */
+#office-monitor.picking #monitor-pb-brand{opacity:0} /* the grid owns the whole screen */
 #monitor-pb-retake{opacity:0; pointer-events:none}
 #office-monitor.picking #monitor-pb-retake{opacity:1; pointer-events:auto}
 .pb-picker{width:124px; height:42px; box-sizing:border-box; display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(2,1fr); gap:1px; padding:1px; background:#0a0d12}
@@ -1086,30 +1097,39 @@ footer{margin-top:2.6rem}
 .pb-thumb canvas{width:100%; height:100%; display:block; object-fit:cover}
 .pb-thumb:hover{outline-width:1.5px}
 @media (prefers-reduced-motion: reduce){.pb-thumb{transition:none}}
-/* post-snap action panel — a small floating card (not over the live preview); Download / Gmail /
-   Email, plus a paste-hint. Dismissable via its x, a click away, or the booth closing. */
-.pb-panel{
-  position:fixed; z-index:21; max-width:266px; background:var(--ink); color:var(--paper);
-  font-family:"Source Serif 4",serif; font-size:.78rem; line-height:1.35; padding:.5rem .6rem .55rem;
-  border-radius:8px; box-shadow:0 5px 16px rgba(0,0,0,.3); opacity:0; transition:opacity .25s ease;
-  pointer-events:auto; text-align:center;
+/* the final polaroid dialog — the booth's ONE popup: a centered overlay that shows the
+   composed polaroid at a legible size with Download / Gmail / Email / Retake / Cancel and
+   a paste-hint. Appended into #hunt-fullscreen-area when the game is fullscreen (same host
+   trick as eggBubble). Dismissed via its ✕, Cancel, a backdrop tap, or the booth closing. */
+.pb-dialog-backdrop{
+  position:fixed; inset:0; z-index:40; background:rgba(30,22,14,.52);
+  display:flex; align-items:center; justify-content:center; padding:3vh 4vw;
+  opacity:0; transition:opacity .22s ease;
 }
-.pb-panel.show{opacity:1}
-.pb-panel-x{
-  position:absolute; top:.1rem; right:.28rem; background:none; border:none; color:var(--paper);
-  font-size:.85rem; line-height:1; padding:.12rem .22rem; cursor:pointer; opacity:.6;
+.pb-dialog-backdrop.show{opacity:1}
+.pb-dialog{
+  position:relative; box-sizing:border-box; max-width:min(560px, 94vw); max-height:94vh; overflow:auto;
+  background:var(--ink); color:var(--paper); border-radius:12px; padding:.85rem 1rem 1rem;
+  font-family:"Source Serif 4",serif; font-size:.85rem; line-height:1.35; text-align:center;
+  box-shadow:0 14px 44px rgba(0,0,0,.45);
 }
-.pb-panel-x:hover{opacity:1}
-.pb-panel-lead{margin:.05rem .9rem .45rem; font-size:.8rem}
-.pb-panel-row{display:flex; gap:.3rem; justify-content:center; flex-wrap:wrap}
-.pb-panel-btn{
-  font:inherit; font-size:.74rem; cursor:pointer; color:var(--ink); background:var(--paper);
-  border:none; border-radius:14px; padding:.28rem .5rem; white-space:nowrap;
+.pb-dlg-x{
+  position:absolute; top:.22rem; right:.34rem; background:none; border:none; color:var(--paper);
+  font-size:.95rem; line-height:1; padding:.14rem .26rem; cursor:pointer; opacity:.6;
+}
+.pb-dlg-x:hover{opacity:1}
+.pb-dlg-lead{margin:.1rem 1.5rem .55rem; font-size:.92rem}
+.pb-dlg-img{display:block; margin:0 auto; max-width:100%; max-height:60vh; width:auto; height:auto;
+  border-radius:3px; background:#fffdf8; box-shadow:0 6px 20px rgba(0,0,0,.5)}
+.pb-dlg-row{display:flex; gap:.35rem; justify-content:center; flex-wrap:wrap; margin-top:.7rem}
+.pb-dlg-btn{
+  font:inherit; font-size:.76rem; cursor:pointer; color:var(--ink); background:var(--paper);
+  border:none; border-radius:14px; padding:.3rem .55rem; white-space:nowrap;
   box-shadow:0 1px 3px rgba(0,0,0,.2); transition:background .15s ease, transform .1s ease;
 }
-.pb-panel-btn:hover{background:#fff; transform:translateY(-1px)}
-.pb-panel-hint{margin-top:.42rem; font-size:.68rem; opacity:.82}
-@media (prefers-reduced-motion: reduce){.pb-panel-btn{transition:none} .pb-panel-btn:hover{transform:none}}
+.pb-dlg-btn:hover{background:#fff; transform:translateY(-1px)}
+.pb-dlg-hint{margin-top:.5rem; font-size:.7rem; opacity:.82}
+@media (prefers-reduced-motion: reduce){.pb-dialog-backdrop{transition:none} .pb-dlg-btn{transition:none} .pb-dlg-btn:hover{transform:none}}
 .eq-bar{transform-box:fill-box; transform-origin:bottom center; transform:scaleY(0.28)}
 #monitor-np-marquee{transform:translateX(85px)}
 #office-monitor.show-nowplaying #monitor-np-marquee{animation:np-scroll 13s linear infinite}
@@ -5399,29 +5419,38 @@ section{margin:1.9rem 0}
 </g>
 </g>
 <!-- LOFT PHOTOBOOTH: the visitor's own camera, live inside the monitor. Shown only while a
-     session is running (the .photobooth class on #office-monitor). The live <video> lives in
-     a foreignObject over the screen, exactly like #monitor-saver-fractal. Nothing is uploaded:
-     preview, effects, and snap->download are all client-side. Topmost screen child so the
-     controls sit above every other screen state. -->
+     session is running (the .photobooth class on #office-monitor). The live <video> sits in
+     a foreignObject over the screen's LEFT zone (x254–316) at its true aspect ratio; the
+     RIGHT zone (x316–378) holds the wordmark + shutter. Nothing is uploaded: preview,
+     filters, and the final polaroid are all client-side. Topmost screen child so the
+     controls sit above every other screen state. All text content is set from the T dict
+     by refreshPhotoboothText (bilingual). -->
 <g id="monitor-photobooth">
-<foreignObject id="monitor-pb-fo" x="254" y="154" width="124" height="42">
-<div xmlns="http://www.w3.org/1999/xhtml" class="pb-video-wrap">
+<rect x="254" y="154" width="124" height="42" fill="#0a0d12"/>
+<foreignObject id="monitor-pb-fo" x="254" y="154" width="62" height="42">
+<div xmlns="http://www.w3.org/1999/xhtml" id="monitor-pb-videowrap" class="pb-video-wrap">
 <video id="monitor-pb-video" class="pb-video" autoplay="autoplay" muted="muted" playsinline="playsinline"></video>
 <div class="pb-scanlines"></div>
 </div>
 </foreignObject>
+<!-- right-zone dressing: zone divider, wordmark, ∞ accent (covered by the picker in .picking) -->
+<g id="monitor-pb-brand">
+<line x1="316" y1="154" x2="316" y2="196" stroke="#232830" stroke-width="0.8"/>
+<text id="monitor-pb-wordmark" x="347" y="168" text-anchor="middle" style="fill:#d9a6a6; font-family:'Fraunces',serif; font-style:italic; font-size:5px; letter-spacing:0.2px"></text>
+<text x="347" y="176" text-anchor="middle" style="fill:#7f9ec0; font-size:5px">∞</text>
+</g>
 <!-- filter picker: a grid of the captured frame under 6 looks; shown only in .picking. JS
      fills #monitor-pb-picker-grid with clickable thumbnail canvases. -->
 <foreignObject id="monitor-pb-picker" x="254" y="154" width="124" height="42">
 <div xmlns="http://www.w3.org/1999/xhtml" id="monitor-pb-picker-grid" class="pb-picker"></div>
 </foreignObject>
-<!-- effect-name flash label (top centre) -->
+<!-- effect-name flash label (top of the video zone) -->
 <g id="monitor-pb-label">
-<rect x="288" y="156.5" width="56" height="9" rx="4.5" fill="#000" fill-opacity="0.42"/>
-<text id="monitor-pb-label-text" x="316" y="162.9" text-anchor="middle" style="fill:#f6f2ea; font-family:monospace; font-size:5.4px; letter-spacing:0.2px"></text>
+<rect x="257" y="156.5" width="56" height="9" rx="4.5" fill="#000" fill-opacity="0.42"/>
+<text id="monitor-pb-label-text" x="285" y="162.9" text-anchor="middle" style="fill:#f6f2ea; font-family:monospace; font-size:5.4px; letter-spacing:0.2px"></text>
 </g>
-<!-- big 3-2-1 countdown before the capture -->
-<text id="monitor-pb-count" x="316" y="184" text-anchor="middle" style="font-size:26px; fill:#fffdf8; paint-order:stroke; stroke:rgba(0,0,0,0.55); stroke-width:2.4px; stroke-linejoin:round"></text>
+<!-- big 3-2-1 countdown before the capture, centered over the video zone -->
+<text id="monitor-pb-count" x="285" y="184" text-anchor="middle" style="font-size:26px; fill:#fffdf8; paint-order:stroke; stroke:rgba(0,0,0,0.55); stroke-width:2.4px; stroke-linejoin:round"></text>
 <!-- close (x), top-right -->
 <g id="monitor-pb-close" class="pb-ctrl">
 <circle cx="372" cy="159.5" r="4.6" fill="#000" fill-opacity="0.45"/>
@@ -5433,14 +5462,41 @@ section{margin:1.9rem 0}
 <path d="M262.5 157.3 A2.7 2.7 0 1 0 263 161.7" fill="none" stroke="#f6f2ea" stroke-width="1" stroke-linecap="round"/>
 <path d="M262.9 155.7 L263 157.7 L261 157.6 Z" fill="#f6f2ea"/>
 </g>
-<!-- shutter, bottom-right -->
+<!-- shutter, centered in the right zone (transparent circle widens the tap target) -->
 <g id="monitor-pb-shutter" class="pb-ctrl">
-<circle cx="368" cy="189" r="6.2" fill="#000" fill-opacity="0.4"/>
-<circle cx="368" cy="189" r="5" fill="none" stroke="#f6f2ea" stroke-width="1.2"/>
-<circle cx="368" cy="189" r="2.4" fill="#f6f2ea"/>
+<circle cx="347" cy="186.5" r="9" fill="transparent"/>
+<circle cx="347" cy="186.5" r="6.2" fill="#000" fill-opacity="0.4"/>
+<circle cx="347" cy="186.5" r="5" fill="none" stroke="#f6f2ea" stroke-width="1.2"/>
+<circle cx="347" cy="186.5" r="2.4" fill="#f6f2ea"/>
 </g>
 <!-- white snap flash (topmost, click-through) -->
 <rect id="monitor-pb-flash" x="254" y="154" width="124" height="42" fill="#ffffff" opacity="0" pointer-events="none"/>
+</g>
+<!-- photobooth pre-permission confirm: an ON-SCREEN ask (no popup, no getUserMedia yet) —
+     only the "Open camera" button click calls getUserMedia, inside that user gesture.
+     Shown via .pb-confirm on #office-monitor; drawn over whatever the screen shows. -->
+<g id="monitor-pb-confirm">
+<rect id="monitor-pb-confirm-bg" x="254" y="154" width="124" height="42" fill="#10141b" fill-opacity="0.94"/>
+<text id="monitor-pb-confirm-q" x="316" y="167" text-anchor="middle" style="fill:#f6f2ea; font-family:'Fraunces',serif; font-size:5.6px"></text>
+<g id="monitor-pb-confirm-yes" class="pb-ctrl">
+<rect x="270" y="173.5" width="56" height="12" rx="6" fill="#8e3a4a" stroke="#6e2836" stroke-width="0.8"/>
+<text id="monitor-pb-confirm-yes-text" x="298" y="181.5" text-anchor="middle" style="fill:#f8f5ec; font-size:4.8px; font-family:'Source Serif 4',serif"></text>
+</g>
+<g id="monitor-pb-confirm-no" class="pb-ctrl">
+<rect x="332" y="173.5" width="30" height="12" rx="6" fill="#262b33" stroke="#3a4049" stroke-width="0.8"/>
+<text id="monitor-pb-confirm-no-text" x="347" y="181.5" text-anchor="middle" style="fill:#d8d3c8; font-size:4.8px; font-family:'Source Serif 4',serif"></text>
+</g>
+</g>
+<!-- photobooth no-camera/denied panel: a friendly ON-SCREEN note (no bubble, no throw).
+     Shown via .pb-error on #office-monitor; OK returns the previous screen. -->
+<g id="monitor-pb-error">
+<rect id="monitor-pb-error-bg" x="254" y="154" width="124" height="42" fill="#10141b" fill-opacity="0.94"/>
+<text id="monitor-pb-error-1" x="316" y="165" text-anchor="middle" style="fill:#f6f2ea; font-family:'Fraunces',serif; font-size:5.4px"></text>
+<text id="monitor-pb-error-2" x="316" y="172" text-anchor="middle" style="fill:#bfb7a8; font-size:4.8px; font-family:'Source Serif 4',serif"></text>
+<g id="monitor-pb-error-ok" class="pb-ctrl">
+<rect x="303" y="177" width="26" height="11" rx="5.5" fill="#262b33" stroke="#3a4049" stroke-width="0.8"/>
+<text id="monitor-pb-error-ok-text" x="316" y="184.3" text-anchor="middle" style="fill:#d8d3c8; font-size:4.8px; font-family:'Source Serif 4',serif"></text>
+</g>
 </g>
 </g>
 <!-- webcam launch target: a generous transparent hit area over the top bezel around the lens,
@@ -6464,23 +6520,26 @@ var T = {
     cheers_text: "Cheers! 🥂",
     can_streak_text: "Nice toss streak! 🥫",
     trip_no_mix_text: "Please don't mix. Enjoy responsibly. 🙃",
-    pb_ask: "📷 Say cheese? — your camera, just for you.<br>Nothing is sent anywhere.",
-    pb_live: "Smile — you're on camera! 📸",
-    pb_denied: "no worries — camera stays off 🙂",
+    pb_confirm_q: "Open the photobooth?",
+    pb_confirm_yes: "📷 Open camera",
+    pb_confirm_no: "Cancel",
+    pb_err_1: "no camera here",
+    pb_err_2: "no worries 🙂",
+    pb_err_ok: "OK",
     pb_panel_lead: "Love it? Send it to us 💌",
     pb_hint_copied: "photo copied — paste it into your email 📋",
     pb_hint_nocopy: "tap Download, then attach it to your email ⬇",
     pb_btn_download: "⬇ Download",
     pb_btn_gmail: "Gmail",
     pb_btn_email: "✉ Email",
-    pb_email_subject: "Loft photobooth 📸",
-    pb_email_body: "A photo from your loft photobooth 📸",
+    pb_btn_retake: "↺ Retake",
+    pb_btn_cancel: "Cancel",
+    pb_email_subject: "A photo from your loft photobooth 📸",
+    pb_email_body: "Hi Markéta & Behdad!\n\nPaste the picture now — it's on your clipboard (Ctrl/Cmd+V).\n\nSee you at the wedding!",
     pb_fx_normal: "Normal",
     pb_fx_bw: "Black & white",
     pb_fx_sepia: "Sepia",
-    pb_fx_negative: "Negative",
     pb_fx_night: "Night vision",
-    pb_fx_glow: "Loft glow",
     pb_fx_psy: "Psychedelic",
     pb_fx_kaleido: "Kaleidoscope",
     pb_strip_caption: "loft photobooth",
@@ -6585,23 +6644,26 @@ var T = {
     cheers_text: "Na zdraví! 🥂",
     can_streak_text: "Pěkná série hodů! 🥫",
     trip_no_mix_text: "Prosím nemíchat. Užívejte s mírou. 🙃",
-    pb_ask: "📷 Úsměv? — tvoje kamera, jen pro tebe.<br>Nikam se nic neposílá.",
-    pb_live: "Úsměv — jsi na kameře! 📸",
-    pb_denied: "nic se neděje — kamera zůstane vypnutá 🙂",
-    pb_panel_lead: "Líbí se ti? Pošli nám ho 💌",
+    pb_confirm_q: "Otevřít fotokoutek?",
+    pb_confirm_yes: "📷 Zapnout kameru",
+    pb_confirm_no: "Zrušit",
+    pb_err_1: "kamera tu není",
+    pb_err_2: "nic se neděje 🙂",
+    pb_err_ok: "OK",
+    pb_panel_lead: "Líbí se ti? Pošli nám ji 💌",
     pb_hint_copied: "fotka zkopírována — vlož ji do e-mailu 📋",
     pb_hint_nocopy: "klikni na Stáhnout a přilož ji k e-mailu ⬇",
     pb_btn_download: "⬇ Stáhnout",
     pb_btn_gmail: "Gmail",
     pb_btn_email: "✉ E-mail",
-    pb_email_subject: "Fotokoutek v loftu 📸",
-    pb_email_body: "Fotka z vašeho loftového fotokoutku 📸",
+    pb_btn_retake: "↺ Znovu",
+    pb_btn_cancel: "Zrušit",
+    pb_email_subject: "Fotka z vašeho fotokoutku v loftu 📸",
+    pb_email_body: "Ahoj Markéto a Behdade!\n\nTeď sem vlož fotku — máš ji ve schránce (Ctrl/Cmd+V).\n\nUvidíme se na svatbě!",
     pb_fx_normal: "Normální",
     pb_fx_bw: "Černobílá",
     pb_fx_sepia: "Sépie",
-    pb_fx_negative: "Negativ",
     pb_fx_night: "Noční vidění",
-    pb_fx_glow: "Zář loftu",
     pb_fx_psy: "Psychedelie",
     pb_fx_kaleido: "Kaleidoskop",
     pb_strip_caption: "fotokoutek v loftu",
@@ -6643,6 +6705,7 @@ function setLang(l) {
   if (window.refreshHuntCaption) window.refreshHuntCaption();
   if (window.refreshLaptopClock) window.refreshLaptopClock();
   if (window.refreshFullscreenLabel) window.refreshFullscreenLabel();
+  if (window.refreshPhotoboothText) window.refreshPhotoboothText();
 }
 (function () {
   var btns = document.querySelectorAll(".langs button");
@@ -10565,7 +10628,10 @@ document.addEventListener("click", function (e) {
   });
   monitor.addEventListener("click", function () {
     clearTimeout(monClickTimer);
-    if (monitor.classList.contains("photobooth")) { cyclePhotoboothEffect(); return; } // a screen tap cycles the effect
+    if (monitor.classList.contains("photobooth")) return; // the booth owns the screen; its own controls handle clicks (tapping the video cycles filters)
+    if (monitor.classList.contains("pb-confirm") || monitor.classList.contains("pb-error")) {
+      hidePbConfirm(); hidePbError(); return; // a stray click (screen or bezel) dismisses the booth's panel, never runs the boot gag under it
+    }
     if (monitor.classList.contains("show-saver")) {
       stopSaver();
       monitor.classList.add("show-caps");
@@ -10609,15 +10675,17 @@ document.addEventListener("click", function (e) {
     });
   }
   // ── LOFT PHOTOBOOTH ──────────────────────────────────────────────────────────────
-  // The bezel webcam turns on the VISITOR'S own camera, shows it live inside the monitor,
-  // cycles fun filters, snaps a photo that DOWNLOADS to their device, then suggests
-  // emailing it to the couple. Everything is client-side — nothing is uploaded or
-  // auto-sent. The .photobooth class drives every visual (live video + red LED), so the
-  // camera can never outlive it: every teardown path removes the class AND stops the
-  // tracks (close x, webcam re-click, leaving the office, tab hidden, pagehide, PC off,
-  // game reset).
+  // The bezel webcam runs the VISITOR'S own camera inside the monitor. The flow: webcam
+  // click → ON-SCREEN confirm (no getUserMedia yet, no popup) → its "Open camera" button
+  // (a real user gesture) starts the stream → live preview at true aspect in the screen's
+  // left zone → shutter runs a 3-2-1 countdown and captures ONE mirrored frame → on-screen
+  // 6-look filter picker → picking a look composes a polaroid and opens the booth's single
+  // popup, the polaroid dialog (Download / Gmail / Email / Retake / Cancel). Everything is
+  // client-side — nothing is uploaded or auto-sent. The .photobooth class drives every
+  // live visual (video + red LED), so the camera can never outlive it: every teardown
+  // path removes the class AND stops the tracks (close x, webcam re-click, leaving the
+  // office, tab hidden, pagehide, PC off, game reset).
   var webcam = document.getElementById("office-webcam");
-  var pbAnchor = webcam || monitor;
   var pbVideo = document.getElementById("monitor-pb-video");
   var pbLabelG = document.getElementById("monitor-pb-label");
   var pbLabelText = document.getElementById("monitor-pb-label-text");
@@ -10627,15 +10695,16 @@ document.addEventListener("click", function (e) {
   var pbStarting = false; // getUserMedia is pending (its permission prompt is up)
   var pbWant = false;     // the visitor still wants it on — cleared the instant they close/leave
   var pbFxIndex = 0;
-  var pbPanel = null;     // the post-snap action panel (Download/Gmail/Email), or null
+  var pbDialog = null;    // the polaroid dialog's backdrop element, or null
+  var pbDialogUrl = null; // the dialog <img>'s object URL, revoked on dismiss
   var pbCount = document.getElementById("monitor-pb-count");
   var pbPickerGrid = document.getElementById("monitor-pb-picker-grid");
   var pbCapturing = false;  // a 3-2-1 countdown/capture is running
   var pbPicking = false;    // the filter picker grid is up
   var pbBaseFrame = null;   // the single captured frame (mirrored, unfiltered) the picker/polaroid derive from
   var pbTimers = [];        // countdown timers, cancelled on teardown
-  // the 6 looks offered in the picker: clean + B&W + sepia + three trip looks
-  var PICK_FX = [
+  // the 6 looks: the live tap-to-cycle preview and the post-snap picker share this list
+  var PB_EFFECTS = [
     { key: "pb_fx_normal", css: "none" },
     { key: "pb_fx_bw", css: "grayscale(1)" },
     { key: "pb_fx_sepia", css: "sepia(0.75)" },
@@ -10643,18 +10712,31 @@ document.addEventListener("click", function (e) {
     { key: "pb_fx_night", css: "hue-rotate(75deg) saturate(1.8) contrast(1.5) brightness(1.15)" },
     { key: "pb_fx_kaleido", css: "hue-rotate(260deg) saturate(2.8) contrast(1.15) brightness(1.05)" }
   ];
-  var PB_EFFECTS = [
-    { key: "pb_fx_normal", css: "none" },
-    { key: "pb_fx_bw", css: "grayscale(1)" },
-    { key: "pb_fx_sepia", css: "sepia(0.75)" },
-    { key: "pb_fx_negative", css: "invert(1)" },
-    { key: "pb_fx_night", css: "hue-rotate(90deg) saturate(1.6) contrast(1.3) brightness(1.05)" },
-    { key: "pb_fx_glow", css: "sepia(0.4) saturate(1.4) contrast(1.1) brightness(1.05)" }
-  ];
   function pbText(key) {
     var l = document.documentElement.lang;
     return (T[l] && T[l][key]) || T.en[key] || "";
   }
+  // The on-screen SVG texts (wordmark, confirm ask, error note) come from the T dict —
+  // registered on window so setLang re-renders them on a language switch (same pattern
+  // as refreshLaptopClock).
+  window.refreshPhotoboothText = function () {
+    function set(id, key) { var el = document.getElementById(id); if (el) el.textContent = pbText(key); }
+    set("monitor-pb-wordmark", "pb_strip_caption");
+    set("monitor-pb-confirm-q", "pb_confirm_q");
+    set("monitor-pb-confirm-yes-text", "pb_confirm_yes");
+    set("monitor-pb-confirm-no-text", "pb_confirm_no");
+    set("monitor-pb-error-1", "pb_err_1");
+    set("monitor-pb-error-2", "pb_err_2");
+    set("monitor-pb-error-ok-text", "pb_err_ok");
+  };
+  window.refreshPhotoboothText();
+  // the pre-permission confirm and the no-camera note: pure class toggles, both drawn by
+  // the SCREEN itself (never a browser popup, never a bubble); dismissing one uncovers
+  // whatever the screen showed before
+  function showPbConfirm() { monitor.classList.remove("pb-error"); monitor.classList.add("pb-confirm"); }
+  function hidePbConfirm() { monitor.classList.remove("pb-confirm"); }
+  function showPbError() { monitor.classList.remove("pb-confirm"); monitor.classList.add("pb-error"); }
+  function hidePbError() { monitor.classList.remove("pb-error"); }
   function applyPbEffect() { if (pbVideo) pbVideo.style.filter = PB_EFFECTS[pbFxIndex].css; }
   function flashPbLabel() {
     if (!pbLabelG || !pbLabelText) return;
@@ -10672,12 +10754,13 @@ document.addEventListener("click", function (e) {
     flashPbLabel();
   }
   function openPhotobooth() {
+    // called ONLY from the confirm panel's "Open camera" button, so the getUserMedia
+    // below runs inside a real user gesture and the browser's permission prompt can show
     if (pbActive || pbStarting) return;
     var md = navigator.mediaDevices;
-    if (!md || !md.getUserMedia) { eggBubble(pbAnchor, pbText("pb_denied")); return; } // no camera API / insecure context
+    if (!md || !md.getUserMedia) { showPbError(); return; } // no camera API / insecure context
     pbStarting = true;
     pbWant = true;
-    eggBubble(pbAnchor, pbText("pb_ask")); // friendly heads-up alongside the browser's own permission prompt
     var p;
     try { p = md.getUserMedia({ video: { facingMode: "user" }, audio: false }); }
     catch (err) { p = Promise.reject(err); } // never throw synchronously
@@ -10699,20 +10782,21 @@ document.addEventListener("click", function (e) {
       pbFxIndex = 0;
       applyPbEffect();
       pbActive = true;
-      monitor.classList.add("photobooth"); // shows the video + lights the red LED
-      eggBubble(pbAnchor, pbText("pb_live")); // "Smile — you're on camera!"
+      monitor.classList.add("photobooth"); // shows the booth + lights the red LED
     }).catch(function () {
       pbStarting = false;
-      if (pbWant) eggBubble(pbAnchor, pbText("pb_denied")); // denied / no device / error — never throws
+      if (pbWant) showPbError(); // denied / no device / error — a friendly on-screen note, never a throw
       pbWant = false;
     });
   }
   function closePhotobooth() {
     pbWant = false;
     pbStarting = false;
-    cancelCapture();       // stop any in-progress countdown / close the picker
-    pbBaseFrame = null;    // drop the captured frame — nothing of the camera lingers
-    dismissPhotoActions(); // the post-snap panel goes away with the booth
+    hidePbConfirm();         // a pending ask or error note dies with the booth
+    hidePbError();
+    cancelCapture();         // stop any in-progress countdown / close the picker
+    pbBaseFrame = null;      // drop the captured frame — nothing of the camera lingers
+    dismissPolaroidDialog(); // the polaroid dialog goes away with the booth
     if (pbStream) { pbStream.getTracks().forEach(function (t) { t.stop(); }); pbStream = null; } // release the camera (light off)
     if (pbVideo) { try { pbVideo.pause(); } catch (e) {} pbVideo.srcObject = null; pbVideo.style.filter = "none"; } // drop the last frame
     var wasActive = pbActive;
@@ -10730,8 +10814,8 @@ document.addEventListener("click", function (e) {
   }
   // ── capture ── hitting the shutter runs a 3-2-1 countdown, a flash, and captures ONE
   // frame. That frame is offered in a 6-look picker (grid of filtered thumbnails on the
-  // screen); the picked look is rendered as a polaroid — the ONE output the Download/
-  // Gmail/Email buttons + clipboard all operate on. A retake re-runs the countdown.
+  // screen); the picked look is rendered as a polaroid — the ONE output the dialog's
+  // Download/Gmail/Email buttons + clipboard all operate on. Retake re-runs the countdown.
   function pushTimer(fn, ms) { var id = setTimeout(fn, ms); pbTimers.push(id); return id; }
   function showCount(n) {
     if (!pbCount) return;
@@ -10793,7 +10877,11 @@ document.addEventListener("click", function (e) {
     g.fillText("markéta ∞ behdad", W / 2, baseY);
     g.fillStyle = "#716455";                                 // muted
     g.font = "400 30px Georgia, 'Times New Roman', serif";
-    g.fillText(pbText("pb_strip_caption") + " · 2027", W / 2, baseY + 42);
+    // full ISO capture date — the same string in both languages
+    var d = new Date();
+    function pad(n) { return (n < 10 ? "0" : "") + n; }
+    var dateStr = d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+    g.fillText(pbText("pb_strip_caption") + " · " + dateStr, W / 2, baseY + 42);
     return c;
   }
   function cancelCapture() {
@@ -10810,7 +10898,7 @@ document.addEventListener("click", function (e) {
     pbCapturing = true;
     pbPicking = false;
     monitor.classList.remove("picking"); // in case this is a retake
-    dismissPhotoActions();
+    dismissPolaroidDialog();             // a retake from the dialog closes it first
     var n = 3;
     (function countdown() {
       if (!pbActive) { cancelCapture(); return; }
@@ -10830,7 +10918,7 @@ document.addEventListener("click", function (e) {
   function showPicker() {
     if (!pbBaseFrame || !pbPickerGrid) return;
     pbPickerGrid.innerHTML = "";
-    PICK_FX.forEach(function (fx) {
+    PB_EFFECTS.forEach(function (fx) {
       var tc = document.createElement("canvas");
       tc.width = 132; tc.height = 84;
       var tg = tc.getContext("2d");
@@ -10852,19 +10940,20 @@ document.addEventListener("click", function (e) {
     monitor.classList.remove("picking");
     var pol = composePolaroid(pbBaseFrame, fx.css);
     if (!pol) return;
-    // One blob (the composed polaroid) feeds both the clipboard copy and the Download button.
+    // One blob (the composed polaroid) feeds the dialog <img>, the clipboard, and Download.
     var blobPromise = new Promise(function (resolve, reject) {
       try { pol.toBlob(function (b) { b ? resolve(b) : reject(new Error("no blob")); }, "image/png"); }
       catch (e) { reject(e); }
     });
-    // Best-effort immediate copy — but the picker/countdown runs past the shutter click's
-    // transient-activation window, so this write is usually stale. The copy that actually
-    // lands is re-issued inside the Gmail/Email button gesture (see showPhotoActions), so the
-    // paste hint keys off clipboard *support*, not this write's result.
+    // Copy at dialog-open time, issued synchronously inside the thumbnail click's
+    // user-activation window (the promise-valued ClipboardItem keeps the gesture).
+    // Browsers still vary, so the Gmail/Email buttons RE-ISSUE the write inside their
+    // own click gesture, and the paste hint keys off clipboard *support*, not this
+    // write's result.
     copyImageToClipboard(blobPromise);
     blobPromise.then(function (blob) {
-      showPhotoActions(blob, clipboardSupported());
-    }, function () { /* no blob (rare) — skip the panel */ });
+      showPolaroidDialog(blob, clipboardSupported());
+    }, function () { /* no blob (rare) — fall back to the live view already showing */ });
   }
   function clipboardSupported() {
     try { return !!(navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== "undefined"); }
@@ -10911,76 +11000,95 @@ document.addEventListener("click", function (e) {
     try { window.location.href = "mailto:marketa@behdad.org?subject=" +
       encodeURIComponent(pbText("pb_email_subject")) + "&body=" + encodeURIComponent(pbText("pb_email_body")); } catch (e) {}
   }
-  function pbPanelAway(e) { if (pbPanel && !pbPanel.contains(e.target)) dismissPhotoActions(); }
-  function dismissPhotoActions() {
-    document.removeEventListener("click", pbPanelAway);
-    if (!pbPanel) return;
-    var p = pbPanel; pbPanel = null;
-    p.classList.remove("show");
-    setTimeout(function () { if (p.parentNode) p.remove(); }, 250);
+  // ── the polaroid dialog ── the booth's ONE popup: a centered fixed overlay showing the
+  // composed polaroid big, with Download / Gmail / Email / Retake / Cancel. Retake goes
+  // back to live + countdown; Cancel/✕/backdrop-tap go back to the live view (camera
+  // still on — the monitor's own ✕ closes the whole booth).
+  function dismissPolaroidDialog() {
+    if (!pbDialog) return;
+    var d = pbDialog; pbDialog = null;
+    if (pbDialogUrl) { try { URL.revokeObjectURL(pbDialogUrl); } catch (e) {} pbDialogUrl = null; }
+    d.classList.remove("show");
+    setTimeout(function () { if (d.parentNode) d.remove(); }, 250);
   }
-  function showPhotoActions(blob, copied) {
-    dismissPhotoActions();
-    var eb = document.querySelector(".egg-bubble"); if (eb) dismissEggBubble(eb); // clear the "on camera" bubble under it
-    var panel = document.createElement("div");
-    panel.className = "pb-panel";
-    panel.dir = "auto";
-    panel.innerHTML =
-      '<button type="button" class="pb-panel-x" aria-label="close">✕</button>' +
-      '<div class="pb-panel-lead">' + pbText("pb_panel_lead") + '</div>' +
-      '<div class="pb-panel-row">' +
-        '<button type="button" class="pb-panel-btn" data-act="download">' + pbText("pb_btn_download") + '</button>' +
-        '<button type="button" class="pb-panel-btn" data-act="gmail">' + pbText("pb_btn_gmail") + '</button>' +
-        '<button type="button" class="pb-panel-btn" data-act="email">' + pbText("pb_btn_email") + '</button>' +
-      '</div>' +
-      '<div class="pb-panel-hint">' + pbText(copied ? "pb_hint_copied" : "pb_hint_nocopy") + '</div>';
-    // same fullscreen-aware host + positioning as eggBubble; anchored BELOW the monitor so
-    // the panel never covers the live camera preview up in the screen.
+  function showPolaroidDialog(blob, copied) {
+    dismissPolaroidDialog();
+    var bd = document.createElement("div");
+    bd.className = "pb-dialog-backdrop";
+    var url = null;
+    try { url = URL.createObjectURL(blob); } catch (e) {}
+    bd.innerHTML =
+      '<div class="pb-dialog" dir="auto">' +
+        '<button type="button" class="pb-dlg-x" aria-label="close">✕</button>' +
+        '<div class="pb-dlg-lead">' + pbText("pb_panel_lead") + '</div>' +
+        (url ? '<img class="pb-dlg-img" alt="">' : "") +
+        '<div class="pb-dlg-row">' +
+          '<button type="button" class="pb-dlg-btn" data-act="download">' + pbText("pb_btn_download") + '</button>' +
+          '<button type="button" class="pb-dlg-btn" data-act="gmail">' + pbText("pb_btn_gmail") + '</button>' +
+          '<button type="button" class="pb-dlg-btn" data-act="email">' + pbText("pb_btn_email") + '</button>' +
+          '<button type="button" class="pb-dlg-btn" data-act="retake">' + pbText("pb_btn_retake") + '</button>' +
+          '<button type="button" class="pb-dlg-btn" data-act="cancel">' + pbText("pb_btn_cancel") + '</button>' +
+        '</div>' +
+        '<div class="pb-dlg-hint">' + pbText(copied ? "pb_hint_copied" : "pb_hint_nocopy") + '</div>' +
+      '</div>';
+    if (url) { var img = bd.querySelector(".pb-dlg-img"); if (img) img.src = url; }
+    // in fullscreen the dialog must live INSIDE the fullscreen element (the top layer) or
+    // it renders behind it and never shows — the same host trick as eggBubble
     var fsHost = document.fullscreenElement || document.webkitFullscreenElement ||
                  document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
-    fsHost.appendChild(panel);
-    positionEggBubble(panel, monitor);
-    pbPanel = panel;
-    requestAnimationFrame(function () { panel.classList.add("show"); });
-    panel.querySelector(".pb-panel-x").addEventListener("click", function (e) { e.stopPropagation(); dismissPhotoActions(); });
-    var btns = panel.querySelectorAll(".pb-panel-btn");
+    fsHost.appendChild(bd);
+    pbDialog = bd;
+    pbDialogUrl = url;
+    requestAnimationFrame(function () { bd.classList.add("show"); });
+    // the backdrop swallows every click (nothing leaks to the page under it); a click on
+    // the translucent backdrop itself dismisses, same as Cancel
+    bd.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (e.target === bd) dismissPolaroidDialog();
+    });
+    bd.querySelector(".pb-dlg-x").addEventListener("click", function () { dismissPolaroidDialog(); });
+    var btns = bd.querySelectorAll(".pb-dlg-btn");
     for (var i = 0; i < btns.length; i++) {
-      btns[i].addEventListener("click", function (e) {
-        e.stopPropagation(); // keep the panel open (and off the click-away handler) so they can pick more than one
+      btns[i].addEventListener("click", function () {
         var act = this.getAttribute("data-act");
-        // re-copy the reel inside this fresh click gesture so it's actually on the clipboard
-        // when they land in the compose window (the copy at capture time was likely stale)
+        // Gmail/Email re-copy inside this fresh click gesture so the polaroid is actually
+        // on the clipboard when they land in the compose window; the dialog stays open for
+        // those two so they can pick more than one route
         if (act === "download") downloadPhoto(blob);
         else if (act === "gmail") { copyImageToClipboard(Promise.resolve(blob)); openGmailCompose(); }
         else if (act === "email") { copyImageToClipboard(Promise.resolve(blob)); openMailto(); }
+        else if (act === "retake") { dismissPolaroidDialog(); runCountdownCapture(); }
+        else if (act === "cancel") dismissPolaroidDialog();
       });
     }
-    // click-away dismissal, armed next tick so the creating click can't instantly close it
-    setTimeout(function () { document.addEventListener("click", pbPanelAway); }, 0);
   }
   if (webcam) {
     webcam.addEventListener("click", function (e) {
       e.stopPropagation(); // never fall through to the monitor's boot gag
-      if (pbActive || pbStarting) closePhotobooth();
-      else openPhotobooth();
+      if (pbActive || pbStarting) { closePhotobooth(); return; } // live session → the cam is the off switch
+      if (monitor.classList.contains("pb-confirm")) { hidePbConfirm(); return; } // second tap = never mind
+      hidePbError();
+      showPbConfirm(); // the ON-SCREEN ask — getUserMedia waits for its "Open camera" button
     });
     webcam.addEventListener("dblclick", function (e) { e.stopPropagation(); }); // and never trigger the swap-to-typewriter dblclick
   }
-  var pbShutter = document.getElementById("monitor-pb-shutter");
-  if (pbShutter) {
-    pbShutter.addEventListener("click", function (e) { e.stopPropagation(); runCountdownCapture(); });
-    pbShutter.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  // tiny helper: an on-screen SVG control gets a click action; both click and dblclick
+  // stopPropagation so screen taps never reach the monitor's boot gag / typewriter swap
+  function pbCtrl(id, fn) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("click", function (e) { e.stopPropagation(); fn(); });
+    el.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
-  var pbClose = document.getElementById("monitor-pb-close");
-  if (pbClose) {
-    pbClose.addEventListener("click", function (e) { e.stopPropagation(); closePhotobooth(); });
-    pbClose.addEventListener("dblclick", function (e) { e.stopPropagation(); });
-  }
-  var pbRetake = document.getElementById("monitor-pb-retake");
-  if (pbRetake) {
-    pbRetake.addEventListener("click", function (e) { e.stopPropagation(); runCountdownCapture(); }); // re-shoot from the picker
-    pbRetake.addEventListener("dblclick", function (e) { e.stopPropagation(); });
-  }
+  pbCtrl("monitor-pb-shutter", runCountdownCapture);
+  pbCtrl("monitor-pb-close", closePhotobooth);
+  pbCtrl("monitor-pb-retake", runCountdownCapture);         // re-shoot from the picker
+  pbCtrl("monitor-pb-confirm-yes", function () { hidePbConfirm(); openPhotobooth(); }); // the ONE getUserMedia entry point (a real user gesture)
+  pbCtrl("monitor-pb-confirm-no", hidePbConfirm);
+  pbCtrl("monitor-pb-confirm-bg", hidePbConfirm);           // tapping past the buttons = cancel
+  pbCtrl("monitor-pb-error-ok", hidePbError);
+  pbCtrl("monitor-pb-error-bg", hidePbError);
+  pbCtrl("monitor-pb-videowrap", cyclePhotoboothEffect);    // tap the live picture to cycle looks
   // Privacy backstops: stop the camera when the tab is hidden or the page is torn down,
   // on top of the room-leave hook (goToStage calls window.__closeOfficePhotobooth).
   document.addEventListener("visibilitychange", function () { if (document.hidden) closePhotobooth(); });

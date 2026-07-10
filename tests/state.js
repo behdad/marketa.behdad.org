@@ -80,7 +80,8 @@ var CASCADE_ALLOW = [
 ];
 
 // "element ±class" diffs vs the load snapshot that are legitimate after an
-// extinguisher reset. Keep minimal.
+// extinguisher reset. Injected into the probe harness too, so its settle-wait
+// can stop early when only these remain. Keep minimal.
 var RESET_DIFF_ALLOW = [
   // Known reset gap: __updateGrowlightForNight() turns the grow light off at
   // dusk, but resetHunt()/resetBalconyDusk() clears dusk without re-running it,
@@ -417,19 +418,35 @@ var PROBE_HARNESS = [
   "    ok('reset: back on the kitchen stage', window.currentStageIndex === 0, 'currentStageIndex=' + window.currentStageIndex);",
   "    ok('reset: wipe overlay released', !has('hunt-wipe', 'active'));",
   "    // class-state must match the load snapshot (a leftover one-shot/state",
-  "    // class here is exactly the recurring stuck-class bug)",
-  "    snap.forEach(function (orig, e) {",
-  "      if (!e.isConnected) return;", // app may legitimately replace nodes
-  "      var now = e.getAttribute('class') || '';",
-  "      if (now === orig) return;",
-  "      var a = orig.split(/\\s+/).filter(Boolean), b = now.split(/\\s+/).filter(Boolean);",
-  "      var gained = b.filter(function (c) { return a.indexOf(c) === -1; });",
-  "      var lost = a.filter(function (c) { return b.indexOf(c) === -1; });",
-  "      if (gained.length || lost.length) {",
-  "        report.resetDiff.push((e.id ? '#' + e.id : 'in #' + nearestId(e.parentNode) + ' <' + e.tagName.toLowerCase() + '>') +",
-  "          gained.map(function (c) { return ' +' + c; }).join('') + lost.map(function (c) { return ' -' + c; }).join(''));",
-  "      }",
-  "    });",
+  "    // class here is exactly the recurring stuck-class bug). One-shot bump",
+  "    // classes (.tapped etc.) are dropped by animationend handlers, and under",
+  "    // --virtual-time-budget those events can land after any fixed sleep — so",
+  "    // poll until the diff settles to nothing (or to known-legit entries)",
+  "    // instead of reading it once. The bound keeps the check honest: a class",
+  "    // the reset genuinely strands never clears, so it still fails.",
+  "    var RESET_ALLOW = " + JSON.stringify(RESET_DIFF_ALLOW) + ";",
+  "    function resetDiffNow() {",
+  "      var out = [];",
+  "      snap.forEach(function (orig, e) {",
+  "        if (!e.isConnected) return;", // app may legitimately replace nodes
+  "        var now = e.getAttribute('class') || '';",
+  "        if (now === orig) return;",
+  "        var a = orig.split(/\\s+/).filter(Boolean), b = now.split(/\\s+/).filter(Boolean);",
+  "        var gained = b.filter(function (c) { return a.indexOf(c) === -1; });",
+  "        var lost = a.filter(function (c) { return b.indexOf(c) === -1; });",
+  "        if (gained.length || lost.length) {",
+  "          out.push((e.id ? '#' + e.id : 'in #' + nearestId(e.parentNode) + ' <' + e.tagName.toLowerCase() + '>') +",
+  "            gained.map(function (c) { return ' +' + c; }).join('') + lost.map(function (c) { return ' -' + c; }).join(''));",
+  "        }",
+  "      });",
+  "      return out;",
+  "    }",
+  "    var settleDiff = resetDiffNow();",
+  "    for (var w = 0; w < 30 && settleDiff.some(function (d) { return RESET_ALLOW.indexOf(d) === -1; }); w++) {",
+  "      await sleep(100);",
+  "      settleDiff = resetDiffNow();",
+  "    }",
+  "    report.resetDiff = settleDiff;",
   "",
   "    // liveness: the game still responds after the chaos",
   "    if (window.goToStage) window.goToStage('kitchen');",
@@ -467,7 +484,7 @@ function fail(msg, detail) {
   var jobs = {};
   if (!ONLY || "cascade".indexOf(ONLY) === 0) jobs.cascade = lib.runPage("rsvp.html", CASCADE_HARNESS, 9000, CHROME_OPTS);
   if (!ONLY || "gates".indexOf(ONLY) === 0) jobs.gates = lib.runPage("rsvp.html", GATES_HARNESS, 12000, CHROME_OPTS);
-  if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 14000, CHROME_OPTS);
+  if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 17000, CHROME_OPTS);
   if (!Object.keys(jobs).length) {
     fail("unknown --only value: " + ONLY + " (use cascade|gates|probes)");
   }

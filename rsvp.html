@@ -6718,6 +6718,7 @@ document.addEventListener("click", function (e) {
       lfo.start(0);
       fireCtx._nodes = [noise, lfo];
       fireCtx._roarGain = roarGain;
+      fireCtx._lfoGain = lfoGain;
       scheduleCrackle();
     } catch (e) {}
   }
@@ -6725,11 +6726,15 @@ document.addEventListener("click", function (e) {
     var f = (typeof fadeSecs === "number") ? fadeSecs : 0.3;
     if (crackleTimer) { clearTimeout(crackleTimer); crackleTimer = null; }
     if (fireCtx) {
-      var ctx = fireCtx, roar = fireCtx._roarGain, nodes = fireCtx._nodes || [];
+      var ctx = fireCtx, roar = fireCtx._roarGain, nodes = fireCtx._nodes || [], lfoG = fireCtx._lfoGain;
       fireCtx = null; // null first so a racing scheduleCrackle callback bails
       // linear (not exponential) ramp so the roar stays audible across the whole fade
       // instead of dropping below hearing in the first third of a long room-change fade
       try { if (roar) { var t = ctx.currentTime; roar.gain.cancelScheduledValues(t); roar.gain.setValueAtTime(roar.gain.value, t); roar.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
+      // the breathing LFO adds to roar.gain, so fade its depth too — left at full depth
+      // the "faded" roar keeps swelling audibly until the close timer, which hidden/
+      // backgrounded tabs can delay well past the ramp (setTimeout throttling)
+      try { if (lfoG) { var t2 = ctx.currentTime; lfoG.gain.setValueAtTime(lfoG.gain.value, t2); lfoG.gain.linearRampToValueAtTime(0, t2 + f); } } catch (e) {}
       setTimeout(function () {
         nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
         try { ctx.close(); } catch (e) {}
@@ -6995,7 +7000,10 @@ document.addEventListener("click", function (e) {
         dropY = FALL_DIST;
         if (!banged) {
           banged = true;
-          if (!document.hidden && window.currentStageName === "office") playCraneDropSound();
+          // hasFocus too, not just !hidden: a visible-but-UNFOCUSED window (second
+          // monitor, partially covered) still runs this rAF loop, and the drop boom is
+          // the loudest sound in the file — it must never fire from an unwatched window
+          if (!document.hidden && document.hasFocus() && window.currentStageName === "office") playCraneDropSound();
         }
         state = "reload"; reloadTimer = 0;
       }
@@ -7936,16 +7944,24 @@ document.addEventListener("click", function (e) {
         filter.Q.value = 0.6;
         radioGain = radioCtx.createGain();
         radioGain.gain.setValueAtTime(0.0001, radioCtx.currentTime);
-        radioGain.gain.exponentialRampToValueAtTime(0.13, radioCtx.currentTime + 0.15);
         radioSource.connect(filter);
         filter.connect(radioGain);
         radioGain.connect(pannedOut(radioCtx, "kitchen-scale"));
         radioSource.start();
-        radioTuneInTimeout = setTimeout(function () {
-          // fade the tuning hiss much further down (near-silent) so the melody comes in clean
-          if (radioGain && radioCtx) radioGain.gain.exponentialRampToValueAtTime(0.0012, radioCtx.currentTime + 0.9);
+        if (document.hasFocus()) {
+          // theatrical tune-in: a burst of loud static, then the station comes in clean
+          radioGain.gain.exponentialRampToValueAtTime(0.13, radioCtx.currentTime + 0.15);
+          radioTuneInTimeout = setTimeout(function () {
+            // fade the tuning hiss much further down (near-silent) so the melody comes in clean
+            if (radioGain && radioCtx) radioGain.gain.exponentialRampToValueAtTime(0.0012, radioCtx.currentTime + 0.9);
+            playRadioMelodyLoop();
+          }, 1400);
+        } else {
+          // unattended restart — a visibility flap (window occluded then revealed without
+          // focus) resuming the bed: skip the loud tuning blast, come back in already tuned
+          radioGain.gain.exponentialRampToValueAtTime(0.0012, radioCtx.currentTime + 0.4);
           playRadioMelodyLoop();
-        }, 1400);
+        }
       } catch (e) {}
     }
     function playRadioMelodyOnce() {
@@ -10615,7 +10631,7 @@ document.addEventListener("click", function (e) {
   // door, same two-room pattern as the storm rain ambience above. Polled every ~1s
   // rather than hooked into every room-nav/door-toggle call site, mirroring rain/
   // cricket ambience elsewhere in this file.
-  var cityCtx = null, citySource = null, cityGain = null, cityLfo = null, cityWhere = null;
+  var cityCtx = null, citySource = null, cityGain = null, cityLfo = null, cityLfoDepth = null, cityWhere = null;
   function cuddlyDoorOpen() {
     var front = document.getElementById("balcony-door"), nook = document.getElementById("cuddly-balcony-door");
     return !!((front && front.classList.contains("open")) || (nook && nook.classList.contains("open")));
@@ -10652,10 +10668,10 @@ document.addEventListener("click", function (e) {
       cityLfo = cityCtx.createOscillator();
       cityLfo.type = "sine";
       cityLfo.frequency.value = 0.07;
-      var lfoDepth = cityCtx.createGain();
-      lfoDepth.gain.value = peak * 0.3;
-      cityLfo.connect(lfoDepth);
-      lfoDepth.connect(cityGain.gain);
+      cityLfoDepth = cityCtx.createGain();
+      cityLfoDepth.gain.value = peak * 0.3;
+      cityLfo.connect(cityLfoDepth);
+      cityLfoDepth.connect(cityGain.gain);
       cityLfo.start();
       citySource.connect(filter);
       filter.connect(cityGain);
@@ -10665,14 +10681,21 @@ document.addEventListener("click", function (e) {
   }
   function stopCityHum() {
     if (!cityCtx) return;
-    try { cityGain.gain.exponentialRampToValueAtTime(0.0001, cityCtx.currentTime + 0.4); } catch (e) {}
+    try {
+      cityGain.gain.exponentialRampToValueAtTime(0.0001, cityCtx.currentTime + 0.4);
+      // the traffic-swell LFO adds to cityGain.gain, so fade its depth too — otherwise the
+      // "faded" hum keeps wobbling audibly until the close timer, which hidden/backgrounded
+      // tabs can delay well past the ramp (setTimeout throttling)
+      cityLfoDepth.gain.setValueAtTime(cityLfoDepth.gain.value, cityCtx.currentTime);
+      cityLfoDepth.gain.linearRampToValueAtTime(0, cityCtx.currentTime + 0.4);
+    } catch (e) {}
     var src = citySource, lfo = cityLfo, ctxToClose = cityCtx;
     setTimeout(function () {
       if (src) { try { src.stop(); } catch (e) {} }
       if (lfo) { try { lfo.stop(); } catch (e) {} }
       if (ctxToClose) { try { ctxToClose.close(); } catch (e) {} }
     }, 500);
-    citySource = null; cityGain = null; cityCtx = null; cityLfo = null; cityWhere = null;
+    citySource = null; cityGain = null; cityCtx = null; cityLfo = null; cityLfoDepth = null; cityWhere = null;
   }
   function tick() {
     var want = cityHumWant();
@@ -10809,6 +10832,13 @@ document.addEventListener("click", function (e) {
       windGain.gain.cancelScheduledValues(t);
       windGain.gain.setValueAtTime(windGain.gain.value, t);
       windGain.gain.linearRampToValueAtTime(0.0001, t + f);
+      // the gust LFOs feed windGain.gain ADDITIVELY, so left at full depth the "faded"
+      // bed still surges to full calm/storm loudness on every gust — right through the
+      // fade, and past it whenever the close timer below runs late (hidden/backgrounded
+      // tabs throttle setTimeout). Fade the depth to zero over the same ramp.
+      windLfoDepth.gain.cancelScheduledValues(t);
+      windLfoDepth.gain.setValueAtTime(windLfoDepth.gain.value, t);
+      windLfoDepth.gain.linearRampToValueAtTime(0, t + f);
     } catch (e) {}
     var nodes = [windSource, windLfo1, windLfo2, windFilterLfo], ctxToClose = windCtx;
     setTimeout(function () {
@@ -17270,7 +17300,13 @@ function spawnDustMote(container) {
       });
     });
     var onBalcony = stageIndex === STAGES.indexOf("balcony");
-    setTimeout(function () { playThunderSound(onBalcony ? 0.5 : 0.15); }, 320 + Math.random() * 480);
+    setTimeout(function () {
+      // re-check at PLAY time (the flash->rumble delay can straddle a hide), and require
+      // focus too: the storm timers keep firing for a visible-but-unfocused window, and a
+      // full thunderclap from a window nobody's watching reads as a random loud blast
+      if (document.visibilityState === "hidden" || !document.hasFocus()) return;
+      playThunderSound(onBalcony ? 0.5 : 0.15);
+    }, 320 + Math.random() * 480);
     // the couple startle at the rumble if you're in the nook with them (.shake is
     // after .grooving in source, so it wins over the groove for its brief run)
     if (stageIndex === STAGES.indexOf("cuddly")) {

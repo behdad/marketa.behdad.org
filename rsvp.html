@@ -7074,12 +7074,7 @@ document.addEventListener("click", function (e) {
       if (dropY >= FALL_DIST) {
         dropY = FALL_DIST;
         if (!banged) {
-          banged = true;
-          // hasFocus too, not just !hidden: a visible-but-UNFOCUSED window (second
-          // monitor, partially covered) still runs this rAF loop, and the drop boom is
-          // the loudest sound in the file — it must never fire from an unwatched window
-          // don't thud over the music — the boom's sub-bass masks the song's low end
-          if (!document.hidden && document.hasFocus() && window.currentStageName === "office" && !(window.__anySongPlaying && window.__anySongPlaying())) playCraneDropSound();
+          banged = true; // the crane drops its load silently — visual only (the boom read as an unpleasant thump)
         }
         state = "reload"; reloadTimer = 0;
       }
@@ -9328,7 +9323,6 @@ document.addEventListener("click", function (e) {
     }
     return false;
   }
-  window.__anySongPlaying = anySongPlaying; // so the crane drop can hush its boom during a song
   // The pipeline's context is deliberately permanent (capture is irreversible — see
   // ensureAudioGraph), but permanent shouldn't mean always rendering: while the tab
   // is hidden AND no song is playing, park it suspended instead of holding a live,
@@ -13837,68 +13831,6 @@ function playMetalClinkSound(pitchMult, panId) {
     noise.start(t);
     noise.stop(t + 0.03);
     setTimeout(function () { ctx.close(); }, 400);
-  } catch (e) {}
-}
-// A construction load hitting the deck, heard through the office window: a heavy,
-// bass-shifted take on the metal-clink/pan-crash family. Two low, slow-ringing metal
-// clangs a beat apart (reusing playMetalClinkSound at deep pitch multipliers), layered
-// over a deep thud — a low sine boom plus a short low-passed noise body — for the weight
-// of it. Panned to the window's on-screen position. Only ever called from the crane's
-// gated rAF loop, so it never sounds while the office is off-screen or the tab is hidden.
-function playCraneDropSound() {
-  playMetalClinkSound(0.20, "office-window-pane-1");
-  setTimeout(function () { playMetalClinkSound(0.14, "office-window-pane-1"); }, 210);
-  try {
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    var ctx = new Ctx();
-    var t = ctx.currentTime;
-    var out = pannedOut(ctx, "office-window-pane-1");
-    // deep boom: a low sine dropping in pitch as it decays — the ground-shake of impact,
-    // lower + longer than a clink so a dropped steel load lands with real weight
-    var boom = ctx.createOscillator();
-    boom.type = "sine";
-    boom.frequency.setValueAtTime(64, t);
-    boom.frequency.exponentialRampToValueAtTime(22, t + 0.35);
-    var bg = ctx.createGain();
-    bg.gain.setValueAtTime(0.0001, t);
-    bg.gain.exponentialRampToValueAtTime(0.62, t + 0.02);
-    bg.gain.exponentialRampToValueAtTime(0.0001, t + 0.68);
-    boom.connect(bg);
-    bg.connect(out);
-    boom.start(t);
-    boom.stop(t + 0.72);
-    // sub-boom: an even deeper sine under it for the chest-thump low end
-    var sub = ctx.createOscillator();
-    sub.type = "sine";
-    sub.frequency.setValueAtTime(34, t);
-    sub.frequency.exponentialRampToValueAtTime(18, t + 0.5);
-    var sg = ctx.createGain();
-    sg.gain.setValueAtTime(0.0001, t);
-    sg.gain.exponentialRampToValueAtTime(0.34, t + 0.03);
-    sg.gain.exponentialRampToValueAtTime(0.0001, t + 0.62);
-    sub.connect(sg);
-    sg.connect(out);
-    sub.start(t);
-    sub.stop(t + 0.66);
-    // thud body: a burst of low-passed noise for the dull "whump" of mass landing
-    var nlen = Math.floor(ctx.sampleRate * 0.36);
-    var nb = ctx.createBuffer(1, nlen, ctx.sampleRate);
-    var nd = nb.getChannelData(0);
-    for (var i = 0; i < nlen; i++) nd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / nlen, 2);
-    var noise = ctx.createBufferSource();
-    noise.buffer = nb;
-    var lp = ctx.createBiquadFilter();
-    lp.type = "lowpass";
-    lp.frequency.value = 120;
-    var ng = ctx.createGain();
-    ng.gain.value = 0.5;
-    noise.connect(lp);
-    lp.connect(ng);
-    ng.connect(out);
-    noise.start(t);
-    noise.stop(t + 0.38);
-    setTimeout(function () { ctx.close(); }, 850);
   } catch (e) {}
 }
 // The balcony windchime, hanging under the wall lamp: 2-4 of its 4 tubes ring at once,

@@ -236,6 +236,8 @@ footer{margin-top:2.6rem}
 .device-hint.show{display:block}
 .season-toast{position:absolute; left:50%; bottom:12px; transform:translateX(-50%); background:rgba(69,58,49,.85); color:#f8f5ec; font-size:.85rem; padding:.3rem .9rem; border-radius:999px; opacity:0; transition:opacity .3s ease; pointer-events:none; z-index:6; white-space:nowrap}
 .season-toast.show{opacity:1}
+.fs-hint-link{background:none; border:0; padding:0; font:inherit; color:var(--wine); text-decoration:underline; text-underline-offset:2px; cursor:pointer}
+.fs-hint-link:hover{color:var(--ink)}
 .hunt-dots{display:flex; justify-content:center; align-items:center; gap:.15rem; margin:.55rem 0 0}
 /* small visible dot inside a ~24px transparent tap target (dots double as
    click/tap navigation) */
@@ -7651,7 +7653,7 @@ var T = {
     hunt_title: "Loft Day",
     tagline: "We’re getting married<br><strong>Will you be there?</strong>",
     device_hint: "(best enjoyed on a laptop 💻)",
-    fs_hint: "(best enjoyed fullscreen ⛶, headphones on 🎧)",
+    fs_hint: "(best enjoyed <button type=\"button\" class=\"fs-hint-link\">fullscreen ⛶</button>, headphones on 🎧)",
     season_winter: "❄ winter",
     season_spooky: "🎃 spooky season",
     season_auto: "⛅ back to today",
@@ -7854,7 +7856,7 @@ var T = {
     hunt_title: "Den v podkroví",
     tagline: "Budeme se brát<br><strong>Budete tam?</strong>",
     device_hint: "(nejlíp si to užiješ na počítači 💻)",
-    fs_hint: "(nejlíp na celou obrazovku ⛶ a se sluchátky 🎧)",
+    fs_hint: "(nejlíp na <button type=\"button\" class=\"fs-hint-link\">celou obrazovku ⛶</button> a se sluchátky 🎧)",
     season_winter: "❄ zima",
     season_spooky: "🎃 strašidelno",
     season_auto: "⛅ zpátky k dnešku",
@@ -8133,6 +8135,14 @@ function setLang(l) {
     hint.innerHTML = T[l].fs_hint || T.en.fs_hint;
   }
   hint.classList.add("show");
+  // the hint's "fullscreen" word is a live trigger — delegated, so language toggles
+  // (which rebuild the innerHTML) can't shed the listener
+  hint.addEventListener("click", function (e) {
+    var b = e.target && e.target.closest && e.target.closest(".fs-hint-link");
+    if (!b) return;
+    var fsBtn = document.getElementById("hunt-fullscreen-btn");
+    if (fsBtn) fsBtn.click();
+  });
 })();
 (function () {
   // Fullscreens #hunt-fullscreen-area (the nav-frame + viewport + room dots together,
@@ -13134,7 +13144,9 @@ document.addEventListener("click", function (e) {
     if (monitor.classList.contains("here") && pcTower && pcTower.classList.contains("on")) {
       monitor.classList.add("screen-on", "show-caps");
       monitorUrl = CAPS_URL;
-      updateNowPlaying();
+      // deliberately NOT updateNowPlaying(): with a song going it re-adds
+      // show-nowplaying over the desktop we just restored — the booth always
+      // closes to the desktop; the music tile is the way back to the player
       scheduleSaver();
     }
   }
@@ -13576,7 +13588,10 @@ document.addEventListener("click", function (e) {
   // a tap landing anywhere outside the monitor hands the room back (capture phase, so a
   // target's own stopPropagation can't strand the zoom)
   vp.addEventListener("pointerdown", function (e) {
-    if (zoomed && !monitor.contains(e.target)) zoomOut();
+    if (!zoomed) return;
+    if (monitor.contains(e.target)) return;
+    if (e.target && e.target.closest && e.target.closest("#hunt-fullscreen-btn")) return; // viewport chrome, not the room
+    zoomOut();
   }, true);
   // ...and tapping the lit monitor pulls the view back up
   monitor.addEventListener("pointerdown", function () {

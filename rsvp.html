@@ -6255,8 +6255,9 @@ section{margin:1.9rem 0}
 <path d="M369.9 159.9 L374.1 164.1 M374.1 159.9 L369.9 164.1" stroke="#f8f5ec" stroke-width="1.1" stroke-linecap="round"/>
 </g>
 </g>
-<!-- LINUX app: a real x86 PC (v86/WebAssembly) booting a real Linux, lazy-loaded from
-     the same CDN as the Python runtime on first open. The screen is the VM's SERIAL
+<!-- LINUX app: a real x86 PC (v86/WebAssembly) booting a real Linux — a self-hosted
+     repack of the v86 Buildroot ISO with the groom's hb-shape (HarfBuzz) baked in; the
+     emulator itself lazy-loads from the CDN on first open. The screen is the VM's SERIAL
      console: finished lines scroll above, and the console's unfinished tail line (the
      shell's own prompt) labels the input row. Same shell as the terminal, tux accents. -->
 <g id="monitor-linux">
@@ -8282,8 +8283,9 @@ var T = {
     py_busy: "still chewing on the last one\u2026",
     app_linux: "linux",
     linux_welcome: "loft linux \u2014 a whole x86 PC in your page (v86/WebAssembly), booting a real kernel.",
-    linux_loading: "booting linux\u2026 ~8 MB, first time only",
+    linux_loading: "booting linux\u2026 ~9 MB, first time only",
     linux_wait: "still booting\u2026 the prompt appears once the kernel is up.",
+    linux_hint: "try: hb-shape /root/test.ttf 'mark\u00e9ta \u221e behdad' \u2014 the groom's text-shaping engine, in the box.",
     linux_fail: "couldn't fetch linux \u2014 offline, or the CDN is blocked. close and reopen to retry.",
   },
   cs: {
@@ -8497,8 +8499,9 @@ var T = {
     py_busy: "je\u0161t\u011b \u017ev\u00fdk\u00e1m ten p\u0159edchoz\u00ed\u2026",
     app_linux: "linux",
     linux_welcome: "loftov\u00fd linux \u2014 cel\u00e9 x86 PC p\u0159\u00edmo tady ve str\u00e1nce (v86/WebAssembly), bootuje skute\u010dn\u00e9 j\u00e1dro.",
-    linux_loading: "bootujeme linux\u2026 ~8 MB, jen napoprv\u00e9",
+    linux_loading: "bootujeme linux\u2026 ~9 MB, jen napoprv\u00e9",
     linux_wait: "po\u0159\u00e1d bootujeme\u2026 prompt se uk\u00e1\u017ee, a\u017e j\u00e1dro nab\u011bhne.",
+    linux_hint: "zkuste: hb-shape /root/test.ttf 'mark\u00e9ta \u221e behdad' \u2014 \u017eenichova s\u00e1zec\u00ed knihovna, p\u0159\u00edmo v krabici.",
     linux_fail: "linux se nepoda\u0159ilo st\u00e1hnout \u2014 offline, nebo je CDN blokovan\u00e9. zav\u0159ete a otev\u0159ete znovu.",
   }
 };
@@ -13273,10 +13276,13 @@ document.addEventListener("click", function (e) {
     pyCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   // ── LINUX APP ────────────────────────────────────────────────────────────────────
-  // A real Linux: v86 (a whole x86 PC emulated in WebAssembly) boots the v86 project's
-  // tiny Buildroot ISO (Linux 2.6 + busybox, ~5.7 MB), all of it lazy-loaded from
+  // A real Linux: v86 (a whole x86 PC emulated in WebAssembly) boots our repack of the
+  // v86 project's tiny Buildroot ISO (Linux 2.6.34 + busybox, i686) with the groom's
+  // own hb-shape — the HarfBuzz CLI, statically built i686/musl — plus a small OFL test
+  // font baked into the ramdisk (~6.9 MB, self-hosted in art/linux/, provenance and
+  // build recipe in art/linux/README.md). The emulator library (~2 MB) lazy-loads from
   // jsDelivr on first open — the same one-CDN exception as the Python app above,
-  // ~8 MB total, nothing fetched until then. The screen is the VM's SERIAL console,
+  // ~9 MB total, nothing fetched until then. The screen is the VM's SERIAL console,
   // not its VGA canvas: at 124×42 a text-mode framebuffer is unreadable, while serial
   // reuses the terminal's 2px shell verbatim. Finished lines land in the scrollback;
   // the console's unfinished tail line (the shell's own prompt, "/root% ") labels the
@@ -13296,12 +13302,13 @@ document.addEventListener("click", function (e) {
   var lxPrompted = false; // a shell prompt has appeared, so typed lines may be sent
   var lxHiddenStop = false; // the hidden-tab guard stopped the CPU (resume on return)
   var lxLine = ""; // the serial console's unfinished tail line (rendered as the row prompt)
+  var lxDec = null; // streaming UTF-8 decoder for serial output (é/∞ span multiple bytes)
   var LX_CDN = {
     lib: "https://cdn.jsdelivr.net/npm/v86@0.5.424/build/libv86.js",
     wasm: "https://cdn.jsdelivr.net/npm/v86@0.5.424/build/v86.wasm",
     bios: "https://cdn.jsdelivr.net/gh/copy/v86@2f1346b0e7d88d4cbbbcc05fe15b4e369c3de23f/bios/seabios.bin",
     vgaBios: "https://cdn.jsdelivr.net/gh/copy/v86@2f1346b0e7d88d4cbbbcc05fe15b4e369c3de23f/bios/vgabios.bin",
-    iso: "https://cdn.jsdelivr.net/gh/copy/images@db92d8fd4a53dbd73b8e0588bb4bd8fe37a1975a/linux.iso"
+    iso: "art/linux/linux.iso" // self-hosted: the stock v86 ISO repacked with hb-shape + a test font
   };
   function lxT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
   function lxPrint(txt, cls) {
@@ -13333,7 +13340,9 @@ document.addEventListener("click", function (e) {
     var tail = lxClean(lxLine);
     if (lxPs) lxPs.textContent = tail;
     if (/login: $/.test(tail)) { try { lxVM.serial0_send("root\n"); } catch (e) {} } // the getty's question, answered
-    if (!lxPrompted && /[%#$] $/.test(tail)) lxPrompted = true;
+    // first shell prompt: the machine is up — drop the hb-shape hint (the groom's own
+    // text-shaping engine is installed in the image; that's the whole point of the gag)
+    if (!lxPrompted && /[%#$] $/.test(tail)) { lxPrompted = true; lxPrint(lxT("linux_hint"), "term-dim"); }
   }
   function lxFail() { lxLoadState = "failed"; lxPrint(lxT("linux_fail"), "term-err"); }
   function lxBootVM() {
@@ -13351,8 +13360,9 @@ document.addEventListener("click", function (e) {
         disable_mouse: true
       });
     } catch (e) { lxFail(); return; }
+    lxDec = new TextDecoder(); // fresh stream state per boot
     lxVM.add_listener("download-error", function () { lxFail(); }); // wasm/bios/iso 404 or offline
-    lxVM.add_listener("serial0-output-byte", function (b) { lxFeed(String.fromCharCode(b)); });
+    lxVM.add_listener("serial0-output-byte", function (b) { lxFeed(lxDec.decode(new Uint8Array([b]), { stream: true })); });
     lxVM.add_listener("emulator-started", function () {
       if (lxLoadState === "loading") lxLoadState = "ready";
       // autostart can land after the app closed or the tab hid mid-download — don't
@@ -13407,7 +13417,11 @@ document.addEventListener("click", function (e) {
   function lxSubmit(v) {
     if (lxLoadState === "failed") { lxPrint(lxT("linux_fail"), "term-err"); return; }
     if (!lxVM || lxLoadState !== "ready" || !lxPrompted) { lxPrint(lxT("linux_wait"), "term-dim"); return; }
-    try { lxVM.serial0_send(v + "\n"); } catch (e) {}
+    // serial0_send transmits one byte per char code, so é/∞ must go out as UTF-8 bytes
+    // or the guest sees them truncated (the hint command itself contains both)
+    var bytes = new TextEncoder().encode(v + "\n"), raw = "";
+    for (var i = 0; i < bytes.length; i++) raw += String.fromCharCode(bytes[i]);
+    try { lxVM.serial0_send(raw); } catch (e) {}
   }
   if (lxIn) {
     lxIn.addEventListener("keydown", function (e) {

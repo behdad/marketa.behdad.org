@@ -1047,7 +1047,7 @@ footer{margin-top:2.6rem}
    No need to touch the other boot-logos' pointer-events: monitor clicks still delegate up. */
 #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .4s ease}
 #office-monitor.show-caps #monitor-desktop-dock{opacity:1; visibility:visible; pointer-events:auto}
-#office-monitor.show-nowplaying #monitor-desktop-dock, #office-monitor.show-saver #monitor-desktop-dock, #office-monitor.show-terminal #monitor-desktop-dock, #office-monitor.show-mail #monitor-desktop-dock, #office-monitor.show-video #monitor-desktop-dock, #office-monitor.show-calendar #monitor-desktop-dock, #office-monitor.show-python #monitor-desktop-dock, #office-monitor.show-linux #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none}
+#office-monitor.show-nowplaying #monitor-desktop-dock, #office-monitor.show-saver #monitor-desktop-dock, #office-monitor.show-terminal #monitor-desktop-dock, #office-monitor.show-mail #monitor-desktop-dock, #office-monitor.show-video #monitor-desktop-dock, #office-monitor.show-tehran #monitor-desktop-dock, #office-monitor.show-calendar #monitor-desktop-dock, #office-monitor.show-python #monitor-desktop-dock, #office-monitor.show-linux #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none}
 /* the dock is an HTML app grid in a foreignObject below the menu bar: 4 columns, and a
    thin right-side scrollbar once the apps outgrow the screen (overflow-y:auto shows it
    only then). overscroll-behavior + the grid's own wheel/touchmove stopPropagation keep
@@ -1094,7 +1094,7 @@ footer{margin-top:2.6rem}
 .term-err{color:#e08a8a}
 .term-row{display:flex; align-items:flex-start; gap:0.6px} /* top-aligned so prompt and input share a baseline (their boxes differ in height) */
 .term-ps{color:#8fd070}
-.term-in{flex:1; min-width:0; background:transparent; border:none; outline:none; padding:0; color:inherit; font:inherit; height:3.4px; line-height:2.8px; caret-color:transparent} /* line-height matches the prompt (2px × 1.4) so baselines agree; the taller box keeps descenders inside the input’s own clip */ /* native caret renders as a fat block at 2px type — a slim custom one rides the row instead */
+.term-in{flex:1; min-width:0; background:transparent; border:none; outline:none; padding:0; color:inherit; font:inherit; height:2.8px; line-height:2.8px; caret-color:transparent} /* height = line-height = the prompt's line box: Chrome centers an input's line box inside any extra height, which read as a baseline drop */ /* native caret renders as a fat block at 2px type — a slim custom one rides the row instead */
 .term-row{position:relative}
 .term-in-wrap{flex:1; min-width:0; position:relative; display:flex}
 .term-in-wrap .term-in{flex:1; min-width:0}
@@ -1222,6 +1222,29 @@ footer{margin-top:2.6rem}
 .browser-frame{position:absolute; left:0; top:0; width:708.6px; height:194.3px; transform:scale(0.175); transform-origin:0 0; border:0; display:block; background:transparent}
 #office-monitor.show-browser #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none}
 #office-monitor.photobooth #monitor-browser{opacity:0 !important; visibility:hidden; pointer-events:none !important}
+/* tehran call app: a video call to Behdad's family, on Behdad's own machine. show-tehran
+   on #office-monitor gates the app; .connected on #monitor-tehran fades the ring screen
+   into the family's living room. The ✕ pill (tehran-tile green) hangs up. The bezel
+   webcam LED glows call-green for the whole call — the photobooth's red rules sit later
+   in the sheet, so a booth session still owns the LED. */
+#monitor-tehran{opacity:0; pointer-events:none; transition:opacity .25s ease}
+#office-monitor.show-tehran #monitor-tehran{opacity:1; pointer-events:auto}
+#monitor-tehran-close{cursor:pointer}
+#monitor-tehran-close:hover .seg-hover{opacity:.55}
+#monitor-tehran-ringing{transition:opacity .3s ease}
+#monitor-tehran.connected #monitor-tehran-ringing{opacity:0}
+#monitor-tehran-video{opacity:0; transition:opacity .5s ease}
+#monitor-tehran.connected #monitor-tehran-video{opacity:1}
+#monitor-tehran-ring{transform-box:fill-box; transform-origin:center}
+#office-monitor.show-tehran #monitor-tehran:not(.connected) #monitor-tehran-ring{animation:call-ring-pulse 1.3s ease-out infinite}
+.tehran-wave-arm{transform-box:fill-box; transform-origin:bottom center}
+#monitor-tehran.connected .tehran-wave-arm{animation:call-wave .9s ease-in-out infinite}
+@keyframes call-wave{0%,100%{transform:rotate(14deg)} 50%{transform:rotate(-16deg)}}
+#office-monitor.show-tehran #office-webcam-led{fill:#40d870; filter:drop-shadow(0 0 1.7px #40d870)}
+@media (prefers-reduced-motion: reduce){
+  #office-monitor.show-tehran #monitor-tehran:not(.connected) #monitor-tehran-ring{animation:none; opacity:0}
+  #monitor-tehran.connected .tehran-wave-arm{animation:none; transform:rotate(-14deg)}
+}
 /* the now-playing screen carries a pause/play toggle: pause bars while the song plays,
    a play triangle when it's paused (JS adds .paused). Shown only over show-nowplaying. */
 #monitor-pause-btn{opacity:0; visibility:hidden; pointer-events:none; cursor:pointer; transition:opacity .4s ease}
@@ -1289,6 +1312,7 @@ footer{margin-top:2.6rem}
 #office-monitor.photobooth #monitor-terminal,
 #office-monitor.photobooth #monitor-mail,
 #office-monitor.photobooth #monitor-video,
+#office-monitor.photobooth #monitor-tehran,
 #office-monitor.photobooth #monitor-calendar,
 #office-monitor.photobooth #monitor-pause-btn,
 #office-monitor.photobooth #monitor-volume-btn,
@@ -2513,15 +2537,15 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 /* the full-screen overlays sit ABOVE the desktop face, so keep them click-through —
    otherwise (even at opacity 0) they swallow the call-tile click and it bubbles to the
    lid, closing the laptop. Any click during a call/update still bubbles up to hang up/close. */
-#laptop-call, #laptop-tcall, #laptop-update, #laptop-boot, #laptop-saver{pointer-events:none}
-#laptop-menubar text, #laptop-call text, #laptop-tcall text{font-family:sans-serif}
+#laptop-call, #laptop-update, #laptop-boot, #laptop-saver{pointer-events:none}
+#laptop-menubar text, #laptop-call text{font-family:sans-serif}
 #laptop-editor text{font-family:monospace}
 /* the editor's Czech title types itself on: a clip window scales open + a riding, blinking caret */
 #laptop-type-clip-rect{transform-box:fill-box; transform-origin:left center; transform:scaleX(0)}
-#office-laptop.open:not(.updating):not(.rebooting):not(.calling):not(.connecting):not(.connected):not(.t-calling):not(.t-connecting):not(.t-connected) #laptop-type-clip-rect{animation:laptop-type 1.6s steps(10) forwards}
+#office-laptop.open:not(.updating):not(.rebooting):not(.calling):not(.connecting):not(.connected) #laptop-type-clip-rect{animation:laptop-type 1.6s steps(10) forwards}
 @keyframes laptop-type{from{transform:scaleX(0)} to{transform:scaleX(1)}}
 #laptop-caret{opacity:0}
-#office-laptop.open:not(.updating):not(.rebooting):not(.calling):not(.connecting):not(.connected):not(.t-calling):not(.t-connecting):not(.t-connected) #laptop-caret{animation:laptop-caret-ride 1.6s steps(10) forwards, laptop-caret-blink 1s step-end infinite}
+#office-laptop.open:not(.updating):not(.rebooting):not(.calling):not(.connecting):not(.connected) #laptop-caret{animation:laptop-caret-ride 1.6s steps(10) forwards, laptop-caret-blink 1s step-end infinite}
 @keyframes laptop-caret-ride{from{transform:translateX(0)} to{transform:translateX(21px)}}
 @keyframes laptop-caret-blink{0%,49%{opacity:1} 50%,100%{opacity:0}}
 @media (prefers-reduced-motion: reduce){
@@ -2536,32 +2560,19 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 #office-laptop.calling #laptop-webcam-led, #office-laptop.connecting #laptop-webcam-led, #office-laptop.connected #laptop-webcam-led{fill:#40d870; filter:drop-shadow(0 0 1.4px #40d870)}
 #laptop-call-ringing{opacity:0}
 #office-laptop.calling #laptop-call-ringing, #office-laptop.connecting #laptop-call-ringing{opacity:1}
-#laptop-call-garden{opacity:0; transition:opacity .5s ease}
-#office-laptop.connected #laptop-call-garden{opacity:1}
+#laptop-call-remote{opacity:0; transition:opacity .5s ease}
+#office-laptop.connected #laptop-call-remote{opacity:1}
 #laptop-call-ring{transform-box:fill-box; transform-origin:center}
-#office-laptop.calling #laptop-call-ring{animation:laptop-ring-pulse 1.3s ease-out infinite}
-@keyframes laptop-ring-pulse{0%{transform:scale(.65); opacity:.75} 70%{opacity:0} 100%{transform:scale(1.5); opacity:0}}
-.laptop-wave-arm{transform-box:fill-box; transform-origin:bottom center}
-#office-laptop.connected .laptop-wave-arm{animation:laptop-wave .9s ease-in-out infinite}
-@keyframes laptop-wave{0%,100%{transform:rotate(14deg)} 50%{transform:rotate(-16deg)}}
+#office-laptop.calling #laptop-call-ring{animation:call-ring-pulse 1.3s ease-out infinite}
+@keyframes call-ring-pulse{0%{transform:scale(.65); opacity:.75} 70%{opacity:0} 100%{transform:scale(1.5); opacity:0}}
+/* both calls' corner self-view (Prague on the laptop, Tehran on the monitor): the static
+   silhouette gives way to the visitor's own mirrored camera while the call-cam module
+   has a live stream (.live on the group) — permission is never requested for it */
+.call-self-fo{visibility:hidden}
+.call-self.live .call-self-fo{visibility:visible}
+.call-self-cam{width:100%; height:100%; object-fit:cover; transform:scaleX(-1); display:block; background:#10141b; pointer-events:none}
 @media (prefers-reduced-motion: reduce){
   #office-laptop.calling #laptop-call-ring{animation:none; opacity:0}
-  #office-laptop.connected .laptop-wave-arm{animation:none; transform:rotate(-14deg)}
-}
-/* the video-call-to-Tehran overlay: the same ring → connect states as Prague, t- prefixed */
-#laptop-tcall{opacity:0}
-#office-laptop.t-calling #laptop-tcall, #office-laptop.t-connecting #laptop-tcall, #office-laptop.t-connected #laptop-tcall{opacity:1}
-#office-laptop.t-calling #laptop-webcam-led, #office-laptop.t-connecting #laptop-webcam-led, #office-laptop.t-connected #laptop-webcam-led{fill:#40d870; filter:drop-shadow(0 0 1.4px #40d870)}
-#laptop-tcall-ringing{opacity:0}
-#office-laptop.t-calling #laptop-tcall-ringing, #office-laptop.t-connecting #laptop-tcall-ringing{opacity:1}
-#laptop-tcall-video{opacity:0; transition:opacity .5s ease}
-#office-laptop.t-connected #laptop-tcall-video{opacity:1}
-#laptop-tcall-ring{transform-box:fill-box; transform-origin:center}
-#office-laptop.t-calling #laptop-tcall-ring{animation:laptop-ring-pulse 1.3s ease-out infinite}
-#office-laptop.t-connected .laptop-wave-arm{animation:laptop-wave .9s ease-in-out infinite}
-@media (prefers-reduced-motion: reduce){
-  #office-laptop.t-calling #laptop-tcall-ring{animation:none; opacity:0}
-  #office-laptop.t-connected .laptop-wave-arm{animation:none; transform:rotate(-14deg)}
 }
 /* the sweet software update: release notes + a heart boot where the apple logo should be */
 #laptop-sweet-notes{opacity:0}
@@ -5982,6 +5993,197 @@ section{margin:1.9rem 0}
 <path d="M369.9 159.9 L374.1 164.1 M374.1 159.9 L369.9 164.1" stroke="#f8f5ec" stroke-width="1.1" stroke-linecap="round"/>
 </g>
 </g>
+<!-- TEHRAN CALL app: a video call to Behdad's family from his own machine — ring screen
+     first, then the family's living room mid-birthday-party. The corner self-view is a
+     silhouette until the call-cam module swaps in the visitor's real camera; the warm-
+     green ✕ pill hangs up. -->
+<g id="monitor-tehran">
+<g id="monitor-tehran-ringing">
+<rect x="254" y="154" width="124" height="42" rx="1.5" fill="#2a2024"/>
+<circle id="monitor-tehran-ring" cx="316" cy="171" r="11" fill="none" stroke="#d9a6a6" stroke-width="0.9"/>
+<circle cx="316" cy="171" r="8.8" fill="#5a3742"/>
+<rect x="310.9" y="168.3" width="6.4" height="5.2" rx="1" fill="#f0d8dc"/>
+<path d="M321.6 168.6 L318.7 170.9 L321.6 173.2 Z" fill="#f0d8dc" stroke="#f0d8dc" stroke-width="0.9" stroke-linejoin="round"/>
+<text id="monitor-tehran-place" x="316" y="187" text-anchor="middle" font-size="4.6" fill="#f6e8ea" style="font-family:sans-serif"></text>
+<text id="monitor-tehran-status" x="316" y="192" text-anchor="middle" font-size="3.2" fill="#d9aeb6" style="font-family:sans-serif"></text>
+</g>
+<g id="monitor-tehran-video">
+<g id="monitor-tehran-remote">
+<!-- remote view: the family's Tehran living room on the girl's 10th birthday, drawn
+     from a real family photo — an interim likeness; swap the contents of
+     #monitor-tehran-scene when a better photo arrives (the self-view lives outside it) -->
+<g id="monitor-tehran-scene">
+<!-- the room: cream wall, warm floor, a bright sheer-curtained window -->
+<rect x="254" y="154" width="124" height="42" rx="1.5" fill="#f1e8d4"/>
+<rect x="254" y="188" width="124" height="8" fill="#dfd0b2"/>
+<g id="tehran-window">
+<rect x="297.4" y="156.4" width="37.2" height="21.2" rx="0.8" fill="#d8c9ab"/>
+<rect x="298.8" y="157.8" width="34.4" height="18.4" fill="#fdf8ea"/>
+<path d="M316 157.8 L316 176.2 M298.8 166.6 L333.2 166.6" stroke="#d8c9ab" stroke-width="0.7" fill="none"/>
+<path d="M298.8 157.8 Q303.4 166 300 176.2 L298.8 176.2 Z" fill="#ffffff" opacity="0.55"/>
+<path d="M333.2 157.8 Q328.6 166 332 176.2 L333.2 176.2 Z" fill="#ffffff" opacity="0.55"/>
+</g>
+<!-- kraft-paper pennant flags on a twine arc across the top -->
+<g id="tehran-flags">
+<path d="M256 158 Q316 167 376 158" stroke="#a08560" stroke-width="0.5" fill="none"/>
+<path d="M260 158.7 L264 158.7 L262 162.3 Z" fill="#b98f5e"/>
+<path d="M272 160.2 L276 160.2 L274 163.8 Z" fill="#a97f4e"/>
+<path d="M284 161.3 L288 161.3 L286 164.9 Z" fill="#b98f5e"/>
+<path d="M296 162 L300 162 L298 165.6 Z" fill="#a97f4e"/>
+<path d="M308 162.4 L312 162.4 L310 166 Z" fill="#b98f5e"/>
+<path d="M320 162.4 L324 162.4 L322 166 Z" fill="#a97f4e"/>
+<path d="M332 162 L336 162 L334 165.6 Z" fill="#b98f5e"/>
+<path d="M344 161.3 L348 161.3 L346 164.9 Z" fill="#a97f4e"/>
+<path d="M356 160.2 L360 160.2 L358 163.8 Z" fill="#b98f5e"/>
+<path d="M368 158.7 L372 158.7 L370 162.3 Z" fill="#a97f4e"/>
+</g>
+<!-- dad: black tee with a little green sci-fi blob, round glasses, stubble, waving -->
+<g id="tehran-fig-dad">
+<rect x="262.2" y="183.5" width="2.7" height="7.5" rx="1" fill="#3a3a40"/>
+<rect x="266.3" y="183.5" width="2.7" height="7.5" rx="1" fill="#3a3a40"/>
+<rect x="260.8" y="171.5" width="9.6" height="12.5" rx="3" fill="#2b2b2e"/>
+<ellipse cx="265.6" cy="176.2" rx="1.3" ry="1" fill="#7fbf6a"/>
+<rect x="259.2" y="172.9" width="2" height="7.6" rx="1" fill="#2b2b2e"/>
+<circle cx="260.2" cy="181" r="0.9" fill="#dfb08a"/>
+<rect class="tehran-wave-arm" x="270.2" y="167.5" width="2" height="9.2" rx="1" fill="#2b2b2e"/>
+<circle cx="265.6" cy="166.3" r="3.1" fill="#dfb08a"/>
+<path d="M263.4 168.6 Q265.6 170.9 267.8 168.6 Q267.2 170.3 265.6 170.4 Q264 170.3 263.4 168.6 Z" fill="#c69a76"/>
+<path d="M262.5 166 Q262.4 162.6 265.6 162.6 Q268.8 162.6 268.7 166 L268.2 164.6 Q265.6 163.3 263 164.6 Z" fill="#2e2620"/>
+<circle cx="264.2" cy="166.6" r="1.05" fill="none" stroke="#453a31" stroke-width="0.3"/>
+<circle cx="267" cy="166.6" r="1.05" fill="none" stroke="#453a31" stroke-width="0.3"/>
+<path d="M265.25 166.6 L265.95 166.6" stroke="#453a31" stroke-width="0.3"/>
+<circle cx="264.2" cy="166.7" r="0.28" fill="#453a31"/>
+<circle cx="267" cy="166.7" r="0.28" fill="#453a31"/>
+<path d="M264.4 168.5 Q265.6 169.6 266.8 168.5" stroke="#6d4a33" stroke-width="0.4" fill="none" stroke-linecap="round"/>
+</g>
+<!-- mom: mint crochet sweater (diamond dots), white trousers, thin necklace -->
+<g id="tehran-fig-mom">
+<rect x="347.1" y="183.5" width="2.7" height="7.5" rx="1" fill="#f2efe6"/>
+<rect x="351.2" y="183.5" width="2.7" height="7.5" rx="1" fill="#f2efe6"/>
+<rect x="345.7" y="171.5" width="9.6" height="12.5" rx="3" fill="#bfe0c8"/>
+<path d="M348.3 175.4 l0.8 0.8 l-0.8 0.8 l-0.8 -0.8 Z M352.7 175.4 l0.8 0.8 l-0.8 0.8 l-0.8 -0.8 Z M350.5 178.6 l0.8 0.8 l-0.8 0.8 l-0.8 -0.8 Z M348.3 181.6 l0.8 0.8 l-0.8 0.8 l-0.8 -0.8 Z M352.7 181.6 l0.8 0.8 l-0.8 0.8 l-0.8 -0.8 Z" fill="#96c2a4"/>
+<rect x="344.1" y="172.9" width="2" height="7.6" rx="1" fill="#bfe0c8"/>
+<circle cx="345.1" cy="181" r="0.9" fill="#ecc7a2"/>
+<rect x="355.1" y="172.9" width="2" height="7.6" rx="1" fill="#bfe0c8"/>
+<circle cx="356.1" cy="181" r="0.9" fill="#ecc7a2"/>
+<path d="M349.4 172 Q350.5 173.3 351.6 172" stroke="#c9a227" stroke-width="0.3" fill="none"/>
+<circle cx="350.5" cy="173.3" r="0.32" fill="#c9a227"/>
+<circle cx="350.5" cy="166.3" r="3" fill="#ecc7a2"/>
+<path d="M347.5 166.4 Q347.2 162.8 350.5 162.8 Q353.8 162.8 353.5 166.4 L353.9 170.2 Q352.9 169.4 352.9 167.4 Q352.6 164.6 350.5 164.4 Q348.4 164.6 348.1 167.4 Q348.1 169.4 347.1 170.2 Z" fill="#d99f6f"/>
+<circle cx="349.3" cy="166.5" r="0.28" fill="#453a31"/>
+<circle cx="351.7" cy="166.5" r="0.28" fill="#453a31"/>
+<path d="M349.4 168.2 Q350.5 169.2 351.6 168.2" stroke="#6d4a33" stroke-width="0.4" fill="none" stroke-linecap="round"/>
+</g>
+<!-- grandma: wavy gray-streaked hair, round glasses, olive patterned top, in her chair -->
+<g id="tehran-fig-grandma">
+<rect x="281.5" y="171.8" width="15" height="15.8" rx="2" fill="#cfa87a"/>
+<rect x="282.6" y="184.4" width="12.8" height="3.2" rx="1.2" fill="#c09767"/>
+<rect x="284.3" y="175.8" width="9.4" height="10.4" rx="3" fill="#8f9276"/>
+<circle cx="286.8" cy="178.6" r="0.35" fill="#6f7358"/>
+<circle cx="291.2" cy="179.4" r="0.35" fill="#6f7358"/>
+<circle cx="289" cy="181.8" r="0.35" fill="#6f7358"/>
+<circle cx="286.6" cy="183.6" r="0.35" fill="#6f7358"/>
+<circle cx="287.2" cy="185.2" r="0.85" fill="#e3b493"/>
+<circle cx="290.8" cy="185.2" r="0.85" fill="#e3b493"/>
+<circle cx="289" cy="171.8" r="2.9" fill="#e3b493"/>
+<path d="M286.1 171.6 Q285.9 168 289 168 Q292.1 168 291.9 171.6 Q292.5 173.2 291.7 175 Q291.9 173 291.3 171.4 Q290.2 169.9 289 169.9 Q287.8 169.9 286.7 171.4 Q286.1 173 286.3 175 Q285.5 173.2 286.1 171.6 Z" fill="#8a7668"/>
+<path d="M286.5 170.3 Q287.5 169.4 288.4 169.9" stroke="#b8aca2" stroke-width="0.35" fill="none"/>
+<path d="M291.6 172.2 Q291.9 173.6 291.4 174.6" stroke="#b8aca2" stroke-width="0.35" fill="none"/>
+<circle cx="287.7" cy="172.1" r="1" fill="none" stroke="#453a31" stroke-width="0.3"/>
+<circle cx="290.3" cy="172.1" r="1" fill="none" stroke="#453a31" stroke-width="0.3"/>
+<path d="M288.7 172.1 L289.3 172.1" stroke="#453a31" stroke-width="0.3"/>
+<circle cx="287.7" cy="172.2" r="0.26" fill="#453a31"/>
+<circle cx="290.3" cy="172.2" r="0.26" fill="#453a31"/>
+<path d="M288 173.8 Q289 174.6 290 173.8" stroke="#6d4a33" stroke-width="0.35" fill="none" stroke-linecap="round"/>
+</g>
+<!-- grandpa: receding white-gray hair, beige button-up, the deep warm smile -->
+<g id="tehran-fig-grandpa">
+<rect x="332.5" y="171.8" width="15" height="15.8" rx="2" fill="#cfa87a"/>
+<rect x="333.6" y="184.4" width="12.8" height="3.2" rx="1.2" fill="#c09767"/>
+<rect x="335.3" y="175.8" width="9.4" height="10.4" rx="3" fill="#d9c6a3"/>
+<path d="M340 176.2 L340 185" stroke="#bda87e" stroke-width="0.35" fill="none"/>
+<circle cx="340" cy="178.4" r="0.3" fill="#a8916a"/>
+<circle cx="340" cy="181.2" r="0.3" fill="#a8916a"/>
+<path d="M338.4 176 L340 177.6 L341.6 176 Z" fill="#e9dcc0"/>
+<circle cx="338.2" cy="185.2" r="0.85" fill="#dcae87"/>
+<circle cx="341.8" cy="185.2" r="0.85" fill="#dcae87"/>
+<circle cx="340" cy="171.8" r="3" fill="#dcae87"/>
+<path d="M337 171.8 Q336.9 170.4 337.9 169.6 Q337.5 171.2 338 172.4 Q337.3 172.4 337 171.8 Z" fill="#cfc9c0"/>
+<path d="M343 171.8 Q343.1 170.4 342.1 169.6 Q342.5 171.2 342 172.4 Q342.7 172.4 343 171.8 Z" fill="#cfc9c0"/>
+<path d="M338.6 169.3 Q340 168.6 341.4 169.3" stroke="#cfc9c0" stroke-width="0.4" fill="none"/>
+<circle cx="338.8" cy="171.6" r="0.28" fill="#453a31"/>
+<circle cx="341.2" cy="171.6" r="0.28" fill="#453a31"/>
+<path d="M338.4 173.1 Q340 174.6 341.6 173.1" stroke="#6d4a33" stroke-width="0.45" fill="none" stroke-linecap="round"/>
+<path d="M337.9 172.9 Q338 173.5 338.5 173.8 M342.1 172.9 Q342 173.5 341.5 173.8" stroke="#c69a76" stroke-width="0.3" fill="none"/>
+</g>
+<!-- the birthday girl: long dark hair, green cone hat with a pom, floral dress, her card -->
+<g id="tehran-fig-girl">
+<path d="M312.2 172 L312 181.5 Q316 183.2 320 181.5 L319.8 172 Z" fill="#332821"/>
+<rect x="314.4" y="184" width="1.3" height="3.4" fill="#e8bd97"/>
+<rect x="316.3" y="184" width="1.3" height="3.4" fill="#e8bd97"/>
+<circle cx="316" cy="172" r="2.7" fill="#e8bd97"/>
+<path d="M313.4 171.2 Q313.6 169.8 314.6 169.3 L317.4 169.3 Q318.4 169.8 318.6 171.2 L318.6 172 Q316 170.6 313.4 172 Z" fill="#332821"/>
+<path d="M316 162.9 L312.9 169.5 L319.1 169.5 Z" fill="#57a556"/>
+<circle cx="316" cy="163" r="1" fill="#eef4e2"/>
+<circle cx="313.6" cy="169.5" r="0.45" fill="#eef4e2"/>
+<circle cx="315.2" cy="169.5" r="0.45" fill="#eef4e2"/>
+<circle cx="316.8" cy="169.5" r="0.45" fill="#eef4e2"/>
+<circle cx="318.4" cy="169.5" r="0.45" fill="#eef4e2"/>
+<circle cx="314.9" cy="172" r="0.28" fill="#453a31"/>
+<circle cx="317.1" cy="172" r="0.28" fill="#453a31"/>
+<path d="M314.5 173.2 Q316 174.7 317.5 173.2" stroke="#6d4a33" stroke-width="0.45" fill="none" stroke-linecap="round"/>
+<path d="M312.9 174.6 L319.1 174.6 L320.8 184.2 L311.2 184.2 Z" fill="#e8b7c4"/>
+<circle cx="314.2" cy="177.2" r="0.45" fill="#7f9ec0"/>
+<circle cx="317.8" cy="177.6" r="0.45" fill="#7f9ec0"/>
+<circle cx="313.4" cy="181.6" r="0.45" fill="#7f9ec0"/>
+<circle cx="318.6" cy="181.2" r="0.45" fill="#7f9ec0"/>
+<circle cx="316" cy="179.5" r="0.45" fill="#d582a0"/>
+<rect x="312.3" y="176.3" width="1.7" height="2.9" rx="0.8" fill="#e8bd97" transform="rotate(28 313.15 177.75)"/>
+<rect x="318" y="176.3" width="1.7" height="2.9" rx="0.8" fill="#e8bd97" transform="rotate(-28 318.85 177.75)"/>
+<rect x="313.8" y="177.6" width="4.4" height="3.3" rx="0.3" fill="#fffdf8" stroke="#d8cbb4" stroke-width="0.3"/>
+</g>
+<!-- green birthday balloons at the right edge -->
+<g id="tehran-balloons">
+<path d="M366 174.4 Q367.6 178 368.3 181 M371.5 172.1 Q370 177 368.3 181 M369 177.7 Q368.6 179.6 368.3 181" stroke="#8a7668" stroke-width="0.3" fill="none"/>
+<ellipse cx="366" cy="172" rx="2.2" ry="2.5" fill="#7fbf6a"/>
+<ellipse cx="371.5" cy="169.6" rx="2.4" ry="2.7" fill="#5da257"/>
+<ellipse cx="369" cy="175.4" rx="2" ry="2.3" fill="#a8c96c"/>
+</g>
+<!-- the low party table: lime cloth, the pale-green drip cake ("10" in gold),
+     a popcorn basket, a spare cone hat -->
+<g id="tehran-table">
+<rect x="296.5" y="186.8" width="41" height="9.2" rx="1.5" fill="#b5d17e"/>
+<path d="M297.5 190.4 L336.5 190.4" stroke="#9dbb64" stroke-width="0.4" fill="none"/>
+<rect x="308.5" y="181" width="11" height="5.8" rx="1" fill="#e9f2d9"/>
+<path d="M308.5 182.6 q0.9 1.5 1.8 0 q0.9 1.8 1.8 0 q0.9 1.4 1.8 0 q0.9 1.9 1.8 0 q0.9 1.4 1.8 0 q0.9 1.8 1.8 0 L319.5 181 L308.5 181 Z" fill="#cfe4b0"/>
+<text x="314" y="186" text-anchor="middle" font-size="3" fill="#c9a227" style="font-family:sans-serif; font-weight:700">10</text>
+<rect x="300.3" y="183.4" width="5" height="3.4" rx="0.6" fill="#d9b87c"/>
+<path d="M301.3 183.4 L301.3 186.8 M302.8 183.4 L302.8 186.8 M304.3 183.4 L304.3 186.8" stroke="#c2a061" stroke-width="0.3" fill="none"/>
+<circle cx="301.4" cy="182.9" r="0.6" fill="#fbf6e8"/>
+<circle cx="302.6" cy="182.4" r="0.6" fill="#fbf6e8"/>
+<circle cx="303.8" cy="182.9" r="0.6" fill="#fbf6e8"/>
+<circle cx="302" cy="181.9" r="0.55" fill="#fbf6e8"/>
+<path d="M330 181.2 L327.8 186.8 L332.2 186.8 Z" fill="#5da257"/>
+<circle cx="330" cy="181.2" r="0.6" fill="#eef4e2"/>
+</g>
+</g>
+</g>
+<g id="monitor-tehran-self" class="call-self">
+<rect x="357" y="180.5" width="19" height="13.5" rx="1" fill="#10141b" stroke="#e8e2d4" stroke-width="0.5"/>
+<circle cx="366.5" cy="185.6" r="2.3" fill="#5a6270"/>
+<path d="M361.6 193.7 Q366.5 188.7 371.4 193.7 Z" fill="#5a6270"/>
+<foreignObject class="call-self-fo" x="357.3" y="180.8" width="18.4" height="12.9">
+<video xmlns="http://www.w3.org/1999/xhtml" id="monitor-tehran-self-cam" class="call-self-cam" autoplay="autoplay" muted="muted" playsinline="playsinline"></video>
+</foreignObject>
+</g>
+</g>
+<g id="monitor-tehran-close">
+<rect x="367" y="156.5" width="10" height="11" rx="5" fill="#2b7a4b" stroke="#1f5a37" stroke-width="0.9"/>
+<rect x="368.2" y="157.6" width="7.6" height="4.2" rx="2.1" fill="#ffffff" opacity="0.16"/>
+<rect class="seg-hover" x="367" y="156.5" width="10" height="11" rx="5" fill="#173f27" opacity="0"/>
+<path d="M369.9 159.9 L374.1 164.1 M374.1 159.9 L369.9 164.1" stroke="#f8f5ec" stroke-width="1.1" stroke-linecap="round"/>
+</g>
+</g>
 <!-- CALENDAR app: the two wedding weekends as compact date cards (Edmonton in his wine,
      Prague in her blue) plus a Download .ics button, with the same mini close pill as the
      player/terminal. All text is set from the T dict by refreshCalendarText (bilingual). -->
@@ -6083,6 +6285,7 @@ section{margin:1.9rem 0}
 <symbol id="dicon-mail" viewBox="0 0 12 12"><rect x="1.4" y="2.6" width="9.2" height="6.8" rx="1" fill="#f8f5ec"/><path d="M1.9 3.4 L6 6.6 L10.1 3.4" fill="none" stroke="#4a6b94" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="dicon-globe" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.4" fill="none" stroke="#4285f4" stroke-width="0.9"/><ellipse cx="6" cy="6" rx="2" ry="4.4" fill="none" stroke="#4285f4" stroke-width="0.7"/><path d="M1.8 6 L10.2 6 M2.4 3.8 L9.6 3.8 M2.4 8.2 L9.6 8.2" stroke="#4285f4" stroke-width="0.7" fill="none"/></symbol>
 <symbol id="dicon-console" viewBox="0 0 12 12"><path d="M2.6 3.4 L5.6 6 L2.6 8.6" fill="none" stroke="#8fd070" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><rect x="6.6" y="8" width="3" height="1.1" rx="0.5" fill="#8fd070"/></symbol>
+<symbol id="dicon-phone" viewBox="0 0 12 12"><path d="M3.2 1.8 C2.4 2.6 2 3.5 2.6 5 C3.4 7 4.9 8.6 7 9.4 C8.5 10 9.4 9.6 10.2 8.8 C10.7 8.3 10.6 7.6 10 7.2 L8.7 6.4 C8.2 6.1 7.7 6.2 7.3 6.6 C7 6.9 6.5 7 6.1 6.7 C5.5 6.3 5.7 6.5 5.3 5.9 C5 5.5 5.1 5 5.4 4.7 C5.8 4.3 5.9 3.8 5.6 3.3 L4.8 2 C4.4 1.4 3.7 1.3 3.2 1.8 Z" fill="#f8f5ec"/></symbol>
 <symbol id="dicon-python" viewBox="0 0 12 12"><path d="M1.6 3.6 L4 5.5 L1.6 7.4 M4.9 3.6 L7.3 5.5 L4.9 7.4 M8.2 3.6 L10.6 5.5 L8.2 7.4" fill="none" stroke="#ffd43b" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <g id="chrome-roundel-def">
 <path d="M0 0 L-11.26 -6.5 A13 13 0 0 1 11.26 -6.5 Z" fill="#ea4335"/>
@@ -6256,17 +6459,9 @@ section{margin:1.9rem 0}
 <!-- Prague weather readout: real Open-Meteo conditions for the city the laptop calls
      (see the realWeather IIFE). Empty until a fetch lands — offline shows nothing. -->
 <text id="laptop-wx" x="443.5" y="175.4" text-anchor="end" pointer-events="none"><tspan id="laptop-wx-city" font-size="2.6" fill="#8f8a80"></tspan><tspan id="laptop-wx-val" font-size="3" fill="#2a2a2a"></tspan></text>
-<!-- the tehran contact chip: a second contact above the Prague tile — a video call to
-     Behdad's family (wine = Behdad's colour in the site palette) -->
-<g id="laptop-tehrantile">
-<rect x="412.5" y="169.8" width="37.5" height="10.2" fill="transparent"/>
-<rect x="417.4" y="171.8" width="27.6" height="7.6" rx="1.8" fill="#8e3a4a"/>
-<rect x="419.2" y="174.1" width="4.4" height="3" rx="0.7" fill="#f6e8ea"/>
-<path d="M426.2 174.2 L424.1 175.6 L426.2 177 Z" fill="#f6e8ea" stroke="#f6e8ea" stroke-width="0.7" stroke-linejoin="round"/>
-<text id="laptop-tehrantile-label" x="436.2" y="177.1" text-anchor="middle" font-size="3.7" fill="#f6e8ea"></text>
 </g>
-</g>
-<!-- calling Prague: ring → connecting → the garden with the couple waving -->
+<!-- calling Prague: ring → connecting → Markéta's family waiting on a sunny café
+     terrace. -->
 <g id="laptop-call">
 <g id="laptop-call-ringing">
 <rect x="388" y="164" width="58" height="34" rx="1" fill="#1e2b26"/>
@@ -6277,71 +6472,119 @@ section{margin:1.9rem 0}
 <text id="laptop-call-place" x="417" y="190" text-anchor="middle" font-size="4.2" fill="#eafaf0"></text>
 <text id="laptop-call-status" x="417" y="194.6" text-anchor="middle" font-size="3" fill="#a9c9b5"></text>
 </g>
-<g id="laptop-call-garden">
-<rect x="388" y="164" width="58" height="34" rx="1" fill="#bfe0ef"/>
-<rect x="388" y="186" width="58" height="12" fill="#a9cf8f"/>
-<rect x="396" y="180" width="1.6" height="7" fill="#7a5a3a"/>
-<circle cx="396.8" cy="179" r="4" fill="#6fae5a"/>
-<rect x="427" y="180" width="12" height="8" fill="#e8d8b8"/>
-<path d="M425.3 180.4 l7.7 -5.4 l7.7 5.4 z" fill="#b8563f"/>
-<rect x="431" y="183" width="3" height="5" fill="#8a6a45"/>
-<g id="laptop-fig-b">
-<rect x="409" y="185" width="4" height="6" rx="1.5" fill="#d9a6a6"/>
-<circle cx="411" cy="183.6" r="1.9" fill="#e9c9a8"/>
-<path d="M408.5 183 Q411 180.8 413.5 183 L413.6 183.5 L408.4 183.5 Z" fill="#c68e95"/>
-<rect class="laptop-wave-arm" x="412.6" y="182.6" width="1.1" height="3.4" rx="0.5" fill="#d9a6a6"/>
+<g id="laptop-call-remote">
+<!-- remote view: Markéta's family on a café terrace in Czechia, drawn from a real
+     family photo — an interim likeness; swap the contents of #laptop-call-scene when
+     a better photo arrives (self-view + end hint live outside it) -->
+<g id="laptop-call-scene">
+<!-- terrace: glass panels each side, a park opening behind the table -->
+<rect x="388" y="164" width="58" height="34" rx="1" fill="#e6ded0"/>
+<g id="laptop-prague-park">
+<rect x="400" y="164" width="34" height="21" fill="#bfe0ef"/>
+<circle cx="406" cy="175" r="4.4" fill="#6fae5a"/>
+<circle cx="414" cy="173.4" r="5" fill="#7fbf6a"/>
+<circle cx="424" cy="174.6" r="4.6" fill="#6fae5a"/>
+<circle cx="430.6" cy="176" r="3.6" fill="#8cc06e"/>
+<rect x="400" y="178.5" width="34" height="6.5" fill="#a9cf8f"/>
 </g>
-<g id="laptop-fig-m">
-<rect x="419" y="185" width="4" height="6" rx="1.5" fill="#7f9ec0"/>
-<circle cx="421" cy="183.6" r="1.9" fill="#e9c9a8"/>
-<path d="M418.4 183.2 Q421 181 423.6 183.2 L423.7 183.6 L418.3 183.6 Z" fill="#4a6b94"/>
-<rect class="laptop-wave-arm" x="418.3" y="182.6" width="1.1" height="3.4" rx="0.5" fill="#7f9ec0"/>
+<g id="laptop-prague-glass">
+<rect x="388" y="164" width="12" height="21" fill="#d7e2de"/>
+<rect x="434" y="164" width="12" height="21" fill="#d7e2de"/>
+<path d="M390 182 L396.5 165.5" stroke="#ffffff" stroke-width="0.9" opacity="0.5" fill="none"/>
+<path d="M436.4 182 L442.9 165.5" stroke="#ffffff" stroke-width="0.9" opacity="0.5" fill="none"/>
+<rect x="399.2" y="164" width="1" height="21" fill="#b8a98e"/>
+<rect x="433.8" y="164" width="1" height="21" fill="#b8a98e"/>
 </g>
-<text id="laptop-call-endhint" x="417" y="196.6" text-anchor="middle" font-size="2.6" fill="#3a5a3a"></text>
+<!-- light-wood bench back running behind everyone -->
+<rect x="388" y="183.6" width="58" height="2.6" fill="#d9c49a"/>
+<!-- grandpa M: swept-back gray-brown hair, gray goatee, taupe hoodie -->
+<g id="laptop-prague-grandpa">
+<rect x="391.8" y="177.6" width="8.4" height="13" rx="2.8" fill="#a89684"/>
+<path d="M393.4 179.4 Q396 181.6 398.6 179.4" stroke="#93826f" stroke-width="0.5" fill="none"/>
+<circle cx="396" cy="174.2" r="2.7" fill="#dcae87"/>
+<path d="M393.3 174 Q393.6 170.6 396.6 171.4 Q399 172 398.7 174 L398.2 172.9 Q396 171.8 393.9 173.4 Z" fill="#8d7f6d"/>
+<ellipse cx="396" cy="176.7" rx="1" ry="0.65" fill="#b8b0a4"/>
+<circle cx="395" cy="174" r="0.28" fill="#453a31"/>
+<circle cx="397" cy="174" r="0.28" fill="#453a31"/>
+<path d="M395.3 175.5 Q396.1 176.1 396.9 175.4" stroke="#6d4a33" stroke-width="0.35" fill="none" stroke-linecap="round"/>
+</g>
+<!-- boy (~3): bright blue cap with a tiny patch, blue hoodie, just above the table edge -->
+<g id="laptop-prague-boy">
+<rect x="404.6" y="188" width="5.8" height="3.4" rx="1.3" fill="#4a78b8"/>
+<circle cx="407.5" cy="186.2" r="2.1" fill="#e8bd97"/>
+<path d="M405.4 186 Q405.4 183.6 407.5 183.6 Q409.6 183.6 409.6 186 L409.9 186 Q410 185.5 409.4 185.3 L409.6 186.2 Z" fill="#2f7fd4"/>
+<path d="M405.4 186 Q407.5 183.4 409.6 186 L409.9 186.3 L405.1 186.3 Z" fill="#2f7fd4"/>
+<circle cx="407.5" cy="184.9" r="0.42" fill="#f4d03f"/>
+<circle cx="406.7" cy="186.7" r="0.26" fill="#453a31"/>
+<circle cx="408.3" cy="186.7" r="0.26" fill="#453a31"/>
+<path d="M406.9 187.6 Q407.5 188.1 408.1 187.6" stroke="#6d4a33" stroke-width="0.3" fill="none" stroke-linecap="round"/>
+</g>
+<!-- girl (~5): pink cap over a navy floral kerchief, teal floral top -->
+<g id="laptop-prague-girl">
+<rect x="412.4" y="188.4" width="6.2" height="3" rx="1.3" fill="#3f7f8a"/>
+<circle cx="414" cy="189.4" r="0.3" fill="#2e3f66"/>
+<circle cx="417" cy="189.6" r="0.3" fill="#2e3f66"/>
+<path d="M413.1 184.6 Q413.1 187.6 413.9 188.6 L417.1 188.6 Q417.9 187.6 417.9 184.6 Z" fill="#2e3f66"/>
+<circle cx="415.5" cy="184.8" r="2.2" fill="#e8bd97"/>
+<path d="M413.3 184.4 Q413.3 182.2 415.5 182.2 Q417.7 182.2 417.7 184.4 L418.3 184.7 L412.7 184.7 Z" fill="#2e3f66"/>
+<circle cx="414.5" cy="183.7" r="0.22" fill="#f8f5ec"/>
+<circle cx="416.6" cy="183.9" r="0.22" fill="#f8f5ec"/>
+<path d="M413.2 184 Q413.5 182 415.5 182 Q417.5 182 417.8 184 L418.5 184.3 L412.5 184.3 Z" fill="#e8a8b8"/>
+<circle cx="414.7" cy="185.4" r="0.26" fill="#453a31"/>
+<circle cx="416.3" cy="185.4" r="0.26" fill="#453a31"/>
+<path d="M414.7 186.3 Q415.5 187 416.3 186.3" stroke="#6d4a33" stroke-width="0.32" fill="none" stroke-linecap="round"/>
+</g>
+<!-- grandma E (the elder): curly sandy hair, dark sunglasses, striped top, teal scarf -->
+<g id="laptop-prague-grandma-e">
+<rect x="422.3" y="177.6" width="8.4" height="13" rx="2.8" fill="#f6f3ea"/>
+<path d="M423.2 181 L429.8 181 M423.2 183.2 L429.8 183.2 M423.2 185.4 L429.8 185.4" stroke="#33456e" stroke-width="0.28" fill="none"/>
+<path d="M425.2 177.8 Q426.5 179.6 427.8 177.8 L427 180.4 L426 180.4 Z" fill="#3e7fa0"/>
+<circle cx="426.5" cy="178.6" r="0.55" fill="#4fa8a0"/>
+<circle cx="426.5" cy="174.2" r="2.7" fill="#e3b493"/>
+<path d="M423.7 174.4 Q423.3 171.6 425.2 171.5 Q425.6 170.6 427 170.9 Q428.5 170.5 428.9 171.7 Q429.9 172.2 429.3 174.4 Q428.9 172.6 426.5 172.4 Q424.2 172.6 423.7 174.4 Z" fill="#d8bc8a"/>
+<rect x="424.5" y="173.5" width="1.7" height="1.15" rx="0.5" fill="#2a2622"/>
+<rect x="426.8" y="173.5" width="1.7" height="1.15" rx="0.5" fill="#2a2622"/>
+<path d="M426.2 174 L426.8 174" stroke="#2a2622" stroke-width="0.3"/>
+<path d="M425.6 175.9 Q426.5 176.6 427.4 175.9" stroke="#6d4a33" stroke-width="0.35" fill="none" stroke-linecap="round"/>
+</g>
+<!-- grandma J: silver hair pulled back, dark sunglasses, cream trench -->
+<g id="laptop-prague-grandma-j">
+<rect x="433.3" y="177.6" width="8.4" height="13" rx="2.8" fill="#ded2b8"/>
+<path d="M436.2 177.9 L435 181.4 L436.6 180.2 L437.5 181.6 L438.4 180.2 L440 181.4 L438.8 177.9" fill="#cbbc9c"/>
+<rect x="436.6" y="178" width="1.8" height="1.6" rx="0.4" fill="#f0ead8"/>
+<circle cx="437.5" cy="175" r="2.6" fill="#e8bd97"/>
+<path d="M434.9 175 Q434.7 172.2 437.5 172.2 Q440.3 172.2 440.1 175 L439.7 173.7 Q437.5 172.8 435.3 173.7 Z" fill="#b9b3ab"/>
+<circle cx="440" cy="174.6" r="0.75" fill="#b9b3ab"/>
+<rect x="435.6" y="174.3" width="1.6" height="1.1" rx="0.5" fill="#2a2622"/>
+<rect x="437.8" y="174.3" width="1.6" height="1.1" rx="0.5" fill="#2a2622"/>
+<path d="M437.2 174.8 L437.8 174.8" stroke="#2a2622" stroke-width="0.3"/>
+<path d="M436.7 176.6 Q437.5 177.2 438.3 176.6" stroke="#6d4a33" stroke-width="0.32" fill="none" stroke-linecap="round"/>
+</g>
+<!-- wooden-plank table with the red sunglasses, the girl's hands + her teal snack box -->
+<g id="laptop-prague-table">
+<rect x="388" y="190.4" width="58" height="7.6" fill="#c8a468"/>
+<path d="M388 192.9 L446 192.9 M388 195.4 L446 195.4" stroke="#b28f55" stroke-width="0.35" fill="none"/>
+<circle cx="400" cy="191.9" r="0.85" fill="#c05548" opacity="0.9"/>
+<circle cx="402" cy="191.9" r="0.85" fill="#c05548" opacity="0.9"/>
+<path d="M400.8 191.7 Q401 191.4 401.2 191.7" stroke="#8a4038" stroke-width="0.3" fill="none"/>
+<circle cx="414" cy="191.2" r="0.75" fill="#e8bd97"/>
+<circle cx="417" cy="191.2" r="0.75" fill="#e8bd97"/>
+<rect x="412.8" y="192.2" width="5.4" height="2.8" rx="0.5" fill="#4fa8a0"/>
+<path d="M412.8 193.1 L418.2 193.1" stroke="#3a8078" stroke-width="0.3" fill="none"/>
+<ellipse cx="437.5" cy="191.3" rx="1.6" ry="0.85" fill="#e8bd97"/>
 </g>
 </g>
-<!-- calling Tehran: ring → connecting → a video-call layout (remote view + a corner
-     self-view). The remote view is a PLACEHOLDER — the Prague garden graphics stand in
-     until family pictures arrive; swap the contents of #laptop-tcall-remote only, the
-     self-view and end hint live outside it. -->
-<g id="laptop-tcall">
-<g id="laptop-tcall-ringing">
-<rect x="388" y="164" width="58" height="34" rx="1" fill="#2a2024"/>
-<circle id="laptop-tcall-ring" cx="417" cy="177" r="9.25" fill="none" stroke="#d9a6a6" stroke-width="0.8"/>
-<circle cx="417" cy="177" r="7.5" fill="#5a3742"/>
-<rect x="412.6" y="174.6" width="5.4" height="4.4" rx="0.9" fill="#f0d8dc"/>
-<path d="M421.6 174.9 L419.1 176.8 L421.6 178.7 Z" fill="#f0d8dc" stroke="#f0d8dc" stroke-width="0.8" stroke-linejoin="round"/>
-<text id="laptop-tcall-place" x="417" y="190" text-anchor="middle" font-size="4.2" fill="#f6e8ea"></text>
-<text id="laptop-tcall-status" x="417" y="194.6" text-anchor="middle" font-size="3" fill="#d9aeb6"></text>
-</g>
-<g id="laptop-tcall-video">
-<g id="laptop-tcall-remote">
-<rect x="388" y="164" width="58" height="34" rx="1" fill="#bfe0ef"/>
-<rect x="388" y="186" width="58" height="12" fill="#a9cf8f"/>
-<rect x="396" y="180" width="1.6" height="7" fill="#7a5a3a"/>
-<circle cx="396.8" cy="179" r="4" fill="#6fae5a"/>
-<rect x="427" y="180" width="12" height="8" fill="#e8d8b8"/>
-<path d="M425.3 180.4 l7.7 -5.4 l7.7 5.4 z" fill="#b8563f"/>
-<rect x="431" y="183" width="3" height="5" fill="#8a6a45"/>
-<g id="laptop-tfig-b">
-<rect x="409" y="185" width="4" height="6" rx="1.5" fill="#d9a6a6"/>
-<circle cx="411" cy="183.6" r="1.9" fill="#e9c9a8"/>
-<path d="M408.5 183 Q411 180.8 413.5 183 L413.6 183.5 L408.4 183.5 Z" fill="#c68e95"/>
-<rect class="laptop-wave-arm" x="412.6" y="182.6" width="1.1" height="3.4" rx="0.5" fill="#d9a6a6"/>
-</g>
-<g id="laptop-tfig-m">
-<rect x="419" y="185" width="4" height="6" rx="1.5" fill="#7f9ec0"/>
-<circle cx="421" cy="183.6" r="1.9" fill="#e9c9a8"/>
-<path d="M418.4 183.2 Q421 181 423.6 183.2 L423.7 183.6 L418.3 183.6 Z" fill="#4a6b94"/>
-<rect class="laptop-wave-arm" x="418.3" y="182.6" width="1.1" height="3.4" rx="0.5" fill="#7f9ec0"/>
-</g>
-</g>
-<g id="laptop-tcall-self">
+<!-- corner self-view: silhouette placeholder; the call-cam module swaps in the
+     visitor's own mirrored camera when permission is already granted -->
+<g id="laptop-call-self" class="call-self">
 <rect x="435.2" y="166.2" width="9" height="7" rx="0.8" fill="#10141b" stroke="#e8e2d4" stroke-width="0.4"/>
 <circle cx="439.7" cy="169" r="1.2" fill="#5a6270"/>
 <path d="M437.1 173.2 Q439.7 170.7 442.3 173.2 Z" fill="#5a6270"/>
+<foreignObject class="call-self-fo" x="435.4" y="166.4" width="8.6" height="6.6">
+<video xmlns="http://www.w3.org/1999/xhtml" id="laptop-call-self-cam" class="call-self-cam" autoplay="autoplay" muted="muted" playsinline="playsinline"></video>
+</foreignObject>
 </g>
-<text id="laptop-tcall-endhint" x="417" y="196.6" text-anchor="middle" font-size="2.6" fill="#3a5a3a"></text>
+<text id="laptop-call-endhint" x="417" y="196.9" text-anchor="middle" font-size="2.6" fill="#fffdf8" opacity="0.9"></text>
 </g>
 </g>
 <g id="laptop-update">
@@ -7841,7 +8084,6 @@ var T = {
     desk_to: "to",
     desk_date: "May 1",
     laptop_place: "Prague",
-    laptop_tplace: "Tehran",
     laptop_calling: "Calling…",
     laptop_connecting: "Connecting…",
     laptop_endhint: "tap to end",
@@ -7983,6 +8225,8 @@ var T = {
     term_help: "commands: help \u00b7 clear \u00b7 laser() \u00b7 any JavaScript (try 2+2, document.title, loft.couple, loft.weddings)",
     term_laser: "bzzzt \u2014 red dot on the loose, shadowing your cursor. laser(0) calls it off. good luck, cat.",
     app_mail: "mail",
+    app_tehran: "tehran",
+    tehran_place: "Tehran",
     mail_inbox_title: "inbox",
     mail_back: "\u2039 inbox",
     mail_from_lore: "mark\u00e9ta \u221e behdad",
@@ -8055,7 +8299,6 @@ var T = {
     desk_to: "do",
     desk_date: "1. 5.",
     laptop_place: "Praha",
-    laptop_tplace: "Teherán",
     laptop_calling: "Volání…",
     laptop_connecting: "Spojuji…",
     laptop_endhint: "klepni pro konec",
@@ -8197,6 +8440,8 @@ var T = {
     term_help: "p\u0159\u00edkazy: help \u00b7 clear \u00b7 laser() \u00b7 jak\u00fdkoli JavaScript (zkuste 2+2, document.title, loft.couple, loft.weddings)",
     term_laser: "bzzzt \u2014 \u010derven\u00e1 te\u010dka je venku a sleduje kurzor. laser(0) ji odvol\u00e1. hodn\u011b \u0161t\u011bst\u00ed, ko\u010dko.",
     app_mail: "po\u0161ta",
+    app_tehran: "teher\u00e1n",
+    tehran_place: "Teher\u00e1n",
     mail_inbox_title: "doru\u010den\u00e1",
     mail_back: "\u2039 doru\u010den\u00e1",
     mail_from_lore: "mark\u00e9ta \u221e behdad",
@@ -8285,6 +8530,7 @@ function setLang(l) {
   if (window.refreshFullscreenLabel) window.refreshFullscreenLabel();
   if (window.refreshPhotoboothText) window.refreshPhotoboothText();
   if (window.refreshMailText) window.refreshMailText();
+  if (window.refreshTehranText) window.refreshTehranText();
   if (window.refreshCalendarText) window.refreshCalendarText();
 }
 (function () {
@@ -10488,16 +10734,14 @@ document.addEventListener("click", function (e) {
       laptopUpdateTimers = [];
       if (laptopAutoTimer) { clearTimeout(laptopAutoTimer); laptopAutoTimer = null; }
     }
-    // inCall is the Prague call only — the office sequence gates on it. The Tehran video
-    // call (inTCall) is a bonus interaction with its own t- state classes; anyCall guards
-    // everything that must not run during EITHER call (and keeps the two mutually exclusive).
+    // inCall is this laptop's Prague call — the office sequence gates on it. anyCall
+    // also counts the monitor's Tehran call (window.__tehranCallLive), keeping the two
+    // calls mutually exclusive: neither starts while the other is live.
     function inCall() {
       return laptop.classList.contains("calling") || laptop.classList.contains("connecting") || laptop.classList.contains("connected");
     }
-    function inTCall() {
-      return laptop.classList.contains("t-calling") || laptop.classList.contains("t-connecting") || laptop.classList.contains("t-connected");
-    }
-    function anyCall() { return inCall() || inTCall(); }
+    function anyCall() { return inCall() || !!(window.__tehranCallLive && window.__tehranCallLive()); }
+    window.__pragueCallLive = inCall; // the monitor's Tehran call checks this before starting
     // After the laptop's been open and untouched a while, the bouncing-caps "DVD
     // logo" screensaver takes over. Any click wakes it back to the normal
     // TextEdit face.
@@ -10556,8 +10800,11 @@ document.addEventListener("click", function (e) {
     function endLaptopUpdate() {
       clearLaptopTimers();
       stopLaptopSaver();
-      stopCallAmbient();
-      laptop.classList.remove("updating", "progress", "rebooting", "sweet", "calling", "connecting", "connected", "t-calling", "t-connecting", "t-connected");
+      // the ambient bed is shared with the monitor's Tehran call — only silence it when
+      // it isn't that call's (the two are mutually exclusive, so no Prague bed survives)
+      if (!(window.__tehranCallLive && window.__tehranCallLive())) stopCallAmbient();
+      laptop.classList.remove("updating", "progress", "rebooting", "sweet", "calling", "connecting", "connected");
+      if (window.__syncCallCams) window.__syncCallCams(); // a dropped call releases the self-view camera right away
     }
     // The gag: an open Mac decides to install a software update and reboot — now framed
     // as her machine rudely interrupting her translating. Every 3rd update installs
@@ -10620,6 +10867,7 @@ document.addEventListener("click", function (e) {
         markPragueCalled();
         playCallLaughSound();
         startCallAmbient();
+        if (window.__syncCallCams) window.__syncCallCams(); // the corner self-view goes live (permission permitting)
         return;
       }
       playPhoneRingSound();
@@ -10633,8 +10881,9 @@ document.addEventListener("click", function (e) {
         laptop.classList.add("connected");
         markPragueCalled();
         playBootChimeSound();
-        playCallLaughSound(); // the couple giggling across the ocean
+        playCallLaughSound(); // the family cheering across the ocean
         startCallAmbient(); // and the ongoing static/wind/giggling bed while it lasts
+        if (window.__syncCallCams) window.__syncCallCams(); // the corner self-view goes live (permission permitting)
       }, 3400));
     }
     var callHangingUp = false;
@@ -10646,6 +10895,7 @@ document.addEventListener("click", function (e) {
       function dropLine() {
         playCallHangupSound();
         laptop.classList.remove("calling", "connecting", "connected");
+        if (window.__syncCallCams) window.__syncCallCams(); // hangup releases the self-view camera right away
         if (laptop.classList.contains("open")) scheduleLaptopSaver(); // back to idle
         // the sequence advances on disconnect, not connect: point at the computer next
         var glass = document.getElementById("office-stainedglass");
@@ -10667,59 +10917,8 @@ document.addEventListener("click", function (e) {
         dropLine(); // hung up mid-ring: just the click, no goodbye
       }
     }
-    // Video call to Tehran (Behdad's family): the same ring → connect → hang-up shape as
-    // the Prague call, but nothing in the office sequence gates on it — no captions, no
-    // nudges, no markPragueCalled. The pickup is the "alo?" voice and the goodbye is the
-    // same "I love you" dropped to Behdad's register.
-    function startTehranCall() {
-      if (!laptop.classList.contains("open")) return;
-      if (laptop.classList.contains("updating") || laptop.classList.contains("rebooting") || anyCall()) return;
-      clearLaptopTimers();
-      stopLaptopSaver();
-      laptop.classList.add("t-calling");
-      setCallStatus("laptop_calling", "laptop-tcall-status");
-      if (laptopReduce) {
-        laptop.classList.remove("t-calling", "t-connecting");
-        laptop.classList.add("t-connected");
-        playPhoneVoiceSound("office-laptop"); // the family picks up: "alo?"
-        startCallAmbient("tehran");
-        return;
-      }
-      playPhoneRingSound();
-      laptopUpdateTimers.push(setTimeout(function () {
-        laptop.classList.remove("t-calling");
-        laptop.classList.add("t-connecting");
-        setCallStatus("laptop_connecting", "laptop-tcall-status");
-      }, 2400));
-      laptopUpdateTimers.push(setTimeout(function () {
-        laptop.classList.remove("t-connecting");
-        laptop.classList.add("t-connected");
-        playPhoneVoiceSound("office-laptop"); // the family picks up: "alo?"
-        startCallAmbient("tehran"); // the warm indoor murmur while the call lasts
-      }, 3400));
-    }
-    function endTehranCall() {
-      if (callHangingUp) return; // a goodbye is already playing — ignore repeat taps
-      clearLaptopTimers();
-      var wasConnected = laptop.classList.contains("t-connected");
-      stopCallAmbient();
-      function dropTehranLine() {
-        playCallHangupSound();
-        laptop.classList.remove("t-calling", "t-connecting", "t-connected");
-        if (laptop.classList.contains("open")) scheduleLaptopSaver(); // back to idle
-      }
-      if (wasConnected) {
-        // Behdad's goodbye: the same phrase, pitched down — then drop the line
-        callHangingUp = true;
-        playILoveYouSound("office-laptop", 0.8);
-        setTimeout(function () { callHangingUp = false; dropTehranLine(); }, 1500);
-      } else {
-        dropTehranLine(); // hung up mid-ring: just the click, no goodbye
-      }
-    }
     function toggleLaptop() {
       if (inCall()) { endCall(); return; }
-      if (inTCall()) { endTehranCall(); return; }
       var open = laptop.classList.toggle("open");
       if (window.__laptopLidZoom) window.__laptopLidZoom(open);
       playLaptopClickSound("office-laptop");
@@ -10767,25 +10966,16 @@ document.addEventListener("click", function (e) {
       }
       toggleLaptop();
     });
-    // Each contact tile is its own control: start its call, or hang up whichever call is
-    // live (never start over one — the calls are mutually exclusive).
-    // stopImmediatePropagation keeps their clicks from also toggling the lid.
+    // The contact tile starts the call, or hangs a live one up. It never starts over the
+    // monitor's Tehran call (anyCall — the calls are mutually exclusive).
+    // stopImmediatePropagation keeps its clicks from also toggling the lid.
     var callTile = document.getElementById("laptop-calltile");
     if (callTile) {
       callTile.addEventListener("click", function (e) {
         e.stopImmediatePropagation();
         stopLaptopInvite();
         clearTimeout(laptopClickTimer);
-        if (inCall()) endCall(); else if (inTCall()) endTehranCall(); else startCall();
-      });
-    }
-    var tehranTile = document.getElementById("laptop-tehrantile");
-    if (tehranTile) {
-      tehranTile.addEventListener("click", function (e) {
-        e.stopImmediatePropagation();
-        stopLaptopInvite();
-        clearTimeout(laptopClickTimer);
-        if (inCall()) endCall(); else if (inTCall()) endTehranCall(); else startTehranCall();
+        if (inCall()) endCall(); else if (!anyCall()) startCall();
       });
     }
     // Menu-bar clock (wedding date + a static days-to-go, computed once at render) and
@@ -10806,9 +10996,6 @@ document.addEventListener("click", function (e) {
       set("laptop-calltile-label", t.laptop_place);
       set("laptop-call-place", t.laptop_place);
       set("laptop-call-endhint", t.laptop_endhint);
-      set("laptop-tehrantile-label", t.laptop_tplace);
-      set("laptop-tcall-place", t.laptop_tplace);
-      set("laptop-tcall-endhint", t.laptop_endhint);
       set("laptop-sweet-1", t.laptop_sweet1);
       set("laptop-sweet-2", t.laptop_sweet2);
       set("laptop-sweet-3", t.laptop_sweet3);
@@ -10943,7 +11130,7 @@ document.addEventListener("click", function (e) {
     saverTimer = setTimeout(startSaver, ms || 8000);
   }
   function startSaver() {
-    if (monitor.classList.contains("show-terminal") || monitor.classList.contains("show-mail") || monitor.classList.contains("show-video") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux")) { scheduleSaver(30000); return; } // never over someone typing, reading mail, or the film
+    if (monitor.classList.contains("show-terminal") || monitor.classList.contains("show-mail") || monitor.classList.contains("show-video") || monitor.classList.contains("show-tehran") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux")) { scheduleSaver(30000); return; } // never over someone typing, reading mail, the film, or a live call
     if (monitor.classList.contains("show-calendar")) { scheduleSaver(30000); return; } // nor over the open calendar
     if (monitor.classList.contains("show-browser")) { scheduleSaver(30000); return; } // nor over someone browsing
     // a visited site (harfbuzz/behdad) idles back to the caps "home" before the saver
@@ -11047,12 +11234,13 @@ document.addEventListener("click", function (e) {
     closeLinux(); // stops the VM's CPU too — no emulation behind a dark screen
     closeMailApp();
     closeVideoApp(); // pauses the film too — it never plays behind a dark/rebooting screen
+    closeTehranCall(true); // a dark screen can't keep the family call (or its camera/ambient) alive
     closeBrowser();
     blankBrowser(); // a powered-off PC isn't secretly running a site in the iframe
     bootTimers.forEach(clearTimeout);
     bootTimers = [];
     stopSaver();
-    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying", "show-terminal", "show-mail", "show-video", "show-calendar", "show-python", "show-linux", "show-browser");
+    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying", "show-terminal", "show-mail", "show-video", "show-tehran", "show-calendar", "show-python", "show-linux", "show-browser");
     if (window.__monitorZoomOut) window.__monitorZoomOut(); // a dark screen never holds the zoom
   }
   // The monitor only lights up when the PC is on; it then boots Fedora →
@@ -12046,6 +12234,7 @@ document.addEventListener("click", function (e) {
     { id: "album", icon: "album", labelKey: "app_album", glyph: "\uD83D\uDDBC\uFE0F", tile: "#d9a6a6", glyphSize: "5.2", open: function () { try { window.open("https://photos.app.goo.gl/gBQpsw4nrh9RwdQu9", "_blank"); } catch (err) {} } },
     { id: "calendar", labelKey: "app_calendar", glyph: "\uD83D\uDCC5", tile: "#c68e95", glyphSize: "5.2", open: function () { openCalendar(); } },
     { id: "mail", icon: "mail", labelKey: "app_mail", glyph: "\u2709\uFE0F", tile: "#4a6b94", glyphSize: "5.2", open: function () { openMailApp(); } },
+    { id: "tehran", icon: "phone", labelKey: "app_tehran", glyph: "\uD83D\uDCDE", tile: "#2b7a4b", glyphSize: "5.2", open: function () { openTehranCall(); } },
     { id: "chrome", icon: HOST_BROWSER === "chrome" ? null : "globe", labelKey: HOST_BROWSER === "chrome" ? "app_chrome" : HOST_BROWSER === "firefox" ? "app_firefox" : "app_browser", glyph: "\uD83C\uDF10", tile: "#fdfbf6", color: "#4285f4", glyphSize: "5.2", open: function () { openBrowser(); } },
     { id: "terminal", icon: "console", labelKey: "app_terminal", glyph: "\u276F_", tile: "#2e2823", color: "#8fd070", mono: true, glyphSize: "4", open: function () { openTerminal(); } },
     { id: "python", icon: "python", labelKey: "app_python", glyph: ">>>", tile: "#306998", color: "#ffd43b", mono: true, glyphSize: "3.5", open: function () { openPython(); } },
@@ -12504,6 +12693,81 @@ document.addEventListener("click", function (e) {
   if (vidCloseBtn) {
     vidCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeVideoApp(); playLaptopClickSound("office-monitor"); });
     vidCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+  // ── TEHRAN CALL APP ──────────────────────────────────────────────────────────────
+  // A video call to Behdad's family from his own machine: ring screen → their living
+  // room (see #monitor-tehran). Same class-gated screen pattern as the other apps; the
+  // ✕ pill hangs up — with the goodbye when connected, like the laptop's Prague call.
+  // The two calls are mutually exclusive both ways (window.__pragueCallLive /
+  // window.__tehranCallLive), and every screen-teardown owner (clearBoot,
+  // navigateMonitor, the photobooth, room-leave) calls closeTehranCall(true): an
+  // instant silent drop — no goodbye, no hangup tone.
+  var tehranG = document.getElementById("monitor-tehran");
+  var tehranCloseBtn = document.getElementById("monitor-tehran-close");
+  var tehranTimers = [];
+  var tehranStatusKey = ""; // last-shown ring status, so a language toggle can repaint it
+  function clearTehranTimers() { tehranTimers.forEach(clearTimeout); tehranTimers = []; }
+  function tehranLive() { return monitor.classList.contains("show-tehran"); }
+  window.__tehranCallLive = tehranLive; // the laptop's Prague call checks this before starting
+  function tehranT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
+  function setTehranStatus(key) {
+    tehranStatusKey = key;
+    var el = document.getElementById("monitor-tehran-status");
+    if (el) el.textContent = key ? tehranT(key) : "";
+  }
+  window.refreshTehranText = function () {
+    var place = document.getElementById("monitor-tehran-place");
+    if (place) place.textContent = tehranT("tehran_place");
+    if (tehranStatusKey) setTehranStatus(tehranStatusKey);
+  };
+  window.refreshTehranText();
+  function connectTehranCall() {
+    if (tehranG) tehranG.classList.add("connected");
+    playPhoneVoiceSound("office-monitor"); // the family picks up: "alo?"
+    startCallAmbient("tehran"); // the warm indoor murmur while the call lasts
+    if (window.__syncCallCams) window.__syncCallCams(); // the corner self-view goes live (permission permitting)
+  }
+  function openTehranCall() {
+    if (!monitor.classList.contains("show-caps") || tehranLive()) return;
+    if (window.__pragueCallLive && window.__pragueCallLive()) return; // one call at a time — hang up Prague first
+    stopSaver();
+    clearTimeout(saverTimer); saverTimer = null; // no screensaver over a live call
+    monitor.classList.add("show-tehran");
+    window.refreshTehranText();
+    setTehranStatus("laptop_calling");
+    if (reduceMotion) { connectTehranCall(); return; }
+    playPhoneRingSound("office-monitor");
+    tehranTimers.push(setTimeout(function () { setTehranStatus("laptop_connecting"); }, 2400));
+    tehranTimers.push(setTimeout(connectTehranCall, 3400));
+  }
+  var tehranHangingUp = false;
+  function dropTehranCall(silent) {
+    clearTehranTimers();
+    stopCallAmbient();
+    var wasLive = tehranLive();
+    monitor.classList.remove("show-tehran");
+    if (tehranG) tehranG.classList.remove("connected");
+    setTehranStatus("");
+    if (window.__syncCallCams) window.__syncCallCams(); // hangup releases the self-view camera right away
+    if (wasLive && !silent) { playCallHangupSound("office-monitor"); scheduleSaver(); }
+  }
+  function closeTehranCall(silent) {
+    if (silent) { tehranHangingUp = false; dropTehranCall(true); return; }
+    if (tehranHangingUp) return; // the goodbye is already playing — ignore repeat taps
+    if (!tehranLive()) return;
+    if (tehranG && tehranG.classList.contains("connected")) {
+      // let the goodbye play in full, THEN drop the line — Behdad's register
+      tehranHangingUp = true;
+      playILoveYouSound("office-monitor", 0.8);
+      setTimeout(function () { tehranHangingUp = false; dropTehranCall(); }, 1500);
+    } else {
+      dropTehranCall(); // hung up mid-ring: just the tone
+    }
+  }
+  window.__closeMonitorTehran = closeTehranCall; // Esc's app layer + every screen-teardown owner
+  if (tehranCloseBtn) {
+    tehranCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeTehranCall(); });
+    tehranCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   // ── video control strip (begin) ───────────────────────────────────────────────────
   // Progress/seek bar, current time, mute glyph, and volume slider along the bottom of
@@ -13523,6 +13787,7 @@ document.addEventListener("click", function (e) {
     closeBrowser();
     closePython();
     closeLinux();
+    closeTehranCall(true); // navigation takes the screen — the call drops silently
     clearBoot();
     monitor.classList.remove("show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying"); // one thing at a time
     monitor.classList.add("screen-on", "show-" + siteKey);
@@ -13785,6 +14050,7 @@ document.addEventListener("click", function (e) {
     stopTileCam(); // the booth takes the camera over — one stream at a time
     if (window.__closeMonitorVideo) window.__closeMonitorVideo(); // the granted-permission path skips the confirm, so close the film here too
     if (window.__closeMonitorBrowser) window.__closeMonitorBrowser(); // ...and the browser
+    if (window.__closeMonitorTehran) window.__closeMonitorTehran(true); // ...and a live family call yields the camera + the screen
     if (window.__closeMonitorLinux) window.__closeMonitorLinux(); // ...and stop the VM
     var md = navigator.mediaDevices;
     if (!md || !md.getUserMedia) { showPbError(); return; } // no camera API / insecure context
@@ -14144,6 +14410,7 @@ document.addEventListener("click", function (e) {
       !monitor.classList.contains("show-terminal") &&
       !monitor.classList.contains("show-mail") &&
       !monitor.classList.contains("show-video") &&
+      !monitor.classList.contains("show-tehran") &&
       !monitor.classList.contains("show-browser") &&
       !monitor.classList.contains("show-python") &&
       !monitor.classList.contains("show-linux") &&
@@ -14179,6 +14446,70 @@ document.addEventListener("click", function (e) {
     } catch (e) { tileCamPending = false; }
   }, 1500);
   window.addEventListener("pagehide", stopTileCam);
+  // ── call self-view cameras ── the Prague (laptop) and Tehran (monitor) calls each
+  // carry a corner self-view: a static silhouette, or the visitor's real mirrored
+  // camera while the call is connected and permission is ALREADY granted
+  // (permissions.query — a call never prompts; only the photobooth asks). Same
+  // poll-shape as the tile-cam above; one stream serves whichever call is live (the
+  // two are mutually exclusive). Every teardown path — hangup, room leave, PC off,
+  // lid close, tab hidden, pagehide — flips the wanted owner to null, and
+  // syncCallCams() (called directly at those moments, plus the poll) stops the tracks.
+  var callCamStream = null, callCamPending = 0, callCamOwner = null; // pending: timestamp; a stuck getUserMedia expires after 8s
+  var CALL_CAMS = {
+    prague: { group: "laptop-call-self", video: "laptop-call-self-cam", live: function () {
+      var lap = document.getElementById("office-laptop");
+      return !!(lap && lap.classList.contains("connected"));
+    } },
+    tehran: { group: "monitor-tehran-self", video: "monitor-tehran-self-cam", live: function () {
+      return monitor.classList.contains("show-tehran") && !!(tehranG && tehranG.classList.contains("connected"));
+    } }
+  };
+  function callCamWantedOwner() {
+    if (window.currentStageIndex !== 3 || document.visibilityState !== "visible") return null;
+    if (pbActive || pbStarting) return null; // the booth owns the camera outright
+    for (var k in CALL_CAMS) if (CALL_CAMS[k].live()) return k;
+    return null;
+  }
+  function stopCallCam() {
+    if (callCamStream) { try { callCamStream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {} callCamStream = null; }
+    if (callCamOwner) {
+      var c = CALL_CAMS[callCamOwner];
+      var v = document.getElementById(c.video);
+      if (v) { try { v.srcObject = null; } catch (e) {} }
+      var g = document.getElementById(c.group);
+      if (g) g.classList.remove("live");
+      callCamOwner = null;
+    }
+  }
+  function syncCallCams() {
+    var want = callCamWantedOwner();
+    if (callCamStream && want !== callCamOwner) stopCallCam(); // owner changed or gone — release before anything else
+    if (!want || callCamStream || (callCamPending && Date.now() - callCamPending < 8000)) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !navigator.permissions || !navigator.permissions.query) return;
+    callCamPending = Date.now();
+    try {
+      navigator.permissions.query({ name: "camera" }).then(function (st) {
+        if (st.state !== "granted" || callCamWantedOwner() !== want) { callCamPending = 0; return; }
+        navigator.mediaDevices.getUserMedia({ video: true, audio: false }).then(function (stream) {
+          callCamPending = 0;
+          // stop this stream if the call ended (or changed) while the request was in
+          // flight, or a concurrent request already won — no camera is ever orphaned
+          if (callCamWantedOwner() !== want || callCamStream) { try { stream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {} return; }
+          callCamStream = stream;
+          callCamOwner = want;
+          var c = CALL_CAMS[want];
+          var v = document.getElementById(c.video);
+          if (v) { v.srcObject = stream; var p = v.play(); if (p && p.catch) p.catch(function () {}); }
+          var g = document.getElementById(c.group);
+          if (g) g.classList.add("live");
+        }, function () { callCamPending = 0; });
+      }, function () { callCamPending = 0; });
+    } catch (e) { callCamPending = 0; }
+  }
+  window.__syncCallCams = syncCallCams; // connect/hangup/teardown moments call this for a snappy start/stop
+  setInterval(syncCallCams, 1500); // ...and the poll self-heals every other path
+  document.addEventListener("visibilitychange", syncCallCams);
+  window.addEventListener("pagehide", stopCallCam);
   if (webcam) {
     webcam.addEventListener("click", function (e) {
       e.stopPropagation(); // never fall through to the monitor's boot gag
@@ -18574,8 +18905,9 @@ function updateOfficeNudges() {
   var glass = document.getElementById("office-stainedglass");
   var done = !!(glass && glass.classList.contains("done"));
   var lap = document.getElementById("office-laptop");
-  var callLive = !!(lap && ["calling", "connecting", "connected", "t-calling", "t-connecting", "t-connected"]
-    .some(function (c) { return lap.classList.contains(c); })); // either call quiets the nudges
+  var callLive = !!(lap && ["calling", "connecting", "connected"]
+    .some(function (c) { return lap.classList.contains(c); })) ||
+    !!(window.__tehranCallLive && window.__tehranCallLive()); // either call (laptop Prague / monitor Tehran) quiets the nudges
   var wantLaptop = !done && !window.__pragueCalled;
   var wantPc = !done && !callLive && !!window.__pragueCalled && !window.__pcPlayed;
   if (wantLaptop) { if (window.__inviteLaptop) window.__inviteLaptop(); }
@@ -19421,8 +19753,9 @@ function playCallLaughSound() {
 // for a lower, slower indoor room-tone and drops the voices into a warm family murmur.
 // One persistent AudioContext, kept alive (unlike every other sound function here, which
 // self-closes on a timer) until stopCallAmbient tears it down — started at "connected"
-// in startCall/startTehranCall, stopped from endCall/endTehranCall/endLaptopUpdate so it
-// never outlives the call, however it ends. Focus-gated like every other continuous bed
+// in startCall (laptop/Prague) and connectTehranCall (monitor/Tehran), stopped from
+// endCall/closeTehranCall/endLaptopUpdate/clearBoot so it never outlives the call,
+// however it ends. Focus-gated like every other continuous bed
 // (see __updateKettleHum): callAmbientWanted remembers that a call is live across a blur,
 // buildCallAmbient/teardownCallAmbient park and rebuild the bed as focus goes and
 // comes, and __updateCallAmbient is the re-check the shared focus watcher calls
@@ -19496,12 +19829,12 @@ window.__updateCallAmbient = function () {
 };
 // Hanging up: two quick descending tones, the mirror image of playPhoneRingSound's
 // ascending ring — a "call ended" cue distinct from every other laptop sound here.
-function playCallHangupSound() {
+function playCallHangupSound(panId) {
   try {
     var ctx = getSfxCtx();
     if (!ctx) return;
     var t = ctx.currentTime;
-    var master = ctx.createGain(); master.gain.value = 0.5; master.connect(pannedOut(ctx, "office-laptop"));
+    var master = ctx.createGain(); master.gain.value = 0.5; master.connect(pannedOut(ctx, panId || "office-laptop"));
     [{ f0: 480, f1: 420, at: 0 }, { f0: 420, f1: 320, at: 0.14 }].forEach(function (tone) {
       var osc = ctx.createOscillator(); osc.type = "sine";
       var tt = t + tone.at;
@@ -21364,6 +21697,8 @@ function spawnDustMote(container) {
     var ROOM_FADE = 3;
     if (window.__updatePcFan) window.__updatePcFan(name === "office", ROOM_FADE); // hum only in the office
     if (name !== "office" && window.__closeOfficePhotobooth) window.__closeOfficePhotobooth(); // leaving the office stops the photobooth camera
+    if (name !== "office" && window.__closeMonitorTehran) window.__closeMonitorTehran(true); // ...hangs up the family call (and its self-view camera)
+    if (name !== "office" && window.__syncCallCams) window.__syncCallCams(); // ...and releases the Prague call's self-view camera too
     if (name !== "office" && window.__pauseMonitorVideo) window.__pauseMonitorVideo(); // ...and pauses the home movie (the app view stays for the return)
     if (window.__updateACHum) window.__updateACHum(name, ROOM_FADE); // AC hum only in garden + balcony, panned to that room's unit
     if (window.__updateRadioSound) window.__updateRadioSound(name === "kitchen", ROOM_FADE); // radio audible only in the kitchen

@@ -1102,7 +1102,10 @@ footer{margin-top:2.6rem}
 #monitor-mail-close{cursor:pointer}
 #monitor-mail-close:hover .seg-hover{opacity:.55}
 .mail-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#fffdf8; font-family:sans-serif; font-size:2.5px; line-height:1.35; color:#453a31; overflow:hidden}
-.mail-bar{flex:none; background:#4a6b94; color:#f8f5ec; padding:0.8px 3px 1px; letter-spacing:0.2px}
+.mail-bar{flex:none; display:flex; align-items:center; background:#4a6b94; color:#f8f5ec; padding:0.8px 3px 1px; letter-spacing:0.2px}
+.mail-bar-title{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.mail-compose-btn{flex:none; margin-right:9px; cursor:pointer; text-decoration:underline; text-underline-offset:1px} /* right margin keeps it clear of the close pill */
+.mail-compose-btn:hover{color:#d9a6a6}
 .mail-back{cursor:pointer}
 .mail-back:hover{background:#3d5a7f}
 .mail-list{flex:1; overflow-y:auto; scrollbar-width:none}
@@ -1124,7 +1127,7 @@ footer{margin-top:2.6rem}
 .mail-body::-webkit-scrollbar-track{background:transparent}
 .mail-body::-webkit-scrollbar-thumb{background:rgba(69,58,49,.35); border-radius:1px}
 @supports not selector(::-webkit-scrollbar){.mail-body{scrollbar-width:thin; scrollbar-color:rgba(69,58,49,.35) transparent}}
-.mail-reply-btn{float:right; background:#8e3a4a; color:#f8f5ec; border-radius:2.5px; padding:1.2px 4px 1.4px; margin:1.2px 0 0 2px; cursor:pointer} /* action pill in the reading-view head, clear of the close pill via the head's right padding */
+.mail-reply-btn{float:right; display:flex; align-items:center; background:#8e3a4a; color:#f8f5ec; border-radius:2.5px; padding:0 3.5px; height:4.4px; line-height:1; margin:1px 0 0 2px; cursor:pointer} /* action pill in the reading-view head, clear of the close pill via the head's right padding */
 .mail-reply-btn:hover{background:#7a2f3e}
 /* video app: markéta's identity-dance film, letterboxed in a foreignObject over the
    screen (tap = play/pause); .absent on the wrap = the file isn't on the server, so a
@@ -7877,6 +7880,8 @@ var T = {
     mail_subj_rsvp: "will you be there?",
     mail_body_rsvp: "the couch is saving you a seat.\nhit reply and put us out of our suspense.",
     mail_reply_btn: "Reply",
+    mail_compose: "Compose",
+    mail_compose_subject: "hello from the loft",
     mail_reply_subject: "Re: will you be there?",
     mail_reply_body: "Hi Mark\u00e9ta & Behdad!\n\nYes! Count me in for Edmonton / Prague / both.\n\n",
     mail_from_spam: "totally-real-deals",
@@ -8083,6 +8088,8 @@ var T = {
     mail_subj_rsvp: "budete tam?",
     mail_body_rsvp: "gau\u010d v\u00e1m dr\u017e\u00ed m\u00edsto.\nklikn\u011bte na odpov\u011bd\u011bt a zbavte n\u00e1s nap\u011bt\u00ed.",
     mail_reply_btn: "Odpov\u011bd\u011bt",
+    mail_compose: "Napsat",
+    mail_compose_subject: "pozdrav z loftu",
     mail_reply_subject: "Re: budete tam?",
     mail_reply_body: "Ahoj Mark\u00e9to a Behdade!\n\nAno! Po\u010d\u00edtejte se mnou \u2014 Edmonton / Praha / oboj\u00ed.\n\n",
     mail_from_spam: "naprosto-seriozni-slevy",
@@ -12147,7 +12154,14 @@ document.addEventListener("click", function (e) {
       mailDiv("mail-body", mailWrap, mailT("mail_body_" + mailOpenMsg.id));
     } else {
       var unread = MAILS.filter(function (m) { return !m.read; }).length;
-      mailDiv("mail-bar", mailWrap, "✉ " + mailT("mail_inbox_title") + (unread ? " (" + unread + ")" : ""));
+      var bar = mailDiv("mail-bar", mailWrap);
+      mailDiv("mail-bar-title", bar, "✉ " + mailT("mail_inbox_title") + (unread ? " (" + unread + ")" : ""));
+      var composeBtn = mailDiv("mail-compose-btn", bar, mailT("mail_compose"));
+      composeBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        try { window.open("https://mail.google.com/mail/?view=cm&fs=1&to=marketa@behdad.org&su=" +
+          encodeURIComponent(mailT("mail_compose_subject")), "_blank"); } catch (err) {}
+      });
       var list = mailDiv("mail-list", mailWrap);
       MAILS.forEach(function (m) {
         var row = mailDiv("mail-row" + (m.read ? "" : " unread"), list);

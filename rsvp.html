@@ -1659,6 +1659,24 @@ footer{margin-top:2.6rem}
 .pm-music .pmm-title{font-family:"Fraunces",serif; font-size:14px; color:var(--ink); min-height:19px; padding:0 10px}
 .pm-music .pmm-play{width:62px; height:62px; border-radius:50%; border:none; background:var(--wine); color:#fff; font-size:24px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 10px rgba(142,58,74,.35)}
 .pm-mines-host{display:flex; flex-direction:column; align-items:center; gap:9px; transform:scale(3.6); transform-origin:top center; margin-top:22px}
+/* calculator: a right-aligned readout over a 4-col key grid, wine accents */
+.phone-calc{display:flex; flex-direction:column; gap:10px; height:100%}
+.phone-calc .pc-display{flex:none; min-height:52px; display:flex; align-items:flex-end; justify-content:flex-end; padding:8px 12px; background:var(--paper); border:1px solid var(--rule); border-radius:14px; font-family:"Fraunces",serif; font-size:30px; line-height:1.05; color:var(--ink); overflow:hidden; word-break:break-all; text-align:right}
+.phone-calc .pc-keys{flex:1; min-height:0; display:grid; grid-template-columns:repeat(4,1fr); grid-auto-rows:1fr; gap:8px}
+.phone-calc .pc-key{display:flex; align-items:center; justify-content:center; min-height:46px; border:none; border-radius:14px; background:var(--cream); color:var(--ink); font-family:"Source Serif 4",serif; font-size:20px; cursor:pointer; box-shadow:inset 0 0 0 1px var(--rule)}
+.phone-calc .pc-key:active{transform:scale(.96)}
+.phone-calc .pc-key.pc-op{background:#7f9ec0; color:#fff; box-shadow:none}
+.phone-calc .pc-key.pc-eq{background:var(--wine); color:#fff; box-shadow:none}
+.phone-calc .pc-key.pc-fn{background:#efe6cf; color:var(--muted); box-shadow:none; font-size:17px}
+.phone-calc .pc-key.pc-wide{grid-column:span 2; justify-content:flex-start; padding-left:20px}
+/* pocket browser: slim address bar over one full-bleed iframe of the wedding site */
+.phone-browser{display:flex; flex-direction:column; height:100%; margin:-14px; width:calc(100% + 28px)}
+.phone-browser .pbrow-bar{flex:none; display:flex; align-items:center; gap:6px; padding:7px 10px; background:var(--paper); border-bottom:1px solid var(--rule)}
+.phone-browser .pbrow-url{flex:1; min-width:0; display:flex; align-items:center; gap:5px; background:var(--cream); border:1px solid var(--rule); border-radius:11px; padding:5px 9px; font-size:11.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.phone-browser .pbrow-lock{font-size:9px}
+.phone-browser .pbrow-open{flex:none; width:26px; height:26px; border:none; border-radius:8px; background:var(--cream); color:var(--muted); font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 0 0 1px var(--rule)}
+.phone-browser .pbrow-open:active{transform:scale(.94)}
+.phone-browser .pbrow-frame{flex:1; min-height:0; width:100%; border:none; background:var(--cream)}
 @media (max-width:520px){
   .phone-backdrop{padding:0}
   .phone-shell{width:100vw; height:100dvh; max-width:100vw; max-height:100dvh; border-radius:0; padding:6px}
@@ -8749,6 +8767,9 @@ var T = {
     app_chrome: "chrome",
     app_browser: "browser",
     app_firefox: "firefox",
+    app_calculator: "Calculator",
+    calc_error: "Error",
+    browser_open_tab: "Open in a real tab",
     tab_loft: "b \u221e m",
     tab_marketa: "mark\u00e9ta",
     tab_behdad: "behdad",
@@ -8998,6 +9019,9 @@ var T = {
     app_chrome: "chrome",
     app_browser: "prohlížeč",
     app_firefox: "firefox",
+    app_calculator: "Kalkula\u010dka",
+    calc_error: "Chyba",
+    browser_open_tab: "Otev\u0159\u00edt v nov\u00e9 z\u00e1lo\u017ece",
     tab_loft: "b \u221e m",
     tab_marketa: "mark\u00e9ta",
     tab_behdad: "behdad",
@@ -12862,6 +12886,7 @@ document.addEventListener("click", function (e) {
     if (/Firefox\/|FxiOS/.test(ua)) return "firefox";
     return "other";
   })();
+  window.__hostBrowser = HOST_BROWSER; // shared with the phone IIFE so its browser tile can host-brand too
   // the Tehran birthday girl was born in 2016 — her cake keeps up with her
   (function () {
     var cake = document.getElementById("tehran-cake-age");
@@ -16218,6 +16243,11 @@ document.addEventListener("click", function (e) {
     };
     var CITY_ORDER = ["tehran", "prague", "lueb"];
     var WEDDING_URL = "https://marketa.behdad.org";
+    // pocket browser tile is host-branded exactly like the monitor's chrome tile:
+    // chrome label/glyph on Chrome, firefox on Firefox, generic globe otherwise.
+    // HOST_BROWSER lives in the monitor's sibling IIFE — read the value it published.
+    var HOST_BROWSER = window.__hostBrowser || "other";
+    var browserLabelKey = HOST_BROWSER === "chrome" ? "app_chrome" : HOST_BROWSER === "firefox" ? "app_firefox" : "app_browser";
     var PHONE_APPS = [
       { id: "phone", labelKey: "app_phone", icon: "phone", tile: "#8e3a4a", open: function () { openDialer(); } },
       { id: "music", labelKey: "app_music", icon: "music", tile: "#8e3a4a", open: function () { openApp("music", "app_music", renderMusic); } },
@@ -16225,9 +16255,10 @@ document.addEventListener("click", function (e) {
       { id: "calendar", labelKey: "app_calendar", icon: null, glyph: "📅", tile: "#c68e95", open: function () { openApp("calendar", "app_calendar", renderCalendar); } },
       { id: "mail", labelKey: "app_mail", icon: "mail", tile: "#4a6b94", open: function () { openApp("mail", "app_mail", function (b) { renderMailList(b); }); } },
       { id: "mines", labelKey: "app_mines", icon: "mines", tile: "#c8c2b4", open: function () { openApp("mines", "app_mines", renderMines); } },
+      { id: "calculator", labelKey: "app_calculator", icon: null, glyph: "🧮", tile: "#8e3a4a", open: function () { openApp("calculator", "app_calculator", renderCalculator); } },
       { id: "album", labelKey: "app_album", icon: "album", tile: "#d9a6a6", link: "https://photos.app.goo.gl/gBQpsw4nrh9RwdQu9" },
       { id: "places", labelKey: "app_places", icon: "places", tile: "#7f9ec0", link: "https://maps.app.goo.gl/WFNVQLw7F6CTQ8xs5" },
-      { id: "browser", labelKey: "app_browser", icon: "globe", tile: "#fdfbf6", link: WEDDING_URL }
+      { id: "browser", labelKey: browserLabelKey, icon: HOST_BROWSER === "chrome" ? null : "globe", glyph: "🌐", tile: "#fdfbf6", open: function () { openApp("browser", browserLabelKey, renderPhoneBrowser); } }
     ];
     var MAILS = [{ id: "lore" }, { id: "rsvp", reply: true }, { id: "spam" }]; // same ids/reply flags as the monitor inbox
     var mailRead = {};
@@ -16601,6 +16632,147 @@ document.addEventListener("click", function (e) {
       body.appendChild(host);
       if (window.__phoneMountMines) window.__phoneMountMines(host);
     }
+    // ── calculator ──────────────────────────────────────────────────────────────
+    // a plain four-function calculator: acc holds the running total, pending the
+    // chosen operator, cur the on-screen entry. fresh means the next digit starts
+    // a new entry (after =, an operator, or an error).
+    function renderCalculator(body) {
+      var acc = null, pending = null, cur = "0", fresh = true, errored = false;
+      var wrap = document.createElement("div");
+      wrap.className = "phone-calc";
+      var display = document.createElement("div");
+      display.className = "pc-display";
+      var keys = document.createElement("div");
+      keys.className = "pc-keys";
+      wrap.appendChild(display);
+      wrap.appendChild(keys);
+      body.appendChild(wrap);
+
+      function fmt(n) {
+        if (!isFinite(n)) return "∞";
+        // keep long results inside the narrow display: trim to ~10 significant digits
+        var s = (Math.abs(n) >= 1e10 || (n !== 0 && Math.abs(n) < 1e-6))
+          ? n.toExponential(4)
+          : String(Math.round(n * 1e6) / 1e6);
+        if (s.replace(/[-.]/g, "").length > 11) s = n.toPrecision(9).replace(/\.?0+$/, "");
+        return s;
+      }
+      function paint() { display.textContent = errored ? tr("calc_error") : cur; }
+      function opSymbol(op) { return op === "+" ? "+" : op === "-" ? "−" : op === "*" ? "×" : "÷"; }
+      function compute(a, op, b) {
+        if (op === "+") return a + b;
+        if (op === "-") return a - b;
+        if (op === "*") return a * b;
+        return b === 0 ? Infinity : a / b; // guard divide-by-zero
+      }
+      function clearAll() { acc = null; pending = null; cur = "0"; fresh = true; errored = false; paint(); }
+      function inputDigit(d) {
+        if (errored) clearAll();
+        if (fresh) { cur = (d === "0") ? "0" : d; fresh = false; }
+        else if (cur === "0" && d !== ".") cur = d;
+        else if (cur.replace("-", "").replace(".", "").length < 12) cur += d;
+        paint();
+      }
+      function inputDot() {
+        if (errored) clearAll();
+        if (fresh) { cur = "0."; fresh = false; }
+        else if (cur.indexOf(".") === -1) cur += ".";
+        paint();
+      }
+      function setOp(op) {
+        if (errored) return;
+        var val = parseFloat(cur);
+        if (pending !== null && !fresh) {
+          var r = compute(acc, pending, val);
+          if (!isFinite(r)) { showError(); return; }
+          acc = r; cur = fmt(r);
+        } else {
+          acc = val;
+        }
+        pending = op; fresh = true; paint();
+      }
+      function equals() {
+        if (errored || pending === null) return;
+        var val = parseFloat(cur);
+        var r = compute(acc, pending, fresh ? acc : val);
+        if (!isFinite(r)) { showError(); return; }
+        cur = fmt(r); acc = null; pending = null; fresh = true; paint();
+      }
+      function negate() {
+        if (errored) return;
+        if (cur === "0") return;
+        cur = cur.charAt(0) === "-" ? cur.slice(1) : "-" + cur;
+        paint();
+      }
+      function percent() {
+        if (errored) return;
+        var val = parseFloat(cur) / 100;
+        cur = fmt(val); fresh = true; paint();
+      }
+      function showError() { errored = true; acc = null; pending = null; fresh = true; paint(); }
+
+      // layout: [AC ± % ÷] [7 8 9 ×] [4 5 6 −] [1 2 3 +] [0(wide) . =]
+      var LAYOUT = [
+        [{ t: "AC", k: "clear", a: "fn" }, { t: "±", k: "neg", a: "fn" }, { t: "%", k: "pct", a: "fn" }, { t: "÷", k: "op", op: "/", a: "op" }],
+        [{ t: "7", k: "d", d: "7" }, { t: "8", k: "d", d: "8" }, { t: "9", k: "d", d: "9" }, { t: "×", k: "op", op: "*", a: "op" }],
+        [{ t: "4", k: "d", d: "4" }, { t: "5", k: "d", d: "5" }, { t: "6", k: "d", d: "6" }, { t: "−", k: "op", op: "-", a: "op" }],
+        [{ t: "1", k: "d", d: "1" }, { t: "2", k: "d", d: "2" }, { t: "3", k: "d", d: "3" }, { t: "+", k: "op", op: "+", a: "op" }],
+        [{ t: "0", k: "d", d: "0", wide: true }, { t: ".", k: "dot" }, { t: "=", k: "eq", a: "eq" }]
+      ];
+      LAYOUT.forEach(function (row) {
+        row.forEach(function (spec) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "pc-key" + (spec.a ? " pc-" + spec.a : "") + (spec.wide ? " pc-wide" : "");
+          b.textContent = spec.t;
+          b.setAttribute("aria-label", spec.t);
+          b.addEventListener("click", function () {
+            if (spec.k === "d") inputDigit(spec.d);
+            else if (spec.k === "dot") inputDot();
+            else if (spec.k === "op") setOp(spec.op);
+            else if (spec.k === "eq") equals();
+            else if (spec.k === "clear") clearAll();
+            else if (spec.k === "neg") negate();
+            else if (spec.k === "pct") percent();
+          });
+          keys.appendChild(b);
+        });
+      });
+      paint();
+      // tap-driven only: physical-key digits are swallowed by the game's window-capture
+      // keydown guard (arrows/digits are stopPropagation'd before they reach the shell),
+      // so a keyboard handler here would half-work at best — left out deliberately.
+    }
+    // ── in-phone browser ─────────────────────────────────────────────────────────
+    // a real, self-referential pocket browser: a slim faux address bar over a single
+    // full-bleed iframe of the wedding site (the monitor iframes these same URLs, so
+    // the live site is frame-able). in headless/offline tests the frame is simply blank.
+    function renderPhoneBrowser(body) {
+      var wrap = document.createElement("div");
+      wrap.className = "phone-browser";
+      var bar = document.createElement("div");
+      bar.className = "pbrow-bar";
+      var url = document.createElement("span");
+      url.className = "pbrow-url";
+      url.innerHTML = '<span class="pbrow-lock">🔒</span>' + WEDDING_URL.replace(/^https?:\/\//, "");
+      var openTab = document.createElement("button");
+      openTab.type = "button";
+      openTab.className = "pbrow-open";
+      openTab.setAttribute("aria-label", tr("browser_open_tab"));
+      openTab.setAttribute("title", tr("browser_open_tab"));
+      openTab.textContent = "⤢";
+      openTab.addEventListener("click", function () { try { window.open(WEDDING_URL, "_blank"); } catch (e) {} });
+      bar.appendChild(url);
+      bar.appendChild(openTab);
+      var frame = document.createElement("iframe");
+      frame.className = "pbrow-frame";
+      frame.src = WEDDING_URL;
+      frame.setAttribute("title", tr(browserLabelKey));
+      frame.setAttribute("loading", "lazy");
+      wrap.appendChild(bar);
+      wrap.appendChild(frame);
+      body.appendChild(wrap);
+    }
 
     // ── nav / open / close ──────────────────────────────────────────────────────
     function navBack() {
@@ -16694,6 +16866,8 @@ document.addEventListener("click", function (e) {
         else if (currentApp === "calendar") openApp("calendar", "app_calendar", renderCalendar);
         else if (currentApp === "mail") openApp("mail", "app_mail", function (b) { renderMailList(b); });
         else if (currentApp === "mines" && shell.querySelector(".pah-title")) shell.querySelector(".pah-title").textContent = tr(currentTitleKey);
+        else if (currentApp === "calculator" && shell.querySelector(".pah-title")) shell.querySelector(".pah-title").textContent = tr(currentTitleKey); // keys are language-neutral; keep the running total, just retitle
+        else if (currentApp === "browser") openApp("browser", browserLabelKey, renderPhoneBrowser);
       }
     };
     // Escape: layered close, on window-capture so it beats the document-capture music-stop

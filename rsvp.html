@@ -6352,7 +6352,7 @@ section{margin:1.9rem 0}
 <path d="M369.9 159.9 L374.1 164.1 M374.1 159.9 L369.9 164.1" stroke="#f8f5ec" stroke-width="1.1" stroke-linecap="round"/>
 </g>
 </g>
-<!-- PYTHON app: a real CPython REPL (Pyodide/WebAssembly, self-hosted in art/pyodide/,
+<!-- PYTHON app: a real CPython REPL (Pyodide/WebAssembly, self-hosted in pyodide/,
      lazy-loaded the first time it opens). Same shell as the terminal above,
      python-blue accents. -->
 <g id="monitor-python">
@@ -6371,7 +6371,7 @@ section{margin:1.9rem 0}
 </g>
 <!-- LINUX app: a real x86 PC (v86/WebAssembly) booting a real Linux — a self-hosted
      repack of the v86 Buildroot ISO with the groom's hb-shape (HarfBuzz) baked in; the
-     emulator + BIOSes are self-hosted too (art/linux/) and lazy-load on first open,
+     emulator + BIOSes are self-hosted too (linux/) and lazy-load on first open,
      with a 45 s stall watchdog. The screen is the VM's SERIAL
      console: finished lines scroll above, and the console's unfinished tail line (the
      shell's own prompt) labels the input row. Same shell as the terminal, tux accents. -->
@@ -13524,7 +13524,7 @@ document.addEventListener("click", function (e) {
   }
   // ── PYTHON APP ───────────────────────────────────────────────────────────────────
   // A real CPython REPL: Pyodide (CPython compiled to WebAssembly), self-hosted in
-  // art/pyodide/ (runtime + the three wheels below; provenance in its README) and
+  // pyodide/ (runtime + the three wheels below; provenance in its README) and
   // lazy-loaded the first time the app opens — it costs nothing until then and works
   // fully offline. Input runs through pyodide.runPythonAsync (so top-level await
   // works); micropip loads alongside the runtime — fonttools and brotli resolve from
@@ -13539,7 +13539,7 @@ document.addEventListener("click", function (e) {
   var pyRuntime = null, pyReprFn = null;
   var pyLoadState = ""; // "" → "loading" → "ready" | "failed" (reopening after a failure retries)
   var pyBusy = false, pyLastCmd = "";
-  var PYODIDE_URL = "art/pyodide/pyodide.js";
+  var PYODIDE_URL = "pyodide/pyodide.js";
   function pyT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
   function updatePythonTile() {
     // same trick as the console tile: once used, the dock icon wears the last command
@@ -13569,7 +13569,7 @@ document.addEventListener("click", function (e) {
     s.onerror = function () { pyLoadFailed(); };
     s.onload = function () {
       var p;
-      try { p = window.loadPyodide({ indexURL: "art/pyodide/" }); } catch (e) { pyLoadFailed(); return; }
+      try { p = window.loadPyodide({ indexURL: "pyodide/" }); } catch (e) { pyLoadFailed(); return; }
       Promise.resolve(p).then(function (py) {
         // stdout/stderr land in the scrollback, so print() behaves like a real shell
         try {
@@ -13698,8 +13698,8 @@ document.addEventListener("click", function (e) {
   // v86 project's tiny Buildroot ISO (Linux 2.6.34 + busybox, i686) with the groom's
   // own hb-shape — the HarfBuzz CLI, statically built i686/musl — plus a small OFL test
   // font baked into the ramdisk (~6.9 MB, provenance and build recipe in
-  // art/linux/README.md). The emulator (libv86.js + v86.wasm) and both BIOS blobs are
-  // self-hosted in art/linux/ alongside the ISO — one origin, no third party in the
+  // linux/README.md). The emulator (libv86.js + v86.wasm) and both BIOS blobs are
+  // self-hosted in linux/ alongside the ISO — one origin, no third party in the
   // boot path (a hung CDN route once stranded the loader on "booting…" forever) —
   // everything lazy-loads on first open, ~9 MB total, nothing fetched until then.
   // A 45 s watchdog turns a silent stall into the visible fail line.
@@ -13725,12 +13725,12 @@ document.addEventListener("click", function (e) {
   var lxLine = ""; // the serial console's unfinished tail line (rendered as the row prompt)
   var lxDec = null; // streaming UTF-8 decoder for serial output (é/∞ span multiple bytes)
   var lxStallTimer = null; // boot watchdog — cleared by the first shell prompt
-  var LX_ASSETS = { // all self-hosted (pinned v86 0.5.424 build — provenance in art/linux/README.md)
-    lib: "art/linux/libv86.js",
-    wasm: "art/linux/v86.wasm",
-    bios: "art/linux/seabios.bin",
-    vgaBios: "art/linux/vgabios.bin",
-    iso: "art/linux/linux.iso" // the stock v86 ISO repacked with hb-shape + a test font
+  var LX_ASSETS = { // all self-hosted (pinned v86 0.5.424 build — provenance in linux/README.md)
+    lib: "linux/libv86.js",
+    wasm: "linux/v86.wasm",
+    bios: "linux/seabios.bin",
+    vgaBios: "linux/vgabios.bin",
+    iso: "linux/linux.iso" // the stock v86 ISO repacked with hb-shape + a test font
   };
   function lxT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
   function lxPrint(txt, cls) {
@@ -13769,6 +13769,14 @@ document.addEventListener("click", function (e) {
       if (lxStallTimer) { clearTimeout(lxStallTimer); lxStallTimer = null; }
       if (lxLoadState === "failed") lxLoadState = "ready"; // a prompt out of a "stalled" boot means it recovered
       lxPrint(lxT("linux_hint"), "term-dim");
+      // ...and the machine demos itself: the boot runs the shaping gags for real, so
+      // the invocations + live output scroll by (sh reads the buffered lines in turn)
+      setTimeout(function () {
+        if (!lxVM || lxLoadState !== "ready") return;
+        var demo = new TextEncoder().encode("hb-shape --version\nhb-shape /root/test.ttf 'mark\u00e9ta \u221e behdad'\nhb-shape /root/emoji.ttf '\ud83d\udc69\u200d\u2764\ufe0f\u200d\ud83d\udc68'\n"), raw = "";
+        for (var i = 0; i < demo.length; i++) raw += String.fromCharCode(demo[i]);
+        try { lxVM.serial0_send(raw); } catch (e) {}
+      }, 600);
     }
   }
   function lxFail() {

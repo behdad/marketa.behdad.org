@@ -6178,6 +6178,9 @@ section{margin:1.9rem 0}
 <path d="M435.73 184.7 L432.97 186.08 L435.73 187.46 Z" fill="#eafaf0" stroke="#eafaf0" stroke-width="1" stroke-linejoin="round"/>
 <text id="laptop-calltile-label" x="431.2" y="194.7" text-anchor="middle" font-size="4.37" fill="#eafaf0"></text>
 </g>
+<!-- Prague weather readout: real Open-Meteo conditions for the city the laptop calls
+     (see the realWeather IIFE). Empty until a fetch lands — offline shows nothing. -->
+<text id="laptop-wx" x="443.5" y="175.4" text-anchor="end" pointer-events="none"><tspan id="laptop-wx-city" font-size="2.6" fill="#8f8a80"></tspan><tspan id="laptop-wx-val" font-size="3" fill="#2a2a2a"></tspan></text>
 </g>
 <!-- calling Prague: ring → connecting → the garden with the couple waving -->
 <g id="laptop-call">
@@ -11852,11 +11855,10 @@ document.addEventListener("click", function (e) {
     function deskWeatherGlyph() {
       if (window.__balconyStorm) return "⛈";
       var w = window.__realWx;
-      if (w) {
-        if (w.code >= 95) return "⛈"; // thunderstorm
-        if ((w.code >= 51 && w.code <= 67) || (w.code >= 80 && w.code <= 82)) return "🌧"; // drizzle/rain/showers
-        if ((w.code >= 71 && w.code <= 77) || w.code === 85 || w.code === 86) return "❄"; // snow
-        if (w.code === 2 || w.code === 3 || w.code === 45 || w.code === 48) return "⛅"; // clouds/fog
+      if (w && window.__wmoGlyph) {
+        var g = window.__wmoGlyph(w.code);
+        // clear skies defer to the in-game day/night split below (also the no-network fallback)
+        if (g !== "☀") return g;
       }
       var sb = document.getElementById("stage-balcony");
       return sb && sb.classList.contains("dusk") ? "🌙" : "☀";
@@ -14526,9 +14528,12 @@ document.addEventListener("click", function (e) {
   }
 })();
 (function realWeather() {
-  // REAL Edmonton weather (Open-Meteo: free, keyless, CORS-open) feeding three passive
-  // consumers: the desktop menu-bar forecast glyph, the garden window's storm view, and
-  // the outdoor tube thermometer (outdoorTarget below). FAILURE IS SILENT by design —
+  // REAL Edmonton + Prague weather (Open-Meteo: free, keyless, CORS-open; one call, the
+  // API takes comma-listed coords and answers with an array in request order) feeding
+  // four passive consumers: the desktop menu-bar forecast glyph, the garden window's
+  // storm view, the outdoor tube thermometer (outdoorTarget below), and the laptop's
+  // Prague readout (the laptop is the Call-Prague device, so it wears Prague's weather
+  // the way the monitor's menu bar wears Edmonton's). FAILURE IS SILENT by design —
   // offline, headless test runs, an API change — every consumer checks for null state
   // and falls back to the fully simulated behavior, so no network is the tested baseline.
   //
@@ -14538,23 +14543,54 @@ document.addEventListener("click", function (e) {
   // itself is deliberately NOT nudged from here: its only public entries re-arm or kill
   // the whole dusk-owned timer chain (there's no "start/end this storm now"), so real
   // rain drives the garden window's view + the glyph only.
-  window.__realWx = null; // {code: WMO weather code} once a fetch lands
-  window.__realOutdoorC = null; // real temperature, or null -> simulated model
+  window.__realWx = null; // {code: WMO weather code} once a fetch lands (Edmonton)
+  window.__realOutdoorC = null; // real Edmonton temperature, or null -> simulated model
+  window.__realWxPrague = null; // {code} for Prague, same lifecycle as __realWx
+  window.__realPragueC = null; // real Prague temperature, or null
   window.__realWxRainy = function () {
     // WMO: 51-67 drizzle/rain (incl. freezing), 80-82 showers, 95+ thunderstorm
     var w = window.__realWx;
     return !!w && ((w.code >= 51 && w.code <= 67) || (w.code >= 80 && w.code <= 82) || w.code >= 95);
   };
+  // the one WMO code -> glyph map, shared by the monitor's menu bar (which layers its
+  // own storm precedence + day/night split on top) and the laptop's Prague readout
+  // (which shows it plain). Clear codes read "☀" here; night is the caller's business.
+  window.__wmoGlyph = function (code) {
+    if (code >= 95) return "⛈"; // thunderstorm
+    if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return "🌧"; // drizzle/rain/showers
+    if ((code >= 71 && code <= 77) || code === 85 || code === 86) return "❄"; // snow
+    if (code === 2 || code === 3 || code === 45 || code === 48) return "⛅"; // clouds/fog
+    return "☀";
+  };
+  // repaint the laptop's Prague readout (empty until data lands, so offline shows
+  // nothing). Text-only — called from the fetch below, no timer of its own.
+  function paintLaptopWx() {
+    var city = document.getElementById("laptop-wx-city");
+    var val = document.getElementById("laptop-wx-val");
+    var w = window.__realWxPrague;
+    if (!city || !val || !w) return;
+    city.textContent = "Praha"; // same word in EN and CS — no dictionary key needed
+    val.textContent = " " + window.__wmoGlyph(w.code) +
+      (typeof window.__realPragueC === "number" ? " " + Math.round(window.__realPragueC) + "°" : "");
+  }
   function fetchWx() {
     try {
       if (!window.fetch) return;
-      window.fetch("https://api.open-meteo.com/v1/forecast?latitude=53.5461&longitude=-113.4937&current=weather_code,temperature_2m")
+      window.fetch("https://api.open-meteo.com/v1/forecast?latitude=53.5461,50.0755&longitude=-113.4937,14.4378&current=weather_code,temperature_2m")
         .then(function (r) { return r && r.ok ? r.json() : null; })
         .then(function (j) {
-          var c = j && j.current;
-          if (!c || typeof c.weather_code !== "number") return;
-          window.__realWx = { code: c.weather_code };
-          window.__realOutdoorC = (typeof c.temperature_2m === "number" && isFinite(c.temperature_2m)) ? c.temperature_2m : null;
+          // comma-listed coords -> an array of per-city results, request order
+          var edm = j && j[0] && j[0].current;
+          if (edm && typeof edm.weather_code === "number") {
+            window.__realWx = { code: edm.weather_code };
+            window.__realOutdoorC = (typeof edm.temperature_2m === "number" && isFinite(edm.temperature_2m)) ? edm.temperature_2m : null;
+          }
+          var prg = j && j[1] && j[1].current;
+          if (prg && typeof prg.weather_code === "number") {
+            window.__realWxPrague = { code: prg.weather_code };
+            window.__realPragueC = (typeof prg.temperature_2m === "number" && isFinite(prg.temperature_2m)) ? prg.temperature_2m : null;
+            paintLaptopWx();
+          }
         })
         .catch(function () {});
     } catch (e) {}

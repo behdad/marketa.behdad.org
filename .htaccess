@@ -27,3 +27,27 @@ RewriteRule ^tests/ - [F,L]
 # strict module imports for the same reason)
 AddType application/wasm .wasm
 AddType text/javascript .mjs
+
+# ── launch hardening: compression + caching ────────────────────────────────
+# rsvp.html is ~1.6 MB uncompressed; gzip takes it to a few hundred KB. Every
+# visitor benefits, and it slashes origin egress under a traffic spike.
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml \
+    application/javascript text/javascript application/json image/svg+xml \
+    application/wasm application/manifest+json
+</IfModule>
+
+<IfModule mod_headers.c>
+  # The pinned runtimes never change (versioned by content) — cache them hard.
+  # A new build ships under a new path, so "immutable" is safe.
+  <IfModule mod_setenvif.c>
+    SetEnvIf Request_URI "^/(pyodide|linux)/" LOFT_IMMUTABLE
+  </IfModule>
+  Header set Cache-Control "public, max-age=31536000, immutable" env=LOFT_IMMUTABLE
+
+  # Media + fonts change rarely: a month of edge/browser cache absorbs a spike
+  # while still letting an art tweak propagate within weeks.
+  <FilesMatch "\.(mp4|webm|opus|mp3|wav|m4a|jpg|jpeg|png|webp|gif|ico|woff2?)$">
+    Header set Cache-Control "public, max-age=2592000"
+  </FilesMatch>
+</IfModule>

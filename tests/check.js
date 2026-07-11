@@ -626,11 +626,27 @@ function checkTermOutClipSlack(file, style) {
   else fail(file + ": .term-out clip-slack invariant broken", issues.join("\n"));
 }
 
+// A leftover git merge marker in CSS/HTML slips past `node --check` (which only sees
+// the inline <script>) and the other structural checks — one reached production once.
+// Precise forms only, so decorative "====" comment rules don't false-positive.
+function checkNoConflictMarkers(file, html) {
+  var lines = html.split("\n"), hits = [];
+  for (var i = 0; i < lines.length; i++) {
+    var L = lines[i];
+    if (/^<{7}[ \t]/.test(L) || /^>{7}[ \t]/.test(L) || /^={7}[ \t]*$/.test(L) || /^\|{7}[ \t]/.test(L)) {
+      hits.push((i + 1) + ": " + L.slice(0, 40));
+    }
+  }
+  if (hits.length) fail(file + ": leftover git conflict markers", hits.join("\n"));
+  else pass(file + ": no leftover merge conflict markers");
+}
+
 FILES.forEach(function (file) {
   console.log(file + ":");
   var html = fs.readFileSync(path.join(ROOT, file), "utf8");
   var script = extractScript(html);
   var style = extractStyle(html);
+  checkNoConflictMarkers(file, html);
   checkSyntax(file, script);
   if (script) {
     checkDictParity(file, script);

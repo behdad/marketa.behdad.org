@@ -7,7 +7,12 @@ loft on the same block as their loft home apartment) and **July 10, 2027, Prague
 ones welcome, small or big.
 
 Single file: `index.html`. No build step, no framework. Keep it that way — new features
-go inside `index.html` unless there's a strong reason not to.
+go inside `index.html` unless there's a strong reason not to. (`rsvp.html` follows the
+same rule; its self-hosted runtimes live in `pyodide/` — CPython wasm + wheels — and
+`linux/` — v86 + a repacked ISO carrying hb-shape/Fraunces/emoji; provenance in each
+dir's README. Both are pinned deliverables, not build outputs: don't regenerate or
+"upgrade" them casually, and keep runtime deps zero-CDN — Google Fonts is the one
+allowed exception, owner-confirmed.)
 
 ## Workflow (read this first)
 
@@ -21,8 +26,8 @@ go inside `index.html` unless there's a strong reason not to.
   `T.cs` (or a static HTML fallback) drift out of sync, even for a one-word tweak.
   Markéta (native Czech speaker) reviews all Czech copy at the end, so don't hold back
   on proposing/editing CS text — she'll correct anything off.
-- **Run `node tests/check.js` before every commit that touches `index.html` or
-  `rsvp.html`.** Zero-dependency script — `node --check` on each file's inline
+- **Run `node tests/check.js` AND `node tests/state.js` before every commit that
+  touches `index.html` or `rsvp.html`.** Zero-dependency script — `node --check` on each file's inline
   `<script>`, EN/CS dictionary key parity, `EGG_TOTAL` vs. cheatsheet `<li data-egg>`
   count, and `<g>`/`</g>` tag balance in rsvp.html's shared SVG strip. It's cheap
   insurance against exactly the bugs that have bitten this project before (a dropped

@@ -57,7 +57,16 @@ function checkSyntax(file, script) {
 function checkSvgTagBalance(file, html) {
   var start = html.indexOf('<svg id="loft-game-strip"');
   if (start === -1) return; // not applicable (index.html)
-  var end = html.indexOf("</svg>", start);
+  // the strip may contain nested <svg> icons (foreignObject HTML) — find ITS closing
+  // tag by depth, not the first </svg>
+  var depth = 0, end = -1, re = /<svg[\s>]|<\/svg>/g;
+  re.lastIndex = start;
+  var m;
+  while ((m = re.exec(html))) {
+    if (m[0] === "</svg>") { depth--; if (depth === 0) { end = m.index; break; } }
+    else depth++;
+  }
+  if (end === -1) end = html.length;
   var svg = html.slice(start, end);
   var opens = (svg.match(/<g[ >]/g) || []).length;
   var closes = (svg.match(/<\/g>/g) || []).length;

@@ -1308,13 +1308,9 @@ footer{margin-top:2.6rem}
    active visitor tab hasn't navigated yet */
 .browser-newtab{position:absolute; inset:0; z-index:1; display:none; align-items:center; justify-content:center; gap:2px; background:#fffdf8}
 .browser-wrap.newtab .browser-newtab{display:flex}
-.browser-url-in{position:absolute; inset:0; display:block; box-sizing:border-box; background:#f8f5ec; border:0.4px solid #d8d2c4; border-radius:2px; padding:1.2px 2px; color:#453a31; font-family:sans-serif; font-size:2.5px; line-height:3px; outline:none} /* height − padding − border = the 3px line box exactly: the native caret sizes to the line box, and any extra height turns it into a tall bar (the terminals' old bug) */
+.url-wrap{flex:none; width:66px; height:6.2px}
+.browser-url-in{width:100%; height:100%; box-sizing:border-box; display:block; background:#f8f5ec; border:0.4px solid #d8d2c4; border-radius:2px; padding:0 2px; color:#453a31; font-family:sans-serif; font-size:2.5px; line-height:6.2px; outline:none} /* line-height = the field height so the single line centers and the native caret sizes to it */
 .browser-url-in::placeholder{color:#a89a87}
-.url-wrap{position:relative; flex:none; width:66px; height:6.2px} /* pinned to the input's exact box — as a bare flex item it took its own size and dragged the caret lane (and the field's alignment) with it */
-.url-wrap .browser-url-in{caret-color:transparent} /* the native caret can't be thinned — at desk zoom it covered the last glyph */
-.url-caret-lane{position:absolute; inset:0; padding:1.45px 2px 0; box-sizing:border-box; font-family:sans-serif; font-size:2.5px; line-height:3px; white-space:pre; overflow:hidden; pointer-events:none; visibility:hidden} /* padding-top seats the lane's baseline on the input's own text baseline (measured), so the caret bottom meets the baseline instead of dropping below it */
-.url-caret{visibility:visible; display:inline-block; width:0.12px; height:1.55px; margin-left:0.18px; background:#453a31; opacity:0} /* ~a glyph stroke wide */ /* stroke-thin, one hair of gap off the last glyph, cap-height tall */
-.url-wrap:focus-within .url-caret{opacity:1; animation:term-caret-blink 1.1s step-end infinite}
 .browser-url-in:focus{border-color:#a89a87}
 .browser-go{flex:none; box-sizing:border-box; margin:0; width:7px; height:6.2px; display:flex; align-items:center; justify-content:center; padding:0; background:#4285f4; border:0; border-radius:2px; cursor:pointer}
 .browser-go svg{width:3.2px; height:3.2px; display:block}
@@ -6554,7 +6550,6 @@ section{margin:1.9rem 0}
 <div id="monitor-browser-newtab" class="browser-newtab">
 <div class="url-wrap">
 <input id="monitor-browser-url" class="browser-url-in" tabindex="-1" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="type a URL&#8230;" data-ph-i="browser_url_ph"/>
-<div class="url-caret-lane"><span id="monitor-browser-url-mirror"></span><span class="url-caret"></span></div>
 </div>
 <button id="monitor-browser-go" class="browser-go" type="button" tabindex="-1"><svg viewBox="0 0 12 12"><path d="M2.2 6 L9.4 6 M6.6 2.9 L9.8 6 L6.6 9.1" fill="none" stroke="#fffdf8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 </div>
@@ -13876,18 +13871,7 @@ document.addEventListener("click", function (e) {
   })();
   var browserPage = browserWrap ? browserWrap.querySelector(".browser-page") : null;
   var browserUrlIn = document.getElementById("monitor-browser-url");
-  (function () {
-    var mir = document.getElementById("monitor-browser-url-mirror");
-    if (!browserUrlIn || !mir) return;
-    var lane = mir.parentNode;
-    function paint() {
-      mir.textContent = browserUrlIn.value.slice(0, browserUrlIn.selectionStart == null ? browserUrlIn.value.length : browserUrlIn.selectionStart);
-      lane.style.transform = browserUrlIn.scrollLeft ? "translateX(" + (-browserUrlIn.scrollLeft) + "px)" : "";
-    }
-    ["input", "keydown", "keyup", "click", "focus", "select"].forEach(function (ev) {
-      browserUrlIn.addEventListener(ev, function () { requestAnimationFrame(paint); });
-    });
-  })();
+
   var browserGoBtn = document.getElementById("monitor-browser-go");
   var browserNewtab = document.getElementById("monitor-browser-newtab");
   var browserSplashTimer = null; // the ~0.8s chrome splash between engaging and revealing the frame

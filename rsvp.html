@@ -1091,9 +1091,10 @@ footer{margin-top:2.6rem}
 .term-err{color:#e08a8a}
 .term-row{display:flex; align-items:center; gap:1.5px}
 .term-ps{color:#8fd070}
-.term-in{flex:1; min-width:0; background:transparent; border:none; outline:none; padding:0; color:inherit; font:inherit; caret-color:transparent} /* native caret renders as a fat block at 2px type — a slim custom one rides the row instead */
+.term-in{flex:1; min-width:0; background:transparent; border:none; outline:none; padding:0; color:inherit; font:inherit; height:2.8px; line-height:2.8px; caret-color:transparent} /* native caret renders as a fat block at 2px type — a slim custom one rides the row instead */
 .term-row{position:relative}
 .term-caret{position:absolute; top:50%; transform:translateY(-50%); width:0.4px; height:2.6px; background:#8fd070; opacity:0; pointer-events:none}
+.term-mirror{position:absolute; visibility:hidden; white-space:pre; pointer-events:none}
 .term-row:focus-within .term-caret{opacity:1; animation:term-caret-blink 1.1s step-end infinite}
 @keyframes term-caret-blink{0%,49%{opacity:1} 50%,100%{opacity:0}}
 /* mail app: a tiny three-message inbox over the screen (list view → reading view) */
@@ -7984,7 +7985,7 @@ var T = {
     py_wait: "the snake is still on its way\u2026",
     py_ready: "Python {v} ready. try: 2+2 \u00b7 import this",
     py_fonttools: "fontTools {v} is already imported \u2014 the groom insisted.",
-    py_fonts: "the page's fonts are mounted at /fonts \u2014 try TTFont('/fonts/{f}')",
+    py_fonts: "the page's three fonts are mounted at /fonts: {fs} \u2014 try TTFont('/fonts/{f}')",
     py_fail: "couldn't fetch Python \u2014 offline, or the CDN is blocked. close and reopen to retry.",
     py_busy: "still chewing on the last one\u2026",
   },
@@ -8194,7 +8195,7 @@ var T = {
     py_wait: "had je po\u0159\u00e1d na cest\u011b\u2026",
     py_ready: "Python {v} p\u0159ipraven. zkuste: 2+2 \u00b7 import this",
     py_fonttools: "fontTools {v} je u\u017e naimportovan\u00fd \u2014 \u017eenich trval na sv\u00e9m.",
-    py_fonts: "fonty str\u00e1nky jsou p\u0159ipojen\u00e9 v /fonts \u2014 zkuste TTFont('/fonts/{f}')",
+    py_fonts: "t\u0159i fonty str\u00e1nky jsou p\u0159ipojen\u00e9 v /fonts: {fs} \u2014 zkuste TTFont('/fonts/{f}')",
     py_fail: "Python se nepoda\u0159ilo st\u00e1hnout \u2014 offline, nebo je CDN blokovan\u00e9. zav\u0159ete a otev\u0159ete znovu.",
     py_busy: "je\u0161t\u011b \u017ev\u00fdk\u00e1m ten p\u0159edchoz\u00ed\u2026",
   }
@@ -12838,10 +12839,15 @@ document.addEventListener("click", function (e) {
         // first prompt; brotli lets TTFont open the woff2 files directly. a failed
         // fetch stays silent
         py.runPythonAsync("import micropip\nawait micropip.install(['fonttools', 'brotli'])\nimport fontTools\nfrom fontTools.ttLib import TTFont\nfontTools.version")
-          .then(function (v) { pyPrint(pyT("py_fonttools").replace("{v}", String(v)), "term-dim"); return pyFonts; })
+          .then(function (v) {
+            // show the shell exactly what already ran on its behalf
+            pyPrint(">>> import micropip; await micropip.install(['fonttools', 'brotli'])", "term-dim");
+            pyPrint(">>> from fontTools.ttLib import TTFont", "term-dim");
+            pyPrint(pyT("py_fonttools").replace("{v}", String(v)), "term-dim");
+            return pyFonts;
+          })
           .then(function (names) {
-            var ex = names.indexOf("fraunces.woff2") >= 0 ? "fraunces.woff2" : names[0];
-            pyPrint(pyT("py_fonts").replace("{f}", ex), "term-dim");
+            pyPrint(pyT("py_fonts").replace("{fs}", names.join(" \u00b7 ")).replace("{f}", names.indexOf("fraunces.woff2") >= 0 ? "fraunces.woff2" : names[0]), "term-dim");
           })
           .catch(function () {});
       }).catch(function () { pyLoadFailed(); });
@@ -13965,21 +13971,25 @@ document.addEventListener("click", function (e) {
     if (window.__updateOfficeNudges) window.__updateOfficeNudges();
   };
 })();
-// the REPLs' slim custom caret: tracks the text width up to the selection point
-// (canvas measureText with the input's own font), repainted after every keystroke
+// the REPLs' slim custom caret: a hidden mirror span (inheriting the row's exact font,
+// which canvas measureText can't be trusted to resolve — ui-monospace) carries the text
+// up to the selection point; the caret sits at its measured width
 (function () {
-  var mctx = document.createElement("canvas").getContext("2d");
   ["monitor-term-in", "monitor-py-in"].forEach(function (id) {
     var inp = document.getElementById(id);
-    if (!inp || !inp.parentNode || !mctx) return;
+    if (!inp || !inp.parentNode) return;
+    var mirror = document.createElement("span");
+    mirror.className = "term-mirror";
+    inp.parentNode.appendChild(mirror);
     var car = document.createElement("span");
     car.className = "term-caret";
     inp.parentNode.appendChild(car);
     function paint() {
-      var cs = getComputedStyle(inp);
-      mctx.font = cs.fontSize + " " + cs.fontFamily;
-      var upto = inp.value.slice(0, inp.selectionStart == null ? inp.value.length : inp.selectionStart);
-      car.style.left = (inp.offsetLeft + mctx.measureText(upto).width - (inp.scrollLeft || 0)) + "px";
+      mirror.textContent = inp.value.slice(0, inp.selectionStart == null ? inp.value.length : inp.selectionStart);
+      // rects come back in screen px (svg scaling + the monitor zoom); style.left wants
+      // local px — normalize via the input's own rect/offsetWidth ratio
+      var scale = inp.offsetWidth ? inp.getBoundingClientRect().width / inp.offsetWidth : 1;
+      car.style.left = (inp.offsetLeft + (scale ? mirror.getBoundingClientRect().width / scale : 0) - (inp.scrollLeft || 0)) + "px";
     }
     ["input", "keydown", "keyup", "click", "focus", "select"].forEach(function (ev) {
       inp.addEventListener(ev, function () { requestAnimationFrame(paint); });

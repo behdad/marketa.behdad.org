@@ -13933,16 +13933,20 @@ document.addEventListener("click", function (e) {
     if (!tab || !tab.dyn || tab.url || !browserUrlIn) return;
     var raw = browserUrlIn.value.trim();
     if (!raw) return;
-    // no scheme → https://; anything unreachable just leaves the dim hint lines showing
-    var full = /^[a-z][a-z0-9+.-]*:\/\//i.test(raw) ? raw : "https://" + raw;
+    // not URL-shaped (spaces, or no dot and no scheme) → a web search on FrogFind:
+    // the one free engine that both allows framing AND proxies its RESULT pages
+    // through its own reader, so clicking results keeps working inside the frame
+    var hasScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(raw);
+    var isSearch = /\s/.test(raw) || (!hasScheme && raw.indexOf(".") === -1);
+    var full = isSearch ? "https://frogfind.com/?q=" + encodeURIComponent(raw) : (hasScheme ? raw : "https://" + raw);
     var u;
     try { u = new URL(full); } catch (e) {
       browserUrlIn.classList.remove("shake"); void browserUrlIn.offsetWidth; browserUrlIn.classList.add("shake");
       return;
     }
     tab.url = u.href;
-    tab.lbl.removeAttribute("data-i"); // hostnames don't translate
-    tab.lbl.textContent = u.hostname.replace(/^www\./, "");
+    tab.lbl.removeAttribute("data-i"); // hostnames (and queries) don't translate
+    tab.lbl.textContent = isSearch ? "\uD83D\uDD0D " + raw : u.hostname.replace(/^www\./, "");
     tab.fav.style.display = "";
     tab.fav.src = u.origin + "/favicon.ico"; // onerror re-hides it for sites without one
     tab.frame = document.createElement("iframe");

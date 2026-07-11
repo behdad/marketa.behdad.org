@@ -1263,24 +1263,49 @@ footer{margin-top:2.6rem}
 .pl-pin{cursor:pointer}
 .pl-pin .pl-halo{opacity:0; transition:opacity .2s ease}
 .pl-pin.on .pl-halo{opacity:.6}
-/* browser (chrome) app: real web pages in an iframe over the screen, behind a slim
+/* browser (chrome) app: real web pages in iframes over the screen, behind a slim
    tab strip (markéta / behdad / harfbuzz — the dock's chrome tile + the fake wall-sign
-   pages' click-through), same class-gated pattern as the other apps. The page zone
-   carries the paper background and the iframe stays transparent, so the dim loading
-   line under it shows until the framed page paints. */
+   pages' click-through — plus a + stub that opens visitor tabs: an address form in the
+   page zone until they navigate, then their own per-tab iframe with a closable ✕ tab),
+   same class-gated pattern as the other apps. The page zone carries the paper
+   background and the iframes stay transparent, so the dim loading line under them
+   shows until the framed page paints; .dyn on the wrap adds the framing-refused hint
+   for visitor-typed sites, .newtab swaps the page zone for the address form. */
 #monitor-browser{opacity:0; pointer-events:none; transition:opacity .25s ease}
 #office-monitor.show-browser #monitor-browser{opacity:1; pointer-events:auto}
 #monitor-browser-close{cursor:pointer}
 #monitor-browser-close:hover .seg-hover{opacity:.55}
 .browser-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#d8d2c4}
-.browser-tabs{flex:none; display:flex; align-items:flex-end; gap:1px; height:8px; padding:0 3px; box-sizing:border-box}
-.browser-tab{flex:none; display:flex; align-items:center; gap:1.2px; padding:1px 4px 1.2px; border-radius:2.5px 2.5px 0 0; background:#c8c1b2; color:#5d5347; font-family:sans-serif; font-size:4.5px; line-height:1; letter-spacing:0.1px; cursor:pointer}
-.tab-fav{width:3.6px; height:3.6px; display:block}
+/* right padding keeps the strip clear of the app's ✕ pill (x369–378 over the bezel);
+   tabs squeeze chrome-style — labels ellipsize — so a full strip still fits */
+.browser-tabs{flex:none; display:flex; align-items:flex-end; gap:1px; height:8px; padding:0 10px 0 3px; box-sizing:border-box}
+.browser-tab{flex:0 1 auto; min-width:0; display:flex; align-items:center; gap:1.2px; padding:1px 4px 1.2px; border-radius:2.5px 2.5px 0 0; background:#c8c1b2; color:#5d5347; font-family:sans-serif; font-size:4.5px; line-height:1; letter-spacing:0.1px; cursor:pointer}
+.browser-tab > span:first-of-type{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.tab-fav{flex:none; width:3.6px; height:3.6px; display:block}
 .browser-tab:hover{background:#d2ccbd}
 .browser-tab.active{background:#fffdf8; color:#453a31}
 .browser-tab.active:hover{background:#fffdf8}
+.browser-tab-plus{flex:none; width:4px; padding-left:0; padding-right:0; justify-content:center; color:#7a6f60}
+/* refusal shake, shared by the + stub (tab cap reached) and the URL input (unparsable) */
+.browser-wrap .shake{animation:browser-shake .25s ease}
+@keyframes browser-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-0.8px)}75%{transform:translateX(0.8px)}}
+.tab-x{flex:none; margin-left:0.6px; padding:0.5px 0.7px; font-size:3.4px; line-height:1; color:#8d8172; border-radius:1px}
+.tab-x:hover{color:#453a31; background:#e2dccd}
 .browser-page{position:relative; flex:1; min-height:0; background:#fffdf8}
 .browser-loading{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#a89a87; font-family:sans-serif; font-size:4.8px}
+/* framing-refused hint, dim like the loading line: only visitor-typed sites (.dyn) get
+   it — X-Frame-Options blanks are common and silent */
+.browser-noframe{position:absolute; left:10px; right:10px; top:63%; display:none; text-align:center; color:#a89a87; font-family:sans-serif; font-size:3.2px; line-height:1.45}
+.browser-wrap.dyn .browser-noframe{display:block}
+/* new-tab address form: opaque over the page zone (and the loading lines) while the
+   active visitor tab hasn't navigated yet */
+.browser-newtab{position:absolute; inset:0; z-index:1; display:none; align-items:center; justify-content:center; gap:2px; background:#fffdf8}
+.browser-wrap.newtab .browser-newtab{display:flex}
+.browser-url-in{width:66px; box-sizing:border-box; background:#f8f5ec; border:0.4px solid #d8d2c4; border-radius:2px; padding:1.2px 2px; color:#453a31; font-family:sans-serif; font-size:2.5px; line-height:1.4; outline:none}
+.browser-url-in::placeholder{color:#a89a87}
+.browser-url-in:focus{border-color:#a89a87}
+.browser-go{flex:none; box-sizing:border-box; margin:0; padding:1px 2px; background:#4285f4; color:#fffdf8; border:0; border-radius:2px; font-family:sans-serif; font-size:2.8px; line-height:1.2; cursor:pointer}
+.browser-go:hover{background:#2f66c4}
 /* the frame lays the site out on a 496px-wide virtual viewport and scales it down —
    at 1:1 the 124px screen triggers sites' narrowest breakpoints and the monitor zoom
    then blows that up comically ("ridiculously zoomed-in") */
@@ -6462,12 +6487,15 @@ section{margin:1.9rem 0}
 <path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round"/>
 </g>
 </g>
-<!-- BROWSER (chrome) app: real web pages in an iframe over the screen, behind a slim
-     three-tab strip (markéta / behdad / harfbuzz, built by JS from BROWSER_TABS).
-     Clicking a fake wall-sign page opens this app on that site's tab. The iframe's src
-     follows the active tab (only swapped when it actually changes) and is blanked by
-     clearBoot; the dim loading line under it shows until the framed page paints. Same
-     mini close pill as the other apps. The roundel def is the dock tile's glyph. -->
+<!-- BROWSER (chrome) app: real web pages in iframes over the screen, behind a slim
+     tab strip (markéta / behdad / harfbuzz, built by JS from BROWSER_TABS, plus a +
+     stub for visitor-opened tabs — those show the address form below until navigated,
+     then get their own iframe and a ✕). Clicking a fake wall-sign page opens this app
+     on that site's tab. The fixed tabs share #monitor-browser-frame, whose src follows
+     the active fixed tab (only swapped when it actually changes); clearBoot blanks it
+     and drops the visitor tabs. The dim loading line under the transparent iframes
+     shows until the framed page paints. Same mini close pill as the other apps. The
+     roundel def is the dock tile's glyph. -->
 <defs>
 <!-- hand-drawn dock tile icons (12x12 boxes) — vector, so the hover zoom can't wobble them -->
 <symbol id="dicon-music" viewBox="0 0 12 12"><path d="M4.6 2.2 L9.4 1.3 L9.4 7.6 A1.6 1.3 0 1 1 8.4 6.4 L8.4 3.1 L5.6 3.6 L5.6 8.8 A1.6 1.3 0 1 1 4.6 7.6 Z" fill="#f8f5ec"/></symbol>
@@ -6496,7 +6524,12 @@ section{margin:1.9rem 0}
 <div id="monitor-browser-tabs" class="browser-tabs"></div>
 <div class="browser-page">
 <div class="browser-loading" data-i="browser_loading">loading&#8230;</div>
+<div class="browser-noframe" data-i="browser_noframe">if it stays blank, that site refuses to live in a picture frame &#8212; most big ones do</div>
 <iframe id="monitor-browser-frame" class="browser-frame"></iframe>
+<div id="monitor-browser-newtab" class="browser-newtab">
+<input id="monitor-browser-url" class="browser-url-in" tabindex="-1" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="type a URL&#8230;" data-ph-i="browser_url_ph"/>
+<button id="monitor-browser-go" class="browser-go" type="button" tabindex="-1">&#8594;</button>
+</div>
 </div>
 </div>
 </foreignObject>
@@ -8527,6 +8560,9 @@ var T = {
     tab_behdad: "behdad",
     tab_harfbuzz: "harfbuzz",
     browser_loading: "loading\u2026",
+    tab_new: "new tab",
+    browser_url_ph: "type a URL\u2026",
+    browser_noframe: "if it stays blank, that site refuses to live in a picture frame \u2014 most big ones do",
     eq_off_note: "This browser plays the songs directly \u2014 there's no audio pipeline for the equalizer to pull on. Try it on another device \ud83c\udf9a",
     kbd_title: "Keyboard shortcuts",
     kbd_space: "play / pause the music",
@@ -8751,6 +8787,9 @@ var T = {
     tab_behdad: "behdad",
     tab_harfbuzz: "harfbuzz",
     browser_loading: "na\u010d\u00edt\u00e1n\u00ed\u2026",
+    tab_new: "nov\u00e1 karta",
+    browser_url_ph: "zadejte adresu\u2026",
+    browser_noframe: "kdy\u017e z\u016fstane pr\u00e1zdn\u00e1, ten web se odm\u00edt\u00e1 nast\u011bhovat do obr\u00e1zkov\u00e9ho r\u00e1me\u010dku \u2014 v\u011bt\u0161ina velk\u00fdch to tak m\u00e1",
     eq_off_note: "Tenhle prohl\u00ed\u017ee\u010d p\u0159ehr\u00e1v\u00e1 p\u00edsni\u010dky nap\u0159\u00edmo \u2014 ekvaliz\u00e9r tu nem\u00e1 za co tahat. Zkus to na jin\u00e9m za\u0159\u00edzen\u00ed \ud83c\udf9a",
     kbd_title: "Kl\u00e1vesov\u00e9 zkratky",
     kbd_space: "p\u0159ehr\u00e1t / pozastavit hudbu",
@@ -8805,6 +8844,11 @@ function setLang(l) {
   for (var ti = 0; ti < titleEls.length; ti++) {
     var tk = titleEls[ti].getAttribute("data-title-i");
     if (T[l][tk]) titleEls[ti].setAttribute("title", T[l][tk]);
+  }
+  var phEls = document.querySelectorAll("[data-ph-i]");
+  for (var ph = 0; ph < phEls.length; ph++) {
+    var pk = phEls[ph].getAttribute("data-ph-i");
+    if (T[l][pk]) phEls[ph].setAttribute("placeholder", T[l][pk]);
   }
   var btns = document.querySelectorAll(".langs button");
   for (var j = 0; j < btns.length; j++) {
@@ -13697,55 +13741,166 @@ document.addEventListener("click", function (e) {
     placesPill.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   // ── BROWSER (CHROME) APP ─────────────────────────────────────────────────────────
-  // Real web pages inside the monitor: one iframe over the screen behind a slim
-  // three-tab strip, same class-gated pattern as the other apps (show-browser on
+  // Real web pages inside the monitor: iframes over the screen behind a slim tab
+  // strip, same class-gated pattern as the other apps (show-browser on
   // #office-monitor). The dock's chrome tile opens it on the markéta tab; a click on a
   // visible fake wall-sign page opens it on that site's own tab instead of a new
-  // browser tab (the m ∞ b menu-bar brand keeps its real new-tab link). The single
-  // iframe's src follows the active tab and is only swapped when it actually changes —
-  // reopening the app or re-picking the current tab never reloads — and clearBoot
-  // blanks it so a powered-off PC isn't secretly running a site. The dim loading line
-  // sits under the iframe because cross-origin frames don't reliably report failures.
+  // browser tab (the m ∞ b menu-bar brand keeps its real new-tab link). The three
+  // fixed tabs share #monitor-browser-frame, whose src follows the active fixed tab
+  // and is only swapped when it actually changes — reopening the app or re-picking the
+  // current tab never reloads. The + stub opens up to three visitor tabs: each shows
+  // the address form until it navigates, then keeps its own iframe (so tab switches
+  // show/hide frames instead of reloading them) and a ✕. Visitor tabs survive closing
+  // and reopening the app but not a power-off: clearBoot blanks the fixed frame and
+  // drops them, so a powered-off PC isn't secretly running a site. The dim loading
+  // line sits under the transparent iframes because cross-origin frames don't reliably
+  // report failures; visitor tabs add the framing-refused hint since X-Frame-Options
+  // blanks are common and just as silent.
   var browserFrame = document.getElementById("monitor-browser-frame");
   var browserWrap = document.getElementById("monitor-browser-wrap");
   var browserCloseBtn = document.getElementById("monitor-browser-close");
   var browserTabsBar = document.getElementById("monitor-browser-tabs");
+  var browserPage = browserWrap ? browserWrap.querySelector(".browser-page") : null;
+  var browserUrlIn = document.getElementById("monitor-browser-url");
+  var browserGoBtn = document.getElementById("monitor-browser-go");
+  var browserNewtab = document.getElementById("monitor-browser-newtab");
   var browserSplashTimer = null; // the ~0.8s chrome splash between engaging and revealing the frame
   var BROWSER_TABS = [
     { id: "marketa", labelKey: "tab_marketa", url: "https://marketajakesova.ca/" },
     { id: "behdad", labelKey: "tab_behdad", url: "https://behdad.org/" },
     { id: "harfbuzz", labelKey: "tab_harfbuzz", url: "https://harfbuzz-world.cc/" }
   ];
+  var browserDynTabs = []; // visitor-opened tabs: { id, dyn:true, url (null until navigated), el, fav, lbl, frame }
+  var browserDynSeq = 0;
+  var BROWSER_DYN_MAX = 3;
   var browserTabEls = {};
   var browserActiveTab = "marketa";
+  var browserPlusEl = null;
+  function findBrowserTab(tabId) {
+    var all = BROWSER_TABS.concat(browserDynTabs);
+    for (var i = 0; i < all.length; i++) if (all[i].id === tabId) return all[i];
+    return null;
+  }
   function setBrowserTab(tabId) {
-    var tab = null;
-    for (var i = 0; i < BROWSER_TABS.length; i++) if (BROWSER_TABS[i].id === tabId) tab = BROWSER_TABS[i];
+    var tab = findBrowserTab(tabId);
     if (!tab) return;
     browserActiveTab = tab.id;
     for (var id in browserTabEls) browserTabEls[id].classList.toggle("active", id === tab.id);
-    if (browserFrame && browserFrame.getAttribute("src") !== tab.url) browserFrame.setAttribute("src", tab.url);
+    if (browserWrap) {
+      browserWrap.classList.toggle("newtab", !!tab.dyn && !tab.url); // unnavigated visitor tab = address form
+      browserWrap.classList.toggle("dyn", !!(tab.dyn && tab.url)); // framing-refused hint, visitor sites only
+    }
+    // fixed tabs share the one original frame; each navigated visitor tab keeps its
+    // own, so switching tabs shows/hides frames instead of reloading them
+    if (browserFrame) browserFrame.style.display = tab.dyn ? "none" : "";
+    browserDynTabs.forEach(function (t) { if (t.frame) t.frame.style.display = t.id === tab.id ? "" : "none"; });
+    if (!tab.dyn && browserFrame && browserFrame.getAttribute("src") !== tab.url) browserFrame.setAttribute("src", tab.url);
   }
+  function makeBrowserTabEl(t) {
+    var el = document.createElement("div");
+    el.className = "browser-tab";
+    var fav = document.createElement("img");
+    fav.className = "tab-fav";
+    fav.alt = "";
+    fav.addEventListener("error", function () { fav.style.display = "none"; });
+    if (t.url) fav.src = t.url + "favicon.ico"; // each fixed-tab site serves one at the root (verified)
+    else fav.style.display = "none"; // a visitor tab earns its favicon when it navigates
+    el.appendChild(fav);
+    var lbl = document.createElement("span");
+    lbl.setAttribute("data-i", t.dyn ? "tab_new" : t.labelKey); // language toggles repaint the label, not the icon
+    lbl.textContent = browserT(t.dyn ? "tab_new" : t.labelKey);
+    el.appendChild(lbl);
+    el.addEventListener("click", function (e) { e.stopPropagation(); if (browserActiveTab !== t.id) { setBrowserTab(t.id); playLaptopClickSound("office-monitor"); } });
+    el.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+    if (t.dyn) {
+      var x = document.createElement("span");
+      x.className = "tab-x";
+      x.textContent = "✕";
+      x.addEventListener("click", function (e) { e.stopPropagation(); closeDynBrowserTab(t); playLaptopClickSound("office-monitor"); });
+      x.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+      el.appendChild(x);
+    }
+    browserTabEls[t.id] = el;
+    t.el = el; t.fav = fav; t.lbl = lbl;
+    return el;
+  }
+  function browserT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
   if (browserTabsBar) {
-    BROWSER_TABS.forEach(function (t) {
-      var el = document.createElement("div");
-      el.className = "browser-tab";
-      var fav = document.createElement("img");
-      fav.className = "tab-fav";
-      fav.alt = "";
-      fav.src = t.url + "favicon.ico"; // each site serves one at the root (verified)
-      fav.addEventListener("error", function () { fav.style.display = "none"; });
-      el.appendChild(fav);
-      var lbl = document.createElement("span");
-      lbl.setAttribute("data-i", t.labelKey); // language toggles repaint the label, not the icon
-      var lang = document.documentElement.lang;
-      lbl.textContent = (T[lang] && T[lang][t.labelKey]) || T.en[t.labelKey] || "";
-      el.appendChild(lbl);
-      el.addEventListener("click", function (e) { e.stopPropagation(); if (browserActiveTab !== t.id) { setBrowserTab(t.id); playLaptopClickSound("office-monitor"); } });
-      el.addEventListener("dblclick", function (e) { e.stopPropagation(); });
-      browserTabsBar.appendChild(el);
-      browserTabEls[t.id] = el;
+    BROWSER_TABS.forEach(function (t) { browserTabsBar.appendChild(makeBrowserTabEl(t)); });
+    browserPlusEl = document.createElement("div");
+    browserPlusEl.className = "browser-tab browser-tab-plus";
+    browserPlusEl.textContent = "+";
+    browserPlusEl.addEventListener("click", function (e) { e.stopPropagation(); openDynBrowserTab(); });
+    browserPlusEl.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+    browserPlusEl.addEventListener("animationend", function () { browserPlusEl.classList.remove("shake"); });
+    browserTabsBar.appendChild(browserPlusEl);
+  }
+  function focusBrowserUrl() { if (browserUrlIn) { try { browserUrlIn.focus({ preventScroll: true }); } catch (e) {} } }
+  function openDynBrowserTab() {
+    // an untouched new tab is already where + would land — just activate it
+    for (var i = 0; i < browserDynTabs.length; i++) {
+      if (!browserDynTabs[i].url) { setBrowserTab(browserDynTabs[i].id); focusBrowserUrl(); playLaptopClickSound("office-monitor"); return; }
+    }
+    if (browserDynTabs.length >= BROWSER_DYN_MAX) {
+      // full house: a shake instead of a fourth tab (the strip is only 124px wide)
+      browserPlusEl.classList.remove("shake"); void browserPlusEl.offsetWidth; browserPlusEl.classList.add("shake");
+      return;
+    }
+    var t = { id: "dyn" + (++browserDynSeq), dyn: true, url: null, frame: null };
+    browserDynTabs.push(t);
+    browserTabsBar.insertBefore(makeBrowserTabEl(t), browserPlusEl);
+    setBrowserTab(t.id);
+    focusBrowserUrl();
+    playLaptopClickSound("office-monitor");
+  }
+  function closeDynBrowserTab(t) {
+    var idx = browserDynTabs.indexOf(t);
+    if (idx < 0) return;
+    var wasActive = browserActiveTab === t.id;
+    browserDynTabs.splice(idx, 1);
+    delete browserTabEls[t.id];
+    if (t.el && t.el.parentNode) t.el.parentNode.removeChild(t.el);
+    if (t.frame && t.frame.parentNode) t.frame.parentNode.removeChild(t.frame); // removal actually unloads the site
+    if (wasActive) setBrowserTab(idx > 0 ? browserDynTabs[idx - 1].id : BROWSER_TABS[BROWSER_TABS.length - 1].id);
+  }
+  function browserNavigate() {
+    var tab = findBrowserTab(browserActiveTab);
+    if (!tab || !tab.dyn || tab.url || !browserUrlIn) return;
+    var raw = browserUrlIn.value.trim();
+    if (!raw) return;
+    // no scheme → https://; anything unreachable just leaves the dim hint lines showing
+    var full = /^[a-z][a-z0-9+.-]*:\/\//i.test(raw) ? raw : "https://" + raw;
+    var u;
+    try { u = new URL(full); } catch (e) {
+      browserUrlIn.classList.remove("shake"); void browserUrlIn.offsetWidth; browserUrlIn.classList.add("shake");
+      return;
+    }
+    tab.url = u.href;
+    tab.lbl.removeAttribute("data-i"); // hostnames don't translate
+    tab.lbl.textContent = u.hostname.replace(/^www\./, "");
+    tab.fav.style.display = "";
+    tab.fav.src = u.origin + "/favicon.ico"; // onerror re-hides it for sites without one
+    tab.frame = document.createElement("iframe");
+    tab.frame.className = "browser-frame";
+    tab.frame.setAttribute("src", u.href);
+    if (browserPage) browserPage.appendChild(tab.frame);
+    browserUrlIn.value = "";
+    setBrowserTab(tab.id); // repaints form/frame visibility now that the tab has a page
+  }
+  if (browserUrlIn) {
+    browserUrlIn.addEventListener("keydown", function (e) {
+      e.stopPropagation(); // game shortcuts don't fire while typing (same guard as the console)
+      if (e.key === "Enter") { e.preventDefault(); browserNavigate(); }
     });
+    browserUrlIn.addEventListener("animationend", function () { browserUrlIn.classList.remove("shake"); });
+  }
+  if (browserGoBtn) {
+    browserGoBtn.addEventListener("click", function (e) { e.stopPropagation(); browserNavigate(); playLaptopClickSound("office-monitor"); });
+    browserGoBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+  if (browserNewtab) {
+    browserNewtab.addEventListener("click", function (e) { e.stopPropagation(); focusBrowserUrl(); });
+    browserNewtab.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   function openBrowser(tabId) {
     if (!monitor.classList.contains("screen-on") || monitor.classList.contains("show-browser") || browserSplashTimer) return;
@@ -13787,6 +13942,16 @@ document.addEventListener("click", function (e) {
   function blankBrowser() {
     // about:blank (not a removed attribute) actually unloads the framed site
     if (browserFrame && browserFrame.getAttribute("src")) browserFrame.setAttribute("src", "about:blank");
+    // visitor tabs are the running machine's session state: power-off drops them whole
+    while (browserDynTabs.length) {
+      var t = browserDynTabs.pop();
+      delete browserTabEls[t.id];
+      if (t.el && t.el.parentNode) t.el.parentNode.removeChild(t.el);
+      if (t.frame && t.frame.parentNode) t.frame.parentNode.removeChild(t.frame);
+    }
+    if (!findBrowserTab(browserActiveTab)) browserActiveTab = "marketa"; // the next boot's open lands somewhere real
+    if (browserWrap) browserWrap.classList.remove("newtab", "dyn");
+    if (browserUrlIn) browserUrlIn.value = "";
   }
   if (browserWrap) {
     browserWrap.addEventListener("click", function (e) { e.stopPropagation(); }); // screen taps never reach the monitor's boot gag

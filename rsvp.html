@@ -1556,7 +1556,7 @@ footer{margin-top:2.6rem}
 }
 .phone-statusbar .psb-right{display:flex; align-items:center; gap:6px}
 .phone-statusbar svg{display:block}
-.psb-brand{font-family:"Fraunces",serif; font-size:12px; color:var(--ink)}
+.psb-brand{font-family:"Fraunces",serif; font-size:12px; color:var(--ink); cursor:pointer}
 .psb-brand b{color:var(--wine); font-weight:400; margin:0 1px}
 .phone-shell.pm-incall .psb-brand{color:#eee}
 .phone-shell.pm-incall .psb-brand b{color:var(--pink)}
@@ -1582,8 +1582,8 @@ footer{margin-top:2.6rem}
 .phone-home-hi b{color:var(--wine); font-weight:600}
 .phone-home-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:16px 4px}
 .phone-app-tile{display:flex; flex-direction:column; align-items:center; gap:5px; background:none; border:none; cursor:pointer; padding:0; font:inherit}
-.phone-app-tile .pat-ico{width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 5px rgba(0,0,0,.18)}
-.phone-app-tile .pat-ico svg{width:26px; height:26px; display:block}
+.phone-app-tile .pat-ico{width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:26px; box-shadow:0 2px 5px rgba(0,0,0,.18)}
+.phone-app-tile .pat-ico svg{width:32px; height:32px; display:block}
 .phone-app-tile .pat-label{font-size:10.5px; color:var(--ink); text-align:center; line-height:1.1; max-width:62px}
 .phone-app-tile:active .pat-ico{transform:scale(.94)}
 /* per-app chrome: a titled header + a scrolling body */
@@ -1653,7 +1653,7 @@ footer{margin-top:2.6rem}
 .pm-music .pmm-art{width:120px; height:120px; border-radius:18px; background:linear-gradient(135deg,#8e3a4a,#4a6b94); display:flex; align-items:center; justify-content:center; color:#fff; font-size:52px; box-shadow:0 4px 14px rgba(0,0,0,.25)}
 .pm-music .pmm-title{font-family:"Fraunces",serif; font-size:14px; color:var(--ink); min-height:19px; padding:0 10px}
 .pm-music .pmm-play{width:62px; height:62px; border-radius:50%; border:none; background:var(--wine); color:#fff; font-size:24px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 10px rgba(142,58,74,.35)}
-.pm-mines-host{display:flex; flex-direction:column; align-items:center; gap:10px; transform:scale(2.3); transform-origin:top center; margin-top:34px}
+.pm-mines-host{display:flex; flex-direction:column; align-items:center; gap:9px; transform:scale(3.6); transform-origin:top center; margin-top:22px}
 @media (max-width:520px){
   .phone-backdrop{padding:0}
   .phone-shell{width:100vw; height:100dvh; max-width:100vw; max-height:100dvh; border-radius:0; padding:6px}
@@ -13285,6 +13285,16 @@ document.addEventListener("click", function (e) {
   var minesWrap = document.getElementById("monitor-mines-wrap");
   var minesCloseBtn = document.getElementById("monitor-mines-close");
   var MINES_COLS = 16, MINES_ROWS = 7, MINES_COUNT = 17;
+  // The monitor plays a wide 16×7 board; the pocket phone re-uses the SAME board node
+  // (they never show at once) but in a tall 8×12 portrait shape that fits a phone screen.
+  function minesSetLayout(cols, rows, count) {
+    MINES_COLS = cols; MINES_ROWS = rows; MINES_COUNT = count;
+    if (minesBoardEl) {
+      minesBoardEl.style.gridTemplateColumns = "repeat(" + cols + ",6px)";
+      minesBoardEl.style.width = (cols * 6) + "px";
+      minesBoardEl.style.height = (rows * 6) + "px";
+    }
+  }
   var minesGrid = [], minesCells = [];
   var minesPlaced = false, minesOver = false, minesFlags = 0, minesOpened = 0;
   var minesStartTs = 0, minesElapsed = 0, minesTimer = null, minesMsgKey = "";
@@ -13484,6 +13494,7 @@ document.addEventListener("click", function (e) {
     if (!minesWrap || !host || __minesInPhone) return;
     while (minesWrap.firstChild) host.appendChild(minesWrap.firstChild);
     __minesInPhone = true;
+    minesSetLayout(8, 12, 15); // tall portrait board for the pocket screen
     minesNewGame();
   };
   window.__phoneUnmountMines = function () {
@@ -13492,6 +13503,8 @@ document.addEventListener("click", function (e) {
     if (host) while (host.firstChild) minesWrap.appendChild(host.firstChild);
     __minesInPhone = false;
     minesStopTimer();
+    minesSetLayout(16, 7, 17); // restore the monitor's wide board
+    minesNewGame();
   };
   if (minesCloseBtn) {
     minesCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeMinesApp(); playLaptopClickSound("office-monitor"); });
@@ -16225,7 +16238,7 @@ document.addEventListener("click", function (e) {
     // ── static chrome ──────────────────────────────────────────────────────────
     var STATUSBAR =
       '<div class="phone-statusbar">' +
-        '<span class="psb-brand">m<b>∞</b>b</span>' + // the loft's own OS, same wordmark as the desktop menu bar
+        '<span class="psb-brand" role="link" tabindex="0" title="marketa.behdad.org">m<b>∞</b>b</span>' + // the loft's own OS, same wordmark as the desktop menu bar — taps out to the wedding site
         '<span class="psb-right">' +
           '<span class="psb-time">--:--</span>' +
           '<svg width="15" height="11" viewBox="0 0 15 11" aria-hidden="true"><rect x="0" y="7" width="3" height="4" fill="currentColor"/><rect x="4" y="5" width="3" height="6" fill="currentColor"/><rect x="8" y="3" width="3" height="8" fill="currentColor"/><rect x="12" y="0" width="3" height="11" fill="currentColor"/></svg>' +
@@ -16278,6 +16291,12 @@ document.addEventListener("click", function (e) {
       modal.querySelector(".pnav-home").addEventListener("click", navHome);
       modal.querySelector(".pnav-recents").addEventListener("click", navHome); // recents lands on the launcher (no task switcher on this pocket OS)
       modal.querySelector(".pic-hangup").addEventListener("click", function (e) { e.stopPropagation(); hangup(); });
+      (function () {
+        var brand = modal.querySelector(".psb-brand");
+        function openSite(e) { e.stopPropagation(); try { window.open(WEDDING_URL, "_blank"); } catch (_) {} }
+        brand.addEventListener("click", openSite);
+        brand.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openSite(e); } });
+      })();
       // the phone owns the keyboard while it's up: this bubble listener stops game
       // hotkeys (arrows / digits / space / d,q,r,s / ?) from reaching the room beneath —
       // native button activation already happened at the target before this fires
@@ -16602,7 +16621,7 @@ document.addEventListener("click", function (e) {
           booted = true;
           shell.classList.remove("booting");
           if (shell) shell.focus();
-        }, reduced() ? 300 : 1200);
+        }, reduced() ? 300 : 500);
       } else {
         showHome();
       }

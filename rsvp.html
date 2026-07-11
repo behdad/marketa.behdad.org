@@ -1544,7 +1544,7 @@ footer{margin-top:2.6rem}
   background:var(--cream); display:flex; flex-direction:column;
 }
 /* front-facing camera punch-hole, centered in the empty middle of the status bar */
-.phone-screen::before{content:""; position:absolute; top:5px; left:50%; transform:translateX(-50%); width:7px; height:7px; border-radius:50%; background:#0a0806; box-shadow:0 0 0 1px rgba(255,255,255,.14), inset 0 0 2px rgba(120,150,190,.5); z-index:30; pointer-events:none}
+.phone-screen::before{content:""; position:absolute; top:7px; left:50%; transform:translateX(-50%); width:7px; height:7px; border-radius:50%; background:#0a0806; box-shadow:0 0 0 1px rgba(255,255,255,.14), inset 0 0 2px rgba(120,150,190,.5); z-index:30; pointer-events:none}
 .phone-close{
   position:absolute; top:-6px; right:-6px; width:26px; height:26px; border-radius:50%;
   background:var(--ink); color:var(--paper); border:2px solid var(--paper); font-size:14px;
@@ -1657,9 +1657,13 @@ footer{margin-top:2.6rem}
 .pm-mail-body{font-size:13px; line-height:1.5; white-space:pre-line; color:var(--ink)}
 .pm-mail-actions{display:flex; gap:8px; margin:2px 0 14px}
 .pm-music{display:flex; flex-direction:column; align-items:center; gap:18px; padding-top:26px; text-align:center}
-.pm-music .pmm-art{width:120px; height:120px; border-radius:18px; background:linear-gradient(135deg,#8e3a4a,#4a6b94); display:flex; align-items:center; justify-content:center; color:#fff; font-size:52px; box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.pm-music .pmm-art{width:120px; height:120px; border-radius:18px; overflow:hidden; box-shadow:0 4px 14px rgba(0,0,0,.25); background:#43807e}
+.pm-music .pmm-art svg{display:block; width:100%; height:100%}
 .pm-music .pmm-title{font-family:"Fraunces",serif; font-size:14px; color:var(--ink); min-height:19px; padding:0 10px}
+.pm-music .pmm-transport{display:flex; align-items:center; gap:20px}
 .pm-music .pmm-play{width:62px; height:62px; border-radius:50%; border:none; background:var(--wine); color:#fff; font-size:24px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 10px rgba(142,58,74,.35)}
+.pm-music .pmm-skip{width:46px; height:46px; border-radius:50%; border:none; background:var(--cream); color:var(--wine); font-size:17px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 0 0 1px var(--rule)}
+.pm-music .pmm-skip:active, .pm-music .pmm-play:active{transform:scale(.94)}
 .pm-mines-host{display:flex; flex-direction:column; align-items:center; gap:9px; transform:scale(3.6); transform-origin:top center; margin-top:22px}
 /* calculator: a right-aligned readout over a 4-col key grid, wine accents */
 .phone-calc{display:flex; flex-direction:column; gap:10px; height:100%}
@@ -12852,6 +12856,20 @@ document.addEventListener("click", function (e) {
     }
     return "";
   };
+  window.__phoneMusicId = function () { // id of the current (playing or paused-with-progress) track, else null
+    for (var i = 0; i < songAudios.length; i++) {
+      var a = songAudios[i];
+      if (a && !a.ended && (!a.paused || a.currentTime > 0)) return a.id;
+    }
+    return null;
+  };
+  window.__phoneMusicLabel = function (id) { return (SONG_INFO[id] || "").replace(/^\s*♪\s*/, ""); };
+  window.__phoneMusicSkip = function (dir) { // prev/next wrap-around, shared transport with the monitor
+    var cur = window.__phoneMusicId(), idx = -1;
+    for (var i = 0; i < songAudios.length; i++) if (songAudios[i].id === cur) { idx = i; break; }
+    var n = idx < 0 ? (dir > 0 ? 0 : songAudios.length - 1) : ((idx + dir) % songAudios.length + songAudios.length) % songAudios.length;
+    if (window.__playSongAt) window.__playSongAt(n);
+  };
   // The resting caps "home" screen carries a small PLAY button that kicks off a
   // random garden song; the audio's own "play" listener (above) then flips the
   // monitor to the now-playing equalizer. SVG nodes get no .click(), so wire real
@@ -16612,19 +16630,67 @@ document.addEventListener("click", function (e) {
       bd.textContent = tr("mail_body_" + m.id);
       body.appendChild(bd);
     }
+    // Hand-drawn flat-vector cover portraits, one per loft-concert track (modelled on
+    // photos of the two real artists) — the pocket player swaps them with the song.
+    var COVER_DAN =
+      '<svg viewBox="0 0 120 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' +
+      '<rect width="120" height="120" fill="#d99a5b"/><circle cx="60" cy="52" r="58" fill="#e3ad6d" opacity="0.55"/>' +
+      '<path d="M16 120 Q60 90 104 120 Z" fill="#6a5b3e"/><path d="M40 96 Q60 108 80 96 L84 120 L36 120 Z" fill="#7c6a48"/>' +
+      '<path d="M46 52 Q44 78 60 88 Q78 92 84 72 Q88 58 84 48 Q74 38 60 40 Q50 42 46 52 Z" fill="#e7c6a0"/>' +
+      '<path d="M78 60 Q86 62 82 72 Q76 84 62 86 Q74 80 78 68 Z" fill="#d9ad80" opacity="0.7"/>' +
+      '<path d="M45 60 Q40 62 44 68 Q49 69 49 63 Z" fill="#dcb890"/>' +
+      '<path d="M62 58 Q59 68 64 71 Q69 70 67 64 Z" fill="#dcb185"/>' +
+      '<path d="M55 74 Q66 84 79 70 Q69 78 58 76 Z" fill="#7a382f"/>' +
+      '<path d="M57 74 Q66 79 76 71 L75 72 Q66 76 58 75 Z" fill="#f4ece0"/>' +
+      '<path d="M54 78 Q66 88 80 72 Q78 84 64 86 Q56 84 54 78 Z" fill="#a98f6f" opacity="0.45"/>' +
+      '<path d="M64 54 Q69 51 74 54" stroke="#5a4a3a" stroke-width="1.4" fill="none"/>' +
+      '<ellipse cx="70" cy="57" rx="2.6" ry="1.9" fill="#3a2f28"/>' +
+      '<path d="M75 55 l6 -2 M75 58 l6 1 M75 60 l5 3" stroke="#c19a72" stroke-width="0.9" fill="none"/>' +
+      '<path d="M40 48 Q40 22 66 20 Q92 22 88 46 Q90 50 84 50 Q83 34 66 32 Q49 32 46 50 Q40 52 40 48 Z" fill="#2b2621"/>' +
+      '<path d="M58 22 Q66 20 74 23 L72 40 Q66 36 60 40 Z" fill="#231f1a"/>' +
+      '<path d="M28 50 Q60 41 98 50 Q100 56 90 56 Q60 47 38 56 Q28 56 28 50 Z" fill="#211d18"/>' +
+      '<path d="M42 48 Q64 41 88 47 L86 51 Q64 44 46 51 Z" fill="#cbbfa6"/></svg>';
+    var COVER_ORIT =
+      '<svg viewBox="0 0 120 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' +
+      '<rect width="120" height="120" fill="#43807e"/>' +
+      '<g fill="#559a97" opacity="0.5"><circle cx="18" cy="20" r="3"/><circle cx="40" cy="12" r="2"/><circle cx="100" cy="24" r="3"/><circle cx="14" cy="70" r="2.5"/><circle cx="108" cy="64" r="2.5"/></g>' +
+      '<path d="M60 12 Q24 13 22 52 Q21 82 33 100 Q29 64 42 50 Q39 40 51 36 Q45 20 60 20 Q75 20 69 36 Q81 40 78 50 Q91 64 87 100 Q99 82 98 52 Q96 13 60 12 Z" fill="#26212a"/>' +
+      '<path d="M40 46 Q28 40 24 24 Q22 18 28 18 Q34 30 46 40 Z" fill="#e4c3a4"/>' +
+      '<path d="M80 46 Q92 40 96 24 Q98 18 92 18 Q86 30 74 40 Z" fill="#e4c3a4"/>' +
+      '<path d="M26 20 q4 -4 8 0 q2 4 -2 6 q-6 2 -6 -6 Z" fill="#e4c3a4"/><path d="M94 20 q-4 -4 -8 0 q-2 4 2 6 q6 2 6 -6 Z" fill="#e4c3a4"/>' +
+      '<path d="M48 44 Q46 66 60 74 Q74 66 72 44 Q66 36 60 36 Q54 36 48 44 Z" fill="#e4c3a4"/>' +
+      '<path d="M50 46 Q48 64 60 72 Q56 60 54 46 Z" fill="#d3ad8b" opacity="0.5"/>' +
+      '<path d="M52 50 Q56 48 59 50 M61 50 Q64 48 68 50" stroke="#3a2f2a" stroke-width="1.2" fill="none"/>' +
+      '<ellipse cx="55.5" cy="54" rx="2.4" ry="1.7" fill="#2e2620"/><ellipse cx="64.5" cy="54" rx="2.4" ry="1.7" fill="#2e2620"/>' +
+      '<path d="M58 58 Q60 62 62 58" stroke="#c49b78" stroke-width="1" fill="none"/>' +
+      '<path d="M56 66 Q60 68 64 66" stroke="#8a5548" stroke-width="1.4" fill="none"/>' +
+      '<path d="M38 96 Q60 88 82 96 L86 120 L34 120 Z" fill="#efe6d8"/>' +
+      '<g><circle cx="48" cy="108" r="4" fill="#c0503f"/><circle cx="70" cy="112" r="5" fill="#b8483a"/><circle cx="60" cy="102" r="3" fill="#c85a48"/><path d="M54 116 q4 -4 8 0" stroke="#3a5a4a" stroke-width="2" fill="none"/><path d="M40 114 q4 -3 7 1" stroke="#3a5a4a" stroke-width="1.6" fill="none"/></g></svg>';
+    function musicCover(id) { return id === "ukulele-song-audio" ? COVER_ORIT : COVER_DAN; }
     function renderMusic(body) {
       var wrap = document.createElement("div");
       wrap.className = "pm-music";
-      wrap.innerHTML = '<div class="pmm-art">♪</div><div class="pmm-title"></div>';
-      var play = document.createElement("button");
-      play.className = "pmm-play";
+      wrap.innerHTML = '<div class="pmm-art"></div><div class="pmm-title"></div>';
+      var art = wrap.querySelector(".pmm-art");
+      var transport = document.createElement("div");
+      transport.className = "pmm-transport";
+      var prev = document.createElement("button"); prev.type = "button"; prev.className = "pmm-skip"; prev.innerHTML = "⏮";
+      var play = document.createElement("button"); play.type = "button"; play.className = "pmm-play";
+      var next = document.createElement("button"); next.type = "button"; next.className = "pmm-skip"; next.innerHTML = "⏭";
       function paint() {
         var playing = window.__phoneMusicPlaying && window.__phoneMusicPlaying();
         play.textContent = playing ? "⏸" : "▶";
-        wrap.querySelector(".pmm-title").textContent = (window.__phoneMusicTitle && window.__phoneMusicTitle()) || "";
+        var id = (window.__phoneMusicId && window.__phoneMusicId()) || "guitar-song-audio";
+        art.innerHTML = musicCover(id);
+        var title = (window.__phoneMusicTitle && window.__phoneMusicTitle());
+        if (!title && window.__phoneMusicLabel) title = window.__phoneMusicLabel(id);
+        wrap.querySelector(".pmm-title").textContent = title || "";
       }
       play.addEventListener("click", function () { if (window.__phoneMusicToggle) window.__phoneMusicToggle(); setTimeout(paint, 60); });
-      wrap.appendChild(play);
+      prev.addEventListener("click", function () { if (window.__phoneMusicSkip) window.__phoneMusicSkip(-1); setTimeout(paint, 80); });
+      next.addEventListener("click", function () { if (window.__phoneMusicSkip) window.__phoneMusicSkip(1); setTimeout(paint, 80); });
+      transport.appendChild(prev); transport.appendChild(play); transport.appendChild(next);
+      wrap.appendChild(transport);
       body.appendChild(wrap);
       paint();
     }

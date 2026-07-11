@@ -8456,7 +8456,12 @@ var T = {
       cine_song: "Then their song comes on…",
       cine_bloom: "…and the garden blooms.",
       cine_sway: "They sway together.",
-      cine_office: "A quick call to Prague…",
+      cine_office: "Into the office…",
+      cine_boot: "He wakes the old tower.",
+      cine_mail: "An RSVP in the inbox…",
+      cine_call: "A birthday call to Tehran…",
+      cine_film: "Her film plays…",
+      cine_console: "…the two dates, in plain text.",
       cine_dusk: "Day turns to night.",
       cine_finale: "And the sky blooms.",
       cine_encore: "Encore — the loft in blacklight…",
@@ -8684,7 +8689,12 @@ var T = {
       cine_song: "A pak zazní jejich píseň…",
       cine_bloom: "…a zahrada rozkvete.",
       cine_sway: "Kolébají se spolu.",
-      cine_office: "Rychlý hovor do Prahy…",
+      cine_office: "Do pracovny…",
+      cine_boot: "Probudí starou věž.",
+      cine_mail: "RSVP ve schránce…",
+      cine_call: "Narozeninový hovor do Teheránu…",
+      cine_film: "Běží její film…",
+      cine_console: "…dvě data, černé na bílém.",
       cine_dusk: "Den se mění v noc.",
       cine_finale: "A nebe rozkvete.",
       cine_encore: "Přídavek — loft v černém světle…",
@@ -12765,6 +12775,7 @@ document.addEventListener("click", function (e) {
     DESKTOP_APPS.forEach(function (app) {
       var cell = document.createElement("div");
       cell.className = "dock-app dock-app-" + app.id;
+      cell.id = "monitor-dock-" + app.id; // stable handle for the cinematic's ghost-cursor taps (dock tiles are otherwise class-only)
       var tile = document.createElement("div");
       tile.className = "dock-tile";
       tile.style.background = app.tile;
@@ -13023,6 +13034,7 @@ document.addEventListener("click", function (e) {
       var list = mailDiv("mail-list", mailWrap);
       MAILS.forEach(function (m) {
         var row = mailDiv("mail-row" + (m.read ? "" : " unread"), list);
+        row.id = "monitor-mail-row-" + m.id; // stable handle for the cinematic's ghost-cursor tap on the RSVP message
         mailDiv("mail-dot", row);
         mailDiv("mail-from", row, mailT("mail_from_" + m.id));
         mailDiv("mail-subj", row, mailT("mail_subj_" + m.id));
@@ -24824,15 +24836,6 @@ function spawnDustMote(container) {
   // a scheduled caption beat: forces our narration past the setCaption guard (still a
   // no-op if the show was cancelled between scheduling and firing).
   function cine(key) { return function () { if (window.__cinematic) setCaption(key, true); }; }
-  // the laptop's call state lives in another closure; read the classes it drives
-  function laptopIsOpen() {
-    var l = document.getElementById("office-laptop");
-    return !!(l && l.classList.contains("open"));
-  }
-  function laptopInCall() {
-    var l = document.getElementById("office-laptop");
-    return !!(l && (l.classList.contains("calling") || l.classList.contains("connecting") || l.classList.contains("connected")));
-  }
   function mushroomTrip() { // the garden plants lift off their pots and bloom hue-cycling fractals
     if (window.startTripVariant) window.startTripVariant("psychedelic");
     if (window.startTripBlooms) window.startTripBlooms();
@@ -24864,6 +24867,75 @@ function spawnDustMote(container) {
         else settle();
       } catch (e) {}
     });
+    // The office chapter's film beat plays ~40s after the Watch click — the same late-play()
+    // autoplay problem as the songs. Unlock the <video> here inside the gesture (set its src,
+    // silent play→pause). preload="metadata" + the immediate pause keep this to a small
+    // buffer, not the whole file. Strict browsers unlock only the first media element per
+    // gesture (guitar wins), so on those the film may stay paused — the beat degrades to a
+    // held first frame, which is fine.
+    var v = document.getElementById("monitor-video-el");
+    if (v) {
+      try {
+        if (!v.src) v.src = "art/downtown-dance.mp4";
+        v.volume = 0;
+        var vsettle = function () { try { v.pause(); v.currentTime = 0; } catch (e) {} };
+        var vp = v.play();
+        if (vp && vp.then) vp.then(vsettle, function () { vsettle(); });
+        else vsettle();
+      } catch (e) {}
+    }
+  }
+  // ── office desktop-tour helpers (the monitor's apps drive the office chapter) ──
+  // the monitor's app layer is class-gated on #office-monitor; read those classes to gate beats
+  function monitorShowing(key) {
+    var m = document.getElementById("office-monitor");
+    return !!(m && m.classList.contains("show-" + key));
+  }
+  function tehranConnected() {
+    var t = document.getElementById("monitor-tehran");
+    return !!(t && t.classList.contains("connected"));
+  }
+  // close whichever app owns the screen, from any view, back to the desktop (show-caps)
+  function cineCloseApp() { if (window.__closeTopMonitorApp) window.__closeTopMonitorApp(); }
+  function playCineFilm() {
+    if (!window.__cinematic) return;
+    var v = document.getElementById("monitor-video-el");
+    if (v && v.paused && window.__toggleMonitorVideo) window.__toggleMonitorVideo(); // the film takes the speakers; the song was hushed first
+  }
+  // Hush the day's song before the film so the monitor stays on the desktop: a song merely
+  // PAUSED mid-track still counts as "current" and flips the screen to the now-playing
+  // player (hiding the dock, stalling every later app beat) — resetting currentTime to 0
+  // clears "current", so the flip never fires.
+  function cineHushSong() {
+    ["guitar-song-audio", "ukulele-song-audio"].forEach(function (id) {
+      var a = document.getElementById(id);
+      if (a && !a.paused) { try { a.pause(); a.currentTime = 0; } catch (e) {} }
+    });
+  }
+  // Bring the guitar song back for the finale/encore once the desk work is done. The play
+  // flips the monitor to the now-playing player, but that only lands during dim-lights/dusk
+  // now — cosmetic, and cleared at the extinguisher reset.
+  function cineResumeSong() {
+    if (!window.__cinematic) return;
+    var g = document.getElementById("guitar-song-audio");
+    if (!g || !g.paused) return;
+    try {
+      g.currentTime = 0;
+      g.volume = window.__songVolume ? window.__songVolume() : 0.5;
+      if (window.__captureSongAudio) window.__captureSongAudio(g);
+      var p = g.play(); if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] resume play() rejected:", e); });
+    } catch (e) {}
+  }
+  // Type loft.weddings into the real console input and submit it — the reply (the two
+  // wedding dates) prints to the scrollback. A synthetic keydown drives the REPL's own
+  // Enter handler; nothing cancels the show on keydown, so this passes straight through.
+  function cineTypeWeddings() {
+    if (!window.__cinematic) return;
+    var inp = document.getElementById("monitor-term-in");
+    if (!inp) return;
+    inp.value = "loft.weddings";
+    inp.dispatchEvent(new Event("input", { bubbles: true })); // repaint the caret mirror
+    inp.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
   }
 
   function runFullCinematic() {
@@ -24909,17 +24981,42 @@ function spawnDustMote(container) {
       tapAt(2000, "cuddly-pillow-1"),                    // squish a pillow
       tapAt(1700, "cuddly-trunk"),                       // Octi tumbles into the chest
       [2600, visit("office")], [0, cine("cine_office")],
-      // OFFICE — the game's own order: call Prague, hang up, then play with the PC
-      tapAt(1600, "office-laptop"),                      // open Markéta's Mac (the lid toggle lands a beat later)
-      waitFor(laptopIsOpen, 1500),
-      tapAt(1100, "laptop-calltile"),                    // Call Prague (calling → connecting → giggles) — before the Mac finds an update to install
-      waitFor(function () { return !!window.__pragueCalled; }, 6500), // the sequence gate sets on CONNECT (~3.4s in)
-      tapAt(3400, "laptop-calltile"),                    // linger with the couple, then hang up ("I love you"…)
-      waitFor(function () { return !laptopInCall(); }, 4000), // …and wait for the line to actually drop
-      tapAt(1400, "office-pc-desk-trio"),                // power the PC → monitor boots Fedora → caps
-      waitFor(function () { return !!window.__pcPlayed; }, 2500), // the stained-glass butterfly's other gate
-      [4300, null],                                      // watch the boot land on the caps
-      tapAt(600, "office-lamp"),                         // then dim the lights
+      // OFFICE — wake the desktop and tour its life: mail (the RSVP) → a family call → the
+      // film → a console sign-off. The boot zooms the view up to the screen on its own; each
+      // app opens from the dock and closes back to the desktop before the next (they're
+      // mutually exclusive and every open() needs the desktop showing). Every gate is a
+      // state poll with a timeout, so an app that fails to open just skips, never stalls.
+      tapAt(1500, "office-pc-desk-trio"),                // power the PC → the monitor boots Fedora
+      waitFor(function () { return monitorShowing("caps"); }, 4500), // ~1s boot; wait for the 14-app desktop
+      [1000, null], [0, cine("cine_boot")],              // let it settle on the desktop
+      // MAIL — the RSVP ask, the whole point of the night
+      tapAt(1300, "monitor-dock-mail"), [0, cine("cine_mail")],
+      waitFor(function () { return monitorShowing("mail"); }, 1800),
+      tapAt(1600, "monitor-mail-row-rsvp"),              // open the RSVP message
+      [4200, cineCloseApp],                              // read it, then back to the desktop
+      waitFor(function () { return monitorShowing("caps"); }, 1800),
+      // TEHRAN — a warm birthday call to Behdad's family
+      tapAt(1100, "monitor-dock-tehran"), [0, cine("cine_call")],
+      waitFor(tehranConnected, 5500),                    // rings ~3.4s, then they pick up
+      [5000, null],                                      // linger on the living-room scene
+      tapAt(700, "monitor-tehran-close"),                // hang up — the goodbye plays out (~1.5s)
+      waitFor(function () { return !monitorShowing("tehran"); }, 3500),
+      // FILM — Markéta's downtown-dance, with sound (the song steps aside for it)
+      [700, cineHushSong],                               // stop the song so the screen stays on the desktop, not the player
+      tapAt(1000, "monitor-dock-video"), [0, cine("cine_film")],
+      waitFor(function () { return monitorShowing("video"); }, 1800),
+      [400, playCineFilm],                               // play (primed in the Watch gesture so this late play() isn't blocked)
+      [8000, function () { cineClick("monitor-video-close"); }], // ~8s of film, then close
+      waitFor(function () { return monitorShowing("caps"); }, 1800),
+      // CONSOLE — a sign-off: the two wedding dates, in plain text
+      tapAt(1000, "monitor-dock-terminal"), [0, cine("cine_console")],
+      waitFor(function () { return monitorShowing("terminal"); }, 1800),
+      [1000, cineTypeWeddings],                          // type loft.weddings + Enter → the reply prints
+      [3400, function () { cineClick("monitor-term-close"); }], // read the reply, then close
+      waitFor(function () { return monitorShowing("caps"); }, 1800),
+      // desk work done: pull the view back out of the screen, bring the day's music back
+      [500, function () { cursorHide(); if (window.__monitorZoomOut) window.__monitorZoomOut(); cineResumeSong(); }],
+      tapAt(1400, "office-lamp"),                        // then dim the lights
       tapAt(1200, "office-pendant"),
       [2000, function () { if (window.__autoToggleDusk) window.__autoToggleDusk(); }], [0, cine("cine_dusk")], // day → night
       [2600, visit("balcony")], [0, cine("cine_finale")] // → the built-in finale (rainbow → fireworks → RSVP nudge)

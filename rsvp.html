@@ -1279,12 +1279,13 @@ footer{margin-top:2.6rem}
 /* right padding keeps the strip clear of the app's ✕ pill (x369–378 over the bezel);
    tabs squeeze chrome-style — labels ellipsize — so a full strip still fits */
 .browser-tabs{flex:none; display:flex; align-items:flex-end; gap:1px; height:8px; padding:0 10px 0 3px; box-sizing:border-box}
-.browser-tab{flex:0 1 auto; min-width:0; display:flex; align-items:center; gap:1.2px; padding:1px 4px 1.2px; border-radius:2.5px 2.5px 0 0; background:#c8c1b2; color:#5d5347; font-family:sans-serif; font-size:4.5px; line-height:1; letter-spacing:0.1px; cursor:pointer}
+.browser-tab{flex:0 4 auto; min-width:0; display:flex; align-items:center; gap:1.2px; padding:1px 4px 1.2px; border-radius:2.5px 2.5px 0 0; background:#c8c1b2; color:#5d5347; font-family:sans-serif; font-size:4.5px; line-height:1; letter-spacing:0.1px; cursor:pointer}
 .browser-tab > span:first-of-type{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .tab-fav{flex:none; width:3.6px; height:3.6px; display:block}
 .browser-tab:hover{background:#d2ccbd}
 .browser-tab.active{background:#fffdf8; color:#453a31}
 .browser-tab.active:hover{background:#fffdf8}
+.browser-tabs .browser-tab:nth-child(-n+3){flex-shrink:1} /* the couple's own three tabs give ground 4x more slowly than visitors' tabs */
 .browser-tab-plus{flex:none; width:4px; padding-left:0; padding-right:0; justify-content:center; color:#7a6f60}
 /* refusal shake, shared by the + stub (tab cap reached) and the URL input (unparsable) */
 .browser-wrap .shake{animation:browser-shake .25s ease}
@@ -1295,13 +1296,14 @@ footer{margin-top:2.6rem}
 .browser-loading{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#a89a87; font-family:sans-serif; font-size:4.8px}
 /* framing-refused hint, dim like the loading line: only visitor-typed sites (.dyn) get
    it — X-Frame-Options blanks are common and silent */
-.browser-noframe{position:absolute; left:10px; right:10px; top:63%; display:none; text-align:center; color:#a89a87; font-family:sans-serif; font-size:3.2px; line-height:1.45}
-.browser-wrap.dyn .browser-noframe{display:block}
+.browser-noframe{position:absolute; left:14px; right:14px; bottom:2px; z-index:3; display:none; text-align:center; color:#f4efe4; background:rgba(69,58,49,0.82); border-radius:2px; padding:1px 2px; font-family:sans-serif; font-size:2.6px; line-height:1.45; pointer-events:none; transition:opacity 1.2s ease}
+.browser-wrap.dyn .browser-noframe{display:block} /* floats OVER the iframe: a refused site paints its own opaque error page, which used to bury this exact explanation */
+.browser-wrap.dyn .browser-noframe.hint-done{opacity:0}
 /* new-tab address form: opaque over the page zone (and the loading lines) while the
    active visitor tab hasn't navigated yet */
 .browser-newtab{position:absolute; inset:0; z-index:1; display:none; align-items:center; justify-content:center; gap:2px; background:#fffdf8}
 .browser-wrap.newtab .browser-newtab{display:flex}
-.browser-url-in{width:66px; box-sizing:border-box; background:#f8f5ec; border:0.4px solid #d8d2c4; border-radius:2px; padding:1.2px 2px; color:#453a31; font-family:sans-serif; font-size:2.5px; line-height:1.4; outline:none}
+.browser-url-in{width:66px; height:6.2px; box-sizing:border-box; background:#f8f5ec; border:0.4px solid #d8d2c4; border-radius:2px; padding:1.2px 2px; color:#453a31; font-family:sans-serif; font-size:2.5px; line-height:3px; outline:none} /* height − padding − border = the 3px line box exactly: the native caret sizes to the line box, and any extra height turns it into a tall bar (the terminals' old bug) */
 .browser-url-in::placeholder{color:#a89a87}
 .browser-url-in:focus{border-color:#a89a87}
 .browser-go{flex:none; box-sizing:border-box; margin:0; padding:1px 2px; background:#4285f4; color:#fffdf8; border:0; border-radius:2px; font-family:sans-serif; font-size:2.8px; line-height:1.2; cursor:pointer}
@@ -1309,7 +1311,7 @@ footer{margin-top:2.6rem}
 /* the frame lays the site out on a 496px-wide virtual viewport and scales it down —
    at 1:1 the 124px screen triggers sites' narrowest breakpoints and the monitor zoom
    then blows that up comically ("ridiculously zoomed-in") */
-.browser-frame{position:absolute; left:0; top:0; width:708.6px; height:194.3px; transform:scale(0.175); transform-origin:0 0; border:0; display:block; background:transparent}
+.browser-frame{position:absolute; left:0; top:0; width:1012.2px; height:277.6px; transform:scale(0.1225); transform-origin:0 0; border:0; display:block; background:transparent}
 #office-monitor.show-browser #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none}
 #office-monitor.photobooth #monitor-browser{opacity:0 !important; visibility:hidden; pointer-events:none !important}
 /* tehran call app: a video call to Behdad's family, on Behdad's own machine. show-tehran
@@ -13829,6 +13831,8 @@ document.addEventListener("click", function (e) {
     if (browserWrap) {
       browserWrap.classList.toggle("newtab", !!tab.dyn && !tab.url); // unnavigated visitor tab = address form
       browserWrap.classList.toggle("dyn", !!(tab.dyn && tab.url)); // framing-refused hint, visitor sites only
+      var nf = browserWrap.querySelector(".browser-noframe");
+      if (nf && tab.dyn && tab.url) { nf.classList.remove("hint-done"); clearTimeout(nf._t); nf._t = setTimeout(function () { nf.classList.add("hint-done"); }, 7000); } // the chip explains, then gets out of the way
     }
     // fixed tabs share the one original frame; each navigated visitor tab keeps its
     // own, so switching tabs shows/hides frames instead of reloading them

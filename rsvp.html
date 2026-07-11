@@ -1088,7 +1088,11 @@ footer{margin-top:2.6rem}
 .term-err{color:#e08a8a}
 .term-row{display:flex; align-items:center; gap:1.5px}
 .term-ps{color:#8fd070}
-.term-in{flex:1; min-width:0; background:transparent; border:none; outline:none; padding:0; color:inherit; font:inherit; caret-color:#8fd070}
+.term-in{flex:1; min-width:0; background:transparent; border:none; outline:none; padding:0; color:inherit; font:inherit; caret-color:transparent} /* native caret renders as a fat block at 2px type — a slim custom one rides the row instead */
+.term-row{position:relative}
+.term-caret{position:absolute; top:50%; transform:translateY(-50%); width:0.4px; height:2.6px; background:#8fd070; opacity:0; pointer-events:none}
+.term-row:focus-within .term-caret{opacity:1; animation:term-caret-blink 1.1s step-end infinite}
+@keyframes term-caret-blink{0%,49%{opacity:1} 50%,100%{opacity:0}}
 /* mail app: a tiny three-message inbox over the screen (list view → reading view) */
 #monitor-mail{opacity:0; pointer-events:none; transition:opacity .25s ease}
 #office-monitor.show-mail #monitor-mail{opacity:1; pointer-events:auto}
@@ -1166,7 +1170,7 @@ footer{margin-top:2.6rem}
 #monitor-py-close:hover .seg-hover{opacity:.55}
 .py-wrap{background:#0e1520; color:#d9e4f0}
 .py-wrap .term-ps{color:#ffd43b}
-.py-wrap .term-in{caret-color:#ffd43b}
+.py-wrap .term-caret{background:#ffd43b}
 .py-wrap .term-dim{color:#8ea8c6}
 /* browser (chrome) app: real web pages in an iframe over the screen, behind a slim
    tab strip (markéta / behdad / harfbuzz — the dock's chrome tile + the fake wall-sign
@@ -7845,7 +7849,7 @@ var T = {
     cal_ics_p2: "mark\u00e9ta \u221e behdad \u2014 Prague garden party \u00b7 day two",
     term_welcome: "loft console \u2014 real JavaScript, running right here in your page. try: help",
     term_help: "commands: help \u00b7 clear \u00b7 laser() \u00b7 any JavaScript (try 2+2, document.title, loft.couple, loft.weddings)",
-    term_laser: "bzzzt \u2014 red dot on the loose for a minute, shadowing your cursor. laser(0) calls it off. good luck, cat.",
+    term_laser: "bzzzt \u2014 red dot on the loose, shadowing your cursor. laser(0) calls it off. good luck, cat.",
     app_mail: "mail",
     mail_inbox_title: "inbox",
     mail_back: "\u2039 inbox",
@@ -8049,7 +8053,7 @@ var T = {
     cal_ics_p2: "mark\u00e9ta \u221e behdad \u2014 zahradn\u00ed slavnost v Praze \u00b7 druh\u00fd den",
     term_welcome: "loftov\u00e1 konzole \u2014 opravdov\u00fd JavaScript, b\u011b\u017e\u00ed p\u0159\u00edmo tady ve str\u00e1nce. zkuste: help",
     term_help: "p\u0159\u00edkazy: help \u00b7 clear \u00b7 laser() \u00b7 jak\u00fdkoli JavaScript (zkuste 2+2, document.title, loft.couple, loft.weddings)",
-    term_laser: "bzzzt \u2014 \u010derven\u00e1 te\u010dka je na minutu venku a sleduje kurzor. laser(0) ji odvol\u00e1. hodn\u011b \u0161t\u011bst\u00ed, ko\u010dko.",
+    term_laser: "bzzzt \u2014 \u010derven\u00e1 te\u010dka je venku a sleduje kurzor. laser(0) ji odvol\u00e1. hodn\u011b \u0161t\u011bst\u00ed, ko\u010dko.",
     app_mail: "po\u0161ta",
     mail_inbox_title: "doru\u010den\u00e1",
     mail_back: "\u2039 doru\u010den\u00e1",
@@ -13733,6 +13737,28 @@ document.addEventListener("click", function (e) {
     if (window.__updateOfficeNudges) window.__updateOfficeNudges();
   };
 })();
+// the REPLs' slim custom caret: tracks the text width up to the selection point
+// (canvas measureText with the input's own font), repainted after every keystroke
+(function () {
+  var mctx = document.createElement("canvas").getContext("2d");
+  ["monitor-term-in", "monitor-py-in"].forEach(function (id) {
+    var inp = document.getElementById(id);
+    if (!inp || !inp.parentNode || !mctx) return;
+    var car = document.createElement("span");
+    car.className = "term-caret";
+    inp.parentNode.appendChild(car);
+    function paint() {
+      var cs = getComputedStyle(inp);
+      mctx.font = cs.fontSize + " " + cs.fontFamily;
+      var upto = inp.value.slice(0, inp.selectionStart == null ? inp.value.length : inp.selectionStart);
+      car.style.left = (inp.offsetLeft + mctx.measureText(upto).width - (inp.scrollLeft || 0)) + "px";
+    }
+    ["input", "keydown", "keyup", "click", "focus", "select"].forEach(function (ev) {
+      inp.addEventListener(ev, function () { requestAnimationFrame(paint); });
+    });
+    paint();
+  });
+})();
 // ── DESK ZOOM ── while an office device holds attention, the room view glides up to
 // it: the MONITOR (engaged by the PC booting or tapping the lit screen) and the LAPTOP
 // (engaged by tapping it — the Prague call happens zoomed). Released by tapping anywhere
@@ -13818,6 +13844,17 @@ document.addEventListener("click", function (e) {
     if (open) { setTimeout(function () { zoomIn(laptop); }, 520); } // after the lid's .5s hinge transition, so the box measures full height
     else if (zoomEl === laptop) zoomOut();
   };
+  // Esc backs out of the zoom — window capture runs before the document-level
+  // music-stop Esc handler, and stopPropagation keeps the song going; open dialogs
+  // (photobooth polaroid, shortcuts card) keep their own Esc priority
+  window.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape" || !zoomEl) return;
+    if (document.querySelector(".pb-dialog-backdrop")) return;
+    var t = e.target;
+    if (t && t.blur && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) t.blur();
+    e.stopPropagation();
+    zoomOut();
+  }, true);
   window.addEventListener("resize", function () { if (zoomEl) apply(); });
   document.addEventListener("fullscreenchange", function () { if (zoomEl) setTimeout(apply, 60); }); // measure after the box settles
 })();
@@ -23680,8 +23717,8 @@ function spawnDustMote(container) {
   // The console's laser() command: a red dot loose in the CURRENTLY VIEWED room.
   // It shadows the visitor's cursor (mapped through the strip's live bounding box, so
   // room offsets and the monitor zoom can't skew it) and free-darts on its own whenever
-  // the cursor rests >2.5s — which is also the whole behavior on touch screens. Runs a
-  // minute; laser(0) calls it off early, laser(N) keeps it out N seconds. It spawns
+  // the cursor rests >2.5s — which is also the whole behavior on touch screens. Runs
+  // until laser(0) calls it off (laser(N) bounds it to N seconds). It spawns
   // INTO the current stage group (the spawn-in-parent rule) and every teardown path
   // removes it and clears its timers: the natural end, a repeat laser() (restart —
   // never two dots), a room change (goToStage), the extinguisher reset (resetHunt),
@@ -23764,7 +23801,7 @@ function spawnDustMote(container) {
     dotX = first.x; dotY = first.y; lastMove = 0;
     dot.style.transform = "translate(" + first.x + "px," + first.y + "px)";
     stage.appendChild(dot); // last child: the dot paints over the room, like a real laser would
-    endTimer = setTimeout(window.__laserOff, (seconds > 0 ? seconds : 60) * 1000);
+    if (seconds > 0) endTimer = setTimeout(window.__laserOff, seconds * 1000); // laser() runs until laser(0) calls it off
     dartTimer = setTimeout(dart, 260 + Math.random() * 240);
   };
   window.laser = function (seconds) { // devtools users get the toy too; laser(0) calls it off

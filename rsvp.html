@@ -1646,6 +1646,21 @@ footer{margin-top:2.6rem}
 .phone-boot .pb-mark{font-family:"Fraunces",serif; font-size:13px; letter-spacing:.04em; color:var(--cream); opacity:.85}
 .phone-boot .pb-mark b{font-weight:400; margin:0 2px}
 @keyframes phone-boot-shimmer{0%,100%{opacity:.45} 50%{opacity:1}}
+/* lockscreen: the wine ∞ field is now a math passcode gate on the first open per
+   visit — a question, a digit readout, and a keypad; solving it lifts to home.
+   the whole field only renders under .phone-shell.booting, so the lock rides that. */
+.phone-boot .pb-inf{font-size:50px}
+.phone-boot .pb-lock{display:flex; flex-direction:column; align-items:center; gap:9px; width:min(232px,82%)}
+.phone-boot .pb-lock-label{font-family:"Fraunces",serif; font-size:14px; letter-spacing:.06em; color:var(--cream); opacity:.9}
+.phone-boot .pb-question{font-family:"Fraunces",serif; font-size:26px; color:var(--cream)}
+.phone-boot .pb-entry{min-height:34px; min-width:120px; padding:4px 14px; border-radius:12px; background:rgba(255,255,255,.12); border:1px solid rgba(255,253,248,.34); font-family:"Fraunces",serif; font-size:22px; letter-spacing:.16em; color:var(--cream); text-align:center; display:flex; align-items:center; justify-content:center}
+.phone-boot .pb-entry:empty::before{content:"·"; opacity:.4; letter-spacing:0}
+.phone-boot .pb-keys{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; width:100%; margin-top:2px}
+.phone-boot .pb-key{display:flex; align-items:center; justify-content:center; min-height:42px; border:none; border-radius:50%; background:rgba(255,255,255,.14); color:var(--cream); font-family:"Source Serif 4",serif; font-size:20px; cursor:pointer; box-shadow:inset 0 0 0 1px rgba(255,253,248,.26)}
+.phone-boot .pb-key:active{transform:scale(.94)}
+.phone-boot .pb-key.pb-ok{background:rgba(255,253,248,.3)}
+.phone-boot .pb-lock.shake{animation:pb-lock-shake .38s ease}
+@keyframes pb-lock-shake{0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(7px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(4px)}}
 /* weather / calendar / mail / music / mines — portrait content */
 .wx-city{background:var(--paper); border:1px solid var(--rule); border-radius:16px; padding:16px; margin-bottom:14px; text-align:center}
 .wx-city .wxc-name{font-family:"Fraunces",serif; font-size:15px; color:var(--ink)}
@@ -1727,6 +1742,7 @@ footer{margin-top:2.6rem}
 @media (prefers-reduced-motion: reduce){
   .phone-backdrop{transition:none}
   .phone-boot .pb-inf{animation:none}
+  .phone-boot .pb-lock.shake{animation:none}
 }
 .eq-bar{transform-box:fill-box; transform-origin:bottom center; transform:scaleY(0.28)}
 #monitor-np-marquee{transform:translateX(85px)}
@@ -8920,6 +8936,10 @@ var T = {
     phone_nav_back: "Back",
     phone_nav_home: "Home",
     phone_nav_recents: "Recent apps",
+    phone_lock_title: "Unlock",
+    phone_lock_hint: "enter the answer",
+    phone_lock_del: "Delete",
+    phone_lock_ok: "Unlock",
   },
   cs: {
     hunt_title: "Den v podkroví",
@@ -9182,6 +9202,10 @@ var T = {
     phone_nav_back: "Zp\u011bt",
     phone_nav_home: "Dom\u016f",
     phone_nav_recents: "Ned\u00e1vn\u00e9 aplikace",
+    phone_lock_title: "Odemknout",
+    phone_lock_hint: "zadej v\u00fdsledek",
+    phone_lock_del: "Smazat",
+    phone_lock_ok: "Odemknout",
   }
 };
 function setLang(l) {
@@ -16582,6 +16606,7 @@ document.addEventListener("click", function (e) {
     var mailRead = {};
 
     var modal = null, shell = null, booted = false, closing = false;
+    var lockA = 0, lockB = 0, lockAnswer = null, lockEntry = "", lockShakeT = null; // math passcode lockscreen (first open per visit)
     var statusClock = null, currentApp = null, currentTitleKey = "";
     var battMgr = null, battHooked = false;
     var phoneBrowserCleanup = null; // teardown for the in-phone browser (ResizeObserver + frame unload)
@@ -16614,9 +16639,25 @@ document.addEventListener("click", function (e) {
         '<button type="button" class="pnav-home" aria-label="' + "" + '"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.7"/></svg></button>' +
         '<button type="button" class="pnav-recents" aria-label="' + "" + '"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.7"/></svg></button>' +
       '</div>';
+    var LOCK_KEYS = (function () {
+      var s = "";
+      ["1", "2", "3", "4", "5", "6", "7", "8", "9"].forEach(function (d) {
+        s += '<button type="button" class="pb-key" data-k="' + d + '" aria-label="' + d + '">' + d + '</button>';
+      });
+      s += '<button type="button" class="pb-key pb-del" data-k="del" aria-label="">⌫</button>';
+      s += '<button type="button" class="pb-key" data-k="0" aria-label="0">0</button>';
+      s += '<button type="button" class="pb-key pb-ok" data-k="ok" aria-label="">✓</button>';
+      return s;
+    })();
     var BOOT =
       '<div class="phone-boot">' +
         '<div class="pb-inf">∞</div>' +
+        '<div class="pb-lock">' +
+          '<div class="pb-lock-label"></div>' +
+          '<div class="pb-question"></div>' +
+          '<div class="pb-entry"></div>' +
+          '<div class="pb-keys">' + LOCK_KEYS + '</div>' +
+        '</div>' +
         '<div class="pb-mark">markéta<b>∞</b>behdad</div>' +
       '</div>';
     var INCALL =
@@ -16654,6 +16695,15 @@ document.addEventListener("click", function (e) {
       modal.querySelector(".pnav-home").addEventListener("click", navHome);
       modal.querySelector(".pnav-recents").addEventListener("click", navHome); // recents lands on the launcher (no task switcher on this pocket OS)
       modal.querySelector(".pic-hangup").addEventListener("click", function (e) { e.stopPropagation(); hangup(); });
+      modal.querySelector(".pb-keys").addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-k]");
+        if (!b) return;
+        e.stopPropagation();
+        var k = b.getAttribute("data-k");
+        if (k === "del") lockDel();
+        else if (k === "ok") lockSubmit();
+        else lockDigit(k);
+      });
       (function () {
         var brand = modal.querySelector(".psb-brand");
         function openSite(e) { e.stopPropagation(); try { window.open(WEDDING_URL, "_blank"); } catch (_) {} }
@@ -16687,6 +16737,61 @@ document.addEventListener("click", function (e) {
       modal.querySelector(".pnav-back").setAttribute("aria-label", tr("phone_nav_back"));
       modal.querySelector(".pnav-home").setAttribute("aria-label", tr("phone_nav_home"));
       modal.querySelector(".pnav-recents").setAttribute("aria-label", tr("phone_nav_recents"));
+      modal.querySelector(".pb-del").setAttribute("aria-label", tr("phone_lock_del"));
+      modal.querySelector(".pb-key.pb-ok").setAttribute("aria-label", tr("phone_lock_ok"));
+    }
+
+    // ── lockscreen (math passcode) ─────────────────────────────────────────────
+    // shown only on the first phone open per visit; solving it flips `booted` so
+    // later opens skip straight to home. wine ∞ field reuses the .phone-boot styling.
+    function genLock() {
+      if (lockAnswer !== null) return; // one problem per visit, stable across re-opens
+      var seed = Date.now();
+      lockA = 11 + (Math.floor(seed / 7) % 88);  // 11..98
+      lockB = 11 + (Math.floor(seed / 101) % 88);
+      lockAnswer = lockA + lockB;
+    }
+    function paintLock() {
+      if (!shell) return;
+      var label = shell.querySelector(".pb-lock-label");
+      var q = shell.querySelector(".pb-question");
+      var entry = shell.querySelector(".pb-entry");
+      if (label) label.textContent = tr("phone_lock_title");
+      if (q) q.textContent = (lockAnswer === null) ? "" : (lockA + " + " + lockB);
+      if (entry) entry.textContent = lockEntry;
+    }
+    function lockDigit(d) {
+      if (lockAnswer === null) return;
+      if (lockEntry.length >= 4) return; // answer is at most 3 digits; a small cap
+      lockEntry += d;
+      paintLock();
+      if (lockEntry.length >= String(lockAnswer).length) lockSubmit();
+    }
+    function lockDel() {
+      if (!lockEntry) return;
+      lockEntry = lockEntry.slice(0, -1);
+      paintLock();
+    }
+    function lockSubmit() {
+      if (lockAnswer === null) return;
+      if (lockEntry === String(lockAnswer)) { unlock(); return; }
+      lockEntry = "";
+      paintLock();
+      if (reduced()) return;
+      var l = shell.querySelector(".pb-lock");
+      if (!l) return;
+      l.classList.remove("shake");
+      void l.offsetWidth; // reflow so the shake restarts on a rapid retry
+      l.classList.add("shake");
+      if (lockShakeT) clearTimeout(lockShakeT);
+      lockShakeT = setTimeout(function () { if (l) l.classList.remove("shake"); lockShakeT = null; }, 420);
+    }
+    function unlock() {
+      if (lockShakeT) { clearTimeout(lockShakeT); lockShakeT = null; }
+      booted = true;
+      renderHome();
+      showScreen("home");        // clears .booting, hiding the lock field
+      if (shell) shell.focus();
     }
 
     // ── screens ──────────────────────────────────────────────────────────────
@@ -17271,15 +17376,13 @@ document.addEventListener("click", function (e) {
       requestAnimationFrame(function () { if (modal) modal.classList.add("show"); });
       startStatusClock();
       if (!booted) {
-        showScreen("home"); // home is built underneath so the boot splash lifts onto a ready screen
+        showScreen("home"); // home is built underneath so the lockscreen lifts onto a ready screen
         renderHome();
+        genLock();          // one math problem per visit, stable across re-opens until solved
+        lockEntry = "";     // fresh entry each open
+        paintLock();
         shell.classList.add("booting");
-        setTimeout(function () {
-          if (!modal || !modal.parentNode) return; // closed during boot
-          booted = true;
-          shell.classList.remove("booting");
-          if (shell) shell.focus();
-        }, reduced() ? 300 : 500);
+        if (shell) shell.focus();
       } else {
         showHome();
       }
@@ -17287,6 +17390,7 @@ document.addEventListener("click", function (e) {
     function close(silent) {
       if (!modal) return;
       closing = true;
+      if (lockShakeT) { clearTimeout(lockShakeT); lockShakeT = null; }
       if (callee) dropCall(true); // silent teardown of any live call + ambient
       leaveCurrentApp();           // restore the re-placed Mines board to the monitor
       stopStatusClock();
@@ -17301,6 +17405,7 @@ document.addEventListener("click", function (e) {
     window.refreshPhoneText = function () {
       if (!modal || !shell) return;
       applyNavLabels();
+      if (shell.classList.contains("booting")) { paintLock(); return; } // lockscreen labels are language-driven
       if (shell.classList.contains("pm-incall")) { refreshCallText(); return; }
       if (shell.classList.contains("pm-home")) { renderHome(); return; }
       if (shell.classList.contains("pm-app")) {

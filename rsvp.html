@@ -16434,7 +16434,12 @@ document.addEventListener("click", function (e) {
     for (var i = 0; i < 2; i++) {
       var obs = metarCur[i], mod = modelCur[i];
       var fresh = !!obs && (Date.now() - obs.at) < METAR_FRESH_MS;
-      var code = fresh ? obs.code : (mod ? mod.code : null);
+      // severity-max: WMO codes are ordered worst-first (thunder 95 > snow 71 >
+      // rain 61 > fog 45 > cloud 3 > clear 0), so showing the WORSE of a fresh
+      // station observation and the model nowcast catches a storm EITHER one sees —
+      // the model catching a storm the (lagging) airport METAR missed, or vice versa.
+      var code = (fresh && mod) ? Math.max(obs.code, mod.code) : (fresh ? obs.code : (mod ? mod.code : null));
+      // temperature is a real measurement: prefer the station's when fresh
       var temp = (fresh && typeof obs.temp === "number") ? obs.temp : (mod ? mod.temp : null);
       if (typeof code !== "number") continue;
       if (i === 0) {

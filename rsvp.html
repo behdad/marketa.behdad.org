@@ -1675,7 +1675,11 @@ footer{margin-top:2.6rem}
 .pm-music .pmm-play{width:62px; height:62px; border-radius:50%; border:none; background:var(--wine); color:#fff; font-size:24px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 10px rgba(142,58,74,.35)}
 .pm-music .pmm-skip{width:46px; height:46px; border-radius:50%; border:none; background:var(--cream); color:var(--wine); font-size:17px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 0 0 1px var(--rule)}
 .pm-music .pmm-skip:active, .pm-music .pmm-play:active{transform:scale(.94)}
-.pm-mines-host{display:flex; flex-direction:column; align-items:center; gap:9px; transform:scale(3.6); transform-origin:top center; margin-top:22px}
+.pm-mines-host{display:flex; flex-direction:column; align-items:center; gap:6px; transform:scale(3.2); transform-origin:top center; width:fit-content; margin:10px auto 0}
+/* the monitor's side panel is a full-height column with a left divider; on the pocket
+   phone it becomes a compact face+counters row (no flex-grow gap, no divider line) */
+.pm-mines-host .mines-side{flex:none; flex-direction:row; gap:7px; padding-top:0; box-shadow:none; align-items:center}
+.pm-mines-host .mines-msg{position:static; left:auto; top:auto; width:auto; margin-top:2px}
 /* calculator: a right-aligned readout over a 4-col key grid, wine accents */
 .phone-calc{display:flex; flex-direction:column; gap:10px; height:100%}
 .phone-calc .pc-display{flex:none; min-height:52px; display:flex; align-items:flex-end; justify-content:flex-end; padding:8px 12px; background:var(--paper); border:1px solid var(--rule); border-radius:14px; font-family:"Fraunces",serif; font-size:30px; line-height:1.05; color:var(--ink); overflow:hidden; word-break:break-all; text-align:right}
@@ -12968,6 +12972,10 @@ document.addEventListener("click", function (e) {
     a.addEventListener("play", updateNowPlaying);
     a.addEventListener("pause", updateNowPlaying);
     a.addEventListener("ended", updateNowPlaying);
+    // keep the pocket phone's Music screen in sync on auto-advance / monitor-driven changes
+    ["play", "pause", "ended"].forEach(function (ev) {
+      a.addEventListener(ev, function () { if (window.__phoneMusicChanged) window.__phoneMusicChanged(); });
+    });
   });
   // Auto-advance: when a song finishes, the next one in the list starts on its own
   // (wraps around — with 2 songs today that just means "the other one"). Runs
@@ -13022,11 +13030,9 @@ document.addEventListener("click", function (e) {
     return null;
   };
   window.__phoneMusicLabel = function (id) { return (SONG_INFO[id] || "").replace(/^\s*♪\s*/, ""); };
-  window.__phoneMusicSkip = function (dir) { // prev/next wrap-around, shared transport with the monitor
-    var cur = window.__phoneMusicId(), idx = -1;
-    for (var i = 0; i < songAudios.length; i++) if (songAudios[i].id === cur) { idx = i; break; }
-    var n = idx < 0 ? (dir > 0 ? 0 : songAudios.length - 1) : ((idx + dir) % songAudios.length + songAudios.length) % songAudios.length;
-    if (window.__playSongAt) window.__playSongAt(n);
+  window.__phoneMusicSkip = function (dir) { // reuse the monitor's real skip: fade out + stop current, then play next
+    if (window.__phoneMusicPlaying() && window.__monitorSkip) { window.__monitorSkip(dir); return; }
+    playSongAt(dir > 0 ? 0 : songAudios.length - 1); // idle: just start a track
   };
   // The resting caps "home" screen carries a small PLAY button that kicks off a
   // random garden song; the audio's own "play" listener (above) then flips the
@@ -15087,6 +15093,7 @@ document.addEventListener("click", function (e) {
     prevBtn.addEventListener("click", function (e) { e.stopPropagation(); scheduleSaver(15000); monitorSkip(-1); });
     prevBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
+  window.__monitorSkip = monitorSkip; // the pocket phone's prev/next reuses the real skip logic
   var nextBtn = document.getElementById("monitor-next-btn");
   if (nextBtn) {
     nextBtn.addEventListener("click", function (e) { e.stopPropagation(); scheduleSaver(15000); monitorSkip(1); });
@@ -16645,6 +16652,7 @@ document.addEventListener("click", function (e) {
     }
     function leaveCurrentApp() {
       if (currentApp === "mines" && window.__phoneUnmountMines) window.__phoneUnmountMines();
+      if (currentApp === "music") window.__phoneMusicChanged = null;
       currentApp = null;
     }
     function showHome() {
@@ -16906,10 +16914,10 @@ document.addEventListener("click", function (e) {
       '<path d="M64 54 Q69 51 74 54" stroke="#5a4a3a" stroke-width="1.4" fill="none"/>' +
       '<ellipse cx="70" cy="57" rx="2.6" ry="1.9" fill="#3a2f28"/>' +
       '<path d="M75 55 l6 -2 M75 58 l6 1 M75 60 l5 3" stroke="#c19a72" stroke-width="0.9" fill="none"/>' +
-      '<path d="M40 48 Q40 22 66 20 Q92 22 88 46 Q90 50 84 50 Q83 34 66 32 Q49 32 46 50 Q40 52 40 48 Z" fill="#2b2621"/>' +
-      '<path d="M58 22 Q66 20 74 23 L72 40 Q66 36 60 40 Z" fill="#231f1a"/>' +
-      '<path d="M28 50 Q60 41 98 50 Q100 56 90 56 Q60 47 38 56 Q28 56 28 50 Z" fill="#211d18"/>' +
-      '<path d="M42 48 Q64 41 88 47 L86 51 Q64 44 46 51 Z" fill="#cbbfa6"/></svg>';
+      '<path d="M32 43 Q52 35 72 37 Q92 40 96 46 Q90 48 74 45 Q58 40 44 46 Q35 47 32 43 Z" fill="#211d18"/>' +
+      '<path d="M42 44 Q44 20 66 19 Q88 21 86 44 Q74 35 64 36 Q50 36 42 44 Z" fill="#2b2621"/>' +
+      '<path d="M44 42 Q66 36 86 42 L85 44 Q66 38 46 44 Z" fill="#cbbfa6"/>' +
+      '<path d="M60 22 Q66 20 72 23 L70 36 Q66 33 62 36 Z" fill="#231f1a"/></svg>';
     var COVER_ORIT =
       '<svg viewBox="0 0 120 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' +
       '<rect width="120" height="120" fill="#43807e"/>' +
@@ -16953,6 +16961,7 @@ document.addEventListener("click", function (e) {
       wrap.appendChild(transport);
       body.appendChild(wrap);
       paint();
+      window.__phoneMusicChanged = paint; // repaint on external song changes (auto-advance, monitor transport)
     }
     function renderMines(body) {
       var host = document.createElement("div");

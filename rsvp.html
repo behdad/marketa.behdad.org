@@ -1578,6 +1578,10 @@ footer{margin-top:2.6rem}
 .psb-wifi-pop{position:absolute; top:calc(100% + 7px); right:0; z-index:20; display:none; flex-direction:column; gap:4px; padding:8px 10px; background:var(--paper); color:var(--ink); border:1px solid var(--rule); border-radius:10px; box-shadow:0 8px 22px rgba(0,0,0,.24); white-space:nowrap; font-family:"Source Serif 4",serif; font-size:11.5px}
 .psb-wifi-wrap.show .psb-wifi-pop{display:flex}
 .psb-wifi-pop .pwp-row{display:block}
+.psb-batt-wrap{position:relative; display:inline-flex; align-items:center; cursor:pointer}
+.psb-batt-pop{position:absolute; top:calc(100% + 7px); right:0; z-index:20; display:none; align-items:center; gap:4px; padding:7px 10px; background:var(--paper); color:var(--ink); border:1px solid var(--rule); border-radius:10px; box-shadow:0 8px 22px rgba(0,0,0,.24); white-space:nowrap; font-family:"Source Serif 4",serif; font-size:12px}
+.psb-batt-pop .pbp-pct{font-weight:600}
+.psb-batt-wrap.show .psb-batt-pop{display:inline-flex}
 .phone-stage{flex:1; min-height:0; position:relative; display:flex; flex-direction:column}
 .phone-home, .phone-app, .phone-incall{display:none; flex:1; min-height:0}
 .phone-shell.pm-home .phone-home{display:flex}
@@ -16570,7 +16574,10 @@ document.addEventListener("click", function (e) {
             '<svg class="psb-wifi" width="15" height="11" viewBox="0 0 16 12" aria-hidden="true"><path d="M2.4 4.3 A8 8 0 0 1 13.6 4.3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4.6 6.7 A5 5 0 0 1 11.4 6.7" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="8" cy="9.4" r="1.15" fill="currentColor"/></svg>' +
             '<span class="psb-wifi-pop"><span class="pwp-row">📶 Never Forget</span><span class="pwp-row">🔑 Never Forgive</span></span>' +
           '</span>' +
-          '<svg class="psb-batt" width="23" height="11" viewBox="0 0 24 12" aria-hidden="true"><rect x="1" y="1.5" width="20" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.2"/><rect class="psb-batt-fill" x="3" y="3.5" width="16" height="5" rx="1" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor"/><path class="psb-batt-bolt" d="M12.6 2.2 L8.6 6.6 H11 L10.3 9.8 L14.4 5.2 H11.9 Z" fill="var(--cream)" style="display:none"/></svg>' +
+          '<span class="psb-batt-wrap" role="button" tabindex="0" title="Battery">' +
+            '<svg class="psb-batt" width="23" height="11" viewBox="0 0 24 12" aria-hidden="true"><rect x="1" y="1.5" width="20" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.2"/><rect class="psb-batt-fill" x="3" y="3.5" width="16" height="5" rx="1" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor"/><path class="psb-batt-bolt" d="M12.6 2.2 L8.6 6.6 H11 L10.3 9.8 L14.4 5.2 H11.9 Z" fill="var(--cream)" style="display:none"/></svg>' +
+            '<span class="psb-batt-pop"><span class="pbp-ico">🔋</span> <b class="pbp-pct">100%</b></span>' +
+          '</span>' +
         '</span>' +
       '</div>';
     var NAV =
@@ -16613,7 +16620,7 @@ document.addEventListener("click", function (e) {
       shell = modal.querySelector(".phone-shell");
       // backdrop tap (outside the shell) closes
       modal.addEventListener("click", function (e) { if (e.target === modal) close(); });
-      shell.addEventListener("click", function (e) { e.stopPropagation(); var w = modal.querySelector(".psb-wifi-wrap"); if (w) w.classList.remove("show"); });
+      shell.addEventListener("click", function (e) { e.stopPropagation(); ["psb-wifi-wrap", "psb-batt-wrap"].forEach(function (c) { var w = modal.querySelector("." + c); if (w) w.classList.remove("show"); }); });
       modal.querySelector(".phone-close").addEventListener("click", function (e) { e.stopPropagation(); close(); });
       modal.querySelector(".pnav-back").addEventListener("click", navBack);
       modal.querySelector(".pnav-home").addEventListener("click", navHome);
@@ -16626,10 +16633,19 @@ document.addEventListener("click", function (e) {
         brand.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openSite(e); } });
       })();
       (function () {
-        var wrap = modal.querySelector(".psb-wifi-wrap");
-        function toggle(e) { e.stopPropagation(); wrap.classList.toggle("show"); }
-        wrap.addEventListener("click", toggle);
-        wrap.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(e); } });
+        ["psb-wifi-wrap", "psb-batt-wrap"].forEach(function (cls) {
+          var wrap = modal.querySelector("." + cls);
+          if (!wrap) return;
+          function toggle(e) {
+            e.stopPropagation();
+            var other = modal.querySelector(cls === "psb-wifi-wrap" ? ".psb-batt-wrap" : ".psb-wifi-wrap");
+            if (other) other.classList.remove("show"); // only one status-bar popover open at a time
+            wrap.classList.toggle("show");
+            if (cls === "psb-batt-wrap") paintBattery(); // refresh the % on open
+          }
+          wrap.addEventListener("click", toggle);
+          wrap.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(e); } });
+        });
       })();
       hookBattery();
       // the phone owns the keyboard while it's up: this bubble listener stops game
@@ -17140,6 +17156,9 @@ document.addEventListener("click", function (e) {
       var charging = battMgr ? !!battMgr.charging : false;
       if (fill) fill.setAttribute("width", Math.max(2, Math.round(lvl * 16)));
       if (bolt) bolt.style.display = charging ? "block" : "none";
+      var pct = shell.querySelector(".pbp-pct"), ico = shell.querySelector(".pbp-ico");
+      if (pct) pct.textContent = Math.round(lvl * 100) + "%";
+      if (ico) ico.textContent = charging ? "⚡" : "🔋";
     }
     function hookBattery() {
       if (battHooked) return; battHooked = true;

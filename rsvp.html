@@ -1081,7 +1081,7 @@ footer{margin-top:2.6rem}
 #office-monitor.show-terminal #monitor-terminal{opacity:1; pointer-events:auto}
 #monitor-term-close{cursor:pointer}
 #monitor-term-close:hover .seg-hover{opacity:.55}
-.term-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#0c1014; padding:2.5px 3px 2px; font-family:ui-monospace,Menlo,monospace; font-size:3.8px; line-height:1.4; color:#cfe3cf}
+.term-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#0c1014; padding:2.5px 3px 2px; font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.4; color:#cfe3cf}
 .term-out{flex:1; overflow-y:auto; white-space:pre-wrap; word-break:break-word; scrollbar-width:none}
 .term-out::-webkit-scrollbar{display:none}
 .term-dim{color:#8fa98f}
@@ -1094,7 +1094,7 @@ footer{margin-top:2.6rem}
 #office-monitor.show-mail #monitor-mail{opacity:1; pointer-events:auto}
 #monitor-mail-close{cursor:pointer}
 #monitor-mail-close:hover .seg-hover{opacity:.55}
-.mail-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#fffdf8; font-family:sans-serif; font-size:4.2px; line-height:1.35; color:#453a31; overflow:hidden}
+.mail-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#fffdf8; font-family:sans-serif; font-size:2.5px; line-height:1.35; color:#453a31; overflow:hidden}
 .mail-bar{flex:none; background:#4a6b94; color:#f8f5ec; padding:0.8px 3px 1px; letter-spacing:0.2px}
 .mail-back{cursor:pointer}
 .mail-back:hover{background:#3d5a7f}
@@ -5735,7 +5735,7 @@ section{margin:1.9rem 0}
 </g>
 <g id="monitor-saver" class="boot-logo">
 <foreignObject id="monitor-saver-fractal" x="254" y="154" width="124" height="42">
-<canvas xmlns="http://www.w3.org/1999/xhtml" id="monitor-fractal-canvas" width="248" height="84" style="width:124px;height:42px;display:block"></canvas>
+<canvas xmlns="http://www.w3.org/1999/xhtml" id="monitor-fractal-canvas" width="496" height="168" style="width:124px;height:42px;display:block"></canvas>
 </foreignObject>
 <!-- mini equalizer accent: bottom-left corner of the screen, on top of the fractal
      (later sibling paints over it). Shown only while a song's still playing under the
@@ -10801,7 +10801,7 @@ document.addEventListener("click", function (e) {
     if (reduceMotion) { renderJulia(canvas, R * Math.cos(theta), R * Math.sin(theta), 90, 1.3, hueBase, false, fractalBeatKick()); return; }
     var lastDraw = 0;
     function frame(t) {
-      if (t - lastDraw >= 45) { // ~22fps: plenty for a slow morph, easy on the CPU
+      if (t - lastDraw >= 60) { // ~16fps: plenty for a slow morph — the canvas carries 4x the pixels now
         lastDraw = t;
         theta += 0.02;              // shape morphs (full c-orbit ~ every 14s)
         hueBase = (hueBase + 0.003) % 1; // colour drifts through the spectrum ~ every 15s
@@ -12185,7 +12185,10 @@ document.addEventListener("click", function (e) {
       vidWrap.classList.remove("absent");
       try { if (vidEl.currentTime === 0) vidEl.currentTime = 0.001; } catch (e) {} // nudge a seek so the first frame actually paints
     });
-    vidEl.addEventListener("play", function () { vidWrap.classList.remove("paused"); });
+    vidEl.addEventListener("play", function () {
+      vidWrap.classList.remove("paused");
+      try { if ("mediaSession" in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: "identity dance", artist: "mark\u00e9ta" }); } catch (e) {}
+    });
     vidEl.addEventListener("pause", function () { vidWrap.classList.add("paused"); });
     // a song starting (spacebar, headphones, garden instruments…) takes the screen for the
     // player — close the film so it never keeps playing (or lingering) underneath
@@ -12216,6 +12219,13 @@ document.addEventListener("click", function (e) {
     var volFill = vol.querySelector(".vid-ctrl-fill");
     var userVol = null; // set once the visitor touches the slider; overrides the app-owned default for the session
     window.__vidCtrlVolume = function () { return userVol; };
+    window.__vidCtrlMasterVolume = function (level) {
+      // the page/monitor volume button cycled: the film follows and the master rules
+      // again — the slider only overrides until the next master cycle
+      userVol = null;
+      try { vidEl.volume = level; vidEl.muted = false; } catch (err) {}
+      paintVol();
+    };
     // nothing on the strip reaches the wrap (its tap toggles play/pause) or the room (pan)
     ["pointerdown", "click", "dblclick", "touchstart"].forEach(function (t) {
       ctrl.addEventListener(t, function (e) { e.stopPropagation(); });
@@ -12869,6 +12879,7 @@ document.addEventListener("click", function (e) {
   window.__songVolume = function () { return VOL_LEVELS[volIdx]; };
   function applySongVolume() {
     for (var vi = 0; vi < songAudios.length; vi++) if (songAudios[vi]) songAudios[vi].volume = VOL_LEVELS[volIdx];
+    if (window.__vidCtrlMasterVolume) window.__vidCtrlMasterVolume(VOL_LEVELS[volIdx]); // the film follows the master
   }
   // Two triggers share one volume: the office monitor's own speaker button (SVG, inside
   // the game scene) and #hunt-volume-btn (real HTML button, visible from any room). Both

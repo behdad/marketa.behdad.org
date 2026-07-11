@@ -26,8 +26,9 @@ https://github.com/copy/images @ db92d8fd (kernel & busybox under GPLv2; that re
 Buildroot/kernel.org are the corresponding-source pointers) — repacked with additions
 in the ext2 ramdisk:
 
-- `/bin/hb-shape` — the real HarfBuzz shaping CLI (the groom's project), v14.2.1,
-  statically linked i686/musl, ~1.0 MB stripped. HarfBuzz is under the Old MIT license.
+- `/bin/hb-shape` and `/usr/bin/hb-info` — the real HarfBuzz shaping and
+  font-introspection CLIs (the groom's project), v14.2.1, statically linked i686/musl,
+  ~1.0 MB / ~0.7 MB stripped. HarfBuzz is under the Old MIT license.
   Built from https://github.com/harfbuzz/harfbuzz @ 9075798 with GLib (LGPL-2.1+),
   PCRE2 (BSD-3) and zlib linked in statically via meson subprojects. Cross toolchain:
   musl.cc i686-linux-musl-cross (GCC 11.2.1). Recipe:
@@ -36,7 +37,10 @@ in the ext2 ramdisk:
   -Dfreetype=disabled -Dcairo=disabled -Dicu=disabled -Dgraphite2=disabled
   -Dchafa=disabled -Dtests=disabled -Ddocs=disabled -Dutilities=enabled
   --force-fallback-for=glib,pcre2,libffi,zlib` (+ glib subproject options disabling
-  nls/xattr/libmount/selinux/introspection/sysprof/tests), `ninja util/hb-shape`, strip.
+  nls/xattr/libmount/selinux/introspection/sysprof/tests),
+  `ninja util/hb-shape util/hb-info`, strip. hb-info is deliberately built without
+  cairo/chafa, so no glyph previews — name/metrics/table/feature queries are the point
+  (`hb-info /root/test.ttf`, `hb-info --list-features /root/test.ttf`).
   musl (MIT) is what makes a 2026 binary run on a 2010 kernel — glibc ≥ 2.24 statics
   refuse anything older than Linux 3.2.
 - `/root/test.ttf` (hardlinked as `/root/fraunces.ttf`) — "Fraunces 72pt", a ~26 KB
@@ -64,10 +68,11 @@ in the ext2 ramdisk:
 - `/root/OFL.txt` — combined attribution for all three fonts (Fraunces, Noto Color
   Emoji, Liberation-derived Loft Sans) plus the shared OFL 1.1 license text.
 
-Repack: grow the ext2 image (`resize2fs` to 5120 1K-blocks), inject files with
+Repack: grow the ext2 image (`resize2fs` to 6144 1K-blocks — ~1.3 MB currently
+free; grow it and `ramdisk_size=` together if it fills up), inject files with
 `debugfs -w` (`rm`/`write`; the fraunces.ttf hardlink is `ln` + `sif <file>
 links_count 2`), then `genisoimage -b isolinux/isolinux.bin -c isolinux/boot.cat
--no-emul-boot -boot-load-size 4 -boot-info-table` with `ramdisk_size=5120` added to the
+-no-emul-boot -boot-load-size 4 -boot-info-table` with `ramdisk_size=6144` added to the
 isolinux append line (the fs outgrew the kernel's 4 MB ramdisk default). A gzipped
 ramdisk would halve the ISO but this kernel build oopses in `rd_load_image`'s
 decompressor, so it ships uncompressed.

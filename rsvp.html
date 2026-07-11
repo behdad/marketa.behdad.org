@@ -1052,7 +1052,7 @@ footer{margin-top:2.6rem}
    thin right-side scrollbar once the apps outgrow the screen (overflow-y:auto shows it
    only then). overscroll-behavior + the grid's own wheel/touchmove stopPropagation keep
    scrolling inside the grid instead of panning the room/page. */
-.dock-grid{width:100%; height:100%; box-sizing:border-box; display:grid; grid-template-columns:repeat(6,1fr); align-content:start; padding:1.2px 2px; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; touch-action:pan-y; background:rgba(255,253,248,0.72); border:0.4px solid rgba(69,58,49,0.2); border-radius:0 0 1.5px 1.5px}
+.dock-grid{width:100%; height:100%; box-sizing:border-box; display:grid; grid-template-columns:repeat(7,1fr); align-content:start; padding:1.2px 2px; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; touch-action:pan-y; background:rgba(255,253,248,0.72); border:0.4px solid rgba(69,58,49,0.2); border-radius:0 0 1.5px 1.5px}
 .dock-roundel{width:9px; height:9px; display:block}
 .dock-tux{width:8px; height:9.5px; display:block}
 .dock-icon{width:9px; height:9px; display:block}
@@ -1081,7 +1081,7 @@ footer{margin-top:2.6rem}
 .dock-mini-eq{position:absolute; left:50%; top:50%; margin:-4.5px 0 0 -4.5px; opacity:0; transition:opacity .3s ease}
 #office-monitor.eq-live .dock-mini-eq{opacity:1}
 #office-monitor.eq-live .dock-app-music .dock-glyph{opacity:0}
-.dock-label{max-width:100%; font-size:4.2px; line-height:1; letter-spacing:0.1px; color:#716455; font-family:sans-serif; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.dock-label{max-width:100%; font-size:3.4px; line-height:1; letter-spacing:0.1px; color:#716455; font-family:sans-serif; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 /* terminal app: a tiny JS REPL over the screen */
 #monitor-terminal{opacity:0; pointer-events:none; transition:opacity .25s ease}
 #office-monitor.show-terminal #monitor-terminal{opacity:1; pointer-events:auto}
@@ -2604,6 +2604,8 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 }
 /* the call-to-Prague overlay */
 #laptop-call{opacity:0}
+#laptop-call-close{pointer-events:auto; cursor:pointer} /* the one live control on the click-transparent overlay */
+#laptop-call-close:hover .seg-hover{opacity:.55}
 #office-laptop.calling #laptop-call, #office-laptop.connecting #laptop-call, #office-laptop.connected #laptop-call{opacity:1}
 /* the webcam LED glows green while the camera's live (the whole call) */
 #laptop-webcam-led{transition:fill .3s ease, filter .3s ease}
@@ -12381,7 +12383,7 @@ document.addEventListener("click", function (e) {
     { id: "tehran", icon: "phone", labelKey: "app_tehran", glyph: "\uD83D\uDCDE", tile: "#2b7a4b", glyphSize: "5.2", open: function () { openTehranCall(); } },
     { id: "chrome", icon: HOST_BROWSER === "chrome" ? null : "globe", labelKey: HOST_BROWSER === "chrome" ? "app_chrome" : HOST_BROWSER === "firefox" ? "app_firefox" : "app_browser", glyph: "\uD83C\uDF10", tile: "#fdfbf6", color: "#4285f4", glyphSize: "5.2", open: function () { openBrowser(); } },
     { id: "terminal", icon: "console", labelKey: "app_terminal", glyph: "\u276F_", tile: "#2e2823", color: "#8fd070", mono: true, glyphSize: "4", open: function () { openTerminal(); } },
-    { id: "python", icon: "python", labelKey: "app_python", glyph: ">>>", tile: "#306998", color: "#ffd43b", mono: true, glyphSize: "3.5", open: function () { openPython(); } },
+    { id: "python", labelKey: "app_python", glyph: ">>>", tile: "#306998", color: "#ffd43b", mono: true, glyphSize: "3.5", open: function () { openPython(); } },
     { id: "linux", labelKey: "app_linux", glyph: "🐧", tile: "#fdfbf6", glyphSize: "5.2", open: function () { openLinux(); } }
   ];
   var dock = document.getElementById("monitor-desktop-dock");
@@ -12438,7 +12440,7 @@ document.addEventListener("click", function (e) {
       var d = new Date();
       var z = function (n) { return (n < 10 ? "0" : "") + n; };
       deskClock.textContent = z(d.getHours()) + ":" + z(d.getMinutes());
-      deskWeather.textContent = "Edmonton " + deskWeatherGlyph();
+      deskWeather.textContent = "Edmonton " + deskWeatherGlyph() + (window.__realOutdoorC != null ? " " + Math.round(window.__realOutdoorC) + "\u00b0" : "");
       // days to the Edmonton wedding (2027-05-01), then to each May 1 anniversary after
       // it — same fixed-date-first shape as the laptop's July 10 / Prague countdown
       var days = Math.ceil((new Date(2027, 4, 1) - d) / 86400000);
@@ -12457,7 +12459,8 @@ document.addEventListener("click", function (e) {
     // gates. Still text-only, so it's just as hidden-tab safe as the clock repaint.
     setInterval(function () {
       var g = deskWeatherGlyph();
-      if (deskWeather.textContent !== "Edmonton " + g) deskWeather.textContent = "Edmonton " + g;
+      var wtxt = "Edmonton " + g + (window.__realOutdoorC != null ? " " + Math.round(window.__realOutdoorC) + "\u00b0" : "");
+      if (deskWeather.textContent !== wtxt) deskWeather.textContent = wtxt;
     }, 1000);
     // app grid: one foreignObject filling the screen below the menu bar; .dock-grid
     // lays the tiles out 4-across and grows a thin right scrollbar when they overflow
@@ -12745,8 +12748,9 @@ document.addEventListener("click", function (e) {
     renderMail();
     playLaptopClickSound("office-monitor");
   }
-  function closeMailApp() {
+  function closeMailApp(fromPill) {
     if (!monitor.classList.contains("show-mail")) return;
+    if (fromPill && mailOpenMsg) { mailOpenMsg = null; renderMail(); return; } // reading view: ✕ = back to the inbox; closing is the list's job
     monitor.classList.remove("show-mail");
     scheduleSaver();
   }
@@ -12756,7 +12760,7 @@ document.addEventListener("click", function (e) {
     mailWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   if (mailCloseBtn) {
-    mailCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeMailApp(); playLaptopClickSound("office-monitor"); });
+    mailCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeMailApp(true); playLaptopClickSound("office-monitor"); });
     mailCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   // ── MINESWEEPER APP ──────────────────────────────────────────────────────────────
@@ -13080,6 +13084,7 @@ document.addEventListener("click", function (e) {
     startCallAmbient("tehran"); // the warm indoor murmur while the call lasts
   }
   function openTehranCall() {
+    if (monitor.classList.contains("show-saver")) { stopSaver(); monitor.classList.add("show-caps"); } // a click that raced the screensaver still lands
     if (!monitor.classList.contains("show-caps") || tehranLive()) return;
     if (window.__pragueCallLive && window.__pragueCallLive()) return; // one call at a time — hang up Prague first
     stopSaver();
@@ -22140,7 +22145,7 @@ function spawnDustMote(container) {
     restoreStageHint(name);
     updateNav();
     if (window.__homeCat) window.__homeCat(name); // the loose cat follows the player between rooms
-    if (window.__laserOff) window.__laserOff(); // the laser dot doesn't follow between rooms
+    if (window.__laserHop) window.__laserHop(); // the laser dot follows into the new room
     if (name === "cuddly" && window.updateCuddlyGrooving) window.updateCuddlyGrooving();
     if (name === "cuddly" && window.startCuddlyFlame) window.startCuddlyFlame(); // light the fireplace's fractal flames
     if (name === "cuddly" && window.resetFishu) window.resetFishu();
@@ -25156,6 +25161,16 @@ function spawnDustMote(container) {
     stage.appendChild(dot); // last child: the dot paints over the room, like a real laser would
     if (seconds > 0) endTimer = setTimeout(window.__laserOff, seconds * 1000); // laser() runs until laser(0) calls it off
     dartTimer = setTimeout(dart, 260 + Math.random() * 240);
+  };
+  // a room change re-homes the dot into the newly viewed stage (same spawn-in-parent rule)
+  window.__laserHop = function () {
+    if (!dot) return;
+    var stage = document.getElementById("stage-" + (window.currentStageName || "kitchen"));
+    if (!stage) { window.__laserOff(); return; }
+    var to = randomSpot();
+    dotX = to.x; dotY = to.y; lastMove = 0;
+    dot.style.transform = "translate(" + to.x + "px," + to.y + "px)";
+    stage.appendChild(dot); // moves it — a node has one parent
   };
   window.laser = function (seconds) { // devtools users get the toy too; laser(0) calls it off
     if (!seconds && seconds !== undefined) { window.__laserOff(); return "off"; }

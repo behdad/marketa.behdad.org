@@ -1073,7 +1073,7 @@ footer{margin-top:2.6rem}
 .dock-tile{position:relative; width:12.1px; height:12.1px; margin:-0.55px; transform:scale(0.909); border-radius:3.3px; transition:transform .15s ease; box-shadow:inset 0 0 0 0.4px rgba(0,0,0,0.18); display:flex; align-items:center; justify-content:center}
 .dock-glyph{font-family:sans-serif; line-height:1; color:#f8f5ec}
 .cal-tile{position:absolute; inset:0; border-radius:3px; overflow:hidden; display:flex; flex-direction:column}
-.cal-tile-head{flex:none; height:3.4px; background:#c14b3e; color:#fffdf8; font-size:2.4px; line-height:1; display:flex; align-items:center; justify-content:center; letter-spacing:0.1px; font-weight:600}
+.cal-tile-head{flex:none; height:3.4px; background:#c14b3e; color:#fffdf8; font-size:2.4px; line-height:1.4; padding-top:1px; display:flex; align-items:center; justify-content:center; letter-spacing:0.1px; font-weight:600} /* line-height must cover the font's ascent+descent (~1.36em): at line-height:1 the negative half-leading pushed the ink above the band and the tile's overflow clipped it */
 .cal-tile-day{flex:1; display:flex; align-items:center; justify-content:center; color:#453a31; font-size:5.4px; font-weight:600}
 .dock-cam-wrap{position:absolute; inset:0; border-radius:3px; overflow:hidden; background:#000; display:none}
 .dock-app-photobooth.live .dock-cam-wrap{display:block}
@@ -1087,12 +1087,19 @@ footer{margin-top:2.6rem}
 #office-monitor.show-terminal #monitor-terminal{opacity:1; pointer-events:auto}
 #monitor-term-close{cursor:pointer}
 #monitor-term-close:hover .seg-hover{opacity:.55}
-.term-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#0c1014; padding:2.5px 3px 2px; font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.4; color:#cfe3cf; padding-bottom:2.6px}
-.term-out{flex:none; height:33.6px; margin-bottom:0.5px; overflow-y:auto; white-space:pre-wrap; word-break:break-word; scrollbar-width:none} /* exactly 12 of the 2.8px line boxes: a bottom-pinned scrollback can never straddle a line across the top edge */
+.term-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#0c1014; padding:1.8px 2px 2.6px; font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.4; color:#cfe3cf}
+/* the scrollback is a scroll container, so it clips at its own padding box — and at 2px
+   type under the desk zoom, painted ink can land up to ~1px outside its layout box
+   (tiny-glyph raster snapping under the ~7× transform), which shaved ascenders at the
+   top edge and first columns at the left. The padding keeps the clip edge off the
+   glyphs; the wrap's padding is correspondingly slimmer and .term-row pads 1px to
+   match, so the text itself sits exactly where it always did. The -0.5px bottom margin
+   nets the old 0.5px scrollback→input gap against the 1px padding-bottom. */
+.term-out{flex:none; height:35.3px; padding:0.7px 1px 1px; margin-bottom:-0.5px; overflow-y:auto; white-space:pre-wrap; word-break:break-word; scrollbar-width:none; -webkit-mask-image:linear-gradient(#0000,#000 0.7px); mask-image:linear-gradient(#0000,#000 0.7px)} /* content height (35.3 border-box − 0.7 − 1 padding) = exactly 12 of the 2.8px line boxes: a bottom-pinned scrollback can never straddle a line across the top edge. Top slack is only 0.7px (vs 1px elsewhere) on purpose: any more and that same slack re-reveals a readable sliver of the 13th line when pinned; 0.7px clears the ~0.4px worst-case upward ink shift, and the mask fades that slack zone so the 13th line's descender tails vanish while stray ascender ink lands soft instead of chopped. */
 .term-out::-webkit-scrollbar{display:none}
 .term-dim{color:#8fa98f}
 .term-err{color:#e08a8a}
-.term-row{display:flex; align-items:flex-start; gap:0.6px} /* top-aligned so prompt and input share a baseline (their boxes differ in height) */
+.term-row{display:flex; align-items:flex-start; gap:0.6px; padding:0 1px} /* top-aligned so prompt and input share a baseline (their boxes differ in height); the 1px side padding keeps the prompt column aligned with the scrollback's (see .term-out) */
 .term-ps{color:#8fd070}
 .term-in{flex:1; min-width:0; background:transparent; border:none; outline:none; padding:0; color:inherit; font:inherit; height:2.8px; line-height:2.8px; caret-color:transparent} /* height = line-height = the prompt's line box: Chrome centers an input's line box inside any extra height, which read as a baseline drop */ /* native caret renders as a fat block at 2px type — a slim custom one rides the row instead */
 .term-row{position:relative}
@@ -1101,7 +1108,7 @@ footer{margin-top:2.6rem}
    keyboard live there; the VISIBLE text is plain spans in the lane, which render
    with the scrollback's exact metrics (input boxes clip/center at these sizes) */
 .term-in-wrap .term-in{position:absolute; inset:0; opacity:0}
-.term-caret-lane{flex:1; min-width:0; display:flex; align-items:flex-start; pointer-events:none; overflow:hidden}
+.term-caret-lane{flex:1; min-width:0; display:flex; align-items:flex-start; pointer-events:none; overflow:hidden; padding:1px 0.4px; margin:-1px -0.4px} /* same clip-slack trick as .term-out: the lane clips the typed line, so keep its edges off the glyph ink (padding pushed out, margin pulls the box back — text doesn't move) */
 .term-mirror{white-space:pre}
 .term-tail{white-space:pre}
 .term-caret{flex:none; width:0.4px; height:1.8px; margin-top:0.5px; background:#8fd070; opacity:0; pointer-events:none} /* sits on the 2.8px line box’s ascent band */
@@ -1115,7 +1122,7 @@ footer{margin-top:2.6rem}
 .mail-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#fffdf8; font-family:sans-serif; font-size:2.5px; line-height:1.35; color:#453a31; overflow:hidden}
 .mail-bar{flex:none; display:flex; align-items:center; background:#4a6b94; color:#f8f5ec; padding:0.8px 3px 1px; letter-spacing:0.2px}
 .mail-bar-title{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.mail-compose-btn{flex:none; display:flex; align-items:center; justify-content:center; margin-right:9px; cursor:pointer; background:#3d5a7f; border-radius:2.5px; padding:0 3px 0.4px; height:4px; line-height:1; box-shadow:inset 0 0.4px 0 rgba(255,255,255,0.28), inset 0 0 0 0.3px rgba(0,0,0,0.25)} /* right margin keeps it clear of the close pill */
+.mail-compose-btn{flex:none; display:flex; align-items:center; justify-content:center; margin-right:9px; cursor:pointer; background:#3d5a7f; border-radius:2.5px; padding:0.9px 3px 0; height:4px; line-height:1; box-shadow:inset 0 0.4px 0 rgba(255,255,255,0.28), inset 0 0 0 0.3px rgba(0,0,0,0.25)} /* right margin keeps it clear of the close pill */
 .mail-compose-btn:hover{background:#345070}
 .mail-compose-btn, .mail-reply-btn{color:#f8f5ec; font-size:2.5px}
 .mail-back{cursor:pointer}
@@ -1139,7 +1146,7 @@ footer{margin-top:2.6rem}
 .mail-body::-webkit-scrollbar-track{background:transparent}
 .mail-body::-webkit-scrollbar-thumb{background:rgba(69,58,49,.35); border-radius:1px}
 @supports not selector(::-webkit-scrollbar){.mail-body{scrollbar-width:thin; scrollbar-color:rgba(69,58,49,.35) transparent}}
-.mail-reply-btn{float:right; display:flex; align-items:center; justify-content:center; background:#3d5a7f; color:#f8f5ec; border-radius:2.5px; padding:0 3px 0.4px; height:4px; line-height:1; margin:0.6px 0 0 2px; cursor:pointer; box-shadow:inset 0 0.4px 0 rgba(255,255,255,0.28), inset 0 0 0 0.3px rgba(0,0,0,0.25)} /* action pill in the reading-view head, clear of the close pill via the head's right padding */
+.mail-reply-btn{float:right; display:flex; align-items:center; justify-content:center; background:#3d5a7f; color:#f8f5ec; border-radius:2.5px; padding:0.9px 3px 0; height:4px; line-height:1; margin:0.6px 0 0 2px; cursor:pointer; box-shadow:inset 0 0.4px 0 rgba(255,255,255,0.28), inset 0 0 0 0.3px rgba(0,0,0,0.25)} /* action pill in the reading-view head, clear of the close pill via the head's right padding */
 .mail-reply-btn:hover{background:#3d5a7f}
 /* minesweeper app: a classic 16×7 board over the screen, HTML grid in the foreignObject.
    The mines are 💍 rings ("don't set off the ring"); side panel on the RIGHT so the
@@ -8283,9 +8290,9 @@ var T = {
     cal_edmonton: "Edmonton",
     cal_prague: "Prague",
     cal_e_d1: "May 1 \u00b7 16:00\u201304:00",
-    cal_e_d2: "May 2 \u00b7 loft BBQ \u00b7 16:00\u201322:00",
+    cal_e_d2: "May 2 \u00b7 16:00\u201322:00",
     cal_p_d1: "July 10 \u00b7 15:00\u201303:00",
-    cal_p_d2: "July 11 \u00b7 garden brunch \u00b7 11:00\u201315:00",
+    cal_p_d2: "July 11 \u00b7 11:00\u201315:00",
     cal_download: "Download .ics",
     cal_gcal: "GCal",
     cal_ics_e1: "mark\u00e9ta \u221e behdad \u2014 Edmonton wedding",
@@ -8501,9 +8508,9 @@ var T = {
     cal_edmonton: "Edmonton",
     cal_prague: "Praha",
     cal_e_d1: "1. 5. \u00b7 16:00\u201304:00",
-    cal_e_d2: "2. 5. \u00b7 grilova\u010dka v loftu \u00b7 16:00\u201322:00",
+    cal_e_d2: "2. 5. \u00b7 16:00\u201322:00",
     cal_p_d1: "10. 7. \u00b7 15:00\u201303:00",
-    cal_p_d2: "11. 7. \u00b7 zahradn\u00ed brunch \u00b7 11:00\u201315:00",
+    cal_p_d2: "11. 7. \u00b7 11:00\u201315:00",
     cal_download: "St\u00e1hnout .ics",
     cal_gcal: "GCal",
     cal_ics_e1: "mark\u00e9ta \u221e behdad \u2014 svatba v Edmontonu",
@@ -14540,9 +14547,9 @@ document.addEventListener("click", function (e) {
     pbPickerGrid.innerHTML = "";
     PB_EFFECTS.forEach(function (fx) {
       var tc = document.createElement("canvas");
-      tc.width = 96; tc.height = 96; // square, like the polaroid window
+      tc.width = 384; tc.height = 384; // square, like the polaroid window; 4× the ~28px cell's on-screen size so the desk zoom (~4.7×, retina-doubled) still gets a crisp preview — same backing-vs-display pattern as the screensaver fractal canvas
       var tg = tc.getContext("2d");
-      if (tg) drawCover(tg, pbBaseFrame, 0, 0, 96, 96, fx.css);
+      if (tg) drawCover(tg, pbBaseFrame, 0, 0, tc.width, tc.height, fx.css);
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "pb-thumb";

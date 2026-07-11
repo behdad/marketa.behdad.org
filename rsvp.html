@@ -8865,10 +8865,25 @@ window.__dayWord = function (n) {
   // touch devices keep the laptop suggestion; fine pointers get the fullscreen +
   // headphones tip. The initial data-i fill already ran, so this one is set by hand;
   // swapping the attribute keeps future language toggles filling the right line.
-  if (!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches)) {
+  var lang0 = T[document.documentElement.lang] ? document.documentElement.lang : "en";
+  if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) {
+    // touch devices keep the laptop suggestion AND get the fullscreen/headphones tip
+    // as a second line (fullscreen is real on Android; each line refills via its own
+    // data-i on language toggles)
+    var fsLine = document.createElement("p");
+    fsLine.className = "device-hint show";
+    fsLine.setAttribute("data-i", "fs_hint");
+    fsLine.innerHTML = T[lang0].fs_hint || T.en.fs_hint;
+    hint.parentNode.insertBefore(fsLine, hint.nextSibling);
+    fsLine.addEventListener("click", function (e) {
+      var b = e.target && e.target.closest && e.target.closest(".fs-hint-link");
+      if (!b) return;
+      var fsBtn = document.getElementById("hunt-fullscreen-btn");
+      if (fsBtn) fsBtn.click();
+    });
+  } else {
     hint.setAttribute("data-i", "fs_hint");
-    var l = T[document.documentElement.lang] ? document.documentElement.lang : "en";
-    hint.innerHTML = T[l].fs_hint || T.en.fs_hint;
+    hint.innerHTML = T[lang0].fs_hint || T.en.fs_hint;
   }
   hint.classList.add("show");
   // the hint's "fullscreen" word is a live trigger — delegated, so language toggles
@@ -13900,11 +13915,12 @@ document.addEventListener("click", function (e) {
         // `fontTools` (and the TTFont the fonts line suggests) just works at the
         // first prompt; brotli lets TTFont open the woff2 files directly. a failed
         // fetch stays silent
+        // the shell shows what it's about to run on its own behalf, THEN runs it —
+        // the invocations are visible even mid-install or if the install dies
+        pyPrint(">>> import micropip; await micropip.install(['fonttools', 'brotli'])", "term-dim");
+        pyPrint(">>> from fontTools.ttLib import TTFont", "term-dim");
         py.runPythonAsync("import micropip\nawait micropip.install(['fonttools', 'brotli'])\nimport fontTools\nfrom fontTools.ttLib import TTFont\nfontTools.version")
           .then(function (v) {
-            // show the shell exactly what already ran on its behalf
-            pyPrint(">>> import micropip; await micropip.install(['fonttools', 'brotli'])", "term-dim");
-            pyPrint(">>> from fontTools.ttLib import TTFont", "term-dim");
             pyPrint(pyT("py_fonttools").replace("{v}", String(v)), "term-dim");
             return pyFonts;
           })

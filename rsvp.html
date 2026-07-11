@@ -6316,7 +6316,8 @@ section{margin:1.9rem 0}
 </g>
 <!-- LINUX app: a real x86 PC (v86/WebAssembly) booting a real Linux — a self-hosted
      repack of the v86 Buildroot ISO with the groom's hb-shape (HarfBuzz) baked in; the
-     emulator itself lazy-loads from the CDN on first open. The screen is the VM's SERIAL
+     emulator + BIOSes are self-hosted too (art/linux/) and lazy-load on first open,
+     with a 45 s stall watchdog. The screen is the VM's SERIAL
      console: finished lines scroll above, and the console's unfinished tail line (the
      shell's own prompt) labels the input row. Same shell as the terminal, tux accents. -->
 <g id="monitor-linux">
@@ -8353,7 +8354,7 @@ var T = {
     linux_loading: "booting linux\u2026 ~9 MB, first time only",
     linux_wait: "still booting\u2026 the prompt appears once the kernel is up.",
     linux_hint: "try: hb-shape /root/test.ttf 'mark\u00e9ta \u221e behdad' \u2014 the groom's text-shaping engine, in the box.",
-    linux_fail: "couldn't fetch linux \u2014 offline, or the CDN is blocked. close and reopen to retry.",
+    linux_fail: "linux couldn't boot \u2014 offline, or the download stalled. close and reopen to retry.",
   },
   cs: {
     hunt_title: "Den v podkroví",
@@ -8571,7 +8572,7 @@ var T = {
     linux_loading: "bootujeme linux\u2026 ~9 MB, jen napoprv\u00e9",
     linux_wait: "po\u0159\u00e1d bootujeme\u2026 prompt se uk\u00e1\u017ee, a\u017e j\u00e1dro nab\u011bhne.",
     linux_hint: "zkuste: hb-shape /root/test.ttf 'mark\u00e9ta \u221e behdad' \u2014 \u017eenichova s\u00e1zec\u00ed knihovna, p\u0159\u00edmo v krabici.",
-    linux_fail: "linux se nepoda\u0159ilo st\u00e1hnout \u2014 offline, nebo je CDN blokovan\u00e9. zav\u0159ete a otev\u0159ete znovu.",
+    linux_fail: "linux nenabootoval \u2014 offline, nebo se stahov\u00e1n\u00ed zaseklo. zav\u0159ete a otev\u0159ete znovu.",
   }
 };
 function setLang(l) {
@@ -13574,10 +13575,13 @@ document.addEventListener("click", function (e) {
   // A real Linux: v86 (a whole x86 PC emulated in WebAssembly) boots our repack of the
   // v86 project's tiny Buildroot ISO (Linux 2.6.34 + busybox, i686) with the groom's
   // own hb-shape — the HarfBuzz CLI, statically built i686/musl — plus a small OFL test
-  // font baked into the ramdisk (~6.9 MB, self-hosted in art/linux/, provenance and
-  // build recipe in art/linux/README.md). The emulator library (~2 MB) lazy-loads from
-  // jsDelivr on first open — the same one-CDN exception as the Python app above,
-  // ~9 MB total, nothing fetched until then. The screen is the VM's SERIAL console,
+  // font baked into the ramdisk (~6.9 MB, provenance and build recipe in
+  // art/linux/README.md). The emulator (libv86.js + v86.wasm) and both BIOS blobs are
+  // self-hosted in art/linux/ alongside the ISO — one origin, no third party in the
+  // boot path (a hung CDN route once stranded the loader on "booting…" forever) —
+  // everything lazy-loads on first open, ~9 MB total, nothing fetched until then.
+  // A 45 s watchdog turns a silent stall into the visible fail line.
+  // The screen is the VM's SERIAL console,
   // not its VGA canvas: at 124×42 a text-mode framebuffer is unreadable, while serial
   // reuses the terminal's 2px shell verbatim. Finished lines land in the scrollback;
   // the console's unfinished tail line (the shell's own prompt, "/root% ") labels the
@@ -13598,12 +13602,13 @@ document.addEventListener("click", function (e) {
   var lxHiddenStop = false; // the hidden-tab guard stopped the CPU (resume on return)
   var lxLine = ""; // the serial console's unfinished tail line (rendered as the row prompt)
   var lxDec = null; // streaming UTF-8 decoder for serial output (é/∞ span multiple bytes)
-  var LX_CDN = {
-    lib: "https://cdn.jsdelivr.net/npm/v86@0.5.424/build/libv86.js",
-    wasm: "https://cdn.jsdelivr.net/npm/v86@0.5.424/build/v86.wasm",
-    bios: "https://cdn.jsdelivr.net/gh/copy/v86@2f1346b0e7d88d4cbbbcc05fe15b4e369c3de23f/bios/seabios.bin",
-    vgaBios: "https://cdn.jsdelivr.net/gh/copy/v86@2f1346b0e7d88d4cbbbcc05fe15b4e369c3de23f/bios/vgabios.bin",
-    iso: "art/linux/linux.iso" // self-hosted: the stock v86 ISO repacked with hb-shape + a test font
+  var lxStallTimer = null; // boot watchdog — cleared by the first shell prompt
+  var LX_ASSETS = { // all self-hosted (pinned v86 0.5.424 build — provenance in art/linux/README.md)
+    lib: "art/linux/libv86.js",
+    wasm: "art/linux/v86.wasm",
+    bios: "art/linux/seabios.bin",
+    vgaBios: "art/linux/vgabios.bin",
+    iso: "art/linux/linux.iso" // the stock v86 ISO repacked with hb-shape + a test font
   };
   function lxT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
   function lxPrint(txt, cls) {
@@ -13637,19 +13642,41 @@ document.addEventListener("click", function (e) {
     if (/login: $/.test(tail)) { try { lxVM.serial0_send("root\n"); } catch (e) {} } // the getty's question, answered
     // first shell prompt: the machine is up — drop the hb-shape hint (the groom's own
     // text-shaping engine is installed in the image; that's the whole point of the gag)
-    if (!lxPrompted && /[%#$] $/.test(tail)) { lxPrompted = true; lxPrint(lxT("linux_hint"), "term-dim"); }
+    if (!lxPrompted && /[%#$] $/.test(tail)) {
+      lxPrompted = true;
+      if (lxStallTimer) { clearTimeout(lxStallTimer); lxStallTimer = null; }
+      if (lxLoadState === "failed") lxLoadState = "ready"; // a prompt out of a "stalled" boot means it recovered
+      lxPrint(lxT("linux_hint"), "term-dim");
+    }
   }
-  function lxFail() { lxLoadState = "failed"; lxPrint(lxT("linux_fail"), "term-err"); }
+  function lxFail() {
+    if (lxLoadState === "failed") return; // download-error and the stall watchdog can both report
+    if (lxStallTimer) { clearTimeout(lxStallTimer); lxStallTimer = null; }
+    lxLoadState = "failed";
+    lxPrint(lxT("linux_fail"), "term-err");
+  }
+  // boot watchdog: a fetch that hangs without ever erroring (bad route, intercepting
+  // proxy) or a wedged boot must not sit on "booting…" forever — 45 s with no shell
+  // prompt surfaces the fail line, whose close-and-reopen advice actually retries.
+  // A deliberately paused CPU (hidden tab, app closed mid-boot) isn't a stall: re-arm.
+  function lxStallWatch() {
+    lxStallTimer = setTimeout(function () {
+      lxStallTimer = null;
+      if (lxPrompted || lxLoadState === "failed") return;
+      if (document.hidden || lxHiddenStop || !monitor.classList.contains("show-linux")) { lxStallWatch(); return; }
+      lxFail();
+    }, 45000);
+  }
   function lxBootVM() {
     if (lxVM) { try { lxVM.destroy(); } catch (e) {} lxVM = null; } // a failed half-boot never survives into the retry
     try {
       lxVM = new window.V86({
-        wasm_path: LX_CDN.wasm,
+        wasm_path: LX_ASSETS.wasm,
         memory_size: 64 * 1024 * 1024, // plenty for a 2.6 kernel + busybox
         vga_memory_size: 2 * 1024 * 1024, // nobody watches the VGA — serial only
-        bios: { url: LX_CDN.bios },
-        vga_bios: { url: LX_CDN.vgaBios },
-        cdrom: { url: LX_CDN.iso },
+        bios: { url: LX_ASSETS.bios },
+        vga_bios: { url: LX_ASSETS.vgaBios },
+        cdrom: { url: LX_ASSETS.iso },
         autostart: true,
         disable_keyboard: true, // all input arrives via serial0_send
         disable_mouse: true
@@ -13670,9 +13697,11 @@ document.addEventListener("click", function (e) {
     if (lxLoadState === "loading" || lxLoadState === "ready") return;
     lxLoadState = "loading";
     lxPrint(lxT("linux_loading"), "term-dim");
+    if (lxStallTimer) clearTimeout(lxStallTimer);
+    lxStallWatch();
     if (window.V86) { lxBootVM(); return; } // a retry already has the library
     var s = document.createElement("script");
-    s.src = LX_CDN.lib;
+    s.src = LX_ASSETS.lib;
     s.onerror = function () { lxFail(); };
     s.onload = function () { lxBootVM(); };
     document.head.appendChild(s);

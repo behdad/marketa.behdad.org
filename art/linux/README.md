@@ -1,6 +1,26 @@
-# art/linux/linux.iso
+# art/linux/
 
-The bootable image behind rsvp.html's Linux app (v86). It is the v86 project's stock
+Everything rsvp.html's Linux app boots from — all self-hosted so the app has no
+third-party origin in its boot path (a visitor whose route to a CDN silently hung
+used to be stranded on "booting…" forever).
+
+## Emulator + BIOS blobs (verbatim upstream copies, pinned)
+
+- `libv86.js`, `v86.wasm` — the v86 emulator, exact files from the npm build
+  `v86@0.5.424` (fetched from `cdn.jsdelivr.net/npm/v86@0.5.424/build/`).
+  v86 is BSD-2-Clause: https://github.com/copy/v86 (LICENSE in that repo).
+  sha256 `b80fba71dacb7977e5b46800b3ba194bba7fe13e52fa3d22f80cc060ff015a4e` (libv86.js),
+  `aec2c16bb0a1618aa641bb44d9c0fe14681f8c1459fa08c32e3e0562020884e8` (v86.wasm).
+- `seabios.bin`, `vgabios.bin` — the BIOS images v86 ships for itself, from the v86
+  repo @ 2f1346b0 `bios/`. SeaBIOS is LGPLv3 (https://www.seabios.org, source at
+  https://github.com/coreboot/seabios); the VGA BIOS is SeaVGABIOS from the same
+  project. Unmodified binaries; the v86 repo is the corresponding-source pointer.
+  sha256 `73e3f359102e3a9982c35fce98eb7cd08f18303ac7f1ba6ebfbe6cdc1c244d98` (seabios),
+  `a4bc0d80cc3ca028c73dafa8fee396b8d054ce87ebd8abfbd31b06b437607880` (vgabios).
+
+## linux.iso
+
+The bootable image itself. It is the v86 project's stock
 Buildroot demo ISO — Linux 2.6.34.14 + busybox, i686, serial console, from
 https://github.com/copy/images @ db92d8fd (kernel & busybox under GPLv2; that repo and
 Buildroot/kernel.org are the corresponding-source pointers) — repacked with two

@@ -8339,6 +8339,7 @@ var T = {
     tagline: "We’re getting married<br><strong>Will you be there?</strong>",
     device_hint: "(best enjoyed on a laptop 💻)",
     fs_hint: "(best enjoyed <button type=\"button\" class=\"fs-hint-link\">fullscreen ⛶</button>, headphones on 🎧)",
+    chrome_hint: "(best experienced in Chrome — Safari misses some of the tricks)",
     season_winter: "❄ winter",
     season_spooky: "🎃 spooky season",
     season_auto: "⛅ back to today",
@@ -8563,6 +8564,7 @@ var T = {
     tagline: "Budeme se brát<br><strong>Budete tam?</strong>",
     device_hint: "(nejlíp si to užiješ na počítači 💻)",
     fs_hint: "(nejlíp na <button type=\"button\" class=\"fs-hint-link\">celou obrazovku ⛶</button> a se sluchátky 🎧)",
+    chrome_hint: "(nejlépe funguje v Chromu — Safari některé triky neumí)",
     season_winter: "❄ zima",
     season_spooky: "🎃 strašidelno",
     season_auto: "⛅ zpátky k dnešku",
@@ -8884,6 +8886,17 @@ window.__dayWord = function (n) {
   } else {
     hint.setAttribute("data-i", "fs_hint");
     hint.innerHTML = T[lang0].fs_hint || T.en.fs_hint;
+  }
+  // Safari (and other non-Chromium engines) miss enough of the tricks that the
+  // note earns its line — Chromium visitors are spared the redundant advice
+  var isChromium = /Chrom(e|ium)|CriOS/.test(navigator.userAgent || "");
+  try { var brs = (navigator.userAgentData && navigator.userAgentData.brands) || []; for (var bi = 0; bi < brs.length; bi++) if (/Chrom/i.test(brs[bi].brand)) isChromium = true; } catch (e) {}
+  if (!isChromium) {
+    var chLine = document.createElement("p");
+    chLine.className = "device-hint show";
+    chLine.setAttribute("data-i", "chrome_hint");
+    chLine.innerHTML = T[lang0].chrome_hint || T.en.chrome_hint;
+    hint.parentNode.insertBefore(chLine, hint.nextSibling);
   }
   hint.classList.add("show");
   // the hint's "fullscreen" word is a live trigger — delegated, so language toggles

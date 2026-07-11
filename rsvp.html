@@ -12884,6 +12884,7 @@ document.addEventListener("click", function (e) {
   if (termIn) {
     termIn.addEventListener("keydown", function (e) {
       e.stopPropagation(); // game shortcuts don't fire while typing
+      if (e.key === "Tab") { e.preventDefault(); return; } // focus stays in the shell
       if (e.key === "Enter") { var v = termIn.value; termIn.value = ""; termRun(v); }
       else if (e.key === "ArrowUp") { e.preventDefault(); if (termHistIdx > 0) { termHistIdx--; termIn.value = termHist[termHistIdx] || ""; } }
       else if (e.key === "ArrowDown") { e.preventDefault(); if (termHistIdx < termHist.length) { termHistIdx++; termIn.value = termHist[termHistIdx] || ""; } }
@@ -13994,6 +13995,17 @@ document.addEventListener("click", function (e) {
   if (pyIn) {
     pyIn.addEventListener("keydown", function (e) {
       e.stopPropagation(); // game shortcuts don't fire while typing
+      if (e.key === "Tab") {
+        // Tab must not walk focus out of the invisible input (it stranded typing);
+        // in a python shell it means indentation anyway
+        e.preventDefault();
+        var st = pyIn.selectionStart == null ? pyIn.value.length : pyIn.selectionStart;
+        var en = pyIn.selectionEnd == null ? st : pyIn.selectionEnd;
+        pyIn.value = pyIn.value.slice(0, st) + "    " + pyIn.value.slice(en);
+        pyIn.selectionStart = pyIn.selectionEnd = st + 4;
+        pyIn.dispatchEvent(new Event("input", { bubbles: true })); // the caret lane repaints
+        return;
+      }
       if (e.key === "Enter") { var v = pyIn.value; pyIn.value = ""; pyRun(v); }
       else if (e.key === "ArrowUp") { e.preventDefault(); if (pyHistIdx > 0) { pyHistIdx--; pyIn.value = pyHist[pyHistIdx] || ""; } }
       else if (e.key === "ArrowDown") { e.preventDefault(); if (pyHistIdx < pyHist.length) { pyHistIdx++; pyIn.value = pyHist[pyHistIdx] || ""; } }
@@ -14194,6 +14206,7 @@ document.addEventListener("click", function (e) {
   if (lxIn) {
     lxIn.addEventListener("keydown", function (e) {
       e.stopPropagation(); // game shortcuts don't fire while typing
+      if (e.key === "Tab") { e.preventDefault(); return; } // focus stays in the shell
       if (e.key === "Enter") {
         var v = lxIn.value; lxIn.value = "";
         if (v.trim()) lxHist.push(v);

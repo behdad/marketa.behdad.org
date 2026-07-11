@@ -1560,6 +1560,11 @@ footer{margin-top:2.6rem}
 .psb-brand b{color:var(--wine); font-weight:400; margin:0 1px}
 .phone-shell.pm-incall .psb-brand{color:#eee}
 .phone-shell.pm-incall .psb-brand b{color:var(--pink)}
+.psb-wifi-wrap{position:relative; display:inline-flex; align-items:center}
+.psb-wifi{display:block; cursor:pointer}
+.psb-wifi-pop{position:absolute; top:calc(100% + 7px); right:0; z-index:20; display:none; flex-direction:column; gap:4px; padding:8px 10px; background:var(--paper); color:var(--ink); border:1px solid var(--rule); border-radius:10px; box-shadow:0 8px 22px rgba(0,0,0,.24); white-space:nowrap; font-family:"Source Serif 4",serif; font-size:11.5px}
+.psb-wifi-wrap.show .psb-wifi-pop{display:flex}
+.psb-wifi-pop .pwp-row{display:block}
 .phone-stage{flex:1; min-height:0; position:relative; display:flex; flex-direction:column}
 .phone-home, .phone-app, .phone-incall{display:none; flex:1; min-height:0}
 .phone-shell.pm-home .phone-home{display:flex}
@@ -16229,6 +16234,7 @@ document.addEventListener("click", function (e) {
 
     var modal = null, shell = null, booted = false, closing = false;
     var statusClock = null, currentApp = null, currentTitleKey = "";
+    var battMgr = null, battHooked = false;
     var selectedCity = null;
     var callee = null, callConnected = false, callStatusKey = "", callHangingUp = false, callTimers = [];
 
@@ -16242,7 +16248,11 @@ document.addEventListener("click", function (e) {
         '<span class="psb-right">' +
           '<span class="psb-time">--:--</span>' +
           '<svg width="15" height="11" viewBox="0 0 15 11" aria-hidden="true"><rect x="0" y="7" width="3" height="4" fill="currentColor"/><rect x="4" y="5" width="3" height="6" fill="currentColor"/><rect x="8" y="3" width="3" height="8" fill="currentColor"/><rect x="12" y="0" width="3" height="11" fill="currentColor"/></svg>' +
-          '<svg width="23" height="11" viewBox="0 0 24 12" aria-hidden="true"><rect x="1" y="1.5" width="20" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="3" y="3.5" width="14" height="5" rx="1" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor"/></svg>' +
+          '<span class="psb-wifi-wrap" role="button" tabindex="0" title="Wi‑Fi">' +
+            '<svg class="psb-wifi" width="15" height="11" viewBox="0 0 16 12" aria-hidden="true"><path d="M2.4 4.3 A8 8 0 0 1 13.6 4.3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4.6 6.7 A5 5 0 0 1 11.4 6.7" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="8" cy="9.4" r="1.15" fill="currentColor"/></svg>' +
+            '<span class="psb-wifi-pop"><span class="pwp-row">📶 Never Forget</span><span class="pwp-row">🔑 Never Forgive</span></span>' +
+          '</span>' +
+          '<svg class="psb-batt" width="23" height="11" viewBox="0 0 24 12" aria-hidden="true"><rect x="1" y="1.5" width="20" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.2"/><rect class="psb-batt-fill" x="3" y="3.5" width="16" height="5" rx="1" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor"/><path class="psb-batt-bolt" d="M12.6 2.2 L8.6 6.6 H11 L10.3 9.8 L14.4 5.2 H11.9 Z" fill="var(--cream)" style="display:none"/></svg>' +
         '</span>' +
       '</div>';
     var NAV =
@@ -16285,7 +16295,7 @@ document.addEventListener("click", function (e) {
       shell = modal.querySelector(".phone-shell");
       // backdrop tap (outside the shell) closes
       modal.addEventListener("click", function (e) { if (e.target === modal) close(); });
-      shell.addEventListener("click", function (e) { e.stopPropagation(); });
+      shell.addEventListener("click", function (e) { e.stopPropagation(); var w = modal.querySelector(".psb-wifi-wrap"); if (w) w.classList.remove("show"); });
       modal.querySelector(".phone-close").addEventListener("click", function (e) { e.stopPropagation(); close(); });
       modal.querySelector(".pnav-back").addEventListener("click", navBack);
       modal.querySelector(".pnav-home").addEventListener("click", navHome);
@@ -16297,6 +16307,13 @@ document.addEventListener("click", function (e) {
         brand.addEventListener("click", openSite);
         brand.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openSite(e); } });
       })();
+      (function () {
+        var wrap = modal.querySelector(".psb-wifi-wrap");
+        function toggle(e) { e.stopPropagation(); wrap.classList.toggle("show"); }
+        wrap.addEventListener("click", toggle);
+        wrap.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(e); } });
+      })();
+      hookBattery();
       // the phone owns the keyboard while it's up: this bubble listener stops game
       // hotkeys (arrows / digits / space / d,q,r,s / ?) from reaching the room beneath —
       // native button activation already happened at the target before this fires
@@ -16602,7 +16619,31 @@ document.addEventListener("click", function (e) {
       var d = new Date(), z = function (n) { return (n < 10 ? "0" : "") + n; };
       c.textContent = z(d.getHours()) + ":" + z(d.getMinutes());
     }
-    function startStatusClock() { paintClock(); stopStatusClock(); statusClock = setInterval(paintClock, 30000); } // text-only, hidden-tab safe
+    // The pocket phone mirrors the visitor's REAL battery when the browser exposes it
+    // (getBattery is Chromium-only) — on a phone it feels like your own device; on a
+    // desktop or an unsupporting browser it falls back to a full battery, never empty.
+    function paintBattery() {
+      if (!shell) return;
+      var svg = shell.querySelector(".psb-batt");
+      if (!svg) return;
+      var fill = svg.querySelector(".psb-batt-fill"), bolt = svg.querySelector(".psb-batt-bolt");
+      var lvl = battMgr && typeof battMgr.level === "number" ? battMgr.level : 1;
+      var charging = battMgr ? !!battMgr.charging : false;
+      if (fill) fill.setAttribute("width", Math.max(2, Math.round(lvl * 16)));
+      if (bolt) bolt.style.display = charging ? "block" : "none";
+    }
+    function hookBattery() {
+      if (battHooked) return; battHooked = true;
+      if (!navigator.getBattery) { paintBattery(); return; }
+      try {
+        navigator.getBattery().then(function (b) {
+          battMgr = b;
+          ["levelchange", "chargingchange"].forEach(function (ev) { try { b.addEventListener(ev, paintBattery); } catch (_) {} });
+          paintBattery();
+        }, function () { paintBattery(); });
+      } catch (e) { paintBattery(); }
+    }
+    function startStatusClock() { paintClock(); paintBattery(); stopStatusClock(); statusClock = setInterval(paintClock, 30000); } // text-only, hidden-tab safe
     function stopStatusClock() { if (statusClock) { clearInterval(statusClock); statusClock = null; } }
     function open() {
       build();

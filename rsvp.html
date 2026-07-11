@@ -1285,6 +1285,11 @@ footer{margin-top:2.6rem}
 .browser-tab:hover{background:#d2ccbd}
 .browser-tab.active{background:#fffdf8; color:#453a31}
 .browser-tab.active:hover{background:#fffdf8}
+/* bezel back/forward: browser-only, ghosted until the frames have somewhere to go */
+.bezel-nav{opacity:0; visibility:hidden; pointer-events:none; cursor:pointer; transition:opacity .25s ease}
+#office-monitor.show-browser .bezel-nav{opacity:1; visibility:visible; pointer-events:auto}
+#office-monitor.show-browser .bezel-nav.nav-dead{opacity:.35; pointer-events:auto; cursor:default}
+.bezel-nav:hover .seg-hover{opacity:.5}
 .browser-tabs .browser-tab:nth-child(-n+3){flex-shrink:1} /* the couple's own three tabs give ground 4x more slowly than visitors' tabs */
 .browser-tab-plus{flex:none; width:4px; padding-left:0; padding-right:0; justify-content:center; color:#7a6f60}
 /* refusal shake, shared by the + stub (tab cap reached) and the URL input (unparsable) */
@@ -6526,6 +6531,18 @@ section{margin:1.9rem 0}
 <circle cx="0" cy="0" r="4.5" fill="#4285f4"/>
 </g>
 </defs>
+<!-- browser back/forward: small round buttons on the bezel flanks, only while the
+     browser app is up; enabled state mirrors the frames' actual navigation depth -->
+<g id="monitor-nav-back" class="bezel-nav nav-dead">
+<circle cx="249.5" cy="175" r="3.2" fill="#3a3a3c" stroke="#1f1f21" stroke-width="0.5"/>
+<circle class="seg-hover" cx="249.5" cy="175" r="3.2" fill="#0c0c0d" opacity="0"/>
+<path d="M250.9 172.9 L248 175 L250.9 177.1" fill="none" stroke="#f8f5ec" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<g id="monitor-nav-fwd" class="bezel-nav nav-dead">
+<circle cx="382.5" cy="175" r="3.2" fill="#3a3a3c" stroke="#1f1f21" stroke-width="0.5"/>
+<circle class="seg-hover" cx="382.5" cy="175" r="3.2" fill="#0c0c0d" opacity="0"/>
+<path d="M381.1 172.9 L384 175 L381.1 177.1" fill="none" stroke="#f8f5ec" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
 <g id="monitor-browser">
 <foreignObject x="254" y="154" width="124" height="42">
 <div xmlns="http://www.w3.org/1999/xhtml" id="monitor-browser-wrap" class="browser-wrap">
@@ -13808,9 +13825,41 @@ document.addEventListener("click", function (e) {
   // report failures; visitor tabs add the framing-refused hint since X-Frame-Options
   // blanks are common and just as silent.
   var browserFrame = document.getElementById("monitor-browser-frame");
+  if (browserFrame) browserFrame.addEventListener("load", function () { if (window.__browserFrameLoaded) window.__browserFrameLoaded(browserFrame); });
   var browserWrap = document.getElementById("monitor-browser-wrap");
   var browserCloseBtn = document.getElementById("monitor-browser-close");
   var browserTabsBar = document.getElementById("monitor-browser-tabs");
+  // back/forward ride the JOINT session history: history.back() reverses the newest
+  // navigation wherever it happened — inside a frame included. The depth counters
+  // gate the buttons so they can never navigate the GAME page itself: back only
+  // counts real in-frame navigations (each frame's first load is its arrival, not
+  // history), and both reset when the PC powers off with the frames.
+  var browserNavDepth = 0, browserFwdDepth = 0;
+  function paintBezelNav() {
+    var b = document.getElementById("monitor-nav-back"), f = document.getElementById("monitor-nav-fwd");
+    if (b) b.classList.toggle("nav-dead", browserNavDepth <= 0);
+    if (f) f.classList.toggle("nav-dead", browserFwdDepth <= 0);
+  }
+  window.__browserFrameLoaded = function (frame) {
+    if (!frame._arrived) { frame._arrived = true; paintBezelNav(); return; } // arrival, not a step
+    if (frame._expectBack) { frame._expectBack = false; } // the back/forward step itself reloads the frame
+    else { browserNavDepth++; browserFwdDepth = 0; }
+    paintBezelNav();
+  };
+  window.__browserNavReset = function () { browserNavDepth = 0; browserFwdDepth = 0; paintBezelNav(); };
+  (function () {
+    var b = document.getElementById("monitor-nav-back"), f = document.getElementById("monitor-nav-fwd");
+    function step(back) {
+      if (back ? browserNavDepth <= 0 : browserFwdDepth <= 0) return;
+      if (back) { browserNavDepth--; browserFwdDepth++; } else { browserFwdDepth--; browserNavDepth++; }
+      document.querySelectorAll("#monitor-browser iframe").forEach(function (fr) { fr._expectBack = true; });
+      try { back ? history.back() : history.forward(); } catch (e) {}
+      paintBezelNav();
+      playLaptopClickSound("office-monitor");
+    }
+    if (b) { b.addEventListener("click", function (e) { e.stopPropagation(); step(true); }); b.addEventListener("dblclick", function (e) { e.stopPropagation(); }); }
+    if (f) { f.addEventListener("click", function (e) { e.stopPropagation(); step(false); }); f.addEventListener("dblclick", function (e) { e.stopPropagation(); }); }
+  })();
   var browserPage = browserWrap ? browserWrap.querySelector(".browser-page") : null;
   var browserUrlIn = document.getElementById("monitor-browser-url");
   (function () {
@@ -13951,6 +14000,7 @@ document.addEventListener("click", function (e) {
     tab.fav.src = u.origin + "/favicon.ico"; // onerror re-hides it for sites without one
     tab.frame = document.createElement("iframe");
     tab.frame.className = "browser-frame";
+    tab.frame.addEventListener("load", function () { if (window.__browserFrameLoaded) window.__browserFrameLoaded(tab.frame); });
     tab.frame.setAttribute("src", u.href);
     if (browserPage) browserPage.appendChild(tab.frame);
     browserUrlIn.value = "";
@@ -14011,6 +14061,8 @@ document.addEventListener("click", function (e) {
   function blankBrowser() {
     // about:blank (not a removed attribute) actually unloads the framed site
     if (browserFrame && browserFrame.getAttribute("src")) browserFrame.setAttribute("src", "about:blank");
+    if (browserFrame) browserFrame._arrived = false;
+    if (window.__browserNavReset) window.__browserNavReset();
     // visitor tabs are the running machine's session state: power-off drops them whole
     while (browserDynTabs.length) {
       var t = browserDynTabs.pop();
@@ -16508,9 +16560,16 @@ document.addEventListener("click", function (e) {
     return !!(el && el.classList.contains("dusk"));
   }
   function outdoorTarget() {
-    // the REAL Edmonton temperature when the weather fetch has one (see realWeather
-    // above); the simulated early-May model is the offline/headless fallback
-    if (typeof window.__realOutdoorC === "number") return Math.round(Math.max(HARD_MIN, Math.min(HARD_MAX, window.__realOutdoorC)));
+    // real Edmonton ANCHORS the reading but the game still moves it: in-game dusk
+    // cools a few degrees off the real number and the game storm drops it further —
+    // real-but-not-fully, so the loft's own weather stays visible on the tube.
+    // The simulated early-May model is the offline/headless fallback.
+    if (typeof window.__realOutdoorC === "number") {
+      var r = window.__realOutdoorC;
+      if (isDusk("stage-balcony")) r -= 4;
+      if (window.__balconyStorm) r += STORM_OUT;
+      return Math.round(Math.max(HARD_MIN, Math.min(HARD_MAX, r)));
+    }
     var t = isDusk("stage-balcony") ? OUT_NIGHT : OUT_DAY;
     if (window.__balconyStorm) t += STORM_OUT;
     return Math.round(Math.max(HARD_MIN, Math.min(HARD_MAX, t + wanderOut)));

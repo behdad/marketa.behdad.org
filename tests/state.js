@@ -83,6 +83,11 @@ var CASCADE_ALLOW = [
 // extinguisher reset. Injected into the probe harness too, so its settle-wait
 // can stop early when only these remain. Keep minimal.
 var RESET_DIFF_ALLOW = [
+  // REAL-weather state, not game state: the live Edmonton feed toggles the garden
+  // window's storm view whenever it's actually raining there — it can arrive between
+  // the load snapshot and the reset diff, and a reset must NOT clear the sky
+  "#stage-garden +storming",
+  "#stage-garden -storming",
   // Known reset gap: __updateGrowlightForNight() turns the grow light off at
   // dusk, but resetHunt()/resetBalconyDusk() clears dusk without re-running it,
   // so a reset from nighttime leaves the grow light dark in daytime. Self-heals

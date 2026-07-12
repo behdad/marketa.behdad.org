@@ -11547,13 +11547,23 @@ document.addEventListener("keydown", function (e) {
     if (m.classList.contains("show-terminal")) return document.getElementById("monitor-term-in");
     return null;
   }
+  var zoomPending = false; // a deferred zoom-in is already scheduled — don't double-schedule or zoom mid-pan
   document.addEventListener("keydown", function (e) {
     if (!consoleOpen()) return;
     // keep the office in view AND zoomed into the monitor — a drift both navigates away and
     // (per goToStage) zooms the monitor out, which would leave the console tiny/unusable
-    if (window.currentStageName !== "office" && window.goToStage) window.goToStage("office");
+    var navigated = false;
+    if (window.currentStageName !== "office" && window.goToStage) { window.goToStage("office"); navigated = true; }
     var vp = document.querySelector(".hunt-viewport");
-    if (vp && !vp.classList.contains("device-zoomed") && window.__monitorZoomIn) window.__monitorZoomIn();
+    // pan first, THEN zoom: goToStage slides the room strip over .7s (and zooms the monitor
+    // out); zooming back in on the same tick composes with the in-flight slide and lands on a
+    // half-monitor. When we had to travel (e.g. returning from irene()/eclipse()), wait for the
+    // slide to settle before zooming back in — and don't re-zoom mid-pan if more keys arrive.
+    function zoomBack() { zoomPending = false; if (vp && !vp.classList.contains("device-zoomed") && window.__monitorZoomIn) window.__monitorZoomIn(); }
+    if (vp && !vp.classList.contains("device-zoomed")) {
+      if (navigated || zoomPending) { if (!zoomPending) { zoomPending = true; setTimeout(zoomBack, 740); } }
+      else zoomBack();
+    }
     var input = textConsoleInput();
     if (input && e.target !== input) { // a stray key leaked (input lost focus): refocus it and swallow the key so no game shortcut fires
       try { input.focus({ preventScroll: true }); } catch (err) {}
@@ -12700,9 +12710,10 @@ document.addEventListener("click", function (e) {
     applyPose(beh);
   };
   document.addEventListener("visibilitychange", function () { if (document.hidden) leave(); });
+  window.__ireneSummon = function () { show(); }; // full visit (appear → two actions → leave); used by the console irene() + the wall double-click
   // double-click the bare cuddly wall to summon Irene (a hidden bonus)
   var cuddlyWall = document.getElementById("cuddly-wall");
-  if (cuddlyWall) cuddlyWall.addEventListener("dblclick", function () { show(); });
+  if (cuddlyWall) cuddlyWall.addEventListener("dblclick", function () { window.__ireneSummon(); });
   schedule();
 })();
 (function () {
@@ -16282,6 +16293,8 @@ document.addEventListener("click", function (e) {
       confetti: "confetti() — a shower of confetti in the room you're in",
       fireworks: "fireworks() — a burst of fireworks over the room you're in",
       cat: "cat() — summon the loose chest cat to your room (bare `cat` prints a cat instead)",
+      irene: "irene() — the niece skips into the cuddly nook for a bit",
+      eclipse: "eclipse() — a solar (day) or lunar (night) eclipse over the balcony",
       loft: "loft — the couple's object: .countdown .nowPlaying .weather .menu .love .you .couple .weddings .site",
       ls: "ls — list the rooms",
       pwd: "pwd — print the working directory",
@@ -18129,13 +18142,23 @@ document.addEventListener("click", function (e) {
         // fetch stays silent
         // the shell shows what it's about to run on its own behalf, THEN runs it —
         // the invocations are visible even mid-install or if the install dies
-        pyPrint(">>> import micropip; await micropip.install(['fonttools', 'brotli', 'uharfbuzz'])", "term-dim");
-        pyPrint(">>> from fontTools.ttLib import TTFont; import uharfbuzz as hb", "term-dim");
-        py.runPythonAsync("import micropip\nawait micropip.install(['fonttools', 'brotli', 'uharfbuzz'])\nimport fontTools\nfrom fontTools.ttLib import TTFont\nimport uharfbuzz as hb\nfontTools.version + '|' + hb.version_string()")
+        pyPrint(">>> import micropip; await micropip.install(['fonttools', 'brotli'])", "term-dim");
+        pyPrint(">>> from fontTools.ttLib import TTFont", "term-dim");
+        py.runPythonAsync("import micropip\nawait micropip.install(['fonttools', 'brotli'])\nimport fontTools\nfrom fontTools.ttLib import TTFont\nfontTools.version")
           .then(function (v) {
-            var parts = String(v).split("|");
-            pyPrint(pyT("py_fonttools").replace("{v}", parts[0]), "term-dim");
-            if (parts[1]) pyPrint(pyT("py_uharfbuzz").replace("{v}", parts[1]), "term-dim");
+            pyPrint(pyT("py_fonttools").replace("{v}", String(v)), "term-dim");
+            // uharfbuzz (the groom's own) — installed SEPARATELY from the self-hosted wheel via the
+            // FS, which sidesteps the lock's stricter tag check on the abi3 wheel. Kept off the
+            // fontTools/TTFont chain above so a hiccup here can never break that preload. Optional;
+            // failures stay silent (hb just won't be present).
+            var HBWHL = "uharfbuzz-0.56.0b1-cp310-abi3-pyemscripten_2026_0_wasm32.whl";
+            fetch("pyodide/" + HBWHL).then(function (r) { if (!r.ok) throw 0; return r.arrayBuffer(); }).then(function (buf) {
+              py.FS.writeFile("/tmp/" + HBWHL, new Uint8Array(buf));
+              return py.runPythonAsync("await micropip.install('emfs:/tmp/" + HBWHL + "')\nimport uharfbuzz as hb\nhb.version_string()");
+            }).then(function (hv) {
+              pyPrint(">>> import uharfbuzz as hb", "term-dim");
+              pyPrint(pyT("py_uharfbuzz").replace("{v}", String(hv)), "term-dim");
+            }, function () {});
             return pyFonts;
           })
           .then(function (names) {
@@ -33456,6 +33479,16 @@ function spawnDustMote(container) {
     return "🐈 here, kitty — she pads into the office.";
   };
   window.love = function () { return "love is patient, love is kind. ∞"; };
+  window.irene = function () {
+    if (window.goToStage) window.goToStage("cuddly"); // she only appears in the cuddly nook
+    if (window.__ireneSummon) { window.__ireneSummon(); return "👧 irene skips into the nook."; }
+    return "irene isn't around right now.";
+  };
+  window.eclipse = function () {
+    if (window.goToStage) window.goToStage("balcony"); // the eclipse plays out over the balcony sky
+    if (window.__runBalconyEclipse) { window.__runBalconyEclipse(); return "🌒 the moon slides across the sky…"; }
+    return "no clear sky for an eclipse.";
+  };
 })();
 (function () {
   var gmailBtn = document.getElementById("rsvp-gmail-btn");

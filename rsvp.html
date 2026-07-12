@@ -18142,20 +18142,18 @@ document.addEventListener("click", function (e) {
         // fetch stays silent
         // the shell shows what it's about to run on its own behalf, THEN runs it —
         // the invocations are visible even mid-install or if the install dies
-        // googlefonts(name): fetch ANY of the ~1900 Google Fonts families at runtime and hand
-        // back raw sfnt bytes — css2 gives a woff2 URL, fontTools+brotli decompress it in-Python
-        // (harfbuzz/hb can't read woff2). The family catalogue is loaded from the self-hosted
-        // gfonts.json because fonts.google.com/metadata sends no CORS header. String methods, not
-        // regex, so the source survives the JS-template-literal escaping intact.
+        // googlefonts(name): fetch ANY Google Fonts family at runtime and hand back raw sfnt
+        // bytes — css2 gives a woff2 URL, fontTools+brotli decompress it in-Python (harfbuzz/hb
+        // can't read woff2). String methods, not regex, so the source survives the JS-template-
+        // literal escaping intact.
         var GFPY = `
-import io, json
+import io
 from pyodide.http import pyfetch
 
 async def googlefonts(family, weight=None, text=None):
     """Fetch a Google Fonts family and return raw sfnt (TTF/OTF) bytes.
     e.g.  face = hb.Face(await googlefonts('Anton'))
-          TTFont(io.BytesIO(await googlefonts('Fraunces')))
-    googlefonts.families -> list of names; googlefonts.search('mono') -> matches."""
+          TTFont(io.BytesIO(await googlefonts('Lalezar')))"""
     spec = family if weight is None else "{}:wght@{}".format(family, weight)
     url = "https://fonts.googleapis.com/css2?family=" + spec.replace(" ", "+")
     if text:
@@ -18171,13 +18169,6 @@ async def googlefonts(family, weight=None, text=None):
     f = TTFont(io.BytesIO(data)); f.flavor = None
     out = io.BytesIO(); f.save(out)
     return out.getvalue()
-
-try:
-    googlefonts.families = json.loads(await (await pyfetch("gfonts.json")).string())
-except Exception:
-    googlefonts.families = []
-googlefonts.search = lambda q: [n for n in googlefonts.families if q.lower() in n.lower()]
-len(googlefonts.families)
 `;
         pyPrint(">>> import micropip; await micropip.install(['fonttools', 'brotli'])", "term-dim");
         pyPrint(">>> from fontTools.ttLib import TTFont", "term-dim");
@@ -18196,10 +18187,10 @@ len(googlefonts.families)
               pyPrint(">>> import uharfbuzz as hb", "term-dim");
               pyPrint(pyT("py_uharfbuzz").replace("{v}", String(hv)), "term-dim");
             }, function () {});
-            // define googlefonts() once TTFont is in scope; load the family catalogue for
-            // googlefonts.families / .search(). Optional — a failure never blocks the fonts line.
-            py.runPythonAsync(GFPY).then(function (n) {
-              pyPrint(">>> await googlefonts('Anton')  # any of " + String(n) + " families -> font bytes: hb.Face(await googlefonts('Fraunces'))", "term-dim");
+            // define googlefonts() once TTFont is in scope. Optional — a failure never blocks
+            // the fonts line below.
+            py.runPythonAsync(GFPY).then(function () {
+              pyPrint(">>> hb.Face(await googlefonts('Anton'))  # fetch any Google Fonts family — try 'Anton', 'Lalezar'", "term-dim");
             }, function () {});
             return pyFonts;
           })

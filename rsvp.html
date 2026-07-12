@@ -3263,6 +3263,16 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 #balcony-butterfly.flying .bfly-wing{animation:bfly-flap .22s ease-in-out infinite alternate}
 @keyframes bfly-flap{from{transform:scaleX(1)}to{transform:scaleX(0.35)}}
 @media (prefers-reduced-motion: reduce){#balcony-butterfly.flying .bfly-wing{animation:none}}
+/* dusk mosquitoes swarming the string lights — a quiet, swattable bonus. Each mosquito's
+   wrapper <g> is positioned by a rAF loop writing transform ATTRIBUTES (see the
+   #balcony-mosquitoes controller); the wing flap rides these CHILD nodes so their CSS
+   transform can't clash with the wrapper's positioning transform. Bodies are JS-spawned +
+   removed outright, so no static-class cleanup is needed; the wing flap loops `infinite`. */
+#balcony-mosquitoes .moz-wing{transform-box:fill-box; animation:moz-wing-flap .1s linear infinite alternate}
+#balcony-mosquitoes .moz-wing-l{transform-origin:right center}
+#balcony-mosquitoes .moz-wing-r{transform-origin:left center}
+@keyframes moz-wing-flap{from{transform:scaleY(1)}to{transform:scaleY(0.28)}}
+@media (prefers-reduced-motion: reduce){#balcony-mosquitoes .moz-wing{animation:none}}
 #garden-birds.startled .bird-fly-a, #garden-birds.startled .bird-fly-b{animation-duration:4s}
 #garden-rooster.wobbling2 #garden-rooster-inner{animation:rooster-wobble-2 .55s ease-in-out}
 @keyframes rooster-wobble-2{
@@ -8941,6 +8951,12 @@ section{margin:1.9rem 0}
 <stop offset="1" stop-color="#ffdc9a" stop-opacity="0"/>
 </radialGradient></defs>
 <rect id="balcony-flashlight-glow" x="0" y="0" width="680" height="340" fill="url(#balcony-flashlight-grad)" opacity="0" pointer-events="none" style="mix-blend-mode:screen; transition:opacity .35s ease"/>
+<!-- dusk mosquitoes: JS-spawned tiny pests that swarm the string lights and can be swatted.
+     Empty at rest; the #balcony-mosquitoes controller fills + hard-clears it. Painted last
+     inside the wobble so it rides the tipsy sway and sits above the scene; it takes pointer
+     events (each mosquito carries a generous transparent hit circle) but a bare group only
+     hit-tests where its children paint, so it never blocks page scroll elsewhere. -->
+<g id="balcony-mosquitoes" aria-hidden="true"></g>
 </g><!-- /#balcony-wobble -->
 </g>
 <rect id="balcony-thunder-flash" class="balcony-thunder-flash" x="2720" y="0" width="680" height="340" pointer-events="none"/>
@@ -21303,6 +21319,7 @@ document.addEventListener("click", function (e) {
         if (wallLampEl) wallLampEl.classList.remove("on");
         if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle();
       }
+      if (window.__updateMozzies) window.__updateMozzies(); // dusk → mosquitoes swarm; day → they clear
     }
     window.__autoToggleDusk = toggleDusk;
     // a manual flip means the visitor's driving — stop the automatic cycle
@@ -21334,6 +21351,7 @@ document.addEventListener("click", function (e) {
       var wallLampEl = document.getElementById("balcony-walllamp");
       if (wallLampEl) wallLampEl.classList.remove("on");
       if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle();
+      if (window.__updateMozzies) window.__updateMozzies(); // dusk removed → tear the swarm down
     };
     // click the night sky (not the moon) to wish on a shooting star
     var skyClick = document.getElementById("balcony-skyclick");
@@ -21343,6 +21361,216 @@ document.addEventListener("click", function (e) {
       });
     }
   }
+  /* ---- dusk mosquito-swat micro-game -------------------------------------
+     A few mosquitoes buzz erratic little zig-zags around the balcony string
+     lights at dusk; tap one to swat it (soft splat + pat), and another wanders
+     in a beat later. A quiet, UNTRACKED bonus — no markFound, no cheatsheet.
+
+     Self-cleaning, mirroring the loft's other ambients:
+      • ONE rAF loop drives everything (flight + a spawn accumulator, like the
+        alien arcade's arcadeStep) — no separate timer, so spawning naturally
+        pauses with the frames when the tab is hidden/backgrounded (no pile-up).
+      • Each mosquito's wrapper <g> is positioned by writing a transform
+        ATTRIBUTE (translate+rotate) every frame — never a CSS transform, which
+        would clash with the attribute. The wing flap rides child nodes (CSS).
+      • Count is hard-capped at 2–4; the layer is hard-cleared (never trusting a
+        per-node onfinish) on every teardown: leaving the balcony, flip back to
+        day, the extinguisher reset, and tab-hide. mozFrame self-cancels the
+        instant conditions fail, so no path leaves a live rAF behind.
+     Splat/flourish effects spawn INTO this same layer, so the hard-clear wipes
+     any in-flight one too. */
+  (function () {
+    var mozLayer = document.getElementById("balcony-mosquitoes");
+    var mozStage = document.getElementById("stage-balcony");
+    if (mozLayer && mozStage) {
+      var MOZNS = "http://www.w3.org/2000/svg";
+      var mozReduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      // swarm band in balcony-local coords: the string-light bulbs sit at
+      // x≈478–634, y≈158–188, so this brackets them and spills a little toward
+      // the deck. Every mosquito's home wanders inside this box.
+      var MOZ_X0 = 470, MOZ_X1 = 646, MOZ_Y0 = 148, MOZ_Y1 = 214;
+      var mozAmp = mozReduce ? 0.3 : 1;      // calmer flight under reduced motion
+      var mozDrift = mozReduce ? 0.28 : 1;
+      var mozzies = [], mozRaf = null, mozLastT = 0;
+      var mozTarget = 3, mozSpawnAcc = 0, mozNextDelay = 0;
+
+      function mozRand(a, b) { return a + Math.random() * (b - a); }
+      function mozWant() {
+        return window.currentStageName === "balcony" &&
+          mozStage.classList.contains("dusk") &&
+          document.visibilityState !== "hidden";
+      }
+      function mozClearLayer() { while (mozLayer.firstChild) mozLayer.removeChild(mozLayer.firstChild); }
+      function mozRerollTarget() { mozTarget = 2 + Math.floor(Math.random() * 3); } // 2..4
+
+      function spawnMozzie() {
+        var m = {
+          homeX: mozRand(MOZ_X0 + 14, MOZ_X1 - 14),
+          homeY: mozRand(MOZ_Y0 + 12, MOZ_Y1 - 12),
+          hvx: mozRand(-0.012, 0.012), hvy: mozRand(-0.009, 0.009),
+          t: mozRand(0, 6000),
+          a1: mozRand(8, 13), a2: mozRand(3, 6), a3: mozRand(5, 9), a4: mozRand(2, 4.5),
+          w1: mozRand(0.002, 0.005), w2: mozRand(0.004, 0.008),
+          w3: mozRand(0.0025, 0.006), w4: mozRand(0.005, 0.009),
+          p1: mozRand(0, 6.28), p2: mozRand(0, 6.28), p3: mozRand(0, 6.28), p4: mozRand(0, 6.28),
+          x: 0, y: 0, px: 0, py: 0, ang: 0, dead: false
+        };
+        var g = document.createElementNS(MOZNS, "g");
+        // generous transparent hit circle first (fill:transparent hit-tests; fill:none would not),
+        // so the tiny body is easy to tap on mobile; the rest is decorative + pointer-transparent
+        g.innerHTML =
+          '<circle r="15" fill="transparent"/>' +
+          '<g class="moz-body" pointer-events="none">' +
+          // a faint pale sheen lifts the tiny dark body off the busy fence/sky behind it
+          // (like the string lights catching it) without reading as a glowing firefly
+          '<circle cx="0" cy="0" r="5" fill="#f2ead8" opacity="0.14"/>' +
+          '<g class="moz-wing moz-wing-l"><ellipse cx="-0.5" cy="-3.4" rx="4.2" ry="2" fill="#dbe4ea" opacity="0.62" stroke="#aab5bc" stroke-width="0.3"/></g>' +
+          '<g class="moz-wing moz-wing-r"><ellipse cx="-0.5" cy="3.4" rx="4" ry="1.9" fill="#dbe4ea" opacity="0.56" stroke="#aab5bc" stroke-width="0.3"/></g>' +
+          '<line x1="-2.5" y1="0.5" x2="-6" y2="3.5" stroke="#4a3d34" stroke-width="0.5"/>' +
+          '<line x1="-2.5" y1="0" x2="-6.5" y2="0.5" stroke="#4a3d34" stroke-width="0.5"/>' +
+          '<line x1="-2.5" y1="-0.5" x2="-6" y2="-3" stroke="#4a3d34" stroke-width="0.5"/>' +
+          '<ellipse cx="0" cy="0" rx="3" ry="1.4" fill="#4a3d34"/>' +
+          '<line x1="2.8" y1="0" x2="7" y2="1" stroke="#5b4a3f" stroke-width="0.7" stroke-linecap="round"/>' +
+          '<circle cx="2.6" cy="-0.3" r="1.3" fill="#3a2f28"/>' +
+          '</g>';
+        var hit = g.firstChild;
+        function swat(ev) {
+          if (m.dead) return;
+          m.dead = true;
+          if (ev) { if (ev.stopPropagation) ev.stopPropagation(); }
+          var idx = mozzies.indexOf(m);
+          if (idx !== -1) mozzies.splice(idx, 1);
+          mozSplat(m.x, m.y);
+          playMosquitoSlapSound("balcony-lights");
+          if (g.parentNode) g.parentNode.removeChild(g);
+          // reset the refill beat on EVERY swat, not just clear-all: at steady state the
+          // accumulator saturates (spawn condition false while full), so without this a swat
+          // would pop a replacement the very next frame instead of after a pause. A short
+          // beat after thinning the swarm, a longer breather once it's fully cleared.
+          mozSpawnAcc = 0;
+          if (mozzies.length === 0) { mozCleared(m.x, m.y); mozRerollTarget(); mozNextDelay = mozRand(3200, 5600); }
+          else { mozNextDelay = mozRand(1200, 3000); }
+        }
+        // swat on pointerdown (the target moves, so this is the reliable tap) AND click
+        // (what the headless verify dispatches); the m.dead guard keeps it idempotent. No
+        // preventDefault, so a tap that isn't on a mosquito still pans/scrolls the page.
+        hit.addEventListener("pointerdown", swat);
+        hit.addEventListener("click", swat);
+        mozLayer.appendChild(g);
+        m.el = g;
+        // gentle fade-in as it wanders in (opacity only — never touches the transform attr)
+        if (!mozReduce && g.animate) g.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 420, easing: "ease-out" });
+        mozzies.push(m);
+      }
+
+      function mozSplat(x, y) {
+        var g = document.createElementNS(MOZNS, "g");
+        g.setAttribute("transform", "translate(" + x.toFixed(1) + "," + y.toFixed(1) + ")");
+        g.setAttribute("pointer-events", "none");
+        // a muted ink smudge + a couple of tiny specks — charming, not gory (no red)
+        g.innerHTML =
+          '<circle r="2.4" fill="#453a31"/>' +
+          '<circle cx="3.5" cy="-1.5" r="0.9" fill="#5b4a3f"/>' +
+          '<circle cx="-2.8" cy="2.2" r="0.8" fill="#5b4a3f"/>' +
+          '<circle cx="1.5" cy="3.2" r="0.7" fill="#716455"/>';
+        mozLayer.appendChild(g);
+        if (mozReduce || !g.animate) { setTimeout(function () { if (g.parentNode) g.parentNode.removeChild(g); }, 320); return; }
+        var a = g.animate([{ scale: 0.5, opacity: 1 }, { scale: 1.3, opacity: 0 }], { duration: 420, easing: "ease-out" });
+        a.onfinish = function () { if (g.parentNode) g.parentNode.removeChild(g); };
+      }
+
+      // subtle "all clear" flourish: a small ring of pale sparkles, once the last one's gone
+      function mozCleared(x, y) {
+        if (mozReduce) return;
+        var g = document.createElementNS(MOZNS, "g");
+        g.setAttribute("transform", "translate(" + x.toFixed(1) + "," + y.toFixed(1) + ")");
+        g.setAttribute("pointer-events", "none");
+        var dots = "";
+        for (var i = 0; i < 6; i++) {
+          var ang = (i / 6) * 6.283, r = 7;
+          dots += '<circle cx="' + (Math.cos(ang) * r).toFixed(1) + '" cy="' + (Math.sin(ang) * r).toFixed(1) + '" r="1.1" fill="#f2e2bd"/>';
+        }
+        g.innerHTML = dots;
+        mozLayer.appendChild(g);
+        if (!g.animate) { setTimeout(function () { if (g.parentNode) g.parentNode.removeChild(g); }, 600); return; }
+        var a = g.animate([{ scale: 0.3, opacity: 0.95 }, { scale: 1.6, opacity: 0 }], { duration: 650, easing: "ease-out" });
+        a.onfinish = function () { if (g.parentNode) g.parentNode.removeChild(g); };
+      }
+
+      function mozStep(dt) {
+        // spawn accumulator — refills toward the current target, so swatting them all
+        // leaves the swarm to wander back a beat later (never exceeds 4)
+        mozSpawnAcc += dt;
+        if (mozSpawnAcc >= mozNextDelay && mozzies.length < mozTarget) {
+          mozSpawnAcc = 0; mozNextDelay = mozRand(1600, 4200); spawnMozzie();
+        }
+        for (var i = 0; i < mozzies.length; i++) {
+          var m = mozzies[i];
+          m.t += dt;
+          // home slowly roams the band, bouncing off the edges so orbits stay in view
+          m.homeX += m.hvx * dt * mozDrift;
+          m.homeY += m.hvy * dt * mozDrift;
+          if (m.homeX < MOZ_X0 + 14 || m.homeX > MOZ_X1 - 14) { m.hvx = -m.hvx; m.homeX = Math.max(MOZ_X0 + 14, Math.min(MOZ_X1 - 14, m.homeX)); }
+          if (m.homeY < MOZ_Y0 + 12 || m.homeY > MOZ_Y1 - 12) { m.hvy = -m.hvy; m.homeY = Math.max(MOZ_Y0 + 12, Math.min(MOZ_Y1 - 12, m.homeY)); }
+          // erratic zig-zag = sum of out-of-phase sines around the roaming home
+          m.px = m.x; m.py = m.y;
+          m.x = m.homeX + (m.a1 * Math.sin(m.w1 * m.t + m.p1) + m.a2 * Math.sin(m.w2 * m.t + m.p2)) * mozAmp;
+          m.y = m.homeY + (m.a3 * Math.sin(m.w3 * m.t + m.p3) + m.a4 * Math.cos(m.w4 * m.t + m.p4)) * mozAmp;
+          var tf = "translate(" + m.x.toFixed(1) + "," + m.y.toFixed(1) + ")";
+          if (!mozReduce) {
+            var dx = m.x - m.px, dy = m.y - m.py;
+            if (dx * dx + dy * dy > 0.02) {
+              var target = Math.atan2(dy, dx) * 57.2958;
+              var d = target - m.ang;
+              while (d > 180) d -= 360; while (d < -180) d += 360;
+              m.ang += d * 0.25;                 // low-pass so heading doesn't jitter
+            }
+            tf += " rotate(" + m.ang.toFixed(1) + ")";
+          }
+          m.el.setAttribute("transform", tf);
+        }
+      }
+
+      function mozFrame(now) {
+        if (!mozWant()) { stopMozzies(); return; }   // self-cancel: room-leave, day-flip, tab-hide
+        var dt = mozLastT ? Math.min(50, now - mozLastT) : 16;
+        mozLastT = now;
+        mozStep(dt);
+        mozRaf = requestAnimationFrame(mozFrame);
+      }
+
+      function startMozzies() {
+        if (mozRaf) return;
+        mozClearLayer();
+        mozzies.length = 0;
+        mozRerollTarget();
+        mozSpawnAcc = 0; mozNextDelay = mozRand(400, 1200);
+        spawnMozzie(); spawnMozzie();   // a couple already about the moment you arrive at dusk
+        mozLastT = 0;
+        mozRaf = requestAnimationFrame(mozFrame);
+      }
+      function stopMozzies() {
+        if (mozRaf) { cancelAnimationFrame(mozRaf); mozRaf = null; }
+        mozClearLayer();                // hard-clear — never trust per-node onfinish for teardown
+        mozzies.length = 0;
+      }
+      function updateMozzies() {
+        var want = mozWant();
+        if (want && !mozRaf) startMozzies();
+        else if (!want && mozRaf) stopMozzies();
+      }
+
+      // shared entry points: goToStage (room change), toggleDusk (day/night flip),
+      // resetBalconyDusk (the extinguisher reset), and the tab-hide below all call this;
+      // it reads live room+dusk+visibility, so it both starts and tears down as needed.
+      window.__updateMozzies = updateMozzies;
+      window.__stopMozzies = stopMozzies;
+      document.addEventListener("visibilitychange", updateMozzies);
+      // test/inspection hook: `raf` lets the headless verify assert "no leftover timer"
+      // (raf === null) after each teardown path; `count` is the live mosquito tally.
+      window.__mozzieState = function () { return { raf: mozRaf, count: mozzies.length, nodes: mozLayer.childElementCount }; };
+    }
+  })();
   var ashtray = document.getElementById("balcony-ashtray");
   if (ashtray) {
     function spinAshtray() {
@@ -26957,6 +27185,45 @@ function playAlienBlipSound() {
     osc.stop(t + 0.17);
   } catch (e) {}
 }
+// soft little "pat" when a mosquito is swatted: a short low-passed noise slap plus a
+// tiny body thud, panned to the string lights. Quiet + always user-initiated (a tap),
+// so getSfxCtx's hidden gate is guard enough — no extra hasFocus check needed.
+function playMosquitoSlapSound(panId) {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var out = pannedOut(ctx, panId || "balcony-lights");
+    // the slap: a brief burst of noise, low-passed so it reads as a soft pat, not a hiss
+    var bufSize = Math.floor(ctx.sampleRate * 0.09);
+    var buffer = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    var data = buffer.getChannelData(0);
+    for (var i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufSize);
+    var noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    var lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(1400, t);
+    lp.frequency.exponentialRampToValueAtTime(500, t + 0.07);
+    var nGain = ctx.createGain();
+    nGain.gain.setValueAtTime(0.0001, t);
+    nGain.gain.exponentialRampToValueAtTime(0.07, t + 0.006);
+    nGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+    noise.connect(lp); lp.connect(nGain); nGain.connect(out);
+    noise.start(t); noise.stop(t + 0.1);
+    // the body of the slap: a very short low thud
+    var osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(150, t);
+    osc.frequency.exponentialRampToValueAtTime(80, t + 0.06);
+    var oGain = ctx.createGain();
+    oGain.gain.setValueAtTime(0.0001, t);
+    oGain.gain.exponentialRampToValueAtTime(0.05, t + 0.008);
+    oGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    osc.connect(oGain); oGain.connect(out);
+    osc.start(t); osc.stop(t + 0.08);
+  } catch (e) {}
+}
 function playDeskMotorSound() {
   try {
     var ctx = getSfxCtx();
@@ -28362,6 +28629,7 @@ function spawnDustMote(container) {
     if (window.__updateWind) window.__updateWind(ROOM_FADE); // wind bed (balcony, + through the cuddly door) fades out over the room change too
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(name === "garden"); // birdsong only in the garden, and only by day
     if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(name === "balcony"); // string lights pulse with the beat only on the balcony
+    if (window.__updateMozzies) window.__updateMozzies(); // dusk mosquitoes swarm only on the balcony (reads the now-current room)
     if (window.__updateSongRoomPan) window.__updateSongRoomPan(); // room-fixed rooms settle immediately
     if (window.__updateSongRoomWidth) window.__updateSongRoomWidth(); // width follows the same room-fixed table, no transition dependency
     // the balcony's pan reads the door's live on-screen position (see
@@ -30390,6 +30658,7 @@ function spawnDustMote(container) {
     if (window.resetSmoker) window.resetSmoker();
     if (window.resetLaptop) window.resetLaptop();
     if (window.resetBalconyDusk) window.resetBalconyDusk();
+    if (window.__stopMozzies) window.__stopMozzies(); // clear any dusk mosquitoes on the extinguisher reset
     if (window.__clearTipsy) window.__clearTipsy();
     if (window.__setUvParty) window.__setUvParty(false); // drop out of the blacklight party
     if (window.__setGardenParty) window.__setGardenParty(false); // ...and tear the garden party down

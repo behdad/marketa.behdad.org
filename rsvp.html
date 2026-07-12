@@ -138,13 +138,21 @@ footer{margin-top:2.6rem}
 @media (max-width:759px){
   .hunt-nav{width:1.9rem; height:1.9rem; font-size:1.2rem}
 }
-/* the fullscreen + volume controls live in a vertical stack to the RIGHT of the scene
-   (a flex child of .hunt-frame after #hunt-next), not overlaid on the room — beside the
-   scene they're clearly visible and easy to tap. The stack's live offsetWidth is folded
-   into sizeFullscreenFrame's `chrome` so the room still fits in fullscreen. */
+/* right-of-scene control column: one column wide (the › next arrow governs its width),
+   shared by the fullscreen/volume button stack pinned to the scene's TOP and the › next
+   arrow kept vertically centered (as nav arrows are) below them. align-self:stretch makes
+   the column span the frame's full height = the scene height, so top:0 lands on the
+   scene's top edge; the arrow is centered by the column's own flex-center. Because the
+   arrow (out of flow via its own centering) and the button stack (absolute) share ONE
+   column, the frame reserves just one nav-width column on the right — sizeFullscreenFrame
+   measures that single width, never next+side doubled. */
+.hunt-right{
+  position:relative; flex:0 0 auto; align-self:stretch; width:2.3rem;
+  display:flex; align-items:center; justify-content:center;
+}
 .hunt-side{
-  flex:0 0 auto; display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:.35rem; align-self:center;
+  position:absolute; top:0; left:50%; transform:translateX(-50%);
+  display:flex; flex-direction:column; align-items:center; gap:.35rem;
 }
 .hunt-fullscreen-btn{
   flex:0 0 auto; font:inherit; font-size:1rem; line-height:1;
@@ -154,6 +162,7 @@ footer{margin-top:2.6rem}
 }
 .hunt-fullscreen-btn:hover, .hunt-fullscreen-btn:focus-visible{background:#7a2f3d}
 @media (max-width:759px){
+  .hunt-right{width:1.9rem}
   .hunt-fullscreen-btn{width:1.7rem; height:1.7rem; font-size:.9rem}
 }
 /* the cinematic's ghost cursor: a cream dot with a wine ring that glides between the
@@ -8922,18 +8931,20 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
     </svg>
     <div id="hunt-wipe" aria-hidden="true"></div>
   </div>
-  <button type="button" id="hunt-next" class="hunt-nav hunt-nav-next locked" aria-label="Next room">›</button>
-  <div class="hunt-side" id="hunt-side">
-    <button type="button" id="hunt-fullscreen-btn" class="hunt-fullscreen-btn" aria-label="Enter fullscreen">⛶</button>
-    <button type="button" id="hunt-volume-btn" class="hunt-fullscreen-btn song-volume-btn" aria-label="Volume">
-      <svg viewBox="0 0 26 24" width="14" height="13" fill="none" stroke="#f8f5ec" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <polygon points="9,5 4,9 0,9 0,15 4,15 9,19" fill="#f8f5ec" stroke="none"/>
-        <path class="vol-wave" d="M13.54 8.46a5 5 0 0 1 0 7.07"/>
-        <path class="vol-wave" d="M17.07 4.93a10 10 0 0 1 0 14.14"/>
-        <path class="vol-wave" d="M20.61 1.39a15 15 0 0 1 0 21.21"/>
-        <path class="vol-mute" d="M13 9l6 6M19 9l-6 6" stroke="#e08a8a" style="display:none"/>
-      </svg>
-    </button>
+  <div class="hunt-right" id="hunt-right">
+    <div class="hunt-side" id="hunt-side">
+      <button type="button" id="hunt-fullscreen-btn" class="hunt-fullscreen-btn" aria-label="Enter fullscreen">⛶</button>
+      <button type="button" id="hunt-volume-btn" class="hunt-fullscreen-btn song-volume-btn" aria-label="Volume">
+        <svg viewBox="0 0 26 24" width="14" height="13" fill="none" stroke="#f8f5ec" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="9,5 4,9 0,9 0,15 4,15 9,19" fill="#f8f5ec" stroke="none"/>
+          <path class="vol-wave" d="M13.54 8.46a5 5 0 0 1 0 7.07"/>
+          <path class="vol-wave" d="M17.07 4.93a10 10 0 0 1 0 14.14"/>
+          <path class="vol-wave" d="M20.61 1.39a15 15 0 0 1 0 21.21"/>
+          <path class="vol-mute" d="M13 9l6 6M19 9l-6 6" stroke="#e08a8a" style="display:none"/>
+        </svg>
+      </button>
+    </div>
+    <button type="button" id="hunt-next" class="hunt-nav hunt-nav-next locked" aria-label="Next room">›</button>
   </div>
   </div>
   <div class="hunt-dots" id="hunt-dots" role="tablist" aria-label="Rooms"></div>
@@ -9875,7 +9886,7 @@ window.addEventListener("hashchange", function () {
   var caption = document.getElementById("hunt-caption");
   var dots = document.getElementById("hunt-dots");
   var prevBtn = document.getElementById("hunt-prev");
-  var sideStack = document.getElementById("hunt-side");
+  var rightCol = document.getElementById("hunt-right");
   function outerHeight(el) {
     if (!el) return 0;
     var s = getComputedStyle(el);
@@ -9898,11 +9909,12 @@ window.addEventListener("hashchange", function () {
     var areaH = area.clientHeight - padY - outerHeight(caption) - outerHeight(dots);
     if (areaW <= 0 || areaH <= 0) return;
     var navW = prevBtn ? prevBtn.offsetWidth : 0;
-    var sideW = sideStack ? sideStack.offsetWidth : 0; // the fullscreen/volume button column, right of the frame
+    var rightW = rightCol ? rightCol.offsetWidth : navW; // right control column (arrow + button stack share one width)
     var frameGap = parseFloat(getComputedStyle(frame).columnGap || getComputedStyle(frame).gap) || 0;
-    // four flex children in the frame — prev | viewport | next | side-stack — so three
-    // gaps flank the viewport+stack; the stack is always present (fullscreen button never hides)
-    var chrome = navW * 2 + sideW + frameGap * 3;
+    // three flex children in the frame — prev | viewport | right-column — so two gaps flank
+    // the viewport; the right column is one nav-arrow wide (the › arrow governs it; the
+    // fullscreen/volume stack sits above the arrow, not beside it, so it adds no width)
+    var chrome = navW + rightW + frameGap * 2;
     // room viewport is a fixed 2:1 shape (680x340 per room in the strip's viewBox);
     // fit that ratio into (areaW - chrome) x areaH, whichever dimension binds
     var viewportW = Math.min(areaW - chrome, areaH * 2);

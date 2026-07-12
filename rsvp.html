@@ -3631,6 +3631,9 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 @keyframes pane-streak-run{0%{transform:translateY(0)} 8%{opacity:0.75} 88%{opacity:0.6} 100%{transform:translateY(390px); opacity:0}}
 /* reduced motion: the static storm tint still lands, the streaks stay invisible (base opacity 0) */
 @media (prefers-reduced-motion: reduce){#stage-garden.storming #garden-pane-streaks .pane-streak{animation:none}}
+/* winter: precipitation falls as snow, which doesn't run down the glass — suppress the
+   rain streaks so the storming window just reads cold (base opacity 0 keeps them hidden) */
+#loft-game-strip.season-winter #stage-garden.storming #garden-pane-streaks .pane-streak{animation:none}
 /* SOLAR eclipse (daytime): a dark moon transits the sun right->left (N hemisphere),
    the sky blacks out at totality with a bright corona ring, then it passes. The
    .solar-eclipse class is added by JS; the hearts burst at totality (the 2017 event). */
@@ -28202,6 +28205,48 @@ function spawnDustMote(container) {
       scheduleGardenPlane();
     }, delay);
   })();
+  // Winter swap: wherever rain already falls (storm active / real-weather poll toggles
+  // the same .storming class), the falling precipitation reads as SNOW instead — soft
+  // white circles, varied sizes, slow linear fall with a gentle side-to-side drift, no
+  // fast-rain streaking. Each spawner branches on this at spawn time, so toggling winter
+  // (the 's' preview key) mid-storm crossfades naturally as drops replenish. The snow
+  // reuses the EXACT same replenish-on-finish discipline as rain: makeSnowflake's
+  // onfinish removes the node then calls the spawner's own active-gated onDone, so the
+  // live count stays constant and spawning pauses/tears down with the frames on a hidden
+  // tab or when the storm/room ends — never an unbounded timer.
+  function isWinterSeason() { return !!(strip && strip.classList.contains("season-winter")); }
+  // A single drifting snowflake: a soft circle (position via cx/cy, so a CSS transform
+  // animation is safe — no transform attribute to clobber). onDone is the caller's 1:1
+  // replenish, gated on its own rainActive()-style check, run on the fall's onfinish.
+  function makeSnowflake(container, cx, cy, fallDist, onDone) {
+    if (!container) { if (onDone) onDone(); return; }
+    var SVGNS = "http://www.w3.org/2000/svg";
+    var r = 1.1 + Math.random() * 2.1; // varied sizes -> a sense of depth
+    var flake = document.createElementNS(SVGNS, "circle");
+    flake.setAttribute("cx", cx); flake.setAttribute("cy", cy);
+    flake.setAttribute("r", r.toFixed(2));
+    flake.setAttribute("fill", "#eef4f9"); // soft cool-white, not a blue rain streak
+    flake.style.pointerEvents = "none";
+    container.appendChild(flake);
+    if (flake.animate) {
+      var sway = 5 + Math.random() * 8;              // side-to-side wobble amplitude
+      var dir = Math.random() < 0.5 ? 1 : -1;        // which way it starts drifting
+      var peak = 0.55 + Math.random() * 0.35;        // faint, size-independent
+      var dur = 2600 + Math.random() * 1900;         // slow, unhurried fall (vs rain's ~0.8s)
+      var anim = flake.animate([
+        { transform: "translate(0px,0px)", opacity: 0 },
+        { transform: "translate(" + (dir * sway).toFixed(1) + "px," + (fallDist * 0.28).toFixed(1) + "px)", opacity: peak, offset: 0.22 },
+        { transform: "translate(" + (-dir * sway).toFixed(1) + "px," + (fallDist * 0.62).toFixed(1) + "px)", opacity: peak, offset: 0.6 },
+        { transform: "translate(" + (dir * sway * 0.4).toFixed(1) + "px," + fallDist.toFixed(1) + "px)", opacity: 0 }
+      ], { duration: dur, easing: "linear", delay: Math.random() * 500 });
+      anim.onfinish = function () {
+        if (flake.parentNode) flake.remove();
+        if (onDone) onDone();
+      };
+    } else {
+      setTimeout(function () { if (flake.parentNode) flake.remove(); if (onDone) onDone(); }, 1800);
+    }
+  }
   // rain in the garden window during the (shared) storm — self-replenishing so the
   // count stays constant and spawning naturally pauses with the frames on a hidden tab
   var GARDEN_RAIN_DROPS = 13;
@@ -28215,6 +28260,10 @@ function spawnDustMote(container) {
     if (!container) return;
     var SVGNS = "http://www.w3.org/2000/svg";
     var cx = 108 + Math.random() * 416, cy = 20 + Math.random() * 90;
+    if (isWinterSeason()) { // winter -> drifting snow instead of rain streaks
+      makeSnowflake(container, cx, cy, 150 + Math.random() * 90, function () { if (gardenRainActive()) spawnGardenRainDrop(); });
+      return;
+    }
     var dropLen = 12 + Math.random() * 8, fallDist = 150 + Math.random() * 90;
     var line = document.createElementNS(SVGNS, "line");
     line.setAttribute("x1", cx); line.setAttribute("y1", cy);
@@ -28262,6 +28311,10 @@ function spawnDustMote(container) {
     if (!container) return;
     var SVGNS = "http://www.w3.org/2000/svg";
     var cx = 500 + Math.random() * 175, cy = 18 + Math.random() * 96; // upper-right, by the door
+    if (isWinterSeason()) { // winter -> snow drifts in through the open door instead of rain
+      makeSnowflake(container, cx, cy, 150 + Math.random() * 90, function () { if (cuddlyRainActive()) spawnCuddlyRainDrop(); });
+      return;
+    }
     var dropLen = 11 + Math.random() * 7, fallDist = 150 + Math.random() * 90;
     var line = document.createElementNS(SVGNS, "line");
     line.setAttribute("x1", cx); line.setAttribute("y1", cy);
@@ -28523,6 +28576,10 @@ function spawnDustMote(container) {
     // tab is hidden (no frames -> no onfinish -> no new drops -> no pile-up).
     function spawnDrop() {
       var cx = 2760 + Math.random() * 620, cy = 8 + Math.random() * 178;
+      if (isWinterSeason()) { // winter -> snow drifts down the balcony sky instead of rain
+        makeSnowflake(strip, cx, cy + 18, 96 + Math.random() * 64, function () { if (rainActive()) spawnDrop(); });
+        return;
+      }
       var startY = cy + 18, dropLen = 14 + Math.random() * 8, fallDist = 72 + Math.random() * 44;
       var line = document.createElementNS(SVGNS, "line");
       line.setAttribute("x1", cx); line.setAttribute("y1", startY);

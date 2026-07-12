@@ -139,6 +139,9 @@ footer{margin-top:2.6rem}
 }
 /* overlaid on the viewport's own top-right corner (position:absolute — costs zero
    page layout space, unlike a control living in the flow above/below the game) */
+.mobile-fs-hint{display:none}
+@media (max-width:760px){.mobile-fs-hint{display:block; text-align:center; font-size:.8rem; line-height:1.3; color:var(--muted); margin:.15rem auto .1rem; cursor:pointer; max-width:22rem}}
+#hunt-fullscreen-area.is-fullscreen .mobile-fs-hint{display:none}
 .hunt-fullscreen-btn{
   position:absolute; top:.5rem; right:.5rem; z-index:6; font:inherit; font-size:1rem; line-height:1;
   width:1.9rem; height:1.9rem; padding:0; border-radius:50%; border:1.5px solid rgba(255,253,248,.7);
@@ -3474,6 +3477,7 @@ section{margin:1.9rem 0}
   <p class="device-hint" id="device-hint" data-i="device_hint"></p>
   <div id="hunt-fullscreen-area">
   <p class="scene-caption" id="hunt-caption">Power on the espresso machine, then grind coffee, then brew a shot.</p>
+  <p class="mobile-fs-hint" id="mobile-fs-hint" data-i="mobile_fs_hint">Best on a bigger screen — landscape, fullscreen ⛶, headphones on 🎧</p>
   <div class="hunt-frame">
   <button type="button" id="hunt-prev" class="hunt-nav hunt-nav-prev" aria-label="Previous room" disabled>‹</button>
   <div class="hunt-viewport">
@@ -8833,6 +8837,7 @@ var T = {
     nav_lang_aria: "Language",
     fullscreen_enter: "Enter fullscreen",
     fullscreen_exit: "Exit fullscreen",
+    mobile_fs_hint: "Best on a bigger screen — landscape, fullscreen ⛶, headphones on 🎧",
     caps_aria: "A pink flat cap and a blue baker boy cap, crossed",
     laptop_date: "July 10",
     desk_to: "to",
@@ -9120,6 +9125,7 @@ var T = {
     nav_lang_aria: "Jazyk",
     fullscreen_enter: "Celá obrazovka",
     fullscreen_exit: "Ukončit celou obrazovku",
+    mobile_fs_hint: "Nejlepší na větší obrazovce — na šířku, celá obrazovka ⛶, se sluchátky 🎧",
     caps_aria: "Růžová čepice a modrá čepice, zkřížené",
     laptop_date: "10. 7.",
     desk_to: "do",
@@ -9740,6 +9746,7 @@ window.addEventListener("hashchange", function () {
   window.addEventListener("resize", sizeFullscreenFrame); // orientation change / DevTools resize while fullscreen
   refreshLabel();
 })();
+(function(){ var mh=document.getElementById("mobile-fs-hint"); if(mh) mh.addEventListener("click", function(){ var b=document.getElementById("hunt-fullscreen-btn"); if(b) b.click(); }); })();
 // ── Keyboard-shortcuts card ── '?' toggles a small overlay listing the game's global
 // shortcuts, in the polaroid dialog's visual language (same backdrop/ink-card/✕ classes,
 // same fullscreen-host trick). Rebuilt from the T dict on every open, so it always
@@ -14718,12 +14725,12 @@ document.addEventListener("click", function (e) {
     if (!tab || !tab.dyn || tab.url || !browserUrlIn) return;
     var raw = browserUrlIn.value.trim();
     if (!raw) return;
-    // not URL-shaped (spaces, or no dot and no scheme) → a web search on Wiby, the
-    // hand-curated classic-web engine — the one free engine that actually renders
-    // inside a frame (FrogFind is HTTP-only; Marginalia/DDG/the majors all refuse)
+    // not URL-shaped (spaces, or no dot and no scheme) → a Google search via the igu=1
+    // embed param, which drops the X-Frame-Options header so results render inside the
+    // frame (plain google.com/search sends SAMEORIGIN and refuses)
     var hasScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(raw);
     var isSearch = /\s/.test(raw) || (!hasScheme && raw.indexOf(".") === -1);
-    var full = isSearch ? "https://wiby.me/?q=" + encodeURIComponent(raw) : (hasScheme ? raw : "https://" + raw);
+    var full = isSearch ? "https://www.google.com/search?igu=1&q=" + encodeURIComponent(raw) : (hasScheme ? raw : "https://" + raw);
     var u;
     try { u = new URL(full); } catch (e) {
       browserUrlIn.classList.remove("shake"); void browserUrlIn.offsetWidth; browserUrlIn.classList.add("shake");
@@ -17775,10 +17782,10 @@ document.addEventListener("click", function (e) {
         if (!raw) return;
         var hasScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(raw);
         // not URL-shaped (has spaces, or no dot and no scheme) → a web search, loaded IN
-        // the frame via DuckDuckGo's lite endpoint (plain duckduckgo.com refuses framing)
+        // the frame via Google's igu=1 embed param (it drops X-Frame-Options; plain google.com refuses)
         var isSearch = /\s/.test(raw) || (!hasScheme && raw.indexOf(".") === -1);
         if (isSearch) {
-          showUrl("https://lite.duckduckgo.com/lite/?q=" + encodeURIComponent(raw), null);
+          showUrl("https://www.google.com/search?igu=1&q=" + encodeURIComponent(raw), null);
           input.blur();
           return;
         }

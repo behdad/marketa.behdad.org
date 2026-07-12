@@ -10543,6 +10543,7 @@ var T = {
     py_wait: "the snake is still on its way…",
     py_ready: "Python {v} ready. try: 2+2 · import this",
     py_fonttools: "fontTools {v} is already imported — the groom insisted.",
+    py_uharfbuzz: "uharfbuzz {v} is imported as hb — the groom's own shaping engine, now in Python.",
     py_fonts: "the page's fonts are mounted at /fonts: {fs} — try TTFont('/fonts/{f}')",
     py_fail: "couldn't load Python — offline, or the download broke. close and reopen to retry.",
     py_busy: "still chewing on the last one…",
@@ -10901,6 +10902,7 @@ var T = {
     py_wait: "had je pořád na cestě…",
     py_ready: "Python {v} připraven. zkuste: 2+2 · import this",
     py_fonttools: "fontTools {v} je už naimportovaný — ženich trval na svém.",
+    py_uharfbuzz: "uharfbuzz {v} je naimportovaný jako hb — ženichova vlastní sázecí knihovna, teď v Pythonu.",
     py_fonts: "fonty stránky jsou připojené v /fonts: {fs} — zkuste TTFont('/fonts/{f}')",
     py_fail: "Python se nepodařilo načíst — offline, nebo se stahování přerušilo. zavřete a otevřete znovu.",
     py_busy: "ještě žvýkám ten předchozí…",
@@ -18127,11 +18129,13 @@ document.addEventListener("click", function (e) {
         // fetch stays silent
         // the shell shows what it's about to run on its own behalf, THEN runs it —
         // the invocations are visible even mid-install or if the install dies
-        pyPrint(">>> import micropip; await micropip.install(['fonttools', 'brotli'])", "term-dim");
-        pyPrint(">>> from fontTools.ttLib import TTFont", "term-dim");
-        py.runPythonAsync("import micropip\nawait micropip.install(['fonttools', 'brotli'])\nimport fontTools\nfrom fontTools.ttLib import TTFont\nfontTools.version")
+        pyPrint(">>> import micropip; await micropip.install(['fonttools', 'brotli', 'uharfbuzz'])", "term-dim");
+        pyPrint(">>> from fontTools.ttLib import TTFont; import uharfbuzz as hb", "term-dim");
+        py.runPythonAsync("import micropip\nawait micropip.install(['fonttools', 'brotli', 'uharfbuzz'])\nimport fontTools\nfrom fontTools.ttLib import TTFont\nimport uharfbuzz as hb\nfontTools.version + '|' + hb.version_string()")
           .then(function (v) {
-            pyPrint(pyT("py_fonttools").replace("{v}", String(v)), "term-dim");
+            var parts = String(v).split("|");
+            pyPrint(pyT("py_fonttools").replace("{v}", parts[0]), "term-dim");
+            if (parts[1]) pyPrint(pyT("py_uharfbuzz").replace("{v}", parts[1]), "term-dim");
             return pyFonts;
           })
           .then(function (names) {

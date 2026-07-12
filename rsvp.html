@@ -11529,6 +11529,32 @@ document.addEventListener("keydown", function (e) {
   e.preventDefault();
   sw.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 });
+// While a monitor console is open (python / terminal / linux), keep the office+monitor in
+// view and the console input focused, and stop stray keys from firing game shortcuts. The
+// term inputs are tabindex="-1" in a scaled SVG foreignObject and lose focus easily, so a
+// leaked keydown (e.g. 'p') would otherwise trigger the party and strand the typist.
+(function () {
+  function consoleOpen() {
+    var m = document.getElementById("office-monitor");
+    return !!(m && (m.classList.contains("show-python") || m.classList.contains("show-terminal") || m.classList.contains("show-linux")));
+  }
+  function textConsoleInput() { // the python/terminal <input> the user types into (linux uses the v86 canvas)
+    var m = document.getElementById("office-monitor");
+    if (!m) return null;
+    if (m.classList.contains("show-python")) return document.getElementById("monitor-py-in");
+    if (m.classList.contains("show-terminal")) return document.getElementById("monitor-term-in");
+    return null;
+  }
+  document.addEventListener("keydown", function (e) {
+    if (!consoleOpen()) return;
+    if (window.currentStageName !== "office" && window.goToStage) window.goToStage("office"); // summon the office/monitor back into view
+    var input = textConsoleInput();
+    if (input && e.target !== input) { // a stray key leaked (input lost focus): refocus it and swallow the key so no game shortcut fires
+      try { input.focus({ preventScroll: true }); } catch (err) {}
+      e.stopPropagation();
+    }
+  }, true); // capture — runs before the game-shortcut handlers
+})();
 document.addEventListener("click", function (e) {
   var link = e.target.closest && e.target.closest("#hunt-caption a");
   if (!link) return;
@@ -16258,6 +16284,8 @@ document.addEventListener("click", function (e) {
       date: "date — the two wedding dates",
       echo: "echo <text> — say it back",
       man: "man <topic> — a manual page (try `man love`)",
+      love: "love [--patient] [--kind] [--no-jealousy] someone — love, as advertised",
+      kitty: "kitty() — bring the cat to the office",
       exit: "exit — spoiler: you can't"
     };
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
@@ -16301,12 +16329,23 @@ document.addEventListener("click", function (e) {
         "NAME",
         "    love — an unbounded, mutual, freely chosen commitment",
         "SYNOPSIS",
-        "    love [--patient] [--kind] [--no-envy] someone [and someone…]",
+        "    love [--patient] [--kind] [--no-jealousy] someone [and someone…]",
         "DESCRIPTION",
         "    come to one wedding or both. small or big — all loved ones welcome.",
         "SEE ALSO",
         "    marketa.behdad.org"
       ].forEach(function (line) { termPrint(line, "term-dim"); });
+      return;
+    }
+    if (/^love(\s|$)/.test(c)) { // as advertised by `man love`
+      var la = c.replace(/^love\s*/, "").trim();
+      var how = [];
+      if (/--patient/.test(la)) how.push("patiently");
+      if (/--kind/.test(la)) how.push("kindly");
+      if (/--no-jealous/.test(la)) how.push("without jealousy");
+      var whom = la.replace(/--\S+/g, "").replace(/\s+/g, " ").trim();
+      if (!whom) termPrint("love is patient, love is kind. ∞   (try: love someone)", "term-dim");
+      else termPrint("loving " + whom + (how.length ? " — " + how.join(", ") : "") + ". ∞", "term-dim");
       return;
     }
     if (/^man(\s|$)/.test(c)) { termPrint("the only manual here is `man love`.", "term-dim"); return; }
@@ -33257,6 +33296,7 @@ function spawnDustMote(container) {
     } else {
       variant = TRIP_VARIANTS[(Math.random() * TRIP_VARIANTS.length) | 0];
     }
+    if (window.goToStage) window.goToStage("garden"); // trips play best in the garden — head there
     tripActive = true;
     window.__tripActive = true; // mirror for the garden thermometer readout (same as the drugs box / Shift+digit)
     startTripVariant(variant);
@@ -33397,6 +33437,17 @@ function spawnDustMote(container) {
     if (window.__homeCat) window.__homeCat(window.currentStageName || "garden"); // walk it into the room you're viewing
     return "🐈 here, kitty — she pads over to say hi.";
   };
+  window.kitty = function () {
+    if (window.goToStage) window.goToStage("office"); // summon the cat to the office
+    var walk = document.getElementById("witchy-chest-cat-walk");
+    if (!walk) return "no cat here.";
+    if (!walk.classList.contains("out")) {
+      if (!window.__releaseCat || !window.__releaseCat()) return "the cat's asleep in the chest — open the moon door in the garden.";
+    }
+    if (window.__homeCat) window.__homeCat("office");
+    return "🐈 here, kitty — she pads into the office.";
+  };
+  window.love = function () { return "love is patient, love is kind. ∞"; };
 })();
 (function () {
   var gmailBtn = document.getElementById("rsvp-gmail-btn");

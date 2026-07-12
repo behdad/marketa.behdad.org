@@ -19653,6 +19653,7 @@ document.addEventListener("click", function (e) {
         requestAnimationFrame(function () { ladybug.classList.add("buzzing"); });
       });
       emitLadybugHeart();
+      playLadybugSound();
     };
     ladybug.addEventListener("click", buzzLadybug);
     ladybug.addEventListener("keydown", function (e) {
@@ -20201,6 +20202,34 @@ function playPluckSound() {
       osc.start(t + t0);
       osc.stop(t + t0 + 0.65);
     });
+  } catch (e) {}
+}
+// A tiny wing-flutter buzz for the garden ladybug: a low tone with fast vibrato,
+// panned to the bug, quick in and out — an insect wingbeat, not a note.
+function playLadybugSound() {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var osc = ctx.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(175, t);
+    osc.frequency.linearRampToValueAtTime(150, t + 0.22);
+    var lfo = ctx.createOscillator(); // wing flutter → vibrato on the buzz
+    lfo.type = "sine";
+    lfo.frequency.value = 46;
+    var lfoGain = ctx.createGain();
+    lfoGain.gain.value = 28;
+    lfo.connect(lfoGain);
+    lfoGain.connect(osc.frequency);
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.06, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
+    osc.connect(gain);
+    gain.connect(pannedOut(ctx, "garden-ladybug"));
+    osc.start(t); lfo.start(t);
+    osc.stop(t + 0.26); lfo.stop(t + 0.26);
   } catch (e) {}
 }
 function spawnCloudRain(svg, cx, cy) {

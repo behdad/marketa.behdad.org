@@ -3598,6 +3598,10 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 #cuddly-wallscreen .fire-live{transition:opacity .5s ease}
 #cuddly-wallscreen:not(.chan-fire) .fire-live{opacity:0; animation:none}
 #cuddly-wallscreen:not(.chan-fire) #cuddly-firelight{opacity:0; animation:none}
+/* off channel (5th tap state): the projector is powered down — the panel goes cool grey
+   (the canvas is wiped, so this shows through) and the rAF loop stops */
+#cuddly-screen-bg{transition:fill .5s ease}
+#cuddly-wallscreen.chan-off #cuddly-screen-bg{fill:#b6bbc0}
 #cuddly-chan-badge{transition:opacity .5s ease}
 @media (prefers-reduced-motion: reduce){
   #cuddly-wallscreen .fire-flame, #cuddly-fire-ember, #cuddly-fire-bed,
@@ -6496,7 +6500,7 @@ section{margin:1.9rem 0}
 <rect x="178" y="42" width="96" height="64" rx="3" fill="#161311"/>
 <rect id="cuddly-screen-bg" x="180" y="44" width="92" height="60" rx="2" fill="url(#cuddly-screen-grad)"/>
 <!-- Shared projector canvas: ONE 138x90 supersample of the 92x60 panel drives EVERY channel
-     (fire / aquarium / rain / starfield). overflow:hidden clips it to the bezel; the JS sets
+     (fire / aquarium / rain / starfield; off just wipes it). overflow:hidden clips it to the bezel; the JS sets
      mix-blend-mode per channel (screen for the additive fire over the dark panel, normal for
      the others which paint their own background). pointer-events:none keeps the screen's tap
      target intact. Driven by the single self-cancelling rAF loop in the projector IIFE. -->
@@ -6519,13 +6523,14 @@ section{margin:1.9rem 0}
 <path class="fire-flame cf-d" d="M221 100 C 219 94 221 87 226 82 C 231 87 233 94 231 100 Z" fill="url(#cuddly-flame-grad-d)"/>
 </g></g>
 </g>
-<!-- subtle channel indicator: four dots at the top of the screen, the active one bright;
-     JS fades the group in for ~1s on each tap, then out -->
+<!-- subtle channel indicator: five dots (fire / aquarium / rain / starfield / off) centered
+     at the top of the screen, the active one bright; JS fades the group in for ~1s per tap -->
 <g id="cuddly-chan-badge" pointer-events="none" aria-hidden="true" opacity="0">
-<circle class="chan-dot" cx="218" cy="49" r="1.6" fill="#ffffff" opacity="1"/>
-<circle class="chan-dot" cx="224" cy="49" r="1.6" fill="#ffffff" opacity="0.28"/>
-<circle class="chan-dot" cx="230" cy="49" r="1.6" fill="#ffffff" opacity="0.28"/>
-<circle class="chan-dot" cx="236" cy="49" r="1.6" fill="#ffffff" opacity="0.28"/>
+<circle class="chan-dot" cx="214" cy="49" r="1.6" fill="#ffffff" opacity="1"/>
+<circle class="chan-dot" cx="220" cy="49" r="1.6" fill="#ffffff" opacity="0.28"/>
+<circle class="chan-dot" cx="226" cy="49" r="1.6" fill="#ffffff" opacity="0.28"/>
+<circle class="chan-dot" cx="232" cy="49" r="1.6" fill="#ffffff" opacity="0.28"/>
+<circle class="chan-dot" cx="238" cy="49" r="1.6" fill="#ffffff" opacity="0.28"/>
 </g>
 </g>
 </g>
@@ -11089,9 +11094,9 @@ document.addEventListener("click", function (e) {
 
   function advanceChannel() {
     // the screen is a projector: a tap cycles its channel (🔥 fire → 🐟 aquarium → 🌧 rain →
-    // ✨ starfield → back). The projector IIFE owns the loop/canvas; it swaps the chan-* class,
-    // re-gates the fire crackle (only the fire channel is audible) via __updateFireSound, and
-    // (re)starts the shared self-cancelling loop.
+    // ✨ starfield → ⏻ off → back). The projector IIFE owns the loop/canvas; it swaps the chan-*
+    // class, re-gates the fire crackle (only the fire channel is audible) via __updateFireSound,
+    // and (re)starts the shared self-cancelling loop (which stops outright on the off channel).
     if (window.__cuddlyProjector) window.__cuddlyProjector.cycle();
   }
   screen.addEventListener("click", advanceChannel);
@@ -11180,7 +11185,7 @@ document.addEventListener("click", function (e) {
 (function () {
   // ── Cuddly wall PROJECTOR: multi-channel ambient screen ───────────────────
   // The wall screen is a little projector; a tap cycles atmospheric "channels":
-  //   🔥 fire (default) → 🐟 aquarium → 🌧 rain-on-glass → ✨ starfield → (wrap).
+  //   🔥 fire (default) → 🐟 aquarium → 🌧 rain-on-glass → ✨ starfield → ⏻ off → (wrap).
   // ONE shared 138×90 canvas and ONE self-cancelling rAF drive whichever channel is
   // active. Switching tears the previous channel's state down (its particle arrays are
   // cleared, the canvas wiped) so nothing from an off-screen channel lingers or piles up.
@@ -11208,10 +11213,19 @@ document.addEventListener("click", function (e) {
   function rnd(a, b) { return a + Math.random() * (b - a); }
 
   // =========================================================================
-  // Channel: FIRE — Doom-fire body (hearth-shaped, dark surround) + drifting sparks
+  // Channel: FIRE — the classic algorithmic doom-fire: seed the whole hot bottom row,
+  // propagate heat upward with a random ±1 wind-shift minus a little cooling, tone-map
+  // through a warm LUT, and composite mix-blend-mode:screen over the dark panel. The
+  // full bottom row is re-seeded hot every frame, so the flame fills the hearth and
+  // flickers as a living wall (not a contained cluster). Season/time sync: winter/spooky
+  // burn taller & brighter, day drops to low glowing embers, dusk is warm & full — read
+  // live each frame by scaling the cooling rate + seed brightness. Music sync: each beat
+  // spikes the seed brightness and briefly lowers the cooling, so the fire flares up on
+  // the beat (window.__cuddlyMusic). Drifting ember sparks ride on top (a fixed, recycled
+  // pool — never grows).
   // =========================================================================
   var fire = (function () {
-    var COOL0 = 0.05, SEED_MIN = 0.80;
+    var COOL0 = 0.03, SEED_MIN = 0.82; // original doom-fire cooling → tall full flame
     var heat = new Float32Array(N);
     var img = ctx.createImageData(W, H), data = img.data;
     // warm LUT (heat 0→255): cool = transparent, then ember-red → orange → gold → pale-hot
@@ -11226,11 +11240,6 @@ document.addEventListener("click", function (e) {
         LUT[i*4+3] = Math.max(0, Math.min(1, (t - 0.04) * 3.4)) * 255;
       }
     })();
-    // hearth envelope: hot centre-bottom, dark toward the side walls, so the fire reads as
-    // flames rising from a bed rather than a uniform orange wall filling the whole panel
-    var env = new Float32Array(W);
-    (function () { var c = W/2, hw = W*0.34; for (var x=0;x<W;x++){ var d=Math.abs(x-c)/hw; env[x]= d>=1?0:0.5+0.5*Math.cos(d*Math.PI); } })();
-    var roots = [{x:W*0.40,v:0},{x:W*0.52,v:0},{x:W*0.64,v:0}]; // slow-wandering brighter columns → distinct tongues
     var SPARKS = 18, sparks = [];
     for (var si = 0; si < SPARKS; si++) sparks.push({ life: 0 });
     var popFrames = 0, popCooldown = 0;
@@ -11246,23 +11255,19 @@ document.addEventListener("click", function (e) {
       return { mul: mul, music: music, beat: beat };
     }
     function seedBottom(it) {
-      for (var r = 0; r < roots.length; r++) {
-        var rt = roots[r]; rt.v = rt.v * 0.86 + (Math.random() - 0.5) * 0.9; rt.x += rt.v;
-        if (rt.x < W*0.30) { rt.x = W*0.30; rt.v = Math.abs(rt.v); }
-        else if (rt.x > W*0.70) { rt.x = W*0.70; rt.v = -Math.abs(rt.v); }
-      }
-      var hotm = 0.55 + 0.45 * it.mul + 0.35 * it.beat; // seed brightness scales with season + beat
+      // full-width hot bottom row (the doom-fire seed); brightness scales with season + beat
+      var hotm = 0.62 + 0.38 * it.mul + 0.32 * it.beat;
       var boost = popFrames > 0 ? 0.12 : 0;
       var base = (H - 1) * W;
       for (var x = 0; x < W; x++) {
-        var e = env[x]; if (e <= 0) { heat[base + x] = 0; continue; }
-        var rb = 0; for (var k = 0; k < roots.length; k++) { var dx = x - roots[k].x; rb += Math.exp(-(dx*dx)/42); } if (rb > 1) rb = 1;
-        var seed = (SEED_MIN + Math.random() * (1 - SEED_MIN)) * (0.5 + 0.7 * rb) * e * hotm + boost;
+        var seed = (SEED_MIN + Math.random() * (1 - SEED_MIN)) * hotm + boost;
         heat[base + x] = seed > 1 ? 1 : seed;
       }
       if (popFrames > 0) popFrames--;
     }
     function spread(cool) {
+      // each cell pulls heat from the cell below (wind-shifted ±1) minus random cooling,
+      // so heat climbs one row per frame and the flames waver and thin as they rise
       for (var y = 0; y < H - 1; y++) {
         var row = y * W, below = (y + 1) * W;
         for (var x = 0; x < W; x++) {
@@ -11277,8 +11282,7 @@ document.addEventListener("click", function (e) {
       ctx.putImageData(img, 0, 0);
     }
     function spawnSpark(s, hot) {
-      var rt = roots[(Math.random() * roots.length) | 0];
-      s.x = rt.x + rnd(-5, 5); s.y = H - 2 - Math.random() * 6; s.vx = rnd(-0.25, 0.25);
+      s.x = rnd(W * 0.20, W * 0.80); s.y = H - 2 - Math.random() * 6; s.vx = rnd(-0.25, 0.25);
       s.vy = -(0.45 + Math.random() * 0.7) * (hot ? 1.7 : 1); s.drift = Math.random() * 6.2832;
       s.maxLife = 26 + (Math.random() * 34 | 0); s.life = s.maxLife; s.r = 0.6 + Math.random() * 0.9;
     }
@@ -11327,17 +11331,31 @@ document.addEventListener("click", function (e) {
     function resetFish(fh, i) {
       fh.dir = Math.random() < 0.5 ? 1 : -1;
       fh.x = Math.random() * W; fh.y = rnd(H * 0.28, H * 0.85);
-      fh.sp = rnd(0.12, 0.30); fh.size = rnd(4.5, 8); fh.bobA = rnd(1.5, 4); fh.bobP = Math.random() * 6.28;
+      fh.sp = rnd(0.12, 0.30); fh.size = rnd(6.5, 11); fh.bobA = rnd(1.5, 4); fh.bobP = Math.random() * 6.28;
       fh.col = palette[i % palette.length];
     }
     function resetBub(b) { b.x = rnd(6, W - 6); b.y = H + rnd(0, H); b.r = rnd(0.6, 1.8); b.sp = rnd(0.25, 0.6); b.wob = Math.random() * 6.28; }
+    // Crisp, defined fish: a dark outline stroke gives a clear silhouette against the
+    // water, a forked tail + dorsal fin read as fish shapes (not blobs), and a white eye
+    // with a dark pupil keeps a sharp focal point — the earlier tiny, outline-less solid
+    // ellipses read as fuzzy smears once anti-aliased on the shared low-res canvas.
     function drawFish(fh) {
-      var y = fh.y + Math.sin(t * 0.03 + fh.bobP) * fh.bobA;
+      var y = fh.y + Math.sin(t * 0.03 + fh.bobP) * fh.bobA, s = fh.size;
       ctx.save(); ctx.translate(fh.x, y); ctx.scale(fh.dir, 1);
-      ctx.fillStyle = fh.col;
-      ctx.beginPath(); ctx.ellipse(0, 0, fh.size, fh.size * 0.6, 0, 0, 6.2832); ctx.fill(); // body
-      ctx.beginPath(); ctx.moveTo(-fh.size * 0.9, 0); ctx.lineTo(-fh.size * 1.7, -fh.size * 0.55); ctx.lineTo(-fh.size * 1.7, fh.size * 0.55); ctx.closePath(); ctx.fill(); // tail
-      ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.beginPath(); ctx.arc(fh.size * 0.45, -fh.size * 0.15, fh.size * 0.14, 0, 6.2832); ctx.fill(); // eye
+      ctx.lineJoin = "round";
+      ctx.fillStyle = fh.col; ctx.strokeStyle = "rgba(8,20,28,0.7)"; ctx.lineWidth = 0.9;
+      // forked tail (drawn first so the body overlaps its root cleanly)
+      ctx.beginPath(); ctx.moveTo(-s * 0.75, 0); ctx.lineTo(-s * 1.7, -s * 0.62); ctx.lineTo(-s * 1.28, 0); ctx.lineTo(-s * 1.7, s * 0.62); ctx.closePath(); ctx.fill(); ctx.stroke();
+      // dorsal fin
+      ctx.beginPath(); ctx.moveTo(s * 0.2, -s * 0.5); ctx.lineTo(-s * 0.35, -s * 0.98); ctx.lineTo(-s * 0.55, -s * 0.45); ctx.closePath(); ctx.fill(); ctx.stroke();
+      // body
+      ctx.beginPath(); ctx.ellipse(0, 0, s, s * 0.58, 0, 0, 6.2832); ctx.fill(); ctx.stroke();
+      // gill line
+      ctx.strokeStyle = "rgba(8,20,28,0.4)"; ctx.lineWidth = 0.7;
+      ctx.beginPath(); ctx.arc(s * 0.2, 0, s * 0.6, -1.05, 1.05); ctx.stroke();
+      // eye: white with a dark pupil
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(s * 0.52, -s * 0.14, s * 0.2, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = "#0d1c26"; ctx.beginPath(); ctx.arc(s * 0.57, -s * 0.14, s * 0.1, 0, 6.2832); ctx.fill();
       ctx.restore();
     }
     return {
@@ -11432,9 +11450,24 @@ document.addEventListener("click", function (e) {
     };
   })();
 
+  // =========================================================================
+  // Channel: OFF — the projector is powered down: a blank panel over a cool grey screen
+  // (CSS .chan-off → #cuddly-screen-bg grey) and a STOPPED loop (shouldRun() excludes
+  // "off", so the rAF self-cancels and __cuddlyFlameRaf() reads null). The fire decor,
+  // crackle audio and Fishu's warm halo all already gate on the .chan-fire class, so they
+  // stay dark here too. All this channel ever does is wipe the canvas.
+  // =========================================================================
+  var off = {
+    blend: "normal",
+    reset: function () {},
+    init: function () { ctx.clearRect(0, 0, W, H); },
+    frame: function () { ctx.clearRect(0, 0, W, H); },
+    still: function () { ctx.clearRect(0, 0, W, H); }
+  };
+
   // ---- driver: one loop, one canvas, channel-switched --------------------
-  var order = ["fire", "aqua", "rain", "stars"];
-  var chanObj = { fire: fire, aqua: aqua, rain: rain, stars: stars };
+  var order = ["fire", "aqua", "rain", "stars", "off"];
+  var chanObj = { fire: fire, aqua: aqua, rain: rain, stars: stars, off: off };
   var current = "fire";
   try { var saved = localStorage.getItem("cuddlyChannel"); if (saved && chanObj[saved]) current = saved; } catch (e) {}
 
@@ -11456,14 +11489,16 @@ document.addEventListener("click", function (e) {
   }
 
   var raf = null, lastDraw = 0;
-  function shouldRun() { return window.currentStageName === "cuddly" && !document.hidden; }
+  // OFF is a genuine stop: excluded here so frame() self-cancels and the handle goes null
+  function shouldRun() { return window.currentStageName === "cuddly" && !document.hidden && current !== "off"; }
   function frame(t) {
-    if (!shouldRun()) { raf = null; return; } // leaving the room / hiding → self-cancel, no leftover timer
+    if (!shouldRun()) { raf = null; return; } // leaving the room / hiding / off → self-cancel, no leftover timer
     if (t - lastDraw >= DRAW_MS) { lastDraw = t; chanObj[current].frame(); }
     raf = requestAnimationFrame(frame);
   }
   function renderStill() { ctx.clearRect(0, 0, W, H); (chanObj[current].still || chanObj[current].frame).call(chanObj[current]); }
   function start() {
+    if (current === "off") { ctx.clearRect(0, 0, W, H); return; } // powered down — blank panel, no loop
     if (reduceMotion) { if (window.currentStageName === "cuddly") renderStill(); return; }
     if (raf || !shouldRun()) return; // already live, or not runnable right now
     lastDraw = 0; raf = requestAnimationFrame(frame);

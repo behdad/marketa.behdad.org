@@ -617,6 +617,25 @@ footer{margin-top:2.6rem}
   65%{transform:rotate(4deg) translateX(1px)}
 }
 @media (prefers-reduced-motion: reduce){#balcony-wineglass.wobbling, #balcony-winebottle.wobbling #balcony-winebottle-inner, #balcony-wineglass.cheers{animation:none}}
+/* Finishing the very last of the wine sets the whole balcony gently swaying for ~15s.
+   The sway rides #balcony-wobble (a transform-free inner wrapper) — NEVER #loft-game-strip
+   (its transform is the room-pan) nor #stage-balcony (its transform positions the room);
+   animating either would fight an existing transform. A faint scale keeps the room edges
+   over-covered so the tilt never bares a seam to the neighbouring room. */
+#balcony-wobble{transform-box:fill-box; transform-origin:50% 62%}
+#loft-game-strip.tipsy #balcony-wobble{animation:balcony-tipsy 15s ease-in-out both}
+@keyframes balcony-tipsy{
+  0%{transform:rotate(0deg) translate(0,0) scale(1)}
+  8%{transform:rotate(1.3deg) translate(3px,-1px) scale(1.02)}
+  22%{transform:rotate(-1.1deg) translate(-3px,1px) scale(1.02)}
+  36%{transform:rotate(1.1deg) translate(2px,1px) scale(1.02)}
+  50%{transform:rotate(-1deg) translate(-2px,-1px) scale(1.02)}
+  64%{transform:rotate(0.85deg) translate(2px,0) scale(1.015)}
+  78%{transform:rotate(-0.55deg) translate(-1px,1px) scale(1.01)}
+  90%{transform:rotate(0.28deg) translate(0,0) scale(1.005)}
+  100%{transform:rotate(0deg) translate(0,0) scale(1)}
+}
+@media (prefers-reduced-motion: reduce){#loft-game-strip.tipsy #balcony-wobble{animation:none}}
 #kitchen-gong-disc{transform-box:fill-box; transform-origin:center}
 #kitchen-gong.struck #kitchen-gong-disc{animation:gong-strike .6s ease-out}
 @keyframes gong-strike{
@@ -7100,6 +7119,10 @@ section{margin:1.9rem 0}
 </defs>
 <g id="office-laptop" class="hunt-hit" tabindex="0" role="button" aria-label="The laptop" transform="translate(-214,0)">
 <rect id="laptop-zoom-box" x="384" y="158" width="66" height="50" fill="none" pointer-events="none"/>
+<!-- generous transparent hit pad: the laptop reads as a thin lid on the desk and is hard
+     to tap. This fills the brick gap above the lid (below the window pane's hit area) down
+     to just above the headphones, staying clear of the typewriter to the right. -->
+<rect id="laptop-hit-pad" x="379" y="178" width="82" height="34" fill="transparent"/>
 <g id="office-laptop-screen">
 <rect x="384" y="160" width="66" height="42" rx="2" fill="#2a2a2a" stroke="#1a1a1a" stroke-width="1.5"/>
 <!-- webcam on the top bezel: a lens + an LED that glows green while a call is live -->
@@ -7556,7 +7579,9 @@ section{margin:1.9rem 0}
 <rect id="office-dusk" x="0" y="0" width="680" height="340" fill="#141830" opacity="0" pointer-events="none"/>
 </g>
 <g id="stage-balcony" transform="translate(2720,0)">
-
+<!-- transform-free inner wrapper: carries the "tipsy" sway so the animation never
+     touches #stage-balcony's own transform (which positions the room). See .tipsy CSS. -->
+<g id="balcony-wobble">
 <rect x="0" y="0" width="680" height="340" rx="0" fill="#c2d8e4"/>
 <rect id="balcony-skyclick" x="418" y="0" width="180" height="118" fill="transparent"/>
 <rect x="0" y="0" width="250" height="290" fill="url(#bbrick)"/>
@@ -7993,7 +8018,7 @@ section{margin:1.9rem 0}
 <path id="balcony-lighter-flame" d="M96 226.5 Q93 221.5 96 216.5 Q99 221.5 96 226.5 Z" fill="#f0a04a" opacity="0"/>
 </g>
 <g id="balcony-phone" class="hunt-hit" tabindex="0" role="button" aria-label="The phone">
-<rect x="112" y="217" width="32" height="19" fill="transparent"/>
+<rect x="116" y="209" width="28" height="35" fill="transparent"/>
 <rect x="116" y="221" width="24" height="11" rx="2" fill="#d9a6a6" stroke="#b8888c" stroke-width="1"/>
 <rect id="balcony-phone-screen" x="119" y="223" width="18" height="7" rx="1" fill="#2d2d2d"/>
 </g>
@@ -8102,6 +8127,7 @@ section{margin:1.9rem 0}
 <stop offset="1" stop-color="#ffdc9a" stop-opacity="0"/>
 </radialGradient></defs>
 <rect id="balcony-flashlight-glow" x="0" y="0" width="680" height="340" fill="url(#balcony-flashlight-grad)" opacity="0" pointer-events="none" style="mix-blend-mode:screen; transition:opacity .35s ease"/>
+</g><!-- /#balcony-wobble -->
 </g>
 <rect id="balcony-thunder-flash" class="balcony-thunder-flash" x="2720" y="0" width="680" height="340" pointer-events="none"/>
 <rect class="trip-melt-whiteout" x="0" y="0" width="3400" height="340" pointer-events="none"/>
@@ -18154,6 +18180,26 @@ document.addEventListener("click", function (e) {
   }
   var wineglass = document.getElementById("balcony-wineglass");
   var winebottle = document.getElementById("balcony-winebottle");
+  // Draining the last of the wine (glass emptied with the bottle already dry) sets the
+  // balcony swaying woozily for ~15s — the sway itself lives on #balcony-wobble (CSS).
+  // Cleared on room-leave (goToStage) and the extinguisher reset so it can't get stuck.
+  var tipsyTimer = null;
+  function goTipsy() {
+    var s = document.getElementById("loft-game-strip");
+    var w = document.getElementById("balcony-wobble");
+    if (!s || !w) return;
+    s.classList.remove("tipsy");
+    void w.getBBox(); // force a reflow so a re-trigger restarts the sway from the top
+    s.classList.add("tipsy");
+    if (tipsyTimer) clearTimeout(tipsyTimer);
+    tipsyTimer = setTimeout(function () { s.classList.remove("tipsy"); tipsyTimer = null; }, 15300);
+  }
+  function clearTipsy() {
+    if (tipsyTimer) { clearTimeout(tipsyTimer); tipsyTimer = null; }
+    var s = document.getElementById("loft-game-strip");
+    if (s) s.classList.remove("tipsy");
+  }
+  window.__clearTipsy = clearTipsy;
   if (wineglass) {
     // toast in all four tongues — English, Czech, Persian (نوش), German — dealt from a
     // shuffled deck so each shows once per cycle before any repeats (a random pick missed some)
@@ -18196,6 +18242,8 @@ document.addEventListener("click", function (e) {
           requestAnimationFrame(function () { wineglass.classList.add("wobbling"); });
         });
       }
+      // that last sip — glass drained and the bottle already poured dry — tips the room woozy
+      if (wasFull && typeof winePoursLeft !== "undefined" && winePoursLeft <= 0) goTipsy();
     }
     wineglass.addEventListener("click", sipGlass);
     wineglass.addEventListener("keydown", function (e) {
@@ -25083,6 +25131,7 @@ function spawnDustMote(container) {
       if (window.__updateSongRoomWidth) window.__updateSongRoomWidth();
     }, 720);
     if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics(); // and gets quieter on the balcony specifically, while its door is shut
+    if (name !== "balcony" && window.__clearTipsy) window.__clearTipsy(); // the tipsy sway lives only on the balcony
     if (name === "balcony") triggerBalconyFinale();
     if (window.__updateSkyFireworks) window.__updateSkyFireworks(name); // wedding-day sky (balcony/garden), else stops
   }
@@ -26847,6 +26896,7 @@ function spawnDustMote(container) {
     if (window.resetSmoker) window.resetSmoker();
     if (window.resetLaptop) window.resetLaptop();
     if (window.resetBalconyDusk) window.resetBalconyDusk();
+    if (window.__clearTipsy) window.__clearTipsy();
     if (window.__setUvParty) window.__setUvParty(false); // drop out of the blacklight party
     var partyswitch = document.getElementById("balcony-partyswitch");
     if (partyswitch) partyswitch.classList.remove("on");

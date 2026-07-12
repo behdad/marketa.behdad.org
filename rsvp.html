@@ -13319,6 +13319,9 @@ document.addEventListener("click", function (e) {
     if (!faviconLink || isPlaying === faviconIsPlaying) return;
     faviconIsPlaying = isPlaying;
     clearInterval(faviconTimer);
+    // The 12fps favicon rewrite flickers Android Chrome's UI (and the flicker can persist
+    // after playback stops) — skip the favicon indicator entirely on touch devices.
+    if (window.matchMedia && (matchMedia("(pointer: coarse)").matches || matchMedia("(hover: none)").matches)) { faviconTimer = null; return; }
     if (isPlaying) {
       faviconLink.href = FAVICON_PLAYING; // instant static swap so the tab updates right away, before the first live frame
       faviconTimer = setInterval(faviconFrame, 83); // ~12fps
@@ -26817,7 +26820,7 @@ function spawnDustMote(container) {
         lp.frequency.value = 7000;
         rainGain = rainCtx.createGain();
         rainGain.gain.setValueAtTime(0.0001, rainCtx.currentTime);
-        var peak = rainInCuddly ? 0.01 : 0.018; // fainter heard through the door than out on the balcony
+        var peak = rainInCuddly ? 0.005 : 0.009; // fainter heard through the door than out on the balcony
         rainGain.gain.exponentialRampToValueAtTime(peak, rainCtx.currentTime + 1.2);
         var out = pannedOut(rainCtx, rainInCuddly ? "cuddly-balcony-door" : 0);
         rainNoise.connect(hp); hp.connect(lp); lp.connect(rainGain); rainGain.connect(out);

@@ -1725,7 +1725,8 @@ footer{margin-top:2.6rem}
 .pm-music{display:flex; flex-direction:column; align-items:center; gap:18px; padding-top:26px; text-align:center}
 .pm-music .pmm-art{width:120px; height:120px; border-radius:18px; overflow:hidden; box-shadow:0 4px 14px rgba(0,0,0,.25); background:#43807e}
 .pm-music .pmm-art svg{display:block; width:100%; height:100%}
-.pm-music .pmm-title{font-family:"Fraunces",serif; font-size:14px; color:var(--ink); min-height:19px; padding:0 10px}
+.pm-music .pmm-title{font-family:"Fraunces",serif; font-size:14px; color:var(--ink); min-height:18px; padding:0 10px; line-height:1.15}
+.pm-music .pmm-artist{font-size:11.5px; color:var(--muted); min-height:14px; padding:0 10px; margin-top:1px}
 .pm-music .pmm-transport{display:flex; align-items:center; gap:20px}
 .pm-music .pmm-play{width:62px; height:62px; border-radius:50%; border:none; background:var(--wine); color:#fff; font-size:24px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 10px rgba(142,58,74,.35)}
 .pm-music .pmm-skip{width:46px; height:46px; border-radius:50%; border:none; background:var(--cream); color:var(--wine); font-size:17px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 0 0 1px var(--rule)}
@@ -17382,6 +17383,7 @@ document.addEventListener("click", function (e) {
       body.appendChild(wrap);
       var needle = wrap.querySelector(".pmp-needle"), head = wrap.querySelector(".pmp-head");
       var enableBtn = wrap.querySelector(".pmp-enable"), cap = wrap.querySelector(".pmp-cap");
+      var smoothed = null; // low-pass state — raw magnetometer readings jitter badly
       function setHeading(deg) {
         var d = ((deg % 360) + 360) % 360;
         if (needle) needle.style.transform = "rotate(" + (-d) + "deg)"; // north needle points to true north as you turn
@@ -17391,8 +17393,13 @@ document.addEventListener("click", function (e) {
         if (typeof e.webkitCompassHeading === "number") heading = e.webkitCompassHeading; // iOS: degrees CW from north
         else if (typeof e.alpha === "number") heading = 360 - e.alpha;                    // absolute alpha → compass heading
         if (heading == null || isNaN(heading)) return;
-        setHeading(heading);
-        head.innerHTML = tr("comp_heading") + ": <b>" + Math.round(((heading % 360) + 360) % 360) + "°</b>";
+        heading = ((heading % 360) + 360) % 360;
+        // exponential low-pass filter, following the SHORTEST angular path so the 359°→0°
+        // wrap doesn't spin the needle all the way around; ~0.12 heavily damps the jitter
+        if (smoothed == null) smoothed = heading;
+        else { var diff = ((heading - smoothed + 540) % 360) - 180; smoothed = (smoothed + diff * 0.12 + 360) % 360; }
+        setHeading(smoothed);
+        head.innerHTML = tr("comp_heading") + ": <b>" + Math.round(smoothed) + "°</b>";
       }
       function staticNorth(msgKey) {
         setHeading(0);
@@ -17581,7 +17588,7 @@ document.addEventListener("click", function (e) {
     function renderMusic(body) {
       var wrap = document.createElement("div");
       wrap.className = "pm-music";
-      wrap.innerHTML = '<div class="pmm-art"></div><div class="pmm-title"></div>';
+      wrap.innerHTML = '<div class="pmm-art"></div><div class="pmm-titles"><div class="pmm-title"></div><div class="pmm-artist"></div></div>';
       var art = wrap.querySelector(".pmm-art");
       var transport = document.createElement("div");
       transport.className = "pmm-transport";
@@ -17595,7 +17602,9 @@ document.addEventListener("click", function (e) {
         art.innerHTML = musicCover(id);
         var title = (window.__phoneMusicTitle && window.__phoneMusicTitle());
         if (!title && window.__phoneMusicLabel) title = window.__phoneMusicLabel(id);
-        wrap.querySelector(".pmm-title").textContent = title || "";
+        var parts = (title || "").split(" — "); // "Song — Artist" → song on top, artist beneath
+        wrap.querySelector(".pmm-title").textContent = parts[0] || "";
+        wrap.querySelector(".pmm-artist").textContent = parts[1] || "";
       }
       play.addEventListener("click", function () { if (window.__phoneMusicToggle) window.__phoneMusicToggle(); setTimeout(paint, 60); });
       prev.addEventListener("click", function () { if (window.__phoneMusicSkip) window.__phoneMusicSkip(-1); setTimeout(paint, 80); });

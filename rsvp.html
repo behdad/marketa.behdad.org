@@ -174,7 +174,8 @@ footer{margin-top:2.6rem}
    the whole page — the browser fills the screen with just this element's own box, so
    give it a matching background + center the frame in it, SCALED to fill whichever
    dimension (width or height) is the binding constraint at this screen's aspect ratio.
-   .is-fullscreen (toggled by JS in the fullscreenchange handler) drives this rather than
+   .is-fullscreen (added by JS the moment the button is activated, and kept in sync with
+   the real Fullscreen API in the fullscreenchange handler) drives this rather than
    the :fullscreen pseudo-class alone, since pseudo-class + vendor-prefix support is less
    predictable across engines than a plain class the JS controls directly; the pseudo-
    class rules stay too as a harmless belt-and-braces fallback. */
@@ -8826,6 +8827,7 @@ var T = {
     marketa_url: "https://marketajakesova.ca",
     nav_lang_aria: "Language",
     fullscreen_enter: "Enter fullscreen",
+    fullscreen_exit: "Exit fullscreen",
     caps_aria: "A pink flat cap and a blue baker boy cap, crossed",
     laptop_date: "July 10",
     desk_to: "to",
@@ -9113,6 +9115,7 @@ var T = {
     marketa_url: "https://marketajakesova.ca/cs/",
     nav_lang_aria: "Jazyk",
     fullscreen_enter: "Celá obrazovka",
+    fullscreen_exit: "Ukončit celou obrazovku",
     caps_aria: "Růžová čepice a modrá čepice, zkřížené",
     laptop_date: "10. 7.",
     desk_to: "do",
@@ -9598,12 +9601,20 @@ window.addEventListener("hashchange", function () {
   var btn = document.getElementById("hunt-fullscreen-btn");
   var area = document.getElementById("hunt-fullscreen-area");
   if (!btn || !area) return;
+  // The real Fullscreen API is only a bonus layer here: the always-works mechanism is the
+  // .is-fullscreen class (a fixed overlay that fills the viewport, sized by JS below), so
+  // the button stays useful even where requestFullscreen is missing or silently denied
+  // (mobile). requestFs/exitFs may be undefined — every call site guards for that.
   var requestFs = area.requestFullscreen || area.webkitRequestFullscreen;
   var exitFs = document.exitFullscreen || document.webkitExitFullscreen;
-  if (!requestFs || !exitFs) { btn.remove(); return; } // no Fullscreen API support: don't show a dead button
+  // Our own intent flag: true whenever the class-fill is meant to be on. Kept separate
+  // from the real API state so the fullscreenchange handler can tell an Esc/back exit of
+  // real fullscreen (which must also drop the class-fill) from a request we never made.
+  var manualFs = false;
   function isFullscreen() {
     return (document.fullscreenElement || document.webkitFullscreenElement) === area;
   }
+  function isFilled() { return area.classList.contains("is-fullscreen"); }
   function lang() { return T[document.documentElement.lang] ? document.documentElement.lang : "en"; }
   // Measures the actual space available in fullscreen (area's content box minus the
   // caption/dots, which are flex:0 0 auto and keep their natural size) and sets the
@@ -9647,21 +9658,20 @@ window.addEventListener("hashchange", function () {
     frame.style.height = viewportH + "px";
   }
   function refreshLabel() {
-    var fs = isFullscreen();
-    area.classList.toggle("is-fullscreen", fs); // primary driver for the scaling CSS — see comment there
-    // no exit-fullscreen affordance needed: Escape (desktop) and the mobile back
-    // button/gesture both already exit fullscreen natively, so the button only ever
-    // needs to offer entering it -- hide it entirely once inside instead of relabeling.
-    btn.style.display = fs ? "none" : "";
-    btn.setAttribute("aria-label", T[lang()].fullscreen_enter);
-    btn.textContent = "⛶";
+    var filled = isFilled();
+    // The button stays visible even while filled — it doubles as the explicit EXIT
+    // control. A class-only fill (no real Fullscreen API grant — the common mobile case)
+    // is dismissed by neither Esc nor the Android back gesture, so relying on those to
+    // leave would strand the user; an always-present toggle guarantees a way out.
+    btn.setAttribute("aria-label", filled ? T[lang()].fullscreen_exit : T[lang()].fullscreen_enter);
+    btn.textContent = filled ? "✕" : "⛶";
     sizeFullscreenFrame();
     // Firefox (confirmed live: black padding around an undersized frame) fires
     // fullscreenchange before its own layout pass has caught up to the new fullscreen
     // viewport, so the immediate measurement above reads stale (pre-fullscreen)
     // dimensions -- re-measure a couple of frames later once it has settled. Harmless
     // no-op re-measurement on browsers that already got it right the first time.
-    if (fs) {
+    if (filled) {
       requestAnimationFrame(function () {
         requestAnimationFrame(sizeFullscreenFrame);
       });
@@ -9669,12 +9679,34 @@ window.addEventListener("hashchange", function () {
   }
   window.refreshFullscreenLabel = refreshLabel; // re-run by setLang() on every language switch
   window.__sizeFullscreenFrame = sizeFullscreenFrame; // test hook: isFullscreen() checks the real Fullscreen API, which headless test scripts that only toggle .is-fullscreen can't trigger
-  function toggleFs() {
-    try {
-      var p = isFullscreen() ? exitFs.call(document) : requestFs.call(area);
-      if (p && p.catch) p.catch(function () {}); // e.g. denied outside a trusted gesture
-    } catch (err) {}
+  function enterFs() {
+    // Class-fill first — this alone fills the viewport and works on mobile regardless of
+    // the Fullscreen API; refreshLabel() flips the glyph to ✕ and sizes the room to fill.
+    manualFs = true;
+    area.classList.add("is-fullscreen");
+    refreshLabel();
+    // Then best-effort real fullscreen (hides the browser/status bar where supported).
+    // A rejection on mobile / outside a trusted gesture is harmless — the class already
+    // did the visible work.
+    if (requestFs) {
+      try {
+        var p = requestFs.call(area);
+        if (p && p.catch) p.catch(function () {});
+      } catch (err) {}
+    }
   }
+  function exitFsFull() {
+    manualFs = false;
+    area.classList.remove("is-fullscreen");
+    if (isFullscreen() && exitFs) { // leave real fullscreen too, if a genuine grant is in effect
+      try {
+        var p = exitFs.call(document);
+        if (p && p.catch) p.catch(function () {});
+      } catch (err) {}
+    }
+    refreshLabel();
+  }
+  function toggleFs() { if (isFilled()) exitFsFull(); else enterFs(); }
   btn.addEventListener("click", function (e) { e.stopPropagation(); toggleFs(); });
   // 'f' toggles fullscreen from anywhere (a keydown is a trusted gesture, so the
   // requestFullscreen call is allowed); ignored while typing or with a modifier held.
@@ -9685,8 +9717,23 @@ window.addEventListener("hashchange", function () {
     e.preventDefault();
     toggleFs();
   });
-  document.addEventListener("fullscreenchange", refreshLabel);
-  document.addEventListener("webkitfullscreenchange", refreshLabel);
+  // Keep the class-fill and the real API in sync so neither can strand the other. If the
+  // real API just EXITED (Esc / Android back) while our fill is on, drop the fill too so
+  // those gestures still fully exit; if it just ENTERED, ensure the class is on. The
+  // manualFs guard means a real-fs exit we didn't initiate here never yanks a fill away
+  // that the user is relying on.
+  function onFsChange() {
+    if (isFullscreen()) {
+      manualFs = true;
+      area.classList.add("is-fullscreen");
+    } else if (manualFs) {
+      manualFs = false;
+      area.classList.remove("is-fullscreen");
+    }
+    refreshLabel();
+  }
+  document.addEventListener("fullscreenchange", onFsChange);
+  document.addEventListener("webkitfullscreenchange", onFsChange);
   window.addEventListener("resize", sizeFullscreenFrame); // orientation change / DevTools resize while fullscreen
   refreshLabel();
 })();

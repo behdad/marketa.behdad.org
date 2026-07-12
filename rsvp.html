@@ -1780,6 +1780,35 @@ footer{margin-top:2.6rem}
 .pm-flash-app .pmf-torch:active{transform:scale(.96)}
 .pm-flash-app .pmf-label{font-size:13px; color:var(--muted)}
 .phone-shell.pm-flash .phone-app-body{background:radial-gradient(120% 80% at 50% 30%, rgba(255,231,168,.32), transparent 70%)}
+/* photobooth: consent → live selfie preview → composed polaroid with look + frame chips.
+   its own camera/UI; the polaroid is the monitor booth's compositor via window.__phonePB */
+.pm-booth{display:flex; flex-direction:column; align-items:center; gap:12px}
+.pm-booth .pmb-consent{display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center; padding:36px 12px}
+.pm-booth .pmb-cam{font-size:52px; line-height:1}
+.pm-booth .pmb-ask{font-family:"Fraunces",serif; font-size:17px; color:var(--ink)}
+.pm-booth .pmb-sub{font-size:13px; color:var(--muted)}
+.pm-booth .pmb-btn{border:none; border-radius:14px; background:var(--wine); color:#fff; font:inherit; font-size:14px; padding:10px 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(142,58,74,.3)}
+.pm-booth .pmb-btn:active{transform:scale(.96)}
+.pm-booth .pmb-stage{position:relative; width:100%; aspect-ratio:1/1; max-height:46vh; border-radius:16px; overflow:hidden; background:#0a0d12; box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.pm-booth .pmb-video{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transform:scaleX(-1)} /* mirror = selfie view, matches the capture */
+.pm-booth .pmb-count{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:"Fraunces",serif; font-size:86px; color:#fff; text-shadow:0 2px 12px rgba(0,0,0,.6); opacity:0; pointer-events:none}
+.pmb-tick{animation:pmbTick .5s ease-out} /* one-shot per digit; added/removed in JS (keyframes override the base opacity:0) */
+@keyframes pmbTick{0%{opacity:0; transform:scale(1.6)}30%{opacity:1; transform:scale(1)}100%{opacity:.15; transform:scale(.9)}}
+.pm-booth .pmb-shutter{flex:none; width:66px; height:66px; border-radius:50%; border:4px solid var(--wine); background:var(--paper); cursor:pointer; box-shadow:0 3px 10px rgba(0,0,0,.2); padding:0}
+.pm-booth .pmb-shutter::after{content:""; display:block; width:44px; height:44px; margin:7px auto; border-radius:50%; background:var(--wine)}
+.pm-booth .pmb-shutter:active{transform:scale(.94)}
+.pm-booth .pmb-shutter:disabled{opacity:.5}
+.pm-booth .pmb-lead{font-family:"Fraunces",serif; font-size:15px; color:var(--wine); text-align:center}
+.pm-booth .pmb-img{width:100%; max-width:224px; border-radius:6px; box-shadow:0 4px 14px rgba(0,0,0,.22); background:var(--paper)}
+.pm-booth .pmb-row-label{align-self:flex-start; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--soft)}
+.pm-booth .pmb-chip-row{display:flex; gap:6px; width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding-bottom:2px}
+.pm-booth .pmb-chip-row::-webkit-scrollbar{display:none}
+.pm-booth .pmb-chip{flex:none; border:1px solid var(--rule); border-radius:999px; background:var(--paper); color:var(--muted); font:inherit; font-size:12px; padding:5px 11px; cursor:pointer; white-space:nowrap}
+.pm-booth .pmb-chip.active{background:var(--wine); color:#fff; border-color:var(--wine)}
+.pm-booth .pmb-hint{font-size:12px; color:var(--muted); text-align:center; line-height:1.4}
+.pm-booth .pmb-btn-row{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; width:100%}
+.pm-booth .pmb-act{background:var(--cream); color:var(--ink); box-shadow:inset 0 0 0 1px var(--rule); font-size:13px; padding:9px 14px}
+.pm-booth .pmb-act svg{vertical-align:-1px; margin-right:4px}
 /* hacker news reader */
 .pm-hn{display:flex; flex-direction:column}
 .pm-hn .pmh-msg{font-size:13px; color:var(--muted); text-align:center; padding:24px 8px; line-height:1.5}
@@ -15955,18 +15984,22 @@ document.addEventListener("click", function (e) {
     g.filter = "none";
   }
   var pbCaptureTime = null; // when the frame was actually shot — names the download
-  function captureBaseFrame() {
-    var w = pbVideo.videoWidth, h = pbVideo.videoHeight;
+  // mirror ONE frame of a live <video> into a canvas (selfie view). generic so the pocket
+  // phone's photobooth can shoot from its own camera through the same shared compositor.
+  function captureMirrored(video) {
+    if (!video) return null;
+    var w = video.videoWidth, h = video.videoHeight;
     if (!w || !h) return null;
     pbCaptureTime = new Date();
     var c = document.createElement("canvas");
     c.width = w; c.height = h;
     var g = c.getContext("2d");
     if (!g) return null;
-    try { g.translate(w, 0); g.scale(-1, 1); g.drawImage(pbVideo, 0, 0, w, h); } // mirror = selfie view
+    try { g.translate(w, 0); g.scale(-1, 1); g.drawImage(video, 0, 0, w, h); } // mirror = selfie view
     catch (e) { return null; }
     return c;
   }
+  function captureBaseFrame() { return captureMirrored(pbVideo); }
   // canvas helpers for the optional wedding overlays
   function pbRoundRect(g, x, y, w, h, r) {
     g.beginPath();
@@ -16399,6 +16432,24 @@ document.addEventListener("click", function (e) {
   document.addEventListener("visibilitychange", function () { if (document.hidden) closePhotobooth(); });
   window.addEventListener("pagehide", function () { closePhotobooth(); });
   window.__closeOfficePhotobooth = closePhotobooth;
+  // ── shared with the pocket phone's photobooth ── the phone runs its OWN camera + UI
+  // (its own getUserMedia, video, capture) but reuses the monitor's real compositor,
+  // look/frame lists, share routes and copy through these hooks — the Music/Mines
+  // reuse pattern (no duplicated compositor). The two booths never run at once: they
+  // live in different rooms and the phone booth calls __closeOfficePhotobooth on open.
+  window.__phonePB = {
+    effects: PB_EFFECTS,   // [{key, css}] — the same 12 looks
+    frames: PB_FRAMES,     // [{key, id}]  — Plain + the 3 wedding overlays
+    text: pbText,          // bilingual T lookup for pb_* keys
+    capture: captureMirrored,      // (video) -> mirrored canvas, stamps the download time
+    compose: composePolaroid,      // (base, filterCss, frameId) -> polaroid canvas
+    toBlob: polaroidToBlob,        // (canvas) -> Promise<Blob>
+    copy: copyImageToClipboard,    // (blobOrPromise) -> Promise<bool>, never throws
+    clipboardSupported: clipboardSupported,
+    download: downloadPhoto,       // (blob) -> saves loft-photobooth-<ts>.png
+    gmail: openGmailCompose,       // opens the Gmail web composer to marketa@behdad.org
+    mailto: openMailto             // native mail client, same subject/body
+  };
   window.resetOfficeMonitor = function () {
     closePhotobooth(); // a reset must never leave the camera running
     clearBoot();
@@ -16798,10 +16849,10 @@ document.addEventListener("click", function (e) {
   // monitor and laptop calls. All calls stay mutually exclusive: this module wraps the
   // three window.__*CallLive predicates so they also report a live phone call, and it
   // checks them (via the pre-wrap originals) before dialing. Content apps (Weather,
-  // Calendar, Mail, Mines, Music) reuse the real data/logic through small window.__phone*
-  // hooks; Album/Places/Browser are link-outs. Photobooth + the dev tools (console /
-  // python / linux) are deliberately skipped on the phone (camera consent + a wasm VM are
-  // too heavy for a pocket screen) — owner-revisitable. One shell, screens class-gated on
+  // Calendar, Mail, Mines, Music, Photobooth) reuse the real data/logic through small
+  // window.__phone* hooks; Album/Places/Browser are link-outs. The dev tools (console /
+  // python / linux) are still skipped on the phone (a wasm VM is too heavy for a pocket
+  // screen) — owner-revisitable. One shell, screens class-gated on
   // .phone-shell (.booting / .pm-home / .pm-app / .pm-incall). Every close path — ✕, Esc,
   // backdrop, room-leave (goToStage), the extinguisher reset (ends in goToStage), and a
   // hidden tab — funnels through close(), which hangs up any call, stops the ambient bed,
@@ -16842,6 +16893,7 @@ document.addEventListener("click", function (e) {
     var PHONE_APPS = [
       { id: "phone", labelKey: "app_phone", icon: "phone", tile: "#8e3a4a", open: function () { openDialer(); } },
       { id: "music", labelKey: "app_music", icon: "music", tile: "#6d4b63", open: function () { openApp("music", "app_music", renderMusic); } },
+      { id: "photobooth", labelKey: "app_photobooth", icon: "photobooth", glyph: "📷", tile: "#7f9ec0", open: function () { openApp("photobooth", "app_photobooth", renderPhotobooth); } },
       { id: "weather", labelKey: "app_weather", icon: "weather", tile: "#35726b", open: function () { openApp("weather", "app_weather", renderWeather); } },
       { id: "calendar", labelKey: "app_calendar", icon: null, glyph: "📅", tile: "#c68e95", open: function () { openApp("calendar", "app_calendar", renderCalendar); } },
       { id: "mail", labelKey: "app_mail", icon: "mail", tile: "#4a6b94", open: function () { openApp("mail", "app_mail", function (b) { renderMailList(b); }); } },
@@ -16866,6 +16918,7 @@ document.addEventListener("click", function (e) {
     var phoneBrowserCleanup = null; // teardown for the in-phone browser (ResizeObserver + frame unload)
     var clockTimer = null;          // clock app's 1s tick (time + both countdowns + playtime)
     var compassHandler = null;      // deviceorientation listener for the compass app
+    var photoboothCleanup = null;   // booth teardown: stop the stream, clear timers, revoke URLs
     var flashOn = false;            // flashlight state (balcony beam + screen glow)
     var sessionStart = Date.now();  // "in the loft for" playtime origin — set at script load
     var selectedCity = null;
@@ -17070,6 +17123,7 @@ document.addEventListener("click", function (e) {
       if (clockTimer) { clearInterval(clockTimer); clockTimer = null; } // clock/currency/hn all safe to clear blindly
       if (compassHandler) { try { window.removeEventListener("deviceorientationabsolute", compassHandler); window.removeEventListener("deviceorientation", compassHandler); } catch (e) {} compassHandler = null; }
       if (currentApp === "flashlight") setFlashlight(false); // beam off on leave — also the close()/visibilitychange path (close → leaveCurrentApp)
+      if (photoboothCleanup) { photoboothCleanup(); photoboothCleanup = null; } // stop the booth camera + timers + object URLs
       currentApp = null;
     }
     function showHome() {
@@ -17612,6 +17666,201 @@ document.addEventListener("click", function (e) {
       body.appendChild(host);
       if (window.__phoneMountMines) window.__phoneMountMines(host);
     }
+    // ── photobooth ────────────────────────────────────────────────────────────────
+    // The pocket front-camera booth: consent → live selfie preview → 3-2-1 shutter →
+    // a composed polaroid the visitor styles with looks + wedding frames, then Downloads
+    // or Emails to us. It runs its OWN getUserMedia stream + <video> + capture, but the
+    // polaroid itself (compositor, the 12 looks, the 3 wedding frames, share routes, all
+    // the bilingual copy) is the MONITOR booth's real code, reached through window.__phonePB
+    // — same reuse pattern as Music/Mines. Everything visible is an existing pb_* T key,
+    // so no new strings. Teardown (stream + timers + object URLs) hangs off leaveCurrentApp
+    // via photoboothCleanup, which every exit path (✕, Esc→home, hidden tab, room leave)
+    // funnels through — so the camera can never outlive the screen.
+    var PB_GMAIL_SVG = '<svg width="15" height="12" viewBox="0 0 20 16" aria-hidden="true"><rect x="1" y="1" width="18" height="14" rx="2" fill="#ffffff" stroke="#d6d0c0" stroke-width="1"/><path d="M1 2l9 7 9-7" fill="none" stroke="#c9483c" stroke-width="1.6"/><path d="M1 2v11l7-6z" fill="#4a6b94"/><path d="M19 2v11l-7-6z" fill="#7f9ec0"/></svg> ';
+    var PB_MAIL_SVG = '<svg width="15" height="12" viewBox="0 0 20 16" aria-hidden="true"><rect x="1" y="1" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M2 2l8 7 8-7" stroke="currentColor" stroke-width="1.5" fill="none"/></svg> ';
+    function renderPhotobooth(body) {
+      var PB = window.__phonePB;
+      if (!PB) { var m = document.createElement("div"); m.className = "pmh-msg"; m.textContent = tr("pb_err_1"); body.appendChild(m); return; }
+      try { if (window.__closeOfficePhotobooth) window.__closeOfficePhotobooth(); } catch (e) {} // never two live cameras at once
+      var stream = null, video = null, starting = false, baseFrame = null, curBlob = null;
+      var curFilter = "none", curFrame = "none";
+      var timers = [], urls = [];
+      var wrap = document.createElement("div");
+      wrap.className = "pm-booth";
+      body.appendChild(wrap);
+
+      function pushTimer(fn, ms) { var id = setTimeout(fn, ms); timers.push(id); return id; }
+      function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+      function trackUrl(u) { urls.push(u); return u; }
+      function revokeUrls() { urls.forEach(function (u) { try { URL.revokeObjectURL(u); } catch (e) {} }); urls = []; }
+      function stopStream() {
+        if (stream) { try { stream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {} stream = null; }
+        if (video) { try { video.pause(); } catch (e) {} try { video.srcObject = null; } catch (e) {} video = null; }
+      }
+      function teardown() { clearTimers(); stopStream(); revokeUrls(); }
+      photoboothCleanup = teardown; // leaveCurrentApp() calls this on every exit
+
+      function alive() { return currentApp === "photobooth" && photoboothCleanup === teardown; }
+
+      // ── consent (own deliberate tap → getUserMedia inside a real gesture) ──
+      function showConsent() {
+        clearTimers();
+        wrap.innerHTML = "";
+        var panel = document.createElement("div");
+        panel.className = "pmb-consent";
+        panel.innerHTML = '<div class="pmb-cam">📷</div><div class="pmb-ask">' + tr("pb_confirm_q") + '</div>';
+        var go = document.createElement("button");
+        go.type = "button"; go.className = "pmb-btn pmb-go";
+        go.textContent = tr("pb_confirm_yes");
+        go.addEventListener("click", startCamera);
+        panel.appendChild(go);
+        wrap.appendChild(panel);
+      }
+      function showError() {
+        clearTimers(); stopStream();
+        wrap.innerHTML = "";
+        var panel = document.createElement("div");
+        panel.className = "pmb-consent pmb-err";
+        panel.innerHTML = '<div class="pmb-cam">🙈</div><div class="pmb-ask">' + tr("pb_err_1") + '</div><div class="pmb-sub">' + tr("pb_err_2") + '</div>';
+        var ok = document.createElement("button");
+        ok.type = "button"; ok.className = "pmb-btn pmb-act";
+        ok.textContent = tr("pb_err_ok");
+        ok.addEventListener("click", showConsent);
+        panel.appendChild(ok);
+        wrap.appendChild(panel);
+      }
+      function startCamera() {
+        if (starting || stream) return;
+        var md = navigator.mediaDevices;
+        if (!md || !md.getUserMedia) { showError(); return; } // no camera API / insecure context
+        starting = true;
+        wrap.innerHTML = '<div class="pmb-consent"><div class="pmb-cam">📷</div><div class="pmb-ask">…</div></div>';
+        var p;
+        try { p = md.getUserMedia({ video: { facingMode: "user" }, audio: false }); }
+        catch (e) { p = Promise.reject(e); } // never throw synchronously
+        p.then(function (s) {
+          starting = false;
+          if (!alive()) { s.getTracks().forEach(function (t) { t.stop(); }); return; } // left while the prompt was up — orphan nothing
+          stream = s;
+          showLive();
+        }, function () { starting = false; if (alive()) showError(); }); // denied / no device → friendly note, never a throw
+      }
+      // ── live selfie preview + shutter ──
+      function showLive() {
+        clearTimers();
+        wrap.innerHTML = "";
+        var stage = document.createElement("div");
+        stage.className = "pmb-stage";
+        video = document.createElement("video");
+        video.className = "pmb-video";
+        video.setAttribute("playsinline", ""); // iOS: keep it inline, don't force fullscreen
+        video.muted = true; video.autoplay = true;
+        try { video.srcObject = stream; } catch (e) {}
+        var pl = video.play(); if (pl && pl.catch) pl.catch(function () {});
+        stage.appendChild(video);
+        var count = document.createElement("div");
+        count.className = "pmb-count";
+        stage.appendChild(count);
+        wrap.appendChild(stage);
+        var shutter = document.createElement("button");
+        shutter.type = "button"; shutter.className = "pmb-shutter"; shutter.setAttribute("aria-label", tr("pb_confirm_yes"));
+        shutter.addEventListener("click", function () { runCountdown(count, shutter); });
+        wrap.appendChild(shutter);
+      }
+      function runCountdown(count, shutter) {
+        if (!video || !video.videoWidth) return; // no frame decoded yet — same guard as the monitor
+        shutter.disabled = true;
+        var n = 3;
+        (function tick() {
+          if (!alive() || !video) return;
+          if (n <= 0) {
+            count.classList.remove("pmb-tick"); count.textContent = "";
+            try { playLaptopClickSound("balcony-phone"); } catch (e) {} // shutter click
+            baseFrame = PB.capture(video);
+            if (baseFrame) { curFilter = "none"; curFrame = "none"; showResult(); }
+            else { shutter.disabled = false; } // capture failed — let them try again
+            return;
+          }
+          count.textContent = String(n);
+          count.classList.remove("pmb-tick"); void count.getBoundingClientRect(); count.classList.add("pmb-tick"); // reflow so the pop restarts each digit
+          n--;
+          pushTimer(tick, 520);
+        })();
+      }
+      // ── result: composed polaroid, look + frame chips (re-compose in place), share ──
+      function recompose() {
+        var pol = PB.compose(baseFrame, curFilter, curFrame);
+        if (!pol) return;
+        PB.toBlob(pol).then(function (b) {
+          if (!alive()) return;
+          curBlob = b;
+          PB.copy(Promise.resolve(b)); // keep the clipboard in step so paste-into-email just works
+          try {
+            var u = trackUrl(URL.createObjectURL(b));
+            var img = wrap.querySelector(".pmb-img");
+            if (img) img.src = u;
+          } catch (e) {}
+        }, function () {});
+      }
+      function chipRow(items, isActive, onPick) {
+        var row = document.createElement("div");
+        row.className = "pmb-chip-row";
+        items.forEach(function (it) {
+          var chip = document.createElement("button");
+          chip.type = "button";
+          chip.className = "pmb-chip" + (isActive(it) ? " active" : "");
+          chip.textContent = PB.text(it.key);
+          chip.addEventListener("click", function () {
+            if (isActive(it)) return;
+            onPick(it);
+            var chips = row.querySelectorAll(".pmb-chip");
+            for (var k = 0; k < chips.length; k++) chips[k].classList.toggle("active", chips[k] === chip);
+            recompose();
+          });
+          row.appendChild(chip);
+        });
+        return row;
+      }
+      function showResult() {
+        clearTimers();
+        var copied = PB.clipboardSupported();
+        wrap.innerHTML = "";
+        var lead = document.createElement("div"); lead.className = "pmb-lead"; lead.textContent = PB.text("pb_panel_lead");
+        var img = document.createElement("img"); img.className = "pmb-img"; img.alt = "";
+        var fxLabel = document.createElement("div"); fxLabel.className = "pmb-row-label"; fxLabel.textContent = PB.text("pb_pick_hint");
+        var fxRow = chipRow(PB.effects, function (fx) { return fx.css === curFilter; }, function (fx) { curFilter = fx.css; });
+        var frLabel = document.createElement("div"); frLabel.className = "pmb-row-label"; frLabel.textContent = PB.text("pb_frame_heading");
+        var frRow = chipRow(PB.frames, function (fr) { return fr.id === curFrame; }, function (fr) { curFrame = fr.id; });
+        var hint = document.createElement("div"); hint.className = "pmb-hint"; hint.textContent = PB.text(copied ? "pb_hint_copied" : "pb_hint_nocopy");
+        var btnRow = document.createElement("div"); btnRow.className = "pmb-btn-row";
+        function mkBtn(act, label, svg) {
+          var b = document.createElement("button");
+          b.type = "button"; b.className = "pmb-btn pmb-act";
+          b.innerHTML = (svg || "") + label;
+          b.addEventListener("click", function () {
+            // Gmail/Email re-copy inside this fresh gesture so the polaroid is on the
+            // clipboard when the composer opens; the booth stays put for more routes
+            if (act === "download") PB.download(curBlob);
+            else if (act === "gmail") { PB.copy(Promise.resolve(curBlob)); PB.gmail(); }
+            else if (act === "email") { PB.copy(Promise.resolve(curBlob)); PB.mailto(); }
+            else if (act === "retake") { revokeUrls(); baseFrame = null; showLive(); }
+          });
+          return b;
+        }
+        btnRow.appendChild(mkBtn("download", PB.text("pb_btn_download")));
+        // Android drops the Gmail web-compose prefill into the app and can't paste images —
+        // its plain Email button opens the native chooser, the right path there (matches the monitor)
+        if (!/\bAndroid\b/.test(navigator.userAgent)) btnRow.appendChild(mkBtn("gmail", PB.text("pb_btn_gmail"), PB_GMAIL_SVG));
+        btnRow.appendChild(mkBtn("email", PB.text("pb_btn_email"), PB_MAIL_SVG));
+        btnRow.appendChild(mkBtn("retake", PB.text("pb_btn_retake")));
+        wrap.appendChild(lead); wrap.appendChild(img);
+        wrap.appendChild(fxLabel); wrap.appendChild(fxRow);
+        wrap.appendChild(frLabel); wrap.appendChild(frRow);
+        wrap.appendChild(hint); wrap.appendChild(btnRow);
+        recompose(); // render the plain polaroid to start
+      }
+      showConsent();
+    }
     // ── calculator ──────────────────────────────────────────────────────────────
     // a plain four-function calculator: acc holds the running total, pending the
     // chosen operator, cur the on-screen entry. fresh means the next digit starts
@@ -17973,8 +18222,9 @@ document.addEventListener("click", function (e) {
         else if (currentApp === "clock") openApp("clock", "app_clock", renderClock);
         else if (currentApp === "compass") openApp("compass", "app_compass", renderCompass);
         else if (currentApp === "hn") openApp("hn", "app_hn", renderHN);
-        // flashlight + currency retitle only: a full rebuild would kill the live beam / drop the typed amount
-        else if ((currentApp === "flashlight" || currentApp === "currency") && shell.querySelector(".pah-title")) shell.querySelector(".pah-title").textContent = tr(currentTitleKey);
+        // flashlight + currency + photobooth retitle only: a full rebuild would kill the
+        // live beam / drop the typed amount / tear down the live camera mid-session
+        else if ((currentApp === "flashlight" || currentApp === "currency" || currentApp === "photobooth") && shell.querySelector(".pah-title")) shell.querySelector(".pah-title").textContent = tr(currentTitleKey);
       }
     };
     // Escape: layered close, on window-capture so it beats the document-capture music-stop

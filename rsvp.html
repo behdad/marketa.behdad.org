@@ -17914,6 +17914,16 @@ document.addEventListener("click", function (e) {
     // (same reasoning as the shortcuts card). in-call → hang up, app → home, home → close.
     window.addEventListener("keydown", function (e) {
       if (!isOpen()) return;
+      // while the math lockscreen is up, the physical number row / Backspace / Enter
+      // drive the passcode entry. we're on window-capture — ahead of the game's
+      // document/bubble digit hotkeys (room-nav, trips) — so stopImmediatePropagation
+      // here keeps the keys off the game and off the shell's own bubble listener that
+      // would otherwise swallow them. no-op once unlocked (.booting is cleared).
+      if (shell && shell.classList.contains("booting") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (/^[0-9]$/.test(e.key)) { e.preventDefault(); e.stopImmediatePropagation(); lockDigit(e.key); return; }
+        if (e.key === "Backspace") { e.preventDefault(); e.stopImmediatePropagation(); lockDel(); return; }
+        if (e.key === "Enter") { e.preventDefault(); e.stopImmediatePropagation(); lockSubmit(); return; }
+      }
       if (e.key === "Escape" || e.key === "Esc") {
         e.preventDefault(); e.stopPropagation();
         navBack();

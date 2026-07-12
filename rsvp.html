@@ -2918,6 +2918,19 @@ footer{margin-top:2.6rem}
 #loft-game-strip.strobe .strobe-trail.st1{opacity:.35; animation-delay:-.12s; filter:hue-rotate(40deg)}
 #loft-game-strip.strobe .strobe-trail.st2{opacity:.22; animation-delay:-.24s; filter:hue-rotate(90deg)}
 #loft-game-strip.strobe .strobe-trail.st3{opacity:.12; animation-delay:-.36s; filter:hue-rotate(140deg)}
+/* acid (strobe) trip, layered on top of the colour-flash: the walls drip via #acid-drip on
+   the whole-strip wrapper (independent of the strip's own animated filter), plus a slow
+   kaleidoscope bloom overlay. Both ride the .strobe class, so they clear when it drops. */
+#loft-game-strip.strobe #loft-float{filter:url(#acid-drip)}
+#trip-acid-kaleido-layer{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:4; mix-blend-mode:screen}
+#trip-acid-kaleido{opacity:0; transform-box:view-box; transform-origin:340px 170px}
+body:has(#loft-game-strip.strobe) #trip-acid-kaleido{animation:acid-kaleido 3s ease-in-out}
+@keyframes acid-kaleido{
+  0%{opacity:0; transform:rotate(0deg) scale(0.85)}
+  22%{opacity:.55}
+  78%{opacity:.5}
+  100%{opacity:0; transform:rotate(150deg) scale(1.12)}
+}
 #loft-game-strip.melt{filter:url(#melt-filter)}
 .trip-melt-whiteout{opacity:0; pointer-events:none; fill:#ffffff}
 #loft-game-strip.melt .trip-melt-whiteout{animation:trip-melt-whiteout-fade 5s ease-in-out}
@@ -3006,6 +3019,21 @@ body:has(#loft-game-strip.psychedelic) #garden-buddha{animation:buddha-apparitio
   95%{transform:rotate(1deg)}
   100%{transform:rotate(0)}
 }
+/* ketamine trip: weightless drift. The whole viewed room gently floats, tilts and breathes
+   as if gravity let go — a CSS animation on #loft-float (the neutral whole-strip wrapper),
+   pivoting about the viewed room's centre (JS sets transform-origin at trip start). Scale
+   stays >=1 through the drift so the translate/rotate never expose a cream or neighbour-room
+   sliver at the edges. The drift lives ONLY in these keyframes; #loft-float has no transform
+   attribute to clobber, and it clears the moment .ketamine drops. */
+#loft-game-strip.ketamine #loft-float{transform-box:view-box; animation:ket-float 18s ease-in-out}
+@keyframes ket-float{
+  0%{transform:translate(0,0) rotate(0deg) scale(1)}
+  15%{transform:translate(-4px,-5px) rotate(-0.4deg) scale(1.06)}
+  40%{transform:translate(4px,-3px) rotate(0.4deg) scale(1.08)}
+  65%{transform:translate(-3px,5px) rotate(-0.3deg) scale(1.07)}
+  88%{transform:translate(2px,-2px) rotate(0.2deg) scale(1.04)}
+  100%{transform:translate(0,0) rotate(0deg) scale(1)}
+}
 /* iboga: the world drains to gray and holds there while faint blue-gray memory
    photos surface one at a time on #iboga-layer (see startIbogaSlideshow) */
 #loft-game-strip.iboga{animation:iboga-trip 20s ease-in-out}
@@ -3072,6 +3100,11 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 @media (prefers-reduced-motion: reduce){
   #loft-game-strip.strobe, #loft-game-strip.molly, #loft-game-strip.melt, #loft-game-strip.ketamine, #loft-game-strip.iboga{animation:none; filter:none}
   #loft-game-strip.strobe .trip-strobe-flash{animation:none}
+  /* acid: no drip warp, no spinning kaleidoscope — a faint static bloom instead */
+  #loft-game-strip.strobe #loft-float{filter:none}
+  body:has(#loft-game-strip.strobe) #trip-acid-kaleido{animation:none; opacity:.22; transform:none}
+  /* ketamine: no weightless drift */
+  #loft-game-strip.ketamine #loft-float{animation:none}
   .iboga-slide{transition:none}
   #iboga-tree{transition:none}
   body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:none}
@@ -3963,7 +3996,25 @@ section{margin:1.9rem 0}
 </feTurbulence>
 <feDisplacementMap in="SourceGraphic" in2="turb" scale="45" xChannelSelector="A" yChannelSelector="G"/>
 </filter>
+<!-- acid (strobe) trip: the walls ooze/drip. A soft, large-scale turbulence whose
+     displacement scale pulses so edges melt and run. Hung on #loft-float (a neutral
+     wrapper around the whole strip) so it's independent of the strobe colour-flash the
+     strip element itself animates; the two compose. Cleared the instant .strobe drops. -->
+<filter id="acid-drip" x="-20%" y="-20%" width="140%" height="140%">
+<feTurbulence type="fractalNoise" baseFrequency="0.008 0.014" numOctaves="2" seed="4" result="adturb">
+<animate attributeName="baseFrequency" values="0.008 0.014;0.011 0.026;0.008 0.014" dur="1.9s" repeatCount="indefinite"/>
+</feTurbulence>
+<feDisplacementMap in="SourceGraphic" in2="adturb" xChannelSelector="R" yChannelSelector="G" scale="18">
+<animate attributeName="scale" values="12;32;12" dur="2.3s" repeatCount="indefinite"/>
+</feDisplacementMap>
+</filter>
 </defs>
+<!-- #loft-float: a coordinate-neutral wrapper around every stage + overlay. Idle it is the
+     identity, so navigation (the strip's own inline transform) and every geometry read are
+     unchanged. Two trips borrow it, one at a time: acid/strobe hangs the drip filter on it;
+     ketamine hangs a weightless drift ANIMATION on it (never a transform attribute — the
+     drift lives only in CSS keyframes, and JS sets transform-origin to the viewed room). -->
+<g id="loft-float">
 <g id="stage-kitchen" transform="translate(0,0)">
 
 <rect x="0" y="0" width="680" height="340" rx="0" fill="url(#kbrick)"/>
@@ -8965,6 +9016,7 @@ section{margin:1.9rem 0}
 </g>
 <rect class="trip-strobe-flash" x="0" y="0" width="3400" height="340" pointer-events="none"/>
 <rect id="trip-tolerance-veil" x="0" y="0" width="3400" height="340" fill="#0a0812" opacity="0" pointer-events="none" style="transition:opacity 2.5s ease"/>
+</g><!-- /#loft-float -->
     </svg>
     <!-- the fractal trip's golden buddha: its own overlay ABOVE the strip, so the
          hue-rotating trip filter never touches it (same layering trick as the ghost) -->
@@ -8993,6 +9045,37 @@ section{margin:1.9rem 0}
 <ellipse cx="320" cy="179.5" rx="9.5" ry="4" fill="#e8cd7e"/>
 <ellipse cx="320" cy="178.6" rx="4" ry="1.8" fill="#c9a13b"/>
 <path d="M290 188.5 Q320 181 350 188.5 M296 192.5 Q320 186.5 344 192.5" fill="none" stroke="#a8842a" stroke-width="1" stroke-linecap="round"/>
+</g>
+    </svg>
+    <!-- acid (strobe) trip: a slow kaleidoscope bloom. Its OWN overlay above the strip
+         (same layering trick as the buddha) so it auto-centres on whichever room shows
+         (viewBox 0 0 680 340, slice) and the strobe brightness/hue flash can't wash its
+         colours out. Twelve mirrored rainbow wedges + a bright core, screen-blended over
+         the room; the group fades in, rotates, and fades out across the 3s strobe, gated
+         purely on body:has(.strobe) so removing the class tears it fully down (no JS). -->
+    <svg id="trip-acid-kaleido-layer" aria-hidden="true" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid slice">
+<defs>
+<path id="kaleido-wedge" d="M340 170 L765 56 L765 284 Z"/>
+<radialGradient id="kaleido-glow" cx="0.5" cy="0.5" r="0.5">
+<stop offset="0" stop-color="#ffffff" stop-opacity="0.9"/>
+<stop offset="0.5" stop-color="#ffe6f2" stop-opacity="0.35"/>
+<stop offset="1" stop-color="#ffe6f2" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<g id="trip-acid-kaleido">
+<use href="#kaleido-wedge" transform="rotate(0 340 170)" fill="hsl(0 90% 55%)"/>
+<use href="#kaleido-wedge" transform="rotate(30 340 170)" fill="hsl(30 90% 55%)"/>
+<use href="#kaleido-wedge" transform="rotate(60 340 170)" fill="hsl(60 90% 55%)"/>
+<use href="#kaleido-wedge" transform="rotate(90 340 170)" fill="hsl(90 90% 55%)"/>
+<use href="#kaleido-wedge" transform="rotate(120 340 170)" fill="hsl(120 90% 55%)"/>
+<use href="#kaleido-wedge" transform="rotate(150 340 170)" fill="hsl(150 90% 55%)"/>
+<use href="#kaleido-wedge" transform="rotate(180 340 170)" fill="hsl(180 90% 55%)"/>
+<use href="#kaleido-wedge" transform="rotate(210 340 170)" fill="hsl(210 90% 55%)"/>
+<use href="#kaleido-wedge" transform="rotate(240 340 170)" fill="hsl(240 90% 55%)"/>
+<use href="#kaleido-wedge" transform="rotate(270 340 170)" fill="hsl(270 90% 55%)"/>
+<use href="#kaleido-wedge" transform="rotate(300 340 170)" fill="hsl(300 90% 55%)"/>
+<use href="#kaleido-wedge" transform="rotate(330 340 170)" fill="hsl(330 90% 55%)"/>
+<circle cx="340" cy="170" r="150" fill="url(#kaleido-glow)"/>
 </g>
     </svg>
     <!-- the iboga trip's memory photos: their own overlay ABOVE the strip, so the
@@ -24541,6 +24624,15 @@ function startTripVariant(variant) {
   playTripMelody(variant);
   if (variant === "iboga") startIbogaSlideshow();
   if (variant === "ketamine") {
+    // weightless drift: pivot the whole-room float about the CENTRE of the room being
+    // viewed (view-box units in the 3400x340 strip), so the tilt/scale never swing an
+    // off-centre room sideways. Only transform-origin is set here — the drift itself is
+    // the CSS ket-float animation on #loft-float; we never touch its transform attribute.
+    var loftFloat = document.getElementById("loft-float");
+    if (loftFloat) {
+      var ketIdx = window.currentStageIndex || 0;
+      loftFloat.style.transformOrigin = (ketIdx * 680 + 340) + "px 170px";
+    }
     setTimeout(function () {
       var ghostInner = document.getElementById("rsvp-trip-ghost-inner");
       var ghostPos = document.getElementById("rsvp-trip-ghost-pos");

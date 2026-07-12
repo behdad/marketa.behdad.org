@@ -10026,7 +10026,7 @@ var T = {
     kbd_space: "play / pause the music or video",
     kbd_esc: "go back",
     kbd_f: "fullscreen",
-    kbd_shift: "hold for the blacklight",
+    kbd_party: "throw the garden party",
     kbd_arrows: "previous / next room",
     kbd_digits: "jump to a room",
     kbd_q: "skip to the balcony finale",
@@ -10381,7 +10381,7 @@ var T = {
     kbd_space: "přehrát / pozastavit hudbu nebo video",
     kbd_esc: "jít zpět",
     kbd_f: "celá obrazovka",
-    kbd_shift: "podržet pro UV světlo",
+    kbd_party: "spustit zahradní večírek",
     kbd_arrows: "předchozí / další místnost",
     kbd_digits: "skok do místnosti",
     kbd_q: "rovnou na finále na balkoně",
@@ -10799,7 +10799,7 @@ window.addEventListener("hashchange", function () {
       ["<kbd>Space</kbd>", "kbd_space"],
       ["<kbd>Esc</kbd>", "kbd_esc"],
       ["<kbd>F</kbd>", "kbd_f"],
-      ["<kbd>Shift</kbd>", "kbd_shift"],
+      ["<kbd>P</kbd>", "kbd_party"],
       ["<kbd>←</kbd><kbd>→</kbd>", "kbd_arrows"],
       ["<kbd>1</kbd>–<kbd>5</kbd>", "kbd_digits"],
       ["<kbd>Q</kbd>", "kbd_q"],
@@ -10951,26 +10951,27 @@ document.addEventListener("click", function (e) {
   if (anchor && (e.target === anchor || (anchor.contains && anchor.contains(e.target)))) return;
   dismissEggBubble(b);
 });
-// Hold Shift to switch on the UV / blacklight "nightlight" — a momentary reveal that
-// restores when released. Momentary (vs. the old Caps-Lock toggle) means there's no
-// lingering state to get stuck, desync, or need resetting, and Shift's keydown/keyup fire
-// reliably — Caps Lock's lock-state read lagged a press, so the first press did nothing.
 function setUvMode(on) {
   var strip = document.getElementById("loft-game-strip");
   if (strip) strip.classList.toggle("uv-mode", !!on);
 }
-// Two independent sources drive the same blacklight look: the balcony party switch
-// (persistent, #balcony-partyswitch) and holding Shift (momentary). XOR them — Shift toggles
-// the current state, so with the party switch ON, holding Shift momentarily flips back to
-// normal (a peek out of the blacklight), and with it off, Shift peeks into the blacklight.
-var uvPartyOn = false, uvShiftHeld = false;
-function applyUvMode() { setUvMode(uvPartyOn !== uvShiftHeld); }
+// The blacklight is driven solely by the balcony party switch (persistent,
+// #balcony-partyswitch) — also togglable with the 'p' key (see the party keydown below).
+var uvPartyOn = false;
+function applyUvMode() { setUvMode(uvPartyOn); }
 window.__setUvMode = setUvMode; // reset / room-leave can force the raw class off
 window.__setUvParty = function (on) { uvPartyOn = !!on; applyUvMode(); }; // the balcony switch
-document.addEventListener("keydown", function (e) { if (e.key === "Shift") { uvShiftHeld = true; applyUvMode(); } });
-document.addEventListener("keyup", function (e) { if (e.key === "Shift") { uvShiftHeld = false; applyUvMode(); } });
-// if focus is lost while Shift is down (alt-tab), the keyup never arrives — clear it
-window.addEventListener("blur", function () { uvShiftHeld = false; applyUvMode(); });
+// 'p' throws / dismisses the garden blacklight party — same as flipping the balcony switch
+// (which drives the UV, whisks to the garden, and runs the party). Plain keypress only.
+document.addEventListener("keydown", function (e) {
+  if ((e.key !== "p" && e.key !== "P") || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+  var t = e.target;
+  if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+  var sw = document.getElementById("balcony-partyswitch");
+  if (!sw) return;
+  e.preventDefault();
+  sw.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+});
 document.addEventListener("click", function (e) {
   var link = e.target.closest && e.target.closest("#hunt-caption a");
   if (!link) return;

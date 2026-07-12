@@ -2889,8 +2889,8 @@ footer{margin-top:2.6rem}
 #trip-melt-dancers.melt-dancing{animation:trip-melt-dancers-fade 5s ease-in-out}
 @keyframes trip-melt-dancers-fade{
   0%{opacity:0}
-  22%{opacity:.92}
-  65%{opacity:.92}
+  22%{opacity:.5}
+  65%{opacity:.5}
   90%{opacity:0}
   100%{opacity:0}
 }
@@ -11520,7 +11520,7 @@ document.addEventListener("click", function (e) {
         '<circle cx="-9" cy="2.6" r="1.5" fill="#fffdf8"/><circle cx="0" cy="3.4" r="1.5" fill="#fffdf8"/><circle cx="9" cy="2.6" r="1.5" fill="#fffdf8"/>' +
         '<circle cx="0" cy="-8" r="1.7" fill="#8e3a4a"/>';
       alienLayer.appendChild(g);
-      arcadeAliens.push({ el: g, x: ax, y: ay, vy: 0.032 + Math.random() * 0.022 });
+      arcadeAliens.push({ el: g, x: ax, y: ay, vy: 0.023 + Math.random() * 0.0158 }); // ~28% slower descent
     }
 
     function fireShot() {
@@ -11561,7 +11561,7 @@ document.addEventListener("click", function (e) {
         a = arcadeAliens[i];
         a.y += a.vy * dt;
         a.el.setAttribute("transform", "translate(" + a.x.toFixed(1) + "," + a.y.toFixed(1) + ")");
-        if (a.y > 372) { if (a.el.parentNode) a.el.parentNode.removeChild(a.el); arcadeAliens.splice(i, 1); } // reached the floor, missed
+        if (a.y > 288) { stopArcade(true); return; } // a saucer reached the chair/floor — game over
       }
       for (var s = arcadeShots.length - 1; s >= 0; s--) {
         var sh = arcadeShots[s];
@@ -11583,6 +11583,7 @@ document.addEventListener("click", function (e) {
       var dt = arcadeLastT ? Math.min(50, t - arcadeLastT) : 16;
       arcadeLastT = t;
       arcadeStep(dt);
+      if (!arcadeActive) return; // a missed saucer ended the game inside the step — don't reschedule
       arcadeRaf = requestAnimationFrame(arcadeFrame);
     }
 
@@ -11600,17 +11601,17 @@ document.addEventListener("click", function (e) {
       arcadeRaf = requestAnimationFrame(arcadeFrame);
     }
 
-    function arcadeFlourish(n) {
+    function arcadeFlourish(n, gameOver) {
       if (!alienLayer) return;
       var g = document.createElementNS(SVGNS_ARC, "g");
       g.setAttribute("transform", "translate(340,150)");
       var txt = document.createElementNS(SVGNS_ARC, "text");
       txt.setAttribute("text-anchor", "middle");
-      txt.setAttribute("fill", "#8e3a4a");
+      txt.setAttribute("fill", gameOver ? "#d9534f" : "#8e3a4a");
       txt.setAttribute("font-family", "Fraunces, Georgia, serif");
-      txt.setAttribute("font-size", "30");
+      txt.setAttribute("font-size", gameOver ? "22" : "30");
       txt.setAttribute("font-weight", "700");
-      txt.textContent = "×" + n; // "×N" — language-neutral, no scoreboard UI
+      txt.textContent = gameOver ? ("game over · ×" + n) : ("×" + n); // language-neutral, no scoreboard UI
       g.appendChild(txt);
       alienLayer.appendChild(g);
       if (arcadeReduce) { setTimeout(function () { if (g.parentNode) g.parentNode.removeChild(g); }, 850); return; }
@@ -11623,7 +11624,7 @@ document.addEventListener("click", function (e) {
       anim.onfinish = function () { if (g.parentNode) g.parentNode.removeChild(g); };
     }
 
-    function stopArcade() {
+    function stopArcade(gameOver) {
       if (arcadeRaf) { cancelAnimationFrame(arcadeRaf); arcadeRaf = null; }
       var wasActive = arcadeActive, finalScore = arcadeScore;
       arcadeActive = false;
@@ -11631,7 +11632,7 @@ document.addEventListener("click", function (e) {
       arcadeAliens.length = 0; arcadeShots.length = 0;
       if (stageOffice) stageOffice.classList.remove("arcade");
       arcadeScore = 0;
-      if (wasActive && finalScore > 0) arcadeFlourish(finalScore); // subtle "×N" on release
+      if (wasActive && (gameOver || finalScore > 0)) arcadeFlourish(finalScore, gameOver); // "game over" on a miss, else a subtle "×N" on release
     }
 
     // tear down if the tab hides or the window loses focus mid-game (pointerup may never come)
@@ -23981,7 +23982,7 @@ function startTripVariant(variant) {
     // froggies: SOMETIMES (~45%) you glimpse dancer silhouettes on the whiteout. Place
     // them in the room you're viewing (like the molly hearts) and let them ride the fade.
     var dancers = document.getElementById("trip-melt-dancers");
-    if (dancers && Math.random() < 0.45) {
+    if (dancers && Math.random() < 0.75) {
       var meltIdx = window.currentStageIndex || 0;
       dancers.setAttribute("transform", "translate(" + (meltIdx * 680) + ",0)");
       dancers.classList.remove("melt-dancing");

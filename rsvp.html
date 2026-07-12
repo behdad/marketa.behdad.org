@@ -3630,6 +3630,13 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
   50%{filter:brightness(2.2)}
 }
 @media (prefers-reduced-motion: reduce){.garden-mirror-glass.glaring{animation:none}}
+/* the hanging mirror sways to the beat, pivoting at its top-center hook (transform-origin
+   50% 0). The groove rides a wrapper <g> distinct from the placement translate/scale g, so
+   the rotate can't clobber the mirror's position — same trap-avoidance as the rooster. */
+#garden-mirror-groove{transform-box:fill-box; transform-origin:50% 0}
+#garden-mirror-groove.grooving{animation:mirror-sway .7s ease-in-out infinite}
+@keyframes mirror-sway{0%,100%{transform:rotate(-2.6deg)} 50%{transform:rotate(2.6deg)}}
+@media (prefers-reduced-motion: reduce){#garden-mirror-groove.grooving{animation:none}}
 #garden-lamp-tip{transform-box:fill-box; transform-origin:center}
 #garden-lamp.glowing #garden-lamp-tip{animation:lamp-glow .9s ease-in-out}
 @keyframes lamp-glow{
@@ -3825,6 +3832,27 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 #stage-office.storming #office-sun{opacity:0}
 /* stars + moon are hidden by overcast/storm clouds */
 #stage-office.dusk.storming #office-stars, #stage-office.dusk.storming #office-moon, #stage-kitchen.dusk.storming #kitchen-stars{opacity:0}
+/* clicking a sun or moon toggles day/night. Only the currently-VISIBLE body is hittable:
+   the day sun is live by day (never at dusk/storm), the night moon only at dusk (not in a
+   storm that hides it), so a click always lands on the one you can see and falls through to
+   the other otherwise. office sun+moon share one point (cx160 cy54), so this gating is what
+   lets a click round-trip. garden sun/moon sit in the window (sun behind the raised blind). */
+#garden-window-sun, #garden-moon, #office-sun, #office-moon{cursor:pointer}
+#garden-window-sun{pointer-events:auto}
+#stage-garden.dusk #garden-window-sun, #stage-garden.storming #garden-window-sun{pointer-events:none}
+#garden-moon{pointer-events:none}
+#stage-garden.dusk #garden-moon{pointer-events:auto}
+#stage-garden.dusk.storming #garden-moon{pointer-events:none}
+#office-sun{pointer-events:auto}
+#stage-office.dusk #office-sun, #stage-office.storming #office-sun{pointer-events:none}
+#office-moon{pointer-events:none}
+#stage-office.dusk #office-moon{pointer-events:auto}
+#stage-office.dusk.storming #office-moon{pointer-events:none}
+/* the garden window sun hides under the blind's own full-size hit rect, so it gets a
+   transparent hit circle painted on top of the blind — live only once the blind is raised
+   by day (the sun is revealed), otherwise clicks fall through to the blind as before */
+#garden-sun-hit{pointer-events:none; cursor:pointer}
+#stage-garden:not(.dusk):not(.storming) #garden-blind.raised ~ #garden-sun-hit{pointer-events:auto}
 #stage-office.dusk #office-stars .twinkle, #stage-kitchen.dusk #kitchen-stars .twinkle{transform-box:fill-box; transform-origin:center; animation:star-twinkle 3s ease-in-out infinite}
 #stage-office.dusk #office-stars .twinkle.t2, #stage-kitchen.dusk #kitchen-stars .twinkle.t2{animation-duration:4.3s; animation-delay:.7s}
 #stage-office.dusk #office-stars .twinkle.t3, #stage-kitchen.dusk #kitchen-stars .twinkle.t3{animation-duration:2.4s; animation-delay:1.4s}
@@ -4817,13 +4845,13 @@ section{margin:1.9rem 0}
 <circle cx="118" cy="28" r="1.3" opacity="0.95" class="twinkle"/><circle cx="190" cy="30" r="1.5" opacity="1" class="twinkle t3"/><circle cx="248" cy="88" r="0.95" opacity="0.6" class="twinkle"/><circle cx="270" cy="32" r="1.3" opacity="0.9" class="twinkle t3"/><circle cx="300" cy="60" r="1" opacity="0.7"/><circle cx="336" cy="96" r="1.1" opacity="0.8" class="twinkle t2"/><circle cx="410" cy="40" r="1.2" opacity="0.85" class="twinkle"/><circle cx="442" cy="90" r="0.95" opacity="0.6"/><circle cx="470" cy="30" r="1.3" opacity="0.9" class="twinkle t3"/><circle cx="500" cy="64" r="1" opacity="0.7" class="twinkle t2"/><circle cx="128" cy="100" r="0.9" opacity="0.55"/>
 </g>
 </g>
-<g id="garden-moon" opacity="0" pointer-events="none" aria-hidden="true">
+<g id="garden-moon" opacity="0" aria-hidden="true">
 <circle id="garden-moon-glow" cx="370" cy="52" r="22" fill="url(#garden-moon-glow-grad)" opacity="0.5"/>
 <circle cx="370" cy="52" r="11" fill="#efece0"/>
 <circle cx="366" cy="49" r="0.9" fill="#c9c3ad"/><circle cx="373" cy="56" r="1.1" fill="#c9c3ad"/>
 </g>
 <!-- a daytime sun tucked in the top-right pane, hidden behind the blind until it's raised -->
-<g id="garden-window-sun" pointer-events="none" aria-hidden="true">
+<g id="garden-window-sun" aria-hidden="true">
 <circle cx="462" cy="67" r="21" fill="#ffe6a0" opacity="0.35"/>
 <circle cx="462" cy="67" r="13" fill="#ffd451"/>
 <circle cx="462" cy="67" r="13" fill="none" stroke="#fff0c0" stroke-width="1.5" opacity="0.7"/>
@@ -4881,6 +4909,10 @@ section{margin:1.9rem 0}
 <rect x="426" y="104" width="102" height="5" rx="2" fill="#a89468"/>
 </g>
 </g>
+<!-- transparent hit target for the window sun: it sits under the blind's full-size hit
+     rect, so this rides on top of the blind and only accepts clicks once the blind is
+     raised by day (gated in CSS), forwarding the tap to the day/night toggle -->
+<circle id="garden-sun-hit" cx="462" cy="67" r="15" fill="transparent" aria-hidden="true"/>
 <rect x="0" y="290" width="680" height="50" fill="#cf9a5f"/>
 <line x1="0" y1="312" x2="680" y2="312" stroke="#b57f47" stroke-width="1.5"/>
 <line x1="0" y1="330" x2="680" y2="330" stroke="#b57f47" stroke-width="1.5"/>
@@ -5548,6 +5580,7 @@ section{margin:1.9rem 0}
 <g id="garden-mirror" class="hunt-hit" tabindex="0" role="button" aria-label="A three-piece wall mirror">
 <rect x="583" y="181" width="70" height="52" fill="transparent"/>
 <g transform="translate(587,184) scale(0.8)">
+<g id="garden-mirror-groove">
 <path d="M-4 10 Q-4 5 2 4 L15 4 L15 40 L-4 40 Z" fill="#6b3a2f" stroke="#4a251e" stroke-width="1.5"/>
 <path d="M62 10 Q62 5 56 4 L43 4 L43 40 L62 40 Z" fill="#6b3a2f" stroke="#4a251e" stroke-width="1.5"/>
 <path id="garden-mirror-glass-1" class="garden-mirror-glass" d="M-1 12 Q-1 8 3 7.5 L12 7.5 L12 37 L-1 37 Z" fill="#dce8ee" stroke="#a8c0cc" stroke-width="1"/>
@@ -5560,6 +5593,7 @@ section{margin:1.9rem 0}
 <circle cx="43" cy="14" r="1.4" fill="#c9a35c"/>
 <circle cx="43" cy="32" r="1.4" fill="#c9a35c"/>
 <line x1="23" y1="9" x2="34" y2="34" stroke="#c6d8e2" stroke-width="1.5" stroke-linecap="round"/>
+</g>
 </g>
 </g>
 <g id="garden-chest">
@@ -6934,12 +6968,12 @@ section{margin:1.9rem 0}
 </g>
 <!-- the sun (day) and moon (dusk) share the same patch of open sky above the skyline;
      only one shows at a time, and both hide under overcast/storm clouds -->
-<g id="office-sun" pointer-events="none" aria-hidden="true">
+<g id="office-sun" aria-hidden="true">
 <circle cx="160" cy="54" r="11.5" fill="#ffe6a0" opacity="0.35"/>
 <circle cx="160" cy="54" r="7.5" fill="#ffd86a"/>
 <circle cx="160" cy="54" r="7.5" fill="none" stroke="#fff0c0" stroke-width="1" opacity="0.7"/>
 </g>
-<g id="office-moon" opacity="0" pointer-events="none" aria-hidden="true">
+<g id="office-moon" opacity="0" aria-hidden="true">
 <circle cx="160" cy="54" r="9.5" fill="#eef1f5" opacity="0.28"/>
 <circle cx="160" cy="54" r="7" fill="#e9edf0"/>
 <circle cx="157" cy="52.5" r="1.5" fill="#cdd5dd" opacity="0.6"/>
@@ -23407,6 +23441,16 @@ document.addEventListener("click", function (e) {
     if (!tarotIsNight()) { if (window.__toggleDayNight) window.__toggleDayNight(); } // → night
     else playLampShimmerSound("garden-tarot-moon");
   });
+  // clicking the actual sun or moon in a room window flips day↔night, same as the balcony
+  // sun / the 'd' key. CSS pointer-events gating keeps only the visible body hittable, so a
+  // click always toggles to the other. stopPropagation so it never double-fires a parent.
+  ["garden-window-sun", "garden-sun-hit", "garden-moon", "office-sun", "office-moon"].forEach(function (id) {
+    var body = document.getElementById(id);
+    if (body) body.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (window.__toggleDayNight) window.__toggleDayNight();
+    });
+  });
   var chanter = document.getElementById("garden-chanter");
   if (chanter) {
     function bumpChanter() {
@@ -30557,7 +30601,7 @@ function spawnDustMote(container) {
     // wrappers distinct from their click-reaction nodes, so a tap still wobbles/bounces).
     // During the balcony-switch garden party they also groove with NO song playing —
     // then at the CSS default tempo (partyGroove clears any stale phase-lock inline styles).
-    ["garden-rooster-groove", "garden-deer-groove", "garden-ladybug"].forEach(function (id) {
+    ["garden-rooster-groove", "garden-deer-groove", "garden-ladybug", "garden-mirror-groove"].forEach(function (id) {
       var el = document.getElementById(id);
       if (!el) return;
       if (anyPlaying) setGroove(el, durations.head);      // wings flutter + bob to the beat

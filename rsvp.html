@@ -2259,7 +2259,7 @@ footer{margin-top:2.6rem}
    with a short ease so a same-visit nudge doesn't snap; never animated as keyframes */
 #cuddly-irene-move{transform-box:fill-box; transform-origin:bottom center; transition:translate .45s ease}
 #cuddly-irene.irene-hug    #cuddly-irene-move{translate:140px 0}      /* stands over Behdad, arms + lean reach onto Markéta */
-#cuddly-irene.irene-sit    #cuddly-irene-move{translate:210px -30px}  /* up on the seat, beside Markéta */
+#cuddly-irene.irene-sit    #cuddly-irene-move{translate:262px -30px}  /* up on the seat, clearly to Markéta's right (not on top of her) */
 #cuddly-irene.irene-bounce #cuddly-irene-move{translate:52px -52px}   /* standing on the seat cushion */
 #cuddly-irene.irene-catplay #cuddly-irene-move{translate:16px 22px}   /* crouched low, down by the cat */
 #cuddly-irene.irene-roam   #cuddly-irene-move{translate:0 -2px}       /* behind the couch back (reparented) */
@@ -12173,7 +12173,7 @@ document.addEventListener("click", function (e) {
   var daybed = document.getElementById("cuddly-daybed");        // roam hides her lower half behind this
   var ireneHome = irene.parentNode, ireneNext = irene.nextSibling; // canonical z-order (in front of the couple)
   var BEHAVIORS = ["irene-roam", "irene-bounce", "irene-sit", "irene-hug"]; // catplay appended only when the cat's here
-  var showTimer = null, hideTimer = null, catPlayTimer = null, fadeTimer = null, firstDone = false, lastBeh = null;
+  var showTimer = null, hideTimer = null, catPlayTimer = null, fadeTimer = null, firstDone = false, lastBeh = null, firstWasRoam = false;
   function onScreen() { return window.currentStageName === "cuddly" && !document.hidden; }
   function catLoose() {
     var w = document.getElementById("witchy-chest-cat-walk");
@@ -12184,22 +12184,47 @@ document.addEventListener("click", function (e) {
     var stage = document.getElementById("stage-cuddly");
     return !!(catLoose() && pos && stage && stage.contains(pos));
   }
-  function restoreZ() { // undo the roam's reparent-behind-the-couch
+  function reducedMotion() {
+    return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+  function restoreZ() { // return her to her canonical parse-time DOM slot / z-order
     if (irene.parentNode !== ireneHome || irene.nextSibling !== ireneNext) ireneHome.insertBefore(irene, ireneNext);
   }
+  // Place her in the DOM for the given behavior's z-order (SVG has no z-index — paint order
+  // follows document order, later = on top):
+  //   roam        → BEHIND the daybed, so the couch back hides her lower half.
+  //   cat-play    → just AFTER the loose cat node, so the cat crouches BEHIND her (she's the
+  //                 kid reaching down over it). Falls through to front-of-knives if no cat.
+  //   bounce/sit/hug → AFTER the knives (last of the couple/knife layer), so a front-of-couch
+  //                 pose paints over the daybed AND the .cuddly-knife elements.
+  // restoreZ() (reset/teardown) always undoes whichever of these ran.
+  function placeFor(beh) {
+    if (beh === "irene-roam") {
+      if (daybed && daybed.parentNode) daybed.parentNode.insertBefore(irene, daybed);
+      return;
+    }
+    if (beh === "irene-catplay" && catInNook()) {
+      var cat = document.getElementById("witchy-chest-cat-pos");
+      if (cat && cat.parentNode) { cat.parentNode.insertBefore(irene, cat.nextSibling); return; }
+    }
+    var knife = document.getElementById("cuddly-knife-2"); // the later of the two knives
+    if (knife && knife.parentNode) knife.parentNode.insertBefore(irene, knife.nextSibling);
+    else restoreZ();
+  }
+  function clearCatPlay() { if (catPlayTimer) { clearTimeout(catPlayTimer); catPlayTimer = null; } }
   function dropPose() { // literal removes (check.js wants a literal classList.remove per anim-driving class)
     irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-catplay");
     restoreZ();
   }
   function leave() {
     // Fade her out IN PLACE: only .showing comes off now (starting the opacity fade). The
-    // pose classes + roam's behind-the-couch z-order are torn down AFTER the fade, once she's
-    // invisible — dropping them mid-fade would snap the walk-across back to origin and flash
-    // her z-order (the transform-attribute-jump family of bug, at animation-END). show()
-    // cancels this pending cleanup, so a synchronous leave()+show() re-pose isn't stripped.
+    // pose classes + reparented z-order are torn down AFTER the fade, once she's invisible —
+    // dropping them mid-fade would snap the walk-across back to origin and flash her z-order
+    // (the transform-attribute-jump family of bug, at animation-END). show()/runStep cancel
+    // this pending cleanup, so a synchronous leave()+re-pose isn't stripped.
     irene.classList.remove("showing");
     if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
-    if (catPlayTimer) { clearTimeout(catPlayTimer); catPlayTimer = null; }
+    clearCatPlay();
     if (fadeTimer) clearTimeout(fadeTimer);
     fadeTimer = setTimeout(function () { fadeTimer = null; dropPose(); }, 620); // > opacity .55s fade
   }
@@ -12212,23 +12237,60 @@ document.addEventListener("click", function (e) {
     if (!choices.length) choices = pool;
     return choices[Math.floor(Math.random() * choices.length)];
   }
-  function show(forced) {
-    if (irene.classList.contains("showing")) return;
-    if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; } // cancel a pending fade-cleanup so it can't strip these classes
-    var beh = forced || pickBehavior();
+  // Apply ONE pose synchronously: swap the pose class, drop the matching z-order, optionally
+  // nudge the cat. NO linger/chain timer here — the sequence driver (runStep) and the verify
+  // hook own timing, so this stays a pure, screenshottable single-pose apply. Returns the
+  // behavior actually applied (cat-play downgrades to hug when the cat isn't here).
+  function applyPose(beh) {
     if (beh === "irene-catplay" && !catInNook()) beh = "irene-hug"; // never play with a cat that isn't here
     lastBeh = beh;
+    clearCatPlay();
     irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-catplay");
-    if (beh === "irene-roam" && daybed && daybed.parentNode) daybed.parentNode.insertBefore(irene, daybed); // drop behind the couch
-    else restoreZ(); // every other pose composites in front of the couple
+    placeFor(beh);
     irene.classList.add(beh, "showing");
-    var linger = beh === "irene-roam" ? 6600 : (4200 + Math.random() * 2600);
-    hideTimer = setTimeout(function () { hideTimer = null; leave(); }, linger);
     if (beh === "irene-catplay") { // nudge the cat into a playful hop toward her (guarded + self-resuming)
       catPlayTimer = setTimeout(function () {
         catPlayTimer = null;
         if (onScreen() && catInNook() && window.__catChaseTo) window.__catChaseTo(120, 330);
       }, 750);
+    }
+    return beh;
+  }
+  // A visit = TWO distinct actions, then fade out. show() plays action 1; when it has
+  // lingered, transition() picks a DIFFERENT action 2 and plays it; when THAT lingers, she
+  // leaves. step is 1 or 2.
+  function show(forced) {
+    if (irene.classList.contains("showing")) return;
+    if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; } // cancel a pending fade-cleanup so it can't strip these classes
+    runStep(forced || pickBehavior(), 1);
+  }
+  function runStep(beh, step) {
+    var applied = applyPose(beh);
+    if (step === 1) firstWasRoam = (applied === "irene-roam");
+    var linger = applied === "irene-roam" ? 6000                              // her walk-across is ~6.8s
+      : (step === 2 && firstWasRoam) ? (2600 + Math.random() * 1200)          // trim action 2 after a long roam
+      : (3200 + Math.random() * 1500);                                        // two-action pacing (~8–11s total)
+    hideTimer = setTimeout(function () {
+      hideTimer = null;
+      if (step === 1) transition();
+      else leave();
+    }, linger);
+  }
+  function transition() {
+    var next = pickBehavior(); // excludes lastBeh (= action 1), so action 2 always differs
+    // Any transition touching roam would snap (roam holds its walk transform via `forwards`,
+    // and it reparents behind the couch), and under reduced-motion the move-glide + pose anims
+    // are disabled so an in-place swap would teleport — in both cases fade out, re-pose while
+    // invisible, fade back in (the opacity fade is NOT reduced-motion-disabled). Otherwise both
+    // poses are front-of-couch with motion allowed: glide in place (the .45s move-translate
+    // slides her over; .showing stays, so she never fades between the two actions of one visit).
+    if (lastBeh === "irene-roam" || next === "irene-roam" || reducedMotion()) {
+      irene.classList.remove("showing");
+      clearCatPlay();
+      if (fadeTimer) clearTimeout(fadeTimer);
+      fadeTimer = setTimeout(function () { fadeTimer = null; dropPose(); runStep(next, 2); }, 620);
+    } else {
+      runStep(next, 2);
     }
   }
   function tick() {
@@ -12259,9 +12321,17 @@ document.addEventListener("click", function (e) {
     firstDone = false;
     schedule();
   };
-  // test/verify hook: force a specific behavior now (falls back to hug if catplay is asked
-  // for without the cat present). Hard-clear first so a forced re-pose is instant.
-  window.__ireneShow = function (beh) { irene.classList.remove("showing"); dropPose(); show(beh); };
+  // test/verify hook: force ONE specific behavior and hold it (no auto-chain / no leave),
+  // so a pose is deterministically screenshottable (falls back to hug if catplay is asked
+  // for without the cat present). Hard-clear all timers + state first so it's instant + stable.
+  window.__ireneShow = function (beh) {
+    if (showTimer) { clearTimeout(showTimer); showTimer = null; }
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+    if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; }
+    irene.classList.remove("showing");
+    dropPose();
+    applyPose(beh);
+  };
   document.addEventListener("visibilitychange", function () { if (document.hidden) leave(); });
   schedule();
 })();

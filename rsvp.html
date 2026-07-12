@@ -1102,7 +1102,7 @@ footer{margin-top:2.6rem}
    No need to touch the other boot-logos' pointer-events: monitor clicks still delegate up. */
 #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .4s ease}
 #office-monitor.show-caps #monitor-desktop-dock{opacity:1; visibility:visible; pointer-events:auto}
-#office-monitor.show-nowplaying #monitor-desktop-dock, #office-monitor.show-saver #monitor-desktop-dock, #office-monitor.show-terminal #monitor-desktop-dock, #office-monitor.show-mail #monitor-desktop-dock, #office-monitor.show-mines #monitor-desktop-dock, #office-monitor.show-video #monitor-desktop-dock, #office-monitor.show-tehran #monitor-desktop-dock, #office-monitor.show-calendar #monitor-desktop-dock, #office-monitor.show-python #monitor-desktop-dock, #office-monitor.show-linux #monitor-desktop-dock, #office-monitor.show-weather #monitor-desktop-dock, #office-monitor.show-places #monitor-desktop-dock, #office-monitor.show-tattoo #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none}
+#office-monitor.show-nowplaying #monitor-desktop-dock, #office-monitor.show-saver #monitor-desktop-dock, #office-monitor.show-terminal #monitor-desktop-dock, #office-monitor.show-mail #monitor-desktop-dock, #office-monitor.show-mines #monitor-desktop-dock, #office-monitor.show-video #monitor-desktop-dock, #office-monitor.show-tehran #monitor-desktop-dock, #office-monitor.show-calendar #monitor-desktop-dock, #office-monitor.show-python #monitor-desktop-dock, #office-monitor.show-linux #monitor-desktop-dock, #office-monitor.show-weather #monitor-desktop-dock, #office-monitor.show-places #monitor-desktop-dock, #office-monitor.show-tattoo #monitor-desktop-dock, #office-monitor.show-life #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none}
 /* the dock is an HTML app grid in a foreignObject below the menu bar: 4 columns, and a
    thin right-side scrollbar once the apps outgrow the screen (overflow-y:auto shows it
    only then). overscroll-behavior + the grid's own wheel/touchmove stopPropagation keep
@@ -1291,6 +1291,26 @@ footer{margin-top:2.6rem}
 .tattoo-size:hover, .tattoo-tool:hover, .tattoo-swatch:hover{filter:brightness(0.95)}
 .tattoo-send{margin-left:auto; cursor:pointer; background:#c68e95; color:#fffdf8; border-radius:2.5px; padding:0 3px; height:5.6px; display:flex; align-items:center; justify-content:center; gap:0.8px; font-size:2.7px; line-height:1}
 .tattoo-send:hover{background:#b87b83}
+/* life app: Conway's Game of Life on a <canvas> over the screen, HTML in the foreignObject.
+   Wide board on the left (live cells wine on paper), a slim control panel on the RIGHT so
+   the close pill sits over the panel, never over playable cells (same layout idea as mines).
+   The whole UI is built once by JS into #monitor-life-wrap; the grid state lives in a JS
+   array, so a language toggle repaints labels without disturbing the cells. */
+#monitor-life{opacity:0; pointer-events:none; transition:opacity .25s ease}
+#office-monitor.show-life #monitor-life{opacity:1; pointer-events:auto}
+#monitor-life-close{cursor:pointer}
+#monitor-life-close:hover .seg-hover{opacity:.55}
+.life-wrap{position:relative; width:124px; height:42px; box-sizing:border-box; display:flex; background:#efe6cf; font-family:sans-serif; color:#453a31; overflow:hidden}
+.life-board{flex:none; width:90px; height:42px; display:block; background:#fffdf8; cursor:crosshair; touch-action:none}
+.life-side{flex:1; display:flex; flex-direction:column; align-items:stretch; gap:0.9px; padding:11px 2px 1.6px; box-sizing:border-box; box-shadow:inset 0.7px 0 0 rgba(255,255,255,0.6)} /* top padding clears the ✕ pill */
+.life-row{display:flex; gap:0.9px}
+.life-btn{flex:1; min-width:0; display:flex; align-items:center; justify-content:center; height:4.6px; padding:0 0.4px; font-size:3px; line-height:1; border-radius:1px; background:#c8bfa9; color:#453a31; cursor:pointer; overflow:hidden; box-shadow:inset 0.5px 0.5px 0 rgba(255,255,255,0.62), inset -0.5px -0.5px 0 rgba(69,58,49,0.3)}
+.life-btn:hover{background:#d3cbb7}
+.life-btn:active{box-shadow:inset 0.5px 0.5px 0 rgba(69,58,49,0.3), inset -0.5px -0.5px 0 rgba(255,255,255,0.62)}
+.life-btn.on{background:#8e3a4a; color:#fffdf8; box-shadow:inset 0 0 0 0.3px rgba(69,58,49,0.35)}
+.life-preset{font-size:2.5px}
+.life-gen{font-size:2.8px; line-height:1; text-align:center; color:#5c5142; padding:0.4px 0 0.2px}
+.life-lbl{font-size:2.3px; line-height:1; color:#8a7d6b; text-align:center}
 .vid-wrap.absent .vid-el, .vid-wrap.absent .vid-play{display:none}
 /* ── video control strip (begin) — self-contained with the .vid-ctrl div and its JS
    block; delete all three together if the film is ever swapped for a Vimeo iframe.
@@ -1514,6 +1534,7 @@ footer{margin-top:2.6rem}
 #office-monitor.photobooth #monitor-mines,
 #office-monitor.photobooth #monitor-video,
 #office-monitor.photobooth #monitor-tattoo,
+#office-monitor.photobooth #monitor-life,
 #office-monitor.photobooth #monitor-tehran,
 #office-monitor.photobooth #monitor-calendar,
 #office-monitor.photobooth #monitor-weather,
@@ -6677,6 +6698,22 @@ section{margin:1.9rem 0}
 <path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round"/>
 </g>
 </g>
+<!-- LIFE app: Conway's Game of Life over the screen. A canvas board + a slim right-hand
+     control panel (play/step/random/clear, speed, presets) are built by JS into the wrap;
+     the generation loop stops on every close/leave path (see closeLifeApp). Same mini close
+     pill as the other apps, in wine. -->
+<g id="monitor-life">
+<foreignObject x="254" y="154" width="124" height="42">
+<div xmlns="http://www.w3.org/1999/xhtml" id="monitor-life-wrap" class="life-wrap"></div>
+</foreignObject>
+<g id="monitor-life-close">
+<rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
+<rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#8e3a4a" stroke="#6f2c39" stroke-width="0.5"/>
+<rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.24"/>
+<rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#6f2c39" opacity="0"/>
+<path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round"/>
+</g>
+</g>
 <!-- TEHRAN CALL app: a video call to Behdad's family from his own machine — ring screen
      first, then the family's living room mid-birthday-party. The corner self-view is a
      silhouette until the call-cam module swaps in the visitor's real camera; the warm-
@@ -7078,6 +7115,8 @@ section{margin:1.9rem 0}
 <symbol id="dicon-phone" viewBox="0 0 12 12"><path d="M3.2 1.8 C2.4 2.6 2 3.5 2.6 5 C3.4 7 4.9 8.6 7 9.4 C8.5 10 9.4 9.6 10.2 8.8 C10.7 8.3 10.6 7.6 10 7.2 L8.7 6.4 C8.2 6.1 7.7 6.2 7.3 6.6 C7 6.9 6.5 7 6.1 6.7 C5.5 6.3 5.7 6.5 5.3 5.9 C5 5.5 5.1 5 5.4 4.7 C5.8 4.3 5.9 3.8 5.6 3.3 L4.8 2 C4.4 1.4 3.7 1.3 3.2 1.8 Z" fill="#f8f5ec"/></symbol>
 <symbol id="dicon-python" viewBox="0 0 12 12"><path d="M1.6 3.6 L4 5.5 L1.6 7.4 M4.9 3.6 L7.3 5.5 L4.9 7.4 M8.2 3.6 L10.6 5.5 L8.2 7.4" fill="none" stroke="#ffd43b" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="dicon-weather" viewBox="0 0 12 12"><circle cx="7.6" cy="4.7" r="2.2" fill="#f2e3b8"/><path d="M7.6 1.1 L7.6 1.9 M10.2 2.1 L9.6 2.7 M11.2 4.7 L10.4 4.7 M10.2 7.3 L9.6 6.7 M5 2.1 L5.6 2.7" stroke="#f2e3b8" stroke-width="0.7" stroke-linecap="round"/><path d="M2.5 9.6 A1.9 1.9 0 0 1 2.8 5.9 A2.6 2.6 0 0 1 7.8 6.4 A1.65 1.65 0 0 1 8.1 9.6 Z" fill="#f8f5ec"/></symbol>
+<!-- life: a 3×3 cell grid holding a glider (three filled cells) — the toy in miniature -->
+<symbol id="dicon-life" viewBox="0 0 12 12"><path d="M1.4 4.6 L10.6 4.6 M1.4 7.4 L10.6 7.4 M4.6 1.4 L4.6 10.6 M7.4 1.4 L7.4 10.6" stroke="#f8f5ec" stroke-width="0.5" opacity="0.6"/><rect x="4.9" y="1.7" width="2.2" height="2.2" rx="0.4" fill="#f8f5ec"/><rect x="7.7" y="4.5" width="2.2" height="2.2" rx="0.4" fill="#f8f5ec"/><rect x="1.9" y="7.3" width="2.2" height="2.2" rx="0.4" fill="#f8f5ec"/><rect x="4.9" y="7.3" width="2.2" height="2.2" rx="0.4" fill="#f8f5ec"/><rect x="7.7" y="7.3" width="2.2" height="2.2" rx="0.4" fill="#f8f5ec"/></symbol>
 <g id="chrome-roundel-def">
 <path d="M0 0 L-11.26 -6.5 A13 13 0 0 1 11.26 -6.5 Z" fill="#ea4335"/>
 <path d="M0 0 L-11.26 -6.5 A13 13 0 0 0 0 13 Z" fill="#34a853"/>
@@ -9168,6 +9207,21 @@ var T = {
     app_mines: "mines",
     mines_lose: "you set off the ring! (it was always going to happen)",
     mines_win: "cleared! the ring stays a surprise",
+    app_life: "life",
+    life_play: "Play",
+    life_pause: "Pause",
+    life_step: "Step one generation",
+    life_random: "Random soup",
+    life_clear: "Clear the board",
+    life_speed: "Speed",
+    life_slow: "Slow",
+    life_med: "Medium",
+    life_fast: "Fast",
+    life_seed: "seed a pattern",
+    life_glider: "glider",
+    life_blinker: "blinker",
+    life_pulsar: "pulsar",
+    life_gen: "gen",
     app_tehran: "tehran",
     tehran_place: "Tehran",
     mail_inbox_title: "inbox",
@@ -9473,6 +9527,21 @@ var T = {
     app_mines: "miny",
     mines_lose: "spustili jste prsten! (stejně k tomu jednou dojít muselo)",
     mines_win: "vyčištěno! prsten zůstává překvapením",
+    app_life: "život",
+    life_play: "Spustit",
+    life_pause: "Pozastavit",
+    life_step: "O generaci dál",
+    life_random: "Náhodná polévka",
+    life_clear: "Vyčistit desku",
+    life_speed: "Rychlost",
+    life_slow: "Pomalu",
+    life_med: "Středně",
+    life_fast: "Rychle",
+    life_seed: "zasej vzor",
+    life_glider: "kluzák",
+    life_blinker: "blikač",
+    life_pulsar: "pulzar",
+    life_gen: "gen",
     app_tehran: "teherán",
     tehran_place: "Teherán",
     mail_inbox_title: "doručená",
@@ -9617,6 +9686,7 @@ function setLang(l) {
   if (window.refreshPlacesText) window.refreshPlacesText();
   if (window.refreshPhoneText) window.refreshPhoneText();
   if (window.refreshTattooText) window.refreshTattooText();
+  if (window.refreshLifeText) window.refreshLifeText();
 }
 (function () {
   var btns = document.querySelectorAll(".langs button");
@@ -12391,7 +12461,7 @@ document.addEventListener("click", function (e) {
     saverTimer = setTimeout(startSaver, ms || 8000);
   }
   function startSaver() {
-    if (monitor.classList.contains("show-terminal") || monitor.classList.contains("show-mail") || monitor.classList.contains("show-mines") || monitor.classList.contains("show-video") || monitor.classList.contains("show-tehran") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux") || monitor.classList.contains("show-weather") || monitor.classList.contains("show-places") || monitor.classList.contains("show-tattoo")) { scheduleSaver(30000); return; } // never over someone typing, reading mail, a minesweeper game, the film, the tattoo studio, or a live call
+    if (monitor.classList.contains("show-terminal") || monitor.classList.contains("show-mail") || monitor.classList.contains("show-mines") || monitor.classList.contains("show-video") || monitor.classList.contains("show-tehran") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux") || monitor.classList.contains("show-weather") || monitor.classList.contains("show-places") || monitor.classList.contains("show-tattoo") || monitor.classList.contains("show-life")) { scheduleSaver(30000); return; } // never over someone typing, reading mail, a minesweeper game, the film, the tattoo studio, a life sim, or a live call
     if (monitor.classList.contains("show-calendar")) { scheduleSaver(30000); return; } // nor over the open calendar
     if (monitor.classList.contains("show-browser")) { scheduleSaver(30000); return; } // nor over someone browsing
     // a visited site (harfbuzz/behdad) idles back to the caps "home" before the saver
@@ -12497,13 +12567,14 @@ document.addEventListener("click", function (e) {
     closeMinesApp(); // stops the game timer too — nothing ticks behind a dark screen
     closeVideoApp(); // pauses the film too — it never plays behind a dark/rebooting screen
     closeTattooApp(); // drops the studio (and any open send dialog) before the screen goes dark
+    closeLifeApp(); // stops the Game-of-Life loop too — nothing ticks behind a dark screen
     closeTehranCall(true); // a dark screen can't keep the family call (or its camera/ambient) alive
     closeBrowser();
     blankBrowser(); // a powered-off PC isn't secretly running a site in the iframe
     bootTimers.forEach(clearTimeout);
     bootTimers = [];
     stopSaver();
-    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying", "show-terminal", "show-mail", "show-mines", "show-video", "show-tehran", "show-calendar", "show-python", "show-linux", "show-places", "show-tattoo", "show-browser");
+    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying", "show-terminal", "show-mail", "show-mines", "show-video", "show-tehran", "show-calendar", "show-python", "show-linux", "show-places", "show-tattoo", "show-life", "show-browser");
     if (window.__monitorZoomOut) window.__monitorZoomOut(); // a dark screen never holds the zoom
   }
   // The monitor only lights up when the PC is on; it then boots Fedora →
@@ -13555,7 +13626,8 @@ document.addEventListener("click", function (e) {
     { id: "chrome", icon: HOST_BROWSER === "chrome" ? null : "globe", labelKey: HOST_BROWSER === "chrome" ? "app_chrome" : HOST_BROWSER === "firefox" ? "app_firefox" : "app_browser", glyph: "🌐", tile: "#fdfbf6", color: "#4285f4", glyphSize: "5.2", open: function () { openBrowser(); } },
     { id: "terminal", icon: "console", labelKey: "app_terminal", glyph: "❯_", tile: "#2e2823", color: "#8fd070", mono: true, glyphSize: "4", open: function () { openTerminal(); } },
     { id: "python", labelKey: "app_python", glyph: ">>>", tile: "#306998", color: "#ffd43b", mono: true, glyphSize: "3.5", open: function () { openPython(); } },
-    { id: "linux", labelKey: "app_linux", glyph: "🐧", tile: "#fdfbf6", glyphSize: "5.2", open: function () { openLinux(); } }
+    { id: "linux", labelKey: "app_linux", glyph: "🐧", tile: "#fdfbf6", glyphSize: "5.2", open: function () { openLinux(); } },
+    { id: "life", icon: "life", labelKey: "app_life", glyph: "⧉", tile: "#8e3a4a", color: "#f8f5ec", glyphSize: "5.2", open: function () { openLifeApp(); } }
   ];
   var dock = document.getElementById("monitor-desktop-dock");
   var dockGlyphEls = {}; // per-app glyph element, for tiles that show live state
@@ -14230,7 +14302,7 @@ document.addEventListener("click", function (e) {
   window.__closeTopMonitorApp = function () {
     if (monitor.classList.contains("show-tehran") && window.__closeMonitorTehran) { window.__closeMonitorTehran(); return true; }
     if (monitor.classList.contains("photobooth")) { if (window.__closeOfficePhotobooth) window.__closeOfficePhotobooth(); return true; }
-    var apps = [["show-video", closeVideoApp], ["show-mail", closeMailApp], ["show-mines", closeMinesApp], ["show-tattoo", closeTattooApp], ["show-terminal", closeTerminal], ["show-browser", closeBrowser]];
+    var apps = [["show-video", closeVideoApp], ["show-mail", closeMailApp], ["show-mines", closeMinesApp], ["show-tattoo", closeTattooApp], ["show-life", closeLifeApp], ["show-terminal", closeTerminal], ["show-browser", closeBrowser]];
     for (var i = 0; i < apps.length; i++) if (monitor.classList.contains(apps[i][0])) { apps[i][1](); return true; }
     if (monitor.classList.contains("show-calendar") && window.__closeMonitorCalendar) { window.__closeMonitorCalendar(); return true; }
     if (monitor.classList.contains("show-weather") && window.__closeMonitorWeather) { window.__closeMonitorWeather(); return true; }
@@ -14552,6 +14624,235 @@ document.addEventListener("click", function (e) {
   if (tattooCloseBtn) {
     tattooCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeTattooApp(true); playLaptopClickSound("office-monitor"); });
     tattooCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+  // ── LIFE APP (Conway's Game of Life) ──────────────────────────────────────────────
+  // A cellular-automaton toy over the screen: a toroidal 30×14 board on a <canvas>, live
+  // cells wine on paper, with a slim right-hand control panel (play/step/random/clear, a
+  // 3-step speed, and glider/blinker/pulsar presets). The board state is a JS array, so a
+  // language toggle repaints labels without disturbing it. The generation loop is a single
+  // setInterval that is stopped AND nulled on every close/leave path (closeLifeApp via
+  // clearBoot / navigateMonitor / Esc / photobooth, __pauseMonitorLife on room-leave,
+  // visibilitychange on tab-hide) — a Game-of-Life loop left ticking in a backgrounded tab
+  // is exactly the ambient-accumulation freeze this project has been bitten by. A
+  // self-check in the timer tick (drops the loop the moment show-life / the office is gone)
+  // is the belt-and-suspenders net under all of it.
+  var lifeWrap = document.getElementById("monitor-life-wrap");
+  var lifeCloseBtn = document.getElementById("monitor-life-close");
+  var LIFE_COLS = 30, LIFE_ROWS = 14, LIFE_CELL = 8; // 8px backing per cell → crisp when the monitor is zoomed
+  var LIFE_SPEEDS = [300, 140, 60]; // slow / medium / fast, ms per generation
+  var lifeGridArr = new Uint8Array(LIFE_COLS * LIFE_ROWS);
+  var lifeCanvas = null, lifeCtx = null, lifeBuilt = false;
+  var lifePlaying = false, lifeTimer = null, lifeSpeedIdx = 1, lifeGen = 0;
+  var lifePlayBtn = null, lifeGenEl = null, lifeSeedLbl = null;
+  var lifeSpeedBtns = [], lifePresetBtns = [];
+  var lifePainting = false, lifePaintVal = 1;
+  function lifeT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
+  var LIFE_PRESETS = {
+    glider: { r: 1, c: 1, cells: [[0, 1], [1, 2], [2, 0], [2, 1], [2, 2]] }, // near the top-left so it has room to travel
+    blinker: { center: true, cells: [[0, 0], [0, 1], [0, 2]] },
+    pulsar: (function () {
+      var quad = [[0, 2], [0, 3], [0, 4], [2, 0], [3, 0], [4, 0], [2, 5], [3, 5], [4, 5], [5, 2], [5, 3], [5, 4]];
+      var cells = [];
+      quad.forEach(function (p) { // reflect the arm across both axes of the 13×13 box (center at 6,6)
+        [[p[0], p[1]], [p[0], 12 - p[1]], [12 - p[0], p[1]], [12 - p[0], 12 - p[1]]].forEach(function (q) {
+          if (!cells.some(function (e) { return e[0] === q[0] && e[1] === q[1]; })) cells.push(q);
+        });
+      });
+      return { center: true, cells: cells };
+    })()
+  };
+  function lifeRender() {
+    if (!lifeCtx) return;
+    var W = LIFE_COLS * LIFE_CELL, H = LIFE_ROWS * LIFE_CELL;
+    lifeCtx.fillStyle = "#fffdf8"; lifeCtx.fillRect(0, 0, W, H);
+    lifeCtx.strokeStyle = "rgba(69,58,49,0.10)"; lifeCtx.lineWidth = 0.5; // faint grid lines for a cellular look
+    lifeCtx.beginPath();
+    for (var gx = 1; gx < LIFE_COLS; gx++) { lifeCtx.moveTo(gx * LIFE_CELL, 0); lifeCtx.lineTo(gx * LIFE_CELL, H); }
+    for (var gy = 1; gy < LIFE_ROWS; gy++) { lifeCtx.moveTo(0, gy * LIFE_CELL); lifeCtx.lineTo(W, gy * LIFE_CELL); }
+    lifeCtx.stroke();
+    lifeCtx.fillStyle = "#8e3a4a";
+    for (var i = 0; i < lifeGridArr.length; i++) if (lifeGridArr[i]) {
+      var r = (i / LIFE_COLS) | 0, c = i % LIFE_COLS;
+      lifeCtx.fillRect(c * LIFE_CELL + 0.6, r * LIFE_CELL + 0.6, LIFE_CELL - 1.2, LIFE_CELL - 1.2);
+    }
+  }
+  function lifePaintGen() { if (lifeGenEl) lifeGenEl.textContent = lifeT("life_gen") + " " + lifeGen; }
+  function lifeAdvance() {
+    var next = new Uint8Array(LIFE_COLS * LIFE_ROWS);
+    for (var r = 0; r < LIFE_ROWS; r++) for (var c = 0; c < LIFE_COLS; c++) {
+      var n = 0;
+      for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) {
+        if (!dr && !dc) continue;
+        var rr = (r + dr + LIFE_ROWS) % LIFE_ROWS, cc = (c + dc + LIFE_COLS) % LIFE_COLS; // toroidal wrap
+        n += lifeGridArr[rr * LIFE_COLS + cc];
+      }
+      var i = r * LIFE_COLS + c;
+      next[i] = lifeGridArr[i] ? (n === 2 || n === 3 ? 1 : 0) : (n === 3 ? 1 : 0); // B3/S23
+    }
+    lifeGridArr = next; lifeGen++; lifePaintGen(); lifeRender();
+  }
+  function lifeArmTimer() { if (lifeTimer) clearInterval(lifeTimer); lifeTimer = setInterval(lifeStep, LIFE_SPEEDS[lifeSpeedIdx]); }
+  function lifeStep() {
+    // the loop's own kill-switch: the instant the app isn't the office's on-screen layer,
+    // stop ticking (covers every path that drops show-life or leaves the office room)
+    if (!monitor.classList.contains("show-life")) { lifePause(); return; }
+    if (window.currentStageName !== "office") { if (lifeTimer) { clearInterval(lifeTimer); lifeTimer = null; } return; }
+    lifeAdvance();
+  }
+  function lifePaintPlayBtn() {
+    if (!lifePlayBtn) return;
+    lifePlayBtn.textContent = lifePlaying ? "⏸" : "▶";
+    lifePlayBtn.title = lifeT(lifePlaying ? "life_pause" : "life_play");
+    lifePlayBtn.classList.toggle("on", lifePlaying);
+  }
+  function lifePlay() {
+    if (lifePlaying || !monitor.classList.contains("show-life")) return;
+    lifePlaying = true; lifeArmTimer(); lifePaintPlayBtn();
+  }
+  function lifePause() {
+    lifePlaying = false;
+    if (lifeTimer) { clearInterval(lifeTimer); lifeTimer = null; }
+    lifePaintPlayBtn();
+  }
+  function lifeToggle() { lifePlaying ? lifePause() : lifePlay(); }
+  function lifeStepOnce() { lifePause(); lifeAdvance(); }
+  function lifeRandom() {
+    for (var i = 0; i < lifeGridArr.length; i++) lifeGridArr[i] = Math.random() < 0.32 ? 1 : 0;
+    lifeGen = 0; lifePaintGen(); lifeRender();
+  }
+  function lifeClear() { lifeGridArr = new Uint8Array(LIFE_COLS * LIFE_ROWS); lifeGen = 0; lifePause(); lifePaintGen(); lifeRender(); }
+  function lifeDropPreset(name) {
+    var p = LIFE_PRESETS[name]; if (!p) return;
+    lifeGridArr = new Uint8Array(LIFE_COLS * LIFE_ROWS);
+    var maxR = 0, maxC = 0;
+    p.cells.forEach(function (o) { if (o[0] > maxR) maxR = o[0]; if (o[1] > maxC) maxC = o[1]; });
+    var baseR = p.center ? Math.max(0, ((LIFE_ROWS - 1 - maxR) / 2) | 0) : p.r;
+    var baseC = p.center ? Math.max(0, ((LIFE_COLS - 1 - maxC) / 2) | 0) : p.c;
+    p.cells.forEach(function (o) {
+      var r = baseR + o[0], c = baseC + o[1];
+      if (r >= 0 && r < LIFE_ROWS && c >= 0 && c < LIFE_COLS) lifeGridArr[r * LIFE_COLS + c] = 1;
+    });
+    lifeGen = 0; lifePause(); lifePaintGen(); lifeRender();
+  }
+  function lifeSetSpeed(idx) {
+    lifeSpeedIdx = idx;
+    for (var i = 0; i < lifeSpeedBtns.length; i++) lifeSpeedBtns[i].classList.toggle("on", i === idx);
+    if (lifePlaying) lifeArmTimer();
+  }
+  function lifeCellFromEvent(e) {
+    if (!lifeCanvas) return -1;
+    var rect = lifeCanvas.getBoundingClientRect();
+    var cx = e.touches ? e.touches[0].clientX : e.clientX;
+    var cy = e.touches ? e.touches[0].clientY : e.clientY;
+    var c = Math.floor((cx - rect.left) / rect.width * LIFE_COLS);
+    var r = Math.floor((cy - rect.top) / rect.height * LIFE_ROWS);
+    if (c < 0 || c >= LIFE_COLS || r < 0 || r >= LIFE_ROWS) return -1;
+    return r * LIFE_COLS + c;
+  }
+  function lifeBtn(parent, cls, face, titleKey, onClick) {
+    var b = document.createElement("div");
+    b.className = "life-btn" + (cls ? " " + cls : "");
+    b.textContent = face;
+    if (titleKey) { b.title = lifeT(titleKey); b.setAttribute("data-tkey", titleKey); }
+    b.addEventListener("click", function (e) { e.stopPropagation(); onClick(); playLaptopClickSound("office-monitor"); });
+    b.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+    parent.appendChild(b);
+    return b;
+  }
+  function lifeBuildUI() {
+    if (lifeBuilt || !lifeWrap) return;
+    lifeBuilt = true;
+    lifeWrap.innerHTML = "";
+    lifeCanvas = document.createElement("canvas");
+    lifeCanvas.className = "life-board";
+    lifeCanvas.width = LIFE_COLS * LIFE_CELL; lifeCanvas.height = LIFE_ROWS * LIFE_CELL;
+    lifeCtx = lifeCanvas.getContext("2d");
+    lifeWrap.appendChild(lifeCanvas);
+    var side = document.createElement("div"); side.className = "life-side"; lifeWrap.appendChild(side);
+    var row1 = document.createElement("div"); row1.className = "life-row"; side.appendChild(row1);
+    lifePlayBtn = lifeBtn(row1, "", "▶", "life_play", lifeToggle);
+    lifeBtn(row1, "", "⏭", "life_step", lifeStepOnce);
+    lifeBtn(row1, "", "🎲", "life_random", lifeRandom);
+    lifeBtn(row1, "", "✕", "life_clear", lifeClear);
+    lifeGenEl = document.createElement("div"); lifeGenEl.className = "life-gen"; side.appendChild(lifeGenEl);
+    var rowS = document.createElement("div"); rowS.className = "life-row"; side.appendChild(rowS);
+    lifeSpeedBtns = [
+      lifeBtn(rowS, "", "1", "life_slow", function () { lifeSetSpeed(0); }),
+      lifeBtn(rowS, "", "2", "life_med", function () { lifeSetSpeed(1); }),
+      lifeBtn(rowS, "", "3", "life_fast", function () { lifeSetSpeed(2); })
+    ];
+    lifeSeedLbl = document.createElement("div"); lifeSeedLbl.className = "life-lbl"; side.appendChild(lifeSeedLbl);
+    var rowP = document.createElement("div"); rowP.className = "life-row"; side.appendChild(rowP);
+    lifePresetBtns = ["glider", "blinker", "pulsar"].map(function (name) {
+      var b = lifeBtn(rowP, "life-preset", lifeT("life_" + name), "life_" + name, function () { lifeDropPreset(name); });
+      b.setAttribute("data-preset", name);
+      return b;
+    });
+    // pointer painting: toggle the first cell, then paint that value across the drag
+    lifeCanvas.addEventListener("pointerdown", function (e) {
+      e.stopPropagation();
+      var i = lifeCellFromEvent(e); if (i < 0) return;
+      lifePainting = true; lifePaintVal = lifeGridArr[i] ? 0 : 1; lifeGridArr[i] = lifePaintVal;
+      try { lifeCanvas.setPointerCapture(e.pointerId); } catch (er) {}
+      lifeRender();
+    });
+    lifeCanvas.addEventListener("pointermove", function (e) {
+      if (!lifePainting) return;
+      e.stopPropagation();
+      var i = lifeCellFromEvent(e); if (i < 0) return;
+      if (lifeGridArr[i] !== lifePaintVal) { lifeGridArr[i] = lifePaintVal; lifeRender(); }
+    });
+    function endPaint() { lifePainting = false; }
+    lifeCanvas.addEventListener("pointerup", endPaint);
+    lifeCanvas.addEventListener("pointercancel", endPaint);
+    lifeCanvas.addEventListener("click", function (e) { e.stopPropagation(); });
+    lifeCanvas.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+    lifeSetSpeed(lifeSpeedIdx);
+    lifeRefreshLabels();
+  }
+  function lifeRefreshLabels() {
+    if (!lifeBuilt) return;
+    lifePaintPlayBtn();
+    lifePaintGen();
+    if (lifeSeedLbl) lifeSeedLbl.textContent = lifeT("life_seed");
+    var tk = lifeWrap.querySelectorAll("[data-tkey]");
+    for (var i = 0; i < tk.length; i++) tk[i].title = lifeT(tk[i].getAttribute("data-tkey"));
+    lifePresetBtns.forEach(function (b) { b.textContent = lifeT("life_" + b.getAttribute("data-preset")); });
+  }
+  function openLifeApp() {
+    if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-life")) return;
+    lifeBuildUI();
+    stopSaver();
+    clearTimeout(saverTimer); saverTimer = null; // no screensaver over the sim
+    monitor.classList.add("show-life");
+    lifeRandom(); // a lively soup so opening the app shows the automaton evolving
+    if (reduceMotion) { lifePause(); } else { lifePlay(); }
+    playLaptopClickSound("office-monitor");
+  }
+  function closeLifeApp() {
+    if (!monitor.classList.contains("show-life")) return;
+    monitor.classList.remove("show-life");
+    lifePause(); // stop AND null the generation timer — nothing ticks behind a closed app
+    scheduleSaver();
+  }
+  window.__closeMonitorLife = closeLifeApp; // other monitor apps / the photobooth close the sim before taking the screen
+  window.__pauseMonitorLife = function () { if (lifeTimer) { clearInterval(lifeTimer); lifeTimer = null; } }; // room-leave: stop the loop but keep lifePlaying so it resumes on return
+  window.__resumeMonitorLife = function () { if (lifePlaying && !lifeTimer && monitor.classList.contains("show-life") && document.visibilityState !== "hidden") lifeArmTimer(); };
+  window.refreshLifeText = function () { lifeRefreshLabels(); };
+  document.addEventListener("visibilitychange", function () {
+    // a hidden tab throttles/pauses timers; drop it so nothing accumulates, re-arm on return
+    if (document.hidden) { if (lifeTimer) { clearInterval(lifeTimer); lifeTimer = null; } }
+    else if (lifePlaying && monitor.classList.contains("show-life") && window.currentStageName === "office") lifeArmTimer();
+  });
+  if (lifeWrap) {
+    lifeWrap.addEventListener("click", function (e) { e.stopPropagation(); }); // screen taps never reach the monitor's boot gag
+    lifeWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+    lifeWrap.addEventListener("wheel", function (e) { e.stopPropagation(); });
+    lifeWrap.addEventListener("touchmove", function (e) { e.stopPropagation(); }, { passive: true });
+  }
+  if (lifeCloseBtn) {
+    lifeCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeLifeApp(); playLaptopClickSound("office-monitor"); });
+    lifeCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   // ── TEHRAN CALL APP ──────────────────────────────────────────────────────────────
   // A video call to Behdad's family from his own machine: ring screen → their living
@@ -16033,6 +16334,7 @@ document.addEventListener("click", function (e) {
     closeTerminal();
     closeMailApp();
     closeMinesApp();
+    closeLifeApp();
     if (window.__closeMonitorCalendar) window.__closeMonitorCalendar();
     if (window.__closeMonitorWeather) window.__closeMonitorWeather();
     if (window.__closeMonitorPlaces) window.__closeMonitorPlaces();
@@ -16277,6 +16579,7 @@ document.addEventListener("click", function (e) {
     if (window.__closeMonitorMail) window.__closeMonitorMail();
     if (window.__closeMonitorVideo) window.__closeMonitorVideo(); // ...or the film playing underneath
     if (window.__closeMonitorTattoo) window.__closeMonitorTattoo(); // nor the tattoo studio under it
+    if (window.__closeMonitorLife) window.__closeMonitorLife(); // nor a Game-of-Life loop ticking under it
     if (window.__closeMonitorCalendar) window.__closeMonitorCalendar(); // nor the calendar waiting under it
     if (window.__closeMonitorBrowser) window.__closeMonitorBrowser(); // nor a site browsing under it
     if (window.__closeMonitorPython) window.__closeMonitorPython();
@@ -16311,6 +16614,7 @@ document.addEventListener("click", function (e) {
     stopTileCam(); // the booth takes the camera over — one stream at a time
     if (window.__closeMonitorVideo) window.__closeMonitorVideo(); // the granted-permission path skips the confirm, so close the film here too
     if (window.__closeMonitorTattoo) window.__closeMonitorTattoo(); // ...and the tattoo studio
+    if (window.__closeMonitorLife) window.__closeMonitorLife(); // ...and the Game-of-Life loop
     if (window.__closeMonitorBrowser) window.__closeMonitorBrowser(); // ...and the browser
     if (window.__closeMonitorTehran) window.__closeMonitorTehran(true); // ...and a live family call yields the camera + the screen
     if (window.__closeMonitorLinux) window.__closeMonitorLinux(); // ...and stop the VM
@@ -25785,6 +26089,7 @@ function spawnDustMote(container) {
     if (name === "cuddly" && window.resetFishu) window.resetFishu();
     if (name === "office" && window.revealOfficeFishuIfFled) window.revealOfficeFishuIfFled();
     if (name === "office" && window.startOfficeCrane) window.startOfficeCrane(); // resume the skyline crane's traverse/drop loop
+    if (name === "office" && window.__resumeMonitorLife) window.__resumeMonitorLife(); // resume a running Game-of-Life loop on return to the office
     // leaving a room fades its ambient drone out over several seconds rather than the
     // snappy device-toggle fade, so the sound slowly recedes as you move to the next room.
     var ROOM_FADE = 3;
@@ -25793,6 +26098,7 @@ function spawnDustMote(container) {
     if (name !== "office" && window.__closeMonitorTehran) window.__closeMonitorTehran(true); // ...hangs up the family call (and its self-view camera)
     if (window.__closePhoneModal) window.__closePhoneModal(true); // leaving the balcony (or the extinguisher reset) closes the pocket phone, tearing down its call/board
     if (name !== "office" && window.__pauseMonitorVideo) window.__pauseMonitorVideo(); // ...and pauses the home movie (the app view stays for the return)
+    if (name !== "office" && window.__pauseMonitorLife) window.__pauseMonitorLife(); // ...and stops the Game-of-Life loop off-screen (the board stays for the return)
     if (window.__updateACHum) window.__updateACHum(name, ROOM_FADE); // AC hum only in garden + balcony, panned to that room's unit
     if (window.__updateRadioSound) window.__updateRadioSound(name === "kitchen", ROOM_FADE); // radio audible only in the kitchen
     if (window.__updateKettleHum) window.__updateKettleHum(name === "kitchen", ROOM_FADE); // kettle hum only in the kitchen

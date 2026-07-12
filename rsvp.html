@@ -19800,7 +19800,7 @@ document.addEventListener("click", function (e) {
     var clockTimer = null;          // clock app's 1s tick (time + both countdowns + playtime)
     var compassHandler = null;      // deviceorientation listener for the compass app
     var photoboothCleanup = null;   // booth teardown: stop the stream, clear timers, revoke URLs
-    var flashOn = false;            // flashlight state (balcony beam + screen glow)
+    var flashOn = false, flashTrack = null; // flashlight state (balcony beam + screen glow; flashTrack = the real camera-LED torch, used only when camera access is already granted)
     var sessionStart = Date.now();  // "in the loft for" playtime origin — set at script load
     var selectedCity = null;
     var cardsIndex = 0;             // phrasebook deck position — reset on leave (see leaveCurrentApp)
@@ -20417,11 +20417,37 @@ document.addEventListener("click", function (e) {
     // night scene (the phone is opened from the balcony) and glows the phone screen; OFF
     // on toggle, on leaving the app, and on any phone close — leaveCurrentApp covers all
     // of those (close() and visibilitychange both route through it).
+    // Best-effort REAL torch — but only WITHOUT ever showing a permission prompt: fire the
+    // phone's camera LED only if camera access is ALREADY granted (e.g. the visitor used the
+    // photobooth). We check the grant via the Permissions API first, so this never prompts;
+    // where it's unsupported / not granted / no torch (iOS, desktop), it stays the glow gag.
+    function stopTorch() {
+      if (!flashTrack) return;
+      try { flashTrack.applyConstraints({ advanced: [{ torch: false }] }); } catch (e) {}
+      try { flashTrack.stop(); } catch (e) {}
+      flashTrack = null;
+    }
+    function tryRealTorch() {
+      if (flashTrack) return; // already lit
+      var md = navigator.mediaDevices;
+      if (!md || !md.getUserMedia || !navigator.permissions || !navigator.permissions.query) return;
+      navigator.permissions.query({ name: "camera" }).then(function (st) {
+        if (!flashOn || st.state !== "granted") return; // never prompt — only proceed if already granted
+        md.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
+          var track = stream.getVideoTracks()[0];
+          var caps = track && track.getCapabilities ? track.getCapabilities() : null;
+          if (!flashOn || !track || !caps || !caps.torch) { stream.getTracks().forEach(function (t) { t.stop(); }); return; }
+          flashTrack = track;
+          track.applyConstraints({ advanced: [{ torch: true }] }).catch(function () { stopTorch(); });
+        }).catch(function () {});
+      }).catch(function () {});
+    }
     function setFlashlight(on) {
       flashOn = !!on;
       var ov = document.getElementById("balcony-flashlight-glow");
       if (ov) ov.style.opacity = flashOn ? "1" : "0";
       if (shell) shell.classList.toggle("pm-flash", flashOn);
+      if (flashOn) tryRealTorch(); else stopTorch(); // fire/kill the real LED torch if camera was already granted
     }
     function renderFlashlight(body) {
       var wrap = document.createElement("div");

@@ -1900,6 +1900,24 @@ footer{margin-top:2.6rem}
 .pm-flash-app .pmf-torch:active{transform:scale(.96)}
 .pm-flash-app .pmf-label{font-size:13px; color:var(--muted)}
 .phone-shell.pm-flash .phone-app-body{background:radial-gradient(120% 80% at 50% 30%, rgba(255,231,168,.32), transparent 70%)}
+/* phrasebook: EN⇄CZ flip cards */
+.pm-cards{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; height:100%}
+.pm-cards .pmc-stage{perspective:900px; width:100%; display:flex; align-items:center; justify-content:center; padding:6px 0}
+.pm-cards .pmc-card{width:224px; height:150px; padding:0; border:none; background:none; cursor:pointer; -webkit-perspective:900px}
+.pm-cards .pmc-inner{position:relative; display:block; width:100%; height:100%; transition:transform .5s cubic-bezier(.4,.15,.2,1); transform-style:preserve-3d; -webkit-transform-style:preserve-3d}
+.pm-cards .pmc-card.flipped .pmc-inner{transform:rotateY(180deg)}
+.pm-cards .pmc-face{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; box-sizing:border-box; padding:12px; border-radius:18px; background:var(--paper); box-shadow:0 3px 12px rgba(69,58,49,.14), inset 0 0 0 1px var(--rule); backface-visibility:hidden; -webkit-backface-visibility:hidden}
+.pm-cards .pmc-back{transform:rotateY(180deg); background:#f3ecf1; box-shadow:0 3px 12px rgba(69,58,49,.14), inset 0 0 0 1px #e0cdda}
+.pm-cards .pmc-lang{font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:600}
+.pm-cards .pmc-back .pmc-lang{color:#9a5a7a}
+.pm-cards .pmc-phrase{font-family:"Fraunces",serif; font-size:21px; line-height:1.2; color:var(--ink); text-align:center}
+.pm-cards .pmc-hint{font-size:11px; color:var(--muted)}
+.pm-cards .pmc-nav{display:flex; align-items:center; gap:16px}
+.pm-cards .pmc-arrow{width:34px; height:34px; border-radius:50%; border:1px solid var(--rule); background:var(--paper); color:var(--ink); font-size:20px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center}
+.pm-cards .pmc-arrow:hover{background:var(--cream)}
+.pm-cards .pmc-arrow:active{transform:scale(.94)}
+.pm-cards .pmc-count{font-size:13px; color:var(--muted); min-width:52px; text-align:center; font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion: reduce){.pm-cards .pmc-inner{transition:none}}
 /* photobooth: consent → live selfie preview → composed polaroid with look + frame chips.
    its own camera/UI; the polaroid is the monitor booth's compositor via window.__phonePB */
 .pm-booth{display:flex; flex-direction:column; align-items:center; gap:12px}
@@ -9308,6 +9326,11 @@ var T = {
     notes_send_mail: "Email app",
     notes_email_subject: "A little note from your loft 💌",
     notes_email_intro: "Hi Markéta & Behdad!\n\nHere's a note from your loft:",
+    app_cards: "phrasebook",
+    cards_hint: "tap the card to flip",
+    cards_flip: "flip card",
+    cards_prev: "previous card",
+    cards_next: "next card",
     clk_playtime: "You’ve been in the loft for",
     clk_now: "now in the loft",
     cur_amount: "amount",
@@ -9634,6 +9657,11 @@ var T = {
     notes_send_mail: "E-mailová aplikace",
     notes_email_subject: "Malý vzkaz z vašeho loftu 💌",
     notes_email_intro: "Ahoj Markéto a Behdade!\n\nTady je vzkaz z vašeho loftu:",
+    app_cards: "slovníček",
+    cards_hint: "klepnutím kartu otočíš",
+    cards_flip: "otočit kartu",
+    cards_prev: "předchozí karta",
+    cards_next: "další karta",
     clk_playtime: "V loftu jsi už",
     clk_now: "teď v loftu",
     cur_amount: "částka",
@@ -17703,6 +17731,7 @@ document.addEventListener("click", function (e) {
       { id: "flashlight", labelKey: "app_flashlight", icon: null, glyph: "🔦", tile: "#cc9a48", open: function () { openApp("flashlight", "app_flashlight", renderFlashlight); } },
       { id: "hn", labelKey: "app_hn", icon: null, glyph: "📰", tile: "#a55f42", open: function () { openApp("hn", "app_hn", renderHN); } },
       { id: "notes", labelKey: "app_notes", icon: null, glyph: "📝", tile: "#e6c34a", open: function () { openApp("notes", "app_notes", renderNotes); } },
+      { id: "cards", labelKey: "app_cards", icon: null, glyph: "🔤", tile: "#9a5a7a", open: function () { openApp("cards", "app_cards", renderCards); } },
       { id: "album", labelKey: "app_album", icon: "album", tile: "#4a6b94", link: "https://photos.app.goo.gl/gBQpsw4nrh9RwdQu9" },
       { id: "places", labelKey: "app_places", icon: "places", tile: "#6d4b63", link: "https://maps.app.goo.gl/WFNVQLw7F6CTQ8xs5" },
       { id: "browser", labelKey: browserLabelKey, icon: HOST_BROWSER === "chrome" ? "chrome" : "globe", glyph: "🌐", tile: "#fdfbf6", open: function () { openApp("browser", browserLabelKey, renderPhoneBrowser); } }
@@ -17721,6 +17750,7 @@ document.addEventListener("click", function (e) {
     var flashOn = false;            // flashlight state (balcony beam + screen glow)
     var sessionStart = Date.now();  // "in the loft for" playtime origin — set at script load
     var selectedCity = null;
+    var cardsIndex = 0;             // phrasebook deck position — reset on leave (see leaveCurrentApp)
     var callee = null, callConnected = false, callStatusKey = "", callHangingUp = false, callTimers = [];
 
     function isOpen() { return !!(modal && modal.parentNode); }
@@ -17923,6 +17953,7 @@ document.addEventListener("click", function (e) {
       if (compassHandler) { try { window.removeEventListener("deviceorientationabsolute", compassHandler); window.removeEventListener("deviceorientation", compassHandler); } catch (e) {} compassHandler = null; }
       if (currentApp === "flashlight") setFlashlight(false); // beam off on leave — also the close()/visibilitychange path (close → leaveCurrentApp)
       if (photoboothCleanup) { photoboothCleanup(); photoboothCleanup = null; } // stop the booth camera + timers + object URLs
+      if (currentApp === "cards") cardsIndex = 0; // reset the phrasebook deck to the first card on leave
       currentApp = null;
     }
     function showHome() {
@@ -18335,6 +18366,62 @@ document.addEventListener("click", function (e) {
         torch.classList.toggle("on", flashOn);
       }
       torch.addEventListener("click", function () { setFlashlight(!flashOn); paint(); });
+      paint();
+    }
+    // ── phrasebook ── a little English⇄Czech flip-card deck of useful wedding phrases.
+    // The card content is EN/CZ *data* (front English, back Czech), independent of the
+    // UI language; only the chrome strings (hint + arrow/flip aria) come from T.
+    // TODO owner: final phrase list — swap/reorder freely, keep {en, cs} shape.
+    var PHRASE_CARDS = [
+      { en: "Cheers!", cs: "Na zdraví!" },
+      { en: "Congratulations!", cs: "Gratuluji!" },
+      { en: "Thank you", cs: "Děkuji" },
+      { en: "I love you", cs: "Miluji tě" },
+      { en: "To the happy couple", cs: "Na šťastný pár" },
+      { en: "Good evening", cs: "Dobrý večer" },
+      { en: "Where is the bar?", cs: "Kde je bar?" },
+      { en: "Let’s dance!", cs: "Pojďme tančit!" },
+      { en: "One more, please", cs: "Ještě jedno, prosím" },
+      { en: "See you at the wedding", cs: "Uvidíme se na svatbě" }
+    ];
+    function renderCards(body) {
+      if (cardsIndex >= PHRASE_CARDS.length) cardsIndex = 0;
+      var wrap = document.createElement("div");
+      wrap.className = "pm-cards";
+      wrap.innerHTML =
+        '<div class="pmc-stage">' +
+          '<button type="button" class="pmc-card" aria-label="' + tr("cards_flip") + '">' +
+            '<span class="pmc-inner">' +
+              '<span class="pmc-face pmc-front"><span class="pmc-lang">EN</span><span class="pmc-phrase"></span></span>' +
+              '<span class="pmc-face pmc-back"><span class="pmc-lang">CS</span><span class="pmc-phrase"></span></span>' +
+            '</span>' +
+          '</button>' +
+        '</div>' +
+        '<div class="pmc-hint">' + tr("cards_hint") + '</div>' +
+        '<div class="pmc-nav">' +
+          '<button type="button" class="pmc-arrow pmc-prev" aria-label="' + tr("cards_prev") + '">‹</button>' +
+          '<span class="pmc-count"></span>' +
+          '<button type="button" class="pmc-arrow pmc-next" aria-label="' + tr("cards_next") + '">›</button>' +
+        '</div>';
+      body.appendChild(wrap);
+      var card = wrap.querySelector(".pmc-card");
+      var front = wrap.querySelector(".pmc-front .pmc-phrase");
+      var back = wrap.querySelector(".pmc-back .pmc-phrase");
+      var count = wrap.querySelector(".pmc-count");
+      function paint() {
+        var c = PHRASE_CARDS[cardsIndex];
+        front.textContent = c.en;
+        back.textContent = c.cs;
+        count.textContent = (cardsIndex + 1) + " / " + PHRASE_CARDS.length;
+      }
+      function go(delta) {
+        cardsIndex = (cardsIndex + delta + PHRASE_CARDS.length) % PHRASE_CARDS.length;
+        card.classList.remove("flipped"); // always land on the English side after moving
+        paint();
+      }
+      card.addEventListener("click", function () { card.classList.toggle("flipped"); });
+      wrap.querySelector(".pmc-prev").addEventListener("click", function () { go(-1); });
+      wrap.querySelector(".pmc-next").addEventListener("click", function () { go(1); });
       paint();
     }
     // ── Hacker News reader ── HN's keyless CORS-open Firebase API: top stories, then the
@@ -19147,6 +19234,12 @@ document.addEventListener("click", function (e) {
         else if (currentApp === "compass") openApp("compass", "app_compass", renderCompass);
         else if (currentApp === "hn") openApp("hn", "app_hn", renderHN);
         else if (currentApp === "notes") openApp("notes", "app_notes", renderNotes); // notesDraft survives the rebuild, so a half-typed note isn't lost
+        else if (currentApp === "cards") { // in-place chrome relabel: the card phrases are bilingual data, so keep the deck position + flip state
+          var ch = shell.querySelector(".pmc-hint"); if (ch) ch.textContent = tr("cards_hint");
+          var cc = shell.querySelector(".pmc-card"); if (cc) cc.setAttribute("aria-label", tr("cards_flip"));
+          var cp = shell.querySelector(".pmc-prev"); if (cp) cp.setAttribute("aria-label", tr("cards_prev"));
+          var cn = shell.querySelector(".pmc-next"); if (cn) cn.setAttribute("aria-label", tr("cards_next"));
+        }
         // flashlight + currency + photobooth retitle only: a full rebuild would kill the
         // live beam / drop the typed amount / tear down the live camera mid-session
         else if ((currentApp === "flashlight" || currentApp === "currency" || currentApp === "photobooth") && shell.querySelector(".pah-title")) shell.querySelector(".pah-title").textContent = tr(currentTitleKey);

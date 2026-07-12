@@ -1686,8 +1686,15 @@ footer{margin-top:2.6rem}
 .phone-browser .pbrow-tab:hover{background:#d2ccbd}
 .phone-browser .pbrow-tab.active{background:var(--paper); color:var(--ink)}
 .phone-browser .pbrow-bar{flex:none; display:flex; align-items:center; gap:6px; padding:7px 10px; background:var(--paper); border-bottom:1px solid var(--rule)}
-.phone-browser .pbrow-url{flex:1; min-width:0; display:flex; align-items:center; gap:5px; background:var(--cream); border:1px solid var(--rule); border-radius:11px; padding:5px 9px; font-size:11.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.phone-browser .pbrow-lock{font-size:9px}
+/* editable omnibox: a pill wrapping a lock glyph + a transparent text input. submit
+   navigates the framed iframe for our own (frameable) sites, else pops the target into a
+   real tab; non-URL text is a web search, also opened in a real tab */
+.phone-browser .pbrow-omni{flex:1; min-width:0; display:flex; align-items:center; gap:5px; background:var(--cream); border:1px solid var(--rule); border-radius:11px; padding:4px 9px}
+.phone-browser .pbrow-omni:focus-within{border-color:var(--muted)}
+.phone-browser .pbrow-lock{flex:none; font-size:9px}
+.phone-browser .pbrow-url-in{flex:1; min-width:0; background:none; border:none; outline:none; padding:0; margin:0; font-family:inherit; font-size:11.5px; line-height:1.5; color:var(--ink)}
+.phone-browser .pbrow-url-in::placeholder{color:var(--soft)}
+.pbrow-shake{animation:browser-shake .25s ease} /* unparsable-input nudge; lone class so the one-shot-removal check tracks it */
 .phone-browser .pbrow-open{flex:none; width:26px; height:26px; border:none; border-radius:8px; background:var(--cream); color:var(--muted); font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 0 0 1px var(--rule)}
 .phone-browser .pbrow-open:active{transform:scale(.94)}
 /* the page zone frames a site laid out at a wide virtual viewport and scaled down (JS
@@ -8796,6 +8803,7 @@ var T = {
     browser_loading: "loading\u2026",
     tab_new: "new tab",
     browser_url_ph: "type a URL\u2026",
+    browser_omni_ph: "Search or enter address",
     browser_noframe: "if it stays blank, that site refuses to live in a picture frame \u2014 most big ones do",
     eq_off_note: "This browser plays the songs directly \u2014 there's no audio pipeline for the equalizer to pull on. Try it on another device \ud83c\udf9a",
     kbd_title: "Keyboard shortcuts",
@@ -9048,6 +9056,7 @@ var T = {
     browser_loading: "na\u010d\u00edt\u00e1n\u00ed\u2026",
     tab_new: "nov\u00e1 karta",
     browser_url_ph: "zadejte adresu\u2026",
+    browser_omni_ph: "Hledat nebo zadat adresu",
     browser_noframe: "kdy\u017e z\u016fstane pr\u00e1zdn\u00e1, ten web se odm\u00edt\u00e1 nast\u011bhovat do obr\u00e1zkov\u00e9ho r\u00e1me\u010dku \u2014 v\u011bt\u0161ina velk\u00fdch to tak m\u00e1",
     eq_off_note: "Tenhle prohl\u00ed\u017ee\u010d p\u0159ehr\u00e1v\u00e1 p\u00edsni\u010dky nap\u0159\u00edmo \u2014 ekvaliz\u00e9r tu nem\u00e1 za co tahat. Zkus to na jin\u00e9m za\u0159\u00edzen\u00ed \ud83c\udf9a",
     kbd_title: "Kl\u00e1vesov\u00e9 zkratky",
@@ -16850,15 +16859,29 @@ document.addEventListener("click", function (e) {
       tabsBar.className = "pbrow-tabs";
       var bar = document.createElement("div");
       bar.className = "pbrow-bar";
-      var url = document.createElement("span");
-      url.className = "pbrow-url";
+      var omni = document.createElement("div");
+      omni.className = "pbrow-omni";
+      var lock = document.createElement("span");
+      lock.className = "pbrow-lock";
+      lock.textContent = "🔒";
+      var input = document.createElement("input");
+      input.className = "pbrow-url-in";
+      input.type = "text";
+      input.setAttribute("autocomplete", "off");
+      input.setAttribute("autocapitalize", "off");
+      input.setAttribute("spellcheck", "false");
+      input.setAttribute("enterkeyhint", "go");
+      input.setAttribute("aria-label", tr("browser_omni_ph"));
+      input.placeholder = tr("browser_omni_ph");
+      omni.appendChild(lock);
+      omni.appendChild(input);
       var openTab = document.createElement("button");
       openTab.type = "button";
       openTab.className = "pbrow-open";
       openTab.setAttribute("aria-label", tr("browser_open_tab"));
       openTab.setAttribute("title", tr("browser_open_tab"));
       openTab.textContent = "⤢";
-      bar.appendChild(url);
+      bar.appendChild(omni);
       bar.appendChild(openTab);
       var page = document.createElement("div");
       page.className = "pbrow-page";
@@ -16867,14 +16890,58 @@ document.addEventListener("click", function (e) {
       frame.setAttribute("title", tr(browserLabelKey));
       page.appendChild(frame);
 
-      var active = PHONE_BROWSER_TABS[0];
+      // only the couple's four fixed-tab sites are proven to frame; the omnibox pops
+      // anything else (off-site URLs, search results) into a real tab, since external
+      // pages and search engines refuse iframing and JS can't reliably detect the refusal
+      var FRAMEABLE = {};
+      PHONE_BROWSER_TABS.forEach(function (t) { var m = t.url.match(/^https?:\/\/([^\/]+)/); if (m) FRAMEABLE[m[1].replace(/^www\./, "")] = true; });
+
       var tabEls = {};
-      function setActive(tab) {
-        active = tab;
-        for (var id in tabEls) tabEls[id].classList.toggle("active", id === tab.id);
-        url.innerHTML = '<span class="pbrow-lock">🔒</span>' + tab.url.replace(/^https?:\/\//, "");
-        if (frame.getAttribute("src") !== tab.url) frame.setAttribute("src", tab.url); // reopening the same tab never reloads
+      var currentUrl = PHONE_BROWSER_TABS[0].url; // what the shared iframe is actually showing
+      function barDisplay(href) { return href.replace(/^https?:\/\//, ""); }
+      function syncBar() { if (document.activeElement !== input) input.value = barDisplay(currentUrl); }
+      function showUrl(href, tabId) {
+        currentUrl = href;
+        for (var id in tabEls) tabEls[id].classList.toggle("active", id === tabId);
+        if (frame.getAttribute("src") !== href) frame.setAttribute("src", href); // reopening the same page never reloads
+        syncBar();
       }
+      function setActive(tab) { showUrl(tab.url, tab.id); }
+      function submitOmni() {
+        var raw = input.value.trim();
+        if (!raw) return;
+        var hasScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(raw);
+        // not URL-shaped (has spaces, or no dot and no scheme) → a web search
+        var isSearch = /\s/.test(raw) || (!hasScheme && raw.indexOf(".") === -1);
+        if (isSearch) {
+          try { window.open("https://duckduckgo.com/?q=" + encodeURIComponent(raw), "_blank"); } catch (e) {} // search engines refuse framing → real tab
+          input.blur(); syncBar();
+          return;
+        }
+        var u;
+        try { u = new URL(hasScheme ? raw : "https://" + raw); } catch (e) {
+          input.classList.remove("pbrow-shake"); void input.offsetWidth; input.classList.add("pbrow-shake"); // unparsable
+          return;
+        }
+        var host = u.hostname.replace(/^www\./, "");
+        if (FRAMEABLE[host]) {
+          var tabId = null;
+          for (var i = 0; i < PHONE_BROWSER_TABS.length; i++) if (PHONE_BROWSER_TABS[i].url === u.href) tabId = PHONE_BROWSER_TABS[i].id;
+          showUrl(u.href, tabId); // one of our own sites → frame it in place
+          input.blur();
+        } else {
+          try { window.open(u.href, "_blank"); } catch (e) {} // off-site → can't be framed, open a real tab
+          input.blur(); syncBar();
+        }
+      }
+      input.addEventListener("keydown", function (e) {
+        e.stopPropagation(); // game hotkeys stay off while typing (same guard as the monitor URL bar)
+        if (e.key === "Enter") { e.preventDefault(); submitOmni(); }
+      });
+      input.addEventListener("focus", function () { input.value = barDisplay(currentUrl); try { input.select(); } catch (e) {} });
+      input.addEventListener("blur", syncBar); // drop an unsubmitted edit back to the live URL
+      input.addEventListener("animationend", function () { input.classList.remove("pbrow-shake"); });
+
       PHONE_BROWSER_TABS.forEach(function (tab) {
         var el = document.createElement("button");
         el.type = "button";
@@ -16889,17 +16956,17 @@ document.addEventListener("click", function (e) {
         var lbl = document.createElement("span");
         lbl.textContent = tr(tab.labelKey);
         el.appendChild(lbl);
-        el.addEventListener("click", function () { if (active.id !== tab.id) setActive(tab); });
+        el.addEventListener("click", function () { setActive(tab); });
         tabEls[tab.id] = el;
         tabsBar.appendChild(el);
       });
-      openTab.addEventListener("click", function () { try { window.open(active.url, "_blank"); } catch (e) {} });
+      openTab.addEventListener("click", function () { try { window.open(currentUrl, "_blank"); } catch (e) {} });
 
       wrap.appendChild(tabsBar);
       wrap.appendChild(bar);
       wrap.appendChild(page);
       body.appendChild(wrap);
-      setActive(active);
+      setActive(PHONE_BROWSER_TABS[0]);
 
       // scale the frame to the live page-zone width, mirroring the monitor
       function applyScale() {

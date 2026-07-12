@@ -1330,9 +1330,16 @@ footer{margin-top:2.6rem}
 .mail-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#fffdf8; font-family:sans-serif; font-size:2.5px; line-height:1.35; color:#453a31; overflow:hidden}
 .mail-bar{flex:none; display:flex; align-items:center; background:#4a6b94; color:#f8f5ec; padding:0.8px 3px 1px; letter-spacing:0.2px}
 .mail-bar-title{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.mail-compose-btn{flex:none; display:flex; align-items:center; justify-content:center; box-sizing:border-box; margin-right:9px; cursor:pointer; background:#3d5a7f; border-radius:2.5px; padding:0 3px; height:4.4px; line-height:1; box-shadow:inset 0 0.4px 0 rgba(255,255,255,0.28), inset 0 0 0 0.3px rgba(0,0,0,0.25)} /* symmetric vertical padding — the flex centering does the rest (the 0.9/0 top-bottom pushed the label up) */ /* right margin keeps it clear of the close pill */
+.mail-compose-btn{flex:none; display:flex; align-items:center; justify-content:center; box-sizing:border-box; margin-right:9px; cursor:pointer; background:#3d5a7f; border-radius:2.5px; padding:0 3px; height:4.4px; line-height:1; box-shadow:inset 0 0.4px 0 rgba(255,255,255,0.28), inset 0 0 0 0.3px rgba(0,0,0,0.25)} /* symmetric padding + flex centring; the label's .btn-vc span carries the optical nudge. Right margin keeps it clear of the close pill */
 .mail-compose-btn:hover{background:#345070}
 .mail-compose-btn, .mail-reply-btn{color:#f8f5ec; font-size:2.5px}
+/* optical vertical centering for the micro-scale UI pills (mail / tattoo / browser tab):
+   align-items:center centers the text's LINE BOX, but at these ~2-4px rendered font sizes
+   the ink still reads high (font ascent/descent asymmetry + sub-pixel rounding). Wrapping
+   the label in this span and nudging it down a hair lands the ink on the optical centre.
+   em-based, so the correction scales with the monitor's zoom on every device. Also carries
+   the emoji+text pair (💌 Share) so both ride the same centre line. */
+.btn-vc{display:inline-flex; align-items:center; gap:0.8px; line-height:1; transform:translateY(0.07em)}
 .mail-back{cursor:pointer}
 .mail-back:hover{background:#3d5a7f}
 .mail-list{flex:1; overflow-y:auto; scrollbar-width:none}
@@ -1354,7 +1361,7 @@ footer{margin-top:2.6rem}
 .mail-body::-webkit-scrollbar-track{background:transparent}
 .mail-body::-webkit-scrollbar-thumb{background:rgba(69,58,49,.35); border-radius:1px}
 @supports not selector(::-webkit-scrollbar){.mail-body{scrollbar-width:thin; scrollbar-color:rgba(69,58,49,.35) transparent}}
-.mail-reply-btn{float:right; display:flex; align-items:center; justify-content:center; background:#3d5a7f; color:#f8f5ec; border-radius:2.5px; padding:0.9px 3px 0; height:4px; line-height:1; margin:0.6px 0 0 2px; cursor:pointer; box-shadow:inset 0 0.4px 0 rgba(255,255,255,0.28), inset 0 0 0 0.3px rgba(0,0,0,0.25)} /* action pill in the reading-view head, clear of the close pill via the head's right padding */
+.mail-reply-btn{float:right; box-sizing:border-box; display:flex; align-items:center; justify-content:center; background:#3d5a7f; color:#f8f5ec; border-radius:2.5px; padding:0 3px; height:4.4px; line-height:1; margin:0.6px 0 0 2px; cursor:pointer; box-shadow:inset 0 0.4px 0 rgba(255,255,255,0.28), inset 0 0 0 0.3px rgba(0,0,0,0.25)} /* action pill in the reading-view head, clear of the close pill via the head's right padding; symmetric padding matches the compose pill so the label starts cap-centred */
 .mail-reply-btn:hover{background:#3d5a7f}
 /* minesweeper app: a classic 16×7 board over the screen, HTML grid in the foreignObject.
    The mines are 💍 rings ("don't set off the ring"); side panel on the RIGHT so the
@@ -1556,8 +1563,8 @@ footer{margin-top:2.6rem}
 /* right padding keeps the strip clear of the app's ✕ pill (x369–378 over the bezel);
    tabs squeeze chrome-style — labels ellipsize — so a full strip still fits */
 .browser-tabs{flex:none; display:flex; align-items:flex-end; gap:0.8px; height:6px; padding:0 8px 0 3px; box-sizing:border-box}
-.browser-tab{flex:0 4 auto; min-width:0; display:flex; align-items:center; gap:0.9px; padding:0.7px 2.6px 0.9px; border-radius:2px 2px 0 0; background:#c8c1b2; color:#5d5347; font-family:sans-serif; font-size:2.3px; line-height:1.4; letter-spacing:0.1px; cursor:pointer}
-.browser-tab > span:first-of-type{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.browser-tab{flex:0 4 auto; min-width:0; display:flex; align-items:center; gap:0.9px; padding:0.7px 2.6px 0.9px; border-radius:2px 2px 0 0; background:#c8c1b2; color:#5d5347; font-family:sans-serif; font-size:2.3px; line-height:1.15; letter-spacing:0.1px; cursor:pointer} /* line-height kept near 1: a tall 1.4 line box rode the label high in the tab */
+.browser-tab > span:first-of-type{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; transform:translateY(0.07em)} /* optical nudge — same downward correction as .btn-vc, applied here so the label stays a plain (ellipsis-capable) flex item; line-height was also cut to 1.15 above */
 .tab-fav{flex:none; width:2.8px; height:2.8px; display:block}
 .browser-tab:hover{background:#d2ccbd}
 .browser-tab.active{background:#fffdf8; color:#453a31}
@@ -16038,7 +16045,8 @@ document.addEventListener("click", function (e) {
       back.addEventListener("click", function (e) { e.stopPropagation(); mailOpenMsg = null; renderMail(); playLaptopClickSound("office-monitor"); });
       var head = mailDiv("mail-head", mailWrap);
       if (mailOpenMsg.reply) {
-        var replyBtn = mailDiv("mail-reply-btn", head, mailT("mail_reply_btn")); // floats right, so it goes in before the text lines
+        var replyBtn = mailDiv("mail-reply-btn", head); // floats right, so it goes in before the text lines
+        mailDiv("btn-vc", replyBtn, mailT("mail_reply_btn")); // label wrapped so it optically centres (see .btn-vc)
         replyBtn.addEventListener("click", function (e) {
           e.stopPropagation();
           try { window.open("https://mail.google.com/mail/?view=cm&fs=1&to=marketa@behdad.org&su=" +
@@ -16052,7 +16060,8 @@ document.addEventListener("click", function (e) {
       var unread = MAILS.filter(function (m) { return !m.read; }).length;
       var bar = mailDiv("mail-bar", mailWrap);
       mailDiv("mail-bar-title", bar, "✉ " + mailT("mail_inbox_title") + (unread ? " (" + unread + ")" : ""));
-      var composeBtn = mailDiv("mail-compose-btn", bar, mailT("mail_compose"));
+      var composeBtn = mailDiv("mail-compose-btn", bar);
+      mailDiv("btn-vc", composeBtn, mailT("mail_compose")); // label wrapped so it optically centres (see .btn-vc)
       composeBtn.addEventListener("click", function (e) {
         e.stopPropagation();
         try { window.open("https://mail.google.com/mail/?view=cm&fs=1&to=marketa@behdad.org&su=" +
@@ -16437,9 +16446,10 @@ document.addEventListener("click", function (e) {
   function tattooDiv(cls, parent, text) { var d = document.createElement("div"); d.className = cls; if (text != null) d.textContent = text; if (parent) parent.appendChild(d); return d; }
   // a send button's label as two flex items — emoji and text sit on the same centre line
   function tattooLabel(el, emoji, text) {
+    var w = document.createElement("span"); w.className = "btn-vc"; // emoji+text ride one optically-centred line (see .btn-vc)
     var e = document.createElement("span"); e.className = "tattoo-btn-emoji"; e.textContent = emoji;
     var t = document.createElement("span"); t.textContent = text;
-    el.appendChild(e); el.appendChild(t);
+    w.appendChild(e); w.appendChild(t); el.appendChild(w);
   }
   function tattooClearBitmap() { if (!tattooCtx) return; tattooCtx.fillStyle = "#fffdf8"; tattooCtx.fillRect(0, 0, tattooCanvas.width, tattooCanvas.height); }
   function ensureTattooCanvas() {

@@ -12018,67 +12018,235 @@ document.addEventListener("click", function (e) {
   })();
 
   // =========================================================================
-  // Channel: RAIN ON GLASS — droplets running down, blurred night-city glow behind
+  // Channel: RAIN ON GLASS — looking out a rainy window at night. Blurred warm city
+  // bokeh + a low horizon glow sit behind the wet glass; a cool cast and a vignette
+  // frame the pane. Fat droplets cling, then release and RUN down the glass leaving a
+  // tapering wet streak with a rounded, highlit head — varied sizes/speeds, occasionally
+  // merging when a fast one overtakes a slower one below it. Fine static speckle adds
+  // condensation texture. All pools are fixed-size and recycled (no growth); every
+  // radius is clamped so createRadialGradient never sees a non-positive r.
   // =========================================================================
   var rain = (function () {
     var bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, "#0a1420"); bg.addColorStop(1, "#12202f");
-    var lights = [ // blurred bokeh city lights (static)
-      { x: W*0.22, y: H*0.34, r: 16, c: "255,196,120" }, { x: W*0.5, y: H*0.5, r: 22, c: "150,190,255" },
-      { x: W*0.74, y: H*0.28, r: 14, c: "255,150,110" }, { x: W*0.62, y: H*0.66, r: 18, c: "180,255,220" },
-      { x: W*0.34, y: H*0.62, r: 13, c: "255,220,150" }
+    bg.addColorStop(0, "#070d17"); bg.addColorStop(0.6, "#0b1626"); bg.addColorStop(1, "#132235");
+    // out-of-focus city lights behind the glass — warm windows, a couple of cool signs.
+    // {r} is the soft radius; drawn twice (core + wide halo) for an out-of-focus bloom.
+    var bokeh = [
+      { x: W*0.19, y: H*0.30, r: 15, c: "255,188,110", a: 0.55 },
+      { x: W*0.31, y: H*0.45, r: 9,  c: "255,150,92",  a: 0.50 },
+      { x: W*0.50, y: H*0.35, r: 21, c: "150,185,255", a: 0.48 },
+      { x: W*0.63, y: H*0.53, r: 12, c: "255,214,140", a: 0.55 },
+      { x: W*0.76, y: H*0.29, r: 13, c: "255,140,120", a: 0.50 },
+      { x: W*0.84, y: H*0.47, r: 8,  c: "170,255,222", a: 0.42 },
+      { x: W*0.43, y: H*0.60, r: 10, c: "255,206,150", a: 0.50 },
+      { x: W*0.11, y: H*0.51, r: 8,  c: "255,172,110", a: 0.40 },
+      { x: W*0.90, y: H*0.64, r: 11, c: "198,190,255", a: 0.40 }
     ];
-    var DROPS = 26, drops = [];
-    function resetDrop(d, top) { d.x = rnd(4, W - 4); d.y = top ? rnd(-H, 0) : rnd(0, H); d.len = rnd(4, 12); d.sp = rnd(1.1, 2.6); d.w = rnd(0.6, 1.3); }
+    var SPECK = 40, speck = []; // fine condensation droplets clinging to the glass (static)
+    var DROPS = 15, drops = [], TRAIL_MAX = 34;
+    function resetSpeck(s) { s.x = rnd(2, W - 2); s.y = rnd(2, H - 2); s.r = rnd(0.4, 1.1); s.a = rnd(0.08, 0.22); }
+    function resetDrop(d, top) {
+      d.x = rnd(4, W - 4); d.y = top ? rnd(-14, -2) : rnd(0, H * 0.9);
+      d.r = rnd(0.9, 2.6); d.sp = 0.22 + d.r * rnd(0.36, 0.6); // fatter drops fall faster
+      d.wob = Math.random() * 6.2832; d.wa = rnd(0.06, 0.22);  // gentle sideways wander
+      d.trail = 0; d.cling = top ? (14 + (Math.random() * 46 | 0)) : (Math.random() * 24 | 0);
+    }
+    function drawDrop(d) {
+      var r = d.r < 0.5 ? 0.5 : d.r; // clamp: gradient radii must stay positive
+      // wet streak the running drop leaves above its head (tapers to nothing)
+      if (d.trail > 1) {
+        var tg = ctx.createLinearGradient(d.x, d.y - d.trail, d.x, d.y);
+        tg.addColorStop(0, "rgba(188,214,246,0)");
+        tg.addColorStop(1, "rgba(206,228,255," + (0.10 + 0.06 * r).toFixed(3) + ")");
+        ctx.strokeStyle = tg; ctx.lineWidth = r * 0.85; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(d.x, d.y - d.trail); ctx.lineTo(d.x, d.y); ctx.stroke();
+      }
+      // rounded head: bright rim fading out, refracting the glow behind it
+      var hg = ctx.createRadialGradient(d.x - r * 0.3, d.y - r * 0.35, 0, d.x, d.y, r * 1.15);
+      hg.addColorStop(0, "rgba(236,246,255,0.92)");
+      hg.addColorStop(0.5, "rgba(178,204,240,0.55)");
+      hg.addColorStop(1, "rgba(150,180,222,0)");
+      ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(d.x, d.y, r * 1.15, 0, 6.2832); ctx.fill();
+      // tiny specular glint
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.beginPath(); ctx.arc(d.x - r * 0.32, d.y - r * 0.34, r * 0.28, 0, 6.2832); ctx.fill();
+    }
     return {
       blend: "normal",
-      init: function () { drops = []; for (var i = 0; i < DROPS; i++) { var d = {}; resetDrop(d, false); drops.push(d); } },
-      reset: function () { drops = []; },
-      frame: function () {
-        ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-        ctx.globalCompositeOperation = "lighter"; // blurred glow behind the glass
-        for (var i = 0; i < lights.length; i++) { var L = lights[i]; var g = ctx.createRadialGradient(L.x, L.y, 1, L.x, L.y, L.r); g.addColorStop(0, "rgba(" + L.c + ",0.5)"); g.addColorStop(1, "rgba(" + L.c + ",0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(L.x, L.y, L.r, 0, 6.2832); ctx.fill(); }
-        ctx.globalCompositeOperation = "source-over";
-        ctx.strokeStyle = "rgba(200,225,255,0.5)"; ctx.lineCap = "round";
-        for (var k = 0; k < drops.length; k++) {
-          var d = drops[k]; d.y += d.sp;
-          ctx.lineWidth = d.w; ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x, d.y - d.len); ctx.stroke();
-          ctx.fillStyle = "rgba(220,240,255,0.75)"; ctx.beginPath(); ctx.arc(d.x, d.y, d.w * 0.9, 0, 6.2832); ctx.fill();
-          if (d.y - d.len > H) resetDrop(d, true);
-        }
+      init: function () {
+        drops = []; for (var i = 0; i < DROPS; i++) { var d = {}; resetDrop(d, false); drops.push(d); }
+        speck = []; for (var j = 0; j < SPECK; j++) { var s = {}; resetSpeck(s); speck.push(s); }
       },
-      still: function () { this.init(); ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H); this.frame(); }
+      reset: function () { drops = []; speck = []; },
+      frame: function () {
+        ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+        // low warm horizon glow (distant city sky)
+        var hgl = ctx.createLinearGradient(0, H * 0.55, 0, H);
+        hgl.addColorStop(0, "rgba(120,92,72,0)"); hgl.addColorStop(1, "rgba(146,104,78,0.30)");
+        ctx.fillStyle = hgl; ctx.fillRect(0, H * 0.5, W, H * 0.5);
+        // blurred bokeh (additive: core + wide halo for an out-of-focus bloom)
+        ctx.globalCompositeOperation = "lighter";
+        for (var i = 0; i < bokeh.length; i++) {
+          var L = bokeh[i];
+          var g1 = ctx.createRadialGradient(L.x, L.y, 0, L.x, L.y, L.r);
+          g1.addColorStop(0, "rgba(" + L.c + "," + L.a + ")"); g1.addColorStop(1, "rgba(" + L.c + ",0)");
+          ctx.fillStyle = g1; ctx.beginPath(); ctx.arc(L.x, L.y, L.r, 0, 6.2832); ctx.fill();
+          var g2 = ctx.createRadialGradient(L.x, L.y, 0, L.x, L.y, L.r * 1.8);
+          g2.addColorStop(0, "rgba(" + L.c + "," + (L.a * 0.35).toFixed(3) + ")"); g2.addColorStop(1, "rgba(" + L.c + ",0)");
+          ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(L.x, L.y, L.r * 1.8, 0, 6.2832); ctx.fill();
+        }
+        ctx.globalCompositeOperation = "source-over";
+        // cool cast over the whole pane so it reads as night glass
+        ctx.fillStyle = "rgba(40,70,112,0.16)"; ctx.fillRect(0, 0, W, H);
+        // static condensation speckle
+        for (var m = 0; m < speck.length; m++) { var sp = speck[m]; ctx.fillStyle = "rgba(206,224,248," + sp.a.toFixed(3) + ")"; ctx.beginPath(); ctx.arc(sp.x, sp.y, sp.r, 0, 6.2832); ctx.fill(); }
+        // running droplets: advance, wander, grow the trail, recycle at the bottom
+        for (var k = 0; k < drops.length; k++) {
+          var d = drops[k];
+          if (d.cling > 0) { d.cling--; d.trail = 0; }
+          else {
+            d.wob += 0.08; d.x += Math.sin(d.wob) * d.wa; d.y += d.sp;
+            d.trail = d.trail + d.sp < TRAIL_MAX ? d.trail + d.sp : TRAIL_MAX;
+            if (d.y - d.r * 1.2 > H) resetDrop(d, true);
+          }
+        }
+        // merging: a faster drop that catches a slower one just below it absorbs it
+        for (var a = 0; a < drops.length; a++) {
+          var da = drops[a]; if (da.cling > 0) continue;
+          for (var b = 0; b < drops.length; b++) {
+            if (b === a) continue; var db = drops[b];
+            if (Math.abs(da.x - db.x) < da.r + db.r && da.y > db.y && da.y - db.y < da.r + db.r + 2) {
+              var nr = Math.sqrt(da.r * da.r + db.r * db.r); da.r = nr > 3 ? 3 : nr; // capped
+              da.sp = 0.22 + da.r * 0.5; resetDrop(db, true); break;
+            }
+          }
+        }
+        for (var q = 0; q < drops.length; q++) if (drops[q].cling <= 0) drawDrop(drops[q]);
+        // still beads for the clinging ones (no streak) so the glass isn't empty up top
+        for (var c = 0; c < drops.length; c++) if (drops[c].cling > 0) drawDrop(drops[c]);
+        // vignette so it reads as looking OUT a window
+        var vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.32, W / 2, H / 2, H * 0.85);
+        vg.addColorStop(0, "rgba(4,8,14,0)"); vg.addColorStop(1, "rgba(4,8,14,0.5)");
+        ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+      },
+      still: function () { this.init(); for (var i = 0; i < drops.length; i++) drops[i].cling = 0; this.frame(); }
     };
   })();
 
   // =========================================================================
-  // Channel: STARFIELD / lo-fi drift — slow twinkling stars, a rare shooting star
+  // Channel: NIGHT SKY — a slow, dreamy sky. Deep-navy gradient with a faint horizon
+  // glow; a soft diagonal Milky-Way band (precomputed blobs + extra faint stars biased
+  // onto it) gives depth; three parallax layers of stars drift at different speeds and
+  // twinkle out of phase; a faint low moon with a halo sits off to one side, and the
+  // couple's ∞ hides as a tiny 8-star constellation. A single self-clearing shooting
+  // star streaks by now and then (never more than one alive). Star pool is fixed-size
+  // and recycled; the shooting star is a single reused slot — nothing grows.
   // =========================================================================
   var stars = (function () {
     var bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, "#0b1030"); bg.addColorStop(0.6, "#0a0e26"); bg.addColorStop(1, "#080a1c");
-    var STARS = 46, arr = [], t = 0, shoot = null, shootCd = 120;
-    function resetStar(s, anyY) { s.x = Math.random() * W; s.y = anyY ? Math.random() * H : -2; s.r = rnd(0.35, 1.2); s.tw = Math.random() * 6.28; s.tws = rnd(0.02, 0.06); s.sp = rnd(0.03, 0.10); }
+    bg.addColorStop(0, "#05060f"); bg.addColorStop(0.55, "#0a0e24"); bg.addColorStop(0.86, "#101636"); bg.addColorStop(1, "#181a34");
+    // Milky-Way band: soft wash blobs strung along a diagonal (upper-left → lower-right)
+    var bandCx = W * 0.5, bandCy = H * 0.42, bandDx = 0.82, bandDy = 0.57; // unit-ish direction
+    var band = [];
+    for (var bi = -3; bi <= 3; bi++) {
+      band.push({ x: bandCx + bandDx * bi * 22 + rnd(-6, 6), y: bandCy + bandDy * bi * 15 + rnd(-5, 5), r: rnd(26, 40) });
+    }
+    // three parallax layers: {n, size range, drift px/frame, brightness}
+    var LAYERS = [
+      { n: 40, rmin: 0.30, rmax: 0.65, drift: 0.008, br: 0.60, band: true },  // far dust
+      { n: 26, rmin: 0.55, rmax: 1.05, drift: 0.018, br: 0.85, band: false }, // mid
+      { n: 12, rmin: 1.00, rmax: 1.70, drift: 0.030, br: 1.00, band: false }  // near, brightest
+    ];
+    var STAR_TINTS = ["255,250,235", "255,250,235", "255,250,235", "210,224,255", "255,224,196"];
+    // ∞ constellation: 8 points on a lemniscate, tucked low-right, drawn as faint stars
+    var infPts = [];
+    (function () {
+      var cx = W * 0.72, cy = H * 0.70, sc = 13;
+      for (var k = 0; k < 8; k++) {
+        var th = k / 8 * 6.2832, dn = 1 + Math.sin(th) * Math.sin(th);
+        infPts.push({ x: cx + sc * Math.cos(th) / dn, y: cy + sc * Math.sin(th) * Math.cos(th) / dn, tw: Math.random() * 6.2832 });
+      }
+    })();
+    var arr = [], t = 0, shoot = null, shootCd = 90;
+    function resetStar(s, layer, fresh) {
+      s.drift = layer.drift; s.br = layer.br;
+      s.x = Math.random() * W;
+      if (layer.band && Math.random() < 0.5) { // bias far dust onto the Milky-Way band
+        var bp = band[(Math.random() * band.length) | 0];
+        s.x = bp.x + rnd(-bp.r, bp.r); s.y = bp.y + rnd(-bp.r * 0.5, bp.r * 0.5);
+      } else { s.y = fresh ? Math.random() * H : rnd(-2, 0); }
+      s.r = rnd(layer.rmin, layer.rmax);
+      s.tw = Math.random() * 6.2832; s.tws = rnd(0.015, 0.05);
+      s.col = STAR_TINTS[(Math.random() * STAR_TINTS.length) | 0];
+    }
+    function drawBand() {
+      ctx.globalCompositeOperation = "lighter";
+      for (var i = 0; i < band.length; i++) {
+        var bb = band[i];
+        var g = ctx.createRadialGradient(bb.x, bb.y, 0, bb.x, bb.y, bb.r);
+        g.addColorStop(0, "rgba(120,120,190,0.10)"); g.addColorStop(0.5, "rgba(96,104,170,0.05)"); g.addColorStop(1, "rgba(96,104,170,0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(bb.x, bb.y, bb.r, 0, 6.2832); ctx.fill();
+      }
+      ctx.globalCompositeOperation = "source-over";
+    }
+    function drawMoon() {
+      var mx = W * 0.16, my = H * 0.22, mr = 6.5;
+      var halo = ctx.createRadialGradient(mx, my, 0, mx, my, mr * 4);
+      halo.addColorStop(0, "rgba(210,222,255,0.22)"); halo.addColorStop(1, "rgba(210,222,255,0)");
+      ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = halo;
+      ctx.beginPath(); ctx.arc(mx, my, mr * 4, 0, 6.2832); ctx.fill();
+      ctx.globalCompositeOperation = "source-over";
+      var disc = ctx.createRadialGradient(mx - mr * 0.3, my - mr * 0.3, 0, mx, my, mr);
+      disc.addColorStop(0, "rgba(244,246,255,0.95)"); disc.addColorStop(1, "rgba(206,214,240,0.8)");
+      ctx.fillStyle = disc; ctx.beginPath(); ctx.arc(mx, my, mr, 0, 6.2832); ctx.fill();
+    }
     return {
       blend: "normal",
-      init: function () { arr = []; for (var i = 0; i < STARS; i++) { var s = {}; resetStar(s, true); arr.push(s); } t = 0; shoot = null; shootCd = 120; },
+      init: function () {
+        arr = [];
+        for (var li = 0; li < LAYERS.length; li++) { for (var i = 0; i < LAYERS[li].n; i++) { var s = {}; resetStar(s, LAYERS[li], true); arr.push(s); } }
+        t = 0; shoot = null; shootCd = 90;
+      },
       reset: function () { arr = []; shoot = null; },
       frame: function () {
         t++;
+        ctx.globalCompositeOperation = "source-over";
         ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+        drawBand();
+        drawMoon();
+        // parallax star layers (drift + twinkle); recycle at the edges
         for (var i = 0; i < arr.length; i++) {
-          var s = arr[i]; s.y += s.sp; s.x += 0.02; s.tw += s.tws;
-          if (s.y > H + 2) resetStar(s, false); if (s.x > W + 2) s.x = -2;
-          var a = 0.5 + 0.5 * Math.sin(s.tw);
-          ctx.fillStyle = "rgba(255,250,235," + (a * 0.9).toFixed(3) + ")";
+          var s = arr[i]; s.x += s.drift; s.tw += s.tws;
+          if (s.x > W + 2) s.x = -2;
+          var a = (0.45 + 0.55 * (0.5 + 0.5 * Math.sin(s.tw))) * s.br;
+          if (s.r > 1.1) { // brightest near stars get a soft glow
+            var gl = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r * 2.4);
+            gl.addColorStop(0, "rgba(" + s.col + "," + (a * 0.5).toFixed(3) + ")"); gl.addColorStop(1, "rgba(" + s.col + ",0)");
+            ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 2.4, 0, 6.2832); ctx.fill();
+          }
+          ctx.fillStyle = "rgba(" + s.col + "," + a.toFixed(3) + ")";
           ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.2832); ctx.fill();
         }
-        // a single, self-clearing shooting star now and then (never more than one alive)
-        if (!shoot) { if (--shootCd <= 0) { shoot = { x: rnd(W * 0.1, W * 0.6), y: rnd(4, H * 0.4), vx: rnd(1.8, 2.8), vy: rnd(0.6, 1.1), life: 22 }; shootCd = 140 + (Math.random() * 200 | 0); } }
-        else {
-          ctx.strokeStyle = "rgba(255,255,240,0.9)"; ctx.lineWidth = 1; ctx.lineCap = "round";
-          ctx.beginPath(); ctx.moveTo(shoot.x, shoot.y); ctx.lineTo(shoot.x - shoot.vx * 5, shoot.y - shoot.vy * 5); ctx.stroke();
-          shoot.x += shoot.vx; shoot.y += shoot.vy; if (--shoot.life <= 0 || shoot.x > W + 8) shoot = null;
+        // ∞ constellation: eight faint, slowly twinkling stars tracing a lemniscate
+        for (var p = 0; p < infPts.length; p++) {
+          var ip = infPts[p]; ip.tw += 0.012;
+          var ia = 0.30 + 0.30 * (0.5 + 0.5 * Math.sin(ip.tw));
+          ctx.fillStyle = "rgba(255,238,220," + ia.toFixed(3) + ")";
+          ctx.beginPath(); ctx.arc(ip.x, ip.y, 0.9, 0, 6.2832); ctx.fill();
+        }
+        // one self-clearing shooting star now and then (tapering trail)
+        if (!shoot) {
+          if (--shootCd <= 0) { shoot = { x: rnd(W * 0.1, W * 0.6), y: rnd(4, H * 0.4), vx: rnd(1.8, 2.8), vy: rnd(0.55, 1.05), life: 24, maxLife: 24 }; shootCd = 150 + (Math.random() * 220 | 0); }
+        } else {
+          var tl = 9, tx = shoot.x - shoot.vx * tl, ty = shoot.y - shoot.vy * tl;
+          var sg = ctx.createLinearGradient(tx, ty, shoot.x, shoot.y);
+          sg.addColorStop(0, "rgba(255,255,244,0)"); sg.addColorStop(1, "rgba(255,255,244,0.95)");
+          ctx.strokeStyle = sg; ctx.lineWidth = 1.1; ctx.lineCap = "round";
+          ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(shoot.x, shoot.y); ctx.stroke();
+          ctx.fillStyle = "rgba(255,255,250,0.95)"; ctx.beginPath(); ctx.arc(shoot.x, shoot.y, 1.1, 0, 6.2832); ctx.fill();
+          shoot.x += shoot.vx; shoot.y += shoot.vy;
+          if (--shoot.life <= 0 || shoot.x > W + 8 || shoot.y > H + 8) shoot = null;
         }
       },
       still: function () { this.init(); this.frame(); }

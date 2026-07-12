@@ -11548,8 +11548,10 @@ document.addEventListener("click", function (e) {
        Drag the chair around and, once you've dragged it a bit (> threshold of
        cumulative travel — a normal nudge won't trip it), the office darkens,
        saucers drift down from the top, and the chair auto-fires straight up
-       once a second. Line a shot up under a saucer to pop it. Releasing the
-       pointer (or leaving the office / hiding the tab) tears everything down.
+       once a second. Line a shot up under a saucer to pop it. Saucers keep
+       coming until one reaches the chair (game over) or you leave the office /
+       hide the tab; releasing the pointer just stops dragging — re-grab the
+       chair any time to keep moving it and lining up shots.
 
        All positions are written as SVG transform ATTRIBUTES from a single rAF
        loop (never CSS transforms — those would clash with the transform attr),
@@ -11702,7 +11704,7 @@ document.addEventListener("click", function (e) {
       arcadeAliens.length = 0; arcadeShots.length = 0;
       if (stageOffice) stageOffice.classList.remove("arcade");
       arcadeScore = 0;
-      if (wasActive && (gameOver || finalScore > 0)) arcadeFlourish(finalScore, gameOver); // "game over" on a miss, else a subtle "×N" on release
+      if (wasActive && gameOver) arcadeFlourish(finalScore, true); // "game over ·×N" when a saucer gets through; leaving the room ends it silently
     }
 
     // tear down if the tab hides or the window loses focus mid-game (pointerup may never come)
@@ -11748,10 +11750,12 @@ document.addEventListener("click", function (e) {
     function onChairPointerUp(e) {
       if (!chairDragging) return;
       chairDragging = false;
-      stopArcade(); // releasing always ends the arcade cleanly
+      // releasing no longer ends the arcade — the survival loop keeps running
+      // until a saucer gets through (game over) or you leave the office / hide
+      // the tab. Re-grab the chair to keep moving it and lining up shots.
       try { chair.releasePointerCapture(e.pointerId); } catch (err) {}
       chair.style.transition = "";
-      if (!chairDragMoved) spinChair();
+      if (!chairDragMoved && !arcadeActive) spinChair();
     }
     chair.addEventListener("pointerup", onChairPointerUp);
     chair.addEventListener("pointercancel", onChairPointerUp);

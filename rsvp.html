@@ -559,14 +559,9 @@ footer{margin-top:2.6rem}
   70%{transform:translateX(-.5px)}
 }
 @media (prefers-reduced-motion: reduce){#kitchen-post.knocking{animation:none !important}}
-.office-window-glow{opacity:0}
-.office-window-glow.glowing{animation:window-glow 1.7s ease-in-out}
-@keyframes window-glow{
-  0%{opacity:0}
-  14%{opacity:.9}
-  55%{opacity:.78}
-  100%{opacity:0}
-}
+.office-window{fill:#ffd98a; opacity:0; transition:opacity .35s ease} /* a distant tower window; a click toggles its light on/off */
+.office-window.lit{opacity:.9}
+@media (prefers-reduced-motion: reduce){.office-window{transition:none}}
 #balcony-hallway-jacket-inner{transform-box:fill-box; transform-origin:top center}
 #balcony-hallway-jacket.swaying #balcony-hallway-jacket-inner{animation:jacket-sway 1.4s ease-in-out}
 @media (prefers-reduced-motion: reduce){#balcony-hallway-jacket.swaying #balcony-hallway-jacket-inner{animation:none}}
@@ -6816,9 +6811,8 @@ section{margin:1.9rem 0}
 <rect x="136" y="72" width="46" height="118" fill="#b3624a"/>
 <path d="M140 86 h38 M140 102 h38 M140 118 h38 M140 134 h38" stroke="#e8e0d4" stroke-width="2"/>
 <path d="M150 72 V140 M166 72 V140" stroke="#9a4e3a" stroke-width="1.5"/>
-<!-- a tap lights one of these warm — someone home in the tower (wired in JS, alternating) -->
-<rect class="office-window-glow" x="151" y="119" width="14" height="14" rx="1" fill="#ffd98a"/>
-<rect class="office-window-glow" x="167" y="87" width="10" height="14" rx="1" fill="#ffe6a0"/>
+<!-- tappable tower windows are generated in JS (a grid tiling each tower's face); a tap
+     toggles that window's light on/off. See the office-buildings handler below. -->
 </g>
 <!-- the sun (day) and moon (dusk) share the same patch of open sky above the skyline;
      only one shows at a time, and both hide under overcast/storm clouds -->
@@ -12440,6 +12434,7 @@ document.addEventListener("click", function (e) {
       arcadeAliens.length = 0; arcadeShots.length = 0;
       if (stageOffice) stageOffice.classList.remove("arcade");
       arcadeScore = 0;
+      chair.style.transition = ""; // restore the smooth glide once the game (and cursor-follow) ends
       if (wasActive && gameOver) arcadeFlourish(finalScore, true); // "game over ·×N" when a saucer gets through; leaving the room ends it silently
     }
 
@@ -12490,11 +12485,21 @@ document.addEventListener("click", function (e) {
       // until a saucer gets through (game over) or you leave the office / hide
       // the tab. Re-grab the chair to keep moving it and lining up shots.
       try { chair.releasePointerCapture(e.pointerId); } catch (err) {}
-      chair.style.transition = "";
+      chair.style.transition = arcadeActive ? "none" : ""; // keep instant tracking while the game runs
       if (!chairDragMoved && !arcadeActive) spinChair();
     }
     chair.addEventListener("pointerup", onChairPointerUp);
     chair.addEventListener("pointercancel", onChairPointerUp);
+    // While the arcade runs, the chair keeps following the cursor even after the button
+    // is released — a hold-free turret — until the game ends. Reuses the last grab's
+    // anchor so the mapping is seamless with an active drag (which owns the move while
+    // chairDragging). Cheap early-return when the game isn't running.
+    document.addEventListener("pointermove", function (e) {
+      if (!arcadeActive || chairDragging) return;
+      chair.style.transition = "none";
+      setChairOffset(chairDragStartOffset + (pointerSvgX(e) - chairDragStartX));
+      if (window.__chairCatFollow) window.__chairCatFollow();
+    });
     chair.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); spinChair(); }
     });
@@ -13525,27 +13530,38 @@ document.addEventListener("click", function (e) {
   wireProp("garden-bench", "settling", function () { playDryClickSound("garden-bench"); });
   wireProp("garden-crate", "rattling", function () { playDryClickSound("garden-crate"); });
   wireProp("kitchen-post", "knocking", function () { playDryClickSound("kitchen-post"); });
-  // the skyline window: a light comes on in a different pane each tap (silent — it's
-  // just a lamp switching on in a far tower). stopPropagation so the tap never falls
-  // through to the window-pane behind the buildings.
+  // the skyline windows: a grid of togglable lit-window rects tiling each tower's face.
+  // Tap a window and its light toggles on/off (both towers). stopPropagation so the tap
+  // never falls through to the window-pane behind the buildings.
   var buildings = document.getElementById("office-buildings");
   if (buildings) {
-    var glows = buildings.querySelectorAll(".office-window-glow");
-    for (var gi = 0; gi < glows.length; gi++) {
-      (function (g) { g.addEventListener("animationend", function () { g.classList.remove("glowing"); }); })(glows[gi]);
-    }
-    var glowIdx = 0;
-    if (glows.length) {
-      buildings.addEventListener("click", function (e) {
-        if (e) e.stopPropagation();
-        var g = glows[glowIdx % glows.length];
-        glowIdx++;
-        g.classList.remove("glowing");
-        requestAnimationFrame(function () {
-          requestAnimationFrame(function () { g.classList.add("glowing"); });
-        });
-      });
-    }
+    var SVGNS_WIN = "http://www.w3.org/2000/svg";
+    // grid per tower: face origin + cell count/size (aligned to each tower's drawn window rows)
+    var TOWERS = [
+      { x0: 88, y0: 60, cols: 3, rows: 5, cw: 13.5, ch: 14 },   // grey tower (x86–130)
+      { x0: 138, y0: 80, cols: 3, rows: 4, cw: 14.5, ch: 13.5 } // red-brick tower (x136–182)
+    ];
+    TOWERS.forEach(function (t) {
+      for (var r = 0; r < t.rows; r++) {
+        for (var c = 0; c < t.cols; c++) {
+          var w = document.createElementNS(SVGNS_WIN, "rect");
+          w.setAttribute("class", "office-window");
+          w.setAttribute("x", (t.x0 + c * t.cw).toFixed(1));
+          w.setAttribute("y", (t.y0 + r * t.ch).toFixed(1));
+          w.setAttribute("width", (t.cw - 3).toFixed(1));
+          w.setAttribute("height", (t.ch - 3).toFixed(1));
+          w.setAttribute("rx", "1");
+          buildings.appendChild(w);
+        }
+      }
+    });
+    buildings.addEventListener("click", function (e) {
+      var el = e && e.target;
+      if (el && el.classList && el.classList.contains("office-window")) {
+        e.stopPropagation();       // a real window was tapped — toggle its light
+        el.classList.toggle("lit");
+      }
+    });
   }
 })();
 (function () {
@@ -30608,7 +30624,7 @@ function spawnDustMote(container) {
     var postReset = document.getElementById("kitchen-post");
     if (postReset) postReset.classList.remove("knocking");
     var buildingsReset = document.getElementById("office-buildings");
-    if (buildingsReset) Array.prototype.forEach.call(buildingsReset.querySelectorAll(".office-window-glow"), function (g) { g.classList.remove("glowing"); });
+    if (buildingsReset) Array.prototype.forEach.call(buildingsReset.querySelectorAll(".office-window"), function (g) { g.classList.remove("lit"); });
     if (window.resetChairPosition) window.resetChairPosition();
     if (window.resetBlanketPositions) window.resetBlanketPositions();
     gardenState.water = false;

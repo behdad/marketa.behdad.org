@@ -3000,6 +3000,12 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
    bob rides an inner group so its CSS transform never collides with that
    position attribute. Fade only under reduced motion (no bob). */
 #garden-trip-frog, #garden-trip-mushroom, #garden-trip-moth, #garden-trip-jellyfish{opacity:0; transition:opacity .8s ease; pointer-events:none}
+/* the mushroom-trip UFO drifts across the window (see startTripVariant → psychedelic) */
+#garden-ufo{opacity:0}
+#garden-ufo.ufo-flying{opacity:1}
+#garden-ufo.ufo-flying #garden-ufo-craft{animation:garden-ufo-flyby 8s ease-in-out}
+@keyframes garden-ufo-flyby{0%{transform:translate(-30px,0);opacity:0}12%{opacity:1}50%{transform:translate(205px,-9px)}86%{opacity:1}100%{transform:translate(450px,5px);opacity:0}}
+@media (prefers-reduced-motion: reduce){#garden-ufo.ufo-flying #garden-ufo-craft{animation:none}#garden-ufo{opacity:0}}
 #garden-trip-frog.trip-creature-show, #garden-trip-mushroom.trip-creature-show, #garden-trip-moth.trip-creature-show, #garden-trip-jellyfish.trip-creature-show{opacity:1}
 #garden-trip-frog.trip-creature-show .trip-creature-bob{animation:trip-frog-hop 1.6s ease-in-out infinite}
 #garden-trip-mushroom.trip-creature-show .trip-creature-bob{animation:trip-shroom-bob 3.4s ease-in-out infinite}
@@ -4475,6 +4481,18 @@ section{margin:1.9rem 0}
 <circle cx="462" cy="67" r="21" fill="#ffe6a0" opacity="0.35"/>
 <circle cx="462" cy="67" r="13" fill="#ffd451"/>
 <circle cx="462" cy="67" r="13" fill="none" stroke="#fff0c0" stroke-width="1.5" opacity="0.7"/>
+</g>
+<!-- a little flying saucer that drifts across the window during the mushroom (psychedelic)
+     trip — "seeing things". Clipped to the window so it slips in and out past the frame. -->
+<g id="garden-ufo" clip-path="url(#garden-window-clip)" pointer-events="none" aria-hidden="true">
+<g id="garden-ufo-craft">
+<ellipse cx="110" cy="49.4" rx="13" ry="3.9" fill="#6f7c89" opacity="0.55"/>
+<ellipse cx="110" cy="48.4" rx="13" ry="3.9" fill="#aeb9c4"/>
+<ellipse cx="110" cy="47.6" rx="9" ry="2.3" fill="#c6d2dc"/>
+<path d="M103.5 47.4 Q110 41.2 116.5 47.4 Q110 50 103.5 47.4 Z" fill="#cfe8f2" opacity="0.92"/>
+<ellipse cx="107.2" cy="45.4" rx="1.8" ry="0.9" fill="#ffffff" opacity="0.5"/>
+<circle cx="101" cy="49" r="1" fill="#6ee06e"/><circle cx="105.5" cy="50.2" r="1" fill="#e06ec8"/><circle cx="110" cy="50.5" r="1" fill="#6ecfe0"/><circle cx="114.5" cy="50.2" r="1" fill="#e0c86e"/><circle cx="119" cy="49" r="1" fill="#6ee06e"/>
+</g>
 </g>
 <g id="garden-skyfx" clip-path="url(#garden-window-clip)" pointer-events="none" aria-hidden="true"></g>
 <g id="garden-rainfx" clip-path="url(#garden-window-clip)" pointer-events="none" aria-hidden="true"></g>
@@ -23674,6 +23692,19 @@ function startTripVariant(variant) {
         playMollyArpCycle(Math.max(-1, Math.min(1, ((hx - stageIdx * 680) / 680 * 2 - 1) * 0.85)));
       }, delay);
     });
+  }
+  if (variant === "psychedelic") {
+    // the mushroom trip: a UFO drifts across the garden window
+    var ufo = document.getElementById("garden-ufo");
+    if (ufo) {
+      ufo.classList.remove("ufo-flying");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          ufo.classList.add("ufo-flying");
+          setTimeout(function () { ufo.classList.remove("ufo-flying"); }, 8200);
+        });
+      });
+    }
   }
   clearTimeout(tripEndTimer);
   tripEndTimer = setTimeout(function () {

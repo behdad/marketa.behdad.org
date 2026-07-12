@@ -138,15 +138,24 @@ footer{margin-top:2.6rem}
 @media (max-width:759px){
   .hunt-nav{width:1.9rem; height:1.9rem; font-size:1.2rem}
 }
-/* overlaid on the viewport's own top-right corner (position:absolute — costs zero
-   page layout space, unlike a control living in the flow above/below the game) */
-.hunt-fullscreen-btn{
-  position:absolute; top:.5rem; right:.5rem; z-index:6; font:inherit; font-size:1rem; line-height:1;
-  width:1.9rem; height:1.9rem; padding:0; border-radius:50%; border:1.5px solid rgba(255,253,248,.7);
-  background:rgba(69,58,49,.55); color:#fffdf8; cursor:pointer; opacity:.7; transition:opacity .2s ease, background .2s ease;
-  display:flex; align-items:center; justify-content:center;
+/* the fullscreen + volume controls live in a vertical stack to the RIGHT of the scene
+   (a flex child of .hunt-frame after #hunt-next), not overlaid on the room — beside the
+   scene they're clearly visible and easy to tap. The stack's live offsetWidth is folded
+   into sizeFullscreenFrame's `chrome` so the room still fits in fullscreen. */
+.hunt-side{
+  flex:0 0 auto; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:.35rem; align-self:center;
 }
-.hunt-fullscreen-btn:hover, .hunt-fullscreen-btn:focus-visible{opacity:1; background:rgba(69,58,49,.82)}
+.hunt-fullscreen-btn{
+  flex:0 0 auto; font:inherit; font-size:1rem; line-height:1;
+  width:1.9rem; height:1.9rem; padding:0; border-radius:50%; border:1.5px solid var(--wine);
+  background:var(--wine); color:#fffdf8; cursor:pointer; box-shadow:0 2px 8px rgba(69,58,49,.18);
+  transition:background .2s ease; display:flex; align-items:center; justify-content:center;
+}
+.hunt-fullscreen-btn:hover, .hunt-fullscreen-btn:focus-visible{background:#7a2f3d}
+@media (max-width:759px){
+  .hunt-fullscreen-btn{width:1.7rem; height:1.7rem; font-size:.9rem}
+}
 /* the cinematic's ghost cursor: a cream dot with a wine ring that glides between the
    show's tap targets, plus a one-shot ripple ring at each click. Both live inside
    .hunt-viewport (inside #hunt-fullscreen-area, so fullscreen keeps them; positions are
@@ -164,13 +173,13 @@ footer{margin-top:2.6rem}
   position:absolute; left:-16px; top:-16px; width:32px; height:32px; border-radius:50%;
   border:2px solid var(--wine); box-sizing:border-box; pointer-events:none; z-index:7; opacity:0;
 }
-/* the cross-room song volume control, bottom-right of the viewport (fullscreen owns
-   top-right) -- hidden until a song's actually played once, same as index.html's loft
-   volume button. Cycles the SAME mute->0.25->0.5->1.0 level as the office monitor's own
-   speaker button (see cycleVolume/updateVolIcon) -- one shared level, two triggers. */
-.song-volume-btn{top:auto; bottom:.5rem; right:.5rem; opacity:0; pointer-events:none}
-.song-volume-btn.shown{opacity:.7; pointer-events:auto}
-.song-volume-btn.shown:hover, .song-volume-btn.shown:focus-visible{opacity:1}
+/* the cross-room song volume control, second in the side stack below the fullscreen
+   button -- hidden (display:none, so it reserves no empty slot before then) until a song's
+   actually played once, same as index.html's loft volume button. Cycles the SAME
+   mute->0.25->0.5->1.0 level as the office monitor's own speaker button (see
+   cycleVolume/updateVolIcon) -- one shared level, two triggers. */
+.song-volume-btn{display:none}
+.song-volume-btn.shown{display:flex}
 /* fullscreen wraps the frame (nav arrows + viewport) AND the room dots below it, not
    the whole page — the browser fills the screen with just this element's own box, so
    give it a matching background + center the frame in it, SCALED to fill whichever
@@ -8873,6 +8882,9 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </g>
     </svg>
     <div id="hunt-wipe" aria-hidden="true"></div>
+  </div>
+  <button type="button" id="hunt-next" class="hunt-nav hunt-nav-next locked" aria-label="Next room">›</button>
+  <div class="hunt-side" id="hunt-side">
     <button type="button" id="hunt-fullscreen-btn" class="hunt-fullscreen-btn" aria-label="Enter fullscreen">⛶</button>
     <button type="button" id="hunt-volume-btn" class="hunt-fullscreen-btn song-volume-btn" aria-label="Volume">
       <svg viewBox="0 0 26 24" width="14" height="13" fill="none" stroke="#f8f5ec" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -8884,7 +8896,6 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
       </svg>
     </button>
   </div>
-  <button type="button" id="hunt-next" class="hunt-nav hunt-nav-next locked" aria-label="Next room">›</button>
   </div>
   <div class="hunt-dots" id="hunt-dots" role="tablist" aria-label="Rooms"></div>
   </div>
@@ -9794,6 +9805,7 @@ window.addEventListener("hashchange", function () {
   var caption = document.getElementById("hunt-caption");
   var dots = document.getElementById("hunt-dots");
   var prevBtn = document.getElementById("hunt-prev");
+  var sideStack = document.getElementById("hunt-side");
   function outerHeight(el) {
     if (!el) return 0;
     var s = getComputedStyle(el);
@@ -9816,8 +9828,11 @@ window.addEventListener("hashchange", function () {
     var areaH = area.clientHeight - padY - outerHeight(caption) - outerHeight(dots);
     if (areaW <= 0 || areaH <= 0) return;
     var navW = prevBtn ? prevBtn.offsetWidth : 0;
+    var sideW = sideStack ? sideStack.offsetWidth : 0; // the fullscreen/volume button column, right of the frame
     var frameGap = parseFloat(getComputedStyle(frame).columnGap || getComputedStyle(frame).gap) || 0;
-    var chrome = navW * 2 + frameGap * 2; // the two nav buttons + the gaps flanking the viewport
+    // four flex children in the frame — prev | viewport | next | side-stack — so three
+    // gaps flank the viewport+stack; the stack is always present (fullscreen button never hides)
+    var chrome = navW * 2 + sideW + frameGap * 3;
     // room viewport is a fixed 2:1 shape (680x340 per room in the strip's viewBox);
     // fit that ratio into (areaW - chrome) x areaH, whichever dimension binds
     var viewportW = Math.min(areaW - chrome, areaH * 2);
@@ -15886,8 +15901,8 @@ document.addEventListener("click", function (e) {
   // the game scene) and #hunt-volume-btn (real HTML button, visible from any room). Both
   // carry class "song-volume-btn" so this updates them together.
   function updateVolIcon() {
-    // include the monitor's own SVG speaker button (id, not class — it can't carry
-    // .song-volume-btn, whose absolute-positioning CSS would hide the in-scene button)
+    // include the monitor's own SVG speaker button (matched by id, not class — it can't
+    // carry .song-volume-btn, whose display:none-until-.shown rule would hide the in-scene button)
     var btns = document.querySelectorAll(".song-volume-btn, #monitor-volume-btn");
     for (var bi = 0; bi < btns.length; bi++) {
       var vb = btns[bi];

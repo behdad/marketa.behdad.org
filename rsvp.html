@@ -6511,12 +6511,12 @@ section{margin:1.9rem 0}
 <path d="M57 176 Q61 172 66 172 M72 174 Q76 178 77 183" fill="none" stroke="#3a2e28" stroke-width="1" stroke-linecap="round" opacity="0.7"/>
 <!-- neck -->
 <path d="M62 205 H70 V212 Q66 214 62 212 Z" fill="#cf9d6e"/>
-<!-- arms (black raglan sleeves): each drops down her side then reaches right, draping over
-     the daybed back in a hug — routed around the chest so the reindeer stays visible -->
-<path d="M52 216 Q49 229 52 238 Q80 244 112 233" fill="none" stroke="#2b2724" stroke-width="9" stroke-linecap="round"/>
-<path d="M82 216 Q86 226 85 233 Q106 235 130 225" fill="none" stroke="#2b2724" stroke-width="8" stroke-linecap="round"/>
-<circle cx="112" cy="233" r="4.6" fill="#dca878" stroke="#b9855e" stroke-width="1"/>
-<circle cx="130" cy="225" r="4.3" fill="#dca878" stroke="#b9855e" stroke-width="1"/>
+<!-- arms (black raglan sleeves): hanging naturally at her sides, hands near her hips
+     (not stretched outward) — the hug reads from her whole-body lean, not long arms -->
+<path d="M52 216 Q48 228 53 240" fill="none" stroke="#2b2724" stroke-width="8.5" stroke-linecap="round"/>
+<path d="M82 216 Q86 228 80 240" fill="none" stroke="#2b2724" stroke-width="8.5" stroke-linecap="round"/>
+<circle cx="53" cy="241" r="4.4" fill="#dca878" stroke="#b9855e" stroke-width="1"/>
+<circle cx="80" cy="241" r="4.4" fill="#dca878" stroke="#b9855e" stroke-width="1"/>
 </g><!-- /peek -->
 </g><!-- /pose -->
 </g><!-- /move -->
@@ -12208,9 +12208,9 @@ document.addEventListener("click", function (e) {
     if (showTimer) clearTimeout(showTimer);
     var loose = catInNook();
     var delay;
-    if (!firstDone) delay = loose ? (4000 + Math.random() * 9000) : (6000 + Math.random() * 20000); // first ≤ ~26s
-    else if (loose) delay = 24000 + Math.random() * 18000; // cat loose in the nook → more often (~24-42s)
-    else delay = 48000 + Math.random() * 26000;            // baseline ≈ every ~60s
+    if (!firstDone) delay = loose ? (5000 + Math.random() * 8000) : (10000 + Math.random() * 10000); // first ~15s (sooner if the cat's loose)
+    else if (loose) delay = 14000 + Math.random() * 12000; // cat loose in the nook → more often (~20s)
+    else delay = 22000 + Math.random() * 16000;            // baseline reappearance ≈ every ~30s
     showTimer = setTimeout(tick, delay);
   }
   // Room change / extinguisher reset: HARD teardown — strip everything now (no graceful
@@ -13792,24 +13792,31 @@ document.addEventListener("click", function (e) {
   var buildings = document.getElementById("office-buildings");
   if (buildings) {
     var SVGNS_WIN = "http://www.w3.org/2000/svg";
-    // grid per tower: face origin + cell count/size (aligned to each tower's drawn window rows)
+    // window cells aligned to each tower's DRAWN grid (uneven columns + differing row
+    // pitch), so a lit pane sits neatly between the drawn divider lines.
     var TOWERS = [
-      { x0: 88, y0: 60, cols: 3, rows: 5, cw: 13.5, ch: 14 },   // grey tower (x86–130)
-      { x0: 138, y0: 80, cols: 3, rows: 4, cw: 14.5, ch: 13.5 } // red-brick tower (x136–182)
+      { // grey tower: v-lines x=100,112 → 3 cols; h-lines y=60,74,88,102,116,130 → 5 rows
+        cols: [{ x: 90, w: 8 }, { x: 101, w: 10 }, { x: 114, w: 13 }],
+        rows: [62, 76, 90, 104, 118], h: 10
+      },
+      { // red-brick tower: v-lines x=150,166 → 3 cols; h-lines y=86,102,118,134 (top y=72) → 4 rows
+        cols: [{ x: 139, w: 9 }, { x: 152, w: 12 }, { x: 168, w: 12 }],
+        rows: [74, 88, 104, 120], h: 11
+      }
     ];
     TOWERS.forEach(function (t) {
-      for (var r = 0; r < t.rows; r++) {
-        for (var c = 0; c < t.cols; c++) {
+      t.rows.forEach(function (ry) {
+        t.cols.forEach(function (col) {
           var w = document.createElementNS(SVGNS_WIN, "rect");
           w.setAttribute("class", "office-window");
-          w.setAttribute("x", (t.x0 + c * t.cw).toFixed(1));
-          w.setAttribute("y", (t.y0 + r * t.ch).toFixed(1));
-          w.setAttribute("width", (t.cw - 3).toFixed(1));
-          w.setAttribute("height", (t.ch - 3).toFixed(1));
+          w.setAttribute("x", col.x);
+          w.setAttribute("y", ry);
+          w.setAttribute("width", col.w);
+          w.setAttribute("height", t.h);
           w.setAttribute("rx", "1");
           buildings.appendChild(w);
-        }
-      }
+        });
+      });
     });
     buildings.addEventListener("click", function (e) {
       var el = e && e.target;

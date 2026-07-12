@@ -1696,10 +1696,13 @@ footer{margin-top:2.6rem}
 .phone-nav button:hover{background:rgba(0,0,0,.05); color:var(--ink)}
 .phone-nav svg{display:block; width:15px; height:15px}
 /* home: an app grid, 4 across */
-.phone-home{flex-direction:column; overflow-y:auto; padding:18px 12px 12px}
-.phone-home-hi{text-align:center; font-family:"Fraunces",serif; font-size:13px; color:var(--soft); margin:0 0 16px}
+.phone-home{flex-direction:column; overflow-y:auto; padding:18px 12px 12px; position:relative}
+/* faded watermark of the two of us (the reclining daybed couple), behind the launcher */
+.phone-home-bg{position:absolute; inset:0; z-index:0; display:flex; pointer-events:none; opacity:.1}
+.phone-home-bg svg{width:100%; height:100%; display:block}
+.phone-home-hi{text-align:center; font-family:"Fraunces",serif; font-size:13px; color:var(--soft); margin:0 0 16px; position:relative; z-index:1}
 .phone-home-hi b{color:var(--wine); font-weight:600}
-.phone-home-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:16px 4px}
+.phone-home-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:16px 4px; position:relative; z-index:1}
 .phone-app-tile{display:flex; flex-direction:column; align-items:center; gap:5px; background:none; border:none; cursor:pointer; padding:0; font:inherit}
 .phone-app-tile .pat-ico{width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:26px; box-shadow:0 2px 5px rgba(0,0,0,.18)}
 .phone-app-tile .pat-ico svg{width:32px; height:32px; display:block}
@@ -17527,6 +17530,7 @@ document.addEventListener("click", function (e) {
     function renderHome() {
       var home = shell.querySelector(".phone-home");
       home.innerHTML = '<div class="phone-home-hi">markéta <b>∞</b> behdad</div>';
+      var bg = buildHomeCoupleBg(); if (bg) home.insertBefore(bg, home.firstChild); // faded couple behind the launcher
       var grid = document.createElement("div");
       grid.className = "phone-home-grid";
       PHONE_APPS.forEach(function (app) {
@@ -17574,6 +17578,38 @@ document.addEventListener("click", function (e) {
       callBtn.innerHTML = '<svg viewBox="0 0 12 12" aria-hidden="true"><use href="#dicon-phone"/></svg><span>' + tr("dial_call") + '</span>';
       callBtn.addEventListener("click", function () { if (selectedCity) startCall(selectedCity); });
       body.appendChild(callBtn);
+    }
+    // A faint watermark of the couple (the reclining daybed pose — the only full
+    // "two of us" figure in this scene) for the phone home background. Clones
+    // #cuddly-couple, drops the id-hidden joint prop (its opacity:0 lives on the id
+    // rule we strip), and strips ids + a11y/focus attrs. Classes are kept on purpose:
+    // the wedding veil and blush/grin marks are hidden via *class* rules, so keeping
+    // classes keeps them hidden, while the id-gated live states can't reach the copy.
+    function buildHomeCoupleBg() {
+      var src = document.getElementById("cuddly-couple");
+      if (!src) return null;
+      var g = src.cloneNode(true);
+      var jp = g.querySelector("#cuddly-behdad-joint-prop"); // green joint + ember: id-hidden, would show once id is stripped
+      if (jp && jp.parentNode) jp.parentNode.removeChild(jp);
+      g.removeAttribute("id");
+      var nodes = g.querySelectorAll("[id],[tabindex],[role],[aria-label]");
+      for (var i = 0; i < nodes.length; i++) {
+        nodes[i].removeAttribute("id");
+        nodes[i].removeAttribute("tabindex");
+        nodes[i].removeAttribute("role");
+        nodes[i].removeAttribute("aria-label");
+      }
+      g.setAttribute("style", "display:block;opacity:1");
+      var svg = document.createElementNS(SVGNS, "svg");
+      svg.setAttribute("viewBox", "168 134 210 153"); // measured bbox of #cuddly-couple
+      svg.setAttribute("preserveAspectRatio", "xMidYMax meet"); // feet anchored to the bottom, centered
+      svg.setAttribute("aria-hidden", "true");
+      svg.appendChild(g);
+      var wrap = document.createElement("div");
+      wrap.className = "phone-home-bg";
+      wrap.setAttribute("aria-hidden", "true");
+      wrap.appendChild(svg);
+      return wrap;
     }
     function cloneScene(sceneId, viewBox) {
       var src = document.getElementById(sceneId);

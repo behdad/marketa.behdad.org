@@ -2202,17 +2202,51 @@ footer{margin-top:2.6rem}
   70%{transform:scale(.96,1.05)}
 }
 @media (prefers-reduced-motion: reduce){#cuddly-bolster.squished, .cuddly-pillow.squished{animation:none}}
-/* Irene (the owner's niece) — an occasional, self-cleaning cameo who leans in from the
-   nook's left edge and hugs the daybed back, then fades out. Untracked bonus (no egg
-   plumbing); scheduled ~50% while the cuddly room is on-screen (see the #cuddly-irene
-   IIFE). Fade on the outer group; the lean-in rides CSS translate/rotate on the inner
-   node so it never clobbers a transform attribute (there is none). Reduced motion just
-   fades her in at rest. */
+/* Irene (the owner's niece, ~10) — an occasional, self-cleaning cameo in the cuddly nook.
+   Each appearance the scheduler (see the #cuddly-irene IIFE) picks ONE behavior at random,
+   rotating so it varies visit to visit: roam behind the couch, bounce on the daybed, sit
+   beside Markéta, hug Markéta, or — only when the loose chest cat is in the nook — crouch
+   to play with it. Untracked bonus (no egg plumbing).
+   Layering: the outer group fades (opacity). #cuddly-irene-move carries a static per-
+   behavior reposition via the CSS `translate` PROPERTY (never a transform attribute, so
+   nothing to clobber). The pose motions (bounce / walk-cross / crouch-reach) ride
+   `transform` keyframes on the distinct inner #cuddly-irene-pose, and the gentle settle-in
+   lean stays on #cuddly-irene-peek's translate/rotate transition (shared by every pose as a
+   soft entrance). Her arms are baked reaching right (draping over the couch back) — the
+   reposition slides that reach onto Markéta for the hug, over the cushion otherwise.
+   Reduced motion drops every pose animation and the reposition transition, just fading her
+   in at the target spot, at rest. */
 #cuddly-irene{opacity:0; transition:opacity .55s ease}
 #cuddly-irene.showing{opacity:1}
+/* per-behavior gross reposition — instant enough (she fades in already near the target),
+   with a short ease so a same-visit nudge doesn't snap; never animated as keyframes */
+#cuddly-irene-move{transform-box:fill-box; transform-origin:bottom center; transition:translate .45s ease}
+#cuddly-irene.irene-hug    #cuddly-irene-move{translate:140px 0}      /* stands over Behdad, arms + lean reach onto Markéta */
+#cuddly-irene.irene-sit    #cuddly-irene-move{translate:210px -30px}  /* up on the seat, beside Markéta */
+#cuddly-irene.irene-bounce #cuddly-irene-move{translate:52px -52px}   /* standing on the seat cushion */
+#cuddly-irene.irene-catplay #cuddly-irene-move{translate:16px 22px}   /* crouched low, down by the cat */
+#cuddly-irene.irene-roam   #cuddly-irene-move{translate:0 -2px}       /* behind the couch back (reparented) */
+/* a seated child reads shorter + tucked, not a standing figure lifted onto the cushion */
+#cuddly-irene.irene-sit    #cuddly-irene-pose{transform:scaleY(.9) rotate(-3deg); transform-origin:50% 100%}
+/* the settle-in lean (all behaviors get this gentle entrance; reduced motion = at rest) */
 #cuddly-irene-peek{transform-box:fill-box; transform-origin:bottom center; translate:-6px 9px; rotate:-3deg; transition:translate .6s cubic-bezier(.34,1.15,.6,1), rotate .6s cubic-bezier(.34,1.15,.6,1)}
 #cuddly-irene.showing #cuddly-irene-peek{translate:0 0; rotate:0deg}
-@media (prefers-reduced-motion: reduce){#cuddly-irene-peek{translate:0 0; rotate:0deg; transition:none}}
+#cuddly-irene.irene-hug.showing #cuddly-irene-peek{rotate:6deg} /* lean her in toward Markéta */
+/* pose motions on the distinct #cuddly-irene-pose (transform keyframes; it has no transform attr) */
+#cuddly-irene-pose{transform-box:fill-box; transform-origin:bottom center}
+#cuddly-irene.irene-bounce #cuddly-irene-pose{animation:irene-bounce .52s ease-in-out 4}
+@keyframes irene-bounce{0%,100%{transform:translateY(0)} 42%{transform:translateY(-15px) scaleY(1.04)} 62%{transform:translateY(-10px)}}
+#cuddly-irene.irene-roam #cuddly-irene-pose{animation:irene-walk 6.8s linear forwards}
+@keyframes irene-walk{0%{transform:translateX(-48px)} 50%{transform:translateX(150px) translateY(-2px)} 100%{transform:translateX(340px)}}
+#cuddly-irene.irene-catplay #cuddly-irene-pose{animation:irene-reach 1.5s ease-in-out 3}
+@keyframes irene-reach{0%,100%{transform:rotate(0)} 45%{transform:rotate(5deg) translateY(2px)}}
+@media (prefers-reduced-motion: reduce){
+  #cuddly-irene-peek{translate:0 0; rotate:0deg; transition:none}
+  #cuddly-irene-move{transition:none}
+  #cuddly-irene.irene-bounce #cuddly-irene-pose,
+  #cuddly-irene.irene-roam #cuddly-irene-pose,
+  #cuddly-irene.irene-catplay #cuddly-irene-pose{animation:none}
+}
 #balcony-doormat{transform-box:fill-box; transform-origin:center}
 #balcony-doormat.shaking{animation:doormat-shake .4s ease-in-out}
 @keyframes doormat-shake{
@@ -6265,6 +6299,8 @@ section{margin:1.9rem 0}
      and animated only via CSS on the wrapper (see #cuddly-irene rules + IIFE), never a
      transform attribute. Hidden by default (opacity 0). -->
 <g id="cuddly-irene" aria-hidden="true" pointer-events="none">
+<g id="cuddly-irene-move"><!-- per-behavior gross reposition (static CSS translate property; see #cuddly-irene rules) -->
+<g id="cuddly-irene-pose"><!-- pose motions: bounce / walk-cross / crouch-reach (transform keyframes; no transform attr here) -->
 <g id="cuddly-irene-peek">
 <!-- hair back mass: dark loose curls falling past the shoulders (behind the body) -->
 <path d="M50 190 Q43 178 51 170 Q59 163 66 163 Q73 163 81 170 Q89 178 82 190 Q88 212 81 236 Q74 248 66 246 Q58 248 51 236 Q44 212 50 190 Z" fill="#241d1a"/>
@@ -6321,7 +6357,9 @@ section{margin:1.9rem 0}
 <path d="M82 216 Q86 226 85 233 Q106 235 130 225" fill="none" stroke="#2b2724" stroke-width="8" stroke-linecap="round"/>
 <circle cx="112" cy="233" r="4.6" fill="#dca878" stroke="#b9855e" stroke-width="1"/>
 <circle cx="130" cy="225" r="4.3" fill="#dca878" stroke="#b9855e" stroke-width="1"/>
-</g>
+</g><!-- /peek -->
+</g><!-- /pose -->
+</g><!-- /move -->
 </g>
 
 <!-- wedding-day "just married" ribbon + ∞-heart confetti floating over the daybed nook
@@ -11694,40 +11732,117 @@ document.addEventListener("click", function (e) {
   document.addEventListener("visibilitychange", function () { if (!document.hidden) startOfficeCrane(); });
 })();
 (function () {
-  // Irene's cameo — the owner's niece leans in from the cuddly nook's left edge and
-  // hugs the daybed's back, then fades away. An occasional surprise like the wandering
-  // cat, NOT always present: one self-rescheduling timer (never a perpetual/background
-  // spawner), gated on the room being on-screen and the tab visible, and only ~50% of
-  // the times its window fires does she actually show. Untracked bonus — no markFound /
-  // EGG_TOTAL. Teardown: she clears when she leaves after lingering, on room change
-  // (goToStage calls __resetIrene when leaving the nook), on the extinguisher reset
-  // (resetHunt calls __resetIrene), and when the tab hides — nothing accumulates.
+  // Irene's cameo — the owner's niece turns up in the cuddly nook now and then and does
+  // ONE of several things at random, rotating so it varies visit to visit: roams behind
+  // the couch, bounces on the daybed, sits beside Markéta, hugs Markéta, or — only when the
+  // loose chest cat is in the nook — crouches to play with it. An occasional surprise like
+  // the wandering cat, NOT always present: ONE self-rescheduling timer (never a perpetual/
+  // background spawner), gated on the room being on-screen and the tab visible.
+  //   Cadence: the first appearance comes soon (≤ ~30s of the nook being on screen), then
+  // roughly every ~60s. When the loose cat is IN the nook she turns up MORE often (and the
+  // cat-play behavior becomes available + favored). `firstDone` flips only on a real on-
+  // screen show, so the "first ≤30s" promise holds from whenever the player actually lands
+  // on the nook (an off-room tick just re-arms the short first delay), and every reset re-
+  // arms it so each fresh nook visit greets them.
+  //   Untracked bonus — no markFound / EGG_TOTAL. Teardown: she fully clears (fade out, ALL
+  // behavior classes dropped, roam's behind-the-couch z-order restored, hide/cat-play timers
+  // cleared) when she leaves after lingering, on room change (goToStage calls __resetIrene
+  // when leaving the nook), on the extinguisher reset (resetHunt calls __resetIrene), and
+  // when the tab hides — nothing accumulates.
   var irene = document.getElementById("cuddly-irene");
   if (!irene) return;
-  var showTimer = null, hideTimer = null;
+  var daybed = document.getElementById("cuddly-daybed");        // roam hides her lower half behind this
+  var ireneHome = irene.parentNode, ireneNext = irene.nextSibling; // canonical z-order (in front of the couple)
+  var BEHAVIORS = ["irene-roam", "irene-bounce", "irene-sit", "irene-hug"]; // catplay appended only when the cat's here
+  var showTimer = null, hideTimer = null, catPlayTimer = null, fadeTimer = null, firstDone = false, lastBeh = null;
   function onScreen() { return window.currentStageName === "cuddly" && !document.hidden; }
+  function catLoose() {
+    var w = document.getElementById("witchy-chest-cat-walk");
+    return !!(w && w.classList.contains("out")); // .out = the chest cat is loose (see the follow IIFE)
+  }
+  function catInNook() { // loose AND physically parented into the cuddly stage (i.e. following the player here)
+    var pos = document.getElementById("witchy-chest-cat-pos");
+    var stage = document.getElementById("stage-cuddly");
+    return !!(catLoose() && pos && stage && stage.contains(pos));
+  }
+  function restoreZ() { // undo the roam's reparent-behind-the-couch
+    if (irene.parentNode !== ireneHome || irene.nextSibling !== ireneNext) ireneHome.insertBefore(irene, ireneNext);
+  }
+  function dropPose() { // literal removes (check.js wants a literal classList.remove per anim-driving class)
+    irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-catplay");
+    restoreZ();
+  }
   function leave() {
+    // Fade her out IN PLACE: only .showing comes off now (starting the opacity fade). The
+    // pose classes + roam's behind-the-couch z-order are torn down AFTER the fade, once she's
+    // invisible — dropping them mid-fade would snap the walk-across back to origin and flash
+    // her z-order (the transform-attribute-jump family of bug, at animation-END). show()
+    // cancels this pending cleanup, so a synchronous leave()+show() re-pose isn't stripped.
     irene.classList.remove("showing");
     if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+    if (catPlayTimer) { clearTimeout(catPlayTimer); catPlayTimer = null; }
+    if (fadeTimer) clearTimeout(fadeTimer);
+    fadeTimer = setTimeout(function () { fadeTimer = null; dropPose(); }, 620); // > opacity .55s fade
+  }
+  function pickBehavior() {
+    // rotate so visits vary (never immediately repeat); cat-play only when the cat is in
+    // the nook, and then weighted so she gravitates to it while the cat's around
+    var pool = BEHAVIORS.slice();
+    if (catInNook()) { pool.push("irene-catplay", "irene-catplay"); }
+    var choices = pool.filter(function (b) { return b !== lastBeh; });
+    if (!choices.length) choices = pool;
+    return choices[Math.floor(Math.random() * choices.length)];
+  }
+  function show(forced) {
+    if (irene.classList.contains("showing")) return;
+    if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; } // cancel a pending fade-cleanup so it can't strip these classes
+    var beh = forced || pickBehavior();
+    if (beh === "irene-catplay" && !catInNook()) beh = "irene-hug"; // never play with a cat that isn't here
+    lastBeh = beh;
+    irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-catplay");
+    if (beh === "irene-roam" && daybed && daybed.parentNode) daybed.parentNode.insertBefore(irene, daybed); // drop behind the couch
+    else restoreZ(); // every other pose composites in front of the couple
+    irene.classList.add(beh, "showing");
+    var linger = beh === "irene-roam" ? 6600 : (4200 + Math.random() * 2600);
+    hideTimer = setTimeout(function () { hideTimer = null; leave(); }, linger);
+    if (beh === "irene-catplay") { // nudge the cat into a playful hop toward her (guarded + self-resuming)
+      catPlayTimer = setTimeout(function () {
+        catPlayTimer = null;
+        if (onScreen() && catInNook() && window.__catChaseTo) window.__catChaseTo(120, 330);
+      }, 750);
+    }
   }
   function tick() {
     showTimer = null;
-    if (onScreen() && !irene.classList.contains("showing") && Math.random() < 0.5) {
-      irene.classList.add("showing");
-      hideTimer = setTimeout(function () { hideTimer = null; irene.classList.remove("showing"); }, 4200 + Math.random() * 3000); // linger a few seconds
-    }
+    if (onScreen() && !irene.classList.contains("showing")) { firstDone = true; show(); }
+    // off-screen: leave firstDone alone so the ≤30s promise holds from real room-entry
     schedule();
   }
   function schedule() {
     if (showTimer) clearTimeout(showTimer);
-    showTimer = setTimeout(tick, 15000 + Math.random() * 15000); // ~15-30s between chances → she turns up now and then
+    var loose = catInNook();
+    var delay;
+    if (!firstDone) delay = loose ? (4000 + Math.random() * 9000) : (6000 + Math.random() * 20000); // first ≤ ~26s
+    else if (loose) delay = 24000 + Math.random() * 18000; // cat loose in the nook → more often (~24-42s)
+    else delay = 48000 + Math.random() * 26000;            // baseline ≈ every ~60s
+    showTimer = setTimeout(tick, delay);
   }
-  // Room change / extinguisher reset: hide her and re-arm the single timer.
+  // Room change / extinguisher reset: HARD teardown — strip everything now (no graceful
+  // in-place fade; the room transition/reset wipe hides any snap), re-arm the "soon" first
+  // appearance, and reschedule the single timer.
   window.__resetIrene = function () {
     if (showTimer) { clearTimeout(showTimer); showTimer = null; }
-    leave();
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+    if (catPlayTimer) { clearTimeout(catPlayTimer); catPlayTimer = null; }
+    if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; }
+    irene.classList.remove("showing");
+    dropPose();
+    firstDone = false;
     schedule();
   };
+  // test/verify hook: force a specific behavior now (falls back to hug if catplay is asked
+  // for without the cat present). Hard-clear first so a forced re-pose is instant.
+  window.__ireneShow = function (beh) { irene.classList.remove("showing"); dropPose(); show(beh); };
   document.addEventListener("visibilitychange", function () { if (document.hidden) leave(); });
   schedule();
 })();

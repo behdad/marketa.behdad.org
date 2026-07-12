@@ -2009,8 +2009,10 @@ footer{margin-top:2.6rem}
 .pm-notes .pmn-pad{background:#fff3a8; border:none; border-radius:2px; box-shadow:0 3px 9px rgba(0,0,0,.15); padding:14px; width:100%; min-height:110px; resize:none; font-family:var(--hand-font); font-size:20px; line-height:1.3; color:#3a3128}
 .pm-notes .pmn-pad:focus{outline:2px solid var(--wine); outline-offset:2px}
 .pm-notes .pmn-pad::placeholder{color:#9a8f5a}
-.pm-notes .pmn-send-row{display:flex; gap:8px; justify-content:center; flex-wrap:wrap}
+.pm-notes .pmn-send-row{display:flex; gap:8px; justify-content:center; align-items:center; flex-wrap:wrap}
+.pm-notes .pmn-send-lead{font-family:"Fraunces",serif; font-size:13px; color:var(--wine)}
 .pm-notes .pmn-send-row .pm-btn:disabled{opacity:.5; cursor:default}
+@media (max-width:759px){ .pm-notes .pmn-gmail{display:none} }
 /* cocktails: featured signature drink pinned on top, then a scrolling photo gallery.
    Photos are real <img> (art/cocktails/<slug>/…); a missing file falls back to a
    wine placeholder tile carrying the drink's name, so it looks fine pre-photos */
@@ -9420,8 +9422,9 @@ var T = {
     app_notes: "notes",
     notes_write_lead: "write us a little note",
     notes_placeholder: "leave us a few words…",
-    notes_send: "Send to us 💌",
-    notes_send_mail: "Email app",
+    notes_send_lead: "Send to us",
+    notes_send: "Gmail",
+    notes_send_mail: "Email",
     notes_email_subject: "A little note from your loft 💌",
     notes_email_intro: "Hi Markéta & Behdad!\n\nHere's a note from your loft:",
     app_cards: "phrasebook",
@@ -9453,7 +9456,6 @@ var T = {
     clk_playtime: "You’ve been in the loft for",
     clk_now: "now in the loft",
     cur_amount: "amount",
-    cur_live: "· live rate",
     cur_offline: "· offline rate",
     comp_enable: "enable compass",
     comp_heading: "heading",
@@ -9775,8 +9777,9 @@ var T = {
     app_notes: "vzkazy",
     notes_write_lead: "napište nám vzkaz",
     notes_placeholder: "nechte nám pár slov…",
-    notes_send: "Poslat nám 💌",
-    notes_send_mail: "E-mailová aplikace",
+    notes_send_lead: "Poslat nám",
+    notes_send: "Gmail",
+    notes_send_mail: "E-mail",
     notes_email_subject: "Malý vzkaz z vašeho loftu 💌",
     notes_email_intro: "Ahoj Markéto a Behdade!\n\nTady je vzkaz z vašeho loftu:",
     app_cards: "slovníček",
@@ -9808,7 +9811,6 @@ var T = {
     clk_playtime: "V loftu jsi už",
     clk_now: "teď v loftu",
     cur_amount: "částka",
-    cur_live: "· aktuální kurz",
     cur_offline: "· kurz offline",
     comp_enable: "zapnout kompas",
     comp_heading: "směr",
@@ -18429,7 +18431,7 @@ document.addEventListener("click", function (e) {
         var out = (f && t) ? (a / f * t) : 0;
         res.textContent = out.toLocaleString(loc, { maximumFractionDigits: 2 }) + " " + to.value;
         var per = (f && t) ? (t / f).toFixed(3) : "—";
-        sub.textContent = "1 " + from.value + " = " + per + " " + to.value + " " + tr(live ? "cur_live" : "cur_offline");
+        sub.textContent = "1 " + from.value + " = " + per + " " + to.value + (live ? "" : " " + tr("cur_offline"));
       }
       [amt, from, to].forEach(function (el) { el.addEventListener("input", recompute); el.addEventListener("change", recompute); });
       recompute();
@@ -18556,26 +18558,17 @@ document.addEventListener("click", function (e) {
     var PHRASE_CARDS = [
       { en: "Hi", cs: "Ahoj" },
       { en: "Hello", cs: "Dobrý den" },
-      { en: "Good morning", cs: "Dobré ráno" },
-      { en: "Nice to meet you", cs: "Těší mě" },
-      { en: "Please", cs: "Prosím" },
       { en: "Thank you", cs: "Děkuju" },
       { en: "Thanks", cs: "Díky" },
+      { en: "Please", cs: "Prosím" },
       { en: "You are welcome", cs: "Rádo se stalo" },
-      { en: "Do you speak English?", cs: "Mluvíte anglicky?" },
-      { en: "How can I get to the wedding?", cs: "Jak se prosím vás dostanu na svatbu?" },
-      { en: "Where are the toilets?", cs: "Kde jsou toalety?" },
-      { en: "Congratulations!", cs: "Gratuluju!" },
-      { en: "Cheers!", cs: "Na zdraví!" },
-      { en: "One beer, please", cs: "Jedno pivo, prosím" },
-      { en: "What would you like to drink?", cs: "Co si dáš k pití?" },
       { en: "Can I have another piece of cake?", cs: "Můžu si dát ještě jeden kus dortu?" },
-      { en: "It’s delicious!", cs: "Je to výborné!" },
-      { en: "Let’s dance!", cs: "Pojďme si zatančit!" },
-      { en: "I like you", cs: "Mám tě rád(a)" },
-      { en: "I love you", cs: "it’s kind of weird to say it in Czech", italic: true },
+      { en: "One beer, please", cs: "Jedno pivo, prosím" },
       { en: "Good night", cs: "Dobrou noc" },
-      { en: "Goodbye", cs: "Na shledanou" }
+      { en: "How can I get to the wedding?", cs: "Jak se prosím vás dostanu na svatbu?" },
+      { en: "I love you", cs: "it’s kind of weird to say it in Czech", italic: true },
+      { en: "I like you", cs: "Mám tě rád(a)" },
+      { en: "What would you like to drink?", cs: "Co si dáš k pití?" }
     ];
     function renderCards(body) {
       if (cardsIndex >= PHRASE_CARDS.length) cardsIndex = 0;
@@ -18601,17 +18594,30 @@ document.addEventListener("click", function (e) {
       var front = wrap.querySelector(".pmc-front .pmc-phrase");
       var back = wrap.querySelector(".pmc-back .pmc-phrase");
       var count = wrap.querySelector(".pmc-count");
+      function paintBack() {
+        var c = PHRASE_CARDS[cardsIndex];
+        back.textContent = c.cs;
+        back.style.fontStyle = c.italic ? "italic" : ""; // the "I love you" card's CS side is a joke, rendered in italics
+      }
       function paint() {
         var c = PHRASE_CARDS[cardsIndex];
         front.textContent = c.en;
-        back.textContent = c.cs;
-        back.style.fontStyle = c.italic ? "italic" : ""; // the "I love you" card's CS side is a joke, rendered in italics
+        paintBack();
         count.textContent = (cardsIndex + 1) + " / " + PHRASE_CARDS.length;
       }
+      var backTimer = null;
       function go(delta) {
+        var wasFlipped = card.classList.contains("flipped");
         cardsIndex = (cardsIndex + delta + PHRASE_CARDS.length) % PHRASE_CARDS.length;
         card.classList.remove("flipped"); // always land on the English side after moving
-        paint();
+        var c = PHRASE_CARDS[cardsIndex];
+        front.textContent = c.en; // front is hidden until the flip passes 90°, safe to swap now
+        count.textContent = (cardsIndex + 1) + " / " + PHRASE_CARDS.length;
+        if (backTimer) { clearTimeout(backTimer); backTimer = null; }
+        // if we were on the CS side, the back is still rotating out of view — repaint it only
+        // after the flip settles, or the next card's translation flashes on the departing face
+        if (wasFlipped) backTimer = setTimeout(function () { paintBack(); backTimer = null; }, 520);
+        else paintBack();
       }
       card.addEventListener("click", function () { card.classList.toggle("flipped"); });
       wrap.querySelector(".pmc-prev").addEventListener("click", function () { go(-1); });
@@ -18915,14 +18921,18 @@ document.addEventListener("click", function (e) {
 
       var row = document.createElement("div");
       row.className = "pmn-send-row";
+      var sendLead = document.createElement("span");
+      sendLead.className = "pmn-send-lead";
+      sendLead.textContent = tr("notes_send_lead");
       var gmail = document.createElement("button");
       gmail.type = "button";
-      gmail.className = "pm-btn";
+      gmail.className = "pm-btn pmn-gmail"; // Gmail web-compose: hidden on mobile (native mail app is better there)
       gmail.textContent = tr("notes_send");
       var mail = document.createElement("button");
       mail.type = "button";
       mail.className = "pm-btn ghost";
       mail.textContent = tr("notes_send_mail");
+      row.appendChild(sendLead);
       row.appendChild(gmail);
       row.appendChild(mail);
       wrap.appendChild(row);
@@ -19727,6 +19737,9 @@ document.addEventListener("click", function (e) {
       if (modal.parentNode !== fsHost) fsHost.appendChild(modal);
       requestAnimationFrame(function () { if (modal) modal.classList.add("show"); });
       startStatusClock();
+      window.__weatherDuck = 0.1; // phone open on the balcony: pull the wind/chimes/rain/thunder way back
+      if (window.__applyWindDuck) window.__applyWindDuck();
+      if (window.__updateRainDuck) window.__updateRainDuck();
       if (!booted) {
         showScreen("home"); // home is built underneath so the lockscreen lifts onto a ready screen
         renderHome();
@@ -19746,6 +19759,9 @@ document.addEventListener("click", function (e) {
       if (callee) dropCall(true); // silent teardown of any live call + ambient
       leaveCurrentApp();           // restore the re-placed Mines board to the monitor
       stopStatusClock();
+      window.__weatherDuck = 1; // phone closed: weather ambience back to full
+      if (window.__applyWindDuck) window.__applyWindDuck();
+      if (window.__updateRainDuck) window.__updateRainDuck();
       if (modal.parentNode) {
         modal.classList.remove("show");
         var m = modal;
@@ -20668,7 +20684,7 @@ document.addEventListener("click", function (e) {
   }
   function windTarget(stormy) {
     var t = stormy ? WIND_STORM : WIND_CALM;
-    var scale = windWhere === "cuddly" ? WIND_CUDDLY_SCALE : 1;
+    var scale = (windWhere === "cuddly" ? WIND_CUDDLY_SCALE : 1) * (window.__weatherDuck || 1);
     return { gain: t.gain * scale, depth: t.depth * scale, filter: t.filter };
   }
   // Ramp the loudness/gust-depth/brightness from the current level to the calm or
@@ -20783,6 +20799,9 @@ document.addEventListener("click", function (e) {
     } else if (!want && windCtx) stopWind(stopFade);
   }
   window.__updateWind = evaluateWind;
+  // re-ramp the wind bed to the current target when the weather-duck changes but the storm
+  // state hasn't (evaluateWind alone only re-applies on a storm transition)
+  window.__applyWindDuck = function () { if (windCtx) applyIntensity(!!window.__balconyStorm, windCtx.currentTime); };
   function tick() {
     evaluateWind();
     setTimeout(tick, 1000);
@@ -21841,6 +21860,7 @@ function playThunderSound(volume) {
     var ctx = getSfxCtx();
     if (!ctx) return;
     var t = ctx.currentTime;
+    volume = volume * (window.__weatherDuck || 1); // duck weather while the pocket phone is open
     // everything sums into a master gain so the whole clap can be scaled — quiet
     // when heard through a window from another room, fuller out on the balcony
     var master = ctx.createGain();
@@ -23960,7 +23980,7 @@ function playWindchimeSound(stormy, throughDoor) {
     var TUBES = [1046.50, 1244.51, 1318.51, 1567.98]; // C6, Eb6, E6, G6
     var nr = Math.random(); var n = nr < 0.4 ? 1 : (nr < 0.85 ? 2 : 3); // mostly 1-2 tubes per gust, 3 now and then
     var picked = TUBES.slice().sort(function () { return Math.random() - 0.5; }).slice(0, n);
-    var loud = 0.6 * (stormy ? 1.3 : 1) * (throughDoor ? 0.4 : 1); // softer overall
+    var loud = 0.6 * (stormy ? 1.3 : 1) * (throughDoor ? 0.4 : 1) * (window.__weatherDuck || 1); // softer overall; ducked while the pocket phone is open
     picked.forEach(function (base, i) {
       var onset = t + i * (0.03 + Math.random() * 0.09); // tubes knock together, not in perfect unison
       var detune = 1 + (Math.random() * 0.03 - 0.015); // real tubes are never quite in tune with themselves
@@ -27920,7 +27940,7 @@ function spawnDustMote(container) {
         lp.frequency.value = 7000;
         rainGain = rainCtx.createGain();
         rainGain.gain.setValueAtTime(0.0001, rainCtx.currentTime);
-        var peak = rainInCuddly ? 0.005 : 0.009; // fainter heard through the door than out on the balcony
+        var peak = (rainInCuddly ? 0.005 : 0.009) * (window.__weatherDuck || 1); // fainter through the door; ducked hard while the pocket phone is open
         rainGain.gain.exponentialRampToValueAtTime(peak, rainCtx.currentTime + 1.2);
         var out = pannedOut(rainCtx, rainInCuddly ? "cuddly-balcony-door" : 0);
         rainNoise.connect(hp); hp.connect(lp); lp.connect(rainGain); rainGain.connect(out);
@@ -27943,6 +27963,16 @@ function spawnDustMote(container) {
       else if (!want && rainCtx) stopRain();
       setTimeout(tick, 1000);
     }
+    window.__updateRainDuck = function () {
+      if (!rainCtx || !rainGain) return;
+      try {
+        var peak = (rainInCuddly ? 0.005 : 0.009) * (window.__weatherDuck || 1);
+        var now = rainCtx.currentTime;
+        rainGain.gain.cancelScheduledValues(now);
+        rainGain.gain.setValueAtTime(Math.max(0.0001, rainGain.gain.value), now);
+        rainGain.gain.linearRampToValueAtTime(Math.max(0.0001, peak), now + 0.4);
+      } catch (e) {}
+    };
     tick();
   })();
   // an occasional shooting star streaks the clear dusk sky (not during a storm)

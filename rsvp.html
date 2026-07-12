@@ -2045,7 +2045,8 @@ footer{margin-top:2.6rem}
 .pm-comp .pmp-head b{font-family:"Fraunces",serif; color:var(--wine)}
 .pm-comp .pmp-cap{font-size:12px; color:var(--muted); line-height:1.4; padding:0 6px}
 /* a large ∞ brand flourish pinned to the bottom of the compass screen — blinks for a few seconds on open, then settles */
-.pm-comp .pmp-inf{margin-top:auto; font-family:Georgia,"Fraunces",serif; font-size:46px; line-height:1; color:var(--wine)}
+.pm-comp .pmp-inf{margin-top:auto; font-family:Georgia,"Fraunces",serif; font-size:96px; line-height:1; color:var(--wine)}
+.pm-comp.nocompass .pmp-dial{opacity:.4} /* no live sensor: dim the dial so it doesn't read as a working compass */
 .pmp-inf.blinking{animation:pmp-inf-blink .7s ease-in-out infinite} /* JS strips .blinking after ~4 cycles so it settles at full opacity */
 @keyframes pmp-inf-blink{0%,100%{opacity:1} 50%{opacity:.12}}
 @media (prefers-reduced-motion: reduce){.pmp-inf.blinking{animation:none}}
@@ -20377,6 +20378,11 @@ document.addEventListener("click", function (e) {
         else if (typeof e.alpha === "number") heading = 360 - e.alpha;                    // absolute alpha → compass heading
         if (heading == null || isNaN(heading)) return;
         heading = ((heading % 360) + 360) % 360;
+        // the game runs in landscape, so the device-frame heading is offset by the screen
+        // orientation — fold it back in (screen.orientation.angle is 90/270 in landscape;
+        // legacy window.orientation is the fallback)
+        var scr = (window.screen && screen.orientation && typeof screen.orientation.angle === "number") ? screen.orientation.angle : (typeof window.orientation === "number" ? window.orientation : 0);
+        heading = ((heading + scr) % 360 + 360) % 360;
         // exponential low-pass filter, following the SHORTEST angular path so the 359°→0°
         // wrap doesn't spin the needle all the way around; ~0.12 heavily damps the jitter
         if (smoothed == null) smoothed = heading;
@@ -20389,6 +20395,7 @@ document.addEventListener("click", function (e) {
         head.textContent = "";
         cap.textContent = tr(msgKey || "comp_static");
         enableBtn.style.display = "none";
+        if (wrap) wrap.classList.add("nocompass"); // no live sensor → dim the dial so it doesn't read as a working compass
       }
       function listen() {
         compassHandler = onOrient;
@@ -20398,6 +20405,7 @@ document.addEventListener("click", function (e) {
         } catch (e) {}
         enableBtn.style.display = "none";
         cap.textContent = "";
+        if (wrap) wrap.classList.remove("nocompass");
       }
       enableBtn.addEventListener("click", function () {
         try {

@@ -1306,14 +1306,14 @@ footer{margin-top:2.6rem}
 .tattoo-grid::-webkit-scrollbar-track{background:transparent}
 .tattoo-grid::-webkit-scrollbar{display:none}
 .tattoo-cell{display:flex; flex-direction:column; align-items:center; cursor:pointer}
-.tattoo-thumb{width:100%; aspect-ratio:1/1; object-fit:contain; border-radius:1px; background:#f4efe2; box-shadow:inset 0 0 0 0.3px rgba(69,58,49,0.2)}
+.tattoo-thumb{width:100%; aspect-ratio:1/1; box-sizing:border-box; padding:0.8px; object-fit:contain; border-radius:1px; background:#fff; box-shadow:inset 0 0 0 0.3px rgba(69,58,49,0.2)}
 .tattoo-cell:hover .tattoo-thumb{box-shadow:inset 0 0 0 0.6px #c68e95}
-.tattoo-cap{max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:2px; color:#716455; margin-top:0.3px}
+.tattoo-cap{white-space:nowrap; text-align:center; font-size:2px; color:#716455; margin-top:0.3px}
 .tattoo-credit{flex:none; width:100%; text-align:center; font-size:2px; color:#716455; padding:0 3px 0.6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .tattoo-new{display:flex; align-items:center; justify-content:center; width:100%; aspect-ratio:1/1; box-sizing:border-box; border-radius:1px; background:#f7efe9; border:0.4px dashed #c68e95; color:#c68e95; font-size:5px; line-height:1}
 .tattoo-cell:hover .tattoo-new{background:#faf3ef}
 .tattoo-preview{flex:1; display:flex; align-items:center; justify-content:center; min-height:0; padding:2px; overflow:hidden}
-.tattoo-preview img{max-width:100%; max-height:100%; object-fit:contain; border-radius:1px; box-shadow:0 0.5px 2px rgba(0,0,0,0.25)}
+.tattoo-preview img{max-width:100%; max-height:100%; object-fit:contain; border-radius:1px; background:#fff; box-shadow:0 0.5px 2px rgba(0,0,0,0.25)}
 .tattoo-actions{flex:none; display:flex; justify-content:center; padding:1px 3px 2px}
 .tattoo-btn{display:inline-flex; align-items:center; justify-content:center; gap:0.8px; cursor:pointer; background:#c68e95; color:#fffdf8; border-radius:2.5px; padding:1.2px 4px; font-size:2.7px; line-height:1; box-shadow:inset 0 0.4px 0 rgba(255,255,255,0.3)}
 .tattoo-btn:hover{background:#b87b83}
@@ -9067,6 +9067,12 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
   <div class="hunt-right" id="hunt-right">
     <div class="hunt-side" id="hunt-side">
       <button type="button" id="hunt-fullscreen-btn" class="hunt-fullscreen-btn" aria-label="Enter fullscreen">⛶</button>
+      <button type="button" id="hunt-restart-btn" class="hunt-fullscreen-btn" aria-label="Restart the game" data-aria-i="restart_aria" data-title-i="restart_aria">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#f8f5ec" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
+          <polyline points="21 3 21 9 15 9"/>
+        </svg>
+      </button>
       <button type="button" id="hunt-volume-btn" class="hunt-fullscreen-btn song-volume-btn" aria-label="Volume">
         <svg viewBox="0 0 26 24" width="14" height="13" fill="none" stroke="#f8f5ec" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <polygon points="9,5 4,9 0,9 0,15 4,15 9,19" fill="#f8f5ec" stroke="none"/>
@@ -9175,6 +9181,7 @@ var T = {
     fullscreen_enter: "Enter fullscreen",
     fullscreen_exit: "Exit fullscreen",
     feedback_aria: "Send feedback (opens GitHub)",
+    restart_aria: "Restart the game",
     caps_aria: "A pink flat cap and a blue baker boy cap, crossed",
     laptop_date: "July 10",
     desk_to: "to",
@@ -9529,6 +9536,7 @@ var T = {
     fullscreen_enter: "Celá obrazovka",
     fullscreen_exit: "Ukončit celou obrazovku",
     feedback_aria: "Poslat zpětnou vazbu (otevře GitHub)",
+    restart_aria: "Spustit hru znovu",
     caps_aria: "Růžová čepice a modrá čepice, zkřížené",
     laptop_date: "10. 7.",
     desk_to: "do",
@@ -14685,7 +14693,7 @@ document.addEventListener("click", function (e) {
   function renderTattooGallery() {
     var grid = tattooDiv("tattoo-grid", tattooWrap);
     var addCell = tattooDiv("tattoo-cell", grid); // the "draw your own" tile leads so it's always in view
-    tattooDiv("tattoo-new", addCell, "+1");
+    tattooDiv("tattoo-new", addCell, "+");
     tattooDiv("tattoo-cap", addCell, tattooT("tt_new"));
     addCell.addEventListener("click", function (e) { e.stopPropagation(); tattooShowPaint(); playLaptopClickSound("office-monitor"); });
     TATTOO_DESIGNS.forEach(function (id) {
@@ -28737,6 +28745,15 @@ function spawnDustMote(container) {
       }, 700);
     }
     window.__activateExtinguisher = activateExtinguisher; // 'r' key routes the reset through the extinguisher
+    // the scene's ↻ restart button: scroll back to the first room, then fire the
+    // extinguisher there so the powder-burst + wipe reset is actually on-screen
+    var restartBtn = document.getElementById("hunt-restart-btn");
+    if (restartBtn) restartBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var atKitchen = (window.currentStageIndex || 0) === 0;
+      if (!atKitchen) goToStage("kitchen");
+      setTimeout(activateExtinguisher, atKitchen ? 0 : 760); // let the slide land first
+    });
     extinguisher.addEventListener("click", activateExtinguisher);
     extinguisher.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activateExtinguisher(); }

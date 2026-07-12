@@ -3610,13 +3610,16 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 #cuddly-wallscreen:not(.chan-fire) .fire-live{opacity:0; animation:none}
 #cuddly-wallscreen:not(.chan-fire) #cuddly-firelight{opacity:0; animation:none}
 /* off channel (5th tap state): the projector is powered down — the panel goes cool grey
-   (the canvas is wiped, so this shows through) and the rAF loop stops */
+   (the canvas is wiped, so this shows through) and the rAF loop stops. The canvas itself
+   fades its last frame out (JS drops opacity → 0) so switching off reads as a screen
+   powering down, not a hard cut, before it's wiped clean. */
 #cuddly-screen-bg{transition:fill .5s ease}
 #cuddly-wallscreen.chan-off #cuddly-screen-bg{fill:#b6bbc0}
+#cuddly-flame-canvas{transition:opacity .45s ease}
 #cuddly-chan-badge{transition:opacity .5s ease}
 @media (prefers-reduced-motion: reduce){
   #cuddly-wallscreen .fire-flame, #cuddly-fire-ember, #cuddly-fire-bed,
-  #cuddly-flame-groove.grooving, #cuddly-chan-badge,
+  #cuddly-flame-groove.grooving, #cuddly-chan-badge, #cuddly-flame-canvas,
   #cuddly-wallscreen .cuddly-flame-season, #cuddly-wallscreen .fire-live,
   #stage-cuddly.dusk #cuddly-firelight{animation:none; transition:none}
 }
@@ -11532,12 +11535,14 @@ document.addEventListener("click", function (e) {
   // (CSS .chan-off → #cuddly-screen-bg grey) and a STOPPED loop (shouldRun() excludes
   // "off", so the rAF self-cancels and __cuddlyFlameRaf() reads null). The fire decor,
   // crackle audio and Fishu's warm halo all already gate on the .chan-fire class, so they
-  // stay dark here too. All this channel ever does is wipe the canvas.
+  // stay dark here too. Switching to off runs an animated "screen turning off" fade
+  // (powerDownCanvas → the last frame fades to transparent, then the canvas is wiped), so
+  // this channel deliberately does NOT clear on its own (no init) — the driver owns the
+  // fade-then-wipe; still() is only the reduced-motion / instant path.
   // =========================================================================
   var off = {
     blend: "normal",
     reset: function () {},
-    init: function () { ctx.clearRect(0, 0, W, H); },
     frame: function () { ctx.clearRect(0, 0, W, H); },
     still: function () { ctx.clearRect(0, 0, W, H); }
   };
@@ -11551,7 +11556,26 @@ document.addEventListener("click", function (e) {
   function applyChannelClass() {
     for (var i = 0; i < order.length; i++) screen.classList.remove("chan-" + order[i]);
     screen.classList.add("chan-" + current);
-    canvas.style.mixBlendMode = chanObj[current].blend;
+    // keep the outgoing channel's blend mode through the power-off fade (off wipes to
+    // transparent, so its blend is moot) — swapping it mid-fade would pop the last frame
+    if (current !== "off") canvas.style.mixBlendMode = chanObj[current].blend;
+  }
+  // Power-off fade: let the canvas's last frame fade to transparent (CSS opacity
+  // transition), revealing the greying screen-bg, THEN wipe it clean so the next channel
+  // starts fresh. One timer, always cleared before re-arming — nothing accumulates.
+  var canvasFadeTimer = null;
+  function powerDownCanvas() {
+    if (canvasFadeTimer) { clearTimeout(canvasFadeTimer); canvasFadeTimer = null; }
+    if (reduceMotion) { ctx.clearRect(0, 0, W, H); canvas.style.opacity = ""; return; } // no fade
+    canvas.style.opacity = "0"; // CSS transitions the last frame out over ~.45s
+    canvasFadeTimer = setTimeout(function () {
+      canvasFadeTimer = null;
+      ctx.clearRect(0, 0, W, H); canvas.style.opacity = ""; // wiped + opacity restored (canvas now transparent, no flash)
+    }, 480);
+  }
+  function powerUpCanvas() { // leaving off: cancel any in-flight fade, make the canvas visible again
+    if (canvasFadeTimer) { clearTimeout(canvasFadeTimer); canvasFadeTimer = null; }
+    canvas.style.opacity = "";
   }
   var badge = document.getElementById("cuddly-chan-badge");
   var badgeDots = badge ? badge.querySelectorAll(".chan-dot") : [];
@@ -11575,15 +11599,20 @@ document.addEventListener("click", function (e) {
   }
   function renderStill() { ctx.clearRect(0, 0, W, H); (chanObj[current].still || chanObj[current].frame).call(chanObj[current]); }
   function start() {
-    if (current === "off") { ctx.clearRect(0, 0, W, H); return; } // powered down — blank panel, no loop
+    // powered down — no loop. Don't clobber an in-flight power-off fade (canvasFadeTimer);
+    // only blank instantly when there's nothing fading (e.g. entering the nook already off)
+    if (current === "off") { if (!canvasFadeTimer) { ctx.clearRect(0, 0, W, H); canvas.style.opacity = ""; } return; }
     if (reduceMotion) { if (window.currentStageName === "cuddly") renderStill(); return; }
     if (raf || !shouldRun()) return; // already live, or not runnable right now
     lastDraw = 0; raf = requestAnimationFrame(frame);
   }
   function setChannel(name, persist) {
     if (!chanObj[name]) return;
-    chanObj[current].reset();          // tear the old channel's state down
-    ctx.clearRect(0, 0, W, H);
+    var toOff = (name === "off");
+    chanObj[current].reset();          // tear the old channel's state down (internal arrays only)
+    if (current === "off") powerUpCanvas();     // leaving off: cancel any pending fade, canvas visible again
+    if (toOff) powerDownCanvas();               // animated "screen turning off": fade the last frame, then wipe
+    else ctx.clearRect(0, 0, W, H);             // any other channel starts from a clean canvas
     current = name;
     if (chanObj[current].init) chanObj[current].init();
     applyChannelClass();

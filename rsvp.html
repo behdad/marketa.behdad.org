@@ -17455,6 +17455,8 @@ document.addEventListener("click", function (e) {
   var laptop = document.getElementById("office-laptop");
   if (!strip || !vp || !monitor) return;
   var zoomEl = null; // the device the view is zoomed onto (null = zoomed out)
+  var monClose = document.getElementById("monitor-close-btn");
+  var monTrackId = 0, monTrackUntil = 0;
   // box = the invisible screen-sized rect the zoom frames (the device groups' own
   // bboxes include stands/keyboards, which pulled the view down and out — the owner's
   // "not zoomed enough, not centered"); laptop zoom is lid-driven: only while open
@@ -17486,11 +17488,14 @@ document.addEventListener("click", function (e) {
     zoomEl = el;
     vp.classList.add("device-zoomed");
     apply();
+    monTrackUntil = performance.now() + 820; // follow the screen corner through the zoom glide
+    if (!monTrackId) monTrack();
   }
   function zoomOut() {
     if (!zoomEl) return;
     zoomEl = null;
     vp.classList.remove("device-zoomed");
+    monTrackUntil = 0;
     // the origin must survive the glide out (scale interpolates about it; clearing it
     // mid-transition snaps the start pose sideways) — drive the transition in px, which
     // lands exactly where translateX(-idx*20%) does, then restore the canonical % form
@@ -17503,9 +17508,26 @@ document.addEventListener("click", function (e) {
       strip.style.transform = "translateX(-" + ((window.currentStageIndex || 0) * 20) + "%)";
     }, 760);
   }
+  function positionMonClose() {
+    if (!monClose || !zoomEl) return;
+    var t = targetFor(zoomEl);
+    var box = (t && document.getElementById(t.box)) || zoomEl;
+    var r = box.getBoundingClientRect(), v = vp.getBoundingClientRect();
+    if (!r.width || !v.width) return;
+    var sz = monClose.offsetWidth || 26;
+    // seat the ✕ on the screen's top-right corner (poking into the letterbox margin, the
+    // way the phone's ✕ pokes past its shell), clamped so the clipped viewport can't eat it
+    var top = Math.max(4, Math.min(r.top - v.top - sz / 2, v.height - sz - 4));
+    var left = Math.max(4, Math.min(r.right - v.left - sz / 2, v.width - sz - 4));
+    monClose.style.top = top + "px"; monClose.style.left = left + "px"; monClose.style.right = "auto";
+  }
+  function monTrack() {
+    positionMonClose();
+    monTrackId = performance.now() < monTrackUntil ? requestAnimationFrame(monTrack) : 0;
+  }
+  window.addEventListener("resize", function () { if (zoomEl) positionMonClose(); });
   window.__monitorZoomIn = function () { zoomIn(monitor); };
   window.__monitorZoomOut = zoomOut;
-  var monClose = document.getElementById("monitor-close-btn");
   if (monClose) monClose.addEventListener("click", function (e) { e.stopPropagation(); zoomOut(); });
   // a tap landing outside the zoomed device hands the room back — unless it lands on
   // the OTHER device (glide over) or on viewport chrome (capture phase, so a target's
@@ -18570,6 +18592,10 @@ document.addEventListener("click", function (e) {
       var g = src.cloneNode(true);
       var jp = g.querySelector("#cuddly-behdad-joint-prop"); // id-hidden → would SHOW once ids are stripped
       if (jp && jp.parentNode) jp.parentNode.removeChild(jp);
+      // dress-up frames just the head + torso: drop the legs/feet and the lap blanket
+      ["#cuddly-couple-legs", "#cuddly-lapblanket"].forEach(function (sel) {
+        var n = g.querySelector(sel); if (n && n.parentNode) n.parentNode.removeChild(n);
+      });
       g.removeAttribute("id");
       var nodes = g.querySelectorAll("[id],[tabindex],[role],[aria-label]");
       for (var i = 0; i < nodes.length; i++) {
@@ -18692,7 +18718,7 @@ document.addEventListener("click", function (e) {
       stage.className = "pmd-stage";
       var svg = document.createElementNS(SVGNS, "svg");
       svg.setAttribute("class", "pmd-svg");
-      svg.setAttribute("viewBox", "176 120 186 140"); // head + torso only — crop the legs/feet
+      svg.setAttribute("viewBox", "158 138 122 122"); // head + torso only, visually centered
       svg.setAttribute("preserveAspectRatio", "xMidYMax meet");
       svg.setAttribute("aria-hidden", "true");
       var fig = cloneCoupleFigure();

@@ -2745,7 +2745,7 @@ footer{margin-top:2.6rem}
    to draw the eye to the (small, easily-missed) phone, until it's opened this session */
 #balcony-phone-led{animation:phone-led-blink 1.5s ease-in-out infinite}
 #balcony-phone-led-ping{transform-box:fill-box; transform-origin:center; animation:phone-led-ping 1.5s ease-out infinite}
-#balcony-phone.phone-opened #balcony-phone-led, #balcony-phone.phone-opened #balcony-phone-led-ping{display:none}
+#balcony-phone.phone-opened #balcony-phone-led, #balcony-phone.phone-opened #balcony-phone-led-ping, #balcony-phone.phone-opened #balcony-phone-badge{display:none}
 @keyframes phone-led-blink{0%,100%{opacity:1} 50%{opacity:.4}}
 @keyframes phone-led-ping{0%{opacity:.75; transform:scale(.5)} 70%,100%{opacity:0; transform:scale(3.4)}}
 @media (prefers-reduced-motion: reduce){#balcony-phone-led{animation:none} #balcony-phone-led-ping{display:none}}
@@ -3400,6 +3400,8 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 #garden-stars, #garden-moon{transition:opacity .9s ease}
 #stage-garden.dusk #garden-stars{opacity:1}
 #stage-garden.dusk #garden-moon{opacity:1}
+#garden-clouds{transition:opacity .9s ease} /* day clouds clear off at dusk so the stars aren't behind bright daytime clouds */
+#stage-garden.dusk #garden-clouds{opacity:0}
 #stage-garden.dusk #garden-stars .twinkle{transform-box:fill-box; transform-origin:center; animation:star-twinkle 3s ease-in-out infinite}
 #stage-garden.dusk #garden-stars .twinkle.t2{animation-duration:4.3s; animation-delay:.7s}
 #stage-garden.dusk #garden-stars .twinkle.t3{animation-duration:2.4s; animation-delay:1.4s}
@@ -4423,7 +4425,7 @@ section{margin:1.9rem 0}
 <path class="bird-fly-a" d="M114 55 Q117 51 120 55 Q123 51 126 55" fill="none" stroke="#4a453d" stroke-width="1.5" stroke-linecap="round"/>
 <path class="bird-fly-b" d="M114 85 Q116.5 82 119 85 Q121.5 82 124 85" fill="none" stroke="#4a453d" stroke-width="1.3" stroke-linecap="round"/>
 </g>
-<g aria-hidden="true" opacity="0.55">
+<g id="garden-clouds" aria-hidden="true" opacity="0.55">
 <ellipse cx="150" cy="40" rx="20" ry="7" fill="#dce6ea"/>
 <ellipse cx="164" cy="36" rx="14" ry="6" fill="#dce6ea"/>
 <ellipse cx="200" cy="60" rx="16" ry="6" fill="#dce6ea"/>
@@ -8427,12 +8429,16 @@ section{margin:1.9rem 0}
 <rect x="96" y="223" width="15" height="7" rx="2" fill="#c0392b" stroke="#8f2a20" stroke-width="1"/>
 <path id="balcony-lighter-flame" d="M96 226.5 Q93 221.5 96 216.5 Q99 221.5 96 226.5 Z" fill="#f0a04a" opacity="0"/>
 </g>
+<g transform="translate(116,232) scale(1.1) translate(-116,-232)"><!-- +10%, anchored bottom-left so it grows right & up -->
 <g id="balcony-phone" class="hunt-hit" tabindex="0" role="button" aria-label="The phone">
 <rect x="116" y="209" width="28" height="35" fill="transparent"/>
 <rect x="116" y="221" width="24" height="11" rx="2" fill="#d9a6a6" stroke="#b8888c" stroke-width="1"/>
-<rect id="balcony-phone-screen" x="119" y="223" width="18" height="7" rx="1" fill="#2d2d2d"/>
+<rect id="balcony-phone-screen" x="119" y="223" width="18" height="7" rx="1" fill="#20242a"/>
+<text id="balcony-phone-clock" x="126.5" y="227.6" text-anchor="middle" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="4" fill="#7fe0cf" opacity="0.9" pointer-events="none">12:00</text>
+<g id="balcony-phone-badge" pointer-events="none"><circle cx="135" cy="224.4" r="1.6" fill="#e0463a"/><text x="135" y="225.35" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="2.2" fill="#fff">1</text></g>
 <circle id="balcony-phone-led-ping" cx="116" cy="226.5" r="1.4" fill="none" stroke="#4fce6a" stroke-width="0.7"/>
 <circle id="balcony-phone-led" cx="116" cy="226.5" r="1" fill="#5fe07a" stroke="#2e7d3a" stroke-width="0.3"/>
+</g>
 </g>
 </g>
 <ellipse cx="228" cy="300" rx="42" ry="7" fill="#8a9090" opacity="0.35"/>
@@ -18010,6 +18016,46 @@ document.addEventListener("click", function (e) {
     phone.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); buzz(); }
     });
+    // ── glanceable lock screen: a live clock on the (closed) phone, hidden-tab safe ──
+    var phoneClockEl = document.getElementById("balcony-phone-clock");
+    function paintPhoneClock() {
+      if (!phoneClockEl) return;
+      var d = new Date(), z = function (n) { return (n < 10 ? "0" : "") + n; };
+      phoneClockEl.textContent = z(d.getHours()) + ":" + z(d.getMinutes());
+    }
+    paintPhoneClock();
+    setInterval(paintPhoneClock, 30000);
+    // ── the phone nudges you: a soft two-note chime + buzz + screen glow while it sits
+    //    unopened out on the balcony, so its 20 apps don't go unnoticed. Stops for good
+    //    once the phone has been opened this session. ──
+    function playPhoneNotifySound() {
+      try {
+        var ctx = getSfxCtx(); if (!ctx) return;
+        var t = ctx.currentTime, out = pannedOut(ctx, "balcony-phone");
+        [[880, 0], [1174.7, 0.1]].forEach(function (n) {
+          var osc = ctx.createOscillator(); osc.type = "sine"; osc.frequency.value = n[0];
+          var g = ctx.createGain();
+          g.gain.setValueAtTime(0.0001, t + n[1]);
+          g.gain.exponentialRampToValueAtTime(0.045, t + n[1] + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + n[1] + 0.18);
+          osc.connect(g); g.connect(out); osc.start(t + n[1]); osc.stop(t + n[1] + 0.2);
+        });
+      } catch (e) {}
+    }
+    phone.addEventListener("animationend", function (e) { if (e.animationName === "phone-buzz") phone.classList.remove("buzz"); });
+    phoneScreen.addEventListener("animationend", function (e) { if (e.animationName === "phone-screen-glow") phoneScreen.classList.remove("buzz"); });
+    function phoneNotify() {
+      if (phone.classList.contains("phone-opened")) return;
+      phone.classList.remove("buzz"); phoneScreen.classList.remove("buzz");
+      requestAnimationFrame(function () { requestAnimationFrame(function () { phone.classList.add("buzz"); phoneScreen.classList.add("buzz"); }); });
+      playPhoneNotifySound();
+    }
+    setInterval(function () {
+      if (document.visibilityState === "hidden") return;    // no ghost buzzing in a backgrounded tab
+      if ((window.currentStageIndex || 0) !== 4) return;    // only while you're out on the balcony
+      if (phone.classList.contains("phone-opened")) return; // opened once → it stays quiet
+      phoneNotify();
+    }, 19000);
   }
   // ── Loft phone modal (the balcony phone) ─────────────────────────────────────
   // Tapping the phone boots the loft's own pocket OS: a cream-∞-on-wine splash (first

@@ -881,6 +881,12 @@ footer{margin-top:2.6rem}
   85%{transform:rotate(6deg)}
 }
 @media (prefers-reduced-motion: reduce){#office-chair.spinning{animation:none}}
+/* office chair "alien arcade": a hidden micro-game that runs only while the chair is
+   dragged. The dim darkens the whole office EXCEPT the chair (it paints earlier in
+   source); reduced motion just snaps it on instead of fading. */
+#office-alien-dim{opacity:0; transition:opacity .35s ease; pointer-events:none}
+#stage-office.arcade #office-alien-dim{opacity:.72}
+@media (prefers-reduced-motion: reduce){#office-alien-dim{transition:none}}
 #kitchen-tamper-inner{transform-box:fill-box; transform-origin:bottom center}
 #kitchen-tamper.wobbling #kitchen-tamper-inner{animation:tamper-tamp .62s ease-in-out}
 @keyframes tamper-tamp{
@@ -7905,6 +7911,10 @@ section{margin:1.9rem 0}
 </g>
 </g>
 </g>
+<!-- Alien-arcade dim: sits BEFORE the chair so the chair paints on top of it and
+     stays bright while the rest of the office darkens (SVG paint order = document
+     order). Toggled by #stage-office.arcade; opacity handled in CSS. -->
+<rect id="office-alien-dim" x="0" y="0" width="680" height="340" fill="#0e1524"/>
 <g id="office-chair" class="hunt-hit" tabindex="0" role="button" aria-label="The office chair">
 <defs>
 <linearGradient id="office-chair-back-grad" x1="0" y1="0" x2="0" y2="1">
@@ -7989,6 +7999,9 @@ section{margin:1.9rem 0}
 <rect id="office-lamp-dim" x="0" y="0" width="680" height="340" fill="#1a1510" opacity="0" pointer-events="none"/>
 <rect x="0" y="0" width="680" height="340" fill="#3a5a7a" opacity="0.08" pointer-events="none"/>
 <rect id="office-dusk" x="0" y="0" width="680" height="340" fill="#141830" opacity="0" pointer-events="none"/>
+<!-- Topmost office layer: JS-spawned alien saucers + chair projectiles for the
+     hidden drag-the-chair arcade. Always empty at rest; hard-cleared on teardown. -->
+<g id="office-alien-layer" pointer-events="none"></g>
 </g>
 <g id="stage-balcony" transform="translate(2720,0)">
 <!-- transform-free inner wrapper: carries the "tipsy" sway so the animation never
@@ -11364,24 +11377,209 @@ document.addEventListener("click", function (e) {
         requestAnimationFrame(function () { chair.style.transition = ""; });
       });
     };
+
+    /* ---- hidden "alien arcade" mini-game ----------------------------------
+       Drag the chair around and, once you've dragged it a bit (> threshold of
+       cumulative travel — a normal nudge won't trip it), the office darkens,
+       saucers drift down from the top, and the chair auto-fires straight up
+       once a second. Line a shot up under a saucer to pop it. Releasing the
+       pointer (or leaving the office / hiding the tab) tears everything down.
+
+       All positions are written as SVG transform ATTRIBUTES from a single rAF
+       loop (never CSS transforms — those would clash with the transform attr),
+       and the pop flash uses the CSS `scale`/`opacity` individual properties on
+       a fresh node so it never fights a positioning transform. The chair's own
+       spin/dizzy/roll are untouched: those ride `.spinning`/`.dizzy` (transform
+       animations) and `style.translate` respectively, both independent of this. */
+    var SVGNS_ARC = "http://www.w3.org/2000/svg";
+    var stageOffice = document.getElementById("stage-office");
+    var alienLayer = document.getElementById("office-alien-layer");
+    var arcadeReduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var ARCADE_THRESHOLD = 40;   // px of cumulative drag travel before the game arms
+    var ALIEN_MIN_X = 46, ALIEN_MAX_X = 634, ALIEN_START_Y = -30;
+    var ALIEN_CAP = 6, ALIEN_SPAWN_MS = 1000;
+    var CHAIR_TOP_Y = 224;       // office-local y the projectile launches from (chair back top)
+    var SHOT_MS = 1000, SHOT_SPEED = 0.42; // once/sec, px per ms upward
+    var HIT_R = 18;              // hit radius (per axis) between shot and saucer
+    var arcadeActive = false, arcadeRaf = null, arcadeLastT = 0;
+    var arcadeAliens = [], arcadeShots = [];
+    var arcadeLastSpawn = 0, arcadeLastShot = 0, arcadeScore = 0;
+    var chairDragTravel = 0, chairPrevX = 0;
+
+    function arcadeChairX() { return 278 + chairOffsetX; }
+    function arcadeClearLayer() { if (alienLayer) { while (alienLayer.firstChild) alienLayer.removeChild(alienLayer.firstChild); } }
+
+    function spawnAlien(x, y) {
+      if (!alienLayer) return;
+      var ax = (x == null) ? (ALIEN_MIN_X + Math.random() * (ALIEN_MAX_X - ALIEN_MIN_X)) : x;
+      var ay = (y == null) ? ALIEN_START_Y : y;
+      var color = (arcadeAliens.length % 2) ? "#d9a6a6" : "#7f9ec0"; // his pink / her blue
+      var g = document.createElementNS(SVGNS_ARC, "g");
+      g.setAttribute("transform", "translate(" + ax.toFixed(1) + "," + ay.toFixed(1) + ")");
+      g.innerHTML =
+        '<ellipse cx="0" cy="1" rx="15" ry="6" fill="' + color + '" stroke="#453a31" stroke-width="1.2"/>' +
+        '<path d="M-8 -2 Q0 -12 8 -2 Z" fill="#fffdf8" opacity="0.92" stroke="#453a31" stroke-width="1"/>' +
+        '<circle cx="-9" cy="2.6" r="1.5" fill="#fffdf8"/><circle cx="0" cy="3.4" r="1.5" fill="#fffdf8"/><circle cx="9" cy="2.6" r="1.5" fill="#fffdf8"/>' +
+        '<circle cx="0" cy="-8" r="1.7" fill="#8e3a4a"/>';
+      alienLayer.appendChild(g);
+      arcadeAliens.push({ el: g, x: ax, y: ay, vy: 0.032 + Math.random() * 0.022 });
+    }
+
+    function fireShot() {
+      if (!alienLayer) return;
+      var sx = arcadeChairX();
+      var g = document.createElementNS(SVGNS_ARC, "g");
+      g.setAttribute("transform", "translate(" + sx.toFixed(1) + "," + CHAIR_TOP_Y + ")");
+      g.innerHTML = '<rect x="-2" y="-8" width="4" height="16" rx="2" fill="#c68e95"/><rect x="-1" y="-6" width="2" height="11" rx="1" fill="#fffdf8"/>';
+      alienLayer.appendChild(g);
+      arcadeShots.push({ el: g, x: sx, y: CHAIR_TOP_Y });
+      playChairPewSound();
+    }
+
+    function popAlien(a) {
+      arcadeScore++;
+      playAlienBlipSound();
+      if (a.el && a.el.parentNode) a.el.parentNode.removeChild(a.el);
+      if (arcadeReduce || !alienLayer) return; // reduced motion: no flash, just gone + blip
+      var wrap = document.createElementNS(SVGNS_ARC, "g");
+      wrap.setAttribute("transform", "translate(" + a.x.toFixed(1) + "," + a.y.toFixed(1) + ")");
+      var c = document.createElementNS(SVGNS_ARC, "circle");
+      c.setAttribute("r", "6"); c.setAttribute("fill", "none");
+      c.setAttribute("stroke", "#f4d58d"); c.setAttribute("stroke-width", "2.5");
+      wrap.appendChild(c);
+      alienLayer.appendChild(wrap);
+      var anim = c.animate([{ scale: 0.4, opacity: 1 }, { scale: 3, opacity: 0 }], { duration: 360, easing: "ease-out" });
+      anim.onfinish = function () { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
+    }
+
+    // one deterministic simulation tick (no rAF) — the rAF driver and the test hook both call it
+    function arcadeStep(dt) {
+      arcadeLastSpawn += dt;
+      if (arcadeLastSpawn >= ALIEN_SPAWN_MS && arcadeAliens.length < ALIEN_CAP) { arcadeLastSpawn = 0; spawnAlien(null, null); }
+      arcadeLastShot += dt;
+      if (arcadeLastShot >= SHOT_MS) { arcadeLastShot = 0; fireShot(); }
+      var i, a;
+      for (i = arcadeAliens.length - 1; i >= 0; i--) {
+        a = arcadeAliens[i];
+        a.y += a.vy * dt;
+        a.el.setAttribute("transform", "translate(" + a.x.toFixed(1) + "," + a.y.toFixed(1) + ")");
+        if (a.y > 372) { if (a.el.parentNode) a.el.parentNode.removeChild(a.el); arcadeAliens.splice(i, 1); } // reached the floor, missed
+      }
+      for (var s = arcadeShots.length - 1; s >= 0; s--) {
+        var sh = arcadeShots[s];
+        sh.y -= SHOT_SPEED * dt;
+        var hit = false;
+        for (var j = arcadeAliens.length - 1; j >= 0; j--) {
+          a = arcadeAliens[j];
+          if (Math.abs(sh.x - a.x) < HIT_R && Math.abs(sh.y - a.y) < HIT_R) { popAlien(a); arcadeAliens.splice(j, 1); hit = true; break; }
+        }
+        if (hit || sh.y < -20) { if (sh.el.parentNode) sh.el.parentNode.removeChild(sh.el); arcadeShots.splice(s, 1); }
+        else sh.el.setAttribute("transform", "translate(" + sh.x.toFixed(1) + "," + sh.y.toFixed(1) + ")");
+      }
+    }
+
+    function arcadeFrame(t) {
+      // self-cancel the instant the game shouldn't be running (release handled separately,
+      // this covers room-leave and tab-hide → no leftover timer, mirrors the office crane)
+      if (!arcadeActive || window.currentStageName !== "office" || document.hidden) { stopArcade(); return; }
+      var dt = arcadeLastT ? Math.min(50, t - arcadeLastT) : 16;
+      arcadeLastT = t;
+      arcadeStep(dt);
+      arcadeRaf = requestAnimationFrame(arcadeFrame);
+    }
+
+    function startArcade() {
+      if (arcadeActive) return;
+      arcadeActive = true;
+      arcadeScore = 0;
+      arcadeClearLayer();
+      arcadeAliens.length = 0; arcadeShots.length = 0;
+      arcadeLastSpawn = ALIEN_SPAWN_MS; // spawn promptly on the first tick
+      arcadeLastShot = SHOT_MS;         // fire promptly on the first tick
+      if (stageOffice) stageOffice.classList.add("arcade");
+      spawnAlien(180, -18); spawnAlien(430, -52); // a couple already on the way in
+      arcadeLastT = 0;
+      arcadeRaf = requestAnimationFrame(arcadeFrame);
+    }
+
+    function arcadeFlourish(n) {
+      if (!alienLayer) return;
+      var g = document.createElementNS(SVGNS_ARC, "g");
+      g.setAttribute("transform", "translate(340,150)");
+      var txt = document.createElementNS(SVGNS_ARC, "text");
+      txt.setAttribute("text-anchor", "middle");
+      txt.setAttribute("fill", "#8e3a4a");
+      txt.setAttribute("font-family", "Fraunces, Georgia, serif");
+      txt.setAttribute("font-size", "30");
+      txt.setAttribute("font-weight", "700");
+      txt.textContent = "×" + n; // "×N" — language-neutral, no scoreboard UI
+      g.appendChild(txt);
+      alienLayer.appendChild(g);
+      if (arcadeReduce) { setTimeout(function () { if (g.parentNode) g.parentNode.removeChild(g); }, 850); return; }
+      var anim = txt.animate([
+        { scale: 0.6, opacity: 0 },
+        { scale: 1.1, opacity: 1, offset: 0.25 },
+        { scale: 1, opacity: 1, offset: 0.7 },
+        { scale: 1, opacity: 0 }
+      ], { duration: 950, easing: "ease-out" });
+      anim.onfinish = function () { if (g.parentNode) g.parentNode.removeChild(g); };
+    }
+
+    function stopArcade() {
+      if (arcadeRaf) { cancelAnimationFrame(arcadeRaf); arcadeRaf = null; }
+      var wasActive = arcadeActive, finalScore = arcadeScore;
+      arcadeActive = false;
+      arcadeClearLayer();               // hard-clear — never trust per-particle onfinish for teardown
+      arcadeAliens.length = 0; arcadeShots.length = 0;
+      if (stageOffice) stageOffice.classList.remove("arcade");
+      arcadeScore = 0;
+      if (wasActive && finalScore > 0) arcadeFlourish(finalScore); // subtle "×N" on release
+    }
+
+    // tear down if the tab hides or the window loses focus mid-game (pointerup may never come)
+    document.addEventListener("visibilitychange", function () { if (document.hidden) stopArcade(); });
+    window.addEventListener("blur", function () { stopArcade(); });
+
+    // headless test hook: deterministically arms the game and runs N logic ticks with a
+    // fixed dt WITHOUT scheduling rAF, so a screenshot can capture dim + saucers + a shot.
+    window.__arcadeTest = function (steps, dt) {
+      arcadeActive = true; arcadeScore = 0;
+      arcadeClearLayer();
+      arcadeAliens.length = 0; arcadeShots.length = 0;
+      if (stageOffice) stageOffice.classList.add("arcade");
+      spawnAlien(200, 118); spawnAlien(330, 88); spawnAlien(470, 150);
+      arcadeLastSpawn = 0; arcadeLastShot = SHOT_MS;
+      for (var k = 0; k < (steps || 1); k++) arcadeStep(dt || 16);
+      return { active: arcadeActive, aliens: arcadeAliens.length, shots: arcadeShots.length, score: arcadeScore };
+    };
+    window.__arcadeStop = stopArcade;
+    window.__arcadeState = function () { return { active: arcadeActive, raf: arcadeRaf, aliens: arcadeAliens.length, shots: arcadeShots.length }; };
+
     chair.addEventListener("pointerdown", function (e) {
       chairDragging = true;
       chairDragMoved = false;
       chairDragStartX = pointerSvgX(e);
       chairDragStartOffset = chairOffsetX;
+      chairDragTravel = 0;
+      chairPrevX = chairDragStartX;
       chair.style.transition = "none";
       try { chair.setPointerCapture(e.pointerId); } catch (err) {}
     });
     chair.addEventListener("pointermove", function (e) {
       if (!chairDragging) return;
-      var dx = pointerSvgX(e) - chairDragStartX;
+      var px = pointerSvgX(e);
+      var dx = px - chairDragStartX;
       if (Math.abs(dx) > 2) chairDragMoved = true;
+      chairDragTravel += Math.abs(px - chairPrevX); // cumulative travel — a tiny nudge won't arm the game
+      chairPrevX = px;
+      if (!arcadeActive && chairDragTravel > ARCADE_THRESHOLD) startArcade();
       setChairOffset(chairDragStartOffset + dx);
       if (window.__chairCatFollow) window.__chairCatFollow(); // dragging is instant (no transition) — resync every move
     });
     function onChairPointerUp(e) {
       if (!chairDragging) return;
       chairDragging = false;
+      stopArcade(); // releasing always ends the arcade cleanly
       try { chair.releasePointerCapture(e.pointerId); } catch (err) {}
       chair.style.transition = "";
       if (!chairDragMoved) spinChair();
@@ -25755,6 +25953,46 @@ function playChairWhirlSound(pitchMult) {
     gain.connect(pannedOut(ctx, "office-chair"));
     osc.start(t);
     osc.stop(t + 0.81);
+  } catch (e) {}
+}
+// soft "pew" as the chair auto-fires a projectile in the alien arcade
+function playChairPewSound() {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var osc = ctx.createOscillator();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(760, t);
+    osc.frequency.exponentialRampToValueAtTime(220, t + 0.12);
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.035, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+    osc.connect(gain);
+    gain.connect(pannedOut(ctx, "office-chair"));
+    osc.start(t);
+    osc.stop(t + 0.14);
+  } catch (e) {}
+}
+// bright little blip when a projectile pops an alien saucer
+function playAlienBlipSound() {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(520, t);
+    osc.frequency.exponentialRampToValueAtTime(1180, t + 0.09);
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.05, t + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    osc.connect(gain);
+    gain.connect(pannedOut(ctx, "office-chair"));
+    osc.start(t);
+    osc.stop(t + 0.17);
   } catch (e) {}
 }
 function playDeskMotorSound() {

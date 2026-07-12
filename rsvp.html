@@ -1790,6 +1790,15 @@ footer{margin-top:2.6rem}
 .pb-frame-chip:hover{background:var(--paper)}
 .pb-frame-chip.active{background:var(--wine); color:#f8f5ec; border-color:var(--wine)}
 @media (prefers-reduced-motion: reduce){.pb-dlg-hint{animation:none} .pb-frame-chip{transition:none}}
+/* "Install app" chip: a discoverable PWA-install affordance (see the install IIFE). Only
+   built when installable + not already installed; bottom-left so it clears the game controls. */
+.install-chip{position:fixed; z-index:12; left:calc(env(safe-area-inset-left,0px) + 12px); bottom:calc(env(safe-area-inset-bottom,0px) + 12px); display:inline-flex; align-items:stretch; background:var(--wine); color:#f8f5ec; border-radius:999px; box-shadow:0 3px 14px rgba(0,0,0,.28); opacity:0; pointer-events:none; transition:opacity .35s ease; font-family:'Source Serif 4', Georgia, serif; overflow:hidden}
+.install-chip.show{opacity:1; pointer-events:auto}
+.install-chip .ic-go{appearance:none; border:0; background:transparent; color:inherit; font:inherit; font-size:.85rem; padding:.5rem .5rem .5rem .9rem; cursor:pointer; display:inline-flex; align-items:center; gap:.35rem; line-height:1}
+.install-chip .ic-go:hover{background:rgba(0,0,0,.12)}
+.install-chip .ic-x{appearance:none; border:0; background:transparent; color:inherit; font:inherit; font-size:1rem; line-height:1; padding:0 .6rem 0 .3rem; cursor:pointer; opacity:.7}
+.install-chip .ic-x:hover{opacity:1}
+@media (prefers-reduced-motion: reduce){.install-chip{transition:none}}
 @media (prefers-reduced-motion: reduce){.pb-dialog-backdrop{transition:none} .pb-dlg-btn{transition:none} .pb-dlg-btn:hover{transform:none}}
 /* the keyboard-shortcuts card ('?') — same backdrop / ink card / ✕ language as the
    polaroid dialog above, plus a key-chip + description grid (left-aligned list). */
@@ -10190,6 +10199,9 @@ var T = {
     fullscreen_enter: "Enter fullscreen",
     fullscreen_exit: "Exit fullscreen",
     feedback_aria: "Send feedback",
+    install_label: "Install app",
+    install_ios_hint: "Tap Share, then “Add to Home Screen”",
+    install_dismiss: "Dismiss",
     restart_aria: "Restart the game",
     caps_aria: "A pink flat cap and a blue baker boy cap, crossed",
     laptop_date: "July 10",
@@ -10547,6 +10559,9 @@ var T = {
     fullscreen_enter: "Celá obrazovka",
     fullscreen_exit: "Ukončit celou obrazovku",
     feedback_aria: "Poslat zpětnou vazbu",
+    install_label: "Nainstalovat appku",
+    install_ios_hint: "Klepni na Sdílet, pak „Přidat na plochu“",
+    install_dismiss: "Zavřít",
     restart_aria: "Spustit hru znovu",
     caps_aria: "Růžová čepice a modrá čepice, zkřížené",
     laptop_date: "10. 7.",
@@ -11243,6 +11258,55 @@ window.addEventListener("hashchange", function () {
     b.click();
   }
   document.addEventListener("click", firstTap, true);
+})();
+// ── "Install app" chip ── surfaces the PWA install (installable via manifest.webmanifest,
+// but the browser's ⋮ "Install app" is undiscoverable). Chromium (Android + desktop): capture
+// beforeinstallprompt and drive the native prompt from the chip. iOS Safari (no programmatic
+// install): the chip reveals the Share → Add to Home Screen hint. Self-hides when already
+// installed, after install, or once dismissed (remembered in localStorage).
+(function(){
+  function standalone(){ try { return (matchMedia("(display-mode: standalone)").matches || matchMedia("(display-mode: fullscreen)").matches) || navigator.standalone === true; } catch(e){ return false; } }
+  if (standalone()) return;
+  var DISMISS_KEY = "installChipHidden";
+  try { if (localStorage.getItem(DISMISS_KEY)) return; } catch(e){}
+  function t(key, fallback){ try { var l = document.documentElement.lang; return (T[l] && T[l][key]) || (T.en && T.en[key]) || fallback; } catch(e){ return fallback; } }
+  var chip = null, goBtn = null, deferred = null;
+  function label(text){ return '<span aria-hidden="true">📲</span> ' + text; }
+  function build(labelHTML, onGo){
+    if (chip) return;
+    chip = document.createElement("div"); chip.className = "install-chip";
+    goBtn = document.createElement("button"); goBtn.type = "button"; goBtn.className = "ic-go"; goBtn.innerHTML = labelHTML;
+    goBtn.addEventListener("click", onGo);
+    var x = document.createElement("button"); x.type = "button"; x.className = "ic-x"; x.textContent = "×"; x.setAttribute("aria-label", t("install_dismiss", "Dismiss"));
+    x.addEventListener("click", function(){ hide(); try { localStorage.setItem(DISMISS_KEY, "1"); } catch(e){} });
+    chip.appendChild(goBtn); chip.appendChild(x);
+    document.body.appendChild(chip);
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ if (chip) chip.classList.add("show"); }); });
+  }
+  function hide(){ if (chip) chip.classList.remove("show"); }
+  // Chromium: real install prompt
+  window.addEventListener("beforeinstallprompt", function(e){
+    e.preventDefault(); deferred = e;
+    build(label(t("install_label", "Install app")), function(){
+      if (!deferred) return;
+      var d = deferred; deferred = null;
+      try { d.prompt(); } catch(err){}
+      if (d.userChoice && d.userChoice.then) d.userChoice.then(function(){ hide(); }); else hide();
+    });
+  });
+  window.addEventListener("appinstalled", function(){ hide(); deferred = null; try { localStorage.setItem(DISMISS_KEY, "1"); } catch(e){} });
+  // iOS Safari: no beforeinstallprompt — tapping the chip reveals the manual instruction
+  var ua = navigator.userAgent || "";
+  var isIOS = /iphone|ipad|ipod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1); // iPadOS reports as Mac
+  var isSafari = /^((?!chrome|android|crios|fxios|edga?|opr).)*safari/i.test(ua);
+  if (isIOS && isSafari){
+    setTimeout(function(){
+      if (chip || standalone()) return;
+      build(label(t("install_label", "Install app")), function(){
+        if (goBtn) goBtn.innerHTML = label(t("install_ios_hint", "Tap Share, then “Add to Home Screen”"));
+      });
+    }, 2500);
+  }
 })();
 // ── Keyboard-shortcuts card ── '?' toggles a small overlay listing the game's global
 // shortcuts, in the polaroid dialog's visual language (same backdrop/ink-card/✕ classes,

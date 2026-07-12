@@ -9763,6 +9763,21 @@ window.addEventListener("hashchange", function () {
   refreshLabel();
 })();
 (function(){ var mh=document.getElementById("mobile-fs-hint"); if(mh) mh.addEventListener("click", function(){ var b=document.getElementById("hunt-fullscreen-btn"); if(b) b.click(); }); })();
+(function(){
+  // requestFullscreen needs a user gesture (no auto-fullscreen on load). When launched
+  // as the installed PWA, take the FIRST tap as that gesture and enter fullscreen once.
+  // Normal browser tabs are left alone (they have the ⛶ button + the mobile hint).
+  function isPWA(){ try { return (window.matchMedia && (matchMedia("(display-mode: standalone)").matches || matchMedia("(display-mode: fullscreen)").matches)) || navigator.standalone === true; } catch(e){ return false; } }
+  if(!isPWA()) return;
+  function firstTap(e){
+    document.removeEventListener("click", firstTap, true);
+    var area=document.querySelector("#hunt-fullscreen-area"), b=document.getElementById("hunt-fullscreen-btn");
+    if(!b || (area && area.classList.contains("is-fullscreen"))) return;
+    if(e && e.target && e.target.closest && e.target.closest("#hunt-fullscreen-btn")) return; // the button handles itself
+    b.click();
+  }
+  document.addEventListener("click", firstTap, true);
+})();
 // ── Keyboard-shortcuts card ── '?' toggles a small overlay listing the game's global
 // shortcuts, in the polaroid dialog's visual language (same backdrop/ink-card/✕ classes,
 // same fullscreen-host trick). Rebuilt from the T dict on every open, so it always

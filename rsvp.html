@@ -20401,8 +20401,18 @@ document.addEventListener("click", function (e) {
           } else { listen(); }
         } catch (e) { staticNorth("comp_static"); }
       });
-      setHeading(0);                 // initial: static true north with the loft caption until enabled
-      cap.textContent = tr("comp_static");
+      setHeading(0); // start with the dial pointing true north
+      // The "enable compass" button only earns its keep on iOS 13+, where the sensor is
+      // gesture-gated (requestPermission must be called from a tap, and the grant can't be
+      // pre-queried). Everywhere else there's no permission gate — just start listening, no
+      // pointless tap. No sensor API at all → a static true-north dial.
+      if (typeof DeviceOrientationEvent === "undefined") {
+        staticNorth("comp_static");
+      } else if (typeof DeviceOrientationEvent.requestPermission === "function") {
+        cap.textContent = tr("comp_static"); // iOS: keep the button visible for the grant tap
+      } else {
+        listen(); // Android / desktop: hide the button and go live immediately
+      }
     }
     // ── flashlight ── an on/off torch. ON spills a warm radial beam onto the balcony
     // night scene (the phone is opened from the balcony) and glows the phone screen; OFF

@@ -1808,6 +1808,12 @@ footer{margin-top:2.6rem}
    browser, computed for the phone instead of hardcoded) */
 .phone-browser .pbrow-page{position:relative; flex:1; min-height:0; overflow:hidden; background:var(--cream)}
 .phone-browser .pbrow-frame{position:absolute; left:0; top:0; border:none; background:var(--cream); transform-origin:0 0}
+/* framing-refused hint, floated over the frame for omnibox destinations (arbitrary URLs
+   / search) — off-site pages commonly refuse iframing and paint blank; shown briefly then
+   faded, same idea as the monitor's .browser-noframe */
+.phone-browser .pbrow-noframe{position:absolute; left:12px; right:12px; bottom:12px; z-index:3; display:none; text-align:center; color:#f4efe4; background:rgba(69,58,49,0.82); border-radius:8px; padding:7px 10px; font-size:11px; line-height:1.4; pointer-events:none; transition:opacity 1s ease}
+.phone-browser .pbrow-noframe.show{display:block}
+.phone-browser .pbrow-noframe.show.hint-done{opacity:0}
 @media (max-width:520px){
   .phone-backdrop{padding:0}
   .phone-shell{width:100vw; height:100dvh; max-width:100vw; max-height:100dvh; border-radius:0; padding:6px}
@@ -17743,12 +17749,10 @@ document.addEventListener("click", function (e) {
       frame.className = "pbrow-frame";
       frame.setAttribute("title", tr(browserLabelKey));
       page.appendChild(frame);
-
-      // only the couple's four fixed-tab sites are proven to frame; the omnibox pops
-      // anything else (off-site URLs, search results) into a real tab, since external
-      // pages and search engines refuse iframing and JS can't reliably detect the refusal
-      var FRAMEABLE = {};
-      PHONE_BROWSER_TABS.forEach(function (t) { var m = t.url.match(/^https?:\/\/([^\/]+)/); if (m) FRAMEABLE[m[1].replace(/^www\./, "")] = true; });
+      var noframe = document.createElement("div");
+      noframe.className = "pbrow-noframe";
+      noframe.textContent = tr("browser_noframe");
+      page.appendChild(noframe);
 
       var tabEls = {};
       var currentUrl = PHONE_BROWSER_TABS[0].url; // what the shared iframe is actually showing
@@ -17758,6 +17762,11 @@ document.addEventListener("click", function (e) {
         currentUrl = href;
         for (var id in tabEls) tabEls[id].classList.toggle("active", id === tabId);
         if (frame.getAttribute("src") !== href) frame.setAttribute("src", href); // reopening the same page never reloads
+        // off-tab destinations (arbitrary URLs / search) may refuse framing and paint
+        // blank — float the hint, then fade it; our own fixed tabs are known-frameable
+        clearTimeout(noframe._t);
+        if (tabId) noframe.classList.remove("show", "hint-done");
+        else { noframe.classList.remove("hint-done"); noframe.classList.add("show"); noframe._t = setTimeout(function () { noframe.classList.add("hint-done"); }, 4500); }
         syncBar();
       }
       function setActive(tab) { showUrl(tab.url, tab.id); }
@@ -17765,11 +17774,12 @@ document.addEventListener("click", function (e) {
         var raw = input.value.trim();
         if (!raw) return;
         var hasScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(raw);
-        // not URL-shaped (has spaces, or no dot and no scheme) → a web search
+        // not URL-shaped (has spaces, or no dot and no scheme) → a web search, loaded IN
+        // the frame via DuckDuckGo's lite endpoint (plain duckduckgo.com refuses framing)
         var isSearch = /\s/.test(raw) || (!hasScheme && raw.indexOf(".") === -1);
         if (isSearch) {
-          try { window.open("https://duckduckgo.com/?q=" + encodeURIComponent(raw), "_blank"); } catch (e) {} // search engines refuse framing → real tab
-          input.blur(); syncBar();
+          showUrl("https://lite.duckduckgo.com/lite/?q=" + encodeURIComponent(raw), null);
+          input.blur();
           return;
         }
         var u;
@@ -17777,16 +17787,12 @@ document.addEventListener("click", function (e) {
           input.classList.remove("pbrow-shake"); void input.offsetWidth; input.classList.add("pbrow-shake"); // unparsable
           return;
         }
-        var host = u.hostname.replace(/^www\./, "");
-        if (FRAMEABLE[host]) {
-          var tabId = null;
-          for (var i = 0; i < PHONE_BROWSER_TABS.length; i++) if (PHONE_BROWSER_TABS[i].url === u.href) tabId = PHONE_BROWSER_TABS[i].id;
-          showUrl(u.href, tabId); // one of our own sites → frame it in place
-          input.blur();
-        } else {
-          try { window.open(u.href, "_blank"); } catch (e) {} // off-site → can't be framed, open a real tab
-          input.blur(); syncBar();
-        }
+        // any host loads in the frame; matching a fixed tab re-highlights it, otherwise no
+        // tab is active — the ⤢ button stays the only escape hatch to a real browser tab
+        var tabId = null;
+        for (var i = 0; i < PHONE_BROWSER_TABS.length; i++) if (PHONE_BROWSER_TABS[i].url === u.href) tabId = PHONE_BROWSER_TABS[i].id;
+        showUrl(u.href, tabId);
+        input.blur();
       }
       input.addEventListener("keydown", function (e) {
         e.stopPropagation(); // game hotkeys stay off while typing (same guard as the monitor URL bar)
@@ -17842,6 +17848,7 @@ document.addEventListener("click", function (e) {
 
       phoneBrowserCleanup = function () {
         clearTimeout(t0);
+        clearTimeout(noframe._t);
         if (ro) { try { ro.disconnect(); } catch (e) {} }
         else window.removeEventListener("resize", applyScale);
         try { frame.setAttribute("src", "about:blank"); } catch (e) {} // removal/blank actually unloads the framed site

@@ -28315,14 +28315,16 @@ function spawnDustMote(container) {
     } else {
       setTimeout(function () { if (flake.parentNode) flake.remove(); if (onDone) onDone(); }, 1800);
     }
+    return flake; // caller may tag it (the balcony seed-tick counts its own flakes)
   }
   // rain in the garden window during the (shared) storm — self-replenishing so the
   // count stays constant and spawning naturally pauses with the frames on a hidden tab
   var GARDEN_RAIN_DROPS = 13;
   function gardenRainActive() {
     var gs = document.getElementById("stage-garden");
-    return window.__balconyStorm && gs && gs.classList.contains("dusk") &&
-      stageIndex === STAGES.indexOf("garden") && document.visibilityState !== "hidden";
+    if (!gs || stageIndex !== STAGES.indexOf("garden") || document.visibilityState === "hidden") return false;
+    if (isWinterSeason()) return true; // winter: snow falls on its own, day or night — no storm needed
+    return window.__balconyStorm && gs.classList.contains("dusk"); // rain only during a dusk storm
   }
   function spawnGardenRainDrop() {
     var container = document.getElementById("garden-rainfx");
@@ -28473,8 +28475,9 @@ function spawnDustMote(container) {
     var sc = document.getElementById("stage-cuddly");
     var front = document.getElementById("balcony-door"), nook = document.getElementById("cuddly-balcony-door");
     var open = (front && front.classList.contains("open")) || (nook && nook.classList.contains("open"));
-    return sc && open && sc.classList.contains("dusk") &&
-      window.__balconyStorm && stageIndex === STAGES.indexOf("cuddly") && document.visibilityState !== "hidden";
+    if (!sc || !open || stageIndex !== STAGES.indexOf("cuddly") || document.visibilityState === "hidden") return false;
+    if (isWinterSeason()) return true; // winter: snow drifts in through the open door on its own
+    return window.__balconyStorm && sc.classList.contains("dusk"); // rain only during a dusk storm
   }
   function spawnCuddlyRainDrop() {
     var container = document.getElementById("cuddly-rainfx");
@@ -28739,7 +28742,9 @@ function spawnDustMote(container) {
       return !!(sb && sb.classList.contains("dusk"));
     }
     function rainActive() {
-      return window.__balconyStorm && isDuskBalcony() && !document.hidden && stageIndex === STAGES.indexOf("balcony");
+      if (document.hidden || stageIndex !== STAGES.indexOf("balcony")) return false;
+      if (isWinterSeason()) return true; // winter: snow falls on its own, day or night — no storm needed
+      return window.__balconyStorm && isDuskBalcony(); // rain only during a dusk storm
     }
     // Each drop replenishes itself when its fall animation finishes, so the live
     // count stays constant (~RAIN_DROPS) and spawning naturally pauses when the
@@ -28747,7 +28752,8 @@ function spawnDustMote(container) {
     function spawnDrop() {
       var cx = 2760 + Math.random() * 620, cy = 8 + Math.random() * 178;
       if (isWinterSeason()) { // winter -> snow drifts down the balcony sky instead of rain
-        makeSnowflake(strip, cx, cy + 18, 96 + Math.random() * 64, function () { if (rainActive()) spawnDrop(); });
+        var f = makeSnowflake(strip, cx, cy + 18, 96 + Math.random() * 64, function () { if (rainActive()) spawnDrop(); });
+        if (f) f.classList.add("balc-snow"); // tagged so the winter seed-tick can count/top-up (balcony drops share the strip, no container)
         return;
       }
       var startY = cy + 18, dropLen = 14 + Math.random() * 8, fallDist = 72 + Math.random() * 44;
@@ -28816,6 +28822,21 @@ function spawnDustMote(container) {
       timers.push(setTimeout(startStorm, 9000 + Math.random() * 6000)); // first storm ~9-15s into the night
     };
     window.__stopBalconyStormCycle = clearAll;
+    // Winter snow falls on its own — no storm needed. Unlike a storm (which seeds on
+    // start), ambient snow needs a top-up loop: whenever it's winter + on the balcony +
+    // visible, keep the sky filled to RAIN_DROPS. Counts its own tagged flakes since
+    // balcony drops share the strip (no container to childElementCount like garden/cuddly).
+    // Self-limiting (only tops up below the target) and pauses on a hidden tab via rainActive.
+    (function seedBalconySnow() {
+      function tick() {
+        if (isWinterSeason() && rainActive()) {
+          var have = strip.querySelectorAll(".balc-snow").length;
+          for (var i = have; i < RAIN_DROPS; i++) spawnDrop();
+        }
+        setTimeout(tick, 1200);
+      }
+      setTimeout(tick, 1200);
+    })();
   })();
   (function () {
     // Ambient rain patter during a balcony night storm: audible on the balcony itself

@@ -3544,7 +3544,25 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 .fire-flame.cf-b{animation:cuddly-fire-b 0.9s ease-in-out -0.35s infinite}
 .fire-flame.cf-c{animation:cuddly-fire-a 1.05s ease-in-out -0.6s infinite}
 .fire-flame.cf-d{animation:cuddly-fire-b 0.7s ease-in-out -0.2s infinite}
+/* flanking tongues flicker AND lean side-to-side — the sway is folded into the SAME single
+   transform as the scale (one animation, one transform property), never a second transform
+   animation stacked on a node that already animates transform */
+.fire-flame.cf-e{animation:cuddly-fire-sway-l 1.15s ease-in-out -0.5s infinite}
+.fire-flame.cf-f{animation:cuddly-fire-sway-r 1s ease-in-out -0.25s infinite}
 #cuddly-fire-ember{transform-box:fill-box; transform-origin:center; animation:cuddly-fire-ember 3.2s ease-in-out infinite}
+/* the hot bed of coals gently breathes brighter/wider under the tongues */
+#cuddly-fire-bed{transform-box:fill-box; transform-origin:center; animation:cuddly-fire-bed 2.4s ease-in-out infinite}
+/* SEASON + TIME sync (E): the whole tongue cluster scales on the OUTER wrapper (a <g> with no
+   transform attribute — nothing to clash with). Low glowing embers by day → warm/full at dusk
+   → a taller roar in winter and spooky season. MUSIC sync (D): the INNER wrapper grooves to
+   the beat (phase-locked via setGroove, same as every other groover). Nested so both compose
+   with each flame path's own flicker — three independent transforms on three distinct nodes. */
+#cuddly-wallscreen .cuddly-flame-season{transform-box:fill-box; transform-origin:bottom center; transition:transform .9s ease; transform:scaleY(0.72)}
+#stage-cuddly.dusk #cuddly-wallscreen .cuddly-flame-season{transform:scaleY(1)}
+#loft-game-strip.season-winter #cuddly-wallscreen .cuddly-flame-season{transform:scaleY(1.28)}
+#loft-game-strip.season-spooky #cuddly-wallscreen .cuddly-flame-season{transform:scaleY(1.2)}
+#cuddly-flame-groove{transform-box:fill-box; transform-origin:bottom center}
+#cuddly-flame-groove.grooving{animation:cuddly-flame-groove 0.5s ease-in-out infinite}
 @keyframes cuddly-fire-a{
   0%,100%{transform:scaleY(1) scaleX(1)}
   25%{transform:scaleY(1.16) scaleX(.9)}
@@ -3557,21 +3575,35 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
   55%{transform:scaleY(1.18) scaleX(.9)}
   80%{transform:scaleY(.97) scaleX(1.03)}
 }
+@keyframes cuddly-fire-sway-l{
+  0%,100%{transform:translateX(0) scaleY(1) scaleX(1)}
+  30%{transform:translateX(-1.5px) scaleY(1.14) scaleX(.92)}
+  62%{transform:translateX(1px) scaleY(.92) scaleX(1.06)}
+}
+@keyframes cuddly-fire-sway-r{
+  0%,100%{transform:translateX(0) scaleY(1) scaleX(1)}
+  34%{transform:translateX(1.5px) scaleY(.94) scaleX(1.05)}
+  66%{transform:translateX(-1px) scaleY(1.16) scaleX(.9)}
+}
 @keyframes cuddly-fire-ember{0%,100%{transform:scaleX(1)} 50%{transform:scaleX(1.1)}}
+@keyframes cuddly-fire-bed{0%,100%{opacity:.85; transform:scaleX(1)} 50%{opacity:1; transform:scaleX(1.09)}}
+@keyframes cuddly-flame-groove{0%,100%{transform:scaleY(1)} 50%{transform:scaleY(1.15)}}
 #cuddly-firelight{transition:opacity .5s ease}
 /* Fishu catches a warm halo from the fireplace when it drifts near (JS sets opacity by proximity) */
 #fishu-fire-halo{transition:opacity .5s ease}
 #stage-cuddly.dusk #cuddly-firelight{opacity:.62; animation:cuddly-fire-glow-breathe 4.6s ease-in-out infinite}
 @keyframes cuddly-fire-glow-breathe{0%,100%{opacity:.66} 50%{opacity:.46}}
-/* click the screen: the fire goes out, the panel goes dark, the room glow lifts */
+/* tap the screen to change projector channel: the fire decor + warm room glow show ONLY on the
+   fire channel; the aquarium / rain / starfield channels paint the shared canvas themselves */
 #cuddly-wallscreen .fire-live{transition:opacity .5s ease}
-#cuddly-wallscreen.off .fire-live{opacity:0; animation:none}
-#cuddly-wallscreen.off #cuddly-firelight{opacity:0; animation:none}
-#cuddly-screen-bg{transition:fill .5s ease}
-#cuddly-wallscreen.off #cuddly-screen-bg{fill:#b6bbc0}
+#cuddly-wallscreen:not(.chan-fire) .fire-live{opacity:0; animation:none}
+#cuddly-wallscreen:not(.chan-fire) #cuddly-firelight{opacity:0; animation:none}
+#cuddly-chan-badge{transition:opacity .5s ease}
 @media (prefers-reduced-motion: reduce){
-  #cuddly-wallscreen .fire-flame, #cuddly-fire-ember,
-  #stage-cuddly.dusk #cuddly-firelight{animation:none}
+  #cuddly-wallscreen .fire-flame, #cuddly-fire-ember, #cuddly-fire-bed,
+  #cuddly-flame-groove.grooving, #cuddly-chan-badge,
+  #cuddly-wallscreen .cuddly-flame-season, #cuddly-wallscreen .fire-live,
+  #stage-cuddly.dusk #cuddly-firelight{animation:none; transition:none}
 }
 #stage-office.dusk #office-dusk{opacity:0.30}
 #office-window-pane-1{transition:fill .9s ease}
@@ -6411,7 +6443,7 @@ section{margin:1.9rem 0}
      its warm glow washes over the room (and clears the dusk overlay). Only the opaque
      frame/panel is clickable; the glow that spills over the couple is pointer-events:none
      so it never eats their clicks. Clicking the panel toggles the fire off/on. -->
-<g id="cuddly-wallscreen" class="hunt-hit" tabindex="0" role="button" aria-label="The wall screen playing a flickering fireplace" transform="translate(69,13) scale(1.5)">
+<g id="cuddly-wallscreen" class="hunt-hit chan-fire" tabindex="0" role="button" aria-label="The wall screen playing a flickering fireplace" transform="translate(69,13) scale(1.5)">
 <defs>
 <radialGradient id="cuddly-firelight-grad" cx="50%" cy="50%" r="50%">
 <stop offset="0" stop-color="#ffcf8a" stop-opacity="0.95"/>
@@ -6452,25 +6484,48 @@ section{margin:1.9rem 0}
 <stop offset="0.55" stop-color="#ff8c28" stop-opacity="0.85"/>
 <stop offset="1" stop-color="#d64510" stop-opacity="0"/>
 </radialGradient>
+<!-- the hot bed of glowing coals under the tongues: white-gold core bleeding to transparent -->
+<radialGradient id="cuddly-firebed-grad" cx="50%" cy="45%" r="60%">
+<stop offset="0" stop-color="#fff1c4"/>
+<stop offset="0.5" stop-color="#ff9a34" stop-opacity="0.9"/>
+<stop offset="1" stop-color="#e0500f" stop-opacity="0"/>
+</radialGradient>
 </defs>
 <ellipse id="cuddly-firelight" class="fire-live" cx="226" cy="92" rx="152" ry="132" fill="url(#cuddly-firelight-grad)" opacity="0.14" pointer-events="none" aria-hidden="true"/>
 <rect x="174" y="38" width="104" height="72" rx="5" fill="#3b2e26" stroke="#241c17" stroke-width="1.5"/>
 <rect x="178" y="42" width="96" height="64" rx="3" fill="#161311"/>
 <rect id="cuddly-screen-bg" x="180" y="44" width="92" height="60" rx="2" fill="url(#cuddly-screen-grad)"/>
-<!-- Bottom-seeded fire canvas, layered just under the hand-drawn CSS flames so it
-     reads as living additive fire rising behind them. Backing is a 3x supersample
-     (138x90) of the 92x60 panel; overflow:hidden clips it to the bezel so nothing
-     spills past the screen. pointer-events:none keeps the screen's off/on click
-     target intact; fire-live fades it with the off toggle. Driven by the
-     self-cancelling rAF loop in the "cuddly fireplace fire" IIFE. -->
-<foreignObject id="cuddly-flame-fo" class="fire-live" x="180" y="44" width="92" height="60" style="overflow:hidden;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" id="cuddly-flame-canvas" width="138" height="90" style="width:92px;height:60px;display:block;mix-blend-mode:screen"></canvas></foreignObject>
-<g pointer-events="none" aria-hidden="true">
-<ellipse id="cuddly-fire-ember" class="fire-live" cx="226" cy="100" rx="41" ry="12" fill="url(#cuddly-ember-grad)" fill-opacity="0.6"/>
-<rect class="fire-live" x="203" y="97" width="46" height="8" rx="4" fill="#33251c" transform="rotate(-3 226 101)"/>
-<path class="fire-flame cf-a fire-live" d="M206 100 C 198 86 206 70 219 62 C 223 59 226 56 226 56 C 226 56 229 59 233 62 C 246 70 254 86 246 100 Z" fill="url(#cuddly-flame-grad-a)"/>
-<path class="fire-flame cf-b fire-live" d="M212 100 C 206 88 210 76 220 68 C 223 65 226 63 226 63 C 226 63 229 65 232 68 C 242 76 246 88 240 100 Z" fill="url(#cuddly-flame-grad-b)"/>
-<path class="fire-flame cf-c fire-live" d="M217 100 C 213 90 215 80 222 73 C 224 70 226 69 226 69 C 226 70 228 72 230 75 C 237 82 239 91 235 100 Z" fill="url(#cuddly-flame-grad-c)"/>
-<path class="fire-flame cf-d fire-live" d="M221 100 C 219 94 221 87 226 82 C 231 87 233 94 231 100 Z" fill="url(#cuddly-flame-grad-d)"/>
+<!-- Shared projector canvas: ONE 138x90 supersample of the 92x60 panel drives EVERY channel
+     (fire / aquarium / rain / starfield). overflow:hidden clips it to the bezel; the JS sets
+     mix-blend-mode per channel (screen for the additive fire over the dark panel, normal for
+     the others which paint their own background). pointer-events:none keeps the screen's tap
+     target intact. Driven by the single self-cancelling rAF loop in the projector IIFE. -->
+<foreignObject id="cuddly-flame-fo" x="180" y="44" width="92" height="60" style="overflow:hidden;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" id="cuddly-flame-canvas" width="138" height="90" style="width:92px;height:60px;display:block"></canvas></foreignObject>
+<!-- Fire-channel decor (fire-live → hidden on every other channel): a bed of glowing coals,
+     crossed hearth logs, and layered hand-drawn tongues sitting on the additive canvas fire. -->
+<g class="fire-live" pointer-events="none" aria-hidden="true">
+<ellipse id="cuddly-fire-ember" cx="226" cy="100" rx="41" ry="12" fill="url(#cuddly-ember-grad)" fill-opacity="0.6"/>
+<ellipse id="cuddly-fire-bed" cx="226" cy="99" rx="27" ry="7" fill="url(#cuddly-firebed-grad)" fill-opacity="0.92"/>
+<rect x="200" y="98" width="40" height="7" rx="3.5" fill="#2c2018" transform="rotate(4 220 101)"/>
+<rect x="212" y="97" width="45" height="7" rx="3.5" fill="#33251c" transform="rotate(-5 235 100)"/>
+<ellipse cx="206" cy="101" rx="4.6" ry="2.4" fill="url(#cuddly-ember-grad)"/>
+<ellipse cx="247" cy="100" rx="4.6" ry="2.4" fill="url(#cuddly-ember-grad)"/>
+<g class="cuddly-flame-season"><g id="cuddly-flame-groove">
+<path class="fire-flame cf-e" d="M202 100 C 196 88 200 77 208 70 C 214 78 217 90 214 100 Z" fill="url(#cuddly-flame-grad-a)"/>
+<path class="fire-flame cf-f" d="M238 100 C 235 90 239 78 245 71 C 253 79 256 89 250 100 Z" fill="url(#cuddly-flame-grad-b)"/>
+<path class="fire-flame cf-a" d="M206 100 C 198 86 206 70 219 62 C 223 59 226 56 226 56 C 226 56 229 59 233 62 C 246 70 254 86 246 100 Z" fill="url(#cuddly-flame-grad-a)"/>
+<path class="fire-flame cf-b" d="M212 100 C 206 88 210 76 220 68 C 223 65 226 63 226 63 C 226 63 229 65 232 68 C 242 76 246 88 240 100 Z" fill="url(#cuddly-flame-grad-b)"/>
+<path class="fire-flame cf-c" d="M217 100 C 213 90 215 80 222 73 C 224 70 226 69 226 69 C 226 70 228 72 230 75 C 237 82 239 91 235 100 Z" fill="url(#cuddly-flame-grad-c)"/>
+<path class="fire-flame cf-d" d="M221 100 C 219 94 221 87 226 82 C 231 87 233 94 231 100 Z" fill="url(#cuddly-flame-grad-d)"/>
+</g></g>
+</g>
+<!-- subtle channel indicator: four dots at the top of the screen, the active one bright;
+     JS fades the group in for ~1s on each tap, then out -->
+<g id="cuddly-chan-badge" pointer-events="none" aria-hidden="true" opacity="0">
+<circle class="chan-dot" cx="218" cy="49" r="1.6" fill="#ffffff" opacity="1"/>
+<circle class="chan-dot" cx="224" cy="49" r="1.6" fill="#ffffff" opacity="0.28"/>
+<circle class="chan-dot" cx="230" cy="49" r="1.6" fill="#ffffff" opacity="0.28"/>
+<circle class="chan-dot" cx="236" cy="49" r="1.6" fill="#ffffff" opacity="0.28"/>
 </g>
 </g>
 </g>
@@ -10907,7 +10962,7 @@ document.addEventListener("click", function (e) {
     // stream open, and an unattended-but-"visible" window (covered on X11 — no
     // occlusion detection) would otherwise hold it forever, where it underruns
     // into crackle on Linux; same rule as the one-shot spawners (crickets/crane)
-    return fireInCuddly && !screen.classList.contains("off") &&
+    return fireInCuddly && screen.classList.contains("chan-fire") &&
       document.visibilityState !== "hidden" && document.hasFocus();
   }
   function popCrackle() {
@@ -11032,15 +11087,16 @@ document.addEventListener("click", function (e) {
   };
   document.addEventListener("visibilitychange", function () { window.__updateFireSound(); });
 
-  function toggleFire() {
-    screen.classList.toggle("off");
-    window.__updateFireSound(); // fade the crackle in/out with the on/off toggle
-    // back on → restart the fractal-flame loop (it self-cancelled when the fire went off)
-    if (!screen.classList.contains("off") && window.startCuddlyFlame) window.startCuddlyFlame();
+  function advanceChannel() {
+    // the screen is a projector: a tap cycles its channel (🔥 fire → 🐟 aquarium → 🌧 rain →
+    // ✨ starfield → back). The projector IIFE owns the loop/canvas; it swaps the chan-* class,
+    // re-gates the fire crackle (only the fire channel is audible) via __updateFireSound, and
+    // (re)starts the shared self-cancelling loop.
+    if (window.__cuddlyProjector) window.__cuddlyProjector.cycle();
   }
-  screen.addEventListener("click", toggleFire);
+  screen.addEventListener("click", advanceChannel);
   screen.addEventListener("keydown", function (e) {
-    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleFire(); }
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); advanceChannel(); }
   });
 })();
 (function () {
@@ -11122,106 +11178,316 @@ document.addEventListener("click", function (e) {
   document.addEventListener("visibilitychange", function () { window.__updateGardenBirdsong(); });
 })();
 (function () {
-  // ── Cuddly fireplace fire ─────────────────────────────────────────────────
-  // A classic "seed the hot bottom row, propagate upward" fire on the wall-screen
-  // fireplace: the bottom row is re-seeded hot every frame, and each cell above
-  // pulls heat from the cell below (wind-shifted ±1) minus a small random cooling,
-  // so flames rise, waver, and taper. Heat is tone-mapped through a warm LUT (cool
-  // → transparent, then ember-red → orange → gold → pale-hot). Painted BELOW the
-  // hand-drawn CSS flame group (mix-blend-mode:screen, transparent bg) so the CSS
-  // core stays crisp on top and this reads as living fire behind it.
+  // ── Cuddly wall PROJECTOR: multi-channel ambient screen ───────────────────
+  // The wall screen is a little projector; a tap cycles atmospheric "channels":
+  //   🔥 fire (default) → 🐟 aquarium → 🌧 rain-on-glass → ✨ starfield → (wrap).
+  // ONE shared 138×90 canvas and ONE self-cancelling rAF drive whichever channel is
+  // active. Switching tears the previous channel's state down (its particle arrays are
+  // cleared, the canvas wiped) so nothing from an off-screen channel lingers or piles up.
   //
-  // Robustness (CLAUDE.md timer-pile-up class): ONE self-cancelling rAF. It runs
-  // ONLY while the cuddly room is on-screen (window.currentStageName) AND the tab
-  // is visible AND the fire isn't toggled off; the instant any of those is false
-  // it nulls its handle and returns — no accumulation, no leftover timer. It is
-  // (re)started idempotently from three triggers (entering cuddly, toggling the
-  // fire back on, tab becoming visible), each of which no-ops when not runnable.
-  // Reduced motion: a single static frame, no loop.
+  // Robustness (CLAUDE.md timer-pile-up class): the loop runs ONLY while the cuddly room
+  // is on-screen (window.currentStageName) AND the tab is visible; the instant either is
+  // false it nulls its handle and returns — no accumulation, no leftover timer. Every
+  // channel keeps a FIXED, recycled particle pool (never grows). (Re)started idempotently
+  // on entering cuddly, a tap, and the tab becoming visible. Reduced motion: one static
+  // frame per channel, never a loop.
+  //
+  // Channel 0 (fire) is the richer hearth AND reacts to music (beats → taller/brighter
+  // flames via window.__cuddlyMusic) and to the loft's season + time of day (winter/spooky
+  // roar, low glowing embers by day, warm at dusk) — read live each frame, gentle only.
   var canvas = document.getElementById("cuddly-flame-canvas");
   var screen = document.getElementById("cuddly-wallscreen");
+  var strip = document.getElementById("loft-game-strip");
+  var stageCuddly = document.getElementById("stage-cuddly");
   if (!canvas || !screen) return;
   var ctx = canvas.getContext("2d");
   if (!ctx) return;
   var W = canvas.width, H = canvas.height, N = W * H;
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var DRAW_MS = 33; // ~30fps
+  function rnd(a, b) { return a + Math.random() * (b - a); }
 
-  var DRAW_MS = 33;    // ~30fps
-  var COOL = 0.03;     // max per-step cooling — the main knob for flame height (lower = taller)
-  var SEED_MIN = 0.82; // hot bottom row, re-seeded each frame with a little flicker
-  var heat = new Float32Array(N); // 0 (cool) … 1 (white-hot); row 0 = top, row H-1 = bottom
-  var img = ctx.createImageData(W, H), data = img.data;
+  // =========================================================================
+  // Channel: FIRE — Doom-fire body (hearth-shaped, dark surround) + drifting sparks
+  // =========================================================================
+  var fire = (function () {
+    var COOL0 = 0.05, SEED_MIN = 0.80;
+    var heat = new Float32Array(N);
+    var img = ctx.createImageData(W, H), data = img.data;
+    // warm LUT (heat 0→255): cool = transparent, then ember-red → orange → gold → pale-hot
+    var LUT = new Uint8Array(256 * 4);
+    (function () {
+      var stops = [[0,0,0,0],[0.12,120,8,3],[0.34,214,30,8],[0.55,255,96,16],[0.75,255,176,56],[1,255,240,190]];
+      for (var i = 0; i < 256; i++) {
+        var t = i / 255, s = 0;
+        while (s < stops.length - 2 && t > stops[s + 1][0]) s++;
+        var a = stops[s], b = stops[s + 1], f = (t - a[0]) / (b[0] - a[0] || 1);
+        LUT[i*4] = a[1]+(b[1]-a[1])*f; LUT[i*4+1] = a[2]+(b[2]-a[2])*f; LUT[i*4+2] = a[3]+(b[3]-a[3])*f;
+        LUT[i*4+3] = Math.max(0, Math.min(1, (t - 0.04) * 3.4)) * 255;
+      }
+    })();
+    // hearth envelope: hot centre-bottom, dark toward the side walls, so the fire reads as
+    // flames rising from a bed rather than a uniform orange wall filling the whole panel
+    var env = new Float32Array(W);
+    (function () { var c = W/2, hw = W*0.34; for (var x=0;x<W;x++){ var d=Math.abs(x-c)/hw; env[x]= d>=1?0:0.5+0.5*Math.cos(d*Math.PI); } })();
+    var roots = [{x:W*0.40,v:0},{x:W*0.52,v:0},{x:W*0.64,v:0}]; // slow-wandering brighter columns → distinct tongues
+    var SPARKS = 18, sparks = [];
+    for (var si = 0; si < SPARKS; si++) sparks.push({ life: 0 });
+    var popFrames = 0, popCooldown = 0;
 
-  // Warm fire LUT (heat 0→255): cool is fully transparent, alpha ramps up fast so the
-  // flame body reads vivid (not washed out); colour runs ember-red → orange → gold → pale.
-  var LUT = new Uint8Array(256 * 4);
-  (function buildLUT() {
-    var stops = [
-      [0.00,   0,   0,   0],
-      [0.12, 120,   8,   3],
-      [0.34, 214,  30,   8],
-      [0.55, 255,  96,  16],
-      [0.75, 255, 176,  56],
-      [1.00, 255, 240, 190]
-    ];
-    for (var i = 0; i < 256; i++) {
-      var t = i / 255, s = 0;
-      while (s < stops.length - 2 && t > stops[s + 1][0]) s++;
-      var a = stops[s], b = stops[s + 1], f = (t - a[0]) / (b[0] - a[0] || 1);
-      LUT[i * 4]     = a[1] + (b[1] - a[1]) * f;
-      LUT[i * 4 + 1] = a[2] + (b[2] - a[2]) * f;
-      LUT[i * 4 + 2] = a[3] + (b[3] - a[3]) * f;
-      LUT[i * 4 + 3] = Math.max(0, Math.min(1, (t - 0.04) * 3.4)) * 255; // <0.04 clear, opaque by ~0.34
+    function intensity() {
+      var winter = strip && strip.classList.contains("season-winter");
+      var spooky = strip && strip.classList.contains("season-spooky");
+      var dusk = stageCuddly && stageCuddly.classList.contains("dusk");
+      var mul = winter ? 1.4 : spooky ? 1.3 : dusk ? 1.0 : 0.7; // day = low glowing embers
+      var beat = 0, music = false;
+      var m = window.__cuddlyMusic && window.__cuddlyMusic();
+      if (m && m.playing) { music = true; beat = Math.pow(1 - m.phase, 2.2); } // spike just after each beat
+      return { mul: mul, music: music, beat: beat };
     }
-  })();
-
-  function seedBottom() {
-    var base = (H - 1) * W;
-    for (var x = 0; x < W; x++) heat[base + x] = SEED_MIN + Math.random() * (1 - SEED_MIN);
-  }
-  function spread() {
-    // each cell takes the cell below (wind-shifted ±1) minus a random cooling, so
-    // heat climbs one row per frame and the flames waver and thin as they rise.
-    for (var y = 0; y < H - 1; y++) {
-      var row = y * W, below = (y + 1) * W;
+    function seedBottom(it) {
+      for (var r = 0; r < roots.length; r++) {
+        var rt = roots[r]; rt.v = rt.v * 0.86 + (Math.random() - 0.5) * 0.9; rt.x += rt.v;
+        if (rt.x < W*0.30) { rt.x = W*0.30; rt.v = Math.abs(rt.v); }
+        else if (rt.x > W*0.70) { rt.x = W*0.70; rt.v = -Math.abs(rt.v); }
+      }
+      var hotm = 0.55 + 0.45 * it.mul + 0.35 * it.beat; // seed brightness scales with season + beat
+      var boost = popFrames > 0 ? 0.12 : 0;
+      var base = (H - 1) * W;
       for (var x = 0; x < W; x++) {
-        var sx = x + ((Math.random() * 3) | 0) - 1;
-        if (sx < 0) sx = 0; else if (sx >= W) sx = W - 1;
-        var v = heat[below + sx] - Math.random() * COOL;
-        heat[row + x] = v > 0 ? v : 0;
+        var e = env[x]; if (e <= 0) { heat[base + x] = 0; continue; }
+        var rb = 0; for (var k = 0; k < roots.length; k++) { var dx = x - roots[k].x; rb += Math.exp(-(dx*dx)/42); } if (rb > 1) rb = 1;
+        var seed = (SEED_MIN + Math.random() * (1 - SEED_MIN)) * (0.5 + 0.7 * rb) * e * hotm + boost;
+        heat[base + x] = seed > 1 ? 1 : seed;
+      }
+      if (popFrames > 0) popFrames--;
+    }
+    function spread(cool) {
+      for (var y = 0; y < H - 1; y++) {
+        var row = y * W, below = (y + 1) * W;
+        for (var x = 0; x < W; x++) {
+          var sx = x + ((Math.random() * 3) | 0) - 1; if (sx < 0) sx = 0; else if (sx >= W) sx = W - 1;
+          var v = heat[below + sx] - Math.random() * cool; heat[row + x] = v > 0 ? v : 0;
+        }
       }
     }
-  }
-  function draw() {
-    for (var i = 0; i < N; i++) {
-      var h = heat[i]; if (h > 1) h = 1;
-      var li = ((h * 255) | 0) * 4, o = i * 4;
-      data[o] = LUT[li]; data[o + 1] = LUT[li + 1]; data[o + 2] = LUT[li + 2]; data[o + 3] = LUT[li + 3];
+    function paint() {
+      for (var i = 0; i < N; i++) { var h = heat[i]; if (h > 1) h = 1; var li = ((h*255)|0)*4, o = i*4;
+        data[o]=LUT[li]; data[o+1]=LUT[li+1]; data[o+2]=LUT[li+2]; data[o+3]=LUT[li+3]; }
+      ctx.putImageData(img, 0, 0);
     }
-    ctx.putImageData(img, 0, 0);
+    function spawnSpark(s, hot) {
+      var rt = roots[(Math.random() * roots.length) | 0];
+      s.x = rt.x + rnd(-5, 5); s.y = H - 2 - Math.random() * 6; s.vx = rnd(-0.25, 0.25);
+      s.vy = -(0.45 + Math.random() * 0.7) * (hot ? 1.7 : 1); s.drift = Math.random() * 6.2832;
+      s.maxLife = 26 + (Math.random() * 34 | 0); s.life = s.maxLife; s.r = 0.6 + Math.random() * 0.9;
+    }
+    function updateSparks(burst, rate) {
+      for (var i = 0; i < SPARKS; i++) {
+        var s = sparks[i];
+        if (s.life <= 0) { if (burst > 0) { spawnSpark(s, true); burst--; } else if (Math.random() < rate) spawnSpark(s, false); continue; }
+        s.drift += 0.15; s.x += s.vx + Math.sin(s.drift) * 0.35; s.y += s.vy; s.vy *= 0.985; s.life--; if (s.y < 2) s.life = 0;
+      }
+    }
+    function drawSparks() {
+      ctx.globalCompositeOperation = "lighter";
+      for (var i = 0; i < SPARKS; i++) {
+        var s = sparks[i]; if (s.life <= 0) continue;
+        var f = s.life / s.maxLife, a = f * f * 0.9, g = (140 + 115 * f) | 0, b = (40 + 60 * f) | 0;
+        ctx.fillStyle = "rgba(255," + g + "," + b + "," + a.toFixed(3) + ")";
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r * (0.6 + f), 0, 6.2832); ctx.fill();
+      }
+      ctx.globalCompositeOperation = "source-over";
+    }
+    return {
+      blend: "screen",
+      reset: function () { heat.fill(0); for (var i = 0; i < SPARKS; i++) sparks[i].life = 0; popFrames = 0; popCooldown = 0; },
+      frame: function () {
+        var it = intensity();
+        var cool = COOL0 / it.mul; if (it.music) cool *= (1 - 0.25 * it.beat);
+        var burst = 0;
+        if (popCooldown > 0) popCooldown--;
+        else if (Math.random() < 0.012) { popFrames = 3 + (Math.random() * 3 | 0); burst = 5 + (Math.random() * 4 | 0); popCooldown = 40; } // random crackle flare
+        if (it.music && it.beat > 0.6 && popFrames <= 0) { popFrames = 2; if (burst < 3) burst = 3; } // a flare kicked on the beat
+        seedBottom(it); spread(cool); paint();
+        updateSparks(burst, 0.08 + 0.10 * it.mul + 0.10 * it.beat); drawSparks();
+      },
+      still: function () { heat.fill(0); for (var p = 0; p < H; p++) { seedBottom({ mul: 1, music: false, beat: 0 }); spread(COOL0); } paint(); }
+    };
+  })();
+
+  // =========================================================================
+  // Channel: AQUARIUM — fish drifting, bubbles rising, gentle caustic light bands
+  // =========================================================================
+  var aqua = (function () {
+    var bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#0c3b47"); bg.addColorStop(0.55, "#0a2b4a"); bg.addColorStop(1, "#071c33");
+    var FISH = 4, fishArr = [], BUB = 12, bub = [], t = 0;
+    var palette = ["#ff9a52", "#ffd166", "#7fd6c2", "#e58fb0"];
+    function resetFish(fh, i) {
+      fh.dir = Math.random() < 0.5 ? 1 : -1;
+      fh.x = Math.random() * W; fh.y = rnd(H * 0.28, H * 0.85);
+      fh.sp = rnd(0.12, 0.30); fh.size = rnd(4.5, 8); fh.bobA = rnd(1.5, 4); fh.bobP = Math.random() * 6.28;
+      fh.col = palette[i % palette.length];
+    }
+    function resetBub(b) { b.x = rnd(6, W - 6); b.y = H + rnd(0, H); b.r = rnd(0.6, 1.8); b.sp = rnd(0.25, 0.6); b.wob = Math.random() * 6.28; }
+    function drawFish(fh) {
+      var y = fh.y + Math.sin(t * 0.03 + fh.bobP) * fh.bobA;
+      ctx.save(); ctx.translate(fh.x, y); ctx.scale(fh.dir, 1);
+      ctx.fillStyle = fh.col;
+      ctx.beginPath(); ctx.ellipse(0, 0, fh.size, fh.size * 0.6, 0, 0, 6.2832); ctx.fill(); // body
+      ctx.beginPath(); ctx.moveTo(-fh.size * 0.9, 0); ctx.lineTo(-fh.size * 1.7, -fh.size * 0.55); ctx.lineTo(-fh.size * 1.7, fh.size * 0.55); ctx.closePath(); ctx.fill(); // tail
+      ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.beginPath(); ctx.arc(fh.size * 0.45, -fh.size * 0.15, fh.size * 0.14, 0, 6.2832); ctx.fill(); // eye
+      ctx.restore();
+    }
+    return {
+      blend: "normal",
+      init: function () { fishArr = []; for (var i = 0; i < FISH; i++) { var fh = {}; resetFish(fh, i); fishArr.push(fh); } bub = []; for (var j = 0; j < BUB; j++) { var b = {}; resetBub(b); b.y = rnd(0, H); bub.push(b); } t = 0; },
+      reset: function () { fishArr = []; bub = []; },
+      frame: function () {
+        t++;
+        ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+        // caustics: soft moving light bands near the surface
+        ctx.globalCompositeOperation = "lighter";
+        for (var c = 0; c < 3; c++) {
+          var cx = (Math.sin(t * 0.012 + c * 2.1) * 0.5 + 0.5) * W;
+          var grd = ctx.createRadialGradient(cx, -8, 2, cx, -8, 46);
+          grd.addColorStop(0, "rgba(120,210,220,0.16)"); grd.addColorStop(1, "rgba(120,210,220,0)");
+          ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H * 0.6);
+        }
+        ctx.globalCompositeOperation = "source-over";
+        for (var i = 0; i < fishArr.length; i++) { var fh = fishArr[i]; fh.x += fh.sp * fh.dir; if (fh.dir > 0 && fh.x > W + 14) { fh.x = -14; fh.y = rnd(H * 0.28, H * 0.85); } else if (fh.dir < 0 && fh.x < -14) { fh.x = W + 14; fh.y = rnd(H * 0.28, H * 0.85); } drawFish(fh); }
+        ctx.fillStyle = "rgba(220,245,255,0.5)";
+        for (var k = 0; k < bub.length; k++) { var b = bub[k]; b.y -= b.sp; b.wob += 0.08; b.x += Math.sin(b.wob) * 0.2; if (b.y < -4) resetBub(b); ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 6.2832); ctx.fill(); }
+      },
+      still: function () { this.init(); this.frame(); }
+    };
+  })();
+
+  // =========================================================================
+  // Channel: RAIN ON GLASS — droplets running down, blurred night-city glow behind
+  // =========================================================================
+  var rain = (function () {
+    var bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#0a1420"); bg.addColorStop(1, "#12202f");
+    var lights = [ // blurred bokeh city lights (static)
+      { x: W*0.22, y: H*0.34, r: 16, c: "255,196,120" }, { x: W*0.5, y: H*0.5, r: 22, c: "150,190,255" },
+      { x: W*0.74, y: H*0.28, r: 14, c: "255,150,110" }, { x: W*0.62, y: H*0.66, r: 18, c: "180,255,220" },
+      { x: W*0.34, y: H*0.62, r: 13, c: "255,220,150" }
+    ];
+    var DROPS = 26, drops = [];
+    function resetDrop(d, top) { d.x = rnd(4, W - 4); d.y = top ? rnd(-H, 0) : rnd(0, H); d.len = rnd(4, 12); d.sp = rnd(1.1, 2.6); d.w = rnd(0.6, 1.3); }
+    return {
+      blend: "normal",
+      init: function () { drops = []; for (var i = 0; i < DROPS; i++) { var d = {}; resetDrop(d, false); drops.push(d); } },
+      reset: function () { drops = []; },
+      frame: function () {
+        ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+        ctx.globalCompositeOperation = "lighter"; // blurred glow behind the glass
+        for (var i = 0; i < lights.length; i++) { var L = lights[i]; var g = ctx.createRadialGradient(L.x, L.y, 1, L.x, L.y, L.r); g.addColorStop(0, "rgba(" + L.c + ",0.5)"); g.addColorStop(1, "rgba(" + L.c + ",0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(L.x, L.y, L.r, 0, 6.2832); ctx.fill(); }
+        ctx.globalCompositeOperation = "source-over";
+        ctx.strokeStyle = "rgba(200,225,255,0.5)"; ctx.lineCap = "round";
+        for (var k = 0; k < drops.length; k++) {
+          var d = drops[k]; d.y += d.sp;
+          ctx.lineWidth = d.w; ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x, d.y - d.len); ctx.stroke();
+          ctx.fillStyle = "rgba(220,240,255,0.75)"; ctx.beginPath(); ctx.arc(d.x, d.y, d.w * 0.9, 0, 6.2832); ctx.fill();
+          if (d.y - d.len > H) resetDrop(d, true);
+        }
+      },
+      still: function () { this.init(); ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H); this.frame(); }
+    };
+  })();
+
+  // =========================================================================
+  // Channel: STARFIELD / lo-fi drift — slow twinkling stars, a rare shooting star
+  // =========================================================================
+  var stars = (function () {
+    var bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#0b1030"); bg.addColorStop(0.6, "#0a0e26"); bg.addColorStop(1, "#080a1c");
+    var STARS = 46, arr = [], t = 0, shoot = null, shootCd = 120;
+    function resetStar(s, anyY) { s.x = Math.random() * W; s.y = anyY ? Math.random() * H : -2; s.r = rnd(0.35, 1.2); s.tw = Math.random() * 6.28; s.tws = rnd(0.02, 0.06); s.sp = rnd(0.03, 0.10); }
+    return {
+      blend: "normal",
+      init: function () { arr = []; for (var i = 0; i < STARS; i++) { var s = {}; resetStar(s, true); arr.push(s); } t = 0; shoot = null; shootCd = 120; },
+      reset: function () { arr = []; shoot = null; },
+      frame: function () {
+        t++;
+        ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+        for (var i = 0; i < arr.length; i++) {
+          var s = arr[i]; s.y += s.sp; s.x += 0.02; s.tw += s.tws;
+          if (s.y > H + 2) resetStar(s, false); if (s.x > W + 2) s.x = -2;
+          var a = 0.5 + 0.5 * Math.sin(s.tw);
+          ctx.fillStyle = "rgba(255,250,235," + (a * 0.9).toFixed(3) + ")";
+          ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.2832); ctx.fill();
+        }
+        // a single, self-clearing shooting star now and then (never more than one alive)
+        if (!shoot) { if (--shootCd <= 0) { shoot = { x: rnd(W * 0.1, W * 0.6), y: rnd(4, H * 0.4), vx: rnd(1.8, 2.8), vy: rnd(0.6, 1.1), life: 22 }; shootCd = 140 + (Math.random() * 200 | 0); } }
+        else {
+          ctx.strokeStyle = "rgba(255,255,240,0.9)"; ctx.lineWidth = 1; ctx.lineCap = "round";
+          ctx.beginPath(); ctx.moveTo(shoot.x, shoot.y); ctx.lineTo(shoot.x - shoot.vx * 5, shoot.y - shoot.vy * 5); ctx.stroke();
+          shoot.x += shoot.vx; shoot.y += shoot.vy; if (--shoot.life <= 0 || shoot.x > W + 8) shoot = null;
+        }
+      },
+      still: function () { this.init(); this.frame(); }
+    };
+  })();
+
+  // ---- driver: one loop, one canvas, channel-switched --------------------
+  var order = ["fire", "aqua", "rain", "stars"];
+  var chanObj = { fire: fire, aqua: aqua, rain: rain, stars: stars };
+  var current = "fire";
+  try { var saved = localStorage.getItem("cuddlyChannel"); if (saved && chanObj[saved]) current = saved; } catch (e) {}
+
+  function applyChannelClass() {
+    for (var i = 0; i < order.length; i++) screen.classList.remove("chan-" + order[i]);
+    screen.classList.add("chan-" + current);
+    canvas.style.mixBlendMode = chanObj[current].blend;
+  }
+  var badge = document.getElementById("cuddly-chan-badge");
+  var badgeDots = badge ? badge.querySelectorAll(".chan-dot") : [];
+  var badgeTimer = null;
+  function flashBadge() {
+    if (!badge) return;
+    var ci = order.indexOf(current);
+    for (var i = 0; i < badgeDots.length; i++) badgeDots[i].setAttribute("opacity", i === ci ? "1" : "0.28");
+    badge.setAttribute("opacity", "0.9");
+    if (badgeTimer) clearTimeout(badgeTimer);
+    badgeTimer = setTimeout(function () { badgeTimer = null; badge.setAttribute("opacity", "0"); }, 1100);
   }
 
   var raf = null, lastDraw = 0;
-  function fireOn() { return !screen.classList.contains("off"); }
-  function shouldRun() { return window.currentStageName === "cuddly" && !document.hidden && fireOn(); }
+  function shouldRun() { return window.currentStageName === "cuddly" && !document.hidden; }
   function frame(t) {
-    if (!shouldRun()) { raf = null; return; } // leaving the room / hiding / off → self-cancel, no leftover timer
-    if (t - lastDraw >= DRAW_MS) { lastDraw = t; seedBottom(); spread(); draw(); }
+    if (!shouldRun()) { raf = null; return; } // leaving the room / hiding → self-cancel, no leftover timer
+    if (t - lastDraw >= DRAW_MS) { lastDraw = t; chanObj[current].frame(); }
     raf = requestAnimationFrame(frame);
   }
-  function renderStatic() { // reduced motion: climb the flame once, paint a single frame, never loop
-    for (var p = 0; p < H; p++) { seedBottom(); spread(); }
-    draw();
-  }
-  function startCuddlyFlame() {
-    if (reduceMotion) { if (window.currentStageName === "cuddly") renderStatic(); return; }
+  function renderStill() { ctx.clearRect(0, 0, W, H); (chanObj[current].still || chanObj[current].frame).call(chanObj[current]); }
+  function start() {
+    if (reduceMotion) { if (window.currentStageName === "cuddly") renderStill(); return; }
     if (raf || !shouldRun()) return; // already live, or not runnable right now
-    lastDraw = 0;
-    raf = requestAnimationFrame(frame);
+    lastDraw = 0; raf = requestAnimationFrame(frame);
   }
-  window.startCuddlyFlame = startCuddlyFlame;
+  function setChannel(name, persist) {
+    if (!chanObj[name]) return;
+    chanObj[current].reset();          // tear the old channel's state down
+    ctx.clearRect(0, 0, W, H);
+    current = name;
+    if (chanObj[current].init) chanObj[current].init();
+    applyChannelClass();
+    flashBadge();
+    if (persist) { try { localStorage.setItem("cuddlyChannel", current); } catch (e) {} }
+    if (window.__updateFireSound) window.__updateFireSound(); // crackle audio follows the fire channel
+    if (reduceMotion) renderStill(); else start();
+  }
+
+  if (chanObj[current].init) chanObj[current].init();
+  applyChannelClass();
+
+  window.startCuddlyFlame = start; // kept name: goToStage + the tap handler call this to (re)start the loop
+  window.__cuddlyProjector = { cycle: function () { var i = order.indexOf(current); setChannel(order[(i + 1) % order.length], true); }, set: function (n) { setChannel(n, true); }, channel: function () { return current; } };
   window.__cuddlyFlameRaf = function () { return raf; }; // test hook: null when the loop is stopped
-  document.addEventListener("visibilitychange", function () { if (!document.hidden) startCuddlyFlame(); });
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) start(); });
 })();
 (function () {
   // The distant tower crane through the office window: the trolley traverses the jib, the
@@ -29145,6 +29411,15 @@ function spawnDustMote(container) {
     cuddlyGrooveHeadIds.forEach(function (id) { setGroove(document.getElementById(id), durations.head); });
     cuddlyGrooveFootIds.forEach(function (id) { setGroove(document.getElementById(id), durations.toe); });
     document.querySelectorAll(".puffer-eye").forEach(function (eye) { setGroove(eye, durations.toe); });
+    // the wall-projector fire dances to the beat too — but ONLY while it's on the fire channel
+    // (the aquarium/rain/starfield channels ignore music). Phase-locked like every other groover;
+    // the beat pulse rides on the inner flame wrapper, composing with the season-scale wrapper.
+    var flameGroove = document.getElementById("cuddly-flame-groove");
+    var wallScreenEl = document.getElementById("cuddly-wallscreen");
+    if (flameGroove) {
+      if (anyPlaying && wallScreenEl && wallScreenEl.classList.contains("chan-fire")) setGroove(flameGroove, durations.toe);
+      else flameGroove.classList.remove("grooving");
+    }
     var octopusEl = document.getElementById("cuddly-octopus");
     var octopusGroove = document.getElementById("cuddly-octopus-groove");
     if (octopusEl && octopusGroove) {
@@ -29225,6 +29500,22 @@ function spawnDustMote(container) {
     });
   }
   window.updateCuddlyGrooving = updateCuddlyGrooving;
+  // Live music state for the wall-projector fire (channel 0 reactivity): returns the playing
+  // song's beat period + current phase (0→1), or null when nothing plays. The fire canvas
+  // reads this each frame to pulse taller/brighter on the beat, then falls calm when silent.
+  window.__cuddlyMusic = function () {
+    var playing = null;
+    Object.keys(instrumentSpots).some(function (id) {
+      var a = document.getElementById(instrumentSpots[id].audioId);
+      if (a && !a.paused) { playing = a; return true; }
+      return false;
+    });
+    if (!playing) return null;
+    var bpm = GROOVE_BPM[playing.id] || 126.0;
+    var period = 60 / bpm; if (period < 0.4) period *= 2;
+    var phase = (((playing.currentTime % period) + period) % period) / period;
+    return { playing: true, bpm: bpm, period: period, phase: phase };
+  };
   // A few slow tokes: the raise-to-mouth gesture plays 2-3 times on
   // #cuddly-behdad-joint-toke (see its CSS), releasing a small puff near his mouth
   // each time via the shared steam-wisp spawner, then settles back to normal.
@@ -31169,7 +31460,7 @@ function spawnDustMote(container) {
   var halo = document.getElementById("fishu-fire-halo");
   if (!ws || !body || !halo) return;
   setInterval(function () {
-    if (document.hidden || ws.classList.contains("off")) { halo.style.opacity = "0"; return; }
+    if (document.hidden || !ws.classList.contains("chan-fire")) { halo.style.opacity = "0"; return; } // warm halo only from the fire channel
     var f = ws.getBoundingClientRect();
     if (!f.width || f.right < 0 || f.left > window.innerWidth) { halo.style.opacity = "0"; return; }
     var b = body.getBoundingClientRect();

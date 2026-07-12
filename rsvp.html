@@ -107,6 +107,19 @@ footer{margin-top:2.6rem}
   transition:opacity .6s ease; z-index:5;
 }
 #hunt-wipe.active{opacity:1}
+/* dismiss ✕ for a zoomed device (monitor / laptop) — the same affordance the pocket
+   phone gives, pinned to the viewport corner so the strip's zoom transform can't move
+   it. Shown only while a device holds the view; a corner tap also zooms out on its own,
+   this just makes the exit obvious. */
+.monitor-close{
+  position:absolute; top:8px; right:8px; width:26px; height:26px; border-radius:50%;
+  background:var(--ink); color:var(--paper); border:2px solid var(--paper); font:inherit; font-size:14px;
+  line-height:1; cursor:pointer; z-index:6; display:none; align-items:center; justify-content:center;
+  box-shadow:0 2px 8px rgba(69,58,49,.28);
+}
+.hunt-viewport.device-zoomed .monitor-close{display:flex}
+.monitor-close:hover, .monitor-close:focus-visible{background:var(--wine)}
+@media (max-width:759px){ .monitor-close{width:22px; height:22px; font-size:12px; top:6px; right:6px} }
 #loft-game-strip{
   display:block; width:500%; height:auto; user-select:none; -webkit-user-select:none;
   -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none;
@@ -9038,6 +9051,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </g>
     </svg>
     <div id="hunt-wipe" aria-hidden="true"></div>
+    <button type="button" id="monitor-close-btn" class="monitor-close" aria-label="Exit screen">✕</button>
   </div>
   <div class="hunt-right" id="hunt-right">
     <div class="hunt-side" id="hunt-side">
@@ -17470,11 +17484,13 @@ document.addEventListener("click", function (e) {
     var t = targetFor(el);
     if (!t || !t.el || !t.when()) return;
     zoomEl = el;
+    vp.classList.add("device-zoomed");
     apply();
   }
   function zoomOut() {
     if (!zoomEl) return;
     zoomEl = null;
+    vp.classList.remove("device-zoomed");
     // the origin must survive the glide out (scale interpolates about it; clearing it
     // mid-transition snaps the start pose sideways) — drive the transition in px, which
     // lands exactly where translateX(-idx*20%) does, then restore the canonical % form
@@ -17489,6 +17505,8 @@ document.addEventListener("click", function (e) {
   }
   window.__monitorZoomIn = function () { zoomIn(monitor); };
   window.__monitorZoomOut = zoomOut;
+  var monClose = document.getElementById("monitor-close-btn");
+  if (monClose) monClose.addEventListener("click", function (e) { e.stopPropagation(); zoomOut(); });
   // a tap landing outside the zoomed device hands the room back — unless it lands on
   // the OTHER device (glide over) or on viewport chrome (capture phase, so a target's
   // own stopPropagation can't strand the zoom)
@@ -18614,9 +18632,26 @@ document.addEventListener("click", function (e) {
         { id: "flowercrown", emo: "🌸", labelKey: "du_flowercrown", hides: [".cuddly-cap-hers"], svg:
           '<g transform="rotate(-12 243 170)">' + fl(232, 155, "#e88fa5") + fl(238, 151, "#fdfcfa") +
           fl(243, 149.5, "#b06a7a") + fl(248, 151, "#9db8d6") + fl(254, 155, "#e88fa5") + '</g>' },
-        // Markéta never wears a matching pair — her real earrings: a long cascade of
-        // iridescent rainbow paillettes on one ear, a plain little gold hoop on the other.
+        // both of them wear the real mismatched pair — a long cascade of iridescent
+        // rainbow paillettes on one ear, a plain rainbow-rimmed hoop on the other.
+        // Behdad wears them in the OPPOSITE order (hoop + cascade sides swapped). His head
+        // isn't rotated; hers sits inside the -12° head tilt.
         { id: "earrings", emo: "💎", labelKey: "du_earrings", svg:
+          '<path d="M183.4 181.5 A2.4 2.4 0 0 1 182.2 183.58" fill="none" stroke="#e0564f" stroke-width="1.1"/>' +
+          '<path d="M182.2 183.58 A2.4 2.4 0 0 1 179.8 183.58" fill="none" stroke="#e8913f" stroke-width="1.1"/>' +
+          '<path d="M179.8 183.58 A2.4 2.4 0 0 1 178.6 181.5" fill="none" stroke="#e6c34a" stroke-width="1.1"/>' +
+          '<path d="M178.6 181.5 A2.4 2.4 0 0 1 179.8 179.42" fill="none" stroke="#5aa35a" stroke-width="1.1"/>' +
+          '<path d="M179.8 179.42 A2.4 2.4 0 0 1 182.2 179.42" fill="none" stroke="#4a80c4" stroke-width="1.1"/>' +
+          '<path d="M182.2 179.42 A2.4 2.4 0 0 1 183.4 181.5" fill="none" stroke="#8e5ac0" stroke-width="1.1"/>' +
+          '<circle cx="207" cy="180.4" r="1.2" fill="none" stroke="#d8b23a" stroke-width="1"/>' +
+          '<ellipse cx="206.3" cy="183" rx="1.8" ry="2.5" fill="#e0a23f" transform="rotate(20 206.3 183)"/>' +
+          '<ellipse cx="207.7" cy="185.4" rx="1.8" ry="2.5" fill="#e6c34a" transform="rotate(-20 207.7 185.4)"/>' +
+          '<ellipse cx="206.3" cy="187.8" rx="1.8" ry="2.5" fill="#6bb04a" transform="rotate(20 206.3 187.8)"/>' +
+          '<ellipse cx="207.7" cy="190.2" rx="1.8" ry="2.5" fill="#3fae9e" transform="rotate(-20 207.7 190.2)"/>' +
+          '<ellipse cx="206.3" cy="192.6" rx="1.8" ry="2.5" fill="#4a80c4" transform="rotate(20 206.3 192.6)"/>' +
+          '<ellipse cx="207.7" cy="195" rx="1.7" ry="2.4" fill="#6a5ac0" transform="rotate(-20 207.7 195)"/>' +
+          '<ellipse cx="206.9" cy="197.3" rx="1.6" ry="2.3" fill="#c04a9e" transform="rotate(10 206.9 197.3)"/>' +
+          '<ellipse cx="207" cy="199.4" rx="1.5" ry="2.2" fill="#e07aa8"/>' +
           '<g transform="rotate(-12 243 170)">' +
           '<circle cx="231" cy="178.4" r="1.2" fill="none" stroke="#d8b23a" stroke-width="1"/>' +
           '<ellipse cx="230.3" cy="181" rx="1.8" ry="2.5" fill="#e0a23f" transform="rotate(20 230.3 181)"/>' +

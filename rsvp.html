@@ -16276,7 +16276,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var TERM_HELP_OVERVIEW = "commands: help · clear · laser() · party() · trip() · goto() · night()/day() · confetti() · cat() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var TERM_HELP_OVERVIEW = "commands: help · clear · laser() · party() · trip() · goto() · night()/day() · confetti() · cat() · shape() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var TERM_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -16295,6 +16295,7 @@ document.addEventListener("click", function (e) {
       cat: "cat() — summon the loose chest cat to your room (bare `cat` prints a cat instead)",
       irene: "irene() — the niece skips into the cuddly nook for a bit",
       eclipse: "eclipse() — a solar (day) or lunar (night) eclipse over the balcony",
+      shape: "shape('text') — shape text with HarfBuzz (harfbuzzjs/WebAssembly) and print the glyphs",
       loft: "loft — the couple's object: .countdown .nowPlaying .weather .menu .love .you .couple .weddings .site",
       ls: "ls — list the rooms",
       pwd: "pwd — print the working directory",
@@ -33510,6 +33511,63 @@ function spawnDustMote(container) {
     }
     if (window.__homeCat) window.__homeCat("office");
     return "🐈 here, kitty — she pads into the office.";
+  };
+  // shape(text, opts) — shape text with HarfBuzz from JavaScript, mirroring the python
+  // console's uharfbuzz. Lazy-loads the self-hosted harfbuzzjs runtime (harfbuzzjs/hb.js
+  // loader + hb.wasm + the hbjs.js wrapper) and a latin-subset Fraunces once, caches the
+  // parsed font, and reuses them for every call. Returns a Promise, so both the in-game
+  // console and real devtools can `await shape('markéta')`. opts.features takes an array
+  // or comma-separated string of OpenType feature tags. English-only (console commands
+  // aren't translated).
+  var __hbReady = null;
+  function hbLoadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement("script");
+      s.src = src;
+      s.onload = function () { resolve(); };
+      s.onerror = function () { reject(new Error("failed to load " + src)); };
+      document.head.appendChild(s);
+    });
+  }
+  function hbReady() {
+    if (__hbReady) return __hbReady;
+    var p = hbLoadScript("harfbuzzjs/hb.js")
+      .then(function () { return hbLoadScript("harfbuzzjs/hbjs.js"); })
+      .then(function () { return window.createHarfBuzz({ locateFile: function (f) { return "harfbuzzjs/" + f; } }); })
+      .then(function (mod) {
+        var hb = window.hbjs(mod);
+        return fetch("harfbuzzjs/fraunces.ttf").then(function (r) {
+          if (!r.ok) throw new Error("font " + r.status);
+          return r.arrayBuffer();
+        }).then(function (buf) {
+          var blob = hb.createBlob(new Uint8Array(buf));
+          var face = hb.createFace(blob, 0);
+          var font = hb.createFont(face);
+          return { hb: hb, font: font };
+        });
+      });
+    __hbReady = p;
+    p.catch(function () { if (__hbReady === p) __hbReady = null; }); // a transient load failure shouldn't poison later retries
+    return __hbReady;
+  }
+  window.shape = function (text, opts) {
+    text = text == null ? "" : String(text);
+    return hbReady().then(function (ctx) {
+      var features = opts && opts.features;
+      if (Array.isArray(features)) features = features.join(",");
+      var buf = ctx.hb.createBuffer();
+      buf.addText(text);
+      buf.guessSegmentProperties();
+      ctx.hb.shape(ctx.font, buf, features || undefined);
+      var glyphs = buf.json();
+      buf.destroy();
+      var out = glyphs.map(function (g) { return { glyph: g.g, cluster: g.cl, xAdvance: g.ax }; });
+      console.log("⬡ shape(" + JSON.stringify(text) + ") → " + out.length + " glyphs [" +
+        out.map(function (g) { return g.glyph; }).join(" ") + "] via HarfBuzz (harfbuzzjs)");
+      return out;
+    }).catch(function (e) {
+      return "couldn't reach the harfbuzz runtime — " + ((e && e.message) || e);
+    });
   };
   window.love = function () { return "love is patient, love is kind. ∞"; };
   window.irene = function () {

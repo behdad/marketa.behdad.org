@@ -259,6 +259,17 @@ footer{margin-top:2.6rem}
   50%{transform:translateY(5px)}
 }
 @media (prefers-reduced-motion: reduce){.scene-caption.rsvp-nudge{animation:none}}
+/* attract attention to the how-to-play hint on first load: a gentle opacity+colour pulse
+   that runs until the player first taps the scene (JS drops .hint-blink then, and after a
+   short grace period if they never do). Removed in JS, so no stale one-shot lingers. */
+.scene-caption.hint-blink{animation:hint-blink-attract 1.3s ease-in-out infinite}
+@keyframes hint-blink-attract{
+  0%,100%{opacity:1; color:var(--wine)}
+  50%{opacity:.4; color:var(--soft)}
+}
+/* reduced motion: no pulse, but keep the hint noticeable with a static wine emphasis
+   (wine is already the on-cream link colour, so contrast holds). */
+@media (prefers-reduced-motion: reduce){.scene-caption.hint-blink{animation:none; color:var(--wine); font-weight:700}}
 .watch-controls{display:flex; justify-content:center; align-items:center; gap:.9rem; margin:.5rem 0 0; min-height:1.5rem}
 .watch-loft-btn, .watch-skip-btn{
   font:inherit; font-size:.85rem; line-height:1.3; cursor:pointer; background:none;
@@ -27116,6 +27127,7 @@ function spawnDustMote(container) {
   function startCinematic() {
     if (window.__cinematic) return;
     window.__cinematic = true;
+    stopHintBlink(); // the show owns the caption — end any attract-blink first (Watch is off-strip)
     if (watchBtn) { watchBtn.classList.remove("nudge"); watchBtn.hidden = true; }
     if (skipBtn) skipBtn.hidden = false;
     if (window.__stopAutoDayNight) window.__stopAutoDayNight(); // freeze the background sky
@@ -27175,7 +27187,27 @@ function spawnDustMote(container) {
   // explicitly so it reads as a real control.
   if (skipBtn) skipBtn.addEventListener("click", stopCinematic);
 
-  goToStage("kitchen");
+  // ── attract-blink on the how-to hint ──
+  // A new player can miss the instruction caption, so on first load it pulses gently
+  // (opacity + wine tint) to draw the eye, and settles the instant the player first taps
+  // anywhere in the scene — or after a short grace period if they never do. Both `click`
+  // and `pointerdown` end it: real taps fire pointerdown first, but scripted/synthetic
+  // clicks (tests, the cinematic's own beats) only fire click, so bind both. The class is
+  // explicitly removed (never left to loop), reverting the caption to its steady state.
+  var hintBlinkTimer = null;
+  function stopHintBlink() {
+    if (hintBlinkTimer) { clearTimeout(hintBlinkTimer); hintBlinkTimer = null; }
+    caption.classList.remove("hint-blink");
+    strip.removeEventListener("pointerdown", stopHintBlink);
+    strip.removeEventListener("click", stopHintBlink);
+  }
+  window.__stopHintBlink = stopHintBlink; // the cinematic (Watch is outside the strip) settles it too
+  strip.addEventListener("pointerdown", stopHintBlink);
+  strip.addEventListener("click", stopHintBlink);
+
+  goToStage("kitchen"); // sets the initial caption text before the blink class goes on
+  caption.classList.add("hint-blink");
+  hintBlinkTimer = setTimeout(stopHintBlink, 8000); // a handful of pulses, then rest even if untouched
 })();
 (function () {
   // Once the chest cat is loose (.out), it FOLLOWS the player from room to room. There is

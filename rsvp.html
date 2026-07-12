@@ -12314,12 +12314,45 @@ document.addEventListener("click", function (e) {
   function reducedMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
-  function restoreZ() { // return her to her canonical parse-time DOM slot / z-order
+  // Roam paints Irene BEHIND the daybed so the couch back hides her lower half. The two
+  // magnetic-board knives and the fireplace wall-screen are visually ON THE WALL (background)
+  // but drawn LAST (frontmost) — so during roam they'd otherwise paint over her upper body.
+  // For the roam ONLY we tuck those three behind the daybed too (behind her). They don't
+  // spatially overlap the couch or couple, so the sole pixel change is the screen's wide
+  // 0.14-opacity firelight glow briefly washing behind the couple instead of over them —
+  // fully restored on teardown. Captured at MOVE time, not init: the wallscreen/Fishu load-
+  // time reorder (see the Fishu IIFE near the bottom) runs AFTER this IIFE, so these canonical
+  // slots aren't settled until the first roam. Restored in reverse so each element's recorded
+  // nextSibling is already back home before it's re-inserted.
+  var WALL_IDS = ["cuddly-wallscreen", "cuddly-knife-1", "cuddly-knife-2"];
+  var wallMoved = null;
+  function moveWallsBehind() {
+    if (wallMoved || !daybed || !daybed.parentNode) return;
+    wallMoved = [];
+    WALL_IDS.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el || !el.parentNode) return;
+      wallMoved.push({ el: el, next: el.nextSibling });
+      daybed.parentNode.insertBefore(el, daybed); // into the wall/background layer, before Irene
+    });
+  }
+  function restoreWalls() {
+    if (!wallMoved) return;
+    for (var i = wallMoved.length - 1; i >= 0; i--) {
+      var m = wallMoved[i];
+      if (m.el && daybed && daybed.parentNode) daybed.parentNode.insertBefore(m.el, m.next);
+    }
+    wallMoved = null;
+  }
+  function restoreZ() { // return her (and any roam-tucked wall elements) to their canonical z-order
+    restoreWalls();
     if (irene.parentNode !== ireneHome || irene.nextSibling !== ireneNext) ireneHome.insertBefore(irene, ireneNext);
   }
   // Place her in the DOM for the given behavior's z-order (SVG has no z-index — paint order
   // follows document order, later = on top):
-  //   roam        → BEHIND the daybed, so the couch back hides her lower half.
+  //   roam        → BEHIND the daybed, so the couch back hides her lower half; the wall knives
+  //                 + screen are also tucked behind the daybed (moveWallsBehind) so they don't
+  //                 paint over her upper body.
   //   cat-play    → just AFTER the loose cat node, so the cat crouches BEHIND her (she's the
   //                 kid reaching down over it). Falls through to front-of-knives if no cat.
   //   bounce/sit/hug → AFTER the knives (last of the couple/knife layer), so a front-of-couch
@@ -12327,9 +12360,11 @@ document.addEventListener("click", function (e) {
   // restoreZ() (reset/teardown) always undoes whichever of these ran.
   function placeFor(beh) {
     if (beh === "irene-roam") {
-      if (daybed && daybed.parentNode) daybed.parentNode.insertBefore(irene, daybed);
+      moveWallsBehind(); // tuck the wall knives + screen behind the daybed, i.e. behind her
+      if (daybed && daybed.parentNode) daybed.parentNode.insertBefore(irene, daybed); // then her, just in front of them, still behind the couch
       return;
     }
+    restoreWalls(); // any front-of-couch pose: the wall elements return to their frontmost slots
     if (beh === "irene-catplay" && catInNook()) {
       var cat = document.getElementById("witchy-chest-cat-pos");
       if (cat && cat.parentNode) { cat.parentNode.insertBefore(irene, cat.nextSibling); return; }
@@ -12375,6 +12410,10 @@ document.addEventListener("click", function (e) {
     irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-catplay");
     placeFor(beh);
     irene.classList.add(beh, "showing");
+    // As she leans in to hug Markéta, she coos "I love you" in a high, childlike pitch. One-shot,
+    // no timer (nothing to tear down); hasFocus-gated like every other unattended sound so a
+    // backgrounded tab stays silent (playILoveYouSound itself only gates document.hidden).
+    if (beh === "irene-hug" && onScreen() && document.hasFocus()) playILoveYouSound("cuddly-irene", 1.5);
     if (beh === "irene-catplay") { // nudge the cat into a playful hop toward her (guarded + self-resuming)
       catPlayTimer = setTimeout(function () {
         catPlayTimer = null;

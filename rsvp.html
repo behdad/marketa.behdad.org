@@ -1893,6 +1893,22 @@ footer{margin-top:2.6rem}
 .pm-flash-app .pmf-torch:active{transform:scale(.96)}
 .pm-flash-app .pmf-label{font-size:13px; color:var(--muted)}
 .phone-shell.pm-flash .phone-app-body{background:radial-gradient(120% 80% at 50% 30%, rgba(255,231,168,.32), transparent 70%)}
+/* dress-up: a paper-doll of the cloned couple + a wrapping row of accessory chips */
+.pm-dressup{display:flex; flex-direction:column; gap:9px}
+.pm-dressup .pmd-hint{font-size:11.5px; color:var(--muted); text-align:center; margin:0}
+.pm-dressup .pmd-stage{background:linear-gradient(180deg,#fbf7ec,#f2ecdc); border:1px solid var(--rule); border-radius:16px; padding:4px; display:flex; justify-content:center}
+.pm-dressup .pmd-svg{width:100%; height:auto; max-height:196px; display:block}
+/* the cloned figure is a static prop here — no hover reactions (its .hunt-hit classes
+   carry cursor/hover styling); it has no always-on animation, so nothing to freeze */
+.pm-dressup .pmd-svg .pmd-fig{pointer-events:none; cursor:default}
+.pm-dressup .pmd-chips{display:flex; flex-wrap:wrap; gap:6px; justify-content:center}
+.pm-dressup .pmd-chip{display:inline-flex; align-items:center; gap:4px; background:var(--paper); border:1px solid var(--rule); border-radius:14px; padding:4px 9px; cursor:pointer; font:inherit; font-size:11px; color:var(--ink); line-height:1}
+.pm-dressup .pmd-chip .pmd-emo{font-size:14px}
+.pm-dressup .pmd-chip.on{background:var(--wine); color:#fff; border-color:var(--wine)}
+.pm-dressup .pmd-chip:active{transform:scale(.95)}
+.pm-dressup .pmd-reset{align-self:center; margin-top:2px; background:none; border:1px solid var(--rule); border-radius:12px; padding:5px 16px; cursor:pointer; font:inherit; font-size:12px; color:var(--muted)}
+.pm-dressup .pmd-reset:hover{color:var(--ink); border-color:var(--soft)}
+@media (prefers-reduced-motion: reduce){.pm-dressup .pmd-chip:active{transform:none}}
 /* photobooth: consent → live selfie preview → composed polaroid with look + frame chips.
    its own camera/UI; the polaroid is the monitor booth's compositor via window.__phonePB */
 .pm-booth{display:flex; flex-direction:column; align-items:center; gap:12px}
@@ -9274,6 +9290,19 @@ var T = {
     app_compass: "compass",
     app_flashlight: "flashlight",
     app_hn: "news",
+    app_dressup: "dress-up",
+    du_hint: "Tap to add or take off — dress the two of us up.",
+    du_reset: "reset",
+    du_tophats: "top hats",
+    du_shades: "shades",
+    du_partyhats: "party hats",
+    du_mustache: "moustache",
+    du_monocle: "monocle",
+    du_necktie: "necktie",
+    du_flowercrown: "flower crown",
+    du_earrings: "earrings",
+    du_bouquet: "bouquet",
+    du_veil: "veil",
     clk_playtime: "You’ve been in the loft for",
     clk_now: "now in the loft",
     cur_amount: "amount",
@@ -9593,6 +9622,19 @@ var T = {
     app_compass: "kompas",
     app_flashlight: "svítilna",
     app_hn: "zprávy",
+    app_dressup: "oblékačka",
+    du_hint: "Klepnutím přidáš nebo sundáš — obleč nás dva.",
+    du_reset: "reset",
+    du_tophats: "cylindry",
+    du_shades: "sluneční brýle",
+    du_partyhats: "party čepice",
+    du_mustache: "knír",
+    du_monocle: "monokl",
+    du_necktie: "kravata",
+    du_flowercrown: "věneček",
+    du_earrings: "náušnice",
+    du_bouquet: "kytice",
+    du_veil: "závoj",
     clk_playtime: "V loftu jsi už",
     clk_now: "teď v loftu",
     cur_amount: "částka",
@@ -17661,6 +17703,7 @@ document.addEventListener("click", function (e) {
       { id: "compass", labelKey: "app_compass", icon: null, glyph: "🧭", tile: "#5b6aa0", open: function () { openApp("compass", "app_compass", renderCompass); } },
       { id: "flashlight", labelKey: "app_flashlight", icon: null, glyph: "🔦", tile: "#cc9a48", open: function () { openApp("flashlight", "app_flashlight", renderFlashlight); } },
       { id: "hn", labelKey: "app_hn", icon: null, glyph: "📰", tile: "#a55f42", open: function () { openApp("hn", "app_hn", renderHN); } },
+      { id: "dressup", labelKey: "app_dressup", icon: null, glyph: "👗", tile: "#b06a7a", open: function () { openApp("dressup", "app_dressup", renderDressup); } },
       { id: "album", labelKey: "app_album", icon: "album", tile: "#4a6b94", link: "https://photos.app.goo.gl/gBQpsw4nrh9RwdQu9" },
       { id: "places", labelKey: "app_places", icon: "places", tile: "#6d4b63", link: "https://maps.app.goo.gl/WFNVQLw7F6CTQ8xs5" },
       { id: "browser", labelKey: browserLabelKey, icon: HOST_BROWSER === "chrome" ? "chrome" : "globe", glyph: "🌐", tile: "#fdfbf6", open: function () { openApp("browser", browserLabelKey, renderPhoneBrowser); } }
@@ -18294,6 +18337,153 @@ document.addEventListener("click", function (e) {
       }
       torch.addEventListener("click", function () { setFlashlight(!flashOn); paint(); });
       paint();
+    }
+    // ── dress-up ── a paper-doll of the couple. Clones #cuddly-couple (same stripping
+    // as buildHomeCoupleBg — drop the id-hidden joint prop, strip ids/a11y so no dup ids
+    // leak, keep classes so the wedding adornments stay class-hidden), then layers small
+    // drawn accessory <g>s over it, each toggled show/hide by an HTML chip (no animation).
+    // Markéta's head is rotated -12° about (243,170) in the source, so her head-worn
+    // accessories wrap in the same rotate; Behdad's head is upright.
+    function cloneCoupleFigure() {
+      var src = document.getElementById("cuddly-couple");
+      if (!src) return null;
+      var g = src.cloneNode(true);
+      var jp = g.querySelector("#cuddly-behdad-joint-prop"); // id-hidden → would SHOW once ids are stripped
+      if (jp && jp.parentNode) jp.parentNode.removeChild(jp);
+      g.removeAttribute("id");
+      var nodes = g.querySelectorAll("[id],[tabindex],[role],[aria-label]");
+      for (var i = 0; i < nodes.length; i++) {
+        nodes[i].removeAttribute("id");
+        nodes[i].removeAttribute("tabindex");
+        nodes[i].removeAttribute("role");
+        nodes[i].removeAttribute("aria-label");
+      }
+      g.setAttribute("class", "pmd-fig");         // CSS kills pointer-events + any looping animation on the copy
+      g.setAttribute("style", "display:block;opacity:1");
+      return g;
+    }
+    function renderDressup(body) {
+      // a 4-petal flower stamp, reused by the crown and the bouquet
+      function fl(cx, cy, c) {
+        return '<circle cx="' + (cx - 2.2) + '" cy="' + cy + '" r="2.1" fill="' + c + '"/>' +
+          '<circle cx="' + (cx + 2.2) + '" cy="' + cy + '" r="2.1" fill="' + c + '"/>' +
+          '<circle cx="' + cx + '" cy="' + (cy - 2.2) + '" r="2.1" fill="' + c + '"/>' +
+          '<circle cx="' + cx + '" cy="' + (cy + 2.2) + '" r="2.1" fill="' + c + '"/>' +
+          '<circle cx="' + cx + '" cy="' + cy + '" r="1.6" fill="#f2c14e"/>';
+      }
+      // id → chip emoji, label key, and the accessory SVG (couple coords, 680×920 space).
+      // his = Behdad only, hers = Markéta only, both = drawn on the two of them.
+      var ITEMS = [
+        { id: "tophats", emo: "🎩", labelKey: "du_tophats", svg:
+          '<ellipse cx="194" cy="147" rx="15" ry="3.2" fill="#2b2b2b"/>' +
+          '<path d="M185 147 L186.5 126 Q186.5 124 188.5 124 L199.5 124 Q201.5 124 201.5 126 L203 147 Z" fill="#2b2b2b"/>' +
+          '<rect x="185.5" y="142.6" width="17" height="3.2" fill="#8e3a4a"/>' +
+          '<ellipse cx="194" cy="125" rx="7.5" ry="1.8" fill="#3a3a3a"/>' +
+          '<g transform="rotate(-12 243 170)">' +
+          '<ellipse cx="243" cy="143" rx="14" ry="3" fill="#2b2b2b"/>' +
+          '<path d="M234 143 L235.5 123 Q235.5 121 237.5 121 L248.5 121 Q250.5 121 250.5 123 L252 143 Z" fill="#2b2b2b"/>' +
+          '<rect x="234.5" y="138.7" width="17" height="3" fill="#7f9ec0"/>' +
+          '<ellipse cx="243" cy="122" rx="7" ry="1.7" fill="#3a3a3a"/></g>' },
+        { id: "shades", emo: "🕶️", labelKey: "du_shades", svg:
+          '<g fill="#20242a"><ellipse cx="189" cy="170" rx="6" ry="4.6"/><ellipse cx="200" cy="170" rx="6" ry="4.6"/></g>' +
+          '<path d="M183 169 L178 167 M206 169 L211 167" stroke="#20242a" stroke-width="1.4" fill="none"/>' +
+          '<line x1="195" y1="169.4" x2="199" y2="169.4" stroke="#20242a" stroke-width="1.4"/>' +
+          '<g transform="rotate(-12 243 170)">' +
+          '<g fill="#20242a"><ellipse cx="238" cy="168" rx="5.6" ry="4.4"/><ellipse cx="249" cy="168" rx="5.6" ry="4.4"/></g>' +
+          '<line x1="243.5" y1="167.4" x2="247" y2="167.4" stroke="#20242a" stroke-width="1.4"/>' +
+          '<path d="M232.5 167 L228 165 M254.5 167 L259 165" stroke="#20242a" stroke-width="1.4" fill="none"/></g>' },
+        { id: "partyhats", emo: "🥳", labelKey: "du_partyhats", svg:
+          '<polygon points="194,120 184,146 204,146" fill="#d9a6a6" stroke="#c68e95" stroke-width="1"/>' +
+          '<path d="M187 138 L201 138 M189 130 L199 130" stroke="#fffdf8" stroke-width="1.2" opacity=".85"/>' +
+          '<circle cx="194" cy="119" r="3" fill="#8e3a4a"/>' +
+          '<g transform="rotate(-12 243 170)">' +
+          '<polygon points="243,117 233,143 253,143" fill="#7f9ec0" stroke="#4a6b94" stroke-width="1"/>' +
+          '<path d="M236 135 L250 135 M238 127 L248 127" stroke="#fffdf8" stroke-width="1.2" opacity=".85"/>' +
+          '<circle cx="243" cy="116" r="3" fill="#4a6b94"/></g>' },
+        { id: "mustache", emo: "👨", labelKey: "du_mustache", svg:
+          '<path d="M194 185.5 Q189 181.5 184 183.5 Q188 185.5 190.5 184.5 Q192.5 186.5 194 185.5 Q195.5 186.5 197.5 184.5 Q200 185.5 204 183.5 Q199 181.5 194 185.5 Z" fill="#38302a"/>' },
+        { id: "monocle", emo: "🧐", labelKey: "du_monocle", svg:
+          '<circle cx="200" cy="170" r="6.6" fill="#cfe0ea" fill-opacity="0.25" stroke="#caa63a" stroke-width="1.6"/>' +
+          '<path d="M200 176.6 Q198 187 194 197" fill="none" stroke="#caa63a" stroke-width="1"/>' },
+        { id: "necktie", emo: "👔", labelKey: "du_necktie", svg:
+          '<path d="M190 210 L198 210 L196 216 L192 216 Z" fill="#6c2b38"/>' +
+          '<path d="M192 216 L196 216 L199 244 L194 250 L189 244 Z" fill="#8e3a4a" stroke="#6c2b38" stroke-width="0.8"/>' +
+          '<path d="M191 224 Q194 226 197 224 M190.5 234 Q194 236.5 197.5 234" stroke="#6c2b38" stroke-width="0.7" fill="none" opacity=".55"/>' },
+        { id: "flowercrown", emo: "🌸", labelKey: "du_flowercrown", svg:
+          '<g transform="rotate(-12 243 170)">' + fl(232, 155, "#e88fa5") + fl(238, 151, "#fdfcfa") +
+          fl(243, 149.5, "#b06a7a") + fl(248, 151, "#9db8d6") + fl(254, 155, "#e88fa5") + '</g>' },
+        { id: "earrings", emo: "💎", labelKey: "du_earrings", svg:
+          '<g transform="rotate(-12 243 170)">' +
+          '<line x1="231" y1="176.5" x2="231" y2="181" stroke="#caa63a" stroke-width="1"/>' +
+          '<circle cx="231" cy="182.6" r="2.1" fill="#7f9ec0" stroke="#4a6b94" stroke-width=".6"/>' +
+          '<line x1="255" y1="176.5" x2="255" y2="181" stroke="#caa63a" stroke-width="1"/>' +
+          '<circle cx="255" cy="182.6" r="2.1" fill="#7f9ec0" stroke="#4a6b94" stroke-width=".6"/></g>' },
+        { id: "bouquet", emo: "💐", labelKey: "du_bouquet", svg:
+          '<path d="M258 258 L262 240 M262 259 L264 240 M266 258 L266 240" stroke="#5f7d4a" stroke-width="1.4" fill="none"/>' +
+          '<path d="M258 254 Q252 250 256 245" stroke="#5f7d4a" stroke-width="1.5" fill="none"/>' +
+          fl(256, 239, "#e88fa5") + fl(263, 235, "#fdfcfa") + fl(270, 239, "#b06a7a") + fl(263, 243, "#9db8d6") },
+        { id: "veil", emo: "👰", labelKey: "du_veil", svg:
+          '<g transform="rotate(-12 243 170)">' +
+          '<path d="M234 153 Q219 162 217 188 Q223 194 233 190 Q238 170 242 155 Z" fill="#fdfcfa" fill-opacity="0.55" stroke="#e3e9f0" stroke-width="0.8"/>' +
+          '<path d="M233 150 Q243 145 253 150" fill="none" stroke="#fffdf8" stroke-width="2" stroke-linecap="round"/>' +
+          '<circle cx="243" cy="147.2" r="1.8" fill="#fffdf8" stroke="#e5ddc9" stroke-width=".5"/></g>' }
+      ];
+
+      var wrap = document.createElement("div");
+      wrap.className = "pm-dressup";
+
+      var hint = document.createElement("p");
+      hint.className = "pmd-hint";
+      hint.textContent = tr("du_hint");
+      wrap.appendChild(hint);
+
+      var stage = document.createElement("div");
+      stage.className = "pmd-stage";
+      var svg = document.createElementNS(SVGNS, "svg");
+      svg.setAttribute("class", "pmd-svg");
+      svg.setAttribute("viewBox", "164 116 220 176");
+      svg.setAttribute("preserveAspectRatio", "xMidYMax meet");
+      svg.setAttribute("aria-hidden", "true");
+      var fig = cloneCoupleFigure();
+      if (fig) svg.appendChild(fig);
+      var layer = document.createElementNS(SVGNS, "g"); // accessory layers, hidden until toggled
+      layer.innerHTML = ITEMS.map(function (it) {
+        return '<g data-acc="' + it.id + '" style="display:none">' + it.svg + '</g>';
+      }).join("");
+      svg.appendChild(layer);
+      stage.appendChild(svg);
+      wrap.appendChild(stage);
+
+      var chips = document.createElement("div");
+      chips.className = "pmd-chips";
+      ITEMS.forEach(function (it) {
+        var chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "pmd-chip";
+        chip.innerHTML = '<span class="pmd-emo">' + it.emo + '</span><span></span>';
+        chip.lastChild.textContent = tr(it.labelKey);
+        chip.addEventListener("click", function () {
+          var on = chip.classList.toggle("on");
+          var g = layer.querySelector('[data-acc="' + it.id + '"]');
+          if (g) g.style.display = on ? "block" : "none";
+        });
+        chips.appendChild(chip);
+      });
+      wrap.appendChild(chips);
+
+      var reset = document.createElement("button");
+      reset.type = "button";
+      reset.className = "pmd-reset";
+      reset.textContent = tr("du_reset");
+      reset.addEventListener("click", function () {
+        var onChips = chips.querySelectorAll(".pmd-chip.on");
+        for (var i = 0; i < onChips.length; i++) onChips[i].classList.remove("on");
+        var gs = layer.querySelectorAll("[data-acc]");
+        for (var j = 0; j < gs.length; j++) gs[j].style.display = "none";
+      });
+      wrap.appendChild(reset);
+
+      body.appendChild(wrap);
     }
     // ── Hacker News reader ── HN's keyless CORS-open Firebase API: top stories, then the
     // first ~15 items. A tap opens the story in a REAL browser tab (external URLs refuse

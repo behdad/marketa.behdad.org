@@ -10544,7 +10544,6 @@ var T = {
     py_ready: "Python {v} ready. try: 2+2 · import this",
     py_fonttools: "fontTools {v} is already imported — the groom insisted.",
     py_uharfbuzz: "uharfbuzz {v} is imported as hb — the groom's own shaping engine, now in Python.",
-    py_fonts: "the page's fonts are mounted at /fonts: {fs} — try TTFont('/fonts/{f}')",
     py_fail: "couldn't load Python — offline, or the download broke. close and reopen to retry.",
     py_busy: "still chewing on the last one…",
     app_linux: "linux",
@@ -10903,7 +10902,6 @@ var T = {
     py_ready: "Python {v} připraven. zkuste: 2+2 · import this",
     py_fonttools: "fontTools {v} je už naimportovaný — ženich trval na svém.",
     py_uharfbuzz: "uharfbuzz {v} je naimportovaný jako hb — ženichova vlastní sázecí knihovna, teď v Pythonu.",
-    py_fonts: "fonty stránky jsou připojené v /fonts: {fs} — zkuste TTFont('/fonts/{f}')",
     py_fail: "Python se nepodařilo načíst — offline, nebo se stahování přerušilo. zavřete a otevřete znovu.",
     py_busy: "ještě žvýkám ten předchozí…",
     app_linux: "linux",
@@ -18112,35 +18110,7 @@ document.addEventListener("click", function (e) {
         var ver = "";
         try { ver = py.runPython("__import__('sys').version.split()[0]"); } catch (e) {}
         pyPrint(pyT("py_ready").replace("{v}", ver || "3"), "term-dim");
-        // the page's own webfonts, mounted so TTFont has something real to chew
-        // on: the same (cached) css2 stylesheet the <link> loads names one
-        // latin-subset variable woff2 per family+style; offline, the fetches
-        // reject and the whole thing stays silent, same as the install below
-        var fontsLink = document.querySelector('link[href*="fonts.googleapis.com/css2"]');
-        var pyFonts = !fontsLink ? Promise.reject() : fetch(fontsLink.href)
-          .then(function (r) { if (!r.ok) throw 0; return r.text(); })
-          .then(function (css) {
-            var files = {}, re = /\/\*\s*latin\s*\*\/\s*@font-face\s*\{([^}]*)\}/g, m;
-            while ((m = re.exec(css))) {
-              var fam = /font-family:\s*'([^']+)'/.exec(m[1]);
-              var url = /url\((https:[^)\s]+\.woff2)\)/.exec(m[1]);
-              if (fam && url) files[fam[1].toLowerCase().replace(/ /g, "-") + (/font-style:\s*italic/.test(m[1]) ? "-italic" : "") + ".woff2"] = url[1];
-            }
-            var names = Object.keys(files);
-            if (!names.length) throw 0;
-            return Promise.all(names.map(function (n) {
-              return fetch(files[n]).then(function (r) { if (!r.ok) throw 0; return r.arrayBuffer(); });
-            })).then(function (bufs) {
-              py.FS.mkdirTree("/fonts");
-              for (var i = 0; i < names.length; i++) py.FS.writeFile("/fonts/" + names[i], new Uint8Array(bufs[i]));
-              return names;
-            });
-          });
-        pyFonts.catch(function () {}); // handled again below, after the install resolves
-        // the groom's own library comes pre-imported: fetched in the background so
-        // `fontTools` (and the TTFont the fonts line suggests) just works at the
-        // first prompt; brotli lets TTFont open the woff2 files directly. a failed
-        // fetch stays silent
+        // (the old /fonts woff2 mount was dropped — googlefonts() below supersedes it)
         // the shell shows what it's about to run on its own behalf, THEN runs it —
         // the invocations are visible even mid-install or if the install dies
         // googlefonts(name): fetch ANY Google Fonts family at runtime and hand back raw sfnt
@@ -18176,27 +18146,23 @@ async def googlefonts(family, weight=None, text=None):
         py.runPythonAsync("import micropip\nawait micropip.install(['fonttools', 'brotli'])\nimport fontTools\nfrom fontTools.ttLib import TTFont\nfontTools.version")
           .then(function (v) {
             pyPrint(pyT("py_fonttools").replace("{v}", String(v)), "term-dim");
-            // uharfbuzz (the groom's own) — installed SEPARATELY from the self-hosted wheel via the
-            // FS, which sidesteps the lock's stricter tag check on the abi3 wheel. Kept off the
-            // fontTools/TTFont chain above so a hiccup here can never break that preload. Optional;
-            // failures stay silent (hb just won't be present).
+            // uharfbuzz (the groom's own) — installed from the self-hosted wheel via the FS, which
+            // sidesteps the lock's stricter tag check on the abi3 wheel. Optional; a hiccup here
+            // never blocks the fontTools preload. RETURNED so the demo below prints after hb's line.
             var HBWHL = "uharfbuzz-0.56.0b1-cp310-abi3-pyemscripten_2026_0_wasm32.whl";
-            fetch("pyodide/" + HBWHL).then(function (r) { if (!r.ok) throw 0; return r.arrayBuffer(); }).then(function (buf) {
+            return fetch("pyodide/" + HBWHL).then(function (r) { if (!r.ok) throw 0; return r.arrayBuffer(); }).then(function (buf) {
               py.FS.writeFile("/tmp/" + HBWHL, new Uint8Array(buf));
               return py.runPythonAsync("await micropip.install('emfs:/tmp/" + HBWHL + "')\nimport uharfbuzz as hb\nhb.version_string()");
             }).then(function (hv) {
               pyPrint(">>> import uharfbuzz as hb", "term-dim");
               pyPrint(pyT("py_uharfbuzz").replace("{v}", String(hv)), "term-dim");
             }, function () {});
-            // define googlefonts() once TTFont is in scope. Optional — a failure never blocks
-            // the fonts line below.
-            py.runPythonAsync(GFPY).then(function () {
+          })
+          .then(function () {
+            // define googlefonts() once TTFont is in scope, THEN print the demo line that uses hb + it
+            return py.runPythonAsync(GFPY).then(function () {
               pyPrint(">>> hb.Face(await googlefonts('Anton'))  # fetch any Google Fonts family — try 'Anton', 'Lalezar'", "term-dim");
             }, function () {});
-            return pyFonts;
-          })
-          .then(function (names) {
-            pyPrint(pyT("py_fonts").replace("{fs}", names.join(" · ")).replace("{f}", names.indexOf("fraunces.woff2") >= 0 ? "fraunces.woff2" : names[0]), "term-dim");
           })
           .catch(function () {});
       }).catch(function () { pyLoadFailed(); });

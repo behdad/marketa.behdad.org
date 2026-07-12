@@ -9643,6 +9643,7 @@ var T = {
       cine_finale: "And the sky blooms.",
       cine_encore: "Encore — the loft in blacklight…",
       cine_fireworks: "Fireworks over the city…",
+      cine_party: "And the garden throws a party…",
       cine_encore_end: "And that's their day. Again tomorrow…"
     },
     ed_city: "Edmonton",
@@ -9997,6 +9998,7 @@ var T = {
       cine_finale: "A nebe rozkvete.",
       cine_encore: "Přídavek — loft v černém světle…",
       cine_fireworks: "Ohňostroj nad městem…",
+      cine_party: "A zahrada pořádá večírek…",
       cine_encore_end: "A to je jejich den. Zítra zas…"
     },
     ed_city: "Edmonton",
@@ -29876,6 +29878,7 @@ function spawnDustMote(container) {
     // the encore owns the blacklight — hand it back off on any cancel (idempotent, and
     // a no-op before the encore has switched it on; keeps the party switch in sync too)
     setEncoreUv(false);
+    if (window.__setGardenParty) window.__setGardenParty(false); // the encore's garden party never lingers past the show
     if (cinematicTeardown) { cinematicTeardown(); cinematicTeardown = null; }
     if (skipBtn) skipBtn.hidden = true;
     if (watchBtn) { watchBtn.hidden = false; watchBtn.classList.remove("nudge"); }
@@ -30208,6 +30211,16 @@ function spawnDustMote(container) {
       else steps.push([2100, visit(STAGES[i + 1])]);
     });
     steps.push(
+      // the celebratory peak: back to the garden, where the balcony switch's own party
+      // is thrown — the disco ball spins, confetti rains, the garden groovers move and
+      // the colourful dancers rise, all glowing neon through the encore's blacklight.
+      // userInitiated=false so setGardenParty doesn't re-navigate (we already visited),
+      // and the encore song is still playing so it won't start a second one. Held for a
+      // stretch at full tilt, then the pan away carries it off; the closing reset (and
+      // stopCinematic's teardown) clear the party class/dancers/confetti to a fresh loft.
+      [1800, visit("garden")],
+      [500, function () { if (window.__setGardenParty) window.__setGardenParty(true, false); }], [0, cine("cine_party")],
+      [6500, function () {}], // hold on the full party so the beat lands
       // curtain call: back where the day began, a held beat of stillness, the song
       // fades out and the cursor settles on the extinguisher — then the show formally
       // ends and the pull runs through the game's real handler, exactly as a player's

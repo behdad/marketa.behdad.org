@@ -97,7 +97,7 @@ footer{margin-top:2.6rem}
 .egg-bubble.show{opacity:1}
 .hunt-title{font-family:"Fraunces",serif; font-weight:700; font-size:1.1rem; text-align:center; letter-spacing:.02em; color:var(--wine); margin:.6rem 0 0; opacity:0}
 .hunt-title.show{opacity:1; transition:opacity .5s ease}
-.hunt-frame{display:flex; align-items:center; gap:.3rem; max-width:1140px; margin:1.5rem auto}
+.hunt-frame{display:flex; align-items:center; gap:.3rem; max-width:1140px; margin:1.5rem auto; position:relative}
 .hunt-viewport{
   position:relative; flex:1 1 auto; min-width:0; overflow:hidden; border-radius:14px;
   box-shadow:0 3px 10px rgba(69,58,49,.15); background:#f8f5ec;
@@ -112,14 +112,14 @@ footer{margin-top:2.6rem}
    it. Shown only while a device holds the view; a corner tap also zooms out on its own,
    this just makes the exit obvious. */
 .monitor-close{
-  position:absolute; top:8px; right:8px; width:26px; height:26px; border-radius:50%;
+  position:absolute; width:26px; height:26px; border-radius:50%;
   background:var(--ink); color:var(--paper); border:2px solid var(--paper); font:inherit; font-size:14px;
-  line-height:1; cursor:pointer; z-index:6; display:none; align-items:center; justify-content:center;
+  line-height:1; cursor:pointer; z-index:8; display:none; align-items:center; justify-content:center;
   box-shadow:0 2px 8px rgba(69,58,49,.28);
 }
-.hunt-viewport.device-zoomed .monitor-close{display:flex}
+.hunt-viewport.device-zoomed ~ #monitor-close-btn{display:flex}
 .monitor-close:hover, .monitor-close:focus-visible{background:var(--wine)}
-@media (max-width:759px){ .monitor-close{width:22px; height:22px; font-size:12px; top:6px; right:6px} }
+@media (max-width:759px){ .monitor-close{width:22px; height:22px; font-size:12px} }
 #loft-game-strip{
   display:block; width:500%; height:auto; user-select:none; -webkit-user-select:none;
   -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none;
@@ -2708,6 +2708,14 @@ footer{margin-top:2.6rem}
   50%{transform:translateX(2px)}
   75%{transform:translateX(-1px)}
 }
+/* the balcony phone's notification LED — a green dot that blinks with an outward ping
+   to draw the eye to the (small, easily-missed) phone, until it's opened this session */
+#balcony-phone-led{animation:phone-led-blink 1.5s ease-in-out infinite}
+#balcony-phone-led-ping{transform-box:fill-box; transform-origin:center; animation:phone-led-ping 1.5s ease-out infinite}
+#balcony-phone.phone-opened #balcony-phone-led, #balcony-phone.phone-opened #balcony-phone-led-ping{display:none}
+@keyframes phone-led-blink{0%,100%{opacity:1} 50%{opacity:.4}}
+@keyframes phone-led-ping{0%{opacity:.75; transform:scale(.5)} 70%,100%{opacity:0; transform:scale(3.4)}}
+@media (prefers-reduced-motion: reduce){#balcony-phone-led{animation:none} #balcony-phone-led-ping{display:none}}
 .office-lamp-glow, .office-lamp-bulb, .office-pendant-bulb, .office-pendant-glow, .office-lamp-filament, .office-pendant-filament{transition:opacity .4s ease, fill .4s ease, stroke .4s ease}
 #office-lamp.flicker .office-lamp-glow{animation:lamp-flicker .4s steps(6,end)}
 #office-pendant.flicker .office-pendant-bulb, #office-pendant.flicker .office-pendant-filament{animation:pendant-flicker .4s steps(6,end)}
@@ -8297,6 +8305,8 @@ section{margin:1.9rem 0}
 <rect x="116" y="209" width="28" height="35" fill="transparent"/>
 <rect x="116" y="221" width="24" height="11" rx="2" fill="#d9a6a6" stroke="#b8888c" stroke-width="1"/>
 <rect id="balcony-phone-screen" x="119" y="223" width="18" height="7" rx="1" fill="#2d2d2d"/>
+<circle id="balcony-phone-led-ping" cx="116" cy="226.5" r="1.4" fill="none" stroke="#4fce6a" stroke-width="0.7"/>
+<circle id="balcony-phone-led" cx="116" cy="226.5" r="1" fill="#5fe07a" stroke="#2e7d3a" stroke-width="0.3"/>
 </g>
 </g>
 <ellipse cx="228" cy="300" rx="42" ry="7" fill="#8a9090" opacity="0.35"/>
@@ -9051,8 +9061,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </g>
     </svg>
     <div id="hunt-wipe" aria-hidden="true"></div>
-    <button type="button" id="monitor-close-btn" class="monitor-close" aria-label="Exit screen">✕</button>
   </div>
+  <button type="button" id="monitor-close-btn" class="monitor-close" aria-label="Exit screen">✕</button>
   <div class="hunt-right" id="hunt-right">
     <div class="hunt-side" id="hunt-side">
       <button type="button" id="hunt-fullscreen-btn" class="hunt-fullscreen-btn" aria-label="Enter fullscreen">⛶</button>
@@ -17512,14 +17522,18 @@ document.addEventListener("click", function (e) {
     if (!monClose || !zoomEl) return;
     var t = targetFor(zoomEl);
     var box = (t && document.getElementById(t.box)) || zoomEl;
-    var r = box.getBoundingClientRect(), v = vp.getBoundingClientRect();
-    if (!r.width || !v.width) return;
+    var frame = monClose.offsetParent; // .hunt-frame (position:relative)
+    if (!frame) return;
+    var r = box.getBoundingClientRect(), f = frame.getBoundingClientRect();
+    if (!r.width || !f.width) return;
     var sz = monClose.offsetWidth || 26;
-    // seat the ✕ on the screen's top-right corner (poking into the letterbox margin, the
-    // way the phone's ✕ pokes past its shell), clamped so the clipped viewport can't eat it
-    var top = Math.max(4, Math.min(r.top - v.top - sz / 2, v.height - sz - 4));
-    var left = Math.max(4, Math.min(r.right - v.left - sz / 2, v.width - sz - 4));
-    monClose.style.top = top + "px"; monClose.style.left = left + "px"; monClose.style.right = "auto";
+    // seat just outside the on-screen MONITOR's top-right corner (poking out ~a quarter of
+    // the button, the way the phone's ✕ pokes past its shell). The button lives in
+    // .hunt-frame, so the poke isn't clipped by the viewport; the screen corner glides
+    // during the zoom, so track it for the length of that transition.
+    monClose.style.top = (r.top - f.top - sz * 0.6) + "px";
+    monClose.style.left = (r.right - f.left - sz * 0.4) + "px";
+    monClose.style.right = "auto";
   }
   function monTrack() {
     positionMonClose();
@@ -17801,6 +17815,7 @@ document.addEventListener("click", function (e) {
           phoneScreen.classList.add("buzz");
         });
       });
+      phone.classList.add("phone-opened"); // its work is done — clear the notification LED
       if (window.__openPhoneModal) window.__openPhoneModal(); // the pickup buzz, then the pocket computer boots
     }
     phone.addEventListener("click", buzz);

@@ -10420,7 +10420,6 @@ var T = {
     places_open: "open the live map ↗",
     places_note_home: "home",
     term_welcome: "loft console — real JavaScript, running right here in your page. try: help",
-    term_help: "commands: help · clear · laser() · any JavaScript (try 2+2, document.title, loft.couple, loft.weddings)",
     term_laser: "bzzzt — red dot on the loose, shadowing your cursor. laser(0) calls it off. good luck, cat.",
     app_mail: "mail",
     app_mines: "mines",
@@ -10780,7 +10779,6 @@ var T = {
     places_open: "otevřít živou mapu ↗",
     places_note_home: "domov",
     term_welcome: "loftová konzole — opravdový JavaScript, běží přímo tady ve stránce. zkuste: help",
-    term_help: "příkazy: help · clear · laser() · jakýkoli JavaScript (zkuste 2+2, document.title, loft.couple, loft.weddings)",
     term_laser: "bzzzt — červená tečka je venku a sleduje kurzor. laser(0) ji odvolá. hodně štěstí, kočko.",
     app_mail: "pošta",
     app_mines: "miny",
@@ -16151,7 +16149,40 @@ document.addEventListener("click", function (e) {
       var cs = document.documentElement.lang === "cs";
       return ["2027-05-01 · Edmonton", "2027-07-10 · " + (cs ? "Praha" : "Prague")];
     },
-    site: "https://marketa.behdad.org/"
+    site: "https://marketa.behdad.org/",
+    // live days-to-go, computed against a real Date at access time (runtime JS, fine here)
+    get countdown() {
+      var cs = document.documentElement.lang === "cs";
+      function days(iso) {
+        var target = new Date(iso + "T00:00:00").getTime();
+        var now = Date.now();
+        return Math.ceil((target - now) / 86400000);
+      }
+      function leg(n, city) {
+        if (n > 1) return n + (cs ? " dní do " : " days to ") + city;
+        if (n === 1) return cs ? ("zítra: " + city) : ("tomorrow: " + city);
+        if (n === 0) return cs ? (city + " je DNES") : (city + " is TODAY");
+        return cs ? (city + " už proběhla") : (city + " already happened");
+      }
+      return leg(days("2027-05-01"), "Edmonton") + " · " + leg(days("2027-07-10"), cs ? "Praha" : "Prague");
+    },
+    get nowPlaying() {
+      var t = window.__phoneMusicTitle ? window.__phoneMusicTitle() : "";
+      return t || (document.documentElement.lang === "cs" ? "ticho" : "silence");
+    },
+    get weather() {
+      var cs = document.documentElement.lang === "cs";
+      var e = window.__realOutdoorC, p = window.__realPragueC;
+      if (typeof e !== "number" && typeof p !== "number") return cs ? "počasí se ještě načítá…" : "weather still loading…";
+      function t(v) { return typeof v === "number" ? Math.round(v) + "°C" : "—"; }
+      return "Edmonton " + t(e) + " · " + (cs ? "Praha " : "Prague ") + t(p);
+    },
+    get menu() {
+      return window.__cocktailNames ? window.__cocktailNames().join(", ") : "";
+    },
+    get love() { return "∞"; },
+    // English-only, on purpose (not routed through T) — a warm aside for the snooper
+    get you() { return "you went and found the console. curious, careful, a little bit clever — exactly our kind of person. welcome, snooper. ∞"; }
   };
   function termT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
   var termLastCmd = "";
@@ -16192,13 +16223,92 @@ document.addEventListener("click", function (e) {
     termHist.push(cmd); termHistIdx = termHist.length;
     termLastCmd = c;
     updateConsoleTile();
-    if (/^help(\(\))?$/.test(c)) { termPrint(termT("term_help"), "term-dim"); return; }
     if (/^clear(\(\))?$/.test(c)) { if (termOut) termOut.innerHTML = ""; termLastCmd = ""; updateConsoleTile(); return; }
     if (/^laser(\(\))?$/.test(c)) {
       if (window.__laserPointer) window.__laserPointer();
       termPrint(termT("term_laser"), "term-dim");
       return;
     }
+    // help — bare shows the overview; `help <command>` prints one-line details. The whole
+    // console app is plain English constants (not routed through T) — the command names are
+    // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
+    var TERM_HELP_OVERVIEW = "commands: help · clear · laser() · party() · trip() · goto() · night()/day() · confetti() · cat() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var TERM_HELP = {
+      help: "help [command] — this list, or details for one command",
+      clear: "clear — wipe the scrollback",
+      laser: "laser([seconds]) — loose a red dot the cat chases; laser(0) turns it off",
+      party: "party() throws the garden party; party(0) ends it",
+      trip: "trip([name]) — start a named or random trip: shrooms · acid · froggies · dmt · molly · k · iboga",
+      goto: "goto(room) — jump to kitchen · garden · cuddly · office · balcony",
+      rooms: "rooms() — list the five rooms",
+      night: "night() — bring dusk down over the loft",
+      day: "day() — bring the daylight back",
+      season: "season([name]) — winter · spooky · none (no arg surprises you)",
+      play: "play() — start the record player",
+      pause: "pause() — stop the music",
+      confetti: "confetti() — a shower of confetti in the room you're in",
+      fireworks: "fireworks() — a burst of fireworks over the room you're in",
+      cat: "cat() — summon the loose chest cat to your room (bare `cat` prints a cat instead)",
+      loft: "loft — the couple's object: .countdown .nowPlaying .weather .menu .love .you .couple .weddings .site",
+      ls: "ls — list the rooms",
+      pwd: "pwd — print the working directory",
+      whoami: "whoami — who you are here",
+      sudo: "sudo <cmd> — nice try",
+      date: "date — the two wedding dates",
+      echo: "echo <text> — say it back",
+      man: "man <topic> — a manual page (try `man love`)",
+      exit: "exit — spoiler: you can't"
+    };
+    var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
+    if (helpM) {
+      var topic = helpM[1];
+      if (!topic) { termPrint(TERM_HELP_OVERVIEW, "term-dim"); return; }
+      var key = topic.trim().toLowerCase().replace(/\(.*\)$/, "").replace(/^["']|["']$/g, "");
+      if (TERM_HELP[key]) termPrint(TERM_HELP[key], "term-dim");
+      else termPrint("no help for '" + topic.trim() + "' — try `help`", "term-dim");
+      return;
+    }
+    // ── unix-shell gags (intercepted before the JS eval, like help/clear) ──────────
+    // These gag replies are plain English constants (they don't flow through T), so there's
+    // no EN/CS parity burden — the shell itself is code, not translated copy.
+    if (/^ls(\s.*)?$/.test(c)) { termPrint("kitchen  garden  cuddly  office  balcony", "term-dim"); return; }
+    if (/^pwd$/.test(c)) { termPrint("/home/markéta+behdad/loft", "term-dim"); return; }
+    if (/^whoami$/.test(c)) { termPrint("someone we love.", "term-dim"); return; }
+    if (/^sudo\b/.test(c)) { termPrint("nice try — no superpowers at this wedding. everyone's equal on the guest list.", "term-dim"); return; }
+    if (/^exit$/.test(c)) { termPrint("you can't leave — the party's just starting.", "term-dim"); return; }
+    if (/^date$/.test(c)) { termPrint((window.loft ? window.loft.weddings.join(" · ") : ""), "term-dim"); return; }
+    if (/^echo(\s|$)/.test(c)) { termPrint(c.replace(/^echo\s?/, "")); return; }
+    // bare `cat` (or `cat -flags`) prints a cat; `cat <room>` describes a room; `cat(...)` falls
+    // through to the JS eval so the cat() summon toy still works.
+    var catM = c.match(/^cat(?:\s+([a-z]+))?$/i);
+    if (catM) {
+      var room = catM[1] && catM[1].toLowerCase();
+      var ROOM_DESC = {
+        kitchen: "kitchen — where the tofu gets cubed and the radio never quite stops.",
+        garden: "garden — string lights, a chest that hides a cat, and room to dance.",
+        cuddly: "cuddly — the nook: a daybed, a fireplace, and the two of them.",
+        office: "office — the very monitor you're reading this on. also a very good chair.",
+        balcony: "balcony — sunsets, a smoker, and the whole city laid out below."
+      };
+      if (room && ROOM_DESC[room]) termPrint(ROOM_DESC[room], "term-dim");
+      else termPrint(" /\\_/\\\n( o.o )\n > ^ <   meow.", "term-dim");
+      return;
+    }
+    if (/^man\s+love$/.test(c)) {
+      [
+        "LOVE(1)                       loft manual                       LOVE(1)",
+        "NAME",
+        "    love — an unbounded, mutual, freely chosen commitment",
+        "SYNOPSIS",
+        "    love [--patient] [--kind] [--no-envy] someone [and someone…]",
+        "DESCRIPTION",
+        "    come to one wedding or both. small or big — all loved ones welcome.",
+        "SEE ALSO",
+        "    marketa.behdad.org"
+      ].forEach(function (line) { termPrint(line, "term-dim"); });
+      return;
+    }
+    if (/^man(\s|$)/.test(c)) { termPrint("the only manual here is `man love`.", "term-dim"); return; }
     var out;
     try {
       out = window.eval(c); // indirect eval -> global scope, so var/function persist across commands
@@ -21293,6 +21403,7 @@ document.addEventListener("click", function (e) {
         }
       }
     ];
+    window.__cocktailNames = function () { return COCKTAILS.map(function (c) { return c.name; }); }; // the loft.menu console getter reads this
     var cocktailView = "gallery"; // "gallery" | "detail"
     var cocktailSel = -1;         // index into COCKTAILS of the drink open in detail view
     function cocktailFeatured() {
@@ -23824,6 +23935,34 @@ document.addEventListener("click", function (e) {
       requestAnimationFrame(function () { el.classList.add("wobbling"); });
     });
   }
+  // Let the chest cat out of the bag: it starts its wide garden stroll and paints in
+  // front of the door panels. Shared by the moon-door open handler (below) and the
+  // console's cat() toy (via window.__releaseCat). Guarded — a no-op if it's already
+  // loose or the node is missing — so it never double-releases.
+  function releaseCat() {
+    var catWalk = document.getElementById("witchy-chest-cat-walk");
+    if (!cat || !catWalk || catWalk.classList.contains("out")) return false;
+    wobbleEl(cat);
+    // .out = the cat is loose (persists across rooms/resets until the fire-extinguisher);
+    // .roaming = the wide garden stroll. Follower rooms swap in .roaming-sm (see __homeCat).
+    catWalk.classList.add("roaming", "out"); // out of the bag — it strolls the garden now
+    var catPos = document.getElementById("witchy-chest-cat-pos");
+    if (catPos) {
+      catPos.setAttribute("transform", "translate(-46,4)"); // keeps the chest x, lands on the garden floor line (4px low)
+      // now that it's outside, paint it in front of the door panels (it goes back
+      // behind them only on a completed stow — see __homeCat's garden parking)
+      var doorFront = document.getElementById("witchy-door-2");
+      if (doorFront && doorFront.parentNode === catPos.parentNode) catPos.parentNode.insertBefore(catPos, doorFront.nextSibling);
+    }
+    return true;
+  }
+  // console/devtools hook: swing the moon door open (so it reads as the cat letting itself
+  // out) and release. goToStage's own __homeCat then walks it into whatever room you view.
+  window.__releaseCat = function () {
+    var d1 = document.getElementById("witchy-door-1");
+    if (d1 && !d1.classList.contains("open")) { d1.classList.add("open"); if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); }
+    return releaseCat();
+  };
   var mouseHasRun = false;
   ["cuddly-cabinet-door-1", "cuddly-cabinet-door-2"].forEach(function (id) {
     var el = document.getElementById(id);
@@ -23977,26 +24116,11 @@ document.addEventListener("click", function (e) {
       // back in through whichever door just opened — and that open is "used up" by
       // the slip-in, so it doesn't also let the cat straight back out below.
       var catSlippedIn = !!(window.__chestDoorChanged && window.__chestDoorChanged());
-      var catWalk = document.getElementById("witchy-chest-cat-walk");
       // Emergence is gated on THIS door's freshly-read open state — through a shut
       // chest the cat never comes out (and never goes back in; see __stowCat) — and on
-      // the cat still being INSIDE: re-opening the door while it's already loose must
-      // not snap a wandering cat back to the emergence pose.
-      if (id === "witchy-door-1" && el.classList.contains("open") && cat && !catSlippedIn &&
-          catWalk && !catWalk.classList.contains("out")) { // cat lives behind the moon door
-        wobbleEl(cat);
-        // .out = the cat is loose (persists across rooms/resets until the fire-extinguisher);
-        // .roaming = the wide garden stroll. Follower rooms swap in .roaming-sm (see __homeCat).
-        catWalk.classList.add("roaming", "out"); // out of the bag — it strolls the garden now
-        var catPos = document.getElementById("witchy-chest-cat-pos");
-        if (catPos) {
-          catPos.setAttribute("transform", "translate(-46,4)"); // keeps the chest x, lands on the garden floor line (4px low)
-          // now that it's outside, paint it in front of the door panels (it goes back
-          // behind them only on a completed stow — see __homeCat's garden parking)
-          var doorFront = document.getElementById("witchy-door-2");
-          if (doorFront && doorFront.parentNode === catPos.parentNode) catPos.parentNode.insertBefore(catPos, doorFront.nextSibling);
-        }
-      }
+      // the cat still being INSIDE (releaseCat's own guard): re-opening the door while
+      // it's already loose must not snap a wandering cat back to the emergence pose.
+      if (id === "witchy-door-1" && el.classList.contains("open") && !catSlippedIn) releaseCat(); // cat lives behind the moon door
       if (id === "witchy-door-2" && el.classList.contains("open") && fairy) wobbleEl(fairy); // fairy behind the sun door
       if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // revealing/hiding starts/stops their dance
     }
@@ -33095,6 +33219,185 @@ function spawnDustMote(container) {
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "hidden") window.__laserOff(); // no timer pile-up in a hidden tab
   });
+})();
+(function () {
+  // ── LOFT CONSOLE TOYS ────────────────────────────────────────────────────────────
+  // Friendly globals on window (like laser above) so they work from BOTH the in-game
+  // office terminal AND real devtools. Each guards every hook it touches, never throws,
+  // no-ops gracefully if a hook isn't ready, and RETURNS a short confirmation string so
+  // the terminal (which prints the eval result) shows feedback. Anything they spawn
+  // self-cleans and pauses on a hidden tab.
+  var ROOM_NAMES = ["kitchen", "garden", "cuddly", "office", "balcony"];
+  function reduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+  function currentStage() { return document.getElementById("stage-" + (window.currentStageName || "kitchen")); }
+
+  window.party = function (arg) {
+    if (!window.__setGardenParty) return "the party hook isn't ready yet.";
+    var on = !(arguments.length > 0 && !arg); // party() / party(true) → on; party(0) → off
+    window.__setGardenParty(on, on); // userInitiated=true when lighting it up so it whisks to the garden
+    return on ? "🎉 party on — blacklight, confetti, a beat. dance." : "party over — the garden settles.";
+  };
+
+  // friendly street names → the canonical TRIP_VARIANTS ids
+  var TRIP_ALIASES = {
+    shrooms: "psychedelic", mushrooms: "psychedelic", mushroom: "psychedelic", psychedelic: "psychedelic",
+    acid: "strobe", lsd: "strobe", strobe: "strobe",
+    froggies: "melt", froggie: "melt", frog: "melt", "5meo": "melt", melt: "melt",
+    dmt: "dmt",
+    molly: "molly", mdma: "molly",
+    k: "ketamine", ket: "ketamine", ketamine: "ketamine",
+    iboga: "iboga", ibogaine: "iboga"
+  };
+  window.trip = function (name) {
+    if (typeof startTripVariant !== "function") return "the trip hook isn't ready yet.";
+    if (window.__tripActive) return "one at a time — let this one wear off first.";
+    var variant;
+    if (name != null && name !== "") {
+      variant = TRIP_ALIASES[String(name).toLowerCase().trim()];
+      if (!variant) return "unknown trip. try: shrooms · acid · froggies · dmt · molly · k · iboga";
+    } else {
+      variant = TRIP_VARIANTS[(Math.random() * TRIP_VARIANTS.length) | 0];
+    }
+    tripActive = true;
+    window.__tripActive = true; // mirror for the garden thermometer readout (same as the drugs box / Shift+digit)
+    startTripVariant(variant);
+    if (variant === "psychedelic") startTripBlooms();
+    return "◑ " + variant + " — hold on to something soft. it wears off on its own.";
+  };
+
+  window.goto = function (room) {
+    room = String(room == null ? "" : room).toLowerCase().trim();
+    if (ROOM_NAMES.indexOf(room) === -1) return "rooms: " + ROOM_NAMES.join(" · ");
+    if (!window.goToStage) return "the navigation hook isn't ready yet.";
+    window.goToStage(room);
+    return "→ " + room;
+  };
+  window.rooms = function () { return ROOM_NAMES.join(" · "); };
+
+  function isNight() { var b = document.getElementById("stage-balcony"); return !!(b && b.classList.contains("dusk")); }
+  window.night = function () {
+    if (!window.__toggleDayNight) return "the sky hook isn't ready yet.";
+    if (!isNight()) window.__toggleDayNight();
+    return "🌙 dusk settles over the loft.";
+  };
+  window.day = function () {
+    if (!window.__toggleDayNight) return "the sky hook isn't ready yet.";
+    if (isNight()) window.__toggleDayNight();
+    return "☀️ daylight.";
+  };
+
+  var SEASON_ALIASES = { winter: "winter", snow: "winter", spooky: "spooky", halloween: "spooky", none: null, off: null, clear: null };
+  window.season = function (name) {
+    if (!window.__setSeason) return "the season hook isn't ready yet.";
+    var s;
+    if (arguments.length === 0) { s = ["winter", "spooky", null][(Math.random() * 3) | 0]; }
+    else if (name == null || name === "") { s = null; }
+    else {
+      var key = String(name).toLowerCase().trim();
+      if (!(key in SEASON_ALIASES)) return "seasons: winter · spooky · none";
+      s = SEASON_ALIASES[key];
+    }
+    window.__setSeason(s);
+    return s ? ("❄ " + s + " dressing on.") : "back to the calendar's own season.";
+  };
+
+  window.play = function () {
+    if (!window.__phoneMusicToggle || !window.__phoneMusicPlaying) return "the music hook isn't ready yet.";
+    if (!window.__phoneMusicPlaying()) window.__phoneMusicToggle();
+    var t = window.__phoneMusicTitle && window.__phoneMusicTitle();
+    return t ? ("♪ " + t) : "♪ playing.";
+  };
+  window.pause = function () {
+    if (!window.__phoneMusicToggle || !window.__phoneMusicPlaying) return "the music hook isn't ready yet.";
+    if (window.__phoneMusicPlaying()) window.__phoneMusicToggle();
+    return "⏸ paused.";
+  };
+
+  // A self-contained celebratory burst into the room you're viewing (stage-local coords:
+  // 0..680 x, 0..340 y). One-shot — pieces self-remove on their own onfinish, plus a
+  // belt-and-braces cleanup timer for whatever a hidden tab paused. Reduced-motion / a
+  // hidden tab skip the visuals but still confirm.
+  var BURST_COLORS = ["#f500f5", "#00f5a3", "#1ab2ff", "#f7a01f", "#e070ff", "#ffd95e", "#ff5e7a", "#ffffff"];
+  function burstHost() {
+    var stage = currentStage();
+    if (!stage) return null;
+    var g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.setAttribute("pointer-events", "none");
+    stage.appendChild(g);
+    setTimeout(function () { if (g.parentNode) g.remove(); }, 4600); // sweep up anything a hidden tab left paused
+    return g;
+  }
+  window.confetti = function () {
+    if (document.visibilityState === "hidden" || reduced()) return "🎊 confetti!";
+    var host = burstHost();
+    if (!host) return "no room to celebrate in.";
+    var SVGNS = "http://www.w3.org/2000/svg";
+    for (var i = 0; i < 26; i++) {
+      var x = 40 + Math.random() * 600;
+      var w = 4 + Math.random() * 5, h = 7 + Math.random() * 6;
+      var wrap = document.createElementNS(SVGNS, "g"); // wrapper carries the fall+drift translate
+      var rect = document.createElementNS(SVGNS, "rect"); // rect tumbles about its own centre
+      rect.setAttribute("x", (-w / 2).toFixed(1)); rect.setAttribute("y", (-h / 2).toFixed(1));
+      rect.setAttribute("width", w.toFixed(1)); rect.setAttribute("height", h.toFixed(1));
+      rect.setAttribute("rx", "1"); rect.setAttribute("fill", BURST_COLORS[(Math.random() * BURST_COLORS.length) | 0]);
+      rect.style.transformBox = "fill-box"; rect.style.transformOrigin = "center";
+      wrap.appendChild(rect); host.appendChild(wrap);
+      if (!wrap.animate) continue;
+      var drift = (Math.random() - 0.5) * 130;
+      var dur = 2200 + Math.random() * 1600, delay = Math.random() * 500;
+      var spin = (Math.random() < 0.5 ? -1 : 1) * (360 + Math.random() * 540);
+      var f = wrap.animate([
+        { transform: "translate(" + x.toFixed(1) + "px,-20px)", opacity: 0 },
+        { transform: "translate(" + (x + drift * 0.4).toFixed(1) + "px,70px)", opacity: 0.95, offset: 0.16 },
+        { transform: "translate(" + (x + drift).toFixed(1) + "px,350px)", opacity: 0.85 }
+      ], { duration: dur, easing: "cubic-bezier(.35,.1,.6,1)", delay: delay });
+      rect.animate([{ transform: "rotate(0deg)" }, { transform: "rotate(" + spin.toFixed(0) + "deg)" }], { duration: dur, easing: "linear", delay: delay });
+      f.onfinish = (function (wr) { return function () { if (wr.parentNode) wr.remove(); }; })(wrap);
+    }
+    return "🎊 confetti!";
+  };
+  window.fireworks = function () {
+    if (document.visibilityState === "hidden" || reduced()) return "🎆 boom.";
+    var host = burstHost();
+    if (!host) return "no sky to light up.";
+    var SVGNS = "http://www.w3.org/2000/svg";
+    for (var b = 0; b < 3; b++) {
+      (function (b) {
+        setTimeout(function () {
+          if (!host.parentNode) return;
+          var cx = 120 + Math.random() * 440, cy = 55 + Math.random() * 120;
+          var color = BURST_COLORS[(Math.random() * BURST_COLORS.length) | 0];
+          var sparks = 16;
+          for (var s = 0; s < sparks; s++) {
+            var ang = Math.PI * 2 * s / sparks + Math.random() * 0.2;
+            var dist = 26 + Math.random() * 26;
+            var dot = document.createElementNS(SVGNS, "circle");
+            dot.setAttribute("r", (1 + Math.random() * 1.2).toFixed(1));
+            dot.setAttribute("fill", color);
+            host.appendChild(dot);
+            if (!dot.animate) { (function (d) { setTimeout(function () { if (d.parentNode) d.remove(); }, 1200); })(dot); continue; }
+            var dur = 800 + Math.random() * 500;
+            var an = dot.animate([
+              { transform: "translate(" + cx.toFixed(1) + "px," + cy.toFixed(1) + "px)", opacity: 1 },
+              { transform: "translate(" + (cx + Math.cos(ang) * dist).toFixed(1) + "px," + (cy + Math.sin(ang) * dist + 10).toFixed(1) + "px)", opacity: 0 }
+            ], { duration: dur, easing: "cubic-bezier(.2,.7,.3,1)" });
+            an.onfinish = (function (d) { return function () { if (d.parentNode) d.remove(); }; })(dot);
+          }
+        }, b * 260);
+      })(b);
+    }
+    return "🎆 boom.";
+  };
+
+  window.cat = function () {
+    var walk = document.getElementById("witchy-chest-cat-walk");
+    if (!walk) return "no cat here.";
+    if (!walk.classList.contains("out")) {
+      if (!window.__releaseCat || !window.__releaseCat()) return "the cat's asleep in the chest — open the moon door in the garden.";
+    }
+    if (window.__homeCat) window.__homeCat(window.currentStageName || "garden"); // walk it into the room you're viewing
+    return "🐈 here, kitty — she pads over to say hi.";
+  };
 })();
 (function () {
   var gmailBtn = document.getElementById("rsvp-gmail-btn");

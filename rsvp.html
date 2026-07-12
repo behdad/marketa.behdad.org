@@ -2916,14 +2916,17 @@ footer{margin-top:2.6rem}
   65%{opacity:1}
   100%{opacity:0}
 }
-/* froggies (melt/5-MeO) "sometimes" hallucination: stylized dark dancer silhouettes
-   bloom on TOP of the whiteout (see startTripVariant → melt, ~45% chance). The layer
+/* froggies (melt/5-MeO) hallucination: colorful dancer figures bloom on TOP of the
+   whiteout (see startTripVariant → melt) — the same figures are reused by garden party
+   mode, where they rise and hold for as long as the party runs. The layer
    carries a JS-set positional transform (translate to the viewed room); the fade rides
    that same node as OPACITY only (never a transform animation — that would clobber the
    positional attribute). Each dancer's sway/arm motion rides inner groups. All CSS, so a
    hidden tab accumulates nothing; the class is torn down by a setTimeout and by reset. */
 #trip-melt-dancers{opacity:0; pointer-events:none; fill:#241f1c}
 #trip-melt-dancers.melt-dancing{animation:trip-melt-dancers-fade 5s ease-in-out}
+#trip-melt-dancers.party-dancing{opacity:.9; transition:opacity 1.4s ease} /* party mode: fade in and hold, no trip fade-out */
+#trip-melt-dancers.party-dancing .md-pole{display:none} /* no stripper pole at the garden party — just dancing */
 @keyframes trip-melt-dancers-fade{
   0%{opacity:0}
   22%{opacity:.82}
@@ -2934,15 +2937,15 @@ footer{margin-top:2.6rem}
 #trip-melt-dancers .md-sway{transform-box:fill-box; transform-origin:center bottom}
 #trip-melt-dancers .md-arm-l{transform-box:fill-box; transform-origin:right bottom}
 #trip-melt-dancers .md-arm-r{transform-box:fill-box; transform-origin:left bottom}
-#trip-melt-dancers.melt-dancing .md-sway{animation:md-sway 1.15s ease-in-out infinite}
-#trip-melt-dancers.melt-dancing .md-arm-l{animation:md-arm-l .9s ease-in-out infinite}
-#trip-melt-dancers.melt-dancing .md-arm-r{animation:md-arm-r .9s ease-in-out infinite}
-#trip-melt-dancers.melt-dancing .md-d2 .md-sway{animation-delay:-.55s}
-#trip-melt-dancers.melt-dancing .md-d3 .md-sway{animation-delay:-.25s}
-#trip-melt-dancers.melt-dancing .md-d2 .md-arm-l,
-#trip-melt-dancers.melt-dancing .md-d2 .md-arm-r{animation-delay:-.4s}
-#trip-melt-dancers.melt-dancing .md-d3 .md-arm-l,
-#trip-melt-dancers.melt-dancing .md-d3 .md-arm-r{animation-delay:-.2s}
+#trip-melt-dancers:is(.melt-dancing,.party-dancing) .md-sway{animation:md-sway 1.15s ease-in-out infinite}
+#trip-melt-dancers:is(.melt-dancing,.party-dancing) .md-arm-l{animation:md-arm-l .9s ease-in-out infinite}
+#trip-melt-dancers:is(.melt-dancing,.party-dancing) .md-arm-r{animation:md-arm-r .9s ease-in-out infinite}
+#trip-melt-dancers:is(.melt-dancing,.party-dancing) .md-d2 .md-sway{animation-delay:-.55s}
+#trip-melt-dancers:is(.melt-dancing,.party-dancing) .md-d3 .md-sway{animation-delay:-.25s}
+#trip-melt-dancers:is(.melt-dancing,.party-dancing) .md-d2 .md-arm-l,
+#trip-melt-dancers:is(.melt-dancing,.party-dancing) .md-d2 .md-arm-r{animation-delay:-.4s}
+#trip-melt-dancers:is(.melt-dancing,.party-dancing) .md-d3 .md-arm-l,
+#trip-melt-dancers:is(.melt-dancing,.party-dancing) .md-d3 .md-arm-r{animation-delay:-.2s}
 @keyframes md-sway{
   0%{transform:rotate(-4deg) translateX(-1px)}
   50%{transform:rotate(4deg) translateX(1px)}
@@ -2951,10 +2954,10 @@ footer{margin-top:2.6rem}
 @keyframes md-arm-l{0%{transform:rotate(6deg)} 50%{transform:rotate(-16deg)} 100%{transform:rotate(6deg)}}
 @keyframes md-arm-r{0%{transform:rotate(-6deg)} 50%{transform:rotate(18deg)} 100%{transform:rotate(-6deg)}}
 @media (prefers-reduced-motion: reduce){
-  #trip-melt-dancers.melt-dancing{animation:none; opacity:.9}
-  #trip-melt-dancers.melt-dancing .md-sway,
-  #trip-melt-dancers.melt-dancing .md-arm-l,
-  #trip-melt-dancers.melt-dancing .md-arm-r{animation:none}
+  #trip-melt-dancers:is(.melt-dancing,.party-dancing){animation:none; opacity:.9}
+  #trip-melt-dancers:is(.melt-dancing,.party-dancing) .md-sway,
+  #trip-melt-dancers:is(.melt-dancing,.party-dancing) .md-arm-l,
+  #trip-melt-dancers:is(.melt-dancing,.party-dancing) .md-arm-r{animation:none}
 }
 #garden-buddha-layer{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:4}
 body:has(#loft-game-strip.psychedelic) #garden-buddha{animation:buddha-apparition 14s ease-in-out}
@@ -28381,16 +28384,34 @@ function spawnDustMote(container) {
   // overlay, start the confetti, and drive the garden groovers. Idempotent — safe for
   // play.js's rapid switch-storming (repeated true/false). Torn down on switch-off, the
   // extinguisher reset, and room-leave (goToStage clears the confetti when you leave).
+  var partyStartedMusic = false; // did the party kick off the song? (so switch-off only stops what it started)
   function setGardenParty(on, userInitiated) {
     on = !!on;
     window.__gardenPartyOn = on;
     var gs = document.getElementById("stage-garden");
     if (gs) gs.classList.toggle("garden-party", on);
+    var partyDancers = document.getElementById("trip-melt-dancers");
     if (on) {
       if (userInitiated && window.goToStage) window.goToStage("garden"); // whisk to the garden
       if (gardenPartyActive()) topUpConfetti(); // kick it off now; the seed loop keeps it topped
+      if (partyDancers) { // the colorful dancers rise in the garden and hold for the party
+        partyDancers.setAttribute("transform", "translate(" + (STAGES.indexOf("garden") * 680) + ",0)");
+        partyDancers.classList.add("party-dancing");
+      }
+      // a party needs music: start a song right now (on the switch gesture) if none is
+      // playing, so the groovers/dancers have a beat instead of dancing to silence
+      if (window.__phoneMusicPlaying && !window.__phoneMusicPlaying() && window.__phoneMusicToggle) {
+        partyStartedMusic = !!window.__phoneMusicToggle();
+      }
     } else {
       clearConfetti();
+      if (partyDancers) partyDancers.classList.remove("party-dancing");
+      // only silence the music if the party is what started it (leave a song the visitor
+      // had going before)
+      if (partyStartedMusic && window.__phoneMusicPlaying && window.__phoneMusicPlaying() && window.__phoneMusicToggle) {
+        window.__phoneMusicToggle();
+      }
+      partyStartedMusic = false;
     }
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // start/stop the garden groovers
   }

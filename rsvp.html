@@ -13791,15 +13791,36 @@ document.addEventListener("click", function (e) {
       if (mediaSessionSongId !== current.id) {
         mediaSessionSongId = current.id;
         var meta = songMeta(current.id);
+        var artSrc = (window.__songArtwork && window.__songArtwork(current.id)) || "art/apple-touch-icon.png";
         navigator.mediaSession.metadata = new MediaMetadata({
           title: meta.title,
           artist: meta.artist,
-          artwork: [{ src: "art/apple-touch-icon.png", sizes: "180x180", type: "image/png" }]
+          artwork: [{ src: artSrc, sizes: artSrc.indexOf("data:") === 0 ? "320x320" : "180x180", type: "image/png" }]
         });
       }
       navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
     } catch (e) {}
   }
+  // OS lock-screen / media-key transport → the loft's real playback controls
+  function setupMediaSessionHandlers() {
+    if (!("mediaSession" in navigator)) return;
+    var ms = navigator.mediaSession;
+    function currentAudio() {
+      var paused = null;
+      for (var i = 0; i < songAudios.length; i++) { var a = songAudios[i]; if (!a || a.ended) continue; if (!a.paused) return a; if (a.currentTime > 0) paused = a; }
+      return paused;
+    }
+    function h(action, fn) { try { ms.setActionHandler(action, fn); } catch (e) {} }
+    h("play", function () { var a = currentAudio() || songAudios[0]; if (a) { var p = a.play(); if (p && p.catch) p.catch(function () {}); } });
+    h("pause", function () { var a = currentAudio(); if (a) a.pause(); });
+    h("stop", function () { var a = currentAudio(); if (a) a.pause(); });
+    h("nexttrack", function () { if (window.__monitorSkip) window.__monitorSkip(1); });
+    h("previoustrack", function () { if (window.__monitorSkip) window.__monitorSkip(-1); });
+  }
+  setupMediaSessionHandlers();
+  // the phone's rasterized artist headshots land async; when one arrives, re-push the
+  // current song's metadata so the lock-screen artwork swaps in from the fallback icon
+  window.__refreshMediaArtwork = function () { mediaSessionSongId = null; updateNowPlaying(); };
   function updateNowPlaying() {
     clearNavRevert(); // deciding state directly now: any pending "show site then revert" is moot
     var playing = null, pausedMid = null;
@@ -19318,6 +19339,28 @@ document.addEventListener("click", function (e) {
       '<path d="M56 66 Q60 68 64 66" stroke="#8a5548" stroke-width="1.4" fill="none"/>' +
       '<path d="M38 96 Q60 88 82 96 L86 120 L34 120 Z" fill="#efe6d8"/>' +
       '<g><circle cx="48" cy="108" r="4" fill="#c0503f"/><circle cx="70" cy="112" r="5" fill="#b8483a"/><circle cx="60" cy="102" r="3" fill="#c85a48"/><path d="M54 116 q4 -4 8 0" stroke="#3a5a4a" stroke-width="2" fill="none"/><path d="M40 114 q4 -3 7 1" stroke="#3a5a4a" stroke-width="1.6" fill="none"/></g></svg>';
+    // rasterize the hand-drawn artist headshots to PNGs so the OS media-control artwork can
+    // use them (MediaSession artwork wants a raster src, not inline SVG). Lands async.
+    var COVER_ART_PNG = {};
+    (function rasterizeCovers() {
+      function rasterize(key, svg) {
+        try {
+          var sized = svg.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" ');
+          var img = new Image();
+          img.onload = function () {
+            try {
+              var c = document.createElement("canvas"); c.width = 320; c.height = 320;
+              c.getContext("2d").drawImage(img, 0, 0, 320, 320);
+              COVER_ART_PNG[key] = c.toDataURL("image/png");
+              if (window.__refreshMediaArtwork) window.__refreshMediaArtwork();
+            } catch (e) {}
+          };
+          img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(sized);
+        } catch (e) {}
+      }
+      rasterize("dan", COVER_DAN); rasterize("orit", COVER_ORIT);
+    })();
+    window.__songArtwork = function (id) { return COVER_ART_PNG[id === "ukulele-song-audio" ? "orit" : "dan"] || null; };
     function musicCover(id) { return id === "ukulele-song-audio" ? COVER_ORIT : COVER_DAN; }
     function renderMusic(body) {
       var wrap = document.createElement("div");

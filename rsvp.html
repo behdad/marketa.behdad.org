@@ -22105,7 +22105,7 @@ document.addEventListener("click", function (e) {
         setTimeout(function () { if (t.parentNode) t.remove(); }, 1200);
       }
     };
-    var buzzLadybug = function (e) {
+    var buzzLadybug = function (e, quiet) {
       // the bug lives inside #garden-dieffenbachia; swallow the event so tapping it
       // doesn't also water the plant (its parent's onActivate handler).
       if (e) e.stopPropagation();
@@ -22114,12 +22114,15 @@ document.addEventListener("click", function (e) {
         requestAnimationFrame(function () { ladybug.classList.add("buzzing"); });
       });
       emitLadybugHeart();
-      playLadybugSound();
+      if (!quiet) playLadybugSound(); // quiet=true when the loose cat pounces at it in an unfocused window
     };
     ladybug.addEventListener("click", buzzLadybug);
     ladybug.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); buzzLadybug(); }
     });
+    // the loose chest cat occasionally pounces at the bug from the garden floor (see the
+    // cat IIFE's startBugPounce) — expose its flee reaction so it lives in one place.
+    window.__buzzLadybug = buzzLadybug;
     ladybug.addEventListener("animationend", function (e) {
       if (e.animationName === "ladybug-hop") ladybug.classList.remove("buzzing");
     });
@@ -30116,11 +30119,19 @@ function spawnDustMote(container) {
   // paints behind the plant layer, so a leaf over its rump reads as depth, not a bug).
   // Same static-{x,y} reasoning as the windchime above.
   var roosterStarePerch = { x: 216, y: 232 };
+  // The garden ladybug perches on the dieffenbachia at stage-garden-local (488,212) — the
+  // one plant ancestor chain up to the stage carries no transform, so that's the cat's own
+  // coord space too (same static-mapping convention as roosterStarePerch above). This is a
+  // pounce SENTINEL, not a landing perch: {x,y} is the leap's APEX in FEET terms — feet at
+  // y246 put the cat's head up at the bug (~y212). It's a lunge-and-MISS (startBugPounce),
+  // not a sit; the cat springs up, the bug bolts, and it drops back to the floor.
+  var ladybugPouncePerch = { x: 488, y: 246 };
   var PERCHES = {
     kitchen: [{ x: 48,  y: 230 }], // left end of the counter top, clear of the espresso gear
-    // the rooster stare-down is a rare discovered moment, same idea (and same 1-in-4
-    // weighting) as the balcony windchime swat below — the chest lid stays its habit.
-    garden:  [{ x: 610, y: 240 }, { x: 610, y: 240 }, { x: 610, y: 240 }, roosterStarePerch],
+    // two rare discovered moments share the garden with the chest-lid habit: the rooster
+    // stare-down and the ladybug pounce, each weighted 1-in-5 (same occasional idea as the
+    // balcony windchime swat below) so the chest lid stays the cat's usual perch.
+    garden:  [{ x: 610, y: 240 }, { x: 610, y: 240 }, { x: 610, y: 240 }, roosterStarePerch, ladybugPouncePerch],
     cuddly:  [{ x: 96,  y: 250 }], // front-left corner of the daybed seat, clear of the couple
     // the chair is weighted 3:1 over the desk — it gravitates toward the chair to nap far
     // more often than it perches anywhere else (owner request); resolved live, both move.
@@ -30244,6 +30255,7 @@ function spawnDustMote(container) {
     var isNap = chosen === officeChairPerch;       // the nap-worthy perch: needs a longer sit + the sleeping look
     var isSwipe = chosen === windchimeSwatPerch;   // the windchime: a quick swat-and-ring, not a sit
     var isStare = chosen === roosterStarePerch;    // the rooster: a normal-length sit spent locked onto the figurine
+    if (chosen === ladybugPouncePerch) { startBugPounce(); return; } // a lunge-and-miss, its own arc (below)
     var perch = typeof chosen === "function" ? chosen() : chosen; // resolve live-geometry perches
     if (!perch) { scheduleJump(); return; }           // couldn't resolve a surface — skip this cycle
     var b = baseFeet();
@@ -30326,6 +30338,49 @@ function spawnDustMote(container) {
         flickTail();
       }, duration * (0.10 + (0.86 - 0.10) * (0.3 + Math.random() * 0.4)));
     }
+  }
+  // The loose cat's autonomous ladybug pounce (chosen ~1-in-5 from PERCHES.garden). Unlike a
+  // perch, it doesn't sit: the cat springs up off the floor so its head meets the bug on the
+  // dieffenbachia, the bug bolts (its own flee reaction), and the cat drops straight back to
+  // where the roam froze — a lunge-and-MISS (isPerchJump stays false), same spirit as the
+  // cuddly-mouse pounce. Rides the identical busy-lock + finishJump cleanup as every other
+  // hop, so a room change / stow / reset / hidden tab (all routed through cancelJump) tears
+  // it down with no leak, and a captured-jumpAnim guard keeps a cancelled pounce from firing
+  // a stale flee. Reads baseFeet in the cat's own stage-garden-local space; ladybugPouncePerch
+  // is authored in that same space (see its definition), so the apex lands the head on the bug.
+  function startBugPounce() {
+    if (!walk.animate) { scheduleJump(); return; } // no WAAPI: just keep roaming
+    var b = baseFeet();
+    var Dx = ladybugPouncePerch.x - b.x, Dy = ladybugPouncePerch.y - b.y; // apex offset: up at the bug
+    var cur = currentWalkOffset();                 // where the roam is right now
+    jumpCur = cur; jumpApexX = (cur.x + Dx) / 2; jumpApexY = Dy; // parity only; retargetSit is office-gated
+    function tf(x, y) { return "translate(" + x + "px," + y + "px)"; }
+    jumping = true; isPerchJump = false; isNapJump = false;
+    walk.style.animationPlayState = "paused";      // freeze the roam at `cur`; the arc drives the walk node
+    var duration = 1150 + Math.random() * 350;
+    jumpAnim = walk.animate([
+      { offset: 0,    transform: tf(cur.x, cur.y),   easing: "cubic-bezier(.3,0,.45,.6)" }, // gather + spring up
+      { offset: 0.36, transform: tf(Dx, Dy),         easing: "cubic-bezier(.5,.1,.75,.5)" }, // nose reaches the bug
+      { offset: 0.5,  transform: tf(Dx, Dy + 12),    easing: "cubic-bezier(.3,0,.6,1)" },     // paw swats down on empty air
+      { offset: 1,    transform: tf(cur.x, cur.y) }                                            // drop back to the floor
+    ], { duration: duration, fill: "none" });
+    jumpAnim.onfinish = finishJump;
+    // the bug bolts the instant the paw arrives (~34% in, just before the visual apex, so it's
+    // already hopping away as the cat lands on empty air). Reuse its own flee reaction — hop +
+    // hearts, buzz muted in an unfocused window like every autonomous sound — plus the cat's
+    // own click-wobble on the whiff.
+    var thisPounce = jumpAnim;
+    setTimeout(function () {
+      if (!jumping || jumpAnim !== thisPounce) return;
+      if (window.__buzzLadybug) window.__buzzLadybug(null, !document.hasFocus());
+      flickTail();
+      if (catArt) {
+        catArt.classList.remove("wobbling");
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { catArt.classList.add("wobbling"); });
+        });
+      }
+    }, duration * 0.34);
   }
   function flickTail() {                    // one-shot tail swish; safe no-op without the node
     var tail = document.getElementById("witchy-chest-cat-tail");

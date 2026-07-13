@@ -653,11 +653,27 @@ footer{margin-top:2.6rem}
 #stage-garden.garden-party .db-facet.f3{animation-delay:-.9s; animation-duration:1.7s}
 #stage-garden.garden-party .db-facet.f4{animation-delay:-.3s; animation-duration:1.35s}
 @keyframes db-twinkle{0%,100%{opacity:.22}50%{opacity:.95}}
-/* reduced motion: no sweep, no spin, no strobe — hold a gentle static neon wash */
+/* tapping the glitter ball pops it: a quick scale-bounce on a dedicated wrapper plus a
+   white light-flash halo. The bounce lives on #garden-disco-ball-pop, a node DISTINCT from
+   the -spin group, so the party spin's rotate is never clobbered (parent/child transforms
+   compose). Only reachable during the party — the whole partyfx layer is pointer-events:none,
+   re-enabled on the ball only under .garden-party. */
+#garden-disco-ball{pointer-events:none}
+#stage-garden.garden-party #garden-disco-ball{pointer-events:auto}
+#garden-disco-ball-pop{transform-box:fill-box; transform-origin:center}
+#garden-disco-ball-pop.popping{animation:disco-ball-pop .5s ease-out}
+@keyframes disco-ball-pop{0%{transform:scale(1)}30%{transform:scale(1.24)}58%{transform:scale(.9)}100%{transform:scale(1)}}
+#garden-disco-ball-glow{opacity:0; mix-blend-mode:screen}
+#garden-disco-ball-pop.popping #garden-disco-ball-glow{animation:disco-ball-flash .5s ease-out}
+@keyframes disco-ball-flash{0%{opacity:0}22%{opacity:.85}100%{opacity:0}}
+/* reduced motion: no sweep, no spin, no strobe — hold a gentle static neon wash. The tap
+   pop/flash is disabled too; the shimmer chime alone still answers the click. */
 @media (prefers-reduced-motion: reduce){
   #stage-garden.garden-party .disco-pool{animation:none; opacity:.2}
   #stage-garden.garden-party #garden-disco-ball-spin{animation:none}
   #stage-garden.garden-party .db-facet{animation:none; opacity:.6}
+  #garden-disco-ball-pop.popping{animation:none}
+  #garden-disco-ball-pop.popping #garden-disco-ball-glow{animation:none}
 }
 #kitchen-canister-lid{transform-box:fill-box; transform-origin:bottom center}
 #kitchen-canister.jiggling #kitchen-canister-lid{animation:canister-lid-jiggle .4s ease-in-out}
@@ -3703,6 +3719,13 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 #garden-lamp-groove.grooving{animation:lamp-groove .7s ease-in-out infinite}
 @keyframes lamp-groove{0%,100%{transform:rotate(-3.4deg)} 50%{transform:rotate(3.4deg)}}
 @media (prefers-reduced-motion: reduce){#garden-lamp-groove.grooving{animation:none}}
+/* the ceramic wall mask nods to the beat: the groove rides a wrapper distinct from
+   #garden-mask's placement translate, pivoting at the chin (50% 100%) so it tilts like a
+   gentle nod — same trap-avoidance as the lamp. Driven by the garden groover array. */
+#garden-mask-groove{transform-box:fill-box; transform-origin:50% 100%}
+#garden-mask-groove.grooving{animation:mask-nod .7s ease-in-out infinite}
+@keyframes mask-nod{0%,100%{transform:rotate(-3deg)} 50%{transform:rotate(3deg)}}
+@media (prefers-reduced-motion: reduce){#garden-mask-groove.grooving{animation:none}}
 #garden-mirror-groove{transform-box:fill-box; transform-origin:50% 0}
 #garden-mirror-groove.grooving{animation:mirror-sway .7s ease-in-out infinite}
 @keyframes mirror-sway{0%,100%{transform:rotate(-2.6deg)} 50%{transform:rotate(2.6deg)}}
@@ -5629,6 +5652,10 @@ section{margin:1.9rem 0}
 </g>
 <g id="garden-mask" class="hunt-hit" tabindex="0" role="button" aria-label="The ceramic wall mask" transform="translate(-20,-20)">
 <rect x="578" y="76" width="44" height="58" fill="transparent"/>
+<!-- the ceramic face rides a groove wrapper distinct from #garden-mask's placement
+     translate, so the bob's rotate can't clobber that static transform (same trap-avoidance
+     as the lamp/rooster); pivot at the chin so it nods to the beat -->
+<g id="garden-mask-groove">
 <!-- darker glazed hair/crown band -->
 <path d="M589 95 Q592 82 600 81 Q608 82 611 95 Q600 91 589 95 Z" fill="#5f6f7e"/>
 <!-- smooth ceramic face -->
@@ -5646,6 +5673,7 @@ section{margin:1.9rem 0}
 <path d="M600 105 L598 119 Q600 121 602 119 Z" fill="#dedcd3" stroke="#b3bfc6" stroke-width="0.7"/>
 <!-- small calm mouth -->
 <path d="M596.5 125 Q600 127 603.5 125" fill="none" stroke="#8a99a6" stroke-width="1.1" stroke-linecap="round"/>
+</g>
 </g>
 <g id="garden-mirror" class="hunt-hit" tabindex="0" role="button" aria-label="A three-piece wall mirror">
 <rect x="583" y="181" width="70" height="52" fill="transparent"/>
@@ -6114,8 +6142,10 @@ section{margin:1.9rem 0}
 <ellipse class="disco-pool dp3" cx="545" cy="165" rx="170" ry="150" fill="#1ab2ff"/>
 <ellipse class="disco-pool dp4" cx="300" cy="205" rx="160" ry="140" fill="#f7a01f"/>
 </g>
-<g id="garden-disco-ball">
+<g id="garden-disco-ball" class="hunt-hit">
 <line x1="340" y1="0" x2="340" y2="24" stroke="#8a8f9c" stroke-width="1.2"/>
+<g id="garden-disco-ball-pop">
+<circle id="garden-disco-ball-glow" cx="340" cy="34" r="20" fill="#fff" pointer-events="none"/>
 <g id="garden-disco-ball-spin">
 <circle cx="340" cy="34" r="11" fill="#3a4a63"/>
 <circle class="db-facet f1" cx="336" cy="30" r="2.4" fill="#f500f5"/>
@@ -6124,6 +6154,7 @@ section{margin:1.9rem 0}
 <circle class="db-facet f4" cx="344" cy="37" r="2.1" fill="#f7a01f"/>
 <circle class="db-facet f2" cx="333" cy="35" r="2" fill="#e070ff"/>
 <circle class="db-facet f3" cx="340" cy="40" r="2" fill="#ffffff"/>
+</g>
 </g>
 </g>
 <g id="garden-confettifx"></g>
@@ -14559,6 +14590,28 @@ document.addEventListener("click", function (e) {
   rooster.addEventListener("click", wobbleRooster);
   rooster.addEventListener("keydown", function (e) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); wobbleRooster(); }
+  });
+})();
+(function () {
+  // Tapping the glitter ball during the garden party pops it: a quick scale-bounce on the
+  // dedicated -pop wrapper (the -spin group's rotate is left untouched) plus a white
+  // light-flash halo and a shimmery rising chime. Re-triggerable — the class clears on
+  // animationend and re-adds across a double rAF, so rapid taps restart cleanly. Party-only
+  // (pointer-events is CSS-gated to .garden-party; the guard also blocks a phantom shimmer
+  // from a dispatched click while the ball is invisible), and stopPropagation keeps the tap
+  // from falling through to the room behind. No a11y attrs — it lives in aria-hidden partyfx.
+  var ball = document.getElementById("garden-disco-ball");
+  var pop = document.getElementById("garden-disco-ball-pop");
+  if (!ball || !pop) return;
+  pop.addEventListener("animationend", function () { pop.classList.remove("popping"); });
+  ball.addEventListener("click", function (e) {
+    if (e) e.stopPropagation();
+    if (!window.__gardenPartyOn) return;
+    pop.classList.remove("popping");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { pop.classList.add("popping"); });
+    });
+    playLampShimmerSound("garden-disco-ball");
   });
 })();
 (function () {
@@ -31819,7 +31872,7 @@ function spawnDustMote(container) {
     // wrappers distinct from their click-reaction nodes, so a tap still wobbles/bounces).
     // During the balcony-switch garden party they also groove with NO song playing —
     // then at the CSS default tempo (partyGroove clears any stale phase-lock inline styles).
-    ["garden-rooster-groove", "garden-deer-groove", "garden-ladybug", "garden-mirror-groove", "garden-lamp-groove"].forEach(function (id) {
+    ["garden-rooster-groove", "garden-deer-groove", "garden-ladybug", "garden-mirror-groove", "garden-lamp-groove", "garden-mask-groove"].forEach(function (id) {
       var el = document.getElementById(id);
       if (!el) return;
       if (anyPlaying) setGroove(el, durations.head);      // wings flutter + bob to the beat

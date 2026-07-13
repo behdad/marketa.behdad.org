@@ -10421,7 +10421,7 @@ var T = {
     places_open: "open the live map ↗",
     places_note_home: "home",
     term_welcome: "loft console — real JavaScript, running right here in your page. try: help",
-    term_laser: "bzzzt — red dot on the loose, shadowing your cursor. laser(0) calls it off. good luck, cat.",
+    term_laser: "bzzzt — red dot on the loose, shadowing your cursor. laser(false) calls it off. good luck, cat.",
     app_mail: "mail",
     app_mines: "mines",
     mines_lose: "you set off the ring! (it was always going to happen)",
@@ -10779,7 +10779,7 @@ var T = {
     places_open: "otevřít živou mapu ↗",
     places_note_home: "domov",
     term_welcome: "loftová konzole — opravdový JavaScript, běží přímo tady ve stránce. zkuste: help",
-    term_laser: "bzzzt — červená tečka je venku a sleduje kurzor. laser(0) ji odvolá. hodně štěstí, kočko.",
+    term_laser: "bzzzt — červená tečka je venku a sleduje kurzor. laser(false) ji odvolá. hodně štěstí, kočko.",
     app_mail: "pošta",
     app_mines: "miny",
     mines_lose: "spustili jste prsten! (stejně k tomu jednou dojít muselo)",
@@ -11546,29 +11546,15 @@ document.addEventListener("keydown", function (e) {
     if (m.classList.contains("show-terminal")) return document.getElementById("monitor-term-in");
     return null;
   }
-  var stripEl = document.getElementById("loft-game-strip");
   document.addEventListener("keydown", function (e) {
     if (!consoleOpen()) return;
-    // keep the office in view AND zoomed into the monitor — a drift both navigates away and
-    // (per goToStage) zooms the monitor out, which would leave the console tiny/unusable
-    var navigated = false;
-    if (window.currentStageName !== "office" && window.goToStage) { window.goToStage("office"); navigated = true; }
-    var vp = document.querySelector(".hunt-viewport");
-    if (vp && !vp.classList.contains("device-zoomed") && window.__monitorZoomIn) {
-      if (navigated && stripEl) {
-        // returning from a drift (irene()/eclipse()): goToStage just started a .7s room-pan, and
-        // zooming in changes the strip's transform-origin — changing the origin mid-pan snaps the
-        // strip sideways (the half-monitor). Commit the office pan to its absolute position with
-        // the transition suppressed, so the zoom glides from a settled pose, not a moving one.
-        var prevT = stripEl.style.transition;
-        stripEl.style.transition = "none";
-        void stripEl.offsetWidth; // force the office translateX to apply with no animation
-        stripEl.style.transition = prevT; // restore so the zoom itself still glides
-      }
-      window.__monitorZoomIn();
-    }
+    // A console command that pans the view away (irene()/party()/eclipse()/goto()/trip()/…) hands
+    // the room back and leaves the monitor focus (goToStage zooms it out + blurs the input). Do NOT
+    // fight to zoom back in on the next key — that raced the room-pan and framed half the monitor.
+    // Only keep the console input pinned while we're actually on the office.
+    if (window.currentStageName !== "office") return;
     var input = textConsoleInput();
-    if (input && e.target !== input) { // a stray key leaked (input lost focus): refocus it and swallow the key so no game shortcut fires
+    if (input && e.target !== input) { // a stray key leaked (the scaled foreignObject input lost focus): refocus it and swallow the key so no game shortcut (e.g. 'p') fires
       try { input.focus({ preventScroll: true }); } catch (err) {}
       e.stopPropagation();
     }
@@ -16283,8 +16269,9 @@ document.addEventListener("click", function (e) {
     var TERM_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
-      laser: "laser([seconds]) — loose a red dot the cat chases; laser(0) turns it off",
-      party: "party() throws the garden party; party(0) ends it",
+      laser: "laser([seconds]) — loose a red dot the cat chases; laser(false) turns it off",
+      party: "party() throws the garden party; party(false) ends it",
+      blacklight: "blacklight() — UV wash over the whole loft; blacklight(false) off",
       trip: "trip([name]) — start a named or random trip: shrooms · acid · froggies · dmt · molly · k · iboga",
       goto: "goto(room) — jump to kitchen · garden · cuddly · office · balcony",
       rooms: "rooms() — list the five rooms",
@@ -29844,6 +29831,10 @@ function spawnDustMote(container) {
     // snappy device-toggle fade, so the sound slowly recedes as you move to the next room.
     var ROOM_FADE = 3;
     if (window.__updatePcFan) window.__updatePcFan(name === "office", ROOM_FADE); // hum only in the office
+    if (name !== "office") { // leaving the office also leaves the console's monitor focus: blur its input so keys go to the game, not the off-screen console (see the console keydown guard)
+      var ai = document.activeElement;
+      if (ai && ai.blur && /^monitor-(term|py|linux)-in$/.test(ai.id || "")) ai.blur();
+    }
     if (name !== "office" && window.__closeOfficePhotobooth) window.__closeOfficePhotobooth(); // leaving the office stops the photobooth camera
     if (name !== "office" && window.__closeMonitorTehran) window.__closeMonitorTehran(true); // ...hangs up the family call (and its self-view camera)
     if (window.__closePhoneModal) window.__closePhoneModal(true); // leaving the balcony (or the extinguisher reset) closes the pocket phone, tearing down its call/board
@@ -33319,7 +33310,7 @@ function spawnDustMote(container) {
     dot.style.transform = "translate(" + to.x + "px," + to.y + "px)";
     stage.appendChild(dot); // moves it — a node has one parent
   };
-  window.laser = function (seconds) { // devtools users get the toy too; laser(0) calls it off
+  window.laser = function (seconds) { // devtools users get the toy too; laser(false) calls it off
     if (!seconds && seconds !== undefined) { window.__laserOff(); return "off"; }
     window.__laserPointer(seconds);
     return "on";
@@ -33341,7 +33332,7 @@ function spawnDustMote(container) {
 
   window.party = function (arg) {
     if (!window.__setGardenParty) return "the party hook isn't ready yet.";
-    var on = !(arguments.length > 0 && !arg); // party() / party(true) → on; party(0) → off
+    var on = !(arguments.length > 0 && !arg); // party() / party(true) → on; party(false) → off
     window.__setGardenParty(on, on); // userInitiated=true when lighting it up so it whisks to the garden
     return on ? "🎉 party on — blacklight, confetti, a beat. dance." : "party over — the garden settles.";
   };
@@ -33588,6 +33579,13 @@ function spawnDustMote(container) {
     });
   };
   window.love = function () { return "love is patient, love is kind. ∞"; };
+  window.blacklight = function (arg) { // toggle the UV/blacklight wash over the whole loft (the caps-lock toggle it used to ride is gone)
+    var strip = document.getElementById("loft-game-strip");
+    if (!strip) return "the loft isn't ready yet.";
+    var on = !(arguments.length > 0 && !arg); // blacklight() / blacklight(true) → on; blacklight(false) → off
+    strip.classList.toggle("uv-mode", on);
+    return on ? "🟣 blacklight on — everything fluoresces." : "blacklight off — the lights come up.";
+  };
   window.irene = function () {
     if (window.goToStage) window.goToStage("cuddly"); // she only appears in the cuddly nook
     if (window.__ireneSummon) { window.__ireneSummon(); return "👧 irene skips into the nook."; }

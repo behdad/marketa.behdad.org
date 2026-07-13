@@ -264,7 +264,7 @@ uncompressed and `ramdisk_size=6144` is passed on the isolinux append line.
 
 ## Deploy note
 
-There is **no build step for the site itself** — `index.html` / `rsvp.html` are
+There is **no build step for the site itself** — `save-the-dates.html` / `rsvp.html` are
 hand-edited and served as-is. These three runtimes are the only compiled/packed
 deliverables, and they are pinned: don't regenerate or "upgrade" them casually. When you
 do rebuild one, ship it under a new content-versioned path and update the reference in

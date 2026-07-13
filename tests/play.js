@@ -190,9 +190,9 @@ if (!r) {
 }
 
 console.log("");
-console.log("index.html egg hunt + storm:");
+console.log("save-the-dates.html egg hunt + storm:");
 var EGGS = ["book", "clapper", "fish", "guitar", "head", "plant", "rabbit", "roach", "shoes", "trip"];
-var x = runPage("index.html", INDEX_HARNESS, 30000, false);
+var x = runPage("save-the-dates.html", INDEX_HARNESS, 30000, false);
 if (!x) {
   fail("harness reported (page error before load, or budget too small)");
 } else {

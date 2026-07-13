@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Zero-dependency sanity checks for index.html and rsvp.html.
+// Zero-dependency sanity checks for save-the-dates.html and rsvp.html.
 // Run with: node tests/check.js
 "use strict";
 
@@ -9,7 +9,7 @@ var os = require("os");
 var execSync = require("child_process").execSync;
 
 var ROOT = path.join(__dirname, "..");
-var FILES = ["index.html", "rsvp.html"];
+var FILES = ["save-the-dates.html", "rsvp.html"];
 var failures = 0;
 
 function pass(label) {
@@ -56,7 +56,7 @@ function checkSyntax(file, script) {
 
 function checkSvgTagBalance(file, html) {
   var start = html.indexOf('<svg id="loft-game-strip"');
-  if (start === -1) return; // not applicable (index.html)
+  if (start === -1) return; // not applicable (save-the-dates.html)
   // the strip may contain nested <svg> icons (foreignObject HTML) — find ITS closing
   // tag by depth, not the first </svg>
   var depth = 0, end = -1, re = /<svg[\s>]|<\/svg>/g;
@@ -128,9 +128,9 @@ function checkEggTotal(html, script) {
   var declared = parseInt(totalMatch[1], 10);
   var liCount = (html.match(/<li[^>]*data-egg="/g) || []).length;
   if (declared === liCount) {
-    pass("index.html: EGG_TOTAL matches cheatsheet <li data-egg> count (" + declared + ")");
+    pass("save-the-dates.html: EGG_TOTAL matches cheatsheet <li data-egg> count (" + declared + ")");
   } else {
-    fail("index.html: EGG_TOTAL (" + declared + ") does not match cheatsheet <li data-egg> count (" + liCount + ")");
+    fail("save-the-dates.html: EGG_TOTAL (" + declared + ") does not match cheatsheet <li data-egg> count (" + liCount + ")");
   }
 }
 

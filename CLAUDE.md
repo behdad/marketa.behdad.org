@@ -6,9 +6,13 @@ loft on the same block as their loft home apartment) and **July 10, 2027, Prague
 (Markéta's parents' summerhouse) garden party. Message: come to one or both; all loved
 ones welcome, small or big.
 
-Single file: `index.html`. No build step, no framework. Keep it that way — new features
-go inside `index.html` unless there's a strong reason not to. (`rsvp.html` follows the
-same rule; its self-hosted runtimes live in `pyodide/` — CPython wasm + wheels — and
+Pages (each a single self-contained file, no build step, no framework — keep it that way):
+`save-the-dates.html` is the save-the-date page (it *was* `index.html`; renamed 2026-07 for
+the frozen-archive drops model), and `rsvp.html` is the interactive game. A landing
+`index.html` at the root — a hub linking every drop — is planned but not yet built; until it
+exists, `.htaccess` `DirectoryIndex` serves `save-the-dates.html` at `/`. New save-the-date
+features go inside `save-the-dates.html` unless there's a strong reason not to. (`rsvp.html`
+follows the same rule; its self-hosted runtimes live in `pyodide/` — CPython wasm + wheels — and
 `linux/` — v86 + a repacked ISO carrying hb-shape/Fraunces/emoji; provenance in each
 dir's README. Both are pinned deliverables, not build outputs: don't regenerate or
 "upgrade" them casually, and keep runtime deps zero-CDN — Google Fonts is the one
@@ -27,7 +31,7 @@ allowed exception, owner-confirmed.)
   Markéta (native Czech speaker) reviews all Czech copy at the end, so don't hold back
   on proposing/editing CS text — she'll correct anything off.
 - **Run `node tests/check.js` AND `node tests/state.js` before every commit that
-  touches `index.html` or `rsvp.html`.** Zero-dependency script — `node --check` on each file's inline
+  touches `save-the-dates.html` or `rsvp.html`.** Zero-dependency script — `node --check` on each file's inline
   `<script>`, EN/CS dictionary key parity, `EGG_TOTAL` vs. cheatsheet `<li data-egg>`
   count, and `<g>`/`</g>` tag balance in rsvp.html's shared SVG strip. It's cheap
   insurance against exactly the bugs that have bitten this project before (a dropped
@@ -41,7 +45,7 @@ allowed exception, owner-confirmed.)
   error, a broken solve chain, or missing solve-path elements. It patches rAF to
   setTimeout and stubs window.open — see its header before changing test plumbing.
 - **`node tests/visual.js` is an optional, advisory spot-check** — never part of the
-  must-pass-before-commit chain: it renders the five rsvp.html rooms and index.html's
+  must-pass-before-commit chain: it renders the five rsvp.html rooms and save-the-dates.html's
   two scenes headlessly (animations/transitions frozen, clock and RNG pinned) and
   pixel-diffs them against `tests/baselines/`, catching neighboring-room breakage that
   eyeballing a single screenshot misses. After an *intentional* art change, rerun with

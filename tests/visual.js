@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Visual regression harness: renders each rsvp.html room (kitchen, garden,
-// cuddly, office, balcony) plus index.html's two scenes in headless Chrome and
+// cuddly, office, balcony) plus save-the-dates.html's two scenes in headless Chrome and
 // compares the pixels against committed baselines in tests/baselines/.
 // ADVISORY tool — not part of the must-pass-before-commit chain, and it exits 0
 // with a SKIP message if google-chrome or ImageMagick (magick) is missing.
@@ -91,8 +91,8 @@ var SHOTS = ["kitchen", "garden", "cuddly", "office", "balcony"].map(function (r
   return { name: "rsvp-" + room, file: "rsvp.html", window: RSVP_WINDOW, harness: rsvpHarness(room) };
 }).concat([
   // crops (WxH+X+Y) framed from probed geometry: loft svg at y151, garden at y852, both 450x609
-  { name: "index-loft", file: "index.html", window: INDEX_WINDOW, harness: "", crop: "600x700+0+110" },
-  { name: "index-garden", file: "index.html", window: INDEX_WINDOW, harness: "", crop: "600x700+0+810" }
+  { name: "index-loft", file: "save-the-dates.html", window: INDEX_WINDOW, harness: "", crop: "600x700+0+110" },
+  { name: "index-garden", file: "save-the-dates.html", window: INDEX_WINDOW, harness: "", crop: "600x700+0+810" }
 ]);
 
 function toolOk(cmd, args) {

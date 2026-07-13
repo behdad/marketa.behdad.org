@@ -16411,7 +16411,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var TERM_HELP_OVERVIEW = "commands: help · clear · laser() · party() · trip() · goto() · night()/day() · confetti() · cat() · shape() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var TERM_HELP_OVERVIEW = "commands: help · clear · laser() · party() · trip() · goto() · night()/day() · confetti() · cat() · hb (help hb) · googlefonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var TERM_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -16431,7 +16431,7 @@ document.addEventListener("click", function (e) {
       cat: "cat() — summon the loose chest cat to your room (bare `cat` prints a cat instead)",
       irene: "irene() — the niece skips into the cuddly nook for a bit",
       eclipse: "eclipse() — a solar (day) or lunar (night) eclipse over the balcony",
-      shape: "shape('text') — shape text with HarfBuzz (harfbuzzjs/WebAssembly) and print the glyphs",
+      hb: "hb — the harfbuzzjs shaper (uharfbuzz-style); `help hb` prints a full shaping sequence",
       loft: "loft — the couple's object: .countdown .nowPlaying .weather .menu .love .you .couple .weddings .site",
       ls: "ls — list the rooms",
       pwd: "pwd — print the working directory",
@@ -16449,6 +16449,21 @@ document.addEventListener("click", function (e) {
       var topic = helpM[1];
       if (!topic) { termPrint(TERM_HELP_OVERVIEW, "term-dim"); return; }
       var key = topic.trim().toLowerCase().replace(/\(.*\)$/, "").replace(/^["']|["']$/g, "");
+      if (key === "hb") { // a full harfbuzzjs shaping sequence, uharfbuzz-style
+        [
+          "// harfbuzzjs (HarfBuzz in WebAssembly), uharfbuzz-style — shape text, read glyphs:",
+          "var bytes = await fetch('harfbuzzjs/fraunces.ttf').then(r => r.arrayBuffer());",
+          "var face  = hb.Face(bytes);            // raw sfnt bytes, or hb.Face(hb.Blob(bytes))",
+          "var font  = hb.Font(face);",
+          "var buf   = hb.Buffer();",
+          "buf.add_str('markéta');",
+          "buf.guess_segment_properties();        // direction / script / language",
+          "hb.shape(font, buf);",
+          "buf.glyph_infos;       // [{codepoint, cluster}, …]",
+          "buf.glyph_positions;   // [{x_advance, y_advance, x_offset, y_offset}, …]"
+        ].forEach(function (line) { termPrint(line, "term-dim"); });
+        return;
+      }
       if (TERM_HELP[key]) termPrint(TERM_HELP[key], "term-dim");
       else termPrint("no help for '" + topic.trim() + "' — try `help`", "term-dim");
       return;
@@ -18261,56 +18276,45 @@ document.addEventListener("click", function (e) {
         // can't read woff2). String methods, not regex, so the source survives the JS-template-
         // literal escaping intact.
         var GFPY = `
-import io
+import io, json
 from pyodide.http import pyfetch
 
-async def googlefonts(family, weight=None, text=None, subset=None):
-    """Fetch a Google Fonts family and return raw sfnt (TTF/OTF) bytes.
+_GF_API = "https://www.googleapis.com/webfonts/v1/webfonts?key=AIzaSyDngKwSS8RU2si2eJNDT2haEdi7D80kX90"
+
+async def googlefonts(family, weight=None, italic=False):
+    """Fetch a Google Fonts family and return raw sfnt (TTF) bytes, via the Google Fonts
+    Developer API — a direct .ttf url per variant, a full uncompressed font (no woff2, no
+    decompression).
     e.g.  face = hb.Face(await googlefonts('Anton'))
           TTFont(io.BytesIO(await googlefonts('Fraunces')))
-    Defaults to the latin subset (small + fast). Options:
-        subset='arabic'  -> one specific named subset
-        subset='all'     -> every subset merged into one full font
-        text='مرحبا'      -> just the glyphs needed to set that text"""
+    weight=700 / italic=True pick a variant; googlefonts.list('mono') enumerates families."""
     from urllib.parse import quote
-    spec = family if weight is None else "{}:wght@{}".format(family, weight)
-    url = "https://fonts.googleapis.com/css2?family=" + spec.replace(" ", "+")
-    if text:
-        url += "&text=" + quote(text)
-    css = await (await pyfetch(url)).string()
-    # each @font-face is a /* subset */ comment + a url(...) (a .woff2, or a /l/font kit
-    # url with no extension for text= requests) — grab everything between url( and )
-    faces, pos = [], 0
-    while True:
-        u = css.find("url(https://", pos)
-        if u < 0:
-            break
-        e = css.find(")", u)
-        c = css.rfind("/* ", 0, u)
-        name = css[c + 3:css.find(" */", c)] if c >= 0 else ""
-        faces.append((name, css[u + 4:e]))
-        pos = e + 1
-    if not faces:
+    data = json.loads(await (await pyfetch(_GF_API + "&family=" + quote(family))).string())
+    items = data.get("items") or []
+    if not items:
         raise ValueError("no font found for {!r} (unknown family?)".format(family))
+    files = items[0].get("files") or {}
+    if weight and italic:
+        key = "{}italic".format(weight)
+    elif weight:
+        key = str(weight)
+    elif italic:
+        key = "italic"
+    else:
+        key = "regular"
+    url = files.get(key) or files.get("regular") or (next(iter(files.values())) if files else None)
+    if not url:
+        raise ValueError("no variant for {!r}".format(family))
+    return await (await pyfetch(url.replace("http://", "https://"))).bytes()
 
-    async def to_sfnt(u):  # download a woff2 and decompress to raw sfnt bytes
-        f = TTFont(io.BytesIO(await (await pyfetch(u)).bytes())); f.flavor = None
-        out = io.BytesIO(); f.save(out)
-        return out.getvalue()
-
-    if subset == "all" and len(faces) > 1:
-        from fontTools.merge import Merger
-        paths = []
-        for idx, (nm, u) in enumerate(faces):
-            f = TTFont(io.BytesIO(await (await pyfetch(u)).bytes())); f.flavor = None
-            p = "/tmp/gf_%d.ttf" % idx; f.save(p); paths.append(p)
-        merged = Merger().merge(paths)
-        out = io.BytesIO(); merged.save(out)
-        return out.getvalue()
-
-    want = subset or "latin"
-    pick = next((u for nm, u in faces if nm == want), faces[0][1])
-    return await to_sfnt(pick)
+async def _gf_list(query=None):
+    data = json.loads(await (await pyfetch(_GF_API + "&sort=popularity")).string())
+    names = [i["family"] for i in data.get("items", [])]
+    if query:
+        q = query.lower()
+        names = [n for n in names if q in n.lower()]
+    return names
+googlefonts.list = _gf_list
 `;
         pyPrint(">>> import micropip; await micropip.install(['fonttools', 'brotli'])", "term-dim");
         pyPrint(">>> from fontTools.ttLib import TTFont", "term-dim");
@@ -18332,7 +18336,7 @@ async def googlefonts(family, weight=None, text=None, subset=None):
           .then(function () {
             // define googlefonts() once TTFont is in scope, THEN print the demo line that uses hb + it
             return py.runPythonAsync(GFPY).then(function () {
-              pyPrint(">>> hb.Face(await googlefonts('Anton'))  # any family; also subset='all' / text='مرحبا'", "term-dim");
+              pyPrint(">>> hb.Face(await googlefonts('Anton'))  # any family — weight=700, italic=True; googlefonts.list('mono')", "term-dim");
             }, function () {});
           })
           .catch(function () {});
@@ -33802,31 +33806,10 @@ function spawnDustMote(container) {
     p.catch(function () { if (__hbReady === p) __hbReady = null; }); // a transient load failure shouldn't poison later retries
     return __hbReady;
   }
-  window.shape = function (text, opts) {
-    text = text == null ? "" : String(text);
-    return hbReady().then(function (ctx) {
-      var features = opts && opts.features;
-      if (Array.isArray(features)) features = features.join(",");
-      var font = (opts && opts.font) || ctx.font; // opts.font: a custom font from hbFont(bytes)
-      var buf = ctx.hb.createBuffer();
-      buf.addText(text);
-      buf.guessSegmentProperties();
-      ctx.hb.shape(font, buf, features || undefined);
-      var glyphs = buf.json();
-      buf.destroy();
-      var out = glyphs.map(function (g) { return { glyph: g.g, cluster: g.cl, xAdvance: g.ax }; });
-      console.log("⬡ shape(" + JSON.stringify(text) + ") → " + out.length + " glyphs [" +
-        out.map(function (g) { return g.glyph; }).join(" ") + "] via HarfBuzz (harfbuzzjs)");
-      return out;
-    }).catch(function (e) {
-      return "couldn't reach the harfbuzz runtime — " + ((e && e.message) || e);
-    });
-  };
-  // low-level handles for tinkering, mirroring the Python console's `hb`:
-  //   var {hb, font} = await harfbuzz()   // the harfbuzzjs API + the bundled Fraunces font
-  //   var f = await hbFont(sfntBytes)     // build a font from raw TTF/OTF bytes, then shape('…', {font:f})
-  // JS has no brotli, so woff2 won't load here — fetch a .ttf/.otf (or bridge bytes over from
-  // the Python console's googlefonts(), which decompresses woff2 for you).
+  // low-level handles, mirroring the Python console's `hb`:
+  //   var { hb, font } = await harfbuzz()  // the harfbuzzjs API + the bundled Fraunces font
+  //   var f = await hbFont(sfntBytes)      // build a font from raw TTF/OTF bytes
+  // hb.Face wants raw sfnt (TTF/OTF) — googlefonts() below returns exactly that.
   window.harfbuzz = hbReady;
   window.hbFont = function (bytes) {
     return hbReady().then(function (ctx) {
@@ -33834,50 +33817,42 @@ function spawnDustMote(container) {
       return ctx.hb.createFont(ctx.hb.createFace(ctx.hb.createBlob(u8), 0));
     });
   };
-  // googlefonts(family, opts) — mirror of the python console's googlefonts(). Fetches the
-  // css2 stylesheet (default latin subset; opts.weight / opts.text / opts.subset like the
-  // python side) and pulls the font url out of the first matching @font-face. Google Fonts
-  // serves woff2 to browsers, and JS has no brotli — harfbuzzjs's hb.wasm can't read woff2
-  // either (verified: a woff2-fed face shapes only .notdef, glyph id 0) — so this can't hand
-  // back a ready hb.Face the way python can. It returns the raw woff2 BYTES (Uint8Array) plus
-  // a console note pointing at the python console's googlefonts() (which decompresses woff2)
-  // — the bytes are there for anyone who wants to pipe them to a woff2 decoder. English-only.
+  // googlefonts(family, opts) — like the Python console's googlefonts(): fetch a Google Fonts
+  // family and return its raw sfnt (TTF) BYTES, ready for hb.Face(). Uses the Google Fonts
+  // Developer API (webfonts/v1), which hands back a direct .ttf url per variant — a full,
+  // uncompressed font, so no woff2 / no decompression. opts.weight → the '400'/'700'/… variant,
+  // opts.italic → its italic. googlefonts.list([query]) enumerates the whole catalogue.
+  //   hb.Face(await googlefonts('Anton'))
+  var GF_KEY = "AIzaSyDngKwSS8RU2si2eJNDT2haEdi7D80kX90"; // Google Fonts API key — referrer-restrict it in the Google Cloud console
+  var GF_API = "https://www.googleapis.com/webfonts/v1/webfonts?key=" + GF_KEY;
+  function gfTtfUrl(item, opts) {
+    var files = item.files || {}, key = "regular";
+    if (opts.weight && opts.italic) key = String(opts.weight) + "italic";
+    else if (opts.weight) key = String(opts.weight);
+    else if (opts.italic) key = "italic";
+    return (files[key] || files.regular || files[Object.keys(files)[0]] || "").replace(/^http:/, "https:");
+  }
   window.googlefonts = function (family, opts) {
     opts = opts || {};
-    var spec = family + (opts.weight ? ":wght@" + opts.weight : "");
-    var url = "https://fonts.googleapis.com/css2?family=" + spec.split(" ").join("+");
-    if (opts.text) url += "&text=" + encodeURIComponent(opts.text);
-    return fetch(url).then(function (r) {
-      if (!r.ok) throw new Error("css2 " + r.status);
-      return r.text();
-    }).then(function (css) {
-      // each @font-face is a /* subset */ comment + a url(...) (a .woff2, or a /l/font kit
-      // url with no extension for text= requests) — grab everything between url( and ).
-      var faces = [], pos = 0;
-      while (true) {
-        var u = css.indexOf("url(https://", pos);
-        if (u < 0) break;
-        var e = css.indexOf(")", u);
-        var c = css.lastIndexOf("/* ", u);
-        var nm = c >= 0 ? css.slice(c + 3, css.indexOf(" */", c)) : "";
-        faces.push({ name: nm, url: css.slice(u + 4, e) });
-        pos = e + 1;
-      }
-      if (!faces.length) throw new Error("no font found for " + JSON.stringify(family) + " (unknown family?)");
-      var want = opts.subset || "latin";
-      var pick = faces.filter(function (f) { return f.name === want; })[0] || faces[0];
-      return fetch(pick.url).then(function (r) {
-        if (!r.ok) throw new Error("woff2 " + r.status);
-        return r.arrayBuffer();
-      }).then(function (ab) {
-        var bytes = new Uint8Array(ab);
-        console.log("⬡ googlefonts(" + JSON.stringify(family) + ") → " + bytes.length + " bytes of woff2 (" +
-          (pick.name || "default") + " subset). JS can't decompress woff2 and hb.wasm can't read it — " +
-          "use the python console's googlefonts() for a ready hb.Face, or pipe these bytes to a woff2 decoder.");
-        return bytes;
-      });
-    }).catch(function (e) {
-      return "googlefonts failed — " + ((e && e.message) || e);
+    return fetch(GF_API + "&family=" + encodeURIComponent(family)).then(function (r) {
+      if (!r.ok) throw new Error("webfonts API " + r.status); return r.json();
+    }).then(function (d) {
+      var item = d.items && d.items[0];
+      if (!item) throw new Error("no font found for " + JSON.stringify(family) + " (unknown family?)");
+      var url = gfTtfUrl(item, opts);
+      if (!url) throw new Error("no variant for " + JSON.stringify(family));
+      return fetch(url).then(function (r) { if (!r.ok) throw new Error("ttf " + r.status); return r.arrayBuffer(); });
+    }).then(function (ab) {
+      var bytes = new Uint8Array(ab);
+      console.log("⬡ googlefonts(" + JSON.stringify(family) + ") → " + bytes.length + " bytes of TTF. hb.Face(bytes) to shape it.");
+      return bytes;
+    }).catch(function (e) { return "googlefonts failed — " + ((e && e.message) || e); });
+  };
+  window.googlefonts.list = function (query) { // enumerate the ~1950 families (optionally filtered)
+    return fetch(GF_API + "&sort=popularity").then(function (r) { return r.json(); }).then(function (d) {
+      var names = (d.items || []).map(function (i) { return i.family; });
+      if (query) { var q = String(query).toLowerCase(); names = names.filter(function (n) { return n.toLowerCase().indexOf(q) >= 0; }); }
+      return names;
     });
   };
   window.love = function () { return "love is patient, love is kind. ∞"; };

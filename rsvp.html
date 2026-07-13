@@ -11290,6 +11290,7 @@ window.addEventListener("hashchange", function () {
     // genuine Fullscreen API state, so this doesn't change real behavior at all.
     if (!area.classList.contains("is-fullscreen") || !frame || !viewport || !caption || !dots) {
       if (frame) { frame.style.width = ""; frame.style.height = ""; }
+      if (window.__refitZoom) window.__refitZoom(); // re-fit a desk zoom to the restored frame, in lockstep with the resize
       return;
     }
     var areaStyle = getComputedStyle(area);
@@ -11311,6 +11312,11 @@ window.addEventListener("hashchange", function () {
     var viewportH = viewportW / 2;
     frame.style.width = (viewportW + chrome) + "px";
     frame.style.height = viewportH + "px";
+    // A device zoom frames the room through #loft-game-strip's transform; the frame just
+    // changed size under it, so re-fit NOW (same tick as the resize) — the strip's own
+    // transition then glides straight to the new framing instead of the deferred
+    // fullscreenchange refit snapping it back from a stale pose.
+    if (window.__refitZoom) window.__refitZoom();
   }
   function refreshLabel() {
     var filled = isFilled();
@@ -11327,6 +11333,11 @@ window.addEventListener("hashchange", function () {
       btn.textContent = "⛶";
     }
     sizeFullscreenFrame();
+    // The phone modal is a fixed overlay parented to whatever host was current when it
+    // opened; entering/leaving fullscreen changes that host (real fullscreen is top-layer,
+    // the class-fill is a z-50 overlay), so an open phone must move with it or it vanishes
+    // behind/outside the fullscreen layer. No-op when the phone is closed.
+    if (window.__reparentPhoneToFsHost) window.__reparentPhoneToFsHost();
     // Firefox (confirmed live: black padding around an undersized frame) fires
     // fullscreenchange before its own layout pass has caught up to the new fullscreen
     // viewport, so the immediate measurement above reads stale (pre-fullscreen)
@@ -22747,6 +22758,15 @@ async def localfont(name):
     }
     window.__openPhoneModal = open;
     window.__closePhoneModal = function (silent) { close(silent); };
+    // Keep an open phone riding the current fullscreen host (same choice open() makes), so a
+    // fullscreen toggle re-seats it into the top-layer / z-50 fill instead of stranding it
+    // on <body> behind the overlay. No-op while closed (modal absent from the DOM).
+    window.__reparentPhoneToFsHost = function () {
+      if (!modal || !modal.parentNode) return;
+      var fsHost = document.fullscreenElement || document.webkitFullscreenElement ||
+                   document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
+      if (modal.parentNode !== fsHost) fsHost.appendChild(modal);
+    };
     window.__cineShowPhone = function () { open(true); }; // cinematic: open to the launcher, no lock, booted untouched
     window.refreshPhoneText = function () {
       if (!modal || !shell) return;

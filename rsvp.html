@@ -18066,10 +18066,9 @@ document.addEventListener("click", function (e) {
   var PYODIDE_URL = "pyodide/pyodide.js";
   function pyT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
   function updatePythonTile() {
-    // same trick as the console tile: once used, the dock icon wears the last command
+    // the Python dock icon always wears the >>> prompt (owner: not the last command)
     var glyph = dockGlyphEls.python;
-    if (!glyph) return;
-    glyph.textContent = pyLastCmd ? ">" + pyLastCmd.slice(0, 2) : ">>>";
+    if (glyph) glyph.textContent = ">>>";
   }
   function pyPrint(txt, cls) {
     if (!pyOut) return;
@@ -18121,25 +18120,53 @@ document.addEventListener("click", function (e) {
 import io
 from pyodide.http import pyfetch
 
-async def googlefonts(family, weight=None, text=None):
+async def googlefonts(family, weight=None, text=None, subset=None):
     """Fetch a Google Fonts family and return raw sfnt (TTF/OTF) bytes.
     e.g.  face = hb.Face(await googlefonts('Anton'))
-          TTFont(io.BytesIO(await googlefonts('Lalezar')))"""
+          TTFont(io.BytesIO(await googlefonts('Fraunces')))
+    Defaults to the latin subset (small + fast). Options:
+        subset='arabic'  -> one specific named subset
+        subset='all'     -> every subset merged into one full font
+        text='مرحبا'      -> just the glyphs needed to set that text"""
+    from urllib.parse import quote
     spec = family if weight is None else "{}:wght@{}".format(family, weight)
     url = "https://fonts.googleapis.com/css2?family=" + spec.replace(" ", "+")
     if text:
-        url += "&text=" + text.replace(" ", "+")
+        url += "&text=" + quote(text)
     css = await (await pyfetch(url)).string()
-    i = css.find("/* latin */")
-    seg = css[i:] if i >= 0 else css
-    j = seg.find("url(https://")
-    k = seg.find(".woff2)", j)
-    if j < 0 or k < 0:
+    # each @font-face is a /* subset */ comment + a url(...) (a .woff2, or a /l/font kit
+    # url with no extension for text= requests) — grab everything between url( and )
+    faces, pos = [], 0
+    while True:
+        u = css.find("url(https://", pos)
+        if u < 0:
+            break
+        e = css.find(")", u)
+        c = css.rfind("/* ", 0, u)
+        name = css[c + 3:css.find(" */", c)] if c >= 0 else ""
+        faces.append((name, css[u + 4:e]))
+        pos = e + 1
+    if not faces:
         raise ValueError("no font found for {!r} (unknown family?)".format(family))
-    data = await (await pyfetch(seg[j + 4:k + 6])).bytes()
-    f = TTFont(io.BytesIO(data)); f.flavor = None
-    out = io.BytesIO(); f.save(out)
-    return out.getvalue()
+
+    async def to_sfnt(u):  # download a woff2 and decompress to raw sfnt bytes
+        f = TTFont(io.BytesIO(await (await pyfetch(u)).bytes())); f.flavor = None
+        out = io.BytesIO(); f.save(out)
+        return out.getvalue()
+
+    if subset == "all" and len(faces) > 1:
+        from fontTools.merge import Merger
+        paths = []
+        for idx, (nm, u) in enumerate(faces):
+            f = TTFont(io.BytesIO(await (await pyfetch(u)).bytes())); f.flavor = None
+            p = "/tmp/gf_%d.ttf" % idx; f.save(p); paths.append(p)
+        merged = Merger().merge(paths)
+        out = io.BytesIO(); merged.save(out)
+        return out.getvalue()
+
+    want = subset or "latin"
+    pick = next((u for nm, u in faces if nm == want), faces[0][1])
+    return await to_sfnt(pick)
 `;
         pyPrint(">>> import micropip; await micropip.install(['fonttools', 'brotli'])", "term-dim");
         pyPrint(">>> from fontTools.ttLib import TTFont", "term-dim");
@@ -18161,7 +18188,7 @@ async def googlefonts(family, weight=None, text=None):
           .then(function () {
             // define googlefonts() once TTFont is in scope, THEN print the demo line that uses hb + it
             return py.runPythonAsync(GFPY).then(function () {
-              pyPrint(">>> hb.Face(await googlefonts('Anton'))  # fetch any Google Fonts family — try 'Anton', 'Lalezar'", "term-dim");
+              pyPrint(">>> hb.Face(await googlefonts('Anton'))  # any family; also subset='all' / text='مرحبا'", "term-dim");
             }, function () {});
           })
           .catch(function () {});
@@ -33521,10 +33548,11 @@ function spawnDustMote(container) {
     return hbReady().then(function (ctx) {
       var features = opts && opts.features;
       if (Array.isArray(features)) features = features.join(",");
+      var font = (opts && opts.font) || ctx.font; // opts.font: a custom font from hbFont(bytes)
       var buf = ctx.hb.createBuffer();
       buf.addText(text);
       buf.guessSegmentProperties();
-      ctx.hb.shape(ctx.font, buf, features || undefined);
+      ctx.hb.shape(font, buf, features || undefined);
       var glyphs = buf.json();
       buf.destroy();
       var out = glyphs.map(function (g) { return { glyph: g.g, cluster: g.cl, xAdvance: g.ax }; });
@@ -33533,6 +33561,18 @@ function spawnDustMote(container) {
       return out;
     }).catch(function (e) {
       return "couldn't reach the harfbuzz runtime — " + ((e && e.message) || e);
+    });
+  };
+  // low-level handles for tinkering, mirroring the Python console's `hb`:
+  //   var {hb, font} = await harfbuzz()   // the harfbuzzjs API + the bundled Fraunces font
+  //   var f = await hbFont(sfntBytes)     // build a font from raw TTF/OTF bytes, then shape('…', {font:f})
+  // JS has no brotli, so woff2 won't load here — fetch a .ttf/.otf (or bridge bytes over from
+  // the Python console's googlefonts(), which decompresses woff2 for you).
+  window.harfbuzz = hbReady;
+  window.hbFont = function (bytes) {
+    return hbReady().then(function (ctx) {
+      var u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+      return ctx.hb.createFont(ctx.hb.createFace(ctx.hb.createBlob(u8), 0));
     });
   };
   window.love = function () { return "love is patient, love is kind. ∞"; };

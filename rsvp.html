@@ -23923,7 +23923,23 @@ async def localfont(name):
   // other ambient loop in this file).
   var windCtx = null, windSource = null, windGain = null, windFilter = null,
       windLfoDepth = null, windLfo1 = null, windLfo2 = null, windFilterLfo = null,
-      windStormy = false, windWhere = null;
+      windStormy = false, windWhere = null, windPanner = null, windPanRAF = null, windPanUntil = 0;
+  // While the wind bleeds in from the cuddly nook's open balcony door, pan it to the door's
+  // LIVE on-screen position for a beat rather than freezing at whatever it read the instant
+  // the bed started. On a room slide the door sweeps across the view (it enters from the left
+  // and settles on the right of the nook), so the wind swooshes along with it and lands where
+  // the door rests — instead of sticking wherever the door happened to be mid-slide (the wrong
+  // side). Time-boxed to comfortably cover #loft-game-strip's .7s slide, then it holds.
+  function trackWindDoorPan() {
+    if (windPanRAF) cancelAnimationFrame(windPanRAF);
+    windPanUntil = performance.now() + 900;
+    (function step() {
+      windPanRAF = null;
+      if (!windCtx || windWhere !== "cuddly" || !windPanner || !windPanner.pan) return;
+      try { windPanner.pan.value = panForElId("cuddly-balcony-door"); } catch (e) {}
+      if (performance.now() < windPanUntil) windPanRAF = requestAnimationFrame(step);
+    })();
+  }
   var WIND_CALM = { gain: 0.006, depth: 0.003, filter: 2400 };
   var WIND_STORM = { gain: 0.01, depth: 0.005, filter: 3200 };
   var WIND_CUDDLY_SCALE = 0.4; // fainter heard through the door than out on the balcony itself
@@ -24013,12 +24029,16 @@ async def localfont(name):
       filterLfoDepth.connect(windFilter.frequency);
       windLfo1.start(); windLfo2.start(); windFilterLfo.start();
       windSource.connect(hp); hp.connect(windFilter); windFilter.connect(windGain);
-      windGain.connect(pannedOut(windCtx, windWhere === "cuddly" ? "cuddly-balcony-door" : 0));
+      windPanner = pannedOut(windCtx, windWhere === "cuddly" ? "cuddly-balcony-door" : 0);
+      windGain.connect(windPanner);
       windSource.start();
+      if (windWhere === "cuddly") trackWindDoorPan(); // swoosh the pan with the door's slide-in
+
     } catch (e) {}
   }
   function stopWind(fadeSecs) {
     if (!windCtx) return;
+    if (windPanRAF) { cancelAnimationFrame(windPanRAF); windPanRAF = null; }
     var f = (typeof fadeSecs === "number") ? fadeSecs : 0.6;
     try {
       var t = windCtx.currentTime;
@@ -24040,7 +24060,7 @@ async def localfont(name):
     }, f * 1000 + 100);
     windCtx = null; windSource = null; windGain = null; windFilter = null;
     windLfoDepth = null; windLfo1 = null; windLfo2 = null; windFilterLfo = null;
-    windStormy = false; windWhere = null;
+    windStormy = false; windWhere = null; windPanner = null;
   }
   // (re)evaluate the wind gate and start/stop/re-level accordingly. The self-polling
   // tick() calls it with no arg (default 0.6s fade); goToStage calls it via

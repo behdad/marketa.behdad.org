@@ -11625,7 +11625,7 @@ document.addEventListener("keydown", function (e) {
     return !!(el && el.closest && el.closest(".term-out, .term-in-wrap"));
   }
   function selText() { var s = window.getSelection && window.getSelection(); return s ? s.toString() : ""; }
-  var menu, copyBtn, pasteBtn, copyTimer = 0;
+  var menu, copyBtn, pasteBtn, copyTimer = 0, stashedSel = ""; // the selection captured when the menu opened
   function build() {
     if (menu) return;
     menu = document.createElement("div");
@@ -11634,12 +11634,15 @@ document.addEventListener("keydown", function (e) {
     pasteBtn = document.createElement("button"); pasteBtn.type = "button"; pasteBtn.textContent = "paste";
     menu.appendChild(copyBtn); menu.appendChild(pasteBtn);
     (document.getElementById("hunt-fullscreen-area") || document.body).appendChild(menu);
+    // mousedown on a button outside the selection collapses it before the click fires — prevent
+    // default so the selection (and the stashed text) survives long enough to copy
+    menu.addEventListener("mousedown", function (e) { e.preventDefault(); });
     copyBtn.addEventListener("click", function (e) { e.stopPropagation(); doCopy(); });
     pasteBtn.addEventListener("click", function (e) { e.stopPropagation(); doPaste(); hide(); });
   }
   function hide() { if (menu) menu.classList.remove("show"); }
   function doCopy() {
-    var t = selText();
+    var t = stashedSel || selText();
     if (!t) { hide(); return; }
     function done() { clearTimeout(copyTimer); copyBtn.textContent = "copied ✓"; copyTimer = setTimeout(hide, 750); }
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, function () { hide(); });
@@ -11665,7 +11668,8 @@ document.addEventListener("keydown", function (e) {
     e.preventDefault();
     build();
     copyBtn.textContent = "copy"; clearTimeout(copyTimer);
-    copyBtn.disabled = !selText();
+    stashedSel = selText();
+    copyBtn.disabled = !stashedSel;
     pasteBtn.disabled = !(consoleInput() && navigator.clipboard && navigator.clipboard.readText);
     menu.style.left = e.clientX + "px"; menu.style.top = e.clientY + "px";
     menu.classList.add("show");
@@ -16492,16 +16496,24 @@ document.addEventListener("click", function (e) {
       var key = topic.trim().toLowerCase().replace(/\(.*\)$/, "").replace(/^["']|["']$/g, "");
       if (key === "hb") { // a full harfbuzzjs shaping sequence, uharfbuzz-style
         [
-          "// harfbuzzjs (HarfBuzz in WebAssembly), uharfbuzz-style — shape text, read glyphs:",
-          "var bytes = await fetch('harfbuzzjs/fraunces.ttf').then(r => r.arrayBuffer());",
-          "var face  = hb.Face(bytes);            // raw sfnt bytes, or hb.Face(hb.Blob(bytes))",
+          "var bytes = await googlefonts('Anton');    // any Google Fonts family → raw TTF bytes",
+          "var face  = hb.Face(bytes);                // or hb.Face(hb.Blob(bytes))",
           "var font  = hb.Font(face);",
           "var buf   = hb.Buffer();",
           "buf.add_str('markéta');",
-          "buf.guess_segment_properties();        // direction / script / language",
+          "buf.guess_segment_properties();            // direction / script / language",
           "hb.shape(font, buf);",
           "buf.glyph_infos;       // [{codepoint, cluster}, …]",
           "buf.glyph_positions;   // [{x_advance, y_advance, x_offset, y_offset}, …]"
+        ].forEach(function (line) { termPrint(line, "term-dim"); });
+        return;
+      }
+      if (key === "googlefonts") { // fetch any Google Fonts family as raw TTF bytes
+        [
+          "var bytes = await googlefonts('Anton');        // full TTF, ready for hb.Face()",
+          "await googlefonts('Roboto', {weight: 700});    // a variant; {italic:true} too",
+          "await googlefonts.list('mono');                // enumerate the ~1950 families, filtered",
+          "hb.Face(await googlefonts('Lalezar'));         // straight into the shaper (see `help hb`)"
         ].forEach(function (line) { termPrint(line, "term-dim"); });
         return;
       }

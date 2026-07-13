@@ -29,12 +29,11 @@ DirectoryIndex index.html save-the-dates.html
 
 RewriteRule ^tests/ - [F,L]
 
-# Clean URLs: serve /foo as /foo.html when that file exists, so links can drop the
-# .html (e.g. /save-the-dates, /rsvp). %{REQUEST_FILENAME} isn't a reliable full path
-# in this per-dir .htaccess context, so test the target against %{DOCUMENT_ROOT} + the
-# rule's own capture. Skips real files/dirs, so /loft-day (a symlink) still resolves.
-RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI}.html -f
-RewriteRule ^(.+?)/?$ /$1.html [L]
+# Clean URLs: extensionless links → their .html page. The automatic "add .html when the
+# file exists" -f test doesn't work on this host (neither %{DOCUMENT_ROOT} nor
+# %{REQUEST_FILENAME} resolves to the real serving path — a symlinked-docroot quirk), so
+# list pages explicitly. Add each new drop here. (/loft-day stays a plain symlink.)
+RewriteRule ^(save-the-dates|rsvp)/?$ /$1.html [L]
 
 # HTML must revalidate on every load — the site deploys continuously and a
 # heuristically-cached rsvp.html serves fixes minutes late

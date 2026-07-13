@@ -1306,6 +1306,12 @@ footer{margin-top:2.6rem}
 .term-out{flex:none; height:35.3px; padding:0.7px 1px 1px; margin-bottom:-0.5px; overflow-y:auto; white-space:pre-wrap; word-break:break-word; scrollbar-width:none; -webkit-mask-image:linear-gradient(#0000,#000 0.7px); mask-image:linear-gradient(#0000,#000 0.7px)} /* content height (35.3 border-box − 0.7 − 1 padding) = exactly 12 of the 2.8px line boxes: a bottom-pinned scrollback can never straddle a line across the top edge. Top slack is only 0.7px (vs 1px elsewhere) on purpose: any more and that same slack re-reveals a readable sliver of the 13th line when pinned; 0.7px clears the ~0.4px worst-case upward ink shift, and the mask fades that slack zone so the 13th line's descender tails vanish while stray ascender ink lands soft instead of chopped. */
 .term-out::-webkit-scrollbar{display:none}
 .term-out, .term-out *{ user-select:text; -webkit-user-select:text; cursor:text } /* console scrollback is copy-pasteable, overriding the strip-wide user-select:none */
+/* right-click Copy/Paste menu for the consoles */
+.term-ctx{position:fixed; z-index:60; display:none; background:#1e2a2a; border:1px solid #3a4a4a; border-radius:6px; padding:3px; box-shadow:0 4px 14px rgba(0,0,0,.45); font:13px/1.1 ui-monospace,Menlo,Consolas,monospace}
+.term-ctx.show{display:block}
+.term-ctx button{display:block; width:100%; text-align:left; background:none; border:0; color:#cfe8cf; padding:6px 16px 6px 10px; cursor:pointer; border-radius:4px; font:inherit; white-space:nowrap}
+.term-ctx button:hover:not(:disabled){background:#2f4040}
+.term-ctx button:disabled{color:#6a7a6a; cursor:default}
 .term-dim{color:#8fa98f}
 .term-err{color:#e08a8a}
 .term-row{display:flex; align-items:flex-start; gap:0.6px; padding:0 1px} /* top-aligned so prompt and input share a baseline (their boxes differ in height); the 1px side padding keeps the prompt column aligned with the scrollback's (see .term-out) */
@@ -11559,6 +11565,74 @@ document.addEventListener("keydown", function (e) {
       e.stopPropagation();
     }
   }, true); // capture — runs before the game-shortcut handlers
+})();
+(function () {
+  // Right-click Copy/Paste menu for the office-monitor terminal/python consoles: copy the current
+  // selection, or paste clipboard text into the console input at the caret. Lives in the fullscreen
+  // root (not body) so it also renders while the game is in real Fullscreen.
+  function consoleInput() {
+    var m = document.getElementById("office-monitor");
+    if (!m) return null;
+    if (m.classList.contains("show-python")) return document.getElementById("monitor-py-in");
+    if (m.classList.contains("show-terminal")) return document.getElementById("monitor-term-in");
+    return null;
+  }
+  function inConsole(node) {
+    var el = node && (node.nodeType === 1 ? node : node.parentElement);
+    return !!(el && el.closest && el.closest(".term-out, .term-in-wrap"));
+  }
+  function selText() { var s = window.getSelection && window.getSelection(); return s ? s.toString() : ""; }
+  var menu, copyBtn, pasteBtn, copyTimer = 0;
+  function build() {
+    if (menu) return;
+    menu = document.createElement("div");
+    menu.className = "term-ctx";
+    copyBtn = document.createElement("button"); copyBtn.type = "button"; copyBtn.textContent = "copy";
+    pasteBtn = document.createElement("button"); pasteBtn.type = "button"; pasteBtn.textContent = "paste";
+    menu.appendChild(copyBtn); menu.appendChild(pasteBtn);
+    (document.getElementById("hunt-fullscreen-area") || document.body).appendChild(menu);
+    copyBtn.addEventListener("click", function (e) { e.stopPropagation(); doCopy(); });
+    pasteBtn.addEventListener("click", function (e) { e.stopPropagation(); doPaste(); hide(); });
+  }
+  function hide() { if (menu) menu.classList.remove("show"); }
+  function doCopy() {
+    var t = selText();
+    if (!t) { hide(); return; }
+    function done() { clearTimeout(copyTimer); copyBtn.textContent = "copied ✓"; copyTimer = setTimeout(hide, 750); }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, function () { hide(); });
+    else { try { document.execCommand("copy"); done(); } catch (e) { hide(); } }
+  }
+  function doPaste() {
+    var input = consoleInput();
+    if (!input || !navigator.clipboard || !navigator.clipboard.readText) return;
+    navigator.clipboard.readText().then(function (text) {
+      if (!text) return;
+      text = text.replace(/[\r\n]+/g, " "); // the console input is single-line: flatten pasted newlines
+      var s = input.selectionStart == null ? input.value.length : input.selectionStart;
+      var en = input.selectionEnd == null ? input.value.length : input.selectionEnd;
+      input.value = input.value.slice(0, s) + text + input.value.slice(en);
+      var pos = s + text.length;
+      try { input.setSelectionRange(pos, pos); } catch (er) {}
+      input.focus({ preventScroll: true });
+      input.dispatchEvent(new Event("input", { bubbles: true })); // repaint the caret lane (it listens for input)
+    }, function () {});
+  }
+  document.addEventListener("contextmenu", function (e) {
+    if (!inConsole(e.target)) return;
+    e.preventDefault();
+    build();
+    copyBtn.textContent = "copy"; clearTimeout(copyTimer);
+    copyBtn.disabled = !selText();
+    pasteBtn.disabled = !(consoleInput() && navigator.clipboard && navigator.clipboard.readText);
+    menu.style.left = e.clientX + "px"; menu.style.top = e.clientY + "px";
+    menu.classList.add("show");
+    var r = menu.getBoundingClientRect(); // clamp inside the viewport
+    if (r.right > window.innerWidth) menu.style.left = Math.max(2, window.innerWidth - r.width - 4) + "px";
+    if (r.bottom > window.innerHeight) menu.style.top = Math.max(2, window.innerHeight - r.height - 4) + "px";
+  });
+  document.addEventListener("pointerdown", function (e) { if (menu && menu.classList.contains("show") && !menu.contains(e.target)) hide(); }, true);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && menu && menu.classList.contains("show")) { hide(); e.stopPropagation(); } }, true);
+  window.addEventListener("scroll", hide, true);
 })();
 document.addEventListener("click", function (e) {
   var link = e.target.closest && e.target.closest("#hunt-caption a");

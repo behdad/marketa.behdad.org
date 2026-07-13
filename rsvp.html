@@ -16456,7 +16456,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var TERM_HELP_OVERVIEW = "commands: help · clear · laser() · party() · trip() · goto() · night()/day() · confetti() · cat() · hb (help hb) · googlefonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var TERM_HELP_OVERVIEW = "commands: help · clear · laser() · party() · trip() · goto() · night()/day() · confetti() · cat() · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var TERM_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -16514,6 +16514,15 @@ document.addEventListener("click", function (e) {
           "await googlefonts('Roboto', {weight: 700});    // a variant; {italic:true} too",
           "await googlefonts.list('mono');                // enumerate the ~1950 families, filtered",
           "hb.Face(await googlefonts('Lalezar'));         // straight into the shaper (see `help hb`)"
+        ].forEach(function (line) { termPrint(line, "term-dim"); });
+        return;
+      }
+      if (key === "localfonts") { // the visitor's OWN installed fonts (Local Font Access API)
+        [
+          "// your machine's installed fonts — Chromium desktop, asks permission once:",
+          "await localfonts();                             // every installed font",
+          "await localfonts('mono');                       // filtered by name",
+          "hb.Face(await (await localfonts('Menlo'))[0].bytes());   // shape with one"
         ].forEach(function (line) { termPrint(line, "term-dim"); });
         return;
       }
@@ -31752,11 +31761,8 @@ function spawnDustMote(container) {
   // keep puffing/releasing smoke into a now-silent room.
   var behdadJointSeqTimers = [];
   // Running tally of Behdad's tokes across the whole session. Every 3rd puff lands the
-  // "stoned chemistry" beat: the THC card flashes and the wall-screen projector slows to a
-  // crawl for a few seconds (see triggerWeedChem). Persistent so any 3rd puff — auto-roll
-  // or triple-click — counts, and reset with the playthrough.
-  var behdadPuffTotal = 0;
-  window.__resetBehdadPuffs = function () { behdadPuffTotal = 0; };
+  // "stoned chemistry" beat: on the 2nd toke of each smoking round, the THC card flashes and
+  // the wall-screen projector fire slows to a smooth crawl for a few seconds (see triggerWeedChem).
   function triggerWeedChem() {
     if (window.__flashMolCard) window.__flashMolCard("thc", 2800); // shows even under reduced motion (a card, not motion)
     var rm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -31815,7 +31821,7 @@ function spawnDustMote(container) {
     var puffs = 2 + Math.floor(Math.random() * 2); // 2 or 3 slow tokes
     var t = 500;
     for (var i = 0; i < puffs; i++) {
-      (function (first) {
+      (function (first, ord) {
         behdadJointSeqTimers.push(setTimeout(function () {
           wrap.classList.remove("toking");
           void wrap.getBoundingClientRect();
@@ -31823,8 +31829,7 @@ function spawnDustMote(container) {
           behdadJointSeqTimers.push(setTimeout(function () {
             spawnSteamWisps(strip, 1568, 177, 0.4, 1, -1, 2, 0.55); // released up near the ember at the toke's peak
             bumpCuddlySmoke(0.16); // each puff thickens the room's haze a little
-            behdadPuffTotal++;
-            if (behdadPuffTotal % 3 === 0) triggerWeedChem(); // every 3rd puff: THC card + projector slow-down
+            if (ord === 1) triggerWeedChem(); // 2nd puff of each smoking round: THC card + projector slow-down
 
             if (first && head) head.classList.add("pleased");
             // she's right next to him — the first release always gets her, same
@@ -31843,7 +31848,7 @@ function spawnDustMote(container) {
             }
           }, 850)); // lands during the keyframe's 45%-62% hold at the top
         }, t));
-      })(i === 0);
+      })(i === 0, i);
       t += 2100; // ~1.6s toke, then a beat of pause before the next
     }
     behdadJointSeqTimers.push(setTimeout(function () {
@@ -32189,7 +32194,6 @@ function spawnDustMote(container) {
     if (window.__resetDmt) window.__resetDmt();
     if (window.__hideMoleculeCards) window.__hideMoleculeCards();
     if (window.__clearCuddlyProjectorSlow) window.__clearCuddlyProjectorSlow(); // drop any stoned time-dilation on the projector
-    if (window.__resetBehdadPuffs) window.__resetBehdadPuffs(); // a fresh playthrough re-arms the "3rd puff" beat
     if (window.__resetWineSips) window.__resetWineSips();
     ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"].forEach(function (id) {
       var el = document.getElementById(id);

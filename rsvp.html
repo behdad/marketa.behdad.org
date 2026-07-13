@@ -12831,6 +12831,10 @@ document.addEventListener("click", function (e) {
     // no timer (nothing to tear down); hasFocus-gated like every other unattended sound so a
     // backgrounded tab stays silent (playILoveYouSound itself only gates document.hidden).
     if (beh === "irene-hug" && onScreen() && document.hasFocus()) playILoveYouSound("cuddly-irene", 1.5);
+    if (beh === "irene-bounce" && onScreen() && document.hasFocus() && !reducedMotion()) playIreneBounce(); // springy bounces on the couch cushion
+    if (beh === "irene-catjump" && onScreen() && document.hasFocus()) {
+      setTimeout(function () { if (onScreen() && catInNook() && document.hasFocus()) playCatMeowSound(); }, 840); // the cat's startled yelp as she lands beside it
+    }
     if (beh === "irene-catplay" || beh === "irene-catjump") { // nudge the cat to the convergence spot (guarded + self-resuming)
       // catplay: she's already crouched, so nudge after a beat. catjump: sync the cat's hop with
       // her leap so it's settling at the target as she lands (her arc lands ~840ms in).
@@ -12944,6 +12948,27 @@ document.addEventListener("click", function (e) {
         g.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.08);
         osc.connect(g); g.connect(out);
         osc.start(t + dt); osc.stop(t + dt + 0.1);
+      });
+    } catch (e) {}
+  }
+  function playIreneBounce() {
+    try {
+      var ctx = getSfxCtx();
+      if (!ctx) return;
+      var t = ctx.currentTime;
+      var out = pannedOut(ctx, "cuddly-irene");
+      // one soft springy "boing" per landing — the .52s bounce loops 4×
+      [0, 0.52, 1.04, 1.56].forEach(function (dt) {
+        var osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(235, t + dt);
+        osc.frequency.exponentialRampToValueAtTime(95, t + dt + 0.16); // the boing's pitch drop
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t + dt);
+        g.gain.exponentialRampToValueAtTime(0.05, t + dt + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.2);
+        osc.connect(g); g.connect(out);
+        osc.start(t + dt); osc.stop(t + dt + 0.22);
       });
     } catch (e) {}
   }

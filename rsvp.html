@@ -12013,6 +12013,7 @@ document.addEventListener("click", function (e) {
   var fire = (function () {
     var COOL0 = 0.03, SEED_MIN = 0.82; // original doom-fire cooling → tall full flame
     var heat = new Float32Array(N);
+    var heatPrev = new Float32Array(N), slowLast = 0; // slow-mo interpolator: last sim state + step clock
     var img = ctx.createImageData(W, H), data = img.data;
     // warm LUT (heat 0→255): cool = transparent, then ember-red → orange → gold → pale-hot
     var LUT = new Uint8Array(256 * 4);
@@ -12040,13 +12041,18 @@ document.addEventListener("click", function (e) {
       if (m && m.playing) { music = true; beat = Math.pow(1 - m.phase, 2.2); } // spike just after each beat
       return { mul: mul, music: music, beat: beat };
     }
-    function seedBottom(it) {
-      // full-width hot bottom row (the doom-fire seed); brightness scales with season + beat
+    function seedBottom(it, damp) {
+      // full-width hot bottom row (the doom-fire seed); brightness scales with season + beat.
+      // damp (0..1, slow-mo only) shrinks the per-step random flicker toward its mean so the
+      // source doesn't strobe between two unrelated random rows while the display is cross-faded
+      // between sim steps; damp falsy/0 is the normal full re-seed (byte-identical to original).
       var hotm = 0.62 + 0.38 * it.mul + 0.32 * it.beat;
       var boost = popFrames > 0 ? 0.12 : 0;
       var base = (H - 1) * W;
       for (var x = 0; x < W; x++) {
-        var seed = (SEED_MIN + Math.random() * (1 - SEED_MIN)) * hotm + boost;
+        var r = Math.random();
+        if (damp) r = 0.5 + (r - 0.5) * (1 - damp); // shrink flicker amplitude toward the mean
+        var seed = (SEED_MIN + r * (1 - SEED_MIN)) * hotm + boost;
         heat[base + x] = seed > 1 ? 1 : seed;
       }
       if (popFrames > 0) popFrames--;
@@ -12072,11 +12078,14 @@ document.addEventListener("click", function (e) {
       s.vy = -(0.45 + Math.random() * 0.7) * (hot ? 1.7 : 1); s.drift = Math.random() * 6.2832;
       s.maxLife = 26 + (Math.random() * 34 | 0); s.life = s.maxLife; s.r = 0.6 + Math.random() * 0.9;
     }
-    function updateSparks(burst, rate) {
+    function updateSparks(burst, rate, ts) {
+      // ts (slow-mo time-scale) slows the embers in lockstep with the fire; undefined/>=1 is
+      // full speed and byte-identical to the original per-frame advance.
+      var k = (ts === undefined || ts >= 1) ? 1 : ts;
       for (var i = 0; i < SPARKS; i++) {
         var s = sparks[i];
         if (s.life <= 0) { if (burst > 0) { spawnSpark(s, true); burst--; } else if (Math.random() < rate) spawnSpark(s, false); continue; }
-        s.drift += 0.15; s.x += s.vx + Math.sin(s.drift) * 0.35; s.y += s.vy; s.vy *= 0.985; s.life--; if (s.y < 2) s.life = 0;
+        s.drift += 0.15 * k; s.x += (s.vx + Math.sin(s.drift) * 0.35) * k; s.y += s.vy * k; s.vy *= (k >= 1 ? 0.985 : Math.pow(0.985, k)); s.life -= k; if (s.y < 2) s.life = 0;
       }
     }
     function drawSparks() {
@@ -12101,6 +12110,31 @@ document.addEventListener("click", function (e) {
         if (it.music && it.beat > 0.6 && popFrames <= 0) { popFrames = 2; if (burst < 3) burst = 3; } // a flare kicked on the beat
         seedBottom(it); spread(cool); paint();
         updateSparks(burst, 0.08 + 0.10 * it.mul + 0.10 * it.beat); drawSparks();
+      },
+      // ---- stoned slow-motion (fire only) --------------------------------------------------
+      // The choppy trap was throttling to ~2fps: each drawn frame was a fresh, unrelated random
+      // doom-fire state, so the flame jumped. Instead advance the sim ONE FULL discrete step
+      // every (DRAW_MS * slowFactor) ms, but repaint EVERY rAF as a cross-fade between the
+      // previous and current sim states — the rising tongues slide up continuously (true slow
+      // motion). Per-step base flicker is damped (heavier the slower it runs) so the two blended
+      // states stay coherent. resetSlow re-arms it; the driver calls slowRender every rAF while slow.
+      resetSlow: function () { heatPrev.set(heat); slowLast = 0; },
+      slowRender: function (t, slowFactor) {
+        var interval = DRAW_MS * slowFactor;
+        if (slowLast === 0) { heatPrev.set(heat); slowLast = t - interval; } // first slow frame: step once now (no frozen wait)
+        var damp = (slowFactor - 1) / 8; if (damp > 0.75) damp = 0.75; else if (damp < 0) damp = 0;
+        var steps = 0;
+        while (t - slowLast >= interval && steps < 4) { // usually 0 or 1: interval >> a frame
+          var it = intensity();
+          var cool = COOL0 / it.mul; if (it.music) cool *= (1 - 0.25 * it.beat);
+          heatPrev.set(heat); seedBottom(it, damp); spread(cool);
+          slowLast += interval; steps++;
+        }
+        var phase = (t - slowLast) / interval; if (phase > 1) phase = 1; else if (phase < 0) phase = 0;
+        for (var i = 0; i < N; i++) { var h = heatPrev[i] + (heat[i] - heatPrev[i]) * phase; if (h > 1) h = 1; var li = ((h * 255) | 0) * 4, o = i * 4;
+          data[o] = LUT[li]; data[o+1] = LUT[li+1]; data[o+2] = LUT[li+2]; data[o+3] = LUT[li+3]; }
+        ctx.putImageData(img, 0, 0);
+        var k = 1 / slowFactor; updateSparks(0, 0.05 * k, k); drawSparks(); // embers drift in slow-mo too
       },
       still: function () { heat.fill(0); for (var p = 0; p < H; p++) { seedBottom({ mul: 1, music: false, beat: 0 }); spread(COOL0); } paint(); }
     };
@@ -12463,18 +12497,20 @@ document.addEventListener("click", function (e) {
   }
 
   var raf = null, lastDraw = 0;
-  // Stoned time-dilation: Behdad's 3rd joint puff slows the projector's motion for a few
-  // seconds by stretching the per-frame interval, then eases back. slowFactor scales
-  // DRAW_MS (fewer draws → the channel's motion crawls). One self-clearing timer chain;
-  // reset the instant the loop stops (leave-room / hide / off) so nothing carries over.
+  // Stoned time-dilation: Behdad's 3rd joint puff slows the projector fire for a few seconds,
+  // then eases back. slowFactor (6 -> 4 -> 2 -> 1) sets how far apart the fire's discrete sim
+  // steps are (DRAW_MS * slowFactor); the loop still repaints every rAF, cross-fading between
+  // steps, so the flame stays smooth while it crawls (fire.slowRender). Other channels just
+  // re-throttle via DRAW_MS * slowFactor below. One self-clearing timer chain; reset the instant
+  // the loop stops (leave-room / hide / off) so nothing carries over.
   var slowFactor = 1, slowTimers = [];
-  function clearProjectorSlow() { for (var i = 0; i < slowTimers.length; i++) clearTimeout(slowTimers[i]); slowTimers = []; slowFactor = 1; }
+  function clearProjectorSlow() { for (var i = 0; i < slowTimers.length; i++) clearTimeout(slowTimers[i]); slowTimers = []; slowFactor = 1; fire.resetSlow(); }
   window.__cuddlyProjectorSlow = function (ms) {
     if (reduceMotion || document.hidden) return;
     clearProjectorSlow();
-    slowFactor = 16; // near-freeze the fire (~2fps, heat climbs a row every ~half-second), then ease back
-    slowTimers.push(setTimeout(function () { slowFactor = 9; }, Math.round(ms * 0.5)));
-    slowTimers.push(setTimeout(function () { slowFactor = 4; }, Math.round(ms * 0.78)));
+    slowFactor = 6; // deepest slow-mo: fire steps ~6x slower, cross-faded every frame, then eases back
+    slowTimers.push(setTimeout(function () { slowFactor = 4; }, Math.round(ms * 0.5)));
+    slowTimers.push(setTimeout(function () { slowFactor = 2; }, Math.round(ms * 0.78)));
     slowTimers.push(setTimeout(function () { slowFactor = 1; slowTimers = []; }, ms));
   };
   window.__clearCuddlyProjectorSlow = clearProjectorSlow; // reset hook
@@ -12482,7 +12518,12 @@ document.addEventListener("click", function (e) {
   function shouldRun() { return window.currentStageName === "cuddly" && !document.hidden && current !== "off"; }
   function frame(t) {
     if (!shouldRun()) { raf = null; clearProjectorSlow(); return; } // leaving the room / hiding / off → self-cancel, no leftover timer
-    if (t - lastDraw >= DRAW_MS * slowFactor) { lastDraw = t; chanObj[current].frame(); }
+    if (slowFactor > 1 && current === "fire") {
+      // Stoned time-dilation on the fire channel: no frame-rate throttle — repaint every rAF as a
+      // cross-fade between doom-fire sim states that only step every DRAW_MS*slowFactor ms, so the
+      // flame slides up in smooth slow motion instead of jumping at ~2fps (which read as choppy).
+      fire.slowRender(t, slowFactor);
+    } else if (t - lastDraw >= DRAW_MS * slowFactor) { lastDraw = t; chanObj[current].frame(); }
     raf = requestAnimationFrame(frame);
   }
   function renderStill() { ctx.clearRect(0, 0, W, H); (chanObj[current].still || chanObj[current].frame).call(chanObj[current]); }

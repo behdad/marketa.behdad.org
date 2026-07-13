@@ -11545,7 +11545,7 @@ document.addEventListener("keydown", function (e) {
     if (m.classList.contains("show-terminal")) return document.getElementById("monitor-term-in");
     return null;
   }
-  var zoomPending = false; // a deferred zoom-in is already scheduled — don't double-schedule or zoom mid-pan
+  var stripEl = document.getElementById("loft-game-strip");
   document.addEventListener("keydown", function (e) {
     if (!consoleOpen()) return;
     // keep the office in view AND zoomed into the monitor — a drift both navigates away and
@@ -11553,14 +11553,18 @@ document.addEventListener("keydown", function (e) {
     var navigated = false;
     if (window.currentStageName !== "office" && window.goToStage) { window.goToStage("office"); navigated = true; }
     var vp = document.querySelector(".hunt-viewport");
-    // pan first, THEN zoom: goToStage slides the room strip over .7s (and zooms the monitor
-    // out); zooming back in on the same tick composes with the in-flight slide and lands on a
-    // half-monitor. When we had to travel (e.g. returning from irene()/eclipse()), wait for the
-    // slide to settle before zooming back in — and don't re-zoom mid-pan if more keys arrive.
-    function zoomBack() { zoomPending = false; if (vp && !vp.classList.contains("device-zoomed") && window.__monitorZoomIn) window.__monitorZoomIn(); }
-    if (vp && !vp.classList.contains("device-zoomed")) {
-      if (navigated || zoomPending) { if (!zoomPending) { zoomPending = true; setTimeout(zoomBack, 740); } }
-      else zoomBack();
+    if (vp && !vp.classList.contains("device-zoomed") && window.__monitorZoomIn) {
+      if (navigated && stripEl) {
+        // returning from a drift (irene()/eclipse()): goToStage just started a .7s room-pan, and
+        // zooming in changes the strip's transform-origin — changing the origin mid-pan snaps the
+        // strip sideways (the half-monitor). Commit the office pan to its absolute position with
+        // the transition suppressed, so the zoom glides from a settled pose, not a moving one.
+        var prevT = stripEl.style.transition;
+        stripEl.style.transition = "none";
+        void stripEl.offsetWidth; // force the office translateX to apply with no animation
+        stripEl.style.transition = prevT; // restore so the zoom itself still glides
+      }
+      window.__monitorZoomIn();
     }
     var input = textConsoleInput();
     if (input && e.target !== input) { // a stray key leaked (input lost focus): refocus it and swallow the key so no game shortcut fires

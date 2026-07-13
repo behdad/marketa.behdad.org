@@ -2297,7 +2297,7 @@ footer{margin-top:2.6rem}
    Reduced motion drops every pose animation and the reposition transition, just fading her
    in at the target spot, at rest. */
 #cuddly-irene{opacity:0; transition:opacity .55s ease}
-#cuddly-irene.showing{opacity:1}
+#cuddly-irene.showing{opacity:1; pointer-events:auto} /* clickable only while visible (tap → giggle) */
 /* per-behavior gross reposition — instant enough (she fades in already near the target),
    with a short ease so a same-visit nudge doesn't snap; never animated as keyframes */
 #cuddly-irene-move{transform-box:fill-box; transform-origin:bottom center; transition:translate .45s ease}
@@ -2320,12 +2320,21 @@ footer{margin-top:2.6rem}
 @keyframes irene-walk{0%{transform:translateX(-48px)} 50%{transform:translateX(150px) translateY(-2px)} 100%{transform:translateX(340px)}}
 #cuddly-irene.irene-catplay #cuddly-irene-pose{animation:irene-reach 1.5s ease-in-out 3}
 @keyframes irene-reach{0%,100%{transform:rotate(0)} 45%{transform:rotate(5deg) translateY(2px)}}
+/* tap-to-giggle wobble: a one-shot playful wiggle on the dedicated #cuddly-irene-giggle
+   wrapper. It rides the individual `rotate` PROPERTY (not `transform`), so it can't clobber
+   the pose keyframes on its parent #cuddly-irene-pose nor the peek lean on its child — and
+   the wrapper carries no transform attribute of its own. fill-box origin at her feet keeps
+   the wiggle in place (a viewport-origin pivot would swing her across the room). */
+#cuddly-irene-giggle{transform-box:fill-box; transform-origin:bottom center}
+#cuddly-irene.giggling #cuddly-irene-giggle{animation:irene-giggle .5s ease-in-out}
+@keyframes irene-giggle{0%{rotate:0deg} 15%{rotate:-8deg} 32%{rotate:7deg} 48%{rotate:-6deg} 64%{rotate:5deg} 80%{rotate:-3deg} 100%{rotate:0deg}}
 @media (prefers-reduced-motion: reduce){
   #cuddly-irene-peek{translate:0 0; rotate:0deg; transition:none}
   #cuddly-irene-move{transition:none}
   #cuddly-irene.irene-bounce #cuddly-irene-pose,
   #cuddly-irene.irene-roam #cuddly-irene-pose,
-  #cuddly-irene.irene-catplay #cuddly-irene-pose{animation:none}
+  #cuddly-irene.irene-catplay #cuddly-irene-pose,
+  #cuddly-irene.giggling #cuddly-irene-giggle{animation:none}
 }
 #balcony-doormat{transform-box:fill-box; transform-origin:center}
 #balcony-doormat.shaking{animation:doormat-shake .4s ease-in-out}
@@ -6562,6 +6571,7 @@ section{margin:1.9rem 0}
 <g id="cuddly-irene" aria-hidden="true" pointer-events="none">
 <g id="cuddly-irene-move"><!-- per-behavior gross reposition (static CSS translate property; see #cuddly-irene rules) -->
 <g id="cuddly-irene-pose"><!-- pose motions: bounce / walk-cross / crouch-reach (transform keyframes; no transform attr here) -->
+<g id="cuddly-irene-giggle"><!-- tap-to-giggle wobble wrapper: rides the `rotate` property (no transform attr) -->
 <g id="cuddly-irene-peek">
 <!-- hair back mass: dark loose curls falling past the shoulders (behind the body) -->
 <path d="M50 190 Q43 178 51 170 Q59 163 66 163 Q73 163 81 170 Q89 178 82 190 Q88 212 81 236 Q74 248 66 246 Q58 248 51 236 Q44 212 50 190 Z" fill="#241d1a"/>
@@ -6619,6 +6629,7 @@ section{margin:1.9rem 0}
 <circle cx="53" cy="241" r="4.4" fill="#dca878" stroke="#b9855e" stroke-width="1"/>
 <circle cx="80" cy="241" r="4.4" fill="#dca878" stroke="#b9855e" stroke-width="1"/>
 </g><!-- /peek -->
+</g><!-- /giggle -->
 </g><!-- /pose -->
 </g><!-- /move -->
 </g>
@@ -12876,6 +12887,49 @@ document.addEventListener("click", function (e) {
     applyPose(beh);
   };
   document.addEventListener("visibilitychange", function () { if (document.hidden) leave(); });
+  // Tap/click Irene (only while she's showing) → a playful wobble + a light giggle. The
+  // wobble is a one-shot `.giggling` class driving the rotate-property wiggle on the
+  // #cuddly-irene-giggle wrapper; restart it cleanly on rapid re-clicks (remove, force a
+  // reflow, re-add — offsetWidth doesn't exist on SVG, so read a layout box) and self-clear
+  // it on animationend. The giggle sound is cooldown-gated so it can't spam, and hasFocus-
+  // gated like every other unattended sound. Reduced motion drops the wobble (CSS), sound stays.
+  var lastGiggleSound = 0;
+  function playIreneGiggle() {
+    try {
+      var ctx = getSfxCtx();
+      if (!ctx) return;
+      var t = ctx.currentTime;
+      var out = pannedOut(ctx, "cuddly-irene"); // panned to where she stands on screen
+      // four quick high triangle pips, up-then-settling — a light childlike "hee-hee-hee"
+      [[0, 900], [0.085, 1120], [0.17, 1030], [0.255, 1260]].forEach(function (pair) {
+        var dt = pair[0], f = pair[1];
+        var osc = ctx.createOscillator();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(f * 0.93, t + dt);
+        osc.frequency.linearRampToValueAtTime(f, t + dt + 0.05);
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t + dt);
+        g.gain.exponentialRampToValueAtTime(0.05, t + dt + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.08);
+        osc.connect(g); g.connect(out);
+        osc.start(t + dt); osc.stop(t + dt + 0.1);
+      });
+    } catch (e) {}
+  }
+  function giggle() {
+    if (!irene.classList.contains("showing")) return;
+    if (!reducedMotion()) {
+      irene.classList.remove("giggling"); // restart cleanly (don't stack) on a rapid re-tap
+      irene.getBoundingClientRect();       // force reflow so re-adding restarts the animation (SVG has no offsetWidth)
+      irene.classList.add("giggling");
+    }
+    var now = Date.now();
+    if (now - lastGiggleSound > 320 && onScreen() && document.hasFocus()) { lastGiggleSound = now; playIreneGiggle(); }
+  }
+  irene.addEventListener("animationend", function (e) {
+    if (e.animationName === "irene-giggle") irene.classList.remove("giggling");
+  });
+  irene.addEventListener("pointerdown", function () { giggle(); });
   window.__ireneSummon = function () { show(); }; // full visit (appear → two actions → leave); used by the console irene() + the wall double-click
   // double-click the bare cuddly wall to summon Irene (a hidden bonus)
   var cuddlyWall = document.getElementById("cuddly-wall");

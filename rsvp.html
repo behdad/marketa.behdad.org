@@ -15306,44 +15306,18 @@ document.addEventListener("click", function (e) {
   // tempo-synced beat-pulse equalizer fallback) with zero other code changes —
   // no build step, just edit this one line and redeploy. Re-flip to true to try
   // the pipeline again. Independent of git history either way.
-  var AUDIO_PIPELINE_ENABLED = true; // 2026-07: confirmed working on Mac Chrome (real device test) — the earlier
-                                       // silence was reproduced on Chrome/Linux specifically and ruled out as a code
-                                       // bug (the graph/gating are correct; ambient synthesized Web Audio sounds on
-                                       // the SAME machine play fine, so it's a Linux-Chrome audio-output-routing
-                                       // quirk — createMediaElementSource's stream apparently never reaches real
-                                       // hardware even though ctx.state is "running" and its clock keeps advancing,
-                                       // which no in-graph check can detect). Root cause history: confirmed broken
-                                       // even unmuted, not (only) the earlier mute-persistence red herring. On an
-                                       // iPhone, also worth checking the ringer switch — iOS mutes Web-Audio-routed
-                                       // output (but not plain <audio>) while the ringer is silenced (WebKit bug
-                                       // 237322), a similar-shaped issue on a different platform.
-  // There's no reliable way to detect the actual Linux failure live (see above — the
-  // context genuinely reports itself healthy), so this proactively platform-sniffs
-  // Linux+Chrome specifically (the one config confirmed broken) and skips the pipeline
-  // there — everywhere else (confirmed: Mac Chrome) gets the real equalizer/headphone-
-  // mode/room-panning pipeline. Blunt (assumes ALL Linux+Chrome installs share this
-  // PipeWire/PulseAudio-class quirk, which may not be universally true), but it's the
-  // only thing actually implementable without a hardware-level audio-output API.
-  function isLikelyBrokenAudioPlatform() {
-    try {
-      if (navigator.userAgentData && navigator.userAgentData.platform) {
-        var isChrome = navigator.userAgentData.brands.some(function (b) { return /Chrome|Chromium/.test(b.brand); });
-        return navigator.userAgentData.platform === "Linux" && isChrome;
-      }
-      // fallback for browsers without the Client Hints API (e.g. Safari, Firefox — both
-      // unaffected anyway, but the string check still needs to specifically catch Chrome)
-      var ua = navigator.userAgent || "";
-      return /\bLinux\b/.test(ua) && !/\bAndroid\b/.test(ua) && /\bChrome\//.test(ua);
-    } catch (e) { return false; }
-  }
-  // ?pipeline=on forces the pipeline past the platform sniff (for testing whether a
-  // sniffed-broken platform actually still mis-routes createMediaElementSource audio);
-  // ?pipeline=off forces it off everywhere, same effect as the kill switch.
+  var AUDIO_PIPELINE_ENABLED = true; // owner's kill switch: set false to fully revert to plain
+                                       // native <audio> playback + the tempo-synced beat-pulse EQ
+                                       // fallback (the whole non-pipeline codepath, kept intact).
+                                       // iPhone gotcha: iOS mutes Web-Audio-routed output — but not
+                                       // plain <audio> — while the ringer switch is silenced (WebKit
+                                       // bug 237322); the beat-pulse fallback still animates there.
+  // ?pipeline=on / ?pipeline=off force the pipeline on/off for testing (off == the kill switch).
   var pipelineOverride = null;
   try { pipelineOverride = new URLSearchParams(location.search).get("pipeline"); } catch (e) {}
   var USE_LIVE_ANALYSER = pipelineOverride === "on" ? true :
     pipelineOverride === "off" ? false :
-    AUDIO_PIPELINE_ENABLED && !isLikelyBrokenAudioPlatform();
+    AUDIO_PIPELINE_ENABLED;
   // eqAudioEl: the audio element the shared equalizer loop is currently driving (set
   // by startEq, cleared by stopEq) — also read by fractalBeatKick, above, to pulse the
   // screensaver fractal's brightness on the beat while a song plays underneath it.

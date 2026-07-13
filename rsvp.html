@@ -24631,10 +24631,12 @@ async def localfont(name):
   // front of the door panels. Shared by the moon-door open handler (below) and the
   // console's cat() toy (via window.__releaseCat). Guarded — a no-op if it's already
   // loose or the node is missing — so it never double-releases.
-  function releaseCat() {
+  function releaseCat(skipWobble) {
     var catWalk = document.getElementById("witchy-chest-cat-walk");
     if (!cat || !catWalk || catWalk.classList.contains("out")) return false;
-    wobbleEl(cat);
+    // skipWobble: the 'c' shortcut homes the cat into the current room right after this,
+    // so the deferred out-of-the-bag shiver would fire mid-glide and read as a flicker
+    if (!skipWobble) wobbleEl(cat);
     // .out = the cat is loose (persists across rooms/resets until the fire-extinguisher);
     // .roaming = the wide garden stroll. Follower rooms swap in .roaming-sm (see __homeCat).
     catWalk.classList.add("roaming", "out"); // out of the bag — it strolls the garden now
@@ -24650,10 +24652,10 @@ async def localfont(name):
   }
   // console/devtools hook: swing the moon door open (so it reads as the cat letting itself
   // out) and release. goToStage's own __homeCat then walks it into whatever room you view.
-  window.__releaseCat = function () {
+  window.__releaseCat = function (skipWobble) {
     var d1 = document.getElementById("witchy-door-1");
     if (d1 && !d1.classList.contains("open")) { d1.classList.add("open"); if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); }
-    return releaseCat();
+    return releaseCat(skipWobble);
   };
   var mouseHasRun = false;
   ["cuddly-cabinet-door-1", "cuddly-cabinet-door-2"].forEach(function (id) {
@@ -30595,8 +30597,9 @@ function spawnDustMote(container) {
       else resetHunt();
     } else if (e.key === "c" || e.key === "C") {
       e.preventDefault();
-      // let the cat out and bring it straight into whatever room you're viewing
-      if (window.__releaseCat) window.__releaseCat();
+      // let the cat out (no out-of-the-bag shiver — it'd flicker mid-glide) and bring it
+      // straight into whatever room you're viewing
+      if (window.__releaseCat) window.__releaseCat(true);
       if (window.__homeCat) window.__homeCat(window.currentStageName);
     }
   });

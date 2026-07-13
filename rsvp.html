@@ -22349,7 +22349,20 @@ async def localfont(name):
         wrap.appendChild(hint); wrap.appendChild(btnRow);
         recompose(); // render the plain polaroid to start
       }
-      showConsent();
+      // permission already granted → skip the "Open camera" ask and go straight to the camera
+      // (the ask only exists so the browser's permission prompt never surprises anyone; with a
+      // standing grant there's no prompt, and getUserMedia doesn't need the tap's transient
+      // activation, so the async query is safe here — same as the office booth)
+      if (navigator.permissions && navigator.permissions.query && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          navigator.permissions.query({ name: "camera" }).then(function (st) {
+            if (!alive()) return;
+            if (st.state === "granted") startCamera(); else showConsent();
+          }, function () { if (alive()) showConsent(); });
+        } catch (e) { showConsent(); }
+      } else {
+        showConsent();
+      }
     }
     // ── calculator ──────────────────────────────────────────────────────────────
     // a plain four-function calculator: acc holds the running total, pending the

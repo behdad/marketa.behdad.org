@@ -11100,12 +11100,13 @@ window.__dayWord = function (n) {
 // ── date override + wedding-day mode ──────────────────────────────────────────
 // window.__now() is the calendar-DATE source for the date-driven bits (wedding-day
 // check, both countdowns, the calendar dock tile) — NOT the ticking wall clock, which
-// keeps reading new Date() directly so only the date time-travels. A #date=YYYY-MM-DD
-// URL hash overrides it (preview a wedding day / anniversary, and the headless test
-// hook); no hash = the real date, so it's inert in production.
+// keeps reading new Date() directly so only the date time-travels. A ?date=YYYY-MM-DD
+// query (or the legacy #date= hash, which also flips live on hashchange) overrides it —
+// preview a wedding day / anniversary, and the headless test hook; neither present = the
+// real date, so it's inert in production.
 window.__now = function () {
   try {
-    var m = /(?:^|[#&?])date=(\d{4})-(\d{2})-(\d{2})/.exec(location.hash || "");
+    var m = /(?:^|[#&?])date=(\d{4})-(\d{2})-(\d{2})/.exec((location.search || "") + (location.hash || ""));
     if (m) {
       var d = new Date(+m[1], +m[2] - 1, +m[3], 12, 0, 0, 0); // noon: clear of DST edges
       if (!isNaN(d.getTime())) return d;

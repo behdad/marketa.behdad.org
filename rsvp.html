@@ -561,6 +561,18 @@ footer{margin-top:2.6rem}
   70%{transform:translateX(-.5px)}
 }
 @media (prefers-reduced-motion: reduce){#kitchen-post.knocking{animation:none !important}}
+/* the SodaStream shudders on a carbonation press; it rides an inner #kitchen-drinkmate-wob
+   wrapper rather than the translate-attributed node (CLAUDE.md's transform-attribute trap) */
+#kitchen-drinkmate-wob{transform-box:fill-box; transform-origin:50% 100%}
+#kitchen-drinkmate.fizzing #kitchen-drinkmate-wob{animation:drinkmate-fizz .45s ease-in-out}
+@keyframes drinkmate-fizz{
+  0%, 100%{transform:translateY(0) scaleY(1)}
+  18%{transform:translateY(1.2px) scaleY(.97)}
+  45%{transform:translateY(-.5px) scaleY(1.015)}
+  68%{transform:translateY(.6px) scaleY(.995)}
+  85%{transform:translateY(-.3px) scaleY(1)}
+}
+@media (prefers-reduced-motion: reduce){#kitchen-drinkmate.fizzing #kitchen-drinkmate-wob{animation:none !important}}
 .office-window{fill:#ffd98a; opacity:0; transition:opacity .35s ease} /* a distant tower window; a click toggles its light on/off */
 .office-window.lit{opacity:.5} /* daytime: a dim, subtle warm pane */
 #stage-office.dusk .office-window.lit{opacity:1; filter:brightness(3)} /* night: glow bright against the dusk-darkened tower (counters #office-buildings' brightness(0.4)) */
@@ -4600,12 +4612,14 @@ section{margin:1.9rem 0}
 </g>
 <g id="kitchen-drinkmate" class="hunt-hit" tabindex="0" role="button" aria-label="The SodaStream" transform="translate(25,0)">
 <rect x="161.5" y="128" width="45" height="108" fill="transparent"/>
+<g id="kitchen-drinkmate-wob">
 <rect x="172" y="150" width="24" height="80" rx="11" fill="url(#kitchen-jar-red-grad)" stroke="#7d1f2c" stroke-width="1.5"/>
 <rect x="169" y="142" width="30" height="12" rx="6" fill="#b03040" stroke="#7d1f2c" stroke-width="1.5"/>
 <line x1="179" y1="148" x2="189" y2="148" stroke="#7d1f2c" stroke-width="2.5" stroke-linecap="round"/>
 <rect x="181" y="158" width="6" height="18" fill="#f2ead2"/>
 <rect x="178" y="192" width="12" height="5" rx="2" fill="#f2ead2"/>
 <path id="kitchen-drinkmate-crack" class="kitchen-crack" d="M177 165 L184 178 L179 195" fill="none" stroke="#eee" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
+</g>
 </g>
 <!-- our kitchen candle: a wax-crusted wine-bottle candle holder (bottle-green glass, cream
      wax cascading down in drip streaks into a puddle spread past its base), unlike the
@@ -13720,9 +13734,14 @@ document.addEventListener("click", function (e) {
   }
   var soda = document.getElementById("kitchen-drinkmate");
   if (soda) {
+    soda.addEventListener("animationend", function () { soda.classList.remove("fizzing"); });
     function fizzSoda() {
       if (sodaBroken) { playDryClickSound("kitchen-drinkmate"); return; }
       playSodaHissSound();
+      soda.classList.remove("fizzing");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { soda.classList.add("fizzing"); });
+      });
     }
     soda.addEventListener("click", fizzSoda);
     soda.addEventListener("keydown", function (e) {
@@ -14428,6 +14447,7 @@ document.addEventListener("click", function (e) {
     if (!el) return;
     function squish() {
       el.classList.remove("squished");
+      playPlushSquishSound();
       requestAnimationFrame(function () {
         requestAnimationFrame(function () { el.classList.add("squished"); });
       });
@@ -14656,6 +14676,7 @@ document.addEventListener("click", function (e) {
   if (!sofacorner) return;
   function squishSofacorner() {
     sofacorner.classList.remove("squished");
+    playPlushSquishSound();
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { sofacorner.classList.add("squished"); });
     });
@@ -15140,6 +15161,7 @@ document.addEventListener("click", function (e) {
       requestAnimationFrame(function () {
         requestAnimationFrame(function () { woodenHead.classList.add("wobbling"); });
       });
+      playDryClickSound("office-wooden-head");
     }
     woodenHead.addEventListener("click", wobbleWoodenHead);
     woodenHead.addEventListener("keydown", function (e) {
@@ -22868,6 +22890,7 @@ async def localfont(name):
   if (lights) {
     function toggleLights() {
       lights.classList.toggle("off");
+      playLaptopClickSound("balcony-lights");
       if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(); // re-check: pulsing a dark string is pointless
     }
     lights.addEventListener("click", toggleLights);
@@ -23339,7 +23362,7 @@ async def localfont(name):
   }
   var coveredgrill = document.getElementById("balcony-coveredgrill");
   if (coveredgrill) {
-    function puffGrill() { spawnSteamWisps(strip, 3021, 230, 0.7); }
+    function puffGrill() { spawnSteamWisps(strip, 3021, 230, 0.7); playDryClickSound("balcony-coveredgrill"); }
     coveredgrill.addEventListener("click", puffGrill);
     coveredgrill.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); puffGrill(); }
@@ -23441,6 +23464,7 @@ async def localfont(name):
       requestAnimationFrame(function () {
         requestAnimationFrame(function () { doormat.classList.add("shaking"); });
       });
+      playSweepSound();
       spawnSteamWisps(strip, 2820, 275);
     }
     doormat.addEventListener("click", shakeDoormat);
@@ -24343,6 +24367,8 @@ async def localfont(name):
     if (!pane) return;
     function gleamPane() {
       spawnPaneGleam(strip, pane);
+      playGlassClinkSound(1.6, id); // high, quiet tap on the glass
+
       // clicking a GARDEN window pane also summons the KLM/Air Canada flight soon (daytime)
       if (id.indexOf("garden-window") === 0 && typeof spawnGardenPlane === "function") {
         var gs = document.getElementById("stage-garden");
@@ -24550,7 +24576,7 @@ async def localfont(name):
     if (gs.classList.contains("dusk")) growlight.classList.add("off");
     else growlight.classList.remove("off");
   };
-  function toggleGrowlight() { growlight.classList.toggle("off"); scheduleGrowCycle(); }
+  function toggleGrowlight() { growlight.classList.toggle("off"); playLaptopClickSound("garden-growlight"); scheduleGrowCycle(); }
   if (growlight) {
     growlight.addEventListener("click", toggleGrowlight);
     growlight.addEventListener("keydown", function (e) {
@@ -24825,7 +24851,7 @@ async def localfont(name):
   }
   var blind = document.getElementById("garden-blind");
   if (blind) {
-    function toggleBlind() { blind.classList.toggle("raised"); }
+    function toggleBlind() { blind.classList.toggle("raised"); playSwishSound("garden-blind"); }
     blind.addEventListener("click", toggleBlind);
     blind.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleBlind(); }
@@ -31865,6 +31891,7 @@ function spawnDustMote(container) {
       e.stopPropagation();
       wob.classList.remove("wobbling"); // restart cleanly on a rapid re-tap (double-rAF: SVG has no offsetWidth reflow)
       requestAnimationFrame(function () { requestAnimationFrame(function () { wob.classList.add("wobbling"); }); });
+      playDryClickSound("garden-tensegrity");
     });
   })();
   Object.keys(instrumentSpots).forEach(function (id) {
@@ -32340,6 +32367,7 @@ function spawnDustMote(container) {
         requestAnimationFrame(function () {
           requestAnimationFrame(function () { el.classList.add("tugged"); });
         });
+        playSwishSound(id);
       }
       var octopus = document.getElementById("cuddly-octopus");
       if (!octopus || !octopus.classList.contains("played")) {

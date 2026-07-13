@@ -212,6 +212,7 @@ function checkAnimationClassCleanup(file, style, script, html) {
     var animMatch = decl.match(/animation\s*:\s*([^;]+)/);
     if (!animMatch) continue;
     if (/\binfinite\b/.test(animMatch[1])) continue; // looping, not one-shot
+    if (/^\s*none\b/.test(animMatch[1])) continue; // `animation:none` is a reset (e.g. a reduced-motion or channel-gate override), not a one-shot class
     var classRe = /\.([A-Za-z][\w-]*)/g;
     var cm;
     while ((cm = classRe.exec(selector))) {
@@ -340,7 +341,9 @@ function checkTransformClobber(file, style, html) {
         var cre = /\.([\w-]+)/g, cm;
         while ((cm = cre.exec(last))) {
           if (TRANSFORM_CLOBBER_ALLOW.indexOf("." + cm[1]) !== -1) continue;
-          var tagRe = new RegExp('<[a-zA-Z][^>]*\\bclass="[^"]*\\b' + cm[1] + '\\b[^"]*"[^>]*>', "g");
+          // class-token boundary must exclude hyphens (a plain \b treats "-" as a
+          // boundary, so ".sky-shoot" would wrongly match class="sky-shoot-wrap")
+          var tagRe = new RegExp('<[a-zA-Z][^>]*\\bclass="[^"]*(?<![\\w-])' + cm[1] + '(?![\\w-])[^"]*"[^>]*>', "g");
           var tm2;
           while ((tm2 = tagRe.exec(html))) {
             var idIn = tm2[0].match(/\bid="([\w-]+)"/);

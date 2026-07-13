@@ -16489,15 +16489,21 @@ document.addEventListener("click", function (e) {
       return;
     }
     if (/^man(\s|$)/.test(c)) { termPrint("the only manual here is `man love`.", "term-dim"); return; }
-    var out;
+    function fmtOut(v) {
+      if (v === undefined) return "undefined";
+      if (v !== null && typeof v === "object") { try { return JSON.stringify(v); } catch (e2) { return String(v); } }
+      return String(v);
+    }
+    function errOut(e) { return e && e.name ? e.name + ": " + e.message : String(e); }
     try {
-      out = window.eval(c); // indirect eval -> global scope, so var/function persist across commands
-      if (out === undefined) out = "undefined";
-      else if (typeof out === "object") { try { out = JSON.stringify(out); } catch (e2) { out = String(out); } }
-      else out = String(out);
-      termPrint(out);
+      var out = window.eval(c); // indirect eval -> global scope, so var/function persist across commands
+      if (out && typeof out.then === "function") { // a Promise (shape(), await-y toys): print when it settles
+        out.then(function (v) { termPrint(fmtOut(v)); }, function (err) { termPrint(errOut(err), "term-err"); });
+        return;
+      }
+      termPrint(fmtOut(out));
     } catch (e) {
-      termPrint(e && e.name ? e.name + ": " + e.message : String(e), "term-err");
+      termPrint(errOut(e), "term-err");
     }
   }
   // iOS auto-zooms the page when a focused input's font-size is under 16px — which the
@@ -31655,18 +31661,18 @@ function spawnDustMote(container) {
   // back to clear on a single self-stopping timer chain (no perpetual/background-tab
   // spawner — just one rect's opacity). Filling the room takes a few light-ups.
   var cuddlySmokeLevel = 0, cuddlySmokeDecayTimer = null;
-  var CUDDLY_SMOKE_MAX_OPACITY = 0.78;
+  var CUDDLY_SMOKE_MAX_OPACITY = 0.55;
   function renderCuddlySmoke() {
     var haze = document.getElementById("cuddly-smoke-haze");
     if (haze) haze.style.opacity = (cuddlySmokeLevel * CUDDLY_SMOKE_MAX_OPACITY).toFixed(3);
   }
   function decayCuddlySmoke() {
     cuddlySmokeDecayTimer = setTimeout(function () {
-      cuddlySmokeLevel = Math.max(0, cuddlySmokeLevel - 0.05);
+      cuddlySmokeLevel = Math.max(0, cuddlySmokeLevel - 0.06);
       renderCuddlySmoke();
       if (cuddlySmokeLevel > 0.001) decayCuddlySmoke();
       else { cuddlySmokeLevel = 0; cuddlySmokeDecayTimer = null; }
-    }, 3200); // slow lift: ~0.05 every 3.2s → a full room takes ~a minute to clear
+    }, 2400); // lift ~0.06 every 2.4s → a full room clears in well under a minute
   }
   function bumpCuddlySmoke(amount) {
     cuddlySmokeLevel = Math.min(1, cuddlySmokeLevel + amount);

@@ -2336,8 +2336,9 @@ footer{margin-top:2.6rem}
 @keyframes irene-bounce{0%,100%{transform:translateY(0)} 42%{transform:translateY(-15px) scaleY(1.04)} 62%{transform:translateY(-10px)}}
 #cuddly-irene.irene-roam #cuddly-irene-pose{animation:irene-walk 6.8s linear forwards}
 @keyframes irene-walk{0%{transform:translateX(-48px)} 50%{transform:translateX(150px) translateY(-2px)} 100%{transform:translateX(340px)}}
+/* crouch-play: a gentle up/down lift as she reaches for the cat (no side-tilt) */
 #cuddly-irene.irene-catplay #cuddly-irene-pose{animation:irene-reach 1.5s ease-in-out 3}
-@keyframes irene-reach{0%,100%{transform:rotate(0)} 45%{transform:rotate(5deg) translateY(2px)}}
+@keyframes irene-reach{0%,100%{transform:translateY(0)} 45%{transform:translateY(-4px)}}
 /* cat-jump: she springs from her canonical spot up-and-right and lands beside the cat with an
    excited rebound (the move translate above sets the landing; these keyframes are the leap in) */
 #cuddly-irene.irene-catjump #cuddly-irene-pose{animation:irene-catjump 1.2s ease-in-out}
@@ -12826,15 +12827,31 @@ document.addEventListener("click", function (e) {
     if (fadeTimer) clearTimeout(fadeTimer);
     fadeTimer = setTimeout(function () { fadeTimer = null; dropPose(); }, 620); // > opacity .55s fade
   }
-  function pickBehavior() {
-    // rotate so visits vary (never immediately repeat); the two cat behaviors (crouch-play +
-    // leap-over) are added only when the cat is in the nook, together weighted the same as the
-    // old single catplay-x2 so she still gravitates to the cat while it's around
+  // The applicable pose set (the two cat behaviors — crouch-play + leap-over — are valid only
+  // when the loose cat is in the nook; base poses otherwise).
+  function ireneePool() {
     var pool = BEHAVIORS.slice();
     if (catInNook()) { pool.push("irene-catplay", "irene-catjump"); }
-    var choices = pool.filter(function (b) { return b !== lastBeh; });
-    if (!choices.length) choices = pool;
-    return choices[Math.floor(Math.random() * choices.length)];
+    return pool;
+  }
+  // Deal poses from a shuffled bag (like the cheersDeck): every valid pose is seen once per
+  // cycle before any repeats — no random droughts. The bag REFILLS from the currently-valid
+  // pool, so when the cat enters/leaves the nook the cat poses drop in/out at refill (never a
+  // cat pose picked with no cat present). Guard the bag boundary so a fresh shuffle can't
+  // repeat the just-shown pose. Forced poses (irene('catjump'), __ireneShow) bypass this.
+  var ireneBag = [];
+  function pickBehavior() {
+    if (!ireneBag.length) {
+      ireneBag = ireneePool();
+      for (var i = ireneBag.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1)), tmp = ireneBag[i];
+        ireneBag[i] = ireneBag[j]; ireneBag[j] = tmp;
+      }
+      if (ireneBag.length > 1 && ireneBag[0] === lastBeh) { // no back-to-back across the bag boundary
+        var t = ireneBag[0]; ireneBag[0] = ireneBag[1]; ireneBag[1] = t;
+      }
+    }
+    return ireneBag.shift();
   }
   // Apply ONE pose synchronously: swap the pose class, drop the matching z-order, optionally
   // nudge the cat. NO linger/chain timer here — the sequence driver (runStep) and the verify
@@ -12929,6 +12946,7 @@ document.addEventListener("click", function (e) {
     irene.classList.remove("showing");
     dropPose();
     firstDone = false;
+    ireneBag = []; // fresh pose rotation on the next visit
     schedule();
   };
   // test/verify hook: force ONE specific behavior and hold it (no auto-chain / no leave),
@@ -13007,7 +13025,17 @@ document.addEventListener("click", function (e) {
     if (e.animationName === "irene-giggle") irene.classList.remove("giggling");
   });
   irene.addEventListener("pointerdown", function () { giggle(); });
-  window.__ireneSummon = function () { show(); }; // full visit (appear → two actions → leave); used by the console irene() + the wall double-click
+  // full visit (appear → two actions → leave); used by the console irene() + the wall double-
+  // click. Reset the auto-appearance scheduler so a manual summon gives a clean standalone
+  // visit: cancel any pending auto-show, count this as her first appearance (firstDone) so the
+  // re-arm uses the baseline cadence rather than the short first-visit delay, then re-arm the
+  // single timer fresh from now — she won't auto-pop right back on top of the summon.
+  window.__ireneSummon = function () {
+    if (showTimer) { clearTimeout(showTimer); showTimer = null; }
+    firstDone = true;
+    show();
+    schedule();
+  };
   // double-click the bare cuddly wall to summon Irene (a hidden bonus)
   var cuddlyWall = document.getElementById("cuddly-wall");
   if (cuddlyWall) cuddlyWall.addEventListener("dblclick", function () { window.__ireneSummon(); });
@@ -34100,8 +34128,26 @@ function spawnDustMote(container) {
     strip.classList.toggle("uv-mode", on);
     return on ? "🟣 blacklight on — everything fluoresces." : "blacklight off — the lights come up.";
   };
-  window.irene = function () {
+  // irene() → a full random visit. irene('catplay'|'catjump'|'bounce'|'sit'|'hug'|'roam') →
+  // summon her forcing that one pose (held for viewing). The cat behaviors only read right
+  // with the loose cat in the nook, so those first fetch the cat there (releasing it from the
+  // chest if need be) and let its walk-in settle before she plays with / leaps to it.
+  window.irene = function (beh) {
     if (window.goToStage) window.goToStage("cuddly"); // she only appears in the cuddly nook
+    if (beh) {
+      var POSES = { roam: "irene-roam", bounce: "irene-bounce", sit: "irene-sit", hug: "irene-hug", catplay: "irene-catplay", catjump: "irene-catjump" };
+      var pose = POSES[String(beh).toLowerCase().replace(/^irene-/, "")];
+      if (!pose) return "irene poses: roam, bounce, sit, hug, catplay, catjump.";
+      if (!window.__ireneShow) return "irene isn't around right now.";
+      if (pose === "irene-catplay" || pose === "irene-catjump") {
+        if (window.__releaseCat) window.__releaseCat();   // open the moon door + free the cat if it's still in the chest
+        if (window.__homeCat) window.__homeCat("cuddly");  // bring the loose cat into the nook
+        setTimeout(function () { if (window.__ireneShow) window.__ireneShow(pose); }, 1000); // after the ~900ms walk-in settles, so she lands beside the cat
+        return "🐈 fetching the cat — 👧 irene will " + (pose === "irene-catjump" ? "leap to" : "play with") + " it.";
+      }
+      window.__ireneShow(pose);
+      return "👧 irene: " + pose.replace("irene-", "") + ".";
+    }
     if (window.__ireneSummon) { window.__ireneSummon(); return "👧 irene skips into the nook."; }
     return "irene isn't around right now.";
   };

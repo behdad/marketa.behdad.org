@@ -14197,9 +14197,25 @@ document.addEventListener("click", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCabinet(); }
     });
   });
+  function jumpCabinet() { // dart to a DIFFERENT cabinet — a quick fade sells the hop, and a
+    var next;              // shut destination door hides the critter until that cabinet's opened
+    do { next = Math.floor(Math.random() * 4); } while (next === ghostCabinetIndex);
+    ghostCabinetIndex = next;
+    surpriseWrap.style.transition = "opacity .2s ease";
+    surpriseWrap.style.opacity = "0";
+    setTimeout(function () {
+      surpriseWrap.style.transform = "translateX(" + ((ghostCabinetIndex - 1) * 150) + "px)";
+      surpriseWrap.style.opacity = "";
+      setTimeout(function () { surpriseWrap.style.transition = ""; }, 220);
+    }, 210);
+  }
   if (critter) {
     critter.style.cursor = "pointer";
-    critter.addEventListener("click", function () { wobbleCritter(); playSurpriseSound(); });
+    critter.addEventListener("click", function () {
+      wobbleCritter();
+      playSurpriseSound();
+      if (surpriseWrap && Math.random() < 0.5) jumpCabinet(); // half the time it hops away
+    });
   }
   var cups = document.getElementById("kitchen-cups");
   if (cups) {

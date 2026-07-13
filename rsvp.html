@@ -18372,6 +18372,34 @@ async def _gf_list(query=None):
         names = [n for n in names if q in n.lower()]
     return names
 googlefonts.list = _gf_list
+
+async def localfonts(query=None):
+    """The fonts installed on THIS machine (Local Font Access API; Chromium desktop, asks
+    permission once). Returns postscript names, optionally filtered. Use localfont(name)
+    for the bytes.  e.g.  await localfonts('mono')"""
+    import js
+    if not hasattr(js, "queryLocalFonts"):
+        return "local fonts need Chromium desktop (queryLocalFonts) — not available in this browser."
+    fonts = await js.queryLocalFonts()
+    names = sorted({f.postscriptName for f in fonts})
+    if query:
+        q = query.lower()
+        names = [n for n in names if q in n.lower()]
+    return names
+
+async def localfont(name):
+    """Raw sfnt bytes of an installed font, matched by family / full / postscript name.
+    e.g.  face = hb.Face(await localfont('Menlo'))"""
+    import io as _io
+    import js
+    if not hasattr(js, "queryLocalFonts"):
+        raise RuntimeError("local fonts need Chromium desktop (queryLocalFonts)")
+    low = name.lower()
+    for f in await js.queryLocalFonts():
+        if low in ((f.family or "") + " " + (f.fullName or "") + " " + (f.postscriptName or "")).lower():
+            buf = await (await f.blob()).arrayBuffer()
+            return bytes(buf.to_py())
+    raise ValueError("no local font matching {!r}".format(name))
 `;
         pyPrint(">>> import micropip; await micropip.install(['fonttools', 'brotli'])", "term-dim");
         pyPrint(">>> from fontTools.ttLib import TTFont", "term-dim");
@@ -33911,6 +33939,23 @@ function spawnDustMote(container) {
       if (query) { var q = String(query).toLowerCase(); names = names.filter(function (n) { return n.toLowerCase().indexOf(q) >= 0; }); }
       return names;
     });
+  };
+  // localfonts([query]) — the visitor's OWN installed fonts, via the Local Font Access API
+  // (Chromium desktop; a one-time permission prompt). Each result has .bytes() → raw sfnt bytes.
+  //   hb.Face(await (await localfonts('Menlo'))[0].bytes())
+  window.localfonts = function (query) {
+    if (!window.queryLocalFonts) return Promise.resolve("local fonts need Chromium desktop (queryLocalFonts) — not available in this browser.");
+    return window.queryLocalFonts().then(function (fonts) {
+      var q = query ? String(query).toLowerCase() : null, out = [];
+      fonts.forEach(function (fd) {
+        if (q && (fd.family + " " + fd.fullName + " " + fd.postscriptName).toLowerCase().indexOf(q) < 0) return;
+        out.push({
+          family: fd.family, fullName: fd.fullName, postscriptName: fd.postscriptName, style: fd.style,
+          bytes: function () { return fd.blob().then(function (b) { return b.arrayBuffer(); }).then(function (ab) { return new Uint8Array(ab); }); }
+        });
+      });
+      return out;
+    }).catch(function (e) { return "localfonts failed — " + ((e && e.message) || e); });
   };
   window.love = function () { return "love is patient, love is kind. ∞"; };
   window.blacklight = function (arg) { // toggle the UV/blacklight wash over the whole loft (the caps-lock toggle it used to ride is gone)

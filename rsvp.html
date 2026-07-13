@@ -30606,10 +30606,10 @@ function spawnDustMote(container) {
       else resetHunt();
     } else if (e.key === "c" || e.key === "C") {
       e.preventDefault();
-      // let the cat out (no out-of-the-bag shiver — it'd flicker mid-glide) and bring it
-      // straight into whatever room you're viewing
+      // let the cat out and drop it straight into the room you're viewing, in place
+      // (skip both the out-of-the-bag shiver and the walk-in glide — either flickers here)
       if (window.__releaseCat) window.__releaseCat(true);
-      if (window.__homeCat) window.__homeCat(window.currentStageName);
+      if (window.__homeCat) window.__homeCat(window.currentStageName, true);
     }
   });
 
@@ -33866,7 +33866,7 @@ function spawnDustMote(container) {
   // move the cat into `room` if it's loose and that room is reachable; otherwise park it
   // back in its garden chest (off-screen from wherever the player is). Idempotent: calling
   // it repeatedly for the same room is a no-op and never restarts the pace or dupes a cat.
-  window.__homeCat = function (room) {
+  window.__homeCat = function (room, instant) {
     if (!walk.classList.contains("out")) return; // still in the bag
     var dest = eligible(room) ? room : "garden"; // where the cat will physically be
     var changed = dest !== catRoom;
@@ -33885,7 +33885,9 @@ function spawnDustMote(container) {
       pos.setAttribute("transform", "translate(" + cfg.dx + "," + cfg.dy + ")");
       walk.classList.remove("roaming");
       walk.classList.add("roaming-sm");
-      if (changed && canEnter(room)) startEnter(room); // walk in from the edge/door, then pace
+      // instant ('c' shortcut): appear in place — no walk-in glide, so nothing snaps to an
+      // edge and flickers (there's no room-pan here to mask a WAAPI first-frame flash)
+      if (changed && !instant && canEnter(room)) startEnter(room); // walk in from the edge/door, then pace
       else walk.style.animationDelay = "";
     } else {
       // back to the garden, native coordinates (floor line 4px low per owner), wide stroll —

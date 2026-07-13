@@ -12470,9 +12470,9 @@ document.addEventListener("click", function (e) {
   window.__cuddlyProjectorSlow = function (ms) {
     if (reduceMotion || document.hidden) return;
     clearProjectorSlow();
-    slowFactor = 3.4;
-    slowTimers.push(setTimeout(function () { slowFactor = 2.2; }, Math.round(ms * 0.55)));
-    slowTimers.push(setTimeout(function () { slowFactor = 1.5; }, Math.round(ms * 0.8)));
+    slowFactor = 7; // a hard, obvious crawl — the fire near-freezes to ~4fps, then eases back
+    slowTimers.push(setTimeout(function () { slowFactor = 4.5; }, Math.round(ms * 0.5)));
+    slowTimers.push(setTimeout(function () { slowFactor = 2.2; }, Math.round(ms * 0.78)));
     slowTimers.push(setTimeout(function () { slowFactor = 1; slowTimers = []; }, ms));
   };
   window.__clearCuddlyProjectorSlow = clearProjectorSlow; // reset hook
@@ -22862,10 +22862,9 @@ async def googlefonts(family, weight=None, text=None, subset=None):
   // "Booze chemistry" beat: every 2nd full glass Behdad drinks flashes the ethanol card and
   // softens the balcony scene with a brief blur (separate from the last-drop tipsy sway). One
   // self-clearing blur timer; cleared alongside the sway on room-leave/reset via clearTipsy.
-  var wineSipTotal = 0, boozeBlurTimer = null;
-  window.__resetWineSips = function () { wineSipTotal = 0; };
-  function triggerBoozeChem() {
-    if (window.__flashMolCard) window.__flashMolCard("ethanol", 2600);
+  var drinkTotal = 0, boozeBlurTimer = null; // a "drink" is a wine sip OR a beer-can crack (see registerDrink)
+  window.__resetWineSips = function () { drinkTotal = 0; };
+  function boozeBlur() {
     var rm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     var bal = document.getElementById("stage-balcony");
     if (rm || !bal || document.visibilityState === "hidden") return;
@@ -22873,6 +22872,18 @@ async def googlefonts(family, weight=None, text=None, subset=None):
     if (boozeBlurTimer) clearTimeout(boozeBlurTimer);
     boozeBlurTimer = setTimeout(function () { bal.classList.remove("booze-soft"); boozeBlurTimer = null; }, 2600);
   }
+  function triggerBoozeChem() { // the ethanol chemistry reveal: the card + the soft blur
+    if (window.__flashMolCard) window.__flashMolCard("ethanol", 2600);
+    boozeBlur();
+  }
+  // one shared tally across every drink — wine sips AND beer-can cracks: soft blur from the 3rd
+  // drink (the ethanol card flashes at that reveal), the woozy wobble added from the 4th on.
+  function registerDrink() {
+    drinkTotal++;
+    if (drinkTotal === 3) triggerBoozeChem();
+    else if (drinkTotal >= 4) { boozeBlur(); goTipsy(); }
+  }
+  window.__registerDrink = registerDrink;
   function goTipsy() {
     var s = document.getElementById("loft-game-strip");
     var w = document.getElementById("balcony-wobble");
@@ -22928,16 +22939,13 @@ async def googlefonts(family, weight=None, text=None, subset=None):
         }
         // a toast, but only when there's wine to raise (the full -> sip)
         eggBubble(wineglass, nextCheers());
-        wineSipTotal++;
-        if (wineSipTotal % 2 === 0) triggerBoozeChem(); // every 2nd glass: ethanol card + a soft blur
+        registerDrink(); // a wine sip is a drink — blur on the 3rd, wobble from the 4th
       } else {
         wineglass.classList.remove("wobbling");
         requestAnimationFrame(function () {
           requestAnimationFrame(function () { wineglass.classList.add("wobbling"); });
         });
       }
-      // that last sip — glass drained and the bottle already poured dry — tips the room woozy
-      if (wasFull && typeof winePoursLeft !== "undefined" && winePoursLeft <= 0) goTipsy();
     }
     wineglass.addEventListener("click", sipGlass);
     wineglass.addEventListener("keydown", function (e) {
@@ -23096,6 +23104,7 @@ async def googlefonts(family, weight=None, text=None, subset=None):
       }
       can.classList.add("crushed");
       playCanCrushSound();
+      if (window.__registerDrink) window.__registerDrink(); // cracking the can is a drink too
     }
     can.addEventListener("click", crushCan);
     can.addEventListener("keydown", function (e) {
@@ -31640,7 +31649,7 @@ function spawnDustMote(container) {
     if (window.__flashMolCard) window.__flashMolCard("thc", 2800); // shows even under reduced motion (a card, not motion)
     var rm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (rm) return;
-    if (window.__cuddlyProjectorSlow) window.__cuddlyProjectorSlow(3000); // time dilation on the screen content
+    if (window.__cuddlyProjectorSlow) window.__cuddlyProjectorSlow(3600); // time dilation on the fire
   }
   // Joint smoke haze: level rises with each toke (bumpCuddlySmoke) and decays slowly
   // back to clear on a single self-stopping timer chain (no perpetual/background-tab

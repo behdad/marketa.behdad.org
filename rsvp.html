@@ -11593,19 +11593,21 @@ document.addEventListener("keydown", function (e) {
     if (m.classList.contains("show-terminal")) return document.getElementById("monitor-term-in");
     return null;
   }
+  // Modelled on the pocket phone: while zoomed into a device (monitor or laptop), the game's
+  // keyboard shortcuts are grabbed — only Escape (back out) and Space (song/film) get through,
+  // plus real typing into a console prompt. This stops 'p'/arrows/'f'/etc. firing from under the
+  // device (which, via a room-nav, was what raced the zoom into the half-monitor).
   document.addEventListener("keydown", function (e) {
-    if (!consoleOpen()) return;
-    // A console command that pans the view away (irene()/party()/eclipse()/goto()/trip()/…) hands
-    // the room back and leaves the monitor focus (goToStage zooms it out + blurs the input). Do NOT
-    // fight to zoom back in on the next key — that raced the room-pan and framed half the monitor.
-    // Only keep the console input pinned while we're actually on the office.
-    if (window.currentStageName !== "office") return;
-    var input = textConsoleInput();
-    if (input && e.target !== input) { // a stray key leaked (the scaled foreignObject input lost focus): refocus it and swallow the key so no game shortcut (e.g. 'p') fires
-      try { input.focus({ preventScroll: true }); } catch (err) {}
-      e.stopPropagation();
-    }
-  }, true); // capture — runs before the game-shortcut handlers
+    var vp = document.querySelector(".hunt-viewport");
+    if (!vp || !vp.classList.contains("device-zoomed")) return; // nothing engaged → normal game keys
+    if (e.key === "Escape" || e.key === "Esc" || e.key === " " || e.key === "Spacebar") return; // the two the phone lets through
+    var t = e.target;
+    if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return; // typing into the console prompt
+    // any other key is a game shortcut — swallow it. In a console, refocus the prompt so a key
+    // that leaked because the scaled foreignObject input lost focus lands back in it next time.
+    if (consoleOpen()) { var input = textConsoleInput(); if (input && t !== input) { try { input.focus({ preventScroll: true }); } catch (err) {} } }
+    e.stopPropagation();
+  }, true); // capture — runs before the game-shortcut (room-nav / party) handlers
 })();
 (function () {
   // Right-click Copy/Paste menu for the office-monitor terminal/python consoles: copy the current

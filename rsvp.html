@@ -16309,7 +16309,7 @@ document.addEventListener("click", function (e) {
   var termIn = document.getElementById("monitor-term-in");
   var termWrap = document.getElementById("monitor-term-wrap");
   var termCloseBtn = document.getElementById("monitor-term-close");
-  var termHist = [], termHistIdx = 0, termWelcomed = false;
+  var termHist = [], termHistIdx = 0, termWelcomed = false, hbBannerShown = false;
   if (!window.loft) window.loft = {
     couple: "markéta ∞ behdad",
     // a getter so the city follows the language toggle
@@ -16374,6 +16374,15 @@ document.addEventListener("click", function (e) {
     clearTimeout(saverTimer); saverTimer = null; // no screensaver over someone typing
     monitor.classList.add("show-terminal");
     if (!termWelcomed) { termWelcomed = true; termPrint(termT("term_welcome"), "term-dim"); }
+    // preload harfbuzzjs like the python console preloads uharfbuzz — kick off the runtime
+    // and, once ready, print an English-only banner (window.hb is set inside hbReady). One
+    // banner per session; a load failure just stays quiet. (English-only, no T-dict keys.)
+    if (!hbBannerShown && window.harfbuzz) {
+      hbBannerShown = true;
+      window.harfbuzz().then(function () {
+        termPrint("harfbuzzjs ready — hb.Face(bytes), hb.Buffer(), hb.shape(...)", "term-dim");
+      }, function () {});
+    }
     if (termIn) setTimeout(function () { try { termIn.focus({ preventScroll: true }); } catch (e) {} }, 60);
     playLaptopClickSound("office-monitor");
   }
@@ -33721,6 +33730,44 @@ function spawnDustMote(container) {
   // or comma-separated string of OpenType feature tags. English-only (console commands
   // aren't translated).
   var __hbReady = null;
+  // A uharfbuzz-style facade over the raw harfbuzzjs API, so the JS console reads like the
+  // Python console's uharfbuzz `hb`: hb.Face(bytes), hb.Font(face), hb.Buffer(), hb.shape(
+  // font, buf, features). A Buffer is the native hbjs buffer augmented IN PLACE with the
+  // uharfbuzz aliases add_str/guess_segment_properties plus glyph_infos/glyph_positions
+  // getters (mapped from .json()'s g/cl/ax/ay/dx/dy) — since it's the same object, the
+  // native methods keep working and hb.shape(font, buf) still takes it directly. .font is
+  // the bundled Fraunces so hb.shape(hb.font, buf) works with no font load. English-only.
+  function makeHbFacade(hb, font) {
+    function asBlob(x) { // accept raw bytes OR an already-made blob (from hb.Blob()/createBlob)
+      if (x instanceof Uint8Array) return hb.createBlob(x);
+      if (x instanceof ArrayBuffer) return hb.createBlob(new Uint8Array(x));
+      return x;
+    }
+    return {
+      hb: hb,     // the raw harfbuzzjs API, for the low-level names
+      font: font, // the bundled Fraunces, so hb.shape(hb.font, buf) works out of the box
+      Blob: function (bytes) { return bytes instanceof Uint8Array ? hb.createBlob(bytes) : hb.createBlob(new Uint8Array(bytes)); },
+      Face: function (bytesOrBlob, index) { return hb.createFace(asBlob(bytesOrBlob), index || 0); },
+      Font: function (face) { return hb.createFont(face); },
+      Buffer: function () {
+        var buf = hb.createBuffer();
+        buf.add_str = function (t) { return buf.addText(t); };
+        buf.guess_segment_properties = function () { return buf.guessSegmentProperties(); };
+        Object.defineProperty(buf, "glyph_infos", { get: function () {
+          return buf.json().map(function (g) { return { codepoint: g.g, cluster: g.cl }; });
+        } });
+        Object.defineProperty(buf, "glyph_positions", { get: function () {
+          return buf.json().map(function (g) { return { x_advance: g.ax, y_advance: g.ay, x_offset: g.dx, y_offset: g.dy }; });
+        } });
+        return buf;
+      },
+      shape: function (fnt, buf, features) {
+        if (Array.isArray(features)) features = features.join(",");
+        return hb.shape(fnt, buf, features || undefined);
+      },
+      version_string: function () { return hb.version_string ? hb.version_string() : "14.0.0"; }
+    };
+  }
   function hbLoadScript(src) {
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
@@ -33744,6 +33791,7 @@ function spawnDustMote(container) {
           var blob = hb.createBlob(new Uint8Array(buf));
           var face = hb.createFace(blob, 0);
           var font = hb.createFont(face);
+          try { window.hb = makeHbFacade(hb, font); } catch (e) {} // uharfbuzz-style handle for the JS console / devtools
           return { hb: hb, font: font };
         });
       });
@@ -33781,6 +33829,52 @@ function spawnDustMote(container) {
     return hbReady().then(function (ctx) {
       var u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
       return ctx.hb.createFont(ctx.hb.createFace(ctx.hb.createBlob(u8), 0));
+    });
+  };
+  // googlefonts(family, opts) — mirror of the python console's googlefonts(). Fetches the
+  // css2 stylesheet (default latin subset; opts.weight / opts.text / opts.subset like the
+  // python side) and pulls the font url out of the first matching @font-face. Google Fonts
+  // serves woff2 to browsers, and JS has no brotli — harfbuzzjs's hb.wasm can't read woff2
+  // either (verified: a woff2-fed face shapes only .notdef, glyph id 0) — so this can't hand
+  // back a ready hb.Face the way python can. It returns the raw woff2 BYTES (Uint8Array) plus
+  // a console note pointing at the python console's googlefonts() (which decompresses woff2)
+  // — the bytes are there for anyone who wants to pipe them to a woff2 decoder. English-only.
+  window.googlefonts = function (family, opts) {
+    opts = opts || {};
+    var spec = family + (opts.weight ? ":wght@" + opts.weight : "");
+    var url = "https://fonts.googleapis.com/css2?family=" + spec.split(" ").join("+");
+    if (opts.text) url += "&text=" + encodeURIComponent(opts.text);
+    return fetch(url).then(function (r) {
+      if (!r.ok) throw new Error("css2 " + r.status);
+      return r.text();
+    }).then(function (css) {
+      // each @font-face is a /* subset */ comment + a url(...) (a .woff2, or a /l/font kit
+      // url with no extension for text= requests) — grab everything between url( and ).
+      var faces = [], pos = 0;
+      while (true) {
+        var u = css.indexOf("url(https://", pos);
+        if (u < 0) break;
+        var e = css.indexOf(")", u);
+        var c = css.lastIndexOf("/* ", u);
+        var nm = c >= 0 ? css.slice(c + 3, css.indexOf(" */", c)) : "";
+        faces.push({ name: nm, url: css.slice(u + 4, e) });
+        pos = e + 1;
+      }
+      if (!faces.length) throw new Error("no font found for " + JSON.stringify(family) + " (unknown family?)");
+      var want = opts.subset || "latin";
+      var pick = faces.filter(function (f) { return f.name === want; })[0] || faces[0];
+      return fetch(pick.url).then(function (r) {
+        if (!r.ok) throw new Error("woff2 " + r.status);
+        return r.arrayBuffer();
+      }).then(function (ab) {
+        var bytes = new Uint8Array(ab);
+        console.log("⬡ googlefonts(" + JSON.stringify(family) + ") → " + bytes.length + " bytes of woff2 (" +
+          (pick.name || "default") + " subset). JS can't decompress woff2 and hb.wasm can't read it — " +
+          "use the python console's googlefonts() for a ready hb.Face, or pipe these bytes to a woff2 decoder.");
+        return bytes;
+      });
+    }).catch(function (e) {
+      return "googlefonts failed — " + ((e && e.message) || e);
     });
   };
   window.love = function () { return "love is patient, love is kind. ∞"; };

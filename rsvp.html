@@ -2456,6 +2456,7 @@ footer{margin-top:2.6rem}
 /* our kitchen candle — a click-to-toggle (unlike the garden ones' one-time light),
    same flame/glow treatment, brighter at dusk same as the garden pair */
 #kitchen-candle.lit .candle-flame{opacity:1; animation:candle-flicker 1s ease-in-out infinite}
+#kitchen-candle.lit .candle-halo{opacity:.72} /* warm red halo like the garden candles, a touch dimmer */
 #kitchen-candle.lit .candle-glow{opacity:.42}
 #stage-kitchen.dusk #kitchen-candle.lit .candle-glow{opacity:.92; transform:scale(1.75); animation:candle-glow-breathe 4.2s ease-in-out infinite}
 #stage-kitchen.dusk.k-candle-lit #kitchen-frontglow{opacity:.95; transform:scale(1.9); animation:candle-glow-breathe 4.2s ease-in-out infinite}
@@ -3944,10 +3945,111 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 #stage-cuddly.dusk #cuddly-firelight{opacity:.62; animation:cuddly-fire-glow-breathe 4.6s ease-in-out infinite}
 @keyframes cuddly-fire-glow-breathe{0%,100%{opacity:.66} 50%{opacity:.46}}
 /* tap the screen to change projector channel: the fire decor + warm room glow show ONLY on the
-   fire channel; the aquarium / rain / starfield channels paint the shared canvas themselves */
+   fire channel; the aquarium / workout / night-sky channels are inline SVG shown per chan class */
 #cuddly-wallscreen .fire-live{transition:opacity .5s ease}
 #cuddly-wallscreen:not(.chan-fire) .fire-live{opacity:0; animation:none}
 #cuddly-wallscreen:not(.chan-fire) #cuddly-firelight{opacity:0; animation:none}
+/* SVG channels: one shown at a time, cross-fading on channel change (per-channel art +
+   keyframes live with each group's own CSS block below) */
+#cuddly-aqua, #cuddly-stars, #cuddly-workout{opacity:0; transition:opacity .4s ease}
+#cuddly-wallscreen.chan-aqua #cuddly-aqua,
+#cuddly-wallscreen.chan-stars #cuddly-stars,
+#cuddly-wallscreen.chan-workout #cuddly-workout{opacity:1}
+/* Animations are defined on every SVG channel but PAUSED off-channel — a paused animation
+   burns no CPU and holds its current frame, so switching away freezes the scene mid-motion
+   (no snap to base) and only the active channel actually animates. */
+#cuddly-aqua *, #cuddly-stars *, #cuddly-workout *{animation-play-state:paused}
+#cuddly-wallscreen.chan-aqua #cuddly-aqua *,
+#cuddly-wallscreen.chan-stars #cuddly-stars *,
+#cuddly-wallscreen.chan-workout #cuddly-workout *{animation-play-state:running}
+/* ===== workout channel — female instructor doing jumping jacks ===== */
+#cuddly-workout .wo-arm-l,#cuddly-workout .wo-arm-r,
+#cuddly-workout .wo-leg-l,#cuddly-workout .wo-leg-r{transform-box:fill-box;transform-origin:top center}
+#cuddly-workout .wo-figure{transform-box:fill-box;transform-origin:bottom center}
+#cuddly-workout .wo-pulse{transform-box:fill-box;transform-origin:center}
+@keyframes wo-arm-l{0%,100%{transform:rotate(0deg)}50%{transform:rotate(158deg)}}
+@keyframes wo-arm-r{0%,100%{transform:rotate(0deg)}50%{transform:rotate(-158deg)}}
+@keyframes wo-leg-l{0%,100%{transform:rotate(0deg)}50%{transform:rotate(22deg)}}
+@keyframes wo-leg-r{0%,100%{transform:rotate(0deg)}50%{transform:rotate(-22deg)}}
+@keyframes wo-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.2px)}}
+@keyframes wo-pulse{0%,100%{opacity:.10;transform:scale(.82)}50%{opacity:.30;transform:scale(1.06)}}
+#cuddly-workout .wo-arm-l{animation:wo-arm-l .8s ease-in-out infinite}
+#cuddly-workout .wo-arm-r{animation:wo-arm-r .8s ease-in-out infinite}
+#cuddly-workout .wo-leg-l{animation:wo-leg-l .8s ease-in-out infinite}
+#cuddly-workout .wo-leg-r{animation:wo-leg-r .8s ease-in-out infinite}
+#cuddly-workout .wo-figure{animation:wo-bob .8s ease-in-out infinite}
+#cuddly-workout .wo-pulse{animation:wo-pulse .8s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){
+  #cuddly-workout .wo-arm-l,
+  #cuddly-workout .wo-arm-r,
+  #cuddly-workout .wo-leg-l,
+  #cuddly-workout .wo-leg-r,
+  #cuddly-workout .wo-figure,
+  #cuddly-workout .wo-pulse{animation:none}
+}
+/* ===== night-sky channel — twinkling stars, ∞ constellation, a periodic shooting star ===== */
+#cuddly-stars .sky-star{opacity:.85}
+#cuddly-stars .sky-inf{opacity:.42}
+#cuddly-stars .sky-inf-line{opacity:.13}
+#cuddly-stars .sky-shoot{opacity:0; transform-box:fill-box; transform-origin:center}
+@keyframes sky-twinkle{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes sky-inf-tw{0%,100%{opacity:.25}50%{opacity:.62}}
+@keyframes sky-shoot{
+  0%,88%{opacity:0; transform:translate(0,0)}
+  89%{opacity:0; transform:translate(0,0)}
+  90%{opacity:1; transform:translate(0,0)}
+  97%{opacity:1; transform:translate(46px,27px)}
+  99%,100%{opacity:0; transform:translate(50px,29px)}
+}
+#cuddly-stars .sky-star{animation:sky-twinkle 3.4s ease-in-out infinite}
+#cuddly-stars .sky-inf{animation:sky-inf-tw 5s ease-in-out infinite}
+#cuddly-stars .sky-shoot{animation:sky-shoot 13s linear infinite}
+@media (prefers-reduced-motion: reduce){
+  #cuddly-stars .sky-star,
+  #cuddly-stars .sky-inf,
+  #cuddly-stars .sky-shoot{animation:none}
+}
+/* ===== aquarium channel — Nemo-style clownfish, bubbles, swaying anemone ===== */
+@keyframes aq-swim{
+ 0%{transform:translateX(0)}
+ 49.99%{transform:translateX(95px)}
+ 50%{transform:translateX(-95px)}
+ 100%{transform:translateX(0)}
+}
+@keyframes aq-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.4px)}}
+@keyframes aq-rise{
+ 0%{transform:translate(0,0);opacity:0}
+ 12%{opacity:.6}
+ 50%{transform:translate(2.4px,-24px)}
+ 85%{opacity:.45}
+ 100%{transform:translate(-1.6px,-49px);opacity:0}
+}
+@keyframes aq-sway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+#cuddly-aqua .aq-fish{transform-box:fill-box;transform-origin:center}
+#cuddly-aqua .aq-bob{transform-box:fill-box;transform-origin:center}
+#cuddly-aqua .aq-bubble{transform-box:fill-box;transform-origin:center}
+#cuddly-aqua .aq-frond{transform-box:fill-box;transform-origin:bottom center}
+#cuddly-aqua .aq-fish-1{animation:aq-swim 13s linear infinite;animation-delay:-2s}
+#cuddly-aqua .aq-fish-2{animation:aq-swim 18s linear infinite reverse;animation-delay:-9s}
+#cuddly-aqua .aq-fish-3{animation:aq-swim 10s linear infinite;animation-delay:-4s}
+#cuddly-aqua .aq-fish-4{animation:aq-swim 15s linear infinite reverse;animation-delay:-11s}
+#cuddly-aqua .aq-bob-1{animation:aq-bob 3.1s ease-in-out infinite}
+#cuddly-aqua .aq-bob-2{animation:aq-bob 3.9s ease-in-out infinite}
+#cuddly-aqua .aq-bob-3{animation:aq-bob 2.6s ease-in-out infinite}
+#cuddly-aqua .aq-bob-4{animation:aq-bob 3.4s ease-in-out infinite}
+#cuddly-aqua .aq-bubble-1{animation:aq-rise 5.2s ease-in infinite;animation-delay:-1s}
+#cuddly-aqua .aq-bubble-2{animation:aq-rise 6.8s ease-in infinite;animation-delay:-4s}
+#cuddly-aqua .aq-bubble-3{animation:aq-rise 4.4s ease-in infinite;animation-delay:-2.5s}
+#cuddly-aqua .aq-bubble-4{animation:aq-rise 7.6s ease-in infinite;animation-delay:-6s}
+#cuddly-aqua .aq-bubble-5{animation:aq-rise 5.9s ease-in infinite;animation-delay:-3.3s}
+#cuddly-aqua .aq-frond-1{animation:aq-sway 4.6s ease-in-out infinite}
+#cuddly-aqua .aq-frond-2{animation:aq-sway 5.7s ease-in-out infinite;animation-delay:-1.5s}
+@media (prefers-reduced-motion: reduce){
+ #cuddly-aqua .aq-fish,
+ #cuddly-aqua .aq-bob,
+ #cuddly-aqua .aq-bubble,
+ #cuddly-aqua .aq-frond{animation:none}
+}
 /* off channel (5th tap state): the projector is powered down — the panel goes cool grey
    (the canvas is wiped, so this shows through) and the rAF loop stops. The canvas itself
    fades its last frame out (JS drops opacity → 0) so switching off reads as a screen
@@ -4665,7 +4767,9 @@ section{margin:1.9rem 0}
 <rect x="250.5" y="165" width="9" height="15" rx="2" fill="#fdfbf6" stroke="#d8cfbc" stroke-width="1"/>
 <line x1="255" y1="163" x2="255" y2="158" stroke="#8a7a58" stroke-width="1.5" pointer-events="none"/>
 <ellipse class="candle-glow" cx="255" cy="158" rx="19" ry="21" fill="url(#candle-glow-grad)"/>
-<ellipse class="candle-flame" cx="255" cy="155" rx="2" ry="3.5" fill="#f0c46a" pointer-events="none"/>
+<ellipse class="candle-halo" cx="255" cy="154" rx="5.3" ry="6.8" fill="url(#candle-halo-grad)" pointer-events="none"/>
+<ellipse class="candle-flame" cx="255" cy="155.4" rx="2.5" ry="3.9" fill="#ef6626" pointer-events="none"/>
+<ellipse class="candle-flame" cx="255" cy="155" rx="1.7" ry="3" fill="#f8d874" pointer-events="none"/>
 </g>
 <!-- a second, broader wash spilling across the counter at dusk, same "room-filling
      light" pattern as the garden candles' #garden-frontglow-1/-2 (see .candle-frontglow
@@ -7025,16 +7129,18 @@ section{margin:1.9rem 0}
 <stop offset="0.5" stop-color="#ff9a34" stop-opacity="0.9"/>
 <stop offset="1" stop-color="#e0500f" stop-opacity="0"/>
 </radialGradient>
+<!-- clips the SVG channels (aquarium / night sky / workout) to the screen panel -->
+<clipPath id="cuddly-screen-clip"><rect x="180" y="44" width="92" height="60" rx="2"/></clipPath>
 </defs>
 <ellipse id="cuddly-firelight" class="fire-live" cx="226" cy="92" rx="152" ry="132" fill="url(#cuddly-firelight-grad)" opacity="0.14" pointer-events="none" aria-hidden="true"/>
 <rect x="174" y="38" width="104" height="72" rx="5" fill="#3b2e26" stroke="#241c17" stroke-width="1.5"/>
 <rect x="178" y="42" width="96" height="64" rx="3" fill="#161311"/>
 <rect id="cuddly-screen-bg" x="180" y="44" width="92" height="60" rx="2" fill="url(#cuddly-screen-grad)"/>
-<!-- Shared projector canvas: ONE 138x90 supersample of the 92x60 panel drives EVERY channel
-     (fire / aquarium / rain / starfield; off just wipes it). overflow:hidden clips it to the bezel; the JS sets
-     mix-blend-mode per channel (screen for the additive fire over the dark panel, normal for
-     the others which paint their own background). pointer-events:none keeps the screen's tap
-     target intact. Driven by the single self-cancelling rAF loop in the projector IIFE. -->
+<!-- Projector canvas: a 138x90 supersample of the 92x60 panel drives the FIRE channel (off
+     just wipes it; the aquarium / workout / night-sky channels are inline SVG below, shown per
+     chan class). overflow:hidden clips it to the bezel; mix-blend-mode:screen composites the
+     additive fire over the dark panel. pointer-events:none keeps the screen's tap target
+     intact. Driven by the single self-cancelling rAF loop in the projector IIFE. -->
 <foreignObject id="cuddly-flame-fo" x="180" y="44" width="92" height="60" style="overflow:hidden;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" id="cuddly-flame-canvas" width="138" height="90" style="width:92px;height:60px;display:block"></canvas></foreignObject>
 <!-- Fire-channel decor (fire-live → hidden on every other channel): a bed of glowing coals,
      crossed hearth logs, and layered hand-drawn tongues sitting on the additive canvas fire. -->
@@ -7054,9 +7160,218 @@ section{margin:1.9rem 0}
 <path class="fire-flame cf-d" d="M221 100 C 219 94 221 87 226 82 C 231 87 233 94 231 100 Z" fill="url(#cuddly-flame-grad-d)"/>
 </g></g>
 </g>
-<!-- subtle channel indicator: four dots (fire / aquarium / rain / starfield) centered at the
-     top of the screen, the active one bright; JS fades the group in for ~1s per tap. Off gets
-     no dot — nothing's playing. -->
+<!-- SVG channels: crisp, CSS-animated groups shown one at a time via the chan-* class (the
+     canvas above handles only fire + rain). Each carries its own opaque background and is
+     clipped to the screen panel. Filled in below. -->
+<g id="cuddly-aqua" clip-path="url(#cuddly-screen-clip)" pointer-events="none" aria-hidden="true">
+ <defs>
+  <linearGradient id="aq-water" x1="0" y1="0" x2="0" y2="1">
+   <stop offset="0" stop-color="#1b7280"/>
+   <stop offset="0.5" stop-color="#12496a"/>
+   <stop offset="1" stop-color="#0a2440"/>
+  </linearGradient>
+  <clipPath id="aq-body-clip"><ellipse cx="0" cy="0" rx="9" ry="5.5"/></clipPath>
+ </defs>
+ <rect x="180" y="44" width="92" height="60" fill="url(#aq-water)"/>
+ <path d="M188 44 L204 44 L196 104 L184 104 Z" fill="#8fdfe6" opacity="0.06"/>
+ <path d="M234 44 L246 44 L240 104 L226 104 Z" fill="#8fdfe6" opacity="0.05"/>
+ <g class="aq-frond aq-frond-1">
+  <g transform="translate(196,104)">
+   <path d="M0,0 C-4,-8 -6,-12 -5,-16" stroke="#5a3f7a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+   <path d="M0,0 C-1,-9 -2,-13 0,-18" stroke="#6d4a92" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+   <path d="M0,0 C3,-8 5,-12 4,-15" stroke="#5a3f7a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+   <path d="M0,0 C6,-6 8,-9 9,-13" stroke="#7a55a0" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+   <circle cx="0" cy="-18" r="1.5" fill="#c98fd6"/>
+   <circle cx="-5" cy="-16" r="1.3" fill="#c98fd6"/>
+   <circle cx="4" cy="-15" r="1.3" fill="#c98fd6"/>
+   <circle cx="9" cy="-13" r="1.2" fill="#c98fd6"/>
+  </g>
+ </g>
+ <g class="aq-frond aq-frond-2">
+  <g transform="translate(256,104)">
+   <path d="M0,0 C-5,-7 -7,-10 -8,-14" stroke="#4a6f4a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+   <path d="M0,0 C-1,-8 -1,-12 1,-16" stroke="#5c8757" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+   <path d="M0,0 C4,-7 6,-10 5,-14" stroke="#4a6f4a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+   <circle cx="1" cy="-16" r="1.4" fill="#9ed36f"/>
+   <circle cx="-8" cy="-14" r="1.2" fill="#9ed36f"/>
+   <circle cx="5" cy="-14" r="1.2" fill="#9ed36f"/>
+  </g>
+ </g>
+ <g transform="translate(200,102)"><g class="aq-bubble aq-bubble-1"><circle cx="0" cy="0" r="1.1" fill="#cdeef2" opacity="0.7"/></g></g>
+ <g transform="translate(232,102)"><g class="aq-bubble aq-bubble-2"><circle cx="0" cy="0" r="1.5" fill="#cdeef2" opacity="0.65"/></g></g>
+ <g transform="translate(216,102)"><g class="aq-bubble aq-bubble-3"><circle cx="0" cy="0" r="0.8" fill="#cdeef2" opacity="0.7"/></g></g>
+ <g transform="translate(252,102)"><g class="aq-bubble aq-bubble-4"><circle cx="0" cy="0" r="1.3" fill="#cdeef2" opacity="0.6"/></g></g>
+ <g transform="translate(188,102)"><g class="aq-bubble aq-bubble-5"><circle cx="0" cy="0" r="1" fill="#cdeef2" opacity="0.68"/></g></g>
+ <g transform="translate(214,64)"><g class="aq-fish aq-fish-1"><g class="aq-bob aq-bob-1"><g transform="scale(1)">
+  <path d="M -7,0 L -15,-6 L -12,0 L -15,6 Z" fill="#ff7a1e" stroke="#1a1206" stroke-width="0.8" stroke-linejoin="round"/>
+  <path d="M 3,-5.2 L -1,-8 L -5,-5 Z" fill="#f96e12" stroke="#1a1206" stroke-width="0.7" stroke-linejoin="round"/>
+  <path d="M 0,5 L -3,7.6 L -5,5 Z" fill="#f96e12" stroke="#1a1206" stroke-width="0.7" stroke-linejoin="round"/>
+  <path d="M 2,1 L 5.5,4.6 L 6,1.4 Z" fill="#ff8c34" stroke="#1a1206" stroke-width="0.6" stroke-linejoin="round"/>
+  <ellipse cx="0" cy="0" rx="9" ry="5.5" fill="#ff7a1e" stroke="#1a1206" stroke-width="0.8"/>
+  <g clip-path="url(#aq-body-clip)" stroke="#1a1206" stroke-width="0.5" fill="#fff">
+   <path d="M 4.6,-7 L 3.3,7 L 2,7 L 3.3,-7 Z"/>
+   <path d="M 1,-7 L -0.6,7 L -3,7 L -1.4,-7 Z"/>
+   <path d="M -4.6,-7 L -5.7,7 L -6.8,7 L -5.7,-7 Z"/>
+  </g>
+  <circle cx="5" cy="-1.3" r="1.6" fill="#fff"/>
+  <circle cx="5.4" cy="-1.3" r="0.95" fill="#10161d"/>
+  <circle cx="5.05" cy="-1.7" r="0.35" fill="#fff"/>
+ </g></g></g></g>
+ <g transform="translate(238,88)"><g class="aq-fish aq-fish-2"><g class="aq-bob aq-bob-2"><g transform="scale(-1.25,1.25)">
+  <path d="M -7,0 L -15,-6 L -12,0 L -15,6 Z" fill="#ff7a1e" stroke="#1a1206" stroke-width="0.8" stroke-linejoin="round"/>
+  <path d="M 3,-5.2 L -1,-8 L -5,-5 Z" fill="#f96e12" stroke="#1a1206" stroke-width="0.7" stroke-linejoin="round"/>
+  <path d="M 0,5 L -3,7.6 L -5,5 Z" fill="#f96e12" stroke="#1a1206" stroke-width="0.7" stroke-linejoin="round"/>
+  <path d="M 2,1 L 5.5,4.6 L 6,1.4 Z" fill="#ff8c34" stroke="#1a1206" stroke-width="0.6" stroke-linejoin="round"/>
+  <ellipse cx="0" cy="0" rx="9" ry="5.5" fill="#ff7a1e" stroke="#1a1206" stroke-width="0.8"/>
+  <g clip-path="url(#aq-body-clip)" stroke="#1a1206" stroke-width="0.5" fill="#fff">
+   <path d="M 4.6,-7 L 3.3,7 L 2,7 L 3.3,-7 Z"/>
+   <path d="M 1,-7 L -0.6,7 L -3,7 L -1.4,-7 Z"/>
+   <path d="M -4.6,-7 L -5.7,7 L -6.8,7 L -5.7,-7 Z"/>
+  </g>
+  <circle cx="5" cy="-1.3" r="1.6" fill="#fff"/>
+  <circle cx="5.4" cy="-1.3" r="0.95" fill="#10161d"/>
+  <circle cx="5.05" cy="-1.7" r="0.35" fill="#fff"/>
+ </g></g></g></g>
+ <g transform="translate(198,53)"><g class="aq-fish aq-fish-3"><g class="aq-bob aq-bob-3"><g transform="scale(0.7)">
+  <path d="M -7,0 L -15,-6 L -12,0 L -15,6 Z" fill="#ff7a1e" stroke="#1a1206" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M 3,-5.2 L -1,-8 L -5,-5 Z" fill="#f96e12" stroke="#1a1206" stroke-width="0.9" stroke-linejoin="round"/>
+  <path d="M 0,5 L -3,7.6 L -5,5 Z" fill="#f96e12" stroke="#1a1206" stroke-width="0.9" stroke-linejoin="round"/>
+  <ellipse cx="0" cy="0" rx="9" ry="5.5" fill="#ff7a1e" stroke="#1a1206" stroke-width="1"/>
+  <g clip-path="url(#aq-body-clip)" stroke="#1a1206" stroke-width="0.7" fill="#fff">
+   <path d="M 4.6,-7 L 3.2,7 L 1.7,7 L 3.2,-7 Z"/>
+   <path d="M 0.4,-7 L -1.2,7 L -3.4,7 L -1.8,-7 Z"/>
+  </g>
+  <circle cx="5" cy="-1.3" r="1.8" fill="#fff"/>
+  <circle cx="5.4" cy="-1.3" r="1.05" fill="#10161d"/>
+  <circle cx="5.05" cy="-1.75" r="0.4" fill="#fff"/>
+ </g></g></g></g>
+ <g transform="translate(252,70)"><g class="aq-fish aq-fish-4"><g class="aq-bob aq-bob-4"><g transform="scale(-0.9,0.9)">
+  <path d="M -7,0 L -15,-6 L -12,0 L -15,6 Z" fill="#ff7a1e" stroke="#1a1206" stroke-width="0.9" stroke-linejoin="round"/>
+  <path d="M 3,-5.2 L -1,-8 L -5,-5 Z" fill="#f96e12" stroke="#1a1206" stroke-width="0.8" stroke-linejoin="round"/>
+  <path d="M 0,5 L -3,7.6 L -5,5 Z" fill="#f96e12" stroke="#1a1206" stroke-width="0.8" stroke-linejoin="round"/>
+  <path d="M 2,1 L 5.5,4.6 L 6,1.4 Z" fill="#ff8c34" stroke="#1a1206" stroke-width="0.6" stroke-linejoin="round"/>
+  <ellipse cx="0" cy="0" rx="9" ry="5.5" fill="#ff7a1e" stroke="#1a1206" stroke-width="0.9"/>
+  <g clip-path="url(#aq-body-clip)" stroke="#1a1206" stroke-width="0.5" fill="#fff">
+   <path d="M 4.6,-7 L 3.3,7 L 2,7 L 3.3,-7 Z"/>
+   <path d="M 1,-7 L -0.6,7 L -3,7 L -1.4,-7 Z"/>
+   <path d="M -4.6,-7 L -5.7,7 L -6.8,7 L -5.7,-7 Z"/>
+  </g>
+  <circle cx="5" cy="-1.3" r="1.6" fill="#fff"/>
+  <circle cx="5.4" cy="-1.3" r="0.95" fill="#10161d"/>
+  <circle cx="5.05" cy="-1.7" r="0.35" fill="#fff"/>
+ </g></g></g></g>
+</g>
+<g id="cuddly-stars" clip-path="url(#cuddly-screen-clip)" pointer-events="none" aria-hidden="true">
+<rect x="180" y="44" width="92" height="60" fill="url(#sky-night)"/>
+<defs>
+<linearGradient id="sky-night" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#05060f"/>
+<stop offset="0.55" stop-color="#0a0e24"/>
+<stop offset="0.86" stop-color="#101636"/>
+<stop offset="1" stop-color="#181a34"/>
+</linearGradient>
+<radialGradient id="sky-glow" cx="50%" cy="50%" r="50%">
+<stop offset="0" stop-color="#fff7e4" stop-opacity="0.55"/>
+<stop offset="0.5" stop-color="#ffe9c8" stop-opacity="0.18"/>
+<stop offset="1" stop-color="#ffe9c8" stop-opacity="0"/>
+</radialGradient>
+<linearGradient id="sky-streak" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#fffdf4" stop-opacity="0"/>
+<stop offset="1" stop-color="#fffdf4" stop-opacity="0.95"/>
+</linearGradient>
+</defs>
+<path class="sky-inf-line" d="M251,76 L250.7,78.2 L249.9,80.2 L248.6,81.9 L247,83.2 L245.2,84.1 L243.3,84.7 L241.4,84.8 L239.6,84.7 L237.8,84.3 L236.1,83.8 L234.6,83 L233.1,82.2 L231.8,81.3 L230.5,80.3 L229.3,79.2 L228.2,78.2 L227.1,77.1 L226,76 L224.9,74.9 L223.8,73.8 L222.7,72.8 L221.5,71.7 L220.2,70.7 L218.9,69.8 L217.4,69 L215.9,68.2 L214.2,67.7 L212.4,67.3 L210.6,67.2 L208.7,67.3 L206.8,67.9 L205,68.8 L203.4,70.1 L202.1,71.8 L201.3,73.8 L201,76 L201.3,78.2 L202.1,80.2 L203.4,81.9 L205,83.2 L206.8,84.1 L208.7,84.7 L210.6,84.8 L212.4,84.7 L214.2,84.3 L215.9,83.8 L217.4,83 L218.9,82.2 L220.2,81.3 L221.5,80.3 L222.7,79.2 L223.8,78.2 L224.9,77.1 L226,76 L227.1,74.9 L228.2,73.8 L229.3,72.8 L230.5,71.7 L231.8,70.7 L233.1,69.8 L234.6,69 L236.1,68.2 L237.8,67.7 L239.6,67.3 L241.4,67.2 L243.3,67.3 L245.2,67.9 L247,68.8 L248.6,70.1 L249.9,71.8 L250.7,73.8 L251,76 Z" fill="none" stroke="#ffeedc" stroke-width="0.5" stroke-linejoin="round"/>
+<circle class="sky-inf" cx="251" cy="76" r="0.95" fill="#ffeedc" style="animation-delay:0s"/>
+<circle class="sky-inf" cx="245.2" cy="67.9" r="0.85" fill="#ffeedc" style="animation-delay:.6s"/>
+<circle class="sky-inf" cx="245.2" cy="84.1" r="0.85" fill="#ffeedc" style="animation-delay:1.2s"/>
+<circle class="sky-inf" cx="229.3" cy="72.8" r="0.8" fill="#ffeedc" style="animation-delay:1.8s"/>
+<circle class="sky-inf" cx="222.7" cy="79.2" r="0.8" fill="#ffeedc" style="animation-delay:2.4s"/>
+<circle class="sky-inf" cx="206.8" cy="67.9" r="0.85" fill="#ffeedc" style="animation-delay:3s"/>
+<circle class="sky-inf" cx="206.8" cy="84.1" r="0.85" fill="#ffeedc" style="animation-delay:3.6s"/>
+<circle class="sky-inf" cx="201" cy="76" r="0.95" fill="#ffeedc" style="animation-delay:4.2s"/>
+<circle class="sky-star" cx="188" cy="50" r="0.6" fill="#fff4e2" style="animation-delay:.2s"/>
+<circle class="sky-star" cx="200" cy="48" r="0.5" fill="#fff4e2" style="animation-delay:1.1s"/>
+<circle class="sky-star" cx="215" cy="52" r="0.7" fill="#dce6ff" style="animation-delay:2.3s"/>
+<circle class="sky-star" cx="226" cy="54" r="0.65" fill="#fff4e2" style="animation-delay:.7s"/>
+<circle class="sky-star" cx="240" cy="49" r="0.55" fill="#fff4e2" style="animation-delay:1.7s"/>
+<circle class="sky-star" cx="252" cy="51" r="0.6" fill="#ffe6c8" style="animation-delay:2.9s"/>
+<circle class="sky-star" cx="264" cy="49" r="0.55" fill="#fff4e2" style="animation-delay:.4s"/>
+<circle class="sky-star" cx="184" cy="60" r="0.5" fill="#fff4e2" style="animation-delay:2.1s"/>
+<circle class="sky-star" cx="210" cy="58" r="0.55" fill="#fff4e2" style="animation-delay:1.4s"/>
+<circle class="sky-star" cx="238" cy="60" r="0.6" fill="#dce6ff" style="animation-delay:3.2s"/>
+<circle class="sky-star" cx="263" cy="62" r="0.65" fill="#fff4e2" style="animation-delay:.9s"/>
+<circle class="sky-star" cx="186" cy="72" r="0.55" fill="#fff4e2" style="animation-delay:2.6s"/>
+<circle class="sky-star" cx="196" cy="66" r="0.5" fill="#fff4e2" style="animation-delay:1.9s"/>
+<circle class="sky-star" cx="268" cy="76" r="0.6" fill="#ffe6c8" style="animation-delay:.3s"/>
+<circle class="sky-star" cx="183" cy="84" r="0.6" fill="#fff4e2" style="animation-delay:1.5s"/>
+<circle class="sky-star" cx="192" cy="92" r="0.5" fill="#fff4e2" style="animation-delay:3.4s"/>
+<circle class="sky-star" cx="205" cy="98" r="0.6" fill="#fff4e2" style="animation-delay:.6s"/>
+<circle class="sky-star" cx="220" cy="100" r="0.55" fill="#dce6ff" style="animation-delay:2.7s"/>
+<circle class="sky-star" cx="236" cy="99" r="0.6" fill="#fff4e2" style="animation-delay:1.2s"/>
+<circle class="sky-star" cx="250" cy="96" r="0.65" fill="#fff4e2" style="animation-delay:3s"/>
+<circle class="sky-star" cx="261" cy="92" r="0.5" fill="#fff4e2" style="animation-delay:.8s"/>
+<circle class="sky-star" cx="258" cy="102" r="0.55" fill="#fff4e2" style="animation-delay:2.2s"/>
+<circle class="sky-star" cx="269" cy="88" r="0.5" fill="#fff4e2" style="animation-delay:1.6s"/>
+<g class="sky-star sky-bright" style="animation-delay:.5s"><circle cx="198" cy="56" r="4.2" fill="url(#sky-glow)"/><circle cx="198" cy="56" r="1.2" fill="#fff6e6"/></g>
+<g class="sky-star sky-bright" style="animation-delay:2.4s"><circle cx="256" cy="74" r="4.6" fill="url(#sky-glow)"/><circle cx="256" cy="74" r="1.3" fill="#fff6e6"/></g>
+<g class="sky-star sky-bright" style="animation-delay:1.3s"><circle cx="209" cy="89" r="4" fill="url(#sky-glow)"/><circle cx="209" cy="89" r="1.1" fill="#fff6e6"/></g>
+<g class="sky-shoot-wrap" transform="translate(193,49)"><g class="sky-shoot"><line x1="-13" y1="-7.5" x2="0" y2="0" stroke="url(#sky-streak)" stroke-width="1.1" stroke-linecap="round"/><circle cx="0" cy="0" r="1.1" fill="#fffdf4"/></g></g>
+</g>
+<g id="cuddly-workout" clip-path="url(#cuddly-screen-clip)" pointer-events="none" aria-hidden="true">
+<defs>
+<linearGradient id="wo-studio-grad" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#d6f3e4"/>
+<stop offset="0.62" stop-color="#b6ead2"/>
+<stop offset="0.62" stop-color="#8ed9b8"/>
+<stop offset="1" stop-color="#6fc9a4"/>
+</linearGradient>
+<radialGradient id="wo-spot-grad" cx="50%" cy="42%" r="55%">
+<stop offset="0" stop-color="#ffffff" stop-opacity="0.55"/>
+<stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<rect x="180" y="44" width="92" height="60" fill="url(#wo-studio-grad)"/>
+<ellipse cx="226" cy="72" rx="30" ry="30" fill="url(#wo-spot-grad)"/>
+<circle class="wo-pulse" cx="226" cy="74" r="26" fill="none" stroke="#ff8f7a" stroke-width="1.4"/>
+<ellipse cx="226" cy="100" rx="30" ry="4.2" fill="#8f7fc4"/>
+<ellipse cx="226" cy="99.2" rx="30" ry="4.2" fill="#a795d6"/>
+<ellipse cx="226" cy="99" rx="26" ry="2.6" fill="#bcaee4" opacity="0.7"/>
+<g class="wo-figure">
+<g class="wo-leg-l">
+<path d="M223.4 87 L223.4 97.5" stroke="#2f5f68" stroke-width="4.4" stroke-linecap="round"/>
+<ellipse cx="223.4" cy="98.4" rx="3" ry="1.7" fill="#f4f0e4" stroke="#cfc7b6" stroke-width="0.8"/>
+</g>
+<g class="wo-leg-r">
+<path d="M228.6 87 L228.6 97.5" stroke="#2f5f68" stroke-width="4.4" stroke-linecap="round"/>
+<ellipse cx="228.6" cy="98.4" rx="3" ry="1.7" fill="#f4f0e4" stroke="#cfc7b6" stroke-width="0.8"/>
+</g>
+<path d="M220.5 69 Q226 66 231.5 69 L230 86.5 Q226 88.4 222 86.5 Z" fill="#ff8f7a" stroke="#e56a56" stroke-width="0.9"/>
+<path d="M222.4 69.4 Q223 67 224.6 66.4 M229.6 69.4 Q229 67 227.4 66.4" fill="none" stroke="#e56a56" stroke-width="0.8" stroke-linecap="round"/>
+<path d="M222.2 85.8 Q226 87.4 229.8 85.8" fill="none" stroke="#2f5f68" stroke-width="1.6" stroke-linecap="round"/>
+<g class="wo-arm-l">
+<path d="M220.6 70.5 L220.6 83.5" stroke="#dca878" stroke-width="3.4" stroke-linecap="round"/>
+<circle cx="220.6" cy="84.4" r="2.1" fill="#dca878" stroke="#b9855e" stroke-width="0.7"/>
+</g>
+<g class="wo-arm-r">
+<path d="M231.4 70.5 L231.4 83.5" stroke="#dca878" stroke-width="3.4" stroke-linecap="round"/>
+<circle cx="231.4" cy="84.4" r="2.1" fill="#dca878" stroke="#b9855e" stroke-width="0.7"/>
+</g>
+<path d="M224 63 H228 V68 Q226 69 224 68 Z" fill="#cf9d6e"/>
+<circle cx="226" cy="59" r="7" fill="#5a3f2e"/>
+<circle cx="226" cy="51.6" r="3.2" fill="#5a3f2e"/>
+<circle cx="226" cy="60" r="5.6" fill="#dca878" stroke="#b9855e" stroke-width="0.9"/>
+<path d="M220.6 58.6 Q221 54.4 226 54 Q231 54.4 231.4 58.6 Q228.8 56.6 226 56.6 Q223.2 56.6 220.6 58.6 Z" fill="#5a3f2e"/>
+<path d="M220.7 57.7 Q226 55.9 231.3 57.7" fill="none" stroke="#e0468b" stroke-width="1.8" stroke-linecap="round"/>
+<ellipse cx="223.4" cy="61.4" rx="1.1" ry="0.8" fill="#e0967f" opacity="0.5"/>
+<ellipse cx="228.6" cy="61.4" rx="1.1" ry="0.8" fill="#e0967f" opacity="0.5"/>
+<circle cx="224.1" cy="60" r="0.75" fill="#33291f"/>
+<circle cx="227.9" cy="60" r="0.75" fill="#33291f"/>
+<path d="M224 62.6 Q226 64.2 228 62.6" fill="none" stroke="#b06a5a" stroke-width="0.9" stroke-linecap="round"/>
+</g>
+</g>
+<!-- subtle channel indicator: four dots (fire / workout / aquarium / night sky) centered
+     at the top of the screen, the active one bright; JS fades the group in for ~1s per tap. Off
+     gets no dot — nothing's playing. -->
 <g id="cuddly-chan-badge" pointer-events="none" aria-hidden="true" opacity="0">
 <circle class="chan-dot" cx="217" cy="49" r="1.6" fill="#ffffff" opacity="1"/>
 <circle class="chan-dot" cx="223" cy="49" r="1.6" fill="#ffffff" opacity="0.28"/>
@@ -12074,8 +12389,8 @@ document.addEventListener("click", function (e) {
   document.addEventListener("visibilitychange", function () { window.__updateFireSound(); });
 
   function advanceChannel() {
-    // the screen is a projector: a tap cycles its channel (🔥 fire → 🐟 aquarium → 🌧 rain →
-    // ✨ starfield → ⏻ off → back). The projector IIFE owns the loop/canvas; it swaps the chan-*
+    // the screen is a projector: a tap cycles its channel (🔥 fire → 🏋 workout → 🐟 aquarium →
+    // ✨ night sky → ⏻ off → back). The projector IIFE owns the loop/canvas; it swaps the chan-*
     // class, re-gates the fire crackle (only the fire channel is audible) via __updateFireSound,
     // and (re)starts the shared self-cancelling loop (which stops outright on the off channel).
     if (window.__cuddlyProjector) window.__cuddlyProjector.cycle();
@@ -12166,10 +12481,10 @@ document.addEventListener("click", function (e) {
 (function () {
   // ── Cuddly wall PROJECTOR: multi-channel ambient screen ───────────────────
   // The wall screen is a little projector; a tap cycles atmospheric "channels":
-  //   🔥 fire (default) → 🐟 aquarium → 🌧 rain-on-glass → ✨ starfield → ⏻ off → (wrap).
-  // ONE shared 138×90 canvas and ONE self-cancelling rAF drive whichever channel is
-  // active. Switching tears the previous channel's state down (its particle arrays are
-  // cleared, the canvas wiped) so nothing from an off-screen channel lingers or piles up.
+  //   🔥 fire (default) → 🏋 workout → 🐟 aquarium → ✨ night sky → ⏻ off → (wrap).
+  // Fire is drawn on a 138×90 canvas by a self-cancelling rAF; the aquarium / workout /
+  // night-sky channels are inline SVG (CSS-animated, paused off-channel). Switching wipes
+  // the canvas and swaps the chan-* class so nothing from another channel lingers or piles up.
   //
   // Robustness (CLAUDE.md timer-pile-up class): the loop runs ONLY while the cuddly room
   // is on-screen (window.currentStageName) AND the tab is visible; the instant either is
@@ -12335,303 +12650,15 @@ document.addEventListener("click", function (e) {
     };
   })();
 
-  // =========================================================================
-  // Channel: AQUARIUM — fish drifting, bubbles rising, gentle caustic light bands
-  // =========================================================================
-  var aqua = (function () {
-    var bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, "#0c3b47"); bg.addColorStop(0.55, "#0a2b4a"); bg.addColorStop(1, "#071c33");
-    var FISH = 4, fishArr = [], BUB = 12, bub = [], t = 0;
-    var palette = ["#ff9a52", "#ffd166", "#7fd6c2", "#e58fb0"];
-    function resetFish(fh, i) {
-      fh.dir = Math.random() < 0.5 ? 1 : -1;
-      fh.x = Math.random() * W; fh.y = rnd(H * 0.28, H * 0.85);
-      fh.sp = rnd(0.12, 0.30); fh.size = rnd(6.5, 11); fh.bobA = rnd(1.5, 4); fh.bobP = Math.random() * 6.28;
-      fh.col = palette[i % palette.length];
-    }
-    function resetBub(b) { b.x = rnd(6, W - 6); b.y = H + rnd(0, H); b.r = rnd(0.6, 1.8); b.sp = rnd(0.25, 0.6); b.wob = Math.random() * 6.28; }
-    // Crisp, defined fish: a dark outline stroke gives a clear silhouette against the
-    // water, a forked tail + dorsal fin read as fish shapes (not blobs), and a white eye
-    // with a dark pupil keeps a sharp focal point — the earlier tiny, outline-less solid
-    // ellipses read as fuzzy smears once anti-aliased on the shared low-res canvas.
-    function drawFish(fh) {
-      var y = fh.y + Math.sin(t * 0.03 + fh.bobP) * fh.bobA, s = fh.size;
-      ctx.save(); ctx.translate(fh.x, y); ctx.scale(fh.dir, 1);
-      ctx.lineJoin = "round";
-      ctx.fillStyle = fh.col; ctx.strokeStyle = "rgba(8,20,28,0.7)"; ctx.lineWidth = 0.9;
-      // forked tail (drawn first so the body overlaps its root cleanly)
-      ctx.beginPath(); ctx.moveTo(-s * 0.75, 0); ctx.lineTo(-s * 1.7, -s * 0.62); ctx.lineTo(-s * 1.28, 0); ctx.lineTo(-s * 1.7, s * 0.62); ctx.closePath(); ctx.fill(); ctx.stroke();
-      // dorsal fin
-      ctx.beginPath(); ctx.moveTo(s * 0.2, -s * 0.5); ctx.lineTo(-s * 0.35, -s * 0.98); ctx.lineTo(-s * 0.55, -s * 0.45); ctx.closePath(); ctx.fill(); ctx.stroke();
-      // body
-      ctx.beginPath(); ctx.ellipse(0, 0, s, s * 0.58, 0, 0, 6.2832); ctx.fill(); ctx.stroke();
-      // gill line
-      ctx.strokeStyle = "rgba(8,20,28,0.4)"; ctx.lineWidth = 0.7;
-      ctx.beginPath(); ctx.arc(s * 0.2, 0, s * 0.6, -1.05, 1.05); ctx.stroke();
-      // eye: white with a dark pupil
-      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(s * 0.52, -s * 0.14, s * 0.2, 0, 6.2832); ctx.fill();
-      ctx.fillStyle = "#0d1c26"; ctx.beginPath(); ctx.arc(s * 0.57, -s * 0.14, s * 0.1, 0, 6.2832); ctx.fill();
-      ctx.restore();
-    }
-    return {
-      blend: "normal",
-      init: function () { fishArr = []; for (var i = 0; i < FISH; i++) { var fh = {}; resetFish(fh, i); fishArr.push(fh); } bub = []; for (var j = 0; j < BUB; j++) { var b = {}; resetBub(b); b.y = rnd(0, H); bub.push(b); } t = 0; },
-      reset: function () { fishArr = []; bub = []; },
-      frame: function () {
-        t++;
-        ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-        // caustics: soft moving light bands near the surface
-        ctx.globalCompositeOperation = "lighter";
-        for (var c = 0; c < 3; c++) {
-          var cx = (Math.sin(t * 0.012 + c * 2.1) * 0.5 + 0.5) * W;
-          var grd = ctx.createRadialGradient(cx, -8, 2, cx, -8, 46);
-          grd.addColorStop(0, "rgba(120,210,220,0.16)"); grd.addColorStop(1, "rgba(120,210,220,0)");
-          ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H * 0.6);
-        }
-        ctx.globalCompositeOperation = "source-over";
-        for (var i = 0; i < fishArr.length; i++) { var fh = fishArr[i]; fh.x += fh.sp * fh.dir; if (fh.dir > 0 && fh.x > W + 14) { fh.x = -14; fh.y = rnd(H * 0.28, H * 0.85); } else if (fh.dir < 0 && fh.x < -14) { fh.x = W + 14; fh.y = rnd(H * 0.28, H * 0.85); } drawFish(fh); }
-        ctx.fillStyle = "rgba(220,245,255,0.5)";
-        for (var k = 0; k < bub.length; k++) { var b = bub[k]; b.y -= b.sp; b.wob += 0.08; b.x += Math.sin(b.wob) * 0.2; if (b.y < -4) resetBub(b); ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 6.2832); ctx.fill(); }
-      },
-      still: function () { this.init(); this.frame(); }
-    };
-  })();
 
-  // =========================================================================
-  // Channel: RAIN ON GLASS — looking out a rainy window at night. Blurred warm city
-  // bokeh + a low horizon glow sit behind the wet glass; a cool cast and a vignette
-  // frame the pane. Fat droplets cling, then release and RUN down the glass leaving a
-  // tapering wet streak with a rounded, highlit head — varied sizes/speeds, occasionally
-  // merging when a fast one overtakes a slower one below it. Fine static speckle adds
-  // condensation texture. All pools are fixed-size and recycled (no growth); every
-  // radius is clamped so createRadialGradient never sees a non-positive r.
-  // =========================================================================
-  var rain = (function () {
-    var bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, "#070d17"); bg.addColorStop(0.6, "#0b1626"); bg.addColorStop(1, "#132235");
-    // out-of-focus city lights behind the glass — warm windows, a couple of cool signs.
-    // {r} is the soft radius; drawn twice (core + wide halo) for an out-of-focus bloom.
-    var bokeh = [
-      { x: W*0.19, y: H*0.30, r: 15, c: "255,188,110", a: 0.55 },
-      { x: W*0.31, y: H*0.45, r: 9,  c: "255,150,92",  a: 0.50 },
-      { x: W*0.50, y: H*0.35, r: 21, c: "150,185,255", a: 0.48 },
-      { x: W*0.63, y: H*0.53, r: 12, c: "255,214,140", a: 0.55 },
-      { x: W*0.76, y: H*0.29, r: 13, c: "255,140,120", a: 0.50 },
-      { x: W*0.84, y: H*0.47, r: 8,  c: "170,255,222", a: 0.42 },
-      { x: W*0.43, y: H*0.60, r: 10, c: "255,206,150", a: 0.50 },
-      { x: W*0.11, y: H*0.51, r: 8,  c: "255,172,110", a: 0.40 },
-      { x: W*0.90, y: H*0.64, r: 11, c: "198,190,255", a: 0.40 }
-    ];
-    var SPECK = 40, speck = []; // fine condensation droplets clinging to the glass (static)
-    var DROPS = 15, drops = [], TRAIL_MAX = 34;
-    function resetSpeck(s) { s.x = rnd(2, W - 2); s.y = rnd(2, H - 2); s.r = rnd(0.4, 1.1); s.a = rnd(0.08, 0.22); }
-    function resetDrop(d, top) {
-      d.x = rnd(4, W - 4); d.y = top ? rnd(-14, -2) : rnd(0, H * 0.9);
-      d.r = rnd(0.9, 2.6); d.sp = 0.22 + d.r * rnd(0.36, 0.6); // fatter drops fall faster
-      d.wob = Math.random() * 6.2832; d.wa = rnd(0.06, 0.22);  // gentle sideways wander
-      d.trail = 0; d.cling = top ? (14 + (Math.random() * 46 | 0)) : (Math.random() * 24 | 0);
-    }
-    function drawDrop(d) {
-      var r = d.r < 0.5 ? 0.5 : d.r; // clamp: gradient radii must stay positive
-      // wet streak the running drop leaves above its head (tapers to nothing)
-      if (d.trail > 1) {
-        var tg = ctx.createLinearGradient(d.x, d.y - d.trail, d.x, d.y);
-        tg.addColorStop(0, "rgba(188,214,246,0)");
-        tg.addColorStop(1, "rgba(206,228,255," + (0.10 + 0.06 * r).toFixed(3) + ")");
-        ctx.strokeStyle = tg; ctx.lineWidth = r * 0.85; ctx.lineCap = "round";
-        ctx.beginPath(); ctx.moveTo(d.x, d.y - d.trail); ctx.lineTo(d.x, d.y); ctx.stroke();
-      }
-      // rounded head: bright rim fading out, refracting the glow behind it
-      var hg = ctx.createRadialGradient(d.x - r * 0.3, d.y - r * 0.35, 0, d.x, d.y, r * 1.15);
-      hg.addColorStop(0, "rgba(236,246,255,0.92)");
-      hg.addColorStop(0.5, "rgba(178,204,240,0.55)");
-      hg.addColorStop(1, "rgba(150,180,222,0)");
-      ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(d.x, d.y, r * 1.15, 0, 6.2832); ctx.fill();
-      // tiny specular glint
-      ctx.fillStyle = "rgba(255,255,255,0.85)";
-      ctx.beginPath(); ctx.arc(d.x - r * 0.32, d.y - r * 0.34, r * 0.28, 0, 6.2832); ctx.fill();
-    }
-    return {
-      blend: "normal",
-      init: function () {
-        drops = []; for (var i = 0; i < DROPS; i++) { var d = {}; resetDrop(d, false); drops.push(d); }
-        speck = []; for (var j = 0; j < SPECK; j++) { var s = {}; resetSpeck(s); speck.push(s); }
-      },
-      reset: function () { drops = []; speck = []; },
-      frame: function () {
-        ctx.globalCompositeOperation = "source-over";
-        ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-        // low warm horizon glow (distant city sky)
-        var hgl = ctx.createLinearGradient(0, H * 0.55, 0, H);
-        hgl.addColorStop(0, "rgba(120,92,72,0)"); hgl.addColorStop(1, "rgba(146,104,78,0.30)");
-        ctx.fillStyle = hgl; ctx.fillRect(0, H * 0.5, W, H * 0.5);
-        // blurred bokeh (additive: core + wide halo for an out-of-focus bloom)
-        ctx.globalCompositeOperation = "lighter";
-        for (var i = 0; i < bokeh.length; i++) {
-          var L = bokeh[i];
-          var g1 = ctx.createRadialGradient(L.x, L.y, 0, L.x, L.y, L.r);
-          g1.addColorStop(0, "rgba(" + L.c + "," + L.a + ")"); g1.addColorStop(1, "rgba(" + L.c + ",0)");
-          ctx.fillStyle = g1; ctx.beginPath(); ctx.arc(L.x, L.y, L.r, 0, 6.2832); ctx.fill();
-          var g2 = ctx.createRadialGradient(L.x, L.y, 0, L.x, L.y, L.r * 1.8);
-          g2.addColorStop(0, "rgba(" + L.c + "," + (L.a * 0.35).toFixed(3) + ")"); g2.addColorStop(1, "rgba(" + L.c + ",0)");
-          ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(L.x, L.y, L.r * 1.8, 0, 6.2832); ctx.fill();
-        }
-        ctx.globalCompositeOperation = "source-over";
-        // cool cast over the whole pane so it reads as night glass
-        ctx.fillStyle = "rgba(40,70,112,0.16)"; ctx.fillRect(0, 0, W, H);
-        // static condensation speckle
-        for (var m = 0; m < speck.length; m++) { var sp = speck[m]; ctx.fillStyle = "rgba(206,224,248," + sp.a.toFixed(3) + ")"; ctx.beginPath(); ctx.arc(sp.x, sp.y, sp.r, 0, 6.2832); ctx.fill(); }
-        // running droplets: advance, wander, grow the trail, recycle at the bottom
-        for (var k = 0; k < drops.length; k++) {
-          var d = drops[k];
-          if (d.cling > 0) { d.cling--; d.trail = 0; }
-          else {
-            d.wob += 0.08; d.x += Math.sin(d.wob) * d.wa; d.y += d.sp;
-            d.trail = d.trail + d.sp < TRAIL_MAX ? d.trail + d.sp : TRAIL_MAX;
-            if (d.y - d.r * 1.2 > H) resetDrop(d, true);
-          }
-        }
-        // merging: a faster drop that catches a slower one just below it absorbs it
-        for (var a = 0; a < drops.length; a++) {
-          var da = drops[a]; if (da.cling > 0) continue;
-          for (var b = 0; b < drops.length; b++) {
-            if (b === a) continue; var db = drops[b];
-            if (Math.abs(da.x - db.x) < da.r + db.r && da.y > db.y && da.y - db.y < da.r + db.r + 2) {
-              var nr = Math.sqrt(da.r * da.r + db.r * db.r); da.r = nr > 3 ? 3 : nr; // capped
-              da.sp = 0.22 + da.r * 0.5; resetDrop(db, true); break;
-            }
-          }
-        }
-        for (var q = 0; q < drops.length; q++) if (drops[q].cling <= 0) drawDrop(drops[q]);
-        // still beads for the clinging ones (no streak) so the glass isn't empty up top
-        for (var c = 0; c < drops.length; c++) if (drops[c].cling > 0) drawDrop(drops[c]);
-        // vignette so it reads as looking OUT a window
-        var vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.32, W / 2, H / 2, H * 0.85);
-        vg.addColorStop(0, "rgba(4,8,14,0)"); vg.addColorStop(1, "rgba(4,8,14,0.5)");
-        ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
-      },
-      still: function () { this.init(); for (var i = 0; i < drops.length; i++) drops[i].cling = 0; this.frame(); }
-    };
-  })();
+  // The aquarium, night-sky and workout channels are inline SVG (#cuddly-aqua /
+  // #cuddly-stars / #cuddly-workout in the wall-screen group), CSS-animated and crisp at
+  // any zoom. They share this no-op canvas stub so the driver treats them as non-drawing:
+  // shouldRun() skips the rAF for any channel flagged svg, and setChannel still wipes the
+  // canvas so no stale fire/rain frame shows under the SVG.
+  var svgChan = { blend: "normal", svg: true, reset: function () {}, init: function () {}, frame: function () {}, still: function () {} };
 
-  // =========================================================================
-  // Channel: NIGHT SKY — a slow, dreamy sky. Deep-navy gradient with a faint horizon
-  // glow; a soft diagonal Milky-Way band (precomputed blobs + extra faint stars biased
-  // onto it) gives depth; three parallax layers of stars drift at different speeds and
-  // twinkle out of phase; a faint low moon with a halo sits off to one side, and the
-  // couple's ∞ hides as a tiny 8-star constellation. A single self-clearing shooting
-  // star streaks by now and then (never more than one alive). Star pool is fixed-size
-  // and recycled; the shooting star is a single reused slot — nothing grows.
-  // =========================================================================
-  var stars = (function () {
-    var bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, "#05060f"); bg.addColorStop(0.55, "#0a0e24"); bg.addColorStop(0.86, "#101636"); bg.addColorStop(1, "#181a34");
-    // Milky-Way band: soft wash blobs strung along a diagonal (upper-left → lower-right)
-    var bandCx = W * 0.5, bandCy = H * 0.42, bandDx = 0.82, bandDy = 0.57; // unit-ish direction
-    var band = [];
-    for (var bi = -3; bi <= 3; bi++) {
-      band.push({ x: bandCx + bandDx * bi * 22 + rnd(-6, 6), y: bandCy + bandDy * bi * 15 + rnd(-5, 5), r: rnd(26, 40) });
-    }
-    // three parallax layers: {n, size range, drift px/frame, brightness}
-    var LAYERS = [
-      { n: 40, rmin: 0.30, rmax: 0.65, drift: 0.008, br: 0.60, band: true },  // far dust
-      { n: 26, rmin: 0.55, rmax: 1.05, drift: 0.018, br: 0.85, band: false }, // mid
-      { n: 12, rmin: 1.00, rmax: 1.70, drift: 0.030, br: 1.00, band: false }  // near, brightest
-    ];
-    var STAR_TINTS = ["255,250,235", "255,250,235", "255,250,235", "210,224,255", "255,224,196"];
-    // ∞ constellation: 8 points on a lemniscate, tucked low-right, drawn as faint stars
-    var infPts = [];
-    (function () {
-      var cx = W * 0.72, cy = H * 0.70, sc = 13;
-      for (var k = 0; k < 8; k++) {
-        var th = k / 8 * 6.2832, dn = 1 + Math.sin(th) * Math.sin(th);
-        infPts.push({ x: cx + sc * Math.cos(th) / dn, y: cy + sc * Math.sin(th) * Math.cos(th) / dn, tw: Math.random() * 6.2832 });
-      }
-    })();
-    var arr = [], t = 0, shoot = null, shootCd = 90;
-    function resetStar(s, layer, fresh) {
-      s.drift = layer.drift; s.br = layer.br;
-      s.x = Math.random() * W;
-      if (layer.band && Math.random() < 0.5) { // bias far dust onto the Milky-Way band
-        var bp = band[(Math.random() * band.length) | 0];
-        s.x = bp.x + rnd(-bp.r, bp.r); s.y = bp.y + rnd(-bp.r * 0.5, bp.r * 0.5);
-      } else { s.y = fresh ? Math.random() * H : rnd(-2, 0); }
-      s.r = rnd(layer.rmin, layer.rmax);
-      s.tw = Math.random() * 6.2832; s.tws = rnd(0.015, 0.05);
-      s.col = STAR_TINTS[(Math.random() * STAR_TINTS.length) | 0];
-    }
-    function drawBand() {
-      ctx.globalCompositeOperation = "lighter";
-      for (var i = 0; i < band.length; i++) {
-        var bb = band[i];
-        var g = ctx.createRadialGradient(bb.x, bb.y, 0, bb.x, bb.y, bb.r);
-        g.addColorStop(0, "rgba(120,120,190,0.10)"); g.addColorStop(0.5, "rgba(96,104,170,0.05)"); g.addColorStop(1, "rgba(96,104,170,0)");
-        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(bb.x, bb.y, bb.r, 0, 6.2832); ctx.fill();
-      }
-      ctx.globalCompositeOperation = "source-over";
-    }
-    function drawMoon() {
-      var mx = W * 0.16, my = H * 0.22, mr = 6.5;
-      var halo = ctx.createRadialGradient(mx, my, 0, mx, my, mr * 4);
-      halo.addColorStop(0, "rgba(210,222,255,0.22)"); halo.addColorStop(1, "rgba(210,222,255,0)");
-      ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = halo;
-      ctx.beginPath(); ctx.arc(mx, my, mr * 4, 0, 6.2832); ctx.fill();
-      ctx.globalCompositeOperation = "source-over";
-      var disc = ctx.createRadialGradient(mx - mr * 0.3, my - mr * 0.3, 0, mx, my, mr);
-      disc.addColorStop(0, "rgba(244,246,255,0.95)"); disc.addColorStop(1, "rgba(206,214,240,0.8)");
-      ctx.fillStyle = disc; ctx.beginPath(); ctx.arc(mx, my, mr, 0, 6.2832); ctx.fill();
-    }
-    return {
-      blend: "normal",
-      init: function () {
-        arr = [];
-        for (var li = 0; li < LAYERS.length; li++) { for (var i = 0; i < LAYERS[li].n; i++) { var s = {}; resetStar(s, LAYERS[li], true); arr.push(s); } }
-        t = 0; shoot = null; shootCd = 90;
-      },
-      reset: function () { arr = []; shoot = null; },
-      frame: function () {
-        t++;
-        ctx.globalCompositeOperation = "source-over";
-        ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-        drawBand();
-        drawMoon();
-        // parallax star layers (drift + twinkle); recycle at the edges
-        for (var i = 0; i < arr.length; i++) {
-          var s = arr[i]; s.x += s.drift; s.tw += s.tws;
-          if (s.x > W + 2) s.x = -2;
-          var a = (0.45 + 0.55 * (0.5 + 0.5 * Math.sin(s.tw))) * s.br;
-          if (s.r > 1.1) { // brightest near stars get a soft glow
-            var gl = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r * 2.4);
-            gl.addColorStop(0, "rgba(" + s.col + "," + (a * 0.5).toFixed(3) + ")"); gl.addColorStop(1, "rgba(" + s.col + ",0)");
-            ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 2.4, 0, 6.2832); ctx.fill();
-          }
-          ctx.fillStyle = "rgba(" + s.col + "," + a.toFixed(3) + ")";
-          ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.2832); ctx.fill();
-        }
-        // ∞ constellation: eight faint, slowly twinkling stars tracing a lemniscate
-        for (var p = 0; p < infPts.length; p++) {
-          var ip = infPts[p]; ip.tw += 0.012;
-          var ia = 0.30 + 0.30 * (0.5 + 0.5 * Math.sin(ip.tw));
-          ctx.fillStyle = "rgba(255,238,220," + ia.toFixed(3) + ")";
-          ctx.beginPath(); ctx.arc(ip.x, ip.y, 0.9, 0, 6.2832); ctx.fill();
-        }
-        // one self-clearing shooting star now and then (tapering trail)
-        if (!shoot) {
-          if (--shootCd <= 0) { shoot = { x: rnd(W * 0.1, W * 0.6), y: rnd(4, H * 0.4), vx: rnd(1.8, 2.8), vy: rnd(0.55, 1.05), life: 24, maxLife: 24 }; shootCd = 150 + (Math.random() * 220 | 0); }
-        } else {
-          var tl = 9, tx = shoot.x - shoot.vx * tl, ty = shoot.y - shoot.vy * tl;
-          var sg = ctx.createLinearGradient(tx, ty, shoot.x, shoot.y);
-          sg.addColorStop(0, "rgba(255,255,244,0)"); sg.addColorStop(1, "rgba(255,255,244,0.95)");
-          ctx.strokeStyle = sg; ctx.lineWidth = 1.1; ctx.lineCap = "round";
-          ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(shoot.x, shoot.y); ctx.stroke();
-          ctx.fillStyle = "rgba(255,255,250,0.95)"; ctx.beginPath(); ctx.arc(shoot.x, shoot.y, 1.1, 0, 6.2832); ctx.fill();
-          shoot.x += shoot.vx; shoot.y += shoot.vy;
-          if (--shoot.life <= 0 || shoot.x > W + 8 || shoot.y > H + 8) shoot = null;
-        }
-      },
-      still: function () { this.init(); this.frame(); }
-    };
-  })();
+
 
   // =========================================================================
   // Channel: OFF — the projector is powered down: a blank panel over a cool grey screen
@@ -12651,8 +12678,8 @@ document.addEventListener("click", function (e) {
   };
 
   // ---- driver: one loop, one canvas, channel-switched --------------------
-  var order = ["fire", "aqua", "rain", "stars", "off"];
-  var chanObj = { fire: fire, aqua: aqua, rain: rain, stars: stars, off: off };
+  var order = ["fire", "workout", "aqua", "stars", "off"];
+  var chanObj = { fire: fire, workout: svgChan, aqua: svgChan, stars: svgChan, off: off };
   var current = "fire"; // the projector always opens on the fire channel (tapping still cycles within the session)
 
   function applyChannelClass() {
@@ -12715,7 +12742,7 @@ document.addEventListener("click", function (e) {
   };
   window.__clearCuddlyProjectorSlow = clearProjectorSlow; // reset hook
   // OFF is a genuine stop: excluded here so frame() self-cancels and the handle goes null
-  function shouldRun() { return window.currentStageName === "cuddly" && !document.hidden && current !== "off"; }
+  function shouldRun() { return window.currentStageName === "cuddly" && !document.hidden && current !== "off" && !chanObj[current].svg; }
   function frame(t) {
     if (!shouldRun()) { raf = null; clearProjectorSlow(); return; } // leaving the room / hiding / off → self-cancel, no leftover timer
     if (slowFactor > 1 && current === "fire") {

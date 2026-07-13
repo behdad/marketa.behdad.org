@@ -28,6 +28,14 @@ DirectoryIndex index.html save-the-dates.html
 
 RewriteRule ^tests/ - [F,L]
 
+# Clean URLs: serve /foo as /foo.html when that file exists, so links can drop the
+# .html (e.g. /save-the-dates, /rsvp). Skips anything that's already a real file or
+# dir, so symlink aliases like /loft-day still resolve to their target.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^(.+)$ $1.html [L]
+
 # HTML must revalidate on every load — the site deploys continuously and a
 # heuristically-cached rsvp.html serves fixes minutes late
 <IfModule mod_headers.c>

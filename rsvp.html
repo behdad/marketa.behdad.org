@@ -777,6 +777,13 @@ footer{margin-top:2.6rem}
   100%{transform:rotate(0deg) translate(0,0) scale(1)}
 }
 @media (prefers-reduced-motion: reduce){#loft-game-strip.tipsy #balcony-wobble{animation:none}}
+/* A wine sip briefly softens the balcony scene (the "booze" ambient beat, paired with the
+   ethanol card). This is a filter, NOT a transform, so it never fights #stage-balcony's
+   positioning transform; the molecule card lives on the separate #molecule-layer sibling and
+   stays crisp. Self-cleared on room-leave/reset via clearTipsy. */
+#stage-balcony{transition:filter .7s ease}
+#stage-balcony.booze-soft{filter:blur(2.4px)}
+@media (prefers-reduced-motion: reduce){#stage-balcony{transition:none} #stage-balcony.booze-soft{filter:none}}
 #kitchen-gong-disc{transform-box:fill-box; transform-origin:center}
 #kitchen-gong.struck #kitchen-gong-disc{animation:gong-strike .6s ease-out}
 @keyframes gong-strike{
@@ -10111,6 +10118,32 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 <text class="mol-street" data-i="mol_street_iboga" x="75" y="74" text-anchor="middle">iboga</text>
 <text class="mol-cap" data-i="mol_caption" x="75" y="83" text-anchor="middle">we’ve got chemistry</text>
 </g>
+<!-- THC + ethanol: the two ambient (non-trip) cards, flashed by Behdad's 3rd joint puff
+     and his wine sips (see __flashMolCard). Δ9-THC drawn by hand in the same skeletal
+     style as the DMT card: aromatic ring with a phenol (HO) + pentyl tail, the pyran
+     oxygen, the 6,6-gem-dimethyl, and the terpene ring's 9-methyl on its Δ9 double bond. -->
+<g class="mol-card" id="mol-card-thc" transform="translate(515,12)">
+<rect class="mol-paper" x="0.6" y="0.6" width="148.8" height="88.8" rx="8"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 152 92" x="8" y="3" width="134" height="50" preserveAspectRatio="xMidYMid meet">
+<path fill="none" stroke="#453a31" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" d="M28 46 L40 53 L40 67 L28 74 L16 67 L16 53 Z M16 67 L8 72 M40 67 L52 74 L64 67 L76 74 L88 67 L100 74 M28 46 L28 35.5 M30.5 30 L40 25 L52 32 L52 46 L40 53 M40 25 L40 12 M40 25 L52 18 M52 32 L64 25 L76 32 L76 46 L64 53 L52 46 M76 32 L88 26"/>
+<path fill="none" stroke="#453a31" stroke-width="1.5" stroke-linecap="round" d="M30 49 L38 53 M38 64 L30 71 M19 64 L19 56 M73 34 L73 44"/>
+<text x="28" y="35.5" fill="#453a31" text-anchor="middle" style="font:normal 11px 'Arial',sans-serif">O</text>
+<text x="9" y="76" fill="#453a31" text-anchor="end" style="font:normal 11px 'Arial',sans-serif">HO</text>
+</svg>
+<text class="mol-name" data-i="mol_name_thc" x="75" y="65" text-anchor="middle">THC</text>
+<text class="mol-street" data-i="mol_street_thc" x="75" y="74" text-anchor="middle">weed</text>
+<text class="mol-cap" data-i="mol_caption" x="75" y="83" text-anchor="middle">we’ve got chemistry</text>
+</g>
+<g class="mol-card" id="mol-card-ethanol" transform="translate(515,12)">
+<rect class="mol-paper" x="0.6" y="0.6" width="148.8" height="88.8" rx="8"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 92" x="8" y="3" width="134" height="50" preserveAspectRatio="xMidYMid meet">
+<path fill="none" stroke="#453a31" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" d="M28 58 L58 42 L82 56"/>
+<text x="96" y="60" fill="#453a31" text-anchor="middle" style="font:normal 13px 'Arial',sans-serif">OH</text>
+</svg>
+<text class="mol-name" data-i="mol_name_ethanol" x="75" y="65" text-anchor="middle">Ethanol</text>
+<text class="mol-street" data-i="mol_street_ethanol" x="75" y="74" text-anchor="middle">booze</text>
+<text class="mol-cap" data-i="mol_caption" x="75" y="83" text-anchor="middle">we’ve got chemistry</text>
+</g>
     </svg>
     <div id="hunt-wipe" aria-hidden="true"></div>
   </div>
@@ -10342,6 +10375,10 @@ var T = {
     mol_name_molly: "MDMA",
     mol_name_ketamine: "Ketamine",
     mol_name_iboga: "Ibogaine",
+    mol_street_thc: "weed",
+    mol_street_ethanol: "booze",
+    mol_name_thc: "THC",
+    mol_name_ethanol: "Ethanol",
     pb_confirm_q: "Open the photobooth?",
     pb_confirm_yes: "📷 Open camera",
     pb_confirm_no: "Cancel",
@@ -10700,6 +10737,10 @@ var T = {
     mol_name_molly: "MDMA",
     mol_name_ketamine: "Ketamin",
     mol_name_iboga: "Ibogain",
+    mol_street_thc: "tráva",
+    mol_street_ethanol: "chlast",
+    mol_name_thc: "THC",
+    mol_name_ethanol: "Etanol",
     pb_confirm_q: "Otevřít fotokoutek?",
     pb_confirm_yes: "📷 Zapnout kameru",
     pb_confirm_no: "Zrušit",
@@ -12420,11 +12461,26 @@ document.addEventListener("click", function (e) {
   }
 
   var raf = null, lastDraw = 0;
+  // Stoned time-dilation: Behdad's 3rd joint puff slows the projector's motion for a few
+  // seconds by stretching the per-frame interval, then eases back. slowFactor scales
+  // DRAW_MS (fewer draws → the channel's motion crawls). One self-clearing timer chain;
+  // reset the instant the loop stops (leave-room / hide / off) so nothing carries over.
+  var slowFactor = 1, slowTimers = [];
+  function clearProjectorSlow() { for (var i = 0; i < slowTimers.length; i++) clearTimeout(slowTimers[i]); slowTimers = []; slowFactor = 1; }
+  window.__cuddlyProjectorSlow = function (ms) {
+    if (reduceMotion || document.hidden) return;
+    clearProjectorSlow();
+    slowFactor = 3.4;
+    slowTimers.push(setTimeout(function () { slowFactor = 2.2; }, Math.round(ms * 0.55)));
+    slowTimers.push(setTimeout(function () { slowFactor = 1.5; }, Math.round(ms * 0.8)));
+    slowTimers.push(setTimeout(function () { slowFactor = 1; slowTimers = []; }, ms));
+  };
+  window.__clearCuddlyProjectorSlow = clearProjectorSlow; // reset hook
   // OFF is a genuine stop: excluded here so frame() self-cancels and the handle goes null
   function shouldRun() { return window.currentStageName === "cuddly" && !document.hidden && current !== "off"; }
   function frame(t) {
-    if (!shouldRun()) { raf = null; return; } // leaving the room / hiding / off → self-cancel, no leftover timer
-    if (t - lastDraw >= DRAW_MS) { lastDraw = t; chanObj[current].frame(); }
+    if (!shouldRun()) { raf = null; clearProjectorSlow(); return; } // leaving the room / hiding / off → self-cancel, no leftover timer
+    if (t - lastDraw >= DRAW_MS * slowFactor) { lastDraw = t; chanObj[current].frame(); }
     raf = requestAnimationFrame(frame);
   }
   function renderStill() { ctx.clearRect(0, 0, W, H); (chanObj[current].still || chanObj[current].frame).call(chanObj[current]); }
@@ -22803,6 +22859,20 @@ async def googlefonts(family, weight=None, text=None, subset=None):
   // balcony swaying woozily for ~15s — the sway itself lives on #balcony-wobble (CSS).
   // Cleared on room-leave (goToStage) and the extinguisher reset so it can't get stuck.
   var tipsyTimer = null;
+  // "Booze chemistry" beat: every 2nd full glass Behdad drinks flashes the ethanol card and
+  // softens the balcony scene with a brief blur (separate from the last-drop tipsy sway). One
+  // self-clearing blur timer; cleared alongside the sway on room-leave/reset via clearTipsy.
+  var wineSipTotal = 0, boozeBlurTimer = null;
+  window.__resetWineSips = function () { wineSipTotal = 0; };
+  function triggerBoozeChem() {
+    if (window.__flashMolCard) window.__flashMolCard("ethanol", 2600);
+    var rm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var bal = document.getElementById("stage-balcony");
+    if (rm || !bal || document.visibilityState === "hidden") return;
+    bal.classList.add("booze-soft");
+    if (boozeBlurTimer) clearTimeout(boozeBlurTimer);
+    boozeBlurTimer = setTimeout(function () { bal.classList.remove("booze-soft"); boozeBlurTimer = null; }, 2600);
+  }
   function goTipsy() {
     var s = document.getElementById("loft-game-strip");
     var w = document.getElementById("balcony-wobble");
@@ -22817,6 +22887,9 @@ async def googlefonts(family, weight=None, text=None, subset=None):
     if (tipsyTimer) { clearTimeout(tipsyTimer); tipsyTimer = null; }
     var s = document.getElementById("loft-game-strip");
     if (s) s.classList.remove("tipsy");
+    if (boozeBlurTimer) { clearTimeout(boozeBlurTimer); boozeBlurTimer = null; }
+    var bal = document.getElementById("stage-balcony");
+    if (bal) bal.classList.remove("booze-soft");
   }
   window.__clearTipsy = clearTipsy;
   if (wineglass) {
@@ -22855,6 +22928,8 @@ async def googlefonts(family, weight=None, text=None, subset=None):
         }
         // a toast, but only when there's wine to raise (the full -> sip)
         eggBubble(wineglass, nextCheers());
+        wineSipTotal++;
+        if (wineSipTotal % 2 === 0) triggerBoozeChem(); // every 2nd glass: ethanol card + a soft blur
       } else {
         wineglass.classList.remove("wobbling");
         requestAnimationFrame(function () {
@@ -26235,16 +26310,35 @@ function startDmt() {
 // the timing is derived from TRIP_DURATIONS (not hardcoded per variant). Gated on
 // currentTripVariant (set synchronously by startTripVariant, incl. the cinematic's
 // scripted bloom trip which does NOT set tripActive), so every trip path shows a card.
-var moleculeShowTimer = null, moleculeHideTimer = null;
+var moleculeShowTimer = null, moleculeHideTimer = null, molFlashTimer = null;
 function hideMoleculeCards() {
   clearTimeout(moleculeShowTimer); moleculeShowTimer = null;
   clearTimeout(moleculeHideTimer); moleculeHideTimer = null;
+  clearTimeout(molFlashTimer); molFlashTimer = null;
   var layer = document.getElementById("molecule-layer");
   if (layer) Array.prototype.forEach.call(layer.querySelectorAll(".mol-card"), function (c) {
     c.classList.remove("mol-show");
   });
 }
 window.__hideMoleculeCards = hideMoleculeCards; // resetHunt / take-over clear the card through this
+// Ambient (non-trip) card flash: Behdad's joint puffs / wine sips briefly show the THC or
+// ethanol card, the same paper cards the trips use. Gated on visibility (no flashing into a
+// hidden tab) and yields to any live trip (which owns the card). One self-clearing timer;
+// cleared on reset/take-over through hideMoleculeCards.
+function flashMolCard(variant, holdMs) {
+  if (document.visibilityState === "hidden") return;
+  if (currentTripVariant) return; // a trip is showing its own card — don't fight it
+  var card = document.getElementById("mol-card-" + variant);
+  if (!card) return;
+  clearTimeout(molFlashTimer);
+  var layer = document.getElementById("molecule-layer");
+  if (layer) Array.prototype.forEach.call(layer.querySelectorAll(".mol-card"), function (c) {
+    c.classList.remove("mol-show");
+  });
+  card.classList.add("mol-show");
+  molFlashTimer = setTimeout(function () { card.classList.remove("mol-show"); molFlashTimer = null; }, holdMs);
+}
+window.__flashMolCard = flashMolCard;
 function showMoleculeCard(variant) {
   hideMoleculeCards();
   var card = document.getElementById("mol-card-" + variant);
@@ -31536,6 +31630,18 @@ function spawnDustMote(container) {
   // when the music stops mid-sequence) can kill the rest of it instead of letting him
   // keep puffing/releasing smoke into a now-silent room.
   var behdadJointSeqTimers = [];
+  // Running tally of Behdad's tokes across the whole session. Every 3rd puff lands the
+  // "stoned chemistry" beat: the THC card flashes and the wall-screen projector slows to a
+  // crawl for a few seconds (see triggerWeedChem). Persistent so any 3rd puff — auto-roll
+  // or triple-click — counts, and reset with the playthrough.
+  var behdadPuffTotal = 0;
+  window.__resetBehdadPuffs = function () { behdadPuffTotal = 0; };
+  function triggerWeedChem() {
+    if (window.__flashMolCard) window.__flashMolCard("thc", 2800); // shows even under reduced motion (a card, not motion)
+    var rm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (rm) return;
+    if (window.__cuddlyProjectorSlow) window.__cuddlyProjectorSlow(3000); // time dilation on the screen content
+  }
   // Joint smoke haze: level rises with each toke (bumpCuddlySmoke) and decays slowly
   // back to clear on a single self-stopping timer chain (no perpetual/background-tab
   // spawner — just one rect's opacity). Filling the room takes a few light-ups.
@@ -31596,6 +31702,8 @@ function spawnDustMote(container) {
           behdadJointSeqTimers.push(setTimeout(function () {
             spawnSteamWisps(strip, 1568, 177, 0.4, 1, -1, 2, 0.55); // released up near the ember at the toke's peak
             bumpCuddlySmoke(0.16); // each puff thickens the room's haze a little
+            behdadPuffTotal++;
+            if (behdadPuffTotal % 3 === 0) triggerWeedChem(); // every 3rd puff: THC card + projector slow-down
 
             if (first && head) head.classList.add("pleased");
             // she's right next to him — the first release always gets her, same
@@ -31959,6 +32067,9 @@ function spawnDustMote(container) {
     if (window.__stopIbogaSlideshow) window.__stopIbogaSlideshow();
     if (window.__resetDmt) window.__resetDmt();
     if (window.__hideMoleculeCards) window.__hideMoleculeCards();
+    if (window.__clearCuddlyProjectorSlow) window.__clearCuddlyProjectorSlow(); // drop any stoned time-dilation on the projector
+    if (window.__resetBehdadPuffs) window.__resetBehdadPuffs(); // a fresh playthrough re-arms the "3rd puff" beat
+    if (window.__resetWineSips) window.__resetWineSips();
     ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.classList.remove("done");

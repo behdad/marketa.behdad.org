@@ -19818,7 +19818,14 @@ async def googlefonts(family, weight=None, text=None, subset=None):
     positionMonClose();
     monTrackId = performance.now() < monTrackUntil ? requestAnimationFrame(monTrack) : 0;
   }
-  window.addEventListener("resize", function () { if (zoomEl) positionMonClose(); });
+  // re-fit the zoom AND re-seat the ✕ whenever the box the zoom frames may have moved or
+  // resized under us — a resize, or entering/leaving fullscreen (which resizes the frame but
+  // never re-ran apply(), so the zoom stayed at the old scale and the ✕ tracked off-screen).
+  function refitZoom() { if (zoomEl) { apply(); positionMonClose(); } }
+  window.addEventListener("resize", refitZoom);
+  document.addEventListener("fullscreenchange", function () { if (zoomEl) { requestAnimationFrame(refitZoom); setTimeout(refitZoom, 80); } });
+  document.addEventListener("webkitfullscreenchange", function () { if (zoomEl) { requestAnimationFrame(refitZoom); setTimeout(refitZoom, 80); } });
+  window.__refitZoom = refitZoom;
   window.__monitorZoomIn = function () { zoomIn(monitor); };
   window.__monitorZoomOut = zoomOut;
   if (monClose) monClose.addEventListener("click", function (e) { e.stopPropagation(); zoomOut(); });

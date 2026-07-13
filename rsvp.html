@@ -15918,6 +15918,7 @@ document.addEventListener("click", function (e) {
     // so the gain is a display multiplier, not a literal dB/octave tilt.)
     var EQ_TILT_TOP = 2.3;   // treble band's gain relative to the (unboosted) bass band
     var EQ_TILT_CURVE = 1.4; // >1: keep low-mids near natural, concentrate the lift toward the top
+    var EQ_SMALL_BASS = 0.55; // coarse (3-bar saver/dock) EQs pack all the bass into bar 0, so start its tilt below 1 to keep the low bar from towering
     function eqBands(n, binCount) {
       var nyq = (eqAudioCtx ? eqAudioCtx.sampleRate : 48000) / 2;
       var out = [], i, t;
@@ -15946,7 +15947,7 @@ document.addEventListener("click", function (e) {
         var hi = Math.floor(minBin * Math.pow(maxBin / minBin, (i + 1) / n));
         if (hi <= lo) hi = lo + 1;                                 // guarantee >=1 bin per bar
         t = (n > 1) ? Math.pow(i / (n - 1), EQ_TILT_CURVE) : 0;
-        out.push({ lo: lo, hi: hi, gain: 1 + (EQ_TILT_TOP - 1) * t, fc: ((lo + hi) / 2) * nyq / binCount });
+        out.push({ lo: lo, hi: hi, gain: EQ_SMALL_BASS + (EQ_TILT_TOP - EQ_SMALL_BASS) * t, fc: ((lo + hi) / 2) * nyq / binCount });
       }
       return out;
     }

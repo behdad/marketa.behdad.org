@@ -595,35 +595,44 @@ function checkI18nKeys(file, script, html) {
 }
 
 // The monitor terminals' scrollback (.term-out) is a scroll container, so it CLIPS at
-// its own padding box — and at 2px type under the desk zoom, painted glyph ink lands
-// up to ~1px outside its layout box (tiny-glyph raster snapping under the ~7×
-// transform). Two invariants keep the clip off the glyphs (the repeated "cropped
-// ascenders / cropped first column" bug):
-//   1. .term-out horizontal+vertical padding ≥ 1px of clip slack on every side;
-//   2. border-box height − vertical padding = exactly 12 of the 2.8px line boxes
+// its own padding box — and at tiny type under the desk zoom, painted glyph ink lands
+// outside its layout box (tiny-glyph raster snapping under the ~7× transform). Two
+// invariants keep the clip off the glyphs (the repeated "cropped ascenders / cropped
+// first column" bug):
+//   1. .term-out horizontal+vertical padding ≥ the clip slack on every side;
+//   2. border-box height − vertical padding = exactly 12 line boxes
 //      (a bottom-pinned scrollback must never straddle a line across the top edge —
 //      and the border-box/content-box math is exactly what silently broke once).
+// Two regimes share the .term-out class and both must hold: the base 1× rule (still used
+// by the python/linux consoles, 2.8px line box) and the terminal's .term-x10 override
+// (authored ×10 and scaled back down so the caret rasterizes crisp — 28px line box).
 function checkTermOutClipSlack(file, style) {
   if (file !== "rsvp.html" || !style) return;
-  var m = style.match(/\.term-out\{([^}]*)\}/);
-  if (!m) { fail(file + ": .term-out rule not found for clip-slack check"); return; }
+  // base rule: matched at start of a line, so the ".term-x10 .term-out{" override below
+  // (which begins with .term-x10) can't be mistaken for it
+  checkTermOutRegime(file, style, /(?:^|\n)\.term-out\{([^}]*)\}/, 2.8, 0.6, 1, "1× (python/linux)");
+  checkTermOutRegime(file, style, /\.term-x10 \.term-out\{([^}]*)\}/, 28, 6, 10, "×10 (.term-x10 terminal)");
+}
+function checkTermOutRegime(file, style, re, lineBox, minTop, minSide, label) {
+  var m = style.match(re);
+  if (!m) { fail(file + ": .term-out " + label + " rule not found for clip-slack check"); return; }
   var decl = m[1];
   var h = decl.match(/height:\s*([\d.]+)px/);
   var p = decl.match(/padding:\s*([\d.]+)px(?:\s+([\d.]+)px)?(?:\s+([\d.]+)px)?/);
-  if (!h || !p) { fail(file + ": .term-out needs explicit height and padding (clip slack)", decl); return; }
+  if (!h || !p) { fail(file + ": .term-out " + label + " needs explicit height and padding (clip slack)", decl); return; }
   var height = parseFloat(h[1]);
   var padTop = parseFloat(p[1]);
   var padH = p[2] ? parseFloat(p[2]) : padTop;
   var padBottom = p[3] ? parseFloat(p[3]) : padTop;
   var issues = [];
-  // top slack is deliberately smaller: it must clear the ~0.4px worst-case upward ink
-  // shift, but every extra tenth re-reveals more of the 13th line when bottom-pinned
-  if (padTop < 0.6) issues.push("top padding " + padTop + "px < 0.6px of scroll-clip slack");
-  if (padH < 1 || padBottom < 1) issues.push("side/bottom padding " + padH + "px/" + padBottom + "px — needs ≥1px of scroll-clip slack");
+  // top slack is deliberately smaller: it must clear the worst-case upward ink shift, but
+  // every extra tenth re-reveals more of the 13th line when bottom-pinned
+  if (padTop < minTop) issues.push("top padding " + padTop + "px < " + minTop + "px of scroll-clip slack");
+  if (padH < minSide || padBottom < minSide) issues.push("side/bottom padding " + padH + "px/" + padBottom + "px — needs ≥" + minSide + "px of scroll-clip slack");
   var content = height - padTop - padBottom;
-  if (Math.abs(content - 12 * 2.8) > 0.001) issues.push("content height " + content + "px ≠ 12 × 2.8px line boxes (border-box height minus vertical padding)");
-  if (issues.length === 0) pass(file + ": .term-out clip slack + 12-line scrollback math hold");
-  else fail(file + ": .term-out clip-slack invariant broken", issues.join("\n"));
+  if (Math.abs(content - 12 * lineBox) > 0.001) issues.push("content height " + content + "px ≠ 12 × " + lineBox + "px line boxes (border-box height minus vertical padding)");
+  if (issues.length === 0) pass(file + ": .term-out " + label + " clip slack + 12-line scrollback math hold");
+  else fail(file + ": .term-out " + label + " clip-slack invariant broken", issues.join("\n"));
 }
 
 // A leftover git merge marker in CSS/HTML slips past `node --check` (which only sees

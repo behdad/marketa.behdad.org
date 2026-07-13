@@ -686,15 +686,18 @@ footer{margin-top:2.6rem}
 @media (prefers-reduced-motion: reduce){#kitchen-canister.jiggling #kitchen-canister-lid{animation:none}}
 .kitchen-cabinet-door{transform-box:fill-box; transform-origin:left center; transition:transform .5s ease}
 .kitchen-cabinet-door.open{transform:scaleX(.15)}
-#kitchen-cabinet-surprise{transform-box:fill-box; transform-origin:bottom center}
-#kitchen-cabinet-surprise.wobbling{animation:ghost-wobble .8s ease-in-out}
+/* the surprise sits in a random cabinet: #kitchen-cabinet-surprise is the position wrapper
+   (JS translateX), the critter inside carries the wobble — separate nodes so the wobble's
+   transform never clobbers the placement (which made the ghost jump cabinets) */
+.cabinet-critter{transform-box:fill-box; transform-origin:bottom center}
+.cabinet-critter.wobbling{animation:ghost-wobble .8s ease-in-out}
 @keyframes ghost-wobble{
   0%, 100%{transform:rotate(0) translateY(0)}
   20%{transform:rotate(-6deg) translateY(-3px)}
   45%{transform:rotate(5deg) translateY(-5px)}
   70%{transform:rotate(-3deg) translateY(-2px)}
 }
-@media (prefers-reduced-motion: reduce){#kitchen-cabinet-surprise.wobbling{animation:none}}
+@media (prefers-reduced-motion: reduce){.cabinet-critter.wobbling{animation:none}}
 .witchy-door{transform-box:fill-box; transition:transform .5s ease}
 .witchy-door.open{transform:scaleX(.15)}
 /* the open balcony door rattles on its hinge in the wind during a storm (keeps the
@@ -4496,10 +4499,25 @@ section{margin:1.9rem 0}
 <text x="386" y="296" text-anchor="middle" fill="#382c1e" font-family="'Fraunces',serif" font-size="24" font-weight="700">BE</text>
 <text x="536" y="296" text-anchor="middle" fill="#382c1e" font-family="'Fraunces',serif" font-size="24" font-weight="700">THERE?</text>
 <g id="kitchen-cabinet-surprise" aria-hidden="true">
+<g id="kitchen-cabinet-ghost" class="cabinet-critter">
 <ellipse cx="220" cy="300" rx="13" ry="15" fill="#f4f0e8"/>
 <path d="M207 300 Q207 286 220 286 Q233 286 233 300 L233 312 Q229 308 225 312 Q221 308 217 312 Q213 308 209 312 Z" fill="#f4f0e8"/>
 <circle cx="215" cy="297" r="2" fill="#3a352e"/>
 <circle cx="225" cy="297" r="2" fill="#3a352e"/>
+</g>
+<g id="kitchen-cabinet-goat" class="cabinet-critter">
+<path d="M214 289 Q208 283 211 279" fill="none" stroke="#b0a088" stroke-width="2.6" stroke-linecap="round"/>
+<path d="M226 289 Q232 283 229 279" fill="none" stroke="#b0a088" stroke-width="2.6" stroke-linecap="round"/>
+<ellipse cx="208" cy="298" rx="4" ry="2.1" fill="#e6ddc9" stroke="#d8cfbc" stroke-width="0.6" transform="rotate(-22 208 298)"/>
+<ellipse cx="232" cy="298" rx="4" ry="2.1" fill="#e6ddc9" stroke="#d8cfbc" stroke-width="0.6" transform="rotate(22 232 298)"/>
+<path d="M209 297 Q209 288 220 288 Q231 288 231 297 Q231 307 225 312 Q222 315 220 315 Q218 315 215 312 Q209 307 209 297 Z" fill="#efe9dc" stroke="#ddd4c2" stroke-width="0.8"/>
+<ellipse cx="220" cy="308" rx="6.2" ry="4.4" fill="#e2d8c4"/>
+<ellipse cx="217.6" cy="307.5" rx="0.7" ry="1.1" fill="#6b6156"/>
+<ellipse cx="222.4" cy="307.5" rx="0.7" ry="1.1" fill="#6b6156"/>
+<ellipse cx="215.2" cy="298.5" rx="1.9" ry="1.5" fill="#3a352e"/>
+<ellipse cx="224.8" cy="298.5" rx="1.9" ry="1.5" fill="#3a352e"/>
+<path d="M216.5 312 Q217.5 319.5 220 319.5 Q222.5 319.5 223.5 312 Z" fill="#e6ddc9" stroke="#d8cfbc" stroke-width="0.5"/>
+</g>
 </g>
 <g id="kitchen-cabinet-1" class="hunt-hit kitchen-cabinet-door" tabindex="0" role="button" aria-label="A cabinet door">
 <rect x="0" y="252" width="150" height="68" fill="#efe9dc" stroke="#d8cfbc" stroke-width="1.5"/>
@@ -14150,36 +14168,38 @@ document.addEventListener("click", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); jiggleCanister(); }
     });
   }
-  var ghost = document.getElementById("kitchen-cabinet-surprise");
+  var surpriseWrap = document.getElementById("kitchen-cabinet-surprise"); // position wrapper
+  // sometimes a goat lives in the cabinet instead of the ghost — one or the other per visit
+  var goat = Math.random() < 0.3;
+  var critter = document.getElementById(goat ? "kitchen-cabinet-goat" : "kitchen-cabinet-ghost");
+  var otherCritter = document.getElementById(goat ? "kitchen-cabinet-ghost" : "kitchen-cabinet-goat");
+  if (otherCritter) otherCritter.style.display = "none";
+  var playSurpriseSound = goat ? playGoatBleatSound : playGhostBooSound;
   var ghostCabinetIndex = Math.floor(Math.random() * 4);
-  if (ghost) ghost.style.transform = "translateX(" + ((ghostCabinetIndex - 1) * 150) + "px)";
+  if (surpriseWrap) surpriseWrap.style.transform = "translateX(" + ((ghostCabinetIndex - 1) * 150) + "px)";
+  function wobbleCritter() { // re-trigger the one-shot wobble across a double rAF
+    if (!critter) return;
+    critter.classList.remove("wobbling");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { critter.classList.add("wobbling"); });
+    });
+  }
   ["kitchen-cabinet-1", "kitchen-cabinet-2", "kitchen-cabinet-3", "kitchen-cabinet-4"].forEach(function (id, i) {
     var el = document.getElementById(id);
     if (!el) return;
     function toggleCabinet() {
       el.classList.toggle("open");
       playCreakSound(id);
-      if (i === ghostCabinetIndex && el.classList.contains("open") && ghost) {
-        ghost.classList.remove("wobbling");
-        requestAnimationFrame(function () {
-          requestAnimationFrame(function () { ghost.classList.add("wobbling"); });
-        });
-      }
+      if (i === ghostCabinetIndex && el.classList.contains("open")) wobbleCritter();
     }
     el.addEventListener("click", toggleCabinet);
     el.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCabinet(); }
     });
   });
-  if (ghost) {
-    ghost.style.cursor = "pointer";
-    ghost.addEventListener("click", function () {
-      ghost.classList.remove("wobbling");
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () { ghost.classList.add("wobbling"); });
-      });
-      playGhostBooSound();
-    });
+  if (critter) {
+    critter.style.cursor = "pointer";
+    critter.addEventListener("click", function () { wobbleCritter(); playSurpriseSound(); });
   }
   var cups = document.getElementById("kitchen-cups");
   if (cups) {
@@ -29238,6 +29258,64 @@ function playGhostBooSound() {
     noise.start(t);
     noise.stop(t + dur + 0.02);
 
+  } catch (e) {}
+}
+// The cabinet goat's nasal "maaa-a-a": detuned saw voices through a midrange nasal formant,
+// chopped by a fast tremolo for the bleat's chatter, with a slight downward pitch sag. Panned
+// to whichever cabinet the surprise is behind (its position wrapper keeps the pan id).
+function playGoatBleatSound() {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var dur = 0.55;
+    var master = ctx.createGain();
+    master.gain.setValueAtTime(0.0001, t);
+    master.gain.exponentialRampToValueAtTime(0.12, t + 0.04);
+    master.gain.setValueAtTime(0.12, t + 0.38);
+    master.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    master.connect(pannedOut(ctx, "kitchen-cabinet-surprise"));
+
+    // the bleat flutter chops the whole voice ("meh-eh-eh-eh"), slowing as it trails off
+    var tremGain = ctx.createGain();
+    tremGain.gain.value = 0.7;
+    tremGain.connect(master);
+    var trem = ctx.createOscillator();
+    trem.type = "sine";
+    trem.frequency.setValueAtTime(23, t);
+    trem.frequency.linearRampToValueAtTime(17, t + dur);
+    var tremDepth = ctx.createGain();
+    tremDepth.gain.value = 0.5;
+    trem.connect(tremDepth);
+    tremDepth.connect(tremGain.gain);
+    trem.start(t);
+    trem.stop(t + dur + 0.03);
+
+    var vary = 0.9 + Math.random() * 0.2;
+    var nasal = ctx.createBiquadFilter(); // the nasal honk sits in a midrange band
+    nasal.type = "bandpass";
+    nasal.frequency.value = 1080;
+    nasal.Q.value = 2.6;
+    nasal.connect(tremGain);
+    var lp = ctx.createBiquadFilter(); // a little rounded body under the honk
+    lp.type = "lowpass";
+    lp.frequency.value = 2400;
+    var lpG = ctx.createGain();
+    lpG.gain.value = 0.35;
+    lp.connect(lpG);
+    lpG.connect(tremGain);
+
+    [-6, 6].forEach(function (cents) {
+      var osc = ctx.createOscillator();
+      osc.type = "sawtooth";
+      osc.detune.value = cents;
+      osc.frequency.setValueAtTime(455 * vary, t);
+      osc.frequency.linearRampToValueAtTime(400 * vary, t + dur);
+      osc.connect(nasal);
+      osc.connect(lp);
+      osc.start(t);
+      osc.stop(t + dur + 0.03);
+    });
   } catch (e) {}
 }
 // The ketamine-trip ghost murmurs a hushed "cool" — built exactly like the kitchen

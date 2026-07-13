@@ -2286,7 +2286,7 @@ footer{margin-top:2.6rem}
    Each appearance the scheduler (see the #cuddly-irene IIFE) picks ONE behavior at random,
    rotating so it varies visit to visit: roam behind the couch, bounce on the daybed, sit
    beside Markéta, hug Markéta, or — only when the loose chest cat is in the nook — crouch
-   to play with it. Untracked bonus (no egg plumbing).
+   to play with it or leap over to it. Untracked bonus (no egg plumbing).
    Layering: the outer group fades (opacity). #cuddly-irene-move carries a static per-
    behavior reposition via the CSS `translate` PROPERTY (never a transform attribute, so
    nothing to clobber). The pose motions (bounce / walk-cross / crouch-reach) ride
@@ -2305,6 +2305,7 @@ footer{margin-top:2.6rem}
 #cuddly-irene.irene-sit    #cuddly-irene-move{translate:262px -5px}  /* on the seat, clearly to Markéta's right (not on top of her) */
 #cuddly-irene.irene-bounce #cuddly-irene-move{translate:52px -42px}   /* standing on the seat cushion */
 #cuddly-irene.irene-catplay #cuddly-irene-move{translate:16px 22px}   /* crouched low, down by the cat */
+#cuddly-irene.irene-catjump #cuddly-irene-move{translate:40px 22px}   /* landed on the floor right beside the cat (she leaps in via the pose keyframes) */
 #cuddly-irene.irene-roam   #cuddly-irene-move{translate:0 -2px}       /* behind the couch back (reparented) */
 /* a seated child reads shorter + tucked, not a standing figure lifted onto the cushion; upright (no lean) */
 #cuddly-irene.irene-sit    #cuddly-irene-pose{transform:scaleY(.9); transform-origin:50% 100%}
@@ -2324,6 +2325,18 @@ footer{margin-top:2.6rem}
 @keyframes irene-walk{0%{transform:translateX(-48px)} 50%{transform:translateX(150px) translateY(-2px)} 100%{transform:translateX(340px)}}
 #cuddly-irene.irene-catplay #cuddly-irene-pose{animation:irene-reach 1.5s ease-in-out 3}
 @keyframes irene-reach{0%,100%{transform:rotate(0)} 45%{transform:rotate(5deg) translateY(2px)}}
+/* cat-jump: she springs from her canonical spot up-and-right and lands beside the cat with an
+   excited rebound (the move translate above sets the landing; these keyframes are the leap in) */
+#cuddly-irene.irene-catjump #cuddly-irene-pose{animation:irene-catjump 1.2s ease-in-out}
+@keyframes irene-catjump{
+  0%{transform:translate(-40px,2px)}
+  14%{transform:translate(-38px,6px) scaleY(.88)}
+  46%{transform:translate(-18px,-42px)}
+  70%{transform:translate(0,0) scaleY(.88)}
+  82%{transform:translate(0,-15px)}
+  92%{transform:translate(0,-2px) scaleY(.96)}
+  100%{transform:translate(0,0)}
+}
 /* tap-to-giggle wobble: a one-shot playful wiggle on the dedicated #cuddly-irene-giggle
    wrapper. It rides the individual `rotate` PROPERTY (not `transform`), so it can't clobber
    the pose keyframes on its parent #cuddly-irene-pose nor the peek lean on its child — and
@@ -2338,6 +2351,7 @@ footer{margin-top:2.6rem}
   #cuddly-irene.irene-bounce #cuddly-irene-pose,
   #cuddly-irene.irene-roam #cuddly-irene-pose,
   #cuddly-irene.irene-catplay #cuddly-irene-pose,
+  #cuddly-irene.irene-catjump #cuddly-irene-pose,
   #cuddly-irene.giggling #cuddly-irene-giggle{animation:none}
 }
 #balcony-doormat{transform-box:fill-box; transform-origin:center}
@@ -12754,8 +12768,8 @@ document.addEventListener("click", function (e) {
   //   roam        → BEHIND the daybed, so the couch back hides her lower half; the wall knives
   //                 + screen are also tucked behind the daybed (moveWallsBehind) so they don't
   //                 paint over her upper body.
-  //   cat-play    → just AFTER the loose cat node, so the cat crouches BEHIND her (she's the
-  //                 kid reaching down over it). Falls through to front-of-knives if no cat.
+  //   cat-play/   → just AFTER the loose cat node, so the cat sits BEHIND her (she's the kid
+  //   cat-jump       reaching down over / leaping to it). Falls through to front-of-knives if no cat.
   //   bounce/sit/hug → AFTER the knives (last of the couple/knife layer), so a front-of-couch
   //                 pose paints over the daybed AND the .cuddly-knife elements.
   // restoreZ() (reset/teardown) always undoes whichever of these ran.
@@ -12766,7 +12780,7 @@ document.addEventListener("click", function (e) {
       return;
     }
     restoreWalls(); // any front-of-couch pose: the wall elements return to their frontmost slots
-    if (beh === "irene-catplay" && catInNook()) {
+    if ((beh === "irene-catplay" || beh === "irene-catjump") && catInNook()) {
       var cat = document.getElementById("witchy-chest-cat-pos");
       if (cat && cat.parentNode) { cat.parentNode.insertBefore(irene, cat.nextSibling); return; }
     }
@@ -12776,7 +12790,7 @@ document.addEventListener("click", function (e) {
   }
   function clearCatPlay() { if (catPlayTimer) { clearTimeout(catPlayTimer); catPlayTimer = null; } }
   function dropPose() { // literal removes (check.js wants a literal classList.remove per anim-driving class)
-    irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-catplay");
+    irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-catplay", "irene-catjump");
     restoreZ();
   }
   function leave() {
@@ -12792,10 +12806,11 @@ document.addEventListener("click", function (e) {
     fadeTimer = setTimeout(function () { fadeTimer = null; dropPose(); }, 620); // > opacity .55s fade
   }
   function pickBehavior() {
-    // rotate so visits vary (never immediately repeat); cat-play only when the cat is in
-    // the nook, and then weighted so she gravitates to it while the cat's around
+    // rotate so visits vary (never immediately repeat); the two cat behaviors (crouch-play +
+    // leap-over) are added only when the cat is in the nook, together weighted the same as the
+    // old single catplay-x2 so she still gravitates to the cat while it's around
     var pool = BEHAVIORS.slice();
-    if (catInNook()) { pool.push("irene-catplay", "irene-catplay"); }
+    if (catInNook()) { pool.push("irene-catplay", "irene-catjump"); }
     var choices = pool.filter(function (b) { return b !== lastBeh; });
     if (!choices.length) choices = pool;
     return choices[Math.floor(Math.random() * choices.length)];
@@ -12803,23 +12818,26 @@ document.addEventListener("click", function (e) {
   // Apply ONE pose synchronously: swap the pose class, drop the matching z-order, optionally
   // nudge the cat. NO linger/chain timer here — the sequence driver (runStep) and the verify
   // hook own timing, so this stays a pure, screenshottable single-pose apply. Returns the
-  // behavior actually applied (cat-play downgrades to hug when the cat isn't here).
+  // behavior actually applied (the cat behaviors downgrade when the cat isn't here).
   function applyPose(beh) {
-    if (beh === "irene-catplay" && !catInNook()) beh = "irene-hug"; // never play with a cat that isn't here
+    if (beh === "irene-catplay" && !catInNook()) beh = "irene-hug";    // never crouch-play with a cat that isn't here
+    if (beh === "irene-catjump" && !catInNook()) beh = "irene-bounce"; // nothing to leap to → just bounce in place
     lastBeh = beh;
     clearCatPlay();
-    irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-catplay");
+    irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-catplay", "irene-catjump");
     placeFor(beh);
     irene.classList.add(beh, "showing");
     // As she leans in to hug Markéta, she coos "I love you" in a high, childlike pitch. One-shot,
     // no timer (nothing to tear down); hasFocus-gated like every other unattended sound so a
     // backgrounded tab stays silent (playILoveYouSound itself only gates document.hidden).
     if (beh === "irene-hug" && onScreen() && document.hasFocus()) playILoveYouSound("cuddly-irene", 1.5);
-    if (beh === "irene-catplay") { // nudge the cat into a playful hop toward her (guarded + self-resuming)
+    if (beh === "irene-catplay" || beh === "irene-catjump") { // nudge the cat to the convergence spot (guarded + self-resuming)
+      // catplay: she's already crouched, so nudge after a beat. catjump: sync the cat's hop with
+      // her leap so it's settling at the target as she lands (her arc lands ~840ms in).
       catPlayTimer = setTimeout(function () {
         catPlayTimer = null;
         if (onScreen() && catInNook() && window.__catChaseTo) window.__catChaseTo(120, 330);
-      }, 750);
+      }, beh === "irene-catjump" ? 150 : 750);
     }
     return beh;
   }

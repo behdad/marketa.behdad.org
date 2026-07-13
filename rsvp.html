@@ -19925,17 +19925,23 @@ async def googlefonts(family, weight=None, text=None, subset=None):
     }, 760);
   }
   function positionMonClose() {
-    if (!monClose || !zoomEl) return;
+    if (!monClose || !zoomEl || !vp) return;
+    var t = targetFor(zoomEl);
+    var box = (t && document.getElementById(t.box)) || zoomEl;
     var frame = monClose.offsetParent; // .hunt-frame (position:relative)
-    if (!frame || !vp) return;
-    var v = vp.getBoundingClientRect(), f = frame.getBoundingClientRect();
-    if (!v.width || !f.width) return;
+    if (!frame) return;
+    var r = box.getBoundingClientRect(), f = frame.getBoundingClientRect(), v = vp.getBoundingClientRect();
+    if (!r.width || !f.width || !v.width) return;
     var sz = monClose.offsetWidth || 26;
-    // Anchor the ✕ inside the VIEWPORT's top-right corner — always on-screen no matter where the
-    // zoomed device sits. (It used to track the on-screen monitor/laptop corner, which drifted the
-    // button off-screen when the frame resized under fullscreen or the zoom refit.)
-    monClose.style.top = (v.top - f.top + 8) + "px";
-    monClose.style.left = (v.right - f.left - sz - 8) + "px";
+    // Poke just past the on-screen device's top-right corner (the phone's ✕ does the same past its
+    // shell). The monitor zoom nearly fills the viewport, so ALSO clamp inside the viewport — that
+    // keeps the ✕ on the corner normally but never lets it drift off-screen under fullscreen/refit.
+    var lower = (zoomEl === laptop) ? 27 : 0, leftAdj = (zoomEl === laptop) ? -9 : 0;
+    var top = r.top - f.top - sz * 0.9 + lower, left = r.right - f.left - sz * 0.1 + leftAdj;
+    top = Math.max(v.top - f.top + 4, Math.min(top, v.bottom - f.top - sz - 4));
+    left = Math.max(v.left - f.left + 4, Math.min(left, v.right - f.left - sz - 4));
+    monClose.style.top = top + "px";
+    monClose.style.left = left + "px";
     monClose.style.right = "auto";
   }
   function monTrack() {

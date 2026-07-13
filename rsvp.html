@@ -111,19 +111,14 @@ footer{margin-top:2.6rem}
   transition:opacity .6s ease; z-index:5;
 }
 #hunt-wipe.active{opacity:1}
-/* dismiss ✕ for a zoomed device (monitor / laptop) — the same affordance the pocket
-   phone gives, pinned to the viewport corner so the strip's zoom transform can't move
-   it. Shown only while a device holds the view; a corner tap also zooms out on its own,
-   this just makes the exit obvious. */
-.monitor-close{
-  position:absolute; width:26px; height:26px; border-radius:50%;
-  background:var(--ink); color:var(--paper); border:2px solid var(--paper); font:inherit; font-size:14px;
-  line-height:1; cursor:pointer; z-index:8; display:none; align-items:center; justify-content:center;
-  box-shadow:0 2px 8px rgba(69,58,49,.28);
-}
-.hunt-viewport.device-zoomed ~ #monitor-close-btn{display:flex}
-.monitor-close:hover, .monitor-close:focus-visible{background:var(--wine)}
-@media (max-width:759px){ .monitor-close{width:22px; height:22px; font-size:12px} }
+/* dismiss ✕ for a zoomed device (monitor / laptop) — a small SVG mark that lives in the
+   device group's own bezel corner, so it rides the device's zoom transform with no JS
+   position-tracking (the same principle as the pocket phone's ✕, which is a child of the
+   shell it closes). Shown only while THAT device holds the view (its group carries
+   .dev-zoomed); a corner tap also zooms out on its own, this just makes the exit obvious. */
+.bezel-close{opacity:0; pointer-events:none; transition:opacity .2s ease; cursor:pointer}
+.dev-zoomed .bezel-close{opacity:1; pointer-events:auto}
+.bezel-close:hover circle{fill:var(--wine)}
 #loft-game-strip{
   display:block; width:500%; height:auto; user-select:none; -webkit-user-select:none;
   -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none;
@@ -8128,6 +8123,13 @@ section{margin:1.9rem 0}
 <g id="office-webcam">
 <rect id="office-webcam-hit" x="310.5" y="145.5" width="11" height="6.5" fill="transparent"/>
 </g>
+<!-- bezel dismiss ✕: top-right corner of the monitor frame, over the screen's top-right
+     edge. Shown only while the monitor is zoomed (its group carries .dev-zoomed); rides
+     the group's transform so it never needs JS position-tracking, even in fullscreen. -->
+<g id="monitor-bezel-close" class="bezel-close">
+<circle cx="378" cy="155" r="2.6" fill="#453a31" stroke="#fffdf8" stroke-width="0.5"/>
+<path d="M376.7 153.7 L379.3 156.3 M379.3 153.7 L376.7 156.3" fill="none" stroke="#fffdf8" stroke-width="0.7" stroke-linecap="round"/>
+</g>
 </g>
 <defs>
 <radialGradient id="laptop-glow-grad" cx="50%" cy="42%" r="62%">
@@ -8419,6 +8421,12 @@ section{margin:1.9rem 0}
 <circle cx="424" cy="205" r="2" fill="#e8c93a"/>
 <rect x="434" y="203" width="7" height="4" rx="1" fill="#7f9ec0"/>
 <path d="M378 206 Q362 210 365 220" fill="none" stroke="#d8d4c8" stroke-width="2"/>
+<!-- bezel dismiss ✕: top-right corner of the laptop lid frame. Shown only while the
+     laptop is zoomed (its group carries .dev-zoomed); rides the group's transform. -->
+<g id="laptop-bezel-close" class="bezel-close">
+<circle cx="445" cy="162" r="2.2" fill="#453a31" stroke="#fffdf8" stroke-width="0.45"/>
+<path d="M443.9 160.9 L446.1 163.1 M446.1 160.9 L443.9 163.1" fill="none" stroke="#fffdf8" stroke-width="0.6" stroke-linecap="round"/>
+</g>
 </g>
 <!-- over-ear headphones (HD-6xx style) hung by their band from a small hook under
      the desk front edge, dangling below the laptop into the under-desk space -->
@@ -10186,7 +10194,6 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
     </svg>
     <div id="hunt-wipe" aria-hidden="true"></div>
   </div>
-  <button type="button" id="monitor-close-btn" class="monitor-close" aria-label="Exit screen">✕</button>
   <div class="hunt-right" id="hunt-right">
     <div class="hunt-side" id="hunt-side">
       <button type="button" id="hunt-fullscreen-btn" class="hunt-fullscreen-btn" aria-label="Enter fullscreen">⛶</button>
@@ -20093,8 +20100,6 @@ async def localfont(name):
   var laptop = document.getElementById("office-laptop");
   if (!strip || !vp || !monitor) return;
   var zoomEl = null; // the device the view is zoomed onto (null = zoomed out)
-  var monClose = document.getElementById("monitor-close-btn");
-  var monTrackId = 0, monTrackUntil = 0;
   // box = the invisible screen-sized rect the zoom frames (the device groups' own
   // bboxes include stands/keyboards, which pulled the view down and out — the owner's
   // "not zoomed enough, not centered"); laptop zoom is lid-driven: only while open
@@ -20125,15 +20130,14 @@ async def localfont(name):
     if (!t || !t.el || !t.when()) return;
     zoomEl = el;
     vp.classList.add("device-zoomed");
+    el.classList.add("dev-zoomed"); // reveals THIS device's bezel ✕ (a child of its group)
     apply();
-    monTrackUntil = performance.now() + 820; // follow the screen corner through the zoom glide
-    if (!monTrackId) monTrack();
   }
   function zoomOut() {
     if (!zoomEl) return;
+    zoomEl.classList.remove("dev-zoomed");
     zoomEl = null;
     vp.classList.remove("device-zoomed");
-    monTrackUntil = 0;
     // the origin must survive the glide out (scale interpolates about it; clearing it
     // mid-transition snaps the start pose sideways) — drive the transition in px, which
     // lands exactly where translateX(-idx*20%) does, then restore the canonical % form
@@ -20146,41 +20150,23 @@ async def localfont(name):
       strip.style.transform = "translateX(-" + ((window.currentStageIndex || 0) * 20) + "%)";
     }, 760);
   }
-  function positionMonClose() {
-    if (!monClose || !zoomEl || !vp) return;
-    var t = targetFor(zoomEl);
-    var box = (t && document.getElementById(t.box)) || zoomEl;
-    var frame = monClose.offsetParent; // .hunt-frame (position:relative)
-    if (!frame) return;
-    var r = box.getBoundingClientRect(), f = frame.getBoundingClientRect(), v = vp.getBoundingClientRect();
-    if (!r.width || !f.width || !v.width) return;
-    var sz = monClose.offsetWidth || 26;
-    // Poke just past the on-screen device's top-right corner (the phone's ✕ does the same past its
-    // shell). The monitor zoom nearly fills the viewport, so ALSO clamp inside the viewport — that
-    // keeps the ✕ on the corner normally but never lets it drift off-screen under fullscreen/refit.
-    var lower = (zoomEl === laptop) ? 27 : 0, leftAdj = (zoomEl === laptop) ? -9 : 0;
-    var top = r.top - f.top - sz * 0.9 + lower, left = r.right - f.left - sz * 0.1 + leftAdj;
-    top = Math.max(v.top - f.top + 4, Math.min(top, v.bottom - f.top - sz - 4));
-    left = Math.max(v.left - f.left + 4, Math.min(left, v.right - f.left - sz - 4));
-    monClose.style.top = top + "px";
-    monClose.style.left = left + "px";
-    monClose.style.right = "auto";
-  }
-  function monTrack() {
-    positionMonClose();
-    monTrackId = performance.now() < monTrackUntil ? requestAnimationFrame(monTrack) : 0;
-  }
-  // re-fit the zoom AND re-seat the ✕ whenever the box the zoom frames may have moved or
-  // resized under us — a resize, or entering/leaving fullscreen (which resizes the frame but
-  // never re-ran apply(), so the zoom stayed at the old scale and the ✕ tracked off-screen).
-  function refitZoom() { if (zoomEl) { apply(); positionMonClose(); } }
+  // re-fit the zoom whenever the box it frames may have moved or resized under us — a
+  // resize, or entering/leaving fullscreen (which resizes the frame but never re-ran
+  // apply(), so the zoom stayed at the old scale). The bezel ✕ is a child of the device
+  // group, so it rides this same transform and needs no separate re-seating.
+  function refitZoom() { if (zoomEl) apply(); }
   window.addEventListener("resize", refitZoom);
   document.addEventListener("fullscreenchange", function () { if (zoomEl) { requestAnimationFrame(refitZoom); setTimeout(refitZoom, 80); } });
   document.addEventListener("webkitfullscreenchange", function () { if (zoomEl) { requestAnimationFrame(refitZoom); setTimeout(refitZoom, 80); } });
   window.__refitZoom = refitZoom;
   window.__monitorZoomIn = function () { zoomIn(monitor); };
   window.__monitorZoomOut = zoomOut;
-  if (monClose) monClose.addEventListener("click", function (e) { e.stopPropagation(); zoomOut(); });
+  // each device's bezel ✕ dismisses its own zoom. pointerdown + stopPropagation so it
+  // doesn't bubble to the device group's zoom-in handler; the viewport's capture-phase
+  // pointerdown already bails when the target sits inside the zoomed device.
+  [document.getElementById("monitor-bezel-close"), document.getElementById("laptop-bezel-close")].forEach(function (x) {
+    if (x) x.addEventListener("pointerdown", function (e) { e.stopPropagation(); zoomOut(); });
+  });
   // a tap landing outside the zoomed device hands the room back — unless it lands on
   // the OTHER device (glide over) or on viewport chrome (capture phase, so a target's
   // own stopPropagation can't strand the zoom)

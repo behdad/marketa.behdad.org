@@ -16019,70 +16019,7 @@ document.addEventListener("click", function (e) {
     m.getBoundingClientRect();
     m.style.animation = "";
   }
-  // Tab-favicon swap: a small equalizer glyph while a song is actually playing (not just
-  // paused-mid), so the "now playing" state is noticeable from a backgrounded tab too.
-  // faviconNormalHref is read off the existing <link> rather than duplicated here, so
-  // there's only ever one copy of the site's real (espresso-machine) favicon markup.
-  // FAVICON_PLAYING is the static 3-bar glyph used the instant playback starts (before
-  // the analyser has a first frame) and as the no-analyser fallback; faviconFrame below
-  // redraws the same 3 bars live from the analyser once one's available, ~12x/sec via
-  // faviconTimer -- a setInterval (not rAF) specifically because it must keep running in
-  // a backgrounded/unfocused tab, which is the entire point of a favicon indicator.
-  var faviconLink = document.querySelector('link[rel="icon"]');
-  var faviconNormalHref = faviconLink ? faviconLink.href : "";
-  var FAVICON_PLAYING = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="10" y="30" width="12" height="20" rx="6" fill="%23d9a6a6"/><rect x="26" y="10" width="12" height="40" rx="6" fill="%237f9ec0"/><rect x="42" y="22" width="12" height="28" rx="6" fill="%238e3a4a"/></svg>';
-  var faviconIsPlaying = false;
-  var faviconCanvas = null, favicon2d = null, faviconTimer = null;
-  var FAVICON_BAR_COLORS = ["#d9a6a6", "#7f9ec0", "#8e3a4a"];
-  var FAVICON_BARS = [{ x: 10, w: 12 }, { x: 26, w: 12 }, { x: 42, w: 12 }]; // matches FAVICON_PLAYING's rects
-  function roundRect(ctx, x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  }
-  function faviconFrame() {
-    if (!faviconLink) return;
-    var analyser = eqAudioEl && eqAudioEl._eqAnalyser;
-    if (!analyser) return; // keep showing the static glyph until a real frame is available
-    if (!faviconCanvas) {
-      faviconCanvas = document.createElement("canvas");
-      faviconCanvas.width = 64; faviconCanvas.height = 64;
-      favicon2d = faviconCanvas.getContext("2d");
-    }
-    var data = new Uint8Array(analyser.frequencyBinCount);
-    analyser.getByteFrequencyData(data);
-    var usable = Math.max(3, Math.floor(data.length * 0.75)); // skip the near-silent top bins, same as the monitor's bars
-    favicon2d.clearRect(0, 0, 64, 64);
-    for (var i = 0; i < 3; i++) {
-      var lo = Math.floor(i / 3 * usable), hi = Math.floor((i + 1) / 3 * usable), sum = 0, cnt = 0;
-      for (var j = lo; j <= hi && j < data.length; j++) { sum += data[j]; cnt++; }
-      var v = cnt ? (sum / cnt) / 255 : 0;
-      var h = Math.max(8, Math.min(42, 8 + v * 40));
-      favicon2d.fillStyle = FAVICON_BAR_COLORS[i];
-      roundRect(favicon2d, FAVICON_BARS[i].x, 50 - h, FAVICON_BARS[i].w, h, 6);
-      favicon2d.fill();
-    }
-    try { faviconLink.href = faviconCanvas.toDataURL("image/png"); } catch (e) {} // e.g. a tainted-canvas edge case some engine hits — the static glyph just stays put
-  }
-  function setPlayingFavicon(isPlaying) {
-    if (!faviconLink || isPlaying === faviconIsPlaying) return;
-    faviconIsPlaying = isPlaying;
-    clearInterval(faviconTimer);
-    // The 12fps favicon rewrite flickers Android Chrome's UI (and the flicker can persist
-    // after playback stops) — skip the favicon indicator entirely on touch devices.
-    if (window.matchMedia && (matchMedia("(pointer: coarse)").matches || matchMedia("(hover: none)").matches)) { faviconTimer = null; return; }
-    if (isPlaying) {
-      faviconLink.href = FAVICON_PLAYING; // instant static swap so the tab updates right away, before the first live frame
-      faviconTimer = setInterval(faviconFrame, 83); // ~12fps
-    } else {
-      faviconTimer = null;
-      faviconLink.href = faviconNormalHref;
-    }
-  }
+  // No now-playing favicon swap — the tab keeps the original favicon from <head> at all times.
   // Media Session API: mirrors now-playing state to mobile lock-screens / desktop OS media
   // widgets (title, artist, play/pause/skip) so they work even with the tab unfocused or
   // backgrounded — the songs themselves already keep playing in that case (plain <audio>,
@@ -16150,7 +16087,6 @@ document.addEventListener("click", function (e) {
       if (!a.paused) { playing = a; break; }
       if (a.currentTime > 0) pausedMid = a; // paused part-way through — still the "current" song
     }
-    setPlayingFavicon(!!playing); // reuse the same playing/not-playing condition the UI branches on below
     var current = playing || pausedMid;
     monitor.classList.toggle("song-paused", !!current && !playing); // freezes the marquee scroll when paused
     // OS-level lock-screen/media-key state tracks actual audio playback, independent of

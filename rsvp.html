@@ -1086,6 +1086,21 @@ footer{margin-top:2.6rem}
   65%{transform:rotate(1.5deg)}
 }
 @media (prefers-reduced-motion: reduce){#kitchen-waterbottle.rattling #kitchen-waterbottle-inner{animation:none}}
+/* a falling pan smashing onto the water bottle / kettle / SodaStream jolts it: a quick
+   down-hit then a damped rock, pivoting at each object's base (its own inner wrapper —
+   kettle gets one below). After the .rattling/.fizzing rules so it wins on co-occurrence. */
+#kitchen-kettle-wob{transform-box:fill-box; transform-origin:50% 100%}
+#kitchen-waterbottle.struck #kitchen-waterbottle-inner,
+#kitchen-drinkmate.struck #kitchen-drinkmate-wob,
+#kitchen-kettle.struck #kitchen-kettle-wob{animation:kitchen-struck .55s ease-in-out}
+@keyframes kitchen-struck{
+  0%, 100%{transform:translateY(0) rotate(0)}
+  12%{transform:translateY(1.5px) rotate(-4.5deg)}
+  30%{transform:translateY(0) rotate(3.5deg)}
+  52%{transform:rotate(-2.2deg)}
+  74%{transform:rotate(1.2deg)}
+}
+@media (prefers-reduced-motion: reduce){#kitchen-waterbottle.struck #kitchen-waterbottle-inner, #kitchen-drinkmate.struck #kitchen-drinkmate-wob, #kitchen-kettle.struck #kitchen-kettle-wob{animation:none}}
 .wall-brick{transform-box:fill-box; transform-origin:center}
 .wall-brick.wobbling{animation:brick-wobble .4s ease-in-out}
 @keyframes brick-wobble{
@@ -4571,6 +4586,7 @@ section{margin:1.9rem 0}
 <g id="kitchen-brass">
 <g id="kitchen-kettle" class="hunt-hit" tabindex="0" role="button" aria-label="The gooseneck kettle" transform="translate(75.36,184.95) scale(0.68,0.85)">
 <rect x="0" y="0" width="92" height="58" fill="transparent"/>
+<g id="kitchen-kettle-wob">
 <path d="M36 16 L23.5 50.8 Q22.8 53 25.2 53 L70.8 53 Q73.2 53 72.5 50.8 L60 16 Z" fill="#2d2d2d" stroke="#1a1a1a" stroke-width="1.2"/>
 <ellipse cx="54" cy="34" rx="2.8" ry="12" fill="#5c5c5c" opacity="0.5" transform="rotate(-9 54 34)" pointer-events="none"/>
 <path d="M30 44 Q48 47.5 66 44" fill="none" stroke="#4a4a4a" stroke-width="1"/>
@@ -4581,6 +4597,7 @@ section{margin:1.9rem 0}
 <rect x="60" y="18.5" width="7" height="5" rx="1.2" fill="#8a8578" stroke="#6e6a5e" stroke-width="0.8" transform="rotate(-28 63.5 21)"/>
 <ellipse cx="77" cy="13.5" rx="11" ry="5.2" fill="#1a1a1a" transform="rotate(-28 77 13.5)"/>
 <path id="kitchen-kettle-crack" class="kitchen-crack" d="M35 25 L42 35 L38 45" fill="none" stroke="#eee" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
+</g>
 </g>
 <g id="kitchen-waterbottle" class="hunt-hit" tabindex="0" role="button" aria-label="The water bottle" transform="translate(25,0)">
 <rect x="120" y="164" width="26" height="70" fill="transparent"/>
@@ -13802,6 +13819,9 @@ document.addEventListener("click", function (e) {
     setTimeout(function () {
       playPanCrashSound(targetId);
       target.classList.add("broken");
+      target.classList.remove("struck");
+      requestAnimationFrame(function () { requestAnimationFrame(function () { target.classList.add("struck"); }); });
+      setTimeout(function () { target.classList.remove("struck"); }, 600);
       if (targetId === "kitchen-waterbottle" && window.__leakWaterBottle) window.__leakWaterBottle();
       if (targetId === "kitchen-drinkmate") playSodaDepressurizeSound(); // all the CO2 blows out
     }, panFallReducedMotion() ? 0 : 650);
@@ -13841,7 +13861,7 @@ document.addEventListener("click", function (e) {
     });
     ["kitchen-kettle", "kitchen-waterbottle", "kitchen-drinkmate"].forEach(function (id) {
       var t = document.getElementById(id);
-      if (t) t.classList.remove("broken");
+      if (t) t.classList.remove("broken", "struck");
     });
     if (window.resetWaterBottle) window.resetWaterBottle();
   };

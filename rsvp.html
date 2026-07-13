@@ -14484,6 +14484,7 @@ document.addEventListener("click", function (e) {
   pulley.addEventListener("keydown", function (e) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); swing(); }
   });
+  window.__swingPulley = swing; // the loose cat's pulley pounce swats it (see PERCHES.cuddly)
 })();
 (function () {
   var outlet = document.getElementById("cuddly-outlet");
@@ -33329,13 +33330,18 @@ function spawnDustMote(container) {
   // y246 put the cat's head up at the bug (~y212). It's a lunge-and-MISS (startBugPounce),
   // not a sit; the cat springs up, the bug bolts, and it drops back to the floor.
   var ladybugPouncePerch = { x: 488, y: 246 };
+  // the loose cat springs up and swats the hanging pulley (it swings) — a lunge, not a sit,
+  // since there's no surface up there. Apex is the dangling rope area; tune if the paw misses.
+  var pulleyPouncePerch = { x: 568, y: 155 };
   var PERCHES = {
     kitchen: [{ x: 48,  y: 230 }], // left end of the counter top, clear of the espresso gear
     // two rare discovered moments share the garden with the chest-lid habit: the rooster
     // stare-down and the ladybug pounce, each weighted 1-in-5 (same occasional idea as the
     // balcony windchime swat below) so the chest lid stays the cat's usual perch.
     garden:  [{ x: 610, y: 240 }, { x: 610, y: 240 }, { x: 610, y: 240 }, roosterStarePerch, ladybugPouncePerch],
-    cuddly:  [{ x: 96,  y: 250 }], // front-left corner of the daybed seat, clear of the couple
+    // daybed corner is the usual perch; the pulley pounce is a rare discovered moment (1-in-4,
+    // same weighting idea as the balcony windchime) — the cat springs up and swats it swinging.
+    cuddly:  [{ x: 96, y: 250 }, { x: 96, y: 250 }, { x: 96, y: 250 }, pulleyPouncePerch],
     // the chair is weighted 3:1 over the desk — it gravitates toward the chair to nap far
     // more often than it perches anywhere else (owner request); resolved live, both move.
     office:  [officeDeskPerch, officeChairPerch, officeChairPerch, officeChairPerch],
@@ -33459,6 +33465,7 @@ function spawnDustMote(container) {
     var isSwipe = chosen === windchimeSwatPerch;   // the windchime: a quick swat-and-ring, not a sit
     var isStare = chosen === roosterStarePerch;    // the rooster: a normal-length sit spent locked onto the figurine
     if (chosen === ladybugPouncePerch) { startBugPounce(); return; } // a lunge-and-miss, its own arc (below)
+    if (chosen === pulleyPouncePerch) { startPulleyPounce(); return; } // spring-and-swat the pulley (below)
     var perch = typeof chosen === "function" ? chosen() : chosen; // resolve live-geometry perches
     if (!perch) { scheduleJump(); return; }           // couldn't resolve a surface — skip this cycle
     var b = baseFeet();
@@ -33576,6 +33583,42 @@ function spawnDustMote(container) {
     setTimeout(function () {
       if (!jumping || jumpAnim !== thisPounce) return;
       if (window.__buzzLadybug) window.__buzzLadybug(null, !document.hasFocus());
+      flickTail();
+      if (catArt) {
+        catArt.classList.remove("wobbling");
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { catArt.classList.add("wobbling"); });
+        });
+      }
+    }, duration * 0.34);
+  }
+  // The loose cat's pulley pounce (chosen ~1-in-4 from PERCHES.cuddly). Like the ladybug
+  // pounce it doesn't sit — no surface up there: the cat springs up so its paw meets the
+  // hanging pulley, which swings from the swat (reusing its own click swing via
+  // window.__swingPulley), then drops straight back to where the roam froze. Same busy-lock
+  // + finishJump cleanup and captured-jumpAnim guard as every other hop.
+  function startPulleyPounce() {
+    if (!walk.animate) { scheduleJump(); return; } // no WAAPI: just keep roaming
+    var b = baseFeet();
+    var Dx = pulleyPouncePerch.x - b.x, Dy = pulleyPouncePerch.y - b.y; // apex offset: up at the pulley
+    var cur = currentWalkOffset();                 // where the roam is right now
+    jumpCur = cur; jumpApexX = (cur.x + Dx) / 2; jumpApexY = Dy;
+    function tf(x, y) { return "translate(" + x + "px," + y + "px)"; }
+    jumping = true; isPerchJump = false; isNapJump = false;
+    walk.style.animationPlayState = "paused";      // freeze the roam at `cur`; the arc drives the walk node
+    var duration = 1200 + Math.random() * 350;
+    jumpAnim = walk.animate([
+      { offset: 0,    transform: tf(cur.x, cur.y),   easing: "cubic-bezier(.3,0,.45,.6)" }, // gather + spring up
+      { offset: 0.36, transform: tf(Dx, Dy),         easing: "cubic-bezier(.5,.1,.75,.5)" }, // paw meets the pulley
+      { offset: 0.5,  transform: tf(Dx, Dy + 12),    easing: "cubic-bezier(.3,0,.6,1)" },     // bats it down
+      { offset: 1,    transform: tf(cur.x, cur.y) }                                            // drop back to the floor
+    ], { duration: duration, fill: "none" });
+    jumpAnim.onfinish = finishJump;
+    // the pulley swings the instant the paw connects (~34% in), with the cat's own click-wobble
+    var thisPounce = jumpAnim;
+    setTimeout(function () {
+      if (!jumping || jumpAnim !== thisPounce) return;
+      if (window.__swingPulley) window.__swingPulley();
       flickTail();
       if (catArt) {
         catArt.classList.remove("wobbling");

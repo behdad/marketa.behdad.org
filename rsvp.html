@@ -13300,6 +13300,11 @@ document.addEventListener("click", function (e) {
     // tear down if the tab hides or the window loses focus mid-game (pointerup may never come)
     document.addEventListener("visibilitychange", function () { if (document.hidden) stopArcade(); });
     window.addEventListener("blur", function () { stopArcade(); });
+    // Esc ends a run (shows the final "game over ·×N"); capture + stopPropagation so it doesn't
+    // also back the desk-zoom out from under the game
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && arcadeActive) { stopArcade(true); e.stopPropagation(); }
+    }, true);
 
     // headless test hook: deterministically arms the game and runs N logic ticks with a
     // fixed dt WITHOUT scheduling rAF, so a screenshot can capture dim + saucers + a shot.
@@ -31668,11 +31673,11 @@ function spawnDustMote(container) {
   }
   function decayCuddlySmoke() {
     cuddlySmokeDecayTimer = setTimeout(function () {
-      cuddlySmokeLevel = Math.max(0, cuddlySmokeLevel - 0.06);
+      cuddlySmokeLevel = Math.max(0, cuddlySmokeLevel - 0.04);
       renderCuddlySmoke();
       if (cuddlySmokeLevel > 0.001) decayCuddlySmoke();
       else { cuddlySmokeLevel = 0; cuddlySmokeDecayTimer = null; }
-    }, 2400); // lift ~0.06 every 2.4s → a full room clears in well under a minute
+    }, 400); // lift ~0.04 every 0.4s → a full room clears in ~10s
   }
   function bumpCuddlySmoke(amount) {
     cuddlySmokeLevel = Math.min(1, cuddlySmokeLevel + amount);

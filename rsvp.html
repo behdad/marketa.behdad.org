@@ -20237,7 +20237,20 @@ async def localfont(name):
   // resize, or entering/leaving fullscreen (which resizes the frame but never re-ran
   // apply(), so the zoom stayed at the old scale). The bezel ✕ is a child of the device
   // group, so it rides this same transform and needs no separate re-seating.
-  function refitZoom() { if (zoomEl) apply(); }
+  function refitZoom() {
+    if (!zoomEl) return;
+    // Snap, don't glide. A fullscreen/resize refit rescales the whole coordinate space, so
+    // apply() changes BOTH the translate (by a lot) and the transform-origin — and since only
+    // transform transitions (origin jumps instantly), letting it animate reads as the device
+    // lurching off-origin then sliding back into frame. Killing the transition around apply()
+    // re-frames the device in place, matching how zoomOut drives its own pose in px to dodge
+    // the same origin-snap.
+    var prevT = strip.style.transition;
+    strip.style.transition = "none";
+    apply();
+    void strip.offsetWidth; // commit the un-transitioned pose before the glide is restored
+    strip.style.transition = prevT;
+  }
   window.addEventListener("resize", refitZoom);
   document.addEventListener("fullscreenchange", function () { if (zoomEl) { requestAnimationFrame(refitZoom); setTimeout(refitZoom, 80); } });
   document.addEventListener("webkitfullscreenchange", function () { if (zoomEl) { requestAnimationFrame(refitZoom); setTimeout(refitZoom, 80); } });

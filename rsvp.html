@@ -35007,7 +35007,7 @@ function spawnDustMote(container) {
   // backgrounded tab churns no audio contexts. Each flip crossfades ALL beds (updateAllPartyDances:
   // every bed self-starts/stops per its own want-gate, so the incoming fades in as the outgoing
   // fades out over the same 1.8s) and reflects the new dance onto the dancers.
-  window.__partyDance = "techno"; // active dance id; techno is always first (see PARTY_DANCE_ORDER)
+  window.__partyDance = "techno"; // active dance id; a freshly-lit party opens on PARTY_DANCE_ORDER[0] (fully shuffled at load)
   var WALTZ_PERIOD_MS = 15000;
   var waltzAltTimer = null;
   var PARTY_DANCE_ORDER = null; // built lazily at first alternation-setup: ["techno", ...shuffle(rest)]
@@ -35058,18 +35058,18 @@ function spawnDustMote(container) {
     return true;
   };
   function startWaltzAlternation() { // idempotent — setGardenParty(true) is storm-called by play.js
-    if (!PARTY_DANCE_ORDER) { // build the rotation once: techno pinned first, the rest Fisher-Yates shuffled
-      var rest = [], d = window.__partyDances || [];
-      for (var i = 0; i < d.length; i++) if (d[i].id !== "techno") rest.push(d[i].id);
-      for (var j = rest.length - 1; j > 0; j--) { var k = (Math.random() * (j + 1)) | 0, t = rest[j]; rest[j] = rest[k]; rest[k] = t; }
-      PARTY_DANCE_ORDER = window.PARTY_DANCE_ORDER = ["techno"].concat(rest);
+    if (!PARTY_DANCE_ORDER) { // build the rotation once: every dance Fisher-Yates shuffled (fully random first dance)
+      var all = [], d = window.__partyDances || [];
+      for (var i = 0; i < d.length; i++) all.push(d[i].id);
+      for (var j = all.length - 1; j > 0; j--) { var k = (Math.random() * (j + 1)) | 0, t = all[j]; all[j] = all[k]; all[k] = t; }
+      PARTY_DANCE_ORDER = window.PARTY_DANCE_ORDER = all.length ? all : ["techno"];
     }
     if (waltzAltTimer) return;
     waltzAltTimer = setTimeout(flipPartyMode, WALTZ_PERIOD_MS);
   }
   function stopWaltzAlternation() {
     if (waltzAltTimer) { clearTimeout(waltzAltTimer); waltzAltTimer = null; }
-    window.__partyDance = "techno"; // next party opens on techno
+    window.__partyDance = "techno"; // reset; the next fresh party overrides this with PARTY_DANCE_ORDER[0]
   }
   function spawnConfettiPiece() {
     var container = document.getElementById("garden-confettifx");
@@ -35141,9 +35141,10 @@ function spawnDustMote(container) {
         partyDancers.setAttribute("transform", "translate(" + (STAGES.indexOf("garden") * 680) + ",0)");
         partyDancers.classList.add("party-dancing");
       }
-      if (!waltzAltTimer) window.__partyDance = "techno"; // a freshly-lit party opens on techno (storm-safe: don't reset mid-party)
+      var freshParty = !waltzAltTimer;
+      startWaltzAlternation(); // build the shuffled rotation + begin the ~15s alternation (idempotent under storm-clicks)
+      if (freshParty) window.__partyDance = PARTY_DANCE_ORDER[0]; // a freshly-lit party opens on the first shuffled dance (storm-safe: don't reset mid-party)
       applyPartyDanceMode();   // reflect the active dance's formation onto the dancers (solo/coupled/…)
-      startWaltzAlternation(); // begin the ~15s dance rotation (idempotent under storm-clicks)
       // the techno party bed is the beat now (see __updatePartyMusic below); pause any loft
       // song already playing so the two musics don't fight (the bed plays whole-loft while
       // the party's lit, so it always takes over)

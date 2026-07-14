@@ -19341,6 +19341,14 @@ document.addEventListener("click", function (e) {
     return Math.exp(-frac * 5);
   }
   window.__songBeatKick = fractalBeatKick; // exposed so other rooms' independent IIFEs can pulse in time with the song too (e.g. the balcony string lights)
+  // ms until the next beat of the concert song currently playing (phase-locked to its real
+  // audio clock, same period as fractalBeatKick), or 0 if no song is playing. Powers beat().
+  window.__songBeatMs = function () {
+    if (!eqAudioEl || eqAudioEl.paused) return 0;
+    var bpm = SONG_BPM[eqAudioEl.id] || 120;
+    var period = 60 / bpm; if (period < 0.4) period *= 2; // match the kick's half-time for fast songs
+    return (period - (eqAudioEl.currentTime % period)) * 1000;
+  };
   function startFractalSaver() {
     var canvas = document.getElementById("monitor-fractal-canvas");
     if (!canvas) return;
@@ -20716,7 +20724,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · classic() · temp() · weather() · clock() · countdown() · lang() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone() · laptop() · computer()/monitor() · reboot() · go()/no() · summon() · play()/pause() · random() · sleep() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · beat() · temp() · weather() · clock() · countdown() · lang() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone() · laptop() · computer()/monitor() · reboot() · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var TERM_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -20758,7 +20766,9 @@ document.addEventListener("click", function (e) {
       monitor: "monitor(...) — alias for computer(...)",
       go: "go(\"thing\") — thing(true): a verb over the on/off commands, e.g. go(\"party\") · go(\"smoker\") · go(\"laptop\")",
       no: "no(\"thing\") — thing(false): the off verb, e.g. no(\"party\") · no(\"smoker\") · no(\"laptop\")",
-      summon: "summon(\"id\") — jump to any scene element by id and poke it; summon() pokes a random target. summon.list([room|prefix]) returns an array of ids for scripting. `help summon` shows the full roster",
+      summon: "summon(\"id\") — bring a scene element into view (jump to its room); summon(\"id\", true) also activates it. summon() shows a random one. summon.list([room|prefix]) returns an array of ids. `help summon` shows the full roster",
+      reveal: "reveal(\"id\") — bring a scene element into view (alias for summon(\"id\", false))",
+      click: "click(\"id\") — bring a scene element into view AND activate it (alias for summon(\"id\", true))",
       random: "random() — for scripts: random() → 0..1 · random(n) → int 0..n-1 · random(a,b) → int a..b · random([…]) → a random item. bonus: pass random() to any picker — dance(random()), room(random()), projector(random()), trip(random()), classic(random()), season(random()) — to choose one at random",
       sleep: "sleep(ms) — for scripts: `await sleep(500)` pauses that long (default 1000ms)",
       scripts: "scripts() — list the scripts you've saved in the editor app",
@@ -20768,7 +20778,13 @@ document.addEventListener("click", function (e) {
       fireworks: "fireworks() — a burst of fireworks over the room you're in",
       cat: "cat(true) — summon the loose chest cat to your room; cat(false) stows her; cat() reports whether she's out (bare `cat` prints a cat instead)",
       irene: "irene(true) — the niece skips in for a random visit; irene(false) sends her away; irene(\"pose\") forces one: \"roam\" · \"bounce\" · \"sit\" · \"hug\" · \"hugb\" · \"catplay\" · \"catjump\" · \"octiplay\" · \"swing\"; irene() reports whether she's visiting",
-      classic: "classic(\"piece\") — night-sky piano; a piece by name in quotes, e.g. classic(\"bach\"), or 1–5: \"satie\" · \"chopin\" · \"beethoven\" · \"bach\" · \"mozart\". classic() plays a random one",
+      piano: "piano(\"piece\") — the night-sky piano; a piece by name in quotes, e.g. piano(\"bach\"), or 1–5: \"satie\" · \"chopin\" · \"beethoven\" · \"bach\" · \"mozart\". piano() plays a random one (classic is an alias)",
+      classic: "classic(...) — alias for piano(...)",
+      audio: "audio() — the current audio source: \"music\" · \"piano\" · \"dance\" (or \"\"). audio(\"music\"|\"piano\"|\"dance\"|1–3|random()) switches to one; audio(true)/audio(false) resume/pause it",
+      music: "music(\"guitar\"|\"ukulele\") — play a garden concert song (or 1–2, or random()); music() returns the current one {n, name}. guitar()/ukulele() are aliases",
+      guitar: "guitar() — play the guitar concert song (alias for music(\"guitar\"))",
+      ukulele: "ukulele() — play the ukulele concert song (alias for music(\"ukulele\"))",
+      beat: "beat() — ms until the next musical beat, phase-locked to whatever's playing. try `await sleep(beat())` to move in time",
       eclipse: "eclipse() — a solar (day) or lunar (night) eclipse over the balcony",
       hb: "hb — the harfbuzzjs shaper (uharfbuzz-style); `help hb` prints a full shaping sequence",
       loft: "loft — the couple's object: .countdown .nowPlaying .weather .menu .love .you .couple .weddings .site",
@@ -39482,7 +39498,7 @@ function spawnDustMote(container) {
   window.time = window.clock; // alias — clock() or time(), whichever comes to mind
 
   // switch the projector to the night-sky piano channel, optionally choosing a specific piece
-  window.classic = function (piece) {
+  window.piano = function (piece) {
     if (!window.__cuddlyProjector) return "the projector isn't ready yet.";
     if (window.goToStage) window.goToStage("cuddly");
     window.__cuddlyProjector.set("stars"); // the night-sky piano channel (starts the bed)
@@ -39494,6 +39510,7 @@ function spawnDustMote(container) {
     if (!window.__setStarsPieceByName || !window.__setStarsPieceByName(s)) return PIECES;
     return "🎹 " + (window.__starsPieceName ? window.__starsPieceName() : s) + ".";
   };
+  window.classic = window.piano; // alias — the night-sky piano's old name
 
   window.storm = function (arg) {
     var prev = !!window.__balconyStorm;
@@ -39669,32 +39686,34 @@ function spawnDustMote(container) {
     return "🔄 rebooting the loft OS…";
   };
 
-  // general: jump to any scene element's room and poke it. summon() pokes a RANDOM target;
-  // summon("<room>") lists a room's ids; summon("<id>") pokes that one. The full roster
-  // (per-room counts + how to browse) lives under `help summon`, via __summonRoster.
+  // summon("<id>") brings a scene element into view (jumps to its room); click("<id>") also
+  // activates it (dispatches a click). summon("<room>") lists a room's ids. No-arg picks a
+  // random target. The full roster lives under `help summon`, via __summonRoster.
   var SUMMON_ROOMS = ["kitchen", "garden", "cuddly", "office", "balcony"];
   function summonHits(room) { var st = document.getElementById("stage-" + room); return st ? [].slice.call(st.querySelectorAll("[id].hunt-hit")).map(function (e) { return e.id; }) : []; }
+  function summonAll() { var all = []; SUMMON_ROOMS.forEach(function (r) { all = all.concat(summonHits(r)); }); return all; }
   window.__summonRoster = function () {
-    return "summon targets by room — " + SUMMON_ROOMS.map(function (r) { return r + " (" + summonHits(r).length + ")"; }).join(" · ") + ". summon(\"<room>\") lists one room's ids; summon(\"<id>\") pokes it; summon() pokes a random one.";
+    return "targets by room — " + SUMMON_ROOMS.map(function (r) { return r + " (" + summonHits(r).length + ")"; }).join(" · ") + ". summon(\"<id>\") shows its room · click(\"<id>\") activates it · summon(\"<room>\") lists ids · no arg picks a random one.";
   };
-  window.summon = function (id) {
-    function poke(elId) {
-      var el = document.getElementById(elId);
-      if (!el) return "no element with id \"" + elId + "\". (try `help summon` for the roster)";
-      var stage = el.closest && el.closest("[id^='stage-']"); // the room it lives in, if any
-      if (stage && window.goToStage) window.goToStage(stage.id.replace(/^stage-/, ""));
-      try { el.dispatchEvent(new MouseEvent("click", { bubbles: true })); } catch (e) {}
-      return "✨ summoned #" + el.id + (stage ? " (in the " + stage.id.replace(/^stage-/, "") + ")" : "");
-    }
-    if (id == null || id === "") { // no arg → poke a random target somewhere in the loft
-      var all = []; SUMMON_ROOMS.forEach(function (r) { all = all.concat(summonHits(r)); });
-      if (!all.length) return "nothing to summon right now.";
-      return poke(all[(Math.random() * all.length) | 0]);
-    }
+  // jump to the room an element lives in; optionally poke it. Shared by summon()/click().
+  function reveal(elId, doClick) {
+    var el = document.getElementById(elId);
+    if (!el) return "no element with id \"" + elId + "\". (try `help summon` for the roster)";
+    var stage = el.closest && el.closest("[id^='stage-']"); // the room it lives in, if any
+    var room = stage ? stage.id.replace(/^stage-/, "") : null;
+    if (room && window.goToStage) window.goToStage(room);
+    if (doClick) { try { el.dispatchEvent(new MouseEvent("click", { bubbles: true })); } catch (e) {} }
+    return (doClick ? "✨ clicked #" : "👁 showing #") + el.id + (room ? " (in the " + room + ")" : "");
+  }
+  function summonOrClick(id, doClick) {
+    if (id == null || id === "") { var all = summonAll(); return all.length ? reveal(all[(Math.random() * all.length) | 0], doClick) : "nothing here right now."; }
     var key = String(id).replace(/^#/, "");
     if (SUMMON_ROOMS.indexOf(key.toLowerCase()) !== -1) { var list = summonHits(key.toLowerCase()); return key.toLowerCase() + " targets: " + (list.join(" · ") || "(none)"); } // a room name → list its ids
-    return poke(key);
-  };
+    return reveal(key, doClick);
+  }
+  window.summon = function (id, doClick) { return summonOrClick(id, !!doClick); }; // summon(id) shows; summon(id, true) also activates
+  window.reveal = function (id) { return summonOrClick(id, false); }; // alias — bring it into view (no poke)
+  window.click = function (id) { return summonOrClick(id, true); };  // alias — bring it into view AND activate it
   // summon.list([filter]) → an ARRAY of pokeable ids, for scripting (e.g. summon(random(summon.list("garden")))).
   // no arg → every id; an exact room name → that room's ids; anything else → ids starting with that prefix.
   window.summon.list = function (filter) {
@@ -39710,6 +39729,68 @@ function spawnDustMote(container) {
   function verbTarget(name) { var key = String(name == null ? "" : name).toLowerCase().trim().replace(/[()"']/g, ""); return key && typeof window[key] === "function" ? window[key] : null; }
   window.go = function (name) { var fn = verbTarget(name); return fn ? fn(true) : "go what? e.g. go(\"party\") · go(\"smoker\") · go(\"laptop\") · go(\"blacklight\")"; };
   window.no = function (name) { var fn = verbTarget(name); return fn ? fn(false) : "no what? e.g. no(\"party\") · no(\"smoker\") · no(\"laptop\") · no(\"blacklight\")"; };
+
+  // ── audio sources ──────────────────────────────────────────────────────────
+  // music — the garden concert songs (the real loft-concert recordings). music() returns the
+  // current song as {n, name}; music("guitar"|"ukulele"|1|2|random()) plays one. guitar()/
+  // ukulele() are aliases. This is the "music" audio source (see audio()).
+  var MUSIC_NAMES = ["guitar", "ukulele"]; // index ↔ the songAudios order (guitar-song-audio, ukulele-song-audio)
+  function playingSongIdx() {
+    var ids = ["guitar-song-audio", "ukulele-song-audio"];
+    for (var i = 0; i < ids.length; i++) { var a = document.getElementById(ids[i]); if (a && !a.paused && !a.ended) return i; }
+    return -1;
+  }
+  window.music = function (which) {
+    if (arguments.length === 0 || which == null || which === "") { var i = playingSongIdx(); return { n: i + 1, name: i < 0 ? "" : MUSIC_NAMES[i] }; }
+    var mfi = fracToIndex(which, MUSIC_NAMES.length); if (mfi) which = mfi; // random() → a random song
+    var s = String(which).toLowerCase().trim();
+    var idx = MUSIC_NAMES.indexOf(s);
+    if (idx === -1) { var n = parseInt(s, 10); if (String(n) === s && n >= 1 && n <= MUSIC_NAMES.length) idx = n - 1; }
+    if (idx === -1) return "music (in quotes, or 1–2): \"guitar\" · \"ukulele\"";
+    if (window.goToStage) window.goToStage("garden"); // the instruments live in the garden
+    if (window.__playSongAt) window.__playSongAt(idx);
+    return "♪ " + MUSIC_NAMES[idx] + " — from the loft concert.";
+  };
+  window.guitar = function () { return window.music("guitar"); };   // alias
+  window.ukulele = function () { return window.music("ukulele"); }; // alias
+  window.ukelele = window.ukulele;                                   // common misspelling, same command
+
+  // beat() — ms until the next musical beat, so `await sleep(beat())` stays in time with the
+  // music. Phase-locked to the concert songs' real audio clock; for a party dance it's the beat
+  // period from the dance's tempo; ~500ms (120 BPM) if nothing's playing.
+  var DANCE_BPM = { techno: 126, waltz: 162, disco: 120, swing: 180, salsa: 190, bhangra: 140, persian: 110, polka: 130, horah: 146 };
+  window.beat = function () {
+    var ms = window.__songBeatMs ? window.__songBeatMs() : 0; // phase-aware, concert songs
+    if (ms > 0) return Math.round(ms);
+    if (window.__gardenPartyOn && window.__partyDance && DANCE_BPM[window.__partyDance]) return Math.round(60000 / DANCE_BPM[window.__partyDance]);
+    return 500; // nothing playing → a neutral 120 BPM
+  };
+
+  // audio() — the top-level audio SOURCE: "music" (garden concert songs) · "piano" (night-sky
+  // classical) · "dance" (garden party). audio() returns whichever is playing ("" = silence);
+  // audio("music"|"piano"|"dance"|1|2|3|random()) switches to it; audio(true)/audio(false)
+  // resume/pause the current source (NOT aliases — play()/pause() still exist too).
+  var AUDIO_SOURCES = ["music", "piano", "dance"];
+  function currentAudioSource() {
+    if (window.__gardenPartyOn) return "dance";
+    if (playingSongIdx() >= 0) return "music";
+    if (window.__cuddlyProjector && window.__cuddlyProjector.channel() === "stars") return "piano";
+    return "";
+  }
+  window.audio = function (src) {
+    if (arguments.length === 0 || src == null || src === "") return currentAudioSource();
+    if (src === true) return window.play ? window.play() : "nothing to resume.";  // audio(true) → play/resume
+    if (src === false) return window.pause ? window.pause() : "nothing to pause."; // audio(false) → pause
+    var afi = fracToIndex(src, AUDIO_SOURCES.length); if (afi) src = afi; // random() → a random source
+    var s = String(src).toLowerCase().trim();
+    var idx = AUDIO_SOURCES.indexOf(s);
+    if (idx === -1) { var n = parseInt(s, 10); if (String(n) === s && n >= 1 && n <= AUDIO_SOURCES.length) idx = n - 1; }
+    if (idx === -1) return "audio sources (in quotes, or 1–3): \"music\" · \"piano\" · \"dance\"";
+    s = AUDIO_SOURCES[idx];
+    if (s === "music") return window.music(window.random ? window.random() : 0); // a (random) concert song
+    if (s === "piano") return window.piano();                                     // the night-sky piano
+    window.party(true); return "dance";                                           // the garden party dance bed
+  };
 
   // scripting helpers ---------------------------------------------------------
   window.random = function (a, b) { // random(): 0..1 · random(n): int 0..n-1 · random(a,b): int a..b · random([…]): a random item

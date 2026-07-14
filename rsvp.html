@@ -11678,6 +11678,8 @@ var T = {
     kbd_r: "reset the loft",
     kbd_cat: "let the cat out",
     kbd_s: "season change",
+    kbd_n: "next track (dance / piano piece / song)",
+    kbd_t: "next trip",
     kbd_trips: "shrooms · acid · froggies · dmt · molly · k. · iboga",
     kbd_qm: "this list",
     app_python: "python",
@@ -12042,6 +12044,8 @@ var T = {
     kbd_r: "resetovat loft",
     kbd_cat: "pustit kočku ven",
     kbd_s: "změna sezóny",
+    kbd_n: "další skladba (tanec / klavírní skladba / píseň)",
+    kbd_t: "další trip",
     kbd_trips: "houbičky · kyselina · žabičky · dmt · molly · k. · iboga",
     kbd_qm: "tento seznam",
     app_python: "python",
@@ -12525,9 +12529,11 @@ window.addEventListener("hashchange", function () {
     var ROWS = [
       ["<kbd>f</kbd>", "kbd_f"],
       ["<kbd>Space</kbd>", "kbd_space"],
+      ["<kbd>n</kbd>", "kbd_n"],
       ["<kbd>←</kbd><kbd>→</kbd>", "kbd_arrows"],
       ["<kbd>1</kbd>–<kbd>5</kbd>", "kbd_digits"],
       ["<kbd>Esc</kbd>", "kbd_esc"],
+      ["<kbd>t</kbd>", "kbd_t"],
       ["<kbd>Shift</kbd>+<kbd>1…7</kbd>", "kbd_trips"],
       ["<kbd>d</kbd>", "kbd_d"],
       ["<kbd>c</kbd>", "kbd_cat"],
@@ -13712,12 +13718,20 @@ document.addEventListener("click", function (e) {
     return true;
   };
   window.__starsPlaying = function () { return !!starsCtx && !starsSuspended; }; // live: bed up & not suspended
+  window.__starsPieceName = function () { // current night-sky piece's display name (for the now-playing tooltip)
+    if (curScore === STARS_MELODY_2) return "Chopin — Nocturne Op. 9 No. 2";
+    if (curScore === STARS_MELODY_3) return "Beethoven — Für Elise";
+    if (curScore === STARS_MELODY_4) return "Bach — Invention No. 1";
+    if (curScore === STARS_MELODY_5) return "Mozart — Sonata K. 331";
+    return "Satie — Gnossienne No. 1";
+  };
   window.__skipStarsPiece = function () { // jump to the next night-sky piece in place (no channel change)
     if (!starsCtx) return false;
     curScore = STARS_SCORES[starsPiece];
     starsPiece = (starsPiece + 1) % STARS_SCORES.length;
     starsIdx = 0; lastFlashT = 0; lastNoteT = 0;
     starsNext = starsCtx.currentTime + 0.15; // look-ahead picks up the fresh piece ~now (old notes already queued ring out)
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn(); // refresh the now-playing tooltip for the new piece
     return true;
   };
   window.__updateStarsSound = function (inCuddly, fadeSecs) {
@@ -30518,6 +30532,12 @@ function triggerRsvpTrip(e) {
     }
     return;
   }
+  window.__nextTrip();
+}
+// Advance to the next trip in the shuffled cyclic order (every variant once before repeating),
+// starting it now — interrupts a running trip cleanly (startTripVariant tears the old one down).
+// Shared by the drugs-box click and the 't' key.
+window.__nextTrip = function () {
   tripActive = true;
   window.__tripActive = true; // mirror for the garden thermometer readout (see gardenThermo)
   var variant = TRIP_VARIANTS[tripVariantIndex % TRIP_VARIANTS.length];
@@ -30525,7 +30545,7 @@ function triggerRsvpTrip(e) {
   startTripVariant(variant);
   // fractal blooms only on the mushroom trip (the psychedelic / hue-rotating one)
   if (variant === "psychedelic") startTripBlooms();
-}
+};
 // Shift+1..7 launches a SPECIFIC trip (canonical order: psychedelic, strobe, melt,
 // dmt, molly, ketamine, iboga — the pre-shuffle TRIP_VARIANTS order). Unlike the drugs
 // box (which bubbles a "no mixing" nudge), a keyboard request while a trip is running
@@ -34309,7 +34329,8 @@ function spawnDustMote(container) {
   });
   // Keyboard room nav: →/Tab forward, ←/` back. At a locked frontier a second forward
   // within 600ms unlocks it (mirrors the arrow/dot double-click-to-unlock). d/↑/↓ flip
-  // day↔night, 1-5 jump to a room, q to the finale, r resets. Ignored while typing / with
+  // day↔night, 1-5 jump to a room, q to the finale, r resets, c the cat, n next track,
+  // t a trip. Ignored while typing / with
   // a modifier. (Tab is repurposed here — the game strip has no tab targets — but form
   // fields still get it via the typing guard below.)
   var lastLockedRightAt = 0;
@@ -34355,6 +34376,12 @@ function spawnDustMote(container) {
       // (skip both the out-of-the-bag shiver and the walk-in glide — either flickers here)
       if (window.__releaseCat) window.__releaseCat(true);
       if (window.__homeCat) window.__homeCat(window.currentStageName, true);
+    } else if (e.key === "n" || e.key === "N") {
+      e.preventDefault();
+      if (window.__skipCurrentMusic) window.__skipCurrentMusic(); // next dance / piano piece / loft song
+    } else if (e.key === "t" || e.key === "T") {
+      e.preventDefault();
+      if (window.__nextTrip) window.__nextTrip(); // next drug trip (cyclic; interrupts a running one)
     }
   });
 

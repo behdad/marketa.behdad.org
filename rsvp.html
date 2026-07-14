@@ -11680,6 +11680,13 @@ var T = {
     kbd_s: "season change",
     kbd_n: "next track (dance / piano piece / song)",
     kbd_t: "next trip",
+    // now-playing toast labels — dances + the three projector ambient beds (piano pieces and
+    // loft-song titles are proper names, kept hardcoded in JS)
+    np: {
+      techno: "Techno", waltz: "Waltz", disco: "Disco", swing: "Swing", salsa: "Salsa",
+      bhangra: "Bhangra", persian: "Persian", polka: "Polka", horah: "Horah",
+      workout: "Workout beat", totoro: "Woodland rain", aqua: "Aquarium ambient"
+    },
     kbd_trips: "shrooms · acid · froggies · dmt · molly · k. · iboga",
     kbd_qm: "this list",
     app_python: "python",
@@ -12046,6 +12053,12 @@ var T = {
     kbd_s: "změna sezóny",
     kbd_n: "další skladba (tanec / klavírní skladba / píseň)",
     kbd_t: "další trip",
+    // now-playing toast labels (viz EN np)
+    np: {
+      techno: "Techno", waltz: "Valčík", disco: "Disco", swing: "Swing", salsa: "Salsa",
+      bhangra: "Bhangra", persian: "Perský", polka: "Polka", horah: "Hora",
+      workout: "Rytmus na cvičení", totoro: "Lesní déšť", aqua: "Zvuky akvária"
+    },
     kbd_trips: "houbičky · kyselina · žabičky · dmt · molly · k. · iboga",
     kbd_qm: "tento seznam",
     app_python: "python",
@@ -22495,16 +22508,18 @@ async def localfont(name):
   // been active, and flips ▶/⏸ with the true playing state (bed live & not suspended, or a
   // song actually playing). Clicking it is the touch equivalent of the spacebar.
   // —— "Now playing" toast: name the current track (dance / piano piece / song) whenever it
-  // changes. Names are hardcoded (owner: dance/piece/song names don't need translation).
-  var NP_DANCE = { techno: "Techno", waltz: "Waltz", disco: "Disco", swing: "Swing", salsa: "Salsa", bhangra: "Bhangra", persian: "Persian", polka: "Polka", horah: "Horah" };
+  // changes. Dance + workout/totoro/aquarium names are translatable (T[lang].np); piano pieces
+  // (__starsPieceName) and loft-song titles (SONG_INFO) stay hardcoded — they're proper names.
   window.__nowPlayingLabel = function () { // "" when there's no active/loaded track (pause-independent so pause/resume doesn't re-toast)
-    if (window.__gardenPartyOn && window.__partyDance) return NP_DANCE[window.__partyDance] || window.__partyDance;
+    var l = T[document.documentElement.lang] ? document.documentElement.lang : "en";
+    var np = (T[l] && T[l].np) || T.en.np;
+    if (window.__gardenPartyOn && window.__partyDance) return np[window.__partyDance] || window.__partyDance;
     var ws = document.getElementById("cuddly-wallscreen");
     if (ws) { // a projector music channel keys the loaded bed even while paused
       if (ws.classList.contains("chan-stars")) return window.__starsPieceName ? window.__starsPieceName() : "";
-      if (ws.classList.contains("chan-workout")) return "Workout beat";
-      if (ws.classList.contains("chan-totoro")) return "Woodland rain";
-      if (ws.classList.contains("chan-aqua")) return "Aquarium ambient";
+      if (ws.classList.contains("chan-workout")) return np.workout;
+      if (ws.classList.contains("chan-totoro")) return np.totoro;
+      if (ws.classList.contains("chan-aqua")) return np.aqua;
     }
     if (window.__phoneMusicId && window.__phoneMusicId() && window.__phoneMusicTitle) return window.__phoneMusicTitle(); // playing or paused-with-progress
     return "";

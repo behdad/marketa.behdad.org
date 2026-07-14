@@ -39345,13 +39345,12 @@ function spawnDustMote(container) {
   var PROJ_LIST = "channels (in quotes, or 1–5): \"fireplace\" · \"workout\" · \"nightsky\" · \"aquarium\" · \"totoro\" · \"none\" (off)";
   window.projector = function (ch) {
     if (!window.__cuddlyProjector) return "the projector isn't ready yet.";
-    if (window.goToStage) window.goToStage("cuddly"); // the projector lives on the cuddly-room wall
-    if (ch === false) { window.__cuddlyProjector.set("off"); return "📺 off."; } // projector(false) → off, like "none"
-    if (arguments.length === 0 || ch == null || ch === "") { // summon / channel-up (turns it on when off)
-      window.__cuddlyProjector.cycle();
-      var nowc = window.__cuddlyProjector.channel();
-      return nowc === "off" ? "📺 off. (" + PROJ_LIST + ")" : "📺 " + projFriendly(nowc) + " on.";
+    if (arguments.length === 0 || ch == null || ch === "") { // just report what's on — no summoning, no channel change
+      var now = window.__cuddlyProjector.channel();
+      return now === "off" ? "📺 off. " + PROJ_LIST : "📺 on: " + projFriendly(now);
     }
+    if (window.goToStage) window.goToStage("cuddly"); // switching a channel whisks you there to watch it
+    if (ch === false) { window.__cuddlyProjector.set("off"); return "📺 off."; } // projector(false) → off, like "none"
     var s = String(ch).toLowerCase().trim();
     var n = parseInt(s, 10);
     if (String(n) === s && n >= 1 && n <= PROJ_NAMES.length) s = PROJ_NAMES[n - 1][0]; // 1..5 → friendly name
@@ -39510,9 +39509,15 @@ function spawnDustMote(container) {
   };
 
   window.summon = function (id) { // general: jump to any scene element's room and poke it (dispatch a click)
-    if (id == null || id === "") return "summon(\"element-id\") — go to a scene element by id and poke it (try view-source for ids)";
-    var el = document.getElementById(String(id).replace(/^#/, ""));
-    if (!el) return "no element with id \"" + id + "\".";
+    var ROOMS = ["kitchen", "garden", "cuddly", "office", "balcony"];
+    function hitsIn(room) { var st = document.getElementById("stage-" + room); return st ? [].slice.call(st.querySelectorAll("[id].hunt-hit")).map(function (e) { return e.id; }) : []; }
+    if (id == null || id === "") { // no arg → the roster: how many pokeable targets per room + how to drill in
+      return "summon targets by room — " + ROOMS.map(function (r) { return r + " (" + hitsIn(r).length + ")"; }).join(" · ") + ". summon(\"<room>\") lists one room's ids; summon(\"<id>\") pokes it.";
+    }
+    var key = String(id).replace(/^#/, "");
+    if (ROOMS.indexOf(key.toLowerCase()) !== -1) { var list = hitsIn(key.toLowerCase()); return key.toLowerCase() + " targets: " + (list.join(" · ") || "(none)"); } // a room name → list its ids
+    var el = document.getElementById(key);
+    if (!el) return "no element with id \"" + id + "\". (try summon() for the roster)";
     var stage = el.closest && el.closest("[id^='stage-']"); // the room it lives in, if any
     if (stage && window.goToStage) window.goToStage(stage.id.replace(/^stage-/, ""));
     try { el.dispatchEvent(new MouseEvent("click", { bubbles: true })); } catch (e) {}

@@ -669,14 +669,27 @@ footer{margin-top:2.6rem}
    UV neon palette (they glow rather than muddy under brightness .5 + hue-rotate). */
 #garden-partyfx{opacity:0; transition:opacity .5s ease}
 #stage-garden.garden-party #garden-partyfx{opacity:1}
-/* roving colored light pools — screen-blended so they wash light over the room. Position
-   and opacity are driven by a JS STEPPER (see startDiscoStepper), NOT a CSS/WAAPI sweep:
-   each pool JUMPS to a fresh spot ~once a second (discrete, no transition) instead of
-   tweening every frame. The old continuous sweep repainted these big blended ellipses on
-   every frame and visibly FLICKERED on mobile; the once-a-second hop reads as a beat-synced
-   lighting rig with none of the flicker. The ellipses position via cx/cy (no transform
-   attribute), so the inline style.transform the stepper writes never clobbers one. */
+/* roving colored light pools — screen-blended so they wash light over the room. DESKTOP keeps
+   the smooth continuous CSS sweep (below). MOBILE (<760px) instead drives position/opacity from
+   a JS STEPPER (see startDiscoStepper) that JUMPS each pool to a fresh spot ~once a second
+   (discrete, no transition): the continuous sweep repaints these big blended ellipses every
+   frame and visibly FLICKERS on mobile, so there the once-a-second hop reads as a beat-synced
+   rig with none of the flicker. The ellipses position via cx/cy (no transform attribute), so the
+   inline style.transform the stepper writes never clobbers one. */
 .disco-pool{mix-blend-mode:screen; opacity:0; transform-box:fill-box; transform-origin:center}
+@media (min-width:760px){ /* desktop: the original smooth sweep (mobile uses the JS stepper) */
+  #stage-garden.garden-party .disco-pool{animation:disco-pool-sweep 7s ease-in-out infinite}
+  #stage-garden.garden-party .disco-pool.dp2{animation-duration:9s; animation-delay:-2.4s}
+  #stage-garden.garden-party .disco-pool.dp3{animation-duration:8s; animation-delay:-4.8s}
+  #stage-garden.garden-party .disco-pool.dp4{animation-duration:10s; animation-delay:-6.6s}
+}
+@keyframes disco-pool-sweep{
+  0%{opacity:0; transform:translate(-46px,-14px) scale(0.8)}
+  25%{opacity:.5}
+  50%{opacity:.34; transform:translate(64px,30px) scale(1.16)}
+  75%{opacity:.5}
+  100%{opacity:0; transform:translate(-46px,-14px) scale(0.8)}
+}
 /* the glitter ball spins slowly; its facets twinkle out of phase for a sparkle */
 #garden-disco-ball-spin{transform-box:fill-box; transform-origin:center}
 #stage-garden.garden-party #garden-disco-ball-spin{animation:disco-ball-spin 9s linear infinite}
@@ -736,7 +749,7 @@ footer{margin-top:2.6rem}
 /* reduced motion: no sweep, no spin, no strobe — hold a gentle static neon wash. The tap
    pop/flash is disabled too; the shimmer chime alone still answers the click. */
 @media (prefers-reduced-motion: reduce){
-  #stage-garden.garden-party .disco-pool{opacity:.2}
+  #stage-garden.garden-party .disco-pool{animation:none; opacity:.2}
   #stage-garden.garden-party #garden-disco-ball-spin{animation:none}
   #stage-garden.garden-party .db-facet{animation:none; opacity:.6}
   #garden-disco-ball-pop.popping{animation:none}
@@ -35652,16 +35665,26 @@ function spawnDustMote(container) {
       pools[i].style.transition = ""; pools[i].style.transform = ""; pools[i].style.opacity = "";
     }
   }
+  function discoPoolsStepped() { return !!(window.matchMedia && window.matchMedia("(max-width:759px)").matches); } // mobile only; desktop keeps the CSS sweep
   function stepDiscoPools() {
     discoStepTimer = null;
     if (!window.__gardenPartyOn) return; // party ended — stop, don't reschedule
+    if (!discoPoolsStepped()) { clearDiscoPools(); return; } // desktop: hand back to the CSS sweep (drop inline styles, stop stepping)
     if (gardenPartyActive()) positionDiscoPools(); // freeze (no repaint) while hidden / out of room / reduced-motion
     discoStepTimer = setTimeout(stepDiscoPools, 900 + Math.random() * 220); // ~1s, lightly jittered so it's not metronomic
   }
   function startDiscoStepper() {
     if (discoStepTimer) return; // one stepper only — idempotent under storm-clicks
+    if (!discoPoolsStepped()) { clearDiscoPools(); return; } // desktop uses the CSS sweep — no stepper, no inline styles
     if (gardenPartyActive()) positionDiscoPools(); // light them at once (skipped under reduced-motion → CSS wash holds)
     discoStepTimer = setTimeout(stepDiscoPools, 900 + Math.random() * 220);
+  }
+  if (window.matchMedia) { // crossing the mobile/desktop breakpoint mid-party swaps stepper ↔ CSS sweep
+    window.matchMedia("(max-width:759px)").addEventListener("change", function () {
+      if (!window.__gardenPartyOn) return;
+      stopDiscoStepper();  // clears inline styles (desktop CSS sweep resumes) + stops any timer
+      startDiscoStepper(); // mobile → restart the stepper; desktop → no-op
+    });
   }
   function stopDiscoStepper() {
     if (discoStepTimer) { clearTimeout(discoStepTimer); discoStepTimer = null; }

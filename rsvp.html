@@ -12793,6 +12793,13 @@ document.addEventListener("click", function (e) {
   window.__applyStarsVolume = function () { // called when the volume button cycles, to update live
     if (starsCtx && starsCtx._masterGain) { try { starsCtx._masterGain.gain.setTargetAtTime(starsVol(), starsCtx.currentTime, 0.05); } catch (e) {} }
   };
+  function starsRoomPan() { // same cuddly-sourced per-room pan the concert songs use
+    return window.__songRoomBasePan ? window.__songRoomBasePan(window.currentStageName || "cuddly") : 0;
+  }
+  window.__updateStarsRoomPan = function () { // room change: glide the pan to the new room's spot
+    if (!starsCtx || !starsCtx._pan || !starsCtx._pan.pan) return;
+    try { starsCtx._pan.pan.setTargetAtTime(starsRoomPan(), starsCtx.currentTime, 0.4); } catch (e) {}
+  };
   function startStars() {
     try {
       var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -12807,7 +12814,9 @@ document.addEventListener("click", function (e) {
       lp.type = "lowpass"; lp.frequency.value = 2400; // warm, felt-piano roundness
       var master = starsCtx.createGain();
       master.gain.value = starsVol(); // level follows the app volume button
-      lp.connect(master); master.connect(pannedOut(starsCtx, 0));
+      var starsOut = pannedOut(starsCtx, starsRoomPan()); // cuddly-sourced: pan per room like the concert songs
+      lp.connect(master); master.connect(starsOut);
+      starsCtx._pan = starsOut;
       starsCtx._bus = lp;
       starsCtx._masterGain = master;
       starsCtx._nodes = []; // nothing continuous to stop
@@ -13005,6 +13014,30 @@ document.addEventListener("click", function (e) {
   var LEAD_ECHO = [[3, 0.42], [6, 0.18]];                    // dub echoes: [sixteenths later, gain ×]
   function semi(base, n) { return base * Math.pow(2, n / 12); }
   function partyVol() { return 1.2 * (window.__songVolume ? window.__songVolume() : 0.5); }
+  // Garden-sourced room modeling: the party thumps in the garden, heard from elsewhere.
+  // garden/office center, kitchen from the right, cuddly from the left — all a touch faint
+  // vs the garden; balcony comes through the door (position + fainter, opening it lets more in).
+  var PARTY_ROOM = {
+    garden:  { pan: 0,    vol: 1.0 },
+    office:  { pan: 0,    vol: 0.6 },
+    kitchen: { pan: 0.6,  vol: 0.6 },
+    cuddly:  { pan: -0.6, vol: 0.6 }
+  };
+  function partyRoomCfg() {
+    var room = window.currentStageName || "garden";
+    if (room === "balcony") {
+      var door = document.getElementById("balcony-door");
+      var open = door && door.classList.contains("open");
+      return { pan: panForElId("balcony-door"), vol: open ? 0.42 : 0.24 };
+    }
+    return PARTY_ROOM[room] || { pan: 0, vol: 0.6 };
+  }
+  window.__updatePartyRoom = function () { // room change / balcony door: glide pan + faintness
+    if (!partyCtx) return;
+    var cfg = partyRoomCfg(), t = partyCtx.currentTime;
+    try { if (partyCtx._roomGain) partyCtx._roomGain.gain.setTargetAtTime(cfg.vol, t, 0.4); } catch (e) {}
+    try { if (partyCtx._pan && partyCtx._pan.pan) partyCtx._pan.pan.setTargetAtTime(cfg.pan, t, 0.4); } catch (e) {}
+  };
   function partyMusicWant() {
     // plays whenever the garden party is lit, in every room (like the night-sky piano bed) —
     // background music, so no room/focus/visibility gate (look-ahead scheduled, so it stays
@@ -13176,9 +13209,15 @@ document.addEventListener("click", function (e) {
       var master = partyCtx.createGain();
       master.gain.setValueAtTime(0.0001, now);
       master.gain.linearRampToValueAtTime(partyVol(), now + 0.4); // linear: safe when muted (target 0)
-      bus.connect(comp); comp.connect(master); master.connect(pannedOut(partyCtx, 0));
+      // room stage: master(volume/fade) -> roomGain(per-room faintness) -> panner(per-room spot)
+      var cfg = partyRoomCfg();
+      var roomGain = partyCtx.createGain(); roomGain.gain.value = cfg.vol;
+      var partyOut = pannedOut(partyCtx, cfg.pan);
+      bus.connect(comp); comp.connect(master); master.connect(roomGain); roomGain.connect(partyOut);
       partyCtx._bus = bus;
       partyCtx._masterGain = master;
+      partyCtx._roomGain = roomGain;
+      partyCtx._pan = partyOut;
       partyCtx._nodes = []; // only self-terminating transients; nothing continuous to stop
       partyStep = 0;
       partyNextTime = now + 0.12;
@@ -16821,6 +16860,11 @@ document.addEventListener("click", function (e) {
     var room = ROOM_BY_STAGE_INDEX[window.currentStageIndex] || "kitchen";
     songBasePan = room === "balcony" ? panForElId("balcony-door") : SONG_ROOM_PAN[room];
     ensurePanDrift();
+  };
+  // The projector piano (night-sky bed) is cuddly-sourced like these concert songs, so it
+  // reuses this exact per-room pan table — see __updateStarsRoomPan.
+  window.__songRoomBasePan = function (room) {
+    return room === "balcony" ? panForElId("balcony-door") : (SONG_ROOM_PAN[room] || 0);
   };
   // Room-relative stereo image: cuddly (the middle room, where the couple actually is)
   // keeps full, present stereo width. Office sits ACROSS the loft from the cuddly room,
@@ -25734,6 +25778,7 @@ async def localfont(name):
       // a cat can only slip out onto the balcony through an open door
       if (window.__homeCat) window.__homeCat("balcony");
       if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics(); // song swells/recedes with the door
+      if (window.__updatePartyRoom) window.__updatePartyRoom(); // party bleeds in more through the open door
     }
     balconyDoor.addEventListener("click", toggleBalconyDoor);
     balconyDoor.addEventListener("keydown", function (e) {
@@ -31527,6 +31572,8 @@ function spawnDustMote(container) {
     if (window.__updateWorkoutSound) window.__updateWorkoutSound(name === "cuddly", ROOM_FADE); // workout bed only in the cuddly nook
     if (window.__updateTotoroSound) window.__updateTotoroSound(name === "cuddly", ROOM_FADE); // rainfall only in the cuddly nook
     if (window.__updateStarsSound) window.__updateStarsSound(name === "cuddly", ROOM_FADE); // Gnossienne only in the cuddly nook
+    if (window.__updateStarsRoomPan) window.__updateStarsRoomPan(); // piano is cuddly-sourced: pan to the new room like the songs
+    if (window.__updatePartyRoom) window.__updatePartyRoom(); // party is garden-sourced: pan + faintness per room
     if (window.__updateWind) window.__updateWind(ROOM_FADE); // wind bed (balcony, + through the cuddly door) fades out over the room change too
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(name === "garden"); // birdsong only in the garden, and only by day
     if (window.__updatePartyMusic) window.__updatePartyMusic(name === "garden", ROOM_FADE); // techno party bed plays whole-loft while the party's on (room arg ignored, like the night-sky bed)

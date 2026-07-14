@@ -20711,10 +20711,10 @@ document.addEventListener("click", function (e) {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
       laser: "laser([seconds]) — loose a red dot the cat chases; laser(false) turns it off",
-      party: "party() throws the garden party; party(false) ends it",
+      party: "party(true) throws the garden party; party(false) ends it; party() reports whether it's on",
       reset: "reset() — restart the whole loft from the top (no confirmation — you typed it)",
       quit: "quit (or exit) — close the console, back to the desktop",
-      blacklight: "blacklight() — UV wash over the whole loft; blacklight(false) off",
+      blacklight: "blacklight(true) — UV wash over the whole loft; blacklight(false) off; blacklight() reports whether it's on",
       trip: "trip(\"name\") — a trip by name in quotes, e.g. trip(\"acid\"), or a number 1–7, or trip() for a random one. trips: \"shrooms\" · \"acid\" · \"froggies\" · \"dmt\" · \"molly\" · \"k\" · \"iboga\"",
       room: "room(\"name\") — go to a room by name in quotes, e.g. room(\"garden\"), or a number 1–5; room() returns the current room as {n, name}. rooms: \"kitchen\" · \"garden\" · \"cuddly\" · \"office\" · \"balcony\"",
       goto: "goto(...) — alias for room(): navigate by name in quotes or 1–5; goto() returns the current room {n, name}",
@@ -20729,24 +20729,24 @@ document.addEventListener("click", function (e) {
       clock: "clock() (or time()) — the real current time + date",
       time: "time() (or clock()) — the real current time + date",
       projector: "projector(\"channel\") — switch the cuddly-room projector by name in quotes, e.g. projector(\"nightsky\"), or a number 1–5. channels: \"fireplace\" · \"workout\" · \"nightsky\" · \"aquarium\" · \"totoro\" · \"none\" (off). projector() returns the current channel {n, name}",
-      storm: "storm() — roll a thunderstorm in over the balcony; storm(false) clears it",
+      storm: "storm(true) — roll a thunderstorm in over the balcony; storm(false) clears it; storm() reports whether it's storming",
       dance: "dance(\"name\") — cue a garden-party dance by name in quotes, e.g. dance(\"salsa\"), or 1–9, or dance(random()); dance() returns the current dance {n, name}; dance(\"next\") skips ahead (run party(true) first). dances: \"techno\" · \"waltz\" · \"disco\" · \"swing\" · \"salsa\" · \"bhangra\" · \"persian\" · \"polka\" · \"horah\"",
       lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
       countdown: "countdown() — days left until each wedding",
-      fullscreen: "fullscreen() — fill the screen with the loft; fullscreen(false) leaves",
+      fullscreen: "fullscreen(true) — fill the screen with the loft; fullscreen(false) leaves; fullscreen() reports whether it's on",
       rainbow: "rainbow() — arc a rainbow over the balcony",
-      bbq: "bbq() — fire up the balcony smoker, low and slow; bbq(false) shuts it down",
-      phone: "phone() — bring up the pocket phone; phone(false) puts it away",
-      laptop: "laptop() — wake the office laptop; laptop(false) closes it",
-      computer: "computer() — power the office PC up; computer(false) shuts it down",
+      bbq: "bbq(true) — fire up the balcony smoker, low and slow; bbq(false) shuts it down; bbq() reports whether it's on",
+      phone: "phone(true) — bring up the pocket phone; phone(false) puts it away; phone() reports whether it's up",
+      laptop: "laptop(true) — wake the office laptop; laptop(false) closes it; laptop() reports whether it's open",
+      computer: "computer(true) — power the office PC up; computer(false) shuts it down; computer() reports whether it's on",
       reboot: "reboot() — power-cycle the loft OS (a `sudo reboot` from its own terminal)",
       summon: "summon(\"id\") — jump to any scene element by id and poke it; summon(\"room\") lists a room's ids; summon() pokes a random target. `help summon` shows the full roster",
       random: "random() — for scripts: random() → 0..1 · random(n) → int 0..n-1 · random(a,b) → int a..b · random([…]) → a random item. bonus: pass random() to any picker — dance(random()), room(random()), projector(random()), trip(random()), classic(random()), season(random()) — to choose one at random",
       sleep: "sleep(ms) — for scripts: `await sleep(500)` pauses that long (default 1000ms)",
       confetti: "confetti() — a shower of confetti in the room you're in",
       fireworks: "fireworks() — a burst of fireworks over the room you're in",
-      cat: "cat() — summon the loose chest cat to your room (bare `cat` prints a cat instead)",
-      irene: "irene() — the niece skips in for a random visit; irene(\"pose\") forces one: \"roam\" · \"bounce\" · \"sit\" · \"hug\" · \"hugb\" · \"catplay\" · \"catjump\" · \"octiplay\" · \"swing\"",
+      cat: "cat(true) — summon the loose chest cat to your room; cat(false) stows her; cat() reports whether she's out (bare `cat` prints a cat instead)",
+      irene: "irene(true) — the niece skips in for a random visit; irene(false) sends her away; irene(\"pose\") forces one: \"roam\" · \"bounce\" · \"sit\" · \"hug\" · \"hugb\" · \"catplay\" · \"catjump\" · \"octiplay\" · \"swing\"; irene() reports whether she's visiting",
       classic: "classic(\"piece\") — night-sky piano; a piece by name in quotes, e.g. classic(\"bach\"), or 1–5: \"satie\" · \"chopin\" · \"beethoven\" · \"bach\" · \"mozart\". classic() plays a random one",
       eclipse: "eclipse() — a solar (day) or lunar (night) eclipse over the balcony",
       hb: "hb — the harfbuzzjs shaper (uharfbuzz-style); `help hb` prints a full shaping sequence",
@@ -39223,7 +39223,8 @@ function spawnDustMote(container) {
   function currentStage() { return document.getElementById("stage-" + (window.currentStageName || "kitchen")); }
 
   window.party = function (arg) {
-    var on = !(arguments.length > 0 && !arg); // party() / party(true) → on; party(false) → off
+    if (arguments.length === 0) return !!window.__gardenPartyOn; // no arg → is the party on? (a bool, for scripts)
+    var on = !!arg; // party(true) → on; party(false) → off
     // run the EXACT party-start sequence the balcony switch does: UV blacklight + garden party
     // + switch state — not just __setGardenParty (which lit the party but left the blacklight off)
     if (window.__setPartyMode) window.__setPartyMode(on);
@@ -39414,8 +39415,9 @@ function spawnDustMote(container) {
   };
 
   window.storm = function (arg) {
-    var on = !(arguments.length > 0 && !arg); // storm() / storm(true) → on; storm(false) → off
+    if (arguments.length === 0) return !!window.__balconyStorm; // no arg → is it storming?
     if (!window.__forceBalconyStorm) return "the storm hook isn't ready yet.";
+    var on = !!arg; // storm(true) → on; storm(false) → off
     if (!on) { window.__forceBalconyStorm(false); return "🌤 the storm passes — clear skies return."; }
     if (window.goToStage) window.goToStage("balcony"); // storms roll over the balcony
     if (window.__setDayNight) window.__setDayNight(true); // a storm needs dusk
@@ -39471,9 +39473,10 @@ function spawnDustMote(container) {
   };
 
   window.fullscreen = function (arg) {
-    var enter = !(arguments.length > 0 && !arg); // fullscreen()/fullscreen(true) → enter; fullscreen(false) → exit
-    var btn = document.getElementById("hunt-fullscreen-btn");
     var area = document.getElementById("hunt-fullscreen-area");
+    if (arguments.length === 0) return !!(area && area.classList.contains("is-fullscreen")); // no arg → are we fullscreen?
+    var enter = !!arg; // fullscreen(true) → enter; fullscreen(false) → exit
+    var btn = document.getElementById("hunt-fullscreen-btn");
     if (!btn || !area) return "the fullscreen hook isn't ready yet.";
     // reuse the button's own toggle path (a console keystroke is a user gesture, so a real
     // requestFullscreen is allowed); only click when it would change state
@@ -39493,17 +39496,19 @@ function spawnDustMote(container) {
   };
 
   window.bbq = function (arg) {
-    var on = !(arguments.length > 0 && !arg); // bbq()/bbq(true) → smoking; bbq(false) → off
     var smoker = document.getElementById("balcony-smoker");
     var firebox = document.getElementById("balcony-smoker-firebox");
+    if (arguments.length === 0) return !!(smoker && smoker.classList.contains("smoking")); // no arg → is it smoking?
     if (!smoker || !firebox) return "the smoker hook isn't ready yet.";
+    var on = !!arg; // bbq(true) → smoking; bbq(false) → off
     if (on && window.goToStage) window.goToStage("balcony"); // so you can watch it smoke
     if (on !== smoker.classList.contains("smoking")) firebox.dispatchEvent(new MouseEvent("click", { bubbles: true })); // its real toggle path
     return on ? "🔥 smoker's on — low and slow." : "smoker's off.";
   };
 
   window.phone = function (arg) {
-    var open = !(arguments.length > 0 && !arg); // phone()/phone(true) → open; phone(false) → dismiss
+    if (arguments.length === 0) return !!document.querySelector(".phone-backdrop.show"); // no arg → is the phone up?
+    var open = !!arg; // phone(true) → open; phone(false) → dismiss
     if (open) {
       if (!window.__openPhoneModal) return "the phone hook isn't ready yet.";
       if (window.goToStage) window.goToStage("balcony"); // the pocket phone lives on the balcony
@@ -39516,8 +39521,9 @@ function spawnDustMote(container) {
 
   window.laptop = function (arg) {
     var lap = document.getElementById("office-laptop");
+    if (arguments.length === 0) return !!(lap && lap.classList.contains("open")); // no arg → is the laptop open?
     if (!lap) return "the laptop hook isn't ready yet.";
-    var wantOpen = !(arguments.length > 0 && !arg); // laptop()/laptop(true) → open; laptop(false) → close
+    var wantOpen = !!arg; // laptop(true) → open; laptop(false) → close
     if (window.goToStage) window.goToStage("office"); // the laptop sits on the office desk
     if (wantOpen !== lap.classList.contains("open")) lap.dispatchEvent(new MouseEvent("click", { bubbles: true })); // its real toggle path
     return wantOpen ? "💻 the laptop wakes on the desk." : "💻 laptop closed.";
@@ -39525,8 +39531,9 @@ function spawnDustMote(container) {
 
   window.computer = function (arg) {
     var pc = document.getElementById("office-pc-desk-trio");
+    if (arguments.length === 0) return !!(pc && pc.classList.contains("on")); // no arg → is the PC on?
     if (!pc) return "no computer here.";
-    var wantOn = !(arguments.length > 0 && !arg); // computer()/computer(true) → power up; computer(false) → shut down
+    var wantOn = !!arg; // computer(true) → power up; computer(false) → shut down
     if (window.goToStage) window.goToStage("office");
     if (wantOn !== pc.classList.contains("on")) pc.dispatchEvent(new MouseEvent("click", { bubbles: true })); // its real power toggle (boots on / clears off)
     return wantOn ? "🖥 the PC powers up." : "🖥 the PC powers down.";
@@ -39657,6 +39664,7 @@ function spawnDustMote(container) {
 
   window.cat = function (arg) {
     var walk = document.getElementById("witchy-chest-cat-walk");
+    if (arguments.length === 0) return !!(walk && walk.classList.contains("out")); // no arg → is the cat out?
     if (!walk) return "no cat here.";
     if (arg === false) { if (window.__stowCat) window.__stowCat(); return "🐈 the cat curls back into the chest."; } // cat(false) → stow her
     if (!walk.classList.contains("out")) {
@@ -39825,8 +39833,9 @@ function spawnDustMote(container) {
   window.love = function () { return "love is patient, love is kind. ∞"; };
   window.blacklight = function (arg) { // toggle the UV/blacklight wash over the whole loft (the caps-lock toggle it used to ride is gone)
     var strip = document.getElementById("loft-game-strip");
+    if (arguments.length === 0) return !!(strip && strip.classList.contains("uv-mode")); // no arg → is the UV on?
     if (!strip) return "the loft isn't ready yet.";
-    var on = !(arguments.length > 0 && !arg); // blacklight() / blacklight(true) → on; blacklight(false) → off
+    var on = !!arg; // blacklight(true) → on; blacklight(false) → off
     strip.classList.toggle("uv-mode", on);
     return on ? "🟣 blacklight on — everything fluoresces." : "blacklight off — the lights come up.";
   };
@@ -39835,24 +39844,27 @@ function spawnDustMote(container) {
   // with the loose cat in the nook, so those first fetch the cat there (releasing it from the
   // chest if need be) and let its walk-in settle before she plays with / leaps to it.
   window.irene = function (beh) {
+    var el = document.getElementById("cuddly-irene");
+    if (arguments.length === 0) return !!(el && el.classList.contains("showing")); // no arg → is irene visiting?
     if (beh === false) { if (window.__resetIrene) window.__resetIrene(); return "👧 irene heads off — see you soon."; } // irene(false) → send her away
     if (window.goToStage) window.goToStage("cuddly"); // she only appears in the cuddly nook
-    if (beh) {
-      var POSES = { roam: "irene-roam", bounce: "irene-bounce", sit: "irene-sit", hug: "irene-hug", hugb: "irene-hugb", catplay: "irene-catplay", catjump: "irene-catjump", octiplay: "irene-octiplay", swing: "irene-swing" };
-      var pose = POSES[String(beh).toLowerCase().replace(/^irene-/, "")];
-      if (!pose) return "irene poses (in quotes): \"roam\" · \"bounce\" · \"sit\" · \"hug\" · \"hugb\" · \"catplay\" · \"catjump\" · \"octiplay\" · \"swing\"";
-      if (!window.__ireneShow) return "irene isn't around right now.";
-      if (pose === "irene-catplay" || pose === "irene-catjump") {
-        if (window.__releaseCat) window.__releaseCat();   // open the moon door + free the cat if it's still in the chest
-        if (window.__homeCat) window.__homeCat("cuddly");  // bring the loose cat into the nook
-        setTimeout(function () { if (window.__ireneShow) window.__ireneShow(pose); }, 1000); // after the ~900ms walk-in settles, so she lands beside the cat
-        return "🐈 fetching the cat — 👧 irene will " + (pose === "irene-catjump" ? "leap to" : "play with") + " it.";
-      }
-      window.__ireneShow(pose);
-      return "👧 irene: " + pose.replace("irene-", "") + ".";
+    if (beh === true) { // irene(true) → a full random visit
+      if (window.__ireneSummon) { window.__ireneSummon(); return "👧 irene skips into the nook."; }
+      return "irene isn't around right now.";
     }
-    if (window.__ireneSummon) { window.__ireneSummon(); return "👧 irene skips into the nook."; }
-    return "irene isn't around right now.";
+    // otherwise a pose name
+    var POSES = { roam: "irene-roam", bounce: "irene-bounce", sit: "irene-sit", hug: "irene-hug", hugb: "irene-hugb", catplay: "irene-catplay", catjump: "irene-catjump", octiplay: "irene-octiplay", swing: "irene-swing" };
+    var pose = POSES[String(beh).toLowerCase().replace(/^irene-/, "")];
+    if (!pose) return "irene poses (in quotes): \"roam\" · \"bounce\" · \"sit\" · \"hug\" · \"hugb\" · \"catplay\" · \"catjump\" · \"octiplay\" · \"swing\"";
+    if (!window.__ireneShow) return "irene isn't around right now.";
+    if (pose === "irene-catplay" || pose === "irene-catjump") {
+      if (window.__releaseCat) window.__releaseCat();   // open the moon door + free the cat if it's still in the chest
+      if (window.__homeCat) window.__homeCat("cuddly");  // bring the loose cat into the nook
+      setTimeout(function () { if (window.__ireneShow) window.__ireneShow(pose); }, 1000); // after the ~900ms walk-in settles, so she lands beside the cat
+      return "🐈 fetching the cat — 👧 irene will " + (pose === "irene-catjump" ? "leap to" : "play with") + " it.";
+    }
+    window.__ireneShow(pose);
+    return "👧 irene: " + pose.replace("irene-", "") + ".";
   };
   window.eclipse = function () {
     if (window.goToStage) window.goToStage("balcony"); // the eclipse plays out over the balcony sky

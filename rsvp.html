@@ -14248,7 +14248,7 @@ document.addEventListener("click", function (e) {
   var LEAD_GAIN = 0.1;                                        // keep under the kick (0.95) / bass (0.42)
   var LEAD_ECHO = [[3, 0.42], [6, 0.18]];                    // dub echoes: [sixteenths later, gain ×]
   function semi(base, n) { return base * Math.pow(2, n / 12); }
-  function partyVol() { return 1.2 * (window.__songVolume ? window.__songVolume() : 0.5); }
+  function partyVol() { return 1.0 * (window.__songVolume ? window.__songVolume() : 0.5); } // was 1.2 — trimmed to unity to claw back headroom for the +6dB low-end lift (techno is the only bed mixed above unity, already clipping at the top volume step)
   // Garden-sourced room modeling: the party thumps in the garden, heard from elsewhere.
   // garden/office center, kitchen from the right, cuddly from the left — all a touch faint
   // vs the garden; balcony comes through the door (position + fainter, opening it lets more in).
@@ -14451,7 +14451,8 @@ document.addEventListener("click", function (e) {
       var cfg = partyRoomCfg();
       var roomGain = partyCtx.createGain(); roomGain.gain.value = cfg.vol;
       var partyOut = pannedOut(partyCtx, cfg.pan);
-      bus.connect(comp); comp.connect(master); master.connect(roomGain); roomGain.connect(partyOut);
+      var bassLift = partyBassLift(partyCtx); // +low-end weight below ~120 Hz
+      bus.connect(comp); comp.connect(master); master.connect(bassLift); bassLift.connect(roomGain); roomGain.connect(partyOut);
       partyCtx._bus = bus;
       partyCtx._masterGain = master;
       partyCtx._roomGain = roomGain;
@@ -14614,7 +14615,7 @@ document.addEventListener("click", function (e) {
       master.gain.setValueAtTime(0.0001, now);
       master.gain.linearRampToValueAtTime(waltzVol(), now + (fadeIn || 0.4)); // fade in over the crossfade length
       var out = pannedOut(waltzCtx, 0);                           // centered — a whole-garden waltz
-      bus.connect(comp); comp.connect(master); master.connect(out);
+      bus.connect(comp); comp.connect(master); var bassLift = partyBassLift(master.context); master.connect(bassLift); bassLift.connect(out); // +low-end weight below ~120 Hz
       waltzCtx._bus = bus;
       waltzCtx._masterGain = master;
       waltzStep = 0;
@@ -14793,7 +14794,7 @@ document.addEventListener("click", function (e) {
       master.gain.setValueAtTime(0.0001, now);
       master.gain.linearRampToValueAtTime(discoVol(), now + (fadeIn || 0.4)); // fade in over the crossfade
       var out = pannedOut(discoCtx, 0);                           // centered — a whole-garden track
-      bus.connect(comp); comp.connect(master); master.connect(out);
+      bus.connect(comp); comp.connect(master); var bassLift = partyBassLift(master.context); master.connect(bassLift); bassLift.connect(out); // +low-end weight below ~120 Hz
       discoCtx._bus = bus;
       discoCtx._masterGain = master;
       discoStep = 0;
@@ -14957,7 +14958,7 @@ document.addEventListener("click", function (e) {
       master.gain.setValueAtTime(0.0001, now);
       master.gain.linearRampToValueAtTime(swingVol(), now + (fadeIn || 0.4)); // fade in over the crossfade
       var out = pannedOut(swingCtx, 0);                           // centered — a whole-garden track
-      bus.connect(comp); comp.connect(master); master.connect(out);
+      bus.connect(comp); comp.connect(master); var bassLift = partyBassLift(master.context); master.connect(bassLift); bassLift.connect(out); // +low-end weight below ~120 Hz
       swingCtx._bus = bus;
       swingCtx._masterGain = master;
       swingStep = 0;
@@ -15145,7 +15146,7 @@ document.addEventListener("click", function (e) {
       master.gain.setValueAtTime(0.0001, now);
       master.gain.linearRampToValueAtTime(salsaVol(), now + (fadeIn || 0.4)); // fade in over the crossfade length
       var out = pannedOut(salsaCtx, 0);                           // centered — a whole-garden groove
-      bus.connect(comp); comp.connect(master); master.connect(out);
+      bus.connect(comp); comp.connect(master); var bassLift = partyBassLift(master.context); master.connect(bassLift); bassLift.connect(out); // +low-end weight below ~120 Hz
       salsaCtx._bus = bus;
       salsaCtx._masterGain = master;
       salsaStep = 0;
@@ -15318,7 +15319,7 @@ document.addEventListener("click", function (e) {
       master.gain.setValueAtTime(0.0001, now);
       master.gain.linearRampToValueAtTime(bhangraVol(), now + (fadeIn || 0.4)); // fade in over the crossfade length
       var out = pannedOut(bhangraCtx, 0);                         // centered — a whole-garden banger
-      bus.connect(comp); comp.connect(master); master.connect(out);
+      bus.connect(comp); comp.connect(master); var bassLift = partyBassLift(master.context); master.connect(bassLift); bassLift.connect(out); // +low-end weight below ~120 Hz
       bhangraCtx._bus = bus;
       bhangraCtx._masterGain = master;
       bhangraStep = 0;
@@ -15470,7 +15471,7 @@ document.addEventListener("click", function (e) {
       master.gain.setValueAtTime(0.0001, now);
       master.gain.linearRampToValueAtTime(pVol(), now + (fadeIn || 0.4)); // fade in over the crossfade length
       var out = pannedOut(pCtx, 0);                              // centered — a whole-garden dance
-      bus.connect(comp); comp.connect(master); master.connect(out);
+      bus.connect(comp); comp.connect(master); var bassLift = partyBassLift(master.context); master.connect(bassLift); bassLift.connect(out); // +low-end weight below ~120 Hz
       pCtx._bus = bus; pCtx._masterGain = master;
       pStep = 0; pNextTime = now + 0.12;
       var vb = document.getElementById("hunt-volume-btn"); if (vb) vb.classList.add("shown");
@@ -15600,7 +15601,7 @@ document.addEventListener("click", function (e) {
       master.gain.setValueAtTime(0.0001, now);
       master.gain.linearRampToValueAtTime(kVol(), now + (fadeIn || 0.4));
       var out = pannedOut(kCtx, 0);
-      bus.connect(comp); comp.connect(master); master.connect(out);
+      bus.connect(comp); comp.connect(master); var bassLift = partyBassLift(master.context); master.connect(bassLift); bassLift.connect(out); // +low-end weight below ~120 Hz
       kCtx._bus = bus; kCtx._masterGain = master;
       kStep = 0; kNextTime = now + 0.12;
       var vb = document.getElementById("hunt-volume-btn"); if (vb) vb.classList.add("shown");
@@ -15734,7 +15735,7 @@ document.addEventListener("click", function (e) {
       master.gain.setValueAtTime(0.0001, now);
       master.gain.linearRampToValueAtTime(hVol(), now + (fadeIn || 0.4));
       var out = pannedOut(hCtx, 0);
-      bus.connect(comp); comp.connect(master); master.connect(out);
+      bus.connect(comp); comp.connect(master); var bassLift = partyBassLift(master.context); master.connect(bassLift); bassLift.connect(out); // +low-end weight below ~120 Hz
       hCtx._bus = bus; hCtx._masterGain = master;
       hStep = 0; hNextTime = now + 0.12;
       var vb = document.getElementById("hunt-volume-btn"); if (vb) vb.classList.add("shown");
@@ -31604,6 +31605,25 @@ function pannedOut(ctx, elIdOrPan) {
     : panForElId(elIdOrPan);               // pan to the element's on-screen position
   p.connect(ctx.destination);
   return p;
+}
+// Garden-party low-end lift: a low-shelf that adds weight below ~120 Hz to the 9 synth
+// dance beds (techno/waltz/disco/swing/salsa/bhangra/persian/polka/horah). Spliced in
+// AFTER each bed's master gain — i.e. post-compressor, so the boost isn't swallowed by
+// the bed's own peak compressor (pre-comp it would just make the comp duck the mids on
+// every kick) — and before pannedOut. +6 dB @ 120 Hz was measured (OfflineAudioContext
+// replica of the techno bed, the sub-heaviest) to add ~+4.8 dB of sub-150 Hz energy
+// while leaving ample headroom at the default volume (techno peaks 0.60 there); techno
+// additionally drops its master 1.2->1.0 (the only bed mixed above unity, already
+// clipping at the top volume step) to claw some of that back. Each bed owns the node in
+// its own context and tears it down with ctx.close() — no cross-context routing, no
+// source to stop, no new AudioContext.
+var PARTY_BASS_LIFT_HZ = 120, PARTY_BASS_LIFT_DB = 6;
+function partyBassLift(ctx) {
+  var f = ctx.createBiquadFilter();
+  f.type = "lowshelf";
+  f.frequency.value = PARTY_BASS_LIFT_HZ;
+  f.gain.value = PARTY_BASS_LIFT_DB;
+  return f;
 }
 // A linear pan sweep from fromPan to toPan over dur seconds — for a sound whose source is
 // itself moving (e.g. a dragged item snapping back to its rest slot).

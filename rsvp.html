@@ -12148,6 +12148,7 @@ var T = {
     kbd_f: "fullscreen",
     kbd_party: "throw the garden party",
     kbd_arrows: "previous / next room",
+    kbd_console: "open the console",
     kbd_digits: "jump to a room",
     kbd_q: "skip to the balcony finale",
     kbd_d: "day ↔ night (or ↑ / ↓)",
@@ -12525,6 +12526,7 @@ var T = {
     kbd_f: "celá obrazovka",
     kbd_party: "spustit zahradní večírek",
     kbd_arrows: "předchozí / další místnost",
+    kbd_console: "otevřít konzoli",
     kbd_digits: "skok do místnosti",
     kbd_q: "rovnou na finále na balkoně",
     kbd_d: "den ↔ noc (nebo ↑ / ↓)",
@@ -13023,7 +13025,8 @@ window.addEventListener("hashchange", function () {
       ["<kbd>f</kbd>", "kbd_f"],
       ["<kbd>Space</kbd>", "kbd_space"],
       ["<kbd>n</kbd>", "kbd_n"],
-      ["<kbd>←</kbd><kbd>→</kbd>", "kbd_arrows"],
+      ["<kbd>←</kbd><kbd>Backspace</kbd> / <kbd>→</kbd><kbd>Enter</kbd>", "kbd_arrows"],
+      ["<kbd>`</kbd>", "kbd_console"],
       ["<kbd>1</kbd>–<kbd>5</kbd>", "kbd_digits"],
       ["<kbd>Esc</kbd>", "kbd_esc"],
       ["<kbd>t</kbd>", "kbd_t"],
@@ -19215,6 +19218,9 @@ document.addEventListener("click", function (e) {
   // A headphones click while the PC is off asks the boot to finish on the music player
   // instead of the desktop (see __bootToMusic below).
   var pendingBootMusic = false;
+  // The '`' keyboard shortcut (see __whiskToTerminal below) asks a fresh boot to finish
+  // by opening the terminal console on the caps desktop instead of just landing on it.
+  var pendingBootTerminal = false;
   // After the caps site idles a while, a live Julia-set fractal screensaver takes
   // over ("electric sheep" nod). Any click on the monitor wakes it.
   var saverTimer = null, saverRaf = null;
@@ -19355,6 +19361,7 @@ document.addEventListener("click", function (e) {
     if (!monitor.classList.contains("here") || !pcTower || !pcTower.classList.contains("on")) {
       pendingBootSite = null; // no boot will run to land these, so drop any queued targets
       pendingBootMusic = false;
+      pendingBootTerminal = false;
       return;
     }
     if (!window.__pcPlayed) {
@@ -19396,6 +19403,9 @@ document.addEventListener("click", function (e) {
       // find the photobooth. Only a headphones-summoned boot goes straight to the player
       // (a later play/pause still re-opens it via updateNowPlaying's own listeners).
       if (pendingBootMusic) { pendingBootMusic = false; updateNowPlaying(); }
+      // a '`'-summoned boot opens the terminal once the desktop lands (openTerminal
+      // needs show-caps, which the branch above has just added)
+      if (pendingBootTerminal) { pendingBootTerminal = false; openTerminal(); }
       if (window.__inviteLaptop) window.__inviteLaptop(); // the boot done, nudge the laptop → Call Prague
     }, 1000));
   }
@@ -23610,6 +23620,44 @@ async def localfont(name):
       // PC on but the typewriter is showing → bring the monitor back; updateScreen boots.
       swap(true);
     }
+  };
+  // The '`' keyboard shortcut's whisk-to-terminal: reuses the dock/boot flow exactly to
+  // land on the office terminal from wherever the monitor happens to be. Powers the PC on
+  // (queuing the terminal as the boot target), or reboots the monitor forward, or just
+  // opens the terminal on an already-booted desktop — always ending zoomed in with the
+  // prompt focused, same as clicking the terminal dock tile. The console-open keydown
+  // guard grabs '`' once a console is up (the device is zoomed), so this only ever runs
+  // from outside a console — but the already-open branch keeps it idempotent anyway.
+  window.__whiskToTerminal = function () {
+    if (!pcTower) return;
+    // Already in the terminal: just re-zoom + refocus, nothing to boot.
+    if (monitor.classList.contains("show-terminal")) {
+      if (window.__monitorZoomIn) window.__monitorZoomIn();
+      if (termIn) setTimeout(function () { try { termIn.focus({ preventScroll: true }); } catch (e) {} }, 60);
+      return;
+    }
+    pendingBootTerminal = true; // the boot / desktop-restore below lands on caps, then opens the terminal
+    if (!pcTower.classList.contains("on")) {
+      // PC off → power on exactly as a click would (spark + fan + boot); updateScreen
+      // boots Fedora → caps, then the boot-complete hook opens the queued terminal.
+      pcTower.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      return;
+    }
+    if (!monitor.classList.contains("here")) {
+      // PC on but the typewriter's showing → bring the monitor back; updateScreen reboots to caps.
+      swap(true);
+      return;
+    }
+    if (monitor.classList.contains("show-fedora")) return; // mid-boot: the hook opens it when caps lands
+    // PC on, monitor here, not booting: close whatever app / site / console owns the
+    // screen and return to the caps desktop, then open the terminal in place.
+    if (window.__closeTopMonitorApp) window.__closeTopMonitorApp();
+    stopSaver();
+    monitor.classList.remove("show-harfbuzz", "show-behdad", "show-nowplaying");
+    if (!monitor.classList.contains("show-caps")) { monitor.classList.add("show-caps"); monitorUrl = CAPS_URL; }
+    if (window.__monitorZoomIn) window.__monitorZoomIn();
+    pendingBootTerminal = false;
+    openTerminal();
   };
   function swap(toMonitor) {
     if (!toMonitor) closePhotobooth(); // swapping away to the typewriter (or PC power-off) must stop any live camera
@@ -35153,18 +35201,29 @@ function spawnDustMote(container) {
       goToStage(STAGES[stageIndex + 1]);
     }
   });
-  // Keyboard room nav: →/Tab forward, ←/` back. At a locked frontier a second forward
-  // within 600ms unlocks it (mirrors the arrow/dot double-click-to-unlock). d/↑/↓ flip
-  // day↔night, 1-5 jump to a room, q to the finale, r resets, c the cat, n next track,
-  // t a trip. Ignored while typing / with
-  // a modifier. (Tab is repurposed here — the game strip has no tab targets — but form
-  // fields still get it via the typing guard below.)
+  // Keyboard room nav: →/Tab/Enter forward, ←/Backspace back. At a locked frontier a
+  // second forward within 600ms unlocks it (mirrors the arrow/dot double-click-to-unlock).
+  // ` whisks to the office terminal console. d/↑/↓ flip day↔night, 1-5 jump to a room, q to
+  // the finale, r resets, c the cat, n next track, t a trip. Ignored while typing / with a
+  // modifier. (Tab is repurposed here — the game strip has no tab targets — but form fields
+  // still get it via the typing guard below.) Enter also ACTIVATES a focused button/link
+  // (onActivate) and native controls, so it only advances a room when nothing actionable
+  // holds focus — activeControlFocused() below is that guard (onActivate's own
+  // preventDefault already trips the e.defaultPrevented bail at the top; this covers native
+  // buttons/links that don't).
+  function activeControlFocused() {
+    var a = document.activeElement;
+    if (!a) return false;
+    if (/^(BUTTON|A|INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return true;
+    if (a.isContentEditable) return true;
+    return (a.getAttribute && a.getAttribute("role") === "button");
+  }
   var lastLockedRightAt = 0;
   document.addEventListener("keydown", function (e) {
     if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
     var t = e.target;
     if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
-    if (e.key === "ArrowRight" || e.key === "Tab") {
+    if (e.key === "ArrowRight" || e.key === "Tab" || (e.key === "Enter" && !activeControlFocused())) {
       e.preventDefault();
       if (stageIndex < maxUnlocked) { goToStage(STAGES[stageIndex + 1]); lastLockedRightAt = 0; }
       else if (stageIndex < STAGES.length - 1) {
@@ -35172,9 +35231,18 @@ function spawnDustMote(container) {
         if (now - lastLockedRightAt < 600) { goToStage(STAGES[stageIndex + 1]); lastLockedRightAt = 0; } // second press unlocks
         else lastLockedRightAt = now; // first press at the locked frontier — arm the unlock
       }
-    } else if (e.key === "ArrowLeft" || e.key === "`") {
+    } else if (e.key === "ArrowLeft" || e.key === "Backspace") {
       e.preventDefault();
       if (stageIndex > 0) goToStage(STAGES[stageIndex - 1]);
+    } else if (e.key === "`") {
+      e.preventDefault();
+      // whisk to the office and open its terminal console. Defer the boot/zoom until the
+      // .7s strip slide from the current room has settled — zooming into the monitor while
+      // it's still sliding measures a half-off-screen bezel (the room-nav-races-the-zoom bug).
+      var inOffice = window.currentStageName === "office";
+      goToStage("office");
+      if (inOffice) { if (window.__whiskToTerminal) window.__whiskToTerminal(); }
+      else setTimeout(function () { if (window.__whiskToTerminal) window.__whiskToTerminal(); }, 720);
     } else if (e.key === "d" || e.key === "D") {
       e.preventDefault();
       if (window.__toggleDayNight) window.__toggleDayNight(); // 'd' just toggles

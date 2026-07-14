@@ -1524,18 +1524,31 @@ footer{margin-top:2.6rem}
 #office-monitor.show-editor #monitor-editor{opacity:1; pointer-events:auto}
 #monitor-ed-close{cursor:pointer}
 #monitor-ed-close:hover .seg-hover{opacity:.55}
-.ed-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; gap:1px; background:#0c1014; padding:1.6px 2px 2px; font-family:ui-monospace,Menlo,monospace; color:#cfe3cf}
+.ed-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:row; gap:1.4px; background:#0c1014; padding:1.6px 2px 2px; font-family:ui-monospace,Menlo,monospace; color:#cfe3cf}
+/* left sidebar: a slim scrollable list of saved script names, with a +/− header (new/delete) */
+.ed-side{flex:none; width:24px; min-height:0; display:flex; flex-direction:column; gap:0.7px}
+.ed-side-head{flex:none; display:flex; align-items:center; gap:0.5px}
+.ed-side-title{flex:1; min-width:0; font-size:1.8px; letter-spacing:0.1px; color:#5f7a5f; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.ed-side-btn{flex:none; width:4px; height:4px; display:flex; align-items:center; justify-content:center; background:#1d2622; border:0.3px solid #2b3a3a; border-radius:0.8px; color:#8fd070; font:inherit; font-size:3px; line-height:1; padding:0; cursor:pointer}
+.ed-side-btn:hover{background:#26332b}
+.ed-list{flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:0.4px; background:#0a0d10; border:0.3px solid #202b2b; border-radius:0.8px; padding:0.6px; scrollbar-width:none}
+.ed-list::-webkit-scrollbar{display:none}
+.ed-item{flex:none; font-size:2px; line-height:1.5; padding:0.3px 0.8px; border-radius:0.8px; color:#cfe3cf; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.ed-item:hover{background:#1a2420}
+.ed-item.active{background:#264032; color:#a7e08a}
+.ed-empty{flex:none; font-size:1.8px; color:#5f7a5f; padding:0.6px 0.8px}
+.ed-main{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px}
 .ed-top{flex:none; display:flex; align-items:stretch; gap:0.6px; padding:0 1px}
 .ed-name{flex:1; min-width:0; background:#161c20; border:0.3px solid #2b3a3a; border-radius:0.8px; outline:none; color:#cfe3cf; font:inherit; font-size:2px; height:3.6px; line-height:3.6px; padding:0 0.8px}
 .ed-name::placeholder{color:#5f7a5f}
 .ed-btn{flex:none; background:#1d2622; border:0.3px solid #2b3a3a; border-radius:0.8px; color:#8fd070; font:inherit; font-size:2px; height:3.6px; line-height:1; padding:0 0.8px; cursor:pointer}
 .ed-btn:hover{background:#26332b}
 .ed-btn-run{color:#a7e08a}
-.ed-sel{flex:none; max-width:20px; background:#161c20; border:0.3px solid #2b3a3a; border-radius:0.8px; color:#cfe3cf; font:inherit; font-size:2px; height:3.6px; padding:0 0.4px; cursor:pointer}
+.ed-btn-dl{font-size:2.6px; padding:0 0.6px}
 .ed-ta{flex:1; min-height:0; resize:none; background:#0c1014; border:0.3px solid #202b2b; border-radius:0.8px; outline:none; color:#cfe3cf; font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.4; padding:0.6px 1px; white-space:pre; overflow:auto; scrollbar-width:none; caret-color:#8fd070}
 .ed-ta::placeholder{color:#5f7a5f}
 .ed-ta::-webkit-scrollbar{display:none}
-.ed-wrap input, .ed-wrap textarea, .ed-wrap select{user-select:text; -webkit-user-select:text}
+.ed-wrap input, .ed-wrap textarea{user-select:text; -webkit-user-select:text}
 #monitor-term-close{cursor:pointer}
 #monitor-term-close:hover .seg-hover{opacity:.55}
 .term-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#0c1014; padding:1.8px 2px 2.6px; font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.4; color:#cfe3cf}
@@ -8968,22 +8981,31 @@ section{margin:1.9rem 0}
 <path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#8fd070" stroke-width="0.6" stroke-linecap="round"/>
 </g>
 </g>
-<!-- EDITOR app: a tiny local-script editor (sibling to the terminal) — a slim top row
-     (filename + Save/Run/New/Del + a saved-scripts picker) over a code textarea. Scripts
+<!-- EDITOR app: a tiny local-script editor (sibling to the terminal). A left sidebar lists
+     saved script names (click to load, active one highlighted) with a +/− header (new/delete);
+     a top strip holds the filename + Save/Run/download controls over a code textarea. Scripts
      persist in localStorage["deskScripts"] and are run by the console's run("name"). Same
      mini close pill as the terminal, in the same console green. -->
 <g id="monitor-editor">
 <foreignObject x="254" y="154" width="124" height="42">
 <div xmlns="http://www.w3.org/1999/xhtml" id="monitor-ed-wrap" class="ed-wrap">
+<div class="ed-side">
+<div class="ed-side-head">
+<span class="ed-side-title">scripts</span>
+<button id="monitor-ed-new" class="ed-side-btn" type="button" title="new">+</button>
+<button id="monitor-ed-del" class="ed-side-btn" type="button" title="delete">&#8722;</button>
+</div>
+<div id="monitor-ed-list" class="ed-list"></div>
+</div>
+<div class="ed-main">
 <div class="ed-top">
 <input id="monitor-ed-name" class="ed-name" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="filename"/>
 <button id="monitor-ed-save" class="ed-btn" type="button">save</button>
 <button id="monitor-ed-run" class="ed-btn ed-btn-run" type="button">run</button>
-<button id="monitor-ed-new" class="ed-btn" type="button">new</button>
-<button id="monitor-ed-del" class="ed-btn" type="button">del</button>
-<select id="monitor-ed-pick" class="ed-sel"></select>
+<button id="monitor-ed-dl" class="ed-btn ed-btn-dl" type="button" title="download">&#8595;</button>
 </div>
 <textarea id="monitor-ed-code" class="ed-ta" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="// a script — e.g. party(true); await sleep(400); dance(&quot;salsa&quot;)"></textarea>
+</div>
 </div>
 </foreignObject>
 <g id="monitor-ed-close">
@@ -20987,9 +21009,10 @@ document.addEventListener("click", function (e) {
   var edWrap = document.getElementById("monitor-ed-wrap");
   var edName = document.getElementById("monitor-ed-name");
   var edCode = document.getElementById("monitor-ed-code");
-  var edPick = document.getElementById("monitor-ed-pick");
+  var edList = document.getElementById("monitor-ed-list");
   var edSaveBtn = document.getElementById("monitor-ed-save");
   var edRunBtn = document.getElementById("monitor-ed-run");
+  var edDlBtn = document.getElementById("monitor-ed-dl");
   var edNewBtn = document.getElementById("monitor-ed-new");
   var edDelBtn = document.getElementById("monitor-ed-del");
   var edCloseBtn = document.getElementById("monitor-ed-close");
@@ -21004,19 +21027,24 @@ document.addEventListener("click", function (e) {
     var names = scriptNames();
     return names.length ? "saved scripts: " + names.join(", ") : "no saved scripts yet.";
   }
+  // rebuild the sidebar list; `sel` (if a saved name) is highlighted as the active file
   function edRefreshPicker(sel) {
-    if (!edPick) return;
+    if (!edList) return;
     var names = scriptNames();
-    edPick.innerHTML = "";
-    var ph = document.createElement("option");
-    ph.value = ""; ph.textContent = names.length ? "open…" : "(none)";
-    edPick.appendChild(ph);
+    edList.innerHTML = "";
+    if (!names.length) {
+      var empty = document.createElement("div");
+      empty.className = "ed-empty"; empty.textContent = "no scripts";
+      edList.appendChild(empty);
+      return;
+    }
     names.forEach(function (n) {
-      var op = document.createElement("option");
-      op.value = n; op.textContent = n;
-      edPick.appendChild(op);
+      var it = document.createElement("div");
+      it.className = "ed-item" + (n === sel ? " active" : "");
+      it.textContent = n; it.title = n;
+      it.addEventListener("click", function (e) { e.stopPropagation(); edLoad(n); });
+      edList.appendChild(it);
     });
-    edPick.value = (sel != null && names.indexOf(sel) >= 0) ? sel : "";
   }
   function edLoad(name) {
     var scr = readScripts(), has = Object.prototype.hasOwnProperty.call(scr, name);
@@ -21066,6 +21094,22 @@ document.addEventListener("click", function (e) {
   function edRunCurrent() {
     edRunCode((edName && edName.value.trim()) || "(editor)", edCode ? edCode.value : "");
   }
+  // download the current buffer as a .js file (Blob + a synthetic <a download> click)
+  function edDownload() {
+    if (!edCode) return;
+    var name = (edName && edName.value.trim()) || "script";
+    var fn = name.replace(/[^\w.\-]+/g, "_"); // filesystem-safe
+    if (!/\.js$/i.test(fn)) fn += ".js";
+    var url;
+    try {
+      var blob = new Blob([edCode.value], { type: "text/javascript" });
+      url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = fn;
+      document.body.appendChild(a); a.click(); a.remove();
+    } catch (e) {}
+    if (url) setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} }, 0);
+  }
   function openEditor() {
     // only from the lit desktop, and not stacked over a console (edit() clears those first)
     if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-editor") || monitor.classList.contains("show-terminal") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux")) return;
@@ -21107,9 +21151,10 @@ document.addEventListener("click", function (e) {
   };
   // field typing must never leak to the game's keyboard shortcuts (esp. backtick, which
   // opens the console, and q/r/c/n/t/arrows). The document handlers already bail on an
-  // INPUT/TEXTAREA/SELECT target; stopPropagation here is the same belt-and-suspenders the
-  // terminal input uses.
-  [edName, edCode, edPick].forEach(function (el) {
+  // INPUT/TEXTAREA target; stopPropagation here is the same belt-and-suspenders the
+  // terminal input uses. Only the two typable fields need it — the sidebar list items are
+  // plain click-only <div>s (not focusable), so they can't leak keys.
+  [edName, edCode].forEach(function (el) {
     if (el) el.addEventListener("keydown", function (e) { e.stopPropagation(); });
   });
   if (edWrap) {
@@ -21118,9 +21163,9 @@ document.addEventListener("click", function (e) {
   }
   if (edSaveBtn) edSaveBtn.addEventListener("click", function (e) { e.stopPropagation(); edSave(); playLaptopClickSound("office-monitor"); });
   if (edRunBtn) edRunBtn.addEventListener("click", function (e) { e.stopPropagation(); edRunCurrent(); });
+  if (edDlBtn) edDlBtn.addEventListener("click", function (e) { e.stopPropagation(); edDownload(); playLaptopClickSound("office-monitor"); });
   if (edNewBtn) edNewBtn.addEventListener("click", function (e) { e.stopPropagation(); edNew(); });
   if (edDelBtn) edDelBtn.addEventListener("click", function (e) { e.stopPropagation(); edDelete(); playLaptopClickSound("office-monitor"); });
-  if (edPick) edPick.addEventListener("change", function (e) { e.stopPropagation(); if (edPick.value) edLoad(edPick.value); });
   if (edCloseBtn) {
     edCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeEditor(); playLaptopClickSound("office-monitor"); });
     edCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });

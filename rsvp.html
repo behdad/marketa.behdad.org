@@ -3277,7 +3277,6 @@ body:has(#loft-game-strip.strobe) #trip-acid-kaleido{animation:acid-kaleido 3s e
 body:has(#loft-game-strip.psychedelic) #garden-buddha{animation:buddha-apparition 14s ease-in-out}
 @keyframes buddha-apparition{0%{opacity:0} 20%{opacity:0.55} 60%{opacity:0.55} 100%{opacity:0}}
 @media (prefers-reduced-motion: reduce){body:has(#loft-game-strip.psychedelic) #garden-buddha{animation:none}}
-#loft-game-strip.ketamine{animation:ketamine-trip 18s ease-in-out}
 @keyframes ketamine-trip{
   0%{filter:blur(0) saturate(1) brightness(1)}
   15%{filter:blur(3px) saturate(.6) brightness(.85) contrast(1.3)}
@@ -3309,13 +3308,18 @@ body:has(#loft-game-strip.psychedelic) #garden-buddha{animation:buddha-apparitio
   95%{transform:rotate(1deg)}
   100%{transform:rotate(0)}
 }
-/* ketamine trip: weightless drift. The whole viewed room gently floats, tilts and breathes
-   as if gravity let go — a CSS animation on #loft-float (the neutral whole-strip wrapper),
-   pivoting about the viewed room's centre (JS sets transform-origin at trip start). Scale
-   stays >=1 through the drift so the translate/rotate never expose a cream or neighbour-room
-   sliver at the edges. The drift lives ONLY in these keyframes; #loft-float has no transform
-   attribute to clobber, and it clears the moment .ketamine drops. */
-#loft-game-strip.ketamine #loft-float{transform-box:view-box; animation:ket-float 18s ease-in-out}
+/* ketamine trip: weightless drift + the hazy blur/desaturate. Both animations ride
+   #loft-float (the neutral whole-strip wrapper — the SVG's sole content group), pivoting
+   about the viewed room's centre (JS sets transform-origin at trip start). Co-locating the
+   ketamine-trip FILTER with the ket-float TRANSFORM on one element is deliberate: with the
+   filter on the ancestor <svg> and the transform on this child, the animating transform
+   forced a full re-raster of the fullscreen-sized blur every frame (compositing thrash that
+   flickered only at fullscreen resolution). On one element the browser rasterizes the
+   filtered subtree once and composites the transform on the GPU. will-change pins that layer
+   so it isn't promoted/demoted per frame. Scale stays >=1 so the drift never exposes a cream
+   or neighbour-room sliver; #loft-float has no transform attribute to clobber, and both clear
+   the moment .ketamine drops. */
+#loft-game-strip.ketamine #loft-float{transform-box:view-box; will-change:transform; animation:ket-float 18s ease-in-out, ketamine-trip 18s ease-in-out}
 @keyframes ket-float{
   0%{transform:translate(0,0) rotate(0deg) scale(1)}
   15%{transform:translate(-4px,-5px) rotate(-0.4deg) scale(1.06)}
@@ -27748,6 +27752,22 @@ var TRIP_DURATIONS = { psychedelic: 6000, strobe: 3000, melt: 5000, dmt: 6000, m
 var tripActive = false;
 var tripEndTimer = null;
 var currentTripVariant = null;
+// Every deferred, per-trip effect (the ketamine ghost + its whisper, molly's heart bursts,
+// the mushroom UFO's fly-out) parks its setTimeout handle here so a trip that's torn down
+// early — e.g. a keyboard-initiated trip that interrupts the running one — can't leak its
+// timers into the next trip. clearPriorTripEffects() drains it and lives at the top of
+// startTripVariant, so ONE place cleans the outgoing trip on every start, fresh or replacing.
+var tripEffectTimers = [];
+function clearPriorTripEffects() {
+  tripEffectTimers.forEach(function (t) { clearTimeout(t); });
+  tripEffectTimers = [];
+  stopTripBlooms();      // mushroom blooms poll tripActive (stays true across an interrupt), so stop them by hand
+  stopIbogaSlideshow();  // drop any in-flight memory-photo chain
+  var ufo = document.getElementById("garden-ufo");
+  if (ufo) ufo.classList.remove("ufo-flying"); // else a half-flown UFO freezes visible (.ufo-flying{opacity:1})
+  var ghostInner = document.getElementById("rsvp-trip-ghost-inner");
+  if (ghostInner) ghostInner.classList.remove("roaming"); // vanish a mid-drift ketamine ghost
+}
 // The garden's decorative creatures each ride ONE trip: the frog turns up for the melt
 // (whiteout) trip, the toadstool for the psychedelic (fractal-bloom) trip, the jellyfish
 // for molly, and the strobe conjures a pair — the moth plus the acid flask on the bench.
@@ -27975,6 +27995,8 @@ function bumpTripTolerance() {
 function startTripVariant(variant) {
   var strip = document.getElementById("loft-game-strip");
   if (!strip) return;
+  clearTimeout(tripEndTimer); // an interrupting trip cancels the outgoing one's end/comedown before its own is armed below
+  clearPriorTripEffects();    // and drains its deferred effect timers + poll-driven effects
   currentTripVariant = variant;
   stopDmt(); // clear any leftover dmt elves/sparkles/warp before a new trip (dmt→other switch)
   showTripCreatures(variant);
@@ -27995,7 +28017,7 @@ function startTripVariant(variant) {
       var ketIdx = window.currentStageIndex || 0;
       loftFloat.style.transformOrigin = (ketIdx * 680 + 340) + "px 170px";
     }
-    setTimeout(function () {
+    tripEffectTimers.push(setTimeout(function () {
       var ghostInner = document.getElementById("rsvp-trip-ghost-inner");
       var ghostPos = document.getElementById("rsvp-trip-ghost-pos");
       if (ghostInner && ghostPos) {
@@ -28006,20 +28028,20 @@ function startTripVariant(variant) {
         requestAnimationFrame(function () {
           requestAnimationFrame(function () { ghostInner.classList.add("roaming"); });
         });
-        setTimeout(function () { playGhostWhisperSound("rsvp-trip-ghost"); }, 700); // it breathes a whispered "cool" as it drifts in
+        tripEffectTimers.push(setTimeout(function () { playGhostWhisperSound("rsvp-trip-ghost"); }, 700)); // it breathes a whispered "cool" as it drifts in
       }
-    }, 4000);
+    }, 4000));
   }
   if (variant === "molly") {
     [300, 2200, 4100, 6000].forEach(function (delay) {
-      setTimeout(function () {
+      tripEffectTimers.push(setTimeout(function () {
         var stageIdx = window.currentStageIndex || 0;
         var hx = stageIdx * 680 + 150 + Math.random() * 380;
         var hy = 150 + Math.random() * 180;
         spawnHearts(strip, hx, hy);
         // one cycle of molly's arp plays from exactly where the hearts burst (pan by x in the room)
         playMollyArpCycle(Math.max(-1, Math.min(1, ((hx - stageIdx * 680) / 680 * 2 - 1) * 0.85)));
-      }, delay);
+      }, delay));
     });
   }
   if (variant === "dmt") startDmt(); // neon fractal elves + sparkles + room warp
@@ -28031,7 +28053,7 @@ function startTripVariant(variant) {
       requestAnimationFrame(function () {
         requestAnimationFrame(function () {
           ufo.classList.add("ufo-flying");
-          setTimeout(function () { ufo.classList.remove("ufo-flying"); }, 8200);
+          tripEffectTimers.push(setTimeout(function () { ufo.classList.remove("ufo-flying"); }, 8200));
         });
       });
     }
@@ -28078,16 +28100,16 @@ function triggerRsvpTrip(e) {
   if (variant === "psychedelic") startTripBlooms();
 }
 // Shift+1..7 launches a SPECIFIC trip (canonical order: psychedelic, strobe, melt,
-// dmt, molly, ketamine, iboga — the pre-shuffle TRIP_VARIANTS order). Same one-at-a-time
-// rule as the drugs box: a running trip ignores the request. e.code keeps it
-// layout-safe (Shift+1 types "!" as e.key).
+// dmt, molly, ketamine, iboga — the pre-shuffle TRIP_VARIANTS order). Unlike the drugs
+// box (which bubbles a "no mixing" nudge), a keyboard request while a trip is running
+// INTERRUPTS it: startTripVariant tears the outgoing trip down cleanly and the new one
+// takes over at once. e.code keeps it layout-safe (Shift+1 types "!" as e.key).
 document.addEventListener("keydown", function (e) {
   if (!e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
   var m = /^Digit([1-7])$/.exec(e.code || "");
   if (!m) return;
   var ae = document.activeElement;
   if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return;
-  if (tripActive) return;
   e.preventDefault();
   var variant = ["psychedelic", "strobe", "melt", "dmt", "molly", "ketamine", "iboga"][+m[1] - 1];
   tripActive = true;

@@ -2024,8 +2024,6 @@ footer{margin-top:2.6rem}
 .phone-incall .pic-self{position:absolute; right:12px; bottom:82px; width:68px; height:50px; border-radius:9px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.55); background:#efe6cf; border:1.5px solid rgba(255,255,255,.55)}
 .phone-incall .pic-self svg{width:100%; height:100%; display:block}
 /* caller caption: names BOTH of us — a cream chip above the self-view tile so the wine & reads on the dark call screen (wine-on-black wouldn't) */
-.phone-incall .pic-name{position:absolute; right:12px; bottom:135px; padding:1px 7px; border-radius:8px; background:#efe6cf; color:var(--ink); font-family:"Fraunces",serif; font-size:9.5px; line-height:1.5; box-shadow:0 1px 4px rgba(0,0,0,.45)}
-.phone-incall .pic-name b{color:var(--wine); font-weight:400; margin:0 1px}
 .phone-incall .pic-hangup{position:absolute; left:50%; bottom:18px; transform:translateX(-50%); width:58px; height:58px; border-radius:50%; background:#c0392b; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 14px rgba(0,0,0,.5)}
 .phone-incall .pic-hangup:hover{background:#a93226}
 .phone-incall .pic-hangup svg{width:26px; height:26px; transform:rotate(135deg); display:block}
@@ -3308,26 +3306,11 @@ body:has(#loft-game-strip.psychedelic) #garden-buddha{animation:buddha-apparitio
   95%{transform:rotate(1deg)}
   100%{transform:rotate(0)}
 }
-/* ketamine trip: weightless drift + the hazy blur/desaturate. Both animations ride
-   #loft-float (the neutral whole-strip wrapper — the SVG's sole content group), pivoting
-   about the viewed room's centre (JS sets transform-origin at trip start). Co-locating the
-   ketamine-trip FILTER with the ket-float TRANSFORM on one element is deliberate: with the
-   filter on the ancestor <svg> and the transform on this child, the animating transform
-   forced a full re-raster of the fullscreen-sized blur every frame (compositing thrash that
-   flickered only at fullscreen resolution). On one element the browser rasterizes the
-   filtered subtree once and composites the transform on the GPU. will-change pins that layer
-   so it isn't promoted/demoted per frame. Scale stays >=1 so the drift never exposes a cream
-   or neighbour-room sliver; #loft-float has no transform attribute to clobber, and both clear
-   the moment .ketamine drops. */
-#loft-game-strip.ketamine #loft-float{transform-box:view-box; will-change:transform; animation:ket-float 18s ease-in-out, ketamine-trip 18s ease-in-out}
-@keyframes ket-float{
-  0%{transform:translate(0,0) rotate(0deg) scale(1)}
-  15%{transform:translate(-4px,-5px) rotate(-0.4deg) scale(1.06)}
-  40%{transform:translate(4px,-3px) rotate(0.4deg) scale(1.08)}
-  65%{transform:translate(-3px,5px) rotate(-0.3deg) scale(1.07)}
-  88%{transform:translate(2px,-2px) rotate(0.2deg) scale(1.04)}
-  100%{transform:translate(0,0) rotate(0deg) scale(1)}
-}
+/* ketamine trip: the hazy blur/desaturate on #loft-float (the whole-strip wrapper). The
+   whole-scene zoom/wobble is gone: animating a transform on this fullscreen blur-filtered
+   element re-rastered the blur every frame and flickered in real fullscreen — in every
+   filter/transform arrangement tried. Blur-only is stable. Clears when .ketamine drops. */
+#loft-game-strip.ketamine #loft-float{animation:ketamine-trip 18s ease-in-out}
 /* iboga: the world drains to gray and holds there while faint blue-gray memory
    photos surface one at a time on #iboga-layer (see startIbogaSlideshow) */
 #loft-game-strip.iboga{animation:iboga-trip 20s ease-in-out}
@@ -8683,7 +8666,7 @@ section{margin:1.9rem 0}
 <!-- right-zone dressing: zone divider, wordmark, ∞ accent (covered by the picker in .picking) -->
 <g id="monitor-pb-brand">
 <line x1="316" y1="154" x2="316" y2="196" stroke="#232830" stroke-width="0.8"/>
-<text id="monitor-pb-wordmark" x="347" y="168" text-anchor="middle" style="fill:#d9a6a6; font-family:sans-serif; font-size:4.8px; letter-spacing:0.2px"></text>
+<text id="monitor-pb-wordmark" x="347" y="168" text-anchor="middle" style="fill:#d9a6a6; font-family:sans-serif; font-size:4.8px; letter-spacing:0.2px">😊 😆 🤪</text>
 <text x="347" y="176" text-anchor="middle" style="fill:#7f9ec0; font-size:5px">∞</text>
 </g>
 <!-- filter picker: a grid of the captured frame under 6 looks; shown only in .picking. JS
@@ -12486,6 +12469,11 @@ document.addEventListener("click", function (e) {
       else if (e.animationName === "head-chop") el.classList.remove("chopped");
     });
   });
+  // Rouse him from ANY touch on either figure — head, body, butt, feet — not only the head.
+  // Capture phase so a child hit-target's stopPropagation can't swallow it; wakeBehdad's own
+  // uv-mode gate keeps it a no-op outside the blacklight doze.
+  var coupleGrp = document.getElementById("cuddly-couple");
+  if (coupleGrp) coupleGrp.addEventListener("click", function () { wakeBehdad(); }, true);
 })();
 (function () {
   // The wall fireplace screen: a click (or Enter/Space) toggles the fire off/on. It
@@ -20679,7 +20667,6 @@ async def localfont(name):
   // as refreshLaptopClock).
   window.refreshPhotoboothText = function () {
     function set(id, key) { var el = document.getElementById(id); if (el) el.textContent = pbText(key); }
-    set("monitor-pb-wordmark", "pb_strip_caption");
     set("monitor-pb-confirm-q", "pb_confirm_q");
     set("monitor-pb-confirm-yes-text", "pb_confirm_yes");
     set("monitor-pb-confirm-no-text", "pb_confirm_no");
@@ -21944,7 +21931,6 @@ async def localfont(name):
         '<div class="pic-video"></div>' +
         '<div class="pic-status"></div>' +
         '<div class="pic-self"></div>' +
-        '<div class="pic-name">markéta <b>&amp;</b> behdad</div>' + // both of us — the couple's shared line
         '<button type="button" class="pic-hangup" aria-label="' + "" + '"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3.2 1.8 C2.4 2.6 2 3.5 2.6 5 C3.4 7 4.9 8.6 7 9.4 C8.5 10 9.4 9.6 10.2 8.8 C10.7 8.3 10.6 7.6 10 7.2 L8.7 6.4 C8.2 6.1 7.7 6.2 7.3 6.6 C7 6.9 6.5 7 6.1 6.7 C5.5 6.3 5.7 6.5 5.3 5.9 C5 5.5 5.1 5 5.4 4.7 C5.8 4.3 5.9 3.8 5.6 3.3 L4.8 2 C4.4 1.4 3.7 1.3 3.2 1.8 Z" fill="#fff"/></svg></button>' +
       '</div>';
 

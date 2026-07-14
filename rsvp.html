@@ -12785,6 +12785,7 @@ document.addEventListener("click", function (e) {
   // Same gate + fade-and-close teardown as the beds above; a self-rescheduling note
   // scheduler steps the melody and bails when the ctx is null (no pile-up in a bg tab).
   var starsCtx = null, starsTimer = null, starsInCuddly = false, starsIdx = 0, starsWasActive = false, starsNext = 0;
+  var starsSuspended = false; // synchronous transport-suspend flag (ctx.state lags a press)
   var SATIE_RATE = 0.88; // time scale for the whole piece — < 1 plays faster than the MIDI's Lent tempo
   // the FULL two-hand Gnossienne No. 1, transcribed from the Mutopia public-domain MIDI as
   // chord-events: c = the notes starting at this onset, each [semitonesFromA4, ring seconds,
@@ -12893,6 +12894,7 @@ document.addEventListener("click", function (e) {
       if (!Ctx) return;
       stopStars();
       window.__musicPaused = false; // a freshly-opened bed is never born paused
+      starsSuspended = false;
       starsCtx = new Ctx();
       try { var p = starsCtx.resume && starsCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       // triangle voices → a gentle lowpass (rounds the tone toward a soft piano) → one master
@@ -12932,9 +12934,11 @@ document.addEventListener("click", function (e) {
   }
   window.__pauseStars = function (paused) { // unified space-bar control: true pause-in-place via ctx suspend/resume
     if (!starsCtx) return false;
+    starsSuspended = !!paused;
     try { if (paused) starsCtx.suspend(); else starsCtx.resume(); } catch (e) {}
     return true;
   };
+  window.__starsPlaying = function () { return !!starsCtx && !starsSuspended; }; // live: bed up & not suspended
   window.__updateStarsSound = function (inCuddly, fadeSecs) {
     if (typeof inCuddly === "boolean") starsInCuddly = inCuddly;
     // switching TO the night-sky channel fades the game song out and takes over; switching
@@ -13088,6 +13092,7 @@ document.addEventListener("click", function (e) {
   // as the fire/workout beds. It IS the party's music: setGardenParty pauses any loft song so
   // the two don't fight. Master follows the app volume button; centered (a whole-garden track).
   var partyCtx = null, partyTimer = null, partyStep = 0, partyNextTime = 0;
+  var partySuspended = false; // synchronous transport-suspend flag (ctx.state lags a press)
   var BPM = 126, SEC16 = (60 / BPM) / 4;                     // one sixteenth-note, seconds
   var BASS_ROOT = 55, STAB_ROOT = 220;                       // A1 sub bass, A3 stab
   var BAR_ROOT = [0, 0, -4, -2];                             // Am Am F G, semitones from A
@@ -13286,6 +13291,7 @@ document.addEventListener("click", function (e) {
       if (!Ctx) return;
       stopPartyMusic();
       window.__musicPaused = false; // a freshly-lit party is never born paused
+      partySuspended = false;
       partyCtx = new Ctx();
       try { var p = partyCtx.resume && partyCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       var now = partyCtx.currentTime;
@@ -13331,9 +13337,11 @@ document.addEventListener("click", function (e) {
   }
   window.__pausePartyMusic = function (paused) { // unified space-bar control: true pause-in-place via ctx suspend/resume
     if (!partyCtx) return false;
+    partySuspended = !!paused;
     try { if (paused) partyCtx.suspend(); else partyCtx.resume(); } catch (e) {}
     return true;
   };
+  window.__partyPlaying = function () { return !!partyCtx && !partySuspended; }; // live: bed up & not suspended
   window.__partyMusicWant = partyMusicWant; // setGardenParty checks this before pausing a loft song
   window.__applyPartyMusicVolume = function () { // the volume button cycle updates the live master
     if (partyCtx && partyCtx._masterGain) { try { partyCtx._masterGain.gain.setTargetAtTime(partyVol(), partyCtx.currentTime, 0.05); } catch (e) {} }
@@ -20063,38 +20071,68 @@ async def localfont(name):
     } catch (e) {}
   }
   window.__toggleSongPlayback = toggleSongPlayback; // exposed for tests/other callers
-  // One play/pause for whatever is actually sounding. When the night-sky piano bed or the
-  // party techno bed is live, space suspends/resumes THAT in place (a true pause); otherwise
-  // it toggles the loft song, exactly as before. So the beds and the songs are one "playing"
-  // thing under the spacebar.
-  // Global transport over the four sources (guitar/uke song, night-sky piano, party techno):
-  // if anything is audible, ONE press pauses everything at once (remembering the song so it
-  // can restart); the next press resumes whatever the transport paused. Idle press starts a
-  // song. (Interim — a proper AudioTransport state manager is planned to replace this.)
-  var transportSongWasPlaying = false;
+  // ── AudioTransport: one global play/pause over all four audio sources ─────────────────
+  // Sources: the two loft songs (guitar/uke <audio>), the night-sky piano bed, the party
+  // techno bed. Each descriptor reads LIVE state, so a source that starts or stops on its own
+  // never desyncs the transport. If ANY source is audible, one toggle suspends them all and
+  // records the set it held; the next toggle resumes exactly those still valid (skipping a
+  // bed whose gate is gone); an idle toggle starts a song. Beds pause in place via ctx
+  // suspend; songs pause at position.
+  function transportSources() {
+    var list = [];
+    songAudios.forEach(function (a) {
+      if (!a) return;
+      list.push({
+        id: a.id,
+        isPlaying: function () { return !a.paused && !a.ended; },
+        valid: function () { return !a.ended; }, // loaded & resumable at its position
+        pause: function () { if (!a.paused) a.pause(); },
+        resume: function () {
+          if (a.ended) return false;
+          a.volume = window.__songVolume ? window.__songVolume() : 0.5; // app-owned level, reapplied like every play trigger
+          if (window.__captureSongAudio) window.__captureSongAudio(a); // keep retrying the resume inside this gesture
+          var p = a.play(); if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (transport) for " + a.id + ":", e); });
+          return true;
+        }
+      });
+    });
+    list.push({
+      id: "stars",
+      isPlaying: function () { return !!(window.__starsPlaying && window.__starsPlaying()); },
+      valid: function () { var ws = document.getElementById("cuddly-wallscreen"); return !!(ws && ws.classList.contains("chan-stars")); },
+      pause: function () { if (window.__pauseStars) window.__pauseStars(true); },
+      resume: function () { return !!(window.__pauseStars && window.__pauseStars(false)); }
+    });
+    list.push({
+      id: "party",
+      isPlaying: function () { return !!(window.__partyPlaying && window.__partyPlaying()); },
+      valid: function () { return !!window.__gardenPartyOn; },
+      pause: function () { if (window.__pausePartyMusic) window.__pausePartyMusic(true); },
+      resume: function () { return !!(window.__pausePartyMusic && window.__pausePartyMusic(false)); }
+    });
+    return list;
+  }
+  var transportHeld = []; // ids the transport is currently holding paused/suspended
   function anyAudioPlaying() {
-    var ws = document.getElementById("cuddly-wallscreen");
-    var bedGatedOn = (ws && ws.classList.contains("chan-stars")) || !!window.__gardenPartyOn;
-    var bedPlaying = bedGatedOn && !window.__musicPaused; // beds are suspended while __musicPaused
-    var songPlaying = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying());
-    return bedPlaying || songPlaying;
+    return transportSources().some(function (s) { return s.isPlaying(); });
   }
   function toggleMusicPlayback() {
-    if (anyAudioPlaying()) {
-      transportSongWasPlaying = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying());
-      if (transportSongWasPlaying && window.__phoneMusicToggle) window.__phoneMusicToggle(); // pause the song
-      window.__musicPaused = true;
-      if (window.__pauseStars) window.__pauseStars(true);
-      if (window.__pausePartyMusic) window.__pausePartyMusic(true);
-    } else if (window.__musicPaused || transportSongWasPlaying) {
-      window.__musicPaused = false;
-      if (window.__pauseStars) window.__pauseStars(false);
-      if (window.__pausePartyMusic) window.__pausePartyMusic(false);
-      if (transportSongWasPlaying && window.__phoneMusicToggle && !(window.__phoneMusicPlaying && window.__phoneMusicPlaying())) window.__phoneMusicToggle(); // resume the song
-      transportSongWasPlaying = false;
+    var sources = transportSources();
+    var playing = sources.filter(function (s) { return s.isPlaying(); });
+    if (playing.length) {
+      // pause everything audible; union it into the held set (a source paused a press ago
+      // that's still suspended stays held, so a later resume brings it back too)
+      playing.forEach(function (s) { if (transportHeld.indexOf(s.id) < 0) transportHeld.push(s.id); s.pause(); });
+      window.__musicPaused = true; // beds read this as transport-suspended
     } else {
+      // resume every held source whose gate still holds; skip (and drop) ones that vanished
+      var resumed = false;
+      sources.forEach(function (s) {
+        if (transportHeld.indexOf(s.id) >= 0 && s.valid() && s.resume()) resumed = true;
+      });
       window.__musicPaused = false;
-      toggleSongPlayback(); // idle → start a song
+      transportHeld = [];
+      if (!resumed) toggleSongPlayback(); // nothing valid to resume → idle-start a song
     }
     if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
   }

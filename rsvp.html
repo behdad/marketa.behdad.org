@@ -39040,9 +39040,12 @@ function spawnDustMote(container) {
   function currentStage() { return document.getElementById("stage-" + (window.currentStageName || "kitchen")); }
 
   window.party = function (arg) {
-    if (!window.__setGardenParty) return "the party hook isn't ready yet.";
     var on = !(arguments.length > 0 && !arg); // party() / party(true) → on; party(false) → off
-    window.__setGardenParty(on, on); // userInitiated=true when lighting it up so it whisks to the garden
+    // run the EXACT party-start sequence the balcony switch does: UV blacklight + garden party
+    // + switch state — not just __setGardenParty (which lit the party but left the blacklight off)
+    if (window.__setPartyMode) window.__setPartyMode(on);
+    else if (window.__setGardenParty) window.__setGardenParty(on, on);
+    else return "the party hook isn't ready yet.";
     return on ? "🎉 party on — blacklight, confetti, a beat. dance." : "party over — the garden settles.";
   };
 

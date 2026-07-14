@@ -3239,8 +3239,53 @@ body:has(#loft-game-strip.strobe) #trip-acid-kaleido{animation:acid-kaleido 3s e
   60%{transform:translateY(-9px) rotate(360deg) scale(1.08)}
   100%{transform:translateY(0) rotate(360deg) scale(1)}
 }
+/* ── WALTZ MODE ─────────────────────────────────────────────────────────────
+   The garden party auto-alternates techno↔waltz ~every 15s (alternation timer in
+   setGardenParty). In waltz mode the solo signature moves + beat-flares stop and the
+   five dancers pair off: couple (md-d4 left + md-d1 right) and couple (md-d3 left +
+   md-d5 right) flank md-d2, who pirouettes solo between them. Pairing translate +
+   facing flip ride the static outer md-move/md-glide wrapper (never the group's
+   position attr — clobber-safe); the 3/4 rise-and-fall ballroom sway rides md-sway;
+   arms freeze into a raised hold. Translations keep every dancer in its own lane. */
+#trip-melt-dancers.party-dancing.waltz-mode .md-sway,
+#trip-melt-dancers.party-dancing.waltz-mode .md-arm-l,
+#trip-melt-dancers.party-dancing.waltz-mode .md-arm-r,
+#trip-melt-dancers.party-dancing.waltz-mode .md-d5 .md-glide,
+#trip-melt-dancers.party-dancing.waltz-mode .md-d5 .md-foot-l,
+#trip-melt-dancers.party-dancing.waltz-mode .md-d5 .md-foot-r,
+#trip-melt-dancers.party-dancing.waltz-mode .md-d1 .md-move,
+#trip-melt-dancers.party-dancing.waltz-mode .md-d2 .md-move,
+#trip-melt-dancers.party-dancing.waltz-mode .md-d3 .md-move,
+#trip-melt-dancers.party-dancing.waltz-mode .md-d4 .md-move{animation:none}
+/* pair up: bring partners together + turn them to face each other (static, on the outer
+   wrapper; local px account for each group's own scale sign, ±1 flips the facing). */
+#trip-melt-dancers.waltz-mode .md-d4 .md-move{transform:translateX(25.5px)}
+#trip-melt-dancers.waltz-mode .md-d1 .md-move{transform:translateX(-24.5px) scaleX(-1)}
+#trip-melt-dancers.waltz-mode .md-d3 .md-move{transform:translateX(-27.5px) scaleX(-1)}
+#trip-melt-dancers.waltz-mode .md-d5 .md-glide{transform:translateX(26.7px)}
+/* the 3/4 rise-and-fall sway (down on beat 1, up on 2-3), rocking left↔right over two
+   bars; couples staggered so the floor doesn't pulse in lockstep. */
+#trip-melt-dancers.party-dancing.waltz-mode .md-sway{animation:md-waltz 2.22s ease-in-out infinite}
+#trip-melt-dancers.party-dancing.waltz-mode .md-d3 .md-sway,
+#trip-melt-dancers.party-dancing.waltz-mode .md-d5 .md-sway{animation-delay:-1.11s}
+#trip-melt-dancers.party-dancing.waltz-mode .md-d2 .md-sway{animation-delay:-.55s}
+/* the odd dancer out (md-d2) pirouettes in place — a flat scaleX turn, zero lane sweep */
+#trip-melt-dancers.party-dancing.waltz-mode .md-d2 .md-move{animation:md-waltz-twirl 4.5s ease-in-out infinite}
+@keyframes md-waltz{
+  0%{transform:translateY(1.6px) rotate(-3deg)}
+  16.6%{transform:translateY(-1.4px) rotate(-2deg)}
+  33.3%{transform:translateY(-1.4px) rotate(0deg)}
+  50%{transform:translateY(1.6px) rotate(3deg)}
+  66.6%{transform:translateY(-1.4px) rotate(2deg)}
+  83.3%{transform:translateY(-1.4px) rotate(0deg)}
+  100%{transform:translateY(1.6px) rotate(-3deg)}
+}
+@keyframes md-waltz-twirl{0%,8%{transform:scaleX(1)} 33%{transform:scaleX(.12)} 50%{transform:scaleX(-1)} 67%{transform:scaleX(-.12)} 92%,100%{transform:scaleX(1)}}
 @media (prefers-reduced-motion: reduce){
   #trip-melt-dancers.party-dancing{animation:none; opacity:.9}
+  /* waltz mode: keep the static coupling (pairing translate + facing) but drop the sway/pirouette */
+  #trip-melt-dancers.party-dancing.waltz-mode .md-sway,
+  #trip-melt-dancers.party-dancing.waltz-mode .md-d2 .md-move{animation:none}
   #trip-melt-dancers.party-dancing .md-sway,
   #trip-melt-dancers.party-dancing .md-arm-l,
   #trip-melt-dancers.party-dancing .md-arm-r,
@@ -13602,10 +13647,11 @@ document.addEventListener("click", function (e) {
     try { if (partyCtx._pan && partyCtx._pan.pan) partyCtx._pan.pan.setTargetAtTime(cfg.pan, t, 0.4); } catch (e) {}
   };
   function partyMusicWant() {
-    // plays whenever the garden party is lit, in every room (like the night-sky piano bed) —
-    // background music, so no room/focus/visibility gate (look-ahead scheduled, so it stays
-    // clean through room changes, focus loss, and a hidden tab)
-    return !!window.__gardenPartyOn;
+    // plays whenever the garden party is lit AND in the techno segment (the party alternates
+    // techno↔waltz ~every 15s — see setGardenParty), in every room (like the night-sky piano
+    // bed) — background music, so no room/focus/visibility gate (look-ahead scheduled, so it
+    // stays clean through room changes, focus loss, and a hidden tab)
+    return !!window.__gardenPartyOn && !window.__waltzMode;
   }
   function noiseBuf(ctx, dur, shape) {
     var buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
@@ -13731,7 +13777,7 @@ document.addEventListener("click", function (e) {
     if (inBar === 0 && partyFlareOn() && Math.random() < (step === 0 ? 0.45 : 0.12)) schedFlare(ctx, t);
   }
   function partyFlareOn() {
-    return window.__gardenPartyOn && window.currentStageName === "garden" &&
+    return window.__gardenPartyOn && !window.__waltzMode && window.currentStageName === "garden" &&
       document.visibilityState !== "hidden" &&
       !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
@@ -13823,6 +13869,159 @@ document.addEventListener("click", function (e) {
     else if (!want && partyCtx) stopPartyMusic(fadeSecs);
   };
   document.addEventListener("visibilitychange", function () { window.__updatePartyMusic(); });
+})();
+(function () {
+  // ── WALTZ BED — the garden party's *other* music. An ORIGINAL waltz (my own composition,
+  // not derived from any existing/copyrighted waltz): D major, 3/4, ~162 BPM (one chord per
+  // bar), the classic OOM-pah-pah accompaniment (a round bass note on beat 1, a soft chord
+  // pluck on beats 2 & 3), under a lyrical stepwise/arpeggiated lead. 8-bar phrase over an
+  // ordinary diatonic progression (D–A–G–D–Bm–G–A7–D). Built exactly like the techno party
+  // bed above — look-ahead scheduler on the ctx clock, bails the instant the ctx is nulled,
+  // same fade-and-close teardown — and garden-gated the same way, but only during the WALTZ
+  // segment of the auto-alternation (see partyMusicWant / waltzMusicWant). Centered, master
+  // follows the app volume button. Integrated into the AudioTransport as the "waltz" source.
+  var waltzCtx = null, waltzTimer = null, waltzStep = 0, waltzNextTime = 0;
+  var waltzSuspended = false;
+  var WBPM = 162, WSEC8 = (60 / WBPM) / 2;                       // an eighth-note, seconds (beat=quarter in 3/4)
+  var W_BASS = 73.42, W_CHORD = 293.66, W_LEAD = 587.33;         // D2 bass / D4 chord / D5 lead registers
+  var W_ROOT = [0, 7, 5, 0, 9, 5, 7, 0];                         // bar roots (semi from D): D A G D Bm G A D
+  var W_CH = [[0,4,7],[0,4,7],[0,4,7],[0,4,7],[0,3,7],[0,4,7],[0,4,7,10],[0,4,7]]; // triads (Bm minor, A7 dom7)
+  // lead melody: 6 eighths/bar × 8 bars, semitone above D5 (null = rest). An original lilting
+  // A–B–A line that rises across the phrase and resolves stepwise home on the final bar.
+  var W_MEL = [
+    7,null,9,null,7,null,       // bar1 D:  A  B  A
+    11,null,9,null,7,null,      // bar2 A:  C# B  A
+    5,null,7,null,9,null,       // bar3 G:  G  A  B
+    12,null,11,9,7,null,        // bar4 D:  D  C#-B A  (a run down to the tonic)
+    9,null,12,null,14,null,     // bar5 Bm: B  D  E
+    9,null,7,null,5,null,       // bar6 G:  B  A  G
+    7,null,9,null,11,null,      // bar7 A:  A  B  C#
+    12,null,11,null,12,null     // bar8 D:  D  C# D  (leading-tone turn home)
+  ];
+  function wSemi(base, n) { return base * Math.pow(2, n / 12); }
+  function waltzVol() { return 0.9 * (window.__songVolume ? window.__songVolume() : 0.5); }
+  function waltzMusicWant() { return !!window.__gardenPartyOn && !!window.__waltzMode; }
+  function wBass(ctx, t, freq) {                                  // the "oom": a round bass note on beat 1
+    var tri = ctx.createOscillator(); tri.type = "triangle"; tri.frequency.value = freq;
+    var sub = ctx.createOscillator(); sub.type = "sine"; sub.frequency.value = freq;
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 900; lp.Q.value = 0.7;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.5, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+    tri.connect(lp); sub.connect(lp); lp.connect(g); g.connect(ctx._bus);
+    tri.start(t); tri.stop(t + 0.55); sub.start(t); sub.stop(t + 0.55);
+  }
+  function wChord(ctx, t, freqs) {                                // the "pah-pah": a soft chord pluck on beats 2 & 3
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2600; lp.Q.value = 0.6;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.15, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+    lp.connect(g); g.connect(ctx._bus);
+    freqs.forEach(function (f) {
+      var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = f;
+      o.connect(lp); o.start(t); o.stop(t + 0.38);
+    });
+  }
+  function wLead(ctx, t, freq, dur, gain) {                       // the singing melody, a touch of vibrato
+    var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
+    var lfo = ctx.createOscillator(); lfo.type = "sine"; lfo.frequency.value = 5.2;
+    var lfoG = ctx.createGain(); lfoG.gain.value = freq * 0.006;
+    lfo.connect(lfoG); lfoG.connect(o.frequency);
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 3200; lp.Q.value = 0.7;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.04);
+    g.gain.setValueAtTime(gain, t + dur * 0.55);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(lp); lp.connect(g); g.connect(ctx._bus);
+    o.start(t); o.stop(t + dur + 0.02); lfo.start(t); lfo.stop(t + dur + 0.02);
+  }
+  function wLeadHit(ctx, t, freq) {
+    wLead(ctx, t, freq, WSEC8 * 2.4, 0.12);
+    wLead(ctx, t + WSEC8 * 3, freq, WSEC8 * 1.6, 0.045);         // a soft echo tail, for air
+  }
+  function wSchedStep(ctx, step, t) {
+    var inBar = step % 6, bar = (step / 6) | 0;
+    if (inBar === 0) wBass(ctx, t, wSemi(W_BASS, W_ROOT[bar]));  // beat 1: bass
+    else if (inBar === 2 || inBar === 4)                          // beats 2 & 3: chord
+      wChord(ctx, t, W_CH[bar].map(function (iv) { return wSemi(W_CHORD, W_ROOT[bar] + iv); }));
+    var m = W_MEL[step];
+    if (m !== null && m !== undefined) wLeadHit(ctx, t, wSemi(W_LEAD, m));
+  }
+  function scheduleWaltz() {
+    waltzTimer = setTimeout(function () {
+      waltzTimer = null;
+      var ctx = waltzCtx;
+      if (!ctx) return;                                           // stopped meanwhile
+      try {
+        var horizon = ctx.currentTime + 1.2, guard = 0;
+        while (waltzNextTime < horizon && guard++ < 200) {
+          wSchedStep(ctx, waltzStep, waltzNextTime);
+          waltzNextTime += WSEC8;
+          waltzStep = (waltzStep + 1) % 48;                       // 8-bar loop
+        }
+      } catch (e) {}
+      scheduleWaltz();
+    }, 200);
+  }
+  function startWaltzMusic() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      stopWaltzMusic();
+      window.__musicPaused = false;
+      waltzSuspended = false;
+      waltzCtx = new Ctx();
+      try { var p = waltzCtx.resume && waltzCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+      var now = waltzCtx.currentTime;
+      var bus = waltzCtx.createGain(); bus.gain.value = 1.0;
+      var comp = waltzCtx.createDynamicsCompressor();
+      comp.threshold.value = -14; comp.knee.value = 24; comp.ratio.value = 3;
+      comp.attack.value = 0.004; comp.release.value = 0.25;
+      var master = waltzCtx.createGain();
+      master.gain.setValueAtTime(0.0001, now);
+      master.gain.linearRampToValueAtTime(waltzVol(), now + 0.4); // linear: safe when muted (target 0)
+      var out = pannedOut(waltzCtx, 0);                           // centered — a whole-garden waltz
+      bus.connect(comp); comp.connect(master); master.connect(out);
+      waltzCtx._bus = bus;
+      waltzCtx._masterGain = master;
+      waltzStep = 0;
+      waltzNextTime = now + 0.12;
+      var vb = document.getElementById("hunt-volume-btn"); if (vb) vb.classList.add("shown");
+      if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+      scheduleWaltz();
+    } catch (e) {}
+  }
+  function stopWaltzMusic(fadeSecs) {
+    var f = (typeof fadeSecs === "number") ? fadeSecs : 0.3;
+    if (waltzTimer) { clearTimeout(waltzTimer); waltzTimer = null; }
+    if (waltzCtx) {
+      var ctx = waltzCtx, master = waltzCtx._masterGain;
+      waltzCtx = null;                                            // null first so a racing scheduleWaltz bails
+      try { if (master) { var t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
+      setTimeout(function () { try { ctx.close(); } catch (e) {} }, f * 1000 + 100);
+    }
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+  }
+  window.__pauseWaltzMusic = function (paused) {                  // unified space-bar / transport control
+    if (!waltzCtx) return false;
+    waltzSuspended = !!paused;
+    try { if (paused) waltzCtx.suspend(); else waltzCtx.resume(); } catch (e) {}
+    return true;
+  };
+  window.__waltzPlaying = function () { return !!waltzCtx && !waltzSuspended; };
+  window.__waltzMusicWant = waltzMusicWant;
+  window.__applyWaltzMusicVolume = function () {
+    if (waltzCtx && waltzCtx._masterGain) { try { waltzCtx._masterGain.gain.setTargetAtTime(waltzVol(), waltzCtx.currentTime, 0.05); } catch (e) {} }
+  };
+  window.__updateWaltzMusic = function (fadeSecs) {
+    var want = waltzMusicWant();
+    if (want && !waltzCtx) startWaltzMusic();
+    else if (!want && waltzCtx) stopWaltzMusic(fadeSecs);
+  };
+  document.addEventListener("visibilitychange", function () { window.__updateWaltzMusic(); });
 })();
 (function () {
   // Ambient garden birdsong: sparse gentle chirps during the day, gated off at dusk
@@ -20634,6 +20833,13 @@ async def localfont(name):
       pause: function () { if (window.__pausePartyMusic) window.__pausePartyMusic(true); },
       resume: function () { return !!(window.__pausePartyMusic && window.__pausePartyMusic(false)); }
     });
+    list.push({ // garden-party waltz bed — the party's OTHER music (alternates with techno); space / play-pause / OS media keys pause+resume it
+      id: "waltz",
+      isPlaying: function () { return !!(window.__waltzPlaying && window.__waltzPlaying()); },
+      valid: function () { return !!(window.__gardenPartyOn && window.__waltzMode); },
+      pause: function () { if (window.__pauseWaltzMusic) window.__pauseWaltzMusic(true); },
+      resume: function () { return !!(window.__pauseWaltzMusic && window.__pauseWaltzMusic(false)); }
+    });
     list.push({
       id: "workout",
       isPlaying: function () { return !!(window.__workoutPlaying && window.__workoutPlaying()); },
@@ -20890,6 +21096,7 @@ async def localfont(name):
     if (window.__applyTotoroMelodyVolume) window.__applyTotoroMelodyVolume(); // the totoro woodland melody follows it too
     if (window.__applyAquaMelodyVolume) window.__applyAquaMelodyVolume(); // the aquarium melody bed follows it too
     if (window.__applyPartyMusicVolume) window.__applyPartyMusicVolume(); // the techno party bed follows it too
+    if (window.__applyWaltzMusicVolume) window.__applyWaltzMusicVolume(); // the garden-party waltz bed follows it too
     if (window.__applyWorkoutVolume) window.__applyWorkoutVolume(); // the workout bed follows it too
     updateVolIcon();
     try { localStorage.setItem("songVolume", String(VOL_LEVELS[volIdx])); } catch (e) {}
@@ -33166,6 +33373,50 @@ function spawnDustMote(container) {
       document.visibilityState !== "hidden" &&
       !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
+  // The garden party auto-alternates its two moods ~every 15s while it's lit: techno + solo
+  // dancing ↔ an original waltz + coupled ballroom dancing (see the waltz bed + the .waltz-mode
+  // dancer CSS). ONE self-rescheduling timer drives it, cleared when the party ends (below), so
+  // nothing fires off-party or piles up. It FREEZES (no flip) while the transport is paused or
+  // the tab is hidden — so a pause stays coherent (music + dancers never desync across it) and a
+  // backgrounded tab churns no audio contexts. Each flip crossfades the beds (fade the outgoing
+  // over ~1.1s while the incoming fades in) and swaps the dancers' mode class.
+  window.__waltzMode = false;
+  var WALTZ_PERIOD_MS = 15000;
+  var waltzAltTimer = null;
+  function applyPartyDanceMode() { // reflect __waltzMode onto the dancers (coupled ⇄ solo)
+    var pd = document.getElementById("trip-melt-dancers");
+    if (pd) pd.classList.toggle("waltz-mode", !!(window.__gardenPartyOn && window.__waltzMode));
+  }
+  function softSwapDip(pd) { // a brief opacity dip masks the reposition snap on each swap
+    if (!pd || !pd.animate) return;
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    try { pd.animate([{ opacity: 0.9 }, { opacity: 0.32, offset: 0.5 }, { opacity: 0.9 }], { duration: 700, easing: "ease-in-out" }); } catch (e) {}
+  }
+  function flipPartyMode() {
+    waltzAltTimer = null;
+    if (!window.__gardenPartyOn) return; // party ended — stop, don't reschedule
+    var hold = window.__musicPaused || document.visibilityState === "hidden";
+    if (!hold) {
+      window.__waltzMode = !window.__waltzMode;
+      var pd = document.getElementById("trip-melt-dancers");
+      if (window.__waltzMode && pd) { // leaving techno: clear any in-flight solo flare
+        var flaring = pd.querySelectorAll(".melt-dancer.flaring");
+        for (var i = 0; i < flaring.length; i++) flaring[i].classList.remove("flaring");
+      }
+      if (window.__updatePartyMusic) window.__updatePartyMusic(null, 1.1); // crossfade: fade the outgoing bed
+      if (window.__updateWaltzMusic) window.__updateWaltzMusic(1.1);       // ...while the incoming fades in
+      applyPartyDanceMode();
+      softSwapDip(pd);
+    }
+    waltzAltTimer = setTimeout(flipPartyMode, WALTZ_PERIOD_MS);
+  }
+  function startWaltzAlternation() { // idempotent — setGardenParty(true) is storm-called by play.js
+    if (waltzAltTimer) return;
+    waltzAltTimer = setTimeout(flipPartyMode, WALTZ_PERIOD_MS);
+  }
+  function stopWaltzAlternation() {
+    if (waltzAltTimer) { clearTimeout(waltzAltTimer); waltzAltTimer = null; }
+  }
   function spawnConfettiPiece() {
     var container = document.getElementById("garden-confettifx");
     if (!container) return;
@@ -33236,6 +33487,9 @@ function spawnDustMote(container) {
         partyDancers.setAttribute("transform", "translate(" + (STAGES.indexOf("garden") * 680) + ",0)");
         partyDancers.classList.add("party-dancing");
       }
+      if (!waltzAltTimer) window.__waltzMode = false; // a freshly-lit party opens on the techno segment
+      applyPartyDanceMode();   // solo (techno) or coupled (waltz) dancers, matching the current segment
+      startWaltzAlternation(); // begin the ~15s techno↔waltz cycle (idempotent under storm-clicks)
       // the techno party bed is the beat now (see __updatePartyMusic below); pause any loft
       // song already playing so the two musics don't fight (the bed plays whole-loft while
       // the party's lit, so it always takes over)
@@ -33244,15 +33498,19 @@ function spawnDustMote(container) {
         window.__phoneMusicToggle();
       }
     } else {
+      stopWaltzAlternation();          // party over — kill the techno↔waltz cycle
+      window.__waltzMode = false;
       clearConfetti();
       if (partyDancers) {
         partyDancers.classList.remove("party-dancing");
+        partyDancers.classList.remove("waltz-mode");
         // drop any in-flight flare so nothing is stranded once the dancers fade out
         var flaring = partyDancers.querySelectorAll(".melt-dancer.flaring");
         for (var fi = 0; fi < flaring.length; fi++) flaring[fi].classList.remove("flaring");
       }
     }
     if (window.__updatePartyMusic) window.__updatePartyMusic(); // start/stop the techno bed with the party
+    if (window.__updateWaltzMusic) window.__updateWaltzMusic(); // start/stop the waltz bed with the party/segment
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // start/stop the garden groovers
   }
   window.__setGardenParty = setGardenParty;

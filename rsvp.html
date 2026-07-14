@@ -20691,12 +20691,14 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var TERM_HELP_OVERVIEW = "commands: help · clear · laser() · party() · trip() · goto() · night()/day() · confetti() · cat() · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · trip() · goto() · night()/day() · confetti() · cat() · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var TERM_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
       laser: "laser([seconds]) — loose a red dot the cat chases; laser(false) turns it off",
       party: "party() throws the garden party; party(false) ends it",
+      reset: "reset() — restart the whole loft from the top (no confirmation — you typed it)",
+      quit: "quit (or exit) — close the console, back to the desktop",
       blacklight: "blacklight() — UV wash over the whole loft; blacklight(false) off",
       trip: "trip(\"name\") — a named trip IN QUOTES, e.g. trip(\"acid\"); or a number 1–7, e.g. trip(3); or trip() for a random one. names: shrooms · acid · froggies · dmt · molly · k · iboga",
       goto: "goto(\"room\") — a room name IN QUOTES, e.g. goto(\"garden\"); or a number 1–5, e.g. goto(3). rooms: kitchen · garden · cuddly · office · balcony",
@@ -20772,7 +20774,7 @@ document.addEventListener("click", function (e) {
     if (/^pwd$/.test(c)) { termPrint("/home/markéta+behdad/loft", "term-dim"); return; }
     if (/^whoami$/.test(c)) { termPrint("someone we love.", "term-dim"); return; }
     if (/^sudo\b/.test(c)) { termPrint("nice try — no superpowers at this wedding. everyone's equal on the guest list.", "term-dim"); return; }
-    if (/^exit$/.test(c)) { termPrint("you can't leave — the party's just starting.", "term-dim"); return; }
+    if (/^(exit|quit)(\(\))?$/.test(c)) { closeTerminal(); return; } // close the console (back to the desktop)
     if (/^date$/.test(c)) { termPrint((window.loft ? window.loft.weddings.join(" · ") : ""), "term-dim"); return; }
     if (/^echo(\s|$)/.test(c)) { termPrint(c.replace(/^echo\s?/, "")); return; }
     // bare `cat` (or `cat -flags`) prints a cat; `cat <room>` describes a room; `cat(...)` falls
@@ -39145,6 +39147,12 @@ function spawnDustMote(container) {
     else if (window.__setGardenParty) window.__setGardenParty(on, on);
     else return "the party hook isn't ready yet.";
     return on ? "🎉 party on — blacklight, confetti, a beat. dance." : "party over — the garden settles.";
+  };
+
+  window.reset = function () { // reset the whole loft, no confirmation dialog (you asked for it by typing it)
+    if (!window.__activateExtinguisher) return "the reset hook isn't ready yet.";
+    window.__activateExtinguisher(); // the fire-extinguisher wipe → a clean slate (also powers the monitor down)
+    return "🧯 reset — the loft starts over.";
   };
 
   // friendly street names → the canonical TRIP_VARIANTS ids

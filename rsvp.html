@@ -13801,7 +13801,7 @@ document.addEventListener("click", function (e) {
       scheduleParty();
     }, 200);
   }
-  function startPartyMusic() {
+  function startPartyMusic(partyFadeIn) {
     try {
       var Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return;
@@ -13819,7 +13819,7 @@ document.addEventListener("click", function (e) {
       comp.attack.value = 0.003; comp.release.value = 0.2;
       var master = partyCtx.createGain();
       master.gain.setValueAtTime(0.0001, now);
-      master.gain.linearRampToValueAtTime(partyVol(), now + 0.4); // linear: safe when muted (target 0)
+      master.gain.linearRampToValueAtTime(partyVol(), now + (partyFadeIn || 0.4)); // fade in over the crossfade length
       // room stage: master(volume/fade) -> roomGain(per-room faintness) -> panner(per-room spot)
       var cfg = partyRoomCfg();
       var roomGain = partyCtx.createGain(); roomGain.gain.value = cfg.vol;
@@ -13865,7 +13865,7 @@ document.addEventListener("click", function (e) {
   window.__updatePartyMusic = function (_inGarden, fadeSecs) {
     // gate reads the party flag + current-room globals directly, so callers pass no room bool
     var want = partyMusicWant();
-    if (want && !partyCtx) startPartyMusic();
+    if (want && !partyCtx) startPartyMusic(fadeSecs);
     else if (!want && partyCtx) stopPartyMusic(fadeSecs);
   };
   document.addEventListener("visibilitychange", function () { window.__updatePartyMusic(); });
@@ -13966,7 +13966,7 @@ document.addEventListener("click", function (e) {
       scheduleWaltz();
     }, 200);
   }
-  function startWaltzMusic() {
+  function startWaltzMusic(fadeIn) {
     try {
       var Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return;
@@ -13982,7 +13982,7 @@ document.addEventListener("click", function (e) {
       comp.attack.value = 0.004; comp.release.value = 0.25;
       var master = waltzCtx.createGain();
       master.gain.setValueAtTime(0.0001, now);
-      master.gain.linearRampToValueAtTime(waltzVol(), now + 0.4); // linear: safe when muted (target 0)
+      master.gain.linearRampToValueAtTime(waltzVol(), now + (fadeIn || 0.4)); // fade in over the crossfade length
       var out = pannedOut(waltzCtx, 0);                           // centered — a whole-garden waltz
       bus.connect(comp); comp.connect(master); master.connect(out);
       waltzCtx._bus = bus;
@@ -14018,7 +14018,7 @@ document.addEventListener("click", function (e) {
   };
   window.__updateWaltzMusic = function (fadeSecs) {
     var want = waltzMusicWant();
-    if (want && !waltzCtx) startWaltzMusic();
+    if (want && !waltzCtx) startWaltzMusic(fadeSecs);
     else if (!want && waltzCtx) stopWaltzMusic(fadeSecs);
   };
   document.addEventListener("visibilitychange", function () { window.__updateWaltzMusic(); });
@@ -33403,8 +33403,8 @@ function spawnDustMote(container) {
         var flaring = pd.querySelectorAll(".melt-dancer.flaring");
         for (var i = 0; i < flaring.length; i++) flaring[i].classList.remove("flaring");
       }
-      if (window.__updatePartyMusic) window.__updatePartyMusic(null, 1.1); // crossfade: fade the outgoing bed
-      if (window.__updateWaltzMusic) window.__updateWaltzMusic(1.1);       // ...while the incoming fades in
+      if (window.__updatePartyMusic) window.__updatePartyMusic(null, 1.8); // crossfade: fade the outgoing bed out
+      if (window.__updateWaltzMusic) window.__updateWaltzMusic(1.8);       // ...while the incoming fades in over the same 1.8s
       applyPartyDanceMode();
       softSwapDip(pd);
     }

@@ -20822,6 +20822,12 @@ document.addEventListener("click", function (e) {
     function fmtOut(v) {
       if (v === undefined) return "undefined";
       if (v === null) return "null";
+      if (typeof v === "function") { // Chrome-style compact `ƒ name(params)`, not the whole source
+        var fs = String(v), fn = v.name || "";
+        if (/\{\s*\[native code\]\s*\}/.test(fs)) return "ƒ " + fn + "() { [native code] }";
+        var pm = fs.match(/^(?:async\s+)?(?:function\b[^(]*)?\(([^)]*)\)/);
+        return "ƒ " + fn + "(" + (pm ? pm[1].trim() : "") + ")";
+      }
       if (typeof v === "object") {
         // typed arrays / buffers (e.g. googlefonts() → Uint8Array of TTF bytes) print a compact
         // summary + a peek at the head, never the multi-thousand-element JSON dump

@@ -12751,6 +12751,157 @@ document.addEventListener("click", function (e) {
   };
   document.addEventListener("visibilitychange", function () { window.__updateAquaSound(); });
 
+  // ── Aquarium melody bed (chan-aqua): an ORIGINAL dreamy "underwater" tune layered over
+  // the bubbling ambient above — a soft shimmery music-box/celesta voice drifting in C
+  // Lydian. Whole-loft + background-safe, wired exactly like the night-sky Satie bed: the
+  // same chord-event format, a soft bell-struck synth, and a look-ahead scheduler that
+  // queues onto the audio clock so a throttled background tab can't stutter it. Separate
+  // ctx from aquaCtx — the bubbles keep their own room+focus gate; this melody follows the
+  // channel alone (like the piano) and hands its pause/resume to the transport.
+  var aquaMelCtx = null, aquaMelTimer = null, aquaMelIdx = 0, aquaMelNext = 0, aquaMelSuspended = false;
+  var AQUA_MEL_RATE = 1.0; // time scale for the whole tune (ring durations shorten with it)
+  // My own composition — not transcribed from any film/underwater score. C Lydian (C D E F#
+  // G A B), a gentle rocking music-box arpeggio that climbs, then a descending answer that
+  // resolves on a bloomed C major chord, ~40s, then a breath, loops. Slow drift ≈ 0.34s/note.
+  // c = notes at this onset, each [semitonesFromA4, ring seconds, 1 if it's the melody voice];
+  // d = seconds to the next onset.
+  var AQUA_MELODY = [
+    // rising phrase — Cmaj9
+    {c:[[-9,3.2,0],[3,1.4,0]],d:0.34},{c:[[7,1.4,0]],d:0.34},{c:[[10,1.4,0]],d:0.34},
+    {c:[[14,1.8,1]],d:0.34},{c:[[17,1.6,1]],d:0.34},{c:[[14,1.4,0]],d:0.34},{c:[[10,1.4,0]],d:0.7},
+    // Amin9
+    {c:[[-12,3.2,0],[0,1.4,0]],d:0.34},{c:[[3,1.4,0]],d:0.34},{c:[[7,1.4,0]],d:0.34},
+    {c:[[12,1.8,1]],d:0.34},{c:[[15,1.6,1]],d:0.34},{c:[[12,1.4,0]],d:0.34},{c:[[7,1.4,0]],d:0.7},
+    // Fmaj7#11 (the lydian F# shimmer)
+    {c:[[-16,3.2,0],[-4,1.4,0]],d:0.34},{c:[[0,1.4,0]],d:0.34},{c:[[3,1.4,0]],d:0.34},
+    {c:[[9,1.8,1]],d:0.34},{c:[[12,1.6,1]],d:0.34},{c:[[7,1.4,0]],d:0.34},{c:[[3,1.4,0]],d:0.7},
+    // G6/9 — climbs to the top
+    {c:[[-14,3.2,0],[-2,1.4,0]],d:0.34},{c:[[2,1.4,0]],d:0.34},{c:[[5,1.4,0]],d:0.34},
+    {c:[[10,1.8,1]],d:0.34},{c:[[14,1.6,1]],d:0.34},{c:[[17,1.8,1]],d:0.34},{c:[[19,2.4,1]],d:1.4},
+    // descending answer — Cmaj9 falling from the top
+    {c:[[-9,3.2,0],[19,1.8,1]],d:0.34},{c:[[15,1.6,1]],d:0.34},{c:[[12,1.4,0]],d:0.34},
+    {c:[[10,1.6,1]],d:0.34},{c:[[7,1.4,0]],d:0.34},{c:[[5,1.4,0]],d:0.34},{c:[[3,2.0,1]],d:0.7},
+    // Fmaj7 shimmer, drifting down
+    {c:[[-16,3.2,0],[9,1.8,1]],d:0.34},{c:[[7,1.4,0]],d:0.34},{c:[[3,1.4,0]],d:0.34},
+    {c:[[0,1.6,1]],d:0.34},{c:[[-4,1.4,0]],d:0.7},
+    // Amin, easing back
+    {c:[[-12,3.2,0],[12,1.8,1]],d:0.34},{c:[[10,1.4,0]],d:0.34},{c:[[7,1.6,1]],d:0.34},
+    {c:[[5,1.4,0]],d:0.34},{c:[[3,1.4,0]],d:0.7},
+    // gentle G→C cadence, then a bloomed C major held out, breath before the loop
+    {c:[[-14,3.2,0],[5,1.6,1]],d:0.34},{c:[[3,1.4,0]],d:0.34},{c:[[2,1.6,1]],d:0.34},{c:[[-2,1.4,0]],d:0.34},
+    {c:[[-9,3.6,0],[3,2.6,1],[10,2.4,0],[15,2.2,1]],d:2.8}
+  ];
+  function aquaMelWant() {
+    // whole-loft, background-safe: plays whenever the aquarium channel is on, regardless of
+    // room/focus/visibility (the look-ahead scheduler queues on the audio clock). Same shape
+    // as starsWant() — the bubbling ambient above keeps its own tighter gate.
+    return screen.classList.contains("chan-aqua");
+  }
+  // Shimmery bell/celesta voice: a rounded sine fundamental + a quiet octave-up sine sparkle,
+  // plus a faintly detuned twin for a watery chorus shimmer, through a soft bell envelope
+  // (fast strike, pure exponential ring-out — no sustain plateau, so it chimes like a
+  // music-box rather than holds like an organ). isMel lifts the melody voice above the wash.
+  function aquaBellNote(t, semis, ringDur, isMel) {
+    var ctx = aquaMelCtx, bus = ctx._bus;
+    ringDur *= AQUA_MEL_RATE;
+    var freq = 440 * Math.pow(2, semis / 12);
+    var peak = isMel ? 0.5 : 0.3;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + 0.006);          // quick bell strike
+    g.gain.exponentialRampToValueAtTime(0.0001, t + ringDur + 0.3); // slow exponential ring-out
+    g.connect(bus);
+    var end = t + ringDur + 0.35;
+    // fundamental + a lightly detuned twin (chorus shimmer)
+    [0, 7].forEach(function (cents) {
+      var o = ctx.createOscillator();
+      o.type = "sine";
+      o.frequency.value = freq;
+      if (cents) o.detune.value = cents;
+      o.connect(g); o.start(t); o.stop(end);
+    });
+    // octave-up celesta sparkle, quiet, through its own softer gain
+    var sg = ctx.createGain(); sg.gain.value = 0.3; sg.connect(g);
+    var oh = ctx.createOscillator();
+    oh.type = "sine"; oh.frequency.value = freq * 2;
+    oh.connect(sg); oh.start(t); oh.stop(end);
+  }
+  // the app volume button drives the master gain; ×0.32 seats the melody gently under the
+  // bubbles at the default (0.5) level, and lets full (1.0) come up without overpowering them
+  function aquaMelVol() { return 0.32 * (window.__songVolume ? window.__songVolume() : 0.5); }
+  window.__applyAquaMelodyVolume = function () { // volume-button cycle → update the live master
+    if (aquaMelCtx && aquaMelCtx._masterGain) { try { aquaMelCtx._masterGain.gain.setTargetAtTime(aquaMelVol(), aquaMelCtx.currentTime, 0.05); } catch (e) {} }
+  };
+  // Look-ahead scheduler: each tick queues every onset within the next ~1.5s onto the audio
+  // clock, so a background tab (setTimeout throttled to ~1s) never stutters or piles up —
+  // it bails the instant the ctx is null (channel left / reset). Mirrors scheduleSatie.
+  function scheduleAquaMel() {
+    aquaMelTimer = setTimeout(function () {
+      aquaMelTimer = null;
+      if (!aquaMelCtx) return; // stopped meanwhile
+      var horizon = aquaMelCtx.currentTime + 1.5, guard = 0;
+      while (aquaMelNext < horizon && guard++ < 300) {
+        var ev = AQUA_MELODY[aquaMelIdx];
+        if (ev.c) { for (var i = 0; i < ev.c.length; i++) { var nn = ev.c[i]; try { aquaBellNote(aquaMelNext, nn[0], nn[1], nn[2]); } catch (e) {} } }
+        aquaMelNext += ev.d * AQUA_MEL_RATE;
+        aquaMelIdx = (aquaMelIdx + 1) % AQUA_MELODY.length;
+      }
+      scheduleAquaMel();
+    }, 350);
+  }
+  function startAquaMel() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      stopAquaMel();
+      window.__musicPaused = false; // a freshly-opened bed is never born paused
+      aquaMelSuspended = false;
+      aquaMelCtx = new Ctx(); // aquarium melody bed (persistent) — see check.js new-Ctx cap
+      try { var p = aquaMelCtx.resume && aquaMelCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+      // bell voices → a gentle lowpass (rounds off the shimmer) → one master gain (volume + fade)
+      var lp = aquaMelCtx.createBiquadFilter();
+      lp.type = "lowpass"; lp.frequency.value = 3200; // soft, watery brightness
+      var master = aquaMelCtx.createGain();
+      master.gain.value = aquaMelVol();
+      lp.connect(master); master.connect(pannedOut(aquaMelCtx, 0)); // centered: whole-loft wash
+      aquaMelCtx._bus = lp;
+      aquaMelCtx._masterGain = master;
+      aquaMelCtx._nodes = []; // notes self-terminate — nothing continuous to stop
+      aquaMelIdx = 0;
+      aquaMelNext = aquaMelCtx.currentTime + 0.2;
+      var vb = document.getElementById("hunt-volume-btn"); if (vb) vb.classList.add("shown"); // it's the music now — reveal the volume button
+      if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+      scheduleAquaMel();
+    } catch (e) {}
+  }
+  function stopAquaMel(fadeSecs) {
+    var f = (typeof fadeSecs === "number") ? fadeSecs : 0.3;
+    if (aquaMelTimer) { clearTimeout(aquaMelTimer); aquaMelTimer = null; }
+    if (aquaMelCtx) {
+      var ctx = aquaMelCtx, master = aquaMelCtx._masterGain, nodes = aquaMelCtx._nodes || [];
+      aquaMelCtx = null; // null first so a racing scheduleAquaMel callback bails
+      try { if (master) { var t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
+      setTimeout(function () {
+        nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
+        try { ctx.close(); } catch (e) {}
+      }, f * 1000 + 100);
+    }
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+  }
+  window.__pauseAquaMelody = function (paused) { // transport control: true pause-in-place via ctx suspend/resume
+    if (!aquaMelCtx) return false;
+    aquaMelSuspended = !!paused;
+    try { if (paused) aquaMelCtx.suspend(); else aquaMelCtx.resume(); } catch (e) {}
+    return true;
+  };
+  window.__aquaMelodyPlaying = function () { return !!aquaMelCtx && !aquaMelSuspended; }; // live: bed up & not suspended
+  window.__updateAquaMelody = function (inCuddly, fadeSecs) {
+    var want = aquaMelWant();
+    if (want && !aquaMelCtx) startAquaMel();
+    else if (!want && aquaMelCtx) stopAquaMel(fadeSecs);
+  };
+  document.addEventListener("visibilitychange", function () { window.__updateAquaMelody(); });
+
   // ── Totoro channel: a soft, steady rainfall — a band-limited noise "shhh" bed plus
   // sparse gentle drips. Same gate/teardown shape as the aquarium bed.
   var totoroCtx = null, dripTimer = null, totoroInCuddly = false;
@@ -14032,6 +14183,7 @@ document.addEventListener("click", function (e) {
     flashBadge();
     if (window.__updateFireSound) window.__updateFireSound(); // crackle audio follows the fire channel
     if (window.__updateAquaSound) window.__updateAquaSound(); // underwater bed follows the aquarium channel
+    if (window.__updateAquaMelody) window.__updateAquaMelody(); // underwater melody follows the aquarium channel
     if (window.__updateWorkoutSound) window.__updateWorkoutSound(); // aerobics bed follows the workout channel
     if (window.__updateTotoroSound) window.__updateTotoroSound(); // rainfall follows the totoro channel
     if (window.__updateStarsSound) window.__updateStarsSound(); // Gnossienne follows the night-sky channel
@@ -20436,6 +20588,13 @@ async def localfont(name):
       pause: function () { if (window.__pauseStars) window.__pauseStars(true); },
       resume: function () { return !!(window.__pauseStars && window.__pauseStars(false)); }
     });
+    list.push({ // aquarium melody bed — spacebar / play-pause / OS media keys pause+resume it
+      id: "aqua",
+      isPlaying: function () { return !!(window.__aquaMelodyPlaying && window.__aquaMelodyPlaying()); },
+      valid: function () { var ws = document.getElementById("cuddly-wallscreen"); return !!(ws && ws.classList.contains("chan-aqua")); },
+      pause: function () { if (window.__pauseAquaMelody) window.__pauseAquaMelody(true); },
+      resume: function () { return !!(window.__pauseAquaMelody && window.__pauseAquaMelody(false)); }
+    });
     list.push({
       id: "totoro",
       isPlaying: function () { return !!(window.__totoroMelodyPlaying && window.__totoroMelodyPlaying()); },
@@ -20491,7 +20650,7 @@ async def localfont(name):
     var btn = document.getElementById("hunt-playpause-btn");
     if (!btn) return;
     var ws = document.getElementById("cuddly-wallscreen");
-    var bedGatedOn = (ws && (ws.classList.contains("chan-stars") || ws.classList.contains("chan-workout") || ws.classList.contains("chan-totoro"))) || !!window.__gardenPartyOn;
+    var bedGatedOn = (ws && (ws.classList.contains("chan-stars") || ws.classList.contains("chan-workout") || ws.classList.contains("chan-totoro") || ws.classList.contains("chan-aqua"))) || !!window.__gardenPartyOn;
     var songActive = !!(window.__phoneMusicId && window.__phoneMusicId()); // playing or paused-with-progress
     if (bedGatedOn || songActive) btn.classList.add("shown"); // reveal once there's music to control; never un-shows (matches the volume button)
     btn.classList.toggle("paused", !anyAudioPlaying()); // ▶ when everything's silent, ⏸ when anything plays
@@ -20704,6 +20863,7 @@ async def localfont(name):
     applySongVolume();
     if (window.__applyStarsVolume) window.__applyStarsVolume(); // the night-sky Satie bed follows the same level
     if (window.__applyTotoroMelodyVolume) window.__applyTotoroMelodyVolume(); // the totoro woodland melody follows it too
+    if (window.__applyAquaMelodyVolume) window.__applyAquaMelodyVolume(); // the aquarium melody bed follows it too
     if (window.__applyPartyMusicVolume) window.__applyPartyMusicVolume(); // the techno party bed follows it too
     if (window.__applyWorkoutVolume) window.__applyWorkoutVolume(); // the workout bed follows it too
     updateVolIcon();
@@ -29265,6 +29425,7 @@ function pannedSweep(ctx, fromPan, toPan, dur) {
     lastFocused = focused;
     if (window.__updateFireSound) window.__updateFireSound();
     if (window.__updateAquaSound) window.__updateAquaSound();
+    if (window.__updateAquaMelody) window.__updateAquaMelody();
     if (window.__updateWorkoutSound) window.__updateWorkoutSound();
     if (window.__updateTotoroSound) window.__updateTotoroSound();
     if (window.__updateStarsSound) window.__updateStarsSound();
@@ -32227,6 +32388,7 @@ function spawnDustMote(container) {
     if (window.__updateKettleHum) window.__updateKettleHum(name === "kitchen", ROOM_FADE); // kettle hum only in the kitchen
     if (window.__updateFireSound) window.__updateFireSound(name === "cuddly", ROOM_FADE); // fire crackle only in the cuddly nook
     if (window.__updateAquaSound) window.__updateAquaSound(name === "cuddly", ROOM_FADE); // aquarium bed only in the cuddly nook
+    if (window.__updateAquaMelody) window.__updateAquaMelody(name === "cuddly", ROOM_FADE); // aquarium melody is whole-loft; the gate ignores the room but keep the lifecycle identical to stars
     if (window.__updateWorkoutSound) window.__updateWorkoutSound(name === "cuddly", ROOM_FADE); // workout bed only in the cuddly nook
     if (window.__updateTotoroSound) window.__updateTotoroSound(name === "cuddly", ROOM_FADE); // rainfall only in the cuddly nook
     if (window.__updateStarsSound) window.__updateStarsSound(name === "cuddly", ROOM_FADE); // Gnossienne only in the cuddly nook

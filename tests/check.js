@@ -561,8 +561,8 @@ function checkAudioFadeCloseRace(file, script) {
     // beds/pipeline (and getSfxCtx). A one-shot spinning up its own context regresses
     // the stream-churn fix — new effects must use getSfxCtx().
     var ctxSites = (script.match(/new Ctx\(\)/g) || []).length;
-    if (ctxSites > 17) {
-      issues.push("found " + ctxSites + " `new Ctx()` sites (expected <= 17: the beds (incl. the aquarium + workout + totoro rain + totoro woodland-melody + night-sky Satie projector beds + the garden-party techno bed), the song pipeline, and getSfxCtx) — one-shot effects must use getSfxCtx()");
+    if (ctxSites > 18) {
+      issues.push("found " + ctxSites + " `new Ctx()` sites (expected <= 18: the beds (aquarium ambient + aquarium melody + workout + totoro rain + totoro woodland-melody + night-sky Satie projector + garden-party techno), the song pipeline, and getSfxCtx) — one-shot effects must use getSfxCtx()");
     }
   }
   if (issues.length === 0) {

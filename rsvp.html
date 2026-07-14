@@ -186,10 +186,14 @@ footer{margin-top:2.6rem}
 #hunt-feedback-btn svg{stroke:var(--muted)}
 #hunt-feedback-btn:hover, #hunt-feedback-btn:focus-visible{background:rgba(248,245,236,.9)}
 #hunt-feedback-btn:hover svg, #hunt-feedback-btn:focus-visible svg{stroke:var(--ink)}
-/* the ↻ restart is a quiet utility too — no burgundy fill */
-#hunt-restart-btn{background:transparent; border-color:rgba(69,58,49,.28); box-shadow:none}
+/* the ↻ restart is a quiet utility, pinned to the scene's TOP-LEFT corner (the "esc"
+   corner) so it clears the right-side control rail / › next-arrow on mobile. Same
+   translucent-cream treatment as the feedback ✉ in the opposite corner, but — unlike
+   feedback — it STAYS visible in fullscreen (resetting mid-show is a legit action).
+   z-index:4 keeps it below the room-wipe (#hunt-wipe, z-index 5). */
+#hunt-restart-btn{position:absolute; left:.45rem; top:.45rem; z-index:4; background:rgba(248,245,236,.6); border-color:rgba(69,58,49,.28); box-shadow:0 1px 4px rgba(69,58,49,.15)}
 #hunt-restart-btn svg{stroke:var(--muted)}
-#hunt-restart-btn:hover, #hunt-restart-btn:focus-visible{background:rgba(69,58,49,.08)}
+#hunt-restart-btn:hover, #hunt-restart-btn:focus-visible{background:rgba(248,245,236,.9)}
 #hunt-restart-btn:hover svg, #hunt-restart-btn:focus-visible svg{stroke:var(--ink)}
 /* the volume control is a quiet utility too — no burgundy fill */
 #hunt-volume-btn{background:transparent; border-color:rgba(69,58,49,.28); box-shadow:none}
@@ -665,19 +669,14 @@ footer{margin-top:2.6rem}
    UV neon palette (they glow rather than muddy under brightness .5 + hue-rotate). */
 #garden-partyfx{opacity:0; transition:opacity .5s ease}
 #stage-garden.garden-party #garden-partyfx{opacity:1}
-/* roving colored light pools — screen-blended so they wash light over the room */
+/* roving colored light pools — screen-blended so they wash light over the room. Position
+   and opacity are driven by a JS STEPPER (see startDiscoStepper), NOT a CSS/WAAPI sweep:
+   each pool JUMPS to a fresh spot ~once a second (discrete, no transition) instead of
+   tweening every frame. The old continuous sweep repainted these big blended ellipses on
+   every frame and visibly FLICKERED on mobile; the once-a-second hop reads as a beat-synced
+   lighting rig with none of the flicker. The ellipses position via cx/cy (no transform
+   attribute), so the inline style.transform the stepper writes never clobbers one. */
 .disco-pool{mix-blend-mode:screen; opacity:0; transform-box:fill-box; transform-origin:center}
-#stage-garden.garden-party .disco-pool{animation:disco-pool-sweep 7s ease-in-out infinite}
-#stage-garden.garden-party .disco-pool.dp2{animation-duration:9s; animation-delay:-2.4s}
-#stage-garden.garden-party .disco-pool.dp3{animation-duration:8s; animation-delay:-4.8s}
-#stage-garden.garden-party .disco-pool.dp4{animation-duration:10s; animation-delay:-6.6s}
-@keyframes disco-pool-sweep{
-  0%{opacity:0; transform:translate(-46px,-14px) scale(0.8)}
-  25%{opacity:.5}
-  50%{opacity:.34; transform:translate(64px,30px) scale(1.16)}
-  75%{opacity:.5}
-  100%{opacity:0; transform:translate(-46px,-14px) scale(0.8)}
-}
 /* the glitter ball spins slowly; its facets twinkle out of phase for a sparkle */
 #garden-disco-ball-spin{transform-box:fill-box; transform-origin:center}
 #stage-garden.garden-party #garden-disco-ball-spin{animation:disco-ball-spin 9s linear infinite}
@@ -721,7 +720,7 @@ footer{margin-top:2.6rem}
 /* reduced motion: no sweep, no spin, no strobe — hold a gentle static neon wash. The tap
    pop/flash is disabled too; the shimmer chime alone still answers the click. */
 @media (prefers-reduced-motion: reduce){
-  #stage-garden.garden-party .disco-pool{animation:none; opacity:.2}
+  #stage-garden.garden-party .disco-pool{opacity:.2}
   #stage-garden.garden-party #garden-disco-ball-spin{animation:none}
   #stage-garden.garden-party .db-facet{animation:none; opacity:.6}
   #garden-disco-ball-pop.popping{animation:none}
@@ -11437,6 +11436,12 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </g>
     </svg>
     <div id="hunt-wipe" aria-hidden="true"></div>
+    <button type="button" id="hunt-restart-btn" class="hunt-fullscreen-btn" aria-label="Restart the game" data-aria-i="restart_aria" data-title-i="restart_aria">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#f8f5ec" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
+        <polyline points="21 3 21 9 15 9"/>
+      </svg>
+    </button>
     <a id="hunt-feedback-btn" class="hunt-fullscreen-btn" href="https://github.com/behdad/marketa.behdad.org/issues/new" target="_blank" rel="noopener noreferrer" aria-label="Send feedback" data-aria-i="feedback_aria" data-title-i="feedback_aria">
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#f8f5ec" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M20.5 11.5a7.5 7.5 0 0 1-10.8 6.75L4 20l1.35-4.95A7.5 7.5 0 1 1 20.5 11.5Z"/>
@@ -11446,12 +11451,6 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
   <div class="hunt-right" id="hunt-right">
     <div class="hunt-side" id="hunt-side">
       <button type="button" id="hunt-fullscreen-btn" class="hunt-fullscreen-btn" aria-label="Enter fullscreen">⛶</button>
-      <button type="button" id="hunt-restart-btn" class="hunt-fullscreen-btn" aria-label="Restart the game" data-aria-i="restart_aria" data-title-i="restart_aria">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#f8f5ec" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
-          <polyline points="21 3 21 9 15 9"/>
-        </svg>
-      </button>
       <button type="button" id="hunt-volume-btn" class="hunt-fullscreen-btn song-volume-btn" aria-label="Volume">
         <svg viewBox="0 0 26 24" width="14" height="13" fill="none" stroke="#f8f5ec" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <polygon points="9,5 4,9 0,9 0,15 4,15 9,19" fill="#f8f5ec" stroke="none"/>
@@ -35492,6 +35491,55 @@ function spawnDustMote(container) {
     var c = document.getElementById("garden-confettifx");
     if (c) while (c.firstChild) c.removeChild(c.firstChild); // hard-clear — never trust paused onfinish for teardown
   }
+  // ── PARTY MODE disco pools (garden) — STEPPED, not tweened. A continuous CSS/WAAPI sweep
+  // of these big screen-blended ellipses repaints every frame and visibly FLICKERED on
+  // mobile. Instead ONE self-rescheduling stepper JUMPS each pool to a fresh spot ~once a
+  // second (discrete, no transition), which reads as a beat-synced lighting rig without the
+  // per-frame repaint. Same background-safety idiom as the confetti/rain seed loops: one
+  // timer, started on party-on and cleared on party-off (idempotent under play.js's
+  // storm-clicks), that only repositions while gardenPartyActive() — party lit, in the
+  // garden, tab visible, motion allowed — so a hidden tab or reduced-motion holds still
+  // (reduced motion keeps the CSS static neon wash). The ellipses carry no transform
+  // ATTRIBUTE (they position via cx/cy), so writing style.transform never clobbers one.
+  var discoStepTimer = null, discoPoolEls = null;
+  function discoPools() {
+    if (!discoPoolEls) discoPoolEls = document.querySelectorAll("#garden-disco-pools .disco-pool");
+    return discoPoolEls;
+  }
+  function positionDiscoPools() { // one discrete hop per pool — the ranges echo the old sweep's extent
+    var pools = discoPools();
+    for (var i = 0; i < pools.length; i++) {
+      var el = pools[i];
+      var tx = -46 + Math.random() * 110;   // ~[-46, 64]
+      var ty = -14 + Math.random() * 44;    // ~[-14, 30]
+      var s = 0.82 + Math.random() * 0.34;  // ~[0.82, 1.16]
+      var op = 0.34 + Math.random() * 0.18; // ~[0.34, 0.52]
+      el.style.transition = "none"; // discrete jump — never tween (that tween is the flicker)
+      el.style.transform = "translate(" + tx.toFixed(1) + "px," + ty.toFixed(1) + "px) scale(" + s.toFixed(3) + ")";
+      el.style.opacity = op.toFixed(2);
+    }
+  }
+  function clearDiscoPools() { // drop inline styles so the CSS base (opacity:0 / reduced-motion wash) rules again
+    var pools = discoPools();
+    for (var i = 0; i < pools.length; i++) {
+      pools[i].style.transition = ""; pools[i].style.transform = ""; pools[i].style.opacity = "";
+    }
+  }
+  function stepDiscoPools() {
+    discoStepTimer = null;
+    if (!window.__gardenPartyOn) return; // party ended — stop, don't reschedule
+    if (gardenPartyActive()) positionDiscoPools(); // freeze (no repaint) while hidden / out of room / reduced-motion
+    discoStepTimer = setTimeout(stepDiscoPools, 900 + Math.random() * 220); // ~1s, lightly jittered so it's not metronomic
+  }
+  function startDiscoStepper() {
+    if (discoStepTimer) return; // one stepper only — idempotent under storm-clicks
+    if (gardenPartyActive()) positionDiscoPools(); // light them at once (skipped under reduced-motion → CSS wash holds)
+    discoStepTimer = setTimeout(stepDiscoPools, 900 + Math.random() * 220);
+  }
+  function stopDiscoStepper() {
+    if (discoStepTimer) { clearTimeout(discoStepTimer); discoStepTimer = null; }
+    clearDiscoPools();
+  }
   // The garden party itself: whisk to the garden (user click only), light the disco
   // overlay, start the confetti, and drive the garden groovers. Idempotent — safe for
   // play.js's rapid switch-storming (repeated true/false). Torn down on switch-off, the
@@ -35513,6 +35561,7 @@ function spawnDustMote(container) {
       if (userInitiated && window.goToStage) window.goToStage("garden"); // whisk to the garden
       if (userInitiated && window.__setDayNight) window.__setDayNight(true); // the party lights up the night (scripted cinematic drives its own sky)
       if (gardenPartyActive()) topUpConfetti(); // kick it off now; the seed loop keeps it topped
+      startDiscoStepper(); // begin the once-a-second disco-pool hops (idempotent; self-gates on gardenPartyActive)
       if (partyDancers) { // the colorful dancers rise in the garden and hold for the party
         partyDancers.setAttribute("transform", "translate(" + (STAGES.indexOf("garden") * 680) + ",0)");
         partyDancers.classList.add("party-dancing");
@@ -35537,6 +35586,7 @@ function spawnDustMote(container) {
     } else {
       stopWaltzAlternation();          // party over — kill the rotation + reset __partyDance to techno
       clearConfetti();
+      stopDiscoStepper();              // party over — kill the disco-pool stepper + drop the pools' inline styles
       if (partyDancers) {
         partyDancers.classList.remove("party-dancing");
         applyPartyDanceMode();         // party off → clears data-dance + the formation/waltz-mode classes

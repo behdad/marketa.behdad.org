@@ -12921,6 +12921,189 @@ document.addEventListener("click", function (e) {
   });
 })();
 (function () {
+  // Original techno/house bed for the balcony-switch garden blacklight party — pure Web
+  // Audio synthesis, no samples. Four-on-the-floor kick, an offbeat rolling saw+sub bass in
+  // A minor (Am Am F G, 126 BPM), closed/open highpassed-noise hats, a clap backbeat, a
+  // detuned-saw filter-swept chord stab hook, and a once-a-loop noise riser. A look-ahead
+  // scheduler queues events on the ctx clock ~1.2s ahead (background-tab setTimeout throttles
+  // to ~1s) and bails the instant the ctx is nulled. Same focus-gated fade-and-close teardown
+  // as the fire/workout beds. It IS the party's music: setGardenParty pauses any loft song so
+  // the two don't fight. Master follows the app volume button; centered (a whole-garden track).
+  var partyCtx = null, partyTimer = null, partyStep = 0, partyNextTime = 0;
+  var BPM = 126, SEC16 = (60 / BPM) / 4;                     // one sixteenth-note, seconds
+  var BASS_ROOT = 55, STAB_ROOT = 220;                       // A1 sub bass, A3 stab
+  var BAR_ROOT = [0, 0, -4, -2];                             // Am Am F G, semitones from A
+  var CHORD = [[0, 3, 7], [0, 3, 7], [0, 4, 7], [0, 4, 7]];  // minor minor major major triads
+  // bass hits (semitone offset from the bar root, or null = rest) across a 16-step bar
+  var BAR_BASS = [null, null, 0, 12, null, null, 0, null, null, null, 0, 12, null, null, 0, 12];
+  function semi(base, n) { return base * Math.pow(2, n / 12); }
+  function partyVol() { return 0.5 * (window.__songVolume ? window.__songVolume() : 0.5); }
+  function partyMusicWant() {
+    // hasFocus too (not just visibility): a continuous bed holds a live OS audio stream open;
+    // an unattended-but-"visible" window on X11 (no occlusion detection) underruns into crackle
+    return !!window.__gardenPartyOn && window.currentStageName === "garden" &&
+      document.visibilityState !== "hidden" && document.hasFocus();
+  }
+  function noiseBuf(ctx, dur, shape) {
+    var buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (shape ? Math.pow(1 - i / d.length, shape) : 1);
+    return buf;
+  }
+  function kick(ctx, t) {
+    var osc = ctx.createOscillator(); osc.type = "sine";
+    osc.frequency.setValueAtTime(130, t);
+    osc.frequency.exponentialRampToValueAtTime(45, t + 0.11);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.95, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.19);
+    osc.connect(g); g.connect(ctx._bus); osc.start(t); osc.stop(t + 0.21);
+  }
+  function bass(ctx, t, freq, dur) {
+    var saw = ctx.createOscillator(); saw.type = "sawtooth"; saw.frequency.value = freq;
+    var sub = ctx.createOscillator(); sub.type = "sine"; sub.frequency.value = freq;
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 7;
+    lp.frequency.setValueAtTime(700, t);
+    lp.frequency.exponentialRampToValueAtTime(180, t + dur);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.42, t + 0.01);
+    g.gain.setValueAtTime(0.42, t + dur * 0.6);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    var sg = ctx.createGain(); sg.gain.value = 0.5; // sub weight, unfiltered
+    saw.connect(lp); lp.connect(g); sub.connect(sg); sg.connect(g); g.connect(ctx._bus);
+    saw.start(t); saw.stop(t + dur + 0.02); sub.start(t); sub.stop(t + dur + 0.02);
+  }
+  function hat(ctx, t, open) {
+    var dur = open ? 0.09 : 0.035;
+    var src = ctx.createBufferSource(); src.buffer = noiseBuf(ctx, dur, 3);
+    var hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 7500;
+    var g = ctx.createGain(); g.gain.value = open ? 0.09 : 0.13;
+    src.connect(hp); hp.connect(g); g.connect(ctx._bus); src.start(t);
+  }
+  function clap(ctx, t) {
+    for (var k = 0; k < 3; k++) { // three fast bandpassed bursts + a short tail read as a clap
+      var s = ctx.createBufferSource(); s.buffer = noiseBuf(ctx, 0.02, 2);
+      var bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1500; bp.Q.value = 1.2;
+      var g = ctx.createGain(); g.gain.value = 0.22;
+      s.connect(bp); bp.connect(g); g.connect(ctx._bus); s.start(t + k * 0.011);
+    }
+    var tail = ctx.createBufferSource(); tail.buffer = noiseBuf(ctx, 0.12, 3);
+    var tbp = ctx.createBiquadFilter(); tbp.type = "bandpass"; tbp.frequency.value = 1400; tbp.Q.value = 1;
+    var tg = ctx.createGain(); tg.gain.value = 0.13;
+    tail.connect(tbp); tbp.connect(tg); tg.connect(ctx._bus); tail.start(t + 0.02);
+  }
+  function stab(ctx, t, bar) {
+    var dur = 0.19;
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 5;
+    lp.frequency.setValueAtTime(500, t);
+    lp.frequency.linearRampToValueAtTime(3200, t + 0.03);   // fast filter open for the pluck
+    lp.frequency.exponentialRampToValueAtTime(700, t + dur);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.16, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    lp.connect(g); g.connect(ctx._bus);
+    CHORD[bar].forEach(function (iv) {
+      var f = semi(STAB_ROOT, BAR_ROOT[bar] + iv);
+      [-6, 6].forEach(function (cents) { // two detuned saws per note for width
+        var o = ctx.createOscillator(); o.type = "sawtooth";
+        o.frequency.value = f; o.detune.value = cents;
+        o.connect(lp); o.start(t); o.stop(t + dur + 0.02);
+      });
+    });
+  }
+  function riser(ctx, t, dur) {
+    var src = ctx.createBufferSource(); src.buffer = noiseBuf(ctx, dur, 0);
+    var hp = ctx.createBiquadFilter(); hp.type = "highpass";
+    hp.frequency.setValueAtTime(300, t);
+    hp.frequency.exponentialRampToValueAtTime(6000, t + dur);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.1, t + dur * 0.9);
+    g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    src.connect(hp); hp.connect(g); g.connect(ctx._bus); src.start(t);
+  }
+  function schedStep(ctx, step, t) {
+    var inBar = step % 16, bar = (step / 16) | 0;
+    if (step % 4 === 0) kick(ctx, t);                                  // four-on-the-floor
+    if (inBar === 4 || inBar === 12) clap(ctx, t);                     // backbeat on 2 & 4
+    if (step % 2 === 1) hat(ctx, t, step % 8 === 7);                   // 16th hats, open on the "and of 2/4"
+    var bo = BAR_BASS[inBar];
+    if (bo !== null) bass(ctx, t, semi(BASS_ROOT, BAR_ROOT[bar] + bo), SEC16 * 0.9);
+    if (inBar === 6 || inBar === 14) stab(ctx, t, bar);                // chord stab hook
+    if (step === 48) riser(ctx, t, SEC16 * 16);                        // once-a-loop lift into the downbeat
+  }
+  function scheduleParty() {
+    partyTimer = setTimeout(function () {
+      partyTimer = null;
+      var ctx = partyCtx;
+      if (!ctx) return; // stopped meanwhile (switch off / leave garden / hide tab)
+      try {
+        var horizon = ctx.currentTime + 1.2, guard = 0;
+        while (partyNextTime < horizon && guard++ < 200) {
+          schedStep(ctx, partyStep, partyNextTime);
+          partyNextTime += SEC16;
+          partyStep = (partyStep + 1) % 64;   // 4-bar loop
+        }
+      } catch (e) {}
+      scheduleParty();
+    }, 200);
+  }
+  function startPartyMusic() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      stopPartyMusic();
+      partyCtx = new Ctx();
+      try { var p = partyCtx.resume && partyCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+      var now = partyCtx.currentTime;
+      // mix bus -> compressor (peak headroom for the summed kick/bass/stab) -> master (fade +
+      // the single volume handle) -> centered out (fills the whole garden)
+      var bus = partyCtx.createGain(); bus.gain.value = 1.0;
+      var comp = partyCtx.createDynamicsCompressor();
+      comp.threshold.value = -12; comp.knee.value = 24; comp.ratio.value = 4;
+      comp.attack.value = 0.003; comp.release.value = 0.2;
+      var master = partyCtx.createGain();
+      master.gain.setValueAtTime(0.0001, now);
+      master.gain.linearRampToValueAtTime(partyVol(), now + 0.4); // linear: safe when muted (target 0)
+      bus.connect(comp); comp.connect(master); master.connect(pannedOut(partyCtx, 0));
+      partyCtx._bus = bus;
+      partyCtx._masterGain = master;
+      partyCtx._nodes = []; // only self-terminating transients; nothing continuous to stop
+      partyStep = 0;
+      partyNextTime = now + 0.12;
+      var vb = document.getElementById("hunt-volume-btn"); if (vb) vb.classList.add("shown"); // it's the music now — reveal the volume button
+      scheduleParty();
+    } catch (e) {}
+  }
+  function stopPartyMusic(fadeSecs) {
+    var f = (typeof fadeSecs === "number") ? fadeSecs : 0.3;
+    if (partyTimer) { clearTimeout(partyTimer); partyTimer = null; }
+    if (partyCtx) {
+      var ctx = partyCtx, master = partyCtx._masterGain, nodes = partyCtx._nodes || [];
+      partyCtx = null; // null first so a racing scheduleParty callback bails
+      try { if (master) { var t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
+      setTimeout(function () {
+        nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
+        try { ctx.close(); } catch (e) {}
+      }, f * 1000 + 100);
+    }
+  }
+  window.__partyMusicWant = partyMusicWant; // setGardenParty checks this before pausing a loft song
+  window.__applyPartyMusicVolume = function () { // the volume button cycle updates the live master
+    if (partyCtx && partyCtx._masterGain) { try { partyCtx._masterGain.gain.setTargetAtTime(partyVol(), partyCtx.currentTime, 0.05); } catch (e) {} }
+  };
+  window.__updatePartyMusic = function (_inGarden, fadeSecs) {
+    // gate reads the party flag + current-room globals directly, so callers pass no room bool
+    var want = partyMusicWant();
+    if (want && !partyCtx) startPartyMusic();
+    else if (!want && partyCtx) stopPartyMusic(fadeSecs);
+  };
+  document.addEventListener("visibilitychange", function () { window.__updatePartyMusic(); });
+})();
+(function () {
   // Ambient garden birdsong: sparse gentle chirps during the day, gated off at dusk
   // (mirrors #garden-birds itself fading out then) and outside the garden room —
   // same self-rescheduling setTimeout spawner as the cuddly fireplace's crackle pops
@@ -19829,6 +20012,7 @@ async def localfont(name):
     volIdx = (volIdx + 1) % VOL_LEVELS.length;
     applySongVolume();
     if (window.__applyStarsVolume) window.__applyStarsVolume(); // the night-sky Satie bed follows the same level
+    if (window.__applyPartyMusicVolume) window.__applyPartyMusicVolume(); // the techno party bed follows it too
     updateVolIcon();
     try { localStorage.setItem("songVolume", String(VOL_LEVELS[volIdx])); } catch (e) {}
   }
@@ -28372,6 +28556,7 @@ function pannedSweep(ctx, fromPan, toPan, dur) {
     if (window.__updateACHum) window.__updateACHum();
     if (window.__updateCallAmbient) window.__updateCallAmbient();
     if (window.__updateEqCtxIdle) window.__updateEqCtxIdle();
+    if (window.__updatePartyMusic) window.__updatePartyMusic();
   }
   window.addEventListener("focus", updateFocusGatedAudio);
   window.addEventListener("blur", updateFocusGatedAudio);
@@ -31201,6 +31386,7 @@ function spawnDustMote(container) {
     if (window.__updateStarsSound) window.__updateStarsSound(name === "cuddly", ROOM_FADE); // Gnossienne only in the cuddly nook
     if (window.__updateWind) window.__updateWind(ROOM_FADE); // wind bed (balcony, + through the cuddly door) fades out over the room change too
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(name === "garden"); // birdsong only in the garden, and only by day
+    if (window.__updatePartyMusic) window.__updatePartyMusic(name === "garden", ROOM_FADE); // techno party bed only in the garden, and only while the party's on
     if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(name === "balcony"); // string lights pulse with the beat only on the balcony
     if (window.__updateMozzies) window.__updateMozzies(); // dusk mosquitoes swarm only on the balcony (reads the now-current room)
     if (window.__updateSongRoomPan) window.__updateSongRoomPan(); // room-fixed rooms settle immediately
@@ -31965,7 +32151,8 @@ function spawnDustMote(container) {
   // overlay, start the confetti, and drive the garden groovers. Idempotent — safe for
   // play.js's rapid switch-storming (repeated true/false). Torn down on switch-off, the
   // extinguisher reset, and room-leave (goToStage clears the confetti when you leave).
-  var partyStartedMusic = false; // did the party kick off the song? (so switch-off only stops what it started)
+  // the techno party bed (__updatePartyMusic) is the party's music; on switch-on it pauses any
+  // loft song so the two don't fight (not auto-resumed on switch-off — the visitor can restart it)
   function setGardenParty(on, userInitiated) {
     on = !!on;
     window.__gardenPartyOn = on;
@@ -31979,10 +32166,13 @@ function spawnDustMote(container) {
         partyDancers.setAttribute("transform", "translate(" + (STAGES.indexOf("garden") * 680) + ",0)");
         partyDancers.classList.add("party-dancing");
       }
-      // a party needs music: start a song right now (on the switch gesture) if none is
-      // playing, so the groovers/dancers have a beat instead of dancing to silence
-      if (window.__phoneMusicPlaying && !window.__phoneMusicPlaying() && window.__phoneMusicToggle) {
-        partyStartedMusic = !!window.__phoneMusicToggle();
+      // the techno party bed is the beat now (see __updatePartyMusic below); pause any loft
+      // song already playing so the two musics don't fight — but only when the bed will
+      // actually take over (a party thrown outside the garden, e.g. the cinematic, doesn't
+      // start the bed, so leave the song rather than open a silent gap)
+      if (window.__partyMusicWant && window.__partyMusicWant() &&
+          window.__phoneMusicPlaying && window.__phoneMusicPlaying() && window.__phoneMusicToggle) {
+        window.__phoneMusicToggle();
       }
     } else {
       clearConfetti();
@@ -31992,13 +32182,8 @@ function spawnDustMote(container) {
         var flaring = partyDancers.querySelectorAll(".melt-dancer.flaring");
         for (var fi = 0; fi < flaring.length; fi++) flaring[fi].classList.remove("flaring");
       }
-      // only silence the music if the party is what started it (leave a song the visitor
-      // had going before)
-      if (partyStartedMusic && window.__phoneMusicPlaying && window.__phoneMusicPlaying() && window.__phoneMusicToggle) {
-        window.__phoneMusicToggle();
-      }
-      partyStartedMusic = false;
     }
+    if (window.__updatePartyMusic) window.__updatePartyMusic(); // start/stop the techno bed with the party
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // start/stop the garden groovers
   }
   window.__setGardenParty = setGardenParty;

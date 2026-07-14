@@ -390,7 +390,7 @@ function checkTransformClobber(file, style, html) {
 //    constants-only lower-bound check: compare only pure-numeric ramp ends
 //    against pure-numeric close delays (anything symbolic is skipped, so no
 //    false positives). ~50 one-shot SFX closers get this for free.
-var FADE_STOP_FNS = ["stopFire", "stopKettleHum", "stopRadioStatic", "stopPcFan", "stopACHum"];
+var FADE_STOP_FNS = ["stopFire", "stopKettleHum", "stopRadioStatic", "stopPcFan", "stopACHum", "stopPartyMusic"];
 var FADE_CLOSE_ALLOW = [
   // "functionName" entries for vetted false positives of the constants-only tier.
 ];
@@ -561,8 +561,8 @@ function checkAudioFadeCloseRace(file, script) {
     // beds/pipeline (and getSfxCtx). A one-shot spinning up its own context regresses
     // the stream-churn fix — new effects must use getSfxCtx().
     var ctxSites = (script.match(/new Ctx\(\)/g) || []).length;
-    if (ctxSites > 15) {
-      issues.push("found " + ctxSites + " `new Ctx()` sites (expected <= 15: the beds (incl. the aquarium + workout + totoro + night-sky Satie projector beds), the song pipeline, and getSfxCtx) — one-shot effects must use getSfxCtx()");
+    if (ctxSites > 16) {
+      issues.push("found " + ctxSites + " `new Ctx()` sites (expected <= 16: the beds (incl. the aquarium + workout + totoro + night-sky Satie projector beds + the garden-party techno bed), the song pipeline, and getSfxCtx) — one-shot effects must use getSfxCtx()");
     }
   }
   if (issues.length === 0) {

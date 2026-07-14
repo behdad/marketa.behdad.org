@@ -12388,6 +12388,197 @@ document.addEventListener("click", function (e) {
   };
   document.addEventListener("visibilitychange", function () { window.__updateFireSound(); });
 
+  // Ambient aquarium sound (chan-aqua): a soft underwater hush — lowpassed looping noise
+  // at a very low level — plus sparse gentle rising "bloop" bubbles. Same room+visibility+
+  // focus gate and fade-and-close teardown as the fire bed above.
+  var aquaCtx = null, bloopTimer = null, aquaInCuddly = false;
+  function aquaWant() {
+    return aquaInCuddly && screen.classList.contains("chan-aqua") &&
+      document.visibilityState !== "hidden" && document.hasFocus();
+  }
+  function popBloop() {
+    if (!aquaCtx) return;
+    try {
+      var ctx = aquaCtx, t = ctx.currentTime;
+      // a single short bubble: a quick rising sine with a soft envelope
+      var osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(300, t);
+      osc.frequency.exponentialRampToValueAtTime(700, t + 0.15);
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.008 + Math.random() * 0.006, t + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+      osc.connect(g); g.connect(pannedOut(ctx, "cuddly-wallscreen"));
+      osc.start(t); osc.stop(t + 0.2); // self-terminating — no refs held
+    } catch (e) {}
+  }
+  function scheduleBloop() {
+    bloopTimer = setTimeout(function () {
+      bloopTimer = null;
+      if (!aquaCtx) return; // stopped meanwhile (leave room / hide tab / channel change)
+      popBloop();
+      scheduleBloop(); // self-rescheduling spawner, random 1-4s gaps
+    }, 1000 + Math.random() * 3000);
+  }
+  function startAqua() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      stopAqua();
+      aquaCtx = new Ctx();
+      try { var p = aquaCtx.resume && aquaCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+      var now = aquaCtx.currentTime;
+      // water hush bed: heavily lowpassed noise, a gentle calm rush under the room
+      var bufferSize = aquaCtx.sampleRate * 2;
+      var buffer = aquaCtx.createBuffer(1, bufferSize, aquaCtx.sampleRate);
+      var data = buffer.getChannelData(0);
+      for (var i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      var noise = aquaCtx.createBufferSource();
+      noise.buffer = buffer;
+      noise.loop = true;
+      var lp = aquaCtx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 320; // soft muffled water rush
+      var hushGain = aquaCtx.createGain();
+      hushGain.gain.setValueAtTime(0.0001, now);
+      hushGain.gain.exponentialRampToValueAtTime(0.012, now + 0.5); // low ambient level, calming
+      noise.connect(lp); lp.connect(hushGain); hushGain.connect(pannedOut(aquaCtx, "cuddly-wallscreen"));
+      noise.start(0);
+      aquaCtx._nodes = [noise];
+      aquaCtx._hushGain = hushGain;
+      scheduleBloop();
+    } catch (e) {}
+  }
+  function stopAqua(fadeSecs) {
+    var f = (typeof fadeSecs === "number") ? fadeSecs : 0.3;
+    if (bloopTimer) { clearTimeout(bloopTimer); bloopTimer = null; }
+    if (aquaCtx) {
+      var ctx = aquaCtx, hush = aquaCtx._hushGain, nodes = aquaCtx._nodes || [];
+      aquaCtx = null; // null first so a racing scheduleBloop callback bails
+      try { if (hush) { var t = ctx.currentTime; hush.gain.cancelScheduledValues(t); hush.gain.setValueAtTime(hush.gain.value, t); hush.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
+      setTimeout(function () {
+        nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
+        try { ctx.close(); } catch (e) {}
+      }, f * 1000 + 100);
+    }
+  }
+  window.__updateAquaSound = function (inCuddly, fadeSecs) {
+    if (typeof inCuddly === "boolean") aquaInCuddly = inCuddly;
+    var want = aquaWant();
+    if (want && !aquaCtx) startAqua();
+    else if (!want && aquaCtx) stopAqua(fadeSecs);
+  };
+  document.addEventListener("visibilitychange", function () { window.__updateAquaSound(); });
+
+  // Ambient workout sound (chan-workout): a light, muffled aerobics rhythm heard faintly
+  // "through the wall" — a soft four-on-the-floor kick + off-beat tick + an occasional
+  // quiet bouncy note, all routed through one heavy lowpass so it reads muffled, not sharp.
+  // Same gate + fade-and-close teardown as the beds above; the rhythm is a self-rescheduling
+  // beat scheduler that bails when the ctx is null (no firing in a backgrounded tab).
+  var workoutCtx = null, beatTimer = null, workoutInCuddly = false;
+  var WORKOUT_BEAT = 60 / 124; // ~124 BPM aerobics feel
+  var WORKOUT_NOTES = [147, 165, 196, 220]; // low bouncy motif tones (kept under the lowpass)
+  function workoutWant() {
+    return workoutInCuddly && screen.classList.contains("chan-workout") &&
+      document.visibilityState !== "hidden" && document.hasFocus();
+  }
+  function workoutKick(t) {
+    var ctx = workoutCtx, bus = ctx._bus;
+    var osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(120, t);
+    osc.frequency.exponentialRampToValueAtTime(50, t + 0.12);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.9, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    osc.connect(g); g.connect(bus);
+    osc.start(t); osc.stop(t + 0.18);
+  }
+  function workoutTick(t) {
+    var ctx = workoutCtx, bus = ctx._bus;
+    // a quiet off-beat hat: a short noise blip (muffled by the master lowpass)
+    var dur = 0.03;
+    var buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
+    var src = ctx.createBufferSource();
+    src.buffer = buf;
+    var g = ctx.createGain();
+    g.gain.value = 0.25;
+    src.connect(g); g.connect(bus);
+    src.start(t);
+  }
+  function workoutNote(t, freq) {
+    var ctx = workoutCtx, bus = ctx._bus;
+    var osc = ctx.createOscillator();
+    osc.type = "triangle";
+    osc.frequency.value = freq;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+    osc.connect(g); g.connect(bus);
+    osc.start(t); osc.stop(t + 0.24);
+  }
+  function scheduleBeat() {
+    beatTimer = setTimeout(function () {
+      beatTimer = null;
+      if (!workoutCtx) return; // stopped meanwhile (leave room / hide tab / channel change)
+      try {
+        var t0 = workoutCtx.currentTime + 0.05;
+        workoutKick(t0);                     // four-on-the-floor
+        workoutTick(t0 + WORKOUT_BEAT / 2);   // off-beat hat
+        if (Math.random() < 0.2) workoutNote(t0 + WORKOUT_BEAT / 2, WORKOUT_NOTES[Math.floor(Math.random() * WORKOUT_NOTES.length)]); // occasional bouncy note
+      } catch (e) {}
+      scheduleBeat();
+    }, WORKOUT_BEAT * 1000);
+  }
+  function startWorkout() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      stopWorkout();
+      workoutCtx = new Ctx();
+      try { var p = workoutCtx.resume && workoutCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+      var now = workoutCtx.currentTime;
+      // master bus: one heavy lowpass -> a single low master gain, so the whole rhythm
+      // reads as muffled music through a wall and the fade has a single handle
+      var lp = workoutCtx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 600; // muffled, not sharp
+      var master = workoutCtx.createGain();
+      master.gain.setValueAtTime(0.0001, now);
+      master.gain.exponentialRampToValueAtTime(0.012, now + 0.5); // low ambient level
+      lp.connect(master); master.connect(pannedOut(workoutCtx, "cuddly-wallscreen"));
+      workoutCtx._bus = lp;
+      workoutCtx._masterGain = master;
+      workoutCtx._nodes = []; // only self-terminating transients; nothing continuous to stop
+      scheduleBeat();
+    } catch (e) {}
+  }
+  function stopWorkout(fadeSecs) {
+    var f = (typeof fadeSecs === "number") ? fadeSecs : 0.3;
+    if (beatTimer) { clearTimeout(beatTimer); beatTimer = null; }
+    if (workoutCtx) {
+      var ctx = workoutCtx, master = workoutCtx._masterGain, nodes = workoutCtx._nodes || [];
+      workoutCtx = null; // null first so a racing scheduleBeat callback bails
+      try { if (master) { var t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
+      setTimeout(function () {
+        nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
+        try { ctx.close(); } catch (e) {}
+      }, f * 1000 + 100);
+    }
+  }
+  window.__updateWorkoutSound = function (inCuddly, fadeSecs) {
+    if (typeof inCuddly === "boolean") workoutInCuddly = inCuddly;
+    var want = workoutWant();
+    if (want && !workoutCtx) startWorkout();
+    else if (!want && workoutCtx) stopWorkout(fadeSecs);
+  };
+  document.addEventListener("visibilitychange", function () { window.__updateWorkoutSound(); });
+
   function advanceChannel() {
     // the screen is a projector: a tap cycles its channel (🔥 fire → 🏋 workout → 🐟 aquarium →
     // ✨ night sky → ⏻ off → back). The projector IIFE owns the loop/canvas; it swaps the chan-*
@@ -12774,6 +12965,8 @@ document.addEventListener("click", function (e) {
     applyChannelClass();
     flashBadge();
     if (window.__updateFireSound) window.__updateFireSound(); // crackle audio follows the fire channel
+    if (window.__updateAquaSound) window.__updateAquaSound(); // underwater bed follows the aquarium channel
+    if (window.__updateWorkoutSound) window.__updateWorkoutSound(); // aerobics bed follows the workout channel
     if (reduceMotion) renderStill(); else start();
   }
 
@@ -27727,6 +27920,8 @@ function pannedSweep(ctx, fromPan, toPan, dur) {
     if (focused === lastFocused) return;
     lastFocused = focused;
     if (window.__updateFireSound) window.__updateFireSound();
+    if (window.__updateAquaSound) window.__updateAquaSound();
+    if (window.__updateWorkoutSound) window.__updateWorkoutSound();
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong();
     if (window.__updateKettleHum) window.__updateKettleHum();
     if (window.__updateRadioSound) window.__updateRadioSound();
@@ -30557,6 +30752,8 @@ function spawnDustMote(container) {
     if (window.__updateRadioSound) window.__updateRadioSound(name === "kitchen", ROOM_FADE); // radio audible only in the kitchen
     if (window.__updateKettleHum) window.__updateKettleHum(name === "kitchen", ROOM_FADE); // kettle hum only in the kitchen
     if (window.__updateFireSound) window.__updateFireSound(name === "cuddly", ROOM_FADE); // fire crackle only in the cuddly nook
+    if (window.__updateAquaSound) window.__updateAquaSound(name === "cuddly", ROOM_FADE); // aquarium bed only in the cuddly nook
+    if (window.__updateWorkoutSound) window.__updateWorkoutSound(name === "cuddly", ROOM_FADE); // workout bed only in the cuddly nook
     if (window.__updateWind) window.__updateWind(ROOM_FADE); // wind bed (balcony, + through the cuddly door) fades out over the room change too
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(name === "garden"); // birdsong only in the garden, and only by day
     if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(name === "balcony"); // string lights pulse with the beat only on the balcony

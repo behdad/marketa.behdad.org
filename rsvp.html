@@ -20662,6 +20662,19 @@ document.addEventListener("click", function (e) {
     scheduleSaver();
   }
   window.__closeMonitorTerminal = closeTerminal; // other monitor apps close the REPL before taking the screen
+  // a game reset returns this console to its fresh page-load state: empty scrollback,
+  // no command history, cleared input, and the welcome + harfbuzzjs banners re-armed to
+  // print again on the next open. harfbuzzjs (the runtime the banner describes) stays
+  // loaded — only the visible session resets.
+  window.__resetMonitorTermSession = function () {
+    if (termOut) termOut.innerHTML = "";
+    termHist = []; termHistIdx = 0;
+    termLastCmd = "";
+    termWelcomed = false;
+    hbBannerShown = false;
+    if (termIn) { termIn.value = ""; try { termIn.blur(); } catch (e) {} }
+    updateConsoleTile();
+  };
   function termRun(cmd) {
     termPrint("❯ " + cmd);
     var c = cmd.trim();
@@ -22693,6 +22706,20 @@ async def localfont(name):
     scheduleSaver();
   }
   window.__closeMonitorPython = closePython; // other monitor apps close the REPL before taking the screen
+  // display-only reset: scrollback + history + input + the welcome flag, so a reopened
+  // REPL greets fresh and isn't stuck busy. The Pyodide runtime (multi-MB wasm + the
+  // fonttools/uharfbuzz wheels) and its namespace are deliberately LEFT loaded — reloading
+  // on every game reset is far too heavy — so pyLoadState stays "ready" and the cold-boot
+  // py_ready/fonttools/uharfbuzz/demo banners simply don't re-print (only the welcome line does).
+  window.__resetMonitorPySession = function () {
+    if (pyOut) pyOut.innerHTML = "";
+    pyHist = []; pyHistIdx = 0;
+    pyLastCmd = "";
+    pyBusy = false;
+    pyWelcomed = false;
+    if (pyIn) { pyIn.value = ""; try { pyIn.blur(); } catch (e) {} }
+    updatePythonTile();
+  };
   function pyResultText(r) {
     // mirror the real REPL: repr() the value (via the cached builtin — it converts
     // JS-converted primitives back to Python for the call, and reads PyProxies live)
@@ -22912,6 +22939,17 @@ async def localfont(name):
     scheduleSaver();
   }
   window.__closeMonitorLinux = closeLinux; // other monitor apps stop the VM before taking the screen
+  // display-only reset: scrollback + history + input + the welcome flag. The v86 VM keeps
+  // running with RAM intact (rebooting it — let alone reloading the wasm — is far too heavy
+  // for a game reset), so its live serial tail (lxLine/lxPs) and lxPrompted stay coherent
+  // with the shell; only the welcome line re-prints on the next open, and the hb-shape demo
+  // does NOT re-fire.
+  window.__resetMonitorLinuxSession = function () {
+    if (lxOut) lxOut.innerHTML = "";
+    lxHist = []; lxHistIdx = 0;
+    lxWelcomed = false;
+    if (lxIn) { lxIn.value = ""; try { lxIn.blur(); } catch (e) {} }
+  };
   // hidden tab: an emulated CPU would happily spin at full tilt behind a background
   // tab — stop it, and resume only when the tab returns with the app still open
   document.addEventListener("visibilitychange", function () {
@@ -24450,7 +24488,13 @@ async def localfont(name):
   };
   window.resetOfficeMonitor = function () {
     closePhotobooth(); // a reset must never leave the camera running
-    clearBoot();
+    clearBoot(); // powers the screen dark and closes every app (terminal/REPL/VM console included)
+    // ...but clearBoot only CLOSES the consoles; their scrollback + welcome state live in
+    // their own IIFEs, so clear each session too — a reopened console then greets fresh
+    // (the Pyodide/v86 runtimes stay loaded; only the visible session resets)
+    if (window.__resetMonitorTermSession) window.__resetMonitorTermSession();
+    if (window.__resetMonitorPySession) window.__resetMonitorPySession();
+    if (window.__resetMonitorLinuxSession) window.__resetMonitorLinuxSession();
     pendingBootSite = null; // reset never boots to a sign's page
     monitor.classList.add("here");
     typewriter.classList.add("away");

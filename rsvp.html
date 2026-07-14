@@ -12672,14 +12672,17 @@ document.addEventListener("click", function (e) {
   // Same gate + fade-and-close teardown as the beds above; a self-rescheduling note
   // scheduler steps the melody and bails when the ctx is null (no pile-up in a bg tab).
   var starsCtx = null, starsTimer = null, starsInCuddly = false, starsIdx = 0;
-  // opening period: motive (C-Eb-D-C) then a two-note sigh, answered a step higher.
+  // opening period, exact inter-onset timing from the Mutopia MIDI (each d = seconds to the
+  // next onset). The 0.069s steps are the ornament grace notes; the phrase then rests ~4.9s.
   var STARS_MELODY = [
-    { n: "C5", d: 0.3 }, { n: "Eb5", d: 0.3 }, { n: "D5", d: 0.6 }, { n: "C5", d: 0.6 },
-    { n: "C5", d: 0.3 }, { n: "B4", d: 0.75 }, { rest: true, d: 0.45 },
-    { n: "C5", d: 0.3 }, { n: "B4", d: 0.75 }, { rest: true, d: 0.9 },
-    { n: "C5", d: 0.3 }, { n: "Eb5", d: 0.3 }, { n: "D5", d: 0.6 }, { n: "C5", d: 0.6 },
-    { n: "E5", d: 0.3 }, { n: "F5", d: 0.75 }, { rest: true, d: 0.45 },
-    { n: "E5", d: 0.3 }, { n: "F5", d: 0.75 }, { rest: true, d: 1.7 }
+    { n: "C5", d: 0.3 }, { n: "D#5", d: 0.3 }, { n: "D5", d: 0.6 }, { n: "C5", d: 0.531 },
+    { n: "C5", d: 0.069 }, { n: "B4", d: 1.131 }, { n: "C5", d: 0.069 }, { n: "B4", d: 1.8 },
+    { n: "C5", d: 0.3 }, { n: "D#5", d: 0.3 }, { n: "D5", d: 0.6 }, { n: "C5", d: 0.531 },
+    { n: "E5", d: 0.069 }, { n: "F5", d: 1.131 }, { n: "E5", d: 0.069 }, { n: "F5", d: 1.8 },
+    { n: "C5", d: 0.3 }, { n: "D#5", d: 0.3 }, { n: "D5", d: 0.6 }, { n: "C5", d: 0.531 },
+    { n: "C5", d: 0.069 }, { n: "B4", d: 1.131 }, { n: "G#4", d: 0.069 }, { n: "G4", d: 1.2 },
+    { n: "G4", d: 0.6 }, { n: "G4", d: 1.731 }, { n: "G#4", d: 0.069 }, { n: "G4", d: 0.531 },
+    { rest: true, d: 4.869 }
   ];
   function noteHz(name) { // "C5"/"Eb5"/"F5" -> Hz, A4=440, equal temperament
     var m = /^([A-G])([b#]?)(\d)$/.exec(name);
@@ -12708,7 +12711,7 @@ document.addEventListener("click", function (e) {
       starsTimer = null;
       if (!starsCtx) return; // stopped meanwhile (leave room / hide tab / channel change)
       var step = STARS_MELODY[starsIdx];
-      if (!step.rest) { try { satieNote(starsCtx.currentTime + 0.03, noteHz(step.n), step.d + 0.7); } catch (e) {} }
+      if (!step.rest) { try { satieNote(starsCtx.currentTime + 0.03, noteHz(step.n), step.d < 0.15 ? 0.2 : step.d + 0.7); } catch (e) {} }
       starsIdx = (starsIdx + 1) % STARS_MELODY.length;
       scheduleSatie(); // self-rescheduling melody stepper at the slow Lent pace
     }, STARS_MELODY[starsIdx].d * 1000);

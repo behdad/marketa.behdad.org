@@ -12218,10 +12218,10 @@ var T = {
     kbd_arrows: "previous / next room",
     kbd_console: "open the console",
     kbd_digits: "jump to a room",
-    kbd_devices: "laptop / computer / phone",
+    kbd_devices: "monitor / laptop / cellphone",
     kbd_d: "day ↔ night (or ↑ / ↓)",
     kbd_r: "reset the loft",
-    kbd_cat: "let the cat out",
+    kbd_kitten: "toggle the kitten",
     kbd_s: "season change",
     kbd_n: "next track (dance / piano piece / song)",
     kbd_t: "next trip",
@@ -12604,10 +12604,10 @@ var T = {
     kbd_arrows: "předchozí / další místnost",
     kbd_console: "otevřít konzoli",
     kbd_digits: "skok do místnosti",
-    kbd_devices: "notebook / počítač / telefon",
+    kbd_devices: "monitor / notebook / telefon",
     kbd_d: "den ↔ noc (nebo ↑ / ↓)",
     kbd_r: "resetovat loft",
-    kbd_cat: "pustit kočku ven",
+    kbd_kitten: "přepnout kotě",
     kbd_s: "změna sezóny",
     kbd_n: "další skladba (tanec / klavírní skladba / píseň)",
     kbd_t: "další trip",
@@ -13107,12 +13107,12 @@ window.addEventListener("hashchange", function () {
       ["<kbd>←</kbd> / <kbd>→</kbd>", "kbd_arrows"],
       ["<kbd>`</kbd>", "kbd_console"],
       ["<kbd>1</kbd>–<kbd>5</kbd>", "kbd_digits"],
-      ["<kbd>8</kbd><kbd>9</kbd><kbd>0</kbd>", "kbd_devices"],
+      ["<kbd>m</kbd><kbd>l</kbd><kbd>c</kbd>", "kbd_devices"],
       ["<kbd>Esc</kbd><kbd>Backspace</kbd>", "kbd_esc"],
       ["<kbd>t</kbd>", "kbd_t"],
       ["<kbd>Shift</kbd>+<kbd>1…7</kbd>", "kbd_trips"],
       ["<kbd>d</kbd>", "kbd_d"],
-      ["<kbd>c</kbd>", "kbd_cat"],
+      ["<kbd>k</kbd>", "kbd_kitten"],
       ["<kbd>p</kbd>", "kbd_party"],
       ["<kbd>s</kbd>", "kbd_s"],
       ["<kbd>r</kbd>", "kbd_r"],
@@ -35780,8 +35780,8 @@ function spawnDustMote(container) {
   });
   // Keyboard room nav: →/Tab forward, ← back. At a locked frontier a second forward within
   // 600ms unlocks it (mirrors the arrow/dot double-click-to-unlock). ` whisks to the office
-  // terminal console. d/↑/↓ flip day↔night, 1-5 jump to a room, 8/9/0 the devices (laptop /
-  // computer / phone), r resets, c the cat, n next track, t a trip. Backspace
+  // terminal console. d/↑/↓ flip day↔night, 1-5 jump to a room, m/l/c summon the monitor/laptop/
+  // cellphone, k toggles the kitten, r resets, n next track, t a trip. Backspace
   // mirrors Escape ("go back") — see the alias below. Ignored while typing / with a modifier.
   // (Tab is repurposed here — the game strip has no tab targets — but form fields still get it
   // via the typing guard below.)
@@ -35837,25 +35837,27 @@ function spawnDustMote(container) {
       else resetHunt();
     } else if (e.key === "c" || e.key === "C") {
       e.preventDefault();
-      // let the cat out and drop it straight into the room you're viewing, in place
-      // (skip both the out-of-the-bag shiver and the walk-in glide — either flickers here)
-      if (window.__releaseCat) window.__releaseCat(true);
-      if (window.__homeCat) window.__homeCat(window.currentStageName, true);
+      if (window.phone) window.phone(!window.phone()); // 'c' → the cellphone (pocket phone)
+    } else if (e.key === "l" || e.key === "L") {
+      e.preventDefault();
+      if (window.laptop) window.laptop(!window.laptop()); // 'l' → the office laptop
+    } else if (e.key === "m" || e.key === "M") {
+      e.preventDefault();
+      if (window.goToStage) window.goToStage("office"); // 'm' → the monitor: boot the PC if it's off, else zoom into the desktop
+      var monEl = document.getElementById("office-monitor");
+      if (monEl) {
+        if (window.computer && !window.computer()) window.computer(true);
+        else { try { monEl.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true })); } catch (mErr) {} }
+      }
+    } else if (e.key === "k" || e.key === "K") {
+      e.preventDefault();
+      if (window.cat) window.cat(!window.cat()); // 'k' → toggle the kitten (out to your room / back in the chest), like 'p' toggles the party
     } else if (e.key === "n" || e.key === "N") {
       e.preventDefault();
       if (window.__skipCurrentMusic) window.__skipCurrentMusic(); // next dance / piano piece / loft song
     } else if (e.key === "t" || e.key === "T") {
       e.preventDefault();
       if (window.__nextTrip) window.__nextTrip(); // next drug trip (cyclic; interrupts a running one)
-    } else if (e.key === "8") {
-      e.preventDefault();
-      if (window.laptop) window.laptop(!window.laptop()); // toggle the office laptop
-    } else if (e.key === "9") {
-      e.preventDefault();
-      if (window.computer) window.computer(!window.computer()); // toggle / boot the office computer
-    } else if (e.key === "0") {
-      e.preventDefault();
-      if (window.phone) window.phone(!window.phone()); // toggle the pocket phone
     }
   });
 
@@ -40315,6 +40317,7 @@ function spawnDustMote(container) {
     narrate(true, "🐈 here, kitty — she pads over to say hi.", "");
     return prev;
   };
+  window.kitten = window.cat; // alias — cat() and kitten() are the same command
   window.kitty = function () {
     if (window.goToStage) window.goToStage("office"); // summon the cat to the office
     var walk = document.getElementById("witchy-chest-cat-walk");

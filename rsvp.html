@@ -11046,6 +11046,7 @@ var T = {
     install_ios_hint: "Tap Share, then “Add to Home Screen”",
     install_dismiss: "Dismiss",
     restart_aria: "Restart the game",
+    restart_confirm: "Restart the loft from the beginning? You'll lose your progress.",
     caps_aria: "A pink flat cap and a blue baker boy cap, crossed",
     laptop_date: "July 10",
     desk_to: "to",
@@ -11408,6 +11409,7 @@ var T = {
     install_ios_hint: "Klepni na Sdílet, pak „Přidat na plochu“",
     install_dismiss: "Zavřít",
     restart_aria: "Spustit hru znovu",
+    restart_confirm: "Restartovat loft od začátku? Přijdeš o svůj postup.",
     caps_aria: "Růžová čepice a modrá čepice, zkřížené",
     laptop_date: "10. 7.",
     desk_to: "do",
@@ -32727,6 +32729,7 @@ function spawnDustMote(container) {
       goToStage(STAGES[parseInt(e.key, 10) - 1]); // jump straight to room 1-5, unlocking it if needed
     } else if (e.key === "r" || e.key === "R") {
       e.preventDefault();
+      if (window.__confirmRestart && !window.__confirmRestart()) return; // ask before wiping progress
       // fire the extinguisher (hiss + powder + wipe, then reset) rather than a bare reset
       if (window.__activateExtinguisher) window.__activateExtinguisher();
       else resetHunt();
@@ -34883,11 +34886,18 @@ function spawnDustMote(container) {
       }, 700);
     }
     window.__activateExtinguisher = activateExtinguisher; // 'r' key routes the reset through the extinguisher
+    // the restart button + the 'r' key ask first (a full reset loses your progress); the
+    // physical fire-extinguisher in the scene stays immediate — grabbing it is deliberate
+    window.__confirmRestart = function () {
+      var l = T[document.documentElement.lang] ? document.documentElement.lang : "en";
+      return window.confirm((T[l] && T[l].restart_confirm) || T.en.restart_confirm);
+    };
     // the scene's ↻ restart button: scroll back to the first room, then fire the
     // extinguisher there so the powder-burst + wipe reset is actually on-screen
     var restartBtn = document.getElementById("hunt-restart-btn");
     if (restartBtn) restartBtn.addEventListener("click", function (e) {
       e.stopPropagation();
+      if (!window.__confirmRestart()) return; // ask before wiping progress
       var atKitchen = (window.currentStageIndex || 0) === 0;
       if (!atKitchen) goToStage("kitchen");
       setTimeout(activateExtinguisher, atKitchen ? 0 : 760); // let the slide land first

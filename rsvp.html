@@ -13725,13 +13725,18 @@ document.addEventListener("click", function (e) {
     if (curScore === STARS_MELODY_5) return "Mozart — Sonata K. 331";
     return "Satie — Gnossienne No. 1";
   };
-  window.__skipStarsPiece = function () { // jump to the next night-sky piece in place (no channel change)
+  window.__skipStarsPiece = function () { // jump to the next night-sky piece with a clean swap (no channel change)
     if (!starsCtx) return false;
     curScore = STARS_SCORES[starsPiece];
     starsPiece = (starsPiece + 1) % STARS_SCORES.length;
-    starsIdx = 0; lastFlashT = 0; lastNoteT = 0;
-    starsNext = starsCtx.currentTime + 0.15; // look-ahead picks up the fresh piece ~now (old notes already queued ring out)
-    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn(); // refresh the now-playing tooltip for the new piece
+    starsIdx = 0;
+    // Clean context swap instead of an in-place score change: fade the outgoing context out over a
+    // short ramp (its master silences every still-queued + ringing note at once) and open a fresh
+    // context on the new piece. The two pieces now barely overlap — previously the old piece's
+    // scheduled + ringing notes bled ~1.5-3s on top of the new one, which sounded muddy.
+    stopStars(0.25);
+    startStars();
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn(); // name the new piece in the now-playing toast
     return true;
   };
   window.__updateStarsSound = function (inCuddly, fadeSecs) {

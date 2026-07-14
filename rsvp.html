@@ -22580,6 +22580,8 @@ async def googlefonts(family, weight=None, italic=False):
           TTFont(io.BytesIO(await googlefonts('Fraunces')))
     weight=700 / italic=True pick a variant; googlefonts.list('mono') enumerates families."""
     from urllib.parse import quote
+    if not family:
+        raise ValueError("googlefonts() needs a family name, e.g. googlefonts('Anton')")
     data = json.loads(await (await pyfetch(_GF_API + "&family=" + quote(family))).string())
     items = data.get("items") or []
     if not items:
@@ -39330,6 +39332,10 @@ function spawnDustMote(container) {
   }
   window.googlefonts = function (family, opts) {
     opts = opts || {};
+    if (family == null || String(family).trim() === "") {
+      return Promise.resolve("googlefonts failed — googlefonts() needs a family name, e.g. googlefonts('Anton')");
+    }
+    family = String(family).trim();
     return fetch(GF_API + "&family=" + encodeURIComponent(family)).then(function (r) {
       if (!r.ok) throw new Error("webfonts API " + r.status); return r.json();
     }).then(function (d) {

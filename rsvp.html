@@ -20706,7 +20706,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · trip() · goto() · night()/day() · season() · storm() · rainbow() · projector() · classic() · temp() · weather() · clock() · countdown() · lang() · fullscreen() · bbq() · phone() · laptop() · computer() · reboot() · summon() · play()/pause() · random() · sleep() · confetti() · cat() · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · trip() · room()/goto() · night()/day() · season() · storm() · rainbow() · projector() · classic() · temp() · weather() · clock() · countdown() · lang() · fullscreen() · bbq() · phone() · laptop() · computer() · reboot() · summon() · play()/pause() · random() · sleep() · confetti() · cat() · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var TERM_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -20716,7 +20716,8 @@ document.addEventListener("click", function (e) {
       quit: "quit (or exit) — close the console, back to the desktop",
       blacklight: "blacklight() — UV wash over the whole loft; blacklight(false) off",
       trip: "trip(\"name\") — a trip by name in quotes, e.g. trip(\"acid\"), or a number 1–7, or trip() for a random one. trips: \"shrooms\" · \"acid\" · \"froggies\" · \"dmt\" · \"molly\" · \"k\" · \"iboga\"",
-      goto: "goto(\"room\") — a room by name in quotes, e.g. goto(\"garden\"), or a number 1–5. rooms: \"kitchen\" · \"garden\" · \"cuddly\" · \"office\" · \"balcony\"",
+      room: "room(\"name\") — go to a room by name in quotes, e.g. room(\"garden\"), or a number 1–5; room() returns the current room as {n, name}. rooms: \"kitchen\" · \"garden\" · \"cuddly\" · \"office\" · \"balcony\"",
+      goto: "goto(...) — alias for room(): navigate by name in quotes or 1–5; goto() returns the current room {n, name}",
       rooms: "rooms() — list the five rooms",
       night: "night() — bring dusk down over the loft",
       day: "day() — bring the daylight back",
@@ -20727,9 +20728,9 @@ document.addEventListener("click", function (e) {
       weather: "weather() — the real current weather in both wedding cities (Edmonton · Prague)",
       clock: "clock() (or time()) — the real current time + date",
       time: "time() (or clock()) — the real current time + date",
-      projector: "projector(\"channel\") — switch the cuddly-room projector by name in quotes, e.g. projector(\"nightsky\"), or a number 1–5. channels: \"fireplace\" · \"workout\" · \"nightsky\" · \"aquarium\" · \"totoro\" · \"none\" (off). projector() shows what's on",
+      projector: "projector(\"channel\") — switch the cuddly-room projector by name in quotes, e.g. projector(\"nightsky\"), or a number 1–5. channels: \"fireplace\" · \"workout\" · \"nightsky\" · \"aquarium\" · \"totoro\" · \"none\" (off). projector() returns the current channel {n, name}",
       storm: "storm() — roll a thunderstorm in over the balcony; storm(false) clears it",
-      dance: "dance(\"name\") — cue a garden-party dance by name in quotes, e.g. dance(\"salsa\"), or dance() to skip to the next (run party() first). dances: \"techno\" · \"waltz\" · \"disco\" · \"swing\" · \"salsa\" · \"bhangra\" · \"persian\" · \"polka\" · \"horah\"",
+      dance: "dance(\"name\") — cue a garden-party dance by name in quotes, e.g. dance(\"salsa\"), or 1–9, or dance(random()); dance() returns the current dance {n, name}; dance(\"next\") skips ahead (run party(true) first). dances: \"techno\" · \"waltz\" · \"disco\" · \"swing\" · \"salsa\" · \"bhangra\" · \"persian\" · \"polka\" · \"horah\"",
       lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
       countdown: "countdown() — days left until each wedding",
       fullscreen: "fullscreen() — fill the screen with the loft; fullscreen(false) leaves",
@@ -20739,8 +20740,8 @@ document.addEventListener("click", function (e) {
       laptop: "laptop() — wake the office laptop; laptop(false) closes it",
       computer: "computer() — power the office PC up; computer(false) shuts it down",
       reboot: "reboot() — power-cycle the loft OS (a `sudo reboot` from its own terminal)",
-      summon: "summon(\"element-id\") — jump to any scene element by id and poke it (a general go-there-and-click)",
-      random: "random() — for scripts: random() → 0..1 · random(n) → int 0..n-1 · random(a,b) → int a..b · random([…]) → a random item",
+      summon: "summon(\"id\") — jump to any scene element by id and poke it; summon(\"room\") lists a room's ids; summon() pokes a random target. `help summon` shows the full roster",
+      random: "random() — for scripts: random() → 0..1 · random(n) → int 0..n-1 · random(a,b) → int a..b · random([…]) → a random item. bonus: pass random() to any picker — dance(random()), room(random()), projector(random()), trip(random()), classic(random()), season(random()) — to choose one at random",
       sleep: "sleep(ms) — for scripts: `await sleep(500)` pauses that long (default 1000ms)",
       confetti: "confetti() — a shower of confetti in the room you're in",
       fireworks: "fireworks() — a burst of fireworks over the room you're in",
@@ -20766,6 +20767,11 @@ document.addEventListener("click", function (e) {
       var topic = helpM[1];
       if (!topic) { termPrint(TERM_HELP_OVERVIEW, "term-dim"); return; }
       var key = topic.trim().toLowerCase().replace(/\(.*\)$/, "").replace(/^["']|["']$/g, "");
+      if (key === "summon") { // the live roster: per-room pokeable-target counts + how to browse
+        termPrint(TERM_HELP.summon, "term-dim");
+        if (window.__summonRoster) termPrint(window.__summonRoster(), "term-dim");
+        return;
+      }
       if (key === "hb") { // a full harfbuzzjs shaping sequence, uharfbuzz-style
         [
           "var bytes = await googlefonts('Anton');    // any Google Fonts family → raw TTF bytes",
@@ -39242,14 +39248,21 @@ function spawnDustMote(container) {
     k: "ketamine", ket: "ketamine", ketamine: "ketamine",
     iboga: "iboga", ibogaine: "iboga"
   };
+  // a fraction in [0,1) — e.g. from random() — maps to a 1-based index into n items, so
+  // dance(random()) · projector(random()) · room(random()) · trip(random()) all pick a random
+  // one. Anything else (a real 1..n index, a name string) returns null and falls through to the
+  // command's normal name/number parsing.
+  function fracToIndex(v, n) { return (typeof v === "number" && v >= 0 && v < 1) ? Math.min(n, Math.floor(v * n) + 1) : null; }
+
   window.trip = function (name) {
     if (typeof startTripVariant !== "function") return "the trip hook isn't ready yet.";
     if (window.__tripActive) return "one at a time — let this one wear off first.";
     var variant;
     if (name != null && name !== "") {
+      var CANON = ["psychedelic", "strobe", "melt", "dmt", "molly", "ketamine", "iboga"];
+      var tfi = fracToIndex(name, CANON.length); if (tfi) name = tfi; // random() → a random trip
       var s = String(name).toLowerCase().trim();
       var n = parseInt(s, 10); // also accept a number 1..7 (same canonical order as Shift+1..7)
-      var CANON = ["psychedelic", "strobe", "melt", "dmt", "molly", "ketamine", "iboga"];
       variant = (String(n) === s && n >= 1 && n <= CANON.length) ? CANON[n - 1] : TRIP_ALIASES[s];
       if (!variant) return "unknown trip — a name in quotes, or 1–7: \"shrooms\" · \"acid\" · \"froggies\" · \"dmt\" · \"molly\" · \"k\" · \"iboga\"";
     } else {
@@ -39263,15 +39276,23 @@ function spawnDustMote(container) {
     return "◑ " + variant + " — hold on to something soft. it wears off on its own.";
   };
 
-  window.goto = function (room) {
-    room = String(room == null ? "" : room).toLowerCase().trim();
-    var n = parseInt(room, 10); // also accept a room number 1..5 (same order as the keyboard 1-5)
-    if (String(n) === room && n >= 1 && n <= ROOM_NAMES.length) room = ROOM_NAMES[n - 1];
-    if (ROOM_NAMES.indexOf(room) === -1) return "rooms (in quotes, or 1–5): " + ROOM_NAMES.map(function (r) { return "\"" + r + "\""; }).join(" · ");
+  // room()/goto() — no arg returns the current room as {n, name} (both handy in scripts);
+  // with an arg (name in quotes, or 1–5) it navigates there. goto() is an alias for room().
+  window.room = function (r) {
+    if (arguments.length === 0 || r == null || r === "") {
+      var cur = window.currentStageName || "";
+      return { n: ROOM_NAMES.indexOf(cur) + 1, name: cur }; // unknown/off-room → {n:0, name:""}
+    }
+    var rfi = fracToIndex(r, ROOM_NAMES.length); if (rfi) r = rfi; // random() → a random room
+    r = String(r).toLowerCase().trim();
+    var n = parseInt(r, 10); // also accept a room number 1..5 (same order as the keyboard 1-5)
+    if (String(n) === r && n >= 1 && n <= ROOM_NAMES.length) r = ROOM_NAMES[n - 1];
+    if (ROOM_NAMES.indexOf(r) === -1) return "rooms (in quotes, or 1–5): " + ROOM_NAMES.map(function (x) { return "\"" + x + "\""; }).join(" · ");
     if (!window.goToStage) return "the navigation hook isn't ready yet.";
-    window.goToStage(room);
-    return "→ " + room;
+    window.goToStage(r);
+    return "→ " + r;
   };
+  window.goto = window.room; // alias
   window.rooms = function () { return ROOM_NAMES.join(" · "); };
 
   function isNight() { var b = document.getElementById("stage-balcony"); return !!(b && b.classList.contains("dusk")); }
@@ -39299,8 +39320,11 @@ function spawnDustMote(container) {
     var canon;
     if (arguments.length === 0) { canon = ["winter", "spooky", "auto"][(Math.random() * 3) | 0]; } // no arg → a surprise
     else {
+      var SEAS = ["winter", "spooky", "auto"];
+      var sfi = fracToIndex(name, SEAS.length); if (sfi) name = sfi; // random() → a random season
       var key = String(name == null ? "" : name).toLowerCase().trim();
-      if (!(key in SEASON_ALIASES)) return "seasons (in quotes): \"winter\" · \"spooky\" · \"auto\"";
+      var sn = parseInt(key, 10); if (String(sn) === key && sn >= 1 && sn <= SEAS.length) key = SEAS[sn - 1]; // also accept 1..3
+      if (!(key in SEASON_ALIASES)) return "seasons (in quotes, or 1–3): \"winter\" · \"spooky\" · \"auto\"";
       canon = SEASON_ALIASES[key];
     }
     window.__applySeason(canon === "auto" ? null : canon);
@@ -39345,12 +39369,14 @@ function spawnDustMote(container) {
   var PROJ_LIST = "channels (in quotes, or 1–5): \"fireplace\" · \"workout\" · \"nightsky\" · \"aquarium\" · \"totoro\" · \"none\" (off)";
   window.projector = function (ch) {
     if (!window.__cuddlyProjector) return "the projector isn't ready yet.";
-    if (arguments.length === 0 || ch == null || ch === "") { // just report what's on — no summoning, no channel change
+    if (arguments.length === 0 || ch == null || ch === "") { // no arg → the current channel as {n, name} (handy in scripts; off → {n:0, name:"off"})
       var now = window.__cuddlyProjector.channel();
-      return now === "off" ? "📺 off. " + PROJ_LIST : "📺 on: " + projFriendly(now);
+      var pidx = -1; for (var i = 0; i < PROJ_NAMES.length; i++) if (PROJ_NAMES[i][1] === now) pidx = i;
+      return { n: pidx + 1, name: projFriendly(now) };
     }
     if (window.goToStage) window.goToStage("cuddly"); // switching a channel whisks you there to watch it
     if (ch === false) { window.__cuddlyProjector.set("off"); return "📺 off."; } // projector(false) → off, like "none"
+    var cfi = fracToIndex(ch, PROJ_NAMES.length); if (cfi) ch = cfi; // random() → a random channel
     var s = String(ch).toLowerCase().trim();
     var n = parseInt(s, 10);
     if (String(n) === s && n >= 1 && n <= PROJ_NAMES.length) s = PROJ_NAMES[n - 1][0]; // 1..5 → friendly name
@@ -39382,7 +39408,7 @@ function spawnDustMote(container) {
     var PIECES = "pieces (in quotes, or 1–5): \"satie\" · \"chopin\" · \"beethoven\" · \"bach\" · \"mozart\"";
     var s;
     if (arguments.length === 0 || piece == null || piece === "") { s = ORDER[(Math.random() * ORDER.length) | 0]; } // no arg → a random piece
-    else { s = String(piece).toLowerCase().trim(); var n = parseInt(s, 10); if (String(n) === s && n >= 1 && n <= ORDER.length) s = ORDER[n - 1]; }
+    else { var pfi = fracToIndex(piece, ORDER.length); if (pfi) piece = pfi; s = String(piece).toLowerCase().trim(); var n = parseInt(s, 10); if (String(n) === s && n >= 1 && n <= ORDER.length) s = ORDER[n - 1]; }
     if (!window.__setStarsPieceByName || !window.__setStarsPieceByName(s)) return PIECES;
     return "🎹 " + (window.__starsPieceName ? window.__starsPieceName() : s) + ".";
   };
@@ -39398,14 +39424,20 @@ function spawnDustMote(container) {
   };
 
   window.dance = function (name) {
-    if (!window.__gardenPartyOn) return "the garden's dark — run party() first, then pick a dance.";
+    if (!window.__gardenPartyOn) return "the garden's dark — run party(true) first, then pick a dance.";
     var ids = (window.__partyDances || []).map(function (d) { return d.id; });
-    if (name == null || name === "") {
+    if (arguments.length === 0 || name == null || name === "") { // no arg → the current dance as {n, name}
+      var cur = window.__partyDance || "";
+      return { n: ids.indexOf(cur) + 1, name: cur };
+    }
+    if (String(name).toLowerCase().trim() === "next") { // dance("next") → skip ahead to the next in the set
       if (!window.__nextPartyDance || !window.__nextPartyDance()) return "the dance hook isn't ready yet.";
       return "💃 next up — " + (window.__partyDance || "");
     }
+    var dfi = fracToIndex(name, ids.length); if (dfi) name = dfi; // random() → a random dance
     var key = String(name).toLowerCase().trim();
-    if (ids.indexOf(key) === -1) return "dances (in quotes): " + ids.map(function (d) { return "\"" + d + "\""; }).join(" · ");
+    var kn = parseInt(key, 10); if (String(kn) === key && kn >= 1 && kn <= ids.length) key = ids[kn - 1]; // also accept 1..N
+    if (ids.indexOf(key) === -1) return "dances (in quotes, 1–" + ids.length + ", or \"next\"): " + ids.map(function (d) { return "\"" + d + "\""; }).join(" · ");
     if (!window.__setPartyDance || !window.__setPartyDance(key)) return "the dance hook isn't ready yet.";
     return "💃 " + key + " — the garden shifts into step.";
   };
@@ -39508,20 +39540,31 @@ function spawnDustMote(container) {
     return "🔄 rebooting the loft OS…";
   };
 
-  window.summon = function (id) { // general: jump to any scene element's room and poke it (dispatch a click)
-    var ROOMS = ["kitchen", "garden", "cuddly", "office", "balcony"];
-    function hitsIn(room) { var st = document.getElementById("stage-" + room); return st ? [].slice.call(st.querySelectorAll("[id].hunt-hit")).map(function (e) { return e.id; }) : []; }
-    if (id == null || id === "") { // no arg → the roster: how many pokeable targets per room + how to drill in
-      return "summon targets by room — " + ROOMS.map(function (r) { return r + " (" + hitsIn(r).length + ")"; }).join(" · ") + ". summon(\"<room>\") lists one room's ids; summon(\"<id>\") pokes it.";
+  // general: jump to any scene element's room and poke it. summon() pokes a RANDOM target;
+  // summon("<room>") lists a room's ids; summon("<id>") pokes that one. The full roster
+  // (per-room counts + how to browse) lives under `help summon`, via __summonRoster.
+  var SUMMON_ROOMS = ["kitchen", "garden", "cuddly", "office", "balcony"];
+  function summonHits(room) { var st = document.getElementById("stage-" + room); return st ? [].slice.call(st.querySelectorAll("[id].hunt-hit")).map(function (e) { return e.id; }) : []; }
+  window.__summonRoster = function () {
+    return "summon targets by room — " + SUMMON_ROOMS.map(function (r) { return r + " (" + summonHits(r).length + ")"; }).join(" · ") + ". summon(\"<room>\") lists one room's ids; summon(\"<id>\") pokes it; summon() pokes a random one.";
+  };
+  window.summon = function (id) {
+    function poke(elId) {
+      var el = document.getElementById(elId);
+      if (!el) return "no element with id \"" + elId + "\". (try `help summon` for the roster)";
+      var stage = el.closest && el.closest("[id^='stage-']"); // the room it lives in, if any
+      if (stage && window.goToStage) window.goToStage(stage.id.replace(/^stage-/, ""));
+      try { el.dispatchEvent(new MouseEvent("click", { bubbles: true })); } catch (e) {}
+      return "✨ summoned #" + el.id + (stage ? " (in the " + stage.id.replace(/^stage-/, "") + ")" : "");
+    }
+    if (id == null || id === "") { // no arg → poke a random target somewhere in the loft
+      var all = []; SUMMON_ROOMS.forEach(function (r) { all = all.concat(summonHits(r)); });
+      if (!all.length) return "nothing to summon right now.";
+      return poke(all[(Math.random() * all.length) | 0]);
     }
     var key = String(id).replace(/^#/, "");
-    if (ROOMS.indexOf(key.toLowerCase()) !== -1) { var list = hitsIn(key.toLowerCase()); return key.toLowerCase() + " targets: " + (list.join(" · ") || "(none)"); } // a room name → list its ids
-    var el = document.getElementById(key);
-    if (!el) return "no element with id \"" + id + "\". (try summon() for the roster)";
-    var stage = el.closest && el.closest("[id^='stage-']"); // the room it lives in, if any
-    if (stage && window.goToStage) window.goToStage(stage.id.replace(/^stage-/, ""));
-    try { el.dispatchEvent(new MouseEvent("click", { bubbles: true })); } catch (e) {}
-    return "✨ summoned #" + el.id + (stage ? " (in the " + stage.id.replace(/^stage-/, "") + ")" : "");
+    if (SUMMON_ROOMS.indexOf(key.toLowerCase()) !== -1) { var list = summonHits(key.toLowerCase()); return key.toLowerCase() + " targets: " + (list.join(" · ") || "(none)"); } // a room name → list its ids
+    return poke(key);
   };
 
   // scripting helpers ---------------------------------------------------------

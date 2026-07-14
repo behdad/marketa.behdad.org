@@ -12671,7 +12671,7 @@ document.addEventListener("click", function (e) {
   // from the Mutopia public-domain MIDI (Lent, q≈0.6s), F minor, the melody's top voice.
   // Same gate + fade-and-close teardown as the beds above; a self-rescheduling note
   // scheduler steps the melody and bails when the ctx is null (no pile-up in a bg tab).
-  var starsCtx = null, starsTimer = null, starsInCuddly = false, starsIdx = 0;
+  var starsCtx = null, starsTimer = null, starsInCuddly = false, starsIdx = 0, starsWasActive = false;
   // the FULL Gnossienne No. 1 melody (top voice), transcribed from the Mutopia public-domain
   // MIDI. Each step: d = seconds to the next onset, r = ring seconds (note length + soft tail;
   // the 0.069s steps are the grace-note ornaments). ~192s, then a breath and it loops.
@@ -12683,8 +12683,9 @@ document.addEventListener("click", function (e) {
     return 440 * Math.pow(2, (base + (parseInt(m[3], 10) - 4) * 12) / 12);
   }
   function starsWant() {
-    return starsInCuddly && screen.classList.contains("chan-stars") &&
-      document.visibilityState !== "hidden" && document.hasFocus();
+    // whole-loft ambient: plays wherever you are while the night-sky channel is on (no room
+    // gate) and keeps going when the window loses focus — only a hidden tab stops it
+    return screen.classList.contains("chan-stars") && document.visibilityState !== "hidden";
   }
   function satieNote(t, freq, ringDur) {
     var ctx = starsCtx, bus = ctx._bus;
@@ -12693,7 +12694,7 @@ document.addEventListener("click", function (e) {
     osc.frequency.value = freq;
     var g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.008, t + 0.02); // soft attack
+    g.gain.exponentialRampToValueAtTime(0.014, t + 0.02); // soft attack (it's the only music playing now, so a touch louder)
     g.gain.exponentialRampToValueAtTime(0.0001, t + ringDur); // long decay — notes ring and overlap
     osc.connect(g); g.connect(bus);
     osc.start(t); osc.stop(t + ringDur + 0.05); // self-terminating — no refs held
@@ -12718,7 +12719,7 @@ document.addEventListener("click", function (e) {
       // one soft master gain — a single fade handle; the notes are self-terminating transients
       var master = starsCtx.createGain();
       master.gain.value = 1; // per-note envelopes carry the (very low) level
-      master.connect(pannedOut(starsCtx, "cuddly-wallscreen"));
+      master.connect(pannedOut(starsCtx, 0)); // centered — it's a whole-loft track, not tied to the on-screen wall panel
       starsCtx._bus = master;
       starsCtx._masterGain = master;
       starsCtx._nodes = []; // nothing continuous to stop
@@ -12742,6 +12743,12 @@ document.addEventListener("click", function (e) {
   }
   window.__updateStarsSound = function (inCuddly, fadeSecs) {
     if (typeof inCuddly === "boolean") starsInCuddly = inCuddly;
+    // switching TO the night-sky channel fades the game song out and takes over; switching
+    // away hands playback back to whatever song was going. Keyed off the channel class, so a
+    // room change / tab hide (which don't touch chan-stars) never trips it.
+    var onSky = screen.classList.contains("chan-stars");
+    if (onSky && !starsWasActive) { starsWasActive = true; if (window.__suspendSongForProjector) window.__suspendSongForProjector(); }
+    else if (!onSky && starsWasActive) { starsWasActive = false; if (window.__restoreSongAfterProjector) window.__restoreSongAfterProjector(); }
     var want = starsWant();
     if (want && !starsCtx) startStars();
     else if (!want && starsCtx) stopStars(fadeSecs);
@@ -19639,6 +19646,31 @@ async def localfont(name):
     }, 40);
   }
   window.__fadeSongTo = fadeSongTo; // shared with the cinematic's song switch
+  // The night-sky projector channel "puts on Satie": it fades the game song out and takes
+  // over, and hands playback back to whatever was going when you leave the channel. Only a
+  // genuinely-playing song is remembered, so an already-silent loft stays silent on return.
+  var projSuspendedIdx = -1;
+  window.__suspendSongForProjector = function () {
+    var idx = currentSongIndex();
+    var a = idx >= 0 ? songAudios[idx] : null;
+    if (a && !a.paused) {
+      projSuspendedIdx = idx;
+      var appVol = window.__songVolume ? window.__songVolume() : 0.5;
+      fadeSongTo(a, 0, 700, function () { try { a.pause(); a.volume = appVol; } catch (e) {} }); // fade, then pause + restore its level for the resume
+    } else {
+      projSuspendedIdx = -1;
+    }
+  };
+  window.__restoreSongAfterProjector = function () {
+    if (projSuspendedIdx < 0) return;
+    var a = songAudios[projSuspendedIdx]; projSuspendedIdx = -1;
+    if (!a) return;
+    try {
+      if (window.__captureSongAudio) window.__captureSongAudio(a); // rewire the analyser inside this gesture
+      a.volume = window.__songVolume ? window.__songVolume() : 0.5;
+      var p = a.play(); if (p && p.catch) p.catch(function () {}); // resumes from where it paused
+    } catch (e) {}
+  };
   function monitorSkip(dir) {
     var idx = currentSongIndex();
     if (idx < 0) return;

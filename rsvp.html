@@ -802,6 +802,13 @@ footer{margin-top:2.6rem}
 #stage-garden.garden-party #garden-tarot{opacity:0; pointer-events:none}
 #garden-djbooth{opacity:0; pointer-events:none; transition:opacity .5s ease}
 #stage-garden.garden-party #garden-djbooth{opacity:1}
+/* Two DJs share the booth: DJ A (beanie + headphones) by default; the friend cameo DJ B
+   (afro + beard) swaps in under .dj-b — toggled every 3 dances by advanceDance, with a
+   shuffled start (setGardenParty). Instant clean swap via display so no transform is
+   clobbered on the shared nod/headbang wrappers; nothing to make reduced-motion-unsafe. */
+#garden-dj-b{display:none}
+#garden-djbooth.dj-b #garden-dj-a{display:none}
+#garden-djbooth.dj-b #garden-dj-b{display:inline}
 /* DJ works the decks: gentle head-nod + hand-on-platter bob, only while the party's lit.
    Both ride inner wrappers (fill-box) so the loop never clobbers a positioning transform. */
 #garden-dj-nod{transform-box:fill-box; transform-origin:50% 100%}
@@ -6900,6 +6907,9 @@ section{margin:1.9rem 0}
 <!-- inner wrapper for the click-triggered emphatic headbang — kept DISTINCT from the
      infinitely-nodding #garden-dj-nod so the one-shot doesn't lose the cascade to it -->
 <g id="garden-dj-headbang">
+<!-- DJ A (default): beanie + dark shades + headphones. Two DJs share the booth and swap
+     every 3 dances (see advanceDance); .dj-b on #garden-djbooth hides this, shows B. -->
+<g id="garden-dj-a">
 <rect x="605.5" y="216" width="7" height="8" rx="2" fill="#f0c6a0"/>
 <circle cx="609" cy="208" r="9.5" fill="#f5cda4"/>
 <!-- beanie -->
@@ -6914,6 +6924,35 @@ section{margin:1.9rem 0}
 <path d="M598 208 Q598 196.5 609 196" fill="none" stroke="#f500f5" stroke-width="1" stroke-linecap="round" opacity="0.85"/>
 <rect x="595.5" y="205" width="5.5" height="8" rx="2.4" fill="#1b1722" stroke="#f500f5" stroke-width="1"/>
 <rect x="617" y="205" width="5.5" height="8" rx="2.4" fill="#1b1722" stroke="#f500f5" stroke-width="1"/>
+</g>
+<!-- DJ B (the couple's DJ friend cameo): big brown curly afro + full beard, round shades.
+     Self-contained head so draw order is trivial: afro FIRST (behind the face), beard LAST
+     (in front of the lower face). Rides the same nod/headbang wrappers as A — no transforms
+     of its own. Hidden by default; shown when #garden-djbooth has .dj-b. -->
+<g id="garden-dj-b">
+<!-- afro: voluminous rounded cloud, wider + taller than the head, warm-brown curls.
+     Base blob, then edge tufts for a bumpy/scalloped curly silhouette, then upper-left sheen. -->
+<path d="M594 210 Q590 204 591 197 Q590 190 596 187 Q599 182 606 183 Q609 181 612 183 Q619 182 622 187 Q628 190 627 197 Q628 204 624 210 Q616 213 609 212 Q602 213 594 210 Z" fill="#4a3728"/>
+<circle cx="597" cy="186.5" r="3.1" fill="#4a3728"/>
+<circle cx="606" cy="182.5" r="3.3" fill="#4a3728"/>
+<circle cx="615" cy="183.2" r="3.1" fill="#4a3728"/>
+<circle cx="623" cy="189" r="3" fill="#4a3728"/>
+<circle cx="627.5" cy="198" r="2.9" fill="#4a3728"/>
+<circle cx="590.5" cy="197.5" r="2.9" fill="#4a3728"/>
+<circle cx="592.5" cy="190.5" r="2.7" fill="#4a3728"/>
+<path d="M596 187 Q599 182 606 183 Q601 185 598 190 Q595 194.5 594 200 Q590 193 596 187 Z" fill="#6b4f38" opacity="0.9"/>
+<!-- shared face + neck (drawn on top of the afro so the face reads in front) -->
+<rect x="605.5" y="216" width="7" height="8" rx="2" fill="#f0c6a0"/>
+<circle cx="609" cy="208" r="9.5" fill="#f5cda4"/>
+<!-- round-ish dark shades (a DJ look, same dark-lens style as A) -->
+<circle cx="605" cy="207.6" r="3.1" fill="#141019"/>
+<circle cx="613" cy="207.6" r="3.1" fill="#141019"/>
+<path d="M607.6 207 Q609 206.4 610.4 207" fill="none" stroke="#141019" stroke-width="1.2" stroke-linecap="round"/>
+<circle cx="604" cy="206.7" r="0.9" fill="#00f5a3" opacity="0.8"/>
+<!-- full dark beard + moustache + sideburns, framing a warm smile -->
+<path d="M600 204 Q598 212 601.5 217 Q605 220 609 219.5 Q613 220 616.5 217 Q620 212 618 204 Q615.5 209.5 613 210.2 Q609 211 605 210.2 Q602.5 209.5 600 204 Z" fill="#33261b"/>
+<path d="M604.5 213.5 Q609 217 613.5 213.5" fill="none" stroke="#c77a55" stroke-width="1.3" stroke-linecap="round"/>
+</g>
 </g>
 </g>
 <!-- working arm + hand on the left platter (bobs to the beat) -->
@@ -35717,6 +35756,10 @@ function spawnDustMote(container) {
     pd.classList.toggle("circle-mode", formation === "circle");
     pd.classList.toggle("waltz-mode", on && id === "waltz"); // legacy class kept so existing waltz CSS still keys on it
   }
+  function applyDjBooth() { // reflect the active DJ (A default / B = the friend cameo) onto the booth
+    var booth = document.getElementById("garden-djbooth");
+    if (booth) booth.classList.toggle("dj-b", !!window.__djB); // two-arg toggle → deterministic, no leak on re-light
+  }
   function advanceDance() { // advance to the next dance in the rotation, crossfade the beds, glide the dancers
     var order = PARTY_DANCE_ORDER || ["techno"];
     var idx = order.indexOf(window.__partyDance);
@@ -35728,6 +35771,10 @@ function spawnDustMote(container) {
     }
     updateAllPartyDances(1.8); // crossfade the beds over 1.8s (each bed follows its own want-gate)
     applyPartyDanceMode(); // reflect the new dance → the .md-couple wrapper glides formation over the same 1.8s
+    // the two DJs swap every 3rd dance-advance (~3 songs each); counting here (not in
+    // flipPartyMode) makes manual skips count too. Piggybacks the rotation — no new timer.
+    window.__djSwapCount = (window.__djSwapCount || 0) + 1;
+    if (window.__djSwapCount % 3 === 0) { window.__djB = !window.__djB; applyDjBooth(); }
   }
   function flipPartyMode() {
     waltzAltTimer = null;
@@ -35894,7 +35941,12 @@ function spawnDustMote(container) {
       }
       var freshParty = !waltzAltTimer;
       startWaltzAlternation(); // build the shuffled rotation + begin the ~15s alternation (idempotent under storm-clicks)
-      if (freshParty) window.__partyDance = PARTY_DANCE_ORDER[0]; // a freshly-lit party opens on the first shuffled dance (storm-safe: don't reset mid-party)
+      if (freshParty) {
+        window.__partyDance = PARTY_DANCE_ORDER[0]; // a freshly-lit party opens on the first shuffled dance (storm-safe: don't reset mid-party)
+        window.__djB = Math.random() < 0.5; // shuffled start: 50/50 which friend spins first (Math.random ok in-app)
+        window.__djSwapCount = 0;            // reset the swap counter so the first DJ gets a full ~3-dance set
+        applyDjBooth();                      // storm-safe: only re-randomizes on a genuinely fresh party (waltzAltTimer was null)
+      }
       applyPartyDanceMode();   // reflect the active dance's formation onto the dancers (solo/coupled/…)
       // power the cuddly projector off — its whole-loft bed (stars/workout/totoro/aqua) would
       // otherwise double up on the party music. Do this BEFORE the loft-song pause below, since

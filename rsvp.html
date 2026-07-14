@@ -973,6 +973,11 @@ footer{margin-top:2.6rem}
   65%{transform:rotate(3deg)}
 }
 @media (prefers-reduced-motion: reduce){.cuddly-passthrough-plates.wobbling{animation:none}}
+/* the hanging-pan edge glimpsed through the pass-through: swings from its top like a hung pan */
+.cuddly-panedge{transform-box:fill-box; transform-origin:50% 0%}
+.cuddly-panedge.jiggling{animation:panedge-swing .55s ease-in-out}
+@keyframes panedge-swing{0%,100%{transform:rotate(0)} 22%{transform:rotate(6deg)} 55%{transform:rotate(-4deg)} 80%{transform:rotate(2deg)}}
+@media (prefers-reduced-motion: reduce){.cuddly-panedge.jiggling{animation:none}}
 .plate-crack{opacity:0; transition:opacity .3s ease}
 .plate-crack.cracked{opacity:1}
 .cuddly-ledge-item{transform-box:fill-box; transform-origin:bottom center}
@@ -6433,7 +6438,7 @@ section{margin:1.9rem 0}
 <g clip-path="url(#cuddly-pt-clip)" pointer-events="none" aria-hidden="true">
 <rect x="16" y="118" width="126" height="84" fill="url(#cuddly-pt-depth)"/>
 <rect x="98" y="124" width="34" height="28" fill="#a08c6e" opacity="0.5"/>
-<circle cx="48" cy="111" r="14" fill="#2b2118"/>
+<circle id="cuddly-panedge" class="cuddly-panedge" cx="48" cy="111" r="14" fill="#2b2118"/>
 <rect x="16" y="171" width="126" height="31" fill="#463625"/>
 <path d="M40 171 L40 144 Q40 137 48 137 L74 137 Q82 137 82 144 L82 171 Z" fill="#2b2118"/>
 <rect x="54" y="171" width="13" height="8" fill="#2b2118"/>
@@ -6465,6 +6470,8 @@ section{margin:1.9rem 0}
 <line x1="100" y1="90" x2="108" y2="90" stroke="#b8b4a8" stroke-width="2"/>
 </g>
 </g>
+<!-- clickable edge of the hanging pan glimpsed through the pass-through (the swinging sliver) -->
+<rect id="cuddly-panedge-hit" class="hunt-hit" x="30" y="116" width="40" height="16" fill="transparent"/>
 </g>
 <g id="cuddly-kitchenledge">
 <rect x="8" y="204" width="142" height="10" rx="2" fill="#f0ede4" stroke="#c9c4b8" stroke-width="1"/>
@@ -25436,6 +25443,17 @@ async def localfont(name):
   if (fairy) {
     fairy.style.cursor = "pointer";
     fairy.addEventListener("click", function () { wobbleEl(fairy); playFairyChimeSound("witchy-chest-fairy"); });
+  }
+  // the hanging-pan edge glimpsed through the pass-through clinks + swings like the real pans
+  var panEdgeHit = document.getElementById("cuddly-panedge-hit"), panEdge = document.getElementById("cuddly-panedge");
+  if (panEdgeHit && panEdge) {
+    panEdgeHit.style.cursor = "pointer";
+    panEdgeHit.addEventListener("click", function () {
+      if (typeof playMetalClinkSound === "function") playMetalClinkSound(1.35, "cuddly-passthrough"); // high, small pan
+      panEdge.classList.remove("jiggling");
+      requestAnimationFrame(function () { requestAnimationFrame(function () { panEdge.classList.add("jiggling"); }); });
+      setTimeout(function () { panEdge.classList.remove("jiggling"); }, 600);
+    });
   }
   // the Sun / Moon tarot cards on the altar summon day / night
   var tarotSun = document.getElementById("garden-tarot-sun");

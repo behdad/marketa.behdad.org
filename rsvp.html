@@ -18552,6 +18552,19 @@ document.addEventListener("click", function (e) {
       requestAnimationFrame(function () { head.classList.add("bang"); });
     });
   });
+  // Double-click the DJ to manually swap who's spinning (A ↔ B). applyDjBooth() lives in
+  // another closure, so mirror exactly what it does: flip window.__djB and reflect it onto
+  // #garden-djbooth via a two-arg .dj-b toggle. The dblclick also fires two clicks (a
+  // headbang on the way is fine); the swap fires only here. Reset __djSwapCount so a manual
+  // swap doesn't desync the auto every-3 counter — the next auto-swap is a full ~3 dances out.
+  head.addEventListener("dblclick", function (e) {
+    if (e) e.stopPropagation();
+    if (!window.__gardenPartyOn) return; // only while the booth is lit (and clickable)
+    window.__djB = !window.__djB;
+    var booth = document.getElementById("garden-djbooth");
+    if (booth) booth.classList.toggle("dj-b", !!window.__djB);
+    window.__djSwapCount = 0;
+  });
 })();
 (function () {
   // Tap the DJ decks to pause/resume the music — same unified transport as the rail play/pause

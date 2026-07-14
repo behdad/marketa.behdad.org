@@ -20794,13 +20794,32 @@ async def localfont(name):
     if (other && other.contains(e.target)) { zoomIn(other); return; }
     zoomOut();
   }, true);
-  // ...and tapping either device pulls the view up to it
+  // ...and tapping either device pulls the view up to it. At room scale the app icons are
+  // tiny, so the tap that zooms in must ONLY zoom — swallow the click that ends that gesture
+  // (capture phase, before any app-icon handler) so it doesn't also launch whatever was under
+  // the finger. Once zoomed, clicks pass through to the apps normally.
+  var suppressZoomClick = false, suppressTimer = null;
+  function armZoomClickSuppress() {
+    suppressZoomClick = true;
+    if (suppressTimer) clearTimeout(suppressTimer);
+    suppressTimer = setTimeout(function () { suppressZoomClick = false; suppressTimer = null; }, 500); // fallback if no click follows the gesture
+  }
+  function swallowZoomClick(e) {
+    if (!suppressZoomClick) return;
+    suppressZoomClick = false;
+    if (suppressTimer) { clearTimeout(suppressTimer); suppressTimer = null; }
+    e.stopPropagation(); e.stopImmediatePropagation(); e.preventDefault();
+  }
   monitor.addEventListener("pointerdown", function () {
-    if (!zoomEl) zoomIn(monitor);
+    if (!zoomEl) { zoomIn(monitor); armZoomClickSuppress(); }
   });
-  if (laptop) laptop.addEventListener("pointerdown", function () {
-    if (!zoomEl && laptop.classList.contains("open")) zoomIn(laptop);
-  });
+  monitor.addEventListener("click", swallowZoomClick, true);
+  if (laptop) {
+    laptop.addEventListener("pointerdown", function () {
+      if (!zoomEl && laptop.classList.contains("open")) { zoomIn(laptop); armZoomClickSuppress(); }
+    });
+    laptop.addEventListener("click", swallowZoomClick, true);
+  }
   // the lid drives the laptop zoom: opening glides in, closing hands the room back
   window.__laptopLidZoom = function (open) {
     if (open) { setTimeout(function () { zoomIn(laptop); }, 520); } // after the lid's .5s hinge transition, so the box measures full height

@@ -731,9 +731,15 @@ footer{margin-top:2.6rem}
 #stage-garden.garden-party #garden-dj-headbang{pointer-events:auto; cursor:pointer}
 #garden-dj-headbang.bang{animation:dj-headbang .55s ease-in-out}
 @keyframes dj-headbang{0%{transform:translateY(0) rotate(0)}28%{transform:translateY(2.6px) rotate(9deg)}55%{transform:translateY(0) rotate(-3.5deg)}78%{transform:translateY(1px) rotate(2deg)}100%{transform:translateY(0) rotate(0)}}
+/* tap the decks to pause/resume the music — a quick one-shot cue-dip confirms the press */
+#garden-dj-decks{transform-box:fill-box; transform-origin:50% 100%}
+#stage-garden.garden-party #garden-dj-decks{pointer-events:auto; cursor:pointer}
+#garden-dj-decks.cue{animation:dj-cue .26s ease}
+@keyframes dj-cue{0%,100%{transform:translateY(0) scale(1)}45%{transform:translateY(1.6px) scale(.98)}}
 @media (prefers-reduced-motion: reduce){
   #stage-garden.garden-party #garden-dj-nod, #stage-garden.garden-party #garden-dj-hand{animation:none}
   #garden-dj-headbang.bang{animation:none}
+  #garden-dj-decks.cue{animation:none}
 }
 #kitchen-canister-lid{transform-box:fill-box; transform-origin:bottom center}
 #kitchen-canister.jiggling #kitchen-canister-lid{animation:canister-lid-jiggle .4s ease-in-out}
@@ -6561,6 +6567,8 @@ section{margin:1.9rem 0}
 </g>
 </g>
 <g id="garden-dj-decks">
+<!-- transparent hit surface over the whole console so taps land in the gaps between gear too -->
+<rect x="564" y="227" width="90" height="20" fill="transparent"/>
 <!-- console slab (dark gear on the chest lid) -->
 <path d="M569 231 L649 231 L654 246 L564 246 Z" fill="#201d29" stroke="#3b3550" stroke-width="1"/>
 <path d="M569 231 L649 231 L648.4 233 L569.6 233 Z" fill="#2f2a40" opacity="0.8"/>
@@ -18083,6 +18091,23 @@ document.addEventListener("click", function (e) {
     head.classList.remove("bang");
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { head.classList.add("bang"); });
+    });
+  });
+})();
+(function () {
+  // Tap the DJ decks to pause/resume the music — same unified transport as the rail play/pause
+  // button and the spacebar. A quick one-shot cue-dip (re-triggerable across a double rAF,
+  // cleared on animationend) confirms the press. Clickable only while the party's lit.
+  var decks = document.getElementById("garden-dj-decks");
+  if (!decks) return;
+  decks.addEventListener("animationend", function () { decks.classList.remove("cue"); });
+  decks.addEventListener("click", function (e) {
+    if (e) e.stopPropagation();
+    if (!window.__gardenPartyOn) return;
+    if (window.__toggleMusicPlayback) window.__toggleMusicPlayback();
+    decks.classList.remove("cue");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { decks.classList.add("cue"); });
     });
   });
 })();

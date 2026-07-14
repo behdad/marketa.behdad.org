@@ -706,6 +706,7 @@ footer{margin-top:2.6rem}
    animationend (distinct name from disco-ball's .popping). Reduced-motion stills the flash
    entirely (both here AND at the spawner, which self-gates on gardenPartyActive). */
 #garden-photographer{pointer-events:none}
+#loft-game-strip.party-on #garden-photog-hit{pointer-events:auto; cursor:pointer} /* click her to take a photo (flash + shutter) while the party's on */
 #garden-flash-bloom{opacity:0; transform-box:fill-box; transform-origin:center; mix-blend-mode:screen}
 #garden-flash-bloom.flashing{animation:garden-flash-pop .5s ease-out}
 #garden-flash-wash{opacity:0; mix-blend-mode:screen}
@@ -7214,16 +7215,21 @@ section{margin:1.9rem 0}
      — left of the leftmost dancer (x72), left of the candle flames (x88+), clear of the
      plants/DJ/couch on the right. -->
 <g id="garden-photographer">
+<!-- transparent hit surface over the figure (click her to take a photo — flash + shutter) -->
+<rect id="garden-photog-hit" x="16" y="250" width="42" height="87" fill="transparent"/>
 <rect x="23" y="305" width="6" height="28" rx="2" fill="#3a352e"/>
 <rect x="31" y="305" width="6" height="28" rx="2" fill="#332e28"/>
 <path d="M20 333 h10 v3.2 h-12 z" fill="#211d18"/>
 <path d="M30 333 h10 v3.2 h-12 z" fill="#1c1915"/>
 <path d="M22 289 L27 287 L37 271 L32 269 Z" fill="#544b3f"/>
+<!-- longer hair falling behind the shoulders (drawn before the torso so it sits behind) -->
+<path d="M18 262 q-3 14 0 26 q2 5 5 5 q-2 -12 -1 -24 z" fill="#2b231d"/>
 <rect x="20" y="284" width="20" height="24" rx="6" fill="#5c5346"/>
 <line x1="30" y1="286" x2="30" y2="307" stroke="#4a4238" stroke-width="1"/>
 <rect x="26.5" y="276" width="7" height="6" fill="#d8ac80"/>
 <circle cx="30" cy="267" r="9.5" fill="#e0b48a"/>
-<path d="M20.5 265 q1 -12 9.5 -12 q9.5 0 10 12 q-10 -4.5 -19.5 0.5 z" fill="#2e2620"/>
+<!-- fuller crown + hair framing the face down to the jaw (reads as a woman with longer hair) -->
+<path d="M18.5 270 q-1.5 -18 11.5 -18 q13 0 11.5 18 q-2 -5 -4.5 -6 q0.5 7 -1 14 q-1.5 -8 -2 -14 q-5.5 -2.5 -11 0 q-0.5 6 -2 14 q-2.5 -7 -3.5 -8 z" fill="#2e2620"/>
 <circle cx="22" cy="268" r="1.7" fill="#d3a679"/>
 <path d="M36 289 L41 287 L50 270 L45 268 Z" fill="#6b6152"/>
 <g id="garden-photog-cam">
@@ -34112,6 +34118,29 @@ function playCanCrushSound() {
     noise.stop(t + 0.35);
   } catch (e) {}
 }
+// Camera shutter for the party photographer: a quick two-part mechanical "k-chk" (mirror slap +
+// shutter) with a faint high flash-ready ping. Spatialized to the photographer, one-shot via getSfxCtx.
+function playCameraShutterSound() {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var out = pannedOut(ctx, "garden-photographer");
+    [[0, 1800, 0.34], [0.05, 2600, 0.28]].forEach(function (p) {
+      var t = ctx.currentTime + p[0];
+      var bs = Math.floor(ctx.sampleRate * 0.03);
+      var buf = ctx.createBuffer(1, bs, ctx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var j = 0; j < bs; j++) d[j] = (Math.random() * 2 - 1) * Math.pow(1 - j / bs, 3);
+      var n = ctx.createBufferSource(); n.buffer = buf;
+      var bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = p[1]; bp.Q.value = 1.2;
+      var g = ctx.createGain(); g.gain.setValueAtTime(p[2], t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+      n.connect(bp); bp.connect(g); g.connect(out); n.start(t); n.stop(t + 0.035);
+    });
+    var t2 = ctx.currentTime + 0.02, o = ctx.createOscillator(); o.type = "sine"; o.frequency.value = 3200;
+    var og = ctx.createGain(); og.gain.setValueAtTime(0.0001, t2); og.gain.exponentialRampToValueAtTime(0.05, t2 + 0.005); og.gain.exponentialRampToValueAtTime(0.0001, t2 + 0.12);
+    o.connect(og); og.connect(out); o.start(t2); o.stop(t2 + 0.14);
+  } catch (e) {}
+}
 function playKnockboxThumpSound() {
   var knockboxEl = document.getElementById("kitchen-knockbox");
   if (knockboxEl) {
@@ -35988,6 +36017,17 @@ function spawnDustMote(container) {
     ["garden-flash-bloom", "garden-flash-wash"].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.addEventListener("animationend", function () { el.classList.remove("flashing"); });
+    });
+  })();
+  (function () { // click her to take a photo: a flash NOW + a shutter sound (the ambient auto-flash stays silent)
+    var photog = document.getElementById("garden-photographer");
+    if (!photog) return;
+    photog.addEventListener("click", function (e) {
+      var hit = e.target && e.target.closest ? e.target.closest("#garden-photog-hit") : null;
+      if (!hit || !window.__gardenPartyOn) return;
+      e.stopPropagation();
+      fireGardenFlash();
+      playCameraShutterSound();
     });
   })();
   function gardenFlashTick() {

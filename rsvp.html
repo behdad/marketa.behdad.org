@@ -11580,6 +11580,7 @@ var T = {
     laptop_sweet2: "the rest of",
     laptop_sweet3: "our lives ♥",
     hunt: {
+      intro: "A game of wandering without aim. Click around to play.",
       kitchen: "Turn on the machine → grind → brew.",
       kitchen_grind: "Now grind coffee.",
       kitchen_brew: "Now brew a shot.",
@@ -11956,6 +11957,7 @@ var T = {
     laptop_sweet2: "zbytek našich",
     laptop_sweet3: "životů ♥",
     hunt: {
+      intro: "Hra o bezcílném toulání. Klikej a hraj.",
       kitchen: "Zapni kávovar → umel → uvař.",
       kitchen_grind: "Teď umel kávu.",
       kitchen_brew: "Teď uvař espresso.",
@@ -34468,6 +34470,7 @@ function spawnDustMote(container) {
   window.currentStageIndex = 0;
   var maxUnlocked = 0;
   var captionKey = "kitchen";
+  var huntIntroShowing = false; // the blinking "wandering without aim" opening prompt owns the caption until the first tap
   var dotsWrap = document.getElementById("hunt-dots");
   var dots = [];
   if (dotsWrap) {
@@ -34509,6 +34512,7 @@ function spawnDustMote(container) {
     // own captions; every other caller is a no-op until the show ends/cancels. Only
     // showRsvpNudge stays unguarded, so the finale's graceful RSVP landing still lands.
     if (window.__cinematic && !force) return;
+    if (huntIntroShowing && !force) return; // the opening prompt holds the caption until the first tap clears it
     captionKey = key;
     caption.classList.remove("rsvp-nudge");
     caption.textContent = huntText(key);
@@ -34593,6 +34597,7 @@ function spawnDustMote(container) {
     strip.style.transform = "translateX(-" + (idx * 20) + "%)";
     window.currentStageIndex = idx;
     window.currentStageName = name; // room-truth for gates that live outside this IIFE (e.g. the fractal-flame loop)
+    huntIntroShowing = false; // a room change ends the opening prompt, so the new room's caption shows
     setCaption(name);
     restoreStageHint(name);
     updateNav();
@@ -37541,12 +37546,21 @@ function spawnDustMote(container) {
     caption.classList.remove("hint-blink");
     strip.removeEventListener("pointerdown", stopHintBlink);
     strip.removeEventListener("click", stopHintBlink);
+    if (huntIntroShowing) { // hand the opening prompt off to the real first instruction
+      huntIntroShowing = false;
+      setCaption("kitchen"); // (a room change would already have cleared the prompt; at rest we're in the kitchen)
+    }
   }
   window.__stopHintBlink = stopHintBlink; // the cinematic (Watch is outside the strip) settles it too
   strip.addEventListener("pointerdown", stopHintBlink);
   strip.addEventListener("click", stopHintBlink);
 
   goToStage("kitchen"); // sets the initial caption text before the blink class goes on
+  // ...but open on a blinking "wandering without aim" invitation; the first strip tap (or the
+  // grace timeout) hands it off to the real first instruction via stopHintBlink
+  huntIntroShowing = true;
+  captionKey = "intro";
+  caption.textContent = huntText("intro");
   caption.classList.add("hint-blink");
   hintBlinkTimer = setTimeout(stopHintBlink, 8000); // a handful of pulses, then rest even if untouched
 })();

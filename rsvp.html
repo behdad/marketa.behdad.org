@@ -3516,6 +3516,13 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
   100%{opacity:0; transform:translate(3px,-15px) scale(1.2)}
 }
 @media (prefers-reduced-motion: reduce){#loft-game-strip.uv-mode #cuddly-behdad-zzz .zzz{animation:none; opacity:0.9}}
+/* Markéta's kiss stirs him: a tap on his head while dozing adds .behdad-awake to
+   the strip (JS, ~3.5s timer) — eyes open, Zzz gone — then it clears and he dozes
+   again. Id + two-class selectors out-specify the .uv-mode doze rules above. */
+#loft-game-strip.uv-mode.behdad-awake .cuddly-behdad-eye-open{opacity:1}
+#loft-game-strip.uv-mode.behdad-awake .cuddly-behdad-eye-sleepy{opacity:0}
+#loft-game-strip.uv-mode.behdad-awake #cuddly-behdad-zzz{opacity:0}
+#loft-game-strip.uv-mode.behdad-awake #cuddly-behdad-zzz .zzz{animation:none}
 #balcony-butterfly{opacity:0; pointer-events:none}
 #balcony-butterfly.flying{animation:balcony-butterfly-fly 3.2s ease-in-out forwards}
 @keyframes balcony-butterfly-fly{
@@ -12273,6 +12280,7 @@ document.addEventListener("click", function (e) {
 function setUvMode(on) {
   var strip = document.getElementById("loft-game-strip");
   if (strip) strip.classList.toggle("uv-mode", !!on);
+  if (!on && window.__endBehdadWake) window.__endBehdadWake(); // party over: clear any lingering wake
 }
 // The blacklight is driven solely by the balcony party switch (persistent,
 // #balcony-partyswitch) — also togglable with the 'p' key (see the party keydown below).
@@ -12438,10 +12446,36 @@ document.addEventListener("click", function (e) {
       requestAnimationFrame(function () { el.classList.add("shake"); });
     });
   }
+  // Under the blacklight Behdad dozes (see the .uv-mode doze CSS). A tap on his head
+  // is Markéta's kiss/rub: he wakes for ~3.5s (eyes open, Zzz off via .behdad-awake on
+  // the strip), then re-dozes; each tap re-arms the timer. Cleared when the party ends
+  // or the hunt resets so nothing is stranded (setUvMode's off-branch, resetHunt).
+  var behdadWakeTimer = null;
+  function endBehdadWake() {
+    if (behdadWakeTimer) { clearTimeout(behdadWakeTimer); behdadWakeTimer = null; }
+    var strip = document.getElementById("loft-game-strip");
+    var head = document.getElementById("cuddly-behdad-head");
+    if (strip) strip.classList.remove("behdad-awake");
+    if (head) head.classList.remove("pleased");
+  }
+  window.__endBehdadWake = endBehdadWake;
+  function wakeBehdad() {
+    var strip = document.getElementById("loft-game-strip");
+    var head = document.getElementById("cuddly-behdad-head");
+    if (!strip || !head || !strip.classList.contains("uv-mode")) return;
+    strip.classList.add("behdad-awake");
+    head.classList.add("pleased"); // affectionate cue (opacity transition, not a one-shot)
+    if (behdadWakeTimer) clearTimeout(behdadWakeTimer);
+    behdadWakeTimer = setTimeout(endBehdadWake, 3400);
+  }
   ["cuddly-behdad-head", "cuddly-marketa-head"].forEach(function (id) {
     var el = document.getElementById(id);
     if (!el) return;
-    el.addEventListener("click", function (e) { e.stopPropagation(); shake(el); });
+    el.addEventListener("click", function (e) {
+      e.stopPropagation();
+      shake(el);
+      if (id === "cuddly-behdad-head") wakeBehdad();
+    });
     // Strip the one-shot class when its animation ends so a resting head carries
     // none of shake/ouch/chopped (mirrors how the feet clear "tickled").
     el.addEventListener("animationend", function (e) {

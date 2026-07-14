@@ -20721,6 +20721,11 @@ document.addEventListener("click", function (e) {
       termPrint(termT("term_laser"), "term-dim");
       return;
     }
+    // bareword `go party` / `no smoker` — the natural, parens-free form of go("party")/no("smoker").
+    // Rewritten here before the JS eval (typed bare, they'd be a syntax error); the parens forms
+    // go("party")/no("party") still eval normally. (Terminal-only nicety; devtools needs the parens.)
+    var goM = c.match(/^(go|no)\s+(["']?)([A-Za-z_$][\w$-]*)\2$/);
+    if (goM) { var gv = window[goM[1]](goM[3]); termPrint(fmtOut(gv)); return; }
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
@@ -20756,9 +20761,9 @@ document.addEventListener("click", function (e) {
       rainbow: "rainbow() — arc a rainbow over the balcony",
       smoker: "smoker(true) — fire up the balcony smoker, low and slow; smoker(false) shuts it down; smoker() reports whether it's on (bbq is an alias)",
       bbq: "bbq(...) — alias for smoker(...)",
-      smokerlid: "smokerlid(true) — raise the smoker lid; smokerlid(false) lowers it; smokerlid() reports whether it's open (smoker_lid is an alias)",
+      smokerlid: "smokerlid(true) — raise the smoker lid; smokerlid(false) lowers it; smokerlid() reports whether it's open",
       cooked: "cooked(1|2|3) — is that burger done yet (bool)? cooked() — all three, as [bool, bool, bool]",
-      servefood: "servefood() — serve a cooked burger (opens the lid if needed); servefood(random()) picks a random ready one. returns true if one was served (serve_food is an alias)",
+      servefood: "servefood() — serve a cooked burger (opens the lid if needed); servefood(random()) picks a random ready one. returns true if one was served",
       phone: "phone(true) — bring up the pocket phone; phone(false) puts it away; phone() reports whether it's up",
       laptop: "laptop(true) — wake the office laptop; laptop(false) closes it; laptop() reports whether it's open",
       computer: "computer(true) — power the office PC up; computer(false) shuts it down; computer() reports whether it's on",
@@ -39619,7 +39624,6 @@ function spawnDustMote(container) {
     say(open, "🍖 lid up — mind the smoke.", "🍖 lid down.");
     return prev;
   };
-  window.smoker_lid = window.smokerlid; // underscore alias, same command
   window.cooked = function (n) { // is a burger done? cooked(1|2|3) → bool · cooked() → [bool, bool, bool]
     var s = document.getElementById("balcony-smoker");
     var bs = s ? [].slice.call(s.querySelectorAll(".smoker-burger")) : [];
@@ -39641,7 +39645,6 @@ function spawnDustMote(container) {
     say(true, "🍔 served.", "");
     return true;
   };
-  window.serve_food = window.servefood; // underscore alias, same command
 
   window.phone = function (arg) {
     var prev = !!document.querySelector(".phone-backdrop.show");

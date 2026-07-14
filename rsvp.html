@@ -19037,6 +19037,20 @@ document.addEventListener("click", function (e) {
         endLaptopUpdate();
       }
     }
+    // console hook: place a video call to a contact ("prague" | "lueb"), opening the lid first
+    // if needed (startCall requires it open). Used by the console laptop("prague"/"lubeck").
+    window.__laptopCall = function (callee) {
+      callee = callee === "lueb" ? "lueb" : "prague";
+      stopLaptopInvite();
+      if (inCall() && callCallee !== callee) endCall(); // switch contacts: hang up the current one first
+      if (!laptop.classList.contains("open")) {
+        laptop.classList.add("open");
+        if (window.__laptopLidZoom) window.__laptopLidZoom(true);
+        playLaptopClickSound("office-laptop");
+      }
+      startCall(callee);
+      return anyCall();
+    };
     var lapCallClose = document.getElementById("laptop-call-close");
     if (lapCallClose) {
       lapCallClose.addEventListener("click", function (e) { e.stopPropagation(); if (inCall()) endCall(); });
@@ -20731,7 +20745,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · beat() · temp() · weather() · clock() · countdown() · lang() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone() · laptop() · computer()/monitor() · reboot() · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · beat() · temp() · weather() · clock() · countdown() · lang() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone() · laptop() · computer()/monitor() · reboot() · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var TERM_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -20757,6 +20771,7 @@ document.addEventListener("click", function (e) {
       projector: "projector(\"channel\") — switch the cuddly-room projector by name in quotes, e.g. projector(\"nightsky\"), or a number 1–5. channels: \"fireplace\" · \"workout\" · \"nightsky\" · \"aquarium\" · \"totoro\" · \"none\" (off). projector() returns the current channel {n, name}",
       storm: "storm(true) — roll a thunderstorm in over the balcony; storm(false) clears it; storm() reports whether it's storming",
       dance: "dance(\"name\") — cue a garden-party dance by name in quotes, e.g. dance(\"salsa\"), or 1–9, or dance(random()); dance() returns the current dance {n, name}; dance(\"next\") skips ahead (run party(true) first). dances: \"techno\" · \"waltz\" · \"disco\" · \"swing\" · \"salsa\" · \"bhangra\" · \"persian\" · \"polka\" · \"horah\"",
+      dj: "dj(\"amir\"|\"danesh\") — who spins at the party (or 1–2, or random()); dj() returns the current DJ {n, name}. amir wears the cap, danesh the afro",
       lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
       countdown: "countdown() — days left until each wedding",
       fullscreen: "fullscreen(true) — fill the screen with the loft; fullscreen(false) leaves; fullscreen() reports whether it's on",
@@ -20767,7 +20782,7 @@ document.addEventListener("click", function (e) {
       cooked: "cooked(1|2|3) — is that burger done yet (bool)? cooked() — all three, as [bool, bool, bool]",
       servefood: "servefood() — serve a cooked burger (opens the lid if needed); servefood(random()) picks a random ready one. returns true if one was served",
       phone: "phone(true) — bring up the pocket phone; phone(false) puts it away; phone() reports whether it's up",
-      laptop: "laptop(true) — wake the office laptop; laptop(false) closes it; laptop() reports whether it's open",
+      laptop: "laptop(true) — wake the office laptop; laptop(false) closes it; laptop() reports whether it's open. laptop(\"prague\")/laptop(\"lubeck\") place a video call to her family",
       computer: "computer(true) — power the office PC up; computer(false) shuts it down; computer() reports whether it's on",
       reboot: "reboot() — power-cycle the loft OS (a `sudo reboot` from its own terminal)",
       monitor: "monitor(...) — alias for computer(...)",
@@ -39550,6 +39565,28 @@ function spawnDustMote(container) {
     return "💃 " + key + " — the garden shifts into step.";
   };
 
+  // dj — who's spinning at the garden party. amir (beanie/cap) = DJ A · danesh (afro) = DJ B.
+  // dj() returns the current one {n, name}; dj("amir"|"danesh"|1|2|random()) puts them on the decks.
+  var DJ_NAMES = ["amir", "danesh"]; // index ↔ window.__djB (false = A/amir, true = B/danesh)
+  window.dj = function (which) {
+    var curIdx = window.__djB ? 1 : 0;
+    if (arguments.length === 0 || which == null || which === "") return { n: curIdx + 1, name: DJ_NAMES[curIdx] };
+    var jfi = fracToIndex(which, DJ_NAMES.length); if (jfi) which = jfi; // random() → a random DJ
+    var s = String(which).toLowerCase().trim();
+    var idx = DJ_NAMES.indexOf(s);
+    if (idx === -1) { var n = parseInt(s, 10); if (String(n) === s && n >= 1 && n <= DJ_NAMES.length) idx = n - 1; }
+    if (idx === -1) return "djs (in quotes, or 1–2): \"amir\" · \"danesh\"";
+    if (window.goToStage) window.goToStage("garden"); // the booth's in the garden
+    var want = (idx === 1);
+    if (window.__djB !== want) { // mirror the dbl-click swap: flip the flag + reflect onto the booth
+      window.__djB = want;
+      var booth = document.getElementById("garden-djbooth");
+      if (booth) booth.classList.toggle("dj-b", want);
+      window.__djSwapCount = 0; // a manual swap → the next auto every-3 swap is a full set out
+    }
+    return "🎧 " + DJ_NAMES[idx] + " takes the decks.";
+  };
+
   var LANG_ALIASES = { cs: "cs", cz: "cs", czech: "cs", cesky: "cs", en: "en", eng: "en", english: "en" };
   window.lang = function (code) {
     if (arguments.length === 0 || code == null || code === "") {
@@ -39664,6 +39701,14 @@ function spawnDustMote(container) {
     var lap = document.getElementById("office-laptop");
     var prev = !!(lap && lap.classList.contains("open"));
     if (arguments.length === 0 || !lap) return prev; // no arg → is the laptop open?
+    if (typeof arg === "string" && arg !== "") { // a contact name → place a video call to them
+      var CALLEES = { prague: "prague", praha: "prague", lubeck: "lueb", "lübeck": "lueb", lueb: "lueb", lubek: "lueb" };
+      var callee = CALLEES[arg.toLowerCase().trim()];
+      if (!callee) return "laptop calls (in quotes): \"prague\" · \"lubeck\"";
+      if (window.goToStage) window.goToStage("office");
+      if (window.__laptopCall) window.__laptopCall(callee);
+      return callee === "lueb" ? "💻 calling Lübeck — her sister's family." : "💻 calling Prague — her parents' garden.";
+    }
     var wantOpen = !!arg; // laptop(true) → open; laptop(false) → close; returns the previous state
     if (window.goToStage) window.goToStage("office"); // the laptop sits on the office desk
     if (wantOpen !== lap.classList.contains("open")) lap.dispatchEvent(new MouseEvent("click", { bubbles: true })); // its real toggle path

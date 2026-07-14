@@ -18613,19 +18613,30 @@ document.addEventListener("click", function (e) {
   var bartender = document.getElementById("kitchen-bartender");
   var bartenderShaker = document.getElementById("kitchen-bartender-shaker");
   if (bartender && bartenderShaker) {
-    bartender.addEventListener("click", function (e) {
-      var hit = e.target && e.target.closest ? e.target.closest("#kitchen-bartender-hit") : null;
-      if (!hit) return;
-      e.stopPropagation();
+    function tossShaker() { // re-triggerable one-shot: clear + double-rAF re-add so it always replays
       bartenderShaker.classList.remove("tossing");
       requestAnimationFrame(function () {
         requestAnimationFrame(function () { bartenderShaker.classList.add("tossing"); });
       });
-      playShakerRattleSound("kitchen-bartender");
+    }
+    bartender.addEventListener("click", function (e) {
+      var hit = e.target && e.target.closest ? e.target.closest("#kitchen-bartender-hit") : null;
+      if (!hit) return;
+      e.stopPropagation();
+      tossShaker();
+      playShakerRattleSound("kitchen-bartender"); // click gets the rattle; the ambient auto-flare is silent
     });
     bartenderShaker.addEventListener("animationend", function (e) {
       if (e.target === bartenderShaker && bartenderShaker.classList.contains("tossing")) bartenderShaker.classList.remove("tossing");
     });
+    // he flairs on his own ~every 10s while the bar's up (visual only — no repeating rattle). One
+    // self-rescheduling timer that checks conditions each cycle (never touches setGardenParty, so
+    // it can't pile up and doesn't fight other party wiring); skips while off-party / hidden / reduced-motion.
+    function bartenderReduce() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+    (function autoFlare() {
+      if (window.__gardenPartyOn && document.visibilityState !== "hidden" && !bartenderReduce()) tossShaker();
+      setTimeout(autoFlare, 9000 + Math.random() * 3000); // ~10s, jittered so it's not metronomic
+    })();
   }
   // the skyline windows: a grid of togglable lit-window rects tiling each tower's face.
   // Tap a window and its light toggles on/off (both towers). stopPropagation so the tap

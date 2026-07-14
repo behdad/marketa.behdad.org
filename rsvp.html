@@ -13028,90 +13028,181 @@ document.addEventListener("click", function (e) {
   };
   document.addEventListener("visibilitychange", function () { window.__updateStarsSound(); });
 
-  // Ambient workout sound (chan-workout): a light, muffled aerobics rhythm heard faintly
-  // "through the wall" — a soft four-on-the-floor kick + off-beat tick + an occasional
-  // quiet bouncy note, all routed through one heavy lowpass so it reads muffled, not sharp.
-  // Same gate + fade-and-close teardown as the beds above; the rhythm is a self-rescheduling
-  // beat scheduler that bails when the ctx is null (no firing in a backgrounded tab).
-  var workoutCtx = null, beatTimer = null, workoutInCuddly = false;
-  var WORKOUT_BEAT = 0.4; // 150 BPM — half the .8s jumping-jack cycle, so the kick lands on each open/close (synced to the animation frequency)
-  var WORKOUT_NOTES = [147, 165, 196, 220]; // low bouncy motif tones (kept under the lowpass)
+  // Workout channel (chan-workout): a driving 80s-aerobics / hi-NRG electronic track — pure
+  // Web Audio synthesis, no samples. Four-on-the-floor kick (locked to the jumping-jack open/
+  // close at 150 BPM), an offbeat octave-bounce saw+sub bass, bright detuned-saw chord stabs,
+  // a peppy square-wave lead arp up top, closed/open hats, a clap backbeat, and a once-a-loop
+  // noise whoop, over a bright vi–IV–I–V (Am F C G) loop. It's channel MUSIC now, not a muffled
+  // through-the-wall pulse. Same cuddly-only + focus gate and fade-and-close teardown as the
+  // fire/aqua beds; a look-ahead scheduler queues events on the ctx clock ~1.2s ahead and bails
+  // when the ctx is null (no pile-up in a backgrounded tab). Routed to the wall-screen's spot;
+  // master follows the app volume button. Reuses one ctx (no net-new AudioContext).
+  var workoutCtx = null, beatTimer = null, workoutInCuddly = false, wkStep = 0, wkNext = 0;
+  var workoutSuspended = false; // synchronous transport-suspend flag (ctx.state lags a press)
+  var WK_BPM = 150, WK16 = (60 / WK_BPM) / 4;                    // one sixteenth; kick every 4 steps = .4s = the jumping-jack half-cycle
+  var WK_BASS_ROOT = 110, WK_STAB_ROOT = 220, WK_LEAD_ROOT = 440; // A2 bass, A3 stab, A4 arp base
+  var WK_BAR_ROOT = [0, -4, 3, -2];                             // Am F C G — bright hi-NRG vi–IV–I–V, semitones from A
+  var WK_CHORD = [[0, 3, 7], [0, 4, 7], [0, 4, 7], [0, 4, 7]];  // Am, F, C, G triads
+  var WK_BAR_BASS = [0, null, 12, null, 0, null, 12, null, 0, null, 12, null, 0, null, 12, null]; // offbeat octave bounce on the 8ths
+  var WK_BAR_LEAD = [0, null, 2, 3, null, 2, 4, null, 3, null, 5, 4, null, 2, 0, null]; // syncopated arp: triad-degree index (+3 = octave up), null = rest
+  var WK_LEAD_GAIN = 0.14;
+  function wkSemi(base, n) { return base * Math.pow(2, n / 12); }
+  function workoutVol() { return 0.9 * (window.__songVolume ? window.__songVolume() : 0.5); }
   function workoutWant() {
     return workoutInCuddly && screen.classList.contains("chan-workout") &&
       document.visibilityState !== "hidden" && document.hasFocus();
   }
-  function workoutKick(t) {
-    var ctx = workoutCtx, bus = ctx._bus;
-    var osc = ctx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(120, t);
-    osc.frequency.exponentialRampToValueAtTime(50, t + 0.12);
-    var g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.9, t + 0.005);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
-    osc.connect(g); g.connect(bus);
-    osc.start(t); osc.stop(t + 0.18);
-  }
-  function workoutTick(t) {
-    var ctx = workoutCtx, bus = ctx._bus;
-    // a quiet off-beat hat: a short noise blip (muffled by the master lowpass)
-    var dur = 0.03;
-    var buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+  function wkNoise(ctx, dur, shape) {
+    var buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
     var d = buf.getChannelData(0);
-    for (var i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
-    var src = ctx.createBufferSource();
-    src.buffer = buf;
-    var g = ctx.createGain();
-    g.gain.value = 0.25;
-    src.connect(g); g.connect(bus);
-    src.start(t);
+    for (var i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (shape ? Math.pow(1 - i / d.length, shape) : 1);
+    return buf;
   }
-  function workoutNote(t, freq) {
-    var ctx = workoutCtx, bus = ctx._bus;
-    var osc = ctx.createOscillator();
-    osc.type = "triangle";
-    osc.frequency.value = freq;
+  function wkKick(ctx, t) {
+    var osc = ctx.createOscillator(); osc.type = "sine";
+    osc.frequency.setValueAtTime(150, t);
+    osc.frequency.exponentialRampToValueAtTime(48, t + 0.11);
     var g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
-    osc.connect(g); g.connect(bus);
-    osc.start(t); osc.stop(t + 0.24);
+    g.gain.exponentialRampToValueAtTime(0.95, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    osc.connect(g); g.connect(ctx._bus); osc.start(t); osc.stop(t + 0.2);
+  }
+  function wkBass(ctx, t, freq) {
+    var dur = WK16 * 1.6;
+    var saw = ctx.createOscillator(); saw.type = "sawtooth"; saw.frequency.value = freq;
+    var sub = ctx.createOscillator(); sub.type = "sine"; sub.frequency.value = freq;
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 6;
+    lp.frequency.setValueAtTime(1400, t);
+    lp.frequency.exponentialRampToValueAtTime(300, t + dur);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.4, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    var sg = ctx.createGain(); sg.gain.value = 0.5; // sub weight, unfiltered
+    saw.connect(lp); lp.connect(g); sub.connect(sg); sg.connect(g); g.connect(ctx._bus);
+    saw.start(t); saw.stop(t + dur + 0.02); sub.start(t); sub.stop(t + dur + 0.02);
+  }
+  function wkHat(ctx, t, open) {
+    var dur = open ? 0.08 : 0.03;
+    var src = ctx.createBufferSource(); src.buffer = wkNoise(ctx, dur, 3);
+    var hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 8000;
+    var g = ctx.createGain(); g.gain.value = open ? 0.1 : 0.14;
+    src.connect(hp); hp.connect(g); g.connect(ctx._bus); src.start(t);
+  }
+  function wkClap(ctx, t) {
+    for (var k = 0; k < 3; k++) { // three fast bandpassed bursts read as a clap
+      var s = ctx.createBufferSource(); s.buffer = wkNoise(ctx, 0.02, 2);
+      var bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1600; bp.Q.value = 1.2;
+      var g = ctx.createGain(); g.gain.value = 0.24;
+      s.connect(bp); bp.connect(g); g.connect(ctx._bus); s.start(t + k * 0.01);
+    }
+  }
+  function wkStab(ctx, t, bar) {
+    var dur = 0.14;
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 4;
+    lp.frequency.setValueAtTime(700, t);
+    lp.frequency.linearRampToValueAtTime(4200, t + 0.02);       // fast filter open for the pluck
+    lp.frequency.exponentialRampToValueAtTime(1000, t + dur);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.14, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    lp.connect(g); g.connect(ctx._bus);
+    WK_CHORD[bar].forEach(function (iv) {
+      var f = wkSemi(WK_STAB_ROOT, WK_BAR_ROOT[bar] + iv);
+      [-7, 7].forEach(function (cents) {                        // two detuned saws per note for width
+        var o = ctx.createOscillator(); o.type = "sawtooth";
+        o.frequency.value = f; o.detune.value = cents;
+        o.connect(lp); o.start(t); o.stop(t + dur + 0.02);
+      });
+    });
+  }
+  function wkLead(ctx, t, freq) {
+    var dur = WK16 * 1.9;
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 4;
+    lp.frequency.setValueAtTime(1800, t);
+    lp.frequency.exponentialRampToValueAtTime(5200, t + 0.015); // quick pluck open, bright
+    lp.frequency.exponentialRampToValueAtTime(1600, t + dur);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(WK_LEAD_GAIN, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    lp.connect(g); g.connect(ctx._bus);
+    var o = ctx.createOscillator(); o.type = "square"; o.frequency.value = freq;
+    var o2 = ctx.createOscillator(); o2.type = "sawtooth"; o2.frequency.value = freq; o2.detune.value = 8; // a detuned saw thickens the square
+    o.connect(lp); o2.connect(lp);
+    o.start(t); o.stop(t + dur + 0.02); o2.start(t); o2.stop(t + dur + 0.02);
+  }
+  function wkWhoop(ctx, t, dur) {
+    var src = ctx.createBufferSource(); src.buffer = wkNoise(ctx, dur, 0);
+    var hp = ctx.createBiquadFilter(); hp.type = "highpass";
+    hp.frequency.setValueAtTime(400, t);
+    hp.frequency.exponentialRampToValueAtTime(6500, t + dur);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.09, t + dur * 0.9);
+    g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    src.connect(hp); hp.connect(g); g.connect(ctx._bus); src.start(t);
+  }
+  function wkStepFn(ctx, step, t) {
+    var inBar = step % 16, bar = (step / 16) | 0;
+    if (step % 4 === 0) wkKick(ctx, t);                                  // four-on-the-floor
+    if (inBar === 4 || inBar === 12) wkClap(ctx, t);                     // clap backbeat on 2 & 4
+    if (step % 2 === 1) wkHat(ctx, t, step % 8 === 7);                   // 16th hats, open on the offbeat
+    var bo = WK_BAR_BASS[inBar];
+    if (bo !== null) wkBass(ctx, t, wkSemi(WK_BASS_ROOT, WK_BAR_ROOT[bar] + bo)); // offbeat octave bounce
+    if (inBar % 4 === 2) wkStab(ctx, t, bar);                            // bright chord stabs on the offbeats
+    var lo = WK_BAR_LEAD[inBar];
+    if (lo !== null) {                                                   // peppy lead arp, pitched to the chord
+      var ch = WK_CHORD[bar], note = ch[lo % 3] + 12 * ((lo / 3) | 0);
+      wkLead(ctx, t, wkSemi(WK_LEAD_ROOT, WK_BAR_ROOT[bar] + note));
+    }
+    if (step === 60) wkWhoop(ctx, t, WK16 * 8);                          // once-a-loop lift into the downbeat
   }
   function scheduleBeat() {
     beatTimer = setTimeout(function () {
       beatTimer = null;
-      if (!workoutCtx) return; // stopped meanwhile (leave room / hide tab / channel change)
+      var ctx = workoutCtx;
+      if (!ctx) return; // stopped meanwhile (leave room / hide tab / channel change)
       try {
-        var t0 = workoutCtx.currentTime + 0.05;
-        workoutKick(t0);                     // four-on-the-floor
-        workoutTick(t0 + WORKOUT_BEAT / 2);   // off-beat hat
-        if (Math.random() < 0.2) workoutNote(t0 + WORKOUT_BEAT / 2, WORKOUT_NOTES[Math.floor(Math.random() * WORKOUT_NOTES.length)]); // occasional bouncy note
+        var horizon = ctx.currentTime + 1.2, guard = 0;
+        while (wkNext < horizon && guard++ < 200) {
+          wkStepFn(ctx, wkStep, wkNext);
+          wkNext += WK16;
+          wkStep = (wkStep + 1) % 64;   // 4-bar loop
+        }
       } catch (e) {}
       scheduleBeat();
-    }, WORKOUT_BEAT * 1000);
+    }, 200);
   }
   function startWorkout() {
     try {
       var Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return;
       stopWorkout();
+      window.__musicPaused = false; // a freshly-started bed is never born paused
+      workoutSuspended = false;
       workoutCtx = new Ctx();
       try { var p = workoutCtx.resume && workoutCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       var now = workoutCtx.currentTime;
-      // master bus: one heavy lowpass -> a single low master gain, so the whole rhythm
-      // reads as muffled music through a wall and the fade has a single handle
-      var lp = workoutCtx.createBiquadFilter();
-      lp.type = "lowpass";
-      lp.frequency.value = 600; // muffled, not sharp
+      // mix bus -> compressor (headroom for the summed kick/bass/stab) -> master (fade + the
+      // single volume handle) -> the wall-screen's on-screen spot (it's the TV's music)
+      var bus = workoutCtx.createGain(); bus.gain.value = 1.0;
+      var comp = workoutCtx.createDynamicsCompressor();
+      comp.threshold.value = -12; comp.knee.value = 24; comp.ratio.value = 4;
+      comp.attack.value = 0.003; comp.release.value = 0.2;
       var master = workoutCtx.createGain();
       master.gain.setValueAtTime(0.0001, now);
-      master.gain.exponentialRampToValueAtTime(0.024, now + 0.5); // muffled-music level
-      lp.connect(master); master.connect(pannedOut(workoutCtx, "cuddly-wallscreen"));
-      workoutCtx._bus = lp;
+      master.gain.linearRampToValueAtTime(workoutVol(), now + 0.4); // linear: safe when muted (target 0)
+      bus.connect(comp); comp.connect(master); master.connect(pannedOut(workoutCtx, "cuddly-wallscreen"));
+      workoutCtx._bus = bus;
       workoutCtx._masterGain = master;
       workoutCtx._nodes = []; // only self-terminating transients; nothing continuous to stop
+      wkStep = 0;
+      wkNext = now + 0.12;
+      var vb = document.getElementById("hunt-volume-btn"); if (vb) vb.classList.add("shown"); // it's the music now — reveal the volume button
+      if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn(); // ...and reveal + sync the play/pause button
       scheduleBeat();
     } catch (e) {}
   }
@@ -13127,7 +13218,18 @@ document.addEventListener("click", function (e) {
         try { ctx.close(); } catch (e) {}
       }, f * 1000 + 100);
     }
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn(); // the workout music stopped — resync the rail button
   }
+  window.__pauseWorkoutMusic = function (paused) { // unified space-bar control: true pause-in-place via ctx suspend/resume
+    if (!workoutCtx) return false;
+    workoutSuspended = !!paused;
+    try { if (paused) workoutCtx.suspend(); else workoutCtx.resume(); } catch (e) {}
+    return true;
+  };
+  window.__workoutPlaying = function () { return !!workoutCtx && !workoutSuspended; }; // live: bed up & not suspended
+  window.__applyWorkoutVolume = function () { // the volume button cycle updates the live master
+    if (workoutCtx && workoutCtx._masterGain) { try { workoutCtx._masterGain.gain.setTargetAtTime(workoutVol(), workoutCtx.currentTime, 0.05); } catch (e) {} }
+  };
   window.__updateWorkoutSound = function (inCuddly, fadeSecs) {
     if (typeof inCuddly === "boolean") workoutInCuddly = inCuddly;
     var want = workoutWant();
@@ -20204,6 +20306,13 @@ async def localfont(name):
       pause: function () { if (window.__pausePartyMusic) window.__pausePartyMusic(true); },
       resume: function () { return !!(window.__pausePartyMusic && window.__pausePartyMusic(false)); }
     });
+    list.push({
+      id: "workout",
+      isPlaying: function () { return !!(window.__workoutPlaying && window.__workoutPlaying()); },
+      valid: function () { var ws = document.getElementById("cuddly-wallscreen"); return !!(ws && ws.classList.contains("chan-workout")); },
+      pause: function () { if (window.__pauseWorkoutMusic) window.__pauseWorkoutMusic(true); },
+      resume: function () { return !!(window.__pauseWorkoutMusic && window.__pauseWorkoutMusic(false)); }
+    });
     return list;
   }
   var transportHeld = []; // ids the transport is currently holding paused/suspended
@@ -20238,7 +20347,7 @@ async def localfont(name):
     var btn = document.getElementById("hunt-playpause-btn");
     if (!btn) return;
     var ws = document.getElementById("cuddly-wallscreen");
-    var bedGatedOn = (ws && ws.classList.contains("chan-stars")) || !!window.__gardenPartyOn;
+    var bedGatedOn = (ws && (ws.classList.contains("chan-stars") || ws.classList.contains("chan-workout"))) || !!window.__gardenPartyOn;
     var songActive = !!(window.__phoneMusicId && window.__phoneMusicId()); // playing or paused-with-progress
     if (bedGatedOn || songActive) btn.classList.add("shown"); // reveal once there's music to control; never un-shows (matches the volume button)
     btn.classList.toggle("paused", !anyAudioPlaying()); // ▶ when everything's silent, ⏸ when anything plays
@@ -20451,6 +20560,7 @@ async def localfont(name):
     applySongVolume();
     if (window.__applyStarsVolume) window.__applyStarsVolume(); // the night-sky Satie bed follows the same level
     if (window.__applyPartyMusicVolume) window.__applyPartyMusicVolume(); // the techno party bed follows it too
+    if (window.__applyWorkoutVolume) window.__applyWorkoutVolume(); // the workout bed follows it too
     updateVolIcon();
     try { localStorage.setItem("songVolume", String(VOL_LEVELS[volIdx])); } catch (e) {}
   }

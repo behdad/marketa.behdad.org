@@ -390,7 +390,7 @@ function checkTransformClobber(file, style, html) {
 //    constants-only lower-bound check: compare only pure-numeric ramp ends
 //    against pure-numeric close delays (anything symbolic is skipped, so no
 //    false positives). ~50 one-shot SFX closers get this for free.
-var FADE_STOP_FNS = ["stopFire", "stopKettleHum", "stopRadioStatic", "stopPcFan", "stopACHum", "stopPartyMusic"];
+var FADE_STOP_FNS = ["stopFire", "stopKettleHum", "stopRadioStatic", "stopPcFan", "stopACHum", "stopPartyMusic", "stopWorkout"];
 var FADE_CLOSE_ALLOW = [
   // "functionName" entries for vetted false positives of the constants-only tier.
 ];

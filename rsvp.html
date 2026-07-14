@@ -20823,12 +20823,12 @@ document.addEventListener("click", function (e) {
       if (v === undefined) return "undefined";
       if (v === null) return "null";
       if (typeof v === "function") {
-        var fs = String(v), fn = v.name || "";
-        if (fn && TERM_HELP[fn]) return TERM_HELP[fn]; // typing a known command bare → print its help
-        // otherwise a Chrome-style compact `ƒ name(params)`, never the whole source
-        if (/\{\s*\[native code\]\s*\}/.test(fs)) return "ƒ " + fn + "() { [native code] }";
-        var pm = fs.match(/^(?:async\s+)?(?:function\b[^(]*)?\(([^)]*)\)/);
-        return "ƒ " + fn + "(" + (pm ? pm[1].trim() : "") + ")";
+        // a Chrome-style compact `ƒ name(params)` (never the whole source)…
+        var fs = String(v), fn = v.name || "", sig;
+        if (/\{\s*\[native code\]\s*\}/.test(fs)) sig = "ƒ " + fn + "() { [native code] }";
+        else { var pm = fs.match(/^(?:async\s+)?(?:function\b[^(]*)?\(([^)]*)\)/); sig = "ƒ " + fn + "(" + (pm ? pm[1].trim() : "") + ")"; }
+        if (fn && TERM_HELP[fn]) sig += "\n" + TERM_HELP[fn]; // …followed by its help, if it's a known command
+        return sig;
       }
       if (typeof v === "object") {
         // typed arrays / buffers (e.g. googlefonts() → Uint8Array of TTF bytes) print a compact

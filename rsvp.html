@@ -19563,9 +19563,13 @@ document.addEventListener("click", function (e) {
     a.addEventListener("play", updateNowPlaying);
     a.addEventListener("pause", updateNowPlaying);
     a.addEventListener("ended", updateNowPlaying);
-    // keep the pocket phone's Music screen in sync on auto-advance / monitor-driven changes
+    // keep the pocket phone's Music screen in sync on auto-advance / monitor-driven changes,
+    // and resync the rail play/pause button + name the track in the now-playing toast
     ["play", "pause", "ended"].forEach(function (ev) {
-      a.addEventListener(ev, function () { if (window.__phoneMusicChanged) window.__phoneMusicChanged(); });
+      a.addEventListener(ev, function () {
+        if (window.__phoneMusicChanged) window.__phoneMusicChanged();
+        if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+      });
     });
   });
   // Auto-advance: when a song finishes, the next one in the list starts on its own
@@ -22485,8 +22489,40 @@ async def localfont(name):
   // The rail's play/pause button mirrors the unified playback: it shows once any music has
   // been active, and flips ▶/⏸ with the true playing state (bed live & not suspended, or a
   // song actually playing). Clicking it is the touch equivalent of the spacebar.
+  // —— "Now playing" toast: name the current track (dance / piano piece / song) whenever it
+  // changes. Names are hardcoded (owner: dance/piece/song names don't need translation).
+  var NP_DANCE = { techno: "Techno", waltz: "Waltz", disco: "Disco", swing: "Swing", salsa: "Salsa", bhangra: "Bhangra", persian: "Persian", polka: "Polka", horah: "Horah" };
+  window.__nowPlayingLabel = function () { // "" when there's no active/loaded track (pause-independent so pause/resume doesn't re-toast)
+    if (window.__gardenPartyOn && window.__partyDance) return NP_DANCE[window.__partyDance] || window.__partyDance;
+    var ws = document.getElementById("cuddly-wallscreen");
+    if (ws) { // a projector music channel keys the loaded bed even while paused
+      if (ws.classList.contains("chan-stars")) return window.__starsPieceName ? window.__starsPieceName() : "";
+      if (ws.classList.contains("chan-workout")) return "Workout beat";
+      if (ws.classList.contains("chan-totoro")) return "Woodland rain";
+      if (ws.classList.contains("chan-aqua")) return "Aquarium ambient";
+    }
+    if (window.__phoneMusicId && window.__phoneMusicId() && window.__phoneMusicTitle) return window.__phoneMusicTitle(); // playing or paused-with-progress
+    return "";
+  };
+  var npToastEl = null, npToastTimer = null, lastNP = null;
+  function nowPlayingToast(label) { // one retimed element, mirrors seasonToast — nothing accumulates
+    var vp = document.querySelector(".hunt-viewport");
+    if (!vp) return;
+    if (!npToastEl) { npToastEl = document.createElement("div"); npToastEl.className = "season-toast np-toast"; vp.appendChild(npToastEl); }
+    npToastEl.textContent = "♪ " + label;
+    npToastEl.classList.add("show");
+    clearTimeout(npToastTimer);
+    npToastTimer = setTimeout(function () { npToastEl.classList.remove("show"); }, 2500);
+  }
+  window.__announceNowPlaying = function () { // toast only on a real change (dedup covers pause/resume, reveals, room hops)
+    var label = window.__nowPlayingLabel ? window.__nowPlayingLabel() : "";
+    if (label === lastNP) return;
+    lastNP = label;
+    if (label) nowPlayingToast(label); // only announce a genuine, non-empty track
+  };
   window.__updatePlayPauseBtn = function () {
     var btn = document.getElementById("hunt-playpause-btn");
+    if (window.__announceNowPlaying) window.__announceNowPlaying(); // name the track if it just changed (before the early btn-missing return)
     if (!btn) return;
     var ws = document.getElementById("cuddly-wallscreen");
     var bedGatedOn = (ws && (ws.classList.contains("chan-stars") || ws.classList.contains("chan-workout") || ws.classList.contains("chan-totoro") || ws.classList.contains("chan-aqua"))) || !!window.__gardenPartyOn;

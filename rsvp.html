@@ -14627,7 +14627,7 @@ document.addEventListener("click", function (e) {
   var daybed = document.getElementById("cuddly-daybed");        // roam hides her lower half behind this
   var ireneHome = irene.parentNode, ireneNext = irene.nextSibling; // canonical z-order (in front of the couple)
   var BEHAVIORS = ["irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-hugb", "irene-swing"]; // catplay appended only when the cat's here; hugb = the "daaeee" hug of uncle Behdad; swing = hangs from the pulley rope (always available)
-  var showTimer = null, hideTimer = null, catPlayTimer = null, fadeTimer = null, firstDone = false, lastBeh = null, firstWasRoam = false;
+  var showTimer = null, hideTimer = null, catPlayTimer = null, octiReactTimer = null, fadeTimer = null, firstDone = false, lastBeh = null, firstWasRoam = false;
   function onScreen() { return window.currentStageName === "cuddly" && !document.hidden; }
   function catLoose() {
     var w = document.getElementById("witchy-chest-cat-walk");
@@ -14712,6 +14712,7 @@ document.addEventListener("click", function (e) {
     else restoreZ();
   }
   function clearCatPlay() { if (catPlayTimer) { clearTimeout(catPlayTimer); catPlayTimer = null; } }
+  function clearOctiReact() { if (octiReactTimer) { clearTimeout(octiReactTimer); octiReactTimer = null; } }
   function dropPose() { // literal removes (check.js wants a literal classList.remove per anim-driving class)
     irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-hugb", "irene-catplay", "irene-catjump", "irene-octiplay", "irene-swing");
     restoreZ();
@@ -14725,6 +14726,7 @@ document.addEventListener("click", function (e) {
     irene.classList.remove("showing");
     if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
     clearCatPlay();
+    clearOctiReact();
     if (fadeTimer) clearTimeout(fadeTimer);
     fadeTimer = setTimeout(function () { fadeTimer = null; dropPose(); }, 620); // > opacity .55s fade
   }
@@ -14765,6 +14767,7 @@ document.addEventListener("click", function (e) {
     if (beh === "irene-octiplay" && !octiOut()) beh = "irene-bounce";  // Octi's tucked in the trunk → nothing to play with, just bounce
     lastBeh = beh;
     clearCatPlay();
+    clearOctiReact();
     irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-hugb", "irene-catplay", "irene-catjump", "irene-octiplay", "irene-swing");
     placeFor(beh);
     irene.classList.add(beh, "showing");
@@ -14785,6 +14788,20 @@ document.addEventListener("click", function (e) {
         catPlayTimer = null;
         if (onScreen() && catInNook() && window.__catChaseTo) window.__catChaseTo(120, 330);
       }, beh === "irene-catjump" ? 150 : 750);
+    }
+    // Playing with Octi makes him shy: after a beat (she's visibly playing first) he does ONE of his
+    // two existing reactions at random — camo-flash (she plays on) or dive into the trunk (he's gone,
+    // so send her to a fresh pose). Gated + cleared like the cat nudge; sound-bearing, so also hasFocus-gated.
+    if (beh === "irene-octiplay" && octiOut()) {
+      octiReactTimer = setTimeout(function () {
+        octiReactTimer = null;
+        if (!(onScreen() && document.hasFocus() && irene.classList.contains("irene-octiplay") && irene.classList.contains("showing") && octiOut())) return;
+        if (Math.random() < 0.5) {
+          if (window.__octiCamouflage) window.__octiCamouflage();               // he flushes colour; she keeps playing
+        } else if (window.__octiTuck && window.__octiTuck()) {                   // he dives into the box → octiOut() now false
+          if (window.__ireneSummon) window.__ireneSummon();                     // don't leave her crouched at empty floor
+        }
+      }, 800 + Math.random() * 700);
     }
     return beh;
   }
@@ -14820,6 +14837,7 @@ document.addEventListener("click", function (e) {
     if (lastBeh === "irene-roam" || next === "irene-roam" || lastBeh === "irene-swing" || next === "irene-swing" || reducedMotion()) {
       irene.classList.remove("showing");
       clearCatPlay();
+      clearOctiReact();
       if (fadeTimer) clearTimeout(fadeTimer);
       fadeTimer = setTimeout(function () { fadeTimer = null; dropPose(); runStep(next, 2); }, 620);
     } else {
@@ -14848,6 +14866,7 @@ document.addEventListener("click", function (e) {
     if (showTimer) { clearTimeout(showTimer); showTimer = null; }
     if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
     if (catPlayTimer) { clearTimeout(catPlayTimer); catPlayTimer = null; }
+    clearOctiReact();
     if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; }
     irene.classList.remove("showing");
     dropPose();
@@ -16255,6 +16274,7 @@ document.addEventListener("click", function (e) {
   octopus.addEventListener("keydown", function (e) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); wobble(); }
   });
+  window.__octiCamouflage = wobble; // Irene's play may make Octi camo-flash (see the Irene cameo)
 })();
 (function () {
   ["cuddly-bolster", "cuddly-pillow-1", "cuddly-pillow-2", "cuddly-pillow-3"].forEach(function (id) {
@@ -16305,6 +16325,13 @@ document.addEventListener("click", function (e) {
     octopusInChest = false;
     trunk.classList.remove("opening");
     if (octopus) octopus.classList.remove("falling-in", "popping-out", "wobble", "played");
+  };
+  // Irene's play may spook Octi into the trunk. Tuck him in only if he's out (openTrunk with
+  // octopusInChest false ⇒ falling-in). Returns whether he actually dove in.
+  window.__octiTuck = function () {
+    if (!octopus || octopusInChest || octopus.classList.contains("falling-in")) return false;
+    openTrunk();
+    return true;
   };
 })();
 (function () {

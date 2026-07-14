@@ -28030,11 +28030,13 @@ async def localfont(name):
   var outCol = document.getElementById("balcony-thermo-column");
   if (!inText && !outText) return;
 
-  // Early-May Edmonton: mild days, cold nights, storms colder still. The loft holds
-  // a comfortable 22 with a thermostat night-setback to 19; sun through the raised
-  // blind adds a few degrees by day (no sun to let in after dark); the AC pulls it
-  // down to 18; a storm leaks a little cold through the old windows; a molly trip
-  // pins the gauge at 40.
+  // Early-May Edmonton: mild days, cold nights, storms colder still. The loft's base
+  // tracks the outdoor air but never falls below a heated 22 — cool/cold outside, the
+  // furnace holds it at 22 (with a thermostat night-setback to 19); a hot day heats the
+  // loft up so the base rises with the outside air instead. On top of the base: sun
+  // through the raised blind adds a few degrees by day (no sun to let in after dark);
+  // the AC pulls it down; a storm leaks a little cold through the old windows; a molly
+  // trip pins the gauge at 40.
   var OUT_DAY = 16, OUT_NIGHT = 5, STORM_OUT = -4, STORM_IN = -1;
   var IN_BASE = 22, NIGHT_SETBACK = -3, SUN_GAIN = 3, AC_COOL = -4, TRIP_TARGET = 40; // molly pins the gauge
   var HARD_MIN = -20, HARD_MAX = 40;
@@ -28048,30 +28050,45 @@ async def localfont(name):
     var el = document.getElementById(stageId);
     return !!(el && el.classList.contains("dusk"));
   }
-  function outdoorTarget() {
-    // real Edmonton ANCHORS the reading but the game still moves it: in-game dusk
-    // cools a few degrees off the real number and the game storm drops it further —
-    // real-but-not-fully, so the loft's own weather stays visible on the tube.
-    // The simulated early-May model is the offline/headless fallback.
+  function outdoorAir() {
+    // The ambient outdoor AIR temperature, shared by BOTH readouts so indoor and
+    // outdoor agree. Real Edmonton ANCHORS it when a fetch has populated it; otherwise
+    // the simulated early-May day/night model is the offline/headless fallback. In-game
+    // dusk cools it a few degrees and the game storm drops it further — these are real
+    // changes to the outside air, so they live here (the indoor base tracks THIS value,
+    // and gates its own night-setback below to avoid double-cooling at dusk). Returned
+    // unrounded/unclamped; callers finish those.
     if (typeof window.__realOutdoorC === "number") {
       var r = window.__realOutdoorC;
       if (isDusk("stage-balcony")) r -= 4;
       if (window.__balconyStorm) r += STORM_OUT;
-      return Math.round(Math.max(HARD_MIN, Math.min(HARD_MAX, r)));
+      return r;
     }
     var t = isDusk("stage-balcony") ? OUT_NIGHT : OUT_DAY;
     if (window.__balconyStorm) t += STORM_OUT;
-    return Math.round(Math.max(HARD_MIN, Math.min(HARD_MAX, t + wanderOut)));
+    return t + wanderOut;
+  }
+  function outdoorTarget() {
+    return Math.round(Math.max(HARD_MIN, Math.min(HARD_MAX, outdoorAir())));
   }
   function indoorTarget() {
     if (window.__tripActive) return TRIP_TARGET; // overshoots past everything
+    var air = outdoorAir();
+    // Base tracks the outdoor air on a hot day (the loft heats up), but never drops
+    // below the heated 22 in cool/cold weather — the furnace holds it there.
+    var base = Math.max(IN_BASE, air);
     var night = isDusk("stage-garden");
-    var t = IN_BASE;
-    if (night) t += NIGHT_SETBACK;
+    var t = base;
+    // Night thermostat setback only applies while the loft is being HEATED (base pinned
+    // at 22 by the furnace). On a hot day the base is tracking the dusk-cooled outdoor
+    // air already — there's no heating to set back, and applying it would double-cool.
+    if (night && base <= IN_BASE) t += NIGHT_SETBACK;
     var blind = document.getElementById("garden-blind");
     if (!night && blind && blind.classList.contains("raised")) t += SUN_GAIN;
     var unit = document.getElementById("garden-minisplit");
     if (unit && unit.classList.contains("on")) t += AC_COOL;
+    // storm leak stays on top; on a hot stormy day it double-counts a little with the
+    // STORM_OUT already in `air`, but that's the asked-for draft-through-old-windows cue
     if (window.__balconyStorm) t += STORM_IN;
     return Math.round(Math.max(HARD_MIN, Math.min(HARD_MAX, t + wanderIn)));
   }

@@ -20691,7 +20691,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · trip() · goto() · night()/day() · season() · storm() · rainbow() · temp() · countdown() · lang() · fullscreen() · bbq() · phone() · laptop() · play()/pause() · confetti() · cat() · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · trip() · goto() · night()/day() · season() · storm() · rainbow() · temp() · weather() · countdown() · lang() · fullscreen() · bbq() · phone() · laptop() · play()/pause() · confetti() · cat() · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var TERM_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -20709,8 +20709,9 @@ document.addEventListener("click", function (e) {
       play: "play() — resume the music if it's paused",
       pause: "pause() — pause the music if something's playing",
       temp: "temp() — the indoor + outdoor thermometer reading",
+      weather: "weather() — the real current weather in both wedding cities (Edmonton · Prague)",
       storm: "storm() — roll a thunderstorm in over the balcony; storm(false) clears it",
-      dance: "dance(\"name\") — cue a garden-party dance IN QUOTES (techno · waltz · disco · swing · salsa · bhangra · persian · polka · horah); dance() skips to the next. run party() first",
+      dance: "dance(\"name\") — cue a garden-party dance by name in quotes, e.g. dance(\"salsa\"), or dance() to skip to the next (run party() first). dances: \"techno\" · \"waltz\" · \"disco\" · \"swing\" · \"salsa\" · \"bhangra\" · \"persian\" · \"polka\" · \"horah\"",
       lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
       countdown: "countdown() — days left until each wedding",
       fullscreen: "fullscreen() — fill the screen with the loft; fullscreen(false) leaves",
@@ -39304,6 +39305,14 @@ function spawnDustMote(container) {
     return "🌡 inside " + Math.round(t[0]) + "°C · outside " + Math.round(t[1]) + "°C";
   };
 
+  window.weather = function () { // real current weather in both wedding cities (from the one Open-Meteo fetch on load)
+    var e = window.__realOutdoorC, p = window.__realPragueC;
+    if (typeof e !== "number" && typeof p !== "number") return "weather's still loading… (it fetches once on load — try again in a moment)";
+    function g(wx) { return (wx && window.__wmoGlyph) ? window.__wmoGlyph(wx.code) + " " : ""; }
+    function t(v) { return typeof v === "number" ? Math.round(v) + "°C" : "—"; }
+    return "🌍 Edmonton " + g(window.__realWx) + t(e) + " · Prague " + g(window.__realWxPrague) + t(p);
+  };
+
   window.storm = function (arg) {
     var on = !(arguments.length > 0 && !arg); // storm() / storm(true) → on; storm(false) → off
     if (!window.__forceBalconyStorm) return "the storm hook isn't ready yet.";
@@ -39322,7 +39331,7 @@ function spawnDustMote(container) {
       return "💃 next up — " + (window.__partyDance || "");
     }
     var key = String(name).toLowerCase().trim();
-    if (ids.indexOf(key) === -1) return "dances: " + ids.join(" · ");
+    if (ids.indexOf(key) === -1) return "dances (in quotes): " + ids.map(function (d) { return "\"" + d + "\""; }).join(" · ");
     if (!window.__setPartyDance || !window.__setPartyDance(key)) return "the dance hook isn't ready yet.";
     return "💃 " + key + " — the garden shifts into step.";
   };

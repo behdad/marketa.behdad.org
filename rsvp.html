@@ -12589,6 +12589,83 @@ document.addEventListener("click", function (e) {
   };
   document.addEventListener("visibilitychange", function () { window.__updateAquaSound(); });
 
+  // ── Totoro channel: a soft, steady rainfall — a band-limited noise "shhh" bed plus
+  // sparse gentle drips. Same gate/teardown shape as the aquarium bed.
+  var totoroCtx = null, dripTimer = null, totoroInCuddly = false;
+  function totoroWant() {
+    return totoroInCuddly && screen.classList.contains("chan-totoro") &&
+      document.visibilityState !== "hidden" && document.hasFocus();
+  }
+  function popDrip() {
+    if (!totoroCtx) return;
+    try {
+      var ctx = totoroCtx, t = ctx.currentTime;
+      var dur = 0.03 + Math.random() * 0.03;
+      var buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var i = 0; i < d.length; i++) { var e = Math.pow(1 - i / d.length, 3); d[i] = (Math.random() * 2 - 1) * e; }
+      var src = ctx.createBufferSource(); src.buffer = buf;
+      var bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 900 + Math.random() * 1400; bp.Q.value = 2 + Math.random() * 3;
+      var g = ctx.createGain(); g.gain.value = 0.009 + Math.random() * 0.011;
+      src.connect(bp); bp.connect(g); g.connect(pannedOut(ctx, "cuddly-wallscreen"));
+      src.start(t); // self-terminating short buffer — no refs held
+    } catch (e) {}
+  }
+  function scheduleDrip() {
+    dripTimer = setTimeout(function () {
+      dripTimer = null;
+      if (!totoroCtx) return; // stopped meanwhile (leave room / hide tab / channel change)
+      popDrip();
+      scheduleDrip(); // self-rescheduling spawner, random 0.35-1.25s gaps
+    }, 350 + Math.random() * 900);
+  }
+  function startTotoro() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      stopTotoro();
+      totoroCtx = new Ctx();
+      try { var p = totoroCtx.resume && totoroCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+      var now = totoroCtx.currentTime;
+      // rain wash bed: band-limited (600-3600 Hz) looping noise, a soft steady "shhh"
+      var bufferSize = totoroCtx.sampleRate * 2;
+      var buffer = totoroCtx.createBuffer(1, bufferSize, totoroCtx.sampleRate);
+      var data = buffer.getChannelData(0);
+      for (var i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      var noise = totoroCtx.createBufferSource(); noise.buffer = buffer; noise.loop = true;
+      var hp = totoroCtx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 600;
+      var lp = totoroCtx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 3600;
+      var rainGain = totoroCtx.createGain();
+      rainGain.gain.setValueAtTime(0.0001, now);
+      rainGain.gain.exponentialRampToValueAtTime(0.013, now + 0.6); // low ambient level, calming
+      noise.connect(hp); hp.connect(lp); lp.connect(rainGain); rainGain.connect(pannedOut(totoroCtx, "cuddly-wallscreen"));
+      noise.start(0);
+      totoroCtx._nodes = [noise];
+      totoroCtx._rainGain = rainGain;
+      scheduleDrip();
+    } catch (e) {}
+  }
+  function stopTotoro(fadeSecs) {
+    var f = (typeof fadeSecs === "number") ? fadeSecs : 0.3;
+    if (dripTimer) { clearTimeout(dripTimer); dripTimer = null; }
+    if (totoroCtx) {
+      var ctx = totoroCtx, rain = totoroCtx._rainGain, nodes = totoroCtx._nodes || [];
+      totoroCtx = null; // null first so a racing scheduleDrip callback bails
+      try { if (rain) { var t = ctx.currentTime; rain.gain.cancelScheduledValues(t); rain.gain.setValueAtTime(rain.gain.value, t); rain.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
+      setTimeout(function () {
+        nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
+        try { ctx.close(); } catch (e) {}
+      }, f * 1000 + 100);
+    }
+  }
+  window.__updateTotoroSound = function (inCuddly, fadeSecs) {
+    if (typeof inCuddly === "boolean") totoroInCuddly = inCuddly;
+    var want = totoroWant();
+    if (want && !totoroCtx) startTotoro();
+    else if (!want && totoroCtx) stopTotoro(fadeSecs);
+  };
+  document.addEventListener("visibilitychange", function () { window.__updateTotoroSound(); });
+
   // Ambient workout sound (chan-workout): a light, muffled aerobics rhythm heard faintly
   // "through the wall" — a soft four-on-the-floor kick + off-beat tick + an occasional
   // quiet bouncy note, all routed through one heavy lowpass so it reads muffled, not sharp.
@@ -13085,6 +13162,7 @@ document.addEventListener("click", function (e) {
     if (window.__updateFireSound) window.__updateFireSound(); // crackle audio follows the fire channel
     if (window.__updateAquaSound) window.__updateAquaSound(); // underwater bed follows the aquarium channel
     if (window.__updateWorkoutSound) window.__updateWorkoutSound(); // aerobics bed follows the workout channel
+    if (window.__updateTotoroSound) window.__updateTotoroSound(); // rainfall follows the totoro channel
     if (reduceMotion) renderStill(); else start();
   }
 
@@ -28049,6 +28127,7 @@ function pannedSweep(ctx, fromPan, toPan, dur) {
     if (window.__updateFireSound) window.__updateFireSound();
     if (window.__updateAquaSound) window.__updateAquaSound();
     if (window.__updateWorkoutSound) window.__updateWorkoutSound();
+    if (window.__updateTotoroSound) window.__updateTotoroSound();
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong();
     if (window.__updateKettleHum) window.__updateKettleHum();
     if (window.__updateRadioSound) window.__updateRadioSound();
@@ -30881,6 +30960,7 @@ function spawnDustMote(container) {
     if (window.__updateFireSound) window.__updateFireSound(name === "cuddly", ROOM_FADE); // fire crackle only in the cuddly nook
     if (window.__updateAquaSound) window.__updateAquaSound(name === "cuddly", ROOM_FADE); // aquarium bed only in the cuddly nook
     if (window.__updateWorkoutSound) window.__updateWorkoutSound(name === "cuddly", ROOM_FADE); // workout bed only in the cuddly nook
+    if (window.__updateTotoroSound) window.__updateTotoroSound(name === "cuddly", ROOM_FADE); // rainfall only in the cuddly nook
     if (window.__updateWind) window.__updateWind(ROOM_FADE); // wind bed (balcony, + through the cuddly door) fades out over the room change too
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(name === "garden"); // birdsong only in the garden, and only by day
     if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(name === "balcony"); // string lights pulse with the beat only on the balcony

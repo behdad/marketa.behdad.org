@@ -1528,8 +1528,7 @@ footer{margin-top:2.6rem}
 .ed-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:row; gap:1.4px; background:#0c1014; padding:1.6px 2px 2px; font-family:ui-monospace,Menlo,monospace; color:#cfe3cf}
 /* left sidebar: a slim scrollable list of saved script names, with a +/− header (new/delete) */
 .ed-side{flex:none; width:24px; min-height:0; display:flex; flex-direction:column; gap:0.7px}
-.ed-side-head{flex:none; display:flex; align-items:center; gap:0.5px}
-.ed-side-title{flex:1; min-width:0; font-size:1.8px; letter-spacing:0.1px; color:#5f7a5f; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.ed-side-head{flex:none; display:flex; align-items:center; justify-content:space-between; gap:0.5px}
 .ed-side-btn{flex:none; width:4px; height:4px; display:flex; align-items:center; justify-content:center; background:#1d2622; border:0.3px solid #2b3a3a; border-radius:0.8px; color:#8fd070; font:inherit; font-size:3px; line-height:1; padding:0; cursor:pointer}
 .ed-side-btn:hover{background:#26332b}
 .ed-list{flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:0.4px; background:#0a0d10; border:0.3px solid #202b2b; border-radius:0.8px; padding:0.6px; scrollbar-width:none}
@@ -8992,9 +8991,10 @@ section{margin:1.9rem 0}
 <div xmlns="http://www.w3.org/1999/xhtml" id="monitor-ed-wrap" class="ed-wrap">
 <div class="ed-side">
 <div class="ed-side-head">
-<span class="ed-side-title">files</span>
+<button id="monitor-ed-open" class="ed-side-btn" type="button" title="open">&#8593;</button>
 <button id="monitor-ed-new" class="ed-side-btn" type="button" title="new">+</button>
 <button id="monitor-ed-del" class="ed-side-btn" type="button" title="delete">&#8722;</button>
+<button id="monitor-ed-copy" class="ed-side-btn" type="button" title="copy">&#10697;</button>
 </div>
 <div id="monitor-ed-list" class="ed-list"></div>
 </div>
@@ -9002,8 +9002,6 @@ section{margin:1.9rem 0}
 <div class="ed-top">
 <button id="monitor-ed-run" class="ed-btn ed-btn-run" type="button" title="run">&#9654;</button>
 <input id="monitor-ed-name" class="ed-name" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="filename"/>
-<button id="monitor-ed-save" class="ed-btn" type="button">save</button>
-<button id="monitor-ed-open" class="ed-btn" type="button" title="open">open</button>
 <button id="monitor-ed-dl" class="ed-btn" type="button" title="download">download</button>
 <input id="monitor-ed-file" type="file" accept=".js,.txt,text/javascript" style="display:none"/>
 </div>
@@ -21030,11 +21028,11 @@ document.addEventListener("click", function (e) {
   var edName = document.getElementById("monitor-ed-name");
   var edCode = document.getElementById("monitor-ed-code");
   var edList = document.getElementById("monitor-ed-list");
-  var edSaveBtn = document.getElementById("monitor-ed-save");
   var edRunBtn = document.getElementById("monitor-ed-run");
   var edDlBtn = document.getElementById("monitor-ed-dl");
   var edNewBtn = document.getElementById("monitor-ed-new");
   var edDelBtn = document.getElementById("monitor-ed-del");
+  var edCopyBtn = document.getElementById("monitor-ed-copy");
   var edOpenBtn = document.getElementById("monitor-ed-open");
   var edFileInput = document.getElementById("monitor-ed-file");
   var edCloseBtn = document.getElementById("monitor-ed-close");
@@ -21068,15 +21066,21 @@ document.addEventListener("click", function (e) {
       edList.appendChild(it);
     });
   }
+  // The name under which the current buffer is persisted in deskScripts. Tracked so a
+  // rename (autosave off the filename field) can drop the stale old-name entry instead of
+  // leaving a duplicate. null = the buffer isn't saved under any name yet (fresh/new).
+  var edLastSavedName = null;
   function edLoad(name) {
     var scr = readScripts(), has = Object.prototype.hasOwnProperty.call(scr, name);
     if (edName) edName.value = name;
     if (edCode) edCode.value = has ? scr[name] : ""; // unknown name = a fresh file pre-named
+    edLastSavedName = has ? name : null;
     edRefreshPicker(has ? name : null);
   }
   function edNew() {
     if (edName) edName.value = "";
     if (edCode) edCode.value = "";
+    edLastSavedName = null;
     edRefreshPicker(null);
     if (edName) { try { edName.focus(); } catch (e) {} }
   }
@@ -21088,28 +21092,45 @@ document.addEventListener("click", function (e) {
     scr[name] = edCode.value; // same-name save overwrites — it's the same file
     writeScripts(scr);
     edName.value = name; // reflect the trimmed name back
+    edLastSavedName = name;
     edRefreshPicker(name);
   }
-  // Debounced autosave while typing in the code buffer. Capture name+code at schedule
-  // time so a mid-type selection switch (edLoad, which sets .value without firing input,
-  // so it never schedules) can't make a pending timer clobber the newly-loaded file — the
-  // timer writes the pair that was live when the keystroke happened. Skips empty filenames
-  // so it never spawns a nameless entry; first-save/rename stay on the Save button.
-  var edAutoTimer = null;
+  // Write the buffer to deskScripts, dropping a stale prior-name entry on rename so a
+  // rename never leaves a duplicate under the old key. `prev` is the name it was last
+  // saved as; `name`/`code` are the pair captured when the save was scheduled.
+  function edWriteBuffer(name, code, prev) {
+    if (!name) return;
+    var scr = readScripts();
+    if (prev && prev !== name && Object.prototype.hasOwnProperty.call(scr, prev)) delete scr[prev];
+    scr[name] = code;
+    writeScripts(scr);
+    edLastSavedName = name;
+  }
+  // Debounced autosave, fired by typing in the code buffer OR renaming in the filename
+  // field (Save is gone). Capture name+code+prev at schedule time so a mid-type selection
+  // switch (edLoad sets .value without firing input, so it never reschedules) can't make a
+  // pending timer clobber the newly-loaded file — the timer writes the trio that was live
+  // when the keystroke happened. The pending commit is held as a closure so closeEditor can
+  // flush it early (Esc closes the app well under the debounce). Skips empty filenames so it
+  // never spawns a nameless entry.
+  var edAutoTimer = null, edPendingCommit = null;
   function edScheduleAutoSave() {
     if (!edName || !edCode) return;
+    clearTimeout(edAutoTimer); edAutoTimer = null; edPendingCommit = null;
     var name = edName.value.trim();
-    if (!name) return;
-    var code = edCode.value;
-    clearTimeout(edAutoTimer);
-    edAutoTimer = setTimeout(function () {
-      edAutoTimer = null;
-      var scr = readScripts();
-      scr[name] = code;
-      writeScripts(scr);
+    if (!name) return; // never persist a nameless buffer
+    var code = edCode.value, prev = edLastSavedName;
+    edPendingCommit = function () {
+      edAutoTimer = null; edPendingCommit = null;
+      edWriteBuffer(name, code, prev);
       edRefreshPicker(edName ? edName.value.trim() : null); // keep whatever's active highlighted
-    }, 600);
+    };
+    edAutoTimer = setTimeout(edPendingCommit, 250);
   }
+  // Fire any pending debounced save immediately (on close / Esc) so no edit is lost — it
+  // commits the captured pending pair, NOT the on-screen buffer, so a switch-then-close
+  // still saves the file that was actually being edited.
+  function edFlushAutoSave() { if (edPendingCommit) edPendingCommit(); }
   // Load a script's text from a picked file: basename (minus .js/.txt) → filename field,
   // contents → code buffer, then persist via edSave (which refreshes the sidebar).
   function edOpenFile(file) {
@@ -21130,9 +21151,25 @@ document.addEventListener("click", function (e) {
     var known = name && Object.prototype.hasOwnProperty.call(scr, name);
     // confirm before removing a saved file (silent delete lost work before)
     if (known && !window.confirm("Delete \"" + name + "\"?")) return;
+    // drop any pending autosave first — else it resurrects the file we just deleted
+    clearTimeout(edAutoTimer); edAutoTimer = null; edPendingCommit = null;
     if (known) { delete scr[name]; writeScripts(scr); }
     edName.value = ""; if (edCode) edCode.value = "";
+    edLastSavedName = null;
     edRefreshPicker(null);
+  }
+  // Duplicate the current buffer under a NEW name (prompted, defaulting to "<name> copy").
+  // The original is untouched; edSave writes the copy, sets it as the active/last-saved
+  // name, and highlights it in the sidebar. No-op on cancel or an empty name.
+  function edCopy() {
+    if (!edName || !edCode) return;
+    var cur = edName.value.trim();
+    var next = window.prompt("Duplicate as", cur ? cur + " copy" : "copy");
+    if (next == null) return;
+    next = String(next).trim();
+    if (!next) return;
+    edName.value = next; // becomes the active buffer name
+    edSave();            // persist current code under `next`, select it (original kept)
   }
   // Surface a script error: to the console scrollback if it's the console that's open (the
   // run("name") path), otherwise to the page console (the editor's own Run button).
@@ -21181,6 +21218,7 @@ document.addEventListener("click", function (e) {
   }
   function closeEditor() {
     if (!monitor.classList.contains("show-editor")) return;
+    edFlushAutoSave(); // commit any pending debounced save before the app tears down (Esc is faster than the debounce)
     monitor.classList.remove("show-editor");
     if (edCode) { try { edCode.blur(); } catch (e) {} }
     if (edName) { try { edName.blur(); } catch (e) {} }
@@ -21217,15 +21255,16 @@ document.addEventListener("click", function (e) {
     if (el) el.addEventListener("keydown", function (e) { e.stopPropagation(); });
   });
   if (edCode) edCode.addEventListener("input", function () { edScheduleAutoSave(); });
+  if (edName) edName.addEventListener("input", function () { edScheduleAutoSave(); }); // rename persists too (Save is gone)
   if (edWrap) {
     edWrap.addEventListener("click", function (e) { e.stopPropagation(); });
     edWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
-  if (edSaveBtn) edSaveBtn.addEventListener("click", function (e) { e.stopPropagation(); edSave(); playLaptopClickSound("office-monitor"); });
   if (edRunBtn) edRunBtn.addEventListener("click", function (e) { e.stopPropagation(); edRunCurrent(); });
   if (edDlBtn) edDlBtn.addEventListener("click", function (e) { e.stopPropagation(); edDownload(); playLaptopClickSound("office-monitor"); });
   if (edNewBtn) edNewBtn.addEventListener("click", function (e) { e.stopPropagation(); edNew(); });
   if (edDelBtn) edDelBtn.addEventListener("click", function (e) { e.stopPropagation(); edDelete(); playLaptopClickSound("office-monitor"); });
+  if (edCopyBtn) edCopyBtn.addEventListener("click", function (e) { e.stopPropagation(); edCopy(); playLaptopClickSound("office-monitor"); });
   if (edOpenBtn && edFileInput) edOpenBtn.addEventListener("click", function (e) { e.stopPropagation(); try { edFileInput.value = ""; edFileInput.click(); } catch (err) {} });
   if (edFileInput) edFileInput.addEventListener("change", function (e) {
     e.stopPropagation();

@@ -12798,6 +12798,7 @@ document.addEventListener("click", function (e) {
       var Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return;
       stopStars();
+      window.__musicPaused = false; // a freshly-opened bed is never born paused
       starsCtx = new Ctx();
       try { var p = starsCtx.resume && starsCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       // triangle voices → a gentle lowpass (rounds the tone toward a soft piano) → one master
@@ -12831,6 +12832,11 @@ document.addEventListener("click", function (e) {
       }, f * 1000 + 100);
     }
   }
+  window.__pauseStars = function (paused) { // unified space-bar control: true pause-in-place via ctx suspend/resume
+    if (!starsCtx) return false;
+    try { if (paused) starsCtx.suspend(); else starsCtx.resume(); } catch (e) {}
+    return true;
+  };
   window.__updateStarsSound = function (inCuddly, fadeSecs) {
     if (typeof inCuddly === "boolean") starsInCuddly = inCuddly;
     // switching TO the night-sky channel fades the game song out and takes over; switching
@@ -13109,6 +13115,7 @@ document.addEventListener("click", function (e) {
       var Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return;
       stopPartyMusic();
+      window.__musicPaused = false; // a freshly-lit party is never born paused
       partyCtx = new Ctx();
       try { var p = partyCtx.resume && partyCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       var now = partyCtx.currentTime;
@@ -13144,6 +13151,11 @@ document.addEventListener("click", function (e) {
       }, f * 1000 + 100);
     }
   }
+  window.__pausePartyMusic = function (paused) { // unified space-bar control: true pause-in-place via ctx suspend/resume
+    if (!partyCtx) return false;
+    try { if (paused) partyCtx.suspend(); else partyCtx.resume(); } catch (e) {}
+    return true;
+  };
   window.__partyMusicWant = partyMusicWant; // setGardenParty checks this before pausing a loft song
   window.__applyPartyMusicVolume = function () { // the volume button cycle updates the live master
     if (partyCtx && partyCtx._masterGain) { try { partyCtx._masterGain.gain.setTargetAtTime(partyVol(), partyCtx.currentTime, 0.05); } catch (e) {} }
@@ -19870,6 +19882,23 @@ async def localfont(name):
     } catch (e) {}
   }
   window.__toggleSongPlayback = toggleSongPlayback; // exposed for tests/other callers
+  // One play/pause for whatever is actually sounding. When the night-sky piano bed or the
+  // party techno bed is live, space suspends/resumes THAT in place (a true pause); otherwise
+  // it toggles the loft song, exactly as before. So the beds and the songs are one "playing"
+  // thing under the spacebar.
+  function toggleMusicPlayback() {
+    var wallscreen = document.getElementById("cuddly-wallscreen");
+    var bedLive = (wallscreen && wallscreen.classList.contains("chan-stars")) || !!window.__gardenPartyOn;
+    if (bedLive) {
+      window.__musicPaused = !window.__musicPaused;
+      if (window.__pauseStars) window.__pauseStars(window.__musicPaused);
+      if (window.__pausePartyMusic) window.__pausePartyMusic(window.__musicPaused);
+      return;
+    }
+    window.__musicPaused = false;
+    toggleSongPlayback();
+  }
+  window.__toggleMusicPlayback = toggleMusicPlayback;
   // Spacebar always toggles the song, everywhere on the page -- deliberately NOT
   // deferring to a focused hunt-hit/button's own space-activation (an earlier version
   // did, but that meant "click something, then hit space" activated whatever was
@@ -19896,7 +19925,7 @@ async def localfont(name):
       window.__toggleMonitorVideo();
       return;
     }
-    toggleSongPlayback();
+    toggleMusicPlayback();
   }, true);
   // Escape: unconditional stop, not a toggle like space above -- a "get me out of
   // this" gesture that only ever silences, never (re)starts, whichever song is playing.

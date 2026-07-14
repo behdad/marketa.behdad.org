@@ -12990,12 +12990,12 @@ document.addEventListener("click", function (e) {
   // bass hits (semitone offset from the bar root, or null = rest) across a 16-step bar
   var BAR_BASS = [null, null, 0, 12, null, null, 0, null, null, null, 0, 12, null, null, 0, 12];
   function semi(base, n) { return base * Math.pow(2, n / 12); }
-  function partyVol() { return 0.5 * (window.__songVolume ? window.__songVolume() : 0.5); }
+  function partyVol() { return 0.8 * (window.__songVolume ? window.__songVolume() : 0.5); }
   function partyMusicWant() {
-    // hasFocus too (not just visibility): a continuous bed holds a live OS audio stream open;
-    // an unattended-but-"visible" window on X11 (no occlusion detection) underruns into crackle
-    return !!window.__gardenPartyOn && window.currentStageName === "garden" &&
-      document.visibilityState !== "hidden" && document.hasFocus();
+    // plays whenever the garden party is lit — background music, so no focus/visibility gate
+    // (look-ahead scheduled, so it stays clean through focus loss / a hidden tab, like the
+    // projector's night-sky bed)
+    return !!window.__gardenPartyOn && window.currentStageName === "garden";
   }
   function noiseBuf(ctx, dur, shape) {
     var buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
@@ -23879,6 +23879,14 @@ async def localfont(name):
       if (window.__updateMozzies) window.__updateMozzies(); // dusk → mosquitoes swarm; day → they clear
     }
     window.__autoToggleDusk = toggleDusk;
+    // force day/night to a target state (the garden party lights up the night; its light
+    // switch brings the day back). a no-op when already there.
+    window.__setDayNight = function (wantNight) {
+      if (stageBalcony.classList.contains("dusk") !== !!wantNight) {
+        toggleDusk();
+        if (window.__stopAutoDayNight) window.__stopAutoDayNight(); // deliberate flip -> stop the auto cycle
+      }
+    };
     // a manual flip means the visitor's driving — stop the automatic cycle
     function onSunClick() { toggleDusk(); if (window.__stopAutoDayNight) window.__stopAutoDayNight(); }
     window.__toggleDayNight = onSunClick; // 'd' key hook (see the hunt-nav keydown handler)
@@ -24354,10 +24362,14 @@ async def localfont(name):
     // a real tappable toggle (works on touch, and it sticks). The toggle() return value is
     // the source of truth; the guard means a play.js storm click can never throw. Click-only
     // (no keydown/tabindex/role/aria) per the game-SVG a11y rule.
+    function setPartyMode(on) {
+      partyswitch.classList.toggle("on", on);
+      if (window.__setUvParty) window.__setUvParty(on);
+      if (window.__setGardenParty) window.__setGardenParty(on, true); // whisk to the garden + throw the party
+    }
+    window.__setPartyMode = setPartyMode; // the garden light switch turns the party off through here
     partyswitch.addEventListener("click", function () {
-      var isOn = partyswitch.classList.toggle("on");
-      if (window.__setUvParty) window.__setUvParty(isOn);
-      if (window.__setGardenParty) window.__setGardenParty(isOn, true); // whisk to the garden + throw the party
+      setPartyMode(!partyswitch.classList.contains("on"));
     });
   }
   var doormat = document.getElementById("balcony-doormat");
@@ -31941,6 +31953,11 @@ function spawnDustMote(container) {
     var sw = document.getElementById("garden-lightswitch");
     if (!sw) return;
     onActivate(sw, function () {
+      if (window.__gardenPartyOn && window.__setPartyMode) { // party lit -> the switch kills it and brings the day back
+        window.__setPartyMode(false);
+        if (window.__setDayNight) window.__setDayNight(false);
+        return;
+      }
       if (window.__autoToggleDusk) window.__autoToggleDusk();
       if (window.__stopAutoDayNight) window.__stopAutoDayNight(); // manual control from here on
     });
@@ -32214,6 +32231,7 @@ function spawnDustMote(container) {
     var partyDancers = document.getElementById("trip-melt-dancers");
     if (on) {
       if (userInitiated && window.goToStage) window.goToStage("garden"); // whisk to the garden
+      if (userInitiated && window.__setDayNight) window.__setDayNight(true); // the party lights up the night (scripted cinematic drives its own sky)
       if (gardenPartyActive()) topUpConfetti(); // kick it off now; the seed loop keeps it topped
       if (partyDancers) { // the colorful dancers rise in the garden and hold for the party
         partyDancers.setAttribute("transform", "translate(" + (STAGES.indexOf("garden") * 680) + ",0)");

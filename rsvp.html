@@ -725,8 +725,15 @@ footer{margin-top:2.6rem}
 #stage-garden.garden-party #garden-dj-hand{animation:dj-hand .525s ease-in-out infinite}
 @keyframes dj-nod{0%,100%{transform:translateY(0) rotate(-1.6deg)}50%{transform:translateY(1.1px) rotate(1.6deg)}}
 @keyframes dj-hand{0%,100%{transform:translateY(0)}50%{transform:translateY(1.6px)}}
+/* click the DJ's head for an emphatic one-shot headbang — on the inner wrapper (distinct from
+   the infinitely-nodding #garden-dj-nod), pivoting at the neck; clickable while the party's lit */
+#garden-dj-headbang{transform-box:fill-box; transform-origin:50% 100%}
+#stage-garden.garden-party #garden-dj-headbang{pointer-events:auto; cursor:pointer}
+#garden-dj-headbang.bang{animation:dj-headbang .55s ease-in-out}
+@keyframes dj-headbang{0%{transform:translateY(0) rotate(0)}28%{transform:translateY(2.6px) rotate(9deg)}55%{transform:translateY(0) rotate(-3.5deg)}78%{transform:translateY(1px) rotate(2deg)}100%{transform:translateY(0) rotate(0)}}
 @media (prefers-reduced-motion: reduce){
   #stage-garden.garden-party #garden-dj-nod, #stage-garden.garden-party #garden-dj-hand{animation:none}
+  #garden-dj-headbang.bang{animation:none}
 }
 #kitchen-canister-lid{transform-box:fill-box; transform-origin:bottom center}
 #kitchen-canister.jiggling #kitchen-canister-lid{animation:canister-lid-jiggle .4s ease-in-out}
@@ -6528,6 +6535,9 @@ section{margin:1.9rem 0}
 <ellipse cx="630" cy="238.5" rx="2.6" ry="2.1" fill="#f0c6a0"/>
 <!-- head on a nodding wrapper (pivot at the neck) -->
 <g id="garden-dj-nod">
+<!-- inner wrapper for the click-triggered emphatic headbang — kept DISTINCT from the
+     infinitely-nodding #garden-dj-nod so the one-shot doesn't lose the cascade to it -->
+<g id="garden-dj-headbang">
 <rect x="605.5" y="216" width="7" height="8" rx="2" fill="#f0c6a0"/>
 <circle cx="609" cy="208" r="9.5" fill="#f5cda4"/>
 <!-- beanie -->
@@ -6542,6 +6552,7 @@ section{margin:1.9rem 0}
 <path d="M598 208 Q598 196.5 609 196" fill="none" stroke="#f500f5" stroke-width="1" stroke-linecap="round" opacity="0.85"/>
 <rect x="595.5" y="205" width="5.5" height="8" rx="2.4" fill="#1b1722" stroke="#f500f5" stroke-width="1"/>
 <rect x="617" y="205" width="5.5" height="8" rx="2.4" fill="#1b1722" stroke="#f500f5" stroke-width="1"/>
+</g>
 </g>
 <!-- working arm + hand on the left platter (bobs to the beat) -->
 <g id="garden-dj-hand">
@@ -18056,6 +18067,23 @@ document.addEventListener("click", function (e) {
     });
     playLampShimmerSound("garden-disco-ball");
     if (window.__setPartyMode) window.__setPartyMode(false); // one last pop, then the ball calls the party -- but the night stays (no __setDayNight)
+  });
+})();
+(function () {
+  // Click the DJ's head for an emphatic one-shot headbang on top of his ambient nod. The bang
+  // lives on #garden-dj-headbang — a node DISTINCT from the infinitely-nodding #garden-dj-nod, so
+  // the one-shot doesn't lose the cascade to it. Re-triggerable: the class clears on animationend
+  // and re-adds across a double rAF, so repeated taps replay it. No a11y attrs — aria-hidden djbooth.
+  var head = document.getElementById("garden-dj-headbang");
+  if (!head) return;
+  head.addEventListener("animationend", function () { head.classList.remove("bang"); });
+  head.addEventListener("click", function (e) {
+    if (e) e.stopPropagation();
+    if (!window.__gardenPartyOn) return; // only while the booth is lit (and clickable)
+    head.classList.remove("bang");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { head.classList.add("bang"); });
+    });
   });
 })();
 (function () {

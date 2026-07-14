@@ -59,6 +59,14 @@ AddType application/manifest+json .webmanifest
   AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml \
     application/javascript text/javascript application/json image/svg+xml \
     application/wasm application/manifest+json
+  # Large self-hosted binaries served as octet-stream (so the type filter above misses them):
+  # the DOOM WAD compresses ~61% (21→8 MB) and the Linux ISO ~56% (7.6→3.3 MB). Both are fetched
+  # WHOLE (Emscripten createPreloadedFile / v86's non-async cdrom), so the browser's transparent
+  # gunzip hands the runtime the full bytes — safe. (.wasm is already covered above; .zip/.whl are
+  # already-compressed, so they're left alone.)
+  <FilesMatch "\.(wad|iso)$">
+    SetOutputFilter DEFLATE
+  </FilesMatch>
 </IfModule>
 
 <IfModule mod_headers.c>

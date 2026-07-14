@@ -12863,7 +12863,9 @@ document.addEventListener("click", function (e) {
       lp.type = "lowpass"; lp.frequency.value = 3200; // soft, watery brightness
       var master = aquaMelCtx.createGain();
       master.gain.value = aquaMelVol();
-      lp.connect(master); master.connect(pannedOut(aquaMelCtx, 0)); // centered: whole-loft wash
+      var aqOut = pannedOut(aquaMelCtx, projectorRoomPan()); // projector music: pan per room like the piano
+      lp.connect(master); master.connect(aqOut);
+      aquaMelCtx._pan = aqOut;
       aquaMelCtx._bus = lp;
       aquaMelCtx._masterGain = master;
       aquaMelCtx._nodes = []; // notes self-terminate — nothing continuous to stop
@@ -13051,7 +13053,9 @@ document.addEventListener("click", function (e) {
       lp.type = "lowpass"; lp.frequency.value = 2600; // warm, soft-edged
       var master = totoroMelodyCtx.createGain();
       master.gain.value = totoroMelVol(); // level follows the app volume button
-      lp.connect(master); master.connect(pannedOut(totoroMelodyCtx, 0));
+      var toOut = pannedOut(totoroMelodyCtx, projectorRoomPan()); // projector music: pan per room like the piano
+      lp.connect(master); master.connect(toOut);
+      totoroMelodyCtx._pan = toOut;
       totoroMelodyCtx._bus = lp;
       totoroMelodyCtx._masterGain = master;
       totoroMelodyCtx._nodes = []; // only self-terminating note voices; nothing continuous to stop
@@ -13232,17 +13236,6 @@ document.addEventListener("click", function (e) {
   window.__applyStarsVolume = function () { // called when the volume button cycles, to update live
     if (starsCtx && starsCtx._masterGain) { try { starsCtx._masterGain.gain.setTargetAtTime(starsVol(), starsCtx.currentTime, 0.05); } catch (e) {} }
   };
-  // the piano's own cuddly-sourced per-room pan — decoupled from the guitar/uke songs so
-  // each can be tuned independently
-  var STARS_ROOM_PAN = { kitchen: 0.6, garden: -0.6, cuddly: 0, office: 0 };
-  function starsRoomPan() {
-    var room = window.currentStageName || "cuddly";
-    return room === "balcony" ? panForElId("balcony-door") : (STARS_ROOM_PAN[room] || 0);
-  }
-  window.__updateStarsRoomPan = function () { // room change: glide the pan to the new room's spot
-    if (!starsCtx || !starsCtx._pan || !starsCtx._pan.pan) return;
-    try { starsCtx._pan.pan.setTargetAtTime(starsRoomPan(), starsCtx.currentTime, 0.4); } catch (e) {}
-  };
   function startStars() {
     try {
       var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -13258,7 +13251,7 @@ document.addEventListener("click", function (e) {
       lp.type = "lowpass"; lp.frequency.value = 2400; // warm, felt-piano roundness
       var master = starsCtx.createGain();
       master.gain.value = starsVol(); // level follows the app volume button
-      var starsOut = pannedOut(starsCtx, starsRoomPan()); // cuddly-sourced: pan per room like the concert songs
+      var starsOut = pannedOut(starsCtx, projectorRoomPan()); // pan per room like every projector bed
       lp.connect(master); master.connect(starsOut);
       starsCtx._pan = starsOut;
       starsCtx._bus = lp;
@@ -13296,9 +13289,9 @@ document.addEventListener("click", function (e) {
   window.__starsPlaying = function () { return !!starsCtx && !starsSuspended; }; // live: bed up & not suspended
   window.__updateStarsSound = function (inCuddly, fadeSecs) {
     if (typeof inCuddly === "boolean") starsInCuddly = inCuddly;
-    // switching TO the night-sky channel fades the game song out and takes over; switching
-    // away hands playback back to whatever song was going. Keyed off the channel class, so a
-    // room change / tab hide (which don't touch chan-stars) never trips it.
+    // song takeover is centralized in setChannel (the projector-music state machine); here we
+    // only refresh the piece selection when the channel comes up. Keyed off the channel class,
+    // so a room change / tab hide (which don't touch chan-stars) never trips it.
     var onSky = screen.classList.contains("chan-stars");
     if (onSky && !starsWasActive) {
       starsWasActive = true;
@@ -13307,9 +13300,8 @@ document.addEventListener("click", function (e) {
       curScore = starsPiece ? STARS_MELODY : STARS_MELODY_2;
       starsPiece ^= 1;
       starsIdx = 0;
-      if (window.__suspendSongForProjector) window.__suspendSongForProjector();
     }
-    else if (!onSky && starsWasActive) { starsWasActive = false; if (window.__restoreSongAfterProjector) window.__restoreSongAfterProjector(); }
+    else if (!onSky && starsWasActive) { starsWasActive = false; }
     var want = starsWant();
     if (want && !starsCtx) startStars();
     else if (!want && starsCtx) stopStars(fadeSecs);
@@ -13475,7 +13467,7 @@ document.addEventListener("click", function (e) {
       try { var p = workoutCtx.resume && workoutCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       var now = workoutCtx.currentTime;
       // mix bus -> compressor (headroom for the summed kick/bass/stab) -> master (fade + the
-      // single volume handle) -> the wall-screen's on-screen spot (it's the TV's music)
+      // single volume handle) -> a stored per-room panner (projector music: pans like the piano)
       var bus = workoutCtx.createGain(); bus.gain.value = 1.0;
       var comp = workoutCtx.createDynamicsCompressor();
       comp.threshold.value = -12; comp.knee.value = 24; comp.ratio.value = 4;
@@ -13483,7 +13475,9 @@ document.addEventListener("click", function (e) {
       var master = workoutCtx.createGain();
       master.gain.setValueAtTime(0.0001, now);
       master.gain.linearRampToValueAtTime(workoutVol(), now + 0.4); // linear: safe when muted (target 0)
-      bus.connect(comp); comp.connect(master); master.connect(pannedOut(workoutCtx, "cuddly-wallscreen"));
+      var wkOut = pannedOut(workoutCtx, projectorRoomPan());
+      bus.connect(comp); comp.connect(master); master.connect(wkOut);
+      workoutCtx._pan = wkOut;
       workoutCtx._bus = bus;
       workoutCtx._masterGain = master;
       workoutCtx._nodes = []; // only self-terminating transients; nothing continuous to stop
@@ -13525,6 +13519,16 @@ document.addEventListener("click", function (e) {
     else if (!want && workoutCtx) stopWorkout(fadeSecs);
   };
   document.addEventListener("visibilitychange", function () { window.__updateWorkoutSound(); });
+
+  // Every live projector-music bed pans per room from the one shared table — glide (~0.4s) to
+  // the new room's spot on a room change. Guarded for old-Safari (pannedOut returns
+  // ctx.destination, no .pan). Wired into goToStage (+ its deferred re-settle, so the balcony
+  // door-pan re-reads after the strip slide finishes).
+  window.__updateProjectorPans = function () {
+    [starsCtx, workoutCtx, aquaMelCtx, totoroMelodyCtx].forEach(function (c) {
+      if (c && c._pan && c._pan.pan) { try { c._pan.pan.setTargetAtTime(projectorRoomPan(), c.currentTime, 0.4); } catch (e) {} }
+    });
+  };
 
   function advanceChannel() {
     // the screen is a projector: a tap cycles its channel (🔥 fire → 🏋 workout → 🐟 aquarium →
@@ -14091,6 +14095,7 @@ document.addEventListener("click", function (e) {
 
   // ---- driver: one loop, one canvas, channel-switched --------------------
   var order = ["fire", "workout", "stars", "aqua", "totoro", "off"];
+  var MUSIC_CHANNELS = { stars: 1, workout: 1, totoro: 1, aqua: 1 }; // projector-music channels: they suspend the game song while up
   var chanObj = { fire: fire, workout: svgChan, aqua: svgChan, totoro: svgChan, stars: svgChan, off: off };
   var current = "fire"; // the projector always opens on the fire channel (tapping still cycles within the session)
 
@@ -14177,6 +14182,7 @@ document.addEventListener("click", function (e) {
   function setChannel(name, persist) {
     if (!chanObj[name]) return;
     var toOff = (name === "off");
+    var prev = current;                // the outgoing channel (before the reassign below)
     chanObj[current].reset();          // tear the old channel's state down (internal arrays only)
     if (current === "off") powerUpCanvas();     // leaving off: cancel any pending fade, canvas visible again
     if (toOff) powerDownCanvas();               // animated "screen turning off": fade the last frame, then wipe
@@ -14185,6 +14191,13 @@ document.addEventListener("click", function (e) {
     if (chanObj[current].init) chanObj[current].init();
     applyChannelClass();
     flashBadge();
+    // Central projector-music song takeover, clobber-safe: the four melody channels suspend the
+    // game song while ANY of them is up. Enter the music set from fire/off -> suspend; leave it
+    // to fire/off -> restore; a music->music switch does nothing (song stays suspended, so no
+    // restore-then-re-suspend that would strand projSuspendedIdx).
+    var wasMusic = !!MUSIC_CHANNELS[prev], nowMusic = !!MUSIC_CHANNELS[name];
+    if (nowMusic && !wasMusic) { if (window.__suspendSongForProjector) window.__suspendSongForProjector(); }
+    else if (!nowMusic && wasMusic) { if (window.__restoreSongAfterProjector) window.__restoreSongAfterProjector(); }
     if (window.__updateFireSound) window.__updateFireSound(); // crackle audio follows the fire channel
     if (window.__updateAquaSound) window.__updateAquaSound(); // underwater bed follows the aquarium channel
     if (window.__updateAquaMelody) window.__updateAquaMelody(); // underwater melody follows the aquarium channel
@@ -29398,6 +29411,14 @@ function panForElId(elId) {
     return Math.max(-1, Math.min(1, widened * 0.92));
   } catch (e) { return 0; }
 }
+// Shared per-room pan for every wall-screen projector-music bed (piano / workout / totoro /
+// aqua melody) — one source of truth so they all pan the same way from each room. Balcony
+// reads the door's live on-screen position (re-settled after the strip slide in goToStage).
+var PROJECTOR_ROOM_PAN = { kitchen: 0.6, garden: -0.6, cuddly: 0, office: 0 };
+function projectorRoomPan(room) {
+  room = room || window.currentStageName || "cuddly";
+  return room === "balcony" ? panForElId("balcony-door") : (PROJECTOR_ROOM_PAN[room] || 0);
+}
 function pannedOut(ctx, elIdOrPan) {
   if (!ctx.createStereoPanner) return ctx.destination; // old Safari: mono
   var p = ctx.createStereoPanner();
@@ -32403,7 +32424,7 @@ function spawnDustMote(container) {
     if (window.__updateTotoroSound) window.__updateTotoroSound(name === "cuddly", ROOM_FADE); // rainfall only in the cuddly nook
     if (window.__updateStarsSound) window.__updateStarsSound(name === "cuddly", ROOM_FADE); // Gnossienne only in the cuddly nook
     if (window.__updateTotoroMelody) window.__updateTotoroMelody(name === "cuddly", ROOM_FADE); // woodland melody follows the totoro channel
-    if (window.__updateStarsRoomPan) window.__updateStarsRoomPan(); // piano is cuddly-sourced: pan to the new room like the songs
+    if (window.__updateProjectorPans) window.__updateProjectorPans(); // all four projector-music beds pan to the new room from the shared table
     if (window.__updatePartyRoom) window.__updatePartyRoom(); // party is garden-sourced: pan + faintness per room
     if (window.__updateWind) window.__updateWind(ROOM_FADE); // wind bed (balcony, + through the cuddly door) fades out over the room change too
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(name === "garden"); // birdsong only in the garden, and only by day
@@ -32421,7 +32442,7 @@ function spawnDustMote(container) {
     setTimeout(function () {
       if (window.__updateSongRoomPan) window.__updateSongRoomPan();
       if (window.__updateSongRoomWidth) window.__updateSongRoomWidth();
-      if (window.__updateStarsRoomPan) window.__updateStarsRoomPan(); // piano's balcony pan reads the door too — re-settle after the slide
+      if (window.__updateProjectorPans) window.__updateProjectorPans(); // projector beds' balcony pan reads the door too — re-settle after the slide
       if (window.__updatePartyRoom) window.__updatePartyRoom(); // party's balcony pan/faintness reads the door too — same re-settle
     }, 720);
     if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics(); // and gets quieter on the balcony specifically, while its door is shut

@@ -15946,10 +15946,15 @@ document.addEventListener("click", function (e) {
   function setChannel(name, persist) {
     if (!chanObj[name]) return;
     // Party ↔ projector are mutually exclusive whole-loft music: lighting a projector music
-    // channel while the garden party is on ends the party first (no doubled music; the
-    // now-playing toast then names the projector piece). The reverse — a starting party powers
-    // the projector off — lives in setGardenParty. "off"/"fire" aren't music, so no loop.
-    if (MUSIC_CHANNELS[name] && window.__gardenPartyOn && window.__setGardenParty) window.__setGardenParty(false);
+    // channel while the garden party is on ends the party FULLY first (no doubled music; the
+    // now-playing toast then names the projector piece). Route through __setPartyMode so the UV
+    // blacklight + switch state tear down too, not just the garden music/dancers. The reverse —
+    // a starting party powers the projector off — lives in setGardenParty. "off"/"fire" aren't
+    // music channels, so no loop.
+    if (MUSIC_CHANNELS[name] && window.__gardenPartyOn) {
+      if (window.__setPartyMode) window.__setPartyMode(false);
+      else if (window.__setGardenParty) window.__setGardenParty(false);
+    }
     var toOff = (name === "off");
     var prev = current;                // the outgoing channel (before the reassign below)
     chanObj[current].reset();          // tear the old channel's state down (internal arrays only)

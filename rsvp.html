@@ -12719,6 +12719,12 @@ document.addEventListener("click", function (e) {
       scheduleSatie();
     }, 350);
   }
+  // the app volume button (0 / .25 / .5 / 1.0) drives the bed's master gain; ×0.4 puts the
+  // default (0.5) at the level tuned by ear, full (1.0) louder, mute silent
+  function starsVol() { return 0.4 * (window.__songVolume ? window.__songVolume() : 0.5); }
+  window.__applyStarsVolume = function () { // called when the volume button cycles, to update live
+    if (starsCtx && starsCtx._masterGain) { try { starsCtx._masterGain.gain.setTargetAtTime(starsVol(), starsCtx.currentTime, 0.05); } catch (e) {} }
+  };
   function startStars() {
     try {
       var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -12731,7 +12737,7 @@ document.addEventListener("click", function (e) {
       var lp = starsCtx.createBiquadFilter();
       lp.type = "lowpass"; lp.frequency.value = 2400; // warm, felt-piano roundness
       var master = starsCtx.createGain();
-      master.gain.value = 0.2; // overall level
+      master.gain.value = starsVol(); // level follows the app volume button
       lp.connect(master); master.connect(pannedOut(starsCtx, 0));
       starsCtx._bus = lp;
       starsCtx._masterGain = master;
@@ -12739,6 +12745,7 @@ document.addEventListener("click", function (e) {
       // don't reset starsIdx — the melody resumes from where it left off when the channel comes
       // back; starsNext restarts from the fresh context's clock
       starsNext = starsCtx.currentTime + 0.15;
+      var vb = document.getElementById("hunt-volume-btn"); if (vb) vb.classList.add("shown"); // it's the music now — reveal the volume button
       scheduleSatie();
     } catch (e) {}
   }
@@ -19784,6 +19791,7 @@ async def localfont(name):
   function cycleVolume() {
     volIdx = (volIdx + 1) % VOL_LEVELS.length;
     applySongVolume();
+    if (window.__applyStarsVolume) window.__applyStarsVolume(); // the night-sky Satie bed follows the same level
     updateVolIcon();
     try { localStorage.setItem("songVolume", String(VOL_LEVELS[volIdx])); } catch (e) {}
   }

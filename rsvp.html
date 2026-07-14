@@ -574,6 +574,12 @@ footer{margin-top:2.6rem}
   70%{transform:translateX(-.5px)}
 }
 @media (prefers-reduced-motion: reduce){#kitchen-post.knocking{animation:none !important}}
+/* spooky-season pumpkin: a one-shot wobble on click, pivoting at its base (on the inner
+   #kitchen-pumpkin wrapper; the static translate lives on the outer .sn-spooky group) */
+#kitchen-pumpkin{transform-box:fill-box; transform-origin:50% 100%}
+#kitchen-pumpkin.wobble{animation:pumpkin-wobble .6s ease-in-out}
+@keyframes pumpkin-wobble{0%,100%{transform:rotate(0)}18%{transform:rotate(6deg)}42%{transform:rotate(-5deg)}66%{transform:rotate(3.5deg)}85%{transform:rotate(-1.6deg)}}
+@media (prefers-reduced-motion: reduce){#kitchen-pumpkin.wobble{animation:none}}
 /* the SodaStream shudders on a carbonation press; it rides an inner #kitchen-drinkmate-wob
    wrapper rather than the translate-attributed node (CLAUDE.md's transform-attribute trap) */
 #kitchen-drinkmate-wob{transform-box:fill-box; transform-origin:50% 100%}
@@ -5169,14 +5175,19 @@ section{margin:1.9rem 0}
 <ellipse id="kitchen-frontglow" class="candle-frontglow" cx="255" cy="215" rx="34" ry="30" fill="url(#candle-glow-grad)"/>
 <!-- spooky-season pumpkin: sits on the counter between the cutting boards and the
      kettle, clear of every hit target. Season-gated, decorative only. -->
-<g class="sn-spooky" aria-hidden="true" pointer-events="none" transform="translate(2,0)">
-<ellipse cx="68" cy="229.4" rx="10" ry="1.8" fill="#5e3f1e" opacity="0.2"/>
+<g class="sn-spooky" aria-hidden="true" transform="translate(2,0)">
+<ellipse cx="68" cy="229.4" rx="10" ry="1.8" fill="#5e3f1e" opacity="0.2" pointer-events="none"/>
+<!-- the pumpkin body wobbles on click (one-shot .wobble via wireProp) — on an inner wrapper so
+     its animated transform never clobbers the outer translate; wobble pivots at the base -->
+<g id="kitchen-pumpkin" class="hunt-hit">
+<ellipse cx="68" cy="222" rx="9" ry="9.5" fill="transparent"/>
 <ellipse cx="61.5" cy="222.5" rx="6" ry="7" fill="#c06018"/>
 <ellipse cx="74.5" cy="222.5" rx="6" ry="7" fill="#c06018"/>
 <ellipse cx="68" cy="222.5" rx="7" ry="7.6" fill="#d97c2b" stroke="#a85a1a" stroke-width="0.8"/>
 <path d="M64.4 216 Q62.6 222.5 64.4 229 M71.6 216 Q73.4 222.5 71.6 229" fill="none" stroke="#a85a1a" stroke-width="0.7" opacity="0.6"/>
 <ellipse cx="65.4" cy="219" rx="2.2" ry="3" fill="#eea24e" opacity="0.35" transform="rotate(-18 65.4 219)"/>
 <path d="M67 215.4 Q66.6 211.6 69.4 210.4 Q70.8 210 70.4 211.4 Q68.8 212.6 69.2 215.2 Z" fill="#6f4c24"/>
+</g>
 </g>
 <!-- the static position lives on this wrapper, not on #kitchen-tamper itself --
      .invite-pulse sets a CSS transform directly on #kitchen-tamper (see
@@ -18147,6 +18158,7 @@ document.addEventListener("click", function (e) {
   wireProp("garden-bench", "settling", function () { playDryClickSound("garden-bench"); });
   wireProp("garden-crate", "rattling", function () { playDryClickSound("garden-crate"); });
   wireProp("kitchen-post", "knocking", function () { playDryClickSound("kitchen-post"); });
+  wireProp("kitchen-pumpkin", "wobble", function () { playPumpkinThumpSound(); }); // spooky-season pumpkin: hollow thump + wobble
   // the skyline windows: a grid of togglable lit-window rects tiling each tower's face.
   // Tap a window and its light toggles on/off (both towers). stopPropagation so the tap
   // never falls through to the window-pane behind the buildings.
@@ -33599,6 +33611,38 @@ function playKnockboxThumpSound() {
       osc.start(t);
       osc.stop(t + 0.15);
     });
+  } catch (e) {}
+}
+// Knock on a hollow gourd: a soft rind-tap transient over a low, muffled, resonant "bonk" —
+// lower and hollower than the knockbox thump. Spatialized to the pumpkin, one-shot via getSfxCtx.
+function playPumpkinThumpSound() {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime, out = pannedOut(ctx, "kitchen-pumpkin");
+    // the tap on the rind — a short lowpassed noise transient
+    var bufferSize = Math.floor(ctx.sampleRate * 0.05);
+    var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    var data = buffer.getChannelData(0);
+    for (var i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
+    var noise = ctx.createBufferSource(); noise.buffer = buffer;
+    var nlp = ctx.createBiquadFilter(); nlp.type = "lowpass"; nlp.frequency.value = 1300;
+    var ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.2, t);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
+    noise.connect(nlp); nlp.connect(ng); ng.connect(out);
+    noise.start(t); noise.stop(t + 0.05);
+    // the hollow body resonance — a low triangle sliding down through a narrow bandpass
+    var osc = ctx.createOscillator(); osc.type = "triangle";
+    osc.frequency.setValueAtTime(168, t);
+    osc.frequency.exponentialRampToValueAtTime(96, t + 0.16);
+    var bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 235; bp.Q.value = 4;
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.5, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+    osc.connect(bp); bp.connect(gain); gain.connect(out);
+    osc.start(t); osc.stop(t + 0.3);
   } catch (e) {}
 }
 function playTongsClackSound(panId) {

@@ -2392,6 +2392,7 @@ footer{margin-top:2.6rem}
 #cuddly-irene.irene-catplay #cuddly-irene-move{translate:16px 22px}   /* crouched low, down by the cat */
 #cuddly-irene.irene-catjump #cuddly-irene-move{translate:40px 22px}   /* landed on the floor right beside the cat (she leaps in via the pose keyframes) */
 #cuddly-irene.irene-octiplay #cuddly-irene-move{translate:511px 6px}  /* crossed the room to the trunk, standing just left of Octi; she leans right and her hand reaches onto him */
+#cuddly-irene.irene-swing  #cuddly-irene-move{translate:510px -50px}  /* hung below the pulley: her raised hands grip the rope (~576,100), feet dangle clear of the floor */
 #cuddly-irene.irene-roam   #cuddly-irene-move{translate:0 -2px}       /* behind the couch back (reparented) */
 /* a seated child reads shorter + tucked, not a standing figure lifted onto the cushion; upright (no lean) */
 #cuddly-irene.irene-sit    #cuddly-irene-pose{transform:scaleY(.9); transform-origin:50% 100%}
@@ -2405,6 +2406,10 @@ footer{margin-top:2.6rem}
 .irene-arms-hug{display:none}
 #cuddly-irene.irene-hug .irene-arms-rest, #cuddly-irene.irene-hugb .irene-arms-rest{display:none}
 #cuddly-irene.irene-hug .irene-arms-hug, #cuddly-irene.irene-hugb .irene-arms-hug{display:inline}
+/* rope-grip arms: raised overhead only while swinging from the pulley */
+.irene-arms-grip{display:none}
+#cuddly-irene.irene-swing .irene-arms-rest{display:none}
+#cuddly-irene.irene-swing .irene-arms-grip{display:inline}
 /* pose motions on the distinct #cuddly-irene-pose (transform keyframes; it has no transform attr) */
 #cuddly-irene-pose{transform-box:fill-box; transform-origin:bottom center}
 #cuddly-irene.irene-bounce #cuddly-irene-pose{animation:irene-bounce .52s ease-in-out 4}
@@ -2428,6 +2433,26 @@ footer{margin-top:2.6rem}
   92%{transform:translate(0,-2px) scaleY(.96)}
   100%{transform:translate(0,0)}
 }
+/* rope swing: a pendulum about the pulley's rope-top anchor (576,18) — mirrors the pulley's
+   own swing rule (transform-origin at that point + a transform:rotate keyframe). Rides the
+   dedicated #cuddly-irene-swing wrapper (no transform attribute → nothing to clobber); it's
+   identity unless the pose is on. A few decaying arcs, then eases to rest. */
+#cuddly-irene-swing{transform-origin:576px 18px}
+#cuddly-irene.irene-swing #cuddly-irene-swing{animation:irene-swing 3.2s ease-in-out}
+@keyframes irene-swing{
+  0%{transform:rotate(0deg)}
+  12%{transform:rotate(12deg)}
+  32%{transform:rotate(-11deg)}
+  52%{transform:rotate(8deg)}
+  70%{transform:rotate(-5deg)}
+  86%{transform:rotate(2deg)}
+  100%{transform:rotate(0deg)}
+}
+/* the swing rope shows only during the pose; the pulley's own static rope hides then so the
+   two never double up (her rope tilts with her, the static one wouldn't) */
+#cuddly-irene-swing-rope{display:none}
+#cuddly-irene.irene-swing #cuddly-irene-swing-rope{display:inline}
+#loft-game-strip:has(#cuddly-irene.irene-swing) #cuddly-pulley-rope{display:none}
 /* tap-to-giggle wobble: a one-shot playful wiggle on the dedicated #cuddly-irene-giggle
    wrapper. It rides the individual `rotate` PROPERTY (not `transform`), so it can't clobber
    the pose keyframes on its parent #cuddly-irene-pose nor the peek lean on its child — and
@@ -2444,6 +2469,7 @@ footer{margin-top:2.6rem}
   #cuddly-irene.irene-catplay #cuddly-irene-pose,
   #cuddly-irene.irene-catjump #cuddly-irene-pose,
   #cuddly-irene.irene-octiplay #cuddly-irene-pose,
+  #cuddly-irene.irene-swing #cuddly-irene-swing,
   #cuddly-irene.giggling #cuddly-irene-giggle{animation:none}
 }
 #balcony-doormat{transform-box:fill-box; transform-origin:center}
@@ -6626,7 +6652,7 @@ section{margin:1.9rem 0}
 </g>
 <g id="cuddly-pulley" class="hunt-hit" tabindex="0" role="button" aria-label="The pulley">
 <rect x="554" y="108" width="46" height="86" fill="transparent"/><!-- generous hit target over the wheel+ropes+weights; the strokes alone are tiny to click -->
-<line x1="576" y1="18" x2="576" y2="116" stroke="#2d2d2d" stroke-width="2"/>
+<line id="cuddly-pulley-rope" x1="576" y1="18" x2="576" y2="116" stroke="#2d2d2d" stroke-width="2"/>
 <circle cx="576" cy="124" r="8" fill="none" stroke="#4a453d" stroke-width="3"/>
 <circle cx="576" cy="124" r="2" fill="#4a453d"/>
 <defs>
@@ -6973,6 +6999,9 @@ section{margin:1.9rem 0}
      and animated only via CSS on the wrapper (see #cuddly-irene rules + IIFE), never a
      transform attribute. Hidden by default (opacity 0). -->
 <g id="cuddly-irene" aria-hidden="true" pointer-events="none">
+<g id="cuddly-irene-swing"><!-- rope-swing pivot wrapper: rotates about the pulley's rope-top anchor (576,18) via CSS keyframes; identity otherwise. NEVER a transform attribute (clobber trap) -->
+<!-- the swing rope: tilts WITH her (same pivot) so her hands stay glued to it; shown only during the swing pose (the pulley's own static rope is hidden then, see CSS) -->
+<line id="cuddly-irene-swing-rope" x1="576" y1="18" x2="576" y2="120" stroke="#2d2d2d" stroke-width="2"/>
 <g id="cuddly-irene-move"><!-- per-behavior gross reposition (static CSS translate property; see #cuddly-irene rules) -->
 <g id="cuddly-irene-pose"><!-- pose motions: bounce / walk-cross / crouch-reach (transform keyframes; no transform attr here) -->
 <g id="cuddly-irene-giggle"><!-- tap-to-giggle wobble wrapper: rides the `rotate` property (no transform attr) -->
@@ -7041,10 +7070,17 @@ section{margin:1.9rem 0}
 <circle cx="37" cy="196" r="4.4" fill="#dca878" stroke="#b9855e" stroke-width="1"/>
 <circle cx="97" cy="196" r="4.4" fill="#dca878" stroke="#b9855e" stroke-width="1"/>
 </g>
+<g class="irene-arms-grip"><!-- both arms raised straight overhead, hands together gripping the rope (only .irene-swing) -->
+<path d="M52 217 Q52 180 62 152" fill="none" stroke="#2b2724" stroke-width="8.5" stroke-linecap="round"/>
+<path d="M82 217 Q82 180 70 152" fill="none" stroke="#2b2724" stroke-width="8.5" stroke-linecap="round"/>
+<circle cx="62" cy="150" r="4.4" fill="#dca878" stroke="#b9855e" stroke-width="1"/>
+<circle cx="70" cy="150" r="4.4" fill="#dca878" stroke="#b9855e" stroke-width="1"/>
+</g>
 </g><!-- /peek -->
 </g><!-- /giggle -->
 </g><!-- /pose -->
 </g><!-- /move -->
+</g><!-- /swing -->
 </g>
 
 <!-- wedding-day "just married" ribbon + ∞-heart confetti floating over the daybed nook
@@ -14590,7 +14626,7 @@ document.addEventListener("click", function (e) {
   if (!irene) return;
   var daybed = document.getElementById("cuddly-daybed");        // roam hides her lower half behind this
   var ireneHome = irene.parentNode, ireneNext = irene.nextSibling; // canonical z-order (in front of the couple)
-  var BEHAVIORS = ["irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-hugb"]; // catplay appended only when the cat's here; hugb = the "daaeee" hug of uncle Behdad
+  var BEHAVIORS = ["irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-hugb", "irene-swing"]; // catplay appended only when the cat's here; hugb = the "daaeee" hug of uncle Behdad; swing = hangs from the pulley rope (always available)
   var showTimer = null, hideTimer = null, catPlayTimer = null, fadeTimer = null, firstDone = false, lastBeh = null, firstWasRoam = false;
   function onScreen() { return window.currentStageName === "cuddly" && !document.hidden; }
   function catLoose() {
@@ -14677,7 +14713,7 @@ document.addEventListener("click", function (e) {
   }
   function clearCatPlay() { if (catPlayTimer) { clearTimeout(catPlayTimer); catPlayTimer = null; } }
   function dropPose() { // literal removes (check.js wants a literal classList.remove per anim-driving class)
-    irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-hugb", "irene-catplay", "irene-catjump", "irene-octiplay");
+    irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-hugb", "irene-catplay", "irene-catjump", "irene-octiplay", "irene-swing");
     restoreZ();
   }
   function leave() {
@@ -14729,7 +14765,7 @@ document.addEventListener("click", function (e) {
     if (beh === "irene-octiplay" && !octiOut()) beh = "irene-bounce";  // Octi's tucked in the trunk → nothing to play with, just bounce
     lastBeh = beh;
     clearCatPlay();
-    irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-hugb", "irene-catplay", "irene-catjump", "irene-octiplay");
+    irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-hugb", "irene-catplay", "irene-catjump", "irene-octiplay", "irene-swing");
     placeFor(beh);
     irene.classList.add(beh, "showing");
     // As she leans in to hug Markéta, she coos "I love you" in a high, childlike pitch. One-shot,
@@ -14775,12 +14811,13 @@ document.addEventListener("click", function (e) {
   function transition() {
     var next = pickBehavior(); // excludes lastBeh (= action 1), so action 2 always differs
     // Any transition touching roam would snap (roam holds its walk transform via `forwards`,
-    // and it reparents behind the couch), and under reduced-motion the move-glide + pose anims
-    // are disabled so an in-place swap would teleport — in both cases fade out, re-pose while
+    // and it reparents behind the couch); swing hangs way off at the pulley so a move-glide to/
+    // from it would float her across the room; and under reduced-motion the move-glide + pose
+    // anims are disabled so an in-place swap would teleport — in all three cases fade out, re-pose while
     // invisible, fade back in (the opacity fade is NOT reduced-motion-disabled). Otherwise both
     // poses are front-of-couch with motion allowed: glide in place (the .45s move-translate
     // slides her over; .showing stays, so she never fades between the two actions of one visit).
-    if (lastBeh === "irene-roam" || next === "irene-roam" || reducedMotion()) {
+    if (lastBeh === "irene-roam" || next === "irene-roam" || lastBeh === "irene-swing" || next === "irene-swing" || reducedMotion()) {
       irene.classList.remove("showing");
       clearCatPlay();
       if (fadeTimer) clearTimeout(fadeTimer);
@@ -36734,9 +36771,9 @@ function spawnDustMote(container) {
   window.irene = function (beh) {
     if (window.goToStage) window.goToStage("cuddly"); // she only appears in the cuddly nook
     if (beh) {
-      var POSES = { roam: "irene-roam", bounce: "irene-bounce", sit: "irene-sit", hug: "irene-hug", catplay: "irene-catplay", catjump: "irene-catjump", octiplay: "irene-octiplay" };
+      var POSES = { roam: "irene-roam", bounce: "irene-bounce", sit: "irene-sit", hug: "irene-hug", catplay: "irene-catplay", catjump: "irene-catjump", octiplay: "irene-octiplay", swing: "irene-swing" };
       var pose = POSES[String(beh).toLowerCase().replace(/^irene-/, "")];
-      if (!pose) return "irene poses: roam, bounce, sit, hug, catplay, catjump, octiplay.";
+      if (!pose) return "irene poses: roam, bounce, sit, hug, catplay, catjump, octiplay, swing.";
       if (!window.__ireneShow) return "irene isn't around right now.";
       if (pose === "irene-catplay" || pose === "irene-catjump") {
         if (window.__releaseCat) window.__releaseCat();   // open the moon door + free the cat if it's still in the chest

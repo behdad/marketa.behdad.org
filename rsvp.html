@@ -20691,7 +20691,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · trip() · goto() · night()/day() · confetti() · cat() · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · trip() · goto() · night()/day() · season() · storm() · rainbow() · temp() · countdown() · lang() · fullscreen() · bbq() · phone() · laptop() · play()/pause() · confetti() · cat() · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var TERM_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -20705,9 +20705,19 @@ document.addEventListener("click", function (e) {
       rooms: "rooms() — list the five rooms",
       night: "night() — bring dusk down over the loft",
       day: "day() — bring the daylight back",
-      season: "season([name]) — winter · spooky · none (no arg surprises you)",
-      play: "play() — start the record player",
-      pause: "pause() — stop the music",
+      season: "season([name]) — winter · spooky · auto (no arg surprises you)",
+      play: "play() — resume the music if it's paused",
+      pause: "pause() — pause the music if something's playing",
+      temp: "temp() — the indoor + outdoor thermometer reading",
+      storm: "storm() — roll a thunderstorm in over the balcony; storm(false) clears it",
+      dance: "dance(\"name\") — cue a garden-party dance IN QUOTES (techno · waltz · disco · swing · salsa · bhangra · persian · polka · horah); dance() skips to the next. run party() first",
+      lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
+      countdown: "countdown() — days left until each wedding",
+      fullscreen: "fullscreen() — fill the screen with the loft; fullscreen(false) leaves",
+      rainbow: "rainbow() — arc a rainbow over the balcony",
+      bbq: "bbq() — fire up the balcony smoker, low and slow; bbq(false) shuts it down",
+      phone: "phone() — bring up the pocket phone; phone(false) puts it away",
+      laptop: "laptop() — wake the office laptop",
       confetti: "confetti() — a shower of confetti in the room you're in",
       fireworks: "fireworks() — a burst of fireworks over the room you're in",
       cat: "cat() — summon the loose chest cat to your room (bare `cat` prints a cat instead)",
@@ -23223,6 +23233,7 @@ async def localfont(name):
     if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
   }
   window.__toggleMusicPlayback = toggleMusicPlayback;
+  window.__anyMusicPlaying = anyAudioPlaying; // console play()/pause(): is any transport source audible now
   // The rail's play/pause button mirrors the unified playback: it shows once any music has
   // been active, and flips ▶/⏸ with the true playing state (bed live & not suspended, or a
   // song actually playing). Clicking it is the touch equivalent of the spacebar.
@@ -36069,6 +36080,22 @@ function spawnDustMote(container) {
     waltzAltTimer = setTimeout(flipPartyMode, WALTZ_PERIOD_MS);
     return true;
   };
+  window.__setPartyDance = function (id) { // console dance("name"): jump straight to a named dance
+    if (!window.__gardenPartyOn || !danceById(id)) return false;
+    window.__partyDance = id;
+    var pd = document.getElementById("trip-melt-dancers");
+    if (id !== "techno" && pd) { // clear any in-flight solo flare (mirrors advanceDance)
+      var flaring = pd.querySelectorAll(".melt-dancer.flaring");
+      for (var i = 0; i < flaring.length; i++) flaring[i].classList.remove("flaring");
+    }
+    updateAllPartyDances(1.8); // crossfade the beds, same as an auto-advance
+    applyPartyDanceMode();     // glide the dancers into the new formation
+    // re-arm the auto-rotation clock so it keeps alternating from here; leaves the DJ
+    // swap counter alone (a manual set isn't a rotation "advance")
+    if (waltzAltTimer) { clearTimeout(waltzAltTimer); waltzAltTimer = null; }
+    startWaltzAlternation();
+    return true;
+  };
   function startWaltzAlternation() { // idempotent — setGardenParty(true) is storm-called by play.js
     if (!PARTY_DANCE_ORDER) { // build the rotation once: every dance Fisher-Yates shuffled (fully random first dance)
       var all = [], d = window.__partyDances || [];
@@ -36697,6 +36724,12 @@ function spawnDustMote(container) {
       timers.push(setTimeout(startStorm, 9000 + Math.random() * 6000)); // first storm ~9-15s into the night
     };
     window.__stopBalconyStormCycle = clearAll;
+    window.__forceBalconyStorm = function (on) { // console storm(): roll one in NOW, or clear it
+      if (on === false) { clearAll(); return false; } // stop the rain + cancel the cycle
+      clearAll();     // cancel any pending scheduled storm/timers first
+      startStorm();   // begins immediately (self-guards on a dusk balcony; clears if not dusk)
+      return !!window.__balconyStorm;
+    };
     // Winter snow falls on its own — no storm needed. Unlike a storm (which seeds on
     // start), ambient snow needs a top-up loop: whenever it's winter + on the balcony +
     // visible, keep the sky filled to RAIN_DROPS. Counts its own tagged flakes since
@@ -37637,14 +37670,22 @@ function spawnDustMote(container) {
   // date-default (whatever today dictates, possibly none). Plain keypress only —
   // skipped with any modifier held or while typing (same guard as the 'f' key).
   var seasonCycle = 0; // 0 = date-default, 1 = spooky, 2 = winter
+  // Shared apply-path for the 's' key AND the console season() command: sets the strip
+  // class, keeps the cycle counter in sync (so a later 's' press stays consistent), and
+  // shows the naming pill. name: "spooky" | "winter" | null (auto / date-default).
+  function applySeasonPreview(name) {
+    seasonCycle = name === "spooky" ? 1 : name === "winter" ? 2 : 0;
+    window.__setSeason(name === "spooky" ? "spooky" : name === "winter" ? "winter" : seasonForDate());
+    seasonToast(name === "spooky" ? "season_spooky" : name === "winter" ? "season_winter" : "season_auto");
+  }
+  window.__applySeason = applySeasonPreview; // console season() drives the same path as 's'
   document.addEventListener("keydown", function (e) {
     if ((e.key !== "s" && e.key !== "S") || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.defaultPrevented) return;
     var t = e.target;
     if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
     e.preventDefault();
-    seasonCycle = (seasonCycle + 1) % 3;
-    window.__setSeason(seasonCycle === 1 ? "spooky" : seasonCycle === 2 ? "winter" : seasonForDate());
-    seasonToast(seasonCycle === 1 ? "season_spooky" : seasonCycle === 2 ? "season_winter" : "season_auto");
+    var next = (seasonCycle + 1) % 3;
+    applySeasonPreview(next === 1 ? "spooky" : next === 2 ? "winter" : null);
   });
   // a small transient pill naming the season just picked — lives in the viewport so
   // fullscreen keeps it; one element, retimed on every press, nothing accumulates
@@ -39217,31 +39258,150 @@ function spawnDustMote(container) {
     return "☀️ daylight.";
   };
 
-  var SEASON_ALIASES = { winter: "winter", snow: "winter", spooky: "spooky", halloween: "spooky", none: null, off: null, clear: null };
+  // winter · spooky · auto(=the calendar's own season). Friendly aliases fold onto those;
+  // no arg still SURPRISES you with a random one (a documented feature). Drives the same
+  // apply-path the 's' key uses (strip class + naming pill + cycle-sync).
+  var SEASON_ALIASES = {
+    winter: "winter", snow: "winter", xmas: "winter", christmas: "winter",
+    spooky: "spooky", halloween: "spooky",
+    auto: "auto", normal: "auto", off: "auto", none: "auto", clear: "auto"
+  };
   window.season = function (name) {
-    if (!window.__setSeason) return "the season hook isn't ready yet.";
-    var s;
-    if (arguments.length === 0) { s = ["winter", "spooky", null][(Math.random() * 3) | 0]; }
-    else if (name == null || name === "") { s = null; }
+    if (!window.__applySeason) return "the season hook isn't ready yet.";
+    var canon;
+    if (arguments.length === 0) { canon = ["winter", "spooky", "auto"][(Math.random() * 3) | 0]; } // no arg → a surprise
     else {
-      var key = String(name).toLowerCase().trim();
-      if (!(key in SEASON_ALIASES)) return "seasons: winter · spooky · none";
-      s = SEASON_ALIASES[key];
+      var key = String(name == null ? "" : name).toLowerCase().trim();
+      if (!(key in SEASON_ALIASES)) return "seasons: winter · spooky · auto";
+      canon = SEASON_ALIASES[key];
     }
-    window.__setSeason(s);
-    return s ? ("❄ " + s + " dressing on.") : "back to the calendar's own season.";
+    window.__applySeason(canon === "auto" ? null : canon);
+    return canon === "winter" ? "❄ winter dressing on." : canon === "spooky" ? "🎃 spooky dressing on." : "🍂 back to the calendar's own season.";
   };
 
-  window.play = function () {
-    if (!window.__phoneMusicToggle || !window.__phoneMusicPlaying) return "the music hook isn't ready yet.";
-    if (!window.__phoneMusicPlaying()) window.__phoneMusicToggle();
-    var t = window.__phoneMusicTitle && window.__phoneMusicTitle();
-    return t ? ("♪ " + t) : "♪ playing.";
-  };
+  // Directional + idempotent over the unified transport (same as the spacebar / rail button).
   window.pause = function () {
-    if (!window.__phoneMusicToggle || !window.__phoneMusicPlaying) return "the music hook isn't ready yet.";
-    if (window.__phoneMusicPlaying()) window.__phoneMusicToggle();
+    if (!window.__toggleMusicPlayback) return "the music hook isn't ready yet.";
+    if (window.__musicPaused) return "⏸ already paused.";
+    if (!(window.__anyMusicPlaying && window.__anyMusicPlaying())) return "nothing's playing.";
+    window.__toggleMusicPlayback();
     return "⏸ paused.";
+  };
+  window.play = function () {
+    if (!window.__toggleMusicPlayback) return "the music hook isn't ready yet.";
+    if (window.__musicPaused) { window.__toggleMusicPlayback(); return "▶ playing."; }
+    if (window.__anyMusicPlaying && window.__anyMusicPlaying()) return "▶ already playing.";
+    return "nothing to resume — start a track first.";
+  };
+
+  window.temp = function () {
+    if (!window.__loftTempSet) return "the thermometer isn't ready yet.";
+    var t = window.__loftTempSet();
+    if (!t || isNaN(t[0]) || isNaN(t[1])) return "the readout isn't ready yet.";
+    return "🌡 inside " + Math.round(t[0]) + "°C · outside " + Math.round(t[1]) + "°C";
+  };
+
+  window.storm = function (arg) {
+    var on = !(arguments.length > 0 && !arg); // storm() / storm(true) → on; storm(false) → off
+    if (!window.__forceBalconyStorm) return "the storm hook isn't ready yet.";
+    if (!on) { window.__forceBalconyStorm(false); return "🌤 the storm passes — clear skies return."; }
+    if (window.goToStage) window.goToStage("balcony"); // storms roll over the balcony
+    if (window.__setDayNight) window.__setDayNight(true); // a storm needs dusk
+    else if (window.__toggleDayNight && !isNight()) window.__toggleDayNight();
+    return window.__forceBalconyStorm(true) ? "⛈ a storm rolls in over the balcony." : "no dusk balcony to storm over.";
+  };
+
+  window.dance = function (name) {
+    if (!window.__gardenPartyOn) return "the garden's dark — run party() first, then pick a dance.";
+    var ids = (window.__partyDances || []).map(function (d) { return d.id; });
+    if (name == null || name === "") {
+      if (!window.__nextPartyDance || !window.__nextPartyDance()) return "the dance hook isn't ready yet.";
+      return "💃 next up — " + (window.__partyDance || "");
+    }
+    var key = String(name).toLowerCase().trim();
+    if (ids.indexOf(key) === -1) return "dances: " + ids.join(" · ");
+    if (!window.__setPartyDance || !window.__setPartyDance(key)) return "the dance hook isn't ready yet.";
+    return "💃 " + key + " — the garden shifts into step.";
+  };
+
+  var LANG_ALIASES = { cs: "cs", cz: "cs", czech: "cs", cesky: "cs", en: "en", eng: "en", english: "en" };
+  window.lang = function (code) {
+    if (arguments.length === 0 || code == null || code === "") {
+      var cur = document.documentElement.lang === "cs" ? "cs" : "en";
+      return "🌐 language: " + cur + (cur === "cs" ? " (čeština)" : " (english)");
+    }
+    if (typeof setLang !== "function") return "the language hook isn't ready yet.";
+    var key = String(code).toLowerCase().trim();
+    if (!(key in LANG_ALIASES)) return "languages: en · cs";
+    var l = LANG_ALIASES[key];
+    setLang(l);
+    return l === "cs" ? "🌐 přepnuto do češtiny." : "🌐 switched to English.";
+  };
+
+  window.countdown = function () {
+    function whole(y, m, d) { // whole days from local midnight today to the wedding
+      var now = new Date(), today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      return Math.round((new Date(y, m - 1, d) - today) / 86400000);
+    }
+    function leg(emoji, label, n, when) {
+      if (n > 0) return emoji + " " + label + " in " + n + " day" + (n === 1 ? "" : "s") + " (" + when + ")";
+      if (n === 0) return emoji + " " + label + " today! 🎉";
+      return emoji + " " + label + " — married! 🎉";
+    }
+    return leg("⛪", "Edmonton", whole(2027, 5, 1), "May 1 2027") + " · " +
+           leg("🌻", "Prague", whole(2027, 7, 10), "Jul 10 2027");
+  };
+
+  window.fullscreen = function (arg) {
+    var enter = !(arguments.length > 0 && !arg); // fullscreen()/fullscreen(true) → enter; fullscreen(false) → exit
+    var btn = document.getElementById("hunt-fullscreen-btn");
+    var area = document.getElementById("hunt-fullscreen-area");
+    if (!btn || !area) return "the fullscreen hook isn't ready yet.";
+    // reuse the button's own toggle path (a console keystroke is a user gesture, so a real
+    // requestFullscreen is allowed); only click when it would change state
+    if (enter !== area.classList.contains("is-fullscreen")) btn.click();
+    return enter ? "⛶ fullscreen — the loft fills the screen (Esc or fullscreen(false) to leave)." : "⛶ back to windowed.";
+  };
+
+  window.rainbow = function () {
+    var rb = document.getElementById("balcony-rainbow");
+    if (!rb) return "the rainbow hook isn't ready yet.";
+    if (window.goToStage) window.goToStage("balcony"); // the rainbow arcs over the balcony
+    rb.classList.remove("burst"); // re-triggerable one-shot: clear, then double-rAF re-add (as the finale does)
+    if (window.requestAnimationFrame) {
+      requestAnimationFrame(function () { requestAnimationFrame(function () { rb.classList.add("burst"); }); });
+    } else { rb.classList.add("burst"); }
+    return "🌈 a rainbow arcs over the loft.";
+  };
+
+  window.bbq = function (arg) {
+    var on = !(arguments.length > 0 && !arg); // bbq()/bbq(true) → smoking; bbq(false) → off
+    var smoker = document.getElementById("balcony-smoker");
+    var firebox = document.getElementById("balcony-smoker-firebox");
+    if (!smoker || !firebox) return "the smoker hook isn't ready yet.";
+    if (on && window.goToStage) window.goToStage("balcony"); // so you can watch it smoke
+    if (on !== smoker.classList.contains("smoking")) firebox.dispatchEvent(new MouseEvent("click", { bubbles: true })); // its real toggle path
+    return on ? "🔥 smoker's on — low and slow." : "smoker's off.";
+  };
+
+  window.phone = function (arg) {
+    var open = !(arguments.length > 0 && !arg); // phone()/phone(true) → open; phone(false) → dismiss
+    if (open) {
+      if (!window.__openPhoneModal) return "the phone hook isn't ready yet.";
+      if (window.goToStage) window.goToStage("balcony"); // the pocket phone lives on the balcony
+      window.__openPhoneModal();
+      return "📱 the pocket phone lights up.";
+    }
+    if (window.__closePhoneModal) { window.__closePhoneModal(); return "📱 phone away."; }
+    return "the phone hook isn't ready yet.";
+  };
+
+  window.laptop = function () {
+    var lap = document.getElementById("office-laptop");
+    if (!lap) return "the laptop hook isn't ready yet.";
+    if (window.goToStage) window.goToStage("office"); // the laptop sits on the office desk
+    if (!lap.classList.contains("open")) lap.dispatchEvent(new MouseEvent("click", { bubbles: true })); // its real open path
+    return "💻 the laptop wakes on the desk.";
   };
 
   // A self-contained celebratory burst into the room you're viewing (stage-local coords:

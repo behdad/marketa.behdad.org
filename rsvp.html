@@ -20819,7 +20819,17 @@ document.addEventListener("click", function (e) {
     if (/^man(\s|$)/.test(c)) { termPrint("the only manual here is `man love`.", "term-dim"); return; }
     function fmtOut(v) {
       if (v === undefined) return "undefined";
-      if (v !== null && typeof v === "object") { try { return JSON.stringify(v); } catch (e2) { return String(v); } }
+      if (v === null) return "null";
+      if (typeof v === "object") {
+        // typed arrays / buffers (e.g. googlefonts() → Uint8Array of TTF bytes) print a compact
+        // summary + a peek at the head, never the multi-thousand-element JSON dump
+        if (ArrayBuffer.isView(v) && typeof v.length === "number") {
+          var head = Array.prototype.slice.call(v, 0, 8).join(", ");
+          return (v.constructor && v.constructor.name || "TypedArray") + "(" + v.length + ") [" + head + (v.length > 8 ? ", …" : "") + "]";
+        }
+        if (typeof ArrayBuffer !== "undefined" && v instanceof ArrayBuffer) return "ArrayBuffer(" + v.byteLength + ")";
+        try { var j = JSON.stringify(v); return (j && j.length > 400) ? j.slice(0, 400) + "…" : j; } catch (e2) { return String(v); }
+      }
       return String(v);
     }
     function errOut(e) { return e && e.name ? e.name + ": " + e.message : String(e); }

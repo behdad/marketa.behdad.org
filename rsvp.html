@@ -1539,12 +1539,12 @@ footer{margin-top:2.6rem}
 .ed-item.active{background:#264032; color:#a7e08a}
 .ed-empty{flex:none; font-size:1.8px; color:#5f7a5f; padding:0.6px 0.8px}
 .ed-main{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px}
-.ed-top{flex:none; display:flex; align-items:stretch; gap:0.6px; padding:0 1px}
+.ed-top{flex:none; display:flex; align-items:stretch; gap:0.6px; padding:0 8px 0 1px} /* right pad clears the shrunk close pill parked in the top-right corner */
 .ed-name{flex:1; min-width:0; background:#161c20; border:0.3px solid #2b3a3a; border-radius:0.8px; outline:none; color:#cfe3cf; font:inherit; font-size:2px; height:3.6px; line-height:3.6px; padding:0 0.8px}
 .ed-name::placeholder{color:#5f7a5f}
 .ed-btn{flex:none; background:#1d2622; border:0.3px solid #2b3a3a; border-radius:0.8px; color:#8fd070; font:inherit; font-size:2px; height:3.6px; line-height:1; padding:0 0.8px; cursor:pointer}
 .ed-btn:hover{background:#26332b}
-.ed-btn-run{color:#a7e08a}
+.ed-btn-run{color:#a7e08a; font-size:2.6px; padding:0 0.6px} /* monochrome ▶ glyph, sized like the ↓ download */
 .ed-btn-dl{font-size:2.6px; padding:0 0.6px}
 .ed-ta{flex:1; min-height:0; resize:none; background:#0c1014; border:0.3px solid #202b2b; border-radius:0.8px; outline:none; color:#cfe3cf; font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.4; padding:0.6px 1px; white-space:pre; overflow:auto; scrollbar-width:none; caret-color:#8fd070}
 .ed-ta::placeholder{color:#5f7a5f}
@@ -9000,10 +9000,12 @@ section{margin:1.9rem 0}
 </div>
 <div class="ed-main">
 <div class="ed-top">
+<button id="monitor-ed-run" class="ed-btn ed-btn-run" type="button" title="run">&#9654;</button>
 <input id="monitor-ed-name" class="ed-name" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="filename"/>
 <button id="monitor-ed-save" class="ed-btn" type="button">save</button>
-<button id="monitor-ed-run" class="ed-btn ed-btn-run" type="button">run</button>
+<button id="monitor-ed-open" class="ed-btn" type="button" title="open">open</button>
 <button id="monitor-ed-dl" class="ed-btn ed-btn-dl" type="button" title="download">&#8595;</button>
+<input id="monitor-ed-file" type="file" accept=".js,.txt,text/javascript" style="display:none"/>
 </div>
 <textarea id="monitor-ed-code" class="ed-ta" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="// a script — e.g. party(true); await sleep(400); dance(&quot;salsa&quot;)"></textarea>
 </div>
@@ -21033,6 +21035,8 @@ document.addEventListener("click", function (e) {
   var edDlBtn = document.getElementById("monitor-ed-dl");
   var edNewBtn = document.getElementById("monitor-ed-new");
   var edDelBtn = document.getElementById("monitor-ed-del");
+  var edOpenBtn = document.getElementById("monitor-ed-open");
+  var edFileInput = document.getElementById("monitor-ed-file");
   var edCloseBtn = document.getElementById("monitor-ed-close");
   function readScripts() {
     try { var raw = localStorage.getItem("deskScripts"); var o = raw ? JSON.parse(raw) : null; return (o && typeof o === "object") ? o : {}; } catch (e) { return {}; }
@@ -21086,10 +21090,47 @@ document.addEventListener("click", function (e) {
     edName.value = name; // reflect the trimmed name back
     edRefreshPicker(name);
   }
+  // Debounced autosave while typing in the code buffer. Capture name+code at schedule
+  // time so a mid-type selection switch (edLoad, which sets .value without firing input,
+  // so it never schedules) can't make a pending timer clobber the newly-loaded file — the
+  // timer writes the pair that was live when the keystroke happened. Skips empty filenames
+  // so it never spawns a nameless entry; first-save/rename stay on the Save button.
+  var edAutoTimer = null;
+  function edScheduleAutoSave() {
+    if (!edName || !edCode) return;
+    var name = edName.value.trim();
+    if (!name) return;
+    var code = edCode.value;
+    clearTimeout(edAutoTimer);
+    edAutoTimer = setTimeout(function () {
+      edAutoTimer = null;
+      var scr = readScripts();
+      scr[name] = code;
+      writeScripts(scr);
+      edRefreshPicker(edName ? edName.value.trim() : null); // keep whatever's active highlighted
+    }, 600);
+  }
+  // Load a script's text from a picked file: basename (minus .js/.txt) → filename field,
+  // contents → code buffer, then persist via edSave (which refreshes the sidebar).
+  function edOpenFile(file) {
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var text = String(reader.result == null ? "" : reader.result);
+      var base = String(file.name || "script").replace(/\.(js|txt)$/i, "");
+      if (edName) edName.value = base;
+      if (edCode) edCode.value = text;
+      edSave();
+    };
+    try { reader.readAsText(file); } catch (e) {}
+  }
   function edDelete() {
     if (!edName) return;
     var name = edName.value.trim(), scr = readScripts();
-    if (name && Object.prototype.hasOwnProperty.call(scr, name)) { delete scr[name]; writeScripts(scr); }
+    var known = name && Object.prototype.hasOwnProperty.call(scr, name);
+    // confirm before removing a saved file (silent delete lost work before)
+    if (known && !window.confirm("Delete \"" + name + "\"?")) return;
+    if (known) { delete scr[name]; writeScripts(scr); }
     edName.value = ""; if (edCode) edCode.value = "";
     edRefreshPicker(null);
   }
@@ -21172,9 +21213,10 @@ document.addEventListener("click", function (e) {
   // INPUT/TEXTAREA target; stopPropagation here is the same belt-and-suspenders the
   // terminal input uses. Only the two typable fields need it — the sidebar list items are
   // plain click-only <div>s (not focusable), so they can't leak keys.
-  [edName, edCode].forEach(function (el) {
+  [edName, edCode, edFileInput].forEach(function (el) {
     if (el) el.addEventListener("keydown", function (e) { e.stopPropagation(); });
   });
+  if (edCode) edCode.addEventListener("input", function () { edScheduleAutoSave(); });
   if (edWrap) {
     edWrap.addEventListener("click", function (e) { e.stopPropagation(); });
     edWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });
@@ -21184,6 +21226,13 @@ document.addEventListener("click", function (e) {
   if (edDlBtn) edDlBtn.addEventListener("click", function (e) { e.stopPropagation(); edDownload(); playLaptopClickSound("office-monitor"); });
   if (edNewBtn) edNewBtn.addEventListener("click", function (e) { e.stopPropagation(); edNew(); });
   if (edDelBtn) edDelBtn.addEventListener("click", function (e) { e.stopPropagation(); edDelete(); playLaptopClickSound("office-monitor"); });
+  if (edOpenBtn && edFileInput) edOpenBtn.addEventListener("click", function (e) { e.stopPropagation(); try { edFileInput.value = ""; edFileInput.click(); } catch (err) {} });
+  if (edFileInput) edFileInput.addEventListener("change", function (e) {
+    e.stopPropagation();
+    var f = edFileInput.files && edFileInput.files[0];
+    edOpenFile(f);
+    try { edFileInput.value = ""; } catch (err) {} // let the same file re-pick later
+  });
   if (edCloseBtn) {
     edCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeEditor(); playLaptopClickSound("office-monitor"); });
     edCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });

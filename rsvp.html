@@ -36,7 +36,7 @@
 <meta name="twitter:image" content="https://marketa.behdad.org/art/og-image-rsvp.png">
 <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M29 16 q3.2 -4 0 -8 M37 16 q3.2 -4 0 -8" fill="none" stroke="%23c9c2b3" stroke-width="2.4" stroke-linecap="round"/><rect x="16" y="21" width="32" height="17" rx="4" fill="%23c14455"/><rect x="14" y="16" width="36" height="5" rx="2.5" fill="%23d8d3c6"/><rect x="11" y="38" width="42" height="13" rx="3" fill="%23cccccc" stroke="%23999999" stroke-width="0.8"/><rect x="28" y="35" width="8" height="4" rx="1" fill="%23808080"/><path d="M27 42 h10 l-1.5 9 h-7 z" fill="%23fffdf8" stroke="%23453a31" stroke-width="1.5"/><rect x="28.5" y="43" width="7" height="2.6" fill="%236f4636"/><rect x="17" y="51" width="10" height="3.6" rx="1" fill="%232f2f2f"/><rect x="37" y="51" width="10" height="3.6" rx="1" fill="%232f2f2f"/></svg>'>
 <link rel="apple-touch-icon" href="art/espresso-apple-touch-icon.png">
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" href="manifest.v2.webmanifest">
 <meta name="theme-color" content="#8e3a4a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -12666,6 +12666,92 @@ document.addEventListener("click", function (e) {
   };
   document.addEventListener("visibilitychange", function () { window.__updateTotoroSound(); });
 
+  // Night-sky channel (chan-stars): the opening theme of Satie's Gnossienne No. 1 (1890,
+  // public domain) as very soft, slow piano-ish tones — starlight music. Notes transcribed
+  // from the Mutopia public-domain MIDI (Lent, q≈0.6s), F minor, the melody's top voice.
+  // Same gate + fade-and-close teardown as the beds above; a self-rescheduling note
+  // scheduler steps the melody and bails when the ctx is null (no pile-up in a bg tab).
+  var starsCtx = null, starsTimer = null, starsInCuddly = false, starsIdx = 0;
+  // opening period: motive (C-Eb-D-C) then a two-note sigh, answered a step higher.
+  var STARS_MELODY = [
+    { n: "C5", d: 0.3 }, { n: "Eb5", d: 0.3 }, { n: "D5", d: 0.6 }, { n: "C5", d: 0.6 },
+    { n: "C5", d: 0.3 }, { n: "B4", d: 0.75 }, { rest: true, d: 0.45 },
+    { n: "C5", d: 0.3 }, { n: "B4", d: 0.75 }, { rest: true, d: 0.9 },
+    { n: "C5", d: 0.3 }, { n: "Eb5", d: 0.3 }, { n: "D5", d: 0.6 }, { n: "C5", d: 0.6 },
+    { n: "E5", d: 0.3 }, { n: "F5", d: 0.75 }, { rest: true, d: 0.45 },
+    { n: "E5", d: 0.3 }, { n: "F5", d: 0.75 }, { rest: true, d: 1.7 }
+  ];
+  function noteHz(name) { // "C5"/"Eb5"/"F5" -> Hz, A4=440, equal temperament
+    var m = /^([A-G])([b#]?)(\d)$/.exec(name);
+    var base = { C: -9, D: -7, E: -5, F: -4, G: -2, A: 0, B: 2 }[m[1]];
+    if (m[2] === "#") base += 1; else if (m[2] === "b") base -= 1;
+    return 440 * Math.pow(2, (base + (parseInt(m[3], 10) - 4) * 12) / 12);
+  }
+  function starsWant() {
+    return starsInCuddly && screen.classList.contains("chan-stars") &&
+      document.visibilityState !== "hidden" && document.hasFocus();
+  }
+  function satieNote(t, freq, ringDur) {
+    var ctx = starsCtx, bus = ctx._bus;
+    var osc = ctx.createOscillator();
+    osc.type = "triangle";
+    osc.frequency.value = freq;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.008, t + 0.02); // soft attack
+    g.gain.exponentialRampToValueAtTime(0.0001, t + ringDur); // long decay — notes ring and overlap
+    osc.connect(g); g.connect(bus);
+    osc.start(t); osc.stop(t + ringDur + 0.05); // self-terminating — no refs held
+  }
+  function scheduleSatie() {
+    starsTimer = setTimeout(function () {
+      starsTimer = null;
+      if (!starsCtx) return; // stopped meanwhile (leave room / hide tab / channel change)
+      var step = STARS_MELODY[starsIdx];
+      if (!step.rest) { try { satieNote(starsCtx.currentTime + 0.03, noteHz(step.n), step.d + 0.7); } catch (e) {} }
+      starsIdx = (starsIdx + 1) % STARS_MELODY.length;
+      scheduleSatie(); // self-rescheduling melody stepper at the slow Lent pace
+    }, STARS_MELODY[starsIdx].d * 1000);
+  }
+  function startStars() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      stopStars();
+      starsCtx = new Ctx();
+      try { var p = starsCtx.resume && starsCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+      // one soft master gain — a single fade handle; the notes are self-terminating transients
+      var master = starsCtx.createGain();
+      master.gain.value = 1; // per-note envelopes carry the (very low) level
+      master.connect(pannedOut(starsCtx, "cuddly-wallscreen"));
+      starsCtx._bus = master;
+      starsCtx._masterGain = master;
+      starsCtx._nodes = []; // nothing continuous to stop
+      starsIdx = 0;
+      scheduleSatie();
+    } catch (e) {}
+  }
+  function stopStars(fadeSecs) {
+    var f = (typeof fadeSecs === "number") ? fadeSecs : 0.3;
+    if (starsTimer) { clearTimeout(starsTimer); starsTimer = null; }
+    if (starsCtx) {
+      var ctx = starsCtx, master = starsCtx._masterGain, nodes = starsCtx._nodes || [];
+      starsCtx = null; // null first so a racing scheduleSatie callback bails
+      try { if (master) { var t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
+      setTimeout(function () {
+        nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
+        try { ctx.close(); } catch (e) {}
+      }, f * 1000 + 100);
+    }
+  }
+  window.__updateStarsSound = function (inCuddly, fadeSecs) {
+    if (typeof inCuddly === "boolean") starsInCuddly = inCuddly;
+    var want = starsWant();
+    if (want && !starsCtx) startStars();
+    else if (!want && starsCtx) stopStars(fadeSecs);
+  };
+  document.addEventListener("visibilitychange", function () { window.__updateStarsSound(); });
+
   // Ambient workout sound (chan-workout): a light, muffled aerobics rhythm heard faintly
   // "through the wall" — a soft four-on-the-floor kick + off-beat tick + an occasional
   // quiet bouncy note, all routed through one heavy lowpass so it reads muffled, not sharp.
@@ -13163,6 +13249,7 @@ document.addEventListener("click", function (e) {
     if (window.__updateAquaSound) window.__updateAquaSound(); // underwater bed follows the aquarium channel
     if (window.__updateWorkoutSound) window.__updateWorkoutSound(); // aerobics bed follows the workout channel
     if (window.__updateTotoroSound) window.__updateTotoroSound(); // rainfall follows the totoro channel
+    if (window.__updateStarsSound) window.__updateStarsSound(); // Gnossienne follows the night-sky channel
     if (reduceMotion) renderStill(); else start();
   }
 
@@ -28163,6 +28250,7 @@ function pannedSweep(ctx, fromPan, toPan, dur) {
     if (window.__updateAquaSound) window.__updateAquaSound();
     if (window.__updateWorkoutSound) window.__updateWorkoutSound();
     if (window.__updateTotoroSound) window.__updateTotoroSound();
+    if (window.__updateStarsSound) window.__updateStarsSound();
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong();
     if (window.__updateKettleHum) window.__updateKettleHum();
     if (window.__updateRadioSound) window.__updateRadioSound();
@@ -30996,6 +31084,7 @@ function spawnDustMote(container) {
     if (window.__updateAquaSound) window.__updateAquaSound(name === "cuddly", ROOM_FADE); // aquarium bed only in the cuddly nook
     if (window.__updateWorkoutSound) window.__updateWorkoutSound(name === "cuddly", ROOM_FADE); // workout bed only in the cuddly nook
     if (window.__updateTotoroSound) window.__updateTotoroSound(name === "cuddly", ROOM_FADE); // rainfall only in the cuddly nook
+    if (window.__updateStarsSound) window.__updateStarsSound(name === "cuddly", ROOM_FADE); // Gnossienne only in the cuddly nook
     if (window.__updateWind) window.__updateWind(ROOM_FADE); // wind bed (balcony, + through the cuddly door) fades out over the room change too
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(name === "garden"); // birdsong only in the garden, and only by day
     if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(name === "balcony"); // string lights pulse with the beat only on the balcony

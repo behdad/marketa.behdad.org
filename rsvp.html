@@ -3244,8 +3244,8 @@ body:has(#loft-game-strip.strobe) #trip-acid-kaleido{animation:acid-kaleido 3s e
    setGardenParty). In waltz mode the solo signature moves + beat-flares stop and the
    five dancers pair off: couple (md-d4 left + md-d1 right) and couple (md-d3 left +
    md-d5 right) flank md-d2, who pirouettes solo between them. Pairing translate +
-   facing flip ride the static outer md-move/md-glide wrapper (never the group's
-   position attr — clobber-safe); the 3/4 rise-and-fall ballroom sway rides md-sway;
+   facing flip ride a dedicated .md-couple wrapper that transitions between solo and
+   coupled spots (never the group's position attr — clobber-safe); the sway rides md-sway;
    arms freeze into a raised hold. Translations keep every dancer in its own lane. */
 #trip-melt-dancers.party-dancing.waltz-mode .md-sway,
 #trip-melt-dancers.party-dancing.waltz-mode .md-arm-l,
@@ -3257,12 +3257,19 @@ body:has(#loft-game-strip.strobe) #trip-acid-kaleido{animation:acid-kaleido 3s e
 #trip-melt-dancers.party-dancing.waltz-mode .md-d2 .md-move,
 #trip-melt-dancers.party-dancing.waltz-mode .md-d3 .md-move,
 #trip-melt-dancers.party-dancing.waltz-mode .md-d4 .md-move{animation:none}
-/* pair up: bring partners together + turn them to face each other (static, on the outer
-   wrapper; local px account for each group's own scale sign, ±1 flips the facing). */
-#trip-melt-dancers.waltz-mode .md-d4 .md-move{transform:translateX(25.5px)}
-#trip-melt-dancers.waltz-mode .md-d1 .md-move{transform:translateX(-24.5px) scaleX(-1)}
-#trip-melt-dancers.waltz-mode .md-d3 .md-move{transform:translateX(-27.5px) scaleX(-1)}
-#trip-melt-dancers.waltz-mode .md-d5 .md-glide{transform:translateX(26.7px)}
+/* The coupling reposition rides its OWN wrapper (.md-couple), a parent of the keyframe-
+   animated .md-move/.md-glide — a CSS transition can't drive a transform a running animation
+   owns, so it needs a clean wrapper. Transitioning that transform over the 1.8s crossfade
+   glides each dancer solo⇄coupled in BOTH directions (the scaleX flip rides along, so partners
+   turn to face each other). transform-box/origin match .md-move so the flip mirrors identically. */
+#trip-melt-dancers .md-couple{transform-box:fill-box; transform-origin:center bottom}
+#trip-melt-dancers.party-dancing .md-couple{transition:transform 1.8s cubic-bezier(.4,0,.2,1)}
+/* pair up: bring partners together + turn them to face each other (local px account for each
+   group's own scale sign, ±1 flips the facing). */
+#trip-melt-dancers.waltz-mode .md-d4 .md-couple{transform:translateX(25.5px)}
+#trip-melt-dancers.waltz-mode .md-d1 .md-couple{transform:translateX(-24.5px) scaleX(-1)}
+#trip-melt-dancers.waltz-mode .md-d3 .md-couple{transform:translateX(-27.5px) scaleX(-1)}
+#trip-melt-dancers.waltz-mode .md-d5 .md-couple{transform:translateX(26.7px)}
 /* the 3/4 rise-and-fall sway (down on beat 1, up on 2-3), rocking left↔right over two
    bars; couples staggered so the floor doesn't pulse in lockstep. */
 #trip-melt-dancers.party-dancing.waltz-mode .md-sway{animation:md-waltz 2.22s ease-in-out infinite}
@@ -3283,7 +3290,9 @@ body:has(#loft-game-strip.strobe) #trip-acid-kaleido{animation:acid-kaleido 3s e
 @keyframes md-waltz-twirl{0%,8%{transform:scaleX(1)} 33%{transform:scaleX(.12)} 50%{transform:scaleX(-1)} 67%{transform:scaleX(-.12)} 92%,100%{transform:scaleX(1)}}
 @media (prefers-reduced-motion: reduce){
   #trip-melt-dancers.party-dancing{animation:none; opacity:.9}
-  /* waltz mode: keep the static coupling (pairing translate + facing) but drop the sway/pirouette */
+  /* waltz mode: keep the static coupling (pairing translate + facing) but drop the sway/pirouette
+     and the solo⇄coupled glide — the coupling snaps into place instead of sliding */
+  #trip-melt-dancers.party-dancing .md-couple{transition:none}
   #trip-melt-dancers.party-dancing.waltz-mode .md-sway,
   #trip-melt-dancers.party-dancing.waltz-mode .md-d2 .md-move{animation:none}
   #trip-melt-dancers.party-dancing .md-sway,
@@ -9912,6 +9921,7 @@ section{margin:1.9rem 0}
 <clipPath id="melt-dancers-clip"><rect x="0" y="0" width="3400" height="340"/></clipPath>
 <g id="trip-melt-dancers" clip-path="url(#melt-dancers-clip)" pointer-events="none">
 <g class="melt-dancer md-d1" transform="translate(182,0) scale(1.06)">
+<g class="md-couple">
 <g class="md-move">
 <rect class="md-hit" x="-24" y="195" width="48" height="112" fill="#fff" fill-opacity="0"/>
 <g class="md-flare">
@@ -9954,7 +9964,9 @@ section{margin:1.9rem 0}
 </g>
 </g>
 </g>
+</g>
 <g class="melt-dancer md-d2" transform="translate(352,-5) scale(1.13)">
+<g class="md-couple">
 <g class="md-move">
 <rect class="md-hit" x="-24" y="195" width="48" height="112" fill="#fff" fill-opacity="0"/>
 <g class="md-flare">
@@ -10004,7 +10016,9 @@ section{margin:1.9rem 0}
 </g>
 </g>
 </g>
+</g>
 <g class="melt-dancer md-d3" transform="translate(514,0) scale(-1.02,1.02)">
+<g class="md-couple">
 <g class="md-move">
 <rect class="md-hit" x="-24" y="195" width="48" height="112" fill="#fff" fill-opacity="0"/>
 <g class="md-flare">
@@ -10049,7 +10063,9 @@ section{margin:1.9rem 0}
 </g>
 </g>
 </g>
+</g>
 <g class="melt-dancer md-d4" transform="translate(96,0) scale(1.02)">
+<g class="md-couple">
 <g class="md-move">
 <rect class="md-hit" x="-24" y="195" width="48" height="112" fill="#fff" fill-opacity="0"/>
 <g class="md-flare">
@@ -10090,7 +10106,9 @@ section{margin:1.9rem 0}
 </g>
 </g>
 </g>
+</g>
 <g class="melt-dancer md-d5" transform="translate(604,0) scale(-1.05,1.05)">
+<g class="md-couple">
 <g class="md-glide">
 <rect class="md-hit" x="-24" y="195" width="48" height="112" fill="#fff" fill-opacity="0"/>
 <g class="md-flare">
@@ -10138,6 +10156,7 @@ section{margin:1.9rem 0}
 <circle cx="-5" cy="242" r="0.7" fill="#fff" opacity="0.85"/>
 <circle cx="4" cy="235" r="0.6" fill="#fff" opacity="0.8"/>
 <circle cx="1" cy="258" r="0.6" fill="#fff" opacity="0.8"/>
+</g>
 </g>
 </g>
 </g>
@@ -33390,11 +33409,6 @@ function spawnDustMote(container) {
     var pd = document.getElementById("trip-melt-dancers");
     if (pd) pd.classList.toggle("waltz-mode", !!(window.__gardenPartyOn && window.__waltzMode));
   }
-  function softSwapDip(pd) { // a brief opacity dip masks the reposition snap on each swap
-    if (!pd || !pd.animate) return;
-    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    try { pd.animate([{ opacity: 0.9 }, { opacity: 0.32, offset: 0.5 }, { opacity: 0.9 }], { duration: 700, easing: "ease-in-out" }); } catch (e) {}
-  }
   function flipPartyMode() {
     waltzAltTimer = null;
     if (!window.__gardenPartyOn) return; // party ended — stop, don't reschedule
@@ -33408,8 +33422,7 @@ function spawnDustMote(container) {
       }
       if (window.__updatePartyMusic) window.__updatePartyMusic(null, 1.8); // crossfade: fade the outgoing bed out
       if (window.__updateWaltzMusic) window.__updateWaltzMusic(1.8);       // ...while the incoming fades in over the same 1.8s
-      applyPartyDanceMode();
-      softSwapDip(pd);
+      applyPartyDanceMode(); // toggles .waltz-mode → the .md-couple wrapper glides solo⇄coupled over the same 1.8s
     }
     waltzAltTimer = setTimeout(flipPartyMode, WALTZ_PERIOD_MS);
   }

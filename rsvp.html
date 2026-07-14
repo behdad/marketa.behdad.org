@@ -18904,6 +18904,10 @@ document.addEventListener("click", function (e) {
     // the monitor's Tehran call checks both of these before starting
     window.__pragueCallLive = function () { return inCall() && callCallee === "prague"; };
     window.__luebeckCallLive = function () { return inCall() && callCallee === "lueb"; };
+    // Exposed so the device-zoom Esc/Backspace handler can hang up a laptop call as its "close the
+    // app" step (first Esc ends the call, the next backs the zoom out — like any other monitor app).
+    window.__laptopCallLive = inCall;
+    window.__endLaptopCall = function () { endCall(); };
     // After the laptop's been open and untouched a while, the bouncing-caps "DVD
     // logo" screensaver takes over. Any click wakes it back to the normal
     // TextEdit face.
@@ -25201,6 +25205,11 @@ async def localfont(name):
       e.stopPropagation();
       return;
     }
+    if (window.__laptopCallLive && window.__laptopCallLive() && window.__endLaptopCall) { // a live laptop call is "the app" on screen — hang up first, like closing any app
+      window.__endLaptopCall();
+      e.stopPropagation();
+      return;
+    }
     if (!zoomEl) return;
     var t = e.target;
     if (t && t.blur && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) t.blur();
@@ -27728,7 +27737,8 @@ async def localfont(name):
       // would otherwise swallow them. no-op once unlocked (.booting is cleared).
       if (shell && shell.classList.contains("booting") && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (/^[0-9]$/.test(e.key)) { e.preventDefault(); e.stopImmediatePropagation(); lockDigit(e.key); return; }
-        if (e.key === "Backspace") { e.preventDefault(); e.stopImmediatePropagation(); lockDel(); return; }
+        // Backspace is NOT captured for passcode-delete here — it stays the global "go back"
+        // key (closes the phone), consistent with everywhere else; the on-screen ⌫ key deletes.
         if (e.key === "Enter") { e.preventDefault(); e.stopImmediatePropagation(); lockSubmit(); return; }
       }
       if (e.key === "Escape" || e.key === "Esc") {
@@ -35847,7 +35857,12 @@ function spawnDustMote(container) {
     var bt = e.target;
     if (bt && (/^(INPUT|TEXTAREA|SELECT)$/.test(bt.tagName) || bt.isContentEditable)) return;
     e.preventDefault(); // also stops the browser's legacy "Backspace = history back"
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    // Dispatch on the SAME element a real Escape would hit (the focused element), so it propagates
+    // through element-level Esc handlers too — e.g. the pocket phone's, which a document-level
+    // dispatch never reaches. (A real Escape targets document.activeElement, or body if nothing's
+    // focused.)
+    var tgt = (document.activeElement && document.activeElement.dispatchEvent) ? document.activeElement : (bt && bt.dispatchEvent ? bt : document);
+    tgt.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
   }, true); // capture — before the room-nav / shortcut handlers
 
   var GRIND_MS = 1200;

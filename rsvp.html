@@ -16235,11 +16235,6 @@ document.addEventListener("click", function (e) {
   // over ("electric sheep" nod). Any click on the monitor wakes it.
   var saverTimer = null, saverRaf = null;
   var saverCameFrom = "desktop"; // which screen the saver took over (see startSaver/wake)
-  // While a song plays, tapping a site logo shows that site briefly, then the
-  // now-playing equalizer slides back over it (see navigateMonitor). This timer
-  // drives that revert; it's cancelled if the song ends or the user navigates again.
-  var navRevertTimer = null, NAV_REVERT_MS = 3000;
-  function clearNavRevert() { if (navRevertTimer) { clearTimeout(navRevertTimer); navRevertTimer = null; } }
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   function stopSaver() {
     clearTimeout(saverTimer);
@@ -17171,7 +17166,6 @@ document.addEventListener("click", function (e) {
   // current song's metadata so the lock-screen artwork swaps in from the fallback icon
   window.__refreshMediaArtwork = function () { mediaSessionSongId = null; updateNowPlaying(); };
   function updateNowPlaying() {
-    clearNavRevert(); // deciding state directly now: any pending "show site then revert" is moot
     var playing = null, pausedMid = null;
     for (var i = 0; i < songAudios.length; i++) {
       var a = songAudios[i];
@@ -20394,7 +20388,6 @@ async def localfont(name):
   }
   window.navigateMonitor = function (siteKey, url) {
     if (!monitor.classList.contains("here") || !pcTower || !pcTower.classList.contains("on")) return false;
-    clearNavRevert(); // a fresh navigation supersedes any pending revert
     closeTerminal();
     closeMailApp();
     closeMinesApp();
@@ -20412,18 +20405,9 @@ async def localfont(name):
     monitorUrl = url;
     scheduleSaver(); // any visited site idles back to the screensaver after a while
     playLaptopClickSound("office-monitor");
-    if (playingSongSite()) {
-      // A song's playing: actually SHOW the artist's site for a moment, then let the
-      // now-playing equalizer slide back over it — rather than the equalizer instantly
-      // re-covering it (updateNowPlaying) or the site lingering till the screensaver.
-      stopEq(); // bars are hidden while the site shows; updateNowPlaying restarts them
-      navRevertTimer = setTimeout(function () {
-        navRevertTimer = null;
-        updateNowPlaying();
-      }, NAV_REVERT_MS);
-    } else {
-      updateNowPlaying();
-    }
+    // A wall sign shows ITS site, never the music player: show-nowplaying stays off
+    // (stripped above) even while a song plays. Audio keeps going unshown until the
+    // screensaver idles in; calling updateNowPlaying here would re-summon the player.
     return true;
   };
   // A wall sign wants its page on the monitor: if the PC's already on with the monitor

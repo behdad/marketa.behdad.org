@@ -14241,6 +14241,21 @@ document.addEventListener("click", function (e) {
     if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn(); // name the new piece in the now-playing toast
     return true;
   };
+  window.__setStarsPieceByName = function (name) { // jump to a SPECIFIC night-sky piece by name (channel must be up)
+    var MAP = {
+      satie: STARS_MELODY, gnossienne: STARS_MELODY,
+      chopin: STARS_MELODY_2, nocturne: STARS_MELODY_2,
+      elise: STARS_MELODY_3, beethoven: STARS_MELODY_3, "fur elise": STARS_MELODY_3, "für elise": STARS_MELODY_3,
+      bach: STARS_MELODY_4, invention: STARS_MELODY_4,
+      mozart: STARS_MELODY_5, sonata: STARS_MELODY_5
+    };
+    var score = MAP[String(name == null ? "" : name).toLowerCase().trim()];
+    if (!score || !starsCtx) return false;           // channel must be on (starsCtx exists)
+    var idx = STARS_SCORES.indexOf(score);
+    if (idx < 0) return false;
+    starsPiece = idx;                                 // skipStarsPiece plays STARS_SCORES[starsPiece] then advances
+    return window.__skipStarsPiece();
+  };
   window.__updateStarsSound = function (inCuddly, fadeSecs) {
     if (typeof inCuddly === "boolean") starsInCuddly = inCuddly;
     // song takeover is centralized in setChannel (the projector-music state machine); here we
@@ -20691,7 +20706,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · trip() · goto() · night()/day() · season() · storm() · rainbow() · projector() · temp() · weather() · clock() · countdown() · lang() · fullscreen() · bbq() · phone() · laptop() · play()/pause() · confetti() · cat() · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · trip() · goto() · night()/day() · season() · storm() · rainbow() · projector() · classic() · temp() · weather() · clock() · countdown() · lang() · fullscreen() · bbq() · phone() · laptop() · play()/pause() · confetti() · cat() · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var TERM_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -20725,7 +20740,8 @@ document.addEventListener("click", function (e) {
       confetti: "confetti() — a shower of confetti in the room you're in",
       fireworks: "fireworks() — a burst of fireworks over the room you're in",
       cat: "cat() — summon the loose chest cat to your room (bare `cat` prints a cat instead)",
-      irene: "irene() — the niece skips into the cuddly nook for a bit",
+      irene: "irene() — the niece skips in for a random visit; irene(\"pose\") forces one: \"roam\" · \"bounce\" · \"sit\" · \"hug\" · \"hugb\" · \"catplay\" · \"catjump\" · \"octiplay\" · \"swing\"",
+      classic: "classic(\"piece\") — night-sky piano; a piece by name in quotes, e.g. classic(\"bach\"), or 1–5: \"satie\" · \"chopin\" · \"beethoven\" · \"bach\" · \"mozart\". classic() plays a random one",
       eclipse: "eclipse() — a solar (day) or lunar (night) eclipse over the balcony",
       hb: "hb — the harfbuzzjs shaper (uharfbuzz-style); `help hb` prints a full shaping sequence",
       loft: "loft — the couple's object: .countdown .nowPlaying .weather .menu .love .you .couple .weddings .site",
@@ -39325,6 +39341,7 @@ function spawnDustMote(container) {
   window.projector = function (ch) {
     if (!window.__cuddlyProjector) return "the projector isn't ready yet.";
     if (window.goToStage) window.goToStage("cuddly"); // the projector lives on the cuddly-room wall
+    if (ch === false) { window.__cuddlyProjector.set("off"); return "📺 off."; } // projector(false) → off, like "none"
     if (arguments.length === 0 || ch == null || ch === "") return "📺 on: " + projFriendly(window.__cuddlyProjector.channel()) + " — " + PROJ_LIST;
     var s = String(ch).toLowerCase().trim();
     var n = parseInt(s, 10);
@@ -39347,6 +39364,20 @@ function spawnDustMote(container) {
     return face + " " + p2(d.getHours()) + ":" + p2(d.getMinutes()) + " · " + when;
   };
   window.time = window.clock; // alias — clock() or time(), whichever comes to mind
+
+  // switch the projector to the night-sky piano channel, optionally choosing a specific piece
+  window.classic = function (piece) {
+    if (!window.__cuddlyProjector) return "the projector isn't ready yet.";
+    if (window.goToStage) window.goToStage("cuddly");
+    window.__cuddlyProjector.set("stars"); // the night-sky piano channel (starts the bed)
+    var ORDER = ["satie", "chopin", "beethoven", "bach", "mozart"]; // composers, canonical order (1..5)
+    var PIECES = "pieces (in quotes, or 1–5): \"satie\" · \"chopin\" · \"beethoven\" · \"bach\" · \"mozart\"";
+    var s;
+    if (arguments.length === 0 || piece == null || piece === "") { s = ORDER[(Math.random() * ORDER.length) | 0]; } // no arg → a random piece
+    else { s = String(piece).toLowerCase().trim(); var n = parseInt(s, 10); if (String(n) === s && n >= 1 && n <= ORDER.length) s = ORDER[n - 1]; }
+    if (!window.__setStarsPieceByName || !window.__setStarsPieceByName(s)) return PIECES;
+    return "🎹 " + (window.__starsPieceName ? window.__starsPieceName() : s) + ".";
+  };
 
   window.storm = function (arg) {
     var on = !(arguments.length > 0 && !arg); // storm() / storm(true) → on; storm(false) → off
@@ -39527,9 +39558,10 @@ function spawnDustMote(container) {
     return "🎆 boom.";
   };
 
-  window.cat = function () {
+  window.cat = function (arg) {
     var walk = document.getElementById("witchy-chest-cat-walk");
     if (!walk) return "no cat here.";
+    if (arg === false) { if (window.__stowCat) window.__stowCat(); return "🐈 the cat curls back into the chest."; } // cat(false) → stow her
     if (!walk.classList.contains("out")) {
       if (!window.__releaseCat || !window.__releaseCat()) return "the cat's asleep in the chest — open the moon door in the garden.";
     }
@@ -39706,11 +39738,12 @@ function spawnDustMote(container) {
   // with the loose cat in the nook, so those first fetch the cat there (releasing it from the
   // chest if need be) and let its walk-in settle before she plays with / leaps to it.
   window.irene = function (beh) {
+    if (beh === false) { if (window.__resetIrene) window.__resetIrene(); return "👧 irene heads off — see you soon."; } // irene(false) → send her away
     if (window.goToStage) window.goToStage("cuddly"); // she only appears in the cuddly nook
     if (beh) {
-      var POSES = { roam: "irene-roam", bounce: "irene-bounce", sit: "irene-sit", hug: "irene-hug", catplay: "irene-catplay", catjump: "irene-catjump", octiplay: "irene-octiplay", swing: "irene-swing" };
+      var POSES = { roam: "irene-roam", bounce: "irene-bounce", sit: "irene-sit", hug: "irene-hug", hugb: "irene-hugb", catplay: "irene-catplay", catjump: "irene-catjump", octiplay: "irene-octiplay", swing: "irene-swing" };
       var pose = POSES[String(beh).toLowerCase().replace(/^irene-/, "")];
-      if (!pose) return "irene poses: roam, bounce, sit, hug, catplay, catjump, octiplay, swing.";
+      if (!pose) return "irene poses (in quotes): \"roam\" · \"bounce\" · \"sit\" · \"hug\" · \"hugb\" · \"catplay\" · \"catjump\" · \"octiplay\" · \"swing\"";
       if (!window.__ireneShow) return "irene isn't around right now.";
       if (pose === "irene-catplay" || pose === "irene-catjump") {
         if (window.__releaseCat) window.__releaseCat();   // open the moon door + free the cat if it's still in the chest

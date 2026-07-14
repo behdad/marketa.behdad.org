@@ -20302,8 +20302,10 @@ async def localfont(name):
     function setMediaSessionAction(action, handler) {
       try { navigator.mediaSession.setActionHandler(action, handler); } catch (e) {}
     }
-    setMediaSessionAction("play", function () { monitorTogglePause(); });
-    setMediaSessionAction("pause", function () { monitorTogglePause(); });
+    // OS media keys / lock-screen play-pause drive the whole transport (song + piano + party),
+    // not just the song — so pausing from the system silences everything, and resumes it
+    setMediaSessionAction("play", function () { if (window.__toggleMusicPlayback) window.__toggleMusicPlayback(); else monitorTogglePause(); });
+    setMediaSessionAction("pause", function () { if (window.__toggleMusicPlayback) window.__toggleMusicPlayback(); else monitorTogglePause(); });
     setMediaSessionAction("previoustrack", function () { monitorSkip(-1); });
     setMediaSessionAction("nexttrack", function () { monitorSkip(1); });
     setMediaSessionAction("stop", function () {

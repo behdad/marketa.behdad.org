@@ -978,6 +978,19 @@ footer{margin-top:2.6rem}
 .cuddly-panedge.jiggling{animation:panedge-swing .55s ease-in-out}
 @keyframes panedge-swing{0%,100%{transform:rotate(0)} 22%{transform:rotate(6deg)} 55%{transform:rotate(-4deg)} 80%{transform:rotate(2deg)}}
 @media (prefers-reduced-motion: reduce){.cuddly-panedge.jiggling{animation:none}}
+/* more dimly-seen kitchen objects through the pass-through, each shudders when tapped */
+.cuddly-pt-espresso{transform-box:fill-box; transform-origin:50% 100%}
+.cuddly-pt-espresso.wobbling{animation:pt-espresso-shudder .45s ease-in-out}
+@keyframes pt-espresso-shudder{0%,100%{transform:rotate(0)} 25%{transform:rotate(-2.5deg)} 60%{transform:rotate(1.8deg)}}
+@media (prefers-reduced-motion: reduce){.cuddly-pt-espresso.wobbling{animation:none}}
+.cuddly-pt-board{transform-box:fill-box; transform-origin:50% 100%}
+.cuddly-pt-board.wobbling{animation:pt-board-rock .5s ease-in-out}
+@keyframes pt-board-rock{0%,100%{transform:rotate(0)} 30%{transform:rotate(4deg)} 65%{transform:rotate(-3deg)}}
+@media (prefers-reduced-motion: reduce){.cuddly-pt-board.wobbling{animation:none}}
+.cuddly-pt-base{transform-box:fill-box; transform-origin:50% 100%}
+.cuddly-pt-base.wobbling{animation:pt-base-nudge .4s ease-in-out}
+@keyframes pt-base-nudge{0%,100%{transform:translateY(0)} 40%{transform:translateY(2px)}}
+@media (prefers-reduced-motion: reduce){.cuddly-pt-base.wobbling{animation:none}}
 .plate-crack{opacity:0; transition:opacity .3s ease}
 .plate-crack.cracked{opacity:1}
 .cuddly-ledge-item{transform-box:fill-box; transform-origin:bottom center}
@@ -6437,10 +6450,10 @@ section{margin:1.9rem 0}
 </defs>
 <g clip-path="url(#cuddly-pt-clip)" pointer-events="none" aria-hidden="true">
 <rect x="16" y="118" width="126" height="84" fill="url(#cuddly-pt-depth)"/>
-<rect x="98" y="124" width="34" height="28" fill="#a08c6e" opacity="0.5"/>
+<rect id="cuddly-pt-board" class="cuddly-pt-board" x="98" y="124" width="34" height="28" fill="#a08c6e" opacity="0.5"/>
 <circle id="cuddly-panedge" class="cuddly-panedge" cx="48" cy="111" r="14" fill="#2b2118"/>
-<rect x="16" y="171" width="126" height="31" fill="#463625"/>
-<path d="M40 171 L40 144 Q40 137 48 137 L74 137 Q82 137 82 144 L82 171 Z" fill="#2b2118"/>
+<rect id="cuddly-pt-base" class="cuddly-pt-base" x="16" y="171" width="126" height="31" fill="#463625"/>
+<path id="cuddly-pt-espresso" class="cuddly-pt-espresso" d="M40 171 L40 144 Q40 137 48 137 L74 137 Q82 137 82 144 L82 171 Z" fill="#2b2118"/>
 <rect x="54" y="171" width="13" height="8" fill="#2b2118"/>
 <circle cx="60" cy="153" r="4" fill="#4a3a29"/>
 <rect x="98" y="157" width="7" height="14" rx="2" fill="#2b2118"/>
@@ -6472,6 +6485,10 @@ section{margin:1.9rem 0}
 </g>
 <!-- clickable edge of the hanging pan glimpsed through the pass-through (the swinging sliver) -->
 <rect id="cuddly-panedge-hit" class="hunt-hit" x="30" y="116" width="40" height="16" fill="transparent"/>
+<!-- more clickable kitchen objects glimpsed through the pass-through; hit rects sit over each visible sliver -->
+<rect id="cuddly-pt-espresso-hit" class="hunt-hit" x="38" y="138" width="46" height="33" fill="transparent"/>
+<rect id="cuddly-pt-board-hit" class="hunt-hit" x="99" y="122" width="32" height="8" fill="transparent"/>
+<rect id="cuddly-pt-base-hit" class="hunt-hit" x="18" y="174" width="32" height="26" fill="transparent"/>
 </g>
 <g id="cuddly-kitchenledge">
 <rect x="8" y="204" width="142" height="10" rx="2" fill="#f0ede4" stroke="#c9c4b8" stroke-width="1"/>
@@ -25455,6 +25472,22 @@ async def localfont(name):
       setTimeout(function () { panEdge.classList.remove("jiggling"); }, 600);
     });
   }
+  // more dimly-seen kitchen objects in the pass-through: each wobbles + plays a fitting tone
+  [
+    { hit: "cuddly-pt-espresso-hit", art: "cuddly-pt-espresso", sound: function () { if (typeof playMetalClinkSound === "function") playMetalClinkSound(0.9, "cuddly-passthrough"); } }, // espresso machine — metallic, lower than the pan
+    { hit: "cuddly-pt-board-hit", art: "cuddly-pt-board", sound: function () { if (typeof playChopSound === "function") playChopSound(1, 1, "cuddly-passthrough"); } }, // cutting board behind the knives — one wooden chop
+    { hit: "cuddly-pt-base-hit", art: "cuddly-pt-base", sound: function () { if (typeof playDryClickSound === "function") playDryClickSound("cuddly-passthrough"); } } // low wide base — a dry knock
+  ].forEach(function (o) {
+    var hit = document.getElementById(o.hit), art = document.getElementById(o.art);
+    if (!hit || !art) return;
+    hit.style.cursor = "pointer";
+    hit.addEventListener("click", function () {
+      o.sound();
+      art.classList.remove("wobbling");
+      requestAnimationFrame(function () { requestAnimationFrame(function () { art.classList.add("wobbling"); }); });
+      setTimeout(function () { art.classList.remove("wobbling"); }, 600);
+    });
+  });
   // the Sun / Moon tarot cards on the altar summon day / night
   var tarotSun = document.getElementById("garden-tarot-sun");
   var tarotMoon = document.getElementById("garden-tarot-moon");

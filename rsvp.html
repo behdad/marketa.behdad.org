@@ -20683,8 +20683,8 @@ document.addEventListener("click", function (e) {
   // terminal is the active screen; devtools/script callers just get the return value.
   window.__loftEcho = function (msg) {
     if (msg == null || msg === "") return;
-    if (monitor && monitor.classList.contains("show-terminal")) termPrint(String(msg), "term-dim"); // the in-game console
-    try { console.log(String(msg)); } catch (e) {} // and the browser's real console, for devtools users
+    termPrint(String(msg), "term-dim"); // always into the in-game console scrollback (termPrint no-ops if it isn't built yet)
+    try { console.log(String(msg)); } catch (e) {} // and the browser's real console
   };
   function openTerminal() {
     if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-terminal") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux")) return;
@@ -20745,7 +20745,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · beat() · temp() · weather() · clock() · countdown() · lang() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone() · laptop() · computer()/monitor() · reboot() · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · beat() · temp() · weather() · clock() · countdown() · lang() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone() · laptop() · computer()/monitor() · reboot() · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var TERM_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -20793,6 +20793,8 @@ document.addEventListener("click", function (e) {
       click: "click(\"id\") — bring a scene element into view AND activate it (alias for summon(\"id\", true))",
       random: "random() — for scripts: random() → 0..1 · random(n) → int 0..n-1 · random(a,b) → int a..b · random([…]) → a random item. bonus: pass random() to any picker — dance(random()), room(random()), projector(random()), trip(random()), classic(random()), season(random()) — to choose one at random",
       sleep: "sleep(ms) — for scripts: `await sleep(500)` pauses that long (default 1000ms)",
+      echo: "echo(\"text\") — print a line to both consoles (in-game + browser). echo(false) silences the commands' status chatter, echo(true) restores it, echo() reports the state",
+      say: "say(\"text\") — print a line to both consoles, always (ignores echo's on/off gate)",
       scripts: "scripts() — list the scripts you've saved in the editor app",
       run: "run(\"name\") — run a saved editor script by name (in quotes); the whole script runs as one async block, so `await sleep(...)` between steps sequences",
       edit: "edit(\"name\") — open the editor app; with a name in quotes, load that script (or start a fresh one under that name); edit() opens a blank new script",
@@ -39342,7 +39344,7 @@ function spawnDustMote(container) {
     // + switch state — not just __setGardenParty (which lit the party but left the blacklight off)
     if (window.__setPartyMode) window.__setPartyMode(on);
     else if (window.__setGardenParty) window.__setGardenParty(on, on);
-    say(on, "🎉 party on — blacklight, confetti, a beat. dance.", "party over — the garden settles.");
+    narrate(on, "🎉 party on — blacklight, confetti, a beat. dance.", "party over — the garden settles.");
     return prev;
   };
 
@@ -39369,7 +39371,20 @@ function spawnDustMote(container) {
   function fracToIndex(v, n) { return (typeof v === "number" && v >= 0 && v < 1) ? Math.min(n, Math.floor(v * n) + 1) : null; }
   // print a cute status line to the console (if open) without disturbing the command's return
   // value — the toggles return a bool for scripting but still narrate what they did. (See __loftEcho.)
-  function say(on, onMsg, offMsg) { if (window.__loftEcho) window.__loftEcho(on ? onMsg : offMsg); }
+  // narrate(str) ALWAYS prints to both consoles (in-game + browser). echo(str) prints via narrate() only
+  // while echoing is on; echo(true)/echo(false) turn echoing on/off (returns the previous state);
+  // echo() reports whether it's on. All the internal tools narrate through echo(), so echo(false)
+  // silences their status chatter for scripting.
+  var __echoOn = true;
+  window.say = function (m) { if (m != null && m !== "" && window.__loftEcho) window.__loftEcho(String(m)); };
+  window.echo = function (x) {
+    if (x === true) { var p = __echoOn; __echoOn = true; return p; }
+    if (x === false) { var q = __echoOn; __echoOn = false; return q; }
+    if (arguments.length === 0 || x == null) return __echoOn;
+    if (__echoOn) window.say(String(x));
+    return x;
+  };
+  function narrate(on, onMsg, offMsg) { window.echo(on ? onMsg : offMsg); } // tools' 2-message convenience, gated via echo
 
   window.trip = function (name) {
     if (typeof startTripVariant !== "function") return "the trip hook isn't ready yet.";
@@ -39414,14 +39429,14 @@ function spawnDustMote(container) {
 
   function isNight() { var b = document.getElementById("stage-balcony"); return !!(b && b.classList.contains("dusk")); }
   // daylight() — no arg returns whether it's day (true) / night (false); daylight(true/false) sets
-  // it and returns the PREVIOUS state. day()/night() are aliases. Narrates via say().
+  // it and returns the PREVIOUS state. day()/night() are aliases. Narrates via narrate().
   window.daylight = function (arg) {
     var prev = !isNight(); // true = day
     if (arguments.length === 0) return prev;
     var wantDay = !!arg;
     if (window.__setDayNight) window.__setDayNight(!wantDay); // __setDayNight(true) = dusk
     else if (window.__toggleDayNight) { if (wantDay === isNight()) window.__toggleDayNight(); }
-    say(wantDay, "☀️ daylight.", "🌙 dusk settles over the loft.");
+    narrate(wantDay, "☀️ daylight.", "🌙 dusk settles over the loft.");
     return prev;
   };
   window.day = function () { return window.daylight(true); };   // alias — bring the day back
@@ -39538,11 +39553,11 @@ function spawnDustMote(container) {
     var prev = !!window.__balconyStorm;
     if (arguments.length === 0 || !window.__forceBalconyStorm) return prev; // no arg → is it storming?
     var on = !!arg; // storm(true) → on; storm(false) → off; returns the previous state
-    if (!on) { window.__forceBalconyStorm(false); say(false, "", "🌤 the storm passes — clear skies return."); return prev; }
+    if (!on) { window.__forceBalconyStorm(false); narrate(false, "", "🌤 the storm passes — clear skies return."); return prev; }
     if (window.goToStage) window.goToStage("balcony"); // storms roll over the balcony
     if (window.__setDayNight) window.__setDayNight(true); // a storm needs dusk
     else if (window.__toggleDayNight && !isNight()) window.__toggleDayNight();
-    say(!!window.__forceBalconyStorm(true), "⛈ a storm rolls in over the balcony.", "no dusk balcony to storm over.");
+    narrate(!!window.__forceBalconyStorm(true), "⛈ a storm rolls in over the balcony.", "no dusk balcony to storm over.");
     return prev;
   };
 
@@ -39625,7 +39640,7 @@ function spawnDustMote(container) {
     // reuse the button's own toggle path (a console keystroke is a user gesture, so a real
     // requestFullscreen is allowed); only click when it would change state
     if (enter !== area.classList.contains("is-fullscreen")) btn.click();
-    say(enter, "⛶ fullscreen — the loft fills the screen (Esc or fullscreen(false) to leave).", "⛶ back to windowed.");
+    narrate(enter, "⛶ fullscreen — the loft fills the screen (Esc or fullscreen(false) to leave).", "⛶ back to windowed.");
     return prev;
   };
 
@@ -39641,7 +39656,7 @@ function spawnDustMote(container) {
   };
 
   // The smoker family. Every setter returns the PREVIOUS on/off state (a bool, for scripting —
-  // e.g. `var was = smoker(true); …; smoker(was)`) and narrates via say(); no-arg reads state.
+  // e.g. `var was = smoker(true); …; smoker(was)`) and narrates via narrate(); no-arg reads state.
   window.smoker = function (arg) { // the firebox: smoker() → smoking? · smoker(true/false) → light/douse
     var s = document.getElementById("balcony-smoker"), fb = document.getElementById("balcony-smoker-firebox");
     var prev = !!(s && s.classList.contains("smoking"));
@@ -39649,7 +39664,7 @@ function spawnDustMote(container) {
     var on = !!arg;
     if (on && window.goToStage) window.goToStage("balcony"); // so you can watch it smoke
     if (on !== s.classList.contains("smoking")) fb.dispatchEvent(new MouseEvent("click", { bubbles: true })); // its real toggle path
-    say(on, "🔥 smoker's on — low and slow.", "smoker's off.");
+    narrate(on, "🔥 smoker's on — low and slow.", "smoker's off.");
     return prev;
   };
   window.bbq = window.smoker; // alias — the smoker's old name
@@ -39660,7 +39675,7 @@ function spawnDustMote(container) {
     var open = !!arg;
     if (open && window.goToStage) window.goToStage("balcony");
     if (open !== s.classList.contains("open")) lid.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    say(open, "🍖 lid up — mind the smoke.", "🍖 lid down.");
+    narrate(open, "🍖 lid up — mind the smoke.", "🍖 lid down.");
     return prev;
   };
   window.cooked = function (n) { // is a burger done? cooked(1|2|3) → bool · cooked() → [bool, bool, bool]
@@ -39681,7 +39696,7 @@ function spawnDustMote(container) {
     var fi = fracToIndex(pick, ready.length); if (fi) idx = fi - 1; // random() (0..1) → a random ready one
     else if (arguments.length && pick != null && pick !== "") { var pn = parseInt(pick, 10); if (pn >= 1 && pn <= ready.length) idx = pn - 1; }
     ready[idx].dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    say(true, "🍔 served.", "");
+    narrate(true, "🍔 served.", "");
     return true;
   };
 
@@ -39693,7 +39708,7 @@ function spawnDustMote(container) {
       if (window.goToStage) window.goToStage("balcony"); // the pocket phone lives on the balcony
       if (window.__openPhoneModal) window.__openPhoneModal();
     } else if (window.__closePhoneModal) { window.__closePhoneModal(); }
-    say(open, "📱 the pocket phone lights up.", "📱 phone away.");
+    narrate(open, "📱 the pocket phone lights up.", "📱 phone away.");
     return prev;
   };
 
@@ -39712,7 +39727,7 @@ function spawnDustMote(container) {
     var wantOpen = !!arg; // laptop(true) → open; laptop(false) → close; returns the previous state
     if (window.goToStage) window.goToStage("office"); // the laptop sits on the office desk
     if (wantOpen !== lap.classList.contains("open")) lap.dispatchEvent(new MouseEvent("click", { bubbles: true })); // its real toggle path
-    say(wantOpen, "💻 the laptop wakes on the desk.", "💻 laptop closed.");
+    narrate(wantOpen, "💻 the laptop wakes on the desk.", "💻 laptop closed.");
     return prev;
   };
 
@@ -39723,7 +39738,7 @@ function spawnDustMote(container) {
     var wantOn = !!arg; // computer(true) → power up; computer(false) → shut down; returns the previous state
     if (window.goToStage) window.goToStage("office");
     if (wantOn !== pc.classList.contains("on")) pc.dispatchEvent(new MouseEvent("click", { bubbles: true })); // its real power toggle (boots on / clears off)
-    say(wantOn, "🖥 the PC powers up.", "🖥 the PC powers down.");
+    narrate(wantOn, "🖥 the PC powers up.", "🖥 the PC powers down.");
     return prev;
   };
   window.monitor = window.computer; // alias — the office monitor is the computer
@@ -39746,19 +39761,22 @@ function spawnDustMote(container) {
     return "targets by room — " + SUMMON_ROOMS.map(function (r) { return r + " (" + summonHits(r).length + ")"; }).join(" · ") + ". summon(\"<id>\") shows its room · click(\"<id>\") activates it · summon(\"<room>\") lists ids · no arg picks a random one.";
   };
   // jump to the room an element lives in; optionally poke it. Shared by summon()/click().
+  // echoes a human status and RETURNS the element id it acted on (or null), so scripts get a
+  // usable handle — e.g. `var picked = summon()` gives the random id it revealed.
   function reveal(elId, doClick) {
     var el = document.getElementById(elId);
-    if (!el) return "no element with id \"" + elId + "\". (try `help summon` for the roster)";
+    if (!el) { echo("no element with id \"" + elId + "\". (try `help summon` for the roster)"); return null; }
     var stage = el.closest && el.closest("[id^='stage-']"); // the room it lives in, if any
     var room = stage ? stage.id.replace(/^stage-/, "") : null;
     if (room && window.goToStage) window.goToStage(room);
     if (doClick) { try { el.dispatchEvent(new MouseEvent("click", { bubbles: true })); } catch (e) {} }
-    return (doClick ? "✨ clicked #" : "👁 showing #") + el.id + (room ? " (in the " + room + ")" : "");
+    echo((doClick ? "✨ clicked #" : "👁 showing #") + el.id + (room ? " (in the " + room + ")" : ""));
+    return el.id;
   }
   function summonOrClick(id, doClick) {
-    if (id == null || id === "") { var all = summonAll(); return all.length ? reveal(all[(Math.random() * all.length) | 0], doClick) : "nothing here right now."; }
+    if (id == null || id === "") { var all = summonAll(); if (!all.length) { echo("nothing here right now."); return null; } return reveal(all[(Math.random() * all.length) | 0], doClick); }
     var key = String(id).replace(/^#/, "");
-    if (SUMMON_ROOMS.indexOf(key.toLowerCase()) !== -1) { var list = summonHits(key.toLowerCase()); return key.toLowerCase() + " targets: " + (list.join(" · ") || "(none)"); } // a room name → list its ids
+    if (SUMMON_ROOMS.indexOf(key.toLowerCase()) !== -1) { var list = summonHits(key.toLowerCase()); echo(key.toLowerCase() + " targets: " + (list.join(" · ") || "(none)")); return list; } // a room name → echo + return its ids
     return reveal(key, doClick);
   }
   window.summon = function (id, doClick) { return summonOrClick(id, !!doClick); }; // summon(id) shows; summon(id, true) also activates
@@ -39934,11 +39952,11 @@ function spawnDustMote(container) {
     var walk = document.getElementById("witchy-chest-cat-walk");
     var prev = !!(walk && walk.classList.contains("out"));
     if (arguments.length === 0 || !walk) return prev; // no arg → is the cat out?
-    if (arg === false) { if (window.__stowCat) window.__stowCat(); say(false, "", "🐈 the cat curls back into the chest."); return prev; } // cat(false) → stow her
+    if (arg === false) { if (window.__stowCat) window.__stowCat(); narrate(false, "", "🐈 the cat curls back into the chest."); return prev; } // cat(false) → stow her
     // cat(true) → summon her to your room, releasing her from the chest if need be
     if (!walk.classList.contains("out") && window.__releaseCat) window.__releaseCat();
     if (window.__homeCat) window.__homeCat(window.currentStageName || "garden"); // walk it into the room you're viewing
-    say(true, "🐈 here, kitty — she pads over to say hi.", "");
+    narrate(true, "🐈 here, kitty — she pads over to say hi.", "");
     return prev;
   };
   window.kitty = function () {
@@ -40105,7 +40123,7 @@ function spawnDustMote(container) {
     if (arguments.length === 0 || !strip) return prev; // no arg → is the UV on?
     var on = !!arg; // blacklight(true) → on; blacklight(false) → off; returns the previous state
     strip.classList.toggle("uv-mode", on);
-    say(on, "🟣 blacklight on — everything fluoresces.", "blacklight off — the lights come up.");
+    narrate(on, "🟣 blacklight on — everything fluoresces.", "blacklight off — the lights come up.");
     return prev;
   };
   // irene() → a full random visit. irene('catplay'|'catjump'|'bounce'|'sit'|'hug'|'roam') →
@@ -40116,9 +40134,9 @@ function spawnDustMote(container) {
     var el = document.getElementById("cuddly-irene");
     var prev = !!(el && el.classList.contains("showing"));
     if (arguments.length === 0) return prev; // no arg → is irene visiting?
-    if (beh === false) { if (window.__resetIrene) window.__resetIrene(); say(false, "", "👧 irene heads off — see you soon."); return prev; } // send her away
+    if (beh === false) { if (window.__resetIrene) window.__resetIrene(); narrate(false, "", "👧 irene heads off — see you soon."); return prev; } // send her away
     if (window.goToStage) window.goToStage("cuddly"); // she only appears in the cuddly nook
-    if (beh === true) { if (window.__ireneSummon) window.__ireneSummon(); say(true, "👧 irene skips into the nook.", ""); return prev; } // a full random visit
+    if (beh === true) { if (window.__ireneSummon) window.__ireneSummon(); narrate(true, "👧 irene skips into the nook.", ""); return prev; } // a full random visit
     // otherwise a pose name (a usage error still returns the pose list, so typos surface)
     var POSES = { roam: "irene-roam", bounce: "irene-bounce", sit: "irene-sit", hug: "irene-hug", hugb: "irene-hugb", catplay: "irene-catplay", catjump: "irene-catjump", octiplay: "irene-octiplay", swing: "irene-swing" };
     var pose = POSES[String(beh).toLowerCase().replace(/^irene-/, "")];
@@ -40129,7 +40147,7 @@ function spawnDustMote(container) {
         if (window.__homeCat) window.__homeCat("cuddly");  // bring the loose cat into the nook
         setTimeout(function () { if (window.__ireneShow) window.__ireneShow(pose); }, 1000); // after the ~900ms walk-in settles, so she lands beside the cat
       } else { window.__ireneShow(pose); }
-      say(true, "👧 irene: " + pose.replace("irene-", "") + ".", "");
+      narrate(true, "👧 irene: " + pose.replace("irene-", "") + ".", "");
     }
     return prev;
   };

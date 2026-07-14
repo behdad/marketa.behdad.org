@@ -198,6 +198,13 @@ footer{margin-top:2.6rem}
 #hunt-volume-btn:hover, #hunt-volume-btn:focus-visible{background:rgba(69,58,49,.08)}
 #hunt-volume-btn:hover svg{stroke:var(--ink)}
 #hunt-volume-btn:hover polygon{fill:var(--ink)}
+#hunt-playpause-btn{background:transparent; border-color:rgba(69,58,49,.28); box-shadow:none}
+#hunt-playpause-btn svg{fill:var(--muted)}
+#hunt-playpause-btn:hover, #hunt-playpause-btn:focus-visible{background:rgba(69,58,49,.08)}
+#hunt-playpause-btn:hover svg{fill:var(--ink)}
+#hunt-playpause-btn .pp-play{display:none}
+#hunt-playpause-btn.paused .pp-pause{display:none}
+#hunt-playpause-btn.paused .pp-play{display:block}
 #hunt-fullscreen-area.is-fullscreen #hunt-feedback-btn, #hunt-fullscreen-area:fullscreen #hunt-feedback-btn, #hunt-fullscreen-area:-webkit-full-screen #hunt-feedback-btn{display:none}
 @media (max-width:759px){
   .hunt-right{width:1.9rem}
@@ -10798,6 +10805,10 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <polyline points="21 3 21 9 15 9"/>
         </svg>
       </button>
+      <button type="button" id="hunt-playpause-btn" class="hunt-fullscreen-btn song-volume-btn" aria-label="Play or pause the music" title="Play / pause">
+        <svg class="pp-pause" viewBox="0 0 24 24" width="13" height="13" fill="#f8f5ec" stroke="none"><rect x="6" y="4" width="4.5" height="16" rx="1"/><rect x="13.5" y="4" width="4.5" height="16" rx="1"/></svg>
+        <svg class="pp-play" viewBox="0 0 24 24" width="13" height="13" fill="#f8f5ec" stroke="none"><path d="M7 4.5v15l13-7.5z"/></svg>
+      </button>
       <button type="button" id="hunt-volume-btn" class="hunt-fullscreen-btn song-volume-btn" aria-label="Volume">
         <svg viewBox="0 0 26 24" width="14" height="13" fill="none" stroke="#f8f5ec" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <polygon points="9,5 4,9 0,9 0,15 4,15 9,19" fill="#f8f5ec" stroke="none"/>
@@ -12838,6 +12849,7 @@ document.addEventListener("click", function (e) {
       lastFlashT = 0;
       starsNext = starsCtx.currentTime + 0.15;
       var vb = document.getElementById("hunt-volume-btn"); if (vb) vb.classList.add("shown"); // it's the music now — reveal the volume button
+      if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn(); // ...and reveal + sync the play/pause button
       scheduleSatie();
     } catch (e) {}
   }
@@ -12853,6 +12865,7 @@ document.addEventListener("click", function (e) {
         try { ctx.close(); } catch (e) {}
       }, f * 1000 + 100);
     }
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn(); // the piano stopped — resync the rail button
   }
   window.__pauseStars = function (paused) { // unified space-bar control: true pause-in-place via ctx suspend/resume
     if (!starsCtx) return false;
@@ -13235,6 +13248,7 @@ document.addEventListener("click", function (e) {
       partyStep = 0;
       partyNextTime = now + 0.12;
       var vb = document.getElementById("hunt-volume-btn"); if (vb) vb.classList.add("shown"); // it's the music now — reveal the volume button
+      if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn(); // ...and reveal + sync the play/pause button
       scheduleParty();
     } catch (e) {}
   }
@@ -13250,6 +13264,7 @@ document.addEventListener("click", function (e) {
         try { ctx.close(); } catch (e) {}
       }, f * 1000 + 100);
     }
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn(); // the party stopped — resync the rail button
   }
   window.__pausePartyMusic = function (paused) { // unified space-bar control: true pause-in-place via ctx suspend/resume
     if (!partyCtx) return false;
@@ -17181,6 +17196,8 @@ document.addEventListener("click", function (e) {
     // play/pause/ended flip whether the pipeline context may idle suspended (these
     // events still fire in a hidden tab, e.g. from a lock-screen media control)
     updateEqCtxIdle();
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn(); // rail play/pause icon follows the song state
+
     // show once the monitor's booted (even over the screensaver, which we wake)
     var booted = monitor.classList.contains("screen-on") &&
       !monitor.classList.contains("show-fedora") && !monitor.classList.contains("show-chrome");
@@ -19276,7 +19293,7 @@ document.addEventListener("click", function (e) {
   var browserNewtab = document.getElementById("monitor-browser-newtab");
   var browserSplashTimer = null; // the ~0.8s chrome splash between engaging and revealing the frame
   var BROWSER_TABS = [
-    { id: "loft", labelKey: "tab_loft", url: "https://marketa.behdad.org/rsvp.html", nofav: true },
+    { id: "loft", labelKey: "tab_loft", url: "https://marketa.behdad.org", nofav: true },
     { id: "marketa", labelKey: "tab_marketa", url: "https://marketajakesova.ca/" },
     { id: "behdad", labelKey: "tab_behdad", url: "https://behdad.org/" },
     { id: "harfbuzz", labelKey: "tab_harfbuzz", url: "https://harfbuzz-world.cc/" }
@@ -19993,19 +20010,58 @@ async def localfont(name):
   // party techno bed is live, space suspends/resumes THAT in place (a true pause); otherwise
   // it toggles the loft song, exactly as before. So the beds and the songs are one "playing"
   // thing under the spacebar.
+  // Global transport over the four sources (guitar/uke song, night-sky piano, party techno):
+  // if anything is audible, ONE press pauses everything at once (remembering the song so it
+  // can restart); the next press resumes whatever the transport paused. Idle press starts a
+  // song. (Interim — a proper AudioTransport state manager is planned to replace this.)
+  var transportSongWasPlaying = false;
+  function anyAudioPlaying() {
+    var ws = document.getElementById("cuddly-wallscreen");
+    var bedGatedOn = (ws && ws.classList.contains("chan-stars")) || !!window.__gardenPartyOn;
+    var bedPlaying = bedGatedOn && !window.__musicPaused; // beds are suspended while __musicPaused
+    var songPlaying = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying());
+    return bedPlaying || songPlaying;
+  }
   function toggleMusicPlayback() {
-    var wallscreen = document.getElementById("cuddly-wallscreen");
-    var bedLive = (wallscreen && wallscreen.classList.contains("chan-stars")) || !!window.__gardenPartyOn;
-    if (bedLive) {
-      window.__musicPaused = !window.__musicPaused;
-      if (window.__pauseStars) window.__pauseStars(window.__musicPaused);
-      if (window.__pausePartyMusic) window.__pausePartyMusic(window.__musicPaused);
-      return;
+    if (anyAudioPlaying()) {
+      transportSongWasPlaying = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying());
+      if (transportSongWasPlaying && window.__phoneMusicToggle) window.__phoneMusicToggle(); // pause the song
+      window.__musicPaused = true;
+      if (window.__pauseStars) window.__pauseStars(true);
+      if (window.__pausePartyMusic) window.__pausePartyMusic(true);
+    } else if (window.__musicPaused || transportSongWasPlaying) {
+      window.__musicPaused = false;
+      if (window.__pauseStars) window.__pauseStars(false);
+      if (window.__pausePartyMusic) window.__pausePartyMusic(false);
+      if (transportSongWasPlaying && window.__phoneMusicToggle && !(window.__phoneMusicPlaying && window.__phoneMusicPlaying())) window.__phoneMusicToggle(); // resume the song
+      transportSongWasPlaying = false;
+    } else {
+      window.__musicPaused = false;
+      toggleSongPlayback(); // idle → start a song
     }
-    window.__musicPaused = false;
-    toggleSongPlayback();
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
   }
   window.__toggleMusicPlayback = toggleMusicPlayback;
+  // The rail's play/pause button mirrors the unified playback: it shows once any music has
+  // been active, and flips ▶/⏸ with the true playing state (bed live & not suspended, or a
+  // song actually playing). Clicking it is the touch equivalent of the spacebar.
+  window.__updatePlayPauseBtn = function () {
+    var btn = document.getElementById("hunt-playpause-btn");
+    if (!btn) return;
+    var ws = document.getElementById("cuddly-wallscreen");
+    var bedGatedOn = (ws && ws.classList.contains("chan-stars")) || !!window.__gardenPartyOn;
+    var songActive = !!(window.__phoneMusicId && window.__phoneMusicId()); // playing or paused-with-progress
+    if (bedGatedOn || songActive) btn.classList.add("shown"); // reveal once there's music to control; never un-shows (matches the volume button)
+    btn.classList.toggle("paused", !anyAudioPlaying()); // ▶ when everything's silent, ⏸ when anything plays
+  };
+  (function wirePlayPauseBtn() {
+    var btn = document.getElementById("hunt-playpause-btn");
+    if (!btn) return;
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      toggleMusicPlayback();
+    });
+  })();
   // Spacebar always toggles the song, everywhere on the page -- deliberately NOT
   // deferring to a focused hunt-hit/button's own space-activation (an earlier version
   // did, but that meant "click something, then hit space" activated whatever was
@@ -21718,7 +21774,7 @@ async def localfont(name):
     // proven-frameable URLs (the loft tab frames rsvp.html, NOT the bare root, which refuses
     // to frame). local to this IIFE; no cross-IIFE reference.
     var PHONE_BROWSER_TABS = [
-      { id: "loft", labelKey: "tab_loft", url: WEDDING_URL + "/rsvp.html", nofav: true },
+      { id: "loft", labelKey: "tab_loft", url: WEDDING_URL, nofav: true },
       { id: "marketa", labelKey: "tab_marketa", url: "https://marketajakesova.ca/" },
       { id: "behdad", labelKey: "tab_behdad", url: "https://behdad.org/" },
       { id: "harfbuzz", labelKey: "tab_harfbuzz", url: "https://harfbuzz-world.cc/" }
@@ -31601,6 +31657,8 @@ function spawnDustMote(container) {
     setTimeout(function () {
       if (window.__updateSongRoomPan) window.__updateSongRoomPan();
       if (window.__updateSongRoomWidth) window.__updateSongRoomWidth();
+      if (window.__updateStarsRoomPan) window.__updateStarsRoomPan(); // piano's balcony pan reads the door too — re-settle after the slide
+      if (window.__updatePartyRoom) window.__updatePartyRoom(); // party's balcony pan/faintness reads the door too — same re-settle
     }, 720);
     if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics(); // and gets quieter on the balcony specifically, while its door is shut
     if (name !== "balcony" && window.__clearTipsy) window.__clearTipsy(); // the tipsy sway lives only on the balcony

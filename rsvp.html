@@ -11900,6 +11900,9 @@ var T = {
       cine_encore: "Encore — the loft in blacklight…",
       cine_party: "And the garden throws a party…",
       cine_dj: "The DJ can't help himself.",
+      cine_djswap: "Two DJs, trading off.",
+      cine_photo: "A flash for the album…",
+      cine_bar: "And the kitchen's a cocktail bar…",
       cine_dance: "…and the beat rolls on.",
       cine_encore_end: "And that's their day. Again tomorrow…"
     },
@@ -12278,6 +12281,9 @@ var T = {
       cine_encore: "Přídavek — loft v černém světle…",
       cine_party: "A zahrada pořádá večírek…",
       cine_dj: "DJ se neudrží.",
+      cine_djswap: "Dva DJové se střídají.",
+      cine_photo: "Blesk do alba…",
+      cine_bar: "A z kuchyně je koktejlový bar…",
       cine_dance: "…a rytmus jede dál.",
       cine_encore_end: "A to je jejich den. Zítra zas…"
     },
@@ -37739,6 +37745,18 @@ function spawnDustMote(container) {
     }
     el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
   }
+  // Same as cineClick but fires a dblclick — for the encore's DJ A↔B swap, whose handler
+  // listens for dblclick (a lone dblclick doesn't fire the click headbang, so the swap lands
+  // clean). Synthetic + untrusted, so it passes the show's scene-input swallower like cineClick.
+  function cineDblClick(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (window.__cinematic) {
+      var p = cursorPointFor(id);
+      if (p) { cursorPlace(p.x, p.y); cursorRipple(p.x, p.y); }
+    }
+    el.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+  }
 
   function stopCinematic() {
     if (!window.__cinematic) return;
@@ -38098,21 +38116,34 @@ function spawnDustMote(container) {
       // reset (and stopCinematic's teardown) clear the party/dancers/confetti to a fresh loft.
       [1500, visit("garden")],
       [500, function () { if (window.__setGardenParty) window.__setGardenParty(true, false); }], [0, cine("cine_party")],
-      // a lit party auto-rotates its 9 shuffled dances (~15s each) — the show drives the
-      // rotation by hand so the viewer sees more than one groove land. First the DJ, at his
-      // booth, gets an emphatic headbang; then a manual skip jumps to the NEXT dance (the
-      // now-playing toast names each groove as it changes, and the colourful dancers glow
-      // neon through the encore's blacklight).
-      [3000, function () { cineClick("garden-dj-headbang"); }], [0, cine("cine_dj")],
-      [2600, function () { if (window.__nextPartyDance) window.__nextPartyDance(); }], [0, cine("cine_dance")],
-      [3400, function () {}], // hold on the fresh dance so the beat lands
-      // curtain call: back where the day began, a held beat of stillness, the song
-      // fades out and the cursor settles on the extinguisher — then the show formally
-      // ends and the pull runs through the game's real handler, exactly as a player's
-      // own pull would (the cursor goes down with the show, the wipe covers the rest).
-      [3600, visit("kitchen")], [0, cine("cine_encore_end")],
-      [2600, encoreSongOut],
-      [1900, function () { cursorGlideTo("kitchen-extinguisher", 500); }],
+      // the party's new toys, driven by hand so the viewer sees each one land. The two
+      // booth beats are grouped so the cursor stays at the decks: first an emphatic
+      // headbang, then a dblclick swaps who's spinning (A beanie ↔ B afro — the couple's
+      // DJ friend), so both DJs are seen. Then the cursor glides far-left to the
+      // photographer for a shutter-and-flash, and a manual skip drops the NEXT groove under
+      // the fresh DJ (the now-playing toast names each dance; the dancers glow neon through
+      // the encore's blacklight).
+      [2400, function () { cineClick("garden-dj-headbang"); }], [0, cine("cine_dj")],
+      [2000, function () { cineDblClick("garden-dj-headbang"); }], [0, cine("cine_djswap")],
+      [1600, function () { cursorGlideTo("garden-photog-hit", 450); }], // glide to the far-left photographer
+      [500, function () { cineClick("garden-photog-hit"); }], [0, cine("cine_photo")],
+      [2000, function () { if (window.__nextPartyDance) window.__nextPartyDance(); }], [0, cine("cine_dance")],
+      // the highlight, folded into the curtain call: the kitchen where the day began is a
+      // cocktail BAR while the party's lit (party-on gates the whole bar), so the trip home
+      // shows it off — the bartender flairs his shaker and a highball clinks — before the
+      // day resets from exactly here. (Folded rather than a separate garden round-trip: the
+      // reset MUST land at the kitchen extinguisher, so a bar detour + return would double
+      // the kitchen; this gives the bar a lingering spotlight AND keeps the show tight.)
+      [2400, visit("kitchen")], [0, cine("cine_bar")],
+      [1400, function () { cineClick("kitchen-bartender-hit"); }],   // he tosses the shaker (rattle)
+      [1500, function () { cineClick("kitchen-bar-glass-highball"); }], // a glass on the bar wobbles + clinks
+      [1500, cine("cine_encore_end")],                              // linger on the bar — that's their day
+      // the song fades out and the cursor settles on the extinguisher — then the show
+      // formally ends and the pull runs through the game's real handler, exactly as a
+      // player's own pull would (the cursor goes down with the show, the wipe covers the
+      // rest; stopCinematic's setGardenParty(false) clears the bar as the reset lands).
+      [1700, encoreSongOut],
+      [1500, function () { cursorGlideTo("kitchen-extinguisher", 500); }],
       [700, function () { stopCinematic(); cineClick("kitchen-extinguisher"); }]
     ];
     runSteps(steps);

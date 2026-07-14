@@ -12793,8 +12793,12 @@ document.addEventListener("click", function (e) {
   window.__applyStarsVolume = function () { // called when the volume button cycles, to update live
     if (starsCtx && starsCtx._masterGain) { try { starsCtx._masterGain.gain.setTargetAtTime(starsVol(), starsCtx.currentTime, 0.05); } catch (e) {} }
   };
-  function starsRoomPan() { // same cuddly-sourced per-room pan the concert songs use
-    return window.__songRoomBasePan ? window.__songRoomBasePan(window.currentStageName || "cuddly") : 0;
+  // the piano's own cuddly-sourced per-room pan — decoupled from the guitar/uke songs so
+  // each can be tuned independently
+  var STARS_ROOM_PAN = { kitchen: 0.6, garden: -0.6, cuddly: 0, office: 0 };
+  function starsRoomPan() {
+    var room = window.currentStageName || "cuddly";
+    return room === "balcony" ? panForElId("balcony-door") : (STARS_ROOM_PAN[room] || 0);
   }
   window.__updateStarsRoomPan = function () { // room change: glide the pan to the new room's spot
     if (!starsCtx || !starsCtx._pan || !starsCtx._pan.pan) return;
@@ -16860,11 +16864,6 @@ document.addEventListener("click", function (e) {
     var room = ROOM_BY_STAGE_INDEX[window.currentStageIndex] || "kitchen";
     songBasePan = room === "balcony" ? panForElId("balcony-door") : SONG_ROOM_PAN[room];
     ensurePanDrift();
-  };
-  // The projector piano (night-sky bed) is cuddly-sourced like these concert songs, so it
-  // reuses this exact per-room pan table — see __updateStarsRoomPan.
-  window.__songRoomBasePan = function (room) {
-    return room === "balcony" ? panForElId("balcony-door") : (SONG_ROOM_PAN[room] || 0);
   };
   // Room-relative stereo image: cuddly (the middle room, where the couple actually is)
   // keeps full, present stereo width. Office sits ACROSS the loft from the cuddly room,

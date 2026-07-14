@@ -699,6 +699,20 @@ footer{margin-top:2.6rem}
 #stage-garden.garden-party .db-facet.f3{animation-delay:-.9s; animation-duration:1.7s}
 #stage-garden.garden-party .db-facet.f4{animation-delay:-.3s; animation-duration:1.35s}
 @keyframes db-twinkle{0%,100%{opacity:.22}50%{opacity:.95}}
+/* a quiet party guest at the front-left edge with a camera; fades in with the rest of the
+   partyfx layer. The camera pops a soft, infrequent flash (gardenFlashTick, ~5-9s jittered,
+   gated on gardenPartyActive). The bloom is a bare <circle> (cx/cy, no transform attribute),
+   so the scale animation never clobbers a static transform. One-shot .flashing, cleared on
+   animationend (distinct name from disco-ball's .popping). Reduced-motion stills the flash
+   entirely (both here AND at the spawner, which self-gates on gardenPartyActive). */
+#garden-photographer{pointer-events:none}
+#garden-flash-bloom{opacity:0; transform-box:fill-box; transform-origin:center; mix-blend-mode:screen}
+#garden-flash-bloom.flashing{animation:garden-flash-pop .5s ease-out}
+#garden-flash-wash{opacity:0; mix-blend-mode:screen}
+#garden-flash-wash.flashing{animation:garden-flash-wash .5s ease-out}
+@keyframes garden-flash-pop{0%{opacity:0; transform:scale(.35)}16%{opacity:.95; transform:scale(1)}100%{opacity:0; transform:scale(1.25)}}
+@keyframes garden-flash-wash{0%{opacity:0}14%{opacity:.10}100%{opacity:0}}
+@media (prefers-reduced-motion: reduce){#garden-flash-bloom.flashing, #garden-flash-wash.flashing{animation:none}}
 /* ── PARTY BAR ──────────────────────────────────────────────────────────────
    When the garden party is lit, the espresso KITCHEN reads as a cocktail BAR.
    Gated strip-wide on .party-on (toggled in setGardenParty), so every entry
@@ -7193,6 +7207,38 @@ section{margin:1.9rem 0}
 </g>
 </g>
 <g id="garden-confettifx"></g>
+<!-- a small party guest at the front-left edge, camera raised to catch the night. Static
+     (muted tones so it stays in the background rather than glowing neon like the dancers);
+     its only motion is the occasional soft flash from the camera. Non-interactive; lives in
+     aria-hidden partyfx and fades in with the party. Sits at garden-local x~18-60, feet ~y336
+     — left of the leftmost dancer (x72), left of the candle flames (x88+), clear of the
+     plants/DJ/couch on the right. -->
+<g id="garden-photographer">
+<rect x="23" y="305" width="6" height="28" rx="2" fill="#3a352e"/>
+<rect x="31" y="305" width="6" height="28" rx="2" fill="#332e28"/>
+<path d="M20 333 h10 v3.2 h-12 z" fill="#211d18"/>
+<path d="M30 333 h10 v3.2 h-12 z" fill="#1c1915"/>
+<path d="M22 289 L27 287 L37 271 L32 269 Z" fill="#544b3f"/>
+<rect x="20" y="284" width="20" height="24" rx="6" fill="#5c5346"/>
+<line x1="30" y1="286" x2="30" y2="307" stroke="#4a4238" stroke-width="1"/>
+<rect x="26.5" y="276" width="7" height="6" fill="#d8ac80"/>
+<circle cx="30" cy="267" r="9.5" fill="#e0b48a"/>
+<path d="M20.5 265 q1 -12 9.5 -12 q9.5 0 10 12 q-10 -4.5 -19.5 0.5 z" fill="#2e2620"/>
+<circle cx="22" cy="268" r="1.7" fill="#d3a679"/>
+<path d="M36 289 L41 287 L50 270 L45 268 Z" fill="#6b6152"/>
+<g id="garden-photog-cam">
+<rect x="37" y="258" width="17" height="13" rx="2" fill="#241f1c"/>
+<rect x="39" y="255" width="6" height="4" rx="1" fill="#2b2521"/>
+<circle cx="48" cy="264.5" r="4" fill="#15120f"/>
+<circle cx="48" cy="264.5" r="2.2" fill="#41525f"/>
+<circle cx="47.4" cy="263.8" r="0.8" fill="#9fb4c2"/>
+<rect x="49.5" y="255.5" width="3" height="2.6" rx="0.6" fill="#9a9184"/>
+<circle id="garden-flash-bloom" cx="51" cy="256.6" r="7" fill="#fffdf5"/>
+</g>
+</g>
+<!-- very faint scene-wide brighten that rides each flash (the optional wash); opacity peaks
+     at .10 for a gentle blink, never a strobe. Opacity-only (no transform to clobber). -->
+<rect id="garden-flash-wash" x="0" y="0" width="680" height="340" fill="#fff8ec" opacity="0" pointer-events="none"/>
 </g>
 </g>
 <g id="stage-cuddly" transform="translate(1360,0)">
@@ -35923,6 +35969,44 @@ function spawnDustMote(container) {
     if (discoStepTimer) { clearTimeout(discoStepTimer); discoStepTimer = null; }
     clearDiscoPools();
   }
+  // ── PARTY MODE camera flash (garden) — the front-left guest's camera pops a soft, silent,
+  // infrequent flash. SAME background-safety idiom as the disco stepper: ONE self-rescheduling
+  // timer, started on party-on and cleared on party-off, that stops (doesn't reschedule) once
+  // #gardenPartyOn goes false. It only actually flashes while gardenPartyActive() — party lit,
+  // in the garden, tab visible, motion allowed — so a hidden tab or reduced-motion never fires
+  // one (no stranded animation to accumulate). The bloom + wash are persistent nodes (not
+  // spawned), so there's nothing to pile up regardless; each flash just toggles a one-shot
+  // .flashing class, cleared on animationend. Light only — no shutter sound.
+  var gardenFlashTimer = null;
+  function fireGardenFlash() {
+    var bloom = document.getElementById("garden-flash-bloom");
+    var wash = document.getElementById("garden-flash-wash");
+    if (bloom) { bloom.classList.remove("flashing"); void bloom.getBBox; bloom.classList.add("flashing"); }
+    if (wash) { wash.classList.remove("flashing"); wash.classList.add("flashing"); }
+  }
+  (function () { // clear each one-shot .flashing on animationend so the class can be re-added next pop
+    ["garden-flash-bloom", "garden-flash-wash"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener("animationend", function () { el.classList.remove("flashing"); });
+    });
+  })();
+  function gardenFlashTick() {
+    gardenFlashTimer = null;
+    if (!window.__gardenPartyOn) return;                 // party ended — stop, don't reschedule
+    if (gardenPartyActive()) fireGardenFlash();          // only fire when visible / in-garden / motion-ok
+    gardenFlashTimer = setTimeout(gardenFlashTick, 5000 + Math.random() * 4000); // ~5–9s, jittered (never metronomic)
+  }
+  function startGardenFlash() {
+    if (gardenFlashTimer) return;                        // one spawner only — idempotent under storm-clicks
+    gardenFlashTimer = setTimeout(gardenFlashTick, 3000 + Math.random() * 3000); // first pop a few seconds in
+  }
+  function stopGardenFlash() {
+    if (gardenFlashTimer) { clearTimeout(gardenFlashTimer); gardenFlashTimer = null; }
+    var bloom = document.getElementById("garden-flash-bloom");
+    var wash = document.getElementById("garden-flash-wash");
+    if (bloom) bloom.classList.remove("flashing");       // drop any in-flight one-shot so nothing is stranded
+    if (wash) wash.classList.remove("flashing");
+  }
   // The garden party itself: whisk to the garden (user click only), light the disco
   // overlay, start the confetti, and drive the garden groovers. Idempotent — safe for
   // play.js's rapid switch-storming (repeated true/false). Torn down on switch-off, the
@@ -35945,6 +36029,7 @@ function spawnDustMote(container) {
       if (userInitiated && window.__setDayNight) window.__setDayNight(true); // the party lights up the night (scripted cinematic drives its own sky)
       if (gardenPartyActive()) topUpConfetti(); // kick it off now; the seed loop keeps it topped
       startDiscoStepper(); // begin the once-a-second disco-pool hops (idempotent; self-gates on gardenPartyActive)
+      startGardenFlash(); // begin the front-left guest's occasional soft camera flash (idempotent; self-gates on gardenPartyActive)
       if (partyDancers) { // the colorful dancers rise in the garden and hold for the party
         partyDancers.setAttribute("transform", "translate(" + (STAGES.indexOf("garden") * 680) + ",0)");
         partyDancers.classList.add("party-dancing");
@@ -35975,6 +36060,7 @@ function spawnDustMote(container) {
       stopWaltzAlternation();          // party over — kill the rotation + reset __partyDance to techno
       clearConfetti();
       stopDiscoStepper();              // party over — kill the disco-pool stepper + drop the pools' inline styles
+      stopGardenFlash();               // party over — kill the camera-flash timer + drop any in-flight flash
       if (partyDancers) {
         partyDancers.classList.remove("party-dancing");
         applyPartyDanceMode();         // party off → clears data-dance + the formation/waltz-mode classes

@@ -1481,7 +1481,7 @@ footer{margin-top:2.6rem}
    No need to touch the other boot-logos' pointer-events: monitor clicks still delegate up. */
 #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .4s ease}
 #office-monitor.show-caps #monitor-desktop-dock{opacity:1; visibility:visible; pointer-events:auto}
-#office-monitor.show-nowplaying #monitor-desktop-dock, #office-monitor.show-saver #monitor-desktop-dock, #office-monitor.show-terminal #monitor-desktop-dock, #office-monitor.show-mail #monitor-desktop-dock, #office-monitor.show-mines #monitor-desktop-dock, #office-monitor.show-video #monitor-desktop-dock, #office-monitor.show-tehran #monitor-desktop-dock, #office-monitor.show-calendar #monitor-desktop-dock, #office-monitor.show-python #monitor-desktop-dock, #office-monitor.show-linux #monitor-desktop-dock, #office-monitor.show-weather #monitor-desktop-dock, #office-monitor.show-editor #monitor-desktop-dock, #office-monitor.show-tattoo #monitor-desktop-dock, #office-monitor.show-life #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none}
+#office-monitor.show-nowplaying #monitor-desktop-dock, #office-monitor.show-saver #monitor-desktop-dock, #office-monitor.show-terminal #monitor-desktop-dock, #office-monitor.show-mail #monitor-desktop-dock, #office-monitor.show-mines #monitor-desktop-dock, #office-monitor.show-video #monitor-desktop-dock, #office-monitor.show-tehran #monitor-desktop-dock, #office-monitor.show-calendar #monitor-desktop-dock, #office-monitor.show-python #monitor-desktop-dock, #office-monitor.show-linux #monitor-desktop-dock, #office-monitor.show-weather #monitor-desktop-dock, #office-monitor.show-editor #monitor-desktop-dock, #office-monitor.show-tattoo #monitor-desktop-dock, #office-monitor.show-life #monitor-desktop-dock, #office-monitor.show-doom #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none}
 /* the dock is an HTML app grid in a foreignObject below the menu bar: 4 columns, and a
    thin right-side scrollbar once the apps outgrow the screen (overflow-y:auto shows it
    only then). overscroll-behavior + the grid's own wheel/touchmove stopPropagation keep
@@ -1791,6 +1791,18 @@ footer{margin-top:2.6rem}
 .linux-wrap .term-ps{color:#f5c211; white-space:pre}
 .linux-wrap .term-caret{background:#f5c211}
 .linux-wrap .term-dim{color:#a2988a}
+/* doom app: a real GPL Chocolate-Doom (WebAssembly) running FreeDoom Phase 1, rendered
+   into an HTML <canvas> in the foreignObject. Same lazy-load + close-pill shape as linux;
+   the run loop pauses off-screen/hidden and audio is muted (engine started with -nosound). */
+#monitor-doom{opacity:0; pointer-events:none; transition:opacity .25s ease}
+#office-monitor.show-doom #monitor-doom{opacity:1; pointer-events:auto}
+#monitor-doom-close{cursor:pointer}
+#monitor-doom-close:hover .seg-hover{opacity:.55}
+.doom-wrap{position:relative; width:100%; height:100%; overflow:hidden; background:#000}
+#monitor-doom-canvas{width:100%; height:100%; display:block; background:#000; image-rendering:pixelated}
+.doom-msg{position:absolute; left:0; right:0; top:50%; transform:translateY(-50%); margin:0; padding:0 2px; text-align:center; font:2px/1.3 ui-monospace,monospace; color:#e8c060; pointer-events:none}
+.doom-msg.err{color:#e0736a}
+.doom-msg:empty{display:none}
 /* places app: the couple's been-there world map — paper sea, muted land, wine/blue
    city pins; the caption row + halo follow whichever pin is active (hover/tap or the
    idle stroll). The wine pill links out to the live Google Maps list. */
@@ -9451,6 +9463,25 @@ section{margin:1.9rem 0}
 <path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round"/>
 </g>
 </g>
+<!-- DOOM app: a real GPL Chocolate-Doom compiled to WebAssembly (cloudflare/doom-wasm),
+     running FreeDoom Phase 1, rendered into an HTML <canvas>. Lazy-loaded on first open,
+     same mini close pill as the console apps. The canvas id MUST be "canvas": the SDL2
+     glue hardcodes getElementById("canvas") for its event targets. -->
+<g id="monitor-doom">
+<foreignObject x="254" y="154" width="124" height="42">
+<div xmlns="http://www.w3.org/1999/xhtml" id="monitor-doom-wrap" class="doom-wrap">
+<canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+<p id="monitor-doom-msg" class="doom-msg"></p>
+</div>
+</foreignObject>
+<g id="monitor-doom-close">
+<rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
+<rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#a8790a" stroke="#7d5a06" stroke-width="0.5"/>
+<rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
+<rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#5e4405" opacity="0"/>
+<path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round"/>
+</g>
+</g>
 <!-- BROWSER (chrome) app: real web pages in iframes over the screen, behind a slim
      tab strip (markéta / behdad / harfbuzz, built by JS from BROWSER_TABS, plus a +
      stub for visitor-opened tabs — those show the address form below until navigated,
@@ -12184,6 +12215,9 @@ var T = {
     linux_wait: "still booting… the prompt appears once the kernel is up.",
     linux_hint: "try: hb-shape /root/test.ttf 'markéta ∞ behdad' · hb-info /root/test.ttf — the groom's text-shaping engine, shaping (and x-raying) the wedding's own Fraunces.",
     linux_fail: "linux couldn't boot — offline, or the download stalled. close and reopen to retry.",
+    app_doom: "doom",
+    doom_loading: "loading doom… ~30 MB, first time only",
+    doom_fail: "doom couldn't load — offline, or the download stalled. close and reopen to retry.",
     app_phone: "phone",
     phone_dialer_title: "contacts",
     dial_call: "Call",
@@ -12565,6 +12599,9 @@ var T = {
     linux_wait: "pořád bootujeme… prompt se ukáže, až jádro naběhne.",
     linux_hint: "zkuste: hb-shape /root/test.ttf 'markéta ∞ behdad' · hb-info /root/test.ttf — ženichova sázecí knihovna sází (a prosvěcuje) svatební písmo Fraunces.",
     linux_fail: "linux nenabootoval — offline, nebo se stahování zaseklo. zavřete a otevřete znovu.",
+    app_doom: "doom",
+    doom_loading: "načítáme doom… ~30 MB, jen napoprvé",
+    doom_fail: "doom se nenačetl — offline, nebo se stahování zaseklo. zavřete a otevřete znovu.",
     app_phone: "telefon",
     phone_dialer_title: "kontakty",
     dial_call: "Volat",
@@ -13233,6 +13270,20 @@ document.addEventListener("keydown", function (e) {
   document.addEventListener("keydown", function (e) {
     var vp = document.querySelector(".hunt-viewport");
     if (!vp || !vp.classList.contains("device-zoomed")) return; // nothing engaged → normal game keys
+    // DOOM is up: its engine (SDL) listens on window in the BUBBLE phase (last of all), so this
+    // capture guard must NOT stopPropagation or the game would never see the key. Instead
+    // preventDefault — every game shortcut handler bails on e.defaultPrevented — which stops the
+    // party/room-nav/song/season keys AND the arrow/space page-scroll, while the key still reaches
+    // the game. Escape falls through to close the app; ctrl/meta/alt combos stay browser shortcuts
+    // (the game already ignores those). The one holdout with no defaultPrevented check, the
+    // Shift+Digit trip hotkey, is guarded at its own listener.
+    var dmon = document.getElementById("office-monitor");
+    if (dmon && dmon.classList.contains("show-doom")) {
+      if (e.key === "Escape" || e.key === "Esc") return; // Esc closes the app (window-capture closer)
+      if (e.ctrlKey || e.metaKey || e.altKey) return; // leave Ctrl+R / F-keys etc. as real browser shortcuts
+      e.preventDefault();
+      return;
+    }
     if (e.key === "Escape" || e.key === "Esc" || e.key === " " || e.key === "Spacebar") return; // the two the phone lets through
     var t = e.target;
     if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return; // typing into the console prompt
@@ -19259,7 +19310,7 @@ document.addEventListener("click", function (e) {
     saverTimer = setTimeout(startSaver, ms || 8000);
   }
   function startSaver() {
-    if (monitor.classList.contains("show-terminal") || monitor.classList.contains("show-mail") || monitor.classList.contains("show-mines") || monitor.classList.contains("show-video") || monitor.classList.contains("show-tehran") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux") || monitor.classList.contains("show-weather") || monitor.classList.contains("show-editor") || monitor.classList.contains("show-tattoo") || monitor.classList.contains("show-life")) { scheduleSaver(30000); return; } // never over someone typing, reading mail, a minesweeper game, the film, editing a script, the tattoo studio, a life sim, or a live call
+    if (monitor.classList.contains("show-terminal") || monitor.classList.contains("show-mail") || monitor.classList.contains("show-mines") || monitor.classList.contains("show-video") || monitor.classList.contains("show-tehran") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux") || monitor.classList.contains("show-doom") || monitor.classList.contains("show-weather") || monitor.classList.contains("show-editor") || monitor.classList.contains("show-tattoo") || monitor.classList.contains("show-life")) { scheduleSaver(30000); return; } // never over someone typing, reading mail, a minesweeper game, the film, playing doom, editing a script, the tattoo studio, a life sim, or a live call
     if (monitor.classList.contains("show-calendar")) { scheduleSaver(30000); return; } // nor over the open calendar
     if (monitor.classList.contains("show-browser")) { scheduleSaver(30000); return; } // nor over someone browsing
     // a visited site (harfbuzz/behdad) idles back to the caps "home" before the saver
@@ -19369,6 +19420,7 @@ document.addEventListener("click", function (e) {
   function clearBoot() {
     closeTerminal(); // blurs the REPL input too — an invisible focused input eats every keyboard shortcut
     closeLinux(); // stops the VM's CPU too — no emulation behind a dark screen
+    closeDoom(); // pauses DOOM's run loop too — no engine spinning behind a dark screen
     closeMailApp();
     closeMinesApp(); // stops the game timer too — nothing ticks behind a dark screen
     closeVideoApp(); // pauses the film too — it never plays behind a dark/rebooting screen
@@ -19380,7 +19432,7 @@ document.addEventListener("click", function (e) {
     bootTimers.forEach(clearTimeout);
     bootTimers = [];
     stopSaver();
-    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying", "show-terminal", "show-mail", "show-mines", "show-video", "show-tehran", "show-calendar", "show-python", "show-linux", "show-editor", "show-tattoo", "show-life", "show-browser");
+    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying", "show-terminal", "show-mail", "show-mines", "show-video", "show-tehran", "show-calendar", "show-python", "show-linux", "show-doom", "show-editor", "show-tattoo", "show-life", "show-browser");
     if (window.__monitorZoomOut) window.__monitorZoomOut(); // a dark screen never holds the zoom
   }
   // The monitor only lights up when the PC is on; it then boots Fedora →
@@ -20381,7 +20433,8 @@ document.addEventListener("click", function (e) {
     { id: "life", icon: "life", labelKey: "app_life", glyph: "⧉", tile: "#fdfbf6", color: "#8e3a4a", glyphSize: "5.2", open: function () { openLifeApp(); } },
     { id: "terminal", icon: "console", labelKey: "app_terminal", glyph: "❯_", tile: "#2e2823", color: "#8fd070", mono: true, glyphSize: "4", open: function () { openTerminal(); } },
     { id: "python", labelKey: "app_python", glyph: ">>>", tile: "#306998", color: "#ffd43b", mono: true, glyphSize: "3.5", open: function () { openPython(); } },
-    { id: "linux", labelKey: "app_linux", glyph: "🐧", tile: "#fdfbf6", glyphSize: "5.2", open: function () { openLinux(); } }
+    { id: "linux", labelKey: "app_linux", glyph: "🐧", tile: "#fdfbf6", glyphSize: "5.2", open: function () { openLinux(); } },
+    { id: "doom", labelKey: "app_doom", glyph: "🎮", tile: "#4a1010", color: "#e8c060", glyphSize: "5.2", open: function () { openDoom(); } }
   ];
   var dock = document.getElementById("monitor-desktop-dock");
   var dockGlyphEls = {}; // per-app glyph element, for tiles that show live state
@@ -21488,7 +21541,7 @@ document.addEventListener("click", function (e) {
   window.__closeTopMonitorApp = function () {
     if (monitor.classList.contains("show-tehran") && window.__closeMonitorTehran) { window.__closeMonitorTehran(); return true; }
     if (monitor.classList.contains("photobooth")) { if (window.__closeOfficePhotobooth) window.__closeOfficePhotobooth(); return true; }
-    var apps = [["show-video", closeVideoApp], ["show-mail", closeMailApp], ["show-mines", closeMinesApp], ["show-tattoo", closeTattooApp], ["show-life", closeLifeApp], ["show-terminal", closeTerminal], ["show-editor", closeEditor], ["show-browser", closeBrowser]];
+    var apps = [["show-video", closeVideoApp], ["show-mail", closeMailApp], ["show-mines", closeMinesApp], ["show-tattoo", closeTattooApp], ["show-life", closeLifeApp], ["show-terminal", closeTerminal], ["show-editor", closeEditor], ["show-doom", closeDoom], ["show-browser", closeBrowser]];
     for (var i = 0; i < apps.length; i++) if (monitor.classList.contains(apps[i][0])) { apps[i][1](); return true; }
     if (monitor.classList.contains("show-calendar") && window.__closeMonitorCalendar) { window.__closeMonitorCalendar(); return true; }
     if (monitor.classList.contains("show-weather") && window.__closeMonitorWeather) { window.__closeMonitorWeather(); return true; }
@@ -23168,6 +23221,134 @@ async def localfont(name):
     lxCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeLinux(); playLaptopClickSound("office-monitor"); });
     lxCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
+  // ── DOOM app ─────────────────────────────────────────────────────────────────
+  // A real GPL Chocolate-Doom compiled to WebAssembly (cloudflare/doom-wasm, pinned build —
+  // provenance in doom/README.md), running FreeDoom Phase 1, rendered straight into the
+  // foreignObject <canvas>. Lazy-loaded on first open and reused. Started with -nosound so
+  // the engine never opens an audio device (it can't fight the loft's beds; owner can add
+  // sound later by dropping the arg). The run loop pauses whenever the app isn't the live
+  // foreground: gated on show-doom && a visible tab && the office on-screen — mirrors the
+  // linux VM's stop/resume, but via Emscripten's pause/resumeMainLoop. Keys: DOOM's SDL
+  // listens on window in the bubble phase, so the device-zoomed capture guard up top lets
+  // them through (preventDefault, not stopPropagation) — see that handler.
+  var doomCanvas = document.getElementById("canvas"); // id is mandatory: the SDL glue hardcodes getElementById("canvas")
+  var doomMsg = document.getElementById("monitor-doom-msg");
+  var doomWrap = document.getElementById("monitor-doom-wrap");
+  var doomCloseBtn = document.getElementById("monitor-doom-close");
+  var doomModule = null; // the Emscripten Module — built once, reused across open/close
+  var doomLoadState = ""; // "" → "loading" → "ready" | "failed"
+  var doomReady = false; // the runtime is up and callMain has started the main loop
+  var doomPaused = true; // the main loop is currently paused (kept in sync by doomSync)
+  var doomGlueEl = null; // the injected <script> (kept so a good load isn't re-injected)
+  var doomStallTimer = null; // load watchdog — cleared once the runtime is up
+  var DOOM_ASSETS = { // all self-hosted (pinned Chocolate-Doom wasm + FreeDoom — provenance in doom/README.md)
+    glue: "doom/doom.js",
+    wasm: "doom/doom.wasm",
+    wad: "doom/freedoom1.wad",
+    cfg: "doom/default.cfg"
+  };
+  function doomT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
+  function doomSetMsg(txt, isErr) { if (!doomMsg) return; doomMsg.textContent = txt || ""; doomMsg.className = "doom-msg" + (isErr ? " err" : ""); }
+  function doomShouldRun() {
+    return doomReady && monitor.classList.contains("show-doom") &&
+      document.visibilityState !== "hidden" && window.currentStageName === "office";
+  }
+  // single source of truth for "should the engine be ticking": resume when foreground,
+  // pause otherwise. Called from open/close, visibilitychange, and goToStage (room change).
+  function doomSync() {
+    if (!doomReady || !doomModule) return;
+    if (doomShouldRun()) {
+      if (doomPaused) { try { doomModule.resumeMainLoop(); } catch (e) {} doomPaused = false; }
+    } else {
+      if (!doomPaused) { try { doomModule.pauseMainLoop(); } catch (e) {} doomPaused = true; }
+    }
+  }
+  window.__syncMonitorDoom = doomSync;
+  function doomFail() {
+    if (doomLoadState === "failed") return;
+    if (doomStallTimer) { clearTimeout(doomStallTimer); doomStallTimer = null; }
+    doomLoadState = "failed";
+    doomSetMsg(doomT("doom_fail"), true);
+  }
+  // load watchdog: a hung fetch (bad route, intercepting proxy) must not sit on "loading…"
+  // forever — 60 s (the WAD is ~28 MB) with no runtime surfaces the retry line. A paused
+  // load (hidden tab / app closed mid-download) isn't a stall: re-arm.
+  function doomStallWatch() {
+    doomStallTimer = setTimeout(function () {
+      doomStallTimer = null;
+      if (doomLoadState === "ready" || doomLoadState === "failed") return;
+      if (document.hidden || !monitor.classList.contains("show-doom")) { doomStallWatch(); return; }
+      doomFail();
+    }, 60000);
+  }
+  function buildDoomModule() {
+    doomModule = {
+      // -nosound: no audio device (muted by design); -window/-nogui: no setup UI; freedoom1.wad is the IWAD
+      arguments: ["-iwad", "freedoom1.wad", "-window", "-nogui", "-nosound", "-nomusic", "-config", "default.cfg"],
+      noInitialRun: true,
+      locateFile: function (p) { return p === "websockets-doom.wasm" ? DOOM_ASSETS.wasm : p; }, // the glue asks for its build name; point it at doom/doom.wasm
+      preRun: [function () {
+        doomModule.FS.createPreloadedFile("", "freedoom1.wad", DOOM_ASSETS.wad, true, true);
+        doomModule.FS.createPreloadedFile("", "default.cfg", DOOM_ASSETS.cfg, true, true);
+      }],
+      canvas: doomCanvas,
+      onRuntimeInitialized: function () {
+        if (doomStallTimer) { clearTimeout(doomStallTimer); doomStallTimer = null; }
+        doomLoadState = "ready";
+        try { (doomModule.callMain || window.callMain)(doomModule.arguments); } catch (e) { doomFail(); return; } // callMain is a global in this build
+        doomReady = true;
+        doomPaused = false; // callMain started the loop running; doomSync pauses it if we're not foreground
+        doomSetMsg("");
+        doomSync();
+      },
+      onAbort: function () { doomFail(); },
+      print: function () {}, printErr: function () {}, setStatus: function () {}
+    };
+  }
+  function loadDoom() {
+    if (doomLoadState === "loading" || doomLoadState === "ready") return;
+    doomLoadState = "loading";
+    doomSetMsg(doomT("doom_loading"), false);
+    if (doomStallTimer) clearTimeout(doomStallTimer);
+    doomStallWatch();
+    if (doomReady) { doomSync(); return; }
+    buildDoomModule();
+    window.Module = doomModule; // the glue is a plain script that reads a global Module (pyodide/v86 don't touch this global — verified)
+    if (doomGlueEl) return; // glue already fetched once; wait for its callbacks (a corrupt runtime needs a page reload, not a re-inject)
+    doomGlueEl = document.createElement("script");
+    doomGlueEl.src = DOOM_ASSETS.glue;
+    doomGlueEl.onerror = function () { doomGlueEl = null; doomFail(); }; // a true load failure clears the ref so reopening retries the fetch
+    document.head.appendChild(doomGlueEl);
+  }
+  function openDoom() {
+    if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-doom") || monitor.classList.contains("show-terminal") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux")) return;
+    stopSaver();
+    clearTimeout(saverTimer); saverTimer = null; // no screensaver over someone playing
+    monitor.classList.add("show-doom");
+    if (doomLoadState === "failed") { doomLoadState = ""; doomSetMsg("", false); } // reopening retries a failed fetch
+    loadDoom();
+    doomSync(); // resume the loop if the runtime is already up
+    var ae = document.activeElement; if (ae && ae.blur && ae !== document.body) { try { ae.blur(); } catch (e) {} } // a focused console input would eat keys before SDL's window listener
+    playLaptopClickSound("office-monitor");
+  }
+  function closeDoom() {
+    if (!monitor.classList.contains("show-doom")) return;
+    monitor.classList.remove("show-doom");
+    doomSync(); // pauses the loop — no engine spinning behind a closed app
+    scheduleSaver();
+  }
+  window.__closeMonitorDoom = closeDoom; // other monitor apps / resets pause the engine before taking the screen
+  // hidden tab: pause the engine (and re-evaluate on return) — a WebGL run loop behind a
+  // background tab would burn frames for nothing
+  document.addEventListener("visibilitychange", function () { doomSync(); });
+  if (doomWrap) {
+    doomWrap.addEventListener("click", function (e) { e.stopPropagation(); }); // the canvas fire-click shouldn't reach the monitor's screen-swap
+    doomWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+  if (doomCloseBtn) {
+    doomCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeDoom(); playLaptopClickSound("office-monitor"); });
+    doomCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
   // The now-playing screen's pause/play toggle: pauses the current song, or resumes it
   // if paused. play()/pause() fire the listeners above, which repaint the button + bars.
   var pauseBtn = document.getElementById("monitor-pause-btn");
@@ -24556,6 +24737,7 @@ async def localfont(name):
       !monitor.classList.contains("show-browser") &&
       !monitor.classList.contains("show-python") &&
       !monitor.classList.contains("show-linux") &&
+      !monitor.classList.contains("show-doom") &&
       !monitor.classList.contains("show-editor") &&
       !monitor.classList.contains("pb-confirm") &&
       !monitor.classList.contains("pb-error");
@@ -31531,6 +31713,8 @@ document.addEventListener("keydown", function (e) {
   if (!e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
   var m = /^Digit([1-7])$/.exec(e.code || "");
   if (!m) return;
+  var dmon = document.getElementById("office-monitor");
+  if (dmon && dmon.classList.contains("show-doom")) return; // DOOM: Shift+run + weapon-select digits are the game's, not trip hotkeys (this handler alone skips the defaultPrevented bail)
   var ae = document.activeElement;
   if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return;
   e.preventDefault();
@@ -35376,6 +35560,7 @@ function spawnDustMote(container) {
     if (window.__closePhoneModal) window.__closePhoneModal(true); // leaving the balcony (or the extinguisher reset) closes the pocket phone, tearing down its call/board
     if (name !== "office" && window.__pauseMonitorVideo) window.__pauseMonitorVideo(); // ...and pauses the home movie (the app view stays for the return)
     if (name !== "office" && window.__pauseMonitorLife) window.__pauseMonitorLife(); // ...and stops the Game-of-Life loop off-screen (the board stays for the return)
+    if (window.__syncMonitorDoom) window.__syncMonitorDoom(); // pause DOOM's run loop off-screen; resume it on return (the gate is show-doom && visible && office)
     if (window.__updateACHum) window.__updateACHum(name, ROOM_FADE); // AC hum only in garden + balcony, panned to that room's unit
     if (window.__updateRadioSound) window.__updateRadioSound(name === "kitchen", ROOM_FADE); // radio audible only in the kitchen
     if (window.__updateKettleHum) window.__updateKettleHum(name === "kitchen", ROOM_FADE); // kettle hum only in the kitchen

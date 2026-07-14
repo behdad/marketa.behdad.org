@@ -16726,7 +16726,7 @@ document.addEventListener("click", function (e) {
   // through that door. A safe no-op if the audio graph never confirmed running (native
   // fallback has no panner to drive), and skipped while headphone mode owns the pan.
   var ROOM_BY_STAGE_INDEX = ["kitchen", "garden", "cuddly", "office", "balcony"];
-  var SONG_ROOM_PAN = { kitchen: 0.6, garden: -0.6, cuddly: 0, office: 0 };
+  var SONG_ROOM_PAN = { kitchen: 0.6, garden: 0, cuddly: 0, office: 0 }; // center in garden/cuddly/office, from the right in the kitchen
   // songBasePan is the room's fixed target; panDriftFrame smooths toward it AND layers
   // a slow sine wobble on top, so a long listen isn't pinned to one static spot in the
   // stereo field. Both live on the SAME rAF loop because they write the SAME AudioParam
@@ -16905,14 +16905,21 @@ document.addEventListener("click", function (e) {
   // MediaElementSourceNode doesn't bypass its source element's own .volume (the pipeline
   // routes AROUND it, not through it), so this one mechanism works correctly whether or
   // not the Web Audio pipeline happens to be engaged for a given song.
-  var SONG_BALCONY_DOOR_CLOSED_SCALE = 0.38;
+  // per-room loudness (volume-only, applied to the <audio>.volume — see the note above on
+  // why that works regardless of the pipeline): lower in the kitchen; faint on the balcony
+  // and fainter still with its door shut (so opening the door lets the song swell out)
+  var SONG_ROOM_VOL = { kitchen: 0.7 };
+  var SONG_BALCONY_DOOR_OPEN_SCALE = 0.6, SONG_BALCONY_DOOR_CLOSED_SCALE = 0.3;
   function balconyDoorOpenForSong() {
     var d = document.getElementById("balcony-door");
     return !!(d && d.classList.contains("open"));
   }
   window.__updateSongDoorAcoustics = function () {
     var base = window.__songVolume ? window.__songVolume() : 0.5;
-    var scale = (window.currentStageIndex === 4 && !balconyDoorOpenForSong()) ? SONG_BALCONY_DOOR_CLOSED_SCALE : 1;
+    var room = ROOM_BY_STAGE_INDEX[window.currentStageIndex] || "kitchen";
+    var scale = 1;
+    if (room === "balcony") scale = balconyDoorOpenForSong() ? SONG_BALCONY_DOOR_OPEN_SCALE : SONG_BALCONY_DOOR_CLOSED_SCALE;
+    else if (SONG_ROOM_VOL[room] != null) scale = SONG_ROOM_VOL[room];
     for (var i = 0; i < songAudios.length; i++) {
       if (songAudios[i] && !songAudios[i].paused) songAudios[i].volume = base * scale;
     }
@@ -20165,6 +20172,7 @@ async def localfont(name):
   window.__songVolume = function () { return VOL_LEVELS[volIdx]; };
   function applySongVolume() {
     for (var vi = 0; vi < songAudios.length; vi++) if (songAudios[vi]) songAudios[vi].volume = VOL_LEVELS[volIdx];
+    if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics(); // re-apply the current room's attenuation to the playing song
     if (window.__vidCtrlMasterVolume) window.__vidCtrlMasterVolume(VOL_LEVELS[volIdx]); // the film follows the master
   }
   // Two triggers share one volume: the office monitor's own speaker button (SVG, inside

@@ -677,7 +677,7 @@ footer{margin-top:2.6rem}
    rig with none of the flicker. The ellipses position via cx/cy (no transform attribute), so the
    inline style.transform the stepper writes never clobbers one. */
 .disco-pool{mix-blend-mode:screen; opacity:0; transform-box:fill-box; transform-origin:center}
-@media (min-width:760px){ /* desktop: the original smooth sweep (mobile uses the JS stepper) */
+@media (hover: hover) and (pointer: fine){ /* real mouse (desktop): the original smooth sweep. Touch/coarse-pointer devices (phones, tablets — incl. landscape ≥760px) fall to the JS stepper, which is the one that doesn't flicker on mobile GPUs */
   #stage-garden.garden-party .disco-pool{animation:disco-pool-sweep 7s ease-in-out infinite}
   #stage-garden.garden-party .disco-pool.dp2{animation-duration:9s; animation-delay:-2.4s}
   #stage-garden.garden-party .disco-pool.dp3{animation-duration:8s; animation-delay:-4.8s}
@@ -714,13 +714,14 @@ footer{margin-top:2.6rem}
 #loft-game-strip.party-on #stage-kitchen > #kitchen-bar{opacity:1}
 /* the "hydration station" neon: an aqua tube glow that reads against the dark back-bar.
    Layered drop-shadows fake a neon halo; it always glows, and gently pulses during the party */
-#kitchen-bar-neon{filter:drop-shadow(0 0 1.5px #b8f4ff) drop-shadow(0 0 4px #4fd6ff) drop-shadow(0 0 9px #29b6e6)}
+#kitchen-bar-neon{filter:drop-shadow(0 0 1px #eaffff) drop-shadow(0 0 3px #cbf7ff) drop-shadow(0 0 7px #4fd6ff) drop-shadow(0 0 13px #29b6e6)}
 #loft-game-strip.party-on #kitchen-bar-neon{animation:bar-neon-glow 3.4s ease-in-out infinite}
-/* the glow BREATHES — the outer halo swells and settles (with a faint opacity dip), reading
-   like a live neon tube rather than the whole sign just fading */
+/* the glow BREATHES — the outer halo swells and settles, reading like a live neon tube rather
+   than the whole sign just fading. A bright near-white inner layer + wider aqua halo keep it
+   reading as a hot, lit tube */
 @keyframes bar-neon-glow{
-  0%,100%{opacity:1; filter:drop-shadow(0 0 1.5px #b8f4ff) drop-shadow(0 0 4px #4fd6ff) drop-shadow(0 0 9px #29b6e6)}
-  50%{opacity:.9; filter:drop-shadow(0 0 1.5px #b8f4ff) drop-shadow(0 0 6.5px #4fd6ff) drop-shadow(0 0 14px #29b6e6)}
+  0%,100%{opacity:1; filter:drop-shadow(0 0 1px #eaffff) drop-shadow(0 0 3px #cbf7ff) drop-shadow(0 0 7px #4fd6ff) drop-shadow(0 0 13px #29b6e6)}
+  50%{opacity:1; filter:drop-shadow(0 0 1.5px #eaffff) drop-shadow(0 0 5px #cbf7ff) drop-shadow(0 0 10px #4fd6ff) drop-shadow(0 0 19px #29b6e6)}
 }
 @media (prefers-reduced-motion: reduce){#loft-game-strip.party-on #kitchen-bar-neon{animation:none}}
 /* the back-bar bottles are tappable ONLY while the bar is showing (party on): each is wrapped
@@ -35670,7 +35671,7 @@ function spawnDustMote(container) {
       pools[i].style.transition = ""; pools[i].style.transform = ""; pools[i].style.opacity = "";
     }
   }
-  function discoPoolsStepped() { return !!(window.matchMedia && window.matchMedia("(max-width:759px)").matches); } // mobile only; desktop keeps the CSS sweep
+  function discoPoolsStepped() { return !(window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches); } // step on touch/coarse-pointer devices (phones/tablets, incl. landscape); a real mouse keeps the CSS sweep
   function stepDiscoPools() {
     discoStepTimer = null;
     if (!window.__gardenPartyOn) return; // party ended — stop, don't reschedule
@@ -35684,11 +35685,11 @@ function spawnDustMote(container) {
     if (gardenPartyActive()) positionDiscoPools(); // light them at once (skipped under reduced-motion → CSS wash holds)
     discoStepTimer = setTimeout(stepDiscoPools, 900 + Math.random() * 220);
   }
-  if (window.matchMedia) { // crossing the mobile/desktop breakpoint mid-party swaps stepper ↔ CSS sweep
-    window.matchMedia("(max-width:759px)").addEventListener("change", function () {
+  if (window.matchMedia) { // if the device's pointer capability changes (rare), swap stepper ↔ CSS sweep
+    window.matchMedia("(hover: hover) and (pointer: fine)").addEventListener("change", function () {
       if (!window.__gardenPartyOn) return;
-      stopDiscoStepper();  // clears inline styles (desktop CSS sweep resumes) + stops any timer
-      startDiscoStepper(); // mobile → restart the stepper; desktop → no-op
+      stopDiscoStepper();  // clears inline styles (mouse → CSS sweep resumes) + stops any timer
+      startDiscoStepper(); // touch → restart the stepper; mouse → no-op
     });
   }
   function stopDiscoStepper() {

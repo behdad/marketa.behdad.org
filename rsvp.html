@@ -15945,6 +15945,11 @@ document.addEventListener("click", function (e) {
   }
   function setChannel(name, persist) {
     if (!chanObj[name]) return;
+    // Party ↔ projector are mutually exclusive whole-loft music: lighting a projector music
+    // channel while the garden party is on ends the party first (no doubled music; the
+    // now-playing toast then names the projector piece). The reverse — a starting party powers
+    // the projector off — lives in setGardenParty. "off"/"fire" aren't music, so no loop.
+    if (MUSIC_CHANNELS[name] && window.__gardenPartyOn && window.__setGardenParty) window.__setGardenParty(false);
     var toOff = (name === "off");
     var prev = current;                // the outgoing channel (before the reassign below)
     chanObj[current].reset();          // tear the old channel's state down (internal arrays only)
@@ -35281,9 +35286,15 @@ function spawnDustMote(container) {
       startWaltzAlternation(); // build the shuffled rotation + begin the ~15s alternation (idempotent under storm-clicks)
       if (freshParty) window.__partyDance = PARTY_DANCE_ORDER[0]; // a freshly-lit party opens on the first shuffled dance (storm-safe: don't reset mid-party)
       applyPartyDanceMode();   // reflect the active dance's formation onto the dancers (solo/coupled/…)
-      // the techno party bed is the beat now (see __updatePartyMusic below); pause any loft
-      // song already playing so the two musics don't fight (the bed plays whole-loft while
-      // the party's lit, so it always takes over)
+      // power the cuddly projector off — its whole-loft bed (stars/workout/totoro/aqua) would
+      // otherwise double up on the party music. Do this BEFORE the loft-song pause below, since
+      // powering off a music channel can restore a song the projector had suspended.
+      if (window.__cuddlyProjector && window.__cuddlyProjector.channel && window.__cuddlyProjector.channel() !== "off") {
+        window.__cuddlyProjector.set("off");
+      }
+      // the party bed is the beat now (see the dance beds below); pause any loft song already
+      // playing so the two musics don't fight (the bed plays whole-loft while the party's lit,
+      // so it always takes over)
       if (window.__partyMusicWant && window.__partyMusicWant() &&
           window.__phoneMusicPlaying && window.__phoneMusicPlaying() && window.__phoneMusicToggle) {
         window.__phoneMusicToggle();

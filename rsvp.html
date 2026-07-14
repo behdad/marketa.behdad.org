@@ -20688,6 +20688,9 @@ async def localfont(name):
   var laptop = document.getElementById("office-laptop");
   if (!strip || !vp || !monitor) return;
   var zoomEl = null; // the device the view is zoomed onto (null = zoomed out)
+  // Android flickers horrendously while animating the big scaled-SVG transform, so on a
+  // coarse pointer (touch) the zoom SNAPS instead of gliding — desktop keeps the glide.
+  var coarseZoom = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
   // box = the invisible screen-sized rect the zoom frames (the device groups' own
   // bboxes include stands/keyboards, which pulled the view down and out — the owner's
   // "not zoomed enough, not centered"); laptop zoom is lid-driven: only while open
@@ -20709,8 +20712,10 @@ async def localfont(name):
     var uy = ((r.top + r.bottom) / 2 - sr.top) / sr.height * 340;
     var s = Math.min(680 / (r.width / sr.width * 3400 + t.padX * 2), 340 / (r.height / sr.height * 340 + t.padY * 2), t.maxS);
     var tx = ux / 3400 * (v.width * 5), ty = uy / 340 * v.height; // strip lays out at 500% viewport width
+    if (coarseZoom) strip.style.transition = "none"; // snap on touch — no animated repaint to flicker
     strip.style.transformOrigin = tx + "px " + ty + "px";
     strip.style.transform = "translate(" + (v.width / 2 - tx) + "px, " + (v.height / 2 - ty) + "px) scale(" + s + ")";
+    if (coarseZoom) { strip.getBoundingClientRect(); strip.style.transition = ""; } // reflow commits the snap, then restore the glide for room slides
   }
   function zoomIn(el) {
     if (window.currentStageName !== "office") return;
@@ -20726,6 +20731,14 @@ async def localfont(name):
     zoomEl.classList.remove("dev-zoomed");
     zoomEl = null;
     vp.classList.remove("device-zoomed");
+    if (coarseZoom) { // touch: snap straight back to the room view, no glide (Android flicker)
+      strip.style.transition = "none";
+      strip.style.transformOrigin = "";
+      strip.style.transform = "translateX(-" + ((window.currentStageIndex || 0) * 20) + "%)";
+      strip.getBoundingClientRect();
+      strip.style.transition = "";
+      return;
+    }
     // the origin must survive the glide out (scale interpolates about it; clearing it
     // mid-transition snaps the start pose sideways) — drive the transition in px, which
     // lands exactly where translateX(-idx*20%) does, then restore the canonical % form

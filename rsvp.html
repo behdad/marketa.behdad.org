@@ -12983,7 +12983,8 @@ document.addEventListener("click", function (e) {
   // Original techno/house bed for the balcony-switch garden blacklight party — pure Web
   // Audio synthesis, no samples. Four-on-the-floor kick, an offbeat rolling saw+sub bass in
   // A minor (Am Am F G, 126 BPM), closed/open highpassed-noise hats, a clap backbeat, a
-  // detuned-saw filter-swept chord stab hook, and a once-a-loop noise riser. A look-ahead
+  // detuned-saw filter-swept chord stab hook, a plucky detuned-saw lead arp up top (with
+  // dub echoes) that outlines the chords, and a once-a-loop noise riser. A look-ahead
   // scheduler queues events on the ctx clock ~1.2s ahead (background-tab setTimeout throttles
   // to ~1s) and bails the instant the ctx is nulled. Same focus-gated fade-and-close teardown
   // as the fire/workout beds. It IS the party's music: setGardenParty pauses any loft song so
@@ -12995,6 +12996,13 @@ document.addEventListener("click", function (e) {
   var CHORD = [[0, 3, 7], [0, 3, 7], [0, 4, 7], [0, 4, 7]];  // minor minor major major triads
   // bass hits (semitone offset from the bar root, or null = rest) across a 16-step bar
   var BAR_BASS = [null, null, 0, 12, null, null, 0, null, null, null, 0, 12, null, null, 0, 12];
+  // Lead arp: A5 register, up top. Each 16-step entry is a triad-degree index (0/1/2 = root/
+  // third/fifth, +3 = an octave up) into the bar's CHORD, or null = rest — so the same
+  // syncopated riff re-pitches to Am Am F G and climbs/settles the chord. By-ear knobs:
+  var LEAD_ROOT = 440;                                        // A4; the arp mostly rides an octave above
+  var BAR_LEAD = [0, null, null, 2, null, null, 4, null, 3, null, null, 5, null, 2, null, null];
+  var LEAD_GAIN = 0.1;                                        // keep under the kick (0.95) / bass (0.42)
+  var LEAD_ECHO = [[3, 0.42], [6, 0.18]];                    // dub echoes: [sixteenths later, gain ×]
   function semi(base, n) { return base * Math.pow(2, n / 12); }
   function partyVol() { return 1.2 * (window.__songVolume ? window.__songVolume() : 0.5); }
   function partyMusicWant() {
@@ -13073,6 +13081,28 @@ document.addEventListener("click", function (e) {
       });
     });
   }
+  function lead(ctx, t, freq, dur, gain) {
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 6;
+    lp.frequency.setValueAtTime(1200, t);
+    lp.frequency.exponentialRampToValueAtTime(4500, t + 0.02);   // quick pluck open
+    lp.frequency.exponentialRampToValueAtTime(1300, t + dur);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    lp.connect(g); g.connect(ctx._bus);
+    [-7, 7].forEach(function (cents) {                            // two detuned saws → width
+      var o = ctx.createOscillator(); o.type = "sawtooth";
+      o.frequency.value = freq; o.detune.value = cents;
+      o.connect(lp); o.start(t); o.stop(t + dur + 0.02);
+    });
+  }
+  function leadHit(ctx, t, freq) {
+    lead(ctx, t, freq, SEC16 * 2.2, LEAD_GAIN);                  // the note
+    LEAD_ECHO.forEach(function (e) {                              // + dub delay tails, fading
+      lead(ctx, t + SEC16 * e[0], freq, SEC16 * 1.7, LEAD_GAIN * e[1]);
+    });
+  }
   function riser(ctx, t, dur) {
     var src = ctx.createBufferSource(); src.buffer = noiseBuf(ctx, dur, 0);
     var hp = ctx.createBiquadFilter(); hp.type = "highpass";
@@ -13092,7 +13122,25 @@ document.addEventListener("click", function (e) {
     var bo = BAR_BASS[inBar];
     if (bo !== null) bass(ctx, t, semi(BASS_ROOT, BAR_ROOT[bar] + bo), SEC16 * 0.9);
     if (inBar === 6 || inBar === 14) stab(ctx, t, bar);                // chord stab hook
+    var lo = BAR_LEAD[inBar];
+    if (lo !== null) {                                                 // plucky lead arp, pitched to the chord
+      var ch = CHORD[bar], note = ch[lo % 3] + 12 * ((lo / 3) | 0);
+      leadHit(ctx, t, semi(LEAD_ROOT, BAR_ROOT[bar] + note));
+    }
     if (step === 48) riser(ctx, t, SEC16 * 16);                        // once-a-loop lift into the downbeat
+    // beat-sync the party dancers: on a bar downbeat, occasionally flare one to the beat.
+    // Gated to party-on + garden on-screen + visible tab (partyFlareOn) so nothing gets
+    // queued off-screen or in a hidden tab; the fire-time helper re-checks before it hops.
+    if ((inBar === 0 || inBar === 8) && partyFlareOn() && Math.random() < (inBar === 0 ? 0.6 : 0.3)) schedFlare(ctx, t);
+  }
+  function partyFlareOn() {
+    return window.__gardenPartyOn && window.currentStageName === "garden" &&
+      document.visibilityState !== "hidden" &&
+      !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+  function schedFlare(ctx, t) {
+    setTimeout(function () { if (window.__flareRandomDancer) window.__flareRandomDancer(); },
+      Math.max(0, (t - ctx.currentTime) * 1000));
   }
   function scheduleParty() {
     partyTimer = setTimeout(function () {
@@ -32311,6 +32359,16 @@ function spawnDustMote(container) {
       var fig = e.target && e.target.closest ? e.target.closest(".melt-dancer") : null;
       if (fig) fig.classList.remove("flaring");
     });
+    // Beat-driven auto-flare: the party bed's scheduler calls this on downbeats to pop a
+    // random dancer in time with the music (reuses the same one-shot flare + animationend
+    // cleanup as the tap path). Re-gates at fire time so a setTimeout that lands after the
+    // party ends / a room change / a tab hide (or under reduced motion) is a no-op.
+    window.__flareRandomDancer = function () {
+      if (!window.__gardenPartyOn || window.currentStageName !== "garden" || document.hidden) return;
+      if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      var dancers = group.querySelectorAll(".melt-dancer");
+      if (dancers.length) flare(dancers[(Math.random() * dancers.length) | 0]);
+    };
   })();
   window.__clearGardenConfetti = clearConfetti; // goToStage hard-clears on room-leave
   // rain blows into the cuddly nook from the OPEN balcony door during a night storm —

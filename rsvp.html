@@ -12828,6 +12828,113 @@ document.addEventListener("click", function (e) {
   };
   document.addEventListener("visibilitychange", function () { window.__updateTotoroSound(); });
 
+  // Totoro channel melody: an ORIGINAL cheerful, whimsical woodland tune layered over the rain
+  // above — a bouncy C-major-pentatonic march (C D E G A), skippy dotted rhythm, an arpeggiated
+  // do-mi-so-mi / la-so-mi contour with a soft plucked-bass root under each bar. Own composition,
+  // not derived from any existing theme. Wired like the night-sky Satie bed: chord-events
+  // {c:[[semisFromA4, ring, isMel]...], d}, a warm rounded triangle+sine pluck voice, a look-ahead
+  // scheduler on the audio clock (no pile-up in a background tab), whole-loft gate on chan-stars's
+  // sibling chan-totoro, and transport-integrated (space / play-pause / OS media keys). It's a
+  // separate small bed from the rain ctx above — the rain keeps going when the melody is paused.
+  var totoroMelodyCtx = null, totoroMelTimer = null, totoroMelIdx = 0, totoroMelNext = 0, totoroMelSuspended = false;
+  var TOTORO_MEL_RATE = 1.0; // time scale for the whole tune (tempo + note-length handle)
+  // chord-events: c = notes at this onset, each [semitonesFromA4, ring seconds, 1 if melody voice
+  // / 0 if bass], d = seconds to the next event. ~7.2s phrase, then a breath, loops.
+  var TOTORO_MELODY = [{c:[[3,0.4,1],[-21,1.3,0]],d:0.27},{c:[[7,0.25,1]],d:0.09},{c:[[10,0.4,1]],d:0.18},{c:[[7,0.4,1]],d:0.18},{c:[[12,0.75,1],[-12,1.3,0]],d:0.36},{c:[[10,0.4,1]],d:0.18},{c:[[7,0.5,1]],d:0.18},{c:[[5,0.4,1],[-14,1.3,0]],d:0.18},{c:[[7,0.4,1]],d:0.18},{c:[[5,0.4,1]],d:0.18},{c:[[3,0.4,1]],d:0.18},{c:[[0,1.0,1],[-12,1.3,0]],d:0.36},{c:[],d:0.36},{c:[[7,0.4,1],[-21,1.3,0]],d:0.18},{c:[[5,0.4,1]],d:0.18},{c:[[3,0.4,1]],d:0.18},{c:[[5,0.4,1]],d:0.18},{c:[[7,0.75,1],[-21,1.3,0]],d:0.36},{c:[[10,0.75,1]],d:0.36},{c:[[12,0.4,1],[-12,1.3,0]],d:0.27},{c:[[10,0.25,1]],d:0.09},{c:[[7,0.4,1]],d:0.18},{c:[[5,0.4,1]],d:0.18},{c:[[3,1.4,1],[-21,1.5,0]],d:0.54},{c:[],d:0.18},{c:[],d:1.4}];
+  function totoroMelWant() { return screen.classList.contains("chan-totoro"); } // whole-loft, like the night sky
+  function totoroMelVol() { return 0.16 * (window.__songVolume ? window.__songVolume() : 0.5); } // gentle over the rain
+  // rounded pluck voice: a triangle edged softer by a co-tuned sine, struck then decayed —
+  // articulates like a warm mallet/marimba. isMel sits above the bass root.
+  function totoroMelNote(t, semis, ringDur, isMel) {
+    var ctx = totoroMelodyCtx, bus = ctx._bus;
+    ringDur *= TOTORO_MEL_RATE;
+    var freq = 440 * Math.pow(2, semis / 12);
+    var g = ctx.createGain();
+    var peak = isMel ? 0.8 : 0.4;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + 0.012);                        // gentle pluck
+    g.gain.exponentialRampToValueAtTime(peak * 0.3, t + Math.min(ringDur, 0.35)); // quick body decay
+    g.gain.exponentialRampToValueAtTime(0.0001, t + ringDur + 0.15);             // soft tail
+    var tri = ctx.createOscillator(); tri.type = "triangle"; tri.frequency.value = freq;
+    var sub = ctx.createOscillator(); sub.type = "sine"; sub.frequency.value = freq;
+    var subg = ctx.createGain(); subg.gain.value = 0.5; // sine rounds the triangle's edge
+    tri.connect(g); sub.connect(subg); subg.connect(g); g.connect(bus);
+    tri.start(t); tri.stop(t + ringDur + 0.2);
+    sub.start(t); sub.stop(t + ringDur + 0.2); // self-terminating — no refs held
+  }
+  // Look-ahead scheduler: queue every event within the next ~1.5s onto the audio clock, so a
+  // throttled background tab can't stutter or pile up the tune (bails when the ctx is null).
+  function scheduleTotoroMel() {
+    totoroMelTimer = setTimeout(function () {
+      totoroMelTimer = null;
+      if (!totoroMelodyCtx) return; // stopped meanwhile (leave the channel / reset)
+      var horizon = totoroMelodyCtx.currentTime + 1.5, guard = 0;
+      while (totoroMelNext < horizon && guard++ < 300) {
+        var ev = TOTORO_MELODY[totoroMelIdx];
+        if (ev.c) for (var i = 0; i < ev.c.length; i++) { var nn = ev.c[i]; try { totoroMelNote(totoroMelNext, nn[0], nn[1], nn[2]); } catch (e) {} }
+        totoroMelNext += ev.d * TOTORO_MEL_RATE;
+        totoroMelIdx = (totoroMelIdx + 1) % TOTORO_MELODY.length;
+      }
+      scheduleTotoroMel();
+    }, 350);
+  }
+  window.__applyTotoroMelodyVolume = function () { // called when the volume button cycles, to update live
+    if (totoroMelodyCtx && totoroMelodyCtx._masterGain) { try { totoroMelodyCtx._masterGain.gain.setTargetAtTime(totoroMelVol(), totoroMelodyCtx.currentTime, 0.05); } catch (e) {} }
+  };
+  function startTotoroMel() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      stopTotoroMel();
+      window.__musicPaused = false; // a freshly-opened bed is never born paused
+      totoroMelSuspended = false;
+      totoroMelodyCtx = new Ctx();
+      try { var p = totoroMelodyCtx.resume && totoroMelodyCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+      // triangle+sine voices → a soft lowpass (rounds the tone) → one master gain (volume + fade),
+      // centered as a whole-loft track
+      var lp = totoroMelodyCtx.createBiquadFilter();
+      lp.type = "lowpass"; lp.frequency.value = 2600; // warm, soft-edged
+      var master = totoroMelodyCtx.createGain();
+      master.gain.value = totoroMelVol(); // level follows the app volume button
+      lp.connect(master); master.connect(pannedOut(totoroMelodyCtx, 0));
+      totoroMelodyCtx._bus = lp;
+      totoroMelodyCtx._masterGain = master;
+      totoroMelodyCtx._nodes = []; // only self-terminating note voices; nothing continuous to stop
+      totoroMelIdx = 0; // each open restarts from the top of the tune
+      totoroMelNext = totoroMelodyCtx.currentTime + 0.2;
+      var vb = document.getElementById("hunt-volume-btn"); if (vb) vb.classList.add("shown"); // it's the music now — reveal the volume button
+      if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn(); // ...and reveal + sync the play/pause button
+      scheduleTotoroMel();
+    } catch (e) {}
+  }
+  function stopTotoroMel(fadeSecs) {
+    var f = (typeof fadeSecs === "number") ? fadeSecs : 0.3;
+    if (totoroMelTimer) { clearTimeout(totoroMelTimer); totoroMelTimer = null; }
+    if (totoroMelodyCtx) {
+      var ctx = totoroMelodyCtx, master = totoroMelodyCtx._masterGain, nodes = totoroMelodyCtx._nodes || [];
+      totoroMelodyCtx = null; // null first so a racing scheduleTotoroMel callback bails
+      try { if (master) { var t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
+      setTimeout(function () {
+        nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
+        try { ctx.close(); } catch (e) {}
+      }, f * 1000 + 100);
+    }
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn(); // the melody stopped — resync the rail button
+  }
+  window.__pauseTotoroMelody = function (paused) { // unified transport control: pause-in-place via ctx suspend/resume
+    if (!totoroMelodyCtx) return false;
+    totoroMelSuspended = !!paused;
+    try { if (paused) totoroMelodyCtx.suspend(); else totoroMelodyCtx.resume(); } catch (e) {}
+    return true;
+  };
+  window.__totoroMelodyPlaying = function () { return !!totoroMelodyCtx && !totoroMelSuspended; }; // live: bed up & not suspended
+  window.__updateTotoroMelody = function (inCuddly, fadeSecs) {
+    var want = totoroMelWant();
+    if (want && !totoroMelodyCtx) startTotoroMel();
+    else if (!want && totoroMelodyCtx) stopTotoroMel(fadeSecs);
+  };
+  document.addEventListener("visibilitychange", function () { window.__updateTotoroMelody(); });
+
   // Night-sky channel (chan-stars): the opening theme of Satie's Gnossienne No. 1 (1890,
   // public domain) as very soft, slow piano-ish tones — starlight music. Notes transcribed
   // from the Mutopia public-domain MIDI (Lent, q≈0.6s), F minor, the melody's top voice.
@@ -13928,6 +14035,7 @@ document.addEventListener("click", function (e) {
     if (window.__updateWorkoutSound) window.__updateWorkoutSound(); // aerobics bed follows the workout channel
     if (window.__updateTotoroSound) window.__updateTotoroSound(); // rainfall follows the totoro channel
     if (window.__updateStarsSound) window.__updateStarsSound(); // Gnossienne follows the night-sky channel
+    if (window.__updateTotoroMelody) window.__updateTotoroMelody(); // woodland melody follows the totoro channel
     if (reduceMotion) renderStill(); else start();
   }
 
@@ -20329,6 +20437,13 @@ async def localfont(name):
       resume: function () { return !!(window.__pauseStars && window.__pauseStars(false)); }
     });
     list.push({
+      id: "totoro",
+      isPlaying: function () { return !!(window.__totoroMelodyPlaying && window.__totoroMelodyPlaying()); },
+      valid: function () { var ws = document.getElementById("cuddly-wallscreen"); return !!(ws && ws.classList.contains("chan-totoro")); },
+      pause: function () { if (window.__pauseTotoroMelody) window.__pauseTotoroMelody(true); },
+      resume: function () { return !!(window.__pauseTotoroMelody && window.__pauseTotoroMelody(false)); }
+    });
+    list.push({
       id: "party",
       isPlaying: function () { return !!(window.__partyPlaying && window.__partyPlaying()); },
       valid: function () { return !!window.__gardenPartyOn; },
@@ -20376,7 +20491,7 @@ async def localfont(name):
     var btn = document.getElementById("hunt-playpause-btn");
     if (!btn) return;
     var ws = document.getElementById("cuddly-wallscreen");
-    var bedGatedOn = (ws && (ws.classList.contains("chan-stars") || ws.classList.contains("chan-workout"))) || !!window.__gardenPartyOn;
+    var bedGatedOn = (ws && (ws.classList.contains("chan-stars") || ws.classList.contains("chan-workout") || ws.classList.contains("chan-totoro"))) || !!window.__gardenPartyOn;
     var songActive = !!(window.__phoneMusicId && window.__phoneMusicId()); // playing or paused-with-progress
     if (bedGatedOn || songActive) btn.classList.add("shown"); // reveal once there's music to control; never un-shows (matches the volume button)
     btn.classList.toggle("paused", !anyAudioPlaying()); // ▶ when everything's silent, ⏸ when anything plays
@@ -20588,6 +20703,7 @@ async def localfont(name):
     volIdx = (volIdx + 1) % VOL_LEVELS.length;
     applySongVolume();
     if (window.__applyStarsVolume) window.__applyStarsVolume(); // the night-sky Satie bed follows the same level
+    if (window.__applyTotoroMelodyVolume) window.__applyTotoroMelodyVolume(); // the totoro woodland melody follows it too
     if (window.__applyPartyMusicVolume) window.__applyPartyMusicVolume(); // the techno party bed follows it too
     if (window.__applyWorkoutVolume) window.__applyWorkoutVolume(); // the workout bed follows it too
     updateVolIcon();
@@ -29152,6 +29268,7 @@ function pannedSweep(ctx, fromPan, toPan, dur) {
     if (window.__updateWorkoutSound) window.__updateWorkoutSound();
     if (window.__updateTotoroSound) window.__updateTotoroSound();
     if (window.__updateStarsSound) window.__updateStarsSound();
+    if (window.__updateTotoroMelody) window.__updateTotoroMelody();
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong();
     if (window.__updateKettleHum) window.__updateKettleHum();
     if (window.__updateRadioSound) window.__updateRadioSound();
@@ -32113,6 +32230,7 @@ function spawnDustMote(container) {
     if (window.__updateWorkoutSound) window.__updateWorkoutSound(name === "cuddly", ROOM_FADE); // workout bed only in the cuddly nook
     if (window.__updateTotoroSound) window.__updateTotoroSound(name === "cuddly", ROOM_FADE); // rainfall only in the cuddly nook
     if (window.__updateStarsSound) window.__updateStarsSound(name === "cuddly", ROOM_FADE); // Gnossienne only in the cuddly nook
+    if (window.__updateTotoroMelody) window.__updateTotoroMelody(name === "cuddly", ROOM_FADE); // woodland melody follows the totoro channel
     if (window.__updateStarsRoomPan) window.__updateStarsRoomPan(); // piano is cuddly-sourced: pan to the new room like the songs
     if (window.__updatePartyRoom) window.__updatePartyRoom(); // party is garden-sourced: pan + faintness per room
     if (window.__updateWind) window.__updateWind(ROOM_FADE); // wind bed (balcony, + through the cuddly door) fades out over the room change too

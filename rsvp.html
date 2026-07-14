@@ -2385,6 +2385,7 @@ footer{margin-top:2.6rem}
 #cuddly-irene.irene-bounce #cuddly-irene-move{translate:52px -35px}   /* standing on the seat cushion */
 #cuddly-irene.irene-catplay #cuddly-irene-move{translate:16px 22px}   /* crouched low, down by the cat */
 #cuddly-irene.irene-catjump #cuddly-irene-move{translate:40px 22px}   /* landed on the floor right beside the cat (she leaps in via the pose keyframes) */
+#cuddly-irene.irene-octiplay #cuddly-irene-move{translate:511px 6px}  /* crossed the room to the trunk, standing just left of Octi; she leans right and her hand reaches onto him */
 #cuddly-irene.irene-roam   #cuddly-irene-move{translate:0 -2px}       /* behind the couch back (reparented) */
 /* a seated child reads shorter + tucked, not a standing figure lifted onto the cushion; upright (no lean) */
 #cuddly-irene.irene-sit    #cuddly-irene-pose{transform:scaleY(.9); transform-origin:50% 100%}
@@ -2393,6 +2394,7 @@ footer{margin-top:2.6rem}
 #cuddly-irene.showing #cuddly-irene-peek{translate:0 0; rotate:0deg}
 #cuddly-irene.irene-hug.showing #cuddly-irene-peek{rotate:-11deg} /* leans slightly left toward Markéta as she hugs her */
 #cuddly-irene.irene-hugb.showing #cuddly-irene-peek{rotate:-13deg} /* leans left (feet-pivot) so her raised arms wrap onto Behdad beside her */
+#cuddly-irene.irene-octiplay.showing #cuddly-irene-peek{rotate:14deg} /* leans RIGHT toward Octi as she reaches down to play with him */
 /* arm-state swap: hands-up only for a hug (either parent), hands-at-sides otherwise (pure display, no transform) */
 .irene-arms-hug{display:none}
 #cuddly-irene.irene-hug .irene-arms-rest, #cuddly-irene.irene-hugb .irene-arms-rest{display:none}
@@ -2405,6 +2407,8 @@ footer{margin-top:2.6rem}
 @keyframes irene-walk{0%{transform:translateX(-48px)} 50%{transform:translateX(150px) translateY(-2px)} 100%{transform:translateX(340px)}}
 /* crouch-play: a gentle up/down lift as she reaches for the cat (no side-tilt) */
 #cuddly-irene.irene-catplay #cuddly-irene-pose{animation:irene-reach 1.5s ease-in-out 3}
+/* octi-play: same gentle reach lift as she plays with the octopus up on the trunk */
+#cuddly-irene.irene-octiplay #cuddly-irene-pose{animation:irene-reach 1.5s ease-in-out 3}
 @keyframes irene-reach{0%,100%{transform:translateY(0)} 45%{transform:translateY(-4px)}}
 /* cat-jump: she springs from her canonical spot up-and-right and lands beside the cat with an
    excited rebound (the move translate above sets the landing; these keyframes are the leap in) */
@@ -2433,6 +2437,7 @@ footer{margin-top:2.6rem}
   #cuddly-irene.irene-roam #cuddly-irene-pose,
   #cuddly-irene.irene-catplay #cuddly-irene-pose,
   #cuddly-irene.irene-catjump #cuddly-irene-pose,
+  #cuddly-irene.irene-octiplay #cuddly-irene-pose,
   #cuddly-irene.giggling #cuddly-irene-giggle{animation:none}
 }
 #balcony-doormat{transform-box:fill-box; transform-origin:center}
@@ -14570,6 +14575,10 @@ document.addEventListener("click", function (e) {
     var stage = document.getElementById("stage-cuddly");
     return !!(catLoose() && pos && stage && stage.contains(pos));
   }
+  function octiOut() { // Octi is out (available to play with) unless he's tucked into the trunk (.falling-in)
+    var o = document.getElementById("cuddly-octopus");
+    return !!(o && !o.classList.contains("falling-in"));
+  }
   function reducedMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
@@ -14630,13 +14639,18 @@ document.addEventListener("click", function (e) {
       var cat = document.getElementById("witchy-chest-cat-pos");
       if (cat && cat.parentNode) { cat.parentNode.insertBefore(irene, cat.nextSibling); return; }
     }
+    if (beh === "irene-octiplay" && octiOut()) {
+      var trunk = document.getElementById("cuddly-trunk");
+      var wrap = trunk && trunk.parentNode; // the translate(-10,0) wrapper holding trunk + Octi; a direct child of stage-cuddly (no coord shift for her)
+      if (wrap && wrap.parentNode) { wrap.parentNode.insertBefore(irene, wrap.nextSibling); return; } // just after Octi → she plays in front of him
+    }
     var knife = document.getElementById("cuddly-knife-2"); // the later of the two knives
     if (knife && knife.parentNode) knife.parentNode.insertBefore(irene, knife.nextSibling);
     else restoreZ();
   }
   function clearCatPlay() { if (catPlayTimer) { clearTimeout(catPlayTimer); catPlayTimer = null; } }
   function dropPose() { // literal removes (check.js wants a literal classList.remove per anim-driving class)
-    irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-hugb", "irene-catplay", "irene-catjump");
+    irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-hugb", "irene-catplay", "irene-catjump", "irene-octiplay");
     restoreZ();
   }
   function leave() {
@@ -14656,6 +14670,7 @@ document.addEventListener("click", function (e) {
   function ireneePool() {
     var pool = BEHAVIORS.slice();
     if (catInNook()) { pool.push("irene-catplay", "irene-catjump"); }
+    if (octiOut()) { pool.push("irene-octiplay"); } // playing with Octi is valid whenever he's not tucked in the trunk
     return pool;
   }
   // Deal poses from a shuffled bag (like the cheersDeck): every valid pose is seen once per
@@ -14684,9 +14699,10 @@ document.addEventListener("click", function (e) {
   function applyPose(beh) {
     if (beh === "irene-catplay" && !catInNook()) beh = "irene-hug";    // never crouch-play with a cat that isn't here
     if (beh === "irene-catjump" && !catInNook()) beh = "irene-bounce"; // nothing to leap to → just bounce in place
+    if (beh === "irene-octiplay" && !octiOut()) beh = "irene-bounce";  // Octi's tucked in the trunk → nothing to play with, just bounce
     lastBeh = beh;
     clearCatPlay();
-    irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-hugb", "irene-catplay", "irene-catjump");
+    irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-hugb", "irene-catplay", "irene-catjump", "irene-octiplay");
     placeFor(beh);
     irene.classList.add(beh, "showing");
     // As she leans in to hug Markéta, she coos "I love you" in a high, childlike pitch. One-shot,
@@ -36635,9 +36651,9 @@ function spawnDustMote(container) {
   window.irene = function (beh) {
     if (window.goToStage) window.goToStage("cuddly"); // she only appears in the cuddly nook
     if (beh) {
-      var POSES = { roam: "irene-roam", bounce: "irene-bounce", sit: "irene-sit", hug: "irene-hug", catplay: "irene-catplay", catjump: "irene-catjump" };
+      var POSES = { roam: "irene-roam", bounce: "irene-bounce", sit: "irene-sit", hug: "irene-hug", catplay: "irene-catplay", catjump: "irene-catjump", octiplay: "irene-octiplay" };
       var pose = POSES[String(beh).toLowerCase().replace(/^irene-/, "")];
-      if (!pose) return "irene poses: roam, bounce, sit, hug, catplay, catjump.";
+      if (!pose) return "irene poses: roam, bounce, sit, hug, catplay, catjump, octiplay.";
       if (!window.__ireneShow) return "irene isn't around right now.";
       if (pose === "irene-catplay" || pose === "irene-catjump") {
         if (window.__releaseCat) window.__releaseCat();   // open the moon door + free the cat if it's still in the chest

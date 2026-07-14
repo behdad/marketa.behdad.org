@@ -14035,7 +14035,7 @@ document.addEventListener("click", function (e) {
     // As she leans in to hug Markéta, she coos "I love you" in a high, childlike pitch. One-shot,
     // no timer (nothing to tear down); hasFocus-gated like every other unattended sound so a
     // backgrounded tab stays silent (playILoveYouSound itself only gates document.hidden).
-    if (beh === "irene-hug" && onScreen() && document.hasFocus()) playILoveYouSound("cuddly-irene", 1.85);
+    if (beh === "irene-hug" && onScreen() && document.hasFocus()) playILoveYouSound("cuddly-irene", 1.5, 1.7);
     // Hugging uncle Behdad she calls out an affectionate "daaeee" (Persian dâyee, a maternal uncle). Same gating.
     if (beh === "irene-hugb" && onScreen() && document.hasFocus()) playIreneDayeeSound("cuddly-irene");
     if (beh === "irene-bounce" && onScreen() && document.hasFocus() && !reducedMotion()) playIreneBounce(); // springy bounces on the couch cushion
@@ -14146,14 +14146,14 @@ document.addEventListener("click", function (e) {
       var out = pannedOut(ctx, "cuddly-irene"); // panned to where she stands on screen
       // four quick high triangle pips, up-then-settling — a light childlike "hee-hee-hee"
       [[0, 900], [0.085, 1120], [0.17, 1030], [0.255, 1260]].forEach(function (pair) {
-        var dt = pair[0], f = pair[1] * 1.25; // higher, more childlike
+        var dt = pair[0], f = pair[1];
         var osc = ctx.createOscillator();
         osc.type = "triangle";
         osc.frequency.setValueAtTime(f * 0.93, t + dt);
         osc.frequency.linearRampToValueAtTime(f, t + dt + 0.05);
         var g = ctx.createGain();
         g.gain.setValueAtTime(0.0001, t + dt);
-        g.gain.exponentialRampToValueAtTime(0.05, t + dt + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.09, t + dt + 0.02);
         g.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.08);
         osc.connect(g); g.connect(out);
         osc.start(t + dt); osc.stop(t + dt + 0.1);
@@ -14170,11 +14170,11 @@ document.addEventListener("click", function (e) {
       [0, 0.52, 1.04, 1.56].forEach(function (dt) {
         var osc = ctx.createOscillator();
         osc.type = "sine";
-        osc.frequency.setValueAtTime(294, t + dt);
-        osc.frequency.exponentialRampToValueAtTime(119, t + dt + 0.16); // the boing's pitch drop (higher, childlike)
+        osc.frequency.setValueAtTime(235, t + dt);
+        osc.frequency.exponentialRampToValueAtTime(95, t + dt + 0.16); // the boing's pitch drop
         var g = ctx.createGain();
         g.gain.setValueAtTime(0.0001, t + dt);
-        g.gain.exponentialRampToValueAtTime(0.05, t + dt + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.09, t + dt + 0.012);
         g.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.2);
         osc.connect(g); g.connect(out);
         osc.start(t + dt); osc.stop(t + dt + 0.22);
@@ -15684,7 +15684,7 @@ document.addEventListener("click", function (e) {
     } catch (e) { return null; }
   }
   function triggerIreneOuch() {
-    playOuchSound("cuddly-irene", 1.95); // same "ow-ch" a childlike ~1.95× higher
+    playOuchSound("cuddly-irene", 1.65, 1.5); // childlike ~1.65× higher, and a touch louder
     if (window.__ireneSummon) window.__ireneSummon(); // startle her straight to a fresh pose
   }
   function makeThrowable(el, wobbleFn) {
@@ -29594,14 +29594,14 @@ function playPhoneVoiceSound(panId) {
 // gliding through three words) — each call's goodbye. Deliberately a soft robotic voice.
 // pitchMul scales the glottal f0 and every formant/filter centre together: 1 (the default)
 // is the feminine Prague voice, 0.8 drops the whole spectrum to Behdad's register for Tehran.
-function playILoveYouSound(panId, pitchMul) {
+function playILoveYouSound(panId, pitchMul, gainMul) {
   try {
     var ctx = getSfxCtx();
     if (!ctx) return;
-    var p = pitchMul || 1;
+    var p = pitchMul || 1, gm = gainMul || 1;
     var t0 = ctx.currentTime;
     var out = pannedOut(ctx, panId || "office-laptop");
-    var source = ctx.createGain(); source.gain.value = 1;
+    var source = ctx.createGain(); source.gain.value = gm; // gainMul lets Irene's hug be louder than the call goodbyes
     [-6, 7].forEach(function (dt) {
       var osc = ctx.createOscillator();
       osc.type = "sawtooth"; osc.detune.value = dt;
@@ -29689,13 +29689,13 @@ function playIreneDayeeSound(panId) {
       var osc = ctx.createOscillator();
       osc.type = "sawtooth"; osc.detune.value = dt;
       // f0: low /d/ release → rising excited "aa" → "eee" with a small vibrato lift, settling
-      osc.frequency.setValueAtTime(369, t0);
-      osc.frequency.linearRampToValueAtTime(428, t0 + 0.06);
-      osc.frequency.linearRampToValueAtTime(465, t0 + 0.3);
-      osc.frequency.linearRampToValueAtTime(448, t0 + 0.45);
-      osc.frequency.linearRampToValueAtTime(488, t0 + 0.62);
-      osc.frequency.linearRampToValueAtTime(450, t0 + 0.75);
-      osc.frequency.linearRampToValueAtTime(413, t0 + 0.86);
+      osc.frequency.setValueAtTime(295, t0);
+      osc.frequency.linearRampToValueAtTime(342, t0 + 0.06);
+      osc.frequency.linearRampToValueAtTime(372, t0 + 0.3);
+      osc.frequency.linearRampToValueAtTime(358, t0 + 0.45);
+      osc.frequency.linearRampToValueAtTime(390, t0 + 0.62);
+      osc.frequency.linearRampToValueAtTime(360, t0 + 0.75);
+      osc.frequency.linearRampToValueAtTime(330, t0 + 0.86);
       osc.connect(source);
       osc.start(t0); osc.stop(t0 + 0.9);
     });
@@ -29705,11 +29705,11 @@ function playIreneDayeeSound(panId) {
     // amplitude: "daa" burst, a small dip at the a→ee glide, sustained "eee", release
     var master = ctx.createGain(); var m = master.gain;
     m.setValueAtTime(0.0001, t0);
-    m.exponentialRampToValueAtTime(0.09, t0 + 0.05);
-    m.setValueAtTime(0.09, t0 + 0.28);
-    m.exponentialRampToValueAtTime(0.05, t0 + 0.36);
-    m.exponentialRampToValueAtTime(0.085, t0 + 0.46);
-    m.setValueAtTime(0.085, t0 + 0.68);
+    m.exponentialRampToValueAtTime(0.14, t0 + 0.05);
+    m.setValueAtTime(0.14, t0 + 0.28);
+    m.exponentialRampToValueAtTime(0.08, t0 + 0.36);
+    m.exponentialRampToValueAtTime(0.13, t0 + 0.46);
+    m.setValueAtTime(0.13, t0 + 0.68);
     m.exponentialRampToValueAtTime(0.0001, t0 + 0.88);
     master.connect(out);
     // formants gliding /a/ (F1 high, F2 low) -> /i/ (F1 low, F2 high); childlike (high overall)
@@ -29743,14 +29743,14 @@ function playIreneDayeeSound(panId) {
 // falling) then a short noise-burst "ch" tail. pitchMul scales f0 + formants: default (1) is an
 // adult ~145 Hz for Behdad/Markéta; Irene passes ~1.65 for a childlike higher cry. Same voiced-
 // formant shape as playILoveYouSound; no timer / no ctx.close (shared getSfxCtx stays open).
-function playOuchSound(panId, pitchMul) {
+function playOuchSound(panId, pitchMul, gainMul) {
   try {
     var ctx = getSfxCtx();
     if (!ctx) return;
-    var p = pitchMul || 1;
+    var p = pitchMul || 1, gm = gainMul || 1;
     var t0 = ctx.currentTime;
     var out = pannedOut(ctx, panId || "cuddly-behdad-head");
-    var source = ctx.createGain(); source.gain.value = 1;
+    var source = ctx.createGain(); source.gain.value = gm;
     [-6, 7].forEach(function (dt) {
       var osc = ctx.createOscillator();
       osc.type = "sawtooth"; osc.detune.value = dt;

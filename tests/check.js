@@ -561,8 +561,8 @@ function checkAudioFadeCloseRace(file, script) {
     // beds/pipeline (and getSfxCtx). A one-shot spinning up its own context regresses
     // the stream-churn fix — new effects must use getSfxCtx().
     var ctxSites = (script.match(/new Ctx\(\)/g) || []).length;
-    if (ctxSites > 21) { // +2 for the garden-party disco + swing dance beds
-      issues.push("found " + ctxSites + " `new Ctx()` sites (expected <= 21: the beds (aquarium ambient + aquarium melody + workout + totoro rain + totoro woodland-melody + night-sky Satie projector + garden-party techno + garden-party waltz + garden-party disco + garden-party swing), the song pipeline, and getSfxCtx) — one-shot effects must use getSfxCtx()");
+    if (ctxSites > 23) { // +4 for the garden-party disco + swing + salsa + bhangra dance beds
+      issues.push("found " + ctxSites + " `new Ctx()` sites (expected <= 23: the beds (aquarium ambient + aquarium melody + workout + totoro rain + totoro woodland-melody + night-sky Satie projector + garden-party techno + garden-party waltz + garden-party disco + garden-party swing + garden-party salsa + garden-party bhangra), the song pipeline, and getSfxCtx) — one-shot effects must use getSfxCtx()");
     }
   }
   if (issues.length === 0) {

@@ -739,6 +739,33 @@ footer{margin-top:2.6rem}
 #loft-game-strip.party-on #kitchen-bartender-shake{animation:bartender-shake .46s ease-in-out infinite}
 @keyframes bartender-shake{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-2px) rotate(-5deg)}}
 @media (prefers-reduced-motion: reduce){#loft-game-strip.party-on #kitchen-bartender-shake{animation:none}}
+/* bartop glassware + used glasses: each glass/shaker is its own <g class="bar-glass"> pivoting
+   at its base (fill-box), so the one-shot .tipsy wobble (shared bar-bottle-tip keyframe) never
+   clobbers its drawn coordinates. Tappable only while the bar shows — #kitchen-bar is
+   pointer-events:none, re-enabled per glass under .party-on. */
+#kitchen-bar-glassware > g.bar-glass, #kitchen-bar-usedglasses > g.bar-glass{transform-box:fill-box; transform-origin:50% 100%}
+#loft-game-strip.party-on #kitchen-bar-glassware > g.bar-glass,
+#loft-game-strip.party-on #kitchen-bar-usedglasses > g.bar-glass{pointer-events:auto; cursor:pointer}
+#kitchen-bar-glassware > g.bar-glass.tipsy, #kitchen-bar-usedglasses > g.bar-glass.tipsy{animation:bar-bottle-tip .55s ease-in-out}
+@media (prefers-reduced-motion: reduce){#kitchen-bar-glassware > g.bar-glass.tipsy, #kitchen-bar-usedglasses > g.bar-glass.tipsy{animation:none}}
+/* bar stools: each <g class="bar-stool"> rocks on its legs — pivot at the floor (fill-box base),
+   a gentler side-to-side tip than the glass wobble. Same party-on pointer-events gate. */
+#kitchen-bar-stools > g.bar-stool{transform-box:fill-box; transform-origin:50% 100%}
+#loft-game-strip.party-on #kitchen-bar-stools > g.bar-stool{pointer-events:auto; cursor:pointer}
+#kitchen-bar-stools > g.bar-stool.tipsy{animation:bar-stool-rock .6s ease-in-out}
+@keyframes bar-stool-rock{0%,100%{transform:rotate(0)}22%{transform:rotate(3.2deg)}48%{transform:rotate(-2.6deg)}72%{transform:rotate(1.5deg)}90%{transform:rotate(-0.6deg)}}
+@media (prefers-reduced-motion: reduce){#kitchen-bar-stools > g.bar-stool.tipsy{animation:none}}
+/* the bartender's flourish: tapping his transparent upper-body hit rect throws the shaker up
+   and catches it. The toss animates #kitchen-bartender-shaker (the metal parts only) — a node
+   DISTINCT from the idle-shaking #kitchen-bartender-shake wrapper — so the two transforms
+   compose: the arm keeps idling while the shaker rises and spins over it. Pivot at the shaker's
+   own centre. One-shot .tossing, cleared on animationend. Reduced-motion stills the toss. */
+#kitchen-bartender-shaker{transform-box:fill-box; transform-origin:50% 50%}
+#kitchen-bartender-shaker.tossing{animation:bartender-toss .95s ease-in-out}
+@keyframes bartender-toss{0%{transform:translateY(0) rotate(0)}42%{transform:translateY(-32px) rotate(360deg)}100%{transform:translateY(0) rotate(720deg)}}
+#kitchen-bartender-hit{pointer-events:none}
+#loft-game-strip.party-on #kitchen-bartender-hit{pointer-events:auto; cursor:pointer}
+@media (prefers-reduced-motion: reduce){#kitchen-bartender-shaker.tossing{animation:none}}
 /* tapping the glitter ball pops it: a quick scale-bounce on a dedicated wrapper plus a
    white light-flash halo. The bounce lives on #garden-disco-ball-pop, a node DISTINCT from
    the -spin group, so the party spin's rotate is never clobbered (parent/child transforms
@@ -5509,6 +5536,35 @@ section{margin:1.9rem 0}
 <rect x="-7" y="-14" width="14" height="8" rx="1" fill="#f4ecd8" opacity="0.9"/>
 <path d="M-8 -3 L-8 -16 Q-8 -22 -2.6 -25 L-2.6 -20 Q-5 -17 -5 -12 L-5 -3 Z" fill="#ffffff" opacity="0.14"/>
 </g>
+<!-- top-shelf whisky bottles: squat, broad-shouldered / square decanter silhouettes. Body +
+     neck inherit the <use> fill (an amber/whisky tone); label band, cap and glint are fixed. -->
+<g id="kitchen-bar-whiskyA">
+<!-- squat broad-shouldered whisky: fat rounded body, short neck -->
+<path d="M-11 0 L-11 -22 Q-11 -31 -4.5 -34 L-4.5 -40 L4.5 -40 L4.5 -34 Q11 -31 11 -22 L11 0 Z"/>
+<!-- cork + darker cap -->
+<rect x="-5" y="-45.5" width="10" height="6" rx="1.6" fill="#6b4a2c"/>
+<rect x="-5" y="-42" width="10" height="2.4" fill="#4f3720"/>
+<!-- paper label band with a wine top-stripe + a printed line -->
+<rect x="-11" y="-19" width="22" height="12" rx="1" fill="#f4ecd8" opacity="0.92"/>
+<rect x="-11" y="-19" width="22" height="2.4" fill="#8e3a4a" opacity="0.75"/>
+<rect x="-6" y="-13.5" width="12" height="1.6" fill="#7a4a28" opacity="0.5"/>
+<!-- glass glint -->
+<rect x="-11" y="-22" width="3.2" height="22" rx="2.5" fill="#ffffff" opacity="0.16"/>
+</g>
+<g id="kitchen-bar-whiskyB">
+<!-- square-shouldered decanter: straight sides, angular shoulders to a short neck -->
+<path d="M-10 0 L-10 -25 L-5 -32 L-5 -38 L5 -38 L5 -32 L10 -25 L10 0 Z"/>
+<!-- diamond-cut facet highlights on the lower body -->
+<path d="M-6 -3 L0 -18 L6 -3 M-6 -13 L6 -13" fill="none" stroke="#ffffff" stroke-width="0.7" opacity="0.18"/>
+<!-- stopper + a wax-dip collar dripping down the neck -->
+<rect x="-4.5" y="-43" width="9" height="6" rx="1.4" fill="#5a3d24"/>
+<path d="M-6 -38 L6 -38 L6 -33 Q3 -29 0 -33 Q-3 -29 -6 -33 Z" fill="#7a2f3d"/>
+<!-- gold-stripe label plate -->
+<rect x="-10" y="-20" width="20" height="11" rx="1" fill="#f4ecd8" opacity="0.9"/>
+<rect x="-10" y="-20" width="20" height="2.2" fill="#b8863c" opacity="0.85"/>
+<!-- glass glint -->
+<rect x="-10" y="-25" width="3" height="25" rx="2.5" fill="#ffffff" opacity="0.14"/>
+</g>
 </defs>
 <!-- warm back-bar panel so the bottles read against the brick -->
 <g id="kitchen-bar-backdrop">
@@ -5529,16 +5585,16 @@ section{margin:1.9rem 0}
 </g>
 <!-- the liquor lineup: silhouettes recoloured per <use> fill -->
 <g id="kitchen-bar-bottles">
-<g class="bar-bottle"><use href="#kitchen-bar-bottleA" x="70" y="102" fill="#8e3a4a"/></g>
-<g class="bar-bottle"><use href="#kitchen-bar-bottleB" x="120" y="102" fill="#c98a3a"/></g>
-<g class="bar-bottle"><use href="#kitchen-bar-bottleA" x="168" y="102" fill="#4a6b94"/></g>
-<g class="bar-bottle"><use href="#kitchen-bar-bottleA" x="214" y="102" fill="#cfe0e2"/></g>
-<g class="bar-bottle"><use href="#kitchen-bar-bottleB" x="262" y="102" fill="#5f8a52"/></g>
-<g class="bar-bottle"><use href="#kitchen-bar-bottleA" x="312" y="102" fill="#c68e95"/></g>
-<g class="bar-bottle"><use href="#kitchen-bar-bottleB" x="360" y="102" fill="#7a4a28"/></g>
-<g class="bar-bottle"><use href="#kitchen-bar-bottleA" x="408" y="102" fill="#7f9ec0"/></g>
-<g class="bar-bottle"><use href="#kitchen-bar-bottleB" x="458" y="102" fill="#8e3a4a"/></g>
-<g class="bar-bottle"><use href="#kitchen-bar-bottleA" x="510" y="102" fill="#b8863c"/></g>
+<g class="bar-bottle"><use href="#kitchen-bar-whiskyA" x="70" y="102" fill="#c98a3a"/></g>
+<g class="bar-bottle"><use href="#kitchen-bar-whiskyB" x="120" y="102" fill="#a8672c"/></g>
+<g class="bar-bottle"><use href="#kitchen-bar-whiskyA" x="168" y="102" fill="#b8863c"/></g>
+<g class="bar-bottle"><use href="#kitchen-bar-whiskyB" x="214" y="102" fill="#8e3a4a"/></g>
+<g class="bar-bottle"><use href="#kitchen-bar-whiskyA" x="262" y="102" fill="#c9a24a"/></g>
+<g class="bar-bottle"><use href="#kitchen-bar-whiskyB" x="312" y="102" fill="#9a5a2a"/></g>
+<g class="bar-bottle"><use href="#kitchen-bar-whiskyA" x="360" y="102" fill="#a8672c"/></g>
+<g class="bar-bottle"><use href="#kitchen-bar-whiskyB" x="408" y="102" fill="#7a4a28"/></g>
+<g class="bar-bottle"><use href="#kitchen-bar-whiskyA" x="458" y="102" fill="#b8863c"/></g>
+<g class="bar-bottle"><use href="#kitchen-bar-whiskyB" x="510" y="102" fill="#c98a3a"/></g>
 <g class="bar-bottle"><use href="#kitchen-bar-bottleB" x="72" y="154" fill="#4a6b94"/></g>
 <g class="bar-bottle"><use href="#kitchen-bar-bottleA" x="120" y="154" fill="#c98a3a"/></g>
 <g class="bar-bottle"><use href="#kitchen-bar-bottleA" x="166" y="154" fill="#8e3a4a"/></g>
@@ -5592,11 +5648,19 @@ section{margin:1.9rem 0}
 <g id="kitchen-bartender-shake">
 <path d="M318 222 Q332 216 336 200" fill="none" stroke="#f2efe6" stroke-width="7" stroke-linecap="round"/>
 <ellipse cx="336" cy="199" rx="3.2" ry="2.6" fill="#f0c6a0"/>
+<!-- the shaker's metal parts only: the toss animates THIS group (distinct from the idle-shaking
+     parent), so the toss's rise+spin composes over the arm's idle shake without clobbering it -->
+<g id="kitchen-bartender-shaker">
 <path d="M330 198 L328 184 L344 184 L342 198 Z" fill="#cfd4d9" stroke="#a7adb4" stroke-width="1"/>
 <rect x="328" y="177" width="16" height="8" rx="2" fill="#dfe3e7" stroke="#a7adb4" stroke-width="1"/>
 <rect x="331" y="171" width="10" height="7" rx="2" fill="#cfd4d9" stroke="#a7adb4" stroke-width="1"/>
 <rect x="330" y="186" width="3.4" height="12" fill="#eef1f4" opacity="0.6"/>
 </g>
+</g>
+<!-- transparent hit target over the bartender's visible upper body (head + torso + raised arm +
+     shaker), so a tap anywhere on him triggers the shaker toss. Sits above the counter top-rail
+     (y245); pointer-events gated to .party-on like the rest of the bar. -->
+<rect id="kitchen-bartender-hit" x="270" y="166" width="78" height="66" fill="transparent"/>
 </g>
 <!-- the front bar counter: top rail over a dark wood front, on the floor -->
 <g id="kitchen-bar-counter">
@@ -5617,7 +5681,7 @@ section{margin:1.9rem 0}
 <!-- glassware on the bar top -->
 <g id="kitchen-bar-glassware">
 <!-- cocktail (martini) glass with a pink drink + a garnish -->
-<g id="kitchen-bar-glass-martini">
+<g id="kitchen-bar-glass-martini" class="bar-glass" data-clink="1.72">
 <polygon points="60,224 96,224 78,244" fill="#eef4f6" opacity="0.55" stroke="#cdd8da" stroke-width="1"/>
 <polygon points="64,226 92,226 78,241" fill="#d98fa4" opacity="0.85"/>
 <line x1="78" y1="244" x2="78" y2="256" stroke="#cdd8da" stroke-width="1.6"/>
@@ -5625,14 +5689,14 @@ section{margin:1.9rem 0}
 <circle cx="86" cy="223" r="2.4" fill="#8bbf6a"/>
 </g>
 <!-- a coupe glass -->
-<g id="kitchen-bar-glass-coupe">
+<g id="kitchen-bar-glass-coupe" class="bar-glass" data-clink="1.5">
 <path d="M120 232 Q120 244 133 244 Q146 244 146 232 Z" fill="#eef4f6" opacity="0.55" stroke="#cdd8da" stroke-width="1"/>
 <path d="M123 233 Q124 241 133 241 Q142 241 143 233 Z" fill="#e6c46a" opacity="0.85"/>
 <line x1="133" y1="244" x2="133" y2="256" stroke="#cdd8da" stroke-width="1.6"/>
 <line x1="126" y1="256" x2="140" y2="256" stroke="#cdd8da" stroke-width="1.8"/>
 </g>
 <!-- a highball tumbler with amber drink + ice -->
-<g id="kitchen-bar-glass-highball">
+<g id="kitchen-bar-glass-highball" class="bar-glass" data-clink="1.34">
 <rect x="176" y="222" width="20" height="34" rx="2.5" fill="#eef4f6" opacity="0.5" stroke="#cdd8da" stroke-width="1"/>
 <rect x="178" y="234" width="16" height="20" rx="1.5" fill="#c98a3a" opacity="0.82"/>
 <rect x="181" y="230" width="6" height="6" rx="1.4" fill="#ffffff" opacity="0.45"/>
@@ -5640,7 +5704,7 @@ section{margin:1.9rem 0}
 <line x1="192" y1="220" x2="188" y2="240" stroke="#d98fa4" stroke-width="1.4" stroke-linecap="round"/>
 </g>
 <!-- a two-part cocktail shaker -->
-<g id="kitchen-bar-glass-shaker">
+<g id="kitchen-bar-glass-shaker" class="bar-glass" data-clink="1.12">
 <path d="M232 256 L230 232 L250 232 L248 256 Z" fill="#cfd4d9" stroke="#a7adb4" stroke-width="1"/>
 <rect x="230" y="224" width="20" height="9" rx="2" fill="#dfe3e7" stroke="#a7adb4" stroke-width="1"/>
 <rect x="234" y="216" width="12" height="9" rx="2" fill="#cfd4d9" stroke="#a7adb4" stroke-width="1"/>
@@ -5650,28 +5714,34 @@ section{margin:1.9rem 0}
 <!-- a few used glasses left on the bar top: a drained lowball, a half-finished wine, a lime wedge -->
 <g id="kitchen-bar-usedglasses">
 <!-- drained lowball tumbler with a last-sip amber residue -->
+<g id="kitchen-bar-used-lowball" class="bar-glass" data-clink="1.4">
 <rect x="300" y="235" width="18" height="22" rx="2" fill="#eef4f6" opacity="0.42" stroke="#cdd8da" stroke-width="1"/>
 <rect x="302" y="250" width="14" height="6" rx="1.2" fill="#c98a3a" opacity="0.5"/>
 <ellipse cx="309" cy="235" rx="9" ry="2" fill="#cdd8da" opacity="0.45"/>
+</g>
 <!-- half-finished glass of red wine -->
+<g id="kitchen-bar-used-wine" class="bar-glass" data-clink="1.56">
 <path d="M334 232 Q334 246 345 247 Q356 246 356 232 Z" fill="#eef4f6" opacity="0.4" stroke="#cdd8da" stroke-width="1"/>
 <path d="M337 240 Q339 245 345 245 Q351 245 353 240 Z" fill="#8e3a4a" opacity="0.82"/>
 <line x1="345" y1="247" x2="345" y2="256" stroke="#cdd8da" stroke-width="1.6"/>
 <line x1="338" y1="257" x2="352" y2="257" stroke="#cdd8da" stroke-width="1.8"/>
+</g>
 <!-- a spent lime wedge resting on the counter -->
+<g id="kitchen-bar-used-lime" class="bar-glass" data-clink="1.95">
 <path d="M366 255 Q374 250 381 255 Q374 259 366 255 Z" fill="#8bbf6a" stroke="#6f9e4e" stroke-width="0.7"/>
 <path d="M369 255 L379 255 M373.5 252.5 L373.5 257.5" stroke="#d6ea9e" stroke-width="0.6" opacity="0.75"/>
 </g>
+</g>
 <!-- two bar stools in the foreground -->
 <g id="kitchen-bar-stools">
-<g id="kitchen-bar-stool-1">
+<g id="kitchen-bar-stool-1" class="bar-stool">
 <ellipse cx="150" cy="300" rx="20" ry="6" fill="#8e3a4a"/><ellipse cx="150" cy="298" rx="20" ry="6" fill="#a84f5f"/>
 <line x1="136" y1="303" x2="130" y2="340" stroke="#3a2a1e" stroke-width="4" stroke-linecap="round"/>
 <line x1="164" y1="303" x2="170" y2="340" stroke="#3a2a1e" stroke-width="4" stroke-linecap="round"/>
 <line x1="150" y1="304" x2="150" y2="340" stroke="#2f2116" stroke-width="4" stroke-linecap="round"/>
 <line x1="134" y1="322" x2="166" y2="322" stroke="#4a3524" stroke-width="3"/>
 </g>
-<g id="kitchen-bar-stool-2">
+<g id="kitchen-bar-stool-2" class="bar-stool">
 <ellipse cx="356" cy="306" rx="20" ry="6" fill="#4a6b94"/><ellipse cx="356" cy="304" rx="20" ry="6" fill="#5f81ab"/>
 <line x1="342" y1="309" x2="336" y2="340" stroke="#3a2a1e" stroke-width="4" stroke-linecap="round"/>
 <line x1="370" y1="309" x2="376" y2="340" stroke="#3a2a1e" stroke-width="4" stroke-linecap="round"/>
@@ -5679,14 +5749,14 @@ section{margin:1.9rem 0}
 <line x1="340" y1="326" x2="372" y2="326" stroke="#4a3524" stroke-width="3"/>
 </g>
 <!-- two more stools so the counter seats four; pink + wine seats round out the wine/blue pair -->
-<g id="kitchen-bar-stool-3">
+<g id="kitchen-bar-stool-3" class="bar-stool">
 <ellipse cx="250" cy="300" rx="20" ry="6" fill="#c68e95"/><ellipse cx="250" cy="298" rx="20" ry="6" fill="#d9a6a6"/>
 <line x1="236" y1="303" x2="230" y2="340" stroke="#3a2a1e" stroke-width="4" stroke-linecap="round"/>
 <line x1="264" y1="303" x2="270" y2="340" stroke="#3a2a1e" stroke-width="4" stroke-linecap="round"/>
 <line x1="250" y1="304" x2="250" y2="340" stroke="#2f2116" stroke-width="4" stroke-linecap="round"/>
 <line x1="234" y1="322" x2="266" y2="322" stroke="#4a3524" stroke-width="3"/>
 </g>
-<g id="kitchen-bar-stool-4">
+<g id="kitchen-bar-stool-4" class="bar-stool">
 <ellipse cx="462" cy="306" rx="20" ry="6" fill="#8e3a4a"/><ellipse cx="462" cy="304" rx="20" ry="6" fill="#a84f5f"/>
 <line x1="448" y1="309" x2="442" y2="340" stroke="#3a2a1e" stroke-width="4" stroke-linecap="round"/>
 <line x1="476" y1="309" x2="482" y2="340" stroke="#3a2a1e" stroke-width="4" stroke-linecap="round"/>
@@ -18461,6 +18531,62 @@ document.addEventListener("click", function (e) {
     barBottles.addEventListener("animationend", function (e) {
       var w = e.target;
       if (w && w.parentNode === barBottles && w.classList.contains("tipsy")) w.classList.remove("tipsy");
+    });
+  }
+  // The rest of the party bar's props (bartop glassware, the used glasses, the stools) react
+  // to a tap the same way the back-bar bottles do: one delegated listener per group wobbles the
+  // tapped prop (one-shot .tipsy on its own base-pivoted <g>, never on its drawn coords) and
+  // plays a spatialized sound. Pan comes from getBBox (ignores the wobble transform, and unlike
+  // getBoundingClientRect isn't skewed by the idle animations under virtual-time). CSS gates
+  // pointer-events to .party-on, so these are inert with the bar hidden.
+  function barPropPan(w) {
+    try { var b = w.getBBox(); return Math.max(-1, Math.min(1, ((b.x + b.width / 2) / 680) * 2 - 1)); }
+    catch (e) { return 0; }
+  }
+  function wireBarWobbleGroup(id, onHit) {
+    var g = document.getElementById(id);
+    if (!g) return;
+    g.addEventListener("click", function (e) {
+      var w = e.target && e.target.closest ? e.target.closest(".bar-glass, .bar-stool") : null;
+      if (!w || w.parentNode !== g) return;
+      e.stopPropagation();
+      w.classList.remove("tipsy");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { w.classList.add("tipsy"); });
+      });
+      onHit(w, barPropPan(w));
+    });
+    g.addEventListener("animationend", function (e) {
+      var w = e.target;
+      if (w && w.parentNode === g && w.classList.contains("tipsy")) w.classList.remove("tipsy");
+    });
+  }
+  function barGlassHit(w, pan) {
+    var pitch = parseFloat(w.getAttribute("data-clink")) || 1.4; // per-glass pitch so they don't all sound alike
+    playGlassClinkSound(pitch + Math.random() * 0.12, pan);
+  }
+  wireBarWobbleGroup("kitchen-bar-glassware", barGlassHit);
+  wireBarWobbleGroup("kitchen-bar-usedglasses", barGlassHit);
+  wireBarWobbleGroup("kitchen-bar-stools", function (w, pan) { playDryClickSound(pan); }); // a soft wooden knock, not a clink
+  // the bartender: tapping his transparent upper-body hit rect throws the shaker up and catches
+  // it. The toss runs on #kitchen-bartender-shaker (a node distinct from the idle-shaking
+  // #kitchen-bartender-shake, so the transforms compose), cleared on animationend; a synthesized
+  // ice-in-a-metal-tin rattle plays alongside (and still plays under reduced-motion, sans toss).
+  var bartender = document.getElementById("kitchen-bartender");
+  var bartenderShaker = document.getElementById("kitchen-bartender-shaker");
+  if (bartender && bartenderShaker) {
+    bartender.addEventListener("click", function (e) {
+      var hit = e.target && e.target.closest ? e.target.closest("#kitchen-bartender-hit") : null;
+      if (!hit) return;
+      e.stopPropagation();
+      bartenderShaker.classList.remove("tossing");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { bartenderShaker.classList.add("tossing"); });
+      });
+      playShakerRattleSound("kitchen-bartender");
+    });
+    bartenderShaker.addEventListener("animationend", function (e) {
+      if (e.target === bartenderShaker && bartenderShaker.classList.contains("tossing")) bartenderShaker.classList.remove("tossing");
     });
   }
   // the skyline windows: a grid of togglable lit-window rects tiling each tower's face.
@@ -33934,6 +34060,50 @@ function playKnockboxThumpSound() {
       osc.start(t);
       osc.stop(t + 0.15);
     });
+  } catch (e) {}
+}
+// A cocktail-shaker rattle: ice cubes clattering inside a metal tin — a short flurry of bright,
+// tightly-bandpassed noise bursts (the cubes striking the walls) over a faint metallic body ring.
+// Spatialized to the bartender, one-shot via getSfxCtx (null while hidden → silent, no pile-up).
+function playShakerRattleSound(panId) {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t0 = ctx.currentTime;
+    var out = pannedOut(ctx, panId || "kitchen-bartender");
+    // ~7 quick ice-cube rattles across ~0.35s
+    for (var k = 0; k < 7; k++) {
+      var t = t0 + k * 0.045 + Math.random() * 0.012;
+      var nlen = Math.floor(ctx.sampleRate * 0.03);
+      var nb = ctx.createBuffer(1, nlen, ctx.sampleRate);
+      var nd = nb.getChannelData(0);
+      for (var i = 0; i < nlen; i++) nd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / nlen, 2.2);
+      var noise = ctx.createBufferSource();
+      noise.buffer = nb;
+      var bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = 3200 + Math.random() * 2600; // bright, cube-on-metal
+      bp.Q.value = 1.6;
+      var g = ctx.createGain();
+      var lvl = 0.09 + Math.random() * 0.05;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(lvl, t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+      noise.connect(bp); bp.connect(g); g.connect(out);
+      noise.start(t); noise.stop(t + 0.06);
+    }
+    // faint metallic body ring under the flurry
+    var ring = ctx.createOscillator();
+    ring.type = "triangle";
+    ring.frequency.value = 620;
+    var rbp = ctx.createBiquadFilter();
+    rbp.type = "bandpass"; rbp.frequency.value = 1800; rbp.Q.value = 0.9;
+    var rg = ctx.createGain();
+    rg.gain.setValueAtTime(0.0001, t0);
+    rg.gain.exponentialRampToValueAtTime(0.05, t0 + 0.02);
+    rg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.36);
+    ring.connect(rbp); rbp.connect(rg); rg.connect(out);
+    ring.start(t0); ring.stop(t0 + 0.4);
   } catch (e) {}
 }
 // Knock on a hollow gourd: a soft rind-tap transient over a low, muffled, resonant "bonk" —

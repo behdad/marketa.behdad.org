@@ -12864,8 +12864,9 @@ document.addEventListener("click", function (e) {
       var master = aquaMelCtx.createGain();
       master.gain.value = aquaMelVol();
       var aqOut = pannedOut(aquaMelCtx, projectorRoomPan()); // projector music: pan per room like the piano
-      lp.connect(master); master.connect(aqOut);
-      aquaMelCtx._pan = aqOut;
+      var aqRoomGain = aquaMelCtx.createGain(); aqRoomGain.gain.value = projectorRoomGain(); // balcony muffle
+      lp.connect(master); master.connect(aqRoomGain); aqRoomGain.connect(aqOut);
+      aquaMelCtx._pan = aqOut; aquaMelCtx._roomGain = aqRoomGain;
       aquaMelCtx._bus = lp;
       aquaMelCtx._masterGain = master;
       aquaMelCtx._nodes = []; // notes self-terminate — nothing continuous to stop
@@ -13054,8 +13055,9 @@ document.addEventListener("click", function (e) {
       var master = totoroMelodyCtx.createGain();
       master.gain.value = totoroMelVol(); // level follows the app volume button
       var toOut = pannedOut(totoroMelodyCtx, projectorRoomPan()); // projector music: pan per room like the piano
-      lp.connect(master); master.connect(toOut);
-      totoroMelodyCtx._pan = toOut;
+      var toRoomGain = totoroMelodyCtx.createGain(); toRoomGain.gain.value = projectorRoomGain(); // balcony muffle
+      lp.connect(master); master.connect(toRoomGain); toRoomGain.connect(toOut);
+      totoroMelodyCtx._pan = toOut; totoroMelodyCtx._roomGain = toRoomGain;
       totoroMelodyCtx._bus = lp;
       totoroMelodyCtx._masterGain = master;
       totoroMelodyCtx._nodes = []; // only self-terminating note voices; nothing continuous to stop
@@ -13252,8 +13254,9 @@ document.addEventListener("click", function (e) {
       var master = starsCtx.createGain();
       master.gain.value = starsVol(); // level follows the app volume button
       var starsOut = pannedOut(starsCtx, projectorRoomPan()); // pan per room like every projector bed
-      lp.connect(master); master.connect(starsOut);
-      starsCtx._pan = starsOut;
+      var starsRoomGain = starsCtx.createGain(); starsRoomGain.gain.value = projectorRoomGain(); // balcony muffle
+      lp.connect(master); master.connect(starsRoomGain); starsRoomGain.connect(starsOut);
+      starsCtx._pan = starsOut; starsCtx._roomGain = starsRoomGain;
       starsCtx._bus = lp;
       starsCtx._masterGain = master;
       starsCtx._nodes = []; // nothing continuous to stop
@@ -13476,8 +13479,9 @@ document.addEventListener("click", function (e) {
       master.gain.setValueAtTime(0.0001, now);
       master.gain.linearRampToValueAtTime(workoutVol(), now + 0.4); // linear: safe when muted (target 0)
       var wkOut = pannedOut(workoutCtx, projectorRoomPan());
-      bus.connect(comp); comp.connect(master); master.connect(wkOut);
-      workoutCtx._pan = wkOut;
+      var wkRoomGain = workoutCtx.createGain(); wkRoomGain.gain.value = projectorRoomGain(); // balcony muffle
+      bus.connect(comp); comp.connect(master); master.connect(wkRoomGain); wkRoomGain.connect(wkOut);
+      workoutCtx._pan = wkOut; workoutCtx._roomGain = wkRoomGain;
       workoutCtx._bus = bus;
       workoutCtx._masterGain = master;
       workoutCtx._nodes = []; // only self-terminating transients; nothing continuous to stop
@@ -13526,7 +13530,11 @@ document.addEventListener("click", function (e) {
   // door-pan re-reads after the strip slide finishes).
   window.__updateProjectorPans = function () {
     [starsCtx, workoutCtx, aquaMelCtx, totoroMelodyCtx].forEach(function (c) {
-      if (c && c._pan && c._pan.pan) { try { c._pan.pan.setTargetAtTime(projectorRoomPan(), c.currentTime, 0.4); } catch (e) {} }
+      if (!c) return;
+      try {
+        if (c._pan && c._pan.pan) c._pan.pan.setTargetAtTime(projectorRoomPan(), c.currentTime, 0.4);
+        if (c._roomGain) c._roomGain.gain.setTargetAtTime(projectorRoomGain(), c.currentTime, 0.4); // balcony muffle, door-reactive
+      } catch (e) {}
     });
   };
 
@@ -26475,6 +26483,7 @@ async def localfont(name):
       if (window.__homeCat) window.__homeCat("balcony");
       if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics(); // song swells/recedes with the door
       if (window.__updatePartyRoom) window.__updatePartyRoom(); // party bleeds in more through the open door
+      if (window.__updateProjectorPans) window.__updateProjectorPans(); // projector music un-muffles through the open door
     }
     balconyDoor.addEventListener("click", toggleBalconyDoor);
     balconyDoor.addEventListener("keydown", function (e) {
@@ -29414,10 +29423,21 @@ function panForElId(elId) {
 // Shared per-room pan for every wall-screen projector-music bed (piano / workout / totoro /
 // aqua melody) — one source of truth so they all pan the same way from each room. Balcony
 // reads the door's live on-screen position (re-settled after the strip slide in goToStage).
-var PROJECTOR_ROOM_PAN = { kitchen: 0.6, garden: -0.6, cuddly: 0, office: 0 };
+// the projector lives in the cuddly, so each room pans toward it: rooms left of the cuddly
+// (kitchen, garden) come from the right; the office (right of it) comes from the left
+var PROJECTOR_ROOM_PAN = { kitchen: 0.6, garden: 0.6, cuddly: 0, office: -0.6 };
 function projectorRoomPan(room) {
   room = room || window.currentStageName || "cuddly";
   return room === "balcony" ? panForElId("balcony-door") : (PROJECTOR_ROOM_PAN[room] || 0);
+}
+// projector music is muffled out on the balcony (through the walls); opening the balcony
+// door lets it through. every room but the balcony is full level.
+var PROJECTOR_BALCONY_OPEN = 0.7, PROJECTOR_BALCONY_SHUT = 0.34;
+function projectorRoomGain(room) {
+  room = room || window.currentStageName || "cuddly";
+  if (room !== "balcony") return 1;
+  var d = document.getElementById("balcony-door");
+  return (d && d.classList.contains("open")) ? PROJECTOR_BALCONY_OPEN : PROJECTOR_BALCONY_SHUT;
 }
 function pannedOut(ctx, elIdOrPan) {
   if (!ctx.createStereoPanner) return ctx.destination; // old Safari: mono

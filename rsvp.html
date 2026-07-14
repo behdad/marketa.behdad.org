@@ -1867,6 +1867,9 @@ footer{margin-top:2.6rem}
 .pb-dlg-img{display:block; margin:0 auto; max-width:100%; max-height:60vh; width:auto; height:auto;
   border-radius:3px; background:#fffdf8; box-shadow:0 6px 20px rgba(0,0,0,.5)}
 .pb-dlg-row{display:flex; gap:.35rem; justify-content:center; flex-wrap:wrap; margin-top:.7rem}
+/* photobooth send row as a 2-col grid: row1 Retake/Download, row2 Gmail/Email, Cancel spans */
+.pb-dlg-row.pb-dlg-grid{display:grid; grid-template-columns:1fr 1fr; gap:.4rem; width:min(20rem,100%); margin-left:auto; margin-right:auto}
+.pb-dlg-grid .pb-dlg-span{grid-column:1 / -1}
 .pb-dlg-btn{
   font:inherit; font-size:.76rem; cursor:pointer; color:var(--ink); background:var(--paper);
   border:none; border-radius:14px; padding:.3rem .55rem; white-space:nowrap;
@@ -2204,6 +2207,8 @@ footer{margin-top:2.6rem}
 .pm-booth .pmb-chip.active{background:var(--wine); color:#fff; border-color:var(--wine)}
 .pm-booth .pmb-hint{font-size:12px; color:var(--muted); text-align:center; line-height:1.4}
 .pm-booth .pmb-btn-row{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; width:100%}
+.pm-booth .pmb-btn-row.pmb-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.pm-booth .pmb-grid .pmb-btn{justify-content:center}
 .pm-booth .pmb-act{background:var(--cream); color:var(--ink); box-shadow:inset 0 0 0 1px var(--rule); font-size:13px; padding:9px 14px}
 .pm-booth .pmb-act svg{vertical-align:-1px; margin-right:4px}
 /* hacker news reader */
@@ -10893,7 +10898,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 <footer>
   <div class="foot-inner">
     <p class="contact"><span data-i="contact">Questions? Write to us:</span> <a href="mailto:marketa@behdad.org">marketa@behdad.org</a></p>
-    <a href="https://marketajakesova.ca" data-href-i="marketa_url">markéta</a> <span class="inf p">∞</span> <a href="https://behdad.org">behdad</a>
+    <a href="https://marketajakesova.ca" data-href-i="marketa_url" target="_blank" rel="noopener">markéta</a> <span class="inf p">∞</span> <a href="https://behdad.org" target="_blank" rel="noopener">behdad</a>
   </div>
   <div class="strip" aria-hidden="true"><span class="sp"></span><span class="sb"></span></div>
 </footer>
@@ -20816,9 +20821,18 @@ async def localfont(name):
       g.font = "italic 700 62px Georgia, 'Times New Roman', serif";
       g.fillText(pbText("pb_frame_married_text"), side + PW / 2, by + bh / 2 + 4);
     } else if (frame === "hearts") {
-      pbHeart(g, side + PW - 116, top + 96, 52, "#d9a6a6");
-      pbHeart(g, side + PW - 64, top + 148, 40, "#8e3a4a");
-      pbHeart(g, side + PW - 158, top + 162, 34, "#7f9ec0");
+      // a generous heart frame hugging the edges/corners, center kept clear so faces
+      // stay uncovered. Seeded so the scatter is stable across re-composes (look/frame swaps).
+      var hcx = side + PW / 2, hcy = top + PW / 2, half = PW / 2;
+      var hcolors = ["#d9a6a6", "#8e3a4a", "#7f9ec0", "#c68e95", "#4a6b94", "#d9749a"];
+      var hseed = 0x2545f491;
+      var hrnd = function () { hseed = (hseed * 1103515245 + 12345) & 0x7fffffff; return hseed / 0x7fffffff; };
+      for (var hi = 0; hi < 56; hi++) {
+        var ang = hrnd() * Math.PI * 2;
+        var edge = half / Math.max(Math.abs(Math.cos(ang)), Math.abs(Math.sin(ang))); // center→square-border along ang
+        var rr = edge * (0.66 + hrnd() * 0.31);   // outer band only → periphery bias, center clear
+        pbHeart(g, hcx + Math.cos(ang) * rr, hcy + Math.sin(ang) * rr, 20 + hrnd() * 34, hcolors[hi % hcolors.length]);
+      }
       g.fillStyle = "#f0c86a";
       g.font = "700 64px Georgia, 'Times New Roman', serif";
       g.fillText("∞", side + PW - 108, top + 92);
@@ -20994,7 +21008,7 @@ async def localfont(name):
   }
   function openGmailCompose() {
     try { window.open("https://mail.google.com/mail/?view=cm&fs=1&to=marketa@behdad.org&su=" +
-      encodeURIComponent(pbText("pb_email_subject")) + "&body=" + encodeURIComponent(pbText("pb_email_body")), "_blank"); } catch (e) {}
+      encodeURIComponent(pbText("pb_email_subject")) + "&body=" + encodeURIComponent(pbText("pb_email_body")), "_blank", "noopener"); } catch (e) {}
   }
   function openMailto() {
     try { window.location.href = "mailto:marketa@behdad.org?subject=" +
@@ -21039,7 +21053,9 @@ async def localfont(name):
         (url ? '<img class="pb-dlg-img" alt="">' : "") +
         '<div class="pb-frame-row"><span class="pb-frame-label">' + pbText("pb_frame_heading") + '</span>' + frameChips + '</div>' +
         '<div class="pb-dlg-hint">' + pbText(copied ? "pb_hint_copied" : "pb_hint_nocopy") + '</div>' +
-        '<div class="pb-dlg-row">' +
+        // row 1: Retake, Download — row 2: Gmail, Email — Cancel spans below (2-col grid)
+        '<div class="pb-dlg-row pb-dlg-grid">' +
+          '<button type="button" class="pb-dlg-btn" data-act="retake">' + pbText("pb_btn_retake") + '</button>' +
           '<button type="button" class="pb-dlg-btn" data-act="download">' + pbText("pb_btn_download") + '</button>' +
           // same envelope icons as the RSVP section's send buttons (the Gmail one in the site palette)
           // Android: no Gmail button — the web-compose URL hands off to the Gmail app,
@@ -21052,8 +21068,7 @@ async def localfont(name):
           '<button type="button" class="pb-dlg-btn" data-act="email">' +
             '<svg width="15" height="12" viewBox="0 0 20 16" aria-hidden="true"><rect x="1" y="1" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M2 2l8 7 8-7" stroke="currentColor" stroke-width="1.5" fill="none"/></svg> ' +
             pbText("pb_btn_email") + '</button>' +
-          '<button type="button" class="pb-dlg-btn" data-act="retake">' + pbText("pb_btn_retake") + '</button>' +
-          '<button type="button" class="pb-dlg-btn" data-act="cancel">' + pbText("pb_btn_cancel") + '</button>' +
+          '<button type="button" class="pb-dlg-btn pb-dlg-span" data-act="cancel">' + pbText("pb_btn_cancel") + '</button>' +
         '</div>' +
       '</div>';
     if (url) { var img = bd.querySelector(".pb-dlg-img"); if (img) img.src = url; }
@@ -23519,7 +23534,7 @@ async def localfont(name):
         var frLabel = document.createElement("div"); frLabel.className = "pmb-row-label"; frLabel.textContent = PB.text("pb_frame_heading");
         var frRow = chipRow(PB.frames, function (fr) { return fr.id === curFrame; }, function (fr) { curFrame = fr.id; });
         var hint = document.createElement("div"); hint.className = "pmb-hint"; hint.textContent = PB.text(copied ? "pb_hint_copied" : "pb_hint_nocopy");
-        var btnRow = document.createElement("div"); btnRow.className = "pmb-btn-row";
+        var btnRow = document.createElement("div"); btnRow.className = "pmb-btn-row pmb-grid";
         function mkBtn(act, label, svg) {
           var b = document.createElement("button");
           b.type = "button"; b.className = "pmb-btn pmb-act";
@@ -23534,12 +23549,13 @@ async def localfont(name):
           });
           return b;
         }
+        // row 1: Retake, Download — row 2: Gmail, Email (2-col grid)
+        btnRow.appendChild(mkBtn("retake", PB.text("pb_btn_retake")));
         btnRow.appendChild(mkBtn("download", PB.text("pb_btn_download")));
         // Android drops the Gmail web-compose prefill into the app and can't paste images —
         // its plain Email button opens the native chooser, the right path there (matches the monitor)
         if (!/Android|iPhone|iPad|iPod/.test(navigator.userAgent)) btnRow.appendChild(mkBtn("gmail", PB.text("pb_btn_gmail"), PB_GMAIL_SVG));
         btnRow.appendChild(mkBtn("email", PB.text("pb_btn_email"), PB_MAIL_SVG));
-        btnRow.appendChild(mkBtn("retake", PB.text("pb_btn_retake")));
         wrap.appendChild(lead); wrap.appendChild(img);
         wrap.appendChild(fxLabel); wrap.appendChild(fxRow);
         wrap.appendChild(frLabel); wrap.appendChild(frRow);

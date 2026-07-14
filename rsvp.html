@@ -13648,13 +13648,14 @@ document.addEventListener("click", function (e) {
     applyPose(beh);
   };
   document.addEventListener("visibilitychange", function () { if (document.hidden) leave(); });
-  // Tap/click Irene (only while she's showing) → a playful wobble + a light giggle. The
-  // wobble is a one-shot `.giggling` class driving the rotate-property wiggle on the
+  // Tap/click Irene (only while she's showing) → a playful wobble + a light giggle, plus a
+  // boop to a fresh random pose that also resets her visit so she lingers longer. The wobble
+  // is a one-shot `.giggling` class driving the rotate-property wiggle on the
   // #cuddly-irene-giggle wrapper; restart it cleanly on rapid re-clicks (remove, force a
   // reflow, re-add — offsetWidth doesn't exist on SVG, so read a layout box) and self-clear
   // it on animationend. The giggle sound is cooldown-gated so it can't spam, and hasFocus-
   // gated like every other unattended sound. Reduced motion drops the wobble (CSS), sound stays.
-  var lastGiggleSound = 0;
+  var lastGiggleSound = 0, lastTickleHop = 0;
   function playIreneGiggle() {
     try {
       var ctx = getSfxCtx();
@@ -13707,6 +13708,18 @@ document.addEventListener("click", function (e) {
     }
     var now = Date.now();
     if (now - lastGiggleSound > 320 && onScreen() && document.hasFocus()) { lastGiggleSound = now; playIreneGiggle(); }
+    // Boop her to a random pose (plain pick over the valid pool, so it MAY be her current one →
+    // no move) and restart a fresh full visit so each tickle pushes her exit out. Clear the
+    // pending fade/leave first — runStep overwrites hideTimer without clearing the old one.
+    // Cooldown-gated so a rapid tap-storm doesn't churn poses.
+    if (now - lastTickleHop > 320) {
+      lastTickleHop = now;
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+      if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; }
+      clearCatPlay();
+      var pool = ireneePool();
+      runStep(pool[Math.floor(Math.random() * pool.length)], 1);
+    }
   }
   irene.addEventListener("animationend", function (e) {
     if (e.animationName === "irene-giggle") irene.classList.remove("giggling");

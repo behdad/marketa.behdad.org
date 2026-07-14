@@ -12233,6 +12233,7 @@ var T = {
     kbd_console: "open the console",
     kbd_digits: "jump to a room",
     kbd_devices: "monitor / laptop / cellphone",
+    kbd_enter: "Activate main scene feature",
     kbd_d: "day ↔ night (or ↑ / ↓)",
     kbd_r: "reset the loft",
     kbd_kitten: "toggle the kitten",
@@ -12619,6 +12620,7 @@ var T = {
     kbd_console: "otevřít konzoli",
     kbd_digits: "skok do místnosti",
     kbd_devices: "monitor / notebook / telefon",
+    kbd_enter: "Aktivovat hlavní prvek scény",
     kbd_d: "den ↔ noc (nebo ↑ / ↓)",
     kbd_r: "resetovat loft",
     kbd_kitten: "přepnout kotě",
@@ -13122,6 +13124,7 @@ window.addEventListener("hashchange", function () {
       ["<kbd>`</kbd>", "kbd_console"],
       ["<kbd>1</kbd>–<kbd>5</kbd>", "kbd_digits"],
       ["<kbd>m</kbd><kbd>l</kbd><kbd>c</kbd>", "kbd_devices"],
+      ["<kbd>Enter</kbd>", "kbd_enter"],
       ["<kbd>Esc</kbd><kbd>Backspace</kbd>", "kbd_esc"],
       ["<kbd>t</kbd>", "kbd_t"],
       ["<kbd>Shift</kbd>+<kbd>1…7</kbd>", "kbd_trips"],
@@ -25188,6 +25191,7 @@ async def localfont(name):
   window.__refitZoom = refitZoom;
   window.__monitorZoomIn = function () { zoomIn(monitor); };
   window.__monitorZoomOut = zoomOut;
+  window.__toggleMonitorZoom = function () { if (zoomEl === monitor) zoomOut(); else zoomIn(monitor); }; // 'Enter' in the office toggles the monitor zoom
   // each device's bezel ✕ dismisses its own zoom. pointerdown + stopPropagation so it
   // doesn't bubble to the device group's zoom-in handler; the viewport's capture-phase
   // pointerdown already bails when the target sits inside the zoomed device.
@@ -35890,6 +35894,17 @@ function spawnDustMote(container) {
     } else if (e.key === "t" || e.key === "T") {
       e.preventDefault();
       if (window.__nextTrip) window.__nextTrip(); // next drug trip (cyclic; interrupts a running one)
+    } else if (e.key === "Enter") {
+      // Enter activates the MAIN feature of the room you're in. Skip when a button/link is focused —
+      // Enter should activate that instead (activeControlFocused's own preventDefault also bails at top).
+      if (activeControlFocused()) return;
+      e.preventDefault();
+      var enterRoom = window.currentStageName;
+      if (enterRoom === "kitchen") { if (window.__kitchenDoNext) window.__kitchenDoNext(); }        // next pending coffee step
+      else if (enterRoom === "garden") { if (window.party) window.party(!window.party()); }          // toggle the party
+      else if (enterRoom === "cuddly") { if (window.__cuddlyProjector) window.__cuddlyProjector.cycle(); } // next projector channel
+      else if (enterRoom === "office") { if (window.__toggleMonitorZoom) window.__toggleMonitorZoom(); }   // toggle monitor zoom
+      else if (enterRoom === "balcony") { if (window.phone) window.phone(!window.phone()); }         // toggle the cellphone
     }
   });
 
@@ -36036,6 +36051,21 @@ function spawnDustMote(container) {
       knockbox.classList.remove("invite-pulse");
     }
   }
+  // 'Enter' in the kitchen activates the next pending coffee step — whatever the invite arrow
+  // points at (same order as updateKitchenInvite). Clicking an element runs its onActivate,
+  // which drives the fly-to/step animations, so this advances the sequence one beat.
+  window.__kitchenDoNext = function () {
+    var nx = null;
+    if (!kitchenPowered) nx = "kitchen-lamarzocco";
+    else if (!kitchenWarmedUp) nx = null; // warming up — nothing actionable yet
+    else if (portafilterSpent) nx = "kitchen-knockbox";
+    else if (!kitchenGround) nx = "kitchen-grinder";
+    else if (!tamped) nx = "kitchen-tamper";
+    else if (!portafilter || !portafilter.classList.contains("done")) nx = "kitchen-portafilter";
+    else { var sc = document.getElementById("kitchen-shotcup"); nx = (sc && sc.classList.contains("filled")) ? "kitchen-shotcup" : null; }
+    if (nx) { var el = document.getElementById(nx); if (el) el.dispatchEvent(new MouseEvent("click", { bubbles: true })); }
+    return nx;
+  };
   window.resetCoffeeSequence = function () {
     kitchenRounds++;
     kitchenGround = false;

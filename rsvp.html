@@ -11453,8 +11453,11 @@ var T = {
       cine_dusk: "Day turns to night.",
       cine_finale: "And the sky blooms.",
       cine_phone: "A little play with the pocket phone…",
+      cine_piano: "Evening. A little piano under the stars…",
       cine_encore: "Encore — the loft in blacklight…",
       cine_party: "And the garden throws a party…",
+      cine_dj: "The DJ can't help himself.",
+      cine_dance: "…and the beat rolls on.",
       cine_encore_end: "And that's their day. Again tomorrow…"
     },
     ed_city: "Edmonton",
@@ -11826,8 +11829,11 @@ var T = {
       cine_dusk: "Den se mění v noc.",
       cine_finale: "A nebe rozkvete.",
       cine_phone: "Trocha hraní s kapesním telefonem…",
+      cine_piano: "Večer. Trocha klavíru pod hvězdami…",
       cine_encore: "Přídavek — loft v černém světle…",
       cine_party: "A zahrada pořádá večírek…",
+      cine_dj: "DJ se neudrží.",
+      cine_dance: "…a rytmus jede dál.",
       cine_encore_end: "A to je jejich den. Zítra zas…"
     },
     ed_city: "Edmonton",
@@ -36892,6 +36898,14 @@ function spawnDustMote(container) {
     // a no-op before the encore has switched it on; keeps the party switch in sync too)
     setEncoreUv(false);
     if (window.__setGardenParty) window.__setGardenParty(false); // the encore's garden party never lingers past the show
+    // the cuddly chapter's night-sky piano rides a whole-loft projector music channel; a
+    // mid-show skip must silence its bed (→ off) or the piano would play on stranded past the
+    // take-over. Only a music channel is switched off (fire/off are already silent), so a
+    // resting projector is left as it is.
+    if (window.__cuddlyProjector && window.__cuddlyProjector.channel) {
+      var pch = window.__cuddlyProjector.channel();
+      if (pch === "stars" || pch === "workout" || pch === "totoro" || pch === "aqua") window.__cuddlyProjector.set("off");
+    }
     if (window.__closePhoneModal) window.__closePhoneModal(true); // the phone beat's modal must never orphan over a take-over (idempotent)
     if (cinematicTeardown) { cinematicTeardown(); cinematicTeardown = null; }
     if (skipBtn) skipBtn.hidden = true;
@@ -37085,8 +37099,8 @@ function spawnDustMote(container) {
       tapAt(1900, "garden-candle-1"),                    // light a candle
       tapAt(1500, "garden-candle-2"),                    // and the other
       tapAt(2200, "garden-guitar"), [0, cine("cine_song")], // the couple's real song → everything grooves
-      tapAt(2400, "witchy-door-1"),                      // open the fairy chest → she dances to the beat
-      [1950, function () { cursorGlideTo("garden-drugsbox", 450); }],
+      tapAt(2200, "witchy-door-1"),                      // open the fairy chest → she dances to the beat
+      [1800, function () { cursorGlideTo("garden-drugsbox", 450); }],
       [450, function () {
         // show the tap (glide + ripple) but trip via the scripted variant — a real
         // drugsbox click draws from the shuffled deck instead of the bloom
@@ -37094,46 +37108,38 @@ function spawnDustMote(container) {
         if (pd) cursorRipple(pd.x, pd.y);
         mushroomTrip();
       }], [0, cine("cine_bloom")],                       // the plants bloom fractals
-      [6800, visit("cuddly")], [0, cine("cine_sway")],   // hold on the trip, then move on
-      // CUDDLY — the couple sway to the song; play with Octi
-      tapAt(2200, "cuddly-octopus"),                     // Octi wobbles
-      tapAt(2000, "cuddly-pillow-1"),                    // squish a pillow
-      tapAt(1700, "cuddly-trunk"),                       // Octi tumbles into the chest
-      [2600, visit("office")], [0, cine("cine_office")],
-      // OFFICE — wake the desktop and tour its life: mail (the RSVP) → a family call → the
-      // film → a console sign-off. The boot zooms the view up to the screen on its own; each
-      // app opens from the dock and closes back to the desktop before the next (they're
-      // mutually exclusive and every open() needs the desktop showing). Every gate is a
-      // state poll with a timeout, so an app that fails to open just skips, never stalls.
+      [5600, visit("cuddly")], [0, cine("cine_sway")],   // hold on the trip, then move on
+      // CUDDLY — the couple sway to the song; play with Octi, then an evening at the projector
+      tapAt(2100, "cuddly-octopus"),                     // Octi wobbles
+      tapAt(1900, "cuddly-pillow-1"),                    // squish a pillow
+      // the wallscreen projector: switch it to the night-sky channel — a public-domain piano
+      // piece begins (the now-playing toast names it), the couple sway on beneath the stars,
+      // and Irene's cameo is in frame for the linger. It's a whole-loft music channel, so it
+      // suspends the day's garden song while it plays (restored when we power it off below).
+      [1700, function () { if (window.__cuddlyProjector) window.__cuddlyProjector.set("stars"); }],
+      [0, cine("cine_piano")],
+      [6000, function () {}],                            // hold on the night sky + piano (Irene in the room)
+      // OFFICE — the one desk beat that matters: the RSVP in the inbox, the whole point of the
+      // night. Leaving the nook, power the projector off (its piano bed stops; the day's song is
+      // restored) and immediately hush that song, so the booted monitor lands on the desktop and
+      // not the now-playing player. The boot zooms the view up to the screen on its own; the gate
+      // is a state poll with a timeout, so a failed open just skips, never stalls.
+      [2400, function () {
+        cursorHide();
+        goToStage("office");
+        if (window.__cuddlyProjector) window.__cuddlyProjector.set("off"); // stop the piano bed; restores the day's song
+        cineHushSong();               // ...then hush it (currentTime 0) so the monitor shows the desktop, not the player
+      }], [0, cine("cine_office")],
       tapAt(1500, "office-pc-desk-trio"),                // power the PC → the monitor boots Fedora
       waitFor(function () { return monitorShowing("caps"); }, 4500), // ~1s boot; wait for the 14-app desktop
-      [1000, null], [0, cine("cine_boot")],              // let it settle on the desktop
+      [900, null], [0, cine("cine_boot")],               // let it settle on the desktop
       // MAIL — the RSVP ask, the whole point of the night
       tapAt(1300, "monitor-dock-mail"), [0, cine("cine_mail")],
       waitFor(function () { return monitorShowing("mail"); }, 1800),
       tapAt(1600, "monitor-mail-row-rsvp"),              // open the RSVP message
-      [4200, cineCloseApp],                              // read it, then back to the desktop
+      [3800, cineCloseApp],                              // read it, then back to the desktop
       waitFor(function () { return monitorShowing("caps"); }, 1800),
-      // TEHRAN — a warm birthday call to Behdad's family
-      tapAt(1100, "monitor-dock-tehran"), [0, cine("cine_call")],
-      waitFor(tehranConnected, 5500),                    // rings ~3.4s, then they pick up
-      [5000, null],                                      // linger on the living-room scene
-      tapAt(700, "monitor-tehran-close"),                // hang up — the goodbye plays out (~1.5s)
-      waitFor(function () { return !monitorShowing("tehran"); }, 3500),
-      // FILM — Markéta's downtown-dance, with sound (the song steps aside for it)
-      [700, cineHushSong],                               // stop the song so the screen stays on the desktop, not the player
-      tapAt(1000, "monitor-dock-video"), [0, cine("cine_film")],
-      waitFor(function () { return monitorShowing("video"); }, 1800),
-      [400, playCineFilm],                               // play (primed in the Watch gesture so this late play() isn't blocked)
-      [8000, function () { cineClick("monitor-video-close"); }], // ~8s of film, then close
-      waitFor(function () { return monitorShowing("caps"); }, 1800),
-      // CONSOLE — a sign-off: the two wedding dates, in plain text
-      tapAt(1000, "monitor-dock-terminal"), [0, cine("cine_console")],
-      waitFor(function () { return monitorShowing("terminal"); }, 1800),
-      [1000, cineTypeWeddings],                          // type loft.weddings + Enter → the reply prints
-      [3400, function () { cineClick("monitor-term-close"); }], // read the reply, then close
-      waitFor(function () { return monitorShowing("caps"); }, 1800),
-      // desk work done: pull the view back out of the screen, bring the day's music back
+      // desk done: pull the view back out of the screen, bring the day's music back for the finale
       [500, function () { cursorHide(); if (window.__monitorZoomOut) window.__monitorZoomOut(); cineResumeSong(); }],
       tapAt(1400, "office-lamp"),                        // then dim the lights
       tapAt(1200, "office-pendant"),
@@ -37215,7 +37221,14 @@ function spawnDustMote(container) {
       // reset (and stopCinematic's teardown) clear the party/dancers/confetti to a fresh loft.
       [1500, visit("garden")],
       [500, function () { if (window.__setGardenParty) window.__setGardenParty(true, false); }], [0, cine("cine_party")],
-      [6500, function () {}], // hold on the full party so the beat lands
+      // a lit party auto-rotates its 9 shuffled dances (~15s each) — the show drives the
+      // rotation by hand so the viewer sees more than one groove land. First the DJ, at his
+      // booth, gets an emphatic headbang; then a manual skip jumps to the NEXT dance (the
+      // now-playing toast names each groove as it changes, and the colourful dancers glow
+      // neon through the encore's blacklight).
+      [3000, function () { cineClick("garden-dj-headbang"); }], [0, cine("cine_dj")],
+      [2600, function () { if (window.__nextPartyDance) window.__nextPartyDance(); }], [0, cine("cine_dance")],
+      [3400, function () {}], // hold on the fresh dance so the beat lands
       // curtain call: back where the day began, a held beat of stillness, the song
       // fades out and the cursor settles on the extinguisher — then the show formally
       // ends and the pull runs through the game's real handler, exactly as a player's

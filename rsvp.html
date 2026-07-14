@@ -20679,8 +20679,8 @@ document.addEventListener("click", function (e) {
       laser: "laser([seconds]) — loose a red dot the cat chases; laser(false) turns it off",
       party: "party() throws the garden party; party(false) ends it",
       blacklight: "blacklight() — UV wash over the whole loft; blacklight(false) off",
-      trip: "trip([name]) — start a named or random trip: shrooms · acid · froggies · dmt · molly · k · iboga",
-      goto: "goto(room) — jump to kitchen · garden · cuddly · office · balcony",
+      trip: "trip(\"name\") — a named trip IN QUOTES, e.g. trip(\"acid\"); or a number 1–7, e.g. trip(3); or trip() for a random one. names: shrooms · acid · froggies · dmt · molly · k · iboga",
+      goto: "goto(\"room\") — a room name IN QUOTES, e.g. goto(\"garden\"); or a number 1–5, e.g. goto(3). rooms: kitchen · garden · cuddly · office · balcony",
       rooms: "rooms() — list the five rooms",
       night: "night() — bring dusk down over the loft",
       day: "day() — bring the daylight back",
@@ -39064,8 +39064,11 @@ function spawnDustMote(container) {
     if (window.__tripActive) return "one at a time — let this one wear off first.";
     var variant;
     if (name != null && name !== "") {
-      variant = TRIP_ALIASES[String(name).toLowerCase().trim()];
-      if (!variant) return "unknown trip. try: shrooms · acid · froggies · dmt · molly · k · iboga";
+      var s = String(name).toLowerCase().trim();
+      var n = parseInt(s, 10); // also accept a number 1..7 (same canonical order as Shift+1..7)
+      var CANON = ["psychedelic", "strobe", "melt", "dmt", "molly", "ketamine", "iboga"];
+      variant = (String(n) === s && n >= 1 && n <= CANON.length) ? CANON[n - 1] : TRIP_ALIASES[s];
+      if (!variant) return "unknown trip. try: shrooms · acid · froggies · dmt · molly · k · iboga (or 1–7)";
     } else {
       variant = TRIP_VARIANTS[(Math.random() * TRIP_VARIANTS.length) | 0];
     }
@@ -39079,7 +39082,9 @@ function spawnDustMote(container) {
 
   window.goto = function (room) {
     room = String(room == null ? "" : room).toLowerCase().trim();
-    if (ROOM_NAMES.indexOf(room) === -1) return "rooms: " + ROOM_NAMES.join(" · ");
+    var n = parseInt(room, 10); // also accept a room number 1..5 (same order as the keyboard 1-5)
+    if (String(n) === room && n >= 1 && n <= ROOM_NAMES.length) room = ROOM_NAMES[n - 1];
+    if (ROOM_NAMES.indexOf(room) === -1) return "rooms: " + ROOM_NAMES.map(function (r, i) { return (i + 1) + " " + r; }).join(" · ");
     if (!window.goToStage) return "the navigation hook isn't ready yet.";
     window.goToStage(room);
     return "→ " + room;

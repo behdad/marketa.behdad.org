@@ -18339,7 +18339,7 @@ document.addEventListener("click", function (e) {
         '<circle cx="-9" cy="2.6" r="1.5" fill="#fffdf8"/><circle cx="0" cy="3.4" r="1.5" fill="#fffdf8"/><circle cx="9" cy="2.6" r="1.5" fill="#fffdf8"/>' +
         '<circle cx="0" cy="-8" r="1.7" fill="#8e3a4a"/>';
       alienLayer.appendChild(g);
-      arcadeAliens.push({ el: g, x: ax, y: ay, vy: 0.023 + Math.random() * 0.0158 }); // ~28% slower descent
+      arcadeAliens.push({ el: g, x: ax, y: ay, vy: 0.018 + Math.random() * 0.012 }); // gentler default descent; the score ramp speeds it up
     }
 
     function fireShot() {
@@ -18374,7 +18374,8 @@ document.addEventListener("click", function (e) {
     // every ARCADE_MILESTONE kills the run is rewarded: a bright chime (panned to the screen) plus a
     // gold shockwave ring rippling out from the ship — a wordless "streak!" nod on top of the pop flash.
     function arcadeMilestone() {
-      playFairyChimeSound("office-monitor");
+      setTimeout(function () { playFairyChimeSound("office-monitor"); }, 150); // let the kill blip land first so the chime rings clear, not masked
+
       if (arcadeReduce || !alienLayer) return;
       var sx = arcadeChairX();
       var wrap = document.createElementNS(SVGNS_ARC, "g");
@@ -18395,9 +18396,10 @@ document.addEventListener("click", function (e) {
       arcadeLastShot += dt;
       if (arcadeLastShot >= SHOT_MS) { arcadeLastShot = 0; fireShot(); }
       var i, a;
+      var arcadeSpeedMul = 1 + Math.min(0.8, Math.floor(arcadeScore / 10) * 0.1); // gentle start; +10% every 10 kills, capped at 1.8x
       for (i = arcadeAliens.length - 1; i >= 0; i--) {
         a = arcadeAliens[i];
-        a.y += a.vy * dt;
+        a.y += a.vy * arcadeSpeedMul * dt;
         a.el.setAttribute("transform", "translate(" + a.x.toFixed(1) + "," + a.y.toFixed(1) + ")");
         if (a.y > 288) { stopArcade(true); return; } // a saucer reached the chair/floor — game over
       }
@@ -20035,7 +20037,7 @@ document.addEventListener("click", function (e) {
     var flairActive = false, flairRaf = null, flairLastT = 0;
     var flairItems = [], flairLastSpawn = 0, flairElapsed = 0;
     var flairScore = 0, flairMiss = 0;
-    var FLAIR_MILESTONE = 5; // reward a chime + shockwave every this-many catches
+    var FLAIR_MILESTONE = 10; // reward a chime + shockwave every this-many catches (aligned with the speed step)
     var flairHud = null, flairHudScore = null, flairHudHigh = null, flairHudLives = null;
 
     function flairShakerX() { return 336 + barOffsetX; } // shaker-mouth centre in stage-local coords (kitchen-bar has no transform)
@@ -20082,7 +20084,7 @@ document.addEventListener("click", function (e) {
       g.setAttribute("transform", "translate(" + x.toFixed(1) + "," + FLAIR_START_Y + ")");
       g.innerHTML = spec.svg;
       flairLayer.appendChild(g);
-      flairItems.push({ el: g, x: x, y: FLAIR_START_Y, vy: 0.09 + Math.random() * 0.03, bad: spec.bad });
+      flairItems.push({ el: g, x: x, y: FLAIR_START_Y, vy: 0.06 + Math.random() * 0.022, bad: spec.bad }); // gentler default drop; the score ramp (below) speeds it up
     }
 
     function flairCatchFlash(x, y, good) {
@@ -20110,7 +20112,7 @@ document.addEventListener("click", function (e) {
     function flairStep(dt) {
       flairElapsed += dt;
       var spawnMs = Math.max(520, 1150 - flairElapsed * 0.05);        // ramp: spawn faster the longer you last
-      var speedMul = 1 + Math.min(1.1, flairElapsed / 26000);         // ramp: fall quicker over time
+      var speedMul = 1 + Math.min(1.0, Math.floor(flairScore / 10) * 0.12); // gentle start; +12% every 10 catches, capped at 2x
       flairLastSpawn += dt;
       if (flairLastSpawn >= spawnMs) { flairLastSpawn = 0; flairSpawn(); }
       var sx = flairShakerX();
@@ -20177,7 +20179,8 @@ document.addEventListener("click", function (e) {
     // every FLAIR_MILESTONE catches: a bright chime (panned to the bartender) + a gold shockwave ring
     // rippling from the shaker mouth — the bar's echo of the arcade's streak reward.
     function flairMilestone(sx) {
-      playFairyChimeSound("kitchen-bartender");
+      setTimeout(function () { playFairyChimeSound("kitchen-bartender"); }, 170); // clear the louder glass-clink so the reward chime isn't masked
+
       if (flairReduce || !flairLayer) return;
       var wrap = document.createElementNS(SVGNS_FLAIR, "g");
       wrap.setAttribute("transform", "translate(" + sx.toFixed(1) + "," + FLAIR_CATCH_Y + ")");

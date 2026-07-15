@@ -13382,6 +13382,85 @@ var uvPartyOn = false;
 function applyUvMode() { setUvMode(uvPartyOn); }
 window.__setUvMode = setUvMode; // reset / room-leave can force the raw class off
 window.__setUvParty = function (on) { uvPartyOn = !!on; applyUvMode(); }; // the balcony switch
+// Kitchen-only: settle into the bar under the blacklight a while and it gently EASES toward a
+// softer light (kept blue, not off) so you can enjoy the scene/drinks; it snaps back to full
+// blacklight the instant you leave the kitchen, the party ends, a trip takes over, or a device
+// zooms. The blacklight is one whole-strip filter (#loft-game-strip.uv-mode), and we're always
+// viewing exactly one room, so easing that filter WHILE in the kitchen reads as "toned down in
+// the kitchen". We ramp an inline strip.style.filter under our own control (a blanket CSS
+// transition on .uv-mode would also animate the trip variants' own filter keyframes — see the
+// note at #loft-game-strip.uv-mode) and hand control straight back to the CSS (strip.style.
+// filter="") on every exit. Gated fully OFF during a trip: the rAF step self-cancels and a trip
+// clearing re-arms a fresh linger.
+(function () {
+  var strip = document.getElementById("loft-game-strip");
+  if (!strip) return;
+  var viewport = document.querySelector(".hunt-viewport");
+  var LINGER_MS = 18000; // settle-in before the light starts to ease
+  var RAMP_MS = 3500;    // ease-down duration
+  var reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  // Strip-filter endpoints: full uv (t=0, matches the .uv-mode CSS exactly) -> a softer, still
+  // cool-blue wash (t=1). Tuned to keep some ambiance rather than go neutral daylight.
+  var B0 = 0.5, S0 = 2.6, H0 = 220, C0 = 1.3;
+  var B1 = 0.72, S1 = 1.5, H1 = 90, C1 = 1.12;
+  var lingerTimer = 0, rafId = 0, easing = false, rampStart = 0;
+  function nowMs() { return (window.performance && performance.now) ? performance.now() : Date.now(); }
+  function gateOpen() {
+    return !!window.__gardenPartyOn
+      && window.currentStageName === "kitchen"
+      && strip.classList.contains("uv-mode")
+      && !window.__tripActive
+      && !(viewport && viewport.classList.contains("device-zoomed"));
+  }
+  function applyEase(t) {
+    var s = t * t * (3 - 2 * t); // smoothstep — calmer than linear
+    var b = B0 + (B1 - B0) * s, sa = S0 + (S1 - S0) * s, h = H0 + (H1 - H0) * s, c = C0 + (C1 - C0) * s;
+    strip.style.filter = "brightness(" + b.toFixed(3) + ") saturate(" + sa.toFixed(3) + ") hue-rotate(" + h.toFixed(1) + "deg) contrast(" + c.toFixed(3) + ")";
+    // The make-glass counter-filter is the exact affine inverse (reverse order) of the CURRENT
+    // strip filter, so the cocktail he's mixing always reads its true colours no matter how far
+    // we've eased — at t=0 this reproduces the shipping #kitchen-bar-make CSS rule exactly.
+    var mk = document.getElementById("kitchen-bar-make");
+    if (mk) mk.style.filter = "contrast(" + (1 / c).toFixed(3) + ") hue-rotate(" + (-h).toFixed(1) + "deg) saturate(" + (1 / sa).toFixed(3) + ") brightness(" + (1 / b).toFixed(3) + ")";
+  }
+  function clearInline() { // hand the blacklight back to the CSS .uv-mode rules
+    strip.style.filter = "";
+    var mk = document.getElementById("kitchen-bar-make");
+    if (mk) mk.style.filter = "";
+  }
+  function stop() {
+    if (lingerTimer) { clearTimeout(lingerTimer); lingerTimer = 0; }
+    if (rafId) { window.cancelAnimationFrame(rafId); rafId = 0; }
+    easing = false;
+    clearInline();
+  }
+  function step() {
+    rafId = 0;
+    if (!gateOpen()) { stop(); return; } // trip started / left the kitchen mid-ramp -> snap back
+    var e = Math.min(1, (nowMs() - rampStart) / RAMP_MS);
+    applyEase(e);
+    if (e < 1) rafId = window.requestAnimationFrame(step);
+  }
+  function startRamp() {
+    lingerTimer = 0;
+    if (!gateOpen()) { clearInline(); return; }
+    easing = true;
+    if (reduce) { applyEase(1); return; } // calm mode: settle straight to the softer light, no ramp
+    rampStart = nowMs();
+    rafId = window.requestAnimationFrame(step);
+  }
+  function evaluate() {
+    if (gateOpen()) {
+      if (!easing && !lingerTimer && !rafId) lingerTimer = setTimeout(startRamp, LINGER_MS);
+    } else if (lingerTimer || rafId || easing || strip.style.filter) {
+      stop();
+    }
+  }
+  window.__updateKitchenUvLinger = evaluate; // goToStage + setGardenParty ping this on room/party change
+  // A cheap, side-effect-free poll: catches gate changes that don't route through a hook (a trip
+  // starting/clearing, a device zoom) and re-arms a fresh linger once a trip clears. Idempotent —
+  // not the timer-spawned-particle class the accumulation-bug note warns about.
+  setInterval(evaluate, 500);
+})();
 // 'p' throws / dismisses the garden blacklight party — same as flipping the balcony switch
 // (which drives the UV, whisks to the garden, and runs the party). Plain keypress only.
 document.addEventListener("keydown", function (e) {
@@ -36774,6 +36853,7 @@ function spawnDustMote(container) {
     if (window.__updateTotoroMelody) window.__updateTotoroMelody(name === "cuddly", ROOM_FADE); // woodland melody follows the totoro channel
     if (window.__updateProjectorPans) window.__updateProjectorPans(); // all four projector-music beds pan to the new room from the shared table
     if (window.__updatePartyRoom) window.__updatePartyRoom(); // party is garden-sourced: pan + faintness per room
+    if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // leaving the kitchen snaps the eased blacklight back to full; entering it (re)arms the linger
     if (window.__updateWind) window.__updateWind(ROOM_FADE); // wind bed (balcony, + through the cuddly door) fades out over the room change too
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(name === "garden"); // birdsong only in the garden, and only by day
     if (window.__updatePartyMusic) window.__updatePartyMusic(ROOM_FADE); // techno party bed plays whole-loft while the party's on (room-agnostic, like the night-sky bed)
@@ -37907,6 +37987,7 @@ function spawnDustMote(container) {
     }
     updateAllPartyDances(); // start/stop every registered dance's bed with the party (each self-gates on its want)
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // start/stop the garden groovers
+    if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // party off snaps any eased kitchen blacklight back
   }
   window.__setGardenParty = setGardenParty;
   // Tap a party dancer -> that dancer does a celebratory flare (hop + twirl + pop). The

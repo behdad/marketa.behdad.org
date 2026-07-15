@@ -17432,13 +17432,41 @@ document.addEventListener("click", function (e) {
     var CHAIR_TOP_Y = 224;       // office-local y the projectile launches from (chair back top)
     var SHOT_MS = 1000, SHOT_SPEED = 0.42; // once/sec, px per ms upward
     var HIT_R = 18;              // hit radius (per axis) between shot and saucer
+    var ARCADE_HIGH_KEY = "invadersHigh"; // own localStorage key — deliberately NOT part of any game-state snapshot (keeps tests/state.js's reset==load clean)
     var arcadeActive = false, arcadeRaf = null, arcadeLastT = 0;
     var arcadeAliens = [], arcadeShots = [];
     var arcadeLastSpawn = 0, arcadeLastShot = 0, arcadeScore = 0;
+    var arcadeHud = null, arcadeHudScore = null, arcadeHudHigh = null;
     var chairDragTravel = 0, chairPrevX = 0;
 
     function arcadeChairX() { return 278 + chairOffsetX; }
+    function arcadeHigh() { try { return parseInt(localStorage.getItem(ARCADE_HIGH_KEY), 10) || 0; } catch (e) { return 0; } }
+    function arcadeSetHigh(n) { try { localStorage.setItem(ARCADE_HIGH_KEY, String(n)); } catch (e) {} }
     function arcadeClearLayer() { if (alienLayer) { while (alienLayer.firstChild) alienLayer.removeChild(alienLayer.firstChild); } }
+
+    function arcadeBuildHud() {
+      // iconic, language-neutral HUD (no T-dict copy), styled to match Flair Catch's:
+      // a small drawn saucer + live score top-left, a star + persisted high score under it.
+      // Light fills read over the .arcade dim (#office-alien-dim, dark navy @ .72).
+      arcadeHud = document.createElementNS(SVGNS_ARC, "g");
+      arcadeHud.setAttribute("font-family", "Fraunces, Georgia, serif");
+      arcadeHud.innerHTML =
+        '<g transform="translate(20,20)" stroke="#f4efe6" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round">' +
+          '<ellipse cx="0" cy="2" rx="10" ry="4" fill="none"/>' +
+          '<path d="M-5.5 -0.5 Q0 -8 5.5 -0.5" fill="none"/></g>' +
+        '<text class="arcade-score" x="35" y="33" font-size="21" font-weight="700" fill="#f4efe6">0</text>' +
+        '<polygon transform="translate(23,48)" points="0,-5 1.23,-1.7 4.76,-1.55 2,0.65 2.94,4.05 0,2.1 -2.94,4.05 -2,0.65 -4.76,-1.55 -1.23,-1.7" fill="#d9b48a"/>' +
+        '<text class="arcade-high" x="34" y="52" font-size="12" fill="#d9b48a">0</text>';
+      alienLayer.appendChild(arcadeHud);
+      arcadeHudScore = arcadeHud.querySelector(".arcade-score");
+      arcadeHudHigh = arcadeHud.querySelector(".arcade-high");
+      arcadeUpdateHud();
+    }
+    function arcadeUpdateHud() {
+      if (!arcadeHud) return;
+      arcadeHudScore.textContent = String(arcadeScore);
+      arcadeHudHigh.textContent = String(Math.max(arcadeHigh(), arcadeScore));
+    }
 
     function spawnAlien(x, y) {
       if (!alienLayer) return;
@@ -17469,6 +17497,7 @@ document.addEventListener("click", function (e) {
 
     function popAlien(a) {
       arcadeScore++;
+      arcadeUpdateHud(); // live score (and high, if this run just passed it)
       playAlienBlipSound();
       if (a.el && a.el.parentNode) a.el.parentNode.removeChild(a.el);
       if (arcadeReduce || !alienLayer) return; // reduced motion: no flash, just gone + blip
@@ -17525,6 +17554,7 @@ document.addEventListener("click", function (e) {
       arcadeActive = true;
       arcadeScore = 0;
       arcadeClearLayer();
+      arcadeBuildHud();                 // live score + persisted high, drawn into the alien layer
       arcadeAliens.length = 0; arcadeShots.length = 0;
       arcadeLastSpawn = ALIEN_SPAWN_MS; // spawn promptly on the first tick
       arcadeLastShot = SHOT_MS;         // fire promptly on the first tick
@@ -17535,7 +17565,7 @@ document.addEventListener("click", function (e) {
       arcadeRaf = requestAnimationFrame(arcadeFrame);
     }
 
-    function arcadeFlourish(n, gameOver) {
+    function arcadeFlourish(n, gameOver, newBest) {
       if (!alienLayer) return;
       var g = document.createElementNS(SVGNS_ARC, "g");
       g.setAttribute("transform", "translate(340,150)");
@@ -17547,6 +17577,13 @@ document.addEventListener("click", function (e) {
       txt.setAttribute("font-weight", "700");
       txt.textContent = gameOver ? ("game over · ×" + n) : ("×" + n); // language-neutral, no scoreboard UI
       g.appendChild(txt);
+      if (newBest) { // a tasteful, language-neutral "new best" cue: a star flanked by the record score
+        var best = document.createElementNS(SVGNS_ARC, "g");
+        best.setAttribute("transform", "translate(0,30)");
+        best.innerHTML =
+          '<polygon points="0,-9 2.2,-3 8.6,-2.8 3.6,1.2 5.3,7.3 0,3.8 -5.3,7.3 -3.6,1.2 -8.6,-2.8 -2.2,-3" fill="#d9b48a"/>';
+        g.appendChild(best);
+      }
       alienLayer.appendChild(g);
       if (arcadeReduce) { setTimeout(function () { if (g.parentNode) g.parentNode.removeChild(g); }, 850); return; }
       var anim = txt.animate([
@@ -17561,14 +17598,17 @@ document.addEventListener("click", function (e) {
     function stopArcade(gameOver) {
       if (arcadeRaf) { cancelAnimationFrame(arcadeRaf); arcadeRaf = null; }
       var wasActive = arcadeActive, finalScore = arcadeScore;
+      var newBest = wasActive && finalScore > arcadeHigh();
+      if (newBest) arcadeSetHigh(finalScore); // bank BEFORE arcadeScore is zeroed
       arcadeActive = false;
-      arcadeClearLayer();               // hard-clear — never trust per-particle onfinish for teardown
+      arcadeClearLayer();               // hard-clear — never trust per-particle onfinish for teardown (also removes the HUD node)
+      arcadeHud = arcadeHudScore = arcadeHudHigh = null;
       arcadeAliens.length = 0; arcadeShots.length = 0;
       if (stageOffice) stageOffice.classList.remove("arcade");
       arcadeScore = 0;
       chair.style.transition = ""; // restore the smooth glide once the game (and cursor-follow) ends
       if (wasActive && window.restoreStageHint) window.restoreStageHint("office"); // put the room hint back
-      if (wasActive && gameOver) arcadeFlourish(finalScore, true); // "game over ·×N" when a saucer gets through; leaving the room ends it silently
+      if (wasActive && gameOver) arcadeFlourish(finalScore, true, newBest); // "game over ·×N" when a saucer gets through; leaving the room ends it silently
     }
 
     // tear down if the tab hides or the window loses focus mid-game (pointerup may never come)
@@ -17585,9 +17625,12 @@ document.addEventListener("click", function (e) {
     window.__arcadeTest = function (steps, dt) {
       arcadeActive = true; arcadeScore = 0;
       arcadeClearLayer();
+      arcadeBuildHud();
       arcadeAliens.length = 0; arcadeShots.length = 0;
       if (stageOffice) stageOffice.classList.add("arcade");
-      spawnAlien(200, 118); spawnAlien(330, 88); spawnAlien(470, 150);
+      // one saucer is parked in the chair's fire column so the auto-fired shot connects
+      // (lets a headless probe watch the score/HUD tick up); the others just fill the scene.
+      spawnAlien(200, 118); spawnAlien(arcadeChairX(), 88); spawnAlien(470, 150);
       arcadeLastSpawn = 0; arcadeLastShot = SHOT_MS;
       for (var k = 0; k < (steps || 1); k++) arcadeStep(dt || 16);
       return { active: arcadeActive, aliens: arcadeAliens.length, shots: arcadeShots.length, score: arcadeScore };

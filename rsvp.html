@@ -1592,6 +1592,12 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 #office-monitor.here.await-turn:not(.screen-on) #office-monitor-bg{animation:none} /* the laptop step owns the attention until Prague's been called */
 @keyframes monitor-standby{0%,100%{fill:#14161a} 50%{fill:#2b3a5c}}
 @media (prefers-reduced-motion: reduce){#office-monitor.here:not(.screen-on) #office-monitor-bg{animation:none}}
+/* sprinkler water shorted the monitor: a quick electric flicker, then it sits dead-dark (no standby
+   pulse) for a few seconds while window.__monitorShorted blocks power-on. More specific than the
+   standby rule (adds .shorted) so it wins; the one-shot flicker leaves the fill at its dark base. */
+#office-monitor.here.shorted:not(.screen-on) #office-monitor-bg{animation:monitor-short-flick .55s steps(1) 1}
+@keyframes monitor-short-flick{0%{fill:#cfe6f5}14%{fill:#12161c}30%{fill:#9ec4e2}46%{fill:#12161c}64%{fill:#41607e}100%{fill:#12161c}}
+@media (prefers-reduced-motion: reduce){#office-monitor.here.shorted:not(.screen-on) #office-monitor-bg{animation:none}}
 #office-monitor.show-chrome #office-monitor-bg{fill:#ffffff} /* the browser app's opening splash */
 #office-monitor.show-caps #office-monitor-bg{fill:#efe6cf}
 #office-monitor.show-harfbuzz #office-monitor-bg{fill:#3a2416}
@@ -18200,6 +18206,7 @@ document.addEventListener("click", function (e) {
       playWaterSound();
       spawnSprinklerSpray(stripEl, 2366, 64); // originate at the new head's deflector, not mid-body
       spawnMonitorDrip(stripEl); // the nozzle sits right above the monitor — a couple drops reach it
+      setTimeout(function () { if (window.__shortOutMonitor) window.__shortOutMonitor(); }, 520); // when those drops land on the screen, it shorts out + locks off for a few seconds
     }
     sprinkler.addEventListener("click", triggerSprinkler);
     sprinkler.addEventListener("keydown", function (e) {
@@ -21307,6 +21314,7 @@ document.addEventListener("click", function (e) {
   };
   document.addEventListener("visibilitychange", function () { window.__updatePcFan(); });
   function togglePc() {
+    if (window.__monitorShorted) { playDryClickSound("office-pc-desk-trio"); return; } // wet — the PC won't power up until the monitor dries out
     pcTower.classList.toggle("on");
     playSparkSound("office-pc-desk-trio");
     window.__updatePcFan();
@@ -21334,6 +21342,12 @@ document.addEventListener("click", function (e) {
     return /Macintosh|Mac OS X/i.test(ua);
   }
   var bootTimers = [];
+  // The office ceiling sprinkler drips onto the monitor; water shorts it out — it powers down and
+  // can't come back on until it dries (MONITOR_SHORT_MS). The flag lives on window so the PC-tower
+  // toggle (a separate IIFE) and the sprinkler trigger can both see/set it. See __shortOutMonitor +
+  // the updateScreen gate.
+  var monitorShortTimer = null, MONITOR_SHORT_MS = 4200;
+  if (typeof window.__monitorShorted === "undefined") window.__monitorShorted = false;
   var CAPS_URL = "https://marketa.behdad.org/";
   var monitorUrl = CAPS_URL;
   // A wall sign (harfbuzz plaque / behdad.org tag) can ask the boot to finish on its own
@@ -21507,6 +21521,7 @@ document.addEventListener("click", function (e) {
   // browser app's opening splash, not the boot).
   function updateScreen() {
     clearBoot();
+    if (window.__monitorShorted) return; // wet/shorted → the screen stays dark until it dries out
     if (!monitor.classList.contains("here") || !pcTower || !pcTower.classList.contains("on")) {
       pendingBootSite = null; // no boot will run to land these, so drop any queued targets
       pendingBootMusic = false;
@@ -21560,6 +21575,28 @@ document.addEventListener("click", function (e) {
       if (window.__inviteLaptop) window.__inviteLaptop(); // the boot done, nudge the laptop → Call Prague
     }, 1000));
   }
+  // Sprinkler water hit the monitor: short it out. Cut power (drop the PC tower so the fan/apps stop,
+  // not just the pixels), keep the monitor present but dark + sparking, and lock out any power-on
+  // until it dries (MONITOR_SHORT_MS). A live screen gets a visible zap; an already-off one just gets
+  // wet + locked. A re-soak restarts the timer. window.__monitorShorted gates updateScreen (screen
+  // stays dark) and the PC-tower toggle (won't power up) for the duration.
+  window.__shortOutMonitor = function () {
+    var wasLive = monitor.classList.contains("screen-on");
+    window.__monitorShorted = true;
+    if (pcTower && pcTower.classList.contains("on")) { pcTower.classList.remove("on"); if (window.__updatePcFan) window.__updatePcFan(); }
+    updateScreen();                    // gated → clears the boot and keeps it dark
+    monitor.classList.add("shorted");  // wet sheen + a brief electric flicker (CSS)
+    if (wasLive) playSparkSound("office-monitor"); // a zap, only if it actually shorted something live
+    clearTimeout(monitorShortTimer);
+    monitorShortTimer = setTimeout(function () {
+      window.__monitorShorted = false;
+      monitor.classList.remove("shorted");
+      if (pcTower && pcTower.classList.contains("on")) updateScreen(); // dried out: light it now if the PC got switched on meanwhile
+    }, MONITOR_SHORT_MS);
+  };
+  window.__clearMonitorShort = function () { // a full reset dries it instantly
+    clearTimeout(monitorShortTimer); window.__monitorShorted = false; if (monitor) monitor.classList.remove("shorted");
+  };
   // While a room song plays and the monitor's on a site, it flips to a
   // "now playing" equalizer; when the song stops it drops back to the site.
   var songAudios = ["guitar-song-audio", "ukulele-song-audio"]
@@ -27202,6 +27239,7 @@ async def localfont(name):
   // boots it, powering off returns it to the dark pulsing standby. Double-click is
   // the manual override that reveals/hides the typewriter.
   function onPcToggled() {
+    if (window.__monitorShorted) return; // wet: ignore the click entirely (no toggle, no swap) — see togglePc's dud
     var on = pcTower.classList.contains("on");
     // powering the PC on summons the monitor; powering off dissolves it back to the
     // typewriter (the monitor is still the page-load default). Double-click overrides.
@@ -27982,6 +28020,7 @@ async def localfont(name):
   window.resetOfficeMonitor = function () {
     pbFxIndex = 0; pbBaseFrame = null; // the loft reset is a kill: drop the retained look + captured photo (closePhotobooth keeps them now)
     closePhotobooth(); // a reset must never leave the camera running
+    if (window.__clearMonitorShort) window.__clearMonitorShort(); // dry out any sprinkler short so a reset can power the PC on again
     clearBoot(); // powers the screen dark and closes every app (console/REPL/VM console included)
     // a full reset also clears every regular app's retained session state (photobooth already
     // handled above; the self-hosted hosts' sessions are reset just below)

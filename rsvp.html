@@ -28721,6 +28721,7 @@ async def localfont(name):
       ensurePhoneSlots();
       if (id === "cards") cardsIndex = 0; // uninstall is the phrasebook's "kill": reinstalling (reset/reload) starts fresh at card 1
       if (id === "notes") notesDraft = ""; // uninstall is the notes app's "kill": a reinstalled notes pad starts empty (a normal close keeps the draft)
+      if (id === "photobooth") { pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; } // uninstall is the booth's "kill": drop the saved polaroid so a reinstall opens fresh at the camera
       for (var i = 0; i < phoneSlots.length; i++) if (phoneSlots[i] === id) { phoneSlots[i] = null; break; }
       if (shell && shell.classList.contains("pm-home")) renderHome();
     }
@@ -29642,6 +29643,12 @@ async def localfont(name):
       { text: "I was so šleepy. Come to bed šoon. —🦋" }
     ];
     var notesDraft = ""; // the typed note — session-scoped: survives a language rebuild AND a normal close/reopen; cleared only on a kill (uninstallApp / __resetPhoneApps)
+    // Phone photobooth result state — session-scoped, same model as notesDraft/cardsIndex:
+    // a captured polaroid (frame canvas + chosen look/frame) survives a normal close/reopen
+    // (renderPhotobooth seeds its locals from these and commits them back in teardown), and is
+    // cleared only on a kill (uninstallApp("photobooth") / __resetPhoneApps). The frame is a
+    // frozen canvas, camera-independent, so nothing of the live camera lingers.
+    var pbSavedFrame = null, pbSavedFilter = "none", pbSavedFrameId = "none";
     function renderNotes(body) {
       var wrap = document.createElement("div");
       wrap.className = "pm-notes";
@@ -30211,8 +30218,11 @@ async def localfont(name):
       var PB = window.__phonePB;
       if (!PB) { var m = document.createElement("div"); m.className = "pmh-msg"; m.textContent = tr("pb_err_1"); body.appendChild(m); return; }
       try { if (window.__closeOfficePhotobooth) window.__closeOfficePhotobooth(); } catch (e) {} // never two live cameras at once
-      var stream = null, video = null, starting = false, baseFrame = null, curBlob = null;
-      var curFilter = "none", curFrame = "none";
+      var stream = null, video = null, starting = false, curBlob = null;
+      // seed from the session-saved result so a normal close/reopen resumes the captured
+      // polaroid + its look (committed back in teardown); a kill/reset clears these first
+      var baseFrame = pbSavedFrame;
+      var curFilter = pbSavedFilter, curFrame = pbSavedFrameId;
       var timers = [], urls = [];
       var wrap = document.createElement("div");
       wrap.className = "pm-booth";
@@ -30226,7 +30236,12 @@ async def localfont(name):
         if (stream) { try { stream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {} stream = null; }
         if (video) { try { video.pause(); } catch (e) {} try { video.srcObject = null; } catch (e) {} video = null; }
       }
-      function teardown() { clearTimers(); stopStream(); revokeUrls(); }
+      function teardown() {
+        // commit the session result so a reopen resumes it (the frame canvas is valid
+        // regardless of the stream/URL teardown below); a kill/reset zeroes these afterwards
+        pbSavedFrame = baseFrame; pbSavedFilter = curFilter; pbSavedFrameId = curFrame;
+        clearTimers(); stopStream(); revokeUrls();
+      }
       photoboothCleanup = teardown; // leaveCurrentApp() calls this on every exit
 
       function alive() { return currentApp === "photobooth" && photoboothCleanup === teardown; }
@@ -30372,7 +30387,7 @@ async def localfont(name):
             if (act === "download") PB.download(curBlob);
             else if (act === "gmail") { PB.copy(Promise.resolve(curBlob)); PB.gmail(); }
             else if (act === "email") { PB.copy(Promise.resolve(curBlob)); PB.mailto(); }
-            else if (act === "retake") { revokeUrls(); baseFrame = null; showLive(); }
+            else if (act === "retake") { revokeUrls(); baseFrame = null; if (stream) showLive(); else startCamera(); } // a resumed result has no live stream — re-acquire the camera (permission already granted, so no prompt)
           });
           return b;
         }
@@ -30393,7 +30408,9 @@ async def localfont(name):
       // (the ask only exists so the browser's permission prompt never surprises anyone; with a
       // standing grant there's no prompt, and getUserMedia doesn't need the tap's transient
       // activation, so the async query is safe here — same as the office booth)
-      if (navigator.permissions && navigator.permissions.query && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      if (baseFrame) {
+        showResult(); // resume a captured polaroid from a prior session — no camera relit just to view it
+      } else if (navigator.permissions && navigator.permissions.query && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         try {
           navigator.permissions.query({ name: "camera" }).then(function (st) {
             if (!alive()) return;
@@ -30763,7 +30780,7 @@ async def localfont(name):
     }
     window.__openPhoneModal = open;
     window.__closePhoneModal = function (silent) { close(silent); };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering), rewinds the phrasebook deck to card 1, and clears the notes draft
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering), rewinds the phrasebook deck to card 1, clears the notes draft, and drops the saved photobooth polaroid
     // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
     // open(true) is the cinematic lock-skip path (same as __showCocktailInPhone), so a console
     // launch never stalls on the passcode. Matches by app id (case-insensitive) or its localized

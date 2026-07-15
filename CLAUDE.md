@@ -33,7 +33,10 @@ allowed exception, owner-confirmed.)
 - **Run `node tests/check.js` AND `node tests/state.js` before every commit that
   touches `save-the-dates.html` or `rsvp.html`.** Zero-dependency script — `node --check` on each file's inline
   `<script>`, EN/CS dictionary key parity, `EGG_TOTAL` vs. cheatsheet `<li data-egg>`
-  count, and `<g>`/`</g>` tag balance in rsvp.html's shared SVG strip. It's cheap
+  count, `<g>`/`</g>` tag balance in rsvp.html's shared SVG strip, and the JS-console
+  Tab-autocomplete roster (`CONSOLE_CMDS`) vs. `CONSOLE_HELP` keys parity (so a new
+  `window.<cmd>` console command must be added to BOTH, or check.js fails naming the
+  drift). It's cheap
   insurance against exactly the bugs that have bitten this project before (a dropped
   `</g>` that silently broke every stage after the edited one, dictionary keys added to
   one language and not the other). Add more checks to it over time as new bug classes
@@ -44,6 +47,12 @@ allowed exception, owner-confirmed.)
   click-storms every `.hunt-hit` (click + dblclick + Enter), failing on any uncaught JS
   error, a broken solve chain, or missing solve-path elements. It patches rAF to
   setTimeout and stubs window.open — see its header before changing test plumbing.
+- **Run `node tests/menu.js` (and `node tests/laptopmenu.js`) after changes touching the
+  right-click / context-menu system** — the shared `.mon-ctx` menus (monitor desktop-dock,
+  console `.console-ctx`, the office laptop, the pocket phone app-icons, browser tabs, and
+  the in-scene D-pad). They assert each surface shows the right items, suppresses the native
+  menu where it should, dismisses on Esc/away, and (for the dock/phone) that a "Kill" resets
+  the app. Both use the same one-shot headless runner as play.js.
 - **`node tests/visual.js` is an optional, advisory spot-check** — never part of the
   must-pass-before-commit chain: it renders the five rsvp.html rooms and save-the-dates.html's
   two scenes headlessly (animations/transitions frozen, clock and RNG pinned) and
@@ -97,6 +106,16 @@ allowed exception, owner-confirmed.)
   naturally pauses with the frames — used for rain/smoke), or **cap/clear-stale before
   each spawn** (tag the particles with a class and drop the oldest / clear leftovers —
   used for shooting stars, butterflies, dust motes, fireflies, bubbles). Bit repeatedly.
+- **A timer-driven one-shot SOUND leaks while the tab is visible-but-UNFOCUSED.** `getSfxCtx()`
+  blocks audio while the tab is `hidden`, but it `resume()`s the context on every call, undoing
+  the blur/visibility suspend — so any autonomous `setTimeout`/`setInterval` or CSS-`animationend`
+  handler that reaches a `play*Sound` while merely unfocused (another window on top — common on
+  X11, no occlusion signal) will still sound. The continuous beds all gate on `document.hidden`
+  **AND `document.hasFocus()`** (the "crickets/crane rule"); autonomous one-shots must do the same
+  (`if (document.hidden || !document.hasFocus()) return;`). Caught the phone-notify buzz and the
+  solar-eclipse totality chime firing on their own timers with only a visibility gate. User-
+  initiated one-shots are fine — a click implies focus, and getSfxCtx's hidden gate covers the rest.
+  (Songs/media-`<audio>` deliberately keep playing while hidden/unfocused — owner's call.)
 - **Headless-Chrome testing gotchas**: under `--virtual-time-budget`, `requestAnimationFrame`
   doesn't reliably tick (rAF-double class adds appear to never happen — monkeypatch
   `window.requestAnimationFrame = function (cb) { cb(); return 0; }` in the scratch copy

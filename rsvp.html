@@ -38680,19 +38680,76 @@ function spawnDustMote(container) {
   var portafilterFlying = false;
   var GRINDER_BEAN_USES = 22; // matches the 22 drawn beans in the hopper, one hides per grind
   var grinderBeansLeft = GRINDER_BEAN_USES;
-  // depletion order: top-of-the-pile beans (lowest y, i.e. highest in the hopper) empty
-  // first, so the visible pile shrinks downward as beans are used
-  var GRINDER_BEAN_ORDER = ["kitchen-grinder-bean-1", "kitchen-grinder-bean-2", "kitchen-grinder-bean-3",
-    "kitchen-grinder-bean-4", "kitchen-grinder-bean-5", "kitchen-grinder-bean-6", "kitchen-grinder-bean-7",
-    "kitchen-grinder-bean-8", "kitchen-grinder-bean-9", "kitchen-grinder-bean-10", "kitchen-grinder-bean-11",
-    "kitchen-grinder-bean-12", "kitchen-grinder-bean-13", "kitchen-grinder-bean-14", "kitchen-grinder-bean-15",
-    "kitchen-grinder-bean-16", "kitchen-grinder-bean-17", "kitchen-grinder-bean-18", "kitchen-grinder-bean-19",
-    "kitchen-grinder-bean-20", "kitchen-grinder-bean-21", "kitchen-grinder-bean-22"];
+  var GRINDER_BEAN_IDS = [];
+  for (var _gb = 1; _gb <= GRINDER_BEAN_USES; _gb++) GRINDER_BEAN_IDS.push("kitchen-grinder-bean-" + _gb);
+  // The beans used to be baked at fixed coordinates, which read as too tidy however
+  // it was tweaked. Instead we scatter all 22 randomly into the glass hopper on load
+  // (and again on reset) so the heap genuinely differs every visit. The hopper is the
+  // trapezoid <path d="M330 85 L366 85 L360 118 L336 118 Z"> in the grinder's local
+  // coord space: rim y=85 (x 330..366), floor y=118 (x 336..360), sloped glass walls
+  // between. Each bean is a rotated ellipse (rx 3.2) whose centre must stay a scaled
+  // bean-radius clear of every wall/floor so it never clips the glass. Bottom-biased
+  // vertical placement + a light min-distance keeps it a supported, contained heap
+  // rather than beans floating in mid-air. NOTE: the random position transform lives
+  // on the inner <use>, NOT the .kitchen-bean-wobble <g> — the wobble is a CSS
+  // transform animation that would blow away a transform set on its own node (the
+  // documented "CSS transform animation replaces the transform attribute" bug).
+  var GRINDER_HOPPER = {
+    rimY: 85, floorY: 118,
+    rimLx: 330, rimRx: 366,    // rim (top) x-span
+    floorLx: 336, floorRx: 360 // floor (bottom) x-span
+  };
+  // depletion order, recomputed on each scatter: ids sorted top-of-pile first (lowest
+  // y = highest in the hopper) so the visible pile shrinks downward as beans are used
+  var grinderConsumeOrder = GRINDER_BEAN_IDS.slice();
+  function randomizeGrinderBeans() {
+    var H = GRINDER_HOPPER;
+    // x of a glass wall at a given y (linear interp between its rim and floor points)
+    function wallX(fromY, fromX, toY, toX, y) { return fromX + (toX - fromX) * (y - fromY) / (toY - fromY); }
+    var placed = []; // {id, x, y}
+    GRINDER_BEAN_IDS.forEach(function (id) {
+      var s = 0.83 + Math.random() * (1.12 - 0.83); // scale ~0.83..1.12, matching the old range
+      var r = 3.2 * s;                              // rotation-safe bean radius (ellipse rx)
+      var yTop = 96;                                // top of the fill zone (well below the rim)
+      var yBot = H.floorY - r;                      // rest a bean-radius above the floor
+      var x = 0, y = 0, best = null, bestD = -1;
+      for (var attempt = 0; attempt < 40; attempt++) {
+        // bottom-biased y: pow<1 pushes the fraction toward 1 (the floor), so more
+        // beans settle low and fewer perch high -> a heap, not an even fog
+        var yFrac = Math.pow(Math.random(), 0.65);
+        var ty = yTop + yFrac * (yBot - yTop);
+        var lx = wallX(H.rimY, H.rimLx, H.floorY, H.floorLx, ty) + r; // inset off the left glass
+        var rx = wallX(H.rimY, H.rimRx, H.floorY, H.floorRx, ty) - r; // inset off the right glass
+        if (rx < lx) { lx = rx = (lx + rx) / 2; }
+        var tx = lx + Math.random() * (rx - lx);
+        // keep the roomiest try: slight overlap is natural, heavy stacking is not
+        var minD = 1e9;
+        for (var p = 0; p < placed.length; p++) {
+          var dx = placed[p].x - tx, dy = placed[p].y - ty, d = Math.sqrt(dx * dx + dy * dy);
+          if (d < minD) minD = d;
+        }
+        if (!placed.length) { x = tx; y = ty; break; }
+        if (minD > bestD) { bestD = minD; best = { x: tx, y: ty }; }
+        if (minD >= 3.6) { x = tx; y = ty; best = null; break; }
+      }
+      if (best) { x = best.x; y = best.y; }
+      placed.push({ id: id, x: x, y: y });
+      var rot = Math.floor(Math.random() * 360) - 180;
+      var use = document.querySelector("#" + id + " use");
+      if (use) {
+        use.setAttribute("transform",
+          "translate(" + x.toFixed(1) + "," + y.toFixed(1) + ") rotate(" + rot + ") scale(" + s.toFixed(3) + ")");
+      }
+    });
+    // top of the pile (lowest y) empties first
+    grinderConsumeOrder = placed.slice().sort(function (a, b) { return a.y - b.y; }).map(function (p) { return p.id; });
+  }
   function hideNextGrinderBean() {
-    var id = GRINDER_BEAN_ORDER[GRINDER_BEAN_USES - grinderBeansLeft - 1];
+    var id = grinderConsumeOrder[GRINDER_BEAN_USES - grinderBeansLeft - 1];
     var bean = id && document.getElementById(id);
     if (bean) bean.classList.add("used");
   }
+  randomizeGrinderBeans(); // scatter the initial heap before the kitchen is first shown
   var lamarzocco = document.getElementById("kitchen-lamarzocco");
   var grinder = document.getElementById("kitchen-grinder");
   hoverTooltip(lamarzocco, "<em>La Maz</em>, the espresso machine", "top");
@@ -40897,10 +40954,11 @@ function spawnDustMote(container) {
     kitchenRounds = 0;
     clearTimeout(knockboxInviteTimer);
     grinderBeansLeft = GRINDER_BEAN_USES;
-    GRINDER_BEAN_ORDER.forEach(function (id) {
+    GRINDER_BEAN_IDS.forEach(function (id) {
       var bean = document.getElementById(id);
       if (bean) bean.classList.remove("used");
     });
+    randomizeGrinderBeans(); // fresh heap + recomputed consume order, so the two can't desync
     grinding = false;
     brewing = false;
     tamped = false;

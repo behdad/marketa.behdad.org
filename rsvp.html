@@ -12704,6 +12704,8 @@ var T = {
       cine_call: "A birthday call to Tehran…",
       cine_film: "Her film plays…",
       cine_console: "…the two dates, in plain text.",
+      cine_arcade: "The chair swivels — invaders inbound!",
+      cine_sprinkler: "A sprinkler drip, and the screen dies.",
       cine_dusk: "Day turns to night.",
       cine_finale: "And the sky blooms.",
       cine_phone: "A little play with the pocket phone…",
@@ -12714,6 +12716,9 @@ var T = {
       cine_djswap: "Two DJs, trading off.",
       cine_photo: "A flash for the album…",
       cine_bar: "And the kitchen's a cocktail bar…",
+      cine_flair: "The bartender flips his shaker…",
+      cine_patrons: "The tipsy regulars hiccup.",
+      cine_flairgame: "Catch the garnishes — mind the wasp!",
       cine_dance: "…and the beat rolls on.",
       cine_encore_end: "And that's their day. Again tomorrow…"
     },
@@ -13120,6 +13125,8 @@ var T = {
       cine_call: "Narozeninový hovor do Teheránu…",
       cine_film: "Běží její film…",
       cine_console: "…dvě data, černé na bílém.",
+      cine_arcade: "Židle se otočí — invaze!",
+      cine_sprinkler: "Kapka ze sprinkleru — a obrazovka zhasne.",
       cine_dusk: "Den se mění v noc.",
       cine_finale: "A nebe rozkvete.",
       cine_phone: "Trocha hraní s kapesním telefonem…",
@@ -13130,6 +13137,9 @@ var T = {
       cine_djswap: "Dva DJové se střídají.",
       cine_photo: "Blesk do alba…",
       cine_bar: "A z kuchyně je koktejlový bar…",
+      cine_flair: "Barman roztočí šejkr…",
+      cine_patrons: "Podnapilí štamgasti škytají.",
+      cine_flairgame: "Chytej ozdoby — pozor na vosu!",
       cine_dance: "…a rytmus jede dál.",
       cine_encore_end: "A to je jejich den. Zítra zas…"
     },
@@ -18526,6 +18536,40 @@ document.addEventListener("click", function (e) {
     window.__arcadeStop = stopArcade;
     window.__arcadeState = function () { return { active: arcadeActive, raf: arcadeRaf, aliens: arcadeAliens.length, shots: arcadeShots.length }; };
 
+    // ── cinematic autopilot ──────────────────────────────────────────────────
+    // The guided tour can't perform a real chair drag, so this arms the arcade and steers
+    // the chair under the lowest saucer each frame — the once/sec auto-fire then connects,
+    // so the beat reliably shows kills (and a milestone gold-shockwave reward) without ever
+    // losing. The high score is snapshotted and restored on teardown, so a passive tour
+    // never inflates the player's real best. The rAF self-cancels when the show ends or the
+    // game stops; stopCinematic calls __cineArcadeDemo(false) as a backstop.
+    var cineArcadeRaf = null, cineArcadeSavedHigh = 0, cineArcadeEngaged = false;
+    function cineArcadePilot() {
+      if (!cineArcadeEngaged || !arcadeActive || !window.__cinematic) { cineArcadeRaf = null; return; }
+      var target = null, low = -Infinity;
+      for (var i = 0; i < arcadeAliens.length; i++) {
+        if (arcadeAliens[i].y > low) { low = arcadeAliens[i].y; target = arcadeAliens[i]; }
+      }
+      if (target) { setChairOffset(target.x - 278); if (window.__chairCatFollow) window.__chairCatFollow(); } // arcadeChairX = 278 + chairOffsetX
+      cineArcadeRaf = requestAnimationFrame(cineArcadePilot);
+    }
+    window.__cineArcadeDemo = function (on) {
+      if (on) {
+        if (arcadeReduce || arcadeActive || cineArcadeEngaged) return;
+        cineArcadeSavedHigh = arcadeHigh();
+        cineArcadeEngaged = true;
+        startArcade();
+        arcadeScore = ARCADE_MILESTONE - 3; arcadeUpdateHud(); // a streak (→ gold shockwave) lands a few kills into the beat
+        if (!cineArcadeRaf) cineArcadeRaf = requestAnimationFrame(cineArcadePilot);
+      } else {
+        if (!cineArcadeEngaged) return;
+        cineArcadeEngaged = false;
+        if (cineArcadeRaf) { cancelAnimationFrame(cineArcadeRaf); cineArcadeRaf = null; }
+        stopArcade();
+        arcadeSetHigh(cineArcadeSavedHigh); // the tour was autopilot, not a real run — don't bank it
+      }
+    };
+
     chair.addEventListener("pointerdown", function (e) {
       if (e.button && e.button !== 0) return; // right/middle press → the scene D-pad menu handles it, no phantom drag
       chairDragging = true;
@@ -20292,6 +20336,44 @@ document.addEventListener("click", function (e) {
     };
     window.__flairStop = stopFlairCatch;
     window.__flairState = function () { return { active: flairActive, raf: flairRaf, items: flairItems.length, score: flairScore, miss: flairMiss, high: flairHigh() }; };
+
+    // ── cinematic autopilot ──────────────────────────────────────────────────
+    // The guided tour can't perform a real shaker shuffle, so this arms Flair-Catch and
+    // steers the shaker under the good item nearest the catch line each frame — every good
+    // is caught before it can spill, so the beat reliably shows catches (and a milestone
+    // gold-shockwave reward) without ever losing a life. Wasps are left to fall past (a
+    // dodged wasp is fine). The high score is snapshotted and restored on teardown so a
+    // passive tour never inflates the player's real best. The rAF self-cancels when the
+    // show ends or the game stops; stopCinematic calls __cineFlairDemo(false) as a backstop.
+    var cineFlairRaf = null, cineFlairSavedHigh = 0, cineFlairEngaged = false;
+    function cineFlairPilot() {
+      if (!cineFlairEngaged || !flairActive || !window.__cinematic) { cineFlairRaf = null; return; }
+      var target = null, best = Infinity;
+      for (var i = 0; i < flairItems.length; i++) {
+        var it = flairItems[i];
+        if (it.bad) continue;                       // never chase the wasp
+        var d = Math.abs(it.y - FLAIR_CATCH_Y);
+        if (d < best) { best = d; target = it; }
+      }
+      if (target) setBartenderOffset(target.x - 336); // flairShakerX = 336 + barOffsetX
+      cineFlairRaf = requestAnimationFrame(cineFlairPilot);
+    }
+    window.__cineFlairDemo = function (on) {
+      if (on) {
+        if (flairReduce || flairActive || cineFlairEngaged) return;
+        cineFlairSavedHigh = flairHigh();
+        cineFlairEngaged = true;
+        startFlairCatch();
+        flairScore = FLAIR_MILESTONE - 3; flairUpdateHud(); // a streak (→ gold shockwave) lands a few catches into the beat
+        if (!cineFlairRaf) cineFlairRaf = requestAnimationFrame(cineFlairPilot);
+      } else {
+        if (!cineFlairEngaged) return;
+        cineFlairEngaged = false;
+        if (cineFlairRaf) { cancelAnimationFrame(cineFlairRaf); cineFlairRaf = null; }
+        stopFlairCatch();
+        flairSetHigh(cineFlairSavedHigh); // the tour was autopilot, not a real run — don't bank it
+      }
+    };
 
     // he flairs on his own ~every 10s while the bar's up (visual only — no repeating rattle). One
     // self-rescheduling timer that checks conditions each cycle (never touches setGardenParty, so
@@ -22993,7 +23075,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound()/fishu · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone()/phone(\"app\") · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound()/fishu · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone()/phone(\"app\") · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · issues()/feedback() · github() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var CONSOLE_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -23050,6 +23132,9 @@ document.addEventListener("click", function (e) {
       laptop: "laptop(true) — wake the office laptop; laptop(false) closes it; laptop() reports whether it's open. laptop(\"prague\")/laptop(\"lubeck\") place a video call to her family",
       computer: "computer(true) — power the office PC up; computer(false) shuts it down; computer() reports whether it's on. computer(\"doom\")/computer(\"weather\") boot (if needed) and open that monitor app; a bad name lists them",
       reboot: "reboot() — power-cycle the loft OS (a `sudo reboot` from its own console)",
+      issues: "issues() — open the project's GitHub issue tracker in a new tab",
+      feedback: "feedback() — tell us what broke or what you loved (alias for issues())",
+      github: "github() — open the loft's source code on GitHub in a new tab",
       killall: "killall [-9] <doom|console|python|linux> — kill a monitor app by name via its Kill hook (doom's FATALITY, console's flatline, python's Black Knight, linux's BSOD). bare `killall` (no name) kills every currently-running host at once. the -9 is decorative — they all go. a cold runtime says `not running`",
       service: "service <doom|console|python|linux> <start|stop|status|restart|--full-restart> — sysvinit-style control: status reports running/stopped · start opens it · stop kills it · restart|--full-restart do both",
       monitor: "monitor — alias for computer; monitor(\"doom\")/monitor(\"console\") open a monitor app; try `help computer`",
@@ -23345,7 +23430,8 @@ document.addEventListener("click", function (e) {
     "summon", "reveal", "click", "random", "sleep", "echo", "say", "scripts", "run", "edit",
     "confetti", "fireworks", "cat", "irene", "piano", "classic", "kitten", "ukelele", "audio", "music",
     "guitar", "ukulele", "beat", "eclipse", "hb", "loft", "ls", "pwd", "whoami", "sudo",
-    "date", "man", "love", "kitty", "exit", "speech", "fishu", "volume", "volumebutton"
+    "date", "man", "love", "kitty", "exit", "speech", "fishu", "volume", "volumebutton",
+    "issues", "feedback", "github"
   ];
   // Barewords / unix gags that are NOT functions — completing them must not append "(".
   var CONSOLE_CMDS_BARE = { help: 1, clear: 1, quit: 1, exit: 1, loft: 1, hb: 1, ls: 1, pwd: 1, whoami: 1, sudo: 1, date: 1, man: 1, love: 1, killall: 1, service: 1 };
@@ -43252,6 +43338,11 @@ function spawnDustMote(container) {
       if (pch === "stars" || pch === "workout" || pch === "totoro" || pch === "aqua") window.__cuddlyProjector.set("off");
     }
     if (window.__closePhoneModal) window.__closePhoneModal(true); // the phone beat's modal must never orphan over a take-over (idempotent)
+    // the tour's two autopilot mini-games (office arcade, bar Flair-Catch) each run their own
+    // rAF and would otherwise keep running after a take-over — stop them and restore the high
+    // scores they never really earned. Both are idempotent no-ops if the demo wasn't engaged.
+    if (window.__cineArcadeDemo) window.__cineArcadeDemo(false);
+    if (window.__cineFlairDemo) window.__cineFlairDemo(false);
     if (cinematicTeardown) { cinematicTeardown(); cinematicTeardown = null; }
     if (skipBtn) skipBtn.hidden = true;
     if (watchBtn) { watchBtn.hidden = false; watchBtn.classList.remove("nudge"); }
@@ -43487,7 +43578,7 @@ function spawnDustMote(container) {
       // TEHRAN — a warm birthday call to Behdad's family
       tapAt(1100, "monitor-dock-tehran"), [0, cine("cine_call")],
       waitFor(tehranConnected, 5500),                    // rings ~3.4s, then they pick up
-      [4500, null],                                      // linger on the living-room scene
+      [3500, null],                                      // linger on the living-room scene
       tapAt(700, "monitor-tehran-close"),                // hang up — the goodbye plays out (~1.5s)
       waitFor(function () { return !monitorShowing("tehran"); }, 3500),
       // FILM — Markéta's downtown-dance, with sound (the song steps aside for it)
@@ -43495,7 +43586,7 @@ function spawnDustMote(container) {
       tapAt(1000, "monitor-dock-video"), [0, cine("cine_film")],
       waitFor(function () { return monitorShowing("video"); }, 1800),
       [400, playCineFilm],                               // play (primed in the Watch gesture so this late play() isn't blocked)
-      [6000, function () { cineClick("monitor-video-close"); }], // ~6s of film, then close
+      [4500, function () { cineClick("monitor-video-close"); }], // a stretch of film, then close
       waitFor(function () { return monitorShowing("caps"); }, 1800),
       // CONSOLE — a sign-off: the two wedding dates, in plain text
       tapAt(1000, "monitor-dock-console"), [0, cine("cine_console")],
@@ -43505,6 +43596,17 @@ function spawnDustMote(container) {
       waitFor(function () { return monitorShowing("caps"); }, 1800),
       // desk done: pull the view back out of the screen, bring the day's music back for the finale
       [500, function () { cursorHide(); if (window.__monitorZoomOut) window.__monitorZoomOut(); cineResumeSong(); }],
+      // ARCADE — the office chair is a turret: a shove arms the invaders game, saucers descend,
+      // the chair auto-fires, and a kill streak lands the gold-shockwave reward. Driven by the
+      // autopilot hook (no real drag), which steers the chair and restores the high score after.
+      [1400, function () { cursorGlideTo("office-chair", 500); }],
+      [350, function () { cursorHide(); if (window.__cineArcadeDemo) window.__cineArcadeDemo(true); }], [0, cine("cine_arcade")],
+      [6000, function () { if (window.__cineArcadeDemo) window.__cineArcadeDemo(false); }], // let the run play, then stand down
+      // SPRINKLER — a drip from the ceiling head shorts the monitor: a zap, an electric flicker,
+      // and the screen goes dead-dark (a real click on the sprinkler; __shortOutMonitor does the rest).
+      [900, function () { cursorGlideTo("office-sprinkler", 500); }],
+      [350, function () { cineClick("office-sprinkler"); }], [0, cine("cine_sprinkler")],
+      [1900, null],                                      // let the flicker + short land before dimming the room
       tapAt(1400, "office-lamp"),                        // then dim the lights
       tapAt(1200, "office-pendant"),
       [2000, function () { if (window.__autoToggleDusk) window.__autoToggleDusk(); }], [0, cine("cine_dusk")], // day → night
@@ -45060,6 +45162,12 @@ function spawnDustMote(container) {
     setTimeout(function () { if (pc && !pc.classList.contains("on")) pc.dispatchEvent(new MouseEvent("click", { bubbles: true })); }, 900); // …then back up → boots Fedora → the caps desktop
     return "🔄 rebooting the loft OS…";
   };
+  // issues()/feedback() open the project's GitHub issue tracker (feedback is just an alias);
+  // github() opens the source repo. Same destinations as the ✉/octocat buttons on the page. They
+  // narrate via echo() (not a return, which the console would echo back) and return nothing (silent).
+  window.issues = function () { window.echo("🪳 opening the issue tracker…"); try { window.open("https://github.com/behdad/marketa.behdad.org/issues", "_blank", "noopener"); } catch (e) {} };
+  window.feedback = window.issues; // alias — tell us what broke / what you loved
+  window.github = function () { window.echo("😺 opening the source on GitHub…"); try { window.open("https://github.com/behdad/marketa.behdad.org", "_blank", "noopener"); } catch (e) {} };
 
   // summon("<id>") brings a scene element into view (jumps to its room); click("<id>") also
   // activates it (dispatches a click). summon("<room>") lists a room's ids. No-arg picks a

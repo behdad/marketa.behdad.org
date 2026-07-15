@@ -1930,9 +1930,10 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
    dismissed on click-away / Esc / scroll. Paper card in the site's palette. */
 .mon-ctx{position:fixed; z-index:60; min-width:112px; background:var(--paper); color:var(--ink); border:1px solid var(--rule); border-radius:7px; box-shadow:0 6px 22px rgba(69,58,49,.28); padding:4px; font-family:"Source Serif 4",Georgia,serif; font-size:13px; -webkit-user-select:none; user-select:none}
 .mon-ctx button{display:flex; align-items:center; gap:7px; width:100%; box-sizing:border-box; padding:6px 10px; border:none; border-radius:4px; background:transparent; color:inherit; font:inherit; text-align:left; cursor:pointer}
-.mon-ctx button:hover, .mon-ctx button:focus-visible{background:var(--cream)}
+.mon-ctx button:hover:not(:disabled), .mon-ctx button:focus-visible:not(:disabled){background:var(--cream)}
 .mon-ctx button.ctx-kill{color:var(--wine)}
-.mon-ctx button.ctx-kill:hover, .mon-ctx button.ctx-kill:focus-visible{background:#f4e6e6}
+.mon-ctx button.ctx-kill:hover:not(:disabled), .mon-ctx button.ctx-kill:focus-visible:not(:disabled){background:#f4e6e6}
+.mon-ctx button:disabled{opacity:.4; cursor:default}
 .mon-ctx .ctx-ico{flex:0 0 auto; width:13px; height:13px; display:block}
 /* places app: the couple's been-there world map — paper sea, muted land, wine/blue
    city pins; the caption row + halo follow whichever pin is active (hover/tap or the
@@ -13692,14 +13693,25 @@ document.addEventListener("keydown", function (e) {
     copyBtn.addEventListener("click", function (e) { e.stopPropagation(); doCopy(); });
     pasteBtn.addEventListener("click", function (e) { e.stopPropagation(); doPaste(); hide(); });
     restartBtn.addEventListener("click", function (e) { e.stopPropagation(); var a = runtimeApp(); hide(); if (a) { var fn = window[a.restart]; if (fn) fn(); } });
-    killBtn.addEventListener("click", function (e) { e.stopPropagation(); var a = runtimeApp(); hide(); if (a) { var fn = window[a.close]; if (fn) fn(); } });
+    killBtn.addEventListener("click", function (e) { e.stopPropagation(); if (killBtn.disabled) return; var a = killApp(); hide(); if (a) { var fn = window[a.close]; if (fn) fn(); } });
   }
-  // which self-hosted runtime (if any) owns the screen — decides whether Restart/Kill show
+  // which self-hosted runtime (if any) owns the screen — decides whether Restart shows and,
+  // via its running predicate, whether Kill is live (a not-yet-running runtime has nothing to kill)
   function runtimeApp() {
     var m = document.getElementById("office-monitor");
     if (!m || window.currentStageName !== "office") return null;
-    if (m.classList.contains("show-python")) return { restart: "__restartMonitorPython", close: "__closeMonitorPython" };
-    if (m.classList.contains("show-linux")) return { restart: "__restartMonitorLinux", close: "__closeMonitorLinux" };
+    if (m.classList.contains("show-python")) return { restart: "__restartMonitorPython", close: "__closeMonitorPython", running: "__pyRunning" };
+    if (m.classList.contains("show-linux")) return { restart: "__restartMonitorLinux", close: "__closeMonitorLinux", running: "__lxRunning" };
+    return null;
+  }
+  // every console app gets Kill: the runtimes above, plus the plain JS console — which has no
+  // runtime to restart and is always live, so it gets Kill only (no Restart, never disabled)
+  function killApp() {
+    var m = document.getElementById("office-monitor");
+    if (!m || window.currentStageName !== "office") return null;
+    var ra = runtimeApp();
+    if (ra) return ra;
+    if (m.classList.contains("show-console")) return { close: "__closeMonitorConsole", running: null };
     return null;
   }
   function ccT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || key; }
@@ -13734,12 +13746,17 @@ document.addEventListener("keydown", function (e) {
     stashedSel = selText();
     copyBtn.disabled = !stashedSel;
     pasteBtn.disabled = !(consoleInput() && navigator.clipboard && navigator.clipboard.readText);
-    // Restart/Kill only for the self-hosted runtimes (python/linux); hidden for the plain
-    // JS console (nothing to restart there)
-    var ra = runtimeApp();
+    // Restart only for the self-hosted runtimes (python/linux — nothing to restart on the plain
+    // JS console); Kill for all three console apps, disabled while a runtime isn't yet running.
+    var ra = runtimeApp(), ka = killApp();
     restartBtn.style.display = ra ? "block" : "none";
-    killBtn.style.display = ra ? "block" : "none";
-    if (ra) { restartBtn.textContent = ccT("mon_ctx_restart"); killBtn.textContent = ccT("mon_ctx_kill"); }
+    killBtn.style.display = ka ? "block" : "none";
+    if (ra) restartBtn.textContent = ccT("mon_ctx_restart");
+    if (ka) {
+      killBtn.textContent = ccT("mon_ctx_kill");
+      killBtn.disabled = !!(ka.running && !(window[ka.running] && window[ka.running]()));
+      killBtn.classList.toggle("cc-sep", !ra); // the runtime-actions divider rides Restart; with no Restart, it rides Kill
+    }
     menu.style.left = e.clientX + "px"; menu.style.top = e.clientY + "px";
     menu.classList.add("show");
     var r = menu.getBoundingClientRect(); // clamp inside the viewport
@@ -23020,22 +23037,33 @@ document.addEventListener("click", function (e) {
     if (monitor.classList.contains("show-nowplaying")) { monitor.classList.remove("show-nowplaying"); scheduleSaver(); return true; }
     return false;
   };
-  // ── Right-click Restart/Kill menu for the DOOM app ─────────────────────────────────────
-  // The heavy self-hosted runtimes can wedge (a misrendered DOOM) with no in-place recovery.
-  // A contextmenu over DOOM's canvas offers Restart (tear the runtime down and re-init it
-  // fresh) and Kill (the app's normal close). DOOM's canvas has no other context menu, so it
-  // owns the right-click here; python/linux fold the same Restart/Kill into their existing
-  // console copy/paste menu (see the console-ctx block) rather than double up. Dismissed on
-  // click-away / Esc / scroll / window blur / resize.
+  // ── Right-click Kill/Restart menu for monitor apps ────────────────────────────────────
+  // Every real app open on the monitor gets a right-click Kill — its normal close, back to
+  // the desktop (Kill just delegates to __closeTopMonitorApp, which knows every app's close
+  // path). The self-hosted runtimes also get Restart (tear the runtime down and re-init it
+  // fresh — the only recovery for a wedged instance): DOOM here, python/linux fold theirs
+  // into the console copy/paste menu (see the console-ctx block) rather than double up. A
+  // runtime's Kill is disabled until the runtime is actually running (nothing to kill yet;
+  // Restart is the affordance during load/failure). The three console apps (python/linux/
+  // console) are owned by the console-ctx menu, so this one stands down for them to avoid a
+  // double menu. Dismissed on click-away / Esc / scroll / window blur / resize.
   (function () {
-    var RUNTIME_APPS = {
-      "show-doom":   { restart: "__restartMonitorDoom",   close: "__closeMonitorDoom" }
-    };
+    // Real closable apps this menu serves — the exact set __closeTopMonitorApp knows how to
+    // close, minus the three console apps (console-ctx owns those). Keep in sync with it.
+    var REAL_APPS = ["show-tehran", "photobooth", "show-video", "show-mail", "show-mines", "show-tattoo", "show-life", "show-editor", "show-doom", "show-browser", "show-calendar", "show-weather", "show-nowplaying"];
+    var CONSOLE_APPS = ["show-python", "show-linux", "show-console"];
+    // per-app extras: a Restart hook + a runtime-running predicate (Kill greys out until true)
+    var RUNTIME_EXTRAS = { "show-doom": { restart: "__restartMonitorDoom", running: "__doomRunning" } };
     var menuEl = null;
-    function activeRuntimeApp() {
+    function activeMonitorApp() {
       if (!monitor || window.currentStageName !== "office") return null;
-      for (var cls in RUNTIME_APPS) if (monitor.classList.contains(cls)) return RUNTIME_APPS[cls];
-      return null;
+      for (var i = 0; i < CONSOLE_APPS.length; i++) if (monitor.classList.contains(CONSOLE_APPS[i])) return null; // console-ctx owns these
+      var open = false;
+      for (var j = 0; j < REAL_APPS.length; j++) if (monitor.classList.contains(REAL_APPS[j])) { open = true; break; }
+      if (!open) return null;
+      var extra = null;
+      for (var cls in RUNTIME_EXTRAS) if (monitor.classList.contains(cls)) { extra = RUNTIME_EXTRAS[cls]; break; }
+      return { close: "__closeTopMonitorApp", restart: extra ? extra.restart : null, running: extra ? extra.running : null };
     }
     function closeMenu() {
       if (!menuEl) return;
@@ -23052,19 +23080,21 @@ document.addEventListener("click", function (e) {
     function tr(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || key; }
     var RESTART_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9.7 3.4 A4 4 0 1 0 10.3 6.2"/><path d="M10 1.8 L10 3.6 L8.2 3.6"/></svg>';
     var KILL_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M3.4 3.4 L8.6 8.6 M8.6 3.4 L3.4 8.6"/></svg>';
-    function makeItem(cls, ico, label, fnName) {
+    function makeItem(cls, ico, label, fnName, disabled) {
       var b = document.createElement("button");
       b.type = "button"; b.className = cls; b.setAttribute("role", "menuitem");
       b.innerHTML = ico + "<span>" + label + "</span>";
-      b.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); closeMenu(); var fn = window[fnName]; if (fn) fn(); });
+      if (disabled) { b.disabled = true; b.setAttribute("aria-disabled", "true"); }
+      else b.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); closeMenu(); var fn = window[fnName]; if (fn) fn(); });
       return b;
     }
     function buildMenu(app, x, y) {
       closeMenu();
       menuEl = document.createElement("div");
       menuEl.className = "mon-ctx"; menuEl.setAttribute("role", "menu");
-      menuEl.appendChild(makeItem("ctx-restart", RESTART_ICO, tr("mon_ctx_restart"), app.restart));
-      menuEl.appendChild(makeItem("ctx-kill", KILL_ICO, tr("mon_ctx_kill"), app.close));
+      if (app.restart) menuEl.appendChild(makeItem("ctx-restart", RESTART_ICO, tr("mon_ctx_restart"), app.restart, false));
+      var killDisabled = !!(app.running && !(window[app.running] && window[app.running]())); // runtime not up yet → nothing to kill
+      menuEl.appendChild(makeItem("ctx-kill", KILL_ICO, tr("mon_ctx_kill"), app.close, killDisabled));
       menuEl.style.visibility = "hidden";
       document.body.appendChild(menuEl);
       // clamp to the viewport on both axes so a corner right-click doesn't overflow
@@ -23079,7 +23109,7 @@ document.addEventListener("click", function (e) {
       window.addEventListener("resize", closeMenu);
     }
     document.addEventListener("contextmenu", function (e) {
-      var app = activeRuntimeApp();
+      var app = activeMonitorApp();
       if (!app) return; // every other surface keeps the native context menu
       if (!e.target || !e.target.closest || !e.target.closest("#office-monitor")) return; // only over the monitor's app area
       e.preventDefault();
@@ -24468,6 +24498,7 @@ async def localfont(name):
     scheduleSaver();
   }
   window.__closeMonitorPython = closePython; // other monitor apps close the REPL before taking the screen
+  window.__pyRunning = function () { return pyLoadState === "ready"; }; // interpreter up — gates the context-menu Kill
   // Restart (context menu): throw away the current interpreter and boot a fresh CPython —
   // recovers a REPL wedged into a bad state (stuck busy, corrupted namespace). The heavy
   // pyodide bundle is already in memory, so this only re-inits the interpreter, not the fetch.
@@ -24715,6 +24746,7 @@ async def localfont(name):
     scheduleSaver();
   }
   window.__closeMonitorLinux = closeLinux; // other monitor apps stop the VM before taking the screen
+  window.__lxRunning = function () { return lxLoadState === "ready"; }; // VM booted — gates the context-menu Kill
   // Restart (context menu): destroy the VM and cold-boot a fresh one — recovers a wedged
   // kernel/shell (a real power-cycle, not the RAM-intact resume that reopening does). The
   // v86 library is already loaded, so loadLinuxVM() → lxBootVM() boots a brand-new machine.
@@ -24908,6 +24940,7 @@ async def localfont(name):
     scheduleSaver();
   }
   window.__closeMonitorDoom = closeDoom; // other monitor apps / resets pause the engine before taking the screen
+  window.__doomRunning = function () { return doomReady; }; // engine up and looping — gates the context-menu Kill
   // Restart (context menu): tear the Emscripten runtime down and re-instantiate a fresh
   // wasm — recovers a wedged/misrendered DOOM (reopening alone does NOT reboot: the Module
   // is built once and reused). We null the global Module, drop the old glue <script> so

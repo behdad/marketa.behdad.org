@@ -1,14 +1,19 @@
 #!/usr/bin/env node
-// Focused test for the runtime-app right-click menus + restart teardown + the DOOM
-// fullscreen button. Uses the same one-shot headless-Chrome runner as play.js
+// Focused test for the monitor right-click Kill/Restart menus + restart teardown + the
+// DOOM fullscreen button. Uses the same one-shot headless-Chrome runner as play.js
 // (--dump-dom, no long-lived process, so it runs in-sandbox).
 //
-// Two menus by design: python/linux fold Restart+Kill into their existing console
-// copy/paste menu (.console-ctx); DOOM (a canvas, no copy/paste) gets its own
-// standalone menu (.mon-ctx). This verifies UX + wiring + restart TEARDOWN (state
-// reset, canvas swap, no throws). It does NOT load the real WASM runtimes (pyodide /
-// v86 / doom need real network + wasm, which --virtual-time-budget can't drive), so
-// the full runtime RE-INIT completing is out of scope here — that's a live check.
+// Two menus by design (kept split to avoid a double menu on the console apps):
+//   • .console-ctx — python/linux/console fold Kill (and, for the runtimes, Restart) into
+//     their existing copy/paste menu.
+//   • .mon-ctx — every other real app (mail, weather, mines, music, video, …) plus DOOM
+//     (a canvas, no copy/paste) gets this standalone menu. Kill delegates to
+//     __closeTopMonitorApp; Restart appears only for DOOM.
+// Kill on a self-hosted runtime (doom/python/linux) is DISABLED until the runtime is
+// actually running — the running predicates (__doomRunning/__pyRunning/__lxRunning) are
+// window-exposed so this harness can flip them (it can't boot the real WASM runtimes,
+// which need real network + wasm that --virtual-time-budget can't drive). Full runtime
+// RE-INIT completing is out of scope here — that's a live check.
 "use strict";
 var lib = require("./lib");
 
@@ -20,34 +25,55 @@ var HARNESS = [
   "  var report = { errors: [], steps: {} };",
   "  function S(k,v){ report.steps[k]=v; }",
   "  function ctxAt(el){ var r=el.getBoundingClientRect(); var e=new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:r.left+Math.min(20,r.width/2),clientY:r.top+Math.min(20,r.height/2)}); var prevented=!el.dispatchEvent(e); return prevented; }",
-  "  function ccMenu(){ return document.querySelector('.console-ctx.show'); }",           // python/linux menu
+  "  function ccMenu(){ return document.querySelector('.console-ctx.show'); }",           // python/linux/console menu
   "  function ccVisible(sel){ var m=ccMenu(); if(!m) return false; var b=m.querySelector(sel); return !!b && b.style.display!=='none'; }",
   "  function ccText(sel){ var m=ccMenu(); var b=m&&m.querySelector(sel); return b?b.textContent:''; }",
-  "  function monMenu(){ return document.querySelector('.mon-ctx'); }",                    // doom menu
+  "  function ccKillDisabled(){ var m=ccMenu(); var b=m&&m.querySelector('.cc-kill'); return !!(b&&b.disabled); }",
+  "  function monMenu(){ return document.querySelector('.mon-ctx'); }",                    // doom + every non-console app menu
   "  function monItems(){ var m=monMenu(); return m?[].map.call(m.querySelectorAll('button span'),function(s){return s.textContent;}):[]; }",
+  "  function monKill(){ var m=monMenu(); return m?m.querySelector('button.ctx-kill'):null; }",
+  "  function monRestart(){ var m=monMenu(); return m?m.querySelector('button.ctx-restart'):null; }",
+  "  function monKillDisabled(){ var b=monKill(); return !!(b&&b.disabled); }",
   "  function mon(){ return document.getElementById('office-monitor'); }",
-  "  function showApp(cls){ var m=mon(); m.classList.remove('show-python','show-linux','show-doom'); m.classList.add('screen-on','show-caps',cls); window.currentStageName='office'; }",
+  "  var APP_CLASSES=['show-caps','show-nowplaying','show-mail','show-mines','show-weather','show-calendar','show-video','show-tattoo','show-life','show-editor','show-browser','show-tehran','photobooth','show-python','show-linux','show-console','show-doom'];",
+  "  function showApp(cls){ var m=mon(); APP_CLASSES.forEach(function(c){m.classList.remove(c);}); m.classList.add('screen-on'); if(cls) m.classList.add(cls); window.currentStageName='office'; }",
   "  async function run(){",
   "    if (window.goToStage) window.goToStage('office');",
   "    await sleep(200);",
+  // ---- DESKTOP: no menu ----
+  "    showApp('show-caps');",
+  "    S('desktop_ctx_prevented', ctxAt(mon()));",     // should be false — native menu kept
+  "    S('desktop_no_mon_menu', !monMenu());",
+  "    S('desktop_no_cc_menu', !ccMenu());",
+  // ---- NON-RUNTIME APPS (mon-ctx): Kill only, enabled, no Restart ----
+  "    var nonRt=['show-mail','show-weather','show-mines','show-nowplaying'];",
+  "    var nonRtOk=true, nonRtDetail={};",
+  "    for (var i=0;i<nonRt.length;i++){ var c=nonRt[i]; showApp(c); var prevented=ctxAt(mon()); var items=monItems(); var kill=monKill(); var ok = prevented===true && !!monMenu() && items.length===1 && /kill/i.test(items[0]||'') && !monRestart() && !!kill && kill.disabled===false; nonRtDetail[c]={prevented:prevented,items:items,hasRestart:!!monRestart(),killDisabled:kill?kill.disabled:'no-kill'}; if(!ok) nonRtOk=false; }",
+  "    S('nonruntime_kill_only_enabled', nonRtOk); S('nonruntime_detail', nonRtDetail);",
+  // one full close through the generalized Kill (mon-ctx -> __closeTopMonitorApp)
+  "    showApp('show-mail'); ctxAt(mon()); if(monKill()) monKill().click(); await sleep(80);",
+  "    S('mail_kill_closed_app', !mon().classList.contains('show-mail'));",
+  "    S('mail_kill_hid_menu', !monMenu());",
   // ---- PYTHON (console-ctx) ----
   "    showApp('show-python');",
   "    var pyOut = document.getElementById('monitor-py-out');",
   "    S('py_contextmenu_prevented', ctxAt(pyOut));",
   "    S('py_menu_present', !!ccMenu());",
-  "    S('py_has_copy', !!(ccMenu()&&ccMenu().querySelector('button')));",
   "    S('py_restart_visible', ccVisible('.cc-restart'));",
   "    S('py_kill_visible', ccVisible('.cc-kill'));",
+  "    S('py_kill_disabled_when_cold', ccKillDisabled());",   // runtime not loaded → Kill inactive
   "    S('py_restart_label', ccText('.cc-restart'));",
   "    S('py_kill_label', ccText('.cc-kill'));",
   "    S('menu_html', ccMenu()?ccMenu().outerHTML.replace(/\\s+/g,' ').slice(0,500):'');",
-  // click restart -> teardown + hide
+  // Restart is the load/failure affordance — it works even while the runtime is cold
   "    pyOut.innerHTML='<div>stale line</div><div>garbage</div>';",
   "    ccMenu().querySelector('.cc-restart').click(); await sleep(100);",
   "    S('py_menu_hidden_after_restart', !ccMenu());",
   "    S('py_out_reset', /python|CPython|snake/i.test(pyOut.textContent) && !/stale line|garbage/.test(pyOut.textContent));",
-  // reopen + kill
+  // mark the runtime running → Kill enabled → closes
+  "    window.__pyRunning=function(){return true;};",
   "    showApp('show-python'); ctxAt(pyOut); S('py_menu_reopened', !!ccMenu());",
+  "    S('py_kill_enabled_when_running', !ccKillDisabled());",
   "    ccMenu().querySelector('.cc-kill').click(); await sleep(100);",
   "    S('py_kill_closed_app', !mon().classList.contains('show-python'));",
   // Esc keeps app, closes menu
@@ -56,20 +82,28 @@ var HARNESS = [
   "    await sleep(80);",
   "    S('esc_hid_menu', !ccMenu());",
   "    S('esc_kept_app', mon().classList.contains('show-python'));",
-  // plain JS console: no restart/kill
-  "    var m=mon(); m.classList.remove('show-python','show-linux','show-doom'); m.classList.add('screen-on','show-caps','show-console'); window.currentStageName='office';",
-  "    var conOut=document.getElementById('monitor-console-out'); if(conOut){ ctxAt(conOut); S('console_restart_hidden', !ccVisible('.cc-restart')); } else S('console_restart_hidden', 'no-console-out');",
+  // plain JS console: Kill present + enabled (no runtime), but NO Restart
+  "    showApp('show-console');",
+  "    var conOut=document.getElementById('monitor-console-out');",
+  "    if(conOut){ ctxAt(conOut); S('console_restart_hidden', !ccVisible('.cc-restart')); S('console_kill_visible', ccVisible('.cc-kill')); S('console_kill_enabled', !ccKillDisabled()); }",
+  "    else { S('console_restart_hidden','no-console-out'); S('console_kill_visible','no-console-out'); S('console_kill_enabled','no-console-out'); }",
   // ---- LINUX (console-ctx) ----
   "    showApp('show-linux');",
   "    var lxOutEl=document.getElementById('monitor-linux-out');",
   "    ctxAt(lxOutEl); S('linux_menu_present', !!ccMenu()); S('linux_restart_visible', ccVisible('.cc-restart')); S('linux_kill_visible', ccVisible('.cc-kill'));",
+  "    S('linux_kill_disabled_when_cold', ccKillDisabled());",
   "    if(ccMenu()) ccMenu().querySelector('.cc-restart').click(); await sleep(60); S('linux_restart_hid_menu', !ccMenu());",
   // ---- DOOM (mon-ctx) ----
   "    showApp('show-doom');",
   "    var doomWrap=document.getElementById('monitor-doom-wrap');",
   "    S('doom_ctx_prevented', ctxAt(doomWrap));",
   "    S('doom_menu_present', !!monMenu()); S('doom_items', monItems());",
-  "    if(monMenu()) monMenu().querySelector('button.ctx-kill').click(); await sleep(40); S('doom_kill_hid_menu', !monMenu());",
+  "    S('doom_kill_disabled_when_cold', monKillDisabled());",   // engine not up → Kill inactive
+  // mark the engine running → Kill enabled → closes
+  "    window.__doomRunning=function(){return true;};",
+  "    showApp('show-doom'); ctxAt(doomWrap);",
+  "    S('doom_kill_enabled_when_running', !monKillDisabled());",
+  "    if(monKill()) monKill().click(); await sleep(40); S('doom_kill_hid_menu', !monMenu()); S('doom_kill_closed_app', !mon().classList.contains('show-doom'));",
   // fs button
   "    showApp('show-doom');",
   "    window.__fsCalls=[]; HTMLCanvasElement.prototype.requestFullscreen=function(){window.__fsCalls.push(this.id||'canvas');return Promise.resolve();};",
@@ -102,25 +136,36 @@ function check(name, cond, detail) {
   else { fails++; console.log("  ✗ " + name + (detail !== undefined ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 var s = rep.steps;
-console.log("monitor right-click menus + restart + fs button:");
+console.log("monitor right-click Kill/Restart menus + restart + fs button:");
+console.log(" desktop (no app open):");
+check("right-click on the bare desktop shows no menu (native kept)", s.desktop_ctx_prevented === false && s.desktop_no_mon_menu === true && s.desktop_no_cc_menu === true, { prevented: s.desktop_ctx_prevented, mon: !s.desktop_no_mon_menu, cc: !s.desktop_no_cc_menu });
+console.log(" non-runtime apps (mail/weather/mines/music) — Kill only, enabled, no Restart:");
+check("every sampled non-runtime app shows exactly an enabled Kill, no Restart", s.nonruntime_kill_only_enabled === true, s.nonruntime_detail);
+check("generalized Kill closes a non-runtime app (mail) + hides the menu", s.mail_kill_closed_app === true && s.mail_kill_hid_menu === true);
 console.log(" python / linux (folded into the console menu):");
 check("contextmenu suppresses native menu over python console", s.py_contextmenu_prevented === true);
 check("console menu appears over python", s.py_menu_present === true);
 check("Restart item visible for python", s.py_restart_visible === true);
 check("Kill item visible for python", s.py_kill_visible === true);
+check("Kill is DISABLED while the python runtime isn't running", s.py_kill_disabled_when_cold === true);
 check("Restart labelled 'Restart'", /restart/i.test(s.py_restart_label), s.py_restart_label);
 check("Kill labelled 'Kill'", /kill/i.test(s.py_kill_label), s.py_kill_label);
-check("Restart hides the menu + tears down python output", s.py_menu_hidden_after_restart === true && s.py_out_reset === true);
-check("Kill closes the python app", s.py_kill_closed_app === true);
+check("Restart works while cold — hides the menu + tears down python output", s.py_menu_hidden_after_restart === true && s.py_out_reset === true);
+check("Kill becomes ENABLED once the runtime is running", s.py_kill_enabled_when_running === true);
+check("enabled Kill closes the python app", s.py_kill_closed_app === true);
 check("Esc hides the menu", s.esc_hid_menu === true);
 check("Esc leaves the app open (does not close it)", s.esc_kept_app === true);
-check("plain JS console does NOT get a Restart item", s.console_restart_hidden === true || s.console_restart_hidden === "no-console-out");
+check("plain JS console gets NO Restart", s.console_restart_hidden === true || s.console_restart_hidden === "no-console-out");
+check("plain JS console gets an enabled Kill (no runtime to gate)", (s.console_kill_visible === true && s.console_kill_enabled === true) || s.console_kill_visible === "no-console-out");
 check("console menu appears over linux with Restart+Kill", s.linux_menu_present === true && s.linux_restart_visible === true && s.linux_kill_visible === true);
+check("linux Kill is DISABLED while the VM isn't running", s.linux_kill_disabled_when_cold === true);
 check("linux Restart hides the menu", s.linux_restart_hid_menu === true);
 console.log(" doom (standalone menu):");
 check("contextmenu suppresses native menu over doom", s.doom_ctx_prevented === true);
-check("doom menu appears with exactly Restart + Kill", s.doom_menu_present === true && Array.isArray(s.doom_items) && s.doom_items.length === 2 && /restart/i.test(s.doom_items[0]) && /kill/i.test(s.doom_items[1]), s.doom_items);
-check("doom Kill hides the menu", s.doom_kill_hid_menu === true);
+check("doom menu appears with Restart + Kill", s.doom_menu_present === true && Array.isArray(s.doom_items) && s.doom_items.length === 2 && /restart/i.test(s.doom_items[0]) && /kill/i.test(s.doom_items[1]), s.doom_items);
+check("doom Kill is DISABLED while the engine isn't running", s.doom_kill_disabled_when_cold === true);
+check("doom Kill becomes ENABLED once the engine is running", s.doom_kill_enabled_when_running === true);
+check("enabled doom Kill hides the menu + closes the app", s.doom_kill_hid_menu === true && s.doom_kill_closed_app === true);
 check("doom fs button present", s.doom_fs_btn_present === true);
 check("doom fs button calls requestFullscreen on the canvas", s.doom_fs_called_on_canvas === true, s.doom_fs_calls);
 console.log(" restart teardown (no throws, real state reset):");

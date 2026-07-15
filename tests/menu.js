@@ -170,8 +170,11 @@ var HARNESS = [
   "    function deskTile(id){ return document.getElementById('monitor-dock-'+id); }",
   "    function monOpen(){ var m=monMenu(); return m?m.querySelector('button.ctx-open'):null; }",
   "    function escMenu(){ document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); }",
-  // non-host tile (mail) → Open only, no Kill
-  "    showApp('show-caps'); var mailTile=deskTile('mail'); S('desk_mail_prevented', ctxAt(mailTile)); S('desk_mail_items', monItems()); S('desk_mail_has_open', !!monOpen()); S('desk_mail_has_kill', !!monKill()); escMenu(); await sleep(20);",
+  // non-host tile (mail) → Open + Kill (Open first); Kill resets the app's retained state
+  "    showApp('show-caps'); var mailTile=deskTile('mail'); S('desk_mail_prevented', ctxAt(mailTile)); S('desk_mail_items', monItems()); S('desk_mail_has_open', !!monOpen()); S('desk_mail_has_kill', !!monKill());",
+  // clicking Kill on a non-host desktop icon calls resetMonitorAppState(id) (spied) + hides the menu
+  "    (function(){ var _o=window.resetMonitorAppState; window.__resetCalls=[]; window.resetMonitorAppState=function(id){ window.__resetCalls.push(id); return _o&&_o.apply(this,arguments); }; })();",
+  "    if(monKill()) monKill().click(); await sleep(30); S('desk_mail_kill_called', (window.__resetCalls||[]).indexOf('mail')>=0); S('desk_mail_kill_hid_menu', !monMenu()); escMenu(); await sleep(20);",
   // host tile with runtime STOPPED → Open only
   "    window.__doomRunning=function(){return false;}; showApp('show-caps'); S('desk_doom_stopped_prevented', ctxAt(deskTile('doom'))); S('desk_doom_stopped_items', monItems()); S('desk_doom_stopped_has_kill', !!monKill()); escMenu(); await sleep(20);",
   // host tile with runtime RUNNING → Open + Kill (Open first)
@@ -254,7 +257,8 @@ check("no uncaught JS errors during the run", Array.isArray(rep.errors) && rep.e
 
 // ==== DESKTOP DOCK-ICON CONTEXT MENU (Open / Kill) — appended assertions ====
 console.log(" desktop dock-icon menu (Open / Kill):");
-check("desktop right-click a non-host tile (mail) → Open only, no Kill", s.desk_mail_prevented === true && Array.isArray(s.desk_mail_items) && s.desk_mail_items.length === 1 && /open/i.test(s.desk_mail_items[0] || "") && s.desk_mail_has_open === true && s.desk_mail_has_kill === false, s.desk_mail_items);
+check("desktop right-click a non-host tile (mail) → Open + Kill (Open first)", s.desk_mail_prevented === true && Array.isArray(s.desk_mail_items) && s.desk_mail_items.length === 2 && /open/i.test(s.desk_mail_items[0] || "") && /kill/i.test(s.desk_mail_items[1] || "") && s.desk_mail_has_open === true && s.desk_mail_has_kill === true, s.desk_mail_items);
+check("desktop non-host Kill invokes resetMonitorAppState(id) + hides the menu", s.desk_mail_kill_called === true && s.desk_mail_kill_hid_menu === true, { called: s.desk_mail_kill_called, hid: s.desk_mail_kill_hid_menu });
 check("desktop host tile with runtime STOPPED → Open only", s.desk_doom_stopped_prevented === true && Array.isArray(s.desk_doom_stopped_items) && s.desk_doom_stopped_items.length === 1 && s.desk_doom_stopped_has_kill === false, s.desk_doom_stopped_items);
 check("desktop host tile with runtime RUNNING → Open + Kill (Open first)", Array.isArray(s.desk_doom_running_items) && s.desk_doom_running_items.length === 2 && /open/i.test(s.desk_doom_running_items[0] || "") && /kill/i.test(s.desk_doom_running_items[1] || "") && s.desk_doom_running_has_open === true && s.desk_doom_running_has_kill === true, s.desk_doom_running_items);
 check("desktop Kill calls the silent host kill hook + hides the menu", s.desk_doom_kill_called === true && s.desk_doom_kill_hid_menu === true);

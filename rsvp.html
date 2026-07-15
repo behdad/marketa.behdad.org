@@ -1963,7 +1963,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
    audit clean). Fades in via a transition (transitions aren't audited). */
 #click-me-overlay{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:6; pointer-events:none; opacity:0; transition:opacity .5s ease; transform:translateY(-5%)}
 #click-me-overlay.show{opacity:1}
-.click-me-word{font-family:"Climate Crisis",Impact,sans-serif; color:#3ea6e6; font-size:clamp(2rem,8vw,5rem); line-height:.9; letter-spacing:.5px; white-space:nowrap; text-align:center; text-shadow:0 2px 10px rgba(248,245,236,.95),0 0 5px rgba(248,245,236,.95); font-variation-settings:"YEAR" 1979}
+.click-me-word{font-family:"Climate Crisis",Impact,sans-serif; color:#2eb0c9; font-size:clamp(2rem,8vw,5rem); line-height:.9; letter-spacing:.5px; white-space:nowrap; text-align:center; text-shadow:0 2px 10px rgba(248,245,236,.95),0 0 5px rgba(248,245,236,.95); font-variation-settings:"YEAR" 1979}
 @media (prefers-reduced-motion: reduce){.click-me-word{font-variation-settings:"YEAR" 2010} /* static mid-melt, no rAF */}
 .bsod-wrap{width:124px; height:42px; box-sizing:border-box; background:#0d63c4; color:#fff; padding:3.4px 5px; font-family:"Segoe UI",system-ui,Arial,sans-serif; overflow:hidden; display:flex; flex-direction:column; justify-content:center}
 .bsod-face{font-size:8px; line-height:1; font-weight:300; margin-bottom:1.4px}
@@ -25505,7 +25505,17 @@ async def localfont(name):
   var doomReady = false; // the runtime is up and callMain has started the main loop
   var doomPaused = true; // the main loop is currently paused (kept in sync by doomSync)
   var doomGlueSrc = null; // the glue's SOURCE TEXT, fetched once — each (re)boot runs it in a fresh function scope
-  var doomListeners = []; // window/document listeners SDL adds during callMain — captured so destroyDoom can remove them (else Ctrl+R etc. stay preventDefault'd after a kill)
+  var doomListeners = []; // window/document listeners SDL adds during callMain — captured so we can detach them
+  var doomListenersOn = false; // are the SDL input listeners currently attached to window/document?
+  // SDL's key/mouse listeners preventDefault the keys DOOM handles. Left attached while DOOM is
+  // merely BACKGROUNDED (app closed but engine alive), they swallow keystrokes meant for other apps
+  // — you couldn't type in the console. So attach them only while DOOM is the live foreground and
+  // detach otherwise (doomSync drives this alongside the engine pause/resume).
+  function setDoomListeners(on) {
+    if (on === doomListenersOn) return;
+    doomListeners.forEach(function (L) { try { on ? L.t.addEventListener(L.ty, L.fn, L.op) : L.t.removeEventListener(L.ty, L.fn, L.op); } catch (e) {} });
+    doomListenersOn = on;
+  }
   var doomStallTimer = null; // load watchdog — cleared once the runtime is up
   var DOOM_ASSETS = { // all self-hosted (pinned Chocolate-Doom wasm + FreeDoom — provenance in doom/README.md)
     glue: "doom/doom.js",
@@ -25526,8 +25536,10 @@ async def localfont(name):
     if (!doomReady || !doomModule) return;
     if (doomShouldRun()) {
       if (doomPaused) { try { doomModule.resumeMainLoop(); } catch (e) {} doomPaused = false; }
+      setDoomListeners(true); // foreground → SDL input live
     } else {
       if (!doomPaused) { try { doomModule.pauseMainLoop(); } catch (e) {} doomPaused = true; }
+      setDoomListeners(false); // backgrounded → release the keyboard so other apps (console) can type
     }
   }
   window.__syncMonitorDoom = doomSync;
@@ -25574,6 +25586,7 @@ async def localfont(name):
         try { (doomModule.callMain || window.callMain)(doomModule.arguments); } // callMain is a global in this build
         catch (e) { tgs.forEach(function (t, i) { t.addEventListener = origAdd[i]; }); doomFail(); return; }
         tgs.forEach(function (t, i) { t.addEventListener = origAdd[i]; }); // restore immediately — capture window closed
+        doomListenersOn = true; // SDL just attached them during callMain; doomSync will detach when backgrounded
         doomReady = true;
         doomPaused = false; // callMain started the loop running; doomSync pauses it if we're not foreground
         doomSetMsg("");
@@ -25642,7 +25655,7 @@ async def localfont(name):
     if (doomStallTimer) { clearTimeout(doomStallTimer); doomStallTimer = null; }
     // pull SDL's leaked window/document key listeners so Ctrl+R (and other shortcuts) work again after the kill
     doomListeners.forEach(function (L) { try { L.t.removeEventListener(L.ty, L.fn, L.op); } catch (e) {} });
-    doomListeners = [];
+    doomListeners = []; doomListenersOn = false;
     // keep doomGlueSrc cached — the next open reboots from it in a fresh scope (see bootDoom)
     var oldCanvas = document.getElementById("canvas");
     if (oldCanvas && oldCanvas.parentNode) {

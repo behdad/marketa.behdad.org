@@ -103,7 +103,9 @@ var HARNESS = [
   "    window.__doomRunning=function(){return true;};",
   "    showApp('show-doom'); ctxAt(doomWrap);",
   "    S('doom_kill_enabled_when_running', !monKillDisabled());",
-  "    if(monKill()) monKill().click(); await sleep(40); S('doom_kill_hid_menu', !monMenu()); S('doom_kill_closed_app', !mon().classList.contains('show-doom'));",
+  // Kill now runs a ~2.1s FATALITY death-flash, THEN destroys the app: the menu hides + the
+  // on-screen flash (death-doom) starts immediately; show-doom is torn down only after the flash.
+  "    if(monKill()) monKill().click(); await sleep(40); S('doom_kill_hid_menu', !monMenu()); S('doom_kill_flash_started', mon().classList.contains('death-doom')); S('doom_kill_still_open_during_flash', mon().classList.contains('show-doom')); await sleep(2300); S('doom_kill_closed_app', !mon().classList.contains('show-doom')); S('doom_kill_flash_ended', !mon().classList.contains('death-doom'));",
   // fs button
   "    showApp('show-doom');",
   "    window.__fsCalls=[]; HTMLCanvasElement.prototype.requestFullscreen=function(){window.__fsCalls.push(this.id||'canvas');return Promise.resolve();};",
@@ -165,7 +167,7 @@ check("contextmenu suppresses native menu over doom", s.doom_ctx_prevented === t
 check("doom menu appears with Restart + Kill", s.doom_menu_present === true && Array.isArray(s.doom_items) && s.doom_items.length === 2 && /restart/i.test(s.doom_items[0]) && /kill/i.test(s.doom_items[1]), s.doom_items);
 check("doom Kill is DISABLED while the engine isn't running", s.doom_kill_disabled_when_cold === true);
 check("doom Kill becomes ENABLED once the engine is running", s.doom_kill_enabled_when_running === true);
-check("enabled doom Kill hides the menu + closes the app", s.doom_kill_hid_menu === true && s.doom_kill_closed_app === true);
+check("enabled doom Kill runs the FATALITY flash then destroys the app", s.doom_kill_hid_menu === true && s.doom_kill_flash_started === true && s.doom_kill_still_open_during_flash === true && s.doom_kill_closed_app === true && s.doom_kill_flash_ended === true);
 check("doom fs button present", s.doom_fs_btn_present === true);
 check("doom fs button calls requestFullscreen on the canvas", s.doom_fs_called_on_canvas === true, s.doom_fs_calls);
 console.log(" restart teardown (no throws, real state reset):");

@@ -775,6 +775,11 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 #stage-kitchen.dusk > g{opacity:0; pointer-events:none; transition:opacity .5s ease}
 #stage-kitchen.dusk > #kitchen-post,
 #stage-kitchen.dusk > #kitchen-extinguisher{opacity:1; pointer-events:auto}
+/* the "…be there?" imprint wobbles when its poking-out "?" is tapped (raises the shortcuts card) */
+#kitchen-there-q{transform-box:fill-box; transform-origin:center}
+#kitchen-there-q.kq-wob{animation:kq-wob .5s ease-in-out}
+@keyframes kq-wob{0%,100%{transform:rotate(0)}25%{transform:rotate(-5deg) scale(1.08)}55%{transform:rotate(4deg) scale(1.05)}80%{transform:rotate(-1.5deg)}}
+@media (prefers-reduced-motion: reduce){#kitchen-there-q.kq-wob{animation:none}}
 #stage-kitchen.dusk > #kitchen-bar{opacity:1}
 /* the "hydration station" neon: an aqua tube glow that reads against the dark back-bar.
    Layered drop-shadows fake a neon halo; it always glows, and gently pulses during the party */
@@ -5640,7 +5645,11 @@ section{margin:1.9rem 0}
 <text x="86" y="296" text-anchor="middle" fill="#382c1e" font-family="'Fraunces',serif" font-size="24" font-weight="700">WILL</text>
 <text x="236" y="296" text-anchor="middle" fill="#382c1e" font-family="'Fraunces',serif" font-size="24" font-weight="700">YOU</text>
 <text x="386" y="296" text-anchor="middle" fill="#382c1e" font-family="'Fraunces',serif" font-size="24" font-weight="700">BE</text>
-<text x="536" y="296" text-anchor="middle" fill="#382c1e" font-family="'Fraunces',serif" font-size="24" font-weight="700">THERE?</text>
+<text id="kitchen-there-q" x="536" y="296" text-anchor="middle" fill="#382c1e" font-family="'Fraunces',serif" font-size="24" font-weight="700">THERE?</text>
+<!-- the "?" of "…be there?" pokes out past the cabinets; a transparent hit-pad over just it wobbles
+     the word and raises the keyboard-shortcuts card (a quiet find). Drawn here; the "?" x-range is
+     clear of the cabinet/bar overlays that paint later, so it stays the topmost thing at that spot. -->
+<rect id="kitchen-there-q-hit" x="567" y="272" width="27" height="34" fill="transparent" style="cursor:pointer; pointer-events:auto"/>
 <g id="kitchen-cabinet-surprise" aria-hidden="true">
 <g id="kitchen-cabinet-ghost" class="cabinet-critter">
 <ellipse cx="220" cy="300" rx="13" ry="15" fill="#f4f0e8"/>
@@ -14082,6 +14091,7 @@ window.addEventListener("hashchange", function () {
     e.preventDefault();
     if (kbdOverlay) closeKbdHelp(); else openKbdHelp();
   });
+  window.__openKbdHelp = openKbdHelp; // so scene objects (e.g. the bar's "…THERE?" imprint) can raise the shortcuts card
   // Escape closes the card WITHOUT also stopping the music. It listens on window
   // (capture), not document: the stop-the-music Escape listener is a capture listener
   // on document, and same-node capture listeners run in registration order — only an
@@ -20137,6 +20147,20 @@ document.addEventListener("click", function (e) {
   wireBarWobbleGroup("kitchen-bar-glassware", barGlassHit);
   wireBarWobbleGroup("kitchen-bar-usedglasses", barGlassHit);
   wireBarWobbleGroup("kitchen-bar-stools", function (w, pan) { playDryClickSound(pan); }); // a soft wooden knock, not a clink
+  // the "?" of "will you be there?" carved into the bar front pokes out past the cabinets; tapping it
+  // wobbles the word and raises the keyboard-shortcuts card (a quiet find). Hit-pad over just the "?".
+  (function () {
+    var qhit = document.getElementById("kitchen-there-q-hit"), qtext = document.getElementById("kitchen-there-q");
+    if (!qhit || !qtext) return;
+    qhit.addEventListener("click", function (e) {
+      e.stopPropagation();
+      qtext.classList.remove("kq-wob");
+      requestAnimationFrame(function () { requestAnimationFrame(function () { qtext.classList.add("kq-wob"); }); });
+      playDryClickSound("kitchen-there-q-hit");
+      if (window.__openKbdHelp) window.__openKbdHelp();
+    });
+    qtext.addEventListener("animationend", function () { qtext.classList.remove("kq-wob"); });
+  })();
   // the two tipsy party patrons react to a tap: a quick hiccup jolt (one-shot .hiccup, cleared on
   // animationend so the idle sway resumes) + a spatialized hiccup sound. Party-only (CSS re-enables
   // pointer-events on each patron under .party-on; the parent #kitchen-bar-patrons keeps

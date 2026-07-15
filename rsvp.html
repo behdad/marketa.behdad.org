@@ -19522,6 +19522,10 @@ document.addEventListener("click", function (e) {
     var rows = window.__cocktailData ? window.__cocktailData() : [];
     return rows.length ? rows[(Math.random() * rows.length) | 0] : null;
   }
+  function featuredRow() { // the signature drink (cocktail() with no name pours this, not a random one)
+    var fn = window.__cocktailFeatured && window.__cocktailFeatured();
+    return fn ? findRow(fn) : randomRow();
+  }
   function findRow(q) {
     var rows = window.__cocktailData ? window.__cocktailData() : [];
     q = String(q).toLowerCase().trim();
@@ -19551,7 +19555,7 @@ document.addEventListener("click", function (e) {
   window.__makeCocktail = function (name) {
     var rows = window.__cocktailData ? window.__cocktailData() : [];
     if (!rows.length) return "the bar isn't stocked yet.";
-    var row = (name == null || name === "") ? randomRow() : findRow(name);
+    var row = (name == null || name === "") ? featuredRow() : findRow(name);
     if (!row) return "no cocktail by that name — try \"negroni\", \"margarita\", \"mojito\", \"manhattan\"…";
     if (!window.__gardenPartyOn && window.party) window.party(true); // dark bar → light the party first
     if (window.goToStage) window.goToStage("kitchen");               // then step behind the bar
@@ -21567,7 +21571,7 @@ document.addEventListener("click", function (e) {
       storm: "storm(true) — roll a thunderstorm in over the balcony; storm(false) clears it; storm() reports whether it's storming",
       dance: "dance(\"name\") — cue a garden-party dance by name in quotes, e.g. dance(\"salsa\"), or 1–9, or dance(random()); dance() returns the current dance {n, name}; dance(\"next\") skips ahead (run party(true) first). dances: \"techno\" · \"waltz\" · \"disco\" · \"swing\" · \"salsa\" · \"bhangra\" · \"persian\" · \"polka\" · \"horah\"",
       dj: "dj(\"amir\"|\"danesh\") — who spins at the party (or 1–2, or random()); dj() returns the current DJ {n, name}. amir wears the cap, danesh the afro",
-      cocktail: "cocktail(\"negroni\") — the bartender mixes that real drink from the bar's menu (partial name ok); cocktail() makes a random one. lights the party + steps behind the bar first if it's dark. he also mixes on his own while you watch the bar. alias: drink()",
+      cocktail: "cocktail(\"negroni\") — the bartender mixes that real drink from the bar's menu (partial name ok); cocktail() makes the featured signature drink. lights the party + steps behind the bar first if it's dark. he also mixes on his own while you watch the bar. alias: drink()",
       lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
       caption: "caption(\"text\") — overwrite the hint line above the scene with your own text and return the previous line; caption() reads the current line. a room change or hint reclaims it",
       candle: "candle() — both garden candles' lit states; candle(1) or candle(2) reads one; candle(1,true)/candle(2,false) lights or snuffs one and returns its previous state",
@@ -27624,6 +27628,7 @@ async def localfont(name):
       }
     ];
     window.__cocktailNames = function () { return COCKTAILS.map(function (c) { return c.name; }); }; // the loft.menu console getter reads this
+    window.__cocktailFeatured = function () { return COCKTAILS[cocktailFeatured()].name; }; // the signature drink — cocktail() with no arg makes this one
     window.__cocktailData = function () { // full recipe rows for the bartender's make animation (bar module reads this)
       return COCKTAILS.map(function (c) {
         return { name: c.name, ingredients: c.recipe.ingredients.slice(), instructions: c.recipe.instructions };
@@ -27706,16 +27711,7 @@ async def localfont(name):
     function renderCocktailDetail(body) {
       var c = COCKTAILS[cocktailSel];
       if (!c) { cocktailView = "gallery"; renderCocktailGallery(body); return; }
-      var back = document.createElement("button");
-      back.type = "button";
-      back.className = "pm-ck-back";
-      back.textContent = tr("ck_back");
-      back.addEventListener("click", function () {
-        cocktailView = "gallery"; cocktailSel = -1;
-        body.scrollTop = 0; body.innerHTML = "";
-        renderCocktailGallery(body);
-      });
-      body.appendChild(back);
+      // (no in-content back button — the phone's own back arrow steps detail → the bar menu)
       var shot = document.createElement("div");
       shot.className = "pm-ck-detshot";
       cocktailShot(shot, c);
@@ -28382,7 +28378,14 @@ async def localfont(name):
     // ── nav / open / close ──────────────────────────────────────────────────────
     function navBack() {
       if (shell.classList.contains("pm-incall")) { hangup(); return; }
-      if (shell.classList.contains("pm-app")) { showHome(); return; }
+      if (shell.classList.contains("pm-app")) {
+        // in-app back first: the cocktails detail view steps back to the bar menu, not out to home
+        if (currentApp === "cocktails" && cocktailView === "detail") {
+          var body = shell.querySelector(".phone-app-body");
+          if (body) { cocktailView = "gallery"; cocktailSel = -1; body.scrollTop = 0; body.innerHTML = ""; renderCocktailGallery(body); return; }
+        }
+        showHome(); return;
+      }
       close();
     }
     function navHome() {

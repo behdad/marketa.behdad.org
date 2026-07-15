@@ -10154,7 +10154,7 @@ section{margin:1.9rem 0}
 <!-- the translation editor: a real FR→CZ title of Markéta's, the Czech one typing itself on -->
 <g id="laptop-editor">
 <rect x="390" y="171" width="54" height="25" rx="1" fill="#fbfaf7"/>
-<text x="392.5" y="178" font-size="3.4" fill="#8f8a80">«L’amour»</text>
+<text id="laptop-editor-src" x="392.5" y="178" font-size="3.4" fill="#8f8a80">«L’amour»</text>
 <text x="392.5" y="186" font-size="5" fill="#2a2a2a" clip-path="url(#laptop-type-clip)">«Láska»</text>
 <rect id="laptop-caret" x="392.6" y="181.4" width="0.9" height="5.2" fill="#2a2a2a"/>
 <text x="392.5" y="192.6" font-size="2.9" fill="#9a9388">— m ∞ b</text>
@@ -12751,6 +12751,8 @@ var T = {
     laptop_ctx_end: "End call",
     mon_ctx_stop: "Stop",
     mon_ctx_uninstall: "Uninstall",
+    laptop_ctx_translate: "Translate",
+    laptop_amour: "Love", // FR «L’amour» → EN, swapped into the laptop editor by the Translate menu item
     app_phone: "phone",
     phone_dialer_title: "contacts",
     dial_call: "Call",
@@ -13157,6 +13159,8 @@ var T = {
     laptop_ctx_end: "Ukončit hovor",
     mon_ctx_stop: "Zastavit",
     mon_ctx_uninstall: "Odinstalovat",
+    laptop_ctx_translate: "Přeložit",
+    laptop_amour: "Láska", // FR «L’amour» → CS
     app_phone: "telefon",
     phone_dialer_title: "kontakty",
     dial_call: "Volat",
@@ -20680,6 +20684,7 @@ document.addEventListener("click", function (e) {
         scheduleLaptopSaver();
       } else {
         endLaptopUpdate();
+        if (window.__laptopRestoreEditor) window.__laptopRestoreEditor(); // reopening shows the French original again
       }
     }
     // console hook: place a video call to a contact ("prague" | "lueb"), opening the lid first
@@ -20777,7 +20782,25 @@ document.addEventListener("click", function (e) {
       var lapMenuEl = null;
       var LAP_OPEN_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 2.2 H9.8 V5.5"/><path d="M9.8 2.2 L5.6 6.4"/><path d="M9 6.7 V9.3 A0.6 0.6 0 0 1 8.4 9.9 H2.7 A0.6 0.6 0 0 1 2.1 9.3 V3.6 A0.6 0.6 0 0 1 2.7 3 H5"/></svg>';
       var LAP_END_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M3.4 3.4 L8.6 8.6 M8.6 3.4 L3.4 8.6"/></svg>';
+      var LAP_TR_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="4.2"/><path d="M1.9 6 H10.1 M6 1.8 V10.2 M2.9 3.7 Q6 5 9.1 3.7 M2.9 8.3 Q6 7 9.1 8.3"/></svg>';
       function lapTr(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || key; }
+      // Editor "Translate": swap the French «L’amour» title (its lone French string) into the
+      // page language on click (re-read each time, so a language toggle then Translate targets
+      // the right one). The fixed «Láska» below it is Markéta's real published translation — art,
+      // never touched. Translate-in-place; closing the lid restores the French original.
+      var laptopAmourFR = null;
+      function translateEditor() {
+        var el = document.getElementById("laptop-editor-src");
+        if (!el) return;
+        if (laptopAmourFR == null) laptopAmourFR = el.textContent; // «L’amour», captured once
+        var word = (T[laptopLang()] && T[laptopLang()].laptop_amour) || T.en.laptop_amour;
+        var next = "«" + word + "»";
+        if (el.textContent === next) return;
+        el.textContent = next; // synchronous swap (tests read it immediately; harness stalls setTimeout)
+        try { el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: "ease" }); } catch (_) {} // cosmetic fade only
+      }
+      function restoreEditorSrc() { var el = document.getElementById("laptop-editor-src"); if (el && laptopAmourFR != null) el.textContent = laptopAmourFR; }
+      window.__laptopRestoreEditor = restoreEditorSrc;
       function lapCloseMenu() {
         if (!lapMenuEl) return;
         if (lapMenuEl.parentNode) lapMenuEl.parentNode.removeChild(lapMenuEl);
@@ -20831,8 +20854,15 @@ document.addEventListener("click", function (e) {
           lapOpenMenu([lapItem("ctx-open", LAP_OPEN_ICO, lapTr("mon_ctx_open"), function () { stopLaptopInvite(); if (window.__laptopCall) window.__laptopCall(callee); })], e.clientX, e.clientY);
           return;
         }
-        // closed laptop → Open wakes it. An open editor/menubar face has nothing to "open" →
-        // fall through to the native menu (the dock's bare-desktop analog).
+        // open laptop, over the editor screen face (not a tile, no live call) → Translate the
+        // «L’amour» title into the current page language. The face is the TextEdit document.
+        if (laptop.classList.contains("open") && e.target.closest("#office-laptop-face")) {
+          e.preventDefault();
+          lapOpenMenu([lapItem("ctx-translate", LAP_TR_ICO, lapTr("laptop_ctx_translate"), function () { translateEditor(); })], e.clientX, e.clientY);
+          return;
+        }
+        // closed laptop → Open wakes it. A closed lid's screen face is hidden (pointer-events
+        // off), so the branch above can't fire there → this handles the closed state.
         if (!laptop.classList.contains("open")) {
           e.preventDefault();
           lapOpenMenu([lapItem("ctx-open", LAP_OPEN_ICO, lapTr("mon_ctx_open"), function () { stopLaptopInvite(); if (!laptop.classList.contains("open")) toggleLaptop(); })], e.clientX, e.clientY);

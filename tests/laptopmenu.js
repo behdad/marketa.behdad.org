@@ -58,10 +58,19 @@ var HARNESS = [
   "    var eb=menu()&&menu().querySelector('button.ctx-kill'); if(eb) eb.click();",
   "    await sleep(1800);",  // a connected call plays the goodbye (1500ms) before it drops the line
   "    S('call_hung_up', !calling(l));",
-  // open editor face (not a tile) → native menu kept
+  // open editor face (not a tile) → Translate the «L'amour» title into the page language
   "    l.classList.add('open'); l.classList.remove('calling','connecting','connected','lueb');",
+  "    document.documentElement.lang='en';",
   "    S('editor_prevented', ctxAt(el('laptop-editor')));",
-  "    S('editor_no_menu', !menu());",
+  "    S('editor_items', items());",
+  "    var trb=menu()&&menu().querySelector('button.ctx-translate'); if(trb) trb.click();",
+  "    await sleep(60);",
+  "    S('editor_en', (el('laptop-editor-src')||{}).textContent);",
+  // toggle page language → Translate again targets Czech (re-read per click)
+  "    document.documentElement.lang='cs';",
+  "    ctxAt(el('laptop-editor')); var trc=menu()&&menu().querySelector('button.ctx-translate'); if(trc) trc.click();",
+  "    await sleep(60);",
+  "    S('editor_cs', (el('laptop-editor-src')||{}).textContent);",
   // Lübeck tile → Open starts the lueb call
   "    l.classList.remove('calling','connecting','connected','lueb');",
   "    ctxAt(el('laptop-luebtile')); var lb=menu()&&menu().querySelector('button.ctx-open'); if(lb) lb.click();",
@@ -100,8 +109,9 @@ ok("Prague tile: Open starts the call", s.tile_started === true);
 ok("Prague tile: Open dials Prague (not lueb)", s.tile_prague === true);
 ok("live call: right-click shows End call", s.call_prevented === true && /end|ukon/i.test((s.call_items || [])[0] || ""));
 ok("live call: End call hangs up", s.call_hung_up === true);
-ok("open editor face: native menu kept (not prevented)", s.editor_prevented === false);
-ok("open editor face: no custom menu", s.editor_no_menu === true);
+ok("open editor face: right-click shows Translate", s.editor_prevented === true && s.editor_items && s.editor_items.length === 1 && /translate|přelož/i.test(s.editor_items[0] || ""));
+ok("open editor: Translate swaps L'amour → EN word", /love/i.test(s.editor_en || ""));
+ok("open editor: Translate re-evaluates lang → CS word", /láska/i.test(s.editor_cs || ""));
 ok("Lübeck tile: Open starts the lueb call", s.lueb_started === true);
 ok("Esc dismisses the menu", s.esc_up === true && s.esc_dismissed === true);
 

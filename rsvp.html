@@ -22816,7 +22816,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone()/phone(\"app\") · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone()/phone(\"app\") · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var CONSOLE_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -22848,6 +22848,7 @@ document.addEventListener("click", function (e) {
       lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
       caption: "caption(\"text\") — overwrite the hint line above the scene with your own text and return the previous line; caption() reads the current line. a room change or hint reclaims it",
       volume: "volume(v) — master volume over ALL the loft's audio (sound effects, songs, and every music bed), on a 0–1 scale (0 = mute, 1 = full, out-of-range clamps); returns the OLD level so it's restorable. volume() reports the current level. session-only — a reload resets to 1",
+      volumebutton: "volumebutton(v) — the on-screen speaker button's MUSIC level (songs + music beds, no sound effects), snapped to its four steps (0 · 0.1 · 0.35 · 1); moves the button and PERSISTS across reloads. volumebutton() reports the current step; volumebutton(v) sets it and returns the OLD level. rides under volume() (the all-audio session master)",
       candle: "candle() — both garden candles' lit states; candle(1) or candle(2) reads one; candle(1,true)/candle(2,false) lights or snuffs one and returns its previous state",
       butterfly: "butterfly() — step into the office and flutter the butterfly in the stained-glass window",
       water: "water() — the three garden watering bottles' levels (0–4 each); water(true) tips a full one over a plant and returns the new levels",
@@ -26621,12 +26622,37 @@ async def localfont(name):
     if (window.__applyHorahMusicVolume) window.__applyHorahMusicVolume(); // the garden-party horah bed follows it too
     if (window.__applyWorkoutVolume) window.__applyWorkoutVolume(); // the workout bed follows it too
   };
-  function cycleVolume() {
-    volIdx = (volIdx + 1) % VOL_LEVELS.length;
+  // Push the current volIdx step everywhere: live songs/beds, the on-screen icon, and
+  // localStorage. Shared by the button's cycle and the console volumebutton() command.
+  function applyVolStep() {
     window.__reapplyMusicLevels();
     updateVolIcon();
     try { localStorage.setItem("songVolume", String(VOL_LEVELS[volIdx])); } catch (e) {}
   }
+  function cycleVolume() {
+    volIdx = (volIdx + 1) % VOL_LEVELS.length;
+    applyVolStep();
+  }
+  // volumebutton() — a console handle on the on-screen speaker button. It's the MUSIC-only
+  // level (songs + every music bed, no SFX) that the button cycles: four discrete steps
+  // (0 = mute · 0.1 · 0.35 · 1 = full), and it PERSISTS across reloads, exactly like tapping
+  // the button. Distinct from volume(), the session master over *all* audio incl. SFX; the two
+  // compose (effective song level = this × master). Getter/setter like volume()/party():
+  // volumebutton() reports the current step; volumebutton(v) snaps v (0–1) to the nearest step,
+  // moves the button there, and returns the OLD level so it's restorable.
+  window.volumebutton = function (v) {
+    var prev = VOL_LEVELS[volIdx];
+    if (arguments.length === 0 || v == null) return prev; // getter: current button level
+    var nv = Number(v);
+    if (!isFinite(nv)) return prev; // ignore garbage, report unchanged
+    nv = Math.max(0, Math.min(1, nv)); // clamp to 0..1
+    var best = 0, bestD = Infinity; // snap to the button's nearest discrete step
+    for (var i = 0; i < VOL_LEVELS.length; i++) { var d = Math.abs(VOL_LEVELS[i] - nv); if (d < bestD) { bestD = d; best = i; } }
+    volIdx = best;
+    applyVolStep();
+    if (window.echo) window.echo("🎚 volume button → " + Math.round(VOL_LEVELS[volIdx] * 100) + "%");
+    return prev; // the OLD level, restorable
+  };
   var volBtn = document.getElementById("monitor-volume-btn");
   if (volBtn) {
     volBtn.addEventListener("click", function (e) { e.stopPropagation(); scheduleSaver(15000); cycleVolume(); });

@@ -322,6 +322,9 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 .device-hint.show{display:block}
 .season-toast{position:absolute; left:50%; bottom:12px; transform:translateX(-50%); background:rgba(69,58,49,.85); color:#f8f5ec; font-size:.85rem; padding:.3rem .9rem; border-radius:999px; opacity:0; transition:opacity .3s ease; pointer-events:none; z-index:6; white-space:nowrap}
 .season-toast.show{opacity:1}
+/* the cocktail-make toast is a live link: clicking the drink's name opens it in the phone's
+   cocktails app (its real recipe), so unlike the other season-toasts it takes pointer events. */
+.cocktail-toast{pointer-events:auto; cursor:pointer}
 .fs-hint-link{background:none; border:0; padding:0; font:inherit; color:var(--wine); text-decoration:underline; text-underline-offset:2px; cursor:pointer}
 .fs-hint-link:hover{color:var(--ink)}
 .hunt-dots{display:flex; justify-content:center; align-items:center; gap:.15rem; margin:.55rem 0 0}
@@ -769,6 +772,10 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
    reduced motion still wins when it should. Toss/stir live on the child #kitchen-bartender-shaker
    (animation does not inherit), so they play untouched while this stills the parent. */
 #loft-game-strip.party-on #kitchen-bartender.mixing #kitchen-bartender-shake{animation:none}
+/* while he's mixing a drink, hide the shaker in his hand entirely — the drink is told by the
+   glass-side make animation (pour / swizzle / garnish), not by his hands. opacity only, so it
+   never fights the shaker's own toss/stir transforms; it returns to 1 the moment .mixing clears. */
+#kitchen-bartender.mixing #kitchen-bartender-shaker{opacity:0}
 /* bartop glassware + used glasses: each glass/shaker is its own <g class="bar-glass"> pivoting
    at its base (fill-box), so the one-shot .tipsy wobble (shared bar-bottle-tip keyframe) never
    clobbers its drawn coordinates. Tappable only while the bar shows — #kitchen-bar is
@@ -5855,8 +5862,10 @@ section{margin:1.9rem 0}
 <rect x="232" y="234" width="4" height="20" fill="#eef1f4" opacity="0.6"/>
 </g>
 </g>
-<!-- a few used glasses left on the bar top: a drained lowball, a half-finished wine, a lime wedge -->
-<g id="kitchen-bar-usedglasses">
+<!-- a few used glasses left on the bar top: a drained lowball, a half-finished wine, a lime wedge.
+     Shifted right (translate) so the cluster sits clear of the make station at his hands (x≈348,
+     footprint ~330–368) — otherwise the wine glass collided with the cocktail being mixed. -->
+<g id="kitchen-bar-usedglasses" transform="translate(100,0)">
 <!-- drained lowball tumbler with a last-sip amber residue -->
 <g id="kitchen-bar-used-lowball" class="bar-glass" data-clink="1.4">
 <rect x="300" y="235" width="18" height="22" rx="2" fill="#eef4f6" opacity="0.42" stroke="#cdd8da" stroke-width="1"/>
@@ -18981,6 +18990,7 @@ document.addEventListener("click", function (e) {
     function setBartenderOffset(x) {
       barOffsetX = Math.max(BARTENDER_MIN_X, Math.min(BARTENDER_MAX_X, x));
       bartender.style.translate = barOffsetX + "px " + BARTENDER_Y_OFFSET + "px";
+      if (window.__makeFollowX) window.__makeFollowX(barOffsetX); // drag him mid-make → the glass rides along (no-op when no drink's being made)
     }
     setBartenderOffset(0); // define the translate up front so the CSS glide has a start value
     window.resetBartenderPosition = function () { // party-end / game-reset: snap him back to base
@@ -19270,6 +19280,12 @@ document.addEventListener("click", function (e) {
     // tear down if the tab hides or the window loses focus mid-game (pointerup may never come)
     document.addEventListener("visibilitychange", function () { if (document.hidden) stopFlairCatch(); });
     window.addEventListener("blur", function () { stopFlairCatch(); });
+    // Esc quits a run silently (no "last call" flourish); capture + stopPropagation so it doesn't
+    // also back the device-zoom out from under the game. Backspace arrives here too — the global
+    // capture handler re-dispatches it as a synthetic Escape keydown, which this reads like any Esc.
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && flairActive) { stopFlairCatch(); e.stopPropagation(); }
+    }, true);
 
     // headless test hook: deterministically arms the game and runs N logic ticks with a fixed dt
     // WITHOUT scheduling rAF, so a screenshot can capture the dim + falling items + HUD.
@@ -19433,6 +19449,11 @@ document.addEventListener("click", function (e) {
   var MAKE_ANCHOR_X = 348;
   var makeGroup = S("g", { id: "kitchen-bar-make", transform: "translate(" + MAKE_ANCHOR_X + ",0)", style: "opacity:0" }, bar);
 
+  // the bartender's drag handler calls this on every move: while a drink is being made, re-pin the
+  // make station to his LIVE offset so the glass rides along in his hands instead of staying put.
+  // No-op unless a make is in progress (so it's harmless during Flair-Catch / idle dragging).
+  window.__makeFollowX = function (off) { if (making) makeGroup.setAttribute("transform", "translate(" + (MAKE_ANCHOR_X + off) + ",0)"); };
+
   function drawGarnish(node, type, g) {
     var x = g.gx, y = g.gy;
     if (type === "lime" || type === "lemon") {
@@ -19459,13 +19480,13 @@ document.addEventListener("click", function (e) {
     while (makeGroup.firstChild) makeGroup.removeChild(makeGroup.firstChild);
     var defs = S("defs", null, makeGroup);
     var cp = S("clipPath", { id: "kitchen-bar-make-clip" }, defs);
-    if (g.clip === "rect") S("rect", { x: -9, y: 224, width: 18, height: 31, rx: 1.5 }, cp);
+    if (g.clip === "rect") S("rect", { x: -9, y: 224, width: 18, height: 31, rx: 0.9 }, cp);
     else if (g.clip === "coupe") S("path", { d: "M-13 233 Q-13 244 0 245 Q13 244 13 233 Z" }, cp);
     else S("path", { d: "M-15.5 226 L15.5 226 L0 244 Z" }, cp);
 
     var host = S("g", { "class": "mk-glasshost" }, makeGroup);
     if (glassType === "highball") {
-      S("rect", { x: -11, y: 222, width: 22, height: 34, rx: 2.5, fill: "#eef4f6", "fill-opacity": 0.5, stroke: "#cdd8da", "stroke-width": 1 }, host);
+      S("rect", { x: -11, y: 222, width: 22, height: 34, rx: 1, fill: "#eef4f6", "fill-opacity": 0.5, stroke: "#cdd8da", "stroke-width": 1 }, host);
     } else if (glassType === "coupe") {
       S("path", { d: "M-15 232 Q-15 245 0 246 Q15 245 15 232 Z", fill: "#eef4f6", "fill-opacity": 0.5, stroke: "#cdd8da", "stroke-width": 1 }, host);
       S("line", { x1: 0, y1: 246, x2: 0, y2: 256, stroke: "#cdd8da", "stroke-width": 1.6 }, host);
@@ -19515,16 +19536,30 @@ document.addEventListener("click", function (e) {
   }
 
   // ---- toast (now-playing style: one reused element in the viewport, retimed) --------------
-  var ckToastEl = null, ckToastTimer = null;
+  // Clickable: it names the drink being mixed AND links to that drink's real recipe in the phone's
+  // cocktails app (the make animation is generic, so the name is the honest bit — make it useful).
+  // ckToastName tracks the current drink so a click still opens the right one after the reused
+  // element has been retimed by several ambient makes. It stays up for the whole make (hidden by
+  // finishMake / abort), with a long safety timeout in case a teardown path is ever missed.
+  var ckToastEl = null, ckToastTimer = null, ckToastName = null;
   function cocktailToast(name) {
     var vp = document.querySelector(".hunt-viewport");
     if (!vp) return;
-    if (!ckToastEl) { ckToastEl = document.createElement("div"); ckToastEl.className = "season-toast cocktail-toast"; vp.appendChild(ckToastEl); }
+    if (!ckToastEl) {
+      ckToastEl = document.createElement("div");
+      ckToastEl.className = "season-toast cocktail-toast";
+      ckToastEl.addEventListener("click", function () {
+        if (ckToastName && window.__showCocktailInPhone) window.__showCocktailInPhone(ckToastName);
+      });
+      vp.appendChild(ckToastEl);
+    }
+    ckToastName = name;
     ckToastEl.textContent = "🍸 " + name;
     ckToastEl.classList.add("show");
     clearTimeout(ckToastTimer);
-    ckToastTimer = setTimeout(function () { if (ckToastEl) ckToastEl.classList.remove("show"); }, 2600);
+    ckToastTimer = setTimeout(function () { if (ckToastEl) ckToastEl.classList.remove("show"); }, 12000);
   }
+  function hideCocktailToast() { clearTimeout(ckToastTimer); if (ckToastEl) ckToastEl.classList.remove("show"); }
 
   function reduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
   function dragging() { return !!(window.__bartenderDragging && window.__bartenderDragging()); }
@@ -19536,8 +19571,8 @@ document.addEventListener("click", function (e) {
   function clearMakeTimers() { for (var i = 0; i < makeTimers.length; i++) clearTimeout(makeTimers[i]); makeTimers = []; }
   function stopBartenderStir() { if (window.__bartenderStir) window.__bartenderStir(false); } // never leave him stirring after a make ends
   function endBartenderMake() { stopBartenderStir(); if (window.__bartenderMixing) window.__bartenderMixing(false); } // back to idle: sway resumes, clear any stir
-  function finishMake() { clearMakeTimers(); endBartenderMake(); makeGroup.style.opacity = "0"; making = false; cooldownUntil = Date.now() + 1500 + Math.random() * 1700; }
-  function abort() { clearMakeTimers(); endBartenderMake(); if (makeGroup) makeGroup.style.opacity = "0"; making = false; }
+  function finishMake() { clearMakeTimers(); endBartenderMake(); makeGroup.style.opacity = "0"; hideCocktailToast(); making = false; cooldownUntil = Date.now() + 1500 + Math.random() * 1700; }
+  function abort() { clearMakeTimers(); endBartenderMake(); if (makeGroup) makeGroup.style.opacity = "0"; hideCocktailToast(); making = false; }
 
   function startMake(row) {
     if (making || !row) return false;
@@ -19566,31 +19601,33 @@ document.addEventListener("click", function (e) {
 
     var pours = Math.max(1, Math.min(4, (row.ingredients && row.ingredients.length) || 3));
     var target = build === "shake" ? 0.82 : 1.0; // shaken drinks fill on the strain, below
-    var t = 260;
-    if (ice) { after(t, ctx.showIce); t += 300; }
+    // deliberately-slow, step-by-step timeline (SP stretches every beat so a viewer can follow each
+    // stage — ice, each pour, the swizzle/strain, garnish, present — instead of it flashing by).
+    var SP = 1.7;
+    var t = 260 * SP;
+    if (ice) { after(t, ctx.showIce); t += 300 * SP; }
     for (var i = 0; i < pours; i++) {
       (function (i) {
         var f = ((i + 1) / pours) * target;
         var stepColor = lerpHex(PALE, color, pours === 1 ? 1 : i / (pours - 1));
         after(t, function () { ctx.pourStart(stepColor); });
-        after(t + 300, function () { ctx.setLevel(f, stepColor); });
-        after(t + 430, function () { ctx.pourEnd(); });
+        after(t + 300 * SP, function () { ctx.setLevel(f, stepColor); });
+        after(t + 430 * SP, function () { ctx.pourEnd(); });
       })(i);
-      t += 480;
+      t += 480 * SP;
     }
+    // his hand-held shaker is hidden for the whole make (.mixing), so the drink is told entirely by
+    // the glass: a strain-fill for shaken drinks, a swizzle swirl for stirred/built ones.
     if (build === "shake") {
-      after(t, function () { if (window.__bartenderToss) window.__bartenderToss(); }); // he shakes
-      after(t + 780, function () { ctx.setLevel(1, color); }); // ...then strains the full drink into the glass at his hands
-      t += 950;
+      after(t + 780 * SP, function () { ctx.setLevel(1, color); }); // the full drink strains into the glass at his hands
+      t += 950 * SP;
     } else { // stir / build → a gentle swizzle swirl in the glass
-      if (build === "stir") after(t, function () { if (window.__bartenderStir) window.__bartenderStir(true); }); // HE stirs (build drinks: the pour over ice is enough)
       after(t, ctx.stir);
-      after(t + 1150, ctx.stirEnd);
-      if (build === "stir") after(t + 1150, function () { if (window.__bartenderStir) window.__bartenderStir(false); });
-      t += 800;
+      after(t + 1150 * SP, ctx.stirEnd);
+      t += 800 * SP;
     }
-    after(t, ctx.showGarnish); t += 340;
-    after(t, ctx.present); t += 950;
+    after(t, ctx.showGarnish); t += 340 * SP;
+    after(t, ctx.present); t += 950 * SP;
     after(t, finishMake);
     return true;
   }
@@ -27710,6 +27747,21 @@ async def localfont(name):
       return COCKTAILS.map(function (c) {
         return { name: c.name, ingredients: c.recipe.ingredients.slice(), instructions: c.recipe.instructions };
       });
+    };
+    // the bartender's make toast links here: open the pocket phone straight to a drink's recipe
+    // detail. open(true) is the cinematic path — it skips the first-open math lock (booted or not),
+    // so the label always lands on the recipe, never the passcode. goToStage keeps the phone on its
+    // home turf (the balcony) so closing it returns somewhere sensible.
+    window.__showCocktailInPhone = function (name) {
+      var q = String(name == null ? "" : name).toLowerCase().trim();
+      var idx = -1;
+      for (var i = 0; i < COCKTAILS.length; i++) if (COCKTAILS[i].name.toLowerCase() === q) { idx = i; break; }
+      if (idx < 0) return false;
+      if (window.goToStage) window.goToStage("balcony");
+      open(true);                                        // open (or re-seat) the phone at the launcher, no lock
+      openApp("cocktails", "app_cocktails", renderCocktails);
+      cocktailShow(idx);                                 // jump straight to this drink's detail view
+      return true;
     };
     var cocktailView = "gallery"; // "gallery" | "detail"
     var cocktailSel = -1;         // index into COCKTAILS of the drink open in detail view

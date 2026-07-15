@@ -23105,7 +23105,7 @@ document.addEventListener("click", function (e) {
       dj: "dj(\"amir\"|\"danesh\") — who spins at the party (or 1–2, or random()); dj() returns the current DJ {n, name}. amir wears the cap, danesh the afro",
       cocktail: "cocktail(\"negroni\") — the bartender mixes that real drink from the bar's menu (partial name ok); cocktail() makes the featured signature drink. lights the party + steps behind the bar first if it's dark. he also mixes on his own while you watch the bar. alias: drink()",
       lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
-      caption: "caption(\"text\") — overwrite the hint line above the scene with your own text and return the previous line; caption() reads the current line. a room change or hint reclaims it",
+      caption: "caption(\"text\"[, {blink:ms, hold:ms}]) — overwrite the hint line above the scene and return the previous line; caption() reads it. blink pulses the line to catch the eye; hold restores the previous line after that long. also caption(text, blinkMs, holdMs). a room change or hint reclaims it",
       volume: "volume(v) — master volume over ALL the loft's audio (sound effects, songs, and every music bed), on a 0–1 scale (0 = mute, 1 = full, out-of-range clamps); returns the OLD level so it's restorable. volume() reports the current level. session-only — a reload resets to 1",
       volumebutton: "volumebutton(v) — the on-screen speaker button's MUSIC level (songs + music beds, no sound effects), snapped to its four steps (0 · 0.1 · 0.35 · 1); moves the button and PERSISTS across reloads. volumebutton() reports the current step; volumebutton(v) sets it and returns the OLD level. rides under volume() (the all-audio session master)",
       candle: "candle() — both garden candles' lit states; candle(1) or candle(2) reads one; candle(1,true)/candle(2,false) lights or snuffs one and returns its previous state",
@@ -40289,13 +40289,30 @@ function spawnDustMote(container) {
   // console toy: caption() reads the line above the scene; caption("text") overwrites it with
   // literal text and returns the previous line (same no-arg-reads / setter-returns-previous idiom
   // as party(), dance() &c). A room change or hint update reclaims the line afterwards.
-  window.caption = function (text) {
-    var prev = caption.textContent;
+  // Options (2nd arg): a dict {blink:ms, hold:ms}, OR positional caption(text, blinkMs, holdMs), OR
+  // a bare number = blinkMs. blink → pulse the line to draw the eye for that long (reuses the
+  // hint-blink attract animation; reduced-motion shows it solid). hold → after that long, RESTORE the
+  // previous line (only if nothing else has since claimed the caption — a room change wins).
+  window.caption = function (text, opts) {
+    var prev = caption.textContent, prevKey = captionKey;
     if (arguments.length === 0 || text == null) { if (window.echo) window.echo(prev); return prev; }
+    var blinkMs = 0, holdMs = 0;
+    if (typeof opts === "number") blinkMs = opts;                                   // caption(text, blinkMs)
+    else if (opts && typeof opts === "object") { blinkMs = +opts.blink || 0; holdMs = +opts.hold || +opts.resume || 0; }
+    if (typeof arguments[2] === "number") holdMs = arguments[2];                    // caption(text, blinkMs, holdMs)
     captionKey = null;
-    caption.classList.remove("rsvp-nudge");
+    caption.classList.remove("rsvp-nudge", "hint-blink");
     caption.textContent = String(text);
     if (window.echo) window.echo(String(text)); // print through the echo side-channel (respects echo(true/false))
+    if (blinkMs > 0) { caption.classList.add("hint-blink"); setTimeout(function () { caption.classList.remove("hint-blink"); }, blinkMs); }
+    if (holdMs > 0) {
+      var mine = String(text);
+      setTimeout(function () {
+        if (caption.textContent !== mine) return; // someone else (a room change / hint) reclaimed the line — leave it
+        caption.classList.remove("hint-blink");
+        caption.textContent = prev; captionKey = prevKey; // resume the previous line
+      }, holdMs);
+    }
     return prev;
   };
   function showRsvpNudge() {
@@ -43597,7 +43614,9 @@ function spawnDustMote(container) {
       // the chair auto-fires, and a kill streak lands the gold-shockwave reward. Driven by the
       // autopilot hook (no real drag), which steers the chair and restores the high score after.
       [1400, function () { cursorGlideTo("office-chair", 500); }],
-      [350, function () { cursorHide(); if (window.__cineArcadeDemo) window.__cineArcadeDemo(true); }], [0, cine("cine_arcade")],
+      [0, cine("cine_arcade")], // set before arming so the game's own caption-restore lands back on our narration, not the stale desk hint
+      [350, function () { cursorHide(); if (window.__cineArcadeDemo) window.__cineArcadeDemo(true); }],
+      [0, cine("cine_arcade")], // startArcade sets its own player-facing hint — override it back to the tour's narration voice
       [6000, function () { if (window.__cineArcadeDemo) window.__cineArcadeDemo(false); }], // let the run play, then stand down
       // SPRINKLER — a drip from the ceiling head shorts the monitor: a zap, an electric flicker,
       // and the screen goes dead-dark (a real click on the sprinkler; __shortOutMonitor does the rest).

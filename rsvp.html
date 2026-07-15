@@ -13846,9 +13846,9 @@ document.addEventListener("keydown", function (e) {
     // Restart/Kill for the self-hosted runtimes (python/pyodide, linux/v86) — the same
     // recover-a-stuck-runtime actions DOOM gets in its own menu, folded in here so the
     // console keeps a single right-click menu instead of two. Shown only for those apps.
-    restartBtn = document.createElement("button"); restartBtn.type = "button"; restartBtn.className = "cc-sep cc-restart";
-    killBtn = document.createElement("button"); killBtn.type = "button"; killBtn.className = "cc-kill";
-    menu.appendChild(copyBtn); menu.appendChild(pasteBtn); menu.appendChild(restartBtn); menu.appendChild(killBtn);
+    restartBtn = document.createElement("button"); restartBtn.type = "button"; restartBtn.className = "cc-restart";
+    killBtn = document.createElement("button"); killBtn.type = "button"; killBtn.className = "cc-sep cc-kill"; // Kill first, and it carries the runtime-actions divider
+    menu.appendChild(copyBtn); menu.appendChild(pasteBtn); menu.appendChild(killBtn); menu.appendChild(restartBtn);
     (document.getElementById("hunt-fullscreen-area") || document.body).appendChild(menu);
     // mousedown on a button outside the selection collapses it before the click fires — prevent
     // default so the selection (and the stashed text) survives long enough to copy
@@ -13918,7 +13918,7 @@ document.addEventListener("keydown", function (e) {
     if (ka) {
       killBtn.textContent = ccT("mon_ctx_kill");
       killBtn.disabled = !!(ka.running && !(window[ka.running] && window[ka.running]()));
-      killBtn.classList.toggle("cc-sep", !ra); // the runtime-actions divider rides Restart; with no Restart, it rides Kill
+      killBtn.classList.add("cc-sep"); // Kill is the first runtime action → always carries the divider from copy/paste
     }
     menu.style.left = e.clientX + "px"; menu.style.top = e.clientY + "px";
     menu.classList.add("show");
@@ -23322,9 +23322,9 @@ document.addEventListener("click", function (e) {
       closeMenu();
       menuEl = document.createElement("div");
       menuEl.className = "mon-ctx"; menuEl.setAttribute("role", "menu");
-      if (app.restart) menuEl.appendChild(makeItem("ctx-restart", RESTART_ICO, tr("mon_ctx_restart"), app.restart, false));
       var killDisabled = !!(app.running && !(window[app.running] && window[app.running]())); // runtime not up yet → nothing to kill
-      menuEl.appendChild(makeItem("ctx-kill", KILL_ICO, tr("mon_ctx_kill"), app.close, killDisabled));
+      menuEl.appendChild(makeItem("ctx-kill", KILL_ICO, tr("mon_ctx_kill"), app.close, killDisabled)); // Kill first
+      if (app.restart) menuEl.appendChild(makeItem("ctx-restart", RESTART_ICO, tr("mon_ctx_restart"), app.restart, false));
       menuEl.style.visibility = "hidden";
       document.body.appendChild(menuEl);
       // clamp to the viewport on both axes so a corner right-click doesn't overflow

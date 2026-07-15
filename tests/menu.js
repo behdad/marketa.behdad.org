@@ -168,7 +168,7 @@ check("linux Kill is DISABLED while the VM isn't running", s.linux_kill_disabled
 check("linux Restart hides the menu", s.linux_restart_hid_menu === true);
 console.log(" doom (standalone menu):");
 check("contextmenu suppresses native menu over doom", s.doom_ctx_prevented === true);
-check("doom menu appears with Restart + Kill", s.doom_menu_present === true && Array.isArray(s.doom_items) && s.doom_items.length === 2 && /restart/i.test(s.doom_items[0]) && /kill/i.test(s.doom_items[1]), s.doom_items);
+check("doom menu appears with Kill + Restart (Kill first)", s.doom_menu_present === true && Array.isArray(s.doom_items) && s.doom_items.length === 2 && /kill/i.test(s.doom_items[0]) && /restart/i.test(s.doom_items[1]), s.doom_items);
 check("doom Kill is DISABLED while the engine isn't running", s.doom_kill_disabled_when_cold === true);
 check("doom Kill becomes ENABLED once the engine is running", s.doom_kill_enabled_when_running === true);
 check("enabled doom Kill runs the FATALITY flash then destroys the app", s.doom_kill_hid_menu === true && s.doom_kill_flash_started === true && s.doom_kill_still_open_during_flash === true && s.doom_kill_closed_app === true && s.doom_kill_flash_ended === true);

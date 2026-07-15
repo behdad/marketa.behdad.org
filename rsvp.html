@@ -1957,6 +1957,10 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 .nav-dpad .dpad-right{grid-column:3; grid-row:2}
 .nav-dpad .dpad-down{grid-column:2; grid-row:3}
 .nav-dpad .dpad-dot{grid-column:2; grid-row:2; align-self:center; justify-self:center; width:5px; height:5px; border-radius:50%; background:var(--rule)}
+.nav-dpad .dpad-arrow{width:15px; height:15px; display:block} /* one drawn chevron (points up), rotated per direction so all four match */
+.nav-dpad .dpad-right .dpad-arrow{transform:rotate(90deg)}
+.nav-dpad .dpad-down .dpad-arrow{transform:rotate(180deg)}
+.nav-dpad .dpad-left .dpad-arrow{transform:rotate(-90deg)}
 /* runtime death-flash (Kill a self-hosted runtime → a themed ~2s send-off, see __runMonitorDeathFlash).
    The killed line rides the caption bar; the on-screen visual is a #monitor-deathfx overlay per death. */
 #hunt-caption.caption-death{transition:none}
@@ -39227,10 +39231,12 @@ function spawnDustMote(container) {
     function onAway(e) { if (dpadEl && !dpadEl.contains(e.target)) closeMenu(); } // click-away (the menu's own clicks stay)
     function onKey(e) { if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); closeMenu(); } } // Esc closes the D-pad, not the room
     function clickNav(id) { var el = document.getElementById(id); if (el) el.click(); } // reuse the ‹ › handler + its gating verbatim
+    // one drawn chevron (points up); CSS rotates it per direction so all four arrows are identical
+    var DPAD_ARROW = '<svg class="dpad-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 L8 5.5 L12 10.5"/></svg>';
     function mkBtn(dir, glyph, key, fn) {
       var b = document.createElement("button");
       b.type = "button"; b.className = "dpad-" + dir;
-      b.textContent = glyph;
+      b.innerHTML = DPAD_ARROW;
       b.setAttribute("aria-label", tr(key)); b.title = tr(key);
       b.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); closeMenu(); fn(); });
       return b;
@@ -39271,6 +39277,12 @@ function spawnDustMote(container) {
       openMenu(e.clientX, e.clientY);
     });
   })();
+  // Right-clicking an EMPTY area of any custom context menu shouldn't summon the native browser
+  // menu on top of it. One capture-phase guard covers them all (every custom menu carries .mon-ctx
+  // — mon-ctx/desktop/laptop/phone/D-pad — or .console-ctx).
+  document.addEventListener("contextmenu", function (e) {
+    if (e.target && e.target.closest && e.target.closest(".mon-ctx, .console-ctx")) e.preventDefault();
+  }, true);
   // Keyboard room nav: →/Tab forward, ← back. At a locked frontier a second forward within
   // 600ms unlocks it (mirrors the arrow/dot double-click-to-unlock). ` whisks to the office
   // console. d/↑/↓ flip day↔night, 1-5 jump to a room, m/l/c summon the monitor/laptop/

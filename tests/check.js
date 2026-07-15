@@ -629,6 +629,37 @@ function checkConsoleOutClipSlack(file, style) {
   else fail(file + ": .console-out clip-slack invariant broken", issues.join("\n"));
 }
 
+// The console's Tab-autocomplete roster (`CONSOLE_CMDS`, a static array in the input
+// keydown setup) must stay a mirror of the documented command set — the keys of the
+// `CONSOLE_HELP` object inside consoleRun. That object is function-local, so the roster
+// can't read it at runtime; this parity check is what keeps the two in lockstep, so a
+// command added to (or removed from) CONSOLE_HELP that isn't reflected in the roster
+// fails loudly here (naming the offending keys) instead of silently not completing.
+function checkConsoleCmdRoster(file, script) {
+  if (file !== "rsvp.html" || !script) return;
+  var helpM = script.match(/var CONSOLE_HELP = \{([\s\S]*?)\n\s*\};/);
+  if (!helpM) { fail(file + ": CONSOLE_HELP object not found for autocomplete-roster parity check"); return; }
+  var helpKeys = [];
+  helpM[1].split("\n").forEach(function (line) {
+    var km = line.match(/^\s*([A-Za-z_$][\w$]*)\s*:/);
+    if (km) helpKeys.push(km[1]);
+  });
+  var rosterM = script.match(/var CONSOLE_CMDS = \[([\s\S]*?)\];/);
+  if (!rosterM) { fail(file + ": CONSOLE_CMDS roster array not found for autocomplete-roster parity check"); return; }
+  var roster = (rosterM[1].match(/"([^"]+)"/g) || []).map(function (q) { return q.slice(1, -1); });
+  var helpSet = new Set(helpKeys);
+  var rosterSet = new Set(roster);
+  var missing = helpKeys.filter(function (k) { return !rosterSet.has(k); }); // in CONSOLE_HELP, not in roster
+  var extra = roster.filter(function (k) { return !helpSet.has(k); });       // in roster, not a real command
+  if (missing.length === 0 && extra.length === 0) {
+    pass(file + ": Tab-autocomplete roster matches CONSOLE_HELP keys (" + rosterSet.size + " commands)");
+  } else {
+    fail(file + ": Tab-autocomplete roster out of sync with CONSOLE_HELP (add/remove keys in CONSOLE_CMDS)",
+      (missing.length ? "missing from roster: " + missing.join(", ") + "\n" : "") +
+      (extra.length ? "roster has non-command(s): " + extra.join(", ") : ""));
+  }
+}
+
 // A leftover git merge marker in CSS/HTML slips past `node --check` (which only sees
 // the inline <script>) and the other structural checks — one reached production once.
 // Precise forms only, so decorative "====" comment rules don't false-positive.
@@ -658,6 +689,7 @@ FILES.forEach(function (file) {
     checkAnimationClassCleanup(file, style, script, html);
     checkAudioFadeCloseRace(file, script);
     checkI18nKeys(file, script, html);
+    checkConsoleCmdRoster(file, script);
   }
   checkAnimationKeyframes(file, style);
   checkTransformClobber(file, style, html);

@@ -18197,8 +18197,6 @@ document.addEventListener("click", function (e) {
         kettlePuff();
         kettleInterval = setInterval(kettlePuff, 1300);
         window.__updateKettleHum(); // hum only if in the kitchen
-        var radioEl = document.getElementById("kitchen-scale");
-        if (radioEl && radioEl.classList.contains("on")) spawnMusicNotes(document.getElementById("loft-game-strip"), 100, 190);
       } else {
         if (kettleInterval) {
           clearInterval(kettleInterval);
@@ -18460,6 +18458,9 @@ document.addEventListener("click", function (e) {
     }
     function playRadioMelodyOnce() {
       if (!radioCtx) return;
+      // notes rise from the radio with each melody phrase (only once the melody's in, since this
+      // runs after the static tune-in; the visibility gate keeps them from piling up in a hidden tab)
+      if (document.visibilityState !== "hidden") spawnMusicNotes(document.getElementById("loft-game-strip"), 575, 209);
       var t = radioCtx.currentTime;
       radioMelodyGain = radioCtx.createGain();
       radioMelodyGain.gain.setValueAtTime(0.09, t);
@@ -18522,10 +18523,8 @@ document.addEventListener("click", function (e) {
       radioOn = !radioOn;
       radio.classList.toggle("on", radioOn);
       window.__updateRadioSound(); // start/stop based on the current room + radioOn
-      if (radioOn) {
-        var kettleEl = document.getElementById("kitchen-kettle");
-        if (kettleEl && kettleEl.classList.contains("steaming")) spawnMusicNotes(document.getElementById("loft-game-strip"), 100, 190);
-      }
+      // (music notes are spawned by the melody loop below — starting when the melody comes in
+      // after the static tune-in, and repeating each phrase — not here on the on-tap.)
     }
     window.resetRadio = function () {
       stopRadioStatic();
@@ -19715,6 +19714,7 @@ document.addEventListener("click", function (e) {
 
   function reduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
   function dragging() { return !!(window.__bartenderDragging && window.__bartenderDragging()); }
+  function flairBusy() { return !!(window.__flairState && window.__flairState().active); } // the Flair-Catch game owns the bartender — no cocktail-making then
   function barPresent() { return !!window.__gardenPartyOn && window.currentStageName === "kitchen" && document.visibilityState !== "hidden"; }
 
   // ---- the make sequence -----------------------------------------------------------------
@@ -19826,8 +19826,8 @@ document.addEventListener("click", function (e) {
   var pollTimer = null;
   function ambientPoll() {
     pollTimer = null;
-    if (making && !barPresent()) abort();
-    if (!making && barPresent() && !reduced() && !dragging() && Date.now() >= cooldownUntil) startMake(randomRow());
+    if (making && (!barPresent() || flairBusy())) abort(); // stop a make if you leave the bar OR the Flair-Catch game takes over
+    if (!making && barPresent() && !reduced() && !dragging() && !flairBusy() && Date.now() >= cooldownUntil) startMake(randomRow());
     pollTimer = setTimeout(ambientPoll, 500);
   }
   ambientPoll();
@@ -38033,10 +38033,10 @@ function spawnDustMote(container) {
         window.__cuddlyProjector.set("off");
       }
       // the party bed is the beat now (see the dance beds below); pause any loft song already
-      // playing so the two musics don't fight (the bed plays whole-loft while the party's lit,
-      // so it always takes over)
-      if (window.__partyMusicWant && window.__partyMusicWant() &&
-          window.__phoneMusicPlaying && window.__phoneMusicPlaying() && window.__phoneMusicToggle) {
+      // playing so the two musics don't fight — the party bed plays whole-loft while the party's
+      // lit, so it ALWAYS takes over (unconditional: the old __partyMusicWant() gate let songs
+      // slip through into a cacophony when the party started from another room)
+      if (window.__phoneMusicPlaying && window.__phoneMusicPlaying() && window.__phoneMusicToggle) {
         window.__phoneMusicToggle();
       }
     } else {

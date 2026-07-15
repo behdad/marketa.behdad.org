@@ -4311,6 +4311,21 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 @media (prefers-reduced-motion: reduce){
   #office-laptop.calling #laptop-call-ring{animation:none; opacity:0}
 }
+/* the two Lübeck kids singing the Tumbalalaika refrain while the call's live: each kid's
+   mouth ellipse hides behind the resting smile until a .singing class lands on the group
+   (added/removed by the singing scheduler in sync with which voice is on), then it opens
+   and closes on the note beat. reduced-motion keeps a gentle, slow open/close, no jitter. */
+#laptop-lueb-girl-mouth, #laptop-lueb-boy-mouth{transform-box:fill-box; transform-origin:center; opacity:0}
+#laptop-lueb-girl.singing .lueb-smile, #laptop-lueb-boy.singing .lueb-smile{opacity:0}
+#laptop-lueb-girl.singing #laptop-lueb-girl-mouth, #laptop-lueb-boy.singing #laptop-lueb-boy-mouth{opacity:1}
+@keyframes lueb-sing-mouth{0%,100%{transform:scaleY(.45)} 45%{transform:scaleY(2.7)} 72%{transform:scaleY(1.5)}}
+#laptop-lueb-girl.singing #laptop-lueb-girl-mouth{animation:lueb-sing-mouth .44s ease-in-out infinite}
+#laptop-lueb-boy.singing #laptop-lueb-boy-mouth{animation:lueb-sing-mouth .5s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){
+  @keyframes lueb-sing-mouth-calm{0%,100%{transform:scaleY(.7)} 50%{transform:scaleY(1.5)}}
+  #laptop-lueb-girl.singing #laptop-lueb-girl-mouth{animation:lueb-sing-mouth-calm 1.1s ease-in-out infinite}
+  #laptop-lueb-boy.singing #laptop-lueb-boy-mouth{animation:lueb-sing-mouth-calm 1.25s ease-in-out infinite}
+}
 /* the sweet software update: release notes + a heart boot where the apple logo should be */
 #laptop-sweet-notes{opacity:0}
 #office-laptop.updating.sweet #laptop-sweet-notes{opacity:1}
@@ -9995,7 +10010,9 @@ section{margin:1.9rem 0}
 <path d="M405.5 185.8 Q405.8 183.8 407.8 183.8 Q409.8 183.8 410.1 185.8 L410.8 186.1 L404.8 186.1 Z" fill="#e8a8b8"/>
 <circle cx="407" cy="187.2" r="0.26" fill="#453a31"/>
 <circle cx="408.6" cy="187.2" r="0.26" fill="#453a31"/>
-<path d="M407 188.1 Q407.8 188.8 408.6 188.1" stroke="#6d4a33" stroke-width="0.32" fill="none" stroke-linecap="round"/>
+<path class="lueb-smile" d="M407 188.1 Q407.8 188.8 408.6 188.1" stroke="#6d4a33" stroke-width="0.32" fill="none" stroke-linecap="round"/>
+<!-- singing mouth: hidden (smile shows) until .singing on the group, then it opens/closes in time -->
+<ellipse id="laptop-lueb-girl-mouth" class="lueb-mouth" cx="407.8" cy="188.35" rx="0.5" ry="0.16" fill="#7a3b3b"/>
 </g>
 <!-- the boy (~2½), smallest: bright blue cap with a tiny cartoon patch, blue hoodie -->
 <g id="laptop-lueb-boy">
@@ -10007,7 +10024,8 @@ section{margin:1.9rem 0}
 <path d="M419.2 187.4 Q419.4 187.6 419.6 187.4" stroke="#8a6d1f" stroke-width="0.18" fill="none"/>
 <circle cx="418.6" cy="189.1" r="0.26" fill="#453a31"/>
 <circle cx="420.2" cy="189.1" r="0.26" fill="#453a31"/>
-<path d="M418.8 190 Q419.4 190.5 420 190" stroke="#6d4a33" stroke-width="0.3" fill="none" stroke-linecap="round"/>
+<path class="lueb-smile" d="M418.8 190 Q419.4 190.5 420 190" stroke="#6d4a33" stroke-width="0.3" fill="none" stroke-linecap="round"/>
+<ellipse id="laptop-lueb-boy-mouth" class="lueb-mouth" cx="419.4" cy="190.2" rx="0.46" ry="0.14" fill="#7a3b3b"/>
 </g>
 </g>
 <!-- corner self-view: silhouette placeholder shared by both calls; the call-cam module
@@ -19965,6 +19983,7 @@ document.addEventListener("click", function (e) {
       // the ambient bed is shared with the monitor's Tehran call — only silence it when
       // it isn't that call's (the calls are mutually exclusive, so no laptop bed survives)
       if (!(window.__tehranCallLive && window.__tehranCallLive())) stopCallAmbient();
+      if (window.__stopLuebSinging) window.__stopLuebSinging(); // Lübeck kids' serenade never outlives the laptop call
       laptop.classList.remove("updating", "progress", "rebooting", "sweet", "calling", "connecting", "connected", "lueb");
     }
     // The gag: an open Mac decides to install a software update and reboot — now framed
@@ -20036,6 +20055,7 @@ document.addEventListener("click", function (e) {
         if (callCallee === "prague") markPragueCalled();
         playCallLaughSound();
         startCallAmbient(callCallee === "lueb" ? "tehran" : "prague");
+        if (callCallee === "lueb" && window.__startLuebSinging) window.__startLuebSinging(); // the two kids serenade
         return;
       }
       playPhoneRingSound();
@@ -20053,6 +20073,8 @@ document.addEventListener("click", function (e) {
         // the ongoing static/giggling bed while it lasts — Lübeck's flat shares the
         // indoor ("tehran") flavor; Prague keeps the garden wind
         startCallAmbient(callCallee === "lueb" ? "tehran" : "prague");
+        // Lübeck's two kids sing the Tumbalalaika refrain over the bed until the call ends
+        if (callCallee === "lueb" && window.__startLuebSinging) window.__startLuebSinging();
       }, 3400));
     }
     var callHangingUp = false;
@@ -20061,6 +20083,7 @@ document.addEventListener("click", function (e) {
       clearLaptopTimers();
       var wasConnected = laptop.classList.contains("connected");
       stopCallAmbient();
+      if (window.__stopLuebSinging) window.__stopLuebSinging(); // silence the kids the instant we hang up, before the goodbye
       function dropLine() {
         playCallHangupSound();
         laptop.classList.remove("calling", "connecting", "connected", "lueb");
@@ -33841,6 +33864,7 @@ function pannedSweep(ctx, fromPan, toPan, dur) {
     if (window.__updatePcFan) window.__updatePcFan();
     if (window.__updateACHum) window.__updateACHum();
     if (window.__updateCallAmbient) window.__updateCallAmbient();
+    if (window.__updateLuebSinging) window.__updateLuebSinging();
     if (window.__updateEqCtxIdle) window.__updateEqCtxIdle();
     if (window.__updatePartyMusic) window.__updatePartyMusic();
   }
@@ -34772,6 +34796,230 @@ window.__updateCallAmbient = function () {
   if (!document.hasFocus()) { if (callAmbientCtx) teardownCallAmbient(); }
   else if (!callAmbientCtx) buildCallAmbient();
 };
+// ── The Lübeck kids singing "tumba-la tumba-la tumba-la-lai-ka" ─────────────────────
+// The Tumbalalaika refrain, articulated as formant speech (same voiced-source→bandpass
+// technique as playILoveYouSound / playPhoneVoiceSound), not a bare hum: each syllable is
+// a real consonant (t/k plosive noise bursts, b voiced burst, l lateral F2 dip, the "ai"
+// diphthong gliding /a/→/i/) into a five-formant vowel, sung on a chant-like minor melody.
+// Two child voices — the girl a fifth-ish higher (pitchMul 1.28), the boy lower (0.98) —
+// run through the shared getSfxCtx routed to the laptop (pannedOut) via one gentle
+// low-pass "laptop speaker" bus. A little scheduler cycles unison / call-and-response /
+// overlapping-round patterns with playful pauses so it never reads as a fixed loop, and
+// keeps going until the call ends. See the module below start/stop/gate at the bottom.
+var LUEB_SVGNS = "http://www.w3.org/2000/svg";
+var LUEB_REFRAIN_DUR = 3.32; // seconds for one refrain (rhythm is voice-independent)
+// vowel formants [F1,F2,F3] (Hz, base — scaled per voice by pitchMul p)
+var LUEB_VOW = { u: [360, 820, 2400], a: [800, 1350, 2600], i: [320, 2300, 3050] };
+// one refrain: c=onset consonant, v=vowel, s=semitones above the tonic, d=note length, gap=pause after
+var LUEB_SYL = [
+  { c: "t", v: "u",  s: 7, d: 0.22 }, { c: "b", v: "a", s: 7, d: 0.22 }, { c: "l", v: "a", s: 7, d: 0.28, gap: 0.10 },
+  { c: "t", v: "u",  s: 7, d: 0.22 }, { c: "b", v: "a", s: 7, d: 0.22 }, { c: "l", v: "a", s: 7, d: 0.28, gap: 0.10 },
+  { c: "t", v: "u",  s: 7, d: 0.22 }, { c: "b", v: "a", s: 8, d: 0.22 }, { c: "l", v: "a", s: 7, d: 0.22 },
+  { c: "l", v: "ai", s: 5, d: 0.40 }, { c: "k", v: "a", s: 3, d: 0.50 }
+];
+// Build ONE sung refrain for one voice into dest at absolute time t0. Mirrors the
+// playILoveYouSound recipe (detuned-saw glottal source → spectral-tilt → 5 gliding
+// bandpass formants + a shared master envelope with per-syllable consonant dips), just
+// longer and stepping a melody. track(node) registers every source so the module can
+// stop them on teardown. pf scales the glottal f0 (pitch register), ff scales every
+// formant/filter centre (vocal-tract size) — kept SEPARATE so the two kids sit clearly
+// apart in pitch (girl ~a sixth above the boy) yet both read as small children; gain
+// scales the whole voice.
+function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track) {
+  var BASE = 262; // tonic base pitch (Hz), scaled by pf and the per-note semitone
+  var onsets = [], tt = t0 + 0.02;
+  for (var i = 0; i < LUEB_SYL.length; i++) { onsets.push(tt); tt += LUEB_SYL[i].d + (LUEB_SYL[i].gap || 0); }
+  var end = tt + 0.12;
+  // glottal source: two detuned sawtooths stepping the melody, de-buzzed by a spectral-tilt lowpass
+  var source = ctx.createGain(); source.gain.value = 1;
+  var vib = ctx.createOscillator(); vib.type = "sine"; vib.frequency.value = 5.4; // a touch of vibrato keeps it alive
+  var vibGain = ctx.createGain(); vibGain.gain.value = 6; // cents
+  vib.connect(vibGain);
+  [-6, 7].forEach(function (dt) {
+    var osc = ctx.createOscillator(); osc.type = "sawtooth"; osc.detune.value = dt;
+    vibGain.connect(osc.detune);
+    for (var i = 0; i < LUEB_SYL.length; i++) {
+      var f = BASE * pf * Math.pow(2, LUEB_SYL[i].s / 12);
+      if (i === 0) osc.frequency.setValueAtTime(f, t0);
+      else osc.frequency.linearRampToValueAtTime(f, onsets[i] + 0.02); // slight portamento between notes
+    }
+    osc.connect(source);
+    osc.start(t0); osc.stop(end); track(osc);
+  });
+  vib.start(t0); vib.stop(end); track(vib);
+  var tilt = ctx.createBiquadFilter(); tilt.type = "lowpass"; tilt.frequency.value = 2600 * ff; tilt.Q.value = 0.5;
+  source.connect(tilt);
+  // master amplitude: a vowel bump per syllable with a dip at each consonant (the articulation)
+  var master = ctx.createGain(); var m = master.gain; m.setValueAtTime(0.0004, t0);
+  var CONS_DIP = { t: 0.004, k: 0.005, b: 0.02, l: 0.03 };
+  for (var i = 0; i < LUEB_SYL.length; i++) {
+    var syl = LUEB_SYL[i], on = onsets[i];
+    var dip = (CONS_DIP[syl.c] || 0.02) * gain;
+    var peak = (i === 9 ? 0.082 : 0.072) * gain; // "lai" a hair louder as the phrase turns
+    m.exponentialRampToValueAtTime(Math.max(0.0004, dip), on);          // consonant constriction
+    m.exponentialRampToValueAtTime(peak, on + 0.035);                    // vowel onset
+    m.setValueAtTime(peak, on + syl.d * 0.62);                           // sustain
+  }
+  m.exponentialRampToValueAtTime(0.0004, end);
+  master.connect(dest);
+  // five parallel bandpass formants gliding through the vowels; F4/F5 fixed + faint for warmth
+  [
+    { q: 8,  g: 1.0,   idx: 0 },
+    { q: 9,  g: 0.5,   idx: 1 },
+    { q: 11, g: 0.16,  idx: 2 },
+    { q: 16, g: 0.09,  fixed: 3600 },
+    { q: 17, g: 0.05,  fixed: 4600 }
+  ].forEach(function (f) {
+    var bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = f.q;
+    if (f.fixed != null) { bp.frequency.value = f.fixed * ff; }
+    else {
+      bp.frequency.setValueAtTime(LUEB_VOW[LUEB_SYL[0].v === "ai" ? "a" : LUEB_SYL[0].v][f.idx] * ff, t0);
+      for (var i = 0; i < LUEB_SYL.length; i++) {
+        var syl = LUEB_SYL[i], on = onsets[i];
+        if (syl.v === "ai") { // diphthong: start /a/, glide to /i/ across the note
+          bp.frequency.linearRampToValueAtTime(LUEB_VOW.a[f.idx] * ff, on + 0.04);
+          bp.frequency.linearRampToValueAtTime(LUEB_VOW.i[f.idx] * ff, on + syl.d * 0.9);
+        } else {
+          var target = LUEB_VOW[syl.v][f.idx] * ff;
+          if (syl.c === "l" && f.idx === 1) { // lateral: dip F2 low so it reads as an /l/, not a hole
+            bp.frequency.linearRampToValueAtTime(1050 * ff, on + 0.02);
+            bp.frequency.linearRampToValueAtTime(target, on + 0.09);
+          } else {
+            bp.frequency.linearRampToValueAtTime(target, on + 0.04);
+          }
+        }
+      }
+    }
+    var fg = ctx.createGain(); fg.gain.value = f.g;
+    tilt.connect(bp); bp.connect(fg); fg.connect(master);
+  });
+  // consonant transients: short filtered-noise bursts for the plosives (t/k unvoiced, b voiced-low)
+  var nlen = Math.floor(ctx.sampleRate * 0.05);
+  var nbuf = ctx.createBuffer(1, nlen, ctx.sampleRate), nd = nbuf.getChannelData(0);
+  for (var j = 0; j < nlen; j++) nd[j] = Math.random() * 2 - 1;
+  LUEB_SYL.forEach(function (syl, i) {
+    if (syl.c !== "t" && syl.c !== "k" && syl.c !== "b") return;
+    var on = onsets[i], dur = 0.024;
+    var ns = ctx.createBufferSource(); ns.buffer = nbuf;
+    var nf = ctx.createBiquadFilter();
+    if (syl.c === "b") { nf.type = "lowpass"; nf.frequency.value = 320 * ff; }
+    else { nf.type = "bandpass"; nf.frequency.value = (syl.c === "t" ? 3000 : 1700) * ff; nf.Q.value = 0.8; }
+    var ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.0001, on - 0.012);
+    ng.gain.exponentialRampToValueAtTime(0.03 * gain, on);
+    ng.gain.exponentialRampToValueAtTime(0.0001, on + dur);
+    ns.connect(nf); nf.connect(ng); ng.connect(dest);
+    ns.start(on - 0.012); ns.stop(on + dur + 0.01); track(ns);
+  });
+  return LUEB_REFRAIN_DUR;
+}
+(function () {
+  var wanted = false, active = false;         // wanted = a Lübeck call is live; active = the bed is producing
+  var bus = null, busCtx = null;
+  var phraseTimer = null, timers = [], nodes = [], patternIdx = 0;
+  function reduce() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+  // want-gate mirrors every continuous bed: live call + on-screen office + visible + focused
+  function want() { return wanted && window.currentStageName === "office" && !document.hidden && document.hasFocus(); }
+  function track(n) { nodes.push(n); n.onended = function () { var i = nodes.indexOf(n); if (i >= 0) nodes.splice(i, 1); }; }
+  function addTimer(fn, ms) {
+    var id = setTimeout(function () { var i = timers.indexOf(id); if (i >= 0) timers.splice(i, 1); fn(); }, ms);
+    timers.push(id); return id;
+  }
+  // Clearly separated registers so a listener tells them apart instantly, both still child
+  // voices: the girl sits ~a sixth above the boy (pf 1.5 vs 0.95) with a smaller/brighter
+  // tract (ff 1.32 vs 1.04). The boy stays high vs an adult — just plainly lower than her.
+  var GIRL = { pf: 1.5,  ff: 1.32, gid: "laptop-lueb-girl", hx: 407.8, hy: 184.6 };
+  var BOY  = { pf: 0.95, ff: 1.04, gid: "laptop-lueb-boy",  hx: 419.4, hy: 184.9 };
+  function spawnLuebNote(cx, cy) {
+    if (reduce() || document.hidden) return;
+    var scene = document.getElementById("laptop-lueb-scene");
+    if (!scene) return;
+    var glyphs = ["♪", "♫"];
+    var t = document.createElementNS(LUEB_SVGNS, "text");
+    t.setAttribute("class", "lueb-note");
+    t.setAttribute("x", cx); t.setAttribute("y", cy);
+    t.setAttribute("text-anchor", "middle"); t.setAttribute("font-size", "2.4");
+    t.setAttribute("fill", "#8e3a4a"); t.textContent = glyphs[Math.floor(Math.random() * glyphs.length)];
+    t.style.transformBox = "fill-box"; t.style.transformOrigin = "center";
+    scene.appendChild(t);
+    if (t.animate) {
+      var dx = (Math.random() - 0.5) * 3;
+      var a = t.animate([
+        { transform: "translate(0px,0px) scale(.6)", opacity: 0 },
+        { transform: "translate(" + dx + "px,-4px) scale(1)", opacity: 0.9, offset: 0.3 },
+        { transform: "translate(" + (dx * 1.7) + "px,-9px) scale(.8)", opacity: 0 }
+      ], { duration: 1500, easing: "ease-out" });
+      a.onfinish = function () { if (t.parentNode) t.remove(); };
+    } else { addTimer(function () { if (t.parentNode) t.remove(); }, 1600); }
+  }
+  // one voice sings a refrain starting at absolute time startT: schedule the audio, drive
+  // that kid's mouth class over the phrase, and float a couple of ♪ notes from their head
+  function singVoiceAt(ctx, voice, startT, gain) {
+    singLuebRefrain(ctx, bus, startT, voice.pf, voice.ff, gain, track);
+    var delay = Math.max(0, (startT - ctx.currentTime) * 1000);
+    addTimer(function () { var g = document.getElementById(voice.gid); if (g && active) g.classList.add("singing"); }, delay);
+    addTimer(function () { var g = document.getElementById(voice.gid); if (g) g.classList.remove("singing"); }, delay + LUEB_REFRAIN_DUR * 1000 + 40);
+    if (!reduce()) [0.32, 0.72].forEach(function (fr) {
+      addTimer(function () { if (active) spawnLuebNote(voice.hx + (Math.random() - 0.5) * 1.6, voice.hy); }, delay + LUEB_REFRAIN_DUR * 1000 * fr);
+    });
+  }
+  var PATTERNS = ["unison", "girlLead", "boyLead", "round", "unison", "roundBoy"];
+  function scheduleNext() {
+    if (!active) return;
+    var ctx = getSfxCtx();               // re-grabbed each phrase: keeps the shared ctx off its 20s idle-suspend
+    if (!ctx) { stop(); return; }        // (null only if the tab hid mid-run — want() already excludes that)
+    var t0 = ctx.currentTime + 0.06, dur = LUEB_REFRAIN_DUR, total;
+    var pat = PATTERNS[patternIdx % PATTERNS.length];
+    if (Math.random() < 0.25) pat = PATTERNS[Math.floor(Math.random() * PATTERNS.length)]; // jitter so it isn't a fixed cycle
+    patternIdx++;
+    if (pat === "unison") {
+      singVoiceAt(ctx, GIRL, t0, 0.82); singVoiceAt(ctx, BOY, t0, 0.82); total = dur;
+    } else if (pat === "girlLead" || pat === "boyLead") {
+      var lead = pat === "girlLead" ? GIRL : BOY, ans = pat === "girlLead" ? BOY : GIRL;
+      singVoiceAt(ctx, lead, t0, 0.92);
+      var ansT = t0 + dur - 0.3;                 // the answer comes in as the leader's tail fades (a little overlap)
+      singVoiceAt(ctx, ans, ansT, 0.92);
+      total = (ansT + dur) - t0;
+    } else { // round / roundBoy: a canon — second voice enters partway through the first
+      var first = pat === "roundBoy" ? BOY : GIRL, second = pat === "roundBoy" ? GIRL : BOY;
+      singVoiceAt(ctx, first, t0, 0.86);
+      var secT = t0 + dur * 0.45;
+      singVoiceAt(ctx, second, secT, 0.86);
+      total = (secT + dur) - t0;
+    }
+    var gap = reduce() ? 0.8 : (0.45 + Math.random() * 0.7); // playful little pauses between refrains
+    phraseTimer = setTimeout(scheduleNext, (total + gap) * 1000);
+  }
+  function start() {
+    var ctx = getSfxCtx(); if (!ctx) return;
+    active = true; busCtx = ctx;
+    bus = ctx.createGain(); bus.gain.value = 1;
+    var speaker = ctx.createBiquadFilter(); speaker.type = "lowpass"; speaker.frequency.value = 3200; speaker.Q.value = 0.7; // "through a laptop speaker"
+    bus.connect(speaker); speaker.connect(pannedOut(ctx, "office-laptop"));
+    patternIdx = 0;
+    scheduleNext();
+  }
+  function stop() {
+    active = false;
+    clearTimeout(phraseTimer); phraseTimer = null;
+    timers.forEach(clearTimeout); timers = [];
+    nodes.forEach(function (n) { try { n.stop(); } catch (e) {} }); nodes = [];
+    if (bus && busCtx) {
+      try { var t = busCtx.currentTime; bus.gain.cancelScheduledValues(t); bus.gain.setValueAtTime(bus.gain.value, t); bus.gain.linearRampToValueAtTime(0.0001, t + 0.1); } catch (e) {}
+      var b = bus; setTimeout(function () { try { b.disconnect(); } catch (e) {} }, 220);
+    }
+    bus = null; busCtx = null;
+    // leave the mouths shut and clear every floating note, so any reset path lands clean
+    [GIRL.gid, BOY.gid].forEach(function (id) { var g = document.getElementById(id); if (g) g.classList.remove("singing"); });
+    var scene = document.getElementById("laptop-lueb-scene");
+    if (scene) { var ns = scene.querySelectorAll(".lueb-note"), i; for (i = ns.length - 1; i >= 0; i--) ns[i].remove(); }
+  }
+  function update() { if (want() && !active) start(); else if (!want() && active) stop(); }
+  window.__startLuebSinging = function () { wanted = true; update(); };
+  window.__stopLuebSinging = function () { wanted = false; update(); };
+  window.__updateLuebSinging = update; // the shared focus watcher + goToStage re-check the gate through this
+  document.addEventListener("visibilitychange", update);
+})();
 // Hanging up: two quick descending tones, the mirror image of playPhoneRingSound's
 // ascending ring — a "call ended" cue distinct from every other laptop sound here.
 function playCallHangupSound(panId) {
@@ -36909,6 +37157,7 @@ function spawnDustMote(container) {
     if (window.__syncMonitorDoom) window.__syncMonitorDoom(); // pause DOOM's run loop off-screen; resume it on return (the gate is show-doom && visible && office)
     if (window.__updateACHum) window.__updateACHum(name, ROOM_FADE); // AC hum only in garden + balcony, panned to that room's unit
     if (window.__updateRadioSound) window.__updateRadioSound(name === "kitchen", ROOM_FADE); // radio audible only in the kitchen
+    if (window.__updateLuebSinging) window.__updateLuebSinging(); // leaving the office stops the Lübeck kids' serenade (room-gated)
     if (window.__updateKettleHum) window.__updateKettleHum(name === "kitchen", ROOM_FADE); // kettle hum only in the kitchen
     if (window.__updateFireSound) window.__updateFireSound(name === "cuddly", ROOM_FADE); // fire crackle only in the cuddly nook
     if (window.__updateAquaSound) window.__updateAquaSound(name === "cuddly", ROOM_FADE); // aquarium bed only in the cuddly nook

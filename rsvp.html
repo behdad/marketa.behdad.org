@@ -22455,7 +22455,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone()/phone(\"app\") · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall/kill · service · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone()/phone(\"app\") · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var CONSOLE_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -22500,8 +22500,7 @@ document.addEventListener("click", function (e) {
       laptop: "laptop(true) — wake the office laptop; laptop(false) closes it; laptop() reports whether it's open. laptop(\"prague\")/laptop(\"lubeck\") place a video call to her family",
       computer: "computer(true) — power the office PC up; computer(false) shuts it down; computer() reports whether it's on. computer(\"doom\")/computer(\"weather\") boot (if needed) and open that monitor app; a bad name lists them",
       reboot: "reboot() — power-cycle the loft OS (a `sudo reboot` from its own console)",
-      kill: "killall [-9] <doom|console|python|linux> (bare `kill` works too) — tear down a monitor app via its Kill hook (doom's FATALITY, console's flatline, python's Black Knight, linux's BSOD). the -9 is decorative — they all go. a cold runtime says `not running`",
-      killall: "killall — alias for kill; try `help kill`",
+      killall: "killall [-9] <doom|console|python|linux> — kill a monitor app by name via its Kill hook (doom's FATALITY, console's flatline, python's Black Knight, linux's BSOD). bare `killall` (no name) kills every currently-running host at once. the -9 is decorative — they all go. a cold runtime says `not running`",
       service: "service <doom|console|python|linux> <start|stop|status|restart|--full-restart> — sysvinit-style control: status reports running/stopped · start opens it · stop kills it · restart|--full-restart do both",
       monitor: "monitor — alias for computer; monitor(\"doom\")/monitor(\"console\") open a monitor app; try `help computer`",
       go: "go(\"thing\") — thing(true): a verb over the on/off commands, e.g. go(\"party\") · go(\"smoker\") · go(\"laptop\")",
@@ -22661,25 +22660,37 @@ document.addEventListener("click", function (e) {
       return;
     }
     if (/^man(\s|$)/.test(c)) { consolePrint("the only manual here is `man love`.", "console-dim"); return; }
-    // `killall [-9] <doom|console|python|linux>` (or bare `kill`, same thing — these take a process
-    // NAME, so killall is the truer verb) — the console's own process manager: tear a monitor app
-    // down via its Kill hook. Those hooks run the death-flash when the named app owns the screen
-    // (e.g. `killall console` typed here, since the console is what's active) and destroy silently
-    // otherwise. A themed line confirms; a bad/absent host prints usage; a cold runtime reports
-    // "not running". The -9 is decorative — they all go. (Host order mirrors the dock.)
+    // `killall [-9] <doom|console|python|linux>` — kill a monitor app BY NAME (killall's Unix idiom
+    // is a name, not a PID — exactly how we address the runtimes), routing to its Kill hook. Those
+    // hooks run the death-flash when the named app owns the screen (e.g. `killall console` typed
+    // here, since the console is what's active) and destroy silently otherwise. With NO name,
+    // killall kills every currently-running host at once. A themed line confirms; a bad name prints
+    // usage; a cold runtime reports "not running". The -9 is decorative — they all go. (Host order
+    // mirrors the dock.)
     var KILL_HOSTS = {
       doom:    { hook: "__killMonitorDoom",    running: "__doomRunning", ok: "🎮 doom killed — flawless victory." },
       console: { hook: "__killMonitorConsole", running: null,            ok: "❯ console killed — undefined is not a function." },
       python:  { hook: "__killMonitorPython",  running: "__pyRunning",   ok: "🐍 python killed — 'tis but a flesh wound." },
       linux:   { hook: "__killMonitorLinux",   running: "__lxRunning",   ok: "🐧 linux killed — the penguin bluescreened." }
     };
-    var killM = c.match(/^kill(?:all)?(?:\s+-9)?(?:\s+(\S+))?$/i);
+    var KILL_ORDER = ["doom", "console", "python", "linux"]; // dock order
+    var hostRunning = function (name) { // console's "running" = it owns the screen; the others have a predicate
+      if (name === "console") { var mm = document.getElementById("office-monitor"); return !!(mm && mm.classList.contains("show-console")); }
+      var h = KILL_HOSTS[name]; return !!(h && h.running && window[h.running] && window[h.running]());
+    };
+    var killM = c.match(/^killall(?:\s+-9)?(?:\s+(\S+))?$/i);
     if (killM) {
       var kh = (killM[1] || "").toLowerCase();
-      if (!kh) { consolePrint("usage: killall [-9] <doom|console|python|linux>", "console-dim"); return; }
+      if (!kh) { // bare `killall` → kill every running host (snapshot first: killing one changes state)
+        var doomed = KILL_ORDER.filter(hostRunning);
+        if (!doomed.length) { consolePrint("nothing running to kill", "console-dim"); return; }
+        doomed.forEach(function (n) { if (window[KILL_HOSTS[n].hook]) window[KILL_HOSTS[n].hook](); });
+        consolePrint("killed: " + doomed.join(", "), "console-dim");
+        return;
+      }
       var kHost = KILL_HOSTS[kh];
-      if (!kHost) { consolePrint("kill: no such process: " + kh + " — try doom · console · python · linux", "console-dim"); return; }
-      if (kHost.running && !(window[kHost.running] && window[kHost.running]())) { consolePrint(kh + ": not running", "console-dim"); return; }
+      if (!kHost) { consolePrint("killall: no such process: " + kh + " — try doom · console · python · linux (or bare `killall` for every running one)", "console-dim"); return; }
+      if (!hostRunning(kh)) { consolePrint(kh + ": not running", "console-dim"); return; }
       if (window[kHost.hook]) window[kHost.hook]();
       consolePrint(kHost.ok, "console-dim");
       return;

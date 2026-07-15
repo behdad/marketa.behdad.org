@@ -782,6 +782,15 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
    compose: the arm keeps idling while the shaker rises and spins over it. Pivot at the shaker's
    own centre. One-shot .tossing, cleared on animationend. Reduced-motion stills the toss. */
 #kitchen-bartender-shaker{transform-box:fill-box; transform-origin:50% 50%}
+/* stir flair: for "stir" cocktails the make module toggles .stirring on the shaker so his hand
+   traces a small gentle circle over the glass at his station — HE stirs, the in-glass swizzle
+   is just the detail. Runs on the same node as the one-shot .tossing but never both at once
+   (setBartenderStir clears .tossing and gates autoFlare while stirring); declared BEFORE .tossing
+   so this infinite state can't out-order the one-shot toss in the cascade if they ever coincide.
+   Composes over the arm's idle shake on the distinct parent wrapper. Reduced-motion stills it. */
+#kitchen-bartender-shaker.stirring{animation:bartender-stir .62s linear infinite}
+@keyframes bartender-stir{0%{transform:translate(1.6px,0)}25%{transform:translate(0,1.6px)}50%{transform:translate(-1.6px,0)}75%{transform:translate(0,-1.6px)}100%{transform:translate(1.6px,0)}}
+@media (prefers-reduced-motion: reduce){#kitchen-bartender-shaker.stirring{animation:none}}
 #kitchen-bartender-shaker.tossing{animation:bartender-toss .95s ease-in-out}
 @keyframes bartender-toss{0%{transform:translateY(0) rotate(0)}42%{transform:translateY(-32px) rotate(360deg)}100%{transform:translateY(0) rotate(720deg)}}
 #kitchen-bartender-hit{pointer-events:none}
@@ -18870,6 +18879,15 @@ document.addEventListener("click", function (e) {
         requestAnimationFrame(function () { bartenderShaker.classList.add("tossing"); });
       });
     }
+    // "stir" flair for the make module: his hand circles gently over the glass at his station.
+    // While stirring we clear any in-flight toss and gate autoFlare, so the two class-based
+    // animations on this one node never collide (the documented one-shot-vs-state cascade bug).
+    var bartenderStirring = false;
+    function setBartenderStir(on) {
+      bartenderStirring = !!on;
+      if (on) { bartenderShaker.classList.remove("tossing"); bartenderShaker.classList.add("stirring"); }
+      else bartenderShaker.classList.remove("stirring");
+    }
     // ---- drag the bartender horizontally along the bar (party-only) ----------
     // Mirrors the office-chair horizontal drag (setChairOffset / pointerSvgX): the X
     // offset rides the OUTER #kitchen-bartender group's `translate` property, clamped so
@@ -19200,12 +19218,16 @@ document.addEventListener("click", function (e) {
     // it can't pile up and doesn't fight other party wiring); skips while off-party / hidden / reduced-motion.
     function bartenderReduce() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
     (function autoFlare() {
-      if (window.__gardenPartyOn && document.visibilityState !== "hidden" && !bartenderReduce()) tossShaker();
+      // skip the idle toss while he's mid-stir, so it can't swallow the stir animation on the shared node
+      if (window.__gardenPartyOn && document.visibilityState !== "hidden" && !bartenderReduce() && !bartenderStirring) tossShaker();
       setTimeout(autoFlare, 9000 + Math.random() * 3000); // ~10s, jittered so it's not metronomic
     })();
-    // shared with the cocktail-make module: it borrows his shaker toss for "shake" drinks, and
+    // shared with the cocktail-make module: it borrows his shaker toss for "shake" drinks and his
+    // stir flair for "stir" drinks, reads his live bar offset to anchor the glass at his hands, and
     // reads his drag state so the ambient make never fires while he's being dragged.
     window.__bartenderToss = tossShaker;
+    window.__bartenderStir = setBartenderStir;
+    window.__bartenderOffset = function () { return barOffsetX; };
     window.__bartenderDragging = function () { return barDragging; };
   }
   // the skyline windows: a grid of togglable lit-window rects tiling each tower's face.
@@ -19329,8 +19351,12 @@ document.addEventListener("click", function (e) {
     return e;
   }
 
-  // the reused make group, appended once as the bar's frontmost child (inherits the party fade)
-  var makeGroup = S("g", { id: "kitchen-bar-make", transform: "translate(415,0)", style: "opacity:0" }, bar);
+  // the reused make group, appended once as the bar's frontmost child (inherits the party fade).
+  // Its x rides the bartender: MAKE_ANCHOR_X is his base hand/shaker x (~336) nudged right so the
+  // glass sits just in front of his hand — clearing his torso (right edge x321) and pushing the
+  // pour bottle off his raised shaker. startMake re-pins it to his live offset when a make begins.
+  var MAKE_ANCHOR_X = 348;
+  var makeGroup = S("g", { id: "kitchen-bar-make", transform: "translate(" + MAKE_ANCHOR_X + ",0)", style: "opacity:0" }, bar);
 
   function drawGarnish(node, type, g) {
     var x = g.gx, y = g.gy;
@@ -19433,8 +19459,9 @@ document.addEventListener("click", function (e) {
   var making = false, makeTimers = [], cooldownUntil = 0;
   function after(ms, fn) { var id = setTimeout(fn, ms); makeTimers.push(id); return id; }
   function clearMakeTimers() { for (var i = 0; i < makeTimers.length; i++) clearTimeout(makeTimers[i]); makeTimers = []; }
-  function finishMake() { clearMakeTimers(); makeGroup.style.opacity = "0"; making = false; cooldownUntil = Date.now() + 1500 + Math.random() * 1700; }
-  function abort() { clearMakeTimers(); if (makeGroup) makeGroup.style.opacity = "0"; making = false; }
+  function stopBartenderStir() { if (window.__bartenderStir) window.__bartenderStir(false); } // never leave him stirring after a make ends
+  function finishMake() { clearMakeTimers(); stopBartenderStir(); makeGroup.style.opacity = "0"; making = false; cooldownUntil = Date.now() + 1500 + Math.random() * 1700; }
+  function abort() { clearMakeTimers(); stopBartenderStir(); if (makeGroup) makeGroup.style.opacity = "0"; making = false; }
 
   function startMake(row) {
     if (making || !row) return false;
@@ -19448,6 +19475,10 @@ document.addEventListener("click", function (e) {
     var ice = (m.ice === true) || build === "build";
     cocktailToast(name);
     var ctx = buildMake(glass, ice, garnish);
+    // pin the station at the bartender's live position for this whole make (he's stationary during
+    // ambient makes, so the glass stays put at his hands rather than sliding around)
+    var off = (window.__bartenderOffset ? window.__bartenderOffset() : 0);
+    makeGroup.setAttribute("transform", "translate(" + (MAKE_ANCHOR_X + off) + ",0)");
     makeGroup.style.opacity = "1";
 
     if (reduced()) { // static: fill instantly, garnish, hold, clear (no animation)
@@ -19472,11 +19503,13 @@ document.addEventListener("click", function (e) {
     }
     if (build === "shake") {
       after(t, function () { if (window.__bartenderToss) window.__bartenderToss(); }); // he shakes
-      after(t + 700, function () { ctx.setLevel(1, color); }); // ...then strains the full drink into the glass
+      after(t + 780, function () { ctx.setLevel(1, color); }); // ...then strains the full drink into the glass at his hands
       t += 950;
-    } else { // stir / build → a gentle swizzle swirl
+    } else { // stir / build → a gentle swizzle swirl in the glass
+      if (build === "stir") after(t, function () { if (window.__bartenderStir) window.__bartenderStir(true); }); // HE stirs (build drinks: the pour over ice is enough)
       after(t, ctx.stir);
       after(t + 1150, ctx.stirEnd);
+      if (build === "stir") after(t + 1150, function () { if (window.__bartenderStir) window.__bartenderStir(false); });
       t += 800;
     }
     after(t, ctx.showGarnish); t += 340;

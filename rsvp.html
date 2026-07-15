@@ -1949,6 +1949,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 #office-monitor.death-doom #monitor-fatality{opacity:1}
 #office-monitor.death-linux #monitor-bsod{opacity:1}
 #office-monitor.death-python #monitor-pymonty{opacity:1}
+#office-monitor.death-console #monitor-js{opacity:1}
 .fatality-wrap{width:124px; height:42px; display:flex; align-items:center; justify-content:center; overflow:hidden}
 .fatality-word{font-family:"Climate Crisis",Impact,sans-serif; color:#e11414; font-size:12.5px; line-height:1; letter-spacing:.2px; white-space:nowrap; text-shadow:0 0 3px rgba(255,44,44,.55); font-variation-settings:"YEAR" 1979} /* YEAR animated inline 1979→2050 = the melt; this is the fallback */
 /* Intro "CLICK ME!" — a big melting invitation overlaid on the game scene while the opening
@@ -9939,6 +9940,18 @@ section{margin:1.9rem 0}
 <path d="M327 187 L323.6 185 L326.2 187.4 L322.8 188.6 L326 189.6 L324.8 191.6 L327.4 189.6 Z" fill="#b0221c"/>
 </g>
 </g>
+<!-- console killed → the JS REPL flatlines: the last prompt printed `undefined`, its block cursor
+     frozen solid, then a terminal-green EKG line sweeps L→R across the dead screen (driven by the
+     flash tick) and the screen dims to black. "undefined is not a function." rides the caption bar. -->
+<g id="monitor-js">
+<rect x="254" y="154" width="124" height="42" fill="#04120b"/>
+<text x="259" y="165" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="5.6" font-weight="700" fill="#8fd070">❯ undefined</text>
+<rect id="monitor-js-cursor" x="298.4" y="160.4" width="3" height="5" fill="#8fd070"/>
+<rect id="monitor-js-flat" x="256" y="177.4" width="0" height="1.3" rx="0.55" fill="#8fd070"/>
+<circle id="monitor-js-blip" cx="256" cy="178.05" r="1.7" fill="#d6f4bc"/>
+<text x="259" y="191.5" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="3.9" fill="#3f6b46">-- signal lost --</text>
+<rect id="monitor-js-fade" x="254" y="154" width="124" height="42" fill="#000" opacity="0"/>
+</g>
 </g>
 <!-- BROWSER (chrome) app: real web pages in iframes over the screen, behind a slim
      tab strip (markéta / behdad / harfbuzz, built by JS from BROWSER_TABS, plus a +
@@ -12387,6 +12400,7 @@ var T = {
       df_linux_quip: "The penguin bluescreened.", // caption under the on-screen BSOD (Linux kill)
       df_python_quip1: "'Tis but a scratch!", // caption beat 1 under the Monty Python Black Knight (Python kill)
       df_python_quip2: "It's just a flesh wound!", // caption beat 2 under the Monty Python Black Knight (Python kill)
+      df_console_quip: "undefined is not a function.", // caption under the on-screen JS-console flatline (console kill); a literal JS error — same in both languages (code, not prose)
       kitchen: "Turn on the machine → grind → brew.",
       kitchen_grind: "Now grind coffee.",
       kitchen_brew: "Now brew a shot.",
@@ -12788,6 +12802,7 @@ var T = {
       df_linux_quip: "Tučňák dostal modrou smrt.", // caption under the on-screen BSOD (Linux kill)
       df_python_quip1: "To je jen škrábnutí!", // caption beat 1 under the Monty Python Black Knight (Python kill)
       df_python_quip2: "Je to jenom škrábnutí!", // caption beat 2 under the Monty Python Black Knight (Python kill)
+      df_console_quip: "undefined is not a function.", // literal JS error string — same in both languages (a code token, not translated prose)
       kitchen: "Zapni kávovar → umel → uvař.",
       kitchen_grind: "Teď umel kávu.",
       kitchen_brew: "Teď uvař espresso.",
@@ -13936,8 +13951,8 @@ document.addEventListener("keydown", function (e) {
     if (menu) return;
     menu = document.createElement("div");
     menu.className = "console-ctx";
-    copyBtn = document.createElement("button"); copyBtn.type = "button"; copyBtn.textContent = "copy";
-    pasteBtn = document.createElement("button"); pasteBtn.type = "button"; pasteBtn.textContent = "paste";
+    copyBtn = document.createElement("button"); copyBtn.type = "button"; copyBtn.textContent = "Copy";
+    pasteBtn = document.createElement("button"); pasteBtn.type = "button"; pasteBtn.textContent = "Paste";
     // Restart/Kill for the self-hosted runtimes (python/pyodide, linux/v86) — the same
     // recover-a-stuck-runtime actions DOOM gets in its own menu, folded in here so the
     // console keeps a single right-click menu instead of two. Shown only for those apps.
@@ -13950,7 +13965,7 @@ document.addEventListener("keydown", function (e) {
     menu.addEventListener("mousedown", function (e) { e.preventDefault(); });
     copyBtn.addEventListener("click", function (e) { e.stopPropagation(); doCopy(); });
     pasteBtn.addEventListener("click", function (e) { e.stopPropagation(); doPaste(); hide(); });
-    restartBtn.addEventListener("click", function (e) { e.stopPropagation(); var a = runtimeApp(); hide(); if (a) { var fn = window[a.restart]; if (fn) fn(); } });
+    restartBtn.addEventListener("click", function (e) { e.stopPropagation(); var a = killApp(); hide(); if (a && a.restart) { var fn = window[a.restart]; if (fn) fn(); } }); // killApp() covers the runtimes (via runtimeApp) AND the plain console's own restart
     killBtn.addEventListener("click", function (e) { e.stopPropagation(); if (killBtn.disabled) return; var a = killApp(); hide(); if (a) { var fn = window[a.close]; if (fn) fn(); } });
   }
   // which self-hosted runtime (if any) owns the screen — decides whether Restart shows and,
@@ -13969,7 +13984,7 @@ document.addEventListener("keydown", function (e) {
     if (!m || window.currentStageName !== "office") return null;
     var ra = runtimeApp();
     if (ra) return ra;
-    if (m.classList.contains("show-console")) return { close: "__closeMonitorConsole", running: null };
+    if (m.classList.contains("show-console")) return { close: "__killMonitorConsole", restart: "__restartMonitorConsole", running: null }; // Kill → JS-crash flatline flash + refresh; Restart → same, reopened (not the silent ✕ close)
     return null;
   }
   function ccT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || key; }
@@ -13977,7 +13992,7 @@ document.addEventListener("keydown", function (e) {
   function doCopy() {
     var t = stashedSel || selText();
     if (!t) { hide(); return; }
-    function done() { clearTimeout(copyTimer); copyBtn.textContent = "copied ✓"; copyTimer = setTimeout(hide, 750); }
+    function done() { clearTimeout(copyTimer); copyBtn.textContent = "Copied ✓"; copyTimer = setTimeout(hide, 750); }
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, function () { hide(); });
     else { try { document.execCommand("copy"); done(); } catch (e) { hide(); } }
   }
@@ -14000,16 +14015,18 @@ document.addEventListener("keydown", function (e) {
     if (!inConsole(e.target)) return;
     e.preventDefault();
     build();
-    copyBtn.textContent = "copy"; clearTimeout(copyTimer);
+    copyBtn.textContent = "Copy"; clearTimeout(copyTimer);
     stashedSel = selText();
     copyBtn.disabled = !stashedSel;
     pasteBtn.disabled = !(consoleInput() && navigator.clipboard && navigator.clipboard.readText);
-    // Restart only for the self-hosted runtimes (python/linux — nothing to restart on the plain
-    // JS console); Kill for all three console apps, disabled while a runtime isn't yet running.
+    // Restart for the self-hosted runtimes (python/linux) AND the plain JS console (Kill = refresh,
+    // Restart = refresh + reopen); Kill for all three console apps, disabled while a runtime isn't
+    // yet running (the plain console has no running gate → always live).
     var ra = runtimeApp(), ka = killApp();
-    restartBtn.style.display = ra ? "block" : "none";
+    var showRestart = !!(ra || (ka && ka.restart));
+    restartBtn.style.display = showRestart ? "block" : "none";
     killBtn.style.display = ka ? "block" : "none";
-    if (ra) restartBtn.textContent = ccT("mon_ctx_restart");
+    if (showRestart) restartBtn.textContent = ccT("mon_ctx_restart");
     if (ka) {
       killBtn.textContent = ccT("mon_ctx_kill");
       killBtn.disabled = !!(ka.running && !(window[ka.running] && window[ka.running]()));
@@ -22375,6 +22392,48 @@ document.addEventListener("click", function (e) {
     if (consoleIn) { consoleIn.value = ""; try { consoleIn.blur(); } catch (e) {} }
     updateConsoleTile();
   };
+  // Kill/Restart from the right-click menu REALLY refresh the plain console (a stateless JS
+  // REPL — no runtime to reboot): wipe the scrollback + history, re-arm the welcome + harfbuzz
+  // banners, clear/blur the input, and drop back to the desktop. (The silent ✕ / app-switch
+  // close stays closeConsole — it only hides the screen, keeping the session for next time.)
+  function destroyConsole() {
+    if (consoleOut) consoleOut.innerHTML = "";
+    consoleHist = []; consoleHistIdx = 0;
+    consoleLastCmd = "";
+    consoleWelcomed = false; // next open reprints the welcome — a fresh shell
+    hbBannerShown = false;
+    if (consoleIn) { consoleIn.value = ""; try { consoleIn.blur(); } catch (e) {} }
+    updateConsoleTile();
+    monitor.classList.remove("show-console"); // back to the desktop
+    scheduleSaver();
+  }
+  // Kill AND Restart run a JavaScript-crash flash over the frozen console — the REPL flatlines
+  // ("undefined is not a function." rides the caption bar) — then destroyConsole refreshes it;
+  // Restart additionally reopens the console with a fresh welcome. Nothing to freeze (stateless).
+  function consoleDeathFlash(reopen) {
+    var finish = function () { destroyConsole(); if (reopen) openConsole(); };
+    if (!monitor.classList.contains("show-console") || !window.__runMonitorDeathFlash) { finish(); return; }
+    var flat = document.getElementById("monitor-js-flat");
+    var blip = document.getElementById("monitor-js-blip");
+    var fade = document.getElementById("monitor-js-fade");
+    if (flat) flat.setAttribute("width", "0");                 // clean start (a prior kill left the line drawn)
+    if (blip) { blip.setAttribute("cx", "256"); blip.setAttribute("opacity", "1"); }
+    if (fade) fade.setAttribute("opacity", "0");
+    window.__runMonitorDeathFlash({
+      screenClass: "death-console",
+      beats: [{ key: "df_console_quip", at: 300 }], // the JS error rides the caption bar
+      dur: 2000,
+      sound: function () { playJsCrashSound("office-monitor"); },
+      tick: function (t) { // the green EKG line sweeps L→R across the 120-wide screen, then it dims to black
+        if (flat) flat.setAttribute("width", (120 * t).toFixed(1));
+        if (blip) { blip.setAttribute("cx", (256 + 120 * t).toFixed(1)); blip.setAttribute("opacity", t < 0.985 ? "1" : "0"); }
+        if (fade) fade.setAttribute("opacity", (Math.max(0, (t - 0.72) / 0.28) * 0.72).toFixed(3));
+      },
+      close: finish
+    });
+  }
+  window.__killMonitorConsole = function () { consoleDeathFlash(false); };    // Kill → flatline flash → refresh (back to desktop)
+  window.__restartMonitorConsole = function () { consoleDeathFlash(true); };  // Restart → flash → refresh → reopen a fresh shell
   function consoleRun(cmd) {
     consolePrint("❯ " + cmd);
     var c = cmd.trim();
@@ -22396,7 +22455,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone()/phone(\"app\") · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone()/phone(\"app\") · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall/kill · service · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var CONSOLE_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -22441,6 +22500,9 @@ document.addEventListener("click", function (e) {
       laptop: "laptop(true) — wake the office laptop; laptop(false) closes it; laptop() reports whether it's open. laptop(\"prague\")/laptop(\"lubeck\") place a video call to her family",
       computer: "computer(true) — power the office PC up; computer(false) shuts it down; computer() reports whether it's on. computer(\"doom\")/computer(\"weather\") boot (if needed) and open that monitor app; a bad name lists them",
       reboot: "reboot() — power-cycle the loft OS (a `sudo reboot` from its own console)",
+      kill: "killall [-9] <doom|console|python|linux> (bare `kill` works too) — tear down a monitor app via its Kill hook (doom's FATALITY, console's flatline, python's Black Knight, linux's BSOD). the -9 is decorative — they all go. a cold runtime says `not running`",
+      killall: "killall — alias for kill; try `help kill`",
+      service: "service <doom|console|python|linux> <start|stop|status|restart|--full-restart> — sysvinit-style control: status reports running/stopped · start opens it · stop kills it · restart|--full-restart do both",
       monitor: "monitor — alias for computer; monitor(\"doom\")/monitor(\"console\") open a monitor app; try `help computer`",
       go: "go(\"thing\") — thing(true): a verb over the on/off commands, e.g. go(\"party\") · go(\"smoker\") · go(\"laptop\")",
       no: "no(\"thing\") — thing(false): the off verb, e.g. no(\"party\") · no(\"smoker\") · no(\"laptop\")",
@@ -22599,6 +22661,55 @@ document.addEventListener("click", function (e) {
       return;
     }
     if (/^man(\s|$)/.test(c)) { consolePrint("the only manual here is `man love`.", "console-dim"); return; }
+    // `killall [-9] <doom|console|python|linux>` (or bare `kill`, same thing — these take a process
+    // NAME, so killall is the truer verb) — the console's own process manager: tear a monitor app
+    // down via its Kill hook. Those hooks run the death-flash when the named app owns the screen
+    // (e.g. `killall console` typed here, since the console is what's active) and destroy silently
+    // otherwise. A themed line confirms; a bad/absent host prints usage; a cold runtime reports
+    // "not running". The -9 is decorative — they all go. (Host order mirrors the dock.)
+    var KILL_HOSTS = {
+      doom:    { hook: "__killMonitorDoom",    running: "__doomRunning", ok: "🎮 doom killed — flawless victory." },
+      console: { hook: "__killMonitorConsole", running: null,            ok: "❯ console killed — undefined is not a function." },
+      python:  { hook: "__killMonitorPython",  running: "__pyRunning",   ok: "🐍 python killed — 'tis but a flesh wound." },
+      linux:   { hook: "__killMonitorLinux",   running: "__lxRunning",   ok: "🐧 linux killed — the penguin bluescreened." }
+    };
+    var killM = c.match(/^kill(?:all)?(?:\s+-9)?(?:\s+(\S+))?$/i);
+    if (killM) {
+      var kh = (killM[1] || "").toLowerCase();
+      if (!kh) { consolePrint("usage: killall [-9] <doom|console|python|linux>", "console-dim"); return; }
+      var kHost = KILL_HOSTS[kh];
+      if (!kHost) { consolePrint("kill: no such process: " + kh + " — try doom · console · python · linux", "console-dim"); return; }
+      if (kHost.running && !(window[kHost.running] && window[kHost.running]())) { consolePrint(kh + ": not running", "console-dim"); return; }
+      if (window[kHost.hook]) window[kHost.hook]();
+      consolePrint(kHost.ok, "console-dim");
+      return;
+    }
+    // `service <doom|console|python|linux> <start|stop|status|restart|--full-restart>` — sysvinit-
+    // style control over the four monitor "processes": status reads the running predicate; start
+    // opens it (computer() boots the PC + switches the screen); stop is the Kill hook; restart /
+    // --full-restart = stop then start. (For console, "running" = it owns the screen.)
+    var SERVICE_HOSTS = { // host order mirrors the dock (doom · console · python · linux)
+      doom:    { running: "__doomRunning", kill: "__killMonitorDoom" },
+      console: { running: null,            kill: "__killMonitorConsole" },
+      python:  { running: "__pyRunning",   kill: "__killMonitorPython" },
+      linux:   { running: "__lxRunning",   kill: "__killMonitorLinux" }
+    };
+    var svcM = c.match(/^service(?:\s+(\S+))?(?:\s+(\S+))?$/i);
+    if (svcM) {
+      var sh = (svcM[1] || "").toLowerCase(), sub = (svcM[2] || "").toLowerCase();
+      var svc = SERVICE_HOSTS[sh];
+      if (!svc) { consolePrint("usage: service <doom|console|python|linux> <start|stop|status|restart|--full-restart>", "console-dim"); return; }
+      var svcRunning = function () {
+        if (sh === "console") { var mm = document.getElementById("office-monitor"); return !!(mm && mm.classList.contains("show-console")); }
+        return !!(window[svc.running] && window[svc.running]());
+      };
+      if (!sub || sub === "status") { consolePrint(sh + ": " + (svcRunning() ? "running" : "stopped"), "console-dim"); return; }
+      if (sub === "stop") { if (window[svc.kill]) window[svc.kill](); consolePrint(sh + ": stopping", "console-dim"); return; }
+      if (sub === "start") { if (window.computer) window.computer(sh); consolePrint(sh + ": starting", "console-dim"); return; }
+      if (sub === "restart" || sub === "--full-restart") { if (window[svc.kill]) window[svc.kill](); if (window.computer) window.computer(sh); consolePrint(sh + ": restarting", "console-dim"); return; }
+      consolePrint("service: unknown action '" + sub + "' — try start · stop · status · restart · --full-restart", "console-dim");
+      return;
+    }
     function fmtOut(v) {
       if (v === undefined) return "undefined";
       if (v === null) return "null";
@@ -38033,6 +38144,32 @@ function playFleshWoundSound(panId) {
     var g1 = ctx.createGain(); g1.gain.setValueAtTime(0.0001, t);
     g1.gain.exponentialRampToValueAtTime(0.2, t + 0.01); g1.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
     o1.connect(g1); g1.connect(out); o1.start(t); o1.stop(t + 0.25);
+  } catch (e) {}
+}
+// Console (JS REPL) → a terminal flatline: a short error blip (a quick detuned downward zap),
+// then a steady ~960 Hz EKG-flatline monotone for ~0.7s while the green line sweeps across.
+function playJsCrashSound(panId) {
+  try {
+    var ctx = getSfxCtx(); if (!ctx) return;
+    var t = ctx.currentTime, out = pannedOut(ctx, panId);
+    // 1) the error blip — a fast square zap diving in pitch
+    var ob = ctx.createOscillator(); ob.type = "square";
+    ob.frequency.setValueAtTime(680, t); ob.frequency.exponentialRampToValueAtTime(180, t + 0.13);
+    var gb = ctx.createGain(); gb.gain.setValueAtTime(0.0001, t);
+    gb.gain.exponentialRampToValueAtTime(0.12, t + 0.008); gb.gain.exponentialRampToValueAtTime(0.001, t + 0.17);
+    ob.connect(gb); gb.connect(out); ob.start(t); ob.stop(t + 0.19);
+    // 2) the flatline monotone — a soft steady sine (+ faint octave for an electronic edge), ~0.7s
+    var tf = t + 0.22;
+    var of = ctx.createOscillator(); of.type = "sine"; of.frequency.value = 960;
+    var oh = ctx.createOscillator(); oh.type = "sine"; oh.frequency.value = 1920;
+    var gh = ctx.createGain(); gh.gain.value = 0.02;
+    var gf = ctx.createGain();
+    gf.gain.setValueAtTime(0.0001, tf);
+    gf.gain.exponentialRampToValueAtTime(0.085, tf + 0.03);
+    gf.gain.setValueAtTime(0.085, tf + 0.6);
+    gf.gain.exponentialRampToValueAtTime(0.001, tf + 0.78);
+    of.connect(gf); oh.connect(gh); gh.connect(gf); gf.connect(out);
+    of.start(tf); of.stop(tf + 0.82); oh.start(tf); oh.stop(tf + 0.82);
   } catch (e) {}
 }
 function playGlassClinkSound(pitchMult, panId) {

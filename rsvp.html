@@ -2368,6 +2368,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 }
 /* front-facing camera punch-hole, centered in the empty middle of the status bar */
 .phone-screen::before{content:""; position:absolute; top:7px; left:50%; transform:translateX(-50%); width:7px; height:7px; border-radius:50%; background:#0a0806; box-shadow:0 0 0 1px rgba(255,255,255,.14), inset 0 0 2px rgba(120,150,190,.5); z-index:30; pointer-events:none}
+.psb-cam{position:absolute; top:2px; left:50%; transform:translateX(-50%); width:18px; height:16px; padding:0; margin:0; border:none; background:transparent; border-radius:50%; cursor:pointer; z-index:31} /* transparent hit target over the camera hole → photobooth */
 .phone-close{
   position:absolute; top:-6px; right:-6px; width:26px; height:26px; border-radius:50%;
   background:var(--ink); color:var(--paper); border:2px solid var(--paper); font-size:14px;
@@ -8604,12 +8605,6 @@ section{margin:1.9rem 0}
 <stop offset="1" stop-color="#a6acb2"/>
 </linearGradient>
 <!-- Roller-shade housing tube: a warm-pewter metal cylinder (top-lit highlight band) -->
-<linearGradient id="cuddly-shade-grad" x1="0" y1="0" x2="0" y2="1">
-<stop offset="0" stop-color="#8b837a"/>
-<stop offset="0.35" stop-color="#aaa39b"/>
-<stop offset="0.62" stop-color="#6f665d"/>
-<stop offset="1" stop-color="#4f463e"/>
-</linearGradient>
 <!-- Flame gradients: base (bottom) hot, tip (top) cooler + more translucent, so each
      layered flame glows from a warm base up into deep-red translucent tips. Inner layers
      run hotter than outer ones (grad-d is the near-white core). objectBoundingBox units
@@ -8656,15 +8651,6 @@ section{margin:1.9rem 0}
 <!-- Roller-shade valance: the metal housing the pull-down projection screen retracts into.
      Static decor sitting across the top of the frame (mounting brackets → tube → end caps →
      the slot the screen exits). Above the panel (y<42), so it never overlaps the channel art. -->
-<g id="cuddly-screen-shade" aria-hidden="true">
-<rect x="191" y="26" width="5" height="6" rx="1" fill="#463f39"/>
-<rect x="256" y="26" width="5" height="6" rx="1" fill="#463f39"/>
-<rect x="168" y="30" width="116" height="11" rx="5" fill="url(#cuddly-shade-grad)" stroke="#3f3833" stroke-width="0.6"/>
-<rect x="173" y="31.6" width="106" height="1.4" rx="0.7" fill="#cfd3d6" opacity="0.55"/>
-<rect x="165.5" y="29" width="7" height="13" rx="3" fill="#514840"/>
-<rect x="279.5" y="29" width="7" height="13" rx="3" fill="#514840"/>
-<rect x="176" y="41" width="100" height="1.6" rx="0.8" fill="#2c2620" opacity="0.5"/>
-</g>
 <!-- Projector canvas: a 138x90 supersample of the 92x60 panel drives the FIRE channel (off
      just wipes it; the aquarium / workout / totoro / night-sky channels are inline SVG below, shown per
      chan class). overflow:hidden clips it to the bezel; mix-blend-mode:screen composites the
@@ -28421,6 +28407,7 @@ async def localfont(name):
           '<button type="button" class="phone-close" aria-label="close">✕</button>' +
           '<div class="phone-screen">' +
             STATUSBAR +
+            '<button type="button" class="psb-cam" aria-label="camera"></button>' + // the front camera hole opens the photobooth
             '<div class="phone-stage">' +
               '<div class="phone-home"></div>' +
               '<div class="phone-app"><div class="phone-app-head"><span class="pah-title"></span></div><div class="phone-app-body"></div></div>' +
@@ -28471,6 +28458,11 @@ async def localfont(name):
         if (!t) return;
         t.style.cursor = "pointer";
         t.addEventListener("click", function (e) { e.stopPropagation(); if (shell.classList.contains("pm-incall")) return; openApp("clock", "app_clock", renderClock); });
+      })();
+      (function () { // the front-camera punch-hole opens the photobooth
+        var cam = modal.querySelector(".psb-cam");
+        if (!cam) return;
+        cam.addEventListener("click", function (e) { e.stopPropagation(); if (shell.classList.contains("booting") || shell.classList.contains("pm-incall")) return; openApp("photobooth", "app_photobooth", renderPhotobooth); });
       })();
       (function () {
         ["psb-wifi-wrap", "psb-batt-wrap"].forEach(function (cls) {

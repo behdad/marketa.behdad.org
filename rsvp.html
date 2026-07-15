@@ -13132,6 +13132,19 @@ window.addEventListener("hashchange", function () {
     if ((e.key !== "f" && e.key !== "F") || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
     var t = e.target;
     if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+    // Priority routing: a fullscreen-capable monitor app that's the live foreground claims
+    // 'f' for ITS OWN fullscreen instead of the whole-loft toggle.
+    // DOOM: yield the key entirely — don't preventDefault, don't toggleFs — so it flows to
+    // SDL's window listener, which maps f→fullscreen on the canvas. Chrome transitions the
+    // fullscreen element from the loft area to the canvas even if the loft is already
+    // fullscreen; onFsChange then clears the loft's fill (manualFs) as the canvas takes over.
+    if (window.__doomShouldRun && window.__doomShouldRun()) return;
+    // VIDEO app up front: drive the film's own fullscreen (toggle) on #monitor-video-wrap.
+    if (window.__videoAppShowing && window.__videoAppShowing()) {
+      e.preventDefault();
+      if (window.__videoFsToggle) window.__videoFsToggle();
+      return;
+    }
     e.preventDefault();
     toggleFs();
   });
@@ -22818,6 +22831,24 @@ document.addEventListener("click", function (e) {
   window.__closeMonitorVideo = closeVideoApp; // other monitor apps close the film before taking the screen
   window.__pauseMonitorVideo = pauseVideoApp; // room-leave hook: pause playback without closing the app view
   window.__toggleMonitorVideo = toggleVideoApp; // the space key drives the film while its app is up
+  // The global 'f' handler routes to the film's OWN fullscreen while its app is the live
+  // foreground (mirrors the space-key gate: show-video + in the office).
+  window.__videoAppShowing = function () {
+    return monitor.classList.contains("show-video") && window.currentStageName === "office" && vidWrap && !vidWrap.classList.contains("absent");
+  };
+  // Toggle real fullscreen on the film wrap: request it, or exit if the wrap already owns it.
+  // Requested fresh at call time (not a captured ref), so it transitions the fullscreen
+  // element even when the loft area was already fullscreen. Shared by 'f' and the ⛶ button.
+  window.__videoFsToggle = function () {
+    if (!vidWrap) return;
+    try {
+      if ((document.fullscreenElement || document.webkitFullscreenElement) === vidWrap) {
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      } else if (vidWrap.requestFullscreen) vidWrap.requestFullscreen();
+      else if (vidWrap.webkitRequestFullscreen) vidWrap.webkitRequestFullscreen();
+    } catch (err) {}
+  };
   // Esc's app layer: ends the live call or closes whichever app owns the screen.
   // Returns true if it consumed the press (checked before the zoom backs out).
   window.__closeTopMonitorApp = function () {
@@ -23518,10 +23549,7 @@ document.addEventListener("click", function (e) {
     var fsBtn = ctrl.querySelector(".vid-ctrl-fs");
     if (fsBtn) fsBtn.addEventListener("click", function (e) {
       e.stopPropagation();
-      try {
-        if (document.fullscreenElement === vidWrap) document.exitFullscreen();
-        else if (vidWrap.requestFullscreen) vidWrap.requestFullscreen();
-      } catch (err) {}
+      if (window.__videoFsToggle) window.__videoFsToggle(); // same toggle the 'f' key uses
       wake();
     });
     // Flip the fs corner-mark between expand (outward) and compress (inward) so the button
@@ -24547,6 +24575,7 @@ async def localfont(name):
     }
   }
   window.__syncMonitorDoom = doomSync;
+  window.__doomShouldRun = doomShouldRun; // the global 'f' handler yields to DOOM's own (SDL canvas) fullscreen when DOOM is the live foreground
   function doomFail() {
     if (doomLoadState === "failed") return;
     if (doomStallTimer) { clearTimeout(doomStallTimer); doomStallTimer = null; }

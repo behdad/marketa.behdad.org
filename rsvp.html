@@ -28567,7 +28567,7 @@ async def localfont(name):
     var curAmount = "100", curFrom = "CAD", curTo = "CZK"; // currency: typed amount + the two picked codes
     var calcState = null;           // calculator: {acc, pending, cur, fresh, errored} snapshot, or null = fresh
     var dressupOn = {};             // dress-up: map of accessory-id → true for every chip currently ON
-    var flashWasOn = false;         // flashlight INTENT — remembered across a normal leave/close so a reopen relights the beam. Distinct from flashOn (the live beam), which the async torch guards still read, so it must go false the instant the beam is physically killed on leave.
+    var flashWasOn = false;         // flashlight INTENT mirror of flashOn — the beam now stays lit across a normal leave/close (a real flashlight doesn't switch off when you leave the app), so this just tracks the last state; a Kill/loft-reset clears it and douses the beam.
     var callee = null, callConnected = false, callStatusKey = "", callHangingUp = false, callTimers = [];
     // Home-screen layout is a fixed grid of SLOTS (like a real phone): an array of
     // app-ids by slot position, with `null` holes for empty / "Uninstall"ed gaps.
@@ -28807,7 +28807,7 @@ async def localfont(name):
       if (phoneBrowserCleanup) { phoneBrowserCleanup(); phoneBrowserCleanup = null; }
       if (clockTimer) { clearInterval(clockTimer); clockTimer = null; } // clock/currency/hn all safe to clear blindly
       if (compassHandler) { try { window.removeEventListener("deviceorientationabsolute", compassHandler); window.removeEventListener("deviceorientation", compassHandler); } catch (e) {} compassHandler = null; }
-      if (currentApp === "flashlight") { flashWasOn = flashOn; setFlashlight(false); } // remember intent, then physically kill the beam on leave (setFlashlight(false) drops flashOn so the async torch guards bail) — also the close()/visibilitychange path (close → leaveCurrentApp). renderFlashlight relights from flashWasOn on reopen.
+      if (currentApp === "flashlight") { flashWasOn = flashOn; } // a real flashlight STAYS LIT when you leave the app: keep the balcony beam (and any already-granted LED torch) burning — only an explicit off-tap or a Kill douses it. flashOn is left true so the async torch guards keep the LED on; renderFlashlight just reflects flashOn on reopen.
       if (photoboothCleanup) { photoboothCleanup(); photoboothCleanup = null; } // stop the booth camera + timers + object URLs
       // phrasebook (cards) deliberately does NOT reset here — a normal close/reopen resumes at
       // the same card (cardsIndex is session-scoped). It's zeroed only on a "kill": phone Uninstall
@@ -29563,8 +29563,9 @@ async def localfont(name):
       function paint() {
         torch.classList.toggle("on", flashOn);
       }
-      torch.addEventListener("click", function () { setFlashlight(!flashOn); flashWasOn = flashOn; paint(); }); // a tap sets both the live beam and the remembered intent
-      if (flashWasOn && !flashOn) setFlashlight(true); // relight the beam if it was on before a normal close/leave (leaveCurrentApp stashed the intent, then physically killed it)
+      torch.addEventListener("click", function () { setFlashlight(!flashOn); flashWasOn = flashOn; paint(); }); // a tap sets both the live beam and the intent mirror
+      // no relight needed: the beam is never doused on leave (it stays lit like a real flashlight),
+      // so a reopen just paints the current flashOn state below.
       paint();
     }
     // ── phrasebook ── a little English⇄Czech flip-card deck of useful wedding phrases.

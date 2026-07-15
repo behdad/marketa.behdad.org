@@ -12733,6 +12733,7 @@ var T = {
     mon_ctx_restart: "Restart",
     mon_ctx_kill: "Kill",
     mon_ctx_open: "Open",
+    laptop_ctx_end: "End call",
     app_phone: "phone",
     phone_dialer_title: "contacts",
     dial_call: "Call",
@@ -13134,6 +13135,7 @@ var T = {
     mon_ctx_restart: "Restartovat",
     mon_ctx_kill: "Ukončit",
     mon_ctx_open: "Otevřít",
+    laptop_ctx_end: "Ukončit hovor",
     app_phone: "telefon",
     phone_dialer_title: "kontakty",
     dial_call: "Volat",
@@ -20739,6 +20741,81 @@ document.addEventListener("click", function (e) {
         if (inCall()) endCall(); else if (!anyCall()) startCall("lueb");
       });
     }
+    // Right-click (contextmenu) menu for the laptop — mirrors the desktop dock's .mon-ctx
+    // menu (same look, same dismiss wiring, same "Open" label). The two contact tiles are
+    // the laptop's app icons: right-clicking one → Open launches that video call; the closed
+    // lid → Open wakes the laptop; a live call → End call hangs up. It's a document-level
+    // listener because the call overlay (#laptop-call) is a SIBLING of #office-laptop, not a
+    // child — a listener on `laptop` would miss the call surface. Gating on the laptop subtree
+    // as the first line (early return, NO preventDefault) keeps bare chrome native and can't
+    // cross-fire with the monitor/phone menus (disjoint DOM subtrees, each returns early for
+    // the other's targets). Helpers are replicated locally since the mon-ctx IIFE isn't in scope.
+    (function () {
+      var lapMenuEl = null;
+      var LAP_OPEN_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 2.2 H9.8 V5.5"/><path d="M9.8 2.2 L5.6 6.4"/><path d="M9 6.7 V9.3 A0.6 0.6 0 0 1 8.4 9.9 H2.7 A0.6 0.6 0 0 1 2.1 9.3 V3.6 A0.6 0.6 0 0 1 2.7 3 H5"/></svg>';
+      var LAP_END_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M3.4 3.4 L8.6 8.6 M8.6 3.4 L3.4 8.6"/></svg>';
+      function lapTr(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || key; }
+      function lapCloseMenu() {
+        if (!lapMenuEl) return;
+        if (lapMenuEl.parentNode) lapMenuEl.parentNode.removeChild(lapMenuEl);
+        lapMenuEl = null;
+        document.removeEventListener("keydown", lapOnKey, true);
+        document.removeEventListener("mousedown", lapOnAway, true);
+        document.removeEventListener("scroll", lapCloseMenu, true);
+        window.removeEventListener("blur", lapCloseMenu);
+        window.removeEventListener("resize", lapCloseMenu);
+      }
+      function lapOnAway(e) { if (lapMenuEl && !lapMenuEl.contains(e.target)) lapCloseMenu(); }
+      function lapOnKey(e) { if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); lapCloseMenu(); } }
+      function lapItem(cls, ico, label, fn) {
+        var b = document.createElement("button");
+        b.type = "button"; b.className = cls; b.setAttribute("role", "menuitem");
+        b.innerHTML = ico + "<span>" + label + "</span>";
+        b.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); lapCloseMenu(); fn(); });
+        return b;
+      }
+      function lapOpenMenu(items, x, y) {
+        lapCloseMenu();
+        lapMenuEl = document.createElement("div");
+        lapMenuEl.className = "mon-ctx"; lapMenuEl.setAttribute("role", "menu");
+        for (var i = 0; i < items.length; i++) lapMenuEl.appendChild(items[i]);
+        lapMenuEl.style.visibility = "hidden";
+        document.body.appendChild(lapMenuEl);
+        var r = lapMenuEl.getBoundingClientRect();
+        lapMenuEl.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 4)) + "px";
+        lapMenuEl.style.top = Math.max(4, Math.min(y, window.innerHeight - r.height - 4)) + "px";
+        lapMenuEl.style.visibility = "";
+        document.addEventListener("keydown", lapOnKey, true);
+        document.addEventListener("mousedown", lapOnAway, true);
+        document.addEventListener("scroll", lapCloseMenu, true);
+        window.addEventListener("blur", lapCloseMenu);
+        window.addEventListener("resize", lapCloseMenu);
+      }
+      document.addEventListener("contextmenu", function (e) {
+        if (!e.target || !e.target.closest || !e.target.closest("#office-laptop, #laptop-call")) return; // bare desk/chrome → native menu; no cross-fire with the monitor/phone menus
+        // a live call → End call (the overlay is up; mirrors the dock's Kill for a running app)
+        if (inCall()) {
+          e.preventDefault();
+          lapOpenMenu([lapItem("ctx-kill", LAP_END_ICO, lapTr("laptop_ctx_end"), function () { if (inCall()) endCall(); })], e.clientX, e.clientY);
+          return;
+        }
+        // open laptop, over a contact tile → Open launches that call (opens the lid if needed,
+        // switches contacts if another is live — the console's __laptopCall does all of that)
+        var tile = e.target.closest("#laptop-calltile, #laptop-luebtile");
+        if (laptop.classList.contains("open") && tile) {
+          var callee = (tile.id === "laptop-luebtile") ? "lueb" : "prague";
+          e.preventDefault();
+          lapOpenMenu([lapItem("ctx-open", LAP_OPEN_ICO, lapTr("mon_ctx_open"), function () { stopLaptopInvite(); if (window.__laptopCall) window.__laptopCall(callee); })], e.clientX, e.clientY);
+          return;
+        }
+        // closed laptop → Open wakes it. An open editor/menubar face has nothing to "open" →
+        // fall through to the native menu (the dock's bare-desktop analog).
+        if (!laptop.classList.contains("open")) {
+          e.preventDefault();
+          lapOpenMenu([lapItem("ctx-open", LAP_OPEN_ICO, lapTr("mon_ctx_open"), function () { stopLaptopInvite(); if (!laptop.classList.contains("open")) toggleLaptop(); })], e.clientX, e.clientY);
+        }
+      });
+    })();
     // Menu-bar clock (wedding date + a static days-to-go, computed once at render) and
     // the call labels are set from the dictionary here so they follow the language toggle.
     window.refreshLaptopClock = function () {

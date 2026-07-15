@@ -830,20 +830,36 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 #kitchen-bar-stools > g.bar-stool.tipsy{animation:bar-stool-rock .6s ease-in-out}
 @keyframes bar-stool-rock{0%,100%{transform:rotate(0)}22%{transform:rotate(3.2deg)}48%{transform:rotate(-2.6deg)}72%{transform:rotate(1.5deg)}90%{transform:rotate(-0.6deg)}}
 @media (prefers-reduced-motion: reduce){#kitchen-bar-stools > g.bar-stool.tipsy{animation:none}}
-/* the two tipsy patrons on the left stools sway gently while the bar is up — mirroring the bar's
-   OWN two show gates (.party-on AND #stage-kitchen.dusk) so they're lively at both the party and
-   the calm night bar. Infinite state animation on a wrapper carrying NO transform attribute (art
-   is in absolute coords), so it can't clobber a positioning transform; two phases/durations so
-   the pair leans in and out of sync, not in lockstep. transform-origin near the seat (fill-box)
-   keeps the tiny ±1° rotation reading as a lean, not a topple. Reduced-motion stills them. */
+/* the two tipsy patrons on the left stools sway gently — PARTY ONLY. The parent #kitchen-bar fades
+   in at both the party AND the calm night bar, but these two revellers belong to the party: an
+   explicit opacity gate hides the pair whenever the party's off (so the night bar is quiet), and
+   the sway + tap reactions are likewise .party-on only. Infinite state animation on a wrapper
+   carrying NO transform attribute (art is in absolute coords), so it can't clobber a positioning
+   transform; two phases/durations so the pair leans in and out of sync, not in lockstep.
+   transform-origin near the seat (fill-box) keeps the tiny ±1° rotation reading as a lean, not a
+   topple. Reduced-motion stills them. */
 #kitchen-bar-patron-a, #kitchen-bar-patron-b{transform-box:fill-box; transform-origin:50% 72%}
+#kitchen-bar-patrons{opacity:0; transition:opacity .5s ease}
+#loft-game-strip.party-on #kitchen-bar-patrons{opacity:1}
 #loft-game-strip.party-on #kitchen-bar-patron-a,
-#stage-kitchen.dusk #kitchen-bar-patron-a{animation:patron-sway-a 4.6s ease-in-out infinite}
-#loft-game-strip.party-on #kitchen-bar-patron-b,
-#stage-kitchen.dusk #kitchen-bar-patron-b{animation:patron-sway-b 5.3s ease-in-out infinite}
+#loft-game-strip.party-on #kitchen-bar-patron-b{pointer-events:auto; cursor:pointer}
+#loft-game-strip.party-on #kitchen-bar-patron-a{animation:patron-sway-a 4.6s ease-in-out infinite}
+#loft-game-strip.party-on #kitchen-bar-patron-b{animation:patron-sway-b 5.3s ease-in-out infinite}
 @keyframes patron-sway-a{0%,100%{transform:rotate(-1.1deg)}50%{transform:rotate(1deg) translateY(-0.4px)}}
 @keyframes patron-sway-b{0%,100%{transform:rotate(1.2deg)}50%{transform:rotate(-1deg) translateY(-0.4px)}}
-@media (prefers-reduced-motion: reduce){#loft-game-strip.party-on #kitchen-bar-patron-a,#stage-kitchen.dusk #kitchen-bar-patron-a,#loft-game-strip.party-on #kitchen-bar-patron-b,#stage-kitchen.dusk #kitchen-bar-patron-b{animation:none}}
+/* tap reaction: a quick tipsy hiccup jolt. Id-qualified with .hiccup + declared AFTER the idle
+   sway so this one-shot out-specifies (2 classes vs 1) AND out-orders the infinite state animation
+   (the grooving/one-shot cascade bug class); cleared on animationend, whereupon the sway resumes.
+   Same fill-box/origin as the sway, so no transform-attribute clobber. Reduced-motion drops it. */
+#loft-game-strip.party-on #kitchen-bar-patron-a.hiccup,
+#loft-game-strip.party-on #kitchen-bar-patron-b.hiccup{animation:patron-hiccup .62s ease-in-out}
+@keyframes patron-hiccup{0%{transform:rotate(0)}22%{transform:translateY(-2.5px) rotate(-4.5deg)}52%{transform:translateY(-1px) rotate(3.5deg)}78%{transform:rotate(-1.5deg)}100%{transform:rotate(0)}}
+/* the "hic!" that floats up over a tapped patron — spawned into #kitchen-bar-patrons (patron's own
+   group, absolute coords) so it drifts + fades and is removed on animationend / a safety timer. */
+.patron-hic{font:italic 700 12px "Fraunces",serif; fill:#ead8b0; pointer-events:none; opacity:0; animation:patron-hic-float 1.1s ease-out forwards}
+@keyframes patron-hic-float{0%{opacity:0; transform:translateY(0) scale(.8)}18%{opacity:.95}100%{opacity:0; transform:translateY(-16px) scale(1.05)}}
+.patron-hic{transform-box:fill-box; transform-origin:50% 100%}
+@media (prefers-reduced-motion: reduce){#loft-game-strip.party-on #kitchen-bar-patron-a,#loft-game-strip.party-on #kitchen-bar-patron-b{animation:none}#loft-game-strip.party-on #kitchen-bar-patron-a.hiccup,#loft-game-strip.party-on #kitchen-bar-patron-b.hiccup{animation:none}.patron-hic{animation:none; opacity:.95}}
 /* the bartender's flourish: tapping his transparent upper-body hit rect throws the shaker up
    and catches it. The toss animates #kitchen-bartender-shaker (the metal parts only) — a node
    DISTINCT from the idle-shaking #kitchen-bartender-shake wrapper — so the two transforms
@@ -6270,10 +6286,11 @@ section{margin:1.9rem 0}
 </g>
 </g>
 <!-- two tipsy-but-wholesome patrons seated on the LEFT TWO stools (stool-1 @150, stool-3 @250),
-     turned 3/4 toward each other mid-cheers. Nested inside #kitchen-bar so they inherit its
-     opacity gate (fade in with the bar under .party-on OR #stage-kitchen.dusk, invisible in the
-     espresso kitchen) and its pointer-events:none (decorative; clicks pass through to the stool
-     underneath). Drawn AFTER the counter, glassware and stools, so they occlude those foreground
+     turned 3/4 toward each other mid-cheers. Nested inside #kitchen-bar, but PARTY ONLY: an
+     explicit opacity gate (see CSS) hides the pair at the calm night bar. The group keeps
+     pointer-events:none (so bare clicks pass through to the stool), but each patron re-enables
+     pointer-events under .party-on and reacts to a tap (hiccup jolt + a floating "hic!"). Drawn
+     AFTER the counter, glassware and stools, so they occlude those foreground
      bits naturally, like bodies leaning at a bar. Flat vector, :root palette. Each figure is its
      own group; a slow tipsy sway lives as an infinite state animation on those wrapper groups,
      which carry NO transform attribute (art is in absolute coords) so it can't clobber a position. -->
@@ -14076,7 +14093,7 @@ window.__setUvParty = function (on) { uvPartyOn = !!on; applyUvMode(); }; // the
   var strip = document.getElementById("loft-game-strip");
   if (!strip) return;
   var viewport = document.querySelector(".hunt-viewport");
-  var LINGER_MS = 18000; // settle-in before the light starts to ease
+  var LINGER_MS = 8000; // settle-in before the light starts to ease
   var RAMP_MS = 3500;    // ease-down duration
   var reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   // Strip-filter endpoints: full uv (t=0, matches the .uv-mode CSS exactly) -> a softer, still
@@ -19790,6 +19807,44 @@ document.addEventListener("click", function (e) {
   wireBarWobbleGroup("kitchen-bar-glassware", barGlassHit);
   wireBarWobbleGroup("kitchen-bar-usedglasses", barGlassHit);
   wireBarWobbleGroup("kitchen-bar-stools", function (w, pan) { playDryClickSound(pan); }); // a soft wooden knock, not a clink
+  // the two tipsy party patrons react to a tap: a quick hiccup jolt (one-shot .hiccup, cleared on
+  // animationend so the idle sway resumes) + a soft "hic!" floating up over the head + a spatialized
+  // hiccup sound. Party-only (CSS re-enables pointer-events on each patron under .party-on; the
+  // parent #kitchen-bar-patrons keeps pointer-events:none). Each patron is a direct child of
+  // #kitchen-bar-patrons and drawn in absolute coords, so the floating text spawns into that same
+  // group with no coordinate-system surprise (getBBox is local == absolute here).
+  (function () {
+    var patrons = document.getElementById("kitchen-bar-patrons");
+    if (!patrons) return;
+    function patronPan(g) {
+      try { var b = g.getBBox(); return Math.max(-1, Math.min(1, ((b.x + b.width / 2) / 680) * 2 - 1)); }
+      catch (e) { return 0; }
+    }
+    patrons.addEventListener("click", function (e) {
+      var g = e.target && e.target.closest ? e.target.closest("#kitchen-bar-patron-a, #kitchen-bar-patron-b") : null;
+      if (!g || g.parentNode !== patrons) return;
+      e.stopPropagation();
+      g.classList.remove("hiccup"); // rAF-double so a repeat tap restarts the one-shot
+      requestAnimationFrame(function () { requestAnimationFrame(function () { g.classList.add("hiccup"); }); });
+      try {
+        var b = g.getBBox();
+        var t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        t.setAttribute("class", "patron-hic");
+        t.setAttribute("x", (b.x + b.width * 0.62).toFixed(1));
+        t.setAttribute("y", (b.y + 3).toFixed(1));
+        t.setAttribute("text-anchor", "middle");
+        t.textContent = "hic!";
+        patrons.appendChild(t);
+        t.addEventListener("animationend", function () { if (t.parentNode) t.parentNode.removeChild(t); });
+        setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 1500); // safety: onfinish can be skipped in a backgrounded tab
+      } catch (e2) {}
+      playHiccupSound(patronPan(g));
+    });
+    patrons.addEventListener("animationend", function (e) {
+      var g = e.target;
+      if (g && g.classList && g.classList.contains("hiccup")) g.classList.remove("hiccup");
+    });
+  })();
   // the bartender: tapping his transparent upper-body hit rect throws the shaker up and catches
   // it. The toss runs on #kitchen-bartender-shaker (a node distinct from the idle-shaking
   // #kitchen-bartender-shake, so the transforms compose), cleared on animationend; a synthesized
@@ -20639,12 +20694,17 @@ document.addEventListener("click", function (e) {
   document.addEventListener("visibilitychange", function () { if (document.hidden) abort(); }); // hidden → stop now, don't wait for the poll
 
   // console hook (the actual window.cocktail(...) command lives in the console-toys region)
-  window.__makeCocktail = function (name) {
+  window.__makeCocktail = function (name, preferNight) {
     var rows = window.__cocktailData ? window.__cocktailData() : [];
     if (!rows.length) return "the bar isn't stocked yet.";
     var row = (name == null || name === "") ? featuredRow() : findRow(name);
     if (!row) return "no cocktail by that name — try \"negroni\", \"margarita\", \"mojito\", \"manhattan\"…";
-    if (!barUpNow() && window.party) window.party(true); // no bar up (day, no party) → light the party; a night bar already serves
+    // no bar up (day, no party) → raise one: the phone's Order button asks for the calm NIGHT bar
+    // (preferNight), the console party command lights the full party. A bar already up just serves.
+    if (!barUpNow()) {
+      if (preferNight && window.__setDayNight) window.__setDayNight(true);
+      else if (window.party) window.party(true);
+    }
     if (window.goToStage) window.goToStage("kitchen");               // then step behind the bar
     abort();                                  // clear any in-flight make so this one leads
     cooldownUntil = Date.now() + 4000;        // give the requested drink room before the ambient loop resumes
@@ -30039,16 +30099,17 @@ async def localfont(name):
       name.className = "pm-ck-detname";
       name.textContent = c.name;
       body.appendChild(name);
-      // "Order" hands the drink to the party bartender: stow the phone, then he mixes it
-      // (the make module lights the party and steps you behind the bar to watch).
+      // "Order" hands the drink to the bartender: stow the phone, then he mixes it (the make module
+      // raises the bar and steps you behind it to watch). With the party already on it just heads to
+      // the party bar; otherwise it opens the calm NIGHT bar (preferNight) rather than throwing a party.
       var order = document.createElement("button");
       order.type = "button";
       order.className = "pm-btn pm-ck-order";
       order.style.margin = "6px 0 14px";
       order.textContent = tr("ck_order");
       order.addEventListener("click", function () {
-        if (window.__closePhoneModal) window.__closePhoneModal(true); // put the phone away
-        if (window.__makeCocktail) window.__makeCocktail(c.name);      // party on → kitchen → watch him make it
+        if (window.__closePhoneModal) window.__closePhoneModal(true);       // put the phone away
+        if (window.__makeCocktail) window.__makeCocktail(c.name, true);     // party on → party bar; else → night bar
       });
       body.appendChild(order);
       if (c.featured) {
@@ -35350,6 +35411,36 @@ function playDryClickSound(panId) {
     gain.connect(out);
     osc.start(t);
     osc.stop(t + 0.12);
+  } catch (e) {}
+}
+// a soft tipsy "hic!" — a quick up-glide blip cut short, then a tiny lower catch, lowpassed so it
+// reads as a gulp of a hiccup rather than a beep. Spatialized to the tapped patron.
+function playHiccupSound(panId) {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var out = pannedOut(ctx, panId);
+    var filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 900;
+    filter.connect(out);
+    function blip(at, f0, f1, peak, dur) {
+      var osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(f0, at);
+      osc.frequency.exponentialRampToValueAtTime(f1, at + dur * 0.6);
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(peak, at + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+      osc.connect(g);
+      g.connect(filter);
+      osc.start(at);
+      osc.stop(at + dur + 0.02);
+    }
+    blip(t, 300, 430, 0.14, 0.09);        // the "hic"
+    blip(t + 0.12, 220, 180, 0.07, 0.07); // the little catch after
   } catch (e) {}
 }
 function playCandleLightSound(panId) {

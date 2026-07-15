@@ -28343,10 +28343,14 @@ async def localfont(name):
       shell.addEventListener("contextmenu", function (e) {
         if (shell.classList.contains("booting")) { e.preventDefault(); openPhoneLockMenu(e.clientX, e.clientY); return; }
         // On the home screen, right-clicking the BASE — a blank gap or empty chrome,
-        // anywhere that isn't an app icon — does nothing (no native menu). App tiles
-        // fire first (target phase) and keep their own Open/Stop/Uninstall menu, so
-        // this only catches the no-app areas. Inside an app, native menu is left alone.
-        if (shell.classList.contains("pm-home") && !(e.target.closest && e.target.closest(".phone-app-tile"))) e.preventDefault();
+        // anywhere that isn't an app icon — shows a one-item "Open" menu (a home button:
+        // re-asserts home) and suppresses the native menu. App tiles fire first (target
+        // phase) and keep their own Open/Stop/Uninstall menu, so this only catches the
+        // no-app areas. Inside an app (pm-app), the native menu is left alone.
+        if (shell.classList.contains("pm-home") && !(e.target.closest && e.target.closest(".phone-app-tile"))) {
+          e.preventDefault();
+          openPhoneBaseMenu(e.clientX, e.clientY);
+        }
       });
       applyNavLabels();
     }
@@ -28631,6 +28635,26 @@ async def localfont(name):
       window.addEventListener("resize", phCloseMenu);
     }
     function phMenuOpen() { return !!(phMenuEl && phMenuEl.parentNode); }
+    // Home-base menu — right-clicking the blank home screen (no app icon under the
+    // cursor) offers a single "Open" that acts as a home button: re-asserts the home
+    // screen via showHome() (mirrors the .pnav-home tap). Same .mon-ctx chrome + dismiss
+    // wiring as the app/lock menus, just one item.
+    function openPhoneBaseMenu(x, y) {
+      phCloseMenu();
+      phMenuEl = document.createElement("div");
+      phMenuEl.className = "mon-ctx phone-ctx phone-base-ctx"; phMenuEl.setAttribute("role", "menu");
+      phMenuEl.appendChild(phMakeItem("ctx-open", PH_OPEN_ICO, tr("mon_ctx_open"), function () { showHome(); }));
+      phMenuEl.style.visibility = "hidden";
+      document.body.appendChild(phMenuEl);
+      var r = phMenuEl.getBoundingClientRect();
+      phMenuEl.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 4)) + "px";
+      phMenuEl.style.top = Math.max(4, Math.min(y, window.innerHeight - r.height - 4)) + "px";
+      phMenuEl.style.visibility = "";
+      document.addEventListener("mousedown", phOnAway, true);
+      document.addEventListener("scroll", phCloseMenu, true);
+      window.addEventListener("blur", phCloseMenu);
+      window.addEventListener("resize", phCloseMenu);
+    }
     // Lockscreen menu — a single "Unlock" item (reuses the app-menu chrome + dismiss
     // behavior). The unlock icon is a small open padlock.
     var PH_UNLOCK_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.4" width="6" height="4.4" rx="0.9"/><path d="M4.4 5.4 V3.9 A1.6 1.6 0 0 1 7.6 3.6"/></svg>';

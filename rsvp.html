@@ -20406,6 +20406,7 @@ document.addEventListener("click", function (e) {
       if (!(window.__tehranCallLive && window.__tehranCallLive())) stopCallAmbient();
       if (window.__stopLuebSinging) window.__stopLuebSinging(); // Lübeck kids' serenade never outlives the laptop call
       if (window.__stopPragueLife) window.__stopPragueLife(); // ...and neither do the Prague family's gestures
+      if (window.__stopPragueMelody) window.__stopPragueMelody(); // ...nor the family's music player (any teardown path, incl. resetLaptop)
       laptop.classList.remove("updating", "progress", "rebooting", "sweet", "calling", "connecting", "connected", "lueb");
     }
     // The gag: an open Mac decides to install a software update and reboot — now framed
@@ -20479,6 +20480,7 @@ document.addEventListener("click", function (e) {
         startCallAmbient(callCallee === "lueb" ? "tehran" : "prague");
         if (callCallee === "lueb" && window.__startLuebSinging) window.__startLuebSinging(); // the two kids serenade
         if (callCallee === "prague" && window.__startPragueLife) window.__startPragueLife(); // the garden family comes to life (gate no-ops under reduced motion)
+        if (callCallee === "prague" && window.__startPragueMelody) window.__startPragueMelody(); // the family's little music player drifting in from across the garden
         return;
       }
       playPhoneRingSound();
@@ -20500,6 +20502,8 @@ document.addEventListener("click", function (e) {
         if (callCallee === "lueb" && window.__startLuebSinging) window.__startLuebSinging();
         // Prague's family stir with warm on-camera gestures (wink / nod / a produced flower)
         if (callCallee === "prague" && window.__startPragueLife) window.__startPragueLife();
+        // ...and a faint warm tune drifts in from the family's little music player across the garden
+        if (callCallee === "prague" && window.__startPragueMelody) window.__startPragueMelody();
       }, 3400));
     }
     var callHangingUp = false;
@@ -20510,6 +20514,7 @@ document.addEventListener("click", function (e) {
       stopCallAmbient();
       if (window.__stopLuebSinging) window.__stopLuebSinging(); // silence the kids the instant we hang up, before the goodbye
       if (window.__stopPragueLife) window.__stopPragueLife(); // still the Prague family's gestures the instant we hang up too
+      if (window.__stopPragueMelody) window.__stopPragueMelody(); // ...and silence the family's music player the instant we hang up
       function dropLine() {
         playCallHangupSound();
         laptop.classList.remove("calling", "connecting", "connected", "lueb");
@@ -35979,11 +35984,11 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
 // bed it sits on: live Prague call + focused + visible — NOT room-gated (that bed isn't;
 // the music mustn't cut when you step away) and NOT motion-gated (it's sound, not motion).
 //
-// NOTE (owner): this is an original, neutral placeholder motif, shipped UNHEARD (no way to
-// audition audio headless) — tune + mix are for you to judge. The nice pattern would be
-// each call carrying that family's own tune (Lübeck already sings Tumbalalaika; a Persian
-// "tavallod" is prepped for Tehran) — hand me a Prague/Czech-folk MIDI and I'll model it
-// here the same way, rather than me guess-transcribing a folk tune from memory.
+// NOTE (owner): the tune is an ORIGINAL warm G-major folk-waltz (see TUNE) — no copyrighted
+// source. The nice pattern would be each call carrying that family's own tune (Lübeck sings
+// Tumbalalaika; Tehran plays "tavallod") — hand me a Prague/Czech-folk MIDI and I'll model it
+// here the same way. Started/stopped by the laptop Prague call's connect / hang-up (startCall
+// + endCall/endLaptopUpdate), gated on a live Prague call + focus + visibility; mix is faint.
 (function () {
   var laptop = document.getElementById("office-laptop");
   if (!laptop) return;
@@ -35997,16 +36002,19 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
   // A gentle original waltz in a major key, kept low + warm so it sits beneath the voices.
   // {s: semitones from A4 (freq = 440·2^(s/12), same base as satieNote), d: beats,
   //  b: optional soft bass root under the note}. Placeholder — see the owner note above.
-  var BEAT = 0.5;
+  var BEAT = 0.5; // a gentle 3/4 waltz — one quarter-note per beat (an unhurried lilt)
+  // An ORIGINAL warm G-major folk-waltz: an eight-bar arch that climbs to a bright crest
+  // and settles home on the tonic (semitones from A4, so G4 = -2; the phrase lives around
+  // D4..D5). Soft bass roots (b) fall on each bar's downbeat: G · G · C · D · G · C · D · G.
   var TUNE = [
-    { s: -7, d: 1, b: -19 }, { s: -3, d: 1 }, { s: 0, d: 1 },
-    { s: 0, d: 2, b: -12 }, { s: -3, d: 1 },
-    { s: -2, d: 1, b: -17 }, { s: -5, d: 1 }, { s: -2, d: 1 },
-    { s: -3, d: 3, b: -15 },
-    { s: 0, d: 1, b: -12 }, { s: 4, d: 1 }, { s: 0, d: 1 },
-    { s: 2, d: 2, b: -19 }, { s: 0, d: 1 },
-    { s: -3, d: 1 }, { s: -5, d: 1 }, { s: -7, d: 1 },
-    { s: -7, d: 3, b: -19 }
+    { s: -7, d: 1, b: -14 }, { s: -2, d: 1 }, { s: 2, d: 1 },   // I  — rise D–G–B
+    { s: 0, d: 2, b: -14 }, { s: -2, d: 1 },                    //      hold A, ease to G
+    { s: -5, d: 1, b: -9 }, { s: -4, d: 1 }, { s: -2, d: 1 },   // IV — E–F#–G
+    { s: -7, d: 3, b: -19 },                                    // V  — settle low on D
+    { s: -2, d: 1, b: -14 }, { s: 2, d: 1 }, { s: 5, d: 1 },    // I  — climb G–B–D
+    { s: 3, d: 2, b: -9 }, { s: 2, d: 1 },                      // IV — crest on C, step to B
+    { s: 0, d: 1, b: -19 }, { s: -2, d: 1 }, { s: -4, d: 1 },   // V  — fall A–G–F#
+    { s: -2, d: 3, b: -14 }                                     // I  — home on the tonic
   ];
   function note(ctx, dest, t, semis, dur, mel) {
     var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = 440 * Math.pow(2, semis / 12);
@@ -36034,7 +36042,7 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
   function start() {
     var ctx = getSfxCtx(); if (!ctx) return;
     active = true; busCtx = ctx;
-    bus = ctx.createGain(); bus.gain.value = 0.05; // clearly under the wind + giggles
+    bus = ctx.createGain(); bus.gain.value = 0.06; // faint, under the wind + giggles (near the Tehran melody's level)
     var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1500; lp.Q.value = 0.5; // "through the call"
     var out = pannedOut(ctx, "office-laptop");
     var conv = ctx.createConvolver(); // a little room so it isn't bone-dry

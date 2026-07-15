@@ -794,6 +794,21 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 #loft-game-strip.party-on #kitchen-bartender-hit{pointer-events:auto; cursor:grab}
 #loft-game-strip.party-on #kitchen-bartender-hit.grabbing{cursor:grabbing}
 @media (prefers-reduced-motion: reduce){#kitchen-bartender-shaker.tossing{animation:none}}
+/* the bartender's cocktail-make station: a JS-built glass fills, gets a garnish, and is
+   presented, driven by the make module. Lives inside #kitchen-bar so it inherits the party
+   fade (invisible whenever the bar's down). pointer-events off so it never eats bar taps. */
+#kitchen-bar-make{transition:opacity .35s ease; pointer-events:none}
+#kitchen-bar-make .mk-ice, #kitchen-bar-make .mk-garnish{transition:opacity .3s ease}
+#kitchen-bar-make .mk-pour{transition:opacity .16s ease}
+#kitchen-bar-make .mk-glasshost{transform-box:fill-box; transform-origin:50% 100%; transition:transform .3s ease}
+#kitchen-bar-make .mk-glasshost.presenting{transform:translateY(2px) scale(1.07)}
+#kitchen-bar-make .mk-swizzle{transform-box:fill-box; transform-origin:50% 100%; transition:opacity .2s ease}
+#kitchen-bar-make .stirring{animation:mk-stir .55s ease-in-out 2 alternate}
+@keyframes mk-stir{from{transform:rotate(-15deg)}to{transform:rotate(15deg)}}
+@media (prefers-reduced-motion: reduce){
+  #kitchen-bar-make .mk-glasshost, #kitchen-bar-make .mk-glasshost.presenting{transition:none; transform:none}
+  #kitchen-bar-make .stirring{animation:none}
+}
 /* tapping the glitter ball pops it: a quick scale-bounce on a dedicated wrapper plus a
    white light-flash halo. The bounce lives on #garden-disco-ball-pop, a node DISTINCT from
    the -spin group, so the party spin's rotate is never clobbered (parent/child transforms
@@ -18912,6 +18927,10 @@ document.addEventListener("click", function (e) {
       if (window.__gardenPartyOn && document.visibilityState !== "hidden" && !bartenderReduce()) tossShaker();
       setTimeout(autoFlare, 9000 + Math.random() * 3000); // ~10s, jittered so it's not metronomic
     })();
+    // shared with the cocktail-make module: it borrows his shaker toss for "shake" drinks, and
+    // reads his drag state so the ambient make never fires while he's being dragged.
+    window.__bartenderToss = tossShaker;
+    window.__bartenderDragging = function () { return barDragging; };
   }
   // the skyline windows: a grid of togglable lit-window rects tiling each tower's face.
   // Tap a window and its light toggles on/off (both towers). stopPropagation so the tap
@@ -18953,6 +18972,285 @@ document.addEventListener("click", function (e) {
       }
     });
   }
+})();
+(function () {
+  // ======================================================================================
+  //  The bartender's cocktail make show. While the garden party is on and you're at the
+  //  bar (party-mode kitchen), the bartender autonomously mixes a REAL cocktail from the
+  //  phone app's recipes: sets a glass, adds ice, pours each ingredient (a tilted bottle +
+  //  a colored stream, the glass filling and tinting toward the drink's colour), shakes or
+  //  stirs, drops a garnish, presents it, then clears for the next. The drink's name shows
+  //  in a bottom toast (now-playing style). Fully self-contained; nothing accumulates (one
+  //  reused make group, one self-rescheduling poll timer, aborts on hidden/party-off/room).
+  //  Console hook: window.cocktail(name?) (wired in the console-toys region).
+  // ======================================================================================
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var bar = document.getElementById("kitchen-bar");
+  if (!bar) return; // no bar in this DOM → the whole feature stays dormant (cocktail() still replies gracefully)
+
+  // Authored per-drink metadata for all 23 recipes (keys = exact COCKTAILS names): the glass to
+  // reach for, how it's built, the finished colour, and the garnish. build/garnish also have a
+  // prose-scan fallback below, used for any name not found here.
+  var META = {
+    "Orange Cookie":        { glass: "highball", build: "build", color: "#c9822e", garnish: "orange-peel" },
+    "Blue Kamikaze":        { glass: "coupe",    build: "shake", color: "#2f7fd6", garnish: "lime" },
+    "Caesar":               { glass: "highball", build: "build", color: "#b3391f", garnish: "lime" },
+    "Campari Gin Tonic":    { glass: "highball", build: "build", color: "#cf5a34", garnish: "orange-peel" },
+    "Campari Spritz":       { glass: "highball", build: "build", color: "#e0561f", garnish: "orange-peel" },
+    "Dirty Martini":        { glass: "martini",  build: "shake", color: "#e7e4cf", garnish: "olive" },
+    "Lavender Black":       { glass: "coupe",    build: "shake", color: "#2b2540", garnish: "none" },
+    "Long Beach Iced Tea":  { glass: "highball", build: "shake", color: "#b23048", garnish: "lemon" },
+    "Manhattan":            { glass: "coupe",    build: "stir",  color: "#7d2f22", garnish: "cherry" },
+    "Margarita":            { glass: "coupe",    build: "shake", color: "#c9de8a", garnish: "lime" },
+    "Mexican Mule":         { glass: "highball", build: "build", color: "#d7ad48", garnish: "lime" },
+    "Miami Beach":          { glass: "coupe",    build: "shake", color: "#d78f6a", garnish: "none" },
+    "Mojito":               { glass: "highball", build: "build", color: "#c0e2a6", garnish: "mint" },
+    "Negroni":              { glass: "highball", build: "stir",  color: "#a83b22", garnish: "orange-peel", ice: true },
+    "Passion Margarita":    { glass: "coupe",    build: "shake", color: "#e6a02c", garnish: "lime" },
+    "Pink Lady":            { glass: "martini",  build: "shake", color: "#e79bb0", garnish: "none" },
+    "Salty Dog":            { glass: "highball", build: "build", color: "#e2c256", garnish: "none" },
+    "Sazerac":              { glass: "highball", build: "stir",  color: "#b56f28", garnish: "lemon", ice: true },
+    "Smoked Old-fashioned": { glass: "highball", build: "build", color: "#a75a22", garnish: "orange-peel" },
+    "Suffering Bastard":    { glass: "highball", build: "shake", color: "#c9a148", garnish: "mint" },
+    "Tequila Sunrise":      { glass: "highball", build: "build", color: "#e5622a", garnish: "orange-peel" },
+    "Whiskey Sour":         { glass: "coupe",    build: "shake", color: "#d99a3a", garnish: "cherry" },
+    "Yale":                 { glass: "martini",  build: "stir",  color: "#8fb8d9", garnish: "none" }
+  };
+  function deriveBuild(instr) { // prose fallback
+    var s = String(instr || "").toLowerCase();
+    if (/shake/.test(s)) return "shake";
+    if (/stir/.test(s)) return "stir";
+    return "build";
+  }
+  function deriveGarnish(instr) {
+    var s = String(instr || "").toLowerCase();
+    var m = s.match(/garnish[^.]*?\b(lime|lemon|olive|cherry|orange|mint|celery)\b/);
+    if (!m) { if (/\bolive\b/.test(s)) return "olive"; if (/\bmint\b/.test(s)) return "mint"; return "none"; }
+    var w = m[1];
+    if (w === "orange") return "orange-peel";
+    if (w === "celery") return "lime"; // no celery sprite — a lime wedge stands in
+    return w;
+  }
+
+  // per-glass geometry (drawn around x=0; the make group is translated to the station on the bar)
+  var GLASS = {
+    highball: { bottom: 254, topFull: 227, rimY: 222, gx: 9,  gy: 224, clip: "rect" },
+    coupe:    { bottom: 245, topFull: 234, rimY: 232, gx: 12, gy: 233, clip: "coupe" },
+    martini:  { bottom: 244, topFull: 227, rimY: 224, gx: 12, gy: 225, clip: "martini" }
+  };
+  var PALE = [232, 238, 240]; // the glass starts near-clear and tints toward the drink colour
+  function h2rgb(h) { h = String(h).replace("#", ""); return [parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)]; }
+  function lerpHex(a, b, t) {
+    var A = (typeof a === "string") ? h2rgb(a) : a, B = (typeof b === "string") ? h2rgb(b) : b;
+    function m(i) { return Math.round(A[i] + (B[i] - A[i]) * t); }
+    function hx(n) { n = Math.max(0, Math.min(255, n)).toString(16); return n.length < 2 ? "0" + n : n; }
+    return "#" + hx(m(0)) + hx(m(1)) + hx(m(2));
+  }
+  function S(tag, attrs, parent) {
+    var e = document.createElementNS(SVGNS, tag);
+    if (attrs) for (var k in attrs) if (attrs.hasOwnProperty(k)) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+
+  // the reused make group, appended once as the bar's frontmost child (inherits the party fade)
+  var makeGroup = S("g", { id: "kitchen-bar-make", transform: "translate(415,0)", style: "opacity:0" }, bar);
+
+  function drawGarnish(node, type, g) {
+    var x = g.gx, y = g.gy;
+    if (type === "lime" || type === "lemon") {
+      var c = type === "lime" ? "#8bbf6a" : "#e6cf5a", st = type === "lime" ? "#6f9e4e" : "#c9ad3a";
+      S("path", { d: "M" + (x - 6) + " " + y + " Q" + x + " " + (y - 6) + " " + (x + 6) + " " + y + " Q" + x + " " + (y + 3) + " " + (x - 6) + " " + y + " Z", fill: c, stroke: st, "stroke-width": 0.7 }, node);
+      S("line", { x1: x - 4, y1: y - 1, x2: x + 4, y2: y - 1, stroke: "#f2f8d6", "stroke-width": 0.6, opacity: 0.8 }, node);
+    } else if (type === "olive") {
+      S("circle", { cx: x, cy: y, r: 3, fill: "#6f8f3a" }, node);
+      S("circle", { cx: x + 1, cy: y, r: 1.1, fill: "#c0392b" }, node);
+    } else if (type === "cherry") {
+      S("circle", { cx: x, cy: y + 2, r: 3, fill: "#b0243a" }, node);
+      S("path", { d: "M" + x + " " + (y - 1) + " Q" + (x + 3) + " " + (y - 6) + " " + (x + 6) + " " + (y - 7), fill: "none", stroke: "#6b4a2c", "stroke-width": 0.8 }, node);
+    } else if (type === "orange-peel") {
+      S("path", { d: "M" + (x - 5) + " " + (y - 4) + " Q" + (x + 4) + " " + (y - 8) + " " + (x + 5) + " " + y + " Q" + (x - 1) + " " + (y - 3) + " " + (x - 5) + " " + (y - 4) + " Z", fill: "#e08a2e", stroke: "#c06a1e", "stroke-width": 0.6 }, node);
+    } else if (type === "mint") {
+      S("path", { d: "M" + x + " " + y + " Q" + (x - 5) + " " + (y - 5) + " " + (x - 1) + " " + (y - 8) + " Q" + (x + 2) + " " + (y - 4) + " " + x + " " + y + " Z", fill: "#5f9e4e" }, node);
+      S("path", { d: "M" + (x + 1) + " " + y + " Q" + (x + 6) + " " + (y - 4) + " " + (x + 3) + " " + (y - 8) + " Q" + x + " " + (y - 3) + " " + (x + 1) + " " + y + " Z", fill: "#6fae58" }, node);
+    } // "none" → nothing
+  }
+
+  // (re)build the make station for one drink; returns the handles the sequence drives
+  function buildMake(glassType, ice, garnish) {
+    var g = GLASS[glassType] || GLASS.coupe;
+    while (makeGroup.firstChild) makeGroup.removeChild(makeGroup.firstChild);
+    var defs = S("defs", null, makeGroup);
+    var cp = S("clipPath", { id: "kitchen-bar-make-clip" }, defs);
+    if (g.clip === "rect") S("rect", { x: -9, y: 224, width: 18, height: 31, rx: 1.5 }, cp);
+    else if (g.clip === "coupe") S("path", { d: "M-13 233 Q-13 244 0 245 Q13 244 13 233 Z" }, cp);
+    else S("path", { d: "M-15.5 226 L15.5 226 L0 244 Z" }, cp);
+
+    var host = S("g", { "class": "mk-glasshost" }, makeGroup);
+    if (glassType === "highball") {
+      S("rect", { x: -11, y: 222, width: 22, height: 34, rx: 2.5, fill: "#eef4f6", "fill-opacity": 0.5, stroke: "#cdd8da", "stroke-width": 1 }, host);
+    } else if (glassType === "coupe") {
+      S("path", { d: "M-15 232 Q-15 245 0 246 Q15 245 15 232 Z", fill: "#eef4f6", "fill-opacity": 0.5, stroke: "#cdd8da", "stroke-width": 1 }, host);
+      S("line", { x1: 0, y1: 246, x2: 0, y2: 256, stroke: "#cdd8da", "stroke-width": 1.6 }, host);
+      S("line", { x1: -7, y1: 256, x2: 7, y2: 256, stroke: "#cdd8da", "stroke-width": 1.8 }, host);
+    } else {
+      S("path", { d: "M-18 224 L18 224 L0 245 Z", fill: "#eef4f6", "fill-opacity": 0.5, stroke: "#cdd8da", "stroke-width": 1 }, host);
+      S("line", { x1: 0, y1: 245, x2: 0, y2: 256, stroke: "#cdd8da", "stroke-width": 1.6 }, host);
+      S("line", { x1: -7, y1: 256, x2: 7, y2: 256, stroke: "#cdd8da", "stroke-width": 1.8 }, host);
+    }
+    var liquid = S("rect", { x: -20, y: g.bottom, width: 40, height: 0, "clip-path": "url(#kitchen-bar-make-clip)", fill: "#e8eef0", opacity: 0.9 }, host);
+    var iceG = S("g", { "class": "mk-ice", "clip-path": "url(#kitchen-bar-make-clip)", style: "opacity:0" }, host);
+    if (ice) {
+      S("rect", { x: -6, y: g.bottom - 9, width: 7, height: 7, rx: 1.6, fill: "#ffffff", "fill-opacity": 0.5, transform: "rotate(12 -2 " + (g.bottom - 5) + ")" }, iceG);
+      S("rect", { x: 0, y: g.bottom - 7, width: 6.5, height: 6.5, rx: 1.6, fill: "#ffffff", "fill-opacity": 0.42, transform: "rotate(-10 3 " + (g.bottom - 3) + ")" }, iceG);
+    }
+    var garn = S("g", { "class": "mk-garnish", style: "opacity:0" }, host);
+    drawGarnish(garn, garnish, g);
+
+    var swz = S("g", { "class": "mk-swizzle", style: "opacity:0" }, makeGroup);
+    S("line", { x1: 0, y1: g.rimY - 6, x2: 2, y2: g.bottom - 2, stroke: "#d9b04a", "stroke-width": 1.6, "stroke-linecap": "round" }, swz);
+    S("circle", { cx: 0, cy: g.rimY - 6, r: 2, fill: "#d9b04a" }, swz);
+
+    var pour = S("g", { "class": "mk-pour", style: "opacity:0" }, makeGroup);
+    var stream = S("path", { d: "M-1.5 214 L1.5 214 L1 " + (g.rimY + 4) + " L-1 " + (g.rimY + 4) + " Z", fill: "#c98a3a", opacity: 0.9 }, pour);
+    var bottleG = S("g", { transform: "rotate(-40 0 214)" }, pour);
+    var bottleBody = S("rect", { x: -7, y: 178, width: 14, height: 30, rx: 4, fill: "#c98a3a", stroke: "#3a2a1e", "stroke-opacity": 0.25, "stroke-width": 0.6 }, bottleG);
+    S("rect", { x: -2.4, y: 206, width: 4.8, height: 9, rx: 1.5, fill: "#b07a30" }, bottleG);
+    S("rect", { x: -3.4, y: 171, width: 6.8, height: 7, rx: 1.6, fill: "#2b2620" }, bottleG);
+    S("rect", { x: -7, y: 180, width: 3, height: 26, rx: 2, fill: "#ffffff", opacity: 0.18 }, bottleG);
+
+    var range = g.bottom - g.topFull;
+    return {
+      setLevel: function (f, color) {
+        if (color) liquid.setAttribute("fill", color);
+        var hgt = Math.max(0, f) * range;
+        liquid.setAttribute("y", g.bottom - hgt);
+        liquid.setAttribute("height", hgt);
+      },
+      pourStart: function (color) { stream.setAttribute("fill", color); bottleBody.setAttribute("fill", color); pour.style.opacity = "1"; },
+      pourEnd: function () { pour.style.opacity = "0"; },
+      showIce: function () { iceG.style.opacity = "1"; },
+      showGarnish: function () { garn.style.opacity = "1"; },
+      stir: function () { swz.style.opacity = "1"; swz.classList.remove("stirring"); try { swz.getBBox(); } catch (e) {} swz.classList.add("stirring"); }, // getBBox forces a reflow so the swirl always (re)starts
+      stirEnd: function () { swz.style.opacity = "0"; swz.classList.remove("stirring"); },
+      present: function () { host.classList.add("presenting"); }
+    };
+  }
+
+  // ---- toast (now-playing style: one reused element in the viewport, retimed) --------------
+  var ckToastEl = null, ckToastTimer = null;
+  function cocktailToast(name) {
+    var vp = document.querySelector(".hunt-viewport");
+    if (!vp) return;
+    if (!ckToastEl) { ckToastEl = document.createElement("div"); ckToastEl.className = "season-toast cocktail-toast"; vp.appendChild(ckToastEl); }
+    ckToastEl.textContent = "🍸 " + name;
+    ckToastEl.classList.add("show");
+    clearTimeout(ckToastTimer);
+    ckToastTimer = setTimeout(function () { if (ckToastEl) ckToastEl.classList.remove("show"); }, 2600);
+  }
+
+  function reduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+  function dragging() { return !!(window.__bartenderDragging && window.__bartenderDragging()); }
+  function barPresent() { return !!window.__gardenPartyOn && window.currentStageName === "kitchen" && document.visibilityState !== "hidden"; }
+
+  // ---- the make sequence -----------------------------------------------------------------
+  var making = false, makeTimers = [], cooldownUntil = 0;
+  function after(ms, fn) { var id = setTimeout(fn, ms); makeTimers.push(id); return id; }
+  function clearMakeTimers() { for (var i = 0; i < makeTimers.length; i++) clearTimeout(makeTimers[i]); makeTimers = []; }
+  function finishMake() { clearMakeTimers(); makeGroup.style.opacity = "0"; making = false; cooldownUntil = Date.now() + 1500 + Math.random() * 1700; }
+  function abort() { clearMakeTimers(); if (makeGroup) makeGroup.style.opacity = "0"; making = false; }
+
+  function startMake(row) {
+    if (making || !row) return false;
+    making = true;
+    var name = row.name;
+    var m = META[name] || {};
+    var glass = m.glass || "coupe";
+    var build = m.build || deriveBuild(row.instructions);
+    var garnish = m.garnish || deriveGarnish(row.instructions);
+    var color = m.color || "#b98a3a";
+    var ice = (m.ice === true) || build === "build";
+    cocktailToast(name);
+    var ctx = buildMake(glass, ice, garnish);
+    makeGroup.style.opacity = "1";
+
+    if (reduced()) { // static: fill instantly, garnish, hold, clear (no animation)
+      ctx.setLevel(1, color); ctx.showGarnish();
+      after(1600, finishMake);
+      return true;
+    }
+
+    var pours = Math.max(1, Math.min(4, (row.ingredients && row.ingredients.length) || 3));
+    var target = build === "shake" ? 0.82 : 1.0; // shaken drinks fill on the strain, below
+    var t = 260;
+    if (ice) { after(t, ctx.showIce); t += 300; }
+    for (var i = 0; i < pours; i++) {
+      (function (i) {
+        var f = ((i + 1) / pours) * target;
+        var stepColor = lerpHex(PALE, color, pours === 1 ? 1 : i / (pours - 1));
+        after(t, function () { ctx.pourStart(stepColor); });
+        after(t + 300, function () { ctx.setLevel(f, stepColor); });
+        after(t + 430, function () { ctx.pourEnd(); });
+      })(i);
+      t += 480;
+    }
+    if (build === "shake") {
+      after(t, function () { if (window.__bartenderToss) window.__bartenderToss(); }); // he shakes
+      after(t + 700, function () { ctx.setLevel(1, color); }); // ...then strains the full drink into the glass
+      t += 950;
+    } else { // stir / build → a gentle swizzle swirl
+      after(t, ctx.stir);
+      after(t + 1150, ctx.stirEnd);
+      t += 800;
+    }
+    after(t, ctx.showGarnish); t += 340;
+    after(t, ctx.present); t += 950;
+    after(t, finishMake);
+    return true;
+  }
+
+  function randomRow() {
+    var rows = window.__cocktailData ? window.__cocktailData() : [];
+    return rows.length ? rows[(Math.random() * rows.length) | 0] : null;
+  }
+  function findRow(q) {
+    var rows = window.__cocktailData ? window.__cocktailData() : [];
+    q = String(q).toLowerCase().trim();
+    var i, r;
+    for (i = 0; i < rows.length; i++) if (rows[i].name.toLowerCase() === q) return rows[i]; // exact
+    for (i = 0; i < rows.length; i++) if (rows[i].name.toLowerCase().indexOf(q) === 0) return rows[i]; // prefix
+    for (i = 0; i < rows.length; i++) if (rows[i].name.toLowerCase().indexOf(q) !== -1) return rows[i]; // substring
+    return null;
+  }
+
+  // ---- ambient loop: one self-rescheduling poll timer (mirrors the bartender's autoFlare) ----
+  // It never piles up (a single live timer) and self-gates every tick: it only starts a make
+  // when the party's on, you're at the bar, the tab's visible, motion's allowed, the bartender
+  // isn't being dragged, and the between-drinks cooldown has elapsed. If those conditions break
+  // mid-make (party ends / you leave the kitchen / the tab hides) it tears the make down.
+  var pollTimer = null;
+  function ambientPoll() {
+    pollTimer = null;
+    if (making && !barPresent()) abort();
+    if (!making && barPresent() && !reduced() && !dragging() && Date.now() >= cooldownUntil) startMake(randomRow());
+    pollTimer = setTimeout(ambientPoll, 500);
+  }
+  ambientPoll();
+  document.addEventListener("visibilitychange", function () { if (document.hidden) abort(); }); // hidden → stop now, don't wait for the poll
+
+  // console hook (the actual window.cocktail(...) command lives in the console-toys region)
+  window.__makeCocktail = function (name) {
+    var rows = window.__cocktailData ? window.__cocktailData() : [];
+    if (!rows.length) return "the bar isn't stocked yet.";
+    var row = (name == null || name === "") ? randomRow() : findRow(name);
+    if (!row) return "no cocktail by that name — try \"negroni\", \"margarita\", \"mojito\", \"manhattan\"…";
+    if (!window.__gardenPartyOn && window.party) window.party(true); // dark bar → light the party first
+    if (window.goToStage) window.goToStage("kitchen");               // then step behind the bar
+    abort();                                  // clear any in-flight make so this one leads
+    cooldownUntil = Date.now() + 4000;        // give the requested drink room before the ambient loop resumes
+    startMake(row);
+    return "🍸 " + row.name + " — coming right up.";
+  };
 })();
 (function () {
   // Clicking an office wall sign turns the computer on and boots it (Fedora → desktop),
@@ -20933,7 +21231,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · beat() · temp() · weather() · clock() · countdown() · lang() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone() · laptop() · computer()/monitor() · reboot() · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · beat() · temp() · weather() · clock() · countdown() · lang() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone() · laptop() · computer()/monitor() · reboot() · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var TERM_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -20960,6 +21258,7 @@ document.addEventListener("click", function (e) {
       storm: "storm(true) — roll a thunderstorm in over the balcony; storm(false) clears it; storm() reports whether it's storming",
       dance: "dance(\"name\") — cue a garden-party dance by name in quotes, e.g. dance(\"salsa\"), or 1–9, or dance(random()); dance() returns the current dance {n, name}; dance(\"next\") skips ahead (run party(true) first). dances: \"techno\" · \"waltz\" · \"disco\" · \"swing\" · \"salsa\" · \"bhangra\" · \"persian\" · \"polka\" · \"horah\"",
       dj: "dj(\"amir\"|\"danesh\") — who spins at the party (or 1–2, or random()); dj() returns the current DJ {n, name}. amir wears the cap, danesh the afro",
+      cocktail: "cocktail(\"negroni\") — the bartender mixes that real drink from the bar's menu (partial name ok); cocktail() makes a random one. lights the party + steps behind the bar first if it's dark. he also mixes on his own while you watch the bar. alias: drink()",
       lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
       countdown: "countdown() — days left until each wedding",
       fullscreen: "fullscreen(true) — fill the screen with the loft; fullscreen(false) leaves; fullscreen() reports whether it's on",
@@ -26992,6 +27291,11 @@ async def localfont(name):
       }
     ];
     window.__cocktailNames = function () { return COCKTAILS.map(function (c) { return c.name; }); }; // the loft.menu console getter reads this
+    window.__cocktailData = function () { // full recipe rows for the bartender's make animation (bar module reads this)
+      return COCKTAILS.map(function (c) {
+        return { name: c.name, ingredients: c.recipe.ingredients.slice(), instructions: c.recipe.instructions };
+      });
+    };
     var cocktailView = "gallery"; // "gallery" | "detail"
     var cocktailSel = -1;         // index into COCKTAILS of the drink open in detail view
     function cocktailFeatured() {
@@ -40096,6 +40400,16 @@ function spawnDustMote(container) {
     if (!window.__setPartyDance || !window.__setPartyDance(key)) return "the dance hook isn't ready yet.";
     return "💃 " + key + " — the garden shifts into step.";
   };
+
+  // cocktail — the bartender makes one of the bar's real drinks. cocktail() makes a random one;
+  // cocktail("negroni") makes that one (partial/case-insensitive match). If the party's dark it
+  // lights it first, steps behind the bar (kitchen), and mixes. He also mixes on his own while
+  // you watch the bar during the party (see the make module near the bartender code).
+  window.cocktail = function (name) {
+    if (typeof window.__makeCocktail !== "function") return "the bar hook isn't ready yet.";
+    return window.__makeCocktail(arguments.length ? name : undefined);
+  };
+  window.drink = window.cocktail; // alias
 
   // dj — who's spinning at the garden party. amir (beanie/cap) = DJ A · danesh (afro) = DJ B.
   // dj() returns the current one {n, name}; dj("amir"|"danesh"|1|2|random()) puts them on the decks.

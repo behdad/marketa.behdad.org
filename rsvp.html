@@ -11116,6 +11116,7 @@ section{margin:1.9rem 0}
 <polygon points="46,120 54,120 46,126" fill="#874a38" opacity="0.4"/>
 <circle cx="150" cy="150" r="2" fill="#9a5540" opacity="0.4"/>
 </g>
+<rect x="170" y="206" width="26" height="13" fill="#a95f43" class="hunt-hit wall-brick" tabindex="0" role="button" aria-label="A loose brick"/>
 <rect x="250" y="0" width="174" height="290" fill="#1a1a1a"/>
 <path d="M262 0 V290 M276 0 V290 M290 0 V290 M304 0 V290 M318 0 V290 M332 0 V290 M346 0 V290 M360 0 V290 M374 0 V290 M388 0 V290 M402 0 V290 M416 0 V290" stroke="#333333" stroke-width="3"/>
 <line x1="284" y1="10" x2="284" y2="280" stroke="#3d3d3d" stroke-width="6"/>
@@ -18227,6 +18228,7 @@ document.addEventListener("click", function (e) {
   // trail the body — classes are added synchronously (no rAF staggering), relying on
   // the animationend cleanup below to guarantee the classes are absent before re-add.
   function leanBehdad() {
+    if (window.__retireHint) window.__retireHint("hint_hot"); // loose-brick hint: retire once the daybed cuddle's been coaxed
     if (behdad.classList.contains("leaning")) return;
     behdad.classList.add("leaning");
     if (leftArm) leftArm.classList.add("reaching");
@@ -20456,6 +20458,7 @@ document.addEventListener("click", function (e) {
       var a = document.getElementById("kitchen-bar-patron-a"), b = document.getElementById("kitchen-bar-patron-b");
       if (!a || !b) return;
       a.classList.add("kissing"); b.classList.add("kissing"); spawnKissHeart();
+      if (window.__retireHint) window.__retireHint("hint_patrons"); // loose-brick hint: retire once the regulars have kissed
       clearTimeout(kissEndTimer); kissEndTimer = setTimeout(endKiss, 1500);
     }
     window.__barPatronKiss = function () { if (patronsClose()) { startKiss(); return true; } return false; }; // a click on a patron kisses when they're close (else it hiccups)
@@ -20667,7 +20670,7 @@ document.addEventListener("click", function (e) {
         if (!barDragging) return;
         var px = bartenderSvgX(e);
         var dx = px - barDragStartX;
-        if (Math.abs(dx) > 2) barDragMoved = true;
+        if (Math.abs(dx) > 2) { barDragMoved = true; if (window.__retireHint) window.__retireHint("hint_barman"); } // loose-brick hint: retire once the barman's been dragged
         barDragTravel += Math.abs(px - barPrevX); // cumulative travel — clean signal for a future bar shooter
         barPrevX = px;
         setBartenderOffset(barDragStartOffset + dx);
@@ -21342,6 +21345,7 @@ document.addEventListener("click", function (e) {
       ckToastEl = document.createElement("div");
       ckToastEl.className = "season-toast cocktail-toast";
       ckToastEl.addEventListener("click", function () {
+        if (window.__retireHint) window.__retireHint("hint_drink"); // loose-brick hint: retire once a built drink's been tapped open
         if (ckToastName && window.__showCocktailInPhone) window.__showCocktailInPhone(ckToastName);
       });
       ckToastEl.addEventListener("animationend", function () { ckToastEl.classList.remove("ck-pop"); }); // one-shot: drop it so the next make can re-trigger the pop
@@ -22382,7 +22386,7 @@ document.addEventListener("click", function (e) {
     }
     if (!window.__pcPlayed) {
       window.__pcPlayed = true; // the office sequence's "play with the computer" beat (the butterfly gates on it)
-      if (window.__retireHint) window.__retireHint("hint_computer"); // loose-brick hint: retire once the old tower's been woken
+      if (window.__retireHint) { window.__retireHint("hint_tower"); window.__retireHint("hint_deeper"); } // loose-brick hints: retire both PC/monitor nudges once the tower's been woken
       // ...and powering on advances the office hint to the next step (the caption
       // system elsewhere only re-evaluates on lamp/call/entry events)
       // let them actually play for a bit — the lights hint arrives after 10s
@@ -41471,7 +41475,7 @@ function spawnDustMote(container) {
   }
   function restoreStageHint(name) {
     if (name === "kitchen") {
-      if (window.__barUpNow && window.__barUpNow()) { setCaption(kitchenCurrentCaption()); updateKitchenInvite(); return; } // bar's up (party OR night) → bar caption + no coffee arrows, regardless of the machine's power
+      if (window.__barUpNow && window.__barUpNow()) { if (window.__retireHint) window.__retireHint("hint_ksecret"); setCaption(kitchenCurrentCaption()); updateKitchenInvite(); return; } // bar's up (party OR night) → bar caption + no coffee arrows, regardless of the machine's power
       if (!kitchenPowered) return;
       setCaption(kitchenCurrentCaption());
     } else if (name === "garden") {
@@ -42829,7 +42833,7 @@ function spawnDustMote(container) {
   function setGardenParty(on, userInitiated) {
     on = !!on;
     window.__gardenPartyOn = on;
-    if (on && window.__retireHint) window.__retireHint("hint_party"); // loose-brick hint: retire once the party's been thrown
+    if (on && window.__retireHint) window.__retireHint("hint_ksecret"); // loose-brick hint: retire once the party (and its bar) reveals the kitchen's other side
     var gs = document.getElementById("stage-garden");
     if (gs) gs.classList.toggle("garden-party", on);
     // strip-wide party flag: swaps the espresso KITCHEN for a cocktail BAR (all the
@@ -47025,19 +47029,11 @@ function spawnDustMote(container) {
 })();
 (function () {
   // ── Loose-brick HINT dispenser ─────────────────────────────────────────────
-  // Single-click a loose (accent-toned/offset) wall brick and it just wobbles.
-  // DOUBLE-CLICK one and it drops a playful HINT into the caption bar, nudging
-  // toward one of the loft's optional delights. Each hint is "retired" once the
-  // player has done the thing it points at, so it stops being offered.
-  //
-  // To add/edit a hint: append to BRICK_HINTS below. Each entry is
-  //   { id, en, cs, done() } — id is also its caption key (auto-injected into the
-  //   shared hunt dict, so it renders + language-flips like every other caption);
-  //   done() returns true once the nudged activity has happened. Retirement is
-  //   latched permanently in localStorage["retiredHints"] from the activity's own
-  //   site (window.__retireHint), the same persist-forever idea as save-the-dates'
-  //   foundEggs; done() also reads a live/session signal where one exists, as a
-  //   belt to the localStorage suspenders.
+  // Single-click a loose (accent-toned/offset) wall brick: it wobbles and drops a
+  // playful HINT about the ROOM IT'S IN into the caption bar for ~5s, then restores the
+  // room's own instruction. Tap again (any brick) to dismiss early. Each hint retires
+  // once the player has done the thing it points at, so it stops surfacing. The pools,
+  // retire wiring, and auto-dismiss/toggle logic live in ROOM_HINTS below.
   var RETIRE_KEY = "retiredHints";
   function retiredArr() { try { var a = JSON.parse(localStorage.getItem(RETIRE_KEY) || "[]"); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
   function isRetired(id) { return retiredArr().indexOf(id) !== -1; }
@@ -47046,55 +47042,179 @@ function spawnDustMote(container) {
   };
   function octiPlayed() { var o = document.getElementById("cuddly-octopus"); return !!(o && o.classList.contains("played")); }
 
-  // The preset hints, in dispense order (the pointer rotates through them, skipping
-  // any that are already retired). The owner's two examples lead the list.
-  var BRICK_HINTS = [
-    { id: "hint_party",    en: "Worked hard, now party hard.",                    cs: "Práce hotová — teď se pořádně rozjeď!",
-      done: function () { return isRetired("hint_party") || !!window.__gardenPartyOn; } },        // retired once the garden party has been thrown
-    { id: "hint_cocktail", en: "Are you thirsty yet?",                            cs: "Nemáš už žízeň?",
-      done: function () { return isRetired("hint_cocktail"); } },                                 // retired once a cocktail is mixed at the bar
-    { id: "hint_song",     en: "This loft comes with a soundtrack — look for it.", cs: "K tomuhle bytu patří i muzika — najdi ji.",
-      done: function () { return isRetired("hint_song"); } },                                     // retired once a loft song has played
-    { id: "hint_octi",     en: "Someone in the cuddly nook wants a squeeze.",     cs: "Někdo v mazlicím koutku prosí o zmáčknutí.",
-      done: function () { return isRetired("hint_octi") || octiPlayed(); } },                     // retired once Octi has been played with
-    { id: "hint_prague",   en: "Prague is only a phone call away.",               cs: "Praha je jen na jedno zavolání.",
-      done: function () { return isRetired("hint_prague") || !!window.__pragueCalled; } },        // retired once Prague has been called
-    { id: "hint_computer", en: "That old tower still boots — go wake it.",        cs: "Ta stará bedna pořád naběhne — vzbuď ji.",
-      done: function () { return isRetired("hint_computer") || !!window.__pcPlayed; } },          // retired once the PC has been powered on
-    { id: "hint_coffee",   en: "No day in the loft starts without coffee.",       cs: "Žádný den v bytě nezačíná bez kávy.",
-      done: function () { return isRetired("hint_coffee"); } }                                    // retired once an espresso has been sipped
-  ];
-  // Warm sign-off once every hint above is retired.
+  // Per-room hint pools. A brick dispenses a hint about the ROOM IT'S IN, rotating
+  // through that room's list and skipping any already retired (or gated out by rel()).
+  // Each entry: { id, en, cs, done(), rel? } — id is also its caption key. done() latches
+  // off localStorage["retiredHints"] (window.__retireHint, persist-forever like foundEggs)
+  // plus a live belt where one exists. rel() (optional) gates a hint so it's only OFFERED
+  // in a matching state — the bar hints surface only while the bar's up.
+  function barUp() { return !!(window.__barUpNow && window.__barUpNow()); }
+  var ROOM_HINTS = {
+    kitchen: [
+      { id: "hint_ksecret",   en: "This room ain't just what you see.",              cs: "Tenhle pokoj není jen to, co vidíš.",
+        done: function () { return isRetired("hint_ksecret") || barUp(); } },                       // party/night bar reveals the kitchen's other side
+      { id: "hint_coffee",    en: "The machine wants three things, in order.",        cs: "Ten stroj chce tři věci — a v tom pořadí.",
+        done: function () { return isRetired("hint_coffee"); } },                                   // an espresso's been pulled
+      { id: "hint_knock",     en: "Everything here has a voice — if you knock.",      cs: "Všechno tady má hlas — když zaťukáš.",
+        done: function () { return isRetired("hint_knock"); } },                                    // the pans or gong struck
+      { id: "hint_cupboards", en: "The cupboards keep what they shouldn't.",          cs: "Ve skříňkách se skrývá, co by nemělo.",
+        done: function () { return isRetired("hint_cupboards"); } },                                // a cabinet opened
+      { id: "hint_grinder",   en: "No beans, no magic — but a tap refills.",          cs: "Bez zrnek žádné kouzlo — ťuknutí je dosype.",
+        done: function () { return isRetired("hint_grinder"); } },                                  // the grinder refilled
+      { id: "hint_barman",    en: "Grab the barman — he'll follow you down the bar.", cs: "Chyť barmana — půjde s tebou podél baru.",
+        rel: barUp, done: function () { return isRetired("hint_barman"); } },                       // bar-only; he's been dragged
+      { id: "hint_drink",     en: "Every pour has a name. Tap the one he's mixing.",  cs: "Každý drink má jméno. Ťukni na ten, co míchá.",
+        rel: barUp, done: function () { return isRetired("hint_drink"); } },                        // bar-only; a built drink tapped open
+      { id: "hint_patrons",   en: "Sit the regulars close and watch them forget themselves.", cs: "Posaď štamgasty blíž a dívej se, jak zapomenou na svět.",
+        rel: barUp, done: function () { return isRetired("hint_patrons"); } }                       // bar-only; the regulars kissed
+    ],
+    garden: [
+      { id: "hint_song",    en: "Strings and reeds, left for willing hands.",   cs: "Struny a píšťaly — čekají na ochotné ruce.",
+        done: function () { return isRetired("hint_song"); } },                                     // an instrument played
+      { id: "hint_water",   en: "Green things get thirsty too.",                cs: "I zelené věci dostanou žízeň.",
+        done: function () { return isRetired("hint_water"); } },                                    // a plant watered
+      { id: "hint_mask",    en: "The mask blinks first.",                       cs: "Maska mrkne první.",
+        done: function () { return isRetired("hint_mask"); } },                                     // the mask poked
+      { id: "hint_camera",  en: "You're being watched — and photographed.",     cs: "Někdo tě pozoruje — a fotí.",
+        done: function () { return isRetired("hint_camera"); } },                                   // the photographer snapped you
+      { id: "hint_critter", en: "Count the legs. There's a stranger about.",    cs: "Spočítej nožky. Někdo cizí se tu potuluje.",
+        done: function () { return isRetired("hint_critter"); } },                                  // the cat or ladybug found
+      { id: "hint_tarot",   en: "After dark, the cards have something to say.", cs: "Po setmění mají karty co říct.",
+        done: function () { return isRetired("hint_tarot"); } }                                     // a tarot card drawn
+    ],
+    cuddly: [
+      { id: "hint_octi",   en: "Octi is soft, and a little lonely.",          cs: "Chobotnička je měkká — a trošku sama.",
+        done: function () { return isRetired("hint_octi") || octiPlayed(); } },                     // Octi squeezed
+      { id: "hint_screen", en: "One screen, many worlds — keep tapping.",      cs: "Jedna obrazovka, mnoho světů — ťukej dál.",
+        done: function () { return isRetired("hint_screen"); } },                                   // the projector cycled
+      { id: "hint_fire",   en: "The fire's warmer than it looks.",             cs: "Oheň hřeje víc, než by se zdálo.",
+        done: function () { return isRetired("hint_fire"); } },                                     // the fire (same screen) touched
+      { id: "hint_chest",  en: "What sleeps in the chest doesn't stay put.",   cs: "Co spí v truhle, dlouho neposedí.",
+        done: function () { return isRetired("hint_chest"); } },                                    // the trunk opened
+      { id: "hint_hot",    en: "It's getting hot in here…",                    cs: "Začíná tu být horko…",
+        done: function () { return isRetired("hint_hot"); } }                                       // the daybed couple's been cuddled
+    ],
+    office: [
+      { id: "hint_tower",     en: "The old tower dreams of booting.",                  cs: "Stará bedna sní o naběhnutí.",
+        done: function () { return isRetired("hint_tower") || !!window.__pcPlayed; } },             // the PC powered on
+      { id: "hint_deeper",    en: "We must go deeper — turn on the monitor.",          cs: "Musíme jít hlouběji — zapni monitor.",
+        done: function () { return isRetired("hint_deeper") || !!window.__pcPlayed; } },            // the PC/monitor on
+      { id: "hint_arcade",    en: "A restless chair hides a game.",                    cs: "Neposedná židle skrývá hru.",
+        done: function () { return isRetired("hint_arcade"); } },                                   // the chair-arcade armed
+      { id: "hint_prague",    en: "Someone in Prague is waiting for your call.",       cs: "Někdo v Praze čeká na tvůj hovor.",
+        done: function () { return isRetired("hint_prague") || !!window.__pragueCalled; } },        // Prague called
+      { id: "hint_sprinkler", en: "Don't tap the ceiling sprinkler. You will anyway.", cs: "Neťukej na stropní hasič. Stejně to uděláš.",
+        done: function () { return isRetired("hint_sprinkler"); } },                                // the sprinkler triggered
+      { id: "hint_desk",      en: "The desk keeps odd company — poke around.",         cs: "Stůl má divnou společnost — porejdi kolem.",
+        done: function () { return isRetired("hint_desk"); } }                                      // a desk oddity tapped
+    ],
+    balcony: [
+      { id: "hint_phone",  en: "Your pocket's been buzzing a while.",  cs: "V kapse ti to už chvíli vibruje.",
+        done: function () { return isRetired("hint_phone"); } },                                    // the pocket phone opened
+      { id: "hint_bbq",    en: "Fire up the grill — someone's hungry.", cs: "Rozpal gril — někdo má hlad.",
+        done: function () { return isRetired("hint_bbq"); } },                                      // the grill lit / food served
+      { id: "hint_sun",    en: "One tap turns day to dusk.",           cs: "Jedno ťuknutí a den se změní v soumrak.",
+        done: function () { return isRetired("hint_sun"); } },                                      // day/night toggled
+      { id: "hint_chime",  en: "The chimes only sing when nudged.",    cs: "Zvonkohra zpívá, jen když do ní šťouchneš.",
+        done: function () { return isRetired("hint_chime"); } },                                    // the wind chimes rung
+      { id: "hint_switch", en: "Every switch has a purpose.",          cs: "Každý vypínač má svůj účel.",
+        done: function () { return isRetired("hint_switch"); } }                                    // the balcony/party switch used
+    ]
+  };
+  // Warm sign-off once a room's hints are all retired (shared across rooms).
   var HINT_ALLDONE = { en: "You've found your way around every corner ♥ nothing left to hint.",
                        cs: "Prošmejdil(a) jsi každý kout ♥ víc už neporadím." };
 
   // Inject the hint captions into the shared hunt dict (both languages) so
-  // setCaption(key) / refreshHuntCaption() render + re-render them on a language
-  // flip exactly like any room caption. Done at load, off the array — the T.hunt
-  // LITERAL is never touched, so check.js key-parity stays trivially balanced and
-  // there's no overlap with the cinematic's cine_* keys.
+  // setCaption(key) / refreshHuntCaption() render + re-render them on a language flip
+  // exactly like any room caption. Done at load, off the pools — the T.hunt LITERAL is
+  // never touched, so check.js key-parity stays trivially balanced.
   try {
-    BRICK_HINTS.forEach(function (h) {
-      if (T.en && T.en.hunt) T.en.hunt[h.id] = h.en;
-      if (T.cs && T.cs.hunt) T.cs.hunt[h.id] = h.cs;
+    Object.keys(ROOM_HINTS).forEach(function (room) {
+      ROOM_HINTS[room].forEach(function (h) {
+        if (T.en && T.en.hunt) T.en.hunt[h.id] = h.en;
+        if (T.cs && T.cs.hunt) T.cs.hunt[h.id] = h.cs;
+      });
     });
     if (T.en && T.en.hunt) T.en.hunt.hint_alldone = HINT_ALLDONE.en;
     if (T.cs && T.cs.hunt) T.cs.hunt.hint_alldone = HINT_ALLDONE.cs;
   } catch (e) {}
 
-  // Dispenser: advance the pointer to the next NOT-done hint (wrapping), show it,
-  // and leave the pointer past it so repeated double-clicks feel like they're
-  // rotating through fresh nudges. All hints retired → the warm all-done line.
-  var hintPtr = 0;
-  window.__brickHint = function () {
-    if (!window.setCaption || !BRICK_HINTS.length) return;
-    var n = BRICK_HINTS.length, key = "hint_alldone";
-    for (var i = 0; i < n; i++) {
-      var h = BRICK_HINTS[(hintPtr + i) % n];
-      if (!h.done()) { key = h.id; hintPtr = (hintPtr + i + 1) % n; break; }
-    }
-    window.setCaption(key); // transient — reclaimed by the next room hint / room change
+  // A tap on an object a new hint points at retires that hint the first time it's touched
+  // — one delegated CAPTURE-phase listener (beats any stopPropagation), no edits scattered
+  // across each object's own handler. Objects with a cleaner existing signal (coffee/song/
+  // octi/prague/pc/bar) retire from their own site instead.
+  var RETIRE_ON_CLICK = {
+    "kitchen-pans": "hint_knock", "kitchen-gong": "hint_knock",
+    "kitchen-cabinet-1": "hint_cupboards", "kitchen-cabinet-2": "hint_cupboards",
+    "kitchen-cabinet-3": "hint_cupboards", "kitchen-cabinet-4": "hint_cupboards",
+    "kitchen-grinder": "hint_grinder",
+    "garden-mask": "hint_mask",
+    "garden-monstera": "hint_water", "garden-snakeplant": "hint_water", "garden-peacelily": "hint_water",
+    "garden-dieffenbachia": "hint_water", "garden-smallpots": "hint_water",
+    "garden-ladybug": "hint_critter", "garden-chest": "hint_critter",
+    "garden-tarot": "hint_tarot", "garden-photog-hit": "hint_camera",
+    "cuddly-wallscreen": "hint_screen hint_fire",
+    "cuddly-trunk": "hint_chest",
+    "office-chair": "hint_arcade", "office-sprinkler": "hint_sprinkler",
+    "office-skull": "hint_desk", "office-spin-top": "hint_desk", "office-wooden-head": "hint_desk",
+    "balcony-phone": "hint_phone",
+    "balcony-coveredgrill": "hint_bbq", "balcony-smoker-firebox": "hint_bbq", "balcony-smoker-lid": "hint_bbq",
+    "balcony-sun": "hint_sun", "balcony-windchime": "hint_chime", "balcony-partyswitch": "hint_switch"
   };
+  (function () {
+    var strip = document.getElementById("loft-game-strip");
+    if (!strip) return;
+    strip.addEventListener("click", function (e) {
+      if (!e.target || !e.target.closest) return;
+      for (var sel in RETIRE_ON_CLICK) {
+        if (e.target.closest("#" + sel)) { RETIRE_ON_CLICK[sel].split(" ").forEach(function (id) { window.__retireHint(id); }); break; }
+      }
+    }, true);
+  })();
+
+  // Dispenser + auto-dismiss/toggle. A tap shows the current room's next un-retired,
+  // in-context hint for ~5s, then RESTORES the room's own caption (setCaption +
+  // restoreStageHint + refreshHuntCaption — the last rebuilds the balcony RSVP-nudge
+  // link, the one key only refreshHuntCaption repairs). A second tap (any brick)
+  // dismisses immediately. The hint rides the captionKey path, so a language flip while
+  // it's up re-renders it. All of a room's offered hints retired → the all-done line.
+  var HINT_HOLD = 5000;
+  var hintPtr = { kitchen: 0, garden: 0, cuddly: 0, office: 0, balcony: 0 };
+  var hintTimer = null, hintShowing = false, hintCurKey = null, hintSavedKey = null;
+  function clearHintTimer() { if (hintTimer) { clearTimeout(hintTimer); hintTimer = null; } }
+  function restoreRoomCaption() {
+    var name = window.currentStageName;
+    if (window.setCaption) window.setCaption(hintSavedKey != null ? hintSavedKey : name);
+    if (window.restoreStageHint) window.restoreStageHint(name);
+    if (window.refreshHuntCaption) window.refreshHuntCaption(); // rebuilds the rsvp-nudge link for that one key; a plain re-render for the rest
+  }
+  function dismissHint() {
+    clearHintTimer();
+    if (!hintShowing) return;
+    hintShowing = false;
+    var still = window.__captionKey ? window.__captionKey() : null;
+    if (still === hintCurKey) restoreRoomCaption(); // only reclaim the line if our hint still owns it (a room change already replaced it → leave it)
+    hintCurKey = null; hintSavedKey = null;
+  }
+  window.__dismissBrickHint = dismissHint; // test/console hook
+  function showRoomHint(room) {
+    if (!window.setCaption) return;
+    var list = ROOM_HINTS[room] || [];
+    var n = list.length, ptr = hintPtr[room] || 0, key = "hint_alldone";
+    for (var i = 0; i < n; i++) {
+      var h = list[(ptr + i) % n];
+      if (h.rel && !h.rel()) continue;   // gated out of this state (e.g. bar hints with the bar down)
+      if (!h.done()) { key = h.id; hintPtr[room] = (ptr + i + 1) % n; break; }
+    }
+    hintSavedKey = window.__captionKey ? window.__captionKey() : null;
+    window.setCaption(key);
+    if (window.__captionKey && window.__captionKey() !== key) { hintSavedKey = null; return; } // a guard (cinematic/intro) swallowed it — don't latch a phantom hint
+    hintShowing = true; hintCurKey = key;
+    clearHintTimer();
+    hintTimer = setTimeout(dismissHint, HINT_HOLD);
+  }
+  window.__brickHint = function (room) { showRoomHint(room || window.currentStageName); };
 
   document.querySelectorAll(".wall-brick").forEach(function (brick) {
     function wobbleBrick() {
@@ -47104,7 +47224,14 @@ function spawnDustMote(container) {
       });
       playTongsClackSound();
     }
-    function tapBrick() { wobbleBrick(); if (window.__brickHint) window.__brickHint(); } // a single tap now dispenses a hint (was dblclick — undiscoverable, and dead on touch)
+    function tapBrick() {
+      wobbleBrick();
+      var owns = hintShowing && window.__captionKey && window.__captionKey() === hintCurKey;
+      if (owns) { dismissHint(); return; } // a hint we still own is up → this tap toggles it off
+      if (hintShowing) { clearHintTimer(); hintShowing = false; hintCurKey = null; hintSavedKey = null; } // stale (room changed / claimed) → clear silently, show fresh
+      var stage = brick.closest('[id^="stage-"]');
+      showRoomHint(stage ? stage.id.replace("stage-", "") : window.currentStageName);
+    }
     brick.addEventListener("click", tapBrick);
     brick.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tapBrick(); }

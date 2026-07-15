@@ -19118,29 +19118,35 @@ document.addEventListener("click", function (e) {
       if (window.__setGardenParty) window.__setGardenParty(true, true);
     }
   });
-  // Night-peek: 5s after dusk falls, the disco ball fades into view in the garden even with no
-  // party lit — a quiet invitation to tap it and start one. Driven off the day/night + party
-  // state via __updateGardenDiscoPeek (called from toggleDusk, setGardenParty, and the reset).
-  // The .disco-peek class on #stage-garden fades the ball in (CSS) and makes it clickable; a live
-  // party or daylight both retract it. One-shot setTimeout (self-clearing, never accumulates).
+  // Night-peek: each time the player ENTERS the garden after dark with no party lit, the disco
+  // ball fades into view 5s later — a quiet invitation to tap it and start one. Leaving the
+  // garden hides it again and cancels the pending reveal, so it re-arms from scratch on the next
+  // visit (rather than staying up all night). Driven off room + day/night + party state via
+  // __updateGardenDiscoPeek, re-evaluated on every room change (goToStage) and on the dusk/party/
+  // reset transitions. The .disco-peek class on #stage-garden fades the ball in (CSS) and makes
+  // it clickable; leaving the garden, a live party, or daylight all retract it. One-shot
+  // setTimeout, cleared before each re-arm so it never accumulates.
   var peekTimer = null;
   window.__updateGardenDiscoPeek = function () {
     var gs = document.getElementById("stage-garden");
     if (!gs) return;
-    var night = gs.classList.contains("dusk");
-    var wantPeek = night && !window.__gardenPartyOn; // only after dark, only when no party is on
+    var wantPeek = window.currentStageName === "garden"  // only while standing in the garden
+      && gs.classList.contains("dusk")                   // only after dark
+      && !window.__gardenPartyOn;                        // only when no party is on
     if (wantPeek) {
-      // arm the 5s reveal once; don't restart a pending timer or re-add an existing peek
+      // arm the 5s reveal; don't restart a pending timer or re-add an already-shown peek
       if (peekTimer || gs.classList.contains("disco-peek")) return;
       peekTimer = setTimeout(function () {
         peekTimer = null;
         var g = document.getElementById("stage-garden");
-        // re-check at fire time — dusk could have lifted or a party started during the 5s
-        if (g && g.classList.contains("dusk") && !window.__gardenPartyOn) g.classList.add("disco-peek");
+        // re-check at fire time — the player could have left, dusk lifted, or a party started
+        if (g && window.currentStageName === "garden" && g.classList.contains("dusk") && !window.__gardenPartyOn) g.classList.add("disco-peek");
       }, 5000);
     } else {
+      // left the garden, day returned, or party lit -> cancel any pending reveal and hide the
+      // ball immediately, so the next garden entry re-arms the delay from scratch
       if (peekTimer) { clearTimeout(peekTimer); peekTimer = null; }
-      gs.classList.remove("disco-peek"); // party lit or day returned -> retract the invitation
+      gs.classList.remove("disco-peek");
     }
   };
 })();
@@ -37892,6 +37898,7 @@ function spawnDustMote(container) {
     if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // leaving the kitchen snaps the eased blacklight back to full; entering it (re)arms the linger
     if (window.__updateWind) window.__updateWind(ROOM_FADE); // wind bed (balcony, + through the cuddly door) fades out over the room change too
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(name === "garden"); // birdsong only in the garden, and only by day
+    if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // after-dark disco-ball peek re-arms on entering the garden at night, retracts on leaving (reads window.currentStageName)
     if (window.__updatePartyMusic) window.__updatePartyMusic(ROOM_FADE); // techno party bed plays whole-loft while the party's on (room-agnostic, like the night-sky bed)
     if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(name === "balcony"); // string lights pulse with the beat only on the balcony
     if (window.__updateMozzies) window.__updateMozzies(); // dusk mosquitoes swarm only on the balcony (reads the now-current room)

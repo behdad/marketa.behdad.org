@@ -20335,7 +20335,16 @@ document.addEventListener("click", function (e) {
   }
   wireBarWobbleGroup("kitchen-bar-glassware", barGlassHit);
   wireBarWobbleGroup("kitchen-bar-usedglasses", barGlassHit);
-  wireBarWobbleGroup("kitchen-bar-stools", function (w, pan) { playDryClickSound(pan); }); // a soft wooden knock, not a clink
+  wireBarWobbleGroup("kitchen-bar-stools", function (w, pan) { // a soft wooden knock, not a clink
+    playDryClickSound(pan);
+    // a patron riding this stool gets jostled too (their seat was knocked) — reuse the hiccup jolt
+    var pid = { "kitchen-bar-stool-1": "kitchen-bar-patron-a", "kitchen-bar-stool-3": "kitchen-bar-patron-b" }[w.id];
+    var p = pid && document.getElementById(pid);
+    if (p && !p.classList.contains("tumbling") && !p.classList.contains("kissing")) {
+      p.classList.remove("hiccup");
+      requestAnimationFrame(function () { requestAnimationFrame(function () { p.classList.add("hiccup"); }); });
+    }
+  });
   // the "?" of "will you be there?" carved into the bar front pokes out past the cabinets; tapping it
   // wobbles the word and raises the keyboard-shortcuts card (a quiet find). Hit-pad over just the "?".
   (function () {
@@ -20376,7 +20385,7 @@ document.addEventListener("click", function (e) {
     // kiss with hysteresis so a jittery park near the threshold doesn't chatter (and over-roll tumbles).
     var PATRON_OF = { "kitchen-bar-stool-1": "kitchen-bar-patron-a", "kitchen-bar-stool-3": "kitchen-bar-patron-b" };
     var STOOL_OF = { "kitchen-bar-patron-a": "kitchen-bar-stool-1", "kitchen-bar-patron-b": "kitchen-bar-stool-3" };
-    var KISS_ENTER = GAP + 6, KISS_EXIT = GAP + 16; // touch to kiss (≤ 52 apart); part only past 62 (dead-band)
+    var KISS_ENTER = GAP + 30, KISS_EXIT = GAP + 44; // lean in for a kiss from a comfortable gap (≤ 76 apart), not crushed together; must part past 90 to re-arm
     var SVGNS = "http://www.w3.org/2000/svg";
     function reduceMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
     function patronPan(g) { try { var b = g.getBBox(); return Math.max(-1, Math.min(1, ((b.x + b.width / 2) / 680) * 2 - 1)); } catch (e) { return 0; } }
@@ -20415,21 +20424,41 @@ document.addEventListener("click", function (e) {
       p.classList.add("tumbling");
       try { if (window.playTampSound) playTampSound(patronPan(p)); } catch (e) {} // a soft "oof"/thud, panned to the patron
     }
-    function maybeTumble() { // ~1 in 3–4 partings, a random one of the two takes a tumble
+    function maybeTumble() { // 50/50 after a kiss, a random one of the two topples off the seat
       if (reduceMotion()) return;
-      if (Math.random() > 0.3) return;
+      if (Math.random() >= 0.5) return;
       tumble(Math.random() < 0.5 ? "kitchen-bar-patron-a" : "kitchen-bar-patron-b");
     }
-    function updateKiss() { // hysteresis: enter ≤ KISS_ENTER, part only past KISS_EXIT; on parting, maybe a tumble
+    var kissEndTimer = 0, kissLoopTimer = 0;
+    function patronsClose() { return Math.abs(effX("kitchen-bar-stool-1") - effX("kitchen-bar-stool-3")) <= KISS_ENTER; }
+    function patronsBusy() {
+      var a = document.getElementById("kitchen-bar-patron-a"), b = document.getElementById("kitchen-bar-patron-b");
+      if (!a || !b) return true;
+      return a.classList.contains("kissing") || b.classList.contains("kissing") || a.classList.contains("tumbling") || b.classList.contains("tumbling");
+    }
+    function endKiss() { // the 1.5s embrace is over — sit back, and 50% of the time one topples off the seat
+      kissEndTimer = 0;
+      var a = document.getElementById("kitchen-bar-patron-a"), b = document.getElementById("kitchen-bar-patron-b");
+      if (a) a.classList.remove("kissing"); if (b) b.classList.remove("kissing");
+      maybeTumble();
+    }
+    function startKiss() { // a one-shot 1.5s kiss — only when they're close and neither is mid-kiss/tumble
+      if (patronsBusy() || !patronsClose()) return;
       var a = document.getElementById("kitchen-bar-patron-a"), b = document.getElementById("kitchen-bar-patron-b");
       if (!a || !b) return;
-      var d = Math.abs(effX("kitchen-bar-stool-1") - effX("kitchen-bar-stool-3"));
-      if (a.classList.contains("kissing")) {
-        if (d > KISS_EXIT) { a.classList.remove("kissing"); b.classList.remove("kissing"); maybeTumble(); }
-      } else if (d <= KISS_ENTER && !a.classList.contains("tumbling") && !b.classList.contains("tumbling")) {
-        a.classList.add("kissing"); b.classList.add("kissing"); spawnKissHeart();
-      }
+      a.classList.add("kissing"); b.classList.add("kissing"); spawnKissHeart();
+      clearTimeout(kissEndTimer); kissEndTimer = setTimeout(endKiss, 1500);
     }
+    window.__barPatronKiss = function () { if (patronsClose()) { startKiss(); return true; } return false; }; // a click on a patron kisses when they're close (else it hiccups)
+    function updateKiss() { startKiss(); } // dragging them together kisses right away
+    function kissLoop() { // while they stay close they kiss again every few seconds — gated on bar-up + tab visible & focused; skipped under reduced motion
+      kissLoopTimer = setTimeout(kissLoop, 3500 + Math.random() * 3500); // ~3.5–7s, self-rescheduling (one lightweight timer, no particle accumulation)
+      if (reduceMotion()) return;
+      if (document.visibilityState === "hidden" || (document.hasFocus && !document.hasFocus())) return;
+      if (window.__barUpNow && !window.__barUpNow()) return;
+      startKiss(); // a no-op unless they're close and idle
+    }
+    kissLoop();
     var dragEl = null, dragId = null, startX = 0, startEff = 0, dragMoved = false;
     function startDrag(e, stoolId) { // shared by a stool grab AND a patron-body grab; captures on the STOOL so the handlers below run unchanged
       if (window.__barUpNow && !window.__barUpNow()) return; // draggable only while the bar's up (belt-and-suspenders; CSS already gates pointer-events)
@@ -20491,6 +20520,7 @@ document.addEventListener("click", function (e) {
     }
     window.__forceBarTumble = function (which) { tumble(which === "b" ? "kitchen-bar-patron-b" : "kitchen-bar-patron-a"); }; // test hook: force the tumble path
     function resetPatrons() { // fresh game: reseat both patrons at default x, drop any kiss/tumble state + stray hearts
+      clearTimeout(kissEndTimer); kissEndTimer = 0; // (the ambient kissLoop keeps running; it just won't fire once they're re-seated apart)
       ["kitchen-bar-patron-a", "kitchen-bar-patron-b"].forEach(function (pid) {
         var p = document.getElementById(pid);
         if (p) { p.classList.remove("kissing"); p.classList.remove("tumbling"); p.style.translate = ""; }
@@ -20527,6 +20557,7 @@ document.addEventListener("click", function (e) {
       var g = e.target && e.target.closest ? e.target.closest("#kitchen-bar-patron-a, #kitchen-bar-patron-b") : null;
       if (!g || g.parentNode !== patrons) return;
       e.stopPropagation();
+      if (window.__barPatronKiss && window.__barPatronKiss()) return; // sitting close together → a tap makes them kiss, not hiccup
       g.classList.remove("hiccup"); // rAF-double so a repeat tap restarts the one-shot
       requestAnimationFrame(function () { requestAnimationFrame(function () { g.classList.add("hiccup"); }); });
       playHiccupSound(patronPan(g));

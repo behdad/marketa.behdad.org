@@ -23489,6 +23489,7 @@ document.addEventListener("click", function (e) {
     if (tehranG) tehranG.classList.add("connected");
     playPhoneVoiceSound("office-monitor"); // the family picks up: "alo?"
     startCallAmbient("tehran"); // the warm indoor murmur while the call lasts
+    if (window.__startTehranMelody) window.__startTehranMelody(); // the birthday song on their end
   }
   function openTehranCall() {
     if (monitor.classList.contains("show-saver")) { stopSaver(); monitor.classList.add("show-caps"); } // a click that raced the screensaver still lands
@@ -23509,6 +23510,7 @@ document.addEventListener("click", function (e) {
   function dropTehranCall(silent) {
     clearTehranTimers();
     stopCallAmbient();
+    if (window.__stopTehranMelody) window.__stopTehranMelody(); // silence the birthday song the instant we hang up
     var wasLive = tehranLive();
     monitor.classList.remove("show-tehran");
     if (tehranG) tehranG.classList.remove("connected");
@@ -35464,6 +35466,93 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
   window.__startPragueMelody = function () { wanted = true; update(); };
   window.__stopPragueMelody = function () { wanted = false; update(); };
   window.__updatePragueMelody = update;
+  document.addEventListener("visibilitychange", update);
+  window.addEventListener("focus", update);
+  window.addEventListener("blur", update);
+})();
+// ── TEHRAN CALL BACKGROUND MELODY (audio) ────────────────────────────────────────
+// The Persian birthday song "Tavalodet Mobarak" drifts in from the family's end of the
+// monitor's Tehran call — it's the girl's 10th-birthday party over there. Same treatment
+// as the Prague melody: faint, low-passed "through the call", layered under the Tehran
+// wind+giggle bed, satieNote-style triangle voices, panned to the monitor. The tune is the
+// real melody voice transcribed from a MIDI ("tavalodet_voice.mid", track 1) into
+// [semitonesFromA4, ringDur, stepDur] events — a traditional song, like Lübeck's
+// Tumbalalaika. It's 34s (longer than getSfxCtx's 20s idle-suspend), so a LOOK-AHEAD
+// scheduler queues ~1.2s at a time and re-grabs getSfxCtx each tick to keep the shared ctx
+// awake (front-scheduling the whole song would let it suspend mid-tune). Gated on the live
+// Tehran call + focus + visibility; started/stopped by the Tehran call's own connect/drop.
+//
+// CROSS-LANE NOTE: the Tehran call is a monitor app; this melody + its two wiring lines in
+// connectTehranCall/dropTehranCall were added at the owner's explicit instruction. Shipped
+// UNHEARD (no headless audition) — tune + mix are for owner review.
+(function () {
+  var monitor = document.getElementById("office-monitor");
+  var tehranG = document.getElementById("monitor-tehran");
+  if (!monitor || !tehranG) return;
+  var wanted = false, active = false, tickTimer = null, nodes = [], bus = null, busCtx = null, fxNodes = null, idx = 0, nextT = 0;
+  // "Tavalodet Mobarak" — [semitones from A4, ring length (s), step to next (s)]
+  var MEL = [[-2,0.179,0.179],[-2,0.357,0.357],[3,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[3,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[3,0.357,0.357],[3,0.179,0.179],[2,0.179,0.179],[0,0.357,0.357],[2,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[2,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[2,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[0,0.357,0.357],[-2,0.179,0.179],[0,0.179,0.179],[2,0.357,0.357],[3,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[3,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[3,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[3,0.357,0.357],[3,0.179,0.179],[2,0.179,0.179],[0,0.357,0.357],[2,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[2,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[2,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[0,0.357,0.357],[-2,0.179,0.179],[0,0.179,0.179],[2,0.357,0.357],[3,0.536,0.536],[-2,0.357,0.357],[0,0.179,0.179],[1,0.357,0.357],[1,0.179,0.179],[0,0.179,0.179],[-4,0.357,0.357],[-7,0.536,0.536],[-7,0.179,0.179],[-7,0.179,0.179],[-5,0.179,0.179],[-4,0.357,0.357],[-5,0.179,0.179],[-7,0.357,0.357],[-9,0.714,0.714],[-2,0.357,0.357],[0,0.179,0.179],[1,0.357,0.357],[1,0.179,0.179],[0,0.179,0.179],[-4,0.357,0.357],[-7,0.536,0.536],[-7,0.179,0.179],[-7,0.179,0.179],[-5,0.179,0.179],[-4,0.357,0.357],[-5,0.179,0.179],[-7,0.357,0.357],[-9,0.714,0.714],[-2,0.179,0.179],[-2,0.357,0.357],[3,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[3,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[3,0.357,0.357],[3,0.179,0.179],[2,0.179,0.179],[0,0.357,0.357],[2,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[2,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[2,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[0,0.357,0.357],[-2,0.179,0.179],[0,0.179,0.179],[2,0.357,0.357],[3,0.536,0.536]];
+  var GAP = 2.6; // a breath before the song loops round again
+  function want() {
+    return wanted && monitor.classList.contains("show-tehran") && tehranG.classList.contains("connected") &&
+      !document.hidden && document.hasFocus();
+  }
+  function track(n) { nodes.push(n); n.onended = function () { var i = nodes.indexOf(n); if (i >= 0) nodes.splice(i, 1); }; }
+  function note(ctx, dest, t, semis, dur) {
+    var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = 440 * Math.pow(2, semis / 12);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(1, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.35, t + Math.min(dur, 0.5));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.25);
+    o.connect(g); g.connect(dest);
+    o.start(t); o.stop(t + dur + 0.3); track(o);
+  }
+  function tick() {
+    if (!active) return;
+    var ctx = getSfxCtx(); // re-grab each tick keeps the shared ctx off its 20s idle-suspend
+    if (!ctx || ctx !== busCtx) { stop(); return; }
+    var horizon = ctx.currentTime + 1.2, guard = 0;
+    while (nextT < horizon && guard++ < 200) {
+      var ev = MEL[idx];
+      note(ctx, bus, nextT, ev[0], ev[1]);
+      nextT += ev[2]; idx++;
+      if (idx >= MEL.length) { idx = 0; nextT += GAP; } // loop with a breath
+    }
+    tickTimer = setTimeout(tick, 250);
+  }
+  function start() {
+    var ctx = getSfxCtx(); if (!ctx) return;
+    active = true; busCtx = ctx; idx = 0; nextT = ctx.currentTime + 0.15;
+    bus = ctx.createGain(); bus.gain.value = 0.05; // faint, under the family's murmur
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1700; lp.Q.value = 0.5;
+    var out = pannedOut(ctx, "office-monitor");
+    var conv = ctx.createConvolver();
+    var rlen = Math.floor(ctx.sampleRate * 0.45), rbuf = ctx.createBuffer(2, rlen, ctx.sampleRate);
+    for (var ch = 0; ch < 2; ch++) { var rd = rbuf.getChannelData(ch); for (var i = 0; i < rlen; i++) rd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / rlen, 2.2); }
+    conv.buffer = rbuf;
+    var dry = ctx.createGain(); dry.gain.value = 0.85;
+    var wet = ctx.createGain(); wet.gain.value = 0.22;
+    bus.connect(lp);
+    lp.connect(dry); dry.connect(out);
+    lp.connect(conv); conv.connect(wet); wet.connect(out);
+    fxNodes = [lp, conv, dry, wet];
+    tick();
+  }
+  function stop() {
+    active = false;
+    clearTimeout(tickTimer); tickTimer = null;
+    nodes.forEach(function (n) { try { n.stop(); } catch (e) {} }); nodes = [];
+    if (bus && busCtx) {
+      try { var t = busCtx.currentTime; bus.gain.cancelScheduledValues(t); bus.gain.setValueAtTime(bus.gain.value, t); bus.gain.linearRampToValueAtTime(0.0001, t + 0.12); } catch (e) {}
+      var b = bus, fx = fxNodes; setTimeout(function () { try { b.disconnect(); } catch (e) {} if (fx) fx.forEach(function (n) { try { n.disconnect(); } catch (e) {} }); }, 240);
+    }
+    bus = null; busCtx = null; fxNodes = null;
+  }
+  function update() { if (want() && !active) start(); else if (!want() && active) stop(); }
+  window.__startTehranMelody = function () { wanted = true; update(); };
+  window.__stopTehranMelody = function () { wanted = false; update(); };
+  window.__updateTehranMelody = update;
   document.addEventListener("visibilitychange", update);
   window.addEventListener("focus", update);
   window.addEventListener("blur", update);

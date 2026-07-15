@@ -23820,7 +23820,7 @@ document.addEventListener("click", function (e) {
     var RUNTIME_EXTRAS = { "show-doom": { restart: "__restartMonitorDoom", running: "__doomRunning", kill: "__killMonitorDoom" } };
     // per-app Kill overrides for plain (non-runtime) apps whose Kill should run a death-flash
     // instead of the silent generic close — the browser flashes Chrome's "Aw, Snap!" then closes.
-    var APP_KILLS = { "show-browser": "__killMonitorBrowser" };
+    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "photobooth": "__killMonitorPhotobooth" };
     var menuEl = null;
     function activeMonitorApp() {
       if (!monitor || window.currentStageName !== "office") return null;
@@ -26926,7 +26926,7 @@ async def localfont(name):
   var pbStarting = false; // getUserMedia is pending (its permission prompt is up)
   var pbPickHintTimer = null; // linger nudge on the filter picker
   var pbWant = false;     // the visitor still wants it on — cleared the instant they close/leave
-  var pbFxIndex = 0;
+  var pbFxIndex = 0; // selected look — session-scoped: kept across a normal close/reopen; zeroed only on a kill (__killMonitorPhotobooth / resetOfficeMonitor)
   var pbDialog = null;    // the polaroid dialog's backdrop element, or null
   var pbDialogUrl = null; // the dialog <img>'s object URL, revoked on dismiss
   var pbCount = document.getElementById("monitor-pb-count");
@@ -27045,10 +27045,10 @@ async def localfont(name):
         if (pl && pl.catch) pl.catch(function () {});
       }
       stopSaver(); // the fractal loop yields to the live feed
-      pbFxIndex = 0;
-      applyPbEffect();
+      applyPbEffect(); // resume the retained look — pbFxIndex is session-scoped (survives a normal close/reopen; a kill/reset zeroes it)
       pbActive = true;
       monitor.classList.add("photobooth"); // shows the booth + lights the red LED
+      if (pbBaseFrame) showPicker(); // a captured photo survived a normal close/reopen — bring its look picker back up over the live feed
     }).catch(function () {
       pbStarting = false;
       if (pbWant) showPbError(); // denied / no device / error — a friendly on-screen note, never a throw
@@ -27065,8 +27065,11 @@ async def localfont(name):
     // the music tile is the way back into the player)
     monitor.classList.remove("show-nowplaying");
     cancelCapture();         // stop any in-progress countdown / close the picker
-    pbBaseFrame = null;      // drop the captured frame — nothing of the camera lingers
-    dismissPolaroidDialog(); // the polaroid dialog goes away with the booth
+    // NB: the captured frame (pbBaseFrame) is deliberately KEPT here — a normal close/reopen
+    // resumes the picker (see openPhotobooth). It's a frozen canvas, camera-independent, so
+    // nothing of the live camera lingers. Only a kill (__killMonitorPhotobooth) or the loft
+    // reset (resetOfficeMonitor) drops it.
+    dismissPolaroidDialog(); // the polaroid dialog goes away with the booth (re-derivable from the frame)
     if (pbStream) { pbStream.getTracks().forEach(function (t) { t.stop(); }); pbStream = null; } // release the camera (light off)
     if (pbVideo) { try { pbVideo.pause(); } catch (e) {} pbVideo.srcObject = null; pbVideo.style.filter = "none"; } // drop the last frame
     var wasActive = pbActive;
@@ -27577,6 +27580,10 @@ async def localfont(name):
   document.addEventListener("visibilitychange", function () { if (document.hidden) closePhotobooth(); });
   window.addEventListener("pagehide", function () { closePhotobooth(); });
   window.__closeOfficePhotobooth = closePhotobooth;
+  // The right-click "Kill" (mon-ctx, via APP_KILLS) — distinct from a plain ✕ / Esc / room-leave,
+  // all of which KEEP the session. Kill wipes the retained state (look + captured photo) so a
+  // reopen starts fresh, then closes normally.
+  window.__killMonitorPhotobooth = function () { pbFxIndex = 0; pbBaseFrame = null; dismissPolaroidDialog(); closePhotobooth(); };
   // ── shared with the pocket phone's photobooth ── the phone runs its OWN camera + UI
   // (its own getUserMedia, video, capture) but reuses the monitor's real compositor,
   // look/frame lists, share routes and copy through these hooks — the Music/Mines
@@ -27596,6 +27603,7 @@ async def localfont(name):
     mailto: openMailto             // native mail client, same subject/body
   };
   window.resetOfficeMonitor = function () {
+    pbFxIndex = 0; pbBaseFrame = null; // the loft reset is a kill: drop the retained look + captured photo (closePhotobooth keeps them now)
     closePhotobooth(); // a reset must never leave the camera running
     clearBoot(); // powers the screen dark and closes every app (console/REPL/VM console included)
     // ...but clearBoot only CLOSES the consoles; their scrollback + welcome state live in
@@ -28581,6 +28589,7 @@ async def localfont(name):
     function uninstallApp(id) { // empty this app's slot (leaves a blank gap — others don't shift); a reset/reload brings it back
       ensurePhoneSlots();
       if (id === "cards") cardsIndex = 0; // uninstall is the phrasebook's "kill": reinstalling (reset/reload) starts fresh at card 1
+      if (id === "notes") notesDraft = ""; // uninstall is the notes app's "kill": a reinstalled notes pad starts empty (a normal close keeps the draft)
       for (var i = 0; i < phoneSlots.length; i++) if (phoneSlots[i] === id) { phoneSlots[i] = null; break; }
       if (shell && shell.classList.contains("pm-home")) renderHome();
     }
@@ -29407,7 +29416,7 @@ async def localfont(name):
       { text: "🦋💭🌈", small: true },
       { text: "I was so šleepy. Come to bed šoon. —🦋" }
     ];
-    var notesDraft = ""; // preserved across a language rebuild so a half-typed note survives an EN/CS toggle
+    var notesDraft = ""; // the typed note — session-scoped: survives a language rebuild AND a normal close/reopen; cleared only on a kill (uninstallApp / __resetPhoneApps)
     function renderNotes(body) {
       var wrap = document.createElement("div");
       wrap.className = "pm-notes";
@@ -30529,7 +30538,7 @@ async def localfont(name):
     }
     window.__openPhoneModal = open;
     window.__closePhoneModal = function (silent) { close(silent); };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and rewinds the phrasebook deck to card 1
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering), rewinds the phrasebook deck to card 1, and clears the notes draft
     // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
     // open(true) is the cinematic lock-skip path (same as __showCocktailInPhone), so a console
     // launch never stalls on the passcode. Matches by app id (case-insensitive) or its localized

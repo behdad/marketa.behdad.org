@@ -12733,6 +12733,8 @@ var T = {
     mon_ctx_restart: "Restart",
     mon_ctx_kill: "Kill",
     mon_ctx_open: "Open",
+    mon_ctx_stop: "Stop",
+    mon_ctx_uninstall: "Uninstall",
     app_phone: "phone",
     phone_dialer_title: "contacts",
     dial_call: "Call",
@@ -13134,6 +13136,8 @@ var T = {
     mon_ctx_restart: "Restartovat",
     mon_ctx_kill: "Ukončit",
     mon_ctx_open: "Otevřít",
+    mon_ctx_stop: "Zastavit",
+    mon_ctx_uninstall: "Odinstalovat",
     app_phone: "telefon",
     phone_dialer_title: "kontakty",
     dial_call: "Volat",
@@ -27620,6 +27624,7 @@ async def localfont(name):
     var selectedCity = null;
     var cardsIndex = 0;             // phrasebook deck position — reset on leave (see leaveCurrentApp)
     var callee = null, callConnected = false, callStatusKey = "", callHangingUp = false, callTimers = [];
+    var uninstalledApps = new Set(); // app-ids the visitor "Uninstall"ed via the icon right-click menu — hidden for the rest of the session (a page load / loft reset restores them)
 
     function isOpen() { return !!(modal && modal.parentNode); }
     function reduced() { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } }
@@ -27847,22 +27852,80 @@ async def localfont(name):
       var grid = document.createElement("div");
       grid.className = "phone-home-grid";
       PHONE_APPS.forEach(function (app) {
+        if (uninstalledApps.has(app.id)) return; // "Uninstall"ed this session — don't render its icon (a reset/reload brings it back)
         var tile = document.createElement("button");
         tile.type = "button";
         tile.className = "phone-app-tile";
+        tile.id = "phone-app-" + app.id;     // stable handle back to the app (mirror of the desktop dock's monitor-dock-<id>)
+        tile.setAttribute("data-app-id", app.id);
         var ico = app.icon
           ? '<svg viewBox="0 0 12 12" aria-hidden="true"><use href="#dicon-' + app.icon + '"/></svg>'
           : app.glyph;
         tile.innerHTML = '<span class="pat-ico" style="background:' + app.tile + '">' + ico + '</span>' +
           '<span class="pat-label">' + tr(app.labelKey) + '</span>';
-        tile.addEventListener("click", function () {
-          if (app.open) app.open();
-          else if (app.link) { try { window.open(app.link, "_blank"); } catch (e) {} }
-        });
+        tile.addEventListener("click", function () { launchApp(app); });
+        // right-click (desktop) → the same Open / Stop / Uninstall menu as the desktop dock.
+        // Fires only on an app icon, so blank home chrome / the lockscreen keep the native menu.
+        tile.addEventListener("contextmenu", function (e) { e.preventDefault(); openPhoneAppMenu(app, e.clientX, e.clientY); });
         grid.appendChild(tile);
       });
       home.appendChild(grid);
     }
+    function launchApp(app) { // shared by an icon tap and the menu's "Open" item
+      if (app.open) app.open();
+      else if (app.link) { try { window.open(app.link, "_blank"); } catch (e) {} }
+    }
+    function uninstallApp(id) { // hide this icon for the rest of the session; renderHome re-reads the set
+      uninstalledApps.add(id);
+      if (shell && shell.classList.contains("pm-home")) renderHome();
+    }
+
+    // ── app-icon right-click menu ────────────────────────────────────────────────
+    // A local twin of the desktop dock's .mon-ctx menu (that helper is private to the
+    // monitor IIFE, so we replicate the same small pattern here and reuse its global
+    // .mon-ctx CSS for an identical look + dismiss behavior). Adds a .phone-ctx marker
+    // class purely so tests can target the phone menu without touching the monitor's.
+    var phMenuEl = null;
+    var PH_OPEN_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 2.2 H9.8 V5.5"/><path d="M9.8 2.2 L5.6 6.4"/><path d="M9 6.7 V9.3 A0.6 0.6 0 0 1 8.4 9.9 H2.7 A0.6 0.6 0 0 1 2.1 9.3 V3.6 A0.6 0.6 0 0 1 2.7 3 H5"/></svg>';
+    var PH_STOP_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3.4" y="3.4" width="5.2" height="5.2" rx="0.9"/></svg>';
+    var PH_UNINST_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 3.8 H9.2"/><path d="M4.6 3.8 V2.9 A0.5 0.5 0 0 1 5.1 2.4 H6.9 A0.5 0.5 0 0 1 7.4 2.9 V3.8"/><path d="M3.7 3.8 L4.1 9.2 A0.6 0.6 0 0 0 4.7 9.7 H7.3 A0.6 0.6 0 0 0 7.9 9.2 L8.3 3.8"/></svg>';
+    function phCloseMenu() {
+      if (phMenuEl && phMenuEl.parentNode) phMenuEl.parentNode.removeChild(phMenuEl);
+      phMenuEl = null;
+      document.removeEventListener("mousedown", phOnAway, true);
+      document.removeEventListener("scroll", phCloseMenu, true);
+      window.removeEventListener("blur", phCloseMenu);
+      window.removeEventListener("resize", phCloseMenu);
+    }
+    function phOnAway(e) { if (phMenuEl && !phMenuEl.contains(e.target)) phCloseMenu(); }
+    function phMakeItem(cls, ico, label, fn) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = cls; b.setAttribute("role", "menuitem");
+      b.innerHTML = ico + "<span>" + label + "</span>";
+      b.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); phCloseMenu(); if (fn) fn(); });
+      return b;
+    }
+    function openPhoneAppMenu(app, x, y) {
+      phCloseMenu();
+      phMenuEl = document.createElement("div");
+      phMenuEl.className = "mon-ctx phone-ctx"; phMenuEl.setAttribute("role", "menu");
+      phMenuEl.appendChild(phMakeItem("ctx-open", PH_OPEN_ICO, tr("mon_ctx_open"), function () { launchApp(app); }));
+      phMenuEl.appendChild(phMakeItem("ctx-stop", PH_STOP_ICO, tr("mon_ctx_stop"), null)); // inert by design: closing the menu is all it does
+      phMenuEl.appendChild(phMakeItem("ctx-uninstall ctx-kill", PH_UNINST_ICO, tr("mon_ctx_uninstall"), function () { uninstallApp(app.id); }));
+      phMenuEl.style.visibility = "hidden";
+      // mount on <body> exactly like the desktop dock menu: .mon-ctx (z-index 60) clears the
+      // phone backdrop (z-index 41), and body is a clean fixed-positioning containing block
+      document.body.appendChild(phMenuEl);
+      var r = phMenuEl.getBoundingClientRect();
+      phMenuEl.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 4)) + "px";
+      phMenuEl.style.top = Math.max(4, Math.min(y, window.innerHeight - r.height - 4)) + "px";
+      phMenuEl.style.visibility = "";
+      document.addEventListener("mousedown", phOnAway, true);
+      document.addEventListener("scroll", phCloseMenu, true);
+      window.addEventListener("blur", phCloseMenu);
+      window.addEventListener("resize", phCloseMenu);
+    }
+    function phMenuOpen() { return !!(phMenuEl && phMenuEl.parentNode); }
 
     // ── dialer + call ──────────────────────────────────────────────────────────
     function openDialer() { openApp("phone", "phone_dialer_title", renderDialer); }
@@ -29725,6 +29788,7 @@ async def localfont(name):
     function close(silent) {
       if (!modal) return;
       closing = true;
+      phCloseMenu(); // never orphan an open app-icon menu when the phone goes away
       if (lockShakeT) { clearTimeout(lockShakeT); lockShakeT = null; }
       if (callee) dropCall(true); // silent teardown of any live call + ambient
       leaveCurrentApp();           // restore the re-placed Mines board to the monitor
@@ -29740,6 +29804,7 @@ async def localfont(name):
     }
     window.__openPhoneModal = open;
     window.__closePhoneModal = function (silent) { close(silent); };
+    window.__resetPhoneApps = function () { uninstalledApps.clear(); }; // loft reset re-installs every "Uninstall"ed app
     // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
     // open(true) is the cinematic lock-skip path (same as __showCocktailInPhone), so a console
     // launch never stalls on the passcode. Matches by app id (case-insensitive) or its localized
@@ -29822,6 +29887,7 @@ async def localfont(name):
       }
       if (e.key === "Escape" || e.key === "Esc") {
         e.preventDefault(); e.stopPropagation();
+        if (phMenuOpen()) { phCloseMenu(); return; } // an open app-icon menu owns Esc (matches the desktop .mon-ctx), doesn't navigate the phone back
         navBack();
         return;
       }
@@ -41197,6 +41263,7 @@ function spawnDustMote(container) {
     balconyIntroSeen = false; // a fresh playthrough replays the one-time arrival flourish
     if (window.resetSmoker) window.resetSmoker();
     if (window.resetLaptop) window.resetLaptop();
+    if (window.__resetPhoneApps) window.__resetPhoneApps(); // restore any "Uninstall"ed phone apps
     if (window.resetBalconyDusk) window.resetBalconyDusk();
     if (window.__stopMozzies) window.__stopMozzies(); // clear any dusk mosquitoes on the extinguisher reset
     if (window.__clearTipsy) window.__clearTipsy();

@@ -677,8 +677,14 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
    Everything here is inert until #stage-garden.garden-party, and it is designed to
    be seen THROUGH #loft-game-strip.uv-mode's filter, so the source colors are the
    UV neon palette (they glow rather than muddy under brightness .5 + hue-rotate). */
-#garden-partyfx{opacity:0; transition:opacity .5s ease}
-#stage-garden.garden-party #garden-partyfx{opacity:1}
+/* the partyfx wrapper is always live; its two children fade INDEPENDENTLY so the disco ball
+   can peek out on its own at night (5s after dusk, see .disco-peek) without dragging the color
+   pools in with it — clicking the peeking ball throws the full party. */
+#garden-disco-pools{opacity:0; transition:opacity .5s ease}
+#stage-garden.garden-party #garden-disco-pools{opacity:1}
+#garden-disco-ball{opacity:0; transition:opacity .6s ease}
+#stage-garden.garden-party #garden-disco-ball,
+#stage-garden.disco-peek #garden-disco-ball{opacity:1}
 /* roving colored light pools — screen-blended so they wash light over the room. DESKTOP keeps
    the smooth continuous CSS sweep (below). MOBILE (<760px) instead drives position/opacity from
    a JS STEPPER (see startDiscoStepper) that JUMPS each pool to a fresh spot ~once a second
@@ -876,7 +882,8 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
    compose). Only reachable during the party — the whole partyfx layer is pointer-events:none,
    re-enabled on the ball only under .garden-party. */
 #garden-disco-ball{pointer-events:none}
-#stage-garden.garden-party #garden-disco-ball{pointer-events:auto}
+#stage-garden.garden-party #garden-disco-ball,
+#stage-garden.disco-peek #garden-disco-ball{pointer-events:auto}
 #garden-disco-ball-pop{transform-box:fill-box; transform-origin:center}
 #garden-disco-ball-pop.popping{animation:disco-ball-pop .5s ease-out}
 @keyframes disco-ball-pop{0%{transform:scale(1)}30%{transform:scale(1.24)}58%{transform:scale(.9)}100%{transform:scale(1)}}
@@ -19036,14 +19043,47 @@ document.addEventListener("click", function (e) {
   pop.addEventListener("animationend", function () { pop.classList.remove("popping"); });
   ball.addEventListener("click", function (e) {
     if (e) e.stopPropagation();
-    if (!window.__gardenPartyOn) return;
+    var gs = document.getElementById("stage-garden");
+    var peeking = gs && gs.classList.contains("disco-peek"); // the after-dark 5s invitation
+    if (!window.__gardenPartyOn && !peeking) return; // ball invisible: nothing to tap
     pop.classList.remove("popping");
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { pop.classList.add("popping"); });
     });
     playLampShimmerSound("garden-disco-ball");
-    if (window.__setPartyMode) window.__setPartyMode(false); // one last pop, then the ball calls the party -- but the night stays (no __setDayNight)
+    if (window.__gardenPartyOn) {
+      if (window.__setPartyMode) window.__setPartyMode(false); // party lit -> one last pop, then it ends (night stays)
+    } else {
+      // peeking after dark -> the tap throws the garden party (same garden-only start as the
+      // mirror/mask; night stays lit since __setGardenParty forces night, not the switch's UV)
+      if (window.__setGardenParty) window.__setGardenParty(true, true);
+    }
   });
+  // Night-peek: 5s after dusk falls, the disco ball fades into view in the garden even with no
+  // party lit — a quiet invitation to tap it and start one. Driven off the day/night + party
+  // state via __updateGardenDiscoPeek (called from toggleDusk, setGardenParty, and the reset).
+  // The .disco-peek class on #stage-garden fades the ball in (CSS) and makes it clickable; a live
+  // party or daylight both retract it. One-shot setTimeout (self-clearing, never accumulates).
+  var peekTimer = null;
+  window.__updateGardenDiscoPeek = function () {
+    var gs = document.getElementById("stage-garden");
+    if (!gs) return;
+    var night = gs.classList.contains("dusk");
+    var wantPeek = night && !window.__gardenPartyOn; // only after dark, only when no party is on
+    if (wantPeek) {
+      // arm the 5s reveal once; don't restart a pending timer or re-add an existing peek
+      if (peekTimer || gs.classList.contains("disco-peek")) return;
+      peekTimer = setTimeout(function () {
+        peekTimer = null;
+        var g = document.getElementById("stage-garden");
+        // re-check at fire time — dusk could have lifted or a party started during the 5s
+        if (g && g.classList.contains("dusk") && !window.__gardenPartyOn) g.classList.add("disco-peek");
+      }, 5000);
+    } else {
+      if (peekTimer) { clearTimeout(peekTimer); peekTimer = null; }
+      gs.classList.remove("disco-peek"); // party lit or day returned -> retract the invitation
+    }
+  };
 })();
 (function () {
   // Click the DJ's head for an emphatic one-shot headbang on top of his ambient nod. The bang
@@ -19068,7 +19108,9 @@ document.addEventListener("click", function (e) {
   head.addEventListener("dblclick", function (e) {
     if (e) e.stopPropagation();
     if (!window.__gardenPartyOn) return; // only while the party is live
-    if (window.__setGardenParty) window.__setGardenParty(false);
+    // route through the switch (UI + UV + garden all agree) — mirror of startGardenParty
+    if (window.__setPartyMode) window.__setPartyMode(false);
+    else if (window.__setGardenParty) window.__setGardenParty(false);
   });
 })();
 (function () {
@@ -29365,6 +29407,7 @@ async def localfont(name):
         if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle();
       }
       if (window.__updateMozzies) window.__updateMozzies(); // dusk → mosquitoes swarm; day → they clear
+      if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // dusk arms the 5s disco-ball peek; day retracts it
     }
     window.__autoToggleDusk = toggleDusk;
     // force day/night to a target state (the garden party lights up the night; its light
@@ -29405,6 +29448,7 @@ async def localfont(name):
       if (wallLampEl) wallLampEl.classList.remove("on");
       if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle();
       if (window.__updateMozzies) window.__updateMozzies(); // dusk removed → tear the swarm down
+      if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // day forced back → retract any disco-ball peek
     };
     // click the night sky (not the moon) to wish on a shooting star
     var skyClick = document.getElementById("balcony-skyclick");
@@ -30846,7 +30890,13 @@ async def localfont(name):
   // Two hidden party STARTERS: the mirror and the mask. A single click makes them SHINE (an
   // invitation to click again — the mirror already glares; the mask gleams here); a DOUBLE-click
   // throws the garden party (the DJ's head double-click stops it — see the disco/DJ block).
-  function startGardenParty() { if (window.__setGardenParty && !window.__gardenPartyOn) window.__setGardenParty(true, true); }
+  // Start the garden party (dancers, disco, music) — garden-only, no whole-loft UV blacklight
+  // (that stays exclusive to the balcony switch). Guarded so a stray dblclick on an already-lit
+  // party is a no-op. The stop paths (DJ head, tapping the lit ball) route through __setPartyMode
+  // instead, so however the party was lit — here OR the switch — stopping tears down cleanly.
+  function startGardenParty() {
+    if (window.__setGardenParty && !window.__gardenPartyOn) window.__setGardenParty(true, true);
+  }
   var maskFace = document.getElementById("garden-mask-face");
   function shineMask() { // re-triggerable one-shot glow on the ceramic face (filter, so it never clobbers the bob's transform)
     if (!maskFace) return;
@@ -38822,6 +38872,7 @@ function spawnDustMote(container) {
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // start/stop the garden groovers (incl. the bartender's party groove)
     if (window.__refreshKitchenBar) window.__refreshKitchenBar(); // party on/off swaps the kitchen bar↔espresso caption + arrows
     if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // party off snaps any eased kitchen blacklight back
+    if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // party on retracts the night-peek; party off at night re-arms it
   }
   window.__setGardenParty = setGardenParty;
   // Tap a party dancer -> that dancer does a celebratory flare (hop + twirl + pop). The

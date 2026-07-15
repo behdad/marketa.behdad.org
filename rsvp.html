@@ -12240,7 +12240,7 @@ var T = {
     ck_ingredients: "ingredients",
     ck_steps: "steps",
     ck_back: "‹ the bar",
-    ck_order: "🍸 Order — watch him make it",
+    ck_order: "🍸 Order",
     app_dressup: "dress-up",
     du_reset: "reset",
     du_tophats: "top hats",
@@ -12631,7 +12631,7 @@ var T = {
     ck_ingredients: "ingredience",
     ck_steps: "postup",
     ck_back: "‹ bar",
-    ck_order: "🍸 Objednat — sleduj, jak ho míchá",
+    ck_order: "🍸 Objednat",
     app_dressup: "oblékačka",
     du_reset: "reset",
     du_tophats: "cylindry",
@@ -18935,7 +18935,6 @@ document.addEventListener("click", function (e) {
         try { bartenderHit.setPointerCapture(e.pointerId); } catch (err) {}
       });
       bartenderHit.addEventListener("pointermove", function (e) {
-        if (flairActive) return; // during the game the document-level paddle-follow owns his X
         if (!barDragging) return;
         var px = bartenderSvgX(e);
         var dx = px - barDragStartX;
@@ -18952,16 +18951,19 @@ document.addEventListener("click", function (e) {
         if (!barDragging) return;
         barDragging = false;
         bartenderHit.classList.remove("grabbing");
-        bartender.style.transition = ""; // restore the smooth glide
+        bartender.style.transition = flairActive ? "none" : ""; // stay instant while the game runs; restore the glide otherwise
         try { bartenderHit.releasePointerCapture(e.pointerId); } catch (err) {}
       }
       bartenderHit.addEventListener("pointerup", onBartenderPointerUp);
       bartenderHit.addEventListener("pointercancel", onBartenderPointerUp);
-      // paddle-follow: once the game's armed, the shaker tracks the cursor anywhere on the
-      // page with NO button held (release the mouse and he keeps following) — till game over.
+      // While Flair-Catch runs the shaker keeps following the cursor even after the button is
+      // released — a hold-free paddle — until game over. Same seamless-with-drag mapping the
+      // chair arcade uses: reuse the last grab's anchor (relative, no jump), force transition
+      // off every move. Early-returns while dragging (the drag handler owns the move then).
       document.addEventListener("pointermove", function (e) {
-        if (!flairActive) return;
-        setBartenderOffset(bartenderSvgX(e) - 336); // shaker mouth centred under the pointer
+        if (!flairActive || barDragging) return;
+        bartender.style.transition = "none";
+        setBartenderOffset(barDragStartOffset + (bartenderSvgX(e) - barDragStartX));
       });
     }
     bartender.addEventListener("click", function (e) {
@@ -21575,7 +21577,7 @@ document.addEventListener("click", function (e) {
       lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
       caption: "caption(\"text\") — overwrite the hint line above the scene with your own text and return the previous line; caption() reads the current line. a room change or hint reclaims it",
       candle: "candle() — both garden candles' lit states; candle(1) or candle(2) reads one; candle(1,true)/candle(2,false) lights or snuffs one and returns its previous state",
-      butterfly: "butterfly() — flutter the butterfly in the office stained-glass window",
+      butterfly: "butterfly() — step into the office and flutter the butterfly in the stained-glass window",
       water: "water() — the three garden watering bottles' levels (0–4 each); water(true) tips a full one over a plant and returns the new levels",
       countdown: "countdown() — days left until each wedding",
       fullscreen: "fullscreen(true) — fill the screen with the loft; fullscreen(false) leaves; fullscreen() reports whether it's on",
@@ -38869,7 +38871,7 @@ function spawnDustMote(container) {
   if (glass) glass.addEventListener("animationend", function (e) {
     if (e.animationName === "butterfly-flap-left" || e.animationName === "butterfly-flap-right") glass.classList.remove("flap");
   });
-  window.butterfly = function () { flapButterfly(); return !!glass; }; // console toy: flutter the office stained-glass butterfly
+  window.butterfly = function () { if (window.goToStage) window.goToStage("office"); flapButterfly(); }; // console toy: go to the office and flutter the stained-glass butterfly (no return value)
   onActivate(glass, function () {
     if (window.__cinematic) return; // the cinematic drives goToStage("balcony") itself
     if (!window.__pragueCalled) { // the finale gates on calling Prague first

@@ -23198,10 +23198,65 @@ document.addEventListener("click", function (e) {
     var vpMeta = document.querySelector('meta[name="viewport"]');
     if (vpMeta && vpMeta.content.indexOf("maximum-scale") < 0) vpMeta.content += ", maximum-scale=1";
   }
+  // ── Tab autocomplete ─────────────────────────────────────────────────────────
+  // Shell-style completion of the leading command token in the console REPL. The roster
+  // is the documented command set — the keys of `CONSOLE_HELP` (defined inside consoleRun,
+  // so mirrored here as a plain list); tests/check.js has a parity check that fails if this
+  // list drifts from those keys, which is how it "stays in sync". Only the first token (the
+  // command name) is completed; args / inside-parens are out of scope.
+  var CONSOLE_CMDS = [
+    "help", "clear", "laser", "party", "reset", "quit", "blacklight", "uv", "trip", "room",
+    "goto", "rooms", "daylight", "night", "day", "season", "play", "pause", "temp", "weather",
+    "clock", "time", "projector", "storm", "dance", "dj", "cocktail", "lang", "caption", "candle",
+    "butterfly", "water", "countdown", "fullscreen", "rainbow", "smoker", "bbq", "smokerlid", "cooked", "servefood",
+    "phone", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
+    "summon", "reveal", "click", "random", "sleep", "echo", "say", "scripts", "run", "edit",
+    "confetti", "fireworks", "cat", "irene", "piano", "classic", "kitten", "ukelele", "audio", "music",
+    "guitar", "ukulele", "beat", "eclipse", "hb", "loft", "ls", "pwd", "whoami", "sudo",
+    "date", "man", "love", "kitty", "exit"
+  ];
+  // Barewords / unix gags that are NOT functions — completing them must not append "(".
+  var CONSOLE_CMDS_BARE = { help: 1, clear: 1, quit: 1, exit: 1, loft: 1, hb: 1, ls: 1, pwd: 1, whoami: 1, sudo: 1, date: 1, man: 1, love: 1, killall: 1, service: 1 };
+  function consoleCommonPrefix(list) {
+    if (!list.length) return "";
+    var p = list[0];
+    for (var i = 1; i < list.length; i++) {
+      var s = list[i], j = 0;
+      while (j < p.length && j < s.length && p[j] === s[j]) j++;
+      p = p.slice(0, j);
+      if (!p) break;
+    }
+    return p;
+  }
+  function consoleTabComplete() {
+    if (!consoleIn) return;
+    var val = consoleIn.value, caret = consoleIn.selectionStart;
+    if (caret == null) caret = val.length;
+    if (caret !== val.length) return;                          // only complete at the end of the line
+    var m = val.match(/^(\s*)([A-Za-z_$][\w$]*)$/);            // leading identifier, nothing after it
+    if (!m) return;                                            // empty token, or caret past the first token → no-op
+    var lead = m[1], low = m[2].toLowerCase();
+    var matches = CONSOLE_CMDS.filter(function (c) { return c.indexOf(low) === 0; });
+    if (!matches.length) return;                               // no candidate → leave the input untouched
+    if (matches.length === 1) {
+      var full = matches[0];
+      var out = lead + full + (CONSOLE_CMDS_BARE[full] ? "" : "(");   // most commands are functions
+      consoleIn.value = out;
+      try { consoleIn.setSelectionRange(out.length, out.length); } catch (e) {}
+      return;
+    }
+    var pre = consoleCommonPrefix(matches);
+    if (pre.length > low.length) {                             // extend to the longest common prefix
+      var ext = lead + pre;
+      consoleIn.value = ext;
+      try { consoleIn.setSelectionRange(ext.length, ext.length); } catch (e) {}
+    }
+    consolePrint(matches.join("  "), "console-dim");           // bash-style: list the candidates
+  }
   if (consoleIn) {
     consoleIn.addEventListener("keydown", function (e) {
       e.stopPropagation(); // game shortcuts don't fire while typing
-      if (e.key === "Tab") { e.preventDefault(); return; } // focus stays in the shell
+      if (e.key === "Tab") { e.preventDefault(); consoleTabComplete(); return; } // complete the command; focus stays in the shell
       if (e.key === "Enter") { var v = consoleIn.value; consoleIn.value = ""; consoleRun(v); }
       else if (e.key === "ArrowUp") { e.preventDefault(); if (consoleHistIdx > 0) { consoleHistIdx--; consoleIn.value = consoleHist[consoleHistIdx] || ""; } }
       else if (e.key === "ArrowDown") { e.preventDefault(); if (consoleHistIdx < consoleHist.length) { consoleHistIdx++; consoleIn.value = consoleHist[consoleHistIdx] || ""; } }

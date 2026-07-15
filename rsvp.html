@@ -23084,7 +23084,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound()/fishu · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone()/phone(\"app\") · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound()/fishu · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone()/phone(\"app\") · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var CONSOLE_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -23150,6 +23150,9 @@ document.addEventListener("click", function (e) {
       summon: "summon(\"id\") — bring a scene element into view (jump to its room); summon(\"id\", true) also activates it. summon() shows a random one. summon.list([room|prefix]) returns an array of ids. `help summon` shows the full roster",
       reveal: "reveal(\"id\") — bring a scene element into view (alias for summon(\"id\", false))",
       click: "click(\"id\") — bring a scene element into view AND activate it (alias for summon(\"id\", true))",
+      cursorTo: "cursorTo(target[, ms]) — for scripts: glide the cinematic's ghost cursor (cream dot + wine ring) to a target, no click. target is an element id (\"office-monitor\" or \"#office-monitor\") → its live on-screen center (jumps to its room first), OR {x, y} in 0..1 viewport coords (0,0 top-left · 1,1 bottom-right; a value >1 is raw px). Returns a Promise resolving when the glide lands — `await cursorTo(\"#office-monitor\")`. ms overrides the ~550ms glide. Works with the show off too",
+      ghostClick: "ghostClick(target) — for scripts: cursorTo() the target, pulse a ripple, then dispatch a real (synthetic) click there — like click() but WITH the visible pointer. target is an element id or {x, y} 0..1 viewport coords (an {x,y} clicks whatever sits under that point). Returns a Promise resolving after the click — `await ghostClick(\"#office-sprinkler\")`",
+      cursorHide: "cursorHide() — for scripts: send the ghost cursor away (fade it out), ending a cursorTo/ghostClick sequence",
       random: "random() — for scripts: random() → 0..1 · random(n) → int 0..n-1 · random(a,b) → int a..b · random([…]) → a random item. bonus: pass random() to any picker — dance(random()), room(random()), projector(random()), trip(random()), classic(random()), season(random()) — to choose one at random",
       sleep: "sleep(ms) — for scripts: `await sleep(500)` pauses that long (default 1000ms)",
       echo: "echo(\"text\") — print a line to both consoles (in-game + browser). echo(false) silences the commands' status chatter, echo(true) restores it, echo() reports the state",
@@ -23434,7 +23437,7 @@ document.addEventListener("click", function (e) {
     "clock", "time", "projector", "storm", "dance", "dj", "cocktail", "lang", "caption", "candle",
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "smoker", "bbq", "smokerlid", "cooked", "servefood",
     "phone", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
-    "summon", "reveal", "click", "random", "sleep", "echo", "say", "scripts", "run", "edit",
+    "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "edit",
     "confetti", "fireworks", "cat", "irene", "piano", "classic", "kitten", "ukelele", "audio", "music",
     "guitar", "ukulele", "beat", "eclipse", "hb", "loft", "ls", "pwd", "whoami", "sudo",
     "date", "man", "love", "kitty", "exit", "speech", "fishu", "volume", "volumebutton", "openurl"
@@ -43366,6 +43369,94 @@ function spawnDustMote(container) {
     }
     el.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
   }
+
+  // ── scriptable ghost cursor (console) ──
+  // cursorTo/ghostClick/cursorHide expose the show's visible pointer to scripts. They lean on
+  // the same IIFE-local machinery the cinematic uses (cursorPointFor/ensureCursor/cursorPlace/
+  // cursorRipple), so they land through room pans, zoom and fullscreen exactly like the show —
+  // but they work with the show OFF too: the ghost dot's visibility is the .visible class (CSS
+  // #cine-cursor.visible{opacity}), which isn't gated to window.__cinematic, so cursorPlace/glide
+  // reveal it either way. A target is an element id ("office-monitor"/"#office-monitor") → its
+  // live on-screen center (we jump to its room first, like click()), OR {x,y} in 0..1 viewport
+  // coords → that host-relative point (values >1 taken as raw px). Both return a Promise that
+  // resolves when the glide (and, for ghostClick, the click) is done, so scripts can `await`.
+  var SCRIPT_GLIDE_MS = 550;       // default scripted glide when no ms is passed
+  var ROOM_SLIDE_MS = 720;         // #loft-game-strip's .7s room slide — wait it out before measuring a fresh room
+  // resolve a script target → { x, y (host-local px), el (or null), sx, sy (screen px) }
+  function cursorScriptPoint(target) {
+    var host = cursorHost();
+    if (!host) return null;
+    if (target && typeof target === "object" && ("x" in target || "y" in target)) {
+      var h = host.getBoundingClientRect();
+      var nx = +target.x || 0, ny = +target.y || 0;
+      var px = nx > 1 ? nx : nx * h.width;   // 0..1 relative; >1 is a raw px escape hatch
+      var py = ny > 1 ? ny : ny * h.height;
+      return { x: px, y: py, el: null, sx: h.left + px, sy: h.top + py };
+    }
+    var id = String(target == null ? "" : target).replace(/^#/, "");
+    var el = id && document.getElementById(id);
+    if (!el) return null;
+    var p = cursorPointFor(id);
+    if (!p) return null;
+    return { x: p.x, y: p.y, el: el };
+  }
+  // if the target id lives in another room, jump there like click() does; returns true if it did
+  function cursorJumpToRoom(target) {
+    if (!target || typeof target === "object") return false; // {x,y} has no room
+    var el = document.getElementById(String(target).replace(/^#/, ""));
+    if (!el || !el.closest) return false;
+    var stage = el.closest("[id^='stage-']");
+    if (!stage) return false;
+    var room = stage.id.replace(/^stage-/, "");
+    if (window.currentStageName === room) return false;
+    if (window.goToStage) { window.goToStage(room); return true; }
+    return false;
+  }
+  // like cursorGlideTo, but takes a resolved point and calls done() when the glide lands
+  function cursorGlidePoint(p, ms, done) {
+    var c = ensureCursor();
+    if (!c) { if (done) done(); return; }
+    var dur = ms || CURSOR_GLIDE_MS;
+    // reduced motion, first appearance, or no WAAPI → snap (no visible travel), resolve now
+    if (reduceMotion || !c.classList.contains("visible") || !c.animate) { cursorPlace(p.x, p.y); if (done) done(); return; }
+    if (cursorAnim) cursorAnim.cancel(); // single slot: at most one glide alive
+    var from = "translate(" + cursorX.toFixed(1) + "px," + cursorY.toFixed(1) + "px)";
+    cursorX = p.x; cursorY = p.y;
+    var to = "translate(" + p.x.toFixed(1) + "px," + p.y.toFixed(1) + "px)";
+    c.style.transform = to;
+    cursorAnim = c.animate([{ transform: from }, { transform: to }], { duration: dur, easing: "cubic-bezier(.4,0,.2,1)" });
+    var settled = false;
+    var finish = function () { if (settled) return; settled = true; cursorAnim = null; if (done) done(); };
+    cursorAnim.onfinish = finish;
+    setTimeout(finish, dur + 80); // safety net if onfinish is dropped (cancelled/backgrounded)
+  }
+  function cursorEcho(msg) { if (window.echo) try { window.echo(msg); } catch (e) {} }
+  // cursorTo(target[, ms]) — glide the ghost cursor to a target, no click. Awaitable.
+  window.cursorTo = function (target, ms) {
+    return new Promise(function (resolve) {
+      var switched = cursorJumpToRoom(target);
+      var go = function () {
+        var t = cursorScriptPoint(target);
+        if (!t) { cursorEcho("cursorTo: no such target (need an element id or {x,y} 0..1)"); resolve(null); return; }
+        cursorGlidePoint(t, typeof ms === "number" ? ms : SCRIPT_GLIDE_MS, function () { resolve(t); });
+      };
+      if (switched) setTimeout(go, ROOM_SLIDE_MS); else go(); // let a fresh room finish sliding before measuring
+    });
+  };
+  // ghostClick(target) — cursorTo the target, ripple, then dispatch a real (synthetic) click. Awaitable.
+  window.ghostClick = function (target) {
+    return window.cursorTo(target).then(function (t) {
+      if (!t) return null;
+      var pt = cursorScriptPoint(target) || t; // re-measure post-glide to correct any drift
+      cursorPlace(pt.x, pt.y);
+      cursorRipple(pt.x, pt.y);
+      var el = pt.el || (pt.sx != null ? document.elementFromPoint(pt.sx, pt.sy) : null); // {x,y} → whatever's under the point
+      if (el) el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+      return el ? (el.id || null) : null;
+    });
+  };
+  // cursorHide() — send the ghost cursor away (fade it out), to end a scripted sequence.
+  window.cursorHide = function () { cursorHide(); };
 
   function stopCinematic() {
     if (!window.__cinematic) return;

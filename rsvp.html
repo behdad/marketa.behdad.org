@@ -23075,7 +23075,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound()/fishu · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone()/phone(\"app\") · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · issues()/feedback() · github() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound()/fishu · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone()/phone(\"app\") · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var CONSOLE_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -23132,9 +23132,7 @@ document.addEventListener("click", function (e) {
       laptop: "laptop(true) — wake the office laptop; laptop(false) closes it; laptop() reports whether it's open. laptop(\"prague\")/laptop(\"lubeck\") place a video call to her family",
       computer: "computer(true) — power the office PC up; computer(false) shuts it down; computer() reports whether it's on. computer(\"doom\")/computer(\"weather\") boot (if needed) and open that monitor app; a bad name lists them",
       reboot: "reboot() — power-cycle the loft OS (a `sudo reboot` from its own console)",
-      issues: "issues() — open the project's GitHub issue tracker in a new tab",
-      feedback: "feedback() — tell us what broke or what you loved (alias for issues())",
-      github: "github() — open the loft's source code on GitHub in a new tab",
+      openurl: "openurl(\"url\") — open any URL in a new browser tab (a bare host gets https://)",
       killall: "killall [-9] <doom|console|python|linux> — kill a monitor app by name via its Kill hook (doom's FATALITY, console's flatline, python's Black Knight, linux's BSOD). bare `killall` (no name) kills every currently-running host at once. the -9 is decorative — they all go. a cold runtime says `not running`",
       service: "service <doom|console|python|linux> <start|stop|status|restart|--full-restart> — sysvinit-style control: status reports running/stopped · start opens it · stop kills it · restart|--full-restart do both",
       monitor: "monitor — alias for computer; monitor(\"doom\")/monitor(\"console\") open a monitor app; try `help computer`",
@@ -23430,8 +23428,7 @@ document.addEventListener("click", function (e) {
     "summon", "reveal", "click", "random", "sleep", "echo", "say", "scripts", "run", "edit",
     "confetti", "fireworks", "cat", "irene", "piano", "classic", "kitten", "ukelele", "audio", "music",
     "guitar", "ukulele", "beat", "eclipse", "hb", "loft", "ls", "pwd", "whoami", "sudo",
-    "date", "man", "love", "kitty", "exit", "speech", "fishu", "volume", "volumebutton",
-    "issues", "feedback", "github"
+    "date", "man", "love", "kitty", "exit", "speech", "fishu", "volume", "volumebutton", "openurl"
   ];
   // Barewords / unix gags that are NOT functions — completing them must not append "(".
   var CONSOLE_CMDS_BARE = { help: 1, clear: 1, quit: 1, exit: 1, loft: 1, hb: 1, ls: 1, pwd: 1, whoami: 1, sudo: 1, date: 1, man: 1, love: 1, killall: 1, service: 1 };
@@ -43701,14 +43698,26 @@ function spawnDustMote(container) {
       [2000, function () { if (window.__nextPartyDance) window.__nextPartyDance(); }], [0, cine("cine_dance")],
       // the highlight, folded into the curtain call: the kitchen where the day began is a
       // cocktail BAR while the party's lit (party-on gates the whole bar), so the trip home
-      // shows it off — the bartender flairs his shaker and a highball clinks — before the
-      // day resets from exactly here. (Folded rather than a separate garden round-trip: the
-      // reset MUST land at the kitchen extinguisher, so a bar detour + return would double
-      // the kitchen; this gives the bar a lingering spotlight AND keeps the show tight.)
+      // shows it off in full — the bartender's flair, the tipsy regulars, and the Flair-Catch
+      // mini-game — before the day resets from exactly here. (Folded rather than a separate
+      // garden round-trip: the reset MUST land at the kitchen extinguisher, so a bar detour +
+      // return would double the kitchen; this gives the bar a lingering spotlight AND keeps
+      // the show tight.)
       [2400, visit("kitchen")], [0, cine("cine_bar")],
-      [1400, function () { cineClick("kitchen-bartender-hit"); }],   // he tosses the shaker (rattle)
-      [1500, function () { cineClick("kitchen-bar-glass-highball"); }], // a glass on the bar wobbles + clinks
-      [1500, cine("cine_encore_end")],                              // linger on the bar — that's their day
+      // the bartender's flourish: glide to his hit rect and tap — the shaker tosses + rattles
+      [1500, function () { cursorGlideTo("kitchen-bartender-hit", 450); }],
+      [500, function () { cineClick("kitchen-bartender-hit"); }], [0, cine("cine_flair")],
+      // the two tipsy regulars on the left stools: a tap jolts patron A into a hiccup
+      [1500, function () { cursorGlideTo("kitchen-bar-patron-a", 450); }],
+      [500, function () { cineClick("kitchen-bar-patron-a"); }], [0, cine("cine_patrons")],
+      // Flair-Catch: the mini-game arms, the room dims to a spotlight, garnishes rain down and
+      // are auto-caught (a streak lands the gold-shockwave reward). Cursor hidden — the shaker
+      // is the paddle, driven by the autopilot hook, which stands the game down + restores the high.
+      [1600, function () { cursorGlideTo("kitchen-bartender-hit", 450); }],
+      [350, function () { cursorHide(); if (window.__cineFlairDemo) window.__cineFlairDemo(true); }], [0, cine("cine_flairgame")],
+      [6500, function () { if (window.__cineFlairDemo) window.__cineFlairDemo(false); }],
+      [350, function () { cineClick("kitchen-bar-glass-highball"); }], // a finished highball clinks on the bar
+      [1400, cine("cine_encore_end")],                              // linger on the bar — that's their day
       // the song fades out and the cursor settles on the extinguisher — then the show
       // formally ends and the pull runs through the game's real handler, exactly as a
       // player's own pull would (the cursor goes down with the show, the wipe covers the
@@ -45162,12 +45171,14 @@ function spawnDustMote(container) {
     setTimeout(function () { if (pc && !pc.classList.contains("on")) pc.dispatchEvent(new MouseEvent("click", { bubbles: true })); }, 900); // …then back up → boots Fedora → the caps desktop
     return "🔄 rebooting the loft OS…";
   };
-  // issues()/feedback() open the project's GitHub issue tracker (feedback is just an alias);
-  // github() opens the source repo. Same destinations as the ✉/octocat buttons on the page. They
-  // narrate via echo() (not a return, which the console would echo back) and return nothing (silent).
-  window.issues = function () { window.echo("🪳 opening the issue tracker…"); try { window.open("https://github.com/behdad/marketa.behdad.org/issues", "_blank", "noopener"); } catch (e) {} };
-  window.feedback = window.issues; // alias — tell us what broke / what you loved
-  window.github = function () { window.echo("😺 opening the source on GitHub…"); try { window.open("https://github.com/behdad/marketa.behdad.org", "_blank", "noopener"); } catch (e) {} };
+  // openurl("https://…") — open any URL in a new browser tab (bare host → https). A scripting
+  // helper; named openurl (not open) so it never shadows the native window.open the app relies on.
+  window.openurl = function (url) {
+    if (url == null || url === "") return 'openurl("https://…") — opens a URL in a new tab';
+    var u = /^[a-z][a-z0-9+.-]*:\/\//i.test(String(url)) ? String(url) : "https://" + String(url);
+    try { window.open(u, "_blank", "noopener"); } catch (e) {}
+    window.echo("↗ opening " + u + " …"); // narrate; return nothing (silent)
+  };
 
   // summon("<id>") brings a scene element into view (jumps to its room); click("<id>") also
   // activates it (dispatches a click). summon("<room>") lists a room's ids. No-arg picks a

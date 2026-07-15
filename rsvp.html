@@ -2379,9 +2379,15 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 .phone-home-bg svg{width:100%; height:100%; display:block}
 .phone-home-hi{text-align:center; font-family:"Fraunces",serif; font-size:13px; color:var(--soft); margin:0 0 16px; position:relative; z-index:1}
 .phone-home-hi b{color:var(--wine); font-weight:600}
-.phone-home-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:16px 4px; position:relative; z-index:1}
-/* empty / uninstalled slot: a blank gap that still hit-tests as a drop target (min-height so an all-empty row keeps its box) */
-.phone-slot-empty{min-height:66px; border-radius:13px}
+/* grid-auto-rows pins EVERY row to one fixed height so reordering never subtly
+   shifts icons: a row's height no longer depends on whether it holds a tile, a
+   blank gap, or is all-empty (they'd otherwise auto-size differently). Items
+   stretch to the row, so an empty slot is a full-height drop target with no
+   min-height of its own. 63px ≈ the natural single-line tile height (46 icon +
+   5 gap + one label line); labels are single-line in both EN and CS. */
+.phone-home-grid{display:grid; grid-template-columns:repeat(4,1fr); grid-auto-rows:63px; gap:16px 4px; position:relative; z-index:1}
+/* empty / uninstalled slot: a blank gap that still hit-tests as a drop target (stretched to the fixed row height) */
+.phone-slot-empty{border-radius:13px}
 /* drop target highlight while dragging an icon over another slot */
 .phone-app-slot.drop-target{outline:2px dashed var(--wine); outline-offset:2px; border-radius:13px; background:rgba(142,58,74,.08)}
 /* the picked-up icon dims in place; a ghost clone follows the pointer */
@@ -28003,9 +28009,12 @@ async def localfont(name):
       // browser menu. Eat it and offer a single "Unlock" item instead. Gated on .booting
       // so it never cross-fires with the home tiles' own Open/Stop/Uninstall menu.
       shell.addEventListener("contextmenu", function (e) {
-        if (!shell.classList.contains("booting")) return; // home/app: tiles handle their own menu; elsewhere keep native
-        e.preventDefault();
-        openPhoneLockMenu(e.clientX, e.clientY);
+        if (shell.classList.contains("booting")) { e.preventDefault(); openPhoneLockMenu(e.clientX, e.clientY); return; }
+        // On the home screen, right-clicking the BASE — a blank gap or empty chrome,
+        // anywhere that isn't an app icon — does nothing (no native menu). App tiles
+        // fire first (target phase) and keep their own Open/Stop/Uninstall menu, so
+        // this only catches the no-app areas. Inside an app, native menu is left alone.
+        if (shell.classList.contains("pm-home") && !(e.target.closest && e.target.closest(".phone-app-tile"))) e.preventDefault();
       });
       applyNavLabels();
     }

@@ -18286,6 +18286,7 @@ document.addEventListener("click", function (e) {
     var arcadeSavedCaption = null; // the office caption showing before the game armed — restored on game over
     var arcadeAliens = [], arcadeShots = [];
     var arcadeLastSpawn = 0, arcadeLastShot = 0, arcadeScore = 0;
+    var ARCADE_MILESTONE = 10; // reward a chime + shockwave every this-many kills
     var arcadeHud = null, arcadeHudScore = null, arcadeHudHigh = null;
     var chairDragTravel = 0, chairPrevX = 0;
 
@@ -18349,6 +18350,7 @@ document.addEventListener("click", function (e) {
       arcadeScore++;
       arcadeUpdateHud(); // live score (and high, if this run just passed it)
       playAlienBlipSound();
+      if (arcadeScore % ARCADE_MILESTONE === 0) arcadeMilestone(); // every N kills: a reward chime + a gold shockwave
       if (a.el && a.el.parentNode) a.el.parentNode.removeChild(a.el);
       if (arcadeReduce || !alienLayer) return; // reduced motion: no flash, just gone + blip
       var wrap = document.createElementNS(SVGNS_ARC, "g");
@@ -18359,6 +18361,23 @@ document.addEventListener("click", function (e) {
       wrap.appendChild(c);
       alienLayer.appendChild(wrap);
       var anim = c.animate([{ scale: 0.4, opacity: 1 }, { scale: 3, opacity: 0 }], { duration: 360, easing: "ease-out" });
+      anim.onfinish = function () { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
+    }
+
+    // every ARCADE_MILESTONE kills the run is rewarded: a bright chime (panned to the screen) plus a
+    // gold shockwave ring rippling out from the ship — a wordless "streak!" nod on top of the pop flash.
+    function arcadeMilestone() {
+      playFairyChimeSound("office-monitor");
+      if (arcadeReduce || !alienLayer) return;
+      var sx = arcadeChairX();
+      var wrap = document.createElementNS(SVGNS_ARC, "g");
+      wrap.setAttribute("transform", "translate(" + sx.toFixed(1) + "," + CHAIR_TOP_Y + ")");
+      var ring = document.createElementNS(SVGNS_ARC, "circle");
+      ring.setAttribute("r", "9"); ring.setAttribute("fill", "none");
+      ring.setAttribute("stroke", "#f4d58d"); ring.setAttribute("stroke-width", "3");
+      wrap.appendChild(ring);
+      alienLayer.appendChild(wrap);
+      var anim = ring.animate([{ scale: 0.5, opacity: 1 }, { scale: 5.5, opacity: 0 }], { duration: 640, easing: "ease-out" });
       anim.onfinish = function () { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
     }
 
@@ -20009,6 +20028,7 @@ document.addEventListener("click", function (e) {
     var flairActive = false, flairRaf = null, flairLastT = 0;
     var flairItems = [], flairLastSpawn = 0, flairElapsed = 0;
     var flairScore = 0, flairMiss = 0;
+    var FLAIR_MILESTONE = 5; // reward a chime + shockwave every this-many catches
     var flairHud = null, flairHudScore = null, flairHudHigh = null, flairHudLives = null;
 
     function flairShakerX() { return 336 + barOffsetX; } // shaker-mouth centre in stage-local coords (kitchen-bar has no transform)
@@ -20105,6 +20125,7 @@ document.addEventListener("click", function (e) {
             playGlassClinkSound(1.1 + Math.random() * 0.5, "kitchen-bartender");
             flairCatchFlash(sx, FLAIR_CATCH_Y, true);
             flairUpdateHud();
+            if (flairScore % FLAIR_MILESTONE === 0) flairMilestone(sx); // every N catches: a reward chime + a gold shockwave
           }
           continue;
         }
@@ -20146,6 +20167,21 @@ document.addEventListener("click", function (e) {
       flairRaf = requestAnimationFrame(flairFrame);
     }
 
+    // every FLAIR_MILESTONE catches: a bright chime (panned to the bartender) + a gold shockwave ring
+    // rippling from the shaker mouth — the bar's echo of the arcade's streak reward.
+    function flairMilestone(sx) {
+      playFairyChimeSound("kitchen-bartender");
+      if (flairReduce || !flairLayer) return;
+      var wrap = document.createElementNS(SVGNS_FLAIR, "g");
+      wrap.setAttribute("transform", "translate(" + sx.toFixed(1) + "," + FLAIR_CATCH_Y + ")");
+      var ring = document.createElementNS(SVGNS_FLAIR, "circle");
+      ring.setAttribute("r", "8"); ring.setAttribute("fill", "none");
+      ring.setAttribute("stroke", "#f4d58d"); ring.setAttribute("stroke-width", "2.6");
+      wrap.appendChild(ring);
+      flairLayer.appendChild(wrap);
+      var anim = ring.animate([{ scale: 0.5, opacity: 1 }, { scale: 5, opacity: 0 }], { duration: 620, easing: "ease-out" });
+      anim.onfinish = function () { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
+    }
     function flairFlourish(score) {
       if (!flairLayer) return;
       var g = document.createElementNS(SVGNS_FLAIR, "g");

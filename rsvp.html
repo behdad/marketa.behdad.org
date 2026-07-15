@@ -20247,6 +20247,9 @@ document.addEventListener("click", function (e) {
   // The '`' keyboard shortcut (see __whiskToConsole below) asks a fresh boot to finish
   // by opening the console on the caps desktop instead of just landing on it.
   var pendingBootConsole = false;
+  // A console device-command — computer("doom")/monitor("weather") — asks a fresh boot to
+  // finish by opening a named dock app on the caps desktop (see __openMonitorApp below).
+  var pendingBootApp = null;
   // After the caps site idles a while, a live Julia-set fractal screensaver takes
   // over ("electric sheep" nod). Any click on the monitor wakes it.
   var saverTimer = null, saverRaf = null;
@@ -20451,6 +20454,8 @@ document.addEventListener("click", function (e) {
       // a '`'-summoned boot opens the console once the desktop lands (openConsole
       // needs show-caps, which the branch above has just added)
       if (pendingBootConsole) { pendingBootConsole = false; openConsole(); }
+      // a computer("app")/monitor("app") device-command queued a dock app to open once caps lands
+      if (pendingBootApp) { var _pbApp = monitorAppByName(pendingBootApp); pendingBootApp = null; if (_pbApp) _pbApp.open(); }
       if (window.__inviteLaptop) window.__inviteLaptop(); // the boot done, nudge the laptop → Call Prague
     }, 1000));
   }
@@ -21751,7 +21756,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone() · laptop() · computer()/monitor() · reboot() · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone()/phone(\"app\") · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var CONSOLE_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -21792,11 +21797,11 @@ document.addEventListener("click", function (e) {
       smokerlid: "smokerlid(true) — raise the smoker lid; smokerlid(false) lowers it; smokerlid() reports whether it's open",
       cooked: "cooked(1|2|3) — is that burger done yet (bool)? cooked() — all three, as [bool, bool, bool]",
       servefood: "servefood() — serve a cooked burger (opens the lid if needed); servefood(random()) picks a random ready one. returns true if one was served",
-      phone: "phone(true) — bring up the pocket phone; phone(false) puts it away; phone() reports whether it's up",
+      phone: "phone(true) — bring up the pocket phone; phone(false) puts it away; phone() reports whether it's up. phone(\"cocktails\")/phone(\"weather\") open that phone app (skips the lockscreen); a bad name lists them",
       laptop: "laptop(true) — wake the office laptop; laptop(false) closes it; laptop() reports whether it's open. laptop(\"prague\")/laptop(\"lubeck\") place a video call to her family",
-      computer: "computer(true) — power the office PC up; computer(false) shuts it down; computer() reports whether it's on",
+      computer: "computer(true) — power the office PC up; computer(false) shuts it down; computer() reports whether it's on. computer(\"doom\")/computer(\"weather\") boot (if needed) and open that monitor app; a bad name lists them",
       reboot: "reboot() — power-cycle the loft OS (a `sudo reboot` from its own console)",
-      monitor: "monitor — alias for computer; try `help computer`",
+      monitor: "monitor — alias for computer; monitor(\"doom\")/monitor(\"console\") open a monitor app; try `help computer`",
       go: "go(\"thing\") — thing(true): a verb over the on/off commands, e.g. go(\"party\") · go(\"smoker\") · go(\"laptop\")",
       no: "no(\"thing\") — thing(false): the off verb, e.g. no(\"party\") · no(\"smoker\") · no(\"laptop\")",
       summon: "summon(\"id\") — bring a scene element into view (jump to its room); summon(\"id\", true) also activates it. summon() shows a random one. summon.list([room|prefix]) returns an array of ids. `help summon` shows the full roster",
@@ -25184,6 +25189,41 @@ async def localfont(name):
     if (window.__monitorZoomIn) window.__monitorZoomIn();
     pendingBootConsole = false;
     openConsole();
+  };
+  // Console device-command hook: computer("doom")/monitor("weather") open a named dock app
+  // on the office monitor. Boots the PC (queuing the open) if it's off, brings the monitor
+  // forward if the typewriter's up, waits out a mid-boot, or opens straight away on a live
+  // desktop — the same boot/restore path as __whiskToConsole, generalized to any DESKTOP_APPS
+  // entry. Matches by app id (case-insensitive) or its localized dock label; returns a status
+  // string, or the app-name list on an unknown name.
+  function monitorAppByName(name) {
+    var q = String(name == null ? "" : name).toLowerCase().trim();
+    if (!q) return null;
+    for (var i = 0; i < DESKTOP_APPS.length; i++) if (DESKTOP_APPS[i].id.toLowerCase() === q) return DESKTOP_APPS[i];
+    for (var j = 0; j < DESKTOP_APPS.length; j++) {
+      var lbl = (T[document.documentElement.lang] && T[document.documentElement.lang][DESKTOP_APPS[j].labelKey]) || (T.en && T.en[DESKTOP_APPS[j].labelKey]) || "";
+      if (lbl && lbl.toLowerCase() === q) return DESKTOP_APPS[j];
+    }
+    return null;
+  }
+  window.__openMonitorApp = function (name) {
+    if (!pcTower) return "no computer here.";
+    var app = monitorAppByName(name);
+    if (!app) return "monitor apps (in quotes): " + DESKTOP_APPS.map(function (a) { return "\"" + a.id + "\""; }).join(" · ");
+    if (window.goToStage) window.goToStage("office"); // the monitor lives in the office — bring it on screen
+    // PC off → power on (spark + fan + boot Fedora → caps); the boot-complete hook opens the queued app.
+    if (!pcTower.classList.contains("on")) { pendingBootApp = app.id; pcTower.dispatchEvent(new MouseEvent("click", { bubbles: true })); return "🖥 booting the PC → " + app.id + "…"; }
+    // PC on but the typewriter's showing → bring the monitor back; updateScreen reboots to caps, hook opens it.
+    if (!monitor.classList.contains("here")) { pendingBootApp = app.id; swap(true); return "🖥 waking the monitor → " + app.id + "…"; }
+    if (monitor.classList.contains("show-fedora")) { pendingBootApp = app.id; return "🖥 mid-boot → " + app.id + " next…"; } // the boot hook opens it when caps lands
+    // PC on, monitor here, booted: close whatever owns the screen, back to caps, open the app in place.
+    if (window.__closeTopMonitorApp) window.__closeTopMonitorApp();
+    stopSaver();
+    monitor.classList.remove("show-harfbuzz", "show-behdad", "show-nowplaying");
+    if (!monitor.classList.contains("show-caps")) { monitor.classList.add("show-caps"); monitorUrl = CAPS_URL; }
+    if (window.__monitorZoomIn) window.__monitorZoomIn();
+    app.open();
+    return "🖥 " + app.id + " — up on the monitor.";
   };
   function swap(toMonitor) {
     if (!toMonitor) closePhotobooth(); // swapping away to the typewriter (or PC power-off) must stop any live camera
@@ -28693,6 +28733,29 @@ async def localfont(name):
     }
     window.__openPhoneModal = open;
     window.__closePhoneModal = function (silent) { close(silent); };
+    // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
+    // open(true) is the cinematic lock-skip path (same as __showCocktailInPhone), so a console
+    // launch never stalls on the passcode. Matches by app id (case-insensitive) or its localized
+    // label; returns a status string, or the app-name list on an unknown name.
+    function phoneAppByName(name) {
+      var q = String(name == null ? "" : name).toLowerCase().trim();
+      if (!q) return null;
+      for (var i = 0; i < PHONE_APPS.length; i++) if (PHONE_APPS[i].id.toLowerCase() === q) return PHONE_APPS[i];
+      for (var j = 0; j < PHONE_APPS.length; j++) {
+        var lbl = (T[document.documentElement.lang] && T[document.documentElement.lang][PHONE_APPS[j].labelKey]) || (T.en && T.en[PHONE_APPS[j].labelKey]) || "";
+        if (lbl && lbl.toLowerCase() === q) return PHONE_APPS[j];
+      }
+      return null;
+    }
+    window.__openPhoneApp = function (name) {
+      var app = phoneAppByName(name);
+      if (!app) return "phone apps (in quotes): " + PHONE_APPS.map(function (a) { return "\"" + a.id + "\""; }).join(" · ");
+      if (window.goToStage) window.goToStage("balcony"); // the pocket phone lives on the balcony
+      open(true);                                        // open (or re-seat) the phone at the launcher, skipping the first-open math lock
+      if (app.open) app.open();
+      else if (app.link) { try { window.open(app.link, "_blank"); } catch (e) {} }
+      return "📱 " + app.id + " — open on the phone.";
+    };
     // Keep an open phone riding the current fullscreen host (same choice open() makes), so a
     // fullscreen toggle re-seats it into the top-layer / z-50 fill instead of stranding it
     // on <body> behind the overlay. No-op while closed (modal absent from the DOM).
@@ -41163,6 +41226,9 @@ function spawnDustMote(container) {
   window.phone = function (arg) {
     var prev = !!document.querySelector(".phone-backdrop.show");
     if (arguments.length === 0) return prev; // no arg → is the phone up?
+    if (typeof arg === "string" && arg !== "") { // an app name → open it on the pocket phone (skips the lockscreen)
+      return window.__openPhoneApp ? window.__openPhoneApp(arg) : prev;
+    }
     var open = !!arg; // phone(true) → open; phone(false) → dismiss; returns the previous state
     if (open) {
       if (window.goToStage) window.goToStage("balcony"); // the pocket phone lives on the balcony
@@ -41195,6 +41261,9 @@ function spawnDustMote(container) {
     var pc = document.getElementById("office-pc-desk-trio");
     var prev = !!(pc && pc.classList.contains("on"));
     if (arguments.length === 0 || !pc) return prev; // no arg → is the PC on?
+    if (typeof arg === "string" && arg !== "") { // an app name → open it on the office monitor (boots the PC first if off)
+      return window.__openMonitorApp ? window.__openMonitorApp(arg) : prev;
+    }
     var wantOn = !!arg; // computer(true) → power up; computer(false) → shut down; returns the previous state
     if (window.goToStage) window.goToStage("office");
     if (wantOn !== pc.classList.contains("on")) pc.dispatchEvent(new MouseEvent("click", { bubbles: true })); // its real power toggle (boots on / clears off)

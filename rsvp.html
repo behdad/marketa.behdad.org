@@ -35368,6 +35368,106 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
   window.addEventListener("focus", update);
   window.addEventListener("blur", update);
 })();
+// ── PRAGUE CALL BACKGROUND MELODY (audio) ────────────────────────────────────────
+// A faint, warm tune drifting in from the family's end of the Prague call — as if a
+// little music player is on across the garden. It layers UNDER startCallAmbient's
+// garden-wind + giggle bed (kept clearly lower than the giggles), heavily low-passed and
+// lightly reverbed so it reads as music heard "through the call". Own gentle bus on the
+// shared getSfxCtx (re-grabbed each phrase to stay off its 20s idle-suspend; never closed
+// — it's shared, so stop() just fades the bus, drops the tracked sources, disconnects the
+// fx — modelled on the Lübeck singer's teardown). Voices are satieNote-style (triangle +
+// soft-strike envelope, same recipe as the night-sky piano). Gated exactly like the wind
+// bed it sits on: live Prague call + focused + visible — NOT room-gated (that bed isn't;
+// the music mustn't cut when you step away) and NOT motion-gated (it's sound, not motion).
+//
+// NOTE (owner): this is an original, neutral placeholder motif, shipped UNHEARD (no way to
+// audition audio headless) — tune + mix are for you to judge. The nice pattern would be
+// each call carrying that family's own tune (Lübeck already sings Tumbalalaika; a Persian
+// "tavallod" is prepped for Tehran) — hand me a Prague/Czech-folk MIDI and I'll model it
+// here the same way, rather than me guess-transcribing a folk tune from memory.
+(function () {
+  var laptop = document.getElementById("office-laptop");
+  if (!laptop) return;
+  var wanted = false, active = false, phraseTimer = null, nodes = [], bus = null, busCtx = null, fxNodes = null;
+  // focus-gated like the garden-wind bed (startCallAmbient), NOT room- or motion-gated
+  function want() {
+    return wanted && laptop.classList.contains("connected") && !laptop.classList.contains("lueb") &&
+      !document.hidden && document.hasFocus();
+  }
+  function track(n) { nodes.push(n); n.onended = function () { var i = nodes.indexOf(n); if (i >= 0) nodes.splice(i, 1); }; }
+  // A gentle original waltz in a major key, kept low + warm so it sits beneath the voices.
+  // {s: semitones from A4 (freq = 440·2^(s/12), same base as satieNote), d: beats,
+  //  b: optional soft bass root under the note}. Placeholder — see the owner note above.
+  var BEAT = 0.5;
+  var TUNE = [
+    { s: -7, d: 1, b: -19 }, { s: -3, d: 1 }, { s: 0, d: 1 },
+    { s: 0, d: 2, b: -12 }, { s: -3, d: 1 },
+    { s: -2, d: 1, b: -17 }, { s: -5, d: 1 }, { s: -2, d: 1 },
+    { s: -3, d: 3, b: -15 },
+    { s: 0, d: 1, b: -12 }, { s: 4, d: 1 }, { s: 0, d: 1 },
+    { s: 2, d: 2, b: -19 }, { s: 0, d: 1 },
+    { s: -3, d: 1 }, { s: -5, d: 1 }, { s: -7, d: 1 },
+    { s: -7, d: 3, b: -19 }
+  ];
+  function note(ctx, dest, t, semis, dur, mel) {
+    var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = 440 * Math.pow(2, semis / 12);
+    var g = ctx.createGain();
+    var peak = mel ? 1 : 0.5;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + 0.01);                       // soft strike
+    g.gain.exponentialRampToValueAtTime(peak * 0.35, t + Math.min(dur, 0.5));   // quick decay to the body
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.25);                // slow tail
+    o.connect(g); g.connect(dest);
+    o.start(t); o.stop(t + dur + 0.3); track(o);
+  }
+  function scheduleNext() {
+    if (!active) return;
+    var ctx = getSfxCtx(); if (!ctx || ctx !== busCtx) { stop(); return; } // re-grab keeps the shared ctx awake
+    var t = ctx.currentTime + 0.06, total = 0;
+    TUNE.forEach(function (n) {
+      note(ctx, bus, t + total * BEAT, n.s, n.d * BEAT, true);
+      if (typeof n.b === "number") note(ctx, bus, t + total * BEAT, n.b, n.d * BEAT, false);
+      total += n.d;
+    });
+    var gap = 2 + Math.random() * 1.6; // a breath between loops so it isn't a relentless earworm
+    phraseTimer = setTimeout(scheduleNext, (total * BEAT + gap) * 1000);
+  }
+  function start() {
+    var ctx = getSfxCtx(); if (!ctx) return;
+    active = true; busCtx = ctx;
+    bus = ctx.createGain(); bus.gain.value = 0.05; // clearly under the wind + giggles
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1500; lp.Q.value = 0.5; // "through the call"
+    var out = pannedOut(ctx, "office-laptop");
+    var conv = ctx.createConvolver(); // a little room so it isn't bone-dry
+    var rlen = Math.floor(ctx.sampleRate * 0.45), rbuf = ctx.createBuffer(2, rlen, ctx.sampleRate);
+    for (var ch = 0; ch < 2; ch++) { var rd = rbuf.getChannelData(ch); for (var i = 0; i < rlen; i++) rd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / rlen, 2.2); }
+    conv.buffer = rbuf;
+    var dry = ctx.createGain(); dry.gain.value = 0.85;
+    var wet = ctx.createGain(); wet.gain.value = 0.22;
+    bus.connect(lp);
+    lp.connect(dry); dry.connect(out);
+    lp.connect(conv); conv.connect(wet); wet.connect(out);
+    fxNodes = [lp, conv, dry, wet];
+    scheduleNext();
+  }
+  function stop() {
+    active = false;
+    clearTimeout(phraseTimer); phraseTimer = null;
+    nodes.forEach(function (n) { try { n.stop(); } catch (e) {} }); nodes = [];
+    if (bus && busCtx) {
+      try { var t = busCtx.currentTime; bus.gain.cancelScheduledValues(t); bus.gain.setValueAtTime(bus.gain.value, t); bus.gain.linearRampToValueAtTime(0.0001, t + 0.12); } catch (e) {}
+      var b = bus, fx = fxNodes; setTimeout(function () { try { b.disconnect(); } catch (e) {} if (fx) fx.forEach(function (n) { try { n.disconnect(); } catch (e) {} }); }, 240);
+    }
+    bus = null; busCtx = null; fxNodes = null;
+  }
+  function update() { if (want() && !active) start(); else if (!want() && active) stop(); }
+  window.__startPragueMelody = function () { wanted = true; update(); };
+  window.__stopPragueMelody = function () { wanted = false; update(); };
+  window.__updatePragueMelody = update;
+  document.addEventListener("visibilitychange", update);
+  window.addEventListener("focus", update);
+  window.addEventListener("blur", update);
+})();
 // Hanging up: two quick descending tones, the mirror image of playPhoneRingSound's
 // ascending ring — a "call ended" cue distinct from every other laptop sound here.
 function playCallHangupSound(panId) {

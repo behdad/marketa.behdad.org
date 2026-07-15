@@ -31455,6 +31455,12 @@ async def localfont(name):
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleDim(el); }
     });
   });
+  // light both office lamps AND clear the room-dim scrim in one shot (the party uses this — just
+  // removing .dimmed leaves #office-lamp-dim stuck dark, which read as "broken")
+  window.__lightOfficeLamps = function () {
+    lampIds.forEach(function (id) { var el = document.getElementById(id); if (el) el.classList.remove("dimmed"); });
+    updateRoomDim();
+  };
 })();
 (function () {
   var desk = document.getElementById("office-desk");
@@ -40105,7 +40111,7 @@ function spawnDustMote(container) {
       if (userInitiated && window.goToStage) window.goToStage("garden"); // whisk to the garden
       if (userInitiated && window.__setDayNight) window.__setDayNight(true); // the party lights up the night (scripted cinematic drives its own sky)
       // the party lights the loft up — the office + balcony read too dark at night otherwise
-      ["office-lamp", "office-pendant"].forEach(function (id) { var el = document.getElementById(id); if (el) el.classList.remove("dimmed"); });
+      if (window.__lightOfficeLamps) window.__lightOfficeLamps(); // un-dim BOTH lamps + clear the room-dim scrim
       var balcLights = document.getElementById("balcony-lights"); if (balcLights) balcLights.classList.remove("off");
       var balcLamp = document.getElementById("balcony-walllamp"); if (balcLamp) balcLamp.classList.add("on");
       if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse();

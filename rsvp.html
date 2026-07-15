@@ -1956,7 +1956,9 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 .nav-dpad .dpad-left{grid-column:1; grid-row:2}
 .nav-dpad .dpad-right{grid-column:3; grid-row:2}
 .nav-dpad .dpad-down{grid-column:2; grid-row:3}
-.nav-dpad .dpad-dot{grid-column:2; grid-row:2; align-self:center; justify-self:center; width:5px; height:5px; border-radius:50%; background:var(--rule)}
+.nav-dpad .dpad-dot{grid-column:2; grid-row:2; width:30px; height:30px; padding:0; border:none; background:transparent; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center} /* fills the centre cell; tap to dismiss */
+.nav-dpad .dpad-dot::after{content:""; width:6px; height:6px; border-radius:50%; background:var(--soft)}
+.nav-dpad .dpad-dot:hover{background:var(--cream)} .nav-dpad .dpad-dot:hover::after{background:var(--wine)}
 .nav-dpad .dpad-arrow{width:15px; height:15px; display:block} /* one drawn chevron (points up), rotated per direction so all four match */
 .nav-dpad .dpad-right .dpad-arrow{transform:rotate(90deg)}
 .nav-dpad .dpad-down .dpad-arrow{transform:rotate(180deg)}
@@ -23806,7 +23808,7 @@ document.addEventListener("click", function (e) {
       if (!monitor || window.currentStageName !== "office" || !monitor.classList.contains("show-caps")) return;
       if (!e.target || !e.target.closest) return;
       var cell = e.target.closest(".dock-app");
-      if (!cell) return; // bare desktop / menu bar → native menu
+      if (!cell) { if (e.target.closest("#office-monitor")) e.preventDefault(); return; } // bare monitor desktop → eat the right-click (no native menu), like the phone base
       var appObj = null;
       for (var i = 0; i < DESKTOP_APPS.length; i++) if (cell.id === "monitor-dock-" + DESKTOP_APPS[i].id) { appObj = DESKTOP_APPS[i]; break; }
       if (!appObj) return;
@@ -39322,16 +39324,18 @@ function spawnDustMote(container) {
       dpadEl = document.createElement("div");
       dpadEl.className = "mon-ctx nav-dpad"; dpadEl.setAttribute("role", "menu");
       dpadEl.appendChild(mkBtn("up", "↑", "dpad_day", function () { if (window.__setDayNight) window.__setDayNight(false); }));
-      dpadEl.appendChild(mkBtn("left", "←", "dpad_prev", function () { clickNav("hunt-prev"); }));
-      var dot = document.createElement("span"); dot.className = "dpad-dot"; dpadEl.appendChild(dot);
-      dpadEl.appendChild(mkBtn("right", "→", "dpad_next", function () { clickNav("hunt-next"); }));
+      dpadEl.appendChild(mkBtn("left", "←", "dpad_prev", function () { if (stageIndex > 0) goToStage(STAGES[stageIndex - 1]); }));
+      var dot = document.createElement("button"); dot.type = "button"; dot.className = "dpad-dot"; dot.setAttribute("aria-label", "close");
+      dot.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); closeMenu(); }); // tapping the centre dismisses
+      dpadEl.appendChild(dot);
+      dpadEl.appendChild(mkBtn("right", "→", "dpad_next", function () { if (stageIndex < STAGES.length - 1) goToStage(STAGES[stageIndex + 1]); })); // the D-pad always advances, unlocking the frontier
       dpadEl.appendChild(mkBtn("down", "↓", "dpad_night", function () { if (window.__setDayNight) window.__setDayNight(true); }));
       dpadEl.style.visibility = "hidden";
       document.body.appendChild(dpadEl);
-      // clamp to the viewport on both axes so a corner right-click doesn't overflow (mirrors mon-ctx)
+      // centre the D-pad ON the pointer (so the cursor sits over the middle dot), then clamp to the viewport
       var r = dpadEl.getBoundingClientRect();
-      dpadEl.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 4)) + "px";
-      dpadEl.style.top = Math.max(4, Math.min(y, window.innerHeight - r.height - 4)) + "px";
+      dpadEl.style.left = Math.max(4, Math.min(x - r.width / 2, window.innerWidth - r.width - 4)) + "px";
+      dpadEl.style.top = Math.max(4, Math.min(y - r.height / 2, window.innerHeight - r.height - 4)) + "px";
       dpadEl.style.visibility = "";
       document.addEventListener("keydown", onKey, true);
       document.addEventListener("mousedown", onAway, true);

@@ -210,7 +210,7 @@ function check(name, cond, detail) {
 var s = rep.steps;
 console.log("monitor right-click Kill/Restart menus + restart + fs button:");
 console.log(" desktop (no app open):");
-check("right-click on the bare desktop shows no menu (native kept)", s.desktop_ctx_prevented === false && s.desktop_no_mon_menu === true && s.desktop_no_cc_menu === true, { prevented: s.desktop_ctx_prevented, mon: !s.desktop_no_mon_menu, cc: !s.desktop_no_cc_menu });
+check("right-click on the bare monitor desktop eats the native menu, shows no custom menu", s.desktop_ctx_prevented === true && s.desktop_no_mon_menu === true && s.desktop_no_cc_menu === true, { prevented: s.desktop_ctx_prevented, mon: !s.desktop_no_mon_menu, cc: !s.desktop_no_cc_menu });
 console.log(" non-runtime apps (mail/weather/mines/music) — Kill only, enabled, no Restart:");
 check("every sampled non-runtime app shows exactly an enabled Kill, no Restart", s.nonruntime_kill_only_enabled === true, s.nonruntime_detail);
 check("generalized Kill closes a non-runtime app (mail) + hides the menu", s.mail_kill_closed_app === true && s.mail_kill_hid_menu === true);
@@ -261,7 +261,7 @@ check("desktop Kill calls the silent host kill hook + hides the menu", s.desk_do
 check("desktop Kill offered for a running linux host", s.desk_linux_running_has_kill === true);
 check("desktop Kill offered for a running python host", s.desk_python_running_has_kill === true);
 check("desktop Open launches the app (mines) + hides the menu", s.desk_open_launched === true && s.desk_open_hid_menu === true);
-check("desktop right-click a non-icon surface (brand) → no custom menu, native kept", s.desk_nontile_prevented === false && s.desk_nontile_no_menu === true, { prevented: s.desk_nontile_prevented });
+check("desktop right-click a non-icon surface (brand) → no custom menu, native eaten", s.desk_nontile_prevented === true && s.desk_nontile_no_menu === true, { prevented: s.desk_nontile_prevented });
 
 console.log("\n" + (fails ? ("FAILED " + fails + " check(s)") : "All menu checks passed."));
 console.log("captured console menu HTML: " + (s.menu_html || "(none)"));

@@ -39,8 +39,10 @@ var HARNESS = [
   "    await sleep(60);",
   "    S('closed_dismissed', !menu());",
   "    S('closed_woke', l.classList.contains('open'));",
-  // bare desk (off-laptop) → native menu kept, no custom menu
-  "    S('bare_prevented', ctxAt(document.getElementById('stage-office')||document.body));",
+  // off-laptop, off-scene (page body) → the LAPTOP menu doesn't fire; native kept, no custom menu.
+  // (Right-clicking the bare in-scene desk now opens the scene D-pad — a different, intended menu —
+  // so test off-scene to isolate the laptop handler.)
+  "    S('bare_prevented', ctxAt(document.body));",
   "    S('bare_no_menu', !menu());",
   // open + Prague tile → Open starts the Prague call
   "    if(!l.classList.contains('open')) l.classList.add('open');",

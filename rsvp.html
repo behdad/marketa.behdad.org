@@ -2489,6 +2489,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
   flex:none; display:flex; align-items:center; justify-content:space-between;
   padding:6px 15px 5px; font-size:12px; color:var(--ink);
   background:var(--paper); border-bottom:1px solid var(--rule);
+  touch-action:none; /* the empty bar is a drag handle for the phone — don't let a touch-drag pan the page */
 }
 .phone-statusbar .psb-right{display:flex; align-items:center; gap:6px}
 .phone-statusbar svg{display:block}
@@ -29786,6 +29787,34 @@ async def localfont(name):
         var bars = modal.querySelectorAll(".psb-sig-bar");
         for (var i = 0; i < bars.length; i++) bars[i].classList.toggle("off", i >= lvl); // dim bars above the level (bars fill weak→strong, left→right)
       })();
+      // drag the phone by the EMPTY part of its top status bar (the gap left of the centered camera
+      // notch): a grab counts ONLY when the bar's own background is the pointerdown target, never the
+      // brand / camera / wifi / battery children. Moves the shell via its `translate` property (a
+      // distinct property from any boot `transform`, so they compose). Clamped so it can't be flung
+      // fully off-screen; reset to centre on each open (see the open() below).
+      (function () {
+        var bar = shell.querySelector(".phone-statusbar");
+        if (!bar) return;
+        bar.style.cursor = "grab";
+        var dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
+        function curOff() { var t = (shell.style.translate || "").split(/\s+/); return { x: parseFloat(t[0]) || 0, y: parseFloat(t[1]) || 0 }; }
+        bar.addEventListener("pointerdown", function (e) {
+          if (e.target !== bar || (e.button && e.button !== 0)) return; // only the empty bar background, left button
+          dragging = true; sx = e.clientX; sy = e.clientY; var o = curOff(); ox = o.x; oy = o.y;
+          bar.style.cursor = "grabbing";
+          try { bar.setPointerCapture(e.pointerId); } catch (err) {}
+          e.preventDefault();
+        });
+        bar.addEventListener("pointermove", function (e) {
+          if (!dragging) return;
+          var nx = ox + (e.clientX - sx), ny = oy + (e.clientY - sy);
+          var mx = window.innerWidth / 2, my = window.innerHeight / 2; // keep the shell's centre on-screen
+          shell.style.translate = Math.max(-mx, Math.min(mx, nx)) + "px " + Math.max(-my, Math.min(my, ny)) + "px";
+        });
+        function endDrag(e) { if (!dragging) return; dragging = false; bar.style.cursor = "grab"; try { bar.releasePointerCapture(e.pointerId); } catch (err) {} }
+        bar.addEventListener("pointerup", endDrag);
+        bar.addEventListener("pointercancel", endDrag);
+      })();
       // backdrop tap (outside the shell) closes
       modal.addEventListener("click", function (e) { if (e.target === modal) close(); });
       shell.addEventListener("click", function (e) { e.stopPropagation(); ["psb-wifi-wrap", "psb-batt-wrap"].forEach(function (c) { var w = modal.querySelector("." + c); if (w) w.classList.remove("show"); }); });
@@ -32141,6 +32170,7 @@ async def localfont(name):
     function open(cineHome) {
       build();
       closing = false;
+      if (shell) shell.style.translate = ""; // a fresh open re-centres the phone (drops any prior drag offset)
       var fsHost = document.fullscreenElement || document.webkitFullscreenElement ||
                    document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
       if (modal.parentNode !== fsHost) fsHost.appendChild(modal);

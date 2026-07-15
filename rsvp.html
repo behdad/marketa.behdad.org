@@ -1742,6 +1742,9 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 .ed-ac-name{flex:none; color:#a7e08a}
 .ed-ac-item.active .ed-ac-name{color:#c6f0ad}
 .ed-ac-help{flex:1; min-width:0; color:#6f8a6f; overflow:hidden; text-overflow:ellipsis}
+/* full-help card (Tab on an exact command): the ƒ signature + the whole help, wrapped */
+.ed-ac-sig{color:#c6f0ad; padding:0.15px 0.7px 0; white-space:pre-wrap; word-break:break-word}
+.ed-ac-fullhelp{color:#8aa88a; padding:0.15px 0.7px 0.3px; white-space:pre-wrap; word-break:break-word}
 .ed-ac-more{padding:0.15px 0.7px; color:#5f7a5f}
 .ed-ac-mirror{position:absolute; visibility:hidden; pointer-events:none; left:-9999px; top:0; white-space:pre; overflow:hidden}
 #monitor-console-close{cursor:pointer}
@@ -24148,11 +24151,13 @@ document.addEventListener("click", function (e) {
     edAc.addEventListener("mousedown", function (e) { e.preventDefault(); e.stopPropagation(); });
     edMain.appendChild(edAc);
   }
-  // Chrome-style `ƒ name(params)` from the function's own source (same param-extraction as the
-  // console's fmtOut) — shows the real argument list in the popup instead of a bare name().
+  // Chrome-style `ƒ name(params)` from the live function's own source (same param-extraction as the
+  // console's fmtOut). cmd.fn is just an is-a-function flag, so look the real function up on window.
   function edFnSig(cmd) {
-    if (typeof cmd.fn !== "function") return cmd.name;
-    var fs = String(cmd.fn);
+    if (!cmd.fn) return cmd.name;                    // bareword command — no parens
+    var fn = window[cmd.name];
+    if (typeof fn !== "function") return "ƒ " + cmd.name + "()";
+    var fs = String(fn);
     if (/\{\s*\[native code\]\s*\}/.test(fs)) return "ƒ " + cmd.name + "()";
     var pm = fs.match(/^(?:async\s+)?(?:function\b[^(]*)?\(([^)]*)\)/);
     return "ƒ " + cmd.name + "(" + (pm ? pm[1].trim() : "") + ")";
@@ -24269,6 +24274,30 @@ document.addEventListener("click", function (e) {
     edAcHide();
     return true;
   }
+  // exact-command help: the caret on a COMPLETE command (unambiguous, or already followed by "(").
+  function edCmdAtCaret() {
+    if (!edCode) return null;
+    var cmds = window.__loftCommands ? window.__loftCommands() : [];
+    function find(nm) { nm = String(nm).toLowerCase(); for (var i = 0; i < cmds.length; i++) if (cmds[i].name.toLowerCase() === nm) return cmds[i]; return null; }
+    var pre = edCode.value.slice(0, edCode.selectionStart);
+    var m = pre.match(/([A-Za-z_$][\w$]*)\s*\($/);           // `dance(` right before the caret
+    if (m) { var c = find(m[1]); if (c) return c; }
+    var tok = edTokenAtCaret();                               // …or a full command token with nothing extending it
+    if (tok && tok.text) { var c2 = find(tok.text); if (c2 && edMatches(tok.text).length === 1) return c2; }
+    return null;
+  }
+  // render the ƒ-signature + the FULL help for one command, in place of the completion list
+  function edShowCmdHelp(cmd) {
+    edAcEnsure(); if (!edAc) return;
+    edAcItems = []; edAcSel = -1; edAcTok = null;
+    edAc.innerHTML = "";
+    var sig = document.createElement("div"); sig.className = "ed-ac-sig"; sig.textContent = edFnSig(cmd);
+    var hp = document.createElement("div"); hp.className = "ed-ac-fullhelp";
+    hp.textContent = Array.isArray(cmd.help) ? cmd.help.join("\n") : (cmd.help || "");
+    edAc.appendChild(sig); edAc.appendChild(hp);
+    edAc.classList.add("open");
+    edAcPosition();
+  }
   if (edCode && edMain) {
     edCode.addEventListener("input", function () { edAcUpdate(false); }); // live prefix → popup
     edCode.addEventListener("scroll", function () { if (edAcVisible()) edAcHide(); }); // a scroll staleness the popup can't track → drop it
@@ -24283,8 +24312,11 @@ document.addEventListener("click", function (e) {
         if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); edAcHide(); return; } // (also caught by the capture guard below)
         return; // any other key falls through to typing; the input handler refreshes the list
       }
-      // popup closed: Tab opens completion when there's a live prefix (else it's a normal Tab)
+      // popup closed: Tab on an exact command shows its full ƒ-signature + help; otherwise Tab opens
+      // completion when there's a live prefix (else it's a normal Tab)
       if (e.key === "Tab" && !e.shiftKey) {
+        var hc = edCmdAtCaret();
+        if (hc) { e.preventDefault(); e.stopPropagation(); edShowCmdHelp(hc); return; }
         var tok = edTokenAtCaret();
         if (tok && tok.text.length >= 1 && edMatches(tok.text).length) { e.preventDefault(); e.stopPropagation(); edAcUpdate(true); return; }
       }

@@ -999,6 +999,21 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
   70%{transform:rotate(-3deg) translateY(-2px)}
 }
 @media (prefers-reduced-motion: reduce){.cabinet-critter.wobbling{animation:none}}
+/* cabinet cockroach: three nested transform sources so none clobbers another —
+   #kitchen-roach carries the JS-set translate (the dart, CSS-transitioned);
+   #kitchen-roach-face carries the JS-set scaleX facing flip (instant, no transition,
+   so the direction flip never interpolates through zero-width); #kitchen-roach-wob
+   carries the CSS skitter keyframes. Art is centered at local 0,0. */
+#kitchen-roach{cursor:pointer; transition:transform .2s cubic-bezier(.2,.7,.3,1)}
+#kitchen-roach-face{transform-box:fill-box; transform-origin:center}
+#kitchen-roach-wob{transform-box:fill-box; transform-origin:center}
+#kitchen-roach-wob.scuttling{animation:roach-skitter .11s linear infinite}
+@keyframes roach-skitter{
+  0%{transform:rotate(-2.6deg) translateY(0)}
+  50%{transform:rotate(2.6deg) translateY(-0.4px)}
+  100%{transform:rotate(-2.6deg) translateY(0)}
+}
+@media (prefers-reduced-motion: reduce){#kitchen-roach{transition:none} #kitchen-roach-wob.scuttling{animation:none}}
 .witchy-door{transform-box:fill-box; transition:transform .5s ease}
 .witchy-door.open{transform:scaleX(.15)}
 /* the open balcony door rattles on its hinge in the wind during a storm (keeps the
@@ -5987,6 +6002,26 @@ section{margin:1.9rem 0}
 <clipPath id="kitchen-scale-screen-clip"><rect x="564" y="218" width="13" height="7" rx="1"/></clipPath>
 <!-- a wee sweet-nothing that scrolls across the radio screen after a couple seconds of EQ -->
 <g clip-path="url(#kitchen-scale-screen-clip)"><text id="kitchen-scale-love" x="564" y="223.3" font-family="monospace" font-size="5" font-weight="700" fill="#123a24" pointer-events="none">I LOVE YOU ♥</text></g>
+</g>
+<!-- cabinet cockroach: darts out of a cabinet when it's opened, then scuttles the counter
+     until clicked (see the __emergeKitchenRoach IIFE). Three nested groups keep the dart
+     translate, the facing flip, and the skitter wobble on separate nodes (see the CSS).
+     Art centered at local 0,0, facing right; placed before #kitchen-bar so the party/night
+     bar overlay hides it. Starts hidden. -->
+<g id="kitchen-roach" style="display:none;opacity:0">
+<g id="kitchen-roach-face">
+<g id="kitchen-roach-wob">
+<rect x="-13" y="-9" width="27" height="18" fill="transparent"/>
+<path d="M-9 -3 Q-13 -4 -15 -6 M-9 3 Q-13 4 -15 6" fill="none" stroke="#2a1d14" stroke-width="0.7" stroke-linecap="round" opacity="0.75"/>
+<path d="M-8 -3 L-13 -6 M-8 0 L-14 0 M-8 3 L-13 6 M6 -2.5 L11 -5.5 M6 0 L12 -0.5 M6 2.5 L11 5.5" stroke="#2a1d14" stroke-width="0.8" stroke-linecap="round"/>
+<ellipse cx="-2" cy="0" rx="8" ry="4.6" fill="#4a3524"/>
+<ellipse cx="-2" cy="0" rx="8" ry="4.6" fill="none" stroke="#3a2818" stroke-width="0.5"/>
+<path d="M-9.5 0 L4 0" stroke="#33241a" stroke-width="0.7"/>
+<path d="M-4.5 -4.3 Q-4.5 4.3 -4.5 4.3 M0.5 -4.1 Q0.5 4.1 0.5 4.1" stroke="#33241a" stroke-width="0.5" opacity="0.6"/>
+<ellipse cx="4.6" cy="0" rx="3.3" ry="3.1" fill="#3a2818"/>
+<circle cx="6.8" cy="0" r="1.7" fill="#2a1d14"/>
+</g>
+</g>
 </g>
 <!-- ── PARTY BAR (garden-party only) ── the espresso kitchen becomes a cocktail bar
      while #loft-game-strip.party-on is set (see setGardenParty). Purely decorative /
@@ -19172,6 +19207,9 @@ document.addEventListener("click", function (e) {
   var playSurpriseSound = goat ? playGoatBleatSound : playGhostBooSound;
   var ghostCabinetIndex = Math.floor(Math.random() * 4);
   if (surpriseWrap) surpriseWrap.style.transform = "translateX(" + ((ghostCabinetIndex - 1) * 150) + "px)";
+  // a cockroach lurks in a DIFFERENT cabinet than the ghost/goat — open it and it darts out
+  // onto the counter (see the roach IIFE just below). Cabinet i spans x=[i*150 .. i*150+150].
+  var roachCabinetIndex; do { roachCabinetIndex = Math.floor(Math.random() * 4); } while (roachCabinetIndex === ghostCabinetIndex);
   function wobbleCritter() { // re-trigger the one-shot wobble across a double rAF
     if (!critter) return;
     critter.classList.remove("wobbling");
@@ -19186,6 +19224,9 @@ document.addEventListener("click", function (e) {
       el.classList.toggle("open");
       playCreakSound(id);
       if (i === ghostCabinetIndex && el.classList.contains("open")) wobbleCritter();
+      if (i === roachCabinetIndex && el.classList.contains("open") && window.__emergeKitchenRoach) {
+        window.__emergeKitchenRoach(75 + i * 150); // the cabinet's mouth centre (x, stage-local)
+      }
     }
     el.addEventListener("click", toggleCabinet);
     el.addEventListener("keydown", function (e) {
@@ -19212,6 +19253,113 @@ document.addEventListener("click", function (e) {
       if (surpriseWrap && Math.random() < 0.5) jumpCabinet(); // half the time it hops away
     });
   }
+  // ── cabinet cockroach ──────────────────────────────────────────────────────────────────
+  // Darts out of #kitchen-roach-cabinet when opened, then wanders the counter in quick dart-
+  // then-freeze hops; a click sends it bolting off-screen and gone. Gated on room+focus+bar so
+  // it never runs a timer while the tab's hidden/unfocused, you've left the kitchen, or the
+  // night/party cocktail bar is up (which visually covers the espresso counter). Three nested
+  // SVG nodes keep the dart-translate, facing-flip, and skitter-wobble on separate transforms.
+  (function () {
+    var roach = document.getElementById("kitchen-roach");
+    var face = document.getElementById("kitchen-roach-face");
+    var wob = document.getElementById("kitchen-roach-wob");
+    if (!roach || !face || !wob) return;
+    function roachReduce() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+    var MINX = 24, MAXX = 596, MINY = 324, MAXY = 337; // counter-top roam box (stage-local)
+    var x = 300, y = 330, facing = 1;
+    var state = "hidden"; // hidden | roaming | fled
+    var timer = null;
+    function place() { roach.style.transform = "translate(" + x.toFixed(1) + "px," + y.toFixed(1) + "px)"; }
+    function faceIt() { face.style.transform = "scaleX(" + facing + ")"; } // instant flip, no transition
+    function barUp() { // night/party cocktail bar overlay covers the espresso counter
+      var k = document.getElementById("stage-kitchen");
+      return !!window.__gardenPartyOn || !!(k && k.classList.contains("dusk"));
+    }
+    function shouldRun() {
+      return state === "roaming" && window.currentStageName === "kitchen" &&
+        !document.hidden && document.hasFocus() && !barUp();
+    }
+    function stopLegs() { wob.classList.remove("scuttling"); }
+    function clearRoachTimer() { if (timer) { clearTimeout(timer); timer = null; } }
+    function step() {
+      timer = null;
+      if (!shouldRun()) { stopLegs(); return; } // leaving / hidden / unfocused / bar up → self-cancel
+      var reduce = roachReduce();
+      var dx = (Math.random() * 2 - 1) * (55 + Math.random() * 120);
+      var nx = Math.max(MINX, Math.min(MAXX, x + dx));
+      var ny = Math.max(MINY, Math.min(MAXY, y + (Math.random() * 2 - 1) * 7));
+      if (nx < x - 1) facing = -1; else if (nx > x + 1) facing = 1;
+      faceIt();
+      var dist = Math.abs(nx - x);
+      x = nx; y = ny;
+      var dur = reduce ? 0 : Math.max(0.1, Math.min(0.34, dist / 520));
+      roach.style.transition = reduce ? "none" : ("transform " + dur.toFixed(2) + "s cubic-bezier(.2,.7,.3,1)");
+      if (!reduce) wob.classList.add("scuttling");
+      place();
+      var legMs = Math.max(70, dur * 1000);
+      setTimeout(stopLegs, legMs); // legs still only while darting — the freeze between darts
+      timer = setTimeout(step, legMs + 170 + Math.random() * 520); // dart, then a short stop
+    }
+    function startRoam() { clearRoachTimer(); if (!shouldRun()) return; timer = setTimeout(step, 140); }
+    window.__emergeKitchenRoach = function (centerX) {
+      if (state !== "hidden") return; // one roach per game; a re-open won't spawn a second
+      state = "roaming";
+      x = (typeof centerX === "number") ? centerX : 300;
+      y = 320; facing = Math.random() < 0.5 ? -1 : 1;
+      roach.style.transition = "none";
+      faceIt(); place();
+      roach.style.display = "";
+      roach.style.opacity = "1"; // a roach bursts out — no leisurely fade
+      // drop onto the counter and begin roaming a beat later
+      setTimeout(function () {
+        y = MINY + Math.random() * (MAXY - MINY);
+        roach.style.transition = roachReduce() ? "none" : "transform .18s cubic-bezier(.2,.7,.3,1)";
+        place();
+        startRoam();
+      }, 60);
+    };
+    function hideRoach() {
+      clearRoachTimer(); stopLegs();
+      roach.style.display = "none";
+      roach.style.opacity = "0";
+    }
+    function flee(e) {
+      if (state !== "roaming") return;
+      if (e) { if (e.preventDefault) e.preventDefault(); if (e.stopPropagation) e.stopPropagation(); }
+      state = "fled";
+      clearRoachTimer();
+      playRoachSkitterSound("kitchen-roach"); // dry scuttle, panned to its counter position
+      var reduce = roachReduce();
+      var toLeft = (x - MINX) < (MAXX - x);
+      facing = toLeft ? -1 : 1; faceIt();
+      x = toLeft ? -40 : 640; y = MAXY; // bolt off the nearest edge, under the counter
+      roach.style.transition = reduce ? "none" : "transform .45s cubic-bezier(.35,0,.7,1)";
+      if (!reduce) wob.classList.add("scuttling");
+      place();
+      setTimeout(hideRoach, reduce ? 0 : 480);
+    }
+    roach.addEventListener("click", flee);
+    // room change (goToStage) + tab hide/blur re-evaluate the gate: resume if runnable, else
+    // freeze in place (no stray timer). Mirrors the office-crane self-cancel model.
+    window.__updateKitchenRoach = function () {
+      if (state !== "roaming") return;
+      if (shouldRun()) { if (!timer) startRoam(); }
+      else { clearRoachTimer(); stopLegs(); }
+    };
+    document.addEventListener("visibilitychange", function () { window.__updateKitchenRoach(); });
+    window.addEventListener("focus", function () { window.__updateKitchenRoach(); });
+    window.addEventListener("blur", function () { window.__updateKitchenRoach(); });
+    window.__resetKitchenRoach = function () { // reset: no leftover bug, back to a fresh cabinet
+      clearRoachTimer(); stopLegs();
+      state = "hidden"; x = 300; y = 330; facing = 1;
+      roach.style.transition = "none";
+      faceIt();
+      roach.style.transform = "translate(300px,330px)";
+      roach.style.display = "none";
+      roach.style.opacity = "0";
+    };
+    window.__kitchenRoachState = function () { return { state: state, timer: !!timer }; }; // test hook
+  })();
   var cups = document.getElementById("kitchen-cups");
   if (cups) {
     var cupCenters = [
@@ -35867,6 +36015,37 @@ function playDryClickSound(panId) {
     osc.stop(t + 0.12);
   } catch (e) {}
 }
+// a dry skitter — a quick accelerating burst of tiny high-band noise ticks, like six little
+// legs scrabbling across the counter as the roach bolts. Panned to the roach's position.
+function playRoachSkitterSound(panId) {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t0 = ctx.currentTime;
+    var out = pannedOut(ctx, panId);
+    var n = 8;
+    for (var i = 0; i < n; i++) {
+      var at = t0 + i * (0.03 - i * 0.001) + Math.random() * 0.005; // ticks bunch up as it accelerates away
+      var dur = 0.016;
+      var buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var s = 0; s < d.length; s++) d[s] = Math.random() * 2 - 1;
+      var src = ctx.createBufferSource();
+      src.buffer = buf;
+      var bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = 2500 + Math.random() * 1600;
+      bp.Q.value = 1.5;
+      var g = ctx.createGain();
+      var peak = 0.055 * (1 - i / (n + 3));
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.001, peak), at + 0.002);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+      src.connect(bp); bp.connect(g); g.connect(out);
+      src.start(at); src.stop(at + dur + 0.01);
+    }
+  } catch (e) {}
+}
 // a soft tipsy "hic!" — a quick up-glide blip cut short, then a tiny lower catch, lowpassed so it
 // reads as a gulp of a hiccup rather than a beep. Spatialized to the tapped patron.
 function playHiccupSound(panId) {
@@ -40445,6 +40624,7 @@ function spawnDustMote(container) {
     if (window.__updateLuebSinging) window.__updateLuebSinging(); // leaving the office stops the Lübeck kids' serenade (room-gated)
     if (window.__updatePragueLife) window.__updatePragueLife(); // ...and pauses the Prague family's gestures off-screen (room-gated)
     if (window.__updateKettleHum) window.__updateKettleHum(name === "kitchen", ROOM_FADE); // kettle hum only in the kitchen
+    if (window.__updateKitchenRoach) window.__updateKitchenRoach(); // freeze the counter roach off-kitchen, resume it on return (reads window.currentStageName)
     if (window.__updateFireSound) window.__updateFireSound(name === "cuddly", ROOM_FADE); // fire crackle only in the cuddly nook
     if (window.__updateAquaSound) window.__updateAquaSound(name === "cuddly", ROOM_FADE); // aquarium bed only in the cuddly nook
     if (window.__updateAquaMelody) window.__updateAquaMelody(name === "cuddly", ROOM_FADE); // aquarium melody is whole-loft; the gate ignores the room but keep the lifecycle identical to stars
@@ -43094,6 +43274,7 @@ function spawnDustMote(container) {
     gardenState.candles = false;
     if (window.resetBottles) window.resetBottles();
     if (window.__resetKitchenPans) window.__resetKitchenPans();
+    if (window.__resetKitchenRoach) window.__resetKitchenRoach(); // fresh game: hide/stop the cabinet cockroach
     Object.keys(plantSpots).forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.classList.remove("done", "watered");

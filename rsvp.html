@@ -43903,13 +43903,26 @@ function spawnDustMote(container) {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
   function clickMeDismiss() { removeClickMe(); } // a real tap on the scene takes the invitation away
+  // ...and so does any real KEY interaction (Enter, the room-nav arrows, d, a letter…) — the melting
+  // invitation shouldn't linger while a keyboard player is already driving. Ignore lone modifiers/Tab
+  // and keystrokes aimed at a text field (console/editor input). Hands the opening prompt off just
+  // like a tap does (clickMeDismiss + stopHintBlink).
+  function introKeyDismiss(e) {
+    if (e && (e.metaKey || e.ctrlKey || e.altKey)) return;
+    if (e && /^(Shift|Control|Alt|Meta|CapsLock|Tab)$/.test(e.key)) return;
+    var a = document.activeElement;
+    if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+    clickMeDismiss();
+    stopHintBlink();
+  }
   function removeClickMe() {
     if (clickMeRaf) { cancelAnimationFrame(clickMeRaf); clickMeRaf = 0; }
     if (clickMeEl && clickMeEl.parentNode) clickMeEl.parentNode.removeChild(clickMeEl);
     clickMeEl = null; clickMeWord = null;
-    // the invitation persists until an actual click, so its dismiss listener is separate from the
-    // caption's grace-timeout teardown — pull it here (covers click, room-change, and reset paths)
+    // the invitation persists until an actual click/key, so its dismiss listeners are separate from
+    // the caption's grace-timeout teardown — pull them here (covers tap, key, room-change, reset)
     strip.removeEventListener("pointerdown", clickMeDismiss);
+    document.removeEventListener("keydown", introKeyDismiss, true);
   }
   function clickMeStep() {
     if (!clickMeWord || !clickMeWord.isConnected) { clickMeRaf = 0; return; } // torn down mid-flight — stop cleanly
@@ -43933,6 +43946,7 @@ function spawnDustMote(container) {
     clickMeEl.appendChild(clickMeWord);
     host.appendChild(clickMeEl);
     strip.addEventListener("pointerdown", clickMeDismiss); // stays until an actual tap — NOT the caption's 6s grace timeout
+    document.addEventListener("keydown", introKeyDismiss, true); // ...or any real key press (removed in removeClickMe; stays armed past the 6s caption handoff since the invitation lingers)
     requestAnimationFrame(function () { if (clickMeEl) clickMeEl.classList.add("show"); }); // fade in
     if (clickMeReduceMotion()) return; // CSS pins a static mid-melt YEAR; no rAF
     clickMeStart = (window.performance && performance.now) ? performance.now() : Date.now();

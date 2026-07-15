@@ -48,8 +48,8 @@ them casually.
 
 With thanks to the people who helped shape this:
 
-- **Markéta Jakešová** — co-design
-- **Kasra Rahimi**, **Garret Rieger** & **Mahzad** — testing
+- **Markéta** — co-design
+- **Kasra**, **Garret** & **Mahzad** — testing
 
 ## A note for visitors
 

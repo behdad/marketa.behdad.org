@@ -1954,6 +1954,12 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 #office-monitor.death-linux #monitor-bsod{opacity:1}
 #office-monitor.death-python #monitor-pymonty{opacity:1}
 #office-monitor.death-console #monitor-js{opacity:1}
+#office-monitor.death-browser #monitor-awsnap{opacity:1}
+/* Browser is the one app defined AFTER #monitor-deathfx (it paints above), and .browser-wrap is
+   opaque, so hide the frozen browser + its bezel nav arrows under the Aw-Snap overlay during the
+   flash. 2 classes beat the 1-class show rules, order-independently; auto-restores when death-browser clears. */
+#office-monitor.show-browser.death-browser #monitor-browser,
+#office-monitor.show-browser.death-browser .bezel-nav{opacity:0; pointer-events:none}
 .fatality-wrap{width:124px; height:42px; display:flex; align-items:center; justify-content:center; overflow:hidden}
 .fatality-word{font-family:"Climate Crisis",Impact,sans-serif; color:#e11414; font-size:12.5px; line-height:1; letter-spacing:.2px; white-space:nowrap; text-shadow:0 0 3px rgba(255,44,44,.55); font-variation-settings:"YEAR" 1979} /* YEAR animated inline 1979→2050 = the melt; this is the fallback */
 /* Intro "CLICK ME!" — a big melting invitation overlaid on the game scene while the opening
@@ -9956,6 +9962,26 @@ section{margin:1.9rem 0}
 <text x="259" y="191.5" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="3.9" fill="#3f6b46">-- signal lost --</text>
 <rect id="monitor-js-fade" x="254" y="154" width="124" height="42" fill="#000" opacity="0"/>
 </g>
+<!-- Browser (chrome) killed → Chrome's classic "Aw, Snap!" crash page: the sad rounded-page face
+     (tilted a touch), the dark-gray "Aw, Snap!" heading + a small explainer line, and a decorative
+     (non-functional) Reload pill. Native SVG (no foreignObject font-subset risk). Fills the 254/154
+     124×42 screen box; the browser itself is hidden underneath while death-browser is set. -->
+<g id="monitor-awsnap">
+<rect x="254" y="154" width="124" height="42" fill="#dee1e6"/>
+<!-- sad tab / broken-page face, tilted ~-8° -->
+<g transform="rotate(-8 275 176)">
+<rect x="266" y="167" width="18" height="18" rx="4.6" fill="#bdc1c6"/>
+<rect x="270.8" y="172.6" width="1.7" height="3.1" rx="0.85" fill="#80868b"/>
+<rect x="277.5" y="172.6" width="1.7" height="3.1" rx="0.85" fill="#80868b"/>
+<path d="M271.6 180.4 Q275 177.6 278.4 180.4" fill="none" stroke="#80868b" stroke-width="1.4" stroke-linecap="round"/>
+</g>
+<text x="296" y="172.4" font-family="Arial,Helvetica,sans-serif" font-size="7.4" font-weight="700" fill="#3c4043">Aw, Snap!</text>
+<text x="296" y="179" font-family="Arial,Helvetica,sans-serif" font-size="2.75" fill="#5f6368">Something went wrong while</text>
+<text x="296" y="182.7" font-family="Arial,Helvetica,sans-serif" font-size="2.75" fill="#5f6368">displaying this webpage.</text>
+<!-- decorative Reload pill (non-functional) -->
+<rect x="352" y="186" width="20.5" height="7" rx="3.5" fill="#1a73e8"/>
+<text x="362.25" y="190.9" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="3.5" font-weight="600" fill="#ffffff">Reload</text>
+</g>
 </g>
 <!-- BROWSER (chrome) app: real web pages in iframes over the screen, behind a slim
      tab strip (markéta / behdad / harfbuzz, built by JS from BROWSER_TABS, plus a +
@@ -12406,6 +12432,7 @@ var T = {
       df_python_quip1: "'Tis but a scratch!", // caption beat 1 under the Monty Python Black Knight (Python kill)
       df_python_quip2: "It's just a flesh wound!", // caption beat 2 under the Monty Python Black Knight (Python kill)
       df_console_quip: "undefined is not a function.", // caption under the on-screen JS-console flatline (console kill); a literal JS error — same in both languages (code, not prose)
+      df_browser_quip: "Aw, Snap! The tab gave up.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
       kitchen: "Turn on the machine → grind → brew.",
       kitchen_grind: "Now grind coffee.",
       kitchen_brew: "Now brew a shot.",
@@ -12815,6 +12842,7 @@ var T = {
       df_python_quip1: "To je jen škrábnutí!", // caption beat 1 under the Monty Python Black Knight (Python kill)
       df_python_quip2: "Je to jenom škrábnutí!", // caption beat 2 under the Monty Python Black Knight (Python kill)
       df_console_quip: "undefined is not a function.", // literal JS error string — same in both languages (a code token, not translated prose)
+      df_browser_quip: "Ajaj! Panel to vzdal.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
       kitchen: "Zapni kávovar → umel → uvař.",
       kitchen_grind: "Teď umel kávu.",
       kitchen_brew: "Teď uvař espresso.",
@@ -23640,16 +23668,20 @@ document.addEventListener("click", function (e) {
     var CONSOLE_APPS = ["show-python", "show-linux", "show-console"];
     // per-app extras: a Restart hook + a runtime-running predicate (Kill greys out until true)
     var RUNTIME_EXTRAS = { "show-doom": { restart: "__restartMonitorDoom", running: "__doomRunning", kill: "__killMonitorDoom" } };
+    // per-app Kill overrides for plain (non-runtime) apps whose Kill should run a death-flash
+    // instead of the silent generic close — the browser flashes Chrome's "Aw, Snap!" then closes.
+    var APP_KILLS = { "show-browser": "__killMonitorBrowser" };
     var menuEl = null;
     function activeMonitorApp() {
       if (!monitor || window.currentStageName !== "office") return null;
       for (var i = 0; i < CONSOLE_APPS.length; i++) if (monitor.classList.contains(CONSOLE_APPS[i])) return null; // console-ctx owns these
-      var open = false;
-      for (var j = 0; j < REAL_APPS.length; j++) if (monitor.classList.contains(REAL_APPS[j])) { open = true; break; }
+      var open = false, openCls = null;
+      for (var j = 0; j < REAL_APPS.length; j++) if (monitor.classList.contains(REAL_APPS[j])) { open = true; openCls = REAL_APPS[j]; break; }
       if (!open) return null;
       var extra = null;
       for (var cls in RUNTIME_EXTRAS) if (monitor.classList.contains(cls)) { extra = RUNTIME_EXTRAS[cls]; break; }
-      return { close: (extra && extra.kill) ? extra.kill : "__closeTopMonitorApp", restart: extra ? extra.restart : null, running: extra ? extra.running : null };
+      var killOverride = APP_KILLS[openCls] || null; // a plain app's own flash-then-close Kill
+      return { close: (extra && extra.kill) ? extra.kill : (killOverride || "__closeTopMonitorApp"), restart: extra ? extra.restart : null, running: extra ? extra.running : null };
     }
     function closeMenu() {
       if (!menuEl) return;
@@ -24910,6 +24942,21 @@ document.addEventListener("click", function (e) {
     scheduleSaver();
   }
   window.__closeMonitorBrowser = closeBrowser; // other monitor apps close the browser before taking the screen
+  // Kill (from the app's right-click menu) → Chrome's "Aw, Snap!" crash page flashes over the frozen
+  // browser (~2.2s), then it closes back to the desktop. The browser is a plain app, not a self-hosted
+  // runtime, so Kill is the only affordance — no Restart. The silent ✕/app-switch close (closeBrowser)
+  // is left untouched. No freeze needed: the iframes idle harmlessly behind the opaque overlay.
+  function browserDeathFlash() {
+    if (!monitor.classList.contains("show-browser") || !window.__runMonitorDeathFlash) { closeBrowser(); return; }
+    window.__runMonitorDeathFlash({
+      screenClass: "death-browser",
+      beats: [{ key: "df_browser_quip", at: 300 }], // browser-crash quip rides the caption bar
+      dur: 2200,
+      sound: function () { playAwSnapSound("office-monitor"); },
+      close: closeBrowser
+    });
+  }
+  window.__killMonitorBrowser = browserDeathFlash; // Kill → Aw-Snap flash → close (back to desktop)
   function blankBrowser() {
     // about:blank (not a removed attribute) actually unloads the framed site
     if (browserFrame && browserFrame.getAttribute("src")) browserFrame.setAttribute("src", "about:blank");
@@ -38379,6 +38426,26 @@ function playBsodSound(panId) {
       var g2 = ctx.createGain(); g2.gain.value = 0.03;
       o.connect(g); o2.connect(g2); g2.connect(g); g.connect(out);
       o.start(t + n.at); o.stop(t + n.at + 0.38); o2.start(t + n.at); o2.stop(t + n.at + 0.38);
+    });
+  } catch (e) {}
+}
+// Browser → Chrome "Aw, Snap!": a gentle sad "wah-wah" — two soft descending tones (sine + a quiet
+// triangle body), mellow and low, no harsh edge. Like a deflating trombone, tab giving up.
+function playAwSnapSound(panId) {
+  try {
+    var ctx = getSfxCtx(); if (!ctx) return;
+    var t = ctx.currentTime, out = pannedOut(ctx, panId);
+    [{ f0: 392, f1: 311, at: 0.0, d: 0.34 }, { f0: 311, f1: 233, at: 0.30, d: 0.48 }].forEach(function (n) {
+      var o = ctx.createOscillator(); o.type = "sine";
+      o.frequency.setValueAtTime(n.f0, t + n.at); o.frequency.exponentialRampToValueAtTime(n.f1, t + n.at + n.d);
+      var o2 = ctx.createOscillator(); o2.type = "triangle"; // a touch of body under the pure sine
+      o2.frequency.setValueAtTime(n.f0, t + n.at); o2.frequency.exponentialRampToValueAtTime(n.f1, t + n.at + n.d);
+      var g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t + n.at);
+      g.gain.exponentialRampToValueAtTime(0.11, t + n.at + 0.05); g.gain.exponentialRampToValueAtTime(0.001, t + n.at + n.d);
+      var g2 = ctx.createGain(); g2.gain.value = 0.045;
+      o2.connect(g2); g2.connect(g); o.connect(g); g.connect(out);
+      o.start(t + n.at); o.stop(t + n.at + n.d + 0.05);
+      o2.start(t + n.at); o2.stop(t + n.at + n.d + 0.05);
     });
   } catch (e) {}
 }

@@ -54,6 +54,11 @@ var HARNESS = [
   "    showApp('show-mail'); ctxAt(mon()); if(monKill()) monKill().click(); await sleep(80);",
   "    S('mail_kill_closed_app', !mon().classList.contains('show-mail'));",
   "    S('mail_kill_hid_menu', !monMenu());",
+  // browser Kill is the one non-runtime app that flashes: Chrome's ~2.2s 'Aw, Snap!' crash (death-browser),
+  // THEN closes. Menu shows only an enabled Kill (no Restart); the flash starts immediately, show-browser
+  // stays up during it, and is torn down only after. Mirrors the doom kill shape (flash-then-close).
+  "    showApp('show-browser'); ctxAt(mon()); S('browser_items', monItems()); S('browser_kill_enabled', monKill()?!monKill().disabled:false); S('browser_has_restart', !!monRestart());",
+  "    if(monKill()) monKill().click(); await sleep(40); S('browser_kill_hid_menu', !monMenu()); S('browser_kill_flash_started', mon().classList.contains('death-browser')); S('browser_kill_still_open_during_flash', mon().classList.contains('show-browser')); await sleep(2400); S('browser_kill_closed_app', !mon().classList.contains('show-browser')); S('browser_kill_flash_ended', !mon().classList.contains('death-browser'));",
   // ---- PYTHON (console-ctx) ----
   "    showApp('show-python');",
   "    var pyOut = document.getElementById('monitor-py-out');",
@@ -209,6 +214,8 @@ check("right-click on the bare desktop shows no menu (native kept)", s.desktop_c
 console.log(" non-runtime apps (mail/weather/mines/music) — Kill only, enabled, no Restart:");
 check("every sampled non-runtime app shows exactly an enabled Kill, no Restart", s.nonruntime_kill_only_enabled === true, s.nonruntime_detail);
 check("generalized Kill closes a non-runtime app (mail) + hides the menu", s.mail_kill_closed_app === true && s.mail_kill_hid_menu === true);
+check("browser menu shows only an enabled Kill, no Restart", Array.isArray(s.browser_items) && s.browser_items.length === 1 && /kill/i.test(s.browser_items[0] || "") && s.browser_kill_enabled === true && s.browser_has_restart === false, { items: s.browser_items, enabled: s.browser_kill_enabled, restart: s.browser_has_restart });
+check("browser Kill runs the Aw-Snap flash then closes the app", s.browser_kill_hid_menu === true && s.browser_kill_flash_started === true && s.browser_kill_still_open_during_flash === true && s.browser_kill_closed_app === true && s.browser_kill_flash_ended === true, { hid: s.browser_kill_hid_menu, flash: s.browser_kill_flash_started, during: s.browser_kill_still_open_during_flash, closed: s.browser_kill_closed_app, ended: s.browser_kill_flash_ended });
 console.log(" python / linux (folded into the console menu):");
 check("contextmenu suppresses native menu over python console", s.py_contextmenu_prevented === true);
 check("console menu appears over python", s.py_menu_present === true);

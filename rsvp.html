@@ -2517,6 +2517,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 .phone-nav{
   flex:none; display:flex; align-items:center; justify-content:space-around;
   padding:8px 0 10px; background:var(--paper); border-top:1px solid var(--rule);
+  touch-action:none; /* the empty bar is also a phone drag handle — don't let a touch-drag pan the page */
 }
 .phone-nav button{
   background:none; border:none; cursor:pointer; padding:6px 20px; color:var(--muted);
@@ -29787,33 +29788,36 @@ async def localfont(name):
         var bars = modal.querySelectorAll(".psb-sig-bar");
         for (var i = 0; i < bars.length; i++) bars[i].classList.toggle("off", i >= lvl); // dim bars above the level (bars fill weak→strong, left→right)
       })();
-      // drag the phone by the EMPTY part of its top status bar (the gap left of the centered camera
-      // notch): a grab counts ONLY when the bar's own background is the pointerdown target, never the
-      // brand / camera / wifi / battery children. Moves the shell via its `translate` property (a
-      // distinct property from any boot `transform`, so they compose). Clamped so it can't be flung
-      // fully off-screen; reset to centre on each open (see the open() below).
+      // drag the phone by the EMPTY part of its top status bar OR its bottom nav bar: a grab counts
+      // ONLY when the bar's own background is the pointerdown target, never the brand/camera/signal
+      // children (top) or the back/home/recents buttons (bottom). Moves the shell via its `translate`
+      // property (a distinct property from any boot `transform`, so they compose). Clamped so it can't
+      // be flung fully off-screen; reset to centre on each open (see open() below).
       (function () {
-        var bar = shell.querySelector(".phone-statusbar");
-        if (!bar) return;
-        bar.style.cursor = "grab";
-        var dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
+        var dragging = false, activeBar = null, sx = 0, sy = 0, ox = 0, oy = 0;
         function curOff() { var t = (shell.style.translate || "").split(/\s+/); return { x: parseFloat(t[0]) || 0, y: parseFloat(t[1]) || 0 }; }
-        bar.addEventListener("pointerdown", function (e) {
-          if (e.target !== bar || (e.button && e.button !== 0)) return; // only the empty bar background, left button
-          dragging = true; sx = e.clientX; sy = e.clientY; var o = curOff(); ox = o.x; oy = o.y;
-          bar.style.cursor = "grabbing";
-          try { bar.setPointerCapture(e.pointerId); } catch (err) {}
-          e.preventDefault();
-        });
-        bar.addEventListener("pointermove", function (e) {
-          if (!dragging) return;
-          var nx = ox + (e.clientX - sx), ny = oy + (e.clientY - sy);
-          var mx = window.innerWidth / 2, my = window.innerHeight / 2; // keep the shell's centre on-screen
-          shell.style.translate = Math.max(-mx, Math.min(mx, nx)) + "px " + Math.max(-my, Math.min(my, ny)) + "px";
-        });
-        function endDrag(e) { if (!dragging) return; dragging = false; bar.style.cursor = "grab"; try { bar.releasePointerCapture(e.pointerId); } catch (err) {} }
-        bar.addEventListener("pointerup", endDrag);
-        bar.addEventListener("pointercancel", endDrag);
+        function makeHandle(bar) {
+          if (!bar) return;
+          bar.style.cursor = "grab";
+          bar.addEventListener("pointerdown", function (e) {
+            if (e.target !== bar || (e.button && e.button !== 0)) return; // only the bar's own empty background, left button
+            dragging = true; activeBar = bar; sx = e.clientX; sy = e.clientY; var o = curOff(); ox = o.x; oy = o.y;
+            bar.style.cursor = "grabbing";
+            try { bar.setPointerCapture(e.pointerId); } catch (err) {}
+            e.preventDefault();
+          });
+          bar.addEventListener("pointermove", function (e) {
+            if (!dragging || activeBar !== bar) return;
+            var nx = ox + (e.clientX - sx), ny = oy + (e.clientY - sy);
+            var mx = window.innerWidth / 2, my = window.innerHeight / 2; // keep the shell's centre on-screen
+            shell.style.translate = Math.max(-mx, Math.min(mx, nx)) + "px " + Math.max(-my, Math.min(my, ny)) + "px";
+          });
+          function endDrag(e) { if (!dragging || activeBar !== bar) return; dragging = false; activeBar = null; bar.style.cursor = "grab"; try { bar.releasePointerCapture(e.pointerId); } catch (err) {} }
+          bar.addEventListener("pointerup", endDrag);
+          bar.addEventListener("pointercancel", endDrag);
+        }
+        makeHandle(shell.querySelector(".phone-statusbar"));
+        makeHandle(shell.querySelector(".phone-nav"));
       })();
       // backdrop tap (outside the shell) closes
       modal.addEventListener("click", function (e) { if (e.target === modal) close(); });

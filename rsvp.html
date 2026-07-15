@@ -17434,6 +17434,7 @@ document.addEventListener("click", function (e) {
     var HIT_R = 18;              // hit radius (per axis) between shot and saucer
     var ARCADE_HIGH_KEY = "invadersHigh"; // own localStorage key — deliberately NOT part of any game-state snapshot (keeps tests/state.js's reset==load clean)
     var arcadeActive = false, arcadeRaf = null, arcadeLastT = 0;
+    var arcadeSavedCaption = null; // the office caption showing before the game armed — restored on game over
     var arcadeAliens = [], arcadeShots = [];
     var arcadeLastSpawn = 0, arcadeLastShot = 0, arcadeScore = 0;
     var arcadeHud = null, arcadeHudScore = null, arcadeHudHigh = null;
@@ -17559,6 +17560,7 @@ document.addEventListener("click", function (e) {
       arcadeLastSpawn = ALIEN_SPAWN_MS; // spawn promptly on the first tick
       arcadeLastShot = SHOT_MS;         // fire promptly on the first tick
       if (stageOffice) stageOffice.classList.add("arcade");
+      arcadeSavedCaption = window.__captionKey ? window.__captionKey() : null; // remember the room hint to restore on game over
       if (window.setCaption) window.setCaption("arcade_hint", true); // instruction line above the scene
       spawnAlien(180, -18); spawnAlien(430, -52); // a couple already on the way in
       arcadeLastT = 0;
@@ -17607,7 +17609,12 @@ document.addEventListener("click", function (e) {
       if (stageOffice) stageOffice.classList.remove("arcade");
       arcadeScore = 0;
       chair.style.transition = ""; // restore the smooth glide once the game (and cursor-follow) ends
-      if (wasActive && window.restoreStageHint) window.restoreStageHint("office"); // put the room hint back
+      // put the caption back to whatever was showing before the game (restoreStageHint alone is only a
+      // refiner and no-ops when the office puzzle's done, which left the arcade hint stranded)
+      if (wasActive && window.setCaption) {
+        if (arcadeSavedCaption) window.setCaption(arcadeSavedCaption, true);
+        else if (window.restoreStageHint) window.restoreStageHint("office");
+      }
       if (wasActive && gameOver) arcadeFlourish(finalScore, true, newBest); // "game over ·×N" when a saucer gets through; leaving the room ends it silently
     }
 
@@ -36482,6 +36489,8 @@ function spawnDustMote(container) {
     caption.classList.add("rsvp-nudge");
   }
   window.setCaption = setCaption;
+  window.__captionKey = function () { return captionKey; }; // current caption key — games snapshot it to restore the room hint after
+
   window.refreshHuntCaption = function () {
     if (captionKey === "rsvp_nudge") { showRsvpNudge(); return; }
     caption.textContent = huntText(captionKey);

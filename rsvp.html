@@ -24124,6 +24124,15 @@ document.addEventListener("click", function (e) {
     edAc.addEventListener("mousedown", function (e) { e.preventDefault(); e.stopPropagation(); });
     edMain.appendChild(edAc);
   }
+  // Chrome-style `ƒ name(params)` from the function's own source (same param-extraction as the
+  // console's fmtOut) — shows the real argument list in the popup instead of a bare name().
+  function edFnSig(cmd) {
+    if (typeof cmd.fn !== "function") return cmd.name;
+    var fs = String(cmd.fn);
+    if (/\{\s*\[native code\]\s*\}/.test(fs)) return "ƒ " + cmd.name + "()";
+    var pm = fs.match(/^(?:async\s+)?(?:function\b[^(]*)?\(([^)]*)\)/);
+    return "ƒ " + cmd.name + "(" + (pm ? pm[1].trim() : "") + ")";
+  }
   // caret pixel position via the hidden-mirror-div technique: a div mirroring the textarea's box
   // metrics + its text up to the caret, ending in a zero-width marker span whose rect locates the
   // caret. All reads use getBoundingClientRect (fractional — offsetLeft/Top round to integers, which
@@ -24189,7 +24198,7 @@ document.addEventListener("click", function (e) {
       row.className = "ed-ac-item" + (i === 0 ? " active" : "");
       var nm = document.createElement("span");
       nm.className = "ed-ac-name";
-      nm.textContent = cmd.name + (cmd.fn ? "()" : "");
+      nm.textContent = cmd.fn ? edFnSig(cmd) : cmd.name;
       var hp = document.createElement("span");
       hp.className = "ed-ac-help";
       hp.textContent = cmd.help;

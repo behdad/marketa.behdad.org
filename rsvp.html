@@ -20586,6 +20586,18 @@ document.addEventListener("click", function (e) {
   var monitor = document.getElementById("office-monitor");
   var pcTower = document.getElementById("office-pc-desk-trio");
   if (!typewriter || !monitor) return;
+  // macOS detection: true for any browser ON a Mac (Chrome, Safari, …), false on iOS.
+  // iPhone/iPad/iPod carry an iOS UA; iPadOS in desktop mode masquerades as "Macintosh",
+  // so a touch check excludes it too. Used to personalize the hb-shape demo the Linux VM
+  // runs for Mac visitors (the groom's fonts-engineer friend Ned — hb-shape's ` --ned`).
+  function isMacPlatform() {
+    var ua = navigator.userAgent || "";
+    if (/iPhone|iPad|iPod/i.test(ua)) return false;
+    if (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1) return false;
+    if (navigator.userAgentData && navigator.userAgentData.platform === "macOS") return true;
+    if (/Mac/i.test(navigator.platform || "")) return true;
+    return /Macintosh|Mac OS X/i.test(ua);
+  }
   var bootTimers = [];
   var CAPS_URL = "https://marketa.behdad.org/";
   var monitorUrl = CAPS_URL;
@@ -24662,7 +24674,8 @@ async def localfont(name):
       // the invocations + live output scroll by (sh reads the buffered lines in turn)
       setTimeout(function () {
         if (!lxVM || lxLoadState !== "ready") return;
-        var demo = new TextEncoder().encode("hb-shape --version\nhb-shape /root/test.ttf 'markéta ∞ behdad'\nhb-shape /root/emoji.ttf '👩‍❤️‍👨'\nhb-info --show-upem /root/test.ttf\n"), raw = "";
+        var ned = isMacPlatform() ? " --ned" : ""; // a nod to Ned (the groom's fonts-engineer friend); hb-shape accepts it — Mac visitors only
+        var demo = new TextEncoder().encode("hb-shape --version\nhb-shape /root/test.ttf 'markéta ∞ behdad'" + ned + "\nhb-shape /root/emoji.ttf '👩‍❤️‍👨'" + ned + "\nhb-info --show-upem /root/test.ttf\n"), raw = "";
         for (var i = 0; i < demo.length; i++) raw += String.fromCharCode(demo[i]);
         try { lxVM.serial0_send(raw); } catch (e) {}
       }, 600);

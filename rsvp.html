@@ -2072,12 +2072,25 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 .tehran-flame{transform-box:fill-box; transform-origin:bottom center}
 @keyframes tehran-flame{0%,100%{transform:scale(1,1) rotate(-3deg)} 35%{transform:scale(.92,1.15) rotate(2.5deg)} 65%{transform:scale(1.06,.95) rotate(-1deg)}}
 #monitor-tehran.connected #tehran-flame{animation:tehran-flame .42s ease-in-out infinite}
+/* clicking the candle blows it out: the flame + its warm glow fade, the flicker stops, and a
+   wisp of smoke rises once. .out is cleared on the next fresh connect (and on drop), so every
+   new birthday call starts with a freshly-lit candle — see connect/dropTehranCall. The flame's
+   flicker is an infinite id-based looping state, so the .out rule uses !important to guarantee
+   it wins the cascade (a same-specificity rule would merely tie on source order). */
+#tehran-candle{cursor:pointer}
+#tehran-flame, #tehran-candle-glow{transition:opacity .3s ease}
+#tehran-candle.out #tehran-flame{opacity:0; animation:none !important}
+#tehran-candle.out #tehran-candle-glow{opacity:0}
+#tehran-smoke{transform-box:fill-box; transform-origin:bottom center}
+@keyframes tehran-smoke-puff{0%{opacity:0; transform:translateY(1px) scale(.6)} 25%{opacity:.5} 100%{opacity:0; transform:translateY(-6px) scale(1.7)}}
+#tehran-candle.out #tehran-smoke{animation:tehran-smoke-puff 1s ease-out forwards}
 @media (prefers-reduced-motion: reduce){
   #office-monitor.show-tehran #monitor-tehran:not(.connected) #monitor-tehran-ring{animation:none; opacity:0}
   #monitor-tehran.connected .tehran-wave-arm{animation:none; transform:rotate(-14deg)}
   .tehran-eyes.blinking, .tehran-mouth.smiling, .tehran-hat.wiggling{animation:none !important}
   #monitor-tehran.connected #tehran-string-lights .tehran-light{animation:none; opacity:.95}
   #monitor-tehran.connected #tehran-flame{animation:none}
+  #tehran-candle.out #tehran-smoke{animation:none}
 }
 /* the now-playing screen carries a pause/play toggle: pause bars while the song plays,
    a play triangle when it's paused (JS adds .paused). Shown only over show-nowplaying. */
@@ -9623,13 +9636,22 @@ section{margin:1.9rem 0}
 <path d="M310.5 182.6 q0.9 1.5 1.8 0 q0.9 1.8 1.8 0 q0.9 1.4 1.8 0 q0.9 1.9 1.8 0 q0.9 1.4 1.8 0 q0.9 1.8 1.8 0 L321.5 181 L310.5 181 Z" fill="#cfe4b0"/>
 <!-- a single birthday candle standing on the cake, its flame flickering while the call's live -->
 <g id="tehran-candle">
+<!-- an invisible, slightly-enlarged tap target over the flame+wick so the tiny candle is
+     clickable on mobile; kept tight to the flame zone so poke-the-girl still wins on her body -->
+<rect x="314.5" y="173" width="3" height="4.6" fill="transparent"/>
 <rect x="315.35" y="177.3" width="1.3" height="4" rx="0.35" fill="#eab0c6"/>
 <rect x="315.35" y="178.8" width="1.3" height="0.65" fill="#fbeef4"/>
 <rect x="315.85" y="176.7" width="0.3" height="0.8" fill="#5a4a3a"/>
-<ellipse cx="316" cy="175.6" rx="1.5" ry="2" fill="#ffcf7a" opacity="0.22"/>
+<ellipse id="tehran-candle-glow" cx="316" cy="175.6" rx="1.5" ry="2" fill="#ffcf7a" opacity="0.22"/>
 <g id="tehran-flame" class="tehran-flame">
 <path d="M316 173.9 Q317.1 175.6 316 177.2 Q314.9 175.6 316 173.9 Z" fill="#f6a417"/>
 <path d="M316 174.9 Q316.65 175.9 316 177 Q315.35 175.9 316 174.9 Z" fill="#ffe08a"/>
+</g>
+<!-- a wisp of smoke that rises once when the candle is blown out (opacity 0 until then) -->
+<g id="tehran-smoke" opacity="0">
+<circle cx="316" cy="173.2" r="0.5" fill="#d7d0c6"/>
+<circle cx="316.35" cy="172.2" r="0.42" fill="#ded8cf"/>
+<circle cx="315.75" cy="171.3" r="0.34" fill="#e6e0d8"/>
 </g>
 </g>
 <text id="tehran-cake-age" x="316" y="186" text-anchor="middle" font-size="3" fill="#c9a227" style="font-family:sans-serif; font-weight:700">10</text>
@@ -23958,6 +23980,8 @@ document.addEventListener("click", function (e) {
   window.refreshTehranText();
   function connectTehranCall() {
     if (tehranG) tehranG.classList.add("connected");
+    var candle = document.getElementById("tehran-candle");
+    if (candle) candle.classList.remove("out"); // a fresh call = a new, freshly-lit birthday candle
     playPhoneVoiceSound("office-monitor"); // the family picks up: "alo?"
     startCallAmbient("tehran"); // the warm indoor murmur while the call lasts
     if (window.__startTehranMelody) window.__startTehranMelody(); // the birthday song on their end
@@ -23985,6 +24009,8 @@ document.addEventListener("click", function (e) {
     var wasLive = tehranLive();
     monitor.classList.remove("show-tehran");
     if (tehranG) tehranG.classList.remove("connected");
+    var candle = document.getElementById("tehran-candle");
+    if (candle) candle.classList.remove("out"); // clear the blow-out state so the next call starts lit
     setTehranStatus("");
     if (wasLive && !silent) { playCallHangupSound("office-monitor"); scheduleSaver(); }
   }
@@ -36294,6 +36320,17 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
     if (hat.classList.contains("wiggling")) return;
     hat.classList.add("wiggling");
     setTimeout(function () { hat.classList.remove("wiggling"); }, 760);
+  });
+  // tap the birthday candle → blow it out (flame + glow fade, a wisp of smoke rises). Stays out
+  // for the rest of the call; a fresh connect re-lights it (see connect/dropTehranCall's .out
+  // reset). A bare click covers taps too (taps synthesize clicks, same as the hat/figures);
+  // the extinguish is a plain class toggle, so it works under reduced motion (only the smoke
+  // animation is suppressed there).
+  var candle = document.getElementById("tehran-candle");
+  if (candle) candle.addEventListener("click", function (e) {
+    e.stopPropagation();
+    if (!tehranG.classList.contains("connected")) return; // only a live, lit candle blows out
+    candle.classList.add("out");
   });
 })();
 // Hanging up: two quick descending tones, the mirror image of playPhoneRingSound's

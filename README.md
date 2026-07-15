@@ -3,15 +3,21 @@
 The personal wedding website for **Markéta & Behdad**, live at
 [marketa.behdad.org](https://marketa.behdad.org).
 
-Mostly, though, it's a playground. If you found your way to this repo, the fun part is
-the interactive toys — poke around and play:
+Mostly, though, it's a playground of interactive "drops" — each a self-contained little
+world you can poke at and explore. If you found your way to this repo, these are the fun
+part:
 
-- **[`rsvp.html`](rsvp.html)** — an interactive point-and-click loft: an illustrated
-  home you can wander room by room, poke at, and play with. There are little games
-  tucked inside, a whole console DSL if you open the office monitor, and real
-  self-hosted software running in a few corners (see below). It's the good stuff.
-- **[`save-the-dates.html`](save-the-dates.html)** — the save-the-date page proper,
-  with a scattering of little hidden things to find.
+- **Loft Day** — [`loft-day.html`](loft-day.html) — an interactive point-and-click loft:
+  an illustrated home you wander room by room. Little games are tucked inside (catch the
+  garnishes at the bar, clear the invaders from the office chair…), there's a whole
+  console DSL if you open the office monitor, and real self-hosted software runs in a few
+  corners — Python, a tiny Linux, Doom, a text shaper (see below). It's the good stuff.
+- **Egg Hunt** — [`egg-hunt.html`](egg-hunt.html) — a quieter page with a scattering of
+  little hidden things to find.
+
+New drops land every so often; each is kept as a frozen archive under its own name so
+older ones never disappear. `loft-day.html` and `egg-hunt.html` are just the current
+`rsvp.html` and `save-the-dates.html`.
 
 ## How it's built
 
@@ -19,10 +25,6 @@ Each page is a single, self-contained HTML file — plain HTML, CSS, and vanilla
 JavaScript, inline. The illustrations are inline SVG. There is no build step and
 nothing to compile — deploying is just a `git pull` into the web root, so whatever is
 committed is what's live.
-
-The site grows in themed "drops" over time, and each drop is kept as a frozen archive
-under its own name (e.g. `egg-hunt.html`, `loft-day.html`) so older versions never
-disappear. `save-the-dates.html` and `rsvp.html` are always the current ones.
 
 The two typefaces (Fraunces + Source Serif 4) come from Google Fonts; everything else
 is served from this repo.

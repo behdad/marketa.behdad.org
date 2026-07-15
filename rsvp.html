@@ -754,12 +754,21 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 #kitchen-bar-bottles > g.bar-bottle.tipsy{animation:bar-bottle-tip .55s ease-in-out}
 @keyframes bar-bottle-tip{0%,100%{transform:rotate(0)}20%{transform:rotate(5deg)}46%{transform:rotate(-4deg)}70%{transform:rotate(2.4deg)}88%{transform:rotate(-1.1deg)}}
 @media (prefers-reduced-motion: reduce){#kitchen-bar-bottles > g.bar-bottle.tipsy{animation:none}}
-/* the bartender's raised arm shakes a cocktail shaker while the party runs — a cheap idle
-   loop on a wrapper that pivots at the shoulder; reduced-motion stills it */
+/* the bartender's raised arm gently sways a cocktail shaker while the party runs — his idle
+   "at the ready" loop on a wrapper that pivots at the shoulder; reduced-motion stills it. This
+   is ONLY his idle motion: while he's actually mixing a drink the make module marks #kitchen-
+   bartender .mixing and the override just below stops the sway, so the recipe motion (toss for
+   shake, stir for stir, still hands for build) reads clean instead of a perpetual sway-shake. */
 #kitchen-bartender-shake{transform-box:fill-box; transform-origin:50% 100%}
 #loft-game-strip.party-on #kitchen-bartender-shake{animation:bartender-shake .46s ease-in-out infinite}
 @keyframes bartender-shake{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-2px) rotate(-5deg)}}
 @media (prefers-reduced-motion: reduce){#loft-game-strip.party-on #kitchen-bartender-shake{animation:none}}
+/* mixing-a-drink override: kill the idle sway for the whole make. Specificity (3 ids, 2 classes)
+   beats the base sway rule (2,1) so it wins whenever .mixing is set, yet — unlike a :not(.mixing)
+   on the base rule — it never out-specifies the reduced-motion stilling rule above (2,1), so
+   reduced motion still wins when it should. Toss/stir live on the child #kitchen-bartender-shaker
+   (animation does not inherit), so they play untouched while this stills the parent. */
+#loft-game-strip.party-on #kitchen-bartender.mixing #kitchen-bartender-shake{animation:none}
 /* bartop glassware + used glasses: each glass/shaker is its own <g class="bar-glass"> pivoting
    at its base (fill-box), so the one-shot .tipsy wobble (shared bar-bottle-tip keyframe) never
    clobbers its drawn coordinates. Tappable only while the bar shows — #kitchen-bar is
@@ -18888,6 +18897,17 @@ document.addEventListener("click", function (e) {
       if (on) { bartenderShaker.classList.remove("tossing"); bartenderShaker.classList.add("stirring"); }
       else bartenderShaker.classList.remove("stirring");
     }
+    // ---- MIXING state: he's actively making a drink -------------------------------
+    // The make module marks this for the whole make. It puts .mixing on the outer group, which
+    // the CSS keys off to STOP his idle arm-sway (#kitchen-bartender-shake) — so during a make he
+    // shows only the recipe motion (his toss for "shake", his stir for "stir", still hands over the
+    // pour for "build") instead of sway-shaking through everything. It also gates autoFlare so no
+    // idle flourish fires mid-make. He returns to the idle sway the moment the make ends.
+    var bartenderMixing = false;
+    function setBartenderMixing(on) {
+      bartenderMixing = !!on;
+      bartender.classList.toggle("mixing", bartenderMixing);
+    }
     // ---- drag the bartender horizontally along the bar (party-only) ----------
     // Mirrors the office-chair horizontal drag (setChairOffset / pointerSvgX): the X
     // offset rides the OUTER #kitchen-bartender group's `translate` property, clamped so
@@ -19220,8 +19240,10 @@ document.addEventListener("click", function (e) {
     // it can't pile up and doesn't fight other party wiring); skips while off-party / hidden / reduced-motion.
     function bartenderReduce() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
     (function autoFlare() {
-      // skip the idle toss while he's mid-stir, so it can't swallow the stir animation on the shared node
-      if (window.__gardenPartyOn && document.visibilityState !== "hidden" && !bartenderReduce() && !bartenderStirring) tossShaker();
+      // skip the idle toss while he's making a drink (mixing) — an idle flourish mid-make is the same
+      // "wrong motion during a make" bug — and while he's mid-stir, so it can't swallow the stir
+      // animation on the shared shaker node (the documented one-shot-vs-state cascade guard).
+      if (window.__gardenPartyOn && document.visibilityState !== "hidden" && !bartenderReduce() && !bartenderMixing && !bartenderStirring) tossShaker();
       setTimeout(autoFlare, 9000 + Math.random() * 3000); // ~10s, jittered so it's not metronomic
     })();
     // shared with the cocktail-make module: it borrows his shaker toss for "shake" drinks and his
@@ -19229,6 +19251,7 @@ document.addEventListener("click", function (e) {
     // reads his drag state so the ambient make never fires while he's being dragged.
     window.__bartenderToss = tossShaker;
     window.__bartenderStir = setBartenderStir;
+    window.__bartenderMixing = setBartenderMixing; // make module marks a make in progress → idle sway off
     window.__bartenderOffset = function () { return barOffsetX; };
     window.__bartenderDragging = function () { return barDragging; };
   }
@@ -19462,12 +19485,14 @@ document.addEventListener("click", function (e) {
   function after(ms, fn) { var id = setTimeout(fn, ms); makeTimers.push(id); return id; }
   function clearMakeTimers() { for (var i = 0; i < makeTimers.length; i++) clearTimeout(makeTimers[i]); makeTimers = []; }
   function stopBartenderStir() { if (window.__bartenderStir) window.__bartenderStir(false); } // never leave him stirring after a make ends
-  function finishMake() { clearMakeTimers(); stopBartenderStir(); makeGroup.style.opacity = "0"; making = false; cooldownUntil = Date.now() + 1500 + Math.random() * 1700; }
-  function abort() { clearMakeTimers(); stopBartenderStir(); if (makeGroup) makeGroup.style.opacity = "0"; making = false; }
+  function endBartenderMake() { stopBartenderStir(); if (window.__bartenderMixing) window.__bartenderMixing(false); } // back to idle: sway resumes, clear any stir
+  function finishMake() { clearMakeTimers(); endBartenderMake(); makeGroup.style.opacity = "0"; making = false; cooldownUntil = Date.now() + 1500 + Math.random() * 1700; }
+  function abort() { clearMakeTimers(); endBartenderMake(); if (makeGroup) makeGroup.style.opacity = "0"; making = false; }
 
   function startMake(row) {
     if (making || !row) return false;
     making = true;
+    if (window.__bartenderMixing) window.__bartenderMixing(true); // stop his idle sway for the whole make
     var name = row.name;
     var m = META[name] || {};
     var glass = m.glass || "coupe";

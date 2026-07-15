@@ -2417,6 +2417,46 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 .phone-incall .pic-hangup{position:absolute; left:50%; bottom:18px; transform:translateX(-50%); width:58px; height:58px; border-radius:50%; background:#c0392b; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 14px rgba(0,0,0,.5)}
 .phone-incall .pic-hangup:hover{background:#a93226}
 .phone-incall .pic-hangup svg{width:26px; height:26px; transform:rotate(135deg); display:block}
+/* PHONE-CALL LIVELINESS: the family scene is a CLONE of the office computer/laptop scene
+   with ids stashed as data-lid (see cloneScene). The office modules' motion is gated on
+   #office-monitor / #office-laptop ancestors that the clone doesn't have, so mirror just the
+   CONTINUOUS gates here, scoped to the connected phone call. Leaf one-shot classes (.blinking,
+   .smiling, .wiggling, .winking, .blooming) reuse their global keyframes + reduced-motion
+   overrides untouched; only the ancestor-gated loops are re-declared. All reuse existing
+   @keyframes — nothing new is defined. Driven on/off by phoneLifeStart / phoneLifeStop. */
+.phone-incall.connected .pic-video [data-lid="laptop-prague-father"]{transform-box:fill-box; transform-origin:bottom center; animation:prague-sway 4.3s ease-in-out -1.2s infinite}
+.phone-incall.connected .pic-video [data-lid="laptop-prague-mother"]{transform-box:fill-box; transform-origin:bottom center; animation:prague-sway 5.1s ease-in-out -0.5s infinite}
+.phone-incall.connected .pic-video [data-lid="laptop-prague-grandma"]{transform-box:fill-box; transform-origin:bottom center; animation:prague-sway 3.7s ease-in-out -2.1s infinite}
+.phone-incall .pic-video [data-lid="laptop-prague-grandma-nod"]{transform-box:fill-box; transform-origin:bottom center}
+.phone-incall.connected .pic-video [data-lid="laptop-prague-grandma-nod"].nodding{animation:prague-nod 1.15s ease-in-out}
+.phone-incall.connected .pic-video .tehran-wave-arm{animation:call-wave .9s ease-in-out infinite}
+.phone-incall.connected .pic-video .tehran-flame{animation:tehran-flame .42s ease-in-out infinite}
+.phone-incall.connected .pic-video [data-lid="tehran-string-lights"] .tehran-light{animation:tehran-twinkle 1.5s ease-in-out infinite}
+.phone-incall.connected .pic-video [data-lid="tehran-candle"].out .tehran-flame{opacity:0; animation:none !important}
+.phone-incall.connected .pic-video [data-lid="tehran-candle"].out [data-lid="tehran-candle-glow"]{opacity:0}
+.phone-incall.connected .pic-video [data-lid="laptop-lueb-girl"].singing .lueb-smile,
+.phone-incall.connected .pic-video [data-lid="laptop-lueb-boy"].singing .lueb-smile{opacity:0}
+.phone-incall.connected .pic-video [data-lid="laptop-lueb-girl"].singing [data-lid="laptop-lueb-girl-mouth"]{opacity:1; animation:lueb-sing-mouth .44s ease-in-out infinite}
+.phone-incall.connected .pic-video [data-lid="laptop-lueb-boy"].singing [data-lid="laptop-lueb-boy-mouth"]{opacity:1; animation:lueb-sing-mouth .5s ease-in-out infinite}
+.phone-incall.connected .pic-video [data-lid="laptop-lueb-girl"].poked,
+.phone-incall.connected .pic-video [data-lid="laptop-lueb-boy"].poked{animation:lueb-hop .5s ease-in-out}
+.phone-incall.connected .pic-video [data-lid="laptop-lueb-sister"].poked,
+.phone-incall.connected .pic-video [data-lid="laptop-lueb-husband"].poked{animation:lueb-bob .55s ease-in-out}
+@media (prefers-reduced-motion: reduce){
+  .phone-incall.connected .pic-video [data-lid="laptop-prague-father"],
+  .phone-incall.connected .pic-video [data-lid="laptop-prague-mother"],
+  .phone-incall.connected .pic-video [data-lid="laptop-prague-grandma"],
+  .phone-incall.connected .pic-video [data-lid="laptop-prague-grandma-nod"].nodding,
+  .phone-incall.connected .pic-video .tehran-wave-arm,
+  .phone-incall.connected .pic-video .tehran-flame,
+  .phone-incall.connected .pic-video [data-lid="tehran-string-lights"] .tehran-light,
+  .phone-incall.connected .pic-video [data-lid="laptop-lueb-girl"].singing [data-lid="laptop-lueb-girl-mouth"],
+  .phone-incall.connected .pic-video [data-lid="laptop-lueb-boy"].singing [data-lid="laptop-lueb-boy-mouth"],
+  .phone-incall.connected .pic-video [data-lid="laptop-lueb-girl"].poked,
+  .phone-incall.connected .pic-video [data-lid="laptop-lueb-boy"].poked,
+  .phone-incall.connected .pic-video [data-lid="laptop-lueb-sister"].poked,
+  .phone-incall.connected .pic-video [data-lid="laptop-lueb-husband"].poked{animation:none !important}
+}
 /* boot splash: the loft's own OS — a cream ∞ on a wine field, mirroring the
    monitor's #monitor-logo-fedora boot; a slow shimmer breathes the mark */
 .phone-boot{position:absolute; inset:0; z-index:5; display:none; flex-direction:column; align-items:center; justify-content:center; gap:8px; background:var(--wine)}
@@ -20465,7 +20505,7 @@ document.addEventListener("click", function (e) {
     function inCall() {
       return laptop.classList.contains("calling") || laptop.classList.contains("connecting") || laptop.classList.contains("connected");
     }
-    function anyCall() { return inCall() || !!(window.__tehranCallLive && window.__tehranCallLive()); }
+    function anyCall() { return inCall() || !!(window.__tehranCallLive && window.__tehranCallLive()) || !!window.__phoneCallFamily; } // a live pocket-phone call counts too, so the laptop/monitor can't start one over it (they share the per-family audio modules)
     // the monitor's Tehran call checks both of these before starting
     window.__pragueCallLive = function () { return inCall() && callCallee === "prague"; };
     window.__luebeckCallLive = function () { return inCall() && callCallee === "lueb"; };
@@ -28244,9 +28284,14 @@ async def localfont(name):
       svg.setAttribute("viewBox", viewBox);
       svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
       var g = src.cloneNode(true);
-      g.removeAttribute("id"); // no id → the source's own display:none / opacity:0 CSS can't reach the copy
+      // Stash ids as data-lid handles rather than dropping them: the source's id-based
+      // display:none / opacity:0 CSS still can't reach the copy (no live id), but the
+      // phone-call liveliness driver + its .phone-incall-scoped CSS can find the family
+      // figures by their original id strings (see phoneLifeStart and the phone-incall block).
+      if (g.id) g.setAttribute("data-lid", g.id);
+      g.removeAttribute("id");
       var ided = g.querySelectorAll("[id]");
-      for (var i = 0; i < ided.length; i++) ided[i].removeAttribute("id");
+      for (var i = 0; i < ided.length; i++) { ided[i].setAttribute("data-lid", ided[i].id); ided[i].removeAttribute("id"); }
       g.setAttribute("style", "display:block;opacity:1");
       svg.appendChild(g);
       return svg;
@@ -28286,12 +28331,23 @@ async def localfont(name):
       refreshCallText();
       playPhoneVoiceSound("balcony-phone"); // the family picks up: "alo?"
       startCallAmbient(CITIES[callee].flavor); // the warm murmur while it lasts
+      // The family scene comes alive exactly like the office computer/laptop calls: the same
+      // per-family AUDIO modules (re-gated onto this phone via window.__phoneCallFamily, and
+      // re-panned to the phone), plus a phone-scoped VISUAL driver for the gestures the office
+      // modules resolve by id (which the id-stripped clone can't share). See phoneLifeStart.
+      // phoneLifeStart sets window.__phoneCallFamily; the AUDIO start hooks MUST run AFTER it —
+      // phoneLifeStart's internal phoneLifeStop would otherwise stop a just-started module.
+      phoneLifeStart(callee); // sway / winks / blinks / candle+lights — no-ops the random gestures under reduced motion
+      if (callee === "prague" && window.__startPragueMelody) window.__startPragueMelody(); // the family's music player drifting in
+      if (callee === "lueb" && window.__startLuebSinging) window.__startLuebSinging();       // the two kids serenade
+      if (callee === "tehran" && window.__startTehranMelody) window.__startTehranMelody();   // "tavallod" on their end
     }
     function clearCallTimers() { callTimers.forEach(clearTimeout); callTimers = []; }
     function hangup() {
       if (!callee || callHangingUp) return;
       clearCallTimers();
       stopCallAmbient();
+      phoneLifeStop(); // stop the family's gestures + music the instant we hang up (before the goodbye)
       if (callConnected) {
         callHangingUp = true;
         playILoveYouSound("balcony-phone", CITIES[callee].pitch); // that city's pitched goodbye
@@ -28303,6 +28359,7 @@ async def localfont(name):
     function dropCall(silent) {
       clearCallTimers();
       stopCallAmbient();
+      phoneLifeStop(); // belt-and-braces: every teardown path (mid-ring drop, leaving the balcony) lands clean
       var was = callee;
       callee = null; callConnected = false; callStatusKey = "";
       if (shell) {
@@ -28315,6 +28372,83 @@ async def localfont(name):
       }
       if (was && !silent) playCallHangupSound("balcony-phone");
       if (was && !silent && !closing && isOpen()) openDialer(); // land back on the dialer
+    }
+
+    // ── phone-call visual liveliness ─────────────────────────────────────────────────
+    // Each family is rendered as a CLONE of the office scene (cloneScene, ids kept as
+    // data-lid). The office computer/laptop liveliness modules resolve targets by real id and
+    // gate their CSS on #office-monitor / #office-laptop ancestors, so none of them reach the
+    // clone. The AUDIO (melodies / singing) IS the real module — re-gated to this phone above;
+    // this driver adds only the VISUAL gestures onto the clone subtree. The continuous motion
+    // (Prague sway, Tehran flame/lights/dad-wave, Lübeck singing mouths) is pure CSS scoped to
+    // `.phone-incall.connected .pic-video` (see that block); the random one-shots (Prague
+    // wink/nod/bloom, Tehran blink/smile) + on-tap pokes are scheduled here. Torn down on
+    // hangup / drop / leaving the balcony; each loop self-gates on focus+visibility+motion and
+    // stops rescheduling once inactive, so nothing leaks and reduced motion stays calm.
+    var phLifeTimers = [], phLifeActive = false, phLifeRoot = null;
+    function phReduce() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+    function phLifeWant() { return phLifeActive && callConnected && !!phLifeRoot && !document.hidden && document.hasFocus() && !phReduce(); }
+    function phLifeTimer(fn, ms) { var id = setTimeout(function () { var i = phLifeTimers.indexOf(id); if (i >= 0) phLifeTimers.splice(i, 1); fn(); }, ms); phLifeTimers.push(id); return id; }
+    function phFire(el, cls, ms) { if (!el || el.classList.contains(cls)) return; el.classList.add(cls); phLifeTimer(function () { el.classList.remove(cls); }, ms); }
+    function phLoop(run, min, span) { return function tick() { if (!phLifeActive) return; if (phLifeWant()) run(); phLifeTimer(tick, (min + Math.random() * span) * 1000); }; }
+    function phQ(sel) { return phLifeRoot ? phLifeRoot.querySelector(sel) : null; }
+    function phQA(sel) { return phLifeRoot ? phLifeRoot.querySelectorAll(sel) : []; }
+    function phTap(el, fn) { if (!el) return; el.style.cursor = "pointer"; el.addEventListener("click", function (e) { e.stopPropagation(); fn(); }); }
+    function phoneLifeStart(fam) {
+      phoneLifeStop();                 // clean slate (clears any prior timers / flag / melodies)
+      window.__phoneCallFamily = fam;  // re-assert (phoneLifeStop cleared it) so the audio modules stay gated on
+      phLifeRoot = shell ? shell.querySelector(".phone-incall .pic-video") : null;
+      if (!phLifeRoot) return;
+      phLifeActive = true;
+      if (fam === "prague") {
+        // the father winks, the grandmother nods, the mother produces a little flower — the same
+        // one-shot classes the laptop's __startPragueLife fires, at the same random cadences
+        var wink = phLoop(function () { phFire(phQ('[data-lid="laptop-prague-father-wink"]'), "winking", 640); }, 5, 7);
+        var nod = phLoop(function () { phFire(phQ('[data-lid="laptop-prague-grandma-nod"]'), "nodding", 1250); }, 6, 7);
+        var bloom = phLoop(function () { phFire(phQ('[data-lid="laptop-prague-mother-flower"]'), "blooming", 4400); }, 12, 10);
+        phLifeTimer(wink, (1.5 + Math.random() * 3) * 1000);
+        phLifeTimer(nod, (2.5 + Math.random() * 4) * 1000);
+        phLifeTimer(bloom, (4 + Math.random() * 5) * 1000);
+        phTap(phQ('[data-lid="laptop-prague-father"]'), function () { phFire(phQ('[data-lid="laptop-prague-father-wink"]'), "winking", 640); });
+        phTap(phQ('[data-lid="laptop-prague-grandma"]'), function () { phFire(phQ('[data-lid="laptop-prague-grandma-nod"]'), "nodding", 1250); });
+        phTap(phQ('[data-lid="laptop-prague-mother"]'), function () { phFire(phQ('[data-lid="laptop-prague-mother-flower"]'), "blooming", 4400); });
+      } else if (fam === "tehran") {
+        // the birthday family blinks (and sometimes flashes a wider smile) at random — the
+        // clone lost the figure ids but keeps the .tehran-eyes / .tehran-mouth leaf classes
+        var blink = phLoop(function () {
+          var eyes = phQA(".tehran-eyes"); if (!eyes.length) return;
+          var e = eyes[(Math.random() * eyes.length) | 0];
+          phFire(e, "blinking", 560);
+          if (Math.random() < 0.4 && e.parentNode) phFire(e.parentNode.querySelector(".tehran-mouth"), "smiling", 700);
+        }, 2.2, 3.6);
+        phLifeTimer(blink, (1 + Math.random() * 2.5) * 1000);
+        var eyesAll = phQA(".tehran-eyes");
+        for (var fi = 0; fi < eyesAll.length; fi++) (function (e) {
+          if (!e.parentNode) return;
+          phTap(e.parentNode, function () { phFire(e, "blinking", 560); phFire(e.parentNode.querySelector(".tehran-mouth"), "smiling", 700); });
+        })(eyesAll[fi]);
+        phTap(phQ(".tehran-hat"), function () { phFire(phQ(".tehran-hat"), "wiggling", 760); }); // wiggle the party hat
+        var candle = phQ('[data-lid="tehran-candle"]');
+        phTap(candle, function () { if (candle && callConnected) candle.classList.add("out"); }); // blow the candle out (stays out for the call)
+      } else if (fam === "lueb") {
+        // the two kids serenade: their singing mouths flap for the length of the call (the CSS
+        // animation pauses itself on a hidden tab; reduced motion stills it via the phone block)
+        var girl = phQ('[data-lid="laptop-lueb-girl"]'), boy = phQ('[data-lid="laptop-lueb-boy"]');
+        if (girl) girl.classList.add("singing");
+        if (boy) boy.classList.add("singing");
+        [["laptop-lueb-girl", 520], ["laptop-lueb-boy", 520], ["laptop-lueb-sister", 580], ["laptop-lueb-husband", 580]].forEach(function (a) {
+          var el = phQ('[data-lid="' + a[0] + '"]');
+          phTap(el, function () { phFire(el, "poked", a[1]); }); // tap → a quick hop / bob
+        });
+      }
+    }
+    function phoneLifeStop() {
+      phLifeActive = false; phLifeRoot = null;
+      phLifeTimers.forEach(clearTimeout); phLifeTimers = [];
+      window.__phoneCallFamily = null;
+      if (window.__stopPragueMelody) window.__stopPragueMelody(); // all three are no-ops if not running
+      if (window.__stopLuebSinging) window.__stopLuebSinging();
+      if (window.__stopTehranMelody) window.__stopTehranMelody();
     }
 
     // ── content apps ────────────────────────────────────────────────────────────
@@ -36222,7 +36356,7 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
   var phraseTimer = null, timers = [], nodes = [], patternIdx = 0;
   function reduce() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
   // want-gate mirrors every continuous bed: live call + on-screen office + visible + focused
-  function want() { return wanted && window.currentStageName === "office" && !document.hidden && document.hasFocus(); }
+  function want() { return ((wanted && window.currentStageName === "office") || window.__phoneCallFamily === "lueb") && !document.hidden && document.hasFocus(); }
   function track(n) { nodes.push(n); n.onended = function () { var i = nodes.indexOf(n); if (i >= 0) nodes.splice(i, 1); }; }
   function addTimer(fn, ms) {
     var id = setTimeout(function () { var i = timers.indexOf(id); if (i >= 0) timers.splice(i, 1); fn(); }, ms);
@@ -36368,7 +36502,7 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
     active = true; busCtx = ctx;
     bus = ctx.createGain(); bus.gain.value = 1;
     var speaker = ctx.createBiquadFilter(); speaker.type = "lowpass"; speaker.frequency.value = 3400; speaker.Q.value = 0.7; // "through a laptop speaker" (a touch more open for word clarity)
-    var out = pannedOut(ctx, "office-laptop");
+    var out = pannedOut(ctx, window.__phoneCallFamily === "lueb" ? "balcony-phone" : "office-laptop"); // pan to the phone when the pocket-phone is the one calling
     bus.connect(speaker);
     // a hair of room so the voices aren't bone-dry: a short synthetic decaying-noise impulse, mostly dry
     var conv = ctx.createConvolver();
@@ -36507,7 +36641,7 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
   var wanted = false, active = false, phraseTimer = null, nodes = [], bus = null, busCtx = null, fxNodes = null;
   // focus-gated like the garden-wind bed (startCallAmbient), NOT room- or motion-gated
   function want() {
-    return wanted && laptop.classList.contains("connected") && !laptop.classList.contains("lueb") &&
+    return ((wanted && laptop.classList.contains("connected") && !laptop.classList.contains("lueb")) || window.__phoneCallFamily === "prague") &&
       !document.hidden && document.hasFocus();
   }
   function track(n) { nodes.push(n); n.onended = function () { var i = nodes.indexOf(n); if (i >= 0) nodes.splice(i, 1); }; }
@@ -36556,7 +36690,7 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
     active = true; busCtx = ctx;
     bus = ctx.createGain(); bus.gain.value = 0.06; // faint, under the wind + giggles (near the Tehran melody's level)
     var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1500; lp.Q.value = 0.5; // "through the call"
-    var out = pannedOut(ctx, "office-laptop");
+    var out = pannedOut(ctx, window.__phoneCallFamily === "prague" ? "balcony-phone" : "office-laptop"); // pan to the phone when the pocket-phone is the one calling
     var conv = ctx.createConvolver(); // a little room so it isn't bone-dry
     var rlen = Math.floor(ctx.sampleRate * 0.45), rbuf = ctx.createBuffer(2, rlen, ctx.sampleRate);
     for (var ch = 0; ch < 2; ch++) { var rd = rbuf.getChannelData(ch); for (var i = 0; i < rlen; i++) rd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / rlen, 2.2); }
@@ -36611,7 +36745,7 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
   var MEL = [[-2,0.179,0.179],[-2,0.357,0.357],[3,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[3,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[3,0.357,0.357],[3,0.179,0.179],[2,0.179,0.179],[0,0.357,0.357],[2,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[2,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[2,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[0,0.357,0.357],[-2,0.179,0.179],[0,0.179,0.179],[2,0.357,0.357],[3,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[3,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[3,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[3,0.357,0.357],[3,0.179,0.179],[2,0.179,0.179],[0,0.357,0.357],[2,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[2,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[2,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[0,0.357,0.357],[-2,0.179,0.179],[0,0.179,0.179],[2,0.357,0.357],[3,0.536,0.536],[-2,0.357,0.357],[0,0.179,0.179],[1,0.357,0.357],[1,0.179,0.179],[0,0.179,0.179],[-4,0.357,0.357],[-7,0.536,0.536],[-7,0.179,0.179],[-7,0.179,0.179],[-5,0.179,0.179],[-4,0.357,0.357],[-5,0.179,0.179],[-7,0.357,0.357],[-9,0.714,0.714],[-2,0.357,0.357],[0,0.179,0.179],[1,0.357,0.357],[1,0.179,0.179],[0,0.179,0.179],[-4,0.357,0.357],[-7,0.536,0.536],[-7,0.179,0.179],[-7,0.179,0.179],[-5,0.179,0.179],[-4,0.357,0.357],[-5,0.179,0.179],[-7,0.357,0.357],[-9,0.714,0.714],[-2,0.179,0.179],[-2,0.357,0.357],[3,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[3,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[3,0.357,0.357],[3,0.179,0.179],[2,0.179,0.179],[0,0.357,0.357],[2,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[2,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[2,0.536,0.536],[-2,0.179,0.179],[-2,0.357,0.357],[0,0.357,0.357],[-2,0.179,0.179],[0,0.179,0.179],[2,0.357,0.357],[3,0.536,0.536]];
   var GAP = 2.6; // a breath before the song loops round again
   function want() {
-    return wanted && monitor.classList.contains("show-tehran") && tehranG.classList.contains("connected") &&
+    return ((wanted && monitor.classList.contains("show-tehran") && tehranG.classList.contains("connected")) || window.__phoneCallFamily === "tehran") &&
       !document.hidden && document.hasFocus();
   }
   function track(n) { nodes.push(n); n.onended = function () { var i = nodes.indexOf(n); if (i >= 0) nodes.splice(i, 1); }; }
@@ -36643,7 +36777,7 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
     active = true; busCtx = ctx; idx = 0; nextT = ctx.currentTime + 0.15;
     bus = ctx.createGain(); bus.gain.value = 0.05; // faint, under the family's murmur
     var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1700; lp.Q.value = 0.5;
-    var out = pannedOut(ctx, "office-monitor");
+    var out = pannedOut(ctx, window.__phoneCallFamily === "tehran" ? "balcony-phone" : "office-monitor"); // pan to the phone when the pocket-phone is the one calling
     var conv = ctx.createConvolver();
     var rlen = Math.floor(ctx.sampleRate * 0.45), rbuf = ctx.createBuffer(2, rlen, ctx.sampleRate);
     for (var ch = 0; ch < 2; ch++) { var rd = rbuf.getChannelData(ch); for (var i = 0; i < rlen; i++) rd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / rlen, 2.2); }

@@ -329,8 +329,16 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 .season-toast{position:absolute; left:50%; bottom:12px; transform:translateX(-50%); background:rgba(69,58,49,.85); color:#f8f5ec; font-size:.85rem; padding:.3rem .9rem; border-radius:999px; opacity:0; transition:opacity .3s ease; pointer-events:none; z-index:6; white-space:nowrap}
 .season-toast.show{opacity:1}
 /* the cocktail-make toast is a live link: clicking the drink's name opens it in the phone's
-   cocktails app (its real recipe), so unlike the other season-toasts it takes pointer events. */
-.cocktail-toast{pointer-events:auto; cursor:pointer}
+   cocktails app (its real recipe), so unlike the other season-toasts it takes pointer events.
+   It's the bartender's proud "here's your <drink>", so it's presented big: display type,
+   a heavier weight, a pink-edged darker backing and a brief pop-in. Wraps + clamps to the
+   viewport (overriding the base nowrap) so the longest names never force a horizontal scroll. */
+.cocktail-toast{pointer-events:auto; cursor:pointer; font-family:"Fraunces",serif; font-weight:600; font-size:1.18rem; letter-spacing:.005em; line-height:1.16; padding:.42rem 1.15rem; background:rgba(52,42,34,.94); border:1.5px solid var(--pink); box-shadow:0 4px 16px rgba(40,28,20,.4); white-space:normal; max-width:86%; text-align:center; text-wrap:balance}
+/* pop-in each time a new drink is presented — a dedicated one-shot class, re-added on every make
+   and dropped on animationend (keeps translateX(-50%) so the pill stays centred through the pop). */
+.ck-pop{animation:ck-pop .34s cubic-bezier(.2,1.3,.5,1) both}
+@keyframes ck-pop{0%{transform:translateX(-50%) scale(.72)}62%{transform:translateX(-50%) scale(1.05)}100%{transform:translateX(-50%) scale(1)}}
+@media (prefers-reduced-motion: reduce){.ck-pop{animation:none}}
 .fs-hint-link{background:none; border:0; padding:0; font:inherit; color:var(--wine); text-decoration:underline; text-underline-offset:2px; cursor:pointer}
 .fs-hint-link:hover{color:var(--ink)}
 .hunt-dots{display:flex; justify-content:center; align-items:center; gap:.15rem; margin:.55rem 0 0}
@@ -779,6 +787,11 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 #kitchen-bar-bottles > g.bar-bottle{transform-box:fill-box; transform-origin:50% 100%}
 #loft-game-strip.party-on #kitchen-bar-bottles > g.bar-bottle{pointer-events:auto; cursor:pointer}
 #stage-kitchen.dusk #kitchen-bar-bottles > g.bar-bottle{pointer-events:auto; cursor:pointer}
+/* draft-beer taps: click a tap head to pour a beer (a self-clearing glass + amber fill + foam).
+   Same bar-up gate as the bottles — ancestor #kitchen-bar is pointer-events:none, re-enabled per
+   tap only with the party on or the kitchen at night. */
+#loft-game-strip.party-on #kitchen-bar-taps > g.beer-tap{pointer-events:auto; cursor:pointer}
+#stage-kitchen.dusk #kitchen-bar-taps > g.beer-tap{pointer-events:auto; cursor:pointer}
 #kitchen-bar-bottles > g.bar-bottle.tipsy{animation:bar-bottle-tip .55s ease-in-out}
 @keyframes bar-bottle-tip{0%,100%{transform:rotate(0)}20%{transform:rotate(5deg)}46%{transform:rotate(-4deg)}70%{transform:rotate(2.4deg)}88%{transform:rotate(-1.1deg)}}
 @media (prefers-reduced-motion: reduce){#kitchen-bar-bottles > g.bar-bottle.tipsy{animation:none}}
@@ -897,6 +910,9 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
    presented, driven by the make module. Lives inside #kitchen-bar so it inherits the party
    fade (invisible whenever the bar's down). pointer-events off so it never eats bar taps. */
 #kitchen-bar-make{transition:opacity .35s ease; pointer-events:none}
+/* while a drink is being built the glass is a live link — a tap opens its recipe in the phone's
+   cocktails app (the same route as the name toast). Only clickable during a make (.mk-live). */
+#kitchen-bar-make.mk-live{pointer-events:auto; cursor:pointer}
 #kitchen-bar-make .mk-ice, #kitchen-bar-make .mk-garnish{transition:opacity .3s ease}
 #kitchen-bar-make .mk-pour{transition:opacity .16s ease}
 #kitchen-bar-make .mk-glasshost{transform-box:fill-box; transform-origin:50% 100%; transition:transform .3s ease}
@@ -2807,7 +2823,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 .pm-ck-back{font:inherit; font-size:12px; background:none; border:none; color:var(--wine); cursor:pointer; padding:2px 0 8px; text-align:left}
 .pm-ck-detshot{position:relative; width:100%; aspect-ratio:1/1; border-radius:14px; overflow:hidden; background:var(--wine); margin-bottom:10px}
 .pm-ck-detshot img{width:100%; height:100%; object-fit:cover; display:block}
-.pm-ck-detname{font-family:"Fraunces",serif; font-size:20px; color:var(--ink); line-height:1.2}
+.pm-ck-detname{font-family:"Fraunces",serif; font-size:26px; font-weight:600; color:var(--ink); line-height:1.18}
 .pm-ck-detsub{font-size:12px; color:var(--soft); margin:2px 0 12px}
 .pm-ck-rlabel{font-family:"Fraunces",serif; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--wine); margin:12px 0 5px}
 .pm-ck-rlist{margin:0; padding-left:18px; font-size:13px; line-height:1.5; color:var(--ink)}
@@ -6249,12 +6265,32 @@ section{margin:1.9rem 0}
 <rect x="12" y="245" width="564" height="14" rx="4" fill="url(#kitchen-bar-toprail-grad)"/>
 <rect x="12" y="245" width="564" height="3" rx="2" fill="#a6804d" opacity="0.8"/>
 </g>
-<!-- a couple of beer taps rising off the bar top -->
+<!-- a pair of draft-beer tap towers rising off the bar top: a brass font with a domed cap, a
+     gooseneck faucet curving out the front over a drip tray, and a handle (wine / blue knob).
+     Each tap head is clickable (wired in the beer-taps module) to pour a beer into a glass. -->
 <g id="kitchen-bar-taps">
-<rect x="486" y="222" width="7" height="24" rx="2" fill="#c9cdd2"/><rect x="486" y="222" width="2.4" height="24" fill="#eef1f4" opacity="0.7"/>
-<path d="M493 228 h9 v4 h-9 Z" fill="#c9cdd2"/><circle cx="504" cy="230" r="3.4" fill="#8e3a4a"/>
-<rect x="508" y="224" width="7" height="22" rx="2" fill="#c9cdd2"/><rect x="508" y="224" width="2.4" height="22" fill="#eef1f4" opacity="0.7"/>
-<path d="M515 229 h9 v4 h-9 Z" fill="#c9cdd2"/><circle cx="526" cy="231" r="3.4" fill="#4a6b94"/>
+<g id="kitchen-bar-tap-a" class="beer-tap">
+<rect x="477" y="246" width="19" height="2.6" rx="0.8" fill="#6b4f16"/><rect x="478" y="246.7" width="17" height="0.9" fill="#8f6a1f"/>
+<rect x="494" y="214" width="8" height="33" rx="3" fill="#c6982f"/>
+<rect x="494.6" y="216" width="2.2" height="28" rx="1.1" fill="#eccf7a" opacity="0.6"/><rect x="500" y="216" width="1.4" height="28" rx="0.7" fill="#8f6a1f" opacity="0.55"/>
+<ellipse cx="498" cy="214" rx="4.2" ry="2" fill="#d8b95e"/>
+<path d="M495 222 L488 222 Q485 222 485 226 L485 230" fill="none" stroke="#c6982f" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M495 221 L488.5 221 Q486 221 486 224" fill="none" stroke="#eccf7a" stroke-width="1" stroke-linecap="round" opacity="0.7"/>
+<rect x="483.4" y="229" width="3.2" height="2.4" rx="0.8" fill="#8f6a1f"/>
+<rect x="486.7" y="210" width="2.6" height="12" rx="1.3" fill="#b98f38"/>
+<ellipse cx="488" cy="207" rx="3.4" ry="4" fill="#8e3a4a"/><ellipse cx="486.8" cy="205.6" rx="1.1" ry="1.4" fill="#ffffff" opacity="0.4"/>
+</g>
+<g id="kitchen-bar-tap-b" class="beer-tap">
+<rect x="504" y="246" width="19" height="2.6" rx="0.8" fill="#6b4f16"/><rect x="505" y="246.7" width="17" height="0.9" fill="#8f6a1f"/>
+<rect x="521" y="214" width="8" height="33" rx="3" fill="#c6982f"/>
+<rect x="521.6" y="216" width="2.2" height="28" rx="1.1" fill="#eccf7a" opacity="0.6"/><rect x="527" y="216" width="1.4" height="28" rx="0.7" fill="#8f6a1f" opacity="0.55"/>
+<ellipse cx="525" cy="214" rx="4.2" ry="2" fill="#d8b95e"/>
+<path d="M522 222 L515 222 Q512 222 512 226 L512 230" fill="none" stroke="#c6982f" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M522 221 L515.5 221 Q513 221 513 224" fill="none" stroke="#eccf7a" stroke-width="1" stroke-linecap="round" opacity="0.7"/>
+<rect x="510.4" y="229" width="3.2" height="2.4" rx="0.8" fill="#8f6a1f"/>
+<rect x="513.7" y="210" width="2.6" height="12" rx="1.3" fill="#b98f38"/>
+<ellipse cx="515" cy="207" rx="3.4" ry="4" fill="#4a6b94"/><ellipse cx="513.8" cy="205.6" rx="1.1" ry="1.4" fill="#ffffff" opacity="0.4"/>
+</g>
 </g>
 <!-- glassware on the bar top -->
 <g id="kitchen-bar-glassware">
@@ -20774,6 +20810,11 @@ document.addEventListener("click", function (e) {
   // pour bottle off his raised shaker. startMake re-pins it to his live offset when a make begins.
   var MAKE_ANCHOR_X = 348;
   var makeGroup = S("g", { id: "kitchen-bar-make", transform: "translate(" + MAKE_ANCHOR_X + ",0)", style: "opacity:0" }, bar);
+  // tapping the drink being built opens its recipe in the phone's cocktails app — the exact route
+  // the name toast uses (ckToastName tracks the current drink). Only live during a make (.mk-live).
+  makeGroup.addEventListener("click", function () {
+    if (ckToastName && window.__showCocktailInPhone) window.__showCocktailInPhone(ckToastName);
+  });
 
   // the bartender's drag handler calls this on every move: while a drink is being made, re-pin the
   // make station to his LIVE offset so the glass rides along in his hands instead of staying put.
@@ -20877,11 +20918,13 @@ document.addEventListener("click", function (e) {
       ckToastEl.addEventListener("click", function () {
         if (ckToastName && window.__showCocktailInPhone) window.__showCocktailInPhone(ckToastName);
       });
+      ckToastEl.addEventListener("animationend", function () { ckToastEl.classList.remove("ck-pop"); }); // one-shot: drop it so the next make can re-trigger the pop
       vp.appendChild(ckToastEl);
     }
     ckToastName = name;
     ckToastEl.textContent = "🍸 " + name;
     ckToastEl.classList.add("show");
+    ckToastEl.classList.remove("ck-pop"); void ckToastEl.offsetWidth; ckToastEl.classList.add("ck-pop"); // restart the pop-in for this drink (reflow so a reused toast re-animates)
     clearTimeout(ckToastTimer);
     ckToastTimer = setTimeout(function () { if (ckToastEl) ckToastEl.classList.remove("show"); }, 12000);
   }
@@ -20902,8 +20945,8 @@ document.addEventListener("click", function (e) {
   function clearMakeTimers() { for (var i = 0; i < makeTimers.length; i++) clearTimeout(makeTimers[i]); makeTimers = []; }
   function stopBartenderStir() { if (window.__bartenderStir) window.__bartenderStir(false); } // never leave him stirring after a make ends
   function endBartenderMake() { stopBartenderStir(); if (window.__bartenderMixing) window.__bartenderMixing(false); } // back to idle: sway resumes, clear any stir
-  function finishMake() { clearMakeTimers(); endBartenderMake(); makeGroup.style.opacity = "0"; hideCocktailToast(); making = false; cooldownUntil = Date.now() + 1500 + Math.random() * 1700; }
-  function abort() { clearMakeTimers(); endBartenderMake(); if (makeGroup) makeGroup.style.opacity = "0"; hideCocktailToast(); making = false; }
+  function finishMake() { clearMakeTimers(); endBartenderMake(); makeGroup.style.opacity = "0"; makeGroup.classList.remove("mk-live"); hideCocktailToast(); making = false; cooldownUntil = Date.now() + 1500 + Math.random() * 1700; }
+  function abort() { clearMakeTimers(); endBartenderMake(); if (makeGroup) { makeGroup.style.opacity = "0"; makeGroup.classList.remove("mk-live"); } hideCocktailToast(); making = false; }
 
   function startMake(row) {
     if (making || !row) return false;
@@ -20924,6 +20967,7 @@ document.addEventListener("click", function (e) {
     var off = (window.__bartenderOffset ? window.__bartenderOffset() : 0);
     makeGroup.setAttribute("transform", "translate(" + (MAKE_ANCHOR_X + off) + ",0)");
     makeGroup.style.opacity = "1";
+    makeGroup.classList.add("mk-live"); // the glass is now a tappable link to this drink's recipe
 
     if (reduced()) { // static: fill instantly, garnish, hold, clear (no animation)
       ctx.setLevel(1, color); ctx.showGarnish();
@@ -21049,6 +21093,84 @@ document.addEventListener("click", function (e) {
     cooldownUntil = Date.now() + 4000;
     return startMake(row);
   };
+})();
+(function () {
+  // ── Draft-beer taps: click a tap head to pour a beer ─────────────────────────────────────────
+  // A pour is a self-contained one-shot: it spawns a glass + stream into the tapped tower's own <g>
+  // (local scene coords — no getBBox, no transform to clobber), rises an amber fill, settles a foam
+  // head, holds, then fades and removes itself. Only one live pour per tap (a re-click restarts it),
+  // and a hidden tab clears any in-flight pour so nothing accumulates. Reduced motion still pours —
+  // it just skips the animation (a full glass + foam, brief hold). Gated on the bar being up AND you
+  // standing at it, mirroring the bottles/glassware. A poured beer counts as a "drink" (registerDrink).
+  var SVGNS = "http://www.w3.org/2000/svg";
+  function s(tag, attrs, parent) {
+    var e = document.createElementNS(SVGNS, tag);
+    if (attrs) for (var k in attrs) if (attrs.hasOwnProperty(k)) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function rm() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+  // "the bar's up and you're at it" — the same condition the CSS pointer-events gate encodes, re-checked
+  // in JS as belt-and-braces (a click can't reach here otherwise, but a console-dispatched one could).
+  function present() { return !!(window.__barUpNow && window.__barUpNow()) && window.currentStageName === "kitchen" && document.visibilityState !== "hidden"; }
+
+  // one tap descriptor each; nx/ny is the faucet nozzle tip in scene coords (the tap <g> has no transform)
+  var TAPS = [
+    { id: "kitchen-bar-tap-a", nx: 485, ny: 231 },
+    { id: "kitchen-bar-tap-b", nx: 512, ny: 231 }
+  ];
+  TAPS.forEach(function (T) {
+    var g = document.getElementById(T.id);
+    if (!g) return;
+    T.node = null; T.timers = [];
+    function at(ms, fn) { var idt = setTimeout(fn, ms); T.timers.push(idt); return idt; }
+    T.clear = function () {
+      for (var i = 0; i < T.timers.length; i++) clearTimeout(T.timers[i]);
+      T.timers = [];
+      if (T.node && T.node.parentNode) T.node.parentNode.removeChild(T.node);
+      T.node = null;
+    };
+
+    function pour() {
+      if (!present()) return;
+      T.clear(); // one pour at a time — a fresh click restarts cleanly
+
+      var nx = T.nx, ny = T.ny, top = ny + 1, bot = ny + 15; // glass interior
+      var wrap = s("g", { "class": "beer-pour", style: "pointer-events:none" }, g);
+      T.node = wrap;
+      s("rect", { x: nx - 6.5, y: ny, width: 13, height: 16, rx: 1.6, fill: "#eef4f6", "fill-opacity": 0.5, stroke: "#cdd8da", "stroke-width": 1 }, wrap); // the glass
+      var fill = s("rect", { x: nx - 5.3, y: bot, width: 10.6, height: 0, rx: 0.8, fill: "#d99a2e" }, wrap); // amber body, rises
+      var foam = s("g", { style: "opacity:0" }, wrap); // foam head, revealed as the fill tops out
+      s("rect", { x: nx - 5.3, y: top + 0.4, width: 10.6, height: 3.4, rx: 1.7, fill: "#f6f1e6" }, foam);
+      s("circle", { cx: nx - 2.4, cy: top + 1.3, r: 1.3, fill: "#fbf7ee" }, foam);
+      s("circle", { cx: nx + 2.2, cy: top + 1.8, r: 1.1, fill: "#fbf7ee" }, foam);
+      var stream = s("rect", { x: nx - 1, y: ny - 1, width: 2, height: (top + 7) - (ny - 1), rx: 1, fill: "#e0a63a", opacity: 0.9 }, wrap); // nozzle → glass
+
+      try { playPourSound(T.id); } catch (e) {}             // liquid pour, panned to this tap
+      if (window.__registerDrink) window.__registerDrink(); // a poured beer is a drink, like a wine sip / beer-can crack
+
+      function setFill(f) { var h = Math.max(0, Math.min(1, f)) * (bot - top); fill.setAttribute("y", bot - h); fill.setAttribute("height", h); }
+      function done() {
+        wrap.style.transition = "opacity .4s ease"; wrap.style.opacity = "0";
+        at(430, function () { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); if (T.node === wrap) T.node = null; });
+      }
+
+      if (rm()) { setFill(0.86); foam.style.opacity = "1"; stream.style.display = "none"; at(1200, done); return; } // static pour
+
+      var STEPS = 13, RISE = 950;
+      for (var i = 1; i <= STEPS; i++) (function (i) { at((RISE / STEPS) * i, function () { setFill((i / STEPS) * 0.86); }); })(i);
+      at(RISE - 40, function () { stream.style.opacity = "0"; });
+      at(RISE + 60, function () { foam.style.opacity = "1"; });
+      at(RISE + 760, done);
+    }
+
+    g.addEventListener("click", pour);
+  });
+
+  // a hidden tab clears any in-flight pour so a one-shot never lingers into a return (matches the make module)
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) for (var i = 0; i < TAPS.length; i++) if (TAPS[i].clear) TAPS[i].clear();
+  });
 })();
 (function () {
   // Clicking an office wall sign turns the computer on and boots it (Fedora → desktop),
@@ -30875,16 +30997,18 @@ async def localfont(name):
         return { name: c.name, ingredients: c.recipe.ingredients.slice(), instructions: c.recipe.instructions };
       });
     };
-    // the bartender's make toast links here: open the pocket phone straight to a drink's recipe
-    // detail. open(true) is the cinematic path — it skips the first-open math lock (booted or not),
-    // so the label always lands on the recipe, never the passcode. goToStage keeps the phone on its
-    // home turf (the balcony) so closing it returns somewhere sensible.
+    // the bartender's make toast (and the in-scene glass) link here: open the pocket phone straight
+    // to a drink's recipe detail. open(true) is the cinematic path — it skips the first-open math
+    // lock (booted or not), so the label always lands on the recipe, never the passcode. The modal
+    // is a full-screen overlay that covers whatever room is behind it, so it opens IN PLACE — no
+    // goToStage — and closing it returns you to the room you launched it from (the bar, from the
+    // bartender's make; the balcony, if the phone's opened there). Nothing in the phone modal
+    // depends on the balcony scene being the active room.
     window.__showCocktailInPhone = function (name) {
       var q = String(name == null ? "" : name).toLowerCase().trim();
       var idx = -1;
       for (var i = 0; i < COCKTAILS.length; i++) if (COCKTAILS[i].name.toLowerCase() === q) { idx = i; break; }
       if (idx < 0) return false;
-      if (window.goToStage) window.goToStage("balcony");
       open(true);                                        // open (or re-seat) the phone at the launcher, no lock
       openApp("cocktails", "app_cocktails", renderCocktails);
       cocktailShow(idx);                                 // jump straight to this drink's detail view

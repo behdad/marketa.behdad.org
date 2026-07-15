@@ -536,8 +536,8 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
    swing back with the others afterward */
 .kitchen-pan-swing.fallen{animation:none !important}
 .kitchen-crack{opacity:0}
-#kitchen-kettle.broken, #kitchen-waterbottle.broken #kitchen-waterbottle-inner, #kitchen-drinkmate.broken{filter:saturate(.35) brightness(.8)}
-#kitchen-kettle.broken .kitchen-crack, #kitchen-waterbottle.broken .kitchen-crack, #kitchen-drinkmate.broken .kitchen-crack{opacity:1}
+#kitchen-kettle.broken, #kitchen-waterbottle.broken #kitchen-waterbottle-inner, #kitchen-drinkmate.broken, #kitchen-canister.broken{filter:saturate(.35) brightness(.8)}
+#kitchen-kettle.broken .kitchen-crack, #kitchen-waterbottle.broken .kitchen-crack, #kitchen-drinkmate.broken .kitchen-crack, #kitchen-canister.broken .kitchen-crack{opacity:1}
 .kitchen-scoop-swing{transform-box:fill-box; transform-origin:50% 10%}
 .kitchen-scoop-swing.rattling{animation:pan-swing .5s ease-in-out}
 @media (prefers-reduced-motion: reduce){.kitchen-scoop-swing{animation:none !important}}
@@ -5674,6 +5674,8 @@ section{margin:1.9rem 0}
 </defs>
 <rect x="140" y="190" width="34" height="46" fill="transparent"/>
 <rect x="147" y="204" width="20" height="26" rx="3" fill="url(#kitchen-jar-red-grad)" stroke="#7d1f2c" stroke-width="1.5"/>
+<!-- hairline crack, hidden until a falling pan cracks the jar (see #kitchen-canister.broken) -->
+<path class="kitchen-crack" d="M159 205 L155 211 L161 217 L156 224 L159 230" fill="none" stroke="#4a121b" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" opacity="0"/>
 <g id="kitchen-canister-lid">
 <rect x="146" y="198" width="22" height="8" rx="3" fill="#c94a5a" stroke="#7d1f2c" stroke-width="1"/>
 <circle cx="157" cy="196" r="3" fill="#7d1f2c"/>
@@ -18651,21 +18653,33 @@ document.addEventListener("click", function (e) {
   // getting that composition wrong. Dividing by that same 1.65 converts the stage-local
   // delta into the pan's own local transform units (a delta is invariant to the parent
   // group's translate, only its scale matters).
-  function fallenPanTarget(panId, targetId, offsetX, offsetY) {
+  // effect: "break" cracks the item below (crack + desaturate + its own gag), "wobble" just rattles
+  // it (the big pan rattling the cutting boards), "clatter" is a plain drop onto the counter (target
+  // may be null → a straight drop to landY). Each pan lands on the item directly below it, so no pan
+  // ever flies across the scene.
+  function fallenPanTarget(panId, targetId, offsetX, offsetY, effect, landY) {
     var pan = document.getElementById(panId);
-    var target = document.getElementById(targetId);
-    if (!pan || !target) return;
+    var target = targetId ? document.getElementById(targetId) : null;
+    if (!pan) return;
+    if (targetId && !target) return;
     var dx = 0, dy = 0;
     try {
       var svg = document.getElementById("loft-game-strip");
       var stage = document.getElementById("stage-kitchen");
       if (svg && stage && svg.createSVGPoint && stage.getScreenCTM) {
-        var fr = pan.getBoundingClientRect(), tr = target.getBoundingClientRect();
+        var fr = pan.getBoundingClientRect();
         var p1 = svg.createSVGPoint(); p1.x = fr.left + fr.width / 2; p1.y = fr.top + fr.height / 2;
-        var p2 = svg.createSVGPoint(); p2.x = tr.left + tr.width / 2; p2.y = tr.top + tr.height / 2;
         var inv = stage.getScreenCTM().inverse();
-        var sp1 = p1.matrixTransform(inv), sp2 = p2.matrixTransform(inv);
-        dx = (sp2.x - sp1.x) / 1.65 + (offsetX || 0); dy = (sp2.y - sp1.y) / 1.65 + 32 + (offsetY || 0); // land lower, clearly on top of the target rather than at its center
+        var sp1 = p1.matrixTransform(inv);
+        var tx, ty, onTop;
+        if (target) {
+          var tr = target.getBoundingClientRect();
+          var p2 = svg.createSVGPoint(); p2.x = tr.left + tr.width / 2; p2.y = tr.top + tr.height / 2;
+          var sp2 = p2.matrixTransform(inv); tx = sp2.x; ty = sp2.y; onTop = 32; // land lower, clearly on top of the item rather than at its centre
+        } else {
+          tx = sp1.x; ty = (landY != null ? landY : sp1.y + 145); onTop = 0; // straight drop to the counter
+        }
+        dx = (tx - sp1.x) / 1.65 + (offsetX || 0); dy = (ty - sp1.y) / 1.65 + onTop + (offsetY || 0);
       }
     } catch (e) {}
     pan.classList.add("fallen"); // stops it swinging along with the rest afterward
@@ -18682,7 +18696,14 @@ document.addEventListener("click", function (e) {
       pan.style.transform = "translate(" + dx + "px," + dy + "px)";
     }
     setTimeout(function () {
-      playPanCrashSound(targetId);
+      playPanCrashSound(targetId || panId);
+      if (!target || effect === "clatter") return; // a plain clatter onto the counter — nothing below to react
+      if (effect === "wobble") {                    // rattle the item (cutting boards) without breaking it
+        target.classList.remove("rattling");
+        requestAnimationFrame(function () { requestAnimationFrame(function () { target.classList.add("rattling"); }); });
+        setTimeout(function () { target.classList.remove("rattling"); }, 520);
+        return;
+      }
       target.classList.add("broken");
       target.classList.remove("struck");
       requestAnimationFrame(function () { requestAnimationFrame(function () { target.classList.add("struck"); }); });
@@ -18691,22 +18712,38 @@ document.addEventListener("click", function (e) {
       if (targetId === "kitchen-drinkmate") playSodaDepressurizeSound(); // all the CO2 blows out
     }, panFallReducedMotion() ? 0 : 650);
   }
-  // Shared by clinkPans and the gong's strikeGong (below) — either one, clicked enough,
-  // knocks a pan loose. Each target has one dedicated pan (never reused across two
-  // falls) so the fallenPanTarget() flight path is always the same known-good one.
-  var kitchenPanClicks = 0;
+  // Shared by clinkPans and the gong's strikeGong (below) — either one, clicked enough, knocks a pan
+  // loose. Every one of the six pans falls onto the item DIRECTLY BELOW it (measured coords, so no
+  // pan ever sails across the scene): three crack a counter item (waterbottle leaks, kettle, jar),
+  // the drinkmate blows its CO2, the big pan rattles the cutting boards, and the last just clatters
+  // to the counter. The ORDER they drop in is SHUFFLED each game and the click gaps are jittered, so
+  // it's never the same predictable sequence twice.
+  var PAN_FALLS = [
+    { pan: "kitchen-pan-2", target: "kitchen-waterbottle", effect: "break", flag: "waterBottle" },
+    { pan: "kitchen-pan-4", target: "kitchen-kettle", effect: "break", flag: "kettle" },
+    { pan: "kitchen-pan-5", target: "kitchen-drinkmate", effect: "break", flag: "soda", ox: -10, oy: -10 },
+    { pan: "kitchen-pan-6", target: "kitchen-canister", effect: "break", ox: -6 }, // the jar, nudged left onto it
+    { pan: "kitchen-pan-1", target: "kitchen-boards", effect: "wobble" },           // the big pan rattles the cutting boards
+    { pan: "kitchen-pan-3", target: null, effect: "clatter", landY: 208 }           // straight down onto the counter
+  ];
+  var kitchenPanClicks = 0, panFallQueue = null, nextPanFallAt = 0;
+  function shufflePanFalls() {
+    var a = PAN_FALLS.slice();
+    for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  function doPanFall(spec) {
+    if (spec.flag === "waterBottle") waterBottleBroken = true;
+    if (spec.flag === "kettle") { if (typeof kettleSteaming !== "undefined" && kettleSteaming && typeof toggleKettle === "function") toggleKettle(); kettleBroken = true; } // off cleanly before it's marked broken
+    if (spec.flag === "soda") sodaBroken = true;
+    fallenPanTarget(spec.pan, spec.target, spec.ox || 0, spec.oy || 0, spec.effect, spec.landY);
+  }
   function bumpKitchenPanClicks() {
     kitchenPanClicks++;
-    if (kitchenPanClicks === 8 && !waterBottleBroken) {
-      waterBottleBroken = true;
-      fallenPanTarget("kitchen-pan-2", "kitchen-waterbottle");
-    } else if (kitchenPanClicks === 14 && !kettleBroken) {
-      if (typeof kettleSteaming !== "undefined" && kettleSteaming && typeof toggleKettle === "function") toggleKettle(); // off cleanly before it's marked broken
-      kettleBroken = true;
-      fallenPanTarget("kitchen-pan-4", "kitchen-kettle");
-    } else if (kitchenPanClicks === 20 && !sodaBroken) {
-      sodaBroken = true;
-      fallenPanTarget("kitchen-pan-5", "kitchen-drinkmate", -10, -10);
+    if (!panFallQueue) { panFallQueue = shufflePanFalls(); nextPanFallAt = 5 + Math.floor(Math.random() * 4); } // first drop after ~5-8 clinks
+    if (panFallQueue.length && kitchenPanClicks >= nextPanFallAt) {
+      doPanFall(panFallQueue.shift());
+      if (panFallQueue.length) nextPanFallAt = kitchenPanClicks + 4 + Math.floor(Math.random() * 4); // the next in ~4-7 more
     }
   }
   // A full reset undoes the fall: cancel any in-flight/landed WAAPI animation (fill:
@@ -18717,17 +18754,19 @@ document.addEventListener("click", function (e) {
     waterBottleBroken = false;
     kettleBroken = false;
     sodaBroken = false;
-    kitchenPanClicks = 0;
+    kitchenPanClicks = 0; panFallQueue = null; nextPanFallAt = 0; // re-shuffle a fresh fall order next game
     fallenPanAnims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
     fallenPanAnims = [];
     ["kitchen-pan-1", "kitchen-pan-2", "kitchen-pan-3", "kitchen-pan-4", "kitchen-pan-5", "kitchen-pan-6"].forEach(function (id) {
       var p = document.getElementById(id);
       if (p) { p.classList.remove("fallen"); p.style.transform = ""; }
     });
-    ["kitchen-kettle", "kitchen-waterbottle", "kitchen-drinkmate"].forEach(function (id) {
+    ["kitchen-kettle", "kitchen-waterbottle", "kitchen-drinkmate", "kitchen-canister"].forEach(function (id) {
       var t = document.getElementById(id);
       if (t) t.classList.remove("broken", "struck");
     });
+    var boards = document.getElementById("kitchen-boards");
+    if (boards) boards.classList.remove("rattling");
     if (window.resetWaterBottle) window.resetWaterBottle();
   };
   var pans = document.getElementById("kitchen-pans");

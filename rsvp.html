@@ -32704,6 +32704,62 @@ async def localfont(name):
     balconyDoor.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleBalconyDoor(); }
     });
+    // Right-click (contextmenu) menu on the balcony door: one item — "Close" when the door
+    // is open, "Open" when it's shut — that runs the very same toggleBalconyDoor() as a
+    // normal click (so the swing + acoustics/party/projector/cat updates all match). A .mon-ctx
+    // card with the shared dismiss wiring; the openMenu/closeMenu helpers of the monitor/D-pad
+    // IIFEs aren't in scope here, so the small pattern is replicated locally (like the laptop's).
+    // This listener registers before the scene D-pad's (that IIFE runs later in source), so the
+    // preventDefault() below trips its `if (e.defaultPrevented) return;` guard and the door menu
+    // WINS over the D-pad for a door target; a right-click anywhere else on the balcony still
+    // falls through to the D-pad untouched.
+    (function () {
+      var bdMenuEl = null;
+      var DOOR_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="1.6" width="6" height="8.8" rx="0.6"/><circle cx="7.3" cy="6" r="0.5" fill="currentColor" stroke="none"/></svg>';
+      function bdTr(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || key; }
+      function bdCloseMenu() {
+        if (!bdMenuEl) return;
+        if (bdMenuEl.parentNode) bdMenuEl.parentNode.removeChild(bdMenuEl);
+        bdMenuEl = null;
+        document.removeEventListener("keydown", bdOnKey, true);
+        document.removeEventListener("mousedown", bdOnAway, true);
+        document.removeEventListener("scroll", bdCloseMenu, true);
+        window.removeEventListener("blur", bdCloseMenu);
+        window.removeEventListener("resize", bdCloseMenu);
+      }
+      function bdOnAway(e) { if (bdMenuEl && !bdMenuEl.contains(e.target)) bdCloseMenu(); }
+      function bdOnKey(e) { if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); bdCloseMenu(); } }
+      function bdItem(ico, label, fn) {
+        var b = document.createElement("button");
+        b.type = "button"; b.className = "ctx-open"; b.setAttribute("role", "menuitem");
+        b.innerHTML = ico + "<span>" + label + "</span>";
+        b.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); bdCloseMenu(); fn(); });
+        return b;
+      }
+      function bdOpenMenu(items, x, y) {
+        bdCloseMenu();
+        bdMenuEl = document.createElement("div");
+        bdMenuEl.className = "mon-ctx"; bdMenuEl.setAttribute("role", "menu");
+        for (var i = 0; i < items.length; i++) bdMenuEl.appendChild(items[i]);
+        bdMenuEl.style.visibility = "hidden";
+        document.body.appendChild(bdMenuEl);
+        var r = bdMenuEl.getBoundingClientRect();
+        bdMenuEl.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 4)) + "px";
+        bdMenuEl.style.top = Math.max(4, Math.min(y, window.innerHeight - r.height - 4)) + "px";
+        bdMenuEl.style.visibility = "";
+        document.addEventListener("keydown", bdOnKey, true);
+        document.addEventListener("mousedown", bdOnAway, true);
+        document.addEventListener("scroll", bdCloseMenu, true);
+        window.addEventListener("blur", bdCloseMenu);
+        window.addEventListener("resize", bdCloseMenu);
+      }
+      document.addEventListener("contextmenu", function (e) {
+        if (!e.target || !e.target.closest || !e.target.closest("#balcony-door")) return; // only over the door itself → else the scene D-pad handles it
+        e.preventDefault(); // claim the right-click so the later scene-D-pad handler stands down
+        var key = balconyDoor.classList.contains("open") ? "tab_ctx_close" : "mon_ctx_open"; // read fresh each time
+        bdOpenMenu([bdItem(DOOR_ICO, bdTr(key), function () { toggleBalconyDoor(); })], e.clientX, e.clientY);
+      });
+    })();
   }
   // the cuddly nook's own balcony door: its leaf swings in to cover Octi and drives
   // the same sun-ray / rain FX as the front door (updateCuddlyDoorFx ORs the two)

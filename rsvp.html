@@ -28717,11 +28717,18 @@ async def localfont(name):
       if (app.open) app.open();
       else if (app.link) { try { window.open(app.link, "_blank"); } catch (e) {} }
     }
+    // drop an app's retained session state back to fresh (phrasebook deck, notes draft, booth
+    // polaroid). Used by BOTH Stop (force-stop: clear state, keep the icon) and Uninstall (which
+    // also removes the icon) — a normal close keeps the state; only these "kill" paths clear it.
+    function resetAppState(id) {
+      if (id === "cards") cardsIndex = 0;
+      if (id === "notes") notesDraft = "";
+      if (id === "photobooth") { pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; }
+    }
+    function stopApp(id) { resetAppState(id); if (shell && shell.classList.contains("pm-home")) renderHome(); } // Stop = force-stop: clear state, icon stays
     function uninstallApp(id) { // empty this app's slot (leaves a blank gap — others don't shift); a reset/reload brings it back
       ensurePhoneSlots();
-      if (id === "cards") cardsIndex = 0; // uninstall is the phrasebook's "kill": reinstalling (reset/reload) starts fresh at card 1
-      if (id === "notes") notesDraft = ""; // uninstall is the notes app's "kill": a reinstalled notes pad starts empty (a normal close keeps the draft)
-      if (id === "photobooth") { pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; } // uninstall is the booth's "kill": drop the saved polaroid so a reinstall opens fresh at the camera
+      resetAppState(id); // uninstall is also a "kill" — a reinstall opens fresh
       for (var i = 0; i < phoneSlots.length; i++) if (phoneSlots[i] === id) { phoneSlots[i] = null; break; }
       if (shell && shell.classList.contains("pm-home")) renderHome();
     }
@@ -28756,7 +28763,7 @@ async def localfont(name):
       phMenuEl = document.createElement("div");
       phMenuEl.className = "mon-ctx phone-ctx"; phMenuEl.setAttribute("role", "menu");
       phMenuEl.appendChild(phMakeItem("ctx-open", PH_OPEN_ICO, tr("mon_ctx_open"), function () { launchApp(app); }));
-      phMenuEl.appendChild(phMakeItem("ctx-stop", PH_STOP_ICO, tr("mon_ctx_stop"), null)); // inert by design: closing the menu is all it does
+      phMenuEl.appendChild(phMakeItem("ctx-stop", PH_STOP_ICO, tr("mon_ctx_stop"), function () { stopApp(app.id); })); // force-stop: clears the app's session state (icon stays)
       phMenuEl.appendChild(phMakeItem("ctx-uninstall ctx-kill", PH_UNINST_ICO, tr("mon_ctx_uninstall"), function () { uninstallApp(app.id); }));
       phMenuEl.style.visibility = "hidden";
       // mount on <body> exactly like the desktop dock menu: .mon-ctx (z-index 60) clears the

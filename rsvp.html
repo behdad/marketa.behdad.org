@@ -14304,16 +14304,16 @@ var uvPartyOn = false;
 function applyUvMode() { setUvMode(uvPartyOn); }
 window.__setUvMode = setUvMode; // reset / room-leave can force the raw class off
 window.__setUvParty = function (on) { uvPartyOn = !!on; applyUvMode(); }; // the balcony switch
-// Kitchen-only: settle into the bar under the blacklight a while and it gently EASES toward a
+// Every room EXCEPT the garden: settle under the blacklight a while and it gently EASES toward a
 // softer light (kept blue, not off) so you can enjoy the scene/drinks; it snaps back to full
-// blacklight the instant you leave the kitchen, the party ends, a trip takes over, or a device
-// zooms. The blacklight is one whole-strip filter (#loft-game-strip.uv-mode), and we're always
-// viewing exactly one room, so easing that filter WHILE in the kitchen reads as "toned down in
-// the kitchen". We ramp an inline strip.style.filter under our own control (a blanket CSS
-// transition on .uv-mode would also animate the trip variants' own filter keyframes — see the
-// note at #loft-game-strip.uv-mode) and hand control straight back to the CSS (strip.style.
-// filter="") on every exit. Gated fully OFF during a trip: the rAF step self-cancels and a trip
-// clearing re-arms a fresh linger.
+// blacklight the instant you leave for the garden, the light goes off, a trip takes over, or a
+// device zooms. The garden party keeps the full blacklight. The blacklight is one whole-strip
+// filter (#loft-game-strip.uv-mode), and we're always viewing exactly one room, so easing that
+// filter WHILE in a non-garden room reads as "toned down here". We ramp an inline
+// strip.style.filter under our own control (a blanket CSS transition on .uv-mode would also
+// animate the trip variants' own filter keyframes — see the note at #loft-game-strip.uv-mode)
+// and hand control straight back to the CSS (strip.style.filter="") on every exit. Gated fully
+// OFF during a trip: the rAF step self-cancels and a trip clearing re-arms a fresh linger.
 (function () {
   var strip = document.getElementById("loft-game-strip");
   if (!strip) return;
@@ -14328,8 +14328,9 @@ window.__setUvParty = function (on) { uvPartyOn = !!on; applyUvMode(); }; // the
   var lingerTimer = 0, rafId = 0, easing = false, rampStart = 0;
   function nowMs() { return (window.performance && performance.now) ? performance.now() : Date.now(); }
   function gateOpen() {
-    return !!window.__gardenPartyOn
-      && window.currentStageName === "kitchen"
+    // Any room but the garden (which keeps the full blacklight), whenever the UV is on —
+    // party or not (the 'u' key / blacklight()/uv() can raise it with no party).
+    return window.currentStageName !== "garden"
       && strip.classList.contains("uv-mode")
       && !window.__tripActive
       && !(viewport && viewport.classList.contains("device-zoomed"));
@@ -14340,9 +14341,13 @@ window.__setUvParty = function (on) { uvPartyOn = !!on; applyUvMode(); }; // the
     strip.style.filter = "brightness(" + b.toFixed(3) + ") saturate(" + sa.toFixed(3) + ") hue-rotate(" + h.toFixed(1) + "deg) contrast(" + c.toFixed(3) + ")";
     // The make-glass counter-filter is the exact affine inverse (reverse order) of the CURRENT
     // strip filter, so the cocktail he's mixing always reads its true colours no matter how far
-    // we've eased — at t=0 this reproduces the shipping #kitchen-bar-make CSS rule exactly.
+    // we've eased — at t=0 this reproduces the shipping #kitchen-bar-make CSS rule exactly. Only
+    // meaningful in the kitchen (that's the only room the make-glass shows in), so it's a no-op
+    // elsewhere — the element lives in the strip full-time, but we don't touch it off-kitchen.
     var mk = document.getElementById("kitchen-bar-make");
-    if (mk) mk.style.filter = "contrast(" + (1 / c).toFixed(3) + ") hue-rotate(" + (-h).toFixed(1) + "deg) saturate(" + (1 / sa).toFixed(3) + ") brightness(" + (1 / b).toFixed(3) + ")";
+    if (mk) mk.style.filter = window.currentStageName === "kitchen"
+      ? "contrast(" + (1 / c).toFixed(3) + ") hue-rotate(" + (-h).toFixed(1) + "deg) saturate(" + (1 / sa).toFixed(3) + ") brightness(" + (1 / b).toFixed(3) + ")"
+      : ""; // off-kitchen: leave the make-glass to its CSS (never a stale inverse from a ramp that ran elsewhere)
   }
   function clearInline() { // hand the blacklight back to the CSS .uv-mode rules
     strip.style.filter = "";
@@ -14357,7 +14362,7 @@ window.__setUvParty = function (on) { uvPartyOn = !!on; applyUvMode(); }; // the
   }
   function step() {
     rafId = 0;
-    if (!gateOpen()) { stop(); return; } // trip started / left the kitchen mid-ramp -> snap back
+    if (!gateOpen()) { stop(); return; } // trip started / left for the garden / light off mid-ramp -> snap back
     var e = Math.min(1, (nowMs() - rampStart) / RAMP_MS);
     applyEase(e);
     if (e < 1) rafId = window.requestAnimationFrame(step);
@@ -14377,10 +14382,11 @@ window.__setUvParty = function (on) { uvPartyOn = !!on; applyUvMode(); }; // the
       stop();
     }
   }
-  window.__updateKitchenUvLinger = evaluate; // goToStage + setGardenParty ping this on room/party change
-  // A cheap, side-effect-free poll: catches gate changes that don't route through a hook (a trip
-  // starting/clearing, a device zoom) and re-arms a fresh linger once a trip clears. Idempotent —
-  // not the timer-spawned-particle class the accumulation-bug note warns about.
+  window.__updateKitchenUvLinger = evaluate; // goToStage + setGardenParty ping this on room/party change (name kept for its callers)
+  // A cheap, side-effect-free poll: catches gate changes that don't route through a hook — a trip
+  // starting/clearing, a device zoom, and the blacklight raised/dropped by the 'u' key or
+  // blacklight()/uv() console command (no party involved). Re-arms a fresh linger once a trip
+  // clears. Idempotent — not the timer-spawned-particle class the accumulation-bug note warns of.
   setInterval(evaluate, 500);
 })();
 // 'p' throws / dismisses the garden blacklight party — same as flipping the balcony switch
@@ -41536,7 +41542,7 @@ function spawnDustMote(container) {
     if (window.__updateTotoroMelody) window.__updateTotoroMelody(name === "cuddly", ROOM_FADE); // woodland melody follows the totoro channel
     if (window.__updateProjectorPans) window.__updateProjectorPans(); // all four projector-music beds pan to the new room from the shared table
     if (window.__updatePartyRoom) window.__updatePartyRoom(); // party is garden-sourced: pan + faintness per room
-    if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // leaving the kitchen snaps the eased blacklight back to full; entering it (re)arms the linger
+    if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // entering the garden snaps the eased blacklight back to full; entering any other room (re)arms the linger
     if (window.__updateWind) window.__updateWind(ROOM_FADE); // wind bed (balcony, + through the cuddly door) fades out over the room change too
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(name === "garden"); // birdsong only in the garden, and only by day
     if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // after-dark disco-ball peek re-arms on entering the garden at night, retracts on leaving (reads window.currentStageName)
@@ -42885,7 +42891,7 @@ function spawnDustMote(container) {
     updateAllPartyDances(); // start/stop every registered dance's bed with the party (each self-gates on its want)
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // start/stop the garden groovers (incl. the bartender's party groove)
     if (window.__refreshKitchenBar) window.__refreshKitchenBar(); // party on/off swaps the kitchen bar↔espresso caption + arrows
-    if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // party off snaps any eased kitchen blacklight back
+    if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // party toggling re-evaluates the eased blacklight (garden stays full)
     if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // party on retracts the night-peek; party off at night re-arms it
   }
   window.__setGardenParty = setGardenParty;

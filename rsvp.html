@@ -21322,7 +21322,9 @@ document.addEventListener("click", function (e) {
     if (making && (!barPresent() || flairBusy())) abort(); // stop a make if you leave the bar OR the Flair-Catch game takes over
     // AMBIENT auto-making is PARTY-only (the loud, always-mixing bar). The calm NIGHT bar makes a
     // drink only when you tap the bartender (window.__makeCocktailHere) — never on its own.
-    if (!making && window.__gardenPartyOn && barPresent() && !reduced() && !dragging() && !flairBusy() && Date.now() >= cooldownUntil) startMake(randomRow());
+    // While the pocket phone is up, he finishes the current drink (making stays true) but takes NO
+    // new order until you put the phone away — the bar quiets behind the modal instead of mixing on.
+    if (!making && window.__gardenPartyOn && barPresent() && !reduced() && !dragging() && !flairBusy() && Date.now() >= cooldownUntil && !(window.phone && window.phone())) startMake(randomRow());
     pollTimer = setTimeout(ambientPoll, 500);
   }
   ambientPoll();
@@ -21366,7 +21368,7 @@ document.addEventListener("click", function (e) {
   // head, holds, then fades and removes itself. Only one live pour per tap (a re-click restarts it),
   // and a hidden tab clears any in-flight pour so nothing accumulates. Reduced motion still pours —
   // it just skips the animation (a full glass + foam, brief hold). Gated on the bar being up AND you
-  // standing at it, mirroring the bottles/glassware. A poured beer counts as a "drink" (registerDrink).
+  // standing at it, mirroring the bottles/glassware. (A poured beer does NOT count as a "drink".)
   var SVGNS = "http://www.w3.org/2000/svg";
   function s(tag, attrs, parent) {
     var e = document.createElementNS(SVGNS, tag);
@@ -21412,7 +21414,6 @@ document.addEventListener("click", function (e) {
       var stream = s("rect", { x: nx - 1, y: ny - 1, width: 2, height: (top + 7) - (ny - 1), rx: 1, fill: "#e0a63a", opacity: 0.9 }, wrap); // nozzle → glass
 
       try { playPourSound(T.id); } catch (e) {}             // liquid pour, panned to this tap
-      if (window.__registerDrink) window.__registerDrink(); // a poured beer is a drink, like a wine sip / beer-can crack
 
       function setFill(f) { var h = Math.max(0, Math.min(1, f)) * (bot - top); fill.setAttribute("y", bot - h); fill.setAttribute("height", h); }
       function done() {

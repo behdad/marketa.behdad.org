@@ -854,12 +854,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 #loft-game-strip.party-on #kitchen-bar-patron-a.hiccup,
 #loft-game-strip.party-on #kitchen-bar-patron-b.hiccup{animation:patron-hiccup .62s ease-in-out}
 @keyframes patron-hiccup{0%{transform:rotate(0)}22%{transform:translateY(-2.5px) rotate(-4.5deg)}52%{transform:translateY(-1px) rotate(3.5deg)}78%{transform:rotate(-1.5deg)}100%{transform:rotate(0)}}
-/* the "hic!" that floats up over a tapped patron — spawned into #kitchen-bar-patrons (patron's own
-   group, absolute coords) so it drifts + fades and is removed on animationend / a safety timer. */
-.patron-hic{font:italic 700 12px "Fraunces",serif; fill:#ead8b0; pointer-events:none; opacity:0; animation:patron-hic-float 1.1s ease-out forwards}
-@keyframes patron-hic-float{0%{opacity:0; transform:translateY(0) scale(.8)}18%{opacity:.95}100%{opacity:0; transform:translateY(-16px) scale(1.05)}}
-.patron-hic{transform-box:fill-box; transform-origin:50% 100%}
-@media (prefers-reduced-motion: reduce){#loft-game-strip.party-on #kitchen-bar-patron-a,#loft-game-strip.party-on #kitchen-bar-patron-b{animation:none}#loft-game-strip.party-on #kitchen-bar-patron-a.hiccup,#loft-game-strip.party-on #kitchen-bar-patron-b.hiccup{animation:none}.patron-hic{animation:none; opacity:.95}}
+@media (prefers-reduced-motion: reduce){#loft-game-strip.party-on #kitchen-bar-patron-a,#loft-game-strip.party-on #kitchen-bar-patron-b{animation:none}#loft-game-strip.party-on #kitchen-bar-patron-a.hiccup,#loft-game-strip.party-on #kitchen-bar-patron-b.hiccup{animation:none}}
 /* the bartender's flourish: tapping his transparent upper-body hit rect throws the shaker up
    and catches it. The toss animates #kitchen-bartender-shaker (the metal parts only) — a node
    DISTINCT from the idle-shaking #kitchen-bartender-shake wrapper — so the two transforms
@@ -19808,11 +19803,9 @@ document.addEventListener("click", function (e) {
   wireBarWobbleGroup("kitchen-bar-usedglasses", barGlassHit);
   wireBarWobbleGroup("kitchen-bar-stools", function (w, pan) { playDryClickSound(pan); }); // a soft wooden knock, not a clink
   // the two tipsy party patrons react to a tap: a quick hiccup jolt (one-shot .hiccup, cleared on
-  // animationend so the idle sway resumes) + a soft "hic!" floating up over the head + a spatialized
-  // hiccup sound. Party-only (CSS re-enables pointer-events on each patron under .party-on; the
-  // parent #kitchen-bar-patrons keeps pointer-events:none). Each patron is a direct child of
-  // #kitchen-bar-patrons and drawn in absolute coords, so the floating text spawns into that same
-  // group with no coordinate-system surprise (getBBox is local == absolute here).
+  // animationend so the idle sway resumes) + a spatialized hiccup sound. Party-only (CSS re-enables
+  // pointer-events on each patron under .party-on; the parent #kitchen-bar-patrons keeps
+  // pointer-events:none). The jolt reads the reaction on its own — no floating label needed.
   (function () {
     var patrons = document.getElementById("kitchen-bar-patrons");
     if (!patrons) return;
@@ -19826,18 +19819,6 @@ document.addEventListener("click", function (e) {
       e.stopPropagation();
       g.classList.remove("hiccup"); // rAF-double so a repeat tap restarts the one-shot
       requestAnimationFrame(function () { requestAnimationFrame(function () { g.classList.add("hiccup"); }); });
-      try {
-        var b = g.getBBox();
-        var t = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        t.setAttribute("class", "patron-hic");
-        t.setAttribute("x", (b.x + b.width * 0.62).toFixed(1));
-        t.setAttribute("y", (b.y + 3).toFixed(1));
-        t.setAttribute("text-anchor", "middle");
-        t.textContent = "hic!";
-        patrons.appendChild(t);
-        t.addEventListener("animationend", function () { if (t.parentNode) t.parentNode.removeChild(t); });
-        setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 1500); // safety: onfinish can be skipped in a backgrounded tab
-      } catch (e2) {}
       playHiccupSound(patronPan(g));
     });
     patrons.addEventListener("animationend", function (e) {

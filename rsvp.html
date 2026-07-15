@@ -28526,7 +28526,7 @@ async def localfont(name):
       playPhoneNotifySound();
     }
     setInterval(function () {
-      if (document.visibilityState === "hidden") return;    // no ghost buzzing in a backgrounded tab
+      if (document.visibilityState === "hidden" || !document.hasFocus()) return; // no ghost buzz/chime in a backgrounded OR merely unfocused tab (a one-shot, so it needs the focus check the beds have)
       if ((window.currentStageIndex || 0) !== 4) return;    // only while you're out on the balcony
       if (phone.classList.contains("phone-opened")) return; // opened once → it stays quiet
       phoneNotify();
@@ -41722,7 +41722,7 @@ function spawnDustMote(container) {
     function onCentre(e) { // fires at true totality: the "in" half's end == moon dead-centre
       if (e.animationName !== "solar-transit-in") return; // ignore the "out" half / bubbled siblings
       moon.removeEventListener("animationend", onCentre);
-      if (stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden") spawnEclipseTotality();
+      if (stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden" && document.hasFocus()) spawnEclipseTotality(); // totality chime is a one-shot: skip it when unfocused too, not just hidden
     }
     if (moon) moon.addEventListener("animationend", onCentre);
     eclipseTimers.push(setTimeout(function () { // safety net: clear the class + listener even if the burst was skipped
@@ -41743,7 +41743,7 @@ function spawnDustMote(container) {
     function onCentre(e) { // the umbra's "in" half ends at dead-centre totality — same clock trick as the solar burst
       if (e.animationName !== "solar-transit-in") return; // ignore the "out" half / bubbled siblings
       umbra.removeEventListener("animationend", onCentre);
-      if (stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden") spawnLunarSparkles();
+      if (stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden" && document.hasFocus()) spawnLunarSparkles(); // totality chime one-shot: unfocused-safe too (defense-in-depth; this path is user-triggered)
     }
     if (umbra) umbra.addEventListener("animationend", onCentre);
     eclipseTimers.push(setTimeout(function () {

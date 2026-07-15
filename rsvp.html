@@ -785,7 +785,14 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 #kitchen-bartender-shaker.tossing{animation:bartender-toss .95s ease-in-out}
 @keyframes bartender-toss{0%{transform:translateY(0) rotate(0)}42%{transform:translateY(-32px) rotate(360deg)}100%{transform:translateY(0) rotate(720deg)}}
 #kitchen-bartender-hit{pointer-events:none}
-#loft-game-strip.party-on #kitchen-bartender-hit{pointer-events:auto; cursor:pointer}
+/* he's both tappable (toss) and draggable along the bar while the party's up, so the hit
+   rect reads as movable (grab), flipping to grabbing during an active drag. The drag
+   translate rides the OUTER #kitchen-bartender group (its own `translate` property) —
+   distinct element AND property from the inner shake/toss `transform` animations, so they
+   compose without clobber; the .3s ease just glides the return-to-base on reset. */
+#kitchen-bartender{transition:translate .3s ease}
+#loft-game-strip.party-on #kitchen-bartender-hit{pointer-events:auto; cursor:grab}
+#loft-game-strip.party-on #kitchen-bartender-hit.grabbing{cursor:grabbing}
 @media (prefers-reduced-motion: reduce){#kitchen-bartender-shaker.tossing{animation:none}}
 /* tapping the glitter ball pops it: a quick scale-bounce on a dedicated wrapper plus a
    white light-flash halo. The bounce lives on #garden-disco-ball-pop, a node DISTINCT from
@@ -18810,6 +18817,7 @@ document.addEventListener("click", function (e) {
   // ice-in-a-metal-tin rattle plays alongside (and still plays under reduced-motion, sans toss).
   var bartender = document.getElementById("kitchen-bartender");
   var bartenderShaker = document.getElementById("kitchen-bartender-shaker");
+  var bartenderHit = document.getElementById("kitchen-bartender-hit");
   if (bartender && bartenderShaker) {
     function tossShaker() { // re-triggerable one-shot: clear + double-rAF re-add so it always replays
       bartenderShaker.classList.remove("tossing");
@@ -18817,9 +18825,75 @@ document.addEventListener("click", function (e) {
         requestAnimationFrame(function () { bartenderShaker.classList.add("tossing"); });
       });
     }
+    // ---- drag the bartender horizontally along the bar (party-only) ----------
+    // Mirrors the office-chair horizontal drag (setChairOffset / pointerSvgX): the X
+    // offset rides the OUTER #kitchen-bartender group's `translate` property, clamped so
+    // his body stays behind the counter. The inner #kitchen-bartender-shake (idle) and
+    // #kitchen-bartender-shaker (toss) animate `transform` on DIFFERENT nodes, so the
+    // drag translate never fights them (the documented transform-clobber bug class).
+    // A genuine tap still throws the shaker; only a real drag (past a small cumulative
+    // travel) moves him and suppresses the tap. barDragTravel is the clean cumulative
+    // signal a future bar/shaker shooter can arm off (nothing consumes it yet).
+    var BARTENDER_MIN_X = -240, BARTENDER_MAX_X = 210; // hit rect [270,348] vs counter [14,574] → margin both ends
+    var BARTENDER_Y_OFFSET = 0;                        // no vertical shift; he stays on his baseline
+    var barOffsetX = 0;
+    var barDragging = false, barDragStartX = 0, barDragStartOffset = 0, barDragMoved = false;
+    var barDragTravel = 0, barPrevX = 0;
+    function bartenderSvgX(e) { // clientX → strip-SVG coords (own copy; chair's pointerSvgX is out of scope here)
+      var svg = document.getElementById("loft-game-strip");
+      var pt = svg.createSVGPoint();
+      pt.x = e.clientX; pt.y = e.clientY;
+      return pt.matrixTransform(svg.getScreenCTM().inverse()).x;
+    }
+    function setBartenderOffset(x) {
+      barOffsetX = Math.max(BARTENDER_MIN_X, Math.min(BARTENDER_MAX_X, x));
+      bartender.style.translate = barOffsetX + "px " + BARTENDER_Y_OFFSET + "px";
+    }
+    setBartenderOffset(0); // define the translate up front so the CSS glide has a start value
+    window.resetBartenderPosition = function () { // party-end / game-reset: snap him back to base
+      barOffsetX = 0;
+      bartender.style.transition = "none";
+      bartender.style.translate = "0px " + BARTENDER_Y_OFFSET + "px";
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { bartender.style.transition = ""; });
+      });
+    };
+    if (bartenderHit) {
+      bartenderHit.addEventListener("pointerdown", function (e) {
+        if (!window.__gardenPartyOn) return; // only draggable while the bar's up
+        barDragging = true;
+        barDragMoved = false;
+        barDragStartX = bartenderSvgX(e);
+        barDragStartOffset = barOffsetX;
+        barDragTravel = 0;
+        barPrevX = barDragStartX;
+        bartender.style.transition = "none"; // track the pointer instantly (no glide) while dragging
+        bartenderHit.classList.add("grabbing");
+        try { bartenderHit.setPointerCapture(e.pointerId); } catch (err) {}
+      });
+      bartenderHit.addEventListener("pointermove", function (e) {
+        if (!barDragging) return;
+        var px = bartenderSvgX(e);
+        var dx = px - barDragStartX;
+        if (Math.abs(dx) > 2) barDragMoved = true;
+        barDragTravel += Math.abs(px - barPrevX); // cumulative travel — clean signal for a future bar shooter
+        barPrevX = px;
+        setBartenderOffset(barDragStartOffset + dx);
+      });
+      function onBartenderPointerUp(e) {
+        if (!barDragging) return;
+        barDragging = false;
+        bartenderHit.classList.remove("grabbing");
+        bartender.style.transition = ""; // restore the smooth glide
+        try { bartenderHit.releasePointerCapture(e.pointerId); } catch (err) {}
+      }
+      bartenderHit.addEventListener("pointerup", onBartenderPointerUp);
+      bartenderHit.addEventListener("pointercancel", onBartenderPointerUp);
+    }
     bartender.addEventListener("click", function (e) {
       var hit = e.target && e.target.closest ? e.target.closest("#kitchen-bartender-hit") : null;
       if (!hit) return;
+      if (barDragMoved) { barDragMoved = false; return; } // a real drag just ended — swallow its click, don't toss
       e.stopPropagation();
       tossShaker();
       playShakerRattleSound("kitchen-bartender"); // click gets the rattle; the ambient auto-flare is silent
@@ -36857,6 +36931,7 @@ function spawnDustMote(container) {
       }
     } else {
       stopWaltzAlternation();          // party over — kill the rotation + reset __partyDance to techno
+      if (window.resetBartenderPosition) window.resetBartenderPosition(); // bar's gone — send him back to his spot
       clearConfetti();
       stopDiscoStepper();              // party over — kill the disco-pool stepper + drop the pools' inline styles
       stopGardenFlash();               // party over — kill the camera-flash timer + drop any in-flight flash
@@ -38118,6 +38193,7 @@ function spawnDustMote(container) {
     var buildingsReset = document.getElementById("office-buildings");
     if (buildingsReset) Array.prototype.forEach.call(buildingsReset.querySelectorAll(".office-window"), function (g) { g.classList.remove("lit"); });
     if (window.resetChairPosition) window.resetChairPosition();
+    if (window.resetBartenderPosition) window.resetBartenderPosition();
     if (window.resetBlanketPositions) window.resetBlanketPositions();
     gardenState.water = false;
     gardenState.music = false;
@@ -40599,7 +40675,7 @@ function spawnDustMote(container) {
   // dragging an object would pan the page on touch screens. touchmove events
   // retarget to the touchstart element, so one non-passive listener covers
   // every draggable; touches starting elsewhere still scroll normally.
-  var DRAG_SEL = "#office-desk, #office-chair, #garden-bottles, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife, #monitor-manual-eq";
+  var DRAG_SEL = "#office-desk, #office-chair, #garden-bottles, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife, #monitor-manual-eq, #kitchen-bartender";
   strip.addEventListener("touchmove", function (e) {
     if (e.target.closest && e.target.closest(DRAG_SEL)) e.preventDefault();
   }, { passive: false });

@@ -26881,6 +26881,14 @@ async def localfont(name):
     if (manualEqG) manualEqG.classList.add("inert");
     if (eqResetBtn) eqResetBtn.classList.add("inert");
   }
+  // flatten all six manual-EQ bands and repaint the sliders. Shared by the reset button and any
+  // "kill the music app" path (the monitor or the pocket-phone player), so killing music also
+  // clears the EQ the visitor dialed in. Silent (no click sound) unless the button asks for one.
+  function resetManualEqFlat() {
+    for (var ri = 0; ri < MANUAL_EQ_FREQS.length; ri++) setManualEqBand(ri, 0);
+    meqRepaints.forEach(function (fn) { fn(); });
+  }
+  window.__resetManualEq = resetManualEqFlat;
   if (eqResetBtn) {
     eqResetBtn.addEventListener("click", function (e) {
       e.stopPropagation();
@@ -26890,8 +26898,7 @@ async def localfont(name):
         return;
       }
       scheduleSaver(15000);
-      for (var ri = 0; ri < MANUAL_EQ_FREQS.length; ri++) setManualEqBand(ri, 0);
-      meqRepaints.forEach(function (fn) { fn(); });
+      resetManualEqFlat();
       playLaptopClickSound("office-monitor");
     });
     eqResetBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
@@ -27906,6 +27913,7 @@ async def localfont(name):
         break;
       case "music":
         songAudios.forEach(function (a) { if (a && !a.paused) { try { a.pause(); } catch (e) {} } });
+        if (window.__resetManualEq) window.__resetManualEq(); // flatten the manual EQ the visitor dialed in (shared with the pocket-phone player)
         if (monitor.classList.contains("show-nowplaying")) { monitor.classList.remove("show-nowplaying"); scheduleSaver(); }
         break;
       case "tehran":
@@ -29003,6 +29011,7 @@ async def localfont(name):
       if (id === "dressup") dressupOn = {};                                         // every accessory off
       if (id === "flashlight") { flashWasOn = false; setFlashlight(false); }        // forget the intent + kill the beam/torch
       if (id === "mail") mailRead = {};                                             // every message back to unread
+      if (id === "music") { if (window.__phoneMusicPlaying && window.__phoneMusicPlaying() && window.__phoneMusicToggle) window.__phoneMusicToggle(); if (window.__resetManualEq) window.__resetManualEq(); } // pause playback + flatten the manual EQ the visitor dialed in
     }
     function stopApp(id) { resetAppState(id); if (shell && shell.classList.contains("pm-home")) renderHome(); } // Stop = force-stop: clear state, icon stays
     function uninstallApp(id) { // empty this app's slot (leaves a blank gap — others don't shift); a reset/reload brings it back

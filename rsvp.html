@@ -11965,6 +11965,9 @@ var T = {
       kitchen_need_knockout: "Empty the old grounds first.",
       kitchen_grinder_empty: "The grinder's out of beans.",
       kitchen_warming_up: "Let it warm up first.",
+      kitchen_bar: "Bar's open — poke him for a drink. 🍸",
+      flair_hint: "Catch the garnishes — dodge the wasp! 🍋",
+      arcade_hint: "Move to blast the invaders! 👾",
       garden: "Water a plant, play music, light candles.",
       garden_need_music_candles: "Play music, light candles.",
       garden_need_water_candles: "Water a plant, light candles.",
@@ -12352,6 +12355,9 @@ var T = {
       kitchen_need_knockout: "Nejdřív vyklepej starou kávu.",
       kitchen_grinder_empty: "Mlýnku došla zrnková káva.",
       kitchen_warming_up: "Nejdřív ho nech zahřát.",
+      kitchen_bar: "Bar je otevřený — šťouchni do něj pro drink. 🍸",
+      flair_hint: "Chytej ozdoby — vyhni se vosě! 🍋",
+      arcade_hint: "Pohybuj se a sestřel vetřelce! 👾",
       garden: "Zalij kytku, zahraj, zapal svíčky.",
       garden_need_music_candles: "Zahraj a zapal svíčky.",
       garden_need_water_candles: "Zalij kytku a zapal svíčky.",
@@ -17497,6 +17503,7 @@ document.addEventListener("click", function (e) {
       arcadeLastSpawn = ALIEN_SPAWN_MS; // spawn promptly on the first tick
       arcadeLastShot = SHOT_MS;         // fire promptly on the first tick
       if (stageOffice) stageOffice.classList.add("arcade");
+      if (window.setCaption) window.setCaption("arcade_hint", true); // instruction line above the scene
       spawnAlien(180, -18); spawnAlien(430, -52); // a couple already on the way in
       arcadeLastT = 0;
       arcadeRaf = requestAnimationFrame(arcadeFrame);
@@ -17534,6 +17541,7 @@ document.addEventListener("click", function (e) {
       if (stageOffice) stageOffice.classList.remove("arcade");
       arcadeScore = 0;
       chair.style.transition = ""; // restore the smooth glide once the game (and cursor-follow) ends
+      if (wasActive && window.restoreStageHint) window.restoreStageHint("office"); // put the room hint back
       if (wasActive && gameOver) arcadeFlourish(finalScore, true); // "game over ·×N" when a saucer gets through; leaving the room ends it silently
     }
 
@@ -18892,6 +18900,7 @@ document.addEventListener("click", function (e) {
         try { bartenderHit.setPointerCapture(e.pointerId); } catch (err) {}
       });
       bartenderHit.addEventListener("pointermove", function (e) {
+        if (flairActive) return; // during the game the document-level paddle-follow owns his X
         if (!barDragging) return;
         var px = bartenderSvgX(e);
         var dx = px - barDragStartX;
@@ -18913,6 +18922,12 @@ document.addEventListener("click", function (e) {
       }
       bartenderHit.addEventListener("pointerup", onBartenderPointerUp);
       bartenderHit.addEventListener("pointercancel", onBartenderPointerUp);
+      // paddle-follow: once the game's armed, the shaker tracks the cursor anywhere on the
+      // page with NO button held (release the mouse and he keeps following) — till game over.
+      document.addEventListener("pointermove", function (e) {
+        if (!flairActive) return;
+        setBartenderOffset(bartenderSvgX(e) - 336); // shaker mouth centred under the pointer
+      });
     }
     bartender.addEventListener("click", function (e) {
       var hit = e.target && e.target.closest ? e.target.closest("#kitchen-bartender-hit") : null;
@@ -19102,6 +19117,8 @@ document.addEventListener("click", function (e) {
       flairItems.length = 0;
       flairLastSpawn = 900;                 // first item drops promptly on the first tick
       if (stageKitchen) stageKitchen.classList.add("flair-on");
+      bartender.style.transition = "none"; // paddle-follow needs to track the cursor with no glide lag
+      if (window.setCaption) window.setCaption("flair_hint", true); // instruction line above the scene
       flairBuildHud();
       flairLastT = 0;
       flairRaf = requestAnimationFrame(flairFrame);
@@ -19137,6 +19154,8 @@ document.addEventListener("click", function (e) {
       flairItems.length = 0;
       flairHud = null; flairHudScore = null; flairHudHigh = null; flairHudLives = null;
       if (stageKitchen) stageKitchen.classList.remove("flair-on");
+      bartender.style.transition = ""; // restore the smooth glide once the paddle game's over
+      if (wasActive && window.restoreStageHint) window.restoreStageHint("kitchen"); // put the room/bar hint back
       if (wasActive && gameOver) flairFlourish(finalScore); // three misses → "last call"; leaving/hiding ends it silently
     }
     window.stopFlairCatch = stopFlairCatch;
@@ -21188,7 +21207,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · beat() · temp() · weather() · clock() · countdown() · lang() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone() · laptop() · computer()/monitor() · reboot() · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone() · laptop() · computer()/monitor() · reboot() · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var TERM_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -21216,6 +21235,7 @@ document.addEventListener("click", function (e) {
       dance: "dance(\"name\") — cue a garden-party dance by name in quotes, e.g. dance(\"salsa\"), or 1–9, or dance(random()); dance() returns the current dance {n, name}; dance(\"next\") skips ahead (run party(true) first). dances: \"techno\" · \"waltz\" · \"disco\" · \"swing\" · \"salsa\" · \"bhangra\" · \"persian\" · \"polka\" · \"horah\"",
       dj: "dj(\"amir\"|\"danesh\") — who spins at the party (or 1–2, or random()); dj() returns the current DJ {n, name}. amir wears the cap, danesh the afro",
       lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
+      caption: "caption(\"text\") — overwrite the hint line above the scene with your own text and return the previous line; caption() reads the current line. a room change or hint reclaims it",
       countdown: "countdown() — days left until each wedding",
       fullscreen: "fullscreen(true) — fill the screen with the loft; fullscreen(false) leaves; fullscreen() reports whether it's on",
       rainbow: "rainbow() — arc a rainbow over the balcony",
@@ -36001,6 +36021,18 @@ function spawnDustMote(container) {
     caption.classList.remove("rsvp-nudge");
     caption.textContent = huntText(key);
   }
+  // console toy: caption() reads the line above the scene; caption("text") overwrites it with
+  // literal text and returns the previous line (same no-arg-reads / setter-returns-previous idiom
+  // as party(), dance() &c). A room change or hint update reclaims the line afterwards.
+  window.caption = function (text) {
+    var prev = caption.textContent;
+    if (arguments.length === 0 || text == null) { if (window.echo) window.echo(prev); return prev; }
+    captionKey = null;
+    caption.classList.remove("rsvp-nudge");
+    caption.textContent = String(text);
+    if (window.echo) window.echo(String(text)); // print through the echo side-channel (respects echo(true/false))
+    return prev;
+  };
   function showRsvpNudge() {
     captionKey = "rsvp_nudge";
     var l = document.documentElement.lang;
@@ -36052,6 +36084,7 @@ function spawnDustMote(container) {
   }
   function restoreStageHint(name) {
     if (name === "kitchen") {
+      if (window.__gardenPartyOn) { setCaption("kitchen_bar"); return; } // bar's up regardless of the machine's power
       if (!kitchenPowered) return;
       setCaption(kitchenCurrentCaption());
     } else if (name === "garden") {
@@ -36072,6 +36105,7 @@ function spawnDustMote(container) {
       }
     }
   }
+  window.restoreStageHint = restoreStageHint; // games (Flair Catch, chair arcade) call this to put the room hint back
   function goToStage(name) {
     var idx = STAGES.indexOf(name);
     if (idx === -1) return;
@@ -36360,6 +36394,7 @@ function spawnDustMote(container) {
   // shared by restoreStageHint (room re-entry) and the power toggle below — used to be
   // two separately-hand-written copies of this same if-chain that could drift apart.
   function kitchenCurrentCaption() {
+    if (window.__gardenPartyOn) return "kitchen_bar"; // party's on → it's a cocktail bar, not an espresso station
     if (!kitchenWarmedUp) return "kitchen_warming_up";
     if (portafilterSpent) return "kitchen_need_knockout";
     if (!kitchenGround) return grinderBeansLeft <= 0 ? "kitchen_grinder_empty" : "kitchen_grind";

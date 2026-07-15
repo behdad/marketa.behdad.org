@@ -737,6 +737,17 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 #loft-game-strip.party-on #stage-kitchen > #kitchen-post,
 #loft-game-strip.party-on #stage-kitchen > #kitchen-extinguisher{opacity:1; pointer-events:auto}
 #loft-game-strip.party-on #stage-kitchen > #kitchen-bar{opacity:1}
+/* ── NIGHT BAR ───────────────────────────────────────────────────────────────
+   The bar also comes up at NIGHT (kitchen at dusk, party or not): a live-but-calm
+   cocktail bar rather than the loud party one. Same espresso→bar swap as above, but
+   keyed on #stage-kitchen.dusk (set by toggleDusk / the kitchen-window click). The
+   window stars (#kitchen-stars) and the dusk tint (#kitchen-dusk) out-specify the
+   `> g` fade with their two-id selectors, so night lighting survives over the bar.
+   The party's extra festivities (UV, dancers, disco, music) stay .party-on-only. */
+#stage-kitchen.dusk > g{opacity:0; pointer-events:none; transition:opacity .5s ease}
+#stage-kitchen.dusk > #kitchen-post,
+#stage-kitchen.dusk > #kitchen-extinguisher{opacity:1; pointer-events:auto}
+#stage-kitchen.dusk > #kitchen-bar{opacity:1}
 /* the "hydration station" neon: an aqua tube glow that reads against the dark back-bar.
    Layered drop-shadows fake a neon halo; it always glows, and gently pulses during the party */
 #kitchen-bar-neon{filter:drop-shadow(0 0 1.5px #b8f4ff) drop-shadow(0 0 4px #4fd6ff) drop-shadow(0 0 9px #29b6e6)}
@@ -818,6 +829,11 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 #kitchen-bartender{transition:translate .3s ease}
 #loft-game-strip.party-on #kitchen-bartender-hit{pointer-events:auto; cursor:grab}
 #loft-game-strip.party-on #kitchen-bartender-hit.grabbing{cursor:grabbing}
+/* the bartender is interactive at the calm night bar too (tap to make, drag for Flair-Catch):
+   #kitchen-bar's pointer-events:none is re-enabled on his hit rect when the kitchen's at dusk,
+   mirroring the .party-on rule above (the back-bar props stay inert — calm bar) */
+#stage-kitchen.dusk #kitchen-bartender-hit{pointer-events:auto; cursor:grab}
+#stage-kitchen.dusk #kitchen-bartender-hit.grabbing{cursor:grabbing}
 @media (prefers-reduced-motion: reduce){#kitchen-bartender-shaker.tossing{animation:none}}
 /* Flair-Catch spotlight: dim the room while the bar mini-game runs, keeping the bar+bartender
    lit (the dim <rect> paints before #kitchen-bar). Mirrors #stage-office.arcade #office-alien-dim. */
@@ -5136,13 +5152,13 @@ section{margin:1.9rem 0}
 <circle cx="185" cy="109" r="13" fill="#2b2724" stroke="#1a1715" stroke-width="1.5"/><circle cx="185" cy="109" r="9" fill="#3a3531"/><ellipse cx="181.5" cy="105.5" rx="4.4" ry="1.9" fill="#6b645c" opacity="0.5" transform="rotate(-35 181.5 105.5)" pointer-events="none"/>
 </g>
 </g>
-<rect id="kitchen-window-pane" x="652" y="20" width="28" height="180" fill="#eef2ee" stroke="#2d2d2d" stroke-width="3"/>
+<rect id="kitchen-window-pane" class="hunt-hit" x="652" y="20" width="28" height="180" fill="#eef2ee" stroke="#2d2d2d" stroke-width="3"/>
 <g id="kitchen-stars" opacity="0" pointer-events="none" fill="#ffffff" aria-hidden="true">
 <circle cx="659" cy="34" r="0.8" opacity="0.9" class="twinkle"/><circle cx="672" cy="52" r="0.7" opacity="0.75" class="twinkle t3"/><circle cx="661" cy="88" r="0.75" opacity="0.8" class="twinkle t2"/><circle cx="670" cy="96" r="0.7" opacity="0.6" class="twinkle"/>
 </g>
 <rect id="kitchen-window-flash" class="window-storm-flash" x="653" y="21" width="26" height="178"/>
-<line x1="666" y1="20" x2="666" y2="200" stroke="#2d2d2d" stroke-width="2"/>
-<line x1="652" y1="110" x2="680" y2="110" stroke="#2d2d2d" stroke-width="2"/>
+<line x1="666" y1="20" x2="666" y2="200" stroke="#2d2d2d" stroke-width="2" pointer-events="none"/>
+<line x1="652" y1="110" x2="680" y2="110" stroke="#2d2d2d" stroke-width="2" pointer-events="none"/>
 <rect x="0" y="320" width="680" height="20" fill="#cf9a5f"/>
 <line x1="0" y1="330" x2="680" y2="330" stroke="#b57f47" stroke-width="1.5"/>
 <!-- wood-plank texture: light touch — the floor is a thin strip mostly hidden by the cabinets -->
@@ -19039,6 +19055,11 @@ document.addEventListener("click", function (e) {
   var bartenderShaker = document.getElementById("kitchen-bartender-shaker");
   var bartenderHit = document.getElementById("kitchen-bartender-hit");
   if (bartender && bartenderShaker) {
+    // "the bar is up" = the garden PARTY is on OR the kitchen is at NIGHT (dusk). The bartender is
+    // present + interactive in both; nightBarNow() is the calm night-only mode (no party festivities).
+    function kitchenDusk() { var k = document.getElementById("stage-kitchen"); return !!(k && k.classList.contains("dusk")); }
+    function barUpNow() { return !!window.__gardenPartyOn || kitchenDusk(); }
+    function nightBarNow() { return !window.__gardenPartyOn && kitchenDusk(); }
     function tossShaker() { // re-triggerable one-shot: clear + double-rAF re-add so it always replays
       bartenderShaker.classList.remove("tossing");
       requestAnimationFrame(function () {
@@ -19101,7 +19122,7 @@ document.addEventListener("click", function (e) {
     };
     if (bartenderHit) {
       bartenderHit.addEventListener("pointerdown", function (e) {
-        if (!window.__gardenPartyOn) return; // only draggable while the bar's up
+        if (!barUpNow()) return; // only draggable while the bar's up (party OR calm night bar)
         barDragging = true;
         barDragMoved = false;
         barDragStartX = bartenderSvgX(e);
@@ -19123,7 +19144,7 @@ document.addEventListener("click", function (e) {
         // arm Flair-Catch once the drag is a genuine back-and-forth shuffle (not a nudge or a
         // tap-to-toss). flairActive / FLAIR_THRESHOLD / startFlairCatch are declared just below.
         if (!flairActive && barDragTravel > FLAIR_THRESHOLD && !flairReduce &&
-            window.__gardenPartyOn && window.currentStageName === "kitchen") startFlairCatch();
+            barUpNow() && window.currentStageName === "kitchen") startFlairCatch();
       });
       function onBartenderPointerUp(e) {
         if (!barDragging) return;
@@ -19149,8 +19170,14 @@ document.addEventListener("click", function (e) {
       if (!hit) return;
       if (barDragMoved) { barDragMoved = false; return; } // a real drag just ended — swallow its click, don't toss
       e.stopPropagation();
+      if (nightBarNow()) {
+        // calm night bar: a tap MAKES a drink on demand (there's no ambient auto-making at night).
+        // __makeCocktailHere self-gates on bar-up / at-the-bar / not-mid-Flair and never lights the party.
+        if (window.__makeCocktailHere) window.__makeCocktailHere();
+        return;
+      }
       tossShaker();
-      playShakerRattleSound("kitchen-bartender"); // click gets the rattle; the ambient auto-flare is silent
+      playShakerRattleSound("kitchen-bartender"); // party tap: flair toss + rattle (ambient auto-making runs alongside)
     });
     bartenderShaker.addEventListener("animationend", function (e) {
       if (e.target === bartenderShaker && bartenderShaker.classList.contains("tossing")) bartenderShaker.classList.remove("tossing");
@@ -19316,7 +19343,7 @@ document.addEventListener("click", function (e) {
     function flairFrame(t) {
       // self-cancel the instant the game shouldn't run: leaving the kitchen, party's end, or tab hidden.
       // Because spawning lives in the step, stopping the loop stops all accumulation (no leaked sprites).
-      if (!flairActive || window.currentStageName !== "kitchen" || !window.__gardenPartyOn || document.hidden) { stopFlairCatch(); return; }
+      if (!flairActive || window.currentStageName !== "kitchen" || !barUpNow() || document.hidden) { stopFlairCatch(); return; }
       var dt = flairLastT ? Math.min(50, t - flairLastT) : 16;
       flairLastT = t;
       flairStep(dt);
@@ -19407,7 +19434,9 @@ document.addEventListener("click", function (e) {
       // skip the idle toss while he's making a drink (mixing) — an idle flourish mid-make is the same
       // "wrong motion during a make" bug — and while he's mid-stir, so it can't swallow the stir
       // animation on the shared shaker node (the documented one-shot-vs-state cascade guard).
-      if (window.__gardenPartyOn && document.visibilityState !== "hidden" && !bartenderReduce() && !bartenderMixing && !bartenderStirring) tossShaker();
+      // The party stays lively (a toss every cycle); the calm NIGHT bar only flairs occasionally.
+      if (barUpNow() && document.visibilityState !== "hidden" && !bartenderReduce() && !bartenderMixing && !bartenderStirring &&
+          (window.__gardenPartyOn || Math.random() < 0.16)) tossShaker();
       setTimeout(autoFlare, 9000 + Math.random() * 3000); // ~10s, jittered so it's not metronomic
     })();
     // shared with the cocktail-make module: it borrows his shaker toss for "shake" drinks and his
@@ -19457,6 +19486,24 @@ document.addEventListener("click", function (e) {
         e.stopPropagation();       // a real window was tapped — toggle its light
         el.classList.toggle("lit");
       }
+    });
+  }
+})();
+(function () {
+  // The far-right kitchen window is the day/night switch for the whole loft: clicking the pane
+  // flips dusk exactly like the balcony sun (and stops the auto day/night cycle). At night the
+  // kitchen becomes a calm cocktail bar (see the #stage-kitchen.dusk bar-swap CSS); by day it's
+  // the espresso kitchen. Cursor via .hunt-hit; no tabindex/role (tab-nav is disabled strip-wide
+  // — it breaks the room transform), but a keydown mirrors the sun's so it's driveable if focused.
+  var kwin = document.getElementById("kitchen-window-pane");
+  if (kwin) {
+    function flipDayNight(e) {
+      if (e) e.stopPropagation();
+      if (window.__toggleDayNight) window.__toggleDayNight(); // toggleDusk + stop the auto cycle (same as the sun)
+    }
+    kwin.addEventListener("click", flipDayNight);
+    kwin.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flipDayNight(e); }
     });
   }
 })();
@@ -19715,7 +19762,11 @@ document.addEventListener("click", function (e) {
   function reduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
   function dragging() { return !!(window.__bartenderDragging && window.__bartenderDragging()); }
   function flairBusy() { return !!(window.__flairState && window.__flairState().active); } // the Flair-Catch game owns the bartender — no cocktail-making then
-  function barPresent() { return !!window.__gardenPartyOn && window.currentStageName === "kitchen" && document.visibilityState !== "hidden"; }
+  // "the bar is up" = garden PARTY on OR the kitchen's at NIGHT (dusk). A make can run in either;
+  // barPresent means the bar's up AND you're standing at it (kitchen, visible tab).
+  function kitchenNight() { var k = document.getElementById("stage-kitchen"); return !!(k && k.classList.contains("dusk")); }
+  function barUpNow() { return !!window.__gardenPartyOn || kitchenNight(); }
+  function barPresent() { return barUpNow() && window.currentStageName === "kitchen" && document.visibilityState !== "hidden"; }
 
   // ---- the make sequence -----------------------------------------------------------------
   var making = false, makeTimers = [], cooldownUntil = 0;
@@ -19827,7 +19878,9 @@ document.addEventListener("click", function (e) {
   function ambientPoll() {
     pollTimer = null;
     if (making && (!barPresent() || flairBusy())) abort(); // stop a make if you leave the bar OR the Flair-Catch game takes over
-    if (!making && barPresent() && !reduced() && !dragging() && !flairBusy() && Date.now() >= cooldownUntil) startMake(randomRow());
+    // AMBIENT auto-making is PARTY-only (the loud, always-mixing bar). The calm NIGHT bar makes a
+    // drink only when you tap the bartender (window.__makeCocktailHere) — never on its own.
+    if (!making && window.__gardenPartyOn && barPresent() && !reduced() && !dragging() && !flairBusy() && Date.now() >= cooldownUntil) startMake(randomRow());
     pollTimer = setTimeout(ambientPoll, 500);
   }
   ambientPoll();
@@ -19839,12 +19892,24 @@ document.addEventListener("click", function (e) {
     if (!rows.length) return "the bar isn't stocked yet.";
     var row = (name == null || name === "") ? featuredRow() : findRow(name);
     if (!row) return "no cocktail by that name — try \"negroni\", \"margarita\", \"mojito\", \"manhattan\"…";
-    if (!window.__gardenPartyOn && window.party) window.party(true); // dark bar → light the party first
+    if (!barUpNow() && window.party) window.party(true); // no bar up (day, no party) → light the party; a night bar already serves
     if (window.goToStage) window.goToStage("kitchen");               // then step behind the bar
     abort();                                  // clear any in-flight make so this one leads
     cooldownUntil = Date.now() + 4000;        // give the requested drink room before the ambient loop resumes
     startMake(row);
     return "🍸 " + row.name + " — coming right up.";
+  };
+  // On-demand make at the CALM NIGHT bar: tapping the bartender calls this. Unlike __makeCocktail
+  // it never lights the party — it only runs when the bar's already up and you're at it, and it
+  // yields to a Flair-Catch run. A tap with no name pours a random drink (more fun than the featured).
+  window.__makeCocktailHere = function (name) {
+    var rows = window.__cocktailData ? window.__cocktailData() : [];
+    if (!rows.length || !barPresent() || flairBusy()) return false;
+    var row = (name == null || name === "") ? randomRow() : findRow(name);
+    if (!row) return false;
+    abort();                                  // clear any in-flight make so this tap leads
+    cooldownUntil = Date.now() + 4000;
+    return startMake(row);
   };
 })();
 (function () {

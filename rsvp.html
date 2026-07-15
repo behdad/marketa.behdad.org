@@ -2395,7 +2395,15 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 .phone-home-hi{text-align:center; font-family:"Fraunces",serif; font-size:13px; color:var(--soft); margin:0 0 16px; position:relative; z-index:1}
 .phone-home-hi b{color:var(--wine); font-weight:600}
 .phone-home-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:16px 4px; position:relative; z-index:1}
-.phone-app-tile{display:flex; flex-direction:column; align-items:center; gap:5px; background:none; border:none; cursor:pointer; padding:0; font:inherit}
+/* empty / uninstalled slot: a blank gap that still hit-tests as a drop target (min-height so an all-empty row keeps its box) */
+.phone-slot-empty{min-height:66px; border-radius:13px}
+/* drop target highlight while dragging an icon over another slot */
+.phone-app-slot.drop-target{outline:2px dashed var(--wine); outline-offset:2px; border-radius:13px; background:rgba(142,58,74,.08)}
+/* the picked-up icon dims in place; a ghost clone follows the pointer */
+.phone-app-tile.dragging{opacity:.32}
+.phone-drag-ghost{position:fixed; left:0; top:0; z-index:70; margin:0; width:62px; pointer-events:none; transform:translate(-50%,-50%) scale(1.12); opacity:.95; filter:drop-shadow(0 6px 12px rgba(0,0,0,.32))}
+/* touch-action:none keeps a touch-drag on an icon from panning the page (works here — an HTML overlay element, unlike the SVG scene children) */
+.phone-app-tile{display:flex; flex-direction:column; align-items:center; gap:5px; background:none; border:none; cursor:pointer; padding:0; font:inherit; touch-action:none}
 .phone-app-tile .pat-ico{width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:26px; box-shadow:0 2px 5px rgba(0,0,0,.18)}
 .phone-app-tile .pat-ico svg{width:32px; height:32px; display:block}
 .phone-app-tile .pat-label{font-size:10.5px; color:var(--ink); text-align:center; line-height:1.1; max-width:62px}
@@ -27896,7 +27904,17 @@ async def localfont(name):
     var selectedCity = null;
     var cardsIndex = 0;             // phrasebook deck position — reset on leave (see leaveCurrentApp)
     var callee = null, callConnected = false, callStatusKey = "", callHangingUp = false, callTimers = [];
-    var uninstalledApps = new Set(); // app-ids the visitor "Uninstall"ed via the icon right-click menu — hidden for the rest of the session (a page load / loft reset restores them)
+    // Home-screen layout is a fixed grid of SLOTS (like a real phone): an array of
+    // app-ids by slot position, with `null` holes for empty / "Uninstall"ed gaps.
+    // Uninstalling empties a slot (leaves a blank space) instead of reflowing icons,
+    // and drag-drop reorders by swapping slots. Session-scoped: a page load / loft
+    // reset (__resetPhoneApps) restores the default full layout.
+    function phoneDefaultSlots() { return PHONE_APPS.map(function (a) { return a.id; }); }
+    var phoneSlots = null; // lazily inited to phoneDefaultSlots() on first render
+    function ensurePhoneSlots() { if (!phoneSlots) phoneSlots = phoneDefaultSlots(); return phoneSlots; }
+    function phoneAppById(id) { for (var i = 0; i < PHONE_APPS.length; i++) if (PHONE_APPS[i].id === id) return PHONE_APPS[i]; return null; }
+    var phDrag = null;            // live icon-drag state (see phStartDrag) or null
+    var phSuppressClick = false;  // set on a real drag so the pointerup's trailing click doesn't open the app
 
     function isOpen() { return !!(modal && modal.parentNode); }
     function reduced() { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } }
@@ -28020,6 +28038,15 @@ async def localfont(name):
       // hotkeys (arrows / digits / space / d,q,r,s / ?) from reaching the room beneath —
       // native button activation already happened at the target before this fires
       shell.addEventListener("keydown", function (e) { if (e.key !== "Escape") e.stopPropagation(); });
+      // Lockscreen right-click: while the phone is locked (.booting) the boot overlay is
+      // the event target (not an app tile), so a right-click would surface the native
+      // browser menu. Eat it and offer a single "Unlock" item instead. Gated on .booting
+      // so it never cross-fires with the home tiles' own Open/Stop/Uninstall menu.
+      shell.addEventListener("contextmenu", function (e) {
+        if (!shell.classList.contains("booting")) return; // home/app: tiles handle their own menu; elsewhere keep native
+        e.preventDefault();
+        openPhoneLockMenu(e.clientX, e.clientY);
+      });
       applyNavLabels();
     }
     function applyNavLabels() {
@@ -28123,19 +28150,31 @@ async def localfont(name):
       var bg = buildHomeCoupleBg(); if (bg) home.insertBefore(bg, home.firstChild); // faded couple behind the launcher
       var grid = document.createElement("div");
       grid.className = "phone-home-grid";
-      PHONE_APPS.forEach(function (app) {
-        if (uninstalledApps.has(app.id)) return; // "Uninstall"ed this session — don't render its icon (a reset/reload brings it back)
+      ensurePhoneSlots();
+      phoneSlots.forEach(function (id, slotIndex) {
+        var app = id ? phoneAppById(id) : null;
+        if (!app) { // empty / uninstalled slot: a blank gap that stays a drop target
+          var blank = document.createElement("div");
+          blank.className = "phone-app-slot phone-slot-empty";
+          blank.setAttribute("data-slot", slotIndex);
+          grid.appendChild(blank);
+          return;
+        }
         var tile = document.createElement("button");
         tile.type = "button";
-        tile.className = "phone-app-tile";
+        tile.className = "phone-app-tile phone-app-slot";
         tile.id = "phone-app-" + app.id;     // stable handle back to the app (mirror of the desktop dock's monitor-dock-<id>)
         tile.setAttribute("data-app-id", app.id);
+        tile.setAttribute("data-slot", slotIndex);
         var ico = app.icon
           ? '<svg viewBox="0 0 12 12" aria-hidden="true"><use href="#dicon-' + app.icon + '"/></svg>'
           : app.glyph;
         tile.innerHTML = '<span class="pat-ico" style="background:' + app.tile + '">' + ico + '</span>' +
           '<span class="pat-label">' + tr(app.labelKey) + '</span>';
-        tile.addEventListener("click", function () { launchApp(app); });
+        // A tap opens; a drag (past the movement threshold) moves the icon to another
+        // slot. phSuppressClick eats the click that trails a real drag's pointerup.
+        tile.addEventListener("click", function () { if (phSuppressClick) { phSuppressClick = false; return; } launchApp(app); });
+        tile.addEventListener("pointerdown", function (e) { phStartDrag(e, tile, slotIndex, app); });
         // right-click (desktop) → the same Open / Stop / Uninstall menu as the desktop dock.
         // Fires only on an app icon, so blank home chrome / the lockscreen keep the native menu.
         tile.addEventListener("contextmenu", function (e) { e.preventDefault(); openPhoneAppMenu(app, e.clientX, e.clientY); });
@@ -28143,12 +28182,102 @@ async def localfont(name):
       });
       home.appendChild(grid);
     }
+    // ── home-icon drag-drop (pointer + touch) ────────────────────────────────────
+    // Pick up an icon, drag it over another slot, drop → the two slots SWAP (dropping
+    // onto an empty gap moves the icon there and leaves its old slot empty). Swap (not
+    // shift-insert) is the natural fit for the fixed-slot/gap model — nothing else has
+    // to reflow. A floating ghost follows the pointer; the source tile dims. `touch-action:
+    // none` on the tile (an HTML overlay element, so unlike the SVG scene it honors the
+    // property) keeps a touch-drag from panning the page.
+    var PH_DRAG_THRESH = 6; // px of movement before a press becomes a drag (below it = a tap)
+    function phStartDrag(e, tile, fromSlot, app) {
+      if (e.button != null && e.button !== 0) return; // left-button / touch / pen only; right-click falls through to contextmenu
+      phSuppressClick = false; // fresh press: clear any stale flag from a prior drag (advisor: reset at next pointerdown, not on a timer)
+      phCancelDrag(); // abandon any half-live drag first
+      phDrag = { tile: tile, fromSlot: fromSlot, app: app, startX: e.clientX, startY: e.clientY, active: false, pointerId: e.pointerId, ghost: null, target: null };
+      window.addEventListener("pointermove", phOnDragMove, true);
+      window.addEventListener("pointerup", phOnDragEnd, true);
+      window.addEventListener("pointercancel", phOnDragEnd, true);
+    }
+    function phOnDragMove(e) {
+      if (!phDrag || e.pointerId !== phDrag.pointerId) return;
+      var dx = e.clientX - phDrag.startX, dy = e.clientY - phDrag.startY;
+      if (!phDrag.active) {
+        if (Math.abs(dx) < PH_DRAG_THRESH && Math.abs(dy) < PH_DRAG_THRESH) return;
+        phDrag.active = true;
+        phCloseMenu(); // no app menu hanging around mid-drag
+        phDrag.tile.classList.add("dragging");
+        var g = phDrag.tile.cloneNode(true);
+        g.classList.add("phone-drag-ghost");
+        g.classList.remove("dragging");
+        g.removeAttribute("id");
+        document.body.appendChild(g);
+        phDrag.ghost = g;
+      }
+      phMoveGhost(e);
+      phHighlightTarget(e);
+    }
+    function phMoveGhost(e) {
+      if (!phDrag || !phDrag.ghost) return;
+      phDrag.ghost.style.left = e.clientX + "px";
+      phDrag.ghost.style.top = e.clientY + "px";
+    }
+    function phSlotElAt(e) {
+      if (phDrag && phDrag.ghost) phDrag.ghost.style.visibility = "hidden"; // ghost is pointer-events:none, but hide it defensively before the hit-test
+      var el = document.elementFromPoint(e.clientX, e.clientY);
+      if (phDrag && phDrag.ghost) phDrag.ghost.style.visibility = "";
+      return el && el.closest ? el.closest(".phone-app-slot") : null;
+    }
+    function phHighlightTarget(e) {
+      var slotEl = phSlotElAt(e);
+      var newTarget = slotEl ? parseInt(slotEl.getAttribute("data-slot"), 10) : null;
+      if (newTarget === phDrag.target) return;
+      var grid = shell && shell.querySelector(".phone-home-grid");
+      if (grid) { var prev = grid.querySelector(".drop-target"); if (prev) prev.classList.remove("drop-target"); }
+      if (slotEl && newTarget !== phDrag.fromSlot) slotEl.classList.add("drop-target");
+      phDrag.target = (slotEl && newTarget !== phDrag.fromSlot) ? newTarget : null;
+    }
+    function phOnDragEnd(e) {
+      if (!phDrag) return;
+      var d = phDrag;
+      if (d.active) {
+        var slotEl = phSlotElAt(e);
+        var target = slotEl ? parseInt(slotEl.getAttribute("data-slot"), 10) : null;
+        phTeardownDragListeners();
+        if (d.ghost && d.ghost.parentNode) d.ghost.parentNode.removeChild(d.ghost);
+        phDrag = null;
+        phSuppressClick = true; // swallow the click that trails this pointerup so the drop doesn't also open the app
+        if (target != null && target !== d.fromSlot) { phSwapSlots(d.fromSlot, target); renderHome(); }
+        else renderHome(); // no move — just rebuild to clear the .dragging dim
+      } else {
+        phTeardownDragListeners();
+        phDrag = null; // a tap (sub-threshold): let the click through to open
+      }
+    }
+    function phTeardownDragListeners() {
+      window.removeEventListener("pointermove", phOnDragMove, true);
+      window.removeEventListener("pointerup", phOnDragEnd, true);
+      window.removeEventListener("pointercancel", phOnDragEnd, true);
+    }
+    function phCancelDrag() { // abort a live drag with no state change (used by close())
+      if (!phDrag) return;
+      phTeardownDragListeners();
+      if (phDrag.ghost && phDrag.ghost.parentNode) phDrag.ghost.parentNode.removeChild(phDrag.ghost);
+      phDrag = null;
+    }
+    function phSwapSlots(from, to) {
+      ensurePhoneSlots();
+      var tmp = phoneSlots[to];
+      phoneSlots[to] = phoneSlots[from];
+      phoneSlots[from] = tmp;
+    }
     function launchApp(app) { // shared by an icon tap and the menu's "Open" item
       if (app.open) app.open();
       else if (app.link) { try { window.open(app.link, "_blank"); } catch (e) {} }
     }
-    function uninstallApp(id) { // hide this icon for the rest of the session; renderHome re-reads the set
-      uninstalledApps.add(id);
+    function uninstallApp(id) { // empty this app's slot (leaves a blank gap — others don't shift); a reset/reload brings it back
+      ensurePhoneSlots();
+      for (var i = 0; i < phoneSlots.length; i++) if (phoneSlots[i] === id) { phoneSlots[i] = null; break; }
       if (shell && shell.classList.contains("pm-home")) renderHome();
     }
 
@@ -28198,6 +28327,25 @@ async def localfont(name):
       window.addEventListener("resize", phCloseMenu);
     }
     function phMenuOpen() { return !!(phMenuEl && phMenuEl.parentNode); }
+    // Lockscreen menu — a single "Unlock" item (reuses the app-menu chrome + dismiss
+    // behavior). The unlock icon is a small open padlock.
+    var PH_UNLOCK_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.4" width="6" height="4.4" rx="0.9"/><path d="M4.4 5.4 V3.9 A1.6 1.6 0 0 1 7.6 3.6"/></svg>';
+    function openPhoneLockMenu(x, y) {
+      phCloseMenu();
+      phMenuEl = document.createElement("div");
+      phMenuEl.className = "mon-ctx phone-ctx phone-lock-ctx"; phMenuEl.setAttribute("role", "menu");
+      phMenuEl.appendChild(phMakeItem("ctx-open", PH_UNLOCK_ICO, tr("phone_lock_title"), function () { if (shell && shell.classList.contains("booting")) unlock(); }));
+      phMenuEl.style.visibility = "hidden";
+      document.body.appendChild(phMenuEl);
+      var r = phMenuEl.getBoundingClientRect();
+      phMenuEl.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 4)) + "px";
+      phMenuEl.style.top = Math.max(4, Math.min(y, window.innerHeight - r.height - 4)) + "px";
+      phMenuEl.style.visibility = "";
+      document.addEventListener("mousedown", phOnAway, true);
+      document.addEventListener("scroll", phCloseMenu, true);
+      window.addEventListener("blur", phCloseMenu);
+      window.addEventListener("resize", phCloseMenu);
+    }
 
     // ── dialer + call ──────────────────────────────────────────────────────────
     function openDialer() { openApp("phone", "phone_dialer_title", renderDialer); }
@@ -30061,6 +30209,7 @@ async def localfont(name):
       if (!modal) return;
       closing = true;
       phCloseMenu(); // never orphan an open app-icon menu when the phone goes away
+      phCancelDrag(); // abort any in-flight icon drag (drop the ghost + window listeners)
       if (lockShakeT) { clearTimeout(lockShakeT); lockShakeT = null; }
       if (callee) dropCall(true); // silent teardown of any live call + ambient
       leaveCurrentApp();           // restore the re-placed Mines board to the monitor
@@ -30076,7 +30225,7 @@ async def localfont(name):
     }
     window.__openPhoneModal = open;
     window.__closePhoneModal = function (silent) { close(silent); };
-    window.__resetPhoneApps = function () { uninstalledApps.clear(); }; // loft reset re-installs every "Uninstall"ed app
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering)
     // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
     // open(true) is the cinematic lock-skip path (same as __showCocktailInPhone), so a console
     // launch never stalls on the passcode. Matches by app id (case-insensitive) or its localized

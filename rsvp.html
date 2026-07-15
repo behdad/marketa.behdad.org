@@ -776,17 +776,29 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 #stage-kitchen.dusk > #kitchen-post,
 #stage-kitchen.dusk > #kitchen-extinguisher{opacity:1; pointer-events:auto}
 #stage-kitchen.dusk > #kitchen-bar{opacity:1}
-/* the "hydration station" neon: an aqua tube glow that reads against the dark back-bar.
-   Layered drop-shadows fake a neon halo; it always glows, and gently pulses during the party */
-#kitchen-bar-neon{filter:drop-shadow(0 0 1.3px #c8f6ff) drop-shadow(0 0 3.2px #5fd8ff) drop-shadow(0 0 6.5px #35bfe8)}
-#loft-game-strip.party-on #kitchen-bar-neon{animation:bar-neon-glow 3.4s ease-in-out infinite}
-/* the glow BREATHES — the outer halo swells and settles (with a faint opacity dip), reading
-   like a live neon tube rather than the whole sign just fading */
-@keyframes bar-neon-glow{
-  0%,100%{opacity:1; filter:drop-shadow(0 0 1.3px #c8f6ff) drop-shadow(0 0 3.2px #5fd8ff) drop-shadow(0 0 6.5px #35bfe8)}
-  50%{opacity:1; filter:drop-shadow(0 0 1.3px #c8f6ff) drop-shadow(0 0 4.5px #5fd8ff) drop-shadow(0 0 9px #35bfe8)}
+/* the "hydration station" neon. TWO layers (see the SVG): the inner #kitchen-bar-neon-tube
+   carries the GLOW (a bright near-white core + a soft aqua halo, layered drop-shadows) and an
+   irregular flicker; the outer #kitchen-bar-neon carries the RAINBOW hue cycle. Kept separate
+   because an element has only one `filter` — nesting composites the hue-rotate over the glow. */
+#kitchen-bar-neon-tube{filter:drop-shadow(0 0 0.8px #ffffff) drop-shadow(0 0 2.4px #c8f6ff) drop-shadow(0 0 5px #5fd8ff) drop-shadow(0 0 9px #35bfe8)}
+/* the whole sign slowly cycles through the spectrum like a fancy bar sign — hue only, so it stays
+   as legible as the aqua base; runs whenever the bar's up (party OR calm night). */
+#loft-game-strip.party-on #kitchen-bar-neon,
+#stage-kitchen.dusk #kitchen-bar-neon{animation:bar-neon-rainbow 14s linear infinite}
+@keyframes bar-neon-rainbow{from{filter:hue-rotate(0deg)}to{filter:hue-rotate(360deg)}}
+/* real neon flickers IRREGULARLY (a quick hum-dip, not a steady sine) — only while the bar's up */
+#loft-game-strip.party-on #kitchen-bar-neon-tube,
+#stage-kitchen.dusk #kitchen-bar-neon-tube{animation:bar-neon-flicker 6.3s steps(1,end) infinite}
+@keyframes bar-neon-flicker{
+  0%,6%,6.6%,7.4%,41%,41.5%,78%,100%{opacity:1}
+  6.3%,7%,41.2%,78.3%{opacity:0.55}
+  6.9%{opacity:0.82}
 }
-@media (prefers-reduced-motion: reduce){#loft-game-strip.party-on #kitchen-bar-neon{animation:none}}
+/* reduced motion: a calm, steady multicoloured-but-static aqua glow — no cycle, no flicker */
+@media (prefers-reduced-motion: reduce){
+  #loft-game-strip.party-on #kitchen-bar-neon, #stage-kitchen.dusk #kitchen-bar-neon,
+  #loft-game-strip.party-on #kitchen-bar-neon-tube, #stage-kitchen.dusk #kitchen-bar-neon-tube{animation:none}
+}
 /* the back-bar bottles are tappable ONLY while the bar is showing (party on): each is wrapped
    in a <g class="bar-bottle"> that pivots at its base (fill-box), so the one-shot wobble never
    clobbers the <use x=y=> that positions it. Ancestor #kitchen-bar is pointer-events:none;
@@ -850,6 +862,22 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 #kitchen-bar-stools > g.bar-stool.tipsy{animation:bar-stool-rock .6s ease-in-out}
 @keyframes bar-stool-rock{0%,100%{transform:rotate(0)}22%{transform:rotate(3.2deg)}48%{transform:rotate(-2.6deg)}72%{transform:rotate(1.5deg)}90%{transform:rotate(-0.6deg)}}
 @media (prefers-reduced-motion: reduce){#kitchen-bar-stools > g.bar-stool.tipsy{animation:none}}
+/* stools are also DRAGGABLE along the bar (JS): the horizontal offset rides each stool's own CSS
+   `translate` property, a DIFFERENT property from the `.tipsy` rotate `transform` — so a drag and a
+   tap-wobble compose without clobbering each other (the documented transform-attribute trap). */
+#kitchen-bar-stools > g.bar-stool{transition:none}
+#kitchen-bar-stools.dragging > g.bar-stool{cursor:grabbing}
+/* a back-bar bottle clicked a lot falls off the shelf and shatters (JS drives a WAAPI tumble on the
+   <g class="bar-bottle"> wrapper; .fallen freezes it inert, .broken hides the shelf bottle once it's
+   shattered on the bartop — the shards + puddle live in #kitchen-bar-shatter, drawn in front). */
+#kitchen-bar-bottles > g.bar-bottle.fallen{pointer-events:none; cursor:default}
+#kitchen-bar-bottles > g.bar-bottle.fallen.tipsy{animation:none}
+#kitchen-bar-bottles > g.bar-bottle.broken use{opacity:0}
+#kitchen-bar-shatter .bar-shard, #kitchen-bar-shatter .bar-splash{transform-box:fill-box}
+/* the MENU paper on the pillar → opens the cocktails app. Same bar-up pointer-events gate as the
+   bottles (ancestor #kitchen-bar is pointer-events:none; re-enabled here while the bar's up). */
+#loft-game-strip.party-on #kitchen-bar-menu,
+#stage-kitchen.dusk #kitchen-bar-menu{pointer-events:auto; cursor:pointer}
 /* the two tipsy patrons on the left stools sway gently — PARTY ONLY. The parent #kitchen-bar fades
    in at both the party AND the calm night bar, but these two revellers belong to the party: an
    explicit opacity gate hides the pair whenever the party's off (so the night bar is quiet), and
@@ -6190,13 +6218,22 @@ section{margin:1.9rem 0}
 <g class="bar-bottle"><use href="#kitchen-bar-bottleB" x="480" y="206" fill="#b8863c"/></g>
 <g class="bar-bottle"><use href="#kitchen-bar-bottleA" x="524" y="206" fill="#7f9ec0"/></g>
 </g>
-<!-- neon sign: a glowing water-drop + the deadpan words "hydration station" (an aqua neon
-     tube; the glow halo + gentle pulse are CSS on #kitchen-bar-neon). Language-neutral. -->
+<!-- neon sign: a glowing water-drop + the deadpan words "hydration station". Real-neon look —
+     a bright near-white inner core with a soft coloured halo (layered drop-shadows on the inner
+     #kitchen-bar-neon-tube), an irregular flicker, and a slow RAINBOW hue cycle on the OUTER
+     group. The split is deliberate: an element has only ONE `filter`, so the glow lives on the
+     inner group and the hue-rotate on the outer — nesting composites both without clobbering.
+     Language-neutral. -->
 <g id="kitchen-bar-neon" transform="translate(20,-10)">
-<!-- water-drop tube: pointed top rounding into a fat base -->
-<path d="M150 30 C163 48 163 60 150 62 C137 60 137 48 150 30 Z" fill="none" stroke="#b6f2ff" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M145 52 Q145 58 150 58.5" fill="none" stroke="#e8fcff" stroke-width="1.4" stroke-linecap="round" opacity="0.85"/>
-<text x="176" y="56" font-family="Fraunces,serif" font-style="italic" font-weight="700" font-size="29" letter-spacing="0.4" fill="#c8f6ff" stroke="#8fe6ff" stroke-width="0.5">hydration station</text>
+<g id="kitchen-bar-neon-tube">
+<!-- water-drop tube: a slightly darker/thicker coloured outer stroke with a thin near-white
+     core stroke on top of the same path — the lit-glass-tube cross-section. -->
+<path d="M150 30 C163 48 163 60 150 62 C137 60 137 48 150 30 Z" fill="none" stroke="#7fe4ff" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M150 30 C163 48 163 60 150 62 C137 60 137 48 150 30 Z" fill="none" stroke="#eafcff" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M145 52 Q145 58 150 58.5" fill="none" stroke="#f4feff" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
+<text x="176" y="56" font-family="Fraunces,serif" font-style="italic" font-weight="700" font-size="29" letter-spacing="0.4" fill="none" stroke="#7fe4ff" stroke-width="2.4" stroke-linejoin="round">hydration station</text>
+<text x="176" y="56" font-family="Fraunces,serif" font-style="italic" font-weight="700" font-size="29" letter-spacing="0.4" fill="#f0fdff" stroke="#eafcff" stroke-width="0.6">hydration station</text>
+</g>
 </g>
 <!-- Flair-Catch spotlight dim: nested inside #kitchen-bar right AFTER the back-bar (backdrop,
      shelves, bottles, neon) but BEFORE the bartender, so those darken while the bartender, the
@@ -6482,6 +6519,31 @@ section{margin:1.9rem 0}
 <circle cx="216" cy="230" r="1.8" fill="#8bbf6a"/>
 </g>
 </g>
+<!-- a little paper MENU tacked to the wooden pillar (over #kitchen-post at the bar's right). A
+     cream sheet with a bold "MENU" heading and a few lines of faint illegible dashes (a drink
+     list suggested, not real words — so language-neutral, no i18n). Clicking it summons the
+     pocket-phone cocktails app IN-PLACE at the bar (wired in JS). Nested in #kitchen-bar so it
+     shows exactly when the bar's up; a static tilt lives on this wrapper (no animation → nothing
+     clobbers the transform). pointer-events re-enabled per-bar-up in CSS, like the bottles. -->
+<g id="kitchen-bar-menu" transform="rotate(-4 625 180)">
+<rect x="606" y="152" width="40" height="58" rx="1.6" fill="#f6f1e2" stroke="#d6cbaf" stroke-width="0.8"/>
+<rect x="606" y="152" width="40" height="5" rx="1.6" fill="#eee5cf"/>
+<rect x="644.4" y="153" width="1.6" height="57" fill="#000" opacity="0.06"/>
+<!-- a little wine pushpin -->
+<circle cx="626" cy="153.4" r="2.6" fill="#8e3a4a"/><circle cx="625.1" cy="152.5" r="0.9" fill="#d9a6a6"/>
+<text x="626" y="168" text-anchor="middle" font-family="Fraunces,serif" font-weight="700" font-size="10" letter-spacing="0.6" fill="#5a4632">MENU</text>
+<line x1="611" y1="171.5" x2="641" y2="171.5" stroke="#8e3a4a" stroke-width="0.8" opacity="0.7"/>
+<!-- faint, illegible "drink list": a bullet dot + a broken dash rule per row, varied widths -->
+<circle cx="612" cy="178" r="0.9" fill="#b0a488"/><line x1="615" y1="178" x2="633" y2="178" stroke="#b0a488" stroke-width="1.1" stroke-linecap="round"/><line x1="636" y1="178" x2="640" y2="178" stroke="#c4baa0" stroke-width="1.1" stroke-linecap="round"/>
+<circle cx="612" cy="184" r="0.9" fill="#b0a488"/><line x1="615" y1="184" x2="629" y2="184" stroke="#b0a488" stroke-width="1.1" stroke-linecap="round"/><line x1="632" y1="184" x2="638" y2="184" stroke="#c4baa0" stroke-width="1.1" stroke-linecap="round"/>
+<circle cx="612" cy="190" r="0.9" fill="#b0a488"/><line x1="615" y1="190" x2="635" y2="190" stroke="#b0a488" stroke-width="1.1" stroke-linecap="round"/>
+<circle cx="612" cy="196" r="0.9" fill="#b0a488"/><line x1="615" y1="196" x2="626" y2="196" stroke="#b0a488" stroke-width="1.1" stroke-linecap="round"/><line x1="629" y1="196" x2="640" y2="196" stroke="#c4baa0" stroke-width="1.1" stroke-linecap="round"/>
+<circle cx="612" cy="202" r="0.9" fill="#b0a488"/><line x1="615" y1="202" x2="631" y2="202" stroke="#b0a488" stroke-width="1.1" stroke-linecap="round"/>
+</g>
+<!-- debris layer for a shelf bottle knocked off + shattered on the bartop (JS). Placed late (a
+     direct, untransformed child of #kitchen-bar) so a broken bottle + its glass shards paint in
+     FRONT of the counter rail and glassware instead of behind them. Empty at rest; reset clears it. -->
+<g id="kitchen-bar-shatter" pointer-events="none"></g>
 <!-- Flair-Catch (hidden bar mini-game) layer: JS-spawned falling bar items + iconic HUD,
      present only while #stage-kitchen.flair-on. Nested as the LAST child of #kitchen-bar on
      purpose — the party rule (#loft-game-strip.party-on #stage-kitchen > g{opacity:0}) hides
@@ -20081,26 +20143,121 @@ document.addEventListener("click", function (e) {
   // x/y would be clobbered by a transform) and plays a light glassy tink, panned to the
   // bottle's on-screen x. Only hittable while the bar shows (CSS gates pointer-events to
   // .party-on); the delegated handler is harmless if a synthetic click lands with the bar hidden.
+  // ...and a tap that keeps coming KNOCKS THE BOTTLE OFF: each bottle counts its own clicks, and
+  // once it's been poked BOTTLE_FALL_AT times it topples off the shelf and shatters on the bartop —
+  // a WAAPI tumble on the <g class="bar-bottle"> wrapper (which carries no transform attribute, so
+  // the fall can't clobber the <use x=y=> positioning), then .broken hides the shelf bottle while a
+  // burst of glass shards + a splash of its liquid colour lands in #kitchen-bar-shatter (drawn in
+  // front of the counter). Each bottle falls at most once and goes inert; a game reset restores all.
   var barBottles = document.getElementById("kitchen-bar-bottles");
+  var barShatter = document.getElementById("kitchen-bar-shatter");
   if (barBottles) {
+    var SVGNS_BAR = "http://www.w3.org/2000/svg";
+    var bottleReduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    var bottleFallAnims = [];
+    var bottleClicks = new WeakMap();
+    var BOTTLE_FALL_AT = 7;      // clicks before it comes off (a tap or two is safe)
+    var BOTTLE_LAND_Y = 240;     // the bartop surface (stage-local y), where a toppled bottle lands
+    function bottlePan(u) {
+      var bx = u ? parseFloat(u.getAttribute("x")) : 300;
+      if (!isFinite(bx)) bx = 300;
+      return Math.max(-1, Math.min(1, (bx / 680) * 2 - 1)); // kitchen viewBox is 680 wide
+    }
+    function spawnBottleShards(cx, cy, color) {
+      if (!barShatter) return;
+      // a liquid splash that stays as the evidence
+      var puddle = document.createElementNS(SVGNS_BAR, "ellipse");
+      puddle.setAttribute("class", "bar-splash");
+      puddle.setAttribute("cx", cx); puddle.setAttribute("cy", cy + 6);
+      puddle.setAttribute("rx", bottleReduce ? 15 : 3); puddle.setAttribute("ry", bottleReduce ? 3.4 : 1.5);
+      puddle.setAttribute("fill", color); puddle.setAttribute("opacity", "0.5");
+      barShatter.appendChild(puddle);
+      if (bottleReduce) return; // reduced motion: broken puddle only, no flying shards
+      if (puddle.animate) puddle.animate([{ rx: "3px", ry: "1.5px" }, { rx: "16px", ry: "3.6px" }], { duration: 500, easing: "ease-out", fill: "forwards" });
+      for (var i = 0; i < 7; i++) {          // a short, capped burst of glass shards
+        var s = document.createElementNS(SVGNS_BAR, "polygon");
+        s.setAttribute("class", "bar-shard");
+        var sw = 1.4 + Math.random() * 1.8;
+        s.setAttribute("points", "0,0 " + sw.toFixed(1) + ",0.4 " + (sw * 0.4).toFixed(1) + "," + (sw * 1.5).toFixed(1));
+        s.setAttribute("fill", i % 3 === 0 ? color : "#dfeef2");
+        s.setAttribute("transform", "translate(" + cx + "," + cy + ")");
+        barShatter.appendChild(s);
+        var ang = Math.PI * (0.15 + Math.random() * 0.7), dir = i % 2 ? 1 : -1, dist = 10 + Math.random() * 22;
+        var ex = cx + dir * Math.cos(ang) * dist;
+        var ey = cy - Math.sin(ang) * (6 + Math.random() * 10) + (4 + Math.random() * 6);
+        (function (shard, x0, y0, x1, y1, r) {
+          if (shard.animate) {
+            var a = shard.animate([
+              { transform: "translate(" + x0 + "px," + y0 + "px) rotate(0deg)", opacity: 0.95 },
+              { transform: "translate(" + x1 + "px," + y1 + "px) rotate(" + r + "deg)", opacity: 0 }
+            ], { duration: 420 + Math.random() * 260, easing: "cubic-bezier(.3,.5,.7,1)", fill: "forwards" });
+            bottleFallAnims.push(a);
+            a.onfinish = function () { if (shard.parentNode) shard.parentNode.removeChild(shard); };
+          } else { setTimeout(function () { if (shard.parentNode) shard.parentNode.removeChild(shard); }, 500); }
+        })(s, cx, cy, ex, ey, Math.random() * 720 - 360);
+      }
+    }
+    function shatterBottle(w) {
+      var u = w.querySelector("use");
+      if (!u) return;
+      var bx = parseFloat(u.getAttribute("x")); if (!isFinite(bx)) bx = 300;
+      var by = parseFloat(u.getAttribute("y")); if (!isFinite(by)) by = 150;
+      var color = u.getAttribute("fill") || "#8e3a4a";
+      var dy = Math.max(20, BOTTLE_LAND_Y - by), pan = bottlePan(u);
+      w.classList.remove("tipsy");
+      w.classList.add("fallen");            // inert immediately (no more counting/wobble)
+      var landed = false;
+      function land() {
+        if (landed) return; landed = true;
+        w.classList.add("broken");          // hide the shelf bottle — it's shattered now
+        spawnBottleShards(bx, BOTTLE_LAND_Y, color);
+        playGlassClinkSound(0.42 + Math.random() * 0.1, pan); // a low glass smash cluster
+        setTimeout(function () { playGlassClinkSound(0.6 + Math.random() * 0.2, pan); }, 60);
+        setTimeout(function () { playGlassClinkSound(0.5 + Math.random() * 0.2, pan); }, 130);
+      }
+      if (w.animate && !bottleReduce) {
+        var anim = w.animate([
+          { transform: "translate(0px,0px) rotate(0deg)" },
+          { transform: "translate(" + (dy * 0.05) + "px," + (dy * 0.15) + "px) rotate(-30deg)", offset: 0.2 },
+          { transform: "translate(" + (dy * 0.12) + "px," + (dy * 0.6) + "px) rotate(120deg)", offset: 0.62 },
+          { transform: "translate(" + (dy * 0.14) + "px," + dy + "px) rotate(196deg)", offset: 0.85 },
+          { transform: "translate(" + (dy * 0.14) + "px," + (dy - 2) + "px) rotate(200deg)" }
+        ], { duration: 620, easing: "cubic-bezier(.5,0,.85,.6)", fill: "forwards" });
+        bottleFallAnims.push(anim);
+        anim.onfinish = land;
+        setTimeout(land, 700);              // safety: land even if onfinish is skipped (fast-forward)
+      } else { land(); }                    // reduced motion / no WAAPI: it just breaks in place
+    }
     barBottles.addEventListener("click", function (e) {
       var w = e.target && e.target.closest ? e.target.closest(".bar-bottle") : null;
       if (!w || w.parentNode !== barBottles) return;
       e.stopPropagation();
+      if (w.classList.contains("fallen")) return; // a toppled bottle is inert
+      var n = (bottleClicks.get(w) || 0) + 1;
+      bottleClicks.set(w, n);
+      if (n >= BOTTLE_FALL_AT) { shatterBottle(w); return; } // this poke knocks it off the shelf
       w.classList.remove("tipsy");
       requestAnimationFrame(function () {
         requestAnimationFrame(function () { w.classList.add("tipsy"); });
       });
-      var u = w.querySelector("use");
-      var bx = u ? parseFloat(u.getAttribute("x")) : 300;
-      if (!isFinite(bx)) bx = 300;
-      var pan = Math.max(-1, Math.min(1, (bx / 680) * 2 - 1)); // kitchen viewBox is 680 wide
-      playGlassClinkSound(1.6 + Math.random() * 0.5, pan); // higher pitch than a cup → a light bottle tink
+      playGlassClinkSound(1.6 + Math.random() * 0.5, bottlePan(w.querySelector("use"))); // light bottle tink
     });
     barBottles.addEventListener("animationend", function (e) {
       var w = e.target;
       if (w && w.parentNode === barBottles && w.classList.contains("tipsy")) w.classList.remove("tipsy");
     });
+    // a full reset restores every bottle to its shelf + zeroes the click counts, cancels in-flight
+    // falls/shards, and empties the debris layer (state.js: reset class-state must match load).
+    window.__resetBarBottles = function () {
+      bottleFallAnims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
+      bottleFallAnims = [];
+      Array.prototype.forEach.call(barBottles.querySelectorAll(".bar-bottle"), function (w) {
+        w.classList.remove("fallen", "broken", "tipsy");
+        w.style.transform = "";
+        bottleClicks["delete"](w);
+      });
+      if (barShatter) while (barShatter.firstChild) barShatter.removeChild(barShatter.firstChild);
+    };
   }
   // The rest of the party bar's props (bartop glassware, the used glasses, the stools) react
   // to a tap the same way the back-bar bottles do: one delegated listener per group wobbles the
@@ -20137,6 +20294,76 @@ document.addEventListener("click", function (e) {
   wireBarWobbleGroup("kitchen-bar-glassware", barGlassHit);
   wireBarWobbleGroup("kitchen-bar-usedglasses", barGlassHit);
   wireBarWobbleGroup("kitchen-bar-stools", function (w, pan) { playDryClickSound(pan); }); // a soft wooden knock, not a clink
+  // ...and the stools are DRAGGABLE along the bar (while it's up), but can't cross each other.
+  // The horizontal offset rides each stool's own CSS `translate` property (a DIFFERENT property
+  // from the `.tipsy` rotate `transform`, so a drag and a tap-wobble compose without clobbering).
+  // Each dragged stool clamps between its POSITION-neighbours (not id order — the seats sit
+  // 1,3,2,4 left→right) with a min seat gap, and the outer ones clamp to the bar's extent; since
+  // they can't cross, that left→right order is fixed, so the neighbour array is static. Mouse AND
+  // touch via pointer events (+ #kitchen-bar-stools is in the strip's touchmove DRAG_SEL so a drag
+  // never pans the page). A real drag swallows its trailing click so it doesn't also wobble; a
+  // plain tap still wobbles. A reset clears the inline translate → stools snap back to default x.
+  (function () {
+    var stools = document.getElementById("kitchen-bar-stools");
+    var strip = document.getElementById("loft-game-strip");
+    if (!stools || !strip) return;
+    var ORDER = ["kitchen-bar-stool-1", "kitchen-bar-stool-3", "kitchen-bar-stool-2", "kitchen-bar-stool-4"]; // left→right
+    var BASE = { "kitchen-bar-stool-1": 150, "kitchen-bar-stool-3": 250, "kitchen-bar-stool-2": 356, "kitchen-bar-stool-4": 462 };
+    var GAP = 46;                    // min centre-to-centre spacing (≈ a seat width) so seats never overlap
+    var MIN_X = 96, MAX_X = 560;     // outer clamp: keep the end stools on the bar's extent
+    function localX(e) { // client x → strip-local x (a horizontal delta here equals a stage-local delta: rooms are translate-only, scale 1)
+      try { var pt = strip.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; return pt.matrixTransform(strip.getScreenCTM().inverse()).x; }
+      catch (err) { return e.clientX; }
+    }
+    function effX(id) { var el = document.getElementById(id); var off = el ? (parseFloat(el.style.translate) || 0) : 0; return BASE[id] + off; }
+    function setStool(id, ex) { var el = document.getElementById(id); if (el) el.style.translate = (ex - BASE[id]) + "px 0px"; }
+    var dragEl = null, dragId = null, startX = 0, startEff = 0, dragMoved = false;
+    stools.addEventListener("pointerdown", function (e) {
+      if (e.button && e.button !== 0) return;
+      if (window.__barUpNow && !window.__barUpNow()) return; // draggable only while the bar's up (belt-and-suspenders; CSS already gates pointer-events)
+      var w = e.target && e.target.closest ? e.target.closest(".bar-stool") : null;
+      if (!w || w.parentNode !== stools) return;
+      dragEl = w; dragId = w.id; startX = localX(e); startEff = effX(dragId); dragMoved = false;
+      stools.classList.add("dragging");
+      try { w.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    stools.addEventListener("pointermove", function (e) {
+      if (!dragEl) return;
+      var cur = localX(e);
+      if (Math.abs(cur - startX) > 2) dragMoved = true;
+      var ex = startEff + (cur - startX);
+      var idx = ORDER.indexOf(dragId);
+      var lo = idx > 0 ? effX(ORDER[idx - 1]) + GAP : MIN_X;                 // left neighbour (or the bar's left edge)
+      var hi = idx < ORDER.length - 1 ? effX(ORDER[idx + 1]) - GAP : MAX_X;  // right neighbour (or the bar's right edge)
+      if (lo > hi) lo = hi;
+      setStool(dragId, Math.max(lo, Math.min(hi, ex)));
+    });
+    function endDrag(e) {
+      if (!dragEl) return;
+      var w = dragEl; dragEl = null;
+      stools.classList.remove("dragging");
+      try { w.releasePointerCapture(e.pointerId); } catch (err) {}
+    }
+    stools.addEventListener("pointerup", endDrag);
+    stools.addEventListener("pointercancel", endDrag);
+    // capture phase (before wireBarWobbleGroup's bubble click) — a real drag swallows its click
+    stools.addEventListener("click", function (e) {
+      if (dragMoved) { dragMoved = false; e.stopImmediatePropagation(); e.preventDefault(); }
+    }, true);
+    window.__resetStools = function () { ORDER.forEach(function (id) { var el = document.getElementById(id); if (el) el.style.translate = ""; }); };
+  })();
+  // the MENU paper tacked to the pillar → summons the pocket-phone cocktails app to its drink menu,
+  // opened IN-PLACE at the bar (no room jump). CSS gates pointer-events to the bar being up, so this
+  // only fires with the bar showing; no a11y attrs on the scene SVG (cursor:pointer via CSS).
+  (function () {
+    var menu = document.getElementById("kitchen-bar-menu");
+    if (!menu) return;
+    menu.addEventListener("click", function (e) {
+      e.stopPropagation();
+      playDryClickSound("kitchen-bar-menu"); // a soft paper/tap click, panned to the sign
+      if (window.__openCocktailsMenuHere) window.__openCocktailsMenuHere();
+    });
+  })();
   // the two tipsy party patrons react to a tap: a quick hiccup jolt (one-shot .hiccup, cleared on
   // animationend so the idle sway resumes) + a spatialized hiccup sound. Party-only (CSS re-enables
   // pointer-events on each patron under .party-on; the parent #kitchen-bar-patrons keeps
@@ -31032,6 +31259,15 @@ async def localfont(name):
       open(true);                                        // open (or re-seat) the phone at the launcher, no lock
       openApp("cocktails", "app_cocktails", renderCocktails);
       cocktailShow(idx);                                 // jump straight to this drink's detail view
+      return true;
+    };
+    // The bar's MENU paper opens the cocktails app to its GALLERY (the drink menu) IN-PLACE — same
+    // in-place open as __showCocktailInPhone (open(true), no goToStage), so the room stays put. We
+    // reset to the gallery view first so a stale detail view from a prior open doesn't show.
+    window.__openCocktailsMenuHere = function () {
+      open(true);
+      cocktailView = "gallery"; cocktailSel = -1;
+      openApp("cocktails", "app_cocktails", renderCocktails);
       return true;
     };
     var cocktailView = "gallery"; // "gallery" | "detail"
@@ -43702,6 +43938,8 @@ function spawnDustMote(container) {
     gardenState.candles = false;
     if (window.resetBottles) window.resetBottles();
     if (window.__resetKitchenPans) window.__resetKitchenPans();
+    if (window.__resetBarBottles) window.__resetBarBottles(); // fresh game: put any toppled bottles back + zero their click counts
+    if (window.__resetStools) window.__resetStools();          // fresh game: stools back to default x
     if (window.__resetKitchenRoach) window.__resetKitchenRoach(); // fresh game: hide/stop the cabinet cockroach
     Object.keys(plantSpots).forEach(function (id) {
       var el = document.getElementById(id);
@@ -46638,7 +46876,7 @@ function spawnDustMote(container) {
   // dragging an object would pan the page on touch screens. touchmove events
   // retarget to the touchstart element, so one non-passive listener covers
   // every draggable; touches starting elsewhere still scroll normally.
-  var DRAG_SEL = "#office-desk, #office-chair, #garden-bottles, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife, #monitor-manual-eq, #kitchen-bartender";
+  var DRAG_SEL = "#office-desk, #office-chair, #garden-bottles, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife, #monitor-manual-eq, #kitchen-bartender, #kitchen-bar-stools";
   strip.addEventListener("touchmove", function (e) {
     if (e.target.closest && e.target.closest(DRAG_SEL)) e.preventDefault();
   }, { passive: false });

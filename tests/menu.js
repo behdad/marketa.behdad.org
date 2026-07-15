@@ -111,13 +111,17 @@ var HARNESS = [
   "    window.__fsCalls=[]; HTMLCanvasElement.prototype.requestFullscreen=function(){window.__fsCalls.push(this.id||'canvas');return Promise.resolve();};",
   "    var fsBtn=document.getElementById('monitor-doom-fs'); S('doom_fs_btn_present', !!fsBtn);",
   "    fsBtn.click(); await sleep(40); S('doom_fs_called_on_canvas', (window.__fsCalls||[]).indexOf('canvas')>=0); S('doom_fs_calls', window.__fsCalls);",
-  // doom restart teardown
+  // doom restart teardown — Restart now runs the FATALITY flash, THEN destroys (and would cold-boot,
+  // but a real re-boot needs show-caps + the WASM runtime, out of scope here; no show-caps → openDoom
+  // no-ops, so we just verify flash-then-teardown). show-doom is set from the fs block above.
   "    var before=document.getElementById('canvas'); var threw=null;",
   "    try { window.__restartMonitorDoom(); } catch(e){ threw=String(e); }",
-  "    var after=document.getElementById('canvas');",
   "    S('doom_restart_threw', threw);",
+  "    S('doom_restart_flash_started', mon().classList.contains('death-doom'));",
+  "    await sleep(2300);",  // wait out the ~2.1s flash → destroyDoom swaps the canvas + drops show-doom
+  "    var after=document.getElementById('canvas');",
   "    S('doom_restart_swapped_canvas', !!after && after!==before && after.id==='canvas');",
-  "    S('doom_restart_shows_loading', /loading|načít/i.test(document.getElementById('monitor-doom-msg').textContent));",
+  "    S('doom_restart_torn_down', !mon().classList.contains('show-doom') && !mon().classList.contains('death-doom'));",
   // linux/python restart teardown direct
   "    showApp('show-linux'); var lo=document.getElementById('monitor-linux-out'); lo.innerHTML='<div>old</div>'; var lxThrew=null;",
   "    try { window.__restartMonitorLinux(); } catch(e){ lxThrew=String(e); }",
@@ -171,8 +175,7 @@ check("enabled doom Kill runs the FATALITY flash then destroys the app", s.doom_
 check("doom fs button present", s.doom_fs_btn_present === true);
 check("doom fs button calls requestFullscreen on the canvas", s.doom_fs_called_on_canvas === true, s.doom_fs_calls);
 console.log(" restart teardown (no throws, real state reset):");
-check("doom restart does not throw + swaps a fresh canvas (id kept)", s.doom_restart_threw === null && s.doom_restart_swapped_canvas === true, s.doom_restart_threw);
-check("doom restart shows the loading message", s.doom_restart_shows_loading === true);
+check("doom restart runs the flash then tears down + swaps a fresh canvas (id kept)", s.doom_restart_threw === null && s.doom_restart_flash_started === true && s.doom_restart_swapped_canvas === true && s.doom_restart_torn_down === true, s.doom_restart_threw);
 check("linux restart does not throw + clears the console", s.linux_restart_threw === null && s.linux_restart_cleared_out === true, s.linux_restart_threw);
 check("python restart does not throw", s.python_restart_threw === null, s.python_restart_threw);
 check("no uncaught JS errors during the run", Array.isArray(rep.errors) && rep.errors.length === 0, rep.errors);

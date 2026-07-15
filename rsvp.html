@@ -24937,7 +24937,7 @@ async def localfont(name):
   var doomLoadState = ""; // "" → "loading" → "ready" | "failed"
   var doomReady = false; // the runtime is up and callMain has started the main loop
   var doomPaused = true; // the main loop is currently paused (kept in sync by doomSync)
-  var doomGlueEl = null; // the injected <script> (kept so a good load isn't re-injected)
+  var doomGlueSrc = null; // the glue's SOURCE TEXT, fetched once — each (re)boot runs it in a fresh function scope
   var doomStallTimer = null; // load watchdog — cleared once the runtime is up
   var DOOM_ASSETS = { // all self-hosted (pinned Chocolate-Doom wasm + FreeDoom — provenance in doom/README.md)
     glue: "doom/doom.js",
@@ -25006,6 +25006,22 @@ async def localfont(name):
       print: function () {}, printErr: function () {}, setStatus: function () {}
     };
   }
+  // Boot (or REBOOT) DOOM by running the glue's source through a fresh function scope. This is
+  // what makes Kill/Restart actually recoverable: doom.js is a non-modularized Emscripten glue
+  // whose top-level `var`s (calledRun, ABORT, HEAP*, wasmMemory, runDependencies, …) live in the
+  // GLOBAL scope. Re-injecting the <script> reuses those stale globals, so the 2nd boot's run()
+  // early-returns on a leftover calledRun===true, never calls main, and the stall watchdog reports
+  // "offline" forever (bit Kill AND Restart). Running the text via `new Function("Module", src)`
+  // gives every boot its OWN scope — all that state is fresh. doom.js BYTES are untouched (pinned
+  // deliverable); we only wrap them, plus append one line lifting callMain out of the private scope
+  // (Module reads the param at glue line 1; args come from Module["arguments"]). NOTE: new Function
+  // is eval-family — safe only because rsvp.html ships no CSP (no script-src). Add 'unsafe-eval' if
+  // a CSP is ever introduced.
+  function bootDoom() {
+    buildDoomModule();
+    try { (new Function("Module", doomGlueSrc))(doomModule); }
+    catch (e) { doomFail(); }
+  }
   function loadDoom() {
     if (doomLoadState === "loading" || doomLoadState === "ready") return;
     doomLoadState = "loading";
@@ -25013,13 +25029,11 @@ async def localfont(name):
     if (doomStallTimer) clearTimeout(doomStallTimer);
     doomStallWatch();
     if (doomReady) { doomSync(); return; }
-    buildDoomModule();
-    window.Module = doomModule; // the glue is a plain script that reads a global Module (pyodide/v86 don't touch this global — verified)
-    if (doomGlueEl) return; // glue already fetched once; wait for its callbacks (a corrupt runtime needs a page reload, not a re-inject)
-    doomGlueEl = document.createElement("script");
-    doomGlueEl.src = DOOM_ASSETS.glue;
-    doomGlueEl.onerror = function () { doomGlueEl = null; doomFail(); }; // a true load failure clears the ref so reopening retries the fetch
-    document.head.appendChild(doomGlueEl);
+    if (doomGlueSrc) { bootDoom(); return; } // glue text already cached → reboot in a fresh scope
+    fetch(DOOM_ASSETS.glue).then(function (r) { return r.text(); }).then(function (txt) {
+      doomGlueSrc = txt + "\n;try{Module.callMain=callMain;}catch(e){}"; // expose callMain past the wrapper's scope
+      bootDoom();
+    }, function () { doomFail(); }); // a true fetch failure surfaces the offline/retry line
   }
   function openDoom() {
     if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-doom") || monitor.classList.contains("show-console") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux")) return;
@@ -25047,10 +25061,9 @@ async def localfont(name):
   // context, and forget the load state. Then back to the desktop.
   function destroyDoom() {
     if (doomModule) { try { doomModule.pauseMainLoop(); } catch (e) {} }
-    try { if (window.Module === doomModule) window.Module = undefined; } catch (e) {}
     doomModule = null; doomReady = false; doomPaused = true; doomLoadState = "";
     if (doomStallTimer) { clearTimeout(doomStallTimer); doomStallTimer = null; }
-    if (doomGlueEl) { try { if (doomGlueEl.parentNode) doomGlueEl.parentNode.removeChild(doomGlueEl); } catch (e) {} doomGlueEl = null; }
+    // keep doomGlueSrc cached — the next open reboots from it in a fresh scope (see bootDoom)
     var oldCanvas = document.getElementById("canvas");
     if (oldCanvas && oldCanvas.parentNode) {
       var fresh = document.createElement("canvas");
@@ -25063,13 +25076,14 @@ async def localfont(name):
     monitor.classList.remove("show-doom");
     scheduleSaver();
   }
-  // Kill from the right-click menu = a FATALITY: the frozen game screen takes a red wash and
-  // "FATALITY" melts across it in the Climate Crisis variable font (YEAR axis driven 1979→2050
-  // — the word erodes away) while the caption bar drops a dry one-liner. Then DOOM is really
-  // killed (destroyDoom). Freeze the engine first so it dies on a still frame.
-  window.__killMonitorDoom = function () {
-    if (!monitor.classList.contains("show-doom")) { destroyDoom(); return; }
-    if (!window.__runMonitorDeathFlash) { destroyDoom(); return; }
+  // Kill AND Restart both run the FATALITY death-flash, then really destroy the runtime; Restart
+  // additionally cold-boots a fresh game afterwards (openDoom → loadDoom → bootDoom, now reliable).
+  // The frozen game screen takes a red wash and "FATALITY" melts across it in the Climate Crisis
+  // variable font (YEAR axis driven 1979→2050 — the word erodes away) while the caption bar drops a
+  // dry one-liner. Freeze the engine first so it dies on a still frame.
+  function doomDeathFlash(reopen) {
+    var finish = function () { destroyDoom(); if (reopen) openDoom(); };
+    if (!monitor.classList.contains("show-doom") || !window.__runMonitorDeathFlash) { finish(); return; }
     var word = document.getElementById("monitor-fatality-word");
     if (word) word.style.fontVariationSettings = "'YEAR' 1979"; // clean start (a prior kill left it eroded at 2050)
     window.__runMonitorDeathFlash({
@@ -25078,34 +25092,11 @@ async def localfont(name):
       dur: 2100,
       tick: function (t) { if (word) word.style.fontVariationSettings = "'YEAR' " + Math.round(1979 + (2050 - 1979) * t); },
       freeze: function () { if (doomModule) { try { doomModule.pauseMainLoop(); } catch (e) {} doomPaused = true; } },
-      close: destroyDoom
+      close: finish
     });
-  };
-  // Restart (context menu): tear the Emscripten runtime down and re-instantiate a fresh
-  // wasm — recovers a wedged/misrendered DOOM (reopening alone does NOT reboot: the Module
-  // is built once and reused). We null the global Module, drop the old glue <script> so
-  // loadDoom re-injects it, and swap in a fresh <canvas> so the new instance gets a clean
-  // WebGL context (the old one is held by the dead runtime). doom.js is all top-level
-  // var/function (no top-level let/const/class), so re-running the glue re-declares safely.
-  window.__restartMonitorDoom = function () {
-    if (doomModule) { try { doomModule.pauseMainLoop(); } catch (e) {} } // stop the old (possibly wedged) loop first
-    try { if (window.Module === doomModule) window.Module = undefined; } catch (e) {}
-    doomModule = null; doomReady = false; doomPaused = true; doomLoadState = "";
-    if (doomStallTimer) { clearTimeout(doomStallTimer); doomStallTimer = null; }
-    if (doomGlueEl) { try { if (doomGlueEl.parentNode) doomGlueEl.parentNode.removeChild(doomGlueEl); } catch (e) {} doomGlueEl = null; }
-    // fresh canvas (keep the mandatory id "canvas") — a clean WebGL context, free of the dead instance
-    var oldCanvas = document.getElementById("canvas");
-    if (oldCanvas && oldCanvas.parentNode) {
-      var fresh = document.createElement("canvas");
-      fresh.id = "canvas"; fresh.tabIndex = -1;
-      fresh.setAttribute("oncontextmenu", "event.preventDefault()");
-      oldCanvas.parentNode.replaceChild(fresh, oldCanvas);
-      doomCanvas = fresh; // buildDoomModule reads this for Module.canvas
-    }
-    doomSetMsg(doomT("doom_loading"), false);
-    loadDoom(); // rebuilds Module + re-injects the glue → fresh wasm → callMain → new game
-    doomSync();
-  };
+  }
+  window.__killMonitorDoom = function () { doomDeathFlash(false); };    // Kill → flash → destroy (back to desktop)
+  window.__restartMonitorDoom = function () { doomDeathFlash(true); };  // Restart → flash → destroy → fresh cold boot
   // DOOM's explicit fullscreen (the 'f' key stays on the whole-loft toggle — owner dropped
   // the flaky per-app 'f' path). The ⛶ button toggles real fullscreen on the canvas,
   // resolved at click time (Restart replaces the canvas node), requested fresh so it

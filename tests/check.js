@@ -629,12 +629,15 @@ function checkConsoleOutClipSlack(file, style) {
   else fail(file + ": .console-out clip-slack invariant broken", issues.join("\n"));
 }
 
-// The console's Tab-autocomplete roster (`CONSOLE_CMDS`, a static array in the input
-// keydown setup) must stay a mirror of the documented command set — the keys of the
-// `CONSOLE_HELP` object inside consoleRun. That object is function-local, so the roster
-// can't read it at runtime; this parity check is what keeps the two in lockstep, so a
-// command added to (or removed from) CONSOLE_HELP that isn't reflected in the roster
-// fails loudly here (naming the offending keys) instead of silently not completing.
+// The console's Tab-autocomplete roster (`CONSOLE_CMDS`, a static array in the console
+// setup) must stay a mirror of the documented command set — the keys of the `CONSOLE_HELP`
+// object (hoisted to the shared console/editor scope so BOTH the console AND the editor
+// app's autocomplete read the same source). This parity check keeps the two in lockstep, so
+// a command added to (or removed from) CONSOLE_HELP that isn't reflected in the roster fails
+// loudly here (naming the offending keys) instead of silently not completing. It also guards
+// that every bareword in CONSOLE_CMDS_BARE (the set of non-function commands — the editor
+// autocomplete reads it to decide whether to append "(" on insert) is a real command, so a
+// typo'd bareword can't slip a "(" onto a paren-less command (or vice-versa).
 function checkConsoleCmdRoster(file, script) {
   if (file !== "rsvp.html" || !script) return;
   var helpM = script.match(/var CONSOLE_HELP = \{([\s\S]*?)\n\s*\};/);
@@ -658,6 +661,14 @@ function checkConsoleCmdRoster(file, script) {
       (missing.length ? "missing from roster: " + missing.join(", ") + "\n" : "") +
       (extra.length ? "roster has non-command(s): " + extra.join(", ") : ""));
   }
+  // Every bareword must be a documented command (a key of CONSOLE_HELP), else the editor
+  // autocomplete's "append (" decision is keyed off a phantom.
+  var bareM = script.match(/var CONSOLE_CMDS_BARE = \{([\s\S]*?)\};/);
+  if (!bareM) { fail(file + ": CONSOLE_CMDS_BARE set not found for bareword parity check"); return; }
+  var bareKeys = (bareM[1].match(/([A-Za-z_$][\w$]*)\s*:/g) || []).map(function (s) { return s.replace(/\s*:$/, ""); });
+  var bareOrphans = bareKeys.filter(function (k) { return !helpSet.has(k); });
+  if (bareOrphans.length === 0) pass(file + ": CONSOLE_CMDS_BARE barewords are all documented commands (" + bareKeys.length + ")");
+  else fail(file + ": CONSOLE_CMDS_BARE has bareword(s) with no CONSOLE_HELP entry", bareOrphans.join(", "));
 }
 
 // A leftover git merge marker in CSS/HTML slips past `node --check` (which only sees

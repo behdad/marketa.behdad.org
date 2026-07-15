@@ -1692,7 +1692,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 .ed-item:hover{background:#1a2420}
 .ed-item.active{background:#264032; color:#a7e08a}
 .ed-empty{flex:none; font-size:1.8px; color:#5f7a5f; padding:0.6px 0.8px}
-.ed-main{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px}
+.ed-main{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; position:relative} /* position:relative → the autocomplete popup (an absolutely-positioned child) anchors to it */
 .ed-top{flex:none; display:flex; align-items:center; gap:0.6px; padding:0 8px 0 1px} /* right pad clears the shrunk close pill parked in the top-right corner */
 .ed-name{flex:1; min-width:0; background:#161c20; border:0.3px solid #2b3a3a; border-radius:0.8px; outline:none; color:#cfe3cf; font:inherit; font-size:2px; height:3.6px; line-height:3.6px; padding:0 0.8px}
 .ed-name::placeholder{color:#5f7a5f}
@@ -1703,6 +1703,19 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 .ed-ta::placeholder{color:#5f7a5f}
 .ed-ta::-webkit-scrollbar{display:none}
 .ed-wrap input, .ed-wrap textarea{user-select:text; -webkit-user-select:text}
+/* editor autocomplete: a caret-anchored command-completion popup (wired in the editor IIFE).
+   Sized for the 2px monitor world; JS clamps it inside the foreignObject and flips it above the
+   caret when there's no room below. The dim help column truncates with an ellipsis. */
+.ed-ac{position:absolute; z-index:6; display:none; min-width:16px; max-width:88px; max-height:15px; overflow-y:auto; box-sizing:border-box; background:#0a0d10; border:0.3px solid #2f4038; border-radius:0.8px; padding:0.3px; box-shadow:0 0.5px 1.6px rgba(0,0,0,.65); font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.35; scrollbar-width:none}
+.ed-ac.open{display:block}
+.ed-ac::-webkit-scrollbar{display:none}
+.ed-ac-item{display:flex; align-items:baseline; gap:1px; padding:0.15px 0.7px; border-radius:0.6px; white-space:nowrap; cursor:pointer; overflow:hidden}
+.ed-ac-item.active{background:#264032}
+.ed-ac-name{flex:none; color:#a7e08a}
+.ed-ac-item.active .ed-ac-name{color:#c6f0ad}
+.ed-ac-help{flex:1; min-width:0; color:#6f8a6f; overflow:hidden; text-overflow:ellipsis}
+.ed-ac-more{padding:0.15px 0.7px; color:#5f7a5f}
+.ed-ac-mirror{position:absolute; visibility:hidden; pointer-events:none; left:-9999px; top:0; white-space:pre; overflow:hidden}
 #monitor-console-close{cursor:pointer}
 #monitor-console-close:hover .seg-hover{opacity:.55}
 .console-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#100d0a; padding:1.8px 2px 2.6px; font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.4; color:#cfe3cf}
@@ -23211,6 +23224,114 @@ document.addEventListener("click", function (e) {
   }
   window.__killMonitorConsole = function () { consoleDeathFlash(false); };    // Kill → flatline flash → refresh (back to desktop)
   window.__restartMonitorConsole = function () { consoleDeathFlash(true); };  // Restart → flash → refresh → reopen a fresh shell
+  // The documented command set: one help string (or array of lines) per command. Hoisted to
+  // this shared scope (out of consoleRun, where it used to be function-local) so BOTH the
+  // console help/overview AND the editor app autocomplete read the SAME source — no second
+  // copy to drift. tests/check.js parity-checks these keys against the CONSOLE_CMDS roster.
+  var CONSOLE_HELP = {
+    help: "help [command] — this list, or details for one command",
+    clear: "clear — wipe the scrollback",
+    laser: "laser(true) — loose a red dot the cat chases; laser(false) turns it off; laser() reports whether it's on",
+    party: "party(true) throws the garden party; party(false) ends it; party() reports whether it's on",
+    reset: "reset() — restart the whole loft from the top (no confirmation — you typed it)",
+    quit: "quit (or exit) — shut the console down (refresh, back to the desktop)",
+    blacklight: "blacklight(true) — UV wash over the whole loft; blacklight(false) off; blacklight() reports whether it's on",
+    uv: "uv — alias for blacklight; try `help blacklight`",
+    trip: "trip(\"name\") — a trip by name in quotes, e.g. trip(\"acid\"), or a number 1–7, or trip() for a random one. trips: \"shrooms\" · \"acid\" · \"froggies\" · \"dmt\" · \"molly\" · \"k\" · \"iboga\"",
+    room: "room(\"name\") — go to a room by name in quotes, e.g. room(\"garden\"), or a number 1–5; room() returns the current room as {n, name}. rooms: \"kitchen\" · \"garden\" · \"cuddly\" · \"office\" · \"balcony\"",
+    goto: "goto — alias for room; try `help room`",
+    rooms: "rooms() — list the five rooms",
+    daylight: "daylight(true) — bring the day back; daylight(false) — dusk; daylight() reports whether it's day. day()/night() are aliases",
+    night: "night() — dusk (alias for daylight(false))",
+    day: "day() — daylight (alias for daylight(true))",
+    season: "season(\"name\") — a season by name in quotes, e.g. season(\"spooky\"), or season() for a surprise. seasons: \"winter\" · \"spooky\" · \"auto\"",
+    play: "play() — resume the music if it's paused",
+    pause: "pause() — pause the music if something's playing",
+    temp: "temp() — the indoor + outdoor thermometer reading",
+    weather: "weather() — the real current weather in both wedding cities (Edmonton · Prague)",
+    clock: "clock() (or time()) — the real current time + date",
+    time: "time — alias for clock; try `help clock`",
+    projector: "projector(\"channel\") — switch the cuddly-room projector by name in quotes, e.g. projector(\"nightsky\"), or a number 1–5. channels: \"fireplace\" · \"workout\" · \"nightsky\" · \"aquarium\" · \"totoro\" · \"none\" (off). projector() returns the current channel {n, name}",
+    storm: "storm(true) — roll a thunderstorm in over the balcony; storm(false) clears it; storm() reports whether it's storming",
+    dance: "dance(\"name\") — cue a garden-party dance by name in quotes, e.g. dance(\"salsa\"), or 1–9, or dance(random()); dance() returns the current dance {n, name}; dance(\"next\") skips ahead (run party(true) first). dances: \"techno\" · \"waltz\" · \"disco\" · \"swing\" · \"salsa\" · \"bhangra\" · \"persian\" · \"polka\" · \"horah\"",
+    dj: "dj(\"amir\"|\"danesh\") — who spins at the party (or 1–2, or random()); dj() returns the current DJ {n, name}. amir wears the cap, danesh the afro",
+    cocktail: "cocktail(\"negroni\") — the bartender mixes that real drink from the bar's menu (partial name ok); cocktail() makes the featured signature drink. lights the party + steps behind the bar first if it's dark. he also mixes on his own while you watch the bar. alias: drink()",
+    lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
+    caption: "caption(\"text\"[, {blink:ms, hold:ms}]) — overwrite the hint line above the scene and return the previous line; caption() reads it. blink pulses the line to catch the eye; hold restores the previous line after that long. also caption(text, blinkMs, holdMs). a room change or hint reclaims it",
+    volume: "volume(v) — master volume over ALL the loft's audio (sound effects, songs, and every music bed), on a 0–1 scale (0 = mute, 1 = full, out-of-range clamps); returns the OLD level so it's restorable. volume() reports the current level. session-only — a reload resets to 1",
+    volumebutton: "volumebutton(v) — the on-screen speaker button's MUSIC level (songs + music beds, no sound effects), snapped to its four steps (0 · 0.1 · 0.35 · 1); moves the button and PERSISTS across reloads. volumebutton() reports the current step; volumebutton(v) sets it and returns the OLD level. rides under volume() (the all-audio session master)",
+    candle: "candle() — both garden candles' lit states; candle(1) or candle(2) reads one; candle(1,true)/candle(2,false) lights or snuffs one and returns its previous state",
+    butterfly: "butterfly() — step into the office and flutter the butterfly in the stained-glass window",
+    water: "water() — the three garden watering bottles' levels (0–4 each); water(true) tips a full one over a plant and returns the new levels",
+    countdown: "countdown() — days left until each wedding",
+    fullscreen: "fullscreen(true) — fill the screen with the loft; fullscreen(false) leaves; fullscreen() reports whether it's on",
+    rainbow: "rainbow() — arc a rainbow over the balcony",
+    smoker: "smoker(true) — fire up the balcony smoker, low and slow; smoker(false) shuts it down; smoker() reports whether it's on (bbq is an alias)",
+    bbq: "bbq — alias for smoker; try `help smoker`",
+    smokerlid: "smokerlid(true) — raise the smoker lid; smokerlid(false) lowers it; smokerlid() reports whether it's open",
+    cooked: "cooked(1|2|3) — is that burger done yet (bool)? cooked() — all three, as [bool, bool, bool]",
+    beans: "beans() — coffee beans left in the grinder hopper (0..22); beans(n) sets the level (fresh heap to match) and returns the previous count",
+    servefood: "servefood() — serve a cooked burger (opens the lid if needed); servefood(random()) picks a random ready one. returns true if one was served",
+    phone: "phone(true) — bring up the pocket phone; phone(false) puts it away; phone() reports whether it's up. phone(\"cocktails\")/phone(\"weather\") open that phone app (skips the lockscreen); a bad name lists them",
+    sound: [
+      "sound(\"id\"[, …args]) — play a loft sound effect by id, e.g. sound(\"gong\"). sound() lists every id; sound(\"prefix\") lists the ids starting with that prefix — try sound(\"cat\") · sound(\"phone\").",
+      "EVERY sound takes an optional panId — a scene element id (e.g. \"office-monitor\", \"balcony-phone\") or a -1..1 number (left..right, 0 = center). it defaults to that sound's own on-screen source, so a bare sound(\"grind\") already plays from the grinder; sound(\"grind\", 0.9) hard-pans it right, sound(\"grind\", \"balcony-phone\") pans it to another object. a hidden/offscreen source centers.",
+      "for sounds with no extra args the panId is the only argument. the few that take extra args (panId keeps the position shown), e.g. sound(\"iloveyou\", \"office-laptop\", 1.2, 0.7):",
+      "  iloveyou/love(panId, pitchMul=1, gainMul=1) · ouch(panId, pitchMul=1, gainMul=1) · chop(pitchMult=1, hitCount=3, panId) · glass-clink(pitchMult=1, panId) · rooster(intensity=1, panId) · fart(pitchMult=1, durMult=1, panId)",
+      "  typewriter(pitchMult=1, panId) · chair-whirl(pitchMult=1, panId) · thunder(volume=1, panId) · cough(pitch=1, panId) · windchime(stormy=false, throughDoor=false, panId) · genie(reverse=false, panId) · alo/phone-voice(panId) · fishu(phrase)"
+    ],
+    speech: "speech(\"text\"[, opts]) — text-to-speech via the browser synth. opts is {pitch:0-2, rate:0.1-10, volume:0-1, voice:\"male\"|\"female\"|name-substring}; a bare number 2nd arg is a pitch shorthand, e.g. speech(\"hello\", 1.4). ranges clamp; returns the spoken text",
+    fishu: "fishu — say Fishu's name via the browser speech synth (sound(\"fishu\") too; sound(\"fishu\", \"phrase\") speaks that phrase). see speech() for arbitrary text",
+    laptop: "laptop(true) — wake the office laptop; laptop(false) closes it; laptop() reports whether it's open. laptop(\"prague\")/laptop(\"lubeck\") place a video call to her family",
+    computer: "computer(true) — power the office PC up; computer(false) shuts it down; computer() reports whether it's on. computer(\"doom\")/computer(\"weather\") boot (if needed) and open that monitor app; a bad name lists them",
+    reboot: "reboot() — power-cycle the loft OS (a `sudo reboot` from its own console)",
+    openurl: "openurl(\"url\") — open any URL in a new browser tab (a bare host gets https://)",
+    killall: "killall [-9] <doom|console|python|linux> — kill a monitor app by name via its Kill hook (doom's FATALITY, console's flatline, python's Black Knight, linux's BSOD). bare `killall` (no name) kills every currently-running host at once. the -9 is decorative — they all go. a cold runtime says `not running`",
+    service: "service <doom|console|python|linux> <start|stop|status|restart|--full-restart> — sysvinit-style control: status reports running/stopped · start opens it · stop kills it · restart|--full-restart do both",
+    monitor: "monitor — alias for computer; monitor(\"doom\")/monitor(\"console\") open a monitor app; try `help computer`",
+    go: "go(\"thing\") — thing(true): a verb over the on/off commands, e.g. go(\"party\") · go(\"smoker\") · go(\"laptop\")",
+    no: "no(\"thing\") — thing(false): the off verb, e.g. no(\"party\") · no(\"smoker\") · no(\"laptop\")",
+    summon: "summon(\"id\") — bring a scene element into view (jump to its room); summon(\"id\", true) also activates it. summon() shows a random one. summon.list([room|prefix]) returns an array of ids. `help summon` shows the full roster",
+    reveal: "reveal(\"id\") — bring a scene element into view (alias for summon(\"id\", false))",
+    click: "click(\"id\") — bring a scene element into view AND activate it (alias for summon(\"id\", true))",
+    cursorTo: "cursorTo(target[, ms]) — for scripts: glide the cinematic's ghost cursor (cream dot + wine ring) to a target, no click. target is an element id (\"office-monitor\" or \"#office-monitor\") → its live on-screen center (jumps to its room first), OR {x, y} in 0..1 viewport coords (0,0 top-left · 1,1 bottom-right; a value >1 is raw px). Returns a Promise resolving when the glide lands — `await cursorTo(\"#office-monitor\")`. ms overrides the ~550ms glide. Works with the show off too",
+    ghostClick: "ghostClick(target) — for scripts: cursorTo() the target, pulse a ripple, then dispatch a real (synthetic) click there — like click() but WITH the visible pointer. target is an element id or {x, y} 0..1 viewport coords (an {x,y} clicks whatever sits under that point). Returns a Promise resolving after the click — `await ghostClick(\"#office-sprinkler\")`",
+    cursorHide: "cursorHide() — for scripts: send the ghost cursor away (fade it out), ending a cursorTo/ghostClick sequence",
+    random: "random() — for scripts: random() → 0..1 · random(n) → int 0..n-1 · random(a,b) → int a..b · random([…]) → a random item. bonus: pass random() to any picker — dance(random()), room(random()), projector(random()), trip(random()), classic(random()), season(random()) — to choose one at random",
+    sleep: "sleep(ms) — for scripts: `await sleep(500)` pauses that long (default 1000ms)",
+    echo: "echo(\"text\") — print a line to both consoles (in-game + browser). echo(false) silences the commands' status chatter, echo(true) restores it, echo() reports the state",
+    say: "say(\"text\") — print a line to both consoles, always (ignores echo's on/off gate)",
+    scripts: "scripts() — list the scripts you've saved in the editor app",
+    run: "run(\"name\") — run a saved editor script by name (in quotes); the whole script runs as one async block, so `await sleep(...)` between steps sequences",
+    edit: "edit(\"name\") — open the editor app; with a name in quotes, load that script (or start a fresh one under that name); edit() opens a blank new script",
+    confetti: "confetti() — a shower of confetti in the room you're in",
+    fireworks: "fireworks() — a burst of fireworks over the room you're in",
+    cat: "cat(true) — summon the loose chest cat to your room; cat(false) stows her; cat() reports whether she's out (bare `cat` prints a cat instead)",
+    irene: "irene(true) — the niece skips in for a random visit; irene(false) sends her away; irene(\"pose\") forces one: \"roam\" · \"bounce\" · \"sit\" · \"hug\" · \"hugb\" · \"catplay\" · \"catjump\" · \"octiplay\" · \"swing\"; irene() reports whether she's visiting",
+    piano: "piano(\"piece\") — the night-sky piano; a piece by name in quotes, e.g. piano(\"bach\"), or 1–5: \"satie\" · \"chopin\" · \"beethoven\" · \"bach\" · \"mozart\". piano() plays a random one (classic is an alias)",
+    classic: "classic — alias for piano; try `help piano`",
+    kitten: "kitten — alias for cat; try `help cat`",
+    ukelele: "ukelele — alias for ukulele; try `help ukulele`",
+    audio: "audio() — the current audio source: \"music\" · \"piano\" · \"dance\" (or \"\"). audio(\"music\"|\"piano\"|\"dance\"|1–3|random()) switches to one; audio(true)/audio(false) resume/pause it",
+    music: "music(\"guitar\"|\"ukulele\") — play a garden concert song (or 1–2, or random()); music() returns the current one {n, name}. guitar()/ukulele() are aliases",
+    guitar: "guitar() — play the guitar concert song (alias for music(\"guitar\"))",
+    ukulele: "ukulele() — play the ukulele concert song (alias for music(\"ukulele\"))",
+    beat: "beat() — ms until the next musical beat, phase-locked to whatever's playing. try `await sleep(beat())` to move in time",
+    eclipse: "eclipse() — a solar (day) or lunar (night) eclipse over the balcony",
+    hb: "hb — the harfbuzzjs shaper (uharfbuzz-style); `help hb` prints a full shaping sequence",
+    loft: "loft — the couple's object: .countdown .nowPlaying .weather .menu .love .you .couple .weddings .site",
+    ls: "ls — list the rooms",
+    pwd: "pwd — print the working directory",
+    whoami: "whoami — who you are here",
+    sudo: "sudo <cmd> — nice try",
+    date: "date — the two wedding dates",
+    echo: "echo <text> — say it back",
+    man: "man <topic> — a manual page (try `man love`)",
+    love: "love [--patient] [--kind] [--no-jealousy] someone — love, as advertised",
+    kitty: "kitty() — bring the cat to the office",
+    exit: "exit — spoiler: you can't"
+  };
+
   function consoleRun(cmd) {
     consolePrint("❯ " + cmd);
     var c = cmd.trim();
@@ -23233,109 +23354,6 @@ document.addEventListener("click", function (e) {
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
     var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound()/fishu · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · phone()/phone(\"app\") · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
-    var CONSOLE_HELP = {
-      help: "help [command] — this list, or details for one command",
-      clear: "clear — wipe the scrollback",
-      laser: "laser(true) — loose a red dot the cat chases; laser(false) turns it off; laser() reports whether it's on",
-      party: "party(true) throws the garden party; party(false) ends it; party() reports whether it's on",
-      reset: "reset() — restart the whole loft from the top (no confirmation — you typed it)",
-      quit: "quit (or exit) — shut the console down (refresh, back to the desktop)",
-      blacklight: "blacklight(true) — UV wash over the whole loft; blacklight(false) off; blacklight() reports whether it's on",
-      uv: "uv — alias for blacklight; try `help blacklight`",
-      trip: "trip(\"name\") — a trip by name in quotes, e.g. trip(\"acid\"), or a number 1–7, or trip() for a random one. trips: \"shrooms\" · \"acid\" · \"froggies\" · \"dmt\" · \"molly\" · \"k\" · \"iboga\"",
-      room: "room(\"name\") — go to a room by name in quotes, e.g. room(\"garden\"), or a number 1–5; room() returns the current room as {n, name}. rooms: \"kitchen\" · \"garden\" · \"cuddly\" · \"office\" · \"balcony\"",
-      goto: "goto — alias for room; try `help room`",
-      rooms: "rooms() — list the five rooms",
-      daylight: "daylight(true) — bring the day back; daylight(false) — dusk; daylight() reports whether it's day. day()/night() are aliases",
-      night: "night() — dusk (alias for daylight(false))",
-      day: "day() — daylight (alias for daylight(true))",
-      season: "season(\"name\") — a season by name in quotes, e.g. season(\"spooky\"), or season() for a surprise. seasons: \"winter\" · \"spooky\" · \"auto\"",
-      play: "play() — resume the music if it's paused",
-      pause: "pause() — pause the music if something's playing",
-      temp: "temp() — the indoor + outdoor thermometer reading",
-      weather: "weather() — the real current weather in both wedding cities (Edmonton · Prague)",
-      clock: "clock() (or time()) — the real current time + date",
-      time: "time — alias for clock; try `help clock`",
-      projector: "projector(\"channel\") — switch the cuddly-room projector by name in quotes, e.g. projector(\"nightsky\"), or a number 1–5. channels: \"fireplace\" · \"workout\" · \"nightsky\" · \"aquarium\" · \"totoro\" · \"none\" (off). projector() returns the current channel {n, name}",
-      storm: "storm(true) — roll a thunderstorm in over the balcony; storm(false) clears it; storm() reports whether it's storming",
-      dance: "dance(\"name\") — cue a garden-party dance by name in quotes, e.g. dance(\"salsa\"), or 1–9, or dance(random()); dance() returns the current dance {n, name}; dance(\"next\") skips ahead (run party(true) first). dances: \"techno\" · \"waltz\" · \"disco\" · \"swing\" · \"salsa\" · \"bhangra\" · \"persian\" · \"polka\" · \"horah\"",
-      dj: "dj(\"amir\"|\"danesh\") — who spins at the party (or 1–2, or random()); dj() returns the current DJ {n, name}. amir wears the cap, danesh the afro",
-      cocktail: "cocktail(\"negroni\") — the bartender mixes that real drink from the bar's menu (partial name ok); cocktail() makes the featured signature drink. lights the party + steps behind the bar first if it's dark. he also mixes on his own while you watch the bar. alias: drink()",
-      lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
-      caption: "caption(\"text\"[, {blink:ms, hold:ms}]) — overwrite the hint line above the scene and return the previous line; caption() reads it. blink pulses the line to catch the eye; hold restores the previous line after that long. also caption(text, blinkMs, holdMs). a room change or hint reclaims it",
-      volume: "volume(v) — master volume over ALL the loft's audio (sound effects, songs, and every music bed), on a 0–1 scale (0 = mute, 1 = full, out-of-range clamps); returns the OLD level so it's restorable. volume() reports the current level. session-only — a reload resets to 1",
-      volumebutton: "volumebutton(v) — the on-screen speaker button's MUSIC level (songs + music beds, no sound effects), snapped to its four steps (0 · 0.1 · 0.35 · 1); moves the button and PERSISTS across reloads. volumebutton() reports the current step; volumebutton(v) sets it and returns the OLD level. rides under volume() (the all-audio session master)",
-      candle: "candle() — both garden candles' lit states; candle(1) or candle(2) reads one; candle(1,true)/candle(2,false) lights or snuffs one and returns its previous state",
-      butterfly: "butterfly() — step into the office and flutter the butterfly in the stained-glass window",
-      water: "water() — the three garden watering bottles' levels (0–4 each); water(true) tips a full one over a plant and returns the new levels",
-      countdown: "countdown() — days left until each wedding",
-      fullscreen: "fullscreen(true) — fill the screen with the loft; fullscreen(false) leaves; fullscreen() reports whether it's on",
-      rainbow: "rainbow() — arc a rainbow over the balcony",
-      smoker: "smoker(true) — fire up the balcony smoker, low and slow; smoker(false) shuts it down; smoker() reports whether it's on (bbq is an alias)",
-      bbq: "bbq — alias for smoker; try `help smoker`",
-      smokerlid: "smokerlid(true) — raise the smoker lid; smokerlid(false) lowers it; smokerlid() reports whether it's open",
-      cooked: "cooked(1|2|3) — is that burger done yet (bool)? cooked() — all three, as [bool, bool, bool]",
-      beans: "beans() — coffee beans left in the grinder hopper (0..22); beans(n) sets the level (fresh heap to match) and returns the previous count",
-      servefood: "servefood() — serve a cooked burger (opens the lid if needed); servefood(random()) picks a random ready one. returns true if one was served",
-      phone: "phone(true) — bring up the pocket phone; phone(false) puts it away; phone() reports whether it's up. phone(\"cocktails\")/phone(\"weather\") open that phone app (skips the lockscreen); a bad name lists them",
-      sound: [
-        "sound(\"id\"[, …args]) — play a loft sound effect by id, e.g. sound(\"gong\"). sound() lists every id; sound(\"prefix\") lists the ids starting with that prefix — try sound(\"cat\") · sound(\"phone\").",
-        "EVERY sound takes an optional panId — a scene element id (e.g. \"office-monitor\", \"balcony-phone\") or a -1..1 number (left..right, 0 = center). it defaults to that sound's own on-screen source, so a bare sound(\"grind\") already plays from the grinder; sound(\"grind\", 0.9) hard-pans it right, sound(\"grind\", \"balcony-phone\") pans it to another object. a hidden/offscreen source centers.",
-        "for sounds with no extra args the panId is the only argument. the few that take extra args (panId keeps the position shown), e.g. sound(\"iloveyou\", \"office-laptop\", 1.2, 0.7):",
-        "  iloveyou/love(panId, pitchMul=1, gainMul=1) · ouch(panId, pitchMul=1, gainMul=1) · chop(pitchMult=1, hitCount=3, panId) · glass-clink(pitchMult=1, panId) · rooster(intensity=1, panId) · fart(pitchMult=1, durMult=1, panId)",
-        "  typewriter(pitchMult=1, panId) · chair-whirl(pitchMult=1, panId) · thunder(volume=1, panId) · cough(pitch=1, panId) · windchime(stormy=false, throughDoor=false, panId) · genie(reverse=false, panId) · alo/phone-voice(panId) · fishu(phrase)"
-      ],
-      speech: "speech(\"text\"[, opts]) — text-to-speech via the browser synth. opts is {pitch:0-2, rate:0.1-10, volume:0-1, voice:\"male\"|\"female\"|name-substring}; a bare number 2nd arg is a pitch shorthand, e.g. speech(\"hello\", 1.4). ranges clamp; returns the spoken text",
-      fishu: "fishu — say Fishu's name via the browser speech synth (sound(\"fishu\") too; sound(\"fishu\", \"phrase\") speaks that phrase). see speech() for arbitrary text",
-      laptop: "laptop(true) — wake the office laptop; laptop(false) closes it; laptop() reports whether it's open. laptop(\"prague\")/laptop(\"lubeck\") place a video call to her family",
-      computer: "computer(true) — power the office PC up; computer(false) shuts it down; computer() reports whether it's on. computer(\"doom\")/computer(\"weather\") boot (if needed) and open that monitor app; a bad name lists them",
-      reboot: "reboot() — power-cycle the loft OS (a `sudo reboot` from its own console)",
-      openurl: "openurl(\"url\") — open any URL in a new browser tab (a bare host gets https://)",
-      killall: "killall [-9] <doom|console|python|linux> — kill a monitor app by name via its Kill hook (doom's FATALITY, console's flatline, python's Black Knight, linux's BSOD). bare `killall` (no name) kills every currently-running host at once. the -9 is decorative — they all go. a cold runtime says `not running`",
-      service: "service <doom|console|python|linux> <start|stop|status|restart|--full-restart> — sysvinit-style control: status reports running/stopped · start opens it · stop kills it · restart|--full-restart do both",
-      monitor: "monitor — alias for computer; monitor(\"doom\")/monitor(\"console\") open a monitor app; try `help computer`",
-      go: "go(\"thing\") — thing(true): a verb over the on/off commands, e.g. go(\"party\") · go(\"smoker\") · go(\"laptop\")",
-      no: "no(\"thing\") — thing(false): the off verb, e.g. no(\"party\") · no(\"smoker\") · no(\"laptop\")",
-      summon: "summon(\"id\") — bring a scene element into view (jump to its room); summon(\"id\", true) also activates it. summon() shows a random one. summon.list([room|prefix]) returns an array of ids. `help summon` shows the full roster",
-      reveal: "reveal(\"id\") — bring a scene element into view (alias for summon(\"id\", false))",
-      click: "click(\"id\") — bring a scene element into view AND activate it (alias for summon(\"id\", true))",
-      cursorTo: "cursorTo(target[, ms]) — for scripts: glide the cinematic's ghost cursor (cream dot + wine ring) to a target, no click. target is an element id (\"office-monitor\" or \"#office-monitor\") → its live on-screen center (jumps to its room first), OR {x, y} in 0..1 viewport coords (0,0 top-left · 1,1 bottom-right; a value >1 is raw px). Returns a Promise resolving when the glide lands — `await cursorTo(\"#office-monitor\")`. ms overrides the ~550ms glide. Works with the show off too",
-      ghostClick: "ghostClick(target) — for scripts: cursorTo() the target, pulse a ripple, then dispatch a real (synthetic) click there — like click() but WITH the visible pointer. target is an element id or {x, y} 0..1 viewport coords (an {x,y} clicks whatever sits under that point). Returns a Promise resolving after the click — `await ghostClick(\"#office-sprinkler\")`",
-      cursorHide: "cursorHide() — for scripts: send the ghost cursor away (fade it out), ending a cursorTo/ghostClick sequence",
-      random: "random() — for scripts: random() → 0..1 · random(n) → int 0..n-1 · random(a,b) → int a..b · random([…]) → a random item. bonus: pass random() to any picker — dance(random()), room(random()), projector(random()), trip(random()), classic(random()), season(random()) — to choose one at random",
-      sleep: "sleep(ms) — for scripts: `await sleep(500)` pauses that long (default 1000ms)",
-      echo: "echo(\"text\") — print a line to both consoles (in-game + browser). echo(false) silences the commands' status chatter, echo(true) restores it, echo() reports the state",
-      say: "say(\"text\") — print a line to both consoles, always (ignores echo's on/off gate)",
-      scripts: "scripts() — list the scripts you've saved in the editor app",
-      run: "run(\"name\") — run a saved editor script by name (in quotes); the whole script runs as one async block, so `await sleep(...)` between steps sequences",
-      edit: "edit(\"name\") — open the editor app; with a name in quotes, load that script (or start a fresh one under that name); edit() opens a blank new script",
-      confetti: "confetti() — a shower of confetti in the room you're in",
-      fireworks: "fireworks() — a burst of fireworks over the room you're in",
-      cat: "cat(true) — summon the loose chest cat to your room; cat(false) stows her; cat() reports whether she's out (bare `cat` prints a cat instead)",
-      irene: "irene(true) — the niece skips in for a random visit; irene(false) sends her away; irene(\"pose\") forces one: \"roam\" · \"bounce\" · \"sit\" · \"hug\" · \"hugb\" · \"catplay\" · \"catjump\" · \"octiplay\" · \"swing\"; irene() reports whether she's visiting",
-      piano: "piano(\"piece\") — the night-sky piano; a piece by name in quotes, e.g. piano(\"bach\"), or 1–5: \"satie\" · \"chopin\" · \"beethoven\" · \"bach\" · \"mozart\". piano() plays a random one (classic is an alias)",
-      classic: "classic — alias for piano; try `help piano`",
-      kitten: "kitten — alias for cat; try `help cat`",
-      ukelele: "ukelele — alias for ukulele; try `help ukulele`",
-      audio: "audio() — the current audio source: \"music\" · \"piano\" · \"dance\" (or \"\"). audio(\"music\"|\"piano\"|\"dance\"|1–3|random()) switches to one; audio(true)/audio(false) resume/pause it",
-      music: "music(\"guitar\"|\"ukulele\") — play a garden concert song (or 1–2, or random()); music() returns the current one {n, name}. guitar()/ukulele() are aliases",
-      guitar: "guitar() — play the guitar concert song (alias for music(\"guitar\"))",
-      ukulele: "ukulele() — play the ukulele concert song (alias for music(\"ukulele\"))",
-      beat: "beat() — ms until the next musical beat, phase-locked to whatever's playing. try `await sleep(beat())` to move in time",
-      eclipse: "eclipse() — a solar (day) or lunar (night) eclipse over the balcony",
-      hb: "hb — the harfbuzzjs shaper (uharfbuzz-style); `help hb` prints a full shaping sequence",
-      loft: "loft — the couple's object: .countdown .nowPlaying .weather .menu .love .you .couple .weddings .site",
-      ls: "ls — list the rooms",
-      pwd: "pwd — print the working directory",
-      whoami: "whoami — who you are here",
-      sudo: "sudo <cmd> — nice try",
-      date: "date — the two wedding dates",
-      echo: "echo <text> — say it back",
-      man: "man <topic> — a manual page (try `man love`)",
-      love: "love [--patient] [--kind] [--no-jealousy] someone — love, as advertised",
-      kitty: "kitty() — bring the cat to the office",
-      exit: "exit — spoiler: you can't"
-    };
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
@@ -23834,6 +23852,29 @@ document.addEventListener("click", function (e) {
     } catch (e) {}
     if (url) setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} }, 0);
   }
+  // First-visit starter: a short, runnable demo of the loft's own scripting API, so opening the
+  // editor on a blank slate shows something to Run ▶ instead of an empty box. Seeded ONCE per
+  // session, and only when there's nothing to clobber — a saved file OR text/name already in the
+  // buffer keeps its place. It's a genuine default VALUE (editable, runnable, clearable), not the
+  // grey placeholder. English only (it's code). Every command here is a real loft global.
+  var ED_STARTER = [
+    "// ✎ your loft playground — hit Run ▶",
+    "caption(\"hello, world 👋\", { blink: 1000, hold: 2500 });",
+    "await sleep(900);",
+    "party(true);",
+    "await sleep(1600);",
+    "dance(\"salsa\");",
+    ""
+  ].join("\n");
+  var edStarterSeeded = false;
+  function edMaybeSeedStarter() {
+    if (edStarterSeeded || !edCode || !edName) return;
+    if (edCode.value !== "" || (edName.value || "").trim() !== "") return; // buffer already has content or a name
+    if (Object.keys(readScripts()).length) return;                        // a returning author with saved files — leave it blank
+    edStarterSeeded = true;
+    edCode.value = ED_STARTER;
+    try { edCode.setSelectionRange(0, 0); } catch (e) {}                    // caret at the top, on the friendly comment
+  }
   function openEditor() {
     // only from the lit desktop, and not stacked over a console (edit() clears those first)
     if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-editor") || monitor.classList.contains("show-console") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux")) return;
@@ -23841,11 +23882,14 @@ document.addEventListener("click", function (e) {
     clearTimeout(saverTimer); saverTimer = null; // no screensaver over someone editing
     monitor.classList.add("show-editor");
     edRefreshPicker(edName && edName.value.trim() ? edName.value.trim() : null);
-    if (edCode) setTimeout(function () { try { edCode.focus({ preventScroll: true }); } catch (e) {} }, 60);
+    // seed (+ focus) in a tick so it runs AFTER any synchronous edLoad/edNew from edit() — it then
+    // sees the final buffer state and only fills a genuinely blank first-visit slate.
+    if (edCode) setTimeout(function () { edMaybeSeedStarter(); try { edCode.focus({ preventScroll: true }); } catch (e) {} }, 60);
     playLaptopClickSound("office-monitor");
   }
   function closeEditor() {
     if (!monitor.classList.contains("show-editor")) return;
+    if (typeof edAcHide === "function") edAcHide(); // drop any open autocomplete popup with the app
     edFlushAutoSave(); // commit any pending debounced save before the app tears down (Esc is faster than the debounce)
     monitor.classList.remove("show-editor");
     if (edCode) { try { edCode.blur(); } catch (e) {} }
@@ -23884,6 +23928,202 @@ document.addEventListener("click", function (e) {
   });
   if (edCode) edCode.addEventListener("input", function () { edScheduleAutoSave(); });
   if (edName) edName.addEventListener("input", function () { edScheduleAutoSave(); }); // rename persists too (Save is gone)
+  // ── editor autocomplete ──────────────────────────────────────────────────────────
+  // A caret-anchored popup that completes loft console command NAMES as you type in the code
+  // buffer, each row showing the command + its (dimmed, truncated) help line. Reads the SAME
+  // shared CONSOLE_CMDS roster, CONSOLE_CMDS_BARE set, and CONSOLE_HELP strings that the console's
+  // own Tab-complete and `help` use (all in this scope) — so the two can never drift and there's no
+  // second copy to maintain. Desktop/keyboard affordance only (no touch handling).
+  var edMain = edWrap ? edWrap.querySelector(".ed-main") : null;
+  var edAc = null, edAcMirror = null, edAcItems = [], edAcSel = -1, edAcTok = null;
+  var EDAC_MAX = 7; // rows shown before a "+N more" tail (the list also scrolls)
+  // help trimmed to the descriptive tail after the "usage — " dash, when there is one.
+  function edHelpDesc(h) {
+    var s = Array.isArray(h) ? (h[0] || "") : (h || "");
+    var i = s.indexOf(" — ");
+    return i >= 0 ? s.slice(i + 3) : s;
+  }
+  // one {name, help, fn} row per documented command; fn = append "(" on insert (not a bareword).
+  function edCmdList() {
+    return CONSOLE_CMDS.map(function (n) {
+      return { name: n, help: edHelpDesc(CONSOLE_HELP[n]), fn: !CONSOLE_CMDS_BARE[n] };
+    });
+  }
+  window.__loftCommands = edCmdList; // {name, help, fn}[] — the shared roster+help, also handy for tests
+  // the identifier token immediately BEFORE the caret (caret must sit at its end, and it must not
+  // follow a "." — no completing member access). null = nothing to complete here.
+  function edTokenAtCaret() {
+    if (!edCode) return null;
+    var v = edCode.value, c = edCode.selectionStart;
+    if (c == null || c !== edCode.selectionEnd) return null;      // a range selection = no completion
+    if (/[\w$]/.test(v.charAt(c))) return null;                   // caret mid-word → don't complete
+    var start = c;
+    while (start > 0 && /[\w$]/.test(v.charAt(start - 1))) start--;
+    var tok = v.slice(start, c);
+    if (!tok || !/^[A-Za-z_$]/.test(tok)) return null;            // must start like an identifier
+    if (start > 0 && v.charAt(start - 1) === ".") return null;    // obj.member — not a command
+    return { text: tok, start: start, end: c };
+  }
+  function edMatches(prefix) {
+    var low = prefix.toLowerCase();
+    return edCmdList().filter(function (cmd) { return cmd.name.toLowerCase().indexOf(low) === 0; });
+  }
+  function edAcVisible() { return !!(edAc && edAc.classList.contains("open")); }
+  function edAcHide() {
+    if (edAc) { edAc.classList.remove("open"); edAc.innerHTML = ""; }
+    edAcItems = []; edAcSel = -1; edAcTok = null;
+  }
+  function edAcEnsure() {
+    if (edAc || !edMain) return;
+    edAc = document.createElement("div");
+    edAc.className = "ed-ac";
+    // a mousedown inside the popup must NOT blur the textarea (that would hide the popup before a
+    // row's own click can insert) — preventDefault keeps focus in the code buffer.
+    edAc.addEventListener("mousedown", function (e) { e.preventDefault(); e.stopPropagation(); });
+    edMain.appendChild(edAc);
+  }
+  // caret pixel position via the hidden-mirror-div technique: a div mirroring the textarea's box
+  // metrics + its text up to the caret, ending in a zero-width marker span whose rect locates the
+  // caret. All reads use getBoundingClientRect (fractional — offsetLeft/Top round to integers, which
+  // at this 2px scale snaps the caret to nonsense), divided by S (SVG local-units per screen-px) and
+  // corrected for the textarea's own scroll. Returns the caret x/y in ed-main-local units + geometry.
+  function edCaretGeom() {
+    if (!edAcMirror) {
+      edAcMirror = document.createElement("div");
+      edAcMirror.className = "ed-ac-mirror";
+      edMain.appendChild(edAcMirror);
+    }
+    var m = edAcMirror, cs = getComputedStyle(edCode);
+    ["fontFamily", "fontSize", "fontWeight", "fontStyle", "fontVariant", "letterSpacing", "lineHeight",
+     "textTransform", "wordSpacing", "tabSize", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",
+     "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth", "boxSizing"].forEach(function (p) {
+      m.style[p] = cs[p];
+    });
+    m.style.whiteSpace = "pre";
+    m.style.width = edCode.clientWidth + "px";
+    m.textContent = edCode.value.slice(0, edCode.selectionStart);
+    var mark = document.createElement("span");
+    mark.textContent = String.fromCharCode(0x200B); // zero-width marker: its rect.left is the caret x
+    m.appendChild(mark);
+    var wrapR = edWrap.getBoundingClientRect(), S = wrapR.width / 124 || 1; // .ed-wrap is CSS-width 124
+    var mainR = edMain.getBoundingClientRect();
+    var taR = edCode.getBoundingClientRect();
+    var mR = m.getBoundingClientRect();
+    var markR = mark.getBoundingClientRect();
+    var x = (taR.left - mainR.left) / S + (markR.left - mR.left) / S - edCode.scrollLeft;
+    var y = (taR.top - mainR.top) / S + (markR.top - mR.top) / S - edCode.scrollTop;
+    var lh = parseFloat(cs.lineHeight); if (!lh) lh = (parseFloat(cs.fontSize) || 2) * 1.4;
+    m.textContent = ""; // release the mirrored text
+    return { x: x, y: y, lh: lh, S: S, mainW: mainR.width / S, mainH: mainR.height / S };
+  }
+  function edAcSetSel(i) {
+    if (i < 0 || i >= edAcItems.length) return;
+    edAcSel = i;
+    var rows = edAc.querySelectorAll(".ed-ac-item");
+    for (var k = 0; k < rows.length; k++) rows[k].classList.toggle("active", k === i);
+    if (rows[i] && rows[i].scrollIntoView) rows[i].scrollIntoView({ block: "nearest" });
+  }
+  function edAcPosition() {
+    var g = edCaretGeom();
+    var r = edAc.getBoundingClientRect();
+    var pw = r.width / g.S, ph = r.height / g.S;
+    var left = g.x, top = g.y + g.lh; // default: just below the caret's line
+    if (left + pw > g.mainW) left = g.mainW - pw;
+    if (left < 0) left = 0;
+    if (top + ph > g.mainH) { var above = g.y - ph; top = above >= 0 ? above : Math.max(0, g.mainH - ph); } // flip above
+    edAc.style.left = left.toFixed(2) + "px";
+    edAc.style.top = top.toFixed(2) + "px";
+  }
+  function edAcRender(tok, matches) {
+    edAcEnsure();
+    if (!edAc) return;
+    edAcTok = tok;
+    edAcItems = matches.slice(0, EDAC_MAX);
+    edAcSel = 0;
+    var extra = matches.length - edAcItems.length;
+    edAc.innerHTML = "";
+    edAcItems.forEach(function (cmd, i) {
+      var row = document.createElement("div");
+      row.className = "ed-ac-item" + (i === 0 ? " active" : "");
+      var nm = document.createElement("span");
+      nm.className = "ed-ac-name";
+      nm.textContent = cmd.name + (cmd.fn ? "()" : "");
+      var hp = document.createElement("span");
+      hp.className = "ed-ac-help";
+      hp.textContent = cmd.help;
+      row.appendChild(nm); row.appendChild(hp);
+      row.addEventListener("mousemove", function () { if (edAcSel !== i) edAcSetSel(i); });
+      row.addEventListener("mousedown", function (e) { e.preventDefault(); e.stopPropagation(); edAcSel = i; edAcAccept(); });
+      edAc.appendChild(row);
+    });
+    if (extra > 0) {
+      var more = document.createElement("div");
+      more.className = "ed-ac-more";
+      more.textContent = "+" + extra + " more";
+      edAc.appendChild(more);
+    }
+    edAc.classList.add("open");
+    edAcPosition();
+  }
+  // rebuild the popup from the token under the caret. force = explicit trigger (Ctrl-Space / Tab):
+  // opens at >=1 char, otherwise live typing needs >=2 chars so a single keystroke doesn't nag.
+  function edAcUpdate(force) {
+    if (!edCode) return;
+    var tok = edTokenAtCaret();
+    if (!tok || tok.text.length < (force ? 1 : 2)) { edAcHide(); return; }
+    var matches = edMatches(tok.text);
+    if (!matches.length) { edAcHide(); return; }
+    // auto-typed an exact full command already (nothing to add) → don't pop; an explicit trigger
+    // still shows it so Enter can append the "(".
+    if (!force && matches.length === 1 && matches[0].name.toLowerCase() === tok.text.toLowerCase()) { edAcHide(); return; }
+    edAcRender(tok, matches);
+  }
+  // replace the caret's token with the highlighted command; functions get a trailing "(" with the
+  // caret parked inside for args. Programmatic value changes don't fire "input", so autosave by hand.
+  function edAcAccept() {
+    if (!edAcVisible() || edAcSel < 0 || !edAcTok) { edAcHide(); return false; }
+    var cmd = edAcItems[edAcSel];
+    if (!cmd) { edAcHide(); return false; }
+    var v = edCode.value, ins = cmd.name + (cmd.fn ? "(" : "");
+    var before = v.slice(0, edAcTok.start), after = v.slice(edAcTok.end);
+    edCode.value = before + ins + after;
+    var caret = (before + ins).length;
+    try { edCode.setSelectionRange(caret, caret); } catch (e) {}
+    try { edCode.focus({ preventScroll: true }); } catch (e) {}
+    edScheduleAutoSave();
+    edAcHide();
+    return true;
+  }
+  if (edCode && edMain) {
+    edCode.addEventListener("input", function () { edAcUpdate(false); }); // live prefix → popup
+    edCode.addEventListener("scroll", function () { if (edAcVisible()) edAcHide(); }); // a scroll staleness the popup can't track → drop it
+    edCode.addEventListener("blur", function () { edAcHide(); });
+    edCode.addEventListener("keydown", function (e) {
+      // explicit trigger works whether or not the popup is already up
+      if ((e.ctrlKey || e.metaKey) && (e.key === " " || e.code === "Space")) { e.preventDefault(); e.stopPropagation(); edAcUpdate(true); return; }
+      if (edAcVisible()) {
+        if (e.key === "ArrowDown") { e.preventDefault(); e.stopPropagation(); edAcSetSel(Math.min(edAcSel + 1, edAcItems.length - 1)); return; }
+        if (e.key === "ArrowUp") { e.preventDefault(); e.stopPropagation(); edAcSetSel(Math.max(edAcSel - 1, 0)); return; }
+        if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); e.stopPropagation(); edAcAccept(); return; } // insert the highlighted match
+        if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); edAcHide(); return; } // (also caught by the capture guard below)
+        return; // any other key falls through to typing; the input handler refreshes the list
+      }
+      // popup closed: Tab opens completion when there's a live prefix (else it's a normal Tab)
+      if (e.key === "Tab" && !e.shiftKey) {
+        var tok = edTokenAtCaret();
+        if (tok && tok.text.length >= 1 && edMatches(tok.text).length) { e.preventDefault(); e.stopPropagation(); edAcUpdate(true); return; }
+      }
+    });
+    // Esc while the popup is up must close ONLY the popup, not the whole editor. The app-closing Esc
+    // is a window-CAPTURE listener registered later in the file (the desk-zoom IIFE); a capture
+    // listener added HERE (this IIFE runs earlier → registers first) wins, and on a hit its
+    // stopImmediatePropagation keeps that closer from firing.
+    window.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && edAcVisible() && document.activeElement === edCode) {
+        edAcHide(); e.preventDefault(); e.stopImmediatePropagation();
+      }
+    }, true);
+  }
   if (edWrap) {
     edWrap.addEventListener("click", function (e) { e.stopPropagation(); });
     edWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });

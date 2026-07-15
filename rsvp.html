@@ -18640,6 +18640,7 @@ document.addEventListener("click", function (e) {
   if (shotcup) {
     function sipShotcup() {
       if (!shotcup.classList.contains("filled")) return;
+      if (window.__retireHint) window.__retireHint("hint_coffee"); // loose-brick hint: retire once an espresso's been sipped
       shotcup.classList.remove("filled");
       shotcup.classList.remove("sipping");
       requestAnimationFrame(function () {
@@ -19393,6 +19394,7 @@ document.addEventListener("click", function (e) {
     if (octopus.classList.contains("falling-in")) return;
     playPlushSquishSound();
     var alreadyPlayed = octopus.classList.contains("played");
+    if (!alreadyPlayed && window.__retireHint) window.__retireHint("hint_octi"); // loose-brick hint: retire once Octi's been played with
     octopus.classList.remove("wobble", "popping-out");
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { octopus.classList.add("wobble", "played"); });
@@ -19447,6 +19449,7 @@ document.addEventListener("click", function (e) {
       octopus.classList.add(nextClass);
       if (nextClass === "falling-in") {
         octopus.classList.add("played");
+        if (!alreadyPlayed && window.__retireHint) window.__retireHint("hint_octi"); // loose-brick hint: retire once Octi's been played with
         if (!alreadyPlayed && window.setCaption) window.setCaption("cuddly_pull");
       }
       octopusInChest = !octopusInChest;
@@ -20735,6 +20738,7 @@ document.addEventListener("click", function (e) {
   function startMake(row) {
     if (making || !row) return false;
     making = true;
+    if (window.__retireHint) window.__retireHint("hint_cocktail"); // loose-brick hint: retire once a drink's been mixed
     if (window.__bartenderMixing) window.__bartenderMixing(true); // stop his idle sway for the whole make
     var name = row.name;
     var m = META[name] || {};
@@ -21043,6 +21047,7 @@ document.addEventListener("click", function (e) {
     function markPragueCalled() {
       if (window.__pragueCalled) return;
       window.__pragueCalled = true; // satisfies the office finale's Call-Prague requirement
+      if (window.__retireHint) window.__retireHint("hint_prague"); // loose-brick hint: retire once Prague's been called
       // the caption advances only once the call is DISCONNECTED (see dropLine); while
       // the couple's still on screen, a gentle hang-up nudge after a few seconds
       laptopUpdateTimers.push(setTimeout(function () {
@@ -21658,6 +21663,7 @@ document.addEventListener("click", function (e) {
     }
     if (!window.__pcPlayed) {
       window.__pcPlayed = true; // the office sequence's "play with the computer" beat (the butterfly gates on it)
+      if (window.__retireHint) window.__retireHint("hint_computer"); // loose-brick hint: retire once the old tower's been woken
       // ...and powering on advances the office hint to the next step (the caption
       // system elsewhere only re-evaluates on lamp/call/entry events)
       // let them actually play for a bit — the lights hint arrives after 10s
@@ -22556,6 +22562,7 @@ document.addEventListener("click", function (e) {
   function playSongAt(idx) {
     var next = songAudios[((idx % songAudios.length) + songAudios.length) % songAudios.length];
     if (!next) return;
+    if (window.__retireHint) window.__retireHint("hint_song"); // loose-brick hint: retire once a loft song has played
     try {
       next.currentTime = 0;
       next.volume = window.__songVolume ? window.__songVolume() : 0.5;
@@ -41711,6 +41718,7 @@ function spawnDustMote(container) {
   function setGardenParty(on, userInitiated) {
     on = !!on;
     window.__gardenPartyOn = on;
+    if (on && window.__retireHint) window.__retireHint("hint_party"); // loose-brick hint: retire once the party's been thrown
     var gs = document.getElementById("stage-garden");
     if (gs) gs.classList.toggle("garden-party", on);
     // strip-wide party flag: swaps the espresso KITCHEN for a cocktail BAR (all the
@@ -45800,6 +45808,78 @@ function spawnDustMote(container) {
   });
 })();
 (function () {
+  // ── Loose-brick HINT dispenser ─────────────────────────────────────────────
+  // Single-click a loose (accent-toned/offset) wall brick and it just wobbles.
+  // DOUBLE-CLICK one and it drops a playful HINT into the caption bar, nudging
+  // toward one of the loft's optional delights. Each hint is "retired" once the
+  // player has done the thing it points at, so it stops being offered.
+  //
+  // To add/edit a hint: append to BRICK_HINTS below. Each entry is
+  //   { id, en, cs, done() } — id is also its caption key (auto-injected into the
+  //   shared hunt dict, so it renders + language-flips like every other caption);
+  //   done() returns true once the nudged activity has happened. Retirement is
+  //   latched permanently in localStorage["retiredHints"] from the activity's own
+  //   site (window.__retireHint), the same persist-forever idea as save-the-dates'
+  //   foundEggs; done() also reads a live/session signal where one exists, as a
+  //   belt to the localStorage suspenders.
+  var RETIRE_KEY = "retiredHints";
+  function retiredArr() { try { var a = JSON.parse(localStorage.getItem(RETIRE_KEY) || "[]"); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function isRetired(id) { return retiredArr().indexOf(id) !== -1; }
+  window.__retireHint = function (id) {
+    try { var a = retiredArr(); if (a.indexOf(id) === -1) { a.push(id); localStorage.setItem(RETIRE_KEY, JSON.stringify(a)); } } catch (e) {}
+  };
+  function octiPlayed() { var o = document.getElementById("cuddly-octopus"); return !!(o && o.classList.contains("played")); }
+
+  // The preset hints, in dispense order (the pointer rotates through them, skipping
+  // any that are already retired). The owner's two examples lead the list.
+  var BRICK_HINTS = [
+    { id: "hint_party",    en: "Worked hard, now party hard.",                    cs: "Práce hotová — teď se pořádně rozjeď!",
+      done: function () { return isRetired("hint_party") || !!window.__gardenPartyOn; } },        // retired once the garden party has been thrown
+    { id: "hint_cocktail", en: "Are you thirsty yet?",                            cs: "Nemáš už žízeň?",
+      done: function () { return isRetired("hint_cocktail"); } },                                 // retired once a cocktail is mixed at the bar
+    { id: "hint_song",     en: "This loft comes with a soundtrack — press play.", cs: "K tomuhle bytu patří i muzika — pusť si ji.",
+      done: function () { return isRetired("hint_song"); } },                                     // retired once a loft song has played
+    { id: "hint_octi",     en: "Someone in the cuddly nook wants a squeeze.",     cs: "Někdo v mazlicím koutku prosí o zmáčknutí.",
+      done: function () { return isRetired("hint_octi") || octiPlayed(); } },                     // retired once Octi has been played with
+    { id: "hint_prague",   en: "Prague is only a phone call away.",               cs: "Praha je jen na jedno zavolání.",
+      done: function () { return isRetired("hint_prague") || !!window.__pragueCalled; } },        // retired once Prague has been called
+    { id: "hint_computer", en: "That old tower still boots — go wake it.",        cs: "Ta stará bedna pořád naběhne — vzbuď ji.",
+      done: function () { return isRetired("hint_computer") || !!window.__pcPlayed; } },          // retired once the PC has been powered on
+    { id: "hint_coffee",   en: "No day in the loft starts without coffee.",       cs: "Žádný den v bytě nezačíná bez kávy.",
+      done: function () { return isRetired("hint_coffee"); } }                                    // retired once an espresso has been sipped
+  ];
+  // Warm sign-off once every hint above is retired.
+  var HINT_ALLDONE = { en: "You've found your way around every corner ♥ nothing left to hint.",
+                       cs: "Prošmejdil(a) jsi každý kout ♥ víc už neporadím." };
+
+  // Inject the hint captions into the shared hunt dict (both languages) so
+  // setCaption(key) / refreshHuntCaption() render + re-render them on a language
+  // flip exactly like any room caption. Done at load, off the array — the T.hunt
+  // LITERAL is never touched, so check.js key-parity stays trivially balanced and
+  // there's no overlap with the cinematic's cine_* keys.
+  try {
+    BRICK_HINTS.forEach(function (h) {
+      if (T.en && T.en.hunt) T.en.hunt[h.id] = h.en;
+      if (T.cs && T.cs.hunt) T.cs.hunt[h.id] = h.cs;
+    });
+    if (T.en && T.en.hunt) T.en.hunt.hint_alldone = HINT_ALLDONE.en;
+    if (T.cs && T.cs.hunt) T.cs.hunt.hint_alldone = HINT_ALLDONE.cs;
+  } catch (e) {}
+
+  // Dispenser: advance the pointer to the next NOT-done hint (wrapping), show it,
+  // and leave the pointer past it so repeated double-clicks feel like they're
+  // rotating through fresh nudges. All hints retired → the warm all-done line.
+  var hintPtr = 0;
+  window.__brickHint = function () {
+    if (!window.setCaption || !BRICK_HINTS.length) return;
+    var n = BRICK_HINTS.length, key = "hint_alldone";
+    for (var i = 0; i < n; i++) {
+      var h = BRICK_HINTS[(hintPtr + i) % n];
+      if (!h.done()) { key = h.id; hintPtr = (hintPtr + i + 1) % n; break; }
+    }
+    window.setCaption(key); // transient — reclaimed by the next room hint / room change
+  };
+
   document.querySelectorAll(".wall-brick").forEach(function (brick) {
     function wobbleBrick() {
       brick.classList.remove("wobbling");
@@ -45809,6 +45889,7 @@ function spawnDustMote(container) {
       playTongsClackSound();
     }
     brick.addEventListener("click", wobbleBrick);
+    brick.addEventListener("dblclick", function () { if (window.__brickHint) window.__brickHint(); });
     brick.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); wobbleBrick(); }
     });

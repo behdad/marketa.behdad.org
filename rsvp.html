@@ -30260,6 +30260,14 @@ async def localfont(name):
       windFilter.frequency.value = initial.filter; // broad/airy, well above city hum's 260Hz "distant" cutoff
       windFilter.Q.value = 0.5;
       windGain = windCtx.createGain();
+      // Seed the live .value before scheduling: arriving via the phone (the 'c' key / phone("app"))
+      // runs goToStage("balcony")→startWind and then open()→applyIntensity in the SAME synchronous
+      // tick. applyIntensity anchors its ramp on windGain.gain.value, but a scheduled setValueAtTime
+      // is NOT reflected by the .value getter until the audio thread renders it — a just-created gain
+      // still reads its createGain default of 1.0. Without this seed, that reads 1.0 and the wind
+      // blasts in at full scale before ramping down to the ducked calm level. The .value setter is
+      // reflected synchronously, so a same-tick read sees 0.0001.
+      windGain.gain.value = 0.0001;
       windGain.gain.setValueAtTime(0.0001, now);
       windGain.gain.exponentialRampToValueAtTime(initial.gain, now + 0.8);
       // two summed LFOs at unrelated periods driving gain...

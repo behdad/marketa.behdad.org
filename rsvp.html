@@ -419,6 +419,10 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 /* reduced motion: no pulse, but keep the hint noticeable with a static wine emphasis
    (wine is already the on-cream link colour, so contrast holds). */
 @media (prefers-reduced-motion: reduce){.scene-caption.hint-blink{animation:none; color:var(--wine); font-weight:700}}
+/* a brick hint gently breathes while it's up, so it reads as a temporary aside */
+.scene-caption.brick-hint-live{animation:brick-hint-breathe 1.6s ease-in-out infinite}
+@keyframes brick-hint-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+@media (prefers-reduced-motion: reduce){.scene-caption.brick-hint-live{animation:none}}
 .watch-controls{display:flex; justify-content:center; align-items:center; gap:.9rem; margin:.5rem 0 0; min-height:1.5rem}
 .watch-loft-btn, .watch-skip-btn{
   font:inherit; font-size:.85rem; line-height:1.3; cursor:pointer; background:none;
@@ -47274,9 +47278,10 @@ function spawnDustMote(container) {
   // link, the one key only refreshHuntCaption repairs). A second tap (any brick)
   // dismisses immediately. The hint rides the captionKey path, so a language flip while
   // it's up re-renders it. All of a room's offered hints retired → the all-done line.
-  var HINT_HOLD = 5000;
+  var HINT_HOLD = 3000;
   var hintPtr = { kitchen: 0, garden: 0, cuddly: 0, office: 0, balcony: 0 };
-  var hintTimer = null, hintShowing = false, hintCurKey = null, hintSavedKey = null;
+  var hintTimer = null, hintShowing = false, hintCurKey = null, hintSavedKey = null, hintOwnerBrick = null;
+  function hintCapEl() { return document.getElementById("hunt-caption"); }
   function clearHintTimer() { if (hintTimer) { clearTimeout(hintTimer); hintTimer = null; } }
   function restoreRoomCaption() {
     var name = window.currentStageName;
@@ -47288,9 +47293,10 @@ function spawnDustMote(container) {
     clearHintTimer();
     if (!hintShowing) return;
     hintShowing = false;
+    var cap = hintCapEl(); if (cap) cap.classList.remove("brick-hint-live");
     var still = window.__captionKey ? window.__captionKey() : null;
     if (still === hintCurKey) restoreRoomCaption(); // only reclaim the line if our hint still owns it (a room change already replaced it → leave it)
-    hintCurKey = null; hintSavedKey = null;
+    hintCurKey = null; hintSavedKey = null; hintOwnerBrick = null;
   }
   window.__dismissBrickHint = dismissHint; // test/console hook
   function showRoomHint(room) {
@@ -47306,6 +47312,7 @@ function spawnDustMote(container) {
     window.setCaption(key);
     if (window.__captionKey && window.__captionKey() !== key) { hintSavedKey = null; return; } // a guard (cinematic/intro) swallowed it — don't latch a phantom hint
     hintShowing = true; hintCurKey = key;
+    var cap = hintCapEl(); if (cap) cap.classList.add("brick-hint-live");
     clearHintTimer();
     hintTimer = setTimeout(dismissHint, HINT_HOLD);
   }
@@ -47321,11 +47328,12 @@ function spawnDustMote(container) {
     }
     function tapBrick() {
       wobbleBrick();
-      var owns = hintShowing && window.__captionKey && window.__captionKey() === hintCurKey;
-      if (owns) { dismissHint(); return; } // a hint we still own is up → this tap toggles it off
-      if (hintShowing) { clearHintTimer(); hintShowing = false; hintCurKey = null; hintSavedKey = null; } // stale (room changed / claimed) → clear silently, show fresh
+      var live = hintShowing && window.__captionKey && window.__captionKey() === hintCurKey;
+      if (live && brick === hintOwnerBrick) { dismissHint(); return; } // tapping the SAME brick again toggles its hint off
+      if (hintShowing) { dismissHint(); } // a different brick (or a stale hint) → drop the current one, offer a fresh one below
       var stage = brick.closest('[id^="stage-"]');
       showRoomHint(stage ? stage.id.replace("stage-", "") : window.currentStageName);
+      hintOwnerBrick = brick;
     }
     brick.addEventListener("click", tapBrick);
     brick.addEventListener("keydown", function (e) {

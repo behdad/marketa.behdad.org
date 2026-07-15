@@ -25084,6 +25084,7 @@ async def localfont(name):
   var doomReady = false; // the runtime is up and callMain has started the main loop
   var doomPaused = true; // the main loop is currently paused (kept in sync by doomSync)
   var doomGlueSrc = null; // the glue's SOURCE TEXT, fetched once — each (re)boot runs it in a fresh function scope
+  var doomListeners = []; // window/document listeners SDL adds during callMain — captured so destroyDoom can remove them (else Ctrl+R etc. stay preventDefault'd after a kill)
   var doomStallTimer = null; // load watchdog — cleared once the runtime is up
   var DOOM_ASSETS = { // all self-hosted (pinned Chocolate-Doom wasm + FreeDoom — provenance in doom/README.md)
     glue: "doom/doom.js",
@@ -25142,7 +25143,16 @@ async def localfont(name):
       onRuntimeInitialized: function () {
         if (doomStallTimer) { clearTimeout(doomStallTimer); doomStallTimer = null; }
         doomLoadState = "ready";
-        try { (doomModule.callMain || window.callMain)(doomModule.arguments); } catch (e) { doomFail(); return; } // callMain is a global in this build
+        // SDL registers its keyboard/mouse listeners on window+document SYNCHRONOUSLY during main()
+        // (SDL_Init → video init, inside callMain). Capture exactly those by patching addEventListener
+        // just around callMain, so a Kill can removeEventListener them — otherwise the leaked keydown
+        // handler keeps calling preventDefault and swallows real browser shortcuts (Ctrl+R) after a kill.
+        doomListeners = [];
+        var tgs = [window, document], origAdd = tgs.map(function (t) { return t.addEventListener; });
+        tgs.forEach(function (t, i) { t.addEventListener = function (ty, fn, op) { doomListeners.push({ t: t, ty: ty, fn: fn, op: op }); return origAdd[i].call(t, ty, fn, op); }; });
+        try { (doomModule.callMain || window.callMain)(doomModule.arguments); } // callMain is a global in this build
+        catch (e) { tgs.forEach(function (t, i) { t.addEventListener = origAdd[i]; }); doomFail(); return; }
+        tgs.forEach(function (t, i) { t.addEventListener = origAdd[i]; }); // restore immediately — capture window closed
         doomReady = true;
         doomPaused = false; // callMain started the loop running; doomSync pauses it if we're not foreground
         doomSetMsg("");
@@ -25209,6 +25219,9 @@ async def localfont(name):
     if (doomModule) { try { doomModule.pauseMainLoop(); } catch (e) {} }
     doomModule = null; doomReady = false; doomPaused = true; doomLoadState = "";
     if (doomStallTimer) { clearTimeout(doomStallTimer); doomStallTimer = null; }
+    // pull SDL's leaked window/document key listeners so Ctrl+R (and other shortcuts) work again after the kill
+    doomListeners.forEach(function (L) { try { L.t.removeEventListener(L.ty, L.fn, L.op); } catch (e) {} });
+    doomListeners = [];
     // keep doomGlueSrc cached — the next open reboots from it in a fresh scope (see bootDoom)
     var oldCanvas = document.getElementById("canvas");
     if (oldCanvas && oldCanvas.parentNode) {

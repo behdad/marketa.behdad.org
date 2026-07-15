@@ -22816,7 +22816,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone()/phone(\"app\") · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone()/phone(\"app\") · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var CONSOLE_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -22847,6 +22847,7 @@ document.addEventListener("click", function (e) {
       cocktail: "cocktail(\"negroni\") — the bartender mixes that real drink from the bar's menu (partial name ok); cocktail() makes the featured signature drink. lights the party + steps behind the bar first if it's dark. he also mixes on his own while you watch the bar. alias: drink()",
       lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
       caption: "caption(\"text\") — overwrite the hint line above the scene with your own text and return the previous line; caption() reads the current line. a room change or hint reclaims it",
+      volume: "volume(v) — master volume over ALL the loft's audio (sound effects, songs, and every music bed), on a 0–1 scale (0 = mute, 1 = full, out-of-range clamps); returns the OLD level so it's restorable. volume() reports the current level. session-only — a reload resets to 1",
       candle: "candle() — both garden candles' lit states; candle(1) or candle(2) reads one; candle(1,true)/candle(2,false) lights or snuffs one and returns its previous state",
       butterfly: "butterfly() — step into the office and flutter the butterfly in the stained-glass window",
       water: "water() — the three garden watering bottles' levels (0–4 each); water(true) tips a full one over a plant and returns the new levels",
@@ -26573,11 +26574,18 @@ async def localfont(name):
       if (vk > 0) volIdx = vk;
     }
   } catch (e) {}
-  window.__songVolume = function () { return VOL_LEVELS[volIdx]; };
+  // __songVolume is the EFFECTIVE music level = the UI level (VOL_LEVELS[volIdx]) × the
+  // session master (window.__audioMaster, default 1, set by the console volume() command).
+  // Every music bed and every song reads this, so folding master in here is the single
+  // choke point that scales all HTMLMediaElement songs + all synth dance/piano/ambient beds
+  // (which multiply their own gain by __songVolume()). SFX one-shots don't read this — they
+  // get master through the sfxCtx destination-shadow gain instead (see getSfxCtx). The two
+  // paths are disjoint, so master is applied exactly once to everything.
+  window.__songVolume = function () { return VOL_LEVELS[volIdx] * (typeof window.__audioMaster === "number" ? window.__audioMaster : 1); };
   function applySongVolume() {
-    for (var vi = 0; vi < songAudios.length; vi++) if (songAudios[vi]) songAudios[vi].volume = VOL_LEVELS[volIdx];
+    for (var vi = 0; vi < songAudios.length; vi++) if (songAudios[vi]) songAudios[vi].volume = window.__songVolume();
     if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics(); // re-apply the current room's attenuation to the playing song
-    if (window.__vidCtrlMasterVolume) window.__vidCtrlMasterVolume(VOL_LEVELS[volIdx]); // the film follows the master
+    if (window.__vidCtrlMasterVolume) window.__vidCtrlMasterVolume(window.__songVolume()); // the film follows the master
   }
   // Two triggers share one volume: the office monitor's own speaker button (SVG, inside
   // the game scene) and #hunt-volume-btn (real HTML button, visible from any room). Both
@@ -26594,8 +26602,10 @@ async def localfont(name):
       if (mute) mute.style.display = (volIdx === 0) ? "" : "none";
     }
   }
-  function cycleVolume() {
-    volIdx = (volIdx + 1) % VOL_LEVELS.length;
+  // Re-push the current effective level to every live song + music bed. Called both when the
+  // UI level cycles AND when the console master volume() changes, so a master change instantly
+  // reaches everything already playing (new sounds pick it up at creation via __songVolume()).
+  window.__reapplyMusicLevels = function () {
     applySongVolume();
     if (window.__applyStarsVolume) window.__applyStarsVolume(); // the night-sky Satie bed follows the same level
     if (window.__applyTotoroMelodyVolume) window.__applyTotoroMelodyVolume(); // the totoro woodland melody follows it too
@@ -26610,6 +26620,10 @@ async def localfont(name):
     if (window.__applyPolkaMusicVolume) window.__applyPolkaMusicVolume(); // the garden-party polka bed follows it too
     if (window.__applyHorahMusicVolume) window.__applyHorahMusicVolume(); // the garden-party horah bed follows it too
     if (window.__applyWorkoutVolume) window.__applyWorkoutVolume(); // the workout bed follows it too
+  };
+  function cycleVolume() {
+    volIdx = (volIdx + 1) % VOL_LEVELS.length;
+    window.__reapplyMusicLevels();
     updateVolIcon();
     try { localStorage.setItem("songVolume", String(VOL_LEVELS[volIdx])); } catch (e) {}
   }
@@ -35843,6 +35857,21 @@ function getSfxCtx() {
       sfxCtx = new Ctx();
       // leftover per-effect close() calls must never kill the shared context
       sfxCtx.close = function () { return Promise.resolve(); };
+      // Session master volume for the SFX one-shots. Every effect connects to ctx.destination
+      // (some directly, some via pannedOut) — so we insert ONE master GainNode in front of the
+      // real destination and SHADOW ctx.destination with it (an own property overriding the
+      // prototype getter, same technique as the close() override above). Now every current and
+      // future `ctx.destination` connect — direct AND pannedOut — routes through this one node,
+      // with no call-site edits. The console volume() command scales its gain. (Beds/songs get
+      // master through __songVolume instead; the two paths are disjoint, so no double-scaling.)
+      try {
+        var realDest = sfxCtx.destination;
+        var mg = sfxCtx.createGain();
+        mg.gain.value = (typeof window.__audioMaster === "number" ? window.__audioMaster : 1);
+        mg.connect(realDest);
+        sfxCtx._volMaster = mg;
+        Object.defineProperty(sfxCtx, "destination", { value: mg, configurable: true });
+      } catch (e) {}
     } catch (e) { sfxCtxFailed = true; return null; }
   }
   try { if (sfxCtx.state !== "running") { var rp = sfxCtx.resume(); if (rp && rp.catch) rp.catch(function () {}); } } catch (e) {}
@@ -35856,6 +35885,16 @@ function getSfxCtx() {
   return sfxCtx;
 }
 var sfxIdleTimer = null;
+// Push the current session master onto the SFX context's shadow-destination gain (if the
+// context has been created yet — otherwise the next getSfxCtx() bakes it in at creation).
+window.__applySfxMaster = function () {
+  try {
+    if (sfxCtx && sfxCtx._volMaster) {
+      var m = (typeof window.__audioMaster === "number" ? window.__audioMaster : 1);
+      sfxCtx._volMaster.gain.setTargetAtTime(m, sfxCtx.currentTime, 0.02);
+    }
+  } catch (e) {}
+};
 // ...and the stream is released immediately when the page is genuinely unattended.
 function suspendSfxCtx() {
   try { if (sfxCtx && sfxCtx.state === "running") { var sp = sfxCtx.suspend(); if (sp && sp.catch) sp.catch(function () {}); } } catch (e) {}
@@ -44131,6 +44170,26 @@ function spawnDustMote(container) {
     else if (window.__setGardenParty) window.__setGardenParty(on, on);
     narrate(on, "🎉 party on — blacklight, confetti, a beat. dance.", "party over — the garden settles.");
     return prev;
+  };
+
+  // Master audio volume — one session-scoped level (0..1) over EVERYTHING the loft plays:
+  // SFX one-shots (via the sfxCtx shadow-destination gain), the songs, and every synth
+  // music/dance/ambient bed (via __songVolume, which folds this factor in). Getter/setter,
+  // same idiom as party()/caption(): volume() reports the current level; volume(v) sets it
+  // and returns the OLD one (chainable/restorable — `var v = volume(0); …; volume(v)`).
+  // Session-only: not persisted, a reload resets to 1 (full). The office monitor's own
+  // speaker button is a separate, persisted MUSIC-only level; this rides on top of it.
+  window.volume = function (v) {
+    var prev = (typeof window.__audioMaster === "number" ? window.__audioMaster : 1);
+    if (arguments.length === 0 || v == null) return prev; // getter: current master level
+    var nv = Number(v);
+    if (!isFinite(nv)) return prev; // ignore garbage, report unchanged
+    nv = Math.max(0, Math.min(1, nv)); // clamp to 0 (mute) .. 1 (full)
+    window.__audioMaster = nv;
+    if (window.__applySfxMaster) window.__applySfxMaster();       // scale the SFX master gain
+    if (window.__reapplyMusicLevels) window.__reapplyMusicLevels(); // re-push to live songs + beds
+    if (window.echo) window.echo("🔊 master volume " + Math.round(nv * 100) + "%");
+    return prev; // the OLD level, so it's restorable
   };
 
   window.reset = function () { // reset the whole loft, no confirmation dialog (you asked for it by typing it)

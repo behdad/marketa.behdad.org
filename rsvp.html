@@ -12814,6 +12814,8 @@ var T = {
     dpad_next: "Next room",
     dpad_day: "Daylight",
     dpad_night: "Night",
+    tab_ctx_reload: "Reload",
+    tab_ctx_close: "Close",
     laptop_ctx_end: "End call",
     mon_ctx_stop: "Stop",
     mon_ctx_uninstall: "Uninstall",
@@ -13227,6 +13229,8 @@ var T = {
     dpad_next: "Další místnost",
     dpad_day: "Denní světlo",
     dpad_night: "Noc",
+    tab_ctx_reload: "Načíst znovu",
+    tab_ctx_close: "Zavřít",
     laptop_ctx_end: "Ukončit hovor",
     mon_ctx_stop: "Zastavit",
     mon_ctx_uninstall: "Odinstalovat",
@@ -24776,6 +24780,7 @@ document.addEventListener("click", function (e) {
     if (f) f.classList.toggle("nav-dead", browserFwdDepth <= 0);
   }
   window.__browserFrameLoaded = function (frame) {
+    if (frame._reloadPending > 0) { frame._reloadPending--; paintBezelNav(); return; } // a Reload's blank+restore loads: swallowed so a reload never adds a back/forward step
     if (!frame._arrived) { frame._arrived = true; paintBezelNav(); return; } // arrival, not a step
     if (frame._expectBack) { frame._expectBack = false; } // the back/forward step itself reloads the frame
     else { browserNavDepth++; browserFwdDepth = 0; }
@@ -24813,6 +24818,7 @@ document.addEventListener("click", function (e) {
   var browserTabEls = {};
   var browserActiveTab = "loft";
   var browserPlusEl = null;
+  var browserClosedFixed = {}; // fixed tab ids closed for the session via the tab right-click menu; restored on power-off or a reopen onto an empty strip
   function findBrowserTab(tabId) {
     var all = BROWSER_TABS.concat(browserDynTabs);
     for (var i = 0; i < all.length; i++) if (all[i].id === tabId) return all[i];
@@ -24901,8 +24907,131 @@ document.addEventListener("click", function (e) {
     delete browserTabEls[t.id];
     if (t.el && t.el.parentNode) t.el.parentNode.removeChild(t.el);
     if (t.frame && t.frame.parentNode) t.frame.parentNode.removeChild(t.frame); // removal actually unloads the site
-    if (wasActive) setBrowserTab(idx > 0 ? browserDynTabs[idx - 1].id : BROWSER_TABS[BROWSER_TABS.length - 1].id);
+    if (wasActive) {
+      var fb = idx > 0 ? browserDynTabs[idx - 1].id : null; // an earlier visitor tab, else the last OPEN fixed tab
+      if (fb == null) for (var fi = BROWSER_TABS.length - 1; fi >= 0; fi--) if (browserTabEls[BROWSER_TABS[fi].id]) { fb = BROWSER_TABS[fi].id; break; }
+      if (fb != null) setBrowserTab(fb); else closeBrowser(); // every fixed tab was also closed → nothing left to show, close the app
+    }
   }
+  // ── tab right-click menu (Reload / Close) ──────────────────────────────────────────
+  // A local twin of the desktop dock's .mon-ctx menu (that helper is private to its own
+  // IIFE): same .mon-ctx look + dismiss wiring (click-away / Esc / scroll / blur / resize).
+  // Delegated on the tab strip so it also covers visitor + tabs; it fires ONLY over a real
+  // .browser-tab (never the + stub or bare strip) and stops the event so the monitor's
+  // app-level menu (Kill browser) never also fires for a tab target.
+  var tabMenuEl = null;
+  var TAB_RELOAD_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9.7 3.4 A4 4 0 1 0 10.3 6.2"/><path d="M10 1.8 L10 3.6 L8.2 3.6"/></svg>';
+  var TAB_CLOSE_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M3.4 3.4 L8.6 8.6 M8.6 3.4 L3.4 8.6"/></svg>';
+  function tabMenuTr(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || key; }
+  function closeTabMenu() {
+    if (!tabMenuEl) return;
+    if (tabMenuEl.parentNode) tabMenuEl.parentNode.removeChild(tabMenuEl);
+    tabMenuEl = null;
+    document.removeEventListener("keydown", tabMenuOnKey, true);
+    document.removeEventListener("mousedown", tabMenuOnAway, true);
+    document.removeEventListener("scroll", closeTabMenu, true);
+    window.removeEventListener("blur", closeTabMenu);
+    window.removeEventListener("resize", closeTabMenu);
+  }
+  function tabMenuOnAway(e) { if (tabMenuEl && !tabMenuEl.contains(e.target)) closeTabMenu(); }
+  function tabMenuOnKey(e) { if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); closeTabMenu(); } }
+  function tabMenuItem(cls, ico, label, fn) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = cls; b.setAttribute("role", "menuitem");
+    b.innerHTML = ico + "<span>" + label + "</span>";
+    b.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); closeTabMenu(); fn(); });
+    return b;
+  }
+  function openTabMenu(items, x, y) {
+    closeTabMenu();
+    tabMenuEl = document.createElement("div");
+    tabMenuEl.className = "mon-ctx"; tabMenuEl.setAttribute("role", "menu");
+    for (var i = 0; i < items.length; i++) tabMenuEl.appendChild(items[i]);
+    tabMenuEl.style.visibility = "hidden";
+    document.body.appendChild(tabMenuEl);
+    var r = tabMenuEl.getBoundingClientRect(); // clamp to the viewport on both axes
+    tabMenuEl.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 4)) + "px";
+    tabMenuEl.style.top = Math.max(4, Math.min(y, window.innerHeight - r.height - 4)) + "px";
+    tabMenuEl.style.visibility = "";
+    document.addEventListener("keydown", tabMenuOnKey, true);
+    document.addEventListener("mousedown", tabMenuOnAway, true);
+    document.addEventListener("scroll", closeTabMenu, true);
+    window.addEventListener("blur", closeTabMenu);
+    window.addEventListener("resize", closeTabMenu);
+  }
+  // the currently-open tabs, left-to-right: live fixed tabs (BROWSER_TABS order) then visitor tabs
+  function liveTabOrder() {
+    var arr = [];
+    for (var i = 0; i < BROWSER_TABS.length; i++) if (browserTabEls[BROWSER_TABS[i].id]) arr.push(BROWSER_TABS[i].id);
+    for (var j = 0; j < browserDynTabs.length; j++) if (browserTabEls[browserDynTabs[j].id]) arr.push(browserDynTabs[j].id);
+    return arr;
+  }
+  function indexOfFixedTab(id) { for (var i = 0; i < BROWSER_TABS.length; i++) if (BROWSER_TABS[i].id === id) return i; return -1; }
+  // where a restored fixed tab slots in to keep BROWSER_TABS order: before the next live
+  // fixed tab, else before the first visitor tab, else before the +
+  function fixedTabInsertRef(idx) {
+    for (var i = idx + 1; i < BROWSER_TABS.length; i++) if (browserTabEls[BROWSER_TABS[i].id]) return browserTabEls[BROWSER_TABS[i].id];
+    if (browserDynTabs.length && browserDynTabs[0].el) return browserDynTabs[0].el;
+    return browserPlusEl;
+  }
+  function anyFixedTabLive() { for (var i = 0; i < BROWSER_TABS.length; i++) if (browserTabEls[BROWSER_TABS[i].id]) return true; return false; }
+  function firstLiveTabId() { var o = liveTabOrder(); return o.length ? o[0] : null; }
+  function restoreFixedBrowserTabs() {
+    // closing a fixed tab is session state; a power-off (or a reopen onto an empty strip)
+    // brings them all back, rebuilt in BROWSER_TABS order so the strip reads loft · markéta · behdad · harfbuzz
+    if (browserTabsBar) BROWSER_TABS.forEach(function (t) {
+      if (browserClosedFixed[t.id] && !browserTabEls[t.id]) browserTabsBar.insertBefore(makeBrowserTabEl(t), fixedTabInsertRef(indexOfFixedTab(t.id)));
+    });
+    browserClosedFixed = {};
+  }
+  function reloadBrowserTab(tab) {
+    // dyn tabs own their frame → reload it in place; fixed tabs share the one frame → make
+    // the tab active first, then hard-reload it. about:blank → real url actually re-fetches
+    // (re-setting the same src is a no-op in some engines). _reloadPending swallows both
+    // load events so a reload stays neutral on the back/forward depth.
+    if (tab.dyn) {
+      if (!tab.frame || !tab.url) return; // an un-navigated new tab has no page to reload
+      var f = tab.frame, u = tab.url;
+      f._reloadPending = (f._reloadPending || 0) + 2;
+      f.setAttribute("src", "about:blank");
+      setTimeout(function () { f.setAttribute("src", u); }, 0);
+    } else {
+      if (browserActiveTab !== tab.id) setBrowserTab(tab.id);
+      if (!browserFrame || !tab.url) return;
+      browserFrame._reloadPending = (browserFrame._reloadPending || 0) + 2;
+      browserFrame.setAttribute("src", "about:blank");
+      setTimeout(function () { if (browserFrame) browserFrame.setAttribute("src", tab.url); }, 0);
+    }
+    playLaptopClickSound("office-monitor");
+  }
+  function closeBrowserTab(tab) {
+    if (!tab) return;
+    if (tab.dyn) { closeDynBrowserTab(tab); playLaptopClickSound("office-monitor"); return; } // visitor tab → the existing ✕ path
+    // fixed tab: close it for the session (power-off / reset restores it). Pick a neighbour
+    // to activate BEFORE removing it; if it was the last tab standing, close the whole app.
+    if (!browserTabEls[tab.id]) return; // already closed
+    var order = liveTabOrder(), pos = order.indexOf(tab.id);
+    var neighbor = pos < 0 ? null : (order[pos + 1] || order[pos - 1] || null);
+    var wasActive = browserActiveTab === tab.id;
+    browserClosedFixed[tab.id] = true;
+    if (tab.el && tab.el.parentNode) tab.el.parentNode.removeChild(tab.el);
+    delete browserTabEls[tab.id];
+    if (wasActive) { if (neighbor) setBrowserTab(neighbor); else closeBrowser(); }
+    playLaptopClickSound("office-monitor");
+  }
+  if (browserTabsBar) browserTabsBar.addEventListener("contextmenu", function (e) {
+    var tabEl = (e.target && e.target.closest) ? e.target.closest(".browser-tab") : null;
+    if (!tabEl || tabEl.classList.contains("browser-tab-plus")) return; // + stub / bare strip → let the monitor's app menu handle it
+    var tab = null, all = BROWSER_TABS.concat(browserDynTabs);
+    for (var i = 0; i < all.length; i++) if (all[i].el === tabEl) { tab = all[i]; break; }
+    if (!tab) return;
+    e.preventDefault();
+    e.stopPropagation(); // the tab menu wins over the monitor's app-level Kill menu for a tab target
+    openTabMenu([
+      tabMenuItem("ctx-reload", TAB_RELOAD_ICO, tabMenuTr("tab_ctx_reload"), function () { reloadBrowserTab(tab); }),
+      tabMenuItem("ctx-close", TAB_CLOSE_ICO, tabMenuTr("tab_ctx_close"), function () { closeBrowserTab(tab); })
+    ], e.clientX, e.clientY);
+  });
   function browserNavigate() {
     var tab = findBrowserTab(browserActiveTab);
     if (!tab || !tab.dyn || tab.url || !browserUrlIn) return;
@@ -24953,8 +25082,13 @@ document.addEventListener("click", function (e) {
     stopSaver();
     clearTimeout(saverTimer); saverTimer = null; // no screensaver over someone browsing
     // land on the asked-for tab (the dock tile defaults to markéta); its page starts
-    // loading behind the splash
-    setBrowserTab(tabId || "loft");
+    // loading behind the splash. Guarantee a live target first: if every fixed tab was
+    // closed this session, bring the strip back; if just the requested one was closed,
+    // land on the first live tab (closing a specific tab persists across an app close).
+    if (!anyFixedTabLive()) restoreFixedBrowserTabs();
+    var landTab = tabId || "loft";
+    if (!browserTabEls[landTab]) landTab = firstLiveTabId() || "loft";
+    setBrowserTab(landTab);
     // the chrome logo — retired from the boot sequence — flashes as the app's opening
     // splash: the screen state classes yield to it, then the frame takes the screen over
     // the caps desktop (so closing the browser always lands on the home screen)
@@ -25011,6 +25145,7 @@ document.addEventListener("click", function (e) {
       if (t.el && t.el.parentNode) t.el.parentNode.removeChild(t.el);
       if (t.frame && t.frame.parentNode) t.frame.parentNode.removeChild(t.frame);
     }
+    restoreFixedBrowserTabs(); // closed fixed tabs are session state too — a power-off brings the whole strip back
     if (!findBrowserTab(browserActiveTab)) browserActiveTab = "loft"; // the next boot's open lands somewhere real
     if (browserWrap) browserWrap.classList.remove("newtab", "dyn");
     if (browserUrlIn) browserUrlIn.value = "";

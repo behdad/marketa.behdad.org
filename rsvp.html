@@ -4327,6 +4327,38 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 @media (prefers-reduced-motion: reduce){
   #office-laptop.calling #laptop-call-ring{animation:none; opacity:0}
 }
+/* Prague call liveliness: while the garden call is LIVE (.connected, and not the Lübeck
+   scene) the three family members gently shift their weight so it never reads as a frozen
+   photo — the continuous sway is CSS (self-starts on .connected, self-stops on hangup).
+   The discrete "we're on camera" gestures on top (father's wink, grandma's nod, mother
+   producing a flower) are fired at RANDOM intervals by a JS scheduler that adds the
+   one-shot .winking/.nodding/.blooming classes — see the __startPragueLife IIFE. Each
+   gesture lives on a child node distinct from its figure's swaying parent group, so the
+   transforms nest and compose (no attribute-clobber, no cascade clash). */
+#laptop-prague-father, #laptop-prague-mother, #laptop-prague-grandma{transform-box:fill-box; transform-origin:bottom center}
+@keyframes prague-sway{0%,100%{transform:rotate(-1deg) translateY(0)} 50%{transform:rotate(1deg) translateY(-0.25px)}}
+#office-laptop.connected:not(.lueb) #laptop-prague-father{animation:prague-sway 4.3s ease-in-out -1.2s infinite}
+#office-laptop.connected:not(.lueb) #laptop-prague-mother{animation:prague-sway 5.1s ease-in-out -0.5s infinite}
+#office-laptop.connected:not(.lueb) #laptop-prague-grandma{animation:prague-sway 3.7s ease-in-out -2.1s infinite}
+/* father's wink: pupil squashes flat while the crease stroke flashes, both on .winking */
+.prague-wink-eye{transform-box:fill-box; transform-origin:center}
+@keyframes prague-wink-eye{0%,100%{transform:scaleY(1)} 28%,62%{transform:scaleY(0.06)}}
+@keyframes prague-wink-crease{0%,100%{opacity:0} 28%,62%{opacity:1}}
+.prague-wink.winking .prague-wink-eye{animation:prague-wink-eye .52s ease-in-out}
+.prague-wink.winking .prague-wink-crease{animation:prague-wink-crease .52s ease-in-out}
+/* grandma's nod: head wrapper dips twice, pivoting at the neck (bottom center) */
+#laptop-prague-grandma-nod{transform-box:fill-box; transform-origin:bottom center}
+@keyframes prague-nod{0%,100%{transform:translateY(0) rotate(0)} 22%{transform:translateY(0.5px) rotate(3.5deg)} 44%{transform:translateY(0) rotate(0)} 66%{transform:translateY(0.5px) rotate(3.5deg)}}
+#laptop-prague-grandma-nod.nodding{animation:prague-nod 1.15s ease-in-out}
+/* mother's flower: hidden by default; .blooming grows it up from her hand, holds, lowers */
+.prague-flower{opacity:0; transform-box:fill-box; transform-origin:bottom center}
+@keyframes prague-bloom{0%{opacity:0; transform:scale(0.2) translateY(1px)} 14%{opacity:1; transform:scale(1.12)} 24%{transform:scale(1)} 82%{opacity:1; transform:scale(1)} 100%{opacity:0; transform:scale(0.65) translateY(0.6px)}}
+.prague-flower.blooming{animation:prague-bloom 4.2s ease-in-out}
+@media (prefers-reduced-motion: reduce){
+  #laptop-prague-father, #laptop-prague-mother, #laptop-prague-grandma{animation:none !important; transform:none}
+  .prague-wink.winking .prague-wink-eye, .prague-wink.winking .prague-wink-crease, #laptop-prague-grandma-nod.nodding, .prague-flower.blooming{animation:none !important}
+  .prague-flower{opacity:0}
+}
 /* the two Lübeck kids singing the Tumbalalaika refrain while the call's live: each kid's
    mouth ellipse hides behind the resting smile until a .singing class lands on the group
    (added/removed by the singing scheduler in sync with which voice is on), then it opens
@@ -9925,7 +9957,12 @@ section{margin:1.9rem 0}
 <path d="M400.2 170.4 Q400.5 166.6 403.9 167.4 Q406.6 168.1 406.2 170.3 L405.7 169.1 Q403.2 167.9 400.9 169.6 Z" fill="#8d7f6d"/>
 <ellipse cx="403.2" cy="173.4" rx="1.1" ry="0.7" fill="#b8b0a4"/>
 <circle cx="402.1" cy="170.4" r="0.3" fill="#453a31"/>
-<circle cx="404.3" cy="170.4" r="0.3" fill="#453a31"/>
+<!-- his right eye winks on the live call: the pupil squashes flat while a matching crease
+     stroke flashes in — both driven by the same .winking one-shot so they stay in sync -->
+<g id="laptop-prague-father-wink" class="prague-wink">
+<circle class="prague-wink-eye" cx="404.3" cy="170.4" r="0.3" fill="#453a31"/>
+<path class="prague-wink-crease" d="M403.7 170.5 Q404.3 171 404.9 170.5" stroke="#453a31" stroke-width="0.22" fill="none" stroke-linecap="round" opacity="0"/>
+</g>
 <path d="M402.3 172.2 Q403.2 172.8 404.1 172" stroke="#6d4a33" stroke-width="0.35" fill="none" stroke-linecap="round"/>
 </g>
 <!-- her mother: nearly his height — silver hair pulled back, dark sunglasses, cream trench -->
@@ -9940,6 +9977,20 @@ section{margin:1.9rem 0}
 <rect x="431.5" y="171.7" width="1.7" height="1.2" rx="0.5" fill="#2a2622"/>
 <path d="M430.8 172.25 L431.5 172.25" stroke="#2a2622" stroke-width="0.3"/>
 <path d="M430.3 174.4 Q431.2 175.1 432.1 174.4" stroke="#6d4a33" stroke-width="0.35" fill="none" stroke-linecap="round"/>
+<!-- a little garden flower she "produces" for the camera now and then: hidden until a
+     JS-scheduled .blooming one-shot grows it up from her hand, holds, then lowers it -->
+<g id="laptop-prague-mother-flower" class="prague-flower">
+<path d="M431.5 187.2 L431.7 183.2" stroke="#5d8f4a" stroke-width="0.5" fill="none" stroke-linecap="round"/>
+<path d="M431.6 185.4 Q430.6 184.9 430 185.2 M431.6 186 Q432.6 185.5 433.2 185.8" stroke="#5d8f4a" stroke-width="0.32" fill="none" stroke-linecap="round"/>
+<circle cx="430.7" cy="187.5" r="0.85" fill="#e8bd97"/>
+<circle cx="432.6" cy="187.5" r="0.85" fill="#e8bd97"/>
+<circle cx="430.6" cy="182.5" r="0.72" fill="#e8a8b8"/>
+<circle cx="432.6" cy="182.5" r="0.72" fill="#e8a8b8"/>
+<circle cx="431.6" cy="181.5" r="0.72" fill="#e8a8b8"/>
+<circle cx="430.9" cy="183.7" r="0.72" fill="#e0919f"/>
+<circle cx="432.3" cy="183.7" r="0.72" fill="#e0919f"/>
+<circle cx="431.6" cy="182.8" r="0.68" fill="#f4d03f"/>
+</g>
 </g>
 <!-- her grandmother, front and center: shoulder-height to the tall pair — short curly
      sandy hair, dark sunglasses, navy-striped white top, blue-teal silk scarf -->
@@ -9948,6 +9999,9 @@ section{margin:1.9rem 0}
 <path d="M413.8 187.8 L420.2 187.8 M413.8 190 L420.2 190 M413.8 192.2 L420.2 192.2 M413.8 194.4 L420.2 194.4" stroke="#33456e" stroke-width="0.28" fill="none"/>
 <path d="M415.7 184.3 Q417 186.1 418.3 184.3 L417.6 186.9 L416.4 186.9 Z" fill="#3e7fa0"/>
 <circle cx="417" cy="185.1" r="0.55" fill="#4fa8a0"/>
+<!-- her head sits in its own wrapper so the live-call "nod" (a JS-scheduled .nodding
+     one-shot) pivots at the neck without disturbing her swaying torso -->
+<g id="laptop-prague-grandma-nod">
 <circle cx="417" cy="180.8" r="2.6" fill="#e3b493"/>
 <path d="M414.3 181 Q413.9 178.3 415.8 178.2 Q416.2 177.3 417.5 177.6 Q419 177.2 419.4 178.4 Q420.3 178.9 419.8 181 Q419.4 179.2 417 179 Q414.8 179.2 414.3 181 Z" fill="#d8bc8a"/>
 <circle cx="414.5" cy="179.7" r="0.65" fill="#d8bc8a"/>
@@ -9956,6 +10010,7 @@ section{margin:1.9rem 0}
 <rect x="417.35" y="180.1" width="1.65" height="1.15" rx="0.5" fill="#2a2622"/>
 <path d="M416.65 180.6 L417.35 180.6" stroke="#2a2622" stroke-width="0.3"/>
 <path d="M416.1 182.5 Q417 183.2 417.9 182.5" stroke="#6d4a33" stroke-width="0.35" fill="none" stroke-linecap="round"/>
+</g>
 </g>
 </g>
 <!-- remote view (Lübeck): her sister's family in their bright flat, drawn from a real
@@ -20059,6 +20114,7 @@ document.addEventListener("click", function (e) {
       // it isn't that call's (the calls are mutually exclusive, so no laptop bed survives)
       if (!(window.__tehranCallLive && window.__tehranCallLive())) stopCallAmbient();
       if (window.__stopLuebSinging) window.__stopLuebSinging(); // Lübeck kids' serenade never outlives the laptop call
+      if (window.__stopPragueLife) window.__stopPragueLife(); // ...and neither do the Prague family's gestures
       laptop.classList.remove("updating", "progress", "rebooting", "sweet", "calling", "connecting", "connected", "lueb");
     }
     // The gag: an open Mac decides to install a software update and reboot — now framed
@@ -20131,6 +20187,7 @@ document.addEventListener("click", function (e) {
         playCallLaughSound();
         startCallAmbient(callCallee === "lueb" ? "tehran" : "prague");
         if (callCallee === "lueb" && window.__startLuebSinging) window.__startLuebSinging(); // the two kids serenade
+        if (callCallee === "prague" && window.__startPragueLife) window.__startPragueLife(); // the garden family comes to life (gate no-ops under reduced motion)
         return;
       }
       playPhoneRingSound();
@@ -20150,6 +20207,8 @@ document.addEventListener("click", function (e) {
         startCallAmbient(callCallee === "lueb" ? "tehran" : "prague");
         // Lübeck's two kids sing the Tumbalalaika refrain over the bed until the call ends
         if (callCallee === "lueb" && window.__startLuebSinging) window.__startLuebSinging();
+        // Prague's family stir with warm on-camera gestures (wink / nod / a produced flower)
+        if (callCallee === "prague" && window.__startPragueLife) window.__startPragueLife();
       }, 3400));
     }
     var callHangingUp = false;
@@ -20159,6 +20218,7 @@ document.addEventListener("click", function (e) {
       var wasConnected = laptop.classList.contains("connected");
       stopCallAmbient();
       if (window.__stopLuebSinging) window.__stopLuebSinging(); // silence the kids the instant we hang up, before the goodbye
+      if (window.__stopPragueLife) window.__stopPragueLife(); // still the Prague family's gestures the instant we hang up too
       function dropLine() {
         playCallHangupSound();
         laptop.classList.remove("calling", "connecting", "connected", "lueb");
@@ -35241,6 +35301,73 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
   window.__updateLuebSinging = update; // the shared focus watcher + goToStage re-check the gate through this
   document.addEventListener("visibilitychange", update);
 })();
+// ── PRAGUE CALL LIVELINESS (visual) ──────────────────────────────────────────────
+// While the laptop's Prague garden call is live, the three family members do occasional
+// warm "we're on camera" gestures at RANDOM intervals: the father winks, the grandmother
+// nods, the mother produces a little flower. (Their continuous weight-shift sway is pure
+// CSS, self-gated on .connected — see the prague-sway rules.) Each gesture toggles a
+// one-shot class the CSS animates, cleared by a safety timer. Lifecycle mirrors the Lübeck
+// singer: a wanted flag + a room/visibility/focus/reduced-motion gate, torn down on
+// hangup, on leaving the office, and on tab-hide, leaving no timers or stuck classes.
+(function () {
+  var laptop = document.getElementById("office-laptop");
+  if (!laptop) return;
+  var wanted = false, active = false, timers = [];
+  function reduce() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+  // gate off DOM truth (not just the flag): the Prague scene must actually be the live one,
+  // the office on-screen, the tab visible + focused, and motion allowed
+  function want() {
+    return wanted && laptop.classList.contains("connected") && !laptop.classList.contains("lueb") &&
+           window.currentStageName === "office" && !document.hidden && document.hasFocus() && !reduce();
+  }
+  function addTimer(fn, ms) {
+    var id = setTimeout(function () { var i = timers.indexOf(id); if (i >= 0) timers.splice(i, 1); fn(); }, ms);
+    timers.push(id); return id;
+  }
+  // one gesture: add its one-shot class, then clear it after the animation would have ended
+  function fire(id, cls, ms) {
+    var el = document.getElementById(id);
+    if (!el || el.classList.contains(cls)) return;
+    el.classList.add(cls);
+    addTimer(function () { el.classList.remove(cls); }, ms);
+  }
+  // each gesture reschedules itself on its own random cadence, so the three interleave
+  // freely and never lock into a visible pattern; the gaps keep it from reading busy
+  function loop(run, min, span) {
+    return function tick() {
+      if (!active) return;
+      if (want()) run();
+      addTimer(tick, (min + Math.random() * span) * 1000);
+    };
+  }
+  var tickWink  = loop(function () { fire("laptop-prague-father-wink", "winking", 640); }, 5, 7);
+  var tickNod   = loop(function () { fire("laptop-prague-grandma-nod", "nodding", 1250); }, 6, 7);
+  var tickBloom = loop(function () { fire("laptop-prague-mother-flower", "blooming", 4400); }, 12, 10);
+  function start() {
+    if (active) return;
+    active = true;
+    // stagger the first fire of each so they don't all pop the instant the call connects
+    addTimer(tickWink,  (1.5 + Math.random() * 3) * 1000);
+    addTimer(tickNod,   (2.5 + Math.random() * 4) * 1000);
+    addTimer(tickBloom, (4 + Math.random() * 5) * 1000);
+  }
+  function stop() {
+    active = false;
+    timers.forEach(clearTimeout); timers = [];
+    // drop any one-shot class left mid-gesture, so every teardown path lands clean
+    ["laptop-prague-father-wink", "laptop-prague-grandma-nod", "laptop-prague-mother-flower"].forEach(function (id, i) {
+      var el = document.getElementById(id);
+      if (el) el.classList.remove(["winking", "nodding", "blooming"][i]);
+    });
+  }
+  function update() { if (want() && !active) start(); else if (!want() && active) stop(); }
+  window.__startPragueLife = function () { wanted = true; update(); };
+  window.__stopPragueLife = function () { wanted = false; update(); };
+  window.__updatePragueLife = update; // goToStage + the focus/visibility watchers re-check the gate here
+  document.addEventListener("visibilitychange", update);
+  window.addEventListener("focus", update);
+  window.addEventListener("blur", update);
+})();
 // Hanging up: two quick descending tones, the mirror image of playPhoneRingSound's
 // ascending ring — a "call ended" cue distinct from every other laptop sound here.
 function playCallHangupSound(panId) {
@@ -37379,6 +37506,7 @@ function spawnDustMote(container) {
     if (window.__updateACHum) window.__updateACHum(name, ROOM_FADE); // AC hum only in garden + balcony, panned to that room's unit
     if (window.__updateRadioSound) window.__updateRadioSound(name === "kitchen", ROOM_FADE); // radio audible only in the kitchen
     if (window.__updateLuebSinging) window.__updateLuebSinging(); // leaving the office stops the Lübeck kids' serenade (room-gated)
+    if (window.__updatePragueLife) window.__updatePragueLife(); // ...and pauses the Prague family's gestures off-screen (room-gated)
     if (window.__updateKettleHum) window.__updateKettleHum(name === "kitchen", ROOM_FADE); // kettle hum only in the kitchen
     if (window.__updateFireSound) window.__updateFireSound(name === "cuddly", ROOM_FADE); // fire crackle only in the cuddly nook
     if (window.__updateAquaSound) window.__updateAquaSound(name === "cuddly", ROOM_FADE); // aquarium bed only in the cuddly nook

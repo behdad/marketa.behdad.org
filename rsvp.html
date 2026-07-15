@@ -34807,16 +34807,29 @@ window.__updateCallAmbient = function () {
 // overlapping-round patterns with playful pauses so it never reads as a fixed loop, and
 // keeps going until the call ends. See the module below start/stop/gate at the bottom.
 var LUEB_SVGNS = "http://www.w3.org/2000/svg";
-var LUEB_REFRAIN_DUR = 3.32; // seconds for one refrain (rhythm is voice-independent)
 // vowel formants [F1,F2,F3] (Hz, base — scaled per voice by pitchMul p)
 var LUEB_VOW = { u: [360, 820, 2400], a: [800, 1350, 2600], i: [320, 2300, 3050] };
-// one refrain: c=onset consonant, v=vowel, s=semitones above the tonic, d=note length, gap=pause after
+// one refrain: c=onset consonant, v=vowel, s=semitones above the tonic, d=note length, gap=pause after.
+// This is the base (owner-approved) shape — the words/rhythm skeleton; buildLuebRefrain (below,
+// in the IIFE) clones it per refrain and perturbs pitch/tempo/length so no two are identical.
 var LUEB_SYL = [
   { c: "t", v: "u",  s: 7, d: 0.22 }, { c: "b", v: "a", s: 7, d: 0.22 }, { c: "l", v: "a", s: 7, d: 0.28, gap: 0.10 },
   { c: "t", v: "u",  s: 7, d: 0.22 }, { c: "b", v: "a", s: 7, d: 0.22 }, { c: "l", v: "a", s: 7, d: 0.28, gap: 0.10 },
   { c: "t", v: "u",  s: 7, d: 0.22 }, { c: "b", v: "a", s: 8, d: 0.22 }, { c: "l", v: "a", s: 7, d: 0.22 },
   { c: "l", v: "ai", s: 5, d: 0.40 }, { c: "k", v: "a", s: 3, d: 0.50 }
 ];
+// Melodic variants of the refrain (just the per-syllable semitone contour — same words/rhythm
+// skeleton as LUEB_SYL). All keep "tumbala tumbala" as chant-like repeats and only bend the
+// third bar + cadence, so each still reads as Tumbalalaika. The base contour [0] is weighted
+// heaviest in the picker (it's the accepted one — the ask is variation, not a new tune).
+var LUEB_MELODIES = [
+  [7, 7, 7,  7, 7, 7,  7, 8, 7,  5, 3],   // base (owner-approved)
+  [7, 7, 7,  7, 7, 7,  8, 7, 5,  3, 0],   // third bar steps down, cadence lands on the tonic
+  [7, 7, 7,  7, 7, 7,  7, 9, 7,  5, 3],   // a brighter reach on the middle "la"
+  [7, 7, 7,  7, 7, 7,  8, 8, 7,  5, 2]    // held sixth in the turn, cadence to degree 2
+];
+// weighted bag: base contour appears most often
+var LUEB_MEL_BAG = [0, 0, 0, 0, 0, 1, 1, 2, 2, 3];
 // Build ONE sung refrain for one voice into dest at absolute time t0. Mirrors the
 // playILoveYouSound recipe (detuned-saw glottal source → spectral-tilt → 5 gliding
 // bandpass formants + a shared master envelope with per-syllable consonant dips), just
@@ -34825,93 +34838,128 @@ var LUEB_SYL = [
 // formant/filter centre (vocal-tract size) — kept SEPARATE so the two kids sit clearly
 // apart in pitch (girl ~a sixth above the boy) yet both read as small children; gain
 // scales the whole voice.
-function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track) {
+function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
+  syl = syl || LUEB_SYL; wob = wob || {};
+  var vibRate = wob.vibRate || 1, vibDepth = wob.vibDepth || 1;
+  var driftDepth = wob.drift || 0;    // slow wandering pitch drift (cents) — kills the dead-steady tone
+  var mistune = wob.detune || 0;      // small whole-voice static mistune (cents), so the two kids aren't phase-locked
+  var noteImp = wob.noteImp || 0;     // per-note pitch imperfection (cents)
+  var onsetJit = wob.onset || 0;      // per-note timing looseness (s)
+  gain *= (wob.loud || 1);
   var BASE = 262; // tonic base pitch (Hz), scaled by pf and the per-note semitone
   var onsets = [], tt = t0 + 0.02;
-  for (var i = 0; i < LUEB_SYL.length; i++) { onsets.push(tt); tt += LUEB_SYL[i].d + (LUEB_SYL[i].gap || 0); }
-  var end = tt + 0.12;
-  // glottal source: two detuned sawtooths stepping the melody, de-buzzed by a spectral-tilt lowpass
+  for (var i = 0; i < syl.length; i++) {
+    onsets.push(i === 0 ? tt : tt + (Math.random() - 0.5) * 2 * onsetJit); // note 0 stays on the downbeat
+    tt += syl[i].d + (syl[i].gap || 0);
+  }
+  var end = tt + 0.16;
+  // glottal source: two detuned sawtooths stepping the melody, softened below into a rounder tone
   var source = ctx.createGain(); source.gain.value = 1;
-  var vib = ctx.createOscillator(); vib.type = "sine"; vib.frequency.value = 5.4; // a touch of vibrato keeps it alive
-  var vibGain = ctx.createGain(); vibGain.gain.value = 6; // cents
+  // pitch is never dead-steady: fast vibrato + a slow independent drift, both summed into detune
+  var vib = ctx.createOscillator(); vib.type = "sine"; vib.frequency.value = (5.1 + Math.random() * 0.7) * vibRate;
+  var vibGain = ctx.createGain(); vibGain.gain.value = 6.5 * vibDepth; // cents
   vib.connect(vibGain);
+  var driftOsc = ctx.createOscillator(); driftOsc.type = "sine"; driftOsc.frequency.value = 0.45 + Math.random() * 0.55;
+  var driftGain = ctx.createGain(); driftGain.gain.value = driftDepth; // cents
+  driftOsc.connect(driftGain);
   [-6, 7].forEach(function (dt) {
-    var osc = ctx.createOscillator(); osc.type = "sawtooth"; osc.detune.value = dt;
-    vibGain.connect(osc.detune);
-    for (var i = 0; i < LUEB_SYL.length; i++) {
-      var f = BASE * pf * Math.pow(2, LUEB_SYL[i].s / 12);
+    var osc = ctx.createOscillator(); osc.type = "sawtooth"; osc.detune.value = dt + mistune;
+    vibGain.connect(osc.detune); driftGain.connect(osc.detune);
+    for (var i = 0; i < syl.length; i++) {
+      var cents = (Math.random() - 0.5) * 2 * noteImp;                    // never perfectly in tune
+      var f = BASE * pf * Math.pow(2, (syl[i].s + cents / 100) / 12);
       if (i === 0) osc.frequency.setValueAtTime(f, t0);
-      else osc.frequency.linearRampToValueAtTime(f, onsets[i] + 0.02); // slight portamento between notes
+      else osc.frequency.linearRampToValueAtTime(f, onsets[i] + 0.05);    // longer portamento reads as legato, not stepped
     }
     osc.connect(source);
     osc.start(t0); osc.stop(end); track(osc);
   });
   vib.start(t0); vib.stop(end); track(vib);
-  var tilt = ctx.createBiquadFilter(); tilt.type = "lowpass"; tilt.frequency.value = 2600 * ff; tilt.Q.value = 0.5;
-  source.connect(tilt);
-  // master amplitude: a vowel bump per syllable with a dip at each consonant (the articulation)
+  driftOsc.start(t0); driftOsc.stop(end); track(driftOsc);
+  // two cascaded lowpasses round the buzz off the saws (24 dB/oct — gentler, warmer than one)
+  var tilt = ctx.createBiquadFilter(); tilt.type = "lowpass"; tilt.frequency.value = 2100 * ff; tilt.Q.value = 0.3;
+  var tilt2 = ctx.createBiquadFilter(); tilt2.type = "lowpass"; tilt2.frequency.value = 3000 * ff; tilt2.Q.value = 0.3;
+  source.connect(tilt); tilt.connect(tilt2);
+  // master amplitude: a vowel bump per syllable with a dip at each consonant (the articulation),
+  // with a gentle attack/release so syllables breathe into each other instead of snapping
   var master = ctx.createGain(); var m = master.gain; m.setValueAtTime(0.0004, t0);
-  var CONS_DIP = { t: 0.004, k: 0.005, b: 0.02, l: 0.03 };
-  for (var i = 0; i < LUEB_SYL.length; i++) {
-    var syl = LUEB_SYL[i], on = onsets[i];
-    var dip = (CONS_DIP[syl.c] || 0.02) * gain;
-    var peak = (i === 9 ? 0.082 : 0.072) * gain; // "lai" a hair louder as the phrase turns
-    m.exponentialRampToValueAtTime(Math.max(0.0004, dip), on);          // consonant constriction
-    m.exponentialRampToValueAtTime(peak, on + 0.035);                    // vowel onset
-    m.setValueAtTime(peak, on + syl.d * 0.62);                           // sustain
+  var CONS_DIP = { t: 0.004, k: 0.005, b: 0.02, l: 0.035 }; // l is voiced — don't slam it shut (more legato)
+  for (var i = 0; i < syl.length; i++) {
+    var s = syl[i], on = onsets[i];
+    var dip = (CONS_DIP[s.c] || 0.02) * gain;
+    var peak = (s.v === "ai" ? 0.082 : 0.072) * gain * (1 + (Math.random() - 0.5) * 0.12); // "lai" turn a hair louder; slight per-note swell
+    m.exponentialRampToValueAtTime(Math.max(0.0004, dip), on);           // consonant constriction
+    m.exponentialRampToValueAtTime(peak, on + 0.045);                    // softer vowel onset (was 0.035)
+    m.setValueAtTime(peak, on + s.d * 0.58);                             // sustain, then it eases toward the next dip
   }
   m.exponentialRampToValueAtTime(0.0004, end);
   master.connect(dest);
+  // a slow shared formant "wander" — a real vocal tract is never frozen; nudges every formant a few Hz
+  var fWander = ctx.createOscillator(); fWander.type = "sine"; fWander.frequency.value = 1.1 + Math.random() * 0.9;
+  fWander.start(t0); fWander.stop(end); track(fWander);
   // five parallel bandpass formants gliding through the vowels; F4/F5 fixed + faint for warmth
   [
-    { q: 8,  g: 1.0,   idx: 0 },
-    { q: 9,  g: 0.5,   idx: 1 },
-    { q: 11, g: 0.16,  idx: 2 },
-    { q: 16, g: 0.09,  fixed: 3600 },
-    { q: 17, g: 0.05,  fixed: 4600 }
+    { q: 7,  g: 1.0,   idx: 0, wob: 10 },
+    { q: 8,  g: 0.5,   idx: 1, wob: 16 },
+    { q: 10, g: 0.16,  idx: 2, wob: 20 },
+    { q: 15, g: 0.09,  fixed: 3600 },
+    { q: 16, g: 0.05,  fixed: 4600 }
   ].forEach(function (f) {
     var bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = f.q;
     if (f.fixed != null) { bp.frequency.value = f.fixed * ff; }
     else {
-      bp.frequency.setValueAtTime(LUEB_VOW[LUEB_SYL[0].v === "ai" ? "a" : LUEB_SYL[0].v][f.idx] * ff, t0);
-      for (var i = 0; i < LUEB_SYL.length; i++) {
-        var syl = LUEB_SYL[i], on = onsets[i];
-        if (syl.v === "ai") { // diphthong: start /a/, glide to /i/ across the note
-          bp.frequency.linearRampToValueAtTime(LUEB_VOW.a[f.idx] * ff, on + 0.04);
-          bp.frequency.linearRampToValueAtTime(LUEB_VOW.i[f.idx] * ff, on + syl.d * 0.9);
+      bp.frequency.setValueAtTime(LUEB_VOW[syl[0].v === "ai" ? "a" : syl[0].v][f.idx] * ff, t0);
+      for (var i = 0; i < syl.length; i++) {
+        var s = syl[i], on = onsets[i];
+        if (s.v === "ai") { // diphthong: hold /a/ a beat, then glide to /i/ — reads as "ah-ee", not a slur
+          bp.frequency.linearRampToValueAtTime(LUEB_VOW.a[f.idx] * ff, on + 0.05);
+          bp.frequency.linearRampToValueAtTime(LUEB_VOW.a[f.idx] * ff, on + s.d * 0.45);
+          bp.frequency.linearRampToValueAtTime(LUEB_VOW.i[f.idx] * ff, on + s.d * 0.92);
         } else {
-          var target = LUEB_VOW[syl.v][f.idx] * ff;
-          if (syl.c === "l" && f.idx === 1) { // lateral: dip F2 low so it reads as an /l/, not a hole
-            bp.frequency.linearRampToValueAtTime(1050 * ff, on + 0.02);
-            bp.frequency.linearRampToValueAtTime(target, on + 0.09);
+          var target = LUEB_VOW[s.v][f.idx] * ff;
+          if (s.c === "l" && f.idx === 1) { // lateral: dip F2 low so it reads as an /l/, not a hole
+            bp.frequency.linearRampToValueAtTime(1050 * ff, on + 0.03);
+            bp.frequency.linearRampToValueAtTime(target, on + 0.11);     // then coarticulate up to the vowel
           } else {
-            bp.frequency.linearRampToValueAtTime(target, on + 0.04);
+            bp.frequency.linearRampToValueAtTime(target, on + 0.055);    // gentler glides = coarticulation, not snapping
           }
         }
       }
+      var fwg = ctx.createGain(); fwg.gain.value = f.wob * ff;           // a few Hz of living-tract wander
+      fWander.connect(fwg); fwg.connect(bp.frequency);
     }
     var fg = ctx.createGain(); fg.gain.value = f.g;
-    tilt.connect(bp); bp.connect(fg); fg.connect(master);
+    tilt2.connect(bp); bp.connect(fg); fg.connect(master);
   });
+  // a thin breath/aspiration layer under the voiced tone (shaped by master's envelope) — takes the
+  // dryness off so it isn't a bone-dry synth; barely audible, just enough to read as a real little voice
+  var blen = Math.floor(ctx.sampleRate * 0.4);
+  var bbuf = ctx.createBuffer(1, blen, ctx.sampleRate), bd = bbuf.getChannelData(0);
+  for (var k = 0; k < blen; k++) bd[k] = Math.random() * 2 - 1;
+  var breath = ctx.createBufferSource(); breath.buffer = bbuf; breath.loop = true;
+  var bf = ctx.createBiquadFilter(); bf.type = "bandpass"; bf.frequency.value = 1900 * ff; bf.Q.value = 0.5;
+  var bg = ctx.createGain(); bg.gain.value = 0.05;
+  breath.connect(bf); bf.connect(bg); bg.connect(master);
+  breath.start(t0); breath.stop(end); track(breath);
   // consonant transients: short filtered-noise bursts for the plosives (t/k unvoiced, b voiced-low)
   var nlen = Math.floor(ctx.sampleRate * 0.05);
   var nbuf = ctx.createBuffer(1, nlen, ctx.sampleRate), nd = nbuf.getChannelData(0);
   for (var j = 0; j < nlen; j++) nd[j] = Math.random() * 2 - 1;
-  LUEB_SYL.forEach(function (syl, i) {
-    if (syl.c !== "t" && syl.c !== "k" && syl.c !== "b") return;
-    var on = onsets[i], dur = 0.024;
+  syl.forEach(function (s, i) {
+    if (s.c !== "t" && s.c !== "k" && s.c !== "b") return;
+    var on = onsets[i], dur = 0.022;
     var ns = ctx.createBufferSource(); ns.buffer = nbuf;
     var nf = ctx.createBiquadFilter();
-    if (syl.c === "b") { nf.type = "lowpass"; nf.frequency.value = 320 * ff; }
-    else { nf.type = "bandpass"; nf.frequency.value = (syl.c === "t" ? 3000 : 1700) * ff; nf.Q.value = 0.8; }
+    if (s.c === "b") { nf.type = "lowpass"; nf.frequency.value = 320 * ff; }
+    else { nf.type = "bandpass"; nf.frequency.value = (s.c === "t" ? 3100 : 1800) * ff; nf.Q.value = 0.8; }
     var ng = ctx.createGain();
     ng.gain.setValueAtTime(0.0001, on - 0.012);
-    ng.gain.exponentialRampToValueAtTime(0.03 * gain, on);
+    ng.gain.exponentialRampToValueAtTime((s.c === "b" ? 0.028 : 0.034) * gain, on); // crisper unvoiced pop
     ng.gain.exponentialRampToValueAtTime(0.0001, on + dur);
     ns.connect(nf); nf.connect(ng); ng.connect(dest);
     ns.start(on - 0.012); ns.stop(on + dur + 0.01); track(ns);
   });
-  return LUEB_REFRAIN_DUR;
+  return end - t0;
 }
 (function () {
   var wanted = false, active = false;         // wanted = a Lübeck call is live; active = the bed is producing
@@ -34952,50 +35000,131 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track) {
       a.onfinish = function () { if (t.parentNode) t.remove(); };
     } else { addTimer(function () { if (t.parentNode) t.remove(); }, 1600); }
   }
-  // one voice sings a refrain starting at absolute time startT: schedule the audio, drive
-  // that kid's mouth class over the phrase, and float a couple of ♪ notes from their head
-  function singVoiceAt(ctx, voice, startT, gain) {
-    singLuebRefrain(ctx, bus, startT, voice.pf, voice.ff, gain, track);
+  // Build ONE refrain's note data per phrase (shared by both voices in unison / round). Clones the
+  // base skeleton and perturbs it so no two refrains are the same: a (base-weighted) melodic variant,
+  // a small transpose, a tempo scaling (rarely a playful rush or drawl), per-syllable length jitter,
+  // an occasional final-note fermata, and a rare passing ornament. Under reduce it returns the base,
+  // untouched (calm + repeatable). Returns { syl, dur }.
+  var refrainCount = 0;
+  function buildLuebRefrain() {
+    refrainCount++;
+    var mel = LUEB_MELODIES[0], transpose = 0, tempo = 1, jit = 0, elong = 1;
+    if (!reduce()) {
+      mel = LUEB_MELODIES[LUEB_MEL_BAG[Math.floor(Math.random() * LUEB_MEL_BAG.length)]];
+      transpose = [-2, -1, 0, 0, 0, 1, 2, 3][Math.floor(Math.random() * 8)];
+      var r = Math.random();
+      tempo = r < 0.1  ? (0.7 + Math.random() * 0.1)     // rare playful little rush
+            : r > 0.9  ? (1.18 + Math.random() * 0.14)   // rare drawn-out, sleepy
+            :            (0.9 + Math.random() * 0.2);     // normal give-and-take
+      jit = 0.12;                                         // ±12% per-syllable length
+      elong = Math.random() < 0.28 ? (1.25 + Math.random() * 0.3) : 1; // sometimes a fermata on "-ka"
+    }
+    var syl = [], sumD = 0, sumGap = 0, last = LUEB_SYL.length - 1;
+    for (var i = 0; i < LUEB_SYL.length; i++) {
+      var b = LUEB_SYL[i];
+      var d = b.d * tempo * (1 + (Math.random() - 0.5) * jit);
+      if (i === last) d *= elong;
+      var gap = (b.gap || 0) * tempo;
+      var semi = mel[i] + transpose;
+      if (!reduce() && i < 9 && b.v !== "ai" && Math.random() < 0.06) semi += 2; // rare passing ornament
+      syl.push({ c: b.c, v: b.v, s: semi, d: d, gap: gap });
+      sumD += d; sumGap += gap;
+    }
+    return { syl: syl, dur: 0.02 + sumD + sumGap + 0.16 };
+  }
+  // Per-voice, per-refrain micro-imperfection so it's two real kids, not a sequencer. Zeroed under
+  // reduce. The registers themselves (pf/ff on GIRL/BOY) stay fixed — this only wobbles within a voice.
+  function wobble() {
+    if (reduce()) return { detune: 0, vibRate: 1, vibDepth: 1, drift: 0, noteImp: 0, onset: 0, loud: 1 };
+    return {
+      detune: (Math.random() - 0.5) * 14,   // cents — slight, so the two kids aren't dead in tune with each other
+      vibRate: 0.85 + Math.random() * 0.35,
+      vibDepth: 0.7 + Math.random() * 0.8,
+      drift: 6 + Math.random() * 8,          // cents of slow wander
+      noteImp: 6 + Math.random() * 6,        // cents of per-note imperfection
+      onset: 0.014,                          // up to ±14 ms of timing looseness per note
+      loud: 0.92 + Math.random() * 0.16
+    };
+  }
+  // one voice sings a refrain (syl/dur) starting at absolute time startT with its own wobble: schedule
+  // the audio, drive that kid's mouth class over the phrase, and float a couple of ♪ notes from their head
+  function singVoiceAt(ctx, voice, startT, gain, syl, dur, wob) {
+    singLuebRefrain(ctx, bus, startT, voice.pf, voice.ff, gain, track, syl, wob);
     var delay = Math.max(0, (startT - ctx.currentTime) * 1000);
     addTimer(function () { var g = document.getElementById(voice.gid); if (g && active) g.classList.add("singing"); }, delay);
-    addTimer(function () { var g = document.getElementById(voice.gid); if (g) g.classList.remove("singing"); }, delay + LUEB_REFRAIN_DUR * 1000 + 40);
-    if (!reduce()) [0.32, 0.72].forEach(function (fr) {
-      addTimer(function () { if (active) spawnLuebNote(voice.hx + (Math.random() - 0.5) * 1.6, voice.hy); }, delay + LUEB_REFRAIN_DUR * 1000 * fr);
+    addTimer(function () { var g = document.getElementById(voice.gid); if (g) g.classList.remove("singing"); }, delay + dur * 1000 + 40);
+    if (!reduce()) [0.28 + Math.random() * 0.1, 0.6 + Math.random() * 0.14].forEach(function (fr) {
+      addTimer(function () { if (active) spawnLuebNote(voice.hx + (Math.random() - 0.5) * 1.6, voice.hy); }, delay + dur * 1000 * fr);
     });
+  }
+  // occasionally toss in a giggle or trailing "la" from one kid (into the same laptop-filtered bus)
+  function adLib(ctx, kid, at) {
+    var delay = Math.max(0, (at - ctx.currentTime) * 1000);
+    addTimer(function () {
+      if (!active || !bus) return;
+      var c = getSfxCtx(); if (!c) return;
+      spawnGiggleVoices(c, bus, c.currentTime, false, kid === GIRL ? 1.18 : 0.86);
+      var g = document.getElementById(kid.gid);
+      if (g) { g.classList.add("singing"); addTimer(function () { var gg = document.getElementById(kid.gid); if (gg) gg.classList.remove("singing"); }, 520); }
+      if (active) spawnLuebNote(kid.hx + (Math.random() - 0.5) * 1.6, kid.hy);
+    }, delay);
   }
   var PATTERNS = ["unison", "girlLead", "boyLead", "round", "unison", "roundBoy"];
   function scheduleNext() {
     if (!active) return;
     var ctx = getSfxCtx();               // re-grabbed each phrase: keeps the shared ctx off its 20s idle-suspend
     if (!ctx) { stop(); return; }        // (null only if the tab hid mid-run — want() already excludes that)
-    var t0 = ctx.currentTime + 0.06, dur = LUEB_REFRAIN_DUR, total;
+    var built = buildLuebRefrain(), syl = built.syl, dur = built.dur;
+    var t0 = ctx.currentTime + 0.06, total;
     var pat = PATTERNS[patternIdx % PATTERNS.length];
-    if (Math.random() < 0.25) pat = PATTERNS[Math.floor(Math.random() * PATTERNS.length)]; // jitter so it isn't a fixed cycle
+    if (!reduce() && Math.random() < 0.35) pat = PATTERNS[Math.floor(Math.random() * PATTERNS.length)]; // jitter so it isn't a fixed cycle
     patternIdx++;
+    var wG = wobble(), wB = wobble();
     if (pat === "unison") {
-      singVoiceAt(ctx, GIRL, t0, 0.82); singVoiceAt(ctx, BOY, t0, 0.82); total = dur;
+      singVoiceAt(ctx, GIRL, t0, 0.82, syl, dur, wG); singVoiceAt(ctx, BOY, t0, 0.82, syl, dur, wB); total = dur;
     } else if (pat === "girlLead" || pat === "boyLead") {
       var lead = pat === "girlLead" ? GIRL : BOY, ans = pat === "girlLead" ? BOY : GIRL;
-      singVoiceAt(ctx, lead, t0, 0.92);
-      var ansT = t0 + dur - 0.3;                 // the answer comes in as the leader's tail fades (a little overlap)
-      singVoiceAt(ctx, ans, ansT, 0.92);
-      total = (ansT + dur) - t0;
+      var wLead = pat === "girlLead" ? wG : wB, wAns = pat === "girlLead" ? wB : wG;
+      singVoiceAt(ctx, lead, t0, 0.92, syl, dur, wLead);
+      var overlap = reduce() ? 0.3 : (0.12 + Math.random() * 0.5);        // how much the answer treads on the tail
+      var ansT = t0 + dur - overlap;
+      var echo = (!reduce() && Math.random() < 0.4) ? buildLuebRefrain() : { syl: syl, dur: dur }; // answer sometimes its own take
+      singVoiceAt(ctx, ans, ansT, 0.92, echo.syl, echo.dur, wAns);
+      total = (ansT + echo.dur) - t0;
     } else { // round / roundBoy: a canon — second voice enters partway through the first
       var first = pat === "roundBoy" ? BOY : GIRL, second = pat === "roundBoy" ? GIRL : BOY;
-      singVoiceAt(ctx, first, t0, 0.86);
-      var secT = t0 + dur * 0.45;
-      singVoiceAt(ctx, second, secT, 0.86);
+      var wFirst = pat === "roundBoy" ? wB : wG, wSecond = pat === "roundBoy" ? wG : wB;
+      singVoiceAt(ctx, first, t0, 0.86, syl, dur, wFirst);
+      var frac = reduce() ? 0.45 : (0.33 + Math.random() * 0.3);          // canon offset varies
+      var secT = t0 + dur * frac;
+      singVoiceAt(ctx, second, secT, 0.86, syl, dur, wSecond);
       total = (secT + dur) - t0;
     }
-    var gap = reduce() ? 0.8 : (0.45 + Math.random() * 0.7); // playful little pauses between refrains
+    if (!reduce() && Math.random() < 0.16) {                              // sprinkle a giggle/"la" now and then
+      adLib(ctx, Math.random() < 0.5 ? GIRL : BOY, t0 + total + 0.1);
+      total += 0.7;
+    }
+    var gap = reduce() ? 0.8 : (0.35 + Math.random() * 0.9); // playful little pauses between refrains
     phraseTimer = setTimeout(scheduleNext, (total + gap) * 1000);
   }
+  var fxNodes = null;
   function start() {
     var ctx = getSfxCtx(); if (!ctx) return;
     active = true; busCtx = ctx;
     bus = ctx.createGain(); bus.gain.value = 1;
-    var speaker = ctx.createBiquadFilter(); speaker.type = "lowpass"; speaker.frequency.value = 3200; speaker.Q.value = 0.7; // "through a laptop speaker"
-    bus.connect(speaker); speaker.connect(pannedOut(ctx, "office-laptop"));
+    var speaker = ctx.createBiquadFilter(); speaker.type = "lowpass"; speaker.frequency.value = 3400; speaker.Q.value = 0.7; // "through a laptop speaker" (a touch more open for word clarity)
+    var out = pannedOut(ctx, "office-laptop");
+    bus.connect(speaker);
+    // a hair of room so the voices aren't bone-dry: a short synthetic decaying-noise impulse, mostly dry
+    var conv = ctx.createConvolver();
+    var rlen = Math.floor(ctx.sampleRate * 0.22), rbuf = ctx.createBuffer(2, rlen, ctx.sampleRate);
+    for (var ch = 0; ch < 2; ch++) { var rd = rbuf.getChannelData(ch); for (var i = 0; i < rlen; i++) rd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / rlen, 2.5); }
+    conv.buffer = rbuf;
+    var dry = ctx.createGain(); dry.gain.value = 0.9;
+    var wet = ctx.createGain(); wet.gain.value = 0.12;
+    speaker.connect(dry); dry.connect(out);
+    speaker.connect(conv); conv.connect(wet); wet.connect(out);
+    fxNodes = [speaker, conv, dry, wet];
     patternIdx = 0;
     scheduleNext();
   }
@@ -35006,8 +35135,9 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track) {
     nodes.forEach(function (n) { try { n.stop(); } catch (e) {} }); nodes = [];
     if (bus && busCtx) {
       try { var t = busCtx.currentTime; bus.gain.cancelScheduledValues(t); bus.gain.setValueAtTime(bus.gain.value, t); bus.gain.linearRampToValueAtTime(0.0001, t + 0.1); } catch (e) {}
-      var b = bus; setTimeout(function () { try { b.disconnect(); } catch (e) {} }, 220);
+      var b = bus, fx = fxNodes; setTimeout(function () { try { b.disconnect(); } catch (e) {} if (fx) fx.forEach(function (n) { try { n.disconnect(); } catch (e) {} }); }, 240);
     }
+    fxNodes = null;
     bus = null; busCtx = null;
     // leave the mouths shut and clear every floating note, so any reset path lands clean
     [GIRL.gid, BOY.gid].forEach(function (id) { var g = document.getElementById(id); if (g) g.classList.remove("singing"); });

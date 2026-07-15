@@ -27961,7 +27961,7 @@ async def localfont(name):
     var flashOn = false, flashTrack = null; // flashlight state (balcony beam + screen glow; flashTrack = the real camera-LED torch, used only when camera access is already granted)
     var sessionStart = Date.now();  // "in the loft for" playtime origin — set at script load
     var selectedCity = null;
-    var cardsIndex = 0;             // phrasebook deck position — reset on leave (see leaveCurrentApp)
+    var cardsIndex = 0;             // phrasebook deck position — session-scoped: persists across a normal close/reopen (resume); zeroed only on a kill (uninstallApp / __resetPhoneApps)
     var callee = null, callConnected = false, callStatusKey = "", callHangingUp = false, callTimers = [];
     // Home-screen layout is a fixed grid of SLOTS (like a real phone): an array of
     // app-ids by slot position, with `null` holes for empty / "Uninstall"ed gaps.
@@ -28184,7 +28184,9 @@ async def localfont(name):
       if (compassHandler) { try { window.removeEventListener("deviceorientationabsolute", compassHandler); window.removeEventListener("deviceorientation", compassHandler); } catch (e) {} compassHandler = null; }
       if (currentApp === "flashlight") setFlashlight(false); // beam off on leave — also the close()/visibilitychange path (close → leaveCurrentApp)
       if (photoboothCleanup) { photoboothCleanup(); photoboothCleanup = null; } // stop the booth camera + timers + object URLs
-      if (currentApp === "cards") cardsIndex = 0; // reset the phrasebook deck to the first card on leave
+      // phrasebook (cards) deliberately does NOT reset here — a normal close/reopen resumes at
+      // the same card (cardsIndex is session-scoped). It's zeroed only on a "kill": phone Uninstall
+      // (uninstallApp) or the loft reset (__resetPhoneApps).
       if (currentApp === "cocktails") { cocktailView = "gallery"; cocktailSel = null; } // next open starts at the gallery
       currentApp = null;
     }
@@ -28339,6 +28341,7 @@ async def localfont(name):
     }
     function uninstallApp(id) { // empty this app's slot (leaves a blank gap — others don't shift); a reset/reload brings it back
       ensurePhoneSlots();
+      if (id === "cards") cardsIndex = 0; // uninstall is the phrasebook's "kill": reinstalling (reset/reload) starts fresh at card 1
       for (var i = 0; i < phoneSlots.length; i++) if (phoneSlots[i] === id) { phoneSlots[i] = null; break; }
       if (shell && shell.classList.contains("pm-home")) renderHome();
     }
@@ -30287,7 +30290,7 @@ async def localfont(name):
     }
     window.__openPhoneModal = open;
     window.__closePhoneModal = function (silent) { close(silent); };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering)
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and rewinds the phrasebook deck to card 1
     // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
     // open(true) is the cinematic lock-skip path (same as __showCocktailInPhone), so a console
     // launch never stalls on the passcode. Matches by app id (case-insensitive) or its localized

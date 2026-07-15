@@ -2613,11 +2613,17 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 .pm-music .pmm-play{width:58px; height:58px; border-radius:50%; border:none; background:var(--wine); color:#fff; font-size:23px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 10px rgba(142,58,74,.35)}
 .pm-music .pmm-skip{width:44px; height:44px; border-radius:50%; border:none; background:var(--cream); color:var(--wine); font-size:17px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 0 0 1px var(--rule)}
 .pm-music .pmm-skip:active, .pm-music .pmm-play:active{transform:scale(.94)}
-.pm-mines-host{display:flex; flex-direction:column; align-items:center; gap:5px; transform:scale(3.2); transform-origin:top center; width:fit-content; margin:6px auto 0}
+/* transform is NOT set here — sizePhoneMines() computes a per-device scale so the board
+   fills the pocket-screen width (replaces the old hardcoded scale(3.2)). Origin stays
+   top-center so the width fills symmetrically and the height grows straight down. */
+.pm-mines-host{display:flex; flex-direction:column; align-items:center; gap:5px; transform-origin:top center; width:fit-content; margin:6px auto 0}
 /* the monitor's side panel is a full-height column with a left divider; on the pocket
-   phone it becomes a compact face+counters row (no flex-grow gap, no divider line) */
-.pm-mines-host .mines-side{flex:none; flex-direction:row; gap:7px; padding-top:0; box-shadow:none; align-items:center}
-.pm-mines-host .mines-msg{position:static; left:auto; top:auto; width:auto; margin-top:2px}
+   phone it becomes a compact face+counters row (no flex-grow gap, no divider line). Its
+   natural width is kept ≤ the 8-col board (8×6=48px) so the BOARD is the host's widest
+   element — that's what the uniform scale stretches to the screen width. */
+.pm-mines-host .mines-side{flex:none; flex-direction:row; gap:4px; padding-top:0; box-shadow:none; align-items:center}
+.pm-mines-host .mines-side .mines-lcd{width:13px} /* 9(face)+4+13+4+13 = 43px < 48px board */
+.pm-mines-host .mines-msg{position:static; left:auto; top:auto; width:auto; max-width:48px; margin-top:2px} /* cap to board width so a win/lose banner can't grow the fit-content host and re-center the scaled board */
 /* calculator: a right-aligned readout over a 4-col key grid, wine accents */
 .phone-calc{display:flex; flex-direction:column; gap:7px; height:100%}
 .phone-calc .pc-display{flex:none; min-height:40px; display:flex; align-items:flex-end; justify-content:flex-end; padding:6px 12px; background:var(--paper); border:1px solid var(--rule); border-radius:14px; font-family:"Fraunces",serif; font-size:28px; line-height:1.05; color:var(--ink); overflow:hidden; word-break:break-all; text-align:right}
@@ -24214,19 +24220,51 @@ document.addEventListener("click", function (e) {
   window.__closeMonitorMines = closeMinesApp; // other monitor apps close the board before taking the screen
   // Phone Mines re-places this one HTML board into the pocket screen and back — the
   // monitor and phone never show it at once (different rooms), so they share the node.
-  var __minesInPhone = false;
+  var __minesInPhone = false, minesPhoneHost = null;
+  // The board's cells (and their number/flag glyphs) are fixed-px, so to make the phone
+  // board FILL the pocket-screen width we uniform-scale the whole host by
+  // availableWidth / naturalWidth (replacing the old hardcoded 3.2×). A scaled host still
+  // contributes its full VISUAL size to the app-body's scrollable overflow, so a tall
+  // board simply makes the app-body scroll — no explicit height needed (setting one would
+  // be scaled again and balloon the scroll region). Cells stay SQUARE (all width-derived);
+  // the board's height just follows from its rows and is never stretched to the viewport.
+  function sizePhoneMines(host, tries) {
+    if (!host || !host.parentNode) return;
+    host.style.transform = "none"; // measure the board at its natural (unscaled) size
+    var body = host.parentNode; // .phone-app-body — fills the pocket screen
+    var avail = body.clientWidth; // full screen-inner width; symmetric padding overrun causes no scrollbars
+    var natW = host.getBoundingClientRect().width;
+    if (!avail || !natW) { // .phone-app is display:none until showScreen("app"), so mount-time reads 0 — retry a few frames
+      if ((tries || 0) < 8) requestAnimationFrame(function () { sizePhoneMines(host, (tries || 0) + 1); });
+      return;
+    }
+    host.style.transform = "scale(" + (avail / natW) + ")";
+    // a tall board can add a vertical scrollbar (desktop UA scrollbars have width), which
+    // narrows clientWidth — re-fit once so the board lands flush with the screen edge
+    // instead of overflowing it (no-op under mobile overlay scrollbars).
+    var avail2 = body.clientWidth;
+    if (Math.abs(avail2 - avail) > 0.5) host.style.transform = "scale(" + (avail2 / natW) + ")";
+  }
+  function minesPhoneResize() {
+    if (__minesInPhone && minesPhoneHost && minesPhoneHost.parentNode) sizePhoneMines(minesPhoneHost, 0);
+  }
+  window.addEventListener("resize", minesPhoneResize);
+  window.addEventListener("orientationchange", minesPhoneResize);
   window.__phoneMountMines = function (host) {
     if (!minesWrap || !host || __minesInPhone) return;
     while (minesWrap.firstChild) host.appendChild(minesWrap.firstChild);
     __minesInPhone = true;
+    minesPhoneHost = host;
     minesSetLayout(8, 10, 12); // short portrait board for the pocket screen (fits short androids)
     minesNewGame();
+    sizePhoneMines(host, 0); // scales to fill the screen width (retries via rAF until the app screen is laid out)
   };
   window.__phoneUnmountMines = function () {
     if (!minesWrap || !__minesInPhone) return;
     var host = document.querySelector(".pm-mines-host");
     if (host) while (host.firstChild) minesWrap.appendChild(host.firstChild);
     __minesInPhone = false;
+    minesPhoneHost = null;
     minesStopTimer();
     minesSetLayout(16, 7, 17); // restore the monitor's wide board
     minesNewGame();

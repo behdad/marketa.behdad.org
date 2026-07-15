@@ -21505,7 +21505,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone() · laptop() · computer()/monitor() · reboot() · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var TERM_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone() · laptop() · computer()/monitor() · reboot() · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var TERM_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -21535,6 +21535,9 @@ document.addEventListener("click", function (e) {
       cocktail: "cocktail(\"negroni\") — the bartender mixes that real drink from the bar's menu (partial name ok); cocktail() makes a random one. lights the party + steps behind the bar first if it's dark. he also mixes on his own while you watch the bar. alias: drink()",
       lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
       caption: "caption(\"text\") — overwrite the hint line above the scene with your own text and return the previous line; caption() reads the current line. a room change or hint reclaims it",
+      candle: "candle() — both garden candles' lit states; candle(1) or candle(2) reads one; candle(1,true)/candle(2,false) lights or snuffs one and returns its previous state",
+      butterfly: "butterfly() — flutter the butterfly in the office stained-glass window",
+      water: "water() — the three garden watering bottles' levels (0–4 each); water(true) tips a full one over a plant and returns the new levels",
       countdown: "countdown() — days left until each wedding",
       fullscreen: "fullscreen(true) — fill the screen with the loft; fullscreen(false) leaves; fullscreen() reports whether it's on",
       rainbow: "rainbow() — arc a rainbow over the balcony",
@@ -30093,6 +30096,25 @@ async def localfont(name):
         bottlesWaterLeft[i] = 4;
         updateBottleLiquid(i);
       }
+    };
+    // console toy: water() reports the three watering bottles' levels (0–4 each);
+    // water(true) tips a full bottle over a plant (splash + garden watered) and returns the new levels.
+    function bottleLevels() { return { 1: bottlesWaterLeft[0], 2: bottlesWaterLeft[1], 3: bottlesWaterLeft[2] }; }
+    window.water = function (go) {
+      if (arguments.length && go) {
+        var avail = [];
+        bottlesWaterLeft.forEach(function (n, i) { if (n > 0) avail.push(i); });
+        if (avail.length) {
+          var idx = avail[Math.floor(Math.random() * avail.length)];
+          bottlesWaterLeft[idx]--;
+          updateBottleLiquid(idx);
+          var spot = bottlesPlantSpots[Math.floor(Math.random() * bottlesPlantSpots.length)];
+          spawnWaterDroplets(document.getElementById("loft-game-strip"), spot.x, spot.y);
+          playWaterSound();
+          if (window.markGardenWatered) window.markGardenWatered();
+        }
+      }
+      return bottleLevels();
     };
     function nearestBottleIdx(e) {
       var nearestIdx = 0;
@@ -38657,19 +38679,38 @@ function spawnDustMote(container) {
   wireInstrumentStrings("garden-ukulele-strings", "ukulele-song-audio", 126.0, 55);
   var candleIds = ["garden-candle-1", "garden-candle-2"];
   var candlesLit = {};
-  candleIds.forEach(function (id) {
+  function setCandleLit(id, on) { // returns the PREVIOUS lit state
     var el = document.getElementById(id);
-    onActivate(el, function () {
-      if (candlesLit[id]) return;
-      candlesLit[id] = true;
-      if (el) el.classList.add("lit", "done");
-      var gs = document.getElementById("stage-garden"); // light the above-dimmer night glow
-      if (gs) gs.classList.add(id === "garden-candle-1" ? "g-c1-lit" : "g-c2-lit");
-      playCandleLightSound();
-      gardenState.candles = candleIds.every(function (cid) { return candlesLit[cid]; });
-      checkGardenDone();
-    });
+    var was = !!candlesLit[id];
+    if (!!on === was) return was;
+    candlesLit[id] = !!on;
+    var gs = document.getElementById("stage-garden"); // the above-dimmer night glow
+    var glow = id === "garden-candle-1" ? "g-c1-lit" : "g-c2-lit";
+    if (on) { if (el) el.classList.add("lit", "done"); if (gs) gs.classList.add(glow); playCandleLightSound(); }
+    else { if (el) el.classList.remove("lit", "done"); if (gs) gs.classList.remove(glow); }
+    gardenState.candles = candleIds.every(function (cid) { return candlesLit[cid]; });
+    checkGardenDone();
+    return was;
+  }
+  candleIds.forEach(function (id) {
+    onActivate(document.getElementById(id), function () { setCandleLit(id, true); });
   });
+  function resolveCandleId(which) { // 1/2, "1", "candle-2", "garden-candle-1" → a real id
+    if (which == null) return null;
+    var s = String(which).toLowerCase();
+    var n = s.match(/(\d)/);
+    if (n && (n[1] === "1" || n[1] === "2")) return "garden-candle-" + n[1];
+    return candleIds.indexOf(s) !== -1 ? s : null;
+  }
+  // console toy: candle() → both candles' lit states; candle(1) → that one's state;
+  // candle(1,true)/candle(2,false) → light/snuff one and return its PREVIOUS state.
+  window.candle = function (which, on) {
+    if (arguments.length === 0) return { 1: !!candlesLit["garden-candle-1"], 2: !!candlesLit["garden-candle-2"] };
+    var id = resolveCandleId(which);
+    if (!id) return null;
+    if (arguments.length === 1 || on == null) return !!candlesLit[id];
+    return setCandleLit(id, !!on);
+  };
 
   function pointerSvgPoint(e) {
     var svg = document.getElementById("loft-game-strip");
@@ -38778,6 +38819,7 @@ function spawnDustMote(container) {
   if (glass) glass.addEventListener("animationend", function (e) {
     if (e.animationName === "butterfly-flap-left" || e.animationName === "butterfly-flap-right") glass.classList.remove("flap");
   });
+  window.butterfly = function () { flapButterfly(); return !!glass; }; // console toy: flutter the office stained-glass butterfly
   onActivate(glass, function () {
     if (window.__cinematic) return; // the cinematic drives goToStage("balcony") itself
     if (!window.__pragueCalled) { // the finale gates on calling Prague first

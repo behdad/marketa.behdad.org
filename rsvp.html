@@ -9854,6 +9854,16 @@ section{margin:1.9rem 0}
 <div xmlns="http://www.w3.org/1999/xhtml" class="fatality-wrap"><span class="fatality-word" id="monitor-fatality-word">FATALITY</span></div>
 </foreignObject>
 </g>
+<!-- Linux killed → a Windows BSOD (the penguin bluescreens); the witty line rides the caption bar -->
+<g id="monitor-bsod">
+<foreignObject x="254" y="154" width="124" height="42">
+<div xmlns="http://www.w3.org/1999/xhtml" class="bsod-wrap">
+<div class="bsod-face">:(</div>
+<p class="bsod-main" data-i="df_bsod_main">Your PC ran into a problem and needs to restart.</p>
+<p class="bsod-meta">Stop code: PENGUIN_NOT_FOUND</p>
+</div>
+</foreignObject>
+</g>
 </g>
 <!-- BROWSER (chrome) app: real web pages in iframes over the screen, behind a slim
      tab strip (markéta / behdad / harfbuzz, built by JS from BROWSER_TABS, plus a +
@@ -12298,6 +12308,7 @@ var T = {
     hunt: {
       intro: "A game of wandering without aim. Click around to play.",
       df_doom_quip: "kill -9 — flawless victory.", // caption under the on-screen FATALITY melt (DOOM kill)
+      df_linux_quip: "The penguin bluescreened.", // caption under the on-screen BSOD (Linux kill)
       kitchen: "Turn on the machine → grind → brew.",
       kitchen_grind: "Now grind coffee.",
       kitchen_brew: "Now brew a shot.",
@@ -12640,6 +12651,7 @@ var T = {
     doom_loading: "loading doom… ~22 MB, first time only",
     doom_fail: "doom couldn't load — offline, or the download stalled. close and reopen to retry.",
     doom_fs: "fullscreen",
+    df_bsod_main: "Your PC ran into a problem and needs to restart.", // on-screen BSOD line (Linux kill)
     mon_ctx_restart: "Restart",
     mon_ctx_kill: "Kill",
     app_phone: "phone",
@@ -12694,6 +12706,7 @@ var T = {
     hunt: {
       intro: "Hra o bezcílném toulání. Klikej a hraj.",
       df_doom_quip: "kill -9 — dokonalé vítězství.", // caption under the on-screen FATALITY melt (DOOM kill)
+      df_linux_quip: "Tučňák dostal modrou smrt.", // caption under the on-screen BSOD (Linux kill)
       kitchen: "Zapni kávovar → umel → uvař.",
       kitchen_grind: "Teď umel kávu.",
       kitchen_brew: "Teď uvař espresso.",
@@ -13035,6 +13048,7 @@ var T = {
     doom_loading: "načítáme doom… ~22 MB, jen napoprvé",
     doom_fail: "doom se nenačetl — offline, nebo se stahování zaseklo. zavřete a otevřete znovu.",
     doom_fs: "celá obrazovka",
+    df_bsod_main: "V počítači došlo k problému a je potřeba restartovat.", // on-screen BSOD line (Linux kill)
     mon_ctx_restart: "Restartovat",
     mon_ctx_kill: "Ukončit",
     app_phone: "telefon",
@@ -13864,7 +13878,7 @@ document.addEventListener("keydown", function (e) {
     var m = document.getElementById("office-monitor");
     if (!m || window.currentStageName !== "office") return null;
     if (m.classList.contains("show-python")) return { restart: "__restartMonitorPython", close: "__closeMonitorPython", running: "__pyRunning" };
-    if (m.classList.contains("show-linux")) return { restart: "__restartMonitorLinux", close: "__closeMonitorLinux", running: "__lxRunning" };
+    if (m.classList.contains("show-linux")) return { restart: "__restartMonitorLinux", close: "__killMonitorLinux", running: "__lxRunning" }; // Kill → BSOD flash (not the silent ✕ close)
     return null;
   }
   // every console app gets Kill: the runtimes above, plus the plain JS console — which has no
@@ -23238,6 +23252,7 @@ document.addEventListener("click", function (e) {
     if (window.__deathFlashCleanup) window.__deathFlashCleanup(); // a second Kill mid-flash restarts cleanly
     var timers = [], rafId = 0, done = false;
     if (cfg.freeze) { try { cfg.freeze(); } catch (e) {} } // stop the runtime now; it dies frozen behind the flash
+    if (cfg.sound) { try { cfg.sound(); } catch (e) {} } // the kill's signature SFX, at the moment of impact
     var savedKey = window.__captionKey ? window.__captionKey() : null; // reclaim the room hint after
     if (cfg.screenClass) m.classList.add(cfg.screenClass);
     cap.classList.add("caption-death");
@@ -24990,12 +25005,11 @@ async def localfont(name):
     if (lxVM) { try { if (lxVM.is_running()) lxVM.stop(); } catch (e) {} } // no CPU behind a closed app
     scheduleSaver();
   }
-  window.__closeMonitorLinux = closeLinux; // other monitor apps stop the VM before taking the screen
+  window.__closeMonitorLinux = closeLinux; // the ✕ / app-switch: pause the VM, RAM intact (reopen resumes)
   window.__lxRunning = function () { return lxLoadState === "ready"; }; // VM booted — gates the context-menu Kill
-  // Restart (context menu): destroy the VM and cold-boot a fresh one — recovers a wedged
-  // kernel/shell (a real power-cycle, not the RAM-intact resume that reopening does). The
-  // v86 library is already loaded, so loadLinuxVM() → lxBootVM() boots a brand-new machine.
-  window.__restartMonitorLinux = function () {
+  // A true KILL (vs the ✕, which just pauses): power the VM off for real — destroy it and wipe the
+  // session so the next open COLD-BOOTS a brand-new machine. Then back to the desktop.
+  function destroyLinux() {
     if (lxVM) { try { lxVM.destroy(); } catch (e) {} lxVM = null; }
     if (lxStallTimer) { clearTimeout(lxStallTimer); lxStallTimer = null; }
     lxLoadState = ""; lxPrompted = false; lxHiddenStop = false;
@@ -25003,10 +25017,27 @@ async def localfont(name):
     if (lxOut) lxOut.innerHTML = "";
     if (lxPs) lxPs.textContent = "";
     lxHist = []; lxHistIdx = 0;
-    lxWelcomed = true; lxPrint(lxT("linux_welcome"), "console-dim");
-    loadLinuxVM(); // window.V86 present → lxBootVM() cold-boots a fresh machine
-    if (lxIn) { lxIn.value = ""; setTimeout(function () { try { lxIn.focus({ preventScroll: true }); } catch (e) {} }, 60); }
-  };
+    lxWelcomed = false; // next open re-prints the welcome — it's a fresh machine
+    if (lxIn) { lxIn.value = ""; try { lxIn.blur(); } catch (e) {} }
+    monitor.classList.remove("show-linux");
+    scheduleSaver();
+  }
+  // Kill AND Restart run a Windows BSOD flash (the penguin bluescreens), then destroy the VM;
+  // Restart additionally cold-boots a fresh machine after. Freeze the VM first so it dies frozen.
+  function linuxDeathFlash(reopen) {
+    var finish = function () { destroyLinux(); if (reopen) openLinux(); };
+    if (!monitor.classList.contains("show-linux") || !window.__runMonitorDeathFlash) { finish(); return; }
+    window.__runMonitorDeathFlash({
+      screenClass: "death-linux",
+      beats: [{ key: "df_linux_quip", at: 300 }], // witty line rides the caption bar
+      dur: 2200,
+      sound: function () { playBsodSound("office-monitor"); },
+      freeze: function () { lxHiddenStop = true; if (lxVM) { try { if (lxVM.is_running()) lxVM.stop(); } catch (e) {} } },
+      close: finish
+    });
+  }
+  window.__killMonitorLinux = function () { linuxDeathFlash(false); };    // Kill → BSOD → destroy
+  window.__restartMonitorLinux = function () { linuxDeathFlash(true); };  // Restart → BSOD → destroy → fresh cold boot
   // display-only reset: scrollback + history + input + the welcome flag. The v86 VM keeps
   // running with RAM intact (rebooting it — let alone reloading the wasm — is far too heavy
   // for a game reset), so its live serial tail (lxLine/lxPs) and lxPrompted stay coherent
@@ -25249,6 +25280,7 @@ async def localfont(name):
       screenClass: "death-doom",
       beats: [{ key: "df_doom_quip", at: 260 }], // witty line rides the caption bar
       dur: 2100,
+      sound: function () { playFatalitySound("office-monitor"); },
       tick: function (t) { if (word) word.style.fontVariationSettings = "'YEAR' " + Math.round(1979 + (2050 - 1979) * t); },
       freeze: function () { if (doomModule) { try { doomModule.pauseMainLoop(); } catch (e) {} doomPaused = true; } },
       close: finish
@@ -37826,6 +37858,60 @@ function playSodaDepressurizeSound() {
       s.connect(f); f.connect(sg); sg.connect(master);
       s.start(t0 + at); s.stop(t0 + at + 0.12);
     });
+  } catch (e) {}
+}
+// ── runtime death-flash SFX (Kill/Restart a self-hosted runtime) ──────────────────────────
+// DOOM FATALITY: a low impact thud under a menacing descending saw — a Mortal-Kombat-ish hit.
+function playFatalitySound(panId) {
+  try {
+    var ctx = getSfxCtx(); if (!ctx) return;
+    var t = ctx.currentTime, out = pannedOut(ctx, panId);
+    var o1 = ctx.createOscillator(); o1.type = "sine";
+    o1.frequency.setValueAtTime(190, t); o1.frequency.exponentialRampToValueAtTime(42, t + 0.5);
+    var g1 = ctx.createGain(); g1.gain.setValueAtTime(0.0001, t);
+    g1.gain.exponentialRampToValueAtTime(0.5, t + 0.02); g1.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
+    o1.connect(g1); g1.connect(out); o1.start(t); o1.stop(t + 0.75);
+    var o2 = ctx.createOscillator(); o2.type = "sawtooth";
+    o2.frequency.setValueAtTime(330, t + 0.05); o2.frequency.exponentialRampToValueAtTime(58, t + 0.95);
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass";
+    lp.frequency.setValueAtTime(1900, t); lp.frequency.exponentialRampToValueAtTime(300, t + 0.95);
+    var g2 = ctx.createGain(); g2.gain.setValueAtTime(0.0001, t + 0.05);
+    g2.gain.exponentialRampToValueAtTime(0.17, t + 0.16); g2.gain.exponentialRampToValueAtTime(0.001, t + 1.0);
+    o2.connect(lp); lp.connect(g2); g2.connect(out); o2.start(t + 0.05); o2.stop(t + 1.05);
+  } catch (e) {}
+}
+// Linux → Windows BSOD: the classic two-note descending "system error" chime, a touch harsh.
+function playBsodSound(panId) {
+  try {
+    var ctx = getSfxCtx(); if (!ctx) return;
+    var t = ctx.currentTime, out = pannedOut(ctx, panId);
+    [{ f: 660, at: 0 }, { f: 440, at: 0.17 }].forEach(function (n) {
+      var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = n.f;
+      var o2 = ctx.createOscillator(); o2.type = "square"; o2.frequency.value = n.f;
+      var g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t + n.at);
+      g.gain.exponentialRampToValueAtTime(0.13, t + n.at + 0.02); g.gain.exponentialRampToValueAtTime(0.001, t + n.at + 0.36);
+      var g2 = ctx.createGain(); g2.gain.value = 0.03;
+      o.connect(g); o2.connect(g2); g2.connect(g); g.connect(out);
+      o.start(t + n.at); o.stop(t + n.at + 0.38); o2.start(t + n.at); o2.stop(t + n.at + 0.38);
+    });
+  } catch (e) {}
+}
+// Python → the Black Knight: a bright metallic sword clang over a low wooden thunk ('tis but a scratch).
+function playFleshWoundSound(panId) {
+  try {
+    var ctx = getSfxCtx(); if (!ctx) return;
+    var t = ctx.currentTime, out = pannedOut(ctx, panId);
+    [{ f: 520, g: 0.12, d: 0.5 }, { f: 1170, g: 0.08, d: 0.42 }, { f: 1900, g: 0.05, d: 0.3 }, { f: 2540, g: 0.03, d: 0.22 }].forEach(function (p) {
+      var o = ctx.createOscillator(); o.type = "square"; o.frequency.value = p.f;
+      var g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(p.g, t + 0.006); g.gain.exponentialRampToValueAtTime(0.001, t + p.d);
+      o.connect(g); g.connect(out); o.start(t); o.stop(t + p.d + 0.02);
+    });
+    var o1 = ctx.createOscillator(); o1.type = "sine";
+    o1.frequency.setValueAtTime(150, t); o1.frequency.exponentialRampToValueAtTime(80, t + 0.15);
+    var g1 = ctx.createGain(); g1.gain.setValueAtTime(0.0001, t);
+    g1.gain.exponentialRampToValueAtTime(0.2, t + 0.01); g1.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+    o1.connect(g1); g1.connect(out); o1.start(t); o1.stop(t + 0.25);
   } catch (e) {}
 }
 function playGlassClinkSound(pitchMult, panId) {

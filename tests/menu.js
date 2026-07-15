@@ -123,9 +123,13 @@ var HARNESS = [
   "    S('doom_restart_swapped_canvas', !!after && after!==before && after.id==='canvas');",
   "    S('doom_restart_torn_down', !mon().classList.contains('show-doom') && !mon().classList.contains('death-doom'));",
   // linux/python restart teardown direct
+  // Linux Restart now runs a BSOD flash, THEN destroys (clears the console) and would cold-boot
+  // (no show-caps here → openLinux no-ops); verify flash-then-teardown.
   "    showApp('show-linux'); var lo=document.getElementById('monitor-linux-out'); lo.innerHTML='<div>old</div>'; var lxThrew=null;",
   "    try { window.__restartMonitorLinux(); } catch(e){ lxThrew=String(e); }",
-  "    S('linux_restart_threw', lxThrew); S('linux_restart_cleared_out', !/old/.test(lo.textContent));",
+  "    S('linux_restart_threw', lxThrew); S('linux_restart_flash_started', mon().classList.contains('death-linux'));",
+  "    await sleep(2400);",  // wait out the BSOD flash → destroyLinux clears the console
+  "    S('linux_restart_cleared_out', !/old/.test(lo.textContent));",
   "    var pyThrew=null; try { window.__restartMonitorPython(); } catch(e){ pyThrew=String(e); } S('python_restart_threw', pyThrew);",
   "  }",
   "  window.addEventListener('load', function(){ setTimeout(function(){ run().catch(function(e){ window.__errs.push('harness: '+String(e&&e.stack||e)); }).then(function(){ report.errors=window.__errs; document.getElementById('__report').textContent=JSON.stringify(report); }); }, 400); });",
@@ -176,7 +180,7 @@ check("doom fs button present", s.doom_fs_btn_present === true);
 check("doom fs button calls requestFullscreen on the canvas", s.doom_fs_called_on_canvas === true, s.doom_fs_calls);
 console.log(" restart teardown (no throws, real state reset):");
 check("doom restart runs the flash then tears down + swaps a fresh canvas (id kept)", s.doom_restart_threw === null && s.doom_restart_flash_started === true && s.doom_restart_swapped_canvas === true && s.doom_restart_torn_down === true, s.doom_restart_threw);
-check("linux restart does not throw + clears the console", s.linux_restart_threw === null && s.linux_restart_cleared_out === true, s.linux_restart_threw);
+check("linux restart runs the BSOD flash then destroys + clears the console", s.linux_restart_threw === null && s.linux_restart_flash_started === true && s.linux_restart_cleared_out === true, s.linux_restart_threw);
 check("python restart does not throw", s.python_restart_threw === null, s.python_restart_threw);
 check("no uncaught JS errors during the run", Array.isArray(rep.errors) && rep.errors.length === 0, rep.errors);
 

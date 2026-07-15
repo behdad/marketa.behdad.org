@@ -794,6 +794,11 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 #loft-game-strip.party-on #kitchen-bartender-hit{pointer-events:auto; cursor:grab}
 #loft-game-strip.party-on #kitchen-bartender-hit.grabbing{cursor:grabbing}
 @media (prefers-reduced-motion: reduce){#kitchen-bartender-shaker.tossing{animation:none}}
+/* Flair-Catch spotlight: dim the room while the bar mini-game runs, keeping the bar+bartender
+   lit (the dim <rect> paints before #kitchen-bar). Mirrors #stage-office.arcade #office-alien-dim. */
+#kitchen-flair-dim{opacity:0; transition:opacity .4s ease}
+#stage-kitchen.flair-on #kitchen-flair-dim{opacity:.5}
+@media (prefers-reduced-motion: reduce){#kitchen-flair-dim{transition:none}}
 /* tapping the glitter ball pops it: a quick scale-bounce on a dedicated wrapper plus a
    white light-flash halo. The bounce lives on #garden-disco-ball-pop, a node DISTINCT from
    the -spin group, so the party spin's rotate is never clobbered (parent/child transforms
@@ -5723,6 +5728,12 @@ section{margin:1.9rem 0}
 <path d="M145 52 Q145 58 150 58.5" fill="none" stroke="#e8fcff" stroke-width="1.4" stroke-linecap="round" opacity="0.85"/>
 <text x="176" y="56" font-family="Fraunces,serif" font-style="italic" font-weight="700" font-size="29" letter-spacing="0.4" fill="#c8f6ff" stroke="#8fe6ff" stroke-width="0.5">hydration station</text>
 </g>
+<!-- Flair-Catch spotlight dim: nested inside #kitchen-bar right AFTER the back-bar (backdrop,
+     shelves, bottles, neon) but BEFORE the bartender, so those darken while the bartender, the
+     counter, the glassware and the falling items (all drawn later) stay lit — a stage spotlight
+     on the play area, mirroring the office arcade's #office-alien-dim. Toggled by
+     #stage-kitchen.flair-on; a rect, so the party's `> g{opacity:0}` rule can't match it. -->
+<rect id="kitchen-flair-dim" x="0" y="0" width="680" height="340" fill="#0e1524" opacity="0" pointer-events="none"/>
 <!-- the bartender: stands behind the counter shaking a drink. Drawn AFTER the back-bar
      bottles (so in front of them) but BEFORE the counter (so the counter hides the lower
      body). Flat vector, palette colours. The raised arm idles on #kitchen-bartender-shake. -->
@@ -5864,6 +5875,12 @@ section{margin:1.9rem 0}
 <line x1="446" y1="326" x2="478" y2="326" stroke="#4a3524" stroke-width="3"/>
 </g>
 </g>
+<!-- Flair-Catch (hidden bar mini-game) layer: JS-spawned falling bar items + iconic HUD,
+     present only while #stage-kitchen.flair-on. Nested as the LAST child of #kitchen-bar on
+     purpose — the party rule (#loft-game-strip.party-on #stage-kitchen > g{opacity:0}) hides
+     any direct-child group of the stage; #kitchen-bar is exempt and carries no transform, so
+     stage-local coords still hold here. Always empty at rest; hard-cleared on teardown. -->
+<g id="kitchen-flair-layer" pointer-events="none"></g>
 </g>
 <!-- daylight slanting in through the right-hand window, fanning down-left across the room -->
 <g id="kitchen-sunrays" pointer-events="none" aria-hidden="true">
@@ -18882,6 +18899,10 @@ document.addEventListener("click", function (e) {
         barDragTravel += Math.abs(px - barPrevX); // cumulative travel — clean signal for a future bar shooter
         barPrevX = px;
         setBartenderOffset(barDragStartOffset + dx);
+        // arm Flair-Catch once the drag is a genuine back-and-forth shuffle (not a nudge or a
+        // tap-to-toss). flairActive / FLAIR_THRESHOLD / startFlairCatch are declared just below.
+        if (!flairActive && barDragTravel > FLAIR_THRESHOLD && !flairReduce &&
+            window.__gardenPartyOn && window.currentStageName === "kitchen") startFlairCatch();
       });
       function onBartenderPointerUp(e) {
         if (!barDragging) return;
@@ -18904,6 +18925,240 @@ document.addEventListener("click", function (e) {
     bartenderShaker.addEventListener("animationend", function (e) {
       if (e.target === bartenderShaker && bartenderShaker.classList.contains("tossing")) bartenderShaker.classList.remove("tossing");
     });
+
+    /* ==== Flair-Catch — hidden bar mini-game ===============================
+       Drag the bartender back and forth along the bar and, once the drag racks up
+       more than a nudge of cumulative travel (FLAIR_THRESHOLD — a genuine shuffle,
+       not a tap-toss), the room dims to a spotlight and bar items rain down: limes,
+       ice cubes, bottles, olives, cherries, citrus wedges (plus a rare wasp you must
+       NOT catch). Line the cocktail-shaker's mouth up under a falling good item to
+       catch it (score++, a clink); let one hit the bar and it's a miss; catch the
+       wasp and it costs a life too. Three misses ends the run ("last call" flourish +
+       high score), then the bar returns to normal.
+
+       Built on the office-chair arcade's exact safety model: ALL motion + spawning
+       lives inside one rAF step (flairSpawn is only ever called from flairStep, never
+       a stray setTimeout), so hiding the tab / leaving the kitchen / the party ending
+       just self-cancels the loop on its next frame and nothing accumulates (the
+       documented backgrounded-spawner bug class). Item positions are written as SVG
+       transform ATTRIBUTES from that loop; the catch flash uses the CSS scale/opacity
+       individual properties on a fresh node, so neither fights a positioning transform.
+       The bartender drag itself is untouched — this only READS barOffsetX (his live X)
+       and arms off barDragTravel. High score lives in its own localStorage key, kept
+       out of any game-state snapshot. */
+    var SVGNS_FLAIR = "http://www.w3.org/2000/svg";
+    var stageKitchen = document.getElementById("stage-kitchen");
+    var flairLayer = document.getElementById("kitchen-flair-layer");
+    var flairReduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    var FLAIR_THRESHOLD = 55;    // px cumulative drag travel before the game arms (a real shuffle, not a nudge)
+    var FLAIR_SPAWN_MIN_X = 104, FLAIR_SPAWN_MAX_X = 540; // within the shaker's reach (mouth x in [96,546])
+    var FLAIR_START_Y = 34;      // items drop from just under the top of the room
+    var FLAIR_CATCH_Y = 180;     // the shaker's mouth (stage-local y); catch band is +/- FLAIR_CATCH_RY
+    var FLAIR_CATCH_RX = 24, FLAIR_CATCH_RY = 16;
+    var FLAIR_MISS_Y = 250;      // an uncaught good item spilling onto the bar top-rail (drawn at y245)
+    var FLAIR_MAX_MISS = 3;
+    var FLAIR_HIGH_KEY = "flairCatchHigh"; // own localStorage key — deliberately NOT part of any game-state snapshot
+    // item art: each sprite is centred on (0,0). `bad` items (the wasp) must be avoided.
+    var FLAIR_ITEMS = [
+      { bad: false, svg: '<circle r="8.5" fill="#7fae4b" stroke="#4f7a2e" stroke-width="1.4"/><ellipse cx="-2.5" cy="-3" rx="3" ry="1.8" fill="#c7e39a" opacity="0.8"/>' }, // lime
+      { bad: false, svg: '<rect x="-7" y="-7" width="14" height="14" rx="3" fill="#cdeff6" stroke="#7fbcd0" stroke-width="1.3"/><rect x="-4.5" y="-4.5" width="4.5" height="4.5" rx="1" fill="#eafaff" opacity="0.85"/>' }, // ice cube
+      { bad: false, svg: '<rect x="-3.5" y="-9" width="7" height="6" rx="1.5" fill="#5c8a52"/><path d="M-5 -3 h10 v9 q0 3 -3 3 h-4 q-3 0 -3 -3 Z" fill="#3f6b7a" stroke="#2c4d59" stroke-width="1"/><rect x="-4.5" y="1" width="9" height="4" fill="#e8dfcc" opacity="0.85"/>' }, // bottle
+      { bad: false, svg: '<ellipse rx="6.5" ry="8" fill="#6f8a3c" stroke="#4f632a" stroke-width="1.2"/><circle cy="-2" r="2.4" fill="#c0392b"/>' }, // olive w/ pimento
+      { bad: false, svg: '<circle cy="2" r="6.5" fill="#b5303f" stroke="#7d1f2a" stroke-width="1.2"/><path d="M0 -4 Q3 -9 7 -10" fill="none" stroke="#6b4a2a" stroke-width="1.4" stroke-linecap="round"/><circle cx="-2" cy="0" r="1.6" fill="#e08a92" opacity="0.7"/>' }, // cherry
+      { bad: false, svg: '<path d="M-9 6 A11 11 0 0 1 9 6 Z" fill="#f0a83a" stroke="#c47f1e" stroke-width="1.3"/><path d="M-9 6 A11 11 0 0 1 9 6" fill="none" stroke="#fff2d6" stroke-width="1.3"/><path d="M0 6 L-4 -1 M0 6 L4 -1 M0 6 L0 -3" stroke="#fff2d6" stroke-width="0.9"/>' }, // citrus wedge
+      { bad: true,  svg: '<ellipse rx="6" ry="8" fill="#e8c33a" stroke="#3a2f28" stroke-width="1"/><rect x="-6" y="-3" width="12" height="2.4" fill="#3a2f28"/><rect x="-6" y="1.4" width="12" height="2.4" fill="#3a2f28"/><ellipse cx="-7" cy="-4" rx="5" ry="3" fill="#e8f4ff" opacity="0.55" stroke="#9bb2b8" stroke-width="0.6"/><ellipse cx="7" cy="-4" rx="5" ry="3" fill="#e8f4ff" opacity="0.55" stroke="#9bb2b8" stroke-width="0.6"/>' } // wasp — do NOT catch
+    ];
+
+    var flairActive = false, flairRaf = null, flairLastT = 0;
+    var flairItems = [], flairLastSpawn = 0, flairElapsed = 0;
+    var flairScore = 0, flairMiss = 0;
+    var flairHud = null, flairHudScore = null, flairHudHigh = null, flairHudLives = null;
+
+    function flairShakerX() { return 336 + barOffsetX; } // shaker-mouth centre in stage-local coords (kitchen-bar has no transform)
+    function flairHigh() { try { return parseInt(localStorage.getItem(FLAIR_HIGH_KEY), 10) || 0; } catch (e) { return 0; } }
+    function flairSetHigh(n) { try { localStorage.setItem(FLAIR_HIGH_KEY, String(n)); } catch (e) {} }
+    function flairClearLayer() { if (flairLayer) { while (flairLayer.firstChild) flairLayer.removeChild(flairLayer.firstChild); } }
+
+    function flairBuildHud() {
+      // iconic, language-neutral HUD (no T-dict copy): a drawn cocktail glass + live score
+      // top-left, a small star + high score under it, three cherry "lives" top-right.
+      flairHud = document.createElementNS(SVGNS_FLAIR, "g");
+      flairHud.setAttribute("font-family", "Fraunces, Georgia, serif");
+      flairHud.innerHTML =
+        '<g transform="translate(20,24)" fill="none" stroke="#f4efe6" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">' +
+          '<path d="M-8 -7 L8 -7 L0 2 Z"/><line x1="0" y1="2" x2="0" y2="10"/><line x1="-5" y1="10" x2="5" y2="10"/></g>' +
+        '<text class="flair-score" x="35" y="33" font-size="21" font-weight="700" fill="#f4efe6">0</text>' +
+        '<polygon transform="translate(23,48)" points="0,-5 1.23,-1.7 4.76,-1.55 2,0.65 2.94,4.05 0,2.1 -2.94,4.05 -2,0.65 -4.76,-1.55 -1.23,-1.7" fill="#d9b48a"/>' +
+        '<text class="flair-high" x="34" y="52" font-size="12" fill="#d9b48a">0</text>' +
+        '<circle class="flair-life" cx="602" cy="26" r="6" stroke="#7d1f2a" stroke-width="1.4"/>' +
+        '<circle class="flair-life" cx="622" cy="26" r="6" stroke="#7d1f2a" stroke-width="1.4"/>' +
+        '<circle class="flair-life" cx="642" cy="26" r="6" stroke="#7d1f2a" stroke-width="1.4"/>';
+      flairLayer.appendChild(flairHud);
+      flairHudScore = flairHud.querySelector(".flair-score");
+      flairHudHigh = flairHud.querySelector(".flair-high");
+      flairHudLives = flairHud.querySelectorAll(".flair-life");
+      flairUpdateHud();
+    }
+    function flairUpdateHud() {
+      if (!flairHud) return;
+      flairHudScore.textContent = String(flairScore);
+      flairHudHigh.textContent = String(Math.max(flairHigh(), flairScore));
+      for (var i = 0; i < flairHudLives.length; i++) {
+        flairHudLives[i].setAttribute("fill", i < (FLAIR_MAX_MISS - flairMiss) ? "#c0392b" : "none");
+      }
+    }
+
+    function flairSpawn() {
+      if (!flairLayer) return;
+      var idx = (Math.random() < 0.1) ? (FLAIR_ITEMS.length - 1)           // ~10% the wasp (last entry)
+                                      : Math.floor(Math.random() * (FLAIR_ITEMS.length - 1));
+      var spec = FLAIR_ITEMS[idx];
+      var x = FLAIR_SPAWN_MIN_X + Math.random() * (FLAIR_SPAWN_MAX_X - FLAIR_SPAWN_MIN_X);
+      var g = document.createElementNS(SVGNS_FLAIR, "g");
+      g.setAttribute("transform", "translate(" + x.toFixed(1) + "," + FLAIR_START_Y + ")");
+      g.innerHTML = spec.svg;
+      flairLayer.appendChild(g);
+      flairItems.push({ el: g, x: x, y: FLAIR_START_Y, vy: 0.09 + Math.random() * 0.03, bad: spec.bad });
+    }
+
+    function flairCatchFlash(x, y, good) {
+      if (flairReduce || !flairLayer) return;
+      var wrap = document.createElementNS(SVGNS_FLAIR, "g");
+      wrap.setAttribute("transform", "translate(" + x.toFixed(1) + "," + y.toFixed(1) + ")");
+      var c = document.createElementNS(SVGNS_FLAIR, "circle");
+      c.setAttribute("r", "7"); c.setAttribute("fill", "none");
+      c.setAttribute("stroke", good ? "#f4d58d" : "#d9534f"); c.setAttribute("stroke-width", "2.5");
+      wrap.appendChild(c);
+      flairLayer.appendChild(wrap);
+      var anim = c.animate([{ scale: 0.4, opacity: 1 }, { scale: 3, opacity: 0 }], { duration: 340, easing: "ease-out" });
+      anim.onfinish = function () { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
+    }
+
+    // a lost life → returns true if that was the third (the run is over)
+    function flairLoseLife() {
+      flairMiss++;
+      flairUpdateHud();
+      if (flairMiss >= FLAIR_MAX_MISS) { stopFlairCatch(true); return true; }
+      return false;
+    }
+
+    // one deterministic simulation tick (no rAF) — the rAF driver and the test hook both call it
+    function flairStep(dt) {
+      flairElapsed += dt;
+      var spawnMs = Math.max(520, 1150 - flairElapsed * 0.05);        // ramp: spawn faster the longer you last
+      var speedMul = 1 + Math.min(1.1, flairElapsed / 26000);         // ramp: fall quicker over time
+      flairLastSpawn += dt;
+      if (flairLastSpawn >= spawnMs) { flairLastSpawn = 0; flairSpawn(); }
+      var sx = flairShakerX();
+      for (var i = flairItems.length - 1; i >= 0; i--) {
+        var it = flairItems[i];
+        it.y += it.vy * speedMul * dt;
+        it.el.setAttribute("transform", "translate(" + it.x.toFixed(1) + "," + it.y.toFixed(1) + ")");
+        // caught: the item's centre falls through the shaker mouth
+        if (Math.abs(it.y - FLAIR_CATCH_Y) < FLAIR_CATCH_RY && Math.abs(it.x - sx) < FLAIR_CATCH_RX) {
+          if (it.el.parentNode) it.el.parentNode.removeChild(it.el);
+          flairItems.splice(i, 1);
+          if (it.bad) {                                   // caught the wasp — soured shake, costs a life
+            playDryClickSound("kitchen-bartender");
+            flairCatchFlash(sx, FLAIR_CATCH_Y, false);
+            if (flairLoseLife()) return;
+          } else {
+            flairScore++;
+            if (flairScore > flairHigh()) flairSetHigh(flairScore); // keep the high live so a mid-run tab-hide still banks it
+            playGlassClinkSound(1.1 + Math.random() * 0.5, "kitchen-bartender");
+            flairCatchFlash(sx, FLAIR_CATCH_Y, true);
+            flairUpdateHud();
+          }
+          continue;
+        }
+        // spilled past the bar uncaught
+        if (it.y > FLAIR_MISS_Y) {
+          if (it.el.parentNode) it.el.parentNode.removeChild(it.el);
+          flairItems.splice(i, 1);
+          if (!it.bad) {                                  // a dropped good item is a miss; a dodged wasp is fine
+            playDryClickSound("kitchen-bartender");
+            if (flairLoseLife()) return;
+          }
+        }
+      }
+    }
+
+    function flairFrame(t) {
+      // self-cancel the instant the game shouldn't run: leaving the kitchen, party's end, or tab hidden.
+      // Because spawning lives in the step, stopping the loop stops all accumulation (no leaked sprites).
+      if (!flairActive || window.currentStageName !== "kitchen" || !window.__gardenPartyOn || document.hidden) { stopFlairCatch(); return; }
+      var dt = flairLastT ? Math.min(50, t - flairLastT) : 16;
+      flairLastT = t;
+      flairStep(dt);
+      if (!flairActive) return; // a third miss ended the run inside the step — don't reschedule
+      flairRaf = requestAnimationFrame(flairFrame);
+    }
+
+    function startFlairCatch() {
+      if (flairActive || flairReduce || !flairLayer) return; // reduced-motion: skip the game (drag still works)
+      flairActive = true;
+      flairScore = 0; flairMiss = 0; flairElapsed = 0;
+      flairClearLayer();
+      flairItems.length = 0;
+      flairLastSpawn = 900;                 // first item drops promptly on the first tick
+      if (stageKitchen) stageKitchen.classList.add("flair-on");
+      flairBuildHud();
+      flairLastT = 0;
+      flairRaf = requestAnimationFrame(flairFrame);
+    }
+
+    function flairFlourish(score) {
+      if (!flairLayer) return;
+      var g = document.createElementNS(SVGNS_FLAIR, "g");
+      g.setAttribute("transform", "translate(340,150)");
+      g.setAttribute("font-family", "Fraunces, Georgia, serif");
+      // language-neutral: a drawn cocktail glass over the final score (mirrors the arcade's wordless flourish)
+      g.innerHTML =
+        '<g transform="translate(0,-30) scale(1.6)" fill="none" stroke="#f4d58d" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">' +
+          '<path d="M-8 -7 L8 -7 L0 2 Z"/><line x1="0" y1="2" x2="0" y2="10"/><line x1="-5" y1="10" x2="5" y2="10"/></g>' +
+        '<text text-anchor="middle" y="30" font-size="34" font-weight="700" fill="#f4efe6">' + score + '</text>';
+      flairLayer.appendChild(g);
+      if (flairReduce) { setTimeout(function () { if (g.parentNode) g.parentNode.removeChild(g); }, 1100); return; }
+      var anim = g.animate([
+        { scale: 0.6, opacity: 0 },
+        { scale: 1.1, opacity: 1, offset: 0.25 },
+        { scale: 1, opacity: 1, offset: 0.72 },
+        { scale: 1, opacity: 0 }
+      ], { duration: 1300, easing: "ease-out" });
+      anim.onfinish = function () { if (g.parentNode) g.parentNode.removeChild(g); };
+    }
+
+    function stopFlairCatch(gameOver) {
+      if (flairRaf) { cancelAnimationFrame(flairRaf); flairRaf = null; }
+      var wasActive = flairActive, finalScore = flairScore;
+      flairActive = false;
+      if (wasActive && finalScore > flairHigh()) flairSetHigh(finalScore); // bank the high on any teardown
+      flairClearLayer();                    // hard-clear — never trust per-particle onfinish for teardown
+      flairItems.length = 0;
+      flairHud = null; flairHudScore = null; flairHudHigh = null; flairHudLives = null;
+      if (stageKitchen) stageKitchen.classList.remove("flair-on");
+      if (wasActive && gameOver) flairFlourish(finalScore); // three misses → "last call"; leaving/hiding ends it silently
+    }
+    window.stopFlairCatch = stopFlairCatch;
+
+    // tear down if the tab hides or the window loses focus mid-game (pointerup may never come)
+    document.addEventListener("visibilitychange", function () { if (document.hidden) stopFlairCatch(); });
+    window.addEventListener("blur", function () { stopFlairCatch(); });
+
+    // headless test hook: deterministically arms the game and runs N logic ticks with a fixed dt
+    // WITHOUT scheduling rAF, so a screenshot can capture the dim + falling items + HUD.
+    window.__flairTest = function (steps, dt) {
+      flairActive = true; flairScore = 0; flairMiss = 0; flairElapsed = 0;
+      flairClearLayer(); flairItems.length = 0;
+      if (stageKitchen) stageKitchen.classList.add("flair-on");
+      flairBuildHud();
+      flairLastSpawn = 0;
+      for (var k = 0; k < (steps || 1); k++) { if (!flairActive) break; flairStep(dt || 16); }
+      return { active: flairActive, items: flairItems.length, score: flairScore, miss: flairMiss };
+    };
+    window.__flairStop = stopFlairCatch;
+    window.__flairState = function () { return { active: flairActive, raf: flairRaf, items: flairItems.length, score: flairScore, miss: flairMiss, high: flairHigh() }; };
+
     // he flairs on his own ~every 10s while the bar's up (visual only — no repeating rattle). One
     // self-rescheduling timer that checks conditions each cycle (never touches setGardenParty, so
     // it can't pile up and doesn't fight other party wiring); skips while off-party / hidden / reduced-motion.
@@ -36982,6 +37237,7 @@ function spawnDustMote(container) {
       }
     } else {
       stopWaltzAlternation();          // party over — kill the rotation + reset __partyDance to techno
+      if (window.stopFlairCatch) window.stopFlairCatch();                 // party over — end any Flair-Catch run + clear its sprites
       if (window.resetBartenderPosition) window.resetBartenderPosition(); // bar's gone — send him back to his spot
       clearConfetti();
       stopDiscoStepper();              // party over — kill the disco-pool stepper + drop the pools' inline styles
@@ -38244,6 +38500,7 @@ function spawnDustMote(container) {
     var buildingsReset = document.getElementById("office-buildings");
     if (buildingsReset) Array.prototype.forEach.call(buildingsReset.querySelectorAll(".office-window"), function (g) { g.classList.remove("lit"); });
     if (window.resetChairPosition) window.resetChairPosition();
+    if (window.stopFlairCatch) window.stopFlairCatch(); // reset: end any Flair-Catch run + clear #stage-kitchen.flair-on
     if (window.resetBartenderPosition) window.resetBartenderPosition();
     if (window.resetBlanketPositions) window.resetBlanketPositions();
     gardenState.water = false;

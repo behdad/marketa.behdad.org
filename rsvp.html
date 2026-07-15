@@ -22694,6 +22694,18 @@ document.addEventListener("click", function (e) {
   var consoleIn = document.getElementById("monitor-console-in");
   var consoleWrap = document.getElementById("monitor-console-wrap");
   var consoleCloseBtn = document.getElementById("monitor-console-close");
+  // Console scrollback line boxes are TINY (2.8px), so a native wheel notch (~100px) would fling
+  // ~35 lines at once — the printed history streaks past. Scale each tick down to a calm few lines.
+  // Normalize deltaMode (0=px · 1=lines · 2=pages) so a notch-wheel and a trackpad both feel gentle.
+  // Applies to all three terminals (console + python + linux); consumes only a tick that scrolled.
+  [].forEach.call(document.querySelectorAll(".console-out"), function (box) {
+    box.addEventListener("wheel", function (e) {
+      var unit = e.deltaMode === 1 ? 14 : (e.deltaMode === 2 ? box.clientHeight : 1);
+      var before = box.scrollTop;
+      box.scrollTop = before + e.deltaY * unit * 0.1; // ~10% → a 100px notch moves ~3-4 of the 2.8px lines
+      if (box.scrollTop !== before) { e.preventDefault(); e.stopPropagation(); }
+    }, { passive: false });
+  });
   var consoleHist = [], consoleHistIdx = 0, consoleWelcomed = false, hbBannerShown = false;
   if (!window.loft) window.loft = {
     couple: "markéta ∞ behdad",

@@ -31442,8 +31442,9 @@ async def localfont(name):
           spawnWaterDroplets(document.getElementById("loft-game-strip"), spot.x, spot.y);
           playWaterSound();
           if (window.markGardenWatered) window.markGardenWatered();
-        }
-      }
+          if (window.echo) window.echo("💧 a splash from the bottles — a thirsty plant drinks up.");
+        } else if (window.echo) { window.echo("💧 the bottles are bone dry — nothing left to pour."); }
+      } else if (window.echo) { window.echo("🫗 bottles left: " + bottlesWaterLeft.join(" · ") + "."); }
       return bottleLevels();
     };
     function nearestBottleIdx(e) {
@@ -40899,10 +40900,16 @@ function spawnDustMote(container) {
   // console toy: candle() → both candles' lit states; candle(1) → that one's state;
   // candle(1,true)/candle(2,false) → light/snuff one and return its PREVIOUS state.
   window.candle = function (which, on) {
-    if (arguments.length === 0) return { 1: !!candlesLit["garden-candle-1"], 2: !!candlesLit["garden-candle-2"] };
+    if (arguments.length === 0) {
+      var lit1 = !!candlesLit["garden-candle-1"], lit2 = !!candlesLit["garden-candle-2"];
+      if (window.echo) window.echo("🕯 candle 1 " + (lit1 ? "lit" : "dark") + " · candle 2 " + (lit2 ? "lit" : "dark") + ".");
+      return { 1: lit1, 2: lit2 };
+    }
     var id = resolveCandleId(which);
     if (!id) return null;
-    if (arguments.length === 1 || on == null) return !!candlesLit[id];
+    if (arguments.length === 1 || on == null) { var isLit = !!candlesLit[id]; if (window.echo) window.echo("🕯 candle " + (id === "garden-candle-2" ? "2" : "1") + (isLit ? " — lit and glowing." : " — dark right now.")); return isLit; }
+    var num = id === "garden-candle-2" ? "2" : "1";
+    if (window.echo) window.echo(!!on ? "🕯 candle " + num + " lit — a little glow in the garden." : "🕯 candle " + num + " snuffed.");
     return setCandleLit(id, !!on);
   };
 
@@ -41013,7 +41020,7 @@ function spawnDustMote(container) {
   if (glass) glass.addEventListener("animationend", function (e) {
     if (e.animationName === "butterfly-flap-left" || e.animationName === "butterfly-flap-right") glass.classList.remove("flap");
   });
-  window.butterfly = function () { if (window.goToStage) window.goToStage("office"); flapButterfly(); }; // console toy: go to the office and flutter the stained-glass butterfly (no return value)
+  window.butterfly = function () { if (window.goToStage) window.goToStage("office"); flapButterfly(); if (window.echo) window.echo("🦋 the stained-glass butterfly stirs its wings."); }; // console toy: go to the office and flutter the stained-glass butterfly (no return value)
   onActivate(glass, function () {
     if (window.__cinematic) return; // the cinematic drives goToStage("balcony") itself
     if (!window.__pragueCalled) { // the finale gates on calling Prague first
@@ -43123,15 +43130,22 @@ function spawnDustMote(container) {
   window.cooked = function (n) { // is a burger done? cooked(1|2|3) → bool · cooked() → [bool, bool, bool]
     var s = document.getElementById("balcony-smoker");
     var bs = s ? [].slice.call(s.querySelectorAll(".smoker-burger")) : [];
-    if (arguments.length === 0 || n == null || n === "") return bs.map(function (b) { return b.classList.contains("done"); });
+    if (arguments.length === 0 || n == null || n === "") {
+      var states = bs.map(function (b) { return b.classList.contains("done"); });
+      var done = states.filter(Boolean).length;
+      echo("🍔 " + done + " of " + states.length + " done" + (states.length && done === states.length ? " — dinner's ready." : " — low and slow."));
+      return states;
+    }
     var i = parseInt(n, 10);
-    return (i >= 1 && i <= bs.length) ? bs[i - 1].classList.contains("done") : false;
+    if (i >= 1 && i <= bs.length) { var d = bs[i - 1].classList.contains("done"); echo("🍔 burger " + i + (d ? " — done, grab it." : " — still on the grill.")); return d; }
+    echo("🍔 there's no burger " + n + " on the smoker.");
+    return false;
   };
   window.servefood = function (pick) { // serve a cooked burger; servefood(random()) → a random ready one. returns true if one was served
     var s = document.getElementById("balcony-smoker");
     var bs = s ? [].slice.call(s.querySelectorAll(".smoker-burger")) : [];
     var ready = bs.filter(function (b) { return b.classList.contains("done") && !b.classList.contains("served"); });
-    if (!ready.length) return false;
+    if (!ready.length) { echo("🍽 nothing's ready to serve yet — give the smoker a minute."); return false; }
     if (window.goToStage) window.goToStage("balcony");
     if (!s.classList.contains("open")) { var lid = document.getElementById("balcony-smoker-lid"); if (lid) lid.dispatchEvent(new MouseEvent("click", { bubbles: true })); } // serving needs the lid up
     var idx = 0;
@@ -43294,7 +43308,11 @@ function spawnDustMote(container) {
     return "";
   }
   window.audio = function (src) {
-    if (arguments.length === 0 || src == null || src === "") return currentAudioSource();
+    if (arguments.length === 0 || src == null || src === "") {
+      var cur = currentAudioSource();
+      echo(cur ? "🔊 now playing: the " + cur + " source." : "🔇 silence — nothing's playing.");
+      return cur;
+    }
     if (src === true) return window.play ? window.play() : "nothing to resume.";  // audio(true) → play/resume
     if (src === false) return window.pause ? window.pause() : "nothing to pause."; // audio(false) → pause
     var afi = fracToIndex(src, AUDIO_SOURCES.length); if (afi) src = afi; // random() → a random source

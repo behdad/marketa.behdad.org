@@ -908,6 +908,33 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 #loft-game-strip.party-on #kitchen-bar-patron-b.hiccup{animation:patron-hiccup .62s ease-in-out}
 @keyframes patron-hiccup{0%{transform:rotate(0)}22%{transform:translateY(-2.5px) rotate(-4.5deg)}52%{transform:translateY(-1px) rotate(3.5deg)}78%{transform:rotate(-1.5deg)}100%{transform:rotate(0)}}
 @media (prefers-reduced-motion: reduce){#loft-game-strip.party-on #kitchen-bar-patron-a,#loft-game-strip.party-on #kitchen-bar-patron-b{animation:none}#loft-game-strip.party-on #kitchen-bar-patron-a.hiccup,#loft-game-strip.party-on #kitchen-bar-patron-b.hiccup{animation:none}}
+/* the pair are DRAGGABLE along the bar (their bodies are handles for their bound stools — JS): each
+   patron rides its OWN css `translate` property (the horizontal ride), a DIFFERENT property from the
+   sway/hiccup `transform`, so they compose without clobber. When the two stools close to touching JS
+   adds .kissing — patron-a (left) leans RIGHT, patron-b (right) leans LEFT, heads meeting in the
+   middle; a floating 💋 spawns between them (JS, capped, self-cleaning). .kissing/.tumbling carry a
+   state class (specificity 2,2,0, like the hiccup one) and sit AFTER the sway rule, so they win the
+   `animation` property —
+   which IS gating the idle sway off while they lean/topple (no separate sway-disable needed). .kissing
+   holds its pose (forwards); it's cleared by JS (the drag parts them / a reset), not on animationend. */
+#loft-game-strip.party-on #kitchen-bar-patron-a.kissing{animation:patron-kiss-a .42s ease-out forwards}
+#loft-game-strip.party-on #kitchen-bar-patron-b.kissing{animation:patron-kiss-b .42s ease-out forwards}
+@keyframes patron-kiss-a{from{transform:rotate(-1.1deg)}to{transform:rotate(13deg) translateY(-1.5px)}}
+@keyframes patron-kiss-b{from{transform:rotate(1.2deg)}to{transform:rotate(-13deg) translateY(-1.5px)}}
+/* and SOMETIMES, when a kiss ends, one of them comically topples BACKWARD off the stool onto the floor,
+   lies a beat, then pops back on the seat (a one-shot that returns to upright at 100%, so the class is
+   simply dropped on animationend — the topple composes with the ride `translate`). .tumbling sits after
+   .kissing so it wins if they ever coexist. Reduced-motion suppresses the tumble entirely in JS. */
+#loft-game-strip.party-on #kitchen-bar-patron-a.tumbling{animation:patron-tumble-a 2.2s ease-in-out}
+#loft-game-strip.party-on #kitchen-bar-patron-b.tumbling{animation:patron-tumble-b 2.2s ease-in-out}
+@keyframes patron-tumble-a{0%{transform:rotate(0)}16%{transform:translate(-11px,7px) rotate(-42deg)}32%{transform:translate(-24px,21px) rotate(-88deg)}70%{transform:translate(-24px,21px) rotate(-88deg)}86%{transform:translate(-5px,-2px) rotate(6deg)}100%{transform:rotate(0)}}
+@keyframes patron-tumble-b{0%{transform:rotate(0)}16%{transform:translate(11px,7px) rotate(42deg)}32%{transform:translate(24px,21px) rotate(88deg)}70%{transform:translate(24px,21px) rotate(88deg)}86%{transform:translate(5px,-2px) rotate(-6deg)}100%{transform:rotate(0)}}
+@media (prefers-reduced-motion: reduce){#loft-game-strip.party-on #kitchen-bar-patron-a.kissing{animation:none;transform:rotate(13deg)}#loft-game-strip.party-on #kitchen-bar-patron-b.kissing{animation:none;transform:rotate(-13deg)}}
+/* a little kiss 💋 that floats up between the pair (JS-spawned, into #kitchen-bar-patrons so it shares
+   the patrons' coordinate system; capped/self-removing so it can't accumulate in a backgrounded tab) */
+#kitchen-bar-patrons .bar-kiss{pointer-events:none}
+@keyframes bar-kiss-float{0%{opacity:0;transform:translateY(0) scale(.5)}18%{opacity:1}100%{opacity:0;transform:translateY(-26px) scale(1.15)}}
+@media (prefers-reduced-motion: reduce){#kitchen-bar-patrons .bar-kiss{animation:none;opacity:1}}
 /* the bartender's flourish: tapping his transparent upper-body hit rect throws the shaker up
    and catches it. The toss animates #kitchen-bartender-shaker (the metal parts only) — a node
    DISTINCT from the idle-shaking #kitchen-bartender-shake wrapper — so the two transforms
@@ -20334,27 +20361,90 @@ document.addEventListener("click", function (e) {
   // plain tap still wobbles. A reset clears the inline translate → stools snap back to default x.
   (function () {
     var stools = document.getElementById("kitchen-bar-stools");
+    var patrons = document.getElementById("kitchen-bar-patrons");
     var strip = document.getElementById("loft-game-strip");
     if (!stools || !strip) return;
     var ORDER = ["kitchen-bar-stool-1", "kitchen-bar-stool-3", "kitchen-bar-stool-2", "kitchen-bar-stool-4"]; // left→right
     var BASE = { "kitchen-bar-stool-1": 150, "kitchen-bar-stool-3": 250, "kitchen-bar-stool-2": 356, "kitchen-bar-stool-4": 462 };
     var GAP = 46;                    // min centre-to-centre spacing (≈ a seat width) so seats never overlap
     var MIN_X = 96, MAX_X = 560;     // outer clamp: keep the end stools on the bar's extent
+    // the two tipsy patrons ride the two LEFT stools (their bodies are drag handles too): patron-a on
+    // stool-1, patron-b on stool-3. A bound patron slides the same horizontal offset as its stool, set
+    // on the patron's OWN css `translate` property (a DIFFERENT property from the sway `transform`, so
+    // they compose — the same trick the stools use). Push their stools to touching → they lean in for a
+    // KISS (.kissing); pull them apart → sometimes one topples off the seat (.tumbling). Enter/exit the
+    // kiss with hysteresis so a jittery park near the threshold doesn't chatter (and over-roll tumbles).
+    var PATRON_OF = { "kitchen-bar-stool-1": "kitchen-bar-patron-a", "kitchen-bar-stool-3": "kitchen-bar-patron-b" };
+    var STOOL_OF = { "kitchen-bar-patron-a": "kitchen-bar-stool-1", "kitchen-bar-patron-b": "kitchen-bar-stool-3" };
+    var KISS_ENTER = GAP + 6, KISS_EXIT = GAP + 16; // touch to kiss (≤ 52 apart); part only past 62 (dead-band)
+    var SVGNS = "http://www.w3.org/2000/svg";
+    function reduceMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+    function patronPan(g) { try { var b = g.getBBox(); return Math.max(-1, Math.min(1, ((b.x + b.width / 2) / 680) * 2 - 1)); } catch (e) { return 0; } }
     function localX(e) { // client x → strip-local x (a horizontal delta here equals a stage-local delta: rooms are translate-only, scale 1)
       try { var pt = strip.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; return pt.matrixTransform(strip.getScreenCTM().inverse()).x; }
       catch (err) { return e.clientX; }
     }
     function effX(id) { var el = document.getElementById(id); var off = el ? (parseFloat(el.style.translate) || 0) : 0; return BASE[id] + off; }
-    function setStool(id, ex) { var el = document.getElementById(id); if (el) el.style.translate = (ex - BASE[id]) + "px 0px"; }
+    function syncPatron(stoolId) { // a bound patron rides the same horizontal offset as its stool
+      var pid = PATRON_OF[stoolId]; if (!pid) return;
+      var p = document.getElementById(pid), st = document.getElementById(stoolId);
+      if (!p || !st) return;
+      var off = parseFloat(st.style.translate) || 0;
+      p.style.translate = off ? (off + "px 0px") : "";
+    }
+    function setStool(id, ex) { var el = document.getElementById(id); if (el) el.style.translate = (ex - BASE[id]) + "px 0px"; syncPatron(id); }
+    function spawnKissHeart() { // one 💋 floating up between the pair; capped + self-removing (backgrounded-tab safe)
+      if (reduceMotion() || !patrons) return;
+      Array.prototype.forEach.call(patrons.querySelectorAll(".bar-kiss"), function (n) { n.remove(); }); // clear any leftover before spawning: cap = 1
+      var midX = (effX("kitchen-bar-stool-1") + effX("kitchen-bar-stool-3")) / 2;
+      var t = document.createElementNS(SVGNS, "text");
+      t.setAttribute("class", "bar-kiss");
+      t.setAttribute("x", midX); t.setAttribute("y", "204");
+      t.setAttribute("text-anchor", "middle"); t.setAttribute("font-size", "13");
+      t.style.transformBox = "fill-box"; t.style.transformOrigin = "50% 100%";
+      t.style.animation = "bar-kiss-float 1.1s ease-out forwards";
+      t.textContent = "💋";
+      t.addEventListener("animationend", function () { t.remove(); });
+      patrons.appendChild(t);
+    }
+    function tumble(pid) { // one comic backward topple off the stool, then pops back on the seat (animationend clears it)
+      if (reduceMotion()) return;                         // no slapstick + no lingering class under reduced motion
+      var p = document.getElementById(pid);
+      if (!p || p.classList.contains("tumbling")) return;
+      p.classList.remove("kissing");
+      p.classList.add("tumbling");
+      try { if (window.playTampSound) playTampSound(patronPan(p)); } catch (e) {} // a soft "oof"/thud, panned to the patron
+    }
+    function maybeTumble() { // ~1 in 3–4 partings, a random one of the two takes a tumble
+      if (reduceMotion()) return;
+      if (Math.random() > 0.3) return;
+      tumble(Math.random() < 0.5 ? "kitchen-bar-patron-a" : "kitchen-bar-patron-b");
+    }
+    function updateKiss() { // hysteresis: enter ≤ KISS_ENTER, part only past KISS_EXIT; on parting, maybe a tumble
+      var a = document.getElementById("kitchen-bar-patron-a"), b = document.getElementById("kitchen-bar-patron-b");
+      if (!a || !b) return;
+      var d = Math.abs(effX("kitchen-bar-stool-1") - effX("kitchen-bar-stool-3"));
+      if (a.classList.contains("kissing")) {
+        if (d > KISS_EXIT) { a.classList.remove("kissing"); b.classList.remove("kissing"); maybeTumble(); }
+      } else if (d <= KISS_ENTER && !a.classList.contains("tumbling") && !b.classList.contains("tumbling")) {
+        a.classList.add("kissing"); b.classList.add("kissing"); spawnKissHeart();
+      }
+    }
     var dragEl = null, dragId = null, startX = 0, startEff = 0, dragMoved = false;
+    function startDrag(e, stoolId) { // shared by a stool grab AND a patron-body grab; captures on the STOOL so the handlers below run unchanged
+      if (window.__barUpNow && !window.__barUpNow()) return; // draggable only while the bar's up (belt-and-suspenders; CSS already gates pointer-events)
+      var pid = PATRON_OF[stoolId];
+      if (pid) { var pb = document.getElementById(pid); if (pb && pb.classList.contains("tumbling")) return; } // don't drag a patron who's on the floor
+      var el = document.getElementById(stoolId); if (!el) return;
+      dragEl = el; dragId = stoolId; startX = localX(e); startEff = effX(stoolId); dragMoved = false;
+      stools.classList.add("dragging");
+      try { el.setPointerCapture(e.pointerId); } catch (err) {}
+    }
     stools.addEventListener("pointerdown", function (e) {
       if (e.button && e.button !== 0) return;
-      if (window.__barUpNow && !window.__barUpNow()) return; // draggable only while the bar's up (belt-and-suspenders; CSS already gates pointer-events)
       var w = e.target && e.target.closest ? e.target.closest(".bar-stool") : null;
       if (!w || w.parentNode !== stools) return;
-      dragEl = w; dragId = w.id; startX = localX(e); startEff = effX(dragId); dragMoved = false;
-      stools.classList.add("dragging");
-      try { w.setPointerCapture(e.pointerId); } catch (err) {}
+      startDrag(e, w.id);
     });
     stools.addEventListener("pointermove", function (e) {
       if (!dragEl) return;
@@ -20366,6 +20456,7 @@ document.addEventListener("click", function (e) {
       var hi = idx < ORDER.length - 1 ? effX(ORDER[idx + 1]) - GAP : MAX_X;  // right neighbour (or the bar's right edge)
       if (lo > hi) lo = hi;
       setStool(dragId, Math.max(lo, Math.min(hi, ex)));
+      updateKiss();
     });
     function endDrag(e) {
       if (!dragEl) return;
@@ -20379,7 +20470,35 @@ document.addEventListener("click", function (e) {
     stools.addEventListener("click", function (e) {
       if (dragMoved) { dragMoved = false; e.stopImmediatePropagation(); e.preventDefault(); }
     }, true);
-    window.__resetStools = function () { ORDER.forEach(function (id) { var el = document.getElementById(id); if (el) el.style.translate = ""; }); };
+    // patron BODIES are drag handles for their bound stool: a pointerdown on a patron starts the exact
+    // same stool drag (capture routes to the stool, so the move/up handlers above run unchanged). A real
+    // drag swallows its trailing click — which lands on the PATRON, not the stool — so it doesn't hiccup.
+    if (patrons) {
+      patrons.addEventListener("pointerdown", function (e) {
+        if (e.button && e.button !== 0) return;
+        var g = e.target && e.target.closest ? e.target.closest("#kitchen-bar-patron-a, #kitchen-bar-patron-b") : null;
+        if (!g || g.parentNode !== patrons || !STOOL_OF[g.id]) return;
+        startDrag(e, STOOL_OF[g.id]);
+      });
+      patrons.addEventListener("click", function (e) {
+        if (dragMoved) { dragMoved = false; e.stopImmediatePropagation(); e.preventDefault(); }
+      }, true);
+      patrons.addEventListener("animationend", function (e) { // the tumble returns to upright at 100%; drop the class so drag/kiss resume
+        if (e.animationName === "patron-tumble-a" || e.animationName === "patron-tumble-b") {
+          var g = e.target; if (g && g.classList) g.classList.remove("tumbling");
+        }
+      });
+    }
+    window.__forceBarTumble = function (which) { tumble(which === "b" ? "kitchen-bar-patron-b" : "kitchen-bar-patron-a"); }; // test hook: force the tumble path
+    function resetPatrons() { // fresh game: reseat both patrons at default x, drop any kiss/tumble state + stray hearts
+      ["kitchen-bar-patron-a", "kitchen-bar-patron-b"].forEach(function (pid) {
+        var p = document.getElementById(pid);
+        if (p) { p.classList.remove("kissing"); p.classList.remove("tumbling"); p.style.translate = ""; }
+      });
+      if (patrons) Array.prototype.forEach.call(patrons.querySelectorAll(".bar-kiss"), function (n) { n.remove(); });
+    }
+    window.__resetBarPatrons = resetPatrons;
+    window.__resetStools = function () { ORDER.forEach(function (id) { var el = document.getElementById(id); if (el) el.style.translate = ""; }); resetPatrons(); };
   })();
   // the MENU paper tacked to the pillar → summons the pocket-phone cocktails app to its drink menu,
   // opened IN-PLACE at the bar (no room jump). CSS gates pointer-events to the bar being up, so this
@@ -46967,7 +47086,7 @@ function spawnDustMote(container) {
   // dragging an object would pan the page on touch screens. touchmove events
   // retarget to the touchstart element, so one non-passive listener covers
   // every draggable; touches starting elsewhere still scroll normally.
-  var DRAG_SEL = "#office-desk, #office-chair, #garden-bottles, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife, #monitor-manual-eq, #kitchen-bartender, #kitchen-bar-stools";
+  var DRAG_SEL = "#office-desk, #office-chair, #garden-bottles, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife, #monitor-manual-eq, #kitchen-bartender, #kitchen-bar-stools, #kitchen-bar-patrons";
   strip.addEventListener("touchmove", function (e) {
     if (e.target.closest && e.target.closest(DRAG_SEL)) e.preventDefault();
   }, { passive: false });

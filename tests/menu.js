@@ -91,11 +91,22 @@ var HARNESS = [
   "    await sleep(80);",
   "    S('esc_hid_menu', !ccMenu());",
   "    S('esc_kept_app', mon().classList.contains('show-python'));",
-  // plain JS console: Kill present + enabled (no runtime), but NO Restart
+  // plain JS console: Kill AND Restart both present + enabled now — Kill = refresh (clear scrollback,
+  // re-arm welcome, back to desktop), Restart = refresh + reopen. No runtime to gate → Kill always live.
+  // The copy/paste labels are now Titlecase (Copy/Paste), matching Kill/Restart.
   "    showApp('show-console');",
   "    var conOut=document.getElementById('monitor-console-out');",
-  "    if(conOut){ ctxAt(conOut); S('console_restart_hidden', !ccVisible('.cc-restart')); S('console_kill_visible', ccVisible('.cc-kill')); S('console_kill_enabled', !ccKillDisabled()); }",
-  "    else { S('console_restart_hidden','no-console-out'); S('console_kill_visible','no-console-out'); S('console_kill_enabled','no-console-out'); }",
+  "    if(conOut){ ctxAt(conOut); S('console_restart_visible', ccVisible('.cc-restart')); S('console_kill_visible', ccVisible('.cc-kill')); S('console_kill_enabled', !ccKillDisabled()); S('console_restart_label', ccText('.cc-restart')); S('console_kill_label', ccText('.cc-kill')); S('console_menu_html', ccMenu()?ccMenu().outerHTML.replace(/\\s+/g,' '):''); }",
+  "    else { S('console_restart_visible','no-console-out'); S('console_kill_visible','no-console-out'); S('console_kill_enabled','no-console-out'); S('console_restart_label','no-console-out'); S('console_kill_label','no-console-out'); S('console_menu_html',''); }",
+  // console Kill now runs the JS-crash flatline flash, THEN refreshes: the menu hides + death-console
+  // starts immediately; show-console stays up during the flash, then destroyConsole clears the
+  // scrollback + drops show-console once it ends.
+  "    if(conOut){ showApp('show-console'); conOut.innerHTML='<div>stale console line</div>'; ctxAt(conOut);",
+  "      if(ccMenu()) ccMenu().querySelector('.cc-kill').click(); await sleep(40);",
+  "      S('console_kill_hid_menu', !ccMenu()); S('console_kill_flash_started', mon().classList.contains('death-console')); S('console_kill_still_open_during_flash', mon().classList.contains('show-console'));",
+  "      await sleep(2100);",
+  "      S('console_kill_cleared_out', !/stale console line/.test(conOut.textContent)); S('console_kill_closed_app', !mon().classList.contains('show-console')); S('console_kill_flash_ended', !mon().classList.contains('death-console'));",
+  "    } else { ['console_kill_hid_menu','console_kill_flash_started','console_kill_still_open_during_flash','console_kill_cleared_out','console_kill_closed_app','console_kill_flash_ended'].forEach(function(k){S(k,'no-console-out');}); }",
   // ---- LINUX (console-ctx) ----
   "    showApp('show-linux');",
   "    var lxOutEl=document.getElementById('monitor-linux-out');",
@@ -169,13 +180,21 @@ var HARNESS = [
   "    showApp('show-caps'); ctxAt(deskTile('mines')); if(monOpen()) monOpen().click(); await sleep(60); S('desk_open_launched', mon().classList.contains('show-mines')); S('desk_open_hid_menu', !monMenu());",
   // right-clicking a NON-icon desktop surface (the menu-bar brand) → no custom menu, native kept
   "    showApp('show-caps'); var brand=document.querySelector('#monitor-desktop-dock .desk-brand'); S('desk_nontile_prevented', brand?ctxAt(brand):'no-brand'); S('desk_nontile_no_menu', !monMenu());",
+  // Console Restart now runs the JS-crash flatline flash, THEN refreshes (clears the scrollback +
+  // drops show-console) and would reopen a fresh welcome (no show-caps here → openConsole no-ops);
+  // verify flash-then-teardown, mirroring linux/python.
+  "    showApp('show-console'); var co=document.getElementById('monitor-console-out'); if(co){ co.innerHTML='<div>old-console</div>'; } var conThrew=null;",
+  "    try { window.__restartMonitorConsole(); } catch(e){ conThrew=String(e); }",
+  "    S('console_restart_threw', conThrew); S('console_restart_flash_started', mon().classList.contains('death-console'));",
+  "    await sleep(2100);",  // wait out the ~2s flatline flash → destroyConsole clears the console
+  "    S('console_restart_cleared_out', co?!/old-console/.test(co.textContent):'no-console-out'); S('console_restart_torn_down', !mon().classList.contains('show-console') && !mon().classList.contains('death-console'));",
   "  }",
   "  window.addEventListener('load', function(){ setTimeout(function(){ run().catch(function(e){ window.__errs.push('harness: '+String(e&&e.stack||e)); }).then(function(){ report.errors=window.__errs; document.getElementById('__report').textContent=JSON.stringify(report); }); }, 400); });",
   "})();",
   "</script>"
 ].join("\n");
 
-var rep = lib.runPageSync("rsvp.html", HARNESS, 20000, { patchRaf: true });
+var rep = lib.runPageSync("rsvp.html", HARNESS, 26000, { patchRaf: true });
 if (!rep) { console.log("  ✗ harness produced no report (page error before load, or budget too small)"); process.exit(1); }
 
 var fails = 0;
@@ -203,8 +222,11 @@ check("Kill becomes ENABLED once the runtime is running", s.py_kill_enabled_when
 check("enabled Kill runs the Black Knight flash then destroys the python app", s.py_kill_hid_menu === true && s.py_kill_flash_started === true && s.py_kill_still_open_during_flash === true && s.py_kill_closed_app === true && s.py_kill_flash_ended === true);
 check("Esc hides the menu", s.esc_hid_menu === true);
 check("Esc leaves the app open (does not close it)", s.esc_kept_app === true);
-check("plain JS console gets NO Restart", s.console_restart_hidden === true || s.console_restart_hidden === "no-console-out");
+check("plain JS console NOW gets a Restart (Kill=refresh, Restart=refresh+reopen)", s.console_restart_visible === true || s.console_restart_visible === "no-console-out");
 check("plain JS console gets an enabled Kill (no runtime to gate)", (s.console_kill_visible === true && s.console_kill_enabled === true) || s.console_kill_visible === "no-console-out");
+check("console Restart/Kill labelled 'Restart'/'Kill'", (/restart/i.test(s.console_restart_label) && /kill/i.test(s.console_kill_label)) || s.console_restart_label === "no-console-out", { restart: s.console_restart_label, kill: s.console_kill_label });
+check("console menu copy/paste are Titlecase (Copy/Paste), matching Kill/Restart", /Copy/.test(s.console_menu_html) && /Paste/.test(s.console_menu_html) || s.console_menu_html === "", s.console_menu_html ? s.console_menu_html.slice(0, 260) : "(none)");
+check("console Kill runs the flatline flash then refreshes (clears scrollback + drops show-console)", (s.console_kill_hid_menu === true && s.console_kill_flash_started === true && s.console_kill_still_open_during_flash === true && s.console_kill_cleared_out === true && s.console_kill_closed_app === true && s.console_kill_flash_ended === true) || s.console_kill_hid_menu === "no-console-out", { hid: s.console_kill_hid_menu, flash: s.console_kill_flash_started, during: s.console_kill_still_open_during_flash, cleared: s.console_kill_cleared_out, closed: s.console_kill_closed_app, ended: s.console_kill_flash_ended });
 check("console menu appears over linux with Restart+Kill", s.linux_menu_present === true && s.linux_restart_visible === true && s.linux_kill_visible === true);
 check("linux Kill is DISABLED while the VM isn't running", s.linux_kill_disabled_when_cold === true);
 check("linux Restart hides the menu", s.linux_restart_hid_menu === true);
@@ -220,6 +242,7 @@ console.log(" restart teardown (no throws, real state reset):");
 check("doom restart runs the flash then tears down + swaps a fresh canvas (id kept)", s.doom_restart_threw === null && s.doom_restart_flash_started === true && s.doom_restart_swapped_canvas === true && s.doom_restart_torn_down === true, s.doom_restart_threw);
 check("linux restart runs the BSOD flash then destroys + clears the console", s.linux_restart_threw === null && s.linux_restart_flash_started === true && s.linux_restart_cleared_out === true, s.linux_restart_threw);
 check("python restart runs the Black Knight flash then destroys + clears the console", s.python_restart_threw === null && s.python_restart_flash_started === true && s.python_restart_cleared_out === true && s.python_restart_torn_down === true, s.python_restart_threw);
+check("console restart runs the flatline flash then refreshes + clears the console", s.console_restart_threw === null && s.console_restart_flash_started === true && (s.console_restart_cleared_out === true || s.console_restart_cleared_out === "no-console-out") && s.console_restart_torn_down === true, s.console_restart_threw);
 check("no uncaught JS errors during the run", Array.isArray(rep.errors) && rep.errors.length === 0, rep.errors);
 
 // ==== DESKTOP DOCK-ICON CONTEXT MENU (Open / Kill) — appended assertions ====

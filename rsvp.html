@@ -21509,7 +21509,7 @@ document.addEventListener("click", function (e) {
     var TERM_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
-      laser: "laser([seconds]) — loose a red dot the cat chases; laser(false) turns it off",
+      laser: "laser(true) — loose a red dot the cat chases; laser(false) turns it off; laser() reports whether it's on",
       party: "party(true) throws the garden party; party(false) ends it; party() reports whether it's on",
       reset: "reset() — restart the whole loft from the top (no confirmation — you typed it)",
       quit: "quit (or exit) — close the console, back to the desktop",
@@ -21638,6 +21638,26 @@ document.addEventListener("click", function (e) {
     // no EN/CS parity burden — the shell itself is code, not translated copy.
     if (/^ls(\s.*)?$/.test(c)) { termPrint("kitchen  garden  cuddly  office  balcony", "term-dim"); return; }
     if (/^pwd$/.test(c)) { termPrint("/home/markéta+behdad/loft", "term-dim"); return; }
+    // `cd <room>` walks the loft like directories — the natural bareword form of goto("room").
+    var cdM = c.match(/^cd(?:\s+(["']?)([a-z~/]+)\1)?$/i);
+    if (cdM) {
+      var ROOMS = ["kitchen", "garden", "cuddly", "office", "balcony"];
+      var dest = (cdM[2] || "").toLowerCase().replace(/[~/]/g, "") || "kitchen"; // bare `cd` → home (kitchen)
+      if (ROOMS.indexOf(dest) !== -1) { if (window.goToStage) window.goToStage(dest); termPrint("→ " + dest, "term-dim"); }
+      else termPrint("cd: no such room: " + dest + " — rooms: " + ROOMS.join(", "), "term-dim");
+      return;
+    }
+    // `credits` — a quiet thank-you to the people behind the loft (bareword, no parens)
+    if (/^credits$/i.test(c)) {
+      [
+        "with thanks —",
+        "  Markéta Jakešová · co-design",
+        "  Kasra Rahimi · testing & feedback",
+        "  Garret Rieger · testing & feedback",
+        "made with love by markéta ∞ behdad"
+      ].forEach(function (line) { termPrint(line, "term-dim"); });
+      return;
+    }
     if (/^whoami$/.test(c)) { termPrint("someone we love.", "term-dim"); return; }
     if (/^sudo\b/.test(c)) { termPrint("nice try — no superpowers at this wedding. everyone's equal on the guest list.", "term-dim"); return; }
     if (/^(exit|quit)(\(\))?$/.test(c)) { closeTerminal(); return; } // close the console (back to the desktop)
@@ -40429,10 +40449,11 @@ function spawnDustMote(container) {
     dot.style.transform = "translate(" + to.x + "px," + to.y + "px)";
     stage.appendChild(dot); // moves it — a node has one parent
   };
-  window.laser = function (seconds) { // devtools users get the toy too; laser(false) calls it off
-    if (!seconds && seconds !== undefined) { window.__laserOff(); return "off"; }
-    window.__laserPointer(seconds);
-    return "on";
+  window.laser = function (on) { // plain toggle, same idiom as party()/cat(): laser() reports, a set returns the PREVIOUS state
+    var wasOn = !!dot;
+    if (arguments.length === 0 || on == null) return wasOn; // no-arg: report whether it's on
+    if (on) window.__laserPointer(0); else window.__laserOff(); // runs until laser(false)
+    return wasOn;
   };
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "hidden") window.__laserOff(); // no timer pile-up in a hidden tab

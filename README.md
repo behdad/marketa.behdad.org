@@ -49,6 +49,13 @@ that documents exactly how the bundle was produced and where it came from:
 These are pinned deliverables, not build outputs — please don't regenerate or "upgrade"
 them casually.
 
+## Acknowledgments
+
+With thanks to the people who helped shape this:
+
+- **Markéta Jakešová** — co-design
+- **Kasra Rahimi** & **Garret Rieger** — testing & feedback
+
 ## A note for visitors
 
 This repo is public because the site is public and hobbyist-friendly — poke around if

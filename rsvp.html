@@ -19448,6 +19448,16 @@ document.addEventListener("click", function (e) {
     clearTimeout(saverTimer);
     saverTimer = setTimeout(startSaver, ms || 8000);
   }
+  // wake the screensaver back to the desktop (same as clicking the monitor while it's saving) —
+  // used by the office Enter shortcut. Returns true if it actually dismissed a running saver.
+  window.__wakeMonitorSaver = function () {
+    if (!monitor.classList.contains("show-saver")) return false;
+    stopSaver();
+    monitor.classList.add("show-caps");
+    monitorUrl = CAPS_URL;
+    scheduleSaver();
+    return true;
+  };
   function startSaver() {
     if (monitor.classList.contains("show-terminal") || monitor.classList.contains("show-mail") || monitor.classList.contains("show-mines") || monitor.classList.contains("show-video") || monitor.classList.contains("show-tehran") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux") || monitor.classList.contains("show-doom") || monitor.classList.contains("show-weather") || monitor.classList.contains("show-editor") || monitor.classList.contains("show-tattoo") || monitor.classList.contains("show-life")) { scheduleSaver(30000); return; } // never over someone typing, reading mail, a minesweeper game, the film, playing doom, editing a script, the tattoo studio, a life sim, or a live call
     if (monitor.classList.contains("show-calendar")) { scheduleSaver(30000); return; } // nor over the open calendar
@@ -20562,13 +20572,14 @@ document.addEventListener("click", function (e) {
       if (wc) wc.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     } },
     { id: "tehran", icon: "phone", labelKey: "app_tehran", glyph: "📞", tile: "#2b7a4b", glyphSize: "5.2", open: function () { openTehranCall(); } },
-    { id: "tattoo", icon: "tattoo", labelKey: "app_tattoo", glyph: "🖊️", tile: "#c68e95", glyphSize: "5.2", open: function () { openTattooApp(); } },
+    { id: "chrome", icon: HOST_BROWSER === "chrome" ? null : "globe", labelKey: HOST_BROWSER === "chrome" ? "app_chrome" : HOST_BROWSER === "firefox" ? "app_firefox" : "app_browser", glyph: "🌐", tile: "#fdfbf6", color: "#4285f4", glyphSize: "5.2", open: function () { openBrowser(); } },
     { id: "video", icon: "video", labelKey: "app_video", glyph: "▶", tile: "#4a6b94", glyphSize: "4.8", open: function () { openVideoApp(); } },
-    { id: "mines", icon: "mines", labelKey: "app_mines", glyph: "💣", tile: "#c8c2b4", color: "#453a31", glyphSize: "5.2", open: function () { openMinesApp(); } },
+    { id: "weather", icon: "weather", labelKey: "app_weather", glyph: "⛅", tile: "#7f9ec0", glyphSize: "5.2", open: function () { openWeather(); } },
     { id: "mail", icon: "mail", labelKey: "app_mail", glyph: "✉️", tile: "#4a6b94", glyphSize: "5.2", open: function () { openMailApp(); } },
     { id: "calendar", labelKey: "app_calendar", glyph: "📅", tile: "#c68e95", glyphSize: "5.2", open: function () { openCalendar(); } },
-    { id: "weather", icon: "weather", labelKey: "app_weather", glyph: "⛅", tile: "#7f9ec0", glyphSize: "5.2", open: function () { openWeather(); } },
-    { id: "chrome", icon: HOST_BROWSER === "chrome" ? null : "globe", labelKey: HOST_BROWSER === "chrome" ? "app_chrome" : HOST_BROWSER === "firefox" ? "app_firefox" : "app_browser", glyph: "🌐", tile: "#fdfbf6", color: "#4285f4", glyphSize: "5.2", open: function () { openBrowser(); } },
+    // games row: the tattoo studio, minesweeper, Game of Life, DOOM sit together
+    { id: "tattoo", icon: "tattoo", labelKey: "app_tattoo", glyph: "🖊️", tile: "#c68e95", glyphSize: "5.2", open: function () { openTattooApp(); } },
+    { id: "mines", icon: "mines", labelKey: "app_mines", glyph: "💣", tile: "#c8c2b4", color: "#453a31", glyphSize: "5.2", open: function () { openMinesApp(); } },
     { id: "life", icon: "life", labelKey: "app_life", glyph: "⧉", tile: "#fdfbf6", color: "#8e3a4a", glyphSize: "5.2", open: function () { openLifeApp(); } },
     { id: "doom", labelKey: "app_doom", glyph: "🎮", tile: "#4a1010", color: "#e8c060", glyphSize: "5.2", open: function () { openDoom(); } },
     { id: "editor", labelKey: "app_editor", glyph: "✎", tile: "#2e2823", color: "#8fd070", mono: true, glyphSize: "5.9", open: function () { openEditor(); } },
@@ -35986,7 +35997,7 @@ function spawnDustMote(container) {
     if (er === "kitchen") { if (window.__kitchenDoNext) window.__kitchenDoNext(); }                    // next pending coffee step
     else if (er === "garden") { if (window.party) window.party(!window.party()); }                     // toggle the party
     else if (er === "cuddly") { if (window.__cuddlyProjector) window.__cuddlyProjector.cycle(); }       // next projector channel
-    else if (er === "office") { if (window.computer && !window.computer()) window.computer(true); else if (window.__toggleMonitorZoom) window.__toggleMonitorZoom(); } // boot the PC if it's off, else toggle the monitor zoom
+    else if (er === "office") { if (window.__wakeMonitorSaver && window.__wakeMonitorSaver()) {} else if (window.computer && !window.computer()) window.computer(true); else if (window.__toggleMonitorZoom) window.__toggleMonitorZoom(); } // wake the screensaver if it's up, else boot the PC if it's off, else toggle the monitor zoom
     else if (er === "balcony") { if (window.phone) window.phone(!window.phone()); }                    // toggle the cellphone
     else did = false;
     if (did) { e.preventDefault(); e.stopPropagation(); if (ae && ae.blur && ae !== document.body) ae.blur(); } // suppress the focused scene object's activation + drop its focus

@@ -1656,6 +1656,9 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 .console-ctx button{display:block; width:100%; text-align:left; background:none; border:0; color:#cfe8cf; padding:6px 16px 6px 10px; cursor:pointer; border-radius:4px; font:inherit; white-space:nowrap}
 .console-ctx button:hover:not(:disabled){background:#2f4040}
 .console-ctx button:disabled{color:#6a7a6a; cursor:default}
+.console-ctx button.cc-sep{margin-top:3px; border-top:1px solid #3a4a4a} /* divides copy/paste from the restart/kill runtime actions */
+.console-ctx button.cc-kill{color:#e0a0a0}
+.console-ctx button.cc-kill:hover:not(:disabled){background:#4a2f2f}
 .console-dim{color:#8fa98f}
 .console-err{color:#e08a8a}
 .console-row{display:flex; align-items:flex-start; gap:0.6px; padding:0 1px} /* top-aligned so prompt and input share a baseline (their boxes differ in height); the 1px side padding keeps the prompt column aligned with the scrollback's (see .console-out) */
@@ -1909,6 +1912,21 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 .doom-msg{position:absolute; left:0; right:0; top:50%; transform:translateY(-50%); margin:0; padding:0 2px; text-align:center; font:2px/1.3 ui-monospace,monospace; color:#e8c060; pointer-events:none}
 .doom-msg.err{color:#e0736a}
 .doom-msg:empty{display:none}
+/* DOOM's own fullscreen button — a small ⛶ in the top-right corner of the app view,
+   over the canvas (mirrors the video app's ⛶). Toggles real fullscreen on #canvas. The
+   'f' key stays on the whole-loft toggle; this button is DOOM's explicit fullscreen. */
+.doom-fs{position:absolute; top:1px; right:1px; z-index:3; width:4px; height:4px; padding:0.6px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; background:rgba(20,18,14,.5); border-radius:0.8px; cursor:pointer; opacity:.55; transition:opacity .15s ease}
+.doom-fs:hover{opacity:1}
+.doom-fs svg{width:100%; height:100%; display:block}
+/* monitor-app context menu — a small flat right-click menu over a runtime app's screen
+   (DOOM / linux / python) offering Restart + Kill. Fixed to the viewport at the cursor;
+   dismissed on click-away / Esc / scroll. Paper card in the site's palette. */
+.mon-ctx{position:fixed; z-index:60; min-width:112px; background:var(--paper); color:var(--ink); border:1px solid var(--rule); border-radius:7px; box-shadow:0 6px 22px rgba(69,58,49,.28); padding:4px; font-family:"Source Serif 4",Georgia,serif; font-size:13px; -webkit-user-select:none; user-select:none}
+.mon-ctx button{display:flex; align-items:center; gap:7px; width:100%; box-sizing:border-box; padding:6px 10px; border:none; border-radius:4px; background:transparent; color:inherit; font:inherit; text-align:left; cursor:pointer}
+.mon-ctx button:hover, .mon-ctx button:focus-visible{background:var(--cream)}
+.mon-ctx button.ctx-kill{color:var(--wine)}
+.mon-ctx button.ctx-kill:hover, .mon-ctx button.ctx-kill:focus-visible{background:#f4e6e6}
+.mon-ctx .ctx-ico{flex:0 0 auto; width:13px; height:13px; display:block}
 /* places app: the couple's been-there world map — paper sea, muted land, wine/blue
    city pins; the caption row + halo follow whichever pin is active (hover/tap or the
    idle stroll). The wine pill links out to the live Google Maps list. */
@@ -9666,6 +9684,7 @@ section{margin:1.9rem 0}
 <div xmlns="http://www.w3.org/1999/xhtml" id="monitor-doom-wrap" class="doom-wrap">
 <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
 <p id="monitor-doom-msg" class="doom-msg"></p>
+<span id="monitor-doom-fs" class="doom-fs" data-title-i="doom_fs" data-aria-i="doom_fs" role="button" tabindex="-1"><svg viewBox="0 0 12 12"><path d="M2 4.4 L2 2 L4.4 2 M7.6 2 L10 2 L10 4.4 M10 7.6 L10 10 L7.6 10 M4.4 10 L2 10 L2 7.6" fill="none" stroke="#f8f5ec" stroke-width="1" stroke-linecap="round"/></svg></span>
 </div>
 </foreignObject>
 <g id="monitor-doom-close" transform="translate(76.0,29.3) scale(0.8)">
@@ -12436,6 +12455,9 @@ var T = {
     app_doom: "doom",
     doom_loading: "loading doom… ~22 MB, first time only",
     doom_fail: "doom couldn't load — offline, or the download stalled. close and reopen to retry.",
+    doom_fs: "fullscreen",
+    mon_ctx_restart: "Restart",
+    mon_ctx_kill: "Kill",
     app_phone: "phone",
     phone_dialer_title: "contacts",
     dial_call: "Call",
@@ -12827,6 +12849,9 @@ var T = {
     app_doom: "doom",
     doom_loading: "načítáme doom… ~22 MB, jen napoprvé",
     doom_fail: "doom se nenačetl — offline, nebo se stahování zaseklo. zavřete a otevřete znovu.",
+    doom_fs: "celá obrazovka",
+    mon_ctx_restart: "Restartovat",
+    mon_ctx_kill: "Ukončit",
     app_phone: "telefon",
     phone_dialer_title: "kontakty",
     dial_call: "Volat",
@@ -13626,21 +13651,37 @@ document.addEventListener("keydown", function (e) {
     return !!(el && el.closest && el.closest(".console-out, .console-in-wrap"));
   }
   function selText() { var s = window.getSelection && window.getSelection(); return s ? s.toString() : ""; }
-  var menu, copyBtn, pasteBtn, copyTimer = 0, stashedSel = ""; // the selection captured when the menu opened
+  var menu, copyBtn, pasteBtn, restartBtn, killBtn, copyTimer = 0, stashedSel = ""; // the selection captured when the menu opened
   function build() {
     if (menu) return;
     menu = document.createElement("div");
     menu.className = "console-ctx";
     copyBtn = document.createElement("button"); copyBtn.type = "button"; copyBtn.textContent = "copy";
     pasteBtn = document.createElement("button"); pasteBtn.type = "button"; pasteBtn.textContent = "paste";
-    menu.appendChild(copyBtn); menu.appendChild(pasteBtn);
+    // Restart/Kill for the self-hosted runtimes (python/pyodide, linux/v86) — the same
+    // recover-a-stuck-runtime actions DOOM gets in its own menu, folded in here so the
+    // console keeps a single right-click menu instead of two. Shown only for those apps.
+    restartBtn = document.createElement("button"); restartBtn.type = "button"; restartBtn.className = "cc-sep cc-restart";
+    killBtn = document.createElement("button"); killBtn.type = "button"; killBtn.className = "cc-kill";
+    menu.appendChild(copyBtn); menu.appendChild(pasteBtn); menu.appendChild(restartBtn); menu.appendChild(killBtn);
     (document.getElementById("hunt-fullscreen-area") || document.body).appendChild(menu);
     // mousedown on a button outside the selection collapses it before the click fires — prevent
     // default so the selection (and the stashed text) survives long enough to copy
     menu.addEventListener("mousedown", function (e) { e.preventDefault(); });
     copyBtn.addEventListener("click", function (e) { e.stopPropagation(); doCopy(); });
     pasteBtn.addEventListener("click", function (e) { e.stopPropagation(); doPaste(); hide(); });
+    restartBtn.addEventListener("click", function (e) { e.stopPropagation(); var a = runtimeApp(); hide(); if (a) { var fn = window[a.restart]; if (fn) fn(); } });
+    killBtn.addEventListener("click", function (e) { e.stopPropagation(); var a = runtimeApp(); hide(); if (a) { var fn = window[a.close]; if (fn) fn(); } });
   }
+  // which self-hosted runtime (if any) owns the screen — decides whether Restart/Kill show
+  function runtimeApp() {
+    var m = document.getElementById("office-monitor");
+    if (!m || window.currentStageName !== "office") return null;
+    if (m.classList.contains("show-python")) return { restart: "__restartMonitorPython", close: "__closeMonitorPython" };
+    if (m.classList.contains("show-linux")) return { restart: "__restartMonitorLinux", close: "__closeMonitorLinux" };
+    return null;
+  }
+  function ccT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || key; }
   function hide() { if (menu) menu.classList.remove("show"); }
   function doCopy() {
     var t = stashedSel || selText();
@@ -13672,6 +13713,12 @@ document.addEventListener("keydown", function (e) {
     stashedSel = selText();
     copyBtn.disabled = !stashedSel;
     pasteBtn.disabled = !(consoleInput() && navigator.clipboard && navigator.clipboard.readText);
+    // Restart/Kill only for the self-hosted runtimes (python/linux); hidden for the plain
+    // JS console (nothing to restart there)
+    var ra = runtimeApp();
+    restartBtn.style.display = ra ? "block" : "none";
+    killBtn.style.display = ra ? "block" : "none";
+    if (ra) { restartBtn.textContent = ccT("mon_ctx_restart"); killBtn.textContent = ccT("mon_ctx_kill"); }
     menu.style.left = e.clientX + "px"; menu.style.top = e.clientY + "px";
     menu.classList.add("show");
     var r = menu.getBoundingClientRect(); // clamp inside the viewport
@@ -22921,6 +22968,72 @@ document.addEventListener("click", function (e) {
     if (monitor.classList.contains("show-nowplaying")) { monitor.classList.remove("show-nowplaying"); scheduleSaver(); return true; }
     return false;
   };
+  // ── Right-click Restart/Kill menu for the DOOM app ─────────────────────────────────────
+  // The heavy self-hosted runtimes can wedge (a misrendered DOOM) with no in-place recovery.
+  // A contextmenu over DOOM's canvas offers Restart (tear the runtime down and re-init it
+  // fresh) and Kill (the app's normal close). DOOM's canvas has no other context menu, so it
+  // owns the right-click here; python/linux fold the same Restart/Kill into their existing
+  // console copy/paste menu (see the console-ctx block) rather than double up. Dismissed on
+  // click-away / Esc / scroll / window blur / resize.
+  (function () {
+    var RUNTIME_APPS = {
+      "show-doom":   { restart: "__restartMonitorDoom",   close: "__closeMonitorDoom" }
+    };
+    var menuEl = null;
+    function activeRuntimeApp() {
+      if (!monitor || window.currentStageName !== "office") return null;
+      for (var cls in RUNTIME_APPS) if (monitor.classList.contains(cls)) return RUNTIME_APPS[cls];
+      return null;
+    }
+    function closeMenu() {
+      if (!menuEl) return;
+      try { if (menuEl.parentNode) menuEl.parentNode.removeChild(menuEl); } catch (e) {}
+      menuEl = null;
+      document.removeEventListener("keydown", onKey, true);
+      document.removeEventListener("mousedown", onAway, true);
+      document.removeEventListener("scroll", closeMenu, true);
+      window.removeEventListener("blur", closeMenu);
+      window.removeEventListener("resize", closeMenu);
+    }
+    function onAway(e) { if (menuEl && !menuEl.contains(e.target)) closeMenu(); } // click-away (the menu's own clicks stay)
+    function onKey(e) { if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); closeMenu(); } } // Esc closes the menu, not the app under it
+    function tr(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || key; }
+    var RESTART_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9.7 3.4 A4 4 0 1 0 10.3 6.2"/><path d="M10 1.8 L10 3.6 L8.2 3.6"/></svg>';
+    var KILL_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M3.4 3.4 L8.6 8.6 M8.6 3.4 L3.4 8.6"/></svg>';
+    function makeItem(cls, ico, label, fnName) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = cls; b.setAttribute("role", "menuitem");
+      b.innerHTML = ico + "<span>" + label + "</span>";
+      b.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); closeMenu(); var fn = window[fnName]; if (fn) fn(); });
+      return b;
+    }
+    function buildMenu(app, x, y) {
+      closeMenu();
+      menuEl = document.createElement("div");
+      menuEl.className = "mon-ctx"; menuEl.setAttribute("role", "menu");
+      menuEl.appendChild(makeItem("ctx-restart", RESTART_ICO, tr("mon_ctx_restart"), app.restart));
+      menuEl.appendChild(makeItem("ctx-kill", KILL_ICO, tr("mon_ctx_kill"), app.close));
+      menuEl.style.visibility = "hidden";
+      document.body.appendChild(menuEl);
+      // clamp to the viewport on both axes so a corner right-click doesn't overflow
+      var r = menuEl.getBoundingClientRect();
+      menuEl.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 4)) + "px";
+      menuEl.style.top = Math.max(4, Math.min(y, window.innerHeight - r.height - 4)) + "px";
+      menuEl.style.visibility = "";
+      document.addEventListener("keydown", onKey, true);
+      document.addEventListener("mousedown", onAway, true);
+      document.addEventListener("scroll", closeMenu, true);
+      window.addEventListener("blur", closeMenu);
+      window.addEventListener("resize", closeMenu);
+    }
+    document.addEventListener("contextmenu", function (e) {
+      var app = activeRuntimeApp();
+      if (!app) return; // every other surface keeps the native context menu
+      if (!e.target || !e.target.closest || !e.target.closest("#office-monitor")) return; // only over the monitor's app area
+      e.preventDefault();
+      buildMenu(app, e.clientX, e.clientY);
+    });
+  })();
   function toggleVideoApp() {
     if (!vidEl || vidWrap.classList.contains("absent")) return;
     try {
@@ -24148,10 +24261,17 @@ document.addEventListener("click", function (e) {
     if (pyLoadState === "loading" || pyLoadState === "ready") return;
     pyLoadState = "loading";
     pyPrint(pyT("py_loading"), "console-dim");
+    if (window.loadPyodide) { initPyodide(); return; } // library already fetched (e.g. a Restart) — don't re-inject the script
     var s = document.createElement("script");
     s.src = PYODIDE_URL;
     s.onerror = function () { pyLoadFailed(); };
-    s.onload = function () {
+    s.onload = function () { initPyodide(); };
+    document.head.appendChild(s);
+  }
+  // Build a fresh CPython interpreter from the (already-loaded) loadPyodide global. Split
+  // out of loadPythonRuntime so Restart can re-init a new interpreter without re-injecting
+  // the pyodide script (and re-running its whole bundle).
+  function initPyodide() {
       var p;
       try { p = window.loadPyodide({ indexURL: "pyodide/" }); } catch (e) { pyLoadFailed(); return; }
       Promise.resolve(p).then(function (py) {
@@ -24277,8 +24397,6 @@ async def localfont(name):
           })
           .catch(function () {});
       }).catch(function () { pyLoadFailed(); });
-    };
-    document.head.appendChild(s);
   }
   function openPython() {
     if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-python") || monitor.classList.contains("show-console") || monitor.classList.contains("show-linux")) return;
@@ -24298,6 +24416,20 @@ async def localfont(name):
     scheduleSaver();
   }
   window.__closeMonitorPython = closePython; // other monitor apps close the REPL before taking the screen
+  // Restart (context menu): throw away the current interpreter and boot a fresh CPython —
+  // recovers a REPL wedged into a bad state (stuck busy, corrupted namespace). The heavy
+  // pyodide bundle is already in memory, so this only re-inits the interpreter, not the fetch.
+  window.__restartMonitorPython = function () {
+    if (pyOut) pyOut.innerHTML = "";
+    pyHist = []; pyHistIdx = 0; pyLastCmd = "";
+    pyBusy = false;
+    pyRuntime = null; pyReprFn = null;
+    pyLoadState = ""; // "" lets loadPythonRuntime run again
+    pyWelcomed = true; pyPrint(pyT("py_welcome"), "console-dim");
+    updatePythonTile();
+    loadPythonRuntime(); // window.loadPyodide is present → initPyodide() builds a new interpreter
+    if (pyIn) { pyIn.value = ""; setTimeout(function () { try { pyIn.focus({ preventScroll: true }); } catch (e) {} }, 60); }
+  };
   // display-only reset: scrollback + history + input + the welcome flag, so a reopened
   // REPL greets fresh and isn't stuck busy. The Pyodide runtime (multi-MB wasm + the
   // fonttools/uharfbuzz wheels) and its namespace are deliberately LEFT loaded — reloading
@@ -24531,6 +24663,21 @@ async def localfont(name):
     scheduleSaver();
   }
   window.__closeMonitorLinux = closeLinux; // other monitor apps stop the VM before taking the screen
+  // Restart (context menu): destroy the VM and cold-boot a fresh one — recovers a wedged
+  // kernel/shell (a real power-cycle, not the RAM-intact resume that reopening does). The
+  // v86 library is already loaded, so loadLinuxVM() → lxBootVM() boots a brand-new machine.
+  window.__restartMonitorLinux = function () {
+    if (lxVM) { try { lxVM.destroy(); } catch (e) {} lxVM = null; }
+    if (lxStallTimer) { clearTimeout(lxStallTimer); lxStallTimer = null; }
+    lxLoadState = ""; lxPrompted = false; lxHiddenStop = false;
+    lxLine = ""; lxDec = null;
+    if (lxOut) lxOut.innerHTML = "";
+    if (lxPs) lxPs.textContent = "";
+    lxHist = []; lxHistIdx = 0;
+    lxWelcomed = true; lxPrint(lxT("linux_welcome"), "console-dim");
+    loadLinuxVM(); // window.V86 present → lxBootVM() cold-boots a fresh machine
+    if (lxIn) { lxIn.value = ""; setTimeout(function () { try { lxIn.focus({ preventScroll: true }); } catch (e) {} }, 60); }
+  };
   // display-only reset: scrollback + history + input + the welcome flag. The v86 VM keeps
   // running with RAM intact (rebooting it — let alone reloading the wasm — is far too heavy
   // for a game reset), so its live serial tail (lxLine/lxPs) and lxPrompted stay coherent
@@ -24709,6 +24856,51 @@ async def localfont(name):
     scheduleSaver();
   }
   window.__closeMonitorDoom = closeDoom; // other monitor apps / resets pause the engine before taking the screen
+  // Restart (context menu): tear the Emscripten runtime down and re-instantiate a fresh
+  // wasm — recovers a wedged/misrendered DOOM (reopening alone does NOT reboot: the Module
+  // is built once and reused). We null the global Module, drop the old glue <script> so
+  // loadDoom re-injects it, and swap in a fresh <canvas> so the new instance gets a clean
+  // WebGL context (the old one is held by the dead runtime). doom.js is all top-level
+  // var/function (no top-level let/const/class), so re-running the glue re-declares safely.
+  window.__restartMonitorDoom = function () {
+    if (doomModule) { try { doomModule.pauseMainLoop(); } catch (e) {} } // stop the old (possibly wedged) loop first
+    try { if (window.Module === doomModule) window.Module = undefined; } catch (e) {}
+    doomModule = null; doomReady = false; doomPaused = true; doomLoadState = "";
+    if (doomStallTimer) { clearTimeout(doomStallTimer); doomStallTimer = null; }
+    if (doomGlueEl) { try { if (doomGlueEl.parentNode) doomGlueEl.parentNode.removeChild(doomGlueEl); } catch (e) {} doomGlueEl = null; }
+    // fresh canvas (keep the mandatory id "canvas") — a clean WebGL context, free of the dead instance
+    var oldCanvas = document.getElementById("canvas");
+    if (oldCanvas && oldCanvas.parentNode) {
+      var fresh = document.createElement("canvas");
+      fresh.id = "canvas"; fresh.tabIndex = -1;
+      fresh.setAttribute("oncontextmenu", "event.preventDefault()");
+      oldCanvas.parentNode.replaceChild(fresh, oldCanvas);
+      doomCanvas = fresh; // buildDoomModule reads this for Module.canvas
+    }
+    doomSetMsg(doomT("doom_loading"), false);
+    loadDoom(); // rebuilds Module + re-injects the glue → fresh wasm → callMain → new game
+    doomSync();
+  };
+  // DOOM's explicit fullscreen (the 'f' key stays on the whole-loft toggle — owner dropped
+  // the flaky per-app 'f' path). The ⛶ button toggles real fullscreen on the canvas,
+  // resolved at click time (Restart replaces the canvas node), requested fresh so it
+  // transitions even from an already-fullscreen loft. Mirrors __videoFsToggle.
+  window.__doomFsToggle = function () {
+    var c = document.getElementById("canvas");
+    if (!c) return;
+    try {
+      if ((document.fullscreenElement || document.webkitFullscreenElement) === c) {
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      } else if (c.requestFullscreen) c.requestFullscreen();
+      else if (c.webkitRequestFullscreen) c.webkitRequestFullscreen();
+    } catch (e) {}
+  };
+  var doomFsBtn = document.getElementById("monitor-doom-fs");
+  if (doomFsBtn) doomFsBtn.addEventListener("click", function (e) {
+    e.stopPropagation(); e.preventDefault(); // don't let the canvas / keyguard swallow it
+    window.__doomFsToggle();
+  });
   // hidden tab: pause the engine (and re-evaluate on return) — a WebGL run loop behind a
   // background tab would burn frames for nothing
   document.addEventListener("visibilitychange", function () { doomSync(); });
@@ -26474,6 +26666,7 @@ async def localfont(name):
     if (e.key !== "Escape") return;
     if (document.fullscreenElement && document.fullscreenElement.id === "monitor-video-wrap") return; // the browser is exiting the film's own fullscreen — that's all this press does
     if (document.querySelector(".pb-dialog-backdrop")) return; // dialogs own Esc while up
+    if (document.querySelector(".mon-ctx") || document.querySelector(".console-ctx.show")) return; // an open right-click menu owns Esc (its own handler closes it)
     // first Esc closes/ends whatever app or call owns the screen, the next backs the zoom out
     if (window.__closeTopMonitorApp && window.currentStageName === "office" && window.__closeTopMonitorApp()) {
       var t0 = e.target;

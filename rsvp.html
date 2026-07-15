@@ -28146,6 +28146,61 @@ async def localfont(name):
       if (phone.classList.contains("phone-opened")) return; // opened once → it stays quiet
       phoneNotify();
     }, 19000);
+    // Right-click (contextmenu) menu on the phone-at-rest: one item — "Open" — that runs the
+    // very same buzz() as a normal tap (pickup buzz → __openPhoneModal boots the pocket OS), so
+    // it summons the phone identically. A .mon-ctx card with the shared dismiss wiring; the
+    // openMenu/closeMenu helpers of the monitor/D-pad IIFEs aren't in scope here, so the small
+    // pattern is replicated locally (mirroring the balcony door's menu). This listener registers
+    // before the scene D-pad's (that IIFE runs later in source), so the preventDefault() below
+    // trips its `if (e.defaultPrevented) return;` guard and the phone menu WINS over the D-pad
+    // for a phone target; a right-click anywhere else on the balcony still falls through to the
+    // D-pad untouched, and the door is a different target so the two menus never cross-fire.
+    (function () {
+      var phCtxEl = null;
+      var PH_OPEN_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 2.2 H9.8 V5.5"/><path d="M9.8 2.2 L5.6 6.4"/><path d="M9 6.7 V9.3 A0.6 0.6 0 0 1 8.4 9.9 H2.7 A0.6 0.6 0 0 1 2.1 9.3 V3.6 A0.6 0.6 0 0 1 2.7 3 H5"/></svg>';
+      function phCtxTr(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || key; }
+      function phCtxClose() {
+        if (!phCtxEl) return;
+        if (phCtxEl.parentNode) phCtxEl.parentNode.removeChild(phCtxEl);
+        phCtxEl = null;
+        document.removeEventListener("keydown", phCtxKey, true);
+        document.removeEventListener("mousedown", phCtxAway, true);
+        document.removeEventListener("scroll", phCtxClose, true);
+        window.removeEventListener("blur", phCtxClose);
+        window.removeEventListener("resize", phCtxClose);
+      }
+      function phCtxAway(e) { if (phCtxEl && !phCtxEl.contains(e.target)) phCtxClose(); }
+      function phCtxKey(e) { if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); phCtxClose(); } }
+      function phCtxItem(ico, label, fn) {
+        var b = document.createElement("button");
+        b.type = "button"; b.className = "ctx-open"; b.setAttribute("role", "menuitem");
+        b.innerHTML = ico + "<span>" + label + "</span>";
+        b.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); phCtxClose(); fn(); });
+        return b;
+      }
+      function phCtxOpen(items, x, y) {
+        phCtxClose();
+        phCtxEl = document.createElement("div");
+        phCtxEl.className = "mon-ctx"; phCtxEl.setAttribute("role", "menu");
+        for (var i = 0; i < items.length; i++) phCtxEl.appendChild(items[i]);
+        phCtxEl.style.visibility = "hidden";
+        document.body.appendChild(phCtxEl);
+        var r = phCtxEl.getBoundingClientRect();
+        phCtxEl.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 4)) + "px";
+        phCtxEl.style.top = Math.max(4, Math.min(y, window.innerHeight - r.height - 4)) + "px";
+        phCtxEl.style.visibility = "";
+        document.addEventListener("keydown", phCtxKey, true);
+        document.addEventListener("mousedown", phCtxAway, true);
+        document.addEventListener("scroll", phCtxClose, true);
+        window.addEventListener("blur", phCtxClose);
+        window.addEventListener("resize", phCtxClose);
+      }
+      document.addEventListener("contextmenu", function (e) {
+        if (!e.target || !e.target.closest || !e.target.closest("#balcony-phone")) return; // only over the phone itself → else the scene D-pad handles it
+        e.preventDefault(); // claim the right-click so the later scene-D-pad handler stands down
+        phCtxOpen([phCtxItem(PH_OPEN_ICO, phCtxTr("mon_ctx_open"), function () { buzz(); })], e.clientX, e.clientY);
+      });
+    })();
   }
   // ── Loft phone modal (the balcony phone) ─────────────────────────────────────
   // Tapping the phone boots the loft's own pocket OS: a cream-∞-on-wine splash (first
@@ -32807,6 +32862,58 @@ async def localfont(name):
     cuddlyDoor.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCuddlyDoor(); }
     });
+    // Right-click (contextmenu) menu on the cuddly nook's view of the balcony door: one item —
+    // "Close" when it's open, "Open" when it's shut — running the very same toggleCuddlyDoor()
+    // as a normal click (so the swing + FX/cat sync all match). Mirrors the balcony-room door
+    // menu; helpers replicated locally (the other IIFE's aren't in scope), and preventDefault()
+    // claims the right-click so the later scene D-pad stands down over the door target.
+    (function () {
+      var cdMenuEl = null;
+      var CD_DOOR_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="1.6" width="6" height="8.8" rx="0.6"/><circle cx="7.3" cy="6" r="0.5" fill="currentColor" stroke="none"/></svg>';
+      function cdTr(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || key; }
+      function cdCloseMenu() {
+        if (!cdMenuEl) return;
+        if (cdMenuEl.parentNode) cdMenuEl.parentNode.removeChild(cdMenuEl);
+        cdMenuEl = null;
+        document.removeEventListener("keydown", cdOnKey, true);
+        document.removeEventListener("mousedown", cdOnAway, true);
+        document.removeEventListener("scroll", cdCloseMenu, true);
+        window.removeEventListener("blur", cdCloseMenu);
+        window.removeEventListener("resize", cdCloseMenu);
+      }
+      function cdOnAway(e) { if (cdMenuEl && !cdMenuEl.contains(e.target)) cdCloseMenu(); }
+      function cdOnKey(e) { if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); cdCloseMenu(); } }
+      function cdItem(ico, label, fn) {
+        var b = document.createElement("button");
+        b.type = "button"; b.className = "ctx-open"; b.setAttribute("role", "menuitem");
+        b.innerHTML = ico + "<span>" + label + "</span>";
+        b.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); cdCloseMenu(); fn(); });
+        return b;
+      }
+      function cdOpenMenu(items, x, y) {
+        cdCloseMenu();
+        cdMenuEl = document.createElement("div");
+        cdMenuEl.className = "mon-ctx"; cdMenuEl.setAttribute("role", "menu");
+        for (var i = 0; i < items.length; i++) cdMenuEl.appendChild(items[i]);
+        cdMenuEl.style.visibility = "hidden";
+        document.body.appendChild(cdMenuEl);
+        var r = cdMenuEl.getBoundingClientRect();
+        cdMenuEl.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 4)) + "px";
+        cdMenuEl.style.top = Math.max(4, Math.min(y, window.innerHeight - r.height - 4)) + "px";
+        cdMenuEl.style.visibility = "";
+        document.addEventListener("keydown", cdOnKey, true);
+        document.addEventListener("mousedown", cdOnAway, true);
+        document.addEventListener("scroll", cdCloseMenu, true);
+        window.addEventListener("blur", cdCloseMenu);
+        window.addEventListener("resize", cdCloseMenu);
+      }
+      document.addEventListener("contextmenu", function (e) {
+        if (!e.target || !e.target.closest || !e.target.closest("#cuddly-balcony-door")) return; // only over the door itself → else the scene D-pad handles it
+        e.preventDefault(); // claim the right-click so the later scene-D-pad handler stands down
+        var key = cuddlyDoor.classList.contains("open") ? "tab_ctx_close" : "mon_ctx_open"; // read fresh each time
+        cdOpenMenu([cdItem(CD_DOOR_ICO, cdTr(key), function () { toggleCuddlyDoor(); })], e.clientX, e.clientY);
+      });
+    })();
   }
   // an open balcony door lets the outside into the cuddly nook: warm sun shafts by
   // day (rain intrusion during a night storm is handled by its own spawner)

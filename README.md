@@ -49,7 +49,7 @@ them casually.
 With thanks to the people who helped shape this:
 
 - **Markéta Jakešová** — co-design
-- **Kasra Rahimi** & **Garret Rieger** — testing & feedback
+- **Kasra Rahimi**, **Garret Rieger** & **Mahzad** — testing
 
 ## A note for visitors
 

@@ -597,23 +597,23 @@ function checkI18nKeys(file, script, html) {
   }
 }
 
-// The monitor terminals' scrollback (.term-out) is a scroll container, so it CLIPS at
+// The monitor consoles' scrollback (.console-out) is a scroll container, so it CLIPS at
 // its own padding box — and at 2px type under the desk zoom, painted glyph ink lands
 // up to ~1px outside its layout box (tiny-glyph raster snapping under the ~7×
 // transform). Two invariants keep the clip off the glyphs (the repeated "cropped
 // ascenders / cropped first column" bug):
-//   1. .term-out horizontal+vertical padding ≥ 1px of clip slack on every side;
+//   1. .console-out horizontal+vertical padding ≥ 1px of clip slack on every side;
 //   2. border-box height − vertical padding = exactly 12 of the 2.8px line boxes
 //      (a bottom-pinned scrollback must never straddle a line across the top edge —
 //      and the border-box/content-box math is exactly what silently broke once).
-function checkTermOutClipSlack(file, style) {
+function checkConsoleOutClipSlack(file, style) {
   if (file !== "rsvp.html" || !style) return;
-  var m = style.match(/\.term-out\{([^}]*)\}/);
-  if (!m) { fail(file + ": .term-out rule not found for clip-slack check"); return; }
+  var m = style.match(/\.console-out\{([^}]*)\}/);
+  if (!m) { fail(file + ": .console-out rule not found for clip-slack check"); return; }
   var decl = m[1];
   var h = decl.match(/height:\s*([\d.]+)px/);
   var p = decl.match(/padding:\s*([\d.]+)px(?:\s+([\d.]+)px)?(?:\s+([\d.]+)px)?/);
-  if (!h || !p) { fail(file + ": .term-out needs explicit height and padding (clip slack)", decl); return; }
+  if (!h || !p) { fail(file + ": .console-out needs explicit height and padding (clip slack)", decl); return; }
   var height = parseFloat(h[1]);
   var padTop = parseFloat(p[1]);
   var padH = p[2] ? parseFloat(p[2]) : padTop;
@@ -625,8 +625,8 @@ function checkTermOutClipSlack(file, style) {
   if (padH < 1 || padBottom < 1) issues.push("side/bottom padding " + padH + "px/" + padBottom + "px — needs ≥1px of scroll-clip slack");
   var content = height - padTop - padBottom;
   if (Math.abs(content - 12 * 2.8) > 0.001) issues.push("content height " + content + "px ≠ 12 × 2.8px line boxes (border-box height minus vertical padding)");
-  if (issues.length === 0) pass(file + ": .term-out clip slack + 12-line scrollback math hold");
-  else fail(file + ": .term-out clip-slack invariant broken", issues.join("\n"));
+  if (issues.length === 0) pass(file + ": .console-out clip slack + 12-line scrollback math hold");
+  else fail(file + ": .console-out clip-slack invariant broken", issues.join("\n"));
 }
 
 // A leftover git merge marker in CSS/HTML slips past `node --check` (which only sees
@@ -661,7 +661,7 @@ FILES.forEach(function (file) {
   }
   checkAnimationKeyframes(file, style);
   checkTransformClobber(file, style, html);
-  checkTermOutClipSlack(file, style);
+  checkConsoleOutClipSlack(file, style);
   checkSvgTagBalance(file, html);
   console.log("");
 });

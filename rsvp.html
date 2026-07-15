@@ -12669,6 +12669,7 @@ var T = {
       kitchen_need_tamp: "Tamp the coffee first.",
       kitchen_need_knockout: "Empty the old grounds first.",
       kitchen_grinder_empty: "The grinder's out of beans.",
+      kitchen_grinder_refill: "Topped up the hopper — fresh beans. ☕",
       kitchen_warming_up: "Let it warm up first.",
       kitchen_bar: "Bar's open — watch him mix a drink. 🍸",
       kitchen_bar_night: "Bar is open. Ask for a drink! 🍸",
@@ -13090,6 +13091,7 @@ var T = {
       kitchen_need_tamp: "Nejdřív upěchuj kávu.",
       kitchen_need_knockout: "Nejdřív vyklepej starou kávu.",
       kitchen_grinder_empty: "Mlýnku došla zrnková káva.",
+      kitchen_grinder_refill: "Zásobník je zase plný — čerstvá zrna. ☕",
       kitchen_warming_up: "Nejdřív ho nech zahřát.",
       kitchen_bar: "Bar je otevřený — sleduj, jak míchá drink. 🍸",
       kitchen_bar_night: "Bar je otevřený. Řekni si o drink! 🍸",
@@ -40702,7 +40704,17 @@ function spawnDustMote(container) {
   var portafilterPos = "grouphead"; // "grouphead" | "grinder" | "tamper" | "knockbox" — where it's currently docked
   var portafilterFlying = false;
   var GRINDER_BEAN_USES = 22; // matches the 22 drawn beans in the hopper, one hides per grind
+  // Bean level persists across reloads (localStorage), so a half-used hopper is
+  // still half-used after a refresh; only a full game reset refills it. Keep the
+  // full-hopper initializer above the read so a thrown/absent value leaves it full
+  // (never NaN) — that also keeps a clean, storage-less load starting full.
+  var GRINDER_BEANS_KEY = "grinderBeansLeft";
   var grinderBeansLeft = GRINDER_BEAN_USES;
+  try {
+    var _gbSaved = parseInt(localStorage.getItem(GRINDER_BEANS_KEY), 10);
+    if (isFinite(_gbSaved)) grinderBeansLeft = Math.max(0, Math.min(GRINDER_BEAN_USES, _gbSaved));
+  } catch (e) {}
+  function saveGrinderBeans() { try { localStorage.setItem(GRINDER_BEANS_KEY, String(grinderBeansLeft)); } catch (e) {} }
   var GRINDER_BEAN_IDS = [];
   for (var _gb = 1; _gb <= GRINDER_BEAN_USES; _gb++) GRINDER_BEAN_IDS.push("kitchen-grinder-bean-" + _gb);
   // The beans used to be baked at fixed coordinates, which read as too tidy however
@@ -40772,7 +40784,19 @@ function spawnDustMote(container) {
     var bean = id && document.getElementById(id);
     if (bean) bean.classList.add("used");
   }
+  // Sync the visible heap to grinderBeansLeft after a fresh scatter: the top
+  // (GRINDER_BEAN_USES - grinderBeansLeft) beans of the consume order are the
+  // already-ground ones, so a persisted partial level paints as a partial heap
+  // on load (and a refill, count back to full, clears every .used).
+  function paintConsumedGrinderBeans() {
+    var used = GRINDER_BEAN_USES - grinderBeansLeft;
+    for (var i = 0; i < grinderConsumeOrder.length; i++) {
+      var bean = document.getElementById(grinderConsumeOrder[i]);
+      if (bean) bean.classList.toggle("used", i < used);
+    }
+  }
   randomizeGrinderBeans(); // scatter the initial heap before the kitchen is first shown
+  paintConsumedGrinderBeans(); // reflect any persisted partial level in the fresh heap
   var lamarzocco = document.getElementById("kitchen-lamarzocco");
   var grinder = document.getElementById("kitchen-grinder");
   hoverTooltip(lamarzocco, "<em>La Maz</em>, the espresso machine", "top");
@@ -40978,8 +41002,14 @@ function spawnDustMote(container) {
     }
     if (grinding || kitchenGround || portafilterFlying) { jiggleGrinderLid(); return; }
     if (grinderBeansLeft <= 0) {
-      setCaption("kitchen_grinder_empty");
-      playEmptyGrindSound();
+      // Refill instead of a dead end: fresh beans, a rattly pour into the hopper,
+      // and the lid jiggle as the flourish. The NEXT click grinds normally.
+      grinderBeansLeft = GRINDER_BEAN_USES;
+      saveGrinderBeans();
+      randomizeGrinderBeans();       // fresh heap + recomputed consume order
+      paintConsumedGrinderBeans();   // full count -> clears every .used
+      playShakerRattleSound("kitchen-grinder"); // beans clattering into the glass hopper
+      setCaption("kitchen_grinder_refill");
       jiggleGrinderLid();
       return;
     }
@@ -40993,6 +41023,7 @@ function spawnDustMote(container) {
         grinding = false;
         kitchenGround = true;
         grinderBeansLeft--;
+        saveGrinderBeans();
         hideNextGrinderBean();
         if (grinder) { grinder.classList.remove("grinding"); grinder.classList.add("done"); }
         if (portafilter) { portafilter.classList.remove("grounds-flat", "spent"); portafilter.classList.add("has-grounds"); }
@@ -42988,6 +43019,7 @@ function spawnDustMote(container) {
     kitchenRounds = 0;
     clearTimeout(knockboxInviteTimer);
     grinderBeansLeft = GRINDER_BEAN_USES;
+    saveGrinderBeans(); // rewrite the persisted level back to full on a game reset
     GRINDER_BEAN_IDS.forEach(function (id) {
       var bean = document.getElementById(id);
       if (bean) bean.classList.remove("used");

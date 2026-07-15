@@ -1946,6 +1946,17 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 .mon-ctx button.ctx-kill:hover:not(:disabled), .mon-ctx button.ctx-kill:focus-visible:not(:disabled){background:#f4e6e6}
 .mon-ctx button:disabled{opacity:.4; cursor:default}
 .mon-ctx .ctx-ico{flex:0 0 auto; width:13px; height:13px; display:block}
+/* scene right-click D-pad: four arrow buttons in a plus/cross (↑ day, ↓ night, ← prev room,
+   → next room), riding the .mon-ctx card chrome (so the shared Esc "an open menu owns Esc"
+   guard sees it) but overriding the list-item button layout with a 3×3 grid. */
+.nav-dpad{min-width:0; padding:5px; display:grid; grid-template-columns:repeat(3,30px); grid-template-rows:repeat(3,30px); gap:3px}
+.nav-dpad button{display:flex; align-items:center; justify-content:center; width:30px; height:30px; padding:0; border-radius:6px; font-size:16px; line-height:1; color:var(--ink)}
+.nav-dpad button:hover:not(:disabled), .nav-dpad button:focus-visible:not(:disabled){background:var(--cream)}
+.nav-dpad .dpad-up{grid-column:2; grid-row:1}
+.nav-dpad .dpad-left{grid-column:1; grid-row:2}
+.nav-dpad .dpad-right{grid-column:3; grid-row:2}
+.nav-dpad .dpad-down{grid-column:2; grid-row:3}
+.nav-dpad .dpad-dot{grid-column:2; grid-row:2; align-self:center; justify-self:center; width:5px; height:5px; border-radius:50%; background:var(--rule)}
 /* runtime death-flash (Kill a self-hosted runtime → a themed ~2s send-off, see __runMonitorDeathFlash).
    The killed line rides the caption bar; the on-screen visual is a #monitor-deathfx overlay per death. */
 #hunt-caption.caption-death{transition:none}
@@ -12752,6 +12763,10 @@ var T = {
     mon_ctx_restart: "Restart",
     mon_ctx_kill: "Kill",
     mon_ctx_open: "Open",
+    dpad_prev: "Previous room",
+    dpad_next: "Next room",
+    dpad_day: "Daylight",
+    dpad_night: "Night",
     laptop_ctx_end: "End call",
     mon_ctx_stop: "Stop",
     mon_ctx_uninstall: "Uninstall",
@@ -13160,6 +13175,10 @@ var T = {
     mon_ctx_restart: "Restartovat",
     mon_ctx_kill: "Ukončit",
     mon_ctx_open: "Otevřít",
+    dpad_prev: "Předchozí místnost",
+    dpad_next: "Další místnost",
+    dpad_day: "Denní světlo",
+    dpad_night: "Noc",
     laptop_ctx_end: "Ukončit hovor",
     mon_ctx_stop: "Zastavit",
     mon_ctx_uninstall: "Odinstalovat",
@@ -18238,6 +18257,7 @@ document.addEventListener("click", function (e) {
     window.__arcadeState = function () { return { active: arcadeActive, raf: arcadeRaf, aliens: arcadeAliens.length, shots: arcadeShots.length }; };
 
     chair.addEventListener("pointerdown", function (e) {
+      if (e.button && e.button !== 0) return; // right/middle press → the scene D-pad menu handles it, no phantom drag
       chairDragging = true;
       chairDragMoved = false;
       chairDragStartX = pointerSvgX(e);
@@ -19217,6 +19237,7 @@ document.addEventListener("click", function (e) {
     if (!el) return;
     var dragging = false, dragMoved = false, releasePt = null, dragStartPt = null;
     el.addEventListener("pointerdown", function (e) {
+      if (e.button && e.button !== 0) return; // right/middle press → the scene D-pad menu handles it, no phantom throw
       dragging = true;
       dragMoved = false;
       dragStartPt = pointerSvgPointGlobal(e);
@@ -19618,6 +19639,7 @@ document.addEventListener("click", function (e) {
     };
     if (bartenderHit) {
       bartenderHit.addEventListener("pointerdown", function (e) {
+        if (e.button && e.button !== 0) return; // right/middle press → the scene D-pad menu handles it, no phantom drag
         if (!barUpNow()) return; // only draggable while the bar's up (party OR calm night bar)
         barDragging = true;
         barDragMoved = false;
@@ -39029,6 +39051,77 @@ function spawnDustMote(container) {
       goToStage(STAGES[stageIndex + 1]);
     }
   });
+  // ── scene right-click D-pad ─────────────────────────────────────────────────────────────
+  // Right-clicking the general game scene (room backdrop / floor / walls / ordinary scene
+  // objects — everything EXCEPT the surfaces that own their own right-click menu) pops a
+  // four-way D-pad: ← previous room, → next room, ↑ day, ↓ night. Prev/Next reuse the exact
+  // ‹ › nav-button logic (and its no-wrap gating) by .click()ing those buttons; a disabled
+  // #hunt-prev at the kitchen simply doesn't fire, and a locked #hunt-next is a no-op on a
+  // single synthetic click (event.detail 0) — same as one arrow click. Day/night use the same
+  // __setDayNight hook the sun and the party use. The menu is a .mon-ctx card (so the shared
+  // Esc "an open menu owns Esc" guard, which queries '.mon-ctx', stands down room-nav for it)
+  // with a .nav-dpad grid override. Registered after the monitor/console/laptop/phone context
+  // handlers, so `e.defaultPrevented` is true whenever one of them already claimed the click.
+  (function () {
+    var dpadEl = null;
+    function tr(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || key; }
+    function closeMenu() {
+      if (!dpadEl) return;
+      try { if (dpadEl.parentNode) dpadEl.parentNode.removeChild(dpadEl); } catch (e) {}
+      dpadEl = null;
+      document.removeEventListener("keydown", onKey, true);
+      document.removeEventListener("mousedown", onAway, true);
+      document.removeEventListener("scroll", closeMenu, true);
+      window.removeEventListener("blur", closeMenu);
+      window.removeEventListener("resize", closeMenu);
+    }
+    function onAway(e) { if (dpadEl && !dpadEl.contains(e.target)) closeMenu(); } // click-away (the menu's own clicks stay)
+    function onKey(e) { if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); closeMenu(); } } // Esc closes the D-pad, not the room
+    function clickNav(id) { var el = document.getElementById(id); if (el) el.click(); } // reuse the ‹ › handler + its gating verbatim
+    function mkBtn(dir, glyph, key, fn) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "dpad-" + dir;
+      b.textContent = glyph;
+      b.setAttribute("aria-label", tr(key)); b.title = tr(key);
+      b.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); closeMenu(); fn(); });
+      return b;
+    }
+    function openMenu(x, y) {
+      closeMenu();
+      dpadEl = document.createElement("div");
+      dpadEl.className = "mon-ctx nav-dpad"; dpadEl.setAttribute("role", "menu");
+      dpadEl.appendChild(mkBtn("up", "↑", "dpad_day", function () { if (window.__setDayNight) window.__setDayNight(false); }));
+      dpadEl.appendChild(mkBtn("left", "←", "dpad_prev", function () { clickNav("hunt-prev"); }));
+      var dot = document.createElement("span"); dot.className = "dpad-dot"; dpadEl.appendChild(dot);
+      dpadEl.appendChild(mkBtn("right", "→", "dpad_next", function () { clickNav("hunt-next"); }));
+      dpadEl.appendChild(mkBtn("down", "↓", "dpad_night", function () { if (window.__setDayNight) window.__setDayNight(true); }));
+      dpadEl.style.visibility = "hidden";
+      document.body.appendChild(dpadEl);
+      // clamp to the viewport on both axes so a corner right-click doesn't overflow (mirrors mon-ctx)
+      var r = dpadEl.getBoundingClientRect();
+      dpadEl.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 4)) + "px";
+      dpadEl.style.top = Math.max(4, Math.min(y, window.innerHeight - r.height - 4)) + "px";
+      dpadEl.style.visibility = "";
+      document.addEventListener("keydown", onKey, true);
+      document.addEventListener("mousedown", onAway, true);
+      document.addEventListener("scroll", closeMenu, true);
+      window.addEventListener("blur", closeMenu);
+      window.addEventListener("resize", closeMenu);
+    }
+    // surfaces with their own right-click menu / meaning: the monitor (mon-ctx + console-ctx +
+    // desktop dock), the office laptop, the open pocket phone, and (transitively, plus its own
+    // handler) the minesweeper board — the D-pad stands down over all of them.
+    var EXCLUDE = "#office-monitor, #office-laptop, #laptop-call, .phone-backdrop, .phone-shell";
+    document.addEventListener("contextmenu", function (e) {
+      if (e.defaultPrevented) return;                 // a more-specific menu already claimed this right-click
+      var t = e.target;
+      if (!t || !t.closest) return;
+      if (!t.closest("#loft-game-strip")) return;     // only the game scene strip; page chrome / HTML overlays keep native
+      if (t.closest(EXCLUDE)) return;                 // a special surface → let it handle its own contextmenu
+      e.preventDefault();
+      openMenu(e.clientX, e.clientY);
+    });
+  })();
   // Keyboard room nav: →/Tab forward, ← back. At a locked frontier a second forward within
   // 600ms unlocks it (mirrors the arrow/dot double-click-to-unlock). ` whisks to the office
   // console. d/↑/↓ flip day↔night, 1-5 jump to a room, m/l/c summon the monitor/laptop/

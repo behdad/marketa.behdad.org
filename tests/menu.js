@@ -148,7 +148,7 @@ var HARNESS = [
   "    showApp('show-linux'); var lo=document.getElementById('monitor-linux-out'); lo.innerHTML='<div>old</div>'; var lxThrew=null;",
   "    try { window.__restartMonitorLinux(); } catch(e){ lxThrew=String(e); }",
   "    S('linux_restart_threw', lxThrew); S('linux_restart_flash_started', mon().classList.contains('death-linux'));",
-  "    await sleep(2400);",  // wait out the BSOD flash → destroyLinux clears the console
+  "    await sleep(2800);",  // wait out the BSOD flash (dur 2600) → destroyLinux clears the console
   "    S('linux_restart_cleared_out', !/old/.test(lo.textContent));",
   // Python Restart now runs the Monty Python Black Knight flash, THEN destroys (clears the output +
   // drops show-python) and would reopen a fresh REPL (no show-caps here → openPython no-ops); verify flash-then-teardown.

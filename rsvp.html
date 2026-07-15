@@ -2187,9 +2187,14 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 @media (prefers-reduced-motion: reduce){.pb-dialog-backdrop{transition:none} .pb-dlg-btn{transition:none} .pb-dlg-btn:hover{transform:none}}
 /* the keyboard-shortcuts card ('?') — same backdrop / ink card / ✕ language as the
    polaroid dialog above, plus a key-chip + description grid (left-aligned list). */
-.kbd-dialog{text-align:left; max-width:min(500px, 94vw)}
+.kbd-dialog{text-align:left; max-width:min(640px, 94vw)}
 .kbd-dialog .pb-dlg-lead{text-align:center; margin-bottom:.7rem}
-.kbd-rows{display:grid; grid-template-columns:auto 1fr; gap:.34rem .75rem; align-items:center}
+/* two side-by-side columns, each its own key/description grid (so key chips align
+   WITHIN a column). Below 600px they stack — flex-column keeps the reading order
+   (all of column 1, then all of column 2) and each column's alignment intact. */
+.kbd-rows{display:flex; gap:.4rem 1.3rem; align-items:flex-start}
+.kbd-col{flex:1; min-width:0; display:grid; grid-template-columns:auto 1fr; gap:.34rem .7rem; align-items:baseline}
+@media (max-width:600px){.kbd-rows{flex-direction:column; gap:.34rem} .kbd-col{width:100%}}
 .kbd-keys{white-space:nowrap; justify-self:start}
 .kbd-keys kbd{
   font-family:inherit; font-size:.72rem; line-height:1; display:inline-block;
@@ -13314,10 +13319,17 @@ window.addEventListener("hashchange", function () {
       ["<kbd>r</kbd>", "kbd_r"],
       ["<kbd>?</kbd>", "kbd_qm"]
     ];
-    var rowsHtml = "";
-    for (var i = 0; i < ROWS.length; i++) {
-      rowsHtml += '<span class="kbd-keys">' + ROWS[i][0] + '</span><span>' + kbdText(ROWS[i][1]) + '</span>';
+    // split into two balanced columns (left gets the extra row when the count is odd);
+    // each column is its own key/description grid so chips line up within it.
+    var half = Math.ceil(ROWS.length / 2);
+    function colHtml(from, to) {
+      var h = "";
+      for (var i = from; i < to; i++) {
+        h += '<span class="kbd-keys">' + ROWS[i][0] + '</span><span>' + kbdText(ROWS[i][1]) + '</span>';
+      }
+      return '<div class="kbd-col">' + h + '</div>';
     }
+    var rowsHtml = colHtml(0, half) + colHtml(half, ROWS.length);
     var bd = document.createElement("div");
     bd.className = "pb-dialog-backdrop kbd-backdrop";
     bd.innerHTML =

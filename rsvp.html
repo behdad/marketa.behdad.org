@@ -23536,6 +23536,7 @@ document.addEventListener("click", function (e) {
     }
   }
   var minesGrid = [], minesCells = [];
+  var minesSeeded = false; // session retention: the board (mines/opens/flags/win-lose) survives a close+reopen; a first-ever open or a Kill/reset deals fresh
   var minesPlaced = false, minesOver = false, minesFlags = 0, minesOpened = 0;
   var minesStartTs = 0, minesElapsed = 0, minesTimer = null, minesMsgKey = "";
   var minesBoardEl = null, minesFaceEl = null, minesCountEl = null, minesTimeEl = null, minesMsgEl = null;
@@ -23717,7 +23718,8 @@ document.addEventListener("click", function (e) {
     stopSaver();
     clearTimeout(saverTimer); saverTimer = null; // startSaver's own guard reschedules anyway — but don't even arm one over a game
     monitor.classList.add("show-mines");
-    minesNewGame();
+    if (!minesSeeded || !minesGrid.length) { minesSeeded = true; minesNewGame(); } // first open (or post-Kill/reset): a fresh board
+    else if (minesPlaced && !minesOver) { minesStartTs = Date.now() - minesElapsed * 1000; minesStartTimer(); minesTick(); } // reopen a live game: resume the retained board + rebase its clock
     playLaptopClickSound("office-monitor");
   }
   function closeMinesApp() {
@@ -23893,6 +23895,15 @@ document.addEventListener("click", function (e) {
     // per-app Kill overrides for plain (non-runtime) apps whose Kill should run a death-flash
     // instead of the silent generic close — the browser flashes Chrome's "Aw, Snap!" then closes.
     var APP_KILLS = { "show-browser": "__killMonitorBrowser", "photobooth": "__killMonitorPhotobooth" };
+    // plain (non-host) apps: their show-class → desktop-app id, so an in-app Kill resets state
+    // (drop the retained board/drawing/read-state/…) AND closes — same "Kill clears, close keeps"
+    // meaning as the desktop-dock Kill. Excludes the hosts (doom/browser via the maps above;
+    // python/linux/console owned by console-ctx).
+    var CLASS_TO_ID = {
+      "show-tehran": "tehran", "show-video": "video", "show-mail": "mail", "show-mines": "mines",
+      "show-tattoo": "tattoo", "show-life": "life", "show-editor": "editor", "show-calendar": "calendar",
+      "show-weather": "weather", "show-nowplaying": "music"
+    };
     var menuEl = null;
     function activeMonitorApp() {
       if (!monitor || window.currentStageName !== "office") return null;
@@ -23902,8 +23913,14 @@ document.addEventListener("click", function (e) {
       if (!open) return null;
       var extra = null;
       for (var cls in RUNTIME_EXTRAS) if (monitor.classList.contains(cls)) { extra = RUNTIME_EXTRAS[cls]; break; }
-      var killOverride = APP_KILLS[openCls] || null; // a plain app's own flash-then-close Kill
-      return { close: (extra && extra.kill) ? extra.kill : (killOverride || "__closeTopMonitorApp"), restart: extra ? extra.restart : null, running: extra ? extra.running : null };
+      var killOverride = APP_KILLS[openCls] || null; // a plain app's own flash-then-close Kill (browser/photobooth)
+      var resetId = CLASS_TO_ID[openCls] || null; // a plain non-host app: Kill = reset+close
+      var closeFn;
+      if (extra && extra.kill) closeFn = extra.kill;            // doom: FATALITY death-flash
+      else if (killOverride) closeFn = killOverride;            // browser (Aw-Snap) / photobooth (its own reset-kill)
+      else if (resetId) closeFn = function () { window.resetMonitorAppState(resetId); }; // reset the app's state, then close
+      else closeFn = "__closeTopMonitorApp";                    // fallback (should be unreachable for a served app)
+      return { close: closeFn, restart: extra ? extra.restart : null, running: extra ? extra.running : null };
     }
     function closeMenu() {
       if (!menuEl) return;
@@ -23929,6 +23946,10 @@ document.addEventListener("click", function (e) {
       linux: { running: "__lxRunning", kill: "__killMonitorLinux" },
       python: { running: "__pyRunning", kill: "__killMonitorPython" }
     };
+    // Host/runtime app ids — these keep their own death-flash / task-manager kills (doom/linux/
+    // python are the backgroundable DESKTOP_HOSTS above, gated on a running predicate; chrome +
+    // console are never desktop-killable). Every OTHER (non-host) dock icon gets a plain reset-Kill.
+    var HOST_IDS = ["chrome", "console", "doom", "python", "linux"];
     // fnName may be a window-global name (string) or a direct closure fn
     function makeItem(cls, ico, label, fnName, disabled) {
       var b = document.createElement("button");
@@ -23971,7 +23992,13 @@ document.addEventListener("click", function (e) {
       var items = [];
       items.push(makeItem("ctx-open", OPEN_ICO, tr("mon_ctx_open"), function () { appOpenTs = Date.now(); appObj.open(); }, false));
       var host = DESKTOP_HOSTS[appObj.id];
-      if (host && window[host.running] && window[host.running]()) items.push(makeItem("ctx-kill", KILL_ICO, tr("mon_ctx_kill"), host.kill, false));
+      if (host && window[host.running] && window[host.running]()) {
+        items.push(makeItem("ctx-kill", KILL_ICO, tr("mon_ctx_kill"), host.kill, false)); // running backgroundable host → task-manager kill
+      } else if (HOST_IDS.indexOf(appObj.id) < 0) {
+        // every non-host icon → Kill = reset that app's retained state to fresh (and close it if
+        // it's the on-screen app). Always offered, whether or not the app is currently open.
+        items.push(makeItem("ctx-kill", KILL_ICO, tr("mon_ctx_kill"), function () { window.resetMonitorAppState(appObj.id); }, false));
+      }
       openMenu(items, x, y);
     }
     document.addEventListener("contextmenu", function (e) {
@@ -24281,7 +24308,10 @@ document.addEventListener("click", function (e) {
     stopSaver();
     clearTimeout(saverTimer); saverTimer = null; // no screensaver over the studio
     monitor.classList.add("show-tattoo");
-    tattooView = "gallery"; renderTattoo();
+    // reopen onto the RETAINED view — a drawing left on the paint canvas (the same element rides
+    // across renders) survives a close+reopen; first-ever open defaults to the gallery. Only a
+    // Kill/reset drops back to a blank gallery.
+    renderTattoo();
     playLaptopClickSound("office-monitor");
   }
   function closeTattooApp(fromPill) {
@@ -24323,6 +24353,7 @@ document.addEventListener("click", function (e) {
   var lifeGridArr = new Uint8Array(LIFE_COLS * LIFE_ROWS);
   var lifeCanvas = null, lifeCtx = null, lifeBuilt = false;
   var lifePlaying = false, lifeTimer = null, lifeSpeedIdx = 1, lifeGen = 0;
+  var lifeSeeded = false; // session retention: the board/gen/play-state survive a close+reopen; only a first-ever open or a Kill/reset re-seeds a fresh random soup
   var lifePlayBtn = null, lifeGenEl = null;
   var lifeSpeedBtns = [], lifePresetBtns = [];
   var lifePainting = false, lifePaintVal = 1;
@@ -24505,14 +24536,23 @@ document.addEventListener("click", function (e) {
     stopSaver();
     clearTimeout(saverTimer); saverTimer = null; // no screensaver over the sim
     monitor.classList.add("show-life");
-    lifeRandom(); // a lively soup so opening the app shows the automaton evolving
-    if (reduceMotion) { lifePause(); } else { lifePlay(); }
+    if (!lifeSeeded) {
+      lifeSeeded = true;
+      lifeRandom(); // first open (or post-Kill/reset): a lively soup so the automaton is already evolving
+      if (reduceMotion) { lifePause(); } else { lifePlay(); }
+    } else {
+      // reopen onto the RETAINED board, generation and play/pause state
+      lifePaintGen(); lifeRender(); lifePaintPlayBtn();
+      if (lifePlaying) lifeArmTimer(); // resume ticking if it was left playing
+    }
     playLaptopClickSound("office-monitor");
   }
   function closeLifeApp() {
     if (!monitor.classList.contains("show-life")) return;
     monitor.classList.remove("show-life");
-    lifePause(); // stop AND null the generation timer — nothing ticks behind a closed app
+    // stop the loop but KEEP lifePlaying (and the board/gen) so a reopen resumes exactly where it
+    // left off — nothing ticks behind a closed app since lifeStep/__resume gate on show-life
+    if (lifeTimer) { clearInterval(lifeTimer); lifeTimer = null; }
     scheduleSaver();
   }
   window.__closeMonitorLife = closeLifeApp; // other monitor apps / the photobooth close the sim before taking the screen
@@ -27674,10 +27714,78 @@ async def localfont(name):
     gmail: openGmailCompose,       // opens the Gmail web composer to marketa@behdad.org
     mailto: openMailto             // native mail client, same subject/body
   };
+  // ── Reset a monitor app's retained session state to fresh ─────────────────────────────
+  // Parallel to the phone's resetAppState: the regular (non-host) desktop apps keep their
+  // state across a normal close+reopen (a plain ✕ / Esc / app-switch), and ONLY a Kill (from
+  // the desktop-dock icon menu or the in-app mon-ctx) or the loft reset drops it. Closes the
+  // app first if it happens to be the on-screen layer (each closeXApp no-ops when its class is
+  // absent), then clears the retained vars so the next open starts clean. The self-hosted
+  // hosts (doom/python/linux/browser/console) keep their own death-flash kills — not here.
+  function resetMonitorAppState(id) {
+    switch (id) {
+      case "life":
+        closeLifeApp();
+        if (lifeTimer) { clearInterval(lifeTimer); lifeTimer = null; }
+        lifeGridArr = new Uint8Array(LIFE_COLS * LIFE_ROWS);
+        lifeGen = 0; lifePlaying = false; lifeSpeedIdx = 1; lifeSeeded = false;
+        if (lifeBuilt) { lifeSetSpeed(1); lifePaintGen(); lifePaintPlayBtn(); lifeRender(); }
+        break;
+      case "mines":
+        closeMinesApp();
+        if (minesSeeded) { minesSeeded = false; if (minesBoardEl && !__minesInPhone) minesNewGame(); } // only re-deal if it had actually been dealt (keeps reset==load)
+        break;
+      case "mail":
+        closeMailApp();
+        for (var mi = 0; mi < MAILS.length; mi++) MAILS[mi].read = false; // every message unread again
+        mailOpenMsg = null;
+        break;
+      case "tattoo":
+        closeTattooApp();
+        tattooDismissDialog();
+        tattooView = "gallery"; tattooDesign = null;
+        tattooColor = TATTOO_COLORS[0]; tattooSize = TATTOO_SIZES[1]; tattooErasing = false;
+        tattooUndo = [];
+        if (tattooCanvas) tattooClearBitmap(); // wipe the drawing
+        break;
+      case "editor":
+        closeEditor();
+        clearTimeout(edAutoTimer); edAutoTimer = null; edPendingCommit = null; // drop a pending autosave so it can't resurrect the cleared buffer
+        // fresh empty buffer — but the SAVED scripts (deskScripts in localStorage) are FILES,
+        // deliberately kept (they survive reset()/reboot() too). Inline clear, never edNew()
+        // (its trailing edName.focus() would trap the keyboard in an off-screen input).
+        if (edName) edName.value = ""; if (edCode) edCode.value = "";
+        edLastSavedName = null; edRefreshPicker(null);
+        break;
+      case "video":
+        closeVideoApp();
+        if (vidEl) { try { vidEl.pause(); vidEl.currentTime = 0; } catch (e) {} } // rewind to the first frame
+        break;
+      case "music":
+        songAudios.forEach(function (a) { if (a && !a.paused) { try { a.pause(); } catch (e) {} } });
+        if (monitor.classList.contains("show-nowplaying")) { monitor.classList.remove("show-nowplaying"); scheduleSaver(); }
+        break;
+      case "tehran":
+        if (window.__closeMonitorTehran) window.__closeMonitorTehran(true); // silent hang-up (no goodbye tone)
+        break;
+      case "photobooth":
+        if (window.__killMonitorPhotobooth) window.__killMonitorPhotobooth(); // its own reset (drops look + captured frame) + close
+        break;
+      case "weather":
+        closeWeather(); // no retained state of its own — just close
+        break;
+      case "calendar":
+        closeCalendar(); // no retained state of its own — just close
+        break;
+    }
+  }
+  window.resetMonitorAppState = resetMonitorAppState; // the desktop-dock + in-app Kill menus and the loft reset all call it
   window.resetOfficeMonitor = function () {
     pbFxIndex = 0; pbBaseFrame = null; // the loft reset is a kill: drop the retained look + captured photo (closePhotobooth keeps them now)
     closePhotobooth(); // a reset must never leave the camera running
     clearBoot(); // powers the screen dark and closes every app (console/REPL/VM console included)
+    // a full reset also clears every regular app's retained session state (photobooth already
+    // handled above; the self-hosted hosts' sessions are reset just below)
+    ["life", "mines", "mail", "tattoo", "editor", "video", "music", "weather", "calendar", "tehran"].forEach(resetMonitorAppState);
     // ...but clearBoot only CLOSES the consoles; their scrollback + welcome state live in
     // their own IIFEs, so clear each session too — a reopened console then greets fresh
     // (the Pyodide/v86 runtimes stay loaded; only the visible session resets)

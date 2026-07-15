@@ -4382,6 +4382,18 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 #loft-game-strip.uv-mode #kitchen-bar-make{filter:contrast(.769) hue-rotate(-220deg) saturate(.385) brightness(2)}
 /* when device-zoomed the ancestor uv filter is already none (rule above), so no counter-correction */
 .hunt-viewport.device-zoomed #loft-game-strip.uv-mode #kitchen-bar-make{filter:none}
+/* Spotlight the hearth fire the same way: a real fire glows warm, so the blacklight party must
+   not tint the flames blue. This same affine-inverse cancels the root uv-mode filter on the fire's
+   warm nodes — the additive doom-fire canvas plus the coal-bed/ember/flame-tongue decor — so they
+   read their true warm colour. Scoped to .chan-fire so only the fire channel is un-washed (the
+   other projector channels keep the blacklight look). The linger's applyEase drives the exact
+   inverse dynamically while you're in the cuddly room; this static rule covers the un-eased
+   full-blacklight state (t=0) and any other room. Filter on ancestor groups only, never on the
+   transform-animated #cuddly-flame-groove/.cuddly-flame-season, so filter and transform stay independent. */
+#loft-game-strip.uv-mode #cuddly-wallscreen.chan-fire #cuddly-flame-canvas,
+#loft-game-strip.uv-mode #cuddly-wallscreen.chan-fire .fire-live{filter:contrast(.769) hue-rotate(-220deg) saturate(.385) brightness(2)}
+.hunt-viewport.device-zoomed #loft-game-strip.uv-mode #cuddly-wallscreen.chan-fire #cuddly-flame-canvas,
+.hunt-viewport.device-zoomed #loft-game-strip.uv-mode #cuddly-wallscreen.chan-fire .fire-live{filter:none}
 /* Fluorescence under the blacklight. Source colours are picked so the ROOT filter above
    (esp. hue-rotate 220°) lands them on the intended on-screen glow; drop-shadow colours
    are likewise pre-filter source values. All scoped to .uv-mode → inert when it's off. */
@@ -14344,15 +14356,27 @@ window.__setUvParty = function (on) { uvPartyOn = !!on; applyUvMode(); }; // the
     // we've eased — at t=0 this reproduces the shipping #kitchen-bar-make CSS rule exactly. Only
     // meaningful in the kitchen (that's the only room the make-glass shows in), so it's a no-op
     // elsewhere — the element lives in the strip full-time, but we don't touch it off-kitchen.
+    var inv = "contrast(" + (1 / c).toFixed(3) + ") hue-rotate(" + (-h).toFixed(1) + "deg) saturate(" + (1 / sa).toFixed(3) + ") brightness(" + (1 / b).toFixed(3) + ")";
     var mk = document.getElementById("kitchen-bar-make");
     if (mk) mk.style.filter = window.currentStageName === "kitchen"
-      ? "contrast(" + (1 / c).toFixed(3) + ") hue-rotate(" + (-h).toFixed(1) + "deg) saturate(" + (1 / sa).toFixed(3) + ") brightness(" + (1 / b).toFixed(3) + ")"
+      ? inv
       : ""; // off-kitchen: leave the make-glass to its CSS (never a stale inverse from a ramp that ran elsewhere)
+    // Same trick for the hearth fire: keep it warm as the light eases, so the flames never drift
+    // blue. Only meaningful in the cuddly room; off-cuddly leave the fire to its static CSS rule.
+    fireNodes().forEach(function (n) { n.style.filter = window.currentStageName === "cuddly" ? inv : ""; });
+  }
+  function fireNodes() { // the fire's warm nodes: the additive canvas + the coal/ember/flame decor
+    var arr = [];
+    var c = document.getElementById("cuddly-flame-canvas");
+    if (c) arr.push(c);
+    document.querySelectorAll("#cuddly-wallscreen .fire-live").forEach(function (n) { arr.push(n); });
+    return arr;
   }
   function clearInline() { // hand the blacklight back to the CSS .uv-mode rules
     strip.style.filter = "";
     var mk = document.getElementById("kitchen-bar-make");
     if (mk) mk.style.filter = "";
+    fireNodes().forEach(function (n) { n.style.filter = ""; });
   }
   function stop() {
     if (lingerTimer) { clearTimeout(lingerTimer); lingerTimer = 0; }
@@ -43583,6 +43607,9 @@ function spawnDustMote(container) {
       return false;
     });
     var anyPlaying = !!playing;
+    // party on AND a party bed actually sounding (spacebar/transport pause stills it) — the
+    // "party bed sounding" gate the bartender + office groovers use when no phase-lock song plays
+    var partyMusicOn = !!window.__gardenPartyOn && !!(window.__anyMusicPlaying && window.__anyMusicPlaying());
     var durations = grooveDurations(anyPlaying ? (GROOVE_BPM[playing.id] || 126.0) : 126.0);
     var phaseT = anyPlaying ? playing.currentTime : 0;
     // Phase-lock every groover to the song's real position (negative animation-delay
@@ -43675,14 +43702,20 @@ function spawnDustMote(container) {
     // kitchen water, balcony wine, and the wooden head bob on the beat, phase-locked
     setGroove(document.getElementById("kitchen-waterbottle-liquid-groove"), durations.head);
     setGroove(document.getElementById("balcony-wine-liquid-groove"), durations.head);
-    setGroove(document.getElementById("office-wooden-head-groove"), durations.head);
+    // the wooden head bobs to a song (phase-locked) and also grooves during the party with no
+    // song (default tempo, like the garden set); stops when neither a song nor the party is on
+    var officeHeadGroove = document.getElementById("office-wooden-head-groove");
+    if (officeHeadGroove) {
+      if (anyPlaying) setGroove(officeHeadGroove, durations.head);
+      else if (partyMusicOn) partyGroove(officeHeadGroove);
+      else officeHeadGroove.classList.remove("grooving");
+    }
     // the bartender grooves during the PARTY — party lit AND a party bed actually sounding, so a
     // spacebar/transport pause stills him and the calm night bar never grooves. Default-tempo
     // partyGroove (like the garden groovers) since the party bed's beat isn't one of the phase-lock
     // instrument songs; on the OUTER group so it composes with his drag translate + the shaker toss.
     var bartenderGroove = document.getElementById("kitchen-bartender");
     if (bartenderGroove) {
-      var partyMusicOn = !!window.__gardenPartyOn && !!(window.__anyMusicPlaying && window.__anyMusicPlaying());
       if (partyMusicOn) partyGroove(bartenderGroove);
       else bartenderGroove.classList.remove("grooving");
     }
@@ -43698,11 +43731,12 @@ function spawnDustMote(container) {
       else el.classList.remove("grooving");
     });
 
-    // the Mondrian shards and stained-glass butterfly flutter at a fixed tempo while a song plays
+    // the Mondrian shards and stained-glass butterfly flutter at a fixed tempo while a song plays,
+    // and also during the party with no song (fixed CSS tempo either way — no phase-lock needed)
     var mond = document.getElementById("office-mondrian");
-    if (mond) mond.classList.toggle("grooving", anyPlaying);
+    if (mond) mond.classList.toggle("grooving", anyPlaying || partyMusicOn);
     var sg = document.getElementById("office-stainedglass");
-    if (sg) sg.classList.toggle("grooving", anyPlaying);
+    if (sg) sg.classList.toggle("grooving", anyPlaying || partyMusicOn);
     // the PC tower LEDs beat to the music, but only when it's on
     var pcTrio = document.getElementById("office-pc-desk-trio");
     var pcLit = pcTrio && pcTrio.classList.contains("on");

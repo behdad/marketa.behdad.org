@@ -65,17 +65,26 @@ var HARNESS = [
   "    S('py_restart_label', ccText('.cc-restart'));",
   "    S('py_kill_label', ccText('.cc-kill'));",
   "    S('menu_html', ccMenu()?ccMenu().outerHTML.replace(/\\s+/g,' ').slice(0,500):'');",
-  // Restart is the load/failure affordance — it works even while the runtime is cold
+  // Restart is the load/failure affordance — it works even while the runtime is cold. It now runs the
+  // Monty Python Black Knight flash first, THEN tears down (deferred past the ~2.6s flash). openPython
+  // no-ops here (no show-caps), so the reopened welcome doesn't reprint — pyOut just clears.
   "    pyOut.innerHTML='<div>stale line</div><div>garbage</div>';",
-  "    ccMenu().querySelector('.cc-restart').click(); await sleep(100);",
+  "    ccMenu().querySelector('.cc-restart').click(); await sleep(40);",
   "    S('py_menu_hidden_after_restart', !ccMenu());",
-  "    S('py_out_reset', /python|CPython|snake/i.test(pyOut.textContent) && !/stale line|garbage/.test(pyOut.textContent));",
-  // mark the runtime running → Kill enabled → closes
+  "    S('py_restart_flash_started', mon().classList.contains('death-python'));",
+  "    await sleep(2700);",   // wait out the ~2.6s flash → destroyPython clears the output + drops show-python
+  "    S('py_out_reset', !/stale line|garbage/.test(pyOut.textContent) && !mon().classList.contains('death-python'));",
+  // mark the runtime running → Kill enabled → runs the Black Knight flash, THEN destroys the app
   "    window.__pyRunning=function(){return true;};",
   "    showApp('show-python'); ctxAt(pyOut); S('py_menu_reopened', !!ccMenu());",
   "    S('py_kill_enabled_when_running', !ccKillDisabled());",
-  "    ccMenu().querySelector('.cc-kill').click(); await sleep(100);",
+  "    ccMenu().querySelector('.cc-kill').click(); await sleep(40);",
+  "    S('py_kill_hid_menu', !ccMenu());",
+  "    S('py_kill_flash_started', mon().classList.contains('death-python'));",
+  "    S('py_kill_still_open_during_flash', mon().classList.contains('show-python'));",
+  "    await sleep(2700);",   // wait out the flash → destroyPython drops show-python
   "    S('py_kill_closed_app', !mon().classList.contains('show-python'));",
+  "    S('py_kill_flash_ended', !mon().classList.contains('death-python'));",
   // Esc keeps app, closes menu
   "    showApp('show-python'); ctxAt(pyOut);",
   "    document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));",
@@ -130,14 +139,20 @@ var HARNESS = [
   "    S('linux_restart_threw', lxThrew); S('linux_restart_flash_started', mon().classList.contains('death-linux'));",
   "    await sleep(2400);",  // wait out the BSOD flash → destroyLinux clears the console
   "    S('linux_restart_cleared_out', !/old/.test(lo.textContent));",
-  "    var pyThrew=null; try { window.__restartMonitorPython(); } catch(e){ pyThrew=String(e); } S('python_restart_threw', pyThrew);",
+  // Python Restart now runs the Monty Python Black Knight flash, THEN destroys (clears the output +
+  // drops show-python) and would reopen a fresh REPL (no show-caps here → openPython no-ops); verify flash-then-teardown.
+  "    showApp('show-python'); var po=document.getElementById('monitor-py-out'); po.innerHTML='<div>old-py</div>'; var pyThrew=null;",
+  "    try { window.__restartMonitorPython(); } catch(e){ pyThrew=String(e); }",
+  "    S('python_restart_threw', pyThrew); S('python_restart_flash_started', mon().classList.contains('death-python'));",
+  "    await sleep(2700);",  // wait out the ~2.6s flash → destroyPython clears the output + drops show-python
+  "    S('python_restart_cleared_out', !/old-py/.test(po.textContent)); S('python_restart_torn_down', !mon().classList.contains('show-python') && !mon().classList.contains('death-python'));",
   "  }",
   "  window.addEventListener('load', function(){ setTimeout(function(){ run().catch(function(e){ window.__errs.push('harness: '+String(e&&e.stack||e)); }).then(function(){ report.errors=window.__errs; document.getElementById('__report').textContent=JSON.stringify(report); }); }, 400); });",
   "})();",
   "</script>"
 ].join("\n");
 
-var rep = lib.runPageSync("rsvp.html", HARNESS, 15000, { patchRaf: true });
+var rep = lib.runPageSync("rsvp.html", HARNESS, 20000, { patchRaf: true });
 if (!rep) { console.log("  ✗ harness produced no report (page error before load, or budget too small)"); process.exit(1); }
 
 var fails = 0;
@@ -160,9 +175,9 @@ check("Kill item visible for python", s.py_kill_visible === true);
 check("Kill is DISABLED while the python runtime isn't running", s.py_kill_disabled_when_cold === true);
 check("Restart labelled 'Restart'", /restart/i.test(s.py_restart_label), s.py_restart_label);
 check("Kill labelled 'Kill'", /kill/i.test(s.py_kill_label), s.py_kill_label);
-check("Restart works while cold — hides the menu + tears down python output", s.py_menu_hidden_after_restart === true && s.py_out_reset === true);
+check("Restart works while cold — hides the menu, runs the Black Knight flash, then tears down python output", s.py_menu_hidden_after_restart === true && s.py_restart_flash_started === true && s.py_out_reset === true);
 check("Kill becomes ENABLED once the runtime is running", s.py_kill_enabled_when_running === true);
-check("enabled Kill closes the python app", s.py_kill_closed_app === true);
+check("enabled Kill runs the Black Knight flash then destroys the python app", s.py_kill_hid_menu === true && s.py_kill_flash_started === true && s.py_kill_still_open_during_flash === true && s.py_kill_closed_app === true && s.py_kill_flash_ended === true);
 check("Esc hides the menu", s.esc_hid_menu === true);
 check("Esc leaves the app open (does not close it)", s.esc_kept_app === true);
 check("plain JS console gets NO Restart", s.console_restart_hidden === true || s.console_restart_hidden === "no-console-out");
@@ -181,7 +196,7 @@ check("doom fs button calls requestFullscreen on the canvas", s.doom_fs_called_o
 console.log(" restart teardown (no throws, real state reset):");
 check("doom restart runs the flash then tears down + swaps a fresh canvas (id kept)", s.doom_restart_threw === null && s.doom_restart_flash_started === true && s.doom_restart_swapped_canvas === true && s.doom_restart_torn_down === true, s.doom_restart_threw);
 check("linux restart runs the BSOD flash then destroys + clears the console", s.linux_restart_threw === null && s.linux_restart_flash_started === true && s.linux_restart_cleared_out === true, s.linux_restart_threw);
-check("python restart does not throw", s.python_restart_threw === null, s.python_restart_threw);
+check("python restart runs the Black Knight flash then destroys + clears the console", s.python_restart_threw === null && s.python_restart_flash_started === true && s.python_restart_cleared_out === true && s.python_restart_torn_down === true, s.python_restart_threw);
 check("no uncaught JS errors during the run", Array.isArray(rep.errors) && rep.errors.length === 0, rep.errors);
 
 console.log("\n" + (fails ? ("FAILED " + fails + " check(s)") : "All menu checks passed."));

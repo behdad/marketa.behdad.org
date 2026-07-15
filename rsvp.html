@@ -12732,6 +12732,7 @@ var T = {
     df_bsod_main: "Your PC ran into a problem and needs to restart.", // on-screen BSOD line (Linux kill)
     mon_ctx_restart: "Restart",
     mon_ctx_kill: "Kill",
+    mon_ctx_open: "Open",
     app_phone: "phone",
     phone_dialer_title: "contacts",
     dial_call: "Call",
@@ -13132,6 +13133,7 @@ var T = {
     df_bsod_main: "V počítači došlo k problému a je potřeba restartovat.", // on-screen BSOD line (Linux kill)
     mon_ctx_restart: "Restartovat",
     mon_ctx_kill: "Ukončit",
+    mon_ctx_open: "Otevřít",
     app_phone: "telefon",
     phone_dialer_title: "kontakty",
     dial_call: "Volat",
@@ -23423,21 +23425,31 @@ document.addEventListener("click", function (e) {
     function tr(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || key; }
     var RESTART_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9.7 3.4 A4 4 0 1 0 10.3 6.2"/><path d="M10 1.8 L10 3.6 L8.2 3.6"/></svg>';
     var KILL_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M3.4 3.4 L8.6 8.6 M8.6 3.4 L3.4 8.6"/></svg>';
+    var OPEN_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 2.2 H9.8 V5.5"/><path d="M9.8 2.2 L5.6 6.4"/><path d="M9 6.7 V9.3 A0.6 0.6 0 0 1 8.4 9.9 H2.7 A0.6 0.6 0 0 1 2.1 9.3 V3.6 A0.6 0.6 0 0 1 2.7 3 H5"/></svg>';
+    // Desktop dock hosts: the three self-hosted runtimes that can run backgrounded. Each maps
+    // to its running-predicate (Kill appears only when true) + its silent (no death-flash) kill
+    // hook — a desktop/task-manager kill of a backgrounded host, not the on-screen app.
+    var DESKTOP_HOSTS = {
+      doom: { running: "__doomRunning", kill: "__killMonitorDoom" },
+      linux: { running: "__lxRunning", kill: "__killMonitorLinux" },
+      python: { running: "__pyRunning", kill: "__killMonitorPython" }
+    };
+    // fnName may be a window-global name (string) or a direct closure fn
     function makeItem(cls, ico, label, fnName, disabled) {
       var b = document.createElement("button");
       b.type = "button"; b.className = cls; b.setAttribute("role", "menuitem");
       b.innerHTML = ico + "<span>" + label + "</span>";
       if (disabled) { b.disabled = true; b.setAttribute("aria-disabled", "true"); }
-      else b.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); closeMenu(); var fn = window[fnName]; if (fn) fn(); });
+      else b.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); closeMenu(); var fn = (typeof fnName === "function") ? fnName : window[fnName]; if (fn) fn(); });
       return b;
     }
-    function buildMenu(app, x, y) {
+    // shared: mount a built .mon-ctx of items at (x,y), clamped to the viewport, with the
+    // same dismiss wiring (click-away / Esc / scroll / blur / resize) for both menus
+    function openMenu(items, x, y) {
       closeMenu();
       menuEl = document.createElement("div");
       menuEl.className = "mon-ctx"; menuEl.setAttribute("role", "menu");
-      var killDisabled = !!(app.running && !(window[app.running] && window[app.running]())); // runtime not up yet → nothing to kill
-      menuEl.appendChild(makeItem("ctx-kill", KILL_ICO, tr("mon_ctx_kill"), app.close, killDisabled)); // Kill first
-      if (app.restart) menuEl.appendChild(makeItem("ctx-restart", RESTART_ICO, tr("mon_ctx_restart"), app.restart, false));
+      for (var i = 0; i < items.length; i++) menuEl.appendChild(items[i]);
       menuEl.style.visibility = "hidden";
       document.body.appendChild(menuEl);
       // clamp to the viewport on both axes so a corner right-click doesn't overflow
@@ -23451,12 +23463,42 @@ document.addEventListener("click", function (e) {
       window.addEventListener("blur", closeMenu);
       window.addEventListener("resize", closeMenu);
     }
+    function buildMenu(app, x, y) {
+      var items = [];
+      var killDisabled = !!(app.running && !(window[app.running] && window[app.running]())); // runtime not up yet → nothing to kill
+      items.push(makeItem("ctx-kill", KILL_ICO, tr("mon_ctx_kill"), app.close, killDisabled)); // Kill first
+      if (app.restart) items.push(makeItem("ctx-restart", RESTART_ICO, tr("mon_ctx_restart"), app.restart, false));
+      openMenu(items, x, y);
+    }
+    // desktop (show-caps) menu for a right-clicked dock icon: Open always; Kill only for a
+    // host runtime that is actually running in the background (a stopped host = Open only)
+    function buildDesktopMenu(appObj, x, y) {
+      var items = [];
+      items.push(makeItem("ctx-open", OPEN_ICO, tr("mon_ctx_open"), function () { appOpenTs = Date.now(); appObj.open(); }, false));
+      var host = DESKTOP_HOSTS[appObj.id];
+      if (host && window[host.running] && window[host.running]()) items.push(makeItem("ctx-kill", KILL_ICO, tr("mon_ctx_kill"), host.kill, false));
+      openMenu(items, x, y);
+    }
     document.addEventListener("contextmenu", function (e) {
       var app = activeMonitorApp();
-      if (!app) return; // every other surface keeps the native context menu
-      if (!e.target || !e.target.closest || !e.target.closest("#office-monitor")) return; // only over the monitor's app area
+      if (app) { // an app is OPEN on the monitor → close/restart/kill it
+        if (!e.target || !e.target.closest || !e.target.closest("#office-monitor")) return; // only over the monitor's app area
+        e.preventDefault();
+        buildMenu(app, e.clientX, e.clientY);
+        return;
+      }
+      // otherwise: the desktop home screen. Right-clicking a dock app icon → Open [+ Kill].
+      // A console app riding on show-caps hides the dock (pointer-events:none), so its
+      // surface never resolves to a .dock-app cell — it keeps the native menu, no double-up.
+      if (!monitor || window.currentStageName !== "office" || !monitor.classList.contains("show-caps")) return;
+      if (!e.target || !e.target.closest) return;
+      var cell = e.target.closest(".dock-app");
+      if (!cell) return; // bare desktop / menu bar → native menu
+      var appObj = null;
+      for (var i = 0; i < DESKTOP_APPS.length; i++) if (cell.id === "monitor-dock-" + DESKTOP_APPS[i].id) { appObj = DESKTOP_APPS[i]; break; }
+      if (!appObj) return;
       e.preventDefault();
-      buildMenu(app, e.clientX, e.clientY);
+      buildDesktopMenu(appObj, e.clientX, e.clientY);
     });
   })();
   function toggleVideoApp() {

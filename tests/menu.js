@@ -146,6 +146,29 @@ var HARNESS = [
   "    S('python_restart_threw', pyThrew); S('python_restart_flash_started', mon().classList.contains('death-python'));",
   "    await sleep(2700);",  // wait out the ~2.6s flash → destroyPython clears the output + drops show-python
   "    S('python_restart_cleared_out', !/old-py/.test(po.textContent)); S('python_restart_torn_down', !mon().classList.contains('show-python') && !mon().classList.contains('death-python'));",
+  // ==== DESKTOP DOCK-ICON CONTEXT MENU (Open / Kill) — appended block ====
+  // On the show-caps home screen, right-clicking a dock APP ICON pops a .mon-ctx with Open
+  // (always) and — only for a self-hosted host runtime (doom/linux/python) that is actually
+  // RUNNING in the background — Kill. Non-hosts, and stopped hosts, get Open only. Right-
+  // clicking a non-icon desktop surface keeps the native menu.
+  "    function deskTile(id){ return document.getElementById('monitor-dock-'+id); }",
+  "    function monOpen(){ var m=monMenu(); return m?m.querySelector('button.ctx-open'):null; }",
+  "    function escMenu(){ document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); }",
+  // non-host tile (mail) → Open only, no Kill
+  "    showApp('show-caps'); var mailTile=deskTile('mail'); S('desk_mail_prevented', ctxAt(mailTile)); S('desk_mail_items', monItems()); S('desk_mail_has_open', !!monOpen()); S('desk_mail_has_kill', !!monKill()); escMenu(); await sleep(20);",
+  // host tile with runtime STOPPED → Open only
+  "    window.__doomRunning=function(){return false;}; showApp('show-caps'); S('desk_doom_stopped_prevented', ctxAt(deskTile('doom'))); S('desk_doom_stopped_items', monItems()); S('desk_doom_stopped_has_kill', !!monKill()); escMenu(); await sleep(20);",
+  // host tile with runtime RUNNING → Open + Kill (Open first)
+  "    window.__doomRunning=function(){return true;}; showApp('show-caps'); ctxAt(deskTile('doom')); S('desk_doom_running_items', monItems()); S('desk_doom_running_has_open', !!monOpen()); S('desk_doom_running_has_kill', !!monKill());",
+  // clicking Kill calls the SILENT host kill hook (spied — no real death flash) + hides menu
+  "    window.__killMonitorDoom=function(){ window.__deskKill='doom'; }; window.__deskKill=null; if(monKill()) monKill().click(); await sleep(20); S('desk_doom_kill_called', window.__deskKill==='doom'); S('desk_doom_kill_hid_menu', !monMenu());",
+  // each host maps to its OWN predicate + kill hook — linux + python offer Kill when running
+  "    window.__lxRunning=function(){return true;}; showApp('show-caps'); ctxAt(deskTile('linux')); S('desk_linux_running_has_kill', !!monKill()); escMenu(); await sleep(20);",
+  "    window.__pyRunning=function(){return true;}; showApp('show-caps'); ctxAt(deskTile('python')); S('desk_python_running_has_kill', !!monKill()); escMenu(); await sleep(20);",
+  // clicking Open launches the app (mines → show-mines, pure JS) + hides the menu
+  "    showApp('show-caps'); ctxAt(deskTile('mines')); if(monOpen()) monOpen().click(); await sleep(60); S('desk_open_launched', mon().classList.contains('show-mines')); S('desk_open_hid_menu', !monMenu());",
+  // right-clicking a NON-icon desktop surface (the menu-bar brand) → no custom menu, native kept
+  "    showApp('show-caps'); var brand=document.querySelector('#monitor-desktop-dock .desk-brand'); S('desk_nontile_prevented', brand?ctxAt(brand):'no-brand'); S('desk_nontile_no_menu', !monMenu());",
   "  }",
   "  window.addEventListener('load', function(){ setTimeout(function(){ run().catch(function(e){ window.__errs.push('harness: '+String(e&&e.stack||e)); }).then(function(){ report.errors=window.__errs; document.getElementById('__report').textContent=JSON.stringify(report); }); }, 400); });",
   "})();",
@@ -198,6 +221,17 @@ check("doom restart runs the flash then tears down + swaps a fresh canvas (id ke
 check("linux restart runs the BSOD flash then destroys + clears the console", s.linux_restart_threw === null && s.linux_restart_flash_started === true && s.linux_restart_cleared_out === true, s.linux_restart_threw);
 check("python restart runs the Black Knight flash then destroys + clears the console", s.python_restart_threw === null && s.python_restart_flash_started === true && s.python_restart_cleared_out === true && s.python_restart_torn_down === true, s.python_restart_threw);
 check("no uncaught JS errors during the run", Array.isArray(rep.errors) && rep.errors.length === 0, rep.errors);
+
+// ==== DESKTOP DOCK-ICON CONTEXT MENU (Open / Kill) — appended assertions ====
+console.log(" desktop dock-icon menu (Open / Kill):");
+check("desktop right-click a non-host tile (mail) → Open only, no Kill", s.desk_mail_prevented === true && Array.isArray(s.desk_mail_items) && s.desk_mail_items.length === 1 && /open/i.test(s.desk_mail_items[0] || "") && s.desk_mail_has_open === true && s.desk_mail_has_kill === false, s.desk_mail_items);
+check("desktop host tile with runtime STOPPED → Open only", s.desk_doom_stopped_prevented === true && Array.isArray(s.desk_doom_stopped_items) && s.desk_doom_stopped_items.length === 1 && s.desk_doom_stopped_has_kill === false, s.desk_doom_stopped_items);
+check("desktop host tile with runtime RUNNING → Open + Kill (Open first)", Array.isArray(s.desk_doom_running_items) && s.desk_doom_running_items.length === 2 && /open/i.test(s.desk_doom_running_items[0] || "") && /kill/i.test(s.desk_doom_running_items[1] || "") && s.desk_doom_running_has_open === true && s.desk_doom_running_has_kill === true, s.desk_doom_running_items);
+check("desktop Kill calls the silent host kill hook + hides the menu", s.desk_doom_kill_called === true && s.desk_doom_kill_hid_menu === true);
+check("desktop Kill offered for a running linux host", s.desk_linux_running_has_kill === true);
+check("desktop Kill offered for a running python host", s.desk_python_running_has_kill === true);
+check("desktop Open launches the app (mines) + hides the menu", s.desk_open_launched === true && s.desk_open_hid_menu === true);
+check("desktop right-click a non-icon surface (brand) → no custom menu, native kept", s.desk_nontile_prevented === false && s.desk_nontile_no_menu === true, { prevented: s.desk_nontile_prevented });
 
 console.log("\n" + (fails ? ("FAILED " + fails + " check(s)") : "All menu checks passed."));
 console.log("captured console menu HTML: " + (s.menu_html || "(none)"));

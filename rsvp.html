@@ -28343,6 +28343,12 @@ async def localfont(name):
     var sessionStart = Date.now();  // "in the loft for" playtime origin — set at script load
     var selectedCity = null;
     var cardsIndex = 0;             // phrasebook deck position — session-scoped: persists across a normal close/reopen (resume); zeroed only on a kill (uninstallApp / __resetPhoneApps)
+    // More session-scoped app state, same model as cardsIndex/notesDraft: survives a normal
+    // close/reopen (the render seeds from these; handlers commit back), cleared only on a kill.
+    var curAmount = "100", curFrom = "CAD", curTo = "CZK"; // currency: typed amount + the two picked codes
+    var calcState = null;           // calculator: {acc, pending, cur, fresh, errored} snapshot, or null = fresh
+    var dressupOn = {};             // dress-up: map of accessory-id → true for every chip currently ON
+    var flashWasOn = false;         // flashlight INTENT — remembered across a normal leave/close so a reopen relights the beam. Distinct from flashOn (the live beam), which the async torch guards still read, so it must go false the instant the beam is physically killed on leave.
     var callee = null, callConnected = false, callStatusKey = "", callHangingUp = false, callTimers = [];
     // Home-screen layout is a fixed grid of SLOTS (like a real phone): an array of
     // app-ids by slot position, with `null` holes for empty / "Uninstall"ed gaps.
@@ -28576,7 +28582,7 @@ async def localfont(name):
       if (phoneBrowserCleanup) { phoneBrowserCleanup(); phoneBrowserCleanup = null; }
       if (clockTimer) { clearInterval(clockTimer); clockTimer = null; } // clock/currency/hn all safe to clear blindly
       if (compassHandler) { try { window.removeEventListener("deviceorientationabsolute", compassHandler); window.removeEventListener("deviceorientation", compassHandler); } catch (e) {} compassHandler = null; }
-      if (currentApp === "flashlight") setFlashlight(false); // beam off on leave — also the close()/visibilitychange path (close → leaveCurrentApp)
+      if (currentApp === "flashlight") { flashWasOn = flashOn; setFlashlight(false); } // remember intent, then physically kill the beam on leave (setFlashlight(false) drops flashOn so the async torch guards bail) — also the close()/visibilitychange path (close → leaveCurrentApp). renderFlashlight relights from flashWasOn on reopen.
       if (photoboothCleanup) { photoboothCleanup(); photoboothCleanup = null; } // stop the booth camera + timers + object URLs
       // phrasebook (cards) deliberately does NOT reset here — a normal close/reopen resumes at
       // the same card (cardsIndex is session-scoped). It's zeroed only on a "kill": phone Uninstall
@@ -28734,12 +28740,18 @@ async def localfont(name):
       else if (app.link) { try { window.open(app.link, "_blank"); } catch (e) {} }
     }
     // drop an app's retained session state back to fresh (phrasebook deck, notes draft, booth
-    // polaroid). Used by BOTH Stop (force-stop: clear state, keep the icon) and Uninstall (which
-    // also removes the icon) — a normal close keeps the state; only these "kill" paths clear it.
+    // polaroid, currency amount/codes, calculator display, dress-up outfit, flashlight intent,
+    // mail read-marks). Used by BOTH Stop (force-stop: clear state, keep the icon) and Uninstall
+    // (which also removes the icon) — a normal close keeps the state; only these "kill" paths clear it.
     function resetAppState(id) {
       if (id === "cards") cardsIndex = 0;
       if (id === "notes") notesDraft = "";
       if (id === "photobooth") { pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; }
+      if (id === "currency") { curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; } // back to the fresh 100 CAD → CZK
+      if (id === "calculator") calcState = null;                                    // display back to "0"
+      if (id === "dressup") dressupOn = {};                                         // every accessory off
+      if (id === "flashlight") { flashWasOn = false; setFlashlight(false); }        // forget the intent + kill the beam/torch
+      if (id === "mail") mailRead = {};                                             // every message back to unread
     }
     function stopApp(id) { resetAppState(id); if (shell && shell.classList.contains("pm-home")) renderHome(); } // Stop = force-stop: clear state, icon stays
     function uninstallApp(id) { // empty this app's slot (leaves a blank gap — others don't shift); a reset/reload brings it back
@@ -29151,10 +29163,11 @@ async def localfont(name):
         '<div class="pmu-out"><div class="pmu-res">—</div><div class="pmu-sub"></div></div>';
       body.appendChild(wrap);
       var amt = wrap.querySelector(".pmu-amt"), from = wrap.querySelector(".pmu-from"), to = wrap.querySelector(".pmu-to");
-      from.value = "CAD"; to.value = "CZK";
+      amt.value = curAmount; from.value = curFrom; to.value = curTo; // seed from the session-saved amount + codes (survives a normal close/reopen; reset drops them to 100 CAD→CZK)
       var res = wrap.querySelector(".pmu-res"), sub = wrap.querySelector(".pmu-sub");
       var loc = document.documentElement.lang === "cs" ? "cs-CZ" : "en-US";
       function recompute() {
+        curAmount = amt.value; curFrom = from.value; curTo = to.value; // commit every edit so the next open resumes it
         var a = parseFloat(amt.value); if (!isFinite(a)) a = 0;
         var f = rates[from.value], t = rates[to.value];
         var out = (f && t) ? (a / f * t) : 0;
@@ -29325,7 +29338,8 @@ async def localfont(name):
       function paint() {
         torch.classList.toggle("on", flashOn);
       }
-      torch.addEventListener("click", function () { setFlashlight(!flashOn); paint(); });
+      torch.addEventListener("click", function () { setFlashlight(!flashOn); flashWasOn = flashOn; paint(); }); // a tap sets both the live beam and the remembered intent
+      if (flashWasOn && !flashOn) setFlashlight(true); // relight the beam if it was on before a normal close/leave (leaveCurrentApp stashed the intent, then physically killed it)
       paint();
     }
     // ── phrasebook ── a little English⇄Czech flip-card deck of useful wedding phrases.
@@ -29539,9 +29553,9 @@ async def localfont(name):
       svg.setAttribute("aria-hidden", "true");
       var fig = cloneCoupleFigure();
       if (fig) svg.appendChild(fig);
-      var layer = document.createElementNS(SVGNS, "g"); // accessory layers, hidden until toggled
+      var layer = document.createElementNS(SVGNS, "g"); // accessory layers, hidden until toggled (seeded from the session-saved outfit)
       layer.innerHTML = ITEMS.map(function (it) {
-        return '<g data-acc="' + it.id + '" style="display:none">' + it.svg + '</g>';
+        return '<g data-acc="' + it.id + '" style="display:' + (dressupOn[it.id] ? "block" : "none") + '">' + it.svg + '</g>';
       }).join("");
       svg.appendChild(layer);
       stage.appendChild(svg);
@@ -29569,12 +29583,13 @@ async def localfont(name):
       ITEMS.forEach(function (it) {
         var chip = document.createElement("button");
         chip.type = "button";
-        chip.className = "pmd-chip";
+        chip.className = "pmd-chip" + (dressupOn[it.id] ? " on" : ""); // reflect the session-saved outfit
         chip.setAttribute("data-id", it.id);
         chip.innerHTML = '<span class="pmd-emo">' + it.emo + '</span><span></span>';
         chip.lastChild.textContent = tr(it.labelKey);
         chip.addEventListener("click", function () {
           var on = chip.classList.toggle("on");
+          if (on) dressupOn[it.id] = true; else delete dressupOn[it.id]; // commit for a reopen
           var g = layer.querySelector('[data-acc="' + it.id + '"]');
           if (g) g.style.display = on ? "block" : "none";
           syncHidden();
@@ -29582,12 +29597,14 @@ async def localfont(name):
         chips.appendChild(chip);
       });
       wrap.appendChild(chips);
+      syncHidden(); // apply any seeded outfit's base-part hides (caps/bow/glasses) on first render
 
       var reset = document.createElement("button");
       reset.type = "button";
       reset.className = "pmd-reset";
       reset.textContent = tr("du_reset");
       reset.addEventListener("click", function () {
+        dressupOn = {}; // clear the session-saved outfit too, so a reopen stays bare
         var onChips = chips.querySelectorAll(".pmd-chip.on");
         for (var i = 0; i < onChips.length; i++) onChips[i].classList.remove("on");
         var gs = layer.querySelectorAll("[data-acc]");
@@ -29695,6 +29712,7 @@ async def localfont(name):
       pad.setAttribute("aria-label", tr("notes_write_lead"));
       pad.placeholder = tr("notes_placeholder");
       pad.value = notesDraft;
+      pad.scrollTop = 0; // a restored long draft opens scrolled to the top (openApp zeroes the body; this covers the textarea's own scroll)
       wrap.appendChild(pad);
 
       var row = document.createElement("div");
@@ -30449,7 +30467,13 @@ async def localfont(name):
     // chosen operator, cur the on-screen entry. fresh means the next digit starts
     // a new entry (after =, an operator, or an error).
     function renderCalculator(body) {
-      var acc = null, pending = null, cur = "0", fresh = true, errored = false;
+      // seed from the session-saved snapshot so a normal close/reopen resumes the running
+      // calc (committed back on every paint below); a kill/reset nulls calcState → fresh "0"
+      var acc = calcState ? calcState.acc : null,
+          pending = calcState ? calcState.pending : null,
+          cur = calcState ? calcState.cur : "0",
+          fresh = calcState ? calcState.fresh : true,
+          errored = calcState ? calcState.errored : false;
       var wrap = document.createElement("div");
       wrap.className = "phone-calc";
       var display = document.createElement("div");
@@ -30469,7 +30493,7 @@ async def localfont(name):
         if (s.replace(/[-.]/g, "").length > 11) s = n.toPrecision(9).replace(/\.?0+$/, "");
         return s;
       }
-      function paint() { display.textContent = errored ? tr("calc_error") : cur; }
+      function paint() { display.textContent = errored ? tr("calc_error") : cur; calcState = { acc: acc, pending: pending, cur: cur, fresh: fresh, errored: errored }; } // every mutator calls paint(), so this commits the running state for a reopen
       function opSymbol(op) { return op === "+" ? "+" : op === "-" ? "−" : op === "*" ? "×" : "÷"; }
       function compute(a, op, b) {
         if (op === "+") return a + b;
@@ -30803,7 +30827,7 @@ async def localfont(name):
     }
     window.__openPhoneModal = open;
     window.__closePhoneModal = function (silent) { close(silent); };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering), rewinds the phrasebook deck to card 1, clears the notes draft, and drops the saved photobooth polaroid
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks, and the flashlight (intent forgotten + beam/torch off)
     // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
     // open(true) is the cinematic lock-skip path (same as __showCocktailInPhone), so a console
     // launch never stalls on the passcode. Matches by app id (case-insensitive) or its localized

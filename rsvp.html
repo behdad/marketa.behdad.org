@@ -22798,7 +22798,7 @@ document.addEventListener("click", function (e) {
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone()/phone(\"app\") · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · servefood() · phone()/phone(\"app\") · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var CONSOLE_HELP = {
       help: "help [command] — this list, or details for one command",
       clear: "clear — wipe the scrollback",
@@ -22841,6 +22841,7 @@ document.addEventListener("click", function (e) {
       cooked: "cooked(1|2|3) — is that burger done yet (bool)? cooked() — all three, as [bool, bool, bool]",
       servefood: "servefood() — serve a cooked burger (opens the lid if needed); servefood(random()) picks a random ready one. returns true if one was served",
       phone: "phone(true) — bring up the pocket phone; phone(false) puts it away; phone() reports whether it's up. phone(\"cocktails\")/phone(\"weather\") open that phone app (skips the lockscreen); a bad name lists them",
+      sound: "sound(\"id\") — play a loft sound effect by id, e.g. sound(\"gong\"). sound() lists every id; sound(\"prefix\") lists the ids starting with that prefix — try sound(\"cat\") · sound(\"phone\"); sound.list() returns the array",
       laptop: "laptop(true) — wake the office laptop; laptop(false) closes it; laptop() reports whether it's open. laptop(\"prague\")/laptop(\"lubeck\") place a video call to her family",
       computer: "computer(true) — power the office PC up; computer(false) shuts it down; computer() reports whether it's on. computer(\"doom\")/computer(\"weather\") boot (if needed) and open that monitor app; a bad name lists them",
       reboot: "reboot() — power-cycle the loft OS (a `sudo reboot` from its own console)",
@@ -26840,7 +26841,7 @@ async def localfont(name):
   window.__openMonitorApp = function (name) {
     if (!pcTower) return "no computer here.";
     var app = monitorAppByName(name);
-    if (!app) return "monitor apps (in quotes): " + DESKTOP_APPS.map(function (a) { return "\"" + a.id + "\""; }).join(" · ");
+    if (!app) return DESKTOP_APPS.map(function (a) { return a.id; }); // a bad name → the list of app ids to pick from
     if (window.goToStage) window.goToStage("office"); // the monitor lives in the office — bring it on screen
     // PC off → power on (spark + fan + boot Fedora → caps); the boot-complete hook opens the queued app.
     if (!pcTower.classList.contains("on")) { pendingBootApp = app.id; pcTower.dispatchEvent(new MouseEvent("click", { bubbles: true })); return "🖥 booting the PC → " + app.id + "…"; }
@@ -30749,7 +30750,7 @@ async def localfont(name):
     }
     window.__openPhoneApp = function (name) {
       var app = phoneAppByName(name);
-      if (!app) return "phone apps (in quotes): " + PHONE_APPS.map(function (a) { return "\"" + a.id + "\""; }).join(" · ");
+      if (!app) return PHONE_APPS.map(function (a) { return a.id; }); // a bad name → the list of app ids to pick from
       if (window.goToStage) window.goToStage("balcony"); // the pocket phone lives on the balcony
       open(true);                                        // open (or re-seat) the phone at the launcher, skipping the first-open math lock
       if (app.open) app.open();
@@ -44461,7 +44462,7 @@ function spawnDustMote(container) {
     if (typeof arg === "string" && arg !== "") { // a contact name → place a video call to them
       var CALLEES = { prague: "prague", praha: "prague", lubeck: "lueb", "lübeck": "lueb", lueb: "lueb", lubek: "lueb" };
       var callee = CALLEES[arg.toLowerCase().trim()];
-      if (!callee) return "laptop calls (in quotes): \"prague\" · \"lubeck\"";
+      if (!callee) return ["prague", "lubeck"]; // a bad name → the list of callable contacts
       if (window.goToStage) window.goToStage("office");
       if (window.__laptopCall) window.__laptopCall(callee);
       return callee === "lueb" ? "💻 calling Lübeck — her sister's family." : "💻 calling Prague — her parents' garden.";
@@ -44559,7 +44560,7 @@ function spawnDustMote(container) {
     var s = String(which).toLowerCase().trim();
     var idx = MUSIC_NAMES.indexOf(s);
     if (idx === -1) { var n = parseInt(s, 10); if (String(n) === s && n >= 1 && n <= MUSIC_NAMES.length) idx = n - 1; }
-    if (idx === -1) return "music (in quotes, or 1–2): \"guitar\" · \"ukulele\"";
+    if (idx === -1) return MUSIC_NAMES.slice(); // a bad name → the list of songs to pick from
     if (window.goToStage) window.goToStage("garden"); // the instruments live in the garden
     if (window.__playSongAt) window.__playSongAt(idx);
     return "♪ " + MUSIC_NAMES[idx] + " — from the loft concert.";
@@ -44567,6 +44568,91 @@ function spawnDustMote(container) {
   window.guitar = function () { return window.music("guitar"); };   // alias
   window.ukulele = function () { return window.music("ukulele"); }; // alias
   window.ukelele = window.ukulele;                                   // common misspelling, same command
+
+  // sound("<id>") — a dev-console toy: play any one of the loft's curated one-shot sound
+  // effects by id (every SFX here maps to an existing play*Sound with safe defaults — no new
+  // audio). sound() returns the full id list; sound("<prefix>") returns the ids starting with
+  // that prefix (e.g. sound("cat") · sound("phone") · sound("soda")); sound.list() is an alias
+  // for the full array. Exact id wins over prefix. Ids that pan (creak/phone/doom…) carry their
+  // home element so they play from the right side even from another room; panForElId centers a
+  // hidden one. Console-English only, like every other command (no T dict, no CS mirror).
+  var SFX = {
+    // kitchen & coffee
+    grind: function () { playGrindSound(); },
+    brew: function () { playBrewSound(); },
+    tamp: function () { playTampSound(); },
+    steam: function () { playSteamWandHissSound(); },
+    pour: function () { playPourSound(); },
+    sip: function () { playSipSound(); },
+    chop: function () { playChopSound(1, 1); },
+    sizzle: function () { playSizzleSound(); },
+    gong: function () { playGongSound(); },
+    // garden & party
+    windchime: function () { playWindchimeSound(false, false); },
+    rooster: function () { playRoosterCrowSound(1); },
+    goat: function () { playGoatBleatSound(); },
+    ladybug: function () { playLadybugSound(); },
+    water: function () { playWaterSound(); },
+    camera: function () { playCameraShutterSound(); },
+    giggle: function () { playGiggleSound(); },
+    hearts: function () { playHeartsSound(); },
+    fart: function () { playFartSound(1, 1); },
+    // cuddly & critters
+    "cat-meow": function () { playCatMeowSound(); },
+    "cat-chatter": function () { playCatChatterSound(); },
+    mouse: function () { playMouseSqueakSound(); },
+    plush: function () { playPlushSquishSound(); },
+    trunk: function () { playTrunkOpenSound(); },
+    butterfly: function () { playButterflyFlutterSound(); },
+    fairy: function () { playFairyChimeSound(); },
+    genie: function () { playGeniePoofSound(false); },
+    lamp: function () { playLampShimmerSound(); },
+    "ghost-boo": function () { playGhostBooSound(); },
+    "ghost-whisper": function () { playGhostWhisperSound(); },
+    bowl: function () { playBowlRingSound(); },
+    alien: function () { playAlienBlipSound(); },
+    // office & computer
+    boot: function () { playBootChimeSound(); },
+    typewriter: function () { playTypewriterSound(1); },
+    "desk-motor": function () { playDeskMotorSound(); },
+    "chair-whirl": function () { playChairWhirlSound(1); },
+    "chair-pew": function () { playChairPewSound(); },
+    paper: function () { playPaperShuffleSound(); },
+    "soda-open": function () { playSodaDepressurizeSound(); },
+    "soda-hiss": function () { playSodaHissSound(); },
+    "can-crush": function () { playCanCrushSound(); },
+    "glass-clink": function () { playGlassClinkSound(1); },
+    "bass-boom": function () { playBassBoomSound(); },
+    doom: function () { playFatalitySound("office-monitor"); },
+    bsod: function () { playBsodSound("office-monitor"); },
+    "aw-snap": function () { playAwSnapSound("office-monitor"); },
+    "flesh-wound": function () { playFleshWoundSound("office-monitor"); },
+    "js-crash": function () { playJsCrashSound("office-monitor"); },
+    // balcony
+    creak: function () { playCreakSound("balcony-door"); },
+    thunder: function () { playThunderSound(1); },
+    "phone-ring": function () { playPhoneRingSound("balcony-phone"); },
+    "phone-voice": function () { playPhoneVoiceSound("balcony-phone"); },
+    "phone-notify": function () { playPhoneNotifySound(); },
+    knock: function () { playKnockboxThumpSound(); },
+    mosquito: function () { playMosquitoSlapSound(); },
+    sweep: function () { playSweepSound(); },
+    extinguisher: function () { playExtinguisherHissSound(); },
+    // the couple & body
+    cough: function () { playCoughSound(); },
+    sneeze: function () { playSneezeSound(); },
+    exhale: function () { playSatisfiedExhaleSound(); },
+    ouch: function () { playOuchSound(); },
+    love: function () { playILoveYouSound(); }
+  };
+  window.sound = function (id) {
+    var names = Object.keys(SFX);
+    if (arguments.length === 0 || id == null || id === "") return names.slice(); // no arg → the whole list
+    var key = String(id).toLowerCase().trim().replace(/^["']|["']$/g, "");       // tolerate stray quotes
+    if (SFX[key]) { try { SFX[key](); } catch (e) {} return "🔊 " + key; }        // exact id → play it
+    return names.filter(function (n) { return n.indexOf(key) === 0; });          // otherwise → ids under that prefix (maybe [])
+  };
+  window.sound.list = function () { return Object.keys(SFX); }; // alias for the full id array
 
   // beat() — ms until the next musical beat, so `await sleep(beat())` stays in time with the
   // music. Phase-locked to the concert songs' real audio clock; for a party dance it's the beat
@@ -44602,7 +44688,7 @@ function spawnDustMote(container) {
     var s = String(src).toLowerCase().trim();
     var idx = AUDIO_SOURCES.indexOf(s);
     if (idx === -1) { var n = parseInt(s, 10); if (String(n) === s && n >= 1 && n <= AUDIO_SOURCES.length) idx = n - 1; }
-    if (idx === -1) return "audio sources (in quotes, or 1–3): \"music\" · \"piano\" · \"dance\"";
+    if (idx === -1) return AUDIO_SOURCES.slice(); // a bad name → the list of audio sources to pick from
     s = AUDIO_SOURCES[idx];
     if (s === "music") return window.music(window.random ? window.random() : 0); // a (random) concert song
     if (s === "piano") return window.piano();                                     // the night-sky piano

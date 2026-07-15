@@ -46,10 +46,11 @@
 <!-- Source Serif 4 has no IPA vowels/marks, so the pronunciation line uses Noto Serif, subsetted (text=) to just the .ipa line's glyphs. Update text= if that line's characters change. -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif&text=abdehkmrsty%CB%88%C9%9B%CB%90%C9%92%2F%C2%B7%20%C2%A0&display=block" rel="stylesheet">
 <!-- Climate Crisis: a variable font whose custom YEAR axis (1979→2050) erodes the letters like melting ice.
-     Used ONLY for the DOOM-kill "FATALITY" death flash, where YEAR is animated across the whole range so the
-     word visibly melts away. Subsetted (text=) to just F/A/T/L/I/Y — the variable axis survives subsetting
-     (2.7 KB), and the woff2 only downloads when the glyphs first render (i.e. the first DOOM kill). -->
-<link href="https://fonts.googleapis.com/css2?family=Climate+Crisis:YEAR@1979..2050&text=FATALIY&display=block" rel="stylesheet">
+     Used for the DOOM-kill "FATALITY" death flash AND the intro "CLICK ME!"/"KLIKNI!" invitation, where YEAR is
+     animated so the word visibly melts. Subsetted (text=) to the UNION of every glyph we render in this font —
+     FATALITY + CLICK ME! + KLIKNI (uppercase, ASCII-only) = F,A,T,L,I,Y,C,K,M,E,N + space + "!" — the variable
+     axis survives subsetting (small woff2), and it only downloads when those glyphs first render. -->
+<link href="https://fonts.googleapis.com/css2?family=Climate+Crisis:YEAR@1979..2050&text=FATALITY%20CLICK%20ME%21%20KLIKNI&display=block" rel="stylesheet">
 <style>
 :root{
   --cream:#f8f5ec; --paper:#fffdf8; --ink:#453a31; --muted:#716455; --soft:#7d6e5d;
@@ -1950,6 +1951,15 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-github-btn{display:none}
 #office-monitor.death-python #monitor-pymonty{opacity:1}
 .fatality-wrap{width:124px; height:42px; display:flex; align-items:center; justify-content:center; overflow:hidden}
 .fatality-word{font-family:"Climate Crisis",Impact,sans-serif; color:#e11414; font-size:12.5px; line-height:1; letter-spacing:.2px; white-space:nowrap; text-shadow:0 0 3px rgba(255,44,44,.55); font-variation-settings:"YEAR" 1979} /* YEAR animated inline 1979→2050 = the melt; this is the fallback */
+/* Intro "CLICK ME!" — a big melting invitation overlaid on the game scene while the opening
+   prompt shows. Lives inside .hunt-viewport (inset:0), pointer-events:none so a tap anywhere —
+   including on the word — falls through to the strip's stopHintBlink handler. YEAR is animated
+   inline (rAF ping-pong 1979↔2050) = the melt; no CSS animation (keeps check.js's keyframes
+   audit clean). Fades in via a transition (transitions aren't audited). */
+#click-me-overlay{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:6; pointer-events:none; opacity:0; transition:opacity .5s ease}
+#click-me-overlay.show{opacity:1}
+.click-me-word{font-family:"Climate Crisis",Impact,sans-serif; color:var(--wine); font-size:clamp(2rem,8vw,5rem); line-height:.9; letter-spacing:.5px; white-space:nowrap; text-align:center; text-shadow:0 2px 10px rgba(248,245,236,.9),0 0 4px rgba(248,245,236,.9); font-variation-settings:"YEAR" 1979}
+@media (prefers-reduced-motion: reduce){.click-me-word{font-variation-settings:"YEAR" 2010} /* static mid-melt, no rAF */}
 .bsod-wrap{width:124px; height:42px; box-sizing:border-box; background:#0d63c4; color:#fff; padding:3.4px 5px; font-family:"Segoe UI",system-ui,Arial,sans-serif; overflow:hidden; display:flex; flex-direction:column; justify-content:center}
 .bsod-face{font-size:8px; line-height:1; font-weight:300; margin-bottom:1.4px}
 .bsod-main{font-size:2.15px; line-height:1.32; margin:0}
@@ -12307,7 +12317,8 @@ var T = {
     laptop_sweet2: "the rest of",
     laptop_sweet3: "our lives ♥",
     hunt: {
-      intro: "A game of wandering without aim. Click around to play.",
+      intro: "A game of wandering without aim.",
+      clickme: "CLICK ME!", // the melting Climate-Crisis invitation overlaid on the scene during the intro prompt (uppercase keeps the font subset small)
       df_doom_quip: "kill -9 — flawless victory.", // caption under the on-screen FATALITY melt (DOOM kill)
       df_linux_quip: "The penguin bluescreened.", // caption under the on-screen BSOD (Linux kill)
       kitchen: "Turn on the machine → grind → brew.",
@@ -12705,7 +12716,8 @@ var T = {
     laptop_sweet2: "zbytek našich",
     laptop_sweet3: "životů ♥",
     hunt: {
-      intro: "Hra o bezcílném toulání. Klikej a hraj.",
+      intro: "Hra o bezcílném toulání.",
+      clickme: "KLIKNI!", // ASCII-only (no Ě) so it reuses the same small Climate-Crisis subset as CLICK ME!
       df_doom_quip: "kill -9 — dokonalé vítězství.", // caption under the on-screen FATALITY melt (DOOM kill)
       df_linux_quip: "Tučňák dostal modrou smrt.", // caption under the on-screen BSOD (Linux kill)
       kitchen: "Zapni kávovar → umel → uvař.",
@@ -38447,6 +38459,7 @@ function spawnDustMote(container) {
     window.currentStageIndex = idx;
     window.currentStageName = name; // room-truth for gates that live outside this IIFE (e.g. the fractal-flame loop)
     huntIntroShowing = false; // a room change ends the opening prompt, so the new room's caption shows
+    if (window.__removeClickMe) window.__removeClickMe(); // ...and takes the melting invitation with it
     setCaption(name);
     restoreStageHint(name);
     updateNav();
@@ -41712,10 +41725,58 @@ function spawnDustMote(container) {
   // and `pointerdown` end it: real taps fire pointerdown first, but scripted/synthetic
   // clicks (tests, the cinematic's own beats) only fire click, so bind both. The class is
   // explicitly removed (never left to loop), reverting the caption to its steady state.
+  // ── intro "CLICK ME!" melt ──
+  // While the opening prompt shows, a big Climate-Crisis "CLICK ME!" (localized) melts over the
+  // kitchen scene as a living invitation. The YEAR axis ping-pongs 1979↔2050 (~2.5s each way) via
+  // rAF + inline font-variation-settings — no CSS animation, so check.js's keyframes audit stays
+  // clean. pointer-events:none (CSS) lets a tap on the word itself fall through to the strip's
+  // stopHintBlink handler. Torn down on the first tap / grace timeout (stopHintBlink) AND on any
+  // room change (goToStage), so the loop never outlives the prompt nor writes to a detached node
+  // (which would surface as an uncaught error in play.js's click-storm). rAF pauses natively in a
+  // hidden tab and this is a single self-driven node (not a setTimeout spawner), so no accumulation.
+  var clickMeEl = null, clickMeWord = null, clickMeRaf = 0, clickMeStart = 0;
+  var CLICKME_MELT_MS = 2500; // one direction; a full ping-pong is 2×
+  function clickMeReduceMotion() {
+    return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+  function removeClickMe() {
+    if (clickMeRaf) { cancelAnimationFrame(clickMeRaf); clickMeRaf = 0; }
+    if (clickMeEl && clickMeEl.parentNode) clickMeEl.parentNode.removeChild(clickMeEl);
+    clickMeEl = null; clickMeWord = null;
+  }
+  function clickMeStep() {
+    if (!clickMeWord || !clickMeWord.isConnected) { clickMeRaf = 0; return; } // torn down mid-flight — stop cleanly
+    var now = (window.performance && performance.now) ? performance.now() : Date.now();
+    var phase = ((now - clickMeStart) % (CLICKME_MELT_MS * 2)) / CLICKME_MELT_MS; // 0..2
+    var t = phase <= 1 ? phase : 2 - phase; // ping-pong 0↔1
+    clickMeWord.style.fontVariationSettings = "'YEAR' " + Math.round(1979 + (2050 - 1979) * t);
+    clickMeRaf = requestAnimationFrame(clickMeStep);
+  }
+  function showClickMe() {
+    removeClickMe(); // idempotent — reset/re-show never doubles up
+    if (window.__cinematic) return; // the show owns the scene; no invitation over it
+    var host = document.querySelector(".hunt-viewport");
+    if (!host) return;
+    clickMeEl = document.createElement("div");
+    clickMeEl.id = "click-me-overlay";
+    clickMeEl.setAttribute("aria-hidden", "true");
+    clickMeWord = document.createElement("span");
+    clickMeWord.className = "click-me-word";
+    clickMeWord.textContent = huntText("clickme");
+    clickMeEl.appendChild(clickMeWord);
+    host.appendChild(clickMeEl);
+    requestAnimationFrame(function () { if (clickMeEl) clickMeEl.classList.add("show"); }); // fade in
+    if (clickMeReduceMotion()) return; // CSS pins a static mid-melt YEAR; no rAF
+    clickMeStart = (window.performance && performance.now) ? performance.now() : Date.now();
+    clickMeRaf = requestAnimationFrame(clickMeStep);
+  }
+  window.__removeClickMe = removeClickMe; // room-change / reset paths reach the teardown too
+
   var hintBlinkTimer = null;
   function stopHintBlink() {
     if (hintBlinkTimer) { clearTimeout(hintBlinkTimer); hintBlinkTimer = null; }
     caption.classList.remove("hint-blink");
+    removeClickMe(); // the melting invitation dies with the prompt
     strip.removeEventListener("pointerdown", stopHintBlink);
     strip.removeEventListener("click", stopHintBlink);
     if (huntIntroShowing) { // hand the opening prompt off to the real first instruction
@@ -41735,6 +41796,7 @@ function spawnDustMote(container) {
     captionKey = "intro";
     caption.textContent = huntText("intro");
     caption.classList.add("hint-blink");
+    showClickMe(); // the melting "CLICK ME!" invitation, appears with the prompt
     updateKitchenInvite();
     strip.addEventListener("pointerdown", stopHintBlink);
     strip.addEventListener("click", stopHintBlink);
@@ -41742,6 +41804,12 @@ function spawnDustMote(container) {
     hintBlinkTimer = setTimeout(stopHintBlink, 6000); // a handful of pulses, then rest even if untouched
   }
   window.__showHuntIntro = showHuntIntro;
+  // Warm the Climate Crisis woff2 now: display=block means the word renders INVISIBLE (not a
+  // fallback) until the font loads, and this is the first thing shown — pre-fetch with the real
+  // glyphs so there's no blank flash on the intro.
+  if (document.fonts && document.fonts.load) {
+    try { document.fonts.load("16px 'Climate Crisis'", "CLICK ME! KLIKNI!"); } catch (e) {}
+  }
 
   goToStage("kitchen"); // sets the initial room/caption before the intro prompt goes on
   showHuntIntro();

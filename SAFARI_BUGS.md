@@ -23,6 +23,12 @@ _Cause:_ the `transform-box: fill-box` class (documented in CLAUDE.md). A transf
 WebKit is stricter than Chrome about the default. check.js guards `.animate()` calls, so the
 escapees are likely CSS-class-driven particles or spots the check doesn't cover.
 
+Related transform-coordinate variant: the **rotating ashtray's ash drops from the wrong
+place**. That's the sibling bug class (CLAUDE.md "JS-spawned effects break when a target's
+group gains a transform" — `getBBox`/CTM local-vs-viewport coords): the ash is spawned relative
+to a rotated group and WebKit resolves the coordinate system differently than Chrome. Fix by
+spawning the effect into the target's OWN group / reading position via a static ancestor's CTM.
+
 ### 3. 🔴 Zoomed-in objects are very blurred
 The monitor (and other desk objects) look badly blurred when zoomed in. 
 _Suspect:_ WebKit rasterises the SVG at pre-scale resolution then scales up (Chrome re-rasters).
@@ -39,9 +45,11 @@ cause: **foreignObject** content not painting on WebKit (foreignObject is histor
 clipping/painting/positioning). Fixing the foreignObject path likely recovers the whole cluster.
 (The zoom blur #3 and the missing icons may share the same monitor-rendering root — verify together.)
 
-### 5. 🔴 Ketamine-trip scene graying doesn't render
-The ketamine trip's gray-out of the scene doesn't appear on WebKit. 
-_Suspect:_ a CSS filter (grayscale) / overlay WebKit handles differently.
+### 5. 🔴 Scene-wide CSS filter effects don't render (ketamine gray-out, alcohol blur)
+Full-scene filter effects don't appear on WebKit: the **ketamine** trip's gray-out and the
+**alcohol** (drunk) blur both do nothing. 
+_Suspect:_ a CSS `filter` applied to the SVG/strip (grayscale/blur) that WebKit won't apply to
+that element type, or an overlay it handles differently. Likely one root for both.
 
 ### 6. 🔴 Julia-set fractal screensaver doesn't render
 The Julia-set fractal projector/screensaver channel shows nothing on WebKit. 

@@ -131,6 +131,20 @@ allowed exception, owner-confirmed.)
   opacity stays at the start value even though the rule matches (verified via
   `el.matches()` + stylesheet dump). Before concluding a cascade bug, re-probe with
   `transition:none !important` injected; if the value flips, it's this artifact.
+  Also: under `--virtual-time-budget`, a group flipped `display:none` → `inline` after load
+  (e.g. a season's `sn-*` decor) **never paints** — `--screenshot` shows nothing while
+  `getBoundingClientRect`/`getComputedStyle`/`elementsFromPoint` all report it live and
+  topmost. The geometry is telling the truth and the paint is lying, so a magenta-fill probe
+  won't rescue you. **Screenshot anything season-gated in real CDP Chrome** (recipe 2 in
+  `DEBUGGING.md`), which renders it instantly. NB `pkill -f 'remote-debugging-port=9222'`
+  kills your own shell (its cmdline contains the pattern) — use a fresh port instead.
+  And for a *timed* season test, drive `__applySeason` (the `s`-key/console path), not
+  `__setSeason`: the air-quality fetch calls `__applySeasonDate` ~4s in and reverts the strip
+  to the real date's decor, silently zeroing anything you were counting.
+- **A synchronous `requestAnimationFrame` monkeypatch (`cb()` inline) blows the stack** on any
+  rAF-driven *loop* — "Maximum call stack size exceeded" out of `season()`/`goToStage()` is the
+  patch recursing, not an app bug. The documented patch is for rAF-double *class adds*; for
+  anything that reschedules itself, patch to `setTimeout(cb, 16)` the way `play.js` does.
 
 ## Cross-browser gotchas (Safari/WebKit + Firefox)
 

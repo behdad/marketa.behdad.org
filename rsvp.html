@@ -1809,20 +1809,20 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 .dock-grid{scrollbar-width:thin; scrollbar-color:rgba(69,58,49,.35) transparent}
 }
 .dock-app{display:flex; flex-direction:column; align-items:center; gap:0.3px; padding-top:0.4px; cursor:pointer; transition:transform .15s ease}
-.dock-app:hover .dock-tile{transform:translateZ(0) scale(1.09)} /* composited scale about dead center — the shape grows in place, no jump */
+.dock-app:hover .dock-tile{transform:scale(1.09)} /* plain :hover scale — no translateZ/will-change layer (WebKit bug 23113: a RenderLayer under the monitor's g-scale foreignObject paints off-position) */
 .desk-bar-text{fill:#f8f5ec; font-family:sans-serif; font-size:3.2px; letter-spacing:0.2px}
 .desk-brand{cursor:pointer}
 .desk-brand:hover .desk-bar-text{fill:#d9a6a6}
-.dock-tile{position:relative; width:11px; height:11px; transform-origin:50% 50%; transform:translateZ(0); will-change:transform; transition:transform .15s ease; border-radius:3px; box-shadow:inset 0 0 0 0.4px rgba(0,0,0,0.18); display:flex; align-items:center; justify-content:center} /* on its own compositing layer (translateZ/will-change) so the hover scale composites instead of re-rasterizing — no sub-pixel content shift under the monitor zoom */
-.dock-glyph{font-family:sans-serif; line-height:1; color:#f8f5ec}
-.dock-app-editor .dock-glyph{transform:translateY(0.7px) scale(-1.65,1.65)} /* the ✎ pencil is small-in-em + drawn lower-left (left-handed): mirror to point lower-right, scale up to read at tile size, nudge down to sit centered */
-.cal-tile{position:absolute; inset:0; border-radius:3px; overflow:hidden; display:flex; flex-direction:column}
+.dock-tile{width:11px; height:11px; transform-origin:50% 50%; transition:transform .15s ease; border-radius:3px; box-shadow:inset 0 0 0 0.4px rgba(0,0,0,0.18); display:grid} /* single-cell grid: glyph + overlays stack on one grid-area with NO position/transform layer, so they paint in place under the monitor's scaled foreignObject (WebKit bug 23113) */
+.dock-tile > *{grid-area:1/1; min-width:0}
+.dock-glyph{font-family:sans-serif; line-height:1; color:#f8f5ec; display:flex; align-items:center; justify-content:center} /* flex-centres the icon/glyph within the stretched grid cell */
+.cal-tile{border-radius:3px; overflow:hidden; display:flex; flex-direction:column}
 .cal-tile-head{flex:none; height:3.4px; background:#c14b3e; color:#fffdf8; font-family:Arial,"Helvetica Neue",sans-serif; font-size:2.4px; line-height:1.4; padding-top:0.55px; display:flex; align-items:center; justify-content:center; letter-spacing:0.1px; font-weight:600} /* Arial pinned: generic sans-serif resolves to metric-DIFFERENT fonts per OS (DejaVu vs Helvetica), which see-sawed this label's optical centering between Linux and Mac */ /* line-height must cover the font's ascent+descent (~1.36em): at line-height:1 the negative half-leading pushed the ink above the band and the tile's overflow clipped it */
 .cal-tile-day{flex:1; display:flex; align-items:center; justify-content:center; color:#453a31; font-size:5.4px; font-weight:600}
-.dock-cam-wrap{position:absolute; inset:0; border-radius:3px; overflow:hidden; background:#000; display:none}
+.dock-cam-wrap{border-radius:3px; overflow:hidden; background:#000; display:none}
 .dock-app-photobooth.live .dock-cam-wrap{display:block}
 .dock-cam{width:100%; height:100%; object-fit:cover; transform:scaleX(-1); display:block}
-.dock-mini-eq{position:absolute; left:50%; top:50%; margin:-4.5px 0 0 -4.5px; opacity:0; transition:opacity .3s ease}
+.dock-mini-eq{place-self:center; width:9px; height:9px; opacity:0; transition:opacity .3s ease}
 #office-monitor.eq-live .dock-mini-eq{opacity:1}
 #office-monitor.eq-live .dock-app-music .dock-glyph{opacity:0}
 .dock-label{max-width:100%; font-size:3px; line-height:1.4; letter-spacing:0.1px; color:#716455; font-family:sans-serif; white-space:nowrap; text-align:center; overflow:visible} /* box is capped at the (now uniform) track; a wider word spills symmetrically from centre into the gutters rather than clipping — labels never gate the column width now, so tiles stay evenly spaced in every language. 3px (was 3.4) so the two longest labels (photobooth / fotokoutek) fit within a track and don't crowd their neighbour */
@@ -1846,21 +1846,21 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 .ed-item:hover{background:#1a2420}
 .ed-item.active{background:#264032; color:#a7e08a}
 .ed-empty{flex:none; font-size:1.8px; color:#5f7a5f; padding:0.6px 0.8px}
-.ed-main{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; position:relative} /* position:relative → the autocomplete popup (an absolutely-positioned child) anchors to it */
-.ed-top{flex:none; display:flex; align-items:center; gap:0.6px; padding:0 8px 0 1px} /* right pad clears the shrunk close pill parked in the top-right corner */
+.ed-main{flex:1; min-width:0; display:grid; grid-template-rows:auto minmax(0,1fr); gap:1px} /* grid (not flex+position:relative — that composited a RenderLayer that vanished under the monitor's scaled foreignObject, WebKit bug 23113). The autocomplete popup overlays via grid-area + JS margin offset instead of absolute left/top. */
+.ed-top{grid-row:1; grid-column:1; display:flex; align-items:center; gap:0.6px; padding:0 8px 0 1px} /* right pad clears the shrunk close pill parked in the top-right corner */
 .ed-name{flex:1; min-width:0; background:#161c20; border:0.3px solid #2b3a3a; border-radius:0.8px; outline:none; color:#cfe3cf; font:inherit; font-size:2px; height:3.6px; line-height:3.6px; padding:0 0.8px}
 .ed-name::placeholder{color:#5f7a5f}
 .ed-btn{flex:none; width:4px; height:4px; display:flex; align-items:center; justify-content:center; background:#1d2622; border:0.3px solid #2b3a3a; border-radius:0.8px; color:#8fd070; font:inherit; font-size:3px; line-height:1; padding:0; cursor:pointer} /* same keycap metrics as .ed-side-btn so the whole toolbar reads as one even set */
 .ed-btn:hover{background:#26332b}
 .ed-btn-run{color:#a7e08a; font-size:2.5px} /* the solid ▶ triangle reads heavier than the outline arrows, so nudge it a hair smaller to optically match */
-.ed-ta{flex:1; min-height:0; resize:none; background:#0d130e; border:0.3px solid #202b2b; border-radius:0.8px; outline:none; color:#cfe3cf; font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.4; padding:0.6px 1px; white-space:pre; overflow:auto; scrollbar-width:none; caret-color:#8fd070}
+.ed-ta{grid-row:2; grid-column:1; min-height:0; resize:none; background:#0d130e; border:0.3px solid #202b2b; border-radius:0.8px; outline:none; color:#cfe3cf; font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.4; padding:0.6px 1px; white-space:pre; overflow:auto; scrollbar-width:none; caret-color:#8fd070}
 .ed-ta::placeholder{color:#5f7a5f}
 .ed-ta::-webkit-scrollbar{display:none}
 .ed-wrap input, .ed-wrap textarea{user-select:text; -webkit-user-select:text}
 /* editor autocomplete: a caret-anchored command-completion popup (wired in the editor IIFE).
    Sized for the 2px monitor world; JS clamps it inside the foreignObject and flips it above the
    caret when there's no room below. The dim help column truncates with an ellipsis. */
-.ed-ac{position:absolute; z-index:6; display:none; min-width:16px; max-width:88px; max-height:15px; overflow-y:auto; box-sizing:border-box; background:#0a0d10; border:0.3px solid #2f4038; border-radius:0.8px; padding:0.3px; box-shadow:0 0.5px 1.6px rgba(0,0,0,.65); font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.35; scrollbar-width:none}
+.ed-ac{grid-row:1 / span 2; grid-column:1; place-self:start; display:none; min-width:16px; max-width:88px; max-height:15px; overflow-y:auto; box-sizing:border-box; background:#0a0d10; border:0.3px solid #2f4038; border-radius:0.8px; padding:0.3px; box-shadow:0 0.5px 1.6px rgba(0,0,0,.65); font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.35; scrollbar-width:none}
 .ed-ac.open{display:block}
 .ed-ac::-webkit-scrollbar{display:none}
 .ed-ac-item{display:flex; align-items:baseline; gap:1px; padding:0.15px 0.7px; border-radius:0.6px; white-space:nowrap; cursor:pointer; overflow:hidden}
@@ -1883,8 +1883,17 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    glyphs; the wrap's padding is correspondingly slimmer and .console-row pads 1px to
    match, so the text itself sits exactly where it always did. The -0.5px bottom margin
    nets the old 0.5px scrollback→input gap against the 1px padding-bottom. */
-.console-out{flex:none; height:35.3px; padding:0.7px 1px 1px; margin-bottom:-0.5px; overflow-y:auto; white-space:pre-wrap; word-break:break-word; scrollbar-width:none; -webkit-mask-image:linear-gradient(#0000,#000 0.7px); mask-image:linear-gradient(#0000,#000 0.7px)} /* content height (35.3 border-box − 0.7 − 1 padding) = exactly 12 of the 2.8px line boxes: a bottom-pinned scrollback can never straddle a line across the top edge. Top slack is only 0.7px (vs 1px elsewhere) on purpose: any more and that same slack re-reveals a readable sliver of the 13th line when pinned; 0.7px clears the ~0.4px worst-case upward ink shift, and the mask fades that slack zone so the 13th line's descender tails vanish while stray ascender ink lands soft instead of chopped. */
+.console-out{flex:none; height:35.3px; padding:0.7px 1px 1px; margin-bottom:-0.5px; overflow-y:auto; white-space:pre-wrap; word-break:break-word; scrollbar-width:none} /* content height (35.3 border-box − 0.7 − 1 padding) = exactly 12 of the 2.8px line boxes: a bottom-pinned scrollback can never straddle a line across the top edge. Top slack is only 0.7px (vs 1px elsewhere): it clears the ~0.4px worst-case upward ink shift without re-revealing a readable sliver of the 13th line when pinned. (No mask-image — it composited a RenderLayer that vanished under the monitor's scaled foreignObject on WebKit; bug 23113.) */
 .console-out::-webkit-scrollbar{display:none}
+/* WebKit fallback: a SCROLLABLE overflow box under the monitor's scaled foreignObject
+   mispaints (bug 23113) — the scrollback blanks once it fills. overflow:hidden paints
+   fine, and column + justify-content:flex-end keeps the NEWEST lines pinned to the bottom
+   (the old ones clip off the top, same as a scrolled-to-bottom terminal). Chrome keeps its
+   real scrollback. Applies to both consoles + the python/linux REPLs (all .console-out). */
+html.is-webkit .console-out{overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end}
+/* likewise for the other scroll panes that live under the g-scale: show the top rows,
+   clip the overflow, rather than blank the whole box. */
+html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-list, html.is-webkit .ed-list{overflow:hidden}
 .console-out, .console-out *{ user-select:text; -webkit-user-select:text; cursor:text } /* console scrollback is copy-pasteable, overriding the strip-wide user-select:none */
 /* right-click Copy/Paste menu for the consoles */
 .console-ctx{position:fixed; z-index:60; display:none; background:#1e2a2a; border:1px solid #3a4a4a; border-radius:6px; padding:3px; box-shadow:0 4px 14px rgba(0,0,0,.45); font:13px/1.1 ui-monospace,Menlo,Consolas,monospace}
@@ -1900,12 +1909,12 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 .console-row{display:flex; align-items:flex-start; gap:0.6px; padding:0 1px} /* top-aligned so prompt and input share a baseline (their boxes differ in height); the 1px side padding keeps the prompt column aligned with the scrollback's (see .console-out) */
 .console-ps{color:#8fd070}
 .console-in{flex:1; min-width:0; background:transparent; border:none; outline:none; padding:0; color:inherit; font:inherit; height:2.8px; line-height:2.8px; caret-color:transparent} /* height = line-height = the prompt's line box: Chrome centers an input's line box inside any extra height, which read as a baseline drop */ /* native caret renders as a fat block at 2px type — a slim custom one rides the row instead */
-.console-row{position:relative}
-.console-in-wrap{flex:1; min-width:0; position:relative; display:flex; min-height:2.8px}
-/* the real input is an invisible layer over the row — focus, selection, and the
+.console-in-wrap{flex:1; min-width:0; display:grid; min-height:2.8px} /* single-cell grid: the input + caret-lane stack with NO position/opacity layer (WebKit bug 23113 hides layered content under the monitor's scaled foreignObject) */
+/* the real input sits transparently over the row — focus, selection, and the
    keyboard live there; the VISIBLE text is plain spans in the lane, which render
    with the scrollback's exact metrics (input boxes clip/center at these sizes) */
-.console-in-wrap .console-in{position:absolute; inset:0; opacity:0}
+.console-in-wrap .console-in{grid-area:1/1; color:transparent}
+.console-in-wrap .console-caret-lane{grid-area:1/1}
 .console-caret-lane{flex:1; min-width:0; white-space:pre; pointer-events:none; overflow:hidden; padding:1px 0.4px; margin:-1px -0.4px} /* block flow, NOT flex: the caret rides the text baseline as an inline-block. Padding/negative-margin = the .console-out clip-slack trick (edges off the glyph ink, text doesn't move) */
 .console-mirror{white-space:pre}
 .console-tail{white-space:pre}
@@ -1929,11 +1938,11 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    the label in this span and nudging it down a hair lands the ink on the optical centre.
    em-based, so the correction scales with the monitor's zoom on every device. Also carries
    the emoji+text pair (💌 Share) so both ride the same centre line. */
-.btn-vc{display:inline-flex; align-items:center; gap:0.8px; line-height:1; transform:translateY(0.07em)}
+.btn-vc{display:inline-flex; align-items:center; gap:0.8px; line-height:1; margin-top:0.14em} /* asymmetric margin (net +0.07em under a center-aligned flex parent) instead of a translateY transform — a transform is a RenderLayer that vanishes under the monitor's scaled foreignObject (WebKit bug 23113) */
 /* mail-pill labels are pure cap-height words in a tight line-height:1 box, so the ascenders
    overflow upward and the small shared .btn-vc nudge leaves them riding high (glaring at the
    monitor's desktop zoom, invisible at mobile scale) — center the ink box for these two */
-.mail-compose-btn .btn-vc, .mail-reply-btn .btn-vc{transform:translateY(0.3em)}
+.mail-compose-btn .btn-vc, .mail-reply-btn .btn-vc{margin-top:0.6em} /* net +0.3em, see .btn-vc */
 .mail-back{cursor:pointer}
 .mail-back:hover{background:#604681}
 .mail-list{flex:1; overflow-y:auto; scrollbar-width:none}
@@ -1965,8 +1974,8 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #office-monitor.show-mines #monitor-mines{opacity:1; pointer-events:auto}
 #monitor-mines-close{cursor:pointer}
 #monitor-mines-close:hover .seg-hover{opacity:.55}
-.mines-wrap{position:relative; width:124px; height:42px; box-sizing:border-box; display:flex; background:#cfc9bb; font-family:sans-serif; color:#453a31; overflow:hidden}
-.mines-board{flex:none; display:grid; grid-template-columns:repeat(16,6px); grid-auto-rows:6px; width:96px; height:42px}
+.mines-wrap{width:124px; height:42px; box-sizing:border-box; display:grid; grid-template-columns:96px 1fr; grid-template-rows:42px; background:#cfc9bb; font-family:sans-serif; color:#453a31; overflow:hidden} /* grid (was flex+position:relative): board/side/msg stack without a RenderLayer under the monitor's scaled foreignObject (WebKit bug 23113) */
+.mines-board{flex:none; grid-column:1; grid-row:1; display:grid; grid-template-columns:repeat(16,6px); grid-auto-rows:6px; width:96px; height:42px}
 .mines-cell{box-sizing:border-box; display:flex; align-items:center; justify-content:center; font-size:3.8px; font-weight:700; line-height:1; background:#c8c2b4; box-shadow:inset 0.7px 0.7px 0 rgba(255,255,255,0.72), inset -0.7px -0.7px 0 rgba(69,58,49,0.38); cursor:pointer}
 .mines-cell.open{background:#d8d2c4; box-shadow:inset 0 0 0 0.3px rgba(69,58,49,0.16); cursor:default}
 .mines-cell.flag, .mines-cell.ring{font-size:2.9px; font-weight:400; overflow:hidden} /* emoji ascent overshoots the 6px cell — keep the glyph inside its own tile */
@@ -1980,11 +1989,11 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 .mines-cell.n6{color:#2b7a7a}
 .mines-cell.n7{color:#453a31}
 .mines-cell.n8{color:#716455}
-.mines-side{flex:1; display:flex; flex-direction:column; align-items:center; gap:1.6px; padding-top:13px; box-sizing:border-box; box-shadow:inset 0.7px 0 0 rgba(255,255,255,0.6)} /* top padding clears the ✕ pill */
+.mines-side{flex:1; grid-column:2; grid-row:1; display:flex; flex-direction:column; align-items:center; gap:1.6px; padding-top:13px; box-sizing:border-box; box-shadow:inset 0.7px 0 0 rgba(255,255,255,0.6)} /* top padding clears the ✕ pill */
 .mines-face{width:9px; height:8px; display:flex; align-items:center; justify-content:center; font-size:5px; line-height:1; border-radius:1px; background:#c8c2b4; box-shadow:inset 0.7px 0.7px 0 rgba(255,255,255,0.72), inset -0.7px -0.7px 0 rgba(69,58,49,0.38); cursor:pointer}
 .mines-face:active{box-shadow:inset 0.7px 0.7px 0 rgba(69,58,49,0.38), inset -0.7px -0.7px 0 rgba(255,255,255,0.72)}
 .mines-lcd{width:19px; box-sizing:border-box; text-align:center; padding:0.8px 0 0.6px; background:#241d18; color:#e0604e; font-family:ui-monospace,Menlo,monospace; font-size:3.2px; line-height:1; letter-spacing:0.3px; border-radius:0.6px; box-shadow:inset 0.5px 0.5px 0 rgba(0,0,0,0.6)}
-.mines-msg{position:absolute; left:4px; width:88px; top:13px; display:none; box-sizing:border-box; background:rgba(255,253,248,0.95); border:0.4px solid #8a8272; border-radius:1.5px; padding:1.8px 3px; font-size:3.2px; line-height:1.4; text-align:center}
+.mines-msg{grid-column:1/3; grid-row:1; place-self:center; max-width:88px; display:none; box-sizing:border-box; background:rgba(255,253,248,0.95); border:0.4px solid #8a8272; border-radius:1.5px; padding:1.8px 3px; font-size:3.2px; line-height:1.4; text-align:center}
 .mines-wrap.done .mines-msg{display:block}
 /* video app: markéta's identity-dance film, letterboxed in a foreignObject over the
    screen (tap = play/pause); .absent on the wrap = the file isn't on the server, so a
@@ -1993,10 +2002,10 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #office-monitor.show-video #monitor-video{opacity:1; pointer-events:auto}
 #monitor-video-close{cursor:pointer}
 #monitor-video-close:hover .seg-hover{opacity:.55}
-.vid-wrap{position:relative; width:124px; height:42px; background:#000; cursor:pointer}
-.vid-el{width:100%; height:100%; object-fit:contain; display:block}
-.vid-note{position:absolute; inset:0; display:none; align-items:center; justify-content:center; text-align:center; padding:0 12px; box-sizing:border-box; color:#cfc4b4; font-family:sans-serif; font-size:4.6px; line-height:1.5}
-.vid-play{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; color:rgba(248,245,236,0.92); font-family:sans-serif; font-size:13px; text-shadow:0 0 3px rgba(0,0,0,0.8); opacity:0; transition:opacity .2s ease}
+.vid-wrap{width:124px; height:42px; background:#000; cursor:pointer; display:grid} /* single-cell grid (was position:relative): the note/play/controls stack via grid-area with no RenderLayer, so they paint under the monitor's scaled foreignObject (WebKit bug 23113). The <video> raster itself is a composited replaced element WebKit still can't paint under the g-scale. */
+.vid-el{grid-area:1/1; width:100%; height:100%; object-fit:contain; display:block}
+.vid-note{grid-area:1/1; display:none; align-items:center; justify-content:center; text-align:center; padding:0 12px; box-sizing:border-box; color:#cfc4b4; font-family:sans-serif; font-size:4.6px; line-height:1.5}
+.vid-play{grid-area:1/1; display:flex; align-items:center; justify-content:center; pointer-events:none; color:rgba(248,245,236,0.92); font-family:sans-serif; font-size:13px; text-shadow:0 0 3px rgba(0,0,0,0.8); opacity:0; transition:opacity .2s ease}
 .vid-wrap.paused .vid-play{opacity:1}
 .vid-wrap.absent .vid-note{display:flex}
 /* tattoo studio app: a design gallery + a paint canvas over the screen, HTML in the
@@ -2006,7 +2015,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #office-monitor.show-tattoo #monitor-tattoo{opacity:1; pointer-events:auto}
 #monitor-tattoo-close{cursor:pointer}
 #monitor-tattoo-close:hover .seg-hover{opacity:.55}
-.tattoo-wrap{position:relative; width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#f6ebe8; font-family:sans-serif; font-size:2.5px; line-height:1.3; color:#453a31; overflow:hidden}
+.tattoo-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#f6ebe8; font-family:sans-serif; font-size:2.5px; line-height:1.3; color:#453a31; overflow:hidden} /* no position:relative — the paint canvas anchors to its own .tattoo-canvas-wrap, and a wrap layer vanished the whole app under the monitor's scaled foreignObject (WebKit bug 23113) */
 .tattoo-bar{flex:none; display:flex; align-items:center; background:#c68e95; color:#fffdf8; padding:0.8px 3px 1px; letter-spacing:0.2px}
 .tattoo-bar-title{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right:9px}
 .tattoo-back{flex:none; margin-right:2.5px; cursor:pointer}
@@ -2057,7 +2066,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #office-monitor.show-life #monitor-life{opacity:1; pointer-events:auto}
 #monitor-life-close{cursor:pointer}
 #monitor-life-close:hover .seg-hover{opacity:.55}
-.life-wrap{position:relative; width:124px; height:42px; box-sizing:border-box; display:flex; background:#efe6cf; font-family:sans-serif; color:#453a31; overflow:hidden}
+.life-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; background:#efe6cf; font-family:sans-serif; color:#453a31; overflow:hidden}
 .life-board{flex:none; width:90px; height:42px; display:block; background:#fffdf8; cursor:crosshair; touch-action:none; image-rendering:pixelated; image-rendering:-webkit-optimize-contrast; image-rendering:crisp-edges} /* sharp cells: the monitor's desk-zoom upscales this canvas, so keep the scaling nearest-neighbour (paired with a hi-res backing store + imageSmoothingEnabled=false) */
 .life-side{flex:1; display:flex; flex-direction:column; align-items:stretch; gap:0.9px; padding:11px 2px 1.6px; box-sizing:border-box; box-shadow:inset 0.7px 0 0 rgba(255,255,255,0.6)} /* top padding clears the ✕ pill */
 .life-row{display:flex; gap:0.9px}
@@ -2074,7 +2083,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    Slim translucent player chrome along the bottom of the 124×42 screen (visitors see
    it ~4× zoomed): play/pause glyph, seekable progress bar, current time, mute glyph,
    volume slider. Auto-hides (.ctrl-idle on the wrap) after idle while playing. ── */
-.vid-ctrl{position:absolute; left:0; right:0; bottom:0; height:6px; display:flex; align-items:center; gap:1.6px; padding:0 1.6px; box-sizing:border-box; background:rgba(10,8,6,0.62); color:#f8f5ec; font-family:sans-serif; cursor:default; transition:opacity .3s ease}
+.vid-ctrl{grid-area:1/1; align-self:end; justify-self:stretch; height:6px; display:flex; align-items:center; gap:1.6px; padding:0 1.6px; box-sizing:border-box; background:rgba(10,8,6,0.62); color:#f8f5ec; font-family:sans-serif; cursor:default; transition:opacity .3s ease}
 .vid-wrap.ctrl-idle .vid-ctrl{opacity:0; pointer-events:none}
 .vid-wrap.absent .vid-ctrl{display:none}
 .vid-ctrl-pp{font-size:3.6px; line-height:1; width:4px; text-align:center; cursor:pointer}
@@ -2138,20 +2147,20 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #office-monitor.show-doom #monitor-doom{opacity:1; pointer-events:auto}
 #monitor-doom-close{cursor:pointer}
 #monitor-doom-close:hover .seg-hover{opacity:.55}
-.doom-wrap{position:relative; width:100%; height:100%; overflow:hidden; background:#000; display:flex; align-items:center; justify-content:center}
+.doom-wrap{width:100%; height:100%; overflow:hidden; background:#000; display:grid; grid-template-rows:100%; place-items:center} /* grid+place-items (was flex+position:relative): the loading/error message stacks on the canvas via grid-area, no RenderLayer (WebKit bug 23113). The <canvas> raster stays blank on WebKit — a composited replaced element it can't paint under the g-scale. */
 /* The framebuffer is pinned to a fixed 4:3 (640×480 via doom/extra.cfg), so it never tracks the on-screen
    canvas size — that was the super-blocky bug. The monitor screen is ultra-wide (124×42 ≈ 2.95:1), so letterbox
    the 4:3 render centered with black bars L/R (the wrap's black fills them). !important beats any inline size
    the SDL glue leaves on the element; pixelated keeps the upscale crisp-retro rather than blurry. The selector
    targets the canvas by id "canvas" (mandatory for the SDL glue) — a stale #monitor-doom-canvas rule matched nothing. */
-#monitor-doom-wrap canvas{width:auto !important; height:100% !important; max-width:100% !important; display:block; background:#000; image-rendering:pixelated}
-.doom-msg{position:absolute; left:0; right:0; top:50%; transform:translateY(-50%); margin:0; padding:0 2px; text-align:center; font:2px/1.3 ui-monospace,monospace; color:#e8c060; pointer-events:none}
+#monitor-doom-wrap canvas{grid-area:1/1; width:auto !important; height:100% !important; max-width:100% !important; display:block; background:#000; image-rendering:pixelated}
+.doom-msg{grid-area:1/1; align-self:center; justify-self:stretch; margin:0; padding:0 2px; text-align:center; font:2px/1.3 ui-monospace,monospace; color:#e8c060; pointer-events:none}
 .doom-msg.err{color:#e0736a}
 .doom-msg:empty{display:none}
 /* DOOM's own fullscreen button — a small ⛶ in the top-right corner of the app view,
    over the canvas (mirrors the video app's ⛶). Toggles real fullscreen on #canvas. The
    'f' key stays on the whole-loft toggle; this button is DOOM's explicit fullscreen. */
-.doom-fs{position:absolute; top:1px; right:1px; z-index:3; width:4px; height:4px; padding:0.6px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; background:rgba(20,18,14,.5); border-radius:0.8px; cursor:pointer; opacity:.55; transition:opacity .15s ease}
+.doom-fs{grid-area:1/1; place-self:start end; margin:1px; width:4px; height:4px; padding:0.6px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; background:rgba(20,18,14,.5); border-radius:0.8px; cursor:pointer; opacity:.55; transition:opacity .15s ease} /* grid-placed top-right (was position:absolute+z-index — a layer that misplaced under the g-scale on WebKit and lost its anchor once .doom-wrap stopped being position:relative) */
 .doom-fs:hover{opacity:1}
 .doom-fs svg{width:100%; height:100%; display:block}
 /* monitor-app context menu — a small flat right-click menu over a runtime app's screen
@@ -2244,7 +2253,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    tabs squeeze chrome-style — labels ellipsize — so a full strip still fits */
 .browser-tabs{flex:none; display:flex; align-items:flex-end; gap:0.8px; height:6px; padding:0 8px 0 3px; box-sizing:border-box}
 .browser-tab{flex:0 4 auto; min-width:0; display:flex; align-items:center; gap:0.9px; padding:0.7px 2.6px 0.9px; border-radius:2px 2px 0 0; background:#c8c1b2; color:#5d5347; font-family:sans-serif; font-size:2.3px; line-height:1.15; letter-spacing:0.1px; cursor:pointer} /* line-height kept near 1: a tall 1.4 line box rode the label high in the tab */
-.browser-tab > span:first-of-type{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; transform:translateY(0.07em)} /* optical nudge — same downward correction as .btn-vc, applied here so the label stays a plain (ellipsis-capable) flex item; line-height was also cut to 1.15 above */
+.browser-tab > span:first-of-type{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:0.14em} /* optical nudge via margin (net +0.07em), same as .btn-vc — a transform is a RenderLayer that vanishes under the monitor's scaled foreignObject (WebKit bug 23113); line-height cut to 1.15 above */
 .tab-fav{flex:none; width:2.8px; height:2.8px; display:block}
 .browser-tab:hover{background:#d2ccbd}
 .browser-tab.active{background:#fffdf8; color:#453a31}
@@ -2261,16 +2270,17 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 @keyframes browser-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-0.8px)}75%{transform:translateX(0.8px)}}
 .tab-x{flex:none; margin-left:0.5px; padding:0.4px 0.6px; font-size:2.4px; line-height:1; color:#8d8172; border-radius:1px}
 .tab-x:hover{color:#453a31; background:#e2dccd}
-.browser-page{position:relative; flex:1; min-height:0; background:#fffdf8}
-.browser-loading{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#a89a87; font-family:sans-serif; font-size:4.8px}
+.browser-page{flex:1; min-height:0; background:#fffdf8; display:grid} /* single-cell grid (was position:relative): overlays stack via grid-area with no RenderLayer, so they paint under the monitor's scaled foreignObject (WebKit bug 23113). The scaled iframe keeps its own positioning context in .browser-frame-holder — that holder is the one layer, isolating the (WebKit-unpaintable) iframe from the HTML overlays. */
+.browser-frame-holder{grid-area:1/1; position:relative; overflow:hidden}
+.browser-loading{grid-area:1/1; display:flex; align-items:center; justify-content:center; color:#a89a87; font-family:sans-serif; font-size:4.8px}
 /* framing-refused hint, dim like the loading line: only visitor-typed sites (.dyn) get
    it — X-Frame-Options blanks are common and silent */
-.browser-noframe{position:absolute; left:20px; right:20px; bottom:0.8px; z-index:3; display:none; text-align:center; color:#f4efe4; background:rgba(69,58,49,0.78); border-radius:1.6px; padding:0.6px 1.6px; font-family:sans-serif; font-size:2px; line-height:1.45; pointer-events:none; transition:opacity 1.2s ease}
+.browser-noframe{grid-area:1/1; align-self:end; justify-self:stretch; margin:0 20px 0.8px; display:none; text-align:center; color:#f4efe4; background:rgba(69,58,49,0.78); border-radius:1.6px; padding:0.6px 1.6px; font-family:sans-serif; font-size:2px; line-height:1.45; pointer-events:none; transition:opacity 1.2s ease}
 .browser-wrap.dyn .browser-noframe{display:block} /* floats OVER the iframe: a refused site paints its own opaque error page, which used to bury this exact explanation */
 .browser-wrap.dyn .browser-noframe.hint-done{opacity:0}
 /* new-tab address form: opaque over the page zone (and the loading lines) while the
    active visitor tab hasn't navigated yet */
-.browser-newtab{position:absolute; inset:0; z-index:1; display:none; align-items:center; justify-content:center; gap:2px; background:#fffdf8}
+.browser-newtab{grid-area:1/1; display:none; align-items:center; justify-content:center; gap:2px; background:#fffdf8}
 .browser-wrap.newtab .browser-newtab{display:flex}
 .url-wrap{flex:none; width:66px; height:6.2px}
 .browser-url-in{width:100%; height:100%; box-sizing:border-box; display:block; background:#f8f5ec; border:0.4px solid #d8d2c4; border-radius:2px; padding:0 2px; color:#453a31; font-family:sans-serif; font-size:2.5px; line-height:6.2px; outline:none} /* line-height = the field height so the single line centers and the native caret sizes to it */
@@ -10593,8 +10603,8 @@ section{margin:1.9rem 0}
 <div id="monitor-browser-tabs" class="browser-tabs"></div>
 <div class="browser-page">
 <div class="browser-loading" data-i="browser_loading">loading&#8230;</div>
+<div class="browser-frame-holder"><iframe id="monitor-browser-frame" class="browser-frame"></iframe></div>
 <div class="browser-noframe" data-i="browser_noframe">if it stays blank, that site refuses to live in a picture frame &#8212; most big ones do</div>
-<iframe id="monitor-browser-frame" class="browser-frame"></iframe>
 <div id="monitor-browser-newtab" class="browser-newtab">
 <div class="url-wrap">
 <input id="monitor-browser-url" class="browser-url-in" tabindex="-1" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="type a URL&#8230;" data-ph-i="browser_url_ph"/>
@@ -23600,6 +23610,18 @@ document.addEventListener("click", function (e) {
     return "other";
   })();
   window.__hostBrowser = HOST_BROWSER; // shared with the phone IIFE so its browser tile can host-brand too
+  // WebKit-engine flag (distinct from the brand above: on iOS EVERY browser is WebKit —
+  // Safari, Chrome-iOS/CriOS, Firefox-iOS/FxiOS — so this can't key off HOST_BROWSER).
+  // Gates the monitor apps' scrollable-container fallbacks: a scrollable overflow box under
+  // the monitor's scaled foreignObject mispaints on WebKit (bug 23113), so html.is-webkit
+  // rules swap those to overflow:hidden — visible rows instead of a blank box, no Chrome cost.
+  (function () {
+    var ua = navigator.userAgent || "";
+    var isWebKit = /iPad|iPhone|iPod/.test(ua)
+      || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) // iPadOS 13+ reports as Mac
+      || (/AppleWebKit/.test(ua) && /Safari/.test(ua) && !/Chrom(e|ium)|CriOS|FxiOS|Edg|OPR/.test(ua)); // desktop Safari
+    if (isWebKit) document.documentElement.classList.add("is-webkit");
+  })();
   // the Tehran birthday girl was born in 2016 — her cake keeps up with her
   (function () {
     var cake = document.getElementById("tehran-cake-age");
@@ -23629,7 +23651,7 @@ document.addEventListener("click", function (e) {
     { id: "mines", icon: "mines", labelKey: "app_mines", glyph: "💣", tile: "#c8c2b4", color: "#453a31", glyphSize: "5.2", open: function () { openMinesApp(); } },
     { id: "life", icon: "life", labelKey: "app_life", glyph: "⧉", tile: "#fdfbf6", color: "#8e3a4a", glyphSize: "5.2", open: function () { openLifeApp(); } },
     { id: "doom", labelKey: "app_doom", glyph: "🎮", tile: "#7e2323", color: "#e8c060", glyphSize: "5.2", open: function () { openDoom(); } },
-    { id: "editor", labelKey: "app_editor", glyph: "✎", tile: "#17271e", color: "#8fd070", mono: true, glyphSize: "5.9", open: function () { openEditor(); } },
+    { id: "editor", labelKey: "app_editor", glyph: "✏", tile: "#17271e", color: "#8fd070", mono: true, glyphSize: "9", open: function () { openEditor(); } },
     { id: "console", icon: "console", labelKey: "app_console", glyph: "❯_", tile: "#2e2823", color: "#8fd070", mono: true, glyphSize: "4", open: function () { openConsole(); } },
     { id: "python", labelKey: "app_python", glyph: ">>>", tile: "#306998", color: "#ffd43b", mono: true, glyphSize: "3.5", open: function () { openPython(); } },
     { id: "linux", icon: "linux", labelKey: "app_linux", glyph: "🐧", tile: "#fdfbf6", glyphSize: "5.2", open: function () { openLinux(); } }
@@ -23773,7 +23795,7 @@ document.addEventListener("click", function (e) {
         calDay.className = "cal-tile-day";
         calWrap.appendChild(calHead);
         calWrap.appendChild(calDay);
-        glyph.appendChild(calWrap);
+        tile.appendChild(calWrap); // direct grid child of the tile (not the empty glyph) so it stacks in the single grid cell
         window.__paintCalTile = function () {
           var now = window.__now ? window.__now() : new Date(); // calendar DATE (#date-overridable)
           var loc = document.documentElement.lang === "cs" ? "cs-CZ" : "en-US";
@@ -24832,8 +24854,8 @@ document.addEventListener("click", function (e) {
     if (left + pw > g.mainW) left = g.mainW - pw;
     if (left < 0) left = 0;
     if (top + ph > g.mainH) { var above = g.y - ph; top = above >= 0 ? above : Math.max(0, g.mainH - ph); } // flip above
-    edAc.style.left = left.toFixed(2) + "px";
-    edAc.style.top = top.toFixed(2) + "px";
+    edAc.style.marginLeft = left.toFixed(2) + "px"; // offset within the ed-main grid cell (grid-stacked, not absolutely positioned — see .ed-ac)
+    edAc.style.marginTop = top.toFixed(2) + "px";
   }
   function edAcRender(tok, matches) {
     edAcEnsure();

@@ -53,13 +53,6 @@ allowed exception, owner-confirmed.)
   the in-scene D-pad). They assert each surface shows the right items, suppresses the native
   menu where it should, dismisses on Esc/away, and (for the dock/phone) that a "Kill" resets
   the app. Both use the same one-shot headless runner as play.js.
-- **`node tests/visual.js` is an optional, advisory spot-check** — never part of the
-  must-pass-before-commit chain: it renders the five rsvp.html rooms and save-the-dates.html's
-  two scenes headlessly (animations/transitions frozen, clock and RNG pinned) and
-  pixel-diffs them against `tests/baselines/`, catching neighboring-room breakage that
-  eyeballing a single screenshot misses. After an *intentional* art change, rerun with
-  `--update` to refresh the baselines; if it ever gets flaky, distrust it before
-  distrusting your change.
 - **The check script doesn't replace manual verification** for anything visual or
   interactive: rendering with headless
   `google-chrome --headless --disable-gpu --window-size=W,H --screenshot=out.png` and

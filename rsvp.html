@@ -14071,6 +14071,13 @@ function idealBrowser() {
     var viewportH = viewportW / 2;
     frame.style.width = (viewportW + chrome) + "px";
     frame.style.height = viewportH + "px";
+    // Snap the frame to the scene's ACTUALLY-rendered height. The strip is width:500% /
+    // height:auto, and Firefox computes that SVG aspect a hair differently from the pure 2:1
+    // math, so the computed viewportH can exceed what paints — leaving the stretched side-rails
+    // (and their bottom media controls) hanging below the scene. Measuring what rendered keeps
+    // the rails tracking the scene bottom on every engine (Chromium already matches, so no-op there).
+    var sceneH = 0; try { sceneH = Math.round(viewport.getBoundingClientRect().height); } catch (e) {}
+    if (sceneH > 0 && Math.abs(sceneH - viewportH) > 1) frame.style.height = sceneH + "px";
     // A device zoom frames the room through #loft-game-strip's transform; the frame just
     // changed size under it, so re-fit NOW (same tick as the resize) — the strip's own
     // transition then glides straight to the new framing instead of the deferred

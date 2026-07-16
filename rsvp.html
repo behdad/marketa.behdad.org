@@ -5558,6 +5558,12 @@ section{margin:1.9rem 0}
    presentation attributes on .balcony-bulb/.balcony-bulb-glow) */
 #loft-game-strip.season-spooky .balcony-bulb{fill:#e08434; stroke:#a95c1c}
 #loft-game-strip.season-spooky .balcony-bulb-glow{fill:#e08434}
+/* canada day: the balcony string alternates red / warm white. Each bulb is preceded by
+   its own glow circle, so alternating bulbs is a 4n stride, not odd/even. */
+#loft-game-strip.season-canada .balcony-bulb{fill:#f5ecd9; stroke:#c9b89a}
+#loft-game-strip.season-canada .balcony-bulb-glow{fill:#f2e6cd}
+#loft-game-strip.season-canada .balcony-bulb:nth-child(4n){fill:#b2465a; stroke:#8e3a4a}
+#loft-game-strip.season-canada .balcony-bulb-glow:nth-child(4n+3){fill:#b2465a}
 </style>
 </head>
 <body>
@@ -13207,6 +13213,7 @@ var T = {
     season_winter: "❄ winter",
     season_valentines: "💕 valentine's",
     season_wedding: "💍 wedding week",
+    season_canada: "🍁 canada day",
     season_summer: "☀ summer",
     season_smoky: "🔥 smoky season",
     season_holiday: "🎄 holiday season",
@@ -13652,6 +13659,7 @@ var T = {
     season_winter: "❄ zima",
     season_valentines: "💕 valentýn",
     season_wedding: "💍 svatební týden",
+    season_canada: "🍁 den Kanady",
     season_summer: "☀ léto",
     season_smoky: "🔥 kouřová sezóna",
     season_holiday: "🎄 svátky",
@@ -36325,9 +36333,14 @@ function spawnCrystalSparkle() {
     balcony: { box: [430, 20, 160, 78], s: 1.0 },  // x,y,w,h of the burst zone
     garden: { box: [150, 34, 320, 60], s: 0.55 }
   };
-  // The sky celebrates on a wedding day / anniversary, or at the turn of the year (Dec 24 – Jan 1).
+  // The sky celebrates on a wedding day / anniversary, at the turn of the year (Dec 24 – Jan 1),
+  // or over Canada Day (Jun 30 – Jul 4).
   // Every volley re-checks this, so it has to agree with the entry gate — hence one predicate.
-  function fwSeason() { return !!(window.__isWeddingDay || (window.__isNewYearSky && window.__isNewYearSky())); }
+  function fwSeason() {
+    return !!(window.__isWeddingDay
+      || (window.__isNewYearSky && window.__isNewYearSky())
+      || (window.__isCanadaDaySky && window.__isCanadaDaySky())); // hooks land later in source than this
+  }
   function fwActive() {
     return !!(fwSeason() && fwHost && fwHost.isConnected &&
       (fwRoom === "balcony" || fwRoom === "garden") && window.currentStageName === fwRoom);
@@ -45042,6 +45055,7 @@ function spawnDustMote(container) {
     wedding: [4, 1],   // May 1: the Edmonton wedding — ribbon + fireworks sky
     winter:  [0, 15],  // deep January: snow, no dressing
     valentines: [1, 7], // mid-February: hearts in the nook
+    canada:  [6, 1],   // Canada Day: red-and-white balcony string + fireworks (Edmonton's half of the wedding)
     summer:  [6, 15],  // mid-July: never snow
     smoky:   [7, 7]    // early August: Edmonton's wildfire smoke at full strength
   };
@@ -45057,9 +45071,12 @@ function spawnDustMote(container) {
     if (m === 11 || (m === 0 && d <= 6)) return "holiday"; // Dec 1 – Jan 6
     if (m === 9 || (m === 10 && d <= 3)) return "spooky";  // Oct 1 – Nov 3
     if (m === 1 && d <= 14) return "valentines";           // Feb 1 – 14
+    if ((m === 5 && d === 30) || (m === 6 && d <= 4)) return "canada"; // Jun 30 – Jul 4
     return null;
   }
   window.__isNewYearSky = function () { var s = seasonDate(); return (s.m === 11 && s.d >= 24) || (s.m === 0 && s.d === 1); }; // Dec 24 – Jan 1
+  // Same window decorForDate dresses for, so the sky can never disagree with the bulbs.
+  window.__isCanadaDaySky = function () { var s = seasonDate(); return (s.m === 5 && s.d === 30) || (s.m === 6 && s.d <= 4); }; // Jun 30 – Jul 4
   // Wildfire smoke is a CLIMATE axis like the snow odds, not decor: a 0..1 intensity the
   // CSS tints read off --smoke, so it needs no season- class of its own.
   function smokeLevelFor(s) {
@@ -45072,7 +45089,7 @@ function spawnDustMote(container) {
   window.__setSeason = function (name) {
     var strip = document.getElementById("loft-game-strip");
     if (!strip) return;
-    strip.classList.remove("season-holiday", "season-spooky", "season-valentines");
+    strip.classList.remove("season-holiday", "season-spooky", "season-valentines", "season-canada");
     if (name) strip.classList.add("season-" + name);
   };
   function applySeasonDate() {
@@ -45086,7 +45103,7 @@ function spawnDustMote(container) {
   applySeasonDate();
   // 's' cycles the previews: today → spooky → holiday → new year → winter → valentine's → summer → smoky → today.
   // Plain keypress only — skipped with any modifier held or while typing (same guard as 'f').
-  var SEASON_CYCLE = [null, "spooky", "holiday", "newyear", "winter", "valentines", "wedding", "summer", "smoky"];
+  var SEASON_CYCLE = [null, "spooky", "holiday", "newyear", "winter", "valentines", "wedding", "canada", "summer", "smoky"];
   // Shared apply-path for the 's' key AND the console season(); shows the naming pill.
   function applySeasonPreview(name) {
     seasonPreview = SEASON_PREVIEW_DATE[name] ? name : null;
@@ -46933,7 +46950,7 @@ function spawnDustMote(container) {
   // winter · spooky · auto(=the calendar's own season). Friendly aliases fold onto those;
   // no arg still SURPRISES you with a random one (a documented feature). Drives the same
   // apply-path the 's' key uses (strip class + naming pill + cycle-sync).
-  var SEAS = ["spooky", "holiday", "newyear", "winter", "valentines", "wedding", "summer", "smoky", "auto"]; // same order the 's' key cycles
+  var SEAS = ["spooky", "holiday", "newyear", "winter", "valentines", "wedding", "canada", "summer", "smoky", "auto"]; // same order the 's' key cycles
   var SEASON_ALIASES = {
     spooky: "spooky", halloween: "spooky",
     holiday: "holiday", xmas: "holiday", christmas: "holiday", tree: "holiday",
@@ -46941,6 +46958,7 @@ function spawnDustMote(container) {
     winter: "winter", snow: "winter",
     valentines: "valentines", valentine: "valentines", love: "valentines", hearts: "valentines",
     wedding: "wedding", married: "wedding", anniversary: "wedding",
+    canada: "canada", canadaday: "canada", "canada day": "canada", maple: "canada",
     summer: "summer", sun: "summer",
     smoky: "smoky", smoke: "smoky", wildfire: "smoky", wildfires: "smoky",
     auto: "auto", normal: "auto", off: "auto", none: "auto", clear: "auto", today: "auto"
@@ -46949,6 +46967,7 @@ function spawnDustMote(container) {
     spooky: "🎃 spooky dressing on.", holiday: "🎄 holiday dressing on.", newyear: "🎆 fireworks over the loft.",
     wedding: "💍 the loft's dressed for the wedding.",
     winter: "❄ deep winter — it's coming down white.", valentines: "💕 hearts up in the nook.",
+    canada: "🍁 canada day — red and white over edmonton.",
     summer: "☀ high summer — rain at worst.",
     smoky: "🔥 wildfire smoke — orange sun, grey sky. hello, august.",
     auto: "🍂 back to the calendar's own season."

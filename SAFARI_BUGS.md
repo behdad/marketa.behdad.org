@@ -39,12 +39,26 @@ IDENTICAL in Playwright-WebKit vs Chromium (`{x:175,y:454,w:45,h:40}`). Could no
 headless. Owner: "not a big deal, move on." Needs a real-device look if it resurfaces (Playwright-
 WebKit ≈ Safari but not identical).
 
-### 3. 🔴 Zoomed-in objects are very blurred
-The monitor (and other desk objects) look badly blurred when zoomed in. 
-_Suspect:_ WebKit rasterises the SVG at pre-scale resolution then scales up (Chrome re-rasters).
-May need a WebKit re-raster hint (`will-change`, higher backing resolution) or be accepted.
+### 3. 🟢 Zoomed-in monitor "very blurred" — RESOLVED (not actually blurry)
+After the #4 monitor de-layering fix, the owner confirms the zoomed monitor renders SHARP on
+Safari, not blurred. The earlier "very blurred" was the apps failing to render at all (#4), not a
+raster-blur. No separate fix needed. (If a genuine SVG-scale raster blur ever shows on other
+zoomed objects, that's the WebKit raster-at-base-res limit — re-raster hints re-trigger #23113, so
+tread carefully.)
 
-### 4. 🟡 Monitor desktop + its apps don't render — ROOT CAUSE FOUND (WebKit bug 23113)
+### 4. 🟢 Monitor desktop + its apps don't render — FIXED (device-confirmed "MUCH better")
+**FIXED (merged, deployed).** Swept RenderLayer triggers out of the monitor foreignObject content
+and re-anchored anything needing positioning via CSS **grid-stacking** (`display:grid` +
+`grid-area:1/1` — NOT a RenderLayer). Now renders on WebKit: desktop icons/tiles + console, python,
+linux, minesweeper, editor, browser, mail, calendar, weather, tehran, now-playing. Added
+`html.is-webkit` to swap scrollable panes to `overflow:hidden` (WebKit mispaints scroll boxes under
+the g-scale too). Also fixed the dock hover (any `transform` re-creates a layer → hovered tile
+vanished; on WebKit use a non-layer box-shadow instead). **Remaining (hard WebKit limit, accepted):**
+`<canvas>`/`<video>`/`<iframe>` are composited replaced elements WebKit can't paint under the
+g-scale — so Doom, Life board, Video, Tattoo paint, and the photobooth camera stay blank, though
+their surrounding UI renders. Owner confirmed "MUCH better."
+
+<details><summary>Original diagnosis (kept for reference)</summary>
 On WebKit the office monitor is largely non-functional — desktop app icons + effectively every
 app (Console, Python/Pyodide, Linux/v86, Doom, Life, Minesweeper, Tattoo, Browser).
 
@@ -80,6 +94,7 @@ under an SVG `transform`-attribute scale on a `<g>` ancestor**, which is exactly
    re-anchoring. Broadest but most tedious.
 
 Likely also explains the zoom-blur (#3). Owner reviewing which fix path to take (a core-feature change).
+</details>
 
 ### 5. 🟢 Scene-wide CSS filter effects don't render (ketamine gray-out, alcohol blur) — FIXED
 **Actual cause:** a CSS filter *function* (`filter:blur()/saturate()/…`) on an SVG container is a
@@ -107,7 +122,26 @@ Same canvas-in-foreignObject limitation likely blanks the **mushroom-trip** bloo
 (`trip-bloom-fo`) and the **cuddly-flame** fire (`cuddly-flame-fo`) on WebKit. Out of #6's scope —
 apply the same off-DOM-canvas → SVG `<image>` blit in a future pass.
 
-### 7. 🟢 Volume control does nothing — music blasts at full volume — FIXED
+### 10. 🟡 Safari has NO Web Audio output at all — 26 AudioContexts vs Safari's cap (IN PROGRESS)
+THE real Safari audio bug (found after #7 below). On real desktop Safari there is **no Web Audio
+sound whatsoever** — SFX (synth clicks) AND pipeline-captured songs are both silent; only direct
+`<audio>` (i.e. `?pipeline=off` music) plays. The "tab shows audio playing but no sound" symptom is
+the tell. **Root cause:** the page creates **~26 separate `AudioContext`s** (one per ambient bed /
+channel / dance + SFX + pipeline). **Safari hard-caps concurrent AudioContexts** (~4, historically);
+past the cap they go silent. Chrome/Firefox don't cap → only Safari dies. Likely also causes the
+owner's Chrome-Linux audio glitches (hardware-stream contention). **Fix in progress (agent):**
+consolidate to ONE shared AudioContext (per-source lifecycle → node ops, not context close/suspend;
+ramp gains to avoid the "loud pop"; preserve the visibility/focus gating + kill switch). NOTE:
+Playwright-WebKit does NOT reproduce Safari's cap (it has no limit), so this fix is correct-by-
+construction + needs real-Safari confirmation. The #7 volume-GainNode fix below was REVERTED during
+this debugging (it only added a gain node; it wasn't the silence cause) — re-apply after the
+consolidation lands.
+
+### 7. ⚪ Volume control / music blasts — fix REVERTED (see #10)
+Was fixed (route captured-song volume through an in-graph GainNode, commit 7f4c167) and confirmed on
+Chrome — but the confirmation was Chrome, not Safari. REVERTED (commit ce14495) while diagnosing the
+real Safari-silence bug (#10). The GainNode approach is sound; re-apply once the shared-context
+consolidation (#10) makes Safari output Web Audio at all. Original write-up:
 **Actual cause:** on WebKit, `createMediaElementSource(el)` taps the element's RAW decoded stream
 and **bypasses `el.volume`** (opposite of Chrome, which taps post-`.volume`). The app applied song
 volume via `audio.volume`, so once a song was captured into the pipeline the control did nothing →

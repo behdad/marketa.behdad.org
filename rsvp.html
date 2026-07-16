@@ -368,7 +368,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   #hunt-fullscreen-area.is-fullscreen .scene-caption, #hunt-fullscreen-area:fullscreen .scene-caption, #hunt-fullscreen-area:-webkit-full-screen .scene-caption{margin:0 0 .3rem; font-size:.95rem}
   #hunt-fullscreen-area.is-fullscreen .hunt-dots, #hunt-fullscreen-area:fullscreen .hunt-dots, #hunt-fullscreen-area:-webkit-full-screen .hunt-dots{margin-top:.3rem}
 }
-.device-hint{display:none; text-align:center; font-size:.9rem; color:var(--soft); margin:.15rem 0 0}
+.device-hint{display:none; text-align:center; font-size:.9rem; color:var(--soft); margin:.15rem 0 0; text-wrap:balance}
 .device-hint.show{display:block}
 .browser-issues-link{color:var(--wine); text-decoration:underline; text-underline-offset:2px}
 .browser-issues-link:hover{color:var(--ink)}
@@ -942,6 +942,12 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    bottles (ancestor #kitchen-bar is pointer-events:none; re-enabled here while the bar's up). */
 #loft-game-strip.party-on #kitchen-bar-menu,
 #stage-kitchen.dusk #kitchen-bar-menu{pointer-events:auto; cursor:pointer}
+/* the tacked paper swings from its pushpin when tapped, as the cocktails phone opens (wobble
+   rides an inner wrapper so it composes with — never clobbers — the outer static tilt) */
+#kitchen-bar-menu-wob{transform-box:fill-box; transform-origin:50% 2%}
+#kitchen-bar-menu-wob.wobbling{animation:bar-menu-wobble .75s ease-in-out}
+@keyframes bar-menu-wobble{0%{transform:rotate(0)}22%{transform:rotate(6deg)}45%{transform:rotate(-3.5deg)}66%{transform:rotate(2deg)}83%{transform:rotate(-1deg)}100%{transform:rotate(0)}}
+@media (prefers-reduced-motion: reduce){#kitchen-bar-menu-wob.wobbling{animation:none}}
 /* the two tipsy patrons on the left stools sway gently — PARTY ONLY. The parent #kitchen-bar fades
    in at both the party AND the calm night bar, but these two revellers belong to the party: an
    explicit opacity gate hides the pair whenever the party's off (so the night bar is quiet), and
@@ -6652,6 +6658,7 @@ section{margin:1.9rem 0}
      shows exactly when the bar's up; a static tilt lives on this wrapper (no animation → nothing
      clobbers the transform). pointer-events re-enabled per-bar-up in CSS, like the bottles. -->
 <g id="kitchen-bar-menu" transform="rotate(-4 625 180)">
+<g id="kitchen-bar-menu-wob">
 <rect x="606" y="152" width="40" height="58" rx="1.6" fill="#f6f1e2" stroke="#d6cbaf" stroke-width="0.8"/>
 <rect x="606" y="152" width="40" height="5" rx="1.6" fill="#eee5cf"/>
 <rect x="644.4" y="153" width="1.6" height="57" fill="#000" opacity="0.06"/>
@@ -6665,6 +6672,7 @@ section{margin:1.9rem 0}
 <circle cx="612" cy="190" r="0.9" fill="#b0a488"/><line x1="615" y1="190" x2="635" y2="190" stroke="#b0a488" stroke-width="1.1" stroke-linecap="round"/>
 <circle cx="612" cy="196" r="0.9" fill="#b0a488"/><line x1="615" y1="196" x2="626" y2="196" stroke="#b0a488" stroke-width="1.1" stroke-linecap="round"/><line x1="629" y1="196" x2="640" y2="196" stroke="#c4baa0" stroke-width="1.1" stroke-linecap="round"/>
 <circle cx="612" cy="202" r="0.9" fill="#b0a488"/><line x1="615" y1="202" x2="631" y2="202" stroke="#b0a488" stroke-width="1.1" stroke-linecap="round"/>
+</g>
 </g>
 <!-- debris layer for a shelf bottle knocked off + shattered on the bartop (JS). Placed late (a
      direct, untransformed child of #kitchen-bar) so a broken bottle + its glass shards paint in
@@ -20680,9 +20688,15 @@ document.addEventListener("click", function (e) {
   (function () {
     var menu = document.getElementById("kitchen-bar-menu");
     if (!menu) return;
+    var wob = document.getElementById("kitchen-bar-menu-wob");
+    if (wob) wob.addEventListener("animationend", function () { wob.classList.remove("wobbling"); });
     menu.addEventListener("click", function (e) {
       e.stopPropagation();
       playDryClickSound("kitchen-bar-menu"); // a soft paper/tap click, panned to the sign
+      if (wob) {
+        wob.classList.remove("wobbling");
+        requestAnimationFrame(function () { requestAnimationFrame(function () { wob.classList.add("wobbling"); }); });
+      }
       if (window.__openCocktailsMenuHere) window.__openCocktailsMenuHere();
     });
   })();

@@ -42453,11 +42453,11 @@ function spawnDustMote(container) {
       d.setAttribute("role", "tab");
       d.setAttribute("aria-label", "Room " + (i + 1));
       d.addEventListener("click", function () {
-        if (i <= maxUnlocked) goToStage(STAGES[i]);
+        if (i <= maxUnlocked) navTo(STAGES[i]);
       });
       // cheat: double-click a locked dot to unlock up to that room and jump there
       d.addEventListener("dblclick", function () {
-        goToStage(STAGES[i]);
+        navTo(STAGES[i]);
       });
       dotsWrap.appendChild(d);
       dots.push(d);
@@ -42620,7 +42620,13 @@ function spawnDustMote(container) {
     }
   }
   window.restoreStageHint = restoreStageHint; // games (Flair Catch, chair arcade) call this to put the room hint back
+  // The laptop's first-visit demo is for someone WALKING into the office. Power navigation
+  // (the 1-5 keys, 'm', the console) and scripts know where they're going, so the demo is
+  // opt-IN: only navTo() arms it, and goToStage consumes it — anything else stays quiet.
+  var laptopDemoOk = false;
+  function navTo(name) { laptopDemoOk = true; goToStage(name); }
   function goToStage(name) {
+    var byWalkIn = laptopDemoOk; laptopDemoOk = false;
     var idx = STAGES.indexOf(name);
     if (idx === -1) return;
     stageIndex = idx;
@@ -42645,7 +42651,7 @@ function spawnDustMote(container) {
     if (name === "office" && window.revealOfficeFishuIfFled) window.revealOfficeFishuIfFled();
     if (name === "office" && window.startOfficeCrane) window.startOfficeCrane(); // resume the skyline crane's traverse/drop loop
     if (name === "office" && window.__resumeMonitorLife) window.__resumeMonitorLife(); // resume a running Game-of-Life loop on return to the office
-    if (name === "office" && window.__autoOpenLaptopFirstVisit) setTimeout(function () {
+    if (name === "office" && byWalkIn && window.__autoOpenLaptopFirstVisit) setTimeout(function () {
       if (window.currentStageName === "office") window.__autoOpenLaptopFirstVisit(); // discoverability nudge, once the room slide (700ms) has settled so the desk-zoom reads live geometry
     }, 760);
     // leaving a room fades its ambient drone out over several seconds rather than the
@@ -42707,13 +42713,13 @@ function spawnDustMote(container) {
   }
   window.goToStage = goToStage;
   if (prevBtn) prevBtn.addEventListener("click", function () {
-    if (stageIndex > 0) goToStage(STAGES[stageIndex - 1]);
+    if (stageIndex > 0) navTo(STAGES[stageIndex - 1]);
   });
   if (nextBtn) nextBtn.addEventListener("click", function (e) {
     if (stageIndex < maxUnlocked) {
-      goToStage(STAGES[stageIndex + 1]);
+      navTo(STAGES[stageIndex + 1]);
     } else if (e.detail >= 2 && stageIndex < STAGES.length - 1) {
-      goToStage(STAGES[stageIndex + 1]);
+      navTo(STAGES[stageIndex + 1]);
     }
   });
   // ── scene right-click D-pad ─────────────────────────────────────────────────────────────
@@ -42758,12 +42764,12 @@ function spawnDustMote(container) {
       dpadEl = document.createElement("div");
       dpadEl.className = "mon-ctx nav-dpad"; dpadEl.setAttribute("role", "menu");
       dpadEl.appendChild(mkBtn("up", "↑", "dpad_day", function () { if (window.__setDayNight) window.__setDayNight(false); }));
-      dpadEl.appendChild(mkBtn("left", "←", "dpad_prev", function () { if (stageIndex > 0) goToStage(STAGES[stageIndex - 1]); }));
+      dpadEl.appendChild(mkBtn("left", "←", "dpad_prev", function () { if (stageIndex > 0) navTo(STAGES[stageIndex - 1]); }));
       var dot = document.createElement("button"); dot.type = "button"; dot.className = "dpad-dot"; dot.setAttribute("aria-label", "close");
       dot.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); closeMenu(); }); // tapping the centre dismisses
       dot.addEventListener("contextmenu", function (e) { e.stopPropagation(); e.preventDefault(); closeMenu(); }); // right-clicking the centre dismisses too (not a reopen)
       dpadEl.appendChild(dot);
-      dpadEl.appendChild(mkBtn("right", "→", "dpad_next", function () { if (stageIndex < STAGES.length - 1) goToStage(STAGES[stageIndex + 1]); })); // the D-pad always advances, unlocking the frontier
+      dpadEl.appendChild(mkBtn("right", "→", "dpad_next", function () { if (stageIndex < STAGES.length - 1) navTo(STAGES[stageIndex + 1]); })); // the D-pad always advances, unlocking the frontier
       dpadEl.appendChild(mkBtn("down", "↓", "dpad_night", function () { if (window.__setDayNight) window.__setDayNight(true); }));
       dpadEl.style.visibility = "hidden";
       document.body.appendChild(dpadEl);
@@ -42819,15 +42825,15 @@ function spawnDustMote(container) {
     if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
     if (e.key === "ArrowRight" || e.key === "Tab") {
       e.preventDefault();
-      if (stageIndex < maxUnlocked) { goToStage(STAGES[stageIndex + 1]); lastLockedRightAt = 0; }
+      if (stageIndex < maxUnlocked) { navTo(STAGES[stageIndex + 1]); lastLockedRightAt = 0; }
       else if (stageIndex < STAGES.length - 1) {
         var now = Date.now();
-        if (now - lastLockedRightAt < 600) { goToStage(STAGES[stageIndex + 1]); lastLockedRightAt = 0; } // second press unlocks
+        if (now - lastLockedRightAt < 600) { navTo(STAGES[stageIndex + 1]); lastLockedRightAt = 0; } // second press unlocks
         else lastLockedRightAt = now; // first press at the locked frontier — arm the unlock
       }
     } else if (e.key === "ArrowLeft") {
       e.preventDefault();
-      if (stageIndex > 0) goToStage(STAGES[stageIndex - 1]);
+      if (stageIndex > 0) navTo(STAGES[stageIndex - 1]);
     } else if (e.key === "`") {
       e.preventDefault();
       // whisk to the office and open its console. Defer the boot/zoom until the

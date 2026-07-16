@@ -22439,9 +22439,21 @@ document.addEventListener("click", function (e) {
     window.resetLaptop = function () {
       endLaptopUpdate();
       laptop.classList.remove("open", "inviting");
+      window.__officeLaptopAutoOpened = false; // fresh game re-demonstrates the laptop on the next office entry
       // re-derive the sequence nudges AFTER stripping state, so a fresh game's
       // laptop invite matches the load snapshot instead of stranding a diff
       if (window.__updateOfficeNudges) window.__updateOfficeNudges();
+    };
+    // First office entry auto-opens the lid once, so testers discover the laptop is
+    // interactive; a manual close afterwards is left alone (the flag stays burned).
+    window.__autoOpenLaptopFirstVisit = function () {
+      if (window.__officeLaptopAutoOpened) return;
+      if (window.__cinematic) return; // the "Watch the loft" film owns the experience — retry on a later entry
+      if (document.hidden || !document.hasFocus()) return; // crickets rule: no timer-driven open/sound into a backgrounded tab
+      window.__officeLaptopAutoOpened = true;
+      if (laptop.classList.contains("open") || inCall()) return; // already open (console/dblclick) — nothing to demo
+      stopLaptopInvite(); // match the user-open paths: clear the attention pulse before the lid hinges
+      toggleLaptop();
     };
   }
   var woodenHead = document.getElementById("office-wooden-head");
@@ -41912,6 +41924,9 @@ function spawnDustMote(container) {
     if (name === "office" && window.revealOfficeFishuIfFled) window.revealOfficeFishuIfFled();
     if (name === "office" && window.startOfficeCrane) window.startOfficeCrane(); // resume the skyline crane's traverse/drop loop
     if (name === "office" && window.__resumeMonitorLife) window.__resumeMonitorLife(); // resume a running Game-of-Life loop on return to the office
+    if (name === "office" && window.__autoOpenLaptopFirstVisit) setTimeout(function () {
+      if (window.currentStageName === "office") window.__autoOpenLaptopFirstVisit(); // discoverability nudge, once the room slide (700ms) has settled so the desk-zoom reads live geometry
+    }, 760);
     // leaving a room fades its ambient drone out over several seconds rather than the
     // snappy device-toggle fade, so the sound slowly recedes as you move to the next room.
     var ROOM_FADE = 3;

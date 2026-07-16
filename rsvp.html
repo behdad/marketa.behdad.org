@@ -43760,11 +43760,15 @@ function spawnDustMote(container) {
   //   add CSS under #trip-melt-dancers.party-dancing[data-dance="<id>"] for its moves (the
   //   couple/circle formation class comes free from applyPartyDanceMode). Nothing here changes.
   // ONE self-rescheduling timer drives the rotation, cleared when the party ends (below), so
-  // nothing fires off-party or piles up. It FREEZES (no flip) while the transport is paused or
-  // the tab is hidden — so a pause stays coherent (music + dancers never desync across it) and a
-  // backgrounded tab churns no audio contexts. Each flip crossfades ALL beds (updateAllPartyDances:
-  // every bed self-starts/stops per its own want-gate, so the incoming fades in as the outgoing
-  // fades out over the same 1.8s) and reflects the new dance onto the dancers.
+  // nothing fires off-party or piles up. It FREEZES (no flip) only while the transport is paused —
+  // so a pause stays coherent (music + dancers never desync across it). It keeps rotating in a
+  // HIDDEN tab (the music plays on regardless, so a frozen rotation would loop one bed forever):
+  // the advance path spawns nothing (beds are synth-only; the dancer beat-flares self-gate on
+  // document.hidden) and the beds share the one AudioContext, so nothing accumulates or churns.
+  // Background timer throttling just paces it slower while hidden — still rotating, fine.
+  // Each flip crossfades ALL beds (updateAllPartyDances: every bed self-starts/stops per its own
+  // want-gate, so the incoming fades in as the outgoing fades out over the same 1.8s) and
+  // reflects the new dance onto the dancers.
   window.__partyDance = "techno"; // active dance id; a freshly-lit party opens on PARTY_DANCE_ORDER[0] (fully shuffled at load)
   var WALTZ_PERIOD_MS = 15000;
   var waltzAltTimer = null;
@@ -43818,8 +43822,7 @@ function spawnDustMote(container) {
   function flipPartyMode() {
     waltzAltTimer = null;
     if (!window.__gardenPartyOn) return; // party ended — stop, don't reschedule
-    var hold = window.__musicPaused || document.visibilityState === "hidden";
-    if (!hold) advanceDance();
+    if (!window.__musicPaused) advanceDance();
     waltzAltTimer = setTimeout(flipPartyMode, WALTZ_PERIOD_MS);
   }
   window.__nextPartyDance = function () { // manual skip: jump to the next dance now, then keep auto-alternating

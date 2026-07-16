@@ -1849,6 +1849,8 @@ html.is-webkit .dock-app:hover .dock-tile{transform:none; box-shadow:inset 0 0 0
 #office-monitor.show-editor #monitor-editor{opacity:1; pointer-events:auto}
 #monitor-ed-close{cursor:pointer}
 #monitor-ed-close:hover .seg-hover{opacity:.55}
+/* the mini-games' close button (JS-drawn in #kitchen-flair-layer / the arcade layer) reuses the monitor close look */
+.game-close-btn:hover .seg-hover{opacity:.55}
 .ed-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:row; gap:1.4px; background:#0d130e; padding:1.6px 2px 2px; font-family:ui-monospace,Menlo,monospace; color:#cfe3cf}
 /* left sidebar: a slim scrollable list of saved script names, with a +/− header (new/delete) */
 .ed-side{flex:none; width:24px; min-height:0; display:flex; flex-direction:column; gap:0.7px}
@@ -18802,21 +18804,24 @@ document.addEventListener("click", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); triggerSprinkler(); }
     });
   }
-  // Shared "pillow" close button for the two hidden mini-games (invaders / flair-catch),
-  // which live in separate IIFEs — hence a window hook so both reach it. Drawn into each
-  // game's own topmost layer (which is pointer-events:none), so it sets pointer-events:auto
-  // to stay clickable; position is a static transform attr with no CSS transform animation
-  // (that would clobber it). Language-neutral × like the rest of the HUD.
-  window.__makeGameClosePillow = function (layer, onClose) {
+  // Shared close button for the two hidden mini-games (invaders / flair-catch), which live in
+  // separate IIFEs — hence a window hook so both reach it. Modeled on the monitor apps' close
+  // button: a grey rounded pill with a gloss and an ink ×, darkening on hover via .seg-hover.
+  // Drawn into each game's own topmost layer (pointer-events:none), so it sets pointer-events:auto;
+  // static transform attr (a CSS transform animation would clobber it). Language-neutral, like the HUD.
+  window.__makeGameCloseBtn = function (layer, onClose) {
     if (!layer) return null;
     var g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.setAttribute("class", "game-close-btn");
     g.setAttribute("pointer-events", "auto");
     g.setAttribute("cursor", "pointer");
-    g.setAttribute("transform", "translate(640,27)"); // top-right of the 680×340 room
+    g.setAttribute("transform", "translate(646,26)"); // top-right of the 680×340 room
     g.innerHTML =
-      '<rect x="-24" y="-18" width="48" height="36" rx="13" fill="#f4efe6" stroke="#c68e95" stroke-width="2"/>' +
-      '<g fill="#d9a6a6"><circle cx="-16" cy="-10" r="1.5"/><circle cx="16" cy="-10" r="1.5"/><circle cx="-16" cy="10" r="1.5"/><circle cx="16" cy="10" r="1.5"/></g>' +
-      '<path d="M-7 -7 L7 7 M7 -7 L-7 7" fill="none" stroke="#8e3a4a" stroke-width="3" stroke-linecap="round"/>';
+      '<rect class="mini-hit" x="-20" y="-20" width="40" height="40" fill="#000" opacity="0"/>' +
+      '<rect x="-13" y="-13" width="26" height="26" rx="7" fill="#c8c2b4" stroke="#8a8272" stroke-width="1.2"/>' +
+      '<rect x="-11" y="-11.5" width="22" height="10" rx="5" fill="#ffffff" opacity="0.3"/>' +
+      '<rect class="seg-hover" x="-13" y="-13" width="26" height="26" rx="7" fill="#7c7466" opacity="0"/>' +
+      '<path d="M-5 -5 L5 5 M5 -5 L-5 5" fill="none" stroke="#453a31" stroke-width="2" stroke-linecap="round"/>';
     g.addEventListener("click", function (e) { e.stopPropagation(); onClose(); }); // don't bubble to a stage zoom-out
     layer.appendChild(g);
     return g;
@@ -18938,7 +18943,7 @@ document.addEventListener("click", function (e) {
       arcadeHudScore = arcadeHud.querySelector(".arcade-score");
       arcadeHudHigh = arcadeHud.querySelector(".arcade-high");
       arcadeUpdateHud();
-      window.__makeGameClosePillow(alienLayer, function () { stopArcade(); }); // top-right pillow → quit silently (also cleared on teardown)
+      window.__makeGameCloseBtn(alienLayer, function () { stopArcade(); }); // top-right close button → quit silently (also cleared on teardown)
     }
     function arcadeUpdateHud() {
       if (!arcadeHud) return;
@@ -21026,7 +21031,7 @@ document.addEventListener("click", function (e) {
     var BARTENDER_Y_OFFSET = 0;                        // no vertical shift; he stays on his baseline
     var barOffsetX = 0;
     var barDragging = false, barDragStartX = 0, barDragStartOffset = 0, barDragMoved = false;
-    var barDragTravel = 0, barPrevX = 0;
+    var barDragTravel = 0, barPrevX = 0, barFastTravel = 0, barPrevT = 0;
     function bartenderSvgX(e) { // clientX → strip-SVG coords (own copy; chair's pointerSvgX is out of scope here)
       var svg = document.getElementById("loft-game-strip");
       var pt = svg.createSVGPoint();
@@ -21056,7 +21061,9 @@ document.addEventListener("click", function (e) {
         barDragStartX = bartenderSvgX(e);
         barDragStartOffset = barOffsetX;
         barDragTravel = 0;
+        barFastTravel = 0;
         barPrevX = barDragStartX;
+        barPrevT = e.timeStamp;
         bartender.style.transition = "none"; // track the pointer instantly (no glide) while dragging
         bartenderHit.classList.add("grabbing");
         try { bartenderHit.setPointerCapture(e.pointerId); } catch (err) {}
@@ -21066,12 +21073,17 @@ document.addEventListener("click", function (e) {
         var px = bartenderSvgX(e);
         var dx = px - barDragStartX;
         if (Math.abs(dx) > 2) { barDragMoved = true; if (window.__retireHint) window.__retireHint("hint_barman"); } // loose-brick hint: retire once the barman's been dragged
-        barDragTravel += Math.abs(px - barPrevX); // cumulative travel — clean signal for a future bar shooter
+        var stepDist = Math.abs(px - barPrevX);
+        barDragTravel += stepDist; // cumulative travel — clean signal for a future bar shooter
+        // Flair-Catch arms on a QUICK shuffle, not slow repositioning: only fast-moving travel
+        // accrues toward the (small) arm threshold; a leisurely drag bleeds it back off, so the
+        // bartender can still be walked along the bar without tripping the game. (declared below)
+        var moveT = e.timeStamp, moveDt = Math.max(1, moveT - barPrevT);
+        if (stepDist / moveDt > FLAIR_ARM_SPEED) barFastTravel += stepDist; else barFastTravel *= 0.55;
+        barPrevT = moveT;
         barPrevX = px;
         setBartenderOffset(barDragStartOffset + dx);
-        // arm Flair-Catch once the drag is a genuine back-and-forth shuffle (not a nudge or a
-        // tap-to-toss). flairActive / FLAIR_THRESHOLD / startFlairCatch are declared just below.
-        if (!flairActive && barDragTravel > FLAIR_THRESHOLD && !flairReduce &&
+        if (!flairActive && barFastTravel > FLAIR_ARM_TRAVEL && !flairReduce &&
             barUpNow() && window.currentStageName === "kitchen") startFlairCatch();
       });
       function onBartenderPointerUp(e) {
@@ -21112,9 +21124,10 @@ document.addEventListener("click", function (e) {
     });
 
     /* ==== Flair-Catch — hidden bar mini-game ===============================
-       Drag the bartender back and forth along the bar and, once the drag racks up
-       more than a nudge of cumulative travel (FLAIR_THRESHOLD — a genuine shuffle,
-       not a tap-toss), the room dims to a spotlight and bar items rain down: limes,
+       Give the bartender a quick back-and-forth shuffle along the bar and, once the
+       FAST-moving travel racks up past a small threshold (FLAIR_ARM_TRAVEL — a brisk
+       shuffle, not a slow walk-around or a tap-toss), the room dims to a spotlight and
+       bar items rain down: limes,
        ice cubes, bottles, olives, cherries, citrus wedges (plus a rare wasp you must
        NOT catch). Line the cocktail-shaker's mouth up under a falling good item to
        catch it (score++, a clink); let one hit the bar and it's a miss; catch the
@@ -21135,7 +21148,7 @@ document.addEventListener("click", function (e) {
     var stageKitchen = document.getElementById("stage-kitchen");
     var flairLayer = document.getElementById("kitchen-flair-layer");
     var flairReduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-    var FLAIR_THRESHOLD = 55;    // px cumulative drag travel before the game arms (a real shuffle, not a nudge)
+    var FLAIR_ARM_TRAVEL = 30, FLAIR_ARM_SPEED = 0.3; // arm on ~30px of FAST (>0.3 px/ms) shuffle travel — a small quick drag, while a slow move-around never accrues
     var FLAIR_SPAWN_MIN_X = 104, FLAIR_SPAWN_MAX_X = 540; // within the shaker's reach (mouth x in [96,546])
     var FLAIR_START_Y = 34;      // items drop from just under the top of the room
     var FLAIR_CATCH_Y = 180;     // the shaker's mouth (stage-local y); catch band is +/- FLAIR_CATCH_RY
@@ -21184,7 +21197,7 @@ document.addEventListener("click", function (e) {
       flairHudHigh = flairHud.querySelector(".flair-high");
       flairHudLives = flairHud.querySelectorAll(".flair-life");
       flairUpdateHud();
-      window.__makeGameClosePillow(flairLayer, function () { stopFlairCatch(); }); // top-right pillow → quit silently (also cleared on teardown)
+      window.__makeGameCloseBtn(flairLayer, function () { stopFlairCatch(); }); // top-right close button → quit silently (also cleared on teardown)
     }
     function flairUpdateHud() {
       if (!flairHud) return;

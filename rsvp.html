@@ -21304,20 +21304,32 @@ document.addEventListener("click", function (e) {
   };
 })();
 (function () {
-  // Click the DJ's head for an emphatic one-shot headbang on top of his ambient nod. The bang
+  // Click the DJ for an emphatic one-shot headbang plus a scratch on the decks. The bang
   // lives on #garden-dj-headbang — a node DISTINCT from the infinitely-nodding #garden-dj-nod, so
   // the one-shot doesn't lose the cascade to it. Re-triggerable: the class clears on animationend
   // and re-adds across a double rAF, so repeated taps replay it. No a11y attrs — aria-hidden djbooth.
+  // Both DJs (A beanie / B afro) hang off this one wrapper and swap by display, so a click always
+  // lands on whoever is actually in the booth; the scratch arm is shared and outside the swap.
   var head = document.getElementById("garden-dj-headbang");
   if (!head) return;
+  // Rapid taps: ignore one that lands while the pair is still running, so the scratch sounds can't
+  // overlap into mush. Timed, not class-based — under reduced motion the one-shots never fire an
+  // animationend, so a class flag would latch on forever and kill the click for good.
+  var BUSY_MS = 620; // the longer of the two one-shots (dj-scratch .62s, dj-headbang .55s)
+  var lastNudge = 0;
   head.addEventListener("animationend", function () { head.classList.remove("bang"); });
   head.addEventListener("click", function (e) {
     if (e) e.stopPropagation();
     if (!window.__gardenPartyOn) return; // only while the booth is lit (and clickable)
+    var now = Date.now();
+    if (now - lastNudge < BUSY_MS) return;
+    lastNudge = now;
     head.classList.remove("bang");
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { head.classList.add("bang"); });
     });
+    // one shared scratch path: the same function the autonomous timer fires, minus the focus gate
+    if (window.__djScratchNow) window.__djScratchNow(true);
   });
   // Double-click the DJ to kill the party — the counterpart to the mirror/mask dblclick that
   // starts it. The dblclick also fires two clicks first (a headbang on the way out is fine);
@@ -21366,9 +21378,10 @@ document.addEventListener("click", function (e) {
     return window.__gardenPartyOn && gs.classList.contains("garden-party") &&
       !document.hidden && document.hasFocus() && !reduce();
   }
-  function scratch() {
+  function scratch(userInitiated) {
     if (!window.__gardenPartyOn || window.currentStageName !== "garden") return; // not in the room / party died since arming
-    if (document.hidden || !document.hasFocus()) return; // autonomous sound: visibility alone isn't enough
+    // A click implies focus; the autonomous timer has no such promise, so it takes the crickets gate.
+    if (!userInitiated && (document.hidden || !document.hasFocus())) return;
     hand.classList.remove("scratching");
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { hand.classList.add("scratching"); });
@@ -21390,7 +21403,7 @@ document.addEventListener("click", function (e) {
   }
   function update() { if (armed()) start(); else stop(); }
   window.__updateDjScratch = update;
-  window.__djScratchNow = scratch; // test/debug hook: force one now
+  window.__djScratchNow = scratch; // the DJ-head click calls this (with userInitiated) so there's one scratch path, not two
   document.addEventListener("visibilitychange", update);
   window.addEventListener("focus", update);
   window.addEventListener("blur", update);

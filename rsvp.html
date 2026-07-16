@@ -29026,13 +29026,28 @@ async def localfont(name):
   }
   window.__fadeSongTo = fadeSongTo; // shared with the cinematic's song switch
   // Poking an instrument in passing is a light gesture, so it gets a taste, not the whole song:
-  // the tap arms this timer, which fades the song out and pauses it AT POSITION for a resume.
+  // the tap arms a timer that fades the song out and pauses it AT POSITION for a resume.
   // Opt-IN — only the tap arms, so every other play path plays in full with no exception.
-  var SNIPPET_MS = 30000;
+  // The fade lands on a musical seam, so the points below are POSITIONS IN THE SONG (seconds),
+  // not time since the tap — a tap resumes from wherever the song was, and the seam doesn't move.
+  var SONG_FADE_AT = {
+    "guitar-song-audio": [50]  // I Need You — Dan Bern
+  };
+  var SNIPPET_MS = 30000; // fallback for a song with no seam mapped yet
+  var SNIPPET_FADE_MS = 1200; // longer than a UI fade: this one is heard as part of the music
   var snippetTimer = null, snippetAudio = null;
   function clearSongSnippet() {
     if (snippetTimer) { clearTimeout(snippetTimer); snippetTimer = null; }
     snippetAudio = null;
+  }
+  // ms until this song's next seam, or the flat fallback if it has none / is already past the last
+  function snippetDelay(a) {
+    var seams = SONG_FADE_AT[a.id];
+    if (!seams) return SNIPPET_MS;
+    for (var i = 0; i < seams.length; i++) {
+      if (seams[i] > a.currentTime) return (seams[i] - a.currentTime) * 1000;
+    }
+    return SNIPPET_MS;
   }
   function armSongSnippet(a) {
     clearSongSnippet();
@@ -29043,8 +29058,8 @@ async def localfont(name):
       if (snippetAudio !== a || a.paused) { snippetAudio = null; return; }
       snippetAudio = null; // cleared before the fade so its own pause event can't re-enter
       var appVol = window.__songVolume ? window.__songVolume() : 0.5;
-      fadeSongTo(a, 0, 700, function () { try { a.pause(); setSongLevel(a, appVol); } catch (e) {} }); // fade, then pause + restore its level for the resume
-    }, SNIPPET_MS);
+      fadeSongTo(a, 0, SNIPPET_FADE_MS, function () { try { a.pause(); setSongLevel(a, appVol); } catch (e) {} }); // fade, then pause + restore its level for the resume
+    }, snippetDelay(a));
   }
   window.__armSongSnippet = armSongSnippet;   // the garden instrument handler lives in another IIFE
   window.__clearSongSnippet = clearSongSnippet; // ...as does resetHunt

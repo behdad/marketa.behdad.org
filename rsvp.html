@@ -13000,6 +13000,7 @@ var T = {
       cine_song: "Then their song comes on…",
       cine_bloom: "…and the garden blooms.",
       cine_sway: "They sway together.",
+      cine_fart: "A cheeky little toot escapes…",
       cine_office: "Into the office…",
       cine_boot: "He wakes the old tower.",
       cine_mail: "An RSVP in the inbox…",
@@ -13017,9 +13018,11 @@ var T = {
       cine_dj: "The DJ can't help himself.",
       cine_djswap: "Two DJs, trading off.",
       cine_photo: "A flash for the album…",
+      cine_officeparty: "Even the office joins in — the gold skull dances.",
       cine_bar: "And the kitchen's a cocktail bar…",
       cine_flair: "The bartender flips his shaker…",
-      cine_patrons: "The tipsy regulars hiccup.",
+      cine_menu: "The menu conjures up the drinks list…",
+      cine_kiss: "The regulars lean in for a kiss.",
       cine_flairgame: "Catch the garnishes — mind the wasp!",
       cine_dance: "…and the beat rolls on.",
       cine_encore_end: "And that's their day. Again tomorrow…"
@@ -13427,6 +13430,7 @@ var T = {
       cine_song: "A pak zazní jejich píseň…",
       cine_bloom: "…a zahrada rozkvete.",
       cine_sway: "Kolébají se spolu.",
+      cine_fart: "Uklouzne malé rozpustilé prdnutí…",
       cine_office: "Do pracovny…",
       cine_boot: "Probudí starou věž.",
       cine_mail: "RSVP ve schránce…",
@@ -13444,9 +13448,11 @@ var T = {
       cine_dj: "DJ se neudrží.",
       cine_djswap: "Dva DJové se střídají.",
       cine_photo: "Blesk do alba…",
+      cine_officeparty: "I pracovna se přidá — zlatá lebka tančí.",
       cine_bar: "A z kuchyně je koktejlový bar…",
       cine_flair: "Barman roztočí šejkr…",
-      cine_patrons: "Podnapilí štamgasti škytají.",
+      cine_menu: "Menu vykouzlí seznam nápojů…",
+      cine_kiss: "Štamgasti se k sobě naklánějí k polibku.",
       cine_flairgame: "Chytej ozdoby — pozor na vosu!",
       cine_dance: "…a rytmus jede dál.",
       cine_encore_end: "A to je jejich den. Zítra zas…"
@@ -20691,6 +20697,12 @@ document.addEventListener("click", function (e) {
     }
     window.__resetBarPatrons = resetPatrons;
     window.__resetStools = function () { ORDER.forEach(function (id) { var el = document.getElementById(id); if (el) el.style.translate = ""; }); resetPatrons(); };
+    // cinematic showcase: slide patron-b's stool up against patron-a's (within the kiss threshold),
+    // then kiss — the tour can't drag, so it stages the lean-in itself. Returns true if they kissed.
+    window.__cineBarKiss = function () {
+      setStool("kitchen-bar-stool-3", effX("kitchen-bar-stool-1") + (KISS_ENTER - 8));
+      return !!(window.__barPatronKiss && window.__barPatronKiss());
+    };
   })();
   // the MENU paper tacked to the pillar → summons the pocket-phone cocktails app to its drink menu,
   // opened IN-PLACE at the bar (no room jump). CSS gates pointer-events to the bar being up, so this
@@ -44650,19 +44662,6 @@ function spawnDustMote(container) {
     }
     el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
   }
-  // Same as cineClick but fires a dblclick — for the encore's DJ A↔B swap, whose handler
-  // listens for dblclick (a lone dblclick doesn't fire the click headbang, so the swap lands
-  // clean). Synthetic + untrusted, so it passes the show's scene-input swallower like cineClick.
-  function cineDblClick(id) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    if (window.__cinematic) {
-      var p = cursorPointFor(id);
-      if (p) { cursorPlace(p.x, p.y); cursorRipple(p.x, p.y); }
-    }
-    el.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
-  }
-
   // ── scriptable ghost cursor (console) ──
   // cursorTo/ghostClick/cursorHide expose the show's visible pointer to scripts. They lean on
   // the same IIFE-local machinery the cinematic uses (cursorPointFor/ensureCursor/cursorPlace/
@@ -44986,6 +44985,7 @@ function spawnDustMote(container) {
       // CUDDLY — the couple sway to the song; play with Octi, then an evening at the projector
       tapAt(2100, "cuddly-octopus"),                     // Octi wobbles
       tapAt(1900, "cuddly-pillow-1"),                    // squish a pillow
+      tapAt(1700, "cuddly-behdad-leg-hit"), [0, cine("cine_fart")], // a cheeky toot — whimsy before the romance
       // the wallscreen projector: switch it to the night-sky channel — a public-domain piano
       // piece begins (the now-playing toast names it), the couple sway on beneath the stars,
       // and Irene's cameo is in frame for the linger. It's a whole-loft music channel, so it
@@ -45129,16 +45129,23 @@ function spawnDustMote(container) {
       [500, function () { if (window.__setGardenParty) window.__setGardenParty(true, false); }], [0, cine("cine_party")],
       // the party's new toys, driven by hand so the viewer sees each one land. The two
       // booth beats are grouped so the cursor stays at the decks: first an emphatic
-      // headbang, then a dblclick swaps who's spinning (A beanie ↔ B afro — the couple's
-      // DJ friend), so both DJs are seen. Then the cursor glides far-left to the
-      // photographer for a shutter-and-flash, and a manual skip drops the NEXT groove under
-      // the fresh DJ (the now-playing toast names each dance; the dancers glow neon through
-      // the encore's blacklight).
+      // headbang, then the OTHER DJ takes over (A beanie ↔ B afro — the couple's DJ
+      // friend), so both are seen. The swap goes through window.dj() (flag flip + booth
+      // reflect), NOT a dblclick — dblclicking the DJ now STOPS the party. Then the cursor
+      // glides far-left to the photographer for a shutter-and-flash, and a manual skip drops
+      // the NEXT groove (now-playing toast names each dance; dancers glow neon through the UV).
       [2400, function () { cineClick("garden-dj-headbang"); }], [0, cine("cine_dj")],
-      [2000, function () { cineDblClick("garden-dj-headbang"); }], [0, cine("cine_djswap")],
+      [2000, function () { if (window.dj) { var d = window.dj(); window.dj(d && d.name === "danesh" ? "amir" : "danesh"); } }], [0, cine("cine_djswap")],
       [1600, function () { cursorGlideTo("garden-photog-hit", 450); }], // glide to the far-left photographer
       [500, function () { cineClick("garden-photog-hit"); }], [0, cine("cine_photo")],
       [2000, function () { if (window.__nextPartyDance) window.__nextPartyDance(); }], [0, cine("cine_dance")],
+      // the party isn't only the garden — swing through the office on the way home to catch
+      // the after-hours desk joining in: the gold skull nods AND breaks into its full dance,
+      // the wooden head bobs, all glowing under the encore's blacklight. Their .grooving was
+      // set at party-start and rides across the cut (office entry doesn't re-run the sync);
+      // the skull's ~5s dance timer has long since fired, so it's dancing on arrival.
+      [2200, visit("office")], [0, cine("cine_officeparty")],
+      [2600, function () {}],                             // linger on the dancing desk
       // the highlight, folded into the curtain call: the kitchen where the day began is a
       // cocktail BAR while the party's lit (party-on gates the whole bar), so the trip home
       // shows it off in full — the bartender's flair, the tipsy regulars, and the Flair-Catch
@@ -45150,9 +45157,15 @@ function spawnDustMote(container) {
       // the bartender's flourish: glide to his hit rect and tap — the shaker tosses + rattles
       [1500, function () { cursorGlideTo("kitchen-bartender-hit", 450); }],
       [500, function () { cineClick("kitchen-bartender-hit"); }], [0, cine("cine_flair")],
-      // the two tipsy regulars on the left stools: a tap jolts patron A into a hiccup
-      [1500, function () { cursorGlideTo("kitchen-bar-patron-a", 450); }],
-      [500, function () { cineClick("kitchen-bar-patron-a"); }], [0, cine("cine_patrons")],
+      // the paper MENU on the pillar: a tap wobbles it and summons the pocket-phone cocktails
+      // app IN PLACE (no room jump) to the drink list — hold on it, then stow the phone away
+      [1500, function () { cursorGlideTo("kitchen-bar-menu", 450); }],
+      [500, function () { cineClick("kitchen-bar-menu"); }], [0, cine("cine_menu")],
+      [2600, cinePhoneClose],
+      // the two tipsy regulars on the left stools: slide them together and they lean in for a
+      // kiss (a 💋 floats up) — __cineBarKiss stages the lean-in the tour can't drag by hand
+      [1400, function () { cursorGlideTo("kitchen-bar-patron-a", 450); }],
+      [500, function () { if (window.__cineBarKiss) window.__cineBarKiss(); }], [0, cine("cine_kiss")],
       // Flair-Catch: the mini-game arms, the room dims to a spotlight, garnishes rain down and
       // are auto-caught (a streak lands the gold-shockwave reward). Cursor hidden — the shaker
       // is the paddle, driven by the autopilot hook, which stands the game down + restores the high.

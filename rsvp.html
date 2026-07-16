@@ -8534,7 +8534,7 @@ section{margin:1.9rem 0}
 </g>
 <rect x="236" y="251" width="124" height="15" rx="7.5" fill="#a9c3de" stroke="#7f9ec0" stroke-width="1.5" transform="rotate(2 298 258)"/>
 <rect x="236" y="264" width="112" height="14" rx="7" fill="#a9c3de" stroke="#7f9ec0" stroke-width="1.5" transform="rotate(-2 292 271)"/>
-<rect id="cuddly-marketa-leg-hit" x="298" y="248" width="40" height="34" fill="transparent" style="cursor:pointer"/>
+<rect id="cuddly-marketa-leg-hit" x="258" y="248" width="40" height="34" fill="transparent" style="cursor:pointer"/>
 <g id="cuddly-marketa-foot-1" class="hunt-hit" tabindex="0" role="button" aria-label="Markéta's foot">
 <rect x="352" y="246" width="26" height="19" fill="transparent"/>
 <rect x="354" y="248" width="22" height="15" rx="7" fill="#f4f0e4" stroke="#d8cfbc" stroke-width="1"/>
@@ -14620,12 +14620,17 @@ function dismissEggBubble(b) {
 // mouseenter — some anchors (Fishu's ambient drift) keep moving under their own CSS
 // animation for as long as the tooltip stays open, and a one-time position read goes
 // visibly stale mid-hover otherwise.
-function hoverTooltip(el, html, placement, yOffset, xOffset) {
+// posEl (optional) is what the bubble points AT, when that differs from what you hover: an anchor
+// whose bbox is lopsided by an outstretched limb centres the bubble away from the thing it names
+// (Behdad's arm reaches around Markéta, dragging his group bbox ~28u right of his head). Unlike an
+// xOffset nudge, a second anchor stays correct at every render scale.
+function hoverTooltip(el, html, placement, yOffset, xOffset, posEl) {
   if (!el) return;
   var bubble = null, followRaf = null, showTimer = null;
+  var at = posEl || el;
   function follow() {
     if (!bubble) return;
-    positionEggBubble(bubble, el, placement, yOffset, xOffset);
+    positionEggBubble(bubble, at, placement, yOffset, xOffset);
     followRaf = requestAnimationFrame(follow);
   }
   function clearTip() {
@@ -14638,7 +14643,7 @@ function hoverTooltip(el, html, placement, yOffset, xOffset) {
     // a short dwell before showing, so tooltips don't pop the instant the cursor grazes past
     showTimer = setTimeout(function () {
       showTimer = null;
-      bubble = eggBubble(el, html, placement, yOffset, xOffset);
+      bubble = eggBubble(at, html, placement, yOffset, xOffset);
       followRaf = requestAnimationFrame(follow);
     }, 450);
   });
@@ -20145,12 +20150,18 @@ document.addEventListener("click", function (e) {
   }
 })();
 (function () {
-  // The cuddly cast name themselves on hover, same as Octi and Fishu. Their own names ride the
-  // site's lowercase wordmark convention; Irene is a plain proper name. Irene's group is
-  // pointer-events:none until she's .showing, so her tooltip can only surface while she's there.
-  hoverTooltip(document.getElementById("cuddly-behdad"), "<em>behdad</em>", "top");
+  // The cast name themselves on hover, same as Octi and Fishu — italic marks a proper name (the
+  // roman labels next door name generic objects: Tamper, Knock box). The couple ride the site's
+  // lowercase wordmark convention; the friends are plain proper names. Each is gated by its own
+  // scene's pointer-events, so a name only surfaces while that character is actually present:
+  // Irene until she's .showing, Pouria until the bar is up, the DJs until the party is lit (and
+  // only whichever of the two is currently spinning — the other is display:none).
+  hoverTooltip(document.getElementById("cuddly-behdad"), "<em>behdad</em>", "top", 12, 0, document.getElementById("cuddly-behdad-head")); // +y: his head rides ~10u higher than hers, so match her sit
   hoverTooltip(document.getElementById("cuddly-marketa"), "<em>markéta</em>", "top");
   hoverTooltip(document.getElementById("cuddly-irene"), "<em>Irene</em>", "top");
+  hoverTooltip(document.getElementById("kitchen-bartender-hit"), "<em>Pouria</em>", "top");
+  hoverTooltip(document.getElementById("garden-dj-a"), "<em>DJ Amir</em>", "top");
+  hoverTooltip(document.getElementById("garden-dj-b"), "<em>DJ Danesh</em>", "top");
 })();
 (function () {
   var octopus = document.getElementById("cuddly-octopus");

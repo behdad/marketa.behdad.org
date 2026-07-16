@@ -9673,7 +9673,10 @@ section{margin:1.9rem 0}
 </g>
 <!-- holiday tree: a small three-tier fir on the floor under the stained-glass window,
      in a wine pot, with staggered warm bulbs. Season-gated, decorative only. -->
-<g id="office-tree" class="sn-holiday" aria-hidden="true" pointer-events="none">
+<!-- grown 1.4x about its own base (558,300) so it stays planted on the floor rather than
+     scaling away from the SVG origin, then nudged 50px right. Only its bulbs animate, and
+     on opacity, so nothing can clobber this static transform. -->
+<g id="office-tree" class="sn-holiday" aria-hidden="true" pointer-events="none" transform="translate(608,300) scale(1.4) translate(-558,-300)">
 <ellipse cx="558" cy="303" rx="30" ry="4.5" fill="#8a5a28" opacity="0.18"/>
 <rect x="554" y="284" width="8" height="10" fill="#7a5638"/>
 <path d="M558 258 L530 288 Q558 292 586 288 Z" fill="#3f6f4a"/>
@@ -36252,8 +36255,11 @@ function spawnCrystalSparkle() {
     balcony: { box: [430, 20, 160, 78], s: 1.0 },  // x,y,w,h of the burst zone
     garden: { box: [150, 34, 320, 60], s: 0.55 }
   };
+  // The sky celebrates on a wedding day / anniversary, or at the turn of the year (Dec 24 – Jan 1).
+  // Every volley re-checks this, so it has to agree with the entry gate — hence one predicate.
+  function fwSeason() { return !!(window.__isWeddingDay || (window.__isNewYearSky && window.__isNewYearSky())); }
   function fwActive() {
-    return !!(window.__isWeddingDay && fwHost && fwHost.isConnected &&
+    return !!(fwSeason() && fwHost && fwHost.isConnected &&
       (fwRoom === "balcony" || fwRoom === "garden") && window.currentStageName === fwRoom);
   }
   function clearParticles(host) {
@@ -36289,8 +36295,7 @@ function spawnCrystalSparkle() {
   // called from goToStage on every room change (and on hashchange for #date preview)
   window.__updateSkyFireworks = function (room) {
     fwStop();
-    // a wedding day / anniversary — or the turn of the year (Dec 24 – Jan 1), same Edmonton sky
-    if (!window.__isWeddingDay && !(window.__isNewYearSky && window.__isNewYearSky())) return;
+    if (!fwSeason()) return; // same predicate every volley re-checks — they can't disagree
     if (room === "balcony") { fwHost = document.getElementById("balcony-fireworks"); fwRoom = "balcony"; }
     else if (room === "garden") { fwHost = document.getElementById("garden-skyfx"); fwRoom = "garden"; }
     else return;

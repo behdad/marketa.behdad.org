@@ -4987,6 +4987,8 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 #balcony-stars{transition:opacity 1.2s ease}
 #stage-balcony.dusk #balcony-stars{opacity:0.95}
 #stage-balcony.dusk #balcony-skyclick{cursor:pointer}
+/* canada day: the daytime sky is tappable too (it calls in the flypast), so it earns the same hint */
+#loft-game-strip.season-canada #stage-balcony:not(.dusk) #balcony-skyclick{cursor:pointer}
 /* the garden goes to night too: window sky darkens, a dusk tint falls, birds rest */
 #garden-dusk{transition:opacity .9s ease}
 #stage-garden.dusk #garden-dusk{opacity:0.32}
@@ -33791,11 +33793,17 @@ async def localfont(name):
       if (window.__updateMozzies) window.__updateMozzies(); // dusk removed → tear the swarm down
       if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // day forced back → retract any disco-ball peek
     };
-    // click the night sky (not the moon) to wish on a shooting star
+    // click the night sky (not the moon) to wish on a shooting star; by day on Canada Day the
+    // same rect calls in the Hornets instead — the two are dusk-exclusive, so neither shadows
+    // the other, and off-season the daytime sky stays inert
     var skyClick = document.getElementById("balcony-skyclick");
     if (skyClick) {
       skyClick.addEventListener("click", function () {
-        if (stageBalcony.classList.contains("dusk") && !window.__balconyStorm) spawnShootingStar();
+        if (stageBalcony.classList.contains("dusk")) {
+          if (!window.__balconyStorm) spawnShootingStar();
+        } else if (typeof scheduleFlypastFromTap === "function") {
+          scheduleFlypastFromTap("balcony");
+        }
       });
     }
   }
@@ -35277,9 +35285,15 @@ async def localfont(name):
       if (id.indexOf("garden-window") === 0 && typeof spawnGardenPlane === "function") {
         var gs = document.getElementById("stage-garden");
         if (gs && !gs.classList.contains("dusk")) {
-          setTimeout(function () {
-            if (!gs.classList.contains("dusk") && document.visibilityState !== "hidden") spawnGardenPlane();
-          }, 2200 + Math.random() * 2400);
+          // on Canada Day the sky pane calls the Hornets in instead, so one tap stays one aircraft
+          if (id === "garden-window-pane-0" && typeof scheduleFlypastFromTap === "function" &&
+              window.__isCanadaDaySky && window.__isCanadaDaySky()) {
+            scheduleFlypastFromTap("garden");
+          } else {
+            setTimeout(function () {
+              if (!gs.classList.contains("dusk") && document.visibilityState !== "hidden") spawnGardenPlane();
+            }, 2200 + Math.random() * 2400);
+          }
         }
       }
     }
@@ -36799,6 +36813,28 @@ function spawnFlypast(room) {
     setTimeout(done, dur + 400);
   }
   playJetPassSound(room, dur);
+}
+// Canada Day: tapping the sky CALLS THE JETS IN rather than conjuring them overhead — they
+// arrive from off-scene a beat later, reusing the summon idiom (and delay range) the garden
+// pane already uses for the airliner. Every gate is re-read on arrival, never trusted from
+// the tap: the delay is long enough for the sun toggle, the 's' season preview or a room
+// change to invalidate it.
+function scheduleFlypastFromTap(room) {
+  if (!FLYPAST[room]) return;
+  if (window.__flypastPending || window.__flypastBusy) return; // hammering the sky calls in one formation, not a queue
+  if (!(window.__isCanadaDaySky && window.__isCanadaDaySky())) return;
+  var stage = document.getElementById("stage-" + room);
+  if (!stage || stage.classList.contains("dusk")) return;
+  window.__flypastPending = true;
+  setTimeout(function () {
+    window.__flypastPending = false; // cleared FIRST: a gate failing below must not wedge the sky inert
+    var st = document.getElementById("stage-" + room);
+    if (!st || st.classList.contains("dusk")) return;
+    if (window.currentStageName !== room) return; // walked to another room inside the delay
+    if (!(window.__isCanadaDaySky && window.__isCanadaDaySky())) return;
+    if (document.visibilityState === "hidden") return;
+    spawnFlypast(room);
+  }, 2200 + Math.random() * 2400);
 }
 // At the moment of TOTAL eclipse: a burst of hearts explodes around the moon with
 // a tinkle of sparkles on the corona — a nod to a proposal under the 2017 totality.

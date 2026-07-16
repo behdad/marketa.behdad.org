@@ -13109,7 +13109,7 @@ var T = {
     laptop_sweet2: "the rest of",
     laptop_sweet3: "our lives ♥",
     hunt: {
-      intro: "The art of aimless wandering",
+      intro: "Welcome to the art of aimless wandering.",
       clickme: "CLICK ME!", // the melting Climate-Crisis invitation overlaid on the scene during the intro prompt (uppercase keeps the font subset small)
       df_doom_quip: "kill -9 — flawless victory.", // caption under the on-screen FATALITY melt (DOOM kill)
       df_linux_q1: "First they ignore you…", // BSOD caption beat 1 (Linux kill)
@@ -13540,7 +13540,7 @@ var T = {
     laptop_sweet2: "zbytek našich",
     laptop_sweet3: "životů ♥",
     hunt: {
-      intro: "Umění bezcílného toulání",
+      intro: "Vítejte v umění bezcílného toulání.",
       clickme: "KLIKNI!", // ASCII-only (no Ě) so it reuses the same small Climate-Crisis subset as CLICK ME!
       df_doom_quip: "kill -9 — dokonalé vítězství.", // caption under the on-screen FATALITY melt (DOOM kill)
       df_linux_q1: "Nejdřív si tě nevšímají…", // BSOD caption beat 1 (Linux kill)
@@ -28070,8 +28070,20 @@ async def localfont(name):
     } else {
       // resume every held source whose gate still holds; skip (and drop) ones that vanished
       var resumed = false;
+      // The day's guitar/uke song may play alongside whole-loft music (projector melody
+      // channel or garden party) — you can start it from the monitor player or by tapping a
+      // guitar. But that whole-loft music is the foreground: if any non-song source is coming
+      // back on this unpause, don't also revive a held song (else piano-then-space resurrected
+      // both — the guitar tagged along). A song alone still resumes normally.
+      var songId = {};
+      songAudios.forEach(function (a) { if (a) songId[a.id] = 1; });
+      var wholeLoftResuming = sources.some(function (s) {
+        return transportHeld.indexOf(s.id) >= 0 && !songId[s.id] && s.valid();
+      });
       sources.forEach(function (s) {
-        if (transportHeld.indexOf(s.id) >= 0 && s.valid() && s.resume()) resumed = true;
+        if (transportHeld.indexOf(s.id) < 0) return;
+        if (songId[s.id] && wholeLoftResuming) return; // whole-loft music takes the foreground; leave the song behind
+        if (s.valid() && s.resume()) resumed = true;
       });
       window.__musicPaused = false;
       transportHeld = [];

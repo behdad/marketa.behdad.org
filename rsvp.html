@@ -1923,11 +1923,11 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    the label in this span and nudging it down a hair lands the ink on the optical centre.
    em-based, so the correction scales with the monitor's zoom on every device. Also carries
    the emoji+text pair (💌 Share) so both ride the same centre line. */
-.btn-vc{display:inline-flex; align-items:center; gap:0.8px; line-height:1; transform:translateY(0.07em)}
+.btn-vc{display:inline-flex; align-items:center; gap:0.8px; line-height:1; margin-top:0.14em} /* asymmetric margin (net +0.07em under a center-aligned flex parent) instead of a translateY transform — a transform is a RenderLayer that vanishes under the monitor's scaled foreignObject (WebKit bug 23113) */
 /* mail-pill labels are pure cap-height words in a tight line-height:1 box, so the ascenders
    overflow upward and the small shared .btn-vc nudge leaves them riding high (glaring at the
    monitor's desktop zoom, invisible at mobile scale) — center the ink box for these two */
-.mail-compose-btn .btn-vc, .mail-reply-btn .btn-vc{transform:translateY(0.3em)}
+.mail-compose-btn .btn-vc, .mail-reply-btn .btn-vc{margin-top:0.6em} /* net +0.3em, see .btn-vc */
 .mail-back{cursor:pointer}
 .mail-back:hover{background:#604681}
 .mail-list{flex:1; overflow-y:auto; scrollbar-width:none}
@@ -2238,7 +2238,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    tabs squeeze chrome-style — labels ellipsize — so a full strip still fits */
 .browser-tabs{flex:none; display:flex; align-items:flex-end; gap:0.8px; height:6px; padding:0 8px 0 3px; box-sizing:border-box}
 .browser-tab{flex:0 4 auto; min-width:0; display:flex; align-items:center; gap:0.9px; padding:0.7px 2.6px 0.9px; border-radius:2px 2px 0 0; background:#c8c1b2; color:#5d5347; font-family:sans-serif; font-size:2.3px; line-height:1.15; letter-spacing:0.1px; cursor:pointer} /* line-height kept near 1: a tall 1.4 line box rode the label high in the tab */
-.browser-tab > span:first-of-type{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; transform:translateY(0.07em)} /* optical nudge — same downward correction as .btn-vc, applied here so the label stays a plain (ellipsis-capable) flex item; line-height was also cut to 1.15 above */
+.browser-tab > span:first-of-type{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:0.14em} /* optical nudge via margin (net +0.07em), same as .btn-vc — a transform is a RenderLayer that vanishes under the monitor's scaled foreignObject (WebKit bug 23113); line-height cut to 1.15 above */
 .tab-fav{flex:none; width:2.8px; height:2.8px; display:block}
 .browser-tab:hover{background:#d2ccbd}
 .browser-tab.active{background:#fffdf8; color:#453a31}
@@ -2255,16 +2255,17 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 @keyframes browser-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-0.8px)}75%{transform:translateX(0.8px)}}
 .tab-x{flex:none; margin-left:0.5px; padding:0.4px 0.6px; font-size:2.4px; line-height:1; color:#8d8172; border-radius:1px}
 .tab-x:hover{color:#453a31; background:#e2dccd}
-.browser-page{position:relative; flex:1; min-height:0; background:#fffdf8}
-.browser-loading{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#a89a87; font-family:sans-serif; font-size:4.8px}
+.browser-page{flex:1; min-height:0; background:#fffdf8; display:grid} /* single-cell grid (was position:relative): overlays stack via grid-area with no RenderLayer, so they paint under the monitor's scaled foreignObject (WebKit bug 23113). The scaled iframe keeps its own positioning context in .browser-frame-holder — that holder is the one layer, isolating the (WebKit-unpaintable) iframe from the HTML overlays. */
+.browser-frame-holder{grid-area:1/1; position:relative; overflow:hidden}
+.browser-loading{grid-area:1/1; display:flex; align-items:center; justify-content:center; color:#a89a87; font-family:sans-serif; font-size:4.8px}
 /* framing-refused hint, dim like the loading line: only visitor-typed sites (.dyn) get
    it — X-Frame-Options blanks are common and silent */
-.browser-noframe{position:absolute; left:20px; right:20px; bottom:0.8px; z-index:3; display:none; text-align:center; color:#f4efe4; background:rgba(69,58,49,0.78); border-radius:1.6px; padding:0.6px 1.6px; font-family:sans-serif; font-size:2px; line-height:1.45; pointer-events:none; transition:opacity 1.2s ease}
+.browser-noframe{grid-area:1/1; align-self:end; justify-self:stretch; margin:0 20px 0.8px; display:none; text-align:center; color:#f4efe4; background:rgba(69,58,49,0.78); border-radius:1.6px; padding:0.6px 1.6px; font-family:sans-serif; font-size:2px; line-height:1.45; pointer-events:none; transition:opacity 1.2s ease}
 .browser-wrap.dyn .browser-noframe{display:block} /* floats OVER the iframe: a refused site paints its own opaque error page, which used to bury this exact explanation */
 .browser-wrap.dyn .browser-noframe.hint-done{opacity:0}
 /* new-tab address form: opaque over the page zone (and the loading lines) while the
    active visitor tab hasn't navigated yet */
-.browser-newtab{position:absolute; inset:0; z-index:1; display:none; align-items:center; justify-content:center; gap:2px; background:#fffdf8}
+.browser-newtab{grid-area:1/1; display:none; align-items:center; justify-content:center; gap:2px; background:#fffdf8}
 .browser-wrap.newtab .browser-newtab{display:flex}
 .url-wrap{flex:none; width:66px; height:6.2px}
 .browser-url-in{width:100%; height:100%; box-sizing:border-box; display:block; background:#f8f5ec; border:0.4px solid #d8d2c4; border-radius:2px; padding:0 2px; color:#453a31; font-family:sans-serif; font-size:2.5px; line-height:6.2px; outline:none} /* line-height = the field height so the single line centers and the native caret sizes to it */
@@ -10567,8 +10568,8 @@ section{margin:1.9rem 0}
 <div id="monitor-browser-tabs" class="browser-tabs"></div>
 <div class="browser-page">
 <div class="browser-loading" data-i="browser_loading">loading&#8230;</div>
+<div class="browser-frame-holder"><iframe id="monitor-browser-frame" class="browser-frame"></iframe></div>
 <div class="browser-noframe" data-i="browser_noframe">if it stays blank, that site refuses to live in a picture frame &#8212; most big ones do</div>
-<iframe id="monitor-browser-frame" class="browser-frame"></iframe>
 <div id="monitor-browser-newtab" class="browser-newtab">
 <div class="url-wrap">
 <input id="monitor-browser-url" class="browser-url-in" tabindex="-1" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="type a URL&#8230;" data-ph-i="browser_url_ph"/>

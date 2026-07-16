@@ -18787,11 +18787,41 @@ document.addEventListener("click", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); triggerSprinkler(); }
     });
   }
+  // Shared "pillow" close button for the two hidden mini-games (invaders / flair-catch),
+  // which live in separate IIFEs — hence a window hook so both reach it. Drawn into each
+  // game's own topmost layer (which is pointer-events:none), so it sets pointer-events:auto
+  // to stay clickable; position is a static transform attr with no CSS transform animation
+  // (that would clobber it). Language-neutral × like the rest of the HUD.
+  window.__makeGameClosePillow = function (layer, onClose) {
+    if (!layer) return null;
+    var g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.setAttribute("pointer-events", "auto");
+    g.setAttribute("cursor", "pointer");
+    g.setAttribute("transform", "translate(640,27)"); // top-right of the 680×340 room
+    g.innerHTML =
+      '<rect x="-24" y="-18" width="48" height="36" rx="13" fill="#f4efe6" stroke="#c68e95" stroke-width="2"/>' +
+      '<g fill="#d9a6a6"><circle cx="-16" cy="-10" r="1.5"/><circle cx="16" cy="-10" r="1.5"/><circle cx="-16" cy="10" r="1.5"/><circle cx="16" cy="10" r="1.5"/></g>' +
+      '<path d="M-7 -7 L7 7 M7 -7 L-7 7" fill="none" stroke="#8e3a4a" stroke-width="3" stroke-linecap="round"/>';
+    g.addEventListener("click", function (e) { e.stopPropagation(); onClose(); }); // don't bubble to a stage zoom-out
+    layer.appendChild(g);
+    return g;
+  }
   var chair = document.getElementById("office-chair");
   if (chair) {
     var chairSpinStreak = 0;
     var chairSpinStreakTimer = null;
+    var chairArcadeClicks = 0, chairArcadeClickTimer = null;
+    var CHAIR_ARCADE_CLICKS = 5, CHAIR_ARCADE_WINDOW = 1200; // a fast flurry of clicks launches the invaders game (drag-to-arm is hard to discover)
     function spinChair() {
+      // a rapid flurry of clicks on the already-swirling chair discovers the hidden invaders arcade
+      chairArcadeClicks++;
+      clearTimeout(chairArcadeClickTimer);
+      chairArcadeClickTimer = setTimeout(function () { chairArcadeClicks = 0; }, CHAIR_ARCADE_WINDOW);
+      if (chairArcadeClicks >= CHAIR_ARCADE_CLICKS) {
+        chairArcadeClicks = 0;
+        startArcade();
+        return; // the launching click arms the game instead of adding another swirl
+      }
       chairSpinStreak++;
       clearTimeout(chairSpinStreakTimer);
       chairSpinStreakTimer = setTimeout(function () { chairSpinStreak = 0; }, 900);
@@ -18893,6 +18923,7 @@ document.addEventListener("click", function (e) {
       arcadeHudScore = arcadeHud.querySelector(".arcade-score");
       arcadeHudHigh = arcadeHud.querySelector(".arcade-high");
       arcadeUpdateHud();
+      window.__makeGameClosePillow(alienLayer, function () { stopArcade(); }); // top-right pillow → quit silently (also cleared on teardown)
     }
     function arcadeUpdateHud() {
       if (!arcadeHud) return;
@@ -21130,14 +21161,15 @@ document.addEventListener("click", function (e) {
         '<text class="flair-score" x="35" y="33" font-size="21" font-weight="700" fill="#f4efe6">0</text>' +
         '<polygon transform="translate(23,48)" points="0,-5 1.23,-1.7 4.76,-1.55 2,0.65 2.94,4.05 0,2.1 -2.94,4.05 -2,0.65 -4.76,-1.55 -1.23,-1.7" fill="#d9b48a"/>' +
         '<text class="flair-high" x="34" y="52" font-size="12" fill="#d9b48a">0</text>' +
-        '<circle class="flair-life" cx="602" cy="26" r="6" stroke="#7d1f2a" stroke-width="1.4"/>' +
-        '<circle class="flair-life" cx="622" cy="26" r="6" stroke="#7d1f2a" stroke-width="1.4"/>' +
-        '<circle class="flair-life" cx="642" cy="26" r="6" stroke="#7d1f2a" stroke-width="1.4"/>';
+        '<circle class="flair-life" cx="536" cy="26" r="6" stroke="#7d1f2a" stroke-width="1.4"/>' +
+        '<circle class="flair-life" cx="558" cy="26" r="6" stroke="#7d1f2a" stroke-width="1.4"/>' +
+        '<circle class="flair-life" cx="580" cy="26" r="6" stroke="#7d1f2a" stroke-width="1.4"/>'; // shifted left to clear the top-right close pillow
       flairLayer.appendChild(flairHud);
       flairHudScore = flairHud.querySelector(".flair-score");
       flairHudHigh = flairHud.querySelector(".flair-high");
       flairHudLives = flairHud.querySelectorAll(".flair-life");
       flairUpdateHud();
+      window.__makeGameClosePillow(flairLayer, function () { stopFlairCatch(); }); // top-right pillow → quit silently (also cleared on teardown)
     }
     function flairUpdateHud() {
       if (!flairHud) return;

@@ -1879,6 +1879,15 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    nets the old 0.5px scrollback→input gap against the 1px padding-bottom. */
 .console-out{flex:none; height:35.3px; padding:0.7px 1px 1px; margin-bottom:-0.5px; overflow-y:auto; white-space:pre-wrap; word-break:break-word; scrollbar-width:none} /* content height (35.3 border-box − 0.7 − 1 padding) = exactly 12 of the 2.8px line boxes: a bottom-pinned scrollback can never straddle a line across the top edge. Top slack is only 0.7px (vs 1px elsewhere): it clears the ~0.4px worst-case upward ink shift without re-revealing a readable sliver of the 13th line when pinned. (No mask-image — it composited a RenderLayer that vanished under the monitor's scaled foreignObject on WebKit; bug 23113.) */
 .console-out::-webkit-scrollbar{display:none}
+/* WebKit fallback: a SCROLLABLE overflow box under the monitor's scaled foreignObject
+   mispaints (bug 23113) — the scrollback blanks once it fills. overflow:hidden paints
+   fine, and column + justify-content:flex-end keeps the NEWEST lines pinned to the bottom
+   (the old ones clip off the top, same as a scrolled-to-bottom terminal). Chrome keeps its
+   real scrollback. Applies to both consoles + the python/linux REPLs (all .console-out). */
+html.is-webkit .console-out{overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end}
+/* likewise for the other scroll panes that live under the g-scale: show the top rows,
+   clip the overflow, rather than blank the whole box. */
+html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-list, html.is-webkit .ed-list{overflow:hidden}
 .console-out, .console-out *{ user-select:text; -webkit-user-select:text; cursor:text } /* console scrollback is copy-pasteable, overriding the strip-wide user-select:none */
 /* right-click Copy/Paste menu for the consoles */
 .console-ctx{position:fixed; z-index:60; display:none; background:#1e2a2a; border:1px solid #3a4a4a; border-radius:6px; padding:3px; box-shadow:0 4px 14px rgba(0,0,0,.45); font:13px/1.1 ui-monospace,Menlo,Consolas,monospace}
@@ -23541,6 +23550,18 @@ document.addEventListener("click", function (e) {
     return "other";
   })();
   window.__hostBrowser = HOST_BROWSER; // shared with the phone IIFE so its browser tile can host-brand too
+  // WebKit-engine flag (distinct from the brand above: on iOS EVERY browser is WebKit —
+  // Safari, Chrome-iOS/CriOS, Firefox-iOS/FxiOS — so this can't key off HOST_BROWSER).
+  // Gates the monitor apps' scrollable-container fallbacks: a scrollable overflow box under
+  // the monitor's scaled foreignObject mispaints on WebKit (bug 23113), so html.is-webkit
+  // rules swap those to overflow:hidden — visible rows instead of a blank box, no Chrome cost.
+  (function () {
+    var ua = navigator.userAgent || "";
+    var isWebKit = /iPad|iPhone|iPod/.test(ua)
+      || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) // iPadOS 13+ reports as Mac
+      || (/AppleWebKit/.test(ua) && /Safari/.test(ua) && !/Chrom(e|ium)|CriOS|FxiOS|Edg|OPR/.test(ua)); // desktop Safari
+    if (isWebKit) document.documentElement.classList.add("is-webkit");
+  })();
   // the Tehran birthday girl was born in 2016 — her cake keeps up with her
   (function () {
     var cake = document.getElementById("tehran-cake-age");

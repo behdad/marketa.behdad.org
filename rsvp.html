@@ -34523,6 +34523,27 @@ async def localfont(name):
         .catch(function () {});
     } catch (e) {}
   }
+  // One of the weddings is in Edmonton, which really does burn orange most Augusts — so the
+  // loft's haze reads Edmonton's actual PM2.5 (wildfire smoke is overwhelmingly PM2.5), which
+  // blends into smokeLevelFor as max(real, seasonal). Edmonton only: smoke is its thing.
+  window.__realSmoke = 0; // unknown until the fetch lands; the seasonal model stands alone until then
+  function fetchSmoke() {
+    try {
+      if (!window.fetch) return;
+      window.fetch("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=53.5461&longitude=-113.4937&current=pm2_5&timezone=auto")
+        .then(function (r) { return r && r.ok ? r.json() : null; })
+        .then(function (j) {
+          var pm = j && j.current && j.current.pm2_5;
+          if (typeof pm !== "number" || !isFinite(pm)) return;
+          // 15 µg/m³ (WHO's 24h guideline) → 0 so an ordinary clear day (~5) reads as nothing at
+          // all; 200 → 1, the deep-orange end of a real wildfire event. Linear between.
+          window.__realSmoke = Math.max(0, Math.min(1, (pm - 15) / 185));
+          if (window.__applySeasonDate) window.__applySeasonDate(); // the tints update live, not at the next season change
+        })
+        .catch(function () {});
+    } catch (e) {}
+  }
+  setTimeout(fetchSmoke, 4000); // once per load, off the load path — haze moves slower than weather
   setTimeout(fetchWx, 4000); // a few seconds after init, off the load path
   setInterval(fetchWx, 30 * 60000); // fetch + set state only — nothing spawns, hidden-tab safe
   // real rain outside shows through the garden window even when the game's storm is
@@ -45891,11 +45912,16 @@ function spawnDustMote(container) {
     smokeRoll = 0.5 + Math.random() * 0.5;
     return smokeRoll;
   }
+  // Edmonton's REAL air (window.__realSmoke, set by the air-quality fetch) blends in as a
+  // max: a pretend-date has no live AQI, so the 'smoky' preview always shows full smoke,
+  // and reality can only ever push the haze higher — neither silences the other.
   function smokeLevelFor(s) {
-    var ramp = smokeRampFor(s);
-    if (!ramp) return 0; // out of season — nothing to roll for
-    if (s.m + "/" + s.d !== smokeRollKey) rollSmoke();
-    return ramp * smokeRoll;
+    var ramp = smokeRampFor(s), seasonal = 0;
+    if (ramp) { // out of season there's nothing to roll for, but real smoke still counts
+      if (s.m + "/" + s.d !== smokeRollKey) rollSmoke();
+      seasonal = ramp * smokeRoll;
+    }
+    return Math.max(window.__realSmoke || 0, seasonal);
   }
   window.__smokeLevel = function () { return smokeLevelFor(seasonDate()); };
   window.__rollSmoke = function () { rollSmoke(); applySeasonDate(); }; // daybreak: a fresh day, a fresh haze
@@ -45914,6 +45940,7 @@ function spawnDustMote(container) {
     if (smokeStrip) smokeStrip.style.setProperty("--smoke", smokeLevelFor(s));
     if (window.__updateSkyFireworks) window.__updateSkyFireworks(window.currentStageName); // new-year sky follows the preview
   }
+  window.__applySeasonDate = applySeasonDate; // re-apply --smoke when late data (real air quality) lands
   applySeasonDate();
   // 's' cycles the previews forward: today → spooky → holiday → new year → winter →
   // valentine's → chaharshanbe suri → nowruz → witches' night → wedding → pride → canada →

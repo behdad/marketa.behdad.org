@@ -19395,6 +19395,7 @@ document.addEventListener("click", function (e) {
     { pan: "kitchen-pan-3", target: null, effect: "clatter", landY: 208 }           // straight down onto the counter
   ];
   var kitchenPanClicks = 0, panFallQueue = null, nextPanFallAt = 0;
+  var PAN_CLICK_FALL_CHANCE = 0.75; // odds a direct tap knocks down the pan you actually hit (the rest of the time a neighbour goes)
   function shufflePanFalls() {
     var a = PAN_FALLS.slice();
     for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
@@ -19406,11 +19407,24 @@ document.addEventListener("click", function (e) {
     if (spec.flag === "soda") sodaBroken = true;
     fallenPanTarget(spec.pan, spec.target, spec.ox || 0, spec.oy || 0, spec.effect, spec.landY);
   }
-  function bumpKitchenPanClicks() {
+  // Which pan comes down. A direct tap usually knocks loose the pan you actually hit, so the hit
+  // reads as causal; the rest of the time a neighbour goes instead, keeping it playful. Callers
+  // that name no pan — the gong, and the keyboard clink (which targets nothing) — always take the
+  // next in the shuffled order. A pan that's already down has left the queue, so it can't fall twice
+  // (and a tap on it falls through to the shuffle).
+  function takePanFall(clickedPanId) {
+    if (clickedPanId && Math.random() < PAN_CLICK_FALL_CHANCE) {
+      for (var i = 0; i < panFallQueue.length; i++) {
+        if (panFallQueue[i].pan === clickedPanId) return panFallQueue.splice(i, 1)[0];
+      }
+    }
+    return panFallQueue.shift();
+  }
+  function bumpKitchenPanClicks(clickedPanId) {
     kitchenPanClicks++;
     if (!panFallQueue) { panFallQueue = shufflePanFalls(); nextPanFallAt = 5 + Math.floor(Math.random() * 4); } // first drop after ~5-8 clinks
     if (panFallQueue.length && kitchenPanClicks >= nextPanFallAt) {
-      doPanFall(panFallQueue.shift());
+      doPanFall(takePanFall(clickedPanId));
       if (panFallQueue.length) nextPanFallAt = kitchenPanClicks + 4 + Math.floor(Math.random() * 4); // the next in ~4-7 more
     }
   }
@@ -19446,7 +19460,9 @@ document.addEventListener("click", function (e) {
     function clinkPans(e) {
       var mult = 1;
       var nearestIdx = 0;
+      var pointed = false; // a real tap names a pan; the keyboard clink aims at nothing
       if (e && typeof e.clientX === "number") {
+        pointed = true;
         var rect = pans.getBoundingClientRect();
         var localX = 25 + ((e.clientX - rect.left) / rect.width) * 200;
         var localY = 10 + ((e.clientY - rect.top) / rect.height) * 115;
@@ -19458,14 +19474,15 @@ document.addEventListener("click", function (e) {
         mult = 1.6 - nearest.r * 0.06;
       }
       playMetalClinkSound(mult, "kitchen-pans");
-      var pan = document.getElementById("kitchen-pan-" + (nearestIdx + 1));
+      var panId = "kitchen-pan-" + (nearestIdx + 1);
+      var pan = document.getElementById(panId);
       if (pan) {
         pan.classList.remove("pan-clicked");
         requestAnimationFrame(function () {
           requestAnimationFrame(function () { pan.classList.add("pan-clicked"); });
         });
       }
-      bumpKitchenPanClicks();
+      bumpKitchenPanClicks(pointed ? panId : null);
     }
     pans.addEventListener("click", clinkPans);
     pans.addEventListener("keydown", function (e) {

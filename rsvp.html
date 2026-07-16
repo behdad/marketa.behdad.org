@@ -5718,6 +5718,17 @@ section{margin:1.9rem 0}
 .sn-pride-glint.g4{animation-duration:3.7s; animation-delay:-.6s}
 @keyframes sn-pride-glint{0%,74%,100%{opacity:0; transform:scale(.5)} 86%{opacity:.85; transform:scale(1)}}
 @media (prefers-reduced-motion: reduce){.sn-pride-glint{animation:none}}
+/* the masts' tap zone: both mast groups are pointer-events:none so the room behind stays
+   clickable — only this transparent shape over the cloth opts back in (same as .sn-hs-hit) */
+.sn-flag-hit{pointer-events:auto; cursor:pointer}
+/* a tap ripples the cloth, reusing the balcony flag's own flag-wave one-shot. Indoors there's
+   no wind, so unlike the balcony there's no idle sway under it for the one-shot to contend
+   with. The wave rides this inner wrapper rather than the mirror <g> above it: that one
+   carries a static transform attribute a CSS transform animation would replace for its
+   duration, dropping the flag back onto the wrong side of the pole while it waved. */
+#office-pride-flag-wave, #office-canada-flag-wave{transform-box:fill-box; transform-origin:50% 0}
+#office-pride-flag-wave.waving, #office-canada-flag-wave.waving{animation:flag-wave 2.4s ease-in-out}
+@media (prefers-reduced-motion: reduce){#office-pride-flag-wave.waving, #office-canada-flag-wave.waving{animation:none}}
 /* valentine's: the string goes soft pink, matching the nook's paper hearts */
 #loft-game-strip.season-valentines .balcony-bulb{fill:#e8a8b4; stroke:#c68e95}
 #loft-game-strip.season-valentines .balcony-bulb-glow{fill:#e8a8b4}
@@ -10044,6 +10055,9 @@ section{margin:1.9rem 0}
 <g transform="translate(1156,0) scale(-1,1)"><!-- hang the flag left of the mast: mirror about the pole (x=578) -->
 <rect x="578" y="208" width="46" height="2.6" rx="1.3" fill="#3a2a22"/>
 <circle cx="625" cy="209.3" r="1.8" fill="#c9a227" stroke="#8a6a3a" stroke-width="0.5"/>
+<!-- everything that is cloth — stripes, hem outline, the rings it hangs by, the glints — rides
+     this wrapper so a tap skews all of it as one piece; the crossbar and its finial stay out -->
+<g id="office-pride-flag-wave">
 <g clip-path="url(#office-pride-flag-clip)">
 <rect x="580" y="212" width="42" height="12" fill="#b4574f"/>
 <rect x="580" y="224" width="42" height="12" fill="#cf8a4c"/>
@@ -10066,6 +10080,9 @@ section{margin:1.9rem 0}
 <circle class="sn-pride-glint g4" cx="608" cy="274" r="1.3"/>
 </g>
 </g>
+<!-- tap zone last so it sits above the art, and inside the mirror so it shares the cloth's coords -->
+<rect id="office-pride-flag-hit" class="sn-flag-hit" x="580" y="208" width="42" height="76" fill="transparent"/>
+</g>
 </g>
 <!-- canada day: the same indoor mast idiom as the pride flag (pole, crossbar, rings, clipped
      wavy hem, hanging left of the pole), sharing the corner — the seasons never overlap, so
@@ -10085,6 +10102,8 @@ section{margin:1.9rem 0}
 <g transform="translate(1156,0) scale(-1,1)"><!-- hang the flag left of the mast: mirror about the pole (x=578), same as the pride mast -->
 <rect x="578" y="208" width="46" height="2.6" rx="1.3" fill="#3a2a22"/>
 <circle cx="625" cy="209.3" r="1.8" fill="#c9a227" stroke="#8a6a3a" stroke-width="0.5"/>
+<!-- the cloth wrapper, same as the pride mast: leaf included, so a tap skews it with the field -->
+<g id="office-canada-flag-wave">
 <g clip-path="url(#office-canada-flag-clip)">
 <rect x="580" y="212" width="42" height="72" fill="#f5ecd9"/>
 <rect x="580" y="212" width="11" height="72" fill="#b2465a"/>
@@ -10107,6 +10126,8 @@ section{margin:1.9rem 0}
 <circle class="sn-pride-glint" cx="590" cy="224" r="1.6"/>
 <circle class="sn-pride-glint g3" cx="614" cy="262" r="1.7"/>
 </g>
+</g>
+<rect id="office-canada-flag-hit" class="sn-flag-hit" x="580" y="208" width="42" height="76" fill="transparent"/>
 </g>
 </g>
 <!-- nowruz: a low table under the butterfly window carrying a haft-sin spread on a cream
@@ -35248,6 +35269,27 @@ async def localfont(name):
   onHit("office-hs-mirror-hit", function () {
     oneShot(glint, "flashing");
     playFairyChimeSound("office-haftsin");
+  });
+})();
+// The two seasonal office masts wave when tapped — the same one-shot the balcony's flying flag
+// gives a click, so the game's flags all answer a tap alike. Only one mast is ever on screen.
+(function () {
+  [
+    { hit: "office-pride-flag-hit", cloth: "office-pride-flag-wave", pan: "office-pride-mast" },
+    { hit: "office-canada-flag-hit", cloth: "office-canada-flag-wave", pan: "office-canada-mast" }
+  ].forEach(function (spec) {
+    var hit = document.getElementById(spec.hit);
+    var cloth = document.getElementById(spec.cloth);
+    if (!hit || !cloth) return;
+    cloth.addEventListener("animationend", function () { cloth.classList.remove("waving"); });
+    hit.addEventListener("click", function (e) {
+      e.stopPropagation();
+      cloth.classList.remove("waving"); // a re-tap mid-wave restarts it rather than being swallowed
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { cloth.classList.add("waving"); });
+      });
+      playSwishSound(spec.pan);
+    });
   });
 })();
 // The spring bonfire's taps, and Irene leaping it. Same shape as the tree/haft-sin above:

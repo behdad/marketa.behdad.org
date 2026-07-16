@@ -1,199 +1,224 @@
-# Second Act: "The Evening" — design proposal for rsvp.html
+# Second-Act design: "the switch that isn't a switch" — a guided, nudge-driven arc from the balcony finale to the RSVP
 
-Internal design doc (blocked from public via `.htaccess`, like CLAUDE.md). This is a
-**proposal for review — nothing here is implemented yet.** It answers the owner's brief:
-the game is strong on graphics/sound/interactions and Act 1 (the solve chain) is good, but
-the balcony is a cliff — the player is dropped into an open sandbox with no guidance. The
-owner wants: the **party as the climax**, players **routed to the bar → party**, much more
-engagement with the **monitor + phone apps**, a **photobooth** party nudge, a **piano
-wind-down**, a **full-circle loop back to morning coffee**, the **RSVP as the last word /
-exit**, the balcony **switch-misdirection** twist, **instructed day/night**, discreet
-**psych-trip** nudges, and above all **more hints/nudges/workflow** (delivered light, no
-heavy checklist — the egg-hunt was cut from 21→10 for being overwhelming).
+Internal design doc (blocked from public via `.htaccess`, like CLAUDE.md). **A proposal for
+review — nothing here is implemented.** Consolidates two fable-agent design passes.
 
-Key discovery: the **"Watch the loft" cinematic already performs this exact arc** (coffee →
-tasks → dusk → piano → blacklight party → DJs → "a flash for the album" → bar → flair → "and
-that's their day. again tomorrow…"). The second act essentially already exists as a movie;
-this proposal makes it **playable**.
+**The brief.** rsvp.html is strong on graphics/sound/interactions and Act 1 (the kitchen→balcony
+solve chain) is good, but the balcony is a **cliff**: the player is dropped into an open sandbox
+with no guidance, and the richest content (bar, party, the monitor's ~16 apps, the phone's ~23
+apps, the piano wind-down, the trips) sits behind un-signposted state changes. Owner wants: the
+**party as climax**, players **routed bar→party**, far more engagement with the **monitor + phone
+apps** (a **photobooth** party nudge as flagship), a **piano wind-down**, a **full-circle loop
+back to morning coffee**, the **RSVP as the last word / exit**, the balcony **switch-misdirection**
+twist, **instructed day/night**, discreet **psych-trip** nudges, and above all **more
+hints/nudges/workflow** — delivered LIGHT (no heavy checklist; the egg-hunt was cut 21→10 for
+overwhelm).
+
+**Key insight.** The **"Watch the loft" cinematic already performs this exact arc** (its narration
+runs coffee → tasks → dusk → piano → blacklight party → DJs → "a flash for the album" → bar →
+flair → `cine_encore_end`: "And that's their day. Again tomorrow…"). This proposal makes that
+movie **playable** — and almost entirely from machinery that already ships.
 
 ---
 
-## 1. Diagnosis (in code terms)
+## 1. Diagnosis — where the spine breaks, in code
 
-Act 1 is a directed spine via `goToStage`/`maxUnlocked`: espresso (kitchen) → water/uke/candles
-(garden) → octopus + blanket (cuddly) → Prague call + PC + lamps + stained glass (office) →
-balcony. First balcony entry fires `triggerBalconyFinale()` (butterfly, sun-shower 500ms, bell
-3800ms, rainbow 4200ms) then at 9100ms `showRsvpNudge()` → *"Don't forget to RSVP — but wander
-first ↓"*. That is the **last directed thing the game ever says.**
+Act 1 is a five-link chain, each link gated and each handing off to the next (kitchen espresso via
+`updateKitchenInvite()` + `#kitchen-*-arrow` step-arrows → garden watering `updateGardenHint()` →
+cuddly octopus/blanket → office Prague-call `__pragueCalled` / PC `__pcPlayed` / lamps / stained
+glass → balcony). First balcony entry fires `triggerBalconyFinale()` (butterfly, sun-shower,
+rainbow, melody) and at **9100 ms** `showRsvpNudge()` paints the RSVP link — **and then every
+directed nudge stops.** From here the game relies solely on the just-shipped `showExploration`
+rotation ("Enjoy wandering — the balcony's the good part 🌅"), which is *passive by design*: it
+only fires on room re-entry and never says "go **there** next."
 
-Everything after is pull, not push: the solved-room `showExploration()` rotation (just shipped),
-the brick-hint dispenser (`ROOM_HINTS`), and a content-free `phoneNotify()` buzz every 19s
-(balcony-only, no payload — nags without saying why). The richest content sits behind un-signposted
-state changes:
+**The six silent dead-spots (each gets a prescribed next-nudge below):**
+1. **After `showRsvpNudge()` on the balcony** — the main cliff; no onward pointer at all.
+2. **After the party ignites** (`__setPartyMode(true)`) — it runs (`advanceDance`, `announceDj`) but nothing names the bar, photobooth, or trips.
+3. **Inside the bar** — you can watch Pouria / `__makeCocktail`, but nothing hands off to Flair-Catch or onward.
+4. **Monitor desktop-OS** — once `__pcPlayed`, all 16 `DESKTOP_APPS` are live but only the generic "office is more toy than work 🖥️" caption mentions them.
+5. **Pocket phone** — `phoneNotify()` buzzes every 19 s to get you to *open* it, but none of the 23 `PHONE_APPS` is ever pointed to.
+6. **Night-sky piano** (`cuddly` `chan-stars` Satie Gnossienne bed) — zero nudge toward it.
 
-- **Bar** exists only at dusk/party (`__barUpNow`) — a daytime player never meets Pouria, Flair-Catch
-  (`startFlairCatch`), or the patrons.
-- **Party** (`__setGardenParty` — UV blacklight, `PARTY_DANCE_ORDER` ~15s rotation, DJ swap +
-  `announceDj` every 3 dances) hangs off one unexplained purple switch advertised only by the rotating
-  line *"Every switch has a purpose."*
-- **Piano wind-down** already exists: cuddly projector `chan-stars` = Satie Gnossienne No. 1 + note-synced
-  sky flashes (`skyOnScreen()`). Nobody is sent there.
-- **Monitor's 16 dock apps + phone's 20 apps** are the deepest content and structurally invisible.
-- **Trips** (`garden-drugsbox` → `triggerRsvpTrip`, 7 variants) are pure secret.
+The fix is **not a quest log** — it's restoring Act 1's handoff discipline (always a next nudge)
+into Act 2, delivered *ambiently and diegetically* so it never reads as a checklist.
 
-`autoDayNight` (night after ~60s on balcony, flip every ~120s) papers over the dusk gap but takes the
-one dramatic state change of the evening and makes it happen *to* the player, not *by* them.
+## 2. The second act — beat sheet
 
-The fix is not more content — it's a **second directed spine made of content that already ships**, held
-together by the lightest possible thread.
+The emotional hinge is a **misdirection**: the game frames the balcony as an *exit* ("wrap up,
+head out"), points you at what looks like the light switch to leave — and that switch
+(`#balcony-partyswitch`, already wired to `__setPartyMode`) **erupts the loft into a blacklight
+party** instead. *"I'm leaving"* becomes *"the party's starting."*
 
-## 2. The second act — "a day in the loft, lived once by you"
+**BRIDGE — balcony, after the Act-1 finale settles**
+- **B0. Make it night.** Once `balconyIntroSeen` and the RSVP nudge have had their moment, the rotation's first job nudges toward dusk (point at `balcony-sun` / `__toggleDayNight`). Guided or not, it always completes (`autoDayNight` flips after ~60 s — but see §4, we retime it).
+- **B1. The held night-sky moment.** On `dusk`, a quiet contemplative caption — no arrows, no urgency. The dusk balcony already rewards a sky-tap with a shooting star (`balcony-skyclick → spawnShootingStar`), so the pause can invite a wish. The *breath* before the pivot.
+- **B2. "Head out."** Framing turns to leaving: kill the lights, call it a night. The caption names **the switch, by the door** (not "the lights" — §4), with an `.invite-pulse` + step-arrow on `#balcony-partyswitch`.
+- **B3. THE MISDIRECTION.** Reaching the switch → `__setPartyMode(true)` → `__setGardenParty(true,true)`: UV blacklight, violet LED flare, the view **whisks to the garden** (that whisk already exists, ~line 33523). Reveal: *that was never the light switch.*
 
-Act 1 = the couple's **day**; Act 2 = their **evening**, closing the ring back to morning. Six beats,
-each an invitation, each completing off a signal the code already emits:
+**PARTY (the peak)**
+- **P1. The bar, as a callback (FIRST in-party nudge).** `barUpNow() = party OR dusk`, so a player who lingered at dusk in B1 already glimpsed Pouria (`nightBarNow` / `kitchen_bar_night`). The party nudge leans on **"again"**: *"Pouria's mixing again — go get the drink you skipped this morning. 🍸"* Routes kitchen-ward (now party-true): watch him shake, drag him along the bar (`hint_barman`), tap the drink to read its recipe (`__makeCocktail`/`cocktail-toast`/`hint_drink`), and the onward handoff — **Flair-Catch** (`startFlairCatch`, auto-arms while `barUpNow() && currentStageName==="kitchen"`). Patrons kiss (`hint_patrons`).
+- **P2. The floor.** Back to garden: the DJs (`announceDj` — Amir/Danesh trade every 3 dances), the dance rotation (`advanceDance`/`PARTY_DANCE_ORDER`), the disco ball. *"Amir's on the decks — Danesh takes it in a bit."*
+- **P3. The album (flagship app-weave).** Nudge to the **photobooth** — it exists in *both* the monitor and the phone (`DESKTOP_APPS`/`PHONE_APPS`). The phone booth is the party-right one: `__openPhoneModal` opens in the current room ("no balcony jump"), shares the monitor compositor, and the strip persists to the phone **album**. *"Grab a strip for the album — there's a booth on your phone, and one on the office monitor. 📷"*
+- **P4. The office joins in (optional, light).** `cine_officeparty` already exists ("the gold skull dances"). A soft line routes the curious into DOOM/mines/life/console — gates nothing.
+- **P5. The trips door (optional, untracked, discreet).** `garden-drugsbox → triggerRsvpTrip`. Kept exactly as light as today — mentioned once at most, never arrowed. Optionally: under blacklight, give the drugsbox a faint uranium-green fluorescence (one CSS rule in the existing fluorescence block, beside the caterpillar/cat's-eyes) — *glows for those who look.* Broad audience (grandparents→kids) → opt-in only, never in the phone thread.
 
-- **Beat 1 — Sundown.** ~10s after the finale RSVP nudge, the phone buzzes with a *payload*: a text from
-  **Pouria** asking the player to tap the sun down (bar opens at dusk). Completes on the `dusk` class
-  (`toggleDusk`). Replaces the content-free 19s nag with meaning.
-- **Beat 2 — The bar.** Dusk raises the night bar (`__refreshKitchenBar` → `kitchen_bar_night`). Completes
-  on a cocktail built (`__makeCocktail` toast) or a Flair-Catch round. Existing bar brick-hints
-  (`hint_barman`/`hint_drink`/`hint_patrons`, `rel: barUp`) are the supporting cast.
-- **Beat 3 — The party (climax).** After a drink, the DJs text: the purple switch on the balcony. Flipping
-  `balcony-partyswitch` → `__setGardenParty(true, true)` whisks to the blacklit garden — arrived at as a
-  reward, not stumbled into. Completes on `window.__gardenPartyOn`.
-- **Beat 3½ — The flash for the album (flagship in-party nudge).** After the first DJ swap (`announceDj`,
-  ~3 dances in), the photographer nudges → the **phone photobooth** (right one: `__openPhoneModal` opens in
-  the current room, "no balcony jump"; shares the monitor compositor; the polaroid persists to the phone
-  **album** `pbSavedFrame`). Monitor photobooth stays the office alternate. Completes on booth-open (never
-  punish a declined camera permission). **Template for every in-party nudge: the celebration generates the
-  reason to open the app.**
-- **Beat 3¾ — the quiet door (trips, opt-in only).** Not a beat, advances nothing. Two discreet party-gated
-  surfaces: (a) under blacklight, `garden-drugsbox` gets a faint uranium-green fluorescence (one CSS rule in
-  the existing fluorescence block ~line 4500, beside the caterpillar/cat's-eyes) — glows for those who look;
-  (b) one `rel: partyOn` garden rotation line worded so grandparents scroll past and the curious lean in.
-  Trips **never** appear in the text thread (the thread is the mainline every guest reads).
-- **Beat 4 — Wind-down.** Party ends (flipped off, or after ~2 dance rotations) → Octi texts: the projector
-  found the stars. Cuddly → tap wall screen to `chan-stars` → Satie under flashing sky. Completes on
-  `skyOnScreen()` holding for one phrase (~45s). The earned exhale.
-- **Beat 5 — Dawn lands, RSVP exits.** After the stars phrase, the caption does the closing move in two
-  breaths: *"And that's their day — coffee to stars"* (echoing `cine_encore_end`), then a **stronger final
-  variant of `showRsvpNudge`** (new key `rsvp_exit`), explicitly the moment to leave and answer. Existing
-  `rsvp_nudge` in the balcony rotation stays untouched; the exit beat is additive and is the terminus.
-- **The ring (optional replay, never superseding the exit).** *After* the send-off shows, one new rotation
-  line: tap the sun, it's morning again (`toggleDusk` back; birdsong via `__updateGardenBirdsong`, crane
-  restarts, bar lowers) + a one-shot kitchen *"Morning again. Coffee first… ☕"*. **No state wipe** — a soft
-  dawn, not a reset; the extinguisher (`resetHunt`) stays the hard reset and gains a `__resetActTwo` hook
-  beside `__resetExplore`/`__resetExplorePtr`.
+**WIND-DOWN → true ending**
+- **W1. Piano under the stars.** Nudge to the cuddly nook + `chan-stars` Gnossienne. *"The party's easing off — someone's playing piano in the nook, under the stars. 🎹"*
+- **W2. Full circle / dawn.** `autoDayNight` (or a sun nudge) brings morning back; echo `cine_encore_end`: *"Morning again. Same loft, same coffee. It does this every day. ☕"* — **no state wipe** (a soft dawn, not a reset; `resetHunt` stays the hard reset, gains a `__resetActTwo` hook).
+- **W3. RSVP — the real exit.** The "leaving" framing from B2 now pays off honestly: *"You've seen the whole day now — bar, party, all of it. One thing left: tell us you'll come. ↓"* Routes to RSVP; can optionally surface it *through* the unread RSVP letter already in the mail inbox (`MAILS` has `{id:"rsvp", reply:true}` on both monitor and phone) — one last app-engagement. The loop-back to morning is **optional replay that never supersedes the exit**; RSVP stays the last word.
 
-### Instructed day/night (the owner's "maybe")
-**Recommendation: make sundown a player action, but keep a slow fallback rather than deleting
-`autoDayNight`.** The current auto is *eager* (60s) and fires before Beat 1's text lands. Change to: (a)
-starting the act-two thread suppresses auto (already stops on any manual flip — `__stopAutoDayNight`); (b)
-if Beat 1 idles ~3 min, the sun sets itself once and Pouria's follow-up acknowledges it. Agency first,
-passive players still reach the evening. Trade-off: the balcony loses unattended ambient day/night breathing.
+## 3. Guidance — the "always a next nudge" workflow, kept ambient
 
-## 3. Guidance without a checklist — the phone as soft quest-giver
+The owner's two asks ("MORE nudges / continuous workflow" and "keep it light / no checklist") are
+reconciled by making guidance **abundant but ambient and diegetic**. Four layers; only one is new:
 
-**The thread is 4 texts total, ever** (Pouria, the DJs, the photographer, Octi) + one closing line. That's
-the entire "quest system" — linear, one-at-a-time, disappears as followed. Well under the overwhelm ceiling
-that killed the 21-egg hunt.
-
-Two-channel delivery, both existing:
-- **Phone buzz** (`phoneNotify` plumbing) now carries a payload: the closed phone's lock screen (live clock
-  via `paintPhoneClock`) shows the latest text preview — sender + one line. Tap → phone opens. Slice 1 needs
-  no new app: the lock-screen preview *is* the message.
-- **Captions** as guaranteed fallback: the active beat's nudge is the *first surviving item* in the room's
-  explore rotation — same pattern as the balcony's `rsvp_nudge` sentinel, but `done` latches on the beat's
-  completion signal and `rel` gates it to the beat being active. A phone-ignorer still drifts down the arc.
-
-**Composition with the shipped exploration captions is by design:** beats live *inside* `explorePool` as
-highest-priority self-retiring items; when a beat's signal fires, its `done()` latches and the rotation
-returns to pure wandering. One system. (`restoreStageHint`'s `liveSolveState` special cases still win.)
-
-The generic 19s balcony nag is retired in favor of: buzz once per new text + at most one reminder buzz.
-
-## 4. Monitor + phone apps (moments, not menus)
-
-| Beat | App | Diegetic pull |
+| Layer | Scope | Status |
 |---|---|---|
-| Bar | phone `cocktails` | Pouria's text ends "…menu's on your phone if you want to order fancy" — the drinks-list app becomes the bar menu it already is. |
-| Party | phone `photobooth` → `album` | Flagship; the polaroid lands in the album. Octi's wind-down text can add "bring the photo." |
-| Party | monitor `music` | Garden rotation line: the office is dancing too — the tower's visualizer (`eq-live`) is up. Rewards whoever walks to the office mid-party. |
-| Wind-down/dawn | monitor `mail` | The inbox holds an unread RSVP letter with a reply flow (`monitor-mail-row-rsvp`). One office rotation line post-party: a second, fully-built RSVP path that doubles as mail-app discovery. |
-| Dawn | monitor/phone `calendar` | Ring-closing joke: tomorrow's on the calendar — and so are two bigger days (May 1 / July 10). |
+| **Caption nudges** (`setCaption`/`showExploration`/`__nextExploreHint`) | current room | exists |
+| **Phone "messages" thread** — in-character texts from friends/family/Pouria | cross-room handoffs + app discovery | **new (light)** |
+| **`.invite-pulse` + step-arrows** | precise single target (the switch) | reuse |
+| **`phoneNotify()` buzz** | draws you to the phone in the first place | exists |
 
-Not here: doom, mines, linux, python, tattoo, dress-up, places… stay pure discoveries. **Five app touchpoints
-is the ceiling** — more turns the evening into a tour.
+**Division of labor (this is the crux of "more nudges but light"):**
+- **Exploration captions** own the *within-room* "what else is alive here" — unchanged.
+- **Phone texts** own the *between-beat, cross-room* handoffs and *app discovery* — the thing a
+  caption structurally can't do (a caption can't say "go to the garden" because it only shows once
+  you're already somewhere).
 
-## 5. Reuse vs. new machinery
+They never collide: captions answer "what's in *this* room," texts answer "where next." A passive
+player follows the texts like breadcrumbs; a curious player ignores them and the captions still
+reward wandering. This *is* the "always a next nudge" workflow, without a tracked panel.
 
-**Reused wholesale (zero new systems):** `toggleDusk`/`__setDayNight` + dusk cascade; `__barUpNow`/night bar +
-cocktail/flair/patron logic; `__setGardenParty` + dance rotation + `announceDj`; phone modal opening in current
-room; photobooth compositor + album persistence; `chan-stars` Satie + `skyOnScreen`; `explorePool`'s
-`rel`/`done`/sentinel pattern; `showRsvpNudge` plumbing; `phoneNotify` buzz/LED; `resetHunt` hooks; EN/CS `T`.
+**The phone as soft quest-giver (the one substantial new surface).** A small **"messages" phone
+app** — a scrollable thread of short in-character texts that arrive timed to beats (Pouria, the
+group chat, the photobooth/album, M&B). Each is a diegetic nudge to a room/app/beat. It's exactly
+the kind of thing that **grows per drop** (future drops add texts, tie one more app into a beat),
+fitting the frozen-archive/drops cadence.
+
+*Lighter fallback if a new app is too much for now:* skip the messages app and surface the beat
+nudges as balcony **captions only** via the existing buzz — weaker (loses cross-room reach + the
+charm of named friends) but zero new surface. Recommendation: build the messages app; it's the
+highest-leverage light-touch mechanism for the continuous workflow the owner wants.
+
+**App touchpoints (5, the ceiling — more turns the evening into a tour):** phone `cocktails` (bar
+menu, P1) · phone `photobooth`→`album` (P3) · monitor `music` visualizer (a garden line: the office
+is dancing too) · monitor/phone `mail` (the RSVP letter, W3) · monitor/phone `calendar` (the dawn
+joke — tomorrow's on it, and so are May 1 / July 10). Everything else (doom, mines, linux, python,
+tattoo, dress-up, places…) stays a pure discovery.
+
+## 4. The switch misdirection — interaction wiring
+
+Two hazards, both confirmed in code:
+
+**Hazard A — players click the *lamp*, not the *switch*.** Told "turn off the lights," the obvious
+targets are `#balcony-lights` (string lights) and `#balcony-walllamp` (wall lamp) — both
+`hunt-hit`. Only `#balcony-partyswitch` ignites the party. So:
+- **Word the instruction at the switch** — name it + its location ("the switch on the wall, by the door"), never just "the lights."
+- **Point at it** — reuse the kitchen's `.invite-pulse` + `~ arrow` pattern: `.invite-pulse` on `#balcony-partyswitch` + a sibling `#balcony-partyswitch-arrow` `<g>` shown by a `~` rule (copy `#kitchen-shotcup.invite-pulse ~ #kitchen-shotcup-arrow`). One arrow, one pulse.
+- **Redirect the mis-click, don't dead-end it** — a small handler on the lamp/lights, active during B2: a one-line redirect caption + re-flare the switch arrow. No penalty, just a wink and a re-point. (Neither lamp has a dedicated toggle handler today — the wall lamp is driven only by `toggleDusk` — so this is a clean additive listener.)
+
+**Hazard B — the auto-cycle.** `autoDayNight` could flip back to day mid-beat. B1 should call
+`__stopAutoDayNight()` so the night-sky pause and switch moment aren't yanked to daylight.
+**Instructed day/night (owner's "maybe"): recommend making sundown a player action but keeping a
+slow fallback** — the current auto is *eager* (~60 s) and fires before B0's nudge lands; retime it
+so starting the arc suppresses auto, and if B0 idles ~3 min the sun sets itself once (with a
+Pouria follow-up acknowledging it). Agency first; passive players still reach the evening.
+*Trade-off:* the balcony loses unattended ambient day/night breathing.
+
+## 5. Draft copy (EN — CS mirrored later by Markéta)
+
+**Captions (narrator-voiced):**
+- B0 (nudge to night): *"The day's done — but the sky isn't. Tap the sun, watch it go. 🌇"*
+- B1 (held moment, no arrow): *"There. The whole sky comes out. Stay a minute — wish on something. ✨"*
+- B2 (switch arrow + pulse): *"Time to head out. Kill the lights — the switch is on the wall, by the door."*
+- B2-redirect (mis-click on lamp): *"Not the lamp — the little switch by the door. 👉"*
+- B3 (eruption): *"…that was never the light switch. 🎉 Surprise — the loft doesn't do quiet nights."*
+- P1 (bar callback): *"Pouria's back behind the bar — go get the drink you skipped this morning. 🍸"*
+- P1-onward (Flair-Catch): *"He's showing off now — catch the garnishes he flips. Mind the wasp. 🍋"*
+- P2 (floor): *"Amir's on the decks — Danesh takes over in a bit. The garden's dancing. 💃"*
+- P3 (album): *"Grab a strip for the album — there's a booth on your phone, and one on the office monitor. 📷"*
+- P5 (trips door, party-only rotation): *"Something small glows under the blacklight. For the adventurous — enjoy responsibly. 🙃"*
+- W1 (piano): *"The party's easing off — someone's playing piano in the nook, under the stars. 🎹"*
+- W2 (full circle): *"Morning again. Same loft, same coffee. It does this every day. ☕"*
+- W3 (true exit): *"You've seen the whole day now — bar, party, all of it. One thing left: tell us you'll come. ↓"*
+
+**Phone messages (soft quest-giver, timed to beats):**
+- **Pouria** · bar's open again 🍸 get down here
+- **the group chat** · you dancing or what?? 💃
+- **📷 album** · new photo added — grab a strip while you're up
+- **markéta & behdad** · did you RSVP yet? 😉 no pressure. (some pressure.)
+
+*(Tone check vs. shipped copy — `kitchen_bar`, `explore_balcony`, `cine_encore_end` — warm,
+em-dashes, one emoji, dry-literary. Drafts sit in that register.)*
+
+## 6. Reuse vs. new machinery (kept minimal)
+
+**Reused wholesale:** `__setPartyMode`/`__setGardenParty` (party); `barUpNow`/`kitchen-bartender`/
+`__makeCocktail`/`startFlairCatch`/`hint_barman·drink·patrons` (bar); `advanceDance`/`announceDj`/
+`garden-disco-ball` (floor); `chan-stars`/`skyOnScreen` (piano); `autoDayNight`/`__toggleDayNight`
+(day-cycle); `showRsvpNudge` + mail apps (ending); `.invite-pulse` + `~ arrow` (targeting);
+`phoneNotify` + `PHONE_APPS` (phone); `showExploration`/`explorePool` rel/done/sentinel; `resetHunt`
+hooks; EN/CS `T`.
 
 **Genuinely new (small, bounded):**
-1. **Beat tracker** — one IIFE, a single `actBeat` index advanced by ~6 one-line pings at existing sites
-   (`toggleDusk`, cocktail-built toast, `setGardenParty`, `announceDj` first swap, photobooth open, stars-phrase
-   timer). ~60–80 lines with fallback timer.
-2. **Lock-screen text preview** — one DOM element on the closed phone + a `T`-keyed message list. ~40 lines + copy.
-3. **Explore-pool injection** — extend `explorePool()` to consult the beat tracker; ~10 lines.
-4. **`rsvp_exit` send-off + dawn one-shot captions** — new `T` keys + short sequence reusing `setCaption`/`showRsvpNudge`.
-5. **Drugsbox UV glow** — one CSS rule in the fluorescence block; one `rel:`-gated garden rotation line.
-6. Infra: `check.js` enforces EN/CS parity automatically; `play.js` grows an act-two chain (dusk → cocktail →
-   party → photobooth → stars → exit caption), same style as its Act-1 `solve()`.
+1. **Beat-sequencer** — one small IIFE / `actBeat` state machine advancing B0→B3→P1→…→W3, deciding
+   which nudge/text/arrow is live, advanced by ~6 one-line pings at existing sites (`toggleDusk`,
+   the cocktail-built toast, `setGardenParty`, `announceDj` first swap, photobooth open, the
+   stars-phrase timer). Respects `window.__cinematic` (don't fire beats during "Watch the loft");
+   resets with the extinguisher.
+2. **Phone "messages" app** — the one substantial new surface (a thread + `T`-keyed texts). Or the
+   caption-only fallback for slice 1.
+3. **Explore-pool injection** — extend `explorePool()` to consult the beat-sequencer (~10 lines,
+   same shape as the balcony `rsvp_nudge` sentinel).
+4. **`#balcony-partyswitch-arrow` `<g>` + CSS `~` rule + lamp-redirect listener.**
+5. **New `T` keys** (B0–W3 captions, `rsvp_exit`, dawn one-shot) + **drugsbox UV CSS rule**.
+6. Infra: `check.js` enforces EN/CS parity automatically; `play.js` grows an act-two chain
+   (dusk → cocktail → party → photobooth → stars → exit), same style as its Act-1 `solve()`.
 
-## 6. Draft copy (EN — CS mirrored later by Markéta)
+## 7. Phased sketch — smallest first slice, then deferrals
 
-**Texts** (lock screen; sender-voiced, lowercase-casual like the wordmark):
-- **Pouria 🍸** — *"bar opens at sundown. tap the sun for me? first pour's on the house."*
-- **Pouria 🍸** (fallback, if the sun set itself) — *"sun beat you to it — bar's open anyway. come thirsty."*
-- **Amir & Danesh 🎧** — *"decks are warm. purple switch, your balcony. you know what to do 🪩"*
-- **the photographer 📷** — *"everyone's in my shots but you. the booth's in your pocket — one flash for the album?"*
-- **Octi 🐙** — *"the projector found the stars. come be horizontal. bring the blanket — and the photo."*
-
-**Caption injections** (narrator-voiced, matching the shipped hint register):
-- Beat 1, balcony: *"The sun's hanging low — one tap starts the evening. 🌇"*
-- Beat 3, balcony: *"The purple switch has waited all day. Flip it and hold on. 🪩"*
-- Beat 3½, garden mid-party: *"You're the only one not in a photo — the pocket phone has a booth. 📸"*
-- Trips door, garden party-only rotation: *"Something small glows under the blacklight. For the adventurous — enjoy responsibly. 🙃"*
-- Beat 4, post-party: *"The nook's projector knows a night sky. Go be horizontal. 🌙"*
-- Cuddly, stars on: *"Satie, stars, someone soft to hold. Stay a minute."*
-- **Send-off breath 1:** *"And that's their day — coffee to stars. ☕→🌙"*
-- **Send-off breath 2 (`rsvp_exit`, linked):** *"Now the real question — will you be there? → RSVP 💌"*
-- Ring offer (post-send-off rotation): *"Or wind it back — tap the sun, and it's morning again. ☀️"*
-- Dawn one-shot, kitchen: *"Morning again. Coffee first… ☕"*
-- Office post-party rotation: *"There's a letter on the big computer. It's been waiting all day. ✉️"*
-- Garden party rotation: *"The office is dancing too — the tower's got the visualizer up."*
-
-## 7. Phased sketch
-
-- **Slice 1 (delivers the whole arc, no new UI):** beat tracker + caption injections + `autoDayNight` retimed
-  to arc-fallback + `rsvp_exit` send-off + dawn one-shot + reset hooks + play.js act-two chain. Buzz fires
-  per-beat but payload is captions-only.
-- **Slice 2 (the phone finds its voice):** lock-screen text previews + the five sender texts; drugsbox UV glow +
-  trips rotation line; the album/mail/calendar/music rotation lines.
-- **Slice 3 (later drop, ~3-month cadence):** a proper messages-thread app (21st tile, grows per-drop — future
-  characters can text, e.g. Irene's cameo); party-framed polaroid auto-styling; dawn flourish polish.
+- **Phase 1 (the hinge — ship first; it's the whole point):** B0→B3 only. The night-sky pause, the
+  "head out" instruction with switch arrow + lamp redirect, and the party eruption. ~1 arrow, ~6
+  caption keys, one small listener, and the sequencer for just those four beats. Reuses
+  `__setPartyMode` wholesale. **This alone converts the balcony cliff into a payoff** and delivers
+  the emotional hinge.
+- **Phase 2 (the party spine):** P1 bar-callback + Flair-Catch handoff, P2 floor, P3 photobooth,
+  W1 piano, W2 full-circle, W3 RSVP-as-true-exit — pure caption/text routing over existing systems,
+  no new surfaces. The arc is now complete end-to-end for a passive player, via captions only.
+- **Phase 3 (the soft quest-giver):** the phone **messages** app + wiring texts to beats — where
+  "more phone engagement" and the growable-per-drop model land.
+- **Deferrable to later drops:** P5 trips-door polish, P4 office-joins-in, growing the messages
+  thread (future characters text — e.g. Irene's cameo), RSVP-through-the-notes-app ("write us a
+  little note"), party-framed polaroid auto-styling, dawn-flourish polish.
 
 ## 8. Open questions for the owner
 
-1. **Auto day/night:** fully retire the eager 60s auto for instructed-with-3-min-fallback? Or keep auto for
-   visitors who idle at the balcony?
-2. **Party gating:** recommend the switch stays always-live (beat tracker skips completed beats; `done()`
-   latching handles any order). Confirm no hard "bar first" gate wanted.
-3. **Text senders:** Pouria, Amir & Danesh, the photographer, Octi — all in-game cast, zero personal narrative.
-   Any names you'd rather not put in writing on the site?
-4. **Trips discretion:** glow + one rotation line the right volume? Should Pouria also slide a coaster hint, or
-   is that one surface too many for the grandparent audience?
-5. **Exit strength:** `rsvp_exit` as just the linked caption (recommended — never force navigation), or actually
-   scroll/reveal the RSVP section?
-6. **Persistence:** beats per-session (like `exploreSeen`, recommended for a ~10-min experience) or localStorage?
-7. **Photobooth completion:** on booth-open (recommended — permission may be declined) or on shutter?
-8. **Copy taste:** lowercase sender-voice texts vs. sentence-case narrator captions — does that split feel right?
+1. **Night-sky pause (B1) length** — a true contemplative silence risks a passive player thinking
+   the game ended. Fixed ~8–12 s dwell before B2 appears, or gate B2 on the player doing *anything*
+   (a sky-tap / a wish)? Which feels right?
+2. **Party gating** — keep the switch/ball-peek/mask-dblclick always-available (recommended; the
+   sequencer skips completed beats), so the *guided* first ignition feels special but the switch
+   keeps working forever? OK that a returning player already knows the trick?
+3. **Switch-arrow explicitness** — a blinking arrow makes the misdirection land reliably but
+   slightly telegraphs "this matters." Arrow (reliable) vs. worded nudge only (more surprising,
+   more mis-clicks)?
+4. **Messages app vs. caption-only fallback** — build the new phone app, or ship captions-only for
+   now? If built, **named** friends/family (charming but names are personal — Pouria, Amir,
+   Danesh, M&B) or generic ("the group chat," "a friend")?
+5. **RSVP-through-the-inbox (W3)** — route the true ending *through* opening mail + hitting reply
+   (deep, ties in the mail app) or keep the direct `showRsvpNudge` link primary and only *mention*
+   the inbox? Former is more engaging but adds a step to the most important action on the site.
+6. **Auto day/night** — fully retire the eager 60 s auto for instructed-with-3-min-fallback, or
+   keep auto for a visitor who idles at the balcony?
+7. **Trips discretion** — glow + one rotation line the right volume, or should Pouria also slide a
+   coaster hint (one surface too many for the grandparent audience)?
+8. **Persistence** — beats per-session (like `exploreSeen`, recommended for a ~10-min experience)
+   or localStorage? And **photobooth completion** on booth-open (recommended — camera permission
+   may be declined) or on shutter?
 
 ---
 
-*The deepest point: the film ends with "And that's their day. Again tomorrow…" — the game already knows its
-shape. This proposal hands that shape to the player: coffee to stars, the party as the peak, the piano as the
+*The film ends with "And that's their day. Again tomorrow…" — the game already knows its shape.
+This hands that shape to the player: coffee to stars, the party as the peak, the piano as the
 exhale, the RSVP as the last word — and tomorrow, if they want it, one tap of the sun away.*

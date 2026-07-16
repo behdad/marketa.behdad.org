@@ -5591,6 +5591,50 @@ section{margin:1.9rem 0}
 #stage-balcony.dusk #balcony-bonfire-glow{opacity:1; transform:scale(1.5); animation:sn-bonfire-glow-breathe 4s ease-in-out infinite}
 @keyframes sn-bonfire-glow-breathe{0%,100%{transform:scale(1.5)}50%{transform:scale(1.68)}}
 @media (prefers-reduced-motion: reduce){#stage-balcony.dusk #balcony-bonfire-glow{animation:none}}
+/* Tap the fire → it flares fire-amber. The one-shot rides the GLOW ellipse, never the flame
+   paths: those are placed by their path coordinates and already animate transform for their
+   flicker. So the flare is FILTER-only (brightness + saturate + an amber bloom) — the glow's
+   own transform (day scale 1, dusk scale 1.5) is left completely alone. The dusk variant must
+   be id-qualified and must re-list the breathe — `#stage-balcony.dusk #balcony-bonfire-glow`
+   out-specifies a bare `.fire-flare`, and a lone one-shot in the shorthand would drop the breathe
+   for the flare's duration. Same name at index 0 = the breathe keeps running, un-restarted. */
+#balcony-bonfire-glow.fire-flare{animation:sn-fire-flare .85s ease-out}
+#stage-balcony.dusk #balcony-bonfire-glow.fire-flare{animation:sn-bonfire-glow-breathe 4s ease-in-out infinite, sn-fire-flare .85s ease-out}
+/* every keyframe lists the same filter functions — a list that changes length jumps instead of interpolating */
+@keyframes sn-fire-flare{
+  0%, 100%{filter:brightness(1) saturate(1) drop-shadow(0 0 0 rgba(246,161,60,0))}
+  26%{filter:brightness(1.8) saturate(1.6) drop-shadow(0 0 8px rgba(246,161,60,.85))}
+}
+@media (prefers-reduced-motion: reduce){#balcony-bonfire-glow.fire-flare, #stage-balcony.dusk #balcony-bonfire-glow.fire-flare{animation:none}}
+/* Seasonal prop taps (her besom + straw doll, his brushwood + clay jars): one shared wobble,
+   one inner wrapper per prop so the props' own static transform= nudges — which live on their
+   children — are out of the animation's reach. Each wrapper pivots on its own planted foot. */
+.sn-prop-hit{pointer-events:auto; cursor:pointer}
+.sn-prop-wobble.wobbling{animation:sn-prop-wobble .62s ease-in-out}
+@keyframes sn-prop-wobble{0%,100%{transform:rotate(0)} 22%{transform:rotate(-3.4deg)} 52%{transform:rotate(2.6deg)} 78%{transform:rotate(-1.2deg)}}
+#balcony-besom-wobble{transform-origin:540px 306px}     /* the handle's foot on the deck */
+#balcony-doll-wobble{transform-origin:619px 301px}      /* the doll's straw base */
+#balcony-brushwood-wobble{transform-origin:518px 305px} /* the bundles' ground line */
+#balcony-jars-wobble{transform-origin:622px 302px}      /* where the jars stand */
+@media (prefers-reduced-motion: reduce){.sn-prop-wobble.wobbling{animation:none}}
+/* Irene's leap over the Chaharshanbe fire. The arc rides #balcony-irene-jump; the fade rides
+   the outer #balcony-irene, so neither one-shot can strip the other. Her hair-forward drawing
+   is anchored over the fire, and the keyframes carry her from the deck's left, over the flame
+   tips (feet clear y≈240 at the apex) and down to the right. */
+#balcony-irene{opacity:0; pointer-events:none; transition:opacity .4s ease}
+#balcony-irene.showing{opacity:1; pointer-events:auto}
+#balcony-irene-jump{transform-origin:570px 300px}
+#balcony-irene.leaping #balcony-irene-jump{animation:balcony-irene-leap 1.5s cubic-bezier(.4,0,.6,1)}
+@keyframes balcony-irene-leap{
+  0%{transform:translate(-92px,6px) rotate(-6deg)}
+  18%{transform:translate(-64px,-24px) rotate(-2deg)}
+  50%{transform:translate(-2px,-62px) rotate(4deg)}
+  82%{transform:translate(46px,-18px) rotate(8deg)}
+  100%{transform:translate(62px,18px) rotate(5deg)} /* lands on the near deck, in front of the jars — she's drawn last, so nearer reads as in front */
+}
+/* reduced motion: the arc IS the cameo, so she simply doesn't turn up — the scheduler refuses
+   to start a leap at all, and with no .showing she stays at opacity 0 */
+@media (prefers-reduced-motion: reduce){#balcony-irene.leaping #balcony-irene-jump{animation:none}}
 #loft-game-strip.season-pride .sn-pride{display:inline}
 #loft-game-strip.season-nowruz .sn-nowruz{display:inline}
 #loft-game-strip.season-canada .sn-canada{display:inline}
@@ -12258,15 +12302,21 @@ section{margin:1.9rem 0}
 <circle class="sn-spark-b" cx="573" cy="250" r="1.3" fill="#f8d874"/>
 <circle class="sn-spark-b k3" cx="562" cy="256" r="1" fill="#f6c86a"/>
 <circle class="sn-spark-b k4" cx="583" cy="264" r="1.2" fill="#f0a04a"/>
+<rect id="balcony-bonfire-hit" class="sn-prop-hit" x="538" y="242" width="64" height="64" fill="transparent"/>
 </g>
 <!-- Čarodějnice (Apr 30): a besom stood on end left of the fire and a small straw doll in a
-     wine kerchief on its right — folk-simple, standing BESIDE the fire, not on the pyre. -->
+     wine kerchief on its right — folk-simple, standing BESIDE the fire, not on the pyre.
+     Each prop's art rides its own .sn-prop-wobble wrapper (tap → a dry rustle + a wobble);
+     the ground shadow stays outside so the doll rocks on a planted base. -->
 <g class="sn-carodejnice" aria-hidden="true" pointer-events="none">
+<g id="balcony-besom-wobble" class="sn-prop-wobble">
 <path d="M540 306 L524 252" stroke="#a4763f" stroke-width="3" stroke-linecap="round" fill="none"/>
 <polygon points="517,250 531,250 534,233 520,230" fill="#d9b45c" stroke="#b9954a" stroke-width="1"/>
 <path d="M524 252 L516 233 M524 252 L521 230 M524 252 L526 229 M524 252 L531 232 M524 252 L535 236" stroke="#c19a4a" stroke-width="1.4" stroke-linecap="round" fill="none"/>
 <rect x="519" y="247" width="11" height="3" rx="1.2" fill="#8e3a4a"/>
+</g>
 <ellipse cx="619" cy="305" rx="9" ry="2.5" fill="#6b6055" opacity="0.3"/>
+<g id="balcony-doll-wobble" class="sn-prop-wobble">
 <path d="M609 285 L629 283" stroke="#d9b45c" stroke-width="2.5" stroke-linecap="round" fill="none"/>
 <path d="M607 284 l-3 -2 M607 286 l-3 2 M631 282 l3 -2 M631 284 l3 2" stroke="#c19a4a" stroke-width="1" stroke-linecap="round" fill="none"/>
 <polygon points="612,301 626,301 623,279 615,279" fill="#d9b45c" stroke="#b9954a" stroke-width="1"/>
@@ -12277,20 +12327,28 @@ section{margin:1.9rem 0}
 <path d="M614 274 Q619 267 624 274 Q619 271 614 274 Z" fill="#8e3a4a"/>
 <path d="M624 274 l3.5 1.5 l-3.5 1 Z" fill="#8e3a4a"/>
 </g>
+<rect id="balcony-besom-hit" class="sn-prop-hit" x="514" y="228" width="30" height="80" fill="transparent"/>
+<rect id="balcony-doll-hit" class="sn-prop-hit" x="603" y="268" width="34" height="38" fill="transparent"/>
+</g>
 <!-- Chaharshanbe Suri (Mar 16–19): the SAME fire, dressed Persian instead of Czech — his
      half of the pair (Čarodějnice is hers; both are a spring fire you jump to burn off the
      old year). Legible subset of the festival's kit: brushwood bundles waiting their turn on
      the left (the tradition is seven small piles; two read at this size), and on the right the
-     clay jars plus a footed brazier of esfand smoking away. Static like the Czech dressing. -->
+     clay jars plus a footed brazier of esfand smoking away. The bundles and the jars each ride
+     a .sn-prop-wobble wrapper (tap → a dry rustle / a hollow clay bonk), mirroring her besom and
+     straw doll; the lit brazier stays static — you don't jostle a bowl of embers. -->
 <g class="sn-chaharshanbe" aria-hidden="true" pointer-events="none">
 <ellipse cx="518" cy="304" rx="21" ry="3" fill="#6b6055" opacity="0.3"/>
+<g id="balcony-brushwood-wobble" class="sn-prop-wobble">
 <path d="M501 300 L534 296 M501 302.5 L534 299 M502 305 L535 302" stroke="#a4763f" stroke-width="2.2" stroke-linecap="round" fill="none"/>
 <path d="M503 298 L533 294" stroke="#8a6244" stroke-width="1.8" stroke-linecap="round" fill="none"/>
 <rect x="514" y="292" width="3" height="14" rx="1.2" fill="#8e3a4a" transform="rotate(-5 515.5 299)"/>
 <path d="M505 291 L529 288 M505 293 L529 290.5" stroke="#a4763f" stroke-width="2" stroke-linecap="round" fill="none"/>
 <rect x="516" y="286" width="2.6" height="9" rx="1.1" fill="#8e3a4a" transform="rotate(-6 517.3 290.5)"/>
 <path d="M507 289 l-3 -3 M531 287 l3 -2 M509 300 l-4 -1 M532 297 l3 -1" stroke="#c19a4a" stroke-width="0.9" stroke-linecap="round" fill="none"/>
+</g>
 <ellipse cx="622" cy="304" rx="20" ry="3" fill="#6b6055" opacity="0.3"/>
+<g id="balcony-jars-wobble" class="sn-prop-wobble">
 <path d="M609 301 C604 295 604 287 610 283 L618 283 C624 287 624 295 619 301 Z" fill="#b07a56" stroke="#96603f" stroke-width="1"/>
 <rect x="607.5" y="280" width="13" height="3.4" rx="1.7" fill="#c98f66" stroke="#96603f" stroke-width="0.8"/>
 <path d="M608 292 Q614 295 620 292" stroke="#96603f" stroke-width="0.8" opacity="0.6" fill="none"/>
@@ -12298,12 +12356,56 @@ section{margin:1.9rem 0}
 <path d="M628 302 C624 298 624.5 292 629 290 L635 291 C638 294 637 300 633 302 Z" fill="#a06f4d" stroke="#8a5a3a" stroke-width="0.9"/>
 <rect x="627" y="288" width="10" height="2.8" rx="1.4" fill="#bd845d" stroke="#8a5a3a" stroke-width="0.7"/>
 <path d="M626.5 296 Q631 298 636 296" stroke="#8a5a3a" stroke-width="0.7" opacity="0.55" fill="none"/>
+</g>
 <path d="M645 301 l-2.5 4.5 M655 301 l2.5 4.5 M650 301 v4.5" stroke="#716455" stroke-width="1.3" stroke-linecap="round" fill="none"/>
 <path d="M641 294 H659 L655 301 H645 Z" fill="#8a7d6b" stroke="#5f5346" stroke-width="0.9"/>
 <rect x="639.5" y="292.2" width="21" height="2.4" rx="1.2" fill="#9c8f7c" stroke="#5f5346" stroke-width="0.7"/>
 <circle cx="645.5" cy="291" r="1" fill="#453a31"/><circle cx="650" cy="290.3" r="0.9" fill="#5c3f2b"/><circle cx="654.5" cy="291.2" r="0.95" fill="#453a31"/>
 <path d="M650 289 C647 283 653 280 650 273" stroke="#c9bdae" stroke-width="1.4" stroke-linecap="round" fill="none" opacity="0.5"/>
 <path d="M644 289.5 C642 285 645 283 643.5 279" stroke="#c9bdae" stroke-width="1.1" stroke-linecap="round" fill="none" opacity="0.35"/>
+<rect id="balcony-brushwood-hit" class="sn-prop-hit" x="498" y="284" width="40" height="24" fill="transparent"/>
+<rect id="balcony-jars-hit" class="sn-prop-hit" x="603" y="278" width="36" height="27" fill="transparent"/>
+</g>
+<!-- Chaharshanbe Suri only: Behdad's niece Irene leaps the bonfire — "زردی من از تو، سرخی تو از من"
+     (my yellow to you, your red to me): the jump IS the festival. A second, side-on drawing of the
+     cuddly nook's #cuddly-irene rather than a reuse — same face, same signature very long dark wavy
+     hair, but mid-leap that hair is the silhouette, so it streams out BEHIND her and carries the
+     motion. New festive outfit on purpose: new clothes (لباس نو) for the new year is the tradition,
+     and kids get theirs first. Drawn after the fire so she passes IN FRONT of the flames; class-gated
+     to .sn-chaharshanbe, so she cannot leak into Čarodějnice. -->
+<g id="balcony-irene" class="sn-chaharshanbe" aria-hidden="true">
+<g id="balcony-irene-jump"><!-- the leap arc rides here: a fresh wrapper with no transform attribute of its own for the keyframes to replace -->
+<g transform="translate(570,304) scale(0.8) translate(-570,-304)"><!-- she's drawn at nook scale and shrunk to the fire's plane, about her own footing (570,304) so she stays on the deck. A separate node from the animated one: the arc's transform can't reach in here and clobber this -->
+<path d="M590 202 C570 192 540 190 518 200 C500 208 494 220 504 226 C492 230 496 242 510 240 C500 248 508 256 524 250 C544 242 566 240 582 236 C594 228 598 210 590 202 Z" fill="#241d1a"/>
+<path d="M578 203 C556 199 532 202 515 212 M580 226 C562 230 542 238 526 246 M576 215 C556 214 536 220 520 230" fill="none" stroke="#3a2e28" stroke-width="1.1" stroke-linecap="round" opacity="0.7"/>
+<path d="M578 231 C568 235 560 241 556 247" fill="none" stroke="#dca878" stroke-width="6" stroke-linecap="round"/>
+<circle cx="555" cy="248" r="3.6" fill="#dca878" stroke="#b9855e" stroke-width="0.9"/>
+<path d="M576 256 C566 272 556 288 548 297" fill="none" stroke="#4a6b94" stroke-width="7" stroke-linecap="round"/>
+<path d="M543 295 L552 299 L550 304 Q542 305 539 301 Z" fill="#f4f0e4" stroke="#cfc7b6" stroke-width="1.1"/>
+<path d="M576 226 Q586 221 596 226 L601 259 Q586 264 571 259 Z" fill="#8e3a4a" stroke="#6f2c39" stroke-width="1.2"/>
+<path d="M571.6 255 Q586 260 600.4 255" fill="none" stroke="#d9b45c" stroke-width="3"/>
+<path d="M581 233 l3 5 l3 -5" fill="none" stroke="#d9b45c" stroke-width="1.1" stroke-linecap="round" opacity="0.8"/>
+<path d="M592 258 C604 264 610 274 606 283" fill="none" stroke="#4a6b94" stroke-width="7.5" stroke-linecap="round"/>
+<path d="M602 280 L611 282 Q616 287 610 290 L602.5 287 Z" fill="#f4f0e4" stroke="#cfc7b6" stroke-width="1.1"/>
+<path d="M581 221 H591 V227 Q586 229 581 227 Z" fill="#cf9d6e"/>
+<circle cx="586" cy="214" r="10.5" fill="#dca878" stroke="#b9855e" stroke-width="1"/>
+<ellipse cx="580" cy="218.5" rx="2" ry="1.3" fill="#e0967f" opacity="0.45"/>
+<ellipse cx="593" cy="217.5" rx="2" ry="1.3" fill="#e0967f" opacity="0.45"/>
+<circle cx="585.5" cy="212" r="1.4" fill="#33291f"/>
+<circle cx="592.5" cy="211.6" r="1.4" fill="#33291f"/>
+<circle cx="585.9" cy="211.4" r="0.45" fill="#fff" opacity="0.85"/>
+<circle cx="592.9" cy="211" r="0.45" fill="#fff" opacity="0.85"/>
+<path d="M583 208 Q585.5 206.6 588 208 M590.5 207.6 Q593 206.3 595 207.8" fill="none" stroke="#4a3a2c" stroke-width="0.9" stroke-linecap="round" opacity="0.7"/>
+<path d="M596 214 q2 1.5 -0.6 2.6" fill="none" stroke="#b9855e" stroke-width="0.9" stroke-linecap="round"/>
+<path d="M583.5 219.5 Q588.5 225 593.5 219 Q588.5 222.5 583.5 219.5 Z" fill="#b06a5a"/>
+<path d="M575 212 C575 198 592 193 597 204 C598.6 207.6 596.6 211 594.4 209 C589.4 202 580.6 203.6 577.6 213 Z" fill="#241d1a"/>
+<path d="M580.5 205 Q584.5 213 582.6 220" fill="none" stroke="#241d1a" stroke-width="1.4" stroke-linecap="round"/>
+<path d="M590 202.5 Q595.5 209 594.4 215.5" fill="none" stroke="#241d1a" stroke-width="1.2" stroke-linecap="round"/>
+<path d="M592 231 C602 225 610 217 614 209" fill="none" stroke="#dca878" stroke-width="6" stroke-linecap="round"/>
+<circle cx="615" cy="207" r="3.6" fill="#dca878" stroke="#b9855e" stroke-width="0.9"/>
+<path d="M577.6 236 l2.4 -4.6 M594.4 236 l-2.4 -4.6" fill="none" stroke="#d9b45c" stroke-width="2.2" stroke-linecap="round"/>
+</g>
+</g>
 </g>
 <g id="balcony-butterfly" aria-hidden="true">
 <g class="bfly-wing bfly-wing-l">
@@ -20742,6 +20844,7 @@ document.addEventListener("click", function (e) {
   hoverTooltip(document.getElementById("cuddly-behdad"), "<em>behdad</em>", "top", 12, 0, document.getElementById("cuddly-behdad-head")); // +y: his head rides ~10u higher than hers, so match her sit
   hoverTooltip(document.getElementById("cuddly-marketa"), "<em>markéta</em>", "top");
   hoverTooltip(document.getElementById("cuddly-irene"), "<em>Irene</em>", "top");
+  hoverTooltip(document.getElementById("balcony-irene"), "<em>Irene</em>", "top"); // her fire-festival self; hoverTooltip re-reads the anchor every frame, so the bubble rides the leap
   hoverTooltip(document.getElementById("kitchen-bartender-hit"), "<em>Pouria</em>", "top");
   hoverTooltip(document.getElementById("garden-dj-a"), "<em>DJ Amir</em>", "top");
   hoverTooltip(document.getElementById("garden-dj-b"), "<em>DJ Danesh</em>", "top");
@@ -35108,6 +35211,106 @@ async def localfont(name):
     playFairyChimeSound("office-haftsin");
   });
 })();
+// The spring bonfire's taps, and Irene leaping it. Same shape as the tree/haft-sin above:
+// one-shots ride inner wrappers, come off on animationend, and re-add across a double rAF so a
+// rapid re-tap restarts them. Three concerns share one IIFE because they share the fire's click:
+//   · the four seasonal props (her besom + straw doll; his brushwood + clay jars) wobble and rustle;
+//   · the fire itself flares amber (on the glow — see the .fire-flare CSS);
+//   · Irene leaps it. Chaharshanbe Suri ONLY: the fire and the flare are shared with Čarodějnice,
+//     she is not. Every path to her checks the season class, not just the CSS display gate — a
+//     summon that "worked" in Čarodějnice would still fire her sounds over an invisible girl.
+(function () {
+  var strip = document.getElementById("loft-game-strip");
+  var glow = document.getElementById("balcony-bonfire-glow");
+  var irene = document.getElementById("balcony-irene");
+  if (!strip || !glow || !irene) return;
+  function oneShot(el, cls) {
+    el.classList.remove(cls);
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { el.classList.add(cls); });
+    });
+  }
+  function onHit(id, fn) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener("click", function (e) { e.stopPropagation(); fn(); });
+  }
+  function reducedMotion() {
+    return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+  function hisFire() { return strip.classList.contains("season-chaharshanbe"); }
+  function onScreen() { return window.currentStageName === "balcony" && !document.hidden; }
+  // ── the props ──
+  [["balcony-besom-hit", "balcony-besom-wobble", playPaperShuffleSound],   // bristles
+   ["balcony-doll-hit", "balcony-doll-wobble", playPaperShuffleSound],     // straw
+   ["balcony-brushwood-hit", "balcony-brushwood-wobble", playPaperShuffleSound], // twigs
+   ["balcony-jars-hit", "balcony-jars-wobble", playPumpkinThumpSound]      // hollow clay
+  ].forEach(function (row) {
+    var wrap = document.getElementById(row[1]);
+    if (!wrap) return;
+    wrap.addEventListener("animationend", function (e) { if (e.animationName === "sn-prop-wobble") wrap.classList.remove("wobbling"); });
+    onHit(row[0], function () { oneShot(wrap, "wobbling"); row[2](row[1]); });
+  });
+  // ── the fire ──
+  glow.addEventListener("animationend", function (e) { if (e.animationName === "sn-fire-flare") glow.classList.remove("fire-flare"); });
+  onHit("balcony-bonfire-hit", function () {
+    oneShot(glow, "fire-flare");
+    playSizzleSound("balcony-bonfire-glow"); // the fire takes the poke and roars up
+    if (hisFire()) leap(true);               // ...and at his festival, that's Irene's cue
+  });
+  // ── Irene ──
+  // ONE of her, ever: a leap only starts when she isn't already showing, so a tap mid-arc is
+  // ignored rather than stacking a second Irene or snapping this one back to the start. The
+  // fire still flares on that tap, so the tap never reads as dead.
+  var showTimer = null, clearTimer = null;
+  function leap(userInitiated) {
+    if (!hisFire() || !onScreen() || irene.classList.contains("showing")) return;
+    if (reducedMotion()) return; // the arc IS the cameo; there's nothing worth showing without it
+    if (clearTimer) { clearTimeout(clearTimer); clearTimer = null; }
+    irene.classList.remove("leaping");
+    irene.getBoundingClientRect(); // force reflow so re-adding restarts the arc (SVG has no offsetWidth)
+    irene.classList.add("leaping", "showing");
+    // A click implies focus; the autonomous loop has no such promise, so it takes the crickets gate.
+    if (userInitiated || !(document.hidden || !document.hasFocus())) playSwishSound("balcony-irene");
+  }
+  // The landing giggle rides the arc's own animationend, so it can't fire without a leap having
+  // finished on screen — but animationend is not a click, so it gates like any unattended one-shot.
+  irene.addEventListener("animationend", function (e) {
+    if (e.animationName !== "balcony-irene-leap") return;
+    if (!(document.hidden || !document.hasFocus())) playGiggleSound("balcony-irene");
+    irene.classList.remove("showing"); // fade her out from the landing pose...
+    if (clearTimer) clearTimeout(clearTimer);
+    clearTimer = setTimeout(function () { clearTimer = null; irene.classList.remove("leaping"); }, 460); // ...and only drop the arc once she's invisible, so the landing can't snap back to the takeoff spot
+  });
+  // Autonomous loop: ONE self-rescheduling timer that starts at most ONE Irene, never a spawner —
+  // there is nothing to pile up in a backgrounded tab, and a hidden/off-room/wrong-season tick is
+  // simply a no-op that reschedules.
+  function tick() { showTimer = null; leap(false); schedule(); }
+  function schedule() {
+    if (showTimer) clearTimeout(showTimer);
+    showTimer = setTimeout(tick, 5000 + Math.random() * 4000);
+  }
+  // Hard teardown: strip her now (a room slide / season flip / reset hides any snap) and re-arm.
+  window.__resetBalconyIrene = function () {
+    if (showTimer) { clearTimeout(showTimer); showTimer = null; }
+    if (clearTimer) { clearTimeout(clearTimer); clearTimer = null; }
+    irene.classList.remove("showing", "leaping");
+    schedule();
+  };
+  // test/verify hook: hold her at one point of the arc (no auto-chain, no sound) so it's
+  // deterministically screenshottable. frac 0..1 of the 1.5s leap; null releases her.
+  window.__balconyIreneAt = function (frac) {
+    if (showTimer) { clearTimeout(showTimer); showTimer = null; }
+    if (clearTimer) { clearTimeout(clearTimer); clearTimer = null; }
+    var jump = document.getElementById("balcony-irene-jump");
+    if (frac == null) { irene.classList.remove("showing", "leaping"); if (jump) jump.style.animationDelay = jump.style.animationPlayState = ""; return; }
+    irene.classList.remove("leaping");
+    irene.getBoundingClientRect();
+    irene.classList.add("leaping", "showing");
+    if (jump) { jump.style.animationDelay = (-1.5 * frac) + "s"; jump.style.animationPlayState = "paused"; }
+  };
+  document.addEventListener("visibilitychange", function () { if (document.hidden) window.__resetBalconyIrene(); });
+  schedule();
+})();
 (function () {
   var desk = document.getElementById("office-desk");
   if (!desk) return;
@@ -43002,6 +43205,7 @@ function spawnDustMote(container) {
     if (name === "cuddly" && window.startCuddlyFlame) window.startCuddlyFlame(); // light the fireplace's fractal flames
     if (name === "cuddly" && window.resetFishu) window.resetFishu();
     if (name !== "cuddly" && window.__resetIrene) window.__resetIrene(); // Irene's cameo doesn't ride along out of the nook
+    if (name !== "balcony" && window.__resetBalconyIrene) window.__resetBalconyIrene(); // ...nor does her fire-festival self leave the balcony
     if (name === "office" && window.revealOfficeFishuIfFled) window.revealOfficeFishuIfFled();
     if (name === "office" && window.startOfficeCrane) window.startOfficeCrane(); // resume the skyline crane's traverse/drop loop
     if (name === "office" && window.__resumeMonitorLife) window.__resumeMonitorLife(); // resume a running Game-of-Life loop on return to the office
@@ -45812,6 +46016,7 @@ function spawnDustMote(container) {
     });
     if (window.resetOctopusChest) window.resetOctopusChest();
     if (window.__resetIrene) window.__resetIrene(); // clear Irene's cameo + re-arm her timer
+    if (window.__resetBalconyIrene) window.__resetBalconyIrene(); // ...and her bonfire leap
     if (glass) glass.classList.remove("done", "zoomed");
     if (officeDim) officeDim.style.opacity = "0";
     ["office-lamp", "office-pendant"].forEach(function (id) {
@@ -45931,6 +46136,7 @@ function spawnDustMote(container) {
     if (!strip) return;
     strip.classList.remove("season-holiday", "season-spooky", "season-valentines", "season-nowruz", "season-chaharshanbe", "season-carodejnice", "season-pride", "season-canada");
     if (name) strip.classList.add("season-" + name);
+    if (window.__resetBalconyIrene) window.__resetBalconyIrene(); // the season just moved under her: clear any leap in flight (she is Chaharshanbe's alone) and re-arm
   };
   function applySeasonDate() {
     var s = seasonDate();

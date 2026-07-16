@@ -22874,6 +22874,13 @@ document.addEventListener("click", function (e) {
   // screensaver fractal's brightness on the beat while a song plays underneath it.
   var eqRAF = null, eqAudioCtx = null, eqCtxFailed = false, eqAudioEl = null;
   var eqBassShelf = null, eqMuffleFilter = null, eqMasterGain = null, eqCompressor = null, eqPanner = null, eqAnalyser = null;
+  // Song level authority: once a song is captured into the pipeline its .volume is inert on
+  // WebKit (createMediaElementSource bypasses it) — route the level to the in-graph gain then;
+  // before capture (or with the pipeline off) plain .volume still governs native playback. So
+  // every volume write (steady level, room/door acoustics, crossfades) goes through these.
+  function setSongLevel(a, v) { if (!a) return; v = Math.max(0, v); if (a._eqGain) { try { a._eqGain.gain.value = v; } catch (e) {} } else { try { a.volume = v; } catch (e) {} } }
+  function songLevel(a) { return a ? (a._eqGain ? a._eqGain.gain.value : a.volume) : 0; }
+  window.__setSongLevel = setSongLevel; window.__songLevel = songLevel; // the cinematic/instrument IIFEs drive the same song elements
   // Stereo-width stage nodes (mid-side-style narrowing) -- see ensureAudioGraph for the
   // splitter/4-gain/merger wiring and __updateSongRoomWidth for what drives the gains.
   var eqWidthSplitter = null, eqWidthMerger = null, eqWidthL2L = null, eqWidthR2R = null, eqWidthL2R = null, eqWidthR2L = null;
@@ -23043,8 +23050,15 @@ document.addEventListener("click", function (e) {
           }
           try {
             var src = ctx.createMediaElementSource(audioEl); // exactly once per element — throws if repeated
-            src.connect(eqBassShelf);
+            // WebKit's createMediaElementSource taps the RAW decoded stream and BYPASSES the
+            // element's .volume (confirmed on desktop Safari), so a captured song ignores the
+            // volume button. Carry the level on an in-graph gain instead; .volume goes inert.
+            var sg = ctx.createGain();
+            sg.gain.value = audioEl.volume;
+            try { audioEl.volume = 1; } catch (e) {}
+            src.connect(sg); sg.connect(eqBassShelf);
             audioEl._eqSource = src;      // hold refs so neither node is GC'd
+            audioEl._eqGain = sg;         // the ONLY thing that attenuates a captured song on WebKit (see setSongLevel)
             audioEl._eqAnalyser = eqAnalyser;
             console.info("[song-audio] captured " + audioEl.id + " into the pipeline (context sampleRate " + ctx.sampleRate + ")");
           } catch (e) {
@@ -23313,7 +23327,7 @@ document.addEventListener("click", function (e) {
     if (room === "balcony") scale = balconyDoorOpenForSong() ? SONG_BALCONY_DOOR_OPEN_SCALE : SONG_BALCONY_DOOR_CLOSED_SCALE;
     else if (SONG_ROOM_VOL[room] != null) scale = SONG_ROOM_VOL[room];
     for (var i = 0; i < songAudios.length; i++) {
-      if (songAudios[i] && !songAudios[i].paused) songAudios[i].volume = base * scale;
+      if (songAudios[i] && !songAudios[i].paused) setSongLevel(songAudios[i], base * scale);
     }
   };
   function stopEq() {
@@ -23617,7 +23631,7 @@ document.addEventListener("click", function (e) {
     if (window.__retireHint) window.__retireHint("hint_song"); // loose-brick hint: retire once a loft song has played
     try {
       next.currentTime = 0;
-      next.volume = window.__songVolume ? window.__songVolume() : 0.5;
+      setSongLevel(next, window.__songVolume ? window.__songVolume() : 0.5);
       if (window.__captureSongAudio) window.__captureSongAudio(next);
       var p = next.play();
       if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (auto-advance) for " + next.id + ":", e); });
@@ -27886,7 +27900,7 @@ async def localfont(name):
       if (!song) return;
       try {
         if (song.paused) {
-          song.volume = window.__songVolume ? window.__songVolume() : 0.5; // app-owned level, same defensive reapply as every other play trigger
+          setSongLevel(song, window.__songVolume ? window.__songVolume() : 0.5); // app-owned level, same defensive reapply as every other play trigger
           if (window.__captureSongAudio) window.__captureSongAudio(song); // keep retrying the resume inside this gesture
           var p = song.play(); if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (monitor resume) for " + song.id + ":", e); });
         }
@@ -27914,7 +27928,7 @@ async def localfont(name):
     if (!song) return;
     try {
       if (song.paused) {
-        song.volume = window.__songVolume ? window.__songVolume() : 0.5; // app-owned level, same defensive reapply as every other play trigger
+        setSongLevel(song, window.__songVolume ? window.__songVolume() : 0.5); // app-owned level, same defensive reapply as every other play trigger
         if (window.__captureSongAudio) window.__captureSongAudio(song); // keep retrying the resume inside this gesture
         var p = song.play(); if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (spacebar) for " + song.id + ":", e); });
       } else {
@@ -27941,7 +27955,7 @@ async def localfont(name):
         pause: function () { if (!a.paused) a.pause(); },
         resume: function () {
           if (a.ended) return false;
-          a.volume = window.__songVolume ? window.__songVolume() : 0.5; // app-owned level, reapplied like every play trigger
+          setSongLevel(a, window.__songVolume ? window.__songVolume() : 0.5); // app-owned level, reapplied like every play trigger
           if (window.__captureSongAudio) window.__captureSongAudio(a); // keep retrying the resume inside this gesture
           var p = a.play(); if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (transport) for " + a.id + ":", e); });
           return true;
@@ -28197,15 +28211,15 @@ async def localfont(name):
   function fadeSongTo(a, target, ms, done) {
     if (!a) { if (done) done(); return; }
     if (a._fadeTimer) { clearInterval(a._fadeTimer); a._fadeTimer = null; }
-    var from = a.volume, t0 = Date.now();
+    var from = songLevel(a), t0 = Date.now();
     if (ms <= 0 || Math.abs(from - target) < 0.01) {
-      try { a.volume = target; } catch (e) {}
+      setSongLevel(a, target);
       if (done) done();
       return;
     }
     a._fadeTimer = setInterval(function () {
       var f = Math.min(1, (Date.now() - t0) / ms);
-      try { a.volume = from + (target - from) * f; } catch (e) {}
+      setSongLevel(a, from + (target - from) * f);
       if (f >= 1) { clearInterval(a._fadeTimer); a._fadeTimer = null; if (done) done(); }
     }, 40);
   }
@@ -28220,7 +28234,7 @@ async def localfont(name):
     if (a && !a.paused) {
       projSuspendedIdx = idx;
       var appVol = window.__songVolume ? window.__songVolume() : 0.5;
-      fadeSongTo(a, 0, 700, function () { try { a.pause(); a.volume = appVol; } catch (e) {} }); // fade, then pause + restore its level for the resume
+      fadeSongTo(a, 0, 700, function () { try { a.pause(); setSongLevel(a, appVol); } catch (e) {} }); // fade, then pause + restore its level for the resume
     } else {
       projSuspendedIdx = -1;
     }
@@ -28231,7 +28245,7 @@ async def localfont(name):
     if (!a) return;
     try {
       if (window.__captureSongAudio) window.__captureSongAudio(a); // rewire the analyser inside this gesture
-      a.volume = window.__songVolume ? window.__songVolume() : 0.5;
+      setSongLevel(a, window.__songVolume ? window.__songVolume() : 0.5);
       var p = a.play(); if (p && p.catch) p.catch(function () {}); // resumes from where it paused
     } catch (e) {}
   };
@@ -28254,9 +28268,9 @@ async def localfont(name):
         try {
           current.pause();
           current.currentTime = 0;
-          current.volume = appVol; // restore for its next play
+          setSongLevel(current, appVol); // restore for its next play
           next.currentTime = 0;
-          next.volume = 0;
+          setSongLevel(next, 0);
           var p = next.play();
           if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (monitor skip) for " + next.id + ":", e); });
           fadeSongTo(next, appVol, 320); // ...and in
@@ -28322,7 +28336,7 @@ async def localfont(name):
   // paths are disjoint, so master is applied exactly once to everything.
   window.__songVolume = function () { return VOL_LEVELS[volIdx] * (typeof window.__audioMaster === "number" ? window.__audioMaster : 1); };
   function applySongVolume() {
-    for (var vi = 0; vi < songAudios.length; vi++) if (songAudios[vi]) songAudios[vi].volume = window.__songVolume();
+    for (var vi = 0; vi < songAudios.length; vi++) if (songAudios[vi]) setSongLevel(songAudios[vi], window.__songVolume());
     if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics(); // re-apply the current room's attenuation to the playing song
     if (window.__vidCtrlMasterVolume) window.__vidCtrlMasterVolume(window.__songVolume()); // the film follows the master
   }
@@ -28562,7 +28576,7 @@ async def localfont(name):
     if (!current && idle.length) {
       var pick = idle[Math.floor(Math.random() * idle.length)];
       try {
-        pick.volume = window.__songVolume ? window.__songVolume() : 0.5;
+        setSongLevel(pick, window.__songVolume ? window.__songVolume() : 0.5);
         if (window.__captureSongAudio) window.__captureSongAudio(pick);
         var p = pick.play(); if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (headphones boot) for " + pick.id + ":", e); });
       } catch (e) {}
@@ -43919,7 +43933,7 @@ function spawnDustMote(container) {
             if (other && !other.paused) other.pause();
           });
           if (audio.ended) audio.currentTime = 0;
-          audio.volume = window.__songVolume ? window.__songVolume() : 0.5; // app-owned level (monitor speaker button)
+          window.__setSongLevel(audio, window.__songVolume ? window.__songVolume() : 0.5); // app-owned level (monitor speaker button)
           // hook up the monitor equalizer's analyser here, inside the gesture,
           // so routing the song through Web Audio doesn't stall its playback
           if (window.__captureSongAudio) window.__captureSongAudio(audio);
@@ -45121,7 +45135,7 @@ function spawnDustMote(container) {
     if (!g || !g.paused) return;
     try {
       g.currentTime = 0;
-      g.volume = window.__songVolume ? window.__songVolume() : 0.5;
+      window.__setSongLevel(g, window.__songVolume ? window.__songVolume() : 0.5);
       if (window.__captureSongAudio) window.__captureSongAudio(g);
       var p = g.play(); if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] resume play() rejected:", e); });
     } catch (e) {}
@@ -45287,10 +45301,10 @@ function spawnDustMote(container) {
       try {
         cur.pause();
         cur.currentTime = 0;
-        cur.volume = appVol; // restore for its next play
+        window.__setSongLevel(cur, appVol); // restore for its next play
         if (!window.__cinematic) return;
         next.currentTime = 0;
-        next.volume = 0;
+        window.__setSongLevel(next, 0);
         var p = next.play();
         if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (encore) for " + next.id + ":", e); });
         window.__fadeSongTo(next, appVol, 600);
@@ -45304,7 +45318,7 @@ function spawnDustMote(container) {
     if (!a || !window.__fadeSongTo) return;
     var appVol = window.__songVolume ? window.__songVolume() : 0.5;
     window.__fadeSongTo(a, 0, 600, function () {
-      try { a.pause(); a.currentTime = 0; a.volume = appVol; } catch (e) {}
+      try { a.pause(); a.currentTime = 0; window.__setSongLevel(a, appVol); } catch (e) {}
     });
   }
   function startEncore() {

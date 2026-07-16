@@ -5547,6 +5547,31 @@ section{margin:1.9rem 0}
 .sn-tree-light.t4{animation-delay:2.4s}
 @keyframes sn-tree-twinkle{0%,100%{opacity:1}50%{opacity:.35}}
 @media (prefers-reduced-motion: reduce){.sn-tree-light{animation:none}}
+/* the tree's tap zones: #office-tree is pointer-events:none so the room behind stays
+   clickable — only these tight transparent shapes opt back in */
+.sn-tree-hit{pointer-events:auto; cursor:pointer}
+/* lights off: id-qualified so it beats .sn-tree-light's own class-level animation rule */
+#office-tree.lights-off .sn-tree-light{animation:none; opacity:.14}
+/* holiday: ambient glints catching on the ornaments and star — infinite, so nothing to
+   remove and nothing to accumulate; dark most of the cycle so they read as glints */
+.sn-tree-glint{transform-box:fill-box; transform-origin:50% 50%; animation:sn-tree-glint 4.2s ease-in-out infinite}
+.sn-tree-glint.g2{animation-delay:-1.4s; animation-duration:3.6s}
+.sn-tree-glint.g3{animation-delay:-2.7s; animation-duration:4.9s}
+.sn-tree-glint.g4{animation-delay:-3.5s; animation-duration:3.9s}
+@keyframes sn-tree-glint{0%,74%,100%{opacity:0; transform:scale(.35)} 86%{opacity:.9; transform:scale(1)}}
+@media (prefers-reduced-motion: reduce){.sn-tree-glint{animation:none; opacity:0}}
+#office-tree.lights-off .sn-tree-glint{animation:none; opacity:0}
+/* the decorated tree sways on this wrapper, never on #office-tree itself — a CSS transform
+   animation there would replace its static placement transform for the duration */
+#office-tree-sway{transform-box:fill-box; transform-origin:50% 100%}
+#office-tree-sway.sway{animation:sn-tree-sway .7s ease-in-out}
+@keyframes sn-tree-sway{0%,100%{transform:rotate(0)} 22%{transform:rotate(1.7deg)} 55%{transform:rotate(-1.2deg)} 80%{transform:rotate(.5deg)}}
+@media (prefers-reduced-motion: reduce){#office-tree-sway.sway{animation:none}}
+/* star flash: a filter function works here only because the star is a leaf <path> — on an
+   SVG container it's a WebKit no-op */
+#office-tree-star.star-flash{animation:sn-tree-star-flash .6s ease-out}
+@keyframes sn-tree-star-flash{0%,100%{filter:brightness(1)} 35%{filter:brightness(2.2) drop-shadow(0 0 4px #ffe9a8)}}
+@media (prefers-reduced-motion: reduce){#office-tree-star.star-flash{animation:none}}
 /* spooky: the balcony string-light bulbs go pumpkin-orange (CSS fill beats the
    presentation attributes on .balcony-bulb/.balcony-bulb-glow) */
 #loft-game-strip.season-spooky .balcony-bulb{fill:#e08434; stroke:#a95c1c}
@@ -9706,13 +9731,17 @@ section{margin:1.9rem 0}
 <path class="office-pendant-filament" d="M650.5 58 l-3.2 4 l6.4 4 l-6.4 4 l6.4 4 l-3.2 3.5" fill="none" stroke="#ffd074" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M668 18 Q682 150 656 300" fill="none" stroke="#2d2d2d" stroke-width="1.5"/>
 </g>
-<!-- holiday tree: a small three-tier fir on the floor under the stained-glass window,
-     in a wine pot, with staggered warm bulbs. Season-gated, decorative only. -->
+<!-- holiday tree: a small three-tier fir on the floor under the stained-glass window, in a
+     wine pot, with staggered warm bulbs and ambient glints. Season-gated; tap the foliage
+     to sway it, the star to flash it, the pot to switch the lights. -->
 <!-- grown 1.4x about its own base (558,300) so it stays planted on the floor rather than
-     scaling away from the SVG origin, then nudged 50px right. Only its bulbs animate, and
-     on opacity, so nothing can clobber this static transform. -->
+     scaling away from the SVG origin, then nudged 50px right. Nothing animates a transform
+     on this node itself — the sway rides #office-tree-sway — so the static transform holds. -->
 <g id="office-tree" class="sn-holiday" aria-hidden="true" pointer-events="none" transform="translate(608,300) scale(1.4) translate(-558,-300)">
 <ellipse cx="558" cy="303" rx="30" ry="4.5" fill="#8a5a28" opacity="0.18"/>
+<!-- everything that should tip together rides this wrapper; the pot and the floor shadow
+     stay outside it so the tree sways from a planted base -->
+<g id="office-tree-sway">
 <rect x="554" y="284" width="8" height="10" fill="#7a5638"/>
 <path d="M558 258 L530 288 Q558 292 586 288 Z" fill="#3f6f4a"/>
 <path d="M558 258 L558 290.8 Q572 290.4 586 288 Z" fill="#2c4f34" opacity="0.45"/>
@@ -9742,9 +9771,21 @@ section{margin:1.9rem 0}
 <circle class="sn-tree-light t2" cx="536" cy="285" r="1.8" fill="#f4c95a" stroke="#c99b45" stroke-width="0.7"/>
 <circle class="sn-tree-light t3" cx="578" cy="284" r="4" fill="#f0c46a" fill-opacity="0.35"/>
 <circle class="sn-tree-light t3" cx="578" cy="284" r="1.8" fill="#f4c95a" stroke="#c99b45" stroke-width="0.7"/>
+<circle class="sn-tree-glint" cx="563.4" cy="211.5" r="1.3" fill="#fff6df"/>
+<circle class="sn-tree-glint g3" cx="551.2" cy="256.6" r="1.1" fill="#fff6df"/>
+<circle class="sn-tree-glint g2" cx="568.6" cy="259" r="1.2" fill="#fff6df"/>
+<circle class="sn-tree-glint g4" cx="546.6" cy="278.6" r="1.2" fill="#fff6df"/>
+<circle class="sn-tree-glint g3" cx="574.4" cy="277.8" r="1.1" fill="#fff6df"/>
+<circle class="sn-tree-glint g2" cx="554.2" cy="240" r="1" fill="#fff6df"/>
+<path id="office-tree-star" d="M558 208 L559.76 212.57 L564.66 212.84 L560.85 215.93 L562.11 220.66 L558 218 L553.89 220.66 L555.15 215.93 L551.34 212.84 L556.24 212.57 Z" fill="#c9a227" stroke="#8a6a3a" stroke-width="0.7" stroke-linejoin="round"/>
+</g>
 <path d="M546 294.5 L550.5 304 L565.5 304 L570 294.5 Z" fill="#7a3040"/>
 <rect x="543" y="288.5" width="30" height="6" rx="1" fill="#8e3a4a" stroke="#6f2c39" stroke-width="0.6"/>
-<path d="M558 208 L559.76 212.57 L564.66 212.84 L560.85 215.93 L562.11 220.66 L558 218 L553.89 220.66 L555.15 215.93 L551.34 212.84 L556.24 212.57 Z" fill="#c9a227" stroke="#8a6a3a" stroke-width="0.7" stroke-linejoin="round"/>
+<!-- tap zones last so they sit above the art; kept tight to the silhouette (the star zone
+     lands in the round window's empty bbox corner, so it steals no clicks from it) -->
+<path id="office-tree-foliage-hit" class="sn-tree-hit" d="M558 223 L529 292.5 L587 292.5 Z" fill="transparent"/>
+<rect id="office-tree-pot-hit" class="sn-tree-hit" x="542" y="292.5" width="32" height="12.5" fill="transparent"/>
+<rect id="office-tree-star-hit" class="sn-tree-hit" x="548" y="203" width="21" height="19" fill="transparent"/>
 </g>
 <g id="office-side-table">
 <rect x="116" y="253" width="4" height="45" fill="#1f1f1f"/>
@@ -34445,6 +34486,39 @@ async def localfont(name):
     lampIds.forEach(function (id) { var el = document.getElementById(id); if (el) el.classList.remove("dimmed"); });
     updateRoomDim();
   };
+})();
+// The holiday tree's three tap zones. Click-only by design: the scene takes no keydown
+// (Space/Enter are claimed document-capture), and the group carries no a11y attrs.
+(function () {
+  var tree = document.getElementById("office-tree");
+  var sway = document.getElementById("office-tree-sway");
+  var star = document.getElementById("office-tree-star");
+  if (!tree || !sway || !star) return;
+  function oneShot(el, cls) {
+    el.classList.remove(cls);
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { el.classList.add(cls); });
+    });
+  }
+  // the star's flash bubbles up through the sway wrapper, so both listeners check the name
+  sway.addEventListener("animationend", function (e) { if (e.animationName === "sn-tree-sway") sway.classList.remove("sway"); });
+  star.addEventListener("animationend", function (e) { if (e.animationName === "sn-tree-star-flash") star.classList.remove("star-flash"); });
+  function onHit(id, fn) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener("click", function (e) { e.stopPropagation(); fn(); });
+  }
+  onHit("office-tree-foliage-hit", function () {
+    oneShot(sway, "sway");
+    playGlassClinkSound(1.5 + Math.random() * 0.3, "office-tree"); // the baubles knock together
+  });
+  onHit("office-tree-star-hit", function () {
+    oneShot(star, "star-flash");
+    playFairyChimeSound("office-tree");
+  });
+  onHit("office-tree-pot-hit", function () {
+    tree.classList.toggle("lights-off");
+    playDryClickSound("office-tree"); // a switch click at the plug
+  });
 })();
 (function () {
   var desk = document.getElementById("office-desk");

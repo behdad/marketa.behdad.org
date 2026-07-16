@@ -42,16 +42,42 @@ The monitor (and other desk objects) look badly blurred when zoomed in.
 _Suspect:_ WebKit rasterises the SVG at pre-scale resolution then scales up (Chrome re-rasters).
 May need a WebKit re-raster hint (`will-change`, higher backing resolution) or be accepted.
 
-### 4. 🔴 Monitor desktop + its apps don't render (foreignObject cluster)
-On WebKit the office monitor is largely non-functional — the **desktop app icons** and
-effectively **every app** fail to render. Confirmed dead so far: Console, Python (Pyodide),
-Linux (v86), Doom, Game of Life, Minesweeper, Tattoo, Browser (tabs + content) (and the icons
-themselves). Assume the WHOLE app surface is affected until proven otherwise.
-(Tattoo also has a canvas — if the phone's DOM version also fails, that's a separate canvas bug, not foreignObject.)
-These are all the monitor's HTML-in-SVG app surfaces, so this is almost certainly ONE root
-cause: **foreignObject** content not painting on WebKit (foreignObject is historically buggy —
-clipping/painting/positioning). Fixing the foreignObject path likely recovers the whole cluster.
-(The zoom blur #3 and the missing icons may share the same monitor-rendering root — verify together.)
+### 4. 🟡 Monitor desktop + its apps don't render — ROOT CAUSE FOUND (WebKit bug 23113)
+On WebKit the office monitor is largely non-functional — desktop app icons + effectively every
+app (Console, Python/Pyodide, Linux/v86, Doom, Life, Minesweeper, Tattoo, Browser).
+
+**ROOT CAUSE (confirmed — reproduced + fix verified in real WebKit):**
+[WebKit bug #23113](https://bugs.webkit.org/show_bug.cgi?id=23113) — *"layer content inside HTML
+in an SVG foreignObject renders in the wrong place"* when the SVG is **scaled**. `#office-monitor`
+carries `scale(1.1025)` and the desk-zoom scales it much more. Any descendant of the monitor's
+foreignObjects that gets its own **RenderLayer** — `position:relative/absolute`, `transform`,
+`will-change`, `opacity<1`, `z-index`, `filter` — is painted at the WRONG position (off-screen /
+outside the clip) → invisible. Plain text (no layer) paints in place → that's why only the LABELS
+showed. Misleading detour: the `<use>` icon refs DO resolve (getBBox non-zero) and removing the
+tile's `translateZ(0)`/`will-change` alone did NOT help — the real trigger was **`position:relative`
+on `.dock-tile`**. Setting `.dock-tile{position:static}` in WebKit → **all 16 tiles + icons render
+correctly, matching Chrome** (screenshot-verified).
+
+**Isolated minimal-test proof (real WebKit):** a `position:relative` div inside `<foreignObject>`
+under `<g transform="scale(10)">` renders TINY/broken; the SAME div as `position:static` under the
+same g-scale renders LARGE and correct. Also tested: CSS `transform:scale` on the `<svg>` element
+itself (direct-child foreignObject) renders FINE; **`viewBox` scaling does NOT scale foreignObject
+content at all** in WebKit (so a viewBox-zoom rewrite is OUT). The specific trigger = **a RenderLayer
+under an SVG `transform`-attribute scale on a `<g>` ancestor**, which is exactly `#office-monitor`
+(`transform="…scale(1.1025)"`).
+
+**Fix options (both avoid detach/reinject and viewBox):**
+1. *Surgical:* remove the `scale(1.1025)` from `#office-monitor`'s transform attribute and bake that
+   factor into the monitor's coordinates (or apply it via a non-transform path), so no layer content
+   sits under an SVG-transform scale. Smallest blast radius IF the coordinate rebake is clean; one
+   change likely recovers icons + all apps. Risk: repositioning/resizing the whole monitor art.
+2. *Sweep:* strip RenderLayer-creating CSS (`position:relative/absolute`, `transform:translateZ(0)`,
+   `will-change`, stray `opacity`/`z-index`) from elements inside the monitor foreignObjects. Confirmed
+   working for `.dock-tile` (→ all 16 tiles+icons render). Downsides: touches many app rules and breaks
+   overlays that need a positioning context (calendar day-number, photobooth cam) — those need
+   re-anchoring. Broadest but most tedious.
+
+Likely also explains the zoom-blur (#3). Owner reviewing which fix path to take (a core-feature change).
 
 ### 5. 🔴 Scene-wide CSS filter effects don't render (ketamine gray-out, alcohol blur)
 Full-scene filter effects don't appear on WebKit: the **ketamine** trip's gray-out and the

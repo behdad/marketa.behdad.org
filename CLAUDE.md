@@ -132,6 +132,56 @@ allowed exception, owner-confirmed.)
   `el.matches()` + stylesheet dump). Before concluding a cascade bug, re-probe with
   `transition:none !important` injected; if the value flips, it's this artifact.
 
+## Cross-browser gotchas (Safari/WebKit + Firefox)
+
+Found the hard way during the 2026-07 cross-browser pass (tooling recipes in `DEBUGGING.md`).
+On **iOS every browser is WebKit** (Apple mandate), so WebKit bugs hit all iPhone/iPad visitors —
+the "best in desktop Chrome" nudge only helps desktop.
+
+- **WebKit: layer content inside a foreignObject under an SVG `scale()` renders off-position →
+  invisible** ([WebKit bug 23113](https://bugs.webkit.org/show_bug.cgi?id=23113)). Any descendant
+  of a `<foreignObject>` (that sits under a `<g transform="scale()">` or a CSS-transform-scaled SVG
+  ancestor — e.g. `#office-monitor scale(1.1025)` + the desk-zoom) which creates a **RenderLayer**
+  (`position:relative/absolute`, `transform`, `will-change`, `opacity<1`, `z-index`, `filter`) is
+  painted at the wrong place and vanishes; plain text / `position:static` blocks paint fine. Fix:
+  **de-layer** — CSS grid-stacking (`display:grid` + `grid-area:1/1`) for overlays instead of
+  `position:absolute`; no `transform`/`will-change`. (Silenced the whole monitor app surface + the
+  dock hover.) `viewBox` scaling does NOT scale foreignObject content at all in WebKit — not a
+  workaround. Also gate scrollable panes to `overflow:hidden` under the scale (`auto`/`scroll`
+  mispaint once content overflows).
+- **WebKit: `<canvas>`/`<video>`/`<iframe>` inside a foreignObject never composite** — blank even
+  UNSCALED (they're replaced elements). Fix: render into an off-DOM canvas and blit into a native
+  SVG `<image>` via `toDataURL()` each frame (set both `href` + `xlink:href`); SVG `<image>` paints
+  everywhere and `mix-blend-mode:screen` still composites on it. (Julia saver, mushroom blooms,
+  cuddly flame.) `<video>`/live-camera can't be blitted → accept blank under the monitor scale
+  (Doom canvas, video app, photobooth).
+- **WebKit ignores `transform-box: fill-box` on `<text>`** (only `<text>` — `<circle>`/`<g>` are
+  fine): a scale/rotate pivots against the SVG viewport, not the glyph box, so animated text
+  particles fly to the origin. Fix: pivot text particles on their own `(x,y)` in view-box coords.
+- **WebKit: a CSS `filter` FUNCTION on an SVG container is a no-op** (`filter:blur()/grayscale()/
+  saturate()` on a `<g>`/`<svg>` — computed style shows it, nothing renders). Fix: SVG `<filter>`
+  reference (`filter:url(#id)`), animate its primitives via SMIL. (Ketamine/alcohol/iboga trips.)
+- **WebKit paints `opacity:0` foreignObjects AND lets them escape the ancestor `overflow:hidden`
+  clip** → idle/off-screen foreignObject content (inactive monitor channels in another room) leaks
+  a black rectangle into the visible scene. Fix: `visibility:hidden` (WebKit honours it) when the
+  owning region isn't shown.
+- **Safari hard-caps concurrent `AudioContext`s (~4)** — a page that spins up many (one per bed /
+  channel / SFX / pipeline) goes SILENT past the cap on Safari (Chrome/Firefox don't cap). Fix: ONE
+  shared AudioContext, many nodes; per-source lifecycle acts on nodes (gain-gate / disconnect),
+  never the shared context (see `AUDIO.md`). NB: `createMediaElementSource` on WebKit taps the RAW
+  stream and BYPASSES `el.volume` — captured-song volume must ride an in-graph GainNode.
+- **Firefox fullscreen:** (a) `width:500%;height:auto` SVG computes a hair-different aspect than the
+  pure math, so a JS-sized frame can exceed the rendered scene and stretched side-rails hang below
+  it → snap frame height to the actual rendered height; (b) a fullscreen CSS override in a selector
+  list containing `:-webkit-full-screen` can be dropped wholesale by Firefox → force critical
+  fullscreen props (e.g. `max-width:none`) INLINE; (c) Firefox's fullscreen viewport resize lands
+  frames late (and may not fire `resize`) → re-fit on delayed timers, not just rAF.
+- **Testing caveats:** WebKit `getScreenCTM()` ignores an ancestor's CSS transform (can't locate a
+  CSS-zoomed element on-screen); Playwright-WebKit can't construct `TouchEvent`/`Touch` ("Illegal
+  constructor") so multi-touch can't be exercised headless; under `file://`, Chrome/WebKit block
+  media subresources (`art/*.opus`) so headless SONG playback is silent though synth SFX still play
+  — a red herring vs the real https site.
+
 ## Design system
 
 - Palette (CSS custom props in `:root`): cream `#f8f5ec`, paper `#fffdf8`, ink `#453a31`,

@@ -14048,7 +14048,7 @@ function idealBrowser() {
     // production use the class only ever gets set by refreshLabel() based on the
     // genuine Fullscreen API state, so this doesn't change real behavior at all.
     if (!area.classList.contains("is-fullscreen") || !frame || !viewport || !caption || !dots) {
-      if (frame) { frame.style.width = ""; frame.style.height = ""; }
+      if (frame) { frame.style.width = ""; frame.style.height = ""; frame.style.maxWidth = ""; }
       if (window.__refitZoom) window.__refitZoom(); // re-fit a desk zoom to the restored frame, in lockstep with the resize
       return;
     }
@@ -14070,6 +14070,9 @@ function idealBrowser() {
     var viewportW = Math.min(areaW - chrome, areaH * 2);
     var viewportH = viewportW / 2;
     frame.style.width = (viewportW + chrome) + "px";
+    frame.style.maxWidth = "none"; // the fullscreen CSS override that lifts .hunt-frame's base
+    // max-width:1140 rides a selector list containing :-webkit-full-screen, which Firefox can drop
+    // wholesale — so the frame stays capped at 1140 and the scene never zooms up. Force it inline.
     frame.style.height = viewportH + "px";
     // Snap the frame to the scene's ACTUALLY-rendered height. The strip is width:500% /
     // height:auto, and Firefox computes that SVG aspect a hair differently from the pure 2:1
@@ -14114,6 +14117,13 @@ function idealBrowser() {
       requestAnimationFrame(function () {
         requestAnimationFrame(sizeFullscreenFrame);
       });
+      // Firefox's fullscreen viewport resize can land many frames late (and it may not fire a
+      // 'resize' event on the way in), leaving the frame sized against the stale pre-fullscreen
+      // box → an undersized, un-zoomed scene. Re-fit at a few longer delays to catch the final
+      // fullscreen dimensions once it settles. Idempotent — a no-op where the frame is already right.
+      setTimeout(sizeFullscreenFrame, 80);
+      setTimeout(sizeFullscreenFrame, 220);
+      setTimeout(sizeFullscreenFrame, 480);
     }
   }
   window.refreshFullscreenLabel = refreshLabel; // re-run by setLang() on every language switch

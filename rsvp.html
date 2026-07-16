@@ -12951,6 +12951,98 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>
+// ── Shared AudioContext ─────────────────────────────────────────────────────
+// Safari hard-caps concurrent AudioContexts (~4); this page used to spin up ~26 (one
+// per ambient bed / projector-music channel / dance / the song pipeline / SFX), so past
+// the cap Safari produced NO Web Audio output at all. The best-practice fix is one shared
+// context feeding many nodes — it also stops Chrome/Linux from contending dozens of
+// hardware streams. Every bed/dance routes through audioBed(); one-shot SFX through
+// getSfxCtx(); the song pipeline uses the raw shared context. Exactly ONE AudioContext is
+// constructed at runtime — only here in getAudioCtx (see check.js).
+var __sharedAC = null, __sharedACFailed = false, __activeAudioBeds = 0;
+function getAudioCtx() {
+  if (__sharedAC || __sharedACFailed) return __sharedAC;
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) { __sharedACFailed = true; return null; }
+    __sharedAC = new Ctx();
+  } catch (e) { __sharedACFailed = true; return null; }
+  return __sharedAC;
+}
+// Nudge the one context running. A freshly-built context starts "suspended"; callers are
+// always in a gesture/attended path when they want sound, so resuming here is safe (the
+// idle manager below re-suspends once nothing wants sound). Reject swallowed (autoplay
+// policy pre-gesture).
+function resumeSharedAudio() {
+  var ac = getAudioCtx(); if (!ac) return;
+  try { if (ac.state !== "running") { var r = ac.resume(); if (r && r.catch) r.catch(function () {}); } } catch (e) {}
+}
+// The one place the shared context is suspended/resumed, replacing every per-context
+// suspend + idle timer. Keep it running while attended, while any <audio> song plays, OR
+// while any synth bed is live — the background-safe projector/dance beds keep look-ahead
+// schedulers queuing on the audio clock while unfocused, so that clock must never freeze
+// under them (a frozen-then-jumped clock would burst their whole backlog at once). Suspend
+// only when truly idle so we never hold a silent OS stream open.
+window.__updateSharedAudioIdle = function () {
+  var ac = __sharedAC; if (!ac) return; // never create one just to idle it
+  try {
+    var song = window.__anySongPlaying ? window.__anySongPlaying() : false;
+    var idle = (document.hidden || !document.hasFocus()) && !song && __activeAudioBeds <= 0;
+    if (idle) { if (ac.state === "running") { var s = ac.suspend(); if (s && s.catch) s.catch(function () {}); } }
+    else if (ac.state === "suspended") { var r = ac.resume(); if (r && r.catch) r.catch(function () {}); }
+  } catch (e) {}
+};
+// A per-bed handle that quacks like an AudioContext for node creation, but whose lifecycle
+// methods act on THIS bed's nodes only — leaving the shared context alive for every other
+// bed/song/SFX. Its .destination is the bed's own sub-master gain: suspend()/resume() ramp
+// that gain (a music "pause" becomes mute-in-place — the synth beds loop, so muting then
+// un-muting a few notes later is inaudible, and the shared clock keeps running so the
+// look-ahead scheduler self-consumes with no catch-up burst), and close() disconnects it
+// (the bed's own nodes are already stopped by the caller's fade-then-stop). One shared
+// factory, parameterized by output node, so audioBed and getSfxCtx can't drift apart.
+function audioBusProxy(ac, out, lifecycle) {
+  var p = {
+    _ac: ac, _out: out,
+    get currentTime() { return ac.currentTime; },
+    get sampleRate() { return ac.sampleRate; },
+    get state() { return ac.state; },
+    get destination() { return out; },
+    createGain: function () { return ac.createGain(); },
+    createOscillator: function () { return ac.createOscillator(); },
+    createBufferSource: function () { return ac.createBufferSource(); },
+    createBuffer: function (a, b, c) { return ac.createBuffer(a, b, c); },
+    createBiquadFilter: function () { return ac.createBiquadFilter(); },
+    createDynamicsCompressor: function () { return ac.createDynamicsCompressor(); },
+    createConvolver: function () { return ac.createConvolver(); },
+    createWaveShaper: function () { return ac.createWaveShaper(); },
+    createDelay: function (m) { return ac.createDelay(m); },
+    createAnalyser: function () { return ac.createAnalyser(); },
+    createChannelSplitter: function (n) { return ac.createChannelSplitter(n); },
+    createChannelMerger: function (n) { return ac.createChannelMerger(n); }
+  };
+  // feature-detect parity with the real context (pannedOut/swirlBus fall back to mono when absent)
+  if (ac.createStereoPanner) p.createStereoPanner = function () { return ac.createStereoPanner(); };
+  p.resume = lifecycle.resume; p.suspend = lifecycle.suspend; p.close = lifecycle.close;
+  return p;
+}
+function audioBed() {
+  var ac = getAudioCtx();
+  if (!ac) return null;
+  resumeSharedAudio();
+  var out = ac.createGain();
+  out.gain.value = 1;
+  out.connect(ac.destination);
+  __activeAudioBeds++;
+  var closed = false;
+  function ramp(to) {
+    try { var g = out.gain, t = ac.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(to, t + 0.02); } catch (e) {}
+  }
+  return audioBusProxy(ac, out, {
+    resume: function () { ramp(1); return Promise.resolve(); },     // un-mute (pause off / start)
+    suspend: function () { ramp(0.0001); return Promise.resolve(); }, // mute-in-place (pause on)
+    close: function () { if (!closed) { closed = true; __activeAudioBeds--; try { out.disconnect(); } catch (e) {} } return Promise.resolve(); }
+  });
+}
 var T = {
   en: {
     hunt_title: "Loft Day",
@@ -14930,10 +15022,9 @@ document.addEventListener("click", function (e) {
   }
   function startFire() {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
       stopFire();
-      fireCtx = new Ctx();
+      fireCtx = audioBed();
+      if (!fireCtx) return;
       // Web Audio needs a gesture; nav clicks / the toggle are gestures so the context is
       // normally already running. Resume just in case, swallowing a blocked-context reject
       // so it never throws or spams (a pre-gesture reload-into-cuddly path can hit this).
@@ -15034,10 +15125,9 @@ document.addEventListener("click", function (e) {
   }
   function startAqua() {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
       stopAqua();
-      aquaCtx = new Ctx();
+      aquaCtx = audioBed();
+      if (!aquaCtx) return;
       try { var p = aquaCtx.resume && aquaCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       var now = aquaCtx.currentTime;
       // water hush bed: heavily lowpassed noise, a gentle calm rush under the room
@@ -15182,12 +15272,11 @@ document.addEventListener("click", function (e) {
   }
   function startAquaMel() {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
       stopAquaMel();
       window.__musicPaused = false; // a freshly-opened bed is never born paused
       aquaMelSuspended = false;
-      aquaMelCtx = new Ctx(); // aquarium melody bed (persistent) — see check.js new-Ctx cap
+      aquaMelCtx = audioBed(); // aquarium melody bed
+      if (!aquaMelCtx) return;
       try { var p = aquaMelCtx.resume && aquaMelCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       // bell voices → a gentle lowpass (rounds off the shimmer) → one master gain (volume + fade)
       var lp = aquaMelCtx.createBiquadFilter();
@@ -15268,10 +15357,9 @@ document.addEventListener("click", function (e) {
   }
   function startTotoro() {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
       stopTotoro();
-      totoroCtx = new Ctx();
+      totoroCtx = audioBed();
+      if (!totoroCtx) return;
       try { var p = totoroCtx.resume && totoroCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       var now = totoroCtx.currentTime;
       // rain wash bed: band-limited (600-3600 Hz) looping noise, a soft steady "shhh"
@@ -15372,12 +15460,11 @@ document.addEventListener("click", function (e) {
   };
   function startTotoroMel() {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
       stopTotoroMel();
       window.__musicPaused = false; // a freshly-opened bed is never born paused
       totoroMelSuspended = false;
-      totoroMelodyCtx = new Ctx();
+      totoroMelodyCtx = audioBed();
+      if (!totoroMelodyCtx) return;
       try { var p = totoroMelodyCtx.resume && totoroMelodyCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       // triangle+sine voices → a soft lowpass (rounds the tone) → one master gain (volume + fade),
       // centered as a whole-loft track
@@ -15624,12 +15711,11 @@ document.addEventListener("click", function (e) {
   };
   function startStars() {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
       stopStars();
       window.__musicPaused = false; // a freshly-opened bed is never born paused
       starsSuspended = false;
-      starsCtx = new Ctx();
+      starsCtx = audioBed();
+      if (!starsCtx) return;
       try { var p = starsCtx.resume && starsCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       // triangle voices → a gentle lowpass (rounds the tone toward a soft piano) → one master
       // gain (the single volume handle + fade). Centered: it's a whole-loft track.
@@ -15880,12 +15966,11 @@ document.addEventListener("click", function (e) {
   }
   function startWorkout() {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
       stopWorkout();
       window.__musicPaused = false; // a freshly-started bed is never born paused
       workoutSuspended = false;
-      workoutCtx = new Ctx();
+      workoutCtx = audioBed();
+      if (!workoutCtx) return;
       try { var p = workoutCtx.resume && workoutCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       var now = workoutCtx.currentTime;
       // mix bus -> compressor (headroom for the summed kick/bass/stab) -> master (fade + the
@@ -16177,12 +16262,11 @@ document.addEventListener("click", function (e) {
   }
   function startPartyMusic(partyFadeIn) {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
       stopPartyMusic();
       window.__musicPaused = false; // a freshly-lit party is never born paused
       partySuspended = false;
-      partyCtx = new Ctx();
+      partyCtx = audioBed();
+      if (!partyCtx) return;
       try { var p = partyCtx.resume && partyCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       var now = partyCtx.currentTime;
       // mix bus -> compressor (peak headroom for the summed kick/bass/stab) -> master (fade +
@@ -16346,12 +16430,11 @@ document.addEventListener("click", function (e) {
   }
   function startWaltzMusic(fadeIn) {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
       stopWaltzMusic();
       window.__musicPaused = false;
       waltzSuspended = false;
-      waltzCtx = new Ctx();
+      waltzCtx = audioBed();
+      if (!waltzCtx) return;
       try { var p = waltzCtx.resume && waltzCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       var now = waltzCtx.currentTime;
       var bus = waltzCtx.createGain(); bus.gain.value = 1.0;
@@ -16521,12 +16604,11 @@ document.addEventListener("click", function (e) {
   }
   function startDiscoMusic(fadeIn) {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
       stopDiscoMusic();
       window.__musicPaused = false;
       discoSuspended = false;
-      discoCtx = new Ctx();
+      discoCtx = audioBed();
+      if (!discoCtx) return;
       try { var p = discoCtx.resume && discoCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       var now = discoCtx.currentTime;
       var nb = discoCtx.createBuffer(1, (discoCtx.sampleRate | 0) || 44100, (discoCtx.sampleRate | 0) || 44100);
@@ -16685,12 +16767,11 @@ document.addEventListener("click", function (e) {
   }
   function startSwingMusic(fadeIn) {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
       stopSwingMusic();
       window.__musicPaused = false;
       swingSuspended = false;
-      swingCtx = new Ctx();
+      swingCtx = audioBed();
+      if (!swingCtx) return;
       try { var p = swingCtx.resume && swingCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       var now = swingCtx.currentTime;
       var nb = swingCtx.createBuffer(1, (swingCtx.sampleRate | 0) || 44100, (swingCtx.sampleRate | 0) || 44100);
@@ -16877,12 +16958,11 @@ document.addEventListener("click", function (e) {
   }
   function startSalsaMusic(fadeIn) {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
       stopSalsaMusic();
       window.__musicPaused = false;
       salsaSuspended = false;
-      salsaCtx = new Ctx();                                       // see check.js new-Ctx cap (bumped for salsa + bhangra)
+      salsaCtx = audioBed();
+      if (!salsaCtx) return;
       try { var p = salsaCtx.resume && salsaCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       var now = salsaCtx.currentTime;
       var bus = salsaCtx.createGain(); bus.gain.value = 1.0;
@@ -17050,12 +17130,11 @@ document.addEventListener("click", function (e) {
   }
   function startBhangraMusic(fadeIn) {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
       stopBhangraMusic();
       window.__musicPaused = false;
       bhangraSuspended = false;
-      bhangraCtx = new Ctx();                                     // see check.js new-Ctx cap (bumped for salsa + bhangra)
+      bhangraCtx = audioBed();
+      if (!bhangraCtx) return;
       try { var p = bhangraCtx.resume && bhangraCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       var now = bhangraCtx.currentTime;
       var bus = bhangraCtx.createGain(); bus.gain.value = 1.0;
@@ -17203,11 +17282,10 @@ document.addEventListener("click", function (e) {
   }
   function pStart(fadeIn) {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
       pStop();
       window.__musicPaused = false; pSuspended = false;
-      pCtx = new Ctx();                                          // persian bandari bed
+      pCtx = audioBed();                                          // persian bandari bed
+      if (!pCtx) return;
       try { var pr = pCtx.resume && pCtx.resume(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
       var now = pCtx.currentTime;
       var bus = pCtx.createGain(); bus.gain.value = 1.0;
@@ -17333,11 +17411,10 @@ document.addEventListener("click", function (e) {
   }
   function kStart(fadeIn) {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
       kStop();
       window.__musicPaused = false; kSuspended = false;
-      kCtx = new Ctx();                                          // polka bed
+      kCtx = audioBed();                                          // polka bed
+      if (!kCtx) return;
       try { var pr = kCtx.resume && kCtx.resume(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
       var now = kCtx.currentTime;
       var bus = kCtx.createGain(); bus.gain.value = 1.0;
@@ -17467,11 +17544,10 @@ document.addEventListener("click", function (e) {
   }
   function hStart(fadeIn) {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
       hStop();
       window.__musicPaused = false; hSuspended = false;
-      hCtx = new Ctx();                                          // horah / freylekhs bed
+      hCtx = audioBed();                                          // horah / freylekhs bed
+      if (!hCtx) return;
       try { var pr = hCtx.resume && hCtx.resume(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
       var now = hCtx.currentTime;
       var bus = hCtx.createGain(); bus.gain.value = 1.0;
@@ -17572,10 +17648,9 @@ document.addEventListener("click", function (e) {
   }
   function startBirdsong() {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
       stopBirdsong();
-      birdCtx = new Ctx();
+      birdCtx = audioBed();
+      if (!birdCtx) return;
       try { var p = birdCtx.resume && birdCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       scheduleChirp();
     } catch (e) {}
@@ -19415,9 +19490,8 @@ document.addEventListener("click", function (e) {
     function kettlePuff() { spawnSteamWisps(document.getElementById("loft-game-strip"), 79, 193, 0.55, -1); }
     function startKettleHum() {
       try {
-        var Ctx = window.AudioContext || window.webkitAudioContext;
-        if (!Ctx) return;
-        kettleCtx = new Ctx();
+        kettleCtx = audioBed();
+        if (!kettleCtx) return;
         var bufferSize = kettleCtx.sampleRate * 2;
         var buffer = kettleCtx.createBuffer(1, bufferSize, kettleCtx.sampleRate);
         var data = buffer.getChannelData(0);
@@ -19815,9 +19889,8 @@ document.addEventListener("click", function (e) {
     var RADIO_MELODY = [659, 659, 698, 784, 784, 698, 659, 587, 523, 523, 587, 659, 659, 587, 587];
     function startRadioStatic() {
       try {
-        var Ctx = window.AudioContext || window.webkitAudioContext;
-        if (!Ctx) return;
-        radioCtx = new Ctx();
+        radioCtx = audioBed();
+        if (!radioCtx) return;
         var bufferSize = radioCtx.sampleRate * 2;
         var buffer = radioCtx.createBuffer(1, bufferSize, radioCtx.sampleRate);
         var data = buffer.getChannelData(0);
@@ -22344,10 +22417,9 @@ document.addEventListener("click", function (e) {
   var pcFanCtx = null;
   function startPcFan() {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
       stopPcFan();
-      pcFanCtx = new Ctx();
+      pcFanCtx = audioBed();
+      if (!pcFanCtx) return;
       var bufferSize = pcFanCtx.sampleRate * 2;
       var buffer = pcFanCtx.createBuffer(1, bufferSize, pcFanCtx.sampleRate);
       var data = buffer.getChannelData(0);
@@ -22800,9 +22872,8 @@ document.addEventListener("click", function (e) {
   function ensureAudioGraph() {
     if (eqAudioCtx || eqCtxFailed) return eqAudioCtx;
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) { eqCtxFailed = true; return null; }
-      eqAudioCtx = new Ctx();
+      eqAudioCtx = getAudioCtx(); // the shared context, raw (needs real suspend/resume + createMediaElementSource)
+      if (!eqAudioCtx) { eqCtxFailed = true; return null; }
       eqBassShelf = eqAudioCtx.createBiquadFilter();
       eqBassShelf.type = "lowshelf";
       eqBassShelf.frequency.value = 120;
@@ -23093,35 +23164,14 @@ document.addEventListener("click", function (e) {
     }
     return false;
   }
-  // The pipeline's context is deliberately permanent (capture is irreversible — see
-  // ensureAudioGraph), but permanent shouldn't mean always rendering: while the tab
-  // is hidden AND no song is playing, park it suspended instead of holding a live,
-  // silent OS audio stream open from a background-throttled renderer (a prime
-  // underrun/crackle source on some platforms' audio stacks). It must stay RUNNING
-  // while a song plays hidden — backgrounded playback is a feature, see the Media
-  // Session block below — and it resumes the moment the tab shows again OR a song
-  // starts while hidden (a lock-screen/media-key play: a captured element is
-  // inaudible until its context renders again). resume() can be rejected by autoplay
-  // policy outside a gesture — swallowed; __captureSongAudio retries on every play
-  // gesture anyway, same keep-retrying stance as its own per-gesture resume.
-  function updateEqCtxIdle() {
-    if (!eqAudioCtx) return;
-    try {
-      // unfocused counts as idle too (X11 has no occlusion detection, so a covered
-      // window stays "visible" forever) — but NEVER while a song plays: backgrounded/
-      // unfocused playback is a feature, and a captured element is inaudible while
-      // its context is suspended.
-      if ((document.hidden || !document.hasFocus()) && !anySongPlaying()) {
-        if (eqAudioCtx.state === "running") {
-          var s = eqAudioCtx.suspend();
-          if (s && s.catch) s.catch(function () {});
-        }
-      } else if (eqAudioCtx.state === "suspended") {
-        var r = eqAudioCtx.resume();
-        if (r && r.catch) r.catch(function () {});
-      }
-    } catch (e) {}
-  }
+  window.__anySongPlaying = anySongPlaying; // the shared-context idle manager reads this cross-scope
+  // Song-audio playback needs the shared context RUNNING (a captured <audio> element is
+  // inaudible while the context is suspended), including while hidden/unfocused —
+  // backgrounded playback is a feature (see the Media Session block below). That's now a
+  // subset of the shared idle manager's rule (attended OR any song OR any live bed keeps
+  // it running; suspend only when truly idle), so delegate to it rather than duplicate a
+  // song-only condition that would fight the bed refcount.
+  function updateEqCtxIdle() { if (window.__updateSharedAudioIdle) window.__updateSharedAudioIdle(); }
   document.addEventListener("visibilitychange", updateEqCtxIdle);
   window.__updateEqCtxIdle = updateEqCtxIdle; // the shared focus watcher re-checks it on blur/focus too
   function panDriftFrame(now) {
@@ -33361,9 +33411,8 @@ async def localfont(name):
     var acCtx = null, acSource = null, acGain = null;
     function startACHum() {
       try {
-        var Ctx = window.AudioContext || window.webkitAudioContext;
-        if (!Ctx) return;
-        acCtx = new Ctx();
+        acCtx = audioBed();
+        if (!acCtx) return;
         var bufferSize = acCtx.sampleRate * 2;
         var buffer = acCtx.createBuffer(1, bufferSize, acCtx.sampleRate);
         var data = buffer.getChannelData(0);
@@ -33754,10 +33803,9 @@ async def localfont(name):
   }
   function startCityHum(where) {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
       stopCityHum();
-      cityCtx = new Ctx();
+      cityCtx = audioBed();
+      if (!cityCtx) return;
       cityWhere = where;
       var bufferSize = cityCtx.sampleRate * 2;
       var buffer = cityCtx.createBuffer(1, bufferSize, cityCtx.sampleRate);
@@ -33900,10 +33948,9 @@ async def localfont(name):
   }
   function startWind(where) {
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
       stopWind();
-      windCtx = new Ctx();
+      windCtx = audioBed();
+      if (!windCtx) return;
       windWhere = where;
       var now = windCtx.currentTime;
       windStormy = !!window.__balconyStorm;
@@ -37742,42 +37789,29 @@ function getSfxCtx() {
   // the first call after the tab is visible again resumes as normal.
   if (document.visibilityState === "hidden") return null;
   if (!sfxCtx) {
+    var ac = getAudioCtx();
+    if (!ac) { sfxCtxFailed = true; return null; }
+    // Session master volume for the SFX one-shots. Every effect connects to ctx.destination
+    // (some directly, some via pannedOut) — so the SFX handle's .destination IS one master
+    // GainNode feeding the shared context's real destination. The console volume() command
+    // scales its gain. (Beds/songs get master through __songVolume instead — disjoint sub-buses
+    // on the one shared context, so no double-scaling.) The handle's close()/suspend()/resume()
+    // are no-ops: leftover per-effect close() calls must never touch the shared context, and the
+    // shared idle manager handles suspend centrally.
+    var mg;
     try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) { sfxCtxFailed = true; return null; }
-      sfxCtx = new Ctx();
-      // leftover per-effect close() calls must never kill the shared context
-      sfxCtx.close = function () { return Promise.resolve(); };
-      // Session master volume for the SFX one-shots. Every effect connects to ctx.destination
-      // (some directly, some via pannedOut) — so we insert ONE master GainNode in front of the
-      // real destination and SHADOW ctx.destination with it (an own property overriding the
-      // prototype getter, same technique as the close() override above). Now every current and
-      // future `ctx.destination` connect — direct AND pannedOut — routes through this one node,
-      // with no call-site edits. The console volume() command scales its gain. (Beds/songs get
-      // master through __songVolume instead; the two paths are disjoint, so no double-scaling.)
-      try {
-        var realDest = sfxCtx.destination;
-        var mg = sfxCtx.createGain();
-        mg.gain.value = (typeof window.__audioMaster === "number" ? window.__audioMaster : 1);
-        mg.connect(realDest);
-        sfxCtx._volMaster = mg;
-        Object.defineProperty(sfxCtx, "destination", { value: mg, configurable: true });
-      } catch (e) {}
+      mg = ac.createGain();
+      mg.gain.value = (typeof window.__audioMaster === "number" ? window.__audioMaster : 1);
+      mg.connect(ac.destination);
     } catch (e) { sfxCtxFailed = true; return null; }
+    sfxCtx = audioBusProxy(ac, mg, { resume: function () { return Promise.resolve(); }, suspend: function () { return Promise.resolve(); }, close: function () { return Promise.resolve(); } });
+    sfxCtx._volMaster = mg;
   }
-  try { if (sfxCtx.state !== "running") { var rp = sfxCtx.resume(); if (rp && rp.catch) rp.catch(function () {}); } } catch (e) {}
-  // bounded stream lifetime: a context held running for a whole session accumulates
-  // underrun crackle on Linux Chrome (the documented long-held-stream failure that
-  // got the ambient beds focus-gated). 20s after the last effect it suspends; the
-  // machine-side S/PDIF always-process fix keeps the DAC locked through the gap, so
-  // the resume no longer pops.
-  clearTimeout(sfxIdleTimer);
-  sfxIdleTimer = setTimeout(suspendSfxCtx, 20000);
+  resumeSharedAudio();
   return sfxCtx;
 }
-var sfxIdleTimer = null;
-// Push the current session master onto the SFX context's shadow-destination gain (if the
-// context has been created yet — otherwise the next getSfxCtx() bakes it in at creation).
+// Push the current session master onto the SFX master gain (if the handle exists yet —
+// otherwise the next getSfxCtx() bakes it in at creation).
 window.__applySfxMaster = function () {
   try {
     if (sfxCtx && sfxCtx._volMaster) {
@@ -37786,12 +37820,9 @@ window.__applySfxMaster = function () {
     }
   } catch (e) {}
 };
-// ...and the stream is released immediately when the page is genuinely unattended.
-function suspendSfxCtx() {
-  try { if (sfxCtx && sfxCtx.state === "running") { var sp = sfxCtx.suspend(); if (sp && sp.catch) sp.catch(function () {}); } } catch (e) {}
-}
-window.addEventListener("blur", suspendSfxCtx);
-document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") suspendSfxCtx(); });
+// Unattended → let the shared idle manager release the one stream (SFX no longer owns a context).
+window.addEventListener("blur", function () { if (window.__updateSharedAudioIdle) window.__updateSharedAudioIdle(); });
+document.addEventListener("visibilitychange", function () { if (window.__updateSharedAudioIdle) window.__updateSharedAudioIdle(); });
 // ── Stereo panning ──────────────────────────────────────────────────────────
 // Place a sound effect in the stereo field to match where its object sits on the
 // visible room: an object on the left of the screen sounds from the left ear.
@@ -43613,10 +43644,9 @@ function spawnDustMote(container) {
     }
     function startRain(where) {
       try {
-        var Ctx = window.AudioContext || window.webkitAudioContext;
-        if (!Ctx) return;
         stopRain();
-        rainCtx = new Ctx();
+        rainCtx = audioBed();
+        if (!rainCtx) return;
         rainInCuddly = where === "cuddly";
         var bufferSize = rainCtx.sampleRate * 2;
         var buffer = rainCtx.createBuffer(1, bufferSize, rainCtx.sampleRate);

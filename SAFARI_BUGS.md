@@ -89,17 +89,24 @@ that element type, or an overlay it handles differently. Likely one root for bot
 The Julia-set fractal projector/screensaver channel shows nothing on WebKit. 
 _Suspect:_ canvas / WebGL / shader path unsupported or erroring on WebKit.
 
-### 7. 🔴 Volume control does nothing — music blasts at full volume
-The volume button has no effect; songs play at max volume. 
-_Cause:_ iOS/WebKit ignores programmatic `HTMLMediaElement.volume` — only a Web-Audio GainNode
-can attenuate on iOS. Ties to #8.
+### 7. 🟢 Volume control does nothing — music blasts at full volume — FIXED
+**Actual cause:** on WebKit, `createMediaElementSource(el)` taps the element's RAW decoded stream
+and **bypasses `el.volume`** (opposite of Chrome, which taps post-`.volume`). The app applied song
+volume via `audio.volume`, so once a song was captured into the pipeline the control did nothing →
+full blast. **Fix (commit 7f4c167, deployed):** each captured song carries its level on its own
+in-graph GainNode (`_eqGain`, spliced `src→_eqGain→eqBassShelf`); `setSongLevel/songLevel` route
+every write to the gain when captured, else to `.volume`. Browser-agnostic (no UA sniffing), Chrome
+behaviorally unchanged, kill-switch + `?pipeline` preserved. Verified in real WebKit + Chromium
+(gain 1.0→0.1→1.0 gives clean analyser drop/recover on both).
+**iOS residual (untestable headless, verify on device):** (1) ~250ms before capture engages, a
+song's first moment can play at full volume on iOS (iOS ignores `.volume` for native playback too);
+(2) iOS mutes Web-Audio output when the hardware ringer switch is silent (WebKit bug 237322).
 
-### 8. 🔴 Spatial sound-modeling doesn't work — pipeline seems skipped on playback
-No spatialization; "as if the pipeline is skipped for playback." The Web Audio graph
-(MediaElementSource → gain/pan) appears not to engage on WebKit, which would explain BOTH the
-dead volume control (#7) and the missing spatialization. 
-_Prime suspect:_ a feature-detect / context path that silently falls back to raw `<audio>`
-playback on WebKit. See memory `project_audio_pipeline_kill_switch`.
+### 8. 🟢 Spatial sound-modeling "doesn't work" — was actually #7 — FIXED
+Not a separate bug: the pipeline DOES engage on WebKit (capture succeeds; `createStereoPanner`
+exists; `panDriftFrame` has no engine gate), so spatialization already worked — the "as if skipped"
+symptom was the dead volume (#7) making everything sound wrong at full blast. Fixed with #7 (commit
+7f4c167, deployed). No separate code change needed.
 
 ### 9. 🔴 Double-tap for right-click (context menu) doesn't work
 The touch gesture that stands in for right-click — double-tap to open the `.mon-ctx` /

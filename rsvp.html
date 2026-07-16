@@ -1131,10 +1131,26 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #stage-garden.garden-party #garden-dj-decks{pointer-events:auto; cursor:pointer}
 #garden-dj-decks.cue{animation:dj-cue .26s ease}
 @keyframes dj-cue{0%,100%{transform:translateY(0) scale(1)}45%{transform:translateY(1.6px) scale(.98)}}
+/* occasional flourish: the hand scrubs the platter back and forth — on an inner wrapper
+   (distinct from the infinitely-bobbing #garden-dj-hand) so the two compose instead of
+   fighting; pivots at the shoulder end of the arm */
+#garden-dj-scratch{transform-box:fill-box; transform-origin:100% 0%}
+#garden-dj-scratch.scratching{animation:dj-scratch .62s ease-in-out}
+@keyframes dj-scratch{
+  0%{transform:rotate(0)}
+  14%{transform:rotate(-12deg)}
+  28%{transform:rotate(9deg)}
+  42%{transform:rotate(-11deg)}
+  56%{transform:rotate(8deg)}
+  72%{transform:rotate(-6deg)}
+  86%{transform:rotate(3deg)}
+  100%{transform:rotate(0)}
+}
 @media (prefers-reduced-motion: reduce){
   #stage-garden.garden-party #garden-dj-nod, #stage-garden.garden-party #garden-dj-hand{animation:none}
   #garden-dj-headbang.bang{animation:none}
   #garden-dj-decks.cue{animation:none}
+  #garden-dj-scratch.scratching{animation:none}
 }
 #kitchen-canister-lid{transform-box:fill-box; transform-origin:bottom center}
 #kitchen-canister.jiggling #kitchen-canister-lid{animation:canister-lid-jiggle .4s ease-in-out}
@@ -8103,8 +8119,12 @@ section{margin:1.9rem 0}
 </g>
 <!-- working arm + hand on the left platter (bobs to the beat) -->
 <g id="garden-dj-hand">
+<!-- inner wrapper for the occasional one-shot scratch — kept DISTINCT from the infinitely
+     bobbing #garden-dj-hand so the one-shot doesn't lose the cascade to it -->
+<g id="garden-dj-scratch">
 <path d="M596 227 Q588 231 585 236" fill="none" stroke="#1ab2ff" stroke-width="4.4" stroke-linecap="round"/>
 <ellipse cx="584.5" cy="236.5" rx="3" ry="2.3" fill="#f0c6a0"/>
+</g>
 </g>
 </g>
 <g id="garden-dj-decks">
@@ -21095,6 +21115,55 @@ document.addEventListener("click", function (e) {
       requestAnimationFrame(function () { decks.classList.add("cue"); });
     });
   });
+})();
+(function () {
+  // Every now and then the DJ throws in a scratch: the hand scrubs the platter (one-shot on
+  // #garden-dj-scratch, an inner wrapper distinct from the infinitely-bobbing #garden-dj-hand)
+  // with a matching vinyl-scrub sound panned to the booth. One self-rescheduling timer, armed
+  // only while the party's lit AND the tab is attended — a MutationObserver on #stage-garden's
+  // classes re-checks on party start/end/reset, so this touches no party code. The room is
+  // re-checked at fire time (silent from the kitchen); stop() clears the timer, so no stale
+  // fire can land in a dead party.
+  var hand = document.getElementById("garden-dj-scratch");
+  var gs = document.getElementById("stage-garden");
+  if (!hand || !gs) return;
+  var timer = null, active = false;
+  hand.addEventListener("animationend", function () { hand.classList.remove("scratching"); });
+  function reduce() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+  function armed() {
+    return window.__gardenPartyOn && gs.classList.contains("garden-party") &&
+      !document.hidden && document.hasFocus() && !reduce();
+  }
+  function scratch() {
+    if (!window.__gardenPartyOn || window.currentStageName !== "garden") return; // not in the room / party died since arming
+    if (document.hidden || !document.hasFocus()) return; // autonomous sound: visibility alone isn't enough
+    hand.classList.remove("scratching");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { hand.classList.add("scratching"); });
+    });
+    if (typeof playRecordScratchSound === "function") playRecordScratchSound("garden-dj-decks");
+  }
+  function tick() {
+    timer = null;
+    if (!active) return;
+    scratch();
+    schedule();
+  }
+  function schedule() { timer = setTimeout(tick, (11 + Math.random() * 14) * 1000); }
+  function start() { if (active) return; active = true; schedule(); }
+  function stop() {
+    active = false;
+    if (timer) { clearTimeout(timer); timer = null; }
+    hand.classList.remove("scratching");
+  }
+  function update() { if (armed()) start(); else stop(); }
+  window.__updateDjScratch = update;
+  window.__djScratchNow = scratch; // test/debug hook: force one now
+  document.addEventListener("visibilitychange", update);
+  window.addEventListener("focus", update);
+  window.addEventListener("blur", update);
+  try { var mo = new MutationObserver(update); mo.observe(gs, { attributes: true, attributeFilter: ["class"] }); } catch (e) {}
+  update();
 })();
 (function () {
   // Four otherwise-inert scene props get a tiny tap reaction (untracked, no markFound):
@@ -41522,6 +41591,43 @@ function playSwishSound(panId) {
     gain.connect(out);
     noise.start(t);
     noise.stop(t + 0.4);
+  } catch (e) {}
+}
+// Vinyl scratch: looped noise whose playbackRate is bent back and forth (the record being
+// scrubbed) through a resonant bandpass, gain dipping at each direction change so the strokes
+// read separately. Shared SFX context; caller supplies the pan anchor.
+function playRecordScratchSound(panId) {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime, out = pannedOut(ctx, panId);
+    var len = Math.floor(ctx.sampleRate * 0.5);
+    var buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+    var data = buffer.getChannelData(0), last = 0;
+    for (var i = 0; i < len; i++) { last = (last * 0.72) + (Math.random() * 2 - 1) * 0.28; data[i] = last * 2.6; } // brown-ish noise: closer to groove rumble than hiss
+    var noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    noise.loop = true;
+    var rate = noise.playbackRate;
+    rate.setValueAtTime(1.7, t);
+    var stroke = [[0.09, 0.55], [0.18, 1.8], [0.27, 0.5], [0.36, 1.6], [0.46, 0.7], [0.58, 1.1]];
+    for (var s = 0; s < stroke.length; s++) rate.linearRampToValueAtTime(stroke[s][1], t + stroke[s][0]);
+    var bp = ctx.createBiquadFilter();
+    bp.type = "bandpass"; bp.Q.value = 2.2;
+    bp.frequency.setValueAtTime(1400, t);
+    bp.frequency.linearRampToValueAtTime(700, t + 0.3);
+    bp.frequency.linearRampToValueAtTime(1600, t + 0.6);
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.16, t + 0.02);
+    for (var g = 0; g < stroke.length; g++) { // duck at each turnaround so the strokes articulate
+      gain.gain.exponentialRampToValueAtTime(0.05, t + stroke[g][0] - 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.16, t + stroke[g][0] + 0.03);
+    }
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.64);
+    noise.connect(bp); bp.connect(gain); gain.connect(out);
+    noise.start(t);
+    noise.stop(t + 0.66);
   } catch (e) {}
 }
 function playCanCrushSound(panId) {

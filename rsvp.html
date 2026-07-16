@@ -12977,6 +12977,7 @@ var T = {
       flair_hint: "Catch the garnishes — dodge the wasp! 🍋",
       arcade_hint: "Move to blast the invaders! 👾",
       garden: "Water a plant, play music, light candles.",
+      garden_party: "Party's on — dance like nobody's watering. 💃🌱",
       garden_need_music_candles: "Play music, light candles.",
       garden_need_water_candles: "Water a plant, light candles.",
       garden_need_water_music: "Water a plant, play music.",
@@ -13407,6 +13408,7 @@ var T = {
       flair_hint: "Chytej ozdoby — vyhni se vosě! 🍋",
       arcade_hint: "Pohybuj se a sestřel vetřelce! 👾",
       garden: "Zalij kytku, zahraj, zapal svíčky.",
+      garden_party: "Párty jede — tanči, ať kytky počkají. 💃🌱",
       garden_need_music_candles: "Zahraj a zapal svíčky.",
       garden_need_water_candles: "Zalij kytku a zapal svíčky.",
       garden_need_water_music: "Zalij kytku a zahraj.",
@@ -41700,6 +41702,7 @@ function spawnDustMote(container) {
     huntIntroShowing = false; // a room change ends the opening prompt, so the new room's caption shows
     if (window.__removeClickMe) window.__removeClickMe(); // ...and takes the melting invitation with it
     setCaption(name);
+    if (name === "garden" && window.__gardenPartyOn && window.__refreshGardenCaption) window.__refreshGardenCaption();
     restoreStageHint(name);
     updateNav();
     if (window.__homeCat) window.__homeCat(name); // the loose cat follows the player between rooms
@@ -42457,6 +42460,7 @@ function spawnDustMote(container) {
 
   var gardenState = { water: false, music: false, candles: false };
   function updateGardenHint() {
+    if (window.__gardenPartyOn) return; // the party owns the caption (see refreshGardenCaption)
     var missing = [];
     if (!gardenState.water) missing.push("water");
     if (!gardenState.music) missing.push("music");
@@ -42464,6 +42468,13 @@ function spawnDustMote(container) {
     if (missing.length === 3 || missing.length === 0) return;
     setCaption("garden_need_" + missing.join("_"));
   }
+  // the garden's line goes party-mode while the party's on, back to normal when it ends;
+  // called on garden entry and whenever the party toggles (setGardenParty)
+  window.__refreshGardenCaption = function () {
+    if (window.currentStageName !== "garden" || window.__cinematic) return;
+    if (window.__gardenPartyOn) setCaption("garden_party");
+    else { setCaption("garden"); updateGardenHint(); }
+  };
   function checkGardenDone() {
     updateGardenHint();
     if (window.__cinematic) return; // the cinematic drives room changes itself
@@ -43029,6 +43040,7 @@ function spawnDustMote(container) {
   function setGardenParty(on, userInitiated) {
     on = !!on;
     window.__gardenPartyOn = on;
+    if (window.__refreshGardenCaption) window.__refreshGardenCaption(); // garden line goes party-mode / reverts
     if (on && window.__retireHint) window.__retireHint("hint_ksecret"); // loose-brick hint: retire once the party (and its bar) reveals the kitchen's other side
     var gs = document.getElementById("stage-garden");
     if (gs) gs.classList.toggle("garden-party", on);

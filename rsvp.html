@@ -1260,7 +1260,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    positioning transform; the molecule card lives on the separate #molecule-layer sibling and
    stays crisp. Self-cleared on room-leave/reset via clearTipsy. */
 #stage-balcony{transition:filter .7s ease}
-#stage-balcony.booze-soft{filter:blur(2.4px)}
+#stage-balcony.booze-soft{filter:url(#booze-blur)}
 @media (prefers-reduced-motion: reduce){#stage-balcony{transition:none} #stage-balcony.booze-soft{filter:none}}
 #kitchen-gong-disc{transform-box:fill-box; transform-origin:center}
 #kitchen-gong.struck #kitchen-gong-disc{animation:gong-strike .6s ease-out}
@@ -1766,6 +1766,12 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #office-monitor.show-harfbuzz #office-monitor-bg{fill:#3a2416}
 #office-monitor.show-behdad #office-monitor-bg{fill:#8e3a4a}
 #office-monitor.show-fedora #office-monitor-bg{fill:#8e3a4a} /* the loft OS boot flash: wine field, cream ∞ */
+/* WebKit renders the monitor's foreignObjects even when their channel is opacity:0, and
+   foreignObject content escapes the strip's overflow:hidden clip -- so the off-screen office
+   monitor leaks a stray black rectangle into whichever room is on screen. visibility (which
+   WebKit honours for foreignObject painting) hides them whenever the office isn't viewed;
+   in the office they fall back to their normal per-channel opacity gating. */
+#loft-game-strip:not(.viewing-office) #office-monitor foreignObject{visibility:hidden}
 #office-monitor .boot-logo{opacity:0; transition:opacity .4s ease}
 #office-monitor.show-fedora #monitor-logo-fedora{opacity:1}
 #office-monitor.show-chrome #monitor-logo-chrome{opacity:1}
@@ -4266,14 +4272,6 @@ body:has(#loft-game-strip.strobe) #trip-acid-kaleido{animation:acid-kaleido 3s e
 body:has(#loft-game-strip.psychedelic) #garden-buddha{animation:buddha-apparition 14s ease-in-out}
 @keyframes buddha-apparition{0%{opacity:0} 20%{opacity:0.55} 60%{opacity:0.55} 100%{opacity:0}}
 @media (prefers-reduced-motion: reduce){body:has(#loft-game-strip.psychedelic) #garden-buddha{animation:none}}
-@keyframes ketamine-trip{
-  0%{filter:blur(0) saturate(1) brightness(1)}
-  15%{filter:blur(3px) saturate(.6) brightness(.85) contrast(1.3)}
-  30%{filter:blur(6px) saturate(.4) brightness(.7) contrast(1.5)}
-  70%{filter:blur(6px) saturate(.4) brightness(.7) contrast(1.5)}
-  85%{filter:blur(2px) saturate(.7) brightness(.9)}
-  100%{filter:blur(0) saturate(1) brightness(1)}
-}
 #loft-game-strip.ketamine #garden-monstera,
 #loft-game-strip.ketamine #garden-peacelily,
 #loft-game-strip.ketamine #garden-dieffenbachia,
@@ -4297,11 +4295,11 @@ body:has(#loft-game-strip.psychedelic) #garden-buddha{animation:buddha-apparitio
   95%{transform:rotate(1deg)}
   100%{transform:rotate(0)}
 }
-/* ketamine trip: the hazy blur/desaturate on #loft-float (the whole-strip wrapper). The
-   whole-scene zoom/wobble is gone: animating a transform on this fullscreen blur-filtered
-   element re-rastered the blur every frame and flickered in real fullscreen — in every
-   filter/transform arrangement tried. Blur-only is stable. Clears when .ketamine drops. */
-#loft-game-strip.ketamine #loft-float{animation:ketamine-trip 18s ease-in-out}
+/* ketamine trip: the hazy blur/desaturate on #loft-float (the whole-strip wrapper). Driven
+   by the #ket-haze SVG filter (a CSS filter FUNCTION is a WebKit no-op on an SVG group); its
+   18s SMIL ramp is fired via beginElement() when .ketamine goes on. Base filter values are
+   the identity, so applying it before the ramp fires is invisible. Clears when .ketamine drops. */
+#loft-game-strip.ketamine #loft-float{filter:url(#ket-haze)}
 /* iboga: the world drains to gray and holds there while faint blue-gray memory
    photos surface one at a time on #iboga-layer (see startIbogaSlideshow) */
 #loft-game-strip.iboga{animation:iboga-trip 20s ease-in-out}
@@ -4371,8 +4369,8 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
   /* acid: no drip warp, no spinning kaleidoscope — a faint static bloom instead */
   #loft-game-strip.strobe #loft-float{filter:none}
   body:has(#loft-game-strip.strobe) #trip-acid-kaleido{animation:none; opacity:.22; transform:none}
-  /* ketamine: no weightless drift */
-  #loft-game-strip.ketamine #loft-float{animation:none}
+  /* ketamine: no weightless drift, no haze filter */
+  #loft-game-strip.ketamine #loft-float{animation:none; filter:none}
   .iboga-slide{transition:none}
   #iboga-tree{transition:none}
   body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:none}
@@ -5618,6 +5616,32 @@ section{margin:1.9rem 0}
 <animate attributeName="baseFrequency" values="0.012 0.016;0.02 0.024;0.012 0.016" dur="3.6s" repeatCount="indefinite"/>
 </feTurbulence>
 <feDisplacementMap in="SourceGraphic" in2="dmtnoise" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+</filter>
+<!-- ketamine trip: the hazy blur + gray-out over the whole scene. A CSS filter FUNCTION
+     (blur()/saturate()) on an SVG group is a no-op in WebKit, so this is an SVG <filter>
+     reference instead (works in both engines). The 18s ramp is SMIL, syncbase-chained off
+     #ket-haze-blur and fired via beginElement() when the trip starts (see startTripVariant).
+     sRGB interpolation to match the old CSS-filter appearance; base values are the identity
+     so the filter is invisible until the ramp is triggered. slope/intercept fold CSS
+     brightness*contrast into feComponentTransfer (out = brightness*contrast*in + (1-contrast)/2). -->
+<filter id="ket-haze" x="-6%" y="-6%" width="112%" height="112%" color-interpolation-filters="sRGB">
+<feGaussianBlur in="SourceGraphic" stdDeviation="0" result="kb">
+<animate id="ket-haze-blur" attributeName="stdDeviation" begin="indefinite" dur="18s" fill="freeze" calcMode="spline" keyTimes="0;0.15;0.3;0.7;0.85;1" values="0;3;6;6;2;0" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1"/>
+</feGaussianBlur>
+<feColorMatrix in="kb" type="saturate" values="1" result="ks">
+<animate attributeName="values" begin="ket-haze-blur.begin" dur="18s" fill="freeze" calcMode="spline" keyTimes="0;0.15;0.3;0.7;0.85;1" values="1;0.6;0.4;0.4;0.7;1" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1"/>
+</feColorMatrix>
+<feComponentTransfer in="ks">
+<feFuncR type="linear" slope="1" intercept="0"><animate attributeName="slope" begin="ket-haze-blur.begin" dur="18s" fill="freeze" keyTimes="0;0.15;0.3;0.7;0.85;1" values="1;1.105;1.05;1.05;1.125;1"/><animate attributeName="intercept" begin="ket-haze-blur.begin" dur="18s" fill="freeze" keyTimes="0;0.15;0.3;0.7;0.85;1" values="0;-0.15;-0.25;-0.25;-0.125;0"/></feFuncR>
+<feFuncG type="linear" slope="1" intercept="0"><animate attributeName="slope" begin="ket-haze-blur.begin" dur="18s" fill="freeze" keyTimes="0;0.15;0.3;0.7;0.85;1" values="1;1.105;1.05;1.05;1.125;1"/><animate attributeName="intercept" begin="ket-haze-blur.begin" dur="18s" fill="freeze" keyTimes="0;0.15;0.3;0.7;0.85;1" values="0;-0.15;-0.25;-0.25;-0.125;0"/></feFuncG>
+<feFuncB type="linear" slope="1" intercept="0"><animate attributeName="slope" begin="ket-haze-blur.begin" dur="18s" fill="freeze" keyTimes="0;0.15;0.3;0.7;0.85;1" values="1;1.105;1.05;1.05;1.125;1"/><animate attributeName="intercept" begin="ket-haze-blur.begin" dur="18s" fill="freeze" keyTimes="0;0.15;0.3;0.7;0.85;1" values="0;-0.15;-0.25;-0.25;-0.125;0"/></feFuncB>
+</feComponentTransfer>
+</filter>
+<!-- booze (drunk) soft-focus on the balcony: same WebKit reason as ketamine -- a CSS
+     blur() function on the group does nothing, so reference an SVG <filter>. Static; the
+     .7s fade-in/out is carried by #stage-balcony's transition on the filter property. -->
+<filter id="booze-blur" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
+<feGaussianBlur in="SourceGraphic" stdDeviation="2.4"/>
 </filter>
 </defs>
 <!-- #loft-float: a coordinate-neutral wrapper around every stage + overlay. Idle it is the
@@ -9703,9 +9727,11 @@ section{margin:1.9rem 0}
 <g transform="translate(273.5,149.5) scale(0.5)"><use href="#cap-pink"/><use href="#cap-blue"/></g>
 </g>
 <g id="monitor-saver" class="boot-logo">
-<foreignObject id="monitor-saver-fractal" x="254" y="154" width="124" height="42">
-<canvas xmlns="http://www.w3.org/1999/xhtml" id="monitor-fractal-canvas" width="496" height="168" style="width:124px;height:42px;display:block"></canvas>
-</foreignObject>
+<!-- the Julia screensaver: a native SVG <image> fed from an OFF-DOM canvas (see
+     startFractalSaver's blit). A <canvas> inside a <foreignObject> never composites in
+     WebKit -- the bitmap draws fine but the screen shows black -- whereas an <image> paints
+     (and scales under the monitor zoom) in every engine. -->
+<image id="monitor-saver-fractal" x="254" y="154" width="124" height="42" preserveAspectRatio="none"/>
 <!-- mini equalizer accent: bottom-left corner of the screen, on top of the fractal
      (later sibling paints over it). Shown only while a song's still playing under the
      screensaver — see the "eq-live" class toggled by startEq/stopEq. -->
@@ -22505,11 +22531,25 @@ document.addEventListener("click", function (e) {
     var period = 60 / bpm; if (period < 0.4) period *= 2; // match the kick's half-time for fast songs
     return (period - (eqAudioEl.currentTime % period)) * 1000;
   };
+  // The screensaver renders into an OFF-DOM canvas and blits it into the SVG <image>
+  // (#monitor-saver-fractal). Canvas-in-foreignObject doesn't composite in WebKit; an
+  // <image> fed by toDataURL() does. The canvas is 4x the on-screen size for crispness.
+  var monFractalCanvas = null, monFractalImg = null;
+  function getMonFractalCanvas() {
+    if (!monFractalCanvas) { monFractalCanvas = document.createElement("canvas"); monFractalCanvas.width = 496; monFractalCanvas.height = 168; }
+    return monFractalCanvas;
+  }
+  function blitMonFractal() {
+    if (!monFractalImg) monFractalImg = document.getElementById("monitor-saver-fractal");
+    if (!monFractalImg || !monFractalCanvas) return;
+    var url = monFractalCanvas.toDataURL();
+    monFractalImg.setAttribute("href", url);
+    monFractalImg.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", url); // older WebKit builds still key off xlink:href
+  }
   function startFractalSaver() {
-    var canvas = document.getElementById("monitor-fractal-canvas");
-    if (!canvas) return;
+    var canvas = getMonFractalCanvas();
     var R = 0.7885, theta = Math.random() * 6.283, hueBase = Math.random();
-    if (reduceMotion) { renderJulia(canvas, R * Math.cos(theta), R * Math.sin(theta), 90, 1.3, hueBase, false, fractalBeatKick()); return; }
+    if (reduceMotion) { renderJulia(canvas, R * Math.cos(theta), R * Math.sin(theta), 90, 1.3, hueBase, false, fractalBeatKick()); blitMonFractal(); return; }
     var lastDraw = 0;
     function frame(t) {
       if (t - lastDraw >= 60) { // ~16fps: plenty for a slow morph — the canvas carries 4x the pixels now
@@ -22517,6 +22557,7 @@ document.addEventListener("click", function (e) {
         theta += 0.02;              // shape morphs (full c-orbit ~ every 14s)
         hueBase = (hueBase + 0.003) % 1; // colour drifts through the spectrum ~ every 15s
         renderJulia(canvas, R * Math.cos(theta), R * Math.sin(theta), 90, 1.3, hueBase, false, fractalBeatKick());
+        blitMonFractal();
       }
       saverRaf = requestAnimationFrame(frame);
     }
@@ -36817,6 +36858,12 @@ function startTripVariant(variant) {
   playTripMelody(variant);
   if (variant === "iboga") startIbogaSlideshow();
   if (variant === "ketamine") {
+    // fire the #ket-haze SVG filter's 18s blur/gray-out ramp (SMIL; a CSS filter function
+    // is a WebKit no-op on the SVG <g>). Skipped under reduced motion, where the CSS above
+    // forces filter:none. The rest of the animate elements are syncbase-chained to this one.
+    var ketRM = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var ketBlurAnim = document.getElementById("ket-haze-blur");
+    if (ketBlurAnim && !ketRM && ketBlurAnim.beginElement) { try { ketBlurAnim.beginElement(); } catch (e) {} }
     // weightless drift: pivot the whole-room float about the CENTRE of the room being
     // viewed (view-box units in the 3400x340 strip), so the tilt/scale never swing an
     // off-centre room sideways. Only transform-origin is set here — the drift itself is
@@ -41672,6 +41719,7 @@ function spawnDustMote(container) {
     if (idx > maxUnlocked) maxUnlocked = idx;
     if (window.__monitorZoomOut) window.__monitorZoomOut(); // the zoomed-up monitor never travels between rooms
     strip.style.transform = "translateX(-" + (idx * 20) + "%)";
+    strip.classList.toggle("viewing-office", name === "office"); // WebKit paints the monitor's foreignObjects even at opacity:0 and lets them escape the strip clip, leaking into whichever room is on screen; the CSS gate below hides them whenever the office isn't the viewed room
     window.currentStageIndex = idx;
     window.currentStageName = name; // room-truth for gates that live outside this IIFE (e.g. the fractal-flame loop)
     huntIntroShowing = false; // a room change ends the opening prompt, so the new room's caption shows

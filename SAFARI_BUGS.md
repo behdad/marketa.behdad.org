@@ -74,3 +74,10 @@ No spatialization; "as if the pipeline is skipped for playback." The Web Audio g
 dead volume control (#7) and the missing spatialization. 
 _Prime suspect:_ a feature-detect / context path that silently falls back to raw `<audio>`
 playback on WebKit. See memory `project_audio_pipeline_kill_switch`.
+
+### 9. 🔴 Double-tap for right-click (context menu) doesn't work
+The touch gesture that stands in for right-click — double-tap to open the `.mon-ctx` /
+context menus (monitor dock, console, phone icons, D-pad, etc.) — does nothing on WebKit/touch.
+_Suspect:_ WebKit's touch/gesture handling (double-tap is reserved for zoom; the synthetic
+`contextmenu` or the dblclick→menu path differs), and/or `touchend` timing. Interaction bug,
+separate from the render clusters.

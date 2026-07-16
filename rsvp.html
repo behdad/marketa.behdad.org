@@ -43143,17 +43143,29 @@ function spawnDustMote(container) {
   // cliff: it thins out across April–May and thickens back up across November–December, meeting
   // deep winter at either end (Dec 31 -> Jan 1 and Mar 31 -> Apr 1 are both continuous).
   function snowRamp(m, d, first) { return ((m === first ? d - 1 : 30 + d - 1) / 60); } // 0..1 across the 61-day pair
-  function snowChance() {
-    var s = window.__seasonDate ? window.__seasonDate() : { m: new Date().getMonth(), d: new Date().getDate() };
+  function seasonNow() {
+    return window.__seasonDate ? window.__seasonDate() : { m: new Date().getMonth(), d: new Date().getDate() };
+  }
+  function snowChanceFor(s) {
     var m = s.m;
-    if (m <= 2) return SNOW_DEEP;                                  // Jan–Mar: deep winter
+    if (m <= 2) return SNOW_DEEP;                                          // Jan–Mar: deep winter
     if (m === 3 || m === 4) return SNOW_DEEP * (1 - snowRamp(m, s.d, 3));  // Apr–May: thins out (May 1 still ~45%)
     if (m === 10 || m === 11) return SNOW_DEEP * snowRamp(m, s.d, 10);     // Nov–Dec: thickens up
-    return 0;                                                       // Jun–Oct: rain only
+    return 0;                                                              // Jun–Oct: rain only
   }
-  function fallsAsSnow() { return Math.random() < snowChance(); }
-  // Snowy enough that it comes down on its own, no storm needed (rain still waits for one).
-  function snowySeason() { return snowChance() >= 0.5; }
+  // The odds pick the DAY's weather, then hold — the sky does one thing at a time, so snow
+  // REPLACES rain rather than coming down alongside it. Re-rolled only when the season's date
+  // changes (an 's' preview); drops already falling just replenish into the new type.
+  var precipSnow = false, precipRollKey = "";
+  function fallsAsSnow() {
+    var s = seasonNow(), key = s.m + "/" + s.d;
+    if (key !== precipRollKey) { precipRollKey = key; precipSnow = Math.random() < snowChanceFor(s); }
+    return precipSnow;
+  }
+  function snowySeason() { return snowChanceFor(seasonNow()) >= 0.5; }
+  // Snow comes down on its own, no storm needed — but only when today IS a snow day; rain
+  // always waits for a storm (a storm on a snow day is just a snowstorm).
+  function snowsOnItsOwn() { return fallsAsSnow() && snowySeason(); }
   // A single drifting snowflake: a soft circle (position via cx/cy, so a CSS transform
   // animation is safe — no transform attribute to clobber). onDone is the caller's 1:1
   // replenish, gated on its own rainActive()-style check, run on the fall's onfinish.
@@ -43193,7 +43205,7 @@ function spawnDustMote(container) {
   function gardenRainActive() {
     var gs = document.getElementById("stage-garden");
     if (!gs || stageIndex !== STAGES.indexOf("garden") || document.visibilityState === "hidden") return false;
-    if (snowySeason()) return true; // snowy season: it comes down on its own, day or night — no storm needed
+    if (snowsOnItsOwn()) return true; // a snow day: it comes down on its own, day or night — no storm needed
     return window.__balconyStorm && gs.classList.contains("dusk"); // rain only during a dusk storm
   }
   function spawnGardenRainDrop() {
@@ -43641,7 +43653,7 @@ function spawnDustMote(container) {
     var front = document.getElementById("balcony-door"), nook = document.getElementById("cuddly-balcony-door");
     var open = (front && front.classList.contains("open")) || (nook && nook.classList.contains("open"));
     if (!sc || !open || stageIndex !== STAGES.indexOf("cuddly") || document.visibilityState === "hidden") return false;
-    if (snowySeason()) return true; // snowy season: snow drifts in through the open door on its own
+    if (snowsOnItsOwn()) return true; // a snow day: snow drifts in through the open door on its own
     return window.__balconyStorm && sc.classList.contains("dusk"); // rain only during a dusk storm
   }
   function spawnCuddlyRainDrop() {
@@ -43908,7 +43920,7 @@ function spawnDustMote(container) {
     }
     function rainActive() {
       if (document.hidden || stageIndex !== STAGES.indexOf("balcony")) return false;
-      if (snowySeason()) return true; // snowy season: it comes down on its own, day or night — no storm needed
+      if (snowsOnItsOwn()) return true; // a snow day: it comes down on its own, day or night — no storm needed
       return window.__balconyStorm && isDuskBalcony(); // rain only during a dusk storm
     }
     // Each drop replenishes itself when its fall animation finishes, so the live
@@ -44001,7 +44013,7 @@ function spawnDustMote(container) {
     // Self-limiting (only tops up below the target) and pauses on a hidden tab via rainActive.
     (function seedBalconySnow() {
       function tick() {
-        if (snowySeason() && rainActive()) {
+        if (snowsOnItsOwn() && rainActive()) {
           var have = strip.querySelectorAll(".balc-drop").length;
           for (var i = have; i < RAIN_DROPS; i++) spawnDrop();
         }

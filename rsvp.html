@@ -1803,20 +1803,20 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 .dock-grid{scrollbar-width:thin; scrollbar-color:rgba(69,58,49,.35) transparent}
 }
 .dock-app{display:flex; flex-direction:column; align-items:center; gap:0.3px; padding-top:0.4px; cursor:pointer; transition:transform .15s ease}
-.dock-app:hover .dock-tile{transform:translateZ(0) scale(1.09)} /* composited scale about dead center — the shape grows in place, no jump */
+.dock-app:hover .dock-tile{transform:scale(1.09)} /* plain :hover scale — no translateZ/will-change layer (WebKit bug 23113: a RenderLayer under the monitor's g-scale foreignObject paints off-position) */
 .desk-bar-text{fill:#f8f5ec; font-family:sans-serif; font-size:3.2px; letter-spacing:0.2px}
 .desk-brand{cursor:pointer}
 .desk-brand:hover .desk-bar-text{fill:#d9a6a6}
-.dock-tile{position:relative; width:11px; height:11px; transform-origin:50% 50%; transform:translateZ(0); will-change:transform; transition:transform .15s ease; border-radius:3px; box-shadow:inset 0 0 0 0.4px rgba(0,0,0,0.18); display:flex; align-items:center; justify-content:center} /* on its own compositing layer (translateZ/will-change) so the hover scale composites instead of re-rasterizing — no sub-pixel content shift under the monitor zoom */
-.dock-glyph{font-family:sans-serif; line-height:1; color:#f8f5ec}
-.dock-app-editor .dock-glyph{transform:translateY(0.7px) scale(-1.65,1.65)} /* the ✎ pencil is small-in-em + drawn lower-left (left-handed): mirror to point lower-right, scale up to read at tile size, nudge down to sit centered */
-.cal-tile{position:absolute; inset:0; border-radius:3px; overflow:hidden; display:flex; flex-direction:column}
+.dock-tile{width:11px; height:11px; transform-origin:50% 50%; transition:transform .15s ease; border-radius:3px; box-shadow:inset 0 0 0 0.4px rgba(0,0,0,0.18); display:grid} /* single-cell grid: glyph + overlays stack on one grid-area with NO position/transform layer, so they paint in place under the monitor's scaled foreignObject (WebKit bug 23113) */
+.dock-tile > *{grid-area:1/1; min-width:0}
+.dock-glyph{font-family:sans-serif; line-height:1; color:#f8f5ec; display:flex; align-items:center; justify-content:center} /* flex-centres the icon/glyph within the stretched grid cell */
+.cal-tile{border-radius:3px; overflow:hidden; display:flex; flex-direction:column}
 .cal-tile-head{flex:none; height:3.4px; background:#c14b3e; color:#fffdf8; font-family:Arial,"Helvetica Neue",sans-serif; font-size:2.4px; line-height:1.4; padding-top:0.55px; display:flex; align-items:center; justify-content:center; letter-spacing:0.1px; font-weight:600} /* Arial pinned: generic sans-serif resolves to metric-DIFFERENT fonts per OS (DejaVu vs Helvetica), which see-sawed this label's optical centering between Linux and Mac */ /* line-height must cover the font's ascent+descent (~1.36em): at line-height:1 the negative half-leading pushed the ink above the band and the tile's overflow clipped it */
 .cal-tile-day{flex:1; display:flex; align-items:center; justify-content:center; color:#453a31; font-size:5.4px; font-weight:600}
-.dock-cam-wrap{position:absolute; inset:0; border-radius:3px; overflow:hidden; background:#000; display:none}
+.dock-cam-wrap{border-radius:3px; overflow:hidden; background:#000; display:none}
 .dock-app-photobooth.live .dock-cam-wrap{display:block}
 .dock-cam{width:100%; height:100%; object-fit:cover; transform:scaleX(-1); display:block}
-.dock-mini-eq{position:absolute; left:50%; top:50%; margin:-4.5px 0 0 -4.5px; opacity:0; transition:opacity .3s ease}
+.dock-mini-eq{place-self:center; width:9px; height:9px; opacity:0; transition:opacity .3s ease}
 #office-monitor.eq-live .dock-mini-eq{opacity:1}
 #office-monitor.eq-live .dock-app-music .dock-glyph{opacity:0}
 .dock-label{max-width:100%; font-size:3px; line-height:1.4; letter-spacing:0.1px; color:#716455; font-family:sans-serif; white-space:nowrap; text-align:center; overflow:visible} /* box is capped at the (now uniform) track; a wider word spills symmetrically from centre into the gutters rather than clipping — labels never gate the column width now, so tiles stay evenly spaced in every language. 3px (was 3.4) so the two longest labels (photobooth / fotokoutek) fit within a track and don't crowd their neighbour */
@@ -2051,7 +2051,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #office-monitor.show-life #monitor-life{opacity:1; pointer-events:auto}
 #monitor-life-close{cursor:pointer}
 #monitor-life-close:hover .seg-hover{opacity:.55}
-.life-wrap{position:relative; width:124px; height:42px; box-sizing:border-box; display:flex; background:#efe6cf; font-family:sans-serif; color:#453a31; overflow:hidden}
+.life-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; background:#efe6cf; font-family:sans-serif; color:#453a31; overflow:hidden}
 .life-board{flex:none; width:90px; height:42px; display:block; background:#fffdf8; cursor:crosshair; touch-action:none; image-rendering:pixelated; image-rendering:-webkit-optimize-contrast; image-rendering:crisp-edges} /* sharp cells: the monitor's desk-zoom upscales this canvas, so keep the scaling nearest-neighbour (paired with a hi-res backing store + imageSmoothingEnabled=false) */
 .life-side{flex:1; display:flex; flex-direction:column; align-items:stretch; gap:0.9px; padding:11px 2px 1.6px; box-sizing:border-box; box-shadow:inset 0.7px 0 0 rgba(255,255,255,0.6)} /* top padding clears the ✕ pill */
 .life-row{display:flex; gap:0.9px}
@@ -23569,7 +23569,7 @@ document.addEventListener("click", function (e) {
     { id: "mines", icon: "mines", labelKey: "app_mines", glyph: "💣", tile: "#c8c2b4", color: "#453a31", glyphSize: "5.2", open: function () { openMinesApp(); } },
     { id: "life", icon: "life", labelKey: "app_life", glyph: "⧉", tile: "#fdfbf6", color: "#8e3a4a", glyphSize: "5.2", open: function () { openLifeApp(); } },
     { id: "doom", labelKey: "app_doom", glyph: "🎮", tile: "#7e2323", color: "#e8c060", glyphSize: "5.2", open: function () { openDoom(); } },
-    { id: "editor", labelKey: "app_editor", glyph: "✎", tile: "#17271e", color: "#8fd070", mono: true, glyphSize: "5.9", open: function () { openEditor(); } },
+    { id: "editor", labelKey: "app_editor", glyph: "✏", tile: "#17271e", color: "#8fd070", mono: true, glyphSize: "9", open: function () { openEditor(); } },
     { id: "console", icon: "console", labelKey: "app_console", glyph: "❯_", tile: "#2e2823", color: "#8fd070", mono: true, glyphSize: "4", open: function () { openConsole(); } },
     { id: "python", labelKey: "app_python", glyph: ">>>", tile: "#306998", color: "#ffd43b", mono: true, glyphSize: "3.5", open: function () { openPython(); } },
     { id: "linux", icon: "linux", labelKey: "app_linux", glyph: "🐧", tile: "#fdfbf6", glyphSize: "5.2", open: function () { openLinux(); } }
@@ -23713,7 +23713,7 @@ document.addEventListener("click", function (e) {
         calDay.className = "cal-tile-day";
         calWrap.appendChild(calHead);
         calWrap.appendChild(calDay);
-        glyph.appendChild(calWrap);
+        tile.appendChild(calWrap); // direct grid child of the tile (not the empty glyph) so it stacks in the single grid cell
         window.__paintCalTile = function () {
           var now = window.__now ? window.__now() : new Date(); // calendar DATE (#date-overridable)
           var loc = document.documentElement.lang === "cs" ? "cs-CZ" : "en-US";

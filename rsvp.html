@@ -33163,6 +33163,7 @@ async def localfont(name):
       if (document.hasFocus()) playDayNightChime(dusk, "balcony-sun");
       var wallLampEl = document.getElementById("balcony-walllamp");
       if (dusk) {
+        if (window.__rollPrecip) window.__rollPrecip(); // one toss per nightfall: this night is snow OR rain, never both
         if (lights) lights.classList.remove("off");
         if (wallLampEl) wallLampEl.classList.add("on");
         if (window.__startBalconyStormCycle) window.__startBalconyStormCycle();
@@ -43153,13 +43154,21 @@ function spawnDustMote(container) {
     if (m === 10 || m === 11) return SNOW_DEEP * snowRamp(m, s.d, 10);     // Nov–Dec: thickens up
     return 0;                                                              // Jun–Oct: rain only
   }
-  // The odds pick the DAY's weather, then hold — the sky does one thing at a time, so snow
-  // REPLACES rain rather than coming down alongside it. Re-rolled only when the season's date
-  // changes (an 's' preview); drops already falling just replenish into the new type.
+  // Each NIGHTFALL tosses the coin once, and that's the weather for that night alone — the sky
+  // does one thing at a time, so snow REPLACES rain rather than coming down alongside it.
+  // Also re-tossed if the season moves under us (an 's' preview); drops already falling just
+  // replenish into the new type, so the switch crossfades.
   var precipSnow = false, precipRollKey = "";
+  function rollPrecip() {
+    var s = seasonNow();
+    precipRollKey = s.m + "/" + s.d;
+    precipSnow = Math.random() < snowChanceFor(s);
+    return precipSnow;
+  }
+  window.__rollPrecip = rollPrecip; // toggleDusk tosses as night falls
   function fallsAsSnow() {
-    var s = seasonNow(), key = s.m + "/" + s.d;
-    if (key !== precipRollKey) { precipRollKey = key; precipSnow = Math.random() < snowChanceFor(s); }
+    var s = seasonNow();
+    if (s.m + "/" + s.d !== precipRollKey) rollPrecip(); // season moved (a preview) → fresh toss
     return precipSnow;
   }
   function snowySeason() { return snowChanceFor(seasonNow()) >= 0.5; }
@@ -44996,7 +45005,7 @@ function spawnDustMote(container) {
   // (December dressing) stays a separate axis from "winter" (a climate that snows).
   var SEASON_PREVIEW_DATE = { // [month 0-11, day]
     spooky:  [9, 31],  // Halloween
-    holiday: [11, 15], // mid-December: tree + lights, before the fireworks window
+    holiday: [11, 25], // Christmas Day: tree + lights, and deep enough in the ramp to come down white
     newyear: [11, 31], // New Year's Eve: holiday dressing AND fireworks
     winter:  [0, 15],  // deep January: snow, no dressing
     valentines: [1, 7], // mid-February: hearts in the nook

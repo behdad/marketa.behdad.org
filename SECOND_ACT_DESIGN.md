@@ -72,7 +72,7 @@ party** instead. *"I'm leaving"* becomes *"the party's starting."*
 - **P2. The floor.** Back to garden: the DJs (`announceDj` — Amir/Danesh trade every 3 dances), the dance rotation (`advanceDance`/`PARTY_DANCE_ORDER`), the disco ball. *"Amir's on the decks — Danesh takes it in a bit."*
 - **P3. The album (flagship app-weave).** Nudge to the **photobooth** — it exists in *both* the monitor and the phone (`DESKTOP_APPS`/`PHONE_APPS`). The phone booth is the party-right one: `__openPhoneModal` opens in the current room ("no balcony jump"), shares the monitor compositor, and the strip persists to the phone **album**. *"Grab a strip for the album — there's a booth on your phone, and one on the office monitor. 📷"*
 - **P4. The office joins in (optional, light).** `cine_officeparty` already exists ("the gold skull dances"). A soft line routes the curious into DOOM/mines/life/console — gates nothing.
-- **P5. The trips door (optional, untracked, discreet).** `garden-drugsbox → triggerRsvpTrip`. Kept exactly as light as today — mentioned once at most, never arrowed. Optionally: under blacklight, give the drugsbox a faint uranium-green fluorescence (one CSS rule in the existing fluorescence block, beside the caterpillar/cat's-eyes) — *glows for those who look.* Broad audience (grandparents→kids) → opt-in only, never in the phone thread.
+- **P5. The trips door (optional, untracked, discreet) — but nudge it in the DAY.** `garden-drugsbox → triggerRsvpTrip`. **Owner's ranking (2026-07-16): the trips look best in daylight, then night, then party — all three are good.** So keep every surface, but the *nudge* belongs to the DAY (a daytime garden explore-rotation line), not saved for the party — an earlier draft hinted them only under the party's blacklight, which is the least flattering of the three. The party keeps a quieter second surface: under blacklight the drugsbox takes a faint uranium-green fluorescence (one CSS rule in the existing fluorescence block, beside the caterpillar/cat's-eyes) — *glows for those who look.* Kept exactly as light as today — mentioned once at most, never arrowed, never in the phone thread. Broad audience (grandparents→kids) → opt-in only.
 
 **WIND-DOWN → true ending**
 - **W1. Piano under the stars.** Nudge to the cuddly nook + `chan-stars` Gnossienne. *"The party's easing off — someone's playing piano in the nook, under the stars. 🎹"*
@@ -149,7 +149,8 @@ Pouria follow-up acknowledging it). Agency first; passive players still reach th
 - P1-onward (Flair-Catch): *"He's showing off now — catch the garnishes he flips. Mind the wasp. 🍋"*
 - P2 (floor): *"Amir's on the decks — Danesh takes over in a bit. The garden's dancing. 💃"*
 - P3 (album): *"Grab a strip for the album — there's a booth on your phone, and one on the office monitor. 📷"*
-- P5 (trips door, party-only rotation): *"Something small glows under the blacklight. For the adventurous — enjoy responsibly. 🙃"*
+- P5 (trips door — PRIMARY nudge, daytime garden rotation, since they read best in daylight): *"The little box on the altar keeps something curious. For the adventurous — enjoy responsibly. 🙃"*
+- P5 (trips door — quieter second surface, party rotation): *"Something small glows under the blacklight. 🙃"*
 - W1 (piano): *"The party's easing off — someone's playing piano in the nook, under the stars. 🎹"*
 - W2 (full circle): *"Morning again. Same loft, same coffee. It does this every day. ☕"*
 - W3 (true exit): *"You've seen the whole day now — bar, party, all of it. One thing left: tell us you'll come. ↓"*

@@ -33345,6 +33345,7 @@ async def localfont(name):
         if (wallLampEl) wallLampEl.classList.add("on");
         if (window.__startBalconyStormCycle) window.__startBalconyStormCycle();
       } else {
+        if (window.__rollSmoke) window.__rollSmoke(); // daybreak: how bad is today's smoke? (the mirror of the nightfall precip toss)
         if (wallLampEl) wallLampEl.classList.remove("on");
         if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle();
       }
@@ -45258,12 +45259,30 @@ function spawnDustMote(container) {
   window.__isCanadaDaySky = function () { var s = seasonDate(); return (s.m === 5 && s.d === 30) || (s.m === 6 && s.d <= 4); }; // Jun 30 – Jul 4
   // Wildfire smoke is a CLIMATE axis like the snow odds, not decor: a 0..1 intensity the
   // CSS tints read off --smoke, so it needs no season- class of its own.
-  function smokeLevelFor(s) {
+  function smokeRampFor(s) {
     if (s.m === 6 && s.d > 15) return (s.d - 15) / 16;          // Jul 16–31: ramps up
     if (s.m === 7) return s.d <= 15 ? 1 : 1 - (s.d - 15) / 16;  // Aug 1–15 full, 16–31 ramps down
     return 0;
   }
+  // The ramp is only how bad the season CAN be; each day rolls its own share of it (50–100%),
+  // because no two smoke days are alike. Rolled at DAYBREAK — smoke is a daytime thing, the
+  // mirror of the snow/rain coin landing at nightfall. Also re-rolled if the date moves under
+  // us (an 's' preview), so a preview never shows a stale day's haze.
+  var smokeRoll = 1, smokeRollKey = "";
+  function rollSmoke() {
+    var s = seasonDate();
+    smokeRollKey = s.m + "/" + s.d;
+    smokeRoll = 0.5 + Math.random() * 0.5;
+    return smokeRoll;
+  }
+  function smokeLevelFor(s) {
+    var ramp = smokeRampFor(s);
+    if (!ramp) return 0; // out of season — nothing to roll for
+    if (s.m + "/" + s.d !== smokeRollKey) rollSmoke();
+    return ramp * smokeRoll;
+  }
   window.__smokeLevel = function () { return smokeLevelFor(seasonDate()); };
+  window.__rollSmoke = function () { rollSmoke(); applySeasonDate(); }; // daybreak: a fresh day, a fresh haze
   // window.__setSeason("holiday" | "spooky" | null) is the manual/testing hook.
   window.__setSeason = function (name) {
     var strip = document.getElementById("loft-game-strip");

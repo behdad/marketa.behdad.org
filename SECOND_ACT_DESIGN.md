@@ -19,6 +19,17 @@ runs coffee → tasks → dusk → piano → blacklight party → DJs → "a fla
 flair → `cine_encore_end`: "And that's their day. Again tomorrow…"). This proposal makes that
 movie **playable** — and almost entirely from machinery that already ships.
 
+**Decisions locked (owner, 2026-07-16):**
+- **Build the phone "messages" app** (§3) — greenlit.
+- **Drop the phone `compass` app** to make room (one app dropped, not two) — it's unreliable (needs
+  a device-orientation sensor that's usually absent, so it shows a dead/dim dial) and low-value; the
+  messages app takes its slot.
+- **Keep the phone `mail` app.** It's redundant only with the office computer's mail — but it works,
+  and it's the one phone-native RSVP path for visitors who never open the office computer. Note
+  mail (formal) and messages (casual texts) are *not* redundant with each other — a real phone has
+  both. So the W3 RSVP-letter beat can point at either the phone mail or the office computer's mail;
+  the balcony RSVP link remains the direct exit.
+
 ---
 
 ## 1. Diagnosis — where the spine breaks, in code

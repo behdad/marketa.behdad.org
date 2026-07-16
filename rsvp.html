@@ -4314,14 +4314,12 @@ body:has(#loft-game-strip.psychedelic) #garden-buddha{animation:buddha-apparitio
    the identity, so applying it before the ramp fires is invisible. Clears when .ketamine drops. */
 #loft-game-strip.ketamine #loft-float{filter:url(#ket-haze)}
 /* iboga: the world drains to gray and holds there while faint blue-gray memory
-   photos surface one at a time on #iboga-layer (see startIbogaSlideshow) */
-#loft-game-strip.iboga{animation:iboga-trip 20s ease-in-out}
-@keyframes iboga-trip{
-  0%{filter:saturate(1) brightness(1) contrast(1)}
-  15%{filter:saturate(.12) brightness(.88) contrast(.96)}
-  85%{filter:saturate(.12) brightness(.88) contrast(.96)}
-  100%{filter:saturate(1) brightness(1) contrast(1)}
-}
+   photos surface one at a time on #iboga-layer (see startIbogaSlideshow). A CSS filter
+   FUNCTION on the SVG group is a WebKit no-op (same as ketamine/booze), so the gray-out
+   is the #iboga-tint SVG <filter>: its 20s saturate/brightness/contrast dip is SMIL,
+   fired via beginElement() when the trip starts (see startTripVariant). On #loft-float
+   (all rooms) so the memory-photo overlay layered above it stays crisp. */
+#loft-game-strip.iboga #loft-float{filter:url(#iboga-tint)}
 #iboga-layer{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:4}
 /* each photo is cold-tinted (blue-gray / white-gray), kept faint, and edge-feathered
    by an oval mask so it reads as a surfacing memory rather than a rectangle */
@@ -4387,6 +4385,8 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
   .iboga-slide{transition:none}
   #iboga-tree{transition:none}
   body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:none}
+  /* iboga: no 20s ramp — the world just holds at the static gray-out (SMIL never fired) */
+  #loft-game-strip.iboga #loft-float{filter:url(#iboga-tint-static)}
   #loft-game-strip.melt .trip-melt-whiteout{animation:none}
   #loft-game-strip.ketamine #garden-monstera,
   #loft-game-strip.ketamine #garden-peacelily,
@@ -4473,9 +4473,9 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
    inverse dynamically while you're in the cuddly room; this static rule covers the un-eased
    full-blacklight state (t=0) and any other room. Filter on ancestor groups only, never on the
    transform-animated #cuddly-flame-groove/.cuddly-flame-season, so filter and transform stay independent. */
-#loft-game-strip.uv-mode #cuddly-wallscreen.chan-fire #cuddly-flame-canvas,
+#loft-game-strip.uv-mode #cuddly-wallscreen.chan-fire #cuddly-flame-img,
 #loft-game-strip.uv-mode #cuddly-wallscreen.chan-fire .fire-live{filter:contrast(.769) hue-rotate(-220deg) saturate(.385) brightness(2)}
-.hunt-viewport.device-zoomed #loft-game-strip.uv-mode #cuddly-wallscreen.chan-fire #cuddly-flame-canvas,
+.hunt-viewport.device-zoomed #loft-game-strip.uv-mode #cuddly-wallscreen.chan-fire #cuddly-flame-img,
 .hunt-viewport.device-zoomed #loft-game-strip.uv-mode #cuddly-wallscreen.chan-fire .fire-live{filter:none}
 /* Fluorescence under the blacklight. Source colours are picked so the ROOT filter above
    (esp. hue-rotate 220°) lands them on the intended on-screen glow; drop-shadow colours
@@ -5212,11 +5212,11 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
    powering down, not a hard cut, before it's wiped clean. */
 #cuddly-screen-bg{transition:fill .5s ease}
 #cuddly-wallscreen.chan-off #cuddly-screen-bg{fill:url(#cuddly-screen-silver)}
-#cuddly-flame-canvas{transition:opacity .45s ease}
+#cuddly-flame-img{transition:opacity .45s ease}
 #cuddly-chan-badge{transition:opacity .5s ease}
 @media (prefers-reduced-motion: reduce){
   #cuddly-wallscreen .fire-flame, #cuddly-fire-ember, #cuddly-fire-bed,
-  #cuddly-flame-groove.grooving, #cuddly-chan-badge, #cuddly-flame-canvas,
+  #cuddly-flame-groove.grooving, #cuddly-chan-badge, #cuddly-flame-img,
   #cuddly-wallscreen .cuddly-flame-season, #cuddly-wallscreen .fire-live,
   #stage-cuddly.dusk #cuddly-firelight{animation:none; transition:none}
 }
@@ -5655,6 +5655,32 @@ section{margin:1.9rem 0}
      .7s fade-in/out is carried by #stage-balcony's transition on the filter property. -->
 <filter id="booze-blur" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
 <feGaussianBlur in="SourceGraphic" stdDeviation="2.4"/>
+</filter>
+<!-- iboga trip: the world drains to gray and holds, then returns. Same WebKit reason as
+     ketamine -- a CSS saturate()/brightness()/contrast() FUNCTION on the SVG group is a
+     no-op, so reference this SVG <filter>. The 20s dip is SMIL: begin="indefinite", fired
+     via beginElement() when the trip starts; the componentTransfer animates chain off
+     #iboga-tint-sat. Base values are the identity so it's invisible until fired, and it
+     freezes back at identity. slope/intercept fold brightness*contrast into the linear
+     transfer (out = brightness*contrast*in + (1-contrast)/2), same as #ket-haze. -->
+<filter id="iboga-tint" x="-6%" y="-6%" width="112%" height="112%" color-interpolation-filters="sRGB">
+<feColorMatrix in="SourceGraphic" type="saturate" values="1" result="isat">
+<animate id="iboga-tint-sat" attributeName="values" begin="indefinite" dur="20s" fill="freeze" calcMode="spline" keyTimes="0;0.15;0.85;1" values="1;0.12;0.12;1" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1"/>
+</feColorMatrix>
+<feComponentTransfer in="isat">
+<feFuncR type="linear" slope="1" intercept="0"><animate attributeName="slope" begin="iboga-tint-sat.begin" dur="20s" fill="freeze" calcMode="spline" keyTimes="0;0.15;0.85;1" values="1;0.8448;0.8448;1" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1"/><animate attributeName="intercept" begin="iboga-tint-sat.begin" dur="20s" fill="freeze" calcMode="spline" keyTimes="0;0.15;0.85;1" values="0;0.02;0.02;0" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1"/></feFuncR>
+<feFuncG type="linear" slope="1" intercept="0"><animate attributeName="slope" begin="iboga-tint-sat.begin" dur="20s" fill="freeze" calcMode="spline" keyTimes="0;0.15;0.85;1" values="1;0.8448;0.8448;1" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1"/><animate attributeName="intercept" begin="iboga-tint-sat.begin" dur="20s" fill="freeze" calcMode="spline" keyTimes="0;0.15;0.85;1" values="0;0.02;0.02;0" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1"/></feFuncG>
+<feFuncB type="linear" slope="1" intercept="0"><animate attributeName="slope" begin="iboga-tint-sat.begin" dur="20s" fill="freeze" calcMode="spline" keyTimes="0;0.15;0.85;1" values="1;0.8448;0.8448;1" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1"/><animate attributeName="intercept" begin="iboga-tint-sat.begin" dur="20s" fill="freeze" calcMode="spline" keyTimes="0;0.15;0.85;1" values="0;0.02;0.02;0" keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1"/></feFuncB>
+</feComponentTransfer>
+</filter>
+<!-- reduced-motion iboga: the gray-out held statically, no ramp (see the @media rule) -->
+<filter id="iboga-tint-static" x="-6%" y="-6%" width="112%" height="112%" color-interpolation-filters="sRGB">
+<feColorMatrix in="SourceGraphic" type="saturate" values="0.12" result="isats"/>
+<feComponentTransfer in="isats">
+<feFuncR type="linear" slope="0.8448" intercept="0.02"/>
+<feFuncG type="linear" slope="0.8448" intercept="0.02"/>
+<feFuncB type="linear" slope="0.8448" intercept="0.02"/>
+</feComponentTransfer>
 </filter>
 </defs>
 <!-- #loft-float: a coordinate-neutral wrapper around every stage + overlay. Idle it is the
@@ -7036,7 +7062,7 @@ section{margin:1.9rem 0}
 <circle cx="156" cy="234" r="4" fill="#6f9f60"/>
 <path d="M132 200 Q140 192 148 200 Q140 204 132 200 Z" fill="#7fae62"/>
 </g>
-<foreignObject class="trip-bloom-fo" x="83" y="167" width="114" height="114" style="opacity:0;overflow:visible;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" class="trip-bloom-canvas" width="128" height="128" style="width:74px;height:74px;margin:20px;border-radius:50%;display:block;mix-blend-mode:screen"></canvas></foreignObject>
+<image class="trip-bloom-img" x="103" y="187" width="74" height="74" preserveAspectRatio="none" style="opacity:0;pointer-events:none;mix-blend-mode:screen"/>
 </g>
 <!-- the tensegrity table we built ourselves: a pale-pine floating-top frame held by taut
      strings around a suspended middle bar, topped by a two-cluster money tree in a black
@@ -7160,7 +7186,7 @@ section{margin:1.9rem 0}
 </g>
 <path d="M333 226 Q329 208 332 194 Q334 189 335 195 Q336 210 337 226 Z" fill="#7fae62"/>
 <rect x="318" y="210" width="40" height="22" rx="3" fill="#3a3a3a" stroke="#1f1f1f" stroke-width="1"/>
-<foreignObject class="trip-bloom-fo" x="274" y="123" width="126" height="126" style="opacity:0;overflow:visible;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" class="trip-bloom-canvas" width="128" height="128" style="width:86px;height:86px;margin:20px;border-radius:50%;display:block;mix-blend-mode:screen"></canvas></foreignObject>
+<image class="trip-bloom-img" x="294" y="143" width="86" height="86" preserveAspectRatio="none" style="opacity:0;pointer-events:none;mix-blend-mode:screen"/>
 </g>
 </g>
 <g id="garden-deer" class="hunt-hit" tabindex="0" role="button" aria-label="A little wooden giraffe">
@@ -7262,7 +7288,7 @@ section{margin:1.9rem 0}
 </g>
 <path d="M240 296 Q268 302 296 296 M240 308 Q268 314 296 308" fill="none" stroke="#a8894e" stroke-width="1.5"/>
 <path d="M244 288 Q268 292 292 288" fill="none" stroke="#f0d8a4" stroke-width="1.2" opacity="0.5" pointer-events="none"/>
-<foreignObject class="trip-bloom-fo" x="192" y="144" width="144" height="144" style="opacity:0;overflow:visible;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" class="trip-bloom-canvas" width="128" height="128" style="width:104px;height:104px;margin:20px;border-radius:50%;display:block;mix-blend-mode:screen"></canvas></foreignObject>
+<image class="trip-bloom-img" x="212" y="164" width="104" height="104" preserveAspectRatio="none" style="opacity:0;pointer-events:none;mix-blend-mode:screen"/>
 </g>
 </g>
 <!-- drawn after the monstera (was before it) so the bottles sit in front of its drooping
@@ -7376,7 +7402,7 @@ section{margin:1.9rem 0}
 </g>
 <path d="M390 298 Q410 303 430 298 M390 308 Q410 313 430 308" fill="none" stroke="#a8894e" stroke-width="1.5"/>
 <path d="M392 289 Q410 293 428 289" fill="none" stroke="#eed6a2" stroke-width="1.2" opacity="0.5" pointer-events="none"/>
-<foreignObject class="trip-bloom-fo" x="349" y="184" width="124" height="124" style="opacity:0;overflow:visible;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" class="trip-bloom-canvas" width="128" height="128" style="width:84px;height:84px;margin:20px;border-radius:50%;display:block;mix-blend-mode:screen"></canvas></foreignObject>
+<image class="trip-bloom-img" x="369" y="204" width="84" height="84" preserveAspectRatio="none" style="opacity:0;pointer-events:none;mix-blend-mode:screen"/>
 </g>
 </g>
 <use class="strobe-trail st3" href="#garden-dieffenbachia"/><use class="strobe-trail st2" href="#garden-dieffenbachia"/><use class="strobe-trail st1" href="#garden-dieffenbachia"/>
@@ -7421,7 +7447,7 @@ section{margin:1.9rem 0}
 <rect x="471" y="288" width="34" height="2.4" rx="1.2" fill="#faf7ef" opacity="0.75" pointer-events="none"/>
 <ellipse cx="477" cy="304" rx="3.6" ry="12" fill="#ffffff" opacity="0.16" transform="rotate(-6 477 304)" pointer-events="none"/>
 <rect x="503" y="292" width="2.6" height="24" rx="1.3" fill="#c2bba8" opacity="0.5" pointer-events="none"/>
-<foreignObject class="trip-bloom-fo" x="426" y="158" width="126" height="126" style="opacity:0;overflow:visible;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" class="trip-bloom-canvas" width="128" height="128" style="width:86px;height:86px;margin:20px;border-radius:50%;display:block;mix-blend-mode:screen"></canvas></foreignObject>
+<image class="trip-bloom-img" x="446" y="178" width="86" height="86" preserveAspectRatio="none" style="opacity:0;pointer-events:none;mix-blend-mode:screen"/>
 <!-- a ladybug resting on the dieffenbachia's centre leaf; tap it and it flutters its
      wings, hops, and lets a tiny heart drift up (handler wires click/keydown +
      stopPropagation so tapping the bug doesn't water the plant; no a11y attrs — the
@@ -9023,7 +9049,7 @@ section{margin:1.9rem 0}
      chan class). overflow:hidden clips it to the bezel; mix-blend-mode:screen composites the
      additive fire over the dark panel. pointer-events:none keeps the screen's tap target
      intact. Driven by the single self-cancelling rAF loop in the projector IIFE. -->
-<foreignObject id="cuddly-flame-fo" x="180" y="44" width="92" height="60" style="overflow:hidden;pointer-events:none"><canvas xmlns="http://www.w3.org/1999/xhtml" id="cuddly-flame-canvas" width="138" height="90" style="width:92px;height:60px;display:block"></canvas></foreignObject>
+<image id="cuddly-flame-img" x="180" y="44" width="92" height="60" preserveAspectRatio="none" style="pointer-events:none;mix-blend-mode:screen"/>
 <!-- Fire-channel decor (fire-live → hidden on every other channel): a bed of glowing coals,
      crossed hearth logs, and layered hand-drawn tongues sitting on the additive canvas fire. -->
 <g class="fire-live" pointer-events="none" aria-hidden="true">
@@ -14647,9 +14673,9 @@ window.__setUvParty = function (on) { uvPartyOn = !!on; applyUvMode(); }; // the
     // blue. Only meaningful in the cuddly room; off-cuddly leave the fire to its static CSS rule.
     fireNodes().forEach(function (n) { n.style.filter = window.currentStageName === "cuddly" ? inv : ""; });
   }
-  function fireNodes() { // the fire's warm nodes: the additive canvas + the coal/ember/flame decor
+  function fireNodes() { // the fire's warm nodes: the additive flame image + the coal/ember/flame decor
     var arr = [];
-    var c = document.getElementById("cuddly-flame-canvas");
+    var c = document.getElementById("cuddly-flame-img");
     if (c) arr.push(c);
     document.querySelectorAll("#cuddly-wallscreen .fire-live").forEach(function (n) { arr.push(n); });
     return arr;
@@ -17691,13 +17717,25 @@ document.addEventListener("click", function (e) {
   // Channel 0 (fire) is the richer hearth AND reacts to music (beats → taller/brighter
   // flames via window.__cuddlyMusic) and to the loft's season + time of day (winter/spooky
   // roar, low glowing embers by day, warm at dusk) — read live each frame, gentle only.
-  var canvas = document.getElementById("cuddly-flame-canvas");
+  // A <canvas> inside a <foreignObject> never composites in WebKit, so the fire draws into
+  // this OFF-DOM canvas and is blitted into the native SVG <image id="cuddly-flame-img"> via
+  // toDataURL() every frame (same recipe as the monitor fractal saver). blitFlame() runs
+  // after every canvas mutation (draw, clear, power-off wipe) so the image never shows a
+  // stale frame. All the visual CSS (opacity fade, mix-blend, blacklight filter) lives on
+  // the image now, not the canvas.
+  var flameImg = document.getElementById("cuddly-flame-img");
   var screen = document.getElementById("cuddly-wallscreen");
   var strip = document.getElementById("loft-game-strip");
   var stageCuddly = document.getElementById("stage-cuddly");
-  if (!canvas || !screen) return;
+  if (!flameImg || !screen) return;
+  var canvas = document.createElement("canvas"); canvas.width = 138; canvas.height = 90;
   var ctx = canvas.getContext("2d");
   if (!ctx) return;
+  function blitFlame() {
+    var url = canvas.toDataURL();
+    flameImg.setAttribute("href", url);
+    flameImg.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", url); // older WebKit builds still key off xlink:href
+  }
   var W = canvas.width, H = canvas.height, N = W * H;
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var DRAW_MS = 33; // ~30fps
@@ -17883,7 +17921,7 @@ document.addEventListener("click", function (e) {
     screen.classList.add("chan-" + current);
     // keep the outgoing channel's blend mode through the power-off fade (off wipes to
     // transparent, so its blend is moot) — swapping it mid-fade would pop the last frame
-    if (current !== "off") canvas.style.mixBlendMode = chanObj[current].blend;
+    if (current !== "off") flameImg.style.mixBlendMode = chanObj[current].blend;
   }
   // Power-off fade: let the canvas's last frame fade to transparent (CSS opacity
   // transition), revealing the greying screen-bg, THEN wipe it clean so the next channel
@@ -17891,16 +17929,16 @@ document.addEventListener("click", function (e) {
   var canvasFadeTimer = null;
   function powerDownCanvas() {
     if (canvasFadeTimer) { clearTimeout(canvasFadeTimer); canvasFadeTimer = null; }
-    if (reduceMotion) { ctx.clearRect(0, 0, W, H); canvas.style.opacity = ""; return; } // no fade
-    canvas.style.opacity = "0"; // CSS transitions the last frame out over ~.45s
+    if (reduceMotion) { ctx.clearRect(0, 0, W, H); blitFlame(); flameImg.style.opacity = ""; return; } // no fade
+    flameImg.style.opacity = "0"; // CSS transitions the last frame out over ~.45s
     canvasFadeTimer = setTimeout(function () {
       canvasFadeTimer = null;
-      ctx.clearRect(0, 0, W, H); canvas.style.opacity = ""; // wiped + opacity restored (canvas now transparent, no flash)
+      ctx.clearRect(0, 0, W, H); blitFlame(); flameImg.style.opacity = ""; // wiped + opacity restored (image now transparent, no flash)
     }, 480);
   }
-  function powerUpCanvas() { // leaving off: cancel any in-flight fade, make the canvas visible again
+  function powerUpCanvas() { // leaving off: cancel any in-flight fade, make the image visible again
     if (canvasFadeTimer) { clearTimeout(canvasFadeTimer); canvasFadeTimer = null; }
-    canvas.style.opacity = "";
+    flameImg.style.opacity = "";
   }
   var badge = document.getElementById("cuddly-chan-badge");
   var badgeDots = badge ? badge.querySelectorAll(".chan-dot") : [];
@@ -17945,15 +17983,15 @@ document.addEventListener("click", function (e) {
       // Stoned time-dilation on the fire channel: no frame-rate throttle — repaint every rAF as a
       // cross-fade between doom-fire sim states that only step every DRAW_MS*slowFactor ms, so the
       // flame slides up in smooth slow motion instead of jumping at ~2fps (which read as choppy).
-      fire.slowRender(t, slowFactor);
-    } else if (t - lastDraw >= DRAW_MS * slowFactor) { lastDraw = t; chanObj[current].frame(); }
+      fire.slowRender(t, slowFactor); blitFlame();
+    } else if (t - lastDraw >= DRAW_MS * slowFactor) { lastDraw = t; chanObj[current].frame(); blitFlame(); }
     raf = requestAnimationFrame(frame);
   }
-  function renderStill() { ctx.clearRect(0, 0, W, H); (chanObj[current].still || chanObj[current].frame).call(chanObj[current]); }
+  function renderStill() { ctx.clearRect(0, 0, W, H); (chanObj[current].still || chanObj[current].frame).call(chanObj[current]); blitFlame(); }
   function start() {
     // powered down — no loop. Don't clobber an in-flight power-off fade (canvasFadeTimer);
     // only blank instantly when there's nothing fading (e.g. entering the nook already off)
-    if (current === "off") { if (!canvasFadeTimer) { ctx.clearRect(0, 0, W, H); canvas.style.opacity = ""; } return; }
+    if (current === "off") { if (!canvasFadeTimer) { ctx.clearRect(0, 0, W, H); blitFlame(); flameImg.style.opacity = ""; } return; }
     if (reduceMotion) { if (window.currentStageName === "cuddly") renderStill(); return; }
     if (raf || !shouldRun()) return; // already live, or not runnable right now
     lastDraw = 0; raf = requestAnimationFrame(frame);
@@ -17975,7 +18013,7 @@ document.addEventListener("click", function (e) {
     chanObj[current].reset();          // tear the old channel's state down (internal arrays only)
     if (current === "off") powerUpCanvas();     // leaving off: cancel any pending fade, canvas visible again
     if (toOff) powerDownCanvas();               // animated "screen turning off": fade the last frame, then wipe
-    else ctx.clearRect(0, 0, W, H);             // any other channel starts from a clean canvas
+    else { ctx.clearRect(0, 0, W, H); blitFlame(); } // any other channel starts from a clean canvas
     current = name;
     if (chanObj[current].init) chanObj[current].init();
     applyChannelClass();
@@ -36947,7 +36985,15 @@ function startTripVariant(variant) {
     requestAnimationFrame(function () { strip.classList.add(variant); });
   });
   playTripMelody(variant);
-  if (variant === "iboga") startIbogaSlideshow();
+  if (variant === "iboga") {
+    startIbogaSlideshow();
+    // fire the #iboga-tint SVG filter's 20s gray-out ramp (SMIL; a CSS saturate/brightness/
+    // contrast function is a WebKit no-op on the SVG <g>). Skipped under reduced motion, where
+    // the @media rule swaps in the static #iboga-tint-static. The transfer animates chain off this.
+    var ibRM = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var ibSat = document.getElementById("iboga-tint-sat");
+    if (ibSat && !ibRM && ibSat.beginElement) { try { ibSat.beginElement(); } catch (e) {} }
+  }
   if (variant === "ketamine") {
     // fire the #ket-haze SVG filter's 18s blur/gray-out ramp (SMIL; a CSS filter function
     // is a WebKit no-op on the SVG <g>). Skipped under reduced motion, where the CSS above
@@ -37102,16 +37148,31 @@ var tripBloomPhase = 0, tripBloomLastTs = 0;
 function tripBloomReduceMotion() {
   return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 }
+// A <canvas> inside a <foreignObject> never composites in WebKit, so each bloom draws into
+// an OFF-DOM canvas and blits it into a native SVG <image> via toDataURL() (same recipe as
+// the monitor fractal saver). Bake a circular clip in here (the old on-DOM canvas used CSS
+// border-radius:50%), then hand both href + xlink:href to the image.
+function blitTripBloom(it) {
+  var cv = it.canvas, c = cv.getContext("2d");
+  if (c) {
+    c.globalCompositeOperation = "destination-in";
+    c.beginPath(); c.arc(cv.width / 2, cv.height / 2, cv.width / 2, 0, 6.2832); c.fill();
+    c.globalCompositeOperation = "source-over";
+  }
+  var url = cv.toDataURL();
+  it.img.setAttribute("href", url);
+  it.img.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", url); // older WebKit builds still key off xlink:href
+}
 function startTripBlooms() {
   if (tripBloomItems) return; // a loop is already live (fresh trip or mid-settle) — let it re-rise
   var items = [];
   TRIP_BLOOM_CONFIG.forEach(function (cfg) {
     var wrap = document.getElementById(cfg.wrap);
     if (!wrap) return;
-    var fo = wrap.querySelector(".trip-bloom-fo");
-    var canvas = wrap.querySelector(".trip-bloom-canvas");
-    if (!fo || !canvas) return;
-    items.push({ wrap: wrap, fo: fo, canvas: canvas, cfg: cfg, lift: 0,
+    var img = wrap.querySelector(".trip-bloom-img");
+    if (!img) return;
+    var canvas = document.createElement("canvas"); canvas.width = 128; canvas.height = 128; // off-DOM; blitted into the <image>
+    items.push({ wrap: wrap, img: img, canvas: canvas, cfg: cfg, lift: 0,
       theta0: Math.random() * 6.283, hue0: Math.random(),
       pX: Math.random() * 6.283, pY: Math.random() * 6.283 });
   });
@@ -37120,8 +37181,8 @@ function startTripBlooms() {
   if (tripBloomReduceMotion()) {
     var R0 = 0.7885;
     items.forEach(function (it) {
-      it.fo.style.opacity = "1";
-      if (window.__renderJulia) window.__renderJulia(it.canvas, R0 * Math.cos(it.theta0), R0 * Math.sin(it.theta0), 70, 1.3, it.hue0, true);
+      it.img.style.opacity = "1";
+      if (window.__renderJulia) { window.__renderJulia(it.canvas, R0 * Math.cos(it.theta0), R0 * Math.sin(it.theta0), 70, 1.3, it.hue0, true); blitTripBloom(it); }
     });
   }
   tripBloomLastDraw = 0; tripBloomDrawIdx = 0; tripBloomPhase = 0; tripBloomLastTs = 0;
@@ -37132,7 +37193,7 @@ function stopTripBlooms() {
   if (tripBloomItems) {
     tripBloomItems.forEach(function (it) {
       it.wrap.removeAttribute("transform");
-      it.fo.style.opacity = "0";
+      it.img.style.opacity = "0";
     });
     tripBloomItems = null;
   }
@@ -37165,7 +37226,7 @@ function tripBloomLoop(t) {
     var rot = Math.sin(t / 1700 + it.pX) * 2.2 * lift;
     it.wrap.setAttribute("transform", "translate(" + tx.toFixed(2) + "," + ty.toFixed(2) +
       ") rotate(" + rot.toFixed(2) + " " + it.cfg.pivotX + " " + it.cfg.pivotY + ")");
-    it.fo.style.opacity = Math.min(1, lift * 1.25).toFixed(3);
+    it.img.style.opacity = Math.min(1, lift * 1.25).toFixed(3);
   }
   // Round-robin: repaint ONE canvas per draw tick, so per-tick cost stays flat no
   // matter how many blooms exist. Each canvas samples the shared wall-clock phase,
@@ -37177,6 +37238,7 @@ function tripBloomLoop(t) {
       var theta = d.theta0 + tripBloomPhase * THETA_RATE;
       var hue = (d.hue0 + tripBloomPhase * HUE_RATE) % 1;
       window.__renderJulia(d.canvas, R * Math.cos(theta), R * Math.sin(theta), 70, 1.3, hue, true);
+      blitTripBloom(d);
     }
   }
   if (allSettled) { stopTripBlooms(); return; }
@@ -47590,6 +47652,40 @@ function spawnDustMote(container) {
   var DRAG_SEL = "#office-desk, #office-chair, #garden-bottles, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife, #monitor-manual-eq, #kitchen-bartender, #kitchen-bar-stools, #kitchen-bar-patrons";
   strip.addEventListener("touchmove", function (e) {
     if (e.target.closest && e.target.closest(DRAG_SEL)) e.preventDefault();
+  }, { passive: false });
+})();
+(function () {
+  // Touch devices have no right-click, so every .mon-ctx / .console-ctx context menu (monitor
+  // desktop-dock, console, phone app-icons, in-scene D-pad, browser tabs, minesweeper, laptop)
+  // is unreachable. A TWO-FINGER TAP — two fingers down, released quickly without much drift —
+  // synthesizes a `contextmenu` at the touch midpoint on the element there, so every existing
+  // right-click menu opens exactly as the mouse does. Pinch-zoom, single-finger taps and object
+  // drags are untouched: we never preventDefault on touchstart/move and only act on a clean
+  // stationary two-finger tap. preventDefault on the firing touchend suppresses the ghost mouse
+  // events so the just-opened menu isn't immediately dismissed by a compat mousedown-away.
+  var startT = 0, midX = 0, midY = 0, tracking = false;
+  function mid(a, b) { return { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 }; }
+  document.addEventListener("touchstart", function (e) {
+    if (e.touches.length === 2) {
+      var m = mid(e.touches[0], e.touches[1]);
+      tracking = true; startT = Date.now(); midX = m.x; midY = m.y;
+    } else {
+      tracking = false; // 1 or 3+ fingers → not the gesture (and a re-touch cancels an in-flight one)
+    }
+  }, { passive: true });
+  document.addEventListener("touchmove", function (e) {
+    if (!tracking || e.touches.length < 2) return;
+    var m = mid(e.touches[0], e.touches[1]);
+    if (Math.abs(m.x - midX) > 12 || Math.abs(m.y - midY) > 12) tracking = false; // drifted → pinch/pan, not a tap
+  }, { passive: true });
+  document.addEventListener("touchend", function (e) {
+    if (!tracking || e.touches.length !== 0) return; // wait for the last finger to lift
+    tracking = false;
+    if (Date.now() - startT > 500) return;           // too slow to read as a tap
+    var el = document.elementFromPoint(midX, midY);
+    if (!el) return;
+    e.preventDefault();                               // no ghost mousedown/click to dismiss the menu
+    el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: midX, clientY: midY, view: window }));
   }, { passive: false });
 })();
 (function () {

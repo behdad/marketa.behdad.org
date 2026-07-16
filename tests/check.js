@@ -557,12 +557,15 @@ function checkAudioFadeCloseRace(file, script) {
     if (constChecked < 2) {
       issues.push("constants tier only matched " + constChecked + " function(s) (expected >= 2) — extraction broken?");
     }
-    // the shared-context invariant itself: `new Ctx()` is reserved for the persistent
-    // beds/pipeline (and getSfxCtx). A one-shot spinning up its own context regresses
-    // the stream-churn fix — new effects must use getSfxCtx().
+    // the shared-context invariant itself: ONE AudioContext for the whole page. Safari
+    // hard-caps concurrent contexts (~4), so the old ~26-context model produced NO Web
+    // Audio output at all past the cap. Every bed/dance now routes through audioBed(),
+    // one-shot SFX through getSfxCtx(), the song pipeline uses the raw shared context —
+    // all of them via getAudioCtx(), the ONLY place that constructs one. A `new Ctx()`
+    // anywhere else regresses the consolidation.
     var ctxSites = (script.match(/new Ctx\(\)/g) || []).length;
-    if (ctxSites > 26) { // +7 for the garden-party disco + swing + salsa + bhangra + persian + polka + horah dance beds
-      issues.push("found " + ctxSites + " `new Ctx()` sites (expected <= 26: the beds (aquarium ambient + aquarium melody + workout + totoro rain + totoro woodland-melody + night-sky Satie projector + garden-party techno + garden-party waltz + garden-party disco + garden-party swing + garden-party salsa + garden-party bhangra + garden-party persian + garden-party polka + garden-party horah), the song pipeline, and getSfxCtx) — one-shot effects must use getSfxCtx()");
+    if (ctxSites !== 1) {
+      issues.push("found " + ctxSites + " `new Ctx()` site(s) (expected exactly 1: getAudioCtx, the shared AudioContext accessor) — every other audio source must route through getAudioCtx()/audioBed()/getSfxCtx()");
     }
   }
   if (issues.length === 0) {

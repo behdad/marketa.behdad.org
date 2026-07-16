@@ -13186,6 +13186,7 @@ var T = {
     browser_warn: " Runs best in desktop Chrome — <a class=\"browser-issues-link\" target=\"_blank\" rel=\"noopener noreferrer\">see known issues on {b}</a>.",
     season_winter: "❄ winter",
     season_valentines: "💕 valentine's",
+    season_wedding: "💍 wedding week",
     season_summer: "☀ summer",
     season_holiday: "🎄 holiday season",
     season_newyear: "🎆 new year",
@@ -13629,6 +13630,7 @@ var T = {
     browser_warn: " Nejlépe funguje v Chromu na počítači — <a class=\"browser-issues-link\" target=\"_blank\" rel=\"noopener noreferrer\">známé chyby v prohlížeči {b}</a>.",
     season_winter: "❄ zima",
     season_valentines: "💕 valentýn",
+    season_wedding: "💍 svatební týden",
     season_summer: "☀ léto",
     season_holiday: "🎄 svátky",
     season_newyear: "🎆 nový rok",
@@ -14171,7 +14173,12 @@ window.__now = function () {
 // It's a SEASON, not a day: three days either side of each date, so the loft celebrates the
 // wedding week rather than blinking on for 24 hours.
 window.__weddingOccasion = function () {
-  var d = window.__now(), mo = d.getMonth(), day = d.getDate();
+  // The wedding IS one of the seasons, so it reads the same pretend-date as the rest of them
+  // (that's what makes the 's' wedding preview light the ribbon + sky). __seasonDate isn't
+  // defined yet on the first pass at load — fall back to the clock, which is what it'd return.
+  var s = window.__seasonDate ? window.__seasonDate()
+        : (function () { var d = window.__now(); return { m: d.getMonth(), d: d.getDate() }; })();
+  var mo = s.m, day = s.d;
   if ((mo === 3 && day >= 28) || (mo === 4 && day <= 4)) return { which: "edmonton" }; // Apr 28 – May 4
   if (mo === 6 && day >= 7 && day <= 13) return { which: "prague" };                   // Jul 7 – Jul 13
   return null;
@@ -14188,6 +14195,7 @@ function applyWeddingDay() {
   var strip = document.getElementById("loft-game-strip");
   if (strip) strip.classList.toggle("wedding-day", !!occ);
 }
+window.__applyWeddingDay = applyWeddingDay; // a season preview re-runs this
 applyWeddingDay();
 // The countdown occasion label is YEAR-SPECIFIC (distinct from the year-agnostic visual
 // check above): only ON the date, 2027 reads "Wedding day", later years the Nth
@@ -24401,7 +24409,7 @@ document.addEventListener("click", function (e) {
     daylight: "daylight(true) — bring the day back; daylight(false) — dusk; daylight() reports whether it's day. day()/night() are aliases",
     night: "night() — dusk (alias for daylight(false))",
     day: "day() — daylight (alias for daylight(true))",
-    season: "season(\"name\") — a season by name in quotes, e.g. season(\"spooky\"), or season() for a surprise. each is a pretend-date driving the dressing, the snow-vs-rain odds and the new-year sky. seasons: \"spooky\" · \"holiday\" · \"newyear\" · \"winter\" · \"valentines\" · \"summer\" · \"auto\" (the 's' key cycles the same order)",
+    season: "season(\"name\") — a season by name in quotes, e.g. season(\"spooky\"), or season() for a surprise. each is a pretend-date driving the dressing, the snow-vs-rain odds and the new-year sky. seasons: \"spooky\" · \"holiday\" · \"newyear\" · \"winter\" · \"valentines\" · \"wedding\" · \"summer\" · \"auto\" (the 's' key cycles the same order)",
     play: "play() — resume the music if it's paused",
     pause: "pause() — pause the music if something's playing",
     temp: "temp() — the indoor + outdoor thermometer reading",
@@ -45009,6 +45017,7 @@ function spawnDustMote(container) {
     spooky:  [9, 31],  // Halloween
     holiday: [11, 25], // Christmas Day: tree + lights, and deep enough in the ramp to come down white
     newyear: [11, 31], // New Year's Eve: holiday dressing AND fireworks
+    wedding: [4, 1],   // May 1: the Edmonton wedding — ribbon + fireworks sky
     winter:  [0, 15],  // deep January: snow, no dressing
     valentines: [1, 7], // mid-February: hearts in the nook
     summer:  [6, 15]   // mid-July: never snow
@@ -45017,7 +45026,7 @@ function spawnDustMote(container) {
   function seasonDate() {
     var p = seasonPreview && SEASON_PREVIEW_DATE[seasonPreview];
     if (p) return { m: p[0], d: p[1] };
-    var n = new Date();
+    var n = window.__now ? window.__now() : new Date(); // __now honours the ?date=/#date= preview, so it drives the seasons too
     return { m: n.getMonth(), d: n.getDate() };
   }
   window.__seasonDate = seasonDate; // the snow + fireworks controllers read the same pretend-date
@@ -45038,12 +45047,13 @@ function spawnDustMote(container) {
   function applySeasonDate() {
     var s = seasonDate();
     window.__setSeason(decorForDate(s.m, s.d));
+    if (window.__applyWeddingDay) window.__applyWeddingDay(); // the wedding is a season too — refresh before the sky reads it
     if (window.__updateSkyFireworks) window.__updateSkyFireworks(window.currentStageName); // new-year sky follows the preview
   }
   applySeasonDate();
   // 's' cycles the previews: today → spooky → holiday → new year → winter → valentine's → summer → today.
   // Plain keypress only — skipped with any modifier held or while typing (same guard as 'f').
-  var SEASON_CYCLE = [null, "spooky", "holiday", "newyear", "winter", "valentines", "summer"];
+  var SEASON_CYCLE = [null, "spooky", "holiday", "newyear", "winter", "valentines", "wedding", "summer"];
   // Shared apply-path for the 's' key AND the console season(); shows the naming pill.
   function applySeasonPreview(name) {
     seasonPreview = SEASON_PREVIEW_DATE[name] ? name : null;
@@ -46890,18 +46900,20 @@ function spawnDustMote(container) {
   // winter · spooky · auto(=the calendar's own season). Friendly aliases fold onto those;
   // no arg still SURPRISES you with a random one (a documented feature). Drives the same
   // apply-path the 's' key uses (strip class + naming pill + cycle-sync).
-  var SEAS = ["spooky", "holiday", "newyear", "winter", "valentines", "summer", "auto"]; // same order the 's' key cycles
+  var SEAS = ["spooky", "holiday", "newyear", "winter", "valentines", "wedding", "summer", "auto"]; // same order the 's' key cycles
   var SEASON_ALIASES = {
     spooky: "spooky", halloween: "spooky",
     holiday: "holiday", xmas: "holiday", christmas: "holiday", tree: "holiday",
     newyear: "newyear", "new year": "newyear", nye: "newyear", fireworks: "newyear",
     winter: "winter", snow: "winter",
     valentines: "valentines", valentine: "valentines", love: "valentines", hearts: "valentines",
+    wedding: "wedding", married: "wedding", anniversary: "wedding",
     summer: "summer", sun: "summer",
     auto: "auto", normal: "auto", off: "auto", none: "auto", clear: "auto", today: "auto"
   };
   var SEASON_SAID = {
     spooky: "🎃 spooky dressing on.", holiday: "🎄 holiday dressing on.", newyear: "🎆 fireworks over the loft.",
+    wedding: "💍 the loft's dressed for the wedding.",
     winter: "❄ deep winter — it's coming down white.", valentines: "💕 hearts up in the nook.",
     summer: "☀ high summer — rain at worst.",
     auto: "🍂 back to the calendar's own season."

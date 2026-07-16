@@ -368,13 +368,10 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   #hunt-fullscreen-area.is-fullscreen .scene-caption, #hunt-fullscreen-area:fullscreen .scene-caption, #hunt-fullscreen-area:-webkit-full-screen .scene-caption{margin:0 0 .3rem; font-size:.95rem}
   #hunt-fullscreen-area.is-fullscreen .hunt-dots, #hunt-fullscreen-area:fullscreen .hunt-dots, #hunt-fullscreen-area:-webkit-full-screen .hunt-dots{margin-top:.3rem}
 }
-.device-hint{display:none; text-align:center; font-size:.8rem; color:var(--soft); margin:.15rem 0 0}
+.device-hint{display:none; text-align:center; font-size:.9rem; color:var(--soft); margin:.15rem 0 0}
 .device-hint.show{display:block}
-.browser-notice{text-align:center; font-size:.8rem; color:var(--soft); margin:.15rem 0 0}
-.browser-notice[hidden]{display:none}
-.browser-notice a{color:var(--wine)}
-.browser-notice-x{background:none; border:0; color:var(--soft); font:inherit; font-size:1rem; line-height:1; cursor:pointer; padding:0 .2rem; margin-left:.15rem}
-.browser-notice-x:hover, .browser-notice-x:focus-visible{color:var(--ink)}
+.browser-issues-link{color:var(--wine); text-decoration:underline; text-underline-offset:2px}
+.browser-issues-link:hover{color:var(--ink)}
 .season-toast{position:absolute; left:50%; bottom:12px; transform:translateX(-50%); background:rgba(69,58,49,.85); color:#f8f5ec; font-size:.85rem; padding:.3rem .9rem; border-radius:999px; opacity:0; transition:opacity .3s ease; pointer-events:none; z-index:6; white-space:nowrap}
 .season-toast.show{opacity:1}
 /* the cocktail-make toast is a live link: clicking the drink's name opens it in the phone's
@@ -5532,7 +5529,6 @@ section{margin:1.9rem 0}
 
   <p class="hunt-title" id="hunt-title" data-i="hunt_title">Loft Day</p>
   <p class="device-hint" id="device-hint" data-i="device_hint"></p>
-  <p class="browser-notice" id="browser-notice" hidden><span data-i="browser_notice"></span><button type="button" class="browser-notice-x" aria-label="Dismiss" data-aria-i="install_dismiss">×</button></p>
   <div id="hunt-fullscreen-area">
   <button type="button" id="hunt-restart-btn" class="hunt-fullscreen-btn" aria-label="Restart the game" title="Restart" data-aria-i="restart_aria" data-title-i="restart_aria">
     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#f8f5ec" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -12905,9 +12901,10 @@ var T = {
   en: {
     hunt_title: "Loft Day",
     tagline: "We’re getting married<br><strong>Will you be there?</strong>",
-    device_hint: "(best enjoyed on a bigger screen, in landscape, <button type=\"button\" class=\"fs-hint-link\">fullscreen ⛶</button>, headphones on 🎧)",
-    fs_hint: "(best enjoyed <button type=\"button\" class=\"fs-hint-link\">fullscreen ⛶</button>, headphones on 🎧)",
-    browser_notice: "Best enjoyed on desktop Chrome. <a class=\"browser-issues-link\" target=\"_blank\" rel=\"noopener noreferrer\">See known issues</a>.",
+    device_hint: "Best enjoyed on a bigger screen, in landscape, <button type=\"button\" class=\"fs-hint-link\">fullscreen</button>, headphones on.",
+    fs_hint: "Best enjoyed <button type=\"button\" class=\"fs-hint-link\">fullscreen</button>, headphones on.",
+    browser_ok: " <a class=\"browser-issues-link\" target=\"_blank\" rel=\"noopener noreferrer\">See known issues</a>.",
+    browser_warn: " Runs best in desktop Chrome — <a class=\"browser-issues-link\" target=\"_blank\" rel=\"noopener noreferrer\">see known issues on {b}</a>.",
     season_winter: "❄ winter",
     season_spooky: "🎃 spooky season",
     season_auto: "⛅ back to today",
@@ -13330,9 +13327,10 @@ var T = {
   cs: {
     hunt_title: "Den v podkroví",
     tagline: "Budeme se brát<br><strong>Budete tam?</strong>",
-    device_hint: "(nejlíp na větší obrazovce, na šířku, <button type=\"button\" class=\"fs-hint-link\">celá obrazovka ⛶</button>, se sluchátky 🎧)",
-    fs_hint: "(nejlíp na <button type=\"button\" class=\"fs-hint-link\">celou obrazovku ⛶</button> a se sluchátky 🎧)",
-    browser_notice: "Nejlépe funguje v Chromu na počítači. <a class=\"browser-issues-link\" target=\"_blank\" rel=\"noopener noreferrer\">Známé chyby</a>.",
+    device_hint: "Nejlíp na větší obrazovce, na šířku, <button type=\"button\" class=\"fs-hint-link\">celá obrazovka</button>, se sluchátky.",
+    fs_hint: "Nejlíp na <button type=\"button\" class=\"fs-hint-link\">celou obrazovku</button>, se sluchátky.",
+    browser_ok: " <a class=\"browser-issues-link\" target=\"_blank\" rel=\"noopener noreferrer\">Známé chyby</a>.",
+    browser_warn: " Nejlépe funguje v Chromu na počítači — <a class=\"browser-issues-link\" target=\"_blank\" rel=\"noopener noreferrer\">známé chyby v prohlížeči {b}</a>.",
     season_winter: "❄ zima",
     season_spooky: "🎃 strašidelno",
     season_auto: "⛅ zpátky k dnešku",
@@ -13952,8 +13950,6 @@ function idealBrowser() {
   return chromium;
 }
 (function () {
-  var note = document.getElementById("browser-notice");
-  if (!note) return;
   var REPO = "https://github.com/behdad/marketa.behdad.org";
   function issueTerm() {
     var ua = navigator.userAgent || "";
@@ -13966,23 +13962,21 @@ function idealBrowser() {
     if (/Safari/i.test(ua) && !/Chrome\/[0-9]/.test(ua)) return "Safari";
     return "Chrome";
   }
-  // href is browser-derived, so it's set here (not via data-href-i); setLang re-runs this
-  // because it rewrites the span's innerHTML (recreating the link) on every toggle.
+  // non-ideal browsers get the "runs best in desktop Chrome — see known issues on <browser>"
+  // tail appended to the device-hint line. setLang rebuilds that line from data-i, so it calls
+  // this again to re-append in the new language. The issue search matches the browser name in
+  // the issue TITLE only (in:title), so it lands on the relevant known-issue threads.
   window.refreshBrowserNotice = function () {
-    var a = note.querySelector(".browser-issues-link");
-    if (a) a.href = REPO + "/issues?q=is%3Aissue+is%3Aopen+" + encodeURIComponent(issueTerm());
+    var hint = document.getElementById("device-hint");
+    if (!hint) return;
+    if (hint.querySelector(".browser-issues-link")) return; // already appended for this render
+    var l = T[document.documentElement.lang] ? document.documentElement.lang : "en";
+    var ideal = idealBrowser(), term = issueTerm();
+    hint.insertAdjacentHTML("beforeend", ideal ? (T[l].browser_ok || T.en.browser_ok) : (T[l].browser_warn || T.en.browser_warn).replace("{b}", term));
+    var a = hint.querySelector(".browser-issues-link");
+    if (a) a.href = REPO + "/issues?q=" + encodeURIComponent(ideal ? "is:issue is:open" : "is:issue is:open in:title " + term);
   };
   window.refreshBrowserNotice();
-  var DISMISS_KEY = "browserNoticeDismissed";
-  var dismissed = false;
-  try { dismissed = !!localStorage.getItem(DISMISS_KEY); } catch (e) {}
-  if (idealBrowser() || dismissed) return;
-  note.hidden = false;
-  var x = note.querySelector(".browser-notice-x");
-  if (x) x.addEventListener("click", function () {
-    note.hidden = true;
-    try { localStorage.setItem(DISMISS_KEY, "1"); } catch (e) {}
-  });
 })();
 (function () {
   // Fullscreens #hunt-fullscreen-area (the nav-frame + viewport + room dots together,

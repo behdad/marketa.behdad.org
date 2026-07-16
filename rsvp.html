@@ -45316,6 +45316,12 @@ function spawnDustMote(container) {
   window.__removeClickMe = removeClickMe; // room-change / reset paths reach the teardown too
 
   var hintBlinkTimer = null;
+  // the grace timeout only CALMS the pulse — the "wandering without aim" line and the melting
+  // CLICK ME both stay put until a real tap (stopHintBlink) hands off to the first instruction
+  function calmIntroBlink() {
+    if (hintBlinkTimer) { clearTimeout(hintBlinkTimer); hintBlinkTimer = null; }
+    caption.classList.remove("hint-blink");
+  }
   function stopHintBlink() {
     if (hintBlinkTimer) { clearTimeout(hintBlinkTimer); hintBlinkTimer = null; }
     caption.classList.remove("hint-blink");
@@ -45345,7 +45351,7 @@ function spawnDustMote(container) {
     strip.addEventListener("pointerdown", stopHintBlink);
     strip.addEventListener("click", stopHintBlink);
     if (hintBlinkTimer) clearTimeout(hintBlinkTimer);
-    hintBlinkTimer = setTimeout(stopHintBlink, 6000); // a handful of pulses, then rest even if untouched
+    hintBlinkTimer = setTimeout(calmIntroBlink, 6000); // a handful of pulses, then rest — but the line + CLICK ME stay until a real tap
   }
   window.__showHuntIntro = showHuntIntro;
   // Warm the Climate Crisis woff2 now: display=block means the word renders INVISIBLE (not a

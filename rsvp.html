@@ -19392,7 +19392,7 @@ document.addEventListener("click", function (e) {
     { pan: "kitchen-pan-5", target: "kitchen-drinkmate", effect: "break", flag: "soda", ox: -10, oy: -10 },
     { pan: "kitchen-pan-6", target: "kitchen-canister", effect: "break", ox: -6 }, // the jar, nudged left onto it
     { pan: "kitchen-pan-1", target: "kitchen-boards", effect: "wobble" },           // the big pan rattles the cutting boards
-    { pan: "kitchen-pan-3", target: null, effect: "clatter", landY: 208 }           // straight down onto the counter
+    { pan: "kitchen-pan-3", target: null, effect: "clatter", landY: 208, needs: "kitchen-pan-2" } // straight down onto the counter — comes to rest ON pan-2, so pan-2 has to be down first
   ];
   var kitchenPanClicks = 0, panFallQueue = null, nextPanFallAt = 0;
   var PAN_CLICK_FALL_CHANCE = 0.75; // odds a direct tap knocks down the pan you actually hit (the rest of the time a neighbour goes)
@@ -19412,13 +19412,25 @@ document.addEventListener("click", function (e) {
   // that name no pan — the gong, and the keyboard clink (which targets nothing) — always take the
   // next in the shuffled order. A pan that's already down has left the queue, so it can't fall twice
   // (and a tap on it falls through to the shuffle).
+  function panQueueIndex(panId) {
+    for (var i = 0; i < panFallQueue.length; i++) { if (panFallQueue[i].pan === panId) return i; }
+    return -1; // not queued → it's already down
+  }
   function takePanFall(clickedPanId) {
-    if (clickedPanId && Math.random() < PAN_CLICK_FALL_CHANCE) {
-      for (var i = 0; i < panFallQueue.length; i++) {
-        if (panFallQueue[i].pan === clickedPanId) return panFallQueue.splice(i, 1)[0];
-      }
+    var idx = -1;
+    if (clickedPanId && Math.random() < PAN_CLICK_FALL_CHANCE) idx = panQueueIndex(clickedPanId);
+    if (idx < 0) idx = 0; // the gong, an unlucky roll, or a pan already down → next in the shuffled order
+    // A pan that comes to rest ON another can't land first: SVG paints in DOM order, so the lower pan
+    // would appear to slide UNDER the one already there. A pick with an unfallen dependency yields this
+    // drop to it (following the chain); the pick comes back around on a later drop.
+    for (var guard = panFallQueue.length; guard > 0; guard--) {
+      var need = panFallQueue[idx].needs;
+      if (!need) break;
+      var ni = panQueueIndex(need);
+      if (ni < 0) break; // its dependency is already down
+      idx = ni;
     }
-    return panFallQueue.shift();
+    return panFallQueue.splice(idx, 1)[0];
   }
   function bumpKitchenPanClicks(clickedPanId) {
     kitchenPanClicks++;
@@ -19484,10 +19496,7 @@ document.addEventListener("click", function (e) {
       }
       bumpKitchenPanClicks(pointed ? panId : null);
     }
-    pans.addEventListener("click", clinkPans);
-    pans.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); clinkPans(); }
-    });
+    pans.addEventListener("click", clinkPans); // no keydown twin: Space is grabbed for play/pause and Enter for the room action, both on document-capture with stopPropagation, so it could never fire
   }
   var scoops = document.getElementById("kitchen-scoops");
   if (scoops) {

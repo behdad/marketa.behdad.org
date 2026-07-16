@@ -13179,6 +13179,12 @@ var T = {
       office_hangup: "Hang up now.",
       complete: "You made it through the whole loft ♥",
       balcony: "There will be BBQ 🔥🍖🌽🍷",
+      // ── post-unlock exploration captions: shown on re-entry to a solved room instead of its solve instruction ──
+      explore_kitchen: "Enjoy wandering — the kitchen keeps more than coffee. ☕",
+      explore_garden: "Enjoy wandering — the garden's full of small things. 🌿",
+      explore_cuddly: "Enjoy wandering — curl up and poke around. 🐙",
+      explore_office: "Enjoy wandering — the office is more toy than work. 🖥️",
+      explore_balcony: "Enjoy wandering — the balcony's the good part. 🌅",
       // ── cinematic narration (the "Watch the loft" autoplay owns the caption while it runs) ──
       cine_coffee: "Morning. Coffee first…",
       cine_water: "She waters the plants…",
@@ -13612,6 +13618,12 @@ var T = {
       office_hangup: "Teď zavěs.",
       complete: "Prošli jste celým bytem ♥",
       balcony: "Bude tu grilovačka 🔥🍖🌽🍷",
+      // ── titulky pro prozkoumávání: zobrazí se při návratu do vyřešeného pokoje místo návodu ──
+      explore_kitchen: "Toulej se — kuchyně skrývá víc než kávu. ☕",
+      explore_garden: "Toulej se — zahrada je plná maličkostí. 🌿",
+      explore_cuddly: "Toulej se — zavrtej se a prozkoumávej. 🐙",
+      explore_office: "Toulej se — pracovna je spíš hračka než práce. 🖥️",
+      explore_balcony: "Toulej se — balkon je to nejlepší. 🌅",
       // ── titulky filmečku (autoplay „Prohlédnout byt“ řídí titulek, dokud běží) ──
       cine_coffee: "Ráno. Nejdřív kafe…",
       cine_water: "Zalévá kytky…",
@@ -41940,7 +41952,29 @@ function spawnDustMote(container) {
     // On ordinary days the finale runs without them.
     finaleTimers.push(setTimeout(showRsvpNudge, 9100));
   }
+  // Post-unlock exploration captions. Once a room is solved (it sits behind the unlock
+  // frontier — balcony instead keys off the finale-seen flag), re-entering it stops
+  // repeating the solve instruction and shows a gentle, rotating "enjoy wandering" line.
+  // liveSolveState keeps the two rooms whose caption is still meaningfully dynamic even
+  // when solved (kitchen with the bar up, office mid-call) on their existing branch.
+  var exploreSeen = {};
+  function liveSolveState(name) {
+    if (name === "kitchen") return !!(window.__barUpNow && window.__barUpNow());
+    if (name === "office") return !!(window.__laptopCallLive && window.__laptopCallLive());
+    return false;
+  }
+  function showExploration(name) {
+    if (!exploreSeen[name]) { exploreSeen[name] = true; setCaption("explore_" + name); return; } // first solved-entry this page load → base "Enjoy wandering" line
+    var k = window.__nextExploreHint ? window.__nextExploreHint(name, true) : null;              // each subsequent solved-entry → advance to the next surviving nudge
+    if (k === "rsvp_nudge") showRsvpNudge();                                                     // balcony's RSVP link is one rotation item (innerHTML link, not a plain caption key)
+    else if (k) setCaption(k);
+    else setCaption("explore_" + name);
+  }
+  window.__resetExplore = function () { exploreSeen = {}; }; // resetHunt (this IIFE) calls it; explorePtr is reset via its own brick-IIFE hook
   function restoreStageHint(name) {
+    var idx = STAGES.indexOf(name);
+    var solved = (idx >= 0 && idx < maxUnlocked) || (name === "balcony" && balconyIntroSeen);
+    if (solved && !liveSolveState(name)) { showExploration(name); return; }
     if (name === "kitchen") {
       if (window.__barUpNow && window.__barUpNow()) { if (window.__retireHint) window.__retireHint("hint_ksecret"); setCaption(kitchenCurrentCaption()); updateKitchenInvite(); return; } // bar's up (party OR night) → bar caption + no coffee arrows, regardless of the machine's power
       if (!kitchenPowered) return;
@@ -44747,6 +44781,8 @@ function spawnDustMote(container) {
     if (butterfly) butterfly.classList.remove("flying");
     if (rainbow) rainbow.classList.remove("burst");
     balconyIntroSeen = false; // a fresh playthrough replays the one-time arrival flourish
+    if (window.__resetExplore) window.__resetExplore();       // exploreSeen (this IIFE) → base "Enjoy wandering" leads again if a room is re-solved
+    if (window.__resetExplorePtr) window.__resetExplorePtr();  // explorePtr (brick IIFE) → rotation restarts; retiredHints intentionally NOT cleared (a re-solve skips already-found toys)
     if (window.resetSmoker) window.resetSmoker();
     if (window.resetLaptop) window.resetLaptop();
     if (window.__resetPhoneApps) window.__resetPhoneApps(); // restore any "Uninstall"ed phone apps
@@ -47697,6 +47733,29 @@ function spawnDustMote(container) {
   // it's up re-renders it. All of a room's offered hints retired → the all-done line.
   var HINT_HOLD = 3000;
   var hintPtr = { kitchen: 0, garden: 0, cuddly: 0, office: 0, balcony: 0 };
+
+  // Post-unlock exploration rotation. Reuses this room's brick-hint copy: once a room is
+  // solved its puzzle-hints' done() all latch true, so only the optional-toy nudges (drinks,
+  // projector, arcade, phone apps…) survive the scan — exactly the exploration copy we want,
+  // already written and translated. Own pointer (NOT hintPtr — the brick dispenser's), so
+  // revisits rotate independently of loose-brick taps. Balcony carries an extra rsvp_nudge
+  // sentinel so the RSVP CTA is one rotation position, resurfacing periodically.
+  var explorePtr = { kitchen: 0, garden: 0, cuddly: 0, office: 0, balcony: 0 };
+  function explorePool(room) {
+    var pool = (ROOM_HINTS[room] || []).slice();
+    if (room === "balcony") pool.push({ id: "rsvp_nudge", done: function () { return false; } }); // always-surviving CTA step
+    return pool;
+  }
+  window.__nextExploreHint = function (room, advance) {
+    var list = explorePool(room), n = list.length, ptr = explorePtr[room] || 0, key = "hint_alldone";
+    for (var i = 0; i < n; i++) {
+      var h = list[(ptr + i) % n];
+      if (h.rel && !h.rel()) continue;                                     // gated out of this state (e.g. bar hints with the bar down)
+      if (!h.done()) { key = h.id; if (advance) explorePtr[room] = (ptr + i + 1) % n; break; } // surviving nudge — advance the pointer only when asked
+    }
+    return key;
+  };
+  window.__resetExplorePtr = function () { explorePtr = { kitchen: 0, garden: 0, cuddly: 0, office: 0, balcony: 0 }; }; // resetHunt hook (explorePtr lives in this IIFE)
   var hintTimer = null, hintShowing = false, hintCurKey = null, hintSavedKey = null, hintOwnerBrick = null;
   function hintCapEl() { return document.getElementById("hunt-caption"); }
   function clearHintTimer() { if (hintTimer) { clearTimeout(hintTimer); hintTimer = null; } }

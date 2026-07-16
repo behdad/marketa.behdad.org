@@ -1840,21 +1840,21 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 .ed-item:hover{background:#1a2420}
 .ed-item.active{background:#264032; color:#a7e08a}
 .ed-empty{flex:none; font-size:1.8px; color:#5f7a5f; padding:0.6px 0.8px}
-.ed-main{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; position:relative} /* position:relative → the autocomplete popup (an absolutely-positioned child) anchors to it */
-.ed-top{flex:none; display:flex; align-items:center; gap:0.6px; padding:0 8px 0 1px} /* right pad clears the shrunk close pill parked in the top-right corner */
+.ed-main{flex:1; min-width:0; display:grid; grid-template-rows:auto minmax(0,1fr); gap:1px} /* grid (not flex+position:relative — that composited a RenderLayer that vanished under the monitor's scaled foreignObject, WebKit bug 23113). The autocomplete popup overlays via grid-area + JS margin offset instead of absolute left/top. */
+.ed-top{grid-row:1; grid-column:1; display:flex; align-items:center; gap:0.6px; padding:0 8px 0 1px} /* right pad clears the shrunk close pill parked in the top-right corner */
 .ed-name{flex:1; min-width:0; background:#161c20; border:0.3px solid #2b3a3a; border-radius:0.8px; outline:none; color:#cfe3cf; font:inherit; font-size:2px; height:3.6px; line-height:3.6px; padding:0 0.8px}
 .ed-name::placeholder{color:#5f7a5f}
 .ed-btn{flex:none; width:4px; height:4px; display:flex; align-items:center; justify-content:center; background:#1d2622; border:0.3px solid #2b3a3a; border-radius:0.8px; color:#8fd070; font:inherit; font-size:3px; line-height:1; padding:0; cursor:pointer} /* same keycap metrics as .ed-side-btn so the whole toolbar reads as one even set */
 .ed-btn:hover{background:#26332b}
 .ed-btn-run{color:#a7e08a; font-size:2.5px} /* the solid ▶ triangle reads heavier than the outline arrows, so nudge it a hair smaller to optically match */
-.ed-ta{flex:1; min-height:0; resize:none; background:#0d130e; border:0.3px solid #202b2b; border-radius:0.8px; outline:none; color:#cfe3cf; font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.4; padding:0.6px 1px; white-space:pre; overflow:auto; scrollbar-width:none; caret-color:#8fd070}
+.ed-ta{grid-row:2; grid-column:1; min-height:0; resize:none; background:#0d130e; border:0.3px solid #202b2b; border-radius:0.8px; outline:none; color:#cfe3cf; font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.4; padding:0.6px 1px; white-space:pre; overflow:auto; scrollbar-width:none; caret-color:#8fd070}
 .ed-ta::placeholder{color:#5f7a5f}
 .ed-ta::-webkit-scrollbar{display:none}
 .ed-wrap input, .ed-wrap textarea{user-select:text; -webkit-user-select:text}
 /* editor autocomplete: a caret-anchored command-completion popup (wired in the editor IIFE).
    Sized for the 2px monitor world; JS clamps it inside the foreignObject and flips it above the
    caret when there's no room below. The dim help column truncates with an ellipsis. */
-.ed-ac{position:absolute; z-index:6; display:none; min-width:16px; max-width:88px; max-height:15px; overflow-y:auto; box-sizing:border-box; background:#0a0d10; border:0.3px solid #2f4038; border-radius:0.8px; padding:0.3px; box-shadow:0 0.5px 1.6px rgba(0,0,0,.65); font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.35; scrollbar-width:none}
+.ed-ac{grid-row:1 / span 2; grid-column:1; place-self:start; display:none; min-width:16px; max-width:88px; max-height:15px; overflow-y:auto; box-sizing:border-box; background:#0a0d10; border:0.3px solid #2f4038; border-radius:0.8px; padding:0.3px; box-shadow:0 0.5px 1.6px rgba(0,0,0,.65); font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.35; scrollbar-width:none}
 .ed-ac.open{display:block}
 .ed-ac::-webkit-scrollbar{display:none}
 .ed-ac-item{display:flex; align-items:baseline; gap:1px; padding:0.15px 0.7px; border-radius:0.6px; white-space:nowrap; cursor:pointer; overflow:hidden}
@@ -24772,8 +24772,8 @@ document.addEventListener("click", function (e) {
     if (left + pw > g.mainW) left = g.mainW - pw;
     if (left < 0) left = 0;
     if (top + ph > g.mainH) { var above = g.y - ph; top = above >= 0 ? above : Math.max(0, g.mainH - ph); } // flip above
-    edAc.style.left = left.toFixed(2) + "px";
-    edAc.style.top = top.toFixed(2) + "px";
+    edAc.style.marginLeft = left.toFixed(2) + "px"; // offset within the ed-main grid cell (grid-stacked, not absolutely positioned — see .ed-ac)
+    edAc.style.marginTop = top.toFixed(2) + "px";
   }
   function edAcRender(tok, matches) {
     edAcEnsure();

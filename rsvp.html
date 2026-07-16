@@ -13143,6 +13143,8 @@ var T = {
       arcade_hint: "Move to blast the invaders! 👾",
       garden: "Water a plant, play music, light candles.",
       garden_party: "Party's on — dance like nobody's watering. 💃🌱",
+      dj_amir: ["Amir takes over the decks. 🎧", "Amir grabs the ones and twos. 🎧"],
+      dj_danesh: ["Danesh takes over the decks. 🎧", "Danesh steps up to spin. 🎧"],
       garden_need_music_candles: "Play music, light candles.",
       garden_need_water_candles: "Water a plant, light candles.",
       garden_need_water_music: "Water a plant, play music.",
@@ -13574,6 +13576,8 @@ var T = {
       arcade_hint: "Pohybuj se a sestřel vetřelce! 👾",
       garden: "Zalij kytku, zahraj, zapal svíčky.",
       garden_party: "Párty jede — tanči, ať kytky počkají. 💃🌱",
+      dj_amir: ["Za gramofony jde Amir. 🎧", "Amir bere desky do ruky. 🎧"],
+      dj_danesh: ["Za gramofony jde Danesh. 🎧", "Danesh jde roztočit desky. 🎧"],
       garden_need_music_candles: "Zahraj a zapal svíčky.",
       garden_need_water_candles: "Zalij kytku a zapal svíčky.",
       garden_need_water_music: "Zalij kytku a zahraj.",
@@ -43007,6 +43011,12 @@ function spawnDustMote(container) {
     var booth = document.getElementById("garden-djbooth");
     if (booth) booth.classList.toggle("dj-b", !!window.__djB); // two-arg toggle → deterministic, no leak on re-light
   }
+  function announceDj() { // shout out the incoming DJ when the decks change hands — a brief party hype line
+    if (window.__cinematic || window.currentStageName !== "garden") return; // the film owns the caption; from another room the swap is silent
+    var key = window.__djB ? "dj_danesh" : "dj_amir"; // whoever's spinning now
+    var arr = ((T[document.documentElement.lang] || {}).hunt || T.en.hunt)[key] || T.en.hunt[key];
+    if (arr && arr.length && window.caption) window.caption(arr[Math.floor(Math.random() * arr.length)], { blink: 900, hold: 4200 });
+  }
   function advanceDance() { // advance to the next dance in the rotation, crossfade the beds, glide the dancers
     var order = PARTY_DANCE_ORDER || ["techno"];
     var idx = order.indexOf(window.__partyDance);
@@ -43021,7 +43031,7 @@ function spawnDustMote(container) {
     // the two DJs swap every 3rd dance-advance (~3 songs each); counting here (not in
     // flipPartyMode) makes manual skips count too. Piggybacks the rotation — no new timer.
     window.__djSwapCount = (window.__djSwapCount || 0) + 1;
-    if (window.__djSwapCount % 3 === 0) { window.__djB = !window.__djB; applyDjBooth(); }
+    if (window.__djSwapCount % 3 === 0) { window.__djB = !window.__djB; applyDjBooth(); announceDj(); }
   }
   function flipPartyMode() {
     waltzAltTimer = null;

@@ -7,11 +7,19 @@ helps desktop. Target: **not-broken on iOS**, not pixel-perfect.
 
 Status legend: 🔴 open · 🟡 in progress · 🟢 fixed
 
+**Confirmed WORKING on WebKit** (narrows the root causes — it's not "Safari is broken", it's
+specific subsystems): the party scene renders fine. So core inline-SVG art + CSS/WAAPI scene
+animations are OK. The failures cluster in: foreignObject (monitor apps), CSS `filter` effects,
+`<canvas>`/WebGL (fractals), transform-relative particle spawns, and the Web Audio pipeline.
+
 ---
 
 ### 1. 🔴 Stray black rectangle + white-gradient sheen in the opening scene
 The kitchen (opening) scene shows a small black rectangle with a white/gradient sheen over the
-countertop, roughly behind the CLICK ME word. Not present in Chrome. **Reproduced.**
+countertop, roughly behind the CLICK ME word. Not present in Chrome. **Reproduced.** It's a
+persistent KITCHEN-ROOM element (fixed screen position): still there in the bar view (on the
+middle bottle shelf) — so it's one kitchen element, not bar-specific. The rest of the bar
+(bottles, bartender + ∞ shirt, menu, stools) renders fine.
 _Suspect:_ an SVG gradient/filter/mask element WebKit paints opaque where Chrome hides or clips it.
 
 ### 2. 🔴 Animated particles fly away from their source

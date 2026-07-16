@@ -22,20 +22,21 @@ middle bottle shelf) — so it's one kitchen element, not bar-specific. The rest
 (bottles, bartender + ∞ shirt, menu, stools) renders fine.
 _Suspect:_ an SVG gradient/filter/mask element WebKit paints opaque where Chrome hides or clips it.
 
-### 2. 🔴 Animated particles fly away from their source
-WAAPI/CSS particles don't stay near the element that spawns them — they shoot off toward the
-SVG origin. Confirmed on: the espresso machine's power-on LED shine, the notes rising from the
-**ukulele**, and the **piano** notes (these "fly in" from off-target). 
-_Cause:_ the `transform-box: fill-box` class (documented in CLAUDE.md). A transform without
-`transform-box:fill-box` is resolved against the SVG viewport, not the element's own bbox;
-WebKit is stricter than Chrome about the default. check.js guards `.animate()` calls, so the
-escapees are likely CSS-class-driven particles or spots the check doesn't cover.
+### 2. 🟢 Animated text particles fly away from their source — FIXED (device-confirmed)
+Espresso power-on shine ✦, ukulele/radio notes ♪, piano notes ♪, hearts ♥ — all flew toward the
+SVG origin on WebKit. **Actual cause:** WebKit ignores `transform-box: fill-box` specifically on
+**`<text>`** elements (isolated tests: `<circle>` and `<g>` honor it fine; only `<text>` breaks)
+— it resolves the scale/rotate pivot against the SVG viewport instead of the glyph's box. The
+"add fill-box" fix was already present, which is why it looked mysterious. **Fix (commit d8f1859,
+deployed):** pivot each text particle on its own `(x,y)` in view-box coords instead of the
+mis-resolved fill-box center; exact for center-baselined glyphs. Verified WebKit + Chromium, and
+confirmed by the owner on real Safari.
 
-Related transform-coordinate variant: the **rotating ashtray's ash drops from the wrong
-place**. That's the sibling bug class (CLAUDE.md "JS-spawned effects break when a target's
-group gains a transform" — `getBBox`/CTM local-vs-viewport coords): the ash is spawned relative
-to a rotated group and WebKit resolves the coordinate system differently than Chrome. Fix by
-spawning the effect into the target's OWN group / reading position via a static ancestor's CTM.
+**Ashtray ash — PARKED (not a text/transform-box bug).** The ash are `<circle>`s with a pure
+translate (transform-box-immune), and both the ash spawn AND the ashtray's fill-box spin measure
+IDENTICAL in Playwright-WebKit vs Chromium (`{x:175,y:454,w:45,h:40}`). Could not reproduce
+headless. Owner: "not a big deal, move on." Needs a real-device look if it resurfaces (Playwright-
+WebKit ≈ Safari but not identical).
 
 ### 3. 🔴 Zoomed-in objects are very blurred
 The monitor (and other desk objects) look badly blurred when zoomed in. 
@@ -114,3 +115,23 @@ context menus (monitor dock, console, phone icons, D-pad, etc.) — does nothing
 _Suspect:_ WebKit's touch/gesture handling (double-tap is reserved for zoom; the synthetic
 `contextmenu` or the dblclick→menu path differs), and/or `touchend` timing. Interaction bug,
 separate from the render clusters.
+
+---
+
+## Firefox / Gecko (separate engine — its own bugs)
+
+Playwright also bundles real Firefox (Gecko); `DEBUGGING.md` §3 covers it (`import { firefox }`,
+same `PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1`). Firefox is flagged non-ideal by the browser
+notice too.
+
+### F1. 🟢 Fullscreen: scene didn't zoom up + side-rails hung below it — FIXED
+In real Firefox fullscreen the scene stayed small (un-zoomed) in a big empty frame, and the media
+controls floated ~52px below the scene. **Two causes, both fixed (commits 5be9b4a + c7beb6c,
+deployed):** (1) `sizeFullscreenFrame` set `frame.style.width` but the fullscreen `max-width:none`
+override didn't take in Firefox (its selector list includes the unknown `:-webkit-full-screen`),
+so the frame stayed capped at the base `max-width:1140px` → forced `max-width:none` INLINE; plus
+added delayed re-fits (setTimeout 80/220/480ms) for Firefox's late fullscreen resize. (2) Firefox
+computes the `width:500%;height:auto` strip aspect a hair differently, so the JS frame height
+exceeded the rendered scene and the stretched rails hung below → snap the frame height to the
+scene's actually-rendered height. Verified: frame fills 0.99 of the area, rails align, Chromium
+unchanged.

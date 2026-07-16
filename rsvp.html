@@ -379,7 +379,11 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    It's the bartender's proud "here's your <drink>", so it's presented big: display type,
    a heavier weight, a pink-edged darker backing and a brief pop-in. Wraps + clamps to the
    viewport (overriding the base nowrap) so the longest names never force a horizontal scroll. */
-.cocktail-toast{pointer-events:auto; cursor:pointer; font-family:"Fraunces",serif; font-weight:600; font-size:1.18rem; letter-spacing:.005em; line-height:1.16; padding:.42rem 1.15rem; background:rgba(52,42,34,.94); border:1.5px solid var(--pink); box-shadow:0 4px 16px rgba(40,28,20,.4); white-space:normal; max-width:86%; text-align:center; text-wrap:balance}
+.cocktail-toast{cursor:pointer; font-family:"Fraunces",serif; font-weight:600; font-size:1.18rem; letter-spacing:.005em; line-height:1.16; padding:.42rem 1.15rem; background:rgba(52,42,34,.94); border:1.5px solid var(--pink); box-shadow:0 4px 16px rgba(40,28,20,.4); white-space:normal; max-width:86%; text-align:center; text-wrap:balance}
+/* only the SHOWN toast is a live link — it's a persistent viewport child, so an unconditional
+   pointer-events:auto let a faded-out toast keep swallowing clicks over the next room (bit the
+   garden caterpillar: taps there opened the drink in the phone instead of metamorphosing it). */
+.cocktail-toast.show{pointer-events:auto}
 /* pop-in each time a new drink is presented — a dedicated one-shot class, re-added on every make
    and dropped on animationend (keeps translateX(-50%) so the pill stays centred through the pop). */
 .ck-pop{animation:ck-pop .34s cubic-bezier(.2,1.3,.5,1) both}
@@ -21708,6 +21712,7 @@ document.addEventListener("click", function (e) {
     ckToastTimer = setTimeout(function () { if (ckToastEl) ckToastEl.classList.remove("show"); }, 12000);
   }
   function hideCocktailToast() { clearTimeout(ckToastTimer); if (ckToastEl) ckToastEl.classList.remove("show"); }
+  window.__hideCocktailToast = hideCocktailToast; // goToStage drops a still-showing toast so it can't ride into (and click through onto) the next room
 
   function reduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
   function dragging() { return !!(window.__bartenderDragging && window.__bartenderDragging()); }
@@ -41965,6 +41970,7 @@ function spawnDustMote(container) {
     if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics(); // and gets quieter on the balcony specifically, while its door is shut
     if (name !== "balcony" && window.__clearTipsy) window.__clearTipsy(); // the tipsy sway lives only on the balcony
     if (name !== "garden" && window.__clearGardenConfetti) window.__clearGardenConfetti(); // leaving the garden clears any party confetti (spawner re-tops on return while the switch is on)
+    if (name !== "kitchen" && window.__hideCocktailToast) window.__hideCocktailToast(); // the cocktail toast belongs to the kitchen bar — never let a still-showing one ride into the next room
     if (name === "balcony") triggerBalconyFinale();
     if (window.__updateSkyFireworks) window.__updateSkyFireworks(name); // wedding-day sky (balcony/garden), else stops
   }

@@ -14,13 +14,14 @@ animations are OK. The failures cluster in: foreignObject (monitor apps), CSS `f
 
 ---
 
-### 1. 🔴 Stray black rectangle + white-gradient sheen in the opening scene
-The kitchen (opening) scene shows a small black rectangle with a white/gradient sheen over the
-countertop, roughly behind the CLICK ME word. Not present in Chrome. **Reproduced.** It's a
-persistent KITCHEN-ROOM element (fixed screen position): still there in the bar view (on the
-middle bottle shelf) — so it's one kitchen element, not bar-specific. The rest of the bar
-(bottles, bartender + ∞ shirt, menu, stools) renders fine.
-_Suspect:_ an SVG gradient/filter/mask element WebKit paints opaque where Chrome hides or clips it.
+### 1. 🟢 Stray black rectangle in the opening scene — FIXED
+**Actual cause (not a gradient/mask):** the office monitor's ~16 `<foreignObject>` app channels
+(all at x=254 y=154 in `#office-monitor`) are `opacity:0` when idle, but WebKit (a) still PAINTS
+opacity:0 foreignObjects and (b) lets foreignObject content ESCAPE the strip's `overflow:hidden`
+clip — so the off-screen office leaked a black rect into whatever room was on screen. **Fix
+(commit 24f864f, deployed):** `goToStage` toggles a `viewing-office` class on the strip;
+`#loft-game-strip:not(.viewing-office) #office-monitor foreignObject{visibility:hidden}` (WebKit
+honours `visibility`). Screenshot-verified gone in WebKit; office monitor still renders when viewed.
 
 ### 2. 🟢 Animated text particles fly away from their source — FIXED (device-confirmed)
 Espresso power-on shine ✦, ukulele/radio notes ♪, piano notes ♪, hearts ♥ — all flew toward the
@@ -80,15 +81,31 @@ under an SVG `transform`-attribute scale on a `<g>` ancestor**, which is exactly
 
 Likely also explains the zoom-blur (#3). Owner reviewing which fix path to take (a core-feature change).
 
-### 5. 🔴 Scene-wide CSS filter effects don't render (ketamine gray-out, alcohol blur)
-Full-scene filter effects don't appear on WebKit: the **ketamine** trip's gray-out and the
-**alcohol** (drunk) blur both do nothing. 
-_Suspect:_ a CSS `filter` applied to the SVG/strip (grayscale/blur) that WebKit won't apply to
-that element type, or an overlay it handles differently. Likely one root for both.
+### 5. 🟢 Scene-wide CSS filter effects don't render (ketamine gray-out, alcohol blur) — FIXED
+**Actual cause:** a CSS filter *function* (`filter:blur()/saturate()/…`) on an SVG container is a
+WebKit no-op (computed style shows it, nothing renders); an SVG `<filter>` *reference* on the same
+group DOES work. **Fix (commit 24f864f, deployed):** added `#ket-haze` + `#booze-blur` SVG
+`<filter>`s and switched both rules to `filter:url(#…)` (ketamine's 18s ramp re-done as SMIL;
+brightness/contrast folded into `feComponentTransfer`; `color-interpolation-filters=sRGB`). WebKit
+edge-energy + saturation now match Chromium; both were no-ops before. Confirmed by owner on Safari.
 
-### 6. 🔴 Julia-set fractal screensaver doesn't render
-The Julia-set fractal projector/screensaver channel shows nothing on WebKit. 
-_Suspect:_ canvas / WebGL / shader path unsupported or erroring on WebKit.
+### 5b. 🔴 Iboga trip filter (same class as #5, not yet fixed)
+`#loft-game-strip.iboga{animation:iboga-trip … filter:saturate/brightness/contrast}` uses the same
+CSS-filter-keyframe mechanism → same WebKit no-op. Left out of the #5 scope (it's on the root
+`<svg>`, riskier). Fix the same way (SVG `<filter>` ref) in a future pass.
+
+### 6. 🟢 Julia-set fractal screensaver doesn't render — FIXED
+**Actual cause:** the canvas bitmap draws fine in WebKit (pixel readback == Chromium), but a
+`<canvas>` inside a `<foreignObject>` NEVER composites on WebKit → blank even unscaled (so NOT the
+#23113 zoom bug). **Fix (commit 24f864f, deployed):** render into an off-DOM canvas and blit it to
+a native SVG `<image>` via `toDataURL()` each frame. SVG `<image>` paints on every engine and
+scales under the zoom. Confirmed by owner. (Residual softness when the monitor is zoomed is the
+separate zoom-raster issue, #3/#4.)
+
+### 6b. 🔴 Other canvas-in-foreignObject surfaces (same class as #6, not yet fixed)
+Same canvas-in-foreignObject limitation likely blanks the **mushroom-trip** bloom canvases
+(`trip-bloom-fo`) and the **cuddly-flame** fire (`cuddly-flame-fo`) on WebKit. Out of #6's scope —
+apply the same off-DOM-canvas → SVG `<image>` blit in a future pass.
 
 ### 7. 🟢 Volume control does nothing — music blasts at full volume — FIXED
 **Actual cause:** on WebKit, `createMediaElementSource(el)` taps the element's RAW decoded stream

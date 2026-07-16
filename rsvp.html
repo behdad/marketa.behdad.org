@@ -43102,12 +43102,17 @@ function spawnDustMote(container) {
   // date (the 's' previews are just pretend-dates), never by the holiday dressing — which is why
   // May 1, the Edmonton wedding date, still mostly comes down white.
   var SNOW_DEEP = 0.9; // deep winter: snow, with the odd rain — never quite 100%
+  // The shoulders are two months long each, so the turn of the season is gradual rather than a
+  // cliff: it thins out across April–May and thickens back up across November–December, meeting
+  // deep winter at either end (Dec 31 -> Jan 1 and Mar 31 -> Apr 1 are both continuous).
+  function snowRamp(m, d, first) { return ((m === first ? d - 1 : 30 + d - 1) / 60); } // 0..1 across the 61-day pair
   function snowChance() {
     var s = window.__seasonDate ? window.__seasonDate() : { m: new Date().getMonth(), d: new Date().getDate() };
-    if (s.m === 10) return SNOW_DEEP * (s.d / 30);      // November ramps up
-    if (s.m === 4) return SNOW_DEEP * (1 - s.d / 31);   // May ramps down — still ~half on mid-May
-    if (s.m === 11 || s.m <= 3) return SNOW_DEEP;       // Dec–Apr
-    return 0;                                            // Jun–Oct: rain only
+    var m = s.m;
+    if (m <= 2) return SNOW_DEEP;                                  // Jan–Mar: deep winter
+    if (m === 3 || m === 4) return SNOW_DEEP * (1 - snowRamp(m, s.d, 3));  // Apr–May: thins out (May 1 still ~45%)
+    if (m === 10 || m === 11) return SNOW_DEEP * snowRamp(m, s.d, 10);     // Nov–Dec: thickens up
+    return 0;                                                       // Jun–Oct: rain only
   }
   function fallsAsSnow() { return Math.random() < snowChance(); }
   // Snowy enough that it comes down on its own, no storm needed (rain still waits for one).

@@ -24258,6 +24258,7 @@ document.addEventListener("click", function (e) {
   function playSongAt(idx) {
     var next = songAudios[((idx % songAudios.length) + songAudios.length) % songAudios.length];
     if (!next) return;
+    clearSongSnippet(); // a picked track (skip / console music()) isn't a passing poke
     if (window.__retireHint) window.__retireHint("hint_song"); // loose-brick hint: retire once a loft song has played
     try {
       next.currentTime = 0;
@@ -24314,6 +24315,7 @@ document.addEventListener("click", function (e) {
   // click + keyboard handlers, and stop the event reaching the monitor's own click
   // handler (which would otherwise "open" marketa.behdad.org in a new tab).
   function openMusicApp() {
+    clearSongSnippet(); // reaching for the player is a deliberate opt-in to the whole song
     // opens the player VIEW only — it never auto-starts music. With a song current
     // (playing or paused mid-track) the view re-opens on it; otherwise the player
     // opens idle with the play triangle, and pressing it starts a song.
@@ -28530,6 +28532,7 @@ async def localfont(name):
       if (!song) return;
       try {
         if (song.paused) {
+          clearSongSnippet(); // pressing play is a deliberate opt-in to the whole song
           setSongLevel(song, window.__songVolume ? window.__songVolume() : 0.5); // app-owned level, same defensive reapply as every other play trigger
           if (window.__captureSongAudio) window.__captureSongAudio(song); // keep retrying the resume inside this gesture
           var p = song.play(); if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (monitor resume) for " + song.id + ":", e); });
@@ -28558,6 +28561,7 @@ async def localfont(name):
     if (!song) return;
     try {
       if (song.paused) {
+        clearSongSnippet(); // pressing play is a deliberate opt-in to the whole song
         setSongLevel(song, window.__songVolume ? window.__songVolume() : 0.5); // app-owned level, same defensive reapply as every other play trigger
         if (window.__captureSongAudio) window.__captureSongAudio(song); // keep retrying the resume inside this gesture
         var p = song.play(); if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (spacebar) for " + song.id + ":", e); });
@@ -28585,6 +28589,7 @@ async def localfont(name):
         pause: function () { if (!a.paused) a.pause(); },
         resume: function () {
           if (a.ended) return false;
+          clearSongSnippet(); // a transport resume is a deliberate opt-in to the whole song
           setSongLevel(a, window.__songVolume ? window.__songVolume() : 0.5); // app-owned level, reapplied like every play trigger
           if (window.__captureSongAudio) window.__captureSongAudio(a); // keep retrying the resume inside this gesture
           var p = a.play(); if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (transport) for " + a.id + ":", e); });
@@ -28870,6 +28875,34 @@ async def localfont(name):
     }, 40);
   }
   window.__fadeSongTo = fadeSongTo; // shared with the cinematic's song switch
+  // Poking an instrument in passing is a light gesture, so it gets a taste, not the whole song:
+  // the tap arms this timer, which fades the song out and pauses it AT POSITION for a resume.
+  // Opt-IN — only the tap arms, so every other play path plays in full with no exception.
+  var SNIPPET_MS = 30000;
+  var snippetTimer = null, snippetAudio = null;
+  function clearSongSnippet() {
+    if (snippetTimer) { clearTimeout(snippetTimer); snippetTimer = null; }
+    snippetAudio = null;
+  }
+  function armSongSnippet(a) {
+    clearSongSnippet();
+    if (!a) return;
+    snippetAudio = a;
+    snippetTimer = setTimeout(function () {
+      snippetTimer = null;
+      if (snippetAudio !== a || a.paused) { snippetAudio = null; return; }
+      snippetAudio = null; // cleared before the fade so its own pause event can't re-enter
+      var appVol = window.__songVolume ? window.__songVolume() : 0.5;
+      fadeSongTo(a, 0, 700, function () { try { a.pause(); setSongLevel(a, appVol); } catch (e) {} }); // fade, then pause + restore its level for the resume
+    }, SNIPPET_MS);
+  }
+  window.__armSongSnippet = armSongSnippet;   // the garden instrument handler lives in another IIFE
+  window.__clearSongSnippet = clearSongSnippet; // ...as does resetHunt
+  songAudios.forEach(function (a) {
+    // any stop, whatever caused it (transport, projector, second tap, skip, cinematic hush)
+    a.addEventListener("pause", function () { if (snippetAudio === a) clearSongSnippet(); });
+    a.addEventListener("ended", function () { if (snippetAudio === a) clearSongSnippet(); });
+  });
   // The night-sky projector channel "puts on Satie": it fades the game song out and takes
   // over, and hands playback back to whatever was going when you leave the channel. Only a
   // genuinely-playing song is remembered, so an already-silent loft stays silent on return.
@@ -44752,6 +44785,8 @@ function spawnDustMote(container) {
           if (window.__captureSongAudio) window.__captureSongAudio(audio);
           var p = audio.play();
           if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (instrument tap) for " + audio.id + ":", e); playPluckSound(); });
+          // a passing poke gets a ~30s taste; the cinematic taps the guitar for its own beat and wants the whole song
+          if (!window.__cinematic && window.__armSongSnippet) window.__armSongSnippet(audio);
           played = true;
         } catch (e) {}
       }
@@ -45401,6 +45436,7 @@ function spawnDustMote(container) {
     if (window.resetBlanketPositions) window.resetBlanketPositions();
     gardenState.water = false;
     gardenState.music = false;
+    if (window.__clearSongSnippet) window.__clearSongSnippet(); // no tap timer survives a fresh game
     gardenState.candles = false;
     if (window.resetBottles) window.resetBottles();
     if (window.__resetKitchenPans) window.__resetKitchenPans();

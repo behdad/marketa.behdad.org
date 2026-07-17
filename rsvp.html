@@ -45741,7 +45741,7 @@ function spawnDustMote(container) {
     var er = window.currentStageName, did = true;
     if (er === "kitchen") { if (window.__barUpNow && window.__barUpNow()) { if (window.__makeCocktailHere) window.__makeCocktailHere(); } else if (window.__kitchenDoNext) window.__kitchenDoNext(); } // bar up → make a cocktail; else next pending coffee step
     else if (er === "garden") { if (!(window.__gardenDoNext && window.__gardenDoNext())) { if (window.party) window.party(!window.party()); } } // advance the solve (water→music→candles); once solved, toggle the party
-    else if (er === "cuddly") { if (window.__cuddlyProjector) window.__cuddlyProjector.cycle(); }       // next projector channel
+    else if (er === "cuddly") { if (!(window.__cuddlyDoNext && window.__cuddlyDoNext())) { if (window.__cuddlyProjector) window.__cuddlyProjector.cycle(); } } // advance the solve (octopus → blanket); once solved, cycle the projector channel
     else if (er === "office") { if (window.__wakeMonitorSaver && window.__wakeMonitorSaver()) {} else if (window.computer && !window.computer()) window.computer(true); else if (window.__toggleMonitorZoom) window.__toggleMonitorZoom(); } // wake the screensaver if it's up, else boot the PC if it's off, else toggle the monitor zoom
     else if (er === "balcony") { if (window.party && !window.party()) { window.party(true); } else if (window.phone) { window.phone(!window.phone()); } } // solve = jumpstart the party; from then on, toggle the cellphone
     else did = false;
@@ -48171,7 +48171,16 @@ function spawnDustMote(container) {
     el.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); triggerBlanketPull(true); }
     });
+    if (id === "cuddly-blanket") window.__pullMainBlanket = function () { triggerBlanketPull(false); }; // a touch counts — Enter's __cuddlyDoNext taps the blanket
   });
+  // 'Enter' in the cuddly nook advances the solve one beat: play the octopus, then pull the
+  // blanket off the couple. Same idea as __kitchenDoNext/__gardenDoNext; returns the id it fired.
+  window.__cuddlyDoNext = function () {
+    var oct = document.getElementById("cuddly-octopus");
+    if (!(oct && oct.classList.contains("played"))) { if (oct) oct.dispatchEvent(new MouseEvent("click", { bubbles: true })); return "cuddly-octopus"; }
+    if (window.__pullMainBlanket) { window.__pullMainBlanket(); return "cuddly-blanket"; }
+    return null;
+  };
   window.resetBlanketPositions = function () {
     ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"].forEach(function (id) {
       var el = document.getElementById(id);

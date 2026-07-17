@@ -61,6 +61,14 @@ allowed exception, owner-confirmed.)
   after a `setTimeout`, then screenshot or `--dump-dom` it. Clean up scratch files after.
   Always check both language versions and both the mobile (~390px) and desktop (≥760px)
   layouts before shipping copy or layout changes.
+- **A visitor loading mid-`git pull` gets a TRUNCATED page.** The web root *is* the git working
+  tree, so a pull rewrites `rsvp.html` (3.3MB, one file) **in place** — a fetch landing during the
+  write returns partial HTML: no CSS, so every scene stacks vertically and unstyled regions paint
+  as black bands. It looks catastrophic and is nothing. **Before believing a "you broke it
+  REALLY badly" report, `md5sum` local vs live and try to reproduce at the reporter's viewport** —
+  a torn read is far likelier than a real break after a burst of deploys, and the symptom (whole-
+  page loss of layout) rarely matches whatever change is suspected. Deploying several times in
+  quick succession widens the window.
 - **`CLAUDE.md` is blocked from public access via `.htaccess`** (this file was reachable
   at `/CLAUDE.md` on the live site until that was added — the git working tree = web
   root means anything not explicitly blocked is served). If you add other files that

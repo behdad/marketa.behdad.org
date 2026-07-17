@@ -3569,6 +3569,13 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 #loft-game-strip.bd-irene .bd-hat-irene,
 #loft-game-strip.bd-pouria .bd-hat-pouria{opacity:1; visibility:visible}
 @media (prefers-reduced-motion: reduce){.bd-adorn{transition:none}}
+/* The low table is only out when there's food to serve (see MEALS): Nowruz, Štědrý večer and
+   Christmas Day. An overlay like the hats above, for the same reason — two of the three fall
+   inside the holiday dressing, so the tree stays up and the table joins it. visibility, not
+   display, so WebKit can't leak the hidden slab into the room. */
+#cuddly-table{opacity:0; visibility:hidden; transition:opacity .6s ease}
+#loft-game-strip.meal-on #cuddly-table{opacity:1; visibility:visible}
+@media (prefers-reduced-motion: reduce){#cuddly-table{transition:none}}
 #cuddly-behdad{transform-box:fill-box; transform-origin:bottom center}
 #cuddly-behdad.bottom-wiggle{animation:cuddly-bottom-wiggle .5s ease-in-out}
 @keyframes cuddly-bottom-wiggle{
@@ -9364,6 +9371,8 @@ section{margin:1.9rem 0}
      banded rim, one dark round foot underneath. It stands on the floor in FRONT of the
      daybed's right end, so it's drawn after everyone who sits on the daybed, and before
      the room's atmospheric overlays (sunrays / smoke / dusk) so it dims with the room.
+     Out only on the days there's a meal on it — see MEALS and the .meal-on rule; most of
+     the year the nook has no table at all, which is the point.
      Placement is the lone static translate on this wrapper; nothing inside animates, so
      there is no transform to clobber. Furniture, not a toy: pointer-events:none keeps the
      daybed, the blankets and the couple's leg eggs behind it fully clickable.
@@ -46548,6 +46557,30 @@ function spawnDustMote(container) {
     if (!strip) return;
     BIRTHDAYS.forEach(function (b) { strip.classList.toggle("bd-" + b.who, inBirthdayWindow(b, s.m, s.d)); });
   }
+  // The low table is out only when there's food to serve — the owners' rule, and the reason
+  // this is a MEAL list rather than a piece of furniture that's simply always there. Like the
+  // birthday hats it's an overlay, not a season: Štědrý večer and Christmas Day both fall
+  // inside the holiday dressing (Dec 1 – Jan 6), so a season- class could never express them.
+  // Each row is one dinner: `on` decides the day, `what` names the class the dishes will hang
+  // off (#cuddly-table-setting) when they're built. Nowruz's window is decorForDate's own.
+  var MEALS = [
+    { what: "nowruz", on: function (m, d) { return (m === 2 && d >= 20) || (m === 3 && d <= 1); } }, // Mar 20 – Apr 1: sabzi polo ba mahi
+    { what: "stedry", on: function (m, d) { return m === 11 && d === 24; } },                        // Dec 24: fried carp + potato salad
+    { what: "xmas",   on: function (m, d) { return m === 11 && d === 25; } }                         // Dec 25: turkey
+  ];
+  // Every row toggled on every call — a preview that walks off a meal day has to clear the
+  // table behind it. `meal-on` is the table itself; the per-meal classes are for the dishes.
+  function applyMeals(s) {
+    var strip = document.getElementById("loft-game-strip");
+    if (!strip) return;
+    var any = false;
+    MEALS.forEach(function (meal) {
+      var on = !!meal.on(s.m, s.d);
+      strip.classList.toggle("meal-" + meal.what, on);
+      if (on) any = true;
+    });
+    strip.classList.toggle("meal-on", any);
+  }
   window.__isNewYearSky = function () { var s = seasonDate(); return (s.m === 11 && s.d >= 24) || (s.m === 0 && s.d === 1); }; // Dec 24 – Jan 1
   // Same window decorForDate dresses for, so the sky can never disagree with the bulbs.
   window.__isCanadaDaySky = function () { var s = seasonDate(); return (s.m === 5 && s.d === 30) || (s.m === 6 && s.d <= 4); }; // Jun 30 – Jul 4
@@ -46594,6 +46627,7 @@ function spawnDustMote(container) {
     var s = seasonDate();
     window.__setSeason(decorForDate(s.m, s.d));
     applyBirthdays(s); // an overlay: it rides whatever __setSeason just dressed the loft in
+    applyMeals(s);     // same deal: the low table comes out for the dinners, inside or outside a season
     if (window.__applyWeddingDay) window.__applyWeddingDay(); // the wedding is a season too — refresh before the sky reads it
     var strip = document.getElementById("loft-game-strip");
     if (strip) {

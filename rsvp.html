@@ -14618,10 +14618,16 @@ function resumeSharedAudio() {
 // while any synth bed is live — the background-safe projector/dance beds keep look-ahead
 // schedulers queuing on the audio clock while unfocused, so that clock must never freeze
 // under them (a frozen-then-jumped clock would burst their whole backlog at once). Suspend
-// only when truly idle so we never hold a silent OS stream open.
+// only when the tab is truly HIDDEN (not merely unfocused) and debounce even that ~18s: closing
+// the OS stream and re-opening it clicks on real hardware, so we'd rather hold a silent stream
+// than pop on every focus flap (machine-side always-process/dither is the fix for idle silence).
 function __sharedAudioIsIdle() {
   var song = window.__anySongPlaying ? window.__anySongPlaying() : false;
-  return (document.hidden || !document.hasFocus()) && !song && __activeAudioBeds <= 0;
+  // HIDDEN, not merely unfocused: suspending closes the OS output stream and re-opening it
+  // pops on real hardware (Mac built-in, S/PDIF DACs). A visible-but-unfocused tab (a terminal
+  // on top) is the common dev case — keep the stream open there and let it carry silence (the
+  // beds mute themselves on blur via the crickets rule). Only a truly backgrounded tab suspends.
+  return document.hidden && !song && __activeAudioBeds <= 0;
 }
 var __idleSuspendTimer = null;
 window.__updateSharedAudioIdle = function () {

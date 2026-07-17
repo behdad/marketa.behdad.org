@@ -522,6 +522,16 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #balcony-partyswitch-glow{opacity:0; transition:opacity .3s ease; pointer-events:none}
 #balcony-partyswitch.on #balcony-partyswitch-glow{opacity:1}
 @media (prefers-reduced-motion: reduce){#balcony-partyswitch-rocker{transition:none}#balcony-partyswitch-glow{transition:none}}
+/* The second act's "head out — kill the lights" beat points here with the kitchen's
+   step-arrow pattern: the same .invite-pulse ~ arrow shape, so the beat sequencer toggles
+   one class and the CSS does the rest. Told to kill the lights, players reach for the
+   string lights or the wall lamp — neither of which does anything — so the instruction
+   names this switch AND an arrow marks it (the actTwo IIFE's lamp listener redirects the
+   mis-click). Its placement is baked into its coords, so .invite-pulse's CSS transform has
+   no transform= attribute to clobber. */
+#balcony-partyswitch-arrow{opacity:0; pointer-events:none; transition:opacity .3s ease}
+#balcony-partyswitch.invite-pulse ~ #balcony-partyswitch-arrow{opacity:1; animation:kitchen-arrow-bounce 0.9s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){#balcony-partyswitch.invite-pulse ~ #balcony-partyswitch-arrow{animation:none}}
 .ac-airline{opacity:0; transition:opacity .3s ease}
 #garden-minisplit.on .ac-airline{animation:ac-airline-blow 1.1s ease-in infinite}
 #balcony-can{transform-box:fill-box; transform-origin:bottom center}
@@ -4603,6 +4613,10 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 /* the black cat's eyes fluoresce uranium-green under the blacklight (coat stays dark) */
 #loft-game-strip.uv-mode #witchy-chest-cat-eye-l,
 #loft-game-strip.uv-mode #witchy-chest-cat-eye-r{fill:#f500f5; filter:drop-shadow(0 0 2.5px #f500f5)}
+/* the trips box takes a faint uranium-green fluorescence under the blacklight — it glows for
+   those who look, and that's the whole nudge: no arrow, no toast, never in a caption here.
+   (The one worded hint lives in the garden's DAYTIME rotation — the trips read best by day.) */
+#loft-game-strip.uv-mode #garden-drugsbox{filter:drop-shadow(0 0 3px #7fff3f)}
 /* under the blacklight Behdad dozes off on the couch: eyes shut, a rising Zzz, and he stops
    grooving (Markéta parties on). All cuddly-only via the ids. */
 .cuddly-behdad-eye-sleepy{opacity:0}
@@ -12469,6 +12483,12 @@ section{margin:1.9rem 0}
 <rect id="balcony-partyswitch-rocker" x="205" y="115" width="8" height="7" rx="1.5" fill="#d8cfbc" stroke="#b0a690" stroke-width="0.7"/>
 <circle id="balcony-partyswitch-led" cx="209" cy="127.5" r="1.4" fill="#6a675f"/>
 </g>
+<!-- Step-arrow for the second act's "kill the lights" beat, shown by the ~ rule off
+     #balcony-partyswitch.invite-pulse (a proper sibling, so the selector reaches it).
+     Coords baked, no transform= — the bounce is a CSS transform animation. -->
+<g id="balcony-partyswitch-arrow">
+<path d="M205,76 L213,76 L213,90 L219,90 L209,101 L199,90 L205,90 Z" fill="#c0392b" stroke="#1f1f1f" stroke-width="1.3" stroke-linejoin="round"/>
+</g>
 <g id="balcony-winebottle" class="hunt-hit" transform="translate(4,-2)">
 <rect x="145" y="152" width="24" height="48" fill="transparent"/>
 <g id="balcony-winebottle-inner">
@@ -14519,6 +14539,20 @@ var T = {
       explore_cuddly: "Enjoy wandering — curl up and poke around. 🐙",
       explore_office: "Enjoy wandering — the office is more toy than work. 🖥️",
       explore_balcony: "Enjoy wandering — the balcony's the good part. 🌅",
+      // ── second act: the beat sequencer's nudges, balcony bridge → party → wind-down.
+      //    Ambient and diegetic on purpose — the arc is a rumour the loft tells you, not a
+      //    checklist. Order + pacing follow the "Watch the loft" cinematic's narration. ──
+      act_b0: "The day's done — but the sky isn't. Tap the sun, watch it go. 🌇",
+      act_b1: "There. The whole sky comes out. Stay a minute — wish on something. ✨",
+      act_b2: "Time to head out. Kill the lights — the switch is on the wall, by the door.",
+      act_b2_redirect: "Not the lamp — the little switch by the door. 👉",
+      act_b3: "…that was never the light switch. 🎉 Surprise — the loft doesn't do quiet nights.",
+      act_p1: "<em>Pouria</em>'s back behind the bar — go get the drink you skipped this morning. 🍸",
+      act_p2: "<em>Amir</em> and <em>Danesh</em> are trading the decks. The garden's dancing — stay for the next one. 💃",
+      act_p3: "Grab a strip for the album — there's a booth on your phone, and one on the office monitor. 📷",
+      act_w1: "The party's easing off — someone's playing piano in the nook, under the stars. 🎹",
+      act_w2: "One more turn of the sun and it's tomorrow. Go on — bring the morning back. 🌄",
+      act_w2_dawn: "Morning again. Same loft, same coffee. It does this every day. ☕",
       // ── cinematic narration (the "Watch the loft" autoplay owns the caption while it runs) ──
       cine_coffee: "Morning. Coffee first…",
       cine_water: "She waters the plants…",
@@ -14573,6 +14607,8 @@ var T = {
     rsvp_email_body: "who we are:\n\nwhich celebration (one or both — all welcome): Edmonton · May 1  /  Prague · July 10\n\nhow many of us:\n\nanything you should know — food, little ones, a song we have to hear:\n\ncan't wait,",
     flight_note: "Edmonton → Prague — about 10 weeks (and one ocean) apart.",
     rsvp_nudge_link: "Don’t forget to RSVP — but wander first ↓",
+    // the second act's last beat: the same link, but the wandering's done now (see showRsvpNudge)
+    rsvp_exit_link: "You’ve seen the whole day — one thing left: tell us you’ll come ↓",
     typewriter_lines: [
       "Vows: first draft. Deleted.",
       "Note to self: fewer puns in the vows.",
@@ -14981,6 +15017,18 @@ var T = {
       explore_cuddly: "Toulej se — zavrtej se a prozkoumávej. 🐙",
       explore_office: "Toulej se — pracovna je spíš hračka než práce. 🖥️",
       explore_balcony: "Toulej se — balkon je to nejlepší. 🌅",
+      // ── druhé dějství: nápovědy sekvenceru (viz EN) ──
+      act_b0: "Den skončil — obloha ne. Ťukni na slunce a dívej se, jak zapadá. 🌇",
+      act_b1: "A je to. Celá obloha vyleze ven. Zůstaň chvíli — něco si přej. ✨",
+      act_b2: "Čas vyrazit. Zhasni — vypínač je na zdi, u dveří.",
+      act_b2_redirect: "Ne lampu — ten malý vypínač u dveří. 👉",
+      act_b3: "…žádný vypínač světla to nebyl. 🎉 Překvapení — loft tiché noci nedělá.",
+      act_p1: "<em>Pouria</em> je zpátky za barem — dojdi si pro drink, cos ráno vynechal(a). 🍸",
+      act_p2: "<em>Amir</em> a <em>Danesh</em> si předávají gramofony. Zahrada tančí — zůstaň na další. 💃",
+      act_p3: "Vyfoť se do alba — jeden fotokoutek máš v telefonu, druhý na monitoru v pracovně. 📷",
+      act_w1: "Párty pomalu doznívá — někdo hraje v koutku na klavír, pod hvězdami. 🎹",
+      act_w2: "Ještě jedno otočení slunce a je zítra. No tak — přiveď ráno zpátky. 🌄",
+      act_w2_dawn: "Zase ráno. Stejný loft, stejná káva. Dělá to tak každý den. ☕",
       // ── titulky filmečku (autoplay „Prohlédnout byt“ řídí titulek, dokud běží) ──
       cine_coffee: "Ráno. Nejdřív kafe…",
       cine_water: "Zalévá kytky…",
@@ -15035,6 +15083,7 @@ var T = {
     rsvp_email_body: "kdo jsme:\n\nna kterou oslavu (jednu, nebo obě — všichni vítáni): Edmonton · 1. května  /  Praha · 10. července\n\nkolik nás přijede:\n\ncokoliv byste měli vědět — jídlo, malé děti, píseň, kterou prostě musíme slyšet:\n\ntěšíme se,",
     flight_note: "Edmonton → Praha — asi 10 týdnů (a jeden oceán) od sebe.",
     rsvp_nudge_link: "Nezapomeňte na RSVP — ale nejdřív se toulejte ↓",
+    rsvp_exit_link: "Viděli jste celý den — zbývá jediné: dejte nám vědět, že přijdete ↓",
     typewriter_lines: [
       "Sliby: první verze. Smazáno.",
       "Poznámka: méně vtipů ve slibech.",
@@ -19450,6 +19499,7 @@ document.addEventListener("click", function (e) {
     if (window.__updateWorkoutSound) window.__updateWorkoutSound(); // aerobics bed follows the workout channel
     if (window.__updateTotoroSound) window.__updateTotoroSound(); // rainfall follows the totoro channel
     if (window.__updateStarsSound) window.__updateStarsSound(); // Gnossienne follows the night-sky channel
+    if (window.__actPing) window.__actPing("stars"); // second act: the night-sky channel IS the piano wind-down beat (W1)
     if (window.__updateTotoroMelody) window.__updateTotoroMelody(); // woodland melody follows the totoro channel
     if (reduceMotion) renderStill(); else start();
   }
@@ -23296,6 +23346,7 @@ document.addEventListener("click", function (e) {
     if (making || !row) return false;
     making = true;
     if (window.__retireHint) window.__retireHint("hint_cocktail"); // loose-brick hint: retire once a drink's been mixed
+    if (window.__actPing) window.__actPing("drink"); // second act: the drink you skipped this morning — that's the bar beat done (P1)
     if (window.__bartenderMixing) window.__bartenderMixing(true); // stop his idle sway for the whole make
     var name = row.name;
     var m = META[name] || {};
@@ -31058,6 +31109,11 @@ async def localfont(name):
   if (webcam) {
     webcam.addEventListener("click", function (e) {
       e.stopPropagation(); // never fall through to the monitor's boot gag
+      // Second act: OPENING the booth is the album beat (P3), not shuttering it — the camera
+      // permission is the visitor's to decline, and a beat that can only complete with a
+      // granted camera would wedge the arc for anyone who says no. (The dock's photobooth
+      // tile dispatches a click right here, so this one line covers both ways in.)
+      if (window.__actPing) window.__actPing("booth");
       if (pbActive || pbStarting) { closePhotobooth(); return; } // live session → the cam is the off switch
       if (monitor.classList.contains("pb-confirm")) { hidePbConfirm(); return; } // second tap = never mind
       hidePbError();
@@ -33835,6 +33891,7 @@ async def localfont(name):
     var PB_GMAIL_SVG = '<svg width="15" height="12" viewBox="0 0 20 16" aria-hidden="true"><rect x="1" y="1" width="18" height="14" rx="2" fill="#ffffff" stroke="#d6d0c0" stroke-width="1"/><path d="M1 2l9 7 9-7" fill="none" stroke="#c9483c" stroke-width="1.6"/><path d="M1 2v11l7-6z" fill="#4a6b94"/><path d="M19 2v11l-7-6z" fill="#7f9ec0"/></svg> ';
     var PB_MAIL_SVG = '<svg width="15" height="12" viewBox="0 0 20 16" aria-hidden="true"><rect x="1" y="1" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M2 2l8 7 8-7" stroke="currentColor" stroke-width="1.5" fill="none"/></svg> ';
     function renderPhotobooth(body) {
+      if (window.__actPing) window.__actPing("booth"); // second act: booth OPEN settles the album beat — see the monitor webcam's note on why not the shutter
       var PB = window.__phonePB;
       if (!PB) { var m = document.createElement("div"); m.className = "pmh-msg"; m.textContent = tr("pb_err_1"); body.appendChild(m); return; }
       try { if (window.__closeOfficePhotobooth) window.__closeOfficePhotobooth(); } catch (e) {} // never two live cameras at once
@@ -34595,6 +34652,7 @@ async def localfont(name):
       }
       if (window.__updateMozzies) window.__updateMozzies(); // dusk → mosquitoes swarm; day → they clear
       if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // dusk arms the 5s disco-ball peek; day retracts it
+      if (window.__actPing) window.__actPing("daynight"); // second act: nightfall settles B0, daybreak settles W2
     }
     window.__autoToggleDusk = toggleDusk;
     // force day/night to a target state (the garden party lights up the night; its light
@@ -34645,6 +34703,7 @@ async def localfont(name):
       skyClick.addEventListener("click", function () {
         if (stageBalcony.classList.contains("dusk")) {
           if (!window.__balconyStorm) spawnShootingStar();
+          if (window.__actPing) window.__actPing("sky"); // second act: a wish ends the held night-sky pause early (B1)
         } else if (typeof scheduleFlypastFromTap === "function") {
           scheduleFlypastFromTap("balcony");
         }
@@ -44124,18 +44183,22 @@ function spawnDustMote(container) {
     }
     return prev;
   };
-  function showRsvpNudge() {
-    captionKey = "rsvp_nudge";
-    var l = document.documentElement.lang;
-    var link = (T[l] && T[l].rsvp_nudge_link) || T.en.rsvp_nudge_link;
+  // The RSVP CTA. Two flavours, same link: "rsvp_nudge" (the finale's, and the balcony
+  // rotation's) invites you to wander first; "rsvp_exit" is the second act's last beat,
+  // where the wandering IS done. The key rides captionKey so a language flip re-renders it.
+  function showRsvpNudge(key) {
+    captionKey = (key === "rsvp_exit") ? "rsvp_exit" : "rsvp_nudge";
+    var l = document.documentElement.lang, lk = captionKey + "_link";
+    var link = (T[l] && T[l][lk]) || T.en[lk];
     caption.innerHTML = '<a href="#rsvp-anchor">' + link + '</a>';
     caption.classList.add("rsvp-nudge");
   }
+  window.__showRsvpNudge = showRsvpNudge; // the beat sequencer paints its exit beat through here
   window.setCaption = setCaption;
   window.__captionKey = function () { return captionKey; }; // current caption key — games snapshot it to restore the room hint after
 
   window.refreshHuntCaption = function () {
-    if (captionKey === "rsvp_nudge") { showRsvpNudge(); return; }
+    if (captionKey === "rsvp_nudge" || captionKey === "rsvp_exit") { showRsvpNudge(captionKey); return; }
     caption.innerHTML = huntText(captionKey);
   };
   var finaleTimers = [];
@@ -44146,6 +44209,12 @@ function spawnDustMote(container) {
     // every other balcony behavior (day/night, storm, ambient) runs on each visit
     if (balconyIntroSeen) return;
     balconyIntroSeen = true;
+    // From here the SECOND ACT owns the sky. The ambient auto-cycle is eager (~6s after the
+    // balcony first comes on screen, once a minute's elapsed) and would flip to dusk before
+    // the arc's own "tap the sun" nudge had even landed — stop it now, synchronously, so we
+    // win that race. The arc's B0/W2 fallbacks below are the replacement: they only run on
+    // ATTENDED time, so a passive player still reaches the evening and the morning.
+    if (window.__stopAutoDayNight) window.__stopAutoDayNight();
     finaleTimers.forEach(clearTimeout);
     finaleTimers = [];
     var butterfly = document.getElementById("balcony-butterfly");
@@ -44173,7 +44242,9 @@ function spawnDustMote(container) {
     // days / anniversaries, where the ambient controller (window.__updateSkyFireworks,
     // driven from goToStage) runs them the whole time you're on the balcony or garden.
     // On ordinary days the finale runs without them.
-    finaleTimers.push(setTimeout(showRsvpNudge, 9100));
+    finaleTimers.push(setTimeout(function () { showRsvpNudge(); }, 9100));
+    // ...and once the RSVP link has had its moment, the second act picks the thread back up.
+    finaleTimers.push(setTimeout(function () { if (window.__armActTwo) window.__armActTwo(); }, 16000));
   }
   // Post-unlock exploration captions. Once a room is solved (it sits behind the unlock
   // frontier — balcony instead keys off the finale-seen flag), re-entering it stops
@@ -44187,6 +44258,17 @@ function spawnDustMote(container) {
     return false;
   }
   function showExploration(name) {
+    // A live second-act beat speaking for THIS room owns the line — ahead of BOTH the base
+    // line and the rotation. That's the "always a next nudge" spine, and it has to outrank
+    // the base line too: the balcony's first solved-entry only happens AFTER the finale sets
+    // balconyIntroSeen, by which time the arc is often already mid-beat, and a beat that lost
+    // to "Enjoy wandering" would go unheard until the room was entered twice. A beat only
+    // claims the line for a bounded stretch of attended time (see __actBeatHint); once it
+    // yields, everything below resumes — including the balcony's rsvp_nudge sentinel, which
+    // is what guarantees no beat can ever strand the player away from the RSVP.
+    var beat = window.__actBeatHint ? window.__actBeatHint(name) : null;
+    if (beat === "rsvp_exit") { showRsvpNudge("rsvp_exit"); return; }
+    if (beat) { setCaption(beat); return; }
     if (!exploreSeen[name]) { exploreSeen[name] = true; setCaption("explore_" + name); return; } // first solved-entry this page load → base "Enjoy wandering" line
     var k = window.__nextExploreHint ? window.__nextExploreHint(name, true) : null;              // each subsequent solved-entry → advance to the next surviving nudge
     if (k === "rsvp_nudge") showRsvpNudge();                                                     // balcony's RSVP link is one rotation item (innerHTML link, not a plain caption key)
@@ -45013,6 +45095,9 @@ function spawnDustMote(container) {
   // called on garden entry and whenever the party toggles (setGardenParty)
   window.__refreshGardenCaption = function () {
     if (window.currentStageName !== "garden" || window.__cinematic) return;
+    // a live second-act beat is a more specific thing to say than "party's on" — it wins
+    var beat = window.__actBeatHint ? window.__actBeatHint("garden") : null;
+    if (beat) { setCaption(beat); return; }
     if (window.__gardenPartyOn) setCaption("garden_party");
     else { setCaption("garden"); updateGardenHint(); }
   };
@@ -45419,6 +45504,10 @@ function spawnDustMote(container) {
     var key = window.__djB ? "dj_danesh" : "dj_amir"; // whoever's spinning now
     var arr = ((T[document.documentElement.lang] || {}).hunt || T.en.hunt)[key] || T.en.hunt[key];
     if (arr && arr.length && window.caption) window.caption(arr[Math.floor(Math.random() * arr.length)], { blink: 900, hold: 4200 });
+    // Second act: watching the decks change hands IS the floor beat paying off, so it settles
+    // P2 — but only after this hype line has had its 4.2s, or the next beat would stomp the
+    // very moment it's rewarding. Caption-only either way, so the timer reaches no sound.
+    if (window.__actPing) setTimeout(function () { window.__actPing("dj"); }, 4600);
   }
   function advanceDance() { // advance to the next dance in the rotation, crossfade the beds, glide the dancers
     var order = PARTY_DANCE_ORDER || ["techno"];
@@ -45714,6 +45803,11 @@ function spawnDustMote(container) {
     if (window.__refreshKitchenBar) window.__refreshKitchenBar(); // party on/off swaps the kitchen bar↔espresso caption + arrows
     if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // party toggling re-evaluates the eased blacklight (garden stays full)
     if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // party on retracts the night-peek; party off at night re-arms it
+    // Second act: THE hinge. Pinged from the tail — every ignition path (the balcony switch,
+    // the garden light switch, the disco ball, the mask) funnels through here, and by now the
+    // whisk's goToStage("garden") has already run and set its own caption, so the reveal line
+    // the ping paints is the last word rather than something goToStage stomps a frame later.
+    if (on && window.__actPing) window.__actPing("party");
   }
   window.__setGardenParty = setGardenParty;
   // Tap a party dancer -> that dancer does a celebratory flare (hop + twirl + pop). The
@@ -47085,6 +47179,7 @@ function spawnDustMote(container) {
     if (butterfly) butterfly.classList.remove("flying");
     if (rainbow) rainbow.classList.remove("burst");
     balconyIntroSeen = false; // a fresh playthrough replays the one-time arrival flourish
+    if (window.__resetActTwo) window.__resetActTwo();         // second act back to un-armed: beats forgotten, ticker stopped, the switch's pulse+arrow cleared (nothing stranded)
     if (window.__resetExplore) window.__resetExplore();       // exploreSeen (this IIFE) → base "Enjoy wandering" leads again if a room is re-solved
     if (window.__resetExplorePtr) window.__resetExplorePtr();  // explorePtr (brick IIFE) → rotation restarts; retiredHints intentionally NOT cleared (a re-solve skips already-found toys)
     if (window.resetSmoker) window.resetSmoker();
@@ -48038,7 +48133,11 @@ function spawnDustMote(container) {
     // also closes it as a backstop); re-show the nudge so the reduced run still lands on it.
     beat(D * 4 + 700, function () { if (window.__cineShowPhone) window.__cineShowPhone(); setCaption("cine_phone", true); });
     beat(D * 5 + 200, function () { if (window.__closePhoneModal) window.__closePhoneModal(true); showRsvpNudge(); });
-    beat(D * 5 + 700, stopCinematic);
+    // This tour sets balconyIntroSeen itself (to suppress the flourish) and never fires
+    // triggerBalconyFinale — which is what normally schedules the second act's arm. Without
+    // this the reduced-motion viewer would be the one visitor left with no arc at all after
+    // the credits. The full show doesn't need it: it ends on the extinguisher, which resets.
+    beat(D * 5 + 700, function () { stopCinematic(); if (window.__armActTwo) window.__armActTwo(); });
   }
 
   function startCinematic() {
@@ -50141,7 +50240,15 @@ function spawnDustMote(container) {
       { id: "hint_critter", en: "Count the legs. There's a stranger about.",    cs: "Spočítej nožky. Někdo cizí se tu potuluje.",
         done: function () { return isRetired("hint_critter"); } },                                  // the cat or ladybug found
       { id: "hint_tarot",   en: "After dark, the cards have something to say.", cs: "Po setmění mají karty co říct.",
-        done: function () { return isRetired("hint_tarot"); } }                                     // a tarot card drawn
+        done: function () { return isRetired("hint_tarot"); } },                                    // a tarot card drawn
+      // The trips door — the ONE worded surface it gets, and it's opt-in wording only: no arrow,
+      // no toast, never named. rel() keeps it to the DAY (the trips read best in daylight, and
+      // the party has its own quieter surface — the drugsbox's uranium-green glow under the
+      // blacklight). Broad audience here (grandparents to kids), so this stays a rumour.
+      { id: "hint_trips",   en: "The little box on the altar keeps something curious. Enjoy responsibly. 🙃",
+        cs: "Ta krabička na oltáři schovává něco zvláštního. Užívej s rozumem. 🙃",
+        rel: function () { var b = document.getElementById("stage-balcony"); return !barUp() && !!(b && !b.classList.contains("dusk")); },
+        done: function () { return isRetired("hint_trips"); } }                                     // the box opened
     ],
     cuddly: [
       { id: "hint_octi",   en: "Octi is soft, and a little lonely.",          cs: "Chobotnička je měkká — a trošku sama.",
@@ -50215,6 +50322,7 @@ function spawnDustMote(container) {
     "garden-dieffenbachia": "hint_water", "garden-smallpots": "hint_water",
     "garden-ladybug": "hint_critter", "garden-chest": "hint_critter",
     "garden-tarot": "hint_tarot", "garden-photog-hit": "hint_camera",
+    "garden-drugsbox": "hint_trips",
     "cuddly-wallscreen": "hint_screen hint_fire",
     "cuddly-trunk": "hint_chest",
     "office-chair": "hint_arcade", "office-sprinkler": "hint_sprinkler",
@@ -50323,6 +50431,170 @@ function spawnDustMote(container) {
     brick.addEventListener("click", tapBrick);
     brick.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tapBrick(); }
+    });
+  });
+})();
+(function actTwo() {
+  // ── THE SECOND ACT: a beat sequencer ────────────────────────────────────────────────
+  // Walks the arc the "Watch the loft" cinematic narrates — dusk → the switch that isn't a
+  // switch → bar → floor → album → piano → dawn → RSVP — as ambient caption nudges over
+  // systems that already ship. Deliberately NOT a quest log: no panel, no counter, no
+  // persistence. Two rules carry the whole design; break either and it turns into one.
+  //
+  //  1. COMPLETION IS A LIVE READ, LATCHED. A beat asks the world "is this already so?"
+  //     rather than tracking what the player was told — so someone who lit the party before
+  //     we ever mentioned a switch just skips B0–B2, un-narrated. Latched because a beat
+  //     that could un-complete would walk the arc backwards the moment they flipped the
+  //     lights back on.
+  //  2. COMPLETION AND CAPTION-OWNERSHIP ARE SEPARATE. A beat owns its room's caption for a
+  //     bounded stretch of ATTENDED time (claimMs), then yields it back to the room's own
+  //     rotation while staying live, so it still completes if they get round to it later.
+  //     That yield is the no-wedge guarantee — the balcony rotation's rsvp_nudge sentinel
+  //     always comes back round, so no order of play can strand the player away from the
+  //     RSVP. It's what lets B2 refuse to auto-complete (the hinge must be the player's to
+  //     pull) without ever trapping anyone behind it.
+  //
+  // Per-session, never localStorage: a ~10-minute experience, and a returning visitor who
+  // knows the trick shouldn't have the surprise re-explained to them.
+  var armed = false, live = null, liveMs = 0, latched = {}, ticker = null, redirTimer = null;
+
+  function el(id) { return document.getElementById(id); }
+  function isDusk() { var b = el("stage-balcony"); return !!(b && b.classList.contains("dusk")); }
+  function partyOn() { return !!window.__gardenPartyOn; }
+  function starsOn() { var ws = el("cuddly-wallscreen"); return !!(ws && ws.classList.contains("chan-stars")); }
+  // rule 1, as a helper: read the world, and once it says yes remember it said yes
+  function latch(name, live_) { if (live_()) latched[name] = true; return !!latched[name]; }
+  function switchPulse(on) { var s = el("balcony-partyswitch"); if (s) s.classList.toggle("invite-pulse", !!on); }
+
+  // id doubles as the caption key. room: where the beat speaks (a caption can only reach the
+  // room you're standing in, so cross-room beats speak from where you are and point onward).
+  // afterMs/after: the fallback for a player who never does the thing — for the two day/night
+  // beats it performs the flip (agency first, but nobody gets stranded in the dark); for the
+  // optional party beats it just gives up and moves on. All attended-time (see tick).
+  var BEATS = [
+    { id: "act_b0", room: "balcony", claimMs: 60000, afterMs: 180000,
+      done: function () { return latch("dusk", isDusk); },
+      after: function () { if (window.__autoToggleDusk) window.__autoToggleDusk(); } }, // idled through the nudge → the sun sets itself, once
+    // the held breath before the pivot: ~10s, or a sky-tap (a wish) ends it early — as does a
+    // party that's already raging, since there's plainly no quiet moment left to hold
+    { id: "act_b1", room: "balcony", claimMs: 30000, afterMs: 10000,
+      done: function () { return latch("wish", partyOn); },
+      after: function () { latched.wish = true; } },
+    { id: "act_b2", room: "balcony", claimMs: 90000,
+      done: function () { return latch("party", partyOn); },
+      enter: function () { switchPulse(true); }, exit: function () { switchPulse(false); } }, // no fallback: the hinge is the player's to pull
+    { id: "act_p1", room: "garden", claimMs: 90000, afterMs: 150000,
+      done: function () { return !!latched.drink; }, after: function () { latched.drink = true; } },
+    { id: "act_p2", room: "garden", claimMs: 60000, afterMs: 60000,
+      done: function () { return !!latched.dj; }, after: function () { latched.dj = true; } },
+    { id: "act_p3", room: "garden", claimMs: 90000, afterMs: 150000,
+      done: function () { return !!latched.booth; }, after: function () { latched.booth = true; } },
+    { id: "act_w1", room: "garden", claimMs: 90000, afterMs: 150000,
+      done: function () { return latch("stars", starsOn); }, after: function () { latched.stars = true; } },
+    // dawn only counts once there's been a night to come back from
+    { id: "act_w2", room: "balcony", claimMs: 60000, afterMs: 120000,
+      done: function () { return latch("dawn", function () { return !!latched.dusk && !isDusk(); }); },
+      after: function () { if (window.__autoToggleDusk) window.__autoToggleDusk(); } },
+    // the last word. Never completes — the arc ends here, pointing at the one thing we actually want.
+    { id: "rsvp_exit", room: "balcony", claimMs: Infinity, done: function () { return false; } }
+  ];
+  function beat(id) { for (var i = 0; i < BEATS.length; i++) if (BEATS[i].id === id) return BEATS[i]; return null; }
+
+  function speak() {
+    var b = beat(live);
+    if (!b || window.__cinematic || document.hidden) return;
+    if (window.currentStageName !== b.room) return; // it'll get its say when you walk in (see __actBeatHint)
+    if (b.id === "rsvp_exit") { if (window.__showRsvpNudge) window.__showRsvpNudge("rsvp_exit"); return; }
+    if (window.setCaption) window.setCaption(b.id);
+  }
+  function advance(quiet) {
+    if (!armed) return;
+    var next = null;
+    for (var i = 0; i < BEATS.length; i++) { if (!BEATS[i].done()) { next = BEATS[i].id; break; } }
+    if (next === live) return;
+    var prev = beat(live);
+    if (prev && prev.exit) prev.exit();
+    live = next; liveMs = 0;
+    var now = beat(live);
+    if (now && now.enter) now.enter();
+    if (!quiet) speak();
+  }
+
+  // ONE 1s interval drives every fallback. It counts ATTENDED time only: an unattended
+  // window mustn't burn the whole arc down behind the player's back, and B0/W2's fallbacks
+  // reach playDayNightChime through __autoToggleDusk — a timer-driven one-shot sound, which
+  // the crickets rule says needs hidden AND hasFocus (toggleDusk gates the chime itself too;
+  // this is the belt to that's braces, and it's what makes the pacing honest besides).
+  function tick() {
+    if (!armed || !live) return;
+    if (document.hidden || !document.hasFocus() || window.__cinematic) return;
+    liveMs += 1000;
+    var b = beat(live);
+    if (b && b.afterMs && b.after && liveMs >= b.afterMs) { b.after(); advance(); }
+  }
+
+  // What the caption layer asks: "does the act have something to say in this room?" null =
+  // no (wrong room, yielded, or not armed) and the room's own rotation takes the line back.
+  window.__actBeatHint = function (room) {
+    if (!armed || !live || window.__cinematic) return null;
+    var b = beat(live);
+    if (!b || b.room !== room || liveMs >= b.claimMs) return null;
+    return b.id;
+  };
+  // What the world tells the act. Every ping is fired from an existing site's tail and just
+  // reports something that happened; the sequencer decides whether it mattered.
+  window.__actPing = function (what) {
+    if (!armed || window.__cinematic) return;
+    if (what === "sky") latched.wish = true;
+    else if (what === "drink") latched.drink = true;
+    else if (what === "dj") latched.dj = true;
+    else if (what === "booth") latched.booth = true;
+    else if (what === "party" && live === "act_b2") {
+      // THE REVEAL. Only if we're the ones who sent them to that switch — "…that was never
+      // the light switch" is only a joke if the game just told them it was one. Hold the line
+      // on it before the party beats start talking, and let them enjoy the surprise.
+      latched.party = true;
+      if (window.setCaption) window.setCaption("act_b3");
+      advance(true);
+      setTimeout(function () {
+        if (window.__captionKey && window.__captionKey() === "act_b3") speak(); // still ours? then hand over. Otherwise something better is already on screen.
+      }, 5200);
+      return;
+    }
+    advance();
+  };
+
+  window.__armActTwo = function () {
+    if (armed) return;
+    armed = true;
+    if (!ticker) ticker = setInterval(tick, 1000);
+    advance();
+  };
+  window.__resetActTwo = function () { // the extinguisher: forget the whole arc, strand nothing
+    armed = false; live = null; liveMs = 0; latched = {};
+    if (ticker) { clearInterval(ticker); ticker = null; }
+    if (redirTimer) { clearTimeout(redirTimer); redirTimer = null; }
+    switchPulse(false);
+  };
+  window.__actBeat = function () { return live; }; // test hook
+
+  // Hazard A, the one the whole hinge turns on: told "kill the lights", people click the
+  // LIGHTS — the string lights or the wall lamp — and neither does anything here. So don't
+  // dead-end the mis-click: wink at it, re-flare the switch, and let the beat carry on. Only
+  // while B2 is live, so outside the beat both lamps stay their own quiet selves.
+  ["balcony-lights", "balcony-walllamp"].forEach(function (id) {
+    var lamp = el(id);
+    if (!lamp) return;
+    lamp.addEventListener("click", function () {
+      if (live !== "act_b2" || window.__cinematic) return;
+      if (window.setCaption) window.setCaption("act_b2_redirect");
+      switchPulse(false);
+      requestAnimationFrame(function () { requestAnimationFrame(function () { switchPulse(true); }); }); // drop + re-add so the pulse restarts from the top rather than continuing mid-cycle
+      if (redirTimer) clearTimeout(redirTimer);
+      redirTimer = setTimeout(function () {
+        redirTimer = null;
+        if (window.__captionKey && window.__captionKey() === "act_b2_redirect") speak(); // put the instruction back, if the wink's still on screen
+      }, 4500);
     });
   });
 })();

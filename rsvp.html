@@ -35732,12 +35732,15 @@ async def localfont(name):
 })();
 // The spring bonfire's taps, and Irene leaping it. Same shape as the tree/haft-sin above:
 // one-shots ride inner wrappers, come off on animationend, and re-add across a double rAF so a
-// rapid re-tap restarts them. Three concerns share one IIFE because they share the fire's click:
+// rapid re-tap restarts them. Four concerns share one IIFE because they share the fire's click:
 //   · the four seasonal props (her besom + straw doll; his brushwood + clay jars) wobble and rustle;
-//   · the fire itself flares amber (on the glow — see the .fire-flare CSS);
-//   · Irene leaps it. Chaharshanbe Suri ONLY: the fire and the flare are shared with Čarodějnice,
-//     she is not. Every path to her checks the season class, not just the CSS display gate — a
-//     summon that "worked" in Čarodějnice would still fire her sounds over an invisible girl.
+//   · the fire itself flares amber (on the glow — see the .fire-flare CSS) on every tap;
+//   · a single click looks the festival up in the pocket phone (the fire is the only thing that
+//     ever names it on touch, where there's no hover to show the tooltip);
+//   · a DOUBLE click summons Irene. Chaharshanbe Suri ONLY: the fire, the flare and the lookup are
+//     shared with Čarodějnice, she is not. Every path to her checks the season class, not just the
+//     CSS display gate — a summon that "worked" in Čarodějnice would still fire her sounds over an
+//     invisible girl.
 (function () {
   var strip = document.getElementById("loft-game-strip");
   var glow = document.getElementById("balcony-bonfire-glow");
@@ -35809,21 +35812,52 @@ async def localfont(name):
     onHit(row[0], function () { oneShot(wrap, "wobbling"); row[2](row[1]); if (row[3]) row[3](); });
   });
   // ── the fire ──
-  // One fire, two festivals — so the name is read at hover time, not wired once: in his season it's
-  // Chaharshanbe Suri, in hers Čarodějnice. Naming it costs the tap nothing (hover and click are
-  // independent), so the flare and Irene's cue below are untouched.
+  // One fire, two festivals — so both the name and the article are read at the moment of the
+  // hover/click, never wired once: in his season it's Chaharshanbe Suri, in hers Čarodějnice.
+  // Czech Wikipedia titles come from Wikipedia's own langlinks, not from our transliteration.
+  var FIRE_WIKI = {
+    en: { chaharshanbe: "https://en.wikipedia.org/wiki/Chaharshanbe_Suri", carodejnice: "https://en.wikipedia.org/wiki/Walpurgis_Night" },
+    cs: { chaharshanbe: "https://cs.wikipedia.org/wiki/Čaháršanba-súrí", carodejnice: "https://cs.wikipedia.org/wiki/Pálení_čarodějnic" }
+  };
+  function fireWikiUrl() {
+    var l = document.documentElement.lang === "cs" ? "cs" : "en";
+    return FIRE_WIKI[l][hisFire() ? "chaharshanbe" : "carodejnice"];
+  }
   var fireHit = document.getElementById("balcony-bonfire-hit");
   if (fireHit) hoverTooltip(fireHit, function () { return tipText(hisFire() ? "tip_chaharshanbe" : "tip_carodejnice"); }, "top");
   glow.addEventListener("animationend", function (e) { if (e.animationName === "sn-fire-flare") glow.classList.remove("fire-flare"); });
+  // A second click means Irene, not the article — but dblclick fires click first, so the lookup
+  // waits out the double-click window rather than dropping a full-screen phone over her leap. The
+  // flare and the sizzle still answer instantly, so the fire never reads as dead while we wait.
+  // Only his fire has a second gesture (she is gated to .sn-chaharshanbe), so only his fire waits;
+  // in hers there is nothing to disambiguate and the lookup opens at once. The URL is resolved on
+  // the click that asked for it, so a season flip mid-wait can't reroute it to the wrong festival.
+  var DBL_WINDOW_MS = 280;
+  var wikiTimer = null;
   onHit("balcony-bonfire-hit", function () {
     oneShot(glow, "fire-flare");
     playSizzleSound("balcony-bonfire-glow"); // the fire takes the poke and roars up
-    if (hisFire()) leap(true);               // ...and at his festival, that's Irene's cue
+    var url = fireWikiUrl();
+    clearTimeout(wikiTimer);
+    if (!hisFire()) { if (window.__showUrlInPhone) window.__showUrlInPhone(url); return; }
+    wikiTimer = setTimeout(function () {
+      wikiTimer = null;
+      if (window.__showUrlInPhone) window.__showUrlInPhone(url);
+    }, DBL_WINDOW_MS);
+  });
+  if (fireHit) fireHit.addEventListener("dblclick", function (e) {
+    e.stopPropagation();
+    // The second click only takes the article away when it has something better to show. Under
+    // reduced motion leap() bails (the arc IS the cameo), so cancelling here would leave the
+    // gesture with nothing at all — let the pending lookup land instead.
+    if (reducedMotion()) return;
+    clearTimeout(wikiTimer); wikiTimer = null; // the article was never what this click wanted
+    leap(true);                                // no-op in her season: leap() gates on hisFire()
   });
   // ── Irene ──
-  // ONE of her, ever: a leap only starts when she isn't already showing, so a tap mid-arc is
-  // ignored rather than stacking a second Irene or snapping this one back to the start. The
-  // fire still flares on that tap, so the tap never reads as dead.
+  // ONE of her, ever: a leap only starts when she isn't already showing, so a double-click mid-arc
+  // is ignored rather than stacking a second Irene or snapping this one back to the start. The
+  // fire still flares on those clicks, so they never read as dead.
   var showTimer = null, clearTimer = null;
   function leap(userInitiated) {
     if (!hisFire() || !onScreen() || irene.classList.contains("showing")) return;

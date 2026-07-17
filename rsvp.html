@@ -3115,6 +3115,30 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 #garden-rooster-groove.grooving{animation:rooster-groove .7s ease-in-out infinite}
 @keyframes rooster-groove{0%,100%{transform:translateY(0) rotate(0)} 50%{transform:translateY(-0.6px) rotate(2deg)}}
 @media (prefers-reduced-motion: reduce){#garden-rooster-groove.grooving{animation:none}}
+/* the golden egg: at rest it's opacity:0, and .laying is a single one-shot that drops it,
+   holds it, then shimmers it away. No animation-fill-mode anywhere — if the class ever
+   stranded (an animationend lost to a backgrounded tab), the base opacity:0 still hides it. */
+#garden-rooster-egg-anim{transform-box:fill-box; transform-origin:bottom center; opacity:0}
+#garden-rooster-egg-sparkle{transform-box:fill-box; transform-origin:center; opacity:0}
+#garden-rooster-egg.laying #garden-rooster-egg-anim{animation:rooster-egg-lay 2.6s ease-out}
+#garden-rooster-egg.laying #garden-rooster-egg-sparkle{animation:rooster-egg-sparkle 2.6s ease-out}
+@keyframes rooster-egg-lay{
+  0%{opacity:0; transform:translateY(-7px) scale(.55,.65)}
+  10%{opacity:1; transform:translateY(-4px) scale(.9,1.05)}
+  20%{opacity:1; transform:translateY(0) scale(1.18,.8)}
+  27%{opacity:1; transform:translateY(-1.2px) scale(.94,1.06)}
+  34%, 70%{opacity:1; transform:translateY(0) scale(1,1)}
+  100%{opacity:0; transform:translateY(-2px) scale(1.3,1.3)}
+}
+@keyframes rooster-egg-sparkle{
+  0%, 68%{opacity:0; transform:scale(.6)}
+  82%{opacity:0.95; transform:scale(1.05)}
+  100%{opacity:0; transform:scale(1.25)}
+}
+@media (prefers-reduced-motion: reduce){
+  #garden-rooster-egg.laying #garden-rooster-egg-anim,
+  #garden-rooster-egg.laying #garden-rooster-egg-sparkle{animation:none}
+}
 #cuddly-bolster, .cuddly-pillow, #garden-sofacorner{transform-box:fill-box; transform-origin:bottom center}
 #cuddly-bolster.squished, .cuddly-pillow.squished, #garden-sofacorner.squished{animation:cushion-squish .4s ease-in-out}
 @keyframes cushion-squish{
@@ -7784,6 +7808,29 @@ section{margin:1.9rem 0}
 <circle cx="8.8" cy="2.4" r="1.7" fill="#f4e8c8" stroke="#d8cfbc" stroke-width="0.4"/>
 <circle cx="8.3" cy="1.9" r="0.5" fill="#ffffff" opacity="0.7"/>
 </g>
+</g>
+</g>
+<!-- the golden egg. Deliberately a sibling of -groove (not a child of it or of -inner), so
+     the beat sway and the click wobbles can't drag a laid egg around with the bird. One
+     static node that rests at opacity:0 and is never spawned or removed; placement rides
+     this wrapper's transform attribute while the drop animation only ever touches the
+     inner node, so neither clobbers the other. Rests on the bench beside the plinth, clear
+     of both it and the winter toque up top. -->
+<g id="garden-rooster-egg" transform="translate(24,39.4)" pointer-events="none" aria-hidden="true">
+<defs>
+<linearGradient id="garden-rooster-egg-g" x1="0" y1="-2.8" x2="0" y2="2.8" gradientUnits="userSpaceOnUse">
+<stop offset="0" stop-color="#ffe9a3"/><stop offset="0.5" stop-color="#e8b53c"/><stop offset="1" stop-color="#a87520"/>
+</linearGradient>
+</defs>
+<g id="garden-rooster-egg-anim">
+<ellipse cx="0" cy="0.4" rx="2.6" ry="1" fill="#5e3f1e" opacity="0.22"/>
+<ellipse cx="0" cy="0" rx="2.1" ry="2.7" fill="url(#garden-rooster-egg-g)"/>
+<ellipse cx="-0.7" cy="-1" rx="0.7" ry="1.1" fill="#ffffff" opacity="0.55" transform="rotate(-18 -0.7 -1)"/>
+</g>
+<g id="garden-rooster-egg-sparkle">
+<path d="M0 -5.4 L0.45 -4.15 L1.7 -3.7 L0.45 -3.25 L0 -2 L-0.45 -3.25 L-1.7 -3.7 L-0.45 -4.15 Z" fill="#fff3c4"/>
+<path d="M3.5 -1.2 L3.75 -0.5 L4.45 -0.25 L3.75 0 L3.5 0.7 L3.25 0 L2.55 -0.25 L3.25 -0.5 Z" fill="#ffe9a3"/>
+<path d="M-3.6 -2.4 L-3.35 -1.7 L-2.65 -1.45 L-3.35 -1.2 L-3.6 -0.5 L-3.85 -1.2 L-4.55 -1.45 L-3.85 -1.7 Z" fill="#fff3c4"/>
 </g>
 </g>
 </g>
@@ -21787,11 +21834,80 @@ document.addEventListener("click", function (e) {
         requestAnimationFrame(function () { deer.classList.add("bouncing"); });
       });
     }
+    if (window.__roosterEggTry) window.__roosterEggTry(); // shaken hard enough, it sometimes leaves a golden egg
   }
   rooster.addEventListener("click", wobbleRooster);
   rooster.addEventListener("keydown", function (e) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); wobbleRooster(); }
   });
+})();
+(function () {
+  // Every so often the ceramic rooster leaves a golden egg at its base, which shimmers away
+  // a couple of seconds later. A quiet bonus find: no markFound, not on the ? cheatsheet.
+  // Clicking the bird can shake one loose too, but only sometimes — a guaranteed egg per tap
+  // would make it a button rather than a surprise.
+  //
+  // Nothing here spawns anything: the egg is one static node in the SVG and a .laying one-shot
+  // is the whole effect, so "never two at once" and "nothing accumulates" hold by construction
+  // rather than by cleanup. One self-rescheduling timer, armed only while the garden is on
+  // screen AND the tab is attended; the class add is re-gated at fire time (crickets rule).
+  var rooster = document.getElementById("garden-rooster");
+  var egg = document.getElementById("garden-rooster-egg");
+  if (!rooster || !egg) return;
+  // 45–100s: the garden is one of five rooms and a visit runs a minute or two, so a stay
+  // turns up an egg or two — enough to be seen, never often enough to read as a metronome.
+  var LAY_MIN = 45000, LAY_SPAN = 55000;
+  var EGG_LIFE = 2600; // must match the rooster-egg-lay duration
+  var CLICK_LAY_CHANCE = 0.35; // a few taps will find one; the egg-out lock below is what stops spam-clicking, not this
+  var timer = null, soundTimer = null, active = false, lastLay = 0;
+  egg.addEventListener("animationend", function () { egg.classList.remove("laying"); });
+  function reduce() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+  function armed() {
+    return window.currentStageName === "garden" && !document.hidden && document.hasFocus() && !reduce();
+  }
+  function layEgg(userInitiated) {
+    if (window.currentStageName !== "garden") return false;
+    if (reduce()) return false; // the whole effect is the animation; without it there's no egg to end, and .laying would strand
+    // A click implies focus; the autonomous timer has no such promise, so it takes the crickets gate.
+    if (!userInitiated && (document.hidden || !document.hasFocus())) return false;
+    if (Date.now() - lastLay < EGG_LIFE) return false; // one egg at a time — a time lock, not the class, so a lost animationend can't wedge this shut forever
+    lastLay = Date.now();
+    egg.classList.remove("laying");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { egg.classList.add("laying"); });
+    });
+    // the tock lands with the egg, not with the click, so a clicked egg reads as one event
+    // (crow → thud) instead of two sounds stacked on the same instant
+    if (soundTimer) clearTimeout(soundTimer);
+    soundTimer = setTimeout(function () {
+      soundTimer = null;
+      if (document.hidden || !document.hasFocus()) return; // blurred during the drop: no sound into an unattended tab
+      playEggLaySound();
+    }, 520);
+    return true;
+  }
+  function tick() {
+    timer = null;
+    if (!active) return;
+    layEgg();
+    schedule();
+  }
+  function schedule() { timer = setTimeout(tick, LAY_MIN + Math.random() * LAY_SPAN); }
+  function start() { if (active) return; active = true; schedule(); }
+  function stop() {
+    active = false;
+    if (timer) { clearTimeout(timer); timer = null; }
+    if (soundTimer) { clearTimeout(soundTimer); soundTimer = null; }
+    egg.classList.remove("laying");
+  }
+  function update() { if (armed()) start(); else stop(); }
+  window.__updateRoosterEgg = update; // goToStage calls this on every room change
+  window.__roosterEggTry = function () { return Math.random() < CLICK_LAY_CHANCE && layEgg(true); };
+  window.__resetRoosterEgg = function () { stop(); lastLay = 0; update(); };
+  document.addEventListener("visibilitychange", update);
+  window.addEventListener("focus", update);
+  window.addEventListener("blur", update);
+  update();
 })();
 (function () {
   // Tapping the glitter ball during the garden party pops it: a quick scale-bounce on the
@@ -40438,6 +40554,41 @@ function playRoosterCrowSound(intensity, panId) {
 
   } catch (e) {}
 }
+// the golden egg touching down: a soft ceramic tock, then a faint bright ring a beat later
+// — the tock is the landing, the ring is what makes it read as gold rather than a pebble.
+function playEggLaySound(panId) {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var out = pannedOut(ctx, panId == null ? "garden-rooster" : panId);
+    var tock = ctx.createOscillator();
+    tock.type = "triangle";
+    tock.frequency.setValueAtTime(420, t);
+    tock.frequency.exponentialRampToValueAtTime(190, t + 0.07);
+    var tockFilter = ctx.createBiquadFilter();
+    tockFilter.type = "lowpass";
+    tockFilter.frequency.value = 1400;
+    var tockGain = ctx.createGain();
+    tockGain.gain.setValueAtTime(0.0001, t);
+    tockGain.gain.exponentialRampToValueAtTime(0.05, t + 0.008);
+    tockGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    tock.connect(tockFilter); tockFilter.connect(tockGain); tockGain.connect(out);
+    tock.start(t); tock.stop(t + 0.14);
+    // the shimmer: two quiet detuned sines, a fifth apart, ringing out long and thin
+    [1568, 2349].forEach(function (freq, i) {
+      var ring = ctx.createOscillator();
+      ring.type = "sine";
+      ring.frequency.value = freq * (0.998 + Math.random() * 0.004);
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t + 0.09);
+      g.gain.exponentialRampToValueAtTime(i ? 0.012 : 0.02, t + 0.12);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.75);
+      ring.connect(g); g.connect(out);
+      ring.start(t + 0.09); ring.stop(t + 0.78);
+    });
+  } catch (e) {}
+}
 function playFartSound(pitchMult, durMult, panId) {
   try {
     var ctx = getSfxCtx();
@@ -44168,6 +44319,7 @@ function spawnDustMote(container) {
     if (window.__updatePragueLife) window.__updatePragueLife(); // ...and pauses the Prague family's gestures off-screen (room-gated)
     if (window.__updateKettleHum) window.__updateKettleHum(name === "kitchen", ROOM_FADE); // kettle hum only in the kitchen
     if (window.__updateKitchenRoach) window.__updateKitchenRoach(); // freeze the counter roach off-kitchen, resume it on return (reads window.currentStageName)
+    if (window.__updateRoosterEgg) window.__updateRoosterEgg(); // the rooster only lays its golden egg while the garden is the room you're in
     if (window.__updateFireSound) window.__updateFireSound(name === "cuddly", ROOM_FADE); // fire crackle only in the cuddly nook
     if (window.__updateAquaSound) window.__updateAquaSound(name === "cuddly", ROOM_FADE); // aquarium bed only in the cuddly nook
     if (window.__updateAquaMelody) window.__updateAquaMelody(name === "cuddly", ROOM_FADE); // aquarium melody is whole-loft; the gate ignores the room but keep the lifecycle identical to stars
@@ -46862,6 +47014,7 @@ function spawnDustMote(container) {
     clearCuddlySmoke(); // clear any lingering joint haze
     if (window.__stowCat) window.__stowCat(); // cat back in the chest, wherever it had wandered
     if (window.__laserOff) window.__laserOff(); // any console laser dot mid-dart goes with it
+    if (window.__resetRoosterEgg) window.__resetRoosterEgg(); // no golden egg left mid-shimmer at the rooster's feet
     kitchenPowered = false;
     kitchenWarmedUp = false;
     clearTimeout(warmupTimer);

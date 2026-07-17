@@ -23927,6 +23927,11 @@ document.addEventListener("click", function (e) {
     if (document.hidden) for (var i = 0; i < TAPS.length; i++) if (TAPS[i].clear) TAPS[i].clear();
   });
 })();
+// A call is a timer plus animations plus a per-family audio module, so nothing should be
+// left running for a visitor who wandered off: every call (laptop, monitor, pocket phone)
+// gives up on its own this long after it's dialled. Wall-clock, not attended time — the
+// abandoned call is exactly the one that never accrues attended time. Tune freely.
+var ABANDONED_CALL_MS = 30000;
 (function () {
   // Clicking an office wall sign turns the computer on and boots it (Fedora → desktop),
   // landing the browser on that sign's page; if the monitor's already on and showing,
@@ -24114,6 +24119,8 @@ document.addEventListener("click", function (e) {
       paintCallPlace();
       laptop.classList.add("calling");
       setCallStatus("laptop_calling");
+      // the caller gives up if nobody hangs up first (cleared with every other call timer)
+      laptopUpdateTimers.push(setTimeout(function () { if (inCall()) endCall(true); }, ABANDONED_CALL_MS));
       if (laptopReduce) {
         laptop.classList.remove("calling", "connecting");
         laptop.classList.add("connected");
@@ -24149,8 +24156,10 @@ document.addEventListener("click", function (e) {
       }, 3400));
     }
     var callHangingUp = false;
-    function endCall() {
+    function endCall(auto) {
       if (callHangingUp) return; // already saying goodbye — ignore repeat taps
+      // an auto hang-up with nobody there drops the line without the goodbye or the tone
+      var quiet = !!auto && (document.hidden || !document.hasFocus());
       clearLaptopTimers();
       var wasConnected = laptop.classList.contains("connected");
       stopCallAmbient();
@@ -24158,7 +24167,7 @@ document.addEventListener("click", function (e) {
       if (window.__stopPragueLife) window.__stopPragueLife(); // still the Prague family's gestures the instant we hang up too
       if (window.__stopPragueMelody) window.__stopPragueMelody(); // ...and silence the family's music player the instant we hang up
       function dropLine() {
-        playCallHangupSound();
+        if (!quiet) playCallHangupSound();
         laptop.classList.remove("calling", "connecting", "connected", "lueb");
         if (laptop.classList.contains("open")) scheduleLaptopSaver(); // back to idle
         // the sequence advances on disconnect, not connect: point at the computer next
@@ -24172,7 +24181,7 @@ document.addEventListener("click", function (e) {
         }
         if (window.__updateOfficeNudges) window.__updateOfficeNudges();
       }
-      if (wasConnected) {
+      if (wasConnected && !quiet) {
         // let the "I love you" play in full, THEN drop the line (hangup tone + disconnect)
         callHangingUp = true;
         // her side of the line speaks a shade higher than the neutral voice; Lübeck's is the
@@ -24180,7 +24189,7 @@ document.addEventListener("click", function (e) {
         playILoveYouSound("office-laptop", callCallee === "lueb" ? 0.92 : 1.12);
         setTimeout(function () { callHangingUp = false; dropLine(); }, 1500);
       } else {
-        dropLine(); // hung up mid-ring: just the click, no goodbye
+        dropLine(); // mid-ring, or nobody there to hear it: no goodbye
       }
     }
     // Input lock across the lid+zoom glide: on mobile a second deliberate tap (past the
@@ -28333,13 +28342,17 @@ document.addEventListener("click", function (e) {
     monitor.classList.add("show-tehran");
     window.refreshTehranText();
     setTehranStatus("laptop_calling");
+    // the family gives up if nobody hangs up first (cleared with every other call timer)
+    tehranTimers.push(setTimeout(function () { closeTehranCall(false, true); }, ABANDONED_CALL_MS));
     if (reduceMotion) { connectTehranCall(); return; }
     playPhoneRingSound("office-monitor");
     tehranTimers.push(setTimeout(function () { setTehranStatus("laptop_connecting"); }, 2400));
     tehranTimers.push(setTimeout(connectTehranCall, 3400));
   }
   var tehranHangingUp = false;
-  function dropTehranCall(silent) {
+  // silent = the screen itself is going away (no tone, no screensaver); quiet = an ordinary
+  // hang-up nobody's around to hear, so only the tone goes
+  function dropTehranCall(silent, quiet) {
     clearTehranTimers();
     stopCallAmbient();
     if (window.__stopTehranMelody) window.__stopTehranMelody(); // silence the birthday song the instant we hang up
@@ -28349,19 +28362,20 @@ document.addEventListener("click", function (e) {
     var candle = document.getElementById("tehran-candle");
     if (candle) candle.classList.remove("out"); // clear the blow-out state so the next call starts lit
     setTehranStatus("");
-    if (wasLive && !silent) { playCallHangupSound("office-monitor"); scheduleSaver(); }
+    if (wasLive && !silent) { if (!quiet) playCallHangupSound("office-monitor"); scheduleSaver(); }
   }
-  function closeTehranCall(silent) {
+  function closeTehranCall(silent, auto) {
     if (silent) { tehranHangingUp = false; dropTehranCall(true); return; }
     if (tehranHangingUp) return; // the goodbye is already playing — ignore repeat taps
     if (!tehranLive()) return;
-    if (tehranG && tehranG.classList.contains("connected")) {
+    var quiet = !!auto && (document.hidden || !document.hasFocus());
+    if (tehranG && tehranG.classList.contains("connected") && !quiet) {
       // let the goodbye play in full, THEN drop the line — Behdad's register
       tehranHangingUp = true;
       playILoveYouSound("office-monitor", 0.8);
       setTimeout(function () { tehranHangingUp = false; dropTehranCall(); }, 1500);
     } else {
-      dropTehranCall(); // hung up mid-ring: just the tone
+      dropTehranCall(false, quiet); // mid-ring, or nobody there to hear it: no goodbye
     }
   }
   window.__closeMonitorTehran = closeTehranCall; // Esc's app layer + every screen-teardown owner
@@ -32898,6 +32912,8 @@ async def localfont(name):
       refreshCallText();
       showScreen("incall");
       if (shell) shell.focus();
+      // they give up if nobody hangs up first (cleared with every other call timer)
+      callTimers.push(setTimeout(function () { hangup(true); }, ABANDONED_CALL_MS));
       if (reduced()) { connectCall(); return; }
       playPhoneRingSound("balcony-phone");
       callTimers.push(setTimeout(function () { callStatusKey = "laptop_connecting"; refreshCallText(); }, 2400));
@@ -32923,20 +32939,24 @@ async def localfont(name):
       if (callee === "tehran" && window.__startTehranMelody) window.__startTehranMelody();   // "tavallod" on their end
     }
     function clearCallTimers() { callTimers.forEach(clearTimeout); callTimers = []; }
-    function hangup() {
+    function hangup(auto) {
       if (!callee || callHangingUp) return;
+      // an auto hang-up with nobody there drops the line without the goodbye or the tone
+      var quiet = !!auto && (document.hidden || !document.hasFocus());
       clearCallTimers();
       stopCallAmbient();
       phoneLifeStop(); // stop the family's gestures + music the instant we hang up (before the goodbye)
-      if (callConnected) {
+      if (callConnected && !quiet) {
         callHangingUp = true;
         playILoveYouSound("balcony-phone", CITIES[callee].pitch); // that city's pitched goodbye
         setTimeout(function () { callHangingUp = false; dropCall(false); }, 1500);
       } else {
-        dropCall(false); // hung up mid-ring: just the tone
+        dropCall(false, quiet); // mid-ring, or nobody there to hear it: no goodbye
       }
     }
-    function dropCall(silent) {
+    // silent = the phone itself is going away (no tone, no dialer); quiet = an ordinary
+    // hang-up nobody's around to hear, so only the tone goes
+    function dropCall(silent, quiet) {
       clearCallTimers();
       stopCallAmbient();
       phoneLifeStop(); // belt-and-braces: every teardown path (mid-ring drop, leaving the balcony) lands clean
@@ -32950,7 +32970,7 @@ async def localfont(name):
           var self = ic.querySelector(".pic-self"); if (self) self.innerHTML = "";
         }
       }
-      if (was && !silent) playCallHangupSound("balcony-phone");
+      if (was && !silent && !quiet) playCallHangupSound("balcony-phone");
       if (was && !silent && !closing && isOpen()) openDialer(); // land back on the dialer
     }
 

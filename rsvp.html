@@ -502,6 +502,28 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 .growlight-bulb, .growlight-beam{transition:opacity .3s ease, fill .3s ease}
 #garden-growlight.off .growlight-bulb{fill:#8a8a8a}
 #garden-growlight.off .growlight-beam{opacity:0}
+/* ── Drugsbox rotary date lock ──────────────────────────────────────────────
+   Native SVG throughout: a foreignObject descendant that makes a RenderLayer under an SVG
+   scale vanishes in WebKit, and on iOS every browser is WebKit. Nothing inside the lock
+   carries a transform ATTRIBUTE — every coordinate is baked — so the CSS transforms below
+   (drum roll, shackle pop) have no placement to clobber. */
+#garden-boxlock{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .28s ease}
+#garden-boxlock.showing{opacity:1; visibility:visible; pointer-events:auto}
+.boxlock-hit{cursor:pointer}
+.boxlock-drum{transition:transform .16s cubic-bezier(.3,1.45,.6,1)}
+.boxlock-drum.snapping{transition:none} /* the 9→0 wrap: roll onto the clone digit, then jump back with no animation */
+#garden-boxlock-shackle{transform-box:fill-box; transform-origin:100% 100%} /* the right leg's foot — the shackle lifts, then swings open around it */
+#garden-boxlock-shackle.popped{animation:boxlock-shackle-pop .55s cubic-bezier(.2,1.5,.4,1) forwards}
+@keyframes boxlock-shackle-pop{
+  0%{transform:translateY(0) rotate(0deg)}
+  40%{transform:translateY(-18px) rotate(0deg)}
+  100%{transform:translateY(-18px) rotate(24deg)}
+}
+@media (prefers-reduced-motion: reduce){
+  #garden-boxlock{transition:none}
+  .boxlock-drum{transition:none}
+  #garden-boxlock-shackle.popped{animation:none; transform:translateY(-18px) rotate(24deg)}
+}
 #balcony-ashtray{transform-box:fill-box; transform-origin:center}
 #balcony-ashtray.spinning{animation:ashtray-spin 1s ease-in-out}
 @keyframes ashtray-spin{
@@ -4585,6 +4607,27 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 #loft-game-strip.uv-mode #garden-caterpillar .cat-body ellipse{fill:#f500f5}
 #loft-game-strip.uv-mode #garden-caterpillar .cat-body line{stroke:#f500f5}
 #loft-game-strip.uv-mode #garden-caterpillar{filter:drop-shadow(0 0 2.5px #f500f5)}
+/* The magic box under the blacklight. It's the one prop in the loft that's LOCKED, so the
+   glow is its counterweight: it says "there's something here" without saying what, and the
+   date on the save-the-date is the key. Painted, not filtered — the halo is a native SVG
+   <ellipse> on a radial gradient rather than a CSS filter blur, because a CSS filter FUNCTION
+   on an SVG container is a no-op in WebKit (= every iOS browser). The drop-shadow below is
+   only ever the extra rim on top. The pulse rides #garden-drugsbox-uvglow, a dedicated node
+   that carries no one-shots, so this infinite state rule has nothing to out-specify. */
+#garden-drugsbox-uvglow{opacity:0; transition:opacity .4s ease; transform-box:fill-box; transform-origin:center} /* the pulse scales, so it must pivot on the halo, not the view-box origin */
+#loft-game-strip.uv-mode #garden-drugsbox-uvglow{opacity:1; animation:boxuv-pulse 2.2s ease-in-out infinite}
+#loft-game-strip.uv-mode .boxuv-metal{stroke:#f500f5; stroke-width:1.6} /* the straps and the hasp take the light; the wood doesn't */
+#loft-game-strip.uv-mode #garden-drugsbox{filter:drop-shadow(0 0 4px #f500f5)}
+@keyframes boxuv-pulse{
+  0%, 100%{opacity:.62; transform:scale(.9)}
+  50%{opacity:1; transform:scale(1.06)}
+}
+/* Reduced motion still gets the glow at full strength — being noticed IS the point here;
+   the breathing is the bonus. */
+@media (prefers-reduced-motion: reduce){
+  #garden-drugsbox-uvglow{transition:none}
+  #loft-game-strip.uv-mode #garden-drugsbox-uvglow{animation:none}
+}
 /* the black cat's eyes fluoresce uranium-green under the blacklight (coat stays dark) */
 #loft-game-strip.uv-mode #witchy-chest-cat-eye-l,
 #loft-game-strip.uv-mode #witchy-chest-cat-eye-r{fill:#f500f5; filter:drop-shadow(0 0 2.5px #f500f5)}
@@ -7976,15 +8019,19 @@ section{margin:1.9rem 0}
 </g>
 <g id="garden-drugsbox" class="hunt-hit" transform="translate(-8,-2)">
 <rect x="530" y="294" width="30" height="30" fill="transparent"/>
-<defs><linearGradient id="garden-drugsbox-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4b362c"/><stop offset="1" stop-color="#2a1912"/></linearGradient></defs>
+<defs><linearGradient id="garden-drugsbox-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4b362c"/><stop offset="1" stop-color="#2a1912"/></linearGradient>
+<!-- source magenta: the root .uv-mode filter's hue-rotate lands it on the same uranium green
+     as the caterpillar and the cat's eyes -->
+<radialGradient id="garden-drugsbox-uvhalo"><stop offset="0" stop-color="#f500f5" stop-opacity="0.95"/><stop offset="0.45" stop-color="#f500f5" stop-opacity="0.5"/><stop offset="1" stop-color="#f500f5" stop-opacity="0"/></radialGradient></defs>
 <ellipse cx="545" cy="321.5" rx="15" ry="2.6" fill="#1a0f0a" opacity="0.3"/>
+<ellipse id="garden-drugsbox-uvglow" cx="545" cy="309" rx="46" ry="40" fill="url(#garden-drugsbox-uvhalo)" pointer-events="none"/>
 <path d="M532 308 Q532 298 545 298 Q558 298 558 308 L558 320 L532 320 Z" fill="url(#garden-drugsbox-grad)" stroke="#20120e" stroke-width="1.2"/>
 <path d="M534.4 306.6 Q534.6 300.4 545 300.4 Q555.4 300.4 555.6 306.6" fill="none" stroke="#634c3d" stroke-width="1" opacity="0.6"/>
-<line x1="539" y1="300" x2="539" y2="320" stroke="#8a8a8a" stroke-width="1"/>
-<line x1="545" y1="298" x2="545" y2="320" stroke="#8a8a8a" stroke-width="1"/>
-<line x1="551" y1="300" x2="551" y2="320" stroke="#8a8a8a" stroke-width="1"/>
-<rect x="541" y="318" width="8" height="7" rx="1.5" fill="#2a2a2a" stroke="#8a8a8a" stroke-width="0.6"/>
-<circle cx="545" cy="318" r="1.8" fill="none" stroke="#8a8a8a" stroke-width="0.7"/>
+<line class="boxuv-metal" x1="539" y1="300" x2="539" y2="320" stroke="#8a8a8a" stroke-width="1"/>
+<line class="boxuv-metal" x1="545" y1="298" x2="545" y2="320" stroke="#8a8a8a" stroke-width="1"/>
+<line class="boxuv-metal" x1="551" y1="300" x2="551" y2="320" stroke="#8a8a8a" stroke-width="1"/>
+<rect class="boxuv-metal" x="541" y="318" width="8" height="7" rx="1.5" fill="#2a2a2a" stroke="#8a8a8a" stroke-width="0.6"/>
+<circle class="boxuv-metal" cx="545" cy="318" r="1.8" fill="none" stroke="#8a8a8a" stroke-width="0.7"/>
 </g>
 <g id="garden-growlight" class="hunt-hit">
 <rect x="498" y="160" width="40" height="132" fill="transparent"/>
@@ -8647,6 +8694,80 @@ section{margin:1.9rem 0}
 <!-- very faint scene-wide brighten that rides each flash (the optional wash); opacity peaks
      at .10 for a gentle blink, never a strobe. Opacity-only (no transform to clobber). -->
 <rect id="garden-flash-wash" x="0" y="0" width="680" height="340" fill="#fff8ec" opacity="0" pointer-events="none"/>
+</g>
+<!-- The drugsbox's rotary date lock, shown close-up when the box is tapped. In real life they
+     lock the box, so the game locks it too — the trips aren't hidden out of politeness, they're
+     locked because the owners lock them. The key is the one thing this whole site exists to say.
+     The year and the month are ENGRAVED (given away on purpose); only the day's two wheels turn,
+     so there is no MM-vs-DD ambiguity to trip up a Czech or a Canadian reader. Which month is
+     engraved is rolled once per page load (see boxLockMonth) — a returning visitor gets the other
+     wedding. Brute force is ~31 spins and that's fine: this is an honest object and a nudge to
+     read the save-the-date, not security. -->
+<g id="garden-boxlock">
+<defs>
+<linearGradient id="garden-boxlock-body-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5e4834"/><stop offset="1" stop-color="#31231a"/></linearGradient>
+<linearGradient id="garden-boxlock-brass-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e6ca8c"/><stop offset="0.45" stop-color="#b28d48"/><stop offset="1" stop-color="#836430"/></linearGradient>
+<linearGradient id="garden-boxlock-fade-t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#241a12"/><stop offset="1" stop-color="#241a12" stop-opacity="0"/></linearGradient>
+<linearGradient id="garden-boxlock-fade-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#241a12" stop-opacity="0"/><stop offset="1" stop-color="#241a12"/></linearGradient>
+<clipPath id="garden-boxlock-clip-t"><rect x="222" y="160" width="110" height="120"/></clipPath>
+<clipPath id="garden-boxlock-clip-u"><rect x="348" y="160" width="110" height="120"/></clipPath>
+</defs>
+<rect id="garden-boxlock-dim" x="0" y="0" width="680" height="340" fill="#170f0a" opacity="0.62"/>
+<g id="garden-boxlock-shackle">
+<path d="M292 112 V64 A48 48 0 0 1 388 64 V112" fill="none" stroke="#7a5d2c" stroke-width="17" stroke-linecap="round"/>
+<path d="M292 112 V64 A48 48 0 0 1 388 64 V112" fill="none" stroke="url(#garden-boxlock-brass-grad)" stroke-width="11" stroke-linecap="round"/>
+</g>
+<rect id="garden-boxlock-body" x="190" y="88" width="300" height="228" rx="24" fill="url(#garden-boxlock-body-grad)" stroke="#1e140e" stroke-width="2.5"/>
+<rect x="199" y="97" width="282" height="210" rx="18" fill="none" stroke="#7d6144" stroke-width="1.2" opacity="0.55"/>
+<text x="340" y="136" text-anchor="middle" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="31" font-weight="700" letter-spacing="1.5" fill="#e4cd97" opacity="0.92" pointer-events="none">2027-<tspan id="garden-boxlock-month">05</tspan>-</text>
+<rect x="222" y="160" width="110" height="120" rx="7" fill="#241a12" stroke="#12100c" stroke-width="1.6"/>
+<g clip-path="url(#garden-boxlock-clip-t)"><g id="garden-boxlock-drum-t" class="boxlock-drum">
+<text x="277" y="180" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="46" font-weight="700" fill="#f2e3bd">3</text>
+<text x="277" y="220" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="46" font-weight="700" fill="#f2e3bd">0</text>
+<text x="277" y="260" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="46" font-weight="700" fill="#f2e3bd">1</text>
+<text x="277" y="300" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="46" font-weight="700" fill="#f2e3bd">2</text>
+<text x="277" y="340" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="46" font-weight="700" fill="#f2e3bd">3</text>
+<text x="277" y="380" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="46" font-weight="700" fill="#f2e3bd">0</text>
+</g></g>
+<rect x="222" y="160" width="110" height="46" fill="url(#garden-boxlock-fade-t)" pointer-events="none"/>
+<rect x="222" y="234" width="110" height="46" fill="url(#garden-boxlock-fade-b)" pointer-events="none"/>
+<rect x="348" y="160" width="110" height="120" rx="7" fill="#241a12" stroke="#12100c" stroke-width="1.6"/>
+<g clip-path="url(#garden-boxlock-clip-u)"><g id="garden-boxlock-drum-u" class="boxlock-drum">
+<!-- a leading clone of the LAST digit and a trailing clone of 0, so the window always shows a
+     neighbour above and below (it's a drum, not a list) and the wrap can roll forward -->
+<text x="403" y="180" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="46" font-weight="700" fill="#f2e3bd">9</text>
+<text x="403" y="220" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="46" font-weight="700" fill="#f2e3bd">0</text>
+<text x="403" y="260" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="46" font-weight="700" fill="#f2e3bd">1</text>
+<text x="403" y="300" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="46" font-weight="700" fill="#f2e3bd">2</text>
+<text x="403" y="340" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="46" font-weight="700" fill="#f2e3bd">3</text>
+<text x="403" y="380" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="46" font-weight="700" fill="#f2e3bd">4</text>
+<text x="403" y="420" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="46" font-weight="700" fill="#f2e3bd">5</text>
+<text x="403" y="460" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="46" font-weight="700" fill="#f2e3bd">6</text>
+<text x="403" y="500" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="46" font-weight="700" fill="#f2e3bd">7</text>
+<text x="403" y="540" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="46" font-weight="700" fill="#f2e3bd">8</text>
+<text x="403" y="580" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="46" font-weight="700" fill="#f2e3bd">9</text>
+<text x="403" y="620" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="46" font-weight="700" fill="#f2e3bd">0</text>
+</g></g>
+<rect x="348" y="160" width="110" height="46" fill="url(#garden-boxlock-fade-t)" pointer-events="none"/>
+<rect x="348" y="234" width="110" height="46" fill="url(#garden-boxlock-fade-b)" pointer-events="none"/>
+<!-- the index marks a real combination lock has: whatever sits between the brass hairlines is the
+     digit you've dialled — without them the peeking neighbours read as equal candidates -->
+<g pointer-events="none" stroke="#e6ca8c" stroke-width="1.6" opacity="0.8">
+<line x1="222" y1="199" x2="332" y2="199"/><line x1="222" y1="241" x2="332" y2="241"/>
+<line x1="348" y1="199" x2="458" y2="199"/><line x1="348" y1="241" x2="458" y2="241"/>
+</g>
+<!-- knurled thumb tabs: the "push me" affordance. There's no hover on a phone and no focus ring
+     anywhere in the strip (scene items take no tabindex), so the hardware has to say it. -->
+<g pointer-events="none">
+<rect x="228" y="288" width="98" height="18" rx="6" fill="url(#garden-boxlock-brass-grad)" stroke="#6b5028" stroke-width="1"/>
+<rect x="354" y="288" width="98" height="18" rx="6" fill="url(#garden-boxlock-brass-grad)" stroke="#6b5028" stroke-width="1"/>
+<g stroke="#6b5028" stroke-width="1.4" opacity="0.7">
+<line x1="248" y1="291" x2="248" y2="303"/><line x1="264" y1="291" x2="264" y2="303"/><line x1="280" y1="291" x2="280" y2="303"/><line x1="296" y1="291" x2="296" y2="303"/><line x1="312" y1="291" x2="312" y2="303"/>
+<line x1="374" y1="291" x2="374" y2="303"/><line x1="390" y1="291" x2="390" y2="303"/><line x1="406" y1="291" x2="406" y2="303"/><line x1="422" y1="291" x2="422" y2="303"/><line x1="438" y1="291" x2="438" y2="303"/>
+</g>
+</g>
+<rect id="garden-boxlock-hit-t" class="boxlock-hit" x="214" y="152" width="126" height="162" fill="transparent"/>
+<rect id="garden-boxlock-hit-u" class="boxlock-hit" x="340" y="152" width="126" height="162" fill="transparent"/>
 </g>
 </g>
 <g id="stage-cuddly" transform="translate(1360,0)">
@@ -14507,6 +14628,10 @@ var T = {
     cheers_text: "Cheers! 🥂",
     can_streak_text: "Nice toss streak! 🥫",
     trip_no_mix_text: "Please don't mix. Enjoy responsibly. 🙃",
+    // the magic box's date lock — shown only to someone who's been turning the wheels a while
+    boxlock_hint_1: "Two digits. It's the day of one of our weddings — it's on the save-the-date.",
+    boxlock_hint_2_may: "May 1st, 2027. Edmonton. Go on.",
+    boxlock_hint_2_jul: "July 10th, 2027. Prague. Go on.",
     mol_caption: "we’ve got chemistry",
     mol_street_psychedelic: "shrooms",
     mol_street_strobe: "acid",
@@ -14967,6 +15092,9 @@ var T = {
     cheers_text: "Na zdraví! 🥂",
     can_streak_text: "Pěkná série hodů! 🥫",
     trip_no_mix_text: "Prosím nemíchat. Užívejte s mírou. 🙃",
+    boxlock_hint_1: "Dvě číslice. Je to den jedné z našich svateb — stojí to na oznámení.",
+    boxlock_hint_2_may: "1. května 2027. Edmonton. Do toho.",
+    boxlock_hint_2_jul: "10. července 2027. Praha. Do toho.",
     mol_caption: "máme chemii",
     mol_street_psychedelic: "houbičky",
     mol_street_strobe: "kyselina",
@@ -36474,9 +36602,11 @@ async def localfont(name):
   if (crystals) crystals.addEventListener("click", spawnCrystalSparkle); // quiet decorative glint, click-only (untracked bonus)
   var drugsBox = document.getElementById("garden-drugsbox");
   if (drugsBox) {
-    drugsBox.addEventListener("click", triggerRsvpTrip);
+    // the box is locked until the date lock opens it (see __drugsboxTap) — after that a tap
+    // goes straight through to the trip, as it always did
+    drugsBox.addEventListener("click", function (e) { window.__drugsboxTap(e); });
     drugsBox.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); triggerRsvpTrip(); }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); window.__drugsboxTap(); }
     });
   }
   var bottles = document.getElementById("garden-bottles");
@@ -39249,6 +39379,7 @@ function triggerRsvpTrip(e) {
 // starting it now — interrupts a running trip cleanly (startTripVariant tears the old one down).
 // Shared by the drugs-box click and the 't' key.
 window.__nextTrip = function () {
+  if (window.__unlockDrugsbox) window.__unlockDrugsbox(); // the 't' key skips the lock; leave the box open behind it rather than lying about the world
   tripActive = true;
   window.__tripActive = true; // mirror for the garden thermometer readout (see gardenThermo)
   var variant = TRIP_VARIANTS[tripVariantIndex % TRIP_VARIANTS.length];
@@ -39271,12 +39402,137 @@ document.addEventListener("keydown", function (e) {
   var ae = document.activeElement;
   if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return;
   e.preventDefault();
+  if (window.__unlockDrugsbox) window.__unlockDrugsbox(); // same as 't': the shortcut bypasses the lock, so the box shouldn't still be locked afterwards
   var variant = ["psychedelic", "strobe", "melt", "dmt", "molly", "ketamine", "iboga"][+m[1] - 1];
   tripActive = true;
   window.__tripActive = true;
   startTripVariant(variant);
   if (variant === "psychedelic") startTripBlooms();
 });
+// ── The magic box's rotary date lock ────────────────────────────────────────
+// They lock the box in real life, so the game locks it too — which turns the trips'
+// discretion from an apology into a fact about the loft. See the #garden-boxlock markup
+// for the puzzle's shape. Everything here is POINTER-driven: scene items take no
+// tabindex/role/aria (tab-nav is disabled strip-wide), so a real <input> or a focusable
+// keypad is off the table. Tap-to-advance is the one gesture that behaves identically on
+// a phone (no hover, big targets) and a desktop, and needs no drag plumbing. There is no
+// submit button: the lock opens the instant the two wheels read the day, like a real one.
+(function () {
+  var LOCK_DAY = { 5: [0, 1], 7: [1, 0] }; // May 1 (Edmonton) / July 10 (Prague), as [tens, units]
+  var MOD = { t: 4, u: 10 };               // a real date lock's tens wheel only carries 0–3
+  var STEP = 40;                           // one digit's pitch on the drum, in view-box units
+  var HINT_AT = [14, 30];                  // wheel turns before we help — nobody bounces off this and loses the trips
+  var boxLockMonth = rollMonth();          // rolled ONCE per page load and held: a moving target isn't a puzzle
+  var boxLocked = true;
+  var wheels = { t: 0, u: 0 };             // 00 is never an answer, so the lock can't open on load
+  var shown = { t: 0, u: 0 };              // the drum's rendered index — equals wheels[], except while parked on the wrap clone
+  var turns = 0, hints = 0;
+  var openTimers = [];   // the unlock's staged pop → fade → trip; a reset in the middle must not let them land
+  function rollMonth() { return Math.random() < 0.5 ? 5 : 7; }
+  function clearOpenTimers() { openTimers.forEach(clearTimeout); openTimers = []; }
+  function panel() { return document.getElementById("garden-boxlock"); }
+  function drumOf(w) { return document.getElementById("garden-boxlock-drum-" + w); }
+  function applyMonth() {
+    var m = document.getElementById("garden-boxlock-month");
+    if (m) m.textContent = boxLockMonth === 5 ? "05" : "07";
+  }
+  function park(w, idx, animate) {
+    var drum = drumOf(w);
+    if (!drum) return;
+    if (!animate) drum.classList.add("snapping");
+    drum.style.transform = "translateY(" + (-idx * STEP) + "px)";
+    if (!animate) { void drum.getBoundingClientRect(); drum.classList.remove("snapping"); } // flush the jump before the class comes off, or the next roll inherits it
+    shown[w] = idx;
+  }
+  // The 3→0 / 9→0 wrap rolls FORWARD onto the drum's trailing clone of 0 and then jumps back
+  // unanimated — rather than spinning backwards through every digit, which no real wheel does.
+  // normalize() does the jump lazily (on the next tap, or a beat later), so a fast spinner
+  // can't race it.
+  function normalize(w) { if (shown[w] === MOD[w]) park(w, 0, false); }
+  function advance(w) {
+    normalize(w);
+    var next = (wheels[w] + 1) % MOD[w];
+    wheels[w] = next;
+    park(w, next === 0 ? MOD[w] : next, true);
+    if (next === 0) setTimeout(function () { normalize(w); }, 220);
+  }
+  function resetWheels() {
+    ["t", "u"].forEach(function (w) { wheels[w] = 0; park(w, 0, false); });
+    var sh = document.getElementById("garden-boxlock-shackle");
+    if (sh) sh.classList.remove("popped");
+  }
+  function unlock(fanfare) {
+    if (!boxLocked) return;
+    boxLocked = false;
+    clearOpenTimers();
+    var p = panel();
+    if (!fanfare) { if (p) p.classList.remove("showing"); resetWheels(); return; }
+    playBoxlockClunkSound();
+    var sh = document.getElementById("garden-boxlock-shackle");
+    if (sh) { sh.classList.remove("popped"); void sh.getBoundingClientRect(); sh.classList.add("popped"); }
+    openTimers.push(setTimeout(function () {
+      if (p) p.classList.remove("showing");
+      openTimers.push(setTimeout(function () { resetWheels(); triggerRsvpTrip(); }, 320)); // the dial IS the entry — clear the panel first so it can't sit on top of the trip
+    }, 800));
+  }
+  // Anchored ABOVE the lock body, so it never sits on the engraved date it's talking about.
+  // Deferred a tick because this fires from inside a click, and the global click-away handler —
+  // which runs later in that same dispatch — dismisses any bubble whose anchor isn't the target.
+  // (The next wheel turn does then clear it, which is what you'd want anyway.)
+  function hint() {
+    var dict = T[document.documentElement.lang] || T.en;
+    var key = hints === 0 ? "boxlock_hint_1" : (boxLockMonth === 5 ? "boxlock_hint_2_may" : "boxlock_hint_2_jul");
+    var text = dict[key] || T.en[key];
+    setTimeout(function () { eggBubble(document.getElementById("garden-boxlock-body"), text, "top"); }, 0);
+    hints++;
+  }
+  function tap(w) {
+    var p = panel();
+    if (!p || !p.classList.contains("showing") || !boxLocked) return;
+    advance(w);
+    playBoxlockDetentSound();
+    var want = LOCK_DAY[boxLockMonth];
+    if (wheels.t === want[0] && wheels.u === want[1]) { unlock(true); return; }
+    turns++;
+    if (hints < HINT_AT.length && turns >= HINT_AT[hints]) hint(); // counted in turns, not seconds: deterministic, and an idle tab never trips it
+  }
+  ["t", "u"].forEach(function (w) {
+    var hit = document.getElementById("garden-boxlock-hit-" + w);
+    if (hit) hit.addEventListener("click", function () { tap(w); });
+  });
+  var dim = document.getElementById("garden-boxlock-dim");
+  if (dim) dim.addEventListener("click", function () { var p = panel(); if (p) p.classList.remove("showing"); }); // tap away to put the box down; the wheels keep their positions
+  // Capture phase, and only while the panel is up: Esc must close the lock before the global
+  // "go back" hears it and walks us out of the room.
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    var p = panel();
+    if (!p || !p.classList.contains("showing")) return;
+    e.stopPropagation(); e.preventDefault();
+    p.classList.remove("showing");
+  }, true);
+  applyMonth();
+  resetWheels(); // park both drums explicitly, so the first tap transitions from a real value
+  window.__drugsboxTap = function (e) {
+    if (!boxLocked) { triggerRsvpTrip(e); return; }
+    applyMonth();
+    var p = panel();
+    if (p) p.classList.add("showing");
+  };
+  window.__unlockDrugsbox = function () { unlock(false); };
+  window.__drugsboxLocked = function () { return boxLocked; };
+  window.__setDrugsboxMonth = function (m) { boxLockMonth = (+m === 7 ? 7 : 5); applyMonth(); }; // deterministic hook for tests/CDP runs — the roll above is a coin toss
+  window.__resetDrugsbox = function () {
+    clearOpenTimers(); // a reset mid-unlock must not have the old open's fade/trip land on the fresh game
+    boxLocked = true;
+    boxLockMonth = rollMonth(); // a reset is a fresh game, so it re-rolls which wedding the lock asks about
+    turns = 0; hints = 0;
+    var p = panel();
+    if (p) p.classList.remove("showing");
+    resetWheels();
+    applyMonth();
+  };
+})();
 // ── Mushroom-trip plant blooms ────────────────────────────────────────────
 // While a trip is active, five garden plants lift off their pots and grow a
 // live, hue-cycling Julia-set "bloom" over their foliage. ONE shared rAF loop
@@ -40553,6 +40809,82 @@ function playPlushSquishSound(panId) {
     var ng = ctx.createGain(); ng.gain.value = 0.04;
     src.connect(lp); lp.connect(ng); ng.connect(out);
     src.start(t); src.stop(t + 0.13);
+  } catch (e) {}
+}
+// One detent of the magic box's date lock: the sprung tick of the ball dropping into the
+// next notch. Very short and dry — it fires once per wheel tap, so anything with a tail
+// would smear when someone spins.
+function playBoxlockDetentSound(panId) {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var out = pannedOut(ctx, panId == null ? "garden-drugsbox" : panId);
+    var size = Math.max(1, Math.floor(ctx.sampleRate * 0.03));
+    var buf = ctx.createBuffer(1, size, ctx.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < size; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / size);
+    var src = ctx.createBufferSource(); src.buffer = buf;
+    var bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 3.5; bp.frequency.value = 2600;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.09, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+    src.connect(bp); bp.connect(g); g.connect(out);
+    src.start(t); src.stop(t + 0.035);
+    var k = ctx.createOscillator(); k.type = "triangle";
+    k.frequency.setValueAtTime(900, t);
+    k.frequency.exponentialRampToValueAtTime(420, t + 0.03);
+    var kg = ctx.createGain();
+    kg.gain.setValueAtTime(0.0001, t);
+    kg.gain.exponentialRampToValueAtTime(0.05, t + 0.005);
+    kg.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+    k.connect(kg); kg.connect(out);
+    k.start(t); k.stop(t + 0.05);
+  } catch (e) {}
+}
+// The date lock giving up: a heavy body thud, the sprung metallic ring of the shackle
+// letting go, then the scrape of it swinging clear. The payoff sound of the whole puzzle,
+// so it gets a real decay where the detent gets none.
+function playBoxlockClunkSound(panId) {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var out = pannedOut(ctx, panId == null ? "garden-drugsbox" : panId);
+    var thud = ctx.createOscillator(); thud.type = "sine";
+    thud.frequency.setValueAtTime(180, t);
+    thud.frequency.exponentialRampToValueAtTime(58, t + 0.16);
+    var tg = ctx.createGain();
+    tg.gain.setValueAtTime(0.0001, t);
+    tg.gain.exponentialRampToValueAtTime(0.16, t + 0.01);
+    tg.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    thud.connect(tg); tg.connect(out);
+    thud.start(t); thud.stop(t + 0.32);
+    [1180, 1790, 2610].forEach(function (f, i) {
+      var o = ctx.createOscillator(); o.type = "triangle";
+      o.frequency.setValueAtTime(f, t + 0.02);
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.045 / (i + 1), t + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55 - i * 0.12);
+      o.connect(g); g.connect(out);
+      o.start(t + 0.02); o.stop(t + 0.6);
+    });
+    var size = Math.max(1, Math.floor(ctx.sampleRate * 0.22));
+    var buf = ctx.createBuffer(1, size, ctx.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var j = 0; j < size; j++) d[j] = Math.random() * 2 - 1;
+    var src = ctx.createBufferSource(); src.buffer = buf;
+    var bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 5;
+    bp.frequency.setValueAtTime(1500, t + 0.1);
+    bp.frequency.exponentialRampToValueAtTime(3200, t + 0.3);
+    var sg = ctx.createGain();
+    sg.gain.setValueAtTime(0.0001, t + 0.1);
+    sg.gain.exponentialRampToValueAtTime(0.03, t + 0.15);
+    sg.gain.exponentialRampToValueAtTime(0.0001, t + 0.32);
+    src.connect(bp); bp.connect(sg); sg.connect(out);
+    src.start(t + 0.1); src.stop(t + 0.34);
   } catch (e) {}
 }
 function playTrunkOpenSound(panId) {
@@ -46960,6 +47292,7 @@ function spawnDustMote(container) {
     });
     var gsReset = document.getElementById("stage-garden");
     if (gsReset) gsReset.classList.remove("g-c1-lit", "g-c2-lit");
+    if (window.__resetDrugsbox) window.__resetDrugsbox(); // a fresh game re-locks the magic box (and re-rolls which wedding its lock asks about)
     if (window.__resetTripCreatures) window.__resetTripCreatures();
     if (window.__stopIbogaSlideshow) window.__stopIbogaSlideshow();
     if (window.__resetDmt) window.__resetDmt();
@@ -47706,6 +48039,7 @@ function spawnDustMote(container) {
         // drugsbox click draws from the shuffled deck instead of the bloom
         var pd = cursorPointFor("garden-drugsbox");
         if (pd) cursorRipple(pd.x, pd.y);
+        if (window.__unlockDrugsbox) window.__unlockDrugsbox(); // it's their box and their date — they don't stop to dial it
         mushroomTrip();
       }], [0, cine("cine_bloom")],                       // the plants bloom fractals
       [5600, visit("cuddly")], [0, cine("cine_sway")],   // hold on the trip, then move on

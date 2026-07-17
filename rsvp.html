@@ -3581,6 +3581,13 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .bx-item.rocking .bx-wob{animation:bx-rock .55s ease-in-out}
 @keyframes bx-rock{0%,100%{transform:rotate(0)}20%{transform:rotate(-4deg)}52%{transform:rotate(3deg)}78%{transform:rotate(-1.4deg)}}
 @media (prefers-reduced-motion: reduce){.bx-adorn{transition:none} .bx-item.rocking .bx-wob{animation:none}}
+/* The low table is only out when there's food to serve (see MEALS): Nowruz, Štědrý večer and
+   Christmas Day. An overlay like the hats above, for the same reason — two of the three fall
+   inside the holiday dressing, so the tree stays up and the table joins it. visibility, not
+   display, so WebKit can't leak the hidden slab into the room. */
+#cuddly-table{opacity:0; visibility:hidden; transition:opacity .6s ease}
+#loft-game-strip.meal-on #cuddly-table{opacity:1; visibility:visible}
+@media (prefers-reduced-motion: reduce){#cuddly-table{transition:none}}
 #cuddly-behdad{transform-box:fill-box; transform-origin:bottom center}
 #cuddly-behdad.bottom-wiggle{animation:cuddly-bottom-wiggle .5s ease-in-out}
 @keyframes cuddly-bottom-wiggle{
@@ -9412,6 +9419,47 @@ section{margin:1.9rem 0}
 </g>
 </g>
 </g>
+</g>
+<!-- The owners' own low teak table, redrawn from their photo: a stepped slab sitting
+     right on the floor — a raised slatted platform, a lower step at its right, a chunky
+     banded rim, one dark round foot underneath. It stands on the floor in FRONT of the
+     daybed's right end, so it's drawn after everyone who sits on the daybed, and before
+     the room's atmospheric overlays (sunrays / smoke / dusk) so it dims with the room.
+     Out only on the days there's a meal on it — see MEALS and the .meal-on rule; most of
+     the year the nook has no table at all, which is the point.
+     Placement is the lone static translate on this wrapper; nothing inside animates, so
+     there is no transform to clobber. Furniture, not a toy: pointer-events:none keeps the
+     daybed, the blankets and the couple's leg eggs behind it fully clickable.
+     Local coords: the tabletop surface is x0-100, y0-22 (see #cuddly-table-setting). -->
+<g id="cuddly-table" transform="translate(390,280)" pointer-events="none" aria-hidden="true">
+<defs>
+<linearGradient id="cuddly-table-top-grad" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#b5763f"/>
+<stop offset="1" stop-color="#9d5f31"/>
+</linearGradient>
+<linearGradient id="cuddly-table-rim-grad" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#7f4a27"/>
+<stop offset="1" stop-color="#653a1e"/>
+</linearGradient>
+</defs>
+<ellipse cx="70" cy="47" rx="72" ry="4.5" fill="#4a3222" opacity="0.20"/>
+<ellipse cx="106" cy="46" rx="7" ry="3.2" fill="#2b2420"/>
+<g id="cuddly-table-step">
+<rect x="98" y="32" width="44" height="12" fill="url(#cuddly-table-rim-grad)" stroke="#4e2d16" stroke-width="1.5"/>
+<rect x="98" y="10" width="44" height="22" fill="url(#cuddly-table-top-grad)" stroke="#4e2d16" stroke-width="1.5"/>
+<path d="M108 10 V32 M118 10 V32 M128 10 V32" stroke="#4e2d16" stroke-width="1.2" opacity="0.65"/>
+<rect x="99" y="10.8" width="6" height="21" fill="#4e2d16" opacity="0.3"/>
+</g>
+<g id="cuddly-table-slab">
+<rect x="0" y="22" width="100" height="22" fill="url(#cuddly-table-rim-grad)" stroke="#4e2d16" stroke-width="1.5"/>
+<path d="M0 34 H100" stroke="#4e2d16" stroke-width="1.4" opacity="0.45"/>
+<rect x="0" y="0" width="100" height="22" fill="url(#cuddly-table-top-grad)" stroke="#4e2d16" stroke-width="1.5"/>
+<rect x="1.2" y="1.2" width="97.6" height="4.5" fill="#d59a63" opacity="0.22"/>
+<path d="M10 0 V22 M20 0 V22 M30 0 V22 M40 0 V22 M50 0 V22 M60 0 V22 M70 0 V22 M80 0 V22 M90 0 V22" stroke="#4e2d16" stroke-width="1.2" opacity="0.65"/>
+</g>
+<!-- empty on purpose: where a later pass hangs the seasonal feasts (Nowruz herb rice
+     and fish in March, the Czech carp and potato salad on Dec 24) onto the tabletop -->
+<g id="cuddly-table-setting"></g>
 </g>
 <!-- The knives live at the end of the stage so a dragged knife paints over
      everything it's carried across (SVG has no z-index; paint order rules).
@@ -47033,6 +47081,30 @@ function spawnDustMote(container) {
   // inside the holiday dressing, and the picture IS the tree with the morning-after pile
   // under it. Dec 26 alone is truer to the day; the week is what people will actually catch.
   function inBoxingWindow(s) { return s.m === 11 && s.d >= 26 && s.d <= 31; }
+  // The low table is out only when there's food to serve — the owners' rule, and the reason
+  // this is a MEAL list rather than a piece of furniture that's simply always there. Like the
+  // birthday hats it's an overlay, not a season: Štědrý večer and Christmas Day both fall
+  // inside the holiday dressing (Dec 1 – Jan 6), so a season- class could never express them.
+  // Each row is one dinner: `on` decides the day, `what` names the class the dishes will hang
+  // off (#cuddly-table-setting) when they're built. Nowruz's window is decorForDate's own.
+  var MEALS = [
+    { what: "nowruz", on: function (m, d) { return (m === 2 && d >= 20) || (m === 3 && d <= 1); } }, // Mar 20 – Apr 1: sabzi polo ba mahi
+    { what: "stedry", on: function (m, d) { return m === 11 && d === 24; } },                        // Dec 24: fried carp + potato salad
+    { what: "xmas",   on: function (m, d) { return m === 11 && d === 25; } }                         // Dec 25: turkey
+  ];
+  // Every row toggled on every call — a preview that walks off a meal day has to clear the
+  // table behind it. `meal-on` is the table itself; the per-meal classes are for the dishes.
+  function applyMeals(s) {
+    var strip = document.getElementById("loft-game-strip");
+    if (!strip) return;
+    var any = false;
+    MEALS.forEach(function (meal) {
+      var on = !!meal.on(s.m, s.d);
+      strip.classList.toggle("meal-" + meal.what, on);
+      if (on) any = true;
+    });
+    strip.classList.toggle("meal-on", any);
+  }
   window.__isNewYearSky = function () { var s = seasonDate(); return (s.m === 11 && s.d >= 24) || (s.m === 0 && s.d === 1); }; // Dec 24 – Jan 1
   // Same window decorForDate dresses for, so the sky can never disagree with the bulbs.
   window.__isCanadaDaySky = function () { var s = seasonDate(); return (s.m === 5 && s.d === 30) || (s.m === 6 && s.d <= 4); }; // Jun 30 – Jul 4
@@ -47080,6 +47152,7 @@ function spawnDustMote(container) {
     var s = seasonDate();
     window.__setSeason(decorForDate(s.m, s.d));
     applyBirthdays(s); // an overlay: it rides whatever __setSeason just dressed the loft in
+    applyMeals(s);     // same deal: the low table comes out for the dinners, inside or outside a season
     if (window.__applyWeddingDay) window.__applyWeddingDay(); // the wedding is a season too — refresh before the sky reads it
     var strip = document.getElementById("loft-game-strip");
     if (strip) {

@@ -24892,7 +24892,12 @@ var ABANDONED_CALL_MS = 30000;
   // WebKit (createMediaElementSource bypasses it) — route the level to the in-graph gain then;
   // before capture (or with the pipeline off) plain .volume still governs native playback. So
   // every volume write (steady level, room/door acoustics, crossfades) goes through these.
-  function setSongLevel(a, v) { if (!a) return; v = Math.max(0, v); if (a._eqGain) { try { a._eqGain.gain.value = v; } catch (e) {} } else { try { a.volume = v; } catch (e) {} } }
+  // Ramp the in-graph gain over a short constant (~12ms) rather than stepping .value: an
+  // instant AudioParam step on a loud passage is an audible click (a volume-button press,
+  // a room/door acoustics change, a fade tick). 12ms de-zippers the click while staying well
+  // under fadeSongTo's 40ms step cadence, so crossfades don't lag. Pre-capture / pipeline-off
+  // still rides native .volume (already browser-smoothed).
+  function setSongLevel(a, v) { if (!a) return; v = Math.max(0, v); if (a._eqGain) { try { if (eqAudioCtx) a._eqGain.gain.setTargetAtTime(v, eqAudioCtx.currentTime, 0.012); else a._eqGain.gain.value = v; } catch (e) {} } else { try { a.volume = v; } catch (e) {} } }
   function songLevel(a) { return a ? (a._eqGain ? a._eqGain.gain.value : a.volume) : 0; }
   window.__setSongLevel = setSongLevel; window.__songLevel = songLevel; // the cinematic/instrument IIFEs drive the same song elements
   // Stereo-width stage nodes (mid-side-style narrowing) -- see ensureAudioGraph for the
@@ -48468,7 +48473,12 @@ function spawnDustMote(container) {
       var a = document.getElementById(id);
       if (!a) return;
       try {
-        a.volume = 0;
+        // Force silence before the unlock play(). On WebKit a.volume is inert once the song is
+        // captured (createMediaElementSource bypasses it), so a.volume=0 would let this "silent"
+        // play() resume the captured song at full _eqGain level — a loud blip. Zero the in-graph
+        // gain when captured; fall back to .volume before capture. Hard step is click-free here
+        // (the element is paused, nothing is sounding yet); the real play path resets the level.
+        if (a._eqGain) a._eqGain.gain.value = 0; else a.volume = 0;
         var settle = function () { try { a.pause(); a.currentTime = 0; } catch (e) {} };
         var p = a.play();
         // settle either way (no unhandledrejection); a reject here means the unlock

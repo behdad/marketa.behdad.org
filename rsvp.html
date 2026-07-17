@@ -39093,8 +39093,13 @@ function spawnSteamWisps(svg, cx, cy, scale, xDir, yDir, count, peakOpacity) {
         path.setAttribute("stroke-width", 2.5 * s);
         path.setAttribute("stroke-linecap", "round");
         path.setAttribute("opacity", "0");
+        path.setAttribute("class", "steam-wisp");
         path.style.transformBox = "fill-box";
         path.style.transformOrigin = "center";
+        // drop-oldest cap: onfinish removal stalls in a throttled/occluded tab, so an
+        // autonomous caller (kettle, grill) would pile up nodes forever without this bound
+        var wisps = svg.getElementsByClassName("steam-wisp");
+        while (wisps.length >= 40) wisps[0].remove();
         svg.appendChild(path);
         if (path.animate) {
           var anim = path.animate([
@@ -39158,8 +39163,12 @@ function spawnMusicNotes(svg, cx, cy) {
         t.setAttribute("font-size", "13");
         t.setAttribute("fill", "#8e3a4a");
         t.textContent = notes[i];
+        t.setAttribute("class", "music-note");
         t.style.transformBox = "view-box"; // WebKit mis-pivots fill-box on <text>; pivot on the glyph's own coords
         t.style.transformOrigin = (cx + i * 6) + "px " + cy + "px";
+        // drop-oldest cap: same throttled-tab onfinish stall as steam wisps (instrument/radio note loops)
+        var live = svg.getElementsByClassName("music-note");
+        while (live.length >= 24) live[0].remove();
         svg.appendChild(t);
         if (t.animate) {
           var anim = t.animate([

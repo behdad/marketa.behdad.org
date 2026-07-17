@@ -45,7 +45,13 @@ function hook(opts) {
 }
 
 function chromeCmd(scratch, budgetMs, extraFlags) {
-  return "google-chrome --headless=new --disable-gpu --window-size=1100,900 " +
+  // --mute-audio: the playthrough click-storms every interactive element and state.js
+  // starts beds/dances/songs, so the game's Web Audio actually SOUNDS. --headless=new
+  // routes audio to the default output device (and state.js forces
+  // --autoplay-policy=no-user-gesture-required), so without this a test run blasts the
+  // dev's speakers with a glitchy pile-up of overlapping sounds. The tests only inspect
+  // the DOM/report — they never assert on audible output — so muting is free.
+  return "google-chrome --headless=new --disable-gpu --mute-audio --window-size=1100,900 " +
     (extraFlags ? extraFlags + " " : "") +
     "--virtual-time-budget=" + budgetMs + " --dump-dom " + JSON.stringify("file://" + scratch);
 }

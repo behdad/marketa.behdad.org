@@ -3569,12 +3569,12 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 #loft-game-strip.bd-irene .bd-hat-irene,
 #loft-game-strip.bd-pouria .bd-hat-pouria{opacity:1; visibility:visible}
 @media (prefers-reduced-motion: reduce){.bd-adorn{transition:none}}
-/* Boxing Day boxes: the same overlay idiom as the hats — Dec 26–31 falls inside the holiday
-   dressing, so they ride .boxing-day alongside the tree. visibility (not display) so WebKit
-   really hides them, and so they take no clicks out of season. Unlike .bd-adorn these DO want
-   pointer events; a <g> only hits its painted geometry, so the pile stays as tight as its art. */
+/* The opened gifts under the tree: the same overlay idiom as the hats — Dec 24/25 fall inside
+   the holiday dressing, so they ride .gifts-out alongside the tree. visibility (not display) so
+   WebKit really hides them, and so they take no clicks out of season. Unlike .bd-adorn these DO
+   want pointer events; a <g> only hits its painted geometry, so the pile stays as tight as its art. */
 .bx-adorn{opacity:0; visibility:hidden; transition:opacity .6s ease}
-#loft-game-strip.boxing-day .bx-adorn{opacity:1; visibility:visible}
+#loft-game-strip.gifts-out .bx-adorn{opacity:1; visibility:visible}
 .bx-item{cursor:pointer}
 /* the wobble rides an inner wrapper, so each item's floor shadow stays put while it rocks */
 .bx-wob{transform-box:fill-box; transform-origin:50% 100%}
@@ -10221,9 +10221,9 @@ section{margin:1.9rem 0}
 <rect id="office-tree-pot-hit" class="sn-tree-hit" x="542" y="292.5" width="32" height="12.5" fill="transparent"/>
 <rect id="office-tree-star-hit" class="sn-tree-hit" x="548" y="203" width="21" height="19" fill="transparent"/>
 </g>
-<!-- Boxing Day / druhý svátek vánoční (Dec 26–31): the morning after, at the foot of the
-     tree. An OVERLAY like the birthday hats, never a season — Dec 26 sits inside the
-     holiday dressing, so these ride .boxing-day ALONGSIDE the tree rather than replacing
+<!-- The opened gifts (Dec 24/25 only): the morning after, at the foot of the
+     tree. An OVERLAY like the birthday hats, never a season — both days sit inside the
+     holiday dressing, so these ride .gifts-out ALONGSIDE the tree rather than replacing
      it. Source-ordered after #office-tree so they paint in front of it; the two items that
      stand over the pot (x587–629, bottom y≈306) are based BELOW its foot so "in front"
      reads as depth rather than as a mistake. Coordinates are the rendered ones — no scale
@@ -14332,12 +14332,10 @@ var T = {
     season_summer: "☀ summer",
     season_smoky: "🔥 smoky season",
     season_holiday: "🎄 holiday season",
-    season_boxing: "🛍 boxing day",
     season_newyear: "🎆 new year",
     season_spooky: "🎃 spooky season",
     // The same pile of boxes, named by whichever country you're standing in — Edmonton queues
     // for the sales, Czechia has a second Christmas and sings at the door. That split is the joke.
-    boxing_name: "<em>Boxing Day</em> — doors opened at six.",
     season_bd_behdad: "🥳 behdad's birthday",
     season_bd_marketa: "🥳 markéta's birthday",
     season_bd_irene: "🥳 irene's birthday",
@@ -14802,10 +14800,8 @@ var T = {
     season_summer: "☀ léto",
     season_smoky: "🔥 kouřová sezóna",
     season_holiday: "🎄 svátky",
-    season_boxing: "🛍 druhý svátek vánoční",
     season_newyear: "🎆 nový rok",
     season_spooky: "🎃 strašidelno",
-    boxing_name: "<em>Druhý svátek vánoční</em> — koleda, koleda, Štěpáne…",
     season_bd_behdad: "🥳 behdadovy narozeniny",
     season_bd_marketa: "🥳 markétiny narozeniny",
     season_bd_irene: "🥳 ireniny narozeniny",
@@ -35832,23 +35828,19 @@ async def localfont(name):
     playDryClickSound("office-tree"); // a switch click at the plug
   });
 })();
-// The Boxing Day pile. Each item rocks and rustles on a tap, like the tree's taps beside it —
-// a dead pile next to a tree that answers would read as broken. The tap also NAMES the day, so
-// the EN/CS split reaches phones: the hover tooltip that names it everywhere else is desktop-only.
+// The gift pile. Each item rocks and rustles on a tap, like the tree's taps beside it — a dead
+// pile next to a tree that answers would read as broken. Nothing to name: they're just the gifts.
 (function () {
   var pile = document.getElementById("office-boxing");
   if (!pile) return;
-  function name() { var l = T[document.documentElement.lang] ? document.documentElement.lang : "en"; return T[l].boxing_name; }
   Array.prototype.forEach.call(pile.querySelectorAll(".bx-item"), function (item) {
     var wob = item.querySelector(".bx-wob");
     wob.addEventListener("animationend", function (e) { if (e.animationName === "bx-rock") item.classList.remove("rocking"); });
-    hoverTooltip(item, name, "top");
     item.addEventListener("click", function (e) {
       e.stopPropagation();
       item.classList.remove("rocking");
       requestAnimationFrame(function () { requestAnimationFrame(function () { item.classList.add("rocking"); }); });
       playPaperShuffleSound(item.id);
-      eggBubble(item, name(), "top");
     });
   });
 })();
@@ -47016,7 +47008,6 @@ function spawnDustMote(container) {
     spooky:  [9, 31],  // Halloween
     bd_irene: [11, 7], // Irene's birthday — inside the holiday dressing, which stays up
     holiday: [11, 25], // Christmas Day: tree + lights, and deep enough in the ramp to come down white
-    boxing:  [11, 26], // Boxing Day / druhý svátek vánoční — the pile under the tree that stays up
     newyear: [11, 31], // New Year's Eve: holiday dressing AND fireworks
     bd_marketa: [0, 10], // Markéta's birthday — the day after the holiday dressing comes down
     wedding: [4, 1],   // May 1: the Edmonton wedding — ribbon + fireworks sky
@@ -47077,10 +47068,11 @@ function spawnDustMote(container) {
     if (!strip) return;
     BIRTHDAYS.forEach(function (b) { strip.classList.toggle("bd-" + b.who, inBirthdayWindow(b, s.m, s.d)); });
   }
-  // Dec 26–31, the sales week. An overlay for the same reason the hats are: the day sits
-  // inside the holiday dressing, and the picture IS the tree with the morning-after pile
-  // under it. Dec 26 alone is truer to the day; the week is what people will actually catch.
-  function inBoxingWindow(s) { return s.m === 11 && s.d >= 26 && s.d <= 31; }
+  // The gifts, out on the two nights they're opened and not a day longer: Štědrý večer (the
+  // 24th, when Ježíšek brings them) and Christmas morning (the 25th). An overlay for the same
+  // reason the hats are — both days sit inside the holiday dressing, and the picture IS the
+  // tree with the opened pile under it. The rest of the season the tree stands alone.
+  function inGiftsWindow(s) { return s.m === 11 && (s.d === 24 || s.d === 25); }
   // The low table is out only when there's food to serve — the owners' rule, and the reason
   // this is a MEAL list rather than a piece of furniture that's simply always there. Like the
   // birthday hats it's an overlay, not a season: Štědrý večer and Christmas Day both fall
@@ -47156,7 +47148,7 @@ function spawnDustMote(container) {
     if (window.__applyWeddingDay) window.__applyWeddingDay(); // the wedding is a season too — refresh before the sky reads it
     var strip = document.getElementById("loft-game-strip");
     if (strip) {
-      strip.classList.toggle("boxing-day", inBoxingWindow(s)); // another overlay, same as the hats
+      strip.classList.toggle("gifts-out", inGiftsWindow(s)); // another overlay, same as the hats
       strip.style.setProperty("--smoke", smokeLevelFor(s));
       // Two more axes read off the same date, riding ALONGSIDE the decor class rather than
       // through decorForDate — which answers "what's out", not "what's it like out" (winter)
@@ -47184,11 +47176,11 @@ function spawnDustMote(container) {
   window.__applySeasonDate = applySeasonDate; // re-apply --smoke when late data (real air quality) lands
   applySeasonDate();
   // 's' cycles the previews forward, roughly in calendar order: today → spooky → irene's
-  // birthday → holiday → boxing day → new year → markéta's birthday → winter → valentine's →
+  // birthday → holiday → new year → markéta's birthday → winter → valentine's →
   // chaharshanbe suri → nowruz → sizdah bedar → witches' night → wedding → pouria's birthday →
   // pride → canada → summer → smoky → behdad's birthday → today. Shift+S walks the ring backwards.
   // Shift is the direction; any OTHER modifier held (or typing) still skips (same guard as 'f').
-  var SEASON_CYCLE = [null, "spooky", "bd_irene", "holiday", "boxing", "newyear", "bd_marketa", "winter", "valentines", "chaharshanbe", "nowruz", "sizdah", "carodejnice", "wedding", "bd_pouria", "pride", "canada", "summer", "smoky", "bd_behdad"];
+  var SEASON_CYCLE = [null, "spooky", "bd_irene", "holiday", "newyear", "bd_marketa", "winter", "valentines", "chaharshanbe", "nowruz", "sizdah", "carodejnice", "wedding", "bd_pouria", "pride", "canada", "summer", "smoky", "bd_behdad"];
   // Shared apply-path for the 's' key AND the console season(); shows the naming pill.
   function applySeasonPreview(name) {
     seasonPreview = SEASON_PREVIEW_DATE[name] ? name : null;
@@ -49036,11 +49028,10 @@ function spawnDustMote(container) {
   // winter · spooky · auto(=the calendar's own season). Friendly aliases fold onto those;
   // no arg still SURPRISES you with a random one (a documented feature). Drives the same
   // apply-path the 's' key uses (strip class + naming pill + cycle-sync).
-  var SEAS = ["spooky", "bd_irene", "holiday", "boxing", "newyear", "bd_marketa", "winter", "valentines", "chaharshanbe", "nowruz", "sizdah", "carodejnice", "wedding", "bd_pouria", "pride", "canada", "summer", "smoky", "bd_behdad", "auto"]; // same order the 's' key cycles
+  var SEAS = ["spooky", "bd_irene", "holiday", "newyear", "bd_marketa", "winter", "valentines", "chaharshanbe", "nowruz", "sizdah", "carodejnice", "wedding", "bd_pouria", "pride", "canada", "summer", "smoky", "bd_behdad", "auto"]; // same order the 's' key cycles
   var SEASON_ALIASES = {
     spooky: "spooky", halloween: "spooky",
     holiday: "holiday", xmas: "holiday", christmas: "holiday", tree: "holiday",
-    boxing: "boxing", boxingday: "boxing", "boxing day": "boxing", stephen: "boxing", "štěpán": "boxing", stepan: "boxing", boxes: "boxing",
     newyear: "newyear", "new year": "newyear", nye: "newyear", fireworks: "newyear",
     winter: "winter", snow: "winter",
     valentines: "valentines", valentine: "valentines", love: "valentines", hearts: "valentines",
@@ -49062,7 +49053,6 @@ function spawnDustMote(container) {
   };
   var SEASON_SAID = {
     spooky: "🎃 spooky dressing on.", holiday: "🎄 holiday dressing on.", newyear: "🎆 fireworks over the loft.",
-    boxing: "🛍 boxing day in edmonton, svatého štěpána in prague. same boxes.",
     wedding: "💍 the loft's dressed for the wedding.",
     winter: "❄ deep winter — it's coming down white.", valentines: "💕 hearts up in the nook.",
     chaharshanbe: "🔥 chaharshanbe suri — jump it: زردی من از تو، سرخی تو از من.",

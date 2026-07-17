@@ -1054,9 +1054,13 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #stage-kitchen.dusk #kitchen-bartender-hit.grabbing{cursor:grabbing}
 @media (prefers-reduced-motion: reduce){#kitchen-bartender-shaker.tossing{animation:none}}
 /* Flair-Catch spotlight: dim the room while the bar mini-game runs, keeping the bar+bartender
-   lit (the dim <rect> paints before #kitchen-bar). Mirrors #stage-office.arcade #office-alien-dim. */
-#kitchen-flair-dim{opacity:0; transition:opacity .4s ease}
-#stage-kitchen.flair-on #kitchen-flair-dim{opacity:.5}
+   lit (the dim <rect> paints before #kitchen-bar). Mirrors #stage-office.arcade #office-alien-dim.
+   While the game runs the dim is also the room's CLICK SINK (same contract as the arcade's):
+   pointer-events:auto makes it the hit-test target, so a stray tap can't reach the espresso
+   machine, the grinder or any prop it paints over. Only the lit things drawn LATER stay live —
+   the bartender (the game's control), the counter and #kitchen-flair-layer's close button. */
+#kitchen-flair-dim{opacity:0; transition:opacity .4s ease; pointer-events:none}
+#stage-kitchen.flair-on #kitchen-flair-dim{opacity:.5; pointer-events:auto}
 @media (prefers-reduced-motion: reduce){#kitchen-flair-dim{transition:none}}
 /* the bartender's cocktail-make station: a JS-built glass fills, gets a garnish, and is
    presented, driven by the make module. Lives inside #kitchen-bar so it inherits the party
@@ -1500,9 +1504,15 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 @media (prefers-reduced-motion: reduce){#office-chair.spinning{animation:none}}
 /* office chair "alien arcade": a hidden micro-game that runs only while the chair is
    dragged. The dim darkens the whole office EXCEPT the chair (it paints earlier in
-   source); reduced motion just snaps it on instead of fading. */
+   source); reduced motion just snaps it on instead of fading.
+   While the game runs the dim is also the room's CLICK SINK: it paints over the monitor,
+   the laptop and every desk prop, so pointer-events:auto makes it the hit-test target and
+   a stray tap can't zoom a screen or launch an app behind the game. Only what paints
+   LATER stays live — the chair (the game's control) and #office-alien-layer's close
+   button. Inactive it must stay pointer-events:none, or this full-room rect would
+   permanently swallow the office. */
 #office-alien-dim{opacity:0; transition:opacity .35s ease; pointer-events:none}
-#stage-office.arcade #office-alien-dim{opacity:.72}
+#stage-office.arcade #office-alien-dim{opacity:.72; pointer-events:auto}
 @media (prefers-reduced-motion: reduce){#office-alien-dim{transition:none}}
 #kitchen-tamper-inner{transform-box:fill-box; transform-origin:bottom center}
 #kitchen-tamper.wobbling #kitchen-tamper-inner{animation:tamper-tamp .62s ease-in-out}
@@ -20131,35 +20141,24 @@ document.addEventListener("click", function (e) {
   if (chair) {
     var chairSpinStreak = 0;
     var chairSpinStreakTimer = null;
-    var chairArcadeClicks = 0, chairArcadeClickTimer = null;
-    var CHAIR_ARCADE_CLICKS = 5, CHAIR_ARCADE_WINDOW = 1200; // a fast flurry of clicks launches the invaders game (drag-to-arm is hard to discover)
+    // Three clicks in a row spin the chair dizzy AND launch the invaders arcade — the dizzy
+    // swirl IS the launch ("the chair swivels — invaders inbound!"). Folding the two together
+    // keeps every swirl reachable: one or two clicks still just spin it, and the third's
+    // escalation to dizzy survives (a bare click-count threshold would preempt it). The
+    // drag-to-arm path below still works; it's just far harder to stumble on.
+    var CHAIR_ARCADE_CLICKS = 3, CHAIR_CLICK_WINDOW = 900;
     function spinChair() {
-      // a rapid flurry of clicks on the already-swirling chair discovers the hidden invaders arcade
-      chairArcadeClicks++;
-      clearTimeout(chairArcadeClickTimer);
-      chairArcadeClickTimer = setTimeout(function () { chairArcadeClicks = 0; }, CHAIR_ARCADE_WINDOW);
-      if (chairArcadeClicks >= CHAIR_ARCADE_CLICKS) {
-        chairArcadeClicks = 0;
-        startArcade();
-        return; // the launching click arms the game instead of adding another swirl
-      }
       chairSpinStreak++;
       clearTimeout(chairSpinStreakTimer);
-      chairSpinStreakTimer = setTimeout(function () { chairSpinStreak = 0; }, 900);
-      if (chairSpinStreak >= 3) {
-        chairSpinStreak = 0;
-        chair.classList.remove("spinning", "dizzy");
-        requestAnimationFrame(function () {
-          requestAnimationFrame(function () { chair.classList.add("dizzy"); });
-        });
-        playChairWhirlSound(1.3);
-      } else {
-        chair.classList.remove("spinning", "dizzy");
-        requestAnimationFrame(function () {
-          requestAnimationFrame(function () { chair.classList.add("spinning"); });
-        });
-        playChairWhirlSound(1);
-      }
+      chairSpinStreakTimer = setTimeout(function () { chairSpinStreak = 0; }, CHAIR_CLICK_WINDOW);
+      var launching = chairSpinStreak >= CHAIR_ARCADE_CLICKS;
+      if (launching) chairSpinStreak = 0;
+      chair.classList.remove("spinning", "dizzy");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { chair.classList.add(launching ? "dizzy" : "spinning"); });
+      });
+      playChairWhirlSound(launching ? 1.3 : 1);
+      if (launching) startArcade();
     }
     var CHAIR_MIN_X = -180, CHAIR_MAX_X = 300;
     var CHAIR_Y_OFFSET = -5;
@@ -22516,6 +22515,20 @@ document.addEventListener("click", function (e) {
         setBartenderOffset(barDragStartOffset + (bartenderSvgX(e) - barDragStartX));
       });
     }
+    // Three taps in a row on Pouria launch Flair-Catch — the same gesture the office chair uses
+    // for the invaders, since the quick-shuffle arm below is just as hard to stumble on. Runs
+    // AFTER his tap reaction, so the launching tap still tosses/pours like any other; the game
+    // gates match the drag path's exactly. He paints above the flair dim, so once the game runs
+    // he stays tappable — hence the flairActive bail rather than relying on the click sink.
+    var barClickStreak = 0, barClickStreakTimer = null;
+    var FLAIR_CLICK_LAUNCH = 3, FLAIR_CLICK_WINDOW = 900;
+    function bartenderTapLaunch() {
+      if (flairActive || flairReduce || !barUpNow() || window.currentStageName !== "kitchen") { barClickStreak = 0; return; }
+      barClickStreak++;
+      clearTimeout(barClickStreakTimer);
+      barClickStreakTimer = setTimeout(function () { barClickStreak = 0; }, FLAIR_CLICK_WINDOW);
+      if (barClickStreak >= FLAIR_CLICK_LAUNCH) { barClickStreak = 0; startFlairCatch(); }
+    }
     bartender.addEventListener("click", function (e) {
       var hit = e.target && e.target.closest ? e.target.closest("#kitchen-bartender-hit") : null;
       if (!hit) return;
@@ -22525,10 +22538,11 @@ document.addEventListener("click", function (e) {
         // calm night bar: a tap MAKES a drink on demand (there's no ambient auto-making at night).
         // __makeCocktailHere self-gates on bar-up / at-the-bar / not-mid-Flair and never lights the party.
         if (window.__makeCocktailHere) window.__makeCocktailHere();
-        return;
+      } else {
+        tossShaker();
+        playShakerRattleSound("kitchen-bartender"); // party tap: flair toss + rattle (ambient auto-making runs alongside)
       }
-      tossShaker();
-      playShakerRattleSound("kitchen-bartender"); // party tap: flair toss + rattle (ambient auto-making runs alongside)
+      bartenderTapLaunch();
     });
     bartenderShaker.addEventListener("animationend", function (e) {
       if (e.target === bartenderShaker && bartenderShaker.classList.contains("tossing")) bartenderShaker.classList.remove("tossing");
@@ -36718,6 +36732,17 @@ async def localfont(name):
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCuddlyCabinet(); }
     });
   });
+  // resetHunt hook: mouseHasRun is a closure latch, so a reset that only clears classes would
+  // leave the mouse spent — the cabinet would open on a fresh game with nothing inside it.
+  window.__resetCuddlyCabinet = function () {
+    mouseHasRun = false;
+    var mouse = document.getElementById("cuddly-mouse");
+    if (mouse) mouse.classList.remove("scurrying"); // .scurrying is animation-forwards, nothing else drops it
+    ["cuddly-cabinet-door-1", "cuddly-cabinet-door-2"].forEach(function (id) {
+      var d = document.getElementById(id);
+      if (d) d.classList.remove("open");
+    });
+  };
   ["cuddly-passthrough-door-1", "cuddly-passthrough-door-2"].forEach(function (id) {
     var el = document.getElementById(id);
     if (!el) return;
@@ -46861,6 +46886,7 @@ function spawnDustMote(container) {
     window.__pragueCalled = false;
     clearCuddlySmoke(); // clear any lingering joint haze
     if (window.__stowCat) window.__stowCat(); // cat back in the chest, wherever it had wandered
+    if (window.__resetCuddlyCabinet) window.__resetCuddlyCabinet(); // fresh game: cabinet shut, mouse back in the box + re-armed for its one dash
     if (window.__laserOff) window.__laserOff(); // any console laser dot mid-dart goes with it
     kitchenPowered = false;
     kitchenWarmedUp = false;
@@ -46913,6 +46939,7 @@ function spawnDustMote(container) {
     if (buildingsReset) Array.prototype.forEach.call(buildingsReset.querySelectorAll(".office-window"), function (g) { g.classList.remove("lit"); });
     if (window.resetChairPosition) window.resetChairPosition();
     if (window.stopFlairCatch) window.stopFlairCatch(); // reset: end any Flair-Catch run + clear #stage-kitchen.flair-on
+    if (window.__arcadeStop) window.__arcadeStop(); // ...and any invaders run + #stage-office.arcade, which now also gates the room's click sink
     if (window.resetBartenderPosition) window.resetBartenderPosition();
     if (window.resetBlanketPositions) window.resetBlanketPositions();
     gardenState.water = false;

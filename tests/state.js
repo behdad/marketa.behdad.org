@@ -28,10 +28,15 @@
 //      on the cuddly heads and the office skull; tap again -> all of it stops.
 //    - dusk: click the balcony sun -> every #stage-* gains .dusk; click again ->
 //      none keep it ("night is night everywhere").
-//    - extinguisher reset: dirty the state (dusk + music + dimmed lamp), fire
+//    - extinguisher reset: dirty the state (dusk + music + dimmed lamp + the
+//      cuddly cabinet open, which sends its hidden mouse on its one dash), fire
 //      window.__activateExtinguisher() -> dusk cleared everywhere, songs paused,
 //      back on kitchen, and the strip's class-state returns to its load-time
 //      snapshot (catches one-shot/state classes that a reset leaves stranded).
+//      Then re-open the cabinet: the mouse must dash AGAIN. That last assert is
+//      the one a class diff structurally cannot make — the "already ran" latch is
+//      a closure var, so a reset can look spotless in the DOM and still leave a
+//      once-per-game toy spent. Re-drive the trigger for any toy like that.
 //    - liveness: after all that chaos, goToStage("kitchen") still lands
 //      (currentStageIndex === 0) and a known element (the pans) still visibly
 //      reacts to a click (class mutation observed).
@@ -407,13 +412,17 @@ var PROBE_HARNESS = [
   "    ok('dusk: second sun click clears .dusk everywhere', !STAGES.some(function (s) { return has(s, 'dusk'); }),",
   "      STAGES.map(function (s) { return s + '=' + has(s, 'dusk'); }).join(' '));",
   "",
-  "    // extinguisher reset: dirty things first (dusk on, music on, lamp dimmed)",
+  "    // extinguisher reset: dirty things first (dusk on, music on, lamp dimmed, cabinet open)",
   "    click('balcony-sun');",
   "    click('garden-ukulele');",
   "    click('office-lamp');",
+  "    click('cuddly-cabinet-door-1');", // opens the cabinet -> the hidden mouse makes its one dash
   "    await sleep(450);",
   "    ok('reset setup: state is dirty (dusk + music + dimmed)',",
   "      has('stage-office', 'dusk') && song && !song.paused && has('office-lamp', 'dimmed'));",
+  "    ok('reset setup: cabinet open + mouse has made its dash',",
+  "      has('cuddly-cabinet-door-1', 'open') && has('cuddly-mouse', 'scurrying'),",
+  "      'open=' + has('cuddly-cabinet-door-1', 'open') + ' scurrying=' + has('cuddly-mouse', 'scurrying'));",
   "    ok('reset hook exists: window.__activateExtinguisher', typeof window.__activateExtinguisher === 'function');",
   "    if (window.__activateExtinguisher) window.__activateExtinguisher();",
   "    await sleep(2200);", // hiss + wipe (700ms) + resetHunt + generous settle for animationend cleanups
@@ -452,6 +461,17 @@ var PROBE_HARNESS = [
   "      settleDiff = resetDiffNow();",
   "    }",
   "    report.resetDiff = settleDiff;",
+  "",
+  "    // Re-arm check — the half a class diff can NEVER see. The cabinet mouse's",
+  "    // one-dash latch is a closure var (mouseHasRun), so a reset that restored",
+  "    // every class still left the box empty on a fresh game: open it again and",
+  "    // nothing came out. Any 'fires once per game' toy needs its latch cleared by",
+  "    // resetHunt, and only re-driving the trigger after a reset proves it. Runs",
+  "    // AFTER the diff settles — it re-dirties the very classes the diff reads.",
+  "    click('cuddly-cabinet-door-1');",
+  "    await sleep(250);",
+  "    ok('reset: the cabinet mouse re-arms (dashes again on a fresh game)', has('cuddly-mouse', 'scurrying'),",
+  "      'mouse did not scurry on a post-reset cabinet open — a one-shot latch survived resetHunt');",
   "",
   "    // liveness: the game still responds after the chaos",
   "    if (window.goToStage) window.goToStage('kitchen');",

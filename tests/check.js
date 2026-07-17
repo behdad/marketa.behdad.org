@@ -241,6 +241,34 @@ function checkAnimationClassCleanup(file, style, script, html) {
 // does nothing — a class of bug that bites on renames (rename the rule but not the
 // keyframes, or a plain typo). Bit the butterfly groove work (distinct groove keyframe
 // names). Extract every referenced animation-name and verify a @keyframes defines it.
+// A stray `*/` in the <style> block ends a comment EARLY, dumping the rest of that
+// comment's prose into the stylesheet as garbage — the CSS parser then discards
+// everything up to the next recovery point, silently killing whatever rules follow.
+// Nothing else here sees it: the text-based scans read comments and rules alike, and
+// the page still loads. Only state.js's reset diff caught the last one, and only via
+// an unrelated stranded class two rooms away. Editing a multi-line comment ABOVE a
+// rule (to document it) is exactly when this happens: the old text's closing `*/`
+// gets stranded mid-prose. Scanning for an unopened `*/` pins it to the line.
+function checkCssCommentBalance(file, style) {
+  if (!style) return;
+  var issues = [];
+  var depth = 0, line = 1;
+  for (var i = 0; i < style.length; i++) {
+    if (style[i] === "\n") { line++; continue; }
+    if (style[i] === "/" && style[i + 1] === "*") {
+      if (depth === 0) depth = 1; // CSS comments don't nest; a `/*` inside one is just text
+      i++;
+    } else if (style[i] === "*" && style[i + 1] === "/") {
+      if (depth === 0) issues.push("line " + line + ": `*/` with no open comment — the prose above it is leaking into the stylesheet");
+      depth = 0;
+      i++;
+    }
+  }
+  if (depth !== 0) issues.push("unterminated comment — a `/*` never closes, so the rest of the stylesheet is dead");
+  if (issues.length === 0) pass(file + ": <style> comments all open and close cleanly");
+  else fail(file + ": broken CSS comment (rules after it are silently discarded)", issues.join("\n"));
+}
+
 function checkAnimationKeyframes(file, style) {
   if (!style) return;
   var defined = new Set();
@@ -705,6 +733,7 @@ FILES.forEach(function (file) {
     checkI18nKeys(file, script, html);
     checkConsoleCmdRoster(file, script);
   }
+  checkCssCommentBalance(file, style);
   checkAnimationKeyframes(file, style);
   checkTransformClobber(file, style, html);
   checkConsoleOutClipSlack(file, style);

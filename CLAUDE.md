@@ -141,6 +141,13 @@ allowed exception, owner-confirmed.)
   And for a *timed* season test, drive `__applySeason` (the `s`-key/console path), not
   `__setSeason`: the air-quality fetch calls `__applySeasonDate` ~4s in and reverts the strip
   to the real date's decor, silently zeroing anything you were counting.
+- **Chrome serves a STALE `file://` page and your whole test run is fiction.** Two separate agents
+  hit this: `Network.setCacheDisabled` does **not** defeat it, and reusing a headless Chrome on a
+  fixed port can serve the pre-edit `rsvp.html` — producing a full page of confident, meaningless
+  PASS/FAIL. Also `Page.navigate` to an identical URL is a *same-document* navigation and never
+  reloads (this faked a "bug already present on load"). Fixes: a `?t=<timestamp>` cache-buster, a
+  unique port **and profile** per run, and an **`assertFresh` gate** — evaluate something that
+  proves the loaded page contains the code under test *before* trusting a single assertion.
 - **Don't prove a feature against a value the app never produces.** Two separate agents "proved"
   the sun's rays hit opacity 0 by setting `--smoke:1` by hand — but `--smoke` is a random `.5–1`
   roll that *never reaches 1*, so on a real smoky day the rays sat at ~45% and the owner saw them

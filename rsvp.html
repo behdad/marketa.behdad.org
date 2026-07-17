@@ -45314,7 +45314,7 @@ function spawnDustMote(container) {
     if (ae && (/^(BUTTON|A|INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) || ae.isContentEditable)) return; // real control focused → let Enter activate it
     var er = window.currentStageName, did = true;
     if (er === "kitchen") { if (window.__barUpNow && window.__barUpNow()) { if (window.__makeCocktailHere) window.__makeCocktailHere(); } else if (window.__kitchenDoNext) window.__kitchenDoNext(); } // bar up → make a cocktail; else next pending coffee step
-    else if (er === "garden") { if (window.party) window.party(!window.party()); }                     // toggle the party
+    else if (er === "garden") { if (!(window.__gardenDoNext && window.__gardenDoNext())) { if (window.party) window.party(!window.party()); } } // advance the solve (water→music→candles); once solved, toggle the party
     else if (er === "cuddly") { if (window.__cuddlyProjector) window.__cuddlyProjector.cycle(); }       // next projector channel
     else if (er === "office") { if (window.__wakeMonitorSaver && window.__wakeMonitorSaver()) {} else if (window.computer && !window.computer()) window.computer(true); else if (window.__toggleMonitorZoom) window.__toggleMonitorZoom(); } // wake the screensaver if it's up, else boot the PC if it's off, else toggle the monitor zoom
     else if (er === "balcony") { if (window.phone) window.phone(!window.phone()); }                    // toggle the cellphone
@@ -45863,6 +45863,20 @@ function spawnDustMote(container) {
     return true;
   }
   window.waterSpecificPlant = waterSpecificPlant;
+  // 'Enter' in the garden advances the solve one beat (water → music → candles), same idea as
+  // __kitchenDoNext: click the next pending element so its own onActivate runs. Returns the id it
+  // fired, or null when nothing's pending (solved) — the Enter handler falls through to the toggle.
+  window.__gardenDoNext = function () {
+    var nx = null;
+    if (!gardenState.water) nx = "garden-monstera";
+    else if (!gardenState.music) nx = "garden-ukulele";
+    else if (!gardenState.candles) {
+      var c1 = document.getElementById("garden-candle-1");
+      nx = (c1 && !c1.classList.contains("lit")) ? "garden-candle-1" : "garden-candle-2";
+    }
+    if (nx) { var el = document.getElementById(nx); if (el) el.dispatchEvent(new MouseEvent("click", { bubbles: true })); }
+    return nx;
+  };
   window.gardenPlantSpots = plantSpots;
   Object.keys(plantSpots).forEach(function (id) {
     var el = document.getElementById(id);

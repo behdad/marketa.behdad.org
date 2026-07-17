@@ -45924,14 +45924,29 @@ function spawnDustMote(container) {
       if (snowsOnItsOwn()) return true; // a snow day: it comes down on its own, day or night — no storm needed
       return window.__balconyStorm && isDuskBalcony(); // rain only during a dusk storm
     }
-    // Each drop replenishes itself when its fall animation finishes, so the live
-    // count stays constant (~RAIN_DROPS) and spawning naturally pauses when the
-    // tab is hidden (no frames -> no onfinish -> no new drops -> no pile-up).
+    // Live balcony drops (rain + snow share the sky, so one total). Kept by spawn/finish
+    // rather than counted off the DOM: balcony drops hang on the strip with no container
+    // of their own, so a count would mean a querySelectorAll over the whole strip.
+    var liveDrops = 0;
+    // Fill the sky to RAIN_DROPS *from the live count* — never a bare seed. An occluded
+    // window (visible, so no `hidden` gate fires, but unpainted) keeps running timers
+    // while frames stall, so onfinish never clears the last storm's drops; an un-gated
+    // seed would stack a fresh sky onto the frozen one on every storm.
+    function topUpDrops() {
+      for (var i = 0; i < RAIN_DROPS && liveDrops < RAIN_DROPS; i++) spawnDrop();
+    }
+    // Replenish 1:1, but never above target — so a sky that did somehow overfill drains
+    // back down instead of locking its inflated count in.
+    function dropDone() {
+      liveDrops--;
+      if (liveDrops < RAIN_DROPS && rainActive()) spawnDrop();
+    }
     function spawnDrop() {
+      liveDrops++;
       var cx = 2760 + Math.random() * 620, cy = 8 + Math.random() * 178;
       if (fallsAsSnow()) { // this one drifts down the balcony sky as snow rather than rain
-        var f = makeSnowflake(strip, cx, cy + 18, 96 + Math.random() * 64, function () { if (rainActive()) spawnDrop(); });
-        if (f) f.classList.add("balc-drop"); // tagged so the seed-tick can count/top-up (balcony drops share the strip, no container)
+        var f = makeSnowflake(strip, cx, cy + 18, 96 + Math.random() * 64, dropDone);
+        if (f) f.classList.add("balc-drop"); // marks a balcony drop for tests/debug (they share the strip, no container)
         return;
       }
       var startY = cy + 18, dropLen = 14 + Math.random() * 8, fallDist = 72 + Math.random() * 44;
@@ -45952,10 +45967,10 @@ function spawnDustMote(container) {
         ], { duration: 760 + Math.random() * 360, easing: "ease-in", delay: Math.random() * 400 });
         anim.onfinish = function () {
           if (line.parentNode) line.remove();
-          if (rainActive()) spawnDrop(); // replenish 1:1
+          dropDone();
         };
       } else {
-        setTimeout(function () { if (line.parentNode) line.remove(); }, 1400);
+        setTimeout(function () { if (line.parentNode) line.remove(); dropDone(); }, 1400);
       }
     }
     // both windows watch the same sky, so overcast/clear is shared: during a storm
@@ -45987,7 +46002,7 @@ function spawnDustMote(container) {
       if (!isDuskBalcony()) { clearAll(); return; }
       window.__balconyStorm = true;
       setStorming(true);
-      for (var d = 0; d < RAIN_DROPS; d++) spawnDrop(); // seed the rain
+      topUpDrops(); // fill the sky, counting whatever's still falling from the last storm
       var n = 1 + Math.floor(Math.random() * 2); // 1 or 2 thunderclaps — sparing, so it doesn't wear out
       var when = 1500;
       for (var i = 0; i < n; i++) {
@@ -46007,17 +46022,11 @@ function spawnDustMote(container) {
       startStorm();   // begins immediately (self-guards on a dusk balcony; clears if not dusk)
       return !!window.__balconyStorm;
     };
-    // Winter snow falls on its own — no storm needed. Unlike a storm (which seeds on
-    // start), ambient snow needs a top-up loop: whenever it's winter + on the balcony +
-    // visible, keep the sky filled to RAIN_DROPS. Counts its own tagged flakes since
-    // balcony drops share the strip (no container to childElementCount like garden/cuddly).
-    // Self-limiting (only tops up below the target) and pauses on a hidden tab via rainActive.
+    // Winter snow falls on its own — no storm needed, so nothing else would ever start it:
+    // whenever it's winter + on the balcony + visible, keep the sky filled to RAIN_DROPS.
     (function seedBalconySnow() {
       function tick() {
-        if (snowsOnItsOwn() && rainActive()) {
-          var have = strip.querySelectorAll(".balc-drop").length;
-          for (var i = have; i < RAIN_DROPS; i++) spawnDrop();
-        }
+        if (snowsOnItsOwn() && rainActive()) topUpDrops();
         setTimeout(tick, 1200);
       }
       setTimeout(tick, 1200);

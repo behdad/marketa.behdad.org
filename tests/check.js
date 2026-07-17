@@ -269,6 +269,48 @@ function checkCssCommentBalance(file, style) {
   else fail(file + ": broken CSS comment (rules after it are silently discarded)", issues.join("\n"));
 }
 
+// An at-rule block that never closes (`@media (...){` + rules, no final `}`) does not
+// break the page loudly: the CSS parser just NESTS everything that follows inside it,
+// to the end of the <style>. Every one of those rules then lives or dies by a condition
+// it was never meant to have. A missing `}` after a `@media (prefers-reduced-motion:
+// reduce)` block swallowed 1271 rules — the whole rest of the sheet — so on any machine
+// NOT set to reduced motion the game lost its layout: game-only mode stopped hiding the
+// hero/footer, scene layers painted unsized as black bands, and the page ballooned to
+// 3345px. Nothing else here sees it (braces balance *within* each rule, the comment scan
+// is happy, and every selector still parses), and it renders fine for whoever happens to
+// match the stray condition — which is why it shipped. Depth pins it exactly: a healthy
+// <style> ends at depth 0, so a non-zero tail names the unclosed `{`.
+function checkCssBraceBalance(file, style) {
+  if (!style) return;
+  var issues = [];
+  var stack = [], line = 1;
+  for (var i = 0; i < style.length; i++) {
+    var c = style[i];
+    if (c === "\n") { line++; continue; }
+    if (c === "/" && style[i + 1] === "*") { // skip comments (checkCssCommentBalance owns those)
+      i += 2;
+      for (; i < style.length && !(style[i] === "*" && style[i + 1] === "/"); i++) if (style[i] === "\n") line++;
+      i++;
+    } else if (c === '"' || c === "'") { // skip strings — a content:"}" must not miscount
+      var q = c;
+      for (i++; i < style.length && style[i] !== q; i++) {
+        if (style[i] === "\\") i++;
+        else if (style[i] === "\n") { line++; break; }
+      }
+    } else if (c === "{") {
+      stack.push({ line: line, head: style.slice(style.lastIndexOf("\n", i) + 1, i).trim().slice(-70) });
+    } else if (c === "}") {
+      if (stack.length === 0) issues.push("line " + line + ": `}` with nothing open — an extra closing brace ends the block early");
+      else stack.pop();
+    }
+  }
+  stack.forEach(function (o) {
+    issues.push("line " + o.line + ": `" + o.head + " {` never closes — every rule after it is silently nested inside");
+  });
+  if (issues.length === 0) pass(file + ": <style> braces all open and close cleanly");
+  else fail(file + ": unbalanced CSS braces (rules get nested under the wrong condition)", issues.join("\n"));
+}
+
 function checkAnimationKeyframes(file, style) {
   if (!style) return;
   var defined = new Set();
@@ -734,6 +776,7 @@ FILES.forEach(function (file) {
     checkConsoleCmdRoster(file, script);
   }
   checkCssCommentBalance(file, style);
+  checkCssBraceBalance(file, style);
   checkAnimationKeyframes(file, style);
   checkTransformClobber(file, style, html);
   checkConsoleOutClipSlack(file, style);

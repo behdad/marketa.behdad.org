@@ -14619,13 +14619,32 @@ function resumeSharedAudio() {
 // schedulers queuing on the audio clock while unfocused, so that clock must never freeze
 // under them (a frozen-then-jumped clock would burst their whole backlog at once). Suspend
 // only when truly idle so we never hold a silent OS stream open.
+function __sharedAudioIsIdle() {
+  var song = window.__anySongPlaying ? window.__anySongPlaying() : false;
+  return (document.hidden || !document.hasFocus()) && !song && __activeAudioBeds <= 0;
+}
+var __idleSuspendTimer = null;
 window.__updateSharedAudioIdle = function () {
   var ac = __sharedAC; if (!ac) return; // never create one just to idle it
   try {
-    var song = window.__anySongPlaying ? window.__anySongPlaying() : false;
-    var idle = (document.hidden || !document.hasFocus()) && !song && __activeAudioBeds <= 0;
-    if (idle) { if (ac.state === "running") { var s = ac.suspend(); if (s && s.catch) s.catch(function () {}); } }
-    else if (ac.state === "suspended") { var r = ac.resume(); if (r && r.catch) r.catch(function () {}); }
+    if (__sharedAudioIsIdle()) {
+      // Debounce the suspend (~18s): suspending closes the OS output stream, and re-opening it
+      // on the next resume can CLICK on real hardware (a Mac's built-in output, an S/PDIF DAC).
+      // A transient focus/visibility flap — a macOS notification banner, App Nap, a Spaces
+      // switch — shouldn't churn the stream open/closed. Only suspend if STILL idle when the
+      // timer fires; resume stays immediate (the else branch). Don't re-arm while one's pending.
+      if (ac.state === "running" && !__idleSuspendTimer) {
+        __idleSuspendTimer = setTimeout(function () {
+          __idleSuspendTimer = null;
+          if (__sharedAC && __sharedAC.state === "running" && __sharedAudioIsIdle()) {
+            var s = __sharedAC.suspend(); if (s && s.catch) s.catch(function () {});
+          }
+        }, 18000);
+      }
+    } else {
+      if (__idleSuspendTimer) { clearTimeout(__idleSuspendTimer); __idleSuspendTimer = null; }
+      if (ac.state === "suspended") { var r = ac.resume(); if (r && r.catch) r.catch(function () {}); }
+    }
   } catch (e) {}
 };
 // A per-bed handle that quacks like an AudioContext for node creation, but whose lifecycle

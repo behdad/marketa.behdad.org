@@ -16766,6 +16766,7 @@ document.addEventListener("click", function (e) {
     crackleTimer = setTimeout(function () {
       crackleTimer = null;
       if (!fireCtx) return;   // stopped meanwhile (leave room / hide tab / toggle off)
+      if (document.hidden || !document.hasFocus()) { scheduleCrackle(); return; } // crickets rule: no crackle into an unfocused window (mirror birdsong's popChirp guard)
       popCrackle();
       if (Math.random() < 0.35) {
         setTimeout(function () { if (fireCtx) popCrackle(); }, 30 + Math.random() * 60); // occasional quick double-snap
@@ -21312,7 +21313,7 @@ function gameTapsNear(a, b) {
     var kettleSteaming = false;
     var kettleInterval = null;
     var kettleCtx = null, kettleSource = null, kettleGain = null;
-    function kettlePuff() { spawnSteamWisps(document.getElementById("loft-game-strip"), 79, 193, 0.55, -1); }
+    function kettlePuff() { if (document.hidden || !document.hasFocus()) return; spawnSteamWisps(document.getElementById("loft-game-strip"), 79, 193, 0.55, -1); }
     function startKettleHum() {
       try {
         kettleCtx = audioBed();
@@ -45749,7 +45750,7 @@ function spawnDustMote(container) {
     var delay = 3000 + Math.random() * 5000;
     setTimeout(function () {
       var shotcupEl = document.getElementById("kitchen-shotcup");
-      if (stageIndex === STAGES.indexOf("kitchen") && shotcupEl && shotcupEl.classList.contains("filled") && document.visibilityState !== "hidden") {
+      if (stageIndex === STAGES.indexOf("kitchen") && shotcupEl && shotcupEl.classList.contains("filled") && document.visibilityState !== "hidden" && document.hasFocus()) {
         spawnSteamWisps(strip, 465, 208, 0.45, 1, -1, 1, 0.35);
       }
       scheduleShotcupSteam();
@@ -46739,7 +46740,7 @@ function spawnDustMote(container) {
   (function scheduleGrillSmoke() {
     var delay = 8000 + Math.random() * 10000;
     setTimeout(function () {
-      if (stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden") {
+      if (stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden" && document.hasFocus()) {
         spawnSteamWisps(strip, 3021, 230, 0.5, 1, -1, 3, 0.4);
       }
       scheduleGrillSmoke();
@@ -47470,6 +47471,7 @@ function spawnDustMote(container) {
   function scheduleBehdadJointRoll() {
     behdadJointTimer = setTimeout(function () {
       behdadJointTimer = null;
+      if (document.hidden || !document.hasFocus()) { scheduleBehdadJointRoll(); return; } // don't light up into an unattended tab (the manual triple-click path stays ungated)
       if (Math.random() < (2 / 3)) {
         behdadJointCount++;
         startBehdadJoint();
@@ -47505,7 +47507,7 @@ function spawnDustMote(container) {
           if (audio && !audio.paused) { spot = instrumentSpots[id]; return true; }
           return false;
         });
-        if (spot) spawnMusicNotes(strip, spot.x, spot.y);
+        if (spot && !document.hidden && document.hasFocus()) spawnMusicNotes(strip, spot.x, spot.y); // notes are decorative; songs play on while hidden but skip the spawn
       }, 900);
     } else if (!anyPlaying && noteFlowTimer) {
       clearInterval(noteFlowTimer);

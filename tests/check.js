@@ -744,6 +744,39 @@ function checkConsoleCmdRoster(file, script) {
   else fail(file + ": CONSOLE_CMDS_BARE has bareword(s) with no CONSOLE_HELP entry", bareOrphans.join(", "));
 }
 
+// The two shared particle spawners (spawnSteamWisps, spawnMusicNotes) have autonomous
+// interval callers (kettle/grill steam, instrument note-flow). Their nodes self-remove
+// only via a WAAPI onfinish handler, which stalls in a throttled/occluded tab — so
+// without a drop-oldest cap an unattended tab piles up nodes until the machine freezes
+// (happened once, overnight). Lock the cap in: each helper must tag its nodes with a
+// class and drop the oldest before appending. tests/leak.js proves the cap works at
+// runtime; this fails the build fast if a refactor strips it. Add any future shared
+// spawner that gets an autonomous interval caller here.
+function checkParticleSpawnerCaps(file, script) {
+  if (file !== "rsvp.html" || !script) return;
+  var GUARDED = [
+    { fn: "spawnSteamWisps", cls: "steam-wisp" },
+    { fn: "spawnMusicNotes", cls: "music-note" }
+  ];
+  GUARDED.forEach(function (g) {
+    var start = script.indexOf("function " + g.fn + "(");
+    if (start === -1) { fail(file + ": " + g.fn + " not found for particle-cap guard"); return; }
+    // body = from this declaration to the next top-level function (both are top-level)
+    var next = script.indexOf("\nfunction ", start + 1);
+    var body = script.slice(start, next === -1 ? undefined : next);
+    var tagged = body.indexOf('"' + g.cls + '"') !== -1;                       // node carries the class
+    var caps = body.indexOf('getElementsByClassName("' + g.cls + '")') !== -1; // reads the live count
+    var drops = /while\s*\([^)]*\)\s*[^;]*\.remove\(\)/.test(body) || body.indexOf(".remove()") !== -1;
+    if (tagged && caps && drops) {
+      pass(file + ": " + g.fn + " keeps its drop-oldest ." + g.cls + " cap (occluded-tab leak guard)");
+    } else {
+      fail(file + ": " + g.fn + " lost its particle cap — an occluded tab will leak nodes",
+        "need: tag nodes class=\"" + g.cls + "\", read getElementsByClassName(\"" + g.cls + "\"), drop-oldest before append" +
+        "\nfound: tagged=" + tagged + " countRead=" + caps + " dropOldest=" + drops);
+    }
+  });
+}
+
 // A leftover git merge marker in CSS/HTML slips past `node --check` (which only sees
 // the inline <script>) and the other structural checks — one reached production once.
 // Precise forms only, so decorative "====" comment rules don't false-positive.
@@ -774,6 +807,7 @@ FILES.forEach(function (file) {
     checkAudioFadeCloseRace(file, script);
     checkI18nKeys(file, script, html);
     checkConsoleCmdRoster(file, script);
+    checkParticleSpawnerCaps(file, script);
   }
   checkCssCommentBalance(file, style);
   checkCssBraceBalance(file, style);

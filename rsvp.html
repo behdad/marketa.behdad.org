@@ -48902,6 +48902,7 @@ function spawnDustMote(container) {
   // hidden tab and this is a single self-driven node (not a setTimeout spawner), so no accumulation.
   var clickMeEl = null, clickMeWord = null, clickMeRaf = 0, clickMeStart = 0;
   var CLICKME_MELT_MS = 2500; // one direction; a full ping-pong is 2×
+  var CLICKME_MELT_MAX_MS = 15000; // stop the rAF melt after 15s: an unclicked intro shouldn't churn variable-font instances forever. The invitation stays put (frozen at the reduced-motion mid-melt frame) until a real tap.
   function clickMeReduceMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
@@ -48930,6 +48931,7 @@ function spawnDustMote(container) {
   function clickMeStep() {
     if (!clickMeWord || !clickMeWord.isConnected) { clickMeRaf = 0; return; } // torn down mid-flight — stop cleanly
     var now = (window.performance && performance.now) ? performance.now() : Date.now();
+    if (now - clickMeStart >= CLICKME_MELT_MAX_MS) { clickMeWord.style.fontVariationSettings = "'YEAR' 2010"; clickMeRaf = 0; return; } // settle at the static mid-melt frame; stop instancing the variable font
     var phase = ((now - clickMeStart) % (CLICKME_MELT_MS * 2)) / CLICKME_MELT_MS; // 0..2
     var t = phase <= 1 ? phase : 2 - phase; // ping-pong 0↔1
     clickMeWord.style.fontVariationSettings = "'YEAR' " + Math.round(1979 + (2050 - 1979) * t);

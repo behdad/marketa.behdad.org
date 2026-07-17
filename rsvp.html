@@ -10334,6 +10334,11 @@ section{margin:1.9rem 0}
 <path class="sn-hs-flame f2" d="M641.75 238 Q639.75 234.5 641.75 230.5 Q643.75 234.5 641.75 238 Z" fill="#f4c95a"/>
 <!-- tap zones last so they sit above the art; #office-haftsin is pointer-events:none, so
      only these tight transparent shapes opt back in and room clicks behind still land -->
+<!-- the cloth: one broad zone over the whole spread, looking the haft-sin up. It comes FIRST so
+     the three item zones below paint over it and win their own taps — only bare cloth (and the
+     items with no reaction of their own: apple, eggs, candles) reaches this. Nothing but the
+     office's background art sits behind it, so it steals no room click. -->
+<rect id="office-hs-cloth-hit" class="sn-hs-hit" x="508" y="218" width="148" height="86" fill="transparent"/>
 <rect id="office-hs-sabzeh-hit" class="sn-hs-hit" x="520" y="224" width="25" height="28" fill="transparent"/>
 <rect id="office-hs-mirror-hit" class="sn-hs-hit" x="561" y="220" width="20" height="31" fill="transparent"/>
 <rect id="office-hs-bowl-hit" class="sn-hs-hit" x="601" y="230" width="22" height="23" fill="transparent"/>
@@ -13994,6 +13999,13 @@ var T = {
     season_bd_irene: "🥳 irene's birthday",
     season_bd_pouria: "🥳 pouria's birthday",
     season_auto: "⛅ back to today",
+    // Names for the three dressings almost no guest will recognise. Longer than the cast bubbles
+    // (<em>Octi</em>) because a name alone teaches nothing here — a few words of gloss is the only
+    // thing that ever explains them. <bdi> wraps ONLY the Persian: inside the isolate the brackets
+    // would join the RTL run and mirror, so they stay outside it in the sentence's own direction.
+    tip_haftsin: "<em>haft-sin</em> (<bdi>هفت‌سین</bdi>), the nowruz table",
+    tip_carodejnice: "<em>Čarodějnice</em>, burning of the witches",
+    tip_chaharshanbe: "<em>Chaharshanbe Suri</em> (<bdi>چهارشنبه‌سوری</bdi>), the fire you leap",
     watch_loft: "▷ Watch the loft",
     watch_skip: "□ Take over",
     contact: "Questions? Write to us:",
@@ -14448,6 +14460,9 @@ var T = {
     season_bd_irene: "🥳 ireniny narozeniny",
     season_bd_pouria: "🥳 pouriovy narozeniny",
     season_auto: "⛅ zpátky k dnešku",
+    tip_haftsin: "<em>haft-sín</em> (<bdi>هفت‌سین</bdi>), nourúzský stůl",
+    tip_carodejnice: "<em>Čarodějnice</em>, filipojakubská noc",
+    tip_chaharshanbe: "<em>Čaháršanbe surí</em> (<bdi>چهارشنبه‌سوری</bdi>), oheň, který se přeskakuje",
     watch_loft: "▷ Prohlédnout byt",
     watch_skip: "□ Převzít",
     contact: "Dotazy? Napište nám:",
@@ -15525,6 +15540,11 @@ function dismissEggBubble(b) {
   b.classList.remove("show");
   setTimeout(function () { if (b.parentNode) b.remove(); }, 300);
 }
+// a dictionary lookup for tooltip copy, resolved fresh on each hover so it follows a language switch
+function tipText(key) {
+  var l = document.documentElement.lang;
+  return (T[l] && T[l][key]) || T.en[key] || "";
+}
 // A hover tooltip is just an eggBubble shown on mouseenter and dismissed on mouseleave
 // instead of on click+timeout — reuses its positioning/styling/innerHTML support
 // (native SVG <title> can't render markup like <em>, which is why this exists at all).
@@ -15536,6 +15556,9 @@ function dismissEggBubble(b) {
 // whose bbox is lopsided by an outstretched limb centres the bubble away from the thing it names
 // (Behdad's arm reaches around Markéta, dragging his group bbox ~28u right of his head). Unlike an
 // xOffset nudge, a second anchor stays correct at every render scale.
+// `html` may be a function, resolved at hover time instead of at wiring time: the wiring runs once
+// at load, so a tooltip whose text depends on live state (the visitor's language, or which season
+// is dressing a shared prop) would otherwise be frozen at whatever it read on load.
 function hoverTooltip(el, html, placement, yOffset, xOffset, posEl) {
   if (!el) return;
   var bubble = null, followRaf = null, showTimer = null;
@@ -15555,7 +15578,7 @@ function hoverTooltip(el, html, placement, yOffset, xOffset, posEl) {
     // a short dwell before showing, so tooltips don't pop the instant the cursor grazes past
     showTimer = setTimeout(function () {
       showTimer = null;
-      bubble = eggBubble(at, html, placement, yOffset, xOffset);
+      bubble = eggBubble(at, typeof html === "function" ? html() : html, placement, yOffset, xOffset);
       followRaf = requestAnimationFrame(follow);
     }, 450);
   });
@@ -31381,6 +31404,7 @@ async def localfont(name):
     var statusClock = null, currentApp = null, currentTitleKey = "";
     var battMgr = null, battHooked = false;
     var phoneBrowserCleanup = null; // teardown for the in-phone browser (ResizeObserver + frame unload)
+    var phoneBrowserPending = null; // a URL __showUrlInPhone wants opened instead of the default tab; renderPhoneBrowser consumes it
     var clockTimer = null;          // clock app's 1s tick (time + both countdowns + playtime)
     var compassHandler = null;      // deviceorientation listener for the compass app
     var photoboothCleanup = null;   // booth teardown: stop the stream, clear timers, revoke URLs
@@ -33067,6 +33091,17 @@ async def localfont(name):
       openApp("cocktails", "app_cocktails", renderCocktails);
       return true;
     };
+    // Look a thing up in the pocket browser: the in-scene way to read about something the game
+    // shows but can't explain (the haft-sin's Wikipedia article). Same in-place, lock-skipping
+    // open(true) as __showCocktailInPhone, so the room you looked up from stays put behind the
+    // modal. The URL is handed to renderPhoneBrowser via phoneBrowserPending — showUrl is private
+    // to that builder and the app isn't built until openApp runs.
+    window.__showUrlInPhone = function (url) {
+      phoneBrowserPending = String(url);
+      open(true);
+      openApp("browser", browserLabelKey, renderPhoneBrowser);
+      return true;
+    };
     var cocktailView = "gallery"; // "gallery" | "detail"
     var cocktailSel = -1;         // index into COCKTAILS of the drink open in detail view
     function cocktailFeatured() {
@@ -33728,14 +33763,14 @@ async def localfont(name):
       var currentUrl = PHONE_BROWSER_TABS[0].url; // what the shared iframe is actually showing
       function barDisplay(href) { return href.replace(/^https?:\/\//, ""); }
       function syncBar() { if (document.activeElement !== input) input.value = barDisplay(currentUrl); }
-      function showUrl(href, tabId) {
+      function showUrl(href, tabId, knownFrameable) {
         currentUrl = href;
         for (var id in tabEls) tabEls[id].classList.toggle("active", id === tabId);
         if (frame.getAttribute("src") !== href) frame.setAttribute("src", href); // reopening the same page never reloads
         // off-tab destinations (arbitrary URLs / search) may refuse framing and paint
         // blank — float the hint, then fade it; our own fixed tabs are known-frameable
         clearTimeout(noframe._t);
-        if (tabId) noframe.classList.remove("show", "hint-done");
+        if (tabId || knownFrameable) noframe.classList.remove("show", "hint-done");
         else { noframe.classList.remove("hint-done"); noframe.classList.add("show"); noframe._t = setTimeout(function () { noframe.classList.add("hint-done"); }, 4500); }
         syncBar();
       }
@@ -33796,7 +33831,10 @@ async def localfont(name):
       wrap.appendChild(bar);
       wrap.appendChild(page);
       body.appendChild(wrap);
-      setActive(PHONE_BROWSER_TABS[0]);
+      // an off-tab destination handed in by __showUrlInPhone wins the first load; otherwise the
+      // browser opens on its usual home tab
+      if (phoneBrowserPending) { showUrl(phoneBrowserPending, null, true); phoneBrowserPending = null; }
+      else setActive(PHONE_BROWSER_TABS[0]);
 
       // scale the frame to the live page-zone width, mirroring the monitor
       function applyScale() {
@@ -35440,9 +35478,9 @@ async def localfont(name):
     playDryClickSound("office-tree"); // a switch click at the plug
   });
 })();
-// The nowruz haft-sin's three taps. Same shape as the tree above: one-shots ride inner
+// The nowruz haft-sin's taps. Same shape as the tree above: one-shots ride inner
 // wrappers, are removed on animationend and re-added across a double rAF so a rapid
-// re-tap restarts them.
+// re-tap restarts them. Plus the cloth behind them, which names and explains the spread.
 (function () {
   var fish = document.getElementById("office-hs-fish-dart");
   var sabzeh = document.getElementById("office-hs-sabzeh-sway");
@@ -35473,6 +35511,20 @@ async def localfont(name):
     oneShot(glint, "flashing");
     playFairyChimeSound("office-haftsin");
   });
+  // The cloth names the spread on hover and looks it up on tap — most guests have never seen a
+  // haft-sin, and nothing else in the game can tell them. Czech Wikipedia has no haft-sin article
+  // (checked); its Nourúz one describes the "Hafte Sin" table, so CS readers get that rather than
+  // an English page. Read at click time, not wiring time, so it follows a language switch.
+  var cloth = document.getElementById("office-hs-cloth-hit");
+  if (cloth) {
+    hoverTooltip(cloth, function () { return tipText("tip_haftsin"); }, "top");
+    cloth.addEventListener("click", function (e) {
+      e.stopPropagation();
+      playPaperShuffleSound("office-haftsin"); // the cloth answers the tap while the phone comes up
+      var cs = document.documentElement.lang === "cs";
+      if (window.__showUrlInPhone) window.__showUrlInPhone(cs ? "https://cs.wikipedia.org/wiki/Nourúz" : "https://en.wikipedia.org/wiki/Haft-sin");
+    });
+  }
 })();
 // The two seasonal office masts wave when tapped — the same one-shot the balcony's flying flag
 // gives a click, so the game's flags all answer a tap alike. Only one mast is ever on screen.
@@ -35574,6 +35626,11 @@ async def localfont(name):
     onHit(row[0], function () { oneShot(wrap, "wobbling"); row[2](row[1]); if (row[3]) row[3](); });
   });
   // ── the fire ──
+  // One fire, two festivals — so the name is read at hover time, not wired once: in his season it's
+  // Chaharshanbe Suri, in hers Čarodějnice. Naming it costs the tap nothing (hover and click are
+  // independent), so the flare and Irene's cue below are untouched.
+  var fireHit = document.getElementById("balcony-bonfire-hit");
+  if (fireHit) hoverTooltip(fireHit, function () { return tipText(hisFire() ? "tip_chaharshanbe" : "tip_carodejnice"); }, "top");
   glow.addEventListener("animationend", function (e) { if (e.animationName === "sn-fire-flare") glow.classList.remove("fire-flare"); });
   onHit("balcony-bonfire-hit", function () {
     oneShot(glow, "fire-flare");

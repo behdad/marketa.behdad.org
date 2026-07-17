@@ -36458,15 +36458,26 @@ async def localfont(name):
   // The cloth names the spread on hover and looks it up on tap — most guests have never seen a
   // haft-sin, and nothing else in the game can tell them. Czech Wikipedia has no haft-sin article
   // (checked); its Nourúz one describes the "Hafte Sin" table, so CS readers get that rather than
-  // an English page. Read at click time, not wiring time, so it follows a language switch.
+  // an English page. Read the URL at click time, not wiring time, so it follows a language switch.
+  // Single click lights the whole spread up (every item's own tap-flourish at once); double click
+  // opens the article. Same disambiguation as the fire: the flourish waits out the double-click
+  // window, so a dblclick goes straight to the article without also flaring the spread.
   var cloth = document.getElementById("office-hs-cloth-hit");
   if (cloth) {
+    function flareAll() { oneShot(fish, "darting"); oneShot(sabzeh, "rustling"); oneShot(glint, "flashing"); }
+    var CLOTH_DBL_MS = 280, clothTimer = null;
     hoverTooltip(cloth, function () { return tipText("tip_haftsin"); }, "top");
     cloth.addEventListener("click", function (e) {
       e.stopPropagation();
-      playPaperShuffleSound("office-haftsin"); // the cloth answers the tap while the phone comes up
+      playPaperShuffleSound("office-haftsin"); // the cloth answers the tap while the spread lights up
+      clearTimeout(clothTimer);
+      clothTimer = setTimeout(function () { clothTimer = null; flareAll(); }, CLOTH_DBL_MS);
+    });
+    cloth.addEventListener("dblclick", function (e) {
+      e.stopPropagation();
+      clearTimeout(clothTimer); clothTimer = null; // the spread flourish was never what this click wanted
       var cs = document.documentElement.lang === "cs";
-      if (window.__showUrlInPhone) window.__showUrlInPhone(cs ? "https://cs.wikipedia.org/wiki/Nourúz" : "https://en.wikipedia.org/wiki/Haft-sin");
+      if (window.__showUrlInPhone) window.__showUrlInPhone(cs ? "https://cs.m.wikipedia.org/wiki/Nourúz" : "https://en.m.wikipedia.org/wiki/Haft-sin");
     });
   }
 })();
@@ -36577,8 +36588,8 @@ async def localfont(name):
   // hover/click, never wired once: in his season it's Chaharshanbe Suri, in hers Čarodějnice.
   // Czech Wikipedia titles come from Wikipedia's own langlinks, not from our transliteration.
   var FIRE_WIKI = {
-    en: { chaharshanbe: "https://en.wikipedia.org/wiki/Chaharshanbe_Suri", carodejnice: "https://en.wikipedia.org/wiki/Walpurgis_Night" },
-    cs: { chaharshanbe: "https://cs.wikipedia.org/wiki/Čaháršanba-súrí", carodejnice: "https://cs.wikipedia.org/wiki/Pálení_čarodějnic" }
+    en: { chaharshanbe: "https://en.m.wikipedia.org/wiki/Chaharshanbe_Suri", carodejnice: "https://en.m.wikipedia.org/wiki/Walpurgis_Night" },
+    cs: { chaharshanbe: "https://cs.m.wikipedia.org/wiki/Čaháršanba-súrí", carodejnice: "https://cs.m.wikipedia.org/wiki/Pálení_čarodějnic" }
   };
   function fireWikiUrl() {
     var l = document.documentElement.lang === "cs" ? "cs" : "en";
@@ -36587,33 +36598,29 @@ async def localfont(name):
   var fireHit = document.getElementById("balcony-bonfire-hit");
   if (fireHit) hoverTooltip(fireHit, function () { return tipText(hisFire() ? "tip_chaharshanbe" : "tip_carodejnice"); }, "top");
   glow.addEventListener("animationend", function (e) { if (e.animationName === "sn-fire-flare") glow.classList.remove("fire-flare"); });
-  // A second click means Irene, not the article — but dblclick fires click first, so the lookup
-  // waits out the double-click window rather than dropping a full-screen phone over her leap. The
-  // flare and the sizzle still answer instantly, so the fire never reads as dead while we wait.
-  // Only his fire has a second gesture (she is gated to .sn-chaharshanbe), so only his fire waits;
-  // in hers there is nothing to disambiguate and the lookup opens at once. The URL is resolved on
-  // the click that asked for it, so a season flip mid-wait can't reroute it to the wrong festival.
+  // A single click summons the leap; a double click looks the festival up instead. dblclick fires
+  // click first, so the summon waits out the double-click window and a second click cancels it and
+  // opens the article rather than dropping a full-screen phone over the leap. The flare and sizzle
+  // answer instantly on every click, so the fire never reads as dead while we wait. leap() gates on
+  // hisFire(), so in her season the single-click summon is a no-op (only flare+sizzle) and the
+  // article is the only gesture that lands — which is what we want: the lookup is dblclick-only.
+  // The URL is resolved on the click that asked for it, so a season flip mid-wait can't reroute it.
   var DBL_WINDOW_MS = 280;
-  var wikiTimer = null;
+  var summonTimer = null;
   onHit("balcony-bonfire-hit", function () {
     oneShot(glow, "fire-flare");
     playSizzleSound("balcony-bonfire-glow"); // the fire takes the poke and roars up
-    var url = fireWikiUrl();
-    clearTimeout(wikiTimer);
-    if (!hisFire()) { if (window.__showUrlInPhone) window.__showUrlInPhone(url); return; }
-    wikiTimer = setTimeout(function () {
-      wikiTimer = null;
-      if (window.__showUrlInPhone) window.__showUrlInPhone(url);
+    clearTimeout(summonTimer);
+    summonTimer = setTimeout(function () {
+      summonTimer = null;
+      leap(true); // no-op in her season: leap() gates on hisFire()
     }, DBL_WINDOW_MS);
   });
   if (fireHit) fireHit.addEventListener("dblclick", function (e) {
     e.stopPropagation();
-    // The second click only takes the article away when it has something better to show. Under
-    // reduced motion leap() bails (the arc IS the cameo), so cancelling here would leave the
-    // gesture with nothing at all — let the pending lookup land instead.
-    if (reducedMotion()) return;
-    clearTimeout(wikiTimer); wikiTimer = null; // the article was never what this click wanted
-    leap(true);                                // no-op in her season: leap() gates on hisFire()
+    clearTimeout(summonTimer); summonTimer = null; // the summon was never what this click wanted
+    var url = fireWikiUrl();
+    if (window.__showUrlInPhone) window.__showUrlInPhone(url);
   });
   // ── Irene ──
   // ONE of her, ever: a leap only starts when she isn't already showing, so a double-click mid-arc

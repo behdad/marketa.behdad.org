@@ -44471,20 +44471,23 @@ function spawnDustMote(container) {
   // previous line (only if nothing else has since claimed the caption — a room change wins).
   window.caption = function (text, opts) {
     // prevHtml restores the line intact (markup and all); prevText is what a human reads back.
-    // The caller's own text stays LITERAL (textContent) — console input isn't authored copy.
+    // The caller's own text stays LITERAL (textContent) — console input isn't authored copy, and
+    // typing caption("<b>x</b>") must not inject markup. opts.html opts INTO innerHTML for the
+    // one caller that passes authored dictionary copy (the DJ shout-out's <em>Amir</em>).
     var prevHtml = caption.innerHTML, prev = caption.textContent, prevKey = captionKey;
     if (arguments.length === 0 || text == null) { if (window.echo) window.echo(prev); return prev; }
     var blinkMs = 0, holdMs = 0;
     if (typeof opts === "number") blinkMs = opts;                                   // caption(text, blinkMs)
     else if (opts && typeof opts === "object") { blinkMs = +opts.blink || 0; holdMs = +opts.hold || +opts.resume || 0; }
+    var asHtml = !!(opts && typeof opts === "object" && opts.html);
     if (typeof arguments[2] === "number") holdMs = arguments[2];                    // caption(text, blinkMs, holdMs)
     captionKey = null;
     caption.classList.remove("rsvp-nudge", "hint-blink");
-    caption.textContent = String(text);
-    if (window.echo) window.echo(String(text)); // print through the echo side-channel (respects echo(true/false))
+    if (asHtml) caption.innerHTML = String(text); else caption.textContent = String(text);
+    if (window.echo) window.echo(caption.textContent); // print through the echo side-channel (respects echo(true/false)) — rendered, so markup never reaches the console
     if (blinkMs > 0) { caption.classList.add("hint-blink"); setTimeout(function () { caption.classList.remove("hint-blink"); }, blinkMs); }
     if (holdMs > 0) {
-      var mine = String(text);
+      var mine = caption.textContent; // compare on RENDERED text: an html line's markup never matches textContent
       setTimeout(function () {
         if (caption.textContent !== mine) return; // someone else (a room change / hint) reclaimed the line — leave it
         caption.classList.remove("hint-blink");
@@ -45814,7 +45817,7 @@ function spawnDustMote(container) {
     if (window.__cinematic || window.currentStageName !== "garden") return; // the film owns the caption; from another room the swap is silent
     var key = window.__djB ? "dj_danesh" : "dj_amir"; // whoever's spinning now
     var arr = ((T[document.documentElement.lang] || {}).hunt || T.en.hunt)[key] || T.en.hunt[key];
-    if (arr && arr.length && window.caption) window.caption(arr[Math.floor(Math.random() * arr.length)], { blink: 900, hold: 4200 });
+    if (arr && arr.length && window.caption) window.caption(arr[Math.floor(Math.random() * arr.length)], { blink: 900, hold: 4200, html: true }); // authored copy — the DJs are named in <em>
     // Second act: watching the decks change hands IS the floor beat paying off, so it settles
     // P2 — but only after this hype line has had its 4.2s, or the next beat would stomp the
     // very moment it's rewarding. Caption-only either way, so the timer reaches no sound.

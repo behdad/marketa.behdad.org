@@ -3558,6 +3558,17 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
   #loft-game-strip.wedding-day .wd-nook-ribbon .wd-float,
   #loft-game-strip.wedding-day .wd-nook-ribbon .wd-confetti{animation:none}
 }
+/* birthday party hats. An OVERLAY, not a season: the strip's season- class is single-valued,
+   but Irene's week sits inside the holiday dressing and Pouria's inside Pride, so each hat
+   rides its own bd-<who> class ALONGSIDE whatever decor the day already carries. Pure
+   opacity toggles like .wd-adorn, and never an animated node — each hat is a static child of
+   the head group that animates, so the head's one-shots and grooving carry it along. */
+.bd-adorn{opacity:0; visibility:hidden; transition:opacity .6s ease; pointer-events:none}
+#loft-game-strip.bd-behdad .bd-hat-behdad,
+#loft-game-strip.bd-marketa .bd-hat-marketa,
+#loft-game-strip.bd-irene .bd-hat-irene,
+#loft-game-strip.bd-pouria .bd-hat-pouria{opacity:1; visibility:visible}
+@media (prefers-reduced-motion: reduce){.bd-adorn{transition:none}}
 #cuddly-behdad{transform-box:fill-box; transform-origin:bottom center}
 #cuddly-behdad.bottom-wiggle{animation:cuddly-bottom-wiggle .5s ease-in-out}
 @keyframes cuddly-bottom-wiggle{
@@ -5044,13 +5055,18 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
    featureless orange coin and the window shafts stop reading as beams. Rides plain opacity,
    so each room's id-qualified .dusk rule still out-specifies it and wins at night. Elements
    whose own opacity is ANIMATED (the garden/cuddly breathe, the balcony halo pulse) can't
-   take this — an animation replaces the property — so there the class rides a wrapper. */
-.smoke-rays{opacity:calc(1 - var(--smoke,0)); transition:opacity .9s ease}
+   take this — an animation replaces the property — so there the class rides a wrapper.
+   Glare dies at DOUBLE the smoke's rate (gone by --smoke .5, opacity clamps the overshoot):
+   even moderate haze kills direct sun completely — you can look straight at the disc — and
+   a linear fade left the rays half-lit right through smoke season, since --smoke is a random
+   .5–1 roll that never actually reaches 1. Keep the two rules below on the same curve. */
+#loft-game-strip{--glare-fade:calc(1 - var(--smoke,0) * 2)}
+.smoke-rays{opacity:var(--glare-fade,1); transition:opacity .9s ease}
 /* The same physics for a sun's own glare furniture — the soft halo bloom and the bright
    rim on the window suns. Each carries its clear-air opacity as --glare so one rule serves
    ceilings that differ per element. The room's .dusk/.storming rules set opacity on the
    sun GROUP, not these circles, so group opacity still multiplies to 0 at night. */
-.smoke-glare{opacity:calc(var(--glare,1) * (1 - var(--smoke,0))); transition:opacity .9s ease}
+.smoke-glare{opacity:calc(var(--glare,1) * var(--glare-fade,1)); transition:opacity .9s ease}
 /* night in the other rooms: a soft dusk wash. kitchen/office get a fuller dim;
    the cuddly nook just dims "a bit"; the office window sky darkens to night. */
 #kitchen-dusk,#cuddly-dusk,#office-dusk{transition:opacity .9s ease}
@@ -5064,7 +5080,7 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
    rides an inner wrapper so the outer opacity is free to carry the door gate AND the smoke
    fade — an opacity animation on the same node would swallow both. */
 #cuddly-sunrays{transition:opacity 1.1s ease}
-#stage-cuddly.door-daylight #cuddly-sunrays{opacity:calc(1 - var(--smoke,0))}
+#stage-cuddly.door-daylight #cuddly-sunrays{opacity:var(--glare-fade,1)} /* same glare curve as .smoke-rays; needs its own rule to out-specify the door gate */
 #stage-cuddly.door-daylight #cuddly-sunrays-breathe{animation:cuddly-sunray-breathe 7s ease-in-out infinite}
 @keyframes cuddly-sunray-breathe{0%,100%{opacity:.85} 50%{opacity:1}}
 /* daytime sun streaming through the big garden window (fades away at dusk) */
@@ -5640,6 +5656,44 @@ section{margin:1.9rem 0}
   26%{filter:brightness(1.8) saturate(1.6) drop-shadow(0 0 8px rgba(246,161,60,.85))}
 }
 @media (prefers-reduced-motion: reduce){#balcony-bonfire-glow.fire-flare, #stage-balcony.dusk #balcony-bonfire-glow.fire-flare{animation:none}}
+/* The jack-o'-lantern that holds this corner in October. Its light pool speaks the corner's
+   existing glow vocabulary — the bonfire's breathe and its tap flare, reused verbatim: one
+   corner, one light-pool behaviour, and only the season class decides who's standing there.
+   Modest by day, bright and breathing at dusk, exactly like the candles: a lit candle is lit at
+   noon too, it just casts no pool worth seeing. Ordered AFTER the bonfire's rules, and every dusk
+   flare re-lists its breathe at index 0 — same swallow the bonfire's comment above documents. */
+#balcony-jack-glow{opacity:.28; transform-box:fill-box; transform-origin:center; transition:opacity .6s ease, transform .8s ease}
+#stage-balcony.dusk #balcony-jack-glow{opacity:1; transform:scale(1.5); animation:sn-bonfire-glow-breathe 4.6s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){#stage-balcony.dusk #balcony-jack-glow{animation:none}}
+/* The night light, over the dimmer (see the markup by #balcony-dusk). candle-glow-breathe is
+   opacity-only and outranks any opacity declaration, so the numbers here are what reduced motion
+   falls back to; the breathe itself rides 0.95 → 0.68. The pool lags the face by a beat, so the
+   two read as one wavering candle rather than a single pulsing lamp. */
+#stage-balcony.dusk #balcony-jack-frontglow-face{opacity:.95; transform:scale(1.3); animation:candle-glow-breathe 4.6s ease-in-out infinite}
+#stage-balcony.dusk #balcony-jack-frontglow-pool{opacity:.95; transform:scale(1.45); animation:candle-glow-breathe 4.6s ease-in-out -1.2s infinite}
+@media (prefers-reduced-motion: reduce){#stage-balcony.dusk #balcony-jack-frontglow-face, #stage-balcony.dusk #balcony-jack-frontglow-pool{animation:none}}
+/* A tap flares whichever pool is doing the work — the day one under the dimmer, the night ones
+   over it — so all three take the class and all three keep a bare variant, or the day frontglows
+   (opacity 0, but still class-bearing) would never fire the animationend that clears it. */
+#balcony-jack-glow.fire-flare, #balcony-jack-frontglow-face.fire-flare, #balcony-jack-frontglow-pool.fire-flare{animation:sn-fire-flare .85s ease-out}
+#stage-balcony.dusk #balcony-jack-glow.fire-flare{animation:sn-bonfire-glow-breathe 4.6s ease-in-out infinite, sn-fire-flare .85s ease-out}
+#stage-balcony.dusk #balcony-jack-frontglow-face.fire-flare{animation:candle-glow-breathe 4.6s ease-in-out infinite, sn-fire-flare .85s ease-out}
+#stage-balcony.dusk #balcony-jack-frontglow-pool.fire-flare{animation:candle-glow-breathe 4.6s ease-in-out -1.2s infinite, sn-fire-flare .85s ease-out}
+@media (prefers-reduced-motion: reduce){#balcony-jack-glow.fire-flare, #balcony-jack-frontglow-face.fire-flare, #balcony-jack-frontglow-pool.fire-flare,
+  #stage-balcony.dusk #balcony-jack-glow.fire-flare, #stage-balcony.dusk #balcony-jack-frontglow-face.fire-flare, #stage-balcony.dusk #balcony-jack-frontglow-pool.fire-flare{animation:none}}
+/* The candle behind the face, split over two nested groups: an animation's keyframed opacity
+   beats any declaration, so a flickering node can't also carry a day/dusk level. The outer group
+   holds the level, the inner one flickers, and the two multiply. Opacity only — candle-flicker's
+   feel without its scale, since the openings are cut and don't breathe with the flame. */
+#balcony-jack-facelight{opacity:.5; transition:opacity .6s ease}
+#stage-balcony.dusk #balcony-jack-facelight{opacity:1}
+#balcony-jack-flicker{animation:jack-flicker 1.1s ease-in-out infinite}
+@keyframes jack-flicker{0%,100%{opacity:1} 8%{opacity:.62} 18%{opacity:1} 30%{opacity:.74} 45%{opacity:1} 60%{opacity:.58} 75%{opacity:1} 88%{opacity:.8}}
+@media (prefers-reduced-motion: reduce){#balcony-jack-flicker{animation:none}}
+/* the counter/bar pumpkins' own wobble, on a node with no transform attribute to lose */
+#balcony-jack{transform-box:fill-box; transform-origin:50% 100%}
+#balcony-jack.wobble{animation:pumpkin-wobble .6s ease-in-out}
+@media (prefers-reduced-motion: reduce){#balcony-jack.wobble{animation:none}}
 /* Seasonal prop taps (her besom + straw doll, his brushwood + clay jars + brazier): one shared wobble,
    one inner wrapper per prop so the props' own static transform= nudges — which live on their
    children — are out of the animation's reach. Each wrapper pivots on its own planted foot. */
@@ -6763,6 +6817,13 @@ section{margin:1.9rem 0}
 <circle cx="296" cy="185.6" r="1.4" fill="#5a3a22"/><circle cx="304" cy="185.6" r="1.4" fill="#5a3a22"/>
 <!-- warm friendly smile, drawn over the beard -->
 <path d="M296.4 193.4 Q300 196.2 303.6 193.4" fill="none" stroke="#7a4630" stroke-width="1.2" stroke-linecap="round"/>
+<!-- birthday party hat: no signature cap of his own, so it sits straight on the bald dome. -->
+<g class="bd-adorn bd-hat-pouria" transform="rotate(14 300 176)">
+<polygon points="300,157 293.5,176 306.5,176" fill="#4a6b94" stroke="#33507a" stroke-width="0.9"/>
+<path d="M295.9 169 L304.1 169 M298 163 L302 163" stroke="#fffdf8" stroke-width="1" opacity=".85"/>
+<ellipse cx="300" cy="176" rx="6.5" ry="1.5" fill="#33507a"/>
+<circle cx="300" cy="156" r="2.1" fill="#f2c14e"/>
+</g>
 <!-- raised right arm + cocktail shaker on the shaking wrapper (pivots at the shoulder) -->
 <g id="kitchen-bartender-shake">
 <path d="M318 222 Q332 216 336 200" fill="none" stroke="#f2efe6" stroke-width="7" stroke-linecap="round"/>
@@ -8918,6 +8979,15 @@ section{margin:1.9rem 0}
 <rect x="188" y="145.2" width="12" height="2.6" fill="#8e3a4a"/>
 <ellipse cx="194" cy="135.4" rx="5.4" ry="1.5" fill="#363636"/>
 </g>
+<!-- birthday party hat, PERCHED on the flat cap rather than replacing it: the cap is his
+     half of the crossed-caps motif, the thing that makes him him. Her blue, not his pink,
+     so the cap still reads underneath. -->
+<g class="bd-adorn bd-hat-behdad" transform="rotate(-16 194 148)">
+<polygon points="194,127 186.5,148 201.5,148" fill="#7f9ec0" stroke="#4a6b94" stroke-width="1"/>
+<path d="M189.4 140 L198.6 140 M191.7 133.5 L196.3 133.5" stroke="#fffdf8" stroke-width="1.1" opacity=".85"/>
+<ellipse cx="194" cy="148" rx="7.5" ry="1.6" fill="#4a6b94"/>
+<circle cx="194" cy="126" r="2.4" fill="#8e3a4a"/>
+</g>
 </g>
 <g id="cuddly-behdad-zzz" aria-hidden="true">
 <path class="zzz z1" d="M191 147 h4.5 l-4.5 4.5 h4.5" fill="none" stroke="#e8f0ff" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
@@ -8975,6 +9045,15 @@ section{margin:1.9rem 0}
 <path d="M234 153 Q220 161 218 185 Q223 191 232 188 Q237 169 241 155 Z" fill="#fdfcfa" opacity="0.6" stroke="#dfe6ee" stroke-width="0.8"/>
 <path d="M233 150 Q243 145.5 253 150" fill="none" stroke="#fffdf8" stroke-width="2" stroke-linecap="round"/>
 <circle cx="243" cy="147.4" r="1.7" fill="#fffdf8" stroke="#e5ddc9" stroke-width="0.5"/>
+</g>
+<!-- birthday party hat, PERCHED on the baker boy cap rather than replacing it (see his).
+     His pink, not her blue. The rotate is +20 against her head's own -12° tilt, so the hat
+     leans across the cap instead of lying flush with it. -->
+<g class="bd-adorn bd-hat-marketa" transform="rotate(20 243 144)">
+<polygon points="243,123 235.5,144 250.5,144" fill="#d9a6a6" stroke="#c68e95" stroke-width="1"/>
+<path d="M238.4 136 L247.6 136 M240.7 129.5 L245.3 129.5" stroke="#fffdf8" stroke-width="1.1" opacity=".85"/>
+<ellipse cx="243" cy="144" rx="7.5" ry="1.6" fill="#c68e95"/>
+<circle cx="243" cy="122" r="2.4" fill="#8e3a4a"/>
 </g>
 </g>
 </g>
@@ -9074,6 +9153,14 @@ section{margin:1.9rem 0}
 <circle cx="53" cy="222" r="4.6" fill="#241d1a"/>
 <circle cx="79" cy="223" r="4.6" fill="#241d1a"/>
 <path d="M57 176 Q61 172 66 172 M72 174 Q76 178 77 183" fill="none" stroke="#3a2e28" stroke-width="1" stroke-linecap="round" opacity="0.7"/>
+<!-- birthday party hat: no signature cap to protect, so it sits straight on her curls. Drawn
+     before the arms so the raised rope-grip hands pass in front of it during the swing. -->
+<g class="bd-adorn bd-hat-irene" transform="rotate(-15 66 170)">
+<polygon points="66,152 59.5,170 72.5,170" fill="#8e3a4a" stroke="#6c2b38" stroke-width="0.9"/>
+<path d="M61.7 164 L70.3 164 M63.8 158 L68.2 158" stroke="#fffdf8" stroke-width="1" opacity=".85"/>
+<ellipse cx="66" cy="170" rx="6.5" ry="1.5" fill="#6c2b38"/>
+<circle cx="66" cy="151" r="2.1" fill="#f2c14e"/>
+</g>
 <!-- neck -->
 <path d="M62 205 H70 V212 Q66 214 62 212 Z" fill="#cf9d6e"/>
 <!-- arms (black raglan sleeves). Two states, swapped by display (see #cuddly-irene rules):
@@ -12426,6 +12513,43 @@ section{margin:1.9rem 0}
 <circle class="sn-spark-b k4" cx="583" cy="264" r="1.2" fill="#f0a04a"/>
 <rect id="balcony-bonfire-hit" class="sn-prop-hit" x="538" y="242" width="64" height="64" fill="transparent"/>
 </g>
+<!-- October's tenant of the SAME corner: the spring fire and this pumpkin can never be out
+     together (Oct 1 – Nov 3 vs mid-March / Apr 30), so they share the deck's free right side —
+     one shelf, a different dressing per season, like the office corner's tree/haft-sin/flag.
+     Its art is drawn straight in view-box coords, so nothing needs a static transform for the
+     wobble to clobber. Three layers on purpose, each animating a property no sibling touches:
+     the light pool (#balcony-jack-glow, outside the wobble — a pool cast on the deck doesn't
+     rock with the gourd), the wobbling body (#balcony-jack), and the candle inside it
+     (#balcony-jack-facelight's dusk level over #balcony-jack-flicker's flicker). -->
+<g class="sn-spooky" aria-hidden="true" pointer-events="none" transform="translate(47,0)"> <!-- nudge: keep in step with the frontglow wrapper below, or the light detaches from the lantern -->
+<ellipse id="balcony-jack-glow" cx="570" cy="296" rx="48" ry="16" fill="url(#candle-glow-grad)"/>
+<ellipse cx="570" cy="305.5" rx="24" ry="3.5" fill="#6b6055" opacity="0.4"/>
+<g id="balcony-jack">
+<ellipse cx="556" cy="288" rx="12.5" ry="15" fill="#c06018"/>
+<ellipse cx="584" cy="288" rx="12.5" ry="15" fill="#c06018"/>
+<ellipse cx="570" cy="288" rx="21" ry="17.5" fill="#d97c2b" stroke="#a85a1a" stroke-width="0.9"/>
+<path d="M562 274 Q557.5 288 562 302 M578 274 Q582.5 288 578 302" fill="none" stroke="#a85a1a" stroke-width="0.8" opacity="0.6"/>
+<ellipse cx="559" cy="280" rx="4.5" ry="6.5" fill="#eea24e" opacity="0.35" transform="rotate(-18 559 280)"/>
+<path d="M566.5 271.5 Q564 262.5 572.5 259.5 Q576.5 258.5 574.5 261.5 Q569 264.5 570.5 271 Z" fill="#6f4c24"/>
+<!-- the carved openings: cut dark first, so by day (facelight dimmed) it still reads as a
+     carved pumpkin rather than a lamp -->
+<g fill="#40210c">
+<polygon points="553.5,290 563,290 558.5,281"/>
+<polygon points="577,290 586.5,290 582,281"/>
+<polygon points="567,295.5 573,295.5 570,289"/>
+<path d="M556 296 L561 300 L566 296 L571 300 L576 296 L581 300 L584.5 296 Q570 304.5 556 296 Z"/>
+</g>
+<g id="balcony-jack-facelight">
+<g id="balcony-jack-flicker" fill="#ffd06a">
+<polygon points="553.5,290 563,290 558.5,281"/>
+<polygon points="577,290 586.5,290 582,281"/>
+<polygon points="567,295.5 573,295.5 570,289"/>
+<path d="M556 296 L561 300 L566 296 L571 300 L576 296 L581 300 L584.5 296 Q570 304.5 556 296 Z"/>
+</g>
+</g>
+</g>
+<rect id="balcony-jack-hit" class="sn-prop-hit" x="544" y="258" width="52" height="50" fill="transparent"/>
+</g>
 <!-- Čarodějnice (Apr 30): a besom stood on end left of the fire and a small straw doll in a
      wine kerchief on its right — folk-simple, standing BESIDE the fire, not on the pyre.
      Each prop's art rides its own .sn-prop-wobble wrapper (tap → a dry rustle + a wobble);
@@ -12571,6 +12695,14 @@ section{margin:1.9rem 0}
 </radialGradient>
 </defs>
 <rect id="balcony-dusk" x="0" y="0" width="680" height="340" fill="url(#balcony-dusk-grad)" opacity="0" pointer-events="none"/>
+<!-- The jack-o'-lantern's night light, ABOVE the dusk dimmer — light the dimmer can darken isn't
+     light. Same split the garden/kitchen candles make (#garden-frontglow-1/-2, #kitchen-frontglow):
+     the in-scene pool below handles day, this one carries the dark. Two ellipses because a carved
+     pumpkin glows twice: out of the face, and down onto the deck it's sitting on. -->
+<g class="sn-spooky" aria-hidden="true" pointer-events="none" transform="translate(47,0)"> <!-- nudge: must match the lantern's own wrapper above -->
+<ellipse id="balcony-jack-frontglow-face" class="candle-frontglow" cx="570" cy="291" rx="30" ry="24" fill="url(#candle-glow-grad)"/>
+<ellipse id="balcony-jack-frontglow-pool" class="candle-frontglow" cx="570" cy="303" rx="46" ry="13" fill="url(#candle-glow-grad)"/>
+</g>
 <g id="balcony-stars" opacity="0" pointer-events="none" fill="#ffffff">
 <!-- Real constellations at astronomically-plausible relative positions, scaled to fit the sky. -->
 <!-- Cassiopeia (the W) — upper left -->
@@ -13896,6 +14028,10 @@ var T = {
     season_holiday: "🎄 holiday season",
     season_newyear: "🎆 new year",
     season_spooky: "🎃 spooky season",
+    season_bd_behdad: "🥳 behdad's birthday",
+    season_bd_marketa: "🥳 markéta's birthday",
+    season_bd_irene: "🥳 irene's birthday",
+    season_bd_pouria: "🥳 pouria's birthday",
     season_auto: "⛅ back to today",
     watch_loft: "▷ Watch the loft",
     watch_skip: "□ Take over",
@@ -14346,6 +14482,10 @@ var T = {
     season_holiday: "🎄 svátky",
     season_newyear: "🎆 nový rok",
     season_spooky: "🎃 strašidelno",
+    season_bd_behdad: "🥳 behdadovy narozeniny",
+    season_bd_marketa: "🥳 markétiny narozeniny",
+    season_bd_irene: "🥳 ireniny narozeniny",
+    season_bd_pouria: "🥳 pouriovy narozeniny",
     season_auto: "⛅ zpátky k dnešku",
     watch_loft: "▷ Prohlédnout byt",
     watch_skip: "□ Převzít",
@@ -25186,7 +25326,7 @@ document.addEventListener("click", function (e) {
     daylight: "daylight(true) — bring the day back; daylight(false) — dusk; daylight() reports whether it's day. day()/night() are aliases",
     night: "night() — dusk (alias for daylight(false))",
     day: "day() — daylight (alias for daylight(true))",
-    season: "season(\"name\") — a season by name in quotes, e.g. season(\"spooky\"), or season() for a surprise. each is a pretend-date driving the dressing, the snow-vs-rain odds, the smoke and the new-year sky. seasons: \"spooky\" · \"holiday\" · \"newyear\" · \"winter\" · \"valentines\" · \"wedding\" · \"summer\" · \"smoky\" · \"auto\" (the 's' key cycles the same order)",
+    season: "season(\"name\") — a season by name in quotes, e.g. season(\"spooky\"), or season() for a surprise. each is a pretend-date driving the dressing, the snow-vs-rain odds, the smoke and the new-year sky. seasons: \"spooky\" · \"holiday\" · \"newyear\" · \"winter\" · \"valentines\" · \"wedding\" · \"summer\" · \"smoky\" · \"auto\" (the 's' key cycles the same order). the four birthdays ride along too — \"behdad\" · \"markéta\" · \"irene\" · \"pouria\" — a party hat over whatever the day is already wearing, not a season of their own",
     play: "play() — resume the music if it's paused",
     pause: "pause() — pause the music if something's playing",
     temp: "temp() — the indoor + outdoor thermometer reading",
@@ -35532,6 +35672,34 @@ async def localfont(name):
   };
   document.addEventListener("visibilitychange", function () { if (document.hidden) window.__resetBalconyIrene(); });
   schedule();
+})();
+// The balcony jack-o'-lantern's tap. It answers twice over, because it's two things at once: a
+// pumpkin (the counter and bar gourds wobble and thump, so this one had better too) and the lit
+// thing in the bonfire's corner (which flares when poked). Same gesture, same corner, same answer.
+// The wobble and the flare ride separate nodes, so neither one-shot can strip the other.
+(function () {
+  var jack = document.getElementById("balcony-jack");
+  var hit = document.getElementById("balcony-jack-hit");
+  // the day pool and the two night ones: whichever is lit at the time is the one seen to flare
+  var glows = ["balcony-jack-glow", "balcony-jack-frontglow-face", "balcony-jack-frontglow-pool"]
+    .map(function (id) { return document.getElementById(id); }).filter(Boolean);
+  if (!jack || !hit || glows.length !== 3) return;
+  function oneShot(el, cls) {
+    el.classList.remove(cls);
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { el.classList.add(cls); });
+    });
+  }
+  jack.addEventListener("animationend", function (e) { if (e.animationName === "pumpkin-wobble") jack.classList.remove("wobble"); });
+  glows.forEach(function (g) {
+    g.addEventListener("animationend", function (e) { if (e.animationName === "sn-fire-flare") g.classList.remove("fire-flare"); });
+  });
+  hit.addEventListener("click", function (e) {
+    e.stopPropagation();
+    oneShot(jack, "wobble");
+    glows.forEach(function (g) { oneShot(g, "fire-flare"); });
+    playPumpkinThumpSound("balcony-jack");
+  });
 })();
 (function () {
   var desk = document.getElementById("office-desk");
@@ -46313,20 +46481,28 @@ function spawnDustMote(container) {
   // snow-vs-rain odds and the new-year fireworks all read that ONE date, so a preview
   // can never disagree with what the calendar would really do that day — and "holiday"
   // (December dressing) stays a separate axis from "winter" (a climate that snows).
+  // The four birthdays ride in here too — not because they're seasons (they're an overlay,
+  // see BIRTHDAYS) but because a preview is only ever "pretend it's this date", so previewing
+  // one shows the hat AND whatever the calendar really dresses that day in: Dec 7 is Irene's
+  // birthday and the holiday tree, both at once, which is the honest answer.
   var SEASON_PREVIEW_DATE = { // [month 0-11, day]
     spooky:  [9, 31],  // Halloween
+    bd_irene: [11, 7], // Irene's birthday — inside the holiday dressing, which stays up
     holiday: [11, 25], // Christmas Day: tree + lights, and deep enough in the ramp to come down white
     newyear: [11, 31], // New Year's Eve: holiday dressing AND fireworks
+    bd_marketa: [0, 10], // Markéta's birthday — the day after the holiday dressing comes down
     wedding: [4, 1],   // May 1: the Edmonton wedding — ribbon + fireworks sky
     winter:  [0, 15],  // deep January: snow, no dressing
     valentines: [1, 7], // mid-February: hearts in the nook
     chaharshanbe: [2, 17], // Mar 17: چهارشنبه‌سوری — the fire you jump over to burn off the old year, Čarodějnice's Persian twin
     nowruz:  [2, 21],  // Mar 21: Persian new year, just past the equinox — the haft-sin is out
     carodejnice: [3, 30], // Apr 30: Pálení čarodějnic — inside wedding week, so the ribbon stacks
+    bd_pouria: [5, 5], // Pouria's birthday — inside Pride, which stays up (and he only shows with the bar)
     pride:   [5, 15],  // mid-June: the mast flag in the office corner
     canada:  [6, 1],   // Canada Day: red-and-white balcony string + fireworks (Edmonton's half of the wedding)
     summer:  [6, 15],  // mid-July: never snow
-    smoky:   [7, 7]    // early August: Edmonton's wildfire smoke at full strength
+    smoky:   [7, 7],   // early August: Edmonton's wildfire smoke at full strength
+    bd_behdad: [8, 27] // Behdad's birthday — his real one; the week starts Sept 21, his ID's
   };
   var seasonPreview = null; // null = the real calendar
   function seasonDate() {
@@ -46346,6 +46522,31 @@ function spawnDustMote(container) {
     if (m === 5) return "pride";                           // all of June
     if ((m === 5 && d === 30) || (m === 6 && d <= 4)) return "canada"; // Jun 30 – Jul 4
     return null;
+  }
+  // Birthdays are an OVERLAY on the decor, never a season of their own: the strip's season-
+  // class is single-valued, and Irene's week falls inside the holiday dressing (Dec 1–Jan 6)
+  // while Pouria's falls inside Pride (all June) — their hats have to ride ALONGSIDE the tree
+  // and the flag, not instead of them. One row here + a .bd-hat-<who> group in the art is a
+  // whole person. A week each, the same idiom the wedding week uses — except Behdad's, which
+  //custom asymmetric celebration window
+  // documents to his real Sept 27 one. Don't "fix" it back to ±3.
+  var BIRTHDAYS = [
+    { who: "behdad",  m: 8,  d: 27, before: 6, after: 0 }, // Sept 21–27
+    { who: "marketa", m: 0,  d: 10, before: 3, after: 3 }, // Jan 7–13
+    { who: "irene",   m: 11, d: 7,  before: 3, after: 3 }, // Dec 4–10
+    { who: "pouria",  m: 5,  d: 5,  before: 3, after: 3 }  // Jun 2–8
+  ];
+  // Day arithmetic in a common year, wrapped at the half-year, so a window that straddles
+  // New Year's needs no special case.
+  function inBirthdayWindow(b, m, d) {
+    var diff = (Date.UTC(2001, m, d) - Date.UTC(2001, b.m, b.d)) / 864e5;
+    if (diff > 182) diff -= 365; else if (diff < -182) diff += 365;
+    return diff >= -b.before && diff <= b.after;
+  }
+  function applyBirthdays(s) {
+    var strip = document.getElementById("loft-game-strip");
+    if (!strip) return;
+    BIRTHDAYS.forEach(function (b) { strip.classList.toggle("bd-" + b.who, inBirthdayWindow(b, s.m, s.d)); });
   }
   window.__isNewYearSky = function () { var s = seasonDate(); return (s.m === 11 && s.d >= 24) || (s.m === 0 && s.d === 1); }; // Dec 24 – Jan 1
   // Same window decorForDate dresses for, so the sky can never disagree with the bulbs.
@@ -46392,6 +46593,7 @@ function spawnDustMote(container) {
   function applySeasonDate() {
     var s = seasonDate();
     window.__setSeason(decorForDate(s.m, s.d));
+    applyBirthdays(s); // an overlay: it rides whatever __setSeason just dressed the loft in
     if (window.__applyWeddingDay) window.__applyWeddingDay(); // the wedding is a season too — refresh before the sky reads it
     var strip = document.getElementById("loft-game-strip");
     if (strip) {
@@ -46413,11 +46615,12 @@ function spawnDustMote(container) {
   }
   window.__applySeasonDate = applySeasonDate; // re-apply --smoke when late data (real air quality) lands
   applySeasonDate();
-  // 's' cycles the previews forward: today → spooky → holiday → new year → winter →
-  // valentine's → chaharshanbe suri → nowruz → witches' night → wedding → pride → canada →
-  // summer → smoky → today. Shift+S walks the same ring backwards.
+  // 's' cycles the previews forward, roughly in calendar order: today → spooky → irene's
+  // birthday → holiday → new year → markéta's birthday → winter → valentine's → chaharshanbe
+  // suri → nowruz → witches' night → wedding → pouria's birthday → pride → canada → summer →
+  // smoky → behdad's birthday → today. Shift+S walks the same ring backwards.
   // Shift is the direction; any OTHER modifier held (or typing) still skips (same guard as 'f').
-  var SEASON_CYCLE = [null, "spooky", "holiday", "newyear", "winter", "valentines", "chaharshanbe", "nowruz", "carodejnice", "wedding", "pride", "canada", "summer", "smoky"];
+  var SEASON_CYCLE = [null, "spooky", "bd_irene", "holiday", "newyear", "bd_marketa", "winter", "valentines", "chaharshanbe", "nowruz", "carodejnice", "wedding", "bd_pouria", "pride", "canada", "summer", "smoky", "bd_behdad"];
   // Shared apply-path for the 's' key AND the console season(); shows the naming pill.
   function applySeasonPreview(name) {
     seasonPreview = SEASON_PREVIEW_DATE[name] ? name : null;
@@ -48265,7 +48468,7 @@ function spawnDustMote(container) {
   // winter · spooky · auto(=the calendar's own season). Friendly aliases fold onto those;
   // no arg still SURPRISES you with a random one (a documented feature). Drives the same
   // apply-path the 's' key uses (strip class + naming pill + cycle-sync).
-  var SEAS = ["spooky", "holiday", "newyear", "winter", "valentines", "chaharshanbe", "nowruz", "carodejnice", "wedding", "pride", "canada", "summer", "smoky", "auto"]; // same order the 's' key cycles
+  var SEAS = ["spooky", "bd_irene", "holiday", "newyear", "bd_marketa", "winter", "valentines", "chaharshanbe", "nowruz", "carodejnice", "wedding", "bd_pouria", "pride", "canada", "summer", "smoky", "bd_behdad", "auto"]; // same order the 's' key cycles
   var SEASON_ALIASES = {
     spooky: "spooky", halloween: "spooky",
     holiday: "holiday", xmas: "holiday", christmas: "holiday", tree: "holiday",
@@ -48280,6 +48483,11 @@ function spawnDustMote(container) {
     canada: "canada", canadaday: "canada", "canada day": "canada", maple: "canada",
     summer: "summer", sun: "summer",
     smoky: "smoky", smoke: "smoky", wildfire: "smoky", wildfires: "smoky",
+    // the birthdays: a hat over the day's real dressing, not a season of their own
+    bd_behdad: "bd_behdad", behdad: "bd_behdad",
+    bd_marketa: "bd_marketa", marketa: "bd_marketa", "markéta": "bd_marketa",
+    bd_irene: "bd_irene", irene: "bd_irene",
+    bd_pouria: "bd_pouria", pouria: "bd_pouria",
     auto: "auto", normal: "auto", off: "auto", none: "auto", clear: "auto", today: "auto"
   };
   var SEASON_SAID = {
@@ -48293,6 +48501,10 @@ function spawnDustMote(container) {
     canada: "🍁 canada day — red and white over edmonton.",
     summer: "☀ high summer — rain at worst.",
     smoky: "🔥 wildfire smoke — orange sun, grey sky. hello, august.",
+    bd_behdad: "🥳 behdad's birthday week — his id says sept 21, he says sept 27. both, then.",
+    bd_marketa: "🥳 markéta's birthday week — hat on, cap still on under it.",
+    bd_irene: "🥳 irene's birthday week — hat on, and the tree stays up.",
+    bd_pouria: "🥳 pouria's birthday week — he's wearing it behind the bar, if the bar's up.",
     auto: "🍂 back to the calendar's own season."
   };
   window.season = function (name) {

@@ -141,6 +141,13 @@ allowed exception, owner-confirmed.)
   And for a *timed* season test, drive `__applySeason` (the `s`-key/console path), not
   `__setSeason`: the air-quality fetch calls `__applySeasonDate` ~4s in and reverts the strip
   to the real date's decor, silently zeroing anything you were counting.
+- **Don't prove a feature against a value the app never produces.** Two separate agents "proved"
+  the sun's rays hit opacity 0 by setting `--smoke:1` by hand — but `--smoke` is a random `.5–1`
+  roll that *never reaches 1*, so on a real smoky day the rays sat at ~45% and the owner saw them
+  plainly. Both proofs were true and worthless. When a feature is driven by a rolled/derived
+  value, **drive it the way the app does** (`season("smoky")`, `?date=`) and read the value back
+  before asserting on what it produces; only sweep the raw variable as a *supplement*, to show the
+  curve's shape.
 - **A synchronous `requestAnimationFrame` monkeypatch (`cb()` inline) blows the stack** on any
   rAF-driven *loop* — "Maximum call stack size exceeded" out of `season()`/`goToStage()` is the
   patch recursing, not an app bug. The documented patch is for rAF-double *class adds*; for

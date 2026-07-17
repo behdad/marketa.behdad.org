@@ -17,6 +17,7 @@ var lib = require("./lib");
 
 var STEAM_CAP = 40;
 var NOTES_CAP = 24;
+var HEART_CAP = 30;
 
 var HARNESS = [
   "<pre id=\"__report\" style=\"position:fixed;left:-9999px\">pending</pre>",
@@ -25,19 +26,21 @@ var HARNESS = [
   "  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }",
   "  window.addEventListener('load', function () {",
   "    setTimeout(function () {",
-  "      var report = { steam: -1, notes: -1, steamCap: " + STEAM_CAP + ", notesCap: " + NOTES_CAP + ", errors: [] };",
+  "      var report = { steam: -1, notes: -1, hearts: -1, steamCap: " + STEAM_CAP + ", notesCap: " + NOTES_CAP + ", heartCap: " + HEART_CAP + ", errors: [] };",
   "      (async function () {",
   "        try {",
   "          var strip = document.getElementById('loft-game-strip');",
   "          if (!strip) throw new Error('no loft-game-strip');",
-  "          if (typeof spawnSteamWisps !== 'function' || typeof spawnMusicNotes !== 'function') throw new Error('spawners not global');",
+  "          if (typeof spawnSteamWisps !== 'function' || typeof spawnMusicNotes !== 'function' || typeof spawnHearts !== 'function') throw new Error('spawners not global');",
   // no-op .animate so onfinish never fires -> the cap is the ONLY removal path
   "          Element.prototype.animate = function () { return { onfinish: null, cancel: function () {}, finish: function () {} }; };",
   "          for (var i = 0; i < 100; i++) spawnSteamWisps(strip, 79, 193, 0.55, -1);",
   "          for (var j = 0; j < 100; j++) spawnMusicNotes(strip, 200, 300);",
+  "          for (var k = 0; k < 100; k++) spawnHearts(strip, 200, 300);",
   "          await sleep(3000);", // let each helper's staggered internal setTimeouts all fire
   "          report.steam = strip.getElementsByClassName('steam-wisp').length;",
   "          report.notes = strip.getElementsByClassName('music-note').length;",
+  "          report.hearts = strip.getElementsByClassName('heart-particle').length;",
   "        } catch (e) { report.errors.push(String(e && e.stack || e)); }",
   "        document.getElementById('__report').textContent = JSON.stringify(report);",
   "      })();",
@@ -65,6 +68,8 @@ ok(report.steam > 0, "spawnSteamWisps actually spawned (" + report.steam + " > 0
 ok(report.steam <= STEAM_CAP, "steam wisps capped at " + STEAM_CAP + " despite 300 attempted (got " + report.steam + ")");
 ok(report.notes > 0, "spawnMusicNotes actually spawned (" + report.notes + " > 0)");
 ok(report.notes <= NOTES_CAP, "music notes capped at " + NOTES_CAP + " despite 300 attempted (got " + report.notes + ")");
+ok(report.hearts > 0, "spawnHearts actually spawned (" + report.hearts + " > 0)");
+ok(report.hearts <= HEART_CAP, "hearts capped at " + HEART_CAP + " despite 600 attempted (got " + report.hearts + ")");
 
 if (fails.length) { console.error("\nleak.js FAILED (" + fails.length + ")"); process.exit(1); }
 console.log("\nAll checks passed.");

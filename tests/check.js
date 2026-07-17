@@ -756,7 +756,8 @@ function checkParticleSpawnerCaps(file, script) {
   if (file !== "rsvp.html" || !script) return;
   var GUARDED = [
     { fn: "spawnSteamWisps", cls: "steam-wisp" },
-    { fn: "spawnMusicNotes", cls: "music-note" }
+    { fn: "spawnMusicNotes", cls: "music-note" },
+    { fn: "spawnHearts", cls: "heart-particle" }
   ];
   GUARDED.forEach(function (g) {
     var start = script.indexOf("function " + g.fn + "(");

@@ -20372,6 +20372,18 @@ document.addEventListener("click", function (e) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tickle(e); }
   });
 });
+/* Both hidden mini-games — the office chair's invaders and the bar's Flair-Catch — start on
+   TWO taps landing NEAR each other. Proximity, not timing or velocity, is what separates the
+   gesture from a DRAG: a drag ends somewhere else by definition, so it can never be two nearby
+   taps. That keeps both objects freely draggable (you must be able to just reposition the
+   bartender), which is why neither drag arms anything any more.
+   Tune GAME_TAP_NEAR_PX to taste: generous enough for a shaky hand or a phone thumb, tight
+   enough that two deliberate taps at opposite ends of the object aren't one gesture. Screen
+   px — what the user actually feels — not SVG units, which would drift with the room zoom. */
+var GAME_TAP_NEAR_PX = 30;
+function gameTapsNear(a, b) {
+  return !!a && !!b && Math.hypot(b.x - a.x, b.y - a.y) <= GAME_TAP_NEAR_PX;
+}
 (function () {
   var typewriter = document.getElementById("office-typewriter");
   if (typewriter) {
@@ -20521,20 +20533,22 @@ document.addEventListener("click", function (e) {
   }
   var chair = document.getElementById("office-chair");
   if (chair) {
-    var chairSpinStreak = 0;
-    var chairSpinStreakTimer = null;
-    // Three clicks in a row spin the chair dizzy AND launch the invaders arcade — the dizzy
-    // swirl IS the launch ("the chair swivels — invaders inbound!"). Folding the two together
-    // keeps every swirl reachable: one or two clicks still just spin it, and the third's
-    // escalation to dizzy survives (a bare click-count threshold would preempt it). The
-    // drag-to-arm path below still works; it's just far harder to stumble on.
-    var CHAIR_ARCADE_CLICKS = 3, CHAIR_CLICK_WINDOW = 900;
-    function spinChair() {
-      chairSpinStreak++;
-      clearTimeout(chairSpinStreakTimer);
-      chairSpinStreakTimer = setTimeout(function () { chairSpinStreak = 0; }, CHAIR_CLICK_WINDOW);
-      var launching = chairSpinStreak >= CHAIR_ARCADE_CLICKS;
-      if (launching) chairSpinStreak = 0;
+    // Two nearby taps (GAME_TAP_NEAR_PX) spin the chair dizzy AND launch the invaders — one
+    // gesture, both outcomes, exactly what the caption promises ("the chair swivels — invaders
+    // inbound!"). Hanging the dizzy swirl off a rarer third click would have hidden it from
+    // almost everyone; composing them means whoever finds the gesture gets the whole thing.
+    // A single tap still just swirls. Dragging arms nothing — see gameTapsNear.
+    var CHAIR_ARCADE_TAPS = 2, CHAIR_TAP_WINDOW = 900;
+    var chairTapStreak = 0, chairTapTimer = null, chairLastTap = null;
+    function spinChair(e) {
+      var pt = e && e.clientX != null ? { x: e.clientX, y: e.clientY } : chairLastTap; // keyboard: no point, treat as the same spot
+      if (chairLastTap && pt && !gameTapsNear(chairLastTap, pt)) chairTapStreak = 0; // a tap somewhere else starts a fresh gesture
+      chairLastTap = pt;
+      chairTapStreak++;
+      clearTimeout(chairTapTimer);
+      chairTapTimer = setTimeout(function () { chairTapStreak = 0; chairLastTap = null; }, CHAIR_TAP_WINDOW);
+      var launching = chairTapStreak >= CHAIR_ARCADE_TAPS;
+      if (launching) { chairTapStreak = 0; chairLastTap = null; }
       chair.classList.remove("spinning", "dizzy");
       requestAnimationFrame(function () {
         requestAnimationFrame(function () { chair.classList.add(launching ? "dizzy" : "spinning"); });
@@ -20568,13 +20582,16 @@ document.addEventListener("click", function (e) {
     };
 
     /* ---- hidden "alien arcade" mini-game ----------------------------------
-       Drag the chair around and, once you've dragged it a bit (> threshold of
-       cumulative travel — a normal nudge won't trip it), the office darkens,
+       Tap the chair twice near the same spot (see spinChair) and the office darkens,
        saucers drift down from the top, and the chair auto-fires straight up
        once a second. Line a shot up under a saucer to pop it. Saucers keep
        coming until one reaches the chair (game over) or you leave the office /
        hide the tab; releasing the pointer just stops dragging — re-grab the
        chair any time to keep moving it and lining up shots.
+
+       Dragging deliberately does NOT arm the game: the chair is a draggable, and a
+       drag that launches something is a trap — you could never just reposition it.
+       Clicks start the game, drags only move. Same rule for the bartender.
 
        All positions are written as SVG transform ATTRIBUTES from a single rAF
        loop (never CSS transforms — those would clash with the transform attr),
@@ -20586,7 +20603,6 @@ document.addEventListener("click", function (e) {
     var stageOffice = document.getElementById("stage-office");
     var alienLayer = document.getElementById("office-alien-layer");
     var arcadeReduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    var ARCADE_THRESHOLD = 40;   // px of cumulative drag travel before the game arms
     // spawn band matches the chair's reachable firing column (x = 278 + chairOffsetX,
     // chairOffsetX clamped to [-180,300] → x in [98,578]) so every saucer is gettable
     var ALIEN_MIN_X = 100, ALIEN_MAX_X = 576, ALIEN_START_Y = -30;
@@ -20601,7 +20617,6 @@ document.addEventListener("click", function (e) {
     var arcadeLastSpawn = 0, arcadeLastShot = 0, arcadeScore = 0;
     var ARCADE_MILESTONE = 10; // reward a chime + shockwave every this-many kills
     var arcadeHud = null, arcadeHudScore = null, arcadeHudHigh = null;
-    var chairDragTravel = 0, chairPrevX = 0;
 
     function arcadeChairX() { return 278 + chairOffsetX; }
     function arcadeHigh() { try { return parseInt(localStorage.getItem(ARCADE_HIGH_KEY), 10) || 0; } catch (e) { return 0; } }
@@ -20869,8 +20884,6 @@ document.addEventListener("click", function (e) {
       chairDragMoved = false;
       chairDragStartX = pointerSvgX(e);
       chairDragStartOffset = chairOffsetX;
-      chairDragTravel = 0;
-      chairPrevX = chairDragStartX;
       chair.style.transition = "none";
       try { chair.setPointerCapture(e.pointerId); } catch (err) {}
     });
@@ -20878,10 +20891,7 @@ document.addEventListener("click", function (e) {
       if (!chairDragging) return;
       var px = pointerSvgX(e);
       var dx = px - chairDragStartX;
-      if (Math.abs(dx) > 2) chairDragMoved = true;
-      chairDragTravel += Math.abs(px - chairPrevX); // cumulative travel — a tiny nudge won't arm the game
-      chairPrevX = px;
-      if (!arcadeActive && chairDragTravel > ARCADE_THRESHOLD) startArcade();
+      if (Math.abs(dx) > 2) chairDragMoved = true; // sticky: any real drag suppresses the click, so a drag never counts toward the 2-tap launch
       setChairOffset(chairDragStartOffset + dx);
       if (window.__chairCatFollow) window.__chairCatFollow(); // dragging is instant (no transition) — resync every move
     });
@@ -20893,7 +20903,7 @@ document.addEventListener("click", function (e) {
       // the tab. Re-grab the chair to keep moving it and lining up shots.
       try { chair.releasePointerCapture(e.pointerId); } catch (err) {}
       chair.style.transition = arcadeActive ? "none" : ""; // keep instant tracking while the game runs
-      if (!chairDragMoved && !arcadeActive) spinChair();
+      if (!chairDragMoved && !arcadeActive) spinChair(e);
     }
     chair.addEventListener("pointerup", onChairPointerUp);
     chair.addEventListener("pointercancel", onChairPointerUp);
@@ -22922,14 +22932,12 @@ document.addEventListener("click", function (e) {
     // his body stays behind the counter. The inner #kitchen-bartender-shake (idle) and
     // #kitchen-bartender-shaker (toss) animate `transform` on DIFFERENT nodes, so the
     // drag translate never fights them (the documented transform-clobber bug class).
-    // A genuine tap still throws the shaker; only a real drag (past a small cumulative
-    // travel) moves him and suppresses the tap. barDragTravel is the clean cumulative
-    // signal a future bar/shaker shooter can arm off (nothing consumes it yet).
+    // A genuine tap still throws the shaker; only a real drag moves him, and it suppresses
+    // the tap so dragging can never launch Flair-Catch — he must stay freely repositionable.
     var BARTENDER_MIN_X = -240, BARTENDER_MAX_X = 210; // hit rect [270,348] vs counter [14,574] → margin both ends
     var BARTENDER_Y_OFFSET = 0;                        // no vertical shift; he stays on his baseline
     var barOffsetX = 0;
     var barDragging = false, barDragStartX = 0, barDragStartOffset = 0, barDragMoved = false;
-    var barDragTravel = 0, barPrevX = 0, barFastTravel = 0, barPrevT = 0;
     function bartenderSvgX(e) { // clientX → strip-SVG coords (own copy; chair's pointerSvgX is out of scope here)
       var svg = document.getElementById("loft-game-strip");
       var pt = svg.createSVGPoint();
@@ -22958,10 +22966,6 @@ document.addEventListener("click", function (e) {
         barDragMoved = false;
         barDragStartX = bartenderSvgX(e);
         barDragStartOffset = barOffsetX;
-        barDragTravel = 0;
-        barFastTravel = 0;
-        barPrevX = barDragStartX;
-        barPrevT = e.timeStamp;
         bartender.style.transition = "none"; // track the pointer instantly (no glide) while dragging
         bartenderHit.classList.add("grabbing");
         try { bartenderHit.setPointerCapture(e.pointerId); } catch (err) {}
@@ -22970,19 +22974,8 @@ document.addEventListener("click", function (e) {
         if (!barDragging) return;
         var px = bartenderSvgX(e);
         var dx = px - barDragStartX;
-        if (Math.abs(dx) > 2) { barDragMoved = true; if (window.__retireHint) window.__retireHint("hint_barman"); } // loose-brick hint: retire once the barman's been dragged
-        var stepDist = Math.abs(px - barPrevX);
-        barDragTravel += stepDist; // cumulative travel — clean signal for a future bar shooter
-        // Flair-Catch arms on a QUICK shuffle, not slow repositioning: only fast-moving travel
-        // accrues toward the (small) arm threshold; a leisurely drag bleeds it back off, so the
-        // bartender can still be walked along the bar without tripping the game. (declared below)
-        var moveT = e.timeStamp, moveDt = Math.max(1, moveT - barPrevT);
-        if (stepDist / moveDt > FLAIR_ARM_SPEED) barFastTravel += stepDist; else barFastTravel *= 0.55;
-        barPrevT = moveT;
-        barPrevX = px;
+        if (Math.abs(dx) > 2) { barDragMoved = true; if (window.__retireHint) window.__retireHint("hint_barman"); } // sticky: a real drag suppresses the tap, so dragging never counts toward the launch
         setBartenderOffset(barDragStartOffset + dx);
-        if (!flairActive && barFastTravel > FLAIR_ARM_TRAVEL && !flairReduce &&
-            barUpNow() && window.currentStageName === "kitchen") startFlairCatch();
       });
       function onBartenderPointerUp(e) {
         if (!barDragging) return;
@@ -23003,19 +22996,22 @@ document.addEventListener("click", function (e) {
         setBartenderOffset(barDragStartOffset + (bartenderSvgX(e) - barDragStartX));
       });
     }
-    // Three taps in a row on Pouria launch Flair-Catch — the same gesture the office chair uses
-    // for the invaders, since the quick-shuffle arm below is just as hard to stumble on. Runs
-    // AFTER his tap reaction, so the launching tap still tosses/pours like any other; the game
-    // gates match the drag path's exactly. He paints above the flair dim, so once the game runs
-    // he stays tappable — hence the flairActive bail rather than relying on the click sink.
-    var barClickStreak = 0, barClickStreakTimer = null;
-    var FLAIR_CLICK_LAUNCH = 3, FLAIR_CLICK_WINDOW = 900;
-    function bartenderTapLaunch() {
-      if (flairActive || flairReduce || !barUpNow() || window.currentStageName !== "kitchen") { barClickStreak = 0; return; }
-      barClickStreak++;
-      clearTimeout(barClickStreakTimer);
-      barClickStreakTimer = setTimeout(function () { barClickStreak = 0; }, FLAIR_CLICK_WINDOW);
-      if (barClickStreak >= FLAIR_CLICK_LAUNCH) { barClickStreak = 0; startFlairCatch(); }
+    // Two nearby taps on Pouria launch Flair-Catch — the same gesture, and the same shape, as
+    // the office chair's invaders. Runs AFTER his tap reaction, so the launching tap still
+    // tosses his shaker (party) or pours a drink (night bar): one gesture, both outcomes.
+    // He paints above the flair dim and stays tappable once the game runs — hence the
+    // flairActive bail here rather than relying on the click sink to stop a second launch.
+    var FLAIR_LAUNCH_TAPS = 2, FLAIR_TAP_WINDOW = 900;
+    var barTapStreak = 0, barTapTimer = null, barLastTap = null;
+    function bartenderTapLaunch(e) {
+      if (flairActive || flairReduce || !barUpNow() || window.currentStageName !== "kitchen") { barTapStreak = 0; barLastTap = null; return; }
+      var pt = e && e.clientX != null ? { x: e.clientX, y: e.clientY } : barLastTap;
+      if (barLastTap && pt && !gameTapsNear(barLastTap, pt)) barTapStreak = 0; // a tap somewhere else starts a fresh gesture
+      barLastTap = pt;
+      barTapStreak++;
+      clearTimeout(barTapTimer);
+      barTapTimer = setTimeout(function () { barTapStreak = 0; barLastTap = null; }, FLAIR_TAP_WINDOW);
+      if (barTapStreak >= FLAIR_LAUNCH_TAPS) { barTapStreak = 0; barLastTap = null; startFlairCatch(); }
     }
     bartender.addEventListener("click", function (e) {
       var hit = e.target && e.target.closest ? e.target.closest("#kitchen-bartender-hit") : null;
@@ -23030,17 +23026,15 @@ document.addEventListener("click", function (e) {
         tossShaker();
         playShakerRattleSound("kitchen-bartender"); // party tap: flair toss + rattle (ambient auto-making runs alongside)
       }
-      bartenderTapLaunch();
+      bartenderTapLaunch(e);
     });
     bartenderShaker.addEventListener("animationend", function (e) {
       if (e.target === bartenderShaker && bartenderShaker.classList.contains("tossing")) bartenderShaker.classList.remove("tossing");
     });
 
     /* ==== Flair-Catch — hidden bar mini-game ===============================
-       Give the bartender a quick back-and-forth shuffle along the bar and, once the
-       FAST-moving travel racks up past a small threshold (FLAIR_ARM_TRAVEL — a brisk
-       shuffle, not a slow walk-around or a tap-toss), the room dims to a spotlight and
-       bar items rain down: limes,
+       Tap the bartender twice near the same spot (see bartenderTapLaunch) and the room
+       dims to a spotlight and bar items rain down: limes,
        ice cubes, bottles, olives, cherries, citrus wedges (plus a rare wasp you must
        NOT catch). Line the cocktail-shaker's mouth up under a falling good item to
        catch it (score++, a clink); let one hit the bar and it's a miss; catch the
@@ -23054,14 +23048,13 @@ document.addEventListener("click", function (e) {
        documented backgrounded-spawner bug class). Item positions are written as SVG
        transform ATTRIBUTES from that loop; the catch flash uses the CSS scale/opacity
        individual properties on a fresh node, so neither fights a positioning transform.
-       The bartender drag itself is untouched — this only READS barOffsetX (his live X)
-       and arms off barDragTravel. High score lives in its own localStorage key, kept
+       The bartender drag itself is untouched — this only READS barOffsetX (his live X);
+       dragging him arms nothing. High score lives in its own localStorage key, kept
        out of any game-state snapshot. */
     var SVGNS_FLAIR = "http://www.w3.org/2000/svg";
     var stageKitchen = document.getElementById("stage-kitchen");
     var flairLayer = document.getElementById("kitchen-flair-layer");
     var flairReduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-    var FLAIR_ARM_TRAVEL = 30, FLAIR_ARM_SPEED = 0.3; // arm on ~30px of FAST (>0.3 px/ms) shuffle travel — a small quick drag, while a slow move-around never accrues
     var FLAIR_SPAWN_MIN_X = 104, FLAIR_SPAWN_MAX_X = 540; // within the shaker's reach (mouth x in [96,546])
     var FLAIR_START_Y = 34;      // items drop from just under the top of the room
     var FLAIR_CATCH_Y = 180;     // the shaker's mouth (stage-local y); catch band is +/- FLAIR_CATCH_RY

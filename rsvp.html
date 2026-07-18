@@ -23777,6 +23777,7 @@ document.addEventListener("click", function (e) {
   var DUO_IDS = Object.keys(CUDDLY_DUOS);
   function stripEl() { return document.getElementById("loft-game-strip"); }
   function mealOn() { var s = stripEl(); return !!(s && s.classList.contains("meal-on")); } // owner rule: no visitors while food is served
+  function isDay() { var c = document.getElementById("stage-cuddly"); return !(c && c.classList.contains("dusk")); } // owner rule: visitors only come during the day (dusk = night, applied to every stage by the sun toggle)
   function onScreen() { return window.currentStageName === "cuddly" && !document.hidden; }
   function reducedMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
   // every person-group node, and the one currently-visiting duo (null when none)
@@ -23831,6 +23832,7 @@ document.addEventListener("click", function (e) {
     var duo = CUDDLY_DUOS[id];
     if (!duo) return false;
     if (mealOn()) return false;         // owner rule: no visitors while food is served
+    if (!isDay()) return false;         // owner rule: visitors only drop by during the day
     if (activeDuo === id && !forced) return true;
     reset();                            // clear any prior duo (+ its Irene half) first
     activeDuo = id;
@@ -23907,10 +23909,10 @@ document.addEventListener("click", function (e) {
   }
   function drip() {
     dripTimer = null;
-    // crickets rule (attended) AND !meal-on. A text can arrive from ANY room (you're not required
-    // to be in the nook to get it); it only WAITS in the app if unattended — the visit itself is
-    // meal-gated again at tap time by __cuddlyVisit. Pick an undelivered duo, avoiding the last one.
-    if (!document.hidden && document.hasFocus() && !mealOn()) {
+    // crickets rule (attended) AND daytime AND !meal-on. A text can arrive from ANY room (you're not
+    // required to be in the nook to get it); it only WAITS in the app if unattended — the visit itself
+    // is day+meal-gated again at tap time by __cuddlyVisit. Pick an undelivered duo, avoiding the last one.
+    if (!document.hidden && document.hasFocus() && isDay() && !mealOn()) {
       var rem = undelivered().filter(function (id) { return id !== lastDripId; });
       if (!rem.length) rem = undelivered();
       if (rem.length && window.__deliverPhoneMessage) {

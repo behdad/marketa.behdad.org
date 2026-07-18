@@ -15374,6 +15374,7 @@ var T = {
     msg_album_body: "new photo added — let's take another selfie!",
     msg_irene_games_body: "<em>daeeee</em> I'm bored. can I play games on the computer?",
     cue_music_body: "the office speakers are going too 🎶 open music",
+    hp_nudge: "🎧 pop these on — the party's best on cans",
     cue_cocktails_body: "the full menu's on your phone if you're deciding 🍸",
     cue_calendar_body: "put us in your calendar 📅 may 1 · july 10",
     cue_mail_body: "did you check the mail? 💌 there's a letter for you",
@@ -15876,6 +15877,7 @@ var T = {
     msg_album_body: "přibyla nová fotka — dáme další selfie!",
     msg_irene_games_body: "<em>daeeee</em> nudím se. můžu si na počítači zahrát hry?",
     cue_music_body: "hraje to i v pracovně 🎶 zapni hudbu",
+    hp_nudge: "🎧 nasaď si je — párty zní nejlíp přes sluchátka",
     cue_cocktails_body: "celé menu máš v telefonu, když vybíráš 🍸",
     cue_calendar_body: "zapiš si nás do kalendáře 📅 1. května · 10. července",
     cue_mail_body: "koukl(a) jsi do pošty? 💌 máš tam dopis",
@@ -19998,7 +20000,11 @@ document.addEventListener("click", function (e) {
   // window.__partyDuck feeds each dance Vol() (default 1 via `|| 1`); only the active dance has a ctx.
   window.__setPartyDuck = function (musicActive) {
     if (musicActive !== undefined) window.__projMusicActive = !!musicActive;
-    var duck = !!window.__projMusicActive && window.currentStageName === "cuddly";
+    // Duck in the cuddly nook while a projector music channel plays, OR in the office while the
+    // headphones are on (you're listening to the PC through cans — the party recedes). Both are
+    // room-scoped: step out and the party swells back (the ~1s fade below).
+    var duck = (!!window.__projMusicActive && window.currentStageName === "cuddly") ||
+               (!!window.__headphonesOn && window.currentStageName === "office");
     window.__partyDuck = duck ? 0.15 : 1;
     ["__applyPartyMusicVolume", "__applyWaltzMusicVolume", "__applyDiscoMusicVolume", "__applySwingMusicVolume", "__applySalsaMusicVolume", "__applyBhangraMusicVolume", "__applyPersianMusicVolume", "__applyPolkaMusicVolume", "__applyHorahMusicVolume"].forEach(function (fn) { if (window[fn]) window[fn](0.4); }); // 0.4s time-constant → ~1s fade up/down
   };
@@ -21059,6 +21065,7 @@ function gameTapsNear(a, b) {
         if (a && !a.paused && !a.ended) { playing = a; break; }
       }
       if (playing && window.__setHeadphoneMode) window.__setHeadphoneMode(!window.__headphoneModeOn());
+      else if (window.__setHeadphoneMode) window.__setHeadphoneMode(true); // nothing playing → cans on, which resumes the music (see __setHeadphoneMode)
       else playHeadphoneBassRiff();
     }
     headphones.addEventListener("click", wobbleHeadphones);
@@ -25753,8 +25760,14 @@ var ABANDONED_CALL_MS = 30000;
   window.__setHeadphoneMode = function (on) {
     if (!USE_LIVE_ANALYSER) return; // audio pipeline off (kill switch or sniffed-broken platform): headphones stay inert -- no state flip, cup-pulse, or EQ
     headphoneModeOn = !!on;
-    if (on) ensureHeadphoneBeat();
-    else {
+    window.__headphonesOn = headphoneModeOn;              // office party-duck reads this
+    if (window.__setPartyDuck) window.__setPartyDuck();   // dim the party in the office while cans are on (or swell it back)
+    if (on) {
+      ensureHeadphoneBeat();
+      // Cans on means you want to actually hear it: if nothing's playing, start the song.
+      var anyPlaying = songAudios.some(function (a) { return a && !a.paused && !a.ended; });
+      if (!anyPlaying && window.__playSongAt) window.__playSongAt(0);
+    } else {
       var cups = document.getElementById("office-headphones-cups");
       if (cups) cups.style.transform = ""; // settle back flat -- the rAF loop above stops itself on its next tick
     }
@@ -26184,6 +26197,7 @@ var ABANDONED_CALL_MS = 30000;
   // the phone's rasterized artist headshots land async; when one arrives, re-push the
   // current song's metadata so the lock-screen artwork swaps in from the fallback icon
   window.__refreshMediaArtwork = function () { mediaSessionSongId = null; updateNowPlaying(); };
+  var headphoneNudged = false; // one headphones nudge per time the PC player is opened during a party
   function updateNowPlaying() {
     var playing = null, pausedMid = null;
     for (var i = 0; i < songAudios.length; i++) {
@@ -26229,6 +26243,19 @@ var ABANDONED_CALL_MS = 30000;
         title.textContent = newTitle;
       }
       monitor.classList.add("show-nowplaying");
+      // The loft party's best on cans: nudge once toward the desk headphones while the PC player's
+      // up in the office during a party and they're not already on. Delayed a beat so a booting/
+      // panning monitor has settled; re-checks the gates at fire time (attended, still applicable).
+      if (window.__gardenPartyOn && window.currentStageName === "office" && !headphoneNudged &&
+          !(window.__headphoneModeOn && window.__headphoneModeOn()) && !document.hidden && document.hasFocus()) {
+        headphoneNudged = true;
+        setTimeout(function () {
+          var hpEl = document.getElementById("office-headphones");
+          if (hpEl && window.__gardenPartyOn && window.currentStageName === "office" &&
+              monitor.classList.contains("show-nowplaying") && !(window.__headphoneModeOn && window.__headphoneModeOn()) &&
+              !document.hidden && document.hasFocus()) eggBubble(hpEl, tr("hp_nudge"), "top");
+        }, 700);
+      }
       if (playing) {
         if (pauseBtn) pauseBtn.classList.remove("paused"); // playing → show the pause icon
         scheduleSaver(15000); // idle on the equalizer a while (longer than the default 8s), then the screensaver takes over
@@ -26239,6 +26266,7 @@ var ABANDONED_CALL_MS = 30000;
     } else {
       var was = monitor.classList.contains("show-nowplaying");
       monitor.classList.remove("show-nowplaying");
+      headphoneNudged = false; // player closed → allow the headphones nudge again next time it's opened during a party
       var npTitle = document.getElementById("monitor-np-title");
       if (npTitle) npTitle.textContent = ""; // nothing playing → clear the marquee title too
       if (was && monitor.classList.contains("show-caps")) scheduleSaver(); // music done -> resume idle cycle
@@ -45751,6 +45779,7 @@ function spawnDustMote(container) {
       var ai = document.activeElement;
       if (ai && ai.blur && /^monitor-(term|py|linux)-in$/.test(ai.id || "")) ai.blur();
     }
+    if (name !== "office" && window.__headphoneModeOn && window.__headphoneModeOn() && window.__setHeadphoneMode) window.__setHeadphoneMode(false); // leaving the desk takes the cans off — lifts the office party-duck and hands the song's pan back to the room
     if (name !== "office" && window.__closeOfficePhotobooth) window.__closeOfficePhotobooth(); // leaving the office stops the photobooth camera
     if (name !== "office" && window.__closeMonitorTehran) window.__closeMonitorTehran(true); // ...hangs up the family call (and its self-view camera)
     if (window.__closePhoneModal) window.__closePhoneModal(true); // leaving the balcony (or the extinguisher reset) closes the pocket phone, tearing down its call/board

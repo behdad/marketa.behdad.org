@@ -30624,6 +30624,7 @@ var ABANDONED_CALL_MS = 30000;
     cat: "cat(true) — summon the loose chest cat to your room; cat(false) stows her; cat() reports whether she's out (bare `cat` prints a cat instead)",
     irene: "irene(true) — the niece skips in for a random visit; irene(false) sends her away; irene(\"pose\") forces one: \"roam\" · \"bounce\" · \"sit\" · \"hug\" · \"hugb\" · \"catplay\" · \"catjump\" · \"octiplay\" · \"swing\"; irene() reports whether she's visiting",
     visitors: "visitors(\"duo\") — a friend duo drops by the cuddly nook: \"ali\" (+ Goli) · \"spencer\" (+ Jay) · \"alireza\" (+ Mahzad) · \"bahareh\" (+ Irene). visitors(\"duo\",\"text\") just sends their \"are you home?\" text to the phone instead. visitors(false) sends whoever's here away; visitors() lists the duos. (suppressed on meal days — no visitors while food's served)",
+    message: "message(\"sender\", \"your text\") — pop a phone notification from any sender with any message; it also lands in the messages app.",
     piano: "piano(\"piece\") — the night-sky piano; a piece by name in quotes, e.g. piano(\"bach\"), or 1–5: \"satie\" · \"chopin\" · \"beethoven\" · \"bach\" · \"mozart\". piano() plays a random one (classic is an alias)",
     classic: "classic — alias for piano; try `help piano`",
     kitten: "kitten — alias for cat; try `help cat`",
@@ -30919,7 +30920,7 @@ var ABANDONED_CALL_MS = 30000;
     "goto", "rooms", "daylight", "night", "day", "season", "play", "pause", "temp", "weather",
     "clock", "time", "projector", "storm", "dance", "dj", "cocktail", "lang", "caption", "candle",
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood",
-    "phone", "madla", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
+    "phone", "message", "madla", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "edit",
     "confetti", "fireworks", "cat", "irene", "visitors", "piano", "classic", "kitten", "ukelele", "audio", "music",
     "guitar", "ukulele", "beat", "eclipse", "hb", "loft", "ls", "pwd", "whoami", "sudo",
@@ -37737,6 +37738,10 @@ async def localfont(name):
     // ── messages ── a read-only chat thread: the in-character texts that land on the Act-2 beats
     // (Pouria, the group chat, the album, markéta & behdad). Received-only bubbles, newest at the
     // bottom; rendered from messagesThread (ids) so a language flip re-reads the copy live.
+    // a message's sender/body come from the dict (fromKey/bodyKey) for the authored story texts,
+    // OR as literal strings (from/body) for ad-hoc ones delivered via the message() console API.
+    function msgFrom(m) { return (m && m.from != null) ? m.from : tr(m.fromKey); }
+    function msgBody(m) { return (m && m.body != null) ? m.body : tr(m.bodyKey); }
     function renderMessages(body) {
       var wrap = document.createElement("div");
       wrap.className = "pm-messages";
@@ -37755,13 +37760,13 @@ async def localfont(name):
           var row = document.createElement("div"); row.className = "pm-msg-row" + (messagesRead[id] ? "" : " unread"); // unread (bold) until tapped
           row.setAttribute("role", "button"); row.setAttribute("tabindex", "0");
           var head = document.createElement("div"); head.className = "pm-msg-head";
-          var from = document.createElement("span"); from.className = "pm-msg-from"; from.textContent = tr(m.fromKey);
+          var from = document.createElement("span"); from.className = "pm-msg-from"; from.textContent = msgFrom(m);
           head.appendChild(from);
           if (m.time) { var tm = document.createElement("span"); tm.className = "pm-msg-time"; tm.textContent = m.time; head.appendChild(tm); }
           var bub = document.createElement("div"); bub.className = "pm-msg-bubble";
-          var txt = document.createElement("span"); txt.className = "pm-msg-text"; txt.innerHTML = tr(m.bodyKey); bub.appendChild(txt); // authored dict copy (may carry <em>, e.g. Irene's "daeeee")
+          var txt = document.createElement("span"); txt.className = "pm-msg-text"; txt.innerHTML = msgBody(m); bub.appendChild(txt); // authored dict copy (may carry <em>, e.g. Irene's "daeeee")
           if (m.img) { // a "developing polaroid" fade-in (it's a photobooth shot); static, no tap-to-enlarge
-            var im = document.createElement("img"); im.className = "pm-msg-img"; im.src = m.img; im.alt = tr(m.bodyKey); im.loading = "lazy"; bub.appendChild(im);
+            var im = document.createElement("img"); im.className = "pm-msg-img"; im.src = m.img; im.alt = msgBody(m); im.loading = "lazy"; bub.appendChild(im);
             if (!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
               try { im.animate([{ opacity: 0, filter: "contrast(.7) brightness(1.4) saturate(.5)" }, { offset: .45, opacity: 1 }, { opacity: 1, filter: "none" }], { duration: 1100, easing: "ease-out" }); } catch (e) {} // opacity+filter only (no transform) — clear of the particle-transform guard
             }
@@ -39466,12 +39471,12 @@ async def localfont(name):
         msgThumbEl.addEventListener("click", function () { hideMessageThumb(); open(true); openApp("messages", "app_messages", renderMessages); }); // tap the toast → ALWAYS open the messages app; a message's own action lives inside the thread
       }
       if (msgThumbEl.parentNode !== host) host.appendChild(msgThumbEl);
-      msgThumbEl.querySelector(".msg-thumb-from").textContent = tr(m.fromKey);
-      msgThumbEl.querySelector(".msg-thumb-body").innerHTML = tr(m.bodyKey); // authored copy — may carry <em> (Irene's "daeeee")
+      msgThumbEl.querySelector(".msg-thumb-from").textContent = msgFrom(m);
+      msgThumbEl.querySelector(".msg-thumb-body").innerHTML = msgBody(m); // authored copy — may carry <em> (Irene's "daeeee")
       var ico = msgThumbEl.querySelector(".msg-thumb-ico"); // a photo message shows its picture as the icon; otherwise the 💬 glyph
       if (m.img) { ico.classList.add("has-img"); ico.innerHTML = '<img src="' + m.img + '" alt="">'; }
       else { ico.classList.remove("has-img"); ico.textContent = "💬"; }
-      msgThumbEl.setAttribute("aria-label", tr("app_messages") + " — " + tr(m.fromKey) + ": " + tr(m.bodyKey).replace(/<[^>]+>/g, ""));
+      msgThumbEl.setAttribute("aria-label", tr("app_messages") + " — " + msgFrom(m) + ": " + msgBody(m).replace(/<[^>]+>/g, ""));
       msgThumbEl.classList.remove("show"); void msgThumbEl.offsetWidth; // restart the slide/pulse if one's still up
       msgThumbEl.classList.add("show");
       playPhoneNotifySound();
@@ -39508,6 +39513,20 @@ async def localfont(name):
       if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages); // live-refresh if the thread's already open
       showMessageThumb(id);
       updateMsgBadge();
+    };
+    // message("Sender", "your text") — deliver an AD-HOC text: a notification toast (when the tab's
+    // attended) AND a bubble in the messages app, from an arbitrary sender with arbitrary body.
+    // The building block of the phone-messaging JS API; each call is a fresh, unique message.
+    var customMsgSeq = 0;
+    window.message = function (sender, text) {
+      var s = (sender == null) ? "" : String(sender).trim();
+      var t = (text == null) ? "" : String(text);
+      if (!s || !t) return 'usage: message("sender name", "your message")';
+      var mid = "custom_" + (++customMsgSeq);
+      var d = new Date(), mm = d.getMinutes();
+      MESSAGES[mid] = { from: s, body: t, time: d.getHours() + ":" + (mm < 10 ? "0" + mm : mm) }; // literal from/body (no dict keys), stamped now; no act → a tap just opens the app
+      window.__deliverPhoneMessage(mid);
+      return "📱 " + s + ": " + t;
     };
     // has this message already arrived (is it in the thread)? — the cuddly-visitor drip uses this
     // to avoid re-sending a duo's "are you home?" text and to stop its timer once all four are in.

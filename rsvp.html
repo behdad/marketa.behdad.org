@@ -1537,6 +1537,78 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   #garden-guests.guests-in .g-jay .guest-halo.halo-pulse{animation:none}
 }
 @keyframes guest-react-blip{0%,100%{opacity:1} 50%{opacity:.55}}
+/* ── FARHANG'S TOAST — the MC raises a glass ──────────────────────────────────
+   Tapping Farhang (or __farhangToast()) pops a speech bubble over his head, raises his
+   champagne glass, and the nearby guests answer with their own flares (all in JS). The
+   bubble + glass are PERSISTENT hidden nodes inside #garden-guests (nothing spawned →
+   nothing to pile up in a hidden tab); a one-shot .toasting class on #garden-guests shows
+   them, cleared on animationend so it replays cleanly on a re-tap. The bubble/glass carry
+   NO static transform of their own beyond a wrapper, so the show animation composes freely.
+   Both hidden (opacity:0 + pointer-events:none) at rest, so an off-floor / non-toasting
+   party never leaks them. */
+#garden-farhang-toast{opacity:0; pointer-events:none} /* the speech bubble, hidden at rest */
+#garden-farhang-glass{opacity:0} /* Farhang's raised champagne flute, hidden at rest */
+#garden-guests.toasting #garden-farhang-toast{animation:farhang-toast-pop 2.6s ease-out both}
+#garden-guests.toasting #garden-farhang-glass{animation:farhang-glass-raise 2.6s ease-in-out both}
+@keyframes farhang-toast-pop{0%{opacity:0; transform:translateY(6px) scale(.7)} 12%{opacity:1; transform:translateY(0) scale(1.04)} 20%{transform:scale(1)} 85%{opacity:1} 100%{opacity:0; transform:translateY(-2px) scale(1)}}
+@keyframes farhang-glass-raise{0%{opacity:0; transform:translateY(6px) rotate(0)} 14%{opacity:1; transform:translateY(-4px) rotate(-8deg)} 50%{transform:translateY(-6px) rotate(-8deg)} 85%{opacity:1; transform:translateY(-4px) rotate(-8deg)} 100%{opacity:0; transform:translateY(0) rotate(0)}}
+#garden-farhang-toast{transform-box:fill-box; transform-origin:center bottom}
+#garden-farhang-glass{transform-box:fill-box; transform-origin:right bottom}
+/* reduced motion: the bubble + glass still SHOW (a gentle fade, held, faded — no pop/rise) */
+@media (prefers-reduced-motion: reduce){
+  #garden-guests.toasting #garden-farhang-toast{animation:farhang-toast-rm 2.6s ease both}
+  #garden-guests.toasting #garden-farhang-glass{animation:farhang-toast-rm 2.6s ease both}
+  @keyframes farhang-toast-rm{0%{opacity:0} 12%{opacity:1} 85%{opacity:1} 100%{opacity:0}}
+}
+/* ── FIRST DANCE — the crowd rings the floor, the hosts sway centre alone ──────
+   __firstDance() (console: firstdance()) rings the non-host guests outward + pauses them,
+   spotlights Behdad & Markéta swaying centre-floor for ~13s, then everyone resumes. Driven
+   by a .first-dance class on #garden-guests (crowd ring + pause) plus the strip's .dance-frozen
+   flag (via __syncDanceFreeze, keyed off __firstDanceOn) — reusing the TESTED freeze path that
+   already drops the UV blacklight (#loft-game-strip.dance-frozen.uv-mode{filter:none}) and
+   true-colours the hosts (their :not(.dance-frozen) UV counter-filter falls away). We then
+   un-pause ONLY the two host figures so they keep swaying while the frozen crowd holds still.
+   The ring step-back rides the CSS `translate` PROPERTY on each .g-* group (never the transform
+   attribute that positions them), so it composes with the position translate instead of
+   clobbering it — same idiom as the melt-dancers' .crowd-clear reposition. All class-driven
+   (nothing spawned), fully cleared on end / party-off / room-leave / reset. */
+#garden-guests .guest{transition:translate .9s cubic-bezier(.4,0,.2,1)} /* the ring step-back eases */
+#garden-guests.first-dance .g-ali{translate:-58px -34px}
+#garden-guests.first-dance .g-goli{translate:52px -34px}
+#garden-guests.first-dance .g-spencer{translate:-8px -52px}
+#garden-guests.first-dance .g-jay{translate:26px -50px}
+#garden-guests.first-dance .g-alireza{translate:-56px 2px}
+#garden-guests.first-dance .g-mahzad{translate:-40px 6px}
+#garden-guests.first-dance .g-farhang{translate:58px 0}
+#garden-guests.first-dance .g-lauren{translate:74px 4px}
+#garden-guests.first-dance .g-bahareh{translate:80px 6px}
+#garden-guests.first-dance .g-elisabeth{translate:74px 10px}
+#garden-guests.first-dance .g-felix{translate:86px 12px}
+/* under the shared freeze, keep ONLY the two hosts dancing (everyone else holds still). The
+   .first-dance qualifier scopes this to the first-dance freeze, never the space-bar/photo one. */
+#loft-game-strip.dance-frozen.first-dance #garden-guests .g-behdad,
+#loft-game-strip.dance-frozen.first-dance #garden-guests .g-behdad *,
+#loft-game-strip.dance-frozen.first-dance #garden-guests .g-marketa,
+#loft-game-strip.dance-frozen.first-dance #garden-guests .g-marketa *{animation-play-state:running !important}
+/* a soft warm spotlight glow pooled centre-floor under the hosts, only during the first dance.
+   A persistent hidden ellipse (opacity:0 at rest → nothing to pile up); positions via cx/cy so
+   writing no transform ever clobbers a position. Sits BEHIND the hosts (earlier in source). */
+#garden-firstdance-spot{opacity:0; transition:opacity 1s ease}
+#garden-guests.first-dance #garden-firstdance-spot{opacity:1; animation:firstdance-spot-breathe 4s ease-in-out infinite}
+@keyframes firstdance-spot-breathe{0%,100%{opacity:.5} 50%{opacity:.78}}
+/* reduced motion: the crowd still rings out (a lighting/position change, snapped) and the spot
+   still shows, but it doesn't breathe and the hosts hold a pose (the dance-frozen pause already
+   stills them; we simply DON'T un-pause the hosts under reduced motion — see below). */
+@media (prefers-reduced-motion: reduce){
+  #garden-guests .guest{transition:none}
+  #garden-firstdance-spot{transition:none}
+  #garden-guests.first-dance #garden-firstdance-spot{animation:none; opacity:.62}
+  /* hold the hosts still too: cancel the un-pause so nobody spins under reduced motion */
+  #loft-game-strip.dance-frozen.first-dance #garden-guests .g-behdad,
+  #loft-game-strip.dance-frozen.first-dance #garden-guests .g-behdad *,
+  #loft-game-strip.dance-frozen.first-dance #garden-guests .g-marketa,
+  #loft-game-strip.dance-frozen.first-dance #garden-guests .g-marketa *{animation-play-state:paused !important}
+}
 /* Garden party swaps the witchy altar+mirror for a DJ booth. Same gate the disco pools
    use (#stage-garden.garden-party). Fade with opacity (not display) so the ritual props'
    hunt-hit getBBox reads stay valid and the cat-roam math never sees a zeroed chest. */
@@ -9863,6 +9935,15 @@ section{margin:1.9rem 0}
      arrival slide rides its own .guest-arrival wrapper (distinct from both). Reduced
      motion: they still appear (via .guests-in opacity) but hold a static pose. -->
 <g id="garden-guests" pointer-events="none" aria-hidden="true">
+<!-- FIRST-DANCE SPOTLIGHT — a soft warm pool of light on the floor under the hosts, shown only
+     while .first-dance is set (see the CSS). First child so it paints BEHIND every guest.
+     Positions via cx/cy (no transform → nothing to clobber); centred under the hosts (~x328),
+     just below their feet (~y336). A layered radial: a broad warm wash + a brighter core. -->
+<g id="garden-firstdance-spot" pointer-events="none" aria-hidden="true">
+<ellipse cx="328" cy="338" rx="120" ry="42" fill="#ffe6b0" opacity="0.34" style="mix-blend-mode:screen"/>
+<ellipse cx="328" cy="336" rx="78" ry="28" fill="#fff2cf" opacity="0.5" style="mix-blend-mode:screen"/>
+<ellipse cx="328" cy="252" rx="46" ry="96" fill="#ffedc0" opacity="0.16" style="mix-blend-mode:screen"/><!-- a soft upward cone -->
+</g>
 <!-- ALI — very tall & lanky best man: brown/burgundy flat cap, long pointed grey beard to
      mid-chest, big cream rounded sunglasses, oversized cream mesh jersey, red short shorts,
      white knee-high socks, chunky cream platform brogues. A small forearm tattoo. Feet ~y332.
@@ -10648,6 +10729,27 @@ section{margin:1.9rem 0}
 </g><!-- /guest-orbit -->
 </g><!-- /guest-arrival -->
 </g><!-- /g-felix -->
+<!-- ═══ FARHANG'S TOAST — a raised glass + a speech bubble ═════════════════════════
+     The MC (g-farhang, at garden-local x490) raises a champagne flute and pops a speech
+     bubble over his head when tapped (or via __farhangToast()). Persistent hidden nodes
+     (opacity:0 at rest; shown by the one-shot .toasting class on #garden-guests, cleared on
+     animationend), so a hidden tab or a non-toasting party never leaks them. Garden-local
+     coords (direct children of #garden-guests): Farhang's head sits ~x490,y198; his raised
+     hand ~x511,y194. Bubble above his head, glass by the raised hand. -->
+<g id="garden-farhang-glass" pointer-events="none" aria-hidden="true">
+<!-- a slim champagne flute: bowl + a couple of bubbles + a thin stem/foot, warm-gold so it
+     reads bright under the party blacklight. Anchored by Farhang's raised (screen-right) hand. -->
+<path d="M 508 168 L 516 168 L 514.4 178 C 514 180.6 512.6 182 512 182 C 511.4 182 510 180.6 509.6 178 Z" fill="#f6e7a8" stroke="#d8c074" stroke-width="0.6"/>
+<path d="M 508.6 170 L 515.4 170 C 515.1 172 514.7 173.6 514.2 175 L 509.8 175 C 509.3 173.6 508.9 172 508.6 170 Z" fill="#fff6d0" opacity="0.85"/><!-- the bubbly wine -->
+<circle cx="511" cy="165.6" r="0.7" fill="#fff6d0"/><circle cx="513" cy="163.8" r="0.5" fill="#fff6d0"/><circle cx="510" cy="163" r="0.45" fill="#fff6d0"/><!-- rising bubbles -->
+<rect x="511.4" y="182" width="1.2" height="9" rx="0.4" fill="#e7d489"/><!-- stem -->
+<path d="M 507.6 191.4 L 516.4 191.4 L 515.2 193 L 508.8 193 Z" fill="#e7d489"/><!-- foot -->
+</g>
+<g id="garden-farhang-toast" pointer-events="none" aria-hidden="true">
+<!-- a rounded speech bubble above Farhang's head with a small tail pointing down at him -->
+<path d="M 452 128 Q 452 120 460 120 L 526 120 Q 534 120 534 128 L 534 148 Q 534 156 526 156 L 500 156 L 494 166 L 490 156 L 460 156 Q 452 156 452 148 Z" fill="#fffdf8" stroke="#8e3a4a" stroke-width="1.4"/>
+<text x="493" y="142" text-anchor="middle" font-family="'Source Serif 4', Georgia, serif" font-size="12" font-weight="600" fill="#8e3a4a">🥂</text>
+</g>
 </g>
 <!-- a small party guest at the front-left edge, camera raised to catch the night. Static
      (muted tones so it stays in the background rather than glowing neon like the dancers);
@@ -18237,6 +18339,8 @@ var T = {
       arcade_hint: "Move to blast the invaders! 👾",
       garden: "Water a plant, play music, light candles.",
       garden_party: "Party's on — dance like nobody's watering. 💃🌱",
+      farhang_toast: "To the happy couple! 🥂",
+      first_dance_caption: "Their first dance — everyone else, hush. 💞",
       dj_sina: ["<em>DJ Sina</em> takes over the decks. 🎧", "<em>DJ Sina</em> grabs the ones and twos. 🎧"],
       dj_danesh: ["<em>DJ Danesh</em> takes over the decks. 🎧", "<em>DJ Danesh</em> steps up to spin. 🎧"],
       garden_need_music_candles: "Play music, light candles.",
@@ -18777,6 +18881,8 @@ var T = {
       arcade_hint: "Pohybuj se a sestřel vetřelce! 👾",
       garden: "Zalij kytku, zahraj, zapal svíčky.",
       garden_party: "Párty jede — tanči, ať kytky počkají. 💃🌱",
+      farhang_toast: "Na šťastný pár! 🥂",
+      first_dance_caption: "Jejich první tanec — ostatní, pšš. 💞",
       dj_sina: ["Za gramofony jde <em>DJ Sina</em>. 🎧", "<em>DJ Sina</em> bere desky do ruky. 🎧"],
       dj_danesh: ["Za gramofony jde <em>DJ Danesh</em>. 🎧", "<em>DJ Danesh</em> jde roztočit desky. 🎧"],
       garden_need_music_candles: "Zahraj a zapal svíčky.",
@@ -30751,6 +30857,7 @@ var ABANDONED_CALL_MS = 30000;
     storm: "storm(true) — roll a thunderstorm in over the balcony; storm(false) clears it; storm() reports whether it's storming",
     dance: "dance(\"name\") — cue a garden-party dance by name in quotes, e.g. dance(\"salsa\"), or 1–9, or dance(random()); dance() returns the current dance {n, name}; dance(\"next\") skips ahead (run party(true) first). dances: \"techno\" · \"waltz\" · \"disco\" · \"swing\" · \"salsa\" · \"bhangra\" · \"persian\" · \"polka\" · \"horah\"",
     dj: "dj(\"sina\"|\"danesh\") — who spins at the party (or 1–2, or random()); dj() returns the current DJ {n, name}. sina wears the cap, danesh the afro",
+    firstdance: "firstdance() — the hosts' first dance: the crowd rings the floor + pauses, the UV blacklight drops, and Behdad & Markéta sway centre-floor alone under a soft spotlight for ~13s, then everyone resumes. lights the party + heads to the garden + crashes the crowd first if needed. firstdance(false) ends it early",
     cocktail: "cocktail(\"negroni\") — Pouria mixes that real drink from the bar's menu (partial name ok); cocktail() makes the featured signature drink. lights the party + steps behind the bar first if it's dark. he also mixes on his own while you watch the bar. alias: drink()",
     lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
     caption: "caption(\"text\"[, {blink:ms, hold:ms}]) — overwrite the hint line above the scene and return the previous line; caption() reads it. blink pulses the line to catch the eye; hold restores the previous line after that long. also caption(text, blinkMs, holdMs). a room change or hint reclaims it",
@@ -30858,7 +30965,7 @@ var ABANDONED_CALL_MS = 30000;
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · chase() · guests()/aligoli() · roster() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · chase() · guests()/aligoli() · roster() · dance() · dj() · firstdance() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
@@ -31106,7 +31213,7 @@ var ABANDONED_CALL_MS = 30000;
   var CONSOLE_CMDS = [
     "help", "clear", "laser", "party", "chase", "guests", "aligoli", "roster", "reset", "quit", "blacklight", "uv", "trip", "room",
     "goto", "rooms", "daylight", "night", "day", "season", "play", "pause", "temp", "weather",
-    "clock", "time", "projector", "storm", "dance", "dj", "cocktail", "lang", "caption", "candle",
+    "clock", "time", "projector", "storm", "dance", "dj", "firstdance", "cocktail", "lang", "caption", "candle",
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood",
     "phone", "message", "madla", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "edit",
@@ -34748,9 +34855,15 @@ async def localfont(name):
   // transport's __musicPaused + __gardenPartyOn; the CSS pauses the guest/melt/DJ dance animations.
   window.__syncDanceFreeze = function () {
     var strip = document.getElementById("loft-game-strip");
-    // frozen when, during the party, EITHER the music is paused (space-bar, to inspect) OR an
-    // autonomous ~15s photo-moment is running (__photoFreeze).
-    if (strip) strip.classList.toggle("dance-frozen", !!window.__gardenPartyOn && (!!window.__musicPaused || !!window.__photoFreeze));
+    // frozen when, during the party, the music is paused (space-bar, to inspect), an autonomous
+    // ~15s photo-moment is running (__photoFreeze), OR the hosts' FIRST DANCE is on (__firstDanceOn
+    // — reuses this same freeze path so the tested UV-drop + host true-colour rules apply; the
+    // hosts alone are then un-paused via the .first-dance CSS above).
+    var frozen = !!window.__gardenPartyOn && (!!window.__musicPaused || !!window.__photoFreeze || !!window.__firstDanceOn);
+    if (strip) {
+      strip.classList.toggle("dance-frozen", frozen);
+      strip.classList.toggle("first-dance", !!window.__gardenPartyOn && !!window.__firstDanceOn); // scopes the host-only un-pause + spotlight to the first dance
+    }
     if (window.__syncGardenFlashPace) window.__syncGardenFlashPace(); // stopped party → the photographer works the frozen crowd continuously
   };
   window.__toggleMusicPlayback = toggleMusicPlayback;
@@ -51824,6 +51937,7 @@ function spawnDustMote(container) {
   function clearGardenGuests() { // hard teardown: goToStage room-leave + reset
     clearGuestArriveTimer();
     stopHostSolo();
+    if (window.__gardenMomentsTeardown) window.__gardenMomentsTeardown(); // end any live toast / first dance (restores UV) so nothing strands
     var g = document.getElementById("garden-guests");
     if (g) g.classList.remove("guests-in", "guests-arriving");
     syncCrowdClear(); // teardown → the generic dancers return to their normal spots
@@ -51974,6 +52088,121 @@ function spawnDustMote(container) {
         extra.classList.remove("halo-pulse");
       });
     });
+  })();
+  // ── FARHANG'S TOAST + THE FIRST DANCE ────────────────────────────────────────
+  // Two garden-party "moments", both class-driven on persistent nodes (nothing spawned →
+  // nothing to pile up in a hidden tab), self-clearing, teardown-safe (cleared on party-off /
+  // room-leave / reset with the rest of the crowd).
+  //
+  //  TOAST  — tapping Farhang (the MC) or __farhangToast() raises his champagne flute, pops a
+  //           speech bubble ("To the happy couple! 🥂"), plays a soft glass clink (SFX-context
+  //           routed + crickets-gated, though a tap implies focus), and the nearby guests answer
+  //           with their own signature flares. One-shot .toasting class on #garden-guests, cleared
+  //           on the bubble's animationend so a re-tap replays cleanly.
+  //  FIRST DANCE — __firstDance() (console: firstdance()) rings the crowd outward + pauses them
+  //           (.first-dance on #garden-guests) and freezes the strip via __syncDanceFreeze (keyed
+  //           off __firstDance), reusing the tested freeze path that DROPS the UV blacklight and
+  //           true-colours the hosts; the two hosts alone keep swaying (CSS un-pause). After ~13s
+  //           it eases everyone back. Reduced motion holds the hosts in a pose (the CSS keeps them
+  //           paused under the freeze) — no spin. Fully torn down on party-off / room-leave / reset.
+  (function wireGardenMoments() {
+    var group = document.getElementById("garden-guests");
+    if (!group) return;
+    function onFloor() { return group.classList.contains("guests-in"); }
+    function reducedMotion() { return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
+    function reactOf(sel) { var el = group.querySelector(sel); return el ? el.querySelector(".guest-react") : null; }
+    function flareGuest(sel, cls) { // reuse a guest's existing signature flare (one-shot on .guest-react, cleared by wireGuestTaps' animationend)
+      var react = reactOf(sel);
+      if (!react) return;
+      react.classList.remove(cls);
+      react.getBoundingClientRect(); // force reflow (SVG has no offsetWidth) so a rapid replay restarts cleanly
+      react.classList.add(cls);
+    }
+    // a soft two-note glass clink, panned to Farhang's spot (screen-right). SFX-context routed +
+    // crickets-gated like every unattended sound (a tap implies focus; guard kept for parity).
+    function playClinkSfx() {
+      if (document.hidden || !document.hasFocus()) return; // crickets rule
+      try {
+        var ctx = getSfxCtx();
+        if (!ctx) return;
+        var t = ctx.currentTime, out = pannedOut(ctx, 0.7);
+        function ping(f, dt, gpk) {
+          var osc = ctx.createOscillator(); osc.type = "sine"; osc.frequency.setValueAtTime(f, t + dt);
+          var g = ctx.createGain();
+          g.gain.setValueAtTime(0.0001, t + dt);
+          g.gain.exponentialRampToValueAtTime(gpk, t + dt + 0.006);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.5);
+          osc.connect(g); g.connect(out); osc.start(t + dt); osc.stop(t + dt + 0.55);
+        }
+        ping(2100, 0, 0.05); ping(3150, 0.008, 0.035); // the bright glassy double-tap of two flutes meeting
+        ping(1550, 0.09, 0.03); // a soft after-ring
+      } catch (e) {}
+    }
+    var toastEl = document.getElementById("garden-farhang-toast");
+    function farhangToast() {
+      if (!onFloor()) return false; // inert off the floor — nothing to leak
+      // raise + bubble: restart the one-shot .toasting cleanly (remove → reflow → re-add)
+      group.classList.remove("toasting");
+      group.getBoundingClientRect();
+      group.classList.add("toasting");
+      // Farhang grooves as he raises the glass; the nearby guests turn/raise in response a beat later
+      flareGuest(".g-farhang", "farhang-flare");
+      flareGuest(".g-lauren", "lauren-flare"); // his plus-one, right beside him
+      // the rest of the crowd answers a beat later (they turn toward the toast); reuse each
+      // guest's own signature flare. Guarded so nothing fires if the floor cleared meanwhile.
+      setTimeout(function () {
+        if (!onFloor()) return;
+        flareGuest(".g-goli", "goli-flare");
+        flareGuest(".g-jay", "jay-flare");
+        flareGuest(".g-bahareh", "bahareh-flare");
+      }, 200);
+      playClinkSfx();
+      return true;
+    }
+    // clear the one-shot .toasting once the bubble's pop finishes, so a re-tap replays it
+    if (toastEl) toastEl.addEventListener("animationend", function () { group.classList.remove("toasting"); });
+    window.__farhangToast = farhangToast;
+    // tapping Farhang gives the toast (his flare still fires via wireGuestTaps' own listener)
+    var farhang = group.querySelector(".g-farhang");
+    if (farhang) {
+      farhang.addEventListener("pointerdown", function () { farhangToast(); });
+      farhang.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") { e.preventDefault(); farhangToast(); }
+      });
+    }
+
+    // ── FIRST DANCE ──
+    // window.__firstDanceOn is the boolean STATE flag (read by __syncDanceFreeze to key the freeze
+    // + UV drop + spotlight); window.__firstDance() is the callable test hook that starts it.
+    var firstDanceTimer = null;
+    function endFirstDance() {
+      if (firstDanceTimer) { clearTimeout(firstDanceTimer); firstDanceTimer = null; }
+      window.__firstDanceOn = false;
+      group.classList.remove("first-dance");
+      if (window.__syncDanceFreeze) window.__syncDanceFreeze(); // drops .dance-frozen + .first-dance on the strip → UV restored to the switch's intent
+      if (window.__updateUvBreather) window.__updateUvBreather(); // hand the blacklight back to the breather/switch cleanly
+    }
+    window.__endFirstDance = endFirstDance;
+    function firstDance() {
+      if (!onFloor()) return false; // only meaningful with the crowd on the floor
+      if (window.__firstDanceOn) return true; // already running — idempotent (storm-safe)
+      window.__firstDanceOn = true;
+      group.classList.add("first-dance"); // rings the crowd out + spotlight on (CSS)
+      if (window.__syncDanceFreeze) window.__syncDanceFreeze(); // freeze the crowd + drop the UV via the tested path; the two hosts alone keep swaying (CSS)
+      if (window.__updateUvBreather) window.__updateUvBreather(); // pause the UV breather while the freeze holds the blacklight off
+      firstDanceTimer = setTimeout(endFirstDance, reducedMotion() ? 9000 : 13000); // hold ~13s (a shorter beat under reduced motion)
+      return true;
+    }
+    window.__firstDanceOn = false; // state default (read by __syncDanceFreeze)
+    window.__firstDance = firstDance; // test/console hook — __firstDance() starts the moment
+    // a party-off / room-leave / reset that clears the floor must also tear the moment down so
+    // nothing strands (UV left off, crowd left ringed). Poll the floor state cheaply — same idiom
+    // as the other garden self-gating timers; also caught synchronously by the guests' teardown below.
+    document.addEventListener("visibilitychange", function () { if (window.__firstDanceOn && !onFloor()) endFirstDance(); });
+    window.__gardenMomentsTeardown = function () { // called from clearGardenGuests / resetGuestsArrival
+      if (window.__firstDanceOn) endFirstDance();
+      group.classList.remove("toasting");
+    };
   })();
   // ── PARTY MODE disco pools (garden) — STEPPED, not tweened. A continuous CSS/WAAPI sweep
   // of these big screen-blended ellipses repaints every frame and visibly FLICKERED on
@@ -56123,6 +56352,25 @@ function spawnDustMote(container) {
     ensureNodes(); syncAvailability();
     setInterval(syncAvailability, 1500); // cheap: reflect party on/off + presence drift under an open panel
   })();
+  // firstdance() — the hosts' FIRST DANCE: the crowd rings the floor + pauses, the UV blacklight
+  // drops, and Behdad & Markéta sway centre-floor alone under a soft spotlight for ~13s, then
+  // everyone resumes. Lights the party + heads to the garden + crashes the crowd first if needed
+  // (so there's a ring to form), then triggers the moment once the floor's set. firstdance(false)
+  // ends it early. Honours reduced motion (the hosts hold a pose — no spin). window.__firstDance()
+  // is the underlying test hook that runs it immediately assuming the floor's already up.
+  window.firstdance = function (arg) {
+    if (arg === false) { if (window.__endFirstDance) window.__endFirstDance(); if (window.echo) window.echo("the first dance winds down — the party rolls on."); return true; }
+    if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
+    if (window.goToStage) window.goToStage("garden");
+    setTimeout(function () { // let goToStage settle the room, then make sure the crowd's up before ringing them out
+      if (window.__guestsIn && !window.__guestsIn() && window.__summonGuests) window.__summonGuests();
+      setTimeout(function () {
+        var ok = window.__firstDance && window.__firstDance();
+        if (window.echo) window.echo(ok ? "💞 the floor clears — Behdad & Markéta take their first dance, everyone ringed around." : "the floor's dark — run party(true) first.");
+      }, 120);
+    }, 60);
+    return true;
+  };
 
   // Master audio volume — one session-scoped level (0..1) over EVERYTHING the loft plays:
   // SFX one-shots (via the sfxCtx shadow-destination gain), the songs, and every synth

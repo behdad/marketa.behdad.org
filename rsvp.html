@@ -5987,7 +5987,7 @@ section{margin:1.9rem 0}
    (via window.__setSeason): .season-holiday (Dec 1–Jan 6) or .season-spooky
    (Oct 24–31). All .sn-* elements are decorative, non-interactive, and hidden
    outside their season, so the rest of the year renders untouched. */
-.sn-holiday, .sn-spooky, .sn-valentines, .sn-bonfire, .sn-carodejnice, .sn-chaharshanbe, .sn-pride, .sn-nowruz, .sn-canada, .sn-sizdah, .sn-toque, .sn-rehydration{display:none}
+.sn-holiday, .sn-spooky, .sn-autumn, .sn-valentines, .sn-bonfire, .sn-carodejnice, .sn-chaharshanbe, .sn-pride, .sn-nowruz, .sn-canada, .sn-sizdah, .sn-toque, .sn-rehydration{display:none}
 #loft-game-strip.season-holiday .sn-holiday{display:inline}
 /* The toque is CLIMATE, not December's dressing: December's own class shows it too, but
    .climate-winter carries it through the snowy weeks that carry no decor of their own. */
@@ -5999,6 +5999,39 @@ section{margin:1.9rem 0}
 #loft-game-strip.season-newyear .sn-hydration{display:none}
 #loft-game-strip.season-spooky .sn-spooky{display:inline}
 #loft-game-strip.season-valentines .sn-valentines{display:inline}
+/* ── autumn ──────────────────────────────────────────────────────────────────
+   Sep 15–30 (before Halloween takes October). The garden room's greenery turns —
+   the monstera + herb foliage recolour to warm reds/oranges/golds — and a small
+   scatter of fallen leaves shows on the floor (.sn-autumn overlay). Warm leaves
+   also drift down past the garden window: a self-replenishing WAAPI spawner (see
+   spawnGardenLeaf), so nothing accumulates on a hidden/unfocused tab. */
+#loft-game-strip.season-autumn .sn-autumn{display:inline}
+/* recolour the garden foliage to autumn tones. The .garden-leaf solid fills turn;
+   the url(#garden-leaf-sheen) overlays are left alone so the leaves keep their
+   watercolour sheen over the new colour. Staggered hues so the canopy reads as a
+   mix of turned + still-turning rather than one flat repaint. */
+#loft-game-strip.season-autumn .garden-leaf{transition:fill .9s ease}
+#loft-game-strip.season-autumn .garden-leaf{fill:#c0392b}
+#loft-game-strip.season-autumn ellipse.garden-leaf[cx="290"]{fill:#e67e22}
+#loft-game-strip.season-autumn ellipse.garden-leaf[cx="266"]{fill:#e8a33d}
+#loft-game-strip.season-autumn ellipse.garden-leaf[cx="246"]{fill:#b7791f}
+#loft-game-strip.season-autumn ellipse.garden-leaf[cx="292"]{fill:#8e5a2b}
+#loft-game-strip.season-autumn ellipse.garden-leaf[cx="228"]{fill:#e8a33d}
+#loft-game-strip.season-autumn ellipse.garden-leaf[cx="304"]{fill:#e67e22}
+#loft-game-strip.season-autumn #stage-garden .garden-leaf-stem{stroke:#9c6b2b}
+#loft-game-strip.season-autumn ellipse.garden-leaf[cx="462"]{fill:#d98a2b}
+#loft-game-strip.season-autumn ellipse.garden-leaf[cx="474"]{fill:#c0653a}
+/* a fallen leaf's slow curl where it lies (very slight, so a still floor doesn't
+   read as frozen); a FIXED set of nodes, no timer, nothing can pile up */
+/* the settle-curl animates the CSS `rotate:` INDIVIDUAL property (not the `transform`
+   shorthand), so it composes with — rather than clobbering — each leaf's static
+   transform="rotate(... )" placement attribute (the transform-attribute-clobber bug). */
+.sn-fallen-leaf{transform-box:fill-box; transform-origin:center; animation:sn-leaf-settle 6s ease-in-out infinite}
+.sn-fallen-leaf.l2{animation-delay:-1.5s; animation-duration:7s}
+.sn-fallen-leaf.l3{animation-delay:-3s; animation-duration:5.5s}
+.sn-fallen-leaf.l4{animation-delay:-4.5s; animation-duration:6.5s}
+@keyframes sn-leaf-settle{0%,100%{rotate:-4deg}50%{rotate:4deg}}
+@media (prefers-reduced-motion: reduce){.sn-fallen-leaf{animation:none}}
 /* the bonfire is its own season-agnostic axis from the dressing: every spring fire festival
    (Čarodějnice now, Chaharshanbe Suri later) lights the same fire, only the dressing differs */
 #loft-game-strip.season-carodejnice .sn-bonfire{display:inline}
@@ -7727,6 +7760,10 @@ section{margin:1.9rem 0}
 <!-- the Canada Day flypast gets its own host: spawnGardenPlane clears garden-skyfx wholesale, so sharing it would have the airliner and the jets wiping each other -->
 <g id="garden-flypast" clip-path="url(#garden-window-clip)" pointer-events="none" aria-hidden="true"></g>
 <g id="garden-rainfx" clip-path="url(#garden-window-clip)" pointer-events="none" aria-hidden="true"></g>
+<!-- autumn: warm leaves drift down past the glass. Populated by spawnGardenLeaf, a
+     self-replenishing WAAPI spawner (each leaf replaces itself on its own onfinish),
+     so the count stays constant and spawning pauses with the frames on a hidden tab. -->
+<g id="garden-leaffx" clip-path="url(#garden-window-clip)" pointer-events="none" aria-hidden="true"></g>
 <!-- storm rain streaks on the glass: lines start above the clip and a CSS loop (gated on
      #stage-garden.storming) carries them down through the panes; invisible otherwise -->
 <g id="garden-pane-streaks" clip-path="url(#garden-window-clip)" pointer-events="none">
@@ -7787,6 +7824,23 @@ section{margin:1.9rem 0}
 </g>
 <ellipse cx="310" cy="312" rx="140" ry="16" fill="#e8b96f" fill-opacity="0.45"/>
 <ellipse cx="150" cy="326" rx="70" ry="9" fill="#e8b96f" fill-opacity="0.4"/>
+<!-- autumn only: a few leaves already down on the floorboards, warm tones, each with a
+     faint settle-curl (a fixed CSS-animated set — no spawner, so nothing accumulates).
+     Non-interactive, kept off the tap zones. -->
+<g class="sn-autumn" aria-hidden="true" pointer-events="none">
+<path class="sn-fallen-leaf" d="M96 322 Q104 314 112 322 Q104 328 96 322 Z" fill="#c0392b" transform="translate(0,0) rotate(-14 104 322)"/>
+<path d="M104 315 L104 322" stroke="#8a4a20" stroke-width="0.7" transform="rotate(-14 104 322)"/>
+<path class="sn-fallen-leaf l2" d="M182 331 Q191 322 200 331 Q191 338 182 331 Z" fill="#e67e22" transform="rotate(20 191 331)"/>
+<path d="M191 323 L191 331" stroke="#8a4a20" stroke-width="0.7" transform="rotate(20 191 331)"/>
+<path class="sn-fallen-leaf l3" d="M356 320 Q363 313 370 320 Q363 326 356 320 Z" fill="#e8a33d" transform="rotate(-24 363 320)"/>
+<path d="M363 314 L363 320" stroke="#8a4a20" stroke-width="0.6" transform="rotate(-24 363 320)"/>
+<path class="sn-fallen-leaf l4" d="M470 328 Q479 319 488 328 Q479 335 470 328 Z" fill="#b7791f" transform="rotate(12 479 328)"/>
+<path d="M479 320 L479 328" stroke="#8a4a20" stroke-width="0.7" transform="rotate(12 479 328)"/>
+<path class="sn-fallen-leaf l2" d="M560 322 Q567 315 574 322 Q567 328 560 322 Z" fill="#8e5a2b" transform="rotate(-8 567 322)"/>
+<path d="M567 316 L567 322" stroke="#7a4420" stroke-width="0.6" transform="rotate(-8 567 322)"/>
+<path class="sn-fallen-leaf l3" d="M270 334 Q277 327 284 334 Q277 340 270 334 Z" fill="#c0653a" transform="rotate(30 277 334)"/>
+<path d="M277 328 L277 334" stroke="#8a4a20" stroke-width="0.6" transform="rotate(30 277 334)"/>
+</g>
 <g id="garden-jacket" class="hunt-hit" transform="translate(3,0)">
 <rect x="-8" y="95" width="52" height="205" fill="transparent"/>
 <line x1="18" y1="105" x2="18" y2="292" stroke="#6b4226" stroke-width="3.5"/>
@@ -8080,9 +8134,9 @@ section{margin:1.9rem 0}
 <rect x="458" y="216" width="20" height="16" rx="2" fill="url(#garden-smallpot-terra-grad)" stroke="#8f5a50" stroke-width="1"/>
 <rect x="459" y="217" width="18" height="1.8" rx="0.9" fill="#d0a094" opacity="0.6" pointer-events="none"/>
 <ellipse cx="462.5" cy="224" rx="1.6" ry="4.5" fill="#d8a89c" opacity="0.5" pointer-events="none"/>
-<path d="M460 214 Q456 204 462 200 M468 214 Q468 202 474 200 M476 214 Q480 206 478 198" fill="none" stroke="#5f8f60" stroke-width="2"/>
-<ellipse cx="462" cy="199" rx="4" ry="2.5" fill="#7fae62" transform="rotate(-30 462 199)"/>
-<ellipse cx="474" cy="198" rx="4" ry="2.5" fill="#6f9f60" transform="rotate(20 474 198)"/>
+<path class="garden-leaf-stem" d="M460 214 Q456 204 462 200 M468 214 Q468 202 474 200 M476 214 Q480 206 478 198" fill="none" stroke="#5f8f60" stroke-width="2"/>
+<ellipse class="garden-leaf" cx="462" cy="199" rx="4" ry="2.5" fill="#7fae62" transform="rotate(-30 462 199)"/>
+<ellipse class="garden-leaf" cx="474" cy="198" rx="4" ry="2.5" fill="#6f9f60" transform="rotate(20 474 198)"/>
 <rect x="488" y="222" width="14" height="10" rx="2" fill="url(#garden-smallpot-brown-grad)" stroke="#6b4226" stroke-width="1"/>
 <rect x="489" y="223" width="12" height="1.6" rx="0.8" fill="#b08258" opacity="0.6" pointer-events="none"/>
 <ellipse cx="491.5" cy="228" rx="1.2" ry="2.8" fill="#b08a66" opacity="0.5" pointer-events="none"/>
@@ -8095,25 +8149,25 @@ section{margin:1.9rem 0}
 <rect x="215" y="185" width="105" height="145" fill="transparent"/>
 <rect x="264" y="230" width="8" height="60" fill="#a08a5e"/>
 <path d="M264 236 h8 M264 250 h8 M264 264 h8 M264 278 h8" stroke="#8a7448" stroke-width="1.5"/>
-<ellipse cx="242" cy="222" rx="16" ry="12" fill="#5a8a50" transform="rotate(-24 242 222)"/>
+<ellipse class="garden-leaf" cx="242" cy="222" rx="16" ry="12" fill="#5a8a50" transform="rotate(-24 242 222)"/>
 <ellipse cx="242" cy="222" rx="16" ry="12" fill="url(#garden-leaf-sheen)" transform="rotate(-24 242 222)" pointer-events="none"/>
 <path d="M228 222 H256 M242 218 L233 214 M242 226 L233 230 M242 218 L251 214 M242 226 L251 230" stroke="#3f6640" stroke-width="1" opacity="0.45" fill="none" transform="rotate(-24 242 222)"/>
-<ellipse cx="290" cy="216" rx="16" ry="12" fill="#6f9f60" transform="rotate(22 290 216)"/>
+<ellipse class="garden-leaf" cx="290" cy="216" rx="16" ry="12" fill="#6f9f60" transform="rotate(22 290 216)"/>
 <ellipse cx="290" cy="216" rx="16" ry="12" fill="url(#garden-leaf-sheen)" transform="rotate(22 290 216)" pointer-events="none"/>
 <path d="M276 216 H304 M290 212 L281 208 M290 220 L281 224 M290 212 L299 208 M290 220 L299 224" stroke="#4a7a4a" stroke-width="1" opacity="0.45" fill="none" transform="rotate(22 290 216)"/>
-<ellipse cx="266" cy="200" rx="15" ry="11" fill="#5a8a50"/>
+<ellipse class="garden-leaf" cx="266" cy="200" rx="15" ry="11" fill="#5a8a50"/>
 <ellipse cx="266" cy="200" rx="15" ry="11" fill="url(#garden-leaf-sheen)" pointer-events="none"/>
 <path d="M253 200 H279 M266 196 L258 192 M266 204 L258 208 M266 196 L274 192 M266 204 L274 208" stroke="#3f6640" stroke-width="1" opacity="0.45" fill="none"/>
-<ellipse cx="246" cy="252" rx="14" ry="10" fill="#6f9f60" transform="rotate(-30 246 252)"/>
+<ellipse class="garden-leaf" cx="246" cy="252" rx="14" ry="10" fill="#6f9f60" transform="rotate(-30 246 252)"/>
 <ellipse cx="246" cy="252" rx="14" ry="10" fill="url(#garden-leaf-sheen)" transform="rotate(-30 246 252)" pointer-events="none"/>
 <path d="M234 252 H258 M246 249 L239 246 M246 255 L239 258" stroke="#4a7a4a" stroke-width="1" opacity="0.45" fill="none" transform="rotate(-30 246 252)"/>
-<ellipse cx="292" cy="248" rx="14" ry="10" fill="#5a8a50" transform="rotate(30 292 248)"/>
+<ellipse class="garden-leaf" cx="292" cy="248" rx="14" ry="10" fill="#5a8a50" transform="rotate(30 292 248)"/>
 <ellipse cx="292" cy="248" rx="14" ry="10" fill="url(#garden-leaf-sheen)" transform="rotate(30 292 248)" pointer-events="none"/>
 <path d="M280 248 H304 M292 245 L285 242 M292 251 L285 254" stroke="#3f6640" stroke-width="1" opacity="0.45" fill="none" transform="rotate(30 292 248)"/>
-<ellipse cx="228" cy="238" rx="11" ry="8" fill="#7fae62" transform="rotate(-40 228 238)"/>
+<ellipse class="garden-leaf" cx="228" cy="238" rx="11" ry="8" fill="#7fae62" transform="rotate(-40 228 238)"/>
 <ellipse cx="228" cy="238" rx="11" ry="8" fill="url(#garden-leaf-sheen)" transform="rotate(-40 228 238)" pointer-events="none"/>
 <path d="M219 238 H237" stroke="#5a8a5a" stroke-width="1" opacity="0.45" fill="none" transform="rotate(-40 228 238)"/>
-<ellipse cx="304" cy="234" rx="11" ry="8" fill="#7fae62" transform="rotate(40 304 234)"/>
+<ellipse class="garden-leaf" cx="304" cy="234" rx="11" ry="8" fill="#7fae62" transform="rotate(40 304 234)"/>
 <ellipse cx="304" cy="234" rx="11" ry="8" fill="url(#garden-leaf-sheen)" transform="rotate(40 304 234)" pointer-events="none"/>
 <path d="M295 234 H313" stroke="#5a8a5a" stroke-width="1" opacity="0.45" fill="none" transform="rotate(40 304 234)"/>
 <path d="M240 282 Q236 292 242 300" fill="none" stroke="#6f9f60" stroke-width="2"/>
@@ -15655,6 +15709,7 @@ var T = {
     season_wedding: "💍 wedding week",
     season_canada: "🍁 canada day",
     season_summer: "☀ summer",
+    season_autumn: "🍂 autumn",
     season_smoky: "🔥 smoky season",
     season_holiday: "🎄 holiday season",
     season_stedry: "🐟 xmas eve",
@@ -16177,6 +16232,7 @@ var T = {
     season_wedding: "💍 svatební týden",
     season_canada: "🍁 den Kanady",
     season_summer: "☀ léto",
+    season_autumn: "🍂 podzim",
     season_smoky: "🔥 kouřová sezóna",
     season_holiday: "🎄 svátky",
     season_stedry: "🐟 štědrý večer",
@@ -27761,7 +27817,7 @@ var ABANDONED_CALL_MS = 30000;
     daylight: "daylight(true) — bring the day back; daylight(false) — dusk; daylight() reports whether it's day. day()/night() are aliases",
     night: "night() — dusk (alias for daylight(false))",
     day: "day() — daylight (alias for daylight(true))",
-    season: "season(\"name\") — a season by name in quotes, e.g. season(\"spooky\"), or season() for a surprise. each is a pretend-date driving the dressing, the snow-vs-rain odds, the smoke and the new-year sky. seasons: \"spooky\" · \"holiday\" · \"newyear\" · \"winter\" · \"valentines\" · \"wedding\" · \"summer\" · \"smoky\" · \"auto\" (the 's' key cycles the same order). the six birthdays ride along too — \"behdad\" · \"markéta\" · \"irene\" · \"pouria\" · \"danesh\" · \"sina\" — a party hat over whatever the day is already wearing, not a season of their own",
+    season: "season(\"name\") — a season by name in quotes, e.g. season(\"spooky\"), or season() for a surprise. each is a pretend-date driving the dressing, the snow-vs-rain odds, the smoke and the new-year sky. seasons: \"spooky\" · \"holiday\" · \"newyear\" · \"winter\" · \"valentines\" · \"wedding\" · \"summer\" · \"smoky\" · \"autumn\" · \"auto\" (the 's' key cycles the same order). the six birthdays ride along too — \"behdad\" · \"markéta\" · \"irene\" · \"pouria\" · \"danesh\" · \"sina\" — a party hat over whatever the day is already wearing, not a season of their own",
     play: "play() — resume the music if it's paused",
     pause: "pause() — pause the music if something's playing",
     temp: "temp() — the indoor + outdoor thermometer reading",
@@ -48164,6 +48220,75 @@ function spawnDustMote(container) {
     }
     setTimeout(tick, 1200);
   })();
+  // ── AUTUMN falling leaves (garden window) — same self-replenishing idiom as the rain
+  // above, so nothing can pile up on a hidden/unfocused tab: each leaf replaces itself on
+  // its OWN onfinish while the gate still holds, so the live count stays constant and the
+  // spawning pauses/tears down with the frames (paused animations never reach onfinish).
+  // A seed tick tops the sky back up when the season/room is (re)entered. Gated on the
+  // .season-autumn strip class + the garden room + visibility + not reduced-motion.
+  var GARDEN_LEAVES = 9;
+  var AUTUMN_LEAF_COLORS = ["#c0392b", "#e67e22", "#e8a33d", "#b7791f", "#8e5a2b"];
+  function autumnLeavesActive() {
+    var strip = document.getElementById("loft-game-strip");
+    return !!strip && strip.classList.contains("season-autumn") &&
+      stageIndex === STAGES.indexOf("garden") &&
+      document.visibilityState !== "hidden" &&
+      !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+  // A single drifting leaf: a small leaf-shaped path built at the origin, positioned via a
+  // wrapper <g transform="translate">, so the WAAPI transform animation on the inner path
+  // (drift + rotate) never clobbers a positioning transform (the wrapper carries that).
+  function spawnGardenLeaf() {
+    var container = document.getElementById("garden-leaffx");
+    if (!container) return;
+    var SVGNS = "http://www.w3.org/2000/svg";
+    var cx = 108 + Math.random() * 416, cy = 20 + Math.random() * 40;
+    var col = AUTUMN_LEAF_COLORS[(Math.random() * AUTUMN_LEAF_COLORS.length) | 0];
+    var sc = 0.7 + Math.random() * 0.9; // varied sizes -> a sense of depth
+    var wrap = document.createElementNS(SVGNS, "g");
+    wrap.setAttribute("transform", "translate(" + cx.toFixed(1) + "," + cy.toFixed(1) + ") scale(" + sc.toFixed(2) + ")");
+    var leaf = document.createElementNS(SVGNS, "path");
+    leaf.setAttribute("d", "M0 -6 Q6 0 0 6 Q-6 0 0 -6 Z"); // a small pointed leaf about the origin
+    leaf.setAttribute("fill", col);
+    leaf.style.transformBox = "fill-box"; leaf.style.transformOrigin = "center";
+    var vein = document.createElementNS(SVGNS, "path");
+    vein.setAttribute("d", "M0 -5 L0 5"); vein.setAttribute("stroke", "#7a4420");
+    vein.setAttribute("stroke-width", "0.6"); vein.setAttribute("opacity", "0.5");
+    vein.style.transformBox = "fill-box"; vein.style.transformOrigin = "center";
+    wrap.appendChild(leaf); wrap.appendChild(vein);
+    container.appendChild(wrap);
+    if (wrap.animate) {
+      var fallDist = 210 + Math.random() * 70;                 // down through the window panes
+      var sway = 14 + Math.random() * 20;                      // side-to-side amplitude
+      var dir = Math.random() < 0.5 ? 1 : -1;                  // which way it starts drifting
+      var spin = (Math.random() < 0.5 ? 1 : -1) * (140 + Math.random() * 220); // slow tumble
+      var peak = 0.75 + Math.random() * 0.2;
+      var dur = 4200 + Math.random() * 2600;                   // slow, unhurried fall
+      var anim = wrap.animate([
+        { transform: "translate(0px,0px) rotate(0deg)", opacity: 0 },
+        { transform: "translate(" + (dir * sway).toFixed(1) + "px," + (fallDist * 0.3).toFixed(1) + "px) rotate(" + (spin * 0.3).toFixed(0) + "deg)", opacity: peak, offset: 0.22 },
+        { transform: "translate(" + (-dir * sway).toFixed(1) + "px," + (fallDist * 0.65).toFixed(1) + "px) rotate(" + (spin * 0.65).toFixed(0) + "deg)", opacity: peak, offset: 0.62 },
+        { transform: "translate(" + (dir * sway * 0.4).toFixed(1) + "px," + fallDist.toFixed(1) + "px) rotate(" + spin.toFixed(0) + "deg)", opacity: 0 }
+      ], { duration: dur, easing: "linear", delay: Math.random() * 700 });
+      anim.onfinish = function () {
+        if (wrap.parentNode) wrap.remove();
+        if (autumnLeavesActive()) spawnGardenLeaf(); // replenish 1:1
+      };
+    } else {
+      setTimeout(function () { if (wrap.parentNode) wrap.remove(); }, 3000);
+    }
+  }
+  (function seedGardenLeaves() {
+    function tick() {
+      if (autumnLeavesActive()) {
+        var container = document.getElementById("garden-leaffx");
+        var have = container ? container.childElementCount : 0;
+        for (var i = have; i < GARDEN_LEAVES; i++) spawnGardenLeaf(); // top up from the live count
+      }
+      setTimeout(tick, 1400);
+    }
+    setTimeout(tick, 1400);
+  })();
   // ── PARTY MODE confetti (garden) — same self-replenishing idiom as the rain above.
   // The balcony party switch drives window.__gardenPartyOn (see setGardenParty). Each
   // piece self-removes on its onfinish and spawns one replacement while the party is
@@ -50130,6 +50255,7 @@ function spawnDustMote(container) {
     canada:  [6, 1],   // Canada Day: red-and-white balcony string + fireworks (Edmonton's half of the wedding)
     summer:  [6, 15],  // mid-July: never snow
     smoky:   [7, 7],   // early August: Edmonton's wildfire smoke at full strength
+    autumn:  [8, 25],  // late September: leaves turning + coming down, before Halloween takes October
     bd_sina: [0, 15], // Sina's birthday — Jan 15
     bd_danesh: [7, 28], // Danesh's birthday — his real one; the week runs on to Sept 16, his document's
     bd_behdad: [8, 27] // Behdad's birthday — his real one; the week starts Sept 21, his ID's
@@ -50145,6 +50271,7 @@ function spawnDustMote(container) {
   function decorForDate(m, d) {
     if (m === 3 && d === 30) return "carodejnice";         // Apr 30 only — the night itself
     if (m === 11 || (m === 0 && d <= 6)) return "holiday"; // Dec 1 – Jan 6
+    if (m === 8 && d >= 15) return "autumn";               // Sep 15–30: leaves turning, before Halloween takes October
     if (m === 9 || (m === 10 && d <= 3)) return "spooky";  // Oct 1 – Nov 3
     if (m === 1 && d <= 14) return "valentines";           // Feb 1 – 14
     if (m === 2 && d >= 16 && d <= 19) return "chaharshanbe";         // Mar 16–19: an approximate fixed window for a date that really drifts (the eve of the last Wednesday before Nowruz), and it hands straight off to the haft-sin
@@ -50247,7 +50374,7 @@ function spawnDustMote(container) {
   window.__setSeason = function (name) {
     var strip = document.getElementById("loft-game-strip");
     if (!strip) return;
-    strip.classList.remove("season-holiday", "season-spooky", "season-valentines", "season-nowruz", "season-chaharshanbe", "season-carodejnice", "season-pride", "season-canada");
+    strip.classList.remove("season-holiday", "season-spooky", "season-autumn", "season-valentines", "season-nowruz", "season-chaharshanbe", "season-carodejnice", "season-pride", "season-canada");
     if (name) strip.classList.add("season-" + name);
     if (window.__resetBalconyIrene) window.__resetBalconyIrene(); // the season just moved under her: clear any leap in flight (she is Chaharshanbe's alone) and re-arm
     if (window.__resetBalconyCouple) window.__resetBalconyCouple(); // same for the pair — Chaharshanbe's alone too
@@ -50290,9 +50417,9 @@ function spawnDustMote(container) {
   // 's' cycles the previews forward, roughly in calendar order: today → spooky → irene's
   // birthday → holiday → new year → markéta's birthday → winter → valentine's →
   // chaharshanbe suri → nowruz → sizdah bedar → witches' night → wedding → pouria's birthday →
-  // pride → canada → summer → smoky → behdad's birthday → today. Shift+S walks the ring backwards.
+  // pride → canada → summer → smoky → behdad's birthday → autumn → today. Shift+S walks the ring backwards.
   // Shift is the direction; any OTHER modifier held (or typing) still skips (same guard as 'f').
-  var SEASON_CYCLE = [null, "spooky", "bd_irene", "stedry", "xmas", "newyear", "bd_sina", "bd_marketa", "winter", "valentines", "chaharshanbe", "nowruz", "sizdah", "carodejnice", "wedding", "bd_pouria", "pride", "canada", "summer", "smoky", "bd_danesh", "bd_behdad"];
+  var SEASON_CYCLE = [null, "spooky", "bd_irene", "stedry", "xmas", "newyear", "bd_sina", "bd_marketa", "winter", "valentines", "chaharshanbe", "nowruz", "sizdah", "carodejnice", "wedding", "bd_pouria", "pride", "canada", "summer", "smoky", "bd_danesh", "bd_behdad", "autumn"];
   // Shared apply-path for the 's' key AND the console season(); shows the naming pill.
   function applySeasonPreview(name) {
     seasonPreview = SEASON_PREVIEW_DATE[name] ? name : null;
@@ -52165,7 +52292,7 @@ function spawnDustMote(container) {
   // winter · spooky · auto(=the calendar's own season). Friendly aliases fold onto those;
   // no arg still SURPRISES you with a random one (a documented feature). Drives the same
   // apply-path the 's' key uses (strip class + naming pill + cycle-sync).
-  var SEAS = ["spooky", "bd_irene", "stedry", "xmas", "newyear", "bd_sina", "bd_marketa", "winter", "valentines", "chaharshanbe", "nowruz", "sizdah", "carodejnice", "wedding", "bd_pouria", "pride", "canada", "summer", "smoky", "bd_danesh", "bd_behdad", "auto"]; // same order the 's' key cycles
+  var SEAS = ["spooky", "bd_irene", "stedry", "xmas", "newyear", "bd_sina", "bd_marketa", "winter", "valentines", "chaharshanbe", "nowruz", "sizdah", "carodejnice", "wedding", "bd_pouria", "pride", "canada", "summer", "smoky", "bd_danesh", "bd_behdad", "autumn", "auto"]; // same order the 's' key cycles
   var SEASON_ALIASES = {
     spooky: "spooky", halloween: "spooky",
     holiday: "stedry", christmas: "stedry", tree: "stedry", // no plain-tree stop of its own — the tree is up on both meal days
@@ -52183,6 +52310,7 @@ function spawnDustMote(container) {
     canada: "canada", canadaday: "canada", "canada day": "canada", maple: "canada",
     summer: "summer", sun: "summer",
     smoky: "smoky", smoke: "smoky", wildfire: "smoky", wildfires: "smoky",
+    autumn: "autumn", fall: "autumn", leaves: "autumn", foliage: "autumn",
     // the birthdays: a hat over the day's real dressing, not a season of their own
     bd_behdad: "bd_behdad", behdad: "bd_behdad",
     bd_marketa: "bd_marketa", marketa: "bd_marketa", "markéta": "bd_marketa",
@@ -52205,6 +52333,7 @@ function spawnDustMote(container) {
     canada: "🍁 canada day — red and white over edmonton.",
     summer: "☀ high summer — rain at worst.",
     smoky: "🔥 wildfire smoke — orange sun, grey sky. hello, august.",
+    autumn: "🍂 autumn — the leaves have turned and they're coming down.",
     bd_behdad: "🥳 behdad's birthday week — his id says sept 21, he says sept 27. both, then.",
     bd_marketa: "🥳 markéta's birthday week — hat on, cap still on under it.",
     bd_irene: "🥳 irene's birthday week — hat on, and the tree stays up.",

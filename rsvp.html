@@ -15369,7 +15369,7 @@ var T = {
     kbd_r: "reset the loft",
     kbd_kitten: "toggle the kitten",
     kbd_s: "season change",
-    kbd_n: "next track (dance / piano piece / song)",
+    kbd_n: "next phone message — then next track (dance / song)",
     kbd_t: "next trip",
     // now-playing toast labels — dances + the three projector ambient beds (piano pieces and
     // loft-song titles are proper names, kept hardcoded in JS)
@@ -15854,7 +15854,7 @@ var T = {
     kbd_r: "resetovat loft",
     kbd_kitten: "přepnout kotě",
     kbd_s: "změna sezóny",
-    kbd_n: "další skladba (tanec / klavírní skladba / píseň)",
+    kbd_n: "další zpráva v telefonu — pak další skladba (tanec / píseň)",
     kbd_t: "další trip",
     // now-playing toast labels (viz EN np)
     np: {
@@ -35331,6 +35331,15 @@ async def localfont(name):
       if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages); // live-refresh if the thread's already open
       showMessageThumb(id);
     };
+    // 'n' steps through the phone nudges: deliver the next un-arrived message in canonical order
+    // (Pouria → group chat → album → M&B), independent of the Act-2 beats (the beat sequencer
+    // dedups on the same thread, so a pre-delivered nudge just won't re-fire). Returns the id it
+    // sent, or null when every nudge is already in.
+    window.__nextPhoneNudge = function () {
+      var ids = Object.keys(MESSAGES);
+      for (var i = 0; i < ids.length; i++) if (messagesThread.indexOf(ids[i]) === -1) { window.__deliverPhoneMessage(ids[i]); return ids[i]; }
+      return null;
+    };
     window.refreshPhoneText = function () {
       if (!modal || !shell) return;
       applyNavLabels();
@@ -45720,7 +45729,9 @@ function spawnDustMote(container) {
       if (window.cat) window.cat(!window.cat()); // 'k' → toggle the kitten (out to your room / back in the chest), like 'p' toggles the party
     } else if (e.key === "n" || e.key === "N") {
       e.preventDefault();
-      if (window.__skipCurrentMusic) window.__skipCurrentMusic(); // next dance / piano piece / loft song
+      // 'n' → advance to the next phone nudge; once every message is in, it falls back to
+      // skipping the music (next dance / piano piece / loft song), so the key never dead-ends.
+      if (!(window.__nextPhoneNudge && window.__nextPhoneNudge())) { if (window.__skipCurrentMusic) window.__skipCurrentMusic(); }
     } else if (e.key === "t" || e.key === "T") {
       e.preventDefault();
       if (window.__nextTrip) window.__nextTrip(); // next drug trip (cyclic; interrupts a running one)

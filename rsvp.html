@@ -108,6 +108,52 @@ footer{margin-top:2.6rem}
   pointer-events:none; text-align:left;
 }
 .egg-bubble.show{opacity:1}
+/* ── ROSTER PANEL ("who's here") ──────────────────────────────────────────────
+   An at-a-glance legend of everyone currently on the garden-party floor — a tidy
+   overlay complementing the per-figure hover tooltips + the space-to-freeze inspect.
+   Toggled by the corner button, the 'h' key, __toggleRoster(), or roster(). Only
+   meaningful while the party's lit. HTML overlay (not SVG), lives inside .hunt-viewport
+   so it rides along into fullscreen; pointer-events only on the panel itself. */
+.roster-panel{
+  position:absolute; z-index:22; top:12px; right:12px; width:min(230px, calc(100% - 24px));
+  max-height:calc(100% - 24px); overflow:auto; box-sizing:border-box;
+  background:var(--paper); color:var(--ink); border:1px solid var(--rule); border-radius:10px;
+  box-shadow:0 6px 22px rgba(69,58,49,.28); padding:.6rem .7rem .65rem;
+  font-family:"Source Serif 4",Georgia,serif; text-align:left;
+  opacity:0; transform:translateY(-6px); pointer-events:none;
+  transition:opacity .25s ease, transform .25s ease;
+}
+.roster-panel.show{opacity:1; transform:translateY(0); pointer-events:auto}
+.roster-panel h3{
+  font-family:"Fraunces",serif; font-weight:700; font-size:1rem; letter-spacing:.01em;
+  color:var(--wine); margin:0 1.4rem .35rem 0; padding:0;
+}
+.roster-panel ul{list-style:none; margin:0; padding:0; font-size:.82rem; line-height:1.45}
+.roster-panel li{padding:.06rem 0; color:var(--muted)}
+.roster-panel li em{font-style:normal; font-weight:600; color:var(--ink)}
+.roster-panel .roster-empty{color:var(--muted); font-size:.82rem; line-height:1.45}
+.roster-panel .roster-sep{height:1px; background:var(--rule); border:0; margin:.35rem 0}
+.roster-close{
+  position:absolute; top:6px; right:6px; width:22px; height:22px; padding:0; line-height:1;
+  border:0; background:none; color:var(--muted); font:1.1rem/1 "Source Serif 4",serif;
+  cursor:pointer; border-radius:4px;
+}
+.roster-close:hover{color:var(--wine)}
+/* the corner toggle button — a small wine chip, mirrors the site's link accent */
+.roster-toggle{
+  position:absolute; z-index:21; top:12px; right:12px;
+  border:1px solid rgba(120,60,70,.3); background:var(--paper); color:var(--wine);
+  font-family:"Source Serif 4",Georgia,serif; font-size:.78rem; font-weight:600;
+  padding:.28rem .6rem; border-radius:999px; cursor:pointer; opacity:0; pointer-events:none;
+  box-shadow:0 3px 10px rgba(69,58,49,.18); transition:opacity .3s ease;
+}
+.roster-toggle.avail{opacity:.92; pointer-events:auto}
+.roster-toggle.avail:hover{opacity:1; background:var(--wine); color:#f8f5ec}
+.roster-toggle.roster-open{opacity:0; pointer-events:none} /* hide the chip behind the open panel */
+@media (prefers-reduced-motion: reduce){
+  .roster-panel{transition:opacity .25s ease; transform:none}
+  .roster-panel.show{transform:none}
+}
 .hunt-title{font-family:"Fraunces",serif; font-weight:700; font-size:1.1rem; text-align:center; letter-spacing:.02em; color:var(--wine); margin:.6rem 0 0; opacity:0}
 .hunt-title.show{opacity:1; transition:opacity .5s ease}
 /* the whole game reads as one handheld device: a soft burgundy shell wrapping the hint
@@ -18126,6 +18172,8 @@ var T = {
     role_bdad: "Behdad's dad", role_bmom: "Behdad's mom", role_bgrandma: "Behdad's grandmother", role_bgrandpa: "Behdad's grandfather",
     role_mdad: "Markéta's dad", role_mmom: "Markéta's mom", role_mgrandma: "Markéta's grandmother",
     role_mniece: "Markéta's niece", role_mnephew: "Markéta's nephew", role_msisspouse: "Markéta's brother-in-law",
+    role_hosts: "the hosts", role_dj: "DJ", // roster-only roles (the couple share one line; the DJ names himself)
+    roster_title: "who's here", roster_empty: "The floor's empty — throw the party first.", // "who's here" roster overlay
     tip_chaharshanbe: "<em>Chaharshanbe Suri</em> (<bdi>چهارشنبه‌سوری</bdi>), the fire you leap",
     tip_sizdah: "<em>Sizdah Bedar</em> (<bdi>سیزده‌بدر</bdi>), nowruz's thirteenth day, spent outdoors",
     // The knot is the reason this day is on a wedding site at all, and the visual can't say it:
@@ -18666,6 +18714,8 @@ var T = {
     role_bdad: "Behdadův táta", role_bmom: "Behdadova máma", role_bgrandma: "Behdadova babička", role_bgrandpa: "Behdadův děda",
     role_mdad: "Markétin táta", role_mmom: "Markétina máma", role_mgrandma: "Markétina babička",
     role_mniece: "Markétina neteř", role_mnephew: "Markétin synovec", role_msisspouse: "Markétin švagr",
+    role_hosts: "hostitelé", role_dj: "DJ", // role sezname (pár má jeden řádek; DJ se jmenuje sám)
+    roster_title: "kdo tu je", roster_empty: "Parket je prázdný — nejdřív rozjeď párty.", // roster překryv „kdo tu je“
     tip_chaharshanbe: "<em>Čaháršanbe surí</em> (<bdi>چهارشنبه‌سوری</bdi>), oheň, který se přeskakuje",
     tip_sizdah: "<em>Sizdah Bedar</em> (<bdi>سیزده‌بدر</bdi>), třináctý den nourúzu, strávený v přírodě",
     sizdah_wish: "Zauzlovat sabzeh znamená přát si svatbu. Zabralo to.",
@@ -19209,6 +19259,7 @@ function setLang(l) {
   if (window.refreshPhoneText) window.refreshPhoneText();
   if (window.refreshTattooText) window.refreshTattooText();
   if (window.refreshLifeText) window.refreshLifeText();
+  if (window.refreshRoster) window.refreshRoster();
 }
 (function () {
   var btns = document.querySelectorAll(".langs button");
@@ -30677,6 +30728,7 @@ var ABANDONED_CALL_MS = 30000;
     chase: "chase() — send the three godkids (Irene, Robin & Navid) darting across the garden, chasing each other + giggling; lights the party + heads to the garden first if needed. they also run on their own now and then while the party's lit",
     guests: "guests(true) — the three VIP guests crash the party and steal the show, dancing dead-centre floor: Ali (best man, long grey beard), Goli (Ali's fashionista girlfriend, platinum bob) & Spencer (Markéta's maid-of-honor, the giant of the group). lights the party + heads to the garden first if needed. guests(false) sends them off (party rolls on); guests() reports whether they're on the floor. they also arrive on their own a beat after the party lights. aligoli() is an alias",
     aligoli: "aligoli — alias for guests; try `help guests`",
+    roster: "roster() — toggle the \"who's here\" panel: an at-a-glance legend of everyone on the garden-party floor right now (name · role), reflecting who's actually present. roster(true) opens it, roster(false) closes it; lights the party + heads to the garden first if it's dark. the 'h' key does the same",
     reset: "reset() — restart the whole loft from the top (no confirmation — you typed it)",
     quit: "quit (or exit) — shut the console down (refresh, back to the desktop)",
     blacklight: "blacklight(true) — UV wash over the whole loft; blacklight(false) off; blacklight() reports whether it's on",
@@ -30806,7 +30858,7 @@ var ABANDONED_CALL_MS = 30000;
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · chase() · guests()/aligoli() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · chase() · guests()/aligoli() · roster() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
@@ -31052,7 +31104,7 @@ var ABANDONED_CALL_MS = 30000;
   // list drifts from those keys, which is how it "stays in sync". Only the first token (the
   // command name) is completed; args / inside-parens are out of scope.
   var CONSOLE_CMDS = [
-    "help", "clear", "laser", "party", "chase", "guests", "aligoli", "reset", "quit", "blacklight", "uv", "trip", "room",
+    "help", "clear", "laser", "party", "chase", "guests", "aligoli", "roster", "reset", "quit", "blacklight", "uv", "trip", "room",
     "goto", "rooms", "daylight", "night", "day", "season", "play", "pause", "temp", "weather",
     "clock", "time", "projector", "storm", "dance", "dj", "cocktail", "lang", "caption", "candle",
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood",
@@ -55846,6 +55898,231 @@ function spawnDustMote(container) {
     return was;
   };
   window.aligoli = window.guests; // alias
+
+  // ── ROSTER OVERLAY ("who's here") ────────────────────────────────────────────
+  // A tidy legend of everyone currently on the garden-party floor — name · role, the
+  // exact pairs the hover tooltips use. Complements the per-figure tooltips + the
+  // space-to-freeze inspect: no need to hover each cameo one by one. Live — it reads
+  // the scene at open/toggle time (and re-renders on a language flip while open), so it
+  // reflects who's actually present right now (skips hidden/away/off-with-kids figures,
+  // includes the mouses only while they're visiting). Toggled by the corner button, the
+  // 'h' key ("who's here"), window.__toggleRoster() (test hook), or roster().
+  (function () {
+    // The data table: .g-NAME selector → { name literal, roleKey }. Same names+roles as the
+    // tooltips wired near hoverTooltip(...). Ordered hosts → wedding party → travel/friends →
+    // family → the kids/mouses so the panel reads sensibly. `sel` is a full selector (the DJ +
+    // photographer aren't .g-* groups, so they carry their own).
+    var ROSTER = [
+      { grp: "hosts",  sel: ".g-behdad",  name: "markéta & behdad", roleKey: "role_hosts", pair: true }, // the couple share ONE line (like their tooltip); .g-marketa is the same entry
+      { grp: "guests", sel: ".g-ali",       name: "Ali",       roleKey: "role_bestman" },
+      { grp: "guests", sel: ".g-goli",     name: "Goli",     roleKey: "role_fashion" },
+      { grp: "guests", sel: ".g-spencer",   name: "Spencer",   roleKey: "role_maid" },
+      { grp: "guests", sel: ".g-jay",       name: "Jay",       roleKey: "role_officiant" },
+      { grp: "guests", sel: ".g-farhang",   name: "Farhang",   roleKey: "role_mc" },
+      { grp: "guests", sel: ".g-lauren",    name: "Lauren",    roleKey: "role_business" },
+      { grp: "guests", sel: ".g-alireza",   name: "Alireza",   roleKey: "role_travelbuddy_m" },
+      { grp: "guests", sel: ".g-mahzad",    name: "Mahzad",    roleKey: "role_travelbuddy_f" },
+      { grp: "guests", sel: ".g-bahareh",   name: "Bahareh",   roleKey: "role_sister" },
+      { grp: "crew",   sel: "#garden-photog-hit", name: "Aspen", roleKey: "role_photographer" }, // the party photographer
+      { grp: "crew",   sel: "__dj",         name: null,        roleKey: "role_dj" }, // name resolved live from which DJ is spinning
+      { grp: "kids",   sel: ".g-elisabeth", name: "Elisabeth", roleKey: "role_mniece" }, // a mouse — present only while mouses-visiting
+      { grp: "kids",   sel: ".g-felix",     name: "Felix",     roleKey: "role_mnephew" }  // a mouse
+    ];
+
+    // Is this figure actually ON the floor right now? Present = #garden-guests.guests-in AND the
+    // element is rendered (not display:none / .off-with-kids / opacity 0). Mirrors the presence
+    // gating the task describes: mouses only when .mouses-visiting; Bahareh drops out while
+    // .off-with-kids (chase / cuddly-nook).
+    function present(sel) {
+      if (sel === "__dj") return djPresent();
+      if (sel === "#garden-photog-hit") return photogPresent();
+      var g = document.getElementById("garden-guests");
+      if (!g || !g.classList.contains("guests-in")) return false; // party lit + guests on the floor
+      var el = document.querySelector("#garden-guests " + sel) || document.querySelector(sel);
+      if (!el) return false;
+      if (el.classList.contains("off-with-kids")) return false; // stepped away (Bahareh / a mouse mid-chase)
+      var cs = getComputedStyle(el);
+      if (cs.display === "none" || cs.visibility === "hidden" || parseFloat(cs.opacity) === 0) return false;
+      return true;
+    }
+    function photogPresent() { // the photographer shows with the garden party (opacity gated on #stage-garden.garden-party)
+      if (!window.__gardenPartyOn) return false;
+      var p = document.getElementById("garden-photographer");
+      if (!p) return false;
+      var cs = getComputedStyle(p);
+      return cs.display !== "none" && cs.visibility !== "hidden" && parseFloat(cs.opacity) !== 0;
+    }
+    function djPresent() { // the booth fades in with .garden-party; who's spinning is read live
+      if (!window.__gardenPartyOn) return false;
+      var b = document.getElementById("garden-djbooth");
+      if (!b) return false;
+      return getComputedStyle(b).opacity !== "0";
+    }
+    function djName() { // "DJ Sina" (booth default / dj-a) or "DJ Danesh" (.dj-b)
+      var b = document.getElementById("garden-djbooth");
+      var danesh = !!(b && b.classList.contains("dj-b"));
+      return danesh ? "DJ Danesh" : "DJ Sina";
+    }
+
+    var panel = null, toggleBtn = null, open = false;
+
+    function ensureNodes() {
+      var host = document.querySelector(".hunt-viewport");
+      if (!host) return null;
+      if (!toggleBtn) {
+        toggleBtn = document.createElement("button");
+        toggleBtn.type = "button";
+        toggleBtn.className = "roster-toggle";
+        toggleBtn.setAttribute("aria-haspopup", "dialog");
+        toggleBtn.addEventListener("click", function (e) { e.preventDefault(); toggle(); });
+        host.appendChild(toggleBtn);
+      }
+      if (!panel) {
+        panel = document.createElement("div");
+        panel.className = "roster-panel";
+        panel.id = "roster-panel";
+        panel.setAttribute("role", "dialog");
+        panel.setAttribute("aria-modal", "false"); // non-trapping overlay
+        panel.setAttribute("aria-labelledby", "roster-title");
+        panel.setAttribute("tabindex", "-1");
+        panel.hidden = true;
+        var close = document.createElement("button");
+        close.type = "button";
+        close.className = "roster-close";
+        close.innerHTML = "&times;";
+        close.addEventListener("click", function (e) { e.preventDefault(); setOpen(false); });
+        panel.appendChild(close);
+        panel.addEventListener("keydown", function (e) {
+          if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); setOpen(false); if (toggleBtn) toggleBtn.focus(); }
+        });
+        host.appendChild(panel);
+      }
+      return host;
+    }
+
+    // Build the list of present people, grouped, into the panel. Rebuilt each open + on a
+    // language flip while open, so names/roles + presence are always current.
+    function render() {
+      if (!panel) return;
+      // drop everything except the persistent close button
+      var close = panel.querySelector(".roster-close");
+      panel.innerHTML = "";
+      if (close) panel.appendChild(close);
+      var h = document.createElement("h3");
+      h.id = "roster-title";
+      h.textContent = tipText("roster_title");
+      panel.appendChild(h);
+
+      var groups = { hosts: [], guests: [], crew: [], kids: [] };
+      ROSTER.forEach(function (r) {
+        if (!present(r.sel)) return;
+        var nm = r.name || (r.sel === "__dj" ? djName() : "");
+        groups[r.grp].push({ name: nm, role: tipText(r.roleKey) });
+      });
+      var order = ["hosts", "guests", "crew", "kids"];
+      var total = order.reduce(function (n, g) { return n + groups[g].length; }, 0);
+      if (!total) {
+        var empty = document.createElement("p");
+        empty.className = "roster-empty";
+        empty.textContent = tipText("roster_empty");
+        panel.appendChild(empty);
+        return;
+      }
+      var first = true;
+      order.forEach(function (g) {
+        if (!groups[g].length) return;
+        if (!first) panel.appendChild(document.createElement("hr")).className = "roster-sep";
+        first = false;
+        var ul = document.createElement("ul");
+        groups[g].forEach(function (p) {
+          var li = document.createElement("li");
+          var em = document.createElement("em");
+          em.textContent = p.name;
+          li.appendChild(em);
+          li.appendChild(document.createTextNode(p.role ? " · " + p.role : ""));
+          ul.appendChild(li);
+        });
+        panel.appendChild(ul);
+      });
+    }
+
+    function setOpen(v) {
+      if (!ensureNodes()) return;
+      open = !!v;
+      if (open) {
+        render();
+        panel.hidden = false;
+        // let display flip before the opacity/transform transition
+        requestAnimationFrame(function () { if (panel) panel.classList.add("show"); });
+        panel.focus();
+        if (toggleBtn) toggleBtn.classList.add("roster-open");
+      } else {
+        panel.classList.remove("show");
+        panel.hidden = true;
+        if (toggleBtn) toggleBtn.classList.remove("roster-open");
+      }
+    }
+    function toggle() { setOpen(!open); }
+
+    // The corner chip is only offered while the party's lit (empty/absent otherwise). Poll the
+    // party state cheaply and reflect it; also close a stale-open panel if the party ends.
+    function syncAvailability() {
+      if (!ensureNodes()) return;
+      var on = !!window.__gardenPartyOn;
+      toggleBtn.textContent = tipText("roster_title");
+      toggleBtn.setAttribute("aria-label", tipText("roster_title"));
+      toggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
+      toggleBtn.classList.toggle("avail", on);
+      if (!on && open) setOpen(false);
+      if (open) render(); // keep the open panel live (presence can change under it)
+    }
+
+    // Test hook + programmatic toggle. Lights nothing on its own — just shows/hides the panel.
+    window.__toggleRoster = function (force) {
+      ensureNodes();
+      if (force === undefined) toggle();
+      else setOpen(!!force);
+      syncAvailability();
+      return open;
+    };
+    window.__rosterOpen = function () { return open; }; // test read hook
+    window.__rosterList = function () { // test hook: the present names, in panel order
+      var out = [];
+      ROSTER.forEach(function (r) { if (present(r.sel)) out.push(r.name || (r.sel === "__dj" ? djName() : "")); });
+      return out;
+    };
+
+    // roster() — console command. roster(true) opens the "who's here" panel, roster(false)
+    // closes it, roster() toggles + lists who's currently on the floor. Heads to the garden +
+    // lights the party first if it's dark (there's nobody to list otherwise).
+    window.roster = function (arg) {
+      if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
+      if (window.goToStage && window.currentStageName !== "garden") window.goToStage("garden");
+      var want = (arg === undefined) ? !open : !!arg;
+      setTimeout(function () { window.__toggleRoster(want); }, window.currentStageName === "garden" ? 0 : 60); // let a room change settle
+      var names = window.__rosterList();
+      if (window.echo) window.echo(want ? ("📋 who's here: " + (names.length ? names.join(", ") : "(nobody yet — the floor's filling)")) : "📋 roster closed.");
+      return want;
+    };
+
+    // 'h' → who's here. Free key (p=party u=uv s=season d=day r=reset c=phone l=laptop m=monitor
+    // k=cat n=next g=nudge t=trip w=watch f=fullscreen are all taken). Skipped while typing.
+    document.addEventListener("keydown", function (e) {
+      if ((e.key !== "h" && e.key !== "H") || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+      var t = e.target;
+      if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+      e.preventDefault();
+      window.__toggleRoster();
+    });
+
+    // Re-render on a language flip if the panel's open (roles are live-language); refresh the
+    // chip label either way. setLang() calls window.refreshRoster at the end (same idiom as the
+    // other refreshXxxText hooks), so hang the language refresh off that.
+    window.refreshRoster = function () { syncAvailability(); if (open) render(); };
+    document.addEventListener("DOMContentLoaded", syncAvailability);
+    ensureNodes(); syncAvailability();
+    setInterval(syncAvailability, 1500); // cheap: reflect party on/off + presence drift under an open panel
+  })();
 
   // Master audio volume — one session-scoped level (0..1) over EVERYTHING the loft plays:
   // SFX one-shots (via the sfxCtx shadow-destination gain), the songs, and every synth

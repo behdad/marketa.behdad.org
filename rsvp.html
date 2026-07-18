@@ -1517,6 +1517,23 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   75%{transform:translateX(0) translateY(-1.5px)}
 }
 @media (prefers-reduced-motion: reduce){#witchy-chest-cat-walk.roaming, #witchy-chest-cat-walk.roaming-sm, #witchy-chest-cat-groove.grooving{animation:none}}
+/* pounce: a quick crouch → leap-and-paw-bat → land, played when the loose cat is out in
+   an outdoor room with particles drifting (autumn leaves / spring petals / snow). Its OWN
+   wrapper (no static transform attribute) so it composes with — never clobbers — the
+   walk/roam translate, the groove rotate, the breathe scale and the cat's own click-wobble
+   rotate (each animation shorthand lives on a distinct node). One-shot class, removed on
+   animationend so it can replay. transform-origin:bottom center keeps her feet as the pivot
+   so the leap reads as a hop up rather than a slide. */
+#witchy-chest-cat-pounce{transform-box:fill-box; transform-origin:bottom center}
+#witchy-chest-cat-pounce.pouncing{animation:cat-pounce .7s ease-in-out}
+@keyframes cat-pounce{
+  0%, 100%{transform:translateY(0) rotate(0)}
+  18%{transform:translateY(1.5px) rotate(0)}          /* crouch */
+  46%{transform:translateY(-9px) rotate(-7deg)}       /* leap + lean into the bat */
+  66%{transform:translateY(-5px) rotate(5deg)}        /* paw-swipe follow-through */
+  86%{transform:translateY(0) rotate(-2deg)}          /* land + settle */
+}
+@media (prefers-reduced-motion: reduce){#witchy-chest-cat-pounce.pouncing{animation:none}}
 .cuddly-knife{transition:translate .35s cubic-bezier(.34,1.56,.64,1)}
 .cuddly-knife.wobbling{animation:knife-wobble .4s ease-in-out}
 @keyframes knife-wobble{
@@ -8704,7 +8721,7 @@ section{margin:1.9rem 0}
 <path d="M561 305 h9 v-2 h-7 v-8 h-2 Z"/>
 <path d="M659 305 h-9 v-2 h7 v-8 h2 Z"/>
 </g>
-<g id="witchy-chest-cat-pos" transform="translate(-46,0)"><g id="witchy-chest-cat-walk"><g id="witchy-chest-cat-groove"><g id="witchy-chest-cat-breathe">
+<g id="witchy-chest-cat-pos" transform="translate(-46,0)"><g id="witchy-chest-cat-walk"><g id="witchy-chest-cat-groove"><g id="witchy-chest-cat-pounce"><g id="witchy-chest-cat-breathe">
 <g id="witchy-chest-cat" aria-hidden="true">
 <!-- sitting black cat, feet on the y292 baseline the perch/roam math is built around:
      lean witchy silhouette (low haunch bulge tapering into a thin chest and neck),
@@ -8724,7 +8741,7 @@ section{margin:1.9rem 0}
 <ellipse id="witchy-chest-cat-eye-l" cx="629.6" cy="264.8" rx="1.35" ry="1.5" fill="#c9e85c"/>
 <ellipse id="witchy-chest-cat-eye-r" cx="636.4" cy="264.8" rx="1.35" ry="1.5" fill="#c9e85c"/>
 </g>
-</g></g></g></g>
+</g></g></g></g></g>
 <g transform="translate(46,0)"><g id="witchy-chest-fairy-dance">
 <g id="witchy-chest-fairy" aria-hidden="true">
 <defs>
@@ -48666,6 +48683,64 @@ function spawnDustMote(container) {
       setTimeout(tick, 1400);
     }
     setTimeout(tick, 1400);
+  })();
+  // ── The loose cat pounces at drifting particles. When she's OUT (door 2 opened) and
+  // homed into an outdoor room (garden or balcony) where an ambient season is falling —
+  // autumn leaves, spring petals, or snow — she occasionally leaps and bats at one. It's
+  // a periodic GESTURE, not a real collision: a charming background beat, no particle math.
+  // ONE self-rescheduling timer (the timer-leak idiom): it always reschedules, and gates
+  // the actual pounce on visible + focused + all conditions, so it never piles up and just
+  // reschedules a no-op when anything is off (room left, tab hidden, off-season, stowed).
+  (function catPounceCycle() {
+    // snow falls on its own in either outdoor room whenever it's a snow day — mirrors the
+    // snow branch of gardenRainActive()/the balcony rainActive() without reaching into that
+    // private closure (snowsOnItsOwn is in this same scope).
+    function snowFallingHere() {
+      if (document.visibilityState === "hidden") return false;
+      var here = stageIndex === STAGES.indexOf("garden") || stageIndex === STAGES.indexOf("balcony");
+      return here && snowsOnItsOwn();
+    }
+    // Some ambient particle season is drifting in whatever outdoor room the cat is in now.
+    function particlesFallingHere() {
+      return autumnLeavesActive() || balconyLeavesActive() ||
+        springPetalsActive() || balconyPetalsActive() || snowFallingHere();
+    }
+    // The real roaming cat is out AND on-screen. showRealCat() hides #witchy-chest-cat-pos
+    // (visibility:hidden) while the garden chase runner stands in for her, so this same
+    // check also keeps the pounce from overlapping a chase — no double cat.
+    function catOutAndShown() {
+      var walk = document.getElementById("witchy-chest-cat-walk");
+      var pos = document.getElementById("witchy-chest-cat-pos");
+      if (!walk || !pos || !walk.classList.contains("out")) return false;
+      if (pos.style.visibility === "hidden") return false; // chase runner is doing the honours
+      return true;
+    }
+    function firePounce() {
+      if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      var el = document.getElementById("witchy-chest-cat-pounce");
+      if (!el) return;
+      el.classList.remove("pouncing"); // clear a stale one-shot before re-adding, so it replays
+      // eslint-disable-next-line no-unused-expressions
+      el.offsetWidth; // reflow so the removed class doesn't coalesce with the re-add
+      el.classList.add("pouncing");
+      el.addEventListener("animationend", function done(e) {
+        if (e.animationName !== "cat-pounce") return;
+        el.classList.remove("pouncing"); // remove on animationend so it can replay
+        el.removeEventListener("animationend", done);
+      });
+      // a soft prey-chatter chirp now and then (cats chitter at birds/leaves) — crickets-rule
+      // gated (hidden OR unfocused → silent), and only sometimes, to keep it subtle.
+      if (!document.hidden && document.hasFocus() && Math.random() < 0.5 &&
+          typeof playCatChatterSound === "function") playCatChatterSound();
+    }
+    function tick() {
+      if (catOutAndShown() && particlesFallingHere() &&
+          document.visibilityState !== "hidden" && document.hasFocus()) {
+        firePounce();
+      }
+      setTimeout(tick, 6000 + Math.random() * 6000); // ~6–12s, jittered
+    }
+    setTimeout(tick, 6000 + Math.random() * 6000);
   })();
   // ── PARTY MODE confetti (garden) — same self-replenishing idiom as the rain above.
   // The balcony party switch drives window.__gardenPartyOn (see setGardenParty). Each

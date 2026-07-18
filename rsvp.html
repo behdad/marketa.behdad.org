@@ -5841,6 +5841,9 @@ section{margin:1.9rem 0}
 #loft-game-strip.season-carodejnice .sn-carodejnice{display:inline}
 #loft-game-strip.season-chaharshanbe .sn-bonfire{display:inline}
 #loft-game-strip.season-chaharshanbe .sn-chaharshanbe{display:inline}
+/* s'mores: the same season-agnostic bonfire, lit on demand any night of the year (Bahareh's
+   "who wants s'mores?" party text) — reuses the festival fire rather than a second one. */
+#loft-game-strip.smores-on .sn-bonfire{display:inline}
 /* flames: staggered infinite scale flicker on nodes with no static transform= */
 .sn-flame{transform-box:fill-box; transform-origin:bottom center; animation:sn-flame-flicker 1.5s ease-in-out infinite}
 .sn-flame.f2{animation-duration:1.1s; animation-delay:-.4s}
@@ -15382,6 +15385,7 @@ var T = {
     msg_behdad_from: "behdad",
     msg_invaders_body: "Irene, did you see the invaders in the office? 👾",
     msg_flair_body: "I need a break 🍸",
+    msg_smores_body: "who wants s'mores? 🔥🍫",
     msg_mb_from: "markéta & behdad",
     msg_mb_body: "did you RSVP yet? 😉 no pressure. (some pressure.)",
     msg_dusk_body: "eclipse on the balcony 🌑 come out?",
@@ -15885,6 +15889,7 @@ var T = {
     msg_behdad_from: "behdad",
     msg_invaders_body: "Irene, viděla jsi v pracovně vetřelce? 👾",
     msg_flair_body: "Potřebuju pauzu 🍸",
+    msg_smores_body: "kdo chce opékat marshmallows? 🔥🍫",
     msg_mb_from: "markéta & behdad",
     msg_mb_body: "potvrdil(a) jsi už účast? 😉 žádný tlak. (trochu tlak.)",
     msg_dusk_body: "zatmění na balkoně 🌑 přijdeš ven?",
@@ -20848,6 +20853,14 @@ document.addEventListener("click", function (e) {
     }
   });
 })();
+// s'mores bonfire: light the season-agnostic balcony bonfire on demand (Bahareh's "who wants
+// s'mores?" party text), independent of the Chaharshanbe/Čarodějnice fire-festival seasons —
+// reuses the SAME .sn-bonfire fire. Cleared on party-off / extinguisher reset.
+window.__setSmores = function (on) {
+  var strip = document.getElementById("loft-game-strip");
+  if (strip) strip.classList.toggle("smores-on", !!on);
+  window.__smoresOn = !!on;
+};
 (function () {
   var bottom = document.getElementById("cuddly-behdad-bottom");
   var behdad = document.getElementById("cuddly-behdad");
@@ -34293,9 +34306,10 @@ async def localfont(name):
       cue_mail:      { fromKey: "msg_bahareh_from", bodyKey: "cue_mail_body",      act: "app:mail" },      // → mail
       storm:         { fromKey: "msg_bahareh_from", bodyKey: "msg_storm_body",     act: "storm" },         // Bahareh's warning → tap: balcony + storm
       invaders:      { fromKey: "msg_behdad_from",  bodyKey: "msg_invaders_body",  act: "invaders" },      // behdad tasks Irene → the office; taps to LAUNCH the chair alien-arcade
-      flair:         { fromKey: "msg_pouria_from",  bodyKey: "msg_flair_body",     act: "flair" }          // Pouria bored → taps to LAUNCH Flair-Catch at the bar
+      flair:         { fromKey: "msg_pouria_from",  bodyKey: "msg_flair_body",     act: "flair" },         // Pouria bored → taps to LAUNCH Flair-Catch at the bar
+      smores:        { fromKey: "msg_bahareh_from", bodyKey: "msg_smores_body",    act: "smores" }         // Bahareh, after dark → taps: balcony + light the bonfire for s'mores
     };
-    var CUE_POOL = ["cue_music", "cue_cocktails", "cue_calendar", "cue_mail", "storm", "invaders", "flair"]; // the random party drip (shuffled: each drip picks a random un-sent one)
+    var CUE_POOL = ["cue_music", "cue_cocktails", "cue_calendar", "cue_mail", "storm", "invaders", "flair", "smores"]; // the random party drip (shuffled: each drip picks a random un-sent one); smores is night-only — see cueRemaining()
     // Phone photobooth result state — session-scoped, same model as notesDraft/cardsIndex:
     // a captured polaroid (frame canvas + chosen look/frame) survives a normal close/reopen
     // (renderPhotobooth seeds its locals from these and commits them back in teardown), and is
@@ -35520,6 +35534,7 @@ async def localfont(name):
       if (act === "eclipse") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__runBalconyEclipse) window.__runBalconyEclipse(); }, 760); return; } // pan first, then darken the sky
       if (act === "storm") { if (window.storm) window.storm(true); return; } // storm() pans to the balcony, sets dusk, and rolls the storm itself
       if (act === "invaders") { if (window.goToStage) window.goToStage("office"); setTimeout(function () { if (window.__startArcade) window.__startArcade(); }, 720); return; } // pan to the office, then launch the chair alien-arcade
+      if (act === "smores") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__setSmores) window.__setSmores(true); }, 760); return; } // pan to the balcony, then light the bonfire
       if (act === "flair") { if (window.goToStage) window.goToStage("kitchen"); setTimeout(function () { if ((!window.__barUpNow || !window.__barUpNow()) && window.__setDayNight) window.__setDayNight(true); if (window.__startFlairCatch) window.__startFlairCatch(); }, 720); return; } // pan to the bar (raise it if needed), then launch Flair-Catch
       if (act === "rsvp") { if (window.goToStage) window.goToStage("balcony"); if (window.__showRsvpNudge) window.__showRsvpNudge("rsvp_exit"); return; }
       if (act === "games") { if (window.goToStage) window.goToStage("office"); setTimeout(function () { if (window.computer && !window.computer()) window.computer(true); else if (window.__toggleMonitorZoom) window.__toggleMonitorZoom(); }, 420); return; }
@@ -35598,7 +35613,17 @@ async def localfont(name):
     // gated on party-on + attended + not-cinematic (an unattended fire skips but keeps trying).
     // Armed by setGardenParty(on) via __startCueDrip; stops on party-off / reset / pool empty.
     var cueTimer = null;
-    function cueRemaining() { var out = []; for (var i = 0; i < CUE_POOL.length; i++) if (messagesThread.indexOf(CUE_POOL[i]) === -1) out.push(CUE_POOL[i]); return out; }
+    function cueRemaining() {
+      var b = document.getElementById("stage-balcony"), night = !!(b && b.classList.contains("dusk"));
+      var out = [];
+      for (var i = 0; i < CUE_POOL.length; i++) {
+        var id = CUE_POOL[i];
+        if (messagesThread.indexOf(id) !== -1) continue;
+        if (id === "smores" && !night) continue; // s'mores round the fire is an after-dark thing
+        out.push(id);
+      }
+      return out;
+    }
     function scheduleCueDrip() {
       if (cueTimer || !window.__gardenPartyOn || !cueRemaining().length) return;
       cueTimer = setTimeout(function () {
@@ -47203,6 +47228,7 @@ function spawnDustMote(container) {
     on = !!on;
     window.__gardenPartyOn = on;
     if (on) { if (window.__startCueDrip) window.__startCueDrip(); } else if (window.__stopCueDrip) window.__stopCueDrip(); // drip the app-cue phone texts only while the party's lit
+    if (!on && window.__setSmores) window.__setSmores(false); // the party's out → put the s'mores bonfire out too (unless a fire-festival season keeps its own)
     if (window.__updateStarsSound) window.__updateStarsSound(); // stars/piano is cuddly-only during a party, whole-loft otherwise — re-gate on party start/stop
     if (window.__refreshGardenCaption) window.__refreshGardenCaption(); // garden line goes party-mode / reverts
     if (on && window.__retireHint) window.__retireHint("hint_ksecret"); // loose-brick hint: retire once the party (and its bar) reveals the kitchen's other side

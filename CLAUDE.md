@@ -47,6 +47,12 @@ allowed exception, owner-confirmed.)
   click-storms every `.hunt-hit` (click + dblclick + Enter), failing on any uncaught JS
   error, a broken solve chain, or missing solve-path elements. It patches rAF to
   setTimeout and stubs window.open — see its header before changing test plumbing.
+- **Run `node tests/enter.js` after changes touching the room `Enter` key behavior** — the
+  capture-phase document handler and the per-room `__*DoNext` solve-walkers. It drives ONLY
+  the document-level Enter (never per-element clicks): asserts Enter alone walks every room's
+  solve to the balcony (kitchen espresso → garden → cuddly → office call/hang-up/monitor/
+  dismiss/lamps/butterfly), and that a SOLVED room's Enter fires its toy toggle (kitchen
+  day/night, garden party, cuddly projector, office monitor zoom). Same runner as play.js.
 - **Run `node tests/menu.js` (and `node tests/laptopmenu.js`) after changes touching the
   right-click / context-menu system** — the shared `.mon-ctx` menus (monitor desktop-dock,
   console `.console-ctx`, the office laptop, the pocket phone app-icons, browser tabs, and

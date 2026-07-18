@@ -32219,6 +32219,7 @@ async def localfont(name):
   window.__monitorZoomIn = function () { zoomIn(monitor); };
   window.__monitorZoomOut = zoomOut;
   window.__toggleMonitorZoom = function () { if (zoomEl === monitor) zoomOut(); else zoomIn(monitor); }; // 'Enter' in the office toggles the monitor zoom
+  window.__monitorZoomed = function () { return zoomEl === monitor; }; // is the monitor currently zoomed in? (the office Enter-walk's open/dismiss beats read this)
   // each device's bezel ✕ dismisses its own zoom. pointerdown + stopPropagation so it
   // doesn't bubble to the device group's zoom-in handler; the viewport's capture-phase
   // pointerdown already bails when the target sits inside the zoomed device.
@@ -45731,10 +45732,10 @@ function spawnDustMote(container) {
     var ae = document.activeElement;
     if (ae && (/^(BUTTON|A|INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) || ae.isContentEditable)) return; // real control focused → let Enter activate it
     var er = window.currentStageName, did = true;
-    if (er === "kitchen") { if (window.__barUpNow && window.__barUpNow()) { if (window.__makeCocktailHere) window.__makeCocktailHere(); } else if (window.__kitchenDoNext) window.__kitchenDoNext(); } // bar up → make a cocktail; else next pending coffee step
+    if (er === "kitchen") { if (stageIndex < maxUnlocked) { if (window.__toggleDayNight) window.__toggleDayNight(); } else if (window.__kitchenDoNext) window.__kitchenDoNext(); } // solved → toggle day/night (kitchen ⇄ bar); unsolved → walk the espresso solve (a no-op mid warm-up/brew, so Enter never flips to night then). NB: __kitchenDoNext returns null transiently, not just when solved, so gate the toggle on the room being solved, not on its return.
     else if (er === "garden") { if (!(window.__gardenDoNext && window.__gardenDoNext())) { if (window.party) window.party(!window.party()); } } // advance the solve (water→music→candles); once solved, toggle the party
     else if (er === "cuddly") { if (!(window.__cuddlyDoNext && window.__cuddlyDoNext())) { if (window.__cuddlyProjector) window.__cuddlyProjector.cycle(); } } // advance the solve (octopus → blanket); once solved, cycle the projector channel
-    else if (er === "office") { if (window.__wakeMonitorSaver && window.__wakeMonitorSaver()) {} else if (window.computer && !window.computer()) window.computer(true); else if (window.__toggleMonitorZoom) window.__toggleMonitorZoom(); } // wake the screensaver if it's up, else boot the PC if it's off, else toggle the monitor zoom
+    else if (er === "office") { if (!(window.__officeDoNext && window.__officeDoNext())) { if (window.__wakeMonitorSaver && window.__wakeMonitorSaver()) {} else if (window.__toggleMonitorZoom) window.__toggleMonitorZoom(); } } // walk the finale solve (call→hang up→monitor→dismiss→lights→butterfly); once solved, wake the saver else toggle the monitor zoom
     else if (er === "balcony") { if (window.party && !window.party()) { window.party(true); } else if (window.phone) { window.phone(!window.phone()); } } // solve = jumpstart the party; from then on, toggle the cellphone
     else did = false;
     if (did) { e.preventDefault(); e.stopPropagation(); if (ae && ae.blur && ae !== document.body) ae.blur(); } // suppress the focused scene object's activation + drop its focus
@@ -48170,6 +48171,11 @@ function spawnDustMote(container) {
   window.__cuddlyDoNext = function () {
     var oct = document.getElementById("cuddly-octopus");
     if (!(oct && oct.classList.contains("played"))) { if (oct) oct.dispatchEvent(new MouseEvent("click", { bubbles: true })); return "cuddly-octopus"; }
+    // solved once the main blanket is off the couple (triggerBlanketPull tags it `done` + advances
+    // to the office). Check it BEFORE re-pulling, else this always returned "cuddly-blanket" and the
+    // Enter handler's projector-cycle fall-through was dead code (the blanket got re-tugged forever).
+    var bl = document.getElementById("cuddly-blanket");
+    if (bl && bl.classList.contains("done")) return null; // solved → Enter cycles the projector channel
     if (window.__pullMainBlanket) { window.__pullMainBlanket(); return "cuddly-blanket"; }
     return null;
   };
@@ -48229,6 +48235,45 @@ function spawnDustMote(container) {
     setTimeout(function () { goToStage("balcony"); }, 2000);
     setTimeout(function () { if (officeDim) officeDim.style.opacity = "0"; }, 3000);
   });
+
+  // 'Enter' in the office walks the finale sequence one beat per press, mirroring the other
+  // rooms' __*DoNext walkers: call Prague → hang up → open the monitor → dismiss it → lights
+  // off (lamp, then pendant) → click the stained-glass butterfly (which whisks you to the
+  // balcony). Returns a truthy id for each beat it fires — and a busy sentinel while a call is
+  // mid-ring, so a rapid Enter waits rather than re-dialing or falling through to the zoom —
+  // and null once the office is solved (the glass carries `done`), so Enter then toggles zoom.
+  window.__officeDoNext = function () {
+    var glass = document.getElementById("office-stainedglass");
+    if (glass && glass.classList.contains("done")) return null; // solved → Enter toggles the monitor zoom instead
+    var callLive = !!(window.__laptopCallLive && window.__laptopCallLive());
+    // 1. Call Prague (from the laptop): open the lid, then dial the Prague tile.
+    if (!window.__pragueCalled) {
+      if (callLive) return "office-call"; // dialing/connecting — wait it out, don't re-dial
+      if (window.laptop && !window.laptop()) { window.laptop(true); return "office-laptop"; } // open the lid first
+      var tile = document.getElementById("laptop-calltile");
+      if (tile) { tile.dispatchEvent(new MouseEvent("click", { bubbles: true })); return "laptop-calltile"; }
+      return "office-laptop";
+    }
+    // 2. Hang up the now-connected call.
+    if (callLive) { if (window.__endLaptopCall) window.__endLaptopCall(); return "office-hangup"; }
+    // 3. Open the monitor: boot the PC (which sets __pcPlayed) if it's off, and zoom in.
+    if (!window.__pcPlayed) {
+      if (window.computer && !window.computer()) window.computer(true); // boots → sets __pcPlayed
+      else window.__pcPlayed = true; // already on (booted elsewhere) → mark the beat done so we don't loop
+      if (window.__monitorZoomIn && !(window.__monitorZoomed && window.__monitorZoomed())) window.__monitorZoomIn();
+      return "office-monitor";
+    }
+    // 4. Dismiss the monitor (zoom back out) if we're still zoomed in.
+    if (window.__monitorZoomed && window.__monitorZoomed()) { if (window.__monitorZoomOut) window.__monitorZoomOut(); return "office-dismiss"; }
+    // 5. Turn off the lights — one lamp per press (lamp, then pendant), the finale's gate.
+    var lamp = document.getElementById("office-lamp");
+    if (lamp && !lamp.classList.contains("dimmed")) { lamp.dispatchEvent(new MouseEvent("click", { bubbles: true })); return "office-lamp"; }
+    var pend = document.getElementById("office-pendant");
+    if (pend && !pend.classList.contains("dimmed")) { pend.dispatchEvent(new MouseEvent("click", { bubbles: true })); return "office-pendant"; }
+    // 6. Click the stained-glass butterfly → the balcony.
+    if (glass) { glass.dispatchEvent(new MouseEvent("click", { bubbles: true })); return "office-stainedglass"; }
+    return null;
+  };
 
   function resetHunt() {
     window.__pragueCalled = false;

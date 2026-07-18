@@ -15358,6 +15358,7 @@ var T = {
     msg_storm_body: "there's a storm coming! ⛈️",
     msg_behdad_from: "behdad",
     msg_invaders_body: "Irene, did you see the invaders in the office? 👾",
+    msg_flair_body: "I'm bored 🍸",
     msg_mb_from: "markéta & behdad",
     msg_mb_body: "did you RSVP yet? 😉 no pressure. (some pressure.)",
     msg_dusk_body: "eclipse on the balcony 🌑 come out?",
@@ -15859,6 +15860,7 @@ var T = {
     msg_storm_body: "blíží se bouřka! ⛈️",
     msg_behdad_from: "behdad",
     msg_invaders_body: "Irene, viděla jsi v pracovně vetřelce? 👾",
+    msg_flair_body: "Nudím se 🍸",
     msg_mb_from: "markéta & behdad",
     msg_mb_body: "potvrdil(a) jsi už účast? 😉 žádný tlak. (trochu tlak.)",
     msg_dusk_body: "zatmění na balkoně 🌑 přijdeš ven?",
@@ -21269,6 +21271,14 @@ function gameTapsNear(a, b) {
     function startArcade() {
       if (arcadeActive) return;
       arcadeActive = true;
+      // seed the pointer-follow frame from the chair's CURRENT on-screen position, in the SAME
+      // strip-SVG space pointermove uses (via pointerSvgX) — a drag-launch set these through
+      // pointerdown, but a launch WITHOUT a grab (the phone "invaders" message) left them stale and
+      // the chair wouldn't follow. NB arcadeChairX() is STAGE-LOCAL (the office sits at strip x
+      // ~2040), the wrong space — it clamped the chair to the edge. Map the real rect instead.
+      var _cr = chair.getBoundingClientRect();
+      chairDragStartX = pointerSvgX({ clientX: _cr.left + _cr.width / 2, clientY: _cr.top + _cr.height / 2 });
+      chairDragStartOffset = chairOffsetX;
       arcadeScore = 0;
       arcadeClearLayer();
       arcadeBuildHud();                 // live score + persisted high, drawn into the alien layer
@@ -23735,6 +23745,7 @@ function gameTapsNear(a, b) {
     function startFlairCatch() {
       if (flairActive || flairReduce || !flairLayer) return; // reduced-motion: skip the game (drag still works)
       flairActive = true;
+      barDragStartX = flairShakerX(); barDragStartOffset = barOffsetX; // seed the paddle-follow frame so it tracks the cursor immediately (same fix as the arcade chair — a launch without a grab, e.g. the phone "I'm bored" message)
       flairScore = 0; flairMiss = 0; flairElapsed = 0;
       flairClearLayer();
       flairItems.length = 0;
@@ -23821,6 +23832,7 @@ function gameTapsNear(a, b) {
       return { active: flairActive, items: flairItems.length, score: flairScore, miss: flairMiss };
     };
     window.__flairStop = stopFlairCatch;
+    window.__startFlairCatch = startFlairCatch; // a phone message ("I'm bored" from Pouria) can kick off Flair-Catch
     window.__flairState = function () { return { active: flairActive, raf: flairRaf, items: flairItems.length, score: flairScore, miss: flairMiss, high: flairHigh() }; };
 
     // ── cinematic autopilot ──────────────────────────────────────────────────
@@ -34170,9 +34182,10 @@ async def localfont(name):
       cue_calendar:  { fromKey: "msg_mb_from",      bodyKey: "cue_calendar_body",  act: "app:calendar" },  // → calendar
       cue_mail:      { fromKey: "msg_bahareh_from", bodyKey: "cue_mail_body",      act: "app:mail" },      // → mail
       storm:         { fromKey: "msg_bahareh_from", bodyKey: "msg_storm_body",     act: "storm" },         // Bahareh's warning → tap: balcony + storm
-      invaders:      { fromKey: "msg_behdad_from",  bodyKey: "msg_invaders_body",  act: "invaders" }       // behdad tasks Irene → the office; taps to LAUNCH the chair alien-arcade
+      invaders:      { fromKey: "msg_behdad_from",  bodyKey: "msg_invaders_body",  act: "invaders" },      // behdad tasks Irene → the office; taps to LAUNCH the chair alien-arcade
+      flair:         { fromKey: "msg_pouria_from",  bodyKey: "msg_flair_body",     act: "flair" }          // Pouria bored → taps to LAUNCH Flair-Catch at the bar
     };
-    var CUE_POOL = ["cue_music", "cue_cocktails", "cue_calendar", "cue_mail", "storm", "invaders"]; // the random party drip
+    var CUE_POOL = ["cue_music", "cue_cocktails", "cue_calendar", "cue_mail", "storm", "invaders", "flair"]; // the random party drip (shuffled: each drip picks a random un-sent one)
     // Phone photobooth result state — session-scoped, same model as notesDraft/cardsIndex:
     // a captured polaroid (frame canvas + chosen look/frame) survives a normal close/reopen
     // (renderPhotobooth seeds its locals from these and commits them back in teardown), and is
@@ -35396,6 +35409,7 @@ async def localfont(name):
       if (act === "eclipse") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__runBalconyEclipse) window.__runBalconyEclipse(); }, 760); return; } // pan first, then darken the sky
       if (act === "storm") { if (window.storm) window.storm(true); return; } // storm() pans to the balcony, sets dusk, and rolls the storm itself
       if (act === "invaders") { if (window.goToStage) window.goToStage("office"); setTimeout(function () { if (window.__startArcade) window.__startArcade(); }, 720); return; } // pan to the office, then launch the chair alien-arcade
+      if (act === "flair") { if (window.goToStage) window.goToStage("kitchen"); setTimeout(function () { if ((!window.__barUpNow || !window.__barUpNow()) && window.__setDayNight) window.__setDayNight(true); if (window.__startFlairCatch) window.__startFlairCatch(); }, 720); return; } // pan to the bar (raise it if needed), then launch Flair-Catch
       if (act === "rsvp") { if (window.goToStage) window.goToStage("balcony"); if (window.__showRsvpNudge) window.__showRsvpNudge("rsvp_exit"); return; }
       if (act === "games") { if (window.goToStage) window.goToStage("office"); setTimeout(function () { if (window.computer && !window.computer()) window.computer(true); else if (window.__toggleMonitorZoom) window.__toggleMonitorZoom(); }, 420); return; }
       if (act.indexOf("room:") === 0 && window.goToStage) window.goToStage(act.slice(5));

@@ -1240,6 +1240,82 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 @keyframes guest-jay-step{0%,100%{transform:translateX(-2px)} 50%{transform:translateX(2px)}}
 @keyframes guest-jay-bless{0%,100%{transform:rotate(-4deg)} 50%{transform:rotate(6deg)}} /* the raised open palm sways in blessing */
 @keyframes guest-jay-arm-r{0%,100%{transform:rotate(4deg)} 50%{transform:rotate(-6deg)}}
+/* ── COUPLES DANCE AROUND EACH OTHER — an orbit twirl / do-si-do ─────────────────
+   Each pair circles a small ellipse in place, 180° out of phase (the partner rides the
+   SAME keyframe with a negative delay of half its period), so as one leans left the other
+   leans right and they trace opposite arcs — reading as a couple circling each other, not
+   drifting apart. Kept SMALL (a partial offset ellipse) so the two never pass through one
+   another: Ali↔Goli are the wide outer pair (a bigger ring), Spencer↔Jay sit closer (a
+   tighter one). The orbit rides its OWN .guest-orbit wrapper — a fresh <g> with NO static
+   transform attribute, sitting between .guest-arrival and .guest-move — so it composes with
+   the arrival slide + each guest's signature move + sway, never clobbering the .g-* group's
+   static position translate. Gated on .guests-in (drops with a room-leave / party-off, like
+   every other guest animation) and held still under reduced motion (below). */
+#garden-guests .guest-orbit{transform-box:fill-box; transform-origin:center bottom}
+/* Ali (host of the pair's phase) + Goli half a turn behind → they circle each other. */
+#garden-guests.guests-in .g-ali .guest-orbit{animation:guest-orbit-ap 3.2s linear infinite}
+#garden-guests.guests-in .g-goli .guest-orbit{animation:guest-orbit-ap 3.2s linear infinite; animation-delay:-1.6s}
+/* Spencer + Jay, tighter ring, offset period so it doesn't lock-step with the AP pair. */
+#garden-guests.guests-in .g-spencer .guest-orbit{animation:guest-orbit-sj 3.6s linear infinite}
+#garden-guests.guests-in .g-jay .guest-orbit{animation:guest-orbit-sj 3.6s linear infinite; animation-delay:-1.8s}
+@keyframes guest-orbit-ap{0%{transform:translate(13px,0)} 25%{transform:translate(0,-7px)} 50%{transform:translate(-13px,0)} 75%{transform:translate(0,7px)} 100%{transform:translate(13px,0)}}
+@keyframes guest-orbit-sj{0%{transform:translate(10px,0)} 25%{transform:translate(0,-6px)} 50%{transform:translate(-10px,0)} 75%{transform:translate(0,6px)} 100%{transform:translate(10px,0)}}
+/* ── THE HOSTS: Behdad & Markéta at their own party (added in #garden-guests below) ──
+   They're just THERE whenever the party's lit — no toggle. Two modes, swapped by a JS
+   timer that flips .hosts-solo on the group (see __hostSoloDriver):
+     together (default) → they circle each other, same orbit idiom as the guest couples
+                          (their own ring, offset phase) on the .guest-orbit wrapper.
+     .hosts-solo        → they break apart and each does a DISTINCT individual move (Behdad
+                          a jaunty two-step bounce, Markéta a swishy hip-sway spin) on the
+                          .guest-move wrapper, while the orbit relaxes to a gentle in-place
+                          bob so they hold their own ground rather than circling.
+   Both modes ride the transform-free wrappers only (never the .g-* position translate), are
+   gated on .guests-in (drop on room-leave / party-off / tab-hide with everyone else) and
+   hold a static pose under reduced motion (below). */
+#garden-guests.guests-in:not(.hosts-solo) .g-behdad .guest-orbit{animation:guest-orbit-hosts 3.4s linear infinite}
+#garden-guests.guests-in:not(.hosts-solo) .g-marketa .guest-orbit{animation:guest-orbit-hosts 3.4s linear infinite; animation-delay:-1.7s}
+@keyframes guest-orbit-hosts{0%{transform:translate(12px,0)} 25%{transform:translate(0,-6.5px)} 50%{transform:translate(-12px,0)} 75%{transform:translate(0,6.5px)} 100%{transform:translate(12px,0)}}
+/* solo mode: orbit eases to a small standing bob (they stay on their own spot, not circling) */
+#garden-guests.guests-in.hosts-solo .g-behdad .guest-orbit,
+#garden-guests.guests-in.hosts-solo .g-marketa .guest-orbit{animation:guest-host-solobob 1.9s ease-in-out infinite}
+#garden-guests.guests-in.hosts-solo .g-marketa .guest-orbit{animation-delay:-.95s}
+@keyframes guest-host-solobob{0%,100%{transform:translate(0,0)} 50%{transform:translate(0,-4px)}}
+/* the hosts' base together-move: a relaxed couple's sway (their signature .guest-move). */
+#garden-guests.guests-in .g-behdad .guest-move{animation:guest-behdad-sway 2.2s ease-in-out infinite}
+#garden-guests.guests-in .g-marketa .guest-move{animation:guest-marketa-sway 2.4s ease-in-out infinite}
+@keyframes guest-behdad-sway{0%{transform:rotate(-3deg) translateY(0)} 50%{transform:rotate(3deg) translateY(-4px)} 100%{transform:rotate(-3deg) translateY(0)}}
+@keyframes guest-marketa-sway{0%{transform:rotate(3deg) translateY(0)} 50%{transform:rotate(-3deg) translateY(-4px)} 100%{transform:rotate(3deg) translateY(0)}}
+/* solo mode swaps in each host's DISTINCT individual move (class-qualified + later in source
+   than the base sway so it wins the cascade while .hosts-solo holds; reverts when it clears). */
+#garden-guests.guests-in.hosts-solo .g-behdad .guest-move{animation:guest-behdad-solo 1.15s ease-in-out infinite}
+#garden-guests.guests-in.hosts-solo .g-marketa .guest-move{animation:guest-marketa-solo 1.5s ease-in-out infinite}
+@keyframes guest-behdad-solo{0%{transform:translateY(0) rotate(-4deg)} 25%{transform:translateY(-9px) rotate(4deg)} 50%{transform:translateY(0) rotate(-4deg) scaleY(.97)} 75%{transform:translateY(-9px) rotate(4deg)} 100%{transform:translateY(0) rotate(-4deg)}} /* a jaunty two-step bounce */
+@keyframes guest-marketa-solo{0%,100%{transform:rotate(0) scaleX(1)} 30%{transform:rotate(-6deg) scaleX(.9)} 50%{transform:rotate(0) scaleX(-1)} 70%{transform:rotate(6deg) scaleX(-.9)}} /* a swishy hip-sway spin */
+/* ── ALIREZA & MAHZAD: the travel-buddy couple (added in #garden-guests below) ────
+   Behdad & Markéta's intimate friends + travel buddies, crashing the floor with the other
+   VIPs (same .guests-in gating). They ALSO circle each other by default and break into their
+   own solo moves on the shared .hosts-solo cycle (the couples' together⇄solo swap driver),
+   same transform-free-wrapper discipline as everyone else. Alireza does a relaxed cool
+   shoulder-lean two-step, Mahzad an energetic bent-knee lean-forward bounce. Their own ring +
+   period so they don't lock-step with the hosts. Reduced motion holds them still (below). */
+#garden-guests.guests-in:not(.hosts-solo) .g-alireza .guest-orbit{animation:guest-orbit-pals 3.6s linear infinite}
+#garden-guests.guests-in:not(.hosts-solo) .g-mahzad .guest-orbit{animation:guest-orbit-pals 3.6s linear infinite; animation-delay:-1.8s}
+@keyframes guest-orbit-pals{0%{transform:translate(11px,0)} 25%{transform:translate(0,-6px)} 50%{transform:translate(-11px,0)} 75%{transform:translate(0,6px)} 100%{transform:translate(11px,0)}}
+/* solo mode: their orbit eases to a small standing bob (hold their own spot, not circling) */
+#garden-guests.guests-in.hosts-solo .g-alireza .guest-orbit,
+#garden-guests.guests-in.hosts-solo .g-mahzad .guest-orbit{animation:guest-host-solobob 2.1s ease-in-out infinite}
+#garden-guests.guests-in.hosts-solo .g-mahzad .guest-orbit{animation-delay:-1.05s}
+/* their base together-move: a relaxed couple's sway (signature .guest-move). */
+#garden-guests.guests-in .g-alireza .guest-move{animation:guest-alireza-sway 2.3s ease-in-out infinite}
+#garden-guests.guests-in .g-mahzad .guest-move{animation:guest-mahzad-sway 2.1s ease-in-out infinite}
+@keyframes guest-alireza-sway{0%{transform:rotate(3deg) translateY(0)} 50%{transform:rotate(-3deg) translateY(-3px)} 100%{transform:rotate(3deg) translateY(0)}}
+@keyframes guest-mahzad-sway{0%{transform:rotate(-3deg) translateY(0)} 50%{transform:rotate(3deg) translateY(-5px)} 100%{transform:rotate(-3deg) translateY(0)}}
+/* solo mode swaps in each one's DISTINCT individual move (class-qualified + later in source
+   than the base sway so it wins while .hosts-solo holds; reverts when it clears). */
+#garden-guests.guests-in.hosts-solo .g-alireza .guest-move{animation:guest-alireza-solo 1.35s ease-in-out infinite}
+#garden-guests.guests-in.hosts-solo .g-mahzad .guest-move{animation:guest-mahzad-solo 1.05s ease-in-out infinite}
+@keyframes guest-alireza-solo{0%,100%{transform:translateX(-3px) rotate(-3deg)} 50%{transform:translateX(3px) rotate(3deg) translateY(-4px)}} /* a cool shoulder-lean two-step */
+@keyframes guest-mahzad-solo{0%,100%{transform:translateY(0) rotate(0)} 30%{transform:translateY(-7px) rotate(-3deg)} 60%{transform:translateY(-2px) rotate(3deg) scaleY(1.03)} 80%{transform:translateY(-6px) rotate(-2deg)}} /* an energetic bent-knee bounce */
 /* reduced motion: the crashers still ARRIVE (opacity in) but hold a static pose — no slide,
    no sway, no signature move (matches the party's other reduced-motion handling). */
 @media (prefers-reduced-motion: reduce){
@@ -1255,6 +1331,17 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   #garden-guests.guests-in .g-goli .guest-move,
   #garden-guests.guests-in .g-spencer .guest-move,
   #garden-guests.guests-in .g-jay .guest-move{animation:none}
+  /* !important so these beat the per-guest / .hosts-solo orbit+move rules above (which
+     out-specify a plain .guest-orbit selector); reduced motion holds every couple still. */
+  #garden-guests.guests-in .guest-orbit,
+  #garden-guests.guests-in .g-behdad .guest-move,
+  #garden-guests.guests-in .g-marketa .guest-move,
+  #garden-guests.guests-in.hosts-solo .g-behdad .guest-move,
+  #garden-guests.guests-in.hosts-solo .g-marketa .guest-move,
+  #garden-guests.guests-in .g-alireza .guest-move,
+  #garden-guests.guests-in .g-mahzad .guest-move,
+  #garden-guests.guests-in.hosts-solo .g-alireza .guest-move,
+  #garden-guests.guests-in.hosts-solo .g-mahzad .guest-move{animation:none !important} /* no orbit / solo / bob — the couples hold still */
   #garden-guests.guests-in .g-jay .guest-halo{transition:none; animation:none} /* halo shows, but no shimmer */
 }
 /* ── CRASHERS are TAPPABLE (only while on the floor) ──────────────────────────
@@ -1290,13 +1377,21 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #garden-guests .g-jay .guest-halo{transform-box:fill-box; transform-origin:center center} /* pulse scales about the halo's own centre */
 #garden-guests.guests-in .g-jay .guest-halo.halo-pulse{animation:guest-halo-pulse 1s ease-in-out}
 @keyframes guest-halo-pulse{0%{opacity:.55; transform:scale(1)} 35%{opacity:1; transform:scale(1.18)} 100%{opacity:.55; transform:scale(1)}}
+/* Alireza: a cool spin-and-lean on tap; Mahzad: an energetic hop-and-toss. One-shots on their
+   .guest-react wrapper (no static transform → compose with the dance), cleared on animationend. */
+.g-alireza .guest-react.alireza-flare{animation:guest-alireza-flare .8s cubic-bezier(.34,1.4,.64,1)}
+@keyframes guest-alireza-flare{0%{transform:translateX(0) rotate(0)} 30%{transform:translateX(-6px) rotate(-8deg)} 60%{transform:translateX(6px) rotate(8deg) translateY(-4px)} 100%{transform:translateX(0) rotate(0)}}
+.g-mahzad .guest-react.mahzad-flare{animation:guest-mahzad-flare .75s cubic-bezier(.34,1.56,.64,1)}
+@keyframes guest-mahzad-flare{0%{transform:translateY(0) rotate(0)} 30%{transform:translateY(-16px) rotate(4deg)} 55%{transform:translateY(2px) rotate(-4deg)} 78%{transform:translateY(-4px) rotate(2deg)} 100%{transform:translateY(0) rotate(0)}}
 /* reduced motion: a tap still ACKNOWLEDGES (a tiny opacity blip on the react wrapper) but
    skips the big signature motion, matching the party's other reduced-motion handling. */
 @media (prefers-reduced-motion: reduce){
   .g-ali .guest-react.ali-flare,
   .g-goli .guest-react.goli-flare,
   .g-spencer .guest-react.spencer-flare,
-  .g-jay .guest-react.jay-flare{animation:guest-react-blip .4s ease-in-out}
+  .g-jay .guest-react.jay-flare,
+  .g-alireza .guest-react.alireza-flare,
+  .g-mahzad .guest-react.mahzad-flare{animation:guest-react-blip .4s ease-in-out}
   .g-ali .guest-beard.beard-toss{animation:none}
   #garden-guests.guests-in .g-jay .guest-halo.halo-pulse{animation:none}
 }
@@ -9548,6 +9643,7 @@ section{margin:1.9rem 0}
      Drawn tall (head cy~186) so he towers over the ~y210-headed melt dancers. -->
 <g class="guest g-ali" transform="translate(256,0)">
 <g class="guest-arrival">
+<g class="guest-orbit"><!-- circles Goli (couple's do-si-do); no static transform -->
 <g class="guest-move">
 <g class="guest-sway">
 <g class="guest-react"><!-- tap-flare wrapper: no static transform, composes with the dance -->
@@ -9604,10 +9700,11 @@ section{margin:1.9rem 0}
 <path d="M -18 200 q -2 2 -1 4" fill="none" stroke="#4a5a44" stroke-width="0.8" stroke-linecap="round" opacity="0.75"/>
 <circle cx="-20" cy="198.5" r="0.8" fill="none" stroke="#4a5a44" stroke-width="0.7" opacity="0.75"/>
 </g><!-- /guest-react -->
-</g>
-</g>
-</g>
-</g>
+</g><!-- /guest-sway -->
+</g><!-- /guest-move -->
+</g><!-- /guest-orbit -->
+</g><!-- /guest-arrival -->
+</g><!-- /g-ali -->
 <!-- SPENCER — Markéta's maid-of-honor (a man; warm, joyful giant of the group). The TALLEST
      & biggest-framed here (head cy~168, taller even than Ali) — his height is the defining
      trait. Short dark hair, dark-rimmed glasses, clean-shaven, big friendly smile. Casual:
@@ -9616,6 +9713,7 @@ section{margin:1.9rem 0}
      Centred between Ali (left) and Goli (right); his exuberant dance rides the inner wrappers. -->
 <g class="guest g-spencer" transform="translate(320,0)">
 <g class="guest-arrival">
+<g class="guest-orbit"><!-- circles Jay (couple's do-si-do); no static transform -->
 <g class="guest-move">
 <g class="guest-sway">
 <g class="guest-react"><!-- tap-flare wrapper: no static transform, composes with the dance -->
@@ -9666,10 +9764,11 @@ section{margin:1.9rem 0}
 <path class="guest-arm-l" fill="#d99c62" d="M -13 200 C -21 194 -28 184 -31 175 L -27 173.4 C -23 182 -17 191 -9 198 Z"/>
 <path class="guest-arm-r" fill="#d99c62" d="M 13 200 C 21 194 28 184 31 175 L 27 173.4 C 23 182 17 191 9 198 Z"/>
 </g><!-- /guest-react -->
-</g>
-</g>
-</g>
-</g>
+</g><!-- /guest-sway -->
+</g><!-- /guest-move -->
+</g><!-- /guest-orbit -->
+</g><!-- /guest-arrival -->
+</g><!-- /g-spencer -->
 <!-- JAY — Spencer's partner and the couple's wedding OFFICIATOR; famously looks like Jesus.
      Long straight medium-brown hair parted down the middle, flowing past the shoulders; a full
      brown beard; a gentle serene smile; casual navy/black fleece zip jacket. The classic
@@ -9680,6 +9779,7 @@ section{margin:1.9rem 0}
      ever shifts it off his crown; it fades with .guests-in. -->
 <g class="guest g-jay" transform="translate(378,0)">
 <g class="guest-arrival">
+<g class="guest-orbit"><!-- circles Spencer (couple's do-si-do); wraps halo+body so both orbit together; no static transform -->
 <!-- soft halo shimmer above the crown (opacity fades in with .guests-in; pulses gently) -->
 <g class="guest-halo">
 <ellipse cx="0" cy="168" rx="13" ry="4" fill="none" stroke="#fff6d8" stroke-width="1.6" opacity="0.85"/>
@@ -9728,16 +9828,18 @@ section{margin:1.9rem 0}
 <path d="M -22 188 v -3 M -20 187.4 v -3.4 M -18 188 v -3" fill="none" stroke="#e0a86e" stroke-width="1.1" stroke-linecap="round"/>
 <path class="guest-arm-r" fill="#e0a86e" d="M 9 214 C 14 211 18 207 20 202 L 17 200.6 C 15 205 12 208 6 212 Z"/>
 </g><!-- /guest-react -->
-</g>
-</g>
-</g>
-</g>
+</g><!-- /guest-sway -->
+</g><!-- /guest-move -->
+</g><!-- /guest-orbit (wraps halo + body) -->
+</g><!-- /guest-arrival -->
+</g><!-- /g-jay -->
 <!-- GOLI — Lady-Gaga-esque fashion-design student, show-stopping. Platinum-blonde short bob,
      sunglasses pushed up on her head, an avant-garde structured white top with a bold pointed
      shoulder + a statement pink stud choker, red athletic shorts, red-striped tube socks,
      silver sneakers. Shorter than Ali (head cy~206). Feet ~y332. -->
 <g class="guest g-goli" transform="translate(434,0)">
 <g class="guest-arrival">
+<g class="guest-orbit"><!-- circles Ali (couple's do-si-do); no static transform -->
 <g class="guest-move">
 <g class="guest-sway">
 <g class="guest-react"><!-- tap-flare wrapper: no static transform, composes with the dance -->
@@ -9791,10 +9893,250 @@ section{margin:1.9rem 0}
 <path class="guest-arm-l" fill="#e6b48c" d="M -8 227 C -14 222 -19 214 -21.5 208 L -18.5 206.6 C -15.5 213 -11 220 -6 226 Z"/>
 <path class="guest-arm-r" fill="#e6b48c" d="M 8 227 C 14 222 19 214 21.5 208 L 18.5 206.6 C 15.5 213 11 220 6 226 Z"/>
 </g><!-- /guest-react -->
-</g>
-</g>
-</g>
-</g>
+</g><!-- /guest-sway -->
+</g><!-- /guest-move -->
+</g><!-- /guest-orbit -->
+</g><!-- /guest-arrival -->
+</g><!-- /g-goli -->
+<!-- ═══ THE HOSTS: Behdad & Markéta at their OWN party ══════════════════════════════
+     They're just THERE whenever the party's lit (no toggle) — the hosts, on the dance floor
+     with the crowd, dancing around each other (and periodically breaking into a solo, see the
+     .hosts-solo driver + CSS above). Modelled small-scale like the four crashers (feet ~y332,
+     head cy~200ish) from the couple figures elsewhere in the file: Behdad in a pink suit with a
+     burgundy bow tie, flat cap, beard + glasses; Markéta in a blue suit, blue hair, baker-boy
+     cap + glasses. Same wrapper stack as every crasher — .guest-arrival › .guest-orbit ›
+     .guest-move › .guest-sway › .guest-react — so every animation rides a transform-free node
+     and never clobbers the .g-* position translate. Colours are picked to glow (not muddy)
+     under #loft-game-strip.uv-mode's blacklight, like the crashers. Placed centre-floor,
+     Behdad screen-left of Markéta, close enough to circle each other on the hosts' ring.
+     Persistent nodes toggled by .guests-in (cleared on party-off / room-leave / tab-hide /
+     reset with everyone else — nothing spawned, nothing to pile up). -->
+<!-- BEHDAD — pink suit, burgundy bow tie, flat cap, beard, glasses. Head cy~200, feet ~y332. -->
+<g class="guest g-behdad" transform="translate(300,0)">
+<g class="guest-arrival">
+<g class="guest-orbit"><!-- circles Markéta (the hosts' couple's dance); no static transform -->
+<g class="guest-move">
+<g class="guest-sway">
+<g class="guest-react"><!-- tap-flare wrapper: no static transform, composes with the dance -->
+<!-- legs in pink suit trousers -->
+<path class="guest-leg-l" fill="#c68e95" d="M -8 268 C -9 288 -7.5 314 -5 330 L -0.6 330 C -1.4 314 -2.6 288 -1.6 268 Z"/>
+<path class="guest-leg-r" fill="#c68e95" d="M 8 268 C 9 288 7.5 314 5 330 L 0.6 330 C 1.4 314 2.6 288 1.6 268 Z"/>
+<!-- burgundy brogues -->
+<path fill="#8e3a4a" d="M -6.5 327 L -0.6 327 L 0.2 334 L -7.6 334 Z"/>
+<path fill="#8e3a4a" d="M 6.5 327 L 0.6 327 L -0.2 334 L 7.6 334 Z"/>
+<path d="M -6.6 330.4 h6.4 M 0.2 330.4 h6.4" stroke="#a85566" stroke-width="0.7" opacity="0.7"/>
+<!-- pink suit jacket -->
+<path class="guest-torso" fill="#d9a6a6" d="M -11 214 C -13 230 -11 252 -10 268 L 10 268 C 11 252 13 230 11 214 C 4 209 -4 209 -11 214 Z"/>
+<path fill="#c68e95" d="M -10 268 L 10 268 L 9.6 263 L -9.6 263 Z"/>
+<!-- lapels + the burgundy bow tie -->
+<path fill="#c68e95" d="M -6 214 L 0 226 L -1.4 214 Z"/>
+<path fill="#c68e95" d="M 6 214 L 0 226 L 1.4 214 Z"/>
+<path fill="#8e3a4a" d="M -5 214 L -0.6 217 L -0.6 211 Z"/>
+<path fill="#8e3a4a" d="M 5 214 L 0.6 217 L 0.6 211 Z"/>
+<circle cx="0" cy="214" r="1.1" fill="#6c2b38"/>
+<!-- shirt placket + a couple buttons -->
+<rect x="-0.9" y="217" width="1.8" height="46" rx="0.7" fill="#f6efe4"/>
+<circle cx="0" cy="232" r="0.8" fill="#c68e95"/><circle cx="0" cy="244" r="0.8" fill="#c68e95"/>
+<rect class="guest-neck" x="-2" y="204" width="4" height="8" fill="#cf9d6e"/>
+<!-- head: skin, beard, glasses, flat cap -->
+<circle class="guest-head" cx="0" cy="200" r="8.6" fill="#e6b489"/>
+<!-- full dark beard framing the jaw -->
+<path class="guest-beard" fill="#38302a" d="M -8 200 C -8.5 212 -5.5 221 0 224 C 5.5 221 8.5 212 8 200 C 6 205 4 207 0 207 C -4 207 -6 205 -8 200 Z"/>
+<path d="M -4 201 Q 0 204 4 201" fill="none" stroke="#38302a" stroke-width="1.4" stroke-linecap="round"/><!-- moustache -->
+<!-- eyes + smile -->
+<ellipse cx="-3" cy="200.4" rx="0.9" ry="1.2" fill="#3a2f28"/>
+<ellipse cx="3" cy="200.4" rx="0.9" ry="1.2" fill="#3a2f28"/>
+<path d="M -3.4 204 Q 0 206.4 3.4 204" fill="none" stroke="#b06a5a" stroke-width="1" stroke-linecap="round"/>
+<!-- round glasses -->
+<circle cx="-3" cy="200" r="3.4" fill="none" stroke="#2a231c" stroke-width="1.2"/>
+<circle cx="3" cy="200" r="3.4" fill="none" stroke="#2a231c" stroke-width="1.2"/>
+<line x1="-0.1" y1="200" x2="0.1" y2="200" stroke="#2a231c" stroke-width="1.2"/>
+<circle cx="-4" cy="199.2" r="0.9" fill="#a9c6d6" opacity="0.6"/>
+<circle cx="4" cy="199.2" r="0.9" fill="#a9c6d6" opacity="0.6"/>
+<!-- pink flat cap -->
+<path fill="#d9a6a6" d="M -9 191 Q -9 182 0 181 Q 9 182 9 191 Q 0 187 -9 191 Z"/>
+<path fill="#c79598" d="M -9 191 Q 0 195 9 191 L 7 194 Q 0 197 -7 194 Z"/>
+<!-- arms in pink sleeves, thrown up (motion rides the wrappers) -->
+<path class="guest-arm-l" fill="#c68e95" d="M -10 218 C -16 212 -20 203 -22 195 L -18.5 193.6 C -16.5 201 -13 209 -6.5 216 Z"/>
+<path class="guest-arm-r" fill="#c68e95" d="M 10 218 C 16 212 20 203 22 195 L 18.5 193.6 C 16.5 201 13 209 6.5 216 Z"/>
+</g><!-- /guest-react -->
+</g><!-- /guest-sway -->
+</g><!-- /guest-move -->
+</g><!-- /guest-orbit -->
+</g><!-- /guest-arrival -->
+</g><!-- /g-behdad -->
+<!-- MARKÉTA — blue suit, blue hair, baker-boy cap, glasses. Head cy~204, feet ~y332. -->
+<g class="guest g-marketa" transform="translate(356,0)">
+<g class="guest-arrival">
+<g class="guest-orbit"><!-- circles Behdad (the hosts' couple's dance); no static transform -->
+<g class="guest-move">
+<g class="guest-sway">
+<g class="guest-react"><!-- tap-flare wrapper: no static transform, composes with the dance -->
+<!-- legs in blue suit trousers -->
+<path class="guest-leg-l" fill="#7f9ec0" d="M -7.5 270 C -8.5 289 -7 314 -4.5 330 L -0.5 330 C -1.2 314 -2.4 289 -1.6 270 Z"/>
+<path class="guest-leg-r" fill="#7f9ec0" d="M 7.5 270 C 8.5 289 7 314 4.5 330 L 0.5 330 C 1.2 314 2.4 289 1.6 270 Z"/>
+<!-- patterned blue shoes -->
+<path fill="#4a6b94" d="M -6 327 L -0.5 327 L 0.2 334 L -7.2 334 Z"/>
+<path fill="#4a6b94" d="M 6 327 L 0.5 327 L -0.2 334 L 7.2 334 Z"/>
+<path d="M -4.6 329 v4 M -2.6 329 v4 M 2.6 329 v4 M 4.6 329 v4" stroke="#a9c3de" stroke-width="0.7" opacity="0.8"/>
+<!-- blue suit jacket -->
+<path class="guest-torso" fill="#7f9ec0" d="M -10.5 216 C -12.5 232 -10.5 254 -9.5 270 L 9.5 270 C 10.5 254 12.5 232 10.5 216 C 4 211 -4 211 -10.5 216 Z"/>
+<path fill="#6f92bb" d="M -9.5 270 L 9.5 270 L 9.1 265 L -9.1 265 Z"/>
+<!-- lapels + a patterned blue blouse peeking through -->
+<path fill="#6f92bb" d="M -6 216 L 0 228 L -1.4 216 Z"/>
+<path fill="#6f92bb" d="M 6 216 L 0 228 L 1.4 216 Z"/>
+<path fill="#bcd1e7" d="M -3 217 L 0 228 L 3 217 Z"/>
+<circle cx="-1" cy="222" r="0.7" fill="#4a6b94"/><circle cx="1" cy="226" r="0.7" fill="#4a6b94"/>
+<rect class="guest-neck" x="-2" y="206" width="4" height="8" fill="#dbb894"/>
+<!-- head: skin, blue hair, glasses, baker-boy cap -->
+<circle class="guest-head" cx="0" cy="204" r="8" fill="#f2cfae"/>
+<!-- blue hair falling to the jaw, tucked under the cap -->
+<path class="guest-hair-back" fill="#4d84c4" d="M -8 202 C -9.5 206 -10 214 -8 221 L -5 220 C -6.5 214 -6 208 -5 205 L 5 205 C 6 208 6.5 214 5 220 L 8 221 C 10 214 9.5 206 8 202 C 4 198 -4 198 -8 202 Z"/>
+<path fill="#4d84c4" d="M -8 199 C -8.5 194 -4 190.5 0 190.5 C 4 190.5 8.5 194 8 199 C 6 196 3 195.4 0 195.4 C -3 195.4 -6 196 -8 199 Z"/>
+<!-- face -->
+<ellipse cx="-3" cy="204.2" rx="0.9" ry="1.2" fill="#3a2f28"/>
+<ellipse cx="3" cy="204.2" rx="0.9" ry="1.2" fill="#3a2f28"/>
+<ellipse cx="-4.4" cy="207" rx="1.3" ry="0.9" fill="#e8748a" opacity="0.5"/>
+<ellipse cx="4.4" cy="207" rx="1.3" ry="0.9" fill="#e8748a" opacity="0.5"/>
+<path d="M -3 208.4 Q 0 210.8 3 208.4" fill="none" stroke="#b06a5a" stroke-width="1" stroke-linecap="round"/>
+<!-- round glasses -->
+<circle cx="-3" cy="204" r="3.2" fill="none" stroke="#38302a" stroke-width="1.2"/>
+<circle cx="3" cy="204" r="3.2" fill="none" stroke="#38302a" stroke-width="1.2"/>
+<line x1="-0.1" y1="204" x2="0.1" y2="204" stroke="#38302a" stroke-width="1.2"/>
+<circle cx="-4" cy="203.2" r="0.9" fill="#a9c6d6" opacity="0.6"/>
+<circle cx="4" cy="203.2" r="0.9" fill="#a9c6d6" opacity="0.6"/>
+<!-- blue baker-boy cap: a rounded crown + a short front brim + a top button -->
+<path fill="#4a6b94" d="M -9 195 Q -9.5 186 0 185 Q 9.5 186 9 195 Q 0 191 -9 195 Z"/>
+<path fill="#3c587c" d="M -9 195 Q 0 199 9 195 L 11 196 Q 11.5 197.6 10 198 Q 0 195 -9 195 Z"/><!-- front brim -->
+<circle cx="0" cy="186.5" r="1.4" fill="#3c587c"/>
+<!-- arms in blue sleeves, thrown up (motion rides the wrappers) -->
+<path class="guest-arm-l" fill="#7f9ec0" d="M -9.5 220 C -15 214 -19 205 -21 197 L -17.5 195.6 C -15.5 203 -12 211 -6 218 Z"/>
+<path class="guest-arm-r" fill="#7f9ec0" d="M 9.5 220 C 15 214 19 205 21 197 L 17.5 195.6 C 15.5 203 12 211 6 218 Z"/>
+</g><!-- /guest-react -->
+</g><!-- /guest-sway -->
+</g><!-- /guest-move -->
+</g><!-- /guest-orbit -->
+</g><!-- /guest-arrival -->
+</g><!-- /g-marketa -->
+<!-- ═══ ALIREZA & MAHZAD — Behdad & Markéta's travel-buddy couple ══════════════════
+     Intimate friends + travel buddies, on the floor to the screen-LEFT of the others (clear
+     of Ali at x256, right of the front-left photographer) so nobody overlaps. Same crasher
+     wrapper stack (.guest-arrival › .guest-orbit › .guest-move › .guest-sway › .guest-react),
+     tappable flare (see the guest-tap GUESTS array), arriving with the .guests-in gating and
+     torn down with everyone else. They circle each other + break into solos on the shared
+     couples together⇄solo cycle (see the CSS above). Colours picked to glow (not muddy) under
+     #loft-game-strip.uv-mode's blacklight — Alireza's tee is a PUNCHY sage/lime (a muted olive
+     would go muddy under UV, same reason Ali got a bright jersey). Alireza screen-left of
+     Mahzad, close enough to circle. -->
+<!-- ALIREZA — voluminous dark wavy hair, round glasses, short dark beard, punchy sage tee,
+     dark wide-leg trousers, a wristwatch, a relaxed-cool one-arm-out pose. Head cy~200, feet ~y332. -->
+<g class="guest g-alireza" transform="translate(150,0)">
+<g class="guest-arrival">
+<g class="guest-orbit"><!-- circles Mahzad (couple's do-si-do); no static transform -->
+<g class="guest-move">
+<g class="guest-sway">
+<g class="guest-react"><!-- tap-flare wrapper: no static transform, composes with the dance -->
+<!-- legs: dark loose wide-leg trousers -->
+<path class="guest-leg-l" fill="#3a3f4a" d="M -9 266 C -12 288 -11 314 -9 330 L -2 330 C -2.6 314 -3.4 288 -2 266 Z"/>
+<path class="guest-leg-r" fill="#3a3f4a" d="M 9 266 C 12 288 11 314 9 330 L 2 330 C 2.6 314 3.4 288 2 266 Z"/>
+<path fill="#2f333c" d="M -9 266 L -2 266 L -2 270 L -8.8 270 Z"/>
+<path fill="#2f333c" d="M 9 266 L 2 266 L 2 270 L 8.8 270 Z"/>
+<!-- casual dark sneakers -->
+<path fill="#20232a" d="M -9 328 L -2 328 L -1.2 334.5 L -10 334.5 Z"/>
+<path fill="#20232a" d="M 9 328 L 2 328 L 1.2 334.5 L 10 334.5 Z"/>
+<rect x="-10" y="333.4" width="8.8" height="1.6" rx="0.5" fill="#42474f"/>
+<rect x="1.2" y="333.4" width="8.8" height="1.6" rx="0.5" fill="#42474f"/>
+<!-- punchy sage/lime short-sleeve tee (brightened so it glows, not muddies, under UV) -->
+<path class="guest-torso" fill="#a7c94e" d="M -12 214 C -14 230 -12 250 -11 266 L 11 266 C 12 250 14 230 12 214 C 5 209 -5 209 -12 214 Z"/>
+<path fill="#93b53e" d="M -11 266 L 11 266 L 10.6 261 L -10.6 261 Z"/>
+<!-- short sleeves (banded cuffs) -->
+<path fill="#93b53e" d="M -12 214 C -14.5 222 -14 229 -12.5 234 L -6 234 L -6 215 Z"/>
+<path fill="#93b53e" d="M 12 214 C 14.5 222 14 229 12.5 234 L 6 234 L 6 215 Z"/>
+<!-- crew neckline -->
+<path fill="#93b53e" d="M -5 214 C -2 218 2 218 5 214 L 4 212 C 2 215 -2 215 -4 212 Z"/>
+<rect class="guest-neck" x="-2" y="204" width="4" height="8" fill="#d9a066"/>
+<!-- head: warm light skin, short dark beard, round glasses, big wavy hair -->
+<circle class="guest-head" cx="0" cy="200" r="8.6" fill="#e2ae76"/>
+<!-- short dark beard/stubble framing the jaw -->
+<path class="guest-beard" fill="#2e2620" d="M -8 200 C -8.5 210 -5.5 219 0 222 C 5.5 219 8.5 210 8 200 C 6 204 4 206 0 206 C -4 206 -6 204 -8 200 Z"/>
+<path d="M -4 201 Q 0 203.6 4 201" fill="none" stroke="#2e2620" stroke-width="1.3" stroke-linecap="round"/><!-- moustache -->
+<!-- eyes + smile -->
+<ellipse cx="-3" cy="200.4" rx="0.9" ry="1.2" fill="#3a2f28"/>
+<ellipse cx="3" cy="200.4" rx="0.9" ry="1.2" fill="#3a2f28"/>
+<path d="M -3.2 203.8 Q 0 206 3.2 203.8" fill="none" stroke="#b06a5a" stroke-width="1" stroke-linecap="round"/>
+<!-- round glasses -->
+<circle cx="-3" cy="200" r="3.3" fill="none" stroke="#2a231c" stroke-width="1.2"/>
+<circle cx="3" cy="200" r="3.3" fill="none" stroke="#2a231c" stroke-width="1.2"/>
+<line x1="-0.1" y1="200" x2="0.1" y2="200" stroke="#2a231c" stroke-width="1.2"/>
+<circle cx="-4" cy="199.2" r="0.9" fill="#a9c6d6" opacity="0.6"/>
+<circle cx="4" cy="199.2" r="0.9" fill="#a9c6d6" opacity="0.6"/>
+<!-- voluminous dark wavy hair (a full, rounded crown with a couple of waves) -->
+<path fill="#2a221c" d="M -9 195 C -12 188 -10 176 0 175 C 10 176 12 188 9 195 C 8 189 6 187 4.5 189 C 5.5 185 2 183 0 183.5 C -2 183 -5.5 185 -4.5 189 C -6 187 -8 189 -9 195 Z"/>
+<path fill="#3a2f26" d="M -8 192 C -9 187 -7 182 -3 181 C -5 184 -5 188 -6 192 Z" opacity="0.7"/>
+<!-- arms: right (screen-left) relaxed down, left (screen-right) extended up-and-out, cool -->
+<path class="guest-arm-l" fill="#e2ae76" d="M -11 220 C -15 228 -17 238 -17 246 L -13.6 246 C -13 238 -11.5 229 -6.5 222 Z"/>
+<!-- a wristwatch on the down (screen-left) forearm -->
+<rect x="-16.4" y="238" width="4.2" height="3" rx="1" fill="#2a2620"/>
+<rect x="-15.8" y="238.6" width="3" height="1.8" rx="0.6" fill="#8fb0c4"/>
+<path class="guest-arm-r" fill="#e2ae76" d="M 11 218 C 18 212 25 203 28 194 L 24.5 192.6 C 20.5 200 15 208 7.5 216 Z"/>
+</g><!-- /guest-react -->
+</g><!-- /guest-sway -->
+</g><!-- /guest-move -->
+</g><!-- /guest-orbit -->
+</g><!-- /guest-arrival -->
+</g><!-- /g-alireza -->
+<!-- MAHZAD — chin-length tousled dark wavy hair, fair skin, white sleeveless tank, black
+     knee-length skirt, barefoot, slim, an energetic bent-knee lean-forward bounce. Small
+     earrings. Head cy~204, feet ~y332. -->
+<g class="guest g-mahzad" transform="translate(200,0)">
+<g class="guest-arrival">
+<g class="guest-orbit"><!-- circles Alireza (couple's do-si-do); no static transform -->
+<g class="guest-move">
+<g class="guest-sway">
+<g class="guest-react"><!-- tap-flare wrapper: no static transform, composes with the dance -->
+<!-- bare legs (barefoot), slim -->
+<path class="guest-leg-l" fill="#f0d2ac" d="M -6 288 C -7 306 -5.5 322 -3.5 332 L -0.5 332 C -1 322 -2 306 -1.4 288 Z"/>
+<path class="guest-leg-r" fill="#f0d2ac" d="M 6 288 C 7 306 5.5 322 3.5 332 L 0.5 332 C 1 322 2 306 1.4 288 Z"/>
+<!-- bare feet (no shoes) with a hint of toes -->
+<path fill="#e8c69c" d="M -6 330 C -7 333 -6.5 335 -4 335 L -0.6 335 L -0.6 331 Z"/>
+<path fill="#e8c69c" d="M 6 330 C 7 333 6.5 335 4 335 L 0.6 335 L 0.6 331 Z"/>
+<path d="M -5.6 334 h3.4 M 2.2 334 h3.4" stroke="#d8b488" stroke-width="0.5" opacity="0.7"/>
+<!-- black knee-length skirt (A-line, hem ~y288) -->
+<path fill="#26242a" d="M -10 258 C -12 270 -11 282 -10 288 L 10 288 C 11 282 12 270 10 258 C 4 254 -4 254 -10 258 Z"/>
+<path fill="#1c1a1f" d="M -10 288 L 10 288 L 9.6 284 L -9.6 284 Z"/>
+<path d="M -5 260 L -4 286 M 0 259 L 0 288 M 5 260 L 4 286" stroke="#33313a" stroke-width="0.7" opacity="0.7"/><!-- fabric folds -->
+<!-- white sleeveless tank top (fitted, tucked into the skirt) -->
+<path class="guest-torso" fill="#f6f3ea" d="M -8 218 C -9 232 -8 248 -8 260 L 8 260 C 8 248 9 232 8 218 C 4 214 -4 214 -8 218 Z"/>
+<path fill="#e6e1d4" d="M -8 260 L 8 260 L 7.6 256 L -7.6 256 Z"/>
+<!-- thin tank straps + a scoop neckline -->
+<path fill="#f6f3ea" d="M -6 218 L -5 210 L -3.4 210 L -4.4 218 Z"/>
+<path fill="#f6f3ea" d="M 6 218 L 5 210 L 3.4 210 L 4.4 218 Z"/>
+<path fill="#e6e1d4" d="M -4.6 216 C -2 219 2 219 4.6 216 L 3.6 214 C 2 216 -2 216 -3.6 214 Z"/>
+<rect class="guest-neck" x="-2" y="208" width="4" height="7" fill="#eccaa0"/>
+<!-- head: fair skin, round softness, chin-length tousled wavy hair -->
+<circle class="guest-head" cx="0" cy="204" r="7.8" fill="#f2d3ad"/>
+<!-- chin-length tousled dark wavy hair (behind, framing to the jaw) -->
+<path class="guest-hair-back" fill="#2b231d" d="M -8 202 C -10 208 -10 216 -7.5 222 C -6.5 218 -7 214 -6 210 C -6.5 214 -5 218 -4 220 C -4.5 214 -4 208 -5 205 L 5 205 C 4 208 4.5 214 4 220 C 5 218 6.5 214 6 210 C 7 214 6.5 218 7.5 222 C 10 216 10 208 8 202 C 4 197 -4 197 -8 202 Z"/>
+<path fill="#2b231d" d="M -8 200 C -8.5 194 -4 190.5 0 190.5 C 4 190.5 8.5 194 8 200 C 6 196 3 195.4 0 195.4 C -3 195.4 -6 196 -8 200 Z"/>
+<path fill="#3a2f26" d="M 4 192 C 7 194 8 198 7.5 203 C 6 199 5 195 3.5 193 Z" opacity="0.65"/><!-- a tousled wave -->
+<!-- face -->
+<ellipse cx="-3" cy="204.2" rx="0.9" ry="1.2" fill="#3a2f28"/>
+<ellipse cx="3" cy="204.2" rx="0.9" ry="1.2" fill="#3a2f28"/>
+<ellipse cx="-4.4" cy="207" rx="1.3" ry="0.9" fill="#e8748a" opacity="0.5"/>
+<ellipse cx="4.4" cy="207" rx="1.3" ry="0.9" fill="#e8748a" opacity="0.5"/>
+<ellipse cx="0" cy="208.4" rx="1.6" ry="1" fill="#c85a6e"/>
+<!-- small earrings -->
+<circle cx="-7.4" cy="206.4" r="0.9" fill="#e8c14a"/>
+<circle cx="7.4" cy="206.4" r="0.9" fill="#e8c14a"/>
+<!-- arms: energetic, both up + out (lean-forward bounce reads through the base arm animation) -->
+<path class="guest-arm-l" fill="#f0d2ac" d="M -8 222 C -14 217 -19 209 -21.5 202 L -18.5 200.6 C -15.5 207 -11 214 -6 220 Z"/>
+<path class="guest-arm-r" fill="#f0d2ac" d="M 8 222 C 14 217 19 209 21.5 202 L 18.5 200.6 C 15.5 207 11 214 6 220 Z"/>
+</g><!-- /guest-react -->
+</g><!-- /guest-sway -->
+</g><!-- /guest-move -->
+</g><!-- /guest-orbit -->
+</g><!-- /guest-arrival -->
+</g><!-- /g-mahzad -->
 </g>
 <!-- a small party guest at the front-left edge, camera raised to catch the night. Static
      (muted tones so it stays in the background rather than glowing neon like the dancers);
@@ -16919,7 +17261,7 @@ var T = {
     // would join the RTL run and mirror, so they stay outside it in the sentence's own direction.
     tip_haftsin: "<em>haft-sin</em> (<bdi>هفت‌سین</bdi>), the <em>nowruz</em> (<bdi>نوروز</bdi>) table",
     tip_carodejnice: "<em>Čarodějnice</em>, burning of the witches",
-    role_bestman: "best man", role_maid: "maid of honor", role_officiant: "officiant", role_fashion: "fashion designer", role_mc: "MC", role_plusone: "plus-one", role_niece: "Behdad's niece", role_godson: "Behdad's godson", role_sister: "Behdad's sister", role_sisterinlaw: "Behdad's sister-in-law", role_nephew: "Behdad's nephew", role_msister: "Markéta's sister",
+    role_bestman: "best man", role_maid: "maid of honor", role_officiant: "officiant", role_fashion: "fashion designer", role_mc: "MC", role_plusone: "plus-one", role_niece: "Behdad's niece", role_godson: "Behdad's godson", role_sister: "Behdad's sister", role_sisterinlaw: "Behdad's sister-in-law", role_nephew: "Behdad's nephew", role_msister: "Markéta's sister", role_travelbuddy_m: "travel buddy", role_travelbuddy_f: "travel buddy",
     tip_chaharshanbe: "<em>Chaharshanbe Suri</em> (<bdi>چهارشنبه‌سوری</bdi>), the fire you leap",
     tip_sizdah: "<em>Sizdah Bedar</em> (<bdi>سیزده‌بدر</bdi>), nowruz's thirteenth day, spent outdoors",
     // The knot is the reason this day is on a wedding site at all, and the visual can't say it:
@@ -17443,7 +17785,7 @@ var T = {
     season_auto: "⛅ zpátky k dnešku",
     tip_haftsin: "<em>haft-sín</em> (<bdi>هفت‌سین</bdi>), <em>nourúzský</em> (<bdi>نوروز</bdi>) stůl",
     tip_carodejnice: "<em>Čarodějnice</em>, filipojakubská noc",
-    role_bestman: "svědek", role_maid: "svědkyně", role_officiant: "oddávající", role_fashion: "módní návrhářka", role_mc: "moderátor", role_plusone: "doprovod", role_niece: "Behdadova neteř", role_godson: "Behdadův kmotřenec", role_sister: "Behdadova sestra", role_sisterinlaw: "Behdadova švagrová", role_nephew: "Behdadův synovec", role_msister: "Markétina sestra",
+    role_bestman: "svědek", role_maid: "svědkyně", role_officiant: "oddávající", role_fashion: "módní návrhářka", role_mc: "moderátor", role_plusone: "doprovod", role_niece: "Behdadova neteř", role_godson: "Behdadův kmotřenec", role_sister: "Behdadova sestra", role_sisterinlaw: "Behdadova švagrová", role_nephew: "Behdadův synovec", role_msister: "Markétina sestra", role_travelbuddy_m: "parťák na cesty", role_travelbuddy_f: "parťačka na cesty",
     tip_chaharshanbe: "<em>Čaháršanbe surí</em> (<bdi>چهارشنبه‌سوری</bdi>), oheň, který se přeskakuje",
     tip_sizdah: "<em>Sizdah Bedar</em> (<bdi>سیزده‌بدر</bdi>), třináctý den nourúzu, strávený v přírodě",
     sizdah_wish: "Zauzlovat sabzeh znamená přát si svatbu. Zabralo to.",
@@ -24703,6 +25045,10 @@ function gameTapsNear(a, b) {
   var gGoli = document.querySelector(".g-goli"); if (gGoli) hoverTooltip(gGoli, function () { return "<em>Goli</em> · " + tipText("role_fashion"); }, "top");
   var gSpencer = document.querySelector(".g-spencer"); if (gSpencer) hoverTooltip(gSpencer, function () { return "<em>Spencer</em> · " + tipText("role_maid"); }, "top");
   var gJay = document.querySelector(".g-jay"); if (gJay) hoverTooltip(gJay, function () { return "<em>Jay</em> · " + tipText("role_officiant"); }, "top");
+  var gBehdad = document.querySelector(".g-behdad"); if (gBehdad) hoverTooltip(gBehdad, "<em>markéta &amp; behdad</em>", "top"); // the hosts, at their own party — one name for the pair (like #balcony-couple)
+  var gMarketa = document.querySelector(".g-marketa"); if (gMarketa) hoverTooltip(gMarketa, "<em>markéta &amp; behdad</em>", "top");
+  var gAlireza = document.querySelector(".g-alireza"); if (gAlireza) hoverTooltip(gAlireza, function () { return "<em>Alireza</em> · " + tipText("role_travelbuddy_m"); }, "top");
+  var gMahzad = document.querySelector(".g-mahzad"); if (gMahzad) hoverTooltip(gMahzad, function () { return "<em>Mahzad</em> · " + tipText("role_travelbuddy_f"); }, "top");
   hoverTooltip(document.getElementById("kitchen-bartender-hit"), "<em>Pouria</em>", "top");
   hoverTooltip(document.getElementById("garden-dj-a"), "<em>DJ Sina</em>", "top");
   hoverTooltip(document.getElementById("garden-dj-b"), "<em>DJ Danesh</em>", "top", 14); // +14: his afro makes the group bbox ~14px taller than Sina's, so nudge the tip down to sit level with Sina's
@@ -50081,17 +50427,49 @@ function spawnDustMote(container) {
     return !!window.__gardenPartyOn && stageIndex === STAGES.indexOf("garden") && document.visibilityState !== "hidden";
   }
   function clearGuestArriveTimer() { if (guestArriveTimer) { clearTimeout(guestArriveTimer); guestArriveTimer = null; } }
+  // ── HOSTS' SOLO ⇄ TOGETHER cycle ─────────────────────────────────────────────
+  // Behdad & Markéta mostly circle each other (default), but every so often break apart to
+  // each do their own individual move for a stretch, then come back together. Driven by ONE
+  // self-rescheduling timer that flips .hosts-solo on #garden-guests (the CSS above swaps the
+  // orbit ↔ solo moves off that class). Same background-safety idiom as the disco stepper: it
+  // only toggles while the guests are actually on the floor + the tab's visible, and is fully
+  // stopped + the class cleared on teardown (party-off / room-leave / tab-hide / reset), so a
+  // hidden tab never accumulates a flipped state. Reduced motion is a no-op visually (the CSS
+  // holds both modes still) — the class still toggles harmlessly.
+  var hostSoloTimer = null;
+  function stopHostSolo() { // hard teardown: stop the cycle + drop the class so they return to together
+    if (hostSoloTimer) { clearTimeout(hostSoloTimer); hostSoloTimer = null; }
+    var g = document.getElementById("garden-guests");
+    if (g) g.classList.remove("hosts-solo");
+  }
+  function armHostSolo(ms) { // (re)arm the next flip after a given delay — one timer only
+    if (hostSoloTimer) return; // idempotent under storm-clicks / re-entry
+    hostSoloTimer = setTimeout(function () {
+      hostSoloTimer = null;
+      var g = document.getElementById("garden-guests");
+      if (!g || !g.classList.contains("guests-in") || !guestsWanted()) { if (g) g.classList.remove("hosts-solo"); return; } // off the floor → stop cycling (clear any leftover)
+      g.classList.toggle("hosts-solo"); // flip: together → solo → together …
+      // solo stints run a touch shorter than the together stretches
+      armHostSolo(g.classList.contains("hosts-solo") ? 5000 + Math.random() * 3000 : 8000 + Math.random() * 5000);
+    }, ms);
+  }
+  function startHostSolo() { // begin the cycle (they start together; first solo comes after the first together stretch)
+    var g = document.getElementById("garden-guests");
+    if (g) g.classList.remove("hosts-solo"); // always begin together
+    armHostSolo(8000 + Math.random() * 5000);
+  }
   function slideGuestsIn() { // one-shot arrival: fade+slide from the wings (cleared on animationend below)
     var g = document.getElementById("garden-guests");
     if (!g) return;
     g.classList.add("guests-in");
     g.classList.remove("guests-arriving"); void g.getBBox; g.classList.add("guests-arriving"); // restart the one-shot cleanly on a re-arm
+    startHostSolo(); // the hosts are on the floor — begin their solo⇄together cycle
   }
   function updateGardenGuests() {
     var g = document.getElementById("garden-guests");
     if (!g) return;
     if (guestsWanted()) {
-      if (guestsArrived) { g.classList.add("guests-in"); return; } // already crashed the party — just show them (no re-slide)
+      if (guestsArrived) { g.classList.add("guests-in"); startHostSolo(); return; } // already crashed the party — just show them (no re-slide) + resume the hosts' cycle
       // first time this party: arrive a beat after it lights (single timer, cleared on party-off)
       if (!guestArriveTimer) guestArriveTimer = setTimeout(function () {
         guestArriveTimer = null;
@@ -50101,12 +50479,14 @@ function spawnDustMote(container) {
       }, 2200);
     } else {
       clearGuestArriveTimer();
+      stopHostSolo(); // off the floor → stop the hosts' solo cycle + drop its class
       g.classList.remove("guests-in", "guests-arriving"); // off the floor → drop all dance/arrival animation (nothing strands)
     }
   }
   window.__updateGardenGuests = updateGardenGuests;
   function clearGardenGuests() { // hard teardown: goToStage room-leave + reset
     clearGuestArriveTimer();
+    stopHostSolo();
     var g = document.getElementById("garden-guests");
     if (g) g.classList.remove("guests-in", "guests-arriving");
   }
@@ -50176,6 +50556,12 @@ function spawnDustMote(container) {
         } else if (kind === "spencer") { // a comic descending "wobble" duck, then a pop back up
           tone("sawtooth", 360, 150, 0.05, 0, 0.24);
           tone("sine", 200, 520, 0.06, 0.5, 0.14); // the pop as he springs back
+        } else if (kind === "alireza") { // a smooth two-note "swoosh" for the cool spin-lean
+          tone("triangle", 440, 660, 0.05, 0, 0.18);
+          tone("triangle", 660, 880, 0.04, 0.12, 0.14);
+        } else if (kind === "mahzad") { // a bright springy "boing" hop
+          tone("sine", 520, 260, 0.06, 0, 0.2);
+          tone("sine", 700, 1000, 0.045, 0.14, 0.12); // the pop at the top of the hop
         } else { // jay — a soft two-note bell shimmer for the blessing/halo
           tone("sine", 880, 880, 0.055, 0, 0.5);
           tone("sine", 1320, 1320, 0.04, 0.08, 0.5);
@@ -50186,6 +50572,8 @@ function spawnDustMote(container) {
     // (Ali's beard / Jay's halo) with its own class, a fixed pan (their on-screen spot), and
     // the SFX kind. Fixed pans (Ali left … Goli right) avoid a live getBBox during the tap.
     var GUESTS = [
+      { sel: ".g-alireza", flare: "alireza-flare", extraSel: null,           extra: null,         pan: -0.72, sfx: "alireza" }, // travel-buddy couple, far screen-left
+      { sel: ".g-mahzad",  flare: "mahzad-flare",  extraSel: null,           extra: null,         pan: -0.6, sfx: "mahzad" },
       { sel: ".g-ali",     flare: "ali-flare",     extraSel: ".guest-beard", extra: "beard-toss", pan: -0.5, sfx: "ali" },
       { sel: ".g-spencer", flare: "spencer-flare", extraSel: null,           extra: null,         pan: -0.1, sfx: "spencer" },
       { sel: ".g-jay",     flare: "jay-flare",     extraSel: ".guest-halo",  extra: "halo-pulse", pan:  0.2, sfx: "jay" },
@@ -50224,6 +50612,8 @@ function spawnDustMote(container) {
         react.classList.remove("goli-flare");
         react.classList.remove("spencer-flare");
         react.classList.remove("jay-flare");
+        react.classList.remove("alireza-flare");
+        react.classList.remove("mahzad-flare");
       });
       if (extra) extra.addEventListener("animationend", function () {
         extra.classList.remove("beard-toss");

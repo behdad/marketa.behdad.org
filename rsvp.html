@@ -7839,6 +7839,11 @@ section{margin:1.9rem 0}
      self-replenishing WAAPI spawner (each leaf replaces itself on its own onfinish),
      so the count stays constant and spawning pauses with the frames on a hidden tab. -->
 <g id="garden-leaffx" clip-path="url(#garden-window-clip)" pointer-events="none" aria-hidden="true"></g>
+<!-- summer dusk/night: warm yellow-green fireflies meander through the mid-air past the glass.
+     Populated by spawnFirefly, the same self-replenishing WAAPI idiom as the leaves (each
+     firefly replaces itself on its own onfinish), so the count stays constant and spawning
+     pauses with the frames on a hidden/unfocused tab — nothing accumulates. -->
+<g id="garden-fireflyfx" clip-path="url(#garden-window-clip)" pointer-events="none" aria-hidden="true"></g>
 <!-- storm rain streaks on the glass: lines start above the clip and a CSS loop (gated on
      #stage-garden.storming) carries them down through the panes; invisible otherwise -->
 <g id="garden-pane-streaks" clip-path="url(#garden-window-clip)" pointer-events="none">
@@ -14739,6 +14744,7 @@ section{margin:1.9rem 0}
 <g id="balcony-lunar" clip-path="url(#balcony-moon-clip)" pointer-events="none"><circle id="balcony-lunar-umbra" cx="510" cy="50" r="15" fill="#210d09"/></g>
 <g id="balcony-heartfx" pointer-events="none" aria-hidden="true"></g>
 <g id="balcony-leaffx" pointer-events="none" aria-hidden="true"></g><!-- autumn leaves drift across the deck (spawnBalconyLeaf, self-replenishing → no hidden-tab pile-up) -->
+<g id="balcony-fireflyfx" pointer-events="none" aria-hidden="true"></g><!-- summer dusk/night fireflies over the deck (spawnFirefly, self-replenishing → no hidden-tab pile-up) -->
 <!-- pocket-phone flashlight beam: a warm radial glow spilled onto the deck while the
      phone's flashlight app is ON (toggled from setFlashlight()); decorative only, so it
      never captures hit-testing — pointer-events off, like every other balcony overlay -->
@@ -48473,6 +48479,12 @@ function spawnDustMote(container) {
   }
   function snowySeason() { return snowChanceFor(seasonNow()) >= 0.5; }
   window.__snowySeason = snowySeason; // the toque rides the same curve the sky does
+  // Summer is a CLIMATE axis like the snow odds / the smoke ramp, not decor: the warm
+  // months (Jun–Aug — the "never snow" stretch the mid-July preview lands in), read off the
+  // same pretend-date. The fireflies ride this alongside whatever decor is out (Pride in
+  // June, the smoke haze in August), so it needs no season- class of its own.
+  function summerSeason() { var m = seasonNow().m; return m >= 5 && m <= 7; }
+  window.__summerSeason = summerSeason;
   // Snow comes down on its own, no storm needed — but only when today IS a snow day; rain
   // always waits for a storm (a storm on a snow day is just a snowstorm).
   function snowsOnItsOwn() { return fallsAsSnow() && snowySeason(); }
@@ -48614,6 +48626,87 @@ function spawnDustMote(container) {
       !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
   function spawnBalconyPetal() { spawnDriftLeaf("balcony-leaffx", balconyPetalsActive, 40, 580, true); }
+  // ── SUMMER fireflies (garden window + balcony deck) — the SAME self-replenishing idiom as the
+  // leaves/petals above, so nothing can pile up on a hidden/unfocused tab: each firefly replaces
+  // itself on its OWN onfinish while its activeFn gate still holds, so the live count stays
+  // constant and spawning pauses/tears down with the frames (a paused animation never reaches
+  // onfinish → nothing accumulates). Gated on the warm months (summerSeason) AND dusk/night AND
+  // the garden/balcony room AND visibility AND not reduced-motion — fireflies at dusk, not midday.
+  var GARDEN_FIREFLIES = 8; // a few fireflies, not a swarm
+  function gardenFirefliesActive() {
+    var gs = document.getElementById("stage-garden");
+    return !!gs && gs.classList.contains("dusk") && summerSeason() &&
+      stageIndex === STAGES.indexOf("garden") &&
+      document.visibilityState !== "hidden" &&
+      !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+  // the garden fireflies live inside the window (their container is clipped to it, y 20–292):
+  // the dark night sky + the panes, where warm blinking dots read best against the dusk glass.
+  function spawnGardenFirefly() { spawnFirefly("garden-fireflyfx", gardenFirefliesActive, 130, 372, 45, 210); }
+  function balconyFirefliesActive() {
+    var b = document.getElementById("stage-balcony");
+    return !!b && b.classList.contains("dusk") && summerSeason() &&
+      stageIndex === STAGES.indexOf("balcony") &&
+      document.visibilityState !== "hidden" &&
+      !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+  // the balcony deck is open-air (no clip): fireflies hover through the mid-air over the deck,
+  // kept above the low furniture so they read as drifting in the evening air, not behind the couch.
+  function spawnBalconyFirefly() { spawnFirefly("balcony-fireflyfx", balconyFirefliesActive, 40, 580, 300, 300); }
+  // A single firefly: a bright warm core over a soft blurred halo (no CSS filter on a container —
+  // that's a WebKit no-op per the gotchas; the halo is just a larger faint circle behind the core).
+  // It's positioned via a wrapper <g transform="translate">, so the WAAPI transform animation on the
+  // inner group (a slow wandering meander) never clobbers the positioning transform (the wrapper
+  // carries that). A second, faster animation on the core pulses its opacity — the blink — at its own
+  // rhythm. The two run independently and both finish; the meander (the longer of the two) owns the
+  // 1:1 replenish so exactly one firefly comes back per one that leaves.
+  function spawnFirefly(containerId, activeFn, xMin, xSpan, yMin, ySpan) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    var SVGNS = "http://www.w3.org/2000/svg";
+    var cx = xMin + Math.random() * xSpan, cy = yMin + Math.random() * ySpan; // out in the mid-air of the scene
+    var sc = 0.8 + Math.random() * 0.8; // varied sizes -> a sense of depth
+    var wrap = document.createElementNS(SVGNS, "g"); // carries the static position + scale
+    wrap.setAttribute("transform", "translate(" + cx.toFixed(1) + "," + cy.toFixed(1) + ") scale(" + sc.toFixed(2) + ")");
+    var mover = document.createElementNS(SVGNS, "g"); // carries the animated meander (kept off the wrapper's transform)
+    var halo = document.createElementNS(SVGNS, "circle"); // soft warm-green glow behind the core
+    halo.setAttribute("r", "3.4"); halo.setAttribute("fill", "#c9e85c"); halo.setAttribute("opacity", "0.28");
+    var core = document.createElementNS(SVGNS, "circle"); // the bright little body
+    core.setAttribute("r", "1.3"); core.setAttribute("fill", "#e8f06a");
+    mover.appendChild(halo); mover.appendChild(core);
+    wrap.appendChild(mover);
+    container.appendChild(wrap);
+    if (wrap.animate) {
+      // a slow, dreamy wander — gentle x+y sway around the spawn point, drifting a little overall
+      var ax = (18 + Math.random() * 34) * (Math.random() < 0.5 ? 1 : -1);
+      var ay = (14 + Math.random() * 28) * (Math.random() < 0.5 ? 1 : -1);
+      var dx = (Math.random() - 0.5) * 40, dy = (Math.random() - 0.5) * 30; // net drift over the life
+      var dur = 7000 + Math.random() * 5000; // long and unhurried — they meander, not fall
+      mover.animate([
+        { transform: "translate(0px,0px)" },
+        { transform: "translate(" + ax.toFixed(1) + "px," + ay.toFixed(1) + "px)", offset: 0.3 },
+        { transform: "translate(" + (dx - ax * 0.6).toFixed(1) + "px," + (dy + ay * 0.5).toFixed(1) + "px)", offset: 0.65 },
+        { transform: "translate(" + dx.toFixed(1) + "px," + dy.toFixed(1) + "px)" }
+      ], { duration: dur, easing: "ease-in-out" });
+      // the blink: opacity pulses in and out at its own rhythm, several times over the life, and
+      // fades fully at both ends so appearing/vanishing reads as a firefly winking rather than popping
+      var blink = 3 + ((Math.random() * 3) | 0); // 3–5 winks
+      var kf = [{ opacity: 0 }];
+      for (var i = 1; i <= blink; i++) {
+        var t = i / (blink + 1);
+        kf.push({ opacity: (0.85 + Math.random() * 0.15).toFixed(2), offset: (t - 0.5 / (blink + 1)).toFixed(3) });
+        kf.push({ opacity: (0.06 + Math.random() * 0.14).toFixed(2), offset: t.toFixed(3) });
+      }
+      kf.push({ opacity: 0 });
+      var pulse = wrap.animate(kf, { duration: dur, easing: "ease-in-out" });
+      pulse.onfinish = function () {
+        if (wrap.parentNode) wrap.remove();
+        if (activeFn()) spawnFirefly(containerId, activeFn, xMin, xSpan, yMin, ySpan); // replenish 1:1
+      };
+    } else {
+      setTimeout(function () { if (wrap.parentNode) wrap.remove(); }, 3000);
+    }
+  }
   function spawnDriftLeaf(containerId, activeFn, xMin, xSpan, petal) {
     var container = document.getElementById(containerId);
     if (!container) return;
@@ -48668,18 +48761,21 @@ function spawnDustMote(container) {
     }
   }
   (function seedLeaves() {
-    function topUp(id, activeFn, spawnFn) {
+    function topUp(id, activeFn, spawnFn, target) {
       if (!activeFn()) return;
       var c = document.getElementById(id), have = c ? c.childElementCount : 0;
-      for (var i = have; i < GARDEN_LEAVES; i++) spawnFn(); // top up from the live count
+      for (var i = have; i < target; i++) spawnFn(); // top up from the live count
     }
     function tick() {
       // autumn leaves and spring petals share the leaffx containers; their activeFns are
       // mutually exclusive (each gates on its own season class), so only one tops up at a time.
-      topUp("garden-leaffx", autumnLeavesActive, spawnGardenLeaf);
-      topUp("balcony-leaffx", balconyLeavesActive, spawnBalconyLeaf);
-      topUp("garden-leaffx", springPetalsActive, spawnGardenPetal);
-      topUp("balcony-leaffx", balconyPetalsActive, spawnBalconyPetal);
+      topUp("garden-leaffx", autumnLeavesActive, spawnGardenLeaf, GARDEN_LEAVES);
+      topUp("balcony-leaffx", balconyLeavesActive, spawnBalconyLeaf, GARDEN_LEAVES);
+      topUp("garden-leaffx", springPetalsActive, spawnGardenPetal, GARDEN_LEAVES);
+      topUp("balcony-leaffx", balconyPetalsActive, spawnBalconyPetal, GARDEN_LEAVES);
+      // fireflies get their own containers + their own (smaller) target count.
+      topUp("garden-fireflyfx", gardenFirefliesActive, spawnGardenFirefly, GARDEN_FIREFLIES);
+      topUp("balcony-fireflyfx", balconyFirefliesActive, spawnBalconyFirefly, GARDEN_FIREFLIES);
       setTimeout(tick, 1400);
     }
     setTimeout(tick, 1400);

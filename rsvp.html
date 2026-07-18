@@ -1174,6 +1174,89 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   #garden-disco-ball-pop.popping{animation:none}
   #garden-disco-ball-pop.popping #garden-disco-ball-glow{animation:none}
 }
+/* ── CRASHERS: Ali + Goli steal the show ─────────────────────────────────────
+   JS toggles .guests-in on #garden-guests once the party is lit + you're in the garden
+   (see __updateGardenGuests); a hidden tab / room-leave / party-off strips it so nothing
+   accumulates. The group carries NO transform attribute (its two figures do), so the
+   opacity-only fade never clobbers a position. Each figure fades+lifts in via its own
+   .guest-arrival wrapper (a brief .guests-arriving one-shot on the group), then dances a
+   BIGGER move than the ambient melt dancers — dead-centre floor, all eyes on them. Every
+   move rides an inner wrapper (.guest-move/.guest-sway/.guest-arm-*), never the .g-* group's
+   static position attribute. Seen through the uv-mode blacklight like the rest of the fx. */
+#garden-guests{opacity:0}
+#garden-guests.guests-in{opacity:1; transition:opacity 1s ease .2s} /* fade up a beat after the party lights */
+#garden-guests .guest-arrival{transform-box:fill-box; transform-origin:center bottom}
+/* arrival: each crasher slides in from the wings (Ali from screen-left, Goli from the
+   right) and rises into frame. One-shot, cleared on animationend by JS; when at rest the
+   wrapper is neutral so the dance reads from centre. */
+#garden-guests.guests-arriving .g-ali .guest-arrival{animation:guest-arrive-l 1.1s cubic-bezier(.22,1,.36,1) both}
+#garden-guests.guests-arriving .g-goli .guest-arrival{animation:guest-arrive-r 1.1s cubic-bezier(.22,1,.36,1) both; animation-delay:.18s}
+#garden-guests.guests-arriving .g-spencer .guest-arrival{animation:guest-arrive-c 1.1s cubic-bezier(.22,1,.36,1) both; animation-delay:.36s} /* the giant strides in behind, a touch later */
+#garden-guests.guests-arriving .g-jay .guest-arrival{animation:guest-arrive-c 1.1s cubic-bezier(.22,1,.36,1) both; animation-delay:.52s} /* the officiator glides in beside Spencer, last */
+@keyframes guest-arrive-l{0%{transform:translateX(-46px) translateY(10px); opacity:0} 60%{opacity:1} 100%{transform:translateX(0) translateY(0); opacity:1}}
+@keyframes guest-arrive-r{0%{transform:translateX(46px) translateY(10px); opacity:0} 60%{opacity:1} 100%{transform:translateX(0) translateY(0); opacity:1}}
+@keyframes guest-arrive-c{0%{transform:translateY(24px) scale(.9); opacity:0} 60%{opacity:1} 100%{transform:translateY(0) scale(1); opacity:1}}
+/* Jay's soft halo: fades in with .guests-in and pulses gently. Opacity-only (no transform to
+   clobber the .guest-halo position); held still under reduced motion (below). */
+#garden-guests .guest-halo{opacity:0}
+#garden-guests.guests-in .g-jay .guest-halo{opacity:1; transition:opacity 1.2s ease .4s; animation:guest-halo-shimmer 2.6s ease-in-out infinite}
+@keyframes guest-halo-shimmer{0%,100%{opacity:.55} 50%{opacity:1}}
+/* the dance: sway + big signature move + arms up. Bigger amplitude / faster than the melt
+   dancers so they steal focus. Gated on .guests-in so it only runs while they're on the
+   floor (a room-leave / party-off drops .guests-in → all animation stops, nothing strands). */
+#garden-guests .guest-sway{transform-box:fill-box; transform-origin:center bottom}
+#garden-guests .guest-move{transform-box:fill-box; transform-origin:center bottom}
+#garden-guests .guest-arm-l{transform-box:fill-box; transform-origin:right bottom}
+#garden-guests .guest-arm-r{transform-box:fill-box; transform-origin:left bottom}
+#garden-guests.guests-in .guest-sway{animation:guest-sway .82s ease-in-out infinite}
+#garden-guests.guests-in .guest-arm-l{animation:guest-arm-l .82s ease-in-out infinite}
+#garden-guests.guests-in .guest-arm-r{animation:guest-arm-r .82s ease-in-out infinite}
+/* Ali's signature: a big long-armed reach-up-and-bounce; Goli's: a fashionista vogue turn
+   (flat scaleX flip through edge-on, zero lane sweep — a real turn, not a slide). Staggered
+   so they don't peak together. Both bigger than any md-* signature. */
+#garden-guests.guests-in .g-ali .guest-move{animation:guest-ali-bounce 2.1s ease-in-out infinite}
+#garden-guests.guests-in .g-goli .guest-move{animation:guest-goli-vogue 3s ease-in-out infinite}
+#garden-guests.guests-in .g-spencer .guest-move{animation:guest-spencer-party 1.9s ease-in-out infinite} /* the giant's exuberant clap-up bounce */
+#garden-guests.guests-in .g-goli .guest-sway{animation-delay:-.41s}
+#garden-guests.guests-in .g-goli .guest-arm-l,
+#garden-guests.guests-in .g-goli .guest-arm-r{animation-delay:-.41s}
+#garden-guests.guests-in .g-spencer .guest-sway{animation-delay:-.2s}
+#garden-guests.guests-in .g-spencer .guest-arm-l,
+#garden-guests.guests-in .g-spencer .guest-arm-r{animation-delay:-.2s}
+@keyframes guest-sway{0%{transform:rotate(-5deg) translateX(-1.4px)} 50%{transform:rotate(5deg) translateX(1.4px)} 100%{transform:rotate(-5deg) translateX(-1.4px)}}
+@keyframes guest-arm-l{0%{transform:rotate(10deg)} 50%{transform:rotate(-26deg)} 100%{transform:rotate(10deg)}}
+@keyframes guest-arm-r{0%{transform:rotate(-10deg)} 50%{transform:rotate(28deg)} 100%{transform:rotate(-10deg)}}
+@keyframes guest-ali-bounce{0%,46%{transform:translateY(0) scaleY(1)} 56%{transform:translateY(0) scaleY(.93)} 70%{transform:translateY(-20px) scaleY(1.06)} 84%{transform:translateY(0) scaleY(.97)} 92%,100%{transform:translateY(0) scaleY(1)}}
+@keyframes guest-goli-vogue{0%,20%{transform:scaleX(1)} 40%{transform:scaleX(.1)} 55%{transform:scaleX(-1)} 70%{transform:scaleX(-.1)} 88%,100%{transform:scaleX(1)}}
+@keyframes guest-spencer-party{0%{transform:translateY(0) rotate(-2deg)} 25%{transform:translateY(-6px) rotate(2deg)} 50%{transform:translateY(-13px) rotate(-2deg)} 60%{transform:translateY(-9px) scaleY(1.04) rotate(2deg)} 75%{transform:translateY(-4px) rotate(-1deg)} 100%{transform:translateY(0) rotate(-2deg)}}
+/* Jay (the officiator) dances gentler and serene: a soft rock + a raised-palm benediction on
+   his blessing arm (screen-left), the other arm easy. Overrides the base arm/sway/move so his
+   idiom is calmer than the show-offs' — but still moving. */
+#garden-guests.guests-in .g-jay .guest-sway{animation:guest-jay-rock 2.4s ease-in-out infinite}
+#garden-guests.guests-in .g-jay .guest-move{animation:guest-jay-step 4.2s ease-in-out infinite}
+#garden-guests.guests-in .g-jay .guest-arm-l{animation:guest-jay-bless 2.4s ease-in-out infinite}
+#garden-guests.guests-in .g-jay .guest-arm-r{animation:guest-jay-arm-r 2.4s ease-in-out infinite}
+@keyframes guest-jay-rock{0%{transform:rotate(-2.4deg)} 50%{transform:rotate(2.4deg)} 100%{transform:rotate(-2.4deg)}}
+@keyframes guest-jay-step{0%,100%{transform:translateX(-2px)} 50%{transform:translateX(2px)}}
+@keyframes guest-jay-bless{0%,100%{transform:rotate(-4deg)} 50%{transform:rotate(6deg)}} /* the raised open palm sways in blessing */
+@keyframes guest-jay-arm-r{0%,100%{transform:rotate(4deg)} 50%{transform:rotate(-6deg)}}
+/* reduced motion: the crashers still ARRIVE (opacity in) but hold a static pose — no slide,
+   no sway, no signature move (matches the party's other reduced-motion handling). */
+@media (prefers-reduced-motion: reduce){
+  #garden-guests.guests-in{transition:none}
+  #garden-guests.guests-arriving .g-ali .guest-arrival,
+  #garden-guests.guests-arriving .g-goli .guest-arrival,
+  #garden-guests.guests-arriving .g-spencer .guest-arrival,
+  #garden-guests.guests-arriving .g-jay .guest-arrival{animation:none}
+  #garden-guests.guests-in .guest-sway,
+  #garden-guests.guests-in .guest-arm-l,
+  #garden-guests.guests-in .guest-arm-r,
+  #garden-guests.guests-in .g-ali .guest-move,
+  #garden-guests.guests-in .g-goli .guest-move,
+  #garden-guests.guests-in .g-spencer .guest-move,
+  #garden-guests.guests-in .g-jay .guest-move{animation:none}
+  #garden-guests.guests-in .g-jay .guest-halo{transition:none; animation:none} /* halo shows, but no shimmer */
+}
 /* Garden party swaps the witchy altar+mirror for a DJ booth. Same gate the disco pools
    use (#stage-garden.garden-party). Fade with opacity (not display) so the ritual props'
    hunt-hit getBBox reads stay valid and the cat-roam math never sees a zeroed chest. */
@@ -9297,6 +9380,264 @@ section{margin:1.9rem 0}
 </g>
 </g>
 <g id="garden-confettifx"></g>
+<!-- CRASHERS: the couple's friends Ali (best man) + Goli steal the show. They arrive a
+     beat after the party starts (JS adds .guests-arriving → the .guest-arrival wrapper
+     slides+fades each in from the wings) then break into a bigger, flashier move than the
+     ambient dancers, dead-centre floor so all eyes land on them. Persistent nodes (never
+     spawned) toggled by the .guests-in class on #garden-guests — so a hidden tab never
+     piles up; cleared on party-off / room-leave / tab-hide + reset (see setGardenParty,
+     goToStage, __clearGardenGuests). Colours are the same UV-neon palette as the melt
+     dancers so they glow (not muddy) through #loft-game-strip.uv-mode's blacklight.
+     Every dance move rides an inner wrapper (.guest-move/.guest-sway/.guest-arm-*) so no
+     CSS transform ever collides with the .g-* group's static position attribute, and the
+     arrival slide rides its own .guest-arrival wrapper (distinct from both). Reduced
+     motion: they still appear (via .guests-in opacity) but hold a static pose. -->
+<g id="garden-guests" pointer-events="none" aria-hidden="true">
+<!-- ALI — very tall & lanky best man: brown/burgundy flat cap, long pointed grey beard to
+     mid-chest, big cream rounded sunglasses, oversized cream mesh jersey, red short shorts,
+     white knee-high socks, chunky cream platform brogues. A small forearm tattoo. Feet ~y332.
+     Drawn tall (head cy~186) so he towers over the ~y210-headed melt dancers. -->
+<g class="guest g-ali" transform="translate(256,0)">
+<g class="guest-arrival">
+<g class="guest-move">
+<g class="guest-sway">
+<!-- legs: long, white knee-high socks -->
+<path class="guest-leg-l" fill="#f4f2ea" d="M -8 288 C -10 305 -8 322 -5 330 L -0.5 330 C -1.5 322 -3 305 -1 288 Z"/>
+<path class="guest-leg-r" fill="#f4f2ea" d="M 8 288 C 10 305 8 322 5 330 L 0.5 330 C 1.5 322 3 305 1 288 Z"/>
+<!-- sock ribbing -->
+<rect x="-8.4" y="292" width="7.6" height="1.1" fill="#d7d3c6"/>
+<rect x="0.8" y="292" width="7.6" height="1.1" fill="#d7d3c6"/>
+<!-- chunky cream platform brogues -->
+<path fill="#efe8d4" d="M -6.5 328 L -0.5 328 L 0.2 335 L -8.5 335 Z"/>
+<path fill="#efe8d4" d="M 6.5 328 L 0.5 328 L -0.2 335 L 8.5 335 Z"/>
+<rect x="-8.6" y="334.6" width="8.9" height="2" rx="0.6" fill="#c9bf9f"/>
+<rect x="-0.3" y="334.6" width="8.9" height="2" rx="0.6" fill="#c9bf9f"/>
+<!-- red short shorts -->
+<path fill="#ff3b52" d="M -9 264 C -10 274 -9.5 282 -9 288 L -1.4 288 L -0.8 268 L -6 265 Z"/>
+<path fill="#ff3b52" d="M 9 264 C 10 274 9.5 282 9 288 L 1.4 288 L 0.8 268 L 6 265 Z"/>
+<path fill="#cf2233" d="M -9 288 L -1.4 288 L -1.2 285 L -8.9 285 Z"/>
+<path fill="#cf2233" d="M 9 288 L 1.4 288 L 1.2 285 L 8.9 285 Z"/>
+<!-- oversized cream mesh jersey (long, hangs over the shorts) -->
+<path class="guest-torso" fill="#f0e9d6" d="M -12 210 C -14 224 -12 250 -11 268 L 11 268 C 12 250 14 224 12 210 C 5 205 -5 205 -12 210 Z"/>
+<!-- mesh dots -->
+<g fill="#d9d0b4">
+<circle cx="-6" cy="222" r="0.9"/><circle cx="0" cy="220" r="0.9"/><circle cx="6" cy="222" r="0.9"/>
+<circle cx="-8" cy="234" r="0.9"/><circle cx="-2" cy="232" r="0.9"/><circle cx="4" cy="234" r="0.9"/><circle cx="9" cy="233" r="0.9"/>
+<circle cx="-7" cy="247" r="0.9"/><circle cx="-1" cy="245" r="0.9"/><circle cx="5" cy="247" r="0.9"/>
+<circle cx="-8" cy="259" r="0.9"/><circle cx="-2" cy="258" r="0.9"/><circle cx="4" cy="259" r="0.9"/><circle cx="9" cy="258" r="0.9"/>
+</g>
+<!-- collar + placket -->
+<path fill="#e0d7bd" d="M -6 210 L 0 214 L 6 210 L 4 208 L 0 210.5 L -4 208 Z"/>
+<rect x="-0.9" y="212" width="1.8" height="24" rx="0.7" fill="#e0d7bd"/>
+<rect class="guest-neck" x="-2" y="200" width="4" height="8" fill="#c98d55"/>
+<!-- long pointed salt-and-pepper beard to mid-chest (drawn over the jersey, under the head) -->
+<path class="guest-beard" fill="#c9c6bd" d="M -8 190 C -9 208 -6 232 -2.5 246 C -1 251 1 251 2.5 246 C 6 232 9 208 8 190 C 4 197 -4 197 -8 190 Z"/>
+<path fill="#a7a49b" d="M -6.5 196 C -6 214 -3.5 234 -1 244 C 0 247 1 244 1.5 240 C -1 228 -2.5 210 -2.5 197 Z" opacity="0.6"/>
+<path fill="#e6e4dd" d="M 2 200 C 3 214 2 230 0.5 242 C 1.6 240 3.5 224 4.5 206 Z" opacity="0.55"/>
+<!-- head: skin, brows, big cream rounded sunglasses -->
+<circle class="guest-head" cx="0" cy="186" r="9" fill="#d09155"/>
+<path fill="#5a4632" d="M -9 179 C -9.5 172 -4.5 168 0 168 C 4.5 168 9.5 172 9 179 C 6.5 174.5 3.5 174 0 174 C -3.5 174 -6.5 174.5 -9 179 Z"/>
+<!-- cream rounded sunglasses -->
+<rect x="-9" y="182" width="7.6" height="6.2" rx="3.1" fill="#f3ecda" stroke="#d8cfb6" stroke-width="0.8"/>
+<rect x="1.4" y="182" width="7.6" height="6.2" rx="3.1" fill="#f3ecda" stroke="#d8cfb6" stroke-width="0.8"/>
+<rect x="-1.6" y="184.2" width="3.2" height="1.4" rx="0.7" fill="#f3ecda"/>
+<circle cx="-5" cy="185" r="1.1" fill="#a9c6d6" opacity="0.7"/>
+<circle cx="5.4" cy="185" r="1.1" fill="#a9c6d6" opacity="0.7"/>
+<!-- brown/burgundy flat cap -->
+<path fill="#7a3a2a" d="M -9.5 177 C -9.5 168 -5 164 0 164 C 5 164 9.5 168 9.5 177 C 6 173 -6 173 -9.5 177 Z"/>
+<path fill="#6a3122" d="M -9.5 177 C -9.5 176 8 176 9.5 177 C 12 177.4 12.5 179.4 11.5 180 C 6 178 -6 178 -9.5 177 Z"/>
+<!-- arms: long & lanky, thrown up (origins are the shoulders; motion rides the wrappers) -->
+<path class="guest-arm-l" fill="#d09155" d="M -10 214 C -17 208 -24 199 -27 191 L -23.5 189.4 C -19.5 197 -14 205 -6.5 212 Z"/>
+<path class="guest-arm-r" fill="#d09155" d="M 10 214 C 17 208 24 199 27 191 L 23.5 189.4 C 19.5 197 14 205 6.5 212 Z"/>
+<!-- small forearm tattoo on his right (screen-left) forearm -->
+<path d="M -18 200 q -2 2 -1 4" fill="none" stroke="#4a5a44" stroke-width="0.8" stroke-linecap="round" opacity="0.75"/>
+<circle cx="-20" cy="198.5" r="0.8" fill="none" stroke="#4a5a44" stroke-width="0.7" opacity="0.75"/>
+</g>
+</g>
+</g>
+</g>
+<!-- SPENCER — Markéta's maid-of-honor (a man; warm, joyful giant of the group). The TALLEST
+     & biggest-framed here (head cy~168, taller even than Ali) — his height is the defining
+     trait. Short dark hair, dark-rimmed glasses, clean-shaven, big friendly smile. Casual:
+     brown/dark short-sleeve polo, khaki/tan chinos, dark socks. Feet ~y332. Broad shoulders
+     give him bulk. Colours read warm/glowy under the uv-mode blacklight like the others.
+     Centred between Ali (left) and Goli (right); his exuberant dance rides the inner wrappers. -->
+<g class="guest g-spencer" transform="translate(320,0)">
+<g class="guest-arrival">
+<g class="guest-move">
+<g class="guest-sway">
+<!-- long legs in khaki/tan chinos (he's the giant — legs run higher up) -->
+<path class="guest-leg-l" fill="#d8bd86" d="M -10 268 C -12 292 -10 318 -7 330 L -1 330 C -2 318 -4 292 -2.5 268 Z"/>
+<path class="guest-leg-r" fill="#d8bd86" d="M 10 268 C 12 292 10 318 7 330 L 1 330 C 2 318 4 292 2.5 268 Z"/>
+<path fill="#c4a86f" d="M -10 268 L -2.5 268 L -2.5 271 L -9.8 271 Z"/>
+<path fill="#c4a86f" d="M 10 268 L 2.5 268 L 2.5 271 L 9.8 271 Z"/>
+<!-- dark socks + shoes -->
+<rect x="-7.6" y="326" width="6.8" height="5" fill="#2b2a2e"/>
+<rect x="0.8" y="326" width="6.8" height="5" fill="#2b2a2e"/>
+<path fill="#1f1e22" d="M -8 330 L -0.6 330 L 0.2 335 L -9 335 Z"/>
+<path fill="#1f1e22" d="M 8 330 L 0.6 330 L -0.2 335 L 9 335 Z"/>
+<!-- brown/dark short-sleeve polo (broad-framed, hangs to the hip) -->
+<path class="guest-torso" fill="#6e4a33" d="M -15 196 C -17 214 -15 246 -13 268 L 13 268 C 15 246 17 214 15 196 C 6 190 -6 190 -15 196 Z"/>
+<path fill="#5b3c28" d="M -13 268 L 13 268 L 12.4 263 L -12.4 263 Z"/>
+<!-- polo collar + short placket with two buttons -->
+<path fill="#7d543b" d="M -7 196 L 0 202 L 7 196 L 4.5 193 L 0 197 L -4.5 193 Z"/>
+<rect x="-1" y="199" width="2" height="16" rx="0.8" fill="#5b3c28"/>
+<circle cx="0" cy="203" r="0.8" fill="#c8a878"/><circle cx="0" cy="209" r="0.8" fill="#c8a878"/>
+<!-- short sleeves (banded cuffs where the arms meet the torso) -->
+<path fill="#5b3c28" d="M -15 196 C -16.5 204 -16 210 -15 214 L -9 214 L -9 197 Z"/>
+<path fill="#5b3c28" d="M 15 196 C 16.5 204 16 210 15 214 L 9 214 L 9 197 Z"/>
+<rect class="guest-neck" x="-2.4" y="185" width="4.8" height="8" fill="#c98d55"/>
+<!-- head: skin (big friendly), short dark hair, dark-rimmed glasses, big smile -->
+<circle class="guest-head" cx="0" cy="168" r="10" fill="#d99c62"/>
+<!-- short dark hair, neat -->
+<path fill="#2a211a" d="M -10 164 C -10.5 154 -5 150 0 150 C 5 150 10.5 154 10 164 C 7 158 4 157 0 157 C -4 157 -7 158 -10 164 Z"/>
+<path fill="#2a211a" d="M -10 164 C -10 161 -9.4 159 -8.6 158 L -7 159 C -8 161 -8 163 -8 165 Z"/>
+<path fill="#2a211a" d="M 10 164 C 10 161 9.4 159 8.6 158 L 7 159 C 8 161 8 163 8 165 Z"/>
+<!-- brows -->
+<rect x="-7.2" y="163.4" width="4.6" height="1.2" rx="0.6" fill="#2a211a"/>
+<rect x="2.6" y="163.4" width="4.6" height="1.2" rx="0.6" fill="#2a211a"/>
+<!-- dark-rimmed glasses (two rounded rects + a bridge) -->
+<rect x="-8.4" y="164.6" width="7.4" height="6" rx="1.6" fill="none" stroke="#211f22" stroke-width="1.4"/>
+<rect x="1" y="164.6" width="7.4" height="6" rx="1.6" fill="none" stroke="#211f22" stroke-width="1.4"/>
+<rect x="-1.2" y="166.6" width="2.4" height="1.2" rx="0.4" fill="#211f22"/>
+<circle cx="-6" cy="167" r="1" fill="#a9c6d6" opacity="0.6"/>
+<circle cx="6" cy="167" r="1" fill="#a9c6d6" opacity="0.6"/>
+<!-- eyes + a big friendly smile -->
+<circle cx="-4.6" cy="167.4" r="1.1" fill="#2e2018"/>
+<circle cx="4.6" cy="167.4" r="1.1" fill="#2e2018"/>
+<circle cx="-6.8" cy="172.4" r="1.5" fill="#e88f76" opacity="0.4"/>
+<circle cx="6.8" cy="172.4" r="1.5" fill="#e88f76" opacity="0.4"/>
+<path d="M -5 174 C -2 178.5 2 178.5 5 174 C 3 176 -3 176 -5 174 Z" fill="#8a3a3a"/>
+<path d="M -4.4 174.4 C -1.8 176 1.8 176 4.4 174.4" fill="none" stroke="#f0e2d4" stroke-width="1" stroke-linecap="round"/>
+<!-- big arms thrown up, exuberant (motion rides the wrappers) -->
+<path class="guest-arm-l" fill="#d99c62" d="M -13 200 C -21 194 -28 184 -31 175 L -27 173.4 C -23 182 -17 191 -9 198 Z"/>
+<path class="guest-arm-r" fill="#d99c62" d="M 13 200 C 21 194 28 184 31 175 L 27 173.4 C 23 182 17 191 9 198 Z"/>
+</g>
+</g>
+</g>
+</g>
+<!-- JAY — Spencer's partner and the couple's wedding OFFICIATOR; famously looks like Jesus.
+     Long straight medium-brown hair parted down the middle, flowing past the shoulders; a full
+     brown beard; a gentle serene smile; casual navy/black fleece zip jacket. The classic
+     "Jesus" silhouette, tasteful. He does a little blessing/benediction gesture in his dance
+     (a raised open palm) and a faint soft halo shimmers above him when he arrives. Placed
+     next to Spencer (a couple). Head cy~188. Feet ~y332. The halo rides its OWN wrapper
+     (.guest-halo), a direct child of .g-jay above the move/sway wrappers, so no dance transform
+     ever shifts it off his crown; it fades with .guests-in. -->
+<g class="guest g-jay" transform="translate(378,0)">
+<g class="guest-arrival">
+<!-- soft halo shimmer above the crown (opacity fades in with .guests-in; pulses gently) -->
+<g class="guest-halo">
+<ellipse cx="0" cy="168" rx="13" ry="4" fill="none" stroke="#fff6d8" stroke-width="1.6" opacity="0.85"/>
+<ellipse cx="0" cy="168" rx="13" ry="4" fill="#fff6d8" opacity="0.14"/>
+</g>
+<g class="guest-move">
+<g class="guest-sway">
+<!-- legs in dark trousers -->
+<path class="guest-leg-l" fill="#2f3340" d="M -8 286 C -9 304 -7.5 322 -5 330 L -0.6 330 C -1.4 322 -2.6 304 -1.6 286 Z"/>
+<path class="guest-leg-r" fill="#2f3340" d="M 8 286 C 9 304 7.5 322 5 330 L 0.6 330 C 1.4 322 2.6 304 1.6 286 Z"/>
+<!-- plain dark shoes -->
+<path fill="#211f22" d="M -6.5 328 L -0.6 328 L 0.2 334.5 L -7.5 334.5 Z"/>
+<path fill="#211f22" d="M 6.5 328 L 0.6 328 L -0.2 334.5 L 7.5 334.5 Z"/>
+<!-- long center-parted brown hair falling BEHIND the shoulders (drawn before the torso) -->
+<path class="guest-hair-back" fill="#5a3f28" d="M -10 190 C -13 200 -13.5 224 -11 250 C -10 258 -8.5 262 -7 262 C -8.5 250 -8 224 -7 205 L 7 205 C 8 224 8.5 250 7 262 C 8.5 262 10 258 11 250 C 13.5 224 13 200 10 190 C 4 196 -4 196 -10 190 Z"/>
+<!-- navy/black fleece zip jacket -->
+<path class="guest-torso" fill="#28303e" d="M -11 210 C -13 226 -11 250 -10 266 L 10 266 C 11 250 13 226 11 210 C 4 205 -4 205 -11 210 Z"/>
+<path fill="#1e2530" d="M -10 266 L 10 266 L 9.6 261 L -9.6 261 Z"/>
+<!-- center zip + pull -->
+<rect x="-0.7" y="210" width="1.4" height="54" fill="#151a22"/>
+<rect x="-1.1" y="236" width="2.2" height="3" rx="0.7" fill="#9aa2ad"/>
+<!-- fleece collar + a little texture -->
+<path fill="#323b4b" d="M -6 210 L 0 214 L 6 210 L 4 207 L 0 210.5 L -4 207 Z"/>
+<g stroke="#1f2732" stroke-width="0.5" opacity="0.6"><path d="M -7 224 h14 M -7.5 240 h15 M -7 254 h14" fill="none"/></g>
+<rect class="guest-neck" x="-1.9" y="200" width="3.8" height="8" fill="#cf9a63"/>
+<!-- head: skin, serene face; hair front frames the middle part; full brown beard -->
+<circle class="guest-head" cx="0" cy="188" r="8.4" fill="#e0a86e"/>
+<!-- full brown beard, drawn over the jaw + a little down the neck/collar -->
+<path class="guest-beard" fill="#5a3f28" d="M -8 188 C -8.5 200 -5.5 210 0 213 C 5.5 210 8.5 200 8 188 C 6 193 4 195 0 195 C -4 195 -6 193 -8 188 Z"/>
+<path fill="#6b4c30" d="M -6 192 C -5.5 200 -3 207 0 209 C 3 207 5.5 200 6 192 C 4 195 -4 195 -6 192 Z" opacity="0.6"/>
+<!-- moustache -->
+<path d="M -4 189.5 C -2 191 2 191 4 189.5" fill="none" stroke="#5a3f28" stroke-width="1.4" stroke-linecap="round"/>
+<!-- center-parted hair front (two sweeps meeting at a middle part) -->
+<path fill="#5a3f28" d="M -8.4 185 C -8.6 178 -4.5 175 -0.6 175.5 C -1.5 178 -2 181 -2.4 185 C -4.5 181.5 -6.5 182 -8.4 185 Z"/>
+<path fill="#5a3f28" d="M 8.4 185 C 8.6 178 4.5 175 0.6 175.5 C 1.5 178 2 181 2.4 185 C 4.5 181.5 6.5 182 8.4 185 Z"/>
+<!-- serene eyes + gentle smile -->
+<ellipse cx="-3" cy="187.6" rx="0.9" ry="1.2" fill="#3a2a1e"/>
+<ellipse cx="3" cy="187.6" rx="0.9" ry="1.2" fill="#3a2a1e"/>
+<path d="M -3.4 191.4 C -1.4 192.8 1.4 192.8 3.4 191.4" fill="none" stroke="#8a5a3a" stroke-width="0.9" stroke-linecap="round"/>
+<!-- arms: his right (screen-left) rises in an open-palm benediction; the other rests easy.
+     Motion rides the arm wrappers (a gentler blessing sway, see CSS). -->
+<path class="guest-arm-l" fill="#e0a86e" d="M -9 214 C -15 208 -19 199 -21 191 L -17.5 189.6 C -15.5 197 -12 205 -5.5 212 Z"/>
+<!-- open palm at the top of the blessing arm -->
+<circle cx="-20" cy="189" r="2.4" fill="#e0a86e"/>
+<path d="M -22 188 v -3 M -20 187.4 v -3.4 M -18 188 v -3" fill="none" stroke="#e0a86e" stroke-width="1.1" stroke-linecap="round"/>
+<path class="guest-arm-r" fill="#e0a86e" d="M 9 214 C 14 211 18 207 20 202 L 17 200.6 C 15 205 12 208 6 212 Z"/>
+</g>
+</g>
+</g>
+</g>
+<!-- GOLI — Lady-Gaga-esque fashion-design student, show-stopping. Platinum-blonde short bob,
+     sunglasses pushed up on her head, an avant-garde structured white top with a bold pointed
+     shoulder + a statement pink stud choker, red athletic shorts, red-striped tube socks,
+     silver sneakers. Shorter than Ali (head cy~206). Feet ~y332. -->
+<g class="guest g-goli" transform="translate(434,0)">
+<g class="guest-arrival">
+<g class="guest-move">
+<g class="guest-sway">
+<!-- legs + red-striped tube socks -->
+<path class="guest-leg-l" fill="#f4f2ea" d="M -7 288 C -8 305 -6.5 322 -4 330 L -0.5 330 C -1.2 322 -2.4 305 -1.6 288 Z"/>
+<path class="guest-leg-r" fill="#f4f2ea" d="M 7 288 C 8 305 6.5 322 4 330 L 0.5 330 C 1.2 322 2.4 305 1.6 288 Z"/>
+<g fill="#ff3b52">
+<rect x="-7.2" y="300" width="6.6" height="1.4"/><rect x="-7.2" y="305" width="6.6" height="1.4"/><rect x="-7.2" y="310" width="6.6" height="1.4"/>
+<rect x="0.6" y="300" width="6.6" height="1.4"/><rect x="0.6" y="305" width="6.6" height="1.4"/><rect x="0.6" y="310" width="6.6" height="1.4"/>
+</g>
+<!-- silver sneakers -->
+<path fill="#d6d9de" d="M -6 328 L -0.5 328 L 0.2 334.5 L -7.5 334.5 Z"/>
+<path fill="#d6d9de" d="M 6 328 L 0.5 328 L -0.2 334.5 L 7.5 334.5 Z"/>
+<rect x="-7.6" y="333.6" width="7.8" height="1.6" rx="0.5" fill="#aeb2b8"/>
+<rect x="-0.2" y="333.6" width="7.8" height="1.6" rx="0.5" fill="#aeb2b8"/>
+<!-- red athletic shorts -->
+<path fill="#ff3b52" d="M -8 266 C -9 275 -8.5 282 -8 288 L -1.3 288 L -0.8 269 L -5 266.5 Z"/>
+<path fill="#ff3b52" d="M 8 266 C 9 275 8.5 282 8 288 L 1.3 288 L 0.8 269 L 5 266.5 Z"/>
+<path fill="#cf2233" d="M -8 288 L -1.3 288 L -1.1 285 L -7.9 285 Z"/>
+<path fill="#cf2233" d="M 8 288 L 1.3 288 L 1.1 285 L 7.9 285 Z"/>
+<!-- avant-garde structured white top: fitted bodice + one bold POINTED power-shoulder (screen-left) -->
+<path class="guest-torso" fill="#f6f2e8" d="M -9 224 C -10 236 -8.5 254 -8 266 L 8 266 C 8.5 254 10 236 9 224 C 4 220 -4 220 -9 224 Z"/>
+<path fill="#e8e2d2" d="M -8 266 L 8 266 L 7.6 262 L -7.6 262 Z"/>
+<!-- structural seams -->
+<path d="M -3 226 L -2 264 M 3 226 L 2 264" fill="none" stroke="#dcd6c6" stroke-width="0.7"/>
+<!-- the statement pointed power-shoulder pad, jutting up and out (fashion-forward silhouette) -->
+<path fill="#ffffff" d="M -9 226 L -20 210 L -13 224 L -7 227 Z"/>
+<path fill="#e6e0d0" d="M -9 226 L -13 224 L -12 227 Z"/>
+<!-- statement pink stud choker -->
+<path d="M -5 221 C -2 224 2 224 5 221" fill="none" stroke="#ff3fa0" stroke-width="1.8" stroke-linecap="round"/>
+<circle cx="-4" cy="222" r="1" fill="#ff8ad4"/><circle cx="0" cy="223" r="1.1" fill="#ff8ad4"/><circle cx="4" cy="222" r="1" fill="#ff8ad4"/>
+<rect class="guest-neck" x="-1.8" y="215" width="3.6" height="6" fill="#e6b48c"/>
+<!-- head: skin, platinum bob (back layer behind torso? drawn here over neck) -->
+<path class="guest-hair-back" fill="#f4ead0" d="M -9 202 C -11 205 -11.5 214 -9.5 221 L -6 220 C -7.5 214 -7 208 -6 205 L 6 205 C 7 208 7.5 214 6 220 L 9.5 221 C 11.5 214 11 205 9 202 C 5 198 -5 198 -9 202 Z"/>
+<circle class="guest-head" cx="0" cy="206" r="7.8" fill="#e6b48c"/>
+<!-- platinum bob front (sharp fashion cut) -->
+<path fill="#f7eed6" d="M -8 201 C -8.5 194 -4 190.5 0 190.5 C 4 190.5 8.5 194 8 201 C 6 197 3 196.4 0 196.4 C -3 196.4 -6 197 -8 201 Z"/>
+<path fill="#f7eed6" d="M -8 201 C -8.5 205 -8 209 -7 212 L -5.2 211 C -6 208 -6.2 204 -6 201 Z"/>
+<path fill="#f7eed6" d="M 8 201 C 8.5 205 8 209 7 212 L 5.2 211 C 6 208 6.2 204 6 201 Z"/>
+<!-- sunglasses pushed UP on top of the head -->
+<rect x="-6.2" y="191.5" width="5.4" height="3.4" rx="1.7" fill="#2a2622" opacity="0.9"/>
+<rect x="0.8" y="191.5" width="5.4" height="3.4" rx="1.7" fill="#2a2622" opacity="0.9"/>
+<rect x="-1.2" y="192.4" width="2.4" height="1" rx="0.5" fill="#2a2622" opacity="0.9"/>
+<!-- face -->
+<ellipse cx="-2.7" cy="205.2" rx="0.9" ry="1.3" fill="#3a2a2a"/>
+<ellipse cx="2.7" cy="205.2" rx="0.9" ry="1.3" fill="#3a2a2a"/>
+<circle cx="-4.6" cy="208.2" r="1.3" fill="#ef8fa2" opacity="0.55"/>
+<circle cx="4.6" cy="208.2" r="1.3" fill="#ef8fa2" opacity="0.55"/>
+<ellipse cx="0" cy="209.6" rx="1.8" ry="1" fill="#d8446a"/>
+<!-- arms thrown up, striking a pose (motion rides the wrappers) -->
+<path class="guest-arm-l" fill="#e6b48c" d="M -8 227 C -14 222 -19 214 -21.5 208 L -18.5 206.6 C -15.5 213 -11 220 -6 226 Z"/>
+<path class="guest-arm-r" fill="#e6b48c" d="M 8 227 C 14 222 19 214 21.5 208 L 18.5 206.6 C 15.5 213 11 220 6 226 Z"/>
+</g>
+</g>
+</g>
+</g>
+</g>
 <!-- a small party guest at the front-left edge, camera raised to catch the night. Static
      (muted tones so it stays in the background rather than glowing neon like the dancers);
      its only motion is the occasional soft flash from the camera. Non-interactive; lives in
@@ -28149,6 +28490,8 @@ var ABANDONED_CALL_MS = 30000;
     laser: "laser(true) — loose a red dot the cat chases; laser(false) turns it off; laser() reports whether it's on",
     party: "party(true) throws the garden party; party(false) ends it; party() reports whether it's on",
     chase: "chase() — send the three godkids (Irene, Robin & Navid) darting across the garden, chasing each other + giggling; lights the party + heads to the garden first if needed. they also run on their own now and then while the party's lit",
+    guests: "guests(true) — the three VIP guests crash the party and steal the show, dancing dead-centre floor: Ali (best man, long grey beard), Goli (Ali's fashionista girlfriend, platinum bob) & Spencer (Markéta's maid-of-honor, the giant of the group). lights the party + heads to the garden first if needed. guests(false) sends them off (party rolls on); guests() reports whether they're on the floor. they also arrive on their own a beat after the party lights. aligoli() is an alias",
+    aligoli: "aligoli — alias for guests; try `help guests`",
     reset: "reset() — restart the whole loft from the top (no confirmation — you typed it)",
     quit: "quit (or exit) — shut the console down (refresh, back to the desktop)",
     blacklight: "blacklight(true) — UV wash over the whole loft; blacklight(false) off; blacklight() reports whether it's on",
@@ -28272,7 +28615,7 @@ var ABANDONED_CALL_MS = 30000;
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · chase() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman() · phone()/phone(\"app\") · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · chase() · guests()/aligoli() · dance() · dj() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman() · phone()/phone(\"app\") · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
@@ -28518,7 +28861,7 @@ var ABANDONED_CALL_MS = 30000;
   // list drifts from those keys, which is how it "stays in sync". Only the first token (the
   // command name) is completed; args / inside-parens are out of scope.
   var CONSOLE_CMDS = [
-    "help", "clear", "laser", "party", "chase", "reset", "quit", "blacklight", "uv", "trip", "room",
+    "help", "clear", "laser", "party", "chase", "guests", "aligoli", "reset", "quit", "blacklight", "uv", "trip", "room",
     "goto", "rooms", "daylight", "night", "day", "season", "play", "pause", "temp", "weather",
     "clock", "time", "projector", "storm", "dance", "dj", "cocktail", "lang", "caption", "candle",
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "smoker", "bbq", "smokerlid", "smores", "snowman", "cooked", "servefood",
@@ -47499,6 +47842,7 @@ function spawnDustMote(container) {
     if (name !== "balcony" && window.__clearTipsy) window.__clearTipsy(); // the tipsy sway lives only on the balcony
     if (name !== "garden" && window.__clearGardenConfetti) window.__clearGardenConfetti(); // leaving the garden clears any party confetti (spawner re-tops on return while the switch is on)
     if (window.__updateGardenChase) window.__updateGardenChase(); // leaving the garden clears any in-flight kids' chase (the party's driver re-launches on return)
+    if (window.__updateGardenGuests) window.__updateGardenGuests(); // leaving the garden drops Ali + Goli; returning mid-party shows them already-arrived (no re-slide)
     if (name !== "kitchen" && window.__hideCocktailToast) window.__hideCocktailToast(); // the cocktail toast belongs to the kitchen bar — never let a still-showing one ride into the next room
     if (name === "balcony") triggerBalconyFinale();
     if (window.__updateSkyFireworks) window.__updateSkyFireworks(name); // wedding-day sky (balcony/garden), else stops
@@ -49030,6 +49374,73 @@ function spawnDustMote(container) {
     var c = document.getElementById("garden-confettifx");
     if (c) while (c.firstChild) c.removeChild(c.firstChild); // hard-clear — never trust paused onfinish for teardown
   }
+  // ── CRASHERS: Ali (best man) + Goli steal the show ──────────────────────────
+  // Two persistent figures (#garden-guests, in the garden partyfx) that appear DURING the
+  // party and dance a bigger move than the ambient melt dancers, dead-centre floor. Same
+  // background-safety idiom as the confetti/disco stepper: no spawned nodes (nothing to pile
+  // up in a hidden tab), driven entirely by two classes on the group —
+  //   .guests-in       → on the floor (fades in via CSS; drives the dance animations)
+  //   .guests-arriving → a one-shot slide/rise from the wings, cleared on animationend
+  // __updateGardenGuests() re-evaluates on every party toggle + room change + tab visibility
+  // change; it shows them when the party's lit AND you're in the garden AND the tab's visible,
+  // hides them otherwise. The ARRIVAL slide plays once per party (guestsArrived latch), on a
+  // single self-rescheduling timer armed at party-start and cleared on party-off — so they
+  // read as showing up a beat after the party starts, but re-entering the garden mid-party
+  // just shows them already-arrived (no re-slide). Reduced motion holds a static pose (CSS).
+  var guestArriveTimer = null, guestsArrived = false;
+  function guestsWanted() { // on the floor when: party lit, in the garden, tab visible (dance itself self-stills under reduced-motion via CSS)
+    return !!window.__gardenPartyOn && stageIndex === STAGES.indexOf("garden") && document.visibilityState !== "hidden";
+  }
+  function clearGuestArriveTimer() { if (guestArriveTimer) { clearTimeout(guestArriveTimer); guestArriveTimer = null; } }
+  function slideGuestsIn() { // one-shot arrival: fade+slide from the wings (cleared on animationend below)
+    var g = document.getElementById("garden-guests");
+    if (!g) return;
+    g.classList.add("guests-in");
+    g.classList.remove("guests-arriving"); void g.getBBox; g.classList.add("guests-arriving"); // restart the one-shot cleanly on a re-arm
+  }
+  function updateGardenGuests() {
+    var g = document.getElementById("garden-guests");
+    if (!g) return;
+    if (guestsWanted()) {
+      if (guestsArrived) { g.classList.add("guests-in"); return; } // already crashed the party — just show them (no re-slide)
+      // first time this party: arrive a beat after it lights (single timer, cleared on party-off)
+      if (!guestArriveTimer) guestArriveTimer = setTimeout(function () {
+        guestArriveTimer = null;
+        if (!guestsWanted()) return; // party died / left the room / tab hidden during the wait — abort
+        guestsArrived = true;
+        slideGuestsIn();
+      }, 2200);
+    } else {
+      clearGuestArriveTimer();
+      g.classList.remove("guests-in", "guests-arriving"); // off the floor → drop all dance/arrival animation (nothing strands)
+    }
+  }
+  window.__updateGardenGuests = updateGardenGuests;
+  function clearGardenGuests() { // hard teardown: goToStage room-leave + reset
+    clearGuestArriveTimer();
+    var g = document.getElementById("garden-guests");
+    if (g) g.classList.remove("guests-in", "guests-arriving");
+  }
+  window.__clearGardenGuests = clearGardenGuests;
+  function resetGuestsArrival() { guestsArrived = false; clearGardenGuests(); } // party-off: forget the latch so the next party re-crashes with a fresh slide
+  window.__resetGuestsArrival = resetGuestsArrival;
+  window.__guestsIn = function () { var g = document.getElementById("garden-guests"); return !!(g && g.classList.contains("guests-in")); };
+  window.__summonGuests = function () { // test/console hook: crash the floor NOW (skip the arrival delay), if the party wants them
+    clearGuestArriveTimer();
+    if (!guestsWanted()) return false;
+    guestsArrived = true; slideGuestsIn();
+    return true;
+  };
+  window.__dismissGuests = function () { guestsArrived = false; clearGardenGuests(); }; // send them off without ending the party
+  (function wireGuestArrivalCleanup() { // drop the one-shot .guests-arriving once the slide finishes (a re-arm re-adds it)
+    var g = document.getElementById("garden-guests");
+    if (!g) return;
+    g.addEventListener("animationend", function (e) {
+      if (e.animationName === "guest-arrive-l" || e.animationName === "guest-arrive-r" || e.animationName === "guest-arrive-c") g.classList.remove("guests-arriving");
+    });
+  })();
+  // a hidden tab drops the crashers (no paused-animation pile-up); they re-appear on return
+  document.addEventListener("visibilitychange", updateGardenGuests);
   // ── PARTY MODE disco pools (garden) — STEPPED, not tweened. A continuous CSS/WAAPI sweep
   // of these big screen-blended ellipses repaints every frame and visibly FLICKERED on
   // mobile. Instead ONE self-rescheduling stepper JUMPS each pool to a fresh spot ~once a
@@ -49284,6 +49695,7 @@ function spawnDustMote(container) {
       startDiscoStepper(); // begin the once-a-second disco-pool hops (idempotent; self-gates on gardenPartyActive)
       startGardenFlash(); // begin the front-left guest's occasional soft camera flash (idempotent; self-gates on gardenPartyActive)
       startGardenChaseDriver(); // begin the godkids' occasional garden chase (idempotent; self-gates on gardenPartyActive + not-busy)
+      updateGardenGuests(); // arm Ali + Goli's arrival (they crash the floor a beat after the party lights; self-gates on garden + visible)
       if (partyDancers) { // the colorful dancers rise in the garden and hold for the party
         partyDancers.setAttribute("transform", "translate(" + (STAGES.indexOf("garden") * 680) + ",0)");
         partyDancers.classList.add("party-dancing");
@@ -49317,6 +49729,7 @@ function spawnDustMote(container) {
       stopDiscoStepper();              // party over — kill the disco-pool stepper + drop the pools' inline styles
       stopGardenFlash();               // party over — kill the camera-flash timer + drop any in-flight flash
       stopGardenChase();               // party over — kill the chase timer + reset every runner
+      resetGuestsArrival();            // party over — clear Ali + Goli and forget the arrival latch (next party re-crashes with a fresh slide)
       if (partyDancers) {
         partyDancers.classList.remove("party-dancing");
         applyPartyDanceMode();         // party off → clears data-dance + the formation/waltz-mode classes
@@ -52754,6 +53167,32 @@ function spawnDustMote(container) {
     setTimeout(function () { if (window.__startGardenChase) window.__startGardenChase(true); }, 60); // let goToStage settle the room first
     if (window.echo) window.echo("🏃 the kids race across the garden, giggling.");
   };
+
+  // guests() — the three VIP guests crash the party and steal the show, dancing dead-centre
+  // floor: Ali (best man), Goli (his fashionista girlfriend) + Spencer (Markéta's maid-of-
+  // honor, the giant). guests() reports whether they're currently on the floor; guests(true)
+  // (or a bare call while they're off) lights the party + heads to the garden + summons them
+  // straight away (skipping the ~2s arrival wait — this is the test hook); guests(false) sends
+  // them off without ending the party. aligoli() is an alias.
+  window.guests = function (arg) {
+    var was = !!(window.__guestsIn && window.__guestsIn());
+    if (arguments.length === 0) { // bare: off → summon them; on → just report
+      if (was) return true;
+    } else if (!arg) { // guests(false): dismiss them, leave the party running
+      if (window.__dismissGuests) window.__dismissGuests();
+      if (window.echo) window.echo("👋 Ali, Goli & Spencer slip off the floor — the party rolls on.");
+      return was;
+    }
+    // guests(true) / bare-while-off: make sure the party's lit + we're in the garden, then crash the floor now
+    if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
+    if (window.goToStage) window.goToStage("garden");
+    setTimeout(function () { // let goToStage settle the room first (matches chase())
+      var ok = window.__summonGuests && window.__summonGuests();
+      if (window.echo) window.echo(ok ? "🕺 Ali, Goli & Spencer crash the party — long beard, platinum bob, and a giant, all eyes on them." : "the floor's dark — run party(true) first.");
+    }, 60);
+    return was;
+  };
+  window.aligoli = window.guests; // alias
 
   // Master audio volume — one session-scoped level (0..1) over EVERYTHING the loft plays:
   // SFX one-shots (via the sfxCtx shadow-destination gain), the songs, and every synth

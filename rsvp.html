@@ -2945,7 +2945,11 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
    put as the thread scrolls; bleeds out over the app-body padding to the phone-screen edges. */
 .pm-msg-title{position:sticky; top:-6px; z-index:2; margin:-6px -16px 6px; padding:12px 16px 9px; background:var(--cream); border-bottom:1px solid var(--rule); font-family:"Fraunces",serif; font-size:18px; font-weight:700; color:var(--ink)}
 .pm-msg-empty{margin:auto; color:var(--muted); font-size:12px; text-align:center}
-.pm-msg-row{display:flex; flex-direction:column; align-items:flex-start; gap:2px; max-width:100%}
+.pm-msg-row{display:flex; flex-direction:column; align-items:flex-start; gap:2px; max-width:100%; cursor:pointer} /* tap → its place/app */
+.pm-msg-row:hover .pm-msg-bubble, .pm-msg-row:focus-visible .pm-msg-bubble{border-color:var(--soft)}
+.pm-msg-row:focus-visible{outline:none}
+.pm-msg-row.unread .pm-msg-from{color:var(--ink)} /* unread: bolder sender + text until tapped */
+.pm-msg-row.unread .pm-msg-text{font-weight:700}
 .pm-msg-head{display:flex; align-items:baseline; gap:7px; padding-left:9px}
 .pm-msg-from{font-size:10px; font-weight:600; color:var(--muted)}
 .pm-msg-time{font-size:9.5px; color:var(--muted); opacity:.7}
@@ -15350,7 +15354,7 @@ var T = {
     cue_mail_body: "did you check the mail? 💌 there's a letter for you",
     msg_mb_from: "markéta & behdad",
     msg_mb_body: "did you RSVP yet? 😉 no pressure. (some pressure.)",
-    msg_dusk_body: "sunset on the balcony 🌇 you coming out?",
+    msg_dusk_body: "eclipse on the balcony 🌑 come out?",
     msg_piano_body: "someone's on the piano in the nook 🎹 come sit a minute",
     msg_dawn_body: "is the sun coming up?? ☀️ we're still dancing 😳 best night",
     msg_danesh_from: "DJ Danesh",
@@ -15848,7 +15852,7 @@ var T = {
     cue_mail_body: "koukl(a) jsi do pošty? 💌 máš tam dopis",
     msg_mb_from: "markéta & behdad",
     msg_mb_body: "potvrdil(a) jsi už účast? 😉 žádný tlak. (trochu tlak.)",
-    msg_dusk_body: "západ slunce na balkoně 🌇 přijdeš ven?",
+    msg_dusk_body: "zatmění na balkoně 🌑 přijdeš ven?",
     msg_piano_body: "někdo hraje v koutku na klavír 🎹 pojď si na chvíli sednout",
     msg_dawn_body: "to už vychází slunce?? ☀️ pořád tančíme 😳 nejlepší noc",
     msg_danesh_from: "DJ Danesh",
@@ -33714,7 +33718,8 @@ async def localfont(name):
       } else {
         messagesThread.forEach(function (id) {
           var m = MESSAGES[id]; if (!m) return;
-          var row = document.createElement("div"); row.className = "pm-msg-row";
+          var row = document.createElement("div"); row.className = "pm-msg-row" + (messagesRead[id] ? "" : " unread"); // unread (bold) until tapped
+          row.setAttribute("role", "button"); row.setAttribute("tabindex", "0");
           var head = document.createElement("div"); head.className = "pm-msg-head";
           var from = document.createElement("span"); from.className = "pm-msg-from"; from.textContent = tr(m.fromKey);
           head.appendChild(from);
@@ -33727,11 +33732,13 @@ async def localfont(name):
               try { im.animate([{ opacity: 0, filter: "contrast(.7) brightness(1.4) saturate(.5)" }, { offset: .45, opacity: 1 }, { opacity: 1, filter: "none" }], { duration: 1100, easing: "ease-out" }); } catch (e) {} // opacity+filter only (no transform) — clear of the particle-transform guard
             }
           }
-          row.appendChild(head); row.appendChild(bub); wrap.appendChild(row);
+          row.appendChild(head); row.appendChild(bub);
+          row.addEventListener("click", function () { runMsgAction(id); }); // tap a message → its place/app (and mark it read)
+          row.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); runMsgAction(id); } });
+          wrap.appendChild(row);
         });
       }
       body.appendChild(wrap);
-      messagesUnread = false; // opening the thread clears the unread mark
       // conversation → scroll to the newest (bottom). A single sync set runs mid open-animation
       // when the body still measures zero height, so it never sticks — re-assert after layout
       // (double-rAF) and once more past the ~220ms open transition.
@@ -34135,23 +34142,23 @@ async def localfont(name):
     // messages — a read-only chat thread of in-character texts that arrive on the Act-2 beats.
     // messagesThread holds the received message IDS in arrival order (renderMessages reads the copy
     // live via tr(), so a language flip re-renders); cleared only on a kill (__resetPhoneApps).
-    var messagesThread = [], messagesUnread = false;
+    var messagesThread = [], messagesRead = {}; // messagesRead[id] set once a message is tapped — unread (bold) until then
     var MESSAGES = { // each fires from its beat/trigger via window.__deliverPhoneMessage (actTwo sequencer + the DJ swap); listed in arc order so 'g' steps through them in sequence
-      dusk:   { fromKey: "msg_bahareh_from", bodyKey: "msg_dusk_body",   time: "19:40" }, // act_b0 (dusk)
-      pouria: { fromKey: "msg_pouria_from",  bodyKey: "msg_pouria_body", time: "21:20" }, // act_p1 (bar)
-      group:  { fromKey: "msg_admin_from",   bodyKey: "msg_group_body",  time: "22:30" }, // act_p2 (floor)
-      danesh: { fromKey: "msg_danesh_from",  bodyKey: "msg_danesh_body", time: "23:15" }, // DJ Danesh, once he's OFF the decks (Sina spinning)
-      album:  { fromKey: "msg_irene_from",   bodyKey: "msg_album_body",  time: "00:25", img: "art/msg-selfie.jpg" }, // act_p3 (photobooth selfie — Irene shares the loft-booth polaroid)
-      irene_games: { fromKey: "msg_irene_from", bodyKey: "msg_irene_games_body", time: "00:40" }, // act_p3 follow-up: bored kid → nudge to the office computer games
-      piano:  { fromKey: "msg_mb_from",      bodyKey: "msg_piano_body",  time: "02:10" }, // act_w1 (piano)
-      dawn:   { fromKey: "msg_bahareh_from", bodyKey: "msg_dawn_body",   time: "04:55" }, // act_w2 (dawn)
-      mb:     { fromKey: "msg_mb_from",      bodyKey: "msg_mb_body",     time: "09:30" }, // rsvp_exit (next morning)
+      dusk:   { fromKey: "msg_bahareh_from", bodyKey: "msg_dusk_body",   time: "19:40", act: "eclipse" },      // act_b0 → tap: balcony + eclipse
+      pouria: { fromKey: "msg_pouria_from",  bodyKey: "msg_pouria_body", time: "21:20", act: "room:kitchen" }, // act_p1 → the bar
+      group:  { fromKey: "msg_admin_from",   bodyKey: "msg_group_body",  time: "22:30", act: "room:garden" },  // act_p2 → the dance floor
+      danesh: { fromKey: "msg_danesh_from",  bodyKey: "msg_danesh_body", time: "23:15", act: "room:garden" },  // DJ Danesh off the decks → the booth
+      album:  { fromKey: "msg_irene_from",   bodyKey: "msg_album_body",  time: "00:25", img: "art/msg-selfie.jpg", act: "app:photobooth" }, // act_p3 → the photobooth
+      irene_games: { fromKey: "msg_irene_from", bodyKey: "msg_irene_games_body", time: "00:40", act: "games" }, // → the office computer
+      piano:  { fromKey: "msg_mb_from",      bodyKey: "msg_piano_body",  time: "02:10", act: "room:cuddly" },  // act_w1 → the nook piano
+      dawn:   { fromKey: "msg_bahareh_from", bodyKey: "msg_dawn_body",   time: "04:55", act: "room:balcony" }, // act_w2 → the balcony
+      mb:     { fromKey: "msg_mb_from",      bodyKey: "msg_mb_body",     time: "09:30", act: "rsvp" },         // rsvp_exit → the RSVP
       // app-cue pool — dripped at random during the party (not beat-driven); no fixed time (a
       // group chat doesn't stamp every line, and random arrival order shouldn't jumble the clock)
-      cue_music:     { fromKey: "msg_admin_from",   bodyKey: "cue_music_body" },     // → music (visualizer)
-      cue_cocktails: { fromKey: "msg_pouria_from",  bodyKey: "cue_cocktails_body" }, // → cocktails menu
-      cue_calendar:  { fromKey: "msg_mb_from",      bodyKey: "cue_calendar_body" },  // → calendar
-      cue_mail:      { fromKey: "msg_bahareh_from", bodyKey: "cue_mail_body" }       // → mail
+      cue_music:     { fromKey: "msg_admin_from",   bodyKey: "cue_music_body",     act: "app:music" },     // → music (visualizer)
+      cue_cocktails: { fromKey: "msg_pouria_from",  bodyKey: "cue_cocktails_body", act: "app:cocktails" }, // → cocktails menu
+      cue_calendar:  { fromKey: "msg_mb_from",      bodyKey: "cue_calendar_body",  act: "app:calendar" },  // → calendar
+      cue_mail:      { fromKey: "msg_bahareh_from", bodyKey: "cue_mail_body",      act: "app:mail" }       // → mail
     };
     var CUE_POOL = ["cue_music", "cue_cocktails", "cue_calendar", "cue_mail"]; // the random party drip
     // Phone photobooth result state — session-scoped, same model as notesDraft/cardsIndex:
@@ -35326,7 +35333,7 @@ async def localfont(name):
     }
     window.__openPhoneModal = open;
     window.__closePhoneModal = function (silent) { close(silent); };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; messagesThread = []; messagesUnread = false; hideMessageThumb(); if (window.__stopCueDrip) window.__stopCueDrip(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks, and the flashlight (intent forgotten + beam/torch off)
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; messagesThread = []; messagesRead = {}; hideMessageThumb(); if (window.__stopCueDrip) window.__stopCueDrip(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks, and the flashlight (intent forgotten + beam/torch off)
     // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
     // open(true) is the cinematic lock-skip path (same as __showCocktailInPhone), so a console
     // launch never stalls on the passcode. Matches by app id (case-insensitive) or its localized
@@ -35364,7 +35371,22 @@ async def localfont(name):
     // A text lands via window.__deliverPhoneMessage(id): appended to the thread (always), and —
     // if the tab's attended (crickets rule) — a small pulsating phone card slides in top-centre
     // for 7s, buzzing once; tapping it opens the phone straight into the messages app.
-    var msgThumbEl = null, msgThumbT = null;
+    // Where a tapped message takes you (from the notification OR a thread bubble). "app:<id>"
+    // opens that phone app in the current scene; the rest close the phone and go there in the loft.
+    function runMsgAction(id) {
+      hideMessageThumb();
+      if (id) messagesRead[id] = true; // tapping marks the message read (unread = bold until then)
+      var m = id && MESSAGES[id], act = m && m.act;
+      if (!act) { open(true); openApp("messages", "app_messages", renderMessages); return; }
+      if (act.indexOf("app:") === 0) { open(true); var app = phoneAppByName(act.slice(4)); if (app && app.open) app.open(); else openApp("messages", "app_messages", renderMessages); return; }
+      close(true); // the rest leave the phone for somewhere in the loft
+      if (act === "eclipse") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__runBalconyEclipse) window.__runBalconyEclipse(); }, 760); return; } // pan first, then darken the sky
+      if (act === "rsvp") { if (window.goToStage) window.goToStage("balcony"); if (window.__showRsvpNudge) window.__showRsvpNudge("rsvp_exit"); return; }
+      if (act === "games") { if (window.goToStage) window.goToStage("office"); setTimeout(function () { if (window.computer && !window.computer()) window.computer(true); else if (window.__toggleMonitorZoom) window.__toggleMonitorZoom(); }, 420); return; }
+      if (act.indexOf("room:") === 0 && window.goToStage) window.goToStage(act.slice(5));
+    }
+    window.__runMsgAction = runMsgAction; // test hook
+    var msgThumbEl = null, msgThumbT = null, msgThumbId = null;
     function hideMessageThumb() {
       if (msgThumbT) { clearTimeout(msgThumbT); msgThumbT = null; }
       if (msgThumbEl) msgThumbEl.classList.remove("show");
@@ -35381,9 +35403,10 @@ async def localfont(name):
         msgThumbEl.type = "button";
         msgThumbEl.className = "msg-thumb";
         msgThumbEl.innerHTML = '<span class="msg-thumb-ico">💬</span><span class="msg-thumb-txt"><span class="msg-thumb-from"></span><span class="msg-thumb-body"></span></span>';
-        msgThumbEl.addEventListener("click", function () { hideMessageThumb(); open(true); openApp("messages", "app_messages", renderMessages); }); // summon the phone IN THE CURRENT scene (no balcony jump), straight to the thread
+        msgThumbEl.addEventListener("click", function () { runMsgAction(msgThumbId); }); // tap the toast → the message's action (its app / place)
       }
       if (msgThumbEl.parentNode !== host) host.appendChild(msgThumbEl);
+      msgThumbId = id; // this toast's message
       msgThumbEl.querySelector(".msg-thumb-from").textContent = tr(m.fromKey);
       msgThumbEl.querySelector(".msg-thumb-body").innerHTML = tr(m.bodyKey); // authored copy — may carry <em> (Irene's "daeeee")
       var ico = msgThumbEl.querySelector(".msg-thumb-ico"); // a photo message shows its picture as the icon; otherwise the 💬 glyph
@@ -35400,7 +35423,6 @@ async def localfont(name):
     window.__deliverPhoneMessage = function (id) {
       if (!MESSAGES[id] || messagesThread.indexOf(id) !== -1) return; // unknown, or already received (fire once)
       messagesThread.push(id);
-      messagesUnread = true;
       if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages); // live-refresh if the thread's already open
       showMessageThumb(id);
     };

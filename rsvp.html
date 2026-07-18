@@ -2967,6 +2967,9 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .msg-thumb-body{font-size:22px; color:var(--ink); line-height:1.25; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; overflow:hidden} /* up to two lines, then ellipsis */
 @keyframes msg-thumb-pulse{0%,100%{box-shadow:0 6px 22px rgba(0,0,0,.28), inset 0 0 0 1px var(--rule)} 50%{box-shadow:0 7px 27px rgba(142,58,74,.5), inset 0 0 0 1px var(--rule)}}
 @media (prefers-reduced-motion: reduce){.msg-thumb.show{animation:none}}
+/* unread-count badge — a red circle (white number) at the new-notification's top-left corner */
+.msg-badge{position:absolute; top:6px; left:max(10px, calc(50% - 190px)); z-index:61; min-width:23px; height:23px; padding:0 5px; box-sizing:border-box; border:1.5px solid #fffdf8; border-radius:12px; background:#d33a34; color:#fff; font:700 13px/20px "Source Serif 4",system-ui,sans-serif; text-align:center; cursor:pointer; box-shadow:0 2px 7px rgba(0,0,0,.32); display:none}
+.msg-badge.show{display:block}
 /* flashlight */
 .pm-flash-app{display:flex; flex-direction:column; align-items:center; gap:20px; padding-top:22px; text-align:center}
 .pm-flash-app .pmf-torch{width:96px; height:96px; border-radius:50%; border:none; cursor:pointer; background:var(--cream); box-shadow:inset 0 0 0 1px var(--rule); font-size:46px; display:flex; align-items:center; justify-content:center; transition:background .2s ease, box-shadow .2s ease}
@@ -15077,7 +15080,7 @@ var T = {
       act_b3: "…that was never the light switch. 🎉 Surprise — the loft doesn't do quiet nights.",
       act_p1: "<em>Pouria</em>'s back behind the bar — go get the drink you skipped this morning. 🍸",
       act_p2: "<em>DJ Sina</em> and <em>DJ Danesh</em> are trading the decks. The garden's dancing — stay for the next one. 💃",
-      act_p3: "Grab a strip for the album — there's a booth on your phone<span class=\"kbd-hint\">, just press <kbd>c</kbd></span>, and one on the office monitor. 📷",
+      act_p3: "Grab a strip for the album — there's a booth on your phone<span class=\"kbd-hint\">, just press <kbd>c</kbd></span>, & one on the PC. 📷",
       act_w1: "The party's easing off — someone's playing piano in the nook, under the stars. 🎹",
       act_w2: "One more turn of the sun and it's tomorrow. Go on — bring the morning back. 🌄",
       act_w2_dawn: "Morning again. Same loft, same coffee. It does this every day. ☕",
@@ -15578,7 +15581,7 @@ var T = {
       act_b3: "…žádný vypínač světla to nebyl. 🎉 Překvapení — loft tiché noci nedělá.",
       act_p1: "<em>Pouria</em> je zpátky za barem — dojdi si pro drink, cos ráno vynechal(a). 🍸",
       act_p2: "<em>DJ Sina</em> a <em>DJ Danesh</em> si předávají gramofony. Zahrada tančí — zůstaň na další. 💃",
-      act_p3: "Vyfoť se do alba — jeden fotokoutek máš v telefonu<span class=\"kbd-hint\">, stačí zmáčknout <kbd>c</kbd></span>, druhý na monitoru v pracovně. 📷",
+      act_p3: "Vyfoť se do alba — jeden fotokoutek máš v telefonu<span class=\"kbd-hint\">, stačí zmáčknout <kbd>c</kbd></span>, & druhý na PC. 📷",
       act_w1: "Párty pomalu doznívá — někdo hraje v koutku na klavír, pod hvězdami. 🎹",
       act_w2: "Ještě jedno otočení slunce a je zítra. No tak — přiveď ráno zpátky. 🌄",
       act_w2_dawn: "Zase ráno. Stejný loft, stejná káva. Dělá to tak každý den. ☕",
@@ -35336,7 +35339,7 @@ async def localfont(name):
     }
     window.__openPhoneModal = open;
     window.__closePhoneModal = function (silent) { close(silent); };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; messagesThread = []; messagesRead = {}; hideMessageThumb(); if (window.__stopCueDrip) window.__stopCueDrip(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks, and the flashlight (intent forgotten + beam/torch off)
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; messagesThread = []; messagesRead = {}; hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks, and the flashlight (intent forgotten + beam/torch off)
     // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
     // open(true) is the cinematic lock-skip path (same as __showCocktailInPhone), so a console
     // launch never stalls on the passcode. Matches by app id (case-insensitive) or its localized
@@ -35378,7 +35381,7 @@ async def localfont(name):
     // opens that phone app in the current scene; the rest close the phone and go there in the loft.
     function runMsgAction(id) {
       hideMessageThumb();
-      if (id) messagesRead[id] = true; // tapping marks the message read (unread = bold until then)
+      if (id) { messagesRead[id] = true; updateMsgBadge(); } // tapping marks the message read (unread = bold until then)
       var m = id && MESSAGES[id], act = m && m.act;
       if (!act) { open(true); openApp("messages", "app_messages", renderMessages); return; }
       if (act.indexOf("app:") === 0) { open(true); var app = phoneAppByName(act.slice(4)); if (app && app.open) app.open(); else openApp("messages", "app_messages", renderMessages); return; }
@@ -35424,11 +35427,30 @@ async def localfont(name):
       msgThumbT = setTimeout(hideMessageThumb, 7000);
     }
     window.__hideMessageThumb = hideMessageThumb;
+    // ── unread-count badge ── a small red circle with a white count, at the notification's
+    // top-left corner (top-centre, a bit left). Shows while any message is unread; tap opens the
+    // thread (doesn't mark anything read). Kept in sync on every deliver / read / reset.
+    var msgBadgeEl = null;
+    function unreadCount() { var n = 0; for (var i = 0; i < messagesThread.length; i++) if (!messagesRead[messagesThread[i]]) n++; return n; }
+    function updateMsgBadge() {
+      var n = unreadCount(), host = document.querySelector(".hunt-viewport") || document.body;
+      if (!msgBadgeEl) {
+        msgBadgeEl = document.createElement("button");
+        msgBadgeEl.type = "button";
+        msgBadgeEl.className = "msg-badge";
+        msgBadgeEl.addEventListener("click", function () { open(true); openApp("messages", "app_messages", renderMessages); });
+      }
+      if (msgBadgeEl.parentNode !== host) host.appendChild(msgBadgeEl);
+      if (n > 0) { msgBadgeEl.textContent = String(n); msgBadgeEl.setAttribute("aria-label", n + " unread — " + tr("app_messages")); msgBadgeEl.classList.add("show"); }
+      else msgBadgeEl.classList.remove("show");
+    }
+    window.__updateMsgBadge = updateMsgBadge;
     window.__deliverPhoneMessage = function (id) {
       if (!MESSAGES[id] || messagesThread.indexOf(id) !== -1) return; // unknown, or already received (fire once)
       messagesThread.push(id);
       if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages); // live-refresh if the thread's already open
       showMessageThumb(id);
+      updateMsgBadge();
     };
     // 'n' steps through the phone nudges: deliver the next un-arrived message in canonical order
     // (Pouria → group chat → album → M&B), independent of the Act-2 beats (the beat sequencer

@@ -17637,10 +17637,11 @@ document.addEventListener("click", function (e) {
   for (var _si = STARS_SCORES.length - 1; _si > 0; _si--) { var _sj = (Math.random() * (_si + 1)) | 0, _st = STARS_SCORES[_si]; STARS_SCORES[_si] = STARS_SCORES[_sj]; STARS_SCORES[_sj] = _st; } // Fisher-Yates: random per-load order, fixed for the session
   var starsPiece = 0, curScore = STARS_SCORES[0], lastFlashT = 0, lastNoteT = 0; // rotation index into the shuffled pool
   function starsWant() {
-    // whole-loft ambient that keeps going in the background: plays whenever the night-sky
-    // channel is on, regardless of room, focus, or tab visibility (the look-ahead scheduler
-    // below queues notes on the audio clock so a throttled background tab can't stutter it)
-    return screen.classList.contains("chan-stars");
+    // the night-sky piano: whole-loft when there's NO party (a calm Satie bed across the loft),
+    // but cuddly-ONLY once the garden party is on — so it leads in the nook while the party ducks
+    // into the background, instead of two whole-loft musics. Background-safe within wherever it's
+    // allowed (the look-ahead scheduler queues on the audio clock, so a throttled tab won't stutter).
+    return screen.classList.contains("chan-stars") && (!window.__gardenPartyOn || window.currentStageName === "cuddly");
   }
   // Soft triangle voice with a struck-note envelope — a quick strike, a fast initial decay to a
   // lower body, then a slow tail, so it articulates like a felt piano rather than a held tone.
@@ -17918,8 +17919,8 @@ document.addEventListener("click", function (e) {
   function wkSemi(base, n) { return base * Math.pow(2, n / 12); }
   function workoutVol() { return 0.9 * (window.__songVolume ? window.__songVolume() : 0.5); }
   function workoutWant() {
-    // whole-loft projector music like the night-sky piano — plays wherever, no room/focus/visibility gate
-    return screen.classList.contains("chan-workout");
+    // cuddly-ONLY (a projector channel's audio belongs to the nook); background-safe within the room.
+    return screen.classList.contains("chan-workout") && window.currentStageName === "cuddly";
   }
   function wkNoise(ctx, dur, shape) {
     var buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
@@ -45689,7 +45690,7 @@ function spawnDustMote(container) {
     if (window.__updateAquaMelody) window.__updateAquaMelody(name === "cuddly", ROOM_FADE); // aquarium melody is cuddly-only now (aquaMelWant room-gates it) — a plain repetitive loop, no reason to hear it loft-wide
     if (window.__updateWorkoutSound) window.__updateWorkoutSound(name === "cuddly", ROOM_FADE); // workout bed only in the cuddly nook
     if (window.__updateTotoroSound) window.__updateTotoroSound(name === "cuddly", ROOM_FADE); // rainfall only in the cuddly nook
-    if (window.__updateStarsSound) window.__updateStarsSound(name === "cuddly", ROOM_FADE); // Gnossienne only in the cuddly nook
+    if (window.__updateStarsSound) window.__updateStarsSound(name === "cuddly", ROOM_FADE); // Gnossienne: whole-loft off-party, cuddly-only during a party (see starsWant)
     if (window.__updateTotoroMelody) window.__updateTotoroMelody(name === "cuddly", ROOM_FADE); // woodland melody follows the totoro channel
     if (window.__updateProjectorPans) window.__updateProjectorPans(); // all four projector-music beds pan to the new room from the shared table
     if (window.__updatePartyRoom) window.__updatePartyRoom(); // party is garden-sourced: pan + faintness per room
@@ -47093,6 +47094,7 @@ function spawnDustMote(container) {
     on = !!on;
     window.__gardenPartyOn = on;
     if (on) { if (window.__startCueDrip) window.__startCueDrip(); } else if (window.__stopCueDrip) window.__stopCueDrip(); // drip the app-cue phone texts only while the party's lit
+    if (window.__updateStarsSound) window.__updateStarsSound(); // stars/piano is cuddly-only during a party, whole-loft otherwise — re-gate on party start/stop
     if (window.__refreshGardenCaption) window.__refreshGardenCaption(); // garden line goes party-mode / reverts
     if (on && window.__retireHint) window.__retireHint("hint_ksecret"); // loose-brick hint: retire once the party (and its bar) reveals the kitchen's other side
     var gs = document.getElementById("stage-garden");

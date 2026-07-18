@@ -15386,9 +15386,12 @@ var T = {
     cue_mail_body: "did you check the mail? 💌 there's a letter for you",
     msg_storm_body: "there's a storm coming! ⛈️",
     msg_behdad_from: "behdad",
+    msg_sina_from: "Sina",
     msg_invaders_body: "Irene, did you see the invaders in the office? 👾",
     msg_flair_body: "I need a break 🍸",
     msg_smores_body: "who wants s'mores? 🔥🍫",
+    msg_bbq_body: "let's start the BBQ 🔥🍔",
+    msg_sina_helpers_body: "who's got some party helpers? 😜",
     msg_mb_from: "markéta & behdad",
     msg_mb_body: "did you RSVP yet? 😉 no pressure. (some pressure.)",
     msg_dusk_body: "eclipse on the balcony 🌑 come out?",
@@ -15890,9 +15893,12 @@ var T = {
     cue_mail_body: "koukl(a) jsi do pošty? 💌 máš tam dopis",
     msg_storm_body: "blíží se bouřka! ⛈️",
     msg_behdad_from: "behdad",
+    msg_sina_from: "Sina",
     msg_invaders_body: "Irene, viděla jsi v pracovně vetřelce? 👾",
     msg_flair_body: "Potřebuju pauzu 🍸",
     msg_smores_body: "kdo chce opékat marshmallows? 🔥🍫",
+    msg_bbq_body: "jdeme roztopit gril 🔥🍔",
+    msg_sina_helpers_body: "kdo má nějaké párty pomocníky? 😜",
     msg_mb_from: "markéta & behdad",
     msg_mb_body: "potvrdil(a) jsi už účast? 😉 žádný tlak. (trochu tlak.)",
     msg_dusk_body: "zatmění na balkoně 🌑 přijdeš ven?",
@@ -32713,6 +32719,11 @@ async def localfont(name):
     burgers.forEach(function (b) {
       b.addEventListener("click", function (e) { serveBurger(b, e); });
     });
+    // Fire up the BBQ on demand (Behdad's "let's start the BBQ" text): lid up + fire on, idempotent.
+    window.__startBBQ = function () {
+      if (!smoker.classList.contains("open")) toggleLid();
+      if (!smoker.classList.contains("smoking")) toggleFire();
+    };
     window.resetSmoker = function () {
       if (sizzleTimer) clearInterval(sizzleTimer);
       if (tempTimer) clearInterval(tempTimer);
@@ -34310,9 +34321,11 @@ async def localfont(name):
       storm:         { fromKey: "msg_bahareh_from", bodyKey: "msg_storm_body",     act: "storm" },         // Bahareh's warning → tap: balcony + storm
       invaders:      { fromKey: "msg_behdad_from",  bodyKey: "msg_invaders_body",  act: "invaders" },      // behdad tasks Irene → the office; taps to LAUNCH the chair alien-arcade
       flair:         { fromKey: "msg_pouria_from",  bodyKey: "msg_flair_body",     act: "flair" },         // Pouria bored → taps to LAUNCH Flair-Catch at the bar
-      smores:        { fromKey: "msg_bahareh_from", bodyKey: "msg_smores_body",    act: "smores" }         // Bahareh, after dark → taps: balcony + light the bonfire for s'mores
+      smores:        { fromKey: "msg_bahareh_from", bodyKey: "msg_smores_body",    act: "smores" },        // Bahareh, after dark → taps: balcony + light the bonfire for s'mores
+      bbq:           { fromKey: "msg_behdad_from",  bodyKey: "msg_bbq_body",       act: "bbq" },           // behdad → taps: balcony + open the smoker lid + light it
+      sina_helpers:  { fromKey: "msg_sina_from",    bodyKey: "msg_sina_helpers_body", act: "magicbox" }    // Sina (off the decks) → taps: garden + the magic box (locked → date lock the first time)
     };
-    var CUE_POOL = ["cue_music", "cue_cocktails", "cue_calendar", "cue_mail", "storm", "invaders", "flair", "smores"]; // the random party drip (shuffled: each drip picks a random un-sent one); smores is night-only — see cueRemaining()
+    var CUE_POOL = ["cue_music", "cue_cocktails", "cue_calendar", "cue_mail", "storm", "invaders", "flair", "smores", "bbq", "sina_helpers"]; // the random party drip (shuffled: each drip picks a random un-sent one); smores is night-only + sina_helpers only while Sina's off the decks — see cueRemaining()
     // Phone photobooth result state — session-scoped, same model as notesDraft/cardsIndex:
     // a captured polaroid (frame canvas + chosen look/frame) survives a normal close/reopen
     // (renderPhotobooth seeds its locals from these and commits them back in teardown), and is
@@ -35538,6 +35551,8 @@ async def localfont(name):
       if (act === "storm") { if (window.storm) window.storm(true); return; } // storm() pans to the balcony, sets dusk, and rolls the storm itself
       if (act === "invaders") { if (window.goToStage) window.goToStage("office"); setTimeout(function () { if (window.__startArcade) window.__startArcade(); }, 720); return; } // pan to the office, then launch the chair alien-arcade
       if (act === "smores") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__setSmores) window.__setSmores(true); }, 760); return; } // pan to the balcony, then light the bonfire
+      if (act === "bbq") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__startBBQ) window.__startBBQ(); }, 760); return; } // pan to the balcony, then open + light the smoker
+      if (act === "magicbox") { if (window.goToStage) window.goToStage("garden"); setTimeout(function () { if (window.__drugsboxTap) window.__drugsboxTap(); }, 760); return; } // pan to the garden, then tap the magic box (date lock the first time)
       if (act === "flair") { if (window.goToStage) window.goToStage("kitchen"); setTimeout(function () { if ((!window.__barUpNow || !window.__barUpNow()) && window.__setDayNight) window.__setDayNight(true); if (window.__startFlairCatch) window.__startFlairCatch(); }, 720); return; } // pan to the bar (raise it if needed), then launch Flair-Catch
       if (act === "rsvp") { if (window.goToStage) window.goToStage("balcony"); if (window.__showRsvpNudge) window.__showRsvpNudge("rsvp_exit"); return; }
       if (act === "games") { if (window.goToStage) window.goToStage("office"); setTimeout(function () { if (window.computer && !window.computer()) window.computer(true); else if (window.__toggleMonitorZoom) window.__toggleMonitorZoom(); }, 420); return; }
@@ -35623,6 +35638,7 @@ async def localfont(name):
         var id = CUE_POOL[i];
         if (messagesThread.indexOf(id) !== -1) continue;
         if (id === "smores" && !night) continue; // s'mores round the fire is an after-dark thing
+        if (id === "sina_helpers") { var db = document.getElementById("garden-djbooth"); if (!(db && db.classList.contains("dj-b"))) continue; } // only when Sina's off the decks (his friend's spinning)
         out.push(id);
       }
       return out;

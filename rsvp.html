@@ -2941,9 +2941,14 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .pm-cur .pmu-out .pmu-sub{font-size:11.5px; color:var(--muted); margin-top:4px}
 /* messages: a read-only chat thread of the Act-2 texts */
 .pm-messages{display:flex; flex-direction:column; gap:12px; padding:6px 2px 4px; min-height:100%; box-sizing:border-box}
+/* the chat-room name — the whole app is one conversation, "Wedding crowd". Sticky so it stays
+   put as the thread scrolls; bleeds out over the app-body padding to the phone-screen edges. */
+.pm-msg-title{position:sticky; top:-6px; z-index:2; margin:-6px -16px 6px; padding:12px 16px 9px; background:var(--cream); border-bottom:1px solid var(--rule); font-family:"Fraunces",serif; font-size:18px; font-weight:700; color:var(--ink)}
 .pm-msg-empty{margin:auto; color:var(--muted); font-size:12px; text-align:center}
 .pm-msg-row{display:flex; flex-direction:column; align-items:flex-start; gap:2px; max-width:100%}
-.pm-msg-from{font-size:10px; color:var(--muted); padding-left:9px}
+.pm-msg-head{display:flex; align-items:baseline; gap:7px; padding-left:9px}
+.pm-msg-from{font-size:10px; font-weight:600; color:var(--muted)}
+.pm-msg-time{font-size:9.5px; color:var(--muted); opacity:.7}
 .pm-msg-bubble{background:var(--paper); border:1px solid var(--rule); border-radius:13px 13px 13px 3px; padding:7px 11px; font-size:13px; line-height:1.4; color:var(--ink); max-width:86%; overflow-wrap:anywhere}
 /* the new-message thumbnail: a small pulsating phone card, top-centre, ~7s, tap to open messages */
 .msg-thumb{position:absolute; top:14px; left:50%; z-index:60; transform:translateX(-50%) translateY(-30px); display:flex; align-items:center; gap:13px; max-width:min(440px,94vw); padding:13px 20px 13px 14px; border:none; cursor:pointer; text-align:left; font:inherit; color:var(--ink); background:var(--paper); border-radius:20px; box-shadow:0 6px 22px rgba(0,0,0,.28), inset 0 0 0 1px var(--rule); opacity:0; pointer-events:none; transition:opacity .3s ease, transform .3s cubic-bezier(.34,1.4,.6,1)}
@@ -15331,12 +15336,18 @@ var T = {
     msg_empty: "No messages yet.",
     msg_pouria_from: "Pouria",
     msg_pouria_body: "bar's open again 🍸 get down here",
-    msg_group_from: "the group chat",
+    msg_group_from: "Wedding crowd",
     msg_group_body: "you dancing or what?? 💃",
-    msg_album_from: "📷 album",
     msg_album_body: "new photo added — let's take another selfie!",
     msg_mb_from: "markéta & behdad",
     msg_mb_body: "did you RSVP yet? 😉 no pressure. (some pressure.)",
+    msg_dusk_body: "sunset on the balcony 🌇 you coming up?",
+    msg_piano_body: "someone's on the piano in the nook 🎹 come sit a minute",
+    msg_dawn_body: "is the sun coming up?? ☀️ we're still dancing 😳 best night",
+    msg_danesh_from: "DJ Danesh",
+    msg_admin_from: "admin",
+    msg_bahareh_from: "Bahareh",
+    msg_danesh_body: "dude your crowd is SO hot 🔥",
     hn_loading: "loading top stories…",
     hn_error: "couldn’t reach Hacker News — check your connection.",
     hn_points: "points",
@@ -15817,12 +15828,18 @@ var T = {
     msg_empty: "Zatím žádné zprávy.",
     msg_pouria_from: "Pouria",
     msg_pouria_body: "bar zase otevřel 🍸 padej sem",
-    msg_group_from: "skupinový chat",
+    msg_group_from: "Svatební dav",
     msg_group_body: "tak tančíš, nebo co?? 💃",
-    msg_album_from: "📷 album",
     msg_album_body: "přibyla nová fotka — dáme další selfie!",
     msg_mb_from: "markéta & behdad",
     msg_mb_body: "potvrdil(a) jsi už účast? 😉 žádný tlak. (trochu tlak.)",
+    msg_dusk_body: "západ slunce na balkoně 🌇 přijdeš nahoru?",
+    msg_piano_body: "někdo hraje v koutku na klavír 🎹 pojď si na chvíli sednout",
+    msg_dawn_body: "to už vychází slunce?? ☀️ pořád tančíme 😳 nejlepší noc",
+    msg_danesh_from: "DJ Danesh",
+    msg_admin_from: "admin",
+    msg_bahareh_from: "Bahareh",
+    msg_danesh_body: "kámo, ten tvůj dav je fakt žhavej 🔥",
     hn_loading: "načítám příspěvky…",
     hn_error: "Hacker News není dostupný — zkontroluj připojení.",
     hn_points: "bodů",
@@ -33669,6 +33686,10 @@ async def localfont(name):
     function renderMessages(body) {
       var wrap = document.createElement("div");
       wrap.className = "pm-messages";
+      var title = document.createElement("div"); // the whole app IS one chat room, "Wedding crowd"
+      title.className = "pm-msg-title";
+      title.textContent = tr("msg_group_from");
+      wrap.appendChild(title);
       if (!messagesThread.length) {
         var empty = document.createElement("div");
         empty.className = "pm-msg-empty";
@@ -33678,14 +33699,23 @@ async def localfont(name):
         messagesThread.forEach(function (id) {
           var m = MESSAGES[id]; if (!m) return;
           var row = document.createElement("div"); row.className = "pm-msg-row";
-          var from = document.createElement("div"); from.className = "pm-msg-from"; from.textContent = tr(m.fromKey);
+          var head = document.createElement("div"); head.className = "pm-msg-head";
+          var from = document.createElement("span"); from.className = "pm-msg-from"; from.textContent = tr(m.fromKey);
+          head.appendChild(from);
+          if (m.time) { var tm = document.createElement("span"); tm.className = "pm-msg-time"; tm.textContent = m.time; head.appendChild(tm); }
           var bub = document.createElement("div"); bub.className = "pm-msg-bubble"; bub.textContent = tr(m.bodyKey);
-          row.appendChild(from); row.appendChild(bub); wrap.appendChild(row);
+          row.appendChild(head); row.appendChild(bub); wrap.appendChild(row);
         });
       }
       body.appendChild(wrap);
-      messagesUnread = false;             // opening the thread clears the unread mark
-      body.scrollTop = body.scrollHeight; // newest at the bottom
+      messagesUnread = false; // opening the thread clears the unread mark
+      // conversation → scroll to the newest (bottom). A single sync set runs mid open-animation
+      // when the body still measures zero height, so it never sticks — re-assert after layout
+      // (double-rAF) and once more past the ~220ms open transition.
+      var toBottom = function () { body.scrollTop = body.scrollHeight; };
+      toBottom();
+      requestAnimationFrame(function () { requestAnimationFrame(toBottom); });
+      setTimeout(toBottom, 300);
     }
     // ── flashlight ── an on/off torch. ON spills a warm radial beam onto the balcony
     // night scene (the phone is opened from the balcony) and glows the phone screen; OFF
@@ -34083,11 +34113,15 @@ async def localfont(name):
     // messagesThread holds the received message IDS in arrival order (renderMessages reads the copy
     // live via tr(), so a language flip re-renders); cleared only on a kill (__resetPhoneApps).
     var messagesThread = [], messagesUnread = false;
-    var MESSAGES = { // each fires from its beat via window.__deliverPhoneMessage (see the actTwo sequencer)
-      pouria: { fromKey: "msg_pouria_from", bodyKey: "msg_pouria_body" },
-      group:  { fromKey: "msg_group_from",  bodyKey: "msg_group_body" },
-      album:  { fromKey: "msg_album_from",  bodyKey: "msg_album_body" },
-      mb:     { fromKey: "msg_mb_from",     bodyKey: "msg_mb_body" }
+    var MESSAGES = { // each fires from its beat/trigger via window.__deliverPhoneMessage (actTwo sequencer + the DJ swap); listed in arc order so 'g' steps through them in sequence
+      dusk:   { fromKey: "msg_bahareh_from", bodyKey: "msg_dusk_body",   time: "19:40" }, // act_b0 (dusk)
+      pouria: { fromKey: "msg_pouria_from",  bodyKey: "msg_pouria_body", time: "21:20" }, // act_p1 (bar)
+      group:  { fromKey: "msg_admin_from",   bodyKey: "msg_group_body",  time: "22:30" }, // act_p2 (floor)
+      danesh: { fromKey: "msg_danesh_from",  bodyKey: "msg_danesh_body", time: "23:15" }, // DJ Danesh, once he's OFF the decks (Sina spinning)
+      album:  { fromKey: "msg_bahareh_from", bodyKey: "msg_album_body",  time: "00:25" }, // act_p3 (photobooth selfie)
+      piano:  { fromKey: "msg_mb_from",      bodyKey: "msg_piano_body",  time: "02:10" }, // act_w1 (piano)
+      dawn:   { fromKey: "msg_bahareh_from", bodyKey: "msg_dawn_body",   time: "04:55" }, // act_w2 (dawn)
+      mb:     { fromKey: "msg_mb_from",      bodyKey: "msg_mb_body",     time: "09:30" }  // rsvp_exit (next morning)
     };
     // Phone photobooth result state — session-scoped, same model as notesDraft/cardsIndex:
     // a captured polaroid (frame canvas + chosen look/frame) survives a normal close/reopen
@@ -46693,6 +46727,9 @@ function spawnDustMote(container) {
     // P2 — but only after this hype line has had its 4.2s, or the next beat would stomp the
     // very moment it's rewarding. Caption-only either way, so the timer reaches no sound.
     if (window.__actPing) setTimeout(function () { window.__actPing("dj"); }, 4600);
+    // when the decks pass to Sina, Danesh is off — he texts the host from the sidelines. Delayed
+    // so it doesn't land on the "DJ Sina takes over" caption; fires once (dedup'd in the deliverer).
+    if (!window.__djB && window.__deliverPhoneMessage) setTimeout(function () { if (window.__deliverPhoneMessage) window.__deliverPhoneMessage("danesh"); }, 5200);
   }
   // Manual DJ swap — double-tapping the decks hands the booth to the other friend. Flips the
   // active DJ, reflects it onto the booth, hypes the incoming one, and zeroes the every-3-dances
@@ -51778,7 +51815,7 @@ function spawnDustMote(container) {
     if (window.setCaption) window.setCaption(b.id);
   }
   // beats that carry a phone text → the message id delivered (once) the moment the beat goes live
-  var ACT_MSG = { act_p1: "pouria", act_p2: "group", act_p3: "album", rsvp_exit: "mb" };
+  var ACT_MSG = { act_b0: "dusk", act_p1: "pouria", act_p2: "group", act_p3: "album", act_w1: "piano", act_w2: "dawn", rsvp_exit: "mb" };
   var MSG_DELAY_MS = 5000, msgTimers = []; // the beat's phone text arrives ~5s AFTER its caption, so the buzz+thumbnail don't land on top of the caption
   function advance(quiet) {
     if (!armed) return;

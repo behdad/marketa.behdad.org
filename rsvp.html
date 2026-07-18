@@ -15369,7 +15369,8 @@ var T = {
     kbd_r: "reset the loft",
     kbd_kitten: "toggle the kitten",
     kbd_s: "season change",
-    kbd_n: "next phone message — then next track (dance / song)",
+    kbd_n: "next track (dance / piano piece / song)",
+    kbd_g: "next phone message",
     kbd_t: "next trip",
     // now-playing toast labels — dances + the three projector ambient beds (piano pieces and
     // loft-song titles are proper names, kept hardcoded in JS)
@@ -15854,7 +15855,8 @@ var T = {
     kbd_r: "resetovat loft",
     kbd_kitten: "přepnout kotě",
     kbd_s: "změna sezóny",
-    kbd_n: "další zpráva v telefonu — pak další skladba (tanec / píseň)",
+    kbd_n: "další skladba (tanec / klavírní skladba / píseň)",
+    kbd_g: "další zpráva v telefonu",
     kbd_t: "další trip",
     // now-playing toast labels (viz EN np)
     np: {
@@ -16436,6 +16438,7 @@ function idealBrowser() {
       ["<kbd>w</kbd>", "kbd_watch"],
       ["<kbd>Space</kbd>", "kbd_space"],
       ["<kbd>n</kbd>", "kbd_n"],
+      ["<kbd>g</kbd>", "kbd_g"],
       ["<kbd>←</kbd> / <kbd>→</kbd>", "kbd_arrows"],
       ["<kbd>`</kbd>", "kbd_console"],
       ["<kbd>1</kbd>–<kbd>5</kbd>", "kbd_digits"],
@@ -32739,11 +32742,11 @@ async def localfont(name):
       { id: "dressup", labelKey: "app_dressup", icon: null, glyph: "👗", tile: "#b06a7a", open: function () { openApp("dressup", "app_dressup", renderDressup); } },
       { id: "mines", labelKey: "app_mines", icon: "mines", tile: "#c8c2b4", open: function () { openApp("mines", "app_mines", renderMines); } },
       { id: "cards", labelKey: "app_cards", icon: null, glyph: "🔤", tile: "#9a5a7a", open: function () { openApp("cards", "app_cards", renderCards); } },
-      // organize — reach out + plan
+      // organize — reach out + plan (third home-grid row: mail · messages · notes · calendar)
       { id: "mail", labelKey: "app_mail", icon: "mail", tile: "#4a6b94", open: function () { openApp("mail", "app_mail", function (b) { renderMailList(b); }); } },
-      { id: "calendar", labelKey: "app_calendar", icon: null, glyph: "📅", tile: "#c68e95", open: function () { openApp("calendar", "app_calendar", renderCalendar); } },
-      { id: "notes", labelKey: "app_notes", icon: null, glyph: "📝", tile: "#e6c34a", open: function () { openApp("notes", "app_notes", renderNotes); } },
       { id: "messages", labelKey: "app_messages", icon: null, glyph: "💬", tile: "#6d8ba3", open: function () { openApp("messages", "app_messages", renderMessages); } },
+      { id: "notes", labelKey: "app_notes", icon: null, glyph: "📝", tile: "#e6c34a", open: function () { openApp("notes", "app_notes", renderNotes); } },
+      { id: "calendar", labelKey: "app_calendar", icon: null, glyph: "📅", tile: "#c68e95", open: function () { openApp("calendar", "app_calendar", renderCalendar); } },
       { id: "browser", labelKey: browserLabelKey, icon: HOST_BROWSER === "chrome" ? "chrome" : HOST_BROWSER === "firefox" ? "firefox" : "globe", glyph: "🌐", tile: "#fdfbf6", open: function () { openApp("browser", browserLabelKey, renderPhoneBrowser); } },
       // tools — the everyday utilities
       { id: "weather", labelKey: "app_weather", icon: "weather", tile: "#35726b", open: function () { openApp("weather", "app_weather", renderWeather); } },
@@ -35311,7 +35314,7 @@ async def localfont(name):
         msgThumbEl.type = "button";
         msgThumbEl.className = "msg-thumb";
         msgThumbEl.innerHTML = '<span class="msg-thumb-ico">💬</span><span class="msg-thumb-txt"><span class="msg-thumb-from"></span><span class="msg-thumb-body"></span></span>';
-        msgThumbEl.addEventListener("click", function () { hideMessageThumb(); if (window.__openPhoneApp) window.__openPhoneApp("messages"); });
+        msgThumbEl.addEventListener("click", function () { hideMessageThumb(); open(true); openApp("messages", "app_messages", renderMessages); }); // summon the phone IN THE CURRENT scene (no balcony jump), straight to the thread
       }
       if (msgThumbEl.parentNode !== fsHost) fsHost.appendChild(msgThumbEl);
       msgThumbEl.querySelector(".msg-thumb-from").textContent = tr(m.fromKey);
@@ -45729,9 +45732,10 @@ function spawnDustMote(container) {
       if (window.cat) window.cat(!window.cat()); // 'k' → toggle the kitten (out to your room / back in the chest), like 'p' toggles the party
     } else if (e.key === "n" || e.key === "N") {
       e.preventDefault();
-      // 'n' → advance to the next phone nudge; once every message is in, it falls back to
-      // skipping the music (next dance / piano piece / loft song), so the key never dead-ends.
-      if (!(window.__nextPhoneNudge && window.__nextPhoneNudge())) { if (window.__skipCurrentMusic) window.__skipCurrentMusic(); }
+      if (window.__skipCurrentMusic) window.__skipCurrentMusic(); // next dance / piano piece / loft song
+    } else if (e.key === "g" || e.key === "G") {
+      e.preventDefault();
+      if (window.__nextPhoneNudge) window.__nextPhoneNudge(); // 'g' → the next phone nudge/message (messaGe); no-op once every message is in
     } else if (e.key === "t" || e.key === "T") {
       e.preventDefault();
       if (window.__nextTrip) window.__nextTrip(); // next drug trip (cyclic; interrupts a running one)

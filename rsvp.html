@@ -22860,6 +22860,17 @@ function gameTapsNear(a, b) {
       requestAnimationFrame(function () { decks.classList.add("cue"); });
     });
   });
+  // double-tap the decks to hand the booth to the other DJ (the two clicks toggle music off then
+  // back on — a net no-op — then this swaps). Same cue-dip flourish confirms the press.
+  decks.addEventListener("dblclick", function (e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    if (!window.__gardenPartyOn) return;
+    if (window.__swapDj) window.__swapDj();
+    decks.classList.remove("cue");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { decks.classList.add("cue"); });
+    });
+  });
 })();
 (function () {
   // Every now and then the DJ throws in a scratch: the hand scrubs the platter (one-shot on
@@ -46679,6 +46690,15 @@ function spawnDustMote(container) {
     // very moment it's rewarding. Caption-only either way, so the timer reaches no sound.
     if (window.__actPing) setTimeout(function () { window.__actPing("dj"); }, 4600);
   }
+  // Manual DJ swap — double-tapping the decks hands the booth to the other friend. Flips the
+  // active DJ, reflects it onto the booth, hypes the incoming one, and zeroes the every-3-dances
+  // counter so the new DJ gets a full set before the next auto-swap (same as the console dj()).
+  window.__swapDj = function () {
+    window.__djB = !window.__djB;
+    window.__djSwapCount = 0;
+    applyDjBooth();
+    announceDj();
+  };
   function advanceDance() { // advance to the next dance in the rotation, crossfade the beds, glide the dancers
     var order = PARTY_DANCE_ORDER || ["techno"];
     var idx = order.indexOf(window.__partyDance);

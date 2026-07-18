@@ -19075,6 +19075,80 @@ window.__setUvParty = function (on) { uvPartyOn = !!on; applyUvMode(); }; // the
   // clears. Idempotent — not the timer-spawned-particle class the accumulation-bug note warns of.
   setInterval(evaluate, 500);
 })();
+// UV BREATHER — during the garden party the blacklight "breathes": it periodically switches OFF
+// for a shorter stretch (the party shows in normal light) then back ON (blacklight) for a longer
+// stretch, so guests enjoy the party both with and without UV. Owner: "sometimes stop and start
+// again the uv light, it's nice party without uv as well." This ONLY breathes the .uv-mode CLASS
+// under the balcony switch — it never touches uvPartyOn / the switch's .on intent (which stays ON
+// the whole party); on party-off (or a trip / reset forcing UV off) it STOPS and hands control
+// back via applyUvMode() so the final class matches the switch intent (never leaves .uv-mode stuck
+// off). Steady when the blacklight is raised with NO party (the u-key / blacklight()/uv() path).
+// Crickets rule: it's a class toggle (spawns no nodes), but it must not run unattended — the
+// self-rescheduling timer PAUSES while hidden/unfocused and re-arms from a fresh full ON stretch
+// on return, so nothing drifts or accumulates. Reduced motion: still allowed (a lighting change,
+// not motion) and it's a clean snap (no transition on the .uv-mode filter, by design).
+(function () {
+  var ON_MIN = 35000, ON_JIT = 25000;   // blacklight ON: ~35-60s (longer stretch)
+  var OFF_MIN = 12000, OFF_JIT = 10000;  // lights-normal OFF: ~12-22s (shorter stretch)
+  var timer = 0, phase = "on"; // "on" = blacklight class present, "off" = breathing it off
+  function breathing() { return !!window.__gardenPartyOn; }
+  function attended() { return !document.hidden && document.hasFocus(); }
+  function nextMs() { return phase === "on" ? (ON_MIN + Math.random() * ON_JIT) : (OFF_MIN + Math.random() * OFF_JIT); }
+  function clearTimer() { if (timer) { clearTimeout(timer); timer = 0; } }
+  function tick() {
+    timer = 0;
+    if (!breathing() || !attended()) { stop(); return; } // party ended / left unattended mid-cycle → stop cleanly
+    // flip the phase and reflect it onto the raw .uv-mode class (never onto uvPartyOn)
+    phase = (phase === "on") ? "off" : "on";
+    setUvMode(phase === "on");
+    if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger();
+    arm();
+  }
+  function arm() { clearTimer(); timer = setTimeout(tick, nextMs()); }
+  function stop() { // hand the blacklight back to the switch's intent (uvPartyOn), starting clean
+    clearTimer();
+    phase = "on";
+    applyUvMode(); // final class matches the switch — never leaves .uv-mode breathed off after party-off
+  }
+  // start/re-arm a breather that begins from a full ON stretch. Idempotent (storm-safe): if it's
+  // already breathing and attended, leave the in-flight cycle alone rather than resetting it.
+  function start() {
+    if (!breathing() || !attended()) { stop(); return; }
+    if (timer) return; // already breathing — don't restart the clock mid-stretch
+    phase = "on";
+    setUvMode(true); // ensure we open on full blacklight, then time the first OFF from there
+    if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger();
+    arm();
+  }
+  // evaluate() is pinged by setGardenParty (party on/off) and polled cheaply for gate changes that
+  // don't route a hook (a trip/reset forcing UV off mid-party, the tab regaining/losing focus).
+  function evaluate() {
+    if (breathing() && attended()) start();
+    else if (timer || phase === "off") stop();
+  }
+  window.__updateUvBreather = evaluate; // setGardenParty pings this on party start/stop
+  document.addEventListener("visibilitychange", evaluate);
+  window.addEventListener("focus", evaluate);
+  window.addEventListener("blur", evaluate);
+  setInterval(evaluate, 1000); // catches trip/reset-forced UV-off mid-party (no hook) + focus edges some engines skip
+  // Test hook: report the breather's live state + (optionally) override intervals for a fast test.
+  // Pass an object to shrink the ON/OFF windows; call with no args to just read. SHIP the defaults.
+  window.__uvBreatherState = function (opts) {
+    if (opts) {
+      if (opts.onMin != null) ON_MIN = opts.onMin;
+      if (opts.onJit != null) ON_JIT = opts.onJit;
+      if (opts.offMin != null) OFF_MIN = opts.offMin;
+      if (opts.offJit != null) OFF_JIT = opts.offJit;
+      if (timer) arm(); // re-time the in-flight stretch with the new window
+    }
+    var strip = document.getElementById("loft-game-strip");
+    return {
+      running: !!timer, phase: phase, attended: attended(), party: breathing(),
+      uvClass: !!(strip && strip.classList.contains("uv-mode")), uvPartyIntent: uvPartyOn,
+      onMin: ON_MIN, onJit: ON_JIT, offMin: OFF_MIN, offJit: OFF_JIT
+    };
+  };
+})();
 // 'p' throws / dismisses the garden blacklight party — same as flipping the balcony switch
 // (which drives the UV, whisks to the garden, and runs the party). Plain keypress only.
 document.addEventListener("keydown", function (e) {
@@ -50919,6 +50993,7 @@ function spawnDustMote(container) {
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // start/stop the garden groovers (incl. the bartender's party groove)
     if (window.__refreshKitchenBar) window.__refreshKitchenBar(); // party on/off swaps the kitchen bar↔espresso caption + arrows
     if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // party toggling re-evaluates the eased blacklight (garden stays full)
+    if (window.__updateUvBreather) window.__updateUvBreather(); // party on → start the blacklight breather; party off → stop it + hand UV back to the switch
     if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // party on retracts the night-peek; party off at night re-arms it
     // Second act: THE hinge. Pinged from the tail — every ignition path (the balcony switch,
     // the garden light switch, the disco ball, the mask) funnels through here, and by now the

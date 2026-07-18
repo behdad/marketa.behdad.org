@@ -3263,6 +3263,8 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 #cuddly-irene.irene-octiplay #cuddly-irene-move{translate:511px 6px}  /* crossed the room to the trunk, standing just left of Octi; she leans right and her hand reaches onto him */
 #cuddly-irene.irene-swing  #cuddly-irene-move{translate:510px -50px}  /* hung below the pulley: her raised hands grip the rope (~576,100), feet dangle clear of the floor */
 #cuddly-irene.irene-roam   #cuddly-irene-move{translate:0 -2px}       /* behind the couch back (reparented) */
+#cuddly-irene.irene-totoro #cuddly-irene-move{translate:295px 30px}  /* sat on the floor under the projector, screen-left of Robin, watching the wallscreen (totoro cameo) */
+#cuddly-irene.irene-totoro #cuddly-irene-pose{transform:scaleY(.88); transform-origin:50% 100%} /* seated squash, like the cushion sit */
 /* a seated child reads shorter + tucked, not a standing figure lifted onto the cushion; upright (no lean) */
 #cuddly-irene.irene-sit    #cuddly-irene-pose{transform:scaleY(.9); transform-origin:50% 100%}
 /* the settle-in lean (all behaviors get this gentle entrance; reduced motion = at rest) */
@@ -3357,6 +3359,8 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 #cuddly-robin.robin-catjump #cuddly-robin-move{translate:40px 22px}  /* landed beside the cat */
 #cuddly-robin.robin-swing  #cuddly-robin-move{translate:510px -56px}  /* raised hands grip right at the pulley wheel (empirically tuned; the earlier -8 hung him too low, exposing the bar above his grip) */
 #cuddly-robin.robin-roam   #cuddly-robin-move{translate:0 -2px}      /* behind the couch back (reparented) */
+#cuddly-robin.robin-totoro #cuddly-robin-move{translate:355px 30px} /* sat on the floor right beside Irene, under the projector, watching the wallscreen (totoro cameo) */
+#cuddly-robin.robin-totoro #cuddly-robin-pose{transform:scaleY(.88); transform-origin:50% 100%} /* seated squash, like the cushion sit */
 #cuddly-robin.robin-sit    #cuddly-robin-pose{transform:scaleY(.9); transform-origin:50% 100%}
 #cuddly-robin-peek{transform-box:fill-box; transform-origin:bottom center; translate:-6px 9px; rotate:-3deg; transition:translate .6s cubic-bezier(.34,1.15,.6,1), rotate .6s cubic-bezier(.34,1.15,.6,1)}
 #cuddly-robin.showing #cuddly-robin-peek{translate:0 0; rotate:0deg}
@@ -20095,6 +20099,7 @@ document.addEventListener("click", function (e) {
     if (window.__updateStarsSound) window.__updateStarsSound(); // Gnossienne follows the night-sky channel
     if (window.__actPing) window.__actPing("stars"); // second act: the night-sky channel IS the piano wind-down beat (W1)
     if (window.__updateTotoroMelody) window.__updateTotoroMelody(); // woodland melody follows the totoro channel
+    if (window.__updateTotoroWatch) window.__updateTotoroWatch(); // Irene & Robin sit to watch when totoro comes on (and leave when it goes off)
     if (reduceMotion) renderStill(); else start();
   }
 
@@ -20310,7 +20315,7 @@ document.addEventListener("click", function (e) {
   function clearCatPlay() { if (catPlayTimer) { clearTimeout(catPlayTimer); catPlayTimer = null; } }
   function clearOctiReact() { if (octiReactTimer) { clearTimeout(octiReactTimer); octiReactTimer = null; } }
   function dropPose() { // literal removes (check.js wants a literal classList.remove per anim-driving class)
-    irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-hugb", "irene-catplay", "irene-catjump", "irene-octiplay", "irene-swing");
+    irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-hugb", "irene-catplay", "irene-catjump", "irene-octiplay", "irene-swing", "irene-totoro");
     restoreZ();
   }
   function leave() {
@@ -20364,7 +20369,7 @@ document.addEventListener("click", function (e) {
     lastBeh = beh;
     clearCatPlay();
     clearOctiReact();
-    irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-hugb", "irene-catplay", "irene-catjump", "irene-octiplay", "irene-swing");
+    irene.classList.remove("irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-hugb", "irene-catplay", "irene-catjump", "irene-octiplay", "irene-swing", "irene-totoro");
     placeFor(beh);
     irene.classList.add(beh, "showing");
     // As she leans in to hug Markéta, she coos "I love you" in a high, childlike pitch. One-shot,
@@ -20489,6 +20494,17 @@ document.addEventListener("click", function (e) {
     dropPose();
     applyPose(beh);
   };
+  // Totoro co-watch: she sits on the floor and STAYS (no linger/leave timer) for as long as the
+  // controller keeps it on — see the __updateTotoroWatch IIFE. on=true parks her in the seated
+  // watch pose; on=false fades her out and resumes the normal shared cadence. Mutual exclusion is
+  // deliberately NOT enforced here (Robin watches alongside her — the one time both show at once).
+  window.__ireneWatch = function (on) {
+    if (showTimer) { clearTimeout(showTimer); showTimer = null; }
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+    if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; }
+    if (on) { applyPose("irene-totoro"); }   // no runStep → no linger timer → she stays put
+    else { leave(); schedule(); }            // fade out, re-arm the auto-appearance scheduler
+  };
   document.addEventListener("visibilitychange", function () { if (document.hidden) leave(); });
   // Tap/click Irene (only while she's showing) → a playful wobble + a light giggle, plus a
   // boop to a fresh random pose that also resets her visit so she lingers longer. The wobble
@@ -20554,7 +20570,7 @@ document.addEventListener("click", function (e) {
     // no move) and restart a fresh full visit so each tickle pushes her exit out. Clear the
     // pending fade/leave first — runStep overwrites hideTimer without clearing the old one.
     // Cooldown-gated so a rapid tap-storm doesn't churn poses.
-    if (now - lastTickleHop > 320) {
+    if (now - lastTickleHop > 320 && !window.__totoroWatchActive) { // during a totoro co-watch a tap just giggles; she stays seated
       lastTickleHop = now;
       if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
       if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; }
@@ -20573,6 +20589,7 @@ document.addEventListener("click", function (e) {
   // re-arm uses the baseline cadence rather than the short first-visit delay, then re-arm the
   // single timer fresh from now — she won't auto-pop right back on top of the summon.
   window.__ireneSummon = function () {
+    if (window.__totoroWatchActive) return; // don't break up the totoro co-watch (both kids seated)
     if (window.__resetRobin) window.__resetRobin(); // mutual exclusion: a summon on top of a scheduler-spawned Robin
     if (showTimer) { clearTimeout(showTimer); showTimer = null; }
     firstDone = true;
@@ -20656,7 +20673,7 @@ document.addEventListener("click", function (e) {
   }
   function clearCatPlay() { if (catPlayTimer) { clearTimeout(catPlayTimer); catPlayTimer = null; } }
   function dropPose() { // literal removes (check.js wants a literal classList.remove per anim-driving class)
-    robin.classList.remove("robin-roam", "robin-bounce", "robin-sit", "robin-hugb", "robin-catplay", "robin-catjump", "robin-swing");
+    robin.classList.remove("robin-roam", "robin-bounce", "robin-sit", "robin-hugb", "robin-catplay", "robin-catjump", "robin-swing", "robin-totoro");
     restoreZ();
   }
   function pool() {
@@ -20702,7 +20719,7 @@ document.addEventListener("click", function (e) {
     if ((beh === "robin-catplay" || beh === "robin-catjump") && !catInNook()) beh = "robin-bounce"; // no cat → just bounce
     lastBeh = beh;
     clearCatPlay();
-    robin.classList.remove("robin-roam", "robin-bounce", "robin-sit", "robin-hugb", "robin-catplay", "robin-catjump", "robin-swing");
+    robin.classList.remove("robin-roam", "robin-bounce", "robin-sit", "robin-hugb", "robin-catplay", "robin-catjump", "robin-swing", "robin-totoro");
     placeFor(beh);
     robin.classList.add(beh, "showing");
     // hugging god-father Behdad: a synthesized "I love you" like Irene's (playILoveYouSound), pitched a
@@ -20730,9 +20747,18 @@ document.addEventListener("click", function (e) {
   }
   // called BY Irene's shared scheduler when it rolls Robin (she's already guaranteed not showing).
   window.__robinAppear = function (forced) {
+    if (window.__totoroWatchActive) return; // during a totoro co-watch he's already seated — don't let the scheduler re-pose him
     if (robin.classList.contains("showing")) return;
     if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; }
     runStep(forced || pick());
+  };
+  // Totoro co-watch: park Robin on the floor beside Irene and hold him there (no linger/leave)
+  // until the controller turns it off; then fade him out. See the __updateTotoroWatch IIFE.
+  window.__robinWatch = function (on) {
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+    if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; }
+    if (on) { applyPose("robin-totoro"); } // no runStep → no linger timer → he stays put
+    else { leave(); }
   };
   // test/verify hook: force ONE pose and hold it (no linger/leave) so it's screenshottable.
   window.__robinShow = function (beh) {
@@ -20767,6 +20793,36 @@ document.addEventListener("click", function (e) {
   }
   robin.addEventListener("animationend", function (e) { if (e.animationName === "irene-giggle") robin.classList.remove("robin-giggling"); });
   robin.addEventListener("pointerdown", function () { giggle(); });
+})();
+// Totoro co-watch controller: whenever the projector's on the totoro channel AND we're in the
+// cuddly nook, Irene & Robin come sit on the floor together to watch it — they LOVE cartoons.
+// They stay for as long as totoro's playing and leave when it stops / the room changes. This is
+// the ONE case both cameos show at once (their normal mutual exclusion is bypassed via the
+// __ireneWatch/__robinWatch hooks). SKIPPED on meal days: the low food table takes that stretch
+// of floor (owner's rule). Driven by setChannel (channel changes) + goToStage (room changes);
+// re-seats them on tab re-show, since each kid's own visibilitychange handler fades them while hidden.
+(function () {
+  window.__totoroWatchActive = false;
+  function want() {
+    var ws = document.getElementById("cuddly-wallscreen");
+    var strip = document.getElementById("loft-game-strip");
+    return !!(ws && ws.classList.contains("chan-totoro")) &&
+      window.currentStageName === "cuddly" &&
+      !(strip && strip.classList.contains("meal-on")); // not on days the food table is out
+  }
+  window.__updateTotoroWatch = function () {
+    var on = want();
+    if (on === window.__totoroWatchActive) return;
+    window.__totoroWatchActive = on;
+    if (window.__ireneWatch) window.__ireneWatch(on);
+    if (window.__robinWatch) window.__robinWatch(on);
+  };
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden && window.__totoroWatchActive) { // each kid faded out while hidden — re-seat them
+      if (window.__ireneWatch) window.__ireneWatch(true);
+      if (window.__robinWatch) window.__robinWatch(true);
+    }
+  });
 })();
 (function () {
   var bottom = document.getElementById("cuddly-behdad-bottom");
@@ -45656,6 +45712,7 @@ function spawnDustMote(container) {
     if (name === "cuddly" && window.resetFishu) window.resetFishu();
     if (name !== "cuddly" && window.__resetIrene) window.__resetIrene(); // Irene's cameo doesn't ride along out of the nook
     if (name !== "cuddly" && window.__resetRobin) window.__resetRobin(); // ...nor does Robin's
+    if (window.__updateTotoroWatch) window.__updateTotoroWatch(); // both kids come sit & watch when the totoro channel is up in the nook (and leave otherwise)
     if (name !== "balcony" && window.__resetBalconyIrene) window.__resetBalconyIrene(); // ...nor does her fire-festival self leave the balcony
     if (name !== "balcony" && window.__resetBalconyCouple) window.__resetBalconyCouple(); // ...nor do the two of them
     if (name === "office" && window.revealOfficeFishuIfFled) window.revealOfficeFishuIfFled();

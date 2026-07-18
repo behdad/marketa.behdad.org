@@ -2561,19 +2561,36 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .browser-frame{position:absolute; left:0; top:0; width:1265.3px; height:347px; transform:scale(0.098); transform-origin:0 0; border:0; display:block; background:transparent}
 #office-monitor.show-browser #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none}
 #office-monitor.photobooth #monitor-browser{opacity:0 !important; visibility:hidden; pointer-events:none !important}
-/* tehran call app: a video call to Behdad's family, on Behdad's own machine. show-tehran
-   on #office-monitor gates the app; .connected on #monitor-tehran fades the ring screen
-   into the family's living room. The ✕ pill (tehran-tile green) hangs up. The bezel
-   webcam LED glows call-green for the whole call — the photobooth's red rules sit later
-   in the sheet, so a booth session still owns the LED. */
+/* family-call app: a little dialer on Behdad's own machine that calls one of two
+   families — Tehran (Behdad's parents/grandparents) or California (his brother's wife
+   Patricia + her kids). show-tehran on #office-monitor gates the whole app (the class
+   name predates the second callee — read it as "the family-call app", not Tehran-only);
+   the app opens on a two-contact PICKER (.picking on #monitor-tehran), and choosing a
+   contact drops the picker and places that call. .connected fades the ring screen into
+   the chosen family's living room; a callee-* class (callee-tehran / callee-california)
+   picks which remote scene shows. The ✕ pill hangs up. The bezel webcam LED glows
+   call-green for the whole call — the photobooth's red rules sit later in the sheet, so a
+   booth session still owns the LED. */
 #monitor-tehran{opacity:0; pointer-events:none; transition:opacity .25s ease}
 #office-monitor.show-tehran #monitor-tehran{opacity:1; pointer-events:auto}
 #monitor-tehran-close{cursor:pointer}
 #monitor-tehran-close:hover .seg-hover{opacity:.55}
+/* the dialer picker: the app's first screen (two contact rows). Shown while .picking;
+   hidden the instant a contact is chosen. Each row highlights on hover. */
+#monitor-tehran-dial{opacity:0; pointer-events:none; transition:opacity .25s ease}
+#monitor-tehran.picking #monitor-tehran-dial{opacity:1; pointer-events:auto}
+#monitor-tehran.picking #monitor-tehran-ringing, #monitor-tehran.picking #monitor-tehran-video{opacity:0 !important; pointer-events:none !important}
+.mtd-row{cursor:pointer}
+.mtd-row .mtd-row-hi{opacity:0; transition:opacity .15s ease}
+.mtd-row:hover .mtd-row-hi{opacity:1}
 #monitor-tehran-ringing{transition:opacity .3s ease}
 #monitor-tehran.connected #monitor-tehran-ringing{opacity:0}
 #monitor-tehran-video{opacity:0; transition:opacity .5s ease}
 #monitor-tehran.connected #monitor-tehran-video{opacity:1}
+/* which family's living room shows once connected — one scene at a time (default Tehran) */
+#monitor-california-scene{display:none}
+#monitor-tehran.callee-california #monitor-tehran-scene{display:none}
+#monitor-tehran.callee-california #monitor-california-scene{display:block}
 #monitor-tehran-ring{transform-box:fill-box; transform-origin:center}
 #office-monitor.show-tehran #monitor-tehran:not(.connected) #monitor-tehran-ring{animation:call-ring-pulse 1.3s ease-out infinite}
 .tehran-wave-arm{transform-box:fill-box; transform-origin:bottom center}
@@ -2617,6 +2634,15 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 #tehran-smoke{transform-box:fill-box; transform-origin:bottom center}
 @keyframes tehran-smoke-puff{0%{opacity:0; transform:translateY(1px) scale(.6)} 25%{opacity:.5} 100%{opacity:0; transform:translateY(-6px) scale(1.7)}}
 #tehran-candle.out #tehran-smoke{animation:tehran-smoke-puff 1s ease-out forwards}
+/* CALIFORNIA scene liveliness (its figures reuse the .tehran-eyes / .tehran-mouth /
+   .tehran-wave-arm gesture classes above, so the blink/smile/wave rules already cover
+   them). Extras: the sunny window's warm glow breathes, and the hanging plant sways. */
+.cali-sun-glow{transform-box:fill-box; transform-origin:center}
+@keyframes cali-sun-breathe{0%,100%{opacity:.5} 50%{opacity:.85}}
+#monitor-tehran.connected.callee-california #cali-sun-glow{animation:cali-sun-breathe 4s ease-in-out infinite}
+.cali-plant{transform-box:fill-box; transform-origin:top center}
+@keyframes cali-plant-sway{0%,100%{transform:rotate(-2deg)} 50%{transform:rotate(2deg)}}
+#monitor-tehran.connected.callee-california #cali-plant{animation:cali-plant-sway 3.6s ease-in-out infinite}
 @media (prefers-reduced-motion: reduce){
   #office-monitor.show-tehran #monitor-tehran:not(.connected) #monitor-tehran-ring{animation:none; opacity:0}
   #monitor-tehran.connected .tehran-wave-arm{animation:none; transform:rotate(-14deg)}
@@ -2624,6 +2650,8 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
   #monitor-tehran.connected #tehran-string-lights .tehran-light{animation:none; opacity:.95}
   #monitor-tehran.connected #tehran-flame{animation:none}
   #tehran-candle.out #tehran-smoke{animation:none}
+  #monitor-tehran.connected.callee-california #cali-sun-glow{animation:none; opacity:.7}
+  #monitor-tehran.connected.callee-california #cali-plant{animation:none}
 }
 /* the now-playing screen carries a pause/play toggle: pause bars while the song plays,
    a play triangle when it's paused (JS adds .paused). Shown only over show-nowplaying. */
@@ -12571,11 +12599,42 @@ section{margin:1.9rem 0}
 <path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round"/>
 </g>
 </g>
-<!-- TEHRAN CALL app: a video call to Behdad's family from his own machine — ring screen
-     first, then the family's living room mid-birthday-party. The corner self-view is a
-     silhouette until the call-cam module swaps in the visitor's real camera; the warm-
-     green ✕ pill hangs up. -->
+<!-- FAMILY-CALL app: a little dialer on Behdad's own machine that calls one of two
+     families — Tehran (his parents/grandparents, mid-birthday-party) or California (his
+     brother's wife Patricia + her two kids, in a sunny living room). The app opens on the
+     two-contact PICKER (#monitor-tehran-dial); choosing one rings → connects → that
+     family's living room. The corner self-view (outside both scenes) is a silhouette
+     until the call-cam swaps in the visitor's real camera; the warm-green ✕ pill hangs up. -->
 <g id="monitor-tehran">
+<!-- the dialer picker: two contact rows, each a tappable tile with a place glyph + name +
+     the family sub-label. Shown only while .picking (see the CSS). -->
+<g id="monitor-tehran-dial">
+<rect x="254" y="154" width="124" height="42" rx="1.5" fill="#1c3527"/>
+<text id="monitor-tehran-dial-title" x="316" y="163.5" text-anchor="middle" font-size="4" fill="#a9d6b8" style="font-family:sans-serif"></text>
+<!-- row 1: Tehran (Behdad's parents/grandparents) — warm-green glyph, a minaret/house tick -->
+<g class="mtd-row" id="mtd-row-tehran" role="button" tabindex="0">
+<rect x="266" y="166.5" width="98" height="11.5" rx="2" fill="#26463a"/>
+<rect class="mtd-row-hi" x="266" y="166.5" width="98" height="11.5" rx="2" fill="#3a6b56"/>
+<circle cx="274" cy="172.3" r="4.2" fill="#2f948c"/>
+<g transform="translate(270.6,168.5) scale(0.29)" fill="#eaf6ee">
+<path d="M4 20.5C5 13 8 9 12 4c4 5 7 9 8 16.5h-4.7v-3.9c0-3.4-6.6-3.4-6.6 0v3.9H4z"/>
+<rect x="11.1" y="2.4" width="1.8" height="2.6" rx=".4"/>
+</g>
+<text id="mtd-name-tehran" x="282" y="171.4" font-size="4.4" fill="#eef8f1" style="font-family:sans-serif"></text>
+<text id="mtd-fam-tehran" x="282" y="176" font-size="3" fill="#9fcbb4" style="font-family:sans-serif"></text>
+</g>
+<!-- row 2: California (Patricia + the kids) — a sunny golden glyph, a little palm-tree tick -->
+<g class="mtd-row" id="mtd-row-california" role="button" tabindex="0">
+<rect x="266" y="180.5" width="98" height="11.5" rx="2" fill="#26463a"/>
+<rect class="mtd-row-hi" x="266" y="180.5" width="98" height="11.5" rx="2" fill="#3a6b56"/>
+<circle cx="274" cy="186.3" r="4.2" fill="#e8a13c"/>
+<!-- a little palm tree: brown trunk + a green frond crown -->
+<path d="M274 189 L274 185.2" stroke="#6b4a24" stroke-width="0.8" fill="none"/>
+<path d="M274 185.2 Q271.6 184 270.3 185.1 Q272 184.2 274 185.2 Q276.4 184 277.7 185.1 Q276 184.2 274 185.2 Q272.9 183.1 273.4 182 Q274 183.2 274 185.2 Q275.1 183.1 274.6 182 Q274 183.2 274 185.2 Z" fill="#3fa85a"/>
+<text id="mtd-name-california" x="282" y="185.4" font-size="4.4" fill="#eef8f1" style="font-family:sans-serif"></text>
+<text id="mtd-fam-california" x="282" y="190" font-size="3" fill="#9fcbb4" style="font-family:sans-serif"></text>
+</g>
+</g>
 <g id="monitor-tehran-ringing">
 <rect x="254" y="154" width="124" height="42" rx="1.5" fill="#1c3527"/>
 <circle id="monitor-tehran-ring" cx="316" cy="171" r="11" fill="none" stroke="#8fd0a8" stroke-width="0.9"/>
@@ -12779,6 +12838,141 @@ section{margin:1.9rem 0}
 <circle cx="302" cy="181.9" r="0.55" fill="#fbf6e8"/>
 <path d="M330 181.2 L327.8 186.8 L332.2 186.8 Z" fill="#5da257"/>
 <circle cx="330" cy="181.2" r="0.6" fill="#eef4e2"/>
+</g>
+</g>
+<!-- CALIFORNIA CALL scene: Patricia and her two children in a sunny daytime living room. Same self-contained coord box as the Tehran scene (254,154,124,42);
+     shown when #monitor-tehran carries .callee-california (see CSS). The figures reuse the
+     .tehran-eyes / .tehran-mouth / .tehran-wave-arm gesture classes so the monitor's
+     gesture driver (__tehranLife FIGS) brings them alive on connect, exactly like Tehran. -->
+<g id="monitor-california-scene">
+<defs>
+<radialGradient id="cali-sun-grad" cx="82%" cy="18%" r="70%">
+<stop offset="0%" stop-color="#fff4c8"/>
+<stop offset="100%" stop-color="#fff4c8" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<!-- the room: warm bright wall, sunlit floor -->
+<rect x="254" y="154" width="124" height="42" rx="1.5" fill="#fdf3df"/>
+<rect x="254" y="188" width="124" height="8" fill="#e9cfa2"/>
+<!-- a big sunny window on the right, blue sky + palm silhouette; the warm glow breathes -->
+<g id="cali-window">
+<rect x="342.5" y="156.4" width="32" height="20.5" rx="0.8" fill="#e3d3ad"/>
+<rect x="343.9" y="157.8" width="29.2" height="17.7" fill="#bfe4f4"/>
+<rect x="343.9" y="169" width="29.2" height="6.5" fill="#a9d8ee"/>
+<circle cx="366" cy="162" r="2.6" fill="#ffd94a"/>
+<path d="M343.9 157.8 Q351 166 348 175.5 L343.9 175.5 Z" fill="#d7effa" opacity="0.6"/>
+<!-- a distant palm past the glass -->
+<path d="M356 175.5 L356 168.5" stroke="#7a5a34" stroke-width="0.7" fill="none"/>
+<path d="M356 168.5 Q353 167.2 351.6 168.4 Q353.6 167.6 356 168.5 Q359 167.2 360.4 168.4 Q358.4 167.6 356 168.5 Q355 165.8 355.6 164.4 Q356 166 356 168.5 Q357 165.8 356.4 164.4 Q356 166 356 168.5 Z" fill="#5aa46a"/>
+<path d="M358.4 175.5 L358.4 170" stroke="#7a5a34" stroke-width="0.6" fill="none"/>
+<path d="M358.4 170 Q356.2 169 355.1 169.9 Q356.7 169.3 358.4 170 Q360.6 169 361.7 169.9 Q360.1 169.3 358.4 170 Z" fill="#4f9760"/>
+<rect id="cali-sun-glow" class="cali-sun-glow" x="343.9" y="157.8" width="29.2" height="17.7" fill="url(#cali-sun-grad)" opacity="0.6"/>
+<path d="M342.5 156.4 h32 v20.5 h-32 Z M358.5 156.4 v20.5 M342.5 166.6 h32" stroke="#e3d3ad" stroke-width="0.7" fill="none"/>
+</g>
+<!-- a hanging potted plant on the left, gently swaying -->
+<g id="cali-plant" class="cali-plant">
+<path d="M266 156 L266 162" stroke="#b79a6e" stroke-width="0.4" fill="none"/>
+<path d="M263.4 165.6 L268.6 165.6 L267.8 169.4 L264.2 169.4 Z" fill="#c77b52"/>
+<path d="M266 165.6 Q262.6 163.2 262.2 159.6 Q264.6 161.6 266 165.6 Q265.4 161 267.2 158.6 Q267.2 162.4 266 165.6 Q269.4 163.2 269.8 159.6 Q267.4 161.6 266 165.6 Z" fill="#5aa46a"/>
+<path d="M266 165.6 Q263 165 261.6 163 Q263.8 164 266 165.6 Q268.2 164 270.4 163 Q269 165 266 165.6 Z" fill="#6cb87a"/>
+</g>
+<!-- a low couch behind the group -->
+<rect x="278" y="180" width="82" height="10" rx="2.5" fill="#e6b98f"/>
+<rect x="278" y="178.5" width="82" height="5" rx="2.5" fill="#efc79f"/>
+<!-- PATRICIA (center): brother's wife, Mexican — warm olive skin, big voluminous curly
+     BLACK hair, dark eyes, a warm big smile, a teal/turquoise top with a bold Frida Kahlo
+     print (a little portrait motif). -->
+<g id="cali-fig-patricia">
+<rect x="315.6" y="184" width="1.5" height="4" fill="#c98a5e"/>
+<rect x="317.6" y="184" width="1.5" height="4" fill="#c98a5e"/>
+<!-- teal Frida-print top -->
+<rect x="311.6" y="176" width="11.8" height="12" rx="3.2" fill="#1fa5a0"/>
+<!-- a tiny Frida motif on the top: a face with a dark unibrow + a red flower -->
+<circle cx="317.5" cy="181.4" r="1.9" fill="#e7c39b"/>
+<path d="M315.9 180.5 Q317.5 179.9 319.1 180.5" stroke="#3a2a1e" stroke-width="0.45" fill="none"/>
+<circle cx="316.7" cy="181.3" r="0.22" fill="#3a2a1e"/>
+<circle cx="318.3" cy="181.3" r="0.22" fill="#3a2a1e"/>
+<path class="tehran-mouth" d="M316.7 182.3 Q317.5 182.8 318.3 182.3" stroke="#7a3b3b" stroke-width="0.3" fill="none" stroke-linecap="round"/>
+<circle cx="315.5" cy="179.9" r="0.7" fill="#e05a6a"/>
+<circle cx="315.9" cy="179.4" r="0.35" fill="#f2c14e"/>
+<!-- arms -->
+<rect x="310" y="177.4" width="2" height="7.6" rx="1" fill="#1fa5a0"/>
+<circle cx="311" cy="185.4" r="0.95" fill="#c98a5e"/>
+<rect x="323" y="177.4" width="2" height="7.6" rx="1" fill="#1fa5a0"/>
+<circle cx="324" cy="185.4" r="0.95" fill="#c98a5e"/>
+<!-- head: warm olive skin -->
+<circle cx="317.5" cy="171.5" r="3.3" fill="#d69a6a"/>
+<!-- big voluminous curly black hair framing the face -->
+<path d="M313.4 172.6 Q311.6 172 311.8 170 Q310.6 169.4 311.2 167.6 Q310.6 165.8 312 164.8 Q311.8 162.6 313.8 162 Q314.6 160 317.5 160.1 Q320.4 160 321.2 162 Q323.2 162.6 323 164.8 Q324.4 165.8 323.8 167.6 Q324.4 169.4 323.2 170 Q323.4 172 321.6 172.6 Q322.4 169.6 321.2 167.8 Q321.8 165.4 320.4 164 Q321 166 319.8 166.6 Q320 164.4 318.4 163.4 Q319 165.2 317.5 165.2 Q316 165.2 316.6 163.4 Q315 164.4 315.2 166.6 Q314 166 314.6 164 Q313.2 165.4 313.8 167.8 Q312.6 169.6 313.4 172.6 Z" fill="#231b18"/>
+<!-- a couple of springy side curls -->
+<circle cx="312.4" cy="171.4" r="1.15" fill="#231b18"/>
+<circle cx="322.6" cy="171.4" r="1.15" fill="#231b18"/>
+<circle cx="313.1" cy="173.4" r="0.9" fill="#231b18"/>
+<circle cx="321.9" cy="173.4" r="0.9" fill="#231b18"/>
+<g class="tehran-eyes"><circle cx="316.2" cy="171.4" r="0.3" fill="#2a1d14"/><circle cx="318.8" cy="171.4" r="0.3" fill="#2a1d14"/></g>
+<path d="M315.4 170.6 Q316.2 170.1 317 170.6 M318 170.6 Q318.8 170.1 319.6 170.6" stroke="#2a1d14" stroke-width="0.3" fill="none"/>
+<!-- the warm big smile -->
+<path class="tehran-mouth" d="M315.6 173 Q317.5 174.9 319.4 173" stroke="#8a3a3a" stroke-width="0.5" fill="none" stroke-linecap="round"/>
+<!-- little gold hoop earrings -->
+<circle cx="314" cy="172.4" r="0.7" fill="none" stroke="#e0b23c" stroke-width="0.4"/>
+<circle cx="321" cy="172.4" r="0.7" fill="none" stroke="#e0b23c" stroke-width="0.4"/>
+</g>
+<!-- PATRICIA_SON (left): child boy — warm skin, springy dark curls like his mom, big warm
+     eyes, a sweet toothy smile; a striped tee, one arm waving to his tío. -->
+<g id="cali-fig-patricia-son">
+<rect x="291.3" y="184.5" width="1.3" height="3.5" fill="#c98a5e"/>
+<rect x="293" y="184.5" width="1.3" height="3.5" fill="#c98a5e"/>
+<rect x="289.4" y="177" width="6.8" height="8" rx="2.4" fill="#e4703f"/>
+<path d="M289.4 179 h6.8 M289.4 181.2 h6.8" stroke="#f2f0e8" stroke-width="0.5" fill="none"/>
+<!-- waving arm (reuses the shared wave gesture) -->
+<rect class="tehran-wave-arm" x="295.6" y="172.4" width="1.7" height="6.4" rx="0.8" fill="#e4703f"/>
+<circle cx="296.5" cy="171.6" r="0.9" fill="#c98a5e"/>
+<rect x="288.2" y="178.2" width="1.7" height="5.6" rx="0.8" fill="#e4703f"/>
+<circle cx="289" cy="184.2" r="0.85" fill="#c98a5e"/>
+<!-- springy curly dark hair: a crown of overlapping puffs sitting ON TOP of the head
+     (drawn before the face so the skin + features stay clear) -->
+<circle cx="290" cy="170.4" r="1.35" fill="#2a1d16"/>
+<circle cx="291.6" cy="169.3" r="1.5" fill="#2a1d16"/>
+<circle cx="293.4" cy="169.1" r="1.55" fill="#2a1d16"/>
+<circle cx="295.1" cy="169.6" r="1.45" fill="#2a1d16"/>
+<circle cx="296.2" cy="170.9" r="1.3" fill="#2a1d16"/>
+<circle cx="289.7" cy="172" r="1" fill="#2a1d16"/>
+<circle cx="296.4" cy="172.2" r="1" fill="#2a1d16"/>
+<circle cx="292.9" cy="172.5" r="2.75" fill="#d69a6a"/>
+<g class="tehran-eyes"><circle cx="291.8" cy="172.4" r="0.32" fill="#2a1d14"/><circle cx="293.9" cy="172.4" r="0.32" fill="#2a1d14"/></g>
+<circle cx="290.9" cy="173.5" r="0.55" fill="#e6a97f" opacity="0.6"/>
+<circle cx="294.9" cy="173.5" r="0.55" fill="#e6a97f" opacity="0.6"/>
+<!-- a sweet toothy smile: a smile curve with a little white tooth band -->
+<path class="tehran-mouth" d="M291.4 174.1 Q292.9 175.6 294.4 174.1 Z" fill="#fbf7ef" stroke="#8a3a3a" stroke-width="0.4" stroke-linejoin="round"/>
+</g>
+<!-- PATRICIA_DAUGHTER (right): child young child girl — warm skin, straight dark hair with a blunt
+     fringe, big wide expressive eyes, round chubby cheeks; in a high chair, the little
+     "food critic" with a bib + a food splotch. One tiny hand waving. -->
+<g id="cali-fig-patricia-daughter">
+<!-- high chair: legs, tray, seat back -->
+<path d="M344 188 L342.5 195 M352 188 L353.5 195" stroke="#c79a6a" stroke-width="0.8" fill="none"/>
+<rect x="342.8" y="187.4" width="10.4" height="1.6" rx="0.6" fill="#d9ad78"/>
+<rect x="343.4" y="180" width="9.2" height="8" rx="1.6" fill="#e7c08a"/>
+<circle cx="348" cy="174.6" r="2.7" fill="#d69a6a"/>
+<!-- chubby cheeks -->
+<circle cx="345.8" cy="175.4" r="0.7" fill="#e8ac86" opacity="0.6"/>
+<circle cx="350.2" cy="175.4" r="0.7" fill="#e8ac86" opacity="0.6"/>
+<!-- straight dark hair with a blunt fringe -->
+<path d="M345.3 174.4 Q345.1 171.4 348 171.3 Q350.9 171.4 350.7 174.4 L350.7 173 Q350.5 172.2 348 172.2 Q345.5 172.2 345.3 173 Z" fill="#2a1d16"/>
+<path d="M345.4 172.9 L350.6 172.9" stroke="#231712" stroke-width="0.5" fill="none"/>
+<!-- big wide expressive eyes -->
+<g class="tehran-eyes"><circle cx="346.8" cy="174.6" r="0.42" fill="#2a1d14"/><circle cx="349.2" cy="174.6" r="0.42" fill="#2a1d14"/></g>
+<circle cx="346.65" cy="174.45" r="0.14" fill="#fff"/>
+<circle cx="349.05" cy="174.45" r="0.14" fill="#fff"/>
+<path class="tehran-mouth" d="M347 176 Q348 176.8 349 176" stroke="#8a3a3a" stroke-width="0.4" fill="none" stroke-linecap="round"/>
+<!-- little onesie + bib (food critic) -->
+<rect x="345.4" y="177" width="5.2" height="4" rx="1.6" fill="#f2c14e"/>
+<path d="M346.6 177 Q348 178.6 349.4 177 L349.4 179.4 Q348 180.2 346.6 179.4 Z" fill="#f7f2e6"/>
+<circle cx="347.4" cy="178.6" r="0.35" fill="#b5652f"/>
+<circle cx="348.6" cy="178.8" r="0.28" fill="#7fa64a"/>
+<!-- one tiny waving hand -->
+<rect class="tehran-wave-arm" x="344.4" y="176.4" width="1.4" height="4.2" rx="0.7" fill="#f2c14e"/>
+<circle cx="345.1" cy="175.8" r="0.8" fill="#d69a6a"/>
 </g>
 </g>
 </g>
@@ -17025,6 +17219,7 @@ var T = {
     life_gen: "gen",
     app_tehran: "tehran",
     tehran_place: "Tehran",
+    california_place: "California",
     mail_inbox_title: "inbox",
     mail_back: "‹ Inbox",
     mail_from_lore: "markéta ∞ behdad",
@@ -17200,6 +17395,8 @@ var T = {
     phone_dialer_title: "contacts",
     dial_call: "Call",
     dial_fam_tehran: "behdad’s family",
+    dial_fam_california: "patricia & the kids",
+    dial_pick_title: "who are we calling?",
     dial_fam_prague: "markéta’s parents",
     dial_fam_lueb: "markéta’s sister",
     phone_nav_back: "Back",
@@ -17540,6 +17737,7 @@ var T = {
     life_gen: "gen",
     app_tehran: "teherán",
     tehran_place: "Teherán",
+    california_place: "Kalifornie",
     mail_inbox_title: "doručená",
     mail_back: "‹ Doručená",
     mail_from_lore: "markéta ∞ behdad",
@@ -17714,6 +17912,8 @@ var T = {
     phone_dialer_title: "kontakty",
     dial_call: "Volat",
     dial_fam_tehran: "behdadova rodina",
+    dial_fam_california: "patricia a děti",
+    dial_pick_title: "komu voláme?",
     dial_fam_prague: "markétini rodiče",
     dial_fam_lueb: "markétina sestra",
     phone_nav_back: "Zpět",
@@ -27284,6 +27484,9 @@ var ABANDONED_CALL_MS = 30000;
   // A console device-command — computer("doom")/monitor("weather") — asks a fresh boot to
   // finish by opening a named dock app on the caps desktop (see __openMonitorApp below).
   var pendingBootApp = null;
+  // the family-call app opens on its picker by default; a deep-link ("california" / "tehran")
+  // stashes the callee here so the tehran-app open() dials straight through (cleared on read).
+  var pendingMonitorCallee = null;
   // After the caps site idles a while, a live Julia-set fractal screensaver takes
   // over ("electric sheep" nod). Any click on the monitor wakes it.
   var saverTimer = null, saverRaf = null;
@@ -28502,7 +28705,7 @@ var ABANDONED_CALL_MS = 30000;
       if (wc) wc.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     } },
     { id: "video", icon: "video", labelKey: "app_video", glyph: "▶", tile: "#57a05a", glyphSize: "4.8", open: function () { openVideoApp(); } },
-    { id: "tehran", icon: "phone", labelKey: "app_tehran", glyph: "📞", tile: "#2f948c", glyphSize: "5.2", open: function () { openTehranCall(); } },
+    { id: "tehran", icon: "phone", labelKey: "app_tehran", glyph: "📞", tile: "#2f948c", glyphSize: "5.2", open: function () { openTehranCall(pendingMonitorCallee); pendingMonitorCallee = null; } },
     { id: "weather", icon: "weather", labelKey: "app_weather", glyph: "⛅", tile: "#4a72b8", glyphSize: "5.2", open: function () { openWeather(); } },
     { id: "mail", icon: "mail", labelKey: "app_mail", glyph: "✉️", tile: "#7b5aa6", glyphSize: "5.2", open: function () { openMailApp(); } },
     { id: "calendar", labelKey: "app_calendar", glyph: "📅", tile: "#c68e95", glyphSize: "5.2", open: function () { openCalendar(); } },
@@ -31045,18 +31248,30 @@ var ABANDONED_CALL_MS = 30000;
     lifeCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeLifeApp(); playLaptopClickSound("office-monitor"); });
     lifeCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
-  // ── TEHRAN CALL APP ──────────────────────────────────────────────────────────────
-  // A video call to Behdad's family from his own machine: ring screen → their living
-  // room (see #monitor-tehran). Same class-gated screen pattern as the other apps; the
-  // ✕ pill hangs up — with the goodbye when connected, like the laptop's Prague call.
-  // All three calls are mutually exclusive (window.__pragueCallLive /
-  // window.__luebeckCallLive / window.__tehranCallLive), and every screen-teardown owner (clearBoot,
-  // navigateMonitor, the photobooth, room-leave) calls closeTehranCall(true): an
-  // instant silent drop — no goodbye, no hangup tone.
+  // ── FAMILY-CALL APP (the monitor dialer) ───────────────────────────────────────────
+  // A little two-contact dialer on Behdad's own machine: open it and it shows a PICKER
+  // (Tehran / California); choose one and it rings → connects → that family's living room
+  // (see #monitor-tehran, #monitor-tehran-scene = Tehran, #monitor-california-scene =
+  // California). Same class-gated screen pattern as the other apps (show-tehran is the
+  // app gate — the class name predates the second callee); the ✕ pill hangs up, with the
+  // goodbye when connected, like the laptop's Prague call. All calls stay mutually
+  // exclusive (window.__pragueCallLive / __luebeckCallLive / __tehranCallLive), and every
+  // screen-teardown owner (clearBoot, navigateMonitor, the photobooth, room-leave) calls
+  // closeTehranCall(true): an instant silent drop — no goodbye, no hangup tone.
+  //
+  // A "callee" (tehran | california) picks the scene, the connect flavor + voice pitch,
+  // and the on-connect extra (Tehran's birthday melody). Tehran behaves exactly as before.
   var tehranG = document.getElementById("monitor-tehran");
   var tehranCloseBtn = document.getElementById("monitor-tehran-close");
   var tehranTimers = [];
   var tehranStatusKey = ""; // last-shown ring status, so a language toggle can repaint it
+  var currentCallee = "tehran"; // which family is being/was dialed this session
+  // per-callee call config: the ring "place" label, the connect ambient bed flavor, the
+  // pickup-voice pitch, and an optional on-connect extra (Tehran's birthday song).
+  var CALLEES = {
+    tehran:     { placeKey: "tehran_place",     flavor: "tehran", pitch: 0.8, melody: true },
+    california: { placeKey: "california_place", flavor: "tehran", pitch: 1.15, melody: false }
+  };
   function clearTehranTimers() { tehranTimers.forEach(clearTimeout); tehranTimers = []; }
   function tehranLive() { return monitor.classList.contains("show-tehran"); }
   window.__tehranCallLive = tehranLive; // the laptop's calls check this before starting
@@ -31066,28 +31281,39 @@ var ABANDONED_CALL_MS = 30000;
     var el = document.getElementById("monitor-tehran-status");
     if (el) el.textContent = key ? tehranT(key) : "";
   }
+  function setTxt(id, key) { var el = document.getElementById(id); if (el) el.textContent = tehranT(key); }
   window.refreshTehranText = function () {
+    // the ring/connected "place" caption reflects whichever family is being dialed
     var place = document.getElementById("monitor-tehran-place");
-    if (place) place.textContent = tehranT("tehran_place");
+    if (place) place.textContent = tehranT((CALLEES[currentCallee] || CALLEES.tehran).placeKey);
+    // the dialer picker labels
+    setTxt("monitor-tehran-dial-title", "dial_pick_title");
+    setTxt("mtd-name-tehran", "tehran_place");
+    setTxt("mtd-fam-tehran", "dial_fam_tehran");
+    setTxt("mtd-name-california", "california_place");
+    setTxt("mtd-fam-california", "dial_fam_california");
     if (tehranStatusKey) setTehranStatus(tehranStatusKey);
   };
   window.refreshTehranText();
   function connectTehranCall() {
     if (tehranG) tehranG.classList.add("connected");
+    var cfg = CALLEES[currentCallee] || CALLEES.tehran;
     var candle = document.getElementById("tehran-candle");
-    if (candle) candle.classList.remove("out"); // a fresh call = a new, freshly-lit birthday candle
-    playPhoneVoiceSound("office-monitor"); // the family picks up: "alo?"
-    startCallAmbient("tehran"); // the warm indoor murmur while the call lasts
-    if (window.__startTehranMelody) window.__startTehranMelody(); // the birthday song on their end
+    if (candle) candle.classList.remove("out"); // a fresh Tehran call = a new, freshly-lit birthday candle
+    playPhoneVoiceSound("office-monitor", cfg.pitch); // the family picks up ("alo?" / "¡bueno!")
+    startCallAmbient(cfg.flavor); // the warm indoor murmur while the call lasts
+    if (cfg.melody && window.__startTehranMelody) window.__startTehranMelody(); // the birthday song on their end (Tehran only)
   }
-  function openTehranCall() {
-    if (monitor.classList.contains("show-saver")) { stopSaver(); monitor.classList.add("show-caps"); } // a click that raced the screensaver still lands
-    if (!monitor.classList.contains("show-caps") || tehranLive()) return;
-    if ((window.__pragueCallLive && window.__pragueCallLive()) ||
-        (window.__luebeckCallLive && window.__luebeckCallLive())) return; // one call at a time — hang up the laptop first
-    stopSaver();
-    clearTimeout(saverTimer); saverTimer = null; // no screensaver over a live call
-    monitor.classList.add("show-tehran");
+  // place a call to a chosen callee: drop the picker, ring, then connect. Shared by the
+  // picker rows and the __openMonitorApp("tehran"/"california") deep-links.
+  function placeCall(callee) {
+    if (!CALLEES[callee]) callee = "tehran";
+    currentCallee = callee;
+    clearTehranTimers();
+    if (tehranG) {
+      tehranG.classList.remove("picking", "connected", "callee-tehran", "callee-california");
+      tehranG.classList.add("callee-" + callee);
+    }
     window.refreshTehranText();
     setTehranStatus("laptop_calling");
     // the family gives up if nobody hangs up first (cleared with every other call timer)
@@ -31096,6 +31322,23 @@ var ABANDONED_CALL_MS = 30000;
     playPhoneRingSound("office-monitor");
     tehranTimers.push(setTimeout(function () { setTehranStatus("laptop_connecting"); }, 2400));
     tehranTimers.push(setTimeout(connectTehranCall, 3400));
+  }
+  // open the app: show the dialer picker (no call placed yet). openMonitorApp can pass a
+  // callee to skip straight to a call (the dock/console "tehran"/"california" deep-links).
+  function openTehranCall(callee) {
+    if (monitor.classList.contains("show-saver")) { stopSaver(); monitor.classList.add("show-caps"); } // a click that raced the screensaver still lands
+    if (!monitor.classList.contains("show-caps") || tehranLive()) return;
+    if ((window.__pragueCallLive && window.__pragueCallLive()) ||
+        (window.__luebeckCallLive && window.__luebeckCallLive())) return; // one call at a time — hang up the laptop first
+    stopSaver();
+    clearTimeout(saverTimer); saverTimer = null; // no screensaver over the dialer / a live call
+    clearTehranTimers();
+    monitor.classList.add("show-tehran");
+    if (tehranG) tehranG.classList.remove("connected", "callee-tehran", "callee-california");
+    setTehranStatus("");
+    window.refreshTehranText();
+    if (callee && CALLEES[callee]) { placeCall(callee); return; } // deep-link straight to a call
+    if (tehranG) tehranG.classList.add("picking"); // otherwise show the two-contact picker
   }
   var tehranHangingUp = false;
   // silent = the screen itself is going away (no tone, no screensaver); quiet = an ordinary
@@ -31106,7 +31349,7 @@ var ABANDONED_CALL_MS = 30000;
     if (window.__stopTehranMelody) window.__stopTehranMelody(); // silence the birthday song the instant we hang up
     var wasLive = tehranLive();
     monitor.classList.remove("show-tehran");
-    if (tehranG) tehranG.classList.remove("connected");
+    if (tehranG) tehranG.classList.remove("connected", "picking", "callee-tehran", "callee-california");
     var candle = document.getElementById("tehran-candle");
     if (candle) candle.classList.remove("out"); // clear the blow-out state so the next call starts lit
     setTehranStatus("");
@@ -31117,6 +31360,8 @@ var ABANDONED_CALL_MS = 30000;
     if (tehranHangingUp) return; // the goodbye is already playing — ignore repeat taps
     if (!tehranLive()) return;
     var quiet = !!auto && (document.hidden || !document.hasFocus());
+    // still on the picker (no call placed): a ✕/Esc just closes the app, no goodbye/tone
+    if (tehranG && tehranG.classList.contains("picking")) { dropTehranCall(false, true); return; }
     if (tehranG && tehranG.classList.contains("connected") && !quiet) {
       // let the goodbye play in full, THEN drop the line — Behdad's register
       tehranHangingUp = true;
@@ -31129,10 +31374,20 @@ var ABANDONED_CALL_MS = 30000;
     }
   }
   window.__closeMonitorTehran = closeTehranCall; // Esc's app layer + every screen-teardown owner
+  window.__placeMonitorCall = placeCall; // __openMonitorApp("california") deep-links reach the callee here
   if (tehranCloseBtn) {
     tehranCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeTehranCall(); });
     tehranCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
+  // the two picker rows place the corresponding call (click + Enter/Space for a11y)
+  (function () {
+    [["mtd-row-tehran", "tehran"], ["mtd-row-california", "california"]].forEach(function (pair) {
+      var row = document.getElementById(pair[0]); if (!row) return;
+      row.addEventListener("click", function (e) { e.stopPropagation(); placeCall(pair[1]); });
+      row.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+      row.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); placeCall(pair[1]); } });
+    });
+  })();
   // ── video control strip (begin) ───────────────────────────────────────────────────
   // Progress/seek bar, current time, mute glyph, and volume slider along the bottom of
   // the film, auto-hiding (.ctrl-idle) after 2.5s idle while playing and always visible
@@ -33491,7 +33746,12 @@ async def localfont(name):
   }
   window.__openMonitorApp = function (name) {
     if (!pcTower) return "no computer here.";
-    var app = monitorAppByName(name);
+    // "california" deep-links straight to that call via the family-call app; "tehran"
+    // (the dock app's id) opens the app on its two-contact PICKER, same as tapping the dock.
+    var q = String(name == null ? "" : name).toLowerCase().trim();
+    var app;
+    if (q === "california") { pendingMonitorCallee = "california"; app = monitorAppByName("tehran"); }
+    else app = monitorAppByName(name);
     if (!app) return DESKTOP_APPS.map(function (a) { return a.id; }); // a bad name → the list of app ids to pick from
     if (window.goToStage) window.goToStage("office"); // the monitor lives in the office — bring it on screen
     // PC off → power on (spark + fan + boot Fedora → caps); the boot-complete hook opens the queued app.
@@ -44598,12 +44858,13 @@ function playPhoneRingSound(panId) {
 // answer a phone). Deliberately robotic/toy-phone: intelligible speech from bare
 // oscillators isn't a realistic target, so the pitch contour carries the meaning.
 // One-shot, self-closing ctx, no timer/loop left running (no accumulation risk).
-function playPhoneVoiceSound(panId) {
+function playPhoneVoiceSound(panId, pitch) {
   try {
     var ctx = getSfxCtx();
     if (!ctx) return;
     var t0 = ctx.currentTime;
     var out = pannedOut(ctx, panId || "balcony-phone");
+    var p = pitch || 1; // >1 lifts the pickup voice (a lighter register, e.g. California's Patricia)
 
     // ── glottal source: two detuned sawtooths, then a spectral-tilt lowpass so it reads as
     //    a soft voice rather than a buzzer (real vocal folds roll off ~-12dB/oct, a bare
@@ -44616,11 +44877,11 @@ function playPhoneVoiceSound(panId) {
       osc.detune.value = dt;
       // question contour: mid on "a", dip through the /l/, then rise into "lo?"; a couple
       // of tiny jitter points keep it from sounding dead-flat
-      osc.frequency.setValueAtTime(200, t0);
-      osc.frequency.linearRampToValueAtTime(188, t0 + 0.18);
-      osc.frequency.linearRampToValueAtTime(197, t0 + 0.30);
-      osc.frequency.linearRampToValueAtTime(258, t0 + 0.44);
-      osc.frequency.linearRampToValueAtTime(292, t0 + 0.54);
+      osc.frequency.setValueAtTime(200 * p, t0);
+      osc.frequency.linearRampToValueAtTime(188 * p, t0 + 0.18);
+      osc.frequency.linearRampToValueAtTime(197 * p, t0 + 0.30);
+      osc.frequency.linearRampToValueAtTime(258 * p, t0 + 0.44);
+      osc.frequency.linearRampToValueAtTime(292 * p, t0 + 0.54);
       osc.connect(source);
       osc.start(t0);
       osc.stop(t0 + 0.62);
@@ -45741,19 +46002,24 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
     });
   });
 })();
-// ── TEHRAN CALL: small on-camera gestures (blink / smile) + tap an actor ─────────────
-// The Tehran birthday family comes alive on the live call: each character blinks (and now
-// and then flashes a wider smile) at RANDOM intervals, and a tap on any of them pokes a
-// blink + big smile on demand. (The dad's wave is separate, pure CSS.) Gated on the live
-// Tehran call + focus + visibility + motion-allowed; a MutationObserver on the monitor's
-// classes re-checks the gate on connect/hangup, so this adds NO wiring inside the monitor's
-// call code. One-shot .blinking/.smiling on child nodes (eye-pair wrapper / mouth path),
+// ── FAMILY CALL: small on-camera gestures (blink / smile) + tap an actor ──────────────
+// Whichever family is on the live call comes alive: each character blinks (and now and
+// then flashes a wider smile) at RANDOM intervals, and a tap on any of them pokes a blink
+// + big smile on demand. (The dad's/kids' waves are separate, pure CSS.) The Tehran and
+// California scenes share the .tehran-eyes / .tehran-mouth gesture hooks, so one driver
+// covers both — the active FIGS list is chosen by the callee-* class. Gated on the live
+// call + focus + visibility + motion-allowed; a MutationObserver on the monitor's classes
+// re-checks the gate on connect/hangup, so this adds NO wiring inside the monitor's call
+// code. One-shot .blinking/.smiling on child nodes (eye-pair wrapper / mouth path),
 // cleared by timers; stop() drops any stuck class so every teardown lands clean.
 (function () {
   var monitor = document.getElementById("office-monitor");
   var tehranG = document.getElementById("monitor-tehran");
   if (!monitor || !tehranG) return;
-  var FIGS = ["tehran-fig-dad", "tehran-fig-mom", "tehran-fig-grandma", "tehran-fig-grandpa", "tehran-fig-girl"];
+  var TEHRAN_FIGS = ["tehran-fig-dad", "tehran-fig-mom", "tehran-fig-grandma", "tehran-fig-grandpa", "tehran-fig-girl"];
+  var CALI_FIGS = ["cali-fig-patricia", "cali-fig-patricia-son", "cali-fig-patricia-daughter"];
+  var ALL_FIGS = TEHRAN_FIGS.concat(CALI_FIGS);
+  function figs() { return tehranG.classList.contains("callee-california") ? CALI_FIGS : TEHRAN_FIGS; }
   var active = false, timers = [];
   function reduce() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
   function want() {
@@ -45768,13 +46034,13 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
   }
   function tick() {
     if (!active) return;
-    if (want()) poke(FIGS[(Math.random() * FIGS.length) | 0], true, Math.random() < 0.4); // mostly a blink, sometimes a blink+smile
+    if (want()) { var F = figs(); poke(F[(Math.random() * F.length) | 0], true, Math.random() < 0.4); } // mostly a blink, sometimes a blink+smile
     addTimer(tick, (2.2 + Math.random() * 3.6) * 1000);
   }
   function start() { if (active) return; active = true; addTimer(tick, (1 + Math.random() * 2.5) * 1000); }
   function stop() {
     active = false; timers.forEach(clearTimeout); timers = [];
-    FIGS.forEach(function (id) { var fig = document.getElementById(id); if (!fig) return; var e = fig.querySelector(".tehran-eyes"); if (e) e.classList.remove("blinking"); var m = fig.querySelector(".tehran-mouth"); if (m) m.classList.remove("smiling"); });
+    ALL_FIGS.forEach(function (id) { var fig = document.getElementById(id); if (!fig) return; var e = fig.querySelector(".tehran-eyes"); if (e) e.classList.remove("blinking"); var m = fig.querySelector(".tehran-mouth"); if (m) m.classList.remove("smiling"); });
   }
   function update() { if (want() && !active) start(); else if (!want() && active) stop(); }
   window.__updateTehranLife = update;
@@ -45784,8 +46050,9 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
   // re-check the gate whenever the monitor's/​call's classes change (connect adds .connected,
   // hangup/app-switch removes show-tehran) — no edits needed inside the monitor's call code
   try { var mo = new MutationObserver(update); mo.observe(monitor, { attributes: true, attributeFilter: ["class"] }); mo.observe(tehranG, { attributes: true, attributeFilter: ["class"] }); } catch (e) {}
-  // tap a character → blink + a big smile (fires even if the ambient scheduler is idle)
-  FIGS.forEach(function (id) {
+  // tap a character → blink + a big smile (fires even if the ambient scheduler is idle).
+  // Wired on BOTH families' figures; only the on-screen scene is clickable at a time.
+  ALL_FIGS.forEach(function (id) {
     var fig = document.getElementById(id); if (!fig) return;
     fig.style.cursor = "pointer";
     fig.addEventListener("click", function (e) { e.stopPropagation(); poke(id, true, true); });

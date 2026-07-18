@@ -5221,6 +5221,10 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
    whole-strip blacklight tint has nothing to light — drop it while zoomed so the screen
    reads in true colour. Scoped to .device-zoomed → the room's UV look is untouched. */
 .hunt-viewport.device-zoomed #loft-game-strip.uv-mode{filter:none}
+/* the office invaders game (#stage-office.arcade) UNDOES the blacklight while it runs — the
+   arcade needs true colours + clear contrast to play, so drop the whole-strip UV wash (the
+   uv-linger stands down for the arcade too, so no inline eased filter fights this). */
+#loft-game-strip.uv-mode:has(#stage-office.arcade){filter:none}
 /* Spotlight the cocktail he's mixing: the party keeps its blacklight ambiance, but the
    make-glass shows the drink's REAL colours (its per-ingredient pours are set dynamically, so
    they can't use the static .uv-mode fill overrides below). This counter-filter is the affine
@@ -19573,8 +19577,10 @@ window.__setUvParty = function (on) { uvPartyOn = !!on; applyUvMode(); }; // the
     return window.currentStageName !== "garden"
       && strip.classList.contains("uv-mode")
       && !window.__tripActive
-      && !(viewport && viewport.classList.contains("device-zoomed"));
+      && !(viewport && viewport.classList.contains("device-zoomed"))
+      && !arcadeLit(); // the office invaders game undoes the UV (drops it entirely) — don't ease, hand off to the CSS filter:none
   }
+  function arcadeLit() { var o = document.getElementById("stage-office"); return !!(o && o.classList.contains("arcade")); }
   function applyEase(t) {
     var s = t * t * (3 - 2 * t); // smoothstep — calmer than linear
     var b = B0 + (B1 - B0) * s, sa = S0 + (S1 - S0) * s, h = H0 + (H1 - H0) * s, c = C0 + (C1 - C0) * s;
@@ -24788,6 +24794,7 @@ function gameTapsNear(a, b) {
       arcadeLastSpawn = ALIEN_SPAWN_MS; // spawn promptly on the first tick
       arcadeLastShot = SHOT_MS;         // fire promptly on the first tick
       if (stageOffice) stageOffice.classList.add("arcade");
+      if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // arcade undoes the UV — drop any eased inline filter now
       arcadeSavedCaption = window.__captionKey ? window.__captionKey() : null; // remember the room hint to restore on game over
       if (window.setCaption) window.setCaption("arcade_hint", true); // instruction line above the scene
       spawnAlien(180, -18); spawnAlien(430, -52); // a couple already on the way in
@@ -24835,6 +24842,7 @@ function gameTapsNear(a, b) {
       arcadeHud = arcadeHudScore = arcadeHudHigh = null;
       arcadeAliens.length = 0; arcadeShots.length = 0;
       if (stageOffice) stageOffice.classList.remove("arcade");
+      if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // arcade over — restore the UV per the switch's intent
       arcadeScore = 0;
       chair.style.transition = ""; // restore the smooth glide once the game (and cursor-follow) ends
       // put the caption back to whatever was showing before the game (restoreStageHint alone is only a
@@ -24863,6 +24871,7 @@ function gameTapsNear(a, b) {
       arcadeBuildHud();
       arcadeAliens.length = 0; arcadeShots.length = 0;
       if (stageOffice) stageOffice.classList.add("arcade");
+      if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // arcade undoes the UV — drop any eased inline filter now
       // one saucer is parked in the chair's fire column so the auto-fired shot connects
       // (lets a headless probe watch the score/HUD tick up); the others just fill the scene.
       spawnAlien(200, 118); spawnAlien(arcadeChairX(), 88); spawnAlien(470, 150);

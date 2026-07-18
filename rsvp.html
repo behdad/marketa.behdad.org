@@ -27468,8 +27468,9 @@ var ABANDONED_CALL_MS = 30000;
     fullscreen: "fullscreen(true) — fill the screen with the loft; fullscreen(false) leaves; fullscreen() reports whether it's on",
     rainbow: "rainbow() — arc a rainbow over the balcony",
     smoker: "smoker(true) — fire up the balcony smoker, low and slow; smoker(false) shuts it down; smoker() reports whether it's on (bbq is an alias)",
-    bbq: "bbq — alias for smoker; try `help smoker`",
+    bbq: "bbq(true) — start the whole BBQ (lid up + coals lit); bbq(false) shuts it down; bbq() reports whether it's smoking. For just the firebox or just the lid, see smoker / smokerlid",
     smokerlid: "smokerlid(true) — raise the smoker lid; smokerlid(false) lowers it; smokerlid() reports whether it's open",
+    smores: "smores(true) — light the balcony bonfire with two kids (Irene + a random boy) roasting marshmallows; smores(false) puts it out; smores() reports whether it's lit (auto-wraps up after ~30s)",
     cooked: "cooked(1|2|3) — is that burger done yet (bool)? cooked() — all three, as [bool, bool, bool]",
     beans: "beans() — coffee beans left in the grinder hopper (0..22); beans(n) sets the level (fresh heap to match) and returns the previous count",
     servefood: "servefood() — serve a cooked burger (opens the lid if needed); servefood(random()) picks a random ready one. returns true if one was served",
@@ -27803,7 +27804,7 @@ var ABANDONED_CALL_MS = 30000;
     "help", "clear", "laser", "party", "reset", "quit", "blacklight", "uv", "trip", "room",
     "goto", "rooms", "daylight", "night", "day", "season", "play", "pause", "temp", "weather",
     "clock", "time", "projector", "storm", "dance", "dj", "cocktail", "lang", "caption", "candle",
-    "butterfly", "water", "countdown", "fullscreen", "rainbow", "smoker", "bbq", "smokerlid", "cooked", "servefood",
+    "butterfly", "water", "countdown", "fullscreen", "rainbow", "smoker", "bbq", "smokerlid", "smores", "cooked", "servefood",
     "phone", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "edit",
     "confetti", "fireworks", "cat", "irene", "piano", "classic", "kitten", "ukelele", "audio", "music",
@@ -51748,7 +51749,29 @@ function spawnDustMote(container) {
     narrate(on, "🔥 smoker's on — low and slow.", "smoker's off.");
     return prev;
   };
-  window.bbq = window.smoker; // alias — the smoker's old name
+  window.bbq = function (arg) { // the whole cook: lid up + coals lit (matches behdad's "let's start the BBQ" text). bbq(false) douses + closes. bbq() → is it smoking?
+    var s = document.getElementById("balcony-smoker");
+    var prev = !!(s && s.classList.contains("smoking"));
+    if (arguments.length === 0 || !s) return prev;
+    if (window.goToStage) window.goToStage("balcony");
+    if (arg) { if (window.__startBBQ) window.__startBBQ(); }
+    else {
+      var fb = document.getElementById("balcony-smoker-firebox"), lid = document.getElementById("balcony-smoker-lid");
+      if (s.classList.contains("smoking") && fb) fb.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      if (s.classList.contains("open") && lid) lid.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    }
+    narrate(!!arg, "🍔 BBQ's on — lid up, coals lit.", "🍔 BBQ's out.");
+    return prev;
+  };
+  window.smores = function (arg) { // light the balcony bonfire with two kids roasting marshmallows (Irene + a random boy); smores(false) puts it out; smores() → is it lit? (auto-wraps up after ~30s)
+    var prev = !!window.__smoresOn;
+    if (arguments.length === 0) return prev;
+    var on = !!arg;
+    if (on && window.goToStage) window.goToStage("balcony");
+    if (window.__setSmores) window.__setSmores(on);
+    narrate(on, "🔥🍫 s'mores by the fire — grab a stick.", "🔥 s'mores fire's out.");
+    return prev;
+  };
   window.smokerlid = function (arg) { // the lid: smokerlid() → open? · smokerlid(true/false) → raise/lower
     var s = document.getElementById("balcony-smoker"), lid = document.getElementById("balcony-smoker-lid");
     var prev = !!(s && s.classList.contains("open"));

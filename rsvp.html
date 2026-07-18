@@ -32220,6 +32220,8 @@ async def localfont(name):
   window.__monitorZoomOut = zoomOut;
   window.__toggleMonitorZoom = function () { if (zoomEl === monitor) zoomOut(); else zoomIn(monitor); }; // 'Enter' in the office toggles the monitor zoom
   window.__monitorZoomed = function () { return zoomEl === monitor; }; // is the monitor currently zoomed in? (the office Enter-walk's open/dismiss beats read this)
+  window.__laptopZoomIn = function () { if (laptop) zoomIn(laptop); }; // the office Enter-walk's call beat pulls the view up to the laptop (the lid may have auto-opened un-zoomed)
+  window.__laptopZoomed = function () { return zoomEl === laptop; };
   // each device's bezel ✕ dismisses its own zoom. pointerdown + stopPropagation so it
   // doesn't bubble to the device group's zoom-in handler; the viewport's capture-phase
   // pointerdown already bails when the target sits inside the zoomed device.
@@ -48246,16 +48248,17 @@ function spawnDustMote(container) {
     var glass = document.getElementById("office-stainedglass");
     if (glass && glass.classList.contains("done")) return null; // solved → Enter toggles the monitor zoom instead
     var callLive = !!(window.__laptopCallLive && window.__laptopCallLive());
-    // 1. Call Prague (from the laptop): open the lid, then dial the Prague tile.
+    // 1. Call Prague (from the laptop): open the lid, zoom into it, then dial the Prague tile.
     if (!window.__pragueCalled) {
       if (callLive) return "office-call"; // dialing/connecting — wait it out, don't re-dial
-      if (window.laptop && !window.laptop()) { window.laptop(true); return "office-laptop"; } // open the lid first
+      if (window.laptop && !window.laptop()) { window.laptop(true); return "office-laptop"; } // open the lid (its own path zooms in after the .5s hinge)
+      if (window.__laptopZoomIn && !(window.__laptopZoomed && window.__laptopZoomed())) window.__laptopZoomIn(); // the lid may have auto-opened on office entry WITHOUT zooming — pull the view up so the call is visible
       var tile = document.getElementById("laptop-calltile");
       if (tile) { tile.dispatchEvent(new MouseEvent("click", { bubbles: true })); return "laptop-calltile"; }
       return "office-laptop";
     }
-    // 2. Hang up the now-connected call.
-    if (callLive) { if (window.__endLaptopCall) window.__endLaptopCall(); return "office-hangup"; }
+    // 2. Hang up the now-connected call and step back out of the laptop (symmetric with the monitor's dismiss).
+    if (callLive) { if (window.__endLaptopCall) window.__endLaptopCall(); if (window.__laptopLidZoom) window.__laptopLidZoom(false); return "office-hangup"; }
     // 3. Open the monitor: boot the PC (which sets __pcPlayed) if it's off, and zoom in.
     if (!window.__pcPlayed) {
       if (window.computer && !window.computer()) window.computer(true); // boots → sets __pcPlayed

@@ -2950,6 +2950,8 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .pm-msg-from{font-size:10px; font-weight:600; color:var(--muted)}
 .pm-msg-time{font-size:9.5px; color:var(--muted); opacity:.7}
 .pm-msg-bubble{background:var(--paper); border:1px solid var(--rule); border-radius:13px 13px 13px 3px; padding:7px 11px; font-size:13px; line-height:1.4; color:var(--ink); max-width:86%; overflow-wrap:anywhere}
+.pm-msg-text{display:block}
+.pm-msg-img{display:block; margin-top:7px; width:150px; max-width:100%; height:auto; border-radius:9px; border:1px solid var(--rule)}
 /* the new-message thumbnail: a small pulsating phone card, top-centre, ~7s, tap to open messages */
 .msg-thumb{position:absolute; top:14px; left:50%; z-index:60; transform:translateX(-50%) translateY(-30px); display:flex; align-items:center; gap:13px; max-width:min(440px,94vw); padding:13px 20px 13px 14px; border:none; cursor:pointer; text-align:left; font:inherit; color:var(--ink); background:var(--paper); border-radius:20px; box-shadow:0 6px 22px rgba(0,0,0,.28), inset 0 0 0 1px var(--rule); opacity:0; pointer-events:none; transition:opacity .3s ease, transform .3s cubic-bezier(.34,1.4,.6,1)}
 .msg-thumb.show{opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; animation:msg-thumb-pulse 1.15s ease-in-out infinite}
@@ -33705,7 +33707,14 @@ async def localfont(name):
           var from = document.createElement("span"); from.className = "pm-msg-from"; from.textContent = tr(m.fromKey);
           head.appendChild(from);
           if (m.time) { var tm = document.createElement("span"); tm.className = "pm-msg-time"; tm.textContent = m.time; head.appendChild(tm); }
-          var bub = document.createElement("div"); bub.className = "pm-msg-bubble"; bub.textContent = tr(m.bodyKey);
+          var bub = document.createElement("div"); bub.className = "pm-msg-bubble";
+          var txt = document.createElement("span"); txt.className = "pm-msg-text"; txt.textContent = tr(m.bodyKey); bub.appendChild(txt);
+          if (m.img) { // a "developing polaroid" fade-in (it's a photobooth shot); static, no tap-to-enlarge
+            var im = document.createElement("img"); im.className = "pm-msg-img"; im.src = m.img; im.alt = tr(m.bodyKey); im.loading = "lazy"; bub.appendChild(im);
+            if (!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
+              try { im.animate([{ opacity: 0, filter: "contrast(.7) brightness(1.4) saturate(.5)" }, { offset: .45, opacity: 1 }, { opacity: 1, filter: "none" }], { duration: 1100, easing: "ease-out" }); } catch (e) {} // opacity+filter only (no transform) — clear of the particle-transform guard
+            }
+          }
           row.appendChild(head); row.appendChild(bub); wrap.appendChild(row);
         });
       }
@@ -34120,7 +34129,7 @@ async def localfont(name):
       pouria: { fromKey: "msg_pouria_from",  bodyKey: "msg_pouria_body", time: "21:20" }, // act_p1 (bar)
       group:  { fromKey: "msg_admin_from",   bodyKey: "msg_group_body",  time: "22:30" }, // act_p2 (floor)
       danesh: { fromKey: "msg_danesh_from",  bodyKey: "msg_danesh_body", time: "23:15" }, // DJ Danesh, once he's OFF the decks (Sina spinning)
-      album:  { fromKey: "msg_irene_from",   bodyKey: "msg_album_body",  time: "00:25" }, // act_p3 (photobooth selfie)
+      album:  { fromKey: "msg_irene_from",   bodyKey: "msg_album_body",  time: "00:25", img: "art/msg-selfie.jpg" }, // act_p3 (photobooth selfie — Irene shares the loft-booth polaroid)
       piano:  { fromKey: "msg_mb_from",      bodyKey: "msg_piano_body",  time: "02:10" }, // act_w1 (piano)
       dawn:   { fromKey: "msg_bahareh_from", bodyKey: "msg_dawn_body",   time: "04:55" }, // act_w2 (dawn)
       mb:     { fromKey: "msg_mb_from",      bodyKey: "msg_mb_body",     time: "09:30" }  // rsvp_exit (next morning)

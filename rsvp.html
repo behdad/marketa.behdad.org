@@ -14637,6 +14637,7 @@ section{margin:1.9rem 0}
 <!-- LUNAR eclipse (night): Earth's umbra sweeps across the moon (clipped to the disc), reddening it to a dim coppery blood moon at totality -->
 <g id="balcony-lunar" clip-path="url(#balcony-moon-clip)" pointer-events="none"><circle id="balcony-lunar-umbra" cx="510" cy="50" r="15" fill="#210d09"/></g>
 <g id="balcony-heartfx" pointer-events="none" aria-hidden="true"></g>
+<g id="balcony-leaffx" pointer-events="none" aria-hidden="true"></g><!-- autumn leaves drift across the deck (spawnBalconyLeaf, self-replenishing → no hidden-tab pile-up) -->
 <!-- pocket-phone flashlight beam: a warm radial glow spilled onto the deck while the
      phone's flashlight app is ON (toggled from setFlashlight()); decorative only, so it
      never captures hit-testing — pointer-events off, like every other balcony overlay -->
@@ -48473,11 +48474,22 @@ function spawnDustMote(container) {
   // A single drifting leaf: a small leaf-shaped path built at the origin, positioned via a
   // wrapper <g transform="translate">, so the WAAPI transform animation on the inner path
   // (drift + rotate) never clobbers a positioning transform (the wrapper carries that).
-  function spawnGardenLeaf() {
-    var container = document.getElementById("garden-leaffx");
+  function spawnGardenLeaf() { spawnDriftLeaf("garden-leaffx", autumnLeavesActive, 108, 416); }
+  // Autumn leaves also blow across the open-air balcony deck (owner's call). Same self-replenishing
+  // drift as the garden, just a different room + container + x-range.
+  function balconyLeavesActive() {
+    var strip = document.getElementById("loft-game-strip");
+    return !!strip && strip.classList.contains("season-autumn") &&
+      stageIndex === STAGES.indexOf("balcony") &&
+      document.visibilityState !== "hidden" &&
+      !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+  function spawnBalconyLeaf() { spawnDriftLeaf("balcony-leaffx", balconyLeavesActive, 40, 580); }
+  function spawnDriftLeaf(containerId, activeFn, xMin, xSpan) {
+    var container = document.getElementById(containerId);
     if (!container) return;
     var SVGNS = "http://www.w3.org/2000/svg";
-    var cx = 108 + Math.random() * 416, cy = 20 + Math.random() * 40;
+    var cx = xMin + Math.random() * xSpan, cy = 20 + Math.random() * 40;
     var col = AUTUMN_LEAF_COLORS[(Math.random() * AUTUMN_LEAF_COLORS.length) | 0];
     var sc = 0.7 + Math.random() * 0.9; // varied sizes -> a sense of depth
     var wrap = document.createElementNS(SVGNS, "g");
@@ -48507,19 +48519,21 @@ function spawnDustMote(container) {
       ], { duration: dur, easing: "linear", delay: Math.random() * 700 });
       anim.onfinish = function () {
         if (wrap.parentNode) wrap.remove();
-        if (autumnLeavesActive()) spawnGardenLeaf(); // replenish 1:1
+        if (activeFn()) spawnDriftLeaf(containerId, activeFn, xMin, xSpan); // replenish 1:1
       };
     } else {
       setTimeout(function () { if (wrap.parentNode) wrap.remove(); }, 3000);
     }
   }
-  (function seedGardenLeaves() {
+  (function seedLeaves() {
+    function topUp(id, activeFn, spawnFn) {
+      if (!activeFn()) return;
+      var c = document.getElementById(id), have = c ? c.childElementCount : 0;
+      for (var i = have; i < GARDEN_LEAVES; i++) spawnFn(); // top up from the live count
+    }
     function tick() {
-      if (autumnLeavesActive()) {
-        var container = document.getElementById("garden-leaffx");
-        var have = container ? container.childElementCount : 0;
-        for (var i = have; i < GARDEN_LEAVES; i++) spawnGardenLeaf(); // top up from the live count
-      }
+      topUp("garden-leaffx", autumnLeavesActive, spawnGardenLeaf);
+      topUp("balcony-leaffx", balconyLeavesActive, spawnBalconyLeaf);
       setTimeout(tick, 1400);
     }
     setTimeout(tick, 1400);

@@ -869,8 +869,8 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    stature scale lives on yet another inner wrapper (#garden-kid-*-body), so neither
    the cross nor the flip ever clobbers it. Legs/arms pump on their own looping
    nodes. Reduced-motion: the whole gag is motion, so it's gated off (no run). */
-#garden-kid-irene, #garden-kid-robin, #garden-kid-navid{visibility:hidden; pointer-events:none}
-#garden-kid-irene.chasing, #garden-kid-robin.chasing, #garden-kid-navid.chasing{visibility:visible}
+#garden-kid-irene, #garden-kid-robin, #garden-kid-navid, #garden-kid-cat{visibility:hidden; pointer-events:none}
+#garden-kid-irene.chasing, #garden-kid-robin.chasing, #garden-kid-navid.chasing, #garden-kid-cat.chasing{visibility:visible}
 .gk-run{transform-box:fill-box; transform-origin:center}
 .gk-run.gk-run-l{animation:gk-cross-l var(--gk-dur,4.6s) linear both}
 .gk-run.gk-run-r{animation:gk-cross-r var(--gk-dur,4.6s) linear both}
@@ -891,7 +891,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 @keyframes gk-arm-b{0%,100%{transform:rotate(30deg)} 50%{transform:rotate(-34deg)}}
 @keyframes gk-bob{0%,100%{transform:translateY(0)} 50%{transform:translateY(-2px)}}
 @media (prefers-reduced-motion: reduce){
-  #garden-kid-irene, #garden-kid-robin, #garden-kid-navid{visibility:hidden !important}
+  #garden-kid-irene, #garden-kid-robin, #garden-kid-navid, #garden-kid-cat{visibility:hidden !important}
   .gk-run.gk-run-l, .gk-run.gk-run-r, .chasing .gk-leg-a, .chasing .gk-leg-b, .chasing .gk-arm-a, .chasing .gk-arm-b, .chasing .gk-body-bob{animation:none}
 }
 /* ── PARTY BAR ──────────────────────────────────────────────────────────────
@@ -9439,6 +9439,36 @@ section{margin:1.9rem 0}
 <ellipse cx="4" cy="13" rx="7" ry="1.6" fill="#146b67"/>
 <circle cx="4" cy="-7" r="2.3" fill="#f2c14e"/>
 </g>
+</g></g></g></g></g>
+<!-- The loose cat, an EXTRA runner at the back of the pack when she's out (catLoose()).
+     Side-on scampering black cat matching the chest cat's palette (#161311 body, #efe9dc
+     chest tuft, #c68e95 inner ear, #c9e85c eye). Same node stack as the kids so it reuses
+     the gk-cross + .chasing gate + reduced-motion off: #garden-kid-cat (visibility, NO
+     transform attr) → .gk-run (cross translate) → .gk-flip (direction mirror) → -body
+     (static lawn placement + stature scale) → .gk-body-bob (run bounce) → far/near legs
+     that pump on gk-leg-a/b. Feet land on the lawn (~y330), just behind the kids. -->
+<g id="garden-kid-cat" aria-hidden="true" pointer-events="none">
+<g class="gk-run"><g class="gk-flip"><g id="garden-kid-cat-body" transform="translate(0,296) scale(0.9)"><g class="gk-body-bob">
+<!-- far legs (behind body), thin dark strides -->
+<g class="gk-leg-b"><rect x="-6" y="26" width="4" height="16" rx="2" fill="#231e1a"/></g>
+<g class="gk-leg-b"><rect x="22" y="26" width="4" height="16" rx="2" fill="#231e1a"/></g>
+<!-- tail streaming behind (she faces right, so it trails left) -->
+<path class="gk-arm-b" d="M-8 20 Q-22 16 -24 4 Q-24 -2 -20 -3" fill="none" stroke="#161311" stroke-width="3.4" stroke-linecap="round"/>
+<!-- body: low crouched lean silhouette, moonlit rim + faint cream chest tuft -->
+<path d="M-9 20 Q-8 8 6 8 L20 8 Q30 9 30 18 Q30 26 22 27 L-2 27 Q-10 27 -9 20 Z" fill="#161311"/>
+<path d="M-9 20 Q-8 8 6 8 Q0 12 -1 20 Q-1 25 3 27 L-2 27 Q-10 27 -9 20 Z" fill="#3a332c" opacity="0.55"/>
+<path d="M24 24 Q28 22 30 24 Q28 27 24 27 Z" fill="#efe9dc" opacity="0.3"/>
+<!-- head + pointed ears (facing right) -->
+<circle cx="32" cy="14" r="9" fill="#161311"/>
+<path d="M26 7 Q25 0 30 2 Q31 5 32 8 Z" fill="#161311"/>
+<path d="M38 7 Q39 0 34 2 Q33 5 32 8 Z" fill="#161311"/>
+<path d="M27.5 6 Q27 2.5 29.4 3.4 Q30 5 30.6 7 Z" fill="#c68e95" opacity="0.5"/>
+<path d="M36.5 6 Q37 2.5 34.6 3.4 Q34 5 33.4 7 Z" fill="#c68e95" opacity="0.5"/>
+<ellipse cx="35.4" cy="13" rx="1.5" ry="1.7" fill="#c9e85c"/>
+<path d="M38 15 Q40 16 41 18" fill="none" stroke="#3a332c" stroke-width="0.8" opacity="0.6"/>
+<!-- near legs (front), lighter cast so they read in front -->
+<g class="gk-leg-a"><rect x="-4" y="26" width="4.4" height="16" rx="2" fill="#2c2622"/></g>
+<g class="gk-leg-a"><rect x="24" y="26" width="4.4" height="16" rx="2" fill="#2c2622"/></g>
 </g></g></g></g></g>
 </g>
 <g id="stage-cuddly" transform="translate(1360,0)">
@@ -48850,22 +48880,24 @@ function spawnDustMote(container) {
   // animationend (so it can replay); the outer .chasing shows it + drives the leg/arm pump.
   // Nothing is spawned (the three figures are persistent nodes), so nothing can pile up.
   var GARDEN_KIDS = ["irene", "robin", "navid"];
+  var GARDEN_RUNNERS = GARDEN_KIDS.concat(["cat"]); // the cat joins as an extra runner (when she's out) — same node stack, teardown + animationend discipline as the kids
   var gardenChaseTimer = null;
   var gardenChaseRunning = false; // a chase is mid-run — don't stack a second onto it
   function gardenKidEl(name) { return document.getElementById("garden-kid-" + name); }
+  function chaseCatLoose() { var w = document.getElementById("witchy-chest-cat-walk"); return !!(w && w.classList.contains("out")); } // same "out" check as catLoose() elsewhere
   function clearGardenKid(el) {
     if (!el) return;
     el.classList.remove("chasing");
     var run = el.querySelector(".gk-run"); if (run) run.classList.remove("gk-run-l", "gk-run-r");
     var flip = el.querySelector(".gk-flip"); if (flip) flip.classList.remove("flipped");
   }
-  function clearGardenChase() { // teardown: stop the timer + reset every runner
+  function clearGardenChase() { // teardown: stop the timer + reset every runner (kids AND the cat)
     if (gardenChaseTimer) { clearTimeout(gardenChaseTimer); gardenChaseTimer = null; }
     gardenChaseRunning = false;
-    GARDEN_KIDS.forEach(function (n) { clearGardenKid(gardenKidEl(n)); });
+    GARDEN_RUNNERS.forEach(function (n) { clearGardenKid(gardenKidEl(n)); });
   }
   (function () { // clear each runner's one-shot cross on animationend so it can replay + tidy up when the last leaves
-    GARDEN_KIDS.forEach(function (name) {
+    GARDEN_RUNNERS.forEach(function (name) {
       var el = gardenKidEl(name);
       if (!el) return;
       var run = el.querySelector(".gk-run");
@@ -48874,7 +48906,7 @@ function spawnDustMote(container) {
         if (e.animationName !== "gk-cross-l" && e.animationName !== "gk-cross-r") return; // ignore the leg/arm pump loops
         clearGardenKid(el);
         // the whole chase is done once no runner is still crossing
-        var anyLeft = GARDEN_KIDS.some(function (n) { var k = gardenKidEl(n); return k && k.classList.contains("chasing"); });
+        var anyLeft = GARDEN_RUNNERS.some(function (n) { var k = gardenKidEl(n); return k && k.classList.contains("chasing"); });
         if (!anyLeft) gardenChaseRunning = false;
       });
     });
@@ -48895,6 +48927,9 @@ function spawnDustMote(container) {
     for (var i = pool.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
     var count = 1 + Math.floor(Math.random() * 3); // 1, 2, or 3 of them
     var runners = pool.slice(0, count);
+    // when the loose cat is out, she scampers after them — an EXTRA runner at the BACK of the
+    // pack (largest delay, same direction) so she reads as chasing the kids. Kids-only otherwise.
+    if (chaseCatLoose()) runners.push("cat");
     var rightward = Math.random() < 0.5;          // whole pack runs one way, a chase not a scatter
     var dur = 4.2 + Math.random() * 1.4;          // ~4.2–5.6s crossing
     runners.forEach(function (name, k) {
@@ -48908,6 +48943,16 @@ function spawnDustMote(container) {
       if (run) { run.classList.remove("gk-run-l", "gk-run-r"); void run.getBBox; run.classList.add(rightward ? "gk-run-l" : "gk-run-r"); }
       if (flip) flip.classList.toggle("flipped", !rightward); // figures face right; flip for a right→left dash
       el.classList.add("chasing");
+      if (name === "cat") {
+        // a soft meow as she passes — crickets-rule gated (getSfxCtx blocks hidden; guard focus too),
+        // panned to the cat runner's own on-screen element. Subtle, one per chase.
+        if (!document.hidden && document.hasFocus()) {
+          setTimeout(function () {
+            if (!document.hidden && document.hasFocus() && el.classList.contains("chasing")) playCatMeowSound("garden-kid-cat");
+          }, 300 + k * 420 + Math.random() * 500);
+        }
+        return;
+      }
       // giggle as they pass — crickets-rule gated (getSfxCtx blocks hidden; guard focus too),
       // panned to that runner's own on-screen element. Staggered with the start delay.
       if (!document.hidden && document.hasFocus()) {

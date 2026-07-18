@@ -35318,6 +35318,7 @@ async def localfont(name):
         shell.classList.add("booting");
         if (shell) shell.focus();
       }
+      updateMsgBadge(); // phone open → drop the unread badge (it must not float over the phone)
     }
     function close(silent) {
       if (!modal) return;
@@ -35334,7 +35335,7 @@ async def localfont(name):
       if (modal.parentNode) {
         modal.classList.remove("show");
         var m = modal;
-        setTimeout(function () { if (m.parentNode && !modal.classList.contains("show")) m.parentNode.removeChild(m); }, 220);
+        setTimeout(function () { if (m.parentNode && !modal.classList.contains("show")) m.parentNode.removeChild(m); updateMsgBadge(); }, 220); // phone gone → restore the unread badge
       }
     }
     window.__openPhoneModal = open;
@@ -35441,7 +35442,7 @@ async def localfont(name):
         msgBadgeEl.addEventListener("click", function () { open(true); openApp("messages", "app_messages", renderMessages); });
       }
       if (msgBadgeEl.parentNode !== host) host.appendChild(msgBadgeEl);
-      if (n > 0) { msgBadgeEl.textContent = String(n); msgBadgeEl.setAttribute("aria-label", n + " unread — " + tr("app_messages")); msgBadgeEl.classList.add("show"); }
+      if (n > 0 && !isOpen()) { msgBadgeEl.textContent = String(n); msgBadgeEl.setAttribute("aria-label", n + " unread — " + tr("app_messages")); msgBadgeEl.classList.add("show"); } // hidden while the phone's open (the thread shows unread itself)
       else msgBadgeEl.classList.remove("show");
     }
     window.__updateMsgBadge = updateMsgBadge;

@@ -4801,7 +4801,7 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 .hunt-viewport.device-zoomed #loft-game-strip.uv-mode #cuddly-wallscreen #cuddly-totoro{filter:none}
 /* The balcony bonfire is a real fire — un-wash it under the party blacklight (brightness at 1
    so it doesn't over-blow; same affine-inverse hue/sat as the projector fire). */
-#loft-game-strip.uv-mode .sn-bonfire{filter:contrast(.769) hue-rotate(-220deg) saturate(.385) brightness(1)}
+#loft-game-strip.uv-mode .sn-bonfire{filter:contrast(.769) hue-rotate(-220deg) saturate(.385) brightness(2)}
 /* Fluorescence under the blacklight. Source colours are picked so the ROOT filter above
    (esp. hue-rotate 220°) lands them on the intended on-screen glow; drop-shadow colours
    are likewise pre-filter source values. All scoped to .uv-mode → inert when it's off. */
@@ -21438,11 +21438,13 @@ document.addEventListener("click", function (e) {
 // s'mores bonfire: light the season-agnostic balcony bonfire on demand (Bahareh's "who wants
 // s'mores?" party text), independent of the Chaharshanbe/Čarodějnice fire-festival seasons —
 // reuses the SAME .sn-bonfire fire. Cleared on party-off / extinguisher reset.
+var __smoresTimer = null;
 window.__setSmores = function (on) {
   on = !!on;
   var strip = document.getElementById("loft-game-strip");
   if (strip) strip.classList.toggle("smores-on", on);
   window.__smoresOn = on;
+  if (__smoresTimer) { clearTimeout(__smoresTimer); __smoresTimer = null; } // a re-light resets the countdown
   // Two kids roast marshmallows at the lit fire: Irene always, plus ONE of Robin/Navid rolled
   // fresh each lighting (50/50). Gated purely on the .showing class (never a season class), so
   // they only ever appear with the s'mores fire and never leak into the fire festivals.
@@ -21454,6 +21456,7 @@ window.__setSmores = function (on) {
     if (irene) irene.classList.add("showing");
     if (robin) robin.classList.toggle("showing", boyIsRobin);
     if (navid) navid.classList.toggle("showing", !boyIsRobin);
+    __smoresTimer = setTimeout(function () { __smoresTimer = null; if (window.__setSmores) window.__setSmores(false); }, 30000); // the fire + kids wrap up ~30s after lighting (a re-tap re-rolls the kids and restarts this)
   } else {
     if (irene) irene.classList.remove("showing");
     if (robin) robin.classList.remove("showing");

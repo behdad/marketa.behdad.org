@@ -48990,10 +48990,12 @@ function spawnDustMote(container) {
     var run = el.querySelector(".gk-run"); if (run) run.classList.remove("gk-run-l", "gk-run-r");
     var flip = el.querySelector(".gk-flip"); if (flip) flip.classList.remove("flipped");
   }
+  function showRealCat(show) { var rc = document.getElementById("witchy-chest-cat-pos"); if (rc) rc.style.visibility = show ? "" : "hidden"; } // the real roaming cat hides while her garden-runner does the chasing (no double cat)
   function clearGardenChase() { // teardown: stop the timer + reset every runner (kids AND the cat)
     if (gardenChaseTimer) { clearTimeout(gardenChaseTimer); gardenChaseTimer = null; }
     gardenChaseRunning = false;
     GARDEN_RUNNERS.forEach(function (n) { clearGardenKid(gardenKidEl(n)); });
+    showRealCat(true); // she's back to roaming once the chase is torn down
   }
   (function () { // clear each runner's one-shot cross on animationend so it can replay + tidy up when the last leaves
     GARDEN_RUNNERS.forEach(function (name) {
@@ -49006,7 +49008,7 @@ function spawnDustMote(container) {
         clearGardenKid(el);
         // the whole chase is done once no runner is still crossing
         var anyLeft = GARDEN_RUNNERS.some(function (n) { var k = gardenKidEl(n); return k && k.classList.contains("chasing"); });
-        if (!anyLeft) gardenChaseRunning = false;
+        if (!anyLeft) { gardenChaseRunning = false; showRealCat(true); } // chase over → the real cat can roam again
       });
     });
   })();
@@ -49028,7 +49030,7 @@ function spawnDustMote(container) {
     var runners = pool.slice(0, count);
     // when the loose cat is out, she scampers after them — an EXTRA runner at the BACK of the
     // pack (largest delay, same direction) so she reads as chasing the kids. Kids-only otherwise.
-    if (chaseCatLoose()) runners.push("cat");
+    if (chaseCatLoose()) { runners.push("cat"); showRealCat(false); } // her runner IS her — hide the real roaming cat so there aren't two
     var rightward = Math.random() < 0.5;          // whole pack runs one way, a chase not a scatter
     var dur = 4.2 + Math.random() * 1.4;          // ~4.2–5.6s crossing
     runners.forEach(function (name, k) {

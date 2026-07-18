@@ -4786,6 +4786,9 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 #loft-game-strip.uv-mode #cuddly-wallscreen #cuddly-aqua,
 #loft-game-strip.uv-mode #cuddly-wallscreen #cuddly-stars,
 #loft-game-strip.uv-mode #cuddly-wallscreen #cuddly-totoro{filter:contrast(.769) hue-rotate(-220deg) saturate(.385) brightness(2)}
+/* The magic-box date-lock closeup is a modal UI surface — it should read normally, not washed —
+   so un-uv it (same affine-inverse) while the party blacklight is on. */
+#loft-game-strip.uv-mode #garden-boxlock{filter:contrast(.769) hue-rotate(-220deg) saturate(.385) brightness(2)}
 /* Workout is the exception: its studio backdrop is a LIGHT mint, and the root filter's
    saturate(2.6) clips that near-white green past recovery, so the exact affine-inverse above
    sinks it to grey. A gentler un-wash (no contrast/saturate crush, a mild saturation LIFT
@@ -37817,8 +37820,8 @@ async def localfont(name):
     if (couple && couple.classList.contains("showing")) return; // his aunt and uncle have the fire: everyone queues at a bonfire
     if (reducedMotion()) return; // the arc IS the cameo; there's nothing worth showing without it
     if (clearTimer) { clearTimeout(clearTimer); clearTimer = null; }
-    var r = Math.random(); // even-ish thirds: Robin, Navid, or Irene — still only ONE kid at a time
-    var kid = (robin && r < 1 / 3) ? robin : (navid && r < 2 / 3) ? navid : irene;
+    var r = Math.random(); // 50% Irene, 25% Robin, 25% Navid — matching the cuddly-nook odds; still only ONE kid at a time
+    var kid = (r < 1 / 2) ? irene : (r < 3 / 4 && robin) ? robin : (navid || robin || irene);
     irene.classList.remove("leaping"); if (robin) robin.classList.remove("leaping"); if (navid) navid.classList.remove("leaping"); // clear all three before re-adding to the chosen one
     kid.getBoundingClientRect(); // force reflow so re-adding restarts the arc (SVG has no offsetWidth)
     kid.classList.add("leaping", "showing");
@@ -41207,6 +41210,14 @@ document.addEventListener("keydown", function (e) {
     resetWheels();
     applyMonth();
   };
+  // The lock closeup must sit above EVERYTHING while it's up — including the party dancers, which
+  // are a strip-level overlay painted after all the rooms. It normally lives inside #stage-garden
+  // (translate(680,0)); hoist it ONCE to the end of the strip with that same translate baked on, so
+  // it paints last (on top) yet stays positioned over the garden. Hidden until tapped, garden-only.
+  (function () {
+    var p = panel(), strip = document.getElementById("loft-game-strip");
+    if (p && strip && p.parentNode !== strip) { p.setAttribute("transform", "translate(680,0)"); strip.appendChild(p); }
+  })();
 })();
 // ── Mushroom-trip plant blooms ────────────────────────────────────────────
 // While a trip is active, five garden plants lift off their pots and grow a

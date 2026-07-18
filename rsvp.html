@@ -15344,6 +15344,10 @@ var T = {
     msg_group_body: "you dancing or what?? 💃",
     msg_album_body: "new photo added — let's take another selfie!",
     msg_irene_games_body: "<em>daeeee</em> I'm bored. can I play games on the computer?",
+    cue_music_body: "the office speakers are going too 🎶 open music",
+    cue_cocktails_body: "the full menu's on your phone if you're deciding 🍸",
+    cue_calendar_body: "put us in your calendar 📅 may 1 · july 10",
+    cue_mail_body: "did you check the mail? 💌 there's a letter for you",
     msg_mb_from: "markéta & behdad",
     msg_mb_body: "did you RSVP yet? 😉 no pressure. (some pressure.)",
     msg_dusk_body: "sunset on the balcony 🌇 you coming out?",
@@ -15838,6 +15842,10 @@ var T = {
     msg_group_body: "tak tančíš, nebo co?? 💃",
     msg_album_body: "přibyla nová fotka — dáme další selfie!",
     msg_irene_games_body: "<em>daeeee</em> nudím se. můžu si na počítači zahrát hry?",
+    cue_music_body: "hraje to i v pracovně 🎶 zapni hudbu",
+    cue_cocktails_body: "celé menu máš v telefonu, když vybíráš 🍸",
+    cue_calendar_body: "zapiš si nás do kalendáře 📅 1. května · 10. července",
+    cue_mail_body: "koukl(a) jsi do pošty? 💌 máš tam dopis",
     msg_mb_from: "markéta & behdad",
     msg_mb_body: "potvrdil(a) jsi už účast? 😉 žádný tlak. (trochu tlak.)",
     msg_dusk_body: "západ slunce na balkoně 🌇 přijdeš ven?",
@@ -34137,8 +34145,15 @@ async def localfont(name):
       irene_games: { fromKey: "msg_irene_from", bodyKey: "msg_irene_games_body", time: "00:40" }, // act_p3 follow-up: bored kid → nudge to the office computer games
       piano:  { fromKey: "msg_mb_from",      bodyKey: "msg_piano_body",  time: "02:10" }, // act_w1 (piano)
       dawn:   { fromKey: "msg_bahareh_from", bodyKey: "msg_dawn_body",   time: "04:55" }, // act_w2 (dawn)
-      mb:     { fromKey: "msg_mb_from",      bodyKey: "msg_mb_body",     time: "09:30" }  // rsvp_exit (next morning)
+      mb:     { fromKey: "msg_mb_from",      bodyKey: "msg_mb_body",     time: "09:30" }, // rsvp_exit (next morning)
+      // app-cue pool — dripped at random during the party (not beat-driven); no fixed time (a
+      // group chat doesn't stamp every line, and random arrival order shouldn't jumble the clock)
+      cue_music:     { fromKey: "msg_admin_from",   bodyKey: "cue_music_body" },     // → music (visualizer)
+      cue_cocktails: { fromKey: "msg_pouria_from",  bodyKey: "cue_cocktails_body" }, // → cocktails menu
+      cue_calendar:  { fromKey: "msg_mb_from",      bodyKey: "cue_calendar_body" },  // → calendar
+      cue_mail:      { fromKey: "msg_bahareh_from", bodyKey: "cue_mail_body" }       // → mail
     };
+    var CUE_POOL = ["cue_music", "cue_cocktails", "cue_calendar", "cue_mail"]; // the random party drip
     // Phone photobooth result state — session-scoped, same model as notesDraft/cardsIndex:
     // a captured polaroid (frame canvas + chosen look/frame) survives a normal close/reopen
     // (renderPhotobooth seeds its locals from these and commits them back in teardown), and is
@@ -35311,7 +35326,7 @@ async def localfont(name):
     }
     window.__openPhoneModal = open;
     window.__closePhoneModal = function (silent) { close(silent); };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; messagesThread = []; messagesUnread = false; hideMessageThumb(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks, and the flashlight (intent forgotten + beam/torch off)
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; messagesThread = []; messagesUnread = false; hideMessageThumb(); if (window.__stopCueDrip) window.__stopCueDrip(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks, and the flashlight (intent forgotten + beam/torch off)
     // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
     // open(true) is the cinematic lock-skip path (same as __showCocktailInPhone), so a console
     // launch never stalls on the passcode. Matches by app id (case-insensitive) or its localized
@@ -35398,6 +35413,25 @@ async def localfont(name):
       for (var i = 0; i < ids.length; i++) if (messagesThread.indexOf(ids[i]) === -1) { window.__deliverPhoneMessage(ids[i]); return ids[i]; }
       return null;
     };
+    // ── party app-cue drip ── a pool (CUE_POOL) of app-discovery texts dripped at RANDOM times
+    // while the party's lit: a self-rescheduling timer picks a random un-sent cue every ~24–46s,
+    // gated on party-on + attended + not-cinematic (an unattended fire skips but keeps trying).
+    // Armed by setGardenParty(on) via __startCueDrip; stops on party-off / reset / pool empty.
+    var cueTimer = null;
+    function cueRemaining() { var out = []; for (var i = 0; i < CUE_POOL.length; i++) if (messagesThread.indexOf(CUE_POOL[i]) === -1) out.push(CUE_POOL[i]); return out; }
+    function scheduleCueDrip() {
+      if (cueTimer || !window.__gardenPartyOn || !cueRemaining().length) return;
+      cueTimer = setTimeout(function () {
+        cueTimer = null;
+        if (window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic) {
+          var rem = cueRemaining();
+          if (rem.length) window.__deliverPhoneMessage(rem[Math.floor(Math.random() * rem.length)]); // a random un-sent cue
+        }
+        scheduleCueDrip(); // keep dripping while the party's on and cues remain
+      }, 24000 + Math.floor(Math.random() * 22000)); // ~24–46s apart → varied arrival times
+    }
+    window.__startCueDrip = function () { scheduleCueDrip(); };
+    window.__stopCueDrip = function () { if (cueTimer) { clearTimeout(cueTimer); cueTimer = null; } };
     window.refreshPhoneText = function () {
       if (!modal || !shell) return;
       applyNavLabels();
@@ -46985,6 +47019,7 @@ function spawnDustMote(container) {
   function setGardenParty(on, userInitiated) {
     on = !!on;
     window.__gardenPartyOn = on;
+    if (on) { if (window.__startCueDrip) window.__startCueDrip(); } else if (window.__stopCueDrip) window.__stopCueDrip(); // drip the app-cue phone texts only while the party's lit
     if (window.__refreshGardenCaption) window.__refreshGardenCaption(); // garden line goes party-mode / reverts
     if (on && window.__retireHint) window.__retireHint("hint_ksecret"); // loose-brick hint: retire once the party (and its bar) reveals the kitchen's other side
     var gs = document.getElementById("stage-garden");

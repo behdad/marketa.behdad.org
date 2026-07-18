@@ -37815,13 +37815,22 @@ async def localfont(name):
   var showTimer = null, clearTimer = null;
   var couple = document.getElementById("balcony-couple");
   function kidShowing() { return irene.classList.contains("showing") || (robin && robin.classList.contains("showing")) || (navid && navid.classList.contains("showing")); }
+  // A real fire-jump line: shuffle the four jumpers ONCE at load, then cycle through in that fixed
+  // order — everyone goes once before anyone repeats, then to the back of the line. leapIdx only
+  // advances on an actual leap (blocked/gated ticks return before the pick), so nobody's skipped.
+  var LEAP_LINE = ["couple", "irene", "robin", "navid"];
+  for (var _li = LEAP_LINE.length - 1; _li > 0; _li--) { var _lj = Math.floor(Math.random() * (_li + 1)), _lt = LEAP_LINE[_li]; LEAP_LINE[_li] = LEAP_LINE[_lj]; LEAP_LINE[_lj] = _lt; }
+  var leapIdx = 0;
   function leap(userInitiated) {
     if (!hisFire() || !onScreen() || kidShowing()) return;
     if (couple && couple.classList.contains("showing")) return; // his aunt and uncle have the fire: everyone queues at a bonfire
     if (reducedMotion()) return; // the arc IS the cameo; there's nothing worth showing without it
     if (clearTimer) { clearTimeout(clearTimer); clearTimer = null; }
-    var r = Math.random(); // 50% Irene, 25% Robin, 25% Navid — matching the cuddly-nook odds; still only ONE kid at a time
-    var kid = (r < 1 / 2) ? irene : (r < 3 / 4 && robin) ? robin : (navid || robin || irene);
+    // Next in line jumps (couple counts as one). One scheduler drives all four (the couple via
+    // __coupleLeap), so only ONE leap is ever in the air at a time.
+    var who = LEAP_LINE[leapIdx % LEAP_LINE.length]; leapIdx++;
+    if (who === "couple") { if (window.__coupleLeap) window.__coupleLeap(userInitiated); return; } // the couple's turn over the fire
+    var kid = who === "robin" ? (robin || navid || irene) : who === "navid" ? (navid || robin || irene) : irene;
     irene.classList.remove("leaping"); if (robin) robin.classList.remove("leaping"); if (navid) navid.classList.remove("leaping"); // clear all three before re-adding to the chosen one
     kid.getBoundingClientRect(); // force reflow so re-adding restarts the arc (SVG has no offsetWidth)
     kid.classList.add("leaping", "showing");
@@ -37898,7 +37907,7 @@ async def localfont(name):
   function hisFire() { return strip.classList.contains("season-chaharshanbe"); }
   function onScreen() { return window.currentStageName === "balcony" && !document.hidden; }
   var showTimer = null, clearTimer = null;
-  function leap() {
+  function leap(userInitiated) {
     if (!hisFire() || !onScreen() || couple.classList.contains("showing")) return;
     if ((irene && irene.classList.contains("showing")) || (robin && robin.classList.contains("showing")) || (navid && navid.classList.contains("showing"))) return; // a kid's over it — wait your turn
     if (reducedMotion()) return; // the arc IS the cameo; there's nothing worth showing without it
@@ -37906,8 +37915,9 @@ async def localfont(name):
     couple.classList.remove("leaping");
     couple.getBoundingClientRect(); // force reflow so re-adding restarts the arc (SVG has no offsetWidth)
     couple.classList.add("leaping", "showing");
-    if (!(document.hidden || !document.hasFocus())) playSwishSound("balcony-couple"); // nobody clicked this: it takes the crickets gate
+    if (userInitiated || !(document.hidden || !document.hasFocus())) playSwishSound("balcony-couple"); // nobody clicked this: it takes the crickets gate
   }
+  window.__coupleLeap = leap; // the shared kid scheduler drives the couple too (even 25% each of couple/Irene/Robin/Navid)
   // The landing rides the arc's own animationend, so it can't sound without a leap having finished
   // on screen — but animationend is not a click, so it gates like any unattended one-shot. One
   // breath for the pair, not one each: they land as one composition.
@@ -37922,10 +37932,9 @@ async def localfont(name):
   // there is nothing to pile up in a backgrounded tab, and a hidden/off-room/wrong-season tick is
   // simply a no-op that reschedules. Longer gaps than Irene's: she's ten, they aren't.
   function tick() { showTimer = null; leap(); schedule(); }
-  function schedule() {
-    if (showTimer) clearTimeout(showTimer);
-    showTimer = setTimeout(tick, 8000 + Math.random() * 6000);
-  }
+  // Cadence is owned by the shared kid scheduler now (it rolls a 4-way 25% pick and calls
+  // __coupleLeap for the couple), so this timer no longer self-fires — schedule() just clears.
+  function schedule() { if (showTimer) { clearTimeout(showTimer); showTimer = null; } }
   // Hard teardown: strip them now (a room slide / season flip / reset hides any snap) and re-arm.
   window.__resetBalconyCouple = function () {
     if (showTimer) { clearTimeout(showTimer); showTimer = null; }

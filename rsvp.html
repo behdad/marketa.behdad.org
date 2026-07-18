@@ -5152,6 +5152,16 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 /* The magic-box date-lock closeup is a modal UI surface — it should read normally, not washed —
    so un-uv it (same affine-inverse) while the party blacklight is on. */
 #loft-game-strip.uv-mode #garden-boxlock{filter:contrast(.769) hue-rotate(-220deg) saturate(.385) brightness(2)}
+/* The hosts (Behdad & Markéta) always read in their usual colours at their own party — the same
+   affine-inverse cancels the root uv-mode wash on their two figures only, so everyone else glows
+   under the blacklight while the couple stays true-coloured. Applied to the outer .g-* group
+   (static translate only) so the filter stays independent of the inner orbit/solo transforms.
+   (WebKit no-ops a filter on an SVG <g>, so on iOS the hosts stay washed like the crowd —
+   acceptable, same as the projector-channel note above.) */
+#loft-game-strip.uv-mode #garden-guests .g-behdad,
+#loft-game-strip.uv-mode #garden-guests .g-marketa{filter:contrast(.769) hue-rotate(-220deg) saturate(.385) brightness(2)}
+.hunt-viewport.device-zoomed #loft-game-strip.uv-mode #garden-guests .g-behdad,
+.hunt-viewport.device-zoomed #loft-game-strip.uv-mode #garden-guests .g-marketa{filter:none}
 /* Workout is the exception: its studio backdrop is a LIGHT mint, and the root filter's
    saturate(2.6) clips that near-white green past recovery, so the exact affine-inverse above
    sinks it to grey. A gentler un-wash (no contrast/saturate crush, a mild saturation LIFT
@@ -19088,12 +19098,16 @@ window.__setUvParty = function (on) { uvPartyOn = !!on; applyUvMode(); }; // the
 // on return, so nothing drifts or accumulates. Reduced motion: still allowed (a lighting change,
 // not motion) and it's a clean snap (no transition on the .uv-mode filter, by design).
 (function () {
-  var ON_MIN = 35000, ON_JIT = 25000;   // blacklight ON: ~35-60s (longer stretch)
-  var OFF_MIN = 12000, OFF_JIT = 10000;  // lights-normal OFF: ~12-22s (shorter stretch)
-  var timer = 0, phase = "on"; // "on" = blacklight class present, "off" = breathing it off
+  var ON_MIN = 22000, ON_JIT = 12000;   // blacklight ON: ~22-34s (longer stretch)
+  var OFF_MIN = 9000, OFF_JIT = 6000;    // lights-normal OFF: ~9-15s (shorter stretch)
+  var OPEN_MIN = 9000, OPEN_JIT = 4000;  // the FIRST ON stretch is short (~9-13s) so the auto-cycle shows itself quickly
+  var timer = 0, phase = "on", opened = false; // "on" = blacklight class present, "off" = breathing it off
   function breathing() { return !!window.__gardenPartyOn; }
   function attended() { return !document.hidden && document.hasFocus(); }
-  function nextMs() { return phase === "on" ? (ON_MIN + Math.random() * ON_JIT) : (OFF_MIN + Math.random() * OFF_JIT); }
+  function nextMs() {
+    if (!opened) { opened = true; return OPEN_MIN + Math.random() * OPEN_JIT; } // quick first dip so the cycle announces itself
+    return phase === "on" ? (ON_MIN + Math.random() * ON_JIT) : (OFF_MIN + Math.random() * OFF_JIT);
+  }
   function clearTimer() { if (timer) { clearTimeout(timer); timer = 0; } }
   function tick() {
     timer = 0;
@@ -19115,7 +19129,7 @@ window.__setUvParty = function (on) { uvPartyOn = !!on; applyUvMode(); }; // the
   function start() {
     if (!breathing() || !attended()) { stop(); return; }
     if (timer) return; // already breathing — don't restart the clock mid-stretch
-    phase = "on";
+    phase = "on"; opened = false; // a fresh start opens on a short ON stretch (see nextMs)
     setUvMode(true); // ensure we open on full blacklight, then time the first OFF from there
     if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger();
     arm();

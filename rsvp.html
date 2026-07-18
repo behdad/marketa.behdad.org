@@ -1257,6 +1257,50 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   #garden-guests.guests-in .g-jay .guest-move{animation:none}
   #garden-guests.guests-in .g-jay .guest-halo{transition:none; animation:none} /* halo shows, but no shimmer */
 }
+/* ── CRASHERS are TAPPABLE (only while on the floor) ──────────────────────────
+   Each crasher gets a signature one-shot "flare" on tap (see the guest-tap wiring in JS):
+   Ali flips his long beard + a cheeky bounce, Goli snaps a vogue turn, Spencer ducks the
+   giant-height gag, Jay raises an open-palm blessing while his halo pulses. Pointer-events
+   are enabled ONLY on the four .guest groups (never the pointer-events:none #garden-partyfx
+   parent — that would eat disco/DJ clicks) and ONLY while .guests-in, so an off-floor guest
+   is inert. Each flare rides an inner .guest-react wrapper (NO static transform attribute) so
+   it COMPOSES with the looping dance on .guest-move rather than clobbering a position; Ali's
+   beard toss + Jay's halo pulse ride their own nodes. One-shots, each cleared on animationend
+   by JS (restartable on a rapid re-tap via the remove→reflow→re-add idiom). */
+#garden-guests.guests-in .guest{pointer-events:auto; cursor:pointer}
+#garden-guests .guest-react{transform-box:fill-box; transform-origin:center bottom}
+/* Ali: a cheeky whole-body bounce + hip pop, and his long beard swings on its own node. */
+.g-ali .guest-react.ali-flare{animation:guest-ali-flare .7s cubic-bezier(.34,1.56,.64,1)}
+.g-ali .guest-beard{transform-box:fill-box; transform-origin:center top} /* swing pivots at the chin */
+.g-ali .guest-beard.beard-toss{animation:guest-beard-toss .7s ease-in-out} /* the long grey beard swings */
+@keyframes guest-ali-flare{0%{transform:translateY(0) rotate(0)} 30%{transform:translateY(-16px) rotate(-5deg)} 55%{transform:translateY(2px) rotate(4deg)} 78%{transform:translateY(-4px) rotate(-2deg)} 100%{transform:translateY(0) rotate(0)}}
+@keyframes guest-beard-toss{0%{transform:rotate(0)} 25%{transform:rotate(24deg)} 55%{transform:rotate(-16deg)} 80%{transform:rotate(8deg)} 100%{transform:rotate(0)}}
+/* Goli: a sharp fashion pose — a quick edge-on turn snap + a haughty tilt (arm-framing reads
+   through the base arm animation). Snappier easing than her ambient vogue so the tap punches. */
+.g-goli .guest-react.goli-flare{animation:guest-goli-flare .8s cubic-bezier(.5,0,.2,1)}
+@keyframes guest-goli-flare{0%{transform:scaleX(1) rotate(0)} 22%{transform:scaleX(.2) rotate(-3deg)} 46%{transform:scaleX(-1) rotate(3deg)} 62%{transform:scaleX(-1) rotate(-4deg)} 100%{transform:scaleX(1) rotate(0)}}
+/* Spencer: the giant ducks down as if he's too tall, holds a beat, then pops back up. */
+.g-spencer .guest-react.spencer-flare{animation:guest-spencer-flare .85s cubic-bezier(.34,1.4,.64,1)}
+@keyframes guest-spencer-flare{0%{transform:translateY(0) scaleY(1)} 22%{transform:translateY(30px) scaleY(.8)} 55%{transform:translateY(30px) scaleY(.8)} 78%{transform:translateY(-6px) scaleY(1.06)} 100%{transform:translateY(0) scaleY(1)}}
+/* Jay: a gentle raised-palm benediction dip + his halo pulses brighter (a one-shot over the
+   looping shimmer — class-qualified AND later in source than the shimmer rule so it wins the
+   cascade; cleared on animationend, whereupon the shimmer resumes). */
+.g-jay .guest-react.jay-flare{animation:guest-jay-flare 1s ease-in-out}
+@keyframes guest-jay-flare{0%{transform:translateY(0) rotate(0)} 30%{transform:translateY(-3px) rotate(-2.5deg)} 60%{transform:translateY(0) rotate(2.5deg)} 100%{transform:translateY(0) rotate(0)}}
+#garden-guests .g-jay .guest-halo{transform-box:fill-box; transform-origin:center center} /* pulse scales about the halo's own centre */
+#garden-guests.guests-in .g-jay .guest-halo.halo-pulse{animation:guest-halo-pulse 1s ease-in-out}
+@keyframes guest-halo-pulse{0%{opacity:.55; transform:scale(1)} 35%{opacity:1; transform:scale(1.18)} 100%{opacity:.55; transform:scale(1)}}
+/* reduced motion: a tap still ACKNOWLEDGES (a tiny opacity blip on the react wrapper) but
+   skips the big signature motion, matching the party's other reduced-motion handling. */
+@media (prefers-reduced-motion: reduce){
+  .g-ali .guest-react.ali-flare,
+  .g-goli .guest-react.goli-flare,
+  .g-spencer .guest-react.spencer-flare,
+  .g-jay .guest-react.jay-flare{animation:guest-react-blip .4s ease-in-out}
+  .g-ali .guest-beard.beard-toss{animation:none}
+  #garden-guests.guests-in .g-jay .guest-halo.halo-pulse{animation:none}
+}
+@keyframes guest-react-blip{0%,100%{opacity:1} 50%{opacity:.55}}
 /* Garden party swaps the witchy altar+mirror for a DJ booth. Same gate the disco pools
    use (#stage-garden.garden-party). Fade with opacity (not display) so the ritual props'
    hunt-hit getBBox reads stay valid and the cat-roam math never sees a zeroed chest. */
@@ -9478,6 +9522,7 @@ section{margin:1.9rem 0}
 <g class="guest-arrival">
 <g class="guest-move">
 <g class="guest-sway">
+<g class="guest-react"><!-- tap-flare wrapper: no static transform, composes with the dance -->
 <!-- legs: long, white knee-high socks -->
 <path class="guest-leg-l" fill="#f4f2ea" d="M -8 288 C -10 305 -8 322 -5 330 L -0.5 330 C -1.5 322 -3 305 -1 288 Z"/>
 <path class="guest-leg-r" fill="#f4f2ea" d="M 8 288 C 10 305 8 322 5 330 L 0.5 330 C 1.5 322 3 305 1 288 Z"/>
@@ -9529,6 +9574,7 @@ section{margin:1.9rem 0}
 <!-- small forearm tattoo on his right (screen-left) forearm -->
 <path d="M -18 200 q -2 2 -1 4" fill="none" stroke="#4a5a44" stroke-width="0.8" stroke-linecap="round" opacity="0.75"/>
 <circle cx="-20" cy="198.5" r="0.8" fill="none" stroke="#4a5a44" stroke-width="0.7" opacity="0.75"/>
+</g><!-- /guest-react -->
 </g>
 </g>
 </g>
@@ -9543,6 +9589,7 @@ section{margin:1.9rem 0}
 <g class="guest-arrival">
 <g class="guest-move">
 <g class="guest-sway">
+<g class="guest-react"><!-- tap-flare wrapper: no static transform, composes with the dance -->
 <!-- long legs in khaki/tan chinos (he's the giant — legs run higher up) -->
 <path class="guest-leg-l" fill="#d8bd86" d="M -10 268 C -12 292 -10 318 -7 330 L -1 330 C -2 318 -4 292 -2.5 268 Z"/>
 <path class="guest-leg-r" fill="#d8bd86" d="M 10 268 C 12 292 10 318 7 330 L 1 330 C 2 318 4 292 2.5 268 Z"/>
@@ -9589,6 +9636,7 @@ section{margin:1.9rem 0}
 <!-- big arms thrown up, exuberant (motion rides the wrappers) -->
 <path class="guest-arm-l" fill="#d99c62" d="M -13 200 C -21 194 -28 184 -31 175 L -27 173.4 C -23 182 -17 191 -9 198 Z"/>
 <path class="guest-arm-r" fill="#d99c62" d="M 13 200 C 21 194 28 184 31 175 L 27 173.4 C 23 182 17 191 9 198 Z"/>
+</g><!-- /guest-react -->
 </g>
 </g>
 </g>
@@ -9610,6 +9658,7 @@ section{margin:1.9rem 0}
 </g>
 <g class="guest-move">
 <g class="guest-sway">
+<g class="guest-react"><!-- tap-flare wrapper: no static transform, composes with the dance -->
 <!-- legs in dark trousers -->
 <path class="guest-leg-l" fill="#2f3340" d="M -8 286 C -9 304 -7.5 322 -5 330 L -0.6 330 C -1.4 322 -2.6 304 -1.6 286 Z"/>
 <path class="guest-leg-r" fill="#2f3340" d="M 8 286 C 9 304 7.5 322 5 330 L 0.6 330 C 1.4 322 2.6 304 1.6 286 Z"/>
@@ -9649,6 +9698,7 @@ section{margin:1.9rem 0}
 <circle cx="-20" cy="189" r="2.4" fill="#e0a86e"/>
 <path d="M -22 188 v -3 M -20 187.4 v -3.4 M -18 188 v -3" fill="none" stroke="#e0a86e" stroke-width="1.1" stroke-linecap="round"/>
 <path class="guest-arm-r" fill="#e0a86e" d="M 9 214 C 14 211 18 207 20 202 L 17 200.6 C 15 205 12 208 6 212 Z"/>
+</g><!-- /guest-react -->
 </g>
 </g>
 </g>
@@ -9661,6 +9711,7 @@ section{margin:1.9rem 0}
 <g class="guest-arrival">
 <g class="guest-move">
 <g class="guest-sway">
+<g class="guest-react"><!-- tap-flare wrapper: no static transform, composes with the dance -->
 <!-- legs + red-striped tube socks -->
 <path class="guest-leg-l" fill="#f4f2ea" d="M -7 288 C -8 305 -6.5 322 -4 330 L -0.5 330 C -1.2 322 -2.4 305 -1.6 288 Z"/>
 <path class="guest-leg-r" fill="#f4f2ea" d="M 7 288 C 8 305 6.5 322 4 330 L 0.5 330 C 1.2 322 2.4 305 1.6 288 Z"/>
@@ -9710,6 +9761,7 @@ section{margin:1.9rem 0}
 <!-- arms thrown up, striking a pose (motion rides the wrappers) -->
 <path class="guest-arm-l" fill="#e6b48c" d="M -8 227 C -14 222 -19 214 -21.5 208 L -18.5 206.6 C -15.5 213 -11 220 -6 226 Z"/>
 <path class="guest-arm-r" fill="#e6b48c" d="M 8 227 C 14 222 19 214 21.5 208 L 18.5 206.6 C 15.5 213 11 220 6 226 Z"/>
+</g><!-- /guest-react -->
 </g>
 </g>
 </g>
@@ -49803,6 +49855,107 @@ function spawnDustMote(container) {
   })();
   // a hidden tab drops the crashers (no paused-animation pile-up); they re-appear on return
   document.addEventListener("visibilitychange", updateGardenGuests);
+  // ── TAP THE CRASHERS — a signature one-shot "flare" per guest ────────────────
+  // Each crasher is tappable ONLY while on the floor (.guests-in; pointer-events gated in CSS
+  // to the four .guest groups, never the pointer-events:none partyfx parent — so disco/DJ
+  // clicks aren't eaten). A tap (or keyboard Enter/Space for a11y) fires that guest's flare:
+  //   Ali    → a cheeky bounce + his long beard tosses
+  //   Goli  → a sharp vogue turn (fashion pose)
+  //   Spencer→ the giant ducks the height gag, then pops back up
+  //   Jay    → a raised-palm blessing dip + his halo pulses brighter
+  // Each flare is a one-shot class on the guest's inner .guest-react wrapper (no static
+  // transform → composes with the looping dance instead of clobbering it), cleared on
+  // animationend and restarted cleanly on a rapid re-tap (remove → reflow → re-add; SVG has
+  // no offsetWidth, so read a layout box). Reduced motion swaps the big move for a tiny
+  // opacity blip (CSS). A soft, fitting SFX rides each tap — panned to the guest's spot and
+  // cooldown+hidden/blur-gated like every other unattended sound (crickets rule; a tap implies
+  // focus, but keep the guard for parity). The handlers are harmless off the floor (the
+  // guests-in check bails), so nothing leaks on teardown — the flares are one-shots on
+  // persistent nodes. play.js click-storms these too: the guard + one-shot restart absorb it.
+  (function wireGuestTaps() {
+    var group = document.getElementById("garden-guests");
+    if (!group) return;
+    function guestsOnFloor() { return group.classList.contains("guests-in"); }
+    function playGuestFlareSfx(pan, kind) {
+      if (document.hidden || !document.hasFocus()) return; // crickets rule (tap implies focus; guard for parity)
+      try {
+        var ctx = getSfxCtx();
+        if (!ctx) return;
+        var t = ctx.currentTime, out = pannedOut(ctx, pan);
+        function tone(type, f0, f1, gpk, dt, dur) {
+          var osc = ctx.createOscillator(); osc.type = type;
+          osc.frequency.setValueAtTime(f0, t + dt);
+          osc.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + dt + dur);
+          var g = ctx.createGain();
+          g.gain.setValueAtTime(0.0001, t + dt);
+          g.gain.exponentialRampToValueAtTime(gpk, t + dt + Math.min(0.02, dur * 0.3));
+          g.gain.exponentialRampToValueAtTime(0.0001, t + dt + dur);
+          osc.connect(g); g.connect(out); osc.start(t + dt); osc.stop(t + dt + dur + 0.02);
+        }
+        if (kind === "ali") { // a springy low "boing" for the bounce
+          tone("sine", 220, 90, 0.08, 0, 0.22);
+          tone("sine", 300, 140, 0.05, 0.18, 0.16);
+        } else if (kind === "goli") { // a bright rising "shwip" for the vogue turn
+          tone("triangle", 700, 1500, 0.06, 0, 0.14);
+          tone("triangle", 1200, 1900, 0.045, 0.08, 0.1);
+        } else if (kind === "spencer") { // a comic descending "wobble" duck, then a pop back up
+          tone("sawtooth", 360, 150, 0.05, 0, 0.24);
+          tone("sine", 200, 520, 0.06, 0.5, 0.14); // the pop as he springs back
+        } else { // jay — a soft two-note bell shimmer for the blessing/halo
+          tone("sine", 880, 880, 0.055, 0, 0.5);
+          tone("sine", 1320, 1320, 0.04, 0.08, 0.5);
+        }
+      } catch (e) {}
+    }
+    // per-guest config: selector, its flare class (on .guest-react), the extra one-shot node
+    // (Ali's beard / Jay's halo) with its own class, a fixed pan (their on-screen spot), and
+    // the SFX kind. Fixed pans (Ali left … Goli right) avoid a live getBBox during the tap.
+    var GUESTS = [
+      { sel: ".g-ali",     flare: "ali-flare",     extraSel: ".guest-beard", extra: "beard-toss", pan: -0.5, sfx: "ali" },
+      { sel: ".g-spencer", flare: "spencer-flare", extraSel: null,           extra: null,         pan: -0.1, sfx: "spencer" },
+      { sel: ".g-jay",     flare: "jay-flare",     extraSel: ".guest-halo",  extra: "halo-pulse", pan:  0.2, sfx: "jay" },
+      { sel: ".g-goli",   flare: "goli-flare",   extraSel: null,           extra: null,         pan:  0.55, sfx: "goli" }
+    ];
+    var lastFlareSound = 0;
+    GUESTS.forEach(function (cfg) {
+      var el = group.querySelector(cfg.sel);
+      if (!el) return;
+      var react = el.querySelector(".guest-react");
+      var extra = cfg.extraSel ? el.querySelector(cfg.extraSel) : null;
+      function restart(node, cls) { // remove → reflow → re-add so a rapid re-tap replays the one-shot
+        if (!node) return;
+        node.classList.remove(cls);
+        node.getBoundingClientRect(); // force reflow (SVG has no offsetWidth)
+        node.classList.add(cls);
+      }
+      function flare() {
+        if (!guestsOnFloor()) return; // inert off the floor — nothing to leak
+        restart(react, cfg.flare);
+        if (extra) restart(extra, cfg.extra);
+        var now = Date.now();
+        if (now - lastFlareSound > 140) { lastFlareSound = now; playGuestFlareSfx(cfg.pan, cfg.sfx); }
+      }
+      el.addEventListener("pointerdown", flare);
+      // keyboard a11y: Enter/Space fire the flare when the guest is focused
+      el.setAttribute("tabindex", "0");
+      el.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") { e.preventDefault(); flare(); }
+      });
+      // clear each one-shot on its own animationend so it can replay (the react wrapper only
+      // ever runs this guest's flare — full-motion keyframe or the reduced-motion blip).
+      // Literal removes below (not a variable) so each class name is greppable by check.js.
+      react.addEventListener("animationend", function () {
+        react.classList.remove("ali-flare");
+        react.classList.remove("goli-flare");
+        react.classList.remove("spencer-flare");
+        react.classList.remove("jay-flare");
+      });
+      if (extra) extra.addEventListener("animationend", function () {
+        extra.classList.remove("beard-toss");
+        extra.classList.remove("halo-pulse");
+      });
+    });
+  })();
   // ── PARTY MODE disco pools (garden) — STEPPED, not tweened. A continuous CSS/WAAPI sweep
   // of these big screen-blended ellipses repaints every frame and visibly FLICKERED on
   // mobile. Instead ONE self-rescheduling stepper JUMPS each pool to a fresh spot ~once a

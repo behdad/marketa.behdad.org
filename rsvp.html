@@ -7568,7 +7568,7 @@ section{margin:1.9rem 0}
 </g>
 <g id="stage-garden" transform="translate(680,0)">
 
-<rect x="0" y="0" width="680" height="340" rx="0" fill="url(#gbrick)"/>
+<rect id="garden-wall" x="0" y="0" width="680" height="340" rx="0" fill="url(#gbrick)"/>
 <!-- subtle aged-brick imperfections: brick only shows in the two side columns here, so keep them there (non-interactive) -->
 <g pointer-events="none">
 <ellipse cx="55" cy="75" rx="52" ry="48" fill="#8a5a3e" opacity="0.06"/>
@@ -13133,7 +13133,7 @@ section{margin:1.9rem 0}
 <g id="balcony-wobble">
 <rect x="0" y="0" width="680" height="340" rx="0" fill="#c2d8e4"/>
 <rect id="balcony-skyclick" x="418" y="0" width="180" height="118" fill="transparent"/>
-<rect x="0" y="0" width="250" height="290" fill="url(#bbrick)"/>
+<rect id="balcony-wall" x="0" y="0" width="250" height="290" fill="url(#bbrick)"/>
 <!-- subtle aged-brick imperfections: brick wall is only x0-250, mostly left of and above the door; tones biased lighter (non-interactive) -->
 <g pointer-events="none">
 <ellipse cx="60" cy="90" rx="56" ry="58" fill="#6e3d2a" opacity="0.06"/>
@@ -23443,10 +23443,23 @@ function gameTapsNear(a, b) {
       requestAnimationFrame(function () { outlet.classList.add("sparking"); });
     });
     playOutletBuzzSound();
+    if (window.__madlaFromOutlet) window.__madlaFromOutlet(); // poking the plug rings Markéta's sister Madla (day/night, not during the party)
   }
   outlet.addEventListener("click", sparkOutlet);
   outlet.addEventListener("keydown", function (e) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sparkOutlet(); }
+  });
+})();
+// Brick-wall gestures: double-click the GARDEN wall to summon a kids' chase (any time of day/night,
+// party or not — force skips the ambient party gate), and the BALCONY wall AT NIGHT to start s'mores.
+// (The cuddly wall's own dblclick already summons a nook kid; the outlet handles Madla.)
+(function () {
+  var gw = document.getElementById("garden-wall");
+  if (gw) gw.addEventListener("dblclick", function () { if (window.__startGardenChase) window.__startGardenChase(true); });
+  var bw = document.getElementById("balcony-wall");
+  if (bw) bw.addEventListener("dblclick", function () {
+    var b = document.getElementById("stage-balcony");
+    if (b && b.classList.contains("dusk") && window.__setSmores) window.__setSmores(true); // s'mores round the fire is an after-dark thing
   });
 })();
 (function () {
@@ -36685,6 +36698,12 @@ async def localfont(name):
     }
     window.__madlaRing = ringMadla;   // console/test hook: fire the incoming ring on demand
     window.__answerMadla = answerMadla; // test hook: answer as if the ring were tapped
+    // Poking the cuddly outlet "schedules" Madla — she rings in day OR night, but never during the
+    // party (she's not interrupting the dancing). Ignored if a call/ring is already up.
+    window.__madlaFromOutlet = function () {
+      if (window.__gardenPartyOn) return false; // not during the party
+      return ringMadla();
+    };
     // ── daytime schedule ── a single self-rescheduling timer that RARELY fires Madla's incoming
     // ring during attended daytime play (day, no party, visible+focused, not cinematic, no call
     // already up). Kept to a single timer (no pile-up); armed at load and re-armed on the phone

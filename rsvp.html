@@ -2870,6 +2870,12 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 /* Markéta's self-view mouth flaps on HER turns of the murmur (same as Madla's, but in the self-view) */
 .phone-incall .pic-self [data-lid="marketa-self-mouth"]{transform-box:fill-box; transform-origin:center; opacity:0}
 .phone-incall.connected .pic-self [data-lid="marketa-self-mouth"].murmuring{opacity:1; animation:lueb-sing-mouth .46s ease-in-out infinite}
+/* The goodbye: as the self-view pair whisper "I love you" on hang-up, their mouths move too
+   (.saying is added to .pic-self for the ~1.5s of the goodbye — couple busts on the family calls,
+   Markéta alone on Madla's). */
+.phone-incall .pic-self .couple-self-mouth{transform-box:fill-box; transform-origin:center}
+.phone-incall .pic-self.saying .couple-self-mouth,
+.phone-incall .pic-self.saying [data-lid="marketa-self-mouth"]{opacity:1; animation:lueb-sing-mouth .42s ease-in-out infinite}
 @media (prefers-reduced-motion: reduce){
   .phone-incall.connected .pic-video [data-lid="laptop-prague-father"],
   .phone-incall.connected .pic-video [data-lid="laptop-prague-mother"],
@@ -2888,6 +2894,7 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
   .phone-incall.connected .pic-video [data-lid="madla-eyes"].blinking,
   .phone-incall.connected .pic-video [data-lid="madla-mouth"].murmuring{animation:none !important}
   .phone-incall.connected .pic-self [data-lid="marketa-self-mouth"].murmuring{animation:none !important}
+  .phone-incall .pic-self.saying .couple-self-mouth, .phone-incall .pic-self.saying [data-lid="marketa-self-mouth"]{animation:none !important}
 }
 /* boot splash: the loft's own OS — a cream ∞ on a wine field, mirroring the
    monitor's #monitor-logo-fedora boot; a slow shimmer breathes the mark */
@@ -12081,7 +12088,7 @@ section{margin:1.9rem 0}
 <rect x="354.5" y="181" width="21" height="13" rx="1" fill="#efe6cf" stroke="#e8e2d4" stroke-width="0.5"/>
 <g transform="translate(-5.5,0)">
 <path d="M360.5 194 Q366.5 187.6 372.5 194 Z" fill="#c68e95"/>
-<path d="M365.7 189.3 L367.3 189.3 L368 190.5 L366.5 190 L365 190.5 Z" fill="#6e2836"/>
+<path class="couple-self-mouth" d="M365.7 189.3 L367.3 189.3 L368 190.5 L366.5 190 L365 190.5 Z" fill="#6e2836"/>
 <circle cx="366.5" cy="185.8" r="2.5" fill="#c9906b"/>
 <path d="M364.2 186.8 Q366.5 189.6 368.8 186.8 L368.8 188.4 Q366.5 190.4 364.2 188.4 Z" fill="#4a3327"/>
 <path d="M363.9 184.2 Q366.5 182 369.1 184.2 L369.4 183.4 Q366.5 181 363.6 183.4 Z" fill="#8e6b52"/>
@@ -12098,6 +12105,7 @@ section{margin:1.9rem 0}
 <path d="M438.05 168.5 Q439.7 167 441.35 168.5 Q441.5 167.6 439.7 167.3 Q437.9 167.6 438.05 168.5 Z" fill="#5a7ba6"/>
 <circle cx="439.15" cy="169.5" r="0.45" fill="none" stroke="#453a31" stroke-width="0.18"/>
 <circle cx="440.25" cy="169.5" r="0.45" fill="none" stroke="#453a31" stroke-width="0.18"/>
+<path class="couple-self-mouth" d="M439.05 171 L440.35 171 L440.6 171.55 L439.7 171.3 L438.8 171.55 Z" fill="#6e2836"/>
 </g>
 </g>
 <!-- MADLA — Markéta's sister, a doctor in Germany. The remote scene for her INCOMING
@@ -34545,6 +34553,8 @@ async def localfont(name):
       if (callConnected && !quiet) {
         callHangingUp = true;
         playILoveYouSound("balcony-phone", CITIES[callee].pitch); // that city's pitched goodbye
+        var selfEl = shell && shell.querySelector(".phone-incall .pic-self");
+        if (selfEl) { selfEl.classList.add("saying"); setTimeout(function () { selfEl.classList.remove("saying"); }, 1500); } // their mouths move as they whisper "I love you"
         setTimeout(function () { callHangingUp = false; dropCall(false); }, 1500);
       } else {
         dropCall(false, quiet); // mid-ring, or nobody there to hear it: no goodbye
@@ -43753,7 +43763,7 @@ function playSisterMurmur(madla, burstMs) {
     var f0 = madla ? 196 : 232;          // glottal base pitch
     var f1c = madla ? 620 : 720;         // first formant centre (openness)
     var f2c = madla ? 1180 : 1420;       // second formant centre (frontness)
-    var master = ctx.createGain(); master.gain.value = 0.3; master.connect(out); // murmur-quiet, well under the pickup/ambient
+    var master = ctx.createGain(); master.gain.value = 0.15; master.connect(out); // murmur-quiet, well under the pickup/ambient
 
     var source = ctx.createGain(); source.gain.value = 1;
     var oscs = [];

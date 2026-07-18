@@ -51777,6 +51777,7 @@ function spawnDustMote(container) {
   }
   // beats that carry a phone text → the message id delivered (once) the moment the beat goes live
   var ACT_MSG = { act_p1: "pouria", act_p2: "group", act_p3: "album", rsvp_exit: "mb" };
+  var MSG_DELAY_MS = 5000, msgTimers = []; // the beat's phone text arrives ~5s AFTER its caption, so the buzz+thumbnail don't land on top of the caption
   function advance(quiet) {
     if (!armed) return;
     var next = null;
@@ -51785,7 +51786,10 @@ function spawnDustMote(container) {
     var prev = beat(live);
     if (prev && prev.exit) prev.exit();
     live = next; liveMs = 0;
-    if (ACT_MSG[live] && window.__deliverPhoneMessage) window.__deliverPhoneMessage(ACT_MSG[live]); // the beat's phone text lands (dedup'd inside; thumbnail gated on attended)
+    if (ACT_MSG[live]) { // the caption lands now; the phone text follows ~5s later so they don't clash
+      var mid = ACT_MSG[live];
+      msgTimers.push(setTimeout(function () { if (armed && !window.__cinematic && window.__deliverPhoneMessage) window.__deliverPhoneMessage(mid); }, MSG_DELAY_MS)); // dedup'd inside; thumbnail gated on attended
+    }
     var now = beat(live);
     if (now && now.enter) now.enter();
     if (!quiet) speak();
@@ -51845,6 +51849,7 @@ function spawnDustMote(container) {
     armed = false; live = null; liveMs = 0; latched = {};
     if (ticker) { clearInterval(ticker); ticker = null; }
     if (redirTimer) { clearTimeout(redirTimer); redirTimer = null; }
+    msgTimers.forEach(function (t) { clearTimeout(t); }); msgTimers = []; // drop any phone text still waiting out its ~5s delay
     switchPulse(false);
   };
   window.__actBeat = function () { return live; }; // test hook

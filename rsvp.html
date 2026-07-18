@@ -15352,6 +15352,7 @@ var T = {
     cue_cocktails_body: "the full menu's on your phone if you're deciding 🍸",
     cue_calendar_body: "put us in your calendar 📅 may 1 · july 10",
     cue_mail_body: "did you check the mail? 💌 there's a letter for you",
+    msg_storm_body: "there's a storm coming! ⛈️",
     msg_mb_from: "markéta & behdad",
     msg_mb_body: "did you RSVP yet? 😉 no pressure. (some pressure.)",
     msg_dusk_body: "eclipse on the balcony 🌑 come out?",
@@ -15850,6 +15851,7 @@ var T = {
     cue_cocktails_body: "celé menu máš v telefonu, když vybíráš 🍸",
     cue_calendar_body: "zapiš si nás do kalendáře 📅 1. května · 10. července",
     cue_mail_body: "koukl(a) jsi do pošty? 💌 máš tam dopis",
+    msg_storm_body: "blíží se bouřka! ⛈️",
     msg_mb_from: "markéta & behdad",
     msg_mb_body: "potvrdil(a) jsi už účast? 😉 žádný tlak. (trochu tlak.)",
     msg_dusk_body: "zatmění na balkoně 🌑 přijdeš ven?",
@@ -34158,9 +34160,10 @@ async def localfont(name):
       cue_music:     { fromKey: "msg_admin_from",   bodyKey: "cue_music_body",     act: "app:music" },     // → music (visualizer)
       cue_cocktails: { fromKey: "msg_pouria_from",  bodyKey: "cue_cocktails_body", act: "app:cocktails" }, // → cocktails menu
       cue_calendar:  { fromKey: "msg_mb_from",      bodyKey: "cue_calendar_body",  act: "app:calendar" },  // → calendar
-      cue_mail:      { fromKey: "msg_bahareh_from", bodyKey: "cue_mail_body",      act: "app:mail" }       // → mail
+      cue_mail:      { fromKey: "msg_bahareh_from", bodyKey: "cue_mail_body",      act: "app:mail" },      // → mail
+      storm:         { fromKey: "msg_bahareh_from", bodyKey: "msg_storm_body",     act: "storm" }          // Bahareh's warning → tap: balcony + storm
     };
-    var CUE_POOL = ["cue_music", "cue_cocktails", "cue_calendar", "cue_mail"]; // the random party drip
+    var CUE_POOL = ["cue_music", "cue_cocktails", "cue_calendar", "cue_mail", "storm"]; // the random party drip
     // Phone photobooth result state — session-scoped, same model as notesDraft/cardsIndex:
     // a captured polaroid (frame canvas + chosen look/frame) survives a normal close/reopen
     // (renderPhotobooth seeds its locals from these and commits them back in teardown), and is
@@ -35381,6 +35384,7 @@ async def localfont(name):
       if (act.indexOf("app:") === 0) { open(true); var app = phoneAppByName(act.slice(4)); if (app && app.open) app.open(); else openApp("messages", "app_messages", renderMessages); return; }
       close(true); // the rest leave the phone for somewhere in the loft
       if (act === "eclipse") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__runBalconyEclipse) window.__runBalconyEclipse(); }, 760); return; } // pan first, then darken the sky
+      if (act === "storm") { if (window.storm) window.storm(true); return; } // storm() pans to the balcony, sets dusk, and rolls the storm itself
       if (act === "rsvp") { if (window.goToStage) window.goToStage("balcony"); if (window.__showRsvpNudge) window.__showRsvpNudge("rsvp_exit"); return; }
       if (act === "games") { if (window.goToStage) window.goToStage("office"); setTimeout(function () { if (window.computer && !window.computer()) window.computer(true); else if (window.__toggleMonitorZoom) window.__toggleMonitorZoom(); }, 420); return; }
       if (act.indexOf("room:") === 0 && window.goToStage) window.goToStage(act.slice(5));

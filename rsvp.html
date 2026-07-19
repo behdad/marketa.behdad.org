@@ -39948,25 +39948,31 @@ async def localfont(name):
         var inf = add("text", { x: W / 2, y: 20, "text-anchor": "middle", "font-size": "16", fill: "#8e3a4a", "font-family": "Fraunces,serif" });
         inf.textContent = "∞";
       }
-      // Gather the real figure clones for everyone in the shot (hosts = two). Each entry carries a
-      // gentle inward LEAN so the group reads as a warm huddle: hosts tilt toward each other at the
-      // centre, the other subject(s) nestle in on the flanks tilting inward.
+      // Gather the real figure clones for everyone in the shot (hosts = two). We MEASURE each clone's
+      // true local half-width (its real drawn extent — arms up or not, godkid or adult) via a hidden
+      // measuring <svg>, so the spacing maths below can guarantee no two figures ever overlap regardless
+      // of pose. (A guess never held: a raised-arm adult, a scaled godkid and Aspen all differ.)
       var reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      var measSvg = document.createElementNS(svgNS, "svg");
+      measSvg.setAttribute("viewBox", "0 0 680 920");
+      measSvg.setAttribute("style", "position:absolute;left:-4000px;top:0;width:680px;height:920px;pointer-events:none;");
+      document.body.appendChild(measSvg);
+      function measureHalf(g) { // real local half-width of a clone about its centre-x (0), min-clamped
+        var hw = 24;
+        try { measSvg.appendChild(g); var b = g.getBBox(); hw = Math.max(Math.abs(b.x), Math.abs(b.x + b.width), b.width / 2); measSvg.removeChild(g); } catch (e) { if (g.parentNode === measSvg) measSvg.removeChild(g); }
+        return Math.max(10, hw); // clamp so a degenerate/empty clone still reserves room
+      }
       var hostClones = [], otherClones = [];
       rec.people.forEach(function (p) {
         var sels = ALBUM_FIG_SEL[p.key];
         if (!sels) return;
         var isHost = p.grp === "hosts" || p.key === "hosts"; // seeded shots use albumPerson (grp:"") — match the key too
-        sels.forEach(function (sel) { var g = albumFigureClone(sel); if (g) (isHost ? hostClones : otherClones).push({ g: g, key: p.key }); });
+        sels.forEach(function (sel) { var g = albumFigureClone(sel); if (g) (isHost ? hostClones : otherClones).push({ g: g, key: p.key, halfW: measureHalf(g) }); });
       });
-      // Lay them out with the HOSTS at the heart of the huddle and the other couple/individual
-      // nestled in on the flanks: [half the others] · hosts · [the rest]. So the couple always anchors
-      // the centre of the embrace, and each guest is still visible shoulder-to-shoulder beside them.
-      var leftCount = Math.floor(otherClones.length / 2); // extra guest (odd count) sits on the right
-      var clones = otherClones.slice(0, leftCount).concat(hostClones, otherClones.slice(leftCount));
+      if (measSvg.parentNode) measSvg.parentNode.removeChild(measSvg);
       // Fallback: if the live scene isn't mounted (nothing to clone), fill the floor with one plain
       // stand-in so the polaroid still reads — a soft body blob in the hosts' pink.
-      if (!clones.length) {
+      if (!hostClones.length && !otherClones.length) {
         var bx = W / 2, by = H - 14;
         add("ellipse", { cx: bx, cy: by + 3, rx: 12, ry: 3.4, fill: "rgba(0,0,0,0.18)" });
         add("path", { d: "M" + (bx - 11) + " " + by + " Q" + (bx - 11) + " " + (by - 30) + " " + bx + " " + (by - 30) + " Q" + (bx + 11) + " " + (by - 30) + " " + (bx + 11) + " " + by + " Z", fill: "#c68e95" });
@@ -39975,52 +39981,147 @@ async def localfont(name):
       }
       // Local-coord anchors shared by every figure (all drawn identically): feet ≈y332, chest ≈y235
       // (the lean pivot — tilting about the chest keeps the feet planted and rocks the head inward),
-      // head-top ≈y150 (the tallest caps) → an upper body spans ≈182 local units.
+      // head-top ≈y150 (the tallest caps) → a full figure spans ≈182 local units.
       var LOCAL_FOOT = 332, LOCAL_PIVOT = 235, LOCAL_TOP = 150;
-      var n = clones.length;
-      // A tidy GROUP-PHOTO lineup: everyone stands spread across the frame, full bodies visible,
-      // feet on the garden band, spaced so each face reads clearly — a nicely-composed photo, not a
-      // cramped centre huddle. A couple stands close; a full group uses up to ~72% of the width.
-      var scale = n <= 2 ? 0.5 : n === 3 ? 0.46 : 0.42;  // bigger groups scale down a touch to fit the width
-      scale *= 1.5;                                       // big figures (owner's call — fill the polaroid)
-      var scaleX = scale * 1.12;                          // + a slightly wider, "fatter" stretch (horizontal only)
-      var footY = Math.min(H - 4, Math.round((H + (LOCAL_FOOT - LOCAL_TOP) * scale) / 2)); // drop the feet so the taller figure sits vertically centred
-      // Centre the layout on the HOSTS: their pair straddles W/2 and the guests fan out around them, so
-      // the couple is always dead-centre no matter how many guests (even) or which side gets the odd
-      // extra. step is capped so the widest flank still fits on-frame.
-      var hostCount = hostClones.length || 1;
-      var rightCount = otherClones.length - leftCount;
-      var hostCtrIdx = leftCount + (hostCount - 1) / 2;                    // slot index of the couple's midpoint
-      var maxHalf = Math.max(leftCount, rightCount) + (hostCount - 1) / 2; // farthest guest from centre, in slots
-      var step = maxHalf > 0 ? Math.min(44, (W / 2 - 20) / maxHalf) : 0;
-      var x0 = W / 2 - step * hostCtrIdx;                                  // shift the row so the couple centres
-      // Fix each figure's SLOT (x + a whisper of inward lean) by left→right index, but PAINT
-      // outermost-first so the hosts at the centre sit slightly forward.
-      var slots = clones.map(function (c, i) {
-        var cx = n > 1 ? x0 + step * i : W / 2;
-        cx += reduce ? 0 : jit(step * 0.16);            // a little natural side-to-side wobble
-        var frac = n > 1 ? (i / (n - 1)) * 2 - 1 : 0;   // −1 (far left) … +1 (far right)
-        var lean = reduce ? 0 : (-frac * 4 + jit(3.4)); // vary the tilt so nobody stands like a mannequin
-        var fy = footY + (reduce ? 0 : jit(2.8));       // a touch of depth — some stand a hair forward/back
-        return { c: c, cx: cx, lean: lean, fy: fy, dist: Math.abs(cx - W / 2) };
-      });
-      slots.forEach(function (s) { // soft floor shadows first, grounding the huddle
-        add("ellipse", { cx: s.cx, cy: Math.min(s.fy, H - 4), rx: 14 * scaleX, ry: 3.4 * scale, fill: "rgba(0,0,0,0.16)" });
-      });
-      slots.slice().sort(function (a, b) { return b.dist - a.dist; }).forEach(function (s) { // outermost → innermost
-        var wrap = add("g", {
-          // T·S·R·(re-centre feet): translate to the on-screen foot point, scale down, lean about the
-          // chest pivot, then shift the source so its local foot lands at the origin. No CSS transform,
-          // no layer — a plain transform ATTRIBUTE, so it serializes + rasterizes everywhere.
-          transform: "translate(" + s.cx.toFixed(2) + " " + s.fy.toFixed(2) + ") scale(" + scaleX.toFixed(3) + " " + scale.toFixed(3) + ") " +
-                     "rotate(" + s.lean.toFixed(2) + " 0 " + LOCAL_PIVOT + ") translate(0 " + (-LOCAL_FOOT) + ")"
+      var total = hostClones.length + otherClones.length;
+      // ── COMPOSITION MODE (seeded, stable per photo) ── the album shouldn't read as one repeated
+      // line-up. Pick a mode from the seed so each keepsake feels like a different candid frame, yet a
+      // given photo always renders the same. Three families: an intimate CLOSEUP (few figures, large,
+      // faces prominent, feet below the frame — photo-booth style), a staggered TWO-ROW formation
+      // (front row lower & larger, back row raised & smaller for depth — "2 lower, 2–3 above"), and a
+      // grounded LINE (everyone spread across the garden band, full bodies). The hosts always anchor
+      // the front/centre. Small groups can't sensibly form two rows, so their mode set is limited.
+      var modeRoll = rnd();
+      var mode;
+      if (total <= 2) mode = modeRoll < 0.45 ? "closeup" : "line";                 // couple: cosy closeup or a calm two-shot
+      else if (total === 3) mode = modeRoll < 0.35 ? "closeup" : (modeRoll < 0.68 ? "tworow" : "line");
+      else mode = modeRoll < 0.22 ? "closeup" : (modeRoll < 0.60 ? "tworow" : "line"); // big groups favour formations over a flat line
+      if (window.__albumForceMode) mode = window.__albumForceMode; // test hook: force a composition mode
+      svg.setAttribute("data-mode", mode); // (debug/testing aid — which composition this photo used)
+      var usableW = W - 24;         // keep everyone clear of the polaroid's edges
+      var CX = W / 2;
+
+      // Helper: place a set of {clone, base half-width} entries in ONE grounded row, hosts centred,
+      // auto-scaled so the whole row fits `rowW` with no overlap. Returns the on-frame scale used and
+      // an array of {c, cx, halfW} slots (left→right). `depth` (0=front, >0 further back) shrinks the
+      // row a touch and is applied by the caller via the row scale it passes in.
+      function layoutRow(entries, rowW, baseScale, stretch) {
+        var m = entries.length;
+        if (!m) return { scale: baseScale, slots: [] };
+        stretch = stretch || 1.1;                          // figures are stretched ~1.1× horizontally
+        // gaps: a little breathing room between neighbours (in local units, pre-scale)
+        var GAP = 6;
+        // Effective half-width = the true drawn extent (×horizontal stretch) PLUS a lean-sweep pad: a
+        // figure tilted a few degrees about its chest swings its head sideways by ≈height·sin(lean), and
+        // that sweep must be reserved or leaning neighbours collide at the shoulders/heads. LEAN_PAD
+        // covers the max applied lean (~±6°: 182·sin6° ≈ 19 local units of head travel).
+        var LEAN_PAD = 12;
+        function eh(e) { return e.halfW * stretch + LEAN_PAD; }
+        // sum of full widths + gaps at scale 1, then find the largest scale that fits rowW.
+        var sumHalf = 0; entries.forEach(function (e) { sumHalf += eh(e); });
+        var spanLocal = sumHalf * 2 + GAP * (m - 1);      // total local width the row wants
+        var fitScale = Math.min(baseScale, rowW / spanLocal);
+        // walk left→right, packing each figure a collision-radius apart at the chosen scale.
+        var slots = [], cur = 0, centres = [];
+        entries.forEach(function (e, i) {
+          if (i > 0) cur += (eh(entries[i - 1]) + GAP + eh(e)) * fitScale;
+          centres.push(cur);
         });
-        wrap.appendChild(s.c.g);
+        var rowSpan = centres.length ? centres[centres.length - 1] : 0;
+        var off = CX - rowSpan / 2;                        // centre the packed row on CX
+        entries.forEach(function (e, i) { slots.push({ c: e.g, cx: off + centres[i], halfW: e.halfW * fitScale }); });
+        return { scale: fitScale, slots: slots };
+      }
+
+      // Order guests so the hosts sit at the heart of the row: [half the guests] · hosts · [the rest].
+      var lc = Math.floor(otherClones.length / 2);
+      var rowOrder = otherClones.slice(0, lc).concat(hostClones, otherClones.slice(lc));
+
+      var placed = []; // {c, cx, fy, scaleX, scaleY, lean, dist, crop} in paint order (built below)
+
+      if (mode === "closeup") {
+        // Intimate photo-booth crop: just the hosts (+ at most ONE nearest guest), blown up large so the
+        // faces fill the upper frame; feet fall well below the bottom edge — heads high, warm and close.
+        var pick = hostClones.slice();
+        if (otherClones.length && total >= 3) pick.push(otherClones[0]); // one guest leans into a closeup, no more
+        // re-order hosts-centred within the pick (one guest sits to a side of the couple)
+        var others2 = pick.filter(function (e) { return hostClones.indexOf(e) < 0; });
+        var ord = hostClones.concat(others2);
+        var big = pick.length <= 2 ? 1.15 : 0.98;                  // very large — this is the "lean-in" shot
+        var row = layoutRow(ord, usableW, big);
+        // Crop so head-tops land high (~y30): fy = headTop + fullHeight·scale. Feet fall below the frame.
+        var fyC = 30 + (LOCAL_FOOT - LOCAL_TOP) * row.scale;
+        row.slots.forEach(function (s) {
+          var frac = row.slots.length > 1 ? (row.slots.indexOf(s) / (row.slots.length - 1)) * 2 - 1 : 0;
+          placed.push({
+            c: s.c, cx: s.cx + (reduce ? 0 : jit(1)), fy: fyC + (reduce ? 0 : jit(2)),
+            scaleY: row.scale, scaleX: row.scale * 1.1,
+            lean: reduce ? 0 : (-frac * 2 + jit(1.4)), dist: Math.abs(s.cx - CX), shadow: false
+          });
+        });
+      } else if (mode === "tworow") {
+        // Staggered FORMATION ("2 lower, 2–3 above"). Pack EVERYONE in one collision-free row (hosts
+        // centred), then lift a back TIER — the figures on the flanks — up and shrink them a touch for
+        // depth, so heads stagger at two heights like a real group-photo huddle. Because the single row
+        // is already horizontally collision-free, raising a subset can never introduce an overlap (it
+        // only reduces vertical overlap). The hosts + the innermost guest(s) stay grounded up front.
+        var row = layoutRow(rowOrder, usableW, total <= 4 ? 0.66 : 0.58);
+        var frontFootY = Math.min(H - 2, Math.round((H + (LOCAL_FOOT - LOCAL_TOP) * row.scale) / 2) + 10);
+        var lift = (LOCAL_FOOT - LOCAL_TOP) * row.scale * 0.34; // raise the back tier ~a third of a body up
+        var slotList = row.slots, nslot = slotList.length;
+        // slot indices of the hosts' block (they sit centred in rowOrder after `lc` guests)
+        var hostLo = lc, hostHi = lc + hostClones.length - 1;
+        slotList.forEach(function (s, i) {
+          // front tier: the hosts and their immediate neighbour(s); back tier: the outer flanks.
+          var frontSpan = nslot >= 5 ? 1 : 0; // how many guests flanking the hosts stay up front
+          var isFront = (i >= hostLo - frontSpan && i <= hostHi + frontSpan);
+          var frac = nslot > 1 ? (i / (nslot - 1)) * 2 - 1 : 0;
+          if (isFront) {
+            placed.push({ c: s.c, cx: s.cx + (reduce ? 0 : jit(1)), fy: frontFootY + (reduce ? 0 : jit(2)),
+              scaleY: row.scale, scaleX: row.scale * 1.1, lean: reduce ? 0 : (-frac * 2 + jit(1.4)),
+              dist: Math.abs(s.cx - CX), shadow: true, z: 2 });
+          } else {
+            var bs = row.scale * 0.86; // back tier reads as further away
+            placed.push({ c: s.c, cx: s.cx + (reduce ? 0 : jit(1)), fy: frontFootY - lift + (reduce ? 0 : jit(2)),
+              scaleY: bs, scaleX: bs * 1.1, lean: reduce ? 0 : (-frac * 2 + jit(1.4)),
+              dist: Math.abs(s.cx - CX), shadow: false, z: 1 });
+          }
+        });
+      } else { // "line" — the classic grounded spread, everyone full-body on the garden band
+        var row = layoutRow(rowOrder, usableW, total <= 2 ? 0.78 : (total <= 4 ? 0.68 : 0.60));
+        var footY = Math.min(H - 4, Math.round((H + (LOCAL_FOOT - LOCAL_TOP) * row.scale) / 2) + 8);
+        row.slots.forEach(function (s) {
+          var frac = row.slots.length > 1 ? (row.slots.indexOf(s) / (row.slots.length - 1)) * 2 - 1 : 0;
+          placed.push({ c: s.c, cx: s.cx + (reduce ? 0 : jit(1)), fy: footY + (reduce ? 0 : jit(2.5)),
+            scaleY: row.scale, scaleX: row.scale * 1.1, lean: reduce ? 0 : (-frac * 2 + jit(1.4)),
+            dist: Math.abs(s.cx - CX), shadow: true, z: 1 });
+        });
+      }
+
+      // Floor shadows first (only for figures grounded in-frame), then paint. Sort so BACK-row (lower z)
+      // paints before front, and within a row the outermost paints first (hosts at the centre sit
+      // forward). This keeps the couple prominent and the huddle reading as one warm group.
+      placed.forEach(function (p) {
+        if (!p.shadow) return;
+        var sy = Math.min(p.fy, H - 3);
+        add("ellipse", { cx: p.cx, cy: sy, rx: 13 * p.scaleX, ry: 3.2 * p.scaleY, fill: "rgba(0,0,0,0.15)" });
       });
-      // a soft violet blacklight wash LAST (over the figures too) when UV was on — matches the scene
-      if (false) add("rect", { x: 0, y: 0, width: W, height: H, fill: "#7a3ec8", opacity: "0.24", "pointer-events": "none" });
+      placed.slice().sort(function (a, b) {
+        if ((a.z || 0) !== (b.z || 0)) return (a.z || 0) - (b.z || 0); // back rows first
+        return b.dist - a.dist;                                         // then outermost → innermost
+      }).forEach(function (p) {
+        var wrap = add("g", {
+          // T·S·R·(re-centre feet): translate to the on-screen foot point, scale, lean about the chest
+          // pivot, then shift the source so its local foot lands at the origin. A plain transform
+          // ATTRIBUTE (no CSS transform / layer) so it serializes + rasterizes everywhere (WebKit-safe).
+          transform: "translate(" + p.cx.toFixed(2) + " " + p.fy.toFixed(2) + ") scale(" + p.scaleX.toFixed(3) + " " + p.scaleY.toFixed(3) + ") " +
+                     "rotate(" + p.lean.toFixed(2) + " 0 " + LOCAL_PIVOT + ") translate(0 " + (-LOCAL_FOOT) + ")"
+        });
+        wrap.appendChild(p.c);
+      });
       return svg;
     }
+    window.__albumPhotoSvg = albumPhotoSvg; // test hook: render one polaroid's photo SVG in isolation (tests/album-render.mjs)
     function renderAlbum(body) {
       var wrap = document.createElement("div");
       wrap.className = "pm-album";

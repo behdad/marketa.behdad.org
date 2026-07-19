@@ -504,6 +504,27 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 .watch-skip-btn{color:var(--muted); border-bottom-color:var(--muted)}
 .watch-loft-btn.nudge{animation:rsvp-nudge-float 2.4s ease-in-out infinite}
 @media (prefers-reduced-motion: reduce){.watch-loft-btn.nudge{animation:none}}
+/* ── autoplay (attract-mode) indicator ──────────────────────────────────────
+   A faint pill in the top corner of the scene while the self-driving attract
+   loop runs at the BBQ. Lives inside .hunt-viewport (fullscreen keeps it),
+   pointer-events:none so it never intercepts the takeover tap. The soft breathing
+   dot reads as "live / auto"; reduced-motion holds it steady. Deliberately quiet —
+   the show is the star, this is just a whisper that no one's touching it. */
+#autoplay-badge{
+  position:absolute; top:10px; left:12px; z-index:6; pointer-events:none;
+  display:flex; align-items:center; gap:.4em;
+  font:inherit; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--muted); opacity:0; transition:opacity .6s ease;
+  background:rgba(248,245,236,.55); border-radius:999px; padding:.2em .7em .2em .55em;
+  backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
+}
+#autoplay-badge.show{opacity:.85}
+#autoplay-badge .ap-dot{
+  width:.5em; height:.5em; border-radius:50%; background:var(--wine); flex:0 0 auto;
+  animation:autoplay-pulse 2.6s ease-in-out infinite;
+}
+@keyframes autoplay-pulse{0%,100%{opacity:.35}50%{opacity:1}}
+@media (prefers-reduced-motion: reduce){#autoplay-badge .ap-dot{animation:none; opacity:.8}}
 .hunt-hit{cursor:pointer}
 .hunt-hit:focus, .hunt-hit:focus-visible{outline:none}
 /* the game strip is a mouse/touch playground — no focus rings on any of its art */
@@ -18995,6 +19016,9 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </g>
     </svg>
     <div id="hunt-wipe" aria-hidden="true"></div>
+    <!-- autoplay (attract-mode) badge: a quiet "auto" pill shown while the self-driving
+         BBQ loop runs. .show is toggled by the autoplay supervisor; label is i18n'd. -->
+    <div id="autoplay-badge" aria-hidden="true"><span class="ap-dot"></span><span data-i="autoplay_badge">auto</span></div>
   </div>
   <div class="hunt-right" id="hunt-right">
     <div class="hunt-side" id="hunt-side">
@@ -19696,6 +19720,8 @@ var T = {
     kbd_esc: "go back",
     kbd_f: "fullscreen",
     kbd_watch: "watch the loft",
+    kbd_autoplay: "autoplay (loops on its own)",
+    autoplay_badge: "auto",
     kbd_party: "throw the garden party",
     kbd_u: "toggle the UV / blacklight",
     kbd_arrows: "previous / next room",
@@ -20246,6 +20272,8 @@ var T = {
     kbd_esc: "jít zpět",
     kbd_f: "celá obrazovka",
     kbd_watch: "sledovat byt",
+    kbd_autoplay: "autoplay (běží samo dokola)",
+    autoplay_badge: "auto",
     kbd_party: "spustit zahradní večírek",
     kbd_u: "přepnout UV / černé světlo",
     kbd_arrows: "předchozí / další místnost",
@@ -20842,6 +20870,7 @@ function idealBrowser() {
     var ROWS = [
       ["<kbd>f</kbd>", "kbd_f"],
       ["<kbd>w</kbd>", "kbd_watch"],
+      ["<kbd>a</kbd>", "kbd_autoplay"],
       ["<kbd>Space</kbd>", "kbd_space"],
       ["<kbd>n</kbd>", "kbd_n"],
       ["<kbd>g</kbd>", "kbd_g"],
@@ -32231,6 +32260,7 @@ var ABANDONED_CALL_MS = 30000;
     arrive: "arrive(\"ali\"|\"spencer\"|\"alireza\"|\"farhang\"|\"bahareh\") — a duo (or the single Bahareh) STROLLS IN through the garden gate onto the dance floor, an entrance moment. arrive() walks in a random duo. lights the party + heads to the garden first if needed. the duos also trickle in on their own, one per beat, as the party fills up. (ali = Ali & Goli, spencer = Spencer & Jay, alireza = Alireza & Mahzad, farhang = Farhang & Lauren, bahareh = Bahareh solo)",
     roster: "roster() — toggle the \"who's who?\" panel: an at-a-glance legend of everyone on the garden-party floor right now (name · role), reflecting who's actually present. click a name to freeze that guest's dance + point an arrow at them for 5s. roster(true) opens it, roster(false) closes it; lights the party + heads to the garden first if it's dark. the 'h' key does the same",
     reset: "reset() — restart the whole loft from the top (no confirmation — you typed it)",
+    autoplay: "autoplay(true) — ATTRACT MODE for the wedding BBQ screen: the loft drives itself, looping the full \"Day in the Loft\" show through every room forever, with a fresh season each loop. autoplay(false) stops it; autoplay() toggles. touch/click/press any key to take over (it drifts back on its own after a quiet spell); pauses cleanly when the tab is hidden or unfocused. also the 'a' key, or open the page with ?autoplay in the URL to boot straight into it",
     quit: "quit (or exit) — shut the console down (refresh, back to the desktop)",
     blacklight: "blacklight(true) — UV wash over the whole loft; blacklight(false) off; blacklight() reports whether it's on",
     uv: "uv — alias for blacklight; try `help blacklight`",
@@ -32363,7 +32393,7 @@ var ABANDONED_CALL_MS = 30000;
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
@@ -32609,7 +32639,7 @@ var ABANDONED_CALL_MS = 30000;
   // list drifts from those keys, which is how it "stays in sync". Only the first token (the
   // command name) is completed; args / inside-parens are out of scope.
   var CONSOLE_CMDS = [
-    "help", "clear", "laser", "party", "chase", "guests", "aligoli", "arrive", "roster", "reset", "quit", "blacklight", "uv", "trip", "room",
+    "help", "clear", "laser", "party", "chase", "guests", "aligoli", "arrive", "roster", "reset", "autoplay", "quit", "blacklight", "uv", "trip", "room",
     "goto", "rooms", "daylight", "night", "day", "season", "play", "pause", "temp", "weather",
     "clock", "time", "projector", "storm", "dance", "jukebox", "dj", "firstdance", "cocktail", "lang", "caption", "candle",
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "aurora", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood",
@@ -52370,6 +52400,12 @@ function spawnDustMote(container) {
       // 'w' → Watch the loft: start the cinematic, or stop it if it's already running
       if (window.__cinematic) { if (window.__stopCinematic) window.__stopCinematic(); }
       else if (window.__startCinematic) window.__startCinematic();
+    } else if (e.key === "a" || e.key === "A") {
+      e.preventDefault();
+      // 'a' → toggle autoplay (attract mode): the self-driving BBQ loop. A capture-phase
+      // handler treats every OTHER trusted key as a "take over" that exits autoplay, but
+      // deliberately ignores 'a' (see the autoplay module), so this stays a clean toggle.
+      if (window.autoplay) window.autoplay();
     }
   });
 
@@ -57430,6 +57466,190 @@ function spawnDustMote(container) {
   }
   window.__startCinematic = startCinematic; // for headless driving / tests
   window.__stopCinematic = stopCinematic; // 'w' keybind toggles the show off with this
+
+  // ── AUTOPLAY (attract mode) ────────────────────────────────────────────────
+  // A hands-off, loops-forever KIOSK layer for the wedding BBQ screen: it drives the
+  // "Day in the Loft" cinematic above on repeat, varying the season each loop so a long
+  // party never looks the same twice, and hands the wheel to anyone who touches it.
+  //
+  // WHY WRAP THE CINEMATIC (rather than script a second timeline): the cinematic is a
+  // meticulously-tuned, gate-aware walkthrough of every room's best beats. Autoplay's job
+  // is only the three things the single-run show doesn't do — LOOP, VARY, and survive a
+  // multi-hour unattended run. So this is a thin supervisor, not a new choreography.
+  //
+  // The whole loop rides ONE self-rescheduling setTimeout (the watchdog) — never a pile of
+  // setIntervals — so it can't leak timers, and it can pause/resume cleanly. Each tick it
+  // asks: is autoplay still on? is the tab visible AND focused? is the cinematic running?
+  // and does exactly one thing, then re-arms itself. That single-driver shape is the
+  // trickle/armTrickle pattern the recurring-bug notes call for.
+  //
+  // FOCUS/VISIBILITY SAFETY ("crickets rule"): the cinematic's wall-clock beats keep firing
+  // while the tab is hidden but its animations pause → desync + particle/sound pile-up. So
+  // when the tab goes hidden OR merely loses focus (another window on top — the X11 no-
+  // occlusion case the notes flag), the watchdog STOPS the running show. stopCinematic()
+  // clears every cinematicTimer + finaleTimer, tears the ghost cursor down, and stands the
+  // autopilot mini-games down — i.e. nothing accumulates while we're away. On return it
+  // simply starts a FRESH run: restarting from the top is safer than resuming mid-beat (no
+  // stale-state desync) and, for an attract loop, indistinguishable to a passer-by. No sound
+  // is ever fired by autoplay itself while unfocused — the show is stopped, not ticking.
+  var AUTOPLAY_GAP_MS = 3200;       // graceful pause between the end of one loop and the next
+  var AUTOPLAY_IDLE_RESUME_MS = 90000; // after a human takes over, drift back to autoplay after this idle
+  var AUTOPLAY_TICK_MS = 700;       // watchdog cadence — snappy enough to relaunch promptly, cheap enough to idle for hours
+  // Seasons the loop rotates through: visually distinct, and none is a "meal" day (those
+  // suppress the party/visitors). "auto" (the real calendar date) rides along so the true
+  // day-of shows up too. Order is shuffled per loop-set so consecutive loops differ.
+  var AUTOPLAY_SEASONS = ["wedding", "summer", "autumn", "spooky", "winter", "valentines", "spring", "auto"];
+  var apOn = false;              // is the attract loop armed?
+  var apIdleResume = false;      // should we drift BACK to autoplay after idle? (kiosk entry sets this)
+  var apWatchdog = null;         // the single self-rescheduling timer
+  var apIdleTimer = null;        // idle-resume countdown after a takeover
+  var apPending = false;         // a between-loops gap is counting down (don't double-launch)
+  var apSeasonBag = [];          // shuffle bag of season names, refilled when empty
+  var apLoopCount = 0;
+  var apBadge = document.getElementById("autoplay-badge");
+
+  function apShuffleSeasons() {
+    apSeasonBag = AUTOPLAY_SEASONS.slice();
+    for (var i = apSeasonBag.length - 1; i > 0; i--) {
+      var j = (Math.random() * (i + 1)) | 0;
+      var t = apSeasonBag[i]; apSeasonBag[i] = apSeasonBag[j]; apSeasonBag[j] = t;
+    }
+  }
+  function apNextSeason() {
+    if (!apSeasonBag.length) apShuffleSeasons();
+    return apSeasonBag.pop();
+  }
+  function apAttended() { return !document.hidden && document.hasFocus(); }
+  function apShowBadge(on) { if (apBadge) apBadge.classList.toggle("show", !!on); }
+
+  // Start one loop: pick a fresh season, then launch the cinematic. The season is a
+  // calendar axis the extinguisher reset (inside startCinematic → resetHunt) leaves alone,
+  // so applying it right AFTER startCinematic makes it stick for the whole run. Driven the
+  // app's own way (window.season → __applySeason), never a hand-poked variable.
+  function apLaunchLoop() {
+    apPending = false;
+    if (!apOn || !apAttended()) return;
+    if (window.__cinematic) return;   // already running — nothing to do
+    apLoopCount++;
+    if (window.__startCinematic) window.__startCinematic();
+    // vary the season (skip "auto" → leave the real date; some loops are just "today")
+    var s = apNextSeason();
+    if (s && s !== "auto" && window.season) { try { window.season(s); } catch (e) {} }
+  }
+
+  // The one driver. Re-arms itself every tick while autoplay is on. It NEVER lets work pile
+  // up: if we're away, it makes sure the show is stopped and just idles.
+  function apTick() {
+    apWatchdog = null;
+    if (!apOn) return;
+    if (!apAttended()) {
+      // paused: stop any running show so nothing ticks/accumulates while we're away
+      if (window.__cinematic && window.__stopCinematic) window.__stopCinematic();
+      apPending = false;
+      apArmWatchdog();
+      return;
+    }
+    // attended: keep the loop alive
+    if (!window.__cinematic && !apPending) {
+      // the previous loop ended (or we just resumed) → after a graceful beat, launch the next
+      apPending = true;
+      setTimeout(apLaunchLoop, AUTOPLAY_GAP_MS);
+    }
+    apArmWatchdog();
+  }
+  function apArmWatchdog() {
+    if (apWatchdog != null) return; // single slot
+    apWatchdog = setTimeout(apTick, AUTOPLAY_TICK_MS);
+  }
+
+  function startAutoplay() {
+    if (apOn) return;
+    apOn = true;
+    apShuffleSeasons();
+    apShowBadge(true);
+    if (apIdleTimer) { clearTimeout(apIdleTimer); apIdleTimer = null; }
+    // launch the first loop promptly (a short beat lets any in-flight state settle)
+    apPending = true;
+    setTimeout(apLaunchLoop, 400);
+    apArmWatchdog();
+    if (window.echo) try { window.echo("▶ autoplay: the loft runs itself now. touch anything to take over."); } catch (e) {}
+  }
+
+  // Stop the attract loop. keepIdleResume=true (a human takeover) leaves the idle-resume
+  // armed so the screen drifts back to autoplay after a quiet spell; a deliberate
+  // autoplay(false) clears it for good.
+  function stopAutoplay(keepIdleResume) {
+    if (!apOn && !apIdleTimer) return;
+    apOn = false;
+    apPending = false;
+    if (apWatchdog != null) { clearTimeout(apWatchdog); apWatchdog = null; }
+    apShowBadge(false);
+    if (window.__cinematic && window.__stopCinematic) window.__stopCinematic();
+    if (apIdleTimer) { clearTimeout(apIdleTimer); apIdleTimer = null; }
+    if (apIdleResume && keepIdleResume) apArmIdleResume();
+  }
+  // After a takeover, count down from the last interaction; when the loft's been quiet
+  // long enough, slip back into the attract loop. Any fresh interaction re-arms the timer.
+  function apArmIdleResume() {
+    if (!apIdleResume) return;
+    if (apIdleTimer) clearTimeout(apIdleTimer);
+    apIdleTimer = setTimeout(function () {
+      apIdleTimer = null;
+      if (!apOn && apAttended()) startAutoplay();
+      else if (!apOn) apArmIdleResume(); // unfocused now — try again after another quiet spell
+    }, AUTOPLAY_IDLE_RESUME_MS);
+  }
+
+  // A trusted human gesture takes over: exit the loop (but keep idle-resume armed so it
+  // comes back). The autoplay toggle key ('a') is handled in the main keydown handler and
+  // must NOT count as a takeover, so it's excluded there before this ever sees it.
+  function apOnUserGesture() {
+    if (apOn) stopAutoplay(true);          // hand over the wheel, keep drift-back armed
+    else if (apIdleResume) apArmIdleResume(); // already handed over — push the drift-back timer out
+  }
+  window.__autoplayTakeover = apOnUserGesture; // headless tests can't forge a trusted event; drive the takeover path directly
+  // pointerdown/keydown at capture phase, trusted only (the cinematic's own scripted
+  // el.dispatch clicks are untrusted and pass through — they must not self-cancel the loop).
+  document.addEventListener("pointerdown", function (e) { if (e.isTrusted) apOnUserGesture(); }, true);
+  document.addEventListener("keydown", function (e) {
+    if (!e.isTrusted) return;
+    if (e.key === "a" || e.key === "A") return; // the toggle key drives autoplay itself, not a takeover
+    apOnUserGesture();
+  }, true);
+  // Focus/visibility: pause immediately when we lose the screen (don't wait for the next
+  // tick), and nudge the watchdog awake on return so a paused loop relaunches promptly.
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden && apOn && window.__cinematic && window.__stopCinematic) window.__stopCinematic();
+    if (apOn) apArmWatchdog();
+  });
+  window.addEventListener("blur", function () {
+    if (apOn && window.__cinematic && window.__stopCinematic) window.__stopCinematic();
+  });
+  window.addEventListener("focus", function () { if (apOn) apArmWatchdog(); });
+
+  // Public entry: autoplay() / autoplay(true) starts (and arms idle-resume), autoplay(false)
+  // stops for good, autoplay() with no arg toggles. Also the console command + the 'a' key.
+  window.autoplay = function (arg) {
+    if (arguments.length === 0) {              // toggle
+      if (apOn) { stopAutoplay(false); return "⏹ autoplay off."; }
+      apIdleResume = true; startAutoplay(); return "▶ autoplay on — loops all rooms forever; touch anything to take over.";
+    }
+    if (arg) { apIdleResume = true; startAutoplay(); return "▶ autoplay on — loops all rooms forever; touch anything to take over."; }
+    stopAutoplay(false); return "⏹ autoplay off.";
+  };
+  window.__autoplayOn = function () { return apOn; };  // for tests / status
+  window.__autoplayLoops = function () { return apLoopCount; };
+
+  // ?autoplay URL param → kiosk boot: the owner opens one URL on the BBQ screen and walks
+  // away. Deferred a beat so the game's own load-time setup (intro prompt, first-visit
+  // laptop) settles first; idle-resume is on so an accidental touch still returns to attract.
+  try {
+    var apParam = new URLSearchParams(location.search).get("autoplay");
+    if (apParam !== null && apParam !== "0" && apParam !== "false") {
+      apIdleResume = true;
+      setTimeout(function () { if (!apOn) startAutoplay(); }, 1500);
+    }
+  } catch (e) {}
 
   if (watchBtn) {
     // Only a trusted gesture starts the show: a synthetic click can't unlock song

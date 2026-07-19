@@ -38652,6 +38652,11 @@ async def localfont(name):
       spencer: [".g-spencer"], jay: [".g-jay"], farhang: [".g-farhang"], lauren: [".g-lauren"],
       alireza: [".g-alireza"], mahzad: [".g-mahzad"], bahareh: [".g-bahareh"],
       elisabeth: [".g-elisabeth"], felix: [".g-felix"],
+      // Aspen (the photographer) as a RARE subject: sometimes she hands off the camera / sets a
+      // timer and joins the couple. A "#garden-photographer" selector routes albumFigureClone to her
+      // full-figure garden art + its OWN coordinate normalization (she's drawn small + front-left,
+      // centre x≈37, feet ≈y337 in garden coords; scaled up to stand at guest height — see below).
+      aspen: ["#garden-photographer"],
       // The godkids: NOT garden .g-* figures — clone their standing art from the CUDDLY-NOOK figures
       // (#cuddly-*), the cleanest full standing poses (the #garden-kid-* chase runners are wrapped in
       // scale/flip/bob transforms that would double-transform). A "#..." selector routes
@@ -38671,6 +38676,28 @@ async def localfont(name):
       // stand a touch smaller (their live -scale wrapper is 0.85 about the feet, OUTSIDE -peek — so
       // we re-apply that here since we clone -peek, not the scaled wrapper). Everything strips ids +
       // classes so nothing collides or animates, exactly like the guests.
+      // Aspen: her REAL full-figure art is the whole #garden-photographer group (a small front-left
+      // figure — bbox centre x≈37, feet ≈y337, head-top ≈y250, so ~87 local units tall vs a HOST
+      // figure's ~153). Clone the group, drop the sway-animation class + her hit rect + the camera-
+      // flash bloom so she stands still (keeping the camera she's holding — a photographer with a
+      // camera reads nicely), strip ids/classes, then scale her UP about her feet so she stands at
+      // roughly the couple's height and plant her feet on the shared line: map (37,337)→(0,332) at k≈1.75.
+      if (sel === "#garden-photographer") {
+        var ph = document.getElementById("garden-photographer");
+        if (!ph) return null;
+        var pg = ph.cloneNode(true);
+        var flash = pg.querySelector("#garden-flash-bloom"); if (flash) flash.parentNode.removeChild(flash); // no bloom in a still portrait
+        var phit = pg.querySelector("#garden-photog-hit"); if (phit) phit.parentNode.removeChild(phit);      // drop the transparent hit surface
+        pg.removeAttribute("class"); pg.removeAttribute("style"); pg.removeAttribute("id");
+        var pids = pg.querySelectorAll("[id]"); for (var q = 0; q < pids.length; q++) pids[q].removeAttribute("id");
+        var pwrap = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        // Her art is ~87 local units tall (bbox y249.6→337) vs a host figure's ~153 (y181→334), so
+        // scale ~1.75 stands her at the couple's height; centre x≈37 (bbox x16 w42), feet y≈337.
+        var ak = 1.75;
+        pwrap.setAttribute("transform", "translate(0 332) scale(" + ak + ") translate(-37 -337)");
+        pwrap.appendChild(pg);
+        return pwrap;
+      }
       if (sel.charAt(0) === "#") {
         var pk = document.querySelector(sel + "-peek");
         if (!pk) return null;
@@ -53465,6 +53492,19 @@ function spawnDustMote(container) {
                               .map(function (kid) { return { key: kid.key, grp: "kids", name: kid.name, roleKey: "" }; });
       subs.push({ id: "godkids", members: kids });
     }
+    // Aspen (the photographer) as a RARE subject: usually she's behind the lens, but every so often
+    // she hands off the camera / sets a timer and steps in beside the couple. Offered only while the
+    // party's on and she's present, and only ~1-in-6 of the time it's evaluated, so she lands "even
+    // sometimes" and stays a treat, not a regular. Stable id "aspen"; the caption uses her name
+    // literal ("Aspen") via the existing "with …" path — no role shown, no new dict key. Her figure
+    // clone comes from ALBUM_FIG_SEL["aspen"] (#garden-photographer, its own normalization). The DJ
+    // is deliberately NOT offered: the DJ art is a behind-the-booth head-and-neck BUST (no torso or
+    // legs), which would drop in as a cut-off floating head beside the full-figure couple + Aspen —
+    // it can't be made to read well in a feet-on-the-line lineup, so it's skipped.
+    if (window.__gardenPartyOn && Math.random() < 1 / 6) {
+      var asp = null; present.forEach(function (p) { if (p.key === "aspen") asp = p; });
+      if (asp) subs.push({ id: "aspen", members: [{ key: "aspen", grp: "crew", name: asp.name || "Aspen", roleKey: asp.roleKey }] });
+    }
     return subs;
   }
   function captureAlbumShot() {        // build + store one intimate-portrait snapshot from the live floor
@@ -53525,6 +53565,7 @@ function spawnDustMote(container) {
     var HOSTS = albumPerson("hosts", "markéta & behdad");
     var sets = [
       { subjectId: "shoot-couple",  people: [HOSTS] },
+      { subjectId: "shoot-aspen",   people: [HOSTS, albumPerson("aspen", "Aspen")] }, // the couple with the photographer (she stepped in front of the lens for one)
       { subjectId: "shoot-mouses",  people: [HOSTS, albumPerson("elisabeth", "Elisabeth"), albumPerson("felix", "Felix")] },
       { subjectId: "shoot-godkids", people: [HOSTS, albumPerson("irene", "Irene"), albumPerson("robin", "Robin"), albumPerson("navid", "Navid")] }
     ];

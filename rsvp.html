@@ -20228,7 +20228,7 @@ var T = {
     cal_p_d1: "July 10 · 15:00–03:00",
     cal_p_d2: "July 11 · 11:00–15:00",
     cal_e_d1_what: "wedding & party", cal_e_d2_what: "bbq at the loft",
-    cal_p_d1_what: "garden party", cal_p_d2_what: "brunch",
+    cal_p_d1_what: "garden party", cal_p_d2_what: "garden brunch",
     cal_download: "Download .ics",
     cal_gcal: "GCal",
     cal_ics_e1: "markéta ∞ behdad — Edmonton wedding",
@@ -20790,7 +20790,7 @@ var T = {
     cal_p_d1: "10. 7. · 15:00–03:00",
     cal_p_d2: "11. 7. · 11:00–15:00",
     cal_e_d1_what: "svatba & oslava", cal_e_d2_what: "grilování v loftu",
-    cal_p_d1_what: "zahradní oslava", cal_p_d2_what: "brunch",
+    cal_p_d1_what: "zahradní oslava", cal_p_d2_what: "zahradní brunch",
     cal_download: "Stáhnout .ics",
     cal_gcal: "GCal",
     cal_ics_e1: "markéta ∞ behdad — svatba v Edmontonu",
@@ -40524,6 +40524,7 @@ async def localfont(name):
       if (window.__albumForceMode) mode = window.__albumForceMode; // test hook: force a composition mode
       svg.setAttribute("data-mode", mode); // (debug/testing aid — which composition this photo used)
       var usableW = W - 24;         // keep everyone clear of the polaroid's edges
+      var BIG = 1.6;                // owner's call: figures 60% larger (scaling the row-width budget too so the fit-cap doesn't shrink them back; wide rows just crop a little at the frame edges, hosts stay centred)
       var CX = W / 2;
 
       // Helper: place a set of {clone, base half-width} entries in ONE grounded row, hosts centred,
@@ -40572,8 +40573,8 @@ async def localfont(name):
         // re-order hosts-centred within the pick (one guest sits to a side of the couple)
         var others2 = pick.filter(function (e) { return hostClones.indexOf(e) < 0; });
         var ord = hostClones.concat(others2);
-        var big = pick.length <= 2 ? 1.15 : 0.98;                  // very large — this is the "lean-in" shot
-        var row = layoutRow(ord, usableW, big);
+        var big = (pick.length <= 2 ? 1.15 : 0.98) * BIG;         // very large — this is the "lean-in" shot
+        var row = layoutRow(ord, usableW * BIG, big);
         // Crop so head-tops land high (~y30): fy = headTop + fullHeight·scale. Feet fall below the frame.
         var fyC = 30 + (LOCAL_FOOT - LOCAL_TOP) * row.scale;
         row.slots.forEach(function (s) {
@@ -40590,7 +40591,7 @@ async def localfont(name):
         // depth, so heads stagger at two heights like a real group-photo huddle. Because the single row
         // is already horizontally collision-free, raising a subset can never introduce an overlap (it
         // only reduces vertical overlap). The hosts + the innermost guest(s) stay grounded up front.
-        var row = layoutRow(rowOrder, usableW, total <= 4 ? 0.66 : 0.58);
+        var row = layoutRow(rowOrder, usableW * BIG, (total <= 4 ? 0.66 : 0.58) * BIG);
         var frontFootY = Math.min(H - 2, Math.round((H + (LOCAL_FOOT - LOCAL_TOP) * row.scale) / 2) + 10);
         var lift = (LOCAL_FOOT - LOCAL_TOP) * row.scale * 0.34; // raise the back tier ~a third of a body up
         var slotList = row.slots, nslot = slotList.length;
@@ -40613,7 +40614,7 @@ async def localfont(name):
           }
         });
       } else { // "line" — the classic grounded spread, everyone full-body on the garden band
-        var row = layoutRow(rowOrder, usableW, total <= 2 ? 0.78 : (total <= 4 ? 0.68 : 0.60));
+        var row = layoutRow(rowOrder, usableW * BIG, (total <= 2 ? 0.78 : (total <= 4 ? 0.68 : 0.60)) * BIG);
         var footY = Math.min(H - 4, Math.round((H + (LOCAL_FOOT - LOCAL_TOP) * row.scale) / 2) + 8);
         row.slots.forEach(function (s) {
           var frac = row.slots.length > 1 ? (row.slots.indexOf(s) / (row.slots.length - 1)) * 2 - 1 : 0;
@@ -55587,7 +55588,8 @@ function spawnDustMote(container) {
       albumShots.splice(0, dropped); // drop the oldest — cap, don't grow unbounded
       try { console.info("[album] capped at " + ALBUM_CAP + " shots — dropped " + dropped + " oldest"); } catch (e) {} // no silent caps
     }
-    if (window.__albumRefresh) window.__albumRefresh(); // live-refresh the app if it's open
+    // NOTE: deliberately DON'T live-refresh the open album on a new capture — the re-render made the
+    // grid jump while you were browsing. New photos simply appear the next time the app is opened.
     // once the album's built up a few keepsakes, Aspen nudges you to take a look (once, at ≥5)
     if (albumShots.filter(function (s) { return !s.shoot; }).length >= 5 && window.__deliverPhoneMessage && window.__phoneMessageReceived && !window.__phoneMessageReceived("album_full")) window.__deliverPhoneMessage("album_full"); // count only LIVE shots, not the pre-seeded photoshoot
     return rec;

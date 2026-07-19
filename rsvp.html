@@ -38642,7 +38642,7 @@ async def localfont(name):
           : others.slice(0, -1).join(", ") + " " + tr("album_cap_and") + " " + others[others.length - 1];
         parts.push(tr("album_cap_with") + " " + subj); // "with " / "s " (CS)
       }
-      return { line: parts.join(" · "), time: albumFmtTime(rec.t) }; // no dance/song name — just who's in the shot + time
+      return { line: parts.join(" · "), time: rec.shoot ? "" : albumFmtTime(rec.t) }; // no dance/song name — just who's in the shot + time (pre-wedding shoot photos show no party clock)
     }
     // Which live .g-NAME group(s) hold each roster key's REAL figure art (mirrors the ROSTER
     // `sel`s in the roster panel closure, but that ROSTER isn't in scope here). The hosts are
@@ -53505,7 +53505,7 @@ function spawnDustMote(container) {
     }
     if (window.__albumRefresh) window.__albumRefresh(); // live-refresh the app if it's open
     // once the album's built up a few keepsakes, Aspen nudges you to take a look (once, at ≥5)
-    if (albumShots.length >= 5 && window.__deliverPhoneMessage && window.__phoneMessageReceived && !window.__phoneMessageReceived("album_full")) window.__deliverPhoneMessage("album_full");
+    if (albumShots.filter(function (s) { return !s.shoot; }).length >= 5 && window.__deliverPhoneMessage && window.__phoneMessageReceived && !window.__phoneMessageReceived("album_full")) window.__deliverPhoneMessage("album_full"); // count only LIVE shots, not the pre-seeded photoshoot
     return rec;
   }
   // A photo-moment produces ONE keepsake (not one per flash). Flag it as consumed on the freeze
@@ -53515,7 +53515,24 @@ function spawnDustMote(container) {
   window.__albumMomentReset = function () { albumMomentSnapped = false; };
   window.__albumAdd = captureAlbumShot;                 // test hook: snap one now, return the record
   window.__albumList = function () { return albumShots.slice().reverse(); }; // test hook: newest-first copy
-  window.__albumClear = function () { albumShots = []; albumSeq = 0; albumMomentSnapped = false; albumLastSubject = ""; if (window.__albumRefresh) window.__albumRefresh(); }; // loft reset drops the roll
+  // Pre-populate the album with a few PRE-WEDDING PHOTOSHOOT keepsakes (a garden shoot before the
+  // day): the couple alone, with the mouses, and with the godkids. Seeded at load + re-seeded on
+  // reset — the OLDEST entries, so live party snaps stack above them. Calm daytime portraits:
+  // dance:"" (quiet ∞ mark, no disco ball), true-colour, no party clock (shoot:true), garden tint.
+  function albumPerson(key, name) { return { key: key, grp: "", name: name, roleKey: "" }; }
+  function seedAlbum() {
+    if (albumShots.length) return; // only seed a fresh/empty roll
+    var HOSTS = albumPerson("hosts", "markéta & behdad");
+    var sets = [
+      { subjectId: "shoot-couple",  people: [HOSTS] },
+      { subjectId: "shoot-mouses",  people: [HOSTS, albumPerson("elisabeth", "Elisabeth"), albumPerson("felix", "Felix")] },
+      { subjectId: "shoot-godkids", people: [HOSTS, albumPerson("irene", "Irene"), albumPerson("robin", "Robin"), albumPerson("navid", "Navid")] }
+    ];
+    sets.forEach(function (s) { albumShots.push({ id: ++albumSeq, t: 0, people: s.people, subjectId: s.subjectId, dance: "", season: "summer", uv: false, shoot: true }); });
+    if (window.__albumRefresh) window.__albumRefresh();
+  }
+  window.__albumClear = function () { albumShots = []; albumSeq = 0; albumMomentSnapped = false; albumLastSubject = ""; seedAlbum(); if (window.__albumRefresh) window.__albumRefresh(); }; // loft reset drops the live roll but re-seeds the photoshoot
+  seedAlbum(); // seed on load
   // ── PARTY MODE kids' chase (garden) — Irene, Robin & Navid dart across the garden,
   // one chasing another (occasionally all three), giggling, then off the far side. SAME
   // background-safety idiom as the disco stepper / camera flash: ONE self-rescheduling

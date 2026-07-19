@@ -922,6 +922,12 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #garden-disco-ball-spin{transform-box:fill-box; transform-origin:center}
 #stage-garden.garden-party #garden-disco-ball-spin{animation:disco-ball-spin 9s linear infinite}
 @keyframes disco-ball-spin{to{transform:rotate(360deg)}}
+/* DISCO UV pulse: on the disco song only (garden data-partydance) AND while the blacklight's on, a
+   soft violet wash blinks over the scene — a gentle periodic pulse, deliberately NOT a fast strobe. */
+#garden-uv-pulse{opacity:0}
+#loft-game-strip.uv-mode #stage-garden[data-partydance="disco"] #garden-uv-pulse{animation:garden-uv-pulse 1.2s ease-in-out infinite}
+@keyframes garden-uv-pulse{0%,55%,100%{opacity:0} 68%{opacity:.34} 82%{opacity:.09}}
+@media (prefers-reduced-motion: reduce){#loft-game-strip.uv-mode #stage-garden[data-partydance="disco"] #garden-uv-pulse{animation:none; opacity:0}}
 #stage-garden.garden-party .db-facet{animation:db-twinkle 1.5s ease-in-out infinite}
 #stage-garden.garden-party .db-facet.f2{animation-delay:-.5s; animation-duration:1.2s}
 #stage-garden.garden-party .db-facet.f3{animation-delay:-.9s; animation-duration:1.7s}
@@ -10365,6 +10371,9 @@ section{margin:1.9rem 0}
      until #stage-garden.garden-party; rendered last so it sits on top of the room, and
      seen through #loft-game-strip.uv-mode's blacklight filter. Non-interactive. -->
 <g id="garden-partyfx" pointer-events="none" aria-hidden="true">
+<!-- UV pulse: a soft violet wash that blinks in time on the DISCO song only (gated in CSS on the
+     garden stage's data-partydance + uv-mode). A gentle periodic pulse, NOT a rapid strobe. -->
+<rect id="garden-uv-pulse" x="0" y="0" width="680" height="920" fill="#b98cff" opacity="0" style="mix-blend-mode:screen" pointer-events="none"/>
 <g id="garden-disco-pools">
 <ellipse class="disco-pool dp1" cx="150" cy="120" rx="170" ry="150" fill="#f500f5"/>
 <ellipse class="disco-pool dp2" cx="410" cy="95"  rx="160" ry="140" fill="#00f5a3"/>
@@ -54580,6 +54589,7 @@ function spawnDustMote(container) {
     var id = on ? window.__partyDance : "";
     var dance = danceById(id), formation = dance ? dance.formation : "";
     pd.setAttribute("data-dance", id); // "" when the party's off — clears every per-dance CSS gate
+    var sg = document.getElementById("stage-garden"); if (sg) sg.setAttribute("data-partydance", id); // mirror onto the garden stage so scene-wide fx (e.g. the disco UV pulse) can gate on the active song
     pd.classList.toggle("couple-mode", formation === "couple");
     pd.classList.toggle("circle-mode", formation === "circle");
     pd.classList.toggle("waltz-mode", on && id === "waltz"); // legacy class kept so existing waltz CSS still keys on it

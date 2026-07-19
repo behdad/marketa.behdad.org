@@ -154,6 +154,16 @@ footer{margin-top:2.6rem}
   .roster-panel{transition:opacity .25s ease; transform:none}
   .roster-panel.show{transform:none}
 }
+/* roster rows that map to a garden figure are clickable — tap to single that guest out on the floor */
+.roster-panel li.roster-pick{cursor:pointer; border-radius:5px; padding:.1rem .28rem; margin:0 -.28rem; transition:background .15s ease}
+.roster-panel li.roster-pick:hover,.roster-panel li.roster-pick:focus-visible{background:var(--rule); outline:none}
+/* SINGLED-OUT GUEST: freeze their dance for a few seconds + float a bobbing arrow above them */
+#garden-guests .guest.spotlighted .guest-walk,
+#garden-guests .guest.spotlighted .guest-walk *{animation-play-state:paused !important}
+.guest-spot-arrow{animation:guest-spot-bob .7s ease-in-out infinite}
+.guest-spot-arrow path{filter:drop-shadow(0 1px 1px rgba(69,58,49,.35))}
+@keyframes guest-spot-bob{0%,100%{translate:0 0}50%{translate:0 -6px}} /* the translate PROPERTY composes with any transform attr */
+@media (prefers-reduced-motion: reduce){.guest-spot-arrow{animation:none}}
 .hunt-title{font-family:"Fraunces",serif; font-weight:700; font-size:1.1rem; text-align:center; letter-spacing:.02em; color:var(--wine); margin:.6rem 0 0; opacity:0}
 .hunt-title.show{opacity:1; transition:opacity .5s ease}
 /* the whole game reads as one handheld device: a soft burgundy shell wrapping the hint
@@ -19245,7 +19255,7 @@ var T = {
     role_mdad: "Markéta's dad", role_mmom: "Markéta's mom", role_mgrandma: "Markéta's grandmother",
     role_mniece: "Markéta's niece", role_mnephew: "Markéta's nephew", role_msisspouse: "Markéta's brother-in-law", role_qa: "QA lead",
     role_hosts: "the hosts", role_dj: "DJ", // roster-only roles (the couple share one line; the DJ names himself)
-    roster_title: "who's here", roster_empty: "The floor's empty — throw the party first.", // "who's here" roster overlay
+    roster_title: "who's who?", roster_empty: "The floor's empty — throw the party first.", roster_pick_hint: "tap to point them out on the floor", // "who's who?" roster overlay
     tip_chaharshanbe: "<em>Chaharshanbe Suri</em> (<bdi>چهارشنبه‌سوری</bdi>), the fire you leap",
     tip_sizdah: "<em>Sizdah Bedar</em> (<bdi>سیزده‌بدر</bdi>), nowruz's thirteenth day, spent outdoors",
     // The knot is the reason this day is on a wedding site at all, and the visual can't say it:
@@ -19801,7 +19811,7 @@ var T = {
     role_mdad: "Markétin táta", role_mmom: "Markétina máma", role_mgrandma: "Markétina babička",
     role_mniece: "Markétina neteř", role_mnephew: "Markétin synovec", role_msisspouse: "Markétin švagr", role_qa: "vedoucí QA",
     role_hosts: "hostitelé", role_dj: "DJ", // role sezname (pár má jeden řádek; DJ se jmenuje sám)
-    roster_title: "kdo tu je", roster_empty: "Parket je prázdný — nejdřív rozjeď párty.", // roster překryv „kdo tu je“
+    roster_title: "kdo je kdo?", roster_empty: "Parket je prázdný — nejdřív rozjeď párty.", roster_pick_hint: "klepnutím ho ukážeš na parketu", // roster překryv „kdo je kdo?“
     tip_chaharshanbe: "<em>Čaháršanbe surí</em> (<bdi>چهارشنبه‌سوری</bdi>), oheň, který se přeskakuje",
     tip_sizdah: "<em>Sizdah Bedar</em> (<bdi>سیزده‌بدر</bdi>), třináctý den nourúzu, strávený v přírodě",
     sizdah_wish: "Zauzlovat sabzeh znamená přát si svatbu. Zabralo to.",
@@ -32219,7 +32229,7 @@ var ABANDONED_CALL_MS = 30000;
     guests: "guests(true) — the three VIP guests crash the party and steal the show, dancing dead-centre floor: Ali (best man, long grey beard), Goli (Ali's fashionista girlfriend, platinum bob) & Spencer (Markéta's maid-of-honor, the giant of the group). lights the party + heads to the garden first if needed. guests(false) sends them off (party rolls on); guests() reports whether they're on the floor. they also arrive on their own a beat after the party lights. aligoli() is an alias",
     aligoli: "aligoli — alias for guests; try `help guests`",
     arrive: "arrive(\"ali\"|\"spencer\"|\"alireza\"|\"farhang\"|\"bahareh\") — a duo (or the single Bahareh) STROLLS IN through the garden gate onto the dance floor, an entrance moment. arrive() walks in a random duo. lights the party + heads to the garden first if needed. the duos also trickle in on their own, one per beat, as the party fills up. (ali = Ali & Goli, spencer = Spencer & Jay, alireza = Alireza & Mahzad, farhang = Farhang & Lauren, bahareh = Bahareh solo)",
-    roster: "roster() — toggle the \"who's here\" panel: an at-a-glance legend of everyone on the garden-party floor right now (name · role), reflecting who's actually present. roster(true) opens it, roster(false) closes it; lights the party + heads to the garden first if it's dark. the 'h' key does the same",
+    roster: "roster() — toggle the \"who's who?\" panel: an at-a-glance legend of everyone on the garden-party floor right now (name · role), reflecting who's actually present. click a name to freeze that guest's dance + point an arrow at them for 5s. roster(true) opens it, roster(false) closes it; lights the party + heads to the garden first if it's dark. the 'h' key does the same",
     reset: "reset() — restart the whole loft from the top (no confirmation — you typed it)",
     quit: "quit (or exit) — shut the console down (refresh, back to the desktop)",
     blacklight: "blacklight(true) — UV wash over the whole loft; blacklight(false) off; blacklight() reports whether it's on",
@@ -58506,6 +58516,45 @@ function spawnDustMote(container) {
 
     var panel = null, toggleBtn = null, open = false;
 
+    // Singling a guest out from the roster: freeze their dance and float an arrow over them for 5s.
+    // Only one at a time. The arrow is a child of the figure's own group (inherits its position +
+    // any height-scale) but sits OUTSIDE the .guest-walk dance wrappers, so it keeps bobbing while
+    // the dance underneath it holds still.
+    var spotlightTimer = null;
+    function clearSpotlight() {
+      if (spotlightTimer) { clearTimeout(spotlightTimer); spotlightTimer = null; }
+      var g = document.getElementById("garden-guests");
+      if (!g) return;
+      var lit = g.querySelectorAll(".guest.spotlighted");
+      for (var i = 0; i < lit.length; i++) lit[i].classList.remove("spotlighted");
+      var arrows = g.querySelectorAll(".guest-spot-arrow");
+      for (var j = 0; j < arrows.length; j++) if (arrows[j].parentNode) arrows[j].parentNode.removeChild(arrows[j]);
+    }
+    function spotlightGuests(sels) {
+      var g = document.getElementById("garden-guests");
+      if (!g || !sels) return;
+      clearSpotlight(); // replace any current spotlight — one guest at a time
+      var any = false;
+      sels.forEach(function (sel) {
+        var el = g.querySelector(sel);
+        if (!el || !el.classList.contains("guest")) return;
+        any = true;
+        el.classList.add("spotlighted");
+        var arrow = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        arrow.setAttribute("class", "guest-spot-arrow");
+        var p = document.createElementNS("http://www.w3.org/2000/svg", "path"); // a chunky arrow, tip just above the tallest cap (y≈150)
+        p.setAttribute("d", "M -2.4 116 L 2.4 116 L 2.4 133 L 7.6 133 L 0 147 L -7.6 133 L -2.4 133 Z");
+        p.setAttribute("fill", "#8e3a4a");
+        p.setAttribute("stroke", "#fffdf8");
+        p.setAttribute("stroke-width", "1.1");
+        p.setAttribute("stroke-linejoin", "round");
+        arrow.appendChild(p);
+        el.appendChild(arrow);
+      });
+      if (any) spotlightTimer = setTimeout(clearSpotlight, 5000);
+    }
+    window.__spotlightGuest = spotlightGuests; // test/console hook
+
     function ensureNodes() {
       var host = document.querySelector(".hunt-viewport");
       if (!host) return null;
@@ -58557,7 +58606,10 @@ function spawnDustMote(container) {
       ROSTER.forEach(function (r) {
         if (!present(r.sel)) return;
         var nm = r.name || (r.sel === "__dj" ? djName() : "");
-        groups[r.grp].push({ name: nm, role: tipText(r.roleKey) });
+        // which garden figure(s) this row can single out: the hosts are a pair; any ".g-*" guest is
+        // itself; crew (the DJ booth / photographer, non-".g-" sels) aren't dancing figures → not pickable
+        var sels = r.grp === "hosts" ? [".g-behdad", ".g-marketa"] : (r.sel.charAt(0) === "." ? [r.sel] : null);
+        groups[r.grp].push({ name: nm, role: tipText(r.roleKey), sels: sels });
       });
       var order = ["hosts", "guests", "crew", "kids"];
       var total = order.reduce(function (n, g) { return n + groups[g].length; }, 0);
@@ -58580,6 +58632,14 @@ function spawnDustMote(container) {
           em.textContent = p.name;
           li.appendChild(em);
           li.appendChild(document.createTextNode(p.role ? " · " + p.role : ""));
+          if (p.sels) { // clickable → single this guest out on the floor
+            li.className = "roster-pick";
+            li.setAttribute("role", "button");
+            li.setAttribute("tabindex", "0");
+            li.setAttribute("title", tipText("roster_pick_hint"));
+            li.addEventListener("click", function () { spotlightGuests(p.sels); });
+            li.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); spotlightGuests(p.sels); } });
+          }
           ul.appendChild(li);
         });
         panel.appendChild(ul);
@@ -58651,7 +58711,7 @@ function spawnDustMote(container) {
       var want = (arg === undefined) ? !open : !!arg;
       setTimeout(function () { window.__toggleRoster(want); }, window.currentStageName === "garden" ? 0 : 60); // let a room change settle
       var names = window.__rosterList();
-      if (window.echo) window.echo(want ? ("📋 who's here: " + (names.length ? names.join(", ") : "(nobody yet — the floor's filling)")) : "📋 roster closed.");
+      if (window.echo) window.echo(want ? ("📋 who's who: " + (names.length ? names.join(", ") : "(nobody yet — the floor's filling)")) : "📋 roster closed.");
       return want;
     };
 

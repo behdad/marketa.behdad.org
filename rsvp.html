@@ -42387,6 +42387,9 @@ async def localfont(name):
       else msgBadgeEl.classList.remove("show");
     }
     window.__updateMsgBadge = updateMsgBadge;
+    // the freshest still-unread message id (newest arrival first) — autoplay uses this to
+    // decide which notification to open+act-on when a text pops during attract mode.
+    window.__latestUnreadMessage = function () { for (var i = messagesThread.length - 1; i >= 0; i--) if (!messagesRead[messagesThread[i]]) return messagesThread[i]; return null; };
     window.__deliverPhoneMessage = function (id) {
       if (!MESSAGES[id] || messagesThread.indexOf(id) !== -1) return; // unknown, or already received (fire once)
       var m = MESSAGES[id];
@@ -52949,6 +52952,7 @@ function spawnDustMote(container) {
     if (window.__updateSkyFireworks) window.__updateSkyFireworks(name); // wedding-day sky (balcony/garden), else stops
   }
   window.goToStage = goToStage;
+  window.__maxUnlocked = function () { return maxUnlocked; }; // furthest room reached — autoplay reads it to know which rooms are solved
   if (prevBtn) prevBtn.addEventListener("click", function () {
     if (stageIndex > 0) goToStage(STAGES[stageIndex - 1]);
   });
@@ -58270,134 +58274,259 @@ function spawnDustMote(container) {
   window.__startCinematic = startCinematic; // for headless driving / tests
   window.__stopCinematic = stopCinematic; // 'w' keybind toggles the show off with this
 
-  // ── AUTOPLAY (attract mode) ────────────────────────────────────────────────
-  // A hands-off, loops-forever KIOSK layer for the wedding BBQ screen: it drives the
-  // "Day in the Loft" cinematic above on repeat, varying the season each loop so a long
-  // party never looks the same twice, and hands the wheel to anyone who touches it.
+  // ── AUTOPLAY (attract mode) — a STATE MACHINE ──────────────────────────────
+  // A hands-off, loops-forever KIOSK layer for the wedding BBQ screen: the loft drives
+  // ITSELF, room by room, reacting to whatever's on screen — including the phone texts
+  // that pop up during the party. It is NOT the scripted "Day in the Loft" cinematic
+  // (that stays behind the Trailer button, a fixed kitchen→…→balcony reel). Autoplay is a
+  // genuine observe-decide-act loop:
   //
-  // WHY WRAP THE CINEMATIC (rather than script a second timeline): the cinematic is a
-  // meticulously-tuned, gate-aware walkthrough of every room's best beats. Autoplay's job
-  // is only the three things the single-run show doesn't do — LOOP, VARY, and survive a
-  // multi-hour unattended run. So this is a thin supervisor, not a new choreography.
+  //   • TAKE OVER IN PLACE. It never resets to the kitchen. It reads currentStageName +
+  //     the room's solved state and drives on from wherever the game already is — so
+  //     turning it on mid-office keeps you in the office and works that room next.
+  //   • REACT TO EVENTS. When a phone notification / incoming text pops (the .msg-thumb
+  //     toast, or any unread in the thread, or an incoming call ring), the machine OPENS
+  //     the messages app, VIEWS the text, RUNS its action (__runMsgAction → pan/party/
+  //     roster/bbq/…), then continues — notifications are part of the flow, not an
+  //     interruption.
+  //   • VARY. Each visit to a room it advances the solve one beat if unsolved, else fires a
+  //     fresh flourish (a toy, a season change, a party move, a spotlight…), chosen from a
+  //     round-robin / shuffle bag so a long BBQ never repeats the same trick twice.
   //
-  // The whole loop rides ONE self-rescheduling setTimeout (the watchdog) — never a pile of
-  // setIntervals — so it can't leak timers, and it can pause/resume cleanly. Each tick it
-  // asks: is autoplay still on? is the tab visible AND focused? is the cinematic running?
-  // and does exactly one thing, then re-arms itself. That single-driver shape is the
-  // trickle/armTrickle pattern the recurring-bug notes call for.
+  // ONE DRIVER, TRICKLE PATTERN. The whole machine rides a SINGLE self-rescheduling
+  // setTimeout (apTick) — never a pile of setIntervals — so it can't leak timers and it
+  // pauses/resumes cleanly. Each tick runs exactly one step of the state machine, then
+  // re-arms itself.
   //
-  // FOCUS/VISIBILITY SAFETY ("crickets rule"): the cinematic's wall-clock beats keep firing
-  // while the tab is hidden but its animations pause → desync + particle/sound pile-up. So
-  // when the tab goes hidden OR merely loses focus (another window on top — the X11 no-
-  // occlusion case the notes flag), the watchdog STOPS the running show. stopCinematic()
-  // clears every cinematicTimer + finaleTimer, tears the ghost cursor down, and stands the
-  // autopilot mini-games down — i.e. nothing accumulates while we're away. On return it
-  // simply starts a FRESH run: restarting from the top is safer than resuming mid-beat (no
-  // stale-state desync) and, for an attract loop, indistinguishable to a passer-by. No sound
-  // is ever fired by autoplay itself while unfocused — the show is stopped, not ticking.
-  var AUTOPLAY_GAP_MS = 3200;       // graceful pause between the end of one loop and the next
+  // FOCUS/VISIBILITY SAFETY ("crickets rule"). When the tab goes hidden OR merely loses
+  // focus (another window on top — the X11 no-occlusion case the notes flag), the driver
+  // idles: it takes NO step and fires NO sound, so nothing accumulates over a multi-hour
+  // unattended run. The step timer is a plain setTimeout (nothing to spawn while away);
+  // on return the next tick simply resumes the machine mid-stride. Every action autoplay
+  // takes is a user-shaped hook whose own hidden/unfocused gate keeps it silent while away.
+  //
+  // STATES: ASSESS (look around, pick a plan) → the plan is one of:
+  //   HANDLE_EVENT  — an unread text / notification / call is up: open → view → act → go on
+  //   DRIVE_ROOM    — advance the current room's solve one step (its __*DoNext walker)
+  //   ROOM_TOY      — the room is solved: fire one of its toys / flourishes
+  //   TRANSITION    — travel to the next room (round the ring; wraps = one full LOOP)
+  //   FLOURISH      — a whole-loft whimsy beat (season, party, chase, roster, jukebox, uv…)
+  // then loop back to ASSESS, forever.
+  var ROOM_RING = ["kitchen", "garden", "cuddly", "office", "balcony"];
+  var AUTOPLAY_STEP_MS = 2600;      // pacing between machine steps — leisurely enough to watch, brisk enough to feel alive
+  var AUTOPLAY_TICK_MS = 700;       // driver cadence while idling (paused) — cheap enough to sit for hours
   var AUTOPLAY_IDLE_RESUME_MS = 90000; // after a human takes over, drift back to autoplay after this idle
-  var AUTOPLAY_TICK_MS = 700;       // watchdog cadence — snappy enough to relaunch promptly, cheap enough to idle for hours
-  // Seasons the loop rotates through: visually distinct, and none is a "meal" day (those
-  // suppress the party/visitors). "auto" (the real calendar date) rides along so the true
-  // day-of shows up too. Order is shuffled per loop-set so consecutive loops differ.
-  var AUTOPLAY_SEASONS = ["wedding", "summer", "autumn", "spooky", "winter", "valentines", "spring", "auto"];
   var apOn = false;              // is the attract loop armed?
   var apIdleResume = false;      // should we drift BACK to autoplay after idle? (kiosk entry sets this)
-  var apWatchdog = null;         // the single self-rescheduling timer
-  var apGapTimer = null;         // the between-loops gap countdown (tracked so a stop can cancel it)
+  var apStepTimer = null;        // the single self-rescheduling driver
   var apIdleTimer = null;        // idle-resume countdown after a takeover
-  var apPending = false;         // a between-loops gap is counting down (don't double-launch)
-  var apSeasonBag = [];          // shuffle bag of season names, refilled when empty
-  var apLoopCount = 0;
+  var apLoopCount = 0;           // full trips around the room ring (the LOOP counter tests watch)
+  var apStepCount = 0;           // total machine steps taken (drives variety cycling)
+  var apRoomStreak = 0;          // how many steps we've spent in the current room (so we move on)
+  var apLastRoom = null;         // the room we were in last step (detect a fresh arrival)
   var apBadge = document.getElementById("autoplay-badge");
 
-  function apShuffleSeasons() {
-    apSeasonBag = AUTOPLAY_SEASONS.slice();
-    for (var i = apSeasonBag.length - 1; i > 0; i--) {
-      var j = (Math.random() * (i + 1)) | 0;
-      var t = apSeasonBag[i]; apSeasonBag[i] = apSeasonBag[j]; apSeasonBag[j] = t;
-    }
-  }
-  function apNextSeason() {
-    if (!apSeasonBag.length) apShuffleSeasons();
-    return apSeasonBag.pop();
-  }
   function apAttended() { return !document.hidden && document.hasFocus(); }
   function apShowBadge(on) { if (apBadge) apBadge.classList.toggle("show", !!on); }
+  function apRoom() { return window.currentStageName || "kitchen"; }
+  function apGoTo(name) { if (window.goToStage) try { window.goToStage(name); } catch (e) {} }
+  function apCall(fn) { if (typeof fn === "function") { try { return fn(); } catch (e) {} } }
 
-  // Start one loop: pick a fresh season, then launch the cinematic. The season is a
-  // calendar axis the extinguisher reset (inside startCinematic → resetHunt) leaves alone,
-  // so applying it right AFTER startCinematic makes it stick for the whole run. Driven the
-  // app's own way (window.season → __applySeason), never a hand-poked variable.
-  function apLaunchLoop() {
-    apGapTimer = null;
-    apPending = false;
-    if (!apOn || !apAttended()) return;
-    if (window.__cinematic) return;   // already running — nothing to do
-    apLoopCount++;
-    if (window.__startCinematic) window.__startCinematic();
-    // Vary the season (skip "auto" → leave the real date; some loops are just "today").
-    // apSilentSeason drives the app's own season path but suppresses the naming toast, so a
-    // multi-hour kiosk run doesn't flash a season pill every loop (the badge is the only
-    // affordance we want). Falls back to window.season if the internal hook is absent.
+  // A room is "solved" once the game has unlocked at or past it. We read the game's own
+  // truth (currentStageIndex vs the furthest room reached), never re-derive it. Balcony is
+  // the finale — treat it solved once the party's ever been lit (it has no further solve of
+  // its own to walk), else its DRIVE_ROOM lights the party as its solve step.
+  function apRoomSolved(name) {
+    var idx = ROOM_RING.indexOf(name);
+    var maxU = (typeof window.__maxUnlocked === "function") ? window.__maxUnlocked() : (window.currentStageIndex || 0);
+    if (name === "balcony") return !!window.__gardenPartyOn;
+    return idx < maxU; // strictly-less: the room you're unlocked INTO is still being solved
+  }
+
+  // ── event detection ── is there a fresh phone notification / unread text / call to handle?
+  // The notification toast (.msg-thumb.show) or the unread badge (.msg-badge.show) both mean
+  // "a text is waiting"; a .call-ring.show is an incoming call. These are the passer-by-
+  // visible cues, so we key off them directly.
+  function apHasEvent() {
+    if (document.querySelector(".call-ring.show")) return "call";
+    if (document.querySelector(".msg-thumb.show")) return "msg";
+    if (document.querySelector(".msg-badge.show")) return "msg";
+    return false;
+  }
+  // Open the notification and act on it, the human way. For a call we tap its ring card
+  // (answers → pans + opens the phone). For a text we run the freshest unread message's
+  // action via __runMsgAction (which opens the phone to the thread, marks it read, and runs
+  // the message's action — pan/party/roster/bbq/…), exactly as if a human tapped the toast.
+  // Returns true if it handled something.
+  function apHandleEvent(kind) {
+    if (kind === "call") {
+      var ring = document.querySelector(".call-ring.show");
+      if (ring) { ring.click(); return true; }
+    }
+    var id = window.__latestUnreadMessage && window.__latestUnreadMessage();
+    if (id && window.__runMsgAction) { window.__runMsgAction(id); return true; }
+    var thumb = document.querySelector(".msg-thumb.show"); // no id resolved but a toast is up → tap it (opens messages)
+    if (thumb) { thumb.click(); return true; }
+    var badge = document.querySelector(".msg-badge.show");
+    if (badge) { badge.click(); return true; }
+    return false;
+  }
+
+  // ── driving a room ── advance the current room's solve by one step via its __*DoNext
+  // walker (the same "do the next thing in this room" path Enter uses), decoupled from any
+  // fixed timeline. Returns true if it did a pending solve step, false if the room had
+  // nothing left to solve (→ caller fires a toy instead).
+  function apDriveRoomSolve(name) {
+    if (name === "kitchen") return !!apCall(window.__kitchenDoNext);
+    if (name === "garden") return !!apCall(window.__gardenDoNext);
+    if (name === "cuddly") return !!apCall(window.__cuddlyDoNext);
+    if (name === "office") return !!apCall(window.__officeDoNext);
+    if (name === "balcony") { if (!window.__gardenPartyOn && window.party) { window.party(true); return true; } return false; }
+    return false;
+  }
+  // A solved room's toys — fired round-robin so repeat visits vary. Each is a self-contained
+  // action driven the app's own public way.
+  var apRoomToyIdx = { kitchen: 0, garden: 0, cuddly: 0, office: 0, balcony: 0 };
+  var ROOM_TOYS = {
+    kitchen: [
+      function () { apCall(window.__toggleDayNight); }               // day ⇄ bar
+    ],
+    garden: [
+      function () { if (window.party) window.party(!window.party()); }, // party on/off
+      function () { apCall(window.chase); },                            // kids race across
+      function () { apCall(window.roster); },                           // who's here
+      function () { apCall(window.guests); }                            // VIPs crash the floor
+    ],
+    cuddly: [
+      function () { if (window.__cuddlyProjector) apCall(function () { window.__cuddlyProjector.cycle(); }); } // next channel
+    ],
+    office: [
+      function () { if (window.__wakeMonitorSaver && window.__wakeMonitorSaver()) return; apCall(window.__toggleMonitorZoom); }
+    ],
+    balcony: [
+      function () { if (window.phone) window.phone(!window.phone()); } // pocket phone up/down
+    ]
+  };
+  function apFireRoomToy(name) {
+    var toys = ROOM_TOYS[name]; if (!toys || !toys.length) return;
+    var i = apRoomToyIdx[name] % toys.length;
+    apRoomToyIdx[name] = (apRoomToyIdx[name] + 1) % toys.length;
+    apCall(toys[i]);
+  }
+
+  // ── whole-loft flourishes ── whimsy beats not tied to one room, drawn from a shuffle bag
+  // so a long run cycles through all of them before repeating. Seasons vary the whole scene
+  // and are applied SILENTLY (no naming pill flashing every loop on the kiosk — the badge is
+  // the only affordance we want).
+  var AUTOPLAY_SEASONS = ["wedding", "summer", "autumn", "spooky", "winter", "valentines", "spring", "auto"];
+  var apSeasonBag = [];
+  function apNextSeason() {
+    if (!apSeasonBag.length) {
+      apSeasonBag = AUTOPLAY_SEASONS.slice();
+      for (var i = apSeasonBag.length - 1; i > 0; i--) { var j = (Math.random() * (i + 1)) | 0; var t = apSeasonBag[i]; apSeasonBag[i] = apSeasonBag[j]; apSeasonBag[j] = t; }
+    }
+    return apSeasonBag.pop();
+  }
+  function apVarySeason() {
     var s = apNextSeason();
-    if (s && s !== "auto") apSilentSeason(s);
+    if (!s || s === "auto") return; // leave the real calendar date this beat
+    try { if (window.__applySeasonSilent) window.__applySeasonSilent(s); else if (window.season) window.season(s); } catch (e) {}
   }
-  // Apply a season the console way (so it sticks through the ~4s air-quality re-apply — see
-  // applySeasonDate) but WITHOUT the naming pill, so a multi-hour kiosk loop doesn't flash a
-  // season toast every loop. Falls back to window.season (which toasts) only if the silent
-  // hook is somehow absent. AUTOPLAY_SEASONS uses canon names that are SEASON_PREVIEW_DATE keys.
-  function apSilentSeason(name) {
-    try {
-      if (window.__applySeasonSilent) window.__applySeasonSilent(name);
-      else if (window.season) window.season(name);
-    } catch (e) {}
+  var apFlourishBag = [];
+  var FLOURISHES = [
+    apVarySeason,
+    function () { apCall(window.roster); },                                        // pans to garden + lights party
+    function () { apCall(window.firstdance); },                                    // the hosts' first dance
+    function () { apCall(window.jukebox); },                                       // spin a fresh track
+    function () { if (window.uv) window.uv(!window.uv()); },                       // blacklight wash
+    function () { apCall(window.chase); },                                          // godkids race
+    function () { if (window.__spotlightGuest) apCall(window.__spotlightGuest); },  // spotlight a guest
+    apVarySeason
+  ];
+  function apNextFlourish() {
+    if (!apFlourishBag.length) {
+      apFlourishBag = FLOURISHES.slice();
+      for (var i = apFlourishBag.length - 1; i > 0; i--) { var j = (Math.random() * (i + 1)) | 0; var t = apFlourishBag[i]; apFlourishBag[i] = apFlourishBag[j]; apFlourishBag[j] = t; }
+    }
+    return apFlourishBag.pop();
   }
 
-  // The one driver. Re-arms itself every tick while autoplay is on. It NEVER lets work pile
-  // up: if we're away, it makes sure the show is stopped and just idles.
-  function apTick() {
-    apWatchdog = null;
-    if (!apOn) return;
-    if (!apAttended()) {
-      // paused: stop any running show so nothing ticks/accumulates while we're away, and drop
-      // any pending gap launch so it can't fire the instant focus returns (the next attended
-      // tick re-schedules a fresh gap cleanly).
-      if (window.__cinematic && window.__stopCinematic) window.__stopCinematic();
-      if (apGapTimer != null) { clearTimeout(apGapTimer); apGapTimer = null; }
-      apPending = false;
-      apArmWatchdog();
-      return;
-    }
-    // attended: keep the loop alive
-    if (!window.__cinematic && !apPending) {
-      // the previous loop ended (or we just resumed) → after a graceful beat, launch the next.
-      // Tracked in apGapTimer so a stop mid-gap can cancel it (else a stale gap could launch
-      // an unscheduled loop after autoplay was turned off then back on within the gap window).
-      apPending = true;
-      apGapTimer = setTimeout(apLaunchLoop, AUTOPLAY_GAP_MS);
-    }
-    apArmWatchdog();
+  // ── ASSESS ── decide what the machine does this step. Priority: a fresh notification
+  // always wins (react to events). Otherwise linger a few steps in the current room (drive
+  // its solve, or fire a toy if solved), sprinkle in a whole-loft flourish now and then, and
+  // move to the next room once we've lingered. Variety comes from the step counter + shuffle
+  // bags so consecutive steps differ.
+  function apPickPlan() {
+    var ev = apHasEvent();
+    if (ev) return { kind: "HANDLE_EVENT", ev: ev };
+    var room = apRoom();
+    if (room !== apLastRoom) { apRoomStreak = 0; apLastRoom = room; } // fresh arrival
+    apRoomStreak++;
+    if (apRoomStreak > (2 + (apStepCount % 3))) return { kind: "TRANSITION" }; // lingered enough → move on
+    if (apStepCount % 4 === 3) return { kind: "FLOURISH" };                    // ~every 4th step, a whole-loft beat
+    if (!apRoomSolved(room)) return { kind: "DRIVE_ROOM", room: room };
+    return { kind: "ROOM_TOY", room: room };
   }
-  function apArmWatchdog() {
-    if (apWatchdog != null) return; // single slot
-    apWatchdog = setTimeout(apTick, AUTOPLAY_TICK_MS);
+  function apNextRoom() {
+    var i = ROOM_RING.indexOf(apRoom());
+    if (i === -1) i = 0;
+    var next = (i + 1) % ROOM_RING.length;
+    if (next === 0) apLoopCount++; // wrapped past the balcony back to the kitchen → a full loop
+    return ROOM_RING[next];
+  }
+
+  // Run one step of the state machine. It does exactly one thing and returns; the driver
+  // re-arms the next step. Called only while attended (or once, forced, by the test hook).
+  function apRunStep() {
+    var plan = apPickPlan();
+    apStepCount++;
+    switch (plan.kind) {
+      case "HANDLE_EVENT":
+        apHandleEvent(plan.ev);
+        apRoomStreak = 0; apLastRoom = apRoom(); // the action may have panned us elsewhere
+        break;
+      case "TRANSITION":
+        apGoTo(apNextRoom());
+        break;
+      case "FLOURISH":
+        apCall(apNextFlourish());
+        break;
+      case "DRIVE_ROOM":
+        if (!apDriveRoomSolve(plan.room)) apFireRoomToy(plan.room); // nothing left to solve → a toy
+        break;
+      case "ROOM_TOY":
+        apFireRoomToy(plan.room);
+        break;
+    }
+  }
+
+  // The one driver. Re-arms itself while autoplay is on. It NEVER lets work pile up: while
+  // away (hidden/unfocused) it takes NO step and fires NO sound — it idles on the cheap
+  // cadence until focus returns, then resumes the machine mid-stride.
+  function apTick() {
+    apStepTimer = null;
+    if (!apOn) return;
+    if (apAttended()) { apRunStep(); apStepTimer = setTimeout(apTick, AUTOPLAY_STEP_MS); }
+    else { apStepTimer = setTimeout(apTick, AUTOPLAY_TICK_MS); } // paused: idle, nothing accumulates
+  }
+  function apArmDriver(delay) {
+    if (apStepTimer != null) return; // single slot
+    apStepTimer = setTimeout(apTick, delay == null ? AUTOPLAY_STEP_MS : delay);
   }
 
   function startAutoplay() {
     if (apOn) return;
     apOn = true;
-    apShuffleSeasons();
+    // TAKE OVER IN PLACE: seed the machine's bookkeeping from wherever the game IS right now —
+    // never reset the room, never launch the fixed cinematic. The first step assesses the
+    // current room and drives on from there.
+    apLastRoom = apRoom();
+    apRoomStreak = 0;
+    apSeasonBag = []; apFlourishBag = [];
     apShowBadge(true);
     if (apIdleTimer) { clearTimeout(apIdleTimer); apIdleTimer = null; }
-    // launch the first loop promptly (a short beat lets any in-flight state settle); tracked
-    // in apGapTimer so a stop before it fires cancels it, same as the between-loops gap.
-    apPending = true;
-    if (apGapTimer != null) clearTimeout(apGapTimer);
-    apGapTimer = setTimeout(apLaunchLoop, 400);
-    apArmWatchdog();
-    if (window.echo) try { window.echo("▶ autoplay: the loft runs itself now. touch anything to take over."); } catch (e) {}
+    apArmDriver(500); // a short beat so any in-flight state settles, then the machine takes the wheel
+    if (window.echo) try { window.echo("▶ autoplay: the loft runs itself now — from right here. touch anything to take over."); } catch (e) {}
   }
 
   // Stop the attract loop. keepIdleResume=true (a human takeover) leaves the idle-resume
@@ -58406,11 +58535,8 @@ function spawnDustMote(container) {
   function stopAutoplay(keepIdleResume) {
     if (!apOn && !apIdleTimer && !apIdleResume) return;
     apOn = false;
-    apPending = false;
-    if (apWatchdog != null) { clearTimeout(apWatchdog); apWatchdog = null; }
-    if (apGapTimer != null) { clearTimeout(apGapTimer); apGapTimer = null; } // no stale launch after a stop
+    if (apStepTimer != null) { clearTimeout(apStepTimer); apStepTimer = null; }
     apShowBadge(false);
-    if (window.__cinematic && window.__stopCinematic) window.__stopCinematic();
     if (apIdleTimer) { clearTimeout(apIdleTimer); apIdleTimer = null; }
     // A DELIBERATE stop (keepIdleResume falsy — autoplay(false) / the 'a' toggle-off) turns
     // the feature OFF for good: clear idle-resume so a later touch can't silently re-arm it.
@@ -58441,29 +58567,26 @@ function spawnDustMote(container) {
   // NB: autoplay deliberately does NOT stop on arbitrary clicks/keys — on the BBQ kiosk the owner
   // needs to click (e.g. go fullscreen) without killing the show. It stops ONLY via the explicit
   // "Take over" control, autoplay(false), or the 'a' key (handled in the main keydown handler).
-  // Focus/visibility: pause immediately when we lose the screen (don't wait for the next
-  // tick), and nudge the watchdog awake on return so a paused loop relaunches promptly.
-  document.addEventListener("visibilitychange", function () {
-    if (document.hidden && apOn && window.__cinematic && window.__stopCinematic) window.__stopCinematic();
-    if (apOn) apArmWatchdog();
-  });
-  window.addEventListener("blur", function () {
-    if (apOn && window.__cinematic && window.__stopCinematic) window.__stopCinematic();
-  });
-  window.addEventListener("focus", function () { if (apOn) apArmWatchdog(); });
+  // Focus/visibility: on return, nudge the driver awake so a paused machine resumes promptly.
+  // (Nothing to tear down on leaving — the driver simply idles while unattended and the game's
+  // own effects self-pause; nothing autoplay spawns accumulates.)
+  document.addEventListener("visibilitychange", function () { if (apOn && !document.hidden) apArmDriver(300); });
+  window.addEventListener("focus", function () { if (apOn) apArmDriver(300); });
 
   // Public entry: autoplay() / autoplay(true) starts (and arms idle-resume), autoplay(false)
   // stops for good, autoplay() with no arg toggles. Also the console command + the 'a' key.
   window.autoplay = function (arg) {
     if (arguments.length === 0) {              // toggle
       if (apOn) { stopAutoplay(false); return "⏹ autoplay off."; }
-      apIdleResume = true; startAutoplay(); return "▶ autoplay on — loops all rooms forever; touch anything to take over.";
+      apIdleResume = true; startAutoplay(); return "▶ autoplay on — the loft drives itself from here, forever; touch anything to take over.";
     }
-    if (arg) { apIdleResume = true; startAutoplay(); return "▶ autoplay on — loops all rooms forever; touch anything to take over."; }
+    if (arg) { apIdleResume = true; startAutoplay(); return "▶ autoplay on — the loft drives itself from here, forever; touch anything to take over."; }
     stopAutoplay(false); return "⏹ autoplay off.";
   };
   window.__autoplayOn = function () { return apOn; };  // for tests / status
   window.__autoplayLoops = function () { return apLoopCount; };
+  window.__autoplaySteps = function () { return apStepCount; };  // for tests — total machine steps taken
+  window.__autoplayForceStep = function () { if (apOn) apRunStep(); }; // for tests — run one step synchronously
 
   // ?autoplay URL param → kiosk boot: the owner opens one URL on the BBQ screen and walks
   // away. Deferred a beat so the game's own load-time setup (intro prompt, first-visit

@@ -4326,7 +4326,7 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
    Farhang+Lauren later = one more CUDDLY_DUOS row + two more SVG figures. */
 .cuddly-visitor{opacity:0; transition:opacity .55s ease}
 .cuddly-visitor.showing{opacity:1; pointer-events:auto} /* clickable only while visible (tap → wave/giggle) */
-.cuddly-visitor-move{transform-box:fill-box; transform-origin:bottom center; transition:translate .45s ease}
+.cuddly-visitor-move{transform-box:fill-box; transform-origin:bottom center; scale:1.65 1.5; transition:translate .45s ease} /* visiting guests 50% bigger + a touch fatter, scaled about their feet so they stay planted */
 /* the settle-in lean (a soft entrance shared by every visitor; reduced motion = at rest) */
 .cuddly-visitor-peek{transform-box:fill-box; transform-origin:bottom center; translate:0 8px; transition:translate .6s cubic-bezier(.34,1.15,.6,1)}
 .cuddly-visitor.showing .cuddly-visitor-peek{translate:0 0}
@@ -11171,7 +11171,7 @@ section{margin:1.9rem 0}
      the mouses. Warm olive skin (#d69a6a) + springy black-brown curls echo their call figures;
      UV-readable tones. Tappable flare + hover name·role (sister-in-law / nephew / niece). Shown
      with the .guests-in gating (arrive with the trickle, drop on room-leave / party-off). -->
-<g class="guest g-patricia" transform="translate(415,0)">
+<g class="guest g-patricia" transform="translate(415,0) translate(0 332) scale(0.9) translate(0 -332)"><!-- scaled shorter about the feet -->
 <g class="guest-walk"><!-- gate walk-in wrapper: no static transform, composes with the arrival/dance -->
 <g class="guest-arrival">
 <g class="guest-orbit"><!-- single: eases to a gentle in-place bob (no partner to circle); no static transform -->
@@ -11967,7 +11967,7 @@ section{margin:1.9rem 0}
 <polygon points="635,150 635,158 628,158" fill="#8f5740" opacity="0.38"/>
 <circle cx="430" cy="55" r="2.2" fill="#a4654a" opacity="0.4"/>
 </g>
-<rect x="0" y="0" width="680" height="18" fill="#ece8e0"/>
+<rect id="cuddly-ceiling" x="0" y="0" width="680" height="18" fill="#ece8e0" style="cursor:pointer"/>
 <rect x="300" y="60" width="26" height="13" fill="#8a4a35" class="hunt-hit wall-brick"/>
 <rect x="420" y="120" width="26" height="13" fill="#d49a75" class="hunt-hit wall-brick"/>
 <rect x="620" y="70" width="26" height="13" fill="#8a4a35" class="hunt-hit wall-brick"/>
@@ -19661,7 +19661,7 @@ var T = {
     msg_empty: "No messages yet.",
     msg_pouria_from: "Pouria",
     msg_pouria_body: "bar's open again 🍸 get down here",
-    msg_group_from: "Wedding crowd",
+    msg_group_from: "Wedding crew",
     msg_group_body: "you dancing or what?? 💃",
     msg_album_body: "new photo added — let's take another selfie!",
     msg_irene_games_body: "<em>daeeee</em> I'm bored. can I play games on the computer?",
@@ -20213,7 +20213,7 @@ var T = {
     msg_empty: "Zatím žádné zprávy.",
     msg_pouria_from: "Pouria",
     msg_pouria_body: "bar zase otevřel 🍸 padej sem",
-    msg_group_from: "Svatební dav",
+    msg_group_from: "Svatební parta",
     msg_group_body: "tak tančíš, nebo co?? 💃",
     msg_album_body: "přibyla nová fotka — dáme další selfie!",
     msg_irene_games_body: "<em>daeeee</em> nudím se. můžu si na počítači zahrát hry?",
@@ -25840,6 +25840,18 @@ document.addEventListener("click", function (e) {
   window.__cuddlyVisitorText = function (id) { if (CUDDLY_DUOS[id] && window.__deliverPhoneMessage) { window.__deliverPhoneMessage("visit_" + id); return true; } return false; };
   window.__cuddlyVisit = function (id, forced) { return visit(id, forced); };
   window.__cuddlyVisitorDuos = function () { return DUO_IDS.slice(); };
+  // Double-click the nook's ROOF (the pale ceiling strip along the very top — NOT the brick wall)
+  // → a duo drops by unannounced. The daytime + no-meal rules are enforced inside visit(). Fresh duo each time.
+  (function () {
+    var roof = document.getElementById("cuddly-ceiling");
+    if (!roof) return;
+    roof.addEventListener("dblclick", function () {
+      var pool = DUO_IDS.filter(function (id) { return id !== activeDuo; });
+      if (!pool.length) pool = DUO_IDS;
+      visit(pool[Math.floor(Math.random() * pool.length)], false);
+    });
+  })();
+  window.__cuddlyRoofSummon = function () { var pool = DUO_IDS.filter(function (id) { return id !== activeDuo; }); if (!pool.length) pool = DUO_IDS; return visit(pool[Math.floor(Math.random() * pool.length)], false); }; // test/console hook
   schedule();
 })();
 // Totoro co-watch controller: whenever the projector's on the totoro channel AND we're in the
@@ -57702,15 +57714,10 @@ function spawnDustMote(container) {
     if (apOn) stopAutoplay(true);          // hand over the wheel, keep drift-back armed
     else if (apIdleResume) apArmIdleResume(); // already handed over — push the drift-back timer out
   }
-  window.__autoplayTakeover = apOnUserGesture; // headless tests can't forge a trusted event; drive the takeover path directly
-  // pointerdown/keydown at capture phase, trusted only (the cinematic's own scripted
-  // el.dispatch clicks are untrusted and pass through — they must not self-cancel the loop).
-  document.addEventListener("pointerdown", function (e) { if (e.isTrusted) apOnUserGesture(); }, true);
-  document.addEventListener("keydown", function (e) {
-    if (!e.isTrusted) return;
-    if (e.key === "a" || e.key === "A") return; // the toggle key drives autoplay itself, not a takeover
-    apOnUserGesture();
-  }, true);
+  window.__autoplayTakeover = apOnUserGesture; // kept for tests / programmatic takeover
+  // NB: autoplay deliberately does NOT stop on arbitrary clicks/keys — on the BBQ kiosk the owner
+  // needs to click (e.g. go fullscreen) without killing the show. It stops ONLY via the explicit
+  // "Take over" control, autoplay(false), or the 'a' key (handled in the main keydown handler).
   // Focus/visibility: pause immediately when we lose the screen (don't wait for the next
   // tick), and nudge the watchdog awake on return so a paused loop relaunches promptly.
   document.addEventListener("visibilitychange", function () {
@@ -57773,7 +57780,10 @@ function spawnDustMote(container) {
   }
   // Skip is also covered by the global pointerdown/keydown cancel, but wire it
   // explicitly so it reads as a real control.
-  if (skipBtn) skipBtn.addEventListener("click", stopCinematic);
+  if (skipBtn) skipBtn.addEventListener("click", function () {
+    if (window.__autoplayOn && window.__autoplayOn()) { window.autoplay(false); return; } // "Take over" is the deliberate way out of attract mode
+    stopCinematic();
+  });
 
   // ── attract-blink on the how-to hint ──
   // A new player can miss the instruction caption, so on first load it pulses gently

@@ -3660,6 +3660,8 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .pm-msg-row.unread .pm-msg-from{color:var(--ink)} /* unread: bolder sender + text until tapped */
 .pm-msg-row.unread .pm-msg-text{font-weight:700}
 .pm-msg-head{display:flex; align-items:baseline; gap:7px; padding-left:9px}
+.pm-msg-x{margin-left:auto; flex:0 0 auto; align-self:flex-start; background:none; border:none; color:var(--soft); font-size:12px; line-height:1; padding:2px 5px; cursor:pointer; opacity:.45; border-radius:6px; transition:opacity .15s ease, color .15s ease} /* dismiss one text */
+.pm-msg-x:hover, .pm-msg-x:focus-visible{opacity:1; color:var(--wine); outline:none}
 .pm-msg-from{font-size:10px; font-weight:600; color:var(--muted)}
 .pm-msg-time{font-size:9.5px; color:var(--muted); opacity:.7}
 .pm-msg-bubble{background:var(--paper); border:1px solid var(--rule); border-radius:13px 13px 13px 3px; padding:7px 11px; font-size:13px; line-height:1.4; color:var(--ink); max-width:86%; overflow-wrap:anywhere}
@@ -3717,6 +3719,9 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .call-ring-txt{display:flex; flex-direction:column; min-width:0}
 .call-ring-from{font-size:16px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .call-ring-sub{font-size:13px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.call-ring-x{flex:none; width:34px; height:34px; margin-left:4px; border-radius:50%; background:#c0392b; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(192,57,43,.42); cursor:pointer} /* decline / dismiss the incoming call */
+.call-ring-x svg{width:16px; height:16px}
+.call-ring-x:focus-visible{outline:2px solid var(--wine); outline-offset:2px}
 .call-ring-answer{flex:none; width:34px; height:34px; margin-left:4px; border-radius:50%; background:#2b9d4b; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(43,157,75,.45)}
 .call-ring-answer svg{width:19px; height:19px}
 @keyframes call-ring-glow{0%,100%{box-shadow:0 6px 22px rgba(0,0,0,.28), inset 0 0 0 1px var(--rule)} 50%{box-shadow:0 7px 27px rgba(43,157,75,.5), inset 0 0 0 1px var(--rule)}}
@@ -38770,6 +38775,16 @@ async def localfont(name):
     // OR as literal strings (from/body) for ad-hoc ones delivered via the message() console API.
     function msgFrom(m) { return (m && m.from != null) ? m.from : tr(m.fromKey); }
     function msgBody(m) { return (m && m.body != null) ? m.body : tr(m.bodyKey); }
+    // remove ONE text from the thread (its per-row ✕). Drops it + its read-mark, refreshes the
+    // badge, and live-re-renders the open thread.
+    function dismissMessage(id) {
+      var i = messagesThread.indexOf(id);
+      if (i >= 0) messagesThread.splice(i, 1);
+      delete messagesRead[id];
+      if (window.__updateMsgBadge) window.__updateMsgBadge();
+      if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages);
+    }
+    window.__dismissMessage = dismissMessage; // test hook
     function renderMessages(body) {
       var wrap = document.createElement("div");
       wrap.className = "pm-messages";
@@ -38791,6 +38806,9 @@ async def localfont(name):
           var from = document.createElement("span"); from.className = "pm-msg-from"; from.textContent = msgFrom(m);
           head.appendChild(from);
           if (m.time) { var tm = document.createElement("span"); tm.className = "pm-msg-time"; tm.textContent = m.time; head.appendChild(tm); }
+          var xb = document.createElement("button"); xb.type = "button"; xb.className = "pm-msg-x"; xb.textContent = "✕"; xb.setAttribute("aria-label", tr("install_dismiss")); // dismiss THIS text from the thread
+          xb.addEventListener("click", function (e) { e.stopPropagation(); dismissMessage(id); });
+          head.appendChild(xb);
           var bub = document.createElement("div"); bub.className = "pm-msg-bubble";
           var txt = document.createElement("span"); txt.className = "pm-msg-text"; txt.innerHTML = msgBody(m); bub.appendChild(txt); // authored dict copy (may carry <em>, e.g. Irene's "daeeee")
           if (m.img) { // a "developing polaroid" fade-in (it's a photobooth shot); static, no tap-to-enlarge
@@ -41042,8 +41060,13 @@ async def localfont(name):
         callRingEl.className = "call-ring";
         callRingEl.innerHTML = '<span class="call-ring-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6.6 2.5 C5.4 2.5 4.3 3.3 4 4.6 C3.2 8.1 4.3 12.4 7.4 16 C10.5 19.6 14.6 21.6 18.1 21.5 C19.4 21.4 20.4 20.4 20.6 19.1 L20.9 17 C21 16.2 20.6 15.4 19.9 15.1 L16.7 13.8 C16 13.5 15.2 13.7 14.7 14.3 L13.9 15.3 C12.1 14.4 10.5 13 9.4 11 L10.5 10.3 C11.2 9.9 11.5 9.1 11.3 8.3 L10.5 5 C10.3 4.2 9.6 3.7 8.8 3.7 Z"/></svg></span>' +
           '<span class="call-ring-txt"><span class="call-ring-from"></span><span class="call-ring-sub"></span></span>' +
+          '<span class="call-ring-x" role="button" tabindex="0"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 L6 18 M6 6 L18 18" stroke="#fff" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg></span>' +
           '<span class="call-ring-answer"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M6.6 2.5 C5.4 2.5 4.3 3.3 4 4.6 C3.2 8.1 4.3 12.4 7.4 16 C10.5 19.6 14.6 21.6 18.1 21.5 C19.4 21.4 20.4 20.4 20.6 19.1 L20.9 17 C21 16.2 20.6 15.4 19.9 15.1 L16.7 13.8 C16 13.5 15.2 13.7 14.7 14.3 L13.9 15.3 C12.1 14.4 10.5 13 9.4 11 L10.5 10.3 C11.2 9.9 11.5 9.1 11.3 8.3 L10.5 5 C10.3 4.2 9.6 3.7 8.8 3.7 Z"/></svg></span>';
         callRingEl.addEventListener("click", answerMadla);
+        var declineBtn = callRingEl.querySelector(".call-ring-x"); // dismiss the call without answering (stops the card's answer click)
+        declineBtn.setAttribute("aria-label", tr("install_dismiss"));
+        declineBtn.addEventListener("click", function (e) { e.stopPropagation(); hideCallRing(); });
+        declineBtn.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); e.preventDefault(); hideCallRing(); } });
       }
       if (callRingEl.parentNode !== host) host.appendChild(callRingEl);
       callRingEl.querySelector(".call-ring-from").textContent = tr("madla_fam");   // "Madla"

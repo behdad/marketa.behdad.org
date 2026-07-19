@@ -3833,14 +3833,26 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .pm-album{display:flex; flex-direction:column; gap:16px; padding:8px 4px 6px; min-height:100%; box-sizing:border-box}
 .pm-album-empty{margin:auto; color:var(--muted); font-size:12.5px; text-align:center; line-height:1.5; max-width:80%}
 .pm-album-empty b{display:block; font-family:"Fraunces",serif; font-size:16px; color:var(--ink); margin-bottom:5px}
+/* album search: a small round search field above the roll, live-filters the polaroids by the
+   people named in each shot. Light theme, phone fonts; a ✕ clears it. */
+.pm-album-search{position:relative; align-self:stretch; display:flex; align-items:center; margin:0 6px}
+.pm-album-search input{flex:1; width:100%; box-sizing:border-box; padding:8px 30px 8px 12px; border:1px solid var(--rule); border-radius:16px; background:var(--paper); color:var(--ink); font-family:"Source Serif 4",serif; font-size:13px; line-height:1.2; -webkit-appearance:none; appearance:none}
+.pm-album-search input::placeholder{color:var(--muted)}
+.pm-album-search input:focus{outline:none; border-color:var(--wine); box-shadow:0 0 0 2px rgba(142,58,74,.18)}
+.pm-album-search input::-webkit-search-cancel-button{-webkit-appearance:none; appearance:none} /* hide native ✕; we draw our own so it matches the theme */
+.pm-album-search .pm-as-x{position:absolute; right:5px; top:50%; transform:translateY(-50%); width:22px; height:22px; border:none; border-radius:50%; background:transparent; color:var(--muted); font-size:14px; line-height:1; cursor:pointer; display:none; align-items:center; justify-content:center; padding:0}
+.pm-album-search .pm-as-x:hover,.pm-album-search .pm-as-x:focus-visible{color:var(--wine); outline:none}
+.pm-album-search.has-q .pm-as-x{display:flex}
+.pm-album-grid{display:flex; flex-direction:column; gap:16px}
+.pm-album-nomatch{margin:14px auto; color:var(--muted); font-size:12.5px; text-align:center; line-height:1.5; max-width:80%}
 .pm-polaroid{align-self:center; width:196px; max-width:100%; background:#fffdf8; padding:9px 9px 0; border:none; border-radius:3px; box-shadow:0 3px 12px rgba(69,58,49,.22), inset 0 0 0 1px rgba(69,58,49,.06); cursor:pointer; font:inherit; text-align:center; display:block}
-.pm-polaroid:nth-child(odd){transform:rotate(-1.4deg)} /* a lightly-tossed stack; static (not animated) */
-.pm-polaroid:nth-child(even){transform:rotate(1.1deg)}
+.pm-polaroid:nth-of-type(odd){transform:rotate(-1.4deg)} /* a lightly-tossed stack; static (not animated) */
+.pm-polaroid:nth-of-type(even){transform:rotate(1.1deg)}
 .pm-polaroid:focus-visible{outline:2px solid var(--wine); outline-offset:3px}
 .pm-polaroid .pm-pol-pic{display:block; width:100%; height:auto; border-radius:1px}
 .pm-polaroid .pm-pol-cap{padding:9px 4px 12px; font-family:"Fraunces",serif; font-size:12.5px; line-height:1.35; color:var(--ink); text-align:center}
 .pm-polaroid .pm-pol-cap .pm-pol-time{display:block; margin-top:3px; font-family:"Source Serif 4",serif; font-size:10.5px; color:var(--muted)}
-@media (prefers-reduced-motion: reduce){.pm-polaroid{transform:none} .pm-polaroid:nth-child(odd),.pm-polaroid:nth-child(even){transform:none}}
+@media (prefers-reduced-motion: reduce){.pm-polaroid{transform:none} .pm-polaroid:nth-of-type(odd),.pm-polaroid:nth-of-type(even){transform:none}}
 /* album detail: an enlarged polaroid + the photobooth's share actions (Copy/Download/Gmail·Email).
    A fixed overlay filling the phone screen (the phone shell is its host), grid-stacked / no inner
    transforms so it's WebKit-safe under any scaled ancestor. */
@@ -20212,6 +20224,10 @@ var T = {
     album_empty_sub: "Aspen's still shooting — throw the party and she'll fill your roll.",
     album_cap_with: "with", // "markéta & behdad · with Ali & Goli"
     album_cap_and: "&",     // joins a couple in a caption: "Ali & Goli"
+    album_search_ph: "search photos…", // the album search-bar placeholder — filters by who's in each shot
+    album_search_aria: "search photos by who's in them",
+    album_search_clear: "clear search",
+    album_search_none: "no photos with anyone by that name.",
     album_close: "close",
     album_btn_copy: "📋 Copy", // Download/Gmail/Email reuse the photobooth's pb_btn_* keys
     app_console: "console",
@@ -20774,6 +20790,10 @@ var T = {
     album_cap_with: "s", // "markéta & behdad · s Ali & Goli"
     album_cap_and: "&",  // spojuje pár v popisku: "Ali & Goli"
     album_empty_sub: "Aspen ještě fotí — uspořádej párty a rolička se zaplní.",
+    album_search_ph: "hledat fotky…", // placeholder vyhledávání v albu — filtruje podle toho, kdo je na snímku
+    album_search_aria: "hledat fotky podle toho, kdo je na nich",
+    album_search_clear: "vymazat hledání",
+    album_search_none: "žádné fotky s nikým toho jména.",
     album_close: "zavřít",
     album_btn_copy: "📋 Kopírovat", // Download/Gmail/Email přebírají fotokoutkové klíče pb_btn_*
     app_console: "konzole",
@@ -40648,6 +40668,15 @@ async def localfont(name):
       return svg;
     }
     window.__albumPhotoSvg = albumPhotoSvg; // test hook: render one polaroid's photo SVG in isolation (tests/album-render.mjs)
+    // A record matches a (lower-cased, trimmed) query if the query is a substring of ANY person's
+    // name in the shot (the hosts count as "markéta & behdad"), or of its subject/occasion id.
+    function albumRecMatches(rec, q) {
+      if (!q) return true;
+      var hay = (rec.people || []).map(function (p) { return p && p.name ? p.name : ""; });
+      hay.push("markéta & behdad"); // the hosts are always in frame — searchable by name even if people[0] renders differently
+      if (rec.subjectId) hay.push(String(rec.subjectId).replace(/[-_]/g, " ")); // "shoot-godkids" → "shoot godkids"
+      return hay.join(" \n ").toLowerCase().indexOf(q) !== -1;
+    }
     function renderAlbum(body) {
       var wrap = document.createElement("div");
       wrap.className = "pm-album";
@@ -40661,7 +40690,36 @@ async def localfont(name):
         return;
       }
       var reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-      shots.forEach(function (rec) {
+      // ── search bar ── a real <input type="search"> that live-filters the roll by the people in each shot
+      var search = document.createElement("div");
+      search.className = "pm-album-search";
+      var input = document.createElement("input");
+      input.type = "search";
+      input.className = "pm-as-input";
+      input.setAttribute("placeholder", tr("album_search_ph"));
+      input.setAttribute("aria-label", tr("album_search_aria"));
+      input.setAttribute("autocomplete", "off");
+      input.setAttribute("autocorrect", "off");
+      input.setAttribute("spellcheck", "false");
+      var clr = document.createElement("button");
+      clr.type = "button";
+      clr.className = "pm-as-x";
+      clr.setAttribute("aria-label", tr("album_search_clear"));
+      clr.textContent = "✕";
+      search.appendChild(input);
+      search.appendChild(clr);
+      wrap.appendChild(search);
+      // ── grid + no-match line ── polaroids live in their own container so the search bar doesn't
+      // disturb their nth-of-type toss rotation
+      var grid = document.createElement("div");
+      grid.className = "pm-album-grid";
+      wrap.appendChild(grid);
+      var nomatch = document.createElement("div");
+      nomatch.className = "pm-album-nomatch";
+      nomatch.style.display = "none";
+      nomatch.textContent = tr("album_search_none");
+      wrap.appendChild(nomatch);
+      function buildCard(rec, animate) {
         var card = document.createElement("button"); // a button: tap → enlarge + share (keyboard-reachable)
         card.type = "button";
         card.className = "pm-polaroid";
@@ -40677,11 +40735,28 @@ async def localfont(name):
         strip.appendChild(tm);
         card.appendChild(strip);
         card.addEventListener("click", function () { albumShowDetail(rec); }); // open it big, with share actions
-        wrap.appendChild(card);
-        if (!reduce) { // a gentle "developing" fade — opacity+filter only (no transform), like the msg polaroid
+        if (animate && !reduce) { // a gentle "developing" fade — opacity+filter only (no transform), like the msg polaroid
           try { card.animate([{ opacity: 0, filter: "contrast(.7) brightness(1.4) saturate(.5)" }, { offset: .5, opacity: 1 }, { opacity: 1, filter: "none" }], { duration: 900, easing: "ease-out" }); } catch (e) {}
         }
-      });
+        return card;
+      }
+      var firstPaint = true;
+      function applyFilter() {
+        var q = (input.value || "").trim().toLowerCase();
+        search.classList.toggle("has-q", !!q);
+        var shown = 0;
+        grid.textContent = "";
+        shots.forEach(function (rec) {
+          if (!albumRecMatches(rec, q)) return;
+          grid.appendChild(buildCard(rec, firstPaint)); // only the initial (unfiltered) paint gets the develop fade
+          shown++;
+        });
+        firstPaint = false;
+        nomatch.style.display = shown ? "none" : "";
+      }
+      input.addEventListener("input", applyFilter);
+      clr.addEventListener("click", function () { input.value = ""; applyFilter(); input.focus(); });
+      applyFilter();
       body.appendChild(wrap);
     }
     // ── album detail + share ── tapping a polaroid enlarges it inside the phone with the SAME

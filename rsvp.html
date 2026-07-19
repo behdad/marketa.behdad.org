@@ -31419,7 +31419,7 @@ var ABANDONED_CALL_MS = 30000;
         "  Kasra · testing",
         "  Garret · testing",
         "  Mahzad · testing",
-        "  Athena · testing",
+        "  Athena · QA lead",
         "made with love by behdad and Claude"
       ].forEach(function (line) { consolePrint(line, "console-dim"); });
       return;
@@ -38610,24 +38610,20 @@ async def localfont(name):
       // head-top ≈y150 (the tallest caps) → an upper body spans ≈182 local units.
       var LOCAL_FOOT = 332, LOCAL_PIVOT = 235, LOCAL_TOP = 150;
       var n = clones.length;
-      // Place the figures overlapping shoulder-to-shoulder into a warm huddle. A single figure sits
-      // centred; a pair (hosts alone) hugs at centre; larger groups spread across a tightened span so
-      // shoulders overlap. Scale them BIG so the group fills the frame, then drop feet below it for a
-      // cozy chest-up crop (heads land near the top, ~y30). Bigger groups scale down a touch to fit.
-      var scale = n <= 2 ? 0.7 : n === 3 ? 0.62 : 0.54;
-      var headTop = 30;                                   // where the tallest head should land on-screen
-      var footY = headTop + (LOCAL_FOOT - LOCAL_TOP) * scale; // → feet fall just past the frame bottom
-      // Centres spaced so neighbours' shoulders overlap by roughly half a figure-width (≈40·scale):
-      // wide enough that every face reads, tight enough that it's a warm huddle, not a line-up.
-      var step = n > 1 ? 40 * scale * 0.86 : 0;
-      var span = step * (n - 1);
+      // A tidy GROUP-PHOTO lineup: everyone stands spread across the frame, full bodies visible,
+      // feet on the garden band, spaced so each face reads clearly — a nicely-composed photo, not a
+      // cramped centre huddle. A couple stands close; a full group uses up to ~72% of the width.
+      var scale = n <= 2 ? 0.5 : n === 3 ? 0.46 : 0.42;  // bigger groups scale down a touch to fit the width
+      var footY = 124;                                    // feet stand on the garden band, near the bottom
+      var span = n > 1 ? Math.min((n - 1) * 44, W * 0.72) : 0;
+      var step = n > 1 ? span / (n - 1) : 0;
       var x0 = W / 2 - span / 2;
-      // Fix each figure's SLOT (x + inward lean) by left→right index, but PAINT outermost-first so the
-      // centre of the huddle (the hosts) sits on top — a natural front-and-centre couple in the embrace.
+      // Fix each figure's SLOT (x + a whisper of inward lean) by left→right index, but PAINT
+      // outermost-first so the hosts at the centre sit slightly forward.
       var slots = clones.map(function (c, i) {
         var cx = n > 1 ? x0 + step * i : W / 2;
         var frac = n > 1 ? (i / (n - 1)) * 2 - 1 : 0;   // −1 (far left) … +1 (far right)
-        var lean = reduce ? 0 : -frac * 8;              // up to ~8° inward; centre stays upright
+        var lean = reduce ? 0 : -frac * 4;              // a gentle inward lean; upright-ish lineup
         return { c: c, cx: cx, lean: lean, dist: Math.abs(cx - W / 2) };
       });
       slots.forEach(function (s) { // soft floor shadows first, grounding the huddle
@@ -39218,8 +39214,8 @@ async def localfont(name):
       visit_alireza: { fromKey: "msg_alireza_from", bodyKeys: ["msg_visit_body_b", "msg_visit_body_c", "msg_visit_alireza_a"], act: "visit:alireza" },
       visit_bahareh: { fromKey: "msg_bahareh_from", bodyKeys: ["msg_visit_body_a", "msg_visit_body_b", "msg_visit_bahareh_a"], act: "visit:bahareh" }
     };
-    var CUE_POOL = ["cue_cocktails", "cue_calendar", "cue_mail", "storm", "invaders", "flair", "smores", "sina_helpers", "firstdance"]; // the random party (night) drip (shuffled: each drip picks a random un-sent one); smores is night-only + sina_helpers only while Sina's off the decks — see cueRemaining()
-    var DAY_POOL = ["bbq"]; // the DAYTIME drip — texts that belong to daylight hours (no party); dripped by scheduleDayDrip()
+    var CUE_POOL = ["cue_cocktails", "cue_calendar", "storm", "invaders", "flair", "smores", "sina_helpers", "firstdance"]; // the random party (night) drip (shuffled: each drip picks a random un-sent one); smores is night-only + sina_helpers only while Sina's off the decks — see cueRemaining()
+    var DAY_POOL = ["bbq", "cue_mail"]; // the DAYTIME drip — texts that belong to daylight hours (no party); dripped by scheduleDayDrip(). Bahareh's "did you check the mail?" belongs to the day.
     // Phone photobooth result state — session-scoped, same model as notesDraft/cardsIndex:
     // a captured polaroid (frame canvas + chosen look/frame) survives a normal close/reopen
     // (renderPhotobooth seeds its locals from these and commits them back in teardown), and is

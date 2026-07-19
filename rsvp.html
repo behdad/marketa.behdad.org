@@ -1670,6 +1670,29 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   #garden-dj-decks.cue{animation:none}
   #garden-dj-scratch.scratching{animation:none}
 }
+/* request-a-song style picker — a compact neon panel that pops up when you tap the DJ booth
+   during the party. Built in JS into #garden-djpicker (rows are .dj-pick-row groups). The
+   whole panel only takes taps while it's .open; each row is its own pointer target. The active
+   dance's row is flagged .cur (neon-lit). Pop-in scales from the booth; reduced-motion shows it
+   flat with no animation (and taps still land). Themed to the booth's neon palette. */
+#garden-dj-request{pointer-events:none}
+#stage-garden.garden-party #garden-dj-request{pointer-events:auto; cursor:pointer}
+#garden-djpicker.open{pointer-events:auto}
+#garden-djpicker .dj-pick-panel{transform-box:fill-box; transform-origin:100% 100%}
+#garden-djpicker.open .dj-pick-panel{animation:dj-pick-in .22s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes dj-pick-in{0%{transform:scale(.72); opacity:0}100%{transform:scale(1); opacity:1}}
+#garden-djpicker .dj-pick-row{cursor:pointer}
+#garden-djpicker .dj-pick-row .dj-pick-cell{fill:transparent; transition:fill .12s ease}
+#garden-djpicker .dj-pick-row .dj-pick-label{fill:#eafff6; transition:fill .12s ease}
+#garden-djpicker .dj-pick-row:hover .dj-pick-cell{fill:#00f5a3; fill-opacity:.16}
+#garden-djpicker .dj-pick-row:hover .dj-pick-label{fill:#00f5a3}
+#garden-djpicker .dj-pick-row.cur .dj-pick-cell{fill:#f500f5; fill-opacity:.2}
+#garden-djpicker .dj-pick-row.cur .dj-pick-label{fill:#ff8bff; font-weight:600}
+#garden-djpicker .dj-pick-row.cur:hover .dj-pick-cell{fill:#f500f5; fill-opacity:.3}
+@media (prefers-reduced-motion: reduce){
+  #garden-djpicker.open .dj-pick-panel{animation:none}
+  #garden-djpicker .dj-pick-row .dj-pick-cell, #garden-djpicker .dj-pick-row .dj-pick-label{transition:none}
+}
 #kitchen-canister-lid{transform-box:fill-box; transform-origin:bottom center}
 #kitchen-canister.jiggling #kitchen-canister-lid{animation:canister-lid-jiggle .4s ease-in-out}
 @keyframes canister-lid-jiggle{
@@ -9667,6 +9690,9 @@ section{margin:1.9rem 0}
      (CSS-gated on #stage-garden.garden-party). The chest below doubles as the table; the
      rig is seen through the blacklight, so the accent colors are pre-filter neons. -->
 <g id="garden-djbooth" aria-hidden="true">
+<!-- request-a-song hit surface: taps on the booth body (not the head/decks, which keep their
+     own gestures + stopPropagation on top) open the style picker. Enabled only while lit. -->
+<rect id="garden-dj-request" x="560" y="188" width="98" height="62" fill="transparent"/>
 <g id="garden-dj">
 <!-- shoulders/torso (lower half hidden behind the console) -->
 <path d="M593 236 Q595 224 609 223 Q623 224 625 236 Z" fill="#1ab2ff"/>
@@ -9787,6 +9813,10 @@ section{margin:1.9rem 0}
 <line x1="603" y1="230.3" x2="615" y2="230.3" stroke="#00f5a3" stroke-width="0.6" opacity="0.7"/>
 </g>
 </g>
+<!-- request-a-song style picker: a compact neon panel populated by JS (see __requestDance /
+     the djbooth tap handler). Left empty here so the SVG group-balance check stays trivial;
+     the panel's rows are built in code and torn down on select / Esc / tap-away / party-off. -->
+<g id="garden-djpicker" aria-hidden="true" pointer-events="none"></g>
 <g id="garden-sofacorner" class="hunt-hit">
 <rect x="652" y="288" width="28" height="52" fill="transparent"/>
 <rect x="656" y="292" width="24" height="48" rx="8" fill="#6b8271" stroke="#55685a" stroke-width="2"/>
@@ -18916,6 +18946,7 @@ var T = {
       bhangra: "Bhangra", persian: "Persian", polka: "Polka", horah: "Horah",
       workout: "Workout beat", totoro: "Woodland rain", aqua: "Aquarium ambient"
     },
+    dj_pick_title: "request a song", // the DJ-booth style picker's heading
     kbd_trips: "shrooms · acid · froggies · dmt · molly · k. · iboga",
     kbd_qm: "this list",
     app_python: "python",
@@ -19460,6 +19491,7 @@ var T = {
       bhangra: "Bhangra", persian: "Perský", polka: "Polka", horah: "Hora",
       workout: "Rytmus na cvičení", totoro: "Lesní déšť", aqua: "Zvuky akvária"
     },
+    dj_pick_title: "vyber si písničku", // the DJ-booth style picker's heading
     kbd_trips: "houbičky · kyselina · žabičky · dmt · molly · k. · iboga",
     kbd_qm: "tento seznam",
     app_python: "python",
@@ -27297,6 +27329,156 @@ function gameTapsNear(a, b) {
   update();
 })();
 (function () {
+  // REQUEST-A-SONG — tap the DJ booth (the #garden-dj-request hit surface behind the head/decks,
+  // enabled only while the party's lit) to open a compact on-scene style picker. Selecting a style
+  // routes through the SAME set-dance path as the console dance()/the guest phone/the film
+  // (window.__setPartyDance) — which swaps the music bed via each bed's want-gate crossfade,
+  // glides the dancers into the new formation, and RE-ARMS the ~15s auto-rotation clock from the
+  // pick (so auto-rotation resumes gracefully after a manual request). The now-playing toast is
+  // fired for free by the incoming bed's want-gate flip (__updatePlayPauseBtn). A DJ scratch
+  // (the shared __djScratchNow path) reacts to the selection. Fully teardown-safe: the picker
+  // closes on select / Esc / tap-away / party-off / leaving the garden, and builds nothing until
+  // first open. Reduced motion: no pop-in animation, no strobe; taps still land.
+  var picker = document.getElementById("garden-djpicker");
+  var trigger = document.getElementById("garden-dj-request");
+  var gs2 = document.getElementById("stage-garden");
+  if (!picker || !trigger || !gs2) return;
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var built = false, open = false;
+  // panel geometry (garden view-box coords) — a neon slab to the LEFT of the booth
+  var PX = 496, PY = 40, PW = 150, ROW_H = 13, HEAD_H = 20, PAD = 6;
+
+  function danceIds() { // the registered dances, in registration order (matches dance()/np keys)
+    return (window.__partyDances || []).map(function (d) { return d.id; });
+  }
+  function npName(id) { // the dance's display name in the current language (reuses the now-playing np map)
+    var l = T[document.documentElement.lang] ? document.documentElement.lang : "en";
+    var np = (T[l] && T[l].np) || T.en.np;
+    return (np && np[id]) || id;
+  }
+  function pickerTitle() {
+    var l = T[document.documentElement.lang] ? document.documentElement.lang : "en";
+    return (T[l] && T[l].dj_pick_title) || T.en.dj_pick_title;
+  }
+
+  function build() {
+    // Tear down any prior contents (a language switch rebuilds so the labels re-localize).
+    while (picker.firstChild) picker.removeChild(picker.firstChild);
+    var ids = danceIds();
+    var panelH = HEAD_H + ids.length * ROW_H + PAD;
+    var panel = document.createElementNS(SVGNS, "g");
+    panel.setAttribute("class", "dj-pick-panel");
+    // backdrop slab + neon frame
+    var bg = document.createElementNS(SVGNS, "rect");
+    bg.setAttribute("x", PX); bg.setAttribute("y", PY);
+    bg.setAttribute("width", PW); bg.setAttribute("height", panelH);
+    bg.setAttribute("rx", "8");
+    bg.setAttribute("fill", "#141019"); bg.setAttribute("fill-opacity", "0.94");
+    bg.setAttribute("stroke", "#00f5a3"); bg.setAttribute("stroke-width", "1.4");
+    panel.appendChild(bg);
+    // little pointer nub toward the booth (bottom-right corner of the panel)
+    var nub = document.createElementNS(SVGNS, "path");
+    var nx = PX + PW, ny = PY + panelH - 14;
+    nub.setAttribute("d", "M" + nx + " " + ny + " L" + (nx + 11) + " " + (ny + 8) + " L" + nx + " " + (ny + 16) + " Z");
+    nub.setAttribute("fill", "#141019"); nub.setAttribute("fill-opacity", "0.94");
+    nub.setAttribute("stroke", "#00f5a3"); nub.setAttribute("stroke-width", "1.4");
+    panel.appendChild(nub);
+    // title
+    var title = document.createElementNS(SVGNS, "text");
+    title.setAttribute("x", PX + PW / 2); title.setAttribute("y", PY + 14);
+    title.setAttribute("text-anchor", "middle");
+    title.setAttribute("font-family", "'Fraunces', Georgia, serif");
+    title.setAttribute("font-size", "9.5"); title.setAttribute("font-weight", "600");
+    title.setAttribute("fill", "#1ab2ff"); title.setAttribute("letter-spacing", "0.4");
+    title.textContent = pickerTitle();
+    panel.appendChild(title);
+    // rows
+    ids.forEach(function (id, i) {
+      var top = PY + HEAD_H + i * ROW_H;
+      var row = document.createElementNS(SVGNS, "g");
+      row.setAttribute("class", "dj-pick-row" + (id === window.__partyDance ? " cur" : ""));
+      row.setAttribute("data-dance", id);
+      var cell = document.createElementNS(SVGNS, "rect");
+      cell.setAttribute("class", "dj-pick-cell");
+      cell.setAttribute("x", PX + 4); cell.setAttribute("y", top);
+      cell.setAttribute("width", PW - 8); cell.setAttribute("height", ROW_H - 1);
+      cell.setAttribute("rx", "4");
+      row.appendChild(cell);
+      var label = document.createElementNS(SVGNS, "text");
+      label.setAttribute("class", "dj-pick-label");
+      label.setAttribute("x", PX + 14); label.setAttribute("y", top + ROW_H - 3.5);
+      label.setAttribute("font-family", "'Source Serif 4', Georgia, serif");
+      label.setAttribute("font-size", "9");
+      label.textContent = npName(id);
+      row.appendChild(label);
+      // select: set the dance, then close the picker. stopPropagation so the click doesn't
+      // reach any scene handler behind the panel. (The capture-phase onAway ran first for this
+      // same click but saw the target inside the picker, so it left it open — we close here.)
+      row.addEventListener("click", function (e) { if (e) e.stopPropagation(); requestDance(id); window.__closeDjPicker(); });
+      panel.appendChild(row);
+    });
+    picker.appendChild(panel);
+    built = true;
+  }
+
+  function markCurrent() { // reflect the active dance onto the row highlight without a full rebuild
+    var rows = picker.querySelectorAll(".dj-pick-row");
+    for (var i = 0; i < rows.length; i++) {
+      rows[i].classList.toggle("cur", rows[i].getAttribute("data-dance") === window.__partyDance);
+    }
+  }
+
+  // The one set-dance path: reuse window.__setPartyDance (crossfades beds via each want-gate,
+  // glides the dancers, re-arms the ~15s rotation clock). Adds a DJ scratch reaction. Returns
+  // true on a real switch. Exposed as the test hook + the jukebox()/picker mechanism.
+  function requestDance(id) {
+    if (!window.__gardenPartyOn) return false;
+    if (!window.__setPartyDance || !window.__setPartyDance(id)) return false; // unknown id / party dark
+    if (window.__djScratchNow) window.__djScratchNow(true); // a little scratch on the request (userInitiated → no focus gate)
+    markCurrent();
+    return true;
+  }
+  window.__requestDance = requestDance;
+
+  function openPicker() {
+    if (!window.__gardenPartyOn || window.currentStageName !== "garden") return;
+    build(); // rebuild each open so labels track the current language + the highlight is fresh
+    open = true;
+    picker.classList.add("open"); // the pop-in plays off .open .dj-pick-panel (skipped under reduced motion via the media query)
+    picker.setAttribute("pointer-events", "auto");
+    document.addEventListener("keydown", onKey, true);
+    document.addEventListener("click", onAway, true);
+  }
+  window.__closeDjPicker = function () {
+    if (!open && !picker.classList.contains("open")) return;
+    open = false;
+    picker.classList.remove("open");
+    picker.setAttribute("pointer-events", "none");
+    document.removeEventListener("keydown", onKey, true);
+    document.removeEventListener("click", onAway, true);
+  };
+  function onKey(e) {
+    if (e && (e.key === "Escape" || e.key === "Esc")) { e.stopPropagation(); e.preventDefault(); window.__closeDjPicker(); }
+  }
+  function onAway(e) {
+    // any click that isn't on a picker row closes it (rows stopPropagation, so their taps never reach here)
+    if (e && picker.contains(e.target)) return;
+    window.__closeDjPicker();
+  }
+  // Tap the booth body to toggle the picker (open, or close if already open). stopPropagation so
+  // the capture-phase onAway (added on open) doesn't see this very click and immediately re-close
+  // a picker we just opened.
+  trigger.addEventListener("click", function (e) {
+    if (e) e.stopPropagation();
+    if (!window.__gardenPartyOn) return;
+    if (open) window.__closeDjPicker(); else openPicker();
+  });
+
+  // party ends / room class churn → close the picker (mirrors the scratch module's observer)
+  function partyWatch() { if ((!window.__gardenPartyOn || !gs2.classList.contains("garden-party")) && open) window.__closeDjPicker(); }
+  try { var mo2 = new MutationObserver(partyWatch); mo2.observe(gs2, { attributes: true, attributeFilter: ["class"] }); } catch (e) {}
+})();
+(function () {
   // Four otherwise-inert scene props get a tiny tap reaction (untracked, no markFound):
   // the garden bench settles like someone sat, the garden crate and kitchen post
   // knock-on-wood, and a distant skyline window lights up warm. Each reaction is a
@@ -31057,6 +31239,7 @@ var ABANDONED_CALL_MS = 30000;
     projector: "projector(\"channel\") — switch the cuddly-room projector by name in quotes, e.g. projector(\"nightsky\"), or a number 1–5. channels: \"fireplace\" · \"workout\" · \"nightsky\" · \"aquarium\" · \"totoro\" · \"none\" (off). projector() returns the current channel {n, name}",
     storm: "storm(true) — roll a thunderstorm in over the balcony; storm(false) clears it; storm() reports whether it's storming",
     dance: "dance(\"name\") — cue a garden-party dance by name in quotes, e.g. dance(\"salsa\"), or 1–9, or dance(random()); dance() returns the current dance {n, name}; dance(\"next\") skips ahead (run party(true) first). dances: \"techno\" · \"waltz\" · \"disco\" · \"swing\" · \"salsa\" · \"bhangra\" · \"persian\" · \"polka\" · \"horah\"",
+    jukebox: "jukebox(\"salsa\") — request a garden-party style, the console twin of tapping the DJ booth (same styles as dance(); also 1–9 or random()). jukebox() lists them with the current one starred. throws a DJ scratch + re-arms the auto-rotation. run party(true) first",
     dj: "dj(\"sina\"|\"danesh\") — who spins at the party (or 1–2, or random()); dj() returns the current DJ {n, name}. sina wears the cap, danesh the afro",
     firstdance: "firstdance() — the hosts' first dance: the crowd rings the floor + pauses, the UV blacklight drops, and Behdad & Markéta sway centre-floor alone under a soft spotlight for ~13s, then everyone resumes. lights the party + heads to the garden + crashes the crowd first if needed. firstdance(false) ends it early",
     cocktail: "cocktail(\"negroni\") — Pouria mixes that real drink from the bar's menu (partial name ok); cocktail() makes the featured signature drink. lights the party + steps behind the bar first if it's dark. he also mixes on his own while you watch the bar. alias: drink()",
@@ -31167,7 +31350,7 @@ var ABANDONED_CALL_MS = 30000;
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · chase() · guests()/aligoli() · roster() · dance() · dj() · firstdance() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · chase() · guests()/aligoli() · roster() · dance() · jukebox() · dj() · firstdance() ·cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
@@ -31415,7 +31598,7 @@ var ABANDONED_CALL_MS = 30000;
   var CONSOLE_CMDS = [
     "help", "clear", "laser", "party", "chase", "guests", "aligoli", "roster", "reset", "quit", "blacklight", "uv", "trip", "room",
     "goto", "rooms", "daylight", "night", "day", "season", "play", "pause", "temp", "weather",
-    "clock", "time", "projector", "storm", "dance", "dj", "firstdance", "cocktail", "lang", "caption", "candle",
+    "clock", "time", "projector", "storm", "dance", "jukebox", "dj", "firstdance", "cocktail", "lang", "caption", "candle",
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood",
     "phone", "album", "message", "madla", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "edit",
@@ -50812,6 +50995,7 @@ function spawnDustMote(container) {
     if (name !== "office" && window.__closeOfficePhotobooth) window.__closeOfficePhotobooth(); // leaving the office stops the photobooth camera
     if (name !== "office" && window.__closeMonitorFamily) window.__closeMonitorFamily(true); // ...hangs up the family call (and its self-view camera)
     if (window.__closePhoneModal) window.__closePhoneModal(true); // leaving the balcony (or the extinguisher reset) closes the pocket phone, tearing down its call/board
+    if (name !== "garden" && window.__closeDjPicker) window.__closeDjPicker(); // leaving the garden tears down the request-a-song picker
     if (name !== "office" && window.__pauseMonitorVideo) window.__pauseMonitorVideo(); // ...and pauses the home movie (the app view stays for the return)
     if (name !== "office" && window.__pauseMonitorLife) window.__pauseMonitorLife(); // ...and stops the Game-of-Life loop off-screen (the board stays for the return)
     if (window.__syncMonitorDoom) window.__syncMonitorDoom(); // pause DOOM's run loop off-screen; resume it on return (the gate is show-doom && visible && office)
@@ -57346,6 +57530,26 @@ function spawnDustMote(container) {
     if (ids.indexOf(key) === -1) return "dances (in quotes, 1–" + ids.length + ", or \"next\"): " + ids.map(function (d) { return "\"" + d + "\""; }).join(" · ");
     if (!window.__setPartyDance || !window.__setPartyDance(key)) return "the dance hook isn't ready yet.";
     return "💃 " + key + " — the garden shifts into step.";
+  };
+
+  // jukebox — the console twin of the on-scene DJ-booth request picker. jukebox() lists the styles
+  // (with the current one starred); jukebox("salsa") requests it. Routes through __requestDance —
+  // the SAME set-dance path the picker uses (crossfades the bed via its want-gate, glides the
+  // dancers, re-arms the ~15s auto-rotation, and throws a DJ scratch). Also accepts 1–N / random().
+  window.jukebox = function (name) {
+    if (!window.__gardenPartyOn) return "the garden's dark — run party(true) first, then request a song.";
+    var ids = (window.__partyDances || []).map(function (d) { return d.id; });
+    if (arguments.length === 0 || name == null || name === "") { // no arg → the style menu, current one starred
+      var cur = window.__partyDance || "";
+      return "🎶 requestable styles (in quotes, or 1–" + ids.length + "): " +
+        ids.map(function (d) { return (d === cur ? "★ " : "") + "\"" + d + "\""; }).join(" · ");
+    }
+    var jfi = fracToIndex(name, ids.length); if (jfi) name = jfi; // random() → a random style
+    var key = String(name).toLowerCase().trim();
+    var kn = parseInt(key, 10); if (String(kn) === key && kn >= 1 && kn <= ids.length) key = ids[kn - 1]; // also accept 1..N
+    if (ids.indexOf(key) === -1) return "styles (in quotes, or 1–" + ids.length + "): " + ids.map(function (d) { return "\"" + d + "\""; }).join(" · ");
+    if (!window.__requestDance || !window.__requestDance(key)) return "the jukebox hook isn't ready yet.";
+    return "🎶 requested " + key + " — the DJ drops the needle.";
   };
 
   // cocktail — the bartender makes one of the bar's real drinks. cocktail() makes a random one;

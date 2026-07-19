@@ -1927,7 +1927,13 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    the leaf's coordinates, so this rotate can't clobber a transform= attribute. */
 #cuddly-balcony-door{transform-box:fill-box; transform-origin:100% 100%; transition:transform .6s cubic-bezier(.34,1.05,.6,1)}
 #cuddly-balcony-door.open{transform:rotate(-46deg)}
-@media (prefers-reduced-motion: reduce){#cuddly-balcony-door{transition:none}}
+/* solve-step hint: while the door is the next thing to do (Octi played, door still shut, day
+   only — see __updateCuddlyDoorHint) its leaf gives a gentle come-hither nudge on its hinge.
+   A small rotate around the same 100%/100% hinge, so it can't clobber the leaf's baked-in
+   position; .open (a real transform) out-specifies + drops the hint once it swings in. */
+#cuddly-balcony-door.door-hint:not(.open){animation:cuddly-door-nudge 2.2s ease-in-out infinite}
+@keyframes cuddly-door-nudge{0%,72%,100%{transform:rotate(0)} 82%{transform:rotate(-6deg)} 91%{transform:rotate(-2deg)}}
+@media (prefers-reduced-motion: reduce){#cuddly-balcony-door{transition:none} #cuddly-balcony-door.door-hint:not(.open){animation:none}}
 #balcony-wine-liquid{transform-box:fill-box; transform-origin:bottom center; transition:transform .5s ease}
 #balcony-winebottle-liquid{transform-box:fill-box; transform-origin:bottom center; transition:transform .5s ease}
 #garden-bottle-liquid-1, #garden-bottle-liquid-2, #garden-bottle-liquid-3{transform-box:fill-box; transform-origin:bottom center; transition:transform .5s ease}
@@ -5794,6 +5800,21 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 #loft-game-strip.uv-mode.behdad-awake .cuddly-behdad-eye-sleepy{opacity:0}
 #loft-game-strip.uv-mode.behdad-awake #cuddly-behdad-zzz{opacity:0}
 #loft-game-strip.uv-mode.behdad-awake #cuddly-behdad-zzz .zzz{animation:none}
+/* At NIGHT (dusk, no party) Behdad naps the SAME way he used to during the party — eyes shut,
+   a rising Zzz — but now driven by .snoozing on his group (set by updateCuddlyPresence), NOT the
+   blacklight, so it happens on any quiet night. Same visuals, same behdad-zzz keyframes. Markéta
+   stays awake beside him. Reduced-motion drops the Zzz animation but keeps the shut eyes. */
+#cuddly-behdad.snoozing .cuddly-behdad-eye-open{opacity:0}
+#cuddly-behdad.snoozing .cuddly-behdad-eye-sleepy{opacity:1}
+#cuddly-behdad.snoozing #cuddly-behdad-zzz{opacity:1}
+#cuddly-behdad.snoozing #cuddly-behdad-zzz .zzz{animation:behdad-zzz 3s ease-in-out infinite}
+#cuddly-behdad.snoozing #cuddly-behdad-zzz .z2{animation-delay:1s}
+#cuddly-behdad.snoozing #cuddly-behdad-zzz .z3{animation-delay:2s}
+@media (prefers-reduced-motion: reduce){#cuddly-behdad.snoozing #cuddly-behdad-zzz .zzz{animation:none; opacity:0.9}}
+/* DURING THE PARTY the couple is out at the garden, so hide both from the nook (restored when the
+   party's off — see updateCuddlyPresence). visibility:hidden (not display:none) so nothing reflows
+   and WebKit honours it; pointer-events off so their hit-areas don't linger. */
+#cuddly-behdad.at-party, #cuddly-marketa.at-party{visibility:hidden; pointer-events:none}
 #balcony-butterfly{opacity:0; pointer-events:none}
 #balcony-butterfly.flying{animation:balcony-butterfly-fly 3.2s ease-in-out forwards}
 @keyframes balcony-butterfly-fly{
@@ -13422,7 +13443,7 @@ section{margin:1.9rem 0}
 <!-- Ali (best man) — long grey beard, pink mesh jersey, red shorts, flat cap. Texter of the Ali+Goli duo. -->
 <g id="cuddly-vis-ali" class="cuddly-visitor" aria-hidden="true" pointer-events="none">
 <g class="cuddly-visitor-move"><g class="cuddly-visitor-pose"><g class="cuddly-visitor-giggle"><g class="cuddly-visitor-peek">
-<g transform="translate(450,60) scale(0.72)">
+<g transform="translate(380,13) scale(0.86)">
 <path fill="#f4f2ea" d="M -8 288 C -10 305 -8 322 -5 330 L -0.5 330 C -1.5 322 -3 305 -1 288 Z"/>
 <path fill="#f4f2ea" d="M 8 288 C 10 305 8 322 5 330 L 0.5 330 C 1.5 322 3 305 1 288 Z"/>
 <rect x="-8.4" y="292" width="7.6" height="1.1" fill="#d7d3c6"/>
@@ -13468,7 +13489,7 @@ section{margin:1.9rem 0}
 <!-- Goli (Ali's fashionista girlfriend) — platinum bob, structured white top, power shoulder, red shorts. -->
 <g id="cuddly-vis-goli" class="cuddly-visitor" aria-hidden="true" pointer-events="none">
 <g class="cuddly-visitor-move"><g class="cuddly-visitor-pose"><g class="cuddly-visitor-giggle"><g class="cuddly-visitor-peek">
-<g transform="translate(548,60) scale(0.72)">
+<g transform="translate(452,13) scale(0.86)">
 <path fill="#f4f2ea" d="M -7 288 C -8 305 -6.5 322 -4 330 L -0.5 330 C -1.2 322 -2.4 305 -1.6 288 Z"/>
 <path fill="#f4f2ea" d="M 7 288 C 8 305 6.5 322 4 330 L 0.5 330 C 1.2 322 2.4 305 1.6 288 Z"/>
 <g fill="#ff3b52">
@@ -13512,7 +13533,7 @@ section{margin:1.9rem 0}
 <!-- Spencer (maid of honor, the gentle giant) — tallest, brown polo, khaki chinos, dark glasses. Texter of the Spencer+Jay duo. -->
 <g id="cuddly-vis-spencer" class="cuddly-visitor" aria-hidden="true" pointer-events="none">
 <g class="cuddly-visitor-move"><g class="cuddly-visitor-pose"><g class="cuddly-visitor-giggle"><g class="cuddly-visitor-peek">
-<g transform="translate(450,60) scale(0.72)">
+<g transform="translate(380,13) scale(0.86)">
 <path fill="#d8bd86" d="M -10 268 C -12 292 -10 318 -7 330 L -1 330 C -2 318 -4 292 -2.5 268 Z"/>
 <path fill="#d8bd86" d="M 10 268 C 12 292 10 318 7 330 L 1 330 C 2 318 4 292 2.5 268 Z"/>
 <path fill="#c4a86f" d="M -10 268 L -2.5 268 L -2.5 271 L -9.8 271 Z"/>
@@ -13554,7 +13575,7 @@ section{margin:1.9rem 0}
 <!-- Jay (officiant) — long center-parted hair, full beard, navy fleece, a soft halo. -->
 <g id="cuddly-vis-jay" class="cuddly-visitor" aria-hidden="true" pointer-events="none">
 <g class="cuddly-visitor-move"><g class="cuddly-visitor-pose"><g class="cuddly-visitor-giggle"><g class="cuddly-visitor-peek">
-<g transform="translate(548,60) scale(0.72)">
+<g transform="translate(452,13) scale(0.86)">
 <ellipse cx="0" cy="168" rx="13" ry="4" fill="none" stroke="#fff6d8" stroke-width="1.6" opacity="0.85"/>
 <ellipse cx="0" cy="168" rx="13" ry="4" fill="#fff6d8" opacity="0.14"/>
 <path fill="#2f3340" d="M -8 286 C -9 304 -7.5 322 -5 330 L -0.6 330 C -1.4 322 -2.6 304 -1.6 286 Z"/>
@@ -13589,7 +13610,7 @@ section{margin:1.9rem 0}
      Alireza+Mahzad duo. Shorter build than the other guests → an extra ~0.85 down-scale (baked into the transform). -->
 <g id="cuddly-vis-alireza" class="cuddly-visitor" aria-hidden="true" pointer-events="none">
 <g class="cuddly-visitor-move"><g class="cuddly-visitor-pose"><g class="cuddly-visitor-giggle"><g class="cuddly-visitor-peek">
-<g transform="translate(450,97) scale(0.612)">
+<g transform="translate(380,57) scale(0.731)">
 <path fill="#3a3f4a" d="M -9 266 C -12 288 -11 314 -9 330 L -2 330 C -2.6 314 -3.4 288 -2 266 Z"/>
 <path fill="#3a3f4a" d="M 9 266 C 12 288 11 314 9 330 L 2 330 C 2.6 314 3.4 288 2 266 Z"/>
 <path fill="#2f333c" d="M -9 266 L -2 266 L -2 270 L -8.8 270 Z"/>
@@ -13626,7 +13647,7 @@ section{margin:1.9rem 0}
      ~0.85 extra down-scale baked in (matches the garden version + Alireza). -->
 <g id="cuddly-vis-mahzad" class="cuddly-visitor" aria-hidden="true" pointer-events="none">
 <g class="cuddly-visitor-move"><g class="cuddly-visitor-pose"><g class="cuddly-visitor-giggle"><g class="cuddly-visitor-peek">
-<g transform="translate(548,97) scale(0.612)">
+<g transform="translate(452,57) scale(0.731)">
 <path fill="#f0d2ac" d="M -6 288 C -7 306 -5.5 322 -3.5 332 L -0.5 332 C -1 322 -2 306 -1.4 288 Z"/>
 <path fill="#f0d2ac" d="M 6 288 C 7 306 5.5 322 3.5 332 L 0.5 332 C 1 322 2 306 1.4 288 Z"/>
 <path fill="#e8c69c" d="M -6 330 C -7 333 -6.5 335 -4 335 L -0.6 335 L -0.6 331 Z"/>
@@ -13662,7 +13683,7 @@ section{margin:1.9rem 0}
      is Irene, who is brought in through Irene's own existing cameo system (not duplicated here). Texter of her duo. -->
 <g id="cuddly-vis-bahareh" class="cuddly-visitor" aria-hidden="true" pointer-events="none">
 <g class="cuddly-visitor-move"><g class="cuddly-visitor-pose"><g class="cuddly-visitor-giggle"><g class="cuddly-visitor-peek">
-<g transform="translate(450,60) scale(0.72)">
+<g transform="translate(380,13) scale(0.86)">
 <!-- legs: dark tailored trousers -->
 <path fill="#33323a" d="M -8 266 C -10 288 -9 314 -7 330 L -1.4 330 C -2 314 -2.8 288 -1.6 266 Z"/>
 <path fill="#33323a" d="M 8 266 C 10 288 9 314 7 330 L 1.4 330 C 2 314 2.8 288 1.6 266 Z"/>
@@ -19298,8 +19319,9 @@ var T = {
       garden_need_candles: "Now light the candles.",
       garden_need_music: "Now play music.",
       garden_need_water: "Now water a plant.",
-      cuddly: "Play with Octi, pull back a blanket.",
+      cuddly: "Play with Octi, open the balcony door, pull back a blanket.",
       cuddly_hint: "Play with Octi first.",
+      cuddly_door: "Now open the balcony door.",
       cuddly_pull: "Now pull back any blanket.",
       office: "Call Prague first — it's on the laptop.",
       office_hint: "When you're done, turn off the lights.",
@@ -19851,8 +19873,9 @@ var T = {
       garden_need_candles: "Teď zapal svíčky.",
       garden_need_music: "Teď zahraj.",
       garden_need_water: "Teď zalij kytku.",
-      cuddly: "Pohraj si s Octi, odhrň deku.",
+      cuddly: "Pohraj si s Octi, otevři balkonové dveře, odhrň deku.",
       cuddly_hint: "Nejdřív si pohraj s Octi.",
+      cuddly_door: "Teď otevři balkonové dveře.",
       cuddly_pull: "Teď odhrň libovolnou deku.",
       office: "Nejdřív zavolej do Prahy — hovor je na notebooku.",
       office_hint: "Až si pohraješ, zhasni světla.",
@@ -27630,9 +27653,14 @@ function gameTapsNear(a, b) {
     if (!alreadyPlayed && window.__retireHint) window.__retireHint("hint_octi"); // loose-brick hint: retire once Octi's been played with
     octopus.classList.remove("wobble", "popping-out");
     requestAnimationFrame(function () {
-      requestAnimationFrame(function () { octopus.classList.add("wobble", "played"); });
+      requestAnimationFrame(function () {
+        octopus.classList.add("wobble", "played");
+        // caption/door-hint AFTER .played is set (they read __cuddlyDoorNeeded, which gates on
+        // "played") — else the next-step hint reads a stale not-yet-played Octi and never arms
+        if (!alreadyPlayed && window.setCaption) window.setCaption(window.__cuddlyDoorNeeded && window.__cuddlyDoorNeeded() ? "cuddly_door" : "cuddly_pull");
+        if (!alreadyPlayed && window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint(); // Octi's done → the door is the next step: start its come-hither wiggle (day only)
+      });
     });
-    if (!alreadyPlayed && window.setCaption) window.setCaption("cuddly_pull");
   }
   octopus.addEventListener("animationend", function (e) {
     if (e.animationName === "octopus-camouflage") {
@@ -27683,7 +27711,8 @@ function gameTapsNear(a, b) {
       if (nextClass === "falling-in") {
         octopus.classList.add("played");
         if (!alreadyPlayed && window.__retireHint) window.__retireHint("hint_octi"); // loose-brick hint: retire once Octi's been played with
-        if (!alreadyPlayed && window.setCaption) window.setCaption("cuddly_pull");
+        if (!alreadyPlayed && window.setCaption) window.setCaption(window.__cuddlyDoorNeeded && window.__cuddlyDoorNeeded() ? "cuddly_door" : "cuddly_pull");
+        if (!alreadyPlayed && window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint(); // Octi's in the chest but "played" → nudge the door as the next step
       }
       octopusInChest = !octopusInChest;
     }
@@ -41898,6 +41927,8 @@ async def localfont(name):
         if (st) st.classList.toggle("dusk", dusk); // night is night everywhere
       });
       if (window.__updateCuddlyDoorFx) window.__updateCuddlyDoorFx(); // sun shafts are a day thing
+      if (window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint(); // the door-nudge hint is a day thing too
+      if (window.__updateCuddlyPresence) window.__updateCuddlyPresence(); // dusk → Behdad snoozes; day → the couple's back to normal
       if (window.__refreshKitchenBar) window.__refreshKitchenBar(); // dusk raises the calm night bar (day lowers it): swap the kitchen caption + clear/restore the coffee arrows
       if (window.__updateGrowlightForNight) window.__updateGrowlightForNight(); // grow light off at night
       if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(); // birds quiet down at dusk
@@ -41959,6 +41990,8 @@ async def localfont(name):
         if (st) st.classList.remove("dusk");
       });
       if (window.__updateCuddlyDoorFx) window.__updateCuddlyDoorFx();
+      if (window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint(); // day forced back → re-evaluate the door-nudge hint
+      if (window.__updateCuddlyPresence) window.__updateCuddlyPresence(); // day forced back → Behdad wakes from his snooze
       var wallLampEl = document.getElementById("balcony-walllamp");
       if (wallLampEl) wallLampEl.classList.remove("on");
       if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle();
@@ -44358,8 +44391,28 @@ async def localfont(name):
       if (bd) bd.classList.toggle("open", cuddlyDoor.classList.contains("open"));
       playCreakSound("cuddly-balcony-door");
       updateCuddlyDoorFx();
+      updateCuddlyDoorHint(); // opening the door clears its solve-step nudge; and reveal the "pull a blanket" line
       if (window.__homeCat) window.__homeCat("balcony");
     }
+    // The door is the middle solve step (octi → OPEN DOOR → blanket). While it's the next thing to
+    // do — the cuddly room is still unsolved, Octi's been played, the door's shut, and it's day
+    // (owner: the wiggle hints "open me" by day) — give the leaf a gentle come-hither nudge; drop
+    // it the instant the door opens, the room solves, or night falls. Reduced-motion drops via CSS.
+    window.__cuddlyDoorNeeded = function () {
+      var oct = document.getElementById("cuddly-octopus");
+      var bl = document.getElementById("cuddly-blanket");
+      return !!(oct && oct.classList.contains("played") && !cuddlyDoor.classList.contains("open") && !(bl && bl.classList.contains("done")));
+    };
+    function updateCuddlyDoorHint() {
+      var sc = document.getElementById("stage-cuddly");
+      var isDay = !(sc && sc.classList.contains("dusk"));
+      cuddlyDoor.classList.toggle("door-hint", isDay && window.__cuddlyDoorNeeded());
+      // once the door's open, the next line is "pull a blanket" (mirrors Octi's caption hand-off)
+      if (cuddlyDoor.classList.contains("open") && oct_played() && !blanket_done() && window.setCaption && window.currentStageName === "cuddly") window.setCaption("cuddly_pull");
+    }
+    function oct_played() { var o = document.getElementById("cuddly-octopus"); return !!(o && o.classList.contains("played")); }
+    function blanket_done() { var b = document.getElementById("cuddly-blanket"); return !!(b && b.classList.contains("done")); }
+    window.__updateCuddlyDoorHint = updateCuddlyDoorHint;
     cuddlyDoor.addEventListener("click", toggleCuddlyDoor);
     cuddlyDoor.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCuddlyDoor(); }
@@ -52023,6 +52076,8 @@ function spawnDustMote(container) {
     if (window.__homeCat) window.__homeCat(name); // the loose cat follows the player between rooms
     if (window.__laserHop) window.__laserHop(); // the laser dot follows into the new room
     if (name === "cuddly" && window.updateCuddlyGrooving) window.updateCuddlyGrooving();
+    if (name === "cuddly" && window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint(); // re-arm the door-nudge hint if the door's the next step
+    if (window.__updateCuddlyPresence) window.__updateCuddlyPresence(); // resolve the couple's presence for the new room's day/night/party truth
     if (name === "cuddly" && window.startCuddlyFlame) window.startCuddlyFlame(); // light the fireplace's fractal flames
     if (name === "cuddly" && window.resetFishu) window.resetFishu();
     if (name !== "cuddly" && window.__resetIrene) window.__resetIrene(); // Irene's cameo doesn't ride along out of the nook
@@ -54821,6 +54876,7 @@ function spawnDustMote(container) {
     }
     updateAllPartyDances(); // start/stop every registered dance's bed with the party (each self-gates on its want)
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // start/stop the garden groovers (incl. the bartender's party groove)
+    if (window.__updateCuddlyPresence) window.__updateCuddlyPresence(); // party on → the couple's off at the garden (hide both); party off → they're back in the nook
     if (window.__refreshKitchenBar) window.__refreshKitchenBar(); // party on/off swaps the kitchen bar↔espresso caption + arrows
     if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // party toggling re-evaluates the eased blacklight (garden stays full)
     if (window.__updateUvBreather) window.__updateUvBreather(); // party on → start the blacklight breather; party off → stop it + hand UV back to the switch
@@ -55680,6 +55736,28 @@ function spawnDustMote(container) {
     });
   }
   window.updateCuddlyGrooving = updateCuddlyGrooving;
+  // The resident couple's presence in the nook by time of day (owner rule):
+  //   DAY (no dusk, no party) → unchanged, both here and awake.
+  //   NIGHT (dusk, no party)  → Behdad snoozes (the old party-doze pose, now night-driven via
+  //                             .snoozing); Markéta stays awake beside him.
+  //   PARTY on (__gardenPartyOn) → both are OUT at the garden party → hide both (.at-party),
+  //                             restored the moment the party's off.
+  // Re-evaluated on room change, day/night toggle, and party toggle (see the callers). No timers,
+  // pure class toggles → teardown-safe, and state.js stays green (a reset lands day+no-party → clean).
+  function updateCuddlyPresence() {
+    var behdad = document.getElementById("cuddly-behdad");
+    var marketa = document.getElementById("cuddly-marketa");
+    if (!behdad || !marketa) return;
+    var sc = document.getElementById("stage-cuddly");
+    var night = !!(sc && sc.classList.contains("dusk"));
+    var party = !!window.__gardenPartyOn;
+    behdad.classList.toggle("at-party", party);
+    marketa.classList.toggle("at-party", party);
+    // snooze only at night AND when they're actually here (not off at the party)
+    behdad.classList.toggle("snoozing", night && !party);
+  }
+  window.__updateCuddlyPresence = updateCuddlyPresence;
+  updateCuddlyPresence();
   // Live music state for the wall-projector fire (channel 0 reactivity): returns the playing
   // song's beat period + current phase (0→1), or null when nothing plays. The fire canvas
   // reads this each frame to pulse taller/brighter on the beat, then falls calm when silent.
@@ -55996,6 +56074,13 @@ function spawnDustMote(container) {
         setCaption("cuddly_hint");
         return;
       }
+      // middle step: the balcony door must be OPEN before a blanket-pull counts (octi → door → blanket)
+      var cd = document.getElementById("cuddly-balcony-door");
+      if (!(cd && cd.classList.contains("open"))) {
+        setCaption("cuddly_door");
+        if (window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint(); // re-arm the door's come-hither wiggle
+        return;
+      }
       el.classList.add("done");
       setTimeout(function () { goToStage("office"); }, 700);
     }
@@ -56037,11 +56122,15 @@ function spawnDustMote(container) {
     });
     if (id === "cuddly-blanket") window.__pullMainBlanket = function () { triggerBlanketPull(false); }; // a touch counts — Enter's __cuddlyDoNext taps the blanket
   });
-  // 'Enter' in the cuddly nook advances the solve one beat: play the octopus, then pull the
-  // blanket off the couple. Same idea as __kitchenDoNext/__gardenDoNext; returns the id it fired.
+  // 'Enter' in the cuddly nook advances the solve one beat: play the octopus, then open the balcony
+  // door, then pull the blanket off the couple. Same idea as __kitchenDoNext/__gardenDoNext;
+  // returns the id it fired.
   window.__cuddlyDoNext = function () {
     var oct = document.getElementById("cuddly-octopus");
     if (!(oct && oct.classList.contains("played"))) { if (oct) oct.dispatchEvent(new MouseEvent("click", { bubbles: true })); return "cuddly-octopus"; }
+    // middle step: open the balcony door before the blanket counts (see triggerBlanketPull's gate)
+    var cd = document.getElementById("cuddly-balcony-door");
+    if (cd && !cd.classList.contains("open")) { cd.dispatchEvent(new MouseEvent("click", { bubbles: true })); return "cuddly-balcony-door"; }
     // solved once the main blanket is off the couple (triggerBlanketPull tags it `done` + advances
     // to the office). Check it BEFORE re-pulling, else this always returned "cuddly-blanket" and the
     // Enter handler's projector-cycle fall-through was dead code (the blanket got re-tugged forever).

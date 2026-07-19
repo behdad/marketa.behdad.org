@@ -2,7 +2,8 @@
 // Keyboard room-control test: Enter is "do the next thing in this room."
 //   - UNSOLVED room  -> Enter presses the next step of that room's solve sequence, so
 //     repeated Enter solves the room and moves on (kitchen espresso, garden water/music/
-//     candles, cuddly octopus/blanket, office call/hang-up/monitor/dismiss/lamps/butterfly).
+//     candles, cuddly octopus/open-balcony-door/blanket, office call/hang-up/monitor/dismiss/
+//     lamps/butterfly).
 //   - SOLVED room    -> Enter fires that room's toy toggle: kitchen day/night (kitchen<->bar),
 //     garden party, cuddly projector channel, office monitor zoom.
 // Drives ONLY the document-level Enter (the capture-phase handler), never per-element clicks,

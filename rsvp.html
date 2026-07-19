@@ -7036,6 +7036,17 @@ section{margin:1.9rem 0}
   #balcony-snowman{transition:none}
   #loft-game-strip.snowman-on #balcony-snowman-toss{animation:none; transform:translate(124px,204px)}
 }
+/* clicking a kid in ANY balcony daytime play scene TICKLES them — a quick giggly wiggle. The kid
+   groups carry a static translate (some also a rotate) transform ATTRIBUTE, so the wiggle rides the
+   CSS `rotate` PROPERTY (which composes with the transform attribute rather than replacing it — see
+   the bug-class note), pivoting near the feet. pointer-events:auto re-enables each kid inside its
+   pointer-events:none scene group; visibility:hidden (scene off) still gates them out. */
+#balcony-snowman-kidL, #balcony-snowman-kidR, #balcony-leafpile-kidL, #balcony-leafpile-kidR,
+#balcony-blossom-kidL, #balcony-blossom-kidR, #balcony-sprinkler-kidL, #balcony-sprinkler-kidR{pointer-events:auto; cursor:pointer; transform-box:fill-box; transform-origin:50% 88%}
+#balcony-snowman-kidL.tickled, #balcony-snowman-kidR.tickled, #balcony-leafpile-kidL.tickled, #balcony-leafpile-kidR.tickled,
+#balcony-blossom-kidL.tickled, #balcony-blossom-kidR.tickled, #balcony-sprinkler-kidL.tickled, #balcony-sprinkler-kidR.tickled{animation:balcony-kid-tickle .5s ease-in-out}
+@keyframes balcony-kid-tickle{0%,100%{rotate:0deg}22%{rotate:-9deg}44%{rotate:8deg}66%{rotate:-5deg}84%{rotate:3deg}}
+@media (prefers-reduced-motion: reduce){#balcony-snowman-kidL.tickled, #balcony-snowman-kidR.tickled, #balcony-leafpile-kidL.tickled, #balcony-leafpile-kidR.tickled, #balcony-blossom-kidL.tickled, #balcony-blossom-kidR.tickled, #balcony-sprinkler-kidL.tickled, #balcony-sprinkler-kidR.tickled{animation:none}}
 /* The three OTHER seasons' outdoor play scenes, each the daytime counterpart the brick-wall
    dblclick summons in its own season — the snowman's siblings: AUTUMN a leaf pile the kids
    leap into (.leafpile-on), SPRING a blossom toss (.blossom-on), SUMMER a sprinkler romp
@@ -25315,6 +25326,24 @@ window.__setSprinkler = function (on) {
     if (typeof playGiggleSound === "function") playGiggleSound("balcony-sprinkler-kidL");
   }
 };
+// Tickle a kid in any balcony play scene on click → a giggly wiggle (CSS .tickled, one-shot cleared
+// on animationend) + a panned giggle (a click implies focus, so it's fine). Delegated on the stage
+// so it covers whichever season's kids are out; the kids are always in the DOM (hidden when off).
+(function () {
+  var bstage = document.getElementById("stage-balcony");
+  if (!bstage) return;
+  var KIDS = ["balcony-snowman-kidL", "balcony-snowman-kidR", "balcony-leafpile-kidL", "balcony-leafpile-kidR", "balcony-blossom-kidL", "balcony-blossom-kidR", "balcony-sprinkler-kidL", "balcony-sprinkler-kidR"];
+  var kidSet = {}; KIDS.forEach(function (id) { kidSet[id] = 1; });
+  function tickle(kid) {
+    kid.classList.remove("tickled"); void kid.getBBox(); kid.classList.add("tickled");
+    if (typeof playGiggleSound === "function") playGiggleSound(kid.id);
+  }
+  bstage.addEventListener("click", function (e) {
+    var t = e.target;
+    while (t && t !== bstage) { if (t.id && kidSet[t.id]) { tickle(t); return; } t = t.parentNode; }
+  });
+  KIDS.forEach(function (id) { var k = document.getElementById(id); if (k) k.addEventListener("animationend", function () { k.classList.remove("tickled"); }); });
+})();
 (function () {
   var bottom = document.getElementById("cuddly-behdad-bottom");
   var behdad = document.getElementById("cuddly-behdad");

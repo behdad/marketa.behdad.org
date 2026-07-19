@@ -56674,12 +56674,15 @@ function spawnDustMote(container) {
   // Shift is the direction; any OTHER modifier held (or typing) still skips (same guard as 'f').
   var SEASON_CYCLE = [null, "wedding", "bd_pouria", "pride", "canada", "summer", "bd_navid", "smoky", "bd_danesh", "autumn", "bd_behdad", "spooky", "bd_robin", "bd_irene", "stedry", "xmas", "newyear", "bd_marketa", "bd_sina", "winter", "valentines", "chaharshanbe", "nowruz", "sizdah", "spring", "carodejnice"];
   // Shared apply-path for the 's' key AND the console season(); shows the naming pill.
-  function applySeasonPreview(name) {
+  // silent=true skips the naming toast (the autoplay loop varies the season every loop and
+  // wants no per-loop pill flashing on the kiosk screen — the "auto" badge is enough).
+  function applySeasonPreview(name, silent) {
     seasonPreview = SEASON_PREVIEW_DATE[name] ? name : null;
     applySeasonDate();
-    seasonToast(seasonPreview ? "season_" + seasonPreview : "season_auto");
+    if (!silent) seasonToast(seasonPreview ? "season_" + seasonPreview : "season_auto");
   }
   window.__applySeason = applySeasonPreview; // console season() drives the same path as 's'
+  window.__applySeasonSilent = function (name) { applySeasonPreview(name, true); }; // autoplay: vary the season with no toast
   document.addEventListener("keydown", function (e) {
     if ((e.key !== "s" && e.key !== "S") || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
     var t = e.target;
@@ -57502,6 +57505,7 @@ function spawnDustMote(container) {
   var apOn = false;              // is the attract loop armed?
   var apIdleResume = false;      // should we drift BACK to autoplay after idle? (kiosk entry sets this)
   var apWatchdog = null;         // the single self-rescheduling timer
+  var apGapTimer = null;         // the between-loops gap countdown (tracked so a stop can cancel it)
   var apIdleTimer = null;        // idle-resume countdown after a takeover
   var apPending = false;         // a between-loops gap is counting down (don't double-launch)
   var apSeasonBag = [];          // shuffle bag of season names, refilled when empty
@@ -57527,14 +57531,28 @@ function spawnDustMote(container) {
   // so applying it right AFTER startCinematic makes it stick for the whole run. Driven the
   // app's own way (window.season → __applySeason), never a hand-poked variable.
   function apLaunchLoop() {
+    apGapTimer = null;
     apPending = false;
     if (!apOn || !apAttended()) return;
     if (window.__cinematic) return;   // already running — nothing to do
     apLoopCount++;
     if (window.__startCinematic) window.__startCinematic();
-    // vary the season (skip "auto" → leave the real date; some loops are just "today")
+    // Vary the season (skip "auto" → leave the real date; some loops are just "today").
+    // apSilentSeason drives the app's own season path but suppresses the naming toast, so a
+    // multi-hour kiosk run doesn't flash a season pill every loop (the badge is the only
+    // affordance we want). Falls back to window.season if the internal hook is absent.
     var s = apNextSeason();
-    if (s && s !== "auto" && window.season) { try { window.season(s); } catch (e) {} }
+    if (s && s !== "auto") apSilentSeason(s);
+  }
+  // Apply a season the console way (so it sticks through the ~4s air-quality re-apply — see
+  // applySeasonDate) but WITHOUT the naming pill, so a multi-hour kiosk loop doesn't flash a
+  // season toast every loop. Falls back to window.season (which toasts) only if the silent
+  // hook is somehow absent. AUTOPLAY_SEASONS uses canon names that are SEASON_PREVIEW_DATE keys.
+  function apSilentSeason(name) {
+    try {
+      if (window.__applySeasonSilent) window.__applySeasonSilent(name);
+      else if (window.season) window.season(name);
+    } catch (e) {}
   }
 
   // The one driver. Re-arms itself every tick while autoplay is on. It NEVER lets work pile
@@ -57543,17 +57561,22 @@ function spawnDustMote(container) {
     apWatchdog = null;
     if (!apOn) return;
     if (!apAttended()) {
-      // paused: stop any running show so nothing ticks/accumulates while we're away
+      // paused: stop any running show so nothing ticks/accumulates while we're away, and drop
+      // any pending gap launch so it can't fire the instant focus returns (the next attended
+      // tick re-schedules a fresh gap cleanly).
       if (window.__cinematic && window.__stopCinematic) window.__stopCinematic();
+      if (apGapTimer != null) { clearTimeout(apGapTimer); apGapTimer = null; }
       apPending = false;
       apArmWatchdog();
       return;
     }
     // attended: keep the loop alive
     if (!window.__cinematic && !apPending) {
-      // the previous loop ended (or we just resumed) → after a graceful beat, launch the next
+      // the previous loop ended (or we just resumed) → after a graceful beat, launch the next.
+      // Tracked in apGapTimer so a stop mid-gap can cancel it (else a stale gap could launch
+      // an unscheduled loop after autoplay was turned off then back on within the gap window).
       apPending = true;
-      setTimeout(apLaunchLoop, AUTOPLAY_GAP_MS);
+      apGapTimer = setTimeout(apLaunchLoop, AUTOPLAY_GAP_MS);
     }
     apArmWatchdog();
   }
@@ -57568,9 +57591,11 @@ function spawnDustMote(container) {
     apShuffleSeasons();
     apShowBadge(true);
     if (apIdleTimer) { clearTimeout(apIdleTimer); apIdleTimer = null; }
-    // launch the first loop promptly (a short beat lets any in-flight state settle)
+    // launch the first loop promptly (a short beat lets any in-flight state settle); tracked
+    // in apGapTimer so a stop before it fires cancels it, same as the between-loops gap.
     apPending = true;
-    setTimeout(apLaunchLoop, 400);
+    if (apGapTimer != null) clearTimeout(apGapTimer);
+    apGapTimer = setTimeout(apLaunchLoop, 400);
     apArmWatchdog();
     if (window.echo) try { window.echo("▶ autoplay: the loft runs itself now. touch anything to take over."); } catch (e) {}
   }
@@ -57579,14 +57604,19 @@ function spawnDustMote(container) {
   // armed so the screen drifts back to autoplay after a quiet spell; a deliberate
   // autoplay(false) clears it for good.
   function stopAutoplay(keepIdleResume) {
-    if (!apOn && !apIdleTimer) return;
+    if (!apOn && !apIdleTimer && !apIdleResume) return;
     apOn = false;
     apPending = false;
     if (apWatchdog != null) { clearTimeout(apWatchdog); apWatchdog = null; }
+    if (apGapTimer != null) { clearTimeout(apGapTimer); apGapTimer = null; } // no stale launch after a stop
     apShowBadge(false);
     if (window.__cinematic && window.__stopCinematic) window.__stopCinematic();
     if (apIdleTimer) { clearTimeout(apIdleTimer); apIdleTimer = null; }
-    if (apIdleResume && keepIdleResume) apArmIdleResume();
+    // A DELIBERATE stop (keepIdleResume falsy — autoplay(false) / the 'a' toggle-off) turns
+    // the feature OFF for good: clear idle-resume so a later touch can't silently re-arm it.
+    // A TAKEOVER (keepIdleResume true) keeps it armed so the screen drifts back after a quiet spell.
+    if (keepIdleResume) { if (apIdleResume) apArmIdleResume(); }
+    else apIdleResume = false;
   }
   // After a takeover, count down from the last interaction; when the loft's been quiet
   // long enough, slip back into the attract loop. Any fresh interaction re-arms the timer.

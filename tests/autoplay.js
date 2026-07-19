@@ -54,8 +54,9 @@ var HARNESS = [
   "    report.phase1.cinematicStopped = !window.__cinematic;",
   "    report.phase1.badgeHidden = !!(badge && !badge.classList.contains('show'));",
   // ── Phase 2: stub the show to be instant, then watch the loop cycle + vary the season ──
-  "    var seasons=[]; var realSeason=window.season;",
-  "    window.season=function(n){ if(typeof n==='string') seasons.push(n); return realSeason ? realSeason.call(window,n) : n; };",
+  // autoplay varies the season via __applySeasonSilent (no naming toast on the kiosk); spy on it
+  "    var seasons=[]; var realSilent=window.__applySeasonSilent;",
+  "    window.__applySeasonSilent=function(n){ if(typeof n==='string') seasons.push(n); return realSilent ? realSilent.call(window,n) : undefined; };",
   "    var showTimer=null;",
   "    window.__startCinematic=function(){ window.__cinematic=true; if(showTimer)clearTimeout(showTimer); showTimer=setTimeout(function(){window.__cinematic=false;},300); };",  // a fast fake 'show'
   "    window.__stopCinematic=function(){ window.__cinematic=false; if(showTimer){clearTimeout(showTimer);showTimer=null;} };",
@@ -83,12 +84,19 @@ var HARNESS = [
   "    await sleep(4000);",
   "    report.phase3.loopsWhileUnfocused = window.__autoplayLoops() - loopsBeforeBlur;", // must be 0
   "    document.hasFocus=realHasFocus; window.dispatchEvent(new Event('focus'));",
-  // ── Phase 4: a human takeover exits autoplay ──
+  // ── Phase 4: a human takeover exits autoplay (but idle-resume stays armed) ──
   "    if (window.__autoplayTakeover) window.__autoplayTakeover();",
   "    await sleep(200);",
   "    report.phase4.offAfterTakeover = !window.__autoplayOn();",
-  "    window.autoplay(false);",            // clean up idle-resume so nothing relaunches
-  "    window.season=realSeason;",
+  // ── Phase 4b: a DELIBERATE autoplay(false) must STICK — a later gesture can't re-arm it ──
+  "    window.autoplay(true);",             // arm again (idleResume=true)
+  "    await sleep(200);",
+  "    window.autoplay(false);",            // deliberate off → must clear idle-resume for good
+  "    await sleep(200);",
+  "    if (window.__autoplayTakeover) window.__autoplayTakeover();", // a subsequent gesture must NOT re-arm
+  "    await sleep(200);",
+  "    report.phase4.stillOffAfterGesture = !window.__autoplayOn();",  // must stay off
+  "    window.__applySeasonSilent=realSilent;",
   "  }",
   "  window.addEventListener('load',function(){ setTimeout(function(){ run().catch(function(e){window.__errs.push('harness:'+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById('__report').textContent=JSON.stringify(report);}); },400); });",
   "})();",
@@ -131,6 +139,8 @@ if (!r) {
   // Phase 4
   if (p4.offAfterTakeover) pass("a human takeover exits autoplay");
   else fail("a human takeover exits autoplay", JSON.stringify(p4));
+  if (p4.stillOffAfterGesture) pass("a deliberate autoplay(false) sticks — a later gesture can't silently re-arm it");
+  else fail("autoplay(false) must clear idle-resume for good", JSON.stringify(p4));
   // Errors
   if (r.errors.length === 0) pass("no uncaught JS errors across the entire run");
   else fail("no uncaught JS errors", r.errors.slice(0, 12).join("\n"));

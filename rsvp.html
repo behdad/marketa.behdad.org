@@ -3567,6 +3567,34 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .msg-thumb-body{font-size:22px; color:var(--ink); line-height:1.25; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; overflow:hidden} /* up to two lines, then ellipsis */
 @keyframes msg-thumb-pulse{0%,100%{box-shadow:0 6px 22px rgba(0,0,0,.28), inset 0 0 0 1px var(--rule)} 50%{box-shadow:0 7px 27px rgba(142,58,74,.5), inset 0 0 0 1px var(--rule)}}
 @media (prefers-reduced-motion: reduce){.msg-thumb.show{animation:none}}
+/* the WEDDING ALBUM app: Aspen's captured party polaroids, newest-first. Each card is a white-
+   framed polaroid — a stylized generative SVG "photo" (present figures in signature colours over
+   a season/UV-tinted ground) + a hand-style caption strip. Plain HTML/SVG in the phone modal
+   (not under any SVG scale), so no WebKit foreignObject caveats apply here. */
+.pm-album{display:flex; flex-direction:column; gap:16px; padding:8px 4px 6px; min-height:100%; box-sizing:border-box}
+.pm-album-empty{margin:auto; color:var(--muted); font-size:12.5px; text-align:center; line-height:1.5; max-width:80%}
+.pm-album-empty b{display:block; font-family:"Fraunces",serif; font-size:16px; color:var(--ink); margin-bottom:5px}
+.pm-polaroid{align-self:center; width:196px; max-width:100%; background:#fffdf8; padding:9px 9px 0; border:none; border-radius:3px; box-shadow:0 3px 12px rgba(69,58,49,.22), inset 0 0 0 1px rgba(69,58,49,.06); cursor:pointer; font:inherit; text-align:center; display:block}
+.pm-polaroid:nth-child(odd){transform:rotate(-1.4deg)} /* a lightly-tossed stack; static (not animated) */
+.pm-polaroid:nth-child(even){transform:rotate(1.1deg)}
+.pm-polaroid:focus-visible{outline:2px solid var(--wine); outline-offset:3px}
+.pm-polaroid .pm-pol-pic{display:block; width:100%; height:auto; border-radius:1px}
+.pm-polaroid .pm-pol-cap{padding:9px 4px 12px; font-family:"Fraunces",serif; font-size:12.5px; line-height:1.35; color:var(--ink); text-align:center}
+.pm-polaroid .pm-pol-cap .pm-pol-time{display:block; margin-top:3px; font-family:"Source Serif 4",serif; font-size:10.5px; color:var(--muted)}
+@media (prefers-reduced-motion: reduce){.pm-polaroid{transform:none} .pm-polaroid:nth-child(odd),.pm-polaroid:nth-child(even){transform:none}}
+/* album detail: an enlarged polaroid + the photobooth's share actions (Copy/Download/Gmail·Email).
+   A fixed overlay filling the phone screen (the phone shell is its host), grid-stacked / no inner
+   transforms so it's WebKit-safe under any scaled ancestor. */
+.pm-album-detail{position:absolute; inset:0; z-index:8; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:11px; padding:18px 16px; box-sizing:border-box; background:rgba(69,58,49,.62); opacity:0; transition:opacity .2s ease; overflow-y:auto}
+.pm-album-detail.show{opacity:1}
+@media (prefers-reduced-motion: reduce){.pm-album-detail{transition:none}}
+.pm-album-detail .pm-ad-x{position:absolute; top:10px; right:12px; width:32px; height:32px; border:none; border-radius:50%; background:rgba(255,253,248,.92); color:var(--ink); font-size:16px; line-height:1; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.pm-album-detail .pm-ad-lead{font-family:"Fraunces",serif; font-size:15px; color:#fffdf8; text-align:center}
+.pm-album-detail .pm-ad-img{width:100%; max-width:220px; border-radius:4px; box-shadow:0 6px 20px rgba(0,0,0,.4); background:#fffdf8}
+.pm-album-detail .pm-ad-hint{font-size:12px; color:#f3ecd8; text-align:center; line-height:1.4}
+.pm-album-detail .pm-ad-row{display:grid; grid-template-columns:1fr 1fr; gap:8px; width:100%; max-width:250px}
+.pm-album-detail .pm-ad-btn{border:none; border-radius:14px; background:var(--wine); color:#fff; font:inherit; font-size:14px; padding:10px 14px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 3px 10px rgba(142,58,74,.3)}
+.pm-album-detail .pm-ad-btn:active{transform:scale(.96)}
 /* unread-count badge — a red circle (white number) at the new-notification's top-left corner */
 .msg-badge{position:absolute; top:6px; left:max(10px, calc(50% - 190px)); z-index:61; min-width:30px; height:30px; padding:0 6px; box-sizing:border-box; border:2px solid #fffdf8; border-radius:15px; background:#d33a34; color:#fff; font:700 17px/26px "Source Serif 4",system-ui,sans-serif; text-align:center; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.34); display:none}
 .msg-badge.show{display:block}
@@ -18687,6 +18715,13 @@ var T = {
     app_music: "music",
     app_photobooth: "photobooth",
     app_album: "album",
+    // the album app (Aspen's captured party polaroids)
+    album_empty_title: "no photos yet",
+    album_empty_sub: "Aspen's still shooting — throw the party and she'll fill your roll.",
+    album_cap_with: "with", // "markéta & behdad · with Ali & Goli"
+    album_cap_and: "&",     // joins a couple in a caption: "Ali & Goli"
+    album_close: "close",
+    album_btn_copy: "📋 Copy", // Download/Gmail/Email reuse the photobooth's pb_btn_* keys
     app_console: "console",
     app_editor: "editor",
     app_video: "video",
@@ -19225,6 +19260,13 @@ var T = {
     app_music: "hudba",
     app_photobooth: "fotokoutek",
     app_album: "album",
+    // aplikace album (Aspeniny nafocené párty polaroidy)
+    album_empty_title: "zatím žádné fotky",
+    album_cap_with: "s", // "markéta & behdad · s Ali & Goli"
+    album_cap_and: "&",  // spojuje pár v popisku: "Ali & Goli"
+    album_empty_sub: "Aspen ještě fotí — uspořádej párty a rolička se zaplní.",
+    album_close: "zavřít",
+    album_btn_copy: "📋 Kopírovat", // Download/Gmail/Email přebírají fotokoutkové klíče pb_btn_*
     app_console: "konzole",
     app_editor: "editor",
     app_video: "video",
@@ -31040,6 +31082,7 @@ var ABANDONED_CALL_MS = 30000;
     beans: "beans() — coffee beans left in the grinder hopper (0..22); beans(n) sets the level (fresh heap to match) and returns the previous count",
     servefood: "servefood() — serve a cooked burger (opens the lid if needed); servefood(random()) picks a random ready one. returns true if one was served",
     phone: "phone(true) — bring up the pocket phone; phone(false) puts it away; phone() reports whether it's up. phone(\"cocktails\")/phone(\"weather\") open that phone app (skips the lockscreen); a bad name lists them",
+    album: "album() — open the pocket-phone wedding album: Aspen's captured party polaroids, newest first. she snaps one every photo-moment (the ~15s freeze) and whenever you tap her at the garden party; each is an intimate portrait — the couple + one guest (or a guest couple). album() also echoes the photo count",
     madla: "madla() — Markéta's sister (a doctor in Germany, bored on a night shift) rings your phone: a pulsing call card drops top-centre for 15s (tap to answer → pan to the cuddly room, then the video call; ignore it to miss the call). madla(true) answers straight away. she's incoming-only — you can't dial her back",
     sound: [
       "sound(\"id\"[, …args]) — play a loft sound effect by id, e.g. sound(\"gong\"). sound() lists every id; sound(\"prefix\") lists the ids starting with that prefix — try sound(\"cat\") · sound(\"phone\").",
@@ -31124,7 +31167,7 @@ var ABANDONED_CALL_MS = 30000;
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · chase() · guests()/aligoli() · roster() · dance() · dj() · firstdance() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · chase() · guests()/aligoli() · roster() · dance() · dj() · firstdance() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
@@ -31374,7 +31417,7 @@ var ABANDONED_CALL_MS = 30000;
     "goto", "rooms", "daylight", "night", "day", "season", "play", "pause", "temp", "weather",
     "clock", "time", "projector", "storm", "dance", "dj", "firstdance", "cocktail", "lang", "caption", "candle",
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood",
-    "phone", "message", "madla", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
+    "phone", "album", "message", "madla", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "edit",
     "confetti", "fireworks", "cat", "irene", "visitors", "mouses", "piano", "classic", "kitten", "ukelele", "audio", "music",
     "guitar", "ukulele", "beat", "eclipse", "hb", "loft", "ls", "pwd", "whoami", "sudo",
@@ -37184,7 +37227,7 @@ async def localfont(name):
       // us — the wedding/couple apps
       { id: "phone", labelKey: "app_phone", icon: "phone", tile: "#8e3a4a", open: function () { openDialer(); } },
       { id: "photobooth", labelKey: "app_photobooth", icon: "photobooth", glyph: "📷", tile: "#7f9ec0", open: function () { openApp("photobooth", "app_photobooth", renderPhotobooth); } },
-      { id: "album", labelKey: "app_album", icon: "album", tile: "#4a6b94", link: "https://photos.app.goo.gl/gBQpsw4nrh9RwdQu9" },
+      { id: "album", labelKey: "app_album", icon: "album", tile: "#4a6b94", open: function () { openApp("album", "app_album", renderAlbum); } }, // Aspen's party polaroids — the in-phone WEDDING ALBUM gallery (was a Google Photos link-out; the couple's real album ships on save-the-dates)
       { id: "places", labelKey: "app_places", icon: "places", tile: "#6d4b63", link: "https://maps.app.goo.gl/WFNVQLw7F6CTQ8xs5" },
       // play — make + games
       { id: "music", labelKey: "app_music", icon: "music", tile: "#6d4b63", open: function () { openApp("music", "app_music", renderMusic); } },
@@ -37503,6 +37546,7 @@ async def localfont(name):
       // the same card (cardsIndex is session-scoped). It's zeroed only on a "kill": phone Uninstall
       // (uninstallApp) or the loft reset (__resetPhoneApps).
       if (currentApp === "cocktails") { cocktailView = "gallery"; cocktailSel = null; } // next open starts at the gallery
+      if (currentApp === "album" && window.__albumCloseDetail) window.__albumCloseDetail(); // drop any open polaroid detail overlay
       currentApp = null;
     }
     function showHome() {
@@ -38252,6 +38296,243 @@ async def localfont(name):
       requestAnimationFrame(function () { requestAnimationFrame(toBottom); });
       setTimeout(toBottom, 300);
     }
+    // ── WEDDING ALBUM app ── Aspen's captured party polaroids, newest-first. Each shot is a
+    // STATE snapshot (window.__albumList() — who was present, dance, season, UV, time), rendered
+    // here as a stylized generative polaroid: a row of little figures in each present person's
+    // signature colour over a season/UV-tinted ground, plus a hand-style caption. No pixel
+    // screenshot of the SVG scene (WebKit foreignObject/canvas rasterizing is fragile) — this is
+    // drawn fresh from the record, so a language flip re-captions live and it stays cheap.
+    // Signature colours keyed to the roster keys (window.__rosterPresence's `key`); hosts get the
+    // his-pink / her-blue pair. Anyone unmapped falls back to soft.
+    var ALBUM_COLORS = {
+      hosts: ["#c68e95", "#4a6b94"], // his suit pink · her suit blue — two figures for the couple
+      ali: "#8a8f86", goli: "#d9a6a6", spencer: "#6d8ba3", jay: "#7d6e5d", farhang: "#9c6d4a",
+      lauren: "#8e3a4a", alireza: "#5d7d8e", mahzad: "#b06a7a", bahareh: "#7f9ec0",
+      aspen: "#453a31", dj: "#6d4b63", elisabeth: "#c8a24a", felix: "#8a9a5b"
+    };
+    // Season → ground tint for the "photo" backdrop (a wash the figures stand against). UV overrides
+    // it with a violet blacklight wash. A plain/auto day gets a warm dusk-garden green.
+    var ALBUM_SEASON_TINT = {
+      "": "#7c9a6e", wedding: "#8fae7f", summer: "#8fb06a", smoky: "#b79a6e", autumn: "#b3743e",
+      spooky: "#3c2f4a", holiday: "#5e6f5a", xmas: "#5e6f5a", stedry: "#5e6f5a", newyear: "#2c3350",
+      winter: "#9db4c4", valentines: "#b06a80", spring: "#8fb08a", nowruz: "#7fae6a",
+      chaharshanbe: "#7a4a3a", carodejnice: "#4a3a3a", pride: "#7a6a9a", canada: "#a05a5a"
+    };
+    function albumFmtTime(ts) { // wall-clock HH:MM of the capture (a keepsake reads like a party clock)
+      var d = new Date(ts);
+      return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+    }
+    function albumVibeLabel(dance) { // the dance name in the current language (reuses the now-playing np map)
+      if (!dance) return "";
+      var l = T[document.documentElement.lang] ? document.documentElement.lang : "en";
+      var np = (T[l] && T[l].np) || T.en.np;
+      return np[dance] || dance;
+    }
+    // one caption: the hosts + "with <subject>" + vibe + time. The subject is everyone in the
+    // record after the hosts (a couple → "Ali & Goli", an individual → "Bahareh"); hosts alone
+    // drops the "with" clause. e.g. "markéta & behdad · with Ali & Goli · Techno · 00:42".
+    function albumCaption(rec) {
+      var host = rec.people[0] ? rec.people[0].name : "markéta & behdad";
+      var others = rec.people.slice(1).map(function (p) { return p.name; }).filter(Boolean);
+      var parts = [host];
+      if (others.length) {
+        var subj = others.length === 1 ? others[0]
+          : others.slice(0, -1).join(", ") + " " + tr("album_cap_and") + " " + others[others.length - 1];
+        parts.push(tr("album_cap_with") + " " + subj); // "with " / "s " (CS)
+      }
+      var vibe = albumVibeLabel(rec.dance);
+      if (vibe) parts.push(vibe);
+      return { line: parts.join(" · "), time: albumFmtTime(rec.t) };
+    }
+    // The generative "photo": an SVG (200×150-ish) with a season/UV-tinted ground, a little
+    // disco-ball or ∞-heart up top, and a row of tiny figures — one per present figure, in their
+    // signature colour (the couple = two figures). Returns an <svg> element.
+    function albumPhotoSvg(rec) {
+      var W = 200, H = 150;
+      var svgNS = "http://www.w3.org/2000/svg";
+      var svg = document.createElementNS(svgNS, "svg");
+      svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+      svg.setAttribute("class", "pm-pol-pic");
+      svg.setAttribute("aria-hidden", "true");
+      function add(tag, attrs) { var e = document.createElementNS(svgNS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); svg.appendChild(e); return e; }
+      var ground = rec.uv ? "#3a1f52" : (ALBUM_SEASON_TINT[rec.season] || ALBUM_SEASON_TINT[""]);
+      var sky = rec.uv ? "#1c0f2c" : "#f3ecd8";
+      add("rect", { x: 0, y: 0, width: W, height: H, fill: sky });
+      add("rect", { x: 0, y: H * 0.56, width: W, height: H * 0.44, fill: ground }); // the floor/garden band
+      if (rec.uv) { add("rect", { x: 0, y: 0, width: W, height: H, fill: "#7a3ec8", opacity: "0.28" }); } // blacklight violet wash over the whole frame
+      // top motif: a disco-ball for a dance floor, else an ∞-heart keepsake mark
+      if (rec.dance) {
+        add("circle", { cx: W / 2, cy: 24, r: 11, fill: rec.uv ? "#c9a6ff" : "#c9cdd6" });
+        add("circle", { cx: W / 2, cy: 24, r: 11, fill: "none", stroke: rec.uv ? "#efe2ff" : "#8a8f96", "stroke-width": "0.6" });
+        add("line", { x1: W / 2, y1: 6, x2: W / 2, y2: 13, stroke: rec.uv ? "#c9a6ff" : "#9aa0a8", "stroke-width": "1" });
+      } else {
+        var inf = add("text", { x: W / 2, y: 30, "text-anchor": "middle", "font-size": "22", fill: rec.uv ? "#e6b8ff" : "#8e3a4a", "font-family": "Fraunces,serif" });
+        inf.textContent = "∞";
+      }
+      // the row of little figures — a head + a body blob per present figure, in signature colours
+      var figs = [];
+      rec.people.forEach(function (p) {
+        var c = ALBUM_COLORS[p.key];
+        if (Array.isArray(c)) { c.forEach(function (cc) { figs.push(cc); }); } // the couple → two figures
+        else figs.push(c || "#7d6e5d");
+      });
+      if (!figs.length) figs = ["#7d6e5d"]; // an empty floor still gets one lonely stand-in
+      var n = figs.length;
+      var span = W - 40, step = n > 1 ? span / (n - 1) : 0, x0 = n > 1 ? 20 : W / 2;
+      var baseY = H - 20;
+      figs.forEach(function (col, i) {
+        var x = x0 + step * i;
+        add("ellipse", { cx: x, cy: baseY + 4, rx: 8, ry: 3, fill: "rgba(0,0,0,0.18)" }); // a little shadow
+        add("path", { d: "M" + (x - 7) + " " + baseY + " Q" + (x - 7) + " " + (baseY - 20) + " " + x + " " + (baseY - 20) + " Q" + (x + 7) + " " + (baseY - 20) + " " + (x + 7) + " " + baseY + " Z", fill: col }); // body
+        add("circle", { cx: x, cy: baseY - 24, r: 6.5, fill: "#e9c9a8" }); // head
+        add("path", { d: "M" + (x - 6.5) + " " + (baseY - 26) + " Q" + x + " " + (baseY - 33) + " " + (x + 6.5) + " " + (baseY - 26) + " Z", fill: col }); // a cap in the signature colour
+      });
+      return svg;
+    }
+    function renderAlbum(body) {
+      var wrap = document.createElement("div");
+      wrap.className = "pm-album";
+      var shots = (window.__albumList && window.__albumList()) || []; // newest-first
+      if (!shots.length) {
+        var empty = document.createElement("div");
+        empty.className = "pm-album-empty";
+        empty.innerHTML = "<b>" + tr("album_empty_title") + "</b>" + tr("album_empty_sub");
+        wrap.appendChild(empty);
+        body.appendChild(wrap);
+        return;
+      }
+      var reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      shots.forEach(function (rec) {
+        var card = document.createElement("button"); // a button: tap → enlarge + share (keyboard-reachable)
+        card.type = "button";
+        card.className = "pm-polaroid";
+        var cap = albumCaption(rec);
+        card.setAttribute("aria-label", cap.line + " · " + cap.time);
+        card.appendChild(albumPhotoSvg(rec));
+        var strip = document.createElement("div");
+        strip.className = "pm-pol-cap";
+        strip.appendChild(document.createTextNode(cap.line));
+        var tm = document.createElement("span");
+        tm.className = "pm-pol-time";
+        tm.textContent = cap.time;
+        strip.appendChild(tm);
+        card.appendChild(strip);
+        card.addEventListener("click", function () { albumShowDetail(rec); }); // open it big, with share actions
+        wrap.appendChild(card);
+        if (!reduce) { // a gentle "developing" fade — opacity+filter only (no transform), like the msg polaroid
+          try { card.animate([{ opacity: 0, filter: "contrast(.7) brightness(1.4) saturate(.5)" }, { offset: .5, opacity: 1 }, { opacity: 1, filter: "none" }], { duration: 900, easing: "ease-out" }); } catch (e) {}
+        }
+      });
+      body.appendChild(wrap);
+    }
+    // ── album detail + share ── tapping a polaroid enlarges it inside the phone with the SAME
+    // export actions as the photobooth (Copy / Download / Gmail·Email), via the shared __phonePB
+    // machinery. The polaroids are generative SVG (no foreignObject), so we rasterize the selected
+    // one to a PNG canvas first (serialize → Image → offscreen <canvas> → toBlob), then feed that
+    // canvas/blob into __phonePB's copy/download/email paths.
+    var PB_GMAIL_SVG_AL = '<svg width="15" height="12" viewBox="0 0 20 16" aria-hidden="true"><rect x="1" y="1" width="18" height="14" rx="2" fill="#ffffff" stroke="#d6d0c0" stroke-width="1"/><path d="M1 2l9 7 9-7" fill="none" stroke="#c9483c" stroke-width="1.6"/><path d="M1 2v11l7-6z" fill="#4a6b94"/><path d="M19 2v11l-7-6z" fill="#7f9ec0"/></svg> ';
+    var PB_MAIL_SVG_AL = '<svg width="15" height="12" viewBox="0 0 20 16" aria-hidden="true"><rect x="1" y="1" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M2 2l8 7 8-7" stroke="currentColor" stroke-width="1.5" fill="none"/></svg> ';
+    // Rasterize a full polaroid card (SVG photo + caption) to a PNG canvas at 2× for crispness.
+    // Draws the white frame, the SVG "photo" (blitted through an <img> — the SVG has no
+    // foreignObject, so this taints nothing and works cross-browser), and the caption text.
+    function albumRasterize(rec) {
+      return new Promise(function (resolve, reject) {
+        try {
+          var scale = 2, W = 240, padX = 14, picW = W - padX * 2, picH = Math.round(picW * 150 / 200);
+          var cap = albumCaption(rec);
+          var svg = albumPhotoSvg(rec);
+          svg.setAttribute("width", picW); svg.setAttribute("height", picH);
+          var xml = new XMLSerializer().serializeToString(svg);
+          var svgUrl = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml);
+          var img = new Image();
+          img.onload = function () {
+            try {
+              // measure the caption (wrapped) to size the card height
+              var cv = document.createElement("canvas");
+              var g = cv.getContext("2d");
+              var capTop = padX + picH + 12, lineH = 17 * scale, capFont = (13 * scale) + "px 'Fraunces', serif";
+              g.font = capFont;
+              // greedy word-wrap the caption line to the pic width
+              var words = cap.line.split(" "), lines = [], cur = "";
+              words.forEach(function (w) { var t = cur ? cur + " " + w : w; if (g.measureText(t).width > picW * scale && cur) { lines.push(cur); cur = w; } else cur = t; });
+              if (cur) lines.push(cur);
+              var capH = lines.length * lineH + 14 * scale + 6 * scale; // + time line + bottom pad
+              var H = (padX + picH + 12) + Math.ceil(capH / scale) + 8;
+              cv.width = W * scale; cv.height = H * scale;
+              g = cv.getContext("2d");
+              g.fillStyle = "#fffdf8"; g.fillRect(0, 0, cv.width, cv.height); // the white polaroid frame
+              g.drawImage(img, padX * scale, padX * scale, picW * scale, picH * scale);
+              g.fillStyle = "#453a31"; g.textAlign = "center"; g.font = capFont;
+              var y = capTop * scale + 12 * scale;
+              lines.forEach(function (ln) { g.fillText(ln, cv.width / 2, y); y += lineH; });
+              g.fillStyle = "#716455"; g.font = (10.5 * scale) + "px 'Source Serif 4', serif";
+              g.fillText(cap.time, cv.width / 2, y + 3 * scale);
+              resolve(cv);
+            } catch (e) { reject(e); }
+          };
+          img.onerror = function () { reject(new Error("svg image load failed")); };
+          img.src = svgUrl;
+        } catch (e) { reject(e); }
+      });
+    }
+    var albumDetail = null; // the open detail overlay element, or null
+    function albumCloseDetail() {
+      if (!albumDetail) return;
+      var d = albumDetail; albumDetail = null;
+      if (d.__url) { try { URL.revokeObjectURL(d.__url); } catch (e) {} }
+      d.classList.remove("show");
+      setTimeout(function () { if (d.parentNode) d.remove(); }, 220);
+    }
+    function albumShowDetail(rec) {
+      albumCloseDetail();
+      var PB = window.__phonePB;
+      var overlay = document.createElement("div");
+      overlay.className = "pm-album-detail";
+      var copied = PB && PB.clipboardSupported ? PB.clipboardSupported() : false;
+      var isMobile = /Android|iPhone|iPad|iPod/.test(navigator.userAgent);
+      overlay.innerHTML =
+        '<button type="button" class="pm-ad-x" aria-label="' + tr("album_close") + '">✕</button>' +
+        '<div class="pm-ad-lead">' + (PB ? PB.text("pb_panel_lead") : "") + '</div>' +
+        '<img class="pm-ad-img" alt="">' +
+        '<div class="pm-ad-hint">' + (PB ? PB.text(copied ? "pb_hint_copied" : "pb_hint_nocopy") : "") + '</div>' +
+        '<div class="pm-ad-row">' +
+          '<button type="button" class="pm-ad-btn" data-act="copy">' + tr("album_btn_copy") + '</button>' +
+          '<button type="button" class="pm-ad-btn" data-act="download">' + (PB ? PB.text("pb_btn_download") : "⬇") + '</button>' +
+          (isMobile ? "" : '<button type="button" class="pm-ad-btn" data-act="gmail">' + PB_GMAIL_SVG_AL + (PB ? PB.text("pb_btn_gmail") : "Gmail") + '</button>') +
+          '<button type="button" class="pm-ad-btn" data-act="email">' + PB_MAIL_SVG_AL + (PB ? PB.text("pb_btn_email") : "Email") + '</button>' +
+        '</div>';
+      // land the overlay inside the phone shell so it sits over the app body (and the fullscreen host)
+      (shell || document.body).appendChild(overlay);
+      albumDetail = overlay;
+      requestAnimationFrame(function () { overlay.classList.add("show"); });
+      var imgEl = overlay.querySelector(".pm-ad-img");
+      var curCanvas = null, curBlob = null;
+      // rasterize once; the PNG feeds the preview <img>, Copy, Download and the email routes
+      albumRasterize(rec).then(function (cv) {
+        curCanvas = cv;
+        if (imgEl) { try { imgEl.src = cv.toDataURL("image/png"); } catch (e) {} }
+        if (PB && PB.toBlob) PB.toBlob(cv).then(function (b) { curBlob = b; if (PB.copy) PB.copy(Promise.resolve(b)); }, function () {}); // pre-copy so paste-into-email just works
+      }, function () {});
+      overlay.addEventListener("click", function (e) {
+        if (e.target === overlay) { albumCloseDetail(); return; } // backdrop tap closes
+        var btn = e.target.closest ? e.target.closest("[data-act], .pm-ad-x") : null;
+        if (!btn) return;
+        if (btn.classList.contains("pm-ad-x")) { albumCloseDetail(); return; }
+        var act = btn.getAttribute("data-act");
+        if (!PB) return;
+        // ensure we have a blob before acting (rasterize may still be in flight on a fast tap)
+        var withBlob = function (fn) {
+          if (curBlob) { fn(curBlob); return; }
+          if (!curCanvas || !PB.toBlob) return;
+          PB.toBlob(curCanvas).then(function (b) { curBlob = b; fn(b); }, function () {});
+        };
+        if (act === "copy") { withBlob(function (b) { if (PB.copy) PB.copy(Promise.resolve(b)); }); }
+        else if (act === "download") { withBlob(function (b) { if (PB.download) PB.download(b); }); }
+        else if (act === "gmail") { withBlob(function (b) { if (PB.copy) PB.copy(Promise.resolve(b)); if (PB.gmail) PB.gmail(); }); }
+        else if (act === "email") { withBlob(function (b) { if (PB.copy) PB.copy(Promise.resolve(b)); if (PB.mailto) PB.mailto(); }); }
+      });
+    }
+    window.__albumCloseDetail = albumCloseDetail; // test/close hook
     // ── flashlight ── an on/off torch. ON spills a warm radial beam onto the balcony
     // night scene (the phone is opened from the balcony) and glows the phone screen; OFF
     // on toggle, on leaving the app, and on any phone close — leaveCurrentApp covers all
@@ -39854,7 +40135,7 @@ async def localfont(name):
     }
     window.__openPhoneModal = open;
     window.__closePhoneModal = function (silent) { close(silent); };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; messagesThread = []; messagesRead = {}; Object.keys(MESSAGES).forEach(function (k) { if (MESSAGES[k].bodyKeys) MESSAGES[k].bodyKey = null; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__stopDayDrip) window.__stopDayDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks, and the flashlight (intent forgotten + beam/torch off)
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; messagesThread = []; messagesRead = {}; Object.keys(MESSAGES).forEach(function (k) { if (MESSAGES[k].bodyKeys) MESSAGES[k].bodyKey = null; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__stopDayDrip) window.__stopDayDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks, and the flashlight (intent forgotten + beam/torch off)
     // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
     // open(true) is the cinematic lock-skip path (same as __showCocktailInPhone), so a console
     // launch never stalls on the passcode. Matches by app id (case-insensitive) or its localized
@@ -39877,6 +40158,17 @@ async def localfont(name):
       if (app.open) app.open();
       else if (app.link) { try { window.open(app.link, "_blank"); } catch (e) {} }
       return "📱 " + app.id + " — open on the phone.";
+    };
+    // Same as __openPhoneApp but WITHOUT the balcony jump — raise the phone over whatever room
+    // you're in and land on the app. Used by the Aspen tap: she snaps a shot, then the phone
+    // pops up on the album right where you're standing (the modal is scene-agnostic).
+    window.__openPhoneAppHere = function (name) {
+      var app = phoneAppByName(name);
+      if (!app) return false;
+      open(true); // in-place launcher open, first-open math lock skipped
+      if (app.open) app.open();
+      else if (app.link) { try { window.open(app.link, "_blank"); } catch (e) {} }
+      return true;
     };
     // Keep an open phone riding the current fullscreen host (same choice open() makes), so a
     // fullscreen toggle re-seats it into the top-layer / z-50 fill instead of stranding it
@@ -40172,6 +40464,7 @@ async def localfont(name):
         else if (currentApp === "browser") openApp("browser", browserLabelKey, renderPhoneBrowser);
         else if (currentApp === "clock") openApp("clock", "app_clock", renderClock);
         else if (currentApp === "messages") openApp("messages", "app_messages", renderMessages);
+        else if (currentApp === "album") openApp("album", "app_album", renderAlbum); // re-caption the polaroids in the new language (records are language-neutral state)
         else if (currentApp === "hn") openApp("hn", "app_hn", renderHN);
         else if (currentApp === "notes") openApp("notes", "app_notes", renderNotes); // notesDraft survives the rebuild, so a half-typed note isn't lost
         else if (currentApp === "cards") { // in-place chrome relabel: the card phrases are bilingual data, so keep the deck position + flip state
@@ -40185,6 +40478,11 @@ async def localfont(name):
         // live beam / drop the typed amount / tear down the live camera mid-session
         else if ((currentApp === "flashlight" || currentApp === "currency" || currentApp === "photobooth") && shell.querySelector(".pah-title")) shell.querySelector(".pah-title").textContent = tr(currentTitleKey);
       }
+    };
+    // A fresh Aspen shot lands: if the album's open right now, rebuild it so the newest polaroid
+    // appears at the top (matches the messages live-refresh idiom). No-op otherwise.
+    window.__albumRefresh = function () {
+      if (isOpen() && currentApp === "album") openApp("album", "app_album", renderAlbum);
     };
     // Escape: layered close, on window-capture so it beats the document-capture music-stop
     // (same reasoning as the shortcuts card). in-call → hang up, app → home, home → close.
@@ -40204,6 +40502,7 @@ async def localfont(name):
       if (e.key === "Escape" || e.key === "Esc") {
         e.preventDefault(); e.stopPropagation();
         if (phMenuOpen()) { phCloseMenu(); return; } // an open app-icon menu owns Esc (matches the desktop .mon-ctx), doesn't navigate the phone back
+        if (currentApp === "album" && shell && shell.querySelector(".pm-album-detail") && window.__albumCloseDetail) { window.__albumCloseDetail(); return; } // an open polaroid detail owns Esc first
         navBack();
         return;
       }
@@ -52462,6 +52761,11 @@ function spawnDustMote(container) {
       e.stopPropagation();
       fireGardenFlash();
       playCameraShutterSound();
+      if (window.__albumAdd) window.__albumAdd(); // a tapped shot is a keepsake too — straight into the album
+      // she's the photographer: tap her → the shot syncs to your phone. Raise the pocket phone on
+      // the album app (scene-agnostic modal) so the just-taken portrait sits right on top, newest-
+      // first. A short beat lets the shutter/flash read before the phone slides up.
+      setTimeout(function () { if (window.__openPhoneAppHere) window.__openPhoneAppHere("album"); }, 260);
     });
   })();
   function partyFrozen() { var s = document.getElementById("loft-game-strip"); return !!(s && s.classList.contains("dance-frozen")); }
@@ -52500,6 +52804,7 @@ function spawnDustMote(container) {
   function endPhotoMoment() {
     photoFreezeTimer = null;
     window.__photoFreeze = false;
+    if (window.__albumMomentReset) window.__albumMomentReset(); // next freeze snaps a fresh keepsake
     if (window.__syncDanceFreeze) window.__syncDanceFreeze();
     schedulePhotoMoment();
   }
@@ -52509,6 +52814,7 @@ function spawnDustMote(container) {
     if (document.hidden || !document.hasFocus() || window.__musicPaused) { schedulePhotoMoment(); return; } // unattended, or the visitor's already frozen it → try later
     window.__photoFreeze = true;
     if (window.__syncDanceFreeze) window.__syncDanceFreeze();
+    if (window.__albumCaptureMoment) window.__albumCaptureMoment(); // one keepsake per photo-moment (not per flash)
     photoFreezeTimer = setTimeout(endPhotoMoment, 15000); // ~15s of photography
   }
   function schedulePhotoMoment() {
@@ -52522,6 +52828,96 @@ function spawnDustMote(container) {
     if (window.__photoFreeze) { window.__photoFreeze = false; if (window.__syncDanceFreeze) window.__syncDanceFreeze(); }
   };
   window.__photoMomentNow = function () { if (photoFreezeTimer) { clearTimeout(photoFreezeTimer); photoFreezeTimer = null; } startPhotoMoment(); }; // console/test: trigger one now
+  // ── THE WEDDING ALBUM — Aspen's shots, kept as keepsake "polaroids" ────────────
+  // Aspen already flashes through the auto photo-moments and when the visitor taps her; those
+  // shots used to go nowhere. Now each captured shot records a small STATE SNAPSHOT — NOT a pixel
+  // screenshot of the SVG (WebKit foreignObject/canvas compositing makes rasterizing the scene
+  // fragile). Every shot is an INTIMATE PORTRAIT: the wedding couple (always) + ONE "other subject"
+  // picked from who's actually on the floor — either a COUPLE (both members present) or a single
+  // INDIVIDUAL. So a polaroid shows 3–4 figures, never the whole crowd. The subject rotates and
+  // never repeats back-to-back, so the album reads as a series of different intimate shots; if the
+  // hosts are alone, it's just the couple. The pocket-phone "album" app renders a stylized
+  // generative polaroid from each record. Session-scoped, capped, cleared on the loft reset.
+  var ALBUM_CAP = 16;                 // keep only the most recent ~16 — no unbounded growth
+  var albumShots = [];                // newest-LAST here; the app shows newest-first
+  var albumSeq = 0;                   // monotonic id so the app can key/track cards
+  var albumLastSubject = "";          // the last shot's subject-id, so we don't shoot the same subject twice running
+  // Couple groupings among the guests/kids: both members must be present to shoot them as a couple;
+  // a member whose partner is absent becomes an individual subject instead. Everyone not listed here
+  // (Bahareh, the DJ, Aspen) is always an individual. Keyed to the roster `key`s.
+  var ALBUM_COUPLES = [["ali", "goli"], ["spencer", "jay"], ["alireza", "mahzad"], ["farhang", "lauren"], ["elisabeth", "felix"]];
+  function albumSeasonName() {         // the current decor season as a bare name (or "" = plain/auto), read off the strip
+    var strip = document.getElementById("loft-game-strip");
+    if (!strip) return "";
+    var m = (strip.getAttribute("class") || "").match(/\bseason-([a-z]+)\b/); // className on an SVG el is an SVGAnimatedString, not a string — read the attribute
+    // climate-winter is a season too (winter with no decor class of its own); newyear reads as its own
+    if (m) return m[1];
+    if (strip.classList.contains("climate-winter")) return "winter";
+    return "";
+  }
+  function albumUvOn() { var s = document.getElementById("loft-game-strip"); return !!(s && s.classList.contains("uv-mode")); }
+  // Build the list of candidate "other subjects" from who's present (excluding the hosts): each is a
+  // {id, members:[{key,name,roleKey}]} — a couple (2 members, both present) or an individual (1).
+  function albumSubjects(present) {
+    // the crew (DJ, photographer) are working the party, not portrait subjects — skip them; the
+    // hosts anchor every shot separately. Guests, family and the mouse kids are the candidates.
+    var byKey = {}; present.forEach(function (p) { if (p.key !== "hosts" && p.grp !== "crew") byKey[p.key] = p; });
+    var used = {}, subs = [];
+    ALBUM_COUPLES.forEach(function (pair) {
+      if (byKey[pair[0]] && byKey[pair[1]]) { // both here → shoot them together
+        subs.push({ id: pair[0] + "+" + pair[1], members: [byKey[pair[0]], byKey[pair[1]]] });
+        used[pair[0]] = used[pair[1]] = 1;
+      }
+    });
+    Object.keys(byKey).forEach(function (k) { // everyone left over (partner absent, or never in a couple) → solo subject
+      if (used[k]) return;
+      subs.push({ id: k, members: [byKey[k]] });
+    });
+    return subs;
+  }
+  function captureAlbumShot() {        // build + store one intimate-portrait snapshot from the live floor
+    var present = (window.__rosterPresence && window.__rosterPresence()) || [];
+    var hosts = null; present.forEach(function (p) { if (p.key === "hosts") hosts = p; });
+    var subjects = albumSubjects(present);
+    var subject = null;
+    if (subjects.length) {
+      // avoid the same subject twice running; if that leaves nothing (only one candidate), allow it
+      var pool = subjects.filter(function (s) { return s.id !== albumLastSubject; });
+      if (!pool.length) pool = subjects;
+      subject = pool[Math.floor(Math.random() * pool.length)];
+      albumLastSubject = subject.id;
+    }
+    // people = the hosts (always, if present) + the chosen subject's members — the intimate portrait.
+    var people = [];
+    if (hosts) people.push({ key: hosts.key, grp: hosts.grp, name: hosts.name, roleKey: hosts.roleKey });
+    else people.push({ key: "hosts", grp: "hosts", name: "markéta & behdad", roleKey: "role_hosts" }); // captured off-floor (tap before guests-in): the couple still anchor the shot
+    if (subject) subject.members.forEach(function (m) { people.push({ key: m.key, grp: m.grp, name: m.name, roleKey: m.roleKey }); });
+    var rec = {
+      id: ++albumSeq,
+      t: Date.now(),
+      people: people,
+      subjectId: subject ? subject.id : "", // "" = the hosts alone
+      dance: window.__partyDance || "",
+      season: albumSeasonName(),
+      uv: albumUvOn()
+    };
+    albumShots.push(rec);
+    if (albumShots.length > ALBUM_CAP) {
+      var dropped = albumShots.length - ALBUM_CAP;
+      albumShots.splice(0, dropped); // drop the oldest — cap, don't grow unbounded
+      try { console.info("[album] capped at " + ALBUM_CAP + " shots — dropped " + dropped + " oldest"); } catch (e) {} // no silent caps
+    }
+    if (window.__albumRefresh) window.__albumRefresh(); // live-refresh the app if it's open
+    return rec;
+  }
+  // A photo-moment produces ONE keepsake (not one per flash). Flag it as consumed on the freeze
+  // so the near-continuous frozen-crowd flashes don't each snap a card; cleared when the freeze ends.
+  var albumMomentSnapped = false;
+  window.__albumCaptureMoment = function () { if (!albumMomentSnapped) { albumMomentSnapped = true; captureAlbumShot(); } };
+  window.__albumMomentReset = function () { albumMomentSnapped = false; };
+  window.__albumAdd = captureAlbumShot;                 // test hook: snap one now, return the record
+  window.__albumList = function () { return albumShots.slice().reverse(); }; // test hook: newest-first copy
+  window.__albumClear = function () { albumShots = []; albumSeq = 0; albumMomentSnapped = false; albumLastSubject = ""; if (window.__albumRefresh) window.__albumRefresh(); }; // loft reset drops the roll
   // ── PARTY MODE kids' chase (garden) — Irene, Robin & Navid dart across the garden,
   // one chasing another (occasionally all three), giggling, then off the far side. SAME
   // background-safety idiom as the disco stepper / camera flash: ONE self-rescheduling
@@ -56330,21 +56726,25 @@ function spawnDustMote(container) {
     // tooltips wired near hoverTooltip(...). Ordered hosts → wedding party → travel/friends →
     // family → the kids/mouses so the panel reads sensibly. `sel` is a full selector (the DJ +
     // photographer aren't .g-* groups, so they carry their own).
+    // `key` is a stable per-entry id (the couple share "hosts"). The album keeps a signature
+    // colour per key so a captured polaroid draws each present figure in their own hue, and it
+    // reads presence back through this same present()/djName() logic (via window.__rosterPresence)
+    // so the album and the roster always agree on who's on the floor.
     var ROSTER = [
-      { grp: "hosts",  sel: ".g-behdad",  name: "markéta & behdad", roleKey: "role_hosts", pair: true }, // the couple share ONE line (like their tooltip); .g-marketa is the same entry
-      { grp: "guests", sel: ".g-ali",       name: "Ali",       roleKey: "role_bestman" },
-      { grp: "guests", sel: ".g-goli",     name: "Goli",     roleKey: "role_fashion" },
-      { grp: "guests", sel: ".g-spencer",   name: "Spencer",   roleKey: "role_maid" },
-      { grp: "guests", sel: ".g-jay",       name: "Jay",       roleKey: "role_officiant" },
-      { grp: "guests", sel: ".g-farhang",   name: "Farhang",   roleKey: "role_mc" },
-      { grp: "guests", sel: ".g-lauren",    name: "Lauren",    roleKey: "role_business" },
-      { grp: "guests", sel: ".g-alireza",   name: "Alireza",   roleKey: "role_travelbuddy_m" },
-      { grp: "guests", sel: ".g-mahzad",    name: "Mahzad",    roleKey: "role_travelbuddy_f" },
-      { grp: "guests", sel: ".g-bahareh",   name: "Bahareh",   roleKey: "role_sister" },
-      { grp: "crew",   sel: "#garden-photog-hit", name: "Aspen", roleKey: "role_photographer" }, // the party photographer
-      { grp: "crew",   sel: "__dj",         name: null,        roleKey: "role_dj" }, // name resolved live from which DJ is spinning
-      { grp: "kids",   sel: ".g-elisabeth", name: "Elisabeth", roleKey: "role_mniece" }, // a mouse — present only while mouses-visiting
-      { grp: "kids",   sel: ".g-felix",     name: "Felix",     roleKey: "role_mnephew" }  // a mouse
+      { grp: "hosts",  key: "hosts",     sel: ".g-behdad",  name: "markéta & behdad", roleKey: "role_hosts", pair: true }, // the couple share ONE line (like their tooltip); .g-marketa is the same entry
+      { grp: "guests", key: "ali",       sel: ".g-ali",       name: "Ali",       roleKey: "role_bestman" },
+      { grp: "guests", key: "goli",     sel: ".g-goli",     name: "Goli",     roleKey: "role_fashion" },
+      { grp: "guests", key: "spencer",   sel: ".g-spencer",   name: "Spencer",   roleKey: "role_maid" },
+      { grp: "guests", key: "jay",       sel: ".g-jay",       name: "Jay",       roleKey: "role_officiant" },
+      { grp: "guests", key: "farhang",   sel: ".g-farhang",   name: "Farhang",   roleKey: "role_mc" },
+      { grp: "guests", key: "lauren",    sel: ".g-lauren",    name: "Lauren",    roleKey: "role_business" },
+      { grp: "guests", key: "alireza",   sel: ".g-alireza",   name: "Alireza",   roleKey: "role_travelbuddy_m" },
+      { grp: "guests", key: "mahzad",    sel: ".g-mahzad",    name: "Mahzad",    roleKey: "role_travelbuddy_f" },
+      { grp: "guests", key: "bahareh",   sel: ".g-bahareh",   name: "Bahareh",   roleKey: "role_sister" },
+      { grp: "crew",   key: "aspen",     sel: "#garden-photog-hit", name: "Aspen", roleKey: "role_photographer" }, // the party photographer
+      { grp: "crew",   key: "dj",        sel: "__dj",         name: null,        roleKey: "role_dj" }, // name resolved live from which DJ is spinning
+      { grp: "kids",   key: "elisabeth", sel: ".g-elisabeth", name: "Elisabeth", roleKey: "role_mniece" }, // a mouse — present only while mouses-visiting
+      { grp: "kids",   key: "felix",     sel: ".g-felix",     name: "Felix",     roleKey: "role_mnephew" }  // a mouse
     ];
 
     // Is this figure actually ON the floor right now? Present = #garden-guests.guests-in AND the
@@ -56507,6 +56907,16 @@ function spawnDustMote(container) {
     window.__rosterList = function () { // test hook: the present names, in panel order
       var out = [];
       ROSTER.forEach(function (r) { if (present(r.sel)) out.push(r.name || (r.sel === "__dj" ? djName() : "")); });
+      return out;
+    };
+    // Structured presence, shared with the wedding-album capture so both read the SAME floor.
+    // Returns [{ key, grp, name, roleKey }] for everyone present right now, in panel order.
+    window.__rosterPresence = function () {
+      var out = [];
+      ROSTER.forEach(function (r) {
+        if (!present(r.sel)) return;
+        out.push({ key: r.key, grp: r.grp, name: r.name || (r.sel === "__dj" ? djName() : ""), roleKey: r.roleKey });
+      });
       return out;
     };
 
@@ -57070,6 +57480,15 @@ function spawnDustMote(container) {
     } else if (window.__closePhoneModal) { window.__closePhoneModal(); }
     narrate(open, "📱 the pocket phone lights up.", "📱 phone away.");
     return prev;
+  };
+
+  // album() — open the pocket-phone WEDDING ALBUM: Aspen's captured party polaroids, newest-first.
+  // Opens the phone to the album app (like phone("album")); a bare album() also echoes the count.
+  window.album = function () {
+    if (window.__openPhoneApp) window.__openPhoneApp("album");
+    var shots = (window.__albumList && window.__albumList()) || [];
+    if (window.echo) window.echo(shots.length ? ("📸 the wedding album: " + shots.length + " photo" + (shots.length === 1 ? "" : "s") + " — newest first.") : "📸 the wedding album is empty — throw the party and let Aspen shoot.");
+    return shots.length;
   };
 
   // Madla — Markéta's sister, a doctor in Germany, calling on her night shift. INCOMING-ONLY:

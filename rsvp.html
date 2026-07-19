@@ -11427,7 +11427,7 @@ section{margin:1.9rem 0}
      Athena: warm skin, dark curly hair in an updo, a cream/beige ribbed henley with buttons,
      flower dangly earrings, warm smile. UV-readable tones. Tappable flare + hover name·role.
      Head cy~200/204, feet ~y332. Shown with the .guests-in gating. -->
-<g class="guest g-hamid" transform="translate(138,0)">
+<g class="guest g-hamid" transform="translate(138,0) translate(0 332) scale(0.9) translate(0 -332)"><!-- scaled shorter about the feet (Hamid is a shorter guy) -->
 <g class="guest-walk"><!-- gate walk-in wrapper: no static transform, composes with the arrival/dance -->
 <g class="guest-arrival">
 <g class="guest-orbit"><!-- circles Athena (couple's do-si-do); no static transform -->
@@ -11477,7 +11477,7 @@ section{margin:1.9rem 0}
 </g><!-- /guest-arrival -->
 </g><!-- /guest-walk -->
 </g><!-- /g-hamid -->
-<g class="guest g-athena" transform="translate(226,0)">
+<g class="guest g-athena" transform="translate(226,0) translate(0 332) scale(0.95) translate(0 -332)"><!-- scaled a touch shorter about the feet -->
 <g class="guest-walk"><!-- gate walk-in wrapper: no static transform, composes with the arrival/dance -->
 <g class="guest-arrival">
 <g class="guest-orbit"><!-- circles Hamid (couple's do-si-do); no static transform -->
@@ -39669,13 +39669,14 @@ async def localfont(name):
       rec.people.forEach(function (p) {
         var sels = ALBUM_FIG_SEL[p.key];
         if (!sels) return;
-        sels.forEach(function (sel) { var g = albumFigureClone(sel); if (g) (p.grp === "hosts" ? hostClones : otherClones).push({ g: g, key: p.key }); });
+        var isHost = p.grp === "hosts" || p.key === "hosts"; // seeded shots use albumPerson (grp:"") — match the key too
+        sels.forEach(function (sel) { var g = albumFigureClone(sel); if (g) (isHost ? hostClones : otherClones).push({ g: g, key: p.key }); });
       });
       // Lay them out with the HOSTS at the heart of the huddle and the other couple/individual
       // nestled in on the flanks: [half the others] · hosts · [the rest]. So the couple always anchors
       // the centre of the embrace, and each guest is still visible shoulder-to-shoulder beside them.
-      var half = Math.ceil(otherClones.length / 2);
-      var clones = otherClones.slice(0, half).concat(hostClones, otherClones.slice(half));
+      var leftCount = Math.floor(otherClones.length / 2); // extra guest (odd count) sits on the right
+      var clones = otherClones.slice(0, leftCount).concat(hostClones, otherClones.slice(leftCount));
       // Fallback: if the live scene isn't mounted (nothing to clone), fill the floor with one plain
       // stand-in so the polaroid still reads — a soft body blob in the hosts' pink.
       if (!clones.length) {
@@ -39695,9 +39696,15 @@ async def localfont(name):
       // cramped centre huddle. A couple stands close; a full group uses up to ~72% of the width.
       var scale = n <= 2 ? 0.5 : n === 3 ? 0.46 : 0.42;  // bigger groups scale down a touch to fit the width
       var footY = 124;                                    // feet stand on the garden band, near the bottom
-      var span = n > 1 ? Math.min((n - 1) * 44, W * 0.72) : 0;
-      var step = n > 1 ? span / (n - 1) : 0;
-      var x0 = W / 2 - span / 2;
+      // Centre the layout on the HOSTS: their pair straddles W/2 and the guests fan out around them, so
+      // the couple is always dead-centre no matter how many guests (even) or which side gets the odd
+      // extra. step is capped so the widest flank still fits on-frame.
+      var hostCount = hostClones.length || 1;
+      var rightCount = otherClones.length - leftCount;
+      var hostCtrIdx = leftCount + (hostCount - 1) / 2;                    // slot index of the couple's midpoint
+      var maxHalf = Math.max(leftCount, rightCount) + (hostCount - 1) / 2; // farthest guest from centre, in slots
+      var step = maxHalf > 0 ? Math.min(44, (W / 2 - 20) / maxHalf) : 0;
+      var x0 = W / 2 - step * hostCtrIdx;                                  // shift the row so the couple centres
       // Fix each figure's SLOT (x + a whisper of inward lean) by left→right index, but PAINT
       // outermost-first so the hosts at the centre sit slightly forward.
       var slots = clones.map(function (c, i) {

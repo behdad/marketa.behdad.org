@@ -39740,9 +39740,9 @@ async def localfont(name):
       // feet on the garden band, spaced so each face reads clearly — a nicely-composed photo, not a
       // cramped centre huddle. A couple stands close; a full group uses up to ~72% of the width.
       var scale = n <= 2 ? 0.5 : n === 3 ? 0.46 : 0.42;  // bigger groups scale down a touch to fit the width
-      scale *= 1.25;                                      // 25% bigger figures (owner's call — fill the polaroid)
+      scale *= 1.5;                                       // big figures (owner's call — fill the polaroid)
       var scaleX = scale * 1.12;                          // + a slightly wider, "fatter" stretch (horizontal only)
-      var footY = 124;                                    // feet stand on the garden band, near the bottom
+      var footY = Math.min(H - 4, Math.round((H + (LOCAL_FOOT - LOCAL_TOP) * scale) / 2)); // drop the feet so the taller figure sits vertically centred
       // Centre the layout on the HOSTS: their pair straddles W/2 and the guests fan out around them, so
       // the couple is always dead-centre no matter how many guests (even) or which side gets the odd
       // extra. step is capped so the widest flank still fits on-frame.
@@ -54492,9 +54492,9 @@ function spawnDustMote(container) {
       fireGardenFlash();
       if (window.__albumAdd) window.__albumAdd();         // a keepsake straight into the album (rotates subject; capped)
     }
-    albumSnapTimer = setTimeout(albumSnapTick, 14000 + Math.random() * 8000); // ~14-22s
+    albumSnapTimer = setTimeout(albumSnapTick, 34000 + Math.random() * 20000); // ~34-54s — a relaxed pace (and it stops once every group's been shot)
   }
-  window.__startAlbumSnaps = function () { if (!albumSnapTimer && window.__gardenPartyOn) albumSnapTimer = setTimeout(albumSnapTick, 7000 + Math.random() * 6000); }; // first keepsake ~7-13s into the party
+  window.__startAlbumSnaps = function () { if (!albumSnapTimer && window.__gardenPartyOn) albumSnapTimer = setTimeout(albumSnapTick, 12000 + Math.random() * 8000); }; // first keepsake ~12-20s into the party
   window.__stopAlbumSnaps = function () { if (albumSnapTimer) { clearTimeout(albumSnapTimer); albumSnapTimer = null; } };
   // ── THE WEDDING ALBUM — Aspen's shots, kept as keepsake "polaroids" ────────────
   // Aspen already flashes through the auto photo-moments and when the visitor taps her; those
@@ -54510,6 +54510,8 @@ function spawnDustMote(container) {
   var albumShots = [];                // newest-LAST here; the app shows newest-first
   var albumSeq = 0;                   // monotonic id so the app can key/track cards
   var albumLastSubject = "";          // the last shot's subject-id, so we don't shoot the same subject twice running
+  var albumTaken = {};                // every group already photographed (by people-signature) — NEVER shoot the same group twice
+  function shotSig(members) { return (members || []).map(function (m) { return m.key; }).sort().join(","); } // canonical key for a group (host-anchored, so hosts excluded)
   // Couple groupings among the guests/kids: both members must be present to shoot them as a couple;
   // a member whose partner is absent becomes an individual subject instead. Everyone not listed here
   // (Bahareh, the DJ, Aspen) is always an individual. Keyed to the roster `key`s.
@@ -54613,16 +54615,17 @@ function spawnDustMote(container) {
     var subjects = albumSubjects(present);
     var subject = null;
     if (subjects.length) {
-      // avoid the same subject twice running; if that leaves nothing (only one candidate), allow it
-      var pool = subjects.filter(function (s) { return s.id !== albumLastSubject; });
-      if (!pool.length) pool = subjects;
+      // NEVER shoot a group we've already got (by people-signature — covers seeds + live shots); if
+      // every present group is already in the album, take no photo at all (keeps the album duplicate-free)
+      var pool = subjects.filter(function (s) { return !albumTaken[shotSig(s.members)]; });
+      if (!pool.length) return null;
       subject = pool[Math.floor(Math.random() * pool.length)];
       albumLastSubject = subject.id;
     }
     var subjectId = subject ? subject.id : ""; // "" = the hosts alone
-    // don't take DUPLICATE photos — if this shot would repeat the previous one's subject
-    // (forced when only one subject is around, or the hosts alone twice running), skip it.
-    if (albumShots.length && albumShots[albumShots.length - 1].subjectId === subjectId) return null;
+    var sig = subject ? shotSig(subject.members) : ""; // "" = the couple by themselves
+    if (albumTaken[sig]) return null; // already have this exact group (incl. the hosts-alone shot) — don't duplicate
+    albumTaken[sig] = 1;
     // people = the hosts (always, if present) + the chosen subject's members — the intimate portrait.
     var people = [];
     if (hosts) people.push({ key: hosts.key, grp: hosts.grp, name: hosts.name, roleKey: hosts.roleKey });
@@ -54675,10 +54678,13 @@ function spawnDustMote(container) {
       { subjectId: "shoot-madla",   people: [HOSTS, albumPerson("madla", "Madla"), albumPerson("robert", "Robert"), albumPerson("elisabeth", "Elisabeth"), albumPerson("felix", "Felix")] }, // the couple with Markéta's sister's family (Madla, Robert & the mouses)
       { subjectId: "shoot-hamid",   people: [HOSTS, albumPerson("hamid", "Hamid"), albumPerson("athena", "Athena")] } // the couple with Behdad's godson Hamid & Athena
     ];
-    sets.forEach(function (s) { albumShots.push({ id: ++albumSeq, t: 0, people: s.people, subjectId: s.subjectId, dance: "", season: "summer", uv: false, shoot: true }); });
+    sets.forEach(function (s) {
+      albumShots.push({ id: ++albumSeq, t: 0, people: s.people, subjectId: s.subjectId, dance: "", season: "summer", uv: false, shoot: true });
+      albumTaken[shotSig(s.people.filter(function (p) { return p.key !== "hosts"; }))] = 1; // a live shot must never duplicate a seeded group
+    });
     if (window.__albumRefresh) window.__albumRefresh();
   }
-  window.__albumClear = function () { albumShots = []; albumSeq = 0; albumMomentSnapped = false; albumLastSubject = ""; seedAlbum(); if (window.__albumRefresh) window.__albumRefresh(); }; // loft reset drops the live roll but re-seeds the photoshoot
+  window.__albumClear = function () { albumShots = []; albumSeq = 0; albumMomentSnapped = false; albumLastSubject = ""; albumTaken = {}; seedAlbum(); if (window.__albumRefresh) window.__albumRefresh(); }; // loft reset drops the live roll but re-seeds the photoshoot
   seedAlbum(); // seed on load
   // ── PARTY MODE kids' chase (garden) — Irene, Robin & Navid dart across the garden,
   // one chasing another (occasionally all three), giggling, then off the far side. SAME

@@ -38298,12 +38298,13 @@ async def localfont(name):
     }
     // ── WEDDING ALBUM app ── Aspen's captured party polaroids, newest-first. Each shot is a
     // STATE snapshot (window.__albumList() — who was present, dance, season, UV, time), rendered
-    // here as a stylized generative polaroid: a row of little figures in each present person's
-    // signature colour over a season/UV-tinted ground, plus a hand-style caption. No pixel
-    // screenshot of the SVG scene (WebKit foreignObject/canvas rasterizing is fragile) — this is
-    // drawn fresh from the record, so a language flip re-captions live and it stays cheap.
-    // Signature colours keyed to the roster keys (window.__rosterPresence's `key`); hosts get the
-    // his-pink / her-blue pair. Anyone unmapped falls back to soft.
+    // here as a real keepsake portrait: the ACTUAL character art of everyone in the shot, deep-
+    // cloned from the live garden figures and nestled into a cozy close embrace over a season/UV-
+    // tinted ground, plus a hand-style caption (see albumPhotoSvg + albumFigureClone below). No
+    // pixel screenshot of the whole SVG scene (WebKit foreignObject/canvas rasterizing is fragile)
+    // — the figures are re-cloned + re-captioned fresh from the record each render, so a language
+    // flip re-captions live and it stays cheap. Signature colours (fallback stand-in only, and used
+    // by nothing else since the real art carries its own colours) keyed to the roster keys.
     var ALBUM_COLORS = {
       hosts: ["#c68e95", "#4a6b94"], // his suit pink · her suit blue — two figures for the couple
       ali: "#8a8f86", goli: "#d9a6a6", spencer: "#6d8ba3", jay: "#7d6e5d", farhang: "#9c6d4a",
@@ -38344,9 +38345,38 @@ async def localfont(name):
       if (vibe) parts.push(vibe);
       return { line: parts.join(" · "), time: albumFmtTime(rec.t) };
     }
-    // The generative "photo": an SVG (200×150-ish) with a season/UV-tinted ground, a little
-    // disco-ball or ∞-heart up top, and a row of tiny figures — one per present figure, in their
-    // signature colour (the couple = two figures). Returns an <svg> element.
+    // Which live .g-NAME group(s) hold each roster key's REAL figure art (mirrors the ROSTER
+    // `sel`s in the roster panel closure, but that ROSTER isn't in scope here). The hosts are
+    // TWO figures (Behdad + Markéta share one roster line); everyone else is a single group.
+    var ALBUM_FIG_SEL = {
+      hosts: [".g-behdad", ".g-marketa"], ali: [".g-ali"], goli: [".g-goli"],
+      spencer: [".g-spencer"], jay: [".g-jay"], farhang: [".g-farhang"], lauren: [".g-lauren"],
+      alireza: [".g-alireza"], mahzad: [".g-mahzad"], bahareh: [".g-bahareh"],
+      elisabeth: [".g-elisabeth"], felix: [".g-felix"]
+    };
+    // Deep-clone ONE person's real figure drawing out of the live garden scene: reach past the
+    // animated wrappers (.guest-orbit/.guest-move/.guest-sway) to the innermost art group
+    // (.guest-react) and clone just that. Strip every id (so nothing collides with the live
+    // scene or dupes ids in the export — the polaroid needs none) and drop the animation-carrying
+    // classes (.guest-react + its flare one-shots) so the clone sits still. Returns a bare <g>
+    // holding the static art (centred x≈0, feet ≈y332 in the source's local coords), or null.
+    function albumFigureClone(sel) {
+      var src = document.querySelector("#garden-guests " + sel + " .guest-react") ||
+                document.querySelector(sel + " .guest-react");
+      if (!src) return null;
+      var g = src.cloneNode(true);
+      g.removeAttribute("class"); // shed .guest-react (+ any live flare one-shot) so it holds still
+      g.removeAttribute("style");
+      if (g.id) g.removeAttribute("id");
+      var ided = g.querySelectorAll("[id]"); // no ids on the clone — keeps the export dup-id-free
+      for (var i = 0; i < ided.length; i++) ided[i].removeAttribute("id");
+      return g;
+    }
+    // The "photo": a season/UV-tinted backdrop and the REAL character art of everyone in the shot,
+    // deep-cloned from the live garden figures and nestled into a cozy close embrace — hosts at the
+    // heart, the other couple/individual leaning in beside them. Full-height figures cropped to an
+    // upper-body huddle (feet fall below the frame). Plain SVG only (no foreignObject / layer
+    // transforms) so albumRasterize can serialize → PNG cross-browser. Returns an <svg> element.
     function albumPhotoSvg(rec) {
       var W = 200, H = 150;
       var svgNS = "http://www.w3.org/2000/svg";
@@ -38354,39 +38384,84 @@ async def localfont(name):
       svg.setAttribute("viewBox", "0 0 " + W + " " + H);
       svg.setAttribute("class", "pm-pol-pic");
       svg.setAttribute("aria-hidden", "true");
-      function add(tag, attrs) { var e = document.createElementNS(svgNS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); svg.appendChild(e); return e; }
+      function add(tag, attrs, parent) { var e = document.createElementNS(svgNS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); (parent || svg).appendChild(e); return e; }
       var ground = rec.uv ? "#3a1f52" : (ALBUM_SEASON_TINT[rec.season] || ALBUM_SEASON_TINT[""]);
       var sky = rec.uv ? "#1c0f2c" : "#f3ecd8";
       add("rect", { x: 0, y: 0, width: W, height: H, fill: sky });
       add("rect", { x: 0, y: H * 0.56, width: W, height: H * 0.44, fill: ground }); // the floor/garden band
-      if (rec.uv) { add("rect", { x: 0, y: 0, width: W, height: H, fill: "#7a3ec8", opacity: "0.28" }); } // blacklight violet wash over the whole frame
-      // top motif: a disco-ball for a dance floor, else an ∞-heart keepsake mark
+      // top motif: a small disco-ball for a dance floor, else a quiet ∞ keepsake mark (a clean accent)
       if (rec.dance) {
-        add("circle", { cx: W / 2, cy: 24, r: 11, fill: rec.uv ? "#c9a6ff" : "#c9cdd6" });
-        add("circle", { cx: W / 2, cy: 24, r: 11, fill: "none", stroke: rec.uv ? "#efe2ff" : "#8a8f96", "stroke-width": "0.6" });
-        add("line", { x1: W / 2, y1: 6, x2: W / 2, y2: 13, stroke: rec.uv ? "#c9a6ff" : "#9aa0a8", "stroke-width": "1" });
+        add("circle", { cx: W / 2, cy: 18, r: 8, fill: rec.uv ? "#c9a6ff" : "#c9cdd6" });
+        add("circle", { cx: W / 2, cy: 18, r: 8, fill: "none", stroke: rec.uv ? "#efe2ff" : "#8a8f96", "stroke-width": "0.6" });
+        add("line", { x1: W / 2, y1: 4, x2: W / 2, y2: 10, stroke: rec.uv ? "#c9a6ff" : "#9aa0a8", "stroke-width": "1" });
       } else {
-        var inf = add("text", { x: W / 2, y: 30, "text-anchor": "middle", "font-size": "22", fill: rec.uv ? "#e6b8ff" : "#8e3a4a", "font-family": "Fraunces,serif" });
+        var inf = add("text", { x: W / 2, y: 20, "text-anchor": "middle", "font-size": "16", fill: rec.uv ? "#e6b8ff" : "#8e3a4a", "font-family": "Fraunces,serif" });
         inf.textContent = "∞";
       }
-      // the row of little figures — a head + a body blob per present figure, in signature colours
-      var figs = [];
+      // Gather the real figure clones for everyone in the shot (hosts = two). Each entry carries a
+      // gentle inward LEAN so the group reads as a warm huddle: hosts tilt toward each other at the
+      // centre, the other subject(s) nestle in on the flanks tilting inward.
+      var reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      var hostClones = [], otherClones = [];
       rec.people.forEach(function (p) {
-        var c = ALBUM_COLORS[p.key];
-        if (Array.isArray(c)) { c.forEach(function (cc) { figs.push(cc); }); } // the couple → two figures
-        else figs.push(c || "#7d6e5d");
+        var sels = ALBUM_FIG_SEL[p.key];
+        if (!sels) return;
+        sels.forEach(function (sel) { var g = albumFigureClone(sel); if (g) (p.grp === "hosts" ? hostClones : otherClones).push({ g: g, key: p.key }); });
       });
-      if (!figs.length) figs = ["#7d6e5d"]; // an empty floor still gets one lonely stand-in
-      var n = figs.length;
-      var span = W - 40, step = n > 1 ? span / (n - 1) : 0, x0 = n > 1 ? 20 : W / 2;
-      var baseY = H - 20;
-      figs.forEach(function (col, i) {
-        var x = x0 + step * i;
-        add("ellipse", { cx: x, cy: baseY + 4, rx: 8, ry: 3, fill: "rgba(0,0,0,0.18)" }); // a little shadow
-        add("path", { d: "M" + (x - 7) + " " + baseY + " Q" + (x - 7) + " " + (baseY - 20) + " " + x + " " + (baseY - 20) + " Q" + (x + 7) + " " + (baseY - 20) + " " + (x + 7) + " " + baseY + " Z", fill: col }); // body
-        add("circle", { cx: x, cy: baseY - 24, r: 6.5, fill: "#e9c9a8" }); // head
-        add("path", { d: "M" + (x - 6.5) + " " + (baseY - 26) + " Q" + x + " " + (baseY - 33) + " " + (x + 6.5) + " " + (baseY - 26) + " Z", fill: col }); // a cap in the signature colour
+      // Lay them out with the HOSTS at the heart of the huddle and the other couple/individual
+      // nestled in on the flanks: [half the others] · hosts · [the rest]. So the couple always anchors
+      // the centre of the embrace, and each guest is still visible shoulder-to-shoulder beside them.
+      var half = Math.ceil(otherClones.length / 2);
+      var clones = otherClones.slice(0, half).concat(hostClones, otherClones.slice(half));
+      // Fallback: if the live scene isn't mounted (nothing to clone), fill the floor with one plain
+      // stand-in so the polaroid still reads — a soft body blob in the hosts' pink.
+      if (!clones.length) {
+        var bx = W / 2, by = H - 14;
+        add("ellipse", { cx: bx, cy: by + 3, rx: 12, ry: 3.4, fill: "rgba(0,0,0,0.18)" });
+        add("path", { d: "M" + (bx - 11) + " " + by + " Q" + (bx - 11) + " " + (by - 30) + " " + bx + " " + (by - 30) + " Q" + (bx + 11) + " " + (by - 30) + " " + (bx + 11) + " " + by + " Z", fill: "#c68e95" });
+        add("circle", { cx: bx, cy: by - 34, r: 9, fill: "#e9c9a8" });
+        return svg;
+      }
+      // Local-coord anchors shared by every figure (all drawn identically): feet ≈y332, chest ≈y235
+      // (the lean pivot — tilting about the chest keeps the feet planted and rocks the head inward),
+      // head-top ≈y150 (the tallest caps) → an upper body spans ≈182 local units.
+      var LOCAL_FOOT = 332, LOCAL_PIVOT = 235, LOCAL_TOP = 150;
+      var n = clones.length;
+      // Place the figures overlapping shoulder-to-shoulder into a warm huddle. A single figure sits
+      // centred; a pair (hosts alone) hugs at centre; larger groups spread across a tightened span so
+      // shoulders overlap. Scale them BIG so the group fills the frame, then drop feet below it for a
+      // cozy chest-up crop (heads land near the top, ~y30). Bigger groups scale down a touch to fit.
+      var scale = n <= 2 ? 0.7 : n === 3 ? 0.62 : 0.54;
+      var headTop = 30;                                   // where the tallest head should land on-screen
+      var footY = headTop + (LOCAL_FOOT - LOCAL_TOP) * scale; // → feet fall just past the frame bottom
+      // Centres spaced so neighbours' shoulders overlap by roughly half a figure-width (≈40·scale):
+      // wide enough that every face reads, tight enough that it's a warm huddle, not a line-up.
+      var step = n > 1 ? 40 * scale * 0.86 : 0;
+      var span = step * (n - 1);
+      var x0 = W / 2 - span / 2;
+      // Fix each figure's SLOT (x + inward lean) by left→right index, but PAINT outermost-first so the
+      // centre of the huddle (the hosts) sits on top — a natural front-and-centre couple in the embrace.
+      var slots = clones.map(function (c, i) {
+        var cx = n > 1 ? x0 + step * i : W / 2;
+        var frac = n > 1 ? (i / (n - 1)) * 2 - 1 : 0;   // −1 (far left) … +1 (far right)
+        var lean = reduce ? 0 : -frac * 8;              // up to ~8° inward; centre stays upright
+        return { c: c, cx: cx, lean: lean, dist: Math.abs(cx - W / 2) };
       });
+      slots.forEach(function (s) { // soft floor shadows first, grounding the huddle
+        add("ellipse", { cx: s.cx, cy: Math.min(footY, H - 4), rx: 14 * scale, ry: 3.4 * scale, fill: "rgba(0,0,0,0.16)" });
+      });
+      slots.slice().sort(function (a, b) { return b.dist - a.dist; }).forEach(function (s) { // outermost → innermost
+        var wrap = add("g", {
+          // T·S·R·(re-centre feet): translate to the on-screen foot point, scale down, lean about the
+          // chest pivot, then shift the source so its local foot lands at the origin. No CSS transform,
+          // no layer — a plain transform ATTRIBUTE, so it serializes + rasterizes everywhere.
+          transform: "translate(" + s.cx.toFixed(2) + " " + footY.toFixed(2) + ") scale(" + scale + ") " +
+                     "rotate(" + s.lean.toFixed(2) + " 0 " + LOCAL_PIVOT + ") translate(0 " + (-LOCAL_FOOT) + ")"
+        });
+        wrap.appendChild(s.c.g);
+      });
+      // a soft violet blacklight wash LAST (over the figures too) when UV was on — matches the scene
+      if (rec.uv) add("rect", { x: 0, y: 0, width: W, height: H, fill: "#7a3ec8", opacity: "0.24", "pointer-events": "none" });
       return svg;
     }
     function renderAlbum(body) {
@@ -38427,9 +38502,9 @@ async def localfont(name):
     }
     // ── album detail + share ── tapping a polaroid enlarges it inside the phone with the SAME
     // export actions as the photobooth (Copy / Download / Gmail·Email), via the shared __phonePB
-    // machinery. The polaroids are generative SVG (no foreignObject), so we rasterize the selected
-    // one to a PNG canvas first (serialize → Image → offscreen <canvas> → toBlob), then feed that
-    // canvas/blob into __phonePB's copy/download/email paths.
+    // machinery. The polaroids are plain SVG (real cloned figure art, no foreignObject), so we rasterize
+    // the selected one to a PNG canvas first (serialize → Image → offscreen <canvas> → toBlob), then feed
+    // that canvas/blob into __phonePB's copy/download/email paths.
     var PB_GMAIL_SVG_AL = '<svg width="15" height="12" viewBox="0 0 20 16" aria-hidden="true"><rect x="1" y="1" width="18" height="14" rx="2" fill="#ffffff" stroke="#d6d0c0" stroke-width="1"/><path d="M1 2l9 7 9-7" fill="none" stroke="#c9483c" stroke-width="1.6"/><path d="M1 2v11l7-6z" fill="#4a6b94"/><path d="M19 2v11l-7-6z" fill="#7f9ec0"/></svg> ';
     var PB_MAIL_SVG_AL = '<svg width="15" height="12" viewBox="0 0 20 16" aria-hidden="true"><rect x="1" y="1" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M2 2l8 7 8-7" stroke="currentColor" stroke-width="1.5" fill="none"/></svg> ';
     // Rasterize a full polaroid card (SVG photo + caption) to a PNG canvas at 2× for crispness.

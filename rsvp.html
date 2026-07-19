@@ -127,14 +127,17 @@ footer{margin-top:2.6rem}
   transition:opacity .25s ease, transform .25s ease;
 }
 .roster-panel.show{opacity:1; transform:translateY(0); pointer-events:auto}
+.roster-panel.show.spot-hide{opacity:0; pointer-events:none} /* temporarily hidden during a guest flash on small screens (see spotlightGuests) */
 .roster-panel h3{
   font-family:"Fraunces",serif; font-weight:700; font-size:1rem; letter-spacing:.01em;
   color:var(--wine); margin:0 0 .4rem; padding:0;
 }
-/* two wide columns (≥15rem each) so no name+role ever wraps; ~10 rows tall → a roomy portrait card */
+/* up to 4 wide columns (≥15rem each so no name+role ever wraps) — a big fullscreen gets all 4,
+   narrower screens trim to 3/2/1 automatically; the panel scrolls (overflow:auto above) if the
+   remaining rows don't fit the capped height */
 .roster-panel .roster-list{
   list-style:none; margin:0; padding:0; font-size:.84rem; line-height:2.55;
-  columns:2 15rem; column-gap:2rem;
+  columns:4 15rem; column-gap:2rem;
 }
 .roster-panel .roster-list li{padding:.26rem 0; color:var(--muted); break-inside:avoid; white-space:nowrap}
 .roster-panel .roster-list li em{font-style:normal; font-weight:600; color:var(--ink)}
@@ -19046,7 +19049,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
   <div class="hunt-dots" id="hunt-dots" role="tablist" aria-label="Rooms"></div>
   </div>
   <div class="watch-controls">
-    <button type="button" id="watch-loft-btn" class="watch-loft-btn" data-i="watch_loft">▷ Watch the loft</button>
+    <button type="button" id="watch-loft-btn" class="watch-loft-btn" data-i="watch_loft">▷ Trailer</button>
+    <button type="button" id="watch-autoplay-btn" class="watch-loft-btn" data-i="watch_autoplay">⟳ Autoplay</button>
     <button type="button" id="watch-skip-btn" class="watch-skip-btn" data-i="watch_skip" hidden>□ Take over</button>
   </div>
 
@@ -19286,7 +19290,7 @@ var T = {
     // The knot is the reason this day is on a wedding site at all, and the visual can't say it:
     // one line on the tie, then never again. The second sentence is the whole joke — leave it dry.
     sizdah_wish: "Knotting the sabzeh is a wish for a wedding. It worked.",
-    watch_loft: "▷ Watch the loft",
+    watch_loft: "▷ Trailer", watch_autoplay: "⟳ Autoplay",
     watch_skip: "□ Take over",
     contact: "Questions? Write to us:",
     marketa_url: "https://marketajakesova.ca",
@@ -19720,7 +19724,7 @@ var T = {
     kbd_space: "play / pause the music or video",
     kbd_esc: "go back",
     kbd_f: "fullscreen",
-    kbd_watch: "watch the loft",
+    kbd_watch: "trailer",
     kbd_autoplay: "autoplay (loops on its own)",
     autoplay_badge: "auto",
     kbd_party: "throw the garden party",
@@ -19842,7 +19846,7 @@ var T = {
     tip_chaharshanbe: "<em>Čaháršanbe surí</em> (<bdi>چهارشنبه‌سوری</bdi>), oheň, který se přeskakuje",
     tip_sizdah: "<em>Sizdah Bedar</em> (<bdi>سیزده‌بدر</bdi>), třináctý den nourúzu, strávený v přírodě",
     sizdah_wish: "Zauzlovat sabzeh znamená přát si svatbu. Zabralo to.",
-    watch_loft: "▷ Prohlédnout byt",
+    watch_loft: "▷ Upoutávka", watch_autoplay: "⟳ Autoplay",
     watch_skip: "□ Převzít",
     contact: "Dotazy? Napište nám:",
     marketa_url: "https://marketajakesova.ca/cs/",
@@ -20272,7 +20276,7 @@ var T = {
     kbd_space: "přehrát / pozastavit hudbu nebo video",
     kbd_esc: "jít zpět",
     kbd_f: "celá obrazovka",
-    kbd_watch: "sledovat byt",
+    kbd_watch: "upoutávka",
     kbd_autoplay: "autoplay (běží samo dokola)",
     autoplay_badge: "auto",
     kbd_party: "spustit zahradní večírek",
@@ -57743,6 +57747,13 @@ function spawnDustMote(container) {
       if (e && e.isTrusted === false) return;
       startCinematic();
     });
+    // the Autoplay control right beside it: boots the hands-off attract loop (a trusted click
+    // also unlocks song audio, unlike a synthetic one — so we ignore untrusted clicks too)
+    var apBtn = document.getElementById("watch-autoplay-btn");
+    if (apBtn) apBtn.addEventListener("click", function (e) {
+      if (e && e.isTrusted === false) return;
+      if (window.autoplay) window.autoplay(true);
+    });
     // Idle nudge: after ~10s of no progress, gently float the Watch control so a
     // passive visitor notices it. Gated on no progress ONLY (stageIndex 0 / nothing
     // unlocked) so it never interrupts a mid-solve, and not while the show runs.
@@ -58838,6 +58849,7 @@ function spawnDustMote(container) {
     var spotlightTimer = null;
     function clearSpotlight() {
       if (spotlightTimer) { clearTimeout(spotlightTimer); spotlightTimer = null; }
+      if (panel) panel.classList.remove("spot-hide"); // bring the roster back (it was hidden on a small screen during the flash)
       var g = document.getElementById("garden-guests");
       if (!g) return;
       var lit = g.querySelectorAll(".guest.spotlighted");
@@ -58845,6 +58857,7 @@ function spawnDustMote(container) {
       var arrows = g.querySelectorAll(".guest-spot-arrow");
       for (var j = 0; j < arrows.length; j++) if (arrows[j].parentNode) arrows[j].parentNode.removeChild(arrows[j]);
     }
+    function smallScreen() { return window.matchMedia && window.matchMedia("(max-width: 760px)").matches; }
     function spotlightGuests(sels) {
       var g = document.getElementById("garden-guests");
       if (!g || !sels) return;
@@ -58867,8 +58880,10 @@ function spawnDustMote(container) {
         el.appendChild(arrow);
       });
       if (any) {
-        if (open) setOpen(false); // close the roster so the arrowed guest is never hidden behind the panel
-        spotlightTimer = setTimeout(clearSpotlight, 5000);
+        // on a small screen the tall roster would cover the floor — hide it (not close) for the flash,
+        // then it returns; on a big screen it's a compact top banner, so leave it up
+        if (open && smallScreen()) panel.classList.add("spot-hide");
+        spotlightTimer = setTimeout(clearSpotlight, 3000); // flash for 3s
       }
     }
     window.__spotlightGuest = spotlightGuests; // test/console hook

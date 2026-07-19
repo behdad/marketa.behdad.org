@@ -80,6 +80,8 @@ var RSVP_HARNESS = [
   "    report.solve.afterGarden = window.currentStageIndex;",
   "    click(expect('cuddly-octopus'));",
   "    await sleep(400);",
+  "    click(expect('cuddly-balcony-door'));", // middle step: open the balcony door before a blanket counts
+  "    await sleep(400);",
   "    fire(document.getElementById(expect('cuddly-blanket')), 'enter');",
   "    await sleep(1200);",
   "    report.solve.afterCuddly = window.currentStageIndex;",

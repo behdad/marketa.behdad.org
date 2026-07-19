@@ -166,9 +166,11 @@ footer{margin-top:2.6rem}
 /* roster rows that map to a garden figure are clickable — tap to single that guest out on the floor */
 .roster-panel li.roster-pick{cursor:pointer; border-radius:5px; padding:.1rem .28rem; margin:0 -.28rem; transition:background .15s ease}
 .roster-panel li.roster-pick:hover,.roster-panel li.roster-pick:focus-visible{background:var(--rule); outline:none}
-/* SINGLED-OUT GUEST: freeze their dance for a few seconds + float a bobbing arrow above them */
-#garden-guests .guest.spotlighted .guest-walk,
-#garden-guests .guest.spotlighted .guest-walk *{animation-play-state:paused !important}
+/* SINGLED-OUT GUEST: for a few seconds, freeze EVERYONE ELSE while the picked one keeps dancing,
+   and float a bobbing arrow above the pick. The .solo-spot flag on the container scopes the freeze;
+   the .spotlighted pick is exempt so it dances on alone (the inverse of the old freeze-the-pick). */
+#garden-guests.solo-spot .guest:not(.spotlighted) .guest-walk,
+#garden-guests.solo-spot .guest:not(.spotlighted) .guest-walk *{animation-play-state:paused !important}
 .guest-spot-arrow{animation:guest-spot-bob .7s ease-in-out infinite}
 .guest-spot-arrow path{filter:drop-shadow(0 1px 1px rgba(69,58,49,.35))}
 @keyframes guest-spot-bob{0%,100%{translate:0 0}50%{translate:0 -6px}} /* the translate PROPERTY composes with any transform attr */
@@ -1788,7 +1790,14 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    attribute that positions them), so it composes with the position translate instead of
    clobbering it — same idiom as the melt-dancers' .crowd-clear reposition. All class-driven
    (nothing spawned), fully cleared on end / party-off / room-leave / reset. */
-#garden-guests .guest{transition:translate .9s cubic-bezier(.4,0,.2,1)} /* the ring step-back eases */
+/* DYNAMIC FLOOR BALANCE: with the revolving door only ~5 units are present at once, and their
+   fixed home x's cluster (recent families sit far screen-left), so the floor reads lopsided. JS
+   sets a per-figure --balance-x (slotX − homeX) on each PRESENT non-host guest to spread the
+   present set evenly across the floor width; it rides the CSS `translate` PROPERTY (composes with
+   the .g-* group's static position transform, never clobbers it) and eases via the transition
+   below. Hosts + crew never get --balance-x → they stay put (var default 0). The .first-dance ring
+   rules below out-specify this base rule, so the first dance still forms its fixed ring. */
+#garden-guests .guest{translate:var(--balance-x,0) 0; transition:translate .9s cubic-bezier(.4,0,.2,1)} /* the balance glide + ring step-back ease */
 #garden-guests.first-dance .g-ali{translate:-58px -34px}
 #garden-guests.first-dance .g-goli{translate:52px -34px}
 #garden-guests.first-dance .g-spencer{translate:-8px -52px}
@@ -21744,7 +21753,12 @@ function setUvMode(on) {
 var uvPartyOn = false;
 function applyUvMode() { setUvMode(uvPartyOn); }
 window.__setUvMode = setUvMode; // reset / room-leave can force the raw class off
-window.__setUvParty = function (on) { uvPartyOn = !!on; applyUvMode(); }; // the balcony switch
+window.__setUvParty = function (on) { // the balcony switch
+  var was = uvPartyOn;
+  uvPartyOn = !!on;
+  if (uvPartyOn && !was && window.__resetUvEase) window.__resetUvEase(); // a fresh party raise flashes intense then eases (breather off→on won't route here)
+  applyUvMode();
+};
 // Every room EXCEPT the garden: settle under the blacklight a while and it gently EASES toward a
 // softer light (kept blue, not off) so you can enjoy the scene/drinks; it snaps back to full
 // blacklight the instant you leave for the garden, the light goes off, a trip takes over, or a
@@ -21767,12 +21781,17 @@ window.__setUvParty = function (on) { uvPartyOn = !!on; applyUvMode(); }; // the
   var B0 = 0.5, S0 = 2.6, H0 = 220, C0 = 1.3;
   var B1 = 0.8, S1 = 1.55, H1 = 205, C1 = 1.1; // eased endpoint: lift brightness + drop saturation for a softer light, but keep the hue near the blacklight's blue (not the green that a big hue swing gives)
   var lingerTimer = 0, rafId = 0, easing = false, rampStart = 0;
+  // Persistent "already toned down" latch. Once the light has eased in ANY room (including the
+  // garden party) it STAYS eased across room changes — we don't re-flash intense on every enter.
+  // It's re-armed only when the blacklight is raised fresh (party start / u-key / blacklight()),
+  // via window.__resetUvEase below; a breather off→on flicker does NOT reset it (see the breather).
+  var eased = false;
   function nowMs() { return (window.performance && performance.now) ? performance.now() : Date.now(); }
   function gateOpen() {
-    // Any room but the garden (which keeps the full blacklight), whenever the UV is on —
-    // party or not (the 'u' key / blacklight()/uv() can raise it with no party).
-    return window.currentStageName !== "garden"
-      && strip.classList.contains("uv-mode")
+    // ANY room now (the garden party eases too, once), whenever the UV is on — party or not
+    // (the 'u' key / blacklight()/uv() can raise it with no party).
+    return strip.classList.contains("uv-mode")
+      && !strip.classList.contains("dance-frozen") // a space-freeze / first dance drops the UV entirely (CSS filter:none) — don't override it with an inline eased filter
       && !window.__tripActive
       && !(viewport && viewport.classList.contains("device-zoomed"))
       && !arcadeLit(); // the office invaders game undoes the UV (drops it entirely) — don't ease, hand off to the CSS filter:none
@@ -21817,26 +21836,36 @@ window.__setUvParty = function (on) { uvPartyOn = !!on; applyUvMode(); }; // the
   }
   function step() {
     rafId = 0;
-    if (!gateOpen()) { stop(); return; } // trip started / left for the garden / light off mid-ramp -> snap back
+    if (!gateOpen()) { stop(); return; } // trip started / light off mid-ramp -> snap back
     var e = Math.min(1, (nowMs() - rampStart) / RAMP_MS);
     applyEase(e);
     if (e < 1) rafId = window.requestAnimationFrame(step);
+    else eased = true; // reached the soft endpoint — latch it so it persists across room changes
   }
   function startRamp() {
     lingerTimer = 0;
     if (!gateOpen()) { clearInline(); return; }
     easing = true;
+    eased = true; // latch the moment we commit to easing — so a garden UV BREATHER flipping the light
+    // off/on mid-ramp (or a room change) returns to the SOFT level, never re-flashing full intense
     if (reduce) { applyEase(1); return; } // calm mode: settle straight to the softer light, no ramp
     rampStart = nowMs();
     rafId = window.requestAnimationFrame(step);
   }
   function evaluate() {
     if (gateOpen()) {
+      // Already toned down once (this UV session)? Keep it toned down immediately — no fresh
+      // linger, no intense re-flash — no matter which room we entered or a breather off→on flicker.
+      if (eased) { if (!rafId) applyEase(1); return; }
       if (!easing && !lingerTimer && !rafId) lingerTimer = setTimeout(startRamp, LINGER_MS);
     } else if (lingerTimer || rafId || easing || strip.style.filter) {
       stop();
     }
   }
+  // Re-arm a fresh intense→ease cycle. Called when the blacklight is raised anew (party start /
+  // u-key / blacklight()/uv()) so a brand-new UV session flashes intense then eases; NOT called by
+  // the garden breather (its off→on flicker should return to the already-toned-down light).
+  window.__resetUvEase = function () { eased = false; };
   window.__updateKitchenUvLinger = evaluate; // goToStage + setGardenParty ping this on room/party change (name kept for its callers)
   // A cheap, side-effect-free poll: catches gate changes that don't route through a hook — a trip
   // starting/clearing, a device zoom, and the blacklight raised/dropped by the 'u' key or
@@ -32983,7 +33012,7 @@ var ABANDONED_CALL_MS = 30000;
     guests: "guests(true) — the three VIP guests crash the party and steal the show, dancing dead-centre floor: Ali (best man, long grey beard), Goli (Ali's fashionista girlfriend, platinum bob) & Spencer (Markéta's maid-of-honor, the giant of the group). lights the party + heads to the garden first if needed. guests(false) sends them off (party rolls on); guests() reports whether they're on the floor. they also arrive on their own a beat after the party lights. aligoli() is an alias",
     aligoli: "aligoli — alias for guests; try `help guests`",
     arrive: "arrive(\"ali\"|\"spencer\"|\"alireza\"|\"farhang\"|\"bahareh\") — a duo (or the single Bahareh) STROLLS IN through the garden gate onto the dance floor, an entrance moment. arrive() walks in a random duo. lights the party + heads to the garden first if needed. the duos also trickle in on their own, one per beat, as the party fills up. (ali = Ali & Goli, spencer = Spencer & Jay, alireza = Alireza & Mahzad, farhang = Farhang & Lauren, bahareh = Bahareh solo)",
-    roster: "roster() — toggle the \"who's who?\" panel: an at-a-glance legend of everyone on the garden-party floor right now (name · role), reflecting who's actually present. click a name to freeze that guest's dance + point an arrow at them for 5s. roster(true) opens it, roster(false) closes it; lights the party + heads to the garden first if it's dark. the 'h' key does the same",
+    roster: "roster() — toggle the \"who's who?\" panel: an at-a-glance legend of everyone on the garden-party floor right now (name · role), reflecting who's actually present. click a name to spotlight them — everyone ELSE freezes while the pick keeps dancing, with an arrow over them, for 3s (works for the DJ + photographer too). roster(true) opens it, roster(false) closes it; lights the party + heads to the garden first if it's dark. the 'h' key does the same",
     reset: "reset() — restart the whole loft from the top (no confirmation — you typed it)",
     autoplay: "autoplay(true) — ATTRACT MODE for the wedding BBQ screen: the loft drives itself, looping the full \"Day in the Loft\" show through every room forever, with a fresh season each loop. autoplay(false) stops it; autoplay() toggles. touch/click/press any key to take over (it drifts back on its own after a quiet spell); pauses cleanly when the tab is hidden or unfocused. also the 'a' key, or open the page with ?autoplay in the URL to boot straight into it",
     quit: "quit (or exit) — shut the console down (refresh, back to the desktop)",
@@ -37023,6 +37052,7 @@ async def localfont(name):
       strip.classList.toggle("dance-frozen", frozen);
       strip.classList.toggle("first-dance", !!window.__gardenPartyOn && !!window.__firstDanceOn); // scopes the host-only un-pause + spotlight to the first dance
     }
+    if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // a freeze drops the UV (CSS filter:none); on unfreeze restore the eased inline filter at once (no 500ms poll lag)
     if (window.__syncGardenFlashPace) window.__syncGardenFlashPace(); // stopped party → the photographer works the frozen crowd continuously
   };
   window.__toggleMusicPlayback = toggleMusicPlayback;
@@ -52942,7 +52972,8 @@ function spawnDustMote(container) {
     if (window.__updateTotoroMelody) window.__updateTotoroMelody(name === "cuddly", ROOM_FADE); // woodland melody follows the totoro channel
     if (window.__updateProjectorPans) window.__updateProjectorPans(); // all four projector-music beds pan to the new room from the shared table
     if (window.__updatePartyRoom) window.__updatePartyRoom(); // party is garden-sourced: pan + faintness per room
-    if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // entering the garden snaps the eased blacklight back to full; entering any other room (re)arms the linger
+    if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // re-evaluate the eased blacklight for the new room (keeps it toned down if it already eased this UV session — no intense re-flash on room change)
+    if (window.__syncRosterAvail) window.__syncRosterAvail(); // leaving the garden closes the "who's who?" roster (it's a garden-floor legend)
     if (window.__updateWind) window.__updateWind(ROOM_FADE); // wind bed (balcony, + through the cuddly door) fades out over the room change too
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(name === "garden"); // birdsong only in the garden, and only by day
     if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // after-dark disco-ball peek re-arms on entering the garden at night, retracts on leaving (reads window.currentStageName)
@@ -54593,6 +54624,46 @@ function spawnDustMote(container) {
     { sel: ".g-elisabeth", home: 578 }, { sel: ".g-felix", home: 636 }
   ];
   var trickleTimer = null;
+  // ── DYNAMIC FLOOR BALANCE ────────────────────────────────────────────────────
+  // Each present guest is nudged from its fixed home x to an evenly-spread SLOT so the floor reads
+  // balanced whoever's on it (the revolving door means only ~5 of the many units are up at once,
+  // and their homes cluster). The nudge rides --balance-x on the .g-* group (CSS `translate`
+  // property; composes with the static position transform). slotXBySel remembers each figure's
+  // current slot so its gate walk-in/out uses the SLOT distance (GATE_X − slot), not the home.
+  var SPREAD_L = 60, SPREAD_R = 620; // the balanced band across the floor width
+  var slotXBySel = {}; // sel -> current on-floor slot x (present figures only)
+  function setBalance(g, sel, slot, home) {
+    var el = g.querySelector(sel);
+    if (!el) return;
+    slotXBySel[sel] = slot;
+    el.style.setProperty("--balance-x", (slot - home) + "px");
+  }
+  function clearBalance(g, sel) {
+    delete slotXBySel[sel];
+    var el = g && g.querySelector(sel);
+    if (el) el.style.removeProperty("--balance-x");
+  }
+  function walkDistFor(sel, home) { var s = slotXBySel[sel]; return GATE_X - (s == null ? home : s); }
+  // Re-spread the present set (plus any units about to walk in this beat) evenly across the band.
+  // Units are laid left→right by their home x so couples stay adjacent and identities keep their
+  // rough side (small, stable moves — no big crossings on each rotation). Hosts/crew aren't units,
+  // so they're never touched. Called on every present-set change (fill / rotation / manual arrive).
+  function rebalanceFloor(g, incoming) {
+    if (!g) return;
+    var list = fullArrivals();
+    var units = presentUnits(g, list).slice();
+    (incoming || []).forEach(function (u) { if (units.indexOf(u) < 0) units.push(u); });
+    // members in left→right order (units sorted by their leftmost home; members keep unit order)
+    units.sort(function (a, b) { return Math.min.apply(null, a.homes) - Math.min.apply(null, b.homes); });
+    var members = [];
+    units.forEach(function (u) { for (var i = 0; i < u.sels.length; i++) members.push({ sel: u.sels[i], home: u.homes[i] }); });
+    var n = members.length;
+    if (!n) return;
+    for (var i = 0; i < n; i++) {
+      var slot = (n === 1) ? (SPREAD_L + SPREAD_R) / 2 : Math.round(SPREAD_L + (SPREAD_R - SPREAD_L) * i / (n - 1));
+      setBalance(g, members[i].sel, slot, members[i].home);
+    }
+  }
   var arrivalOrder = null; // a per-party, lightly-shuffled copy of ARRIVALS (each duo nudged up/down a slot or two)
   function jitterArrivals() {
     // Not a full shuffle — a gentle per-party reorder so the fill feels fresh but still reads roughly
@@ -54613,15 +54684,18 @@ function spawnDustMote(container) {
     var walk = el.querySelector(".guest-walk");
     if (!walk) { el.classList.add("arrived"); return; }
     if (reducedMotionGuests()) { el.classList.add("arrived"); return; } // reduced motion: appear in place (still staggered by the timer)
-    walk.style.setProperty("--walk-x", (GATE_X - home) + "px");
+    walk.style.setProperty("--walk-x", walkDistFor(sel, home) + "px"); // walk from the gate to this figure's balanced SLOT (not its raw home)
     g.classList.add("duo-walking");
     el.classList.add("arrived");
     el.classList.remove("walking"); void walk.getBoundingClientRect(); el.classList.add("walking"); // restart the one-shot cleanly on a re-walk
   }
-  // arrive a whole entry (a duo or the solo) — every member walks in together
+  // arrive a whole entry (a duo or the solo) — every member walks in together. First re-spread the
+  // floor INCLUDING this incoming entry so its members get a balanced slot (and the already-present
+  // guests glide to make room), then walk each member in from the gate to that slot.
   function arriveEntry(entry) {
     var g = document.getElementById("garden-guests");
     if (!g) return;
+    rebalanceFloor(g, [entry]);
     for (var i = 0; i < entry.sels.length; i++) walkFigureIn(g, entry.sels[i], entry.homes[i]);
   }
   // ── REVOLVING DOOR ──────────────────────────────────────────────────────────
@@ -54645,14 +54719,15 @@ function spawnDustMote(container) {
     if (!el || !el.classList.contains("arrived")) return;
     var walk = el.querySelector(".guest-walk");
     if (!walk || reducedMotionGuests()) { el.classList.remove("arrived", "walking", "leaving"); return; } // no anim: just vanish
-    walk.style.setProperty("--walk-x", (GATE_X - home) + "px");
+    walk.style.setProperty("--walk-x", walkDistFor(sel, home) + "px"); // stroll OUT from this figure's SLOT back to the gate
     el.classList.remove("walking");
     el.classList.remove("leaving"); void walk.getBoundingClientRect(); el.classList.add("leaving"); // restart cleanly
   }
   function leaveEntry(entry) {
     var g = document.getElementById("garden-guests");
     if (!g) return;
-    for (var i = 0; i < entry.sels.length; i++) walkFigureOut(g, entry.sels[i], entry.homes[i]);
+    for (var i = 0; i < entry.sels.length; i++) walkFigureOut(g, entry.sels[i], entry.homes[i]); // strolls out from its current slot (still in slotXBySel)
+    rebalanceFloor(g); // the remaining present guests glide to close the gap (the leaver already has .leaving → excluded)
   }
   // one rotation beat: send 1–2 present units out, then (after a gap) walk the same number of waiting
   // units in. Prefer not to evict someone who only just arrived.
@@ -54722,6 +54797,7 @@ function spawnDustMote(container) {
     for (var i = 0; i < list.length; i++) for (var j = 0; j < list[i].sels.length; j++) {
       var el = g.querySelector(list[i].sels[j]); if (el) el.classList.add("arrived");
     }
+    rebalanceFloor(g); // a full instant floor still spreads evenly across the band
   }
   function slideGuestsIn() { // INSTANT arrival: the whole floor crashes in at once (summon / test hook)
     var g = document.getElementById("garden-guests");
@@ -54767,13 +54843,16 @@ function spawnDustMote(container) {
     }
   }
   window.__updateGardenGuests = updateGardenGuests;
-  function clearAllArrived(g) { // wipe every per-figure arrival flag + walk distance (teardown)
+  function clearAllArrived(g) { // wipe every per-figure arrival flag + walk distance + balance slot (teardown)
     if (!g) return;
     var walkers = g.querySelectorAll(".guest.arrived, .guest.walking, .guest.leaving");
     for (var i = 0; i < walkers.length; i++) { walkers[i].classList.remove("arrived", "walking", "leaving"); }
     recentArrivals.length = 0;
     var walks = g.querySelectorAll(".guest-walk");
     for (var k = 0; k < walks.length; k++) walks[k].style.removeProperty("--walk-x");
+    slotXBySel = {}; // forget all slots
+    var placed = g.querySelectorAll(".guest[style*='--balance-x']");
+    for (var m = 0; m < placed.length; m++) placed[m].style.removeProperty("--balance-x"); // guests glide back to their raw homes
   }
   function clearGardenGuests() { // hard teardown: goToStage room-leave + reset
     clearGuestArriveTimer();
@@ -54825,7 +54904,12 @@ function spawnDustMote(container) {
       }
       if (e.animationName === "guest-gate-leave") { // a figure finished strolling OUT — now hide it (drop .arrived) so the floor has room
         var figo = e.target.closest ? e.target.closest(".guest") : null;
-        if (figo) figo.classList.remove("leaving", "arrived");
+        if (figo) {
+          figo.classList.remove("leaving", "arrived");
+          // forget its slot + drop --balance-x so a later fresh re-arrival recomputes from the gate
+          for (var s = 0; s < figo.classList.length; s++) { var cl = figo.classList[s]; if (cl.indexOf("g-") === 0) delete slotXBySel["." + cl]; }
+          figo.style.removeProperty("--balance-x");
+        }
       }
     });
   })();
@@ -59610,44 +59694,75 @@ function spawnDustMote(container) {
 
     var panel = null, toggleBtn = null, open = false;
 
-    // Singling a guest out from the roster: freeze their dance and float an arrow over them for 5s.
-    // Only one at a time. The arrow is a child of the figure's own group (inherits its position +
-    // any height-scale) but sits OUTSIDE the .guest-walk dance wrappers, so it keeps bobbing while
-    // the dance underneath it holds still.
+    // Singling a guest out from the roster: freeze EVERYONE ELSE while the pick keeps dancing, and
+    // float an arrow over the pick for 3s. Only one at a time. The arrow is a child of the figure's
+    // own group (inherits its position + any height-scale) but sits OUTSIDE the .guest-walk dance
+    // wrappers, so it bobs on regardless. Crew (DJ / photographer) can be picked too — their arrow
+    // floats over the booth / their figure and the crowd still freezes around them.
     var spotlightTimer = null;
     function clearSpotlight() {
       if (spotlightTimer) { clearTimeout(spotlightTimer); spotlightTimer = null; }
       if (panel) panel.classList.remove("spot-hide"); // bring the roster back (it was hidden on a small screen during the flash)
       var g = document.getElementById("garden-guests");
-      if (!g) return;
-      var lit = g.querySelectorAll(".guest.spotlighted");
-      for (var i = 0; i < lit.length; i++) lit[i].classList.remove("spotlighted");
-      var arrows = g.querySelectorAll(".guest-spot-arrow");
+      if (g) {
+        g.classList.remove("solo-spot"); // unfreeze the crowd
+        var lit = g.querySelectorAll(".guest.spotlighted");
+        for (var i = 0; i < lit.length; i++) lit[i].classList.remove("spotlighted");
+      }
+      // arrows live on the picked guest's group OR on the DJ booth / photographer group (crew) —
+      // sweep the whole strip so a crew arrow doesn't strand outside #garden-guests
+      var scope = document.getElementById("loft-game-strip") || document;
+      var arrows = scope.querySelectorAll(".guest-spot-arrow");
       for (var j = 0; j < arrows.length; j++) if (arrows[j].parentNode) arrows[j].parentNode.removeChild(arrows[j]);
     }
     function smallScreen() { return window.matchMedia && window.matchMedia("(max-width: 760px)").matches; }
+    // build the chunky bobbing arrow <g>, its tip pointing DOWN at (cx, tipY) in the host group's
+    // local coords. A 31px-tall arrow whose tip lands at tipY (body from tipY-31 up to tipY).
+    function makeSpotArrow(cx, tipY) {
+      var arrow = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      arrow.setAttribute("class", "guest-spot-arrow");
+      var p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      var t = tipY, sh = t - 14, top = t - 31; // tip, shoulder, top
+      p.setAttribute("d", "M " + (cx - 2.4) + " " + top + " L " + (cx + 2.4) + " " + top +
+        " L " + (cx + 2.4) + " " + sh + " L " + (cx + 7.6) + " " + sh +
+        " L " + cx + " " + t + " L " + (cx - 7.6) + " " + sh + " L " + (cx - 2.4) + " " + sh + " Z");
+      p.setAttribute("fill", "#8e3a4a");
+      p.setAttribute("stroke", "#fffdf8");
+      p.setAttribute("stroke-width", "1.1");
+      p.setAttribute("stroke-linejoin", "round");
+      arrow.appendChild(p);
+      return arrow;
+    }
+    // crew targets aren't ".g-*" dancing figures — they carry their own host group + arrow anchor
+    // (in that group's own view-box coords). The DJ arrow floats over the booth head; the
+    // photographer arrow over her crown. They don't dance, so no .spotlighted self-exemption is
+    // needed — the .solo-spot flag still freezes the guest crowd around them.
+    var CREW_SPOTS = {
+      "__dj":                { host: "garden-djbooth",      cx: 609, tipY: 189 }, // just above the DJ's beanie (top ~194)
+      "#garden-photog-hit":  { host: "garden-photographer", cx: 30,  tipY: 248 }  // just above the photographer's crown (top ~250)
+    };
     function spotlightGuests(sels) {
       var g = document.getElementById("garden-guests");
       if (!g || !sels) return;
       clearSpotlight(); // replace any current spotlight — one guest at a time
       var any = false;
       sels.forEach(function (sel) {
+        var crew = CREW_SPOTS[sel];
+        if (crew) { // DJ / photographer: arrow over their own group, freeze-others via .solo-spot
+          var host = document.getElementById(crew.host);
+          if (!host) return;
+          any = true;
+          host.appendChild(makeSpotArrow(crew.cx, crew.tipY));
+          return;
+        }
         var el = g.querySelector(sel);
         if (!el || !el.classList.contains("guest")) return;
         any = true;
-        el.classList.add("spotlighted");
-        var arrow = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        arrow.setAttribute("class", "guest-spot-arrow");
-        var p = document.createElementNS("http://www.w3.org/2000/svg", "path"); // a chunky arrow, tip just above the tallest cap (y≈150)
-        p.setAttribute("d", "M -2.4 116 L 2.4 116 L 2.4 133 L 7.6 133 L 0 147 L -7.6 133 L -2.4 133 Z");
-        p.setAttribute("fill", "#8e3a4a");
-        p.setAttribute("stroke", "#fffdf8");
-        p.setAttribute("stroke-width", "1.1");
-        p.setAttribute("stroke-linejoin", "round");
-        arrow.appendChild(p);
-        el.appendChild(arrow);
+        el.classList.add("spotlighted"); // exempts THIS guest from the .solo-spot freeze (keeps dancing)
+        el.appendChild(makeSpotArrow(0, 147)); // tip just above the tallest cap (guest group origin at x=0)
       });
       if (any) {
+        g.classList.add("solo-spot"); // freeze everyone but the pick (the .spotlighted one dances on)
         // on a small screen the tall roster would cover the floor — hide it (not close) for the flash,
         // then it returns; on a big screen it's a compact top banner, so leave it up
         if (open && smallScreen()) panel.classList.add("spot-hide");
@@ -59707,9 +59822,13 @@ function spawnDustMote(container) {
         ROSTER.forEach(function (r) {
           if (r.grp !== grp || !present(r.sel)) return;
           var nm = r.name || (r.sel === "__dj" ? djName() : "");
-          // which garden figure(s) a row can single out: the hosts are a pair; any ".g-*" guest is
-          // itself; crew (the DJ booth / photographer, non-".g-" sels) aren't dancing figures → not pickable
-          var sels = grp === "hosts" ? [".g-behdad", ".g-marketa"] : (r.sel.charAt(0) === "." ? [r.sel] : null);
+          // which garden figure(s)/crew a row can single out: the hosts are a pair; any ".g-*" guest
+          // is itself; the DJ + photographer (crew) get an arrow over their booth / their figure and
+          // freeze the crowd around them (they don't dance). Kids with a non-".g-"/non-crew sel
+          // (#garden-kid-*) still aren't pickable.
+          var sels = grp === "hosts" ? [".g-behdad", ".g-marketa"]
+                   : (r.sel.charAt(0) === "." ? [r.sel]
+                   : ((r.sel === "__dj" || r.sel === "#garden-photog-hit") ? [r.sel] : null));
           people.push({ name: nm, role: tipText(r.roleKey), sels: sels });
         });
       });
@@ -59759,18 +59878,21 @@ function spawnDustMote(container) {
     }
     function toggle() { setOpen(!open); }
 
-    // The corner chip is only offered while the party's lit (empty/absent otherwise). Poll the
-    // party state cheaply and reflect it; also close a stale-open panel if the party ends.
+    // The corner chip is only offered while the party's lit AND we're in the garden (the roster is
+    // a legend of the garden floor — meaningless anywhere else). Poll the party/room state cheaply
+    // and reflect it; also close a stale-open panel if the party ends OR we leave the garden.
+    function inGarden() { return window.currentStageName === "garden"; }
     function syncAvailability() {
       if (!ensureNodes()) return;
-      var on = !!window.__gardenPartyOn;
+      var on = !!window.__gardenPartyOn && inGarden();
       toggleBtn.textContent = tipText("roster_title");
       toggleBtn.setAttribute("aria-label", tipText("roster_title"));
       toggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
       toggleBtn.classList.toggle("avail", on);
-      if (!on && open) setOpen(false);
+      if (!on && open) setOpen(false); // party ended OR navigated away from the garden → close the panel
       if (open) render(); // keep the open panel live (presence can change under it)
     }
+    window.__syncRosterAvail = syncAvailability; // goToStage pings this so leaving the garden closes the panel at once (no 1.5s poll lag)
 
     // Test hook + programmatic toggle. Lights nothing on its own — just shows/hides the panel.
     window.__toggleRoster = function (force) {
@@ -60980,6 +61102,7 @@ function spawnDustMote(container) {
     var prev = !!(strip && strip.classList.contains("uv-mode"));
     if (arguments.length === 0 || !strip) return prev; // no arg → is the UV on?
     var on = !!arg; // blacklight(true) → on; blacklight(false) → off; returns the previous state
+    if (on && !prev && window.__resetUvEase) window.__resetUvEase(); // a fresh raise flashes intense then eases
     strip.classList.toggle("uv-mode", on);
     narrate(on, "🟣 blacklight on — everything fluoresces.", "blacklight off — the lights come up.");
     return prev;

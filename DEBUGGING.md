@@ -45,6 +45,29 @@ await send('Emulation.setDeviceMetricsOverride',{width:360,height:720,deviceScal
 
 Used to verify the CLICK ME fits narrow phones (360/390/412px) after the size bump.
 
+**Two CDP overrides you almost always need for a faithful screenshot of animated / focus-gated
+scenes** (both bit repeatedly — a screenshot looked "broken" when the page was fine):
+
+- **Reduced-motion:** headless Chrome reports `prefers-reduced-motion: reduce` by *default*, so
+  every `@media (prefers-reduced-motion: reduce){…animation:none}` rule fires and the scene paints
+  static (auroras flat, arrows not bobbing, particles absent). The Chrome flag alone doesn't fix
+  it — force it over CDP **before navigating**:
+  ```js
+  await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
+  ```
+- **Focus:** the audio beds + some autonomous timers gate on `document.hasFocus()` (the crickets
+  rule), and a headless tab is unfocused, so focus-gated behaviour never runs. Override it in the
+  page (via `Runtime.evaluate` or an injected `<script>`) before exercising anything focus-gated:
+  ```js
+  await send('Runtime.evaluate',{expression:'document.hasFocus=function(){return true;}'});
+  ```
+
+Also (recap from CLAUDE.md, worth having here): use `?t=<timestamp>` + a **unique port AND
+`--user-data-dir` per run** (a reused headless Chrome serves a STALE `file://` page and the whole
+run is fiction; `Network.setCacheDisabled` does NOT defeat it), and prove the loaded page contains
+the code under test (`assertFresh`) before trusting any assertion. `/json/new?<url>` needs the
+**PUT** verb, not GET.
+
 ## 3. Real WebKit (Safari engine) via Playwright — the Safari repro tool
 
 Playwright bundles the **actual WebKit engine** (~Safari, not identical but catches most

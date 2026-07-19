@@ -3812,6 +3812,8 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .msg-thumb-txt{display:flex; flex-direction:column; min-width:0}
 .msg-thumb-from{font-size:16px; font-weight:600; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .msg-thumb-body{font-size:22px; color:var(--ink); line-height:1.25; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; overflow:hidden} /* up to two lines, then ellipsis */
+.msg-thumb-x{position:absolute; top:-8px; right:-8px; width:27px; height:27px; border-radius:50%; background:var(--muted); color:var(--paper); display:flex; align-items:center; justify-content:center; font-size:15px; line-height:1; cursor:pointer; box-shadow:0 2px 7px rgba(0,0,0,.32)}
+.msg-thumb-x:hover,.msg-thumb-x:focus-visible{background:var(--wine); outline:none}
 @keyframes msg-thumb-pulse{0%,100%{box-shadow:0 6px 22px rgba(0,0,0,.28), inset 0 0 0 1px var(--rule)} 50%{box-shadow:0 7px 27px rgba(142,58,74,.5), inset 0 0 0 1px var(--rule)}}
 @media (prefers-reduced-motion: reduce){.msg-thumb.show{animation:none}}
 /* the WEDDING ALBUM app: Aspen's captured party polaroids, newest-first. Each card is a white-
@@ -41865,8 +41867,14 @@ async def localfont(name):
         msgThumbEl = document.createElement("button");
         msgThumbEl.type = "button";
         msgThumbEl.className = "msg-thumb";
-        msgThumbEl.innerHTML = '<span class="msg-thumb-ico">💬</span><span class="msg-thumb-txt"><span class="msg-thumb-from"></span><span class="msg-thumb-body"></span></span>';
+        msgThumbEl.innerHTML = '<span class="msg-thumb-ico">💬</span><span class="msg-thumb-txt"><span class="msg-thumb-from"></span><span class="msg-thumb-body"></span></span><span class="msg-thumb-x" role="button" tabindex="0">✕</span>';
         msgThumbEl.addEventListener("click", function () { hideMessageThumb(); open(true); openApp("messages", "app_messages", renderMessages); }); // tap the toast → ALWAYS open the messages app; a message's own action lives inside the thread
+        var thumbX = msgThumbEl.querySelector(".msg-thumb-x"); // a dismiss ✕ — swat the notification away without opening the app
+        if (thumbX) {
+          thumbX.setAttribute("aria-label", tr("install_dismiss"));
+          thumbX.addEventListener("click", function (e) { e.stopPropagation(); hideMessageThumb(); });
+          thumbX.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); hideMessageThumb(); } });
+        }
       }
       if (msgThumbEl.parentNode !== host) host.appendChild(msgThumbEl);
       msgThumbEl.querySelector(".msg-thumb-from").textContent = msgFrom(m);

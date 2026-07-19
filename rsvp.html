@@ -6174,6 +6174,30 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 #stage-garden.dusk #garden-stars .twinkle.t2{animation-duration:4.3s; animation-delay:.7s}
 #stage-garden.dusk #garden-stars .twinkle.t3{animation-duration:2.4s; animation-delay:1.4s}
 @media (prefers-reduced-motion: reduce){#stage-garden.dusk #garden-stars .twinkle{animation:none}}
+/* Northern lights: a computational aurora in the garden window's night sky. The
+   curtain geometry + shimmer is driven per-frame by gardenAurora (SVG <path> d attrs);
+   this CSS only owns the OPACITY gate, which stays pure-CSS because the state it depends
+   on (dusk on/off, storm start/stop) already lives as classes on #stage-garden — no JS
+   gate needed for those: shown at dusk, hidden by day (base opacity 0). A storm keeps the
+   sky stormy (the .dusk.storming rule out-specifies the plain .dusk one, same idiom as the
+   moon/stars overcast rule). It's fine behind the garden PARTY too. Suppressed while a
+   trip repaints the strip (the trip variant classes live on #loft-game-strip). The
+   __setAurora test hook / aurora() console command flip an .aurora-force / .aurora-hide
+   class on #stage-garden to override the state gate for showing/testing. The rAF loop that
+   animates the geometry is started/stopped by gardenAurora in lockstep with this opacity
+   (it evaluates the same garden ∧ dusk ∧ ¬storm ∧ ¬trip gate + visibility/focus). */
+#garden-aurora{opacity:0; transition:opacity 1.2s ease; mix-blend-mode:screen}
+#stage-garden.dusk #garden-aurora{opacity:0.9}
+#stage-garden.dusk.storming #garden-aurora{opacity:0; transition:opacity .8s ease}
+/* a trip has taken over the whole strip — let its own visuals own the window */
+#loft-game-strip.shrooms #garden-aurora, #loft-game-strip.acid #garden-aurora,
+#loft-game-strip.froggies #garden-aurora, #loft-game-strip.dmt #garden-aurora,
+#loft-game-strip.molly #garden-aurora, #loft-game-strip.ketamine #garden-aurora,
+#loft-game-strip.iboga #garden-aurora{opacity:0}
+/* console/test overrides: force on regardless of dusk, or force off regardless of state */
+#stage-garden.aurora-force #garden-aurora{opacity:0.9}
+#stage-garden.aurora-force.storming #garden-aurora,
+#stage-garden.aurora-hide #garden-aurora{opacity:0}
 /* a little caterpillar appears on the floor at night (the ambient butterflies are
    gated to daytime). only shows + animates at dusk; the crawl (translateX) and
    inch/hump (scale) loops ride inner groups so they don't fight the wrapper's static
@@ -8581,6 +8605,49 @@ section{margin:1.9rem 0}
 </radialGradient>
 <clipPath id="garden-window-clip"><rect x="104" y="20" width="424" height="272"/></clipPath>
 </defs>
+<!-- Northern lights (aurora borealis) high in the garden window's night sky. Shown at
+     dusk when it isn't storming (see the #stage-garden.dusk / .storming CSS gate) and
+     never during a trip. COMPUTATIONAL: gardenAurora (in the script) drives these <path>
+     `d` attributes + gradient stop opacities each rAF frame from sums of sines — several
+     vertical "curtains" whose lower edges ripple over a few octaves and whose brightness
+     shimmers along their length. Pure SVG <path>, so it composites everywhere (a <canvas>
+     inside a foreignObject is a WebKit no-op; native SVG paths are not). Painted before
+     the stars/moon so they twinkle in front of it; clipped to the window. The rAF loop
+     runs ONLY while the aurora is actually shown (garden ∧ dusk ∧ ¬storm ∧ ¬trip) and the
+     tab is visible+focused — it self-pauses on hide/blur (see startGardenAurora), so a
+     backgrounded tab never runs it. Reduced motion: one still frame, no loop. The green
+     low / teal-violet high vertical falloff lives in each curtain's linearGradient. -->
+<g id="garden-aurora" clip-path="url(#garden-window-clip)" pointer-events="none" aria-hidden="true">
+<defs>
+<!-- vertical falloff per curtain: bright green at the base, fading up through teal to a
+     faint violet crown and out to transparent. gardenAurora animates the stop opacities
+     for the along-length shimmer; the colours are static. -->
+<linearGradient id="garden-aurora-grad-1" x1="0" y1="1" x2="0" y2="0">
+<stop class="ag-lo" offset="0" stop-color="#5cf0a0" stop-opacity="0"/>
+<stop class="ag-mid" offset="0.42" stop-color="#46e0c0" stop-opacity="0.72"/>
+<stop class="ag-hi" offset="0.8" stop-color="#9a8ae0" stop-opacity="0.34"/>
+<stop offset="1" stop-color="#b47ad6" stop-opacity="0"/>
+</linearGradient>
+<linearGradient id="garden-aurora-grad-2" x1="0" y1="1" x2="0" y2="0">
+<stop class="ag-lo" offset="0" stop-color="#6affb0" stop-opacity="0"/>
+<stop class="ag-mid" offset="0.4" stop-color="#40dcc8" stop-opacity="0.66"/>
+<stop class="ag-hi" offset="0.82" stop-color="#8f7ce0" stop-opacity="0.3"/>
+<stop offset="1" stop-color="#c07ad0" stop-opacity="0"/>
+</linearGradient>
+<linearGradient id="garden-aurora-grad-3" x1="0" y1="1" x2="0" y2="0">
+<stop class="ag-lo" offset="0" stop-color="#7cf0a8" stop-opacity="0"/>
+<stop class="ag-mid" offset="0.44" stop-color="#4ce0bc" stop-opacity="0.58"/>
+<stop class="ag-hi" offset="0.84" stop-color="#a682e0" stop-opacity="0.28"/>
+<stop offset="1" stop-color="#d67ab4" stop-opacity="0"/>
+</linearGradient>
+</defs>
+<!-- three overlapping curtains, screen-blended so they add light where they cross. The
+     `d` is a placeholder until gardenAurora computes the first frame (start attribute keeps
+     view-source honest and gives a sane static shape if the script never runs). -->
+<path class="aurora-curtain ac1" d="M110 96 L110 30 L528 30 L528 96 Z" fill="url(#garden-aurora-grad-1)"/>
+<path class="aurora-curtain ac2" d="M110 100 L110 34 L528 34 L528 100 Z" fill="url(#garden-aurora-grad-2)"/>
+<path class="aurora-curtain ac3" d="M122 92 L122 38 L522 38 L522 92 Z" fill="url(#garden-aurora-grad-3)"/>
+</g>
 <g id="garden-stars" opacity="0" pointer-events="none" fill="#ffffff" aria-hidden="true">
 <!-- Real constellations at astronomically-plausible relative positions, scaled to the window's night sky (mirrors the balcony sky idiom). -->
 <!-- Cassiopeia (the W) — upper left -->
@@ -23535,6 +23602,154 @@ document.addEventListener("click", function (e) {
   document.addEventListener("visibilitychange", function () { window.__updateGardenBirdsong(); });
 })();
 (function () {
+  // ── Northern lights: a COMPUTATIONAL aurora over the garden window sky ──────
+  // The three <path> curtains in #garden-aurora are pure geometry, recomputed every
+  // rAF frame from sums of sines (a few octaves) so the lower edges ripple + drift and
+  // never read as a fixed shape. Each curtain also shimmers along its length — the
+  // gradient's stop opacities breathe on their own slow sines — and the vertical colour
+  // falloff (green low → teal → faint violet high) lives in the linearGradients. Pure SVG
+  // <path> composites everywhere (a <canvas> in a foreignObject is a WebKit no-op).
+  //
+  // Robustness (CLAUDE.md timer-pile-up class): the loop runs ONLY while the aurora is
+  // actually shown — garden ∧ dusk ∧ ¬storm ∧ ¬trip — AND the tab is visible+focused. The
+  // instant any of that is false, frame() nulls its handle and returns (no accumulation,
+  // no leftover loop in a backgrounded/blurred tab). __updateGardenAurora re-evaluates the
+  // same gate and (re)starts idempotently; it's pinged from every state path that can flip
+  // the gate (toggleDusk / resetBalconyDusk / setStorming / the realWeather storm poll /
+  // goToStage / trip start+end) plus visibilitychange + focus/blur. Reduced motion: paint
+  // ONE still frame and stop — no loop.
+  var auroraG = document.getElementById("garden-aurora");
+  var gardenStage = document.getElementById("stage-garden");
+  var strip = document.getElementById("loft-game-strip");
+  if (!auroraG || !gardenStage) return;
+  var paths = [
+    auroraG.querySelector(".ac1"),
+    auroraG.querySelector(".ac2"),
+    auroraG.querySelector(".ac3")
+  ];
+  // the three shimmer stops per curtain (lo/mid/hi) whose opacity we breathe each frame
+  var grads = ["garden-aurora-grad-1", "garden-aurora-grad-2", "garden-aurora-grad-3"].map(function (id) {
+    var g = document.getElementById(id);
+    return g ? { lo: g.querySelector(".ag-lo"), mid: g.querySelector(".ag-mid"), hi: g.querySelector(".ag-hi") } : null;
+  });
+  if (paths.some(function (p) { return !p; })) return;
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var raf = 0, t0 = 0;
+  // The aurora doesn't hang EVERY clear night — it's rolled once per nightfall. It should
+  // show at least half the time on a clear night, and especially when the garden's UV party
+  // blacklight is OFF (the neon washes it out, and the quiet dark nights are its moment). So:
+  // ~72% on a plain dark night, ~30% while the party's up. Re-rolled on nightfall and when
+  // the party toggles (toggling the UV mid-night re-decides the sky). Starts true so the
+  // very first night a visitor reaches is a likely showing; the console force bypasses it.
+  var auroraTonight = true;
+  function rollAurora() { auroraTonight = Math.random() < (window.__gardenPartyOn ? 0.30 : 0.72); }
+  window.__rollGardenAurora = function () { rollAurora(); if (window.__updateGardenAurora) window.__updateGardenAurora(); };
+  // window sky box (matches the garden-window-clip rect). Curtains hang in the upper band.
+  var X0 = 104, X1 = 528, SAMPLES = 22;      // horizontal span + sample count along the top edge
+  // per-curtain parameters: base top y, curtain height, horizontal drift speed, and a
+  // little octave bank (amplitude/frequency/phase-speed) that ripples the WAVY lower edge.
+  var CURTAINS = [
+    { top: 30, hgt: 62, drift: 9,  driftHz: 0.045, base: 96,
+      oct: [{ a: 9, f: 0.016, s: 0.55 }, { a: 4.5, f: 0.037, s: -0.9 }, { a: 2.2, f: 0.071, s: 1.5 }],
+      sh: { lo: [0.60, 0.36, 0.11], mid: [0.72, 0.40, 0.13], hi: [0.34, 0.42, 0.10] } },
+    { top: 34, hgt: 58, drift: 11, driftHz: 0.033, base: 100,
+      oct: [{ a: 8, f: 0.019, s: -0.42 }, { a: 5, f: 0.041, s: 1.05 }, { a: 2.5, f: 0.083, s: -1.7 }],
+      sh: { lo: [0.66, 0.30, 0.19], mid: [0.66, 0.44, 0.15], hi: [0.30, 0.47, 0.12] } },
+    { top: 38, hgt: 54, drift: 7,  driftHz: 0.057, base: 92,
+      oct: [{ a: 7, f: 0.022, s: 0.78 }, { a: 4, f: 0.049, s: -1.25 }, { a: 2, f: 0.09, s: 2.1 }],
+      sh: { lo: [0.58, 0.33, 0.15], mid: [0.58, 0.38, 0.17], hi: [0.28, 0.49, 0.09] } }
+  ];
+  // shimmer(sh, base, ampA, ampB, hzA, hzB): a stop's live opacity = base + slow twin sines
+  function shimmer(base, t, ph) {
+    return Math.max(0, base[0] + base[1] * Math.sin(t * 0.21 + ph) + base[2] * Math.sin(t * 0.37 + ph * 1.7));
+  }
+  // build one curtain's `d` at time t (seconds): a smooth top edge and a rippling lower
+  // edge sampled left→right, closed into a filled band. The whole band drifts sideways.
+  function curtainD(c, t) {
+    var dx = c.drift * Math.sin(t * c.driftHz * 2 * Math.PI);   // slow horizontal sway
+    var span = X1 - X0, i, x, top = [], bot = [];
+    for (i = 0; i <= SAMPLES; i++) {
+      x = X0 + (span * i / SAMPLES) + dx;
+      // top edge: a gentle single-octave undulation so the crown isn't a straight line
+      var ty = c.top + 3 * Math.sin(x * 0.012 + t * 0.3) + 2 * Math.sin(x * 0.03 - t * 0.5);
+      // lower edge: sum of octaves rippling over time → the organic hanging-curtain fringe
+      var wob = 0, o;
+      for (o = 0; o < c.oct.length; o++) wob += c.oct[o].a * Math.sin(x * c.oct[o].f + t * c.oct[o].s);
+      var by = c.base + wob;
+      top.push([x, ty]); bot.push([x, by]);
+    }
+    var d = "M" + top[0][0].toFixed(1) + " " + top[0][1].toFixed(1);
+    for (i = 1; i <= SAMPLES; i++) d += " L" + top[i][0].toFixed(1) + " " + top[i][1].toFixed(1);
+    for (i = SAMPLES; i >= 0; i--) d += " L" + bot[i][0].toFixed(1) + " " + bot[i][1].toFixed(1);
+    return d + " Z";
+  }
+  function draw(t) {
+    for (var i = 0; i < CURTAINS.length; i++) {
+      var c = CURTAINS[i];
+      paths[i].setAttribute("d", curtainD(c, t + i * 3.1)); // phase-offset so they don't march in step
+      var g = grads[i];
+      if (g) {
+        // along-length shimmer: each stop's opacity breathes on its own slow sines
+        if (g.lo)  g.lo.setAttribute("stop-opacity",  shimmer(c.sh.lo,  t, i * 1.3).toFixed(3));
+        if (g.mid) g.mid.setAttribute("stop-opacity", shimmer(c.sh.mid, t, i * 1.3 + 0.9).toFixed(3));
+        if (g.hi)  g.hi.setAttribute("stop-opacity",  shimmer(c.sh.hi,  t, i * 1.3 + 2.1).toFixed(3));
+      }
+    }
+  }
+  // shown when: garden on-screen ∧ dusk ∧ not storming ∧ not tripping. The .aurora-force /
+  // .aurora-hide test overrides mirror the CSS opacity overrides so the loop and the paint agree.
+  function tripping() {
+    if (!strip) return false;
+    return strip.classList.contains("shrooms") || strip.classList.contains("acid") ||
+      strip.classList.contains("froggies") || strip.classList.contains("dmt") ||
+      strip.classList.contains("molly") || strip.classList.contains("ketamine") ||
+      strip.classList.contains("iboga");
+  }
+  function shouldRun() {
+    if (gardenStage.classList.contains("aurora-hide")) return false;
+    if (document.hidden || !document.hasFocus()) return false; // never in a backgrounded/blurred tab
+    var forced = gardenStage.classList.contains("aurora-force");
+    var natural = auroraTonight &&                         // rolled per nightfall (see rollAurora)
+      window.currentStageName === "garden" &&
+      gardenStage.classList.contains("dusk") &&
+      !gardenStage.classList.contains("storming") &&
+      !tripping();
+    if (!(forced || natural)) return false;
+    if (forced && gardenStage.classList.contains("storming")) return false; // force still yields to a storm
+    return true;
+  }
+  function frame(now) {
+    if (!shouldRun()) { raf = 0; return; } // gate flipped → self-cancel, no leftover loop
+    if (!t0) t0 = now;
+    draw((now - t0) / 1000);
+    raf = requestAnimationFrame(frame);
+  }
+  function start() {
+    if (reduceMotion) { draw(0); return; }     // still frame, no loop
+    if (raf || !shouldRun()) return;           // already live, or not runnable now
+    t0 = 0; raf = requestAnimationFrame(frame);
+  }
+  // one-time still frame so view-source / a never-focused tab still shows a sane shape
+  draw(0);
+  window.__updateGardenAurora = function () {
+    if (shouldRun()) start();
+    else if (raf) { cancelAnimationFrame(raf); raf = 0; }
+  };
+  // console/test hook: force the aurora on/off regardless of the natural state, or (no arg)
+  // just re-evaluate. Flips the same .aurora-force / .aurora-hide classes the CSS reads.
+  window.__setAurora = function (on) {
+    if (on === true) { gardenStage.classList.add("aurora-force"); gardenStage.classList.remove("aurora-hide"); }
+    else if (on === false) { gardenStage.classList.add("aurora-hide"); gardenStage.classList.remove("aurora-force"); }
+    else { gardenStage.classList.remove("aurora-force", "aurora-hide"); }
+    window.__updateGardenAurora();
+    return shouldRun();
+  };
+  window.__gardenAuroraRaf = function () { return raf; }; // test hook: 0 when the loop is stopped
+  document.addEventListener("visibilitychange", function () { window.__updateGardenAurora(); });
+  window.addEventListener("focus", function () { window.__updateGardenAurora(); });
+  window.addEventListener("blur", function () { window.__updateGardenAurora(); });
+})();
+(function () {
   // ── Cuddly wall PROJECTOR: multi-channel ambient screen ───────────────────
   // The wall screen is a little projector; a tap cycles atmospheric "channels":
   //   🔥 fire (default) → 🏋 workout → 🐟 aquarium → 🌧 totoro → ✨ night sky → ⏻ off → (wrap).
@@ -31372,6 +31587,7 @@ var ABANDONED_CALL_MS = 30000;
     countdown: "countdown() — days left until each wedding",
     fullscreen: "fullscreen(true) — fill the screen with the loft; fullscreen(false) leaves; fullscreen() reports whether it's on",
     rainbow: "rainbow() — arc a rainbow over the balcony",
+    aurora: "aurora(true) — the northern lights over the garden window (steps into the garden, falls to a clear dusk first); aurora(false) fades them; aurora() reports whether they're showing. They also appear on their own on most clear garden nights (esp. with the UV party off), never during a storm",
     smoker: "smoker(true) — fire up the balcony smoker, low and slow; smoker(false) shuts it down; smoker() reports whether it's on (bbq is an alias)",
     bbq: "bbq(true) — start the whole BBQ (lid up + coals lit); bbq(false) shuts it down; bbq() reports whether it's smoking. For just the firebox or just the lid, see smoker / smokerlid",
     smokerlid: "smokerlid(true) — raise the smoker lid; smokerlid(false) lowers it; smokerlid() reports whether it's open",
@@ -31469,7 +31685,7 @@ var ABANDONED_CALL_MS = 30000;
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
@@ -31718,7 +31934,7 @@ var ABANDONED_CALL_MS = 30000;
     "help", "clear", "laser", "party", "chase", "guests", "aligoli", "arrive", "roster", "reset", "quit", "blacklight", "uv", "trip", "room",
     "goto", "rooms", "daylight", "night", "day", "season", "play", "pause", "temp", "weather",
     "clock", "time", "projector", "storm", "dance", "jukebox", "dj", "firstdance", "cocktail", "lang", "caption", "candle",
-    "butterfly", "water", "countdown", "fullscreen", "rainbow", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood",
+    "butterfly", "water", "countdown", "fullscreen", "rainbow", "aurora", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood",
     "phone", "album", "message", "madla", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "edit",
     "confetti", "fireworks", "cat", "irene", "visitors", "mouses", "piano", "classic", "kitten", "ukelele", "audio", "music",
@@ -41041,6 +41257,10 @@ async def localfont(name):
       }
       if (window.__updateMozzies) window.__updateMozzies(); // dusk → mosquitoes swarm; day → they clear
       if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // dusk arms the 5s disco-ball peek; day retracts it
+      // northern lights: re-roll the odds at each nightfall (one toss per night, like the precip
+      // roll above — most clear nights show them, esp. with the UV party off); day just re-evaluates off
+      if (dusk && window.__rollGardenAurora) window.__rollGardenAurora();
+      else if (window.__updateGardenAurora) window.__updateGardenAurora();
       if (window.__actPing) window.__actPing("daynight"); // second act: nightfall settles B0, daybreak settles W2
     }
     window.__autoToggleDusk = toggleDusk;
@@ -41083,6 +41303,7 @@ async def localfont(name):
       if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle();
       if (window.__updateMozzies) window.__updateMozzies(); // dusk removed → tear the swarm down
       if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // day forced back → retract any disco-ball peek
+      if (window.__updateGardenAurora) window.__updateGardenAurora(); // day forced back → aurora off
     };
     // click the night sky (not the moon) to wish on a shooting star; by day on Canada Day the
     // same rect calls in the Hornets instead — the two are dusk-exclusive, so neither shadows
@@ -41859,7 +42080,7 @@ async def localfont(name):
     var gs = document.getElementById("stage-garden");
     if (gs) {
       var on = !!window.__balconyStorm || window.__realWxRainy();
-      if (on !== gs.classList.contains("storming")) gs.classList.toggle("storming", on);
+      if (on !== gs.classList.contains("storming")) { gs.classList.toggle("storming", on); if (window.__updateGardenAurora) window.__updateGardenAurora(); } // real rain outside also hides the aurora
     }
     setTimeout(tick, 1000);
   })();
@@ -45748,7 +45969,7 @@ function startTripVariant(variant, noCard) {
   else hideMoleculeCards();
   strip.classList.remove("shrooms", "acid", "froggies", "dmt", "molly", "ketamine", "iboga");
   requestAnimationFrame(function () {
-    requestAnimationFrame(function () { strip.classList.add(variant); });
+    requestAnimationFrame(function () { strip.classList.add(variant); if (window.__updateGardenAurora) window.__updateGardenAurora(); }); // a trip owns the window → aurora pauses
   });
   playTripMelody(variant);
   if (variant === "iboga") {
@@ -45820,6 +46041,7 @@ function startTripVariant(variant, noCard) {
   clearTimeout(tripEndTimer);
   tripEndTimer = setTimeout(function () {
     strip.classList.remove(variant);
+    if (window.__updateGardenAurora) window.__updateGardenAurora(); // trip over → aurora resumes if it's still garden-dusk
     if (variant === "iboga") stopIbogaSlideshow(); // the photos fade with the gray-out
     if (variant === "dmt") stopDmt(); // remove the elves, warp filter, and sparkles
     hideMoleculeCards(); // the molecule card leaves with the trip (safety net; it usually left earlier)
@@ -51198,6 +51420,7 @@ function spawnDustMote(container) {
     if (window.__updateWind) window.__updateWind(ROOM_FADE); // wind bed (balcony, + through the cuddly door) fades out over the room change too
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(name === "garden"); // birdsong only in the garden, and only by day
     if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // after-dark disco-ball peek re-arms on entering the garden at night, retracts on leaving (reads window.currentStageName)
+    if (window.__updateGardenAurora) window.__updateGardenAurora(); // northern lights: the rAF loop runs only while the garden's on-screen at dusk (reads window.currentStageName)
     if (window.__updatePartyMusic) window.__updatePartyMusic(ROOM_FADE); // techno party bed plays whole-loft while the party's on (room-agnostic, like the night-sky bed)
     if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(name === "balcony"); // string lights pulse with the beat only on the balcony
     if (window.__updateMozzies) window.__updateMozzies(); // dusk mosquitoes swarm only on the balcony (reads the now-current room)
@@ -53898,6 +54121,7 @@ function spawnDustMote(container) {
     if (window.__updateUvBreather) window.__updateUvBreather(); // party on → start the blacklight breather; party off → stop it + hand UV back to the switch
     if (window.__syncDanceFreeze) window.__syncDanceFreeze(); // party off → drop any dance-freeze (only meaningful during the party)
     if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // party on retracts the night-peek; party off at night re-arms it
+    if (window.__rollGardenAurora) window.__rollGardenAurora(); // the UV changes the odds — re-roll the aurora (much likelier with the party off)
     // Second act: THE hinge. Pinged from the tail — every ignition path (the balcony switch,
     // the garden light switch, the disco ball, the mask) funnels through here, and by now the
     // whisk's goToStage("garden") has already run and set its own caption, so the reveal line
@@ -54277,6 +54501,7 @@ function spawnDustMote(container) {
         var st = document.getElementById(id);
         if (st) st.classList.toggle("storming", on);
       });
+      if (window.__updateGardenAurora) window.__updateGardenAurora(); // a storm hides the aurora; clearing restores it
     }
     function clearAll() {
       timers.forEach(clearTimeout);
@@ -57931,6 +58156,23 @@ function spawnDustMote(container) {
     else if (window.__toggleDayNight && !isNight()) window.__toggleDayNight();
     narrate(!!window.__forceBalconyStorm(true), "⛈ a storm rolls in over the balcony.", "no dusk balcony to storm over.");
     return prev;
+  };
+
+  // aurora — the northern lights over the garden window. aurora() reports whether they're
+  // showing; aurora(true) forces them on (steps into the garden + falls to dusk first, and
+  // clears any storm so the sky can go clear); aurora(false) clears the force. The paint +
+  // its rAF loop are driven by __setAurora / __updateGardenAurora (the .aurora-force class).
+  window.aurora = function (arg) {
+    if (!window.__setAurora) return false;
+    if (arguments.length === 0) return window.__setAurora(); // no arg → is the aurora showing right now?
+    var on = !!arg;
+    if (!on) { var r = window.__setAurora(false); narrate(r, "", "🌌 the northern lights fade out."); return r; }
+    if (window.goToStage) window.goToStage("garden");     // the aurora hangs in the garden window
+    if (window.__forceBalconyStorm) window.__forceBalconyStorm(false); // a clear night — no storm over the aurora
+    if (window.__setDayNight) window.__setDayNight(true); // the lights need the night sky
+    var shown = window.__setAurora(true);
+    narrate(shown, "🌌 the northern lights ripple over the garden.", "🌌 the northern lights are drifting somewhere overhead.");
+    return shown;
   };
 
   window.dance = function (name) {

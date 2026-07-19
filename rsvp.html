@@ -114,11 +114,14 @@ footer{margin-top:2.6rem}
    Toggled by the corner button, the 'h' key, __toggleRoster(), or roster(). Only
    meaningful while the party's lit. HTML overlay (not SVG), lives inside .hunt-viewport
    so it rides along into fullscreen; pointer-events only on the panel itself. */
+/* A WIDE, SHORT banner across the TOP (over the sky) rather than a tall side column — so the
+   legend never sits on top of the guests it names (a guest under a side panel couldn't be seen
+   when you clicked to arrow them). Names flow into as many ~8.5rem columns as the width allows. */
 .roster-panel{
-  position:absolute; z-index:22; top:12px; right:12px; width:min(230px, calc(100% - 24px));
-  max-height:calc(100% - 24px); overflow:auto; box-sizing:border-box;
+  position:absolute; z-index:22; top:10px; left:10px; right:10px; box-sizing:border-box;
+  max-height:min(85%, 560px); overflow:auto;
   background:var(--paper); color:var(--ink); border:1px solid var(--rule); border-radius:10px;
-  box-shadow:0 6px 22px rgba(69,58,49,.28); padding:.6rem .7rem .65rem;
+  box-shadow:0 6px 22px rgba(69,58,49,.28); padding:.6rem .85rem .7rem;
   font-family:"Source Serif 4",Georgia,serif; text-align:left;
   opacity:0; transform:translateY(-6px); pointer-events:none;
   transition:opacity .25s ease, transform .25s ease;
@@ -126,13 +129,16 @@ footer{margin-top:2.6rem}
 .roster-panel.show{opacity:1; transform:translateY(0); pointer-events:auto}
 .roster-panel h3{
   font-family:"Fraunces",serif; font-weight:700; font-size:1rem; letter-spacing:.01em;
-  color:var(--wine); margin:0 1.4rem .35rem 0; padding:0;
+  color:var(--wine); margin:0 0 .4rem; padding:0;
 }
-.roster-panel ul{list-style:none; margin:0; padding:0; font-size:.82rem; line-height:1.45}
-.roster-panel li{padding:.06rem 0; color:var(--muted)}
-.roster-panel li em{font-style:normal; font-weight:600; color:var(--ink)}
+/* two wide columns (≥15rem each) so no name+role ever wraps; ~10 rows tall → a roomy portrait card */
+.roster-panel .roster-list{
+  list-style:none; margin:0; padding:0; font-size:.84rem; line-height:2.55;
+  columns:2 15rem; column-gap:2rem;
+}
+.roster-panel .roster-list li{padding:.26rem 0; color:var(--muted); break-inside:avoid; white-space:nowrap}
+.roster-panel .roster-list li em{font-style:normal; font-weight:600; color:var(--ink)}
 .roster-panel .roster-empty{color:var(--muted); font-size:.82rem; line-height:1.45}
-.roster-panel .roster-sep{height:1px; background:var(--rule); border:0; margin:.35rem 0}
 .roster-close{
   position:absolute; top:6px; right:6px; width:22px; height:22px; padding:0; line-height:1;
   border:0; background:none; color:var(--muted); font:1.1rem/1 "Source Serif 4",serif;
@@ -58476,7 +58482,12 @@ function spawnDustMote(container) {
       { grp: "guests", key: "madla",     sel: ".g-madla",     name: "Madla",     roleKey: "role_msister" }, // Markéta's sister (Lübeck)
       { grp: "guests", key: "robert",    sel: ".g-robert",    name: "Robert",    roleKey: "role_msisspouse" }, // her husband
       { grp: "guests", key: "hamid",     sel: ".g-hamid",     name: "Hamid",     roleKey: "role_godson" }, // Behdad's adopted godson
-      { grp: "guests", key: "athena",    sel: ".g-athena",    name: "Athena",    roleKey: "role_qa" }  // Hamid's partner, QA lead
+      { grp: "guests", key: "athena",    sel: ".g-athena",    name: "Athena",    roleKey: "role_qa" }, // Hamid's partner, QA lead
+      // the garden CHASE runners — the godkids only appear on the floor while darting across (.chasing),
+      // so they're rostered dynamically via present() (no ".g-*" party figure of their own → not pickable)
+      { grp: "kids",   key: "cirene",    sel: "#garden-kid-irene", name: "Irene", roleKey: "role_niece" },  // Behdad's niece (Bahareh's girl)
+      { grp: "kids",   key: "crobin",    sel: "#garden-kid-robin", name: "Robin", roleKey: "role_godson" }, // godson
+      { grp: "kids",   key: "cnavid",    sel: "#garden-kid-navid", name: "Navid", roleKey: "role_godson" }  // godson
     ];
 
     // Is this figure actually ON the floor right now? Present = #garden-guests.guests-in AND the
@@ -58486,6 +58497,11 @@ function spawnDustMote(container) {
     function present(sel) {
       if (sel === "__dj") return djPresent();
       if (sel === "#garden-photog-hit") return photogPresent();
+      if (sel.indexOf("#garden-kid-") === 0) { // a chase runner — present only while actually darting across
+        if (!window.__gardenPartyOn) return false;
+        var k = document.querySelector(sel);
+        return !!(k && k.classList.contains("chasing"));
+      }
       var g = document.getElementById("garden-guests");
       if (!g || !g.classList.contains("guests-in")) return false; // party lit + guests on the floor
       var el = document.querySelector("#garden-guests " + sel) || document.querySelector(sel);
@@ -58551,7 +58567,10 @@ function spawnDustMote(container) {
         arrow.appendChild(p);
         el.appendChild(arrow);
       });
-      if (any) spotlightTimer = setTimeout(clearSpotlight, 5000);
+      if (any) {
+        if (open) setOpen(false); // close the roster so the arrowed guest is never hidden behind the panel
+        spotlightTimer = setTimeout(clearSpotlight, 5000);
+      }
     }
     window.__spotlightGuest = spotlightGuests; // test/console hook
 
@@ -58572,7 +58591,7 @@ function spawnDustMote(container) {
         panel.id = "roster-panel";
         panel.setAttribute("role", "dialog");
         panel.setAttribute("aria-modal", "false"); // non-trapping overlay
-        panel.setAttribute("aria-labelledby", "roster-title");
+        panel.setAttribute("aria-label", tipText("roster_title")); // no visible header (saved space) → label for a11y
         panel.setAttribute("tabindex", "-1");
         panel.hidden = true;
         var close = document.createElement("button");
@@ -58597,53 +58616,47 @@ function spawnDustMote(container) {
       var close = panel.querySelector(".roster-close");
       panel.innerHTML = "";
       if (close) panel.appendChild(close);
-      var h = document.createElement("h3");
-      h.id = "roster-title";
-      h.textContent = tipText("roster_title");
-      panel.appendChild(h);
+      // no visible header — the list speaks for itself + saves vertical space (aria-label covers a11y)
 
-      var groups = { hosts: [], guests: [], crew: [], kids: [] };
-      ROSTER.forEach(function (r) {
-        if (!present(r.sel)) return;
-        var nm = r.name || (r.sel === "__dj" ? djName() : "");
-        // which garden figure(s) this row can single out: the hosts are a pair; any ".g-*" guest is
-        // itself; crew (the DJ booth / photographer, non-".g-" sels) aren't dancing figures → not pickable
-        var sels = r.grp === "hosts" ? [".g-behdad", ".g-marketa"] : (r.sel.charAt(0) === "." ? [r.sel] : null);
-        groups[r.grp].push({ name: nm, role: tipText(r.roleKey), sels: sels });
+      // flat list in group order (hosts → guests → crew → kids); the CSS flows it into columns so a
+      // long roster stays a short banner rather than a tall side column that covers the floor
+      var order = ["hosts", "guests", "crew", "kids"], people = [];
+      order.forEach(function (grp) {
+        ROSTER.forEach(function (r) {
+          if (r.grp !== grp || !present(r.sel)) return;
+          var nm = r.name || (r.sel === "__dj" ? djName() : "");
+          // which garden figure(s) a row can single out: the hosts are a pair; any ".g-*" guest is
+          // itself; crew (the DJ booth / photographer, non-".g-" sels) aren't dancing figures → not pickable
+          var sels = grp === "hosts" ? [".g-behdad", ".g-marketa"] : (r.sel.charAt(0) === "." ? [r.sel] : null);
+          people.push({ name: nm, role: tipText(r.roleKey), sels: sels });
+        });
       });
-      var order = ["hosts", "guests", "crew", "kids"];
-      var total = order.reduce(function (n, g) { return n + groups[g].length; }, 0);
-      if (!total) {
+      if (!people.length) {
         var empty = document.createElement("p");
         empty.className = "roster-empty";
         empty.textContent = tipText("roster_empty");
         panel.appendChild(empty);
         return;
       }
-      var first = true;
-      order.forEach(function (g) {
-        if (!groups[g].length) return;
-        if (!first) panel.appendChild(document.createElement("hr")).className = "roster-sep";
-        first = false;
-        var ul = document.createElement("ul");
-        groups[g].forEach(function (p) {
-          var li = document.createElement("li");
-          var em = document.createElement("em");
-          em.textContent = p.name;
-          li.appendChild(em);
-          li.appendChild(document.createTextNode(p.role ? " · " + p.role : ""));
-          if (p.sels) { // clickable → single this guest out on the floor
-            li.className = "roster-pick";
-            li.setAttribute("role", "button");
-            li.setAttribute("tabindex", "0");
-            li.setAttribute("title", tipText("roster_pick_hint"));
-            li.addEventListener("click", function () { spotlightGuests(p.sels); });
-            li.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); spotlightGuests(p.sels); } });
-          }
-          ul.appendChild(li);
-        });
-        panel.appendChild(ul);
+      var ul = document.createElement("ul");
+      ul.className = "roster-list";
+      people.forEach(function (p) {
+        var li = document.createElement("li");
+        var em = document.createElement("em");
+        em.textContent = p.name;
+        li.appendChild(em);
+        li.appendChild(document.createTextNode(p.role ? " · " + p.role : ""));
+        if (p.sels) { // clickable → single this guest out on the floor
+          li.className = "roster-pick";
+          li.setAttribute("role", "button");
+          li.setAttribute("tabindex", "0");
+          li.setAttribute("title", tipText("roster_pick_hint"));
+          li.addEventListener("click", function () { spotlightGuests(p.sels); });
+          li.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); spotlightGuests(p.sels); } });
+        }
+        ul.appendChild(li);
       });
+      panel.appendChild(ul);
     }
 
     function setOpen(v) {

@@ -27144,19 +27144,35 @@ function gameTapsNear(a, b) {
     // "speaks first" over the raw winter/summer CLIMATE, the same rule the winter toque follows —
     // April is still snowy by the odds but dresses for spring, so its dblclick is a blossom toss,
     // not a snowman. So: check the two decor-class seasons before the two climate predicates.
+    balconyDayPlay();
+  });
+  // the current season's daytime outdoor kid-play scene (autumn leaf pile / spring blossom toss /
+  // winter snowman / summer sprinkler) — shared by the dblclick + the autonomous arrival chance.
+  function balconyDayPlay() {
     var strip = document.getElementById("loft-game-strip");
     var isAutumn = !!strip && strip.classList.contains("season-autumn");
     var isSpring = !!strip && strip.classList.contains("season-spring");
-    if (isAutumn && window.__setLeafpile) {
-      window.__setLeafpile(true);          // autumn — a leaf pile to leap into
-    } else if (isSpring && window.__setBlossomPlay) {
-      window.__setBlossomPlay(true);       // spring — a blossom toss
-    } else if (window.__snowySeason && window.__snowySeason() && window.__setSnowman) {
-      window.__setSnowman(true);           // genuinely winter — a snowman with the kids
-    } else if (window.__summerSeason && window.__summerSeason() && window.__setSprinkler) {
-      window.__setSprinkler(true);         // summer — a sprinkler romp
-    }
-  });
+    if (isAutumn && window.__setLeafpile) window.__setLeafpile(true);            // autumn — a leaf pile
+    else if (isSpring && window.__setBlossomPlay) window.__setBlossomPlay(true); // spring — a blossom toss
+    else if (window.__snowySeason && window.__snowySeason() && window.__setSnowman) window.__setSnowman(true); // winter — a snowman
+    else if (window.__summerSeason && window.__summerSeason() && window.__setSprinkler) window.__setSprinkler(true); // summer — a sprinkler romp
+  }
+  // On arriving at the balcony BY DAY (and only after the first phase — the balcony's unlocked), the
+  // kids are SOMETIMES already out playing the season's scene (~40%), with a cooldown so it's not
+  // every visit. Attended-only; skips if a scene's already up. (Was 0% before — dblclick only.)
+  var balconyPlayCooldownUntil = 0;
+  window.__maybeBalconyKidsPlay = function (name) {
+    if (name !== "balcony") return;
+    var b = document.getElementById("stage-balcony");
+    if (!b || b.classList.contains("dusk")) return;                        // day only
+    if (!(window.__balconyUnlocked && window.__balconyUnlocked())) return; // first phase over
+    if (document.hidden || !document.hasFocus()) return;                   // attended
+    if (window.__snowmanOn || window.__leafpileOn || window.__blossomPlayOn || window.__sprinklerOn) return; // a scene's already up
+    var now = (window.performance && performance.now) ? performance.now() : Date.now();
+    if (now < balconyPlayCooldownUntil) return;
+    balconyPlayCooldownUntil = now + 45000;                                // ~45s between autonomous plays
+    if (Math.random() < 0.5) balconyDayPlay();                             // 50% chance the kids are already out
+  };
 })();
 (function () {
   var ledge = document.getElementById("cuddly-kitchenledge");
@@ -51265,6 +51281,7 @@ function spawnDustMote(container) {
   };
   var finaleTimers = [];
   var balconyIntroSeen = false;
+  window.__balconyUnlocked = function () { return balconyIntroSeen; }; // "first phase over" = the balcony's been properly reached (gates the autonomous kids-outside chance)
   function triggerBalconyFinale() {
     // the arrival flourish (butterfly, sun-shower, rainbow, fireworks, chime,
     // RSVP nudge) plays only the FIRST time the balcony is shown per page load;
@@ -51446,6 +51463,7 @@ function spawnDustMote(container) {
     if (window.__updateGardenAurora) window.__updateGardenAurora(); // northern lights: the rAF loop runs only while the garden's on-screen at dusk (reads window.currentStageName)
     if (window.__updatePartyMusic) window.__updatePartyMusic(ROOM_FADE); // techno party bed plays whole-loft while the party's on (room-agnostic, like the night-sky bed)
     if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(name === "balcony"); // string lights pulse with the beat only on the balcony
+    if (window.__maybeBalconyKidsPlay) window.__maybeBalconyKidsPlay(name); // ~40% chance the kids are already out playing (day + balcony unlocked)
     if (window.__updateMozzies) window.__updateMozzies(); // dusk mosquitoes swarm only on the balcony (reads the now-current room)
     if (window.__updateSongRoomPan) window.__updateSongRoomPan(); // room-fixed rooms settle immediately
     if (window.__updateSongRoomWidth) window.__updateSongRoomWidth(); // width follows the same room-fixed table, no transition dependency

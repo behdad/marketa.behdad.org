@@ -58723,9 +58723,11 @@ function spawnDustMote(container) {
     try { if (window.__applySeasonSilent) window.__applySeasonSilent(s); else if (window.season) window.season(s); } catch (e) {}
   }
 
-  // ── beat helper ── build a routine beat: { fn, wait, tap }. `tap` is an element id to send the
-  // ghost cursor to (glide + ripple) just before fn runs, so the action reads as a click.
-  function beat(fn, wait, tap) { return { fn: fn, wait: (wait == null ? AUTOPLAY_BEAT_MS : wait), tap: tap || null }; }
+  // ── beat helper ── build a routine beat: { fn, wait, tap, app }. `tap` is an element id to send
+  // the ghost cursor to (glide + ripple) just before fn runs, so the action reads as a click. `app`
+  // (optional) tags an app-open beat with the app id it opens, so the routine-shape test hook can
+  // count distinct apps a routine plays without waiting out the whole (deliberately slow) run.
+  function beat(fn, wait, tap, app) { return { fn: fn, wait: (wait == null ? AUTOPLAY_BEAT_MS : wait), tap: tap || null, app: app || null }; }
   // shuffle a shallow copy of an array in place-return
   function apShuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = (Math.random() * (i + 1)) | 0; var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   // pick n distinct entries from arr, shuffled — for "play a few of the apps, varied each loop"
@@ -58796,7 +58798,7 @@ function spawnDustMote(container) {
     var apps = apPickSome(MONITOR_APPS, 4); // a different handful each loop
     for (var k = 0; k < apps.length; k++) {
       (function (name) {
-        r.push(beat(function () { if (window.computer) window.computer(name); }, 2600, "monitor-dock-" + name)); // open the app on the monitor
+        r.push(beat(function () { if (window.computer) window.computer(name); }, 2600, "monitor-dock-" + name, name)); // open the app on the monitor
         r.push(beat(function () { apMonitorInteract(name); }, 2600)); // …and poke it a little
       })(apps[k]);
     }
@@ -58833,8 +58835,8 @@ function spawnDustMote(container) {
     var apps = apPickSome(PHONE_APPS, 4);
     for (var k = 0; k < apps.length; k++) {
       (function (name) {
-        r.push(beat(function () { if (window.phone) window.phone(name); }, 2600)); // open the app on the pocket phone
-        r.push(beat(function () { apPhoneInteract(name); }, 2600));                 // …and poke it a little
+        r.push(beat(function () { if (window.phone) window.phone(name); }, 2600, null, name)); // open the app on the pocket phone
+        r.push(beat(function () { apPhoneInteract(name); }, 2600));                            // …and poke it a little
       })(apps[k]);
     }
     r.push(beat(function () { if (window.phone && window.phone()) window.phone(false); }, 2200)); // put the phone away
@@ -59009,6 +59011,16 @@ function spawnDustMote(container) {
   window.__autoplayForceStep = function () { if (apOn) apRunBeat(); }; // for tests — run one beat synchronously
   window.__autoplayRoutineRoom = function () { return apRoutineRoom; }; // for tests — which room the current routine belongs to
   window.__autoplayRoutineLen = function () { return apRoutine ? apRoutine.length : 0; }; // for tests — beats in the current routine
+  // for tests — build a room's routine and report its shape ({ beats, totalWait, taps }) without
+  // running it, so a test can prove garden dwells longer + monitor/phone touch several apps. It
+  // reflects live solved-state, so a test that wants the "solved" (toy/app) routine solves first.
+  window.__autoplayRoutineBeats = function (room) {
+    var build = ROUTINE_BUILDERS[room]; if (!build) return null;
+    var r = build() || [];
+    var total = 0, taps = 0, apps = {};
+    for (var i = 0; i < r.length; i++) { total += (r[i].wait || 0); if (r[i].tap) taps++; if (r[i].app) apps[r[i].app] = 1; }
+    return { beats: r.length, totalWait: total, taps: taps, apps: Object.keys(apps).length, appList: Object.keys(apps) };
+  };
 
   // ?autoplay URL param → kiosk boot: the owner opens one URL on the BBQ screen and walks
   // away. Deferred a beat so the game's own load-time setup (intro prompt, first-visit

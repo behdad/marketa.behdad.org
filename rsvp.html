@@ -1236,6 +1236,40 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    static position attribute. Seen through the uv-mode blacklight like the rest of the fx. */
 #garden-guests{opacity:0}
 #garden-guests.guests-in{opacity:1; transition:opacity 1s ease .2s} /* fade up a beat after the party lights */
+/* ── GRADUAL FILL: the party starts SMALL and guests trickle in ───────────────
+   A fresh party opens with just the CORE on the floor (the hosts Behdad & Markéta — the
+   DJ/bartender are their own nodes elsewhere, always present); the 5 friend duos (+ the
+   single Bahareh, + the visiting mouses) then walk in ONE every ~5s via a self-rescheduling,
+   party-gated, crickets-safe timer (see the trickle driver in JS). While
+   that fill is in progress #garden-guests carries .trickle, and each walking figure is HIDDEN
+   until JS grants it .arrived (then it walks in through the gate + joins the dance). The hosts
+   are never gated. An instant-fill path (guests(true) / __summonGuests) grants everyone
+   .arrived at once and drops .trickle, so tests + the roster/album still get a full floor.
+   visibility (not display) so getBBox stays valid; WebKit honours visibility:hidden and won't
+   leak an off-floor figure. Descendant dance animations are also killed so a hidden figure
+   isn't burning frames. */
+#garden-guests.trickle .g-ali:not(.arrived),
+#garden-guests.trickle .g-goli:not(.arrived),
+#garden-guests.trickle .g-spencer:not(.arrived),
+#garden-guests.trickle .g-jay:not(.arrived),
+#garden-guests.trickle .g-alireza:not(.arrived),
+#garden-guests.trickle .g-mahzad:not(.arrived),
+#garden-guests.trickle .g-farhang:not(.arrived),
+#garden-guests.trickle .g-lauren:not(.arrived),
+#garden-guests.trickle .g-bahareh:not(.arrived),
+#garden-guests.trickle .g-elisabeth:not(.arrived),
+#garden-guests.trickle .g-felix:not(.arrived){visibility:hidden}
+#garden-guests.trickle .g-ali:not(.arrived) *,
+#garden-guests.trickle .g-goli:not(.arrived) *,
+#garden-guests.trickle .g-spencer:not(.arrived) *,
+#garden-guests.trickle .g-jay:not(.arrived) *,
+#garden-guests.trickle .g-alireza:not(.arrived) *,
+#garden-guests.trickle .g-mahzad:not(.arrived) *,
+#garden-guests.trickle .g-farhang:not(.arrived) *,
+#garden-guests.trickle .g-lauren:not(.arrived) *,
+#garden-guests.trickle .g-bahareh:not(.arrived) *,
+#garden-guests.trickle .g-elisabeth:not(.arrived) *,
+#garden-guests.trickle .g-felix:not(.arrived) *{animation:none !important} /* an unarrived figure burns no frames */
 #garden-guests .guest-arrival{transform-box:fill-box; transform-origin:center bottom}
 /* arrival: each crasher slides in from the wings (Ali from screen-left, Goli from the
    right) and rises into frame. One-shot, cleared on animationend by JS; when at rest the
@@ -1458,6 +1492,58 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   #garden-guests.guests-in.mouses-visiting .g-elisabeth .guest-move,
   #garden-guests.guests-in.mouses-visiting .g-felix .guest-move{animation:none !important} /* no orbit / solo / bob — the couples (and Bahareh's solo groove, the mouses' kid bob) hold still */
   #garden-guests.guests-in .g-jay .guest-halo{transition:none; animation:none} /* halo shows, but no shimmer */
+}
+/* ── DUO ARRIVAL — a pair strolls IN through the garden gate onto the floor ─────
+   An entrance moment (distinct from the crashers' arrive-from-the-wings slide): a chosen duo
+   walks in from the gate at screen-right and crosses to its home spot on the dance floor, then
+   settles into the crowd (its normal .guests-in dance takes over). Driven by a one-shot class
+   on each walking figure's OWN wrapper: JS adds .duo-walking to #garden-guests and .walking to
+   each of the duo's two .g-* groups, then rides the walk on a fresh .guest-walk wrapper (a <g>
+   with NO static transform, OUTSIDE .guest-arrival so it composes with every inner dance move
+   and never clobbers the .g-* group's static position translate). The distance is per-figure —
+   the gate is fixed but each guest's home x differs — so JS sets a --walk-x custom property on
+   each .guest-walk (gateX − homeX, in view-box px); the keyframe rides that variable from the
+   gate to 0 (home) with a superimposed step-bob. One-shot: cleared on animationend by JS. A duo
+   already on the floor is sent back to the gate first (JS drops .guests-in, then re-walks). */
+#garden-guests .guest-walk{transform-box:fill-box; transform-origin:center bottom}
+/* the walk: cross from the gate (translateX(--walk-x)) to home (0) while bobbing with each step.
+   translate3d keeps X (the cross) and the tiny Y step-bob in one transform so neither clobbers
+   the other. --walk-x defaults to 0 so a stray class add is a harmless no-op. */
+#garden-guests.duo-walking .g-ali.walking .guest-walk,
+#garden-guests.duo-walking .g-goli.walking .guest-walk,
+#garden-guests.duo-walking .g-spencer.walking .guest-walk,
+#garden-guests.duo-walking .g-jay.walking .guest-walk,
+#garden-guests.duo-walking .g-alireza.walking .guest-walk,
+#garden-guests.duo-walking .g-mahzad.walking .guest-walk,
+#garden-guests.duo-walking .g-farhang.walking .guest-walk,
+#garden-guests.duo-walking .g-lauren.walking .guest-walk,
+#garden-guests.duo-walking .g-bahareh.walking .guest-walk{animation:guest-gate-walk 2.2s cubic-bezier(.33,0,.5,1) both}
+/* the partner steps in a beat behind so they don't march in lockstep */
+#garden-guests.duo-walking .g-goli.walking .guest-walk,
+#garden-guests.duo-walking .g-jay.walking .guest-walk,
+#garden-guests.duo-walking .g-mahzad.walking .guest-walk,
+#garden-guests.duo-walking .g-lauren.walking .guest-walk{animation-delay:.28s}
+@keyframes guest-gate-walk{
+  0%{transform:translate3d(var(--walk-x,0),0,0); opacity:0}
+  12%{opacity:1}
+  /* the step-bob: a few small hops en route (composes with the cross via the same transform) */
+  22%{transform:translate3d(calc(var(--walk-x,0) * .72),-3px,0); opacity:1}
+  40%{transform:translate3d(calc(var(--walk-x,0) * .52),0,0)}
+  58%{transform:translate3d(calc(var(--walk-x,0) * .32),-3px,0)}
+  78%{transform:translate3d(calc(var(--walk-x,0) * .12),0,0)}
+  100%{transform:translate3d(0,0,0); opacity:1}
+}
+@media (prefers-reduced-motion: reduce){
+  /* reduced motion: no walk — they simply appear at their home spot (matches the crashers) */
+  #garden-guests.duo-walking .g-ali.walking .guest-walk,
+  #garden-guests.duo-walking .g-goli.walking .guest-walk,
+  #garden-guests.duo-walking .g-spencer.walking .guest-walk,
+  #garden-guests.duo-walking .g-jay.walking .guest-walk,
+  #garden-guests.duo-walking .g-alireza.walking .guest-walk,
+  #garden-guests.duo-walking .g-mahzad.walking .guest-walk,
+  #garden-guests.duo-walking .g-farhang.walking .guest-walk,
+  #garden-guests.duo-walking .g-lauren.walking .guest-walk,
+  #garden-guests.duo-walking .g-bahareh.walking .guest-walk{animation:none}
 }
 /* ── CRASHERS are TAPPABLE (only while on the floor) ──────────────────────────
    Each crasher gets a signature one-shot "flare" on tap (see the guest-tap wiring in JS):
@@ -9686,6 +9772,61 @@ section{margin:1.9rem 0}
 </g>
 </g>
 </g>
+<!-- GARDEN GATE — an arched doorway in the right-hand brick wall, open onto a soft garden
+     beyond: this is where the friend duos WALK IN from onto the dance floor (see the gate
+     walk-in / gradual-fill driver in JS). Flat watercolor style, matched to the scene. It sits
+     BEHIND the DJ booth (earlier in source) so the DJ reads as standing just inside the entrance,
+     and behind the party guests (they're in #garden-partyfx, painted last) so they emerge THROUGH
+     it. Non-interactive, decorative. Its centre (~x648) is the walk-in origin (GATE_X in JS). -->
+<g id="garden-gate" pointer-events="none" aria-hidden="true">
+<!-- the opening: a warm garden glimpse (soft sky + greenery) framed by the arch, clipped to the arch shape -->
+<defs>
+<clipPath id="garden-gate-clip"><path d="M604 340 L604 214 Q604 168 648 168 Q692 168 692 214 L692 340 Z"/></clipPath>
+<linearGradient id="garden-gate-sky" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#cfe6ef"/><stop offset="0.5" stop-color="#dcecdd"/><stop offset="1" stop-color="#c3d8b0"/>
+</linearGradient>
+</defs>
+<g clip-path="url(#garden-gate-clip)">
+<rect x="604" y="164" width="88" height="176" fill="url(#garden-gate-sky)"/>
+<!-- a suggestion of the garden beyond: rounded hedges + a slim path receding to the gate -->
+<ellipse cx="622" cy="300" rx="30" ry="40" fill="#8fb46a" opacity="0.85"/>
+<ellipse cx="678" cy="296" rx="30" ry="44" fill="#7ea75d" opacity="0.85"/>
+<ellipse cx="648" cy="278" rx="24" ry="30" fill="#9cc077" opacity="0.8"/>
+<path d="M636 340 L644 268 L652 268 L660 340 Z" fill="#d9c39a" opacity="0.7"/><!-- a pale garden path leading up to the doorway -->
+<ellipse cx="640" cy="238" rx="10" ry="12" fill="#b7d38f" opacity="0.7"/><ellipse cx="662" cy="244" rx="9" ry="11" fill="#a9c97e" opacity="0.7"/>
+<!-- a couple of little blossoms in the far bushes -->
+<circle cx="628" cy="292" r="2.4" fill="#f2c6d2" opacity="0.9"/><circle cx="672" cy="286" r="2.2" fill="#f6d9a0" opacity="0.9"/><circle cx="650" cy="270" r="2" fill="#f2c6d2" opacity="0.85"/>
+</g>
+<!-- the arch frame: a warm timber surround set into the brick -->
+<path d="M600 340 L600 214 Q600 164 648 164 Q696 164 696 214 L696 340 L692 340 L692 214 Q692 168 648 168 Q604 168 604 214 L604 340 Z" fill="#8a6a44"/>
+<path d="M600 340 L600 214 Q600 164 648 164 L648 168 Q604 168 604 214 L604 340 Z" fill="#9c7a50" opacity="0.7"/><!-- lit left edge of the surround -->
+<!-- keystone + a couple of frame bands -->
+<rect x="642" y="160" width="12" height="10" rx="1.5" fill="#7a5c3a"/>
+<rect x="600" y="248" width="5" height="4" fill="#7a5c3a"/><rect x="691" y="248" width="5" height="4" fill="#7a5c3a"/>
+<!-- ivy trailing over the top of the arch -->
+<g fill="#5f8a44">
+<path d="M612 176 Q606 188 612 200 Q618 190 616 178 Z" opacity="0.9"/>
+<path d="M628 168 Q624 182 630 192 Q636 182 632 170 Z" opacity="0.9"/>
+<path d="M648 165 Q644 178 650 188 Q656 178 652 167 Z" opacity="0.9"/>
+<path d="M668 168 Q664 182 670 192 Q676 182 672 170 Z" opacity="0.9"/>
+<path d="M684 176 Q690 188 684 200 Q678 190 680 178 Z" opacity="0.9"/>
+</g>
+<g fill="#7aa85a">
+<path d="M620 172 Q616 182 621 190 Q626 182 623 174 Z"/><path d="M640 166 Q637 176 642 184 Q647 176 643 168 Z"/>
+<path d="M660 166 Q657 176 662 184 Q667 176 663 168 Z"/><path d="M678 172 Q683 182 678 190 Q673 182 675 174 Z"/>
+</g>
+<!-- little ivy berries -->
+<circle cx="616" cy="196" r="1.4" fill="#3f5f2e"/><circle cx="681" cy="196" r="1.4" fill="#3f5f2e"/><circle cx="649" cy="184" r="1.3" fill="#3f5f2e"/>
+<!-- the open gate leaves, swung inward against the surround (a slim wrought design) -->
+<g stroke="#5a4632" stroke-width="1.6" fill="none" opacity="0.9">
+<path d="M606 236 L606 336 M610 236 L610 336 M614 238 L614 334"/>
+<path d="M606 268 L614 268 M606 300 L614 300"/>
+<path d="M690 236 L690 336 M686 236 L686 336 M682 238 L682 334"/>
+<path d="M682 268 L690 268 M682 300 L690 300"/>
+</g>
+<!-- a soft threshold shadow where the doorway meets the dance floor -->
+<ellipse cx="648" cy="338" rx="46" ry="5" fill="#3a2a18" opacity="0.16"/>
+</g>
 <!-- garden party DJ booth: swaps in for the witchy altar+mirror while the party's lit
      (CSS-gated on #stage-garden.garden-party). The chest below doubles as the table; the
      rig is seen through the blacklight, so the accent colors are pre-filter neons. -->
@@ -10048,6 +10189,7 @@ section{margin:1.9rem 0}
      white knee-high socks, chunky cream platform brogues. A small forearm tattoo. Feet ~y332.
      Drawn tall (head cy~186) so he towers over the ~y210-headed melt dancers. -->
 <g class="guest g-ali" transform="translate(256,0)">
+<g class="guest-walk"><!-- gate walk-in wrapper: no static transform, composes with the arrival/dance -->
 <g class="guest-arrival">
 <g class="guest-orbit"><!-- circles Goli (couple's do-si-do); no static transform -->
 <g class="guest-move">
@@ -10110,6 +10252,7 @@ section{margin:1.9rem 0}
 </g><!-- /guest-move -->
 </g><!-- /guest-orbit -->
 </g><!-- /guest-arrival -->
+</g><!-- /guest-walk -->
 </g><!-- /g-ali -->
 <!-- SPENCER — Markéta's maid-of-honor (a man; warm, joyful giant of the group). The TALLEST
      & biggest-framed here (head cy~168, taller even than Ali) — his height is the defining
@@ -10118,6 +10261,7 @@ section{margin:1.9rem 0}
      give him bulk. Colours read warm/glowy under the uv-mode blacklight like the others.
      Centred between Ali (left) and Goli (right); his exuberant dance rides the inner wrappers. -->
 <g class="guest g-spencer" transform="translate(320,0)">
+<g class="guest-walk"><!-- gate walk-in wrapper: no static transform, composes with the arrival/dance -->
 <g class="guest-arrival">
 <g class="guest-orbit"><!-- circles Jay (couple's do-si-do); no static transform -->
 <g class="guest-move">
@@ -10174,6 +10318,7 @@ section{margin:1.9rem 0}
 </g><!-- /guest-move -->
 </g><!-- /guest-orbit -->
 </g><!-- /guest-arrival -->
+</g><!-- /guest-walk -->
 </g><!-- /g-spencer -->
 <!-- JAY — Spencer's partner and the couple's wedding OFFICIATOR; famously looks like Jesus.
      Long straight medium-brown hair parted down the middle, flowing past the shoulders; a full
@@ -10184,6 +10329,7 @@ section{margin:1.9rem 0}
      (.guest-halo), a direct child of .g-jay above the move/sway wrappers, so no dance transform
      ever shifts it off his crown; it fades with .guests-in. -->
 <g class="guest g-jay" transform="translate(378,0)">
+<g class="guest-walk"><!-- gate walk-in wrapper: no static transform, composes with the arrival/dance -->
 <g class="guest-arrival">
 <g class="guest-orbit"><!-- circles Spencer (couple's do-si-do); wraps halo+body so both orbit together; no static transform -->
 <!-- soft halo shimmer above the crown (opacity fades in with .guests-in; pulses gently) -->
@@ -10238,12 +10384,14 @@ section{margin:1.9rem 0}
 </g><!-- /guest-move -->
 </g><!-- /guest-orbit (wraps halo + body) -->
 </g><!-- /guest-arrival -->
+</g><!-- /guest-walk -->
 </g><!-- /g-jay -->
 <!-- GOLI — Lady-Gaga-esque fashion-design student, show-stopping. Platinum-blonde short bob,
      sunglasses pushed up on her head, an avant-garde structured white top with a bold pointed
      shoulder + a statement pink stud choker, red athletic shorts, red-striped tube socks,
      silver sneakers. Shorter than Ali (head cy~206). Feet ~y332. -->
 <g class="guest g-goli" transform="translate(434,0)">
+<g class="guest-walk"><!-- gate walk-in wrapper: no static transform, composes with the arrival/dance -->
 <g class="guest-arrival">
 <g class="guest-orbit"><!-- circles Ali (couple's do-si-do); no static transform -->
 <g class="guest-move">
@@ -10303,6 +10451,7 @@ section{margin:1.9rem 0}
 </g><!-- /guest-move -->
 </g><!-- /guest-orbit -->
 </g><!-- /guest-arrival -->
+</g><!-- /guest-walk -->
 </g><!-- /g-goli -->
 <!-- ═══ THE HOSTS: Behdad & Markéta at their OWN party ══════════════════════════════
      They're just THERE whenever the party's lit (no toggle) — the hosts, on the dance floor
@@ -10437,6 +10586,7 @@ section{margin:1.9rem 0}
 <!-- ALIREZA — voluminous dark wavy hair, round glasses, short dark beard, punchy sage tee,
      dark wide-leg trousers, a wristwatch, a relaxed-cool one-arm-out pose. Head cy~200, feet ~y332. -->
 <g class="guest g-alireza" transform="translate(150,0)">
+<g class="guest-walk"><!-- gate walk-in wrapper: no static transform, composes with the arrival/dance -->
 <g class="guest-arrival">
 <g class="guest-orbit"><!-- circles Mahzad (couple's do-si-do); no static transform -->
 <g class="guest-move">
@@ -10489,11 +10639,13 @@ section{margin:1.9rem 0}
 </g><!-- /guest-move -->
 </g><!-- /guest-orbit -->
 </g><!-- /guest-arrival -->
+</g><!-- /guest-walk -->
 </g><!-- /g-alireza -->
 <!-- MAHZAD — chin-length tousled dark wavy hair, fair skin, white sleeveless tank, black
      knee-length skirt, barefoot, slim, an energetic bent-knee lean-forward bounce. Small
      earrings. Head cy~204, feet ~y332. -->
 <g class="guest g-mahzad" transform="translate(200,0)">
+<g class="guest-walk"><!-- gate walk-in wrapper: no static transform, composes with the arrival/dance -->
 <g class="guest-arrival">
 <g class="guest-orbit"><!-- circles Alireza (couple's do-si-do); no static transform -->
 <g class="guest-move">
@@ -10543,6 +10695,7 @@ section{margin:1.9rem 0}
 </g><!-- /guest-move -->
 </g><!-- /guest-orbit -->
 </g><!-- /guest-arrival -->
+</g><!-- /guest-walk -->
 </g><!-- /g-mahzad -->
 <!-- ═══ FARHANG & LAUREN — a dancing couple ═══════════════════════════════════════
      On the floor to the screen-RIGHT of the pack (clear of Goli@434 so nobody overlaps).
@@ -10558,6 +10711,7 @@ section{margin:1.9rem 0}
      tuxedo jacket + crisp white shirt + black bow tie, black trousers + shoes. Head cy~198,
      feet ~y332. -->
 <g class="guest g-farhang" transform="translate(490,0)">
+<g class="guest-walk"><!-- gate walk-in wrapper: no static transform, composes with the arrival/dance -->
 <g class="guest-arrival">
 <g class="guest-orbit"><!-- circles Lauren (couple's do-si-do); no static transform -->
 <g class="guest-move">
@@ -10616,11 +10770,13 @@ section{margin:1.9rem 0}
 </g><!-- /guest-move -->
 </g><!-- /guest-orbit -->
 </g><!-- /guest-arrival -->
+</g><!-- /guest-walk -->
 </g><!-- /g-farhang -->
 <!-- LAUREN — Farhang's plus-one: fair/light skin, strawberry-blonde / light-auburn wavy
      shoulder-length hair (some swept back), a big laughing smile; an elegant cream/white
      dress (thin straps). Playful — one arm flung out mid-laugh. Head cy~204, feet ~y332. -->
 <g class="guest g-lauren" transform="translate(540,0)">
+<g class="guest-walk"><!-- gate walk-in wrapper: no static transform, composes with the arrival/dance -->
 <g class="guest-arrival">
 <g class="guest-orbit"><!-- circles Farhang (couple's do-si-do); no static transform -->
 <g class="guest-move">
@@ -10668,6 +10824,7 @@ section{margin:1.9rem 0}
 </g><!-- /guest-move -->
 </g><!-- /guest-orbit -->
 </g><!-- /guest-arrival -->
+</g><!-- /guest-walk -->
 </g><!-- /g-lauren -->
 <!-- BAHAREH — Behdad's sister & Irene's mom: she's AT the party by default (a single guest,
      far screen-right past Lauren), but steps AWAY (hidden via .off-with-kids on this group;
@@ -10678,6 +10835,7 @@ section{margin:1.9rem 0}
      partner): a gentle in-place bob on .guest-orbit + her own solo sway on .guest-move,
      tappable flare on .guest-react. UV-readable warm/teal tones. -->
 <g class="guest g-bahareh" transform="translate(608,0)">
+<g class="guest-walk"><!-- gate walk-in wrapper: no static transform, composes with the arrival/dance -->
 <g class="guest-arrival">
 <g class="guest-orbit"><!-- single: eases to a gentle in-place bob (no partner to circle); no static transform -->
 <g class="guest-move">
@@ -10726,6 +10884,7 @@ section{margin:1.9rem 0}
 </g><!-- /guest-move -->
 </g><!-- /guest-orbit -->
 </g><!-- /guest-arrival -->
+</g><!-- /guest-walk -->
 </g><!-- /g-bahareh -->
 <!-- THE MOUSES AT THE PARTY — Elisabeth & Felix (Markéta's sister Madla's two little ones,
      "the mouses" / myšky) stand AT the garden party as little kid attendees, near their
@@ -31217,6 +31376,7 @@ var ABANDONED_CALL_MS = 30000;
     chase: "chase() — send the three godkids (Irene, Robin & Navid) darting across the garden, chasing each other + giggling; lights the party + heads to the garden first if needed. they also run on their own now and then while the party's lit",
     guests: "guests(true) — the three VIP guests crash the party and steal the show, dancing dead-centre floor: Ali (best man, long grey beard), Goli (Ali's fashionista girlfriend, platinum bob) & Spencer (Markéta's maid-of-honor, the giant of the group). lights the party + heads to the garden first if needed. guests(false) sends them off (party rolls on); guests() reports whether they're on the floor. they also arrive on their own a beat after the party lights. aligoli() is an alias",
     aligoli: "aligoli — alias for guests; try `help guests`",
+    arrive: "arrive(\"ali\"|\"spencer\"|\"alireza\"|\"farhang\"|\"bahareh\") — a duo (or the single Bahareh) STROLLS IN through the garden gate onto the dance floor, an entrance moment. arrive() walks in a random duo. lights the party + heads to the garden first if needed. the duos also trickle in on their own, one per beat, as the party fills up. (ali = Ali & Goli, spencer = Spencer & Jay, alireza = Alireza & Mahzad, farhang = Farhang & Lauren, bahareh = Bahareh solo)",
     roster: "roster() — toggle the \"who's here\" panel: an at-a-glance legend of everyone on the garden-party floor right now (name · role), reflecting who's actually present. roster(true) opens it, roster(false) closes it; lights the party + heads to the garden first if it's dark. the 'h' key does the same",
     reset: "reset() — restart the whole loft from the top (no confirmation — you typed it)",
     quit: "quit (or exit) — shut the console down (refresh, back to the desktop)",
@@ -31350,7 +31510,7 @@ var ABANDONED_CALL_MS = 30000;
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · chase() · guests()/aligoli() · roster() · dance() · jukebox() · dj() · firstdance() ·cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
@@ -31596,7 +31756,7 @@ var ABANDONED_CALL_MS = 30000;
   // list drifts from those keys, which is how it "stays in sync". Only the first token (the
   // command name) is completed; args / inside-parens are out of scope.
   var CONSOLE_CMDS = [
-    "help", "clear", "laser", "party", "chase", "guests", "aligoli", "roster", "reset", "quit", "blacklight", "uv", "trip", "room",
+    "help", "clear", "laser", "party", "chase", "guests", "aligoli", "arrive", "roster", "reset", "quit", "blacklight", "uv", "trip", "room",
     "goto", "rooms", "daylight", "night", "day", "season", "play", "pause", "temp", "weather",
     "clock", "time", "projector", "storm", "dance", "jukebox", "dj", "firstdance", "cocktail", "lang", "caption", "candle",
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood",
@@ -52626,59 +52786,203 @@ function spawnDustMote(container) {
     if (g) g.classList.remove("hosts-solo"); // always begin together
     armHostSolo(8000 + Math.random() * 5000);
   }
-  function slideGuestsIn() { // one-shot arrival: fade+slide from the wings (cleared on animationend below)
+  // ── GATE WALK-IN + GRADUAL FILL ──────────────────────────────────────────────
+  // The party opens SMALL — just the hosts on the floor — and the friend duos (+ the single
+  // Bahareh, + the visiting mouses) trickle in ONE every ~5s, each WALKING in through the garden
+  // gate at screen-right, until the floor is full (~30s all told). A single self-
+  // rescheduling, party-gated, crickets-safe timer drives it (no spawned nodes → nothing piles
+  // up in a hidden/unfocused tab; the timer pauses while the crowd isn't wanted). Everyone's
+  // presence rides a per-figure .arrived class (visibility-gated by the .trickle CSS above);
+  // the gate is at a fixed x, so each figure's walk distance (--walk-x = gateX − homeX) differs.
+  var GATE_X = 648; // the gate's centre in the garden view-box (matches #garden-gate's opening, screen-right past every home x)
+  // trickle order: the FIVE duos, then the single Bahareh, then the mouses (only if visiting).
+  // Each entry lists the .g-* selectors that walk in together (a duo walks in as a pair). A
+  // "solo" flag marks Bahareh (walks in alone). The homes match the .g-* transform translates.
+  var ARRIVALS = [
+    { id: "alireza", sels: [".g-alireza", ".g-mahzad"], homes: [150, 200] }, // travel buddies cross the whole floor
+    { id: "ali",     sels: [".g-ali", ".g-goli"],      homes: [256, 434] }, // best man + fashionista
+    { id: "spencer", sels: [".g-spencer", ".g-jay"],    homes: [320, 378] }, // the giant + the officiator
+    { id: "farhang", sels: [".g-farhang", ".g-lauren"], homes: [490, 540] }, // the MC + his plus-one
+    { id: "bahareh", sels: [".g-bahareh"],              homes: [608], solo: 1 } // Irene's mom, walks in alone
+  ];
+  var MOUSE_ARRIVALS = [ // the little ones — walk in last, only when they're visiting this session
+    { sel: ".g-elisabeth", home: 578 }, { sel: ".g-felix", home: 636 }
+  ];
+  var trickleTimer = null;
+  function reducedMotionGuests() { return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
+  function clearTrickleTimer() { if (trickleTimer) { clearTimeout(trickleTimer); trickleTimer = null; } }
+  // walk ONE figure in through the gate: grant .arrived (so it shows + dances), set its per-figure
+  // walk distance, and ride the one-shot .walking / group .duo-walking so the CSS crosses it from
+  // the gate to home (cleared on animationend below). Reduced motion just grants .arrived (no walk).
+  function walkFigureIn(g, sel, home) {
+    var el = g.querySelector(sel);
+    if (!el) return;
+    var walk = el.querySelector(".guest-walk");
+    if (!walk) { el.classList.add("arrived"); return; }
+    if (reducedMotionGuests()) { el.classList.add("arrived"); return; } // reduced motion: appear in place (still staggered by the timer)
+    walk.style.setProperty("--walk-x", (GATE_X - home) + "px");
+    g.classList.add("duo-walking");
+    el.classList.add("arrived");
+    el.classList.remove("walking"); void walk.getBoundingClientRect(); el.classList.add("walking"); // restart the one-shot cleanly on a re-walk
+  }
+  // arrive a whole entry (a duo or the solo) — every member walks in together
+  function arriveEntry(entry) {
+    var g = document.getElementById("garden-guests");
+    if (!g) return;
+    for (var i = 0; i < entry.sels.length; i++) walkFigureIn(g, entry.sels[i], entry.homes[i]);
+  }
+  // the full roster this party (the duos + the solo, plus the mouses only if they're visiting)
+  function fullArrivals() {
+    var g = document.getElementById("garden-guests");
+    var list = ARRIVALS.slice();
+    if (g && g.classList.contains("mouses-visiting")) {
+      MOUSE_ARRIVALS.forEach(function (m) { list.push({ id: "mouse", sels: [m.sel], homes: [m.home] }); });
+    }
+    return list;
+  }
+  function everyoneArrived(g) { // has the whole current roster landed? (drops .trickle when so)
+    var list = fullArrivals();
+    for (var i = 0; i < list.length; i++) {
+      for (var j = 0; j < list[i].sels.length; j++) {
+        var el = g.querySelector(list[i].sels[j]);
+        if (el && !el.classList.contains("arrived")) return false;
+      }
+    }
+    return true;
+  }
+  // self-rescheduling trickle: bring in the NEXT not-yet-arrived entry, then re-arm. Party-gated
+  // (guestsWanted covers party-lit + in-garden + tab-visible) and crickets-safe (also pauses while
+  // the window is merely unfocused) so nothing accumulates in a background tab; picks back up on
+  // return. Once the whole roster's in, it stops and drops .trickle (the floor's full).
+  function armTrickle(ms) {
+    if (trickleTimer) return; // one timer only (idempotent under storm-clicks / re-entry)
+    trickleTimer = setTimeout(function () {
+      trickleTimer = null;
+      var g = document.getElementById("garden-guests");
+      if (!g) return;
+      if (!guestsWanted() || document.hidden || !document.hasFocus()) { armTrickle(1400); return; } // paused (hidden/unfocused/off-floor) — hold, don't advance; re-check soon
+      if (window.__syncMousesVisitingClass) window.__syncMousesVisitingClass(); // in case the visiting roll flipped
+      var list = fullArrivals(), next = null;
+      for (var i = 0; i < list.length && !next; i++) {
+        for (var j = 0; j < list[i].sels.length; j++) {
+          var el = g.querySelector(list[i].sels[j]);
+          if (el && !el.classList.contains("arrived")) { next = list[i]; break; }
+        }
+      }
+      if (!next) { g.classList.remove("trickle"); return; } // everyone's in — floor full, stop the trickle
+      arriveEntry(next);
+      if (everyoneArrived(g)) { g.classList.remove("trickle"); return; } // that was the last one
+      armTrickle(4500 + Math.random() * 1000); // ~5s between arrivals (4.5–5.5s jitter so it's not robotic) → the floor fills over ~30s
+    }, ms);
+  }
+  function stopTrickle() { clearTrickleTimer(); var g = document.getElementById("garden-guests"); if (g) g.classList.remove("trickle"); }
+  // grant EVERYONE .arrived at once + drop .trickle (the instant-fill path: summon / already-full
+  // re-entry / reduced-motion catch-up). No walk — a full floor appears together.
+  function fillAllNow(g) {
+    stopTrickle();
+    var list = ARRIVALS.slice(); MOUSE_ARRIVALS.forEach(function (m) { list.push({ sels: [m.sel] }); });
+    for (var i = 0; i < list.length; i++) for (var j = 0; j < list[i].sels.length; j++) {
+      var el = g.querySelector(list[i].sels[j]); if (el) el.classList.add("arrived");
+    }
+  }
+  function slideGuestsIn() { // INSTANT arrival: the whole floor crashes in at once (summon / test hook)
     var g = document.getElementById("garden-guests");
     if (!g) return;
     if (window.__syncMousesVisitingClass) window.__syncMousesVisitingClass(); // gate the mouses' party figures on this session's visiting roll (re-sync in case it was flipped after load)
     g.classList.add("guests-in");
-    g.classList.remove("guests-arriving"); void g.getBBox; g.classList.add("guests-arriving"); // restart the one-shot cleanly on a re-arm
+    fillAllNow(g); // everyone present at once (drops .trickle) — tests + the roster/album rely on this
+    g.classList.remove("guests-arriving"); void g.getBBox; g.classList.add("guests-arriving"); // restart the one-shot wing-slide cleanly on a re-arm
     startHostSolo(); // the hosts are on the floor — begin their solo⇄together cycle
     syncCrowdClear(); // fan the generic dancers out to the edges/back so they don't overlap the named crowd
+  }
+  function beginTrickle() { // GRADUAL arrival: open small (hosts only), then walk the duos in one per beat
+    var g = document.getElementById("garden-guests");
+    if (!g) return;
+    if (window.__syncMousesVisitingClass) window.__syncMousesVisitingClass();
+    g.classList.add("guests-in", "trickle"); // hosts show (never gated); everyone else waits for .arrived
+    startHostSolo();
+    syncCrowdClear();
+    armTrickle(3200 + Math.random() * 2000); // the first duo strolls in a few seconds after the party lights, then ~one every 5s
   }
   function updateGardenGuests() {
     var g = document.getElementById("garden-guests");
     if (!g) return;
     if (guestsWanted()) {
-      if (guestsArrived) { if (window.__syncMousesVisitingClass) window.__syncMousesVisitingClass(); g.classList.add("guests-in"); startHostSolo(); syncCrowdClear(); return; } // already crashed the party — just show them (no re-slide) + resume the hosts' cycle + fan the generic dancers out
-      // first time this party: arrive a beat after it lights (single timer, cleared on party-off)
-      if (!guestArriveTimer) guestArriveTimer = setTimeout(function () {
-        guestArriveTimer = null;
-        if (!guestsWanted()) return; // party died / left the room / tab hidden during the wait — abort
-        guestsArrived = true;
-        slideGuestsIn();
-      }, 2200);
+      if (guestsArrived) { // party already crashed — restore whatever's landed (no re-fill), resume the fill if it was mid-trickle
+        if (window.__syncMousesVisitingClass) window.__syncMousesVisitingClass();
+        g.classList.add("guests-in");
+        startHostSolo(); syncCrowdClear();
+        if (g.classList.contains("trickle") && !everyoneArrived(g)) armTrickle(2000 + Math.random() * 2000); // pick the trickle back up on return
+        else g.classList.remove("trickle");
+        return;
+      }
+      // first time this party: open small, then trickle everyone in over ~1–2 min
+      guestsArrived = true;
+      beginTrickle();
     } else {
       clearGuestArriveTimer();
+      clearTrickleTimer(); // off the floor → pause the trickle (kept .arrived state; nothing spawned to pile up)
       stopHostSolo(); // off the floor → stop the hosts' solo cycle + drop its class
-      g.classList.remove("guests-in", "guests-arriving"); // off the floor → drop all dance/arrival animation (nothing strands)
+      g.classList.remove("guests-in", "guests-arriving", "duo-walking"); // off the floor → drop all dance/arrival animation (nothing strands)
       syncCrowdClear(); // guests gone → the generic dancers glide back to their normal spots
     }
   }
   window.__updateGardenGuests = updateGardenGuests;
+  function clearAllArrived(g) { // wipe every per-figure arrival flag + walk distance (teardown)
+    if (!g) return;
+    var walkers = g.querySelectorAll(".guest.arrived, .guest.walking");
+    for (var i = 0; i < walkers.length; i++) { walkers[i].classList.remove("arrived", "walking"); }
+    var walks = g.querySelectorAll(".guest-walk");
+    for (var k = 0; k < walks.length; k++) walks[k].style.removeProperty("--walk-x");
+  }
   function clearGardenGuests() { // hard teardown: goToStage room-leave + reset
     clearGuestArriveTimer();
+    stopTrickle();
     stopHostSolo();
     if (window.__gardenMomentsTeardown) window.__gardenMomentsTeardown(); // end any live toast / first dance (restores UV) so nothing strands
     var g = document.getElementById("garden-guests");
-    if (g) g.classList.remove("guests-in", "guests-arriving");
+    if (g) { g.classList.remove("guests-in", "guests-arriving", "duo-walking"); clearAllArrived(g); }
     syncCrowdClear(); // teardown → the generic dancers return to their normal spots
   }
   window.__clearGardenGuests = clearGardenGuests;
-  function resetGuestsArrival() { guestsArrived = false; clearGardenGuests(); } // party-off: forget the latch so the next party re-crashes with a fresh slide
+  function resetGuestsArrival() { guestsArrived = false; clearGardenGuests(); } // party-off: forget the latch so the next party re-opens small + re-trickles
   window.__resetGuestsArrival = resetGuestsArrival;
   window.__guestsIn = function () { var g = document.getElementById("garden-guests"); return !!(g && g.classList.contains("guests-in")); };
-  window.__summonGuests = function () { // test/console hook: crash the floor NOW (skip the arrival delay), if the party wants them
+  window.__summonGuests = function () { // test/console hook: crash the WHOLE floor NOW (skip the trickle), if the party wants them
     clearGuestArriveTimer();
     if (!guestsWanted()) return false;
     guestsArrived = true; slideGuestsIn();
     return true;
   };
   window.__dismissGuests = function () { guestsArrived = false; clearGardenGuests(); }; // send them off without ending the party
+  // walk a specific duo (or the solo Bahareh) in through the gate NOW — the autonomous entrance
+  // moment's manual trigger. Lights the party + heads to the garden if needed. If a duo's already
+  // on the floor it re-enters tastefully (drop .arrived, re-walk from the gate). Returns the id.
+  window.__duoArrive = function (id) {
+    var g = document.getElementById("garden-guests");
+    if (!g) return null;
+    var entry = null;
+    if (id) { for (var i = 0; i < ARRIVALS.length; i++) if (ARRIVALS[i].id === id) { entry = ARRIVALS[i]; break; } }
+    if (!entry) entry = ARRIVALS[Math.floor(Math.random() * ARRIVALS.length)]; // no/unknown id → a random duo
+    if (!guestsWanted()) return null; // party dark / not in the garden / tab hidden — nothing to arrive onto
+    guestsArrived = true;
+    if (!g.classList.contains("guests-in")) { g.classList.add("guests-in", "trickle"); startHostSolo(); syncCrowdClear(); if (window.__syncMousesVisitingClass) window.__syncMousesVisitingClass(); }
+    // re-enter tastefully: drop the members' .arrived so the walk restarts from the gate
+    for (var s = 0; s < entry.sels.length; s++) { var el = g.querySelector(entry.sels[s]); if (el) el.classList.remove("arrived"); }
+    arriveEntry(entry);
+    if (everyoneArrived(g)) g.classList.remove("trickle"); // manual arrivals can complete the floor
+    return entry.id;
+  };
   (function wireGuestArrivalCleanup() { // drop the one-shot .guests-arriving once the slide finishes (a re-arm re-adds it)
     var g = document.getElementById("garden-guests");
     if (!g) return;
     g.addEventListener("animationend", function (e) {
       if (e.animationName === "guest-arrive-l" || e.animationName === "guest-arrive-r" || e.animationName === "guest-arrive-c") g.classList.remove("guests-arriving");
+      if (e.animationName === "guest-gate-walk") { // a figure finished its gate walk — clear the one-shot (it keeps .arrived + its dance)
+        var fig = e.target.closest ? e.target.closest(".guest") : null;
+        if (fig) fig.classList.remove("walking");
+        if (!g.querySelector(".guest.walking")) g.classList.remove("duo-walking"); // no walkers left → drop the group one-shot flag
+      }
     });
   })();
   // a hidden tab drops the crashers (no paused-animation pile-up); they re-appear on return
@@ -56984,6 +57288,26 @@ function spawnDustMote(container) {
     return was;
   };
   window.aligoli = window.guests; // alias
+
+  // arrive("ali"|"spencer"|"alireza"|"farhang"|"bahareh") — a duo (or the single Bahareh) STROLLS
+  // IN through the garden gate onto the dance floor: the entrance moment. arrive() with no/unknown
+  // id walks in a random duo. Lights the party + heads to the garden if it's dark (matches guests()/
+  // chase()), then walks the duo in a beat later once the room's settled. The duos also trickle in
+  // on their own, one per beat, as the party fills up — this is the manual trigger for the same move.
+  var ARRIVE_LABEL = {
+    ali: "Ali & Goli", spencer: "Spencer & Jay", alireza: "Alireza & Mahzad",
+    farhang: "Farhang & Lauren", bahareh: "Bahareh"
+  };
+  window.arrive = function (id) {
+    if (typeof id === "string") id = id.toLowerCase().trim();
+    if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
+    if (window.goToStage) window.goToStage("garden");
+    setTimeout(function () { // let goToStage settle the room first (matches guests()/chase())
+      var landed = window.__duoArrive ? window.__duoArrive(id) : null;
+      if (window.echo) window.echo(landed ? ("🚪 " + (ARRIVE_LABEL[landed] || landed) + " stroll in through the garden gate onto the dance floor.") : "the floor's dark — run party(true) first.");
+    }, 80);
+    return null;
+  };
 
   // ── ROSTER OVERLAY ("who's here") ────────────────────────────────────────────
   // A tidy legend of everyone currently on the garden-party floor — name · role, the

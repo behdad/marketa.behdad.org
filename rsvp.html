@@ -171,6 +171,8 @@ footer{margin-top:2.6rem}
    the .spotlighted pick is exempt so it dances on alone (the inverse of the old freeze-the-pick). */
 #garden-guests.solo-spot .guest:not(.spotlighted) .guest-walk,
 #garden-guests.solo-spot .guest:not(.spotlighted) .guest-walk *{animation-play-state:paused !important}
+/* the generic party crowd (a separate layer) freezes too, so ONLY the picked person keeps dancing */
+#trip-melt-dancers.solo-frozen, #trip-melt-dancers.solo-frozen *{animation-play-state:paused !important}
 .guest-spot-arrow{animation:guest-spot-bob .7s ease-in-out infinite}
 .guest-spot-arrow path{filter:drop-shadow(0 1px 1px rgba(69,58,49,.35))}
 @keyframes guest-spot-bob{0%,100%{translate:0 0}50%{translate:0 -6px}} /* the translate PROPERTY composes with any transform attr */
@@ -19972,7 +19974,7 @@ var T = {
     role_bdad: "Behdad's dad", role_bmom: "Behdad's mom", role_bril: "Behdad's brother-in-law",
     role_mdad: "Markéta's dad", role_mmom: "Markéta's mom", role_mgrandma: "Markéta's grandmother",
     role_mniece: "Markéta's niece", role_mnephew: "Markéta's nephew", role_msisspouse: "Markéta's brother-in-law", role_qa: "QA lead",
-    role_hosts: "the hosts", role_dj: "DJ", // roster-only roles (the couple share one line; the DJ names himself)
+    role_hosts: "the hosts", role_bride: "the bride", role_groom: "the groom", role_dj: "DJ", // roster-only roles (the couple split into bride/groom rows; the DJ names himself)
     roster_title: "who's who?", roster_empty: "The floor's empty — throw the party first.", roster_pick_hint: "tap to point them out on the floor", // "who's who?" roster overlay
     tip_chaharshanbe: "<em>Chaharshanbe Suri</em> (<bdi>چهارشنبه‌سوری</bdi>), the fire you leap",
     tip_sizdah: "<em>Sizdah Bedar</em> (<bdi>سیزده‌بدر</bdi>), nowruz's thirteenth day, spent outdoors",
@@ -20438,7 +20440,7 @@ var T = {
     kbd_space: "play / pause the music or video",
     kbd_esc: "go back",
     kbd_f: "fullscreen",
-    kbd_watch: "trailer",
+    kbd_watch: "who’s who? (party roster)",
     kbd_autoplay: "autoplay (loops on its own)",
     autoplay_badge: "auto",
     kbd_party: "throw the garden party",
@@ -20503,7 +20505,7 @@ var T = {
     phone_dialer_title: "contacts",
     dial_call: "Call",
     dial_fam_tehran: "behdad’s family",
-    dial_fam_california: "patricia & the kids",
+    dial_fam_california: "patty & the kids",
     dial_pick_title: "who are we calling?",
     dial_fam_prague: "markéta’s parents",
     dial_fam_lueb: "madla &amp; family",
@@ -20555,7 +20557,7 @@ var T = {
     role_bdad: "Behdadův táta", role_bmom: "Behdadova máma", role_bril: "Behdadův švagr",
     role_mdad: "Markétin táta", role_mmom: "Markétina máma", role_mgrandma: "Markétina babička",
     role_mniece: "Markétina neteř", role_mnephew: "Markétin synovec", role_msisspouse: "Markétin švagr", role_qa: "vedoucí QA",
-    role_hosts: "hostitelé", role_dj: "DJ", // role sezname (pár má jeden řádek; DJ se jmenuje sám)
+    role_hosts: "hostitelé", role_bride: "nevěsta", role_groom: "ženich", role_dj: "DJ", // role sezname (pár rozdělen na nevěstu/ženicha; DJ se jmenuje sám)
     roster_title: "kdo je kdo?", roster_empty: "Parket je prázdný — nejdřív rozjeď párty.", roster_pick_hint: "klepnutím ho ukážeš na parketu", // roster překryv „kdo je kdo?“
     tip_chaharshanbe: "<em>Čaháršanbe surí</em> (<bdi>چهارشنبه‌سوری</bdi>), oheň, který se přeskakuje",
     tip_sizdah: "<em>Sizdah Bedar</em> (<bdi>سیزده‌بدر</bdi>), třináctý den nourúzu, strávený v přírodě",
@@ -21015,7 +21017,7 @@ var T = {
     kbd_space: "přehrát / pozastavit hudbu nebo video",
     kbd_esc: "jít zpět",
     kbd_f: "celá obrazovka",
-    kbd_watch: "upoutávka",
+    kbd_watch: "kdo je kdo? (roster párty)",
     kbd_autoplay: "autoplay (běží samo dokola)",
     autoplay_badge: "auto",
     kbd_party: "spustit zahradní večírek",
@@ -21079,7 +21081,7 @@ var T = {
     phone_dialer_title: "kontakty",
     dial_call: "Volat",
     dial_fam_tehran: "behdadova rodina",
-    dial_fam_california: "patricia a děti",
+    dial_fam_california: "patty a děti",
     dial_pick_title: "komu voláme?",
     dial_fam_prague: "markétini rodiče",
     dial_fam_lueb: "madla a rodina",
@@ -53405,9 +53407,9 @@ function spawnDustMote(container) {
       if (window.blacklight) window.blacklight(!window.blacklight()); // toggle the UV / blacklight wash (same as uv()/blacklight())
     } else if (e.key === "w" || e.key === "W") {
       e.preventDefault();
-      // 'w' → Watch the loft: start the cinematic, or stop it if it's already running
-      if (window.__cinematic) { if (window.__stopCinematic) window.__stopCinematic(); }
-      else if (window.__startCinematic) window.__startCinematic();
+      // 'w' → show the "who's who?" roster (lights the party + heads to the garden if needed). The
+      // Trailer is started from its button, not a key.
+      if (window.roster) window.roster(true);
     } else if (e.key === "a" || e.key === "A") {
       e.preventDefault();
       // 'a' → toggle autoplay (attract mode): the self-driving BBQ loop. A capture-phase
@@ -60186,10 +60188,11 @@ function spawnDustMote(container) {
       if (panel) panel.classList.remove("spot-hide"); // bring the roster back (it was hidden on a small screen during the flash)
       var g = document.getElementById("garden-guests");
       if (g) {
-        g.classList.remove("solo-spot"); // unfreeze the crowd
+        g.classList.remove("solo-spot"); // unfreeze the named guests
         var lit = g.querySelectorAll(".guest.spotlighted");
         for (var i = 0; i < lit.length; i++) lit[i].classList.remove("spotlighted");
       }
+      var tdC = document.getElementById("trip-melt-dancers"); if (tdC) tdC.classList.remove("solo-frozen"); // unfreeze the generic crowd
       // arrows live on the picked guest's group OR on the DJ booth / photographer group (crew) —
       // sweep the whole strip so a crew arrow doesn't strand outside #garden-guests
       var scope = document.getElementById("loft-game-strip") || document;
@@ -60243,7 +60246,8 @@ function spawnDustMote(container) {
         el.appendChild(makeSpotArrow(0, 147)); // tip just above the tallest cap (guest group origin at x=0)
       });
       if (any) {
-        g.classList.add("solo-spot"); // freeze everyone but the pick (the .spotlighted one dances on)
+        g.classList.add("solo-spot"); // freeze the named guests but the pick (the .spotlighted one dances on)
+        var tdS = document.getElementById("trip-melt-dancers"); if (tdS) tdS.classList.add("solo-frozen"); // + freeze the generic crowd layer
         // on a small screen the tall roster would cover the floor — hide it (not close) for the flash,
         // then it returns; on a big screen it's a compact top banner, so leave it up
         if (open && smallScreen()) panel.classList.add("spot-hide");
@@ -60302,13 +60306,16 @@ function spawnDustMote(container) {
       order.forEach(function (grp) {
         ROSTER.forEach(function (r) {
           if (r.grp !== grp || !present(r.sel)) return;
+          if (grp === "hosts") { // split the couple into two rows — the BRIDE first, then the groom — each singling out their own figure
+            people.push({ name: "Markéta", role: tipText("role_bride"), sels: [".g-marketa"] });
+            people.push({ name: "Behdad",  role: tipText("role_groom"), sels: [".g-behdad"] });
+            return;
+          }
           var nm = r.name || (r.sel === "__dj" ? djName() : "");
-          // which garden figure(s)/crew a row can single out: the hosts are a pair; any ".g-*" guest
-          // is itself; the DJ + photographer (crew) get an arrow over their booth / their figure and
-          // freeze the crowd around them (they don't dance). Kids with a non-".g-"/non-crew sel
-          // (#garden-kid-*) still aren't pickable.
-          var sels = grp === "hosts" ? [".g-behdad", ".g-marketa"]
-                   : (r.sel.charAt(0) === "." ? [r.sel]
+          // which garden figure(s)/crew a row can single out: any ".g-*" guest is itself; the DJ +
+          // photographer (crew) get an arrow over their booth / their figure and freeze the crowd
+          // around them (they don't dance). Kids with a non-".g-"/non-crew sel (#garden-kid-*) aren't pickable.
+          var sels = (r.sel.charAt(0) === "." ? [r.sel]
                    : ((r.sel === "__dj" || r.sel === "#garden-photog-hit") ? [r.sel] : null));
           people.push({ name: nm, role: tipText(r.roleKey), sels: sels });
         });

@@ -38524,9 +38524,7 @@ async def localfont(name):
           : others.slice(0, -1).join(", ") + " " + tr("album_cap_and") + " " + others[others.length - 1];
         parts.push(tr("album_cap_with") + " " + subj); // "with " / "s " (CS)
       }
-      var vibe = albumVibeLabel(rec.dance);
-      if (vibe) parts.push(vibe);
-      return { line: parts.join(" · "), time: albumFmtTime(rec.t) };
+      return { line: parts.join(" · "), time: albumFmtTime(rec.t) }; // no dance/song name — just who's in the shot + time
     }
     // Which live .g-NAME group(s) hold each roster key's REAL figure art (mirrors the ROSTER
     // `sel`s in the roster panel closure, but that ROSTER isn't in scope here). The hosts are
@@ -53083,6 +53081,23 @@ function spawnDustMote(container) {
     if (window.__photoFreeze) { window.__photoFreeze = false; if (window.__syncDanceFreeze) window.__syncDanceFreeze(); }
   };
   window.__photoMomentNow = function () { if (photoFreezeTimer) { clearTimeout(photoFreezeTimer); photoFreezeTimer = null; } startPhotoMoment(); }; // console/test: trigger one now
+  // ── ASPEN AUTO-SNAPS FOR THE ALBUM ─────────────────────────────────────────────
+  // Aspen quietly grabs keepsakes for the album OFTEN — a shot every ~14-22s while the party's on,
+  // WITHOUT freezing the floor (the rare ~15s photo-moment freeze is a separate, bigger event).
+  // Party-gated + crickets-safe (skips while hidden/unfocused, and while a freeze is already
+  // snapping its own). The album's drop-oldest cap keeps it fresh; each shot flashes + rotates subject.
+  var albumSnapTimer = null;
+  function albumSnapTick() {
+    albumSnapTimer = null;
+    if (!window.__gardenPartyOn) return;                 // party ended — stop
+    if (!document.hidden && document.hasFocus() && !window.__photoFreeze && gardenPartyActive()) {
+      fireGardenFlash();
+      if (window.__albumAdd) window.__albumAdd();         // a keepsake straight into the album (rotates subject; capped)
+    }
+    albumSnapTimer = setTimeout(albumSnapTick, 14000 + Math.random() * 8000); // ~14-22s
+  }
+  window.__startAlbumSnaps = function () { if (!albumSnapTimer && window.__gardenPartyOn) albumSnapTimer = setTimeout(albumSnapTick, 7000 + Math.random() * 6000); }; // first keepsake ~7-13s into the party
+  window.__stopAlbumSnaps = function () { if (albumSnapTimer) { clearTimeout(albumSnapTimer); albumSnapTimer = null; } };
   // ── THE WEDDING ALBUM — Aspen's shots, kept as keepsake "polaroids" ────────────
   // Aspen already flashes through the auto photo-moments and when the visitor taps her; those
   // shots used to go nowhere. Now each captured shot records a small STATE SNAPSHOT — NOT a pixel
@@ -53442,6 +53457,7 @@ function spawnDustMote(container) {
       startDiscoStepper(); // begin the once-a-second disco-pool hops (idempotent; self-gates on gardenPartyActive)
       startGardenFlash(); // begin the front-left guest's occasional soft camera flash (idempotent; self-gates on gardenPartyActive)
       if (window.__startPhotoMoment) window.__startPhotoMoment(); // schedule the occasional ~15s photo-freeze moments
+      if (window.__startAlbumSnaps) window.__startAlbumSnaps(); // Aspen grabs album keepsakes often (~14-22s), no freeze
       startGardenChaseDriver(); // begin the godkids' occasional garden chase (idempotent; self-gates on gardenPartyActive + not-busy)
       updateGardenGuests(); // arm Ali + Goli's arrival (they crash the floor a beat after the party lights; self-gates on garden + visible)
       if (partyDancers) { // the colorful dancers rise in the garden and hold for the party
@@ -53477,6 +53493,7 @@ function spawnDustMote(container) {
       stopDiscoStepper();              // party over — kill the disco-pool stepper + drop the pools' inline styles
       stopGardenFlash();               // party over — kill the camera-flash timer + drop any in-flight flash
       if (window.__stopPhotoMoment) window.__stopPhotoMoment(); // party over — end any photo-freeze + its timer
+      if (window.__stopAlbumSnaps) window.__stopAlbumSnaps(); // party over — stop Aspen's auto-snaps
       stopGardenChase();               // party over — kill the chase timer + reset every runner
       resetGuestsArrival();            // party over — clear Ali + Goli and forget the arrival latch (next party re-crashes with a fresh slide)
       if (partyDancers) {

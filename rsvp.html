@@ -40524,7 +40524,7 @@ async def localfont(name):
       if (window.__albumForceMode) mode = window.__albumForceMode; // test hook: force a composition mode
       svg.setAttribute("data-mode", mode); // (debug/testing aid — which composition this photo used)
       var usableW = W - 24;         // keep everyone clear of the polaroid's edges
-      var BIG = 1.6;                // owner's call: figures 60% larger (scaling the row-width budget too so the fit-cap doesn't shrink them back; wide rows just crop a little at the frame edges, hosts stay centred)
+      var BIG = 1.3;                // figures larger, but rows stay WITHIN the frame (no crop) — the close packing (small GAP) is what lets them grow; BIG lifts the ceiling for small groups
       var CX = W / 2;
 
       // Helper: place a set of {clone, base half-width} entries in ONE grounded row, hosts centred,
@@ -40535,13 +40535,13 @@ async def localfont(name):
         var m = entries.length;
         if (!m) return { scale: baseScale, slots: [] };
         stretch = stretch || 1.1;                          // figures are stretched ~1.1× horizontally
-        // gaps: a little breathing room between neighbours (in local units, pre-scale)
-        var GAP = 6;
+        // gaps: pack neighbours CLOSE (small gap) so figures can be larger without overflowing/cropping
+        var GAP = 1.5;
         // Effective half-width = the true drawn extent (×horizontal stretch) PLUS a lean-sweep pad: a
         // figure tilted a few degrees about its chest swings its head sideways by ≈height·sin(lean), and
         // that sweep must be reserved or leaning neighbours collide at the shoulders/heads. LEAN_PAD
         // covers the max applied lean (~±6°: 182·sin6° ≈ 19 local units of head travel).
-        var LEAN_PAD = 12;
+        var LEAN_PAD = 7;
         function eh(e) { return e.halfW * stretch + LEAN_PAD; }
         // sum of full widths + gaps at scale 1, then find the largest scale that fits rowW.
         var sumHalf = 0; entries.forEach(function (e) { sumHalf += eh(e); });
@@ -40574,7 +40574,7 @@ async def localfont(name):
         var others2 = pick.filter(function (e) { return hostClones.indexOf(e) < 0; });
         var ord = hostClones.concat(others2);
         var big = (pick.length <= 2 ? 1.15 : 0.98) * BIG;         // very large — this is the "lean-in" shot
-        var row = layoutRow(ord, usableW * BIG, big);
+        var row = layoutRow(ord, usableW, big);
         // Crop so head-tops land high (~y30): fy = headTop + fullHeight·scale. Feet fall below the frame.
         var fyC = 30 + (LOCAL_FOOT - LOCAL_TOP) * row.scale;
         row.slots.forEach(function (s) {
@@ -40591,7 +40591,7 @@ async def localfont(name):
         // depth, so heads stagger at two heights like a real group-photo huddle. Because the single row
         // is already horizontally collision-free, raising a subset can never introduce an overlap (it
         // only reduces vertical overlap). The hosts + the innermost guest(s) stay grounded up front.
-        var row = layoutRow(rowOrder, usableW * BIG, (total <= 4 ? 0.66 : 0.58) * BIG);
+        var row = layoutRow(rowOrder, usableW, (total <= 4 ? 0.66 : 0.58) * BIG);
         var frontFootY = Math.min(H - 2, Math.round((H + (LOCAL_FOOT - LOCAL_TOP) * row.scale) / 2) + 10);
         var lift = (LOCAL_FOOT - LOCAL_TOP) * row.scale * 0.34; // raise the back tier ~a third of a body up
         var slotList = row.slots, nslot = slotList.length;
@@ -40614,7 +40614,7 @@ async def localfont(name):
           }
         });
       } else { // "line" — the classic grounded spread, everyone full-body on the garden band
-        var row = layoutRow(rowOrder, usableW * BIG, (total <= 2 ? 0.78 : (total <= 4 ? 0.68 : 0.60)) * BIG);
+        var row = layoutRow(rowOrder, usableW, (total <= 2 ? 0.78 : (total <= 4 ? 0.68 : 0.60)) * BIG);
         var footY = Math.min(H - 4, Math.round((H + (LOCAL_FOOT - LOCAL_TOP) * row.scale) / 2) + 8);
         row.slots.forEach(function (s) {
           var frac = row.slots.length > 1 ? (row.slots.indexOf(s) / (row.slots.length - 1)) * 2 - 1 : 0;

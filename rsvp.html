@@ -1578,24 +1578,17 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 /* the walk: cross from the gate (translateX(--walk-x)) to home (0) while bobbing with each step.
    translate3d keeps X (the cross) and the tiny Y step-bob in one transform so neither clobbers
    the other. --walk-x defaults to 0 so a stray class add is a harmless no-op. */
-#garden-guests.duo-walking .g-ali.walking .guest-walk,
-#garden-guests.duo-walking .g-goli.walking .guest-walk,
-#garden-guests.duo-walking .g-spencer.walking .guest-walk,
-#garden-guests.duo-walking .g-jay.walking .guest-walk,
-#garden-guests.duo-walking .g-alireza.walking .guest-walk,
-#garden-guests.duo-walking .g-mahzad.walking .guest-walk,
-#garden-guests.duo-walking .g-farhang.walking .guest-walk,
-#garden-guests.duo-walking .g-lauren.walking .guest-walk,
-#garden-guests.duo-walking .g-bahareh.walking .guest-walk,
-#garden-guests.duo-walking .g-patricia.walking .guest-walk,
-#garden-guests.duo-walking .g-patricia-son.walking .guest-walk,
-#garden-guests.duo-walking .g-patricia-daughter.walking .guest-walk{animation:guest-gate-walk 2.2s cubic-bezier(.33,0,.5,1) both}
+/* generic: ANY named guest that's mid-walk rides the gate-walk (covers every arrival incl. the
+   Lübeck + Hamid/Athena figures, and any future guest — no per-name list to keep in sync) */
+#garden-guests.duo-walking .guest.walking .guest-walk{animation:guest-gate-walk 2.2s cubic-bezier(.33,0,.5,1) both}
 /* the partner steps in a beat behind so they don't march in lockstep (the two family kids
    trail their mom a touch, staggered so all three don't stride in together) */
 #garden-guests.duo-walking .g-goli.walking .guest-walk,
 #garden-guests.duo-walking .g-jay.walking .guest-walk,
 #garden-guests.duo-walking .g-mahzad.walking .guest-walk,
 #garden-guests.duo-walking .g-lauren.walking .guest-walk,
+#garden-guests.duo-walking .g-robert.walking .guest-walk,
+#garden-guests.duo-walking .g-athena.walking .guest-walk,
 #garden-guests.duo-walking .g-patricia-son.walking .guest-walk{animation-delay:.28s}
 #garden-guests.duo-walking .g-patricia-daughter.walking .guest-walk{animation-delay:.5s}
 @keyframes guest-gate-walk{
@@ -1610,19 +1603,21 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 }
 @media (prefers-reduced-motion: reduce){
   /* reduced motion: no walk — they simply appear at their home spot (matches the crashers) */
-  #garden-guests.duo-walking .g-ali.walking .guest-walk,
-  #garden-guests.duo-walking .g-goli.walking .guest-walk,
-  #garden-guests.duo-walking .g-spencer.walking .guest-walk,
-  #garden-guests.duo-walking .g-jay.walking .guest-walk,
-  #garden-guests.duo-walking .g-alireza.walking .guest-walk,
-  #garden-guests.duo-walking .g-mahzad.walking .guest-walk,
-  #garden-guests.duo-walking .g-farhang.walking .guest-walk,
-  #garden-guests.duo-walking .g-lauren.walking .guest-walk,
-  #garden-guests.duo-walking .g-bahareh.walking .guest-walk,
-  #garden-guests.duo-walking .g-patricia.walking .guest-walk,
-  #garden-guests.duo-walking .g-patricia-son.walking .guest-walk,
-  #garden-guests.duo-walking .g-patricia-daughter.walking .guest-walk{animation:none}
+  #garden-guests.duo-walking .guest.walking .guest-walk{animation:none}
 }
+/* ── REVOLVING DOOR: a guest strolls back OUT to the gate, then drops .arrived (→ hidden), making
+   room for another to walk in. Same per-figure --walk-x distance, played in reverse + fading out.
+   Standalone (no .duo-walking dep) one-shot .leaving; JS drops .arrived+.leaving on animationend. */
+#garden-guests .guest.leaving .guest-walk{animation:guest-gate-leave 2s cubic-bezier(.4,0,.55,1) both}
+@keyframes guest-gate-leave{
+  0%{transform:translate3d(0,0,0); opacity:1}
+  18%{transform:translate3d(calc(var(--walk-x,0) * .14),-3px,0)}
+  40%{transform:translate3d(calc(var(--walk-x,0) * .36),0,0)}
+  62%{transform:translate3d(calc(var(--walk-x,0) * .58),-3px,0)}
+  84%{transform:translate3d(calc(var(--walk-x,0) * .82),0,0); opacity:1}
+  100%{transform:translate3d(var(--walk-x,0),0,0); opacity:0}
+}
+@media (prefers-reduced-motion: reduce){ #garden-guests .guest.leaving .guest-walk{animation:none} }
 /* ── CRASHERS are TAPPABLE (only while on the floor) ──────────────────────────
    Each crasher gets a signature one-shot "flare" on tap (see the guest-tap wiring in JS):
    Ali flips his long beard + a cheeky bounce, Goli snaps a vogue turn, Spencer ducks the
@@ -53833,6 +53828,50 @@ function spawnDustMote(container) {
     if (!g) return;
     for (var i = 0; i < entry.sels.length; i++) walkFigureIn(g, entry.sels[i], entry.homes[i]);
   }
+  // ── REVOLVING DOOR ──────────────────────────────────────────────────────────
+  // The floor holds at most GUEST_CAP guest UNITS (a couple/family/solo = one unit) at a time; the
+  // rest wait off-scene and rotate through — every so often 1–2 present units stroll OUT the gate and
+  // 1–2 waiting units stroll IN, so a big guest list never crowds the dance floor. Hosts + crew never
+  // rotate (they aren't ARRIVALS units). The whole thing rides the same party/focus/visibility gate
+  // as the trickle, so nothing runs (or piles up) in a hidden/unfocused tab.
+  var GUEST_CAP = 5;
+  var recentArrivals = []; // unit keys that JUST walked in — don't send them straight back out
+  function unitKey(u) { return u.id || u.sels[0]; }
+  function unitIsPresent(g, u) { var el = g.querySelector(u.sels[0]); return !!(el && el.classList.contains("arrived") && !el.classList.contains("leaving")); }
+  function unitIsWaiting(g, u) { var el = g.querySelector(u.sels[0]); return !!(el && !el.classList.contains("arrived")); }
+  function presentUnits(g, list) { return list.filter(function (u) { return unitIsPresent(g, u); }); }
+  function waitingUnits(g, list) { return list.filter(function (u) { return unitIsWaiting(g, u); }); }
+  function noteArrival(u) { recentArrivals.push(unitKey(u)); while (recentArrivals.length > 3) recentArrivals.shift(); }
+  function shuffleArr(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  // walk ONE figure back OUT to the gate; JS drops .arrived on animationend (→ hidden by .trickle)
+  function walkFigureOut(g, sel, home) {
+    var el = g.querySelector(sel);
+    if (!el || !el.classList.contains("arrived")) return;
+    var walk = el.querySelector(".guest-walk");
+    if (!walk || reducedMotionGuests()) { el.classList.remove("arrived", "walking", "leaving"); return; } // no anim: just vanish
+    walk.style.setProperty("--walk-x", (GATE_X - home) + "px");
+    el.classList.remove("walking");
+    el.classList.remove("leaving"); void walk.getBoundingClientRect(); el.classList.add("leaving"); // restart cleanly
+  }
+  function leaveEntry(entry) {
+    var g = document.getElementById("garden-guests");
+    if (!g) return;
+    for (var i = 0; i < entry.sels.length; i++) walkFigureOut(g, entry.sels[i], entry.homes[i]);
+  }
+  // one rotation beat: send 1–2 present units out, then (after a gap) walk the same number of waiting
+  // units in. Prefer not to evict someone who only just arrived.
+  function rotateGuests(g, present, waiting) {
+    var k = (Math.random() < 0.35 ? 2 : 1);
+    var evictable = present.filter(function (u) { return recentArrivals.indexOf(unitKey(u)) < 0; });
+    if (evictable.length < k) evictable = present.slice();
+    var leaving = shuffleArr(evictable).slice(0, Math.min(k, evictable.length));
+    leaving.forEach(function (u) { leaveEntry(u); });
+    var incoming = shuffleArr(waiting.slice()).slice(0, Math.min(leaving.length, waiting.length));
+    setTimeout(function () { // let a gap open at the gate before the next lot stroll in
+      if (!guestsWanted() || document.hidden || !document.hasFocus()) return; // don't arrive into a hidden tab
+      incoming.forEach(function (u) { arriveEntry(u); noteArrival(u); });
+    }, 2600);
+  }
   // the full roster this party (the duos + the solo, plus the mouses only if they're visiting)
   function fullArrivals() {
     var g = document.getElementById("garden-guests");
@@ -53852,10 +53891,11 @@ function spawnDustMote(container) {
     }
     return true;
   }
-  // self-rescheduling trickle: bring in the NEXT not-yet-arrived entry, then re-arm. Party-gated
-  // (guestsWanted covers party-lit + in-garden + tab-visible) and crickets-safe (also pauses while
-  // the window is merely unfocused) so nothing accumulates in a background tab; picks back up on
-  // return. Once the whole roster's in, it stops and drops .trickle (the floor's full).
+  // self-rescheduling driver: FILL the floor up to GUEST_CAP units (one per beat), then switch to
+  // ROTATION (swap 1–2 in for 1–2 out every ~20s). Party-gated (guestsWanted covers party-lit +
+  // in-garden + tab-visible) and crickets-safe (also pauses while merely unfocused) so nothing
+  // accumulates in a background tab; picks back up on return. Keeps .trickle on the whole party so
+  // the waiting units stay hidden (:not(.arrived)); only drops it if the whole roster fits under cap.
   function armTrickle(ms) {
     if (trickleTimer) return; // one timer only (idempotent under storm-clicks / re-entry)
     trickleTimer = setTimeout(function () {
@@ -53864,17 +53904,17 @@ function spawnDustMote(container) {
       if (!g) return;
       if (!guestsWanted() || document.hidden || !document.hasFocus()) { armTrickle(1400); return; } // paused (hidden/unfocused/off-floor) — hold, don't advance; re-check soon
       if (window.__syncMousesVisitingClass) window.__syncMousesVisitingClass(); // in case the visiting roll flipped
-      var list = fullArrivals(), next = null;
-      for (var i = 0; i < list.length && !next; i++) {
-        for (var j = 0; j < list[i].sels.length; j++) {
-          var el = g.querySelector(list[i].sels[j]);
-          if (el && !el.classList.contains("arrived")) { next = list[i]; break; }
-        }
+      var list = fullArrivals();
+      var present = presentUnits(g, list), waiting = waitingUnits(g, list);
+      if (!waiting.length) { if (everyoneArrived(g)) g.classList.remove("trickle"); return; } // whole roster fits → full floor, stop
+      if (present.length < GUEST_CAP) { // FILL: walk in the next waiting unit (jittered list order)
+        arriveEntry(waiting[0]); noteArrival(waiting[0]);
+        var nearCap = present.length + 1 >= GUEST_CAP;
+        armTrickle(nearCap ? (16000 + Math.random() * 9000) : (4500 + Math.random() * 1000)); // ~5s while filling, then ease to rotation cadence
+        return;
       }
-      if (!next) { g.classList.remove("trickle"); return; } // everyone's in — floor full, stop the trickle
-      arriveEntry(next);
-      if (everyoneArrived(g)) { g.classList.remove("trickle"); return; } // that was the last one
-      armTrickle(4500 + Math.random() * 1000); // ~5s between arrivals (4.5–5.5s jitter so it's not robotic) → the floor fills over ~30s
+      rotateGuests(g, present, waiting); // ROTATION: swap 1–2 out for 1–2 in
+      armTrickle(16000 + Math.random() * 9000); // ~16–25s between rotations
     }, ms);
   }
   function stopTrickle() { clearTrickleTimer(); var g = document.getElementById("garden-guests"); if (g) g.classList.remove("trickle"); }
@@ -53933,8 +53973,9 @@ function spawnDustMote(container) {
   window.__updateGardenGuests = updateGardenGuests;
   function clearAllArrived(g) { // wipe every per-figure arrival flag + walk distance (teardown)
     if (!g) return;
-    var walkers = g.querySelectorAll(".guest.arrived, .guest.walking");
-    for (var i = 0; i < walkers.length; i++) { walkers[i].classList.remove("arrived", "walking"); }
+    var walkers = g.querySelectorAll(".guest.arrived, .guest.walking, .guest.leaving");
+    for (var i = 0; i < walkers.length; i++) { walkers[i].classList.remove("arrived", "walking", "leaving"); }
+    recentArrivals.length = 0;
     var walks = g.querySelectorAll(".guest-walk");
     for (var k = 0; k < walks.length; k++) walks[k].style.removeProperty("--walk-x");
   }
@@ -53985,6 +54026,10 @@ function spawnDustMote(container) {
         var fig = e.target.closest ? e.target.closest(".guest") : null;
         if (fig) fig.classList.remove("walking");
         if (!g.querySelector(".guest.walking")) g.classList.remove("duo-walking"); // no walkers left → drop the group one-shot flag
+      }
+      if (e.animationName === "guest-gate-leave") { // a figure finished strolling OUT — now hide it (drop .arrived) so the floor has room
+        var figo = e.target.closest ? e.target.closest(".guest") : null;
+        if (figo) figo.classList.remove("leaving", "arrived");
       }
     });
   })();

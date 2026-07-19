@@ -19486,7 +19486,7 @@ var T = {
     // would join the RTL run and mirror, so they stay outside it in the sentence's own direction.
     tip_haftsin: "<em>haft-sin</em> (<bdi>هفت‌سین</bdi>), the <em>nowruz</em> (<bdi>نوروز</bdi>) table",
     tip_carodejnice: "<em>Čarodějnice</em>, burning of the witches",
-    role_bestman: "best man", role_maid: "maid of honor", role_officiant: "officiant", role_fashion: "fashion designer", role_mc: "MC", role_business: "businesswoman", role_photographer: "photographer", role_niece: "Behdad's niece", role_godson: "Behdad's godson", role_sister: "Behdad's sister", role_sisterinlaw: "Behdad's sister-in-law", role_nephew: "Behdad's nephew", role_msister: "Markéta's sister", role_travelbuddy_m: "travel buddy", role_travelbuddy_f: "travel buddy",
+    role_bestman: "best man", role_maid: "maid of honor", role_officiant: "officiant", role_fashion: "fashionista", role_mc: "MC", role_business: "businesswoman", role_photographer: "photographer", role_niece: "Behdad's niece", role_godson: "Behdad's godson", role_sister: "Behdad's sister", role_sisterinlaw: "Behdad's sister-in-law", role_nephew: "Behdad's nephew", role_msister: "Markéta's sister", role_travelbuddy_m: "travel buddy", role_travelbuddy_f: "travel buddy",
     role_bdad: "Behdad's dad", role_bmom: "Behdad's mom", role_bril: "Behdad's brother-in-law",
     role_mdad: "Markéta's dad", role_mmom: "Markéta's mom", role_mgrandma: "Markéta's grandmother",
     role_mniece: "Markéta's niece", role_mnephew: "Markéta's nephew", role_msisspouse: "Markéta's brother-in-law", role_qa: "QA lead",
@@ -39917,17 +39917,23 @@ async def localfont(name):
       svg.setAttribute("class", "pm-pol-pic");
       svg.setAttribute("aria-hidden", "true");
       function add(tag, attrs, parent) { var e = document.createElementNS(svgNS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); (parent || svg).appendChild(e); return e; }
+      // Per-photo deterministic randomness: each polaroid gets its OWN stable-but-varied look (poses,
+      // placement, backdrop) from a seed stored on the record — so the album reads as candid, different
+      // shots, yet a given photo always re-renders identically (no flicker when the app reopens).
+      var _seed = ((rec.seed != null ? rec.seed : ((rec.id || 1) * 2654435761)) >>> 0) || 1;
+      function rnd() { _seed = (_seed * 1664525 + 1013904223) >>> 0; return _seed / 4294967296; }
+      function jit(a) { return (rnd() * 2 - 1) * a; } // a random value in ±a
       var ground = ALBUM_SEASON_TINT[rec.season] || ALBUM_SEASON_TINT[""];
       var sky = "#f3ecd8";
       add("rect", { x: 0, y: 0, width: W, height: H, fill: sky });
       // soft coloured party-light pools washing the wall — pinks, blues, gold, wine (a lively, lit
       // room, not a flat cream backdrop). Low opacity so the figures still read on top.
       [[32,28,"#d9a6a6",17],[170,24,"#7f9ec0",19],[100,16,"#f5c542",14],[58,60,"#c68e95",21],[150,64,"#8bb0d8",19],[18,84,"#f0c27a",16],[186,96,"#e88aa8",17]]
-        .forEach(function (L) { add("circle", { cx: L[0], cy: L[1], r: L[3], fill: L[2], opacity: "0.17" }); });
+        .forEach(function (L) { add("circle", { cx: L[0] + jit(13), cy: L[1] + jit(7), r: (L[3] * (0.82 + rnd() * 0.42)).toFixed(1), fill: L[2], opacity: (0.12 + rnd() * 0.1).toFixed(3) }); });
       add("rect", { x: 0, y: H * 0.56, width: W, height: H * 0.44, fill: ground }); // the floor/garden band
-      // a scatter of confetti flecks
+      // a scatter of confetti flecks (jittered per-photo so no two shots share the same fleck pattern)
       [[40,42,"#d9a6a6"],[132,36,"#7f9ec0"],[76,50,"#f5c542"],[158,48,"#8e3a4a"],[110,40,"#7fbf6a"],[26,54,"#e88aa8"],[178,58,"#f5c542"]]
-        .forEach(function (k, i) { add("rect", { x: k[0], y: k[1], width: 3.4, height: 3.4, rx: 0.6, fill: k[2], opacity: "0.85", transform: "rotate(" + ((i * 41) % 80 - 30) + " " + (k[0] + 1.7) + " " + (k[1] + 1.7) + ")" }); });
+        .forEach(function (k) { var cx = k[0] + jit(11), cy = k[1] + jit(7); add("rect", { x: cx, y: cy, width: 3.4, height: 3.4, rx: 0.6, fill: k[2], opacity: "0.85", transform: "rotate(" + jit(48).toFixed(0) + " " + (cx + 1.7) + " " + (cy + 1.7) + ")" }); });
       // top motif: a faceted disco ball throwing a couple of glints (dance shot), else a quiet ∞ mark
       if (rec.dance) {
         add("line", { x1: W / 2, y1: 0, x2: W / 2, y2: 8.5, stroke: "#9aa0a8", "stroke-width": "1" });
@@ -39990,19 +39996,21 @@ async def localfont(name):
       // outermost-first so the hosts at the centre sit slightly forward.
       var slots = clones.map(function (c, i) {
         var cx = n > 1 ? x0 + step * i : W / 2;
+        cx += reduce ? 0 : jit(step * 0.16);            // a little natural side-to-side wobble
         var frac = n > 1 ? (i / (n - 1)) * 2 - 1 : 0;   // −1 (far left) … +1 (far right)
-        var lean = reduce ? 0 : -frac * 4;              // a gentle inward lean; upright-ish lineup
-        return { c: c, cx: cx, lean: lean, dist: Math.abs(cx - W / 2) };
+        var lean = reduce ? 0 : (-frac * 4 + jit(3.4)); // vary the tilt so nobody stands like a mannequin
+        var fy = footY + (reduce ? 0 : jit(2.8));       // a touch of depth — some stand a hair forward/back
+        return { c: c, cx: cx, lean: lean, fy: fy, dist: Math.abs(cx - W / 2) };
       });
       slots.forEach(function (s) { // soft floor shadows first, grounding the huddle
-        add("ellipse", { cx: s.cx, cy: Math.min(footY, H - 4), rx: 14 * scaleX, ry: 3.4 * scale, fill: "rgba(0,0,0,0.16)" });
+        add("ellipse", { cx: s.cx, cy: Math.min(s.fy, H - 4), rx: 14 * scaleX, ry: 3.4 * scale, fill: "rgba(0,0,0,0.16)" });
       });
       slots.slice().sort(function (a, b) { return b.dist - a.dist; }).forEach(function (s) { // outermost → innermost
         var wrap = add("g", {
           // T·S·R·(re-centre feet): translate to the on-screen foot point, scale down, lean about the
           // chest pivot, then shift the source so its local foot lands at the origin. No CSS transform,
           // no layer — a plain transform ATTRIBUTE, so it serializes + rasterizes everywhere.
-          transform: "translate(" + s.cx.toFixed(2) + " " + footY.toFixed(2) + ") scale(" + scaleX.toFixed(3) + " " + scale.toFixed(3) + ") " +
+          transform: "translate(" + s.cx.toFixed(2) + " " + s.fy.toFixed(2) + ") scale(" + scaleX.toFixed(3) + " " + scale.toFixed(3) + ") " +
                      "rotate(" + s.lean.toFixed(2) + " 0 " + LOCAL_PIVOT + ") translate(0 " + (-LOCAL_FOOT) + ")"
         });
         wrap.appendChild(s.c.g);

@@ -5849,7 +5849,7 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 /* DURING THE PARTY the couple is out at the garden, so hide both from the nook (restored when the
    party's off — see updateCuddlyPresence). visibility:hidden (not display:none) so nothing reflows
    and WebKit honours it; pointer-events off so their hit-areas don't linger. */
-#cuddly-behdad.at-party, #cuddly-marketa.at-party{visibility:hidden; pointer-events:none}
+#cuddly-behdad.at-party, #cuddly-marketa.at-party, #cuddly-couple.at-party{visibility:hidden; pointer-events:none}
 #balcony-butterfly{opacity:0; pointer-events:none}
 #balcony-butterfly.flying{animation:balcony-butterfly-fly 3.2s ease-in-out forwards}
 @keyframes balcony-butterfly-fly{
@@ -25683,6 +25683,15 @@ document.addEventListener("click", function (e) {
     bahareh:  { texter: "Bahareh",  members: [{ name: "Bahareh", role: "role_sister", el: "cuddly-vis-bahareh" },  { name: "Irene",  role: "role_niece",          el: "irene" }] }
   };
   var DUO_IDS = Object.keys(CUDDLY_DUOS);
+  // A shuffled ROTATION so everyone comes by — the order is shuffled once at startup and consumed in
+  // turn (roof-summons + the autonomous text drip both draw from it); after a full pass it reshuffles,
+  // so every duo visits before any repeats but the order still varies each round.
+  function shuffleDuos(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  var visitQueue = shuffleDuos(DUO_IDS.slice()), visitIdx = 0;
+  function nextInRotation() {
+    if (visitIdx >= visitQueue.length) { shuffleDuos(visitQueue); visitIdx = 0; } // full pass done → reshuffle for the next round
+    return visitQueue[visitIdx++];
+  }
   function stripEl() { return document.getElementById("loft-game-strip"); }
   function mealOn() { var s = stripEl(); return !!(s && s.classList.contains("meal-on")); } // owner rule: no visitors while food is served
   function isDay() { var c = document.getElementById("stage-cuddly"); return !(c && c.classList.contains("dusk")); } // owner rule: visitors only come during the day (dusk = night, applied to every stage by the sun toggle)
@@ -25821,11 +25830,13 @@ document.addEventListener("click", function (e) {
     // required to be in the nook to get it); it only WAITS in the app if unattended — the visit itself
     // is day+meal-gated again at tap time by __cuddlyVisit. Pick an undelivered duo, avoiding the last one.
     if (!document.hidden && document.hasFocus() && isDay() && !mealOn()) {
-      var rem = undelivered().filter(function (id) { return id !== lastDripId; });
-      if (!rem.length) rem = undelivered();
+      var rem = undelivered();
       if (rem.length && window.__deliverPhoneMessage) {
-        lastDripId = rem[Math.floor(Math.random() * rem.length)];
-        window.__deliverPhoneMessage("visit_" + lastDripId);
+        var pick = null, guard = 0; // draw the next duo from the shuffled rotation, skipping any already texted
+        do { pick = nextInRotation(); guard++; } while (rem.indexOf(pick) < 0 && guard < visitQueue.length * 2);
+        if (rem.indexOf(pick) < 0) pick = rem[0];
+        lastDripId = pick;
+        window.__deliverPhoneMessage("visit_" + pick);
       }
     }
     schedule();
@@ -25846,12 +25857,11 @@ document.addEventListener("click", function (e) {
     var roof = document.getElementById("cuddly-ceiling");
     if (!roof) return;
     roof.addEventListener("dblclick", function () {
-      var pool = DUO_IDS.filter(function (id) { return id !== activeDuo; });
-      if (!pool.length) pool = DUO_IDS;
-      visit(pool[Math.floor(Math.random() * pool.length)], false);
+      var pick = nextInRotation(); if (pick === activeDuo) pick = nextInRotation(); // next in the shuffled rotation
+      visit(pick, false);
     });
   })();
-  window.__cuddlyRoofSummon = function () { var pool = DUO_IDS.filter(function (id) { return id !== activeDuo; }); if (!pool.length) pool = DUO_IDS; return visit(pool[Math.floor(Math.random() * pool.length)], false); }; // test/console hook
+  window.__cuddlyRoofSummon = function () { var pick = nextInRotation(); if (pick === activeDuo) pick = nextInRotation(); return visit(pick, false); }; // test/console hook
   schedule();
 })();
 // Totoro co-watch controller: whenever the projector's on the totoro channel AND we're in the
@@ -55891,8 +55901,10 @@ function spawnDustMote(container) {
     var sc = document.getElementById("stage-cuddly");
     var night = !!(sc && sc.classList.contains("dusk"));
     var party = !!window.__gardenPartyOn;
-    behdad.classList.toggle("at-party", party);
-    marketa.classList.toggle("at-party", party);
+    // hide the WHOLE couple group (legs, lap blanket, torsos, arms all live under #cuddly-couple) —
+    // toggling only the two body sub-groups left their outstretched legs + joint-arms behind
+    var couple = document.getElementById("cuddly-couple") || behdad;
+    couple.classList.toggle("at-party", party);
     // snooze only at night AND when they're actually here (not off at the party)
     behdad.classList.toggle("snoozing", night && !party);
   }

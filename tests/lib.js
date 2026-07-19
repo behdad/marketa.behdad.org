@@ -34,6 +34,16 @@ function hook(opts) {
     "window.alert = function () {};",
     "window.prompt = function () { return null; };",
     opts.seedRandom ? "(function () { var s = 0x2545f491 >>> 0; Math.random = function () { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; })();" : "",
+    // Headless Chrome reports prefers-reduced-motion:reduce by default (DEBUGGING.md), and a
+    // headless tab is unfocused. cine.js needs the FULL-motion, focused path: override BOTH before
+    // the body's inline script captures its reduceMotion var + before any focus-gated bed runs.
+    opts.forceMotion ? "(function () { var mm = window.matchMedia; window.matchMedia = function (q) { var r = mm ? mm.call(window, q) : { matches: false, media: q, addListener: function () {}, removeListener: function () {}, addEventListener: function () {}, removeEventListener: function () {} }; if (/prefers-reduced-motion/.test(q)) { try { Object.defineProperty(r, 'matches', { get: function () { return /no-preference/.test(q); } }); } catch (e) {} } return r; }; })();" : "",
+    opts.forceMotion ? "document.hasFocus = function () { return true; };" : "",
+    // The mirror image: force prefers-reduced-motion:reduce so cine.js can exercise the
+    // reduced cinematic path deterministically (headless-Chrome's default here is no-preference,
+    // NOT reduce, despite the older note — so it must be forced either way to be reliable).
+    opts.forceReduce ? "(function () { var mm = window.matchMedia; window.matchMedia = function (q) { var r = mm ? mm.call(window, q) : { matches: false, media: q, addListener: function () {}, removeListener: function () {}, addEventListener: function () {}, removeEventListener: function () {} }; if (/prefers-reduced-motion/.test(q)) { try { Object.defineProperty(r, 'matches', { get: function () { return /reduce/.test(q); } }); } catch (e) {} } return r; }; })();" : "",
+    opts.forceReduce ? "document.hasFocus = function () { return true; };" : "",
     opts.patchRaf ? "window.requestAnimationFrame = function (cb) { return setTimeout(function () { cb(performance.now()); }, 16); };" : "",
     opts.patchRaf ? "window.cancelAnimationFrame = function (id) { clearTimeout(id); };" : "",
     "document.addEventListener('click', function (e) {",

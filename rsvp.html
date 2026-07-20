@@ -1579,6 +1579,12 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    pointer-events hide, never a display flip — keeps getBBox valid) so it's never in two places at
    once. Cleared when the runner finishes (syncMousesParty, mirroring syncBaharehParty). */
 #garden-guests .g-elisabeth.off-with-kids, #garden-guests .g-felix.off-with-kids{opacity:0 !important; pointer-events:none !important; transition:opacity .5s ease}
+/* Kids asleep (a mom's phone text — window.__setKidsAsleep): every standing kid guest at the party
+   steps off the floor, same opacity+pointer-events hide as .off-with-kids (never a display flip, so
+   getBBox stays valid). Composes with .off-with-kids. The godkids/mouses' game + chase + cameo
+   presences are gated in JS; this covers the five standing party kids (Elisabeth, Felix, Patricia’s son,
+   Patricia’s daughter, Hannah). Cleared on wake. */
+#garden-guests.kids-asleep .g-elisabeth, #garden-guests.kids-asleep .g-felix, #garden-guests.kids-asleep .g-patricia-son, #garden-guests.kids-asleep .g-patricia-daughter, #garden-guests.kids-asleep .g-hannah{opacity:0 !important; pointer-events:none !important; transition:opacity .5s ease}
 /* ── THE CALIFORNIA FAMILY: Patricia (adult) + Patricia’s son & Patricia’s daughter (kids) — always attending (no
    visiting roll like the mouses). Patricia is a SINGLE adult (no orbit partner): her orbit
    wrapper eases to a gentle in-place bob and .guest-move carries a warm adult sway (a plain
@@ -4758,6 +4764,10 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 #cuddly-kidgames{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .55s ease}
 #cuddly-kidgames.playing{opacity:1; visibility:visible; pointer-events:auto} /* tappable only while playing → each kid pops their white name card (delegated on #cuddly-kidgames); ambient decor otherwise */
 #cuddly-kidgames.playing .kg-rock{cursor:pointer}
+/* Kids asleep (window.__setKidsAsleep): the game-kids themselves clear out but the scene stays
+   .playing so their PROPS (board, blocks, shadows) remain on the nook floor — only the seated
+   figures leave. visibility:hidden (not display) keeps them un-tappable and layout-stable. */
+#cuddly-kidgames.kids-asleep .kg-rock{opacity:0 !important; visibility:hidden !important; pointer-events:none !important}
 #cuddly-kidgames .kg-rock{transform-box:fill-box; transform-origin:center bottom; transform:scale(1.25)} /* the gamer kids read 25% larger, scaled from their feet so they stay on the floor */
 /* gentle seated rock/tilt — each kid slightly out of phase so the group feels alive, not synced */
 .kg-tilt{transform-box:fill-box; transform-origin:50% 100%}
@@ -22610,6 +22620,10 @@ var T = {
     msg_invaders_body: "Irene, did you see the invaders in the office? 👾",
     msg_flair_body: "I need a break 🍸",
     msg_smores_body: "who wants s'mores? 🔥🍫",
+    msg_kidsasleep_body_a: "kids are finally asleep 😴",
+    msg_kidsasleep_body_b: "kids are FINALLY down 😴 don't you dare wake them",
+    msg_kidsloose_body_a: "kids are on the loose again! 🙃",
+    msg_kidsloose_body_b: "and they're awake again 🙃 send help",
     msg_firstdance_body: "Ready for the first dance? 💃",
     msg_slowdance_body: "ok DJ, slow one now — grab your person 🥰🕯️",
     msg_cake_body: "the cake is out!! come cut it you two 🍰🔪",
@@ -23223,6 +23237,10 @@ var T = {
     msg_invaders_body: "Irene, viděla jsi v pracovně vetřelce? 👾",
     msg_flair_body: "Potřebuju pauzu 🍸",
     msg_smores_body: "kdo chce opékat marshmallows? 🔥🍫",
+    msg_kidsasleep_body_a: "děti konečně spí 😴",
+    msg_kidsasleep_body_b: "děti KONEČNĚ usnuly 😴 ať tě ani nenapadne je vzbudit",
+    msg_kidsloose_body_a: "děti jsou zase na svobodě! 🙃",
+    msg_kidsloose_body_b: "a už jsou zase vzhůru 🙃 pošlete posily",
     msg_firstdance_body: "Připraveni na první tanec? 💃",
     msg_slowdance_body: "tak DJi, teď něco pomalého — chyťte si svého člověka 🥰🕯️",
     msg_cake_body: "dort je venku!! poďte ho nakrojit vy dva 🍰🔪",
@@ -28838,6 +28856,7 @@ document.addEventListener("click", function (e) {
   // lingered, transition() picks a DIFFERENT action 2 and plays it; when THAT lingers, she
   // leaves. step is 1 or 2.
   function show(forced) {
+    if (window.__kidsAsleep) return; // kids asleep → no nook cameo
     if (irene.classList.contains("showing")) return;
     if (window.__resetRobin) window.__resetRobin(); // mutual exclusion: Irene, Robin & Navid never show at once
     if (window.__resetNavid) window.__resetNavid();
@@ -29203,6 +29222,7 @@ document.addEventListener("click", function (e) {
   }
   // called BY Irene's shared scheduler when it rolls Robin (she's already guaranteed not showing).
   window.__robinAppear = function (forced) {
+    if (window.__kidsAsleep) return; // kids asleep → no nook cameo
     if (window.__totoroWatchActive) return; // during a totoro co-watch he's already seated — don't let the scheduler re-pose him
     if (robin.classList.contains("showing")) return;
     if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; }
@@ -29390,6 +29410,7 @@ document.addEventListener("click", function (e) {
   }
   // called BY Irene's shared scheduler when it rolls Navid (the others are already guaranteed not showing).
   window.__navidAppear = function (forced) {
+    if (window.__kidsAsleep) return; // kids asleep → no nook cameo
     if (window.__totoroWatchActive) return; // during a totoro co-watch he's already seated — don't let the scheduler re-pose him
     if (navid.classList.contains("showing")) return;
     if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; }
@@ -29828,6 +29849,7 @@ document.addEventListener("click", function (e) {
 var __smoresTimer = null;
 window.__setSmores = function (on) {
   on = !!on;
+  if (on && window.__kidsAsleep) return; // kids asleep → no s'mores kids on the balcony
   var strip = document.getElementById("loft-game-strip");
   if (strip) strip.classList.toggle("smores-on", on);
   window.__smoresOn = on;
@@ -29868,6 +29890,7 @@ function __clearBalconyPlay(except) {
 }
 window.__setSnowman = function (on) {
   on = !!on;
+  if (on && window.__kidsAsleep) return; // kids asleep → no snowman kids on the balcony
   if (on) __clearBalconyPlay("snowman"); // one play scene at a time — clear the other seasons'
   var strip = document.getElementById("loft-game-strip");
   if (strip) strip.classList.toggle("snowman-on", on);
@@ -29888,6 +29911,7 @@ window.__setSnowman = function (on) {
 // AUTUMN: a leaf pile the two godkids leap into, leaves puffing up.
 window.__setLeafpile = function (on) {
   on = !!on;
+  if (on && window.__kidsAsleep) return; // kids asleep → no leaf-pile kids on the balcony
   if (on) __clearBalconyPlay("leafpile");
   var strip = document.getElementById("loft-game-strip");
   if (strip) strip.classList.toggle("leafpile-on", on);
@@ -29900,6 +29924,7 @@ window.__setLeafpile = function (on) {
 // SPRING: the two godkids toss/chase a blossom sprig, loose petals adrift.
 window.__setBlossomPlay = function (on) {
   on = !!on;
+  if (on && window.__kidsAsleep) return; // kids asleep → no blossom-toss kids on the balcony
   if (on) __clearBalconyPlay("blossom");
   var strip = document.getElementById("loft-game-strip");
   if (strip) strip.classList.toggle("blossom-on", on);
@@ -29912,6 +29937,7 @@ window.__setBlossomPlay = function (on) {
 // SUMMER: the two godkids run through a sprinkler's sweeping arc of water.
 window.__setSprinkler = function (on) {
   on = !!on;
+  if (on && window.__kidsAsleep) return; // kids asleep → no sprinkler kids on the balcony
   if (on) __clearBalconyPlay("sprinkler");
   var strip = document.getElementById("loft-game-strip");
   if (strip) strip.classList.toggle("sprinkler-on", on);
@@ -36304,6 +36330,7 @@ var ABANDONED_CALL_MS = 30000;
     leafpile: "leafpile(true) — rake an autumn leaf pile on the balcony deck with two godkids leaping in, leaves puffing up; leafpile(false) sweeps it away; leafpile() reports whether it's up. The daytime-autumn play scene — the brick-wall dblclick rakes it by day in autumn (s'mores after dark). One scene at a time",
     blossomplay: "blossomplay(true) — a spring blossom toss on the balcony deck with two godkids chasing petals back and forth; blossomplay(false) clears it; blossomplay() reports whether it's up. The daytime-spring play scene — the brick-wall dblclick starts it by day in spring (s'mores after dark). One scene at a time",
     sprinkler: "sprinkler(true) — a summer sprinkler romp on the balcony deck with two godkids darting through a sweeping arc of water; sprinkler(false) shuts it off; sprinkler() reports whether it's on. The daytime-summer play scene — the brick-wall dblclick turns it on by day in summer (s'mores after dark). One scene at a time",
+    kidsAsleep: "kidsAsleep(true) — the kids are finally asleep 😴 every kid stops playing everywhere (the cuddly-nook game-kids + cameos, the garden chase-runners, the standing kid guests at the party, the balcony play scenes) — their game props stay put. kidsAsleep(false) wakes them; kidsAsleep() reports whether they're down. Auto-wakes after ~1–2 min (or tap the 'kids on the loose' text). The same thing a mom's phone text does",
     cooked: "cooked(1|2|3) — is that burger done yet (bool)? cooked() — all three, as [bool, bool, bool]",
     beans: "beans() — coffee beans left in the grinder hopper (0..22); beans(n) sets the level (fresh heap to match) and returns the previous count",
     servefood: "servefood() — serve a cooked burger (opens the lid if needed); servefood(random()) picks a random ready one. returns true if one was served",
@@ -36663,7 +36690,7 @@ var ABANDONED_CALL_MS = 30000;
     "help", "clear", "laser", "party", "chase", "guests", "aligoli", "arrive", "roster", "reset", "autoplay", "quit", "blacklight", "uv", "trip", "room",
     "goto", "rooms", "daylight", "night", "day", "season", "birthday", "play", "pause", "temp", "weather",
     "clock", "time", "projector", "storm", "dance", "jukebox", "dj", "firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift", "cocktail", "lang", "caption", "candle",
-    "butterfly", "water", "countdown", "fullscreen", "rainbow", "aurora", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood",
+    "butterfly", "water", "countdown", "fullscreen", "rainbow", "aurora", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood", "kidsAsleep",
     "phone", "album", "message", "madla", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "edit",
     "confetti", "fireworks", "lanterns", "cat", "irene", "visitors", "mouses", "piano", "classic", "kitten", "ukelele", "audio", "music",
@@ -44795,6 +44822,7 @@ async def localfont(name):
     var VISIT_GENERIC = ["msg_visit_body_a", "msg_visit_body_b", "msg_visit_body_c", "msg_visit_body_d", "msg_visit_body_e", "msg_visit_body_f", "msg_visit_body_g", "msg_visit_body_h", "msg_visit_body_i"];
     // the wedding coordinators — any of them can send a moment announcement ("cake's out!", "group photo!" …)
     var MOMENT_SENDERS = ["msg_bahareh_from", "msg_madla_from", "msg_athena_from"];
+    var MOM_SENDERS = ["msg_bahareh_from", "msg_madla_from", "msg_patricia_from"]; // the three moms in the room — any of them reports the kids asleep / on the loose (frozen per delivery)
     var MESSAGES = { // each fires from its beat/trigger via window.__deliverPhoneMessage (actTwo sequencer + the DJ swap); listed in arc order so 'g' steps through them in sequence
       dusk:   { fromKey: "msg_bahareh_from", bodyKey: "msg_dusk_body", act: "eclipse" },      // act_b0 → tap: balcony + eclipse
       pouria: { fromKey: "msg_pouria_from",  bodyKey: "msg_pouria_body", act: "room:kitchen" }, // act_p1 → the bar
@@ -44814,6 +44842,8 @@ async def localfont(name):
       invaders:      { fromKey: "msg_behdad_from",  bodyKey: "msg_invaders_body",  act: "invaders" },      // behdad tasks Irene → the office; taps to LAUNCH the chair alien-arcade
       flair:         { fromKey: "msg_pouria_from",  bodyKey: "msg_flair_body",     act: "flair" },         // Pouria bored → taps to LAUNCH Flair-Catch at the bar
       smores:        { fromKey: "msg_bahareh_from", bodyKey: "msg_smores_body",    act: "smores" },        // Bahareh, after dark → taps: balcony + light the bonfire for s'mores
+      kids_asleep:   { fromKeys: MOM_SENDERS, bodyKeys: ["msg_kidsasleep_body_a", "msg_kidsasleep_body_b"], act: "kidsleep" }, // a mom → taps: every kid in the loft goes to sleep (cleared from every room; props stay)
+      kids_loose:    { fromKeys: MOM_SENDERS, bodyKeys: ["msg_kidsloose_body_a", "msg_kidsloose_body_b"],   act: "kidwake" },  // a mom → the kids woke; lands at auto-wake, taps to wake them (idempotent)
       firstdance:    { fromKeys: MOMENT_SENDERS, bodyKey: "msg_firstdance_body", act: "firstdance" },    // a coordinator → taps: the garden party + the hosts' first dance
       slowdance:     { fromKeys: MOMENT_SENDERS, bodyKey: "msg_slowdance_body", act: "slowdance" },       // a coordinator → taps: the garden party + a slow-song lull (the whole floor pairs off)
       cake:          { fromKeys: MOMENT_SENDERS, bodyKey: "msg_cake_body",      act: "cake" },         // a coordinator → taps: the garden party + the cake cutting
@@ -44850,7 +44880,7 @@ async def localfont(name):
       groupphoto:    { fromKeys: MOMENT_SENDERS, bodyKey: "msg_groupphoto_body", act: "groupphoto" }, // a coordinator gathers everyone for the whole-crowd shot → lands in the album
       sparklers:     { fromKeys: MOMENT_SENDERS, bodyKey: "msg_sparklers_body",  act: "sparklers" }   // a coordinator calls the sparkler send-off tunnel
     };
-    var CUE_POOL = ["cue_cocktails", "cue_calendar", "storm", "invaders", "flair", "smores", "sina_helpers", "firstdance", "slowdance", "cake", "bouquet", "chairlift", "jukebox", "hamid_verse", "pouria_farhang", "ali_love", "alireza_vitamin", "fireworks", "lanterns", "toasts", "groupphoto", "sparklers", "bbq"]; // the random party (night) drip (shuffled: each drip picks a random un-sent one); smores is night-only + sina_helpers only while Sina's off the decks — see cueRemaining(); hamid_verse chains its 2nd stanza via m.next; toasts/groupphoto/sparklers/cake/bouquet/chairlift are scripted garden beats
+    var CUE_POOL = ["cue_cocktails", "cue_calendar", "storm", "invaders", "flair", "smores", "sina_helpers", "firstdance", "slowdance", "cake", "bouquet", "chairlift", "jukebox", "hamid_verse", "pouria_farhang", "ali_love", "alireza_vitamin", "fireworks", "lanterns", "toasts", "groupphoto", "sparklers", "bbq", "kids_asleep"]; // the random party (night) drip (shuffled: each drip picks a random un-sent one); smores is night-only + sina_helpers only while Sina's off the decks — see cueRemaining(); hamid_verse chains its 2nd stanza via m.next; toasts/groupphoto/sparklers/cake/bouquet/chairlift are scripted garden beats
     var DAY_POOL = ["cue_mail"]; // the DAYTIME drip — texts that belong to daylight hours (no party); dripped by scheduleDayDrip(). Bahareh's "did you check the mail?" belongs to the day. (behdad's BBQ text moved to the party CUE_POOL.)
     // Phone photobooth result state — session-scoped, same model as notesDraft/cardsIndex:
     // a captured polaroid (frame canvas + chosen look/frame) survives a normal close/reopen
@@ -46088,6 +46118,8 @@ async def localfont(name):
       if (act === "storm") { if (window.storm) window.storm(true); return; } // storm() pans to the balcony, sets dusk, and rolls the storm itself
       if (act === "invaders") { if (window.goToStage) window.goToStage("office"); setTimeout(function () { if (window.__startArcade) window.__startArcade(); }, 720); return; } // pan to the office, then launch the chair alien-arcade
       if (act === "smores") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__setSmores) window.__setSmores(true); }, 760); return; } // pan to the balcony, then light the bonfire
+      if (act === "kidsleep") { if (window.__setKidsAsleep) window.__setKidsAsleep(true); return; } // every kid in the loft goes to sleep — stays in the current room
+      if (act === "kidwake") { if (window.__wakeKids) window.__wakeKids(); return; } // the kids are up again (idempotent — already awake by the auto-wake)
       if (act === "firstdance") { if (window.firstdance) window.firstdance(); return; } // firstdance() lights the party + heads to the garden + rings the crowd + runs the hosts' first dance
       if (act === "slowdance") { if (window.slowdance) window.slowdance(); return; } // slowdance() lights the party + heads to the garden + pairs the whole floor off for a warm, slow-song lull
       if (act === "toasts") { if (window.toasts) window.toasts(); return; } // toasts() lights the party + heads to the garden + runs the best-man → MC toast sequence
@@ -57317,7 +57349,7 @@ function spawnDustMote(container) {
       }
       var tm = window.__tabBag.shift();
       if (tm === "__randomText") {
-        var TXT = [["Ali", "<em>Habibi</em>s, best night of my life! 🎉"], ["Goli", "this set is UNREAL 🔥"], ["Spencer", "someone bring me a drink 🍸", "bar"], ["Alireza", "who's at the bar? get me one too 🍹", "bar"], ["Bahareh", "kids are finally asleep 😴"], ["Farhang", "who's ready for a speech 🎤", "toasts"]];
+        var TXT = [["Ali", "<em>Habibi</em>s, best night of my life! 🎉"], ["Goli", "this set is UNREAL 🔥"], ["Spencer", "someone bring me a drink 🍸", "bar"], ["Alireza", "who's at the bar? get me one too 🍹", "bar"], ["Farhang", "who's ready for a speech 🎤", "toasts"]];
         var tp = TXT[(Math.random() * TXT.length) | 0];
         if (window.message) window.message(tp[0], tp[1], tp[2]);
       } else if (typeof window[tm] === "function") { window[tm](); }
@@ -60681,6 +60713,7 @@ function spawnDustMote(container) {
     // launch a chase: pick 1–3 kids, run them across in the same direction a beat apart,
     // one chasing the next. force (from the chase() toy) skips the ambient odds/gates but
     // still respects reduced-motion + the busy-elsewhere lock.
+    if (window.__kidsAsleep) return; // kids asleep → no chase (even forced; wake them first)
     if (gardenChaseRunning && !force) return;
     if (!force && (!gardenPartyActive() || !document.hasFocus() || !chaseKidsAllowed())) return;
     if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return; // the motion IS the gag
@@ -60765,6 +60798,7 @@ function spawnDustMote(container) {
   }
   function stopGardenChase() { clearGardenChase(); } // party over — kill the timer + reset every runner
   window.__startGardenChase = startGardenChase; // exposed for the chase() console toy
+  window.__clearGardenChase = clearGardenChase; // exposed for the kids-asleep controller (stop + reset every runner)
   window.__updateGardenChase = function () {    // goToStage pings this: leaving the garden clears any in-flight run
     if (!window.__gardenPartyOn || window.currentStageName !== "garden") clearGardenChase();
   };
@@ -67063,6 +67097,64 @@ function spawnDustMote(container) {
     narrate(on, "💦 sprinkler's on — the kids are darting through it.", "💦 sprinkler's off.");
     return prev;
   };
+  // ── Kids asleep ── a mom's "kids are finally asleep 😴" text puts EVERY kid in the loft to sleep:
+  // the cuddly-nook game-kids + cameos (Irene/Robin/Navid), the garden chase-runners, the standing
+  // kid guests at the party, and the balcony play scenes all clear and stay gone (the game PROPS
+  // stay — only the kids leave). The spawners each consult window.__kidsAsleep and refuse to bring a
+  // kid back while it's set. They WAKE after ~60–120s (crickets-gated so it never fires unattended)
+  // OR when the "kids are on the loose again 🙃" text is tapped, which lands from a random mom at wake.
+  (function () {
+    var wakeTimer = null;
+    function clearWakeTimer() { if (wakeTimer) { clearTimeout(wakeTimer); wakeTimer = null; } }
+    function hideBalconyPlay() {
+      if (window.__setSnowman) window.__setSnowman(false);
+      if (window.__setLeafpile) window.__setLeafpile(false);
+      if (window.__setBlossomPlay) window.__setBlossomPlay(false);
+      if (window.__setSprinkler) window.__setSprinkler(false);
+      if (window.__setSmores) window.__setSmores(false);
+    }
+    function armWake() {
+      clearWakeTimer();
+      wakeTimer = setTimeout(function tick() {
+        wakeTimer = null;
+        if (!window.__kidsAsleep) return;
+        if (document.hidden || !document.hasFocus()) { wakeTimer = setTimeout(tick, 6000); return; } // crickets rule: don't wake into a hidden/blurred tab — re-check shortly
+        wake(true);
+      }, 60000 + Math.random() * 60000); // ~60–120s
+    }
+    function apply(on) {
+      on = !!on;
+      window.__kidsAsleep = on;
+      var gg = document.getElementById("garden-guests");
+      if (gg) gg.classList.toggle("kids-asleep", on);           // standing kid guests step off the party floor
+      var kg = document.getElementById("cuddly-kidgames");
+      if (kg) kg.classList.toggle("kids-asleep", on);            // nook game-kids clear out; their props stay on the floor
+      if (on) {
+        if (window.__resetIrene) window.__resetIrene();
+        if (window.__resetRobin) window.__resetRobin();
+        if (window.__resetNavid) window.__resetNavid();
+        if (window.__clearGardenChase) window.__clearGardenChase(); // stop the driver run + reset every runner
+        hideBalconyPlay();
+        armWake();
+      } else {
+        clearWakeTimer();
+        if (window.__updateKidGames) window.__updateKidGames();    // re-eval — the game-kids resume if the party's still on
+      }
+    }
+    function wake(deliverText) {
+      if (!window.__kidsAsleep) return;
+      apply(false);
+      if (deliverText && window.__deliverPhoneMessage) window.__deliverPhoneMessage("kids_loose"); // announce it from a random mom
+    }
+    window.__setKidsAsleep = apply;
+    window.__wakeKids = function () { wake(false); };
+    window.kidsAsleep = function (arg) { // kidsAsleep(true) puts every kid to sleep · kidsAsleep(false) wakes them · kidsAsleep() → asleep?
+      if (arguments.length === 0) return !!window.__kidsAsleep;
+      apply(!!arg);
+      narrate(!!arg, "😴 the kids are all asleep — none playing anywhere.", "🙃 the kids are on the loose again.");
+      return !!window.__kidsAsleep;
+    };
+  })();
   window.smokerlid = function (arg) { // the lid: smokerlid() → open? · smokerlid(true/false) → raise/lower
     var s = document.getElementById("balcony-smoker"), lid = document.getElementById("balcony-smoker-lid");
     var prev = !!(s && s.classList.contains("open"));

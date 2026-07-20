@@ -168,8 +168,8 @@ footer{margin-top:2.6rem}
   cursor:pointer; border-radius:4px;
 }
 .roster-close:hover{color:var(--wine)}
-/* the toggle chip — a small wine chip on the .loft-chrome strip above the scene, wearing the
-   date/time plates' cream-plate treatment so the strip reads as one row */
+/* the toggle chip — a small wine chip at the top-RIGHT of the chrome above the scene, wearing
+   the date/time plates' cream-plate treatment so all four corners read as one device */
 .roster-toggle{
   border:1px solid rgba(120,60,70,.3); background:var(--paper); color:var(--wine);
   font-family:"Source Serif 4",Georgia,serif; font-size:11px; font-weight:600;
@@ -3554,28 +3554,41 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .occasion-banner.show{opacity:1}
 .hunt-viewport:fullscreen .occasion-banner{top:14px}
 @media (max-width:520px){ .occasion-banner{font-size:11px; padding:4px 11px; top:6px} }
-/* ── CHROME STRIP above the scene ───────────────────────────────────────────────
-   The console pull-tab, the date readout, the "who's here" chip and the wall-clock — all
-   four off the artwork and onto the burgundy shell, as ONE centred row of cream plates
-   sharing the room-dots plate's treatment. It sits between the hint caption and the frame:
-   that puts the ▾ tab directly above the scene edge the console slides down from, and it
-   keeps every plate clear of the console (z60) and the pocket phone (z65), both of which
-   live inside the viewport. Plain flow inside #hunt-fullscreen-area, so the strip tracks
-   the frame through room pans, window resizes and fullscreen with no JS positioning at all.
-   align-items:stretch gives all four one shared top/bottom edge whatever their content.
-   flex:0 0 auto is inert in normal flow and stops the strip being squeezed once
+/* ── CHROME BANDS around the scene ──────────────────────────────────────────────
+   The console pull-tab, the "who's here" chip, the date readout and the wall-clock — all
+   four off the artwork and onto the burgundy shell, as cream plates sharing the room-dots
+   plate's treatment. TWO bands, one above the frame (console left, roster right) and one
+   below it (date left, clock right), so each control sits in its own corner of the device.
+   The top band lands between the hint caption and the frame, which puts the ▼ tab directly
+   above the scene edge the console slides down from; the bottom band lands between the
+   frame and the room dots. Both keep every plate clear of the console (z60) and the pocket
+   phone (z65), which live inside the viewport. Plain flow inside #hunt-fullscreen-area, so
+   the bands track the frame through room pans and window resizes with no JS positioning at
+   all — a band is block-level and the frame is margin:auto capped above the shell's own
+   max-width, so both resolve to the same content width and a band's ends line up with the
+   frame's. Fullscreen is the one exception: there the shell becomes a CENTRED flex column,
+   which shrink-wraps a band to its content (clustering the pair mid-screen), so
+   sizeFullscreenFrame hands each band the frame's px width alongside the frame's own.
+   align-items:stretch + the shared min-height give the two plates in a band one top/bottom
+   edge whatever their content. nowrap keeps the pair on one line at every width — the pills
+   ellipsis rather than wrap, since a wrapped band would break the left/right pinning.
+   flex:0 0 auto is inert in normal flow and stops a band being squeezed once
    #hunt-fullscreen-area becomes a flex column in fullscreen (declared here rather than in a
-   :-webkit-full-screen selector list, which Firefox can drop wholesale). Visual order is set
-   by `order`, not DOM order — the four are appended by four independent blocks. */
-.loft-chrome{display:flex; flex:0 0 auto; justify-content:center; align-items:stretch; flex-wrap:wrap; gap:.35rem .45rem; margin:.4rem auto 0; max-width:100%; box-sizing:border-box}
-.loft-chrome > *{min-height:23px} /* one height for every plate, held whether or not the "who's here" chip is on the strip, so joining it never nudges the scene down a notch */
+   :-webkit-full-screen selector list, which Firefox can drop wholesale). The right-hand
+   plate is pinned by margin-left:auto rather than justify-content:space-between, so it
+   still sits right when it is the band's ONLY plate. Visual order is set by `order`, not
+   DOM order — the four are appended by four independent blocks. */
+.loft-chrome{display:flex; flex:0 0 auto; justify-content:flex-start; align-items:stretch; flex-wrap:nowrap; gap:.35rem .45rem; max-width:100%; box-sizing:border-box}
+#loft-chrome{margin:.4rem auto .3rem}
+#loft-chrome-bot{margin:.3rem auto 0}
+.loft-chrome > *{min-height:23px} /* one height for every plate, held whether or not the "who's here" chip is on the band, so joining it never nudges the scene down a notch */
 .loft-chrome > .loft-console-hint{order:0}
-.loft-chrome > .loft-datenav{order:1}
-.loft-chrome > .roster-toggle{order:2; line-height:1} /* the readouts set line-height:1; match it so the chip can't out-grow the min-height above */
-.loft-chrome > .loft-timenav{order:3}
+.loft-chrome > .loft-datenav{order:0}
+.loft-chrome > .roster-toggle{order:1; margin-left:auto; line-height:1} /* the readouts set line-height:1; match it so the chip can't out-grow the min-height above */
+.loft-chrome > .loft-timenav{order:1; margin-left:auto}
 /* the chip is only offered where a roster means something, and it fades via opacity — on the
-   strip that would leave a permanent hole between the date and the clock, so drop it from the
-   flow entirely until it's offered and let the strip grow symmetrically around its centre */
+   band that would leave a permanent hole at the top-right, so drop it from the flow entirely
+   until it's offered and let the console tab hold the top band on its own */
 .loft-chrome > .roster-toggle:not(.avail){display:none}
 /* the loft's current date + its ⏪/↺/⏩ significant-day stepper (clicking the date opens the phone calendar) */
 .loft-datenav{display:flex; align-items:stretch; gap:0; max-width:100%; background:var(--paper); border:none; border-radius:999px; overflow:hidden; box-shadow:inset 0 1px 2px rgba(69,58,49,.1), 0 1px 2px rgba(50,18,24,.15)} /* ONE unified pill holding ⏪ · date · ⏩ */
@@ -3591,9 +3604,11 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .loft-timestep{flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:transparent; border:none; border-left:1px solid rgba(69,58,49,.16); padding:4px 7px; cursor:pointer; user-select:none}
 .loft-timestep:hover{background:rgba(142,58,74,.14)}
 .loft-timestep.lapsing{color:var(--wine,#8e3a4a)} /* lit while the time-lapse runs */
-/* narrow phones: trim every plate on the strip a notch together, so the four hold one line */
+/* narrow phones: trim every plate a notch together, so each band's pair holds one line */
 @media (max-width:520px){
   .loft-chrome{gap:.3rem .3rem}
+  #loft-chrome{margin:.3rem auto .25rem}
+  #loft-chrome-bot{margin:.25rem auto 0}
   .loft-datepill,.loft-datestep,.loft-timepill,.loft-timestep{font-size:10px}
   .loft-datepill,.loft-timepill{padding:3px 7px}
   .loft-datestep,.loft-timestep{padding:3px 5px}
@@ -3601,14 +3616,18 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
   .loft-chrome > .loft-console-hint{min-width:22px; padding:0 5px; font-size:13px}
   .loft-chrome > *{min-height:21px}
 }
-/* the console's tab: leading plate on the chrome strip, a wine triangle that is both the
-   state and the switch — ▶ while the drop-down console is shut, turned ▼ while it's down,
-   aimed at the scene edge the console arrives from. The glyph rotates inside the plate (the
-   plate itself is a pill and must stay level), so the mark reads as one triangle turning. */
-.loft-console-hint{display:inline-flex; align-items:center; justify-content:center; min-width:26px; padding:0 7px; font-size:15px; line-height:1; color:var(--wine,#8e3a4a); background:var(--paper); border:none; border-radius:999px; cursor:pointer; box-shadow:inset 0 1px 2px rgba(69,58,49,.1), 0 1px 2px rgba(50,18,24,.15); transition:color .15s, background .15s}
-.loft-console-hint:hover,.loft-console-hint:focus-visible{background:var(--wine,#8e3a4a); color:#f8f5ec}
+/* the console's tab: top-left plate of the chrome, a triangle that is both the state and the
+   switch — ▼ while the drop-down console is shut (pull it down), turned ▲ while it's down
+   (send it back up). Neither state points RIGHT: a right-pointing triangle reads as PLAY,
+   which this is not, and the genuine ▶/⏸ time-lapse control sits in the opposite corner.
+   The glyph rotates a half-turn inside the plate (the plate itself is a pill and must stay
+   level), so the mark reads as one triangle turning rather than two swapped marks.
+   INK, not wine: wine is the site's reserved accent (links, the `&`, the ∞ anchors) and a
+   UI affordance wearing it dilutes that. Ink on paper is 10.9:1, well past AA. */
+.loft-console-hint{display:inline-flex; align-items:center; justify-content:center; min-width:26px; padding:0 7px; font-size:15px; line-height:1; color:var(--ink,#453a31); background:var(--paper); border:none; border-radius:999px; cursor:pointer; box-shadow:inset 0 1px 2px rgba(69,58,49,.1), 0 1px 2px rgba(50,18,24,.15); transition:color .15s, background .15s}
+.loft-console-hint:hover,.loft-console-hint:focus-visible{background:var(--ink,#453a31); color:#f8f5ec}
 .loft-console-hint .ct-mark{display:block; transition:transform .22s cubic-bezier(.4,.9,.3,1)}
-.loft-console-hint.open .ct-mark{transform:rotate(90deg)}
+.loft-console-hint.open .ct-mark{transform:rotate(180deg)}
 @media (prefers-reduced-motion: reduce){ .loft-console-hint .ct-mark{transition:none} }
 /* weather app: the couple's two cities side by side (current + 3-day) over the screen */
 #monitor-weather{opacity:0; pointer-events:none; transition:opacity .25s ease}
@@ -8806,8 +8825,8 @@ section{margin:1.9rem 0}
   </button>
   <button type="button" id="hunt-fullscreen-btn" class="hunt-fullscreen-btn" aria-label="Enter fullscreen" title="Enter fullscreen">⛶</button>
   <p class="scene-caption" id="hunt-caption">Power on the espresso machine, then grind coffee, then brew a shot.</p>
-  <!-- chrome strip: the console pull-tab, date, "who's here" and clock plates are appended
-       here by their own blocks (see .loft-chrome) — off the artwork, above the scene. -->
+  <!-- top chrome band: the console pull-tab (left) and the "who's here" chip (right) are
+       appended here by their own blocks (see .loft-chrome) — off the artwork, above the scene. -->
   <div class="loft-chrome" id="loft-chrome"></div>
   <div class="hunt-frame">
   <div class="hunt-left" id="hunt-left">
@@ -22886,6 +22905,9 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
     <button type="button" id="hunt-next" class="hunt-nav hunt-nav-next locked" aria-label="Next room" title="Next room" data-aria-i="dpad_next" data-title-i="dpad_next">›</button>
   </div>
   </div>
+  <!-- bottom chrome band: the date pill + its stepper (left) and the wall-clock pill (right),
+       appended by their own blocks — off the artwork, between the scene and the room dots. -->
+  <div class="loft-chrome" id="loft-chrome-bot"></div>
   <div class="hunt-dots" id="hunt-dots" role="tablist" aria-label="Rooms"></div>
   </div>
   <div class="watch-controls">
@@ -24935,14 +24957,15 @@ function idealBrowser() {
   function isFilled() { return area.classList.contains("is-fullscreen"); }
   function lang() { return T[document.documentElement.lang] ? document.documentElement.lang : "en"; }
   // Measures the actual space available in fullscreen (area's content box minus the
-  // caption/chrome strip/dots, which are flex:0 0 auto and keep their natural size) and sets the
-  // frame's width/height as explicit px, rather than deriving them through CSS
+  // caption/both chrome bands/dots, which are flex:0 0 auto and keep their natural size) and sets
+  // the frame's width/height as explicit px, rather than deriving them through CSS
   // aspect-ratio/flex-grow/flex-shrink -- see the long comment on .hunt-frame's
   // fullscreen rule for why three rounds of pure-CSS attempts each broke differently.
   var frame = document.querySelector(".hunt-frame");
   var viewport = document.querySelector(".hunt-viewport");
   var caption = document.getElementById("hunt-caption");
-  var chromeStrip = document.getElementById("loft-chrome");
+  var chromeStrip = document.getElementById("loft-chrome");        // top band: console tab | who's here
+  var chromeStripBot = document.getElementById("loft-chrome-bot"); // bottom band: date | clock
   var dots = document.getElementById("hunt-dots");
   var prevBtn = document.getElementById("hunt-prev");
   var rightCol = document.getElementById("hunt-right");
@@ -24959,6 +24982,10 @@ function idealBrowser() {
     // genuine Fullscreen API state, so this doesn't change real behavior at all.
     if (!area.classList.contains("is-fullscreen") || !frame || !viewport || !caption || !dots) {
       if (frame) { frame.style.width = ""; frame.style.height = ""; frame.style.maxWidth = ""; }
+      // back in normal flow the bands are block-level and resolve to the shell's content width on
+      // their own — drop the fullscreen px or they stay stuck at the last fullscreen frame's width
+      if (chromeStrip) chromeStrip.style.width = "";
+      if (chromeStripBot) chromeStripBot.style.width = "";
       if (window.__refitZoom) window.__refitZoom(); // re-fit a desk zoom to the restored frame, in lockstep with the resize
       return;
     }
@@ -24966,7 +24993,7 @@ function idealBrowser() {
     var padX = (parseFloat(areaStyle.paddingLeft) || 0) + (parseFloat(areaStyle.paddingRight) || 0);
     var padY = (parseFloat(areaStyle.paddingTop) || 0) + (parseFloat(areaStyle.paddingBottom) || 0);
     var areaW = area.clientWidth - padX;
-    var areaH = area.clientHeight - padY - outerHeight(caption) - outerHeight(chromeStrip) - outerHeight(dots);
+    var areaH = area.clientHeight - padY - outerHeight(caption) - outerHeight(chromeStrip) - outerHeight(chromeStripBot) - outerHeight(dots);
     if (areaW <= 0 || areaH <= 0) return;
     var navW = prevBtn ? prevBtn.offsetWidth : 0;
     var rightW = rightCol ? rightCol.offsetWidth : navW; // right control column (arrow + button stack share one width)
@@ -24991,6 +25018,15 @@ function idealBrowser() {
     // the rails tracking the scene bottom on every engine (Chromium already matches, so no-op there).
     var sceneH = 0; try { sceneH = Math.round(viewport.getBoundingClientRect().height); } catch (e) {}
     if (sceneH > 0 && Math.abs(sceneH - viewportH) > 1) frame.style.height = sceneH + "px";
+    // The chrome bands pin one control to each end, which only reads as the device's corners if a
+    // band spans exactly the frame. In normal flow that falls out of the layout for free, but the
+    // fullscreen shell is a CENTRED flex column, which shrink-wraps a band to its content and
+    // clusters the pair mid-screen — so hand each band the width the frame just took. Width-only:
+    // the bands are nowrap, so this never changes their height and can't perturb the areaH read
+    // above (nor loop through the ResizeObserver watching them).
+    var bandW = (viewportW + chrome) + "px";
+    if (chromeStrip) chromeStrip.style.width = bandW;
+    if (chromeStripBot) chromeStripBot.style.width = bandW;
     // A device zoom frames the room through #loft-game-strip's transform; the frame just
     // changed size under it, so re-fit NOW (same tick as the resize) — the strip's own
     // transition then glides straight to the new framing instead of the deferred
@@ -25038,11 +25074,15 @@ function idealBrowser() {
   }
   window.refreshFullscreenLabel = refreshLabel; // re-run by setLang() on every language switch
   window.__sizeFullscreenFrame = sizeFullscreenFrame; // test hook: isFullscreen() checks the real Fullscreen API, which headless test scripts that only toggle .is-fullscreen can't trigger
-  // The chrome strip changes height on its own — the "who's here" chip joins or leaves it, and
-  // on a tiny phone the plates wrap to two lines — which changes how much height fullscreen has
-  // left for the scene. Re-fit off the strip's own box; sizeFullscreenFrame is a no-op outside
-  // fullscreen, and it never touches the strip, so this can't feed itself.
-  if (chromeStrip && window.ResizeObserver) new ResizeObserver(sizeFullscreenFrame).observe(chromeStrip);
+  // A chrome band changes height on its own — the "who's here" chip joins or leaves the top one,
+  // and a font swap resizes the plates — which changes how much height fullscreen has left for
+  // the scene. Re-fit off the bands' own boxes; sizeFullscreenFrame is a no-op outside
+  // fullscreen, and inside it only ever sets their WIDTH, so this can't feed itself.
+  if (window.ResizeObserver) {
+    var bandRO = new ResizeObserver(sizeFullscreenFrame);
+    if (chromeStrip) bandRO.observe(chromeStrip);
+    if (chromeStripBot) bandRO.observe(chromeStripBot);
+  }
   function enterFs() {
     // Class-fill first — this alone fills the viewport and works on mobile regardless of
     // the Fullscreen API; refreshLabel() flips the glyph to ✕ and sizes the room to fill.
@@ -38714,7 +38754,7 @@ var ABANDONED_CALL_MS = 30000;
     if (dtIn) { try { dtIn.blur(); } catch (e) {} }
     syncConsoleTab();
   }
-  // The strip's ▶/▼ tab reads the panel's REAL state rather than counting its own clicks, so
+  // The chrome's ▼/▲ tab reads the panel's REAL state rather than counting its own clicks, so
   // the backtick key, Esc, the quit command and a game reset all turn it too — every one of
   // them lands in openDropTerm/closeDropTerm.
   function syncConsoleTab() {
@@ -38759,16 +38799,16 @@ var ABANDONED_CALL_MS = 30000;
       if ((e.key === "Escape" || e.key === "Esc") && dtOpen()) { closeDropTerm(); e.stopPropagation(); e.preventDefault(); }
     }, true);
   }
-  (function () { // the console's tab on the chrome strip: one triangle that both shows the panel's state and flips it
+  (function () { // the console's tab, top-left of the chrome: one triangle that both shows the panel's state and flips it
     var vp = document.getElementById("loft-chrome");
     if (!vp || document.getElementById("loft-console-hint")) return;
     var b = document.createElement("button");
     b.type = "button"; b.id = "loft-console-hint"; b.className = "loft-console-hint";
     b.setAttribute("aria-controls", "dropterm");
-    b.innerHTML = '<span class="ct-mark" aria-hidden="true">▶</span>'; // one glyph, rotated by CSS — the same triangle turning, not two swapped marks
+    b.innerHTML = '<span class="ct-mark" aria-hidden="true">▼</span>'; // one glyph, half-turned by CSS — the same triangle turning, not two swapped marks
     b.addEventListener("click", function (e) { e.stopPropagation(); toggleDropTerm(); });
     vp.appendChild(b);
-    syncConsoleTab(); // ▶ closed / ▼ open, plus the matching label
+    syncConsoleTab(); // ▼ closed / ▲ open, plus the matching label
   })();
   // ── EDITOR APP ───────────────────────────────────────────────────────────────────
   // A tiny local-script editor, sibling to the console: write JS, name it, save it. The
@@ -67995,10 +68035,10 @@ function spawnDustMote(container) {
     jumpToDate(y, m0, dd); calView = { y: y, m: m0 }; calRerenderOpen();
     return { year: y, month: m0 + 1, day: dd };
   };
-  // the current-date pill on the chrome strip above the scene: a readout of the loft's day
-  // (window.__now — reflects any jump); a click raises the pocket calendar over the current room
+  // the current-date pill at the BOTTOM-LEFT of the chrome around the scene: a readout of the
+  // loft's day (window.__now — reflects any jump); a click raises the pocket calendar over the room
   function calMakePill() {
-    var vp = document.getElementById("loft-chrome");
+    var vp = document.getElementById("loft-chrome-bot");
     if (!vp || document.getElementById("loft-datepill")) return;
     var nav = document.createElement("div"); nav.className = "loft-datenav";
     function swallowKeys(e) { e.stopPropagation(); } // a focused step button must not leak keys to the game shortcuts (Enter/Space still activate it — that's a default action, not propagation)
@@ -68039,10 +68079,10 @@ function spawnDustMote(container) {
     var dreset = document.getElementById("loft-datereset");
     if (dreset) { var drk = calStr("datenav_reset_date"); dreset.title = drk; dreset.setAttribute("aria-label", drk); dreset.style.display = /[?#&]date=\d{4}-\d{2}-\d{2}/.test(location.href) ? "" : "none"; } // only offered when a ?date= override is in play
   };
-  // sibling TIME pill at the strip's trailing end: the loft's Edmonton wall-clock, showing the
+  // sibling TIME pill at the BOTTOM-RIGHT: the loft's Edmonton wall-clock, showing the
   // advancing ?time= override when one is set (else real Edmonton time); a click opens the Clock app
   function calMakeTimePill() {
-    var vp = document.getElementById("loft-chrome");
+    var vp = document.getElementById("loft-chrome-bot");
     if (!vp || document.getElementById("loft-timenav")) return;
     var nav = document.createElement("div"); nav.id = "loft-timenav"; nav.className = "loft-timenav";
     var pill = document.createElement("button");
@@ -71904,7 +71944,7 @@ function spawnDustMote(container) {
     function ensureNodes() {
       var host = document.querySelector(".hunt-viewport");
       if (!host) return null;
-      var chrome = document.getElementById("loft-chrome") || host; // the chip rides the chrome strip above the scene; the panel still overlays the room
+      var chrome = document.getElementById("loft-chrome") || host; // the chip rides the TOP chrome band, pinned right; the panel still overlays the room
       if (!toggleBtn) {
         toggleBtn = document.createElement("button");
         toggleBtn.type = "button";

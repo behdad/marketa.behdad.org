@@ -679,6 +679,35 @@ function checkI18nKeys(file, script, html) {
 //   2. border-box height − vertical padding = exactly 12 of the 2.8px line boxes
 //      (a bottom-pinned scrollback must never straddle a line across the top edge —
 //      and the border-box/content-box math is exactly what silently broke once).
+// Each .loft-chrome band around the scene eats vertical space that sizeFullscreenFrame has to
+// hand back before it can size the fullscreen frame — a band that exists in the markup but is
+// missing from that subtraction silently overflows the fullscreen shell (the scene grows past
+// the screen and the room dots fall off the bottom). Nothing visual catches it at page size,
+// because the whole calculation only runs in fullscreen. So: every band in the markup must be
+// looked up in the script AND appear in the areaH subtraction chain.
+function checkChromeBandMath(file, script, html) {
+  if (file !== "rsvp.html" || !script || !html) return;
+  var re = /<div class="loft-chrome" id="([\w-]+)"><\/div>/g, m, bands = [];
+  while ((m = re.exec(html))) bands.push(m[1]);
+  if (bands.length < 2) { fail(file + ": expected both .loft-chrome bands in the markup", "found: " + JSON.stringify(bands)); return; }
+  var areaH = script.match(/var areaH = area\.clientHeight[^;]*;/);
+  if (!areaH) { fail(file + ": sizeFullscreenFrame's areaH subtraction not found"); return; }
+  var issues = [];
+  bands.forEach(function (id) {
+    var varDecl = new RegExp("var (\\w+) = document\\.getElementById\\(\"" + id + "\"\\)").exec(script);
+    if (!varDecl) { issues.push(id + ": no getElementById in the fullscreen sizer"); return; }
+    if (areaH[0].indexOf("outerHeight(" + varDecl[1] + ")") === -1)
+      issues.push(id + ": measured into `" + varDecl[1] + "` but never subtracted from areaH");
+  });
+  // the bands are laid out by flow, so they must not be squeezed by the fullscreen flex column
+  if (!/\.loft-chrome\{[^}]*flex:0 0 auto/.test(script + html)) {
+    var styleHas = /\.loft-chrome\{[^}]*flex:\s*0 0 auto/;
+    if (!styleHas.test(html)) issues.push(".loft-chrome base rule lost flex:0 0 auto (Firefox drops the :-webkit-full-screen selector list, so it cannot live there)");
+  }
+  if (issues.length === 0) pass(file + ": all " + bands.length + " chrome bands are subtracted from the fullscreen frame math");
+  else fail(file + ": chrome band / fullscreen frame math drift", issues.join("\n"));
+}
+
 function checkConsoleOutClipSlack(file, style) {
   if (file !== "rsvp.html" || !style) return;
   var m = style.match(/\.console-out\{([^}]*)\}/);
@@ -859,6 +888,7 @@ FILES.forEach(function (file) {
     checkConsoleCmdRoster(file, script);
     checkParticleSpawnerCaps(file, script);
     checkDanceParity(file, script);
+    checkChromeBandMath(file, script, html);
   }
   checkCssCommentBalance(file, style);
   checkCssBraceBalance(file, style);

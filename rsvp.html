@@ -1299,6 +1299,31 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   #kitchen-bar-make .mk-glasshost, #kitchen-bar-make .mk-glasshost.presenting{transition:none; transform:none}
   #kitchen-bar-make .stirring{animation:none}
 }
+/* the PLAYER'S hands-on cocktail mixer at Pouria's end of the bar: a row of tappable ingredient
+   bottles feeds a shaker (its fill rises + tints per tap), a tap on the shaker shakes it, then it
+   pours into a glass and the finished drink is presented. Lives inside #kitchen-bar so it inherits
+   the party/night fade; only interactive while the bar's up (party OR dusk), like the bottles/taps.
+   Positions are baked into child coords, so the tip/shake/serve one-shots ride wrapper <g>s that
+   carry NO transform attribute of their own (the documented transform-clobber bug class). */
+#kitchen-bar-mixer{pointer-events:none}
+#kitchen-bar-mixer > .mixer-bottle{transform-box:fill-box; transform-origin:50% 100%}
+#loft-game-strip.party-on #kitchen-bar-mixer > .mixer-bottle,
+#stage-kitchen.dusk #kitchen-bar-mixer > .mixer-bottle{pointer-events:auto; cursor:pointer}
+#kitchen-bar-mixer .pouring{animation:mixer-bottle-tip .5s ease-in-out}
+@keyframes mixer-bottle-tip{0%,100%{transform:rotate(0)}45%{transform:rotate(-11deg)}}
+#kitchen-bar-mixer .mx-station{transition:opacity .3s ease}
+#loft-game-strip.party-on #kitchen-bar-mixer .mx-shakerwrap.ready,
+#stage-kitchen.dusk #kitchen-bar-mixer .mx-shakerwrap.ready{pointer-events:auto; cursor:pointer}
+#kitchen-bar-mixer .mx-shaker{transform-box:fill-box; transform-origin:50% 100%}
+#kitchen-bar-mixer .shaking{animation:mixer-shake .4s ease-in-out 3}
+@keyframes mixer-shake{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-3px) rotate(-10deg)}75%{transform:translateY(-3px) rotate(10deg)}}
+#kitchen-bar-mixer .mx-glasswrap{transform-box:fill-box; transform-origin:50% 100%; transition:transform .35s ease}
+#kitchen-bar-mixer .mx-glasswrap.served{transform:translate(11px,2px) scale(1.06)}
+@media (prefers-reduced-motion: reduce){
+  #kitchen-bar-mixer .pouring{animation:none}
+  #kitchen-bar-mixer .shaking{animation:none}
+  #kitchen-bar-mixer .mx-glasswrap, #kitchen-bar-mixer .mx-glasswrap.served{transition:none; transform:none}
+}
 /* tapping the glitter ball pops it: a quick scale-bounce on a dedicated wrapper plus a
    white light-flash halo. The bounce lives on #garden-disco-ball-pop, a node DISTINCT from
    the -spin group, so the party spin's rotate is never clobbered (parent/child transforms
@@ -22933,6 +22958,11 @@ var T = {
     ck_steps: "steps",
     ck_back: "‹ The bar",
     ck_order: "🍸 Order",
+    mix_gin: "Gin",
+    mix_campari: "Campari",
+    mix_vermouth: "Sweet vermouth",
+    mix_curacao: "Blue curaçao",
+    mix_house: "House Pour",
     app_dressup: "dress-up",
     du_reset: "reset",
     du_tophats: "top hats",
@@ -23643,6 +23673,11 @@ var T = {
     ck_steps: "postup",
     ck_back: "‹ Bar",
     ck_order: "🍸 Objednat",
+    mix_gin: "Gin",
+    mix_campari: "Campari",
+    mix_vermouth: "Sladký vermut",
+    mix_curacao: "Modré curaçao",
+    mix_house: "Domácí míchanice",
     app_dressup: "oblékačka",
     du_reset: "reset",
     du_tophats: "cylindry",
@@ -34250,6 +34285,7 @@ function gameTapsNear(a, b) {
   }
   function hideCocktailToast() { clearTimeout(ckToastTimer); if (ckToastEl) ckToastEl.classList.remove("show"); }
   window.__hideCocktailToast = hideCocktailToast; // goToStage drops a still-showing toast so it can't ride into (and click through onto) the next room
+  window.__cocktailToast = cocktailToast; // the player-mixer names its served drink through the same now-playing toast (one shared element)
 
   function reduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
   function dragging() { return !!(window.__bartenderDragging && window.__bartenderDragging()); }
@@ -34262,6 +34298,7 @@ function gameTapsNear(a, b) {
 
   // ---- the make sequence -----------------------------------------------------------------
   var making = false, makeTimers = [], cooldownUntil = 0;
+  window.__ambientMaking = function () { return making; }; // the player-mixer checks this so it never fights an in-flight ambient make for the bartender's .mixing state
   function after(ms, fn) { var id = setTimeout(fn, ms); makeTimers.push(id); return id; }
   function clearMakeTimers() { for (var i = 0; i < makeTimers.length; i++) clearTimeout(makeTimers[i]); makeTimers = []; }
   function stopBartenderStir() { if (window.__bartenderStir) window.__bartenderStir(false); } // never leave him stirring after a make ends
@@ -34494,6 +34531,214 @@ function gameTapsNear(a, b) {
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) for (var i = 0; i < TAPS.length; i++) if (TAPS[i].clear) TAPS[i].clear();
   });
+})();
+(function () {
+  // ======================================================================================
+  //  The PLAYER'S cocktail mixer — a gentle, forgiving toy at Pouria's end of the bar.
+  //  Tap the little ingredient bottles to dose a shaker (its fill rises + tints toward the
+  //  mix), tap the shaker to shake it, and it pours into a glass Pouria presents. Any combo
+  //  yields a drink; matching a real bar-menu recipe's ingredients NAMES it (Negroni, Yale) —
+  //  everything else is a house pour. Reachable in-scene (tap the bottles / shaker while the
+  //  bar's up — party OR calm night) and from the console (window.mixer(...)). Self-contained:
+  //  its own SVG nodes, no new AudioContext (it reuses the shared bar SFX), and a clean reset
+  //  (shaker empty, glass gone) on bar-down / game reset / tab-hide.
+  // ======================================================================================
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var bar = document.getElementById("kitchen-bar");
+  if (!bar) return; // no bar in this DOM → dormant (mixer() still replies gracefully)
+
+  function S(tag, attrs, parent) {
+    var e = document.createElementNS(SVGNS, tag);
+    if (attrs) for (var k in attrs) if (attrs.hasOwnProperty(k)) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function tr(key) { var l = (window.currentLang || "en"); return (window.T && window.T[l] && window.T[l][key]) || (window.T && window.T.en && window.T.en[key]) || key; }
+  function reduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+  function barUpNow() { return !!(window.__barUpNow && window.__barUpNow()); }
+  function present() { return barUpNow() && window.currentStageName === "kitchen" && document.visibilityState !== "hidden"; }
+  function flairBusy() { return !!(window.__flairState && window.__flairState().active); } // the Flair-Catch game owns the bar
+  // crickets rule: a real tap implies focus, but the console demo's timer-driven steps can land
+  // while the tab is visible-but-UNFOCUSED — gate every mixer sound the same as the ambient beds.
+  function sfx(fn) { if (document.hidden || (document.hasFocus && !document.hasFocus())) return; try { fn(); } catch (e) {} }
+
+  function h2rgb(h) { h = String(h).replace("#", ""); return [parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)]; }
+  function mixHex(list) { // equal-weight average of the poured colours — the glass so far
+    var r = 0, g = 0, b = 0, n = list.length || 1;
+    for (var i = 0; i < list.length; i++) { var c = h2rgb(list[i]); r += c[0]; g += c[1]; b += c[2]; }
+    function hx(v) { v = Math.max(0, Math.min(255, Math.round(v / n))).toString(16); return v.length < 2 ? "0" + v : v; }
+    return "#" + hx(r) + hx(g) + hx(b);
+  }
+
+  // the four tappable ingredients (key · translated label · pour colour). Chosen so a couple of
+  // the bar's REAL menu drinks fall out of simple combos (see MIX_COMBOS); anything else is a house pour.
+  var INGREDIENTS = [
+    { key: "gin",      labelKey: "mix_gin",      color: "#e9edf0" },
+    { key: "campari",  labelKey: "mix_campari",  color: "#d81e2c" },
+    { key: "vermouth", labelKey: "mix_vermouth", color: "#7c3320" },
+    { key: "curacao",  labelKey: "mix_curacao",  color: "#1f6fd6" }
+  ];
+  // sorted ingredient-key combos → the real bar-menu drink they make (bonus naming; case-insensitive)
+  var MIX_COMBOS = { "campari|gin|vermouth": "Negroni", "curacao|gin|vermouth": "Yale" };
+  function byKey(k) { for (var i = 0; i < INGREDIENTS.length; i++) if (INGREDIENTS[i].key === k) return INGREDIENTS[i]; return null; }
+  function drinkName(keys) { return MIX_COMBOS[keys.slice().sort().join("|")] || tr("mix_house"); }
+  function comboFor(name) { // a console name → a known combo's ingredient keys, or null
+    var q = String(name == null ? "" : name).toLowerCase().trim();
+    if (!q) return null;
+    for (var key in MIX_COMBOS) if (MIX_COMBOS.hasOwnProperty(key) && MIX_COMBOS[key].toLowerCase().indexOf(q) !== -1) return key.split("|");
+    return null;
+  }
+
+  var MAXP = 4;                       // shaker holds up to four doses
+  var CX = 288, BASE = 255;           // the station sits at Pouria's end of the bartop
+  var FILL_X = CX - 8, FILL_W = 16, FILL_BOT = 253, FILL_RANGE = 18; // shaker interior for the fill rect
+
+  // ---- build the static nodes (once) -----------------------------------------------------
+  var mixer = S("g", { id: "kitchen-bar-mixer" }, bar); // last child of the bar → frontmost; inherits the party/night fade
+  // ingredient bottles: a little row in front of the bartender, each its own tappable <g>
+  var BOTTLE_CX = [258, 278, 298, 318];
+  INGREDIENTS.forEach(function (ing, i) {
+    var cx = BOTTLE_CX[i], y = 251;
+    var g = S("g", { "class": "mixer-bottle" }, mixer);
+    ing.node = g;
+    S("rect", { x: cx - 5.5, y: y - 18, width: 11, height: 18, rx: 2.4, fill: ing.color, stroke: "#2a1f16", "stroke-opacity": 0.25, "stroke-width": 0.6 }, g); // body
+    S("rect", { x: cx - 2, y: y - 24, width: 4, height: 7, rx: 1.4, fill: ing.color }, g);        // neck
+    S("rect", { x: cx - 2.6, y: y - 27, width: 5.2, height: 3.4, rx: 1, fill: "#2b2620" }, g);    // cap
+    S("rect", { x: cx - 5.5, y: y - 12, width: 11, height: 6, rx: 1, fill: "#f4ecd8", opacity: 0.9 }, g); // label
+    S("rect", { x: cx - 5.5, y: y - 18, width: 2.4, height: 18, rx: 2.4, fill: "#ffffff", opacity: 0.16 }, g); // glint
+    g.addEventListener("click", function (e) { e.stopPropagation(); addIngredient(ing); });
+    g.addEventListener("animationend", function () { g.classList.remove("pouring"); }); // one-shot tip: drop it so the next dose re-triggers
+  });
+
+  // the station (shaker + glass + pour stream), hidden until you start a mix
+  var station = S("g", { "class": "mx-station", style: "opacity:0" }, mixer);
+  var stream = S("rect", { x: CX - 1.6, y: 218, width: 3.2, height: 22, rx: 1.4, fill: "#c98a3a", opacity: 0, "pointer-events": "none" }, station);
+  var shakerWrap = S("g", { "class": "mx-shakerwrap" }, station);
+  var shaker = S("g", { "class": "mx-shaker" }, shakerWrap);
+  var shFill = S("rect", { x: FILL_X, y: FILL_BOT, width: FILL_W, height: 0, fill: "#e8eef0" }, shaker); // the rising fill, under the translucent tin
+  S("path", { d: "M" + (CX - 9) + " " + BASE + " L" + (CX - 10) + " " + (BASE - 24) + " L" + (CX + 10) + " " + (BASE - 24) + " L" + (CX + 9) + " " + BASE + " Z", fill: "#cfd4d9", "fill-opacity": 0.5, stroke: "#a7adb4", "stroke-width": 1 }, shaker); // tin body (translucent so the fill shows)
+  S("rect", { x: CX - 10, y: BASE - 32, width: 20, height: 9, rx: 2, fill: "#dfe3e7", stroke: "#a7adb4", "stroke-width": 1 }, shaker); // collar
+  S("rect", { x: CX - 6, y: BASE - 40, width: 12, height: 9, rx: 2, fill: "#cfd4d9", stroke: "#a7adb4", "stroke-width": 1 }, shaker); // cap
+  S("rect", { x: CX - 8, y: BASE - 23, width: 3, height: 22, rx: 1.5, fill: "#eef1f4", opacity: 0.6 }, shaker); // glint
+  shakerWrap.addEventListener("click", function (e) { e.stopPropagation(); shakeAndServe(); });
+
+  var glassWrap = S("g", { "class": "mx-glasswrap", style: "opacity:0", "pointer-events": "none" }, station);
+  S("path", { d: "M" + (CX - 15) + " 234 Q" + (CX - 15) + " 246 " + CX + " 247 Q" + (CX + 15) + " 246 " + (CX + 15) + " 234 Z", fill: "#eef4f6", "fill-opacity": 0.5, stroke: "#cdd8da", "stroke-width": 1 }, glassWrap); // coupe bowl
+  var glFill = S("path", { d: "M" + (CX - 12) + " 235 Q" + (CX - 11) + " 243 " + CX + " 243 Q" + (CX + 11) + " 243 " + (CX + 12) + " 235 Z", fill: "#e6c46a", opacity: 0 }, glassWrap); // the drink
+  S("line", { x1: CX, y1: 247, x2: CX, y2: 256, stroke: "#cdd8da", "stroke-width": 1.6 }, glassWrap); // stem
+  S("line", { x1: CX - 7, y1: 256, x2: CX + 7, y2: 256, stroke: "#cdd8da", "stroke-width": 1.8 }, glassWrap); // foot
+
+  // ---- state + timers --------------------------------------------------------------------
+  var picked = [], busy = false, weMarkedMixing = false, timers = [];
+  function at(ms, fn) { var id = setTimeout(fn, ms); timers.push(id); return id; }
+  function clearTimers() { for (var i = 0; i < timers.length; i++) clearTimeout(timers[i]); timers = []; }
+  function setFill(level, color) {
+    var h = Math.max(0, Math.min(1, level)) * FILL_RANGE;
+    shFill.setAttribute("y", FILL_BOT - h); shFill.setAttribute("height", h);
+    if (color) shFill.setAttribute("fill", color);
+  }
+  function markBartender(on) { // he sets his hand-shaker down to make YOUR drink — but never fight an in-flight ambient make
+    if (window.__ambientMaking && window.__ambientMaking()) return;
+    if (window.__bartenderMixing) { window.__bartenderMixing(on); weMarkedMixing = on; }
+  }
+  function resetMix() {
+    clearTimers();
+    picked = []; busy = false;
+    setFill(0);
+    shaker.classList.remove("shaking");
+    shakerWrap.classList.remove("ready");
+    shakerWrap.style.opacity = "0";
+    glassWrap.classList.remove("served");
+    glassWrap.style.opacity = "0"; glFill.setAttribute("opacity", "0");
+    stream.setAttribute("opacity", "0");
+    station.style.opacity = "0";
+    if (weMarkedMixing && window.__bartenderMixing) window.__bartenderMixing(false);
+    weMarkedMixing = false;
+  }
+  window.__resetMixer = resetMix; // resetHunt (game reset) calls this so nothing's left mid-mix
+
+  function showStream(color) {
+    stream.setAttribute("fill", color); stream.setAttribute("opacity", "0.9");
+    at(320, function () { stream.setAttribute("opacity", "0"); });
+  }
+
+  function addIngredient(ing) {
+    if (!ing || busy || !present() || flairBusy() || picked.length >= MAXP) return false;
+    if (window.__retireHint) window.__retireHint("hint_cocktail");
+    picked.push(ing);
+    station.style.opacity = "1";
+    shakerWrap.style.opacity = "1";
+    shakerWrap.classList.add("ready");     // now tappable to shake
+    glassWrap.style.opacity = "0"; glassWrap.classList.remove("served"); glFill.setAttribute("opacity", "0");
+    if (ing.node && !reduced()) { ing.node.classList.remove("pouring"); void ing.node.getBBox && ing.node.getBBox(); ing.node.classList.add("pouring"); } // bottle tip (own wrapper, no static transform)
+    if (!reduced()) showStream(ing.color);
+    setFill(picked.length / MAXP, mixHex(picked.map(function (p) { return p.color; }))); // the fill rises + tints toward the mix
+    sfx(function () { playPourSound("kitchen-bartender"); });
+    return true;
+  }
+
+  function shakeAndServe() {
+    if (busy || !picked.length || !present() || flairBusy()) return false;
+    busy = true;
+    shakerWrap.classList.remove("ready");
+    if (window.__actPing) window.__actPing("drink"); // the drink beat — same as watching Pouria mix one
+    var name = drinkName(picked.map(function (p) { return p.key; }));
+    var color = mixHex(picked.map(function (p) { return p.color; }));
+    markBartender(true);
+
+    if (reduced()) { // static: pour + present instantly, no shake/slide
+      setFill(0);
+      shakerWrap.style.opacity = "0";
+      glassWrap.style.opacity = "1"; glFill.setAttribute("fill", color); glFill.setAttribute("opacity", "0.9");
+      if (window.__cocktailToast) window.__cocktailToast(name);
+      sfx(function () { playGlassClinkSound(1.1 + Math.random() * 0.15, "kitchen-bartender"); });
+      at(1700, resetMix);
+      return true;
+    }
+
+    shaker.classList.add("shaking");
+    sfx(function () { playShakerRattleSound("kitchen-bartender"); });
+    at(220, function () { sfx(function () { playShakerRattleSound("kitchen-bartender"); }); });
+    at(1240, function () { // done shaking → pour it out
+      shaker.classList.remove("shaking");
+      showStream(color);
+      setFill(0);
+      sfx(function () { playPourSound("kitchen-bartender"); });
+    });
+    at(1640, function () { // shaker away, the finished drink appears
+      shakerWrap.style.opacity = "0";
+      glassWrap.style.opacity = "1"; glFill.setAttribute("fill", color); glFill.setAttribute("opacity", "0.9");
+    });
+    at(1820, function () { // Pouria presents it: a little slide + pop, a clink, and the name
+      glassWrap.classList.add("served");
+      if (window.__cocktailToast) window.__cocktailToast(name);
+      sfx(function () { playGlassClinkSound(1.05 + Math.random() * 0.15, "kitchen-bartender"); });
+    });
+    at(3400, resetMix);
+    return true;
+  }
+
+  // console entry: raise the bar + step to the kitchen, then run a self-mixing demo. A known drink
+  // name (or its ingredients) makes that one; a bare mixer() pours a random named drink.
+  window.__runMixer = function (name) {
+    var combo = comboFor(name), keys;
+    if (combo) keys = combo;
+    else if (name == null || name === "") { var ns = Object.keys(MIX_COMBOS); keys = ns[(Math.random() * ns.length) | 0].split("|"); }
+    else { // unknown name → a random 2–3 ingredient house pour
+      var shuffled = INGREDIENTS.map(function (x) { return x.key; }).sort(function () { return Math.random() - 0.5; });
+      keys = shuffled.slice(0, 2 + ((Math.random() * 2) | 0));
+    }
+    if (!barUpNow() && window.__setDayNight) window.__setDayNight(true); // raise the calm night bar if the bar's down
+    if (window.goToStage) window.goToStage("kitchen");
+    var ings = keys.map(byKey).filter(Boolean);
+    resetMix();
+    var d = 620; // let the pan / bar-raise settle before the first dose
+    ings.forEach(function (ing, i) { at(d + i * 640, function () { addIngredient(ing); }); });
+    at(d + ings.length * 640 + 520, function () { shakeAndServe(); });
+    return "🍸 mixing " + drinkName(keys) + " — or tap the bottles + shaker at the bar to make your own.";
+  };
+
+  document.addEventListener("visibilitychange", function () { if (document.hidden) resetMix(); }); // hidden → tear down, don't strand a mix
 })();
 // A call is a timer plus animations plus a per-family audio module, so nothing should be
 // left running for a visitor who wandered off: every call (laptop, monitor, pocket phone)
@@ -36818,6 +37063,7 @@ var ABANDONED_CALL_MS = 30000;
     bouquet: "bouquet() — the bouquet toss: Markéta winds up and throws a bouquet that arcs high over the crowd, and a RANDOM guest leaps to catch it (different each time). lights the party + heads to the garden + crashes the crowd first if needed. bouquet(false) ends it early",
     chairlift: "chairlift() — the chair-lift hora: the crowd hoists Behdad & Markéta up on chairs and rings around bouncing (Persian/Jewish tradition), then lowers them (~12s). lights the party + heads to the garden + crashes the crowd first if needed. chairlift(false) ends it early",
     cocktail: "cocktail(\"negroni\") — Pouria mixes that real drink from the bar's menu (partial name ok); cocktail() makes the featured signature drink. lights the party + steps behind the bar first if it's dark. he also mixes on his own while you watch the bar. alias: drink()",
+    mixer: "mixer() — the hands-on cocktail toy: instead of watching Pouria, YOU dose a shaker at the bar. Tap the little ingredient bottles (gin · Campari · sweet vermouth · blue curaçao) to fill + tint the shaker, then tap the shaker to shake it and it pours into a glass Pouria presents. Any combo makes a drink; hitting a real recipe (gin+Campari+vermouth → Negroni; gin+vermouth+curaçao → Yale) names it, the rest are a house pour. mixer() runs a self-mixing demo of a random named drink; mixer(\"negroni\") mixes that one; mixer(\"gin\") improvises. raises the bar + steps behind it first if it's dark",
     couples: "couples(true) — bring a random named guest couple to groove at the bar now; couples(\"madla\") forces a specific couple (by member or couple name); couples(false) clears them; couples() reports who's there. a couple rotates through on its own most of the party (needs it lit + the kitchen on screen), skipping anyone already dancing in the garden.",
     officefolks: "officefolks(true) — a named cast couple slips into the quiet office to hang out, drinks in hand; officefolks(\"madla\") forces a specific couple (by member or couple name); officefolks(false) clears them; officefolks() reports who's there. a couple drifts in occasionally on its own during the party (needs the office on screen), skipping anyone already dancing in the garden, at the bar, or on the balcony.",
     lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
@@ -36951,7 +37197,7 @@ var ABANDONED_CALL_MS = 30000;
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · storm()/rain()/overcast() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · sharecard() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora() · twilight() · timelapse() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · repeat(\"name\")/stop() · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · mailto() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · mixer() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · storm()/rain()/overcast() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · sharecard() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora() · twilight() · timelapse() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · repeat(\"name\")/stop() · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · mailto() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
@@ -37203,7 +37449,7 @@ var ABANDONED_CALL_MS = 30000;
   var CONSOLE_CMDS = [
     "help", "clear", "laser", "party", "chase", "guests", "aligoli", "arrive", "roster", "reset", "autoplay", "quit", "blacklight", "uv", "trip", "room",
     "goto", "rooms", "daylight", "night", "day", "season", "birthday", "play", "pause", "temp", "weather",
-    "clock", "time", "sharecard", "projector", "storm", "rain", "overcast", "dance", "jukebox", "dj", "firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift", "cocktail", "lang", "caption", "candle",
+    "clock", "time", "sharecard", "projector", "storm", "rain", "overcast", "dance", "jukebox", "dj", "firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift", "cocktail", "mixer", "lang", "caption", "candle",
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "aurora", "twilight", "timelapse", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood", "kidsAsleep",
     "phone", "album", "message", "madla", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "repeat", "stop", "edit",
@@ -64401,6 +64647,7 @@ function spawnDustMote(container) {
     if (window.resetBottles) window.resetBottles();
     if (window.__resetKitchenPans) window.__resetKitchenPans();
     if (window.__resetBarBottles) window.__resetBarBottles(); // fresh game: put any toppled bottles back + zero their click counts
+    if (window.__resetMixer) window.__resetMixer();            // fresh game: shaker empty, glass gone, station hidden
     if (window.__resetStools) window.__resetStools();          // fresh game: stools back to default x
     if (window.__resetKitchenRoach) window.__resetKitchenRoach(); // fresh game: hide/stop the cabinet cockroach
     Object.keys(plantSpots).forEach(function (id) {
@@ -69251,6 +69498,15 @@ function spawnDustMote(container) {
     return window.__makeCocktail(arguments.length ? name : undefined);
   };
   window.drink = window.cocktail; // alias
+
+  // mixer — the hands-on version: instead of watching Pouria mix, YOU dose the shaker at the bar.
+  // mixer() runs a self-mixing demo of a random named drink; mixer("negroni") mixes that one;
+  // mixer("gin") (an unknown drink) improvises a house pour. In-scene, tap the ingredient bottles
+  // + the shaker at the bar. Raises the bar + steps behind it first if it's dark.
+  window.mixer = function (name) {
+    if (typeof window.__runMixer !== "function") return "the bar hook isn't ready yet.";
+    return window.__runMixer(arguments.length ? name : undefined);
+  };
 
   // dj — who's spinning at the garden party. sina (beanie/cap) = DJ A · danesh (afro) = DJ B.
   // dj() returns the current one {n, name}; dj("sina"|"danesh"|1|2|random()) puts them on the decks.

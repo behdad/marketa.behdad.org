@@ -4414,6 +4414,8 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .pm-msg-bubble{background:var(--paper); border:1px solid var(--rule); border-radius:13px 13px 13px 3px; padding:7px 11px; font-size:13px; line-height:1.4; color:var(--ink); max-width:86%; overflow-wrap:anywhere}
 .pm-msg-text{display:block}
 .pm-msg-img{display:block; margin-top:7px; width:150px; max-width:100%; height:auto; border-radius:9px; border:1px solid var(--rule)}
+.pm-msg-img.tappable{cursor:pointer}
+.pm-msg-img.tappable:hover{border-color:var(--wine)}
 /* the new-message thumbnail: a small pulsating phone card, top-centre, ~7s, tap to open messages */
 .msg-thumb{position:absolute; top:14px; left:50%; z-index:60; transform:translateX(-50%) translateY(-30px); display:flex; align-items:center; gap:13px; max-width:min(440px,94vw); padding:13px 20px 13px 14px; border:none; cursor:pointer; text-align:left; font:inherit; color:var(--ink); background:var(--paper); border-radius:20px; box-shadow:0 6px 22px rgba(0,0,0,.28), inset 0 0 0 1px var(--rule); opacity:0; pointer-events:none; transition:opacity .3s ease, transform .3s cubic-bezier(.34,1.4,.6,1)}
 .msg-thumb.show{opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; animation:msg-thumb-pulse 1.15s ease-in-out infinite}
@@ -8479,7 +8481,7 @@ section{margin:1.9rem 0}
    their .bd-cutter .guest-react (composes with any flare). Candles flicker, a knife dips. */
 #garden-bd-cake{opacity:0; transition:opacity .6s ease}
 #garden-guests.bd-cake-cutting #garden-bd-cake{opacity:1}
-#garden-bd-cake-flames{transform-box:fill-box; transform-origin:center bottom}
+#garden-bd-cake-flames{transform-box:fill-box; transform-origin:center bottom; transition:opacity .5s ease}
 #garden-guests.bd-cake-cutting #garden-bd-cake-flames{animation:bd-cake-flicker 1.1s ease-in-out infinite}
 @keyframes bd-cake-flicker{0%,100%{transform:scaleY(1) scaleX(1); opacity:.92} 40%{transform:scaleY(1.16) scaleX(.92); opacity:1} 70%{transform:scaleY(.88) scaleX(1.06); opacity:.82}}
 #garden-bd-cake-knife{transform-box:fill-box; transform-origin:82% 8%} /* pivots at the handle top */
@@ -8487,6 +8489,12 @@ section{margin:1.9rem 0}
 @keyframes bd-cake-knife-cut{0%,100%{transform:rotate(0) translateY(0)} 30%{transform:rotate(3deg) translateY(4px)} 55%{transform:rotate(-2deg) translateY(7px)} 78%{transform:rotate(2deg) translateY(2px)}}
 #garden-bd-cake-sparkle{transform-box:fill-box; transform-origin:center center}
 #garden-guests.bd-cake-cutting #garden-bd-cake-sparkle{animation:cake-sparkle 1.7s ease-in-out infinite}
+/* the cake is tappable while cutting (blow the candles out); a blow fades the flames + kills the
+   flicker (id-based looping state → !important + later-in-source to win the cascade), and the
+   sparkle glow goes with them. */
+#garden-guests.bd-cake-cutting #garden-bd-cake:not(.blown){pointer-events:auto; cursor:pointer}
+#garden-bd-cake.blown #garden-bd-cake-flames{opacity:0; animation:none !important}
+#garden-bd-cake.blown #garden-bd-cake-sparkle{opacity:0; animation:none !important}
 /* the birthday person(s) lean in over the cake (translate property → composes with sway/flare) */
 #garden-guests.bd-cake-cutting .bd-cutter .guest-react{translate:0 3px; transition:translate .7s cubic-bezier(.4,0,.2,1)}
 #garden-guests .bd-cutter .guest-react{transition:translate .7s cubic-bezier(.4,0,.2,1)} /* ease back out too */
@@ -45005,8 +45013,14 @@ async def localfont(name):
           head.appendChild(xb);
           var bub = document.createElement("div"); bub.className = "pm-msg-bubble";
           var txt = document.createElement("span"); txt.className = "pm-msg-text"; txt.innerHTML = msgBody(m); bub.appendChild(txt); // authored dict copy (may carry <em>, e.g. Irene's "daeeee")
-          if (m.img) { // a "developing polaroid" fade-in (it's a photobooth shot); static, no tap-to-enlarge
+          if (m.img) { // a "developing polaroid" fade-in (photobooth shot, or a tappable occasion postcard)
             var im = document.createElement("img"); im.className = "pm-msg-img"; im.src = m.img; im.alt = msgBody(m); im.loading = "lazy"; bub.appendChild(im);
+            if (m.share) { // the share-card postcard: tapping the IMAGE opens the postcard modal (not the row's act)
+              im.classList.add("tappable"); im.setAttribute("role", "button"); im.setAttribute("tabindex", "0");
+              var openCard = function (e) { e.stopPropagation(); if (window.shareCard) window.shareCard(); };
+              im.addEventListener("click", openCard);
+              im.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); if (window.shareCard) window.shareCard(); } });
+            }
             if (!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
               try { im.animate([{ opacity: 0, filter: "contrast(.7) brightness(1.4) saturate(.5)" }, { offset: .45, opacity: 1 }, { opacity: 1, filter: "none" }], { duration: 1100, easing: "ease-out" }); } catch (e) {} // opacity+filter only (no transform) — clear of the particle-transform guard
             }
@@ -47666,6 +47680,19 @@ async def localfont(name):
     // session — messagesThread dedups the "bd_<who>" id, so re-renders / the ~4s air-quality
     // re-apply / repeated 'b' presses can't double-send. Unattended delivery is silent (the thumb
     // + notify buzz self-gate on the crickets rule inside showMessageThumb).
+    // Lazily rasterize the day's occasion share-card and hang it on a delivered message as a
+    // tappable inline postcard (m.img + m.share). Never blocks delivery — the text is already in
+    // the thread; if generation fails the message just stays image-less. If the messages app is
+    // open when the PNG lands, re-render so the postcard appears. (The occasion is whatever the
+    // loft's current date is → the birthday's card on a birthday, the holiday's card on a holiday.)
+    function attachSharePostcard(id) {
+      if (!window.__shareCardDataURL) return;
+      window.__shareCardDataURL().then(function (url) {
+        var m = MESSAGES[id]; if (!m || !url) return;
+        m.img = url; m.share = true; // .share marks the img as the share-card (tap → shareCard modal)
+        if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages);
+      }, function () {});
+    }
     var BD_TEMPLATES = ["bd_msg_a", "bd_msg_b", "bd_msg_c", "bd_msg_d"];
     var BD_MB_PEOPLE = { jay: 1, spencer: 1, madla: 1, robert: 1, elisabeth: 1, felix: 1, daniel: 1, marie: 1, baka: 1 }; // Markéta's friends + Czech family
     window.__deliverBirthdayText = function (who, name) {
@@ -47675,6 +47702,7 @@ async def localfont(name):
       var mb = who === "marketa" ? false : (who === "behdad" || BD_MB_PEOPLE[who]); // a partner's own birthday is announced by the OTHER partner
       MESSAGES[id] = { fromKey: mb ? "msg_marketa_from" : "msg_behdad_from", bodyKey: BD_TEMPLATES[Math.floor(Math.random() * BD_TEMPLATES.length)], bdName: name, act: "bd:" + who }; // tapping the text summons the birthday person (runMsgAction "bd:")
       window.__deliverPhoneMessage(id);
+      attachSharePostcard(id); // carry the birthday's save-the-date postcard as a tappable inline image
     };
     // ── special-day INVITE text ── on a wedding/bbq/brunch occasion or a named holiday, the host texts
     // an invite a moment after load (the dateOccasions orchestrator picks sender + body + tap-action).
@@ -47684,6 +47712,7 @@ async def localfont(name):
       if (!id || messagesThread.indexOf(id) !== -1) return;
       MESSAGES[id] = { fromKey: fromKey, bodyKey: bodyKey, act: act };
       window.__deliverPhoneMessage(id);
+      attachSharePostcard(id); // carry the occasion's save-the-date postcard as a tappable inline image
     };
     // message("Sender", "your text") — deliver an AD-HOC text: a notification toast (when the tab's
     // attended) AND a bubble in the messages app, from an arbitrary sender with arbitrary body.
@@ -61481,6 +61510,8 @@ function spawnDustMote(container) {
       if (bdCakeTimer) { clearTimeout(bdCakeTimer); bdCakeTimer = null; }
       window.__bdCakeOn = false;
       group.classList.remove("bd-cake-cutting");
+      var ckEl = document.getElementById("garden-bd-cake");
+      if (ckEl) ckEl.classList.remove("blown"); // relight for the next cutting (flames fade back up)
       for (var i = 0; i < bdCutters.length; i++) if (bdCutters[i]) bdCutters[i].classList.remove("bd-cutter");
       bdCutters = [];
       // glide each cutter back to the floor spot it held before we danced it to the centre
@@ -61520,10 +61551,36 @@ function spawnDustMote(container) {
       if (ck) { bdCakeAnchor = ck.nextSibling; group.appendChild(ck); }
       cheerCrowd(list.map(function (w) { return ".g-" + w; })); // the crowd flares (the birthday people are busy at the cake)
       playCheerSfx();
-      bdCakeTimer = setTimeout(endBdCakeCutting, reducedMotion() ? 5000 : 9000);
+      // hold until the candles are blown out (blowOutBdCandles ends it) OR 15s passes, whichever first
+      bdCakeTimer = setTimeout(endBdCakeCutting, reducedMotion() ? 6000 : 15000);
       return true;
     }
+    // tap the candled cake → blow the flames out: fade + kill the flicker (CSS .blown), puff a wisp of
+    // smoke off each wick (into the cake's OWN group so the coords track it), a soft "phew", then wind
+    // the hold down shortly after so the birthday person rejoins the dance floor.
+    function blowOutBdCandles() {
+      if (!window.__bdCakeOn) return false;
+      var cake = document.getElementById("garden-bd-cake");
+      if (!cake || cake.classList.contains("blown")) return false;
+      cake.classList.add("blown");
+      var pos = document.getElementById("garden-bd-cake-pos");
+      if (pos && !reducedMotion()) {
+        [-10, -5, 0, 5, 10].forEach(function (x, i) {
+          setTimeout(function () { spawnSteamWisps(pos, x, 286, 0.32, (i % 2) ? 1 : -1, -1, 2, 0.55); }, i * 60);
+        });
+      }
+      playSatisfiedExhaleSound("garden-bd-cake"); // a soft blow/"phew" (a click implies focus)
+      if (bdCakeTimer) { clearTimeout(bdCakeTimer); bdCakeTimer = null; }
+      bdCakeTimer = setTimeout(endBdCakeCutting, reducedMotion() ? 500 : 1600); // linger a beat on the smoke, then rejoin the floor
+      return true;
+    }
+    (function () {
+      var cake = document.getElementById("garden-bd-cake");
+      if (!cake) return;
+      cake.addEventListener("click", function () { if (window.__bdCakeOn) blowOutBdCandles(); });
+    })();
     window.__bdCakeOn = false;
+    window.__blowOutBdCandles = blowOutBdCandles;
     window.__startBdCakeCutting = startBdCakeCutting;
     window.__endBdCakeCutting = endBdCakeCutting;
 
@@ -66417,6 +66474,12 @@ function spawnDustMote(container) {
   // sharecard() — console-facing alias: opens the same preview, returns a friendly line
   // (rather than the giant data-URL) so the scrollback stays readable.
   window.sharecard = function () { window.shareCard(); return "🖼 " + shareT("share_title"); };
+  // Rasterize the day's occasion card and resolve JUST the PNG data-URL (no modal) — used by the
+  // birthday / occasion invite texts to embed the postcard as a tappable inline image. Resolves
+  // null on any failure so a caller can deliver the text regardless.
+  window.__shareCardDataURL = function () {
+    return shareRasterize().then(function (out) { return out.dataURL; }, function () { return null; });
+  };
   // On a day of significance — a friend's EXACT birthday, either wedding day, or a named turn of
   // the year (Nowruz / Čaháršanbe-Sûrî) — greet the visitor with the day's own save-the-date card,
   // once. Reads the same pretend-date the decor does (seasonDate → honours ?date=), so previewing a

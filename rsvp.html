@@ -22998,6 +22998,8 @@ var T = {
     msg_fireworks_body: "FINALE TIME 🎆 get out on the balcony!",
     msg_lanterns_body: "let's send up wish-lanterns 🏮 make a wish ✨",
     msg_sina_helpers_body: "who's got some party helpers? 😜",
+    msg_sunset_body: "this sunset is UNREAL 🌅 get on the balcony",
+    msg_sunrise_body: "wait it's sunrise already?! 😳☀️ we pulled an all-nighter",
     msg_mb_from: "markéta & behdad",
     msg_mb_body: "did you RSVP yet? 😉 no pressure. (some pressure.)",
     msg_dusk_body: "eclipse on the balcony 🌑 come out?",
@@ -23706,6 +23708,8 @@ var T = {
     msg_fireworks_body: "ČAS NA FINÁLE 🎆 pojď ven na balkon!",
     msg_lanterns_body: "pustíme lampiony přání 🏮 něco si přej ✨",
     msg_sina_helpers_body: "kdo má nějaké párty pomocníky? 😜",
+    msg_sunset_body: "ten západ slunce je NESKUTEČNÝ 🌅 pojď na balkon",
+    msg_sunrise_body: "počkat, to už je východ slunce?! 😳☀️ protáhli jsme to celou noc",
     msg_mb_from: "markéta & behdad",
     msg_mb_body: "potvrdil(a) jsi už účast? 😉 žádný tlak. (trochu tlak.)",
     msg_dusk_body: "zatmění na balkoně 🌑 přijdeš ven?",
@@ -45538,6 +45542,7 @@ async def localfont(name):
     // the wedding coordinators — any of them can send a moment announcement ("cake's out!", "group photo!" …)
     var MOMENT_SENDERS = ["msg_bahareh_from", "msg_madla_from", "msg_athena_from"];
     var MOM_SENDERS = ["msg_bahareh_from", "msg_madla_from", "msg_patricia_from"]; // the three moms in the room — any of them reports the kids asleep / on the loose (frozen per delivery)
+    var ADULT_SENDERS = ["msg_bahareh_from", "msg_pouria_from", "msg_ali_from", "msg_alireza_from", "msg_hamid_from", "msg_athena_from"]; // a random grown-up guest — any of them notices the sky (sunset/sunrise); frozen per delivery
     var MESSAGES = { // each fires from its beat/trigger via window.__deliverPhoneMessage (actTwo sequencer + the DJ swap); listed in arc order so 'g' steps through them in sequence
       dusk:   { fromKey: "msg_bahareh_from", bodyKey: "msg_dusk_body", act: "eclipse" },      // act_b0 → tap: balcony + eclipse
       pouria: { fromKey: "msg_pouria_from",  bodyKey: "msg_pouria_body", act: "room:kitchen" }, // act_p1 → the bar
@@ -45570,6 +45575,8 @@ async def localfont(name):
       fireworks:     { fromKey: "msg_danesh_from",  bodyKey: "msg_fireworks_body", act: "fireworks" },     // DJ Danesh calls the finale → taps: balcony (night) + the fireworks finale over the city
       lanterns:      { fromKey: "msg_bahareh_from", bodyKey: "msg_lanterns_body",  act: "lanterns" },      // Bahareh (fire-festival kin) → taps: balcony (night) + a wish-lantern release
       sina_helpers:  { fromKey: "msg_sina_from",    bodyKey: "msg_sina_helpers_body", act: "magicbox" },   // Sina (off the decks) → taps: garden + the magic box (locked → date lock the first time)
+      sunset:        { fromKeys: ADULT_SENDERS,     bodyKey: "msg_sunset_body",   act: "room:balcony" },   // a random guest, only within ~±45min of the real Edmonton sunset (nearSunset) → taps: the balcony
+      sunrise:       { fromKeys: ADULT_SENDERS,     bodyKey: "msg_sunrise_body",  act: "room:balcony" },   // a random guest, party-only within ~±45min of the real Edmonton sunrise (nearSunrise, the all-nighter beat) → taps: the balcony
       // Friend-duo "are you home?" drop-ins → tap pans to the cuddly nook + the PAIR walks in (see
       // the #cuddly-visitors IIFE + the "visit:" action). Each has a small bodyKeys POOL flavored to
       // the texter; __deliverPhoneMessage freezes one pick into bodyKey at delivery (so it varies per
@@ -45595,8 +45602,8 @@ async def localfont(name):
       groupphoto:    { fromKeys: MOMENT_SENDERS, bodyKey: "msg_groupphoto_body", act: "groupphoto" }, // a coordinator gathers everyone for the whole-crowd shot → lands in the album
       sparklers:     { fromKeys: MOMENT_SENDERS, bodyKey: "msg_sparklers_body",  act: "sparklers" }   // a coordinator calls the sparkler send-off tunnel
     };
-    var CUE_POOL = ["cue_cocktails", "cue_calendar", "storm", "invaders", "flair", "smores", "sina_helpers", "firstdance", "slowdance", "cake", "bouquet", "chairlift", "jukebox", "hamid_verse", "pouria_farhang", "ali_love", "alireza_vitamin", "fireworks", "lanterns", "toasts", "groupphoto", "sparklers", "bbq", "kids_asleep"]; // the random party (night) drip (shuffled: each drip picks a random un-sent one); smores is night-only + sina_helpers only while Sina's off the decks — see cueRemaining(); hamid_verse chains its 2nd stanza via m.next; toasts/groupphoto/sparklers/cake/bouquet/chairlift are scripted garden beats
-    var DAY_POOL = ["cue_mail"]; // the DAYTIME drip — texts that belong to daylight hours (no party); dripped by scheduleDayDrip(). Bahareh's "did you check the mail?" belongs to the day. (behdad's BBQ text moved to the party CUE_POOL.)
+    var CUE_POOL = ["cue_cocktails", "cue_calendar", "storm", "invaders", "flair", "smores", "sina_helpers", "firstdance", "slowdance", "cake", "bouquet", "chairlift", "jukebox", "hamid_verse", "pouria_farhang", "ali_love", "alireza_vitamin", "fireworks", "lanterns", "toasts", "groupphoto", "sparklers", "bbq", "kids_asleep", "sunset", "sunrise"]; // the random party (night) drip (shuffled: each drip picks a random un-sent one); smores is night-only + sina_helpers only while Sina's off the decks — see cueRemaining(); hamid_verse chains its 2nd stanza via m.next; toasts/groupphoto/sparklers/cake/bouquet/chairlift are scripted garden beats
+    var DAY_POOL = ["cue_mail", "sunset"]; // the DAYTIME drip — texts that belong to daylight hours (no party); dripped by scheduleDayDrip(). Bahareh's "did you check the mail?" belongs to the day. (behdad's BBQ text moved to the party CUE_POOL.) sunset also lives here so it can drip near dusk even with no party — gated by nearSunset().
     // Phone photobooth result state — session-scoped, same model as notesDraft/cardsIndex:
     // a captured polaroid (frame canvas + chosen look/frame) survives a normal close/reopen
     // (renderPhotobooth seeds its locals from these and commits them back in teardown), and is
@@ -47176,20 +47183,34 @@ async def localfont(name):
     // gated on party-on + attended + not-cinematic (an unattended fire skips but keeps trying).
     // Armed by setGardenParty(on) via __startCueDrip; stops on party-off / reset / pool empty.
     var cueTimer = null;
+    var SUN_NEAR_MIN = 45; // a text lands "near" sunrise/sunset within this many minutes either side
+    function edmNowMins() { // current Edmonton minutes-of-day — mirrors edmMinutes() (a different IIFE), driven by the ?time= override / test hook / real clock
+      if (typeof window.__edmNowMins === "function") return window.__edmNowMins();
+      var ov = window.__timeOverrideMins ? window.__timeOverrideMins() : null;
+      if (ov != null) return Math.floor(ov);
+      try { var d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Edmonton" })); return d.getHours() * 60 + d.getMinutes(); }
+      catch (e) { var n = new Date(); return n.getHours() * 60 + n.getMinutes(); }
+    }
+    function sunMoM() { var s = window.__edmSun; return { sr: (s && typeof s.sr === "number") ? s.sr : 7 * 60, ss: (s && typeof s.ss === "number") ? s.ss : 20 * 60 }; } // same source + offline fallbacks as sunTimes()
+    function nearSunset() { return Math.abs(edmNowMins() - sunMoM().ss) <= SUN_NEAR_MIN; }
+    function nearSunrise() { return Math.abs(edmNowMins() - sunMoM().sr) <= SUN_NEAR_MIN; }
+    function cuePending() { var out = []; for (var i = 0; i < CUE_POOL.length; i++) if (messagesThread.indexOf(CUE_POOL[i]) === -1) out.push(CUE_POOL[i]); return out; } // un-sent cues (keeps the drip alive across time/state gates so a gated-out one stays reachable)
     function cueRemaining() {
       var b = document.getElementById("stage-balcony"), night = !!(b && b.classList.contains("dusk"));
       var out = [];
-      for (var i = 0; i < CUE_POOL.length; i++) {
-        var id = CUE_POOL[i];
-        if (messagesThread.indexOf(id) !== -1) continue;
+      var pend = cuePending();
+      for (var i = 0; i < pend.length; i++) {
+        var id = pend[i];
         if (id === "smores" && !night) continue; // s'mores round the fire is an after-dark thing
         if (id === "sina_helpers") { var db = document.getElementById("garden-djbooth"); if (!(db && db.classList.contains("dj-b"))) continue; } // only when Sina's off the decks (his friend's spinning)
+        if (id === "sunset" && !nearSunset()) continue; // only around the loft's actual sunset
+        if (id === "sunrise" && !(window.__gardenPartyOn && nearSunrise())) continue; // the all-nighter beat: party still on AND near real sunrise
         out.push(id);
       }
       return out;
     }
     function scheduleCueDrip() {
-      if (cueTimer || !window.__gardenPartyOn || !cueRemaining().length) return;
+      if (cueTimer || !window.__gardenPartyOn || !cuePending().length) return;
       cueTimer = setTimeout(function () {
         cueTimer = null;
         if (window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic && autonomousMsgOk()) {
@@ -47207,9 +47228,10 @@ async def localfont(name):
     // exhausted. Same crickets rule (hidden/blur → don't deliver) as the party drip.
     var dayTimer = null;
     function isDayNow() { var b = document.getElementById("stage-balcony"); return !(b && b.classList.contains("dusk")); }
-    function dayRemaining() { var out = []; for (var i = 0; i < DAY_POOL.length; i++) if (messagesThread.indexOf(DAY_POOL[i]) === -1) out.push(DAY_POOL[i]); return out; }
+    function dayPending() { var out = []; for (var i = 0; i < DAY_POOL.length; i++) if (messagesThread.indexOf(DAY_POOL[i]) === -1) out.push(DAY_POOL[i]); return out; } // un-sent daytime texts (keeps the poll alive until sunset's window is reachable)
+    function dayRemaining() { return dayPending().filter(function (id) { return id !== "sunset" || nearSunset(); }); } // of the un-sent, the ones deliverable right now (sunset only near real sunset)
     function scheduleDayDrip() {
-      if (dayTimer || !dayRemaining().length) return;
+      if (dayTimer || !dayPending().length) return;
       dayTimer = setTimeout(function () {
         dayTimer = null;
         if (isDayNow() && !window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic && autonomousMsgOk()) {

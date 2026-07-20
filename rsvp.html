@@ -29209,9 +29209,22 @@ document.addEventListener("click", function (e) {
                         Math.cos(RAD * LOFT_LAT) * Math.cos(dec) * Math.cos(RAD * 15 * (solarH - 12)));
     return -alt / RAD;
   }
-  // 0 = too light to see anything, 1 = properly dark. Midwinter sits pinned at 1 all night;
-  // the solstice tops out near 0.2 for an hour either side of midnight.
-  function auroraDarkness() { return Math.max(0, Math.min(1, (auroraSunDepression() - 12) / 6)); }
+  // 0 = too light to see anything, 1 = properly dark: the nautical→astronomical twilight band.
+  function darknessFor(dep) { return Math.max(0, Math.min(1, (dep - 12) / 6)); }
+  // how dark it is RIGHT NOW — drives the brightness of the paint.
+  function auroraDarkness() { return darknessFor(auroraSunDepression()); }
+  // how dark tonight gets AT ITS DARKEST (the sun at hour angle 180°) — drives the ODDS, which
+  // are rolled once at the sunset crossing, where the instantaneous depression is ~0 by
+  // definition. Asking "is it dark right now" there would decide every night of the year
+  // against a value that moment can never have. Midwinter sits at 1; the solstice tops out
+  // near 0.18, so the lights stay rare AND dim through midsummer rather than being cut off by
+  // a calendar rule.
+  function auroraNightDarkness() {
+    var d = window.__now ? window.__now() : new Date();
+    var dec = RAD * 23.45 * Math.sin(RAD * 360 * (dayOfYear(d) - 81) / 365);
+    var alt = Math.asin(Math.sin(RAD * LOFT_LAT) * Math.sin(dec) - Math.cos(RAD * LOFT_LAT) * Math.cos(dec));
+    return darknessFor(-alt / RAD);
+  }
   // Russell-McPherron: the Earth's tilt lines the interplanetary field up against the
   // magnetosphere best near the equinoxes, so geomagnetic storms genuinely cluster around late
   // March and late September — the real aurora peak is NOT midwinter. It's a storm-FREQUENCY
@@ -29258,12 +29271,11 @@ document.addEventListener("click", function (e) {
   // the base probability the nightly roll is drawn against, before the coin-flip. Split out so a
   // test can read it (window.__auroraBase).
   function auroraBase() {
-    var dark = auroraDarkness();
-    if (dark <= 0) return 0;                            // a twilight-bright midsummer night: nothing to see, whatever the sun is doing
+    var dark = auroraNightDarkness();                   // how dark the night GETS, not how dark it is at the crossing
     // exaggerated for the loft (this is a wedding site, not a forecast tool): Kp 2 is already
     // an even chance, Kp 5 near-certain.
     var base = Math.min(0.97, 0.16 + 0.17 * auroraTargetKp());
-    base *= 0.45 + 0.55 * dark;                         // a marginally-dark sky roughly halves the odds
+    base *= dark;                                       // a night that never gets properly dark is a night you never catch them
     base *= equinoxOdds();
     if (coldNight()) base = Math.max(base, 0.9 * dark); // clear cold night: the lights nearly always dance
     if (window.__gardenPartyOn) base *= 0.42;           // the UV neon washes them out
@@ -29278,7 +29290,8 @@ document.addEventListener("click", function (e) {
   window.__rollGardenAurora = function () { rollAurora(); if (window.__updateGardenAurora) window.__updateGardenAurora(); };
   window.__auroraColdNight = coldNight; // test hook: the clear-cold-night boost predicate
   window.__auroraBase = auroraBase; // test hook: the base the nightly roll is drawn against
-  window.__auroraDarkness = auroraDarkness; // test hook: 0–1 "is it dark enough to see them"
+  window.__auroraDarkness = auroraDarkness; // test hook: 0–1 "is it dark enough to see them right now"
+  window.__auroraNightDarkness = auroraNightDarkness; // test hook: 0–1 "does tonight get dark at all" (what the odds ride)
   window.__auroraSunDepression = auroraSunDepression; // test hook: degrees the sun is below the horizon
   // ── Kp → what you actually SEE ────────────────────────────────────────────────────────
   // One 0–1 "storm strength" drives every dial, deliberately exaggerated (the owner's call:
@@ -29476,7 +29489,7 @@ document.addEventListener("click", function (e) {
     else if (!auroraTonight) why = "a quiet sky tonight, the lights stayed home";
     else why = "Kp " + kp.toFixed(1) + " is too faint to register";
     return { showing: showing, kp: kp, source: kpSource(), forced: forcedOn, cloudy: cloudy,
-             depression: dep, darkness: dark, odds: auroraBase(), why: why };
+             depression: dep, darkness: dark, nightDarkness: auroraNightDarkness(), odds: auroraBase(), why: why };
   };
   window.__gardenAuroraRaf = function () { return raf; }; // test hook: 0 when the loop is stopped
   document.addEventListener("visibilitychange", function () { window.__updateGardenAurora(); });

@@ -50719,7 +50719,7 @@ async def localfont(name):
         // the player is already reading, and the point of the fast first one is to catch them.
       }, cueKioskPace() ? (30000 + Math.floor(Math.random() * 27500)) * msgDripSlowFactor()
         : cueOpenerArmed ? (3000 + Math.floor(Math.random() * 3000))
-                         : (14000 + Math.floor(Math.random() * 12000)) * msgDripSlowFactor()); // kiosk ~30–57s; a player gets ~3–6s to open, then ~14–26s apart, stretched once the thread is busy
+                         : (24000 + Math.floor(Math.random() * 22000)) * msgDripSlowFactor()); // kiosk ~30–57s; a player gets ~3–6s to open, then ~24–46s apart, stretched once the thread is busy
     }
     window.__startCueDrip = function () { cueFirstOfParty = true; scheduleCueDrip(); }; // each party gets its own opener
     window.__stopCueDrip = function () { if (cueTimer) { clearTimeout(cueTimer); cueTimer = null; } };
@@ -75258,9 +75258,35 @@ function spawnDustMote(container) {
     // Rebuild only when the room, the language, or the set of people actually changed — the
     // availability poll calls this every 1.5s under an open panel, and blindly re-rendering
     // would drop row focus/hover mid-interaction.
-    var lastSig = null, lastOrder = null;
+    var lastSig = null, lastOrder = null, lastRoom = null;
+    // Keys are SORTED: the signature must answer "is this the same SET of people", never "are they
+    // in the same order". The order is live screen-x of figures that never stop dancing, so an
+    // order-sensitive signature reports a change on almost every poll and rebuilds the list forever.
     function rosterSig(room, people) {
-      return room + "|" + document.documentElement.lang + "|" + people.map(function (p) { return p.key; }).join(",");
+      return room + "|" + document.documentElement.lang + "|" + people.map(function (p) { return p.key; }).sort().join(",");
+    }
+    // PRESENCE HYSTERESIS. A lit floor churns on sub-second timescales — the chase runners count as
+    // present only while .chasing, Bahareh drops out every time she steps off with the kids, the DJ
+    // pair swaps, cameos cross-fade — and __whoIsHere reads PAINTED state, so a figure mid-fade
+    // reads as absent for a frame or two. A row that vanishes and returns half a second later reads
+    // as a blinking list, not as a departure. So departures HOLD: once listed, a person stays listed
+    // until they have been continuously absent for ROSTER_LINGER. Arrivals stay immediate — a new
+    // face is a real event and shouldn't lag. Display-side only, like the left-to-right sort below:
+    // __whoIsHere stays instantaneous truth, so Aspen's album never photographs someone who left.
+    var ROSTER_LINGER = 2500;
+    var lingerRoom = null, lingerSeen = {}; // key → { p, at }: when this person was last genuinely present
+    function stablePeople(room, people) {
+      var now = Date.now();
+      if (room !== lingerRoom) { lingerRoom = room; lingerSeen = {}; } // a room change is a cut, not a departure
+      var here = {};
+      people.forEach(function (p) { here[p.key] = 1; lingerSeen[p.key] = { p: p, at: now }; });
+      var out = people.slice();
+      Object.keys(lingerSeen).forEach(function (k) {
+        if (here[k]) return;
+        if (now - lingerSeen[k].at > ROSTER_LINGER) { delete lingerSeen[k]; return; } // genuinely gone
+        out.push(lingerSeen[k].p); // still within the grace window — hold the row rather than redraw the list
+      });
+      return out;
     }
     // The panel reads as a map of the room: whoever stands furthest LEFT in the scene is the
     // first row. Screen-space rects are the only measure comparable across these figures — they
@@ -75270,11 +75296,14 @@ function spawnDustMote(container) {
     // display side rather than in __whoIsHere, so Aspen's photo lineup doesn't inherit a sort it
     // has no use for. Rows with nothing to measure (no figure node, or a zero-size box mid-fade)
     // hold their incoming order at the END rather than jumping to the left edge.
+    function rowX(p) { // centre of this figure on screen, or null when there's nothing to measure
+      if (!p.el) return null;
+      try { var r = p.el.getBoundingClientRect(); if (r.width || r.height) return r.left + r.width / 2; } catch (e) {}
+      return null;
+    }
     function orderLeftToRight(people) {
       return people.map(function (p, i) {
-        var x = null;
-        if (p.el) { try { var r = p.el.getBoundingClientRect(); if (r.width || r.height) x = r.left + r.width / 2; } catch (e) {} }
-        return { p: p, i: i, x: x };
+        return { p: p, i: i, x: rowX(p) };
       }).sort(function (a, b) {
         if (a.x === null && b.x === null) return a.i - b.i;
         if (a.x === null) return 1;
@@ -75286,56 +75315,100 @@ function spawnDustMote(container) {
     // people actually changes — these figures never stop moving (guests dance, the deck crowd is
     // re-jittered each showing), so sorting on every read would shuffle rows under the reader's
     // cursor and let a hook read disagree with the rows on screen.
+    // INCREMENTAL. A full left-to-right re-sort on every set change scrambles the whole list:
+    // these figures dance, so by the next sort they have swapped neighbours and every row moves,
+    // even the ones nobody arrived next to. So rows that are ALREADY listed hold the order the
+    // reader is looking at, and only a NEWCOMER is placed — at the spot its figure stands in. A
+    // departure just drops its row. First fill of a room still sorts the whole list.
     function orderedPeople(room, people) {
       var sig = rosterSig(room, people);
-      if (sig !== lastSig || !lastOrder) { lastSig = sig; lastOrder = orderLeftToRight(people); }
+      if (sig === lastSig && lastOrder) return lastOrder;
+      lastSig = sig;
+      var prev = {};
+      if (lastOrder && lastRoom === room) lastOrder.forEach(function (p, i) { prev[p.key] = i; });
+      lastRoom = room;
+      var kept = [], fresh = [];
+      people.forEach(function (p) { (prev[p.key] === undefined ? fresh : kept).push(p); });
+      if (!kept.length) { lastOrder = orderLeftToRight(people); return lastOrder; } // new room / first fill
+      kept.sort(function (a, b) { return prev[a.key] - prev[b.key]; }); // exactly the order on screen now
+      orderLeftToRight(fresh).forEach(function (p) {
+        var x = rowX(p), at = kept.length;
+        if (x !== null) for (var i = 0; i < kept.length; i++) { var kx = rowX(kept[i]); if (kx !== null && x < kx) { at = i; break; } }
+        kept.splice(at, 0, p);
+      });
+      lastOrder = kept;
       return lastOrder;
     }
     // Build the list of people in the room ON SCREEN into the panel. `force` rebuilds regardless
     // of the signature (a fresh open, a language flip).
+    // The rows currently on screen, key → <li>, so a re-render can REUSE them. Tearing the list
+    // down (innerHTML = "") and rebuilding it made every row blink even when only one person had
+    // moved, and on a lit floor that happened ~14×/minute — the whole reason the panel read as
+    // flickering. A row's node now survives until that person actually leaves, and its handlers
+    // read the live person off the node (li.__p) so reuse can't strand a stale closure.
+    var rowNodes = {}, listEl = null, emptyEl = null;
+    function rowLabel(p) { return p.name + (p.roleKey ? " · " + tipText(p.roleKey) : ""); }
+    function makeRow(p) {
+      var li = document.createElement("li");
+      li.appendChild(document.createElement("em"));
+      li.appendChild(document.createTextNode(""));
+      // roster stays short: just name · role (the relationship + fun-fact live on the click who-pop, not here)
+      li.addEventListener("click", function () { if (li.__p) pickRow(li.__p); });
+      li.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (li.__p) pickRow(li.__p); } });
+      return li;
+    }
+    function fillRow(li, p) {
+      li.__p = p;
+      var label = rowLabel(p);
+      if (li.__label !== label) { // text is the only part that can change under a reused row
+        li.__label = label;
+        li.firstChild.textContent = p.name;
+        li.lastChild.textContent = p.roleKey ? " · " + tipText(p.roleKey) : "";
+      }
+      var pick = !!(p.sels || p.el);
+      if (pick) {
+        li.className = "roster-pick";
+        li.setAttribute("role", "button");
+        li.setAttribute("tabindex", "0");
+        li.setAttribute("title", tipText(p.sels ? "roster_pick_hint" : "roster_name_hint"));
+      } else {
+        li.className = "";
+        li.removeAttribute("role"); li.removeAttribute("tabindex"); li.removeAttribute("title");
+      }
+    }
     function render(force) {
       if (!panel) return;
       var room = window.currentStageName || "kitchen";
-      var people = window.__whoIsHere(room);
+      var people = stablePeople(room, window.__whoIsHere(room)); // hold sub-second departures
       var changed = rosterSig(room, people) !== lastSig;
       people = orderedPeople(room, people); // caches the order (and the signature) for this population
       if (!force && !changed) return;
-      // drop everything except the persistent close button
-      var close = panel.querySelector(".roster-close");
-      panel.innerHTML = "";
-      if (close) panel.appendChild(close);
       // no visible header — the list speaks for itself + saves vertical space (aria-label covers a11y)
       if (!people.length) {
-        var empty = document.createElement("p");
-        empty.className = "roster-empty";
+        if (listEl) { panel.removeChild(listEl); listEl = null; rowNodes = {}; }
+        if (!emptyEl) { emptyEl = document.createElement("p"); emptyEl.className = "roster-empty"; panel.appendChild(emptyEl); }
         // a dark garden is a nudge ("throw the party first"); every other quiet room just says so
-        empty.textContent = tipText(room === "garden" && !window.__gardenPartyOn ? "roster_empty" : "roster_none");
-        panel.appendChild(empty);
+        emptyEl.textContent = tipText(room === "garden" && !window.__gardenPartyOn ? "roster_empty" : "roster_none");
         return;
       }
+      if (emptyEl) { panel.removeChild(emptyEl); emptyEl = null; }
       // flat list; the CSS flows it into columns so a long roster stays a short banner rather than
       // a tall side column that covers the room it's naming
-      var ul = document.createElement("ul");
-      ul.className = "roster-list";
-      people.forEach(function (p) {
-        var li = document.createElement("li");
-        var em = document.createElement("em");
-        em.textContent = p.name;
-        li.appendChild(em);
-        var role = p.roleKey ? tipText(p.roleKey) : "";
-        li.appendChild(document.createTextNode(role ? " · " + role : ""));
-        // roster stays short: just name · role (the relationship + fun-fact live on the click who-pop, not here)
-        if (p.sels || p.el) {
-          li.className = "roster-pick";
-          li.setAttribute("role", "button");
-          li.setAttribute("tabindex", "0");
-          li.setAttribute("title", tipText(p.sels ? "roster_pick_hint" : "roster_name_hint"));
-          li.addEventListener("click", function () { pickRow(p); });
-          li.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickRow(p); } });
-        }
-        ul.appendChild(li);
+      if (!listEl) { listEl = document.createElement("ul"); listEl.className = "roster-list"; panel.appendChild(listEl); }
+      var keep = {};
+      people.forEach(function (p) { keep[p.key] = 1; });
+      Object.keys(rowNodes).forEach(function (k) { // whoever actually left — drop them FIRST, so the
+        if (keep[k]) return;                        // placement pass below compares against a list
+        if (rowNodes[k].parentNode === listEl) listEl.removeChild(rowNodes[k]); // that has no stale
+        delete rowNodes[k];                         // node left in it (one removal would otherwise
+      });                                           // shift every row after it and re-insert them all)
+      people.forEach(function (p, i) {
+        var li = rowNodes[p.key] || (rowNodes[p.key] = makeRow(p));
+        fillRow(li, p);
+        // insertBefore MOVES an already-placed node; doing it in order settles the list without
+        // touching rows that are already where they belong
+        if (listEl.childNodes[i] !== li) listEl.insertBefore(li, listEl.childNodes[i] || null);
       });
-      panel.appendChild(ul);
     }
 
     function setOpen(v) {
@@ -75361,12 +75434,23 @@ function spawnDustMote(container) {
     // empty room says so rather than hiding the affordance. Poll cheaply so an open panel tracks
     // arrivals and departures (a couple rotating out of the bar, the deck crowd stepping in, the
     // kids sitting down to a game) instead of only refreshing on room entry.
+    // Writes to the chip ONLY when a value actually changed. This runs on a 1.5s poll forever, in
+    // every room, open or not — and an unconditional textContent write replaces the chip's text
+    // node (and an unconditional setAttribute dirties style) on every single tick, over a scene
+    // that is already animating flat out during a party. The label only ever moves on a language
+    // flip, which has its own hook (refreshRoster), so a CLOSED panel now costs no DOM work at all.
+    var chipLabel = null, chipExpanded = null;
     function syncAvailability() {
       if (!ensureNodes()) return;
-      toggleBtn.textContent = tipText("roster_title");
-      toggleBtn.setAttribute("aria-label", tipText("roster_title"));
-      toggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
-      toggleBtn.classList.add("avail");
+      var label = tipText("roster_title");
+      if (label !== chipLabel) {
+        chipLabel = label;
+        toggleBtn.textContent = label;
+        toggleBtn.setAttribute("aria-label", label);
+      }
+      var expanded = open ? "true" : "false";
+      if (expanded !== chipExpanded) { chipExpanded = expanded; toggleBtn.setAttribute("aria-expanded", expanded); }
+      if (!toggleBtn.classList.contains("avail")) toggleBtn.classList.add("avail");
       if (open) render(); // keep the open panel live (presence can change under it)
     }
     window.__syncRosterAvail = syncAvailability; // goToStage pings this so the panel re-lists for the new room at once (no 1.5s poll lag)

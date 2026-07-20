@@ -779,6 +779,85 @@ function checkParticleSpawnerCaps(file, script) {
   });
 }
 
+// The fire festivals' leap rig lives in TWO separate closures — the kid scheduler and the
+// couple's — and each carries its own copy of fireFest()/hisFire(), because a closure can't
+// reach into the other. Which culture's fire is lit therefore has two answers, and if they
+// ever disagree you get a festival where the kids leap and the couple doesn't (or nothing
+// does): no error, no visual clue, and it only shows on a date nobody previews. There is no
+// other coverage for either festival, so pin the two bodies byte-identical.
+function checkFireFestParity(file, script) {
+  if (file !== "rsvp.html" || !script) return;
+  var re = /function fireFest\(\)\s*\{[\s\S]*?\n  \}/g, found = [], m;
+  while ((m = re.exec(script)) !== null) found.push(m[0]);
+  if (found.length !== 2) {
+    fail(file + ": expected exactly 2 fireFest() definitions (kid scheduler + couple), found " + found.length,
+      "both leap closures need their own copy; if you unified them, retire this check deliberately");
+    return;
+  }
+  if (found[0] === found[1]) {
+    pass(file + ": the two fireFest() bodies are byte-identical (kid scheduler + couple leap agree)");
+  } else {
+    fail(file + ": the two fireFest() bodies have DRIFTED — one fire festival will half-fire",
+      "a: " + JSON.stringify(found[0]) + "\nb: " + JSON.stringify(found[1]));
+  }
+}
+
+// SEASON_ALIASES is one flat object literal, so two entries for the same word are legal JS:
+// the later one silently wins and the earlier is dead. That is what a merge produces when two
+// branches each add a season and pick the same short name for it — "solstice" meant Yalda on
+// one side and the June solstice on the other, and which one the console answered with came
+// down to source order. Nothing throws, nothing renders wrong until someone types the word.
+// Also pin SEAS against SEASON_CYCLE: their comment says "same order the 's' key cycles", and
+// they're edited apart, so an insertion into one and not the other desyncs the key from the
+// console with no other symptom. Every season must also name itself (SEASON_SAID) and be
+// reachable by its own name (an alias self-key), or it exists in the ring and nowhere else.
+function checkSeasonRosters(file, script) {
+  if (file !== "rsvp.html" || !script) return;
+  function list(re) {
+    var m = script.match(re);
+    return m ? m[1].split(",").map(function (x) { return x.trim().replace(/^"|"$/g, ""); })
+      .filter(function (x) { return x && x !== "null"; }) : null;
+  }
+  var seas = list(/var SEAS = \[([^\]]+)\]/), cycle = list(/var SEASON_CYCLE = \[([^\]]+)\]/);
+  var aliasBody = (script.match(/var SEASON_ALIASES = \{([\s\S]*?)\n  \};/) || [])[1];
+  var saidBody = (script.match(/var SEASON_SAID = \{([\s\S]*?)\n  \};/) || [])[1];
+  if (!seas || !cycle || !aliasBody || !saidBody) {
+    fail(file + ": could not read the season rosters (SEAS / SEASON_CYCLE / SEASON_ALIASES / SEASON_SAID)",
+      "the check greps literal declarations; if one was renamed or reshaped, update this check");
+    return;
+  }
+  var seen = {}, dupes = [];
+  // drop // comments first: a trailing one sits between the previous entry's comma and the next
+  // key, which would otherwise hide that key from the scan and fake a "missing alias" failure
+  aliasBody.replace(/\/\/[^\n]*/g, "").replace(/(?:^|[{,])\s*(?:"([^"]+)"|([A-Za-z_$][\w$]*))\s*:/g, function (_, q, bare) {
+    var k = q || bare;
+    if (seen[k]) dupes.push(k); else seen[k] = 1;
+    return _;
+  });
+  if (dupes.length) {
+    fail(file + ": SEASON_ALIASES has duplicate key(s) — the later one silently wins",
+      "duplicated: " + dupes.join(", ") + "\npick ONE meaning per word and give the loser its own alias");
+  } else {
+    pass(file + ": SEASON_ALIASES keys are unique (" + Object.keys(seen).length + " aliases, no shadowed word)");
+  }
+  var seasNoAuto = seas.filter(function (x) { return x !== "auto"; });
+  if (seasNoAuto.join(",") === cycle.join(",")) {
+    pass(file + ": SEAS and SEASON_CYCLE list the same seasons in the same order (" + cycle.length + ")");
+  } else {
+    fail(file + ": SEAS and SEASON_CYCLE have desynced — the 's' key and season() disagree",
+      "SEAS (minus auto): " + seasNoAuto.join(" ") + "\nSEASON_CYCLE:      " + cycle.join(" "));
+  }
+  var noSaid = seasNoAuto.filter(function (k) { return saidBody.indexOf(k + ":") < 0; });
+  var noSelf = seasNoAuto.filter(function (k) { return !seen[k]; });
+  if (!noSaid.length && !noSelf.length) {
+    pass(file + ": every season names itself (SEASON_SAID) and answers to its own name (SEASON_ALIASES)");
+  } else {
+    fail(file + ": a season is in the ring but not reachable/nameable",
+      (noSaid.length ? "missing a SEASON_SAID line: " + noSaid.join(", ") + "\n" : "") +
+      (noSelf.length ? "missing an alias self-key: " + noSelf.join(", ") : ""));
+  }
+}
+
 // The garden party's dances are synth beds with a KNOWN bpm each (DANCE_BPM, driving the
 // tempo-sync retuneDancers + the console beat() helper) and an explicit mood each (DANCE_MOOD,
 // driving the per-song amplitude keyframe swap). Both maps MUST cover exactly the set of dance
@@ -859,6 +938,8 @@ FILES.forEach(function (file) {
     checkConsoleCmdRoster(file, script);
     checkParticleSpawnerCaps(file, script);
     checkDanceParity(file, script);
+    checkFireFestParity(file, script);
+    checkSeasonRosters(file, script);
   }
   checkCssCommentBalance(file, style);
   checkCssBraceBalance(file, style);

@@ -7326,15 +7326,20 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 @media (prefers-reduced-motion: reduce){#balcony-walllamp.flash #balcony-walllamp-flash{animation:none}}
 /* dusk switch: click the sun to flip the balcony to evening */
 #balcony-dusk{transition:opacity 1s ease}
-#stage-balcony.dusk #balcony-dusk{opacity:0.4}
+/* How deep the night goes rides --night-depth (see nightDepth(): 1 for most of the year,
+   ~0.73 at the June solstice, when this far north the sky never reaches astronomical dark).
+   The fallback of 1 is the flat night these three shipped with, so a missing variable is a
+   no-op rather than a year-round regression. Only the two rooms with a view read it — the
+   kitchen, nook and office are windowless and gain nothing. */
+#stage-balcony.dusk #balcony-dusk{opacity:calc(0.4 * var(--night-depth, 1))}
 #balcony-stars{transition:opacity 1.2s ease}
-#stage-balcony.dusk #balcony-stars{opacity:0.95}
+#stage-balcony.dusk #balcony-stars{opacity:calc(0.95 * var(--night-depth, 1))}  /* a sky that stays lit drowns the fainter stars, Orion included */
 #stage-balcony.dusk #balcony-skyclick{cursor:pointer}
 /* canada day: the daytime sky is tappable too (it calls in the flypast), so it earns the same hint */
 #loft-game-strip.season-canada #stage-balcony:not(.dusk) #balcony-skyclick{cursor:pointer}
 /* the garden goes to night too: window sky darkens, a dusk tint falls, birds rest */
 #garden-dusk{transition:opacity .9s ease}
-#stage-garden.dusk #garden-dusk{opacity:0.32}
+#stage-garden.dusk #garden-dusk{opacity:calc(0.32 * var(--night-depth, 1))}
 #garden-window-pane-0{transition:fill .9s ease}
 #stage-garden.dusk #garden-window-pane-0{fill:#1a2438}
 #garden-birds{transition:opacity .8s ease}
@@ -7363,7 +7368,9 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
    loop that animates the geometry is started/stopped by gardenAurora in lockstep with this
    opacity (it evaluates the same garden ∧ dusk ∧ ¬cloud ∧ ¬trip gate + visibility/focus). */
 #garden-aurora{opacity:0; transition:opacity 1.2s ease; mix-blend-mode:screen}
-#stage-garden.dusk #garden-aurora{opacity:0.9}
+/* --night-depth (0..1) is how dark the sky actually gets tonight: a northern summer sky that never
+   reaches astronomical night washes the lights out. They're still up there, so mute, never hide. */
+#stage-garden.dusk #garden-aurora{opacity:calc(0.9 * var(--night-depth, 1))}
 /* you genuinely cannot see the northern lights through cloud */
 #stage-garden.aurora-clouded #garden-aurora{opacity:0; transition:opacity .8s ease}
 /* a trip has taken over the whole strip — let its own visuals own the window */
@@ -7387,7 +7394,7 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 #stage-balcony.storming.twilight #balcony-twilight{opacity:calc(var(--twi, 1) * 0.6)} /* dawn/dusk glow still reads through weather, just muted */
 @media (prefers-reduced-motion: reduce){#balcony-twilight{transition:none}}
 #balcony-aurora{opacity:0; transition:opacity 1.2s ease; mix-blend-mode:screen}
-#stage-balcony.dusk #balcony-aurora{opacity:0.9}
+#stage-balcony.dusk #balcony-aurora{opacity:calc(0.9 * var(--night-depth, 1))} /* a northern sky that never darkens washes it out; it is still up there, so mute it rather than hide it */
 #stage-balcony.aurora-clouded #balcony-aurora{opacity:0; transition:opacity .8s ease}
 /* a trip has taken over the whole strip — let its own visuals own the sky */
 #loft-game-strip.shrooms #balcony-aurora, #loft-game-strip.acid #balcony-aurora,
@@ -8002,7 +8009,7 @@ section{margin:1.9rem 0}
    (via window.__setSeason): .season-holiday (Dec 1–Jan 6) or .season-spooky
    (Oct 24–31). All .sn-* elements are decorative, non-interactive, and hidden
    outside their season, so the rest of the year renders untouched. */
-.sn-holiday, .sn-spooky, .sn-autumn, .sn-spring, .sn-valentines, .sn-bonfire, .sn-carodejnice, .sn-chaharshanbe, .sn-pride, .sn-nowruz, .sn-canada, .sn-sizdah, .sn-toque, .sn-rehydration, .sn-martin{display:none}
+.sn-holiday, .sn-spooky, .sn-autumn, .sn-spring, .sn-valentines, .sn-bonfire, .sn-carodejnice, .sn-chaharshanbe, .sn-pride, .sn-nowruz, .sn-canada, .sn-sizdah, .sn-toque, .sn-rehydration, .sn-martin, .sn-svatojanska, .sn-fire-couple{display:none}
 #loft-game-strip.season-holiday .sn-holiday{display:inline}
 /* The toque is CLIMATE, not December's dressing: December's own class shows it too, but
    .climate-winter carries it through the snowy weeks that carry no decor of their own. */
@@ -8090,6 +8097,15 @@ section{margin:1.9rem 0}
 #loft-game-strip.season-chaharshanbe .sn-chaharshanbe{display:inline}
 /* s'mores: the same season-agnostic bonfire, lit on demand any night of the year (Bahareh's
    "who wants s'mores?" party text) — reuses the festival fire rather than a second one. */
+/* Svatojánská noc, the third culture at the same fire — and the proof the axis really is
+   N-way: it lights the shared bonfire off an OVERLAY class, not a season one, because June
+   is Pride's month and the strip only ever wears one season. */
+#loft-game-strip.svatojanska .sn-bonfire{display:inline}
+#loft-game-strip.svatojanska .sn-svatojanska{display:inline}
+/* The couple leap BOTH fires, so they hang on their own class — the Persian jars, brushwood
+   and brazier stay on .sn-chaharshanbe, where they belong. */
+#loft-game-strip.season-chaharshanbe .sn-fire-couple,
+#loft-game-strip.svatojanska .sn-fire-couple{display:inline}
 #loft-game-strip.smores-on .sn-bonfire{display:inline}
 /* flames: staggered infinite scale flicker on nodes with no static transform= */
 .sn-flame{transform-box:fill-box; transform-origin:bottom center; animation:sn-flame-flicker 1.5s ease-in-out infinite}
@@ -8194,6 +8210,18 @@ section{margin:1.9rem 0}
 #balcony-brushwood-wobble{transform-origin:518px 305px} /* the bundles' ground line */
 #balcony-jars-wobble{transform-origin:622px 302px}      /* where the jars stand */
 #balcony-brazier-wobble{transform-origin:650px 305px}   /* the brazier's middle foot */
+#balcony-wreath-wobble{transform-origin:524px 306px}    /* where the wreath rests on the deck */
+#balcony-herbs-wobble{transform-origin:622px 303px}     /* the bundle's cut ends */
+/* The worn wreaths are the couple's alone and only on their own night: they live INSIDE the
+   two head groups (so they ride each head's tilt) and the overlay class is what reveals them. */
+/* The bloom: closed by default, open only in the midnight window of the night it belongs to.
+   .fern-hour already carries both halves of that verdict (the Jun 23→24 crossing, not just the
+   clock); .svatojanska is kept in the selector so the decor and the bloom can't disagree. */
+#garden-fern-flower{opacity:0; transition:opacity 2.2s ease}
+#loft-game-strip.svatojanska.fern-hour #garden-fern-flower{opacity:1}
+@media (prefers-reduced-motion: reduce){#garden-fern-flower{transition:none}}
+.svatojanska-wreath{display:none}
+#loft-game-strip.svatojanska .svatojanska-wreath{display:inline}
 @media (prefers-reduced-motion: reduce){.sn-prop-wobble.wobbling{animation:none}}
 /* Irene's leap over the Chaharshanbe fire. The arc rides #balcony-irene-jump; the fade rides
    the outer #balcony-irene, so neither one-shot can strip the other. Her hair-forward drawing
@@ -11310,9 +11338,56 @@ section{margin:1.9rem 0}
      it is in the photo. A sibling of #garden-peacelily (so the plant's water-tap and its
      acid-trail <use> clones leave it alone) but INSIDE the -lift wrapper, so when a trip
      floats the pot the mushroom stays planted in it. -->
+<!-- The fern, and the fern flower. Kapradí kvete jen o půlnoci na svatého Jána: legend says it
+     flowers for one midnight a year and whoever finds it comes into luck. So the plant itself is
+     out for the whole festival window (tap it for the story), but the bloom only opens while the
+     loft's own clock reads 23:50–00:10 on that night — a class off the wall clock, no timer of its
+     own. Tucked low between the two barrels, in the shade under the bench, which is where a fern
+     would actually be. Untracked: a find that exists for twenty minutes a year cannot be a
+     checklist item without the checklist lying to everyone for the other 364 days. -->
+<g class="trip-plant-lift" id="garden-fern-lift"><g id="garden-fern" class="sn-svatojanska hunt-hit">
+<rect x="298" y="276" width="52" height="58" fill="transparent"/>
+<ellipse cx="324" cy="332" rx="15" ry="3" fill="#3d2b16" opacity="0.28"/>
+<path d="M311 333 L313 316 H335 L337 333 Z" fill="#a86a42"/>
+<path d="M313 316 H335 L334 322 H314 Z" fill="#93582f" opacity="0.45"/>
+<rect x="309" y="312" width="30" height="5.5" rx="2" fill="#bd7f4f"/>
+<g fill="none" stroke="#5c9161" stroke-width="1.5" stroke-linecap="round"><!-- leaflets first, so the midribs read over them -->
+<path d="M317 309 l-3.5 -3.8 M312.5 305.5 l-4 -3.6 M308 302 l-4 -3.4 M303.5 298.5 l-3.6 -3"/>
+<path d="M319 311.5 l-3.6 -1.6 M314.5 308 l-4 -1.6 M310 304.5 l-4 -1.5 M305.5 301 l-3.6 -1.4"/>
+<path d="M331 309 l3.5 -3.8 M335.5 305.5 l4 -3.6 M340 302 l4 -3.4 M344.5 298.5 l3.6 -3"/>
+<path d="M329 311.5 l3.6 -1.6 M333.5 308 l4 -1.6 M338 304.5 l4 -1.5 M342.5 301 l3.6 -1.4"/>
+<path d="M320 306 l-4.2 -2.6 M318.5 300.5 l-4.4 -2.2 M317 295 l-4.2 -2 M315.5 289.5 l-3.6 -1.7"/>
+<path d="M328 306 l4.2 -2.6 M329.5 300.5 l4.4 -2.2 M331 295 l4.2 -2 M332.5 289.5 l3.6 -1.7"/>
+<path d="M323 304 l-4.6 -1.7 M323 298 l-4.6 -1.7 M323 292 l-4.2 -1.6 M323 286.5 l-3.6 -1.4"/>
+<path d="M325 304 l4.6 -1.7 M325 298 l4.6 -1.7 M325 292 l4.2 -1.6 M325 286.5 l3.6 -1.4"/>
+</g>
+<g fill="none" stroke="#3f6f4a" stroke-width="1.9" stroke-linecap="round">
+<path d="M324 314 Q312 306 300 299"/>
+<path d="M324 314 Q336 306 348 299"/>
+<path d="M324 314 Q317 301 314.5 287"/>
+<path d="M324 314 Q331 301 333.5 287"/>
+<path d="M324 314 Q324 298 324 281"/>
+</g>
+<g id="garden-fern-flower"><!-- opacity is CSS: it opens only in the midnight window -->
+<circle cx="324" cy="296" r="9" fill="url(#garden-fern-glow)" pointer-events="none"/>
+<g fill="#fff6d2" stroke="#f0dc93" stroke-width="0.7">
+<ellipse cx="324" cy="291.6" rx="1.7" ry="3.2"/>
+<ellipse cx="328.2" cy="294.6" rx="1.7" ry="3.2" transform="rotate(72 328.2 294.6)"/>
+<ellipse cx="326.6" cy="299.6" rx="1.7" ry="3.2" transform="rotate(144 326.6 299.6)"/>
+<ellipse cx="321.4" cy="299.6" rx="1.7" ry="3.2" transform="rotate(216 321.4 299.6)"/>
+<ellipse cx="319.8" cy="294.6" rx="1.7" ry="3.2" transform="rotate(288 319.8 294.6)"/>
+</g>
+<circle cx="324" cy="296" r="1.9" fill="#ffe9a3"/>
+</g>
+</g></g>
 <g id="garden-mushroom" class="hunt-hit" transform="translate(399,288)">
 <rect x="-11" y="-24" width="22" height="26" fill="transparent"/>
 <defs>
+<radialGradient id="garden-fern-glow">
+<stop offset="0" stop-color="#fff6cf" stop-opacity="0.95"/>
+<stop offset="0.55" stop-color="#e9dc86" stop-opacity="0.34"/>
+<stop offset="1" stop-color="#e9dc86" stop-opacity="0"/>
+</radialGradient>
 <linearGradient id="garden-mushroom-cap-g" x1="-8" y1="-22" x2="8" y2="-11" gradientUnits="userSpaceOnUse">
 <stop offset="0" stop-color="#ffeeae"/>
 <stop offset="0.5" stop-color="#e3b02c"/>
@@ -21161,7 +21236,38 @@ section{margin:1.9rem 0}
 </g>
 </g>
 </g>
-<!-- Chaharshanbe Suri only: Markéta and Behdad leap the fire together, hand in hand. Leaping it is
+<!-- Svatojánská noc (St John's Eve, Jun 23): the same fire again, dressed Czech a second time and
+     hers a second time — but where Čarodějnice burns winter out, this one is midsummer at its
+     shortest night, and it is the one you JUMP as a pair. Kit kept to what the tradition actually
+     hands you and what fits this deck: a plaited herb wreath (věnec) propped against the parapet,
+     and a bound bundle of gathered St John's-wort and mugwort laid by the logs. No floated wreaths
+     — the tradition sets them on water, and there is no water anywhere in this loft. Each prop rides
+     a .sn-prop-wobble wrapper with its own .sn-prop-hit rect, ground shadows left OUTSIDE the
+     wrapper so they rock on a planted base, exactly like her besom and his brazier. -->
+<g class="sn-svatojanska" aria-hidden="true" pointer-events="none">
+<ellipse cx="524" cy="306" rx="11" ry="2.6" fill="#6b6055" opacity="0.3"/>
+<g id="balcony-wreath-wobble" class="sn-prop-wobble"><!-- leaning against the parapet, so it stands as an ellipse on edge -->
+<ellipse cx="524" cy="288" rx="15" ry="18" fill="none" stroke="#5f8f4e" stroke-width="5.5" transform="rotate(-9 524 288)"/>
+<ellipse cx="524" cy="288" rx="15" ry="18" fill="none" stroke="#83b06a" stroke-width="2.6" transform="rotate(-9 524 288)"/>
+<path d="M512 277 l-4 -3 M521 271 l-1 -4.5 M534 279 l4.5 -2.5 M536 295 l4.5 2 M513 300 l-4.5 2.5" stroke="#6f9c58" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+<circle cx="512" cy="279" r="2" fill="#f0e18a"/>
+<circle cx="527" cy="270.5" r="1.8" fill="#fff3d0"/>
+<circle cx="538" cy="292" r="1.9" fill="#e8a0b4"/>
+<circle cx="516" cy="301" r="1.7" fill="#e8d36a"/>
+<circle cx="536" cy="277" r="1.4" fill="#e8a0b4"/>
+</g>
+<ellipse cx="622" cy="304" rx="15" ry="2.6" fill="#6b6055" opacity="0.3"/>
+<g id="balcony-herbs-wobble" class="sn-prop-wobble"><!-- cut herbs, gathered on the night they are supposed to be gathered -->
+<path d="M609 302 L631 290 M612 303 L634 293 M610 299 L630 285 M614 303 L636 296" stroke="#7a9a52" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+<path d="M611 300.5 L632 288" stroke="#8fae66" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+<path d="M630 285 q4 -3 6 -1 M634 293 q4.5 -1.5 5.5 1 M631 290 q4 -2.5 6 -0.5" stroke="#f0e18a" stroke-width="2" stroke-linecap="round" fill="none"/>
+<path d="M628 288 q3.5 -3.5 5 -6" stroke="#7a9a52" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+<rect x="617" y="292" width="4.5" height="10" rx="1.6" fill="#b9954a" transform="rotate(-29 619 297)"/>
+</g>
+<rect id="balcony-wreath-hit" class="sn-prop-hit" x="505" y="266" width="40" height="42" fill="transparent"/>
+<rect id="balcony-herbs-hit" class="sn-prop-hit" x="605" y="282" width="38" height="24" fill="transparent"/>
+</g>
+<!-- Both fire festivals: Markéta and Behdad leap the fire together, hand in hand. Leaping it is
      the festival — "زردی من از تو، سرخی تو از من" — and it is his; her joining him at it (as he joins
      her at Čarodějnice, the same fire five weeks later) is the whole point, so they go over it linked.
      He leads, ahead and higher on the right; she trails on the left, her blue hair streaming back the
@@ -21169,9 +21275,11 @@ section{margin:1.9rem 0}
      that V is the line the eye reads first, so nothing else crosses it. A third side-on drawing of
      the couple rather than a reuse of the seated nook geometry — but the caps are copied faithfully,
      because his pink flat cap and her blue baker boy are what make them them. She is drawn first and
-     he over her, so his trailing legs read as nearer. Class-gated to .sn-chaharshanbe: they cannot
-     leak into Čarodějnice. -->
-<g id="balcony-couple" class="sn-chaharshanbe" aria-hidden="true">
+     he over her, so his trailing legs read as nearer. On Svatojánská noc they jump it alone, over and
+     over — the Czech tradition is that a couple who jumps together stays together — and they jump it
+     in herb wreaths, which only show under that overlay. Class-gated to .sn-fire-couple: they cannot
+     leak into Čarodějnice, which nobody jumps. -->
+<g id="balcony-couple" class="sn-chaharshanbe sn-fire-couple" aria-hidden="true"><!-- sn-fire-couple: the pair jump every fire; the Persian jars and brazier stay on sn-chaharshanbe alone -->
 <g id="balcony-couple-jump"><!-- the leap arc rides here: a fresh wrapper with no transform attribute of its own for the keyframes to replace -->
 <g transform="translate(570,304) scale(0.9) translate(-570,-304)"><!-- drawn a shade over nook scale and shrunk onto the fire's plane about the pair's footing (570,304): two adults read a little over Irene's height, not double it. A separate node from the animated one: the arc's transform can't reach in here and clobber this -->
 <!-- ── Markéta: left, trailing ── -->
@@ -21221,6 +21329,14 @@ section{margin:1.9rem 0}
 <path d="M534 191 Q536 178 546 177 Q556 178 558 191 Q546 186 534 191 Z" fill="#6f94bd" stroke="#4a6b94" stroke-width="1.5"/>
 <path d="M531 192 Q546 198 561 191 L557 196 Q545 200 535 196 Z" fill="#4a6b94"/>
 <circle cx="546" cy="179" r="1.8" fill="#4a6b94"/>
+<g class="svatojanska-wreath"><!-- her věnec, worn: Czech girls wear the midsummer wreath as well as float it, and there is no water in this loft to float one on. Inside the head group, so it rides the tilt. -->
+<ellipse cx="546" cy="183.5" rx="14.5" ry="5" fill="none" stroke="#5f8f4e" stroke-width="3.4"/>
+<ellipse cx="546" cy="183.5" rx="14.5" ry="5" fill="none" stroke="#83b06a" stroke-width="1.6"/>
+<circle cx="534" cy="185" r="1.7" fill="#f0e18a"/>
+<circle cx="546" cy="178.9" r="1.5" fill="#fff3d0"/>
+<circle cx="558" cy="184.5" r="1.6" fill="#e8a0b4"/>
+<circle cx="540" cy="180" r="1.2" fill="#e8d36a"/>
+</g>
 </g>
 <path d="M558 224 Q570 242 569 261" fill="none" stroke="#6f92bb" stroke-width="14" stroke-linecap="round"/>
 <path d="M558 224 Q570 242 569 261" fill="none" stroke="#bcd1e7" stroke-width="9.5" stroke-linecap="round"/>
@@ -21275,6 +21391,14 @@ section{margin:1.9rem 0}
 <circle cx="606.5" cy="191.8" r="0.5" fill="#fff" opacity=".85"/>
 <path d="M586 183 Q589 170 600 169 Q611 170 614 183 Q600 178 586 183 Z" fill="#d9a6a6" stroke="#b8888c" stroke-width="1.5"/>
 <path d="M586 184 Q600 190 615 183 L611 188 Q600 192 590 188 Z" fill="#c79598" stroke="#b8888c" stroke-width="1"/>
+<g class="svatojanska-wreath"><!-- his, sat on the flat cap — she made two -->
+<ellipse cx="600" cy="176.5" rx="14" ry="4.8" fill="none" stroke="#5f8f4e" stroke-width="3.4"/>
+<ellipse cx="600" cy="176.5" rx="14" ry="4.8" fill="none" stroke="#83b06a" stroke-width="1.6"/>
+<circle cx="588.5" cy="178" r="1.6" fill="#e8a0b4"/>
+<circle cx="600" cy="172" r="1.5" fill="#f0e18a"/>
+<circle cx="611.5" cy="177.5" r="1.7" fill="#fff3d0"/>
+<circle cx="606" cy="173.1" r="1.2" fill="#e8d36a"/>
+</g>
 </g>
 <path d="M589 221 Q580 241 574 260" fill="none" stroke="#b87b82" stroke-width="15" stroke-linecap="round"/>
 <path d="M589 221 Q580 241 574 260" fill="none" stroke="#e9bfc4" stroke-width="10" stroke-linecap="round"/>
@@ -23506,6 +23630,8 @@ var T = {
     season_winter: "❄ winter",
     season_valentines: "💕 valentine's",
     season_carodejnice: "🔥 witches' night",
+    season_solstice: "☀️ summer solstice",
+    season_svatojanska: "🔥 St John's Eve",
     season_chaharshanbe: "🔥 chaharshanbe suri",
     season_nowruz: "🌱 nowruz",
     season_sizdah: "🌿 sizdah bedar",
@@ -23570,6 +23696,8 @@ var T = {
     share_greet_nowruz: "Happy Nowruz!",
     share_greet_pride: "Happy Pride!",
     share_greet_carodejnice: "Happy Witches’ Night!",
+    share_greet_svatojanska: "Come jump the fire with us. Hold on tight.",
+    share_greet_solstice: "Still light out. Stay up with us.",
     share_greet_spooky: "Happy Halloween!",
     share_greet_stedry: "Merry Christmas Eve!",
     share_greet_xmas: "Merry Christmas!",
@@ -23595,6 +23723,10 @@ var T = {
     // would join the RTL run and mirror, so they stay outside it in the sentence's own direction.
     tip_haftsin: "<em>haft-sin</em> (<bdi>هفت‌سین</bdi>), the <em>nowruz</em> (<bdi>نوروز</bdi>) table",
     tip_carodejnice: "<em>Čarodějnice</em>, burning of the witches",
+    tip_svatojanska: "<em>Svatojánská noc</em>, St John's Eve — the fire you jump hand in hand",
+    tip_solstice: "the longest day: seventeen hours of sun, and a north that never goes dark",
+    fern_legend: "Fern. They say it flowers one midnight a year — tonight, if you believe the story — and whoever finds the flower comes into luck.",
+    fern_found: "The fern flower. You were standing here at midnight on the one night it opens. That's the whole trick, and it's supposed to be luck.",
     tip_cokecooler: "the vintage <em>Coca-Cola</em> cooler — really theirs, really rolls",
     role_bestman: "best man", role_maid: "man of honor", role_officiant: "officiant", role_fashion: "fashionista", role_mc: "MC", role_business: "businesswoman", role_photographer: "photographer", role_niece: "Behdad's niece", role_godson: "Behdad's godson", role_godson_a: "grillmaster", role_sister: "Behdad's sister", role_sisterinlaw: "Behdad's sister-in-law", role_nephew: "Behdad's nephew", role_msister: "Markéta's sister", role_travelbuddy_m: "travel buddy", role_travelbuddy_f: "travel buddy",
     age_forms: ["{n} years old now!", "{n} years old already!", "{n} now!", "already {n}! 🎂"],
@@ -24327,6 +24459,8 @@ var T = {
     season_winter: "❄ zima",
     season_valentines: "💕 valentýn",
     season_carodejnice: "🔥 pálení čarodějnic",
+    season_solstice: "☀️ letní slunovrat",
+    season_svatojanska: "🔥 svatojánská noc",
     season_chaharshanbe: "🔥 čaháršanbe surí",
     season_nowruz: "🌱 nowruz",
     season_sizdah: "🌿 sizdah bedar",
@@ -24380,6 +24514,8 @@ var T = {
     share_greet_nowruz: "Šťastný Nourúz!",
     share_greet_pride: "Šťastný Pride!",
     share_greet_carodejnice: "Veselé pálení čarodějnic!",
+    share_greet_svatojanska: "Přijď s námi přeskočit oheň. Drž se pevně.",
+    share_greet_solstice: "Pořád je světlo. Zůstaň vzhůru s námi.",
     share_greet_spooky: "Veselý Halloween!",
     share_greet_stedry: "Šťastný Štědrý den!",
     share_greet_xmas: "Veselé Vánoce!",
@@ -24398,6 +24534,10 @@ var T = {
     share_mail_clip: "(Obrázek karty máte ve schránce — vložte jej do e-mailu jako přílohu.)",
     tip_haftsin: "<em>haft-sín</em> (<bdi>هفت‌سین</bdi>), <em>nourúzský</em> (<bdi>نوروز</bdi>) stůl",
     tip_carodejnice: "<em>Čarodějnice</em>, <em>filipojakubská noc</em>",
+    tip_svatojanska: "<em>Svatojánská noc</em> — oheň, který se přeskakuje za ruce",
+    tip_solstice: "nejdelší den: sedmnáct hodin slunce a sever, který nepotemní",
+    fern_legend: "Kapradí. Prý kvete jednu půlnoc do roka — dnes v noci, jestli té pověsti věříš — a kdo ten květ najde, má štěstí.",
+    fern_found: "Květ kapradí. Stál jsi tady o půlnoci té jediné noci, kdy se otevírá. V tom to celé je — a prý to nosí štěstí.",
     tip_cokecooler: "starý pojízdný chladicí box <em>Coca-Cola</em> — fakt jejich, fakt jezdí",
     role_bestman: "svědek", role_maid: "svědek", role_officiant: "oddávající", role_fashion: "módní ikona", role_mc: "moderátor", role_business: "podnikatelka", role_photographer: "fotografka", role_niece: "Behdadova neteř", role_godson: "Behdadův kmotřenec", role_godson_a: "grilmistr", role_sister: "Behdadova sestra", role_sisterinlaw: "Behdadova švagrová", role_nephew: "Behdadův synovec", role_msister: "Markétina sestra", role_travelbuddy_m: "parťák na cesty", role_travelbuddy_f: "parťačka na cesty",
     age_forms: ["už {n}!", "teď už {n}!", "už {n}! 🎂", "{n}! 🎂"],
@@ -34379,6 +34519,18 @@ function gameTapsNear(a, b) {
         requestAnimationFrame(function () { shroom.classList.add("wobbling"); });
       });
       maybeTrip("shrooms");
+    });
+  }
+  // The fern's tap tells the legend; if you happen to be here at midnight on the night itself,
+  // it tells you what you're looking at instead. Untracked either way — no markFound, not on the
+  // ? cheatsheet: a bloom that exists for twenty minutes a year would leave the counter stuck at
+  // "1 remaining" for everybody, every other day of the year.
+  var fern = document.getElementById("garden-fern");
+  if (fern) {
+    fern.addEventListener("click", function () {
+      var strip = document.getElementById("loft-game-strip");
+      var open = strip && strip.classList.contains("svatojanska") && strip.classList.contains("fern-hour");
+      eggBubble(fern, tipText(open ? "fern_found" : "fern_legend"), "top");
     });
   }
   // Every so often the ceramic rooster leaves a golden egg at its base, which shimmers away
@@ -50430,11 +50582,63 @@ async def localfont(name):
                           Math.cos(lat) * Math.cos(dec) * Math.cos(dm * 0.25 * D2R)) / D2R;
       return -alt;
     };
+    // How dark tonight gets AT ALL — a property of the night, not of the minute (the minute is
+    // what --twi already carries). The sun's lowest point tonight is (90 − lat) − declination
+    // below the horizon; past 18° the sky is astronomically dark and there is nothing left to
+    // lose, so that's the top of the scale. At Edmonton's 53.5° that lands at 1 for every night
+    // from mid-August round to late April — those nights are unchanged, to the value — and then
+    // falls away through the weeks either side of the June solstice, bottoming at (36.5 − 23.44)
+    // / 18 ≈ 0.73 on the solstice itself. Which is the real thing: at this latitude midsummer
+    // never reaches astronomical night at all, so the loft's sky doesn't either. Weeks, not a day.
+    function nightDepth() {
+      // Read the pretend-date the rest of the preview path runs on. __sunGeom's own default is
+      // __now(), which honours ?date=/#date= but is blind to season()/the 's' key — so on that
+      // path the solstice sky stayed ordinary, and previewing an ordinary season from a real June
+      // date washed one out that shouldn't be. Declination is a day's property, so noon is enough.
+      var s = window.__seasonDate ? window.__seasonDate() : null;
+      var g = window.__sunGeom ? window.__sunGeom(s ? new Date(s.y, s.m, s.d, 12) : null) : null;
+      if (!g) return 1; // no model, no change: the flat night the scene shipped with
+      return Math.max(0, Math.min(1, ((90 - g.lat) - g.decl) / 18));
+    }
+    window.__nightDepth = nightDepth;
+    // Stamped on the STRIP (not per-stage) and outside the day/night verdict, so a manual night()
+    // and a ?date= jump both land it. Only the two rooms with a view read it.
+    function stampNightDepth() {
+      var strip = document.getElementById("loft-game-strip");
+      if (strip) strip.style.setProperty("--night-depth", nightDepth().toFixed(3));
+    }
+    window.__stampNightDepth = stampNightDepth;
+    stampNightDepth();
+    // The fern flowers at midnight and only at midnight — the legend is specific about it, and it
+    // means ONE midnight: the one that ends Svatojánská noc (Jun 23) and opens sv. Jan's day
+    // (Jun 24). The clock alone can't say that. .svatojanska spans both days, so a pure 23:50–00:10
+    // class would also open on Jun 23's small hours (that's the Jun 22→23 midnight) and Jun 24's
+    // late evening (the Jun 25 one) — four windows a year instead of one. So the DAY is half the
+    // test: the eve owns the minutes before midnight, the feast owns the minutes after.
+    // The day comes from seasonDate(), the same pretend-date .svatojanska itself is toggled from,
+    // so a season preview and ?date= both land it. The clock is the loft's own wall clock
+    // (override-aware, so ?time= and the time-lapse move it), read the way the May-2 BBQ window is.
+    // A class toggle spawns nothing and allocates nothing, so the poll is hidden-tab safe for the
+    // same reason the desk clock's repaint is.
+    var FERN_FROM = 23 * 60 + 50, FERN_TO = 10; // 23:50 → 00:10, across the midnight it belongs to
+    function stampFernHour() {
+      var strip = document.getElementById("loft-game-strip");
+      if (!strip) return;
+      var s = window.__seasonDate ? window.__seasonDate() : null;
+      var mins = edmMinutes();
+      var eve = !!s && s.m === 5 && s.d === 23 && mins >= FERN_FROM;  // Jun 23, on the near side of midnight
+      var feast = !!s && s.m === 5 && s.d === 24 && mins < FERN_TO;   // Jun 24, on the far side of the same midnight
+      strip.classList.toggle("fern-hour", eve || feast);
+    }
+    window.__stampFernHour = stampFernHour;
+    stampFernHour();
+    setInterval(stampFernHour, 20000);
     // stamp day/night onto EVERY room together. A real flip goes through toggleDusk (which runs
     // the lamp/precip/etc. side-effects AND stamps all five stages); when the balcony already
     // matches the target we still force-sync the siblings, so a room that drifted out of step
     // (the "load at night, garden shows day" bug) is pulled back in line without re-firing effects.
     function stampAllDusk(night) {
+      stampNightDepth(); // the date may have moved under us (?date=, the pill, a season preview)
       if (stageBalcony.classList.contains("dusk") !== night) { toggleDusk(true); return; } // silent: an autonomous flip shouldn't chime
       ["stage-garden", "stage-kitchen", "stage-cuddly", "stage-office"].forEach(function (id) { var s = document.getElementById(id); if (s) s.classList.toggle("dusk", night); });
     }
@@ -52130,7 +52334,16 @@ async def localfont(name):
   function reducedMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
-  function hisFire() { return strip.classList.contains("season-chaharshanbe"); }
+  // Which culture's fire is burning — one rig serves all of them. Čarodějnice is deliberately
+  // absent: you don't jump a burning witch. DUPLICATED VERBATIM in the kid scheduler and the
+  // couple's IIFE (they're separate closures); tests/check.js asserts the two bodies stay
+  // byte-identical, because changing one alone silently gives you a fire nobody leaps.
+  function fireFest() {
+    if (strip.classList.contains("season-chaharshanbe")) return "chaharshanbe";
+    if (strip.classList.contains("svatojanska")) return "svatojanska";
+    return null;
+  }
+  function hisFire() { return !!fireFest(); }
   function onScreen() { return window.currentStageName === "balcony" && !document.hidden; }
   // Jostling the brazier fans its embers. The wisps go into the wobble wrapper's PARENT, not the
   // wrapper: they're placed by view-box coords, and the wrapper is rotating at exactly this moment
@@ -52175,7 +52388,9 @@ async def localfont(name):
    ["balcony-brushwood-hit", "balcony-brushwood-wobble", playPaperShuffleSound], // twigs
    ["balcony-jars-hit", "balcony-jars-wobble", playPumpkinThumpSound],     // hollow clay
    ["balcony-brazier-hit", "balcony-brazier-wobble",
-    function (id) { playMetalClinkSound(0.5, id); }, brazierPuff]           // dull sheet metal, same register as the smoker lid
+    function (id) { playMetalClinkSound(0.5, id); }, brazierPuff],          // dull sheet metal, same register as the smoker lid
+   ["balcony-wreath-hit", "balcony-wreath-wobble", playPaperShuffleSound],  // plaited stems
+   ["balcony-herbs-hit", "balcony-herbs-wobble", playPaperShuffleSound]     // dry cut herbs
   ].forEach(function (row) {
     var wrap = document.getElementById(row[1]);
     if (!wrap) return;
@@ -52187,15 +52402,15 @@ async def localfont(name):
   // hover/click, never wired once: in his season it's Chaharshanbe Suri, in hers Čarodějnice.
   // Czech Wikipedia titles come from Wikipedia's own langlinks, not from our transliteration.
   var FIRE_WIKI = {
-    en: { chaharshanbe: "https://en.m.wikipedia.org/wiki/Chaharshanbe_Suri", carodejnice: "https://en.m.wikipedia.org/wiki/Walpurgis_Night" },
-    cs: { chaharshanbe: "https://cs.m.wikipedia.org/wiki/Čaháršanba-súrí", carodejnice: "https://cs.m.wikipedia.org/wiki/Pálení_čarodějnic" }
+    en: { chaharshanbe: "https://en.m.wikipedia.org/wiki/Chaharshanbe_Suri", carodejnice: "https://en.m.wikipedia.org/wiki/Walpurgis_Night", svatojanska: "https://en.m.wikipedia.org/wiki/Saint_John's_Eve" },
+    cs: { chaharshanbe: "https://cs.m.wikipedia.org/wiki/Čaháršanba-súrí", carodejnice: "https://cs.m.wikipedia.org/wiki/Pálení_čarodějnic", svatojanska: "https://cs.m.wikipedia.org/wiki/Svatojánská_noc" }
   };
   function fireWikiUrl() {
     var l = document.documentElement.lang === "cs" ? "cs" : "en";
-    return FIRE_WIKI[l][hisFire() ? "chaharshanbe" : "carodejnice"];
+    return FIRE_WIKI[l][fireFest() || "carodejnice"]; // no festival lit means the witches' fire — the only one that burns un-jumped
   }
   var fireHit = document.getElementById("balcony-bonfire-hit");
-  if (fireHit) hoverTooltip(fireHit, function () { return tipText(hisFire() ? "tip_chaharshanbe" : "tip_carodejnice"); }, "top");
+  if (fireHit) hoverTooltip(fireHit, function () { return tipText("tip_" + (fireFest() || "carodejnice")); }, "top");
   glow.addEventListener("animationend", function (e) { if (e.animationName === "sn-fire-flare") glow.classList.remove("fire-flare"); });
   // A single click summons the leap; a double click looks the festival up instead. dblclick fires
   // click first, so the summon waits out the double-click window and a second click cancels it and
@@ -52232,8 +52447,16 @@ async def localfont(name):
   // A real fire-jump line: shuffle the four jumpers ONCE at load, then cycle through in that fixed
   // order — everyone goes once before anyone repeats, then to the back of the line. leapIdx only
   // advances on an actual leap (blocked/gated ticks return before the pick), so nobody's skipped.
-  var LEAP_LINE = ["couple", "irene", "robin", "navid"];
-  for (var _li = LEAP_LINE.length - 1; _li > 0; _li--) { var _lj = Math.floor(Math.random() * (_li + 1)), _lt = LEAP_LINE[_li]; LEAP_LINE[_li] = LEAP_LINE[_lj]; LEAP_LINE[_lj] = _lt; }
+  // ...and each fire has its OWN line, because each culture jumps it differently. Chaharshanbe is
+  // the whole household taking turns. Svatojánská is the two of them and nobody else, again and
+  // again all night: the tradition is specifically that a couple who jumps it together stays
+  // together, which on a wedding site is the whole point — kids at a Czech midsummer fire would
+  // dilute it. Read at leap time, so a date change picks up the new line without a reload.
+  var LEAP_LINES = { chaharshanbe: ["couple", "irene", "robin", "navid"], svatojanska: ["couple"] };
+  Object.keys(LEAP_LINES).forEach(function (f) {
+    var L = LEAP_LINES[f];
+    for (var i = L.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = L[i]; L[i] = L[j]; L[j] = t; }
+  });
   var leapIdx = 0;
   function leap(userInitiated) {
     if (!hisFire() || !onScreen() || kidShowing()) return;
@@ -52242,7 +52465,8 @@ async def localfont(name):
     if (clearTimer) { clearTimeout(clearTimer); clearTimer = null; }
     // Next in line jumps (couple counts as one). One scheduler drives all four (the couple via
     // __coupleLeap), so only ONE leap is ever in the air at a time.
-    var who = LEAP_LINE[leapIdx % LEAP_LINE.length]; leapIdx++;
+    var line = LEAP_LINES[fireFest()] || LEAP_LINES.chaharshanbe; // length 1 is fine: idx % 1 is always 0
+    var who = line[leapIdx % line.length]; leapIdx++;
     if (who === "couple") { if (window.__coupleLeap) window.__coupleLeap(userInitiated); return; } // the couple's turn over the fire
     var kid = who === "robin" ? (robin || navid || irene) : who === "navid" ? (navid || robin || irene) : irene;
     irene.classList.remove("leaping"); if (robin) robin.classList.remove("leaping"); if (navid) navid.classList.remove("leaping"); // clear all three before re-adding to the chosen one
@@ -52318,7 +52542,16 @@ async def localfont(name):
   function reducedMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
-  function hisFire() { return strip.classList.contains("season-chaharshanbe"); }
+  // Which culture's fire is burning — one rig serves all of them. Čarodějnice is deliberately
+  // absent: you don't jump a burning witch. DUPLICATED VERBATIM in the kid scheduler and the
+  // couple's IIFE (they're separate closures); tests/check.js asserts the two bodies stay
+  // byte-identical, because changing one alone silently gives you a fire nobody leaps.
+  function fireFest() {
+    if (strip.classList.contains("season-chaharshanbe")) return "chaharshanbe";
+    if (strip.classList.contains("svatojanska")) return "svatojanska";
+    return null;
+  }
+  function hisFire() { return !!fireFest(); }
   function onScreen() { return window.currentStageName === "balcony" && !document.hidden; }
   var showTimer = null, clearTimer = null;
   function leap(userInitiated) {
@@ -68233,11 +68466,20 @@ function spawnDustMote(container) {
     [17, 288.79, 4562.452], [16, 198.04, 62894.029], [14, 199.76, 31436.921], [12, 95.39, 14577.848],
     [12, 287.11, 31931.756], [12, 320.81, 34777.259], [9, 227.73, 1222.114], [8, 15.45, 16859.074]
   ];
-  // The S correction and the TD→UT step are identical for all four of Meeus's cardinal instants —
-  // only the mean-instant polynomial (table 27.B) differs — so both the March equinox and the
-  // December solstice hand their own jde0 to this.
-  function meeusInstant(jde0, gYear) { // UTC Date of a mean cardinal instant, periodic-corrected
-    var D2R = Math.PI / 180;
+  // Meeus table 27.B, the mean-quarter JDE polynomial in Y=(year−2000)/1000 — one row per quarter.
+  // ONLY this polynomial distinguishes the four; the periodic S sum, ΔT and the JD→Unix tail below
+  // are shared verbatim. That's why one routine serves all three instants the loft turns on: the
+  // March equinox the Persian new year hangs off (row 0), the June solstice Edmonton's never-dark
+  // night hangs off (row 1), and the December solstice Yalda hangs off (row 3). Row 2 is unused.
+  var JDE0 = [
+    [2451623.80984, 365242.37404,  0.05169, -0.00411, -0.00057], // 0 — March equinox (northward)
+    [2451716.56767, 365241.62603,  0.00325,  0.00888, -0.00030], // 1 — June solstice
+    [2451810.21715, 365242.01767, -0.11575,  0.00337,  0.00078], // 2 — September equinox
+    [2451900.05952, 365242.74049, -0.06223, -0.00823,  0.00032]  // 3 — December solstice
+  ];
+  function solarQuarterDate(gYear, q) { // UTC Date of an equinox/solstice instant; q indexes JDE0
+    var Y = (gYear - 2000) / 1000, D2R = Math.PI / 180, c = JDE0[q];
+    var jde0 = c[0] + c[1] * Y + c[2] * Y * Y + c[3] * Y * Y * Y + c[4] * Y * Y * Y * Y;
     var T = (jde0 - 2451545.0) / 36525;
     var W = 35999.373 * T - 2.47;
     var dl = 1 + 0.0334 * Math.cos(W * D2R) + 0.0007 * Math.cos(2 * W * D2R);
@@ -68247,14 +68489,8 @@ function spawnDustMote(container) {
     var t = gYear - 2000, dT = 62.92 + 0.32217 * t + 0.005589 * t * t; // ΔT seconds (Espenak–Meeus, era-appropriate)
     return new Date((jde - dT / 86400 - 2440587.5) * 86400000); // JD → Unix ms (UTC)
   }
-  function marchEquinoxDate(gYear) { // UTC Date of the northward (March) equinox instant
-    var Y = (gYear - 2000) / 1000;
-    return meeusInstant(2451623.80984 + 365242.37404 * Y + 0.05169 * Y * Y - 0.00411 * Y * Y * Y - 0.00057 * Y * Y * Y * Y, gYear);
-  }
-  function decemberSolsticeDate(gYear) { // UTC Date of the southward (December) solstice instant
-    var Y = (gYear - 2000) / 1000;
-    return meeusInstant(2451900.05952 + 365242.74049 * Y - 0.06223 * Y * Y - 0.00823 * Y * Y * Y + 0.00032 * Y * Y * Y * Y, gYear);
-  }
+  function marchEquinoxDate(gYear) { return solarQuarterDate(gYear, 0); } // UTC Date of the northward (March) equinox instant
+  function decemberSolsticeDate(gYear) { return solarQuarterDate(gYear, 3); } // UTC Date of the southward (December) solstice instant
   window.__decemberSolstice = decemberSolsticeDate;
   // شب یلدا — the longest night: the last night of autumn, the one that ENDS at the solstice.
   // So Yalda is the day BEFORE the Iran-local (UTC+3:30) solstice day — the evening that runs
@@ -68337,6 +68573,39 @@ function spawnDustMote(container) {
   window.__isSizdah = function (m, d, y) { return isSizdah(m, d, y == null ? curCalYear() : y); };
   window.__isChaharshanbe = function (m, d, y) { return isChaharshanbe(m, d, y == null ? curCalYear() : y); };
   window.__isYalda = function (m, d, y) { return isYalda(m, d, y == null ? curCalYear() : y); };
+  // ── MIDSUMMER ─────────────────────────────────────────────────────────────────
+  // Two June days that share a sky and nothing else. Kept together in one block so the
+  // decor-window / announcement-day split reconciles as one region.
+  //
+  //                    decor window          announcement day
+  //   solstice         none (the sky IS it)  the computed local day (~Jun 20–21)
+  //   svatojanska      Jun 23–24 (eve+day)   Jun 23 only
+  //
+  // Jun 23 is the eve, which is the festival — and it has to be: Madla's birthday is Jun 24
+  // exact, and an exact-day birthday outranks a holiday in both calSummonFestivity and the
+  // invite router. Decor on the 24th is harmless because it's an overlay, not a routed occasion.
+  // NEITHER is a decor season: June belongs to Pride and decorForDate returns one key. Both ride
+  // as overlay classes alongside season-pride, the way Sizdah Bedar rides Nowruz.
+  var _midsummerCache = {};
+  function juneSolsticeOf(gYear) { // the Edmonton-local day the June solstice instant lands on
+    if (_midsummerCache[gYear]) return _midsummerCache[gYear];
+    // June is always MDT (UTC−6) here, so no tz table is needed — but the shift matters: a
+    // solstice at 03:00 UTC is the PREVIOUS day in the loft, and that's the day to mark.
+    var loc = new Date(solarQuarterDate(gYear, 1).getTime() - 6 * 3600000);
+    return (_midsummerCache[gYear] = new Date(loc.getUTCFullYear(), loc.getUTCMonth(), loc.getUTCDate(), 12));
+  }
+  window.__juneSolsticeOf = juneSolsticeOf;
+  function isSolstice(m, d, y) { return pSameDay(juneSolsticeOf(y), m, d); }
+  function isSvatojanska(m, d) { return m === 5 && d === 23; }          // the announcement day (the eve)
+  function inSvatojanska(m, d) { return m === 5 && (d === 23 || d === 24); } // the decor window: eve + the feast of sv. Jan
+  function midsummerCalOcc(m, d, y) { // grid stamp; the solstice drifts, so it's computed, never a CAL_OCC literal
+    if (isSvatojanska(m, d)) return { icon: "🔥", sk: "season_svatojanska" };
+    if (isSolstice(m, d, y)) return { icon: "☀️", sk: "season_solstice" };
+    return null;
+  }
+  window.__isSvatojanska = function (m, d) { return isSvatojanska(m, d); };
+  window.__isSolstice = function (m, d, y) { return isSolstice(m, d, y == null ? curCalYear() : y); };
+  // ── end MIDSUMMER ─────────────────────────────────────────────────────────────
   var SEASON_PREVIEW_DATE = { // [month 0-11, day]
     spooky:  [9, 31],  // Halloween
     stedry:  [11, 24], // Štědrý večer: carp on the table, gifts under the tree
@@ -68353,6 +68622,8 @@ function spawnDustMote(container) {
     spring:  [3, 15],  // mid-April: blossom petals adrift, the greenery flushed fresh green — between Sizdah and Čarodějnice, just before wedding week
     carodejnice: [3, 30], // Apr 30: Pálení čarodějnic — inside wedding week, so the ribbon stacks
     pride:   [5, 15],  // mid-June: the mast flag in the office corner
+    solstice: true,    // the longest day — drifts (Jun 20/21), so seasonDate() computes it
+    svatojanska: [5, 23], // Svatojánská noc, the eve of sv. Jan: the Czech midsummer fire (a fixed Church feast, so no drift)
     canada:  [6, 1],   // Canada Day: red-and-white balcony string + fireworks (Edmonton's half of the wedding)
     summer:  [6, 15],  // mid-July: never snow
     smoky:   [7, 7],   // early August: Edmonton's wildfire smoke at full strength
@@ -68371,6 +68642,7 @@ function spawnDustMote(container) {
         return { m: pd.getMonth(), d: pd.getDate(), y: y };
       }
       if (seasonPreview === "yalda") { var yd = yaldaOf(y); return { m: yd.getMonth(), d: yd.getDate(), y: y }; }
+      if (seasonPreview === "solstice") { var js = juneSolsticeOf(y); return { m: js.getMonth(), d: js.getDate(), y: y }; } // drifts too, same reason
       var p = SEASON_PREVIEW_DATE[seasonPreview];
       if (p) return { m: p[0], d: p[1], y: y };
     }
@@ -68661,8 +68933,11 @@ function spawnDustMote(container) {
     if (!strip) return;
     strip.classList.remove("season-holiday", "season-spooky", "season-autumn", "season-spring", "season-valentines", "season-nowruz", "season-chaharshanbe", "season-carodejnice", "season-pride", "season-canada", "season-martin");
     if (name) strip.classList.add("season-" + name);
-    if (window.__resetBalconyIrene) window.__resetBalconyIrene(); // the season just moved under her: clear any leap in flight (she is Chaharshanbe's alone) and re-arm
-    if (window.__resetBalconyCouple) window.__resetBalconyCouple(); // same for the pair — Chaharshanbe's alone too
+    // The season just moved under them: clear any leap in flight and re-arm. applySeasonDate calls
+    // this BEFORE it toggles the svatojanska overlay, so a date walking off the fire tears the rig
+    // down first and only then undresses — which is why neither June day needs a reset of its own.
+    if (window.__resetBalconyIrene) window.__resetBalconyIrene(); // the kids leap Chaharshanbe's fire alone
+    if (window.__resetBalconyCouple) window.__resetBalconyCouple(); // the pair leap both fires
   };
   function applySeasonDate() {
     var s = seasonDate();
@@ -68711,7 +68986,14 @@ function spawnDustMote(container) {
       // Yalda is one night inside the holiday run, so it's an overlay on that dressing rather
       // than a season of its own — same reasoning as Sizdah above, and it keeps the tree up.
       strip.classList.toggle("yalda", isYalda(s.m, s.d, s.y));
+      // The two June days, overlays for the same reason: June is Pride's, and decorForDate hands
+      // out one key. Stated outright on every call (never cleared on arrival) so the ~4s
+      // air-quality re-apply can't undress the day under the visitor.
+      strip.classList.toggle("svatojanska", inSvatojanska(s.m, s.d));
+      strip.classList.toggle("solstice", isSolstice(s.m, s.d, s.y));
     }
+    if (window.__stampNightDepth) window.__stampNightDepth(); // the new date may never get properly dark
+    if (window.__stampFernHour) window.__stampFernHour();      // ...and ?time= may have landed on midnight
     if (window.__updateSkyFireworks) window.__updateSkyFireworks(window.currentStageName); // new-year sky follows the preview
     if (window.__applyMoonPhases) window.__applyMoonPhases(); // the night-sky moons reshape to the date's real phase
     // a date that moves off (or between) shower nights drops the streaks still in the air, so
@@ -68732,7 +69014,7 @@ function spawnDustMote(container) {
   // bedar → spring → witches' night → back to wedding. Shift+S walks the ring backwards. Birthdays
   // are NOT in this ring — they're the 'b' key's own axis now.
   // Shift is the direction; any OTHER modifier held (or typing) still skips (same guard as 'f').
-  var SEASON_CYCLE = [null, "wedding", "pride", "canada", "summer", "smoky", "autumn", "spooky", "martin", "stedry", "xmas", "yalda", "newyear", "winter", "valentines", "chaharshanbe", "nowruz", "sizdah", "spring", "carodejnice"];
+  var SEASON_CYCLE = [null, "wedding", "pride", "solstice", "svatojanska", "canada", "summer", "smoky", "autumn", "spooky", "martin", "stedry", "xmas", "yalda", "newyear", "winter", "valentines", "chaharshanbe", "nowruz", "sizdah", "spring", "carodejnice"];
   // Shared apply-path for the 's' key AND the console season(); shows the naming pill.
   // silent=true skips the naming toast (the autoplay loop varies the season every loop and
   // wants no per-loop pill flashing on the kiosk screen — the "auto" badge is enough).
@@ -68750,6 +69032,7 @@ function spawnDustMote(container) {
     nowruz: "office", pride: "office",
     autumn: "garden", spring: "garden",
     chaharshanbe: "balcony", carodejnice: "balcony", newyear: "balcony", canada: "balcony",
+    solstice: "balcony", svatojanska: "balcony", // the north-facing sky and the fire are both out there
     smoky: "balcony", winter: "balcony", sizdah: "balcony", spooky: "balcony"
   };
   function applySeasonPreview(name, silent) {
@@ -68990,7 +69273,8 @@ function spawnDustMote(container) {
     autumn: "#f9ddbe", spooky: "#e9e0f0", valentines: "#fbdfe9", chaharshanbe: "#fadfce",
     nowruz: "#e9f4de", pride: "#f1e6f4", wedding: "#f7e6ec", canada: "#fbe1e1",
     carodejnice: "#f6ddce", holiday: "#e6efe7", stedry: "#e4efe4", xmas: "#f3dede",
-    newyear: "#e8e6f5", martin: "#f0e2e4", yalda: "#efdfe4", _: "#fbf7ee"
+    newyear: "#e8e6f5", martin: "#f0e2e4", yalda: "#efdfe4",
+    solstice: "#fdf0d4", svatojanska: "#f7e0cc", _: "#fbf7ee"
   };
   var CAL_OCC = { // "month0-day" → occasion icon + the season T key that names it on hover
     "1-14":  { icon: "💗", sk: "season_valentines" },
@@ -69028,6 +69312,12 @@ function spawnDustMote(container) {
     }
     if ((m === 3 && d >= 28) || (m === 4 && d <= 4)) return "wedding"; // Apr 28 – May 4
     if (m === 6 && d >= 7 && d <= 13) return "wedding";                // Jul 7 – 13
+    // June's two named days, inside Pride's month the way štědrý večer sits inside the holiday
+    // window above: the decor stays Pride, only the day's NAME (its tint, its invite, its share
+    // card) belongs to the occasion. Svatojánská is named for the eve alone — the 24th keeps
+    // the fire lit but is Madla's day.
+    if (isSvatojanska(m, d)) return "svatojanska";
+    if (isSolstice(m, d, y)) return "solstice";
     if (decor) return decor; // autumn, spooky, valentines, chaharshanbe, nowruz, spring, pride, canada
     if (m === 0 || m === 1 || m === 2) return "winter"; // Jan 7–31, Feb 15–28, Mar 1–15 (decor covers the rest)
     if (m === 4) return "spring";                       // May 5–31
@@ -69262,7 +69552,8 @@ function spawnDustMote(container) {
     for (var k in CAL_OCC) { var p = k.split("-"); add(+p[0], +p[1]); }
     METEOR_SHOWERS.forEach(function (s) { for (var i = 0; i < s.nights; i++) add(s.m, s.d + i); }); // every shower night is somewhere worth stepping to
     var po = persianOcc(curCalYear()); // the drifting Persian days, at this year's positions (calNearestSignificant re-derives per from-year within ±1 day)
-    [po.chaharshanbe, po.nowruz, po.sizdah].forEach(function (dt) { add(dt.getMonth(), dt.getDate()); });
+    [po.chaharshanbe, po.nowruz, po.sizdah, juneSolsticeOf(curCalYear())].forEach(function (dt) { add(dt.getMonth(), dt.getDate()); }); // the drifting days, incl. the June solstice
+    add(5, 23); // Svatojánská noc: a fixed Church feast, but named via calSeasonKey rather than CAL_OCC, so it needs listing here
     return out;
   }
   // nearest significant day strictly after (dir>0) / before (dir<0) the given date, within a
@@ -69390,7 +69681,7 @@ function spawnDustMote(container) {
         var cell = document.createElement("button"); cell.type = "button"; cell.className = "calx-day";
         cell.style.background = CAL_TINT[calSeasonKey(m, day, y)] || CAL_TINT._;
         var icons = [], titles = [], busts = [];
-        var occ = CAL_OCC[m + "-" + day] || persianCalOcc(m, day, y); // the Persian occasions drift, so they're computed for the render year rather than keyed by a fixed day
+        var occ = CAL_OCC[m + "-" + day] || persianCalOcc(m, day, y) || midsummerCalOcc(m, day, y); // the Persian occasions and the solstice drift, so they're computed for the render year rather than keyed by a fixed day
         if (occ) { icons.push(occ.icon); titles.push(calStr(occ.sk) + (occ.city ? (" · " + calStr(occ.city)) : "")); }
         var msh = showerFor(m, day); // a meteor-shower night stacks its 🌠 alongside whatever else the day carries (Aug 12 is Hamid's birthday AND the Perseids)
         if (msh) { icons.push("🌠"); titles.push(calStr("meteor_" + msh.key)); }
@@ -73163,7 +73454,7 @@ function spawnDustMote(container) {
     var PLAIN_SEASON = { winter: 1, spring: 1, summer: 1, smoky: 1, autumn: 1 }; // ordinary weather — no invite
     var OCC_SENDER = { "wedding-edmonton": "msg_behdad_from", "bbq": "msg_behdad_from", "wedding-prague": "msg_marketa_from", "prague-party": "msg_marketa_from" }; // Edmonton side → Behdad · Prague side → Markéta
     var OCC_BODY = { "wedding-edmonton": "occ_invite_wed_edm", "bbq": "occ_invite_bbq", "wedding-prague": "occ_invite_wed_prg", "prague-party": "occ_invite_brunch" };
-    var HOLIDAY_SENDER = { nowruz: "msg_behdad_from", chaharshanbe: "msg_behdad_from", yalda: "msg_behdad_from", carodejnice: "msg_marketa_from", martin: "msg_marketa_from", spooky: "msg_irene_from" }; // Iranian → Behdad · Czech → Markéta · Halloween/spooky → Irene; shared/other default to Behdad
+    var HOLIDAY_SENDER = { nowruz: "msg_behdad_from", chaharshanbe: "msg_behdad_from", yalda: "msg_behdad_from", carodejnice: "msg_marketa_from", martin: "msg_marketa_from", svatojanska: "msg_marketa_from", solstice: "msg_behdad_from", spooky: "msg_irene_from" }; // Iranian → Behdad · Czech → Markéta · Halloween/spooky → Irene; shared/other default to Behdad
     function deliverDateInvite() {
       // crickets + autoplay/trip + the untouched attract prompt: no autonomous buzz now. Nothing is
       // lost — a later focus/visibility/first-entry/gamestart ping retries, and the localStorage
@@ -74142,14 +74433,15 @@ function spawnDustMote(container) {
   // winter · spooky · auto(=the calendar's own season). Friendly aliases fold onto those;
   // no arg still SURPRISES you with a random one (a documented feature). Drives the same
   // apply-path the 's' key uses (strip class + naming pill + cycle-sync).
-  var SEAS = ["wedding", "pride", "canada", "summer", "smoky", "autumn", "spooky", "martin", "stedry", "xmas", "yalda", "newyear", "winter", "valentines", "chaharshanbe", "nowruz", "sizdah", "spring", "carodejnice", "auto"]; // same order the 's' key cycles, starting from the May 1 wedding (birthdays are their own axis now — see birthday())
+  var SEAS = ["wedding", "pride", "solstice", "svatojanska", "canada", "summer", "smoky", "autumn", "spooky", "martin", "stedry", "xmas", "yalda", "newyear", "winter", "valentines", "chaharshanbe", "nowruz", "sizdah", "spring", "carodejnice", "auto"]; // same order the 's' key cycles, starting from the May 1 wedding (birthdays are their own axis now — see birthday())
   var SEASON_ALIASES = {
     spooky: "spooky", halloween: "spooky",
     holiday: "stedry", christmas: "stedry", tree: "stedry", // no plain-tree stop of its own — the tree is up on both meal days
     stedry: "stedry", "štědrý": "stedry", stedryvecer: "stedry", xmaseve: "stedry", "xmas eve": "stedry", carp: "stedry", kapr: "stedry",
     xmas: "xmas", xmasday: "xmas", "xmas day": "xmas", turkey: "xmas",
     martin: "martin", svatymartin: "martin", "svaty martin": "martin", "svatý martin": "martin", stmartin: "martin", "st martin": "martin", goose: "martin", husa: "martin", remembrance: "martin", poppy: "martin",
-    yalda: "yalda", shabeyalda: "yalda", "shab e yalda": "yalda", "shab-e yalda": "yalda", chelleh: "yalda", solstice: "yalda", longestnight: "yalda", "longest night": "yalda", pomegranate: "yalda",
+    // bare "solstice" is JUNE's now (there is a season by that name); Yalda keeps the December one
+    yalda: "yalda", shabeyalda: "yalda", "shab e yalda": "yalda", "shab-e yalda": "yalda", chelleh: "yalda", wintersolstice: "yalda", "winter solstice": "yalda", longestnight: "yalda", "longest night": "yalda", pomegranate: "yalda",
     newyear: "newyear", "new year": "newyear", nye: "newyear", fireworks: "newyear",
     winter: "winter", snow: "winter",
     valentines: "valentines", valentine: "valentines", love: "valentines", hearts: "valentines",
@@ -74159,6 +74451,8 @@ function spawnDustMote(container) {
     carodejnice: "carodejnice", "čarodějnice": "carodejnice", witches: "carodejnice", bonfire: "carodejnice",
     wedding: "wedding", married: "wedding", anniversary: "wedding",
     pride: "pride", rainbow: "pride",
+    solstice: "solstice", midsummer: "solstice", longestday: "solstice", "longest day": "solstice", whitenight: "solstice",
+    svatojanska: "svatojanska", "svatojánská": "svatojanska", svatojanskanoc: "svatojanska", "svatojánská noc": "svatojanska", stjohn: "svatojanska", "st john": "svatojanska", stjohnseve: "svatojanska", jan: "svatojanska", fern: "svatojanska", kapradi: "svatojanska", "kapradí": "svatojanska",
     canada: "canada", canadaday: "canada", "canada day": "canada", maple: "canada",
     summer: "summer", sun: "summer",
     smoky: "smoky", smoke: "smoky", wildfire: "smoky", wildfires: "smoky",
@@ -74178,6 +74472,8 @@ function spawnDustMote(container) {
     martin: "🍷 sv. martin — this year's young wine, goose on the low table, and the first snow.",
     yalda: "🍉 shab-e yalda — the longest night. pomegranate, watermelon and ajil, and hafez to open.",
     pride: "🏳️‍🌈 the flag's up in the corner.",
+    solstice: "☀ the longest day — seventeen hours of it. tonight the north never goes properly dark.",
+    svatojanska: "🔥 svatojánská noc — the fire's lit. jump it hand in hand, and go look for the fern.",
     canada: "🍁 canada day — red and white over edmonton.",
     summer: "☀ high summer — rain at worst.",
     smoky: "🔥 wildfire smoke — orange sun, grey sky. hello, august.",

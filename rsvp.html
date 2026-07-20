@@ -5556,7 +5556,7 @@ body:has(#loft-game-strip.acid) #trip-acid-kaleido{animation:acid-kaleido 3s eas
    The one-room rule (a person can't be at the bar AND on the garden floor) is enforced in JS,
    not CSS — the IIFE only picks a couple whose members aren't .arrived in #garden-guests. */
 #kitchen-bar-couples .bar-couple{display:none; opacity:0; transition:opacity 1.2s ease}
-#kitchen-bar-couples .bar-couple.present{display:inline; opacity:0.94}
+#kitchen-bar-couples .bar-couple.present{display:inline; opacity:0.94; pointer-events:auto; cursor:pointer} /* the shown couple is hoverable/clickable for its name popup */
 #kitchen-bar-couples .bc-sway{transform-box:fill-box; transform-origin:center bottom}
 #kitchen-bar-couples .bc-arm-l{transform-box:fill-box; transform-origin:right bottom}
 #kitchen-bar-couples .bc-arm-r{transform-box:fill-box; transform-origin:left bottom}
@@ -59868,6 +59868,15 @@ function spawnDustMote(container) {
     var guests = document.getElementById("garden-guests");
     var timer = null;
     var current = null; // the COUPLES entry currently .present, or null
+    // name each couple (hover tooltip + click white card, like the floor/cuddly/balcony cast)
+    COUPLES.forEach(function (c) {
+      var el = layer.querySelector("." + c.cls);
+      if (!el) return;
+      var nm = c.members.map(function (m) { return m.charAt(0).toUpperCase() + m.slice(1); });
+      var html = "<em>" + nm[0] + "</em> &amp; <em>" + nm[1] + "</em>";
+      if (typeof hoverTooltip === "function") hoverTooltip(el, html, "top");
+      el.addEventListener("click", function (e) { if (e) e.stopPropagation(); if (window.__whoPop) window.__whoPop(el, html); });
+    });
     function attended() { return !document.hidden && document.hasFocus(); }
     function shouldRun() {
       return !!window.__gardenPartyOn && window.currentStageName === "kitchen" && attended();

@@ -68713,7 +68713,8 @@ function spawnDustMote(container) {
   // A room is "solved" once the game has unlocked at or past it — we read the game's own truth,
   // never re-derive it. Strictly-less: the room you're unlocked INTO is still being solved. Balcony
   // is the finale (no solve of its own), so the party having been lit stands in for it.
-  var apSolvedOverride = null; // apSelfCheck builds both branches without touching the real game
+  var apSolvedOverride = null;  // apSelfCheck builds both solve branches without touching the real game
+  var apReducedOverride = null; // …and both motion profiles, without depending on the visitor's
   function apRoomSolved(name) {
     if (apSolvedOverride !== null) return apSolvedOverride;
     var idx = ROOM_RING.indexOf(name);
@@ -69207,7 +69208,7 @@ function spawnDustMote(container) {
   // beat in, so the shape doesn't depend on which room the reader happens to be standing in.
   window.__autoplayRoutineBeats = function (room) {
     var build = SCENE_BUILDERS[room]; if (!build) return null;
-    var r = apNormalize(build() || [], room, null, apReduced);
+    var r = apNormalize(build() || [], room, null, apReducedOverride === null ? apReduced : apReducedOverride);
     var total = 0, taps = 0, apps = {};
     for (var i = 0; i < r.length; i++) {
       total += (r[i].wait || 0);
@@ -69241,23 +69242,28 @@ function spawnDustMote(container) {
       if (r === "garden" || !ROOM_SPEC[r] || !ROOM_SPEC.garden) continue;
       if (ROOM_SPEC.garden.budgetMs <= ROOM_SPEC[r].budgetMs || ROOM_SPEC.garden.maxBeats <= ROOM_SPEC[r].maxBeats) bad.push("garden budget must exceed " + r);
     }
-    // the party dwells longest in BOTH branches — the unsolved walks are what actually run on a
-    // fresh kiosk, and they are where the property silently inverted before.
+    // The party dwells longest across ALL FOUR combinations of solve branch and motion profile.
+    // Both sweeps matter: the unsolved walks are what a fresh kiosk actually runs, and reduced
+    // motion drops `flourish` beats — so tagging one more garden beat `flourish` could silently
+    // invert the property for exactly the visitors who never see it checked otherwise.
     [true, false].forEach(function (solved) {
-      apSolvedOverride = solved;
-      try {
-        var g = window.__autoplayRoutineBeats("garden");
-        ["kitchen", "cuddly", "office", "balcony"].forEach(function (other) {
-          var o = window.__autoplayRoutineBeats(other);
-          if (!g || !o) return;
-          if (g.beats <= o.beats || g.totalWait <= o.totalWait) bad.push("garden must dwell longest vs " + other + " (solved=" + solved + ")");
-        });
-        if (solved) {
-          if (window.__autoplayRoutineBeats("office").apps < 3) bad.push("office must open >=3 apps");
-          if (window.__autoplayRoutineBeats("balcony").apps < 3) bad.push("balcony must open >=3 apps");
-        }
-      } catch (e) { bad.push("build threw: " + e); }
-      apSolvedOverride = null;
+      [false, true].forEach(function (reduced) {
+        apSolvedOverride = solved; apReducedOverride = reduced;
+        var where = " (solved=" + solved + ", reduced=" + reduced + ")";
+        try {
+          var g = window.__autoplayRoutineBeats("garden");
+          ["kitchen", "cuddly", "office", "balcony"].forEach(function (other) {
+            var o = window.__autoplayRoutineBeats(other);
+            if (!g || !o) return;
+            if (g.beats <= o.beats || g.totalWait <= o.totalWait) bad.push("garden must dwell longest vs " + other + where);
+          });
+          if (solved) {
+            if (window.__autoplayRoutineBeats("office").apps < 3) bad.push("office must open >=3 apps" + where);
+            if (window.__autoplayRoutineBeats("balcony").apps < 3) bad.push("balcony must open >=3 apps" + where);
+          }
+        } catch (e) { bad.push("build threw" + where + ": " + e); }
+        apSolvedOverride = null; apReducedOverride = null;
+      });
     });
     apInvariants = { ok: !bad.length, problems: bad };
     return apInvariants;

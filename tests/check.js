@@ -333,6 +333,10 @@ function checkCssBraceBalance(file, style) {
 
 function checkAnimationKeyframes(file, style) {
   if (!style) return;
+  // Scan CODE only. Both regexes below are text matches, so an `animation:` written inside
+  // a /* comment */ used to be read as a declaration — and the value pattern runs to the
+  // next ; or }, swallowing whole sentences of prose as if they were animation names.
+  style = style.replace(/\/\*[\s\S]*?\*\//g, " ");
   var defined = new Set();
   var kfRe = /@(?:-webkit-)?keyframes\s+([A-Za-z_][\w-]*)/g;
   var km;

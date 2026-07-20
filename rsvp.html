@@ -527,13 +527,15 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 .device-hint.show{display:block}
 .browser-issues-link{color:var(--wine); text-decoration:underline; text-underline-offset:2px}
 .browser-issues-link:hover{color:var(--ink)}
-.season-toast{position:absolute; left:50%; bottom:12px; transform:translateX(-50%); background:rgba(69,58,49,.85); color:#f8f5ec; font-size:.85rem; padding:.3rem .9rem; border-radius:999px; opacity:0; transition:opacity .3s ease; pointer-events:none; z-index:6; white-space:nowrap;
+.season-toast{position:absolute; left:50%; bottom:12px; background:rgba(69,58,49,.85); color:#f8f5ec; font-size:.85rem; padding:.3rem .9rem; border-radius:999px; opacity:0; transition:opacity .3s ease; pointer-events:none; z-index:6; white-space:nowrap;
   /* OWN COMPOSITING LAYER. This sits over a scene that animates continuously (the dance floor
      especially); without promotion the browser repaints it on every frame of that animation,
      which reads as flicker. translateZ(0) rather than will-change so the layer is
      unconditional. These are plain HTML overlays, NOT inside a foreignObject, so the WebKit
-     layer-in-scaled-foreignObject trap does not apply. */
-  transform:translateZ(0); backface-visibility:hidden;
+     layer-in-scaled-foreignObject trap does not apply. The centring half-shift rides the SAME
+     declaration — as its own `transform` it was overwritten by the promotion and the toast
+     drifted half its width right of centre. */
+  transform:translateX(-50%) translateZ(0); backface-visibility:hidden;
 }
 .season-toast.show{opacity:1}
 /* the share-card preview: a centered modal over everything, holding the generated PNG and its
@@ -9075,6 +9077,61 @@ section{margin:1.9rem 0}
   #garden-guests .g-behdad,#garden-guests .g-marketa,#garden-guests #garden-chair-lift-b,#garden-guests #garden-chair-lift-m{transition:none}
   #garden-guests.chair-lift #garden-chair-teeter-b,#garden-guests.chair-lift #garden-chair-teeter-m{animation:none}
   #garden-guests.chair-lift .guest:not(.g-behdad):not(.g-marketa) .guest-move{animation:none !important}
+}
+/* ══ PHONE PERFORMANCE ═══════════════════════════════════════════════════════
+   Measured at 390px with the party lit and the floor full: ~500 CSS animations
+   run CONCURRENTLY across the strip, and a full style-recalc + Layout + Paint
+   runs EVERY frame (~11% of wall time in style recalc alone, and that in
+   software rendering on a desktop). Chrome cannot give an SVG <g> its own
+   compositor layer, so every transform animation in the scene is a MAIN-THREAD
+   animation: style + layout + paint per frame, not a cheap composited
+   transform. A main thread that busy is what leaves anything drawn over the
+   scene tearing on a phone. The blocks below cut the concurrent count on small
+   screens only. Desktop is deliberately untouched, and none of this substitutes
+   for prefers-reduced-motion, which stays a separate and stronger contract: it
+   sets animation:none, these only pause or thin. ═════════════════════════════ */
+/* ── rooms you are not looking at hold still ──────────────────────────────────
+   goToStage pans the strip exactly one room width at a time, so a room two or
+   more steps from the viewed one is entirely off-screen — standing in the
+   garden that is the office and the balcony, ~125 animations nobody can see.
+   Paused rather than animation:none so nothing is torn down: a one-shot caught
+   mid-flight resumes and still fires its animationend (and whatever class
+   removal hangs off it) when you walk back in. animation-play-state does not
+   touch WAAPI animations, so the ambient particle spawners keep their onfinish
+   cleanup and none of them accumulate while a room is parked. */
+/* The gate is "small screen", which on a phone means EITHER axis: turned sideways a
+   handset is ~844x390, comfortably past the 759px width gate but still a phone, and
+   landscape is exactly how someone settles in to watch the party. max-height:520px is
+   the same "mobile landscape" line the fullscreen chrome trims itself on. */
+@media (max-width:759px), (max-height:520px){
+  #loft-game-strip .stage-far, #loft-game-strip .stage-far *{animation-play-state:paused !important}
+}
+/* ── the dance floor keeps two moving parts per figure, not five ──────────────
+   Every dancer stacks .guest-orbit (the do-si-do travel) + .guest-move (their
+   own signature step) + .guest-sway (body rock) + .guest-arm-l + .guest-arm-r.
+   Across a full floor that is ~110 animations for the named guests alone, and
+   the arms are the largest single block of them (two per person, 48 in all).
+   On a phone the sway and the signature step are kept — each figure still rocks
+   and still dances its own move, so the floor reads as a party — while the arms
+   and the orbit hold a pose. The orbit goes first among the two because
+   translating a whole figure across the floor dirties far more of the scene per
+   frame than a few degrees of rotation on a limb.
+   Note that lengthening periods was deliberately NOT used here: a running
+   animation costs a style recalc every frame whatever its duration, so a slower
+   sway looks calmer without costing the main thread any less.
+   The same idiom exists in the other rooms — the bar groovers, the nook's
+   kid-games tilt, the balcony deck crowd — but each is only 3 to 4 animations,
+   and .stage-far already parks all of them whenever you are not in that room,
+   so they are left alone rather than spent for a rounding error.
+   Written as the same declaration reduced motion uses, so the two can never
+   disagree: this thins the floor, that stops it entirely. */
+@media (max-width:759px), (max-height:520px){
+  #garden-guests.guests-in .guest-arm-l,
+  #garden-guests.guests-in .guest-arm-r,
+  #garden-guests.guests-in .guest-orbit{animation:none !important}
+  /* doubled id to clear the .slow-dance arm rules, which are themselves !important */
+  #trip-melt-dancers#trip-melt-dancers .md-arm-l,
+  #trip-melt-dancers#trip-melt-dancers .md-arm-r{animation:none !important}
 }
 </style>
 </head>
@@ -62719,6 +62776,17 @@ function spawnDustMote(container) {
     }
   }
   window.restoreStageHint = restoreStageHint; // games (Flair Catch, chair arcade) call this to put the room hint back
+  // Flag the rooms a given pan leaves fully off-screen. One room width per step, so
+  // anything two or more steps out cannot be on screen at any viewport; the neighbours
+  // stay live because they genuinely bleed into the edges on a narrow phone. The CSS
+  // that reads .stage-far is phone-gated, so this is a no-op class on desktop.
+  function markFarRooms(idx) {
+    for (var i = 0; i < STAGES.length; i++) {
+      var g = document.getElementById("stage-" + STAGES[i]);
+      if (g) g.classList.toggle("stage-far", Math.abs(i - idx) >= 2);
+    }
+  }
+  markFarRooms(0); // the loft opens in the kitchen and nothing pans on load, so park the far rooms now
   function goToStage(name) {
     var idx = STAGES.indexOf(name);
     if (idx === -1) return;
@@ -62733,6 +62801,7 @@ function spawnDustMote(container) {
     strip.classList.toggle("viewing-office", name === "office"); // WebKit paints the monitor's foreignObjects even at opacity:0 and lets them escape the strip clip, leaking into whichever room is on screen; the CSS gate below hides them whenever the office isn't the viewed room
     window.currentStageIndex = idx;
     window.currentStageName = name; // room-truth for gates that live outside this IIFE (e.g. the fractal-flame loop)
+    markFarRooms(idx); // park the animations of the rooms this pan leaves off-screen (phones only; see .stage-far)
     if (window.__rearmSkyMeteors) window.__rearmSkyMeteors(); // stepping out under a shower: the sky is going by the time you've arrived (no-op on an ordinary night)
     endHuntIntro(); // a room change ends the opening prompt, so the new room's caption shows (and the held notification channels wake)
     if (window.__removeClickMe) window.__removeClickMe(); // ...and takes the melting invitation with it

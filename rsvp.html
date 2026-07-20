@@ -62798,16 +62798,28 @@ function spawnDustMote(container) {
   // anything two or more steps out cannot be on screen at any viewport; the neighbours
   // stay live because they genuinely bleed into the edges on a narrow phone. The CSS
   // that reads .stage-far is phone-gated, so this is a no-op class on desktop.
-  function markFarRooms(idx) {
+  // Park EVERY room but the one you're in. The neighbours were kept live because they can bleed
+  // a sliver into the edges mid-pan — so `keep` holds the room being left alive for the length of
+  // the slide, and a timer parks it once the strip has settled. Only ever one room animating at
+  // rest, two while travelling, instead of three.
+  var STRIP_SLIDE_MS = 720; // #loft-game-strip's .7s room slide (ROOM_SLIDE_MS is declared far later in the file)
+  var parkTimer = null;
+  function markFarRooms(idx, keep) {
     for (var i = 0; i < STAGES.length; i++) {
       var g = document.getElementById("stage-" + STAGES[i]);
-      if (g) g.classList.toggle("stage-far", Math.abs(i - idx) >= 2);
+      if (g) g.classList.toggle("stage-far", i !== idx && i !== keep);
     }
+  }
+  function parkAfterSlide(idx, from) {
+    markFarRooms(idx, from);            // the room we're leaving stays live while it slides out
+    clearTimeout(parkTimer);
+    parkTimer = setTimeout(function () { markFarRooms(idx); }, STRIP_SLIDE_MS + 80);
   }
   markFarRooms(0); // the loft opens in the kitchen and nothing pans on load, so park the far rooms now
   function goToStage(name) {
     var idx = STAGES.indexOf(name);
     if (idx === -1) return;
+    var fromIdx = stageIndex;
     stageIndex = idx;
     var prevMax = maxUnlocked;
     if (idx > maxUnlocked) maxUnlocked = idx;
@@ -62819,7 +62831,7 @@ function spawnDustMote(container) {
     strip.classList.toggle("viewing-office", name === "office"); // WebKit paints the monitor's foreignObjects even at opacity:0 and lets them escape the strip clip, leaking into whichever room is on screen; the CSS gate below hides them whenever the office isn't the viewed room
     window.currentStageIndex = idx;
     window.currentStageName = name; // room-truth for gates that live outside this IIFE (e.g. the fractal-flame loop)
-    markFarRooms(idx); // park the animations of the rooms this pan leaves off-screen (phones only; see .stage-far)
+    parkAfterSlide(idx, fromIdx); // everything but this room parks once the slide settles (phones only; see .stage-far)
     if (window.__rearmSkyMeteors) window.__rearmSkyMeteors(); // stepping out under a shower: the sky is going by the time you've arrived (no-op on an ordinary night)
     endHuntIntro(); // a room change ends the opening prompt, so the new room's caption shows (and the held notification channels wake)
     if (window.__removeClickMe) window.__removeClickMe(); // ...and takes the melting invitation with it

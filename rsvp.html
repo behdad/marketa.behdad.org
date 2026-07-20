@@ -46855,7 +46855,11 @@ async def localfont(name):
       // (#cuddly-*), the cleanest full standing poses (the #garden-kid-* chase runners are wrapped in
       // scale/flip/bob transforms that would double-transform). A "#..." selector routes
       // albumFigureClone to the cuddly source + its own coordinate normalization (see below).
-      irene: ["#cuddly-irene"], robin: ["#cuddly-robin"], navid: ["#cuddly-navid"]
+      irene: ["#cuddly-irene"], robin: ["#cuddly-robin"], navid: ["#cuddly-navid"],
+      // Whistler, the only four-legged subject. His art is the ONE dog node (re-parented between
+      // the nook and the deck), already drawn feet-on-y0 and centred — so unlike everyone else he
+      // needs no scaling: a labradoodle standing dog-height beside the couple is the photograph.
+      whistler: ["#cuddly-dog"]
     };
     // Deep-clone ONE person's real figure drawing out of the live garden scene: reach past the
     // animated wrappers (.guest-orbit/.guest-move/.guest-sway) to the innermost art group
@@ -46930,6 +46934,28 @@ async def localfont(name):
         dg.removeAttribute("class"); dg.removeAttribute("style"); dg.removeAttribute("id"); // shed the idle sway
         var dids = dg.querySelectorAll("[id]"); for (var d = 0; d < dids.length; d++) dids[d].removeAttribute("id");
         return dg;
+      }
+      // Whistler: the one subject drawn at his own scale. His art already sits centred with the
+      // paws on local y0, so planting him is a bare translate onto the shared feet line — scaling
+      // him to guest height would produce a pony. Checked ahead of the "#…-peek" branch below,
+      // which would otherwise go looking for a #cuddly-dog-peek that doesn't exist.
+      // The tongue MUST go: #cuddly-dog-tongue is hidden by an ID-scoped opacity:0, and the clone
+      // strips ids (and albumRasterize serializes without the stylesheet), so a raw copy would
+      // loll its tongue out in every polaroid. Same reasoning drops the shadow — the polaroid has
+      // no floor to cast it on.
+      if (sel === "#cuddly-dog") {
+        var dog = document.getElementById("cuddly-dog");
+        if (!dog) return null;
+        var dcl = dog.cloneNode(true);
+        var tng = dcl.querySelector("#cuddly-dog-tongue"); if (tng && tng.parentNode) tng.parentNode.removeChild(tng);
+        var shad = dcl.querySelector("ellipse[opacity='0.16']"); if (shad && shad.parentNode) shad.parentNode.removeChild(shad);
+        dcl.removeAttribute("class"); dcl.removeAttribute("style"); dcl.removeAttribute("id");
+        albumAdornSync(dog, dcl);
+        var dgids = dcl.querySelectorAll("[id]"); for (var w = 0; w < dgids.length; w++) dgids[w].removeAttribute("id");
+        var dwrap = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        dwrap.setAttribute("transform", "translate(0 332)"); // paws (local y0) onto the shared feet line
+        dwrap.appendChild(dcl);
+        return dwrap;
       }
       if (sel.charAt(0) === "#") {
         var pk = document.querySelector(sel + "-peek");
@@ -64920,6 +64946,13 @@ function spawnDustMote(container) {
     if (window.__gardenPartyOn && Math.random() < 1 / 6) {
       var asp = null; present.forEach(function (p) { if (p.key === "aspen") asp = p; });
       if (asp) subs.push({ id: "aspen", members: [{ key: "aspen", grp: "crew", name: asp.name || "Aspen", roleKey: asp.roleKey }] });
+    }
+    // Whistler. No extra gate and no rarity roll: __whistlerOut() is already the narrow condition
+    // (a garden party, with Farhang and/or Lauren arrived), and the album de-dups by people-
+    // signature, so he is offered while he's out and lands exactly once per album either way.
+    // roleKey stays "" like the godkids' — "Whistler" over a photo of a dog explains itself.
+    if (window.__whistlerOut && window.__whistlerOut()) {
+      subs.push({ id: "whistler", members: [{ key: "whistler", grp: "dog", name: "Whistler", roleKey: "" }] });
     }
     return subs;
   }

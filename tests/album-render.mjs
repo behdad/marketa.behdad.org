@@ -156,7 +156,13 @@ const SUBJECTS = [
     ['deck-crowd',      room(907, 'balcony', [['ali', 'Ali'], ['bahareh', 'Bahareh'], ['jay', 'Jay'], ['lauren', 'Lauren']])],
     // the off-duty DJ alone on the deck: a lone smoker, and the shape that produced no photo at all
     ['deck-dj-danesh',  room(908, 'balcony', [['danesh', 'Danesh']])],
-    ['deck-dj-sina',    room(909, 'balcony', [['sina', 'Sina']])]
+    ['deck-dj-sina',    room(909, 'balcony', [['sina', 'Sina']])],
+    // Whistler is the only subject who isn't people-shaped: a knee-high figure whose top sits far
+    // below every human's, which is a composition shape nothing else here covers (the measured
+    // figure tops drive the vertical fit, and one very short top is exactly what skews it). Always
+    // WITH the couple — captureAlbumShot anchors every portrait on the hosts, and occupantsOf reads
+    // the people ROSTER, so a dog-alone card is a shape the app cannot produce and isn't tested.
+    ['nook-dog',        room(910, 'cuddly',  [['hosts', 'markéta & behdad'], ['whistler', 'Whistler']])]
   ];
   console.log('=== room shots / mixed heights (all modes) ===');
   for (const [name, rec] of ROOM_CASES) {

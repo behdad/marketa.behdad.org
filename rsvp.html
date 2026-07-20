@@ -22238,7 +22238,7 @@ var T = {
     rel_bahareh: "Irene's mom", rel_baharak: "Hannah's mom", rel_payman: "Hannah's dad",
     rel_madla: "Elisabeth & Felix's mom", rel_robert: "Elisabeth & Felix's dad", rel_patricia: "Patricia’s son & Patricia’s daughter's mom",
     rel_ashraf: "Behdad, Bahareh & Baharak's mom", rel_mohsen: "Behdad, Bahareh & Baharak's dad",
-    rel_daniel: "Markéta & Madla's dad", rel_marie: "Markéta & Madla's mom", rel_baka: "Markéta & Madla's grandmother",
+    rel_daniel: "Markéta & Madla's dad · Baka's son", rel_marie: "Markéta & Madla's mom", rel_baka: "Markéta & Madla's grandmother · Daniel's mom",
     rel_irene: "Bahareh's daughter", rel_hannah: "Baharak & Payman's daughter",
     rel_elisabeth: "Madla & Robert's daughter", rel_felix: "Madla & Robert's son", rel_patricia_son: "Patricia's son", rel_patricia_daughter: "Patricia's daughter",
     roster_title: "who's here?", roster_empty: "The floor's empty — throw the party first.", roster_pick_hint: "tap to point them out on the floor", // "who's here?" roster overlay
@@ -22873,7 +22873,7 @@ var T = {
     rel_bahareh: "Irenina máma", rel_baharak: "Hannina máma", rel_payman: "Hannin táta",
     rel_madla: "máma Elisabeth a Felixe", rel_robert: "táta Elisabeth a Felixe", rel_patricia: "máma Patriciina syna a Patriciině dceři",
     rel_ashraf: "máma Behdada, Bahareh a Baharak", rel_mohsen: "táta Behdada, Bahareh a Baharak",
-    rel_daniel: "táta Markéty a Madly", rel_marie: "máma Markéty a Madly", rel_baka: "babička Markéty a Madly",
+    rel_daniel: "táta Markéty a Madly · syn Baky", rel_marie: "máma Markéty a Madly", rel_baka: "babička Markéty a Madly · Danielova máma",
     rel_irene: "Barešina dcera", rel_hannah: "dcera Baharak a Paymana",
     rel_elisabeth: "dcera Madly a Roberta", rel_felix: "syn Madly a Roberta", rel_patricia_son: "Patriciin syn", rel_patricia_daughter: "Patriciina dcera",
     roster_title: "kdo je tady?", roster_empty: "Parket je prázdný — nejdřív rozjeď párty.", roster_pick_hint: "klepnutím ho ukážeš na parketu", // roster překryv „kdo je tady?“
@@ -54810,16 +54810,27 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
     hat.classList.add("wiggling");
     setTimeout(function () { hat.classList.remove("wiggling"); }, 760);
   });
+  // Which Tehran-room figure is the birthday person behind the cake — read off the SAME
+  // #loft-game-strip.bd-<who> signal the honour seat is keyed on, so the candle always belongs to
+  // whoever's birthday is active. Default: Hannah (the birthday girl) when no Tehran bday is on.
+  var THR_BD_FIG = { payman: "tehran-hon-payman", baharak: "tehran-hon-baharak", ashraf: "tehran-hon-ashraf", mohsen: "tehran-hon-mohsen", hannah: "tehran-fig-girl" };
+  function tehranBdFig() {
+    var s = document.getElementById("loft-game-strip");
+    if (s) for (var who in THR_BD_FIG) if (THR_BD_FIG.hasOwnProperty(who) && s.classList.contains("bd-" + who)) return THR_BD_FIG[who];
+    return "tehran-fig-girl"; // default guest of honour
+  }
   // tap the birthday candle → blow it out (flame + glow fade, a wisp of smoke rises). Stays out
   // for the rest of the call; a fresh connect re-lights it (see connect/dropFamilyCall's .out
   // reset). A bare click covers taps too (taps synthesize clicks, same as the hat/figures);
   // the extinguish is a plain class toggle, so it works under reduced motion (only the smoke
-  // animation is suppressed there).
+  // animation is suppressed there). Whoever's birthday it is beams (blink + big smile) as THEIR
+  // candle goes out — the candle belongs to the person behind the cake, not always Hannah.
   var candle = document.getElementById("tehran-candle");
   if (candle) candle.addEventListener("click", function (e) {
     e.stopPropagation();
     if (!familyG.classList.contains("connected")) return; // only a live, lit candle blows out
     candle.classList.add("out");
+    poke(tehranBdFig(), true, true);
   });
 })();
 // Hanging up: two quick descending tones, the mirror image of playPhoneRingSound's
@@ -63349,13 +63360,13 @@ function spawnDustMote(container) {
     { who: "sina",      m: 0,  d: 15, before: 3, after: 3, name: "Sina",      type: "hat",   venue: "dj-sina" }, // Jan 12–18
     { who: "marketa",   m: 0,  d: 20, before: 3, after: 3, name: "Markéta",   type: "crown", venue: "garden" }, // Jan 17–23
     { who: "felix",     m: 1,  d: 5,  before: 3, after: 3, name: "Felix",     type: "crown", venue: "garden" }, // Feb 2–8
-    { who: "payman",    m: 2,  d: 17, before: 3, after: 3, name: "Payman",    type: "hat",   venue: "garden" }, // Mar 14–20
+    { who: "payman",    m: 2,  d: 17, before: 3, after: 3, name: "Payman",    type: "hat",   venue: "tehran" }, // Mar 14–20 (Baharak's husband — Tehran call only)
     { who: "daniel",    m: 2,  d: 25, before: 3, after: 3, name: "Daniel",    type: "crown", venue: "prague" }, // Mar 22–28 (Markéta's dad — Prague call only)
     { who: "jay",       m: 2,  d: 29, before: 3, after: 3, name: "Jay",       type: "hat",   venue: "garden" }, // Mar 26 – Apr 1
     { who: "alireza",   m: 4,  d: 20, before: 3, after: 3, name: "Alireza",   type: "hat",   venue: "garden" }, // May 17–23
     { who: "robert",    m: 4,  d: 22, before: 3, after: 3, name: "Robert",    type: "crown", venue: "garden" }, // May 19–25
     { who: "pouria",    m: 5,  d: 5,  before: 3, after: 3, name: "Pouria",    type: "hat",   venue: "bar" }, // Jun 2–8
-    { who: "hannah",    m: 5,  d: 16, before: 3, after: 3, name: "Hannah",    type: "hat",   venue: "garden" }, // Jun 13–19
+    { who: "hannah",    m: 5,  d: 16, before: 3, after: 3, name: "Hannah",    type: "hat",   venue: "tehran" }, // Jun 13–19 (Baharak & Payman's daughter — Tehran call only)
     { who: "marie",     m: 5,  d: 17, before: 3, after: 3, name: "Marie",     type: "crown", venue: "prague" }, // Jun 14–20 (Markéta's mom — Prague call only)
     { who: "elisabeth", m: 5,  d: 22, before: 3, after: 3, name: "Elisabeth", type: "crown", venue: "garden" }, // Jun 19–25
     { who: "madla",     m: 5,  d: 24, before: 3, after: 3, name: "Madla",     type: "crown", venue: "garden" }, // Jun 21–27
@@ -63364,7 +63375,7 @@ function spawnDustMote(container) {
     { who: "mohsen",    m: 7,  d: 23, before: 3, after: 3, name: "Mohsen",    type: "hat",   venue: "tehran" }, // Aug 20–26 (Behdad's dad — Tehran call only)
     { who: "danesh",    m: 7,  d: 28, before: 0, after: 19, name: "Danesh",   type: "hat",   venue: "dj-danesh" }, // Aug 28 – Sep 16; custom asymmetric decor window
     { who: "baka",      m: 8,  d: 8,  before: 3, after: 3, name: "Baka",      type: "crown", venue: "prague" }, // Sep 5–11 (Markéta's grandmother — Prague call only)
-    { who: "baharak",   m: 8,  d: 10, before: 3, after: 3, name: "Baharak",   type: "hat",   venue: "garden" }, // Sep 7–13
+    { who: "baharak",   m: 8,  d: 10, before: 3, after: 3, name: "Baharak",   type: "hat",   venue: "tehran" }, // Sep 7–13 (Behdad's sister — Tehran call only)
     { who: "behdad",    m: 8,  d: 27, before: 6, after: 0, name: "Behdad",    type: "hat",   venue: "garden" }, // Sept 21–27
     { who: "bahareh",   m: 9,  d: 7,  before: 3, after: 3, name: "Bahareh",   type: "hat",   venue: "garden" }, // Oct 4–10 (shares Oct 7 with Ashraf)
     { who: "ashraf",    m: 9,  d: 7,  before: 3, after: 3, name: "Ashraf",    type: "hat",   venue: "tehran" }, // Oct 4–10 (Behdad's mom — Tehran call only; shares Oct 7 with Bahareh)
@@ -63561,11 +63572,25 @@ function spawnDustMote(container) {
   var bdIndex = 0, bdStarted = false;
   // Bring the person into view WEARING their hat: light + walk to their venue so the overlay
   // isn't just a class on an off-screen figure. Best-effort — every hook is guarded.
-  // The kids party in the cuddly-puddly, not on the garden floor — so a kid's birthday reveals
-  // them there wearing the hat. Irene/Robin/Navid are the nook cameos (held via their __*Show
-  // hooks); Elisabeth/Felix/Patricia’s son/Patricia’s daughter/Hannah ride in with their family DUO via __cuddlyVisit.
+  // The kids who ATTEND in person party in the cuddly-puddly, not on the garden floor — so a
+  // kid's birthday reveals them there wearing the hat. Irene/Robin/Navid are the nook cameos
+  // (held via their __*Show hooks); Elisabeth/Felix/Patricia’s son/Patricia’s daughter ride in with their family DUO via
+  // __cuddlyVisit. (Hannah is NOT here — she's Baharak & Payman's Tehran-call family now.)
   var BD_KID_CAMEO = { irene: ["__ireneShow", "irene-sit"], robin: ["__robinShow", "robin-sit"], navid: ["__navidShow", "navid-sit"] };
-  var BD_KID_DUO = { elisabeth: "madla", felix: "madla", "patricia-son": "patricia", "patricia-daughter": "patricia", hannah: "baharak" };
+  var BD_KID_DUO = { elisabeth: "madla", felix: "madla", "patricia-son": "patricia", "patricia-daughter": "patricia" };
+  // Garden adults + crew, when the party is OFF, are summoned to the cuddly-puddly via their
+  // CUDDLY_DUOS lead instead of lighting the party (a birthday reveal must NEVER start it). This
+  // maps each person to the duo id that brings them in (a couple/family arrives together). People
+  // with no cuddly duo (Farhang, Pouria, Sina, Danesh, Lauren) fall through to a party-safe default.
+  var BD_CUDDLY_DUO = {
+    ali: "ali", goli: "ali",
+    spencer: "spencer", jay: "spencer",
+    alireza: "alireza", mahzad: "alireza",
+    bahareh: "bahareh",
+    patricia: "patricia",
+    madla: "madla", robert: "madla",
+    hamid: "hamid", athena: "hamid"
+  };
   function bdReveal(b) {
     var v = b.venue || "garden";
     if (BD_KID_CAMEO[b.who] || BD_KID_DUO[b.who]) { // a kid → the cuddly-puddly, awake, wearing the hat
@@ -63579,33 +63604,30 @@ function spawnDustMote(container) {
       }
       return;
     }
-    if (v === "tehran") { // Behdad's parents (Ashraf/Mohsen) — the hat rides the Tehran video call
+    if (v === "tehran") { // Behdad's Tehran family (Ashraf/Mohsen/Baharak/Payman/Hannah) — the hat rides the Tehran video call
       if (window.goToStage) window.goToStage("office");
       // Already mid-call on the monitor: openFamilyCall would bail (one call at a time), so just pull
       // the view back up — the seat of honour is CSS-keyed on the bd-<who> class showBirthday already
-      // set, so this birthday person is behind the cake without re-dialing.
+      // set, so this birthday person is behind the cake without re-dialing. Otherwise
+      // __openMonitorApp boots the PC if off, zooms the monitor, and deep-links straight to the
+      // connected Tehran call (the deep-link places+connects even from a cold start).
       if (window.__familyCallLive && window.__familyCallLive()) {
         if (window.__monitorZoomIn) window.__monitorZoomIn();
       } else if (window.__openMonitorApp) {
-        window.__openMonitorApp("tehran"); // boots the PC if off, zooms the monitor, and deep-links straight to the connected Tehran call
+        window.__openMonitorApp("tehran");
       }
       return;
     }
     if (v === "prague") { // Markéta's parents + Baka — their headwear rides the Prague laptop call
       if (window.goToStage) window.goToStage("office");
-      // Already on the Prague call (a different Prague person, or the lid backed out of zoom): the
-      // laptop is open and startCall would no-op, so zoom the lid back in directly — the new person
-      // rides the bd-<who> seating CSS showBirthday already set.
-      if (window.__pragueCallLive && window.__pragueCallLive()) {
-        if (window.__laptopZoomIn) window.__laptopZoomIn();
-      } else if (window.__laptopCall) {
+      // Place the Prague call unless it's already live (a live call is the app on-screen; re-dialing
+      // would hang it up). __laptopCall only auto-zooms when it has to OPEN the lid, so an already-open
+      // lid (call live, or ended-but-still-open) never re-zooms on its own — pull the view up to the
+      // laptop unconditionally afterwards, which also covers a lid open but backed out of zoom.
+      if (!(window.__pragueCallLive && window.__pragueCallLive()) && window.__laptopCall) {
         window.__laptopCall("prague"); // opens the lid (zooming in) and dials Prague
       }
-      return;
-    }
-    if (v === "bar") { // Pouria behind the kitchen bar — the bar is up during a party (or at night)
-      if (!window.__gardenPartyOn && window.__setGardenParty) window.__setGardenParty(true);
-      if (window.goToStage) window.goToStage("kitchen");
+      if (window.__laptopZoomIn) window.__laptopZoomIn();
       return;
     }
     // The hosts live in the cuddly nook when the party's off (their nook figures wear the
@@ -63614,13 +63636,22 @@ function spawnDustMote(container) {
       if (window.goToStage) window.goToStage("cuddly");
       return;
     }
-    // garden floor (default) + the two DJ stops (Sina/Danesh spin the garden decks). 'b' works
-    // whether or not the party was already on: if it's dark, light it so the floor fills.
-    if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
-    if (window.goToStage) window.goToStage("garden");
-    if (window.__summonGuests) window.__summonGuests(); // crash the whole floor so this guest is actually present
-    if (v === "dj-sina" && window.dj) window.dj("sina");
-    else if (v === "dj-danesh" && window.dj) window.dj("danesh");
+    // Everyone else — garden adults + crew: the garden floor (default), the two DJ decks
+    // (Sina/Danesh), or Pouria's kitchen bar. When the party is ON they take their usual spot.
+    // When it's OFF a birthday reveal must NEVER light the party — instead it summons them to the
+    // cuddly-puddly via their CUDDLY_DUOS lead (a couple/family arrives together). Anyone with no
+    // cuddly duo (Farhang, Pouria, Sina, Danesh, Lauren) falls back to a party-safe pan to the nook.
+    if (window.__gardenPartyOn) {
+      if (window.goToStage) window.goToStage(v === "bar" ? "kitchen" : "garden");
+      if (v !== "bar" && window.__summonGuests) window.__summonGuests(); // crash the whole floor so this guest is actually present
+      if (v === "dj-sina" && window.dj) window.dj("sina");
+      else if (v === "dj-danesh" && window.dj) window.dj("danesh");
+      return;
+    }
+    if (window.goToStage) window.goToStage("cuddly");
+    if (window.__kidsAsleep && window.__wakeKids) window.__wakeKids(); // wake them so a daytime visit can show
+    var duo = BD_CUDDLY_DUO[b.who];
+    if (duo && window.__cuddlyVisit) window.__cuddlyVisit(duo, true); // forced: held, bypasses the meal/day visitor gates
   }
   function showBirthday(b) {
     if (!b) return;

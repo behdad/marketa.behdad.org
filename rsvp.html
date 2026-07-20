@@ -3817,11 +3817,14 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
    grid, .pm-app → the open app, .pm-incall → the video-call view. Site palette with
    wine (#8e3a4a) as the accent, mirroring the monitor's cream-∞-on-wine boot. */
 .phone-backdrop{
-  position:fixed; inset:0; z-index:55; background:rgba(30,22,14,.55); /* above the fullscreen area's z-index:50 so a class-fill scene never paints over the open phone */
+  position:fixed; inset:0; z-index:55; /* above the fullscreen area's z-index:50 so a class-fill scene never paints over the open phone */
   display:flex; align-items:center; justify-content:center; padding:2.5vh 3vw;
-  opacity:0; transition:opacity .22s ease;
 }
-.phone-backdrop.show{opacity:1}
+/* the DIM sits on a pseudo-layer that fades in; the phone shell keeps its OWN opacity so it's
+   never dragged translucent by the backdrop (the scene must not show through the phone) */
+.phone-backdrop::before{content:""; position:absolute; inset:0; background:rgba(30,22,14,.55); opacity:0; transition:opacity .22s ease}
+.phone-backdrop.show::before{opacity:1}
+.phone-shell{opacity:1} /* the shell is ALWAYS fully opaque — only the dim ::before fades, so the scene can never show through the phone */
 .phone-shell{
   position:relative; box-sizing:border-box;
   width:300px; height:620px; max-height:95vh; max-width:94vw;
@@ -4421,6 +4424,7 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 }
 @media (prefers-reduced-motion: reduce){
   .phone-backdrop{transition:none}
+  .phone-backdrop::before, .phone-backdrop .phone-shell{transition:none}
   .phone-boot .pb-inf{animation:none}
   .phone-boot .pb-lock.shake{animation:none}
 }

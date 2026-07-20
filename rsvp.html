@@ -25566,6 +25566,14 @@ function idealBrowser() {
     if (kbdOverlay) closeKbdHelp(); else openKbdHelp();
   });
   window.__openKbdHelp = openKbdHelp; // so scene objects (e.g. the bar's "…THERE?" imprint) can raise the shortcuts card
+  // console `shortcuts()` — the same card '?' raises, toggled the same way. It lives in
+  // this closure because kbdOverlay/closeKbdHelp are only visible here.
+  window.shortcuts = function () {
+    if (kbdOverlay) { closeKbdHelp(); return false; }
+    openKbdHelp();
+    return true;
+  };
+  window.keyboard = window.shortcuts; // the other word people reach for, same command
   // Escape closes the card WITHOUT also stopping the music. It listens on window
   // (capture), not document: the stop-the-music Escape listener is a capture listener
   // on document, and same-node capture listeners run in registration order — only an
@@ -38651,6 +38659,8 @@ var ABANDONED_CALL_MS = 30000;
   var CONSOLE_HELP = {
     help: "help [command] — this list, or details for one command",
     clear: "clear — wipe the scrollback",
+    shortcuts: "shortcuts() — pop up the keyboard-shortcuts card (the one the '?' key shows); call it again to close it. returns whether the card ended up open",
+    keyboard: "keyboard(…) — alias for shortcuts(…), by the other name",
     laser: "laser(true) — loose a red dot the cat chases; laser(false) turns it off; laser() reports whether it's on",
     party: "party(true) throws the garden party; party(false) ends it; party() reports whether it's on",
     chase: "chase() — send the three godkids (Irene, Robin & Navid) darting across the garden, chasing each other + giggling; lights the party + heads to the garden first if needed. they also run on their own now and then while the party's lit",
@@ -38845,7 +38855,7 @@ var ABANDONED_CALL_MS = 30000;
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · mixer() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · meteors() · storm()/rain()/overcast() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · sharecard() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora()/aurora(kp) · aurora() · twilight() · timelapse() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · snap() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · fal() · cat() · octi() · piratebox()/chest() · scripts() · run(\"name\") · repeat(\"name\")/stop() · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · mailto() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · shortcuts()/keyboard() · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · mixer() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · meteors() · storm()/rain()/overcast() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · sharecard() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora()/aurora(kp) · aurora() · twilight() · timelapse() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · snap() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · fal() · cat() · octi() · piratebox()/chest() · scripts() · run(\"name\") · repeat(\"name\")/stop() · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · mailto() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
@@ -39095,7 +39105,7 @@ var ABANDONED_CALL_MS = 30000;
   // list drifts from those keys, which is how it "stays in sync". Only the first token (the
   // command name) is completed; args / inside-parens are out of scope.
   var CONSOLE_CMDS = [
-    "help", "clear", "laser", "party", "chase", "guests", "aligoli", "arrive", "roster", "reset", "autoplay", "quit", "blacklight", "uv", "trip", "room",
+    "help", "clear", "shortcuts", "keyboard", "laser", "party", "chase", "guests", "aligoli", "arrive", "roster", "reset", "autoplay", "quit", "blacklight", "uv", "trip", "room",
     "goto", "rooms", "daylight", "night", "day", "season", "meteors", "birthday", "play", "pause", "temp", "weather",
     "clock", "time", "sharecard", "projector", "storm", "rain", "overcast", "dance", "jukebox", "dj", "firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift", "cocktail", "mixer", "lang", "caption", "candle",
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "aurora", "twilight", "timelapse", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood", "kidsAsleep",

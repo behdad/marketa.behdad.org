@@ -28710,13 +28710,29 @@ document.addEventListener("click", function (e) {
     if (typeof window.__realOutdoorC === "number" && window.__realOutdoorC <= 0) return true; // a real freezing reading
     return !!(window.__snowySeason && window.__snowySeason());                                // else the season's own cold months
   }
+  // the base probability the nightly roll is drawn against, before the coin-flip. Split out so a
+  // test can read it (window.__auroraBase) and so the live NOAA space-weather forecast can fold in.
+  function auroraBase() {
+    var party = window.__gardenPartyOn;
+    var base = party ? 0.30 : 0.72;
+    if (coldNight()) base = party ? 0.55 : 0.97; // clear cold night: the lights nearly always dance
+    var f = window.__auroraForecast;
+    if (f && typeof f.kp === "number" && f.kp > 0) {
+      // fold in the real forecast, EXAGGERATED so the loft is generous: NOAA's planetary Kp (0–9)
+      // maps up steeply — Kp≥4 → near-certain (~0.97), a low-but-nonzero Kp still lifts the odds,
+      // ~0 leaves the baseline alone. Only ever RAISES the base (a quiet sky keeps the old odds).
+      var boosted = Math.min(0.97, 0.45 + 0.13 * f.kp);
+      if (party) boosted *= 0.7; // the neon still washes it out somewhat during the party
+      base = Math.max(base, boosted);
+    }
+    return base;
+  }
   function rollAurora() {
-    var base = window.__gardenPartyOn ? 0.30 : 0.72;
-    if (coldNight()) base = window.__gardenPartyOn ? 0.55 : 0.97; // clear cold night: the lights nearly always dance
-    auroraTonight = Math.random() < base;
+    auroraTonight = Math.random() < auroraBase();
   }
   window.__rollGardenAurora = function () { rollAurora(); if (window.__updateGardenAurora) window.__updateGardenAurora(); };
   window.__auroraColdNight = coldNight; // test hook: the clear-cold-night boost predicate
+  window.__auroraBase = auroraBase; // test hook: the base the nightly roll is drawn against (folds in the NOAA forecast)
   // shimmer(sh, t, ph): a stop's live opacity = base + slow twin sines
   function shimmer(base, t, ph) {
     return Math.max(0, base[0] + base[1] * Math.sin(t * 0.21 + ph) + base[2] * Math.sin(t * 0.37 + ph * 1.7));
@@ -28776,9 +28792,11 @@ document.addEventListener("click", function (e) {
       window.currentStageName === tg.room &&
       tg.stage.classList.contains("dusk") &&
       !tg.stage.classList.contains("storming") &&
+      !tg.stage.classList.contains("climate-overcast") && // clouds hide the lights
       !tripping();
     if (!(forced || natural)) return false;
     if (forced && tg.stage.classList.contains("storming")) return false; // force still yields to a storm
+    if (forced && tg.stage.classList.contains("climate-overcast")) return false; // …and to overcast (clouds hide them)
     return true;
   }
   // the shared loop runs while ANY target is shown + the tab is visible+focused
@@ -48909,6 +48927,35 @@ async def localfont(name):
   setTimeout(fetchSmoke, 4000); // once per load, off the load path — haze moves slower than weather
   setTimeout(fetchWx, 4000); // a few seconds after init, off the load path
   setInterval(fetchWx, 15 * 60000); // fetch + set state only — nothing spawns, hidden-tab safe
+  // The garden/balcony aurora follows the REAL space weather: NOAA SWPC's public planetary Kp
+  // forecast (0–9, no key). rollAurora folds it in (auroraBase, exaggerated); the fetch only sets
+  // the chance — the sky must still be a clear, non-storming, non-overcast dusk to actually show.
+  // Offline/headless the global stays null and the aurora falls back to the clear-cold-night odds.
+  window.__auroraForecast = null; // {kp: 0–9, at: ms} once a fetch lands, else null
+  function fetchAurora() {
+    try {
+      if (!window.fetch) return;
+      window.fetch("https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json")
+        .then(function (r) { return r && r.ok ? r.json() : null; })
+        .then(function (rows) {
+          if (!rows || !rows.length) return;
+          // rows[0] is a header; each data row is [time_tag, kp, "observed"|"predicted", scale].
+          // Take the strongest PREDICTED Kp (the nights ahead); fall back to the strongest of all.
+          var maxPred = -1, maxAny = -1;
+          for (var i = 1; i < rows.length; i++) {
+            var kp = parseFloat(rows[i] && rows[i][1]);
+            if (!isFinite(kp)) continue;
+            if (kp > maxAny) maxAny = kp;
+            if (/pred/i.test(rows[i][2] || "") && kp > maxPred) maxPred = kp;
+          }
+          var best = maxPred >= 0 ? maxPred : maxAny;
+          if (best >= 0) window.__auroraForecast = { kp: best, at: Date.now() };
+        })
+        .catch(function () {});
+    } catch (e) {}
+  }
+  setTimeout(fetchAurora, 4500); // just after the weather, off the load path
+  setInterval(fetchAurora, 30 * 60000); // set-state only, hidden-tab safe (the Kp forecast moves slowly)
   // The loft's DEFAULT sky follows Edmonton's real weather (window.__realWxActive, which
   // yields null the moment any override — a season/birthday preview, a ?date= jump, a trip,
   // the kiosk — takes over): real rain/thunderstorm shows the same .storming look the balcony
@@ -69587,7 +69634,11 @@ function spawnDustMote(container) {
     if (!window.__setAurora) return false;
     if (arguments.length === 0) { // no arg → status (pure, no override change)
       var s = window.__auroraShowing ? window.__auroraShowing() : false;
-      return s ? "🌌 the northern lights are showing." : "🌌 no aurora right now — aurora(true) to summon them (or wait for a clear night).";
+      var f = window.__auroraForecast;
+      var kpNote = (f && typeof f.kp === "number")
+        ? " (real NOAA Kp " + f.kp.toFixed(1) + " → boosted base " + (window.__auroraBase ? window.__auroraBase().toFixed(2) : "?") + ")"
+        : "";
+      return (s ? "🌌 the northern lights are showing." : "🌌 no aurora right now — aurora(true) to summon them (or wait for a clear night).") + kpNote;
     }
     var on = !!arg;
     if (!on) { var r = window.__setAurora(false); narrate(r, "", "🌌 the northern lights fade out."); return r; }

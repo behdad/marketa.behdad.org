@@ -47603,6 +47603,7 @@ async def localfont(name):
         unreadWrap.className = "pm-msg-unread";
         var unreadChk = document.createElement("input");
         unreadChk.type = "checkbox"; unreadChk.className = "pm-msg-unread-chk";
+        unreadChk.checked = msgUnreadOnly; // remembered across a close/reopen; cleared on a kill / reset
         var unreadLbl = document.createElement("span"); unreadLbl.textContent = tr("msg_unread_only");
         unreadWrap.appendChild(unreadChk); unreadWrap.appendChild(unreadLbl);
         wrap.appendChild(unreadWrap);
@@ -47668,7 +47669,7 @@ async def localfont(name):
           if (soonestExpiry !== Infinity) msgNewTimer = setTimeout(function () { msgNewTimer = null; if (isOpen() && currentApp === "messages") applyFilter(); }, soonestExpiry + 50); // retire the "New" label once the freshest text ages out, while the app stays open
         }
         input.addEventListener("input", applyFilter);
-        unreadChk.addEventListener("change", applyFilter);
+        unreadChk.addEventListener("change", function () { msgUnreadOnly = unreadChk.checked; applyFilter(); });
         clr.addEventListener("click", function () { input.value = ""; applyFilter(); input.focus(); });
         applyFilter();
       }
@@ -48393,6 +48394,7 @@ async def localfont(name):
       var input = document.createElement("input");
       input.type = "search";
       input.className = "pm-as-input";
+      input.value = albumSearchQ; // remembered across a close/reopen; cleared on a kill / reset
       input.setAttribute("placeholder", tr("album_search_ph"));
       input.setAttribute("aria-label", tr("album_search_aria"));
       input.setAttribute("autocomplete", "off");
@@ -48451,8 +48453,8 @@ async def localfont(name):
         firstPaint = false;
         nomatch.style.display = shown ? "none" : "";
       }
-      input.addEventListener("input", applyFilter);
-      clr.addEventListener("click", function () { input.value = ""; applyFilter(); input.focus(); });
+      input.addEventListener("input", function () { albumSearchQ = input.value; applyFilter(); });
+      clr.addEventListener("click", function () { input.value = ""; albumSearchQ = ""; applyFilter(); input.focus(); });
       applyFilter();
       body.appendChild(wrap);
     }
@@ -48960,6 +48962,7 @@ async def localfont(name):
     // messagesThread holds the received message IDS in arrival order (renderMessages reads the copy
     // live via tr(), so a language flip re-renders); cleared only on a kill (__resetPhoneApps).
     var messagesThread = [], messagesRead = {}, messagesArrivedAt = {}, msgNewTimer = null; // messagesRead[id] set once a message is tapped — unread (bold) until then; messagesArrivedAt[id] = wall-clock ms of live delivery (drives the "New" divider); msgNewTimer re-renders to retire the divider once the freshest text ages past 30s
+    var msgUnreadOnly = false, albumSearchQ = ""; // sticky UI filters (Messages "unread only", Photos search) — session-scoped like messagesRead: survive a close/reopen, cleared on a kill / __resetPhoneApps
     // the shared "are you home?" opener pool — every friend duo draws from all of these, plus its own flavored line (below)
     var VISIT_GENERIC = ["msg_visit_body_a", "msg_visit_body_b", "msg_visit_body_c", "msg_visit_body_d", "msg_visit_body_e", "msg_visit_body_f", "msg_visit_body_g", "msg_visit_body_h", "msg_visit_body_i"];
     // the wedding coordinators — any of them can send a moment announcement ("cake's out!", "group photo!" …)
@@ -50343,7 +50346,7 @@ async def localfont(name):
     }
     window.__openPhoneModal = open;
     window.__closePhoneModal = function (silent) { close(silent); };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; messagesThread = []; messagesRead = {}; messagesArrivedAt = {}; Object.keys(MESSAGES).forEach(function (k) { if (MESSAGES[k].bodyKeys) MESSAGES[k].bodyKey = null; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__stopDayDrip) window.__stopDayDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks, and the flashlight (intent forgotten + beam/torch off)
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messagesArrivedAt = {}; Object.keys(MESSAGES).forEach(function (k) { if (MESSAGES[k].bodyKeys) MESSAGES[k].bodyKey = null; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__stopDayDrip) window.__stopDayDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks, and the flashlight (intent forgotten + beam/torch off)
     // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
     // open(true) is the cinematic lock-skip path (same as __showCocktailInPhone), so a console
     // launch never stalls on the passcode. Matches by app id (case-insensitive) or its localized

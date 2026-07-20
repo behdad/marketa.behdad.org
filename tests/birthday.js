@@ -40,6 +40,13 @@ var HARNESS = [
   "    // Daniel — Prague call-only",
   "    window.birthday('daniel'); await sleep(200);",
   "    report.steps.daniel = { bd: hasCls('bd-daniel'), room: window.currentStageName };",
+  "    // Navid — a cuddly-nook CAMEO kid: reveal must land in the cuddly-puddly with him showing",
+  "    window.birthday('navid'); await sleep(250);",
+  "    report.steps.navid = { bd: hasCls('bd-navid'), room: window.currentStageName, showing: !!(document.getElementById('cuddly-navid')||{classList:{contains:function(){return false;}}}).classList.contains('showing') };",
+  "    // Hannah — a cuddly VISITOR kid: her family duo (baharak) walks in wearing the hat, ASLEEP-gate overridden",
+  "    if (window.kidsAsleep) window.kidsAsleep(true); await sleep(50);",
+  "    window.birthday('hannah'); await sleep(250);",
+  "    report.steps.hannah = { bd: hasCls('bd-hannah'), room: window.currentStageName, showing: !!(document.getElementById('cuddly-vis-hannah')||{classList:{contains:function(){return false;}}}).classList.contains('showing'), awoke: !window.__kidsAsleep };",
   "    // a season() must CLEAR the birthday axis (mutually exclusive pretend-dates)",
   "    window.season('summer'); await sleep(150);",
   "    report.steps.seasonClears = { anyBd: /\\bbd-[a-z]+\\b/.test(strip().className), summer: hasCls('season-pride')||true, sd: window.__seasonDate() };",
@@ -69,6 +76,8 @@ else {
   if (s.elisabeth && s.elisabeth.bd && s.elisabeth.crownVisible === "visible" && s.elisabeth.plainHat === "none") pass("Elisabeth wears a CROWN (bd-crown, no bd-hat)"); else fail("Elisabeth crown", JSON.stringify(s.elisabeth));
   if (s.ashraf && s.ashraf.bd && s.ashraf.room === "office") pass("Ashraf (Tehran call) pans to the office + shows her hat class"); else fail("Ashraf tehran reveal", JSON.stringify(s.ashraf));
   if (s.daniel && s.daniel.bd && s.daniel.room === "office") pass("Daniel (Prague call) pans to the office"); else fail("Daniel prague reveal", JSON.stringify(s.daniel));
+  if (s.navid && s.navid.bd && s.navid.room === "cuddly" && s.navid.showing) pass("Navid (cameo kid) reveals in the cuddly-puddly, showing"); else fail("Navid cuddly reveal", JSON.stringify(s.navid));
+  if (s.hannah && s.hannah.bd && s.hannah.room === "cuddly" && s.hannah.showing && s.hannah.awoke) pass("Hannah (visitor kid) reveals in the cuddly-puddly, showing, kids woken"); else fail("Hannah cuddly reveal", JSON.stringify(s.hannah));
   if (s.seasonClears && s.seasonClears.anyBd === false) pass("season() clears the birthday axis (no stray bd-* class)"); else fail("season clears bd axis", JSON.stringify(s.seasonClears));
   if (typeof s.list === "string" && /marketa/.test(s.list)) pass("birthday('list') prints the ring"); else fail("birthday list", JSON.stringify(s.list));
   if (r.errors.length === 0) pass("no uncaught JS errors across the run"); else fail("no uncaught JS errors", r.errors.slice(0,12).join("\n"));

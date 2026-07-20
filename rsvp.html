@@ -21246,8 +21246,18 @@ section{margin:1.9rem 0}
 <stop offset="0.74" stop-color="#f0895f" stop-opacity="0.7"/>
 <stop offset="1" stop-color="#ffd39a" stop-opacity="0.86"/>
 </linearGradient>
+<!-- the bright core of the glow, sitting on the horizon where the sun actually goes down (or
+     comes up). userSpaceOnUse so placeTwilightGlow can slide the whole group sideways and take
+     the gradient's centre with it; the rect is 90px wider than the sky window on each side so
+     no edge is ever exposed at full travel. -->
+<radialGradient id="balcony-twilight-glow-grad" gradientUnits="userSpaceOnUse" cx="508" cy="124" r="126">
+<stop offset="0" stop-color="#ffe0a8" stop-opacity="0.85"/>
+<stop offset="0.45" stop-color="#f5a06a" stop-opacity="0.4"/>
+<stop offset="1" stop-color="#c76a9c" stop-opacity="0"/>
+</radialGradient>
 </defs>
 <rect x="418" y="0" width="180" height="118" fill="url(#balcony-twilight-grad)"/>
+<g id="balcony-twilight-glow"><rect x="328" y="0" width="360" height="118" fill="url(#balcony-twilight-glow-grad)"/></g>
 </g>
 <g id="balcony-aurora" clip-path="url(#balcony-sky-clip)" pointer-events="none" aria-hidden="true">
 <defs>
@@ -49050,6 +49060,28 @@ async def localfont(name):
       var lv = twiLevel();
       stageBalcony.style.setProperty("--twi", lv.toFixed(3));
       stageBalcony.classList.toggle("twilight", lv > 0);
+      placeTwilightGlow();
+    }
+    // WHERE the glow sits, which at this latitude is half the story: the balcony faces NORTH, so
+    // a midsummer sun comes up and goes down well round toward north (azimuth ~46° either side of
+    // it) and its glow is squarely IN this window — off to the right at dawn, since east is on
+    // your right when you face north, and to the left at dusk. Come midwinter the sun rises and
+    // sets round in the southeast/southwest, ~130° off north, so the glow slides out to the frame
+    // edge and dims: most of it is genuinely behind the viewer. Positioned by a transform
+    // ATTRIBUTE — nothing animates this group, so there's no CSS-transform clash to worry about.
+    var TWI_FOV = 105;  // ° either side of north that the open sky window reads as covering
+    var TWI_TRAVEL = 90; // px the glow may slide from centre before it hits the window edge
+    function placeTwilightGlow() {
+      var glow = document.getElementById("balcony-twilight-glow");
+      if (!glow) return;
+      var g = window.__sunGeom ? window.__sunGeom() : null;
+      var az = g ? g.riseAz : 90;                 // ° east of north the sun crosses the horizon
+      function dist(a, b) { var d = Math.abs((((a - b) % 1440) + 1440) % 1440); return Math.min(d, 1440 - d); }
+      var t = sunTimes(), now = edmMinutes();
+      var dawn = dist(now, t.sr) <= dist(now, t.ss); // whichever crossing is nearer decides the side
+      var off = Math.max(-1, Math.min(1, (dawn ? az : -az) / TWI_FOV));
+      glow.setAttribute("transform", "translate(" + (off * TWI_TRAVEL).toFixed(1) + ",0)");
+      glow.setAttribute("opacity", (az <= 45 ? 1 : Math.max(0.4, 1 - 0.6 * (az - 45) / 60)).toFixed(3));
     }
     // How far BELOW the horizon the sun sits right now, in degrees (negative while it's up), on
     // the loft's effective clock and date: 0–6 civil twilight, 6–12 nautical, past 12 the sky

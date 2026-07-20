@@ -533,6 +533,9 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   box-shadow:inset 0 1px 2px rgba(69,58,49,.1), 0 1px 2px rgba(50,18,24,.15);
 }
 @media (max-width:759px){ #hunt-caption{max-width:calc(100% - 4.4rem)} }
+#loft-row-top > #hunt-caption{max-width:calc(100% - 15rem); margin-left:auto; margin-right:auto} /* clear of the console tab + who's-here chip riding this row */
+#loft-row-bot > .hunt-dots{max-width:calc(100% - 15rem); margin-left:auto; margin-right:auto} /* clear of the date + clock pills riding this row */
+@media (max-width:759px){ #loft-row-top > #hunt-caption, #loft-row-bot > .hunt-dots{max-width:calc(100% - 9rem)} }
 .scene-caption a{color:var(--wine); text-decoration:none; border-bottom:1px dotted var(--wine); display:inline-block; font-style:normal}
 .scene-caption.rsvp-nudge{animation:rsvp-nudge-float 2.4s ease-in-out infinite}
 @keyframes rsvp-nudge-float{
@@ -3581,9 +3584,12 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
    plate is pinned by margin-left:auto rather than justify-content:space-between, so it
    still sits right when it is the band's ONLY plate. Visual order is set by `order`, not
    DOM order — the four are appended by four independent blocks. */
-.loft-chrome{display:flex; flex:0 0 auto; justify-content:flex-start; align-items:stretch; flex-wrap:nowrap; gap:.35rem .45rem; max-width:100%; box-sizing:border-box}
-#loft-chrome{margin:.4rem auto .3rem}
-#loft-chrome-bot{margin:.3rem auto 0}
+/* The two chrome bands are ABSOLUTE overlays on the caption row / dots row, not rows of their
+   own — so they cost no vertical chrome, and .loft-row's max-width (matching .hunt-frame's)
+   is what pins each plate to the SCENE's left/right edge rather than the shell's. */
+.loft-row{position:relative; max-width:1140px; margin:0 auto}
+.loft-chrome{position:absolute; left:0; right:0; top:50%; translate:0 -50%; display:flex; flex:0 0 auto; justify-content:flex-start; align-items:center; flex-wrap:nowrap; gap:.35rem .45rem; box-sizing:border-box; pointer-events:none; z-index:3}
+.loft-chrome > *{pointer-events:auto} /* the band itself is click-through so it can span the caption */
 .loft-chrome > *{min-height:23px} /* one height for every plate, held whether or not the "who's here" chip is on the band, so joining it never nudges the scene down a notch */
 .loft-chrome > .loft-console-hint{order:0}
 .loft-chrome > .loft-datenav{order:0}
@@ -8834,10 +8840,12 @@ section{margin:1.9rem 0}
     </svg>
   </button>
   <button type="button" id="hunt-fullscreen-btn" class="hunt-fullscreen-btn" aria-label="Enter fullscreen" title="Enter fullscreen">⛶</button>
+  <!-- top row: the caption keeps the row to itself in flow; the chrome band is overlaid on it
+       (absolute) so the tab + chip pin to the SCENE's edges without costing a row of height. -->
+  <div class="loft-row" id="loft-row-top">
   <p class="scene-caption" id="hunt-caption">Power on the espresso machine, then grind coffee, then brew a shot.</p>
-  <!-- top chrome band: the console pull-tab (left) and the "who's here" chip (right) are
-       appended here by their own blocks (see .loft-chrome) — off the artwork, above the scene. -->
   <div class="loft-chrome" id="loft-chrome"></div>
+  </div>
   <div class="hunt-frame">
   <div class="hunt-left" id="hunt-left">
     <button type="button" id="hunt-prev" class="hunt-nav hunt-nav-prev" aria-label="Previous room" title="Previous room" data-aria-i="dpad_prev" data-title-i="dpad_prev" disabled>‹</button>
@@ -23004,10 +23012,12 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
     <button type="button" id="hunt-next" class="hunt-nav hunt-nav-next locked" aria-label="Next room" title="Next room" data-aria-i="dpad_next" data-title-i="dpad_next">›</button>
   </div>
   </div>
-  <!-- bottom chrome band: the date pill + its stepper (left) and the wall-clock pill (right),
-       appended by their own blocks — off the artwork, between the scene and the room dots. -->
-  <div class="loft-chrome" id="loft-chrome-bot"></div>
+  <!-- bottom row: the room dots hold the row; the date + clock pills overlay it, pinned to the
+       SCENE's edges. Same overlay trick as the top row, so neither band adds vertical chrome. -->
+  <div class="loft-row" id="loft-row-bot">
   <div class="hunt-dots" id="hunt-dots" role="tablist" aria-label="Rooms"></div>
+  <div class="loft-chrome" id="loft-chrome-bot"></div>
+  </div>
   </div>
   <div class="watch-controls">
     <button type="button" id="watch-loft-btn" class="watch-loft-btn" data-i="watch_loft">▷ Trailer</button>
@@ -25141,6 +25151,8 @@ function idealBrowser() {
   var caption = document.getElementById("hunt-caption");
   var chromeStrip = document.getElementById("loft-chrome");        // top band: console tab | who's here
   var chromeStripBot = document.getElementById("loft-chrome-bot"); // bottom band: date | clock
+  var chromeRowTop = document.getElementById("loft-row-top");      // the caption row the top band overlays
+  var chromeRowBot = document.getElementById("loft-row-bot");      // the dots row the bottom band overlays
   var dots = document.getElementById("hunt-dots");
   var prevBtn = document.getElementById("hunt-prev");
   var rightCol = document.getElementById("hunt-right");
@@ -25157,10 +25169,10 @@ function idealBrowser() {
     // genuine Fullscreen API state, so this doesn't change real behavior at all.
     if (!area.classList.contains("is-fullscreen") || !frame || !viewport || !caption || !dots) {
       if (frame) { frame.style.width = ""; frame.style.height = ""; frame.style.maxWidth = ""; }
-      // back in normal flow the bands are block-level and resolve to the shell's content width on
-      // their own — drop the fullscreen px or they stay stuck at the last fullscreen frame's width
-      if (chromeStrip) chromeStrip.style.width = "";
-      if (chromeStripBot) chromeStripBot.style.width = "";
+      // back in normal flow the rows resolve to the shell's content width on their own — drop the
+      // fullscreen px or they stay stuck at the last fullscreen frame's width
+      if (chromeRowTop) chromeRowTop.style.width = "";
+      if (chromeRowBot) chromeRowBot.style.width = "";
       if (window.__refitZoom) window.__refitZoom(); // re-fit a desk zoom to the restored frame, in lockstep with the resize
       return;
     }
@@ -25168,7 +25180,9 @@ function idealBrowser() {
     var padX = (parseFloat(areaStyle.paddingLeft) || 0) + (parseFloat(areaStyle.paddingRight) || 0);
     var padY = (parseFloat(areaStyle.paddingTop) || 0) + (parseFloat(areaStyle.paddingBottom) || 0);
     var areaW = area.clientWidth - padX;
-    var areaH = area.clientHeight - padY - outerHeight(caption) - outerHeight(chromeStrip) - outerHeight(chromeStripBot) - outerHeight(dots);
+    // the bands are absolute overlays on the caption/dots rows, so they add no height of their
+    // own — subtracting them here would shrink the scene by chrome that is not actually there
+    var areaH = area.clientHeight - padY - outerHeight(caption) - outerHeight(dots);
     if (areaW <= 0 || areaH <= 0) return;
     var navW = prevBtn ? prevBtn.offsetWidth : 0;
     var rightW = rightCol ? rightCol.offsetWidth : navW; // right control column (arrow + button stack share one width)
@@ -25200,8 +25214,8 @@ function idealBrowser() {
     // the bands are nowrap, so this never changes their height and can't perturb the areaH read
     // above (nor loop through the ResizeObserver watching them).
     var bandW = (viewportW + chrome) + "px";
-    if (chromeStrip) chromeStrip.style.width = bandW;
-    if (chromeStripBot) chromeStripBot.style.width = bandW;
+    if (chromeRowTop) chromeRowTop.style.width = bandW;
+    if (chromeRowBot) chromeRowBot.style.width = bandW;
     // A device zoom frames the room through #loft-game-strip's transform; the frame just
     // changed size under it, so re-fit NOW (same tick as the resize) — the strip's own
     // transition then glides straight to the new framing instead of the deferred
@@ -25255,8 +25269,8 @@ function idealBrowser() {
   // fullscreen, and inside it only ever sets their WIDTH, so this can't feed itself.
   if (window.ResizeObserver) {
     var bandRO = new ResizeObserver(sizeFullscreenFrame);
-    if (chromeStrip) bandRO.observe(chromeStrip);
-    if (chromeStripBot) bandRO.observe(chromeStripBot);
+    if (chromeRowTop) bandRO.observe(chromeRowTop);
+    if (chromeRowBot) bandRO.observe(chromeRowBot);
   }
   function enterFs() {
     // Class-fill first — this alone fills the viewport and works on mobile regardless of

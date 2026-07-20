@@ -65412,6 +65412,7 @@ function spawnDustMote(container) {
     calRefreshDeps();
   }
   window.__jumpToDate = jumpToDate;
+  window.__calResetToday = calResetToday; // clear ?date= back to the real day (time-lapse restores through here)
   var calView = null; // {y, m} the displayed month
   function calEnsureView() { if (!calView) { var n = window.__now ? window.__now() : new Date(); calView = { y: n.getFullYear(), m: n.getMonth() }; } }
   function calSameYMD(dt, y, m, d) { return dt && dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === d; }
@@ -69617,7 +69618,13 @@ function spawnDustMote(container) {
     var dt = now - lapseLast; lapseLast = now;
     if (dt > 2000 || dt < 0) dt = 40; // a long freeze (or clock skew) shouldn't teleport the day — take one step
     var cur = window.__lapseMins == null ? lapseEdmNowMins() : window.__lapseMins;
-    window.__lapseMins = (((cur + (dt / LAPSE_PERIOD_MS) * 1440 * lapseSpeed(cur)) % 1440) + 1440) % 1440;
+    var raw = cur + (dt / LAPSE_PERIOD_MS) * 1440 * lapseSpeed(cur);
+    if (raw >= 1440 && window.__now && window.__jumpToDate) { // crossed midnight → roll the loft's date forward (occasions fire, per owner)
+      var days = Math.floor(raw / 1440);
+      var d0 = window.__now(), nd = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() + days, 12);
+      window.__jumpToDate(nd.getFullYear(), nd.getMonth(), nd.getDate());
+    }
+    window.__lapseMins = ((raw % 1440) + 1440) % 1440;
     lapseApply();
   }
   window.__stopDaylapse = function () { // reset / take-over / Esc / stop() all route through here
@@ -69625,6 +69632,11 @@ function spawnDustMote(container) {
     window.__lapseActive = false;
     if (lapseTimer) { clearInterval(lapseTimer); lapseTimer = null; }
     window.__lapseMins = null; // no stranded synthetic clock — every reader falls back to the real (or ?time=) clock again
+    try { // the date rolled forward during the lapse — restore the day it started on (a held ?date=, or clear back to real today)
+      if (window.__lapseStartDate && window.__jumpToDate) { var p = window.__lapseStartDate.split("-"); window.__jumpToDate(+p[0], +p[1] - 1, +p[2]); }
+      else if (window.__calResetToday) window.__calResetToday();
+    } catch (e) {}
+    window.__lapseStartDate = null;
     if (window.__reanchorTimeOverride) window.__reanchorTimeOverride(); // a held ?time= resumes cleanly from its shown value
     if (window.__startAutoDayNight) window.__startAutoDayNight(); // re-anchor + re-paint the sky against the real/selected clock
     else if (window.__applyAutoDayNight) window.__applyAutoDayNight(true);
@@ -69645,6 +69657,7 @@ function spawnDustMote(container) {
     if (window.__lapseActive) return "🎬 the loft's already living out its day — timelapse(false) to stop.";
     window.__lapseMins = lapseEdmNowMins(); // seed the synthetic clock at the current time so it starts continuous
     window.__lapseActive = true;
+    try { var _dm = /(?:^|[#&?])date=(\d{4})-(\d{2})-(\d{2})/.exec((location.search || "") + (location.hash || "")); window.__lapseStartDate = _dm ? (_dm[1] + "-" + _dm[2] + "-" + _dm[3]) : null; } catch (e) { window.__lapseStartDate = null; } // remember the day so stopping restores it after the date has rolled forward
     if (window.__closePhoneModal) window.__closePhoneModal(true); // put the phone away…
     if (window.goToStage) window.goToStage("balcony");            // …and step onto the balcony where the sky show plays
     if (window.__startAutoDayNight) window.__startAutoDayNight();  // arm the auto sky so applyAutoDayNight paints

@@ -33,11 +33,14 @@ var HARNESS = [
   "    if (window.__setGardenParty) window.__setGardenParty(true, true); await sleep(150);",
   "    var ret = window.birthday('ali'); await sleep(200);",
   "    report.steps.ali = { ret: ret, bdAli: hasCls('bd-ali'), holiday: hasCls('season-holiday'), party: !!window.__gardenPartyOn, room: window.currentStageName, hatVisible: vis('.bd-hat-ali') };",
-  // Historical dateless-guest birthday detail removed.
-  "    // garden party + cuts a candled cake with her dancing between the hosts (the new garden-birthday behavior).",
+  "    // Goli is a GARDEN-figure adult who ALSO has a nook figure (the Ali+Goli duo). Per",
+  "    // the owner's routing rule, with the party OFF her birthday brings her to the CUDDLY nook (NOT a",
+  "    // party): the same instant the hat turns on, her nook figure is shown under it (the hard rule —",
+  "    // no adornment floating over an empty spot). The party-ON garden+cake path is covered by Ali above.",
   "    if (window.__setGardenParty) window.__setGardenParty(false, true); await sleep(300);",
-  "    window.birthday('goli'); await sleep(1400);",
-  "    report.steps.goli = { bd: hasCls('bd-goli'), room: window.currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, cutter: !!(document.querySelector('#garden-guests .g-goli')||{classList:{contains:function(){return false;}}}).classList.contains('bd-cutter') };",
+  "    window.birthday('goli'); await sleep(700);",
+  "    var pFig=document.getElementById('cuddly-vis-goli');",
+  "    report.steps.goli = { bd: hasCls('bd-goli'), room: window.currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, figShown: !!(pFig && pFig.classList.contains('showing')), hatVisible: vis('#cuddly-vis-goli .bd-hat-goli') };",
   "    // Elisabeth — a Czech-family CROWN kid",
   "    window.birthday('elisabeth'); await sleep(200);",
   "    report.steps.elisabeth = { bd: hasCls('bd-elisabeth'), crownVisible: vis('.bd-crown-elisabeth'), plainHat: (document.querySelector('.bd-hat-elisabeth')?'exists':'none') };",
@@ -79,7 +82,7 @@ else {
   if (s.first && s.first.crownVisible === "visible" && s.first.plainHat === "none") pass("Markéta wears a CROWN (bd-crown, no bd-hat)"); else fail("Markéta crown visible / no hat", JSON.stringify(s.first && { crown: s.first.crownVisible, hat: s.first.plainHat }));
   // Historical dateless-guest birthday detail removed.
   if (s.ali && s.ali.party && s.ali.room === "garden" && s.ali.hatVisible === "visible") pass("party-ON garden stop pans to the garden floor, hat visible"); else fail("Ali garden reveal", JSON.stringify(s.ali));
-  if (s.goli && s.goli.bd && s.goli.room === "garden" && s.goli.party === true && s.goli.cakeOn && s.goli.cutter) pass("party-OFF garden-adult reveal (Goli) THROWS the party + cake, dancing between the hosts"); else fail("Goli garden birthday party+cake", JSON.stringify(s.goli));
+  if (s.goli && s.goli.bd && s.goli.room === "cuddly" && s.goli.party === false && !s.goli.cakeOn && s.goli.figShown && s.goli.hatVisible === "visible") pass("party-OFF garden-adult reveal (Goli) brings her to the NOOK — figure shown AND hat on it (no floating adornment)"); else fail("Goli nook reveal + hat-on-figure", JSON.stringify(s.goli));
   if (s.elisabeth && s.elisabeth.bd && s.elisabeth.crownVisible === "visible" && s.elisabeth.plainHat === "none") pass("Elisabeth wears a CROWN (bd-crown, no bd-hat)"); else fail("Elisabeth crown", JSON.stringify(s.elisabeth));
   if (s.ashraf && s.ashraf.bd && s.ashraf.room === "office") pass("Ashraf (Tehran call) pans to the office + shows her hat class"); else fail("Ashraf tehran reveal", JSON.stringify(s.ashraf));
   if (s.hannah && s.hannah.bd && s.hannah.room === "office") pass("Hannah (Tehran family now) routes to the office, not the cuddly"); else fail("Hannah tehran reveal", JSON.stringify(s.hannah));

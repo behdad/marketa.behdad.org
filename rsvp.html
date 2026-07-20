@@ -49947,6 +49947,16 @@ async def localfont(name):
     // cue actually reaches an ATTENDING player — a fire that's gated out (tab hidden/unfocused,
     // cinematic, attract prompt untouched) hasn't been seen, so it shouldn't spend the fast slot.
     var cueFirstOfParty = true;
+    var cueOpenerArmed = false; // the pending tick was scheduled as that fast opener
+    // ATTRACT MODE READS THE THREAD NOTHING LIKE A PLAYER DOES, so it keeps the leisurely spacing
+    // the drip had before the player-facing speed-up above, and never gets an opener. The director
+    // spends a whole INTERRUPT on every text — phone out, action walked, and the room move that
+    // action makes — then resumes whatever room routine it abandoned, in the room the action left
+    // it in. At the player cadence a ~20s routine is interrupted every single time (twice, often
+    // enough) and the show reads as the phone rather than as the loft. It also never earns
+    // msgDripSlowFactor's back-off, because it opens and clears every text the moment one lands,
+    // so the one thing that would otherwise space the drip out for it never engages.
+    function cueKioskPace() { return !!(typeof window.__autoplayOn === "function" && window.__autoplayOn()); }
     var SUN_NEAR_MIN = 45; // a text lands "near" sunrise/sunset within this many minutes either side
     function edmNowMins() { // current Edmonton minutes-of-day — mirrors edmMinutes() (a different IIFE), driven by the ?time= override / test hook / real clock
       if (typeof window.__edmNowMins === "function") return window.__edmNowMins();
@@ -49975,8 +49985,14 @@ async def localfont(name):
     }
     function scheduleCueDrip() {
       if (cueTimer || !window.__gardenPartyOn || !cuePending().length) return;
+      cueOpenerArmed = cueFirstOfParty && !cueKioskPace();
       cueTimer = setTimeout(function () {
         cueTimer = null;
+        // Re-checked at FIRE time like every other gate in here: autoplay can take the wheel
+        // between arming and firing, and an opener armed for a player must not be spent on the
+        // kiosk. Nothing is lost — the cue is picked at fire time, so it just arrives on the
+        // slower schedule instead.
+        if (cueOpenerArmed && cueKioskPace()) { scheduleCueDrip(); return; }
         if (window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic && playerStarted() && autonomousMsgOk()) {
           cueFirstOfParty = false; // an attending player got their look-in; back to the slow cadence
           var rem = cueRemaining();
@@ -49985,8 +50001,9 @@ async def localfont(name):
         scheduleCueDrip(); // keep dripping while the party's on and cues remain
         // the opener is NOT stretched by msgDripSlowFactor: a busy thread is exactly the case where
         // the player is already reading, and the point of the fast first one is to catch them.
-      }, cueFirstOfParty ? (3000 + Math.floor(Math.random() * 3000))
-                         : (14000 + Math.floor(Math.random() * 12000)) * msgDripSlowFactor()); // ~3–6s to open, then ~14–26s apart, stretched once the thread is busy
+      }, cueKioskPace() ? (30000 + Math.floor(Math.random() * 27500)) * msgDripSlowFactor()
+        : cueOpenerArmed ? (3000 + Math.floor(Math.random() * 3000))
+                         : (14000 + Math.floor(Math.random() * 12000)) * msgDripSlowFactor()); // kiosk ~30–57s; a player gets ~3–6s to open, then ~14–26s apart, stretched once the thread is busy
     }
     window.__startCueDrip = function () { cueFirstOfParty = true; scheduleCueDrip(); }; // each party gets its own opener
     window.__stopCueDrip = function () { if (cueTimer) { clearTimeout(cueTimer); cueTimer = null; } };
@@ -71455,7 +71472,13 @@ function spawnDustMote(container) {
 
   // ── SEQUENCER ── run exactly ONE beat, return the pause before the next.
   function apRunBeat() {
-    var ev = apTakeEvent();
+    // AN INTERRUPT IN FLIGHT IS NEVER PREEMPTED. apPushInterrupt REPLACES apScene, so a second
+    // text landing between a running interrupt's two beats dropped the first one's action beat
+    // while its id stayed in the handled ring — the machine had "taken" a text it never acted on,
+    // and since the ring never offers it again it sat unread on the badge forever. The newcomer
+    // loses nothing by waiting: it stays unread and is taken on the next beat.
+    var midInterrupt = apScene && apScene.kind === "interrupt" && apSceneIdx < apScene.beats.length;
+    var ev = midInterrupt ? null : apTakeEvent();
     if (ev) apPushInterrupt(ev);
     for (var guard = 0; guard < 64; guard++) {
       if (!apScene || apSceneIdx >= apScene.beats.length) {

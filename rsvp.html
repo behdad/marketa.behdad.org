@@ -29627,8 +29627,10 @@ document.addEventListener("click", function (e) {
   function visit(id, forced) {
     var duo = CUDDLY_DUOS[id];
     if (!duo) return false;
-    if (mealOn()) return false;         // owner rule: no visitors while food is served
-    if (!isDay()) return false;         // owner rule: visitors only drop by during the day
+    if (!forced) {                      // a forced visit (e.g. a kid's birthday reveal) overrides both gates
+      if (mealOn()) return false;       // owner rule: no visitors while food is served
+      if (!isDay()) return false;       // owner rule: visitors only drop by during the day
+    }
     if (activeDuo === id && !forced) return true;
     reset();                            // clear any prior duo (+ its Irene half) first
     activeDuo = id;
@@ -63559,8 +63561,24 @@ function spawnDustMote(container) {
   var bdIndex = 0, bdStarted = false;
   // Bring the person into view WEARING their hat: light + walk to their venue so the overlay
   // isn't just a class on an off-screen figure. Best-effort — every hook is guarded.
+  // The kids party in the cuddly-puddly, not on the garden floor — so a kid's birthday reveals
+  // them there wearing the hat. Irene/Robin/Navid are the nook cameos (held via their __*Show
+  // hooks); Elisabeth/Felix/Patricia’s son/Patricia’s daughter/Hannah ride in with their family DUO via __cuddlyVisit.
+  var BD_KID_CAMEO = { irene: ["__ireneShow", "irene-sit"], robin: ["__robinShow", "robin-sit"], navid: ["__navidShow", "navid-sit"] };
+  var BD_KID_DUO = { elisabeth: "madla", felix: "madla", "patricia-son": "patricia", "patricia-daughter": "patricia", hannah: "baharak" };
   function bdReveal(b) {
     var v = b.venue || "garden";
+    if (BD_KID_CAMEO[b.who] || BD_KID_DUO[b.who]) { // a kid → the cuddly-puddly, awake, wearing the hat
+      if (window.goToStage) window.goToStage("cuddly");
+      if (window.__kidsAsleep && window.__wakeKids) window.__wakeKids(); // wake them so the birthday kid can show
+      if (BD_KID_CAMEO[b.who]) {
+        var fn = window[BD_KID_CAMEO[b.who][0]];
+        if (fn) fn(BD_KID_CAMEO[b.who][1]); // held pose, bypasses the day/asleep cameo gates
+      } else if (window.__cuddlyVisit) {
+        window.__cuddlyVisit(BD_KID_DUO[b.who], true); // forced: held, bypasses the meal/day visitor gates
+      }
+      return;
+    }
     if (v === "tehran") { // Behdad's parents (Ashraf/Mohsen) — the hat rides the Tehran video call
       if (window.goToStage) window.goToStage("office");
       // Already mid-call on the monitor: openFamilyCall would bail (one call at a time), so just pull

@@ -58838,17 +58838,25 @@ function spawnDustMote(container) {
     }
 
     // ── CAKE CUTTING ──────────────────────────────────────────────────────────────
-    var cakeTimer = null;
+    var cakeTimer = null, cakeAnchor = null;
     function endCakeCutting() {
       if (cakeTimer) { clearTimeout(cakeTimer); cakeTimer = null; }
       window.__cakeOn = false;
       group.classList.remove("cake-cutting");
+      // restore the cake's DOM slot (moved to the front while cutting)
+      var ck = document.getElementById("garden-cake");
+      if (ck && cakeAnchor && cakeAnchor.parentNode === group) group.insertBefore(ck, cakeAnchor);
+      cakeAnchor = null;
     }
     function startCakeCutting() {
       if (!onFloor()) return false;                 // only meaningful with the crowd on the floor
       if (window.__cakeOn) return true;             // idempotent (storm-safe)
       window.__cakeOn = true;
       group.classList.add("cake-cutting");          // cake fades up, hosts lean in, knife cuts (CSS)
+      // the couple lean OVER the cake, so the cake must paint on top of them — move it to the end of
+      // #garden-guests for the moment (the hosts may themselves be front-most from a first dance), restore on end
+      var ck = document.getElementById("garden-cake");
+      if (ck) { cakeAnchor = ck.nextSibling; group.appendChild(ck); }
       cheerCrowd([".g-behdad", ".g-marketa"]);      // the crowd flares (hosts are busy cutting)
       playCheerSfx();
       cakeTimer = setTimeout(endCakeCutting, reducedMotion() ? 5000 : 9000);

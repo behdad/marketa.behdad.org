@@ -574,6 +574,7 @@ var PERSIAN_HARNESS = [
   "      report.years[y] = {",
   "        nowruz: iso(p.nowruz), sizdah: iso(p.sizdah), chaharshanbe: iso(p.chaharshanbe),",
   "        chDay: p.chaharshanbe.getDay(), yalda: iso(window.__yaldaOf(y)),",
+  "        sadeh: iso(p.sadeh),",
   "        nowruzOf: iso(window.__nowruzOf(y))",
   "      };",
   "    }",
@@ -594,18 +595,18 @@ var PERSIAN_HARNESS = [
 // Nowruz rule changes. Chaharshanbe shifts a whole week only when the last Wednesday before
 // Nowruz crosses (2030), which is why it can sit still while Nowruz moves (2025–27).
 var PERSIAN_EXPECT = {
-  2024: { nowruz: "2024-03-20", sizdah: "2024-04-01", chaharshanbe: "2024-03-12", yalda: "2024-12-20" },
-  2025: { nowruz: "2025-03-21", sizdah: "2025-04-02", chaharshanbe: "2025-03-18", yalda: "2025-12-20" },
-  2026: { nowruz: "2026-03-21", sizdah: "2026-04-02", chaharshanbe: "2026-03-17", yalda: "2026-12-21" },
-  2027: { nowruz: "2027-03-21", sizdah: "2027-04-02", chaharshanbe: "2027-03-16", yalda: "2027-12-21" },
-  2028: { nowruz: "2028-03-20", sizdah: "2028-04-01", chaharshanbe: "2028-03-14", yalda: "2028-12-20" },
-  2029: { nowruz: "2029-03-20", sizdah: "2029-04-01", chaharshanbe: "2029-03-13", yalda: "2029-12-20" },
-  2030: { nowruz: "2030-03-21", sizdah: "2030-04-02", chaharshanbe: "2030-03-19", yalda: "2030-12-20" },
-  2031: { nowruz: "2031-03-21", sizdah: "2031-04-02", chaharshanbe: "2031-03-18", yalda: "2031-12-21" },
-  2032: { nowruz: "2032-03-20", sizdah: "2032-04-01", chaharshanbe: "2032-03-16", yalda: "2032-12-20" },
-  2033: { nowruz: "2033-03-20", sizdah: "2033-04-01", chaharshanbe: "2033-03-15", yalda: "2033-12-20" },
-  2034: { nowruz: "2034-03-21", sizdah: "2034-04-02", chaharshanbe: "2034-03-14", yalda: "2034-12-20" },
-  2035: { nowruz: "2035-03-21", sizdah: "2035-04-02", chaharshanbe: "2035-03-13", yalda: "2035-12-21" }
+  2024: { nowruz: "2024-03-20", sizdah: "2024-04-01", chaharshanbe: "2024-03-12", yalda: "2024-12-20", sadeh: "2024-01-30" },
+  2025: { nowruz: "2025-03-21", sizdah: "2025-04-02", chaharshanbe: "2025-03-18", yalda: "2025-12-20", sadeh: "2025-01-29" },
+  2026: { nowruz: "2026-03-21", sizdah: "2026-04-02", chaharshanbe: "2026-03-17", yalda: "2026-12-21", sadeh: "2026-01-30" },
+  2027: { nowruz: "2027-03-21", sizdah: "2027-04-02", chaharshanbe: "2027-03-16", yalda: "2027-12-21", sadeh: "2027-01-30" },
+  2028: { nowruz: "2028-03-20", sizdah: "2028-04-01", chaharshanbe: "2028-03-14", yalda: "2028-12-20", sadeh: "2028-01-30" },
+  2029: { nowruz: "2029-03-20", sizdah: "2029-04-01", chaharshanbe: "2029-03-13", yalda: "2029-12-20", sadeh: "2029-01-29" },
+  2030: { nowruz: "2030-03-21", sizdah: "2030-04-02", chaharshanbe: "2030-03-19", yalda: "2030-12-20", sadeh: "2030-01-29" },
+  2031: { nowruz: "2031-03-21", sizdah: "2031-04-02", chaharshanbe: "2031-03-18", yalda: "2031-12-21", sadeh: "2031-01-30" },
+  2032: { nowruz: "2032-03-20", sizdah: "2032-04-01", chaharshanbe: "2032-03-16", yalda: "2032-12-20", sadeh: "2032-01-30" },
+  2033: { nowruz: "2033-03-20", sizdah: "2033-04-01", chaharshanbe: "2033-03-15", yalda: "2033-12-20", sadeh: "2033-01-29" },
+  2034: { nowruz: "2034-03-21", sizdah: "2034-04-02", chaharshanbe: "2034-03-14", yalda: "2034-12-20", sadeh: "2034-01-29" },
+  2035: { nowruz: "2035-03-21", sizdah: "2035-04-02", chaharshanbe: "2035-03-13", yalda: "2035-12-21", sadeh: "2035-01-30" }
 };
 
 // ── low-table meal harness ──────────────────────────────────────────────────
@@ -746,7 +747,7 @@ function fail(msg, detail) {
     } else {
       if (pe.errors.length) fail("persian: no uncaught JS errors", pe.errors.slice(0, 12).join("\n"));
       else pass("persian: no uncaught JS errors");
-      var dateBad = [], tueBad = [], sizBad = [], yaldaBad = [], years = Object.keys(PERSIAN_EXPECT);
+      var dateBad = [], tueBad = [], sizBad = [], yaldaBad = [], sadehBad = [], years = Object.keys(PERSIAN_EXPECT);
       years.forEach(function (y) {
         var got = pe.years[y], want = PERSIAN_EXPECT[y];
         if (!got) { dateBad.push(y + ": no result from the page"); return; }
@@ -754,6 +755,7 @@ function fail(msg, detail) {
           if (got[k] !== want[k]) dateBad.push(y + " " + k + ": got " + got[k] + ", want " + want[k]);
         });
         if (got.yalda !== want.yalda) yaldaBad.push(y + ": got " + got.yalda + ", want " + want.yalda);
+        if (got.sadeh !== want.sadeh) sadehBad.push(y + ": got " + got.sadeh + ", want " + want.sadeh);
         if (got.chDay !== 2) tueBad.push(y + ": " + got.chaharshanbe + " is day " + got.chDay + ", not Tuesday");
         var n = new Date(got.nowruz + "T12:00:00Z"), s = new Date(got.sizdah + "T12:00:00Z");
         if ((s - n) / 864e5 !== 12) sizBad.push(y + ": " + got.nowruz + " → " + got.sizdah);
@@ -764,6 +766,11 @@ function fail(msg, detail) {
       // Yalda hangs off the DECEMBER SOLSTICE, not off Nowruz — a Nowruz-rule change must not move it.
       if (yaldaBad.length === 0) pass("persian: Yalda still tracks the December solstice (unmoved)");
       else fail("persian: Yalda moved — it must stay independent of nowruzOf", yaldaBad.join("\n"));
+      // Sadeh (10 Bahman) is the one occasion counted off the PREVIOUS Gregorian year's Nowruz.
+      // Give it the same shape as its siblings and it lands a year out — which still reads as a
+      // plausible Jan 29/30 in casual testing, so only a pinned expectation catches it.
+      if (sadehBad.length === 0) pass("persian: Sadeh is nowruzOf(y−1) + 315, landing Jan 29–30 (not a year out)");
+      else fail("persian: Sadeh drifted — check it reads the PREVIOUS year's Nowruz", sadehBad.slice(0, 12).join("\n"));
       if (tueBad.length === 0) pass("persian: Chaharshanbe Suri always falls on a Tuesday evening");
       else fail("persian: Chaharshanbe Suri left Tuesday", tueBad.join("\n"));
       if (sizBad.length === 0) pass("persian: Sizdah Bedar is always Nowruz + 12");

@@ -7356,8 +7356,10 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
    .aurora-force / .aurora-hide test overrides ride on #stage-balcony too. Balcony/garden
    share their day/night + storm state, so both light up (and both hide in a storm) together. */
 #balcony-twilight{opacity:0; transition:opacity 1.4s ease; mix-blend-mode:screen}
-#stage-balcony.twilight #balcony-twilight{opacity:0.85}
-#stage-balcony.storming.twilight #balcony-twilight{opacity:0.6} /* dawn/dusk glow still reads through weather, just muted */
+/* --twi (0..1, written by stampTwilight) is the wash's DEPTH: deepest at the horizon crossing,
+   fading out where nautical twilight ends. Defaults to full so a summoned wash still shows. */
+#stage-balcony.twilight #balcony-twilight{opacity:calc(var(--twi, 1) * 0.85)}
+#stage-balcony.storming.twilight #balcony-twilight{opacity:calc(var(--twi, 1) * 0.6)} /* dawn/dusk glow still reads through weather, just muted */
 @media (prefers-reduced-motion: reduce){#balcony-twilight{transition:none}}
 #balcony-aurora{opacity:0; transition:opacity 1.2s ease; mix-blend-mode:screen}
 #stage-balcony.dusk #balcony-aurora{opacity:0.9}
@@ -21405,10 +21407,13 @@ section{margin:1.9rem 0}
      different window than the garden. The shared loop runs ONLY while EITHER aurora is shown
      (its room ∧ dusk ∧ ¬storm ∧ ¬trip) and the tab is visible+focused; reduced motion: one
      still frame. -->
-<!-- Twilight wash: a soft warm-to-purple gradient over the open sky, faded in by the auto
-     day/night clock during the ~40-min windows around Edmonton's sunrise & sunset (the
-     .twilight class on #stage-balcony). Screen-blended so it warms the day sky and glows
-     over the night one; purely a class-toggled tint (no timers/particles). -->
+<!-- Twilight wash: a soft warm-to-purple gradient over the open sky, ramped in by the auto
+     day/night clock around Edmonton's sunrise & sunset (the .twilight class on #stage-balcony
+     gates it, its --twi variable sets the depth). The window is COMPUTED from the real solar
+     geometry for the loft's date (see __sunGeom / twiSpan), running out to the nautical-twilight
+     edge — ~150 min either side of a midsummer crossing at 53.5°N, ~76 at the equinoxes — so the
+     sky genuinely brightens an hour or two before a summer sunrise. Screen-blended so it warms
+     the day sky and glows over the night one; purely a tint (no timers/particles of its own). -->
 <g id="balcony-twilight" clip-path="url(#balcony-sky-clip)" pointer-events="none" aria-hidden="true">
 <defs>
 <linearGradient id="balcony-twilight-grad" x1="0" y1="0" x2="0" y2="1">
@@ -21417,8 +21422,18 @@ section{margin:1.9rem 0}
 <stop offset="0.74" stop-color="#f0895f" stop-opacity="0.7"/>
 <stop offset="1" stop-color="#ffd39a" stop-opacity="0.86"/>
 </linearGradient>
+<!-- the bright core of the glow, sitting on the horizon where the sun actually goes down (or
+     comes up). userSpaceOnUse so placeTwilightGlow can slide the whole group sideways and take
+     the gradient's centre with it; the rect is 90px wider than the sky window on each side so
+     no edge is ever exposed at full travel. -->
+<radialGradient id="balcony-twilight-glow-grad" gradientUnits="userSpaceOnUse" cx="508" cy="124" r="126">
+<stop offset="0" stop-color="#ffe0a8" stop-opacity="0.85"/>
+<stop offset="0.45" stop-color="#f5a06a" stop-opacity="0.4"/>
+<stop offset="1" stop-color="#c76a9c" stop-opacity="0"/>
+</radialGradient>
 </defs>
 <rect x="418" y="0" width="180" height="118" fill="url(#balcony-twilight-grad)"/>
+<g id="balcony-twilight-glow"><rect x="328" y="0" width="360" height="118" fill="url(#balcony-twilight-glow-grad)"/></g>
 </g>
 <g id="balcony-aurora" clip-path="url(#balcony-sky-clip)" pointer-events="none" aria-hidden="true">
 <defs>
@@ -24730,6 +24745,48 @@ window.__now = function () {
     }
   } catch (e) {}
   return new Date();
+};
+// Real solar geometry for the loft's latitude (Edmonton, 53.5°N) on a date — defaults to the
+// loft's __now(), so ?date=/#date= time-travels it exactly like __moonPhase. No network:
+// declination comes from the USNO low-precision series (±0.01°, good 1950–2050), then the hour
+// angle at which the sun sits at a given altitude, cos H = (sin h − sin φ sin δ)/(cos φ cos δ).
+// Feeding that −0.833° (refraction + the disc's own radius), −6° and −12° gives sunrise/sunset,
+// the civil-twilight edge and the nautical one as minutes either side of solar noon — and the
+// DIFFERENCES between them are how long twilight lasts. This far north those swing hugely
+// through the year: the midsummer sun crosses the horizon at a shallow angle and skims along
+// just beneath it for hours, while at the equinoxes it drops nearly straight down.
+window.__sunGeom = function (date) {
+  var LAT = 53.5, D2R = Math.PI / 180;
+  var d = date || (window.__now ? window.__now() : new Date());
+  var n = d.getTime() / 86400000 + 2440587.5 - 2451545.0;              // days since J2000.0
+  var g = (357.529 + 0.98560028 * n) * D2R;                            // the sun's mean anomaly
+  var L = (280.459 + 0.98564736 * n) * D2R;                            // its mean longitude
+  var lam = L + (1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * D2R; // apparent ecliptic longitude
+  var eps = (23.439 - 0.00000036 * n) * D2R;                           // obliquity of the ecliptic
+  var decl = Math.asin(Math.sin(eps) * Math.sin(lam));                 // solar declination, radians
+  var sinLat = Math.sin(LAT * D2R), cosLat = Math.cos(LAT * D2R);
+  var sinDec = Math.sin(decl), cosDec = Math.cos(decl);
+  // minutes from solar noon to the sun reaching altitude `alt`, or null when it never gets
+  // there at all that day — the out-of-range guard is what stops a degenerate |cos H| ≥ 1
+  // (midnight sun, polar night, a nonsense latitude) returning NaN and lighting the sky forever
+  function noonOffset(alt) {
+    var c = (Math.sin(alt * D2R) - sinLat * sinDec) / (cosLat * cosDec);
+    return (c > -1 && c < 1) ? (Math.acos(c) / D2R) * 4 : null; // hour-angle degrees → minutes, at 15°/h
+  }
+  // the sun's azimuth east of due NORTH as it rises through altitude `alt` (setting mirrors it)
+  function azAt(alt) {
+    var c = (sinDec - Math.sin(alt * D2R) * sinLat) / (Math.cos(alt * D2R) * cosLat);
+    return Math.acos(Math.max(-1, Math.min(1, c))) / D2R;
+  }
+  var h0 = noonOffset(-0.833), civ = noonOffset(-6), nau = noonOffset(-12);
+  return {
+    lat: LAT,
+    decl: decl / D2R,                                        // degrees, + in the northern summer
+    dayMin: h0 == null ? (decl > 0 ? 1440 : 0) : h0 * 2,     // length of the day, minutes
+    civil: (h0 == null || civ == null) ? null : civ - h0,    // civil twilight: minutes past sunset / before sunrise
+    nautical: (h0 == null || nau == null) ? null : nau - h0, // ditto, out to the nautical edge
+    riseAz: azAt(-0.833)                                     // sunrise azimuth, ° east of north (sunset = 360 − this)
+  };
 };
 // Real lunar phase for a date (defaults to the loft's __now() so ?date=/#date= time-travels
 // it). Days since a known new moon (2000-01-06 18:14 UTC) modulo the synodic month give the
@@ -38230,7 +38287,7 @@ var ABANDONED_CALL_MS = 30000;
     fullscreen: "fullscreen(true) — fill the screen with the loft; fullscreen(false) leaves; fullscreen() reports whether it's on",
     rainbow: "rainbow() — arc a rainbow over the balcony",
     aurora: "aurora(true) — the northern lights over the garden window (steps into the garden, falls to a clear dusk first); aurora(false) fades them; aurora() reports whether they're showing. They also appear on their own on most clear garden nights (esp. with the UV party off), never during a storm",
-    twilight: "twilight(true) — the warm dawn/dusk sky-wash over the balcony (steps out to the balcony); twilight(false) clears it; twilight() reports its state. It also appears on its own within 40 min of Edmonton's real sunrise/sunset",
+    twilight: "twilight(true) — the warm dawn/dusk sky-wash over the balcony (steps out to the balcony); twilight(false) clears it; twilight() reports its state. It also ramps up on its own around Edmonton's real sunrise/sunset, over a window computed from the sun's actual angle for the date — roughly 2.5h either side at midsummer, ~1.25h at the equinoxes",
     timelapse: "timelapse() — \"a day in the loft\": fast-forward the clock through a full 24h in ~30s so the balcony sky cycles dawn → midday → sunset → moonrise → night, looping until you stop it (steps out to the balcony first). timelapse(false) stops it and restores the real clock; Esc or stop() also end it. alias: daylapse()",
     smoker: "smoker(true) — fire up the balcony smoker, low and slow; smoker(false) shuts it down; smoker() reports whether it's on (bbq is an alias)",
     bbq: "bbq(true) — start the whole BBQ (lid up + coals lit); bbq(false) shuts it down; bbq() reports whether it's smoking. For just the firebox or just the lid, see smoker / smokerlid",
@@ -49335,7 +49392,6 @@ async def localfont(name):
     // __startAutoDayNight) and then tracks Edmonton's real (or the advancing ?time=) clock across
     // every room; a manual flip persists until the crossing, party/?date=/trip/autoplay override.
     var autoStopped = true, crossTimer = null, twilightForced = false, segNight = null; // segNight: the auto-clock's day/night verdict as of the last sync — a manual flip leaves it untouched, so a re-check only re-stamps the scene when a real crossing has moved it (that's what makes a manual set PERSIST until the next sunrise/sunset)
-    var TWI_MIN = 40; // half-width of each dawn/dusk twilight window, minutes
     // ?time=HH:MM (also ?time=HH, and the #time= hash form) sets the time-of-day the auto
     // day/night/twilight system computes against, without freezing the scene the way ?date=
     // does (it is deliberately NOT in autoOverridden — the auto loop stays live and reflects
@@ -49422,7 +49478,78 @@ async def localfont(name):
       return false;
     }
     function autoWantNight() { var t = sunTimes(), now = edmMinutes(); return now < t.sr || now >= t.ss; } // Edmonton clock (override-aware) vs. today's sun times
-    function nearCrossing() { var t = sunTimes(), now = edmMinutes(); return Math.min(Math.abs(now - t.sr), Math.abs(now - t.ss)) <= TWI_MIN; }
+    // ── how long twilight lasts, from the real solar geometry (__sunGeom) ──────────────────
+    // Not a fixed window: at 53.5°N the sun's horizon crossing is shallow in summer and steep at
+    // the equinoxes, so the wash runs ~150 min either side of a midsummer crossing against ~76
+    // at the equinoxes and ~89 at midwinter. Anchoring the OUTER edge on nautical twilight
+    // (−12°) rather than civil (−6°, only 35–53 min) is what actually lights the sky the hour or
+    // two before an Edmonton summer sunrise. Capped just inside half the night so the dawn and
+    // dusk windows can never meet over a short summer night and leave the sky lit around the clock.
+    function twiSpan() {
+      var g = window.__sunGeom ? window.__sunGeom() : null;
+      var civ = (g && g.civil) || 35, nau = (g && g.nautical) || 76; // equinox spans if the model can't solve the day
+      var t = sunTimes(), night = (((t.sr - t.ss) % 1440) + 1440) % 1440;
+      nau = Math.max(5, Math.min(nau, night * 0.45));
+      return { civil: Math.min(civ, nau * 0.75), naut: nau };
+    }
+    window.__twiSpan = twiSpan; // {civil, naut} half-widths in minutes — also paces the time-lapse
+    function twiDist() { // minutes to whichever of today's two horizon crossings is nearer
+      var t = sunTimes(), now = edmMinutes();
+      function dist(a, b) { var d = Math.abs((((a - b) % 1440) + 1440) % 1440); return Math.min(d, 1440 - d); }
+      return Math.min(dist(now, t.sr), dist(now, t.ss));
+    }
+    // depth of the wash, 0..1: deepest right at the crossing, still strong out at the civil
+    // edge, then fading away to nothing at the nautical one — a ramp, never an on/off switch
+    function twiLevel() {
+      var d = twiDist(), s = twiSpan();
+      if (d >= s.naut) return 0;
+      if (d <= s.civil) return 1 - 0.3 * (d / s.civil);
+      return 0.7 * (1 - (d - s.civil) / (s.naut - s.civil));
+    }
+    window.__twiLevel = twiLevel;
+    function stampTwilight() { // the class gates the wash; --twi carries how deep it is right now
+      var lv = twiLevel();
+      stageBalcony.style.setProperty("--twi", lv.toFixed(3));
+      stageBalcony.classList.toggle("twilight", lv > 0);
+      placeTwilightGlow();
+    }
+    // WHERE the glow sits, which at this latitude is half the story: the balcony faces NORTH, so
+    // a midsummer sun comes up and goes down well round toward north (azimuth ~46° either side of
+    // it) and its glow is squarely IN this window — off to the right at dawn, since east is on
+    // your right when you face north, and to the left at dusk. Come midwinter the sun rises and
+    // sets round in the southeast/southwest, ~130° off north, so the glow slides out to the frame
+    // edge and dims: most of it is genuinely behind the viewer. Positioned by a transform
+    // ATTRIBUTE — nothing animates this group, so there's no CSS-transform clash to worry about.
+    var TWI_FOV = 105;  // ° either side of north that the open sky window reads as covering
+    var TWI_TRAVEL = 90; // px the glow may slide from centre before it hits the window edge
+    function placeTwilightGlow() {
+      var glow = document.getElementById("balcony-twilight-glow");
+      if (!glow) return;
+      var g = window.__sunGeom ? window.__sunGeom() : null;
+      var az = g ? g.riseAz : 90;                 // ° east of north the sun crosses the horizon
+      function dist(a, b) { var d = Math.abs((((a - b) % 1440) + 1440) % 1440); return Math.min(d, 1440 - d); }
+      var t = sunTimes(), now = edmMinutes();
+      var dawn = dist(now, t.sr) <= dist(now, t.ss); // whichever crossing is nearer decides the side
+      var off = Math.max(-1, Math.min(1, (dawn ? az : -az) / TWI_FOV));
+      glow.setAttribute("transform", "translate(" + (off * TWI_TRAVEL).toFixed(1) + ",0)");
+      glow.setAttribute("opacity", (az <= 45 ? 1 : Math.max(0.4, 1 - 0.6 * (az - 45) / 60)).toFixed(3));
+    }
+    // How far BELOW the horizon the sun sits right now, in degrees (negative while it's up), on
+    // the loft's effective clock and date: 0–6 civil twilight, 6–12 nautical, past 12 the sky
+    // reads properly dark, past 18 it's astronomical night. Solar noon is taken as the midpoint
+    // of the day's own sunrise/sunset, so this needs no longitude or equation of time and lands
+    // exactly 0 at each crossing, and it follows ?time=, the time-lapse and the test hook like
+    // everything else here. Exposed for anything that needs "is the sky dark enough yet" —
+    // the aurora reads it.
+    window.__sunDepression = function () {
+      var g = window.__sunGeom ? window.__sunGeom() : null, D2R = Math.PI / 180;
+      var t = sunTimes(), noon = (t.sr + t.ss) / 2;
+      var dm = ((((edmMinutes() - noon) + 720) % 1440) + 1440) % 1440 - 720; // signed minutes from solar noon
+      var lat = (g ? g.lat : 53.5) * D2R, dec = (g ? g.decl : 0) * D2R;
+      var alt = Math.asin(Math.sin(lat) * Math.sin(dec) +
+                          Math.cos(lat) * Math.cos(dec) * Math.cos(dm * 0.25 * D2R)) / D2R;
+      return -alt;
+    };
     // stamp day/night onto EVERY room together. A real flip goes through toggleDusk (which runs
     // the lamp/precip/etc. side-effects AND stamps all five stages); when the balcony already
     // matches the target we still force-sync the siblings, so a room that drifted out of step
@@ -49439,7 +49566,7 @@ async def localfont(name):
       var night = autoWantNight();
       stampAllDusk(night);
       segNight = night;
-      if (!twilightForced) stageBalcony.classList.toggle("twilight", nearCrossing());
+      if (!twilightForced) stampTwilight();
       armCrossing();
     }
     window.__applyAutoDayNight = applyAutoDayNight; // deliberate re-apply (?time= jump, time-lapse, lapse-stop); also a test hook
@@ -49452,7 +49579,7 @@ async def localfont(name):
       if (!window.__lapseActive && (autoStopped || window.__gardenPartyOn || autoOverridden())) { if (!twilightForced) stageBalcony.classList.remove("twilight"); armCrossing(); return; }
       var night = autoWantNight();
       if (night !== segNight) { stampAllDusk(night); segNight = night; } // a crossing was passed (possibly while backgrounded) → the crossing "still changes it", even over a manual set
-      if (!twilightForced) stageBalcony.classList.toggle("twilight", nearCrossing());
+      if (!twilightForced) stampTwilight();
       armCrossing();
     }
     window.__catchUpDayNight = catchUpDayNight;
@@ -49467,12 +49594,18 @@ async def localfont(name):
     window.__setTwilight = function (on) {
       if (arguments.length === 0) return stageBalcony.classList.contains("twilight");
       twilightForced = !!on;
+      stageBalcony.style.setProperty("--twi", on ? "1" : "0"); // a summoned wash shows at full depth
       stageBalcony.classList.toggle("twilight", !!on);
+      if (on) placeTwilightGlow(); // forced washes skip stampTwilight, so place the glow ourselves
       return !!on;
     };
-    // Schedule ONE timer to the very next sunrise/sunset crossing (no 3-min polling). The
-    // effective clock (real, or the advancing ?time=) runs at real speed, so the ms delay to a
-    // crossing is just its minute-distance. At the crossing catchUpDayNight flips + re-arms; a
+    // Schedule ONE timer (still no periodic polling) to whichever comes first: the very next
+    // sunrise/sunset crossing, or the moment the twilight wash next needs redrawing. The
+    // effective clock (real, or the advancing ?time=) runs at real speed, so the ms delay to
+    // either is just its minute-distance. Outside a twilight window that means sleeping straight
+    // through to the window's outer edge; INSIDE one the wash is a ramp rather than a switch, so
+    // it re-stamps each minute to deepen/fade — still landing exactly on the crossing itself,
+    // since the wait is clamped to it. At the crossing catchUpDayNight flips + re-arms; a
     // backgrounded tab holds (crickets) and the focus/visibility re-check catches up on return.
     function armCrossing() {
       clearTimeout(crossTimer); crossTimer = null;
@@ -49482,7 +49615,8 @@ async def localfont(name):
       if (dSr < 0.5) dSr += 1440; // just crossed sunrise → aim at the next one, not a 0-delay loop
       if (dSs < 0.5) dSs += 1440;
       var wait = Math.min(dSr, dSs);
-      crossTimer = setTimeout(function () { crossTimer = null; catchUpDayNight(); }, Math.max(1000, Math.round(wait * 60000)));
+      var step = twiLevel() > 0 ? 1 : Math.max(0.05, wait - twiSpan().naut); // ramping → 1-min steps; otherwise sleep to the wash's outer edge
+      crossTimer = setTimeout(function () { crossTimer = null; catchUpDayNight(); }, Math.max(1000, Math.round(Math.min(wait, step) * 60000)));
     }
     document.addEventListener("visibilitychange", catchUpDayNight);
     window.addEventListener("focus", catchUpDayNight);
@@ -72562,11 +72696,20 @@ function spawnDustMote(container) {
   };
 
   // twilight() → status · twilight(true/false) → force the warm dawn/dusk sky-wash on the
-  // balcony on/off. Auto-appears within 40 min of Edmonton's real sunrise/sunset; this summons it.
+  // balcony on/off. Ramps up on its own over the computed twilight window around Edmonton's real
+  // sunrise/sunset (hours wide at midsummer, see twiSpan); this summons it at full depth.
   window.twilight = function (arg) {
     if (!window.__setTwilight) return false;
     if (arguments.length === 0) {
-      return window.__setTwilight() ? "🌅 twilight is glowing over the balcony." : "🌅 no twilight right now — it auto-appears within 40 min of Edmonton's sunrise/sunset. twilight(true) to summon it.";
+      if (window.__setTwilight()) {
+        var lv = window.__twiLevel ? Math.round(window.__twiLevel() * 100) : 0;
+        return lv > 0 ? "🌅 twilight is glowing over the balcony (" + lv + "% deep)."
+                      : "🌅 twilight is glowing over the balcony.";
+      }
+      var s = window.__twiSpan ? window.__twiSpan() : null;
+      return "🌅 no twilight right now — it ramps up on its own around Edmonton's sunrise/sunset" +
+        (s ? ", from about " + Math.round(s.naut) + " min either side of one today" : "") +
+        ". twilight(true) to summon it.";
     }
     var on = !!arg;
     if (on && window.goToStage) window.goToStage("balcony"); // the wash is over the balcony sky
@@ -72593,9 +72736,14 @@ function spawnDustMote(container) {
     var sr = (typeof s.sr === "number") ? s.sr : 420, ss = (typeof s.ss === "number") ? s.ss : 1200;
     function dist(a, b) { var d = Math.abs((((a - b) % 1440) + 1440) % 1440); return Math.min(d, 1440 - d); }
     var near = Math.min(dist(mins, sr), dist(mins, ss));
-    if (near <= 40) return 0.4;   // ~±40 min of a crossing → slow, savour the twilight
-    if (near >= 150) return 2.8;  // far from either → fast through the dull hours
-    return 0.4 + ((near - 40) / 110) * (2.8 - 0.4); // linear ramp between
+    // the slow zone tracks the DATE's real civil-twilight span (twiSpan) rather than a flat 40
+    // min, so the lapse still savours the crossing on a long midsummer dusk; the outer bound
+    // stays fixed so one loop takes about as long whatever the season
+    var span = window.__twiSpan ? window.__twiSpan() : null;
+    var slow = Math.min(span ? span.civil : 40, 60), fast = 150;
+    if (near <= slow) return 0.4;  // inside civil twilight → slow, savour it
+    if (near >= fast) return 2.8;  // far from either crossing → fast through the dull hours
+    return 0.4 + ((near - slow) / (fast - slow)) * (2.8 - 0.4); // linear ramp between
   }
   function lapseEdmNowMins() { // current effective Edmonton minutes-of-day to start the sweep from (continuous, no jarring jump)
     var ov = window.__timeOverrideMins ? window.__timeOverrideMins() : null;

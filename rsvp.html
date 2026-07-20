@@ -1391,7 +1391,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #garden-guests.guests-in .g-spencer .guest-sway{animation-delay:-.2s}
 #garden-guests.guests-in .g-spencer .guest-arm-l,
 #garden-guests.guests-in .g-spencer .guest-arm-r{animation-delay:-.2s}
-@keyframes guest-sway{0%{transform:rotate(-5deg) translateX(-1.4px)} 50%{transform:rotate(5deg) translateX(1.4px)} 100%{transform:rotate(-5deg) translateX(-1.4px)}}
+@keyframes guest-sway{0%{transform:rotate(-3.5deg) translateX(-1px)} 50%{transform:rotate(3.5deg) translateX(1px)} 100%{transform:rotate(-3.5deg) translateX(-1px)}}
 @keyframes guest-arm-l{0%{transform:rotate(10deg)} 50%{transform:rotate(-26deg)} 100%{transform:rotate(10deg)}}
 @keyframes guest-arm-r{0%{transform:rotate(-10deg)} 50%{transform:rotate(28deg)} 100%{transform:rotate(-10deg)}}
 @keyframes guest-ali-bounce{0%,46%{transform:translateY(0) scaleY(1)} 56%{transform:translateY(0) scaleY(.93)} 70%{transform:translateY(-20px) scaleY(1.06)} 84%{transform:translateY(0) scaleY(.97)} 92%,100%{transform:translateY(0) scaleY(1)}}
@@ -28396,32 +28396,41 @@ function gameTapsNear(a, b) {
   // scene's pointer-events, so a name only surfaces while that character is actually present:
   // Irene until she's .showing, Pouria until the bar is up, the DJs until the party is lit (and
   // only whichever of the two is currently spinning — the other is display:none).
-  hoverTooltip(document.getElementById("cuddly-behdad"), "<em>behdad</em>", "top", 12, 0, document.getElementById("cuddly-behdad-head")); // +y: his head rides ~10u higher than hers, so match her sit
-  hoverTooltip(document.getElementById("cuddly-marketa"), "<em>markéta</em>", "top");
-  hoverTooltip(document.getElementById("cuddly-irene"), function () { return "<em>Irene</em> · " + tipText("role_niece"); }, "top");
-  hoverTooltip(document.getElementById("cuddly-robin"), function () { return "<em>Robin</em> · " + tipText("role_godson"); }, "top"); // gated by his pointer-events: named only while he's .showing
-  hoverTooltip(document.getElementById("cuddly-navid"), function () { return "<em>Navid</em> · " + tipText("role_godson"); }, "top"); // gated by his pointer-events: named only while he's .showing
+  // In the cuddly nook, hovering names a visitor AND tapping pops the same name in a static white
+  // roster-style card (the inverse roster, mirrored from the party floor — owner request). No
+  // freeze-others here: the nook has no dance crowd to pause, so it's just the name card.
+  function nameTip(id, html, placement, yOffset, xOffset, posElId) {
+    var el = document.getElementById(id); if (!el) return;
+    var posEl = posElId ? document.getElementById(posElId) : undefined;
+    hoverTooltip(el, html, placement, yOffset, xOffset, posEl);
+    el.addEventListener("click", function () { if (window.__whoPop) window.__whoPop(el, typeof html === "function" ? html() : html); }); // anchor on el (not posEl) so the global egg-bubble dismisser sees the click inside the anchor and keeps it up
+  }
+  nameTip("cuddly-behdad", "<em>behdad</em>", "top", 12, 0, "cuddly-behdad-head"); // +y: his head rides ~10u higher than hers, so match her sit
+  nameTip("cuddly-marketa", "<em>markéta</em>", "top");
+  nameTip("cuddly-irene", function () { return "<em>Irene</em> · " + tipText("role_niece"); }, "top");
+  nameTip("cuddly-robin", function () { return "<em>Robin</em> · " + tipText("role_godson"); }, "top"); // gated by his pointer-events: named only while he's .showing
+  nameTip("cuddly-navid", function () { return "<em>Navid</em> · " + tipText("role_godson"); }, "top"); // gated by his pointer-events: named only while he's .showing
   // adult friend-duo drop-ins (name · role, bilingual) — named only while .showing (pointer-events gate)
-  hoverTooltip(document.getElementById("cuddly-vis-ali"), function () { return "<em>Ali</em> · " + tipText("role_bestman"); }, "top");
-  hoverTooltip(document.getElementById("cuddly-vis-goli"), function () { return "<em>Goli</em> · " + tipText("role_fashion"); }, "top");
-  hoverTooltip(document.getElementById("cuddly-vis-spencer"), function () { return "<em>Spencer</em> · " + tipText("role_maid"); }, "top");
-  hoverTooltip(document.getElementById("cuddly-vis-jay"), function () { return "<em>Jay</em> · " + tipText("role_officiant"); }, "top");
-  hoverTooltip(document.getElementById("cuddly-vis-alireza"), function () { return "<em>Alireza</em> · " + tipText("role_travelbuddy_m"); }, "top");
-  hoverTooltip(document.getElementById("cuddly-vis-mahzad"), function () { return "<em>Mahzad</em> · " + tipText("role_travelbuddy_f"); }, "top");
-  hoverTooltip(document.getElementById("cuddly-vis-bahareh"), function () { return "<em>Bahareh</em> · " + tipText("role_sister"); }, "top");
+  nameTip("cuddly-vis-ali", function () { return "<em>Ali</em> · " + tipText("role_bestman"); }, "top");
+  nameTip("cuddly-vis-goli", function () { return "<em>Goli</em> · " + tipText("role_fashion"); }, "top");
+  nameTip("cuddly-vis-spencer", function () { return "<em>Spencer</em> · " + tipText("role_maid"); }, "top");
+  nameTip("cuddly-vis-jay", function () { return "<em>Jay</em> · " + tipText("role_officiant"); }, "top");
+  nameTip("cuddly-vis-alireza", function () { return "<em>Alireza</em> · " + tipText("role_travelbuddy_m"); }, "top");
+  nameTip("cuddly-vis-mahzad", function () { return "<em>Mahzad</em> · " + tipText("role_travelbuddy_f"); }, "top");
+  nameTip("cuddly-vis-bahareh", function () { return "<em>Bahareh</em> · " + tipText("role_sister"); }, "top");
   // the rest of the visiting families & couples (everyone visits the nook)
-  hoverTooltip(document.getElementById("cuddly-vis-patricia"), function () { return "<em>Patricia</em> · " + tipText("role_sisterinlaw"); }, "top");
-  hoverTooltip(document.getElementById("cuddly-vis-patricia-son"), function () { return "<em>Patricia’s son</em> · " + tipText("role_nephew"); }, "top");
-  hoverTooltip(document.getElementById("cuddly-vis-patricia-daughter"), function () { return "<em>Patricia’s daughter</em> · " + tipText("role_niece"); }, "top");
-  hoverTooltip(document.getElementById("cuddly-vis-madla"), function () { return "<em>Madla</em> · " + tipText("role_msister"); }, "top");
-  hoverTooltip(document.getElementById("cuddly-vis-robert"), function () { return "<em>Robert</em> · " + tipText("role_msisspouse"); }, "top");
-  hoverTooltip(document.getElementById("cuddly-vis-elisabeth"), function () { return "<em>Elisabeth</em> · " + tipText("role_mniece"); }, "top");
-  hoverTooltip(document.getElementById("cuddly-vis-felix"), function () { return "<em>Felix</em> · " + tipText("role_mnephew"); }, "top");
-  hoverTooltip(document.getElementById("cuddly-vis-hamid"), function () { return "<em>Hamid</em> · " + tipText("role_godson_a"); }, "top");
-  hoverTooltip(document.getElementById("cuddly-vis-athena"), function () { return "<em>Athena</em> · " + tipText("role_qa"); }, "top");
-  hoverTooltip(document.getElementById("cuddly-vis-baharak"), function () { return "<em>Baharak</em> · " + tipText("role_sister"); }, "top");
-  hoverTooltip(document.getElementById("cuddly-vis-payman"), function () { return "<em>Payman</em> · " + tipText("role_bril"); }, "top");
-  hoverTooltip(document.getElementById("cuddly-vis-hannah"), function () { return "<em>Hannah</em> · " + tipText("role_niece"); }, "top");
+  nameTip("cuddly-vis-patricia", function () { return "<em>Patricia</em> · " + tipText("role_sisterinlaw"); }, "top");
+  nameTip("cuddly-vis-patricia-son", function () { return "<em>Patricia’s son</em> · " + tipText("role_nephew"); }, "top");
+  nameTip("cuddly-vis-patricia-daughter", function () { return "<em>Patricia’s daughter</em> · " + tipText("role_niece"); }, "top");
+  nameTip("cuddly-vis-madla", function () { return "<em>Madla</em> · " + tipText("role_msister"); }, "top");
+  nameTip("cuddly-vis-robert", function () { return "<em>Robert</em> · " + tipText("role_msisspouse"); }, "top");
+  nameTip("cuddly-vis-elisabeth", function () { return "<em>Elisabeth</em> · " + tipText("role_mniece"); }, "top");
+  nameTip("cuddly-vis-felix", function () { return "<em>Felix</em> · " + tipText("role_mnephew"); }, "top");
+  nameTip("cuddly-vis-hamid", function () { return "<em>Hamid</em> · " + tipText("role_godson_a"); }, "top");
+  nameTip("cuddly-vis-athena", function () { return "<em>Athena</em> · " + tipText("role_qa"); }, "top");
+  nameTip("cuddly-vis-baharak", function () { return "<em>Baharak</em> · " + tipText("role_sister"); }, "top");
+  nameTip("cuddly-vis-payman", function () { return "<em>Payman</em> · " + tipText("role_bril"); }, "top");
+  nameTip("cuddly-vis-hannah", function () { return "<em>Hannah</em> · " + tipText("role_niece"); }, "top");
   hoverTooltip(document.getElementById("balcony-irene"), "<em>Irene</em>", "top"); // her fire-festival self; hoverTooltip re-reads the anchor every frame, so the bubble rides the leap
   hoverTooltip(document.getElementById("chaharshanbe-robin"), "<em>Robin</em>", "top"); // his turn at the fire; a proper name, same in both languages (like Irene, hardcoded — not in T)
   hoverTooltip(document.getElementById("chaharshanbe-navid"), "<em>Navid</em>", "top"); // his turn at the fire; a proper name, same in both languages (like Irene, hardcoded — not in T)
@@ -60284,22 +60293,27 @@ function spawnDustMote(container) {
     // white roster-styled popup for 3s AND singles them out (freezes everyone else, arrows the
     // pick). The popup rides the guest's dance via a follow loop; it's an HTML overlay appended
     // outside #loft-game-strip, so the UV blacklight never tints it.
-    var whoPopRaf = null;
     function showWhoPop(anchor, html) {
       var old = document.querySelector(".egg-bubble.who-pop"); if (old) { if (old._t) clearTimeout(old._t); old.remove(); }
-      if (whoPopRaf) { cancelAnimationFrame(whoPopRaf); whoPopRaf = null; }
       var b = eggBubble(anchor, html, "top"); // reuse the bubble's positioning + markup support
       b.classList.add("who-pop"); // ...but paint it white like the roster (see .egg-bubble.who-pop)
       clearTimeout(b._t);
-      b._t = setTimeout(function () { dismissEggBubble(b); if (whoPopRaf) { cancelAnimationFrame(whoPopRaf); whoPopRaf = null; } }, 3000); // match the 3s spotlight flash
-      (function follow() { if (!b.parentNode) { whoPopRaf = null; return; } positionEggBubble(b, anchor, "top"); whoPopRaf = requestAnimationFrame(follow); })();
+      b._t = setTimeout(function () { dismissEggBubble(b); }, 3000); // match the 3s spotlight flash
+      // NB: positioned ONCE at tap time and left STATIC — the guest keeps dancing under it, but a
+      // bubble that jitters along with the dance is hard to read (owner feedback), so it stays put.
     }
     function guestInspect(el) {
       var g = document.getElementById("garden-guests");
       if (!g || !el) return;
+      // Hosts name themselves INDIVIDUALLY on the floor: the ROSTER pairs them into one "markéta &
+      // behdad" row, but a tap on Markéta says "markéta" and a tap on Behdad says "behdad" (owner
+      // request — separate them). Each still singles out just that one figure.
+      var beh = g.querySelector(".g-behdad"), mar = g.querySelector(".g-marketa");
+      if (beh && (beh === el || beh.contains(el))) { spotlightGuests([".g-behdad"]); showWhoPop(el, "<em>behdad</em>"); return; }
+      if (mar && (mar === el || mar.contains(el))) { spotlightGuests([".g-marketa"]); showWhoPop(el, "<em>markéta</em>"); return; }
       for (var i = 0; i < ROSTER.length; i++) {
         var r = ROSTER[i];
-        if (r.sel === "__dj" || r.sel.charAt(0) === "#") continue; // crew + chase runners keep their own handlers
+        if (r.sel === "__dj" || r.sel.charAt(0) === "#" || r.pair) continue; // crew + chase runners keep their own handlers; the paired-host row is handled individually above
         var cand = g.querySelector(r.sel);
         if (cand && (cand === el || cand.contains(el))) {
           var name = r.pair ? "markéta & behdad" : r.name; // the hosts share one card, like their tooltip
@@ -60311,6 +60325,7 @@ function spawnDustMote(container) {
       }
     }
     window.__guestInspect = guestInspect; // test/console hook
+    window.__whoPop = showWhoPop; // shared white name-card popup (also used by the cuddly-nook visitors)
     // delegated tap-to-inspect on the floor — covers the hosts + every figure (incl. ones absent
     // from the flare-tap list), and rides through re-renders since it's bound to the container
     var floor = document.getElementById("garden-guests");

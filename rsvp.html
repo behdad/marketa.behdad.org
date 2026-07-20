@@ -3031,7 +3031,7 @@ html.is-webkit .dock-app:hover .dock-tile{transform:none; box-shadow:inset 0 0 0
 html.is-webkit .console-out{overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end}
 /* likewise for the other scroll panes that live under the g-scale: show the top rows,
    clip the overflow, rather than blank the whole box. */
-html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-list, html.is-webkit .ed-list{overflow:hidden}
+html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-list, html.is-webkit .ed-list, html.is-webkit .mail-form, html.is-webkit .mail-ta{overflow:hidden}
 .console-out, .console-out *{ user-select:text; -webkit-user-select:text; cursor:text } /* console scrollback is copy-pasteable, overriding the strip-wide user-select:none */
 /* right-click Copy/Paste menu for the consoles */
 .console-ctx{position:fixed; z-index:60; display:none; background:#1e2a2a; border:1px solid #3a4a4a; border-radius:6px; padding:3px; box-shadow:0 4px 14px rgba(0,0,0,.45); font:13px/1.1 ui-monospace,Menlo,Consolas,monospace}
@@ -3140,6 +3140,26 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 @supports not selector(::-webkit-scrollbar){.mail-body{scrollbar-width:thin; scrollbar-color:rgba(69,58,49,.35) transparent}}
 .mail-reply-btn{float:right; box-sizing:border-box; display:flex; align-items:center; justify-content:center; background:#604681; color:#f8f5ec; border-radius:2.5px; padding:0 3px; height:4.4px; line-height:1; margin:0.6px 0 0 2px; cursor:pointer; box-shadow:inset 0 0.4px 0 rgba(255,255,255,0.28), inset 0 0 0 0.3px rgba(0,0,0,0.25)} /* action pill in the reading-view head, clear of the close pill via the head's right padding; symmetric padding matches the compose pill so the label starts cap-centred */
 .mail-reply-btn:hover{background:#604681}
+/* compose/reply form: plain flex column, no RenderLayers (no position/transform/opacity/z-index/
+   filter) so it survives the monitor's scaled foreignObject (WebKit bug 23113). The scroll pane is
+   the whole form; is-webkit forces it (and the body textarea) to overflow:hidden under the scale. */
+.mail-form{flex:1; min-height:0; display:flex; flex-direction:column; gap:0.8px; padding:1.2px 3px 1px; overflow-y:auto; scrollbar-width:none}
+.mail-form::-webkit-scrollbar{display:none}
+.mail-field{display:flex; flex-direction:column; gap:0.3px}
+.mail-field-grow{flex:1; min-height:11px}
+.mail-flabel{color:#716455; font-size:2.2px; letter-spacing:0.2px}
+.mail-input, .mail-ta{box-sizing:border-box; width:100%; background:#fffdf8; border:0.3px solid #cbbfd0; border-radius:0.8px; outline:none; color:#453a31; font-family:inherit; font-size:2.5px; line-height:1.35; padding:0.6px 1px}
+.mail-input{height:5px}
+.mail-ta{flex:1; min-height:11px; resize:none; white-space:pre-wrap; overflow-y:auto; scrollbar-width:none}
+.mail-ta::-webkit-scrollbar{display:none}
+.mail-input:focus, .mail-ta:focus{border-color:#7b5aa6}
+.mail-form-actions{flex:none; display:flex; gap:2px; justify-content:flex-end; padding:0.6px 3px 1.5px}
+.mail-send-btn, .mail-cancel-btn{box-sizing:border-box; display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:2.5px; padding:0 4px; height:5px; box-shadow:inset 0 0.4px 0 rgba(255,255,255,0.28), inset 0 0 0 0.3px rgba(0,0,0,0.25)}
+.mail-send-btn{background:#604681; color:#f8f5ec}
+.mail-send-btn:hover{background:#4a3664}
+.mail-cancel-btn{background:#e3dae4; color:#453a31}
+.mail-cancel-btn:hover{background:#d3c8d5}
+.mail-send-btn .btn-vc, .mail-cancel-btn .btn-vc{margin-top:0.6em} /* net +0.3em, see .btn-vc */
 /* minesweeper app: a classic 16×7 board over the screen, HTML grid in the foreignObject.
    The mines are 💍 rings ("don't set off the ring"); side panel on the RIGHT so the
    close pill sits over the panel, never over playable cells. Classic silver, warmed
@@ -4227,6 +4247,12 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .pm-mail-head .pmh-subj{font-size:16px; font-family:"Fraunces",serif; color:var(--ink); margin-top:3px}
 .pm-mail-body{font-size:13px; line-height:1.5; white-space:pre-line; color:var(--ink)}
 .pm-mail-actions{display:flex; gap:8px; margin:2px 0 14px}
+.pm-mail-form{display:flex; flex-direction:column; gap:12px}
+.pm-mail-field{display:flex; flex-direction:column; gap:5px}
+.pm-mail-label{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+.pm-mail-input, .pm-mail-ta{font:inherit; font-size:14px; color:var(--ink); background:var(--paper); border:1px solid var(--rule); border-radius:10px; padding:9px 11px; width:100%; box-sizing:border-box}
+.pm-mail-ta{min-height:140px; resize:none; line-height:1.5; white-space:pre-wrap}
+.pm-mail-input:focus, .pm-mail-ta:focus{outline:2px solid var(--wine); outline-offset:1px}
 .pm-music{display:flex; flex-direction:column; align-items:center; gap:12px; padding-top:14px; text-align:center}
 .pm-music .pmm-art{width:104px; height:104px; border-radius:18px; overflow:hidden; box-shadow:0 4px 14px rgba(0,0,0,.25); background:#43807e}
 .pm-music .pmm-art svg{display:block; width:100%; height:100%}
@@ -22791,6 +22817,12 @@ var T = {
     mail_compose_subject: "hello from the loft",
     mail_reply_subject: "Re: will you be there?",
     mail_reply_body: "Hi Markéta & Behdad!\n\nYes! Count me in for Edmonton / Prague / both.\n\n",
+    mail_to: "To",
+    mail_cc: "Cc",
+    mail_subject: "Subject",
+    mail_message: "Message",
+    mail_send: "Send",
+    mail_cancel: "Cancel",
     mail_from_spam: "totally-real-deals",
     mail_subj_spam: "HOT SINGLES IN YOUR LOFT AREA 🔥",
     mail_body_spam: "it's us. we're the hot singles.\nwe're getting married.\nunsubscribe at the wedding.",
@@ -23490,6 +23522,12 @@ var T = {
     mail_compose_subject: "pozdrav z loftu",
     mail_reply_subject: "Re: budete tam?",
     mail_reply_body: "Ahoj Markéto a Behdade!\n\nAno! Počítejte se mnou — Edmonton / Praha / obojí.\n\n",
+    mail_to: "Komu",
+    mail_cc: "Kopie",
+    mail_subject: "Předmět",
+    mail_message: "Zpráva",
+    mail_send: "Odeslat",
+    mail_cancel: "Zrušit",
     mail_from_spam: "naprosto-seriozni-slevy",
     mail_subj_spam: "ŽHAVÍ NEZADANÍ PŘÍMO VE VAŠEM LOFTU 🔥",
     mail_body_spam: "to jsme my. ti žhaví nezadaní jsme my.\nbudeme se brát.\nodhlásit odběr můžete na svatbě.",
@@ -37796,6 +37834,7 @@ var ABANDONED_CALL_MS = 30000;
     { id: "spam", read: false }
   ];
   var mailOpenMsg = null; // the MAILS entry being read; null = list view
+  var mailCompose = null; // {to, cc, subject, body} while the compose/reply form is up; null otherwise
   function mailT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
   function mailDiv(cls, parent, text) {
     var d = document.createElement("div");
@@ -37804,9 +37843,44 @@ var ABANDONED_CALL_MS = 30000;
     parent.appendChild(d);
     return d;
   }
+  function mailFormField(parent, labelKey, key, multiline) {
+    var field = mailDiv("mail-field" + (multiline ? " mail-field-grow" : ""), parent);
+    mailDiv("mail-flabel", field, mailT(labelKey));
+    var input = document.createElement(multiline ? "textarea" : "input");
+    input.className = multiline ? "mail-ta" : "mail-input";
+    input.spellcheck = false;
+    if (!multiline) input.type = "text";
+    input.value = mailCompose[key] || "";
+    input.addEventListener("input", function () { mailCompose[key] = input.value; });
+    input.addEventListener("click", function (e) { e.stopPropagation(); });
+    field.appendChild(input);
+    return input;
+  }
+  function renderMailComposeForm() {
+    var bar = mailDiv("mail-bar", mailWrap);
+    mailDiv("mail-bar-title", bar, "✉ " + mailT("mail_compose"));
+    var form = mailDiv("mail-form", mailWrap);
+    mailFormField(form, "mail_to", "to", false);
+    mailFormField(form, "mail_cc", "cc", false);
+    mailFormField(form, "mail_subject", "subject", false);
+    mailFormField(form, "mail_message", "body", true);
+    var actions = mailDiv("mail-form-actions", mailWrap);
+    var cancelBtn = mailDiv("mail-cancel-btn", actions);
+    mailDiv("btn-vc", cancelBtn, mailT("mail_cancel")); // label wrapped so it optically centres (see .btn-vc)
+    cancelBtn.addEventListener("click", function (e) { e.stopPropagation(); mailCompose = null; renderMail(); playLaptopClickSound("office-monitor"); });
+    var sendBtn = mailDiv("mail-send-btn", actions);
+    mailDiv("btn-vc", sendBtn, mailT("mail_send")); // label wrapped so it optically centres (see .btn-vc)
+    sendBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var c = mailCompose;
+      if (window.__mailCompose) window.__mailCompose(c.subject, c.body, { to: c.to, cc: c.cc });
+      mailCompose = null; mailOpenMsg = null; renderMail(); playLaptopClickSound("office-monitor");
+    });
+  }
   function renderMail() {
     if (!mailWrap) return;
     mailWrap.innerHTML = "";
+    if (mailCompose) { renderMailComposeForm(); return; }
     if (mailOpenMsg) {
       var back = mailDiv("mail-bar mail-back", mailWrap, mailT("mail_back"));
       back.addEventListener("click", function (e) { e.stopPropagation(); mailOpenMsg = null; renderMail(); playLaptopClickSound("office-monitor"); });
@@ -37816,7 +37890,8 @@ var ABANDONED_CALL_MS = 30000;
         mailDiv("btn-vc", replyBtn, mailT("mail_reply_btn")); // label wrapped so it optically centres (see .btn-vc)
         replyBtn.addEventListener("click", function (e) {
           e.stopPropagation();
-          if (window.__mailCompose) window.__mailCompose(mailT("mail_reply_subject"), mailT("mail_reply_body"));
+          mailCompose = { to: "marketa@behdad.org", cc: "", subject: mailT("mail_reply_subject"), body: mailT("mail_reply_body") };
+          renderMail(); playLaptopClickSound("office-monitor");
         });
       }
       mailDiv("mail-head-from", head, mailT("mail_from_" + mailOpenMsg.id));
@@ -37830,7 +37905,8 @@ var ABANDONED_CALL_MS = 30000;
       mailDiv("btn-vc", composeBtn, mailT("mail_compose")); // label wrapped so it optically centres (see .btn-vc)
       composeBtn.addEventListener("click", function (e) {
         e.stopPropagation();
-        if (window.__mailCompose) window.__mailCompose(mailT("mail_compose_subject"), "");
+        mailCompose = { to: "marketa@behdad.org", cc: "", subject: mailT("mail_compose_subject"), body: "" };
+        renderMail(); playLaptopClickSound("office-monitor");
       });
       var list = mailDiv("mail-list", mailWrap);
       MAILS.forEach(function (m) {
@@ -37849,13 +37925,13 @@ var ABANDONED_CALL_MS = 30000;
     stopSaver();
     clearTimeout(saverTimer); saverTimer = null; // no screensaver over someone reading
     monitor.classList.add("show-mail");
-    mailOpenMsg = null; // always land on the inbox list
+    mailOpenMsg = null; mailCompose = null; // always land on the inbox list
     renderMail();
     playLaptopClickSound("office-monitor");
   }
   function closeMailApp(fromPill) {
     if (!monitor.classList.contains("show-mail")) return;
-    if (fromPill && mailOpenMsg) { mailOpenMsg = null; renderMail(); return; } // reading view: ✕ = back to the inbox; closing is the list's job
+    if (fromPill && (mailOpenMsg || mailCompose)) { mailOpenMsg = null; mailCompose = null; renderMail(); return; } // reading/compose view: ✕ = back to the inbox; closing is the list's job
     monitor.classList.remove("show-mail");
     scheduleSaver();
   }
@@ -42482,7 +42558,7 @@ async def localfont(name):
       case "mail":
         closeMailApp();
         for (var mi = 0; mi < MAILS.length; mi++) MAILS[mi].read = false; // every message unread again
-        mailOpenMsg = null;
+        mailOpenMsg = null; mailCompose = null;
         break;
       case "tattoo":
         closeTattooApp();
@@ -45959,8 +46035,51 @@ async def localfont(name):
         body.appendChild(b);
       });
     }
-    function mailCompose(subjKey, bodyKey) {
-      if (window.__mailCompose) window.__mailCompose(tr(subjKey), bodyKey ? tr(bodyKey) : ""); // device-aware: desktop→Gmail, mobile→native mail
+    function renderMailComposeForm(body, subjKey, bodyKey) {
+      body.scrollTop = 0;
+      body.innerHTML = "";
+      var state = { to: "marketa@behdad.org", cc: "", subject: tr(subjKey), body: bodyKey ? tr(bodyKey) : "" };
+      var actions = document.createElement("div");
+      actions.className = "pm-mail-actions";
+      var back = document.createElement("button");
+      back.type = "button";
+      back.className = "pm-btn ghost";
+      back.textContent = tr("mail_cancel");
+      back.addEventListener("click", function () { renderMailList(body); });
+      actions.appendChild(back);
+      var send = document.createElement("button");
+      send.type = "button";
+      send.className = "pm-btn";
+      send.textContent = tr("mail_send");
+      send.addEventListener("click", function () {
+        if (window.__mailCompose) window.__mailCompose(state.subject, state.body, { to: state.to, cc: state.cc }); // device-aware: desktop→Gmail, mobile→native mail
+        renderMailList(body);
+      });
+      actions.appendChild(send);
+      body.appendChild(actions);
+      var form = document.createElement("div");
+      form.className = "pm-mail-form";
+      function field(labelKey, key, multiline) {
+        var f = document.createElement("div");
+        f.className = "pm-mail-field";
+        var lbl = document.createElement("label");
+        lbl.className = "pm-mail-label";
+        lbl.textContent = tr(labelKey);
+        var input = document.createElement(multiline ? "textarea" : "input");
+        input.className = multiline ? "pm-mail-ta" : "pm-mail-input";
+        if (!multiline) input.type = "text";
+        input.value = state[key];
+        input.id = "pm-mail-f-" + key;
+        lbl.setAttribute("for", input.id);
+        input.addEventListener("input", function () { state[key] = input.value; });
+        f.appendChild(lbl); f.appendChild(input);
+        form.appendChild(f);
+      }
+      field("mail_to", "to", false);
+      field("mail_cc", "cc", false);
+      field("mail_subject", "subject", false);
+      field("mail_message", "body", true);
+      body.appendChild(form);
     }
     function renderMailList(body) {
       body.scrollTop = 0;
@@ -45969,7 +46088,7 @@ async def localfont(name):
       compose.className = "pm-btn";
       compose.style.marginBottom = "10px";
       compose.textContent = tr("mail_compose");
-      compose.addEventListener("click", function () { mailCompose("mail_compose_subject", null); });
+      compose.addEventListener("click", function () { renderMailComposeForm(body, "mail_compose_subject", null); });
       body.appendChild(compose);
       MAILS.forEach(function (m) {
         var row = document.createElement("button");
@@ -45996,7 +46115,7 @@ async def localfont(name):
         var rep = document.createElement("button");
         rep.className = "pm-btn";
         rep.textContent = tr("mail_reply_btn");
-        rep.addEventListener("click", function () { mailCompose("mail_reply_subject", "mail_reply_body"); });
+        rep.addEventListener("click", function () { renderMailComposeForm(body, "mail_reply_subject", "mail_reply_body"); });
         actions.appendChild(rep);
       }
       body.appendChild(actions);

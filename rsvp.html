@@ -2441,6 +2441,70 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   86%{transform:translateY(0) rotate(-2deg)}          /* land + settle */
 }
 @media (prefers-reduced-motion: reduce){#witchy-chest-cat-pounce.pouncing{animation:none}}
+/* ── NAUGHTY ANTICS ──────────────────────────────────────────────────────────
+   The loose cat is a real troublemaker: on its own timer it knocks a cup off a
+   ledge, bats a dangling yarn ball, does 3am zoomies, and steals a treat to
+   scamper off with. Each rides the existing self-gating cat driver (crickets
+   rule + on-screen presence + not-mid-hop + reduced-motion) and either composes
+   over the cat's own wrappers as a pure-CSS one-shot (never clobbering the walk/
+   pounce/groove/breathe/groom/tail wrappers) or spawns a short-lived object that
+   self-removes on animationend and is drop-oldest capped, so nothing accumulates
+   in a hidden/unfocused tab and no scene object is ever permanently altered.
+
+   SWAT: a quick lean-and-paw-reach played on the pounce wrapper (its own node, no
+   static transform attr, transform-box already fill-box) via a distinct class, so
+   it never contends with .pouncing. transform-origin bottom center keeps the feet
+   planted so it reads as a reach, not a slide. One-shot, removed on animationend. */
+#witchy-chest-cat-pounce.swatting{animation:cat-swat .62s ease-in-out}
+@keyframes cat-swat{
+  0%, 100%{transform:translateY(0) rotate(0)}
+  22%{transform:translateY(1px) rotate(-2deg)}        /* gather, lean toward the target */
+  48%{transform:translateY(-1px) rotate(-7deg)}       /* reach + paw-swipe out */
+  70%{transform:translateY(0) rotate(3deg)}           /* follow-through */
+}
+@media (prefers-reduced-motion: reduce){#witchy-chest-cat-pounce.swatting{animation:none}}
+/* KNOCKED CUP: a small mug the cat spawns on a ledge and swats off — it topples,
+   falls, rolls a touch and fades. transform-box:fill-box so the tip/roll pivots on
+   its own box (the WebKit <text> caveat doesn't apply — this is a <g>). It's a pure
+   translate+rotate one-shot on a SINGLE class (which is also the drop-oldest cap's
+   getElementsByClassName tag) set at spawn; the node is removed on animationend, so
+   nothing strands. No static transform attribute on the animated node (positioned via
+   a parent <g> the JS creates) per the transform-attr rule. */
+.cat-knock-cup{transform-box:fill-box; transform-origin:center bottom; animation:cat-cup-topple 1.15s cubic-bezier(.4,0,.7,1) forwards}
+@keyframes cat-cup-topple{
+  0%{transform:translate(0,0) rotate(0); opacity:1}
+  16%{transform:translate(2px,-1px) rotate(18deg); opacity:1}     /* tipped off the edge */
+  46%{transform:translate(9px,14px) rotate(120deg); opacity:1}    /* falling, spinning */
+  78%{transform:translate(15px,26px) rotate(300deg); opacity:0.9} /* lands + rolls */
+  100%{transform:translate(20px,26px) rotate(360deg); opacity:0}  /* rolls to rest + fades */
+}
+@media (prefers-reduced-motion: reduce){.cat-knock-cup{animation:none; opacity:0}}
+/* DANGLING YARN: a little ball on a short string the cat spawns above itself and
+   bats, so it swings. Single-class one-shot (also the cap tag), pivots at the string's
+   top anchor (top center); swings, damps out, and the whole node self-removes on end. */
+.cat-yarn{transform-box:fill-box; transform-origin:top center; animation:cat-yarn-swing 1.9s cubic-bezier(.36,0,.66,1) forwards}
+@keyframes cat-yarn-swing{
+  0%{transform:rotate(0); opacity:0}
+  8%{transform:rotate(0); opacity:1}
+  24%{transform:rotate(22deg)}
+  46%{transform:rotate(-16deg)}
+  66%{transform:rotate(9deg)}
+  84%{transform:rotate(-4deg); opacity:1}
+  100%{transform:rotate(0); opacity:0}
+}
+@media (prefers-reduced-motion: reduce){.cat-yarn{animation:none; opacity:0}}
+/* STOLEN TREAT: a tiny morsel the cat "grabs" — it rides along near the cat's mouth
+   for the scamper (positioned by the JS each spawn), bobs, then is dropped and fades.
+   Single-class translate+scale one-shot (also the cap tag); node removed on end. */
+.cat-treat{transform-box:fill-box; transform-origin:center; animation:cat-treat-carry 1.5s ease-in-out forwards}
+@keyframes cat-treat-carry{
+  0%{transform:translate(0,0) scale(0.6); opacity:0}
+  14%{transform:translate(0,-2px) scale(1); opacity:1}   /* snatched up */
+  60%{transform:translate(0,-3px) scale(1); opacity:1}   /* carried, a little bob */
+  82%{transform:translate(1px,4px) scale(1); opacity:1}  /* dropped */
+  100%{transform:translate(2px,8px) scale(0.8); opacity:0}
+}
+@media (prefers-reduced-motion: reduce){.cat-treat{animation:none; opacity:0}}
 .cuddly-knife{transition:translate .35s cubic-bezier(.34,1.56,.64,1)}
 .cuddly-knife.wobbling{animation:knife-wobble .4s ease-in-out}
 @keyframes knife-wobble{
@@ -64220,6 +64284,7 @@ function spawnDustMote(container) {
       walk.classList.add("roaming");
     }
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // re-sync its music sway to the new room
+    scheduleAntic(); // (re)arm the naughty-antic loop now that the cat is out and in a room (a re-release routes through here)
   };
   // The chest doors are physical: with BOTH shut the cat can neither come out nor get
   // back in. Emergence already lives inside witchy-door-1's own open handler (so it
@@ -64236,6 +64301,8 @@ function spawnDustMote(container) {
   window.__stowCat = function () {
     if (!walk.classList.contains("out")) return; // already inside (or gone for good) — nothing to stow
     cancelJump();
+    clearTimeout(anticTimer); anticTimer = null; // stop the antic loop; the cat's away
+    clearStaleAntics();                           // drop any lingering knocked-cup/yarn/treat so nothing strands
     if (!chestDoorsOpen()) {
       stowWaiting = true;
       window.__homeCat("garden");
@@ -64284,8 +64351,256 @@ function spawnDustMote(container) {
     clearTimeout(jumpTimer);
     startJump();
   });
+  // ── NAUGHTY ANTICS ─────────────────────────────────────────────────────────
+  // The loose cat is a real troublemaker now: on its OWN self-rescheduling timer it
+  // does 3am zoomies, knocks a cup off a ledge, bats a dangling yarn ball it fishes
+  // up, or steals a treat and scampers. Each fits wherever the cat currently is (no
+  // relocation, no new home) and is chosen from a per-room menu. SAFETY, mirroring
+  // every other autonomous cat behavior here:
+  //   • ONE self-rescheduling timer that always reschedules and gates the actual antic
+  //     on canAnticNow() — the crickets rule (!hidden && hasFocus) PLUS canJumpNow's
+  //     presence checks (loose, on the viewed room, not mid-hop, not reduced-motion).
+  //     A hidden/unfocused tab just reschedules a no-op; nothing fires or accumulates.
+  //   • Movement antics ride the SAME busy-lock as the perch hops (jumping=true,
+  //     jumpAnim=..., onfinish=finishJump), so a room change / stow / reset / hidden tab
+  //     (all routed through cancelJump) tear a mid-antic down with no leak, and the roam
+  //     resumes with no snap. Skipped mid-hop.
+  //   • SPAWNED objects (knocked cup, dangling yarn, stolen treat) go into the cat's OWN
+  //     parent group at its live on-screen feet (baseFeet + the roam's live offset → the
+  //     parent's local coords, the spawn-in-parent rule), self-remove on animationend, and
+  //     are drop-oldest capped by class so a throttled/hidden tab can't pile them up. No
+  //     scene object is ever touched, so nothing is left broken after the antic.
+  //   • Any SOUND (the cup's clatter) obeys the crickets rule and routes through the shared
+  //     getSfxCtx/pannedOut — no new AudioContext.
+  //   • Reduced motion suppresses all of it (canJumpNow already gates on it; the spawned
+  //     objects' CSS one-shots are `animation:none` under the query too).
+  var anticTimer = null;
+  var ANTIC_SPAWN_CAP = 3; // at most this many live spawned antic objects at once (drop-oldest)
+  function canAnticNow() {
+    return canJumpNow() && !document.hidden && document.hasFocus();
+  }
+  // the cat's live feet position in pos.parentNode's local coord space (same space the
+  // perch math uses): the roam-neutral base plus the roam animation's current offset.
+  function catFeetLocal() {
+    var b = baseFeet();
+    var o = currentWalkOffset();
+    return { x: b.x + o.x, y: b.y + o.y };
+  }
+  var SVGNS = "http://www.w3.org/2000/svg";
+  // drop-oldest cap for a spawned antic class, then return the parent to spawn into.
+  function anticSpawnParent(cls) {
+    var parent = pos.parentNode;
+    if (!parent) return null;
+    var live = parent.getElementsByClassName(cls);
+    while (live.length >= ANTIC_SPAWN_CAP) live[0].parentNode.removeChild(live[0]); // drop oldest
+    return parent;
+  }
+  // belt-and-braces clear-stale: drop any lingering spawned antic objects outright (e.g.
+  // on a stow/reset, or when the cat is no longer shown), so none can strand off-screen in
+  // a paused/hidden tab waiting on an animationend that won't come. A function declaration
+  // (hoisted) so __stowCat above can call it. Each object is a wrapper <g> holding one
+  // spawned .cat-* node; removing the wrapper removes both.
+  function clearStaleAntics() {
+    ["cat-knock-cup", "cat-yarn", "cat-treat"].forEach(function (cls) {
+      var nodes = Array.prototype.slice.call(document.getElementsByClassName ? document.getElementsByClassName(cls) : []);
+      nodes.forEach(function (n) { var w = n.parentNode; if (w && w.parentNode) w.parentNode.removeChild(w); else if (n.remove) n.remove(); });
+    });
+  }
+  // a spawned antic object self-removes (node.remove()) on the END of its own one-shot,
+  // so a paused animation in a throttled/hidden tab simply never finishes and the drop-
+  // oldest cap covers any pile-up — the same transient-node idiom the shared particle
+  // spawners use (created with setAttribute("class",...), destroyed outright, so its
+  // one-shot class needs no separate classList.remove — the whole node is gone).
+  function autoRemoveOnEnd(node, animName) {
+    node.addEventListener("animationend", function done(e) {
+      if (e.animationName !== animName) return;
+      node.removeEventListener("animationend", done);
+      node.remove();
+    });
+  }
+  // paw-swat one-shot on the pounce wrapper (its own node; composes over the walk/roam
+  // and never contends with .pouncing). Clears a stale swat first, removes on animationend.
+  function swatPaw() {
+    var el = document.getElementById("witchy-chest-cat-pounce");
+    if (!el) return;
+    el.classList.remove("swatting");
+    // eslint-disable-next-line no-unused-expressions
+    el.offsetWidth; // reflow so the removed class doesn't coalesce with the re-add
+    el.classList.add("swatting");
+    el.addEventListener("animationend", function done(e) {
+      if (e.animationName !== "cat-swat") return;
+      el.classList.remove("swatting");
+      el.removeEventListener("animationend", done);
+    });
+  }
+  // ── ANTIC 1: ZOOMIES ── a sudden dart across the room and back, then a nonchalant
+  // settle. Pure WAAPI on the walk node, composing over the PAUSED roam exactly like the
+  // entrance glide, so it starts/ends at the roam's live offset with no snap. No spawn,
+  // no sound — just motion, and reduced motion (via canAnticNow) suppresses it entirely.
+  function doZoomies() {
+    if (!walk.animate) return;
+    var cur = currentWalkOffset();
+    // dart one way then overshoot the other and settle back — direction picked so it
+    // stays within a sane band around the room's clear floor patch.
+    var dir = cur.x <= 0 ? 1 : -1;                 // dash toward the side with more room
+    var far = cur.x + dir * (150 + Math.random() * 60);
+    var back = cur.x - dir * (90 + Math.random() * 40);
+    function tf(x, y) { return "translate(" + x + "px," + y + "px)"; }
+    jumping = true; isPerchJump = false; isNapJump = false;
+    walk.style.animationPlayState = "paused";      // freeze the roam; the dash drives the walk node
+    jumpAnim = walk.animate([
+      { offset: 0,    transform: tf(cur.x, cur.y),      easing: "cubic-bezier(.2,.7,.4,1)" }, // burst off
+      { offset: 0.28, transform: tf(far, cur.y - 2),    easing: "cubic-bezier(.4,0,.6,1)" },  // streak across
+      { offset: 0.34, transform: tf(far, cur.y),        easing: "cubic-bezier(.2,.7,.4,1)" }, // skid-turn
+      { offset: 0.64, transform: tf(back, cur.y - 2),   easing: "cubic-bezier(.4,0,.6,1)" },  // scramble back the other way
+      { offset: 0.72, transform: tf(back, cur.y),       easing: "cubic-bezier(.3,0,.5,1)" },  // skid-turn again
+      { offset: 1,    transform: tf(cur.x, cur.y) }                                            // trot back + settle, nonchalant
+    ], { duration: 1500 + Math.random() * 500, fill: "none" });
+    jumpAnim.onfinish = finishJump;
+    flickTail(); // a flick of the tail as it takes off
+  }
+  // ── ANTIC 2: KNOCK A CUP OFF A LEDGE ── the classic. The cat leans and swats (paw
+  // one-shot on the pounce wrapper), and a small mug spawned at its feet-height on the
+  // near ledge topples, falls, rolls and fades — a clatter on the crickets rule. The mug
+  // is spawned into the cat's own parent group (local coords) so it lands right, self-
+  // removes on animationend, and is drop-oldest capped so nothing strands.
+  function doKnockCup() {
+    var parent = anticSpawnParent("cat-knock-cup");
+    if (!parent) return;
+    var f = catFeetLocal();
+    // the mug sits just in front of the cat on a ledge at about seat height; a small
+    // outer <g> carries the static position transform (never the animated node, per the
+    // transform-attr rule), the inner .cat-knock-cup <g> carries the topple animation.
+    var wrap = document.createElementNS(SVGNS, "g");
+    wrap.setAttribute("transform", "translate(" + (f.x - 8).toFixed(1) + "," + (f.y - 20).toFixed(1) + ")");
+    wrap.setAttribute("pointer-events", "none");
+    wrap.setAttribute("aria-hidden", "true");
+    var cup = document.createElementNS(SVGNS, "g");
+    // the single class carries both the drop-oldest cap tag AND the topple one-shot, set at
+    // creation (transient-node idiom): the topple runs from spawn — its 0% keyframe is the
+    // upright cup, so there's no flash — and the node self-removes on animationend.
+    cup.setAttribute("class", "cat-knock-cup");
+    // a little cream mug with a handle (drawn small, ~7 units, at the wrapper origin)
+    cup.innerHTML =
+      '<path d="M0 0 L7 0 L6.2 7 L0.8 7 Z" fill="#efe6d6" stroke="#c9b79a" stroke-width="0.6"/>' +
+      '<ellipse cx="3.5" cy="0" rx="3.5" ry="1" fill="#e2d3ba" stroke="#c9b79a" stroke-width="0.5"/>' +
+      '<path d="M7 1.4 Q10 1.6 9.6 3.6 Q9.2 5.2 6.6 5.2" fill="none" stroke="#c9b79a" stroke-width="0.8"/>';
+    wrap.appendChild(cup);
+    parent.appendChild(wrap);
+    swatPaw();
+    // the clatter fires with the swat, crickets-rule gated (canAnticNow already confirmed
+    // focus, but re-check so a same-frame blur can't sneak a sound through) + panned to the cat.
+    if (!document.hidden && document.hasFocus() && typeof playGlassClinkSound === "function") {
+      playGlassClinkSound(1.15, "witchy-chest-cat");
+    }
+    autoRemoveOnEnd(cup, "cat-cup-topple");
+    flickTail();
+  }
+  // ── ANTIC 3: BAT A DANGLING THING ── the cat "finds" a dangling yarn ball (spawned on
+  // a short string above it) and bats it so it swings. Same spawn-in-parent + cap + self-
+  // clean rules; no sound (a soft bat), the swing damps out and the whole node fades and
+  // removes on animationend.
+  function doBatYarn() {
+    var parent = anticSpawnParent("cat-yarn");
+    if (!parent) return;
+    var f = catFeetLocal();
+    var wrap = document.createElementNS(SVGNS, "g");
+    // hang it just above and slightly in front of the cat's head (cat head ~y-28 from feet)
+    wrap.setAttribute("transform", "translate(" + (f.x + 6).toFixed(1) + "," + (f.y - 46).toFixed(1) + ")");
+    wrap.setAttribute("pointer-events", "none");
+    wrap.setAttribute("aria-hidden", "true");
+    var yarn = document.createElementNS(SVGNS, "g");
+    yarn.setAttribute("class", "cat-yarn"); // single class = cap tag + swing one-shot, at creation (transient-node idiom; 0% keyframe is opacity 0 → fades in, no flash)
+    // a thin string down to a small wine-red yarn ball with a couple of wound lines
+    yarn.innerHTML =
+      '<line x1="0" y1="0" x2="0" y2="12" stroke="#b7a789" stroke-width="0.7"/>' +
+      '<circle cx="0" cy="15" r="3.2" fill="#8e3a4a"/>' +
+      '<path d="M-2.6 14 Q0 16.5 2.6 14 M-2.8 16 Q0 18 2.8 15.6" fill="none" stroke="#6d2b38" stroke-width="0.5"/>';
+    wrap.appendChild(yarn);
+    parent.appendChild(wrap);
+    swatPaw();
+    autoRemoveOnEnd(yarn, "cat-yarn-swing");
+    flickTail();
+  }
+  // ── ANTIC 4: STEAL & SCAMPER ── the cat snatches a small treat, then dashes off with it
+  // in its mouth. The treat spawns at the cat's mouth, rides the carry one-shot (a bob) and
+  // is dropped + fades; the cat itself does a short zoomie-style scamper so the two read as
+  // one move. Reuses the same spawn-in-parent + cap + self-clean + busy-lock machinery.
+  function doStealScamper() {
+    if (!walk.animate) return;
+    var parent = anticSpawnParent("cat-treat");
+    if (!parent) return;
+    var f = catFeetLocal();
+    var wrap = document.createElementNS(SVGNS, "g");
+    // near the cat's mouth (front of the face, ~y-24 from feet)
+    wrap.setAttribute("transform", "translate(" + (f.x - 10).toFixed(1) + "," + (f.y - 24).toFixed(1) + ")");
+    wrap.setAttribute("pointer-events", "none");
+    wrap.setAttribute("aria-hidden", "true");
+    var treat = document.createElementNS(SVGNS, "g");
+    treat.setAttribute("class", "cat-treat"); // single class = cap tag + carry one-shot, at creation (transient-node idiom; 0% keyframe is opacity 0 → fades in, no flash)
+    // a little golden fish-shaped treat
+    treat.innerHTML =
+      '<ellipse cx="0" cy="0" rx="3" ry="1.8" fill="#e0a94a" stroke="#b3831f" stroke-width="0.5"/>' +
+      '<path d="M2.6 0 L4.6 -1.6 L4.6 1.6 Z" fill="#e0a94a" stroke="#b3831f" stroke-width="0.5"/>' +
+      '<circle cx="-1.4" cy="-0.4" r="0.5" fill="#5a3f10"/>';
+    wrap.appendChild(treat);
+    parent.appendChild(wrap);
+    swatPaw(); // the snatch
+    autoRemoveOnEnd(treat, "cat-treat-carry");
+    // and the scamper: a quick dash off to one side and a trot back (shorter than full
+    // zoomies), sharing the busy-lock + finishJump cleanup.
+    var cur = currentWalkOffset();
+    var dir = cur.x <= 0 ? 1 : -1;
+    var away = cur.x + dir * (120 + Math.random() * 40);
+    function tf(x, y) { return "translate(" + x + "px," + y + "px)"; }
+    jumping = true; isPerchJump = false; isNapJump = false;
+    walk.style.animationPlayState = "paused";
+    jumpAnim = walk.animate([
+      { offset: 0,    transform: tf(cur.x, cur.y),     easing: "cubic-bezier(.25,.7,.4,1)" },
+      { offset: 0.4,  transform: tf(away, cur.y - 2),  easing: "cubic-bezier(.4,0,.6,1)" }, // scamper off with the loot
+      { offset: 0.5,  transform: tf(away, cur.y) },                                          // pause — got away with it
+      { offset: 1,    transform: tf(cur.x, cur.y) }                                          // saunter back
+    ], { duration: 1600, fill: "none" });
+    jumpAnim.onfinish = finishJump;
+    flickTail();
+  }
+  // per-room antic menus (the cat picks one at random when a cycle fires). Zoomies and the
+  // yarn-bat + treat-steal fit anywhere; the cup-knock reads best in the kitchen (a counter
+  // of espresso gear) and the balcony (a table of drinks), so it's weighted into those two.
+  var ANTICS = {
+    kitchen: [doZoomies, doKnockCup, doKnockCup, doBatYarn, doStealScamper],
+    garden:  [doZoomies, doBatYarn, doStealScamper],
+    cuddly:  [doZoomies, doZoomies, doBatYarn, doStealScamper],
+    office:  [doZoomies, doBatYarn, doStealScamper],
+    balcony: [doZoomies, doKnockCup, doKnockCup, doBatYarn, doStealScamper]
+  };
+  function fireAntic() {
+    var menu = ANTICS[catRoom];
+    if (!menu || !menu.length) return;
+    clearTimeout(jumpTimer); // an antic owns the busy window; the perch loop reschedules via finishJump
+    menu[Math.floor(Math.random() * menu.length)]();
+  }
+  function anticTick() {
+    if (canAnticNow()) fireAntic();
+    anticTimer = setTimeout(anticTick, 9000 + Math.random() * 9000); // ~9–18s, jittered, sparse so it reads as mischief not a metronome
+  }
+  function scheduleAntic() {
+    clearTimeout(anticTimer);
+    anticTimer = setTimeout(anticTick, 7000 + Math.random() * 7000);
+  }
+  // hidden-tab teardown mirrors the hop/fidget loops: stop scheduling while hidden (a mid-
+  // antic movement is already torn down by cancelJump via the existing visibilitychange
+  // handler above), restart on return. Exposed for the test harness + a belt-and-braces
+  // reset hook so a room-leave/reset can't strand a pending antic timer.
+  window.__scheduleCatAntic = scheduleAntic;
+  window.__stopCatAntics = function () { clearTimeout(anticTimer); anticTimer = null; };
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") { clearTimeout(anticTimer); anticTimer = null; }
+    else scheduleAntic();
+  });
   scheduleJump(); // self-gating loop: acts only while the loose cat is on the viewed room
   idleFidget();   // self-gating idle-fidget loop (ear twitch / occasional groom); same gates
+  scheduleAntic(); // self-gating naughty-antic loop (zoomies / knock-a-cup / bat-yarn / steal); same gates
 })();
 (function () {
   // The console's laser() command: a red dot loose in the CURRENTLY VIEWED room.

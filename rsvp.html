@@ -65303,11 +65303,23 @@ function spawnDustMote(container) {
       aurora: !!(au && parseFloat(getComputedStyle(au).opacity) > 0.1)
     };
   }
-  // Which room backdrops PAINT the weather (albumPhotoSvg): the deck is outdoors, and the office
-  // card frames its window. The bar and the nook are interior walls, so rain/storm/overcast can't
-  // show in those frames — counting it would re-open a room that has not visibly changed, filing a
-  // second identical card every time the forecast flips.
-  var ALBUM_WX_ROOMS = { balcony: 1, office: 1 }; // held in step with the renderer by check.js
+  // What each room's polaroid actually PAINTS of the sky (albumPhotoSvg). A shot's identity is
+  // built from this rather than the raw state, so two shots are different photographs only when
+  // the frame differs — a state the card can't show would file a second, indistinguishable card.
+  //   balcony  outdoors: sky, stars, moon, rain streaks, the dry storm's bolt — every state shows
+  //   office   one window: day/night, and clear vs grey vs streaked (rain and storm streak alike)
+  //   cuddly   brick wall: daylight terracotta vs evening brown; no weather in frame
+  //   kitchen  the bar's back wall goes one shade deeper after dark and nothing else moves, and
+  //            the bar is up for every shot that can exist (in espresso mode the room is empty)
+  // An unlisted room falls back to the fullest key, so a new one over-splits rather than repeats.
+  // tests/album-axis.mjs rasterises these and fails if a backdrop drifts out of agreement.
+  var ALBUM_SKY_SIG = {
+    balcony: function (s) { return (s.night ? "n" : "d") + (s.wx ? "/" + s.wx : ""); },
+    office:  function (s) { return (s.night ? "n" : "d") + (s.wx === "overcast" ? "/oc" : s.wx ? "/wet" : ""); },
+    cuddly:  function (s) { return s.night ? "n" : "d"; },
+    kitchen: function ()  { return ""; }
+  };
+  function albumSkySig(room, sky) { return (ALBUM_SKY_SIG[room] || ALBUM_SKY_SIG.balcony)(sky); }
   // ── WHO IS IN ROOM X RIGHT NOW ────────────────────────────────────────────────
   // Aspen's photo view of the ONE occupancy accessor, window.__whoIsHere(room) — which already
   // reads each room's own published truth rather than inventing a parallel roster. Keeping this
@@ -65481,6 +65493,7 @@ function spawnDustMote(container) {
   window.__albumCaptureMoment = function () { if (!albumMomentSnapped) { albumMomentSnapped = true; captureAlbumShot(); } };
   window.__albumMomentReset = function () { albumMomentSnapped = false; };
   window.__albumAdd = captureAlbumShot;                 // test hook: snap one now, return the record
+  window.__albumSkySig = albumSkySig;                   // test hook: what a room's card shows of the sky (tests/album-axis.mjs)
   // ── A ROOM SHOT ── the keepsake Aspen takes AWAY from the dance floor. Where the garden's
   // portraits are always the couple + one rotating subject, a room shot is simply everyone who
   // is in THAT room at that moment (__roomOccupants) against THAT room's backdrop — so the
@@ -65494,12 +65507,10 @@ function spawnDustMote(container) {
     var people = (window.__roomOccupants && window.__roomOccupants(room)) || [];
     if (!people.length) return null;
     var sky = albumSkyState(room);
-    // The room's LIGHT is part of the shot's identity: the same pair at the bar in daylight and
-    // again after dark are two different photographs, so both are worth keeping. The weather only
-    // counts where the keepsake can show it (ALBUM_WX_ROOMS) — otherwise it splits one photograph
-    // into several identical ones.
-    var sig = "room:" + room + ":" + (sky.night ? "n" : "d") +
-              (ALBUM_WX_ROOMS[room] && sky.wx ? "/" + sky.wx : "") + ":" +
+    // The room's LIGHT is part of the shot's identity only as far as the room's own card paints it
+    // (ALBUM_SKY_SIG): the nook really does go from daylight terracotta to evening brown, while the
+    // bar's back wall shifts a single shade and stays the same photograph.
+    var sig = "room:" + room + ":" + albumSkySig(room, sky) + ":" +
               people.map(function (p) { return p.key; }).sort().join(",");
     if (albumTaken[sig]) return null;
     albumTaken[sig] = 1;

@@ -26059,12 +26059,18 @@ function funFact(key) {
 // `html` may be a function, resolved at hover time instead of at wiring time: the wiring runs once
 // at load, so a tooltip whose text depends on live state (the visitor's language, or which season
 // is dressing a shared prop) would otherwise be frozen at whatever it read on load.
+// Touch has no hover, so a LONG PRESS (the touch block at the end) opens the same bubble — without
+// it every one of these tooltips is unreachable on iOS, where all browsers are WebKit.
 function hoverTooltip(el, html, placement, yOffset, xOffset, posEl) {
   if (!el) return;
   var bubble = null, followRaf = null, showTimer = null;
   var at = posEl || el;
   function follow() {
     if (!bubble) return;
+    // eggBubble self-dismisses after 5s, and any other bubble opening removes this one. The mouse
+    // path always gets a mouseleave to stop the loop; a long press has no such exit, so without
+    // this the rAF would spin forever on a detached node (the accumulation bug class).
+    if (!bubble.isConnected) { clearTip(); return; }
     positionEggBubble(bubble, at, placement, yOffset, xOffset);
     followRaf = requestAnimationFrame(follow);
   }
@@ -26073,19 +26079,53 @@ function hoverTooltip(el, html, placement, yOffset, xOffset, posEl) {
     if (followRaf) { cancelAnimationFrame(followRaf); followRaf = null; }
     if (bubble) { dismissEggBubble(bubble); bubble = null; }
   }
+  function showTip() {
+    if (followRaf) { cancelAnimationFrame(followRaf); followRaf = null; }
+    bubble = eggBubble(at, typeof html === "function" ? html() : html, placement, yOffset, xOffset);
+    followRaf = requestAnimationFrame(follow);
+  }
   el.addEventListener("mouseenter", function () {
     clearTimeout(showTimer);
     // a short dwell before showing, so tooltips don't pop the instant the cursor grazes past
-    showTimer = setTimeout(function () {
-      showTimer = null;
-      bubble = eggBubble(at, typeof html === "function" ? html() : html, placement, yOffset, xOffset);
-      followRaf = requestAnimationFrame(follow);
-    }, 450);
+    showTimer = setTimeout(function () { showTimer = null; showTip(); }, 450);
   });
   el.addEventListener("mouseleave", clearTip);
   // a click/tap means they're interacting (e.g. powering the machine on), not lingering —
   // cancel the pending tooltip and dismiss any shown one so it doesn't pop over the action
   el.addEventListener("mousedown", clearTip);
+  // ── long press = hover, for touch ────────────────────────────────────────────────────────
+  // Hold one finger still on the prop and the same bubble opens; it dismisses the way every egg
+  // bubble does (its own 5s timer, or a tap away via the document handler below — and a later tap
+  // on the prop itself, whose compat mousedown reaches clearTip). Nothing here preventDefaults
+  // touchstart/touchmove, so object drags and the strip's non-passive touchmove pan-guard still
+  // work; bailing on a second finger leaves the two-finger context-menu tap alone.
+  var PRESS_MS = 350, PRESS_SLOP = 10; // hold, and the drift that reads as a drag instead of a press
+  var pressTimer = null, pressX = 0, pressY = 0, pressShown = false;
+  function cancelPress() { clearTimeout(pressTimer); pressTimer = null; }
+  el.addEventListener("touchstart", function (e) {
+    cancelPress(); pressShown = false;
+    if (e.touches.length !== 1) return;
+    pressX = e.touches[0].clientX; pressY = e.touches[0].clientY;
+    pressTimer = setTimeout(function () { pressTimer = null; pressShown = true; showTip(); }, PRESS_MS);
+  }, { passive: true });
+  el.addEventListener("touchmove", function (e) {
+    if (!pressTimer && !pressShown) return;
+    var t = e.touches[0];
+    if (!t) return;
+    if (Math.abs(t.clientX - pressX) > PRESS_SLOP || Math.abs(t.clientY - pressY) > PRESS_SLOP) {
+      cancelPress(); pressShown = false; clearTip(); // dragging or panning, not asking what this is
+    }
+  }, { passive: true });
+  el.addEventListener("touchend", function (e) {
+    cancelPress();
+    if (!pressShown) return; // a short tap: let it through, so the prop's own action still fires
+    pressShown = false;
+    // the press already answered: kill the compat mousedown/click so the action doesn't ALSO fire
+    // (every hoverTooltip target acts on click — none of them act on pointerdown, which this
+    // could not suppress since pointer events precede touchend)
+    e.preventDefault();
+  }, { passive: false });
+  el.addEventListener("touchcancel", function () { cancelPress(); pressShown = false; clearTip(); }, { passive: true });
 }
 document.addEventListener("click", function (e) {
   var b = document.querySelector(".egg-bubble");

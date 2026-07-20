@@ -60562,6 +60562,7 @@ function spawnDustMote(container) {
     if (window.__syncDanceFreeze) window.__syncDanceFreeze(); // party off → drop any dance-freeze (only meaningful during the party)
     if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // party on retracts the night-peek; party off at night re-arms it
     if (window.__rollGardenAurora) window.__rollGardenAurora(); // the UV changes the odds — re-roll the aurora (much likelier with the party off)
+    if (window.__homeCat && window.currentStageName) window.__homeCat(window.currentStageName); // party on → contain the loose cat to the nook; party off → let it roam again (never stows it)
     // Second act: THE hinge. Pinged from the tail — every ignition path (the balcony switch,
     // the garden light switch, the disco ball, the mask) funnels through here, and by now the
     // whisk's goToStage("garden") has already run and set its own caption, so the reveal line
@@ -64524,11 +64525,22 @@ function spawnDustMote(container) {
     office:  { stage: "stage-office",  dx: -71,  dy: 38, before: "office-dim-overlay" }, // floor right of the desk, clear of the chair/Fishu
     balcony: { stage: "stage-balcony", dx: -36, dy: 32 }    // floor apron front-right, clear of the table/lounger/smoker
   };
+  // Where the loose cat is allowed to FOLLOW the player. While the garden party is lit the
+  // cat is contained to the nook (with the kids): the cuddly room is always open, the kitchen
+  // and office are closed off, and the balcony stays gated on its door. Off-party every indoor
+  // room is open again (the original behavior). The garden is never a follow target — it's the
+  // cat's chest home, reached as a PARK below, and during the party it appears there only as the
+  // kid-chase runner (a separate sprite driven by startGardenChase).
   function eligible(room) {
-    if (room === "kitchen" || room === "cuddly" || room === "office") return true;
+    if (room === "cuddly") return true;
+    if (room === "kitchen" || room === "office") return !window.__gardenPartyOn;
     if (room === "balcony") { var d = document.getElementById("balcony-door"); return !!(d && d.classList.contains("open")); }
     return false; // garden (native home) and anything unexpected fall through to the chest
   }
+  // Where the cat PARKS when the viewed room isn't one it may follow into: off-screen from the
+  // player. Off-party that's its garden chest home; during the party it retreats to the cuddly
+  // nook (its party base) so it's never seen freely roaming the garden or any other scene.
+  function catHomeBase() { return window.__gardenPartyOn ? "cuddly" : "garden"; }
   // --- occasional perch-jumps -----------------------------------------------
   // While the loose cat is on the room the player is viewing, it now and then
   // interrupts its floor pace to hop up onto a surface in an arc, sit a few
@@ -65120,6 +65132,7 @@ function spawnDustMote(container) {
   // it repeatedly for the same room is a no-op and never restarts the pace or dupes a cat.
   window.__homeCat = function (room, instant) {
     if (!walk.classList.contains("out")) return; // still in the bag
+    if (!eligible(room)) room = catHomeBase(); // contained: retreat to the party nook or the garden chest
     var dest = eligible(room) ? room : "garden"; // where the cat will physically be
     var changed = dest !== catRoom;
     if (changed) cancelJump(); // a real room change drops any hop/entry mid-air; same-room re-nav keeps it

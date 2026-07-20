@@ -508,6 +508,9 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 }
 #hunt-fullscreen-area.chrome-overlap #hunt-caption a,
 #hunt-fullscreen-area.chrome-overlap .hunt-dot{pointer-events:auto}
+/* The caption outranks EVERYTHING — the drop-down console (60) and the pocket phone (65)
+   included — so the instruction line is never covered by something sliding over the scene. */
+#hunt-fullscreen-area.chrome-overlap #hunt-caption{z-index:70}
 .device-hint{display:none; text-align:center; font-size:.9rem; color:var(--soft); margin:.15rem 0 0; text-wrap:balance}
 .device-hint.show{display:block}
 .browser-issues-link{color:var(--wine); text-decoration:underline; text-underline-offset:2px}
@@ -583,6 +586,9 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    that runs until the player first taps the scene (JS drops .hint-blink then, and after a
    short grace period if they never do). Removed in JS, so no stale one-shot lingers. */
 .scene-caption.hint-blink{animation:hint-blink-attract 1.3s ease-in-out infinite}
+/* overlapping the scene, pulse the INK only — a fading plate reads as bleed-through, not attract */
+#hunt-fullscreen-area.chrome-overlap .scene-caption.hint-blink{animation-name:hint-blink-ink}
+@keyframes hint-blink-ink{0%,100%{color:var(--wine)}50%{color:var(--soft)}}
 @keyframes hint-blink-attract{
   0%,100%{opacity:1; color:var(--wine)}
   50%{opacity:.4; color:var(--soft)}
@@ -3290,11 +3296,12 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
   background:rgba(24,20,16,.96); color:#e9e2d3;
   font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; line-height:1.5;
   border-bottom:2px solid var(--wine, #8e3a4a);
-  box-shadow:0 6px 18px rgba(0,0,0,.38);
   transform:translateY(-102%); transition:transform .22s cubic-bezier(.4,.9,.3,1);
   pointer-events:none;
 }
-#dropterm.open{transform:translateY(0); pointer-events:auto}
+/* the shadow rides .open only: parked at -102% it would still cast ~24px DOWN at z60, banding
+   the top of the scene (and anything overlapping it) with a grey wash. */
+#dropterm.open{transform:translateY(0); pointer-events:auto; box-shadow:0 6px 18px rgba(0,0,0,.38)}
 #dropterm #dropterm-out, html.is-webkit #dropterm #dropterm-out{
   flex:1 1 auto; min-height:0; height:auto; padding:8px 12px 4px;
   overflow-y:auto; white-space:pre-wrap; word-break:break-word;

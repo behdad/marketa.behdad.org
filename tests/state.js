@@ -608,6 +608,58 @@ var PERSIAN_EXPECT = {
   2035: { nowruz: "2035-03-21", sizdah: "2035-04-02", chaharshanbe: "2035-03-13", yalda: "2035-12-21" }
 };
 
+// ── low-table meal harness ──────────────────────────────────────────────────
+// Eating the food is DOM class state on the dish groups, which no other suite touches: the
+// setting isn't .hunt-hit (play.js never clicks it) and it leaves no particles (leak.js can't
+// see it). The thing that actually breaks is the RESTORE — food staying eaten into the next
+// day, or a same-day re-render silently relaying the feast mid-meal — so that's what this pins.
+var MEALS_HARNESS = [
+  '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
+  "<script>",
+  "(function () {",
+  "  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }",
+  "  var report = { errors: [], asserts: [], dishes: {} };",
+  "  function finish() { report.errors = window.__errs; document.getElementById('__report').textContent = JSON.stringify(report); }",
+  "  function ok(l, c, d) { report.asserts.push({ label: l, ok: !!c, detail: c ? '' : String(d || '') }); }",
+  "  function eatenCount(meal) { return document.querySelectorAll('#cuddly-meal-' + meal + ' .dish.eaten').length; }",
+  "  async function run() {",
+  "    await sleep(800);",
+  "    var setting = document.getElementById('cuddly-table-setting');",
+  "    if (!setting || typeof window.__resetMealPlates !== 'function' || typeof window.__applySeason !== 'function') {",
+  "      window.__errs.push('harness: the low-table setting or its reset hook is missing');",
+  "      return;",
+  "    }",
+  "    var MEALS = ['nowruz', 'stedry', 'xmas', 'martin', 'yalda'];",
+  "    MEALS.forEach(function (m) {",
+  "      var ds = [].slice.call(document.querySelectorAll('#cuddly-meal-' + m + ' .dish'));",
+  "      report.dishes[m] = ds.map(function (d) { return d.getAttribute('data-dish'); });",
+  "      ok('meals: ' + m + ' has at least one dish, each with a full and a done state',",
+  "         ds.length > 0 && ds.every(function (d) { return d.querySelector('.dish-full') && d.querySelector('.dish-done'); }));",
+  "    });",
+  "    window.__applySeason('yalda');",
+  "    await sleep(90);",
+  "    var all = [].slice.call(document.querySelectorAll('#cuddly-meal-yalda .dish'));",
+  "    all.forEach(function (d) { d.classList.add('eaten'); });",
+  "    ok('meals: setup — the yalda table is eaten', eatenCount('yalda') === all.length);",
+  "    window.__applySeason('yalda');",
+  "    await sleep(90);",
+  "    ok('meals: a SAME-day re-render leaves the food eaten', eatenCount('yalda') === all.length, eatenCount('yalda') + ' of ' + all.length + ' still eaten');",
+  "    window.__applySeason('martin');",
+  "    await sleep(90);",
+  "    window.__applySeason('yalda');",
+  "    await sleep(90);",
+  "    ok('meals: a DAY change lays a fresh feast', eatenCount('yalda') === 0, eatenCount('yalda') + ' dishes still eaten');",
+  "    all.forEach(function (d) { d.classList.add('eaten'); });",
+  "    window.__resetMealPlates();",
+  "    ok('meals: __resetMealPlates clears every eaten dish', eatenCount('yalda') === 0);",
+  "  }",
+  "  window.addEventListener('load', function () {",
+  "    setTimeout(function () { run().catch(function (e) { window.__errs.push('harness: ' + String(e && e.stack || e)); }).then(finish); }, 200);",
+  "  });",
+  "})();",
+  "</script>"
+].join("\n");
+
 // ── node-side driver ─────────────────────────────────────────────────────────
 var failures = 0;
 function pass(msg) { console.log("  ✓ " + msg); }
@@ -624,8 +676,9 @@ function fail(msg, detail) {
   if (!ONLY || "gates".indexOf(ONLY) === 0) jobs.gates = lib.runPage("rsvp.html", GATES_HARNESS, 12000, CHROME_OPTS);
   if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 17000, CHROME_OPTS);
   if (!ONLY || "persian".indexOf(ONLY) === 0) jobs.persian = lib.runPage("rsvp.html", PERSIAN_HARNESS, 9000, CHROME_OPTS);
+  if (!ONLY || "meals".indexOf(ONLY) === 0) jobs.meals = lib.runPage("rsvp.html", MEALS_HARNESS, 12000, CHROME_OPTS);
   if (!Object.keys(jobs).length) {
-    fail("unknown --only value: " + ONLY + " (use cascade|gates|probes|persian)");
+    fail("unknown --only value: " + ONLY + " (use cascade|gates|probes|persian|meals)");
   }
   var names = Object.keys(jobs);
   var results = {};
@@ -715,6 +768,21 @@ function fail(msg, detail) {
       else fail("persian: Chaharshanbe Suri left Tuesday", tueBad.join("\n"));
       if (sizBad.length === 0) pass("persian: Sizdah Bedar is always Nowruz + 12");
       else fail("persian: Sizdah Bedar is not Nowruz + 12", sizBad.join("\n"));
+    }
+  }
+
+  if (results.meals !== undefined) {
+    var me = results.meals;
+    if (!me) {
+      fail("meals harness reported (page error before load, or budget too small)");
+    } else {
+      if (me.errors.length) fail("meals: no uncaught JS errors", me.errors.slice(0, 12).join("\n"));
+      else pass("meals: no uncaught JS errors");
+      me.asserts.forEach(function (a) { if (a.ok) pass(a.label); else fail(a.label, a.detail); });
+      // The two fish are the same dish in two languages, so their leftovers must not drift apart.
+      var nz = (me.dishes.nowruz || []).indexOf("fish") !== -1, st = (me.dishes.stedry || []).indexOf("fish") !== -1;
+      if (nz && st) pass("meals: the nowruz fish and the Štědrý večer carp are both a 'fish' dish");
+      else fail("meals: the two fish drifted apart", "nowruz=" + (me.dishes.nowruz || []).join(",") + " stedry=" + (me.dishes.stedry || []).join(","));
     }
   }
 

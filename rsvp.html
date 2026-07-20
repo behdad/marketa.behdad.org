@@ -32975,8 +32975,8 @@ function gameTapsNear(a, b) {
   }
   var kitchenCandle = document.getElementById("kitchen-candle");
   if (kitchenCandle) {
-    // a simple toggle (unlike the garden candles' one-time light-and-done) — click to
-    // light with a match-strike sound, click again to blow out silently
+    // a simple toggle — click to light with a match-strike sound, click again to blow
+    // out silently (no smoke here; the garden candles carry the wisp)
     function toggleKitchenCandle() {
       var lit = kitchenCandle.classList.toggle("lit");
       if (lit) playCandleLightSound("kitchen-candle");
@@ -67227,13 +67227,52 @@ function spawnDustMote(container) {
     var gs = document.getElementById("stage-garden"); // the above-dimmer night glow
     var glow = id === "garden-candle-1" ? "g-c1-lit" : "g-c2-lit";
     if (on) { if (el) el.classList.add("lit", "done"); if (gs) gs.classList.add(glow); playCandleLightSound(); }
-    else { if (el) el.classList.remove("lit", "done"); if (gs) gs.classList.remove(glow); }
-    gardenState.candles = candleIds.every(function (cid) { return candlesLit[cid]; });
-    checkGardenDone();
+    else { if (el) el.classList.remove("lit", "done"); if (gs) gs.classList.remove(glow); puffCandleSmoke(el); }
+    // The candle step LATCHES once both have burned: snuffing afterwards is décor, not
+    // un-solving. checkGardenDone therefore runs only on the transition that completes the
+    // step — otherwise a later snuff/relight would fire a second goToStage("cuddly").
+    if (!gardenState.candles && candleIds.every(function (cid) { return candlesLit[cid]; })) {
+      gardenState.candles = true;
+      checkGardenDone();
+    } else if (!gardenState.candles) {
+      updateGardenHint();
+    }
     return was;
   }
+  function candleReducedMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+  // A snuffed candle breathes a little smoke. The wisps go into the candle's OWN <g> so they
+  // share the flame's coordinate system, and they're placed via cx/cy rather than a transform
+  // attribute so the WAAPI translate can't clobber their position. Stale wisps are cleared
+  // before each spawn, and each removes itself on finish.
+  function puffCandleSmoke(el) {
+    if (!el || candleReducedMotion()) return;
+    var flame = el.querySelector(".candle-flame");
+    if (!flame) return;
+    Array.prototype.forEach.call(el.querySelectorAll(".candle-wisp"), function (old) { old.remove(); });
+    var cx = parseFloat(flame.getAttribute("cx")), cy = parseFloat(flame.getAttribute("cy"));
+    if (isNaN(cx) || isNaN(cy)) return;
+    for (var i = 0; i < 3; i++) {
+      var puff = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      puff.setAttribute("class", "candle-wisp");
+      puff.setAttribute("cx", (cx + (i - 1) * 1.3).toFixed(2));
+      puff.setAttribute("cy", (cy - i * 1.6).toFixed(2));
+      puff.setAttribute("r", (1.5 + i * 0.45).toFixed(2));
+      puff.setAttribute("fill", "#cfc6b8");
+      puff.setAttribute("aria-hidden", "true");
+      puff.style.pointerEvents = "none";
+      el.appendChild(puff);
+      (function (node, idx) {
+        var anim = node.animate(
+          [{ transform: "translate(0px,0px)", opacity: 0.5 },
+           { transform: "translate(" + ((idx - 1) * 2.5).toFixed(1) + "px,-14px)", opacity: 0 }],
+          { duration: 900 + idx * 220, delay: idx * 90, easing: "ease-out", fill: "forwards" }
+        );
+        anim.onfinish = function () { node.remove(); };
+      })(puff, i);
+    }
+  }
   candleIds.forEach(function (id) {
-    onActivate(document.getElementById(id), function () { setCandleLit(id, true); });
+    onActivate(document.getElementById(id), function () { setCandleLit(id, !candlesLit[id]); });
   });
   function resolveCandleId(which) { // 1/2, "1", "candle-2", "garden-candle-1" → a real id
     if (which == null) return null;

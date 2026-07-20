@@ -46579,6 +46579,10 @@ async def localfont(name):
       // full-figure garden art + its OWN coordinate normalization (she's drawn small + front-left,
       // centre x≈37, feet ≈y337 in garden coords; scaled up to stand at guest height — see below).
       aspen: ["#garden-photographer"],
+      // The off-duty DJ, photographed on his balcony smoke break. Whichever of the two is not
+      // spinning is the one out there, and both resolve to the same standing art (#bh-dj) — the
+      // face that shows is picked from the live figure, see albumFigureClone.
+      sina: ["#bh-dj"], danesh: ["#bh-dj"],
       // The godkids: NOT garden .g-* figures — clone their standing art from the CUDDLY-NOOK figures
       // (#cuddly-*), the cleanest full standing poses (the #garden-kid-* chase runners are wrapped in
       // scale/flip/bob transforms that would double-transform). A "#..." selector routes
@@ -46591,7 +46595,25 @@ async def localfont(name):
     // scene or dupes ids in the export — the polaroid needs none) and drop the animation-carrying
     // classes (.guest-react + its flare one-shots) so the clone sits still. Returns a bare <g>
     // holding the static art (centred x≈0, feet ≈y332 in the source's local coords), or null.
-    function albumFigureClone(sel) {
+    // Birthday hats and wedding-day adornments are ALWAYS present in the art and merely CSS-hidden
+    // (.bd-adorn/.wd-adorn base rule), so a raw clone gets them both ways wrong: it reserves head-
+    // room for a hat nobody is wearing, and it loses a real one — the reveal rule is scoped to
+    // #loft-game-strip, which the polaroid renders outside of, and albumRasterize serializes to PNG
+    // without the stylesheet at all. Index-match the clone against its source (cloneNode preserves
+    // order): drop what isn't worn today, and bake the rest visible inline so it survives both.
+    function albumAdornSync(srcEl, cloneEl, q) {
+      q = q || ".bd-adorn,.wd-adorn";
+      var a = srcEl.querySelectorAll(q), b = cloneEl.querySelectorAll(q);
+      for (var i = 0; i < b.length && i < a.length; i++) {
+        var cs = getComputedStyle(a[i]);
+        if (cs.display === "none" || cs.visibility === "hidden" || parseFloat(cs.opacity) === 0) {
+          if (b[i].parentNode) b[i].parentNode.removeChild(b[i]);
+          continue;
+        }
+        b[i].setAttribute("style", "display:inline;opacity:1;visibility:visible"); // inline beats any scoped rule
+      }
+    }
+    function albumFigureClone(sel, key) {
       // The godkids come from the CUDDLY NOOK, not the garden: a "#cuddly-*" selector clones the
       // innermost art group (-peek) and normalizes it into the shared guest coordinate frame (centred
       // x≈0, feet ≈y332). The nook art is drawn centred at x≈66 with feet ≈y305, and Robin/Navid
@@ -46611,6 +46633,7 @@ async def localfont(name):
         var flash = pg.querySelector("#garden-flash-bloom"); if (flash) flash.parentNode.removeChild(flash); // no bloom in a still portrait
         var phit = pg.querySelector("#garden-photog-hit"); if (phit) phit.parentNode.removeChild(phit);      // drop the transparent hit surface
         pg.removeAttribute("class"); pg.removeAttribute("style"); pg.removeAttribute("id");
+        albumAdornSync(ph, pg);
         var pids = pg.querySelectorAll("[id]"); for (var q = 0; q < pids.length; q++) pids[q].removeAttribute("id");
         var pwrap = document.createElementNS("http://www.w3.org/2000/svg", "g");
         // Her art is ~87 local units tall (bbox y249.6→337) vs a host figure's ~153 (y181→334), so
@@ -46620,11 +46643,32 @@ async def localfont(name):
         pwrap.appendChild(pg);
         return pwrap;
       }
+      // The off-duty DJ: his standing figure lives on the BALCONY, and the art inside #bh-dj is
+      // already drawn in the shared guest frame (centre x≈0, feet ≈y332) — the group's own transform
+      // is nothing but its deck placement, so the inner .bh-idle art clones straight across with no
+      // normalization. The two faces stack in one group, so keep the one this RECORD names: a
+      // keepsake shows whoever was out that night, not whoever happens to be off duty at re-render.
+      if (sel === "#bh-dj") {
+        var dsrc = document.querySelector("#bh-dj .bh-idle");
+        if (!dsrc) return null;
+        var dg = dsrc.cloneNode(true);
+        var keep = ".bh-dj-" + (key === "sina" ? "sina" : "danesh");
+        var faces = dg.querySelectorAll(".bh-dj-sina,.bh-dj-danesh");
+        for (var f = 0; f < faces.length; f++) {
+          if (faces[f].matches(keep)) faces[f].setAttribute("style", "display:inline"); // inline beats the scoped rule
+          else if (faces[f].parentNode) faces[f].parentNode.removeChild(faces[f]);
+        }
+        albumAdornSync(dsrc, dg);
+        dg.removeAttribute("class"); dg.removeAttribute("style"); dg.removeAttribute("id"); // shed the idle sway
+        var dids = dg.querySelectorAll("[id]"); for (var d = 0; d < dids.length; d++) dids[d].removeAttribute("id");
+        return dg;
+      }
       if (sel.charAt(0) === "#") {
         var pk = document.querySelector(sel + "-peek");
         if (!pk) return null;
         var art = pk.cloneNode(true);
         art.removeAttribute("class"); art.removeAttribute("style"); if (art.id) art.removeAttribute("id");
+        albumAdornSync(pk, art);
         var kided = art.querySelectorAll("[id]"); for (var m = 0; m < kided.length; m++) kided[m].removeAttribute("id");
         var kscale = /robin|navid/.test(sel) ? 0.85 : 1; // the two younger godkids stand ~0.85 of Irene
         var wrap = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -46641,6 +46685,7 @@ async def localfont(name):
       g.removeAttribute("class"); // shed .guest-react (+ any live flare one-shot) so it holds still
       g.removeAttribute("style");
       if (g.id) g.removeAttribute("id");
+      albumAdornSync(src, g);
       var ided = g.querySelectorAll("[id]"); // no ids on the clone — keeps the export dup-id-free
       for (var i = 0; i < ided.length; i++) ided[i].removeAttribute("id");
       return g;
@@ -46793,22 +46838,51 @@ async def localfont(name):
       // true local half-width (its real drawn extent — arms up or not, godkid or adult) via a hidden
       // measuring <svg>, so the spacing maths below can guarantee no two figures ever overlap regardless
       // of pose. (A guess never held: a raised-arm adult, a scaled godkid and Aspen all differ.)
+      // Local-coord anchors shared by every figure (all drawn identically): feet ≈y332, chest ≈y235
+      // (the lean pivot — tilting about the chest keeps the feet planted and rocks the head inward).
+      // LOCAL_TOP is only the NOMINAL head-top (the tallest caps); the real top of each shot is
+      // measured, since poses and hats reach well above it.
+      var LOCAL_FOOT = 332, LOCAL_PIVOT = 235, LOCAL_TOP = 150;
+      // Headroom kept above the tallest head, and the margin the feet keep off the bottom in the
+      // grounded modes. Faces are the point of a photograph: if something has to go, feet go.
+      var TOP_PAD = 7, FOOT_PAD = 4;
+      function topOf(entries) { // local y of the tallest head in a set (hat and raised arms included)
+        var t = LOCAL_TOP;
+        entries.forEach(function (e) { if (e && e.top != null && e.top < t) t = e.top; });
+        return t;
+      }
       var reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
       var measSvg = document.createElementNS(svgNS, "svg");
       measSvg.setAttribute("viewBox", "0 0 680 920");
       measSvg.setAttribute("style", "position:absolute;left:-4000px;top:0;width:680px;height:920px;pointer-events:none;");
       document.body.appendChild(measSvg);
-      function measureHalf(g) { // real local half-width of a clone about its centre-x (0), min-clamped
-        var hw = 24;
-        try { measSvg.appendChild(g); var b = g.getBBox(); hw = Math.max(Math.abs(b.x), Math.abs(b.x + b.width), b.width / 2); measSvg.removeChild(g); } catch (e) { if (g.parentNode === measSvg) measSvg.removeChild(g); }
-        return Math.max(10, hw); // clamp so a degenerate/empty clone still reserves room
+      // Real local extent of a clone: half-width about its centre-x (0) AND its true TOP y. Measuring
+      // the top is what keeps heads in frame — a fixed head-top constant decapitates anyone drawn
+      // above it (arms-up dancers, a birthday hat), and leaves a kid floating under it.
+      function measureBox(g) {
+        var box = { halfW: 24, top: LOCAL_TOP };
+        // Measure through a HOLDER, never on the clone itself: getBBox() reports a <g>'s children in
+        // that <g>'s own space and does NOT apply its own transform attribute — and Aspen's and the
+        // godkids' clones are wrappers whose whole job is a normalizing transform, so measuring them
+        // directly reads raw garden/nook coordinates and mis-sizes the shot.
+        var hold = document.createElementNS(svgNS, "g");
+        try {
+          measSvg.appendChild(hold); hold.appendChild(g);
+          var b = hold.getBBox();
+          box.halfW = Math.max(Math.abs(b.x), Math.abs(b.x + b.width), b.width / 2);
+          if (b.height > 0) box.top = b.y;
+        } catch (e) { /* degenerate clone — fall through to the clamped defaults */ }
+        if (g.parentNode === hold) hold.removeChild(g);
+        if (hold.parentNode) hold.parentNode.removeChild(hold);
+        box.halfW = Math.max(10, box.halfW); // clamp so a degenerate/empty clone still reserves room
+        return box;
       }
       var hostClones = [], otherClones = [];
       rec.people.forEach(function (p) {
         var sels = ALBUM_FIG_SEL[p.key];
         if (!sels) return;
         var isHost = p.grp === "hosts" || p.key === "hosts"; // seeded shots use albumPerson (grp:"") — match the key too
-        sels.forEach(function (sel) { var g = albumFigureClone(sel); if (g) (isHost ? hostClones : otherClones).push({ g: g, key: p.key, halfW: measureHalf(g) }); });
+        sels.forEach(function (sel) { var g = albumFigureClone(sel, p.key); if (!g) return; var mb = measureBox(g); (isHost ? hostClones : otherClones).push({ g: g, key: p.key, halfW: mb.halfW, top: mb.top }); });
       });
       if (measSvg.parentNode) measSvg.parentNode.removeChild(measSvg);
       // Fallback: if the live scene isn't mounted (nothing to clone), fill the floor with one plain
@@ -46820,10 +46894,6 @@ async def localfont(name):
         add("circle", { cx: bx, cy: by - 34, r: 9, fill: "#e9c9a8" });
         return svg;
       }
-      // Local-coord anchors shared by every figure (all drawn identically): feet ≈y332, chest ≈y235
-      // (the lean pivot — tilting about the chest keeps the feet planted and rocks the head inward),
-      // head-top ≈y150 (the tallest caps) → a full figure spans ≈182 local units.
-      var LOCAL_FOOT = 332, LOCAL_PIVOT = 235, LOCAL_TOP = 150;
       var total = hostClones.length + otherClones.length;
       // ── COMPOSITION MODE (seeded, stable per photo) ── the album shouldn't read as one repeated
       // line-up. Pick a mode from the seed so each keepsake feels like a different candid frame, yet a
@@ -46871,7 +46941,7 @@ async def localfont(name):
         });
         var rowSpan = centres.length ? centres[centres.length - 1] : 0;
         var off = CX - rowSpan / 2;                        // centre the packed row on CX
-        entries.forEach(function (e, i) { slots.push({ c: e.g, cx: off + centres[i], halfW: e.halfW * fitScale }); });
+        entries.forEach(function (e, i) { slots.push({ c: e.g, cx: off + centres[i], halfW: e.halfW * fitScale, top: e.top }); });
         return { scale: fitScale, slots: slots };
       }
 
@@ -46893,12 +46963,13 @@ async def localfont(name):
         var ord = pick;                                    // anchors centred, the leaning guest to a side
         var big = (pick.length <= 2 ? 1.15 : 0.98) * BIG;         // very large — this is the "lean-in" shot
         var row = layoutRow(ord, usableW, big);
-        // Crop so head-tops land high (~y30): fy = headTop + fullHeight·scale. Feet fall below the frame.
-        var fyC = 30 + (LOCAL_FOOT - LOCAL_TOP) * row.scale;
+        // Crop so head-tops land high (~y30): fy = headTop + measured height·scale. Feet fall below
+        // the frame — that's the crop this mode wants; the heads are what must not.
+        var fyC = 30 + (LOCAL_FOOT - topOf(pick)) * row.scale;
         row.slots.forEach(function (s) {
           var frac = row.slots.length > 1 ? (row.slots.indexOf(s) / (row.slots.length - 1)) * 2 - 1 : 0;
           placed.push({
-            c: s.c, cx: s.cx + (reduce ? 0 : jit(1)), fy: fyC + (reduce ? 0 : jit(2)),
+            c: s.c, cx: s.cx + (reduce ? 0 : jit(1)), fy: fyC + (reduce ? 0 : jit(2)), top: s.top,
             scaleY: row.scale, scaleX: row.scale * 1.1,
             lean: reduce ? 0 : (-frac * 2 + jit(1.4)), dist: Math.abs(s.cx - CX), shadow: false
           });
@@ -46909,9 +46980,16 @@ async def localfont(name):
         // depth, so heads stagger at two heights like a real group-photo huddle. Because the single row
         // is already horizontally collision-free, raising a subset can never introduce an overlap (it
         // only reduces vertical overlap). The hosts + the innermost guest(s) stay grounded up front.
-        var row = layoutRow(rowOrder, usableW, (total <= 4 ? 0.66 : 0.58) * BIG);
-        var frontFootY = Math.min(H - 2, Math.round((H + (LOCAL_FOOT - LOCAL_TOP) * row.scale) / 2) + 10);
-        var lift = (LOCAL_FOOT - LOCAL_TOP) * row.scale * 0.34; // raise the back tier ~a third of a body up
+        var BACK_LIFT = 0.34, BACK_SCALE = 0.86;
+        var twoBody = LOCAL_FOOT - topOf(rowOrder);   // measured: tallest head → feet
+        // The BACK tier is what clips: it floats (BACK_LIFT + BACK_SCALE) bodies above the front
+        // feet, which themselves ride halfway down the frame. Solve that for the largest scale whose
+        // highest head still clears TOP_PAD, and cap the row by it — the row fit is otherwise
+        // width-only, which is how a tall pose ended up drawn straight off the top edge.
+        var twoCap = (H / 2 + 10 - TOP_PAD) / (BACK_LIFT + BACK_SCALE - 0.5) / twoBody;
+        var row = layoutRow(rowOrder, usableW, Math.min((total <= 4 ? 0.66 : 0.58) * BIG, twoCap));
+        var frontFootY = Math.min(H - 2, Math.round((H + twoBody * row.scale) / 2) + 10);
+        var lift = twoBody * row.scale * BACK_LIFT; // raise the back tier ~a third of a body up
         var slotList = row.slots, nslot = slotList.length;
         // slot indices of the hosts' block (they sit centred in rowOrder after `lc` guests)
         var hostLo = lc, hostHi = lc + hostClones.length - 1;
@@ -46921,26 +46999,40 @@ async def localfont(name):
           var isFront = (i >= hostLo - frontSpan && i <= hostHi + frontSpan);
           var frac = nslot > 1 ? (i / (nslot - 1)) * 2 - 1 : 0;
           if (isFront) {
-            placed.push({ c: s.c, cx: s.cx + (reduce ? 0 : jit(1)), fy: frontFootY + (reduce ? 0 : jit(2)),
+            placed.push({ c: s.c, cx: s.cx + (reduce ? 0 : jit(1)), fy: frontFootY + (reduce ? 0 : jit(2)), top: s.top,
               scaleY: row.scale, scaleX: row.scale * 1.1, lean: reduce ? 0 : (-frac * 2 + jit(1.4)),
               dist: Math.abs(s.cx - CX), shadow: true, z: 2 });
           } else {
-            var bs = row.scale * 0.86; // back tier reads as further away
-            placed.push({ c: s.c, cx: s.cx + (reduce ? 0 : jit(1)), fy: frontFootY - lift + (reduce ? 0 : jit(2)),
+            var bs = row.scale * BACK_SCALE; // back tier reads as further away
+            placed.push({ c: s.c, cx: s.cx + (reduce ? 0 : jit(1)), fy: frontFootY - lift + (reduce ? 0 : jit(2)), top: s.top,
               scaleY: bs, scaleX: bs * 1.1, lean: reduce ? 0 : (-frac * 2 + jit(1.4)),
               dist: Math.abs(s.cx - CX), shadow: false, z: 1 });
           }
         });
       } else { // "line" — the classic grounded spread, everyone full-body on the garden band
-        var row = layoutRow(rowOrder, usableW, (total <= 2 ? 0.78 : (total <= 4 ? 0.68 : 0.60)) * BIG);
-        var footY = Math.min(H - 4, Math.round((H + (LOCAL_FOOT - LOCAL_TOP) * row.scale) / 2) + 8);
+        // This mode shows the WHOLE body, so the row has to fit vertically as well as horizontally:
+        // cap the scale at the frame's usable height over the measured head-to-feet span.
+        var lineBody = LOCAL_FOOT - topOf(rowOrder);
+        var lineCap = (H - TOP_PAD - FOOT_PAD) / lineBody;
+        var row = layoutRow(rowOrder, usableW, Math.min((total <= 2 ? 0.78 : (total <= 4 ? 0.68 : 0.60)) * BIG, lineCap));
+        var footY = Math.min(H - FOOT_PAD, Math.round((H + lineBody * row.scale) / 2) + 8);
         row.slots.forEach(function (s) {
           var frac = row.slots.length > 1 ? (row.slots.indexOf(s) / (row.slots.length - 1)) * 2 - 1 : 0;
-          placed.push({ c: s.c, cx: s.cx + (reduce ? 0 : jit(1)), fy: footY + (reduce ? 0 : jit(2.5)),
+          placed.push({ c: s.c, cx: s.cx + (reduce ? 0 : jit(1)), fy: footY + (reduce ? 0 : jit(2.5)), top: s.top,
             scaleY: row.scale, scaleX: row.scale * 1.1, lean: reduce ? 0 : (-frac * 2 + jit(1.4)),
             dist: Math.abs(s.cx - CX), shadow: true, z: 1 });
         });
       }
+
+      // Last line of defence, whatever the mode computed: no face leaves the top of the frame. Push
+      // the WHOLE group down by any remaining deficit (jitter and lean can still nudge a head over)
+      // rather than shrink it — shrinking here would undo the row's collision fit. Feet crop first.
+      var over = 0;
+      placed.forEach(function (p) {
+        var t = p.fy - (LOCAL_FOOT - (p.top == null ? LOCAL_TOP : p.top)) * p.scaleY;
+        if (TOP_PAD - t > over) over = TOP_PAD - t;
+      });
+      if (over > 0) placed.forEach(function (p) { p.fy += over; });
 
       // Floor shadows first (only for figures grounded in-frame), then paint. Sort so BACK-row (lower z)
       // paints before front, and within a row the outermost paints first (hosts at the centre sit
@@ -46955,11 +47047,14 @@ async def localfont(name):
         return b.dist - a.dist;                                         // then outermost → innermost
       }).forEach(function (p) {
         var wrap = add("g", {
-          // T·S·R·(re-centre feet): translate to the on-screen foot point, scale, lean about the chest
-          // pivot, then shift the source so its local foot lands at the origin. A plain transform
-          // ATTRIBUTE (no CSS transform / layer) so it serializes + rasterizes everywhere (WebKit-safe).
+          // T·S·(re-centre feet)·R: translate to the on-screen foot point, scale, shift the source so
+          // its local foot lands at the origin, and lean LAST — the lean has to be the innermost step
+          // or its pivot is no longer the chest: transforms apply right-to-left, so a rotate placed
+          // outside the foot-shift spins the figure about a point a whole body-length away and slides
+          // it sideways instead of rocking it. A plain transform ATTRIBUTE (no CSS transform / layer)
+          // so it serializes + rasterizes everywhere (WebKit-safe).
           transform: "translate(" + p.cx.toFixed(2) + " " + p.fy.toFixed(2) + ") scale(" + p.scaleX.toFixed(3) + " " + p.scaleY.toFixed(3) + ") " +
-                     "rotate(" + p.lean.toFixed(2) + " 0 " + LOCAL_PIVOT + ") translate(0 " + (-LOCAL_FOOT) + ")"
+                     "translate(0 " + (-LOCAL_FOOT) + ") rotate(" + p.lean.toFixed(2) + " 0 " + LOCAL_PIVOT + ")"
         });
         wrap.appendChild(p.c);
       });
@@ -64368,10 +64463,16 @@ function spawnDustMote(container) {
     here.forEach(function (p) {
       var key = ALBUM_HOST_KEYS[p.key] ? "hosts" : p.key;
       if (seen[key]) return;
-      var info = window.__rosterPersonInfo && window.__rosterPersonInfo(key);
-      if (!info || !info.name) return; // no cast entry → nothing to name or draw; skip rather than guess
+      var info = (window.__rosterPersonInfo && window.__rosterPersonInfo(key)) || null;
+      // The cast table is the naming authority WHERE IT HAS AN ENTRY — that's what gives the couple
+      // the album's lowercase house styling. Where it doesn't, keep the row the room itself
+      // published rather than dropping the person: the off-duty DJ is rostered as the live "dj"
+      // slot, never under the face that is actually out, so dropping him meant a deck holding him
+      // alone produced no photo at all.
+      var name = (info && info.name) || p.name;
+      if (!name) return;
       seen[key] = 1;
-      out.push({ key: info.key, grp: info.grp, name: info.name, roleKey: info.roleKey });
+      out.push({ key: key, grp: info ? info.grp : "", name: name, roleKey: info ? info.roleKey : (p.roleKey || "") });
     });
     return out;
   };
@@ -66243,8 +66344,20 @@ function spawnDustMote(container) {
     var svgNS = "http://www.w3.org/2000/svg";
     var src = document.getElementById("garden-photographer");
     if (!src) return;
-    // where she stands in each room, in that stage's own view-box coords: [centre-x, feet-y, scale]
-    var SPOTS = { kitchen: [615, 336, 1.10], cuddly: [618, 344, 1.15], office: [430, 337, 1.15] };
+    // Her source art's own anchors: bbox centre x≈37, feet ≈y337 (see #garden-photographer).
+    var FIG_CX = 37, FIG_FOOT = 337;
+    // Where she stands in each room, in that stage's own view-box coords, and which way she faces.
+    // `flip` mirrors her about her own centre so she shoots LEFTWARD, across the room instead of
+    // out of it. In the bar that puts her on the right, centred on the wooden pillar (#kitchen-post
+    // spans x600–648) and standing against it — so her feet take the BACK floor line the pillar and
+    // the cooler share (y320, which also keeps them clear of the .loft-datenav HUD pill over y321+),
+    // not the grooving couples' front line at y338. Scaled just under the couples' height for the
+    // same reason: she's a step further back than they are.
+    var SPOTS = {
+      kitchen: { x: 624, y: 320, s: 1.15, flip: true },
+      cuddly:  { x: 618, y: 344, s: 1.15, flip: true },
+      office:  { x: 430, y: 337, s: 1.15, flip: false }
+    };
     var mounted = {};
     Object.keys(SPOTS).forEach(function (room) {
       var stage = document.getElementById("stage-" + room);
@@ -66258,13 +66371,25 @@ function spawnDustMote(container) {
       bloom.setAttribute("class", "rp-bloom");
       bloom.setAttribute("cx", "51"); bloom.setAttribute("cy", "256.6"); bloom.setAttribute("r", "7"); bloom.setAttribute("fill", "#fffdf5");
       (cam || fig).appendChild(bloom); // inside the camera group, so the flash rides the raise
-      var s = SPOTS[room][2];
+      var cfg = SPOTS[room], s = cfg.s;
       var g = document.createElementNS(svgNS, "g");
       g.setAttribute("id", room + "-photographer");
       g.setAttribute("class", "room-photog");
-      g.setAttribute("transform", "translate(" + (SPOTS[room][0] - 37 * s).toFixed(2) + "," + (SPOTS[room][1] - 337 * s).toFixed(2) + ") scale(" + s + ")"); // static placement on the wrapper; the camera animates inside it
+      g.setAttribute("transform", "translate(" + (cfg.x - FIG_CX * s).toFixed(2) + "," + (cfg.y - FIG_FOOT * s).toFixed(2) + ") scale(" + s + ")"); // static placement on the wrapper; the camera animates inside it
       g.setAttribute("role", "button");
-      g.appendChild(fig);
+      // The mirror gets its OWN wrapper, distinct from the placement group above it, the figure
+      // below it and the camera group deeper still — a CSS transform animation replaces an
+      // element's transform attribute for its duration, so the camera-raise would fling a node
+      // that carried both. Everything inside (the camera, its flash bloom) inherits the mirror,
+      // which is exactly what aims the lens leftward.
+      if (cfg.flip) {
+        var flipG = document.createElementNS(svgNS, "g");
+        flipG.setAttribute("transform", "translate(" + (FIG_CX * 2) + ",0) scale(-1,1)"); // mirror about her own centre-x
+        flipG.appendChild(fig);
+        g.appendChild(flipG);
+      } else {
+        g.appendChild(fig);
+      }
       stage.appendChild(g);
       bloom.addEventListener("animationend", function () { bloom.classList.remove("flashing"); });
       if (cam) cam.addEventListener("animationend", function () { cam.classList.remove("aiming"); });
@@ -72384,12 +72509,19 @@ function spawnDustMote(container) {
     // caller that stands people on a floor line (Aspen's photo lineup) would get cut-off
     // floating heads, so it asks for { crew: false }. The DJ is keyed by whichever face is out.
     var WHO_CREW = { aspen: 1, pouria: 1, sina: 1, danesh: 1 };
+    // ...but crew is a job, not a person: the OFF-DUTY DJ out on the balcony is on a smoke break,
+    // drawn there as a full standing figure like any other guest, so he's a subject like any other.
+    // Aspen stays excluded everywhere — she's the one holding the camera.
+    var WHO_OFF_DUTY = { balcony: { sina: 1, danesh: 1 } };
+    function whoWorkingHere(key, room) {
+      return !!WHO_CREW[key] && !(WHO_OFF_DUTY[room] && WHO_OFF_DUTY[room][key]);
+    }
     window.__whoIsHere = function (room, opts) {
       room = room || window.currentStageName || "kitchen";
       if (WHO_ROOMS.indexOf(room) < 0) return [];
       try {
         var list = occupantsOf(room);
-        if (opts && opts.crew === false) list = list.filter(function (p) { return !WHO_CREW[p.key]; });
+        if (opts && opts.crew === false) list = list.filter(function (p) { return !whoWorkingHere(p.key, room); });
         return list;
       } catch (e) { return []; }
     };

@@ -47686,8 +47686,11 @@ async def localfont(name):
     // the thread; if generation fails the message just stays image-less. If the messages app is
     // open when the PNG lands, re-render so the postcard appears. (The occasion is whatever the
     // loft's current date is → the birthday's card on a birthday, the holiday's card on a holiday.)
-    function attachSharePostcard(id) {
-      if (!window.__shareCardDataURL) return;
+    function attachSharePostcard(id, tries) {
+      if (!window.__shareCardDataURL) { // the rasterizer is wired later in this file — a load-time birthday edge-trigger (applySeasonDate → applyBirthdays) can run before it exists; retry until it's ready
+        if ((tries || 0) < 40) setTimeout(function () { attachSharePostcard(id, (tries || 0) + 1); }, 100);
+        return;
+      }
       window.__shareCardDataURL().then(function (url) {
         var m = MESSAGES[id]; if (!m || !url) return;
         m.img = url; m.share = true; // .share marks the img as the share-card (tap → shareCard modal)

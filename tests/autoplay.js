@@ -55,7 +55,8 @@ var HARNESS = [
   "  var report={errors:[],fresh:false,phase1:{},phase2:{},phase3:{},phase4:{},phase5:{},phase6:{},phase7:{}};",
   "  async function run(){",
   // assertFresh: prove the loaded page carries the NEW routine-sequencer code, not a stale build.
-  "    report.fresh = (typeof window.__autoplayRoutineBeats==='function' && typeof window.__autoplayRoutineLen==='function' && typeof window.__latestUnreadMessage==='function' && typeof window.__maxUnlocked==='function');",
+  "    report.fresh = (typeof window.__autoplayRoutineBeats==='function' && typeof window.__autoplayRoutineLen==='function' && typeof window.__latestUnreadMessage==='function' && typeof window.__maxUnlocked==='function'",
+"                    && typeof window.__autoplayInvariants==='function' && typeof window.__autoplayTapMisses==='function' && typeof window.__autoplayLastHandledMsg==='function' && typeof window.__autoplayIdleMs==='function');",
   "    if (!window.autoplay || !window.__autoplayOn || !report.fresh) { report.errors=window.__errs.concat(['autoplay routine-sequencer API missing (stale page?)']); return; }",
   // ── Phase 1: TAKE OVER IN PLACE + first routine is CHAINED ──
   "    window.goToStage('office'); await sleep(300);",
@@ -66,7 +67,8 @@ var HARNESS = [
   "    var badge=document.getElementById('autoplay-badge');",
   "    report.phase1.badgeShown = !!(badge && badge.classList.contains('show'));",
   "    report.phase1.roomAfterStart = window.currentStageName;",   // must NOT be 'kitchen'
-  "    report.phase1.firstRoutineLen = window.__autoplayRoutineLen();", // a routine is running → multiple beats
+  "    report.phase1.firstRoutineLen = window.__autoplayRoutineLen();",
+"    report.invariants = window.__autoplayInvariants();", // a routine is running → multiple beats
   // ── Phase 2: drives multiple rooms + keeps stepping ──
   "    var seen={}; roomsSeen(seen);",
   "    var steps0 = window.__autoplaySteps();",
@@ -74,6 +76,14 @@ var HARNESS = [
   "    report.phase2.steps = window.__autoplaySteps() - steps0;",
   "    report.phase2.distinctRooms = Object.keys(seen).length;",
   "    report.phase2.on = window.__autoplayOn();",
+// KIOSK-SAFE: poke the screen while the show RUNS — a stray click/keypress must not stop it.
+"    var stepsBeforePoke = window.__autoplaySteps();",
+"    document.dispatchEvent(new MouseEvent('click',{bubbles:true}));",
+"    if (document.body.click) document.body.click();",
+"    document.dispatchEvent(new KeyboardEvent('keydown',{key:'x',bubbles:true}));",
+"    await sleep(4000);",
+"    report.phase2.onAfterPoke = window.__autoplayOn();",
+"    report.phase2.stepsAfterPoke = window.__autoplaySteps() - stepsBeforePoke;",
   // ── Phase 3: DWELL + APP-PLAY (deterministic, on a solved game) ──
   // pause autoplay so nothing races the measurements, solve the game, then read routine shapes.
   "    window.autoplay(false); await sleep(200);",
@@ -105,7 +115,9 @@ var HARNESS = [
   "    report.phase4.cursorSeen = cursorSeen;",
   "    if (window.__autoplayTakeover) window.__autoplayTakeover(); await sleep(300);",
   "    var cc2=document.getElementById('cine-cursor');",
-  "    report.phase4.cursorGoneAfterTakeover = !cc2;",             // torn down: element removed
+  "    report.phase4.cursorGoneAfterTakeover = !cc2;",
+"    report.phase4.ripplesAfterTakeover = document.querySelectorAll('.cine-ripple').length;",
+"    report.phase4.tapMisses = window.__autoplayTapMisses(); report.phase4.verbMisses = window.__autoplayVerbMisses();",             // torn down: element removed
   // ── Phase 5: notification interrupt ──
   "    window.autoplay(true); await sleep(400);",
   "    window.goToStage('garden'); await sleep(400);",
@@ -117,6 +129,7 @@ var HARNESS = [
   "    report.phase5.cleared = handled;",
   "    report.phase5.actedRoom = window.currentStageName;",
   "    report.phase5.landedOffice = landedOffice;",
+"    report.phase5.lastHandled = window.__autoplayLastHandledMsg();",
   // ── Phase 6: hide → paused, no accumulation; resume; unfocused pauses too ──
   "    var stepsBeforeHide = window.__autoplaySteps();",
   "    var nodesBeforeHide = nodeCount();",
@@ -141,6 +154,15 @@ var HARNESS = [
   "    report.phase7.onAgain = window.__autoplayOn();",
   "    window.autoplay(false); await sleep(300);",
   "    report.phase7.offAfterStop = !window.__autoplayOn();",
+// the 90s drift-back, shortened so it fits the budget: a TAKEOVER keeps it armed…
+"    window.__autoplayIdleMs(1200);",
+"    window.autoplay(true); await sleep(500); window.__autoplayTakeover(); await sleep(200);",
+"    report.phase7.offAfterTakeover2 = !window.__autoplayOn();",
+"    await sleep(2600);",
+"    report.phase7.driftedBack = window.__autoplayOn();",
+// …while a deliberate autoplay(false) clears it for good.
+"    window.autoplay(false); await sleep(2600);",
+"    report.phase7.noDriftAfterStop = !window.__autoplayOn();",
   "    document.dispatchEvent(new MouseEvent('click',{bubbles:true}));",
   "    if (document.body.click) document.body.click();",
   "    await sleep(1400);",
@@ -161,14 +183,21 @@ if (!r) {
   fail("harness reported (page error before load, or budget too small)");
 } else {
   var p1 = r.phase1 || {}, p2 = r.phase2 || {}, p3 = r.phase3 || {}, p4 = r.phase4 || {}, p5 = r.phase5 || {}, p6 = r.phase6 || {}, p7 = r.phase7 || {};
-  if (r.fresh) pass("loaded page carries the new routine-sequencer API (assertFresh)");
-  else fail("loaded page is stale — no routine-sequencer API", JSON.stringify(r).slice(0, 300));
+  if (r.fresh) pass("loaded page carries the new director API (assertFresh)");
+  else fail("loaded page is stale — no director API", JSON.stringify(r).slice(0, 300));
+  // The director self-checks its own authored intent at parse: every room has a builder + a
+  // budget, every signature tap id resolves, and the garden dwells longest in BOTH the solved and
+  // unsolved branches. This is what makes "it drifted" a failing test rather than a bug report.
+  if (r.invariants && r.invariants.ok) pass("plan-time invariants hold (__autoplayInvariants)");
+  else fail("the director's plan-time invariants must hold", JSON.stringify(r.invariants));
   // Phase 1
   if (p1.on && p1.badgeShown) pass("autoplay(true) starts the loop and shows the 'auto' badge");
   else fail("autoplay(true) starts + badge", JSON.stringify(p1));
-  if (p1.startedRoom === "office" && p1.roomAfterStart && p1.roomAfterStart !== "kitchen")
-    pass("TAKE OVER IN PLACE: started in the office, did NOT jump to the kitchen (roomAfterStart=" + p1.roomAfterStart + ")");
-  else fail("must take over in place, not reset to kitchen", JSON.stringify(p1));
+  // strict: the opening beat must run in the room the game is ALREADY in and navigate nowhere —
+  // "not the kitchen" would also pass a machine that jumped straight to some other room.
+  if (p1.startedRoom === "office" && p1.roomAfterStart === p1.startedRoom)
+    pass("TAKE OVER IN PLACE: the first beat runs where the game already was (" + p1.roomAfterStart + ", no jump)");
+  else fail("must take over in place, in the SAME room", JSON.stringify(p1));
   if (p1.firstRoutineLen >= 3) pass("the first routine is CHAINED (" + p1.firstRoutineLen + " beats — not one-and-jump)");
   else fail("routines must chain multiple beats", "first routine had only " + p1.firstRoutineLen + " beat(s): " + JSON.stringify(p1));
   // Phase 2
@@ -176,6 +205,11 @@ if (!r) {
   else fail("the machine must keep stepping", "only " + p2.steps + " beat(s): " + JSON.stringify(p2));
   if (p2.distinctRooms >= 2) pass("it drives multiple rooms (" + p2.distinctRooms + " distinct rooms visited)");
   else fail("it must travel the loft (multiple rooms)", JSON.stringify(p2));
+  // the owner's core kiosk rule, asserted while the show is actually RUNNING (the phase-7 click
+  // check fires after autoplay(false), so it could only ever pass vacuously).
+  if (p2.onAfterPoke && p2.stepsAfterPoke > 0)
+    pass("KIOSK-SAFE: a stray click + keypress DURING the show neither stops nor stalls it (+" + p2.stepsAfterPoke + " beats after)");
+  else fail("stray clicks/keys must not stop autoplay while it runs", JSON.stringify(p2));
   // Phase 3 — dwell + app-play
   var g = p3.garden || {}, kt = p3.kitchen || {}, cu = p3.cuddly || {};
   if (g.beats > kt.beats && g.beats > cu.beats && g.totalWait > kt.totalWait && g.totalWait > cu.totalWait)
@@ -190,13 +224,20 @@ if (!r) {
   // Phase 4 — ghost cursor
   if (p4.cursorSeen) pass("the ghost cursor is VISIBLE mid-routine (viewers can follow the taps)");
   else fail("the ghost cursor must show during a tapped beat", JSON.stringify(p4));
-  if (p4.cursorGoneAfterTakeover) pass("the ghost cursor is torn down on takeover (no stranded dot)");
-  else fail("the ghost cursor must be removed when autoplay stops", JSON.stringify(p4));
+  if (p4.cursorGoneAfterTakeover && p4.ripplesAfterTakeover === 0)
+    pass("the ghost cursor AND its ripples are torn down on takeover (no stranded dot)");
+  else fail("takeover must remove the cursor and every .cine-ripple", JSON.stringify(p4));
+  // a tap id that no longer resolves, or a beat naming a renamed console verb, is a real defect —
+  // the old build let both rot silently (every authored tap was dead metadata for months).
+  if (p4.tapMisses === 0 && p4.verbMisses === 0) pass("every authored tap id and verb resolved (no dead beat metadata)");
+  else fail("dead tap ids / renamed verbs in the scene library", "tapMisses=" + p4.tapMisses + " verbMisses=" + p4.verbMisses);
   // Phase 5 — notification interrupt
   if (p5.deliveredUnread === "invaders") pass("a phone notification was delivered mid-run (unread)");
   else fail("notification delivery", JSON.stringify(p5));
-  if (p5.cleared) pass("the machine OPENED the notification (no longer the top unread — handled)");
-  else fail("autoplay must open+clear a delivered notification", JSON.stringify(p5));
+  // "no longer the top unread" alone is a false-pass (a NEWER unread displaces it with nothing
+  // read), so assert the director actually took THAT id.
+  if (p5.cleared && p5.lastHandled === "invaders") pass("the machine OPENED that exact notification (handled, not displaced)");
+  else fail("autoplay must open+clear the delivered notification itself", JSON.stringify(p5));
   if (p5.landedOffice) pass("the machine ACTED on the notification (its action panned us to the office)");
   else fail("autoplay must act on the notification (pan to office)", JSON.stringify(p5));
   // Phase 6 — pause / no accumulation
@@ -213,6 +254,10 @@ if (!r) {
   else fail("takeover must exit autoplay", JSON.stringify(p7));
   if (p7.onAgain && p7.offAfterStop) pass("autoplay(false) stops it for good");
   else fail("autoplay(false) must stop cleanly", JSON.stringify(p7));
+  if (p7.offAfterTakeover2 && p7.driftedBack) pass("after a TAKEOVER the kiosk drifts back to attract on its own");
+  else fail("takeover must keep the idle drift-back armed", JSON.stringify(p7));
+  if (p7.noDriftAfterStop) pass("…but autoplay(false) clears the drift-back for good");
+  else fail("a deliberate stop must clear idle-resume", JSON.stringify(p7));
   if (p7.stillOffAfterClick) pass("a plain click does NOT stop or revive autoplay (kiosk-safe)");
   else fail("a plain click must not toggle autoplay", JSON.stringify(p7));
   // Errors

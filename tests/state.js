@@ -100,6 +100,27 @@ var RESET_DIFF_ALLOW = [
   "#stage-kitchen -storming",
   "#stage-office +storming",
   "#stage-office -storming",
+  // Same real-weather feed, the precip (RAIN) layer: an actually-raining/storming Edmonton adds
+  // .raining (pane streaks) TOGETHER WITH .storming in one applyRealWx pass (a dry storm would be
+  // .storming alone, but the real feed only ever maps rain/thunderstorm → both). It can land
+  // between the load snapshot and the reset diff, so a combined ±storming±raining diff on any
+  // stage — as well as .raining on its own — is legitimate on reset.
+  "#stage-garden +storming +raining",
+  "#stage-garden -storming -raining",
+  "#stage-balcony +storming +raining",
+  "#stage-balcony -storming -raining",
+  "#stage-kitchen +storming +raining",
+  "#stage-kitchen -storming -raining",
+  "#stage-office +storming +raining",
+  "#stage-office -storming -raining",
+  "#stage-garden +raining",
+  "#stage-garden -raining",
+  "#stage-balcony +raining",
+  "#stage-balcony -raining",
+  "#stage-kitchen +raining",
+  "#stage-kitchen -raining",
+  "#stage-office +raining",
+  "#stage-office -raining",
   // Same real-weather feed, plain-overcast look: a grey Edmonton day dims the sky via
   // .climate-overcast on the strip (no rain). Same lifecycle as .storming above — it can
   // land between snapshot and diff and a reset must not clear the real sky.

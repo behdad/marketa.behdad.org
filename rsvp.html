@@ -37138,6 +37138,7 @@ async def localfont(name):
     // — reuses this same freeze path so the tested UV-drop + host true-colour rules apply; the
     // hosts alone are then un-paused via the .first-dance CSS above).
     var frozen = !!window.__gardenPartyOn && (!!window.__musicPaused || !!window.__photoFreeze || !!window.__firstDanceOn);
+    if (frozen && window.__clearGuestSpotlight) window.__clearGuestSpotlight(); // entering a freeze: drop any live inverse-roster spotlight so its solo-spot can't strand the crowd frozen after the resume
     if (strip) {
       strip.classList.toggle("dance-frozen", frozen);
       strip.classList.toggle("first-dance", !!window.__gardenPartyOn && !!window.__firstDanceOn); // scopes the host-only un-pause + spotlight to the first dance
@@ -60313,6 +60314,7 @@ function spawnDustMote(container) {
       }
     }
     window.__spotlightGuest = spotlightGuests; // test/console hook
+    window.__clearGuestSpotlight = clearSpotlight; // let the transport freeze drop a live spotlight so it can't linger past a pause/resume
 
     // ── INVERSE ROSTER ────────────────────────────────────────────────────────────
     // Tapping a figure on the floor is the mirror of clicking a roster row: it names them in a
@@ -60331,12 +60333,18 @@ function spawnDustMote(container) {
     function guestInspect(el) {
       var g = document.getElementById("garden-guests");
       if (!g || !el) return;
+      // If the party is ALREADY frozen (space-bar pause-to-inspect / photo-moment / first dance),
+      // everyone's stilled — so DON'T add the solo-spot freeze (it would linger past the resume and
+      // leave the crowd frozen after the music comes back). Just name them. spot() no-ops when frozen.
+      var strip = document.getElementById("loft-game-strip");
+      var frozen = !!(strip && strip.classList.contains("dance-frozen"));
+      function spot(sels) { if (!frozen) spotlightGuests(sels); }
       // Hosts name themselves INDIVIDUALLY on the floor: the ROSTER pairs them into one "markéta &
       // behdad" row, but a tap on Markéta says "markéta" and a tap on Behdad says "behdad" (owner
       // request — separate them). Each still singles out just that one figure.
       var beh = g.querySelector(".g-behdad"), mar = g.querySelector(".g-marketa");
-      if (beh && (beh === el || beh.contains(el))) { spotlightGuests([".g-behdad"]); showWhoPop(el, "<em>behdad</em> · " + tipText("role_groom")); return; }
-      if (mar && (mar === el || mar.contains(el))) { spotlightGuests([".g-marketa"]); showWhoPop(el, "<em>markéta</em> · " + tipText("role_bride")); return; }
+      if (beh && (beh === el || beh.contains(el))) { spot([".g-behdad"]); showWhoPop(el, "<em>behdad</em> · " + tipText("role_groom")); return; }
+      if (mar && (mar === el || mar.contains(el))) { spot([".g-marketa"]); showWhoPop(el, "<em>markéta</em> · " + tipText("role_bride")); return; }
       for (var i = 0; i < ROSTER.length; i++) {
         var r = ROSTER[i];
         if (r.sel === "__dj" || r.sel.charAt(0) === "#" || r.pair) continue; // crew + chase runners keep their own handlers; the paired-host row is handled individually above
@@ -60344,7 +60352,7 @@ function spawnDustMote(container) {
         if (cand && (cand === el || cand.contains(el))) {
           var name = r.pair ? "markéta & behdad" : r.name; // the hosts share one card, like their tooltip
           var role = r.pair ? "" : tipText(r.roleKey);
-          spotlightGuests([r.sel]);
+          spot([r.sel]);
           showWhoPop(el, "<em>" + name + "</em>" + (role ? " · " + role : ""));
           return;
         }

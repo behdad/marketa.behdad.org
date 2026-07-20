@@ -4268,8 +4268,6 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .pm-clock .pmk-slider{flex:1 1 auto; min-width:0; accent-color:var(--wine)}
 .pm-clock .pmk-tval{font-family:"Fraunces",serif; font-size:18px; color:var(--wine); font-variant-numeric:tabular-nums; min-width:52px; text-align:right}
 .pm-clock .pmk-trow2,.pm-clock .pmk-trow3{display:flex; gap:8px; align-items:stretch}
-.pm-clock .pmk-jump{flex:1 1 auto; font:inherit; cursor:pointer; border:none; border-radius:10px; background:var(--wine); color:var(--paper); padding:8px 12px; font-weight:600}
-.pm-clock .pmk-jump:hover{filter:brightness(1.08)}
 .pm-clock .pmk-treset{flex:none; font:inherit; cursor:pointer; border:1px solid var(--rule); border-radius:10px; background:var(--paper); color:var(--wine); padding:8px 13px; line-height:1}
 .pm-clock .pmk-treset:hover{background:#f1e6dc}
 .pm-clock .pmk-sunrise,.pm-clock .pmk-sunset{flex:1 1 0; min-width:0; font:inherit; cursor:pointer; border:1px solid var(--rule); border-radius:10px; background:var(--paper); color:var(--ink); padding:7px 8px; line-height:1; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
@@ -7432,19 +7430,10 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 @keyframes balcony-sun-rays-spin{from{transform:rotate(0)} to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion: reduce){#balcony-sun-halo, #balcony-sun-rays{animation:none}}
 #stage-balcony.dusk #balcony-moon{opacity:1}
-/* arrives as a bright full moon, then the shadow drifts in to a partial
-   eclipse (and the glow dims to match) and stays */
-/* The moon is FULL by default (like the garden's). Occasionally a shadow TRANSITS
-   all the way across it — entering one side, a brief TOTAL eclipse dead-centre,
-   then exiting the far side — and full again for most of the ~50s cycle. */
-#balcony-moon-shadow{transform-box:fill-box; transform-origin:center; transform:translate(-46px,14px)}
-#stage-balcony.dusk #balcony-moon-shadow{animation:moon-eclipse-transit 50s ease-in-out 8s infinite}
-@keyframes moon-eclipse-transit{0%,60%{transform:translate(-46px,14px)} 80%{transform:translate(0,0)} 100%{transform:translate(46px,-14px)}}
+/* #balcony-moon-shadow is a terminator-shaped dark overlay whose `d` is set from
+   window.__moonPhase() (see __applyMoonPhases), so the disc shows the real lunar
+   phase for the loft's date. The double-click blood-moon eclipse is its own override. */
 #balcony-moon-glow{opacity:0.6}
-#stage-balcony.dusk #balcony-moon-glow{animation:moon-glow-transit 50s ease-in-out 8s infinite}
-/* a gentle brightening at totality — the dramatic corona is saved for the SOLAR eclipse */
-@keyframes moon-glow-transit{0%,60%,100%{opacity:0.6} 80%{opacity:0.72}}
-@media (prefers-reduced-motion: reduce){#stage-balcony.dusk #balcony-moon-shadow{animation:none} #stage-balcony.dusk #balcony-moon-glow{animation:none}}
 /* shared sky: a storm hides the moon + stars (overcast) in BOTH windows at once */
 #stage-balcony.dusk.storming #balcony-moon, #stage-balcony.dusk.storming #balcony-stars,
 #stage-garden.dusk.storming #garden-moon, #stage-garden.dusk.storming #garden-stars{opacity:0; transition:opacity .8s ease}
@@ -10145,6 +10134,8 @@ section{margin:1.9rem 0}
 <circle id="garden-moon-glow" cx="370" cy="52" r="22" fill="url(#garden-moon-glow-grad)" opacity="0.5"/>
 <circle cx="370" cy="52" r="11" fill="#efece0"/>
 <circle cx="366" cy="49" r="0.9" fill="#c9c3ad"/><circle cx="373" cy="56" r="1.1" fill="#c9c3ad"/>
+<clipPath id="garden-moon-clip"><circle cx="370" cy="52" r="11"/></clipPath>
+<g clip-path="url(#garden-moon-clip)"><path id="garden-moon-phase" fill="#1a2438" d=""/></g>
 </g>
 <rect class="smoke-tint" x="104" y="20" width="424" height="272" fill="#b0a89c" pointer-events="none" aria-hidden="true"/>
 <rect class="overcast-tint" x="104" y="20" width="424" height="272" fill="#8b95a1" pointer-events="none" aria-hidden="true"/>
@@ -16508,6 +16499,8 @@ section{margin:1.9rem 0}
 <circle cx="157" cy="52.5" r="1.5" fill="#cdd5dd" opacity="0.6"/>
 <circle cx="162.5" cy="56" r="1.1" fill="#cdd5dd" opacity="0.55"/>
 <circle cx="160.5" cy="51.5" r="0.85" fill="#cdd5dd" opacity="0.5"/>
+<clipPath id="office-moon-clip"><circle cx="160" cy="54" r="7"/></clipPath>
+<g clip-path="url(#office-moon-clip)"><path id="office-moon-phase" fill="#141830" d=""/></g>
 </g>
 <rect id="office-window-pane-2" class="hunt-hit window-pane" x="70" y="140" width="160" height="50" fill="#e4e2dc"/>
 <path d="M78 140 V190 M86 140 V190 M94 140 V190 M102 140 V190 M110 140 V190 M118 140 V190 M126 140 V190 M134 140 V190 M142 140 V190 M150 140 V190 M158 140 V190 M166 140 V190 M174 140 V190 M182 140 V190 M190 140 V190 M198 140 V190 M206 140 V190 M214 140 V190 M222 140 V190" stroke="#cfcdc4" stroke-width="1.5"/>
@@ -20759,7 +20752,7 @@ section{margin:1.9rem 0}
 <circle id="balcony-moon-glow" cx="510" cy="50" r="26" fill="url(#moon-glow-grad)"/>
 <circle cx="510" cy="50" r="13" fill="#eae6d2"/>
 <circle cx="505" cy="47" r="0.9" fill="#c9c3ad"/><circle cx="508" cy="56" r="1.2" fill="#c9c3ad"/>
-<g clip-path="url(#balcony-moon-clip)"><circle id="balcony-moon-shadow" cx="510" cy="50" r="14" fill="#241b3d"/></g>
+<g clip-path="url(#balcony-moon-clip)"><path id="balcony-moon-shadow" fill="#241b3d" d=""/></g>
 </g>
 </g>
 <!-- SOLAR eclipse (daytime): sky blackout, then the dark moon + bright corona on top -->
@@ -22837,7 +22830,6 @@ var T = {
     du_veil: "veil",
     clk_playtime: "You’ve been in the loft for",
     clk_jump_label: "Jump to time",
-    clk_jump: "Jump",
     clk_reset: "Reset to now",
     clk_sunrise: "Sunrise",
     clk_sunset: "Sunset",
@@ -23535,7 +23527,6 @@ var T = {
     du_veil: "závoj",
     clk_playtime: "V loftu jsi už",
     clk_jump_label: "Přejít na čas",
-    clk_jump: "Přejít",
     clk_reset: "Zpět na teď",
     clk_sunrise: "Východ slunce",
     clk_sunset: "Západ slunce",
@@ -23840,6 +23831,45 @@ window.__now = function () {
   } catch (e) {}
   return new Date();
 };
+// Real lunar phase for a date (defaults to the loft's __now() so ?date=/#date= time-travels
+// it). Days since a known new moon (2000-01-06 18:14 UTC) modulo the synodic month give the
+// phase fraction; everything else derives from it. No network — the sky is computed, not fetched.
+window.__moonPhase = function (date) {
+  var SYNODIC = 29.530588853;                 // mean synodic month, days
+  var REF = Date.UTC(2000, 0, 6, 18, 14, 0);  // reference new moon
+  var d = date || (window.__now ? window.__now() : new Date());
+  var frac = (((d.getTime() - REF) / 86400000 / SYNODIC) % 1 + 1) % 1; // 0=new, .5=full
+  var illum = (1 - Math.cos(2 * Math.PI * frac)) / 2;
+  var idx = Math.round(frac * 8) % 8;         // 0..7 → new→…→full→…→waning crescent
+  var EMOJI = ["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"];
+  var NAMES = ["new moon", "waxing crescent", "first quarter", "waxing gibbous",
+               "full moon", "waning gibbous", "last quarter", "waning crescent"];
+  return { frac: frac, illum: illum, waxing: frac < 0.5, idx: idx, emoji: EMOJI[idx], name: NAMES[idx] };
+};
+// Terminator-shaped shadow path (`d`) for a moon disc, given the phase fraction: the unlit
+// side's disc edge (a semicircle) closed by the terminator ellipse (x-radius r·|cos|). New →
+// full disc dark; quarter → half; full → nothing; then mirrored for the waning half.
+window.__moonShadowD = function (cx, cy, r, frac) {
+  var cosA = Math.cos(2 * Math.PI * frac);
+  var rx = Math.abs(r * cosA);
+  var top = cy - r, bot = cy + r, waxing = frac < 0.5;
+  var sweepDisc = waxing ? 0 : 1;                                    // dark limb: left when waxing, right when waning
+  var sweepTerm = waxing ? (cosA < 0 ? 1 : 0) : (cosA > 0 ? 1 : 0);  // terminator bulge flips at each quarter
+  return "M" + cx + " " + top + " A" + r + " " + r + " 0 0 " + sweepDisc + " " + cx + " " + bot +
+         " A" + rx + " " + r + " 0 0 " + sweepTerm + " " + cx + " " + top + " Z";
+};
+// Repaint every night-sky moon disc for the current date. Called on load, on season/date
+// re-apply (applySeasonDate), and on hashchange, so a #date=/?date= jump reshapes the moon live.
+window.__applyMoonPhases = function () {
+  if (!window.__moonPhase) return;
+  var frac = window.__moonPhase().frac;
+  var moons = [["garden-moon-phase", 370, 52, 11], ["office-moon-phase", 160, 54, 7], ["balcony-moon-shadow", 510, 50, 13]];
+  for (var i = 0; i < moons.length; i++) {
+    var el = document.getElementById(moons[i][0]);
+    if (el) el.setAttribute("d", window.__moonShadowD(moons[i][1], moons[i][2], moons[i][3], frac));
+  }
+};
+window.__applyMoonPhases();
 // The two wedding dates, ANY year: May 1 (Edmonton) and July 10 (Prague). Year-agnostic
 // on purpose — every anniversary counts too, so the "just married" mode never lapses.
 // It's a SEASON, not a day: three days either side of each date, so the loft celebrates the
@@ -23906,6 +23936,7 @@ window.addEventListener("hashchange", function () {
   if (window.__paintCalTile) window.__paintCalTile();
   if (window.refreshWeddingText) window.refreshWeddingText();
   if (window.__refreshDatePill) window.__refreshDatePill();
+  if (window.__applyMoonPhases) window.__applyMoonPhases();
   if (window.__updateSkyFireworks) window.__updateSkyFireworks(window.currentStageName);
   // a #time= flip re-runs the auto day/night against the chosen hour (re-enabling auto in
   // case a manual flip had latched it off); without a time override, just re-apply the live loop
@@ -36266,7 +36297,7 @@ var ABANDONED_CALL_MS = 30000;
         if (g !== "☀") return g;
       }
       var sb = document.getElementById("stage-balcony");
-      return sb && sb.classList.contains("dusk") ? "🌙" : "☀";
+      return sb && sb.classList.contains("dusk") ? (window.__moonPhase ? window.__moonPhase().emoji : "🌙") : "☀";
     }
     function paintDeskClock() {
       var d = new Date();
@@ -44034,7 +44065,7 @@ async def localfont(name):
       }
       return days + " " + (window.__dayWord ? window.__dayWord(days) : (days === 1 ? "day" : "days"));
     }
-    var SUNSET_GLYPH = "🌙"; // sunset quick-jump button glyph (a later agent swaps this for a moon-phase-correct emoji)
+    function SUNSET_GLYPH() { return window.__moonPhase ? window.__moonPhase().emoji : "🌙"; } // phase-correct moon for the loft's date
     function renderClock(body) {
       var wrap = document.createElement("div");
       wrap.className = "pm-clock";
@@ -44047,8 +44078,8 @@ async def localfont(name):
         '<div class="pmk-time-ctl">' +
           '<label class="pmk-tl">' + tr("clk_jump_label") + '</label>' +
           '<div class="pmk-trow"><input type="range" class="pmk-slider" min="0" max="23" step="1" aria-label="' + tr("clk_jump_label") + '"><span class="pmk-tval"></span></div>' +
-          '<div class="pmk-trow2"><button type="button" class="pmk-jump">' + tr("clk_jump") + '</button><button type="button" class="pmk-treset" title="' + tr("clk_reset") + '" aria-label="' + tr("clk_reset") + '">↻</button></div>' +
-          '<div class="pmk-trow3"><button type="button" class="pmk-sunrise" title="' + tr("clk_sunrise") + '" aria-label="' + tr("clk_sunrise") + '">☀ <span class="pmk-sr-t"></span></button><button type="button" class="pmk-sunset" title="' + tr("clk_sunset") + '" aria-label="' + tr("clk_sunset") + '"><span class="pmk-sunset-glyph">' + SUNSET_GLYPH + '</span> <span class="pmk-ss-t"></span></button></div>' +
+          '<div class="pmk-trow2"><button type="button" class="pmk-treset" title="' + tr("clk_reset") + '" aria-label="' + tr("clk_reset") + '">↻</button></div>' +
+          '<div class="pmk-trow3"><button type="button" class="pmk-sunrise" title="' + tr("clk_sunrise") + '" aria-label="' + tr("clk_sunrise") + '">☀ <span class="pmk-sr-t"></span></button><button type="button" class="pmk-sunset" title="' + tr("clk_sunset") + '" aria-label="' + tr("clk_sunset") + '"><span class="pmk-sunset-glyph">' + SUNSET_GLYPH() + '</span> <span class="pmk-ss-t"></span></button></div>' +
         '</div>';
       body.appendChild(wrap);
       var z = function (n) { return (n < 10 ? "0" : "") + n; };
@@ -44077,9 +44108,10 @@ async def localfont(name):
         wrap.querySelector(".pmk-p-cd").textContent = "💍 " + cdText(6, 10, PRG);
         var secs = Math.max(0, Math.floor((Date.now() - sessionStart) / 1000));
         wrap.querySelector(".pmk-pt").textContent = z(Math.floor(secs / 60)) + ":" + z(secs % 60);
+        var sg = wrap.querySelector(".pmk-sunset-glyph"); if (sg) sg.textContent = SUNSET_GLYPH(); // keep phase-correct if the date jumps while open
       }
-      // ── time-of-day chooser ── slider picks an Edmonton hour; Jump writes ?time=HH:00 and
-      // re-runs the auto day/night against it; ↻ clears the override back to the real clock.
+      // ── time-of-day chooser ── dragging the slider writes ?time=HH:00 LIVE and re-runs the
+      // auto day/night against it, so the sky turns in real time; ↻ clears the override back to the real clock.
       function setTimeParam(str) { // mirrors calSetDateParam: set/clear ?time= in place, keep the colon readable
         try {
           var url = new URL(location.href);
@@ -44101,11 +44133,15 @@ async def localfont(name):
       function nowHour() { var ov = timeOv(); return ov != null ? Math.floor(ov / 60) : Math.floor((tzMins("America/Edmonton") || 0) / 60); }
       function updLabel() { tval.textContent = z(+slider.value) + ":00"; var sm = sunMins(); wrap.querySelector(".pmk-sr-t").textContent = fmtMins(sm.sr); wrap.querySelector(".pmk-ss-t").textContent = fmtMins(sm.ss); }
       slider.value = nowHour(); updLabel();
-      slider.addEventListener("input", updLabel);
-      wrap.querySelector(".pmk-jump").addEventListener("click", function () { setTimeParam(z(+slider.value) + ":00"); applyTimeJump(); tick(); });
+      slider.addEventListener("input", function () { setTimeParam(z(+slider.value) + ":00"); applyTimeJump(); updLabel(); tick(); }); // live: the sky turns as you drag
       wrap.querySelector(".pmk-treset").addEventListener("click", function () { setTimeParam(null); applyTimeJump(); slider.value = nowHour(); updLabel(); tick(); });
-      wrap.querySelector(".pmk-sunrise").addEventListener("click", function () { jumpToMins(sunMins().sr); });
-      wrap.querySelector(".pmk-sunset").addEventListener("click", function () { jumpToMins(sunMins().ss); });
+      function jumpAndStepOut(mn) { // jump the clock, then put the phone away and step onto the balcony to watch the sky turn
+        jumpToMins(mn);
+        if (window.__closePhoneModal) window.__closePhoneModal(true);
+        if (window.goToStage) window.goToStage("balcony");
+      }
+      wrap.querySelector(".pmk-sunrise").addEventListener("click", function () { jumpAndStepOut(sunMins().sr); });
+      wrap.querySelector(".pmk-sunset").addEventListener("click", function () { jumpAndStepOut(sunMins().ss); });
       tick();
       if (clockTimer) clearInterval(clockTimer);
       clockTimer = setInterval(tick, 1000);
@@ -64176,6 +64212,7 @@ function spawnDustMote(container) {
       if (!sizdah && window.__untieSabzeh) window.__untieSabzeh();
     }
     if (window.__updateSkyFireworks) window.__updateSkyFireworks(window.currentStageName); // new-year sky follows the preview
+    if (window.__applyMoonPhases) window.__applyMoonPhases(); // the night-sky moons reshape to the date's real phase
   }
   window.__applySeasonDate = applySeasonDate; // re-apply --smoke when late data (real air quality) lands
   applySeasonDate();

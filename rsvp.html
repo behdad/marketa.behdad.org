@@ -63654,8 +63654,27 @@ function spawnDustMote(container) {
     madla: "madla", robert: "madla",
     hamid: "hamid", athena: "hamid"
   };
+  // A birthday whose venue is an office DEVICE (the Tehran video call on the monitor, the
+  // Prague call on the laptop) has to place/connect that call and zoom the device. The
+  // zoom frames the device by reading its LIVE on-screen box, and the connect boots the PC
+  // — both want the office to be the SETTLED current room. When the reveal is fired from
+  // another room (the pocket-phone birthday-text TAP → close() the phone → goToStage) the
+  // room-slide is still in flight and, on the tap path, the phone modal is still tearing
+  // down, so a synchronous connect/zoom resolves against the departing room and strands.
+  // So: go to the office now, but run the device work only once the slide has settled (and
+  // any closing phone modal is gone). Already in the office (the console birthday() path,
+  // which lives on the monitor) → run it immediately, unchanged. A newer reveal cancels a
+  // still-pending one (bdReveal clears the timer up top), so rapid ring-stepping never piles.
+  var bdOfficeTimer = null;
+  function bdOfficeReveal(fn) {
+    var wasOffice = window.currentStageName === "office";
+    if (window.goToStage) window.goToStage("office");
+    if (wasOffice) { fn(); return; }
+    bdOfficeTimer = setTimeout(fn, 720); // one room-slide (.7s) + margin
+  }
   function bdReveal(b) {
     var v = b.venue || "garden";
+    clearTimeout(bdOfficeTimer); bdOfficeTimer = null; // this reveal supersedes any pending office device-work
     if (BD_KID_CAMEO[b.who] || BD_KID_DUO[b.who]) { // a kid → the cuddly-puddly, awake, wearing the hat
       if (window.goToStage) window.goToStage("cuddly");
       if (window.__kidsAsleep && window.__wakeKids) window.__wakeKids(); // wake them so the birthday kid can show
@@ -63668,29 +63687,31 @@ function spawnDustMote(container) {
       return;
     }
     if (v === "tehran") { // Behdad's Tehran family (Ashraf/Mohsen/Baharak/Payman/Hannah) — the hat rides the Tehran video call
-      if (window.goToStage) window.goToStage("office");
       // Already mid-call on the monitor: openFamilyCall would bail (one call at a time), so just pull
       // the view back up — the seat of honour is CSS-keyed on the bd-<who> class showBirthday already
       // set, so this birthday person is behind the cake without re-dialing. Otherwise
       // __openMonitorApp boots the PC if off, zooms the monitor, and deep-links straight to the
       // connected Tehran call (the deep-link places+connects even from a cold start).
-      if (window.__familyCallLive && window.__familyCallLive()) {
-        if (window.__monitorZoomIn) window.__monitorZoomIn();
-      } else if (window.__openMonitorApp) {
-        window.__openMonitorApp("tehran");
-      }
+      bdOfficeReveal(function () {
+        if (window.__familyCallLive && window.__familyCallLive()) {
+          if (window.__monitorZoomIn) window.__monitorZoomIn();
+        } else if (window.__openMonitorApp) {
+          window.__openMonitorApp("tehran");
+        }
+      });
       return;
     }
     if (v === "prague") { // Markéta's parents + Baka — their headwear rides the Prague laptop call
-      if (window.goToStage) window.goToStage("office");
       // Place the Prague call unless it's already live (a live call is the app on-screen; re-dialing
       // would hang it up). __laptopCall only auto-zooms when it has to OPEN the lid, so an already-open
       // lid (call live, or ended-but-still-open) never re-zooms on its own — pull the view up to the
       // laptop unconditionally afterwards, which also covers a lid open but backed out of zoom.
-      if (!(window.__pragueCallLive && window.__pragueCallLive()) && window.__laptopCall) {
-        window.__laptopCall("prague"); // opens the lid (zooming in) and dials Prague
-      }
-      if (window.__laptopZoomIn) window.__laptopZoomIn();
+      bdOfficeReveal(function () {
+        if (!(window.__pragueCallLive && window.__pragueCallLive()) && window.__laptopCall) {
+          window.__laptopCall("prague"); // opens the lid (zooming in) and dials Prague
+        }
+        if (window.__laptopZoomIn) window.__laptopZoomIn();
+      });
       return;
     }
     // The hosts live in the cuddly nook when the party's off (their nook figures wear the

@@ -111,15 +111,16 @@ footer{margin-top:2.6rem}
 /* white "who is this?" popup — the inverse roster: tapping a figure on the floor names them in a
    roster-styled card (paper/ink, not the dark egg bubble) while everyone else freezes for 3s */
 .egg-bubble.who-pop{
-  background:var(--paper); color:var(--muted); border:1px solid var(--rule);
-  box-shadow:0 6px 22px rgba(69,58,49,.28); z-index:23; font-size:.84rem;
+  background:var(--paper); color:var(--ink); border:1px solid var(--rule);
+  box-shadow:0 6px 22px rgba(69,58,49,.28); z-index:23; font-size:1rem;
 }
-.egg-bubble.who-pop em{font-style:normal; font-weight:600; color:var(--ink)}
-/* fun-fact: a subtle second line under a person's name/role/relationship (funFact()) — dimmer,
-   smaller, italic, on its own line so the popup stays readable; works in the dark bubble, the
-   white who-pop card, the call cards, and the roster list. Its own <em>s read as bold non-italic. */
-.tip-fun{display:block; margin-top:.15em; font-size:.85em; opacity:.72; font-style:italic}
-.tip-fun em{font-style:normal; font-weight:600}
+.egg-bubble.who-pop em{font-style:normal; font-weight:700; color:var(--ink)}
+/* fun-fact: a second line under a person's name/role/relationship (funFact()) — its own line so the
+   popup stays readable; works in the dark bubble, the white who-pop card, the call cards, and the roster. */
+.tip-rel{display:block; margin-top:.2em; font-size:.92em; font-style:italic; color:var(--muted)}
+.tip-rel em{font-style:normal; font-weight:700}
+.tip-fun{display:block; margin-top:.2em; font-size:.92em; color:var(--muted)}
+.tip-fun em{font-weight:700}
 /* ── ROSTER PANEL ("who's here") ──────────────────────────────────────────────
    An at-a-glance legend of everyone currently on the garden-party floor — a tidy
    overlay complementing the per-figure hover tooltips + the space-to-freeze inspect.
@@ -22254,7 +22255,7 @@ var T = {
     fun_patricia: "fluffy hair", fun_madla: "plays the guitar", fun_robert: "plays the piano",
     fun_hamid: "Behdad's <em>adopted son</em>", fun_athena: "<em>Zebel-khan</em>",
     fun_ashraf: "also loves backgammon", fun_mohsen: "loves backgammon!", fun_daniel: "repairs churches", fun_marie: "engineer & psychologist",
-    fun_baka: "likes watching sports", fun_sina: "best techno", fun_danesh: "best hair", fun_aspen: "great wedding photographer",
+    fun_baka: "likes watching sports", fun_sina: "best techno", fun_danesh: "best hair", fun_aspen: "best wedding photographer",
     fun_pouria: "the Café Pamenar guy", fun_irene: "learning Python already", fun_robin: "loves dinosaurs", fun_navid: "loves legos",
     fun_elisabeth: "good climber", fun_felix: "likes sports", fun_patricia_son: "loves the <em>Lada</em>", fun_patricia_daughter: "mesmerizing eyes", fun_hannah: "the gymnast",
     roster_title: "who's here?", roster_empty: "The floor's empty — throw the party first.", roster_pick_hint: "tap to point them out on the floor", // "who's here?" roster overlay
@@ -22900,7 +22901,7 @@ var T = {
     fun_patricia: "nadýchané vlasy", fun_madla: "hraje na kytaru", fun_robert: "hraje na klavír",
     fun_hamid: "Behdadův <em>adoptovaný syn</em>", fun_athena: "<em>Zebel-khan</em>",
     fun_ashraf: "taky miluje vrhcáby", fun_mohsen: "miluje vrhcáby!", fun_daniel: "opravuje kostely", fun_marie: "inženýrka a psycholožka",
-    fun_baka: "ráda sleduje sport", fun_sina: "nejlepší techno", fun_danesh: "nejlepší vlasy", fun_aspen: "skvělá svatební fotografka",
+    fun_baka: "ráda sleduje sport", fun_sina: "nejlepší techno", fun_danesh: "nejlepší vlasy", fun_aspen: "nejlepší svatební fotografka",
     fun_pouria: "ten z Café Pamenar", fun_irene: "už se učí Python", fun_robin: "miluje dinosaury", fun_navid: "miluje lego",
     fun_elisabeth: "dobrá lezkyně", fun_felix: "má rád sport", fun_patricia_son: "miluje <em>Ladu</em>", fun_patricia_daughter: "okouzlující oči", fun_hannah: "gymnastka",
     roster_title: "kdo je tady?", roster_empty: "Parket je prázdný — nejdřív rozjeď párty.", roster_pick_hint: "klepnutím ho ukážeš na parketu", // roster překryv „kdo je tady?“
@@ -24166,7 +24167,7 @@ function relLine(key) {
   key = String(key || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
   var l = document.documentElement.lang;
   var t = (T[l] && T[l]["rel_" + key]) || T.en["rel_" + key] || "";
-  return t ? " · " + t : "";
+  return t ? "<span class=\"tip-rel\">" + t + "</span>" : ""; // its own italic line under the name/role
 }
 // a subtle second line under a person's name/role/relationship — a one-liner fun fact, dict-driven
 // (fun_<key>) so it follows a language switch. Same key normalisation as relLine (lowercased, accents
@@ -63595,6 +63596,7 @@ function spawnDustMote(container) {
     var n = SEASON_CYCLE.length, dir = e.shiftKey ? -1 : 1; // + n before the modulo: JS's % goes negative
     applySeasonPreview(SEASON_CYCLE[(SEASON_CYCLE.indexOf(seasonPreview) + dir + n) % n]);
   });
+  window.__seasonStep = function (dir) { var n = SEASON_CYCLE.length; applySeasonPreview(SEASON_CYCLE[(SEASON_CYCLE.indexOf(seasonPreview) + (dir || 1) + n) % n]); return seasonPreview; }; // console season() with no arg advances the ring (like the 's' key)
   // ── the birthday axis: the 'b' key + birthday() console command ────────────
   // Its OWN ring, independent of the seasons: the datable people (Lauren's date is pending,
   // so she sits out) in calendar order, ROTATED to lead with Markéta (Jan 20). Each stop
@@ -66525,14 +66527,16 @@ function spawnDustMote(container) {
     // pick). The popup rides the guest's dance via a follow loop; it's an HTML overlay appended
     // outside #loft-game-strip, so the UV blacklight never tints it.
     function showWhoPop(anchor, html, posEl) {
-      var old = document.querySelector(".egg-bubble.who-pop"); if (old) { if (old._t) clearTimeout(old._t); old.remove(); }
+      var old = document.querySelector(".egg-bubble.who-pop"); if (old) { if (old._t) clearTimeout(old._t); if (old._off) document.removeEventListener("click", old._off, true); old.remove(); }
       // posEl (the enclosing call surface, when given): anchor the card at the surface's lower-left
       // corner instead of over the figure, so a video-call card never covers the birthday hat / the
       // ∞-heart cheer overlay. anchor-contains dismissal still works (the figure sits inside posEl).
       var b = eggBubble(posEl || anchor, html, posEl ? "bottomleft" : "top"); // reuse the bubble's positioning + markup support
       b.classList.add("who-pop"); // ...but paint it white like the roster (see .egg-bubble.who-pop)
       clearTimeout(b._t);
-      b._t = setTimeout(function () { dismissEggBubble(b); }, 3000); // match the 3s spotlight flash
+      b._t = setTimeout(function () { dismissEggBubble(b); }, 10000); // a click card lingers ~10s (was 3s)…
+      b._off = function () { if (b._t) clearTimeout(b._t); document.removeEventListener("click", b._off, true); dismissEggBubble(b); }; // …or dismisses on the next click anywhere (incl. the card itself)
+      setTimeout(function () { document.addEventListener("click", b._off, true); }, 0); // armed on the next tick so the tap that opened it doesn't close it
       // NB: positioned ONCE at tap time and left STATIC — the guest keeps dancing under it, but a
       // bubble that jitters along with the dance is hard to read (owner feedback), so it stays put.
     }
@@ -66654,7 +66658,8 @@ function spawnDustMote(container) {
         var em = document.createElement("em");
         em.textContent = p.name;
         li.appendChild(em);
-        li.appendChild(document.createTextNode((p.role ? " · " + p.role : "") + (p.rel || "")));
+        li.appendChild(document.createTextNode(p.role ? " · " + p.role : ""));
+        if (p.rel) li.insertAdjacentHTML("beforeend", p.rel); // relationship on its own italic .tip-rel line (HTML, may carry <em>)
         if (p.fun) li.insertAdjacentHTML("beforeend", p.fun); // fun-fact on its own dim .tip-fun line (may carry <em>, so HTML not text)
         if (p.sels) { // clickable → single this guest out on the floor
           li.className = "roster-pick";
@@ -67004,7 +67009,7 @@ function spawnDustMote(container) {
   window.season = function (name) {
     if (!window.__applySeason) return "the season hook isn't ready yet.";
     var canon;
-    if (arguments.length === 0) { canon = SEAS[(Math.random() * SEAS.length) | 0]; } // no arg → a surprise
+    if (arguments.length === 0) { if (window.__seasonStep) { window.__seasonStep(1); return "🍂 next season."; } canon = SEAS[(Math.random() * SEAS.length) | 0]; } // no arg → advance the ring (like the 's' key)
     else {
       var sfi = fracToIndex(name, SEAS.length); if (sfi) name = sfi; // random() → a random season
       var key = String(name == null ? "" : name).toLowerCase().trim();

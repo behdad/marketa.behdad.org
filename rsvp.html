@@ -63580,11 +63580,30 @@ function spawnDustMote(container) {
   // Shared apply-path for the 's' key AND the console season(); shows the naming pill.
   // silent=true skips the naming toast (the autoplay loop varies the season every loop and
   // wants no per-loop pill flashing on the kiosk screen — the "auto" badge is enough).
+  // Each season's most-prominent room, so a season change lands its new decor in view. Keyed on
+  // the canonical season name; a season with no dominant decor is absent and holds the current
+  // room (summer dresses nothing — no decor class, no haze, no snow). The outdoor axes all live on
+  // the balcony deck (the two fire-festivals, the fireworks nights, the wildfire haze, the winter
+  // snow against the open sky, the sizdah sabzeh tossed outside, the carved jack-o'-lantern); the
+  // festive dinners + the nook hearts + the just-married ribbon are the cuddly-puddly; the
+  // Christmas tree, the haft-sin, and the pride mast stand in the office; leaves and blossom fill
+  // the garden.
+  var SEASON_ROOM = {
+    wedding: "cuddly", valentines: "cuddly", stedry: "cuddly", xmas: "cuddly",
+    nowruz: "office", pride: "office",
+    autumn: "garden", spring: "garden",
+    chaharshanbe: "balcony", carodejnice: "balcony", newyear: "balcony", canada: "balcony",
+    smoky: "balcony", winter: "balcony", sizdah: "balcony", spooky: "balcony"
+  };
   function applySeasonPreview(name, silent) {
     bdPreview = null; // picking a season leaves the birthday axis (they're mutually exclusive pretend-dates)
     seasonPreview = SEASON_PREVIEW_DATE[name] ? name : null;
     applySeasonDate();
     if (!silent) seasonToast(seasonPreview ? "season_" + seasonPreview : "season_auto");
+    // Only a user-driven change to a named season pans: silent callers (autoplay's per-loop churn,
+    // the cinema reel) drive their own view, the birthday axis never reaches here, and the
+    // null/auto real-date reset stays put.
+    if (!silent && seasonPreview && SEASON_ROOM[seasonPreview] && window.goToStage) window.goToStage(SEASON_ROOM[seasonPreview]);
   }
   window.__applySeason = applySeasonPreview; // console season() drives the same path as 's'
   window.__applySeasonSilent = function (name) { applySeasonPreview(name, true); }; // autoplay: vary the season with no toast

@@ -20,11 +20,8 @@
 //      lingers longest), and that the OFFICE (monitor) and BALCONY (phone) routines each OPEN
 //      SEVERAL apps (spy on window.computer/window.phone calls while those routines run).
 //   4. GHOST CURSOR + PANELS — while a routine with a tapped beat runs, the cinematic ghost cursor
-//      (#cine-cursor.visible) appears; a takeover tears it down (no stranded dot). A panel the show
-//      opens (the who's-here roster) must be closed by the take-over, by the next scene boundary
-//      while it keeps running, and by autoplay(false) — opened by the TEST so none of the three can
-//      pass vacuously. A sampler running across ALL phases also asserts the dot never sits visible
-//      and motionless longer than its idle span (the frozen-pointer defect).
+//      (#cine-cursor.visible) appears; a takeover tears it down (no stranded dot) and closes the
+//      who's-here roster (opened by the TEST first, so it can't pass vacuously).
 //   5. HANDLE A NOTIFICATION — deliver a phone text mid-run (__deliverPhoneMessage) with an
 //      action that pans to a KNOWN room; assert the machine OPENS + CLEARS it (no longer the top
 //      unread) and ACTS on it (the room changes to the message's target). It's an interrupt.
@@ -34,6 +31,11 @@
 //   7. TAKEOVER — __autoplayTakeover exits (keeps idle-resume) and the kiosk drifts back on its
 //      own; then autoplay(false) stops it for good, no drift-back, and a plain synthetic CLICK
 //      afterwards does NOT re-arm / re-start it.
+//   8. PANELS, part 2 — a panel opened while the show RUNS is closed by the show itself (beats are
+//      forced back-to-back and the closing one is counted) and by autoplay(false). Last, because
+//      forcing beats also fires the garden MOMENTS, whose delayed texts would displace phase 5's.
+// Across ALL phases a background sampler asserts the ghost cursor never sits visible and motionless
+// beyond its idle span — the frozen-pointer defect, whose worst stretch was ~95s in the garden.
 // A SECOND, short page load then runs the whole machine under prefers-reduced-motion:reduce (the
 // director drops its `flourish` beats and stretches its waits there, so the branch is real code,
 // not just the cursor helpers snapping): it must still travel and still show the cursor, and must
@@ -66,7 +68,7 @@ var HARNESS = [
   // every phase instead of at one convenient instant. A "frozen" sample is the dot visible at the
   // very same viewport point as the sample before it — which is what a viewer sees as a stuck
   // artifact while a self-navigating beat slides the scene underneath the pointer.
-  "  var _cur={frozen:0,run:0,worst:0,lastPos:null,samples:0,visible:0};",
+  "  var _cur={run:0,worst:0,lastPos:null,samples:0,visible:0};",
   "  setInterval(function(){",
   "    var c=document.getElementById('cine-cursor');",
   "    var vis=!!(c&&c.classList.contains('visible')); var pos=vis?(c.style.transform||'?'):null;",
@@ -145,16 +147,6 @@ var HARNESS = [
   "    report.phase4.cursorGoneAfterTakeover = !cc2;",
 "    report.phase4.ripplesAfterTakeover = document.querySelectorAll('.cine-ripple').length;",
 "    report.phase4.tapMisses = window.__autoplayTapMisses(); report.phase4.verbMisses = window.__autoplayVerbMisses();",             // torn down: element removed
-  // …and the show CLOSES one on its own while it keeps running: drive beats with no waits and count
-  // how many it takes. The old build never closed the roster at all, so this could only ever hang.
-  "    window.autoplay(true); await sleep(400);",
-  "    window.__toggleRoster(true);",
-  "    var stepsToClose=-1;",
-  "    for (var pz=1; pz<=40 && stepsToClose<0; pz++){ window.__autoplayForceStep(); if(!window.__rosterOpen()) stepsToClose=pz; }",
-  "    report.phase4.rosterStepsToClose = stepsToClose;",
-  "    window.autoplay(false); await sleep(200);",
-  "    window.autoplay(true); await sleep(200); window.__toggleRoster(true); window.autoplay(false); await sleep(200);",
-  "    report.phase4.rosterClosedAfterStop = !window.__rosterOpen();",
   // ── Phase 5: notification interrupt ──
   "    window.autoplay(true); await sleep(400);",
   "    window.goToStage('garden'); await sleep(400);",
@@ -204,6 +196,19 @@ var HARNESS = [
   "    if (document.body.click) document.body.click();",
   "    await sleep(1400);",
   "    report.phase7.stillOffAfterClick = !window.__autoplayOn();",
+  // ── Phase 8: a panel the show opens is closed while it KEEPS RUNNING ── drive beats with no
+  // waits and count how many it takes. The old build never closed the roster at all, so this could
+  // only ever run out the loop. It goes LAST: forcing beats back-to-back also fires the garden's
+  // MOMENTS, whose own delayed phone texts would otherwise displace phase 5's notification.
+  "    window.autoplay(true); await sleep(400);",
+  "    window.__toggleRoster(true);",
+  "    var stepsToClose=-1;",
+  "    for (var pz=1; pz<=40 && stepsToClose<0; pz++){ window.__autoplayForceStep(); if(!window.__rosterOpen()) stepsToClose=pz; }",
+  "    report.phase8 = { rosterStepsToClose: stepsToClose };",
+  "    window.autoplay(false); await sleep(200);",
+  // …and a deliberate stop closes one opened while the show was already running.
+  "    window.autoplay(true); await sleep(200); window.__toggleRoster(true); window.autoplay(false); await sleep(200);",
+  "    report.phase8.rosterClosedAfterStop = !window.__rosterOpen();",
   "    report.cursor = { samples:_cur.samples, visible:_cur.visible, worstFrozenMs:_cur.worst*250 };",
   "  }",
   "  window.addEventListener('load',function(){ setTimeout(function(){ run().catch(function(e){window.__errs.push('harness:'+String(e&&e.stack||e));}).then(function(){if(!report.errors.length)report.errors=window.__errs;document.getElementById('__report').textContent=JSON.stringify(report);}); },400); });",
@@ -220,7 +225,7 @@ var r = lib.runPageSync("rsvp.html", HARNESS, 155000, { patchRaf: true });
 if (!r) {
   fail("harness reported (page error before load, or budget too small)");
 } else {
-  var p1 = r.phase1 || {}, p2 = r.phase2 || {}, p3 = r.phase3 || {}, p4 = r.phase4 || {}, p5 = r.phase5 || {}, p6 = r.phase6 || {}, p7 = r.phase7 || {};
+  var p1 = r.phase1 || {}, p2 = r.phase2 || {}, p3 = r.phase3 || {}, p4 = r.phase4 || {}, p5 = r.phase5 || {}, p6 = r.phase6 || {}, p7 = r.phase7 || {}, p8 = r.phase8 || {};
   if (r.fresh) pass("loaded page carries the new director API (assertFresh)");
   else fail("loaded page is stale — no director API", JSON.stringify(r).slice(0, 300));
   // The director self-checks its own authored intent at parse: every room has a builder + a
@@ -276,11 +281,11 @@ if (!r) {
   if (p4.rosterOpenBeforeTakeover && p4.rosterClosedAfterTakeover)
     pass("a panel open during the show is CLOSED by the take-over (nothing stranded for the human)");
   else fail("takeover must close the who's-here roster", JSON.stringify(p4));
-  if (p4.rosterStepsToClose > 0)
-    pass("…the running show closes one itself within " + p4.rosterStepsToClose + " beat(s) (scene-boundary net)");
-  else fail("a panel must not survive a scene boundary", "never closed across 40 forced beats: " + JSON.stringify(p4));
-  if (p4.rosterClosedAfterStop) pass("…and autoplay(false) leaves no panel open either");
-  else fail("stopping autoplay must close the roster", JSON.stringify(p4));
+  if (p8.rosterStepsToClose > 0)
+    pass("…the running show closes one itself within " + p8.rosterStepsToClose + " beat(s) (scene-boundary net)");
+  else fail("a panel must not survive a scene boundary", "never closed across 40 forced beats: " + JSON.stringify(p8));
+  if (p8.rosterClosedAfterStop) pass("…and autoplay(false) leaves no panel open either");
+  else fail("stopping autoplay must close the roster", JSON.stringify(p8));
   // Phase 5 — notification interrupt
   if (p5.deliveredUnread === "invaders") pass("a phone notification was delivered mid-run (unread)");
   else fail("notification delivery", JSON.stringify(p5));

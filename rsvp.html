@@ -67557,12 +67557,14 @@ function spawnDustMote(container) {
   // still dresses the day's real decor around the hat (Dec 7 lands Irene's cone on the
   // holiday tree, both at once, which is the honest answer).
   // ── Persian (Solar Hijri) occasion dates, computed LIVE and ASTRONOMICALLY from the Gregorian year ──
-  // The official Iranian calendar is observational, not arithmetic: Farvardin 1 (Nowruz) is the day the
-  // northward (March) equinox is reckoned to fall on at Iran's reference meridian (52.5°E, i.e. Iran
-  // Standard Time = a fixed UTC+3:30 — Iran abolished DST in 2022). We take the day, in Iran Standard
-  // Time, on which the astronomical equinox instant lands; this reproduces the official/observed date
-  // (e.g. Nowruz 2027 = March 20, which the 33-year jalaali-js arithmetic wrongly rounded to March 21
-  // — the equinox is 2027-03-20 20:24 UTC = 23:54 Iran time, so it is observed on March 20 in Iran).
+  // The official Iranian calendar is observational, not arithmetic: Farvardin 1 (Nowruz) is fixed by
+  // the northward (March) equinox at Iran's reference meridian (52.5°E, i.e. Iran Standard Time = a
+  // fixed UTC+3:30 — Iran abolished DST in 2022), under the TRUE-NOON rule. The equinox day is Nowruz
+  // when the instant falls at or before true (apparent) solar noon there; past it, the NEXT day is.
+  // True noon, not 12:00 on the clock: the equation of time swings a sundial ±15 min off mean time,
+  // and in March it runs ~7½ min slow, so true noon at 52.5°E is around 12:07:30 Iran time. That
+  // margin decides real years — the 2027 equinox is 2027-03-20 20:24 UTC = 23:54 Iran time, hours
+  // past true noon, so Nowruz 2027 is Sunday March 21 (and Sizdah Bedar Friday April 2).
   // Sizdah Bedar is the 13th day of the year (Nowruz + 12); Chaharshanbe Suri is the eve (Tuesday
   // night) of the last Wednesday before Nowruz. All three drift year to year, so every date test
   // derives them from the year in play rather than a fixed Mar/Apr day. The equinox instant comes from
@@ -67609,9 +67611,36 @@ function spawnDustMote(container) {
   }
   window.__yaldaOf = yaldaOf;
   function isYalda(m, d, y) { return pSameDay(yaldaOf(y), m, d); }
-  function nowruzOf(gYear) { // Farvardin 1: the Iran-Standard-Time (UTC+3:30) day the March equinox lands on
-    var iran = new Date(marchEquinoxDate(gYear).getTime() + 3.5 * 3600000);
-    return new Date(iran.getUTCFullYear(), iran.getUTCMonth(), iran.getUTCDate(), 12);
+  // The equation of time (apparent minus mean solar time, in minutes) at a UTC instant — Meeus ch. 25
+  // low-accuracy solar position feeding the ch. 28 formula. Only Nowruz needs it, but it is what makes
+  // "true noon" true: without it the rule is drawn ~7½ min early in March and the day comes out wrong
+  // whenever the equinox lands inside that gap.
+  function equationOfTime(ms) {
+    var D2R = Math.PI / 180;
+    var T = (ms / 86400000 + 2440587.5 - 2451545.0) / 36525;
+    var L0 = 280.46646 + 36000.76983 * T + 0.0003032 * T * T;      // geometric mean longitude
+    var M = (357.52911 + 35999.05029 * T - 0.0001537 * T * T) * D2R; // mean anomaly
+    var C = (1.914602 - 0.004817 * T - 0.000014 * T * T) * Math.sin(M)
+          + (0.019993 - 0.000101 * T) * Math.sin(2 * M) + 0.000289 * Math.sin(3 * M); // equation of the centre
+    var Om = (125.04 - 1934.136 * T) * D2R;
+    var lam = (L0 + C - 0.00569 - 0.00478 * Math.sin(Om)) * D2R;   // apparent longitude
+    var e0 = 23 + (26 + (21.448 - 46.8150 * T - 0.00059 * T * T + 0.001813 * T * T * T) / 60) / 60;
+    var eps = (e0 + 0.00256 * Math.cos(Om)) * D2R;
+    var ra = Math.atan2(Math.cos(eps) * Math.sin(lam), Math.cos(lam)) / D2R; // apparent right ascension
+    var E = L0 - 0.0057183 - ra - 0.00478 * Math.sin(Om) * Math.cos(eps);
+    return (((E + 180) % 360 + 360) % 360 - 180) * 4; // folded to ±180°, degrees → minutes of time
+  }
+  var IRAN_MERIDIAN_MS = 52.5 / 15 * 3600000; // 52.5°E as an hour angle: Iran Standard Time's own meridian
+  function iranTrueNoon(y, mo, da) { // UTC instant of true solar noon at 52.5°E on that Iran-local day
+    var meanNoon = Date.UTC(y, mo, da, 12) - IRAN_MERIDIAN_MS;
+    return meanNoon - equationOfTime(meanNoon) * 60000;
+  }
+  function nowruzOf(gYear) { // Farvardin 1: the equinox day at 52.5°E, or the next if it falls past true noon
+    var eq = marchEquinoxDate(gYear);
+    var iran = new Date(eq.getTime() + 3.5 * 3600000);
+    var y = iran.getUTCFullYear(), mo = iran.getUTCMonth(), da = iran.getUTCDate();
+    if (eq.getTime() > iranTrueNoon(y, mo, da)) da += 1; // Date rolls the month/year for us
+    return new Date(y, mo, da, 12);
   }
   window.__nowruzOf = nowruzOf;
   var _persianCache = {};

@@ -554,6 +554,60 @@ var PROBE_HARNESS = [
   "</script>"
 ].join("\n");
 
+// ── Persian occasion dates harness ──────────────────────────────────────────
+// Read-only: asks the page for its computed Nowruz / Sizdah Bedar / Chaharshanbe
+// Suri / Yalda across a span of years and hands them back as local y-m-d.
+var PERSIAN_HARNESS = [
+  '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
+  "<script>",
+  "(function () {",
+  "  var report = { errors: [], years: {} };",
+  "  function finish() { report.errors = window.__errs; document.getElementById('__report').textContent = JSON.stringify(report); }",
+  "  function iso(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }",
+  "  function run() {",
+  "    if (typeof window.__persianOcc !== 'function' || typeof window.__yaldaOf !== 'function') {",
+  "      window.__errs.push('harness: __persianOcc/__yaldaOf missing');",
+  "      return;",
+  "    }",
+  "    for (var y = 2024; y <= 2035; y += 1) {",
+  "      var p = window.__persianOcc(y);",
+  "      report.years[y] = {",
+  "        nowruz: iso(p.nowruz), sizdah: iso(p.sizdah), chaharshanbe: iso(p.chaharshanbe),",
+  "        chDay: p.chaharshanbe.getDay(), yalda: iso(window.__yaldaOf(y)),",
+  "        nowruzOf: iso(window.__nowruzOf(y))",
+  "      };",
+  "    }",
+  "  }",
+  "  window.addEventListener('load', function () {",
+  "    setTimeout(function () {",
+  "      try { run(); } catch (e) { window.__errs.push('harness: ' + String(e && e.stack || e)); }",
+  "      finish();",
+  "    }, 200);",
+  "  });",
+  "})();",
+  "</script>"
+].join("\n");
+
+// The observed Iranian dates, as the true-noon rule at 52.5°E yields them (cross-checked
+// against the official Nowruz days for 2020–2030 and against ICU's Persian calendar).
+// Yalda is here to PIN it: it hangs off the December solstice and must never move when the
+// Nowruz rule changes. Chaharshanbe shifts a whole week only when the last Wednesday before
+// Nowruz crosses (2030), which is why it can sit still while Nowruz moves (2025–27).
+var PERSIAN_EXPECT = {
+  2024: { nowruz: "2024-03-20", sizdah: "2024-04-01", chaharshanbe: "2024-03-12", yalda: "2024-12-20" },
+  2025: { nowruz: "2025-03-21", sizdah: "2025-04-02", chaharshanbe: "2025-03-18", yalda: "2025-12-20" },
+  2026: { nowruz: "2026-03-21", sizdah: "2026-04-02", chaharshanbe: "2026-03-17", yalda: "2026-12-21" },
+  2027: { nowruz: "2027-03-21", sizdah: "2027-04-02", chaharshanbe: "2027-03-16", yalda: "2027-12-21" },
+  2028: { nowruz: "2028-03-20", sizdah: "2028-04-01", chaharshanbe: "2028-03-14", yalda: "2028-12-20" },
+  2029: { nowruz: "2029-03-20", sizdah: "2029-04-01", chaharshanbe: "2029-03-13", yalda: "2029-12-20" },
+  2030: { nowruz: "2030-03-21", sizdah: "2030-04-02", chaharshanbe: "2030-03-19", yalda: "2030-12-20" },
+  2031: { nowruz: "2031-03-21", sizdah: "2031-04-02", chaharshanbe: "2031-03-18", yalda: "2031-12-21" },
+  2032: { nowruz: "2032-03-20", sizdah: "2032-04-01", chaharshanbe: "2032-03-16", yalda: "2032-12-20" },
+  2033: { nowruz: "2033-03-20", sizdah: "2033-04-01", chaharshanbe: "2033-03-15", yalda: "2033-12-20" },
+  2034: { nowruz: "2034-03-21", sizdah: "2034-04-02", chaharshanbe: "2034-03-14", yalda: "2034-12-20" },
+  2035: { nowruz: "2035-03-21", sizdah: "2035-04-02", chaharshanbe: "2035-03-13", yalda: "2035-12-21" }
+};
+
 // ── node-side driver ─────────────────────────────────────────────────────────
 var failures = 0;
 function pass(msg) { console.log("  ✓ " + msg); }
@@ -569,8 +623,9 @@ function fail(msg, detail) {
   if (!ONLY || "cascade".indexOf(ONLY) === 0) jobs.cascade = lib.runPage("rsvp.html", CASCADE_HARNESS, 9000, CHROME_OPTS);
   if (!ONLY || "gates".indexOf(ONLY) === 0) jobs.gates = lib.runPage("rsvp.html", GATES_HARNESS, 12000, CHROME_OPTS);
   if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 17000, CHROME_OPTS);
+  if (!ONLY || "persian".indexOf(ONLY) === 0) jobs.persian = lib.runPage("rsvp.html", PERSIAN_HARNESS, 9000, CHROME_OPTS);
   if (!Object.keys(jobs).length) {
-    fail("unknown --only value: " + ONLY + " (use cascade|gates|probes)");
+    fail("unknown --only value: " + ONLY + " (use cascade|gates|probes|persian)");
   }
   var names = Object.keys(jobs);
   var results = {};
@@ -628,6 +683,38 @@ function fail(msg, detail) {
       var diff = p.resetDiff.filter(function (d) { return RESET_DIFF_ALLOW.indexOf(d) === -1; });
       if (diff.length === 0) pass("reset: strip class-state matches the load snapshot (no stranded classes)");
       else fail("reset: stranded class-state diffs vs load snapshot", diff.slice(0, 25).join("\n") + (diff.length > 25 ? "\n... and " + (diff.length - 25) + " more" : ""));
+    }
+  }
+
+  if (results.persian !== undefined) {
+    var pe = results.persian;
+    if (!pe) {
+      fail("persian harness reported (page error before load, or budget too small)");
+    } else {
+      if (pe.errors.length) fail("persian: no uncaught JS errors", pe.errors.slice(0, 12).join("\n"));
+      else pass("persian: no uncaught JS errors");
+      var dateBad = [], tueBad = [], sizBad = [], yaldaBad = [], years = Object.keys(PERSIAN_EXPECT);
+      years.forEach(function (y) {
+        var got = pe.years[y], want = PERSIAN_EXPECT[y];
+        if (!got) { dateBad.push(y + ": no result from the page"); return; }
+        ["nowruz", "sizdah", "chaharshanbe"].forEach(function (k) {
+          if (got[k] !== want[k]) dateBad.push(y + " " + k + ": got " + got[k] + ", want " + want[k]);
+        });
+        if (got.yalda !== want.yalda) yaldaBad.push(y + ": got " + got.yalda + ", want " + want.yalda);
+        if (got.chDay !== 2) tueBad.push(y + ": " + got.chaharshanbe + " is day " + got.chDay + ", not Tuesday");
+        var n = new Date(got.nowruz + "T12:00:00Z"), s = new Date(got.sizdah + "T12:00:00Z");
+        if ((s - n) / 864e5 !== 12) sizBad.push(y + ": " + got.nowruz + " → " + got.sizdah);
+        if (got.nowruzOf !== got.nowruz) dateBad.push(y + ": __nowruzOf disagrees with __persianOcc.nowruz");
+      });
+      if (dateBad.length === 0) pass("persian: Nowruz / Sizdah / Chaharshanbe match the true-noon rule at 52.5°E, " + years[0] + "–" + years[years.length - 1]);
+      else fail("persian: computed occasion dates drifted", dateBad.slice(0, 12).join("\n"));
+      // Yalda hangs off the DECEMBER SOLSTICE, not off Nowruz — a Nowruz-rule change must not move it.
+      if (yaldaBad.length === 0) pass("persian: Yalda still tracks the December solstice (unmoved)");
+      else fail("persian: Yalda moved — it must stay independent of nowruzOf", yaldaBad.join("\n"));
+      if (tueBad.length === 0) pass("persian: Chaharshanbe Suri always falls on a Tuesday evening");
+      else fail("persian: Chaharshanbe Suri left Tuesday", tueBad.join("\n"));
+      if (sizBad.length === 0) pass("persian: Sizdah Bedar is always Nowruz + 12");
+      else fail("persian: Sizdah Bedar is not Nowruz + 12", sizBad.join("\n"));
     }
   }
 

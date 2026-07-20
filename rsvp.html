@@ -48670,6 +48670,21 @@ function spawnCrystalSparkle() {
   // ── shared teardown ── room-leave / party-off / night-off / reset all call this
   window.__stopBalconySky = function () { fwStop(); lantStop(); };
   window.addEventListener("pagehide", function () { fwStop(); lantStop(); });
+  // Occasionally auto-launch a fireworks burst or a lantern release on their own while you're on the
+  // balcony during a night party — one self-rescheduling timer, crickets-gated so a hidden/unfocused
+  // tab never fires (nothing accumulates; the shows self-tear-down on room-leave/reset).
+  (function autoSky() {
+    var t = null;
+    function want() { return !!window.__gardenPartyOn && window.currentStageName === "balcony" && !document.hidden && document.hasFocus(); }
+    function tick() {
+      t = setTimeout(function () {
+        t = null;
+        if (want()) { if (Math.random() < 0.5) window.__releaseLanterns(); else window.__startFireworks(); }
+        tick();
+      }, 55000 + Math.random() * 80000); // ~55–135s between attempts; the balcony gate skips most
+    }
+    tick();
+  })();
 
   // ── soft crackle/boom SFX (crickets rule; shared SFX context, no new AudioContext) ──
   // A firework boom is an autonomous, timer-reached one-shot, so it obeys the crickets rule

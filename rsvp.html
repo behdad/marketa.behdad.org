@@ -46313,7 +46313,7 @@ async def localfont(name):
       if (act === "lanterns") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__setDayNight) window.__setDayNight(true); if (window.__releaseLanterns) window.__releaseLanterns(); }, 760); return; } // pan to the balcony, set night, then release wish-lanterns
       if (act === "magicbox") { if (window.goToStage) window.goToStage("garden"); setTimeout(function () { if (window.__drugsboxTap) window.__drugsboxTap(); }, 760); return; } // pan to the garden, then tap the magic box (date lock the first time)
       if (act === "flair") { if (window.goToStage) window.goToStage("kitchen"); setTimeout(function () { if ((!window.__barUpNow || !window.__barUpNow()) && window.__setDayNight) window.__setDayNight(true); if (window.__startFlairCatch) window.__startFlairCatch(); }, 720); return; } // pan to the bar (raise it if needed), then launch Flair-Catch
-      if (act === "rsvp") { if (window.goToStage) window.goToStage("balcony"); if (window.__showRsvpNudge) window.__showRsvpNudge("rsvp_exit"); return; }
+      if (act === "rsvp") { if (window.goToStage) window.goToStage("balcony"); if (window.__showRsvpNudge) window.__showRsvpNudge("rsvp_exit"); if (window.__openRsvpMail) window.__openRsvpMail(); return; }
       if (act === "games") { if (window.goToStage) window.goToStage("office"); setTimeout(function () { if (window.computer && !window.computer()) window.computer(true); else if (window.__toggleMonitorZoom) window.__toggleMonitorZoom(); }, 420); return; }
       // friend-duo "are you home?" → answering pans to the cuddly nook and brings that PAIR in to
       // visit (the #cuddly-visitors mechanism). Suppressed on meal days by __cuddlyVisit's own gate.
@@ -68458,14 +68458,18 @@ function spawnDustMote(container) {
       body: encodeURIComponent(d.rsvp_email_body)
     };
   }
-  if (gmailBtn) gmailBtn.addEventListener("click", function () {
+  function openRsvpGmail() {
     var sb = rsvpSubjectBody();
-    window.open("https://mail.google.com/mail/?view=cm&fs=1&to=marketa@behdad.org&su=" + sb.subject + "&body=" + sb.body, "_blank");
-  });
-  if (mailBtn) mailBtn.addEventListener("click", function () {
+    try { window.open("https://mail.google.com/mail/?view=cm&fs=1&to=marketa@behdad.org&su=" + sb.subject + "&body=" + sb.body, "_blank"); } catch (e) {}
+  }
+  function openRsvpMailto() {
     var sb = rsvpSubjectBody();
-    window.location.href = "mailto:marketa@behdad.org?subject=" + sb.subject + "&body=" + sb.body;
-  });
+    try { window.location.href = "mailto:marketa@behdad.org?subject=" + sb.subject + "&body=" + sb.body; } catch (e) {}
+  }
+  window.__openRsvpMail = openRsvpMailto; // native mail client, pre-filled with the RSVP template (same source as the out-of-game RSVP buttons)
+  window.__openRsvpGmail = openRsvpGmail;
+  if (gmailBtn) gmailBtn.addEventListener("click", openRsvpGmail);
+  if (mailBtn) mailBtn.addEventListener("click", openRsvpMailto);
 })();
 (function () {
   // ── Loose-brick HINT dispenser ─────────────────────────────────────────────

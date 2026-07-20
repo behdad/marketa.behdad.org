@@ -45961,13 +45961,13 @@ async def localfont(name):
         msgBadgeEl.addEventListener("click", function () { open(true); openApp("messages", "app_messages", renderMessages); });
       }
       if (msgBadgeEl.parentNode !== host) host.appendChild(msgBadgeEl);
-      if (n > 0 && !isOpen()) { msgBadgeEl.textContent = String(n); msgBadgeEl.setAttribute("aria-label", n + " unread — " + tr("app_messages")); msgBadgeEl.classList.add("show"); } // hidden while the phone's open (the thread shows unread itself)
+      if (n > 0 && !isOpen()) { msgBadgeEl.textContent = "∞"; msgBadgeEl.setAttribute("aria-label", n + " unread — " + tr("app_messages")); msgBadgeEl.classList.add("show"); } // the couple's signature ∞ stands in for the count (aria-label keeps the real number); hidden while the phone's open
       else msgBadgeEl.classList.remove("show");
       // the balcony scene's in-world phone shows the same outstanding-unread count on its red badge
       var balBadge = document.getElementById("balcony-phone-badge");
       if (balBadge) {
         var bt = balBadge.querySelector("text");
-        if (bt) bt.textContent = n > 9 ? "9+" : String(n);
+        if (bt) bt.textContent = "∞"; // the couple's signature ∞ instead of a number
         balBadge.style.display = (n > 0 && !isOpen()) ? "" : "none";
       }
     }
@@ -45985,7 +45985,8 @@ async def localfont(name):
       }
     }
     // once the thread gets busy (20+), space autonomous drips out progressively so texts don't pile up
-    function msgDripSlowFactor() { return messagesThread.length >= 20 ? (2 + (messagesThread.length - 20) * 0.2) : 1; }
+    function msgDripSlowFactor() { return unreadCount() >= 4 ? 2.5 : 1; } // 4+ unread piling up → space new texts way out
+    function autonomousMsgOk() { return unreadCount() < 8; } // 8 unread → hold all autonomous texts until the user reads some
     window.__deliverPhoneMessage = function (id) {
       if (!MESSAGES[id] || messagesThread.indexOf(id) !== -1) return; // unknown, or already received (fire once)
       var m = MESSAGES[id];
@@ -46049,7 +46050,7 @@ async def localfont(name):
       if (cueTimer || !window.__gardenPartyOn || !cueRemaining().length) return;
       cueTimer = setTimeout(function () {
         cueTimer = null;
-        if (window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic) {
+        if (window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic && autonomousMsgOk()) {
           var rem = cueRemaining();
           if (rem.length) window.__deliverPhoneMessage(rem[Math.floor(Math.random() * rem.length)]); // a random un-sent cue
         }
@@ -46069,7 +46070,7 @@ async def localfont(name):
       if (dayTimer || !dayRemaining().length) return;
       dayTimer = setTimeout(function () {
         dayTimer = null;
-        if (isDayNow() && !window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic) {
+        if (isDayNow() && !window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic && autonomousMsgOk()) {
           var rem = dayRemaining();
           if (rem.length) window.__deliverPhoneMessage(rem[Math.floor(Math.random() * rem.length)]);
         }
@@ -46165,7 +46166,7 @@ async def localfont(name):
       if (madlaTimer) return;
       madlaTimer = setTimeout(function () {
         madlaTimer = null;
-        if (isDayNow() && !window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic && !callee && !anyExternalCall() && !isOpen() && !callRingUp()) {
+        if (isDayNow() && !window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic && !callee && !anyExternalCall() && !isOpen() && !callRingUp() && autonomousMsgOk()) {
           ringMadla();
         }
         scheduleMadla(); // keep polling — she calls again another day (another window) if this one's skipped

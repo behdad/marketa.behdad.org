@@ -3031,6 +3031,42 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .console-caret{display:inline-block; width:0.4px; height:1.6px; background:#8fd070; opacity:0; pointer-events:none} /* inline-block bottom = the text baseline, by layout — no pixel math to drift */
 .console-row:focus-within .console-caret{opacity:1; animation:console-caret-blink 1.1s step-end infinite}
 @keyframes console-caret-blink{0%,49%{opacity:1} 50%,100%{opacity:0}}
+/* ── DROP-DOWN TERMINAL (Quake console) ──────────────────────────────────────────
+   A scene-agnostic REPL panel that lives INSIDE .hunt-viewport (so it rides fullscreen)
+   and slides down from the top edge over whatever room is showing. Toggled by the
+   backtick key; Esc closes. Plain HTML overlay — NOT the scaled in-world office monitor —
+   so the WebKit foreignObject RenderLayer caveats don't apply here; a position/transform
+   layer is safe. Deliberately NO mask-image (a RenderLayer that vanished under the monitor
+   scale on WebKit — see .console-out). Full-size, readable text, unlike the 2px monitor
+   console: the sizing below wins over the shared .console-out/.console-in monitor rules. */
+#dropterm{
+  position:absolute; left:0; right:0; top:0; z-index:60;
+  max-height:48%; display:flex; flex-direction:column;
+  background:rgba(24,20,16,.96); color:#e9e2d3;
+  font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; line-height:1.5;
+  border-bottom:2px solid var(--wine, #8e3a4a);
+  box-shadow:0 6px 18px rgba(0,0,0,.38);
+  transform:translateY(-102%); transition:transform .22s cubic-bezier(.4,.9,.3,1);
+  pointer-events:none;
+}
+#dropterm.open{transform:translateY(0); pointer-events:auto}
+#dropterm #dropterm-out, html.is-webkit #dropterm #dropterm-out{
+  flex:1 1 auto; min-height:0; height:auto; padding:8px 12px 4px;
+  overflow-y:auto; white-space:pre-wrap; word-break:break-word;
+  display:block; justify-content:normal; /* undo the WebKit .console-out flex-end clamp (that's for the 12-line monitor scrollback, not this full-size pane) */
+  scrollbar-width:thin; scrollbar-color:rgba(233,226,211,.4) transparent;
+}
+#dropterm-out::-webkit-scrollbar{width:8px}
+#dropterm-out::-webkit-scrollbar-thumb{background:rgba(233,226,211,.35); border-radius:4px}
+#dropterm-out .console-dim{color:#9fb79f}
+#dropterm-out .console-err{color:#e79a9a}
+#dropterm-row{flex:none; display:flex; align-items:baseline; gap:6px; padding:5px 12px 8px; border-top:1px solid rgba(233,226,211,.12)}
+#dropterm-row .console-ps{color:#8fd070; font-size:13px}
+#dropterm-in{
+  flex:1; min-width:0; background:transparent; border:none; outline:none; padding:0;
+  color:#f4efe4; font:inherit; height:auto; line-height:1.5; caret-color:#8fd070;
+}
+@media (max-width:760px){ #dropterm{font-size:11px} #dropterm-row .console-ps{font-size:11px} }
 /* mail app: a tiny three-message inbox over the screen (list view → reading view) */
 #monitor-mail{opacity:0; pointer-events:none; transition:opacity .25s ease}
 #office-monitor.show-mail #monitor-mail{opacity:1; pointer-events:auto}
@@ -21532,6 +21568,15 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
     <!-- autoplay (attract-mode) badge: a quiet "auto" pill shown while the self-driving
          BBQ loop runs. .show is toggled by the autoplay supervisor; label is i18n'd. -->
     <div id="autoplay-badge" aria-hidden="true"><span class="ap-dot"></span><span data-i="autoplay_badge">auto</span></div>
+    <!-- DROP-DOWN TERMINAL (Quake console): a scene-agnostic REPL that slides down from the
+         top of the viewport over whatever room you're in, toggled by the backtick key. It is
+         a plain HTML overlay (not the scaled in-world office monitor), so no WebKit
+         foreignObject caveats apply. It reuses the shared command interpreter — see
+         consoleRun(line, ctx) / the DROP-DOWN TERMINAL block in the script. -->
+    <div id="dropterm" aria-hidden="true" aria-label="Drop-down console">
+      <div id="dropterm-out" class="console-out" role="log" aria-live="polite"></div>
+      <div id="dropterm-row"><span class="console-ps" aria-hidden="true">&#10095;</span><input id="dropterm-in" class="console-in" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Console input"/></div>
+    </div>
   </div>
   <div class="hunt-right" id="hunt-right">
     <div class="hunt-side" id="hunt-side">
@@ -22291,7 +22336,7 @@ var T = {
     kbd_party: "throw the garden party",
     kbd_u: "toggle the UV / blacklight",
     kbd_arrows: "previous / next room",
-    kbd_console: "open the console",
+    kbd_console: "drop down the console",
     kbd_digits: "jump to a room",
     kbd_devices: "monitor / laptop / cellphone",
     kbd_enter: "activate main scene feature",
@@ -22895,7 +22940,7 @@ var T = {
     kbd_party: "spustit zahradní večírek",
     kbd_u: "přepnout UV / černé světlo",
     kbd_arrows: "předchozí / další místnost",
-    kbd_console: "otevřít konzoli",
+    kbd_console: "vysunout konzoli",
     kbd_digits: "skok do místnosti",
     kbd_devices: "monitor / notebook / telefon",
     kbd_enter: "aktivovat hlavní prvek scény",
@@ -34105,8 +34150,10 @@ var ABANDONED_CALL_MS = 30000;
   // A headphones click while the PC is off asks the boot to finish on the music player
   // instead of the desktop (see __bootToMusic below).
   var pendingBootMusic = false;
-  // The '`' keyboard shortcut (see __whiskToConsole below) asks a fresh boot to finish
-  // by opening the console on the caps desktop instead of just landing on it.
+  // __whiskToConsole (below) asks a fresh boot to finish by opening the in-world monitor
+  // console on the caps desktop instead of just landing on it. (Backtick no longer whisks —
+  // it toggles the scene-agnostic drop-down terminal instead; __whiskToConsole is kept for
+  // the boot/restore path other callers reuse.)
   var pendingBootConsole = false;
   // A console device-command — computer("doom")/monitor("weather") — asks a fresh boot to
   // finish by opening a named dock app on the caps desktop (see __openMonitorApp below).
@@ -35570,6 +35617,7 @@ var ABANDONED_CALL_MS = 30000;
   // Normalize deltaMode (0=px · 1=lines · 2=pages) so a notch-wheel and a trackpad both feel gentle.
   // Applies to all three terminals (console + python + linux); consumes only a tick that scrolled.
   [].forEach.call(document.querySelectorAll(".console-out"), function (box) {
+    if (box.id === "dropterm-out") return; // the drop-down terminal is full-size with normal-size text — it wants native wheel scrolling, not the tiny-line 10% throttle
     box.addEventListener("wheel", function (e) {
       var unit = e.deltaMode === 1 ? 14 : (e.deltaMode === 2 ? box.clientHeight : 1);
       var before = box.scrollTop;
@@ -35627,14 +35675,21 @@ var ABANDONED_CALL_MS = 30000;
     var glyph = dockGlyphEls.console;
     if (glyph && glyph.textContent !== "❯_") glyph.textContent = "❯_";
   }
+  // Which scrollback a print lands in. Defaults to the monitor console's own out element,
+  // but consoleRun() re-points it (to whichever surface issued the command) for the length
+  // of that command — synchronously, and again inside its Promise callbacks — so the SAME
+  // interpreter can drive the drop-down terminal's scrollback too. All the bare
+  // consolePrint() call sites keep working unchanged; they follow whoever's active.
+  var activeConsoleOut = consoleOut;
   function consolePrint(txt, cls) {
-    if (!consoleOut) return;
+    var box = activeConsoleOut;
+    if (!box) return;
     var d = document.createElement("div");
     if (cls) d.className = cls;
     d.textContent = txt;
-    consoleOut.appendChild(d);
-    while (consoleOut.childNodes.length > 150) consoleOut.removeChild(consoleOut.firstChild);
-    consoleOut.scrollTop = consoleOut.scrollHeight;
+    box.appendChild(d);
+    while (box.childNodes.length > 150) box.removeChild(box.firstChild);
+    box.scrollTop = box.scrollHeight;
   }
   // Side-channel so the console-toy commands (defined in another IIFE) can still show their
   // cute status line while returning a plain bool for scripting: they print here as a
@@ -35863,14 +35918,30 @@ var ABANDONED_CALL_MS = 30000;
     exit: "exit — spoiler: you can't"
   };
 
-  function consoleRun(cmd) {
+  // The one shared command interpreter. Both terminals call it: the monitor console with no
+  // ctx (defaults below → its own out/history/clear/quit), the drop-down passing its own
+  // surface via ctx {out, hist, onClear, onQuit, isMonitor:false}. ctx.out is installed as
+  // activeConsoleOut for the whole command AND re-installed inside the async Promise path,
+  // so every consolePrint — sync or settled-later — lands in the surface that typed it.
+  function consoleRun(cmd, ctx) {
+    ctx = ctx || { out: consoleOut, hist: consoleHist, isMonitor: true,
+                   onClear: function () { if (consoleOut) consoleOut.innerHTML = ""; },
+                   onQuit: function () { if (window.__shutdownConsole) window.__shutdownConsole(); else closeConsole(); } };
+    var prevOut = activeConsoleOut;
+    activeConsoleOut = ctx.out || consoleOut;
     consolePrint("❯ " + cmd);
     var c = cmd.trim();
-    if (!c) return;
-    consoleHist.push(cmd); consoleHistIdx = consoleHist.length;
-    consoleLastCmd = c;
-    updateConsoleTile();
-    if (/^clear(\(\))?$/.test(c)) { if (consoleOut) consoleOut.innerHTML = ""; consoleLastCmd = ""; updateConsoleTile(); return; }
+    if (!c) { activeConsoleOut = prevOut; return; }
+    var hist = ctx.hist || consoleHist;
+    hist.push(cmd); if (ctx.setHistIdx) ctx.setHistIdx(hist.length); else consoleHistIdx = hist.length;
+    if (ctx.isMonitor) { consoleLastCmd = c; updateConsoleTile(); }
+    if (/^clear(\(\))?$/.test(c)) { if (ctx.onClear) ctx.onClear(); if (ctx.isMonitor) { consoleLastCmd = ""; updateConsoleTile(); } activeConsoleOut = prevOut; return; }
+    // The whole rest of the interpreter runs inside a try/finally so EVERY early `return`
+    // path restores activeConsoleOut to the prior surface — the drop-down never leaves the
+    // print target hijacked for a later autonomous timer print. (The async eval Promise
+    // re-points independently; see its .then below, which captures ctx.out.)
+    var __capturedOut = activeConsoleOut;
+    try {
     if (/^laser(\(\))?$/.test(c)) {
       if (window.__laserPointer) window.__laserPointer();
       consolePrint(consoleT("console_laser"), "console-dim");
@@ -35960,7 +36031,7 @@ var ABANDONED_CALL_MS = 30000;
     }
     if (/^whoami$/.test(c)) { consolePrint("someone we love.", "console-dim"); return; }
     if (/^sudo\b/.test(c)) { consolePrint("nice try — no superpowers at this wedding. everyone's equal on the guest list.", "console-dim"); return; }
-    if (/^(exit|quit)(\(\))?$/.test(c)) { if (window.__shutdownConsole) window.__shutdownConsole(); else closeConsole(); return; } // quiet shutdown (refresh + close, no kill screen)
+    if (/^(exit|quit)(\(\))?$/.test(c)) { if (ctx.onQuit) ctx.onQuit(); else if (window.__shutdownConsole) window.__shutdownConsole(); else closeConsole(); return; } // quiet shutdown (refresh + close, no kill screen)
     if (/^date$/.test(c)) { consolePrint((window.loft ? window.loft.weddings.join(" · ") : ""), "console-dim"); return; }
     if (/^echo(\s|$)/.test(c)) { consolePrint(c.replace(/^echo\s?/, "")); return; }
     // bare `cat` (or `cat -flags`) prints a cat; `cat <room>` describes a room; `cat(...)` falls
@@ -36107,13 +36178,17 @@ var ABANDONED_CALL_MS = 30000;
       }
       var out = window.eval(src); // indirect eval -> global scope, so var/function persist across commands
       if (out && typeof out.then === "function") { // a Promise (shape(), await-y toys): print when it settles
-        out.then(function (v) { consolePrint(fmtOut(v)); }, function (err) { consolePrint(errOut(err), "console-err"); });
+        // settles in a LATER task, after activeConsoleOut has been restored — so re-point it
+        // to the surface that typed this command, print, then hand it back.
+        out.then(function (v) { var p = activeConsoleOut; activeConsoleOut = __capturedOut; consolePrint(fmtOut(v)); activeConsoleOut = p; },
+                 function (err) { var p = activeConsoleOut; activeConsoleOut = __capturedOut; consolePrint(errOut(err), "console-err"); activeConsoleOut = p; });
         return;
       }
       consolePrint(fmtOut(out));
     } catch (e) {
       consolePrint(errOut(e), "console-err");
     }
+    } finally { activeConsoleOut = prevOut; } // restore the print target no matter which return path fired
   }
   // iOS auto-zooms the page when a focused input's font-size is under 16px — which the
   // 4.6px REPL input always is. maximum-scale=1 suppresses only that auto-zoom on iOS
@@ -36153,8 +36228,10 @@ var ABANDONED_CALL_MS = 30000;
     }
     return p;
   }
-  function consoleTabComplete() {
-    if (!consoleIn) return;
+  function consoleTabComplete(inEl) {
+    inEl = inEl || consoleIn;                                   // default: the monitor console's input; the drop-down passes its own
+    if (!inEl) return;
+    var consoleIn = inEl;                                       // shadow so the body below reads/writes the passed field
     var val = consoleIn.value, caret = consoleIn.selectionStart;
     if (caret == null) caret = val.length;
     if (caret !== val.length) return;                          // only complete at the end of the line
@@ -36194,6 +36271,70 @@ var ABANDONED_CALL_MS = 30000;
   if (consoleCloseBtn) {
     consoleCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeConsole(); playLaptopClickSound("office-monitor"); });
     consoleCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+  // ── DROP-DOWN TERMINAL (Quake console) ─────────────────────────────────────────────
+  // A scene-agnostic terminal that slides down from the top of .hunt-viewport over whatever
+  // room you're in, toggled by the backtick key (see the keydown handler). It is NOT the
+  // in-world office monitor — it's a plain HTML overlay in the viewport, so none of the
+  // WebKit scaled-foreignObject caveats apply. It REUSES the same interpreter: every line
+  // typed here runs through consoleRun(line, ctx) with ctx pointing at THIS surface's
+  // scrollback/history/clear/quit, and Tab runs the shared consoleTabComplete on this input.
+  // Its own scrollback, history, and welcome are self-contained; nothing accumulates.
+  var dtPanel = document.getElementById("dropterm");
+  var dtOut   = document.getElementById("dropterm-out");
+  var dtIn    = document.getElementById("dropterm-in");
+  var dtHist = [], dtHistIdx = 0, dtWelcomed = false;
+  var dtCtx = {
+    out: dtOut, hist: dtHist, isMonitor: false,
+    setHistIdx: function (n) { dtHistIdx = n; },
+    onClear: function () { if (dtOut) dtOut.innerHTML = ""; },
+    onQuit: function () { closeDropTerm(); }
+  };
+  function dtOpen() { return !!(dtPanel && dtPanel.classList.contains("open")); }
+  function openDropTerm() {
+    if (!dtPanel || dtOpen()) return;
+    dtPanel.classList.add("open");
+    dtPanel.setAttribute("aria-hidden", "false");
+    if (!dtWelcomed) { dtWelcomed = true; var prev = activeConsoleOut; activeConsoleOut = dtOut; consolePrint(consoleT("console_welcome"), "console-dim"); activeConsoleOut = prev; }
+    if (dtIn) setTimeout(function () { try { dtIn.focus({ preventScroll: true }); } catch (e) {} }, 60);
+  }
+  function closeDropTerm() {
+    if (!dtPanel || !dtOpen()) return;
+    dtPanel.classList.remove("open");
+    dtPanel.setAttribute("aria-hidden", "true");
+    if (dtIn) { try { dtIn.blur(); } catch (e) {} }
+  }
+  function toggleDropTerm() { if (dtOpen()) closeDropTerm(); else openDropTerm(); }
+  // a game reset wipes the drop-down back to its fresh state (matches the monitor console's
+  // __resetMonitorTermSession): empty scrollback, no history, welcome re-armed, closed.
+  window.__resetDropTerm = function () {
+    if (dtOut) dtOut.innerHTML = "";
+    dtHist.length = 0; dtHistIdx = 0; dtWelcomed = false;
+    if (dtIn) dtIn.value = "";
+    closeDropTerm();
+  };
+  window.__toggleDropTerm = toggleDropTerm;   // the backtick key calls this
+  window.__closeDropTerm = closeDropTerm;     // Esc / other closers
+  window.__dropTermOpen = dtOpen;
+  if (dtIn) {
+    dtIn.addEventListener("keydown", function (e) {
+      e.stopPropagation(); // game shortcuts don't fire while typing here
+      if (e.key === "Tab") { e.preventDefault(); var p = activeConsoleOut; activeConsoleOut = dtOut; consoleTabComplete(dtIn); activeConsoleOut = p; return; }
+      if (e.key === "Enter") { var v = dtIn.value; dtIn.value = ""; consoleRun(v, dtCtx); }
+      else if (e.key === "Escape") { e.preventDefault(); closeDropTerm(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); if (dtHistIdx > 0) { dtHistIdx--; dtIn.value = dtHist[dtHistIdx] || ""; } }
+      else if (e.key === "ArrowDown") { e.preventDefault(); if (dtHistIdx < dtHist.length) { dtHistIdx++; dtIn.value = dtHist[dtHistIdx] || ""; } }
+    });
+  }
+  if (dtPanel) {
+    // click the panel (but not on a live text selection) focuses the input, like the monitor console
+    dtPanel.addEventListener("click", function (e) { e.stopPropagation(); var s = window.getSelection && window.getSelection(); if (s && !s.isCollapsed) return; if (dtIn) { try { dtIn.focus({ preventScroll: true }); } catch (err) {} } });
+    dtPanel.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+    // Esc closes the drop-down even if focus drifted off its input (the input's own keydown
+    // handles the focused case). Capture-phase + stopPropagation so it wins over the room.
+    document.addEventListener("keydown", function (e) {
+      if ((e.key === "Escape" || e.key === "Esc") && dtOpen()) { closeDropTerm(); e.stopPropagation(); e.preventDefault(); }
+    }, true);
   }
   // ── EDITOR APP ───────────────────────────────────────────────────────────────────
   // A tiny local-script editor, sibling to the console: write JS, name it, save it. The
@@ -40418,9 +40559,9 @@ async def localfont(name):
   // land on the office console from wherever the monitor happens to be. Powers the PC on
   // (queuing the console as the boot target), or reboots the monitor forward, or just
   // opens the console on an already-booted desktop — always ending zoomed in with the
-  // prompt focused, same as clicking the console dock tile. The console-open keydown
-  // guard grabs '`' once a console is up (the device is zoomed), so this only ever runs
-  // from outside a console — but the already-open branch keeps it idempotent anyway.
+  // prompt focused, same as clicking the console dock tile. (No longer bound to '`' — that
+  // now toggles the drop-down terminal — but kept as the shared boot/restore path; the
+  // already-open branch keeps it idempotent.)
   window.__whiskToConsole = function () {
     if (!pcTower) return;
     // Already in the console: just re-zoom + refocus, nothing to boot.
@@ -41370,6 +41511,8 @@ async def localfont(name):
     if (window.__resetMonitorTermSession) window.__resetMonitorTermSession();
     if (window.__resetMonitorPySession) window.__resetMonitorPySession();
     if (window.__resetMonitorLinuxSession) window.__resetMonitorLinuxSession();
+    if (window.__resetDropTerm) window.__resetDropTerm(); // the drop-down Quake terminal too: wipe + re-arm its welcome + close
+
     pendingBootSite = null; // reset never boots to a sign's page
     monitor.classList.add("here");
     typewriter.classList.add("away");
@@ -56563,13 +56706,11 @@ function spawnDustMote(container) {
       } else if (typeof window[tm] === "function") { window[tm](); }
     } else if (e.key === "`") {
       e.preventDefault();
-      // whisk to the office and open its console. Defer the boot/zoom until the
-      // .7s strip slide from the current room has settled — zooming into the monitor while
-      // it's still sliding measures a half-off-screen bezel (the room-nav-races-the-zoom bug).
-      var inOffice = window.currentStageName === "office";
-      goToStage("office");
-      if (inOffice) { if (window.__whiskToConsole) window.__whiskToConsole(); }
-      else setTimeout(function () { if (window.__whiskToConsole) window.__whiskToConsole(); }, 720);
+      // Backtick toggles the scene-agnostic DROP-DOWN terminal over the CURRENT room (a
+      // Quake-style console) — it no longer whisks to the office. The in-world office monitor
+      // console is still reachable by clicking the monitor; this is a separate, lighter shell
+      // that reuses the same command interpreter (consoleRun). See __toggleDropTerm.
+      if (window.__toggleDropTerm) window.__toggleDropTerm();
     } else if (e.key === "d" || e.key === "D") {
       e.preventDefault();
       if (window.__toggleDayNight) window.__toggleDayNight(); // 'd' just toggles

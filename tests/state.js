@@ -121,6 +121,26 @@ var RESET_DIFF_ALLOW = [
   "#stage-kitchen -raining",
   "#stage-office +raining",
   "#stage-office -raining",
+  // Same real-weather feed, one derived layer further out: the aurora's cloud gate
+  // (.aurora-clouded on the two sky stages) is stamped by gardenAurora from __skyCloudy(),
+  // so it lands and clears WITH the rain/storm classes above — legitimate on reset for
+  // exactly the same reason (a reset must not clear the real sky).
+  "#stage-garden +aurora-clouded",
+  "#stage-garden -aurora-clouded",
+  "#stage-garden +storming +aurora-clouded",
+  "#stage-garden -storming -aurora-clouded",
+  "#stage-garden +raining +aurora-clouded",
+  "#stage-garden -raining -aurora-clouded",
+  "#stage-garden +storming +raining +aurora-clouded",
+  "#stage-garden -storming -raining -aurora-clouded",
+  "#stage-balcony +aurora-clouded",
+  "#stage-balcony -aurora-clouded",
+  "#stage-balcony +storming +aurora-clouded",
+  "#stage-balcony -storming -aurora-clouded",
+  "#stage-balcony +raining +aurora-clouded",
+  "#stage-balcony -raining -aurora-clouded",
+  "#stage-balcony +storming +raining +aurora-clouded",
+  "#stage-balcony -storming -raining -aurora-clouded",
   // Same real-weather feed, plain-overcast look: a grey Edmonton day dims the sky via
   // .climate-overcast on the strip (no rain). Same lifecycle as .storming above — it can
   // land between snapshot and diff and a reset must not clear the real sky.

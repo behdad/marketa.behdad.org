@@ -750,6 +750,10 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   80%{transform:translate(1px,0)}
 }
 @media (prefers-reduced-motion: reduce){#cuddly-outlet.sparking{animation:none}}
+#cuddly-countdown-pop{transform-box:fill-box; transform-origin:center}
+#cuddly-countdown-pop.pop{animation:cuddly-cd-pop .75s ease-in-out}
+@keyframes cuddly-cd-pop{0%,100%{transform:scale(1) rotate(0)} 28%{transform:scale(1.11) rotate(-1.6deg)} 58%{transform:scale(1.05) rotate(1.1deg)} 82%{transform:scale(1.02) rotate(-.4deg)}}
+@media (prefers-reduced-motion: reduce){#cuddly-countdown-pop.pop{animation:none}}
 #garden-jacket-inner{transform-box:fill-box; transform-origin:top center}
 .kitchen-pan-swing{transform-box:fill-box; transform-origin:50% 10%}
 #kitchen-pans.rattling .kitchen-pan-swing{animation:pan-swing .7s ease-in-out}
@@ -14218,6 +14222,21 @@ section{margin:1.9rem 0}
 <path transform="translate(-3.5,2.4)" d="M3.5 6.5 C1.4 4.8 0 3.4 0 2 C0 0.7 1 0 1.9 0 C2.6 0 3.2 0.5 3.5 1 C3.8 0.5 4.4 0 5.1 0 C6 0 7 0.7 7 2 C7 3.4 5.6 4.8 3.5 6.5 Z" fill="#c68e95" stroke="#7a2f3d" stroke-width="0.35" opacity="0.95"/>
 </g></g>
 </g>
+<!-- countdown milestone banner: a small hanging wall sign over the fireplace showing the days to
+     the NEAREST upcoming wedding. Hidden by default; __refreshCuddlyCountdown fills the bilingual
+     text and reveals it (except on valentine's / the wedding weeks, which have their own decor).
+     The milestone .pop rides the #cuddly-countdown-pop wrapper — the sign's parts are positioned
+     by baked coords, never a transform attribute, so the pop's scale can't clobber their spot. -->
+<g id="cuddly-countdown" aria-hidden="true" pointer-events="none" style="display:none">
+<g id="cuddly-countdown-pop">
+<circle cx="335" cy="21" r="1.8" fill="#716455"/>
+<line x1="335" y1="21" x2="250" y2="35" stroke="#7d6e5d" stroke-width="1"/>
+<line x1="335" y1="21" x2="420" y2="35" stroke="#7d6e5d" stroke-width="1"/>
+<rect x="246" y="34" width="178" height="27" rx="6" fill="#f8f5ec" stroke="#8e3a4a" stroke-width="1.6"/>
+<rect x="249" y="37" width="172" height="21" rx="4" fill="none" stroke="#d9a6a6" stroke-width="0.8"/>
+<text id="cuddly-countdown-text" x="335" y="52" text-anchor="middle" style="fill:#453a31; font-family:Georgia,serif; font-size:11px; font-weight:600; letter-spacing:0.2px"></text>
+</g>
+</g>
 <defs><linearGradient id="cuddly-concrete-grad" x1="0" y1="0" x2="0" y2="1">
 <stop offset="0" stop-color="#c3bfb7"/><stop offset="0.5" stop-color="#b5b1a9"/><stop offset="1" stop-color="#a7a39b"/>
 </linearGradient></defs>
@@ -22689,6 +22708,16 @@ var T = {
     laptop_date: "July 10",
     desk_to: "to",
     desk_date: "May 1",
+    cdb_conn: "to",
+    cdb_today: "{city} today!",
+    cdb_tomorrow: "{city} tomorrow!",
+    cdb_week_1: "week",
+    cdb_week_n: "weeks",
+    cdb_week_m: "weeks",
+    cdb_edmonton: "Edmonton",
+    cdb_edmonton_to: "Edmonton",
+    cdb_prague: "Prague",
+    cdb_prague_to: "Prague",
     laptop_place: "Prague",
     laptop_lplace: "Lübeck",
     laptop_calling: "Calling…",
@@ -23423,6 +23452,16 @@ var T = {
     laptop_date: "10. 7.",
     desk_to: "do",
     desk_date: "1. 5.",
+    cdb_conn: "do",
+    cdb_today: "{city} je dnes!",
+    cdb_tomorrow: "{city} už zítra!",
+    cdb_week_1: "týden",
+    cdb_week_n: "týdny",
+    cdb_week_m: "týdnů",
+    cdb_edmonton: "Edmonton",
+    cdb_edmonton_to: "Edmontonu",
+    cdb_prague: "Praha",
+    cdb_prague_to: "Prahy",
     laptop_place: "Praha",
     laptop_lplace: "Lübeck",
     laptop_calling: "Volání…",
@@ -24076,6 +24115,7 @@ function setLang(l) {
   if (window.refreshMinesText) window.refreshMinesText();
   if (window.refreshFamilyText) window.refreshFamilyText();
   if (window.refreshCalendarText) window.refreshCalendarText();
+  if (window.__refreshCuddlyCountdown) window.__refreshCuddlyCountdown();
   if (window.__refreshDatePill) window.__refreshDatePill();
   if (window.__refreshTimePill) window.__refreshTimePill();
   if (window.refreshWeatherText) window.refreshWeatherText();
@@ -24240,6 +24280,7 @@ window.addEventListener("hashchange", function () {
   if (window.refreshDeskClock) window.refreshDeskClock();
   if (window.__paintCalTile) window.__paintCalTile();
   if (window.refreshWeddingText) window.refreshWeddingText();
+  if (window.__refreshCuddlyCountdown) window.__refreshCuddlyCountdown();
   if (window.__refreshDatePill) window.__refreshDatePill();
   if (window.__refreshTimePill) window.__refreshTimePill();
   if (window.__paintBalconyPhoneClock) window.__paintBalconyPhoneClock();
@@ -58894,6 +58935,7 @@ function spawnDustMote(container) {
     updateNav();
     if (window.__homeCat) window.__homeCat(name); // the loose cat follows the player between rooms
     if (window.__laserHop) window.__laserHop(); // the laser dot follows into the new room
+    if (name === "cuddly" && window.__refreshCuddlyCountdown) window.__refreshCuddlyCountdown(); // entering the nook on a milestone day pops the sign + throws confetti
     if (name === "cuddly" && window.updateCuddlyGrooving) window.updateCuddlyGrooving();
     if (name === "cuddly" && window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint(); // re-arm the door-nudge hint if the door's the next step
     if (window.__updateCuddlyPresence) window.__updateCuddlyPresence(); // resolve the couple's presence for the new room's day/night/party truth
@@ -65886,6 +65928,66 @@ function spawnDustMote(container) {
     return "summer";                                    // June / July / early September gaps
   }
   window.__calSeasonKey = calSeasonKey; // the date-invite orchestrator reads this to name the day's named holiday
+  // ── cuddly-nook wedding countdown banner ──────────────────────────────────────
+  // A small hanging wall sign counting down to the NEAREST upcoming wedding (Edmonton
+  // May 1 2027, then Prague Jul 10 2027; nothing once both have passed). Reads the loft's
+  // pretend-date (window.__now, so ?date=/#date= time-travels it), hidden on valentine's and
+  // the wedding weeks (calSeasonKey — those days wear their own decor). At round milestones it
+  // pops and (in the cuddly room, motion allowed) throws a confetti burst, fired once per value.
+  var CDB_MILESTONES = [365, 200, 100, 50, 30, 14, 7, 3, 1, 0]; // days-out that celebrate
+  var cdbLastPop = null; // the day-count we last celebrated, so a re-render doesn't re-fire
+  function cdbLang() { return T[document.documentElement.lang] ? document.documentElement.lang : "en"; }
+  function cdbWeekWord(w, t) { return w === 1 ? t.cdb_week_1 : (w >= 2 && w <= 4) ? t.cdb_week_n : t.cdb_week_m; }
+  function cdbPhrase(n, which) {
+    var t = T[cdbLang()], milestone = CDB_MILESTONES.indexOf(n) !== -1;
+    var cityNom = t[which === "edmonton" ? "cdb_edmonton" : "cdb_prague"];
+    var cityTo = t[which === "edmonton" ? "cdb_edmonton_to" : "cdb_prague_to"];
+    if (n <= 0) return "💍 " + t.cdb_today.replace("{city}", cityNom) + " 🎉";
+    if (n === 1) return "💍 " + t.cdb_tomorrow.replace("{city}", cityNom) + " 🎉";
+    var amount;
+    if (n >= 14 && n % 7 === 0) { var w = n / 7; amount = w + " " + cdbWeekWord(w, t); }
+    else { amount = n + " " + (window.__dayWord ? window.__dayWord(n) : (n === 1 ? "day" : "days")); }
+    return "💍 " + amount + " " + t.cdb_conn + " " + cityTo + (milestone ? "!" : "");
+  }
+  function refreshCuddlyCountdown() {
+    var host = document.getElementById("cuddly-countdown");
+    if (!host) return;
+    var txt = document.getElementById("cuddly-countdown-text");
+    var n = window.__now ? window.__now() : new Date();
+    var today = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+    function daysTo(y, mo, d) { return Math.round((new Date(y, mo - 1, d) - today) / 86400000); }
+    var edm = daysTo(2027, 5, 1), prg = daysTo(2027, 7, 10);
+    var which = null, days = 0;
+    if (edm >= 0) { which = "edmonton"; days = edm; }
+    else if (prg >= 0) { which = "prague"; days = prg; }
+    // suppression: both weddings past, OR a day that dresses itself (valentine's / the wedding weeks)
+    var sk = calSeasonKey(n.getMonth(), n.getDate(), n.getFullYear());
+    if (!which || sk === "valentines" || sk === "wedding") {
+      host.style.display = "none";
+      cdbLastPop = null; // leaving a celebrated day re-arms the next milestone's pop
+      return;
+    }
+    host.style.display = "";
+    if (txt) txt.textContent = cdbPhrase(days, which);
+    // Milestone celebration — a sign pop + a confetti burst, fired once per value and only while
+    // the nook is actually on screen (so entering the room on a milestone day still gets it, even
+    // if the count was first computed from another room). Reduced motion / a hidden tab: no pop,
+    // no confetti — the banner just shows the count statically.
+    var milestone = CDB_MILESTONES.indexOf(days) !== -1;
+    if (!milestone) { cdbLastPop = null; return; }
+    if (cdbLastPop === days || window.currentStageName !== "cuddly") return;
+    if ((window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) || document.visibilityState === "hidden") return;
+    cdbLastPop = days;
+    var pop = document.getElementById("cuddly-countdown-pop");
+    if (pop) { pop.classList.remove("pop"); void pop.getBBox(); pop.classList.add("pop"); }
+    if (window.confetti) window.confetti();
+  }
+  window.__refreshCuddlyCountdown = refreshCuddlyCountdown;
+  (function () {
+    var pop = document.getElementById("cuddly-countdown-pop");
+    if (pop) pop.addEventListener("animationend", function () { pop.classList.remove("pop"); });
+  })();
+  refreshCuddlyCountdown();
   function calOverrideDate() { // the time-travelled day, if a ?date=/#date= override is live
     try {
       var s = (location.search || "") + (location.hash || "");
@@ -65912,6 +66014,7 @@ function spawnDustMote(container) {
     if (window.refreshDeskClock) window.refreshDeskClock();
     if (window.__paintCalTile) window.__paintCalTile();
     if (window.refreshWeddingText) window.refreshWeddingText();
+    if (window.__refreshCuddlyCountdown) window.__refreshCuddlyCountdown();
     if (window.__refreshDatePill) window.__refreshDatePill();
     if (window.__applyDateOccasion) window.__applyDateOccasion(); // wedding-day full party / May-2 BBQ scene (latched: no-op unless the occasion changed)
     if (window.__refreshTimePill) window.__refreshTimePill();

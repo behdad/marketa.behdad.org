@@ -7131,7 +7131,10 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
    (it evaluates the same garden ∧ dusk ∧ ¬storm ∧ ¬trip gate + visibility/focus). */
 #garden-aurora{opacity:0; transition:opacity 1.2s ease; mix-blend-mode:screen}
 #stage-garden.dusk #garden-aurora{opacity:0.9}
-#stage-garden.dusk.storming #garden-aurora{opacity:0; transition:opacity .8s ease}
+/* real cloud hides the lights: actual rain (.raining) or grey overcast (.climate-overcast on the strip) —
+   NOT a dry lightning storm (.storming without .raining), which leaves the aurora free to show */
+#stage-garden.dusk.raining #garden-aurora,
+#loft-game-strip.climate-overcast #stage-garden.dusk #garden-aurora{opacity:0; transition:opacity .8s ease}
 /* a trip has taken over the whole strip — let its own visuals own the window */
 #loft-game-strip.shrooms #garden-aurora, #loft-game-strip.acid #garden-aurora,
 #loft-game-strip.froggies #garden-aurora, #loft-game-strip.dmt #garden-aurora,
@@ -7139,7 +7142,8 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 #loft-game-strip.iboga #garden-aurora{opacity:0}
 /* console/test overrides: force on regardless of dusk, or force off regardless of state */
 #stage-garden.aurora-force #garden-aurora{opacity:0.9}
-#stage-garden.aurora-force.storming #garden-aurora,
+#stage-garden.aurora-force.raining #garden-aurora,
+#loft-game-strip.climate-overcast #stage-garden.aurora-force #garden-aurora,
 #stage-garden.aurora-hide #garden-aurora{opacity:0}
 /* The SAME aurora, mirrored into the balcony's open night sky. Same OPACITY gate as the
    garden (dusk on, day off, hidden by a storm), keyed off the classes already on
@@ -7152,14 +7156,16 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 @media (prefers-reduced-motion: reduce){#balcony-twilight{transition:none}}
 #balcony-aurora{opacity:0; transition:opacity 1.2s ease; mix-blend-mode:screen}
 #stage-balcony.dusk #balcony-aurora{opacity:0.9}
-#stage-balcony.dusk.storming #balcony-aurora{opacity:0; transition:opacity .8s ease}
+#stage-balcony.dusk.raining #balcony-aurora,
+#loft-game-strip.climate-overcast #stage-balcony.dusk #balcony-aurora{opacity:0; transition:opacity .8s ease}
 /* a trip has taken over the whole strip — let its own visuals own the sky */
 #loft-game-strip.shrooms #balcony-aurora, #loft-game-strip.acid #balcony-aurora,
 #loft-game-strip.froggies #balcony-aurora, #loft-game-strip.dmt #balcony-aurora,
 #loft-game-strip.molly #balcony-aurora, #loft-game-strip.ketamine #balcony-aurora,
 #loft-game-strip.iboga #balcony-aurora{opacity:0}
 #stage-balcony.aurora-force #balcony-aurora{opacity:0.9}
-#stage-balcony.aurora-force.storming #balcony-aurora,
+#stage-balcony.aurora-force.raining #balcony-aurora,
+#loft-game-strip.climate-overcast #stage-balcony.aurora-force #balcony-aurora,
 #stage-balcony.aurora-hide #balcony-aurora{opacity:0}
 /* a little caterpillar appears on the floor at night (the ambient butterflies are
    gated to daytime). only shows + animates at dusk; the crawl (translateX) and
@@ -28796,8 +28802,16 @@ document.addEventListener("click", function (e) {
       strip.classList.contains("molly") || strip.classList.contains("ketamine") ||
       strip.classList.contains("iboga");
   }
-  // one target's own show gate: its room on-screen ∧ dusk ∧ ¬storm ∧ ¬trip, or its stage's
-  // .aurora-force (still yielding to a storm). .aurora-hide forces it off. Mirrors the CSS
+  // real cloud that hides the lights: actual rain (.raining on the stage) or grey overcast
+  // (.climate-overcast on the strip). A DRY lightning storm (.storming without rain/overcast)
+  // is NOT cloud cover here, so a dry storm and the aurora can coexist.
+  function auroraCloudCovered(stage) {
+    if (stage.classList.contains("raining")) return true;
+    var strip = document.getElementById("loft-game-strip");
+    return !!(strip && strip.classList.contains("climate-overcast"));
+  }
+  // one target's own show gate: its room on-screen ∧ dusk ∧ ¬cloud ∧ ¬trip, or its stage's
+  // .aurora-force (still yielding to real cloud). .aurora-hide forces it off. Mirrors the CSS
   // opacity gate so the loop and the paint agree. (visibility/focus is checked once, shared.)
   function targetShown(tg) {
     if (tg.stage.classList.contains("aurora-hide")) return false;
@@ -28805,12 +28819,10 @@ document.addEventListener("click", function (e) {
     var natural = auroraTonight &&                         // rolled per nightfall (see rollAurora)
       window.currentStageName === tg.room &&
       tg.stage.classList.contains("dusk") &&
-      !tg.stage.classList.contains("storming") &&
-      !tg.stage.classList.contains("climate-overcast") && // clouds hide the lights
+      !auroraCloudCovered(tg.stage) && // real cloud (rain/overcast) hides the lights; a DRY lightning storm does not
       !tripping();
     if (!(forced || natural)) return false;
-    if (forced && tg.stage.classList.contains("storming")) return false; // force still yields to a storm
-    if (forced && tg.stage.classList.contains("climate-overcast")) return false; // …and to overcast (clouds hide them)
+    if (forced && auroraCloudCovered(tg.stage)) return false; // force still yields to real cloud (rain/overcast)
     return true;
   }
   // the shared loop runs while ANY target is shown + the tab is visible+focused
@@ -37160,7 +37172,7 @@ var ABANDONED_CALL_MS = 30000;
     clock: "clock() (or time()) — the real current time + date",
     time: "time — alias for clock; try `help clock`",
     projector: "projector(\"channel\") — switch the cuddly-room projector by name in quotes, e.g. projector(\"nightsky\"), or a number 1–5. channels: \"fireplace\" · \"workout\" · \"nightsky\" · \"aquarium\" · \"totoro\" · \"none\" (off). projector() returns the current channel {n, name}",
-    storm: "storm(true) — a DRY thunderstorm over the balcony: lightning + thunder, NO rain (steps out to the balcony + falls to dusk first, since lightning shows against the night sky). Add rain(true) for the downpour — rain(true)+storm(true) is a classic thunderstorm. storm(false) clears the lightning; storm() reports whether it's storming. Weather is three independent layers — see rain() and overcast()",
+    storm: "storm(true) — a DRY thunderstorm over the balcony: lightning + thunder, NO rain (steps out to the balcony; works DAY or night — it does NOT force dusk). Add rain(true) for the downpour — rain(true)+storm(true) is a classic thunderstorm. Set the sky yourself with day()/night(). storm(false) clears the lightning; storm() reports whether it's storming. Weather levers are independent — see rain(), overcast(), day()/night()",
     rain: "rain(true) — falling rain over the balcony (drops in the sky + streaks down every window + a rain hiss), day or night; rain(false) clears it; rain() reports whether it's raining. Independent of storm() — rain alone is a plain shower, rain(true)+storm(true) is a thunderstorm",
     overcast: "overcast(true) — a grey overcast cloud wash over the whole loft (steps to the balcony + brings the day back, since the wash reads against daylight); overcast(false) clears it; overcast() reports whether it's overcast. Independent of rain()/storm()",
     dance: "dance(\"name\") — cue a garden-party dance by name in quotes, e.g. dance(\"salsa\"), or 1–12, or dance(random()); dance() returns the current dance {n, name}; dance(\"next\") skips ahead (run party(true) first). dances: \"techno\" · \"waltz\" · \"disco\" · \"swing\" · \"salsa\" · \"bhangra\" · \"persian\" · \"polka\" · \"horah\" · \"bulgar\" · \"dupak\" · \"cumbia\"",
@@ -48803,6 +48815,7 @@ async def localfont(name):
   window.__realDaily = null; // [{time,code,max,min} per city, request order]; daily[0] = each city's local today
   window.__edmSun = null; // {sr,ss}: Edmonton's today sunrise/sunset in local minutes-of-day, once the daily feed lands (drives the auto day/night default)
   window.__realWxMode = null; // Edmonton's mapped current look: "clear"|"overcast"|"rain"|"storm"|"snow", null until a fetch lands
+  window.__realStormWet = true; // rolled once each time the real sky turns thunderstorm: mostly WET (rain+lightning), sometimes DRY (lightning only). Meaningless unless mode==="storm".
   // The scene weather is three INDEPENDENT, composable layers, each separately forceable from the
   // console (rain() / storm() / overcast()) and each also driven by the real-weather combo below:
   //   RAIN     — falling precip particles + pane streaks + rain hiss
@@ -48848,7 +48861,9 @@ async def localfont(name):
   window.__realWxPrecip = function () {
     if (reduceMotionMq && reduceMotionMq.matches) return null;
     var m = window.__realWxActive();
-    return (m === "rain" || m === "storm") ? "rain" : (m === "snow" ? "snow" : null);
+    if (m === "rain") return "rain";
+    if (m === "storm") return (window.__realStormWet !== false) ? "rain" : null; // a DRY thunderstorm: lightning, no drops
+    return m === "snow" ? "snow" : null;
   };
   // the one WMO code -> glyph map, shared by the monitor's menu bar (which layers its
   // own storm precedence + day/night split on top) and the laptop's Prague readout
@@ -48896,7 +48911,9 @@ async def localfont(name):
       if (typeof code !== "number") continue;
       if (i === 0) {
         window.__realWx = { code: code };
+        var wasStorm = window.__realWxMode === "storm";
         window.__realWxMode = realWxModeForCode(code);
+        if (window.__realWxMode === "storm" && !wasStorm) window.__realStormWet = Math.random() < 0.72; // fresh thunderstorm → roll wet vs dry once (held for this storm's duration)
         window.__realOutdoorC = (typeof temp === "number" && isFinite(temp)) ? temp : null;
       } else {
         window.__realWxPrague = { code: code };
@@ -49049,8 +49066,9 @@ async def localfont(name):
   // instead of fighting (they read the same flags).
   function applyRealWx() {
     var mode = window.__realWxActive ? window.__realWxActive() : null;
-    var rain = !!window.__wxRain || mode === "rain" || mode === "storm";
-    var storm = !!window.__wxStorm || mode === "storm";
+    var realStormWet = mode === "storm" && window.__realStormWet !== false; // a real thunderstorm brings rain only on a WET roll
+    var rain = !!window.__wxRain || mode === "rain" || realStormWet;
+    var storm = !!window.__wxStorm || mode === "storm"; // lightning fires on any real thunderstorm, wet or dry
     var overcast = !!window.__wxOvercast || mode === "overcast";
     var storming = rain || storm;              // .storming = a cloudy precip/lightning sky (rain OR dry storm)
     window.__balconyStorm = !!(window.__wxRain || window.__wxStorm); // compat alias: a GAME storm is running
@@ -63120,13 +63138,14 @@ function spawnDustMote(container) {
       scheduleGrillSmoke();
     }, delay);
   })();
-  // a distant lightning flash + rolling rumble during a night storm. The bolt is
-  // seen through every window (balcony sky + the kitchen/office windows), so the
-  // storm reads from any room; the rumble is full out on the balcony but much
-  // quieter — muffled through glass — when you're inside another room.
+  // a distant lightning flash + rolling rumble during a storm — day OR night (a daytime
+  // thunderstorm flashes against the bright sky too; the white #balcony-thunder-flash overlay
+  // reads fine either way). The bolt is seen through every window (balcony sky + the kitchen/
+  // office windows), so the storm reads from any room; the rumble is full out on the balcony but
+  // much quieter — muffled through glass — when you're inside another room.
   window.triggerBalconyThunder = function () {
     var sb = document.getElementById("stage-balcony");
-    if (!sb || !sb.classList.contains("dusk")) return;   // only during a night storm
+    if (!sb) return;                                      // the balcony scene owns the storm's flashes/thunder
     if (document.visibilityState === "hidden") return;    // don't rumble a hidden tab
     ["balcony-thunder-flash", "kitchen-window-flash", "office-window-flash", "garden-window-flash"].forEach(function (id) {
       var el = document.getElementById(id);
@@ -63271,10 +63290,11 @@ function spawnDustMote(container) {
       // resume the moment the show ends.
       if (window.__cinematic) { timers.push(setTimeout(startStorm, 8000)); return; }
       if (!isDuskBalcony()) { clearAll(); return; }
-      window.__wxRain = true;   // the auto cycle rolls a CLASSIC storm: rain + lightning together
-      window.__wxStorm = true;  // the continuous thunder scheduler picks up the flashes/rumble
+      var wet = Math.random() < 0.7; // roll each storm: mostly a classic downpour+lightning, sometimes a DRY lightning storm
+      window.__wxRain = wet;     // wet roll → rain drops + streaks; dry roll → lightning only
+      window.__wxStorm = true;   // the continuous thunder scheduler picks up the flashes/rumble either way
       apply();
-      topUpDrops(); // fill the sky, counting whatever's still falling from the last storm
+      if (wet) topUpDrops(); // fill the sky, counting whatever's still falling from the last storm
       timers.push(setTimeout(endStorm, 14000 + Math.random() * 8000)); // this storm lasts ~14-22s, then passes
     }
     window.__startBalconyStormCycle = function () {
@@ -63379,11 +63399,10 @@ function spawnDustMote(container) {
     tick();
   })();
   // The LIGHTNING layer's engine: while a storm's lightning is live (a forced dry/wet storm, the
-  // game storm cycle, or the real Edmonton sky), flash + rumble every so often. One persistent
-  // self-scheduling loop, hidden-tab safe (a hidden tick does nothing and just re-arms). The FLASH
-  // is fine in a visible-but-unfocused window (purely visual); triggerBalconyThunder gates the
-  // SOUND on dusk + focus itself (the crickets rule), and no-ops entirely off a dusk balcony — so
-  // this rumbles day-or-night storms only at night, matching the original cycle.
+  // game storm cycle, or the real Edmonton sky), flash + rumble every so often — day OR night. One
+  // persistent self-scheduling loop, hidden-tab safe (a hidden tick does nothing and just re-arms).
+  // The FLASH is fine in a visible-but-unfocused window (purely visual); triggerBalconyThunder gates
+  // the SOUND on focus + visibility itself (the crickets rule).
   (function scheduleBalconyLightning() {
     function tick() {
       if (window.__stormLightningActive && window.__stormLightningActive() &&
@@ -69815,21 +69834,20 @@ function spawnDustMote(container) {
   };
   window.classic = window.piano; // alias — the night-sky piano's old name
 
-  // The scene weather is three independent, composable layers, each on its own console toggle:
-  //   storm()    — the LIGHTNING+THUNDER layer, DRY by default (no rain unless you also run rain())
-  //   rain()     — the falling-precip layer (drops + pane streaks + rain hiss)
+  // The scene weather is independent, composable levers, each on its own console toggle:
+  //   storm()    — the LIGHTNING+THUNDER layer, DRY by default (no rain unless you also run rain()); day or night
+  //   rain()     — the falling-precip layer (drops + pane streaks + rain hiss); day or night
   //   overcast() — the grey daytime cloud wash
+  //   day()/night() — the sky's time-of-day, fully independent of the weather levers above
   // rain(true)+storm(true) together = a classic thunderstorm. Each reports its own state with no arg.
   window.storm = function (arg) {
     var prev = !!window.__wxStorm;
     if (arguments.length === 0 || !window.__setBalconyStormLayer) return prev; // no arg → is the lightning storm on?
     var on = !!arg; // storm(true) → dry lightning storm on; storm(false) → off; returns the previous state
     if (!on) { window.__setBalconyStormLayer(false); narrate(false, "", "🌤 the lightning passes — the storm quiets."); return prev; }
-    if (window.goToStage) window.goToStage("balcony"); // storms roll over the balcony
-    if (window.__setDayNight) window.__setDayNight(true); // lightning shows against the night sky
-    else if (window.__toggleDayNight && !isNight()) window.__toggleDayNight();
+    if (window.goToStage) window.goToStage("balcony"); // storms roll over the balcony (day or night — day/night is rain()/day()'s business, not storm's)
     window.__setBalconyStormLayer(true);
-    narrate(true, "⛈ a dry thunderstorm cracks over the balcony — lightning, no rain (add rain(true) for the downpour).", "");
+    narrate(true, "⛈ a dry thunderstorm cracks over the balcony — lightning + thunder, no rain (works day or night; add rain(true) for the downpour, day()/night() to set the sky).", "");
     return prev;
   };
   window.rain = function (arg) {

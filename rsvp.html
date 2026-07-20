@@ -5205,7 +5205,7 @@ body:has(#loft-game-strip.acid) #trip-acid-kaleido{animation:acid-kaleido 3s eas
    that same node as OPACITY only (never a transform animation — that would clobber the
    positional attribute). Each dancer's sway/arm motion rides inner groups. All CSS, so a
    hidden tab accumulates nothing; the class is torn down when the party switches off. */
-#trip-melt-dancers{opacity:0; pointer-events:none; fill:#241f1c}
+#trip-melt-dancers{opacity:0; pointer-events:none; fill:#241f1c; transition:opacity 1.4s ease} /* transition on the BASE rule too, so removing .party-dancing FADES the dancers out (graceful wind-down) instead of snapping */
 #trip-melt-dancers.party-dancing{opacity:.9; transition:opacity 1.4s ease} /* party mode: fade in and hold */
 /* the CENTRE generic dancer (md-d2) is hidden — she sat dead-centre and clashed with the hosts
    dancing there (the generics now show mainly at party-start, when the hosts are alone in the
@@ -43544,12 +43544,60 @@ async def localfont(name):
     // a real tappable toggle (works on touch, and it sticks). The toggle() return value is
     // the source of truth; the guard means a play.js storm click can never throw. Click-only
     // (no keydown/tabindex/role/aria) per the game-SVG a11y rule.
+    // GRACEFUL WIND-DOWN state: a pending teardown timer while the guests stroll out (party-off
+    // "while watching"). Guarded so a storm of toggles can't double-fire, and a toggle back ON
+    // mid-stroll cleanly cancels it and resumes the party.
+    var partyWindDownTimer = null;
+    var WINDDOWN_MS = 1900; // ~the guest-gate-leave stroll (2s CSS) — keep the party + UV lit this long
+    function clearWindDown() { if (partyWindDownTimer) { clearTimeout(partyWindDownTimer); partyWindDownTimer = null; } }
+    // Should turning the party OFF walk the guests out first (vs. the instant snap teardown)? Only
+    // when the user is actually WATCHING the garden and there's a lit party with guests on the floor
+    // — never for programmatic teardowns (the cinematic/trailer + autoplay must stay synchronous),
+    // never in a hidden/unfocused tab (crickets rule — a walk you can't see is a dead 1.9s wait),
+    // and never under reduced motion (the stroll has no animation → nothing to watch, so snap).
+    function shouldWindDownGracefully() {
+      if (!window.__gardenPartyOn) return false;                     // party already off → nothing to wind down
+      if (window.currentStageName !== "garden") return false;        // panned away → a walk-out is invisible; snap
+      if (window.__cinematic) return false;                          // the Trailer/cinematic owns teardown — stays instant
+      if (window.__autoplayOn && window.__autoplayOn()) return false; // attract mode drives itself — stays instant
+      if (document.hidden || (document.hasFocus && !document.hasFocus())) return false; // hidden/unfocused — snap
+      if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false; // no walk anim → snap
+      return !!(window.__guestsIn && window.__guestsIn());           // only if there's actually a crowd to walk out
+    }
+    // The real teardown — drop the UV blacklight + tear the garden party down (the pre-existing path).
+    function teardownPartyNow() {
+      if (window.__setUvParty) window.__setUvParty(false);
+      if (window.__setGardenParty) window.__setGardenParty(false, true);
+    }
     function setPartyMode(on) {
+      on = !!on;
       partyswitch.classList.toggle("on", on);
-      if (window.__setUvParty) window.__setUvParty(on);
-      if (window.__setGardenParty) window.__setGardenParty(on, true); // whisk to the garden + throw the party
+      if (on) {
+        // Toggling back ON — cancel any pending graceful teardown and walk the leaving guests back in.
+        clearWindDown();
+        if (window.__cancelGuestsWalkOut) window.__cancelGuestsWalkOut();
+        if (window.__setUvParty) window.__setUvParty(true);
+        if (window.__setGardenParty) window.__setGardenParty(true, true); // whisk to the garden + throw the party
+        return;
+      }
+      // Turning OFF.
+      if (partyWindDownTimer) return; // a graceful wind-down is already in flight — storm-safe no-op
+      if (shouldWindDownGracefully()) {
+        // Walk everyone out but KEEP the party + blacklight lit for the stroll; tear down after.
+        var walking = window.__walkGuestsOut ? window.__walkGuestsOut() : 0;
+        if (walking > 0) {
+          partyWindDownTimer = setTimeout(function () {
+            partyWindDownTimer = null;
+            teardownPartyNow(); // dancers/lights fade (base #trip-melt-dancers now transitions opacity), guests already gone
+          }, WINDDOWN_MS);
+          return;
+        }
+        // nobody actually on the floor → fall through to the instant teardown
+      }
+      teardownPartyNow();
     }
     window.__setPartyMode = setPartyMode; // the garden light switch turns the party off through here
+    window.__partyWindingDown = function () { return !!partyWindDownTimer; }; // test/console hook
     partyswitch.addEventListener("click", function () {
       setPartyMode(!partyswitch.classList.contains("on"));
     });
@@ -55147,6 +55195,41 @@ function spawnDustMote(container) {
     return true;
   };
   window.__dismissGuests = function () { guestsArrived = false; clearGardenGuests(); }; // send them off without ending the party
+  // GRACEFUL WIND-DOWN — walk EVERY present guest UNIT out the gate at once (same stroll the
+  // revolving door uses), so a party turned off "while watching" empties the floor gently instead
+  // of snapping everyone away. Stops the fill/rotation/host-solo timers first so nobody strolls
+  // back IN mid-goodbye, and pauses the trickle latch (guestsArrived stays true so a mid-stroll
+  // toggle-back-ON restores the crowd). Returns the number of units that actually started walking
+  // out (0 → nobody to walk → caller can tear down immediately). Reduced motion / hidden-tab
+  // callers should skip this (the walk-out has no animation there) — the caller guards that.
+  window.__walkGuestsOut = function () {
+    var g = document.getElementById("garden-guests");
+    if (!g) return 0;
+    clearTrickleTimer();   // stop filling — no fresh arrivals during the goodbye
+    stopHostSolo();        // freeze the hosts' solo cycle so nothing re-arms mid-stroll
+    var present = presentUnits(g, fullArrivals()); // every named unit currently on the floor (hosts aren't ARRIVALS units)
+    for (var i = 0; i < present.length; i++) leaveEntry(present[i]); // each strolls out from its slot (animationend drops .arrived)
+    return present.length;
+  };
+  // CANCEL a graceful wind-down that hasn't finished: any guest still mid-stroll-out (.leaving but
+  // .arrived not yet dropped) walks BACK to its slot. Called when the party is toggled back ON
+  // mid-goodbye. Restores the crowd's dance + re-arms the fill/host-solo cycle so the floor lives
+  // again exactly as it was. Idempotent + harmless if nobody's leaving.
+  window.__cancelGuestsWalkOut = function () {
+    var g = document.getElementById("garden-guests");
+    if (!g) return;
+    var leavers = g.querySelectorAll(".guest.arrived.leaving");
+    if (leavers.length) {
+      for (var i = 0; i < leavers.length; i++) {
+        var el = leavers[i];
+        var walk = el.querySelector(".guest-walk");
+        el.classList.remove("leaving");                 // stop strolling out
+        if (walk) { walk.style.setProperty("--walk-x", "0px"); } // snap the walk offset back to the slot (no phantom drift)
+      }
+      rebalanceFloor(g); // re-spread now that the leavers are staying
+    }
+    if (g.classList.contains("guests-in")) { startHostSolo(); syncCrowdClear(); } // resume the hosts' solo cycle + re-eval the generics
+  };
   // walk a specific duo (or the solo Bahareh) in through the gate NOW — the autonomous entrance
   // moment's manual trigger. Lights the party + heads to the garden if needed. If a duo's already
   // on the floor it re-enters tastefully (drop .arrived, re-walk from the gate). Returns the id.

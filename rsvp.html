@@ -4262,6 +4262,18 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .pm-clock .pmk-cd .pmk-sub{font-size:11px; color:var(--muted)}
 .pm-clock .pmk-play{font-size:12px; color:var(--muted); margin-top:2px}
 .pm-clock .pmk-play b{font-family:"Fraunces",serif; font-weight:600; color:var(--ink); font-variant-numeric:tabular-nums}
+.pm-clock .pmk-time-ctl{width:100%; background:var(--paper); border:1px solid var(--rule); border-radius:14px; padding:12px 14px; display:flex; flex-direction:column; gap:9px; margin-top:2px}
+.pm-clock .pmk-tl{font-family:"Fraunces",serif; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--soft); text-align:left}
+.pm-clock .pmk-trow{display:flex; align-items:center; gap:10px}
+.pm-clock .pmk-slider{flex:1 1 auto; min-width:0; accent-color:var(--wine)}
+.pm-clock .pmk-tval{font-family:"Fraunces",serif; font-size:18px; color:var(--wine); font-variant-numeric:tabular-nums; min-width:52px; text-align:right}
+.pm-clock .pmk-trow2,.pm-clock .pmk-trow3{display:flex; gap:8px; align-items:stretch}
+.pm-clock .pmk-jump{flex:1 1 auto; font:inherit; cursor:pointer; border:none; border-radius:10px; background:var(--wine); color:var(--paper); padding:8px 12px; font-weight:600}
+.pm-clock .pmk-jump:hover{filter:brightness(1.08)}
+.pm-clock .pmk-treset{flex:none; font:inherit; cursor:pointer; border:1px solid var(--rule); border-radius:10px; background:var(--paper); color:var(--wine); padding:8px 13px; line-height:1}
+.pm-clock .pmk-treset:hover{background:#f1e6dc}
+.pm-clock .pmk-sunrise,.pm-clock .pmk-sunset{flex:1 1 0; min-width:0; font:inherit; cursor:pointer; border:1px solid var(--rule); border-radius:10px; background:var(--paper); color:var(--ink); padding:7px 8px; line-height:1; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.pm-clock .pmk-sunrise:hover,.pm-clock .pmk-sunset:hover{background:#f1e6dc}
 /* currency converter */
 .pm-cur{display:flex; flex-direction:column; gap:10px}
 .pm-cur .pmu-amt{width:100%; box-sizing:border-box; font:inherit; font-family:"Fraunces",serif; font-size:24px; text-align:right; padding:8px 14px; border:1px solid var(--rule); border-radius:14px; background:var(--paper); color:var(--ink)}
@@ -22813,6 +22825,11 @@ var T = {
     du_bouquet: "bouquet",
     du_veil: "veil",
     clk_playtime: "You’ve been in the loft for",
+    clk_jump_label: "Jump to time",
+    clk_jump: "Jump",
+    clk_reset: "Reset to now",
+    clk_sunrise: "Sunrise",
+    clk_sunset: "Sunset",
     cur_amount: "amount",
     cur_offline: "· offline rate",
     msg_empty: "No messages yet.",
@@ -23495,6 +23512,11 @@ var T = {
     du_bouquet: "kytice",
     du_veil: "závoj",
     clk_playtime: "V loftu jsi už",
+    clk_jump_label: "Přejít na čas",
+    clk_jump: "Přejít",
+    clk_reset: "Zpět na teď",
+    clk_sunrise: "Východ slunce",
+    clk_sunset: "Západ slunce",
     cur_amount: "částka",
     cur_offline: "· kurz offline",
     msg_empty: "Zatím žádné zprávy.",
@@ -23863,6 +23885,11 @@ window.addEventListener("hashchange", function () {
   if (window.refreshWeddingText) window.refreshWeddingText();
   if (window.__refreshDatePill) window.__refreshDatePill();
   if (window.__updateSkyFireworks) window.__updateSkyFireworks(window.currentStageName);
+  // a #time= flip re-runs the auto day/night against the chosen hour (re-enabling auto in
+  // case a manual flip had latched it off); without a time override, just re-apply the live loop
+  if (window.__timeOverrideMins && window.__timeOverrideMins() != null) {
+    if (window.__startAutoDayNight) window.__startAutoDayNight();
+  } else if (window.__applyAutoDayNight) window.__applyAutoDayNight();
 });
 (function () {
   var hint = document.getElementById("device-hint");
@@ -43985,6 +44012,7 @@ async def localfont(name):
       }
       return days + " " + (window.__dayWord ? window.__dayWord(days) : (days === 1 ? "day" : "days"));
     }
+    var SUNSET_GLYPH = "🌙"; // sunset quick-jump button glyph (a later agent swaps this for a moon-phase-correct emoji)
     function renderClock(body) {
       var wrap = document.createElement("div");
       wrap.className = "pm-clock";
@@ -43993,11 +44021,29 @@ async def localfont(name):
           '<div class="pmk-cd his"><span class="pmk-city">' + tr("cal_edmonton") + '</span><span class="pmk-time2 pmk-e-t"></span><span class="pmk-sub pmk-e-cd"></span></div>' +
           '<div class="pmk-cd hers"><span class="pmk-city">' + tr("cal_prague") + '</span><span class="pmk-time2 pmk-p-t"></span><span class="pmk-sub pmk-p-cd"></span></div>' +
         '</div>' +
-        '<div class="pmk-play">' + tr("clk_playtime") + ' <b class="pmk-pt"></b></div>';
+        '<div class="pmk-play">' + tr("clk_playtime") + ' <b class="pmk-pt"></b></div>' +
+        '<div class="pmk-time-ctl">' +
+          '<label class="pmk-tl">' + tr("clk_jump_label") + '</label>' +
+          '<div class="pmk-trow"><input type="range" class="pmk-slider" min="0" max="23" step="1" aria-label="' + tr("clk_jump_label") + '"><span class="pmk-tval"></span></div>' +
+          '<div class="pmk-trow2"><button type="button" class="pmk-jump">' + tr("clk_jump") + '</button><button type="button" class="pmk-treset" title="' + tr("clk_reset") + '" aria-label="' + tr("clk_reset") + '">↻</button></div>' +
+          '<div class="pmk-trow3"><button type="button" class="pmk-sunrise" title="' + tr("clk_sunrise") + '" aria-label="' + tr("clk_sunrise") + '">☀ <span class="pmk-sr-t"></span></button><button type="button" class="pmk-sunset" title="' + tr("clk_sunset") + '" aria-label="' + tr("clk_sunset") + '"><span class="pmk-sunset-glyph">' + SUNSET_GLYPH + '</span> <span class="pmk-ss-t"></span></button></div>' +
+        '</div>';
       body.appendChild(wrap);
       var z = function (n) { return (n < 10 ? "0" : "") + n; };
       var EDM = +new Date(2027, 4, 1), PRG = +new Date(2027, 6, 10);
+      function tzMins(tz) {
+        try { var s = new Date().toLocaleTimeString("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }); var p = s.split(":"); return (+p[0]) * 60 + (+p[1]); }
+        catch (e) { return null; }
+      }
+      function fmtMins(mn) { return z(Math.floor(mn / 60) % 24) + ":" + z(mn % 60); }
+      function timeOv() { return window.__timeOverrideMins ? window.__timeOverrideMins() : null; }
       function cityTime(tz) {
+        var ov = timeOv();
+        if (ov != null) { // frozen at the chosen Edmonton hour; other zones shift by their live offset from Edmonton
+          var base = tzMins("America/Edmonton"), here = tzMins(tz);
+          if (base != null && here != null) return fmtMins(((ov + (here - base)) % 1440 + 1440) % 1440);
+          return fmtMins(ov);
+        }
         try { return new Date().toLocaleTimeString("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }); }
         catch (e) { return "--:--"; }
       }
@@ -44010,6 +44056,34 @@ async def localfont(name):
         var secs = Math.max(0, Math.floor((Date.now() - sessionStart) / 1000));
         wrap.querySelector(".pmk-pt").textContent = z(Math.floor(secs / 60)) + ":" + z(secs % 60);
       }
+      // ── time-of-day chooser ── slider picks an Edmonton hour; Jump writes ?time=HH:00 and
+      // re-runs the auto day/night against it; ↻ clears the override back to the real clock.
+      function setTimeParam(str) { // mirrors calSetDateParam: set/clear ?time= in place, keep the colon readable
+        try {
+          var url = new URL(location.href);
+          if (str) url.searchParams.set("time", str); else url.searchParams.delete("time");
+          if (url.hash && /[#&]time=\d{1,2}(?::\d{1,2})?/.test(url.hash)) {
+            url.hash = url.hash.replace(/([#&])time=\d{1,2}(?::\d{1,2})?/, "$1").replace(/#&/, "#");
+            if (url.hash === "#") url.hash = "";
+          }
+          history.replaceState(null, "", url.toString().replace(/(time=\d{1,2})%3[Aa](\d{1,2})/, "$1:$2"));
+        } catch (e) {}
+      }
+      function applyTimeJump() { // re-enable auto (a manual flip may have latched it off), then reflect the chosen hour
+        if (window.__startAutoDayNight) window.__startAutoDayNight();
+        if (window.__applyAutoDayNight) window.__applyAutoDayNight();
+      }
+      function sunMins() { var s = window.__edmSun; return { sr: (s && typeof s.sr === "number") ? s.sr : 7 * 60, ss: (s && typeof s.ss === "number") ? s.ss : 20 * 60 }; } // mirrors sunTimes() incl. the offline defaults
+      function jumpToMins(mn) { setTimeParam(fmtMins(((mn % 1440) + 1440) % 1440)); applyTimeJump(); slider.value = nowHour(); updLabel(); tick(); }
+      var slider = wrap.querySelector(".pmk-slider"), tval = wrap.querySelector(".pmk-tval");
+      function nowHour() { var ov = timeOv(); return ov != null ? Math.floor(ov / 60) : Math.floor((tzMins("America/Edmonton") || 0) / 60); }
+      function updLabel() { tval.textContent = z(+slider.value) + ":00"; var sm = sunMins(); wrap.querySelector(".pmk-sr-t").textContent = fmtMins(sm.sr); wrap.querySelector(".pmk-ss-t").textContent = fmtMins(sm.ss); }
+      slider.value = nowHour(); updLabel();
+      slider.addEventListener("input", updLabel);
+      wrap.querySelector(".pmk-jump").addEventListener("click", function () { setTimeParam(z(+slider.value) + ":00"); applyTimeJump(); tick(); });
+      wrap.querySelector(".pmk-treset").addEventListener("click", function () { setTimeParam(null); applyTimeJump(); slider.value = nowHour(); updLabel(); tick(); });
+      wrap.querySelector(".pmk-sunrise").addEventListener("click", function () { jumpToMins(sunMins().sr); });
+      wrap.querySelector(".pmk-sunset").addEventListener("click", function () { jumpToMins(sunMins().ss); });
       tick();
       if (clockTimer) clearInterval(clockTimer);
       clockTimer = setInterval(tick, 1000);
@@ -47108,8 +47182,29 @@ async def localfont(name):
     // also keeps every headless test on the untouched daytime baseline.
     var autoStopped = false, autoTimer = null, twilightForced = false;
     var TWI_MIN = 40; // half-width of each dawn/dusk twilight window, minutes
+    // ?time=HH:MM (also ?time=HH, and the #time= hash form) pins the time-of-day the auto
+    // day/night/twilight system computes against, without freezing the scene the way ?date=
+    // does (it is deliberately NOT in autoOverridden — the auto loop stays live and reflects
+    // the chosen hour). Parsed live per call so a hashchange flips it. Colon may arrive
+    // percent-encoded (%3A) via URLSearchParams, so decode first.
+    function timeOverrideMins() {
+      try {
+        var s = (location.search || "") + (location.hash || "");
+        try { s = decodeURIComponent(s); } catch (e) {}
+        var m = /(?:^|[#&?])time=(\d{1,2})(?::(\d{1,2}))?/.exec(s);
+        if (m) {
+          var h = Math.max(0, Math.min(23, parseInt(m[1], 10)));
+          var mn = m[2] != null ? Math.max(0, Math.min(59, parseInt(m[2], 10))) : 0;
+          return h * 60 + mn;
+        }
+      } catch (e) {}
+      return null;
+    }
+    window.__timeOverrideMins = timeOverrideMins; // read by the phone Clock chooser + the hashchange re-apply
     function edmMinutes() {
       if (typeof window.__edmNowMins === "function") return window.__edmNowMins(); // test hook: fake the clock
+      var ov = timeOverrideMins();
+      if (ov != null) return ov; // ?time= override: the chosen wall-clock time
       try {
         var d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Edmonton" }));
         return d.getHours() * 60 + d.getMinutes();

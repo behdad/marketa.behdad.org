@@ -58676,11 +58676,19 @@ function spawnDustMote(container) {
     // + UV drop + spotlight); window.__firstDance() is the callable test hook that starts it.
     var firstDanceTimer = null;
     var firstDancePrevDance = null; // the dance the rotation was on before the first dance took over (restored after)
+    var firstDanceHostsAnchor = null; // DOM anchor to restore the hosts' slot after moving them to the front
     function endFirstDance() {
       if (firstDanceTimer) { clearTimeout(firstDanceTimer); firstDanceTimer = null; }
       var wasOn = window.__firstDanceOn;
       window.__firstDanceOn = false;
       group.classList.remove("first-dance");
+      // restore the hosts to their original DOM slot (moved to the front for the solo dance)
+      if (firstDanceHostsAnchor && firstDanceHostsAnchor.parentNode === group) {
+        var rBeh = group.querySelector(".g-behdad"), rMar = group.querySelector(".g-marketa");
+        if (rBeh) group.insertBefore(rBeh, firstDanceHostsAnchor);
+        if (rMar) group.insertBefore(rMar, firstDanceHostsAnchor);
+      }
+      firstDanceHostsAnchor = null;
       // restore the pre-first-dance dance (crossfades the tango bed back out to whatever was
       // playing). Only if we actually switched and the party's still lit — a party-off teardown
       // will have cleared __partyDance itself. Guarded/idempotent (storm-safe).
@@ -58708,6 +58716,12 @@ function spawnDustMote(container) {
       firstDancePrevDance = window.__partyDance || null;
       if (window.__setPartyDance) window.__setPartyDance("tango"); // crossfade to tango; endFirstDance restores firstDancePrevDance
       group.classList.add("first-dance"); // rings the crowd out + spotlight on (CSS)
+      // paint the couple ON TOP of the ringed crowd for their solo dance (SVG paint order = DOM order):
+      // move the hosts to the end of #garden-guests; endFirstDance restores their slot via the anchor
+      var fdBeh = group.querySelector(".g-behdad"), fdMar = group.querySelector(".g-marketa");
+      firstDanceHostsAnchor = fdMar ? fdMar.nextSibling : (fdBeh ? fdBeh.nextSibling : null);
+      if (fdBeh) group.appendChild(fdBeh);
+      if (fdMar) group.appendChild(fdMar);
       if (window.__syncDanceFreeze) window.__syncDanceFreeze(); // freeze the crowd + drop the UV via the tested path; the two hosts alone keep swaying (CSS)
       if (window.__updateUvBreather) window.__updateUvBreather(); // pause the UV breather while the freeze holds the blacklight off
       firstDanceTimer = setTimeout(endFirstDance, reducedMotion() ? 10000 : 18000); // hold ~18s so a full tango phrase plays (a shorter beat under reduced motion)

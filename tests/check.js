@@ -906,6 +906,32 @@ function checkDanceParity(file, script) {
   else fail(file + ": DANCE_MOOD has value(s) with no amplitude-keyframe handling", unknownMoods.join(", "));
 }
 
+// Aspen's room shots de-dupe on room + light + lineup, and the light half of that
+// signature may only carry what the polaroid actually paints. albumPhotoSvg draws the
+// weather in the two rooms with a sky in frame (the deck, the office window) and nowhere
+// else, so a weather change indoors leaves the photograph identical — including it in the
+// signature filed a second, indistinguishable card each time the real forecast flipped.
+// ALBUM_WX_ROOMS lives in the capture closure and the renderer in another, so nothing but
+// this holds them together: assert the listed rooms are exactly the branches using `wx`.
+function checkAlbumWxRooms(file, script) {
+  if (file !== "rsvp.html" || !script) return;
+  var decl = script.match(/var ALBUM_WX_ROOMS = \{([^}]*)\}/);
+  if (!decl) { fail(file + ": ALBUM_WX_ROOMS not found (room-shot signature's weather gate)"); return; }
+  var listed = (decl[1].match(/(\w+)\s*:/g) || []).map(function (s) { return s.replace(/\s*:/, ""); }).sort();
+  // each `rec.room === "x"` branch of albumPhotoSvg, up to the next branch or the shared tail
+  var body = script.match(/function albumPhotoSvg\(rec\)\s*\{[\s\S]*?\n      \/\/ top motif/);
+  if (!body) { fail(file + ": could not locate albumPhotoSvg's room branches"); return; }
+  var re = /rec\.room === "(\w+)"\)\s*\{([\s\S]*?)(?=\n      \} else)/g, m, paints = [];
+  while ((m = re.exec(body[0])) !== null) if (/\bwx\b/.test(m[2])) paints.push(m[1]);
+  paints.sort();
+  if (paints.join(",") === listed.join(",")) {
+    pass(file + ": ALBUM_WX_ROOMS matches the room backdrops that paint weather (" + listed.join(", ") + ")");
+  } else {
+    fail(file + ": ALBUM_WX_ROOMS has drifted from albumPhotoSvg — room shots will over- or under-de-dupe",
+      "listed: " + (listed.join(", ") || "(none)") + "\npaints wx: " + (paints.join(", ") || "(none)"));
+  }
+}
+
 // A leftover git merge marker in CSS/HTML slips past `node --check` (which only sees
 // the inline <script>) and the other structural checks — one reached production once.
 // Precise forms only, so decorative "====" comment rules don't false-positive.
@@ -940,6 +966,7 @@ FILES.forEach(function (file) {
     checkDanceParity(file, script);
     checkFireFestParity(file, script);
     checkSeasonRosters(file, script);
+    checkAlbumWxRooms(file, script);
   }
   checkCssCommentBalance(file, style);
   checkCssBraceBalance(file, style);

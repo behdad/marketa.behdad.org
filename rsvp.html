@@ -26274,8 +26274,13 @@ function idealBrowser() {
   // doesn't). Observing the boxes catches all of those without threading a call through the
   // dozens of setCaption sites. No feedback loop: the margins these callbacks set don't
   // alter either row's content box.
+  // Gated on the fullscreen class rather than letting sizeFullscreenFrame's own early return
+  // handle it: that branch also calls __refitZoom(), which would then run on every caption
+  // height change during ordinary play, not just on a fullscreen toggle or resize.
   if (window.ResizeObserver && caption && dots) {
-    var chromeRo = new ResizeObserver(function () { sizeFullscreenFrame(); });
+    var chromeRo = new ResizeObserver(function () {
+      if (area.classList.contains("is-fullscreen")) sizeFullscreenFrame();
+    });
     chromeRo.observe(caption);
     chromeRo.observe(dots);
   }

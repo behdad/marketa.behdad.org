@@ -55907,7 +55907,7 @@ function spawnDustMote(container) {
     if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
     var t = e.target;
     if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
-    if (e.key === "ArrowRight" || e.key === "Tab") {
+    if (e.key === "ArrowRight") {
       e.preventDefault();
       if (stageIndex < maxUnlocked) { goToStage(STAGES[stageIndex + 1]); lastLockedRightAt = 0; }
       else if (stageIndex < STAGES.length - 1) {
@@ -55918,6 +55918,19 @@ function spawnDustMote(container) {
     } else if (e.key === "ArrowLeft") {
       e.preventDefault();
       if (stageIndex > 0) goToStage(STAGES[stageIndex - 1]);
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      // Tab cycles the dance-floor "moments"/flares (each self-lights the party + heads to the
+      // garden); the final step just sends a random party text instead of a moment.
+      var TAB_MOMENTS = ["firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift", "__randomText"];
+      var ti = (window.__tabMomentIdx || 0) % TAB_MOMENTS.length;
+      window.__tabMomentIdx = ti + 1;
+      var tm = TAB_MOMENTS[ti];
+      if (tm === "__randomText") {
+        var TXT = [["Ali", "<em>Habibi</em>s, best night of my life! 🎉"], ["Goli", "this set is UNREAL 🔥"], ["Spencer", "someone bring me a drink 🍸"], ["Bahareh", "kids are finally asleep 😴"], ["Farhang", "who's ready for a speech 🎤"]];
+        var tp = TXT[(Math.random() * TXT.length) | 0];
+        if (window.message) window.message(tp[0], tp[1]);
+      } else if (typeof window[tm] === "function") { window[tm](); }
     } else if (e.key === "`") {
       e.preventDefault();
       // whisk to the office and open its console. Defer the boot/zoom until the

@@ -47139,6 +47139,10 @@ async def localfont(name):
       // spinning is the one out there, and both resolve to the same standing art (#bh-dj) — the
       // face that shows is picked from the live figure, see albumFigureClone.
       sina: ["#bh-dj"], danesh: ["#bh-dj"],
+      // Pouria, photographed at work: his art stops at the apron, so his clone brings a section of
+      // the bar counter with it (see albumFigureClone). Only reachable from a KITCHEN room shot —
+      // __whoIsHere keeps him crew everywhere else.
+      pouria: ["#kitchen-bartender"],
       // The godkids: NOT garden .g-* figures — clone their standing art from the CUDDLY-NOOK figures
       // (#cuddly-*), the cleanest full standing poses (the #garden-kid-* chase runners are wrapped in
       // scale/flip/bob transforms that would double-transform). A "#..." selector routes
@@ -47222,6 +47226,49 @@ async def localfont(name):
         dg.removeAttribute("class"); dg.removeAttribute("style"); dg.removeAttribute("id"); // shed the idle sway
         var dids = dg.querySelectorAll("[id]"); for (var d = 0; d < dids.length; d++) dids[d].removeAttribute("id");
         return dg;
+      }
+      // The bartender, photographed where a bartender belongs: behind his bar. He is drawn as a
+      // half figure — the counter is what his art stops at — so his clone brings a slab of counter
+      // with it (quoted from #kitchen-bar-counter in flat fills, since albumRasterize serializes
+      // without the scene's gradients), painted AFTER him so it covers the cut and running far past
+      // the shared feet line: the two-row formation LIFTS the back tier, and a short slab would
+      // hang in the air. He also can't be planted like a guest, having no feet to plant: the bar is
+      // a foreground close-up, so his head is drawn ~1.3× the size of a garden guest's (r12 against
+      // their r8–10) — BAR_K brings him to the crowd's head size, and the counter, not his feet, is
+      // what sets his height, landing its top BAR_TOP above the feet line (~60% of an adult, which
+      // is what a bar counter is).
+      if (sel === "#kitchen-bartender") {
+        var bt = document.getElementById("kitchen-bartender");
+        if (!bt) return null;
+        var bc = bt.cloneNode(true);
+        // his hit rect would inflate the measured half-width; his phone is only out on the bored
+        // beat, held back by an id-scoped opacity:0 the clone can't keep
+        ["#kitchen-bartender-hit", "#kitchen-bartender-phone"].forEach(function (s) {
+          var n = bc.querySelector(s); if (n && n.parentNode) n.parentNode.removeChild(n);
+        });
+        bc.removeAttribute("class"); bc.removeAttribute("style"); bc.removeAttribute("id"); // shed the idle shake
+        albumAdornSync(bt, bc);
+        var bids = bc.querySelectorAll("[id]"); for (var bn = 0; bn < bids.length; bn++) bids[bn].removeAttribute("id");
+        var BAR_K = 0.775, BAR_TOP = 102; // his head r12 → r9.3, the crowd's size; counter top 102 above the feet line
+        var bwrap = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        // map (300, 245) — his centre line and the counter's top rail — onto (0, 332 - BAR_TOP)
+        bwrap.setAttribute("transform", "translate(0 " + (332 - BAR_TOP) + ") scale(" + BAR_K + ") translate(-300 -245)");
+        bwrap.appendChild(bc);
+        var bar = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        bar.setAttribute("class", "alb-scenery"); // set dressing: measureBox leaves it out of his half-width, so a long bar doesn't shove the room's other drinkers aside
+        // Colours are the kitchen backdrop's own counter (see the room === "kitchen" branch), so his
+        // end of the bar and the band already painted across the frame read as one surface.
+        [["rect", { x: 180, y: 245, width: 240, height: 14, rx: 4, fill: "#232633" }],           // the top rail
+         ["rect", { x: 180, y: 245, width: 240, height: 3, rx: 2, fill: "#3d4560" }],            // its lit edge
+         ["rect", { x: 182, y: 257, width: 236, height: 320, fill: "#1a1b26" }],                 // the dark front, run long: the two-row tier lifts him
+         ["rect", { x: 182, y: 300, width: 236, height: 3, fill: "#3d4560", opacity: "0.3" }]    // a low light line down the front
+        ].forEach(function (part) {
+          var e = document.createElementNS("http://www.w3.org/2000/svg", part[0]);
+          for (var a in part[1]) e.setAttribute(a, part[1][a]);
+          bar.appendChild(e);
+        });
+        bwrap.appendChild(bar);
+        return bwrap;
       }
       // Whistler: the one subject drawn at his own scale. His art already sits centred with the
       // paws on local y0, so planting him is a bare translate onto the shared feet line — scaling
@@ -47443,6 +47490,12 @@ async def localfont(name):
       // above it (arms-up dancers, a birthday hat), and leaves a kid floating under it.
       function measureBox(g) {
         var box = { halfW: 24, top: LOCAL_TOP };
+        // A clone may bring SCENERY with it (the bartender's slab of bar counter) — that's set
+        // dressing behind the row, not part of the person, and measuring it would shove his
+        // neighbours a counter's width away. Hidden for the measurement, restored right after
+        // (display:none is the one thing getBBox skips).
+        var scen = g.querySelectorAll ? g.querySelectorAll(".alb-scenery") : [];
+        for (var s = 0; s < scen.length; s++) scen[s].setAttribute("display", "none");
         // Measure through a HOLDER, never on the clone itself: getBBox() reports a <g>'s children in
         // that <g>'s own space and does NOT apply its own transform attribute — and Aspen's and the
         // godkids' clones are wrappers whose whole job is a normalizing transform, so measuring them
@@ -47456,6 +47509,7 @@ async def localfont(name):
         } catch (e) { /* degenerate clone — fall through to the clamped defaults */ }
         if (g.parentNode === hold) hold.removeChild(g);
         if (hold.parentNode) hold.parentNode.removeChild(hold);
+        for (var r = 0; r < scen.length; r++) scen[r].removeAttribute("display");
         box.halfW = Math.max(10, box.halfW); // clamp so a degenerate/empty clone still reserves room
         return box;
       }
@@ -73822,8 +73876,15 @@ function spawnDustMote(container) {
     // drawn there as a full standing figure like any other guest, so he's a subject like any other.
     // Aspen stays excluded everywhere — she's the one holding the camera.
     var WHO_OFF_DUTY = { balcony: { sina: 1, danesh: 1 } };
+    // The bartender is the other way round: he's very much on duty, and that's exactly what makes
+    // the photo work. His clone carries its own slab of bar counter (see albumFigureClone), so the
+    // half of him that isn't drawn is hidden by the thing he's standing behind. Only in the kitchen —
+    // anywhere else there'd be no bar to put him behind.
+    var WHO_BEHIND_BAR = { kitchen: { pouria: 1 } };
     function whoWorkingHere(key, room) {
-      return !!WHO_CREW[key] && !(WHO_OFF_DUTY[room] && WHO_OFF_DUTY[room][key]);
+      if (!WHO_CREW[key]) return false;
+      if (WHO_OFF_DUTY[room] && WHO_OFF_DUTY[room][key]) return false;
+      return !(WHO_BEHIND_BAR[room] && WHO_BEHIND_BAR[room][key]);
     }
     window.__whoIsHere = function (room, opts) {
       room = room || window.currentStageName || "kitchen";

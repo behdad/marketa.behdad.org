@@ -22363,9 +22363,20 @@ var T = {
     share_download: "⬇ Download",
     share_mail: "✉ Email",
     share_close: "Close",
-    share_tagline: "we’re getting married",
     share_bd_a: "Happy Birthday, ",
     share_bd_b: "!",
+    share_greet_wedding: "Save the Date!",
+    share_greet_canada: "Happy Canada Day!",
+    share_greet_valentines: "Happy Valentine’s Day!",
+    share_greet_chaharshanbe: "Happy Chaharshanbe Suri!",
+    share_greet_nowruz: "Happy Nowruz!",
+    share_greet_pride: "Happy Pride!",
+    share_greet_carodejnice: "Happy Witches’ Night!",
+    share_greet_spooky: "Happy Halloween!",
+    share_greet_stedry: "Merry Christmas Eve!",
+    share_greet_xmas: "Merry Christmas!",
+    share_greet_newyear: "Happy New Year!",
+    share_greet_holiday: "Happy Holidays!",
     share_copied: "✓ Copied to clipboard — paste it anywhere",
     share_copyfail: "Download or email it below",
     share_mail_bd_subj: "Happy Birthday, {name}! 🎉",
@@ -23060,9 +23071,20 @@ var T = {
     share_download: "⬇ Stáhnout",
     share_mail: "✉ E-mail",
     share_close: "Zavřít",
-    share_tagline: "budeme se brát",
     share_bd_a: "Všechno nejlepší, ",
     share_bd_b: "!",
+    share_greet_wedding: "Uložte si datum!",
+    share_greet_canada: "Šťastný Den Kanady!",
+    share_greet_valentines: "Šťastného svatého Valentýna!",
+    share_greet_chaharshanbe: "Šťastné Čaháršanbe Súrí!",
+    share_greet_nowruz: "Šťastný Nourúz!",
+    share_greet_pride: "Šťastný Pride!",
+    share_greet_carodejnice: "Veselé pálení čarodějnic!",
+    share_greet_spooky: "Veselý Halloween!",
+    share_greet_stedry: "Šťastný Štědrý den!",
+    share_greet_xmas: "Veselé Vánoce!",
+    share_greet_newyear: "Šťastný nový rok!",
+    share_greet_holiday: "Veselé svátky!",
     share_copied: "✓ Zkopírováno do schránky — vložte kamkoli",
     share_copyfail: "Stáhněte nebo pošlete e-mailem níže",
     share_mail_bd_subj: "Všechno nejlepší, {name}! 🎉",
@@ -64709,30 +64731,64 @@ function spawnDustMote(container) {
     var sk = calSeasonKey(s.m, s.d);
     return { kind: "season", key: sk, id: sk, label: shareT("season_" + sk) };
   }
-  // Both wedding dates, month name localized; the city rides along in the loft object's string.
-  function shareDates() {
-    var loc = (document.documentElement.lang === "cs") ? "cs-CZ" : "en-US";
-    var legs = (window.loft && window.loft.weddings) || ["2027-05-01 · Edmonton", "2027-07-10 · Prague"];
-    return legs.map(function (leg) {
-      var mm = /(\d{4})-(\d{2})-(\d{2})\s*·\s*(.+)$/.exec(leg);
-      if (!mm) return leg;
-      var dt = new Date(+mm[1], +mm[2] - 1, +mm[3], 12), when;
-      try { when = dt.toLocaleDateString(loc, { year: "numeric", month: "long", day: "numeric" }); } catch (e) { when = mm[1] + "-" + mm[2] + "-" + mm[3]; }
-      return when + " · " + mm[4];
-    });
+  var SHARE_GREET_Y = 408; // baseline of the big occasion greeting (wine Fraunces)
+  var SHARE_DATE_Y = 462;  // baseline of the exact-date line under the greeting (ink Source Serif)
+  // The greeting shown for the day's occasion: a birthday wraps the person's name, every named
+  // holiday / wedding window has its own dict line (share_greet_<key>). A plain climate season
+  // (winter/spring/summer/smoky/autumn) and the neutral OG render have none → the card stays a
+  // clean, timeless caps + names + URL save-the-date.
+  function shareGreeting(occ) {
+    if (occ.kind === "birthday") return "🎂 " + shareT("share_bd_a") + occ.name + shareT("share_bd_b");
+    if (occ.kind === "season") return shareT("share_greet_" + occ.key) || "";
+    return "";
   }
-  var SHARE_OCC_Y = 544; // baseline the occasion line + its optional portrait share (kept inside the inner border, whose bottom sits at y=590)
-  // The birthday occasion draws a bust to the LEFT of its text; measure the text so the pair
-  // centres as one unit, and hand the same geometry to both the SVG (bust) and canvas (text).
+  // Point occasions land on a fixed calendar day; span occasions (pride, generic holiday season)
+  // and the wedding windows resolve elsewhere. [month 0-11, day].
+  var SHARE_OCC_DATE = {
+    valentines: [1, 14], chaharshanbe: [2, 17], nowruz: [2, 20], carodejnice: [3, 30],
+    canada: [6, 1], spooky: [9, 31], stedry: [11, 24], xmas: [11, 25], newyear: [11, 31]
+  };
+  function shareFmtDate(y, m0, d) {
+    var loc = (document.documentElement.lang === "cs") ? "cs-CZ" : "en-US";
+    var dt = new Date(y, m0, d, 12);
+    try { return dt.toLocaleDateString(loc, { year: "numeric", month: "long", day: "numeric" }); }
+    catch (e) { return y + "-" + calZ(m0 + 1) + "-" + calZ(d); }
+  }
+  // The exact date to print under the greeting, localized. A birthday → that person's day; a
+  // wedding window → the specific wedding date (May 1 Edmonton or Jul 10 Prague, by month); a
+  // named point holiday → its fixed day; a span occasion → the loft's current day. Year comes
+  // from the loft's pretend-now, so ?date= carries through.
+  function shareOccDate(occ) {
+    var s = seasonDate();
+    var y = (window.__now ? window.__now() : new Date()).getFullYear();
+    if (occ.kind === "birthday") return shareFmtDate(y, occ.row.m, occ.row.d);
+    if (occ.kind === "season") {
+      if (occ.key === "wedding") {
+        var legs = (window.loft && window.loft.weddings) || ["2027-05-01 · Edmonton", "2027-07-10 · Prague"];
+        var mm = /(\d{4})-(\d{2})-(\d{2})/.exec((s.m <= 4) ? legs[0] : legs[1]);
+        if (mm) return shareFmtDate(+mm[1], +mm[2] - 1, +mm[3]);
+      }
+      var pt = SHARE_OCC_DATE[occ.key];
+      return shareFmtDate(y, pt ? pt[0] : s.m, pt ? pt[1] : s.d);
+    }
+    return "";
+  }
+  // The birthday occasion draws a bust to the LEFT of its greeting; measure the greeting so the
+  // pair centres as one unit, and hand the same geometry to both the SVG (bust) and canvas (text).
+  // The greeting font shrinks to fit the card if a long holiday name would overflow.
   function shareLayout(occ) {
-    var lay = { bust: null, occTextX: 600 };
+    var lay = { greet: shareGreeting(occ), gsize: 46, gy: SHARE_GREET_Y, occTextX: 600, bust: null, date: "" };
+    if (!lay.greet) return lay; // plain season / neutral: no greeting or date, just caps + names + URL
+    lay.date = shareOccDate(occ);
+    var g = document.createElement("canvas").getContext("2d");
+    var maxW = (occ.kind === "birthday") ? 900 : 1000; // birthday leaves room for the bust beside it
+    g.font = '700 ' + lay.gsize + 'px "Fraunces", Georgia, serif';
+    while (g.measureText(lay.greet).width > maxW && lay.gsize > 26) { lay.gsize -= 2; g.font = '700 ' + lay.gsize + 'px "Fraunces", Georgia, serif'; }
     if (occ.kind === "birthday") {
-      var g = document.createElement("canvas").getContext("2d");
-      g.font = '700 34px "Fraunces", Georgia, serif';
-      var tw = g.measureText("🎂 " + shareT("share_bd_a") + occ.name + shareT("share_bd_b")).width;
-      var bustH = 62, bustW = Math.round(bustH * 20 / 24), gap = 14;
+      var tw = g.measureText(lay.greet).width;
+      var bustH = 78, bustW = Math.round(bustH * 20 / 24), gap = 16;
       var leftX = 600 - (bustW + gap + tw) / 2;
-      lay.bust = { x: Math.round(leftX), y: SHARE_OCC_Y - Math.round(bustH * 0.82), w: bustW, h: bustH };
+      lay.bust = { x: Math.round(leftX), y: Math.round(lay.gy - bustH * 0.80), w: bustW, h: bustH };
       lay.occTextX = leftX + bustW + gap;
     }
     return lay;
@@ -64751,7 +64807,7 @@ function spawnDustMote(container) {
       bust +
       '</svg>';
   }
-  function shareDraw(ctx, occ, dates, lay) {
+  function shareDraw(ctx, occ, lay) {
     ctx.textBaseline = "alphabetic";
     // the names, drawn in three runs so the & keeps its wine
     ctx.font = '700 78px "Fraunces", Georgia, serif';
@@ -64762,31 +64818,26 @@ function spawnDustMote(container) {
     ctx.fillStyle = "#453a31"; ctx.fillText(n1, sx, 314);
     ctx.fillStyle = "#8e3a4a"; ctx.fillText(amp, sx + w1, 314);
     ctx.fillStyle = "#453a31"; ctx.fillText(n2, sx + w1 + wa, 314);
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#716455"; ctx.font = 'italic 400 28px "Source Serif 4", Georgia, serif';
-    ctx.fillText(shareT("share_tagline"), 600, 360);
-    ctx.fillStyle = "#453a31"; ctx.font = '400 32px "Source Serif 4", Georgia, serif';
-    ctx.fillText(dates[0] || "", 600, 430);
-    ctx.fillStyle = "#8e3a4a"; ctx.font = '400 30px "Fraunces", Georgia, serif';
-    ctx.fillText("∞", 600, 467);
-    ctx.fillStyle = "#453a31"; ctx.font = '400 32px "Source Serif 4", Georgia, serif';
-    ctx.fillText(dates[1] || "", 600, 504);
-    ctx.fillStyle = "#8e3a4a"; ctx.font = '700 34px "Fraunces", Georgia, serif';
-    if (occ.kind === "birthday") {
-      ctx.textAlign = "left";
-      ctx.fillText("🎂 " + shareT("share_bd_a") + occ.name + shareT("share_bd_b"), lay.occTextX, SHARE_OCC_Y);
-      ctx.textAlign = "center";
-    } else {
-      ctx.fillText(occ.label || "", 600, SHARE_OCC_Y);
+    // the occasion greeting + its exact date (skipped on a plain season / neutral render)
+    if (lay.greet) {
+      ctx.fillStyle = "#8e3a4a"; ctx.font = '700 ' + lay.gsize + 'px "Fraunces", Georgia, serif';
+      if (occ.kind === "birthday") { ctx.textAlign = "left"; ctx.fillText(lay.greet, lay.occTextX, lay.gy); }
+      else { ctx.textAlign = "center"; ctx.fillText(lay.greet, 600, lay.gy); }
+      if (lay.date) {
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#453a31"; ctx.font = '400 30px "Source Serif 4", Georgia, serif';
+        ctx.fillText(lay.date, 600, SHARE_DATE_Y);
+      }
     }
-    ctx.fillStyle = "#716455"; ctx.font = '400 22px "Source Serif 4", Georgia, serif';
-    ctx.fillText("marketa.behdad.org", 600, 578);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#716455"; ctx.font = '400 24px "Source Serif 4", Georgia, serif';
+    ctx.fillText("marketa.behdad.org/loft-day", 600, 578);
   }
   // Build → serialize → rasterize → canvas → text. Resolves { canvas, dataURL, occ }.
   function shareRasterize() {
     return new Promise(function (resolve, reject) {
       try {
-        var occ = shareOccasion(), dates = shareDates(), lay = shareLayout(occ);
+        var occ = shareOccasion(), lay = shareLayout(occ);
         var url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(shareCardSvg(occ, lay));
         var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
         var img = new Image();
@@ -64798,7 +64849,7 @@ function spawnDustMote(container) {
               cv.width = SHARE_W; cv.height = SHARE_H;
               var ctx = cv.getContext("2d");
               ctx.drawImage(img, 0, 0, SHARE_W, SHARE_H);
-              shareDraw(ctx, occ, dates, lay);
+              shareDraw(ctx, occ, lay);
               resolve({ canvas: cv, dataURL: cv.toDataURL("image/png"), occ: occ });
             } catch (e) { reject(e); }
           }
@@ -64819,7 +64870,7 @@ function spawnDustMote(container) {
   // inside it, so the body carries the day's deep link and a note that the PNG is already on the
   // clipboard (the auto-copy on open) for the sender to paste in as an attachment.
   function shareMailContent(occ) {
-    var url = "https://marketa.behdad.org/rsvp.html?date=" + shareLoftISO(), subject, intro;
+    var url = "https://marketa.behdad.org/loft-day.html?date=" + shareLoftISO(), subject, intro;
     if (occ && occ.kind === "birthday") {
       subject = shareT("share_mail_bd_subj").replace("{name}", occ.name);
       intro = shareT("share_mail_bd_body").replace("{name}", occ.name);
@@ -64913,6 +64964,7 @@ function spawnDustMote(container) {
   // (occasion,day) via a localStorage stamp so a reload on the same day doesn't nag.
   var SHARE_PLAIN_SEASONS = { winter: 1, spring: 1, summer: 1, smoky: 1, autumn: 1 }; // ordinary seasons don't auto-pop the card; only named occasions do
   function shareAutoShow() {
+    if (!/loft-day/.test(location.pathname)) return; // the card auto-pops only on the /loft-day alias, never the rsvp.html entry
     if ((window.__autoplayOn && window.__autoplayOn()) || window.__tripActive) return;
     var s = seasonDate(), id = null;
     for (var i = 0; i < BIRTHDAYS.length; i++) {

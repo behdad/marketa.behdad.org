@@ -58,7 +58,7 @@ var CROWD = ["bh-patricia-son", "bh-patricia-daughter", "bh-elisabeth"];
 var SMOKERS = ["bh-farhang", "bh-alireza", "bh-dj", "bh-behdad", "bh-marketa"];
 // figure id → garden .g-<name> key used by the one-room exclusion
 var NAME = {
-  "bh-patricia-son": "patricia-son", "bh-patricia-daughter": "patricia-daughter", "bh-elisabeth": "elisabeth",
+  "bh-patricia-son": "bahareh", "bh-patricia-daughter": "patricia", "bh-elisabeth": "lauren",
   "bh-farhang": "farhang", "bh-alireza": "alireza", "bh-dj": "dj",
   "bh-behdad": "behdad", "bh-marketa": "marketa"
 };
@@ -252,7 +252,7 @@ console.log("balcony-hangout controller (Node DOM-shim):");
 // ── 1. RANDOMIZATION varies across activations ───────────────────────────────
 (function () {
   win.__barCoupleNowValue = null;
-  ["patricia-son", "patricia-daughter", "elisabeth", "farhang", "alireza", "behdad", "marketa"].forEach(function (n) { setArrived(n, false); });
+  ["bahareh", "patricia", "lauren", "farhang", "alireza", "behdad", "marketa"].forEach(function (n) { setArrived(n, false); });
   var subsets = {}, orders = {}, gapSets = {};
   var N = 200;
   for (var k = 0; k < N; k++) {
@@ -276,10 +276,10 @@ console.log("balcony-hangout controller (Node DOM-shim):");
 // ── 2. ONE-ROOM RULE: floor + bar exclusion ──────────────────────────────────
 (function () {
   // (a) on the floor → never shown on the balcony
-  ["patricia-son", "patricia-daughter", "elisabeth", "farhang", "alireza", "behdad", "marketa"].forEach(function (n) { setArrived(n, false); });
+  ["bahareh", "patricia", "lauren", "farhang", "alireza", "behdad", "marketa"].forEach(function (n) { setArrived(n, false); });
   win.__barCoupleNowValue = null;
   setArrived("farhang", true);
-  setArrived("patricia-son", true);
+  setArrived("bahareh", true);
   var everFarhang = false, everPatriciaSon = false;
   for (var k = 0; k < 120; k++) {
     leave(); activate();
@@ -289,10 +289,10 @@ console.log("balcony-hangout controller (Node DOM-shim):");
   }
   ok("a smoker on the garden floor (Farhang) is NEVER shown on the balcony", !everFarhang);
   ok("a crowd guest on the garden floor (Patricia’s son) is NEVER shown on the balcony", !everPatriciaSon);
-  setArrived("farhang", false); setArrived("patricia-son", false);
+  setArrived("farhang", false); setArrived("bahareh", false);
 
   // (b) at the bar (via __barCoupleNow) → never shown on the balcony
-  win.__barCoupleNowValue = ["alireza", "patricia-daughter"];
+  win.__barCoupleNowValue = ["alireza", "patricia"];
   var everAlireza = false, everPatriciaDaughter = false;
   for (var j = 0; j < 120; j++) {
     leave(); activate();
@@ -314,7 +314,7 @@ console.log("balcony-hangout controller (Node DOM-shim):");
 
 // ── 3. __balconySmokerNow() reflects the current smokers ─────────────────────
 (function () {
-  ["patricia-son", "patricia-daughter", "elisabeth", "farhang", "alireza", "behdad", "marketa"].forEach(function (n) { setArrived(n, false); });
+  ["bahareh", "patricia", "lauren", "farhang", "alireza", "behdad", "marketa"].forEach(function (n) { setArrived(n, false); });
   win.__barCoupleNowValue = null;
   leave();
   ok("__balconySmokerNow() is null when hidden", win.__balconySmokerNow() === null);
@@ -343,7 +343,7 @@ console.log("balcony-hangout controller (Node DOM-shim):");
 
 // ── 4. DRINKS: some non-smokers, not all, varying; smokers never ──────────────
 (function () {
-  ["patricia-son", "patricia-daughter", "elisabeth", "farhang", "alireza", "behdad", "marketa"].forEach(function (n) { setArrived(n, false); });
+  ["bahareh", "patricia", "lauren", "farhang", "alireza", "behdad", "marketa"].forEach(function (n) { setArrived(n, false); });
   win.__barCoupleNowValue = null;
   var drinkFractions = {}, everDrink = false, everNoDrink = false, smokerDrinkSeen = false;
   var N = 300;
@@ -374,7 +374,7 @@ console.log("balcony-hangout controller (Node DOM-shim):");
 
 // ── 5. TEARDOWN: nothing stranded after hide ─────────────────────────────────
 (function () {
-  ["patricia-son", "patricia-daughter", "elisabeth", "farhang", "alireza", "behdad", "marketa"].forEach(function (n) { setArrived(n, false); });
+  ["bahareh", "patricia", "lauren", "farhang", "alireza", "behdad", "marketa"].forEach(function (n) { setArrived(n, false); });
   win.__barCoupleNowValue = null;
   leave(); activate(); // show, roll a layout (may include drinks)
   win.__resetBalconyHangout(); // the goToStage-leave / global-reset path

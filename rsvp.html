@@ -55212,12 +55212,13 @@ function spawnDustMote(container) {
     if (window.__gardenPartyOn && window.__partyDance) retuneDancers(window.__partyDance); // tempo-lock the newly-arrived figure's wrappers into phase with the rest
   }
   // ── REVOLVING DOOR ──────────────────────────────────────────────────────────
-  // The floor holds at most GUEST_CAP guest UNITS (a couple/family/solo = one unit) at a time; the
+  // The floor holds at most GUEST_CAP guest FIGURES (people, EXCL. the two hosts — a couple = 2, a
+  // solo = 1) at a time; the
   // rest wait off-scene and rotate through — every so often 1–2 present units stroll OUT the gate and
   // 1–2 waiting units stroll IN, so a big guest list never crowds the dance floor. Hosts + crew never
   // rotate (they aren't ARRIVALS units). The whole thing rides the same party/focus/visibility gate
   // as the trickle, so nothing runs (or piles up) in a hidden/unfocused tab.
-  var GUEST_CAP = 5;
+  var GUEST_CAP = 8; // guest FIGURES on the floor at once (excl. the 2 hosts) — owner: "8 guests plus hosts"
   var recentArrivals = []; // unit keys that JUST walked in — don't send them straight back out
   function unitKey(u) { return u.id || u.sels[0]; }
   function unitIsPresent(g, u) { var el = g.querySelector(u.sels[0]); return !!(el && el.classList.contains("arrived") && !el.classList.contains("leaving")); }
@@ -55275,7 +55276,7 @@ function spawnDustMote(container) {
     }
     return true;
   }
-  // self-rescheduling driver: FILL the floor up to GUEST_CAP units (one per beat), then switch to
+  // self-rescheduling driver: FILL the floor up to GUEST_CAP figures (one unit per beat), then switch to
   // ROTATION (swap 1–2 in for 1–2 out every ~20s). Party-gated (guestsWanted covers party-lit +
   // in-garden + tab-visible) and crickets-safe (also pauses while merely unfocused) so nothing
   // accumulates in a background tab; picks back up on return. Keeps .trickle on the whole party so
@@ -55291,9 +55292,9 @@ function spawnDustMote(container) {
       var list = fullArrivals();
       var present = presentUnits(g, list), waiting = waitingUnits(g, list);
       if (!waiting.length) { if (everyoneArrived(g)) g.classList.remove("trickle"); return; } // whole roster fits → full floor, stop
-      if (present.length < GUEST_CAP) { // FILL: walk in the next waiting unit (jittered list order)
+      if (presentGuestFigures(g) < GUEST_CAP) { // FILL: walk in the next waiting unit (jittered list order) — cap is a FIGURE count (guests, excl. hosts), so a couple counts as 2
         arriveEntry(waiting[0]); noteArrival(waiting[0]);
-        var nearCap = present.length + 1 >= GUEST_CAP;
+        var nearCap = presentGuestFigures(g) + 2 >= GUEST_CAP; // ~a couple away from full → ease to the slow rotation cadence
         armTrickle(nearCap ? (16000 + Math.random() * 9000) : (4500 + Math.random() * 1000)); // ~5s while filling, then ease to rotation cadence
         return;
       }

@@ -8408,6 +8408,28 @@ section{margin:1.9rem 0}
   #garden-cake-knife,#garden-cake-sparkle{animation:none !important}
   #garden-guests.cake-cutting .g-behdad .guest-react,#garden-guests.cake-cutting .g-marketa .guest-react{transition:none}
 }
+/* ── BIRTHDAY CAKE CUTTING ── #garden-bd-cake is a smaller, candled single-tier cake, hidden
+   at rest, faded up while .bd-cake-cutting holds. The birthday person(s) stand behind it (the
+   cake is positioned at their floor slot in JS) and lean in via the CSS `translate` property on
+   their .bd-cutter .guest-react (composes with any flare). Candles flicker, a knife dips. */
+#garden-bd-cake{opacity:0; transition:opacity .6s ease}
+#garden-guests.bd-cake-cutting #garden-bd-cake{opacity:1}
+#garden-bd-cake-flames{transform-box:fill-box; transform-origin:center bottom}
+#garden-guests.bd-cake-cutting #garden-bd-cake-flames{animation:bd-cake-flicker 1.1s ease-in-out infinite}
+@keyframes bd-cake-flicker{0%,100%{transform:scaleY(1) scaleX(1); opacity:.92} 40%{transform:scaleY(1.16) scaleX(.92); opacity:1} 70%{transform:scaleY(.88) scaleX(1.06); opacity:.82}}
+#garden-bd-cake-knife{transform-box:fill-box; transform-origin:82% 8%} /* pivots at the handle top */
+#garden-guests.bd-cake-cutting #garden-bd-cake-knife{animation:bd-cake-knife-cut 2.6s ease-in-out infinite}
+@keyframes bd-cake-knife-cut{0%,100%{transform:rotate(0) translateY(0)} 30%{transform:rotate(3deg) translateY(4px)} 55%{transform:rotate(-2deg) translateY(7px)} 78%{transform:rotate(2deg) translateY(2px)}}
+#garden-bd-cake-sparkle{transform-box:fill-box; transform-origin:center center}
+#garden-guests.bd-cake-cutting #garden-bd-cake-sparkle{animation:cake-sparkle 1.7s ease-in-out infinite}
+/* the birthday person(s) lean in over the cake (translate property → composes with sway/flare) */
+#garden-guests.bd-cake-cutting .bd-cutter .guest-react{translate:0 3px; transition:translate .7s cubic-bezier(.4,0,.2,1)}
+#garden-guests .bd-cutter .guest-react{transition:translate .7s cubic-bezier(.4,0,.2,1)} /* ease back out too */
+@media (prefers-reduced-motion: reduce){
+  #garden-bd-cake{transition:none}
+  #garden-bd-cake-flames,#garden-bd-cake-knife,#garden-bd-cake-sparkle{animation:none !important}
+  #garden-guests.bd-cake-cutting .bd-cutter .guest-react{transition:none}
+}
 
 /* ── BOUQUET TOSS ── the flying bouquet is a JS-spawned node (.cbh-bouquet) appended
    into #garden-guests so getBBox/coords stay garden-local; it self-removes on its WAAPI
@@ -13674,6 +13696,50 @@ section{margin:1.9rem 0}
   <g id="garden-cake-knife">
     <rect x="341" y="288" width="2.4" height="8" rx="1" fill="#8e3a4a"/><!-- handle -->
     <path d="M 340 296 L 344.4 296 L 335 313 L 333.6 311 Z" fill="#cfd6dc" stroke="#9aa3ac" stroke-width="0.5"/><!-- blade -->
+  </g>
+</g>
+<!-- BIRTHDAY CAKE — a smaller SINGLE-tier candled cake for a garden birthday, shown during
+     .bd-cake-cutting with the birthday person(s) standing BEHIND it (see the JS). Built
+     CENTRED on local x=0; the #garden-bd-cake-pos wrapper carries the JS-set floor translate
+     (position baked on the wrapper, never animated) while the flames / knife / sparkle animate
+     on their OWN inner nodes — so no CSS-transform animation ever clobbers the static position. -->
+<g id="garden-bd-cake" pointer-events="none" aria-hidden="true">
+  <g id="garden-bd-cake-pos" transform="translate(328,0)">
+    <!-- small round table -->
+    <ellipse cx="0" cy="333" rx="22" ry="5" fill="#3a2f28" opacity="0.28"/><!-- floor shadow -->
+    <rect x="-2.5" y="317" width="5" height="15" fill="#7d6e5d"/><!-- pedestal -->
+    <ellipse cx="0" cy="331" rx="12" ry="3" fill="#8a7a66"/><!-- base foot -->
+    <ellipse cx="0" cy="317" rx="25" ry="5.5" fill="#e8dfcc"/><!-- table top -->
+    <ellipse cx="0" cy="316" rx="25" ry="5" fill="#fffdf8"/>
+    <!-- single tier -->
+    <path d="M -14 306 Q -14 300 -8 300 L 8 300 Q 14 300 14 306 L 14 311 Q 0 315 -14 311 Z" fill="#fff2e0"/>
+    <rect x="-14" y="299" width="28" height="7" rx="3" fill="#fbe6d0"/>
+    <path d="M -14 301.5 Q -7 304 0 301.5 Q 7 304 14 301.5 L 14 305 Q 0 308 -14 305 Z" fill="#f6d2c0"/><!-- pink drip -->
+    <!-- a candle row, five lit candles -->
+    <g id="garden-bd-cake-candles">
+      <rect x="-10.7" y="290" width="1.4" height="9" rx="0.6" fill="#d9a6a6"/>
+      <rect x="-5.7"  y="290" width="1.4" height="9" rx="0.6" fill="#7f9ec0"/>
+      <rect x="-0.7"  y="290" width="1.4" height="9" rx="0.6" fill="#d9a6a6"/>
+      <rect x="4.3"   y="290" width="1.4" height="9" rx="0.6" fill="#7f9ec0"/>
+      <rect x="9.3"   y="290" width="1.4" height="9" rx="0.6" fill="#d9a6a6"/>
+      <g fill="#c68e95"><rect x="-10.7" y="292" width="1.4" height="1" opacity=".5"/><rect x="-0.7" y="292" width="1.4" height="1" opacity=".5"/><rect x="9.3" y="292" width="1.4" height="1" opacity=".5"/></g>
+      <g fill="#4a6b94"><rect x="-5.7" y="292" width="1.4" height="1" opacity=".5"/><rect x="4.3" y="292" width="1.4" height="1" opacity=".5"/></g>
+    </g>
+    <!-- the flames (a distinct node → CSS flicker never touches the wrapper's position) -->
+    <g id="garden-bd-cake-flames" style="mix-blend-mode:screen">
+      <path d="M -10 290 q -1.8 -2.2 0 -4.4 q 1.8 2.2 0 4.4 Z" fill="#ffd66b"/><path d="M -10 289.4 q -1 -1.3 0 -2.6 q 1 1.3 0 2.6 Z" fill="#ff9b3d"/>
+      <path d="M -5 290 q -1.8 -2.2 0 -4.4 q 1.8 2.2 0 4.4 Z" fill="#ffd66b"/><path d="M -5 289.4 q -1 -1.3 0 -2.6 q 1 1.3 0 2.6 Z" fill="#ff9b3d"/>
+      <path d="M 0 290 q -1.8 -2.2 0 -4.4 q 1.8 2.2 0 4.4 Z" fill="#ffd66b"/><path d="M 0 289.4 q -1 -1.3 0 -2.6 q 1 1.3 0 2.6 Z" fill="#ff9b3d"/>
+      <path d="M 5 290 q -1.8 -2.2 0 -4.4 q 1.8 2.2 0 4.4 Z" fill="#ffd66b"/><path d="M 5 289.4 q -1 -1.3 0 -2.6 q 1 1.3 0 2.6 Z" fill="#ff9b3d"/>
+      <path d="M 10 290 q -1.8 -2.2 0 -4.4 q 1.8 2.2 0 4.4 Z" fill="#ffd66b"/><path d="M 10 289.4 q -1 -1.3 0 -2.6 q 1 1.3 0 2.6 Z" fill="#ff9b3d"/>
+    </g>
+    <!-- sparkle over the cake (candle-glow twinkle) -->
+    <g id="garden-bd-cake-sparkle"><path d="M 13 296 l1.2 2.6 l2.6 1.2 l-2.6 1.2 l-1.2 2.6 l-1.2 -2.6 l-2.6 -1.2 l2.6 -1.2 Z" fill="#fff2cf" opacity="0.9" style="mix-blend-mode:screen"/></g>
+    <!-- the cutting knife: blade down into the tier, handle up-right (pivots at handle top) -->
+    <g id="garden-bd-cake-knife">
+      <rect x="12" y="288" width="2.2" height="7.5" rx="1" fill="#8e3a4a"/><!-- handle -->
+      <path d="M 11 295 L 15 295 L 6 311 L 4.6 309 Z" fill="#cfd6dc" stroke="#9aa3ac" stroke-width="0.5"/><!-- blade -->
+    </g>
   </g>
 </g>
 <!-- CHAIR-LIFT HORA — a chair under each host; each rides a lift wrapper (translate up
@@ -60775,6 +60841,67 @@ function spawnDustMote(container) {
     window.__startCakeCutting = startCakeCutting;
     window.__endCakeCutting = endCakeCutting;
 
+    // ── BIRTHDAY CAKE CUTTING ───────────────────────────────────────────────────────
+    // A garden birthday cuts a SMALLER, candled single-tier cake (#garden-bd-cake): the
+    // birthday person(s) stand BEHIND it, so the cake node is positioned at their floor slot
+    // and .bd-cutter marks each of them (a slight lean over the candles). Modelled on the
+    // wedding cake above, but the cutters are the birthday people rather than the hosts.
+    var bdCakeTimer = null, bdCakeAnchor = null, bdCutters = [];
+    function bdGardenFigs() { return window.__bdGardenFigures || {}; }
+    function floorX(node) { // the guest's centre x within #garden-guests (item 0 is always the floor translate)
+      try { var t = node.transform.baseVal; return t.numberOfItems ? t.getItem(0).matrix.e : 0; } catch (e) { return 0; }
+    }
+    function bdWhoList(who) {
+      // the garden-figure birthday people to stand behind the cake: an explicit who/list, else
+      // every garden-figure person whose bd-<who> class is currently lit (covers a shared birthday).
+      var figs = bdGardenFigs(), list = [];
+      if (who) { (Array.isArray(who) ? who : [who]).forEach(function (w) { w = String(w).toLowerCase(); if (figs[w] && list.indexOf(w) === -1) list.push(w); }); }
+      if (!list.length) {
+        var strip = document.getElementById("loft-game-strip");
+        if (strip) Object.keys(figs).forEach(function (w) { if (strip.classList.contains("bd-" + w)) list.push(w); });
+      }
+      return list;
+    }
+    function endBdCakeCutting() {
+      if (bdCakeTimer) { clearTimeout(bdCakeTimer); bdCakeTimer = null; }
+      window.__bdCakeOn = false;
+      group.classList.remove("bd-cake-cutting");
+      for (var i = 0; i < bdCutters.length; i++) if (bdCutters[i]) bdCutters[i].classList.remove("bd-cutter");
+      bdCutters = [];
+      var ck = document.getElementById("garden-bd-cake");
+      if (ck && bdCakeAnchor && bdCakeAnchor.parentNode === group) group.insertBefore(ck, bdCakeAnchor);
+      bdCakeAnchor = null;
+    }
+    function startBdCakeCutting(who) {
+      if (!onFloor()) return false;                 // only meaningful with the crowd on the floor
+      var list = bdWhoList(who);
+      if (!list.length) return false;               // no garden birthday to celebrate right now
+      if (window.__bdCakeOn) return true;           // idempotent (storm-safe)
+      window.__bdCakeOn = true;
+      // position the cake at the average floor-x of the birthday people + mark each a cutter
+      var sum = 0, n = 0; bdCutters = [];
+      list.forEach(function (w) {
+        var g = group.querySelector(".g-" + w); if (!g) return;
+        sum += floorX(g); n++;
+        g.classList.add("bd-cutter"); bdCutters.push(g);
+      });
+      var cx = n ? sum / n : 328;
+      var pos = document.getElementById("garden-bd-cake-pos");
+      if (pos) pos.setAttribute("transform", "translate(" + cx.toFixed(1) + ",0)"); // static position on the wrapper (never animated)
+      group.classList.add("bd-cake-cutting");       // cake fades up, candles flicker, knife cuts (CSS)
+      // the birthday person(s) lean OVER the cake, so it must paint on top — move it to the end of
+      // #garden-guests for the moment, restore on end
+      var ck = document.getElementById("garden-bd-cake");
+      if (ck) { bdCakeAnchor = ck.nextSibling; group.appendChild(ck); }
+      cheerCrowd(list.map(function (w) { return ".g-" + w; })); // the crowd flares (the birthday people are busy at the cake)
+      playCheerSfx();
+      bdCakeTimer = setTimeout(endBdCakeCutting, reducedMotion() ? 5000 : 9000);
+      return true;
+    }
+    window.__bdCakeOn = false;
+    window.__startBdCakeCutting = startBdCakeCutting;
+    window.__endBdCakeCutting = endBdCakeCutting;
+
     // ── BOUQUET TOSS ──────────────────────────────────────────────────────────────
     // Markéta (garden-local x356, hand ~y196) winds up + tosses a bouquet; it arcs over the
     // crowd via a single WAAPI-animated node appended into #garden-guests (garden-local coords),
@@ -60982,11 +61109,12 @@ function spawnDustMote(container) {
 
     // a hidden-tab / room-leave that clears the floor must tear every beat down (nothing strands)
     document.addEventListener("visibilitychange", function () {
-      if (!onFloor()) { if (window.__cakeOn) endCakeCutting(); if (bouquetOn) endBouquetToss(); if (window.__chairLiftOn) endChairLift(); }
+      if (!onFloor()) { if (window.__cakeOn) endCakeCutting(); if (window.__bdCakeOn) endBdCakeCutting(); if (bouquetOn) endBouquetToss(); if (window.__chairLiftOn) endChairLift(); }
     });
     window.__cbhMomentsTeardown = function () { // appended into __gardenMomentsTeardown
-      endCakeCutting(); endBouquetToss(); endChairLift();
-      group.classList.remove("cake-cutting", "bouquet-wind", "chair-lift");
+      endCakeCutting(); endBdCakeCutting(); endBouquetToss(); endChairLift();
+      group.classList.remove("cake-cutting", "bd-cake-cutting", "bouquet-wind", "chair-lift");
+      var g = group.querySelectorAll(".bd-cutter"); for (var i = 0; i < g.length; i++) g[i].classList.remove("bd-cutter");
     };
   })();
   // ══ GARDEN MOMENTS 2 — TOASTS · GROUP PHOTO · SPARKLER SEND-OFF ═════════════════════
@@ -64663,6 +64791,21 @@ function spawnDustMote(container) {
     madla: "madla", robert: "madla",
     hamid: "hamid", athena: "hamid"
   };
+  // Garden-floor birthday people who have their OWN dance-floor figure (.g-<who>): a party-lit
+  // garden reveal cuts them a candled birthday cake, standing behind it. The DJ-deck / kitchen-bar
+  // birthdays (Sina, Danesh, Pouria) have no floor figure, so they get the party but no cake.
+  var BD_GARDEN_FIG = {
+    farhang: 1, marketa: 1, jay: 1, alireza: 1, robert: 1, madla: 1, hamid: 1, behdad: 1,
+    bahareh: 1, mahzad: 1, athena: 1, spencer: 1, patricia: 1, goli: 1, ali: 1
+  };
+  window.__bdGardenFigures = BD_GARDEN_FIG; // shared with the garden cake IIFE + the date-occasion orchestrator
+  // the garden-figure birthday who-ids whose EXACT day is (m,d) — the date-occasion orchestrator
+  // (a separate closure, no BIRTHDAYS in scope) reads this to auto-throw the party + cake.
+  window.__bdGardenOnDay = function (m, d) {
+    var list = [];
+    for (var i = 0; i < BIRTHDAYS.length; i++) { var b = BIRTHDAYS[i]; if (!b.pending && b.m === m && b.d === d && BD_GARDEN_FIG[b.who]) list.push(b.who); }
+    return list;
+  };
   // A birthday whose venue is an office DEVICE (the Tehran video call on the monitor, the
   // Prague call on the laptop) has to place/connect that call and zoom the device. The
   // zoom frames the device by reading its LIVE on-screen box, and the connect boots the PC
@@ -64739,6 +64882,8 @@ function spawnDustMote(container) {
       if (v !== "bar" && window.__summonGuests) window.__summonGuests(); // crash the whole floor so this guest is actually present
       if (v === "dj-sina" && window.dj) window.dj("sina");
       else if (v === "dj-danesh" && window.dj) window.dj("danesh");
+      // a garden birthday person with a floor figure cuts their candled cake, everyone behind it
+      if (BD_GARDEN_FIG[b.who] && window.__bdCakeCut) window.__bdCakeCut(b.who);
       return;
     }
     if (window.goToStage) window.goToStage("cuddly");
@@ -67970,12 +68115,20 @@ function spawnDustMote(container) {
   // and never re-forces it, so a manual choice made afterwards stands (party(true) is a no-op if
   // the party's already on; the BBQ setup isn't re-run for the same day).
   (function dateOccasions() {
+    // the garden-figure birthday people whose EXACT day (m/d) is today — they throw the party +
+    // cut a candled cake. DJ/bar birthdays (no floor figure) and the call families are excluded.
+    function bdGardenToday() {
+      var n = window.__now ? window.__now() : new Date();
+      return window.__bdGardenOnDay ? window.__bdGardenOnDay(n.getMonth(), n.getDate()) : [];
+    }
     function occKey() {
       var n = window.__now ? window.__now() : new Date();
       var m = n.getMonth(), d = n.getDate();
       if (m === 4 && d === 1) return "wedding-edmonton"; // May 1 — the Edmonton wedding day
       if (m === 6 && d === 10) return "wedding-prague";  // Jul 10 — the Prague wedding day
       if (m === 4 && d === 2) return "bbq";              // May 2 — the morning-after cookout
+      var bd = bdGardenToday();
+      if (bd.length) return "bd:" + bd.slice().sort().join("+"); // a garden birthday (or two, on a shared day)
       return null;
     }
     window.__dateOccasion = occKey; // test/console hook
@@ -67985,6 +68138,10 @@ function spawnDustMote(container) {
     }
     function setupWedding() {
       if (window.party && !window.party()) window.party(true); // full party: garden, dancing, blacklight, night
+    }
+    function setupBirthday(list) {
+      if (window.party && !window.party()) window.party(true); // a festive garden party for the birthday
+      if (window.__bdCakeCut) window.__bdCakeCut(list);        // the birthday person(s) behind a candled cake, cutting it
     }
     function setupBBQ() {
       if (window.goToStage) window.goToStage("balcony");
@@ -68014,7 +68171,9 @@ function spawnDustMote(container) {
       // let the room slide / scene settle first, then re-check the gate + date before taking over
       setTimeout(function () {
         if (occKey() !== key || gated()) return;
-        if (key === "bbq") setupBBQ(); else setupWedding();
+        if (key === "bbq") setupBBQ();
+        else if (key.indexOf("bd:") === 0) setupBirthday(key.slice(3).split("+"));
+        else setupWedding();
       }, 900);
     }
     window.__applyDateOccasion = apply; // pinged on every date change (calRefreshDeps + hashchange)
@@ -68557,6 +68716,24 @@ function spawnDustMote(container) {
     null, null,
     "🪑 up they go! the crowd hoists Behdad & Markéta on chairs and rings around for the hora.",
     "the couple come back down — the party rolls on.");
+  // __bdCakeCut(who) — a garden BIRTHDAY cake cutting: light the party + head to the garden +
+  // summon the crowd first (so the birthday person's floor figure is present), then cut a candled
+  // cake with them standing behind it. `who` is a who-id (or a list, for a shared-day birthday);
+  // omitted → whoever's bd-<who> is currently lit. __bdCakeCut(false) ends it early. This is the
+  // shared hook the 'b'/birthday() garden reveal (party-lit) and the date-occasion scene both drive.
+  window.__bdCakeCut = function (who) {
+    if (who === false) { if (window.__endBdCakeCutting) window.__endBdCakeCutting(); if (window.echo) window.echo("the birthday cake's cleared away — the party rolls on."); return true; }
+    if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
+    if (window.goToStage) window.goToStage("garden");
+    setTimeout(function () { // let goToStage settle the room, then make sure the crowd's up before cutting
+      if (window.__guestsIn && !window.__guestsIn() && window.__summonGuests) window.__summonGuests();
+      setTimeout(function () {
+        var ok = window.__startBdCakeCutting && window.__startBdCakeCutting(who);
+        if (window.echo) window.echo(ok ? "🎂 happy birthday! the candles are lit — everyone gathers behind the cake." : "no garden birthday to celebrate right now.");
+      }, 140);
+    }, 60);
+    return true;
+  };
 
   // SLOW DANCE — slowdance() drops the party into a warm, dim slow-song lull: the WHOLE floor pairs
   // off (the cast couples sway together in a close hold, the generic dancers pair too) and sways

@@ -38751,7 +38751,7 @@ var ABANDONED_CALL_MS = 30000;
     album: "album() — open the pocket-phone wedding album: Aspen's captured party polaroids, newest first. she snaps one every photo-moment (the ~15s freeze) and whenever you tap her at the garden party; each is an intimate portrait — the couple + one guest (or a guest couple). She also works the OTHER rooms during the party (see snap()), and those cards show that room and exactly who was in it. album() also echoes the photo count",
     snap: "snap() — Aspen photographs the room you're in RIGHT NOW: she lifts the camera, the flash pops, the shutter goes, and a keepsake of exactly whoever is in that room lands in your phone album — on that room's own backdrop. snap(\"office\")/snap(\"kitchen\")/snap(\"cuddly\")/snap(\"balcony\")/snap(\"garden\") heads there first so you can watch her take it. Lights the party if it's dark (she only works the party). She takes these on her own rounds too, every ~26-44s, in whichever room you're standing in",
     madla: "madla() — Markéta's sister (a doctor in Germany, bored on a night shift) rings your phone: a pulsing call card drops top-centre for 15s (tap to answer → pan to the cuddly room, then the video call; ignore it to miss the call). madla(true) answers straight away. she's incoming-only — you can't dial her back",
-    saturday: "saturday() — Markéta's parents and Báka ring from Prague for the standing Saturday call: the same call card, tap to answer (or the × to let it go). saturday(true) answers straight away. left alone it comes on its own, once per Saturday in the loft, between 08:00 and 14:00 here — their Saturday evening; date(\"YYYY-MM-DD\") a Saturday and clock(9) to see it",
+    saturday: "saturday() — Markéta's parents ring from Prague for the standing Saturday call: the same call card, tap to answer (or the × to let it go). saturday(true) answers straight away. left alone it comes on its own, once per Saturday in the loft, between 08:00 and 14:00 here — their Saturday evening; date(\"YYYY-MM-DD\") a Saturday and clock(9) to see it",
     sound: [
       "sound(\"id\"[, …args]) — play a loft sound effect by id, e.g. sound(\"gong\"). sound() lists every id; sound(\"prefix\") lists the ids starting with that prefix — try sound(\"cat\") · sound(\"phone\").",
       "EVERY sound takes an optional panId — a scene element id (e.g. \"office-monitor\", \"balcony-phone\") or a -1..1 number (left..right, 0 = center). it defaults to that sound's own on-screen source, so a bare sound(\"grind\") already plays from the grinder; sound(\"grind\", 0.9) hard-pans it right, sound(\"grind\", \"balcony-phone\") pans it to another object. a hidden/offscreen source centers.",
@@ -45354,6 +45354,10 @@ async def localfont(name):
     var dressupOn = {};             // dress-up: map of accessory-id → true for every chip currently ON
     var flashWasOn = false;         // flashlight INTENT mirror of flashOn — the beam now stays lit across a normal leave/close (a real flashlight doesn't switch off when you leave the app), so this just tracks the last state; a Kill/loft-reset clears it and douses the beam.
     var callee = null, callConnected = false, callStatusKey = "", callHangingUp = false, callTimers = [];
+    // Did THIS call ring in (openIncall) or did we dial it (startCall)? Both incoming callers
+    // are Markéta's own family phoning HER, so the self-view is Markéta alone (Behdad isn't in
+    // shot); a dialled call is the couple's shared phone. Cleared in dropCall with the rest.
+    var callIncoming = false;
     var quizStep = 0, quizTally = null, quizResult = null; // "which guest are you?" quiz — restarts fresh on each open (its own open handler calls quizReset)
     // Home-screen layout is a fixed grid of SLOTS (like a real phone): an array of
     // app-ids by slot position, with `null` holes for empty / "Uninstall"ed gaps.
@@ -45957,6 +45961,28 @@ async def localfont(name):
       svg.appendChild(g);
       return svg;
     }
+    // The standing Saturday call is her PARENTS ringing in — Báka isn't on it. Recast a fresh
+    // Prague clone for that call: drop the grandmother, then close the two-shot up so the pair
+    // aren't left standing either side of her empty spot. Clone-only, so the office laptop's own
+    // call, the dialer's outgoing Prague call and the garden gathering's <use> of her are all
+    // untouched. The nudge rides a WRAPPER <g>: prague-sway animates the figure's own transform
+    // and would replace a transform set on it directly.
+    var SAT_CLOSE_IN = 5; // user units each parent steps toward the middle (~half the gap she left)
+    function pragueSaturdayCast(scene) {
+      var gran = scene.querySelector('[data-lid="laptop-prague-grandma"]');
+      if (!gran) return;
+      gran.parentNode.removeChild(gran);
+      function nudge(el, dx) {
+        if (!el || !el.parentNode) return;
+        var w = document.createElementNS(SVGNS, "g");
+        w.setAttribute("transform", "translate(" + dx + ",0)");
+        el.parentNode.insertBefore(w, el);
+        w.appendChild(el);
+      }
+      nudge(scene.querySelector('[data-lid="laptop-prague-father"]'), SAT_CLOSE_IN);
+      nudge(scene.querySelector(".cheer-glass"), SAT_CLOSE_IN); // his toast glass is a sibling prop, not part of him — it has to travel with his hand
+      nudge(scene.querySelector('[data-lid="laptop-prague-mother"]'), -SAT_CLOSE_IN);
+    }
     function refreshCallText() {
       if (!callee || !shell) return;
       var st = shell.querySelector(".pic-status");
@@ -45966,7 +45992,7 @@ async def localfont(name):
     function startCall(city) {
       if (callee || anyExternalCall()) return; // one call at a time (this phone or the monitor/laptop)
       callee = city;
-      callConnected = false; callHangingUp = false;
+      callConnected = false; callHangingUp = false; callIncoming = false;
       selectedCity = city;
       var cfg = CITIES[city];
       var ic = shell.querySelector(".phone-incall");
@@ -45974,7 +46000,7 @@ async def localfont(name):
       var v = ic.querySelector(".pic-video"); v.innerHTML = "";
       var scene = cloneScene(cfg.scene, cfg.vb); if (scene) v.appendChild(scene);
       var self = ic.querySelector(".pic-self"); self.innerHTML = "";
-      var sv = cloneScene(city === "madla" ? "phone-marketa-self" : "phone-couple-self", "354 181 22 13"); if (sv) self.appendChild(sv); // Madla's call is Markéta's alone (her sister) → Markéta-only self-view; the family calls are the couple's shared phone → the pair
+      var sv = cloneScene("phone-couple-self", "354 181 22 13"); if (sv) self.appendChild(sv); // a call THEY placed rides the couple's shared phone → the pair
       callStatusKey = "laptop_calling";
       refreshCallText();
       showScreen("incall");
@@ -46072,7 +46098,7 @@ async def localfont(name):
       stopCallAmbient();
       phoneLifeStop(); // belt-and-braces: every teardown path (mid-ring drop, leaving the balcony) lands clean
       var was = callee;
-      callee = null; callConnected = false; callStatusKey = "";
+      callee = null; callConnected = false; callStatusKey = ""; callIncoming = false;
       if (shell) {
         var ic = shell.querySelector(".phone-incall");
         if (ic) {
@@ -46086,26 +46112,28 @@ async def localfont(name):
       // entry to return to (she's incoming-only), so drop to the home launcher instead.
       if (was && !silent && !closing && isOpen()) { if (was === "madla") showHome(); else openDialer(); }
     }
-    // ── INCOMING call (Madla only) ─────────────────────────────────────────────────────
-    // The existing calls are OUTGOING (startCall — you dial from the dialer). Madla's is the one
-    // INCOMING path: openIncall opens the phone straight into the incall view already ringing (a
-    // couple of ring cycles), then auto-answers → connectCall. Same teardown as any call (clearing
-    // timers, ambient, life driver, murmur). Auto-hangs up ~30s after connect; the red button or
-    // leaving the room / closing the phone tears it down early. Not dialable — reachable only via
-    // the incoming ring (the daytime schedule) or the madla() console hook.
+    // ── INCOMING calls ─────────────────────────────────────────────────────────────────
+    // The dialer's calls are OUTGOING (startCall). The ring card's are INCOMING: openIncall opens
+    // the phone straight into the incall view already ringing (a couple of ring cycles), then
+    // auto-answers → connectCall. Same teardown as any call (clearing timers, ambient, life
+    // driver, murmur). Auto-hangs up ~30s after connect; the red button or leaving the room /
+    // closing the phone tears it down early. Two callers ring in: Madla, and Prague's standing
+    // Saturday call. Both are Markéta's own family, so the self-view is her alone.
     var MADLA_CALL_MS = 30000; // ~30s of sisterly murmur, then she has to get back to her rounds
     function openIncall(city) {
       if (callee || anyExternalCall()) return; // one call at a time (this phone or the monitor/laptop)
       if (!shell) build();
       callee = city;
-      callConnected = false; callHangingUp = false;
+      callConnected = false; callHangingUp = false; callIncoming = true;
       var cfg = CITIES[city];
       var ic = shell.querySelector(".phone-incall");
       ic.classList.remove("connected");
       var v = ic.querySelector(".pic-video"); v.innerHTML = "";
-      var scene = cloneScene(cfg.scene, cfg.vb); if (scene) v.appendChild(scene);
+      var scene = cloneScene(cfg.scene, cfg.vb);
+      if (scene && city === "prague") pragueSaturdayCast(scene);
+      if (scene) v.appendChild(scene);
       var self = ic.querySelector(".pic-self"); self.innerHTML = "";
-      var sv = cloneScene(city === "madla" ? "phone-marketa-self" : "phone-couple-self", "354 181 22 13"); if (sv) self.appendChild(sv); // Madla's call → Markéta-only self-view; family calls → the couple's shared phone
+      var sv = cloneScene("phone-marketa-self", "354 181 22 13"); if (sv) self.appendChild(sv); // they're ringing HER → Markéta-only self-view
       callStatusKey = "call_incoming"; // "Incoming call" while it rings, then the place once connected
       refreshCallText();
       showScreen("incall");
@@ -46152,11 +46180,11 @@ async def localfont(name):
         if (!window.__callFigLabel || !window.__callFigLabel(lid)) return; // props/sub-parts have no label → skip
         el.addEventListener("click", function () { if (window.__whoPop) window.__whoPop(el, window.__callFigLabel(lid), el.closest && el.closest(".pic-video")); }); // anchor the card at the phone call surface's lower-left, clear of the birthday hat / cheer overlay
       })(figs[i]);
-      // the tiny self-view thumbnail — the couple (or Markéta alone on her sister's call)
+      // the tiny self-view thumbnail — the couple on a call they placed, Markéta alone on one that rang in
       var self = shell && shell.querySelector(".phone-incall .pic-self");
       var selfRoot = self && self.querySelector("[data-lid]");
       if (selfRoot) {
-        var selfHtml = callee === "madla" ? "<em>markéta</em>" : "<em>markéta &amp; behdad</em>";
+        var selfHtml = callIncoming ? "<em>markéta</em>" : "<em>markéta &amp; behdad</em>";
         selfRoot.addEventListener("click", function () { if (window.__whoPop) window.__whoPop(selfRoot, selfHtml); });
       }
     }
@@ -46170,14 +46198,17 @@ async def localfont(name):
         // the father winks, the grandmother nods, the mother produces a little flower — the same
         // one-shot classes the laptop's __startPragueLife fires, at the same random cadences
         var wink = phLoop(function () { phFire(phQ('[data-lid="laptop-prague-father-wink"]'), "winking", 640); }, 5, 7);
-        var nod = phLoop(function () { phFire(phQ('[data-lid="laptop-prague-grandma-nod"]'), "nodding", 1250); }, 6, 7);
         var bloom = phLoop(function () { phFire(phQ('[data-lid="laptop-prague-mother-flower"]'), "blooming", 4400); }, 12, 10);
         phLifeTimer(wink, (1.5 + Math.random() * 3) * 1000);
-        phLifeTimer(nod, (2.5 + Math.random() * 4) * 1000);
         phLifeTimer(bloom, (4 + Math.random() * 5) * 1000);
         phTap(phQ('[data-lid="laptop-prague-father"]'), function () { phFire(phQ('[data-lid="laptop-prague-father-wink"]'), "winking", 640); });
-        phTap(phQ('[data-lid="laptop-prague-grandma"]'), function () { phFire(phQ('[data-lid="laptop-prague-grandma-nod"]'), "nodding", 1250); });
         phTap(phQ('[data-lid="laptop-prague-mother"]'), function () { phFire(phQ('[data-lid="laptop-prague-mother-flower"]'), "blooming", 4400); });
+        // the grandmother's nod only where she IS: the Saturday call's clone is her parents alone
+        if (phQ('[data-lid="laptop-prague-grandma-nod"]')) {
+          var nod = phLoop(function () { phFire(phQ('[data-lid="laptop-prague-grandma-nod"]'), "nodding", 1250); }, 6, 7);
+          phLifeTimer(nod, (2.5 + Math.random() * 4) * 1000);
+          phTap(phQ('[data-lid="laptop-prague-grandma"]'), function () { phFire(phQ('[data-lid="laptop-prague-grandma-nod"]'), "nodding", 1250); });
+        }
       } else if (fam === "tehran") {
         // the birthday family blinks (and sometimes flashes a wider smile) at random — the
         // clone lost the figure ids but keeps the .tehran-eyes / .tehran-mouth leaf classes
@@ -49544,7 +49575,7 @@ async def localfont(name):
     // ANSWERS: pan to the cuddly room first, then bring up the phone straight into the incall
     // (already ringing → connects). Ignored for 15s = a missed call: it fades, no action.
     // Two callers ring in on this one card — Madla whenever she's bored on a night shift, and
-    // Markéta's parents + Báka on their standing Saturday. Only the name, the caption and which
+    // Markéta's parents on their standing Saturday. Only the name, the caption and which
     // family comes up differ; card, answer path and teardown are shared.
     var RING_CALLERS = {
       madla:  { fromKey: "madla_fam",    subKey: "call_incoming" },
@@ -49656,11 +49687,11 @@ async def localfont(name):
     scheduleMadla(); // arm at load
 
     // ── Saturday: Markéta's family calls ────────────────────────────────────────────────
-    // Her parents and Báka ring from Prague every Saturday, the way they actually do. Prague is
-    // 8h ahead of Edmonton all year (both sides shift for DST together), so an Edmonton late
-    // morning is their Saturday evening — the hour a Czech family sits down to a video call, and
-    // nowhere near waking Báka. The loft's own wall clock decides (__loftMinsNow, override-aware),
-    // so a ?time= jump or the time-lapse walks into and out of the window like a real morning.
+    // Her parents ring from Prague every Saturday, the way they actually do (Báka isn't on the
+    // weekly call). Prague is 8h ahead of Edmonton all year (both sides shift for DST together),
+    // so an Edmonton late morning is their Saturday evening — the hour a Czech family sits down
+    // to a video call. The loft's own wall clock decides (__loftMinsNow, override-aware), so a
+    // ?time= jump or the time-lapse walks into and out of the window like a real morning.
     var SAT_FROM_MIN = 8 * 60, SAT_TO_MIN = 14 * 60; // Edmonton 08:00–14:00 = Prague 16:00–22:00
     // Which Saturdays have already rung, keyed by the LOFT's pretend date. A set, not a
     // "last Saturday" — the player can hop between Saturdays in any order, and a Saturday
@@ -74095,10 +74126,10 @@ function spawnDustMote(container) {
   };
   window.saturday = function (arg) {
     if (arg === true) {
-      if (window.__answerPrague) { window.__answerPrague(); return "📞 answering Prague — máma, táta and Báka, on the Saturday call."; }
+      if (window.__answerPrague) { window.__answerPrague(); return "📞 answering Prague — máma and táta, on the Saturday call."; }
       return "the call hook isn't ready yet.";
     }
-    if (window.__pragueRing && window.__pragueRing()) return "📞 Prague's calling — máma, táta and Báka, ringing top-centre. Tap to answer (or ignore for 15s to miss it).";
+    if (window.__pragueRing && window.__pragueRing()) return "📞 Prague's calling — máma and táta, ringing top-centre. Tap to answer (or ignore for 15s to miss it).";
     return "📞 can't ring right now — a call's already up, the phone's open, or they're already ringing.";
   };
 

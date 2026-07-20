@@ -150,11 +150,19 @@ var HARNESS = [
   // ── Phase 5: notification interrupt ──
   "    window.autoplay(true); await sleep(400);",
   "    window.goToStage('garden'); await sleep(400);",
+  // This phase asserts the director handles the EXACT notification we hand it, so the ambient
+  // drips have to be off while it runs — otherwise the assertion is a race. The garden is the
+  // party room, and lighting the party arms the cue drip (whose opener is only a few seconds),
+  // so a cue would land inside the poll below and displace 'invaders' as the top unread. That
+  // showed up as lastHandled being cue_cocktails/group rather than a real director bug. Stopped
+  // again on every poll turn because a party re-light re-arms it — the calls are idempotent.
+  "    var hush = function () { if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__stopDayDrip) window.__stopDayDrip(); };",
+  "    hush();",
   "    window.__deliverPhoneMessage('invaders');",
   "    var beforeUnread = window.__latestUnreadMessage();",
   "    report.phase5.deliveredUnread = beforeUnread;",
   "    var handled=false, landedOffice=false;",
-  "    for (var h=0; h<20 && !(handled && landedOffice); h++){ await sleep(700); var top=window.__latestUnreadMessage(); if(top!=='invaders') handled=true; if(window.currentStageName==='office') landedOffice=true; }",
+  "    for (var h=0; h<20 && !(handled && landedOffice); h++){ hush(); await sleep(700); var top=window.__latestUnreadMessage(); if(top!=='invaders') handled=true; if(window.currentStageName==='office') landedOffice=true; }",
   "    report.phase5.cleared = handled;",
   "    report.phase5.actedRoom = window.currentStageName;",
   "    report.phase5.landedOffice = landedOffice;",

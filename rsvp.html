@@ -5207,6 +5207,10 @@ body:has(#loft-game-strip.acid) #trip-acid-kaleido{animation:acid-kaleido 3s eas
    hidden tab accumulates nothing; the class is torn down when the party switches off. */
 #trip-melt-dancers{opacity:0; pointer-events:none; fill:#241f1c}
 #trip-melt-dancers.party-dancing{opacity:.9; transition:opacity 1.4s ease} /* party mode: fade in and hold */
+/* the CENTRE generic dancer (md-d2) is hidden — she sat dead-centre and clashed with the hosts
+   dancing there (the generics now show mainly at party-start, when the hosts are alone in the
+   middle). Kept in the DOM so the per-dance md-d2 choreography rules stay harmless no-ops. */
+#trip-melt-dancers .md-d2{display:none}
 /* ── MAKE ROOM FOR THE NAMED CROWD ──────────────────────────────────────────────
    When the named guests are on the floor (JS mirrors #garden-guests.guests-in onto this
    layer as .crowd-clear), the 5 generic dancers fan out to the edges + back row so they
@@ -54809,11 +54813,31 @@ function spawnDustMote(container) {
   // edges/back and stop overlapping the named guests (CSS translate reposition above); drops
   // back when the guests leave. Called from every guests-in add/remove path so the two layers
   // never desync (nothing strands: teardown clears guests-in → this clears .crowd-clear too).
+  // Count the named NON-HOST guest figures actually on the floor (arrived, not strolling back out).
+  // Hosts (.g-behdad/.g-marketa) are always present and never get .arrived, so they don't count.
+  function presentGuestFigures(g) {
+    if (!g) return 0;
+    var arr = g.querySelectorAll(".guest.arrived:not(.leaving)"), n = 0;
+    for (var i = 0; i < arr.length; i++) {
+      var el = arr[i];
+      if (el.classList.contains("g-behdad") || el.classList.contains("g-marketa")) continue; // hosts don't count
+      if (el.classList.contains("off-with-kids")) continue; // stepped away (chase / cuddly nook)
+      n++;
+    }
+    return n;
+  }
   function syncCrowdClear() {
     var g = document.getElementById("garden-guests");
     var pd = document.getElementById("trip-melt-dancers");
-    if (pd) pd.classList.toggle("crowd-clear", !!(g && g.classList.contains("guests-in")));
+    if (!pd) return;
+    // Keep the 5 generic ambient dancers VISIBLE at party start (when the hosts dance alone) and
+    // only fan them out / fade them once a real crowd has filled in — the hosts + at least 4 other
+    // guest figures on the floor. (Owner: "I never see the generics" — they used to vanish the
+    // instant the party lit, because the hosts alone tripped .guests-in.)
+    var full = !!(g && g.classList.contains("guests-in")) && presentGuestFigures(g) >= 4;
+    pd.classList.toggle("crowd-clear", full);
   }
+  window.__syncCrowdClear = syncCrowdClear; // test/console hook
   // ── HOSTS' SOLO ⇄ TOGETHER cycle ─────────────────────────────────────────────
   // Behdad & Markéta mostly circle each other (default), but every so often break apart to
   // each do their own individual move for a stretch, then come back together. Driven by ONE
@@ -54945,6 +54969,7 @@ function spawnDustMote(container) {
     if (!g) return;
     rebalanceFloor(g, [entry]);
     for (var i = 0; i < entry.sels.length; i++) walkFigureIn(g, entry.sels[i], entry.homes[i]);
+    syncCrowdClear(); // the crowd just grew — re-check whether the generics should fan out/fade (≥4 guests)
   }
   // ── REVOLVING DOOR ──────────────────────────────────────────────────────────
   // The floor holds at most GUEST_CAP guest UNITS (a couple/family/solo = one unit) at a time; the
@@ -55157,6 +55182,7 @@ function spawnDustMote(container) {
           // forget its slot + drop --balance-x so a later fresh re-arrival recomputes from the gate
           for (var s = 0; s < figo.classList.length; s++) { var cl = figo.classList[s]; if (cl.indexOf("g-") === 0) delete slotXBySel["." + cl]; }
           figo.style.removeProperty("--balance-x");
+          syncCrowdClear(); // the crowd just shrank — the generics may need to come back (fell below 4)
         }
       }
     });

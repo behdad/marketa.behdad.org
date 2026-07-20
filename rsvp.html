@@ -32617,6 +32617,13 @@ function gameTapsNear(a, b) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); wobble(); }
   });
   window.__octiCamouflage = wobble; // Irene's play may make Octi camo-flash (see the Irene cameo)
+  // console `octi()` — the same squeeze a tap gives him, from any room. Dispatched as a click
+  // rather than calling wobble(), so the strip's delegated hint-retire fires too, as a tap does.
+  window.octi = function () {
+    if (window.goToStage) window.goToStage("cuddly"); // no-op if already there
+    octopus.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    return "cuddly-octopus";
+  };
 })();
 (function () {
   ["cuddly-bolster", "cuddly-pillow-1", "cuddly-pillow-2", "cuddly-pillow-3"].forEach(function (id) {
@@ -32677,6 +32684,15 @@ function gameTapsNear(a, b) {
     openTrunk();
     return true;
   };
+  // console `piratebox()` — the arg tracks where OCTI lands, the lid's pop being a one-shot with
+  // no lasting state. Clicked rather than openTrunk()'d so the strip's delegated hint-retire
+  // fires; dispatch is synchronous, so octopusInChest is settled by the time we read it back.
+  window.piratebox = function (want) {
+    if (window.goToStage) window.goToStage("cuddly"); // no-op if already there
+    if (arguments.length === 0 || !!want !== octopusInChest) trunk.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    return octopusInChest;
+  };
+  window.chest = window.piratebox; // what it plainly is, same command
 })();
 (function () {
   var pulley = document.getElementById("cuddly-pulley");
@@ -37498,6 +37514,9 @@ var ABANDONED_CALL_MS = 30000;
     cat: "cat(true) — summon the loose chest cat to your room; cat(false) stows her; cat() reports whether she's out (bare `cat` prints a cat instead)",
     dog: "dog(true) — bring Whistler (Farhang & Lauren's dog) out for a look; dog(false) sends him home; dog() reports whether he's out (he roams the nook, or the balcony when its door's open, during a party)",
     whistler: "whistler(…) — alias for dog(…), by name",
+    octi: "octi() — squeeze Octi, the octopus plush sat on the chest in the cuddly-puddly (the nook's first step); heads to the nook first",
+    piratebox: "piratebox() — pop the chest lid under Octi: he drops in if he's out, springs back out if he's in. piratebox(true) stows him, piratebox(false) fetches him back; returns whether he's inside",
+    chest: "chest(…) — alias for piratebox(…), plainly named",
     lamaz: "lamaz() — power the kitchen La Marzocco on/off (first espresso step)",
     elmaz: "elmaz() — grind a fresh dose (the Mazzer); flies the portafilter over automatically",
     tamper: "tamper() — tamp the ground puck (auto-moves the portafilter)",
@@ -37569,7 +37588,7 @@ var ABANDONED_CALL_MS = 30000;
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · mixer() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · storm()/rain()/overcast() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · sharecard() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora() · twilight() · timelapse() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · repeat(\"name\")/stop() · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · mailto() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · mixer() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · storm()/rain()/overcast() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · sharecard() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora() · twilight() · timelapse() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · octi() · piratebox()/chest() · scripts() · run(\"name\") · repeat(\"name\")/stop() · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · mailto() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
@@ -37825,7 +37844,7 @@ var ABANDONED_CALL_MS = 30000;
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "aurora", "twilight", "timelapse", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood", "kidsAsleep",
     "phone", "album", "message", "madla", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "repeat", "stop", "edit",
-    "confetti", "fireworks", "lanterns", "cat", "dog", "whistler", "lamaz", "elmaz", "tamper", "brew", "sip", "knockbox", "irene", "visitors", "mouses", "piano", "classic", "kitten", "ukelele", "audio", "music",
+    "confetti", "fireworks", "lanterns", "cat", "dog", "whistler", "octi", "piratebox", "chest", "lamaz", "elmaz", "tamper", "brew", "sip", "knockbox", "irene", "visitors", "mouses", "piano", "classic", "kitten", "ukelele", "audio", "music",
     "guitar", "ukulele", "beat", "eclipse", "hb", "loft", "ls", "pwd", "whoami", "sudo",
     "date", "timestamp", "man", "love", "kitty", "exit", "speech", "fishu", "volume", "volumebutton", "openurl", "mailto", "beans", "couples", "officefolks"
   ];

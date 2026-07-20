@@ -23737,11 +23737,6 @@ document.addEventListener("click", function (e) {
   dismissEggBubble(b);
 });
 function setUvMode(on) {
-  // While a blacklight fade-OUT is animating, ignore a request to snap the class OFF — the fade
-  // owns the drop and will remove the class itself when it completes (its callback passes
-  // fromFade=true to bypass this guard). Without this, setGardenParty(false)'s breather-stop
-  // (applyUvMode → setUvMode(false)) would yank the class mid-fade and cancel the graceful drop.
-  if (!on && !arguments[1] && window.__uvFadingOut && window.__uvFadingOut()) return;
   var strip = document.getElementById("loft-game-strip");
   if (strip) strip.classList.toggle("uv-mode", !!on);
   if (!on && window.__endBehdadWake) window.__endBehdadWake(); // party over: clear any lingering wake
@@ -23754,21 +23749,8 @@ window.__setUvMode = setUvMode; // reset / room-leave can force the raw class of
 window.__setUvParty = function (on) { // the balcony switch
   var was = uvPartyOn;
   uvPartyOn = !!on;
-  if (uvPartyOn && !was) {
-    // Fresh party RAISE: turn the class on, then FADE the blacklight up from daylight to full-uv
-    // (0.7s) and let the linger take over. __resetUvEase re-arms the intense→soft cycle.
-    if (window.__resetUvEase) window.__resetUvEase();
-    applyUvMode();
-    if (window.__fadeUvIn) window.__fadeUvIn();
-  } else if (!uvPartyOn && was) {
-    // Party DROP: FADE the blacklight down to daylight FIRST, then remove the class (in the fade's
-    // completion callback) so the class going away reveals no snap. Reduced motion / special
-    // force-none states make __fadeUvOut synchronous (it runs the callback immediately).
-    if (window.__fadeUvOut) window.__fadeUvOut(function () { setUvMode(false, true); }); // fromFade=true → bypass the mid-fade guard
-    else applyUvMode();
-  } else {
-    applyUvMode(); // no edge (redundant same-state call) — keep the class matched, no fade
-  }
+  if (uvPartyOn && !was && window.__resetUvEase) window.__resetUvEase(); // a fresh party raise flashes intense then eases (breather off→on won't route here)
+  applyUvMode();
 };
 // Every room EXCEPT the garden: settle under the blacklight a while and it gently EASES toward a
 // softer light (kept blue, not off) so you can enjoy the scene/drinks; it snaps back to full
@@ -23792,16 +23774,6 @@ window.__setUvParty = function (on) { // the balcony switch
   var B0 = 0.5, S0 = 2.6, H0 = 220, C0 = 1.3;
   var B1 = 0.8, S1 = 1.55, H1 = 205, C1 = 1.1; // eased endpoint: lift brightness + drop saturation for a softer light, but keep the hue near the blacklight's blue (not the green that a big hue swing gives)
   var lingerTimer = 0, rafId = 0, easing = false, rampStart = 0;
-  // FADE state (raise/drop the blacklight gradually instead of snapping the .uv-mode class on/off).
-  // The fade rides the SAME single rafId as the linger ramp (never a second rAF loop — storm-safe),
-  // and interpolates the strip filter between two 4-tuples [brightness, saturate, hue, contrast]:
-  //   NEUTRAL = no filter (daylight)   FULL = the full-uv blacklight (matches the .uv-mode CSS).
-  // Fade IN goes NEUTRAL→FULL then hands to the CSS/linger; fade OUT goes the CURRENT value→NEUTRAL
-  // then removes the class (matched to neutral, so no snap). Reduced motion: instant (no rAF).
-  var FADE_MS = 700; // ~0.7s each way (owner spec)
-  var NEUTRAL = [1, 1, 0, 1], FULL = [B0, S0, H0, C0];
-  var lastVals = FULL.slice(); // the last filter tuple actually applied — the start point for a fade-out
-  var fading = false, fadingOut = false, fadeStart = 0, fadeFrom = null, fadeTo = null, fadeDone = null;
   // Persistent "already toned down" latch. Once the light has eased in ANY room (including the
   // garden party) it STAYS eased across room changes — we don't re-flash intense on every enter.
   // It's re-armed only when the blacklight is raised fresh (party start / u-key / blacklight()),
@@ -23818,21 +23790,16 @@ window.__setUvParty = function (on) { // the balcony switch
       && !arcadeLit(); // the office invaders game undoes the UV (drops it entirely) — don't ease, hand off to the CSS filter:none
   }
   function arcadeLit() { var o = document.getElementById("stage-office"); return !!(o && o.classList.contains("arcade")); }
-  // Apply one concrete strip filter (brightness/saturate/hue/contrast) PLUS the exact affine-
-  // inverse counter-filter on the make-glass + hearth fire, so those read TRUE colour no matter
-  // where on the ramp we are. Shared by the linger ease AND the fade in/out ramp below, so the
-  // inverse stays consistent through the whole fade (owner: make-glass/fire must read true-colour
-  // as the filter ramps). Neutral (1,1,0,1) yields an identity inverse — the true-colour no-op.
-  function applyFilterVals(b, sa, h, c) {
-    lastVals = [b, sa, h, c]; // remember where the light currently sits (fade-out starts from here)
+  function applyEase(t) {
     if (window.currentStageName === "balcony") { strip.style.filter = "none"; return; } // the balcony's OUTSIDE — no blacklight out there (inline "none" beats the .uv-mode class filter; re-evaluated on room change)
+    var s = t * t * (3 - 2 * t); // smoothstep — calmer than linear
+    var b = B0 + (B1 - B0) * s, sa = S0 + (S1 - S0) * s, h = H0 + (H1 - H0) * s, c = C0 + (C1 - C0) * s;
     strip.style.filter = "brightness(" + b.toFixed(3) + ") saturate(" + sa.toFixed(3) + ") hue-rotate(" + h.toFixed(1) + "deg) contrast(" + c.toFixed(3) + ")";
     // The make-glass counter-filter is the exact affine inverse (reverse order) of the CURRENT
     // strip filter, so the cocktail he's mixing always reads its true colours no matter how far
-    // we've eased/faded — at full-uv (0.5,2.6,220,1.3) this reproduces the shipping
-    // #kitchen-bar-make CSS rule exactly. Only meaningful in the kitchen (that's the only room the
-    // make-glass shows in), so it's a no-op elsewhere — the element lives in the strip full-time,
-    // but we don't touch it off-kitchen.
+    // we've eased — at t=0 this reproduces the shipping #kitchen-bar-make CSS rule exactly. Only
+    // meaningful in the kitchen (that's the only room the make-glass shows in), so it's a no-op
+    // elsewhere — the element lives in the strip full-time, but we don't touch it off-kitchen.
     var inv = "contrast(" + (1 / c).toFixed(3) + ") hue-rotate(" + (-h).toFixed(1) + "deg) saturate(" + (1 / sa).toFixed(3) + ") brightness(" + (1 / b).toFixed(3) + ")";
     var mk = document.getElementById("kitchen-bar-make");
     if (mk) mk.style.filter = window.currentStageName === "kitchen"
@@ -23841,10 +23808,6 @@ window.__setUvParty = function (on) { // the balcony switch
     // Same trick for the hearth fire: keep it warm as the light eases, so the flames never drift
     // blue. Only meaningful in the cuddly room; off-cuddly leave the fire to its static CSS rule.
     fireNodes().forEach(function (n) { n.style.filter = window.currentStageName === "cuddly" ? inv : ""; });
-  }
-  function applyEase(t) {
-    var s = t * t * (3 - 2 * t); // smoothstep — calmer than linear
-    applyFilterVals(B0 + (B1 - B0) * s, S0 + (S1 - S0) * s, H0 + (H1 - H0) * s, C0 + (C1 - C0) * s);
   }
   function fireNodes() { // the fire's warm nodes: the additive flame image + the coal/ember/flame decor
     var arr = [];
@@ -23863,7 +23826,6 @@ window.__setUvParty = function (on) { // the balcony switch
     if (lingerTimer) { clearTimeout(lingerTimer); lingerTimer = 0; }
     if (rafId) { window.cancelAnimationFrame(rafId); rafId = 0; }
     easing = false;
-    fading = false; fadingOut = false; fadeDone = null; // any in-flight fade is abandoned — the gate closed (trip/freeze/off)
     clearInline();
   }
   function step() {
@@ -23884,79 +23846,7 @@ window.__setUvParty = function (on) { // the balcony switch
     rampStart = nowMs();
     rafId = window.requestAnimationFrame(step);
   }
-  // ── FADE IN / OUT ─────────────────────────────────────────────────────────────
-  // A JS-driven ramp of the strip filter between two 4-tuples, sharing the ONE rafId with the
-  // linger (a fade cancels any in-flight linger and vice-versa — never two rAF loops). Fade IN is
-  // called when the blacklight is raised fresh; fade OUT when it drops. Both respect the same gate
-  // as the linger: no fade INTO a balcony/trip/freeze/zoom state — those force filter:none instantly.
-  function fadeStep() {
-    rafId = 0;
-    // A force-none state (trip / dance-freeze / slow-dance / device-zoom / arcade) appearing mid-fade
-    // must win immediately — don't let the inline ramp keep overriding the CSS filter:none. Bail and
-    // let the completion callback + poll settle the correct instant state.
-    if (!gateOpen() || strip.classList.contains("slow-dance")) {
-      var d0 = fadeDone; fadeDone = null; fading = false; fadingOut = false;
-      clearInline();       // drop the inline ramp so the CSS force-none (or class-off) shows through
-      if (d0) d0();        // fade-out: still finish the class drop; fade-in: arm the linger (evaluate)
-      return;
-    }
-    var t = Math.min(1, (nowMs() - fadeStart) / FADE_MS);
-    var s = t * t * (3 - 2 * t); // smoothstep
-    applyFilterVals(
-      fadeFrom[0] + (fadeTo[0] - fadeFrom[0]) * s,
-      fadeFrom[1] + (fadeTo[1] - fadeFrom[1]) * s,
-      fadeFrom[2] + (fadeTo[2] - fadeFrom[2]) * s,
-      fadeFrom[3] + (fadeTo[3] - fadeFrom[3]) * s
-    );
-    if (t < 1) { rafId = window.requestAnimationFrame(fadeStep); return; }
-    fading = false; fadingOut = false;
-    var done = fadeDone; fadeDone = null;
-    if (done) done(); // fade-out: hand back (remove class / clearInline); fade-in: arm the linger
-  }
-  // Ramp from `from` → `to` over FADE_MS then call `done`. Cancels any linger/fade already running.
-  // out=true marks this a fade-OUT (so setUvMode's mid-fade guard knows to defer the class drop).
-  function runFade(from, to, done, out) {
-    if (lingerTimer) { clearTimeout(lingerTimer); lingerTimer = 0; }
-    if (rafId) { window.cancelAnimationFrame(rafId); rafId = 0; }
-    easing = false;
-    fadeFrom = from.slice(); fadeTo = to.slice(); fadeDone = done; fading = true; fadingOut = !!out;
-    if (reduce) { fading = false; fadingOut = false; applyFilterVals(to[0], to[1], to[2], to[3]); var d = fadeDone; fadeDone = null; if (d) d(); return; } // reduced motion: jump to the endpoint, no ramp
-    fadeStart = nowMs();
-    rafId = window.requestAnimationFrame(fadeStep);
-  }
-  window.__uvFadingOut = function () { return fadingOut; }; // setUvMode checks this to defer a mid-fade class drop
-  // Fade the blacklight UP from daylight to full-uv, then hand to the CSS/linger. Only when the gate
-  // is open in a fade-able room (indoor, no trip/freeze/zoom, not the balcony). Otherwise no fade —
-  // evaluate() forces the correct instant state (the garden party's full UV, or filter:none).
-  window.__fadeUvIn = function () {
-    if (reduce) return;                                   // instant path: evaluate() handles it
-    if (!gateOpen()) return;                              // trip/freeze/zoom/off — no fade INTO those
-    if (window.currentStageName === "balcony") return;    // OUTSIDE — never blacklit, evaluate() sets "none"
-    eased = false;                                        // a fresh raise flashes intense (full-uv) then eases (matches __resetUvEase intent)
-    runFade(NEUTRAL, FULL, function () {
-      // reached full-uv: hand the light back to the CSS .uv-mode, then let the linger arm its
-      // soft-down ease from a clean state (evaluate() starts the LINGER_MS timer).
-      clearInline();
-      evaluate();
-    });
-  };
-  // Fade the blacklight DOWN from its CURRENT value to daylight, then run `after` (drop the class /
-  // clearInline) with the inline filter ALREADY neutral — so removing .uv-mode reveals no snap.
-  window.__fadeUvOut = function (after) {
-    if (reduce || !strip.classList.contains("uv-mode")) { if (after) after(); return; } // instant when calm or already off
-    if (window.currentStageName === "balcony") { if (after) after(); return; }          // OUTSIDE — no UV to fade, just run the drop
-    if (!gateOpen()) { stop(); if (after) after(); return; } // trip/freeze/zoom force filter:none — don't fade a non-visible UV; snap the class off (stop() clears any inline so CSS none holds)
-    runFade(lastVals, NEUTRAL, function () {
-      // The inline filter now holds NEUTRAL (applyFilterVals at t=1). Remove .uv-mode FIRST — with
-      // the inline neutral still masking, so the class going away shows no snap — THEN clear the
-      // inline so the strip is fully back to (classless) CSS control. Order matters: clearInline
-      // before removing the class would momentarily reveal the full .uv-mode CSS filter (a flash).
-      if (after) after();  // remove .uv-mode (setUvMode(false)) while inline neutral still masks it
-      clearInline();       // now classless — drop the inline neutral too; strip is plain daylight
-    }, true);              // out=true → fadingOut latched so setUvMode defers the class drop to us
-  };
   function evaluate() {
-    if (fading) return; // a fade owns the strip filter right now — don't let the poll stomp it
     if (window.currentStageName === "balcony") { strip.style.filter = gateOpen() ? "none" : ""; return; } // OUTSIDE: never blacklit (inline "none" overrides the .uv-mode class filter; re-evaluated on room change)
     if (strip.style.filter === "none") strip.style.filter = ""; // clear a balcony-left "none" so the .uv-mode class re-applies immediately on return to an indoor party room
     if (gateOpen()) {
@@ -66804,19 +66694,8 @@ function spawnDustMote(container) {
     var prev = !!(strip && strip.classList.contains("uv-mode"));
     if (arguments.length === 0 || !strip) return prev; // no arg → is the UV on?
     var on = !!arg; // blacklight(true) → on; blacklight(false) → off; returns the previous state
-    if (on === prev) return prev; // no edge — nothing to fade/toggle
-    if (on) {
-      // fresh raise: flash intense then ease. Turn the class on, then fade the blacklight UP.
-      if (window.__resetUvEase) window.__resetUvEase();
-      strip.classList.toggle("uv-mode", true);
-      if (window.__fadeUvIn) window.__fadeUvIn();
-    } else {
-      // drop: fade the blacklight DOWN to daylight, then remove the class (in the fade callback,
-      // fromFade=true to clear the class past setUvMode's mid-fade guard). Reduced motion / a
-      // force-none state makes __fadeUvOut synchronous.
-      if (window.__fadeUvOut) window.__fadeUvOut(function () { strip.classList.remove("uv-mode"); if (window.__endBehdadWake) window.__endBehdadWake(); });
-      else strip.classList.remove("uv-mode");
-    }
+    if (on && !prev && window.__resetUvEase) window.__resetUvEase(); // a fresh raise flashes intense then eases
+    strip.classList.toggle("uv-mode", on);
     narrate(on, "🟣 blacklight on — everything fluoresces.", "blacklight off — the lights come up.");
     return prev;
   };

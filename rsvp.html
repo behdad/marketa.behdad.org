@@ -46153,6 +46153,7 @@ async def localfont(name):
       if (!act) { open(true); openApp("messages", "app_messages", renderMessages); return; }
       if (act.indexOf("app:") === 0) { open(true); var app = phoneAppByName(act.slice(4)); if (app && app.open) app.open(); else openApp("messages", "app_messages", renderMessages); return; }
       if (act.indexOf("pc:") === 0) { close(true); if (window.__openMonitorApp) window.__openMonitorApp(act.slice(3)); return; } // → an app on the office PC monitor (not the pocket phone) — e.g. the cue pointing at "the office speakers"
+      if (act.indexOf("bd:") === 0) { close(true); if (window.__birthdayGoto) window.__birthdayGoto(act.slice(3)); return; } // → summon the birthday person: time-travel to their date + reveal them at their venue (garden/bar/dj/tehran-call/prague-call)
       close(true); // the rest leave the phone for somewhere in the loft
       if (act === "eclipse") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__runBalconyEclipse) window.__runBalconyEclipse(); }, 760); return; } // pan first, then darken the sky
       if (act === "storm") { if (window.storm) window.storm(true); return; } // storm() pans to the balcony, sets dusk, and rolls the storm itself
@@ -46323,7 +46324,7 @@ async def localfont(name):
       var id = "bd_" + who;
       if (messagesThread.indexOf(id) !== -1) return; // already sent this session — fire once
       var mb = who === "marketa" ? false : (who === "behdad" || BD_MB_PEOPLE[who]); // a partner's own birthday is announced by the OTHER partner
-      MESSAGES[id] = { fromKey: mb ? "msg_marketa_from" : "msg_behdad_from", bodyKey: BD_TEMPLATES[Math.floor(Math.random() * BD_TEMPLATES.length)], bdName: name };
+      MESSAGES[id] = { fromKey: mb ? "msg_marketa_from" : "msg_behdad_from", bodyKey: BD_TEMPLATES[Math.floor(Math.random() * BD_TEMPLATES.length)], bdName: name, act: "bd:" + who }; // tapping the text summons the birthday person (runMsgAction "bd:")
       window.__deliverPhoneMessage(id);
     };
     // message("Sender", "your text") — deliver an AD-HOC text: a notification toast (when the tab's
@@ -63523,12 +63524,27 @@ function spawnDustMote(container) {
   function bdReveal(b) {
     var v = b.venue || "garden";
     if (v === "tehran") { // Behdad's parents (Ashraf/Mohsen) — the hat rides the Tehran video call
-      if (window.__openMonitorApp) window.__openMonitorApp("tehran");
+      if (window.goToStage) window.goToStage("office");
+      // Already mid-call on the monitor: openFamilyCall would bail (one call at a time), so just pull
+      // the view back up — the seat of honour is CSS-keyed on the bd-<who> class showBirthday already
+      // set, so this birthday person is behind the cake without re-dialing.
+      if (window.__familyCallLive && window.__familyCallLive()) {
+        if (window.__monitorZoomIn) window.__monitorZoomIn();
+      } else if (window.__openMonitorApp) {
+        window.__openMonitorApp("tehran"); // boots the PC if off, zooms the monitor, and deep-links straight to the connected Tehran call
+      }
       return;
     }
     if (v === "prague") { // Markéta's parents + Baka — their headwear rides the Prague laptop call
       if (window.goToStage) window.goToStage("office");
-      if (window.__laptopCall) window.__laptopCall("prague");
+      // Already on the Prague call (a different Prague person, or the lid backed out of zoom): the
+      // laptop is open and startCall would no-op, so zoom the lid back in directly — the new person
+      // rides the bd-<who> seating CSS showBirthday already set.
+      if (window.__pragueCallLive && window.__pragueCallLive()) {
+        if (window.__laptopZoomIn) window.__laptopZoomIn();
+      } else if (window.__laptopCall) {
+        window.__laptopCall("prague"); // opens the lid (zooming in) and dials Prague
+      }
       return;
     }
     if (v === "bar") { // Pouria behind the kitchen bar — the bar is up during a party (or at night)
@@ -63597,6 +63613,18 @@ function spawnDustMote(container) {
     return "no birthday by that name. try birthday(\"list\").";
   };
   window.__stepBirthday = stepBirthday; // test hook
+  // Tapping a bd_<who> birthday-announcement text summons that person: the SAME navigation as
+  // birthday("<who>") — time-travel to their date + reveal at their venue (calls included via the
+  // fixed bdReveal). Guards an unknown or still-pending (dateless, e.g. Lauren) who — BD_ORDER
+  // already excludes those, so a miss just no-ops.
+  window.__birthdayGoto = function (who) {
+    if (who == null || who === "") return false;
+    var key = String(who).toLowerCase().trim();
+    for (var i = 0; i < BD_ORDER.length; i++) {
+      if (BD_ORDER[i].who === key) { bdIndex = i; bdStarted = true; showBirthday(BD_ORDER[i]); return true; }
+    }
+    return false;
+  };
   // a small transient pill naming the season just picked — lives in the viewport so
   // fullscreen keeps it; one element, retimed on every press, nothing accumulates
   var seasonToastEl = null, seasonToastTimer = null;

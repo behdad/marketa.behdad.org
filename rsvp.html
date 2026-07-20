@@ -17513,6 +17513,14 @@ section{margin:1.9rem 0}
 </g>
 </g>
 <g id="balcony-fireworks" aria-hidden="true" pointer-events="none"></g>
+<!-- night-sky celebrations over the deck: a fireworks FINALE (window.__startFireworks / console
+     fireworks() on the balcony) and a WISH-LANTERNS release (window.__releaseLanterns / lanterns()).
+     Both are timer/loop-spawned WAAPI particles from the balcony-sky-shows IIFE — each tagged with a
+     class (.bfw-particle / .blant-particle), self-cleaning on its own onfinish, gated on
+     !hidden && hasFocus, capped/cleared before each spawn, and fully torn down on room-leave /
+     party-off / night-off / reset (window.__stopBalconySky). Behind the railing so it occludes them. -->
+<g id="balcony-fwfinale" aria-hidden="true" pointer-events="none"></g>
+<g id="balcony-lanterns" aria-hidden="true" pointer-events="none"></g>
 <g id="balcony-railing">
 <path d="M446 150 L680 278 M478 150 L680 260 M510 150 L680 242 M542 150 L680 226 M574 150 L680 208 M606 150 L680 190 M638 150 L680 172 M440 162 L662 280 M440 180 L630 280 M440 198 L598 280 M440 216 L566 280 M440 234 L532 280 M440 252 L500 280" stroke="#141414" stroke-width="1.2"/>
 <path d="M672 150 L440 278 M640 150 L440 260 M608 150 L440 242 M576 150 L440 226 M544 150 L440 208 M512 150 L440 190 M480 150 L440 172 M680 160 L458 280 M680 178 L490 280 M680 196 L522 280 M680 214 L554 280 M680 232 L586 280 M680 250 L618 280" stroke="#141414" stroke-width="1.2"/>
@@ -17925,6 +17933,12 @@ section{margin:1.9rem 0}
 <stop offset="0%" stop-color="#f6c86a" stop-opacity="0.9"/>
 <stop offset="45%" stop-color="#f0a04a" stop-opacity="0.4"/>
 <stop offset="100%" stop-color="#ef6626" stop-opacity="0"/>
+</radialGradient>
+<!-- wish-lantern soft warm halo (window.__releaseLanterns): a candle-lit paper glow -->
+<radialGradient id="balcony-lantern-glow" cx="50%" cy="58%" r="50%">
+<stop offset="0%" stop-color="#fff2c0" stop-opacity="0.95"/>
+<stop offset="55%" stop-color="#ffb45a" stop-opacity="0.5"/>
+<stop offset="100%" stop-color="#ff7e33" stop-opacity="0"/>
 </radialGradient>
 </defs>
 <g class="sn-bonfire" aria-hidden="true" pointer-events="none">
@@ -20506,6 +20520,8 @@ var T = {
     msg_aspen_from: "Aspen",
     msg_albumfull_body: "been snapping all night 📸 your album's filling up — take a look",
     msg_bbq_body: "let's start the BBQ 🔥🍔",
+    msg_fireworks_body: "FINALE TIME 🎆 get out on the balcony!",
+    msg_lanterns_body: "let's send up wish-lanterns 🏮 make a wish ✨",
     msg_sina_helpers_body: "who's got some party helpers? 😜",
     msg_mb_from: "markéta & behdad",
     msg_mb_body: "did you RSVP yet? 😉 no pressure. (some pressure.)",
@@ -21088,6 +21104,8 @@ var T = {
     msg_aspen_from: "Aspen",
     msg_albumfull_body: "cvakám celý večer 📸 album se ti plní — mrkni na něj",
     msg_bbq_body: "jdeme roztopit gril 🔥🍔",
+    msg_fireworks_body: "ČAS NA FINÁLE 🎆 pojď ven na balkon!",
+    msg_lanterns_body: "pustíme lampiony přání 🏮 něco si přej ✨",
     msg_sina_helpers_body: "kdo má nějaké párty pomocníky? 😜",
     msg_mb_from: "markéta & behdad",
     msg_mb_body: "potvrdil(a) jsi už účast? 😉 žádný tlak. (trochu tlak.)",
@@ -33294,7 +33312,8 @@ var ABANDONED_CALL_MS = 30000;
     run: "run(\"name\") — run a saved editor script by name (in quotes); the whole script runs as one async block, so `await sleep(...)` between steps sequences",
     edit: "edit(\"name\") — open the editor app; with a name in quotes, load that script (or start a fresh one under that name); edit() opens a blank new script",
     confetti: "confetti() — a shower of confetti in the room you're in",
-    fireworks: "fireworks() — a burst of fireworks over the room you're in",
+    fireworks: "fireworks() — a burst of fireworks over the room you're in; on the balcony at night it's the full sky FINALE",
+    lanterns: "lanterns() — release glowing wish-lanterns into the balcony night sky (heads to the balcony + dusk first)",
     cat: "cat(true) — summon the loose chest cat to your room; cat(false) stows her; cat() reports whether she's out (bare `cat` prints a cat instead)",
     irene: "irene(true) — the niece skips in for a random visit; irene(false) sends her away; irene(\"pose\") forces one: \"roam\" · \"bounce\" · \"sit\" · \"hug\" · \"hugb\" · \"catplay\" · \"catjump\" · \"octiplay\" · \"swing\"; irene() reports whether she's visiting",
     visitors: "visitors(\"duo\") — a friend duo drops by the cuddly nook: \"ali\" (+ Goli) · \"spencer\" (+ Jay) · \"alireza\" (+ Mahzad) · \"bahareh\" (+ Irene). visitors(\"duo\",\"text\") just sends their \"are you home?\" text to the phone instead. visitors(false) sends whoever's here away; visitors() lists the duos. (suppressed on meal days — no visitors while food's served)",
@@ -33597,7 +33616,7 @@ var ABANDONED_CALL_MS = 30000;
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "aurora", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood",
     "phone", "album", "message", "madla", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "edit",
-    "confetti", "fireworks", "cat", "irene", "visitors", "mouses", "piano", "classic", "kitten", "ukelele", "audio", "music",
+    "confetti", "fireworks", "lanterns", "cat", "irene", "visitors", "mouses", "piano", "classic", "kitten", "ukelele", "audio", "music",
     "guitar", "ukulele", "beat", "eclipse", "hb", "loft", "ls", "pwd", "whoami", "sudo",
     "date", "man", "love", "kitty", "exit", "speech", "fishu", "volume", "volumebutton", "openurl", "beans"
   ];
@@ -41465,6 +41484,8 @@ async def localfont(name):
       jukebox:       { fromKey: "msg_sina_from",     bodyKey: "msg_jukebox_body",   act: "jukebox" },       // DJ Sina: requests open → taps: the DJ-booth song picker
       album_full:    { fromKey: "msg_aspen_from",    bodyKey: "msg_albumfull_body", act: "app:album" },     // Aspen, once the album hits ≥5 shots → taps: the phone album (not in a drip pool — count-triggered)
       bbq:           { fromKey: "msg_behdad_from",  bodyKey: "msg_bbq_body",       act: "bbq" },           // behdad → taps: balcony + open the smoker lid + light it
+      fireworks:     { fromKey: "msg_danesh_from",  bodyKey: "msg_fireworks_body", act: "fireworks" },     // DJ Danesh calls the finale → taps: balcony (night) + the fireworks finale over the city
+      lanterns:      { fromKey: "msg_bahareh_from", bodyKey: "msg_lanterns_body",  act: "lanterns" },      // Bahareh (fire-festival kin) → taps: balcony (night) + a wish-lantern release
       sina_helpers:  { fromKey: "msg_sina_from",    bodyKey: "msg_sina_helpers_body", act: "magicbox" },   // Sina (off the decks) → taps: garden + the magic box (locked → date lock the first time)
       // Friend-duo "are you home?" drop-ins → tap pans to the cuddly nook + the PAIR walks in (see
       // the #cuddly-visitors IIFE + the "visit:" action). Each has a small bodyKeys POOL flavored to
@@ -41485,7 +41506,7 @@ async def localfont(name):
       pouria_farhang: { fromKey: "msg_pouria_from",  bodyKey: "msg_pouria_farhang_body" }, // Pouria ribs Farhang in the group chat — random party drip, no act (tap opens the app)
       ali_love:      { fromKey: "msg_ali_from",     bodyKey: "msg_ali_love_body" } // Ali's random love-you-all group text
     };
-    var CUE_POOL = ["cue_cocktails", "cue_calendar", "storm", "invaders", "flair", "smores", "sina_helpers", "firstdance", "jukebox", "hamid_verse", "pouria_farhang", "ali_love"]; // the random party (night) drip (shuffled: each drip picks a random un-sent one); smores is night-only + sina_helpers only while Sina's off the decks — see cueRemaining(); hamid_verse chains its 2nd stanza via m.next
+    var CUE_POOL = ["cue_cocktails", "cue_calendar", "storm", "invaders", "flair", "smores", "sina_helpers", "firstdance", "jukebox", "hamid_verse", "pouria_farhang", "ali_love", "fireworks", "lanterns"]; // the random party (night) drip (shuffled: each drip picks a random un-sent one); smores is night-only + sina_helpers only while Sina's off the decks — see cueRemaining(); hamid_verse chains its 2nd stanza via m.next
     var DAY_POOL = ["bbq", "cue_mail"]; // the DAYTIME drip — texts that belong to daylight hours (no party); dripped by scheduleDayDrip(). Bahareh's "did you check the mail?" belongs to the day.
     // Phone photobooth result state — session-scoped, same model as notesDraft/cardsIndex:
     // a captured polaroid (frame canvas + chosen look/frame) survives a normal close/reopen
@@ -42732,6 +42753,8 @@ async def localfont(name):
         return;
       }
       if (act === "bbq") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__startBBQ) window.__startBBQ(); }, 760); return; } // pan to the balcony, then open + light the smoker
+      if (act === "fireworks") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__setDayNight) window.__setDayNight(true); if (window.__startFireworks) window.__startFireworks(); }, 760); return; } // pan to the balcony, set night, then run the fireworks finale
+      if (act === "lanterns") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__setDayNight) window.__setDayNight(true); if (window.__releaseLanterns) window.__releaseLanterns(); }, 760); return; } // pan to the balcony, set night, then release wish-lanterns
       if (act === "magicbox") { if (window.goToStage) window.goToStage("garden"); setTimeout(function () { if (window.__drugsboxTap) window.__drugsboxTap(); }, 760); return; } // pan to the garden, then tap the magic box (date lock the first time)
       if (act === "flair") { if (window.goToStage) window.goToStage("kitchen"); setTimeout(function () { if ((!window.__barUpNow || !window.__barUpNow()) && window.__setDayNight) window.__setDayNight(true); if (window.__startFlairCatch) window.__startFlairCatch(); }, 720); return; } // pan to the bar (raise it if needed), then launch Flair-Catch
       if (act === "rsvp") { if (window.goToStage) window.goToStage("balcony"); if (window.__showRsvpNudge) window.__showRsvpNudge("rsvp_exit"); return; }
@@ -43151,6 +43174,7 @@ async def localfont(name):
         if (window.__rollSmoke) window.__rollSmoke(); // daybreak: how bad is today's smoke? (the mirror of the nightfall precip toss)
         if (wallLampEl) wallLampEl.classList.remove("on");
         if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle();
+        if (window.__stopBalconySky) window.__stopBalconySky(); // daybreak also puts out any fireworks finale / wish-lanterns (night things)
       }
       if (window.__updateMozzies) window.__updateMozzies(); // dusk → mosquitoes swarm; day → they clear
       if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // dusk arms the 5s disco-ball peek; day retracts it
@@ -43200,6 +43224,7 @@ async def localfont(name):
       var wallLampEl = document.getElementById("balcony-walllamp");
       if (wallLampEl) wallLampEl.classList.remove("on");
       if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle();
+      if (window.__stopBalconySky) window.__stopBalconySky(); // dusk removed → tear down any fireworks finale / wish-lanterns
       if (window.__updateMozzies) window.__updateMozzies(); // dusk removed → tear the swarm down
       if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // day forced back → retract any disco-ball peek
       if (window.__updateGardenAurora) window.__updateGardenAurora(); // day forced back → aurora off
@@ -47012,6 +47037,308 @@ function spawnCrystalSparkle() {
     volley();
   };
   window.addEventListener("pagehide", fwStop);
+})();
+// ── balcony night-sky celebrations: a fireworks FINALE + a wish-lantern release ──────────────
+// Two on-demand shows over the balcony's open sky (window.__startFireworks / __releaseLanterns,
+// console fireworks()/lanterns(), and two phone-text moments). Both are timer/loop-spawned WAAPI
+// particles, so they carry the full anti-accumulation discipline from CLAUDE.md's "Timer-spawned
+// WAAPI particles accumulate in a backgrounded/unfocused tab" bug class:
+//   • the spawner GATES on !document.hidden && document.hasFocus() (visibilityState alone misses a
+//     visible-but-unfocused window whose frames still throttle — the crickets rule);
+//   • every particle SELF-CLEANS on its own WAAPI onfinish;
+//   • before each spawn we CAP/CLEAR-STALE (tagged .bfw-particle / .blant-particle, drop oldest)
+//     so a paused onfinish that never fired can't pile up;
+//   • fully torn down (window.__stopBalconySky) on room-leave / party-off / night-off / reset.
+// Reduced motion: fireworks paint ONE static burst (no loop, no sound); lanterns show a couple of
+// static glows near the roofline — a tasteful hint, no drift. All shapes are native SVG circles /
+// paths (no foreignObject, no CSS filter on a <g> — WebKit no-ops per the gotchas); text is not
+// used, so no transform-box:fill-box trap. The lantern glow is an SVG radialGradient ref.
+(function () {
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var FW_COLORS = ["#f5b8c8", "#f7d97a", "#a8c4d4", "#d9a6a6", "#7f9ec0", "#f0c86a", "#e88fa6", "#b6e3c4", "#c9a6e8"];
+  function reducedMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+  function onBalcony() { return window.currentStageName === "balcony"; }
+  function attended() { return !document.hidden && document.hasFocus(); } // crickets rule for the autonomous spawner + its sound
+  function mk(host, cls, tag, attrs) {
+    var e = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    e.setAttribute("class", cls);
+    host.appendChild(e);
+    return e;
+  }
+  // cap the tagged particles in a host: drop the oldest so a hidden-tab pause (onfinish never
+  // fires) can't accumulate them past the cap.
+  function capParticles(host, cls, cap) {
+    if (!host) return;
+    var live = host.querySelectorAll("." + cls);
+    for (var i = 0; i < live.length - cap; i++) live[i].remove();
+  }
+  function clearParticles(host, cls) {
+    if (!host) return;
+    var ps = host.querySelectorAll("." + cls);
+    for (var i = 0; i < ps.length; i++) ps[i].remove();
+  }
+
+  // ══ FIREWORKS FINALE ═══════════════════════════════════════════════════════════════════════
+  // A bounded burst of volleys over the balcony sky — rockets rise + explode into colored,
+  // gravity-falling showers with a secondary sparkle crackle. Party/night-flavored: it turns the
+  // sky to dusk first (a finale is a night thing) so the stars + dark backdrop set it off.
+  var FW_HOST_ID = "balcony-fwfinale";
+  var FW_BOX = [430, 18, 162, 80];   // x,y,w,h of the burst zone (balcony-local, the open sky)
+  var FW_CAP = 240;                  // hard ceiling on live fireworks particles
+  var fwTimer = null, fwEndAt = 0;
+  function fwHost() { return document.getElementById(FW_HOST_ID); }
+  function fwBurst(host, cx, cy, s, color, isStatic) {
+    if (!host) return;
+    color = color || FW_COLORS[(Math.random() * FW_COLORS.length) | 0];
+    var flash = mk(host, "bfw-particle", "circle", { cx: cx, cy: cy, r: (7 * s).toFixed(1), fill: "#fff8e0", opacity: isStatic ? 0.35 : 0.9 });
+    if (!isStatic && flash.animate) {
+      flash.style.transformBox = "fill-box"; flash.style.transformOrigin = "center";
+      var fa = flash.animate([{ opacity: 0.95, transform: "scale(0.35)" }, { opacity: 0, transform: "scale(1.8)" }], { duration: 420, easing: "ease-out" });
+      fa.onfinish = function () { if (flash.parentNode) flash.remove(); };
+    }
+    var n = 24 + ((Math.random() * 10) | 0);
+    for (var i = 0; i < n; i++) {
+      var ang = (Math.PI * 2 * i) / n + (Math.random() - 0.5) * 0.18;
+      var dist = (32 + Math.random() * 24) * s;
+      var dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist;
+      var p = mk(host, "bfw-particle", "circle", { cx: cx, cy: cy, r: ((1.3 + Math.random() * 1.1) * s).toFixed(1), fill: color });
+      if (isStatic) { p.setAttribute("transform", "translate(" + dx.toFixed(1) + "," + dy.toFixed(1) + ")"); p.setAttribute("opacity", "0.85"); continue; }
+      (function (el, ex, ey) {
+        if (!el.animate) { setTimeout(function () { if (el.parentNode) el.remove(); }, 1400); return; }
+        var a = el.animate([
+          { transform: "translate(0,0)", opacity: 1, offset: 0 },
+          { transform: "translate(" + (ex * 0.6).toFixed(1) + "px," + (ey * 0.6).toFixed(1) + "px)", opacity: 1, offset: 0.28 },
+          { transform: "translate(" + ex.toFixed(1) + "px," + (ey + 16 * s).toFixed(1) + "px)", opacity: 0, offset: 1 } // +gravity fall
+        ], { duration: 1500 + Math.random() * 800, easing: "cubic-bezier(0.12,0.62,0.3,1)" });
+        a.onfinish = function () { if (el.parentNode) el.remove(); };
+      })(p, dx, dy);
+    }
+    if (isStatic) return;
+    for (var j = 0; j < 8; j++) {
+      (function () {
+        var a = Math.random() * Math.PI * 2, d = (10 + Math.random() * 16) * s;
+        var sp = mk(host, "bfw-particle", "circle", { cx: cx, cy: cy, r: ((0.8 + Math.random() * 0.6) * s).toFixed(1), fill: "#fff3c4" });
+        if (!sp.animate) { setTimeout(function () { if (sp.parentNode) sp.remove(); }, 700); return; }
+        var an = sp.animate([
+          { transform: "translate(0,0)", opacity: 0, offset: 0 },
+          { transform: "translate(" + (Math.cos(a) * d * 0.5).toFixed(1) + "px," + (Math.sin(a) * d * 0.5).toFixed(1) + "px)", opacity: 1, offset: 0.4 },
+          { transform: "translate(" + (Math.cos(a) * d).toFixed(1) + "px," + (Math.sin(a) * d).toFixed(1) + "px)", opacity: 0, offset: 1 }
+        ], { duration: 500 + Math.random() * 320, easing: "ease-out" });
+        an.onfinish = function () { if (sp.parentNode) sp.remove(); };
+      })();
+    }
+    if (attended()) playFireworkBoom(s, cx);
+  }
+  function fwLaunch(host, cx, cy, s) {
+    if (!host) return;
+    var color = FW_COLORS[(Math.random() * FW_COLORS.length) | 0];
+    var startY = cy + (66 + Math.random() * 40) * s;
+    var trail = mk(host, "bfw-particle", "circle", { cx: cx, cy: startY, r: (1.6 * s).toFixed(1), fill: "#ffe9a8" });
+    if (!trail.animate) { fwBurst(host, cx, cy, s, color, false); if (trail.parentNode) trail.remove(); return; }
+    var rise = trail.animate([
+      { transform: "translate(0,0)", opacity: 0.2, offset: 0 },
+      { transform: "translate(0," + (-(startY - cy) * 0.35).toFixed(1) + "px)", opacity: 1, offset: 0.25 },
+      { transform: "translate(0," + (-(startY - cy)).toFixed(1) + "px)", opacity: 0.9, offset: 1 }
+    ], { duration: 520 + Math.random() * 280, easing: "cubic-bezier(0.2,0.5,0.35,1)" });
+    // A rocket in flight when the finale ends / the room is left would still burst into its
+    // captured host — re-check at the moment of the burst, not just at launch (the trail's
+    // onfinish pauses with the frames in a hidden tab, so a backgrounded finale can't detonate).
+    rise.onfinish = function () {
+      if (trail.parentNode) trail.remove();
+      if (!fwRunning() || !onBalcony()) return;
+      fwBurst(host, cx, cy, s, color, false);
+    };
+  }
+  function fwRunning() { return fwTimer !== null && Date.now() < fwEndAt; }
+  function fwStop() {
+    if (fwTimer) { clearTimeout(fwTimer); fwTimer = null; }
+    clearParticles(fwHost(), "bfw-particle");
+  }
+  function fwVolley() {
+    fwTimer && (fwTimer = null);
+    var host = fwHost();
+    // keep the finale's own pacing but never spawn while unattended (nothing accumulates) — the
+    // window closes on its own via fwEndAt, so there's no timer to keep alive past the finale.
+    if (!host || !onBalcony() || Date.now() >= fwEndAt) { fwStop(); return; }
+    if (attended()) {
+      capParticles(host, "bfw-particle", FW_CAP);
+      var rockets = 1 + ((Math.random() * 2) | 0); // 1–2 per volley
+      for (var i = 0; i < rockets; i++) {
+        var cx = FW_BOX[0] + Math.random() * FW_BOX[2];
+        var cy = FW_BOX[1] + Math.random() * FW_BOX[3];
+        var s = 0.9 + Math.random() * 0.35;
+        (function (x, y, sc) { setTimeout(function () { if (fwRunning() && onBalcony() && attended()) fwLaunch(host, x, y, sc); }, i * 230); })(cx, cy, s);
+      }
+    }
+    fwTimer = setTimeout(fwVolley, 900 + Math.random() * 900);
+  }
+  // Public entry: run the finale over the balcony sky (~8s of volleys). Turns the sky to dusk so
+  // it reads as a proper night finale. dur (ms) overrides the length.
+  window.__startFireworks = function (dur) {
+    var host = fwHost();
+    if (!host) return false;
+    if (window.__setDayNight) window.__setDayNight(true); // a finale is a night thing
+    if (reducedMotion()) { // one calm static burst, no loop, no sound
+      clearParticles(host, "bfw-particle");
+      fwBurst(host, FW_BOX[0] + FW_BOX[2] * 0.3, FW_BOX[1] + FW_BOX[3] * 0.32, 1.05, "#f7d97a", true);
+      return true;
+    }
+    fwStop();
+    fwEndAt = Date.now() + (typeof dur === "number" ? dur : 8200);
+    fwTimer = -1;      // mark running (fwRunning() checks fwTimer !== null); fwVolley re-arms the real timer
+    fwVolley();
+    return true;
+  };
+
+  // ══ WISH LANTERNS ══════════════════════════════════════════════════════════════════════════
+  // Warm paper sky-lanterns drift up off the deck, sway, and fade high in the night sky — the
+  // couple's Chaharshanbe / spring-fire-festival theme. Gentle, no sound. A finite RELEASE (a
+  // handful launched over a couple of seconds), then the spawner idles — but if left on the
+  // balcony it keeps a soft trickle going so the sky stays alive, self-replenishing 1:1 like the
+  // fireflies. Each lantern is a wrapper <g> carrying the static launch position, an inner <g>
+  // carrying the WAAPI drift (so the drift transform never clobbers the position), the warm halo
+  // (radialGradient ref — no CSS filter), the paper body, and a flame dot.
+  var LANT_HOST_ID = "balcony-lanterns";
+  var LANT_CAP = 14;         // hard ceiling on live lanterns
+  var LANT_TRICKLE = 5;      // steady-state count while a release is "held" on the balcony
+  var lantHold = false, lantTimer = null;
+  function lantHost() { return document.getElementById(LANT_HOST_ID); }
+  var LANT_COLORS = ["#ff9a52", "#ffb14e", "#ff7e5a", "#f6a35c", "#ffc36b"];
+  function spawnLantern() {
+    var host = lantHost();
+    if (!host) return;
+    if (host.querySelectorAll(".blant-particle").length >= LANT_CAP) capParticles(host, "blant-particle", LANT_CAP - 1);
+    var col = LANT_COLORS[(Math.random() * LANT_COLORS.length) | 0];
+    var x0 = 430 + Math.random() * 170;        // launched from across the deck (balcony-local)
+    var y0 = 274 + Math.random() * 20;         // up off the railing/deck
+    var sc = 0.66 + Math.random() * 0.5;       // varied sizes → depth
+    var wrap = document.createElementNS(SVGNS, "g");
+    wrap.setAttribute("class", "blant-particle");
+    wrap.setAttribute("transform", "translate(" + x0.toFixed(1) + "," + y0.toFixed(1) + ") scale(" + sc.toFixed(2) + ")");
+    var mover = document.createElementNS(SVGNS, "g"); // carries the animated rise+sway
+    // warm halo (radialGradient — WebKit-safe, no CSS filter on the <g>)
+    var halo = document.createElementNS(SVGNS, "circle");
+    halo.setAttribute("cx", "0"); halo.setAttribute("cy", "1"); halo.setAttribute("r", "13");
+    halo.setAttribute("fill", "url(#balcony-lantern-glow)"); halo.setAttribute("opacity", "0.85");
+    // paper body: a soft rounded lantern (dome top, tapered bottom opening)
+    var body = document.createElementNS(SVGNS, "path");
+    body.setAttribute("d", "M0 -8 C5.4 -8 6.6 -3 6.4 1 C6.2 4.6 3.4 6.6 2.4 8 L-2.4 8 C-3.4 6.6 -6.2 4.6 -6.4 1 C-6.6 -3 -5.4 -8 0 -8 Z");
+    body.setAttribute("fill", col); body.setAttribute("stroke", "#c9531f"); body.setAttribute("stroke-width", "0.5"); body.setAttribute("opacity", "0.95");
+    // a lighter glow panel + the flame
+    var panel = document.createElementNS(SVGNS, "ellipse");
+    panel.setAttribute("cx", "0"); panel.setAttribute("cy", "-1"); panel.setAttribute("rx", "3.2"); panel.setAttribute("ry", "4.2");
+    panel.setAttribute("fill", "#fff1c4"); panel.setAttribute("opacity", "0.55");
+    var flame = document.createElementNS(SVGNS, "circle");
+    flame.setAttribute("cx", "0"); flame.setAttribute("cy", "5.5"); flame.setAttribute("r", "1.2"); flame.setAttribute("fill", "#fff0b0");
+    mover.appendChild(halo); mover.appendChild(body); mover.appendChild(panel); mover.appendChild(flame);
+    wrap.appendChild(mover);
+    host.appendChild(wrap);
+    if (!mover.animate) { setTimeout(function () { if (wrap.parentNode) wrap.remove(); }, 3000); return; }
+    var rise = 250 + Math.random() * 40;                 // travels most of the way up the sky
+    var sway = (Math.random() < 0.5 ? -1 : 1) * (10 + Math.random() * 22);
+    var dur = 9000 + Math.random() * 5000;               // slow, dreamy ascent
+    mover.animate([
+      { transform: "translate(0px,0px)", opacity: 0 },
+      { transform: "translate(" + (sway * 0.5).toFixed(1) + "px," + (-rise * 0.28).toFixed(1) + "px)", opacity: 0.95, offset: 0.2 },
+      { transform: "translate(" + sway.toFixed(1) + "px," + (-rise * 0.7).toFixed(1) + "px)", opacity: 0.9, offset: 0.66 },
+      { transform: "translate(" + (sway * 0.4).toFixed(1) + "px," + (-rise).toFixed(1) + "px)", opacity: 0 } // fades out high
+    ], { duration: dur, easing: "ease-in", delay: Math.random() * 500 });
+    // a gentle flame flicker on the inner glow (own rhythm, WebKit-safe circle scale)
+    flame.style.transformBox = "fill-box"; flame.style.transformOrigin = "center";
+    flame.animate([{ opacity: 0.6, transform: "scale(0.85)" }, { opacity: 1, transform: "scale(1.15)" }, { opacity: 0.6, transform: "scale(0.85)" }],
+      { duration: 900 + Math.random() * 500, iterations: Math.max(1, Math.round(dur / 1100)), easing: "ease-in-out" });
+    var life = wrap.animate([{ opacity: 1 }, { opacity: 1 }], { duration: dur });
+    life.onfinish = function () {
+      if (wrap.parentNode) wrap.remove();
+      // self-replenish 1:1 while the release is held on an attended balcony (spawning pauses with
+      // the frames when unattended, so nothing piles up)
+      if (lantHold && onBalcony() && attended() && !reducedMotion() &&
+          lantHost() && lantHost().querySelectorAll(".blant-particle").length < LANT_TRICKLE) spawnLantern();
+    };
+  }
+  function lantStaticHint(host) { // reduced motion: a couple of still lanterns near the roofline
+    clearParticles(host, "blant-particle");
+    [[470, 96, 0.9], [548, 84, 0.75]].forEach(function (p) {
+      var g = document.createElementNS(SVGNS, "g");
+      g.setAttribute("class", "blant-particle");
+      g.setAttribute("transform", "translate(" + p[0] + "," + p[1] + ") scale(" + p[2] + ")");
+      g.innerHTML = '<circle cx="0" cy="1" r="12" fill="url(#balcony-lantern-glow)" opacity="0.8"/>' +
+        '<path d="M0 -8 C5.4 -8 6.6 -3 6.4 1 C6.2 4.6 3.4 6.6 2.4 8 L-2.4 8 C-3.4 6.6 -6.2 4.6 -6.4 1 C-6.6 -3 -5.4 -8 0 -8 Z" fill="#ffb14e" stroke="#c9531f" stroke-width="0.5"/>' +
+        '<circle cx="0" cy="5.5" r="1.2" fill="#fff0b0"/>';
+      host.appendChild(g);
+    });
+  }
+  function lantStop() {
+    lantHold = false;
+    if (lantTimer) { clearTimeout(lantTimer); lantTimer = null; }
+    clearParticles(lantHost(), "blant-particle");
+  }
+  // Public entry: release a batch of wish-lanterns over the balcony (heads to the balcony + dusk).
+  window.__releaseLanterns = function () {
+    var host = lantHost();
+    if (!host) { if (window.goToStage) window.goToStage("balcony"); }
+    if (window.__setDayNight) window.__setDayNight(true); // lanterns read against the night sky
+    host = lantHost();
+    if (!host) return false;
+    if (reducedMotion()) { lantStaticHint(host); return true; }
+    lantHold = true;
+    if (lantTimer) { clearTimeout(lantTimer); lantTimer = null; }
+    // stagger the initial batch out over ~2.5s so they leave the deck in a natural drift, not a wall
+    var batch = 6 + ((Math.random() * 3) | 0);
+    (function launch(i) {
+      if (i >= batch) return;
+      if (onBalcony() && attended()) spawnLantern();     // gate each launch (crickets rule)
+      lantTimer = setTimeout(function () { launch(i + 1); }, 260 + Math.random() * 260);
+    })(0);
+    return true;
+  };
+
+  // ── shared teardown ── room-leave / party-off / night-off / reset all call this
+  window.__stopBalconySky = function () { fwStop(); lantStop(); };
+  window.addEventListener("pagehide", function () { fwStop(); lantStop(); });
+
+  // ── soft crackle/boom SFX (crickets rule; shared SFX context, no new AudioContext) ──
+  // A firework boom is an autonomous, timer-reached one-shot, so it obeys the crickets rule
+  // (guarded at the fwBurst call site above) AND routes through getSfxCtx()/pannedOut() — never a
+  // fresh AudioContext (check.js enforces exactly one). getSfxCtx already refuses while hidden and
+  // scales the session master; we add the focus half of the rule at the call site.
+  function playFireworkBoom(s, cx) {
+    try {
+      if (document.hidden || !document.hasFocus()) return; // crickets rule: no boom into an unattended tab
+      var ctx = getSfxCtx();
+      if (!ctx) return;
+      var t = ctx.currentTime;
+      // pan roughly to where the shell sits across the sky (cx ~430..592 → a bit left..right)
+      var pan = Math.max(-1, Math.min(1, ((cx - 510) / 90) * 0.6));
+      var master = ctx.createGain();
+      master.gain.value = 0.16 * (0.8 + s * 0.4) * (window.__weatherDuck || 1);
+      master.connect(pannedOut(ctx, pan));
+      // the crackle: a short bright noise burst, quick decay
+      var size = Math.max(1, Math.floor(ctx.sampleRate * 0.5));
+      var buf = ctx.createBuffer(1, size, ctx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var i = 0; i < size; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / size, 1.4);
+      var noise = ctx.createBufferSource(); noise.buffer = buf;
+      var hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 900;
+      var ng = ctx.createGain();
+      ng.gain.setValueAtTime(0.0001, t);
+      ng.gain.exponentialRampToValueAtTime(0.9, t + 0.012);
+      ng.gain.exponentialRampToValueAtTime(0.02, t + 0.34);
+      noise.connect(hp); hp.connect(ng); ng.connect(master);
+      noise.start(t); noise.stop(t + 0.5);
+      // the low thump of the shell
+      var osc = ctx.createOscillator(); osc.type = "sine";
+      osc.frequency.setValueAtTime(150, t);
+      osc.frequency.exponentialRampToValueAtTime(46, t + 0.28);
+      var og = ctx.createGain();
+      og.gain.setValueAtTime(0.0001, t);
+      og.gain.exponentialRampToValueAtTime(0.7, t + 0.02);
+      og.gain.exponentialRampToValueAtTime(0.001, t + 0.42);
+      osc.connect(og); og.connect(master);
+      osc.start(t); osc.stop(t + 0.46);
+    } catch (e) {}
+  }
 })();
 function spawnBalconyRain(svg) {
   if (!svg) return;
@@ -53416,6 +53743,7 @@ function spawnDustMote(container) {
     if (window.__updateGardenChase) window.__updateGardenChase(); // leaving the garden clears any in-flight kids' chase (the party's driver re-launches on return)
     if (window.__updateGardenGuests) window.__updateGardenGuests(); // leaving the garden drops Ali + Goli; returning mid-party shows them already-arrived (no re-slide)
     if (name !== "kitchen" && window.__hideCocktailToast) window.__hideCocktailToast(); // the cocktail toast belongs to the kitchen bar — never let a still-showing one ride into the next room
+    if (name !== "balcony" && window.__stopBalconySky) window.__stopBalconySky(); // leaving the deck tears down any fireworks finale / wish-lanterns in flight
     if (name === "balcony") triggerBalconyFinale();
     if (window.__updateSkyFireworks) window.__updateSkyFireworks(name); // wedding-day sky (balcony/garden), else stops
   }
@@ -56323,6 +56651,7 @@ function spawnDustMote(container) {
     window.__gardenPartyOn = on;
     if (on) { if (window.__startCueDrip) window.__startCueDrip(); } else if (window.__stopCueDrip) window.__stopCueDrip(); // drip the app-cue phone texts only while the party's lit
     if (!on && window.__setSmores) window.__setSmores(false); // the party's out → put the s'mores bonfire out too (unless a fire-festival season keeps its own)
+    if (!on && window.__stopBalconySky) window.__stopBalconySky(); // ...and any fireworks finale / wish-lanterns in flight
     if (window.__updateStarsSound) window.__updateStarsSound(); // stars/piano is cuddly-only during a party, whole-loft otherwise — re-gate on party start/stop
     if (window.__refreshGardenCaption) window.__refreshGardenCaption(); // garden line goes party-mode / reverts
     if (on && window.__retireHint) window.__retireHint("hint_ksecret"); // loose-brick hint: retire once the party (and its bar) reveals the kitchen's other side
@@ -61778,6 +62107,9 @@ function spawnDustMote(container) {
     return "🎊 confetti!";
   };
   window.fireworks = function () {
+    // On the balcony it's the full night-sky FINALE (rising shells, gravity showers, a soft boom).
+    // Elsewhere, the quick in-room celebratory burst below.
+    if (window.currentStageName === "balcony" && window.__startFireworks) { window.__startFireworks(); return "🎆 finale!"; }
     if (document.visibilityState === "hidden" || reduced()) return "🎆 boom.";
     var host = burstHost();
     if (!host) return "no sky to light up.";
@@ -61808,6 +62140,12 @@ function spawnDustMote(container) {
       })(b);
     }
     return "🎆 boom.";
+  };
+  // Wish-lanterns: heads to the balcony + night and releases a batch of drifting sky-lanterns.
+  window.lanterns = function () {
+    if (window.currentStageName !== "balcony" && window.goToStage) window.goToStage("balcony");
+    if (window.__releaseLanterns) { window.__releaseLanterns(); return "🏮 make a wish."; }
+    return "🏮 no sky to release into.";
   };
 
   window.cat = function (arg) {

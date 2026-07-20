@@ -55194,7 +55194,7 @@ function spawnDustMote(container) {
     if (!el) return;
     var walk = el.querySelector(".guest-walk");
     if (!walk) { el.classList.add("arrived"); return; }
-    if (reducedMotionGuests()) { el.classList.add("arrived"); return; } // reduced motion: appear in place (still staggered by the timer)
+    if (reducedMotionGuests() || document.hidden) { el.classList.add("arrived"); return; } // reduced motion OR hidden tab: appear in place (a hidden tab pauses the walk animation, so animate-in would strand — pop in instantly, matching the instant walk-OUT below so the revolving door stays balanced)
     walk.style.setProperty("--walk-x", walkDistFor(sel, home) + "px"); // walk from the gate to this figure's balanced SLOT (not its raw home)
     g.classList.add("duo-walking");
     el.classList.add("arrived");
@@ -55231,7 +55231,7 @@ function spawnDustMote(container) {
     var el = g.querySelector(sel);
     if (!el || !el.classList.contains("arrived")) return;
     var walk = el.querySelector(".guest-walk");
-    if (!walk || reducedMotionGuests()) { el.classList.remove("arrived", "walking", "leaving"); return; } // no anim: just vanish
+    if (!walk || reducedMotionGuests() || document.hidden) { el.classList.remove("arrived", "walking", "leaving"); return; } // no anim / hidden tab: just vanish NOW. Critical for the hidden case — the gate-leave animation is PAUSED while hidden, so its animationend (which drops .arrived) never fires; without this, leavers never actually leave while arrivals keep coming → the floor piles up (owner: "room gets very crowded")
     walk.style.setProperty("--walk-x", walkDistFor(sel, home) + "px"); // stroll OUT from this figure's SLOT back to the gate
     el.classList.remove("walking");
     el.classList.remove("leaving"); void walk.getBoundingClientRect(); el.classList.add("leaving"); // restart cleanly

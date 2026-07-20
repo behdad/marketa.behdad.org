@@ -126,6 +126,10 @@ var RSVP_HARNESS = [
   "  }",
   "  window.addEventListener('load', function () {",
   "    setTimeout(function () {",
+  // Pin the auto day/night clock to noon (deterministic daytime) so the real-time default
+  // doesn't flip the loft to night mid-playthrough after dark — the solve/revisit captions
+  // assume the daytime baseline. The clock-driven logic has its own fake-clock verification.
+  "      window.__edmNowMins = function () { return 720; }; if (window.__applyAutoDayNight) window.__applyAutoDayNight();",
   "      solve().then(revisit).then(stormStages).catch(function (e) {",
   "        window.__errs.push('harness: ' + String(e && e.stack || e));",
   "      }).then(function () { finish(report); });",

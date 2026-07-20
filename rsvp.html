@@ -41228,20 +41228,6 @@ async def localfont(name):
   }
   window.__killMonitorPython = function () { pythonDeathFlash(false); };    // Kill → Black Knight flash → destroy (back to desktop)
   window.__restartMonitorPython = function () { pythonDeathFlash(true); };  // Restart → flash → destroy → fresh cold REPL
-  // display-only reset: scrollback + history + input + the welcome flag, so a reopened
-  // REPL greets fresh and isn't stuck busy. The Pyodide runtime (multi-MB wasm + the
-  // fonttools/uharfbuzz wheels) and its namespace are deliberately LEFT loaded — reloading
-  // on every game reset is far too heavy — so pyLoadState stays "ready" and the cold-boot
-  // py_ready/fonttools/uharfbuzz/demo banners simply don't re-print (only the welcome line does).
-  window.__resetMonitorPySession = function () {
-    if (pyOut) pyOut.innerHTML = "";
-    pyHist = []; pyHistIdx = 0;
-    pyLastCmd = "";
-    pyBusy = false;
-    pyWelcomed = false;
-    if (pyIn) { pyIn.value = ""; try { pyIn.blur(); } catch (e) {} }
-    updatePythonTile();
-  };
   function pyResultText(r) {
     // mirror the real REPL: repr() the value (via the cached builtin — it converts
     // JS-converted primitives back to Python for the call, and reads PyProxies live)
@@ -41494,17 +41480,6 @@ async def localfont(name):
   }
   window.__killMonitorLinux = function () { linuxDeathFlash(false); };    // Kill → BSOD → destroy
   window.__restartMonitorLinux = function () { linuxDeathFlash(true); };  // Restart → BSOD → destroy → fresh cold boot
-  // display-only reset: scrollback + history + input + the welcome flag. The v86 VM keeps
-  // running with RAM intact (rebooting it — let alone reloading the wasm — is far too heavy
-  // for a game reset), so its live serial tail (lxLine/lxPs) and lxPrompted stay coherent
-  // with the shell; only the welcome line re-prints on the next open, and the hb-shape demo
-  // does NOT re-fire.
-  window.__resetMonitorLinuxSession = function () {
-    if (lxOut) lxOut.innerHTML = "";
-    lxHist = []; lxHistIdx = 0;
-    lxWelcomed = false;
-    if (lxIn) { lxIn.value = ""; try { lxIn.blur(); } catch (e) {} }
-  };
   // hidden tab: an emulated CPU would happily spin at full tilt behind a background
   // tab — stop it, and resume only when the tab returns with the app still open
   document.addEventListener("visibilitychange", function () {
@@ -43600,19 +43575,26 @@ async def localfont(name):
   window.resetMonitorAppState = resetMonitorAppState; // the desktop-dock + in-app Kill menus and the loft reset all call it
   // Every app the PC is running, dropped to its first-run state — the shared teardown behind a
   // power-off and the loft reset. clearBoot() only CLOSES apps: their retained session state and
-  // DOOM's loaded runtime survive it, so a real shutdown runs this on top, reusing the very same
+  // the loaded runtimes survive it, so a real shutdown runs this on top, reusing the very same
   // per-app Kill paths the dock's right-click menu offers. Run it AFTER clearBoot; stopSaver()
   // goes last because several of the resets arm a fresh saver countdown on their way out.
   function shutdownMonitorApps() {
     pbFxIndex = 0; pbBaseFrame = null; // a kill drops the retained look + captured photo (closePhotobooth keeps them)
     closePhotobooth(); // never leave the camera running
     ["life", "mines", "mail", "tattoo", "editor", "video", "music", "weather", "calendar", "family"].forEach(resetMonitorAppState);
-    // the consoles' scrollback + welcome state live in their own IIFEs, so clear each session
-    // too — a reopened console then greets fresh (the Pyodide/v86 runtimes stay loaded)
+    // the plain console's scrollback + welcome state lives in its own IIFE (no runtime to tear
+    // down), so clear that session — a reopened console then greets fresh
     if (window.__resetMonitorTermSession) window.__resetMonitorTermSession();
-    if (window.__resetMonitorPySession) window.__resetMonitorPySession();
-    if (window.__resetMonitorLinuxSession) window.__resetMonitorLinuxSession();
-    if (doomLoadState) destroyDoom(); // closeDoom only pauses with RAM intact; a shutdown cold-boots the next game
+    // The three heavy hosts go ALL the way down, so the next power-on cold-starts them: a closed
+    // DOOM is only paused with RAM intact, and Pyodide/v86 otherwise stay resident (a CPython wasm
+    // build and a whole VM). destroy* is called DIRECTLY, never the __killMonitor* hooks — those
+    // wrap it in the dock Kill's ~2.6s FATALITY / Black Knight / BSOD flash, which has no business
+    // playing to an empty room and would keep the runtime alive behind it. Gated on load-state so
+    // a power-cycle costs nothing when a runtime never ran; each destroy also clears its own
+    // session, and "" load-state lets the next open re-init from the already-fetched library.
+    if (doomLoadState) destroyDoom();
+    if (pyLoadState) destroyPython();
+    if (lxLoadState) destroyLinux();
     stopSaver();
   }
   window.resetOfficeMonitor = function () {

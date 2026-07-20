@@ -18557,7 +18557,7 @@ section{margin:1.9rem 0}
 </g>
 <g id="monitor-family-video">
 <g id="monitor-family-remote">
-<!-- remote view: the family's Tehran living room on the girl's 10th birthday, drawn
+<!-- remote view: the family's Tehran living room on Hannah's birthday, drawn
      from a real family photo — an interim likeness; swap the contents of
      #monitor-tehran-scene when a better photo arrives (the self-view lives outside it) -->
 <g id="monitor-tehran-scene">
@@ -18864,7 +18864,9 @@ section{margin:1.9rem 0}
 <circle cx="315.75" cy="171.3" r="0.34" fill="#e6e0d8"/>
 </g>
 </g>
-<text id="tehran-cake-age" class="thr-bd-hannah-only" x="316" y="186" text-anchor="middle" font-size="3" fill="#c9a227" style="font-family:sans-serif; font-weight:700">10</text>
+<!-- the gold age iced on the cake: filled from KID_BIRTH_YEARS at boot (syncTehranCakeAge), the
+     same live computation her popup's age line uses — an iced-in number would go stale in January -->
+<text id="tehran-cake-age" class="thr-bd-hannah-only" x="316" y="186" text-anchor="middle" font-size="3" fill="#c9a227" style="font-family:sans-serif; font-weight:700"></text>
 </g>
 <rect x="300.3" y="183.4" width="5" height="3.4" rx="0.6" fill="#d9b87c"/>
 <path d="M301.3 183.4 L301.3 186.8 M302.8 183.4 L302.8 186.8 M304.3 183.4 L304.3 186.8" stroke="#c2a061" stroke-width="0.3" fill="none"/>
@@ -26014,15 +26016,27 @@ function tipText(key) {
 // the kids' birth years → a live "N years old now!" line appended to their popups (age computed
 // from the real current year; wording varies per open).
 var KID_BIRTH_YEARS = { irene: 2016, hannah: 2016, robin: 2017, navid: 2018, elisabeth: 2022, felix: 2024 };
-function kidAgeLine(name) {
+function kidAge(name) {
   var y = KID_BIRTH_YEARS[String(name || "").toLowerCase()];
-  if (!y) return "";
+  if (!y) return null;
   var age = new Date().getFullYear() - y;
-  if (age < 0) return "";
+  return age < 0 ? null : age;
+}
+function kidAgeLine(name) {
+  var age = kidAge(name);
+  if (age == null) return "";
   var l = document.documentElement.lang;
   var forms = (T[l] && T[l].age_forms) || T.en.age_forms;
   return " · " + forms[Math.floor(Math.random() * forms.length)].replace("{n}", age);
 }
+// The Tehran call's birthday cake ices Hannah's age on it in gold. Same source as her popup's age
+// line, so the two can't disagree — and the pocket phone's copy of the scene is a deep clone of
+// this node, so writing it once here reaches the phone's cake too.
+function syncTehranCakeAge() {
+  var el = document.getElementById("tehran-cake-age");
+  if (el) el.textContent = kidAge("hannah");
+}
+syncTehranCakeAge();
 // a live "· <relationship>" line appended to a person's popup (whose partner/kid they are, or who
 // their kids are) — dict-driven (rel_<key>) so it follows a language switch. The key is normalised
 // (lowercased, accents stripped: "Báka"→baka, "Markéta"→marketa) so a call site can pass a bare name.

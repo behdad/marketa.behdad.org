@@ -7048,6 +7048,15 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 .smoke-tint{opacity:calc(var(--smoke,0) * var(--smoke-max,.55)); transition:opacity .9s ease}
 .smoke-sun{opacity:calc(var(--smoke,0) * var(--smoke-max,.9)); transition:opacity .9s ease}
 .dusk .smoke-tint{opacity:0}
+/* A plain grey OVERCAST day (Edmonton's real weather, code 2/3/45/48, when nothing overrides):
+   .climate-overcast lays a soft cool wash over each outdoor sky and slips the sun disc behind it.
+   Daylight-only — .dusk cuts the wash, and the storming rain look is a separate, exclusive mode. */
+.overcast-tint{opacity:0; transition:opacity 1.1s ease}
+#loft-game-strip.climate-overcast .overcast-tint{opacity:var(--overcast-max,.34)}
+.dusk .overcast-tint{opacity:0}
+#loft-game-strip.climate-overcast #balcony-sun-disc,
+#loft-game-strip.climate-overcast #office-sun,
+#loft-game-strip.climate-overcast #garden-window-sun{opacity:.28; transition:opacity 1.1s ease}
 /* Haze scatters direct light, so the rays go as the smoke comes in: the disc flattens to a
    featureless orange coin and the window shafts stop reading as beams. Rides plain opacity,
    so each room's id-qualified .dusk rule still out-specifies it and wins at night. Elements
@@ -10093,6 +10102,7 @@ section{margin:1.9rem 0}
 <circle cx="366" cy="49" r="0.9" fill="#c9c3ad"/><circle cx="373" cy="56" r="1.1" fill="#c9c3ad"/>
 </g>
 <rect class="smoke-tint" x="104" y="20" width="424" height="272" fill="#b0a89c" pointer-events="none" aria-hidden="true"/>
+<rect class="overcast-tint" x="104" y="20" width="424" height="272" fill="#8b95a1" pointer-events="none" aria-hidden="true"/>
 <!-- a daytime sun tucked in the top-right pane, hidden behind the blind until it's raised -->
 <g id="garden-window-sun" aria-hidden="true">
 <circle class="smoke-glare" style="--glare:.35" cx="462" cy="67" r="21" fill="#ffe6a0" opacity="0.35"/>
@@ -20675,6 +20685,7 @@ section{margin:1.9rem 0}
 <!-- outdoors the haze hangs in the air itself, so it washes the whole room rather than
      one pane; drawn under the sun so only the sun's own orange disc tints the sun -->
 <rect class="smoke-tint" style="--smoke-max:.42" x="0" y="0" width="680" height="340" fill="#b0a89c" pointer-events="none" aria-hidden="true"/>
+<rect class="overcast-tint" x="0" y="0" width="680" height="340" fill="#8b95a1" pointer-events="none" aria-hidden="true"/>
 <g id="balcony-sun" class="hunt-hit">
 <rect x="484" y="24" width="52" height="52" fill="transparent"/>
 <g id="balcony-sun-disc">
@@ -47501,10 +47512,40 @@ async def localfont(name):
   window.__realWxPrague = null; // {code} for Prague, same lifecycle as __realWx
   window.__realPragueC = null; // real Prague temperature, or null
   window.__realDaily = null; // [{time,code,max,min} per city, request order]; daily[0] = each city's local today
+  window.__realWxMode = null; // Edmonton's mapped current look: "clear"|"overcast"|"rain"|"storm"|"snow", null until a fetch lands
   window.__realWxRainy = function () {
     // WMO: 51-67 drizzle/rain (incl. freezing), 80-82 showers, 95+ thunderstorm
     var w = window.__realWx;
     return !!w && ((w.code >= 51 && w.code <= 67) || (w.code >= 80 && w.code <= 82) || w.code >= 95);
+  };
+  // Edmonton's real current weather_code -> ONE scene-ambiance mode (same WMO buckets as
+  // __wmoGlyph/__realWxRainy). Set from the fetch in applyCurrent; drives the loft's default sky.
+  function realWxModeForCode(c) {
+    if (typeof c !== "number") return null;
+    if (c >= 95) return "storm";                                     // thunderstorm 95-99
+    if ((c >= 51 && c <= 67) || (c >= 80 && c <= 82)) return "rain"; // drizzle/rain/showers
+    if ((c >= 71 && c <= 77) || c === 85 || c === 86) return "snow"; // snow
+    if (c === 2 || c === 3 || c === 45 || c === 48) return "overcast"; // clouds/fog
+    return "clear";                                                  // 0/1 clear/mainly clear
+  }
+  // Real weather only ever supplies the DEFAULT look — any user override wins outright and real
+  // weather steps aside for as long as it's held: a season/birthday preview, a ?date= jump, a
+  // drug trip, or the attract-mode kiosk. Read live (per consumer tick), so nothing re-applies.
+  function realWxOverridden() {
+    if (window.__tripActive) return true;
+    if (window.__autoplayOn && window.__autoplayOn()) return true;
+    if (window.__previewActive && window.__previewActive()) return true; // an 's' season or 'b' birthday preview
+    try { if (/(?:^|[#&?])date=\d{4}-\d{2}-\d{2}/.test((location.search || "") + (location.hash || ""))) return true; } catch (e) {}
+    return false;
+  }
+  window.__realWxActive = function () { return realWxOverridden() ? null : window.__realWxMode; };
+  var reduceMotionMq = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+  // The heavy-particle contribution of real weather (falling rain/snow), gated on reduced-motion:
+  // the class-driven overcast/storm sky look stays either way — only the particles go.
+  window.__realWxPrecip = function () {
+    if (reduceMotionMq && reduceMotionMq.matches) return null;
+    var m = window.__realWxActive();
+    return (m === "rain" || m === "storm") ? "rain" : (m === "snow" ? "snow" : null);
   };
   // the one WMO code -> glyph map, shared by the monitor's menu bar (which layers its
   // own storm precedence + day/night split on top) and the laptop's Prague readout
@@ -47552,6 +47593,7 @@ async def localfont(name):
       if (typeof code !== "number") continue;
       if (i === 0) {
         window.__realWx = { code: code };
+        window.__realWxMode = realWxModeForCode(code);
         window.__realOutdoorC = (typeof temp === "number" && isFinite(temp)) ? temp : null;
       } else {
         window.__realWxPrague = { code: code };
@@ -47651,16 +47693,23 @@ async def localfont(name):
   setTimeout(fetchSmoke, 4000); // once per load, off the load path — haze moves slower than weather
   setTimeout(fetchWx, 4000); // a few seconds after init, off the load path
   setInterval(fetchWx, 30 * 60000); // fetch + set state only — nothing spawns, hidden-tab safe
-  // real rain outside shows through the garden window even when the game's storm is
-  // idle: ~1s poll toggles the same .storming class the storm lifecycle's setStorming
-  // puts on #stage-garden (same lighter-weight pattern as the rain/city-hum ambience
-  // gates). The game storm term keeps the two writers agreeing instead of fighting.
+  // The loft's DEFAULT sky follows Edmonton's real weather (window.__realWxActive, which
+  // yields null the moment any override — a season/birthday preview, a ?date= jump, a trip,
+  // the kiosk — takes over): real rain/thunderstorm shows the same .storming look the balcony
+  // storm lifecycle's setStorming puts on the rooms, and real cloud/fog dims the sky under
+  // .climate-overcast. ~1s poll (the same lighter-weight pattern as the rain/city-hum ambience
+  // gates); the game-storm term keeps the two .storming writers agreeing instead of fighting.
   (function tick() {
-    var gs = document.getElementById("stage-garden");
-    if (gs) {
-      var on = !!window.__balconyStorm || window.__realWxRainy();
-      if (on !== gs.classList.contains("storming")) { gs.classList.toggle("storming", on); if (window.__updateGardenAurora) window.__updateGardenAurora(); } // real rain outside also hides the aurora
-    }
+    var mode = window.__realWxActive ? window.__realWxActive() : null;
+    var storming = !!window.__balconyStorm || mode === "rain" || mode === "storm";
+    var gardenChanged = false;
+    ["stage-garden", "stage-balcony", "stage-kitchen", "stage-office"].forEach(function (id) {
+      var st = document.getElementById(id);
+      if (st && storming !== st.classList.contains("storming")) { st.classList.toggle("storming", storming); if (id === "stage-garden") gardenChanged = true; }
+    });
+    if (gardenChanged && window.__updateGardenAurora) window.__updateGardenAurora(); // real rain outside also hides the aurora
+    var strip = document.getElementById("loft-game-strip");
+    if (strip) strip.classList.toggle("climate-overcast", mode === "overcast"); // a plain grey day dims the sky, no rain
     setTimeout(tick, 1000);
   })();
 })();
@@ -58386,6 +58435,11 @@ function spawnDustMote(container) {
   }
   window.__rollPrecip = rollPrecip; // toggleDusk tosses as night falls
   function fallsAsSnow() {
+    // real weather is a measurement, not a coin: while it's DRIVING (no override held) it dictates
+    // the drop TYPE outright — a season/date preview steps it aside, so its own coin lands instead
+    var rw = window.__realWxActive ? window.__realWxActive() : null;
+    if (rw === "snow") return true;
+    if (rw === "rain" || rw === "storm") return false;
     var s = seasonNow();
     if (s.m + "/" + s.d !== precipRollKey) rollPrecip(); // season moved (a preview) → fresh toss
     return precipSnow;
@@ -58400,7 +58454,7 @@ function spawnDustMote(container) {
   window.__summerSeason = summerSeason;
   // Snow comes down on its own, no storm needed — but only when today IS a snow day; rain
   // always waits for a storm (a storm on a snow day is just a snowstorm).
-  function snowsOnItsOwn() { return fallsAsSnow() && snowySeason(); }
+  function snowsOnItsOwn() { return (window.__realWxPrecip && window.__realWxPrecip() === "snow") || (fallsAsSnow() && snowySeason()); }
   // A single drifting snowflake: a soft circle (position via cx/cy, so a CSS transform
   // animation is safe — no transform attribute to clobber). onDone is the caller's 1:1
   // replenish, gated on its own rainActive()-style check, run on the fall's onfinish.
@@ -58441,6 +58495,7 @@ function spawnDustMote(container) {
     var gs = document.getElementById("stage-garden");
     if (!gs || stageIndex !== STAGES.indexOf("garden") || document.visibilityState === "hidden") return false;
     if (snowsOnItsOwn()) return true; // a snow day: it comes down on its own, day or night — no storm needed
+    if (window.__realWxPrecip && window.__realWxPrecip() === "rain") return true; // real rain outside: shows through the window day or night, no game storm needed
     return window.__balconyStorm && gs.classList.contains("dusk"); // rain only during a dusk storm
   }
   function spawnGardenRainDrop() {
@@ -61401,6 +61456,7 @@ function spawnDustMote(container) {
     var open = (front && front.classList.contains("open")) || (nook && nook.classList.contains("open"));
     if (!sc || !open || stageIndex !== STAGES.indexOf("cuddly") || document.visibilityState === "hidden") return false;
     if (snowsOnItsOwn()) return true; // a snow day: snow drifts in through the open door on its own
+    if (window.__realWxPrecip && window.__realWxPrecip() === "rain") return true; // real rain drifts in through the open door day or night, no game storm needed
     return window.__balconyStorm && sc.classList.contains("dusk"); // rain only during a dusk storm
   }
   function spawnCuddlyRainDrop() {
@@ -61668,6 +61724,7 @@ function spawnDustMote(container) {
     function rainActive() {
       if (document.hidden || stageIndex !== STAGES.indexOf("balcony")) return false;
       if (snowsOnItsOwn()) return true; // a snow day: it comes down on its own, day or night — no storm needed
+      if (window.__realWxPrecip && window.__realWxPrecip() === "rain") return true; // real rain outside: falls day or night, no game storm needed
       return window.__balconyStorm && isDuskBalcony(); // rain only during a dusk storm
     }
     // Live balcony drops (rain + snow share the sky, so one total). Kept by spawn/finish
@@ -61769,11 +61826,13 @@ function spawnDustMote(container) {
       startStorm();   // begins immediately (self-guards on a dusk balcony; clears if not dusk)
       return !!window.__balconyStorm;
     };
-    // Winter snow falls on its own — no storm needed, so nothing else would ever start it:
-    // whenever it's winter + on the balcony + visible, keep the sky filled to RAIN_DROPS.
-    (function seedBalconySnow() {
+    // Precip that falls with no game storm to start it — winter snow, and real weather (rain or
+    // snow) driving the default sky — self-seeds here: whenever the balcony wants drops and none
+    // are being started elsewhere, keep the sky filled to RAIN_DROPS (topUpDrops is idempotent, so
+    // a game storm already seeding via startStorm just sees a full sky and this is a no-op).
+    (function seedBalconyPrecip() {
       function tick() {
-        if (snowsOnItsOwn() && rainActive()) topUpDrops();
+        if (rainActive() && !window.__balconyStorm) topUpDrops();
         setTimeout(tick, 1200);
       }
       setTimeout(tick, 1200);
@@ -63430,6 +63489,7 @@ function spawnDustMote(container) {
     if (window.resetLaptop) window.resetLaptop();
     if (window.__resetPhoneApps) window.__resetPhoneApps(); // restore any "Uninstall"ed phone apps
     if (window.resetBalconyDusk) window.resetBalconyDusk();
+    if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle(); // cancel any in-flight storm + drop its .storming on every stage (real-weather's own .storming re-applies within a tick if it's genuinely raining out)
     Array.prototype.forEach.call(document.querySelectorAll("#balcony-door.open, #cuddly-balcony-door.open, .witchy-door.open, .kitchen-cabinet-door.open"), function (d) { d.classList.remove("open"); }); // every openable door back shut: the balcony door (both views), the chest moon/sun + passthrough doors, and the kitchen cabinets
     if (window.__stopMozzies) window.__stopMozzies(); // clear any dusk mosquitoes on the extinguisher reset
     if (window.__clearTipsy) window.__clearTipsy();
@@ -63490,6 +63550,7 @@ function spawnDustMote(container) {
     return { m: n.getMonth(), d: n.getDate() };
   }
   window.__seasonDate = seasonDate; // the snow + fireworks controllers read the same pretend-date
+  window.__previewActive = function () { return !!(seasonPreview || bdPreview); }; // real-weather default steps aside while a season/birthday preview is held
   function decorForDate(m, d) {
     if (m === 3 && d === 30) return "carodejnice";         // Apr 30 only — the night itself
     if (m === 11 || (m === 0 && d <= 6)) return "holiday"; // Dec 1 – Jan 6

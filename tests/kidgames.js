@@ -73,10 +73,7 @@ function buildScene() {
   strip = new El("svg"); strip.setAttribute("id", "loft-game-strip");
   kg = new El("g"); kg.setAttribute("id", "cuddly-kidgames");
   strip.appendChild(kg);
-  // two props
-  var board = new El("g"); board.setAttribute("class", "kg-board"); board.setAttribute("transform", "translate(152,330)"); kg.appendChild(board);
-  var blocks = new El("g"); blocks.setAttribute("class", "kg-blocks"); blocks.setAttribute("transform", "translate(470,328)"); kg.appendChild(blocks);
-  // six kids: outer <g transform> > <g class="kg-rock kg-name"> > <g class="kg-tilt">
+  // six kids FIRST: outer <g transform> > <g class="kg-rock kg-name"> > <g class="kg-tilt">
   var basePos = { "kg-robin": [108,300], "kg-navid": [160,296], "kg-elisabeth": [196,302], "kg-irene": [426,300], "kg-felix": [478,304], "kg-hannah": [514,300] };
   NAMES.forEach(function (n) {
     var outer = new El("g"); outer.setAttribute("transform", "translate(" + basePos[n][0] + "," + basePos[n][1] + ")");
@@ -84,6 +81,9 @@ function buildScene() {
     var tilt = new El("g"); tilt.setAttribute("class", "kg-tilt");
     rock.appendChild(tilt); outer.appendChild(rock); kg.appendChild(outer);
   });
+  // then the two props LAST — mirrors the real DOM so the props paint on top of the kids
+  var board = new El("g"); board.setAttribute("class", "kg-board"); board.setAttribute("transform", "translate(152,330)"); kg.appendChild(board);
+  var blocks = new El("g"); blocks.setAttribute("class", "kg-blocks"); blocks.setAttribute("transform", "translate(470,328)"); kg.appendChild(blocks);
 }
 
 /* ── shim document/window + captured __whoPop calls ─────────────────────────── */
@@ -117,6 +117,14 @@ var winShim = {
 };
 function tipText(key) { return T_EN[key] || ""; }
 
+/* hoverTooltip stub: record (element, htmlFn, placement) so we can assert the dark-bubble wiring
+   without a browser. The real one attaches mouseenter/leave; here we capture the html-producing fn
+   and invoke it immediately (it re-reads KID_WHO/tipText), mirroring what a real hover would show. */
+var hoverCalls = [];
+function hoverTooltip(el, html, placement) {
+  hoverCalls.push({ el: el, placement: placement, text: (typeof html === "function" ? html() : html) });
+}
+
 /* ── extract the __updateKidGames IIFE verbatim from rsvp.html ──────────────── */
 function sliceIIFE(src) {
   var start = src.indexOf("// Kids playing games in the nook during the party. Owner:");
@@ -132,9 +140,9 @@ ok(/window\.__updateKidGames\s*=\s*apply/.test(iife), "sliced the real __updateK
 
 /* run it inside a Function with our shims in scope */
 function runIIFE() {
-  var fn = new Function("document", "window", "tipText",
-    iife + "\nreturn { apply: window.__updateKidGames, reshuffle: window.__kidGamesReshuffle };");
-  return fn(docShim, winShim, tipText);
+  var fn = new Function("document", "window", "tipText", "hoverTooltip",
+    iife + "\nreturn { apply: window.__updateKidGames, reshuffle: window.__kidGamesReshuffle, inGame: window.__kidInGamesNow };");
+  return fn(docShim, winShim, tipText, hoverTooltip);
 }
 
 /* ══ TEST 1: name-card taps ═════════════════════════════════════════════════ */
@@ -236,6 +244,65 @@ api.apply(); ok(kg.classList.contains("playing"), "party back on → playing aga
 var showing = new El("g"); showing.setAttribute("class", "cuddly-visitor showing"); visEl.appendChild(showing);
 api.apply();
 ok(!kg.classList.contains("playing"), "a visiting duo (.cuddly-visitor.showing) → kids clear");
+
+/* ══ TEST 4: hover tooltip (dark bubble) on each kid, in ADDITION to the click card ═══════ */
+console.log("\nTest 4 — each kid gets a hover tooltip naming the right kid (plus the click card):");
+// rebuild a clean scene so the load-time hover wiring runs once against fresh nodes
+hoverCalls.length = 0; whoPopCalls.length = 0;
+buildScene();
+coupleEl = new El("g"); coupleEl.setAttribute("class", "at-party");
+visEl = new El("g");
+docShim.getElementById = function (id) { if (id === "loft-game-strip") return strip; if (id === "cuddly-kidgames") return kg; if (id === "cuddly-couple") return coupleEl; if (id === "cuddly-visitors-layer") return visEl; return null; };
+winShim.__gardenPartyOn = true;
+var api4 = runIIFE(); // wiring happens at IIFE run (load) — one hoverTooltip per .kg-rock
+ok(hoverCalls.length === NAMES.length, "hoverTooltip wired onto all six kids (got " + hoverCalls.length + ")");
+NAMES.forEach(function (n) {
+  var rock = kg.querySelector("." + n);
+  var call = hoverCalls.filter(function (c) { return c.el === rock; })[0];
+  var e = expect[n];
+  var want = "<em>" + e[0] + "</em> · " + tipText(e[1]);
+  ok(call && call.text === want, n + " hover tooltip → \"" + (call ? call.text : "(none)") + "\"");
+  ok(call && call.placement === "top", n + " hover tooltip uses the \"top\" dark-bubble placement");
+});
+// the click name-card path must STILL work alongside the hover
+api4.apply();
+whoPopCalls.length = 0;
+kg.querySelector(".kg-irene").querySelector(".kg-tilt")._fireClick();
+ok(whoPopCalls.length === 1 && whoPopCalls[0].html === "<em>Irene</em> · " + tipText("role_niece"),
+   "click name-card still pops alongside the hover tooltip (both wired)");
+
+/* ══ TEST 5: ONE-ROOM gate — a kid in a game group is excluded from the random cameo ═════ */
+console.log("\nTest 5 — __kidInGamesNow gates the cuddly cameo (one kid, one room):");
+ok(typeof api4.inGame === "function", "window.__kidInGamesNow is published");
+// while the games are PLAYING, every seated kid reports in-game (so the cameo scheduler skips them)
+api4.apply();
+ok(kg.classList.contains("playing"), "games are playing for the gate test");
+["Irene", "Robin", "Navid"].forEach(function (nm) {
+  ok(api4.inGame(nm) === true, nm + " reports in-game while the games play → cameo suppressed");
+});
+ok(api4.inGame("irene") === true, "__kidInGamesNow is case-insensitive on the name");
+ok(api4.inGame("Elisabeth") === true, "a seated kid with no cameo also reads in-game (harmless)");
+ok(api4.inGame("Totoro") === false, "a non-game name is never gated");
+// when the games are NOT playing, NO kid is 'in a game' → cameos run normally
+winShim.__gardenPartyOn = false; api4.apply();
+ok(!kg.classList.contains("playing"), "games off for the ungated check");
+["Irene", "Robin", "Navid"].forEach(function (nm) {
+  ok(api4.inGame(nm) === false, nm + " is NOT in-game once the games stop → cameo free to run");
+});
+winShim.__gardenPartyOn = true;
+
+/* ══ TEST 6: paint order — both game props are LATER siblings than every kid (source check) ═ */
+console.log("\nTest 6 — game props paint ON TOP of the kids (later in document order):");
+var kgOpen = html.indexOf('<g id="cuddly-kidgames"');
+var kgClose = html.indexOf("</g>\n</g>\n<g id=\"stage-office\"", kgOpen); // the group's own close, before stage-office
+var kgMarkup = html.slice(kgOpen, kgClose >= 0 ? kgClose : html.indexOf("</g>", kgOpen));
+var lastKidIdx = -1;
+NAMES.forEach(function (n) { var i = kgMarkup.indexOf('kg-rock ' + n); if (i > lastKidIdx) lastKidIdx = i; });
+var boardIdx = kgMarkup.indexOf('class="kg-board"');
+var blocksIdx = kgMarkup.indexOf('class="kg-blocks"');
+ok(lastKidIdx > 0, "found the last kid in the group markup");
+ok(boardIdx > lastKidIdx, "the board prop is AFTER every kid in document order (paints on top)");
+ok(blocksIdx > lastKidIdx, "the blocks prop is AFTER every kid in document order (paints on top)");
 
 console.log("\n" + (fails ? ("FAILED: " + fails + " assertion(s), " + passes + " passed") : ("All " + passes + " assertions passed.")));
 process.exit(fails ? 1 : 0);

@@ -3386,6 +3386,12 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .loft-datepill::before{content:"📅 "; }
 .hunt-viewport:fullscreen .loft-datepill{bottom:14px; left:14px}
 @media (max-width:520px){ .loft-datepill{font-size:10px; padding:3px 7px; left:6px; bottom:6px} }
+/* the loft's Edmonton wall-clock, mirroring the date pill to the bottom-RIGHT; a click opens the Clock app */
+.loft-timepill{position:absolute; right:8px; bottom:8px; z-index:6; font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:rgba(255,253,248,.82); border:1px solid rgba(69,58,49,.18); border-radius:11px; padding:4px 9px; cursor:pointer; -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); user-select:none; max-width:46%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.loft-timepill:hover{background:rgba(255,253,248,.96); border-color:rgba(142,58,74,.5)}
+.loft-timepill::before{content:"🕐 "; }
+.hunt-viewport:fullscreen .loft-timepill{bottom:14px; right:14px}
+@media (max-width:520px){ .loft-timepill{font-size:10px; padding:3px 7px; right:6px; bottom:6px} }
 /* weather app: the couple's two cities side by side (current + 3-day) over the screen */
 #monitor-weather{opacity:0; pointer-events:none; transition:opacity .25s ease}
 #office-monitor.show-weather #monitor-weather{opacity:1; pointer-events:auto}
@@ -23772,6 +23778,7 @@ function setLang(l) {
   if (window.refreshFamilyText) window.refreshFamilyText();
   if (window.refreshCalendarText) window.refreshCalendarText();
   if (window.__refreshDatePill) window.__refreshDatePill();
+  if (window.__refreshTimePill) window.__refreshTimePill();
   if (window.refreshWeatherText) window.refreshWeatherText();
   if (window.refreshPhoneText) window.refreshPhoneText();
   if (window.refreshTattooText) window.refreshTattooText();
@@ -23936,6 +23943,9 @@ window.addEventListener("hashchange", function () {
   if (window.__paintCalTile) window.__paintCalTile();
   if (window.refreshWeddingText) window.refreshWeddingText();
   if (window.__refreshDatePill) window.__refreshDatePill();
+  if (window.__refreshTimePill) window.__refreshTimePill();
+  if (window.__paintBalconyPhoneClock) window.__paintBalconyPhoneClock();
+  if (window.__paintPhoneStatusClock) window.__paintPhoneStatusClock();
   if (window.__applyMoonPhases) window.__applyMoonPhases();
   if (window.__updateSkyFireworks) window.__updateSkyFireworks(window.currentStageName);
   // a #time= flip re-runs the auto day/night against the chosen hour (re-enabling auto in
@@ -36302,7 +36312,8 @@ var ABANDONED_CALL_MS = 30000;
     function paintDeskClock() {
       var d = new Date();
       var z = function (n) { return (n < 10 ? "0" : "") + n; };
-      deskClock.textContent = z(d.getHours()) + ":" + z(d.getMinutes());
+      var ov = window.__ovClock && window.__ovClock(); // advancing ?time= override → the selected wall-clock, else the real clock
+      deskClock.textContent = ov || (z(d.getHours()) + ":" + z(d.getMinutes()));
       deskWeather.textContent = "Edmonton " + deskWeatherGlyph() + (window.__realOutdoorC != null ? " " + Math.round(window.__realOutdoorC) + "°" : "");
       // days to the Edmonton wedding (2027-05-01), then to each May 1 anniversary after
       // it — same fixed-date-first shape as the laptop's July 10 / Prague countdown.
@@ -42949,8 +42960,10 @@ async def localfont(name):
     function paintPhoneClock() {
       if (!phoneClockEl) return;
       var d = new Date(), z = function (n) { return (n < 10 ? "0" : "") + n; };
-      phoneClockEl.textContent = z(d.getHours()) + ":" + z(d.getMinutes());
+      var ov = window.__ovClock && window.__ovClock(); // advancing ?time= override → the selected wall-clock, else the real clock
+      phoneClockEl.textContent = ov || (z(d.getHours()) + ":" + z(d.getMinutes()));
     }
+    window.__paintBalconyPhoneClock = paintPhoneClock; // let the hashchange / time-override re-apply refresh it immediately
     paintPhoneClock();
     setInterval(paintPhoneClock, 30000);
     // ── the phone nudges you: a soft two-note chime + buzz + screen glow while it sits
@@ -44089,10 +44102,10 @@ async def localfont(name):
         catch (e) { return null; }
       }
       function fmtMins(mn) { return z(Math.floor(mn / 60) % 24) + ":" + z(mn % 60); }
-      function timeOv() { return window.__timeOverrideMins ? window.__timeOverrideMins() : null; }
+      function timeOv() { var v = window.__timeOverrideMins ? window.__timeOverrideMins() : null; return v == null ? null : Math.floor(v); } // floor the fractional advancing value to whole minutes for display
       function cityTime(tz) {
         var ov = timeOv();
-        if (ov != null) { // frozen at the chosen Edmonton hour; other zones shift by their live offset from Edmonton
+        if (ov != null) { // the advancing chosen Edmonton time; other zones shift by their live offset from Edmonton
           var base = tzMins("America/Edmonton"), here = tzMins(tz);
           if (base != null && here != null) return fmtMins(((ov + (here - base)) % 1440 + 1440) % 1440);
           return fmtMins(ov);
@@ -44123,9 +44136,14 @@ async def localfont(name):
           history.replaceState(null, "", url.toString().replace(/(time=\d{1,2})%3[Aa](\d{1,2})/, "$1:$2"));
         } catch (e) {}
       }
-      function applyTimeJump() { // re-enable auto (a manual flip may have latched it off), then reflect the chosen hour
+      function applyTimeJump() { // re-anchor the advance to the freshly-chosen start, re-enable auto (a manual flip may have latched it off), then reflect the chosen hour everywhere
+        if (window.__reanchorTimeOverride) window.__reanchorTimeOverride();
         if (window.__startAutoDayNight) window.__startAutoDayNight();
         if (window.__applyAutoDayNight) window.__applyAutoDayNight();
+        if (window.__paintPhoneStatusClock) window.__paintPhoneStatusClock(); // the status-bar clock reflects the pick at once
+        if (window.__paintBalconyPhoneClock) window.__paintBalconyPhoneClock();
+        if (window.refreshDeskClock) window.refreshDeskClock();
+        if (window.__refreshTimePill) window.__refreshTimePill();
       }
       function sunMins() { var s = window.__edmSun; return { sr: (s && typeof s.sr === "number") ? s.sr : 7 * 60, ss: (s && typeof s.ss === "number") ? s.ss : 20 * 60 }; } // mirrors sunTimes() incl. the offline defaults
       function jumpToMins(mn) { setTimeParam(fmtMins(((mn % 1440) + 1440) % 1440)); applyTimeJump(); slider.value = nowHour(); updLabel(); tick(); }
@@ -46532,8 +46550,10 @@ async def localfont(name):
       var c = shell.querySelector(".psb-time");
       if (!c) return;
       var d = new Date(), z = function (n) { return (n < 10 ? "0" : "") + n; };
-      c.textContent = z(d.getHours()) + ":" + z(d.getMinutes());
+      var ov = window.__ovClock && window.__ovClock(); // advancing ?time= override → the selected wall-clock, else the real clock
+      c.textContent = ov || (z(d.getHours()) + ":" + z(d.getMinutes()));
     }
+    window.__paintPhoneStatusClock = paintClock; // let the Clock app's slider/reset refresh the status bar immediately
     // The pocket phone mirrors the visitor's REAL battery when the browser exposes it
     // (getBattery is Chromium-only) — on a phone it feels like your own device; on a
     // desktop or an unsupporting browser it falls back to a full battery, never empty.
@@ -47238,14 +47258,25 @@ async def localfont(name):
     // latches it off until a reset. Gated visible+focused (the crickets rule: an autonomous
     // timer that flips the scene) so a backgrounded/blurred tab never flips on its own — which
     // also keeps every headless test on the untouched daytime baseline.
-    var autoStopped = false, autoTimer = null, twilightForced = false;
+    // Starts STOPPED: the opening kitchen is a forced-DAY intro regardless of the real clock.
+    // Auto day/night switches on when the kitchen is first solved (goToStage's 0→1 frontier
+    // step calls __startAutoDayNight) and then tracks Edmonton's real (or the advancing ?time=)
+    // clock across every room; a manual flip / party / ?date= / trip / autoplay still overrides.
+    var autoStopped = true, autoTimer = null, twilightForced = false;
     var TWI_MIN = 40; // half-width of each dawn/dusk twilight window, minutes
-    // ?time=HH:MM (also ?time=HH, and the #time= hash form) pins the time-of-day the auto
+    // ?time=HH:MM (also ?time=HH, and the #time= hash form) sets the time-of-day the auto
     // day/night/twilight system computes against, without freezing the scene the way ?date=
     // does (it is deliberately NOT in autoOverridden — the auto loop stays live and reflects
-    // the chosen hour). Parsed live per call so a hashchange flips it. Colon may arrive
-    // percent-encoded (%3A) via URLSearchParams, so decode first.
-    function timeOverrideMins() {
+    // the chosen hour). The URL value is the readable START; from the moment it is (re)set the
+    // effective time ADVANCES at real-clock speed = chosenStart + real minutes elapsed since it
+    // was anchored, wrapped over 24h — so a picked 21:30 ticks 21:31, 21:32… like a real clock
+    // that only its starting point was chosen for. Re-anchors when the URL value changes
+    // (parsed live per call, so a hashchange flips it) or on an explicit slider/sunrise/sunset/
+    // reset write (via __reanchorTimeOverride). Colon may arrive percent-encoded (%3A) via
+    // URLSearchParams, so decode first. Returns fractional minutes (advances every second — the
+    // day/night compares are fine with it; the on-screen clocks floor it to HH:MM).
+    var tovChosen = null, tovAnchorMs = null, tovLastRaw = null, tovMidnights = 0; // START mins, Date.now() at the anchor, last-seen URL value, whole days rolled past the anchor
+    function timeParamRaw() {
       try {
         var s = (location.search || "") + (location.hash || "");
         try { s = decodeURIComponent(s); } catch (e) {}
@@ -47258,11 +47289,24 @@ async def localfont(name):
       } catch (e) {}
       return null;
     }
-    window.__timeOverrideMins = timeOverrideMins; // read by the phone Clock chooser + the hashchange re-apply
+    function timeOverrideMins() {
+      var raw = timeParamRaw();
+      if (raw == null) { tovChosen = tovAnchorMs = tovLastRaw = null; tovMidnights = 0; return null; } // no override → real clock
+      if (raw !== tovLastRaw || tovAnchorMs == null) { tovLastRaw = raw; tovChosen = raw; tovAnchorMs = Date.now(); tovMidnights = 0; } // (re)anchor on a changed pick
+      var elapsed = (Date.now() - tovAnchorMs) / 60000; // real minutes since the pick
+      return ((tovChosen + elapsed) % 1440 + 1440) % 1440;
+    }
+    window.__timeOverrideMins = timeOverrideMins; // read by the phone Clock chooser + the hashchange re-apply + every on-screen clock
+    window.__reanchorTimeOverride = function () { tovLastRaw = null; }; // force the next read to re-anchor to the current ?time= (an explicit slider/sunrise/sunset write, even to the same hour)
+    window.__ovClock = function () { // "HH:MM" of the advancing ?time= override, or null when on the real clock — the on-screen clocks all defer to this
+      var ov = timeOverrideMins(); if (ov == null) return null;
+      ov = Math.floor(ov); var zz = function (n) { return (n < 10 ? "0" : "") + n; };
+      return zz(Math.floor(ov / 60) % 24) + ":" + zz(ov % 60);
+    };
     function edmMinutes() {
       if (typeof window.__edmNowMins === "function") return window.__edmNowMins(); // test hook: fake the clock
       var ov = timeOverrideMins();
-      if (ov != null) return ov; // ?time= override: the chosen wall-clock time
+      if (ov != null) return ov; // ?time= override: the chosen wall-clock time, advancing from the pick
       try {
         var d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Edmonton" }));
         return d.getHours() * 60 + d.getMinutes();
@@ -47294,7 +47338,7 @@ async def localfont(name):
     }
     window.__applyAutoDayNight = applyAutoDayNight; // the weather fetch re-applies once real sunrise/sunset land; also a test hook
     window.__stopAutoDayNight = function () { autoStopped = true; clearTimeout(autoTimer); if (!twilightForced) stageBalcony.classList.remove("twilight"); };
-    window.__startAutoDayNight = function () { autoStopped = false; twilightForced = false; applyAutoDayNight(); };
+    window.__startAutoDayNight = function () { autoStopped = false; twilightForced = false; clearTimeout(autoTimer); applyAutoDayNight(); autoTimer = setTimeout(autoTick, 180000); }; // (re)start owns the self-tick loop, so tracking resumes after any stop
     // force the twilight wash on/off (the twilight() console command); a forced wash is left
     // alone by the auto loop until it's cleared or a reset runs __startAutoDayNight.
     window.__setTwilight = function (on) {
@@ -47303,10 +47347,35 @@ async def localfont(name):
       stageBalcony.classList.toggle("twilight", !!on);
       return !!on;
     };
-    function autoTick() { applyAutoDayNight(); autoTimer = setTimeout(autoTick, 180000); } // slow self-reschedule (~3 min) catches the dawn/dusk crossing; > every test's virtual-time budget
-    autoTimer = setTimeout(autoTick, 1500); // first pass after the rest of the loft's IIFEs register their __update hooks
+    function autoTick() { applyAutoDayNight(); autoTimer = setTimeout(autoTick, 180000); } // slow self-reschedule (~3 min) catches the dawn/dusk crossing; > every test's virtual-time budget. Armed by __startAutoDayNight (kitchen-solve), not at load — the intro kitchen stays forced day.
     document.addEventListener("visibilitychange", applyAutoDayNight);
     window.addEventListener("focus", applyAutoDayNight);
+    // While a ?time= override is advancing, evolve the whole scene in step with the on-screen
+    // clocks — faster than the 3-min autoTick — so day/night/twilight, the weather ambiance and
+    // the clocks all track the selected time as it ticks. Crickets-gated (skip hidden/unfocused)
+    // and cheap (text repaints + idempotent class toggles). Also rolls the loft's DATE forward
+    // when the advancing time crosses midnight, but ONLY if a ?date= is held — with no date
+    // override the real clock rolls its own day, so we must not synthesize one.
+    function dateParamActive() { try { return /(?:^|[#&?])date=\d{4}-\d{2}-\d{2}/.test((location.search || "") + (location.hash || "")); } catch (e) { return false; } }
+    function timeAdvanceTick() {
+      if (document.hidden || !document.hasFocus()) return; // crickets rule: never autonomously in a hidden/blurred tab
+      if (timeParamRaw() == null || tovAnchorMs == null) return; // no advancing override → the 3-min autoTick handles real-clock tracking
+      var total = tovChosen + (Date.now() - tovAnchorMs) / 60000, mids = Math.floor(total / 1440);
+      if (mids > tovMidnights) { // one (or more) midnight crossed since the anchor
+        var crossed = mids - tovMidnights; tovMidnights = mids;
+        if (dateParamActive() && window.__now && window.__jumpToDate) { // advance the held ?date= by the elapsed days; time keeps ticking into the new day via the mod above
+          var d = window.__now(), nd = new Date(d.getFullYear(), d.getMonth(), d.getDate() + crossed, 12);
+          window.__jumpToDate(nd.getFullYear(), nd.getMonth(), nd.getDate());
+        }
+      }
+      if (window.__paintBalconyPhoneClock) window.__paintBalconyPhoneClock();
+      if (window.__paintPhoneStatusClock) window.__paintPhoneStatusClock();
+      if (window.refreshDeskClock) window.refreshDeskClock();
+      if (window.__refreshTimePill) window.__refreshTimePill();
+      applyAutoDayNight(); // day/night + twilight follow the advancing time
+      if (window.__applyRealWx) window.__applyRealWx(); // and the real-weather ambiance re-evaluates against the new day/night
+    }
+    setInterval(timeAdvanceTick, 15000);
     // click the night sky (not the moon) to wish on a shooting star; by day on Canada Day the
     // same rect calls in the Hornets instead — the two are dusk-exclusive, so neither shadows
     // the other, and off-season the daytime sky stays inert
@@ -48171,7 +48240,7 @@ async def localfont(name):
   // storm lifecycle's setStorming puts on the rooms, and real cloud/fog dims the sky under
   // .climate-overcast. ~1s poll (the same lighter-weight pattern as the rain/city-hum ambience
   // gates); the game-storm term keeps the two .storming writers agreeing instead of fighting.
-  (function tick() {
+  function applyRealWx() {
     var mode = window.__realWxActive ? window.__realWxActive() : null;
     var storming = !!window.__balconyStorm || mode === "rain" || mode === "storm";
     var gardenChanged = false;
@@ -48182,8 +48251,9 @@ async def localfont(name):
     if (gardenChanged && window.__updateGardenAurora) window.__updateGardenAurora(); // real rain outside also hides the aurora
     var strip = document.getElementById("loft-game-strip");
     if (strip) strip.classList.toggle("climate-overcast", mode === "overcast"); // a plain grey day dims the sky, no rain
-    setTimeout(tick, 1000);
-  })();
+  }
+  window.__applyRealWx = applyRealWx; // the advancing-time tick re-evaluates the ambiance in step with day/night
+  (function tick() { applyRealWx(); setTimeout(tick, 1000); })();
 })();
 (function loftTemperature() {
   // One weather model drives two passive readouts: the digital LCD on the garden
@@ -57704,12 +57774,10 @@ function spawnDustMote(container) {
     // every other balcony behavior (day/night, storm, ambient) runs on each visit
     if (balconyIntroSeen) return;
     balconyIntroSeen = true;
-    // From here the SECOND ACT owns the sky. The ambient auto-cycle is eager (~6s after the
-    // balcony first comes on screen, once a minute's elapsed) and would flip to dusk before
-    // the arc's own "tap the sun" nudge had even landed — stop it now, synchronously, so we
-    // win that race. The arc's B0/W2 fallbacks below are the replacement: they only run on
-    // ATTENDED time, so a passive player still reaches the evening and the morning.
-    if (window.__stopAutoDayNight) window.__stopAutoDayNight();
+    // The auto day/night keeps tracking the real (or ?time=) clock here — the balcony is where
+    // the time-of-day sky matters most, and the advancing-time feature needs it live. The second
+    // act still layers its evening/morning nudges on top (its B0/W2 fallbacks flip via
+    // __autoToggleDusk on ATTENDED time); a real night already showing settles B0 gracefully.
     finaleTimers.forEach(clearTimeout);
     finaleTimers = [];
     var butterfly = document.getElementById("balcony-butterfly");
@@ -57802,7 +57870,9 @@ function spawnDustMote(container) {
     var idx = STAGES.indexOf(name);
     if (idx === -1) return;
     stageIndex = idx;
+    var prevMax = maxUnlocked;
     if (idx > maxUnlocked) maxUnlocked = idx;
+    if (prevMax === 0 && maxUnlocked >= 1 && !window.__cinematic && window.__startAutoDayNight) window.__startAutoDayNight(); // kitchen solved (frontier steps off room 1) → the loft's sky now tracks real/selected time; the forced-day intro is over (the scripted show drives its own sky, so not during it)
     if (window.__monitorZoomOut) window.__monitorZoomOut(); // the zoomed-up monitor never travels between rooms
     strip.style.transform = "translateX(-" + (idx * 20) + "%)";
     strip.classList.toggle("viewing-office", name === "office"); // WebKit paints the monitor's foreignObjects even at opacity:0 and lets them escape the strip clip, leaking into whichever room is on screen; the CSS gate below hides them whenever the office isn't the viewed room
@@ -63959,7 +64029,7 @@ function spawnDustMote(container) {
     if (window.__cuddlyProjector && window.__cuddlyProjector.channel() !== "fire") window.__cuddlyProjector.set("fire");
     window.__musicPaused = false; // clear any spacebar pause state
     maxUnlocked = 0;
-    if (window.__startAutoDayNight) window.__startAutoDayNight(); // a fresh game resumes the real-time day/night default (the cinematic re-freezes right after)
+    if (window.__stopAutoDayNight) window.__stopAutoDayNight(); // a fresh game returns to the forced-DAY intro kitchen; auto day/night re-arms when the kitchen is solved again
     goToStage("kitchen");
     if (window.__showHuntIntro) window.__showHuntIntro(); // a fresh reset re-opens on the blinking intro prompt (matches load)
   }
@@ -64517,6 +64587,7 @@ function spawnDustMote(container) {
     if (window.__paintCalTile) window.__paintCalTile();
     if (window.refreshWeddingText) window.refreshWeddingText();
     if (window.__refreshDatePill) window.__refreshDatePill();
+    if (window.__refreshTimePill) window.__refreshTimePill();
   }
   function jumpToDate(y, mo, d) {
     calSetDateParam(y + "-" + calZ(mo + 1) + "-" + calZ(d));
@@ -64711,8 +64782,35 @@ function spawnDustMote(container) {
     pill.title = calStr("app_calendar");
     pill.setAttribute("aria-label", calStr("app_calendar"));
   };
-  calMakePill();
-  window.__refreshDatePill();
+  // sibling TIME pill, mirrored to the bottom-right: the loft's Edmonton wall-clock, showing the
+  // advancing ?time= override when one is set (else real Edmonton time); a click opens the Clock app
+  function calMakeTimePill() {
+    var vp = document.querySelector(".hunt-viewport");
+    if (!vp || document.getElementById("loft-timepill")) return;
+    var pill = document.createElement("button");
+    pill.type = "button"; pill.id = "loft-timepill"; pill.className = "loft-timepill";
+    pill.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (window.__openPhoneAppHere) window.__openPhoneAppHere("clock");
+      else if (window.phone) window.phone("clock");
+    });
+    vp.appendChild(pill);
+  }
+  window.__refreshTimePill = function () {
+    var pill = document.getElementById("loft-timepill");
+    if (!pill) return;
+    var txt = window.__ovClock && window.__ovClock(); // advancing override HH:MM, or null → real clock
+    if (!txt) {
+      try { txt = new Date().toLocaleTimeString("en-GB", { timeZone: "America/Edmonton", hour: "2-digit", minute: "2-digit", hour12: false }); }
+      catch (e) { var d = new Date(), z = function (n) { return (n < 10 ? "0" : "") + n; }; txt = z(d.getHours()) + ":" + z(d.getMinutes()); }
+    }
+    pill.textContent = txt;
+    pill.title = calStr("app_clock");
+    pill.setAttribute("aria-label", calStr("app_clock"));
+  };
+  calMakePill(); calMakeTimePill();
+  window.__refreshDatePill(); window.__refreshTimePill();
+  setInterval(window.__refreshTimePill, 15000); // text-only, hidden-tab safe; advances the pill while ?time= ticks
   // a small transient pill naming the season just picked — lives in the viewport so
   // fullscreen keeps it; one element, retimed on every press, nothing accumulates
   var seasonToastEl = null, seasonToastTimer = null;
@@ -65747,7 +65845,7 @@ function spawnDustMote(container) {
     if (watchBtn) { watchBtn.classList.remove("nudge"); watchBtn.hidden = true; }
     if (skipBtn) skipBtn.hidden = false;
     resetHunt(); // clean slate: day, kitchen, re-armed balcony finale (deterministic dusk flip later)
-    if (window.__stopAutoDayNight) window.__stopAutoDayNight(); // freeze the background sky (after resetHunt, which would otherwise re-arm the auto clock)
+    if (window.__stopAutoDayNight) window.__stopAutoDayNight(); // freeze the background sky: the scripted show drives its own day/night beats
     primeCinematicAudio(); // unlock the song inside this gesture so the later garden beat can play it
 
     // The show is NOT stopped by stray input — only the explicit skip/take-over

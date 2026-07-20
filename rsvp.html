@@ -45558,6 +45558,7 @@ async def localfont(name):
       // friend-duo "are you home?" → answering pans to the cuddly nook and brings that PAIR in to
       // visit (the #cuddly-visitors mechanism). Suppressed on meal days by __cuddlyVisit's own gate.
       if (act.indexOf("visit:") === 0) { if (window.goToStage) window.goToStage("cuddly"); var duo = act.slice(6); setTimeout(function () { if (window.__cuddlyVisit) window.__cuddlyVisit(duo); }, 760); return; } // pan first, then the pair walks in
+      if (act === "bar") { if (window.goToStage) window.goToStage("kitchen"); setTimeout(function () { if ((!window.__barUpNow || !window.__barUpNow()) && window.__setDayNight) window.__setDayNight(true); }, 300); return; } // "bring me a drink" → pan to the kitchen bar, raising it if the party/night bar isn't already up
       if (act.indexOf("room:") === 0 && window.goToStage) window.goToStage(act.slice(5));
     }
     window.__runMsgAction = runMsgAction; // test hook
@@ -45646,13 +45647,13 @@ async def localfont(name):
     // attended) AND a bubble in the messages app, from an arbitrary sender with arbitrary body.
     // The building block of the phone-messaging JS API; each call is a fresh, unique message.
     var customMsgSeq = 0;
-    window.message = function (sender, text) {
+    window.message = function (sender, text, act) {
       var s = (sender == null) ? "" : String(sender).trim();
       var t = (text == null) ? "" : String(text);
       if (!s || !t) return 'usage: message("sender name", "your message")';
       var mid = "custom_" + (++customMsgSeq);
       var d = new Date(), mm = d.getMinutes();
-      MESSAGES[mid] = { from: s, body: t, time: d.getHours() + ":" + (mm < 10 ? "0" + mm : mm) }; // literal from/body (no dict keys), stamped now; no act → a tap just opens the app
+      MESSAGES[mid] = { from: s, body: t, time: d.getHours() + ":" + (mm < 10 ? "0" + mm : mm), act: act || undefined }; // literal from/body (no dict keys), stamped now; an optional act makes a tap deep-link (else it just opens the app)
       window.__deliverPhoneMessage(mid);
       return "📱 " + s + ": " + t;
     };
@@ -56700,9 +56701,9 @@ function spawnDustMote(container) {
       }
       var tm = window.__tabBag.shift();
       if (tm === "__randomText") {
-        var TXT = [["Ali", "<em>Habibi</em>s, best night of my life! 🎉"], ["Goli", "this set is UNREAL 🔥"], ["Spencer", "someone bring me a drink 🍸"], ["Bahareh", "kids are finally asleep 😴"], ["Farhang", "who's ready for a speech 🎤"]];
+        var TXT = [["Ali", "<em>Habibi</em>s, best night of my life! 🎉"], ["Goli", "this set is UNREAL 🔥"], ["Spencer", "someone bring me a drink 🍸", "bar"], ["Alireza", "who's at the bar? get me one too 🍹", "bar"], ["Bahareh", "kids are finally asleep 😴"], ["Farhang", "who's ready for a speech 🎤", "toasts"]];
         var tp = TXT[(Math.random() * TXT.length) | 0];
-        if (window.message) window.message(tp[0], tp[1]);
+        if (window.message) window.message(tp[0], tp[1], tp[2]);
       } else if (typeof window[tm] === "function") { window[tm](); }
     } else if (e.key === "`") {
       e.preventDefault();

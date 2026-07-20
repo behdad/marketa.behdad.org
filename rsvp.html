@@ -4333,6 +4333,9 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 /* the chat-room name — the whole app is one conversation, "Wedding crowd". Sticky so it stays
    put as the thread scrolls; bleeds out over the app-body padding to the phone-screen edges. */
 .pm-msg-title{position:sticky; top:-6px; z-index:2; margin:-6px -16px 6px; padding:12px 16px 9px; background:var(--cream); border-bottom:1px solid var(--rule); font-family:"Fraunces",serif; font-size:18px; font-weight:700; color:var(--ink)}
+/* "+" compose button in the messages header → opens an outbound note-to-the-couple form */
+.pm-msg-compose{position:absolute; right:12px; top:50%; transform:translateY(-50%); width:26px; height:26px; border:none; border-radius:50%; background:var(--wine); color:#fff; font-size:19px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0}
+.pm-msg-compose:hover,.pm-msg-compose:focus-visible{filter:brightness(1.08); outline:none}
 /* messages search: a small round search field under the title, live-filters the thread by
    sender name + message text. Same styling as the album search bar so it feels native. */
 .pm-msg-search{position:relative; align-self:stretch; display:flex; align-items:center; margin:-4px 4px 2px}
@@ -22974,6 +22977,8 @@ var T = {
     msg_new_divider: "New",
     msg_earlier_divider: "Earlier",
     msg_unread_only: "unread only",
+    msg_compose_aria: "write a note to the couple",
+    msg_compose_subject: "a note from the loft 💌",
     msg_pouria_from: "Pouria",
     msg_pouria_body: "bar's open again 🍸 get down here",
     msg_group_from: "Wedding crew",
@@ -23690,6 +23695,8 @@ var T = {
     msg_new_divider: "Nové",
     msg_earlier_divider: "Starší",
     msg_unread_only: "jen nepřečtené",
+    msg_compose_aria: "napsat vzkaz páru",
+    msg_compose_subject: "vzkaz z loftu 💌",
     msg_pouria_from: "Pouria",
     msg_pouria_body: "bar zase otevřel 🍸 padej sem",
     msg_group_from: "Svatební parta",
@@ -44514,6 +44521,14 @@ async def localfont(name):
       var title = document.createElement("div"); // the whole app IS one chat room, "Wedding crowd"
       title.className = "pm-msg-title";
       title.textContent = tr("msg_group_from");
+      var composeBtn = document.createElement("button"); // "+" → write an outbound note TO the couple (emails us); the thread itself stays read-only
+      composeBtn.type = "button";
+      composeBtn.className = "pm-msg-compose";
+      composeBtn.textContent = "+";
+      composeBtn.setAttribute("aria-label", tr("msg_compose_aria"));
+      composeBtn.setAttribute("title", tr("msg_compose_aria"));
+      composeBtn.addEventListener("click", function () { renderMessagesCompose(body); });
+      title.appendChild(composeBtn);
       wrap.appendChild(title);
       if (!messagesThread.length) {
         var empty = document.createElement("div");
@@ -44617,6 +44632,51 @@ async def localfont(name):
       toTop();
       requestAnimationFrame(function () { requestAnimationFrame(toTop); });
       setTimeout(toTop, 300);
+    }
+    // Outbound "write a note TO the couple" composer, opened by the messages "+" button. The
+    // thread itself stays read-only; Send just emails us via the shared device-aware composer.
+    function renderMessagesCompose(body) {
+      body.scrollTop = 0;
+      body.innerHTML = "";
+      var state = { subject: tr("msg_compose_subject"), body: "" };
+      var actions = document.createElement("div");
+      actions.className = "pm-mail-actions";
+      var send = document.createElement("button");
+      send.type = "button";
+      send.className = "pm-btn";
+      send.textContent = tr("mail_send");
+      send.addEventListener("click", function () {
+        if (window.__mailCompose) window.__mailCompose(state.subject, state.body); // device-aware: desktop→Gmail, mobile→native mail; to us by default
+        body.innerHTML = ""; renderMessages(body);
+      });
+      var back = document.createElement("button");
+      back.type = "button";
+      back.className = "pm-btn ghost";
+      back.textContent = tr("mail_cancel");
+      back.addEventListener("click", function () { body.innerHTML = ""; renderMessages(body); });
+      actions.appendChild(send); actions.appendChild(back); // Send first, then Cancel
+      body.appendChild(actions);
+      var form = document.createElement("div");
+      form.className = "pm-mail-form";
+      function field(labelKey, key, multiline) {
+        var f = document.createElement("div");
+        f.className = "pm-mail-field";
+        var lbl = document.createElement("label");
+        lbl.className = "pm-mail-label";
+        lbl.textContent = tr(labelKey);
+        var input = document.createElement(multiline ? "textarea" : "input");
+        input.className = multiline ? "pm-mail-ta" : "pm-mail-input";
+        if (!multiline) input.type = "text";
+        input.value = state[key];
+        input.id = "pm-msg-f-" + key;
+        lbl.setAttribute("for", input.id);
+        input.addEventListener("input", function () { state[key] = input.value; });
+        f.appendChild(lbl); f.appendChild(input);
+        form.appendChild(f);
+      }
+      field("mail_subject", "subject", false);
+      field("mail_message", "body", true);
+      body.appendChild(form);
     }
     // ── WEDDING ALBUM app ── Aspen's captured party polaroids, newest-first. Each shot is a
     // STATE snapshot (window.__albumList() — who was present, dance, season, UV, time), rendered

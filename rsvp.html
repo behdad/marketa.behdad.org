@@ -4159,6 +4159,8 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .pm-msg-search.has-q .pm-ms-x{display:flex}
 .pm-msg-list{display:flex; flex-direction:column; gap:12px} /* the rows, so the sticky title + search bar sit outside the filter rebuild */
 .pm-msg-nomatch{margin:auto; color:var(--muted); font-size:12px; text-align:center}
+.pm-msg-unread{align-self:flex-end; display:flex; align-items:center; gap:5px; margin:-2px 6px 2px; font-size:11px; color:var(--muted); cursor:pointer; -webkit-user-select:none; user-select:none}
+.pm-msg-unread input{accent-color:var(--wine); cursor:pointer; margin:0}
 .pm-msg-new-divider{display:flex; align-items:center; gap:8px; margin:2px 0 -2px; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--wine)}
 .pm-msg-new-divider::before,.pm-msg-new-divider::after{content:""; flex:1; height:1px; background:var(--wine); opacity:.4}
 .pm-msg-empty{margin:auto; color:var(--muted); font-size:12px; text-align:center}
@@ -22598,6 +22600,7 @@ var T = {
     msg_search_placeholder: "search messages…", // filters the thread by sender name + message text
     msg_search_none: "no messages match that search.",
     msg_new_divider: "New",
+    msg_unread_only: "unread only",
     msg_pouria_from: "Pouria",
     msg_pouria_body: "bar's open again 🍸 get down here",
     msg_group_from: "Wedding crew",
@@ -23215,6 +23218,7 @@ var T = {
     msg_search_placeholder: "hledat zprávy…", // filtruje vlákno podle jména odesílatele + textu zprávy
     msg_search_none: "žádné zprávy neodpovídají hledání.",
     msg_new_divider: "Nové",
+    msg_unread_only: "jen nepřečtené",
     msg_pouria_from: "Pouria",
     msg_pouria_body: "bar zase otevřel 🍸 padej sem",
     msg_group_from: "Svatební parta",
@@ -43808,6 +43812,14 @@ async def localfont(name):
         search.appendChild(input);
         search.appendChild(clr);
         wrap.appendChild(search);
+        // "unread only" toggle — hides already-read texts when checked
+        var unreadWrap = document.createElement("label");
+        unreadWrap.className = "pm-msg-unread";
+        var unreadChk = document.createElement("input");
+        unreadChk.type = "checkbox"; unreadChk.className = "pm-msg-unread-chk";
+        var unreadLbl = document.createElement("span"); unreadLbl.textContent = tr("msg_unread_only");
+        unreadWrap.appendChild(unreadChk); unreadWrap.appendChild(unreadLbl);
+        wrap.appendChild(unreadWrap);
         // the rows live in their own list container so the search bar stays put while filtering
         var list = document.createElement("div");
         list.className = "pm-msg-list";
@@ -43848,6 +43860,7 @@ async def localfont(name):
           messagesThread.forEach(function (id) {
             var m = MESSAGES[id]; if (!m) return;
             if (!msgMatches(m, q)) return;
+            if (unreadChk.checked && messagesRead[id]) return; // "unread only" hides read texts
             var age = messagesArrivedAt[id] ? (now - messagesArrivedAt[id]) : Infinity, isNew = age < 30000;
             if (isNew) {
               soonestExpiry = Math.min(soonestExpiry, 30000 - age);
@@ -43861,6 +43874,7 @@ async def localfont(name):
           if (soonestExpiry !== Infinity) msgNewTimer = setTimeout(function () { msgNewTimer = null; if (isOpen() && currentApp === "messages") applyFilter(); }, soonestExpiry + 50); // retire the "New" label once the freshest text ages out, while the app stays open
         }
         input.addEventListener("input", applyFilter);
+        unreadChk.addEventListener("change", applyFilter);
         clr.addEventListener("click", function () { input.value = ""; applyFilter(); input.focus(); });
         applyFilter();
       }

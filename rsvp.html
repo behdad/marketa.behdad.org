@@ -36726,6 +36726,7 @@ var ABANDONED_CALL_MS = 30000;
     computer: "computer(true) — power the office PC up; computer(false) shuts it down; computer() reports whether it's on. computer(\"doom\")/computer(\"weather\") boot (if needed) and open that monitor app; a bad name lists them",
     reboot: "reboot() — power-cycle the loft OS (a `sudo reboot` from its own console)",
     openurl: "openurl(\"url\") — open any URL in a new browser tab (a bare host gets https://)",
+    mailto: "mailto() — compose an email to us; mailto(\"a@x.com\") or mailto([\"a@x\",\"b@y\"]) sets the recipient(s); mailto(\"a@x.com\", {cc:\"c@z\", bcc:[…], subject:\"hi\", body:\"…\"}) adds the rest. Device-aware: desktop→Gmail web, mobile→native mail. Empty recipient → sends to us",
     killall: "killall [-9] <doom|console|python|linux> — kill a monitor app by name via its Kill hook (doom's FATALITY, console's flatline, python's Black Knight, linux's BSOD). bare `killall` (no name) kills every currently-running host at once. the -9 is decorative — they all go. a cold runtime says `not running`",
     service: "service <doom|console|python|linux> <start|stop|status|restart|--full-restart> — sysvinit-style control: status reports running/stopped · start opens it · stop kills it · restart|--full-restart do both",
     monitor: "monitor — alias for computer; monitor(\"doom\")/monitor(\"console\") open a monitor app; try `help computer`",
@@ -36815,7 +36816,7 @@ var ABANDONED_CALL_MS = 30000;
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · sharecard() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora() · twilight() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · repeat(\"name\")/stop() · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · sharecard() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora() · twilight() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · repeat(\"name\")/stop() · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · mailto() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
@@ -37073,7 +37074,7 @@ var ABANDONED_CALL_MS = 30000;
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "repeat", "stop", "edit",
     "confetti", "fireworks", "lanterns", "cat", "irene", "visitors", "mouses", "piano", "classic", "kitten", "ukelele", "audio", "music",
     "guitar", "ukulele", "beat", "eclipse", "hb", "loft", "ls", "pwd", "whoami", "sudo",
-    "date", "man", "love", "kitty", "exit", "speech", "fishu", "volume", "volumebutton", "openurl", "beans", "couples", "officefolks"
+    "date", "man", "love", "kitty", "exit", "speech", "fishu", "volume", "volumebutton", "openurl", "mailto", "beans", "couples", "officefolks"
   ];
   // Barewords / unix gags that are NOT functions — completing them must not append "(".
   var CONSOLE_CMDS_BARE = { help: 1, clear: 1, quit: 1, exit: 1, loft: 1, hb: 1, ls: 1, pwd: 1, whoami: 1, sudo: 1, date: 1, man: 1, love: 1, killall: 1, service: 1 };
@@ -69550,13 +69551,31 @@ function spawnDustMote(container) {
   // Device-aware composer for every GENERIC "email us" click: desktop has no reliable mailto:
   // handler set up here, and Gmail-web wants a login on phones — so desktop → Gmail web composer,
   // mobile → the native mail app. Explicitly-labelled "Gmail" buttons keep their fixed flavour.
-  window.__mailCompose = function (subject, body) {
-    var to = "marketa@behdad.org", su = encodeURIComponent(subject || ""), bd = encodeURIComponent(body || "");
+  function mailAddrs(v) { return v == null ? "" : (Array.isArray(v) ? v.join(",") : String(v)).trim(); }
+  window.__mailCompose = function (subject, body, opts) {
+    opts = opts || {};
+    var to = mailAddrs(opts.to) || "marketa@behdad.org"; // default recipient is us
+    var cc = mailAddrs(opts.cc), bcc = mailAddrs(opts.bcc);
+    var su = encodeURIComponent(subject || ""), bd = encodeURIComponent(body || "");
     var mobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "") || (("ontouchstart" in window) && Math.min(screen.width || 9999, screen.height || 9999) < 820);
     try {
-      if (mobile) window.location.href = "mailto:" + to + "?subject=" + su + "&body=" + bd;
-      else window.open("https://mail.google.com/mail/?view=cm&fs=1&to=" + to + "&su=" + su + "&body=" + bd, "_blank");
+      if (mobile) {
+        var q = "subject=" + su + "&body=" + bd + (cc ? "&cc=" + encodeURIComponent(cc) : "") + (bcc ? "&bcc=" + encodeURIComponent(bcc) : "");
+        window.location.href = "mailto:" + encodeURIComponent(to).replace(/%2C/g, ",") + "?" + q;
+      } else {
+        var url = "https://mail.google.com/mail/?view=cm&fs=1&to=" + encodeURIComponent(to) + "&su=" + su + "&body=" + bd + (cc ? "&cc=" + encodeURIComponent(cc) : "") + (bcc ? "&bcc=" + encodeURIComponent(bcc) : "");
+        window.open(url, "_blank");
+      }
     } catch (e) {}
+  };
+  // mailto() console command — compose an email (device-aware: desktop→Gmail web, mobile→native
+  // mail). mailto() → to us; mailto("a@x.com") or mailto(["a@x","b@y"]) → those recipients;
+  // mailto("a@x.com", {cc:"c@z", bcc:[...], subject:"hi", body:"…"}) → with extras.
+  window.mailto = function (to, o) {
+    o = (o && typeof o === "object") ? o : {};
+    var recips = mailAddrs(to) || "marketa@behdad.org";
+    window.__mailCompose(o.subject || o.su || "", o.body || "", { to: recips, cc: o.cc, bcc: o.bcc });
+    return "✉ composing to " + recips + (o.cc ? " · cc " + mailAddrs(o.cc) : "") + (o.bcc ? " · bcc " + mailAddrs(o.bcc) : "");
   };
   window.__openRsvpMail = function () { var l = document.documentElement.lang, d = T[l] || T.en; window.__mailCompose(d.rsvp_email_subject, d.rsvp_email_body); }; // device-aware (desktop→Gmail web, mobile→native mail); the two explicit out-of-game buttons keep their fixed flavour
   window.__openRsvpGmail = openRsvpGmail;

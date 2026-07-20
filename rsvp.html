@@ -47394,8 +47394,8 @@ async def localfont(name):
       try { if (/(?:^|[#&?])date=\d{4}-\d{2}-\d{2}/.test((location.search || "") + (location.hash || ""))) return true; } catch (e) {}
       return false;
     }
-    function applyAutoDayNight() {
-      if (document.hidden || !document.hasFocus()) return; // crickets rule + never in a headless/backgrounded tab
+    function applyAutoDayNight(force) {
+      if (!force && (document.hidden || !document.hasFocus())) return; // crickets rule for the autonomous tick; a DELIBERATE set (force) applies even if the window's momentarily unfocused
       if (autoStopped || window.__gardenPartyOn || autoOverridden()) { if (!twilightForced) stageBalcony.classList.remove("twilight"); return; }
       var t = sunTimes(), now = edmMinutes();
       var wantNight = now < t.sr || now >= t.ss;
@@ -47404,7 +47404,7 @@ async def localfont(name):
     }
     window.__applyAutoDayNight = applyAutoDayNight; // the weather fetch re-applies once real sunrise/sunset land; also a test hook
     window.__stopAutoDayNight = function () { autoStopped = true; clearTimeout(autoTimer); if (!twilightForced) stageBalcony.classList.remove("twilight"); };
-    window.__startAutoDayNight = function () { autoStopped = false; twilightForced = false; clearTimeout(autoTimer); applyAutoDayNight(); autoTimer = setTimeout(autoTick, 180000); }; // (re)start owns the self-tick loop, so tracking resumes after any stop
+    window.__startAutoDayNight = function () { autoStopped = false; twilightForced = false; clearTimeout(autoTimer); applyAutoDayNight(true); autoTimer = setTimeout(autoTick, 180000); }; // (re)start owns the self-tick loop; force the apply (deliberate arm: kitchen-solve / ?time= set / reset), so twilight/day-night lands even if the window isn't focused
     // force the twilight wash on/off (the twilight() console command); a forced wash is left
     // alone by the auto loop until it's cleared or a reset runs __startAutoDayNight.
     window.__setTwilight = function (on) {

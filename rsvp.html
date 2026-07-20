@@ -1198,7 +1198,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 /* the whole sign slowly cycles through the spectrum like a fancy bar sign — hue only, so it stays
    as legible as the aqua base; runs whenever the bar's up (party OR calm night). */
 #loft-game-strip.party-on #kitchen-bar-neon,
-#stage-kitchen.dusk #kitchen-bar-neon{animation:bar-neon-rainbow 14s linear infinite}
+#stage-kitchen.dusk #kitchen-bar-neon{animation:bar-neon-rainbow 14s steps(14,end) infinite} /* steps, not linear: the hue SWAPS once a second rather than sweeping — a filter recompute 14×/loop, not every frame (was flickery on mobile) */
 @keyframes bar-neon-rainbow{from{filter:hue-rotate(0deg)}to{filter:hue-rotate(360deg)}}
 /* real neon flickers IRREGULARLY (a quick hum-dip, not a steady sine) — only while the bar's up */
 #loft-game-strip.party-on #kitchen-bar-neon-tube,
@@ -1207,15 +1207,6 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   0%,6%,6.6%,7.4%,41%,41.5%,78%,100%{opacity:1}
   6.3%,7%,41.2%,78.3%{opacity:0.55}
   6.9%{opacity:0.82}
-}
-/* Phones: drop the RAINBOW only. It animates `filter:hue-rotate()`, and a filter re-runs on every
-   frame — over the tube's four layered drop-shadows that is the most expensive animation in the
-   room, and it read as flicker on a Pixel. The neon keeps its irregular hum-dip, which is plain
-   opacity and costs nothing, so the sign still behaves like neon; it just holds one colour.
-   Same gate as the other phone reductions (input first, viewport as the belt). */
-@media (pointer: coarse), (max-width:759px), (max-height:520px){
-  #loft-game-strip.party-on #kitchen-bar-neon,
-  #stage-kitchen.dusk #kitchen-bar-neon{animation:none; filter:hue-rotate(310deg)} /* a warm magenta hold — furthest from the aqua base, so the sign still reads as coloured */
 }
 /* reduced motion: a calm, steady multicoloured-but-static aqua glow — no cycle, no flicker */
 @media (prefers-reduced-motion: reduce){
@@ -36350,6 +36341,9 @@ function gameTapsNear(a, b) {
 
     function startFlairCatch() {
       if (flairActive || flairReduce || !flairLayer) return; // reduced-motion: skip the game (drag still works)
+      // nameTip re-opens his who-pop card on the SECOND tap of the launch double-click, so a card
+      // is born the same tick the game starts. Drop it once the click cycle settles.
+      setTimeout(function () { var c = document.querySelector(".egg-bubble.who-pop"); if (c) dismissEggBubble(c); }, 0);
       flairActive = true;
       barDragStartX = flairShakerX(); barDragStartOffset = barOffsetX; // seed the paddle-follow frame so it tracks the cursor immediately (same fix as the arcade chair — a launch without a grab, e.g. the phone "I'm bored" message)
       flairScore = 0; flairMiss = 0; flairElapsed = 0;

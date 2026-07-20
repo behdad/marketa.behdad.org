@@ -3542,10 +3542,15 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
   .loft-chrome > .loft-console-hint{min-width:22px; padding:0 5px; font-size:13px}
   .loft-chrome > *{min-height:21px}
 }
-/* the console's pull-tab: leading plate on the chrome strip, a wine chevron aimed down at
-   the scene edge the drop-down console arrives from. Clicking it pulls the console down. */
+/* the console's tab: leading plate on the chrome strip, a wine triangle that is both the
+   state and the switch — ▶ while the drop-down console is shut, turned ▼ while it's down,
+   aimed at the scene edge the console arrives from. The glyph rotates inside the plate (the
+   plate itself is a pill and must stay level), so the mark reads as one triangle turning. */
 .loft-console-hint{display:inline-flex; align-items:center; justify-content:center; min-width:26px; padding:0 7px; font-size:15px; line-height:1; color:var(--wine,#8e3a4a); background:var(--paper); border:none; border-radius:999px; cursor:pointer; box-shadow:inset 0 1px 2px rgba(69,58,49,.1), 0 1px 2px rgba(50,18,24,.15); transition:color .15s, background .15s}
 .loft-console-hint:hover,.loft-console-hint:focus-visible{background:var(--wine,#8e3a4a); color:#f8f5ec}
+.loft-console-hint .ct-mark{display:block; transition:transform .22s cubic-bezier(.4,.9,.3,1)}
+.loft-console-hint.open .ct-mark{transform:rotate(90deg)}
+@media (prefers-reduced-motion: reduce){ .loft-console-hint .ct-mark{transition:none} }
 /* weather app: the couple's two cities side by side (current + 3-day) over the screen */
 #monitor-weather{opacity:0; pointer-events:none; transition:opacity .25s ease}
 #office-monitor.show-weather #monitor-weather{opacity:1; pointer-events:auto}
@@ -23109,6 +23114,7 @@ var T = {
     datenav_reset_date: "Reset the date to today",
     datenav_reset_time: "Reset the clock to now",
     console_hint: "Open the drop-down console",
+    console_hint_close: "Close the drop-down console",
     app_weather: "weather",
     cal_title: "Our weddings · 2027",
     cal_edmonton: "Edmonton",
@@ -23389,7 +23395,7 @@ var T = {
     kbd_party: "throw the garden party",
     kbd_u: "toggle the UV / blacklight",
     kbd_arrows: "previous / next room",
-    kbd_console: "drop down the console",
+    kbd_console: "open / close the console",
     kbd_digits: "jump to a room",
     kbd_devices: "monitor / laptop / cellphone",
     kbd_enter: "activate main scene feature",
@@ -23853,6 +23859,7 @@ var T = {
     datenav_reset_date: "Vrátit datum na dnešek",
     datenav_reset_time: "Vrátit čas na teď",
     console_hint: "Otevřít rozbalovací konzoli",
+    console_hint_close: "Zavřít rozbalovací konzoli",
     app_weather: "počasí",
     cal_title: "Naše svatby · 2027",
     cal_edmonton: "Edmonton",
@@ -24132,7 +24139,7 @@ var T = {
     kbd_party: "spustit zahradní večírek",
     kbd_u: "přepnout UV / černé světlo",
     kbd_arrows: "předchozí / další místnost",
-    kbd_console: "vysunout konzoli",
+    kbd_console: "otevřít / zavřít konzoli",
     kbd_digits: "skok do místnosti",
     kbd_devices: "monitor / notebook / telefon",
     kbd_enter: "aktivovat hlavní prvek scény",
@@ -24617,6 +24624,11 @@ function idealBrowser() {
   }
   window.refreshFullscreenLabel = refreshLabel; // re-run by setLang() on every language switch
   window.__sizeFullscreenFrame = sizeFullscreenFrame; // test hook: isFullscreen() checks the real Fullscreen API, which headless test scripts that only toggle .is-fullscreen can't trigger
+  // The chrome strip changes height on its own — the "who's here" chip joins or leaves it, and
+  // on a tiny phone the plates wrap to two lines — which changes how much height fullscreen has
+  // left for the scene. Re-fit off the strip's own box; sizeFullscreenFrame is a no-op outside
+  // fullscreen, and it never touches the strip, so this can't feed itself.
+  if (chromeStrip && window.ResizeObserver) new ResizeObserver(sizeFullscreenFrame).observe(chromeStrip);
   function enterFs() {
     // Class-fill first — this alone fills the viewport and works on mobile regardless of
     // the Fullscreen API; refreshLabel() flips the glyph to ✕ and sizes the room to fill.
@@ -37945,12 +37957,26 @@ var ABANDONED_CALL_MS = 30000;
     dtPanel.setAttribute("aria-hidden", "false");
     if (!dtWelcomed) { dtWelcomed = true; var prev = activeConsoleOut; activeConsoleOut = dtOut; consolePrint(consoleT("console_welcome"), "console-dim"); activeConsoleOut = prev; }
     if (dtIn) setTimeout(function () { try { dtIn.focus({ preventScroll: true }); } catch (e) {} }, 60);
+    syncConsoleTab();
   }
   function closeDropTerm() {
     if (!dtPanel || !dtOpen()) return;
     dtPanel.classList.remove("open");
     dtPanel.setAttribute("aria-hidden", "true");
     if (dtIn) { try { dtIn.blur(); } catch (e) {} }
+    syncConsoleTab();
+  }
+  // The strip's ▶/▼ tab reads the panel's REAL state rather than counting its own clicks, so
+  // the backtick key, Esc, the quit command and a game reset all turn it too — every one of
+  // them lands in openDropTerm/closeDropTerm.
+  function syncConsoleTab() {
+    var tab = document.getElementById("loft-console-hint");
+    if (!tab) return;
+    var on = dtOpen(), key = on ? "console_hint_close" : "console_hint";
+    tab.classList.toggle("open", on);
+    tab.setAttribute("aria-expanded", on ? "true" : "false");
+    tab.setAttribute("data-aria-i", key); tab.setAttribute("data-title-i", key); // setLang re-resolves these on a language flip
+    tab.setAttribute("aria-label", consoleT(key)); tab.title = consoleT(key);
   }
   function toggleDropTerm() { if (dtOpen()) closeDropTerm(); else openDropTerm(); }
   // a game reset wipes the drop-down back to its fresh state (matches the monitor console's
@@ -37985,15 +38011,16 @@ var ABANDONED_CALL_MS = 30000;
       if ((e.key === "Escape" || e.key === "Esc") && dtOpen()) { closeDropTerm(); e.stopPropagation(); e.preventDefault(); }
     }, true);
   }
-  (function () { // the chevron pull-tab on the chrome strip: a discoverable hint that pulls the drop-down console down
+  (function () { // the console's tab on the chrome strip: one triangle that both shows the panel's state and flips it
     var vp = document.getElementById("loft-chrome");
     if (!vp || document.getElementById("loft-console-hint")) return;
     var b = document.createElement("button");
-    b.type = "button"; b.id = "loft-console-hint"; b.className = "loft-console-hint"; b.textContent = "▾";
-    b.setAttribute("data-aria-i", "console_hint"); b.setAttribute("data-title-i", "console_hint");
-    b.setAttribute("aria-label", consoleT("console_hint")); b.title = consoleT("console_hint");
+    b.type = "button"; b.id = "loft-console-hint"; b.className = "loft-console-hint";
+    b.setAttribute("aria-controls", "dropterm");
+    b.innerHTML = '<span class="ct-mark" aria-hidden="true">▶</span>'; // one glyph, rotated by CSS — the same triangle turning, not two swapped marks
     b.addEventListener("click", function (e) { e.stopPropagation(); toggleDropTerm(); });
     vp.appendChild(b);
+    syncConsoleTab(); // ▶ closed / ▼ open, plus the matching label
   })();
   // ── EDITOR APP ───────────────────────────────────────────────────────────────────
   // A tiny local-script editor, sibling to the console: write JS, name it, save it. The

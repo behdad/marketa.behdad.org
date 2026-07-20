@@ -4268,8 +4268,6 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .pm-clock .pmk-slider{flex:1 1 auto; min-width:0; accent-color:var(--wine)}
 .pm-clock .pmk-tval{font-family:"Fraunces",serif; font-size:18px; color:var(--wine); font-variant-numeric:tabular-nums; min-width:52px; text-align:right}
 .pm-clock .pmk-trow2,.pm-clock .pmk-trow3{display:flex; gap:8px; align-items:stretch}
-.pm-clock .pmk-jump{flex:1 1 auto; font:inherit; cursor:pointer; border:none; border-radius:10px; background:var(--wine); color:var(--paper); padding:8px 12px; font-weight:600}
-.pm-clock .pmk-jump:hover{filter:brightness(1.08)}
 .pm-clock .pmk-treset{flex:none; font:inherit; cursor:pointer; border:1px solid var(--rule); border-radius:10px; background:var(--paper); color:var(--wine); padding:8px 13px; line-height:1}
 .pm-clock .pmk-treset:hover{background:#f1e6dc}
 .pm-clock .pmk-sunrise,.pm-clock .pmk-sunset{flex:1 1 0; min-width:0; font:inherit; cursor:pointer; border:1px solid var(--rule); border-radius:10px; background:var(--paper); color:var(--ink); padding:7px 8px; line-height:1; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
@@ -22821,7 +22819,6 @@ var T = {
     du_veil: "veil",
     clk_playtime: "You’ve been in the loft for",
     clk_jump_label: "Jump to time",
-    clk_jump: "Jump",
     clk_reset: "Reset to now",
     clk_sunrise: "Sunrise",
     clk_sunset: "Sunset",
@@ -23508,7 +23505,6 @@ var T = {
     du_veil: "závoj",
     clk_playtime: "V loftu jsi už",
     clk_jump_label: "Přejít na čas",
-    clk_jump: "Přejít",
     clk_reset: "Zpět na teď",
     clk_sunrise: "Východ slunce",
     clk_sunset: "Západ slunce",
@@ -44060,7 +44056,7 @@ async def localfont(name):
         '<div class="pmk-time-ctl">' +
           '<label class="pmk-tl">' + tr("clk_jump_label") + '</label>' +
           '<div class="pmk-trow"><input type="range" class="pmk-slider" min="0" max="23" step="1" aria-label="' + tr("clk_jump_label") + '"><span class="pmk-tval"></span></div>' +
-          '<div class="pmk-trow2"><button type="button" class="pmk-jump">' + tr("clk_jump") + '</button><button type="button" class="pmk-treset" title="' + tr("clk_reset") + '" aria-label="' + tr("clk_reset") + '">↻</button></div>' +
+          '<div class="pmk-trow2"><button type="button" class="pmk-treset" title="' + tr("clk_reset") + '" aria-label="' + tr("clk_reset") + '">↻</button></div>' +
           '<div class="pmk-trow3"><button type="button" class="pmk-sunrise" title="' + tr("clk_sunrise") + '" aria-label="' + tr("clk_sunrise") + '">☀ <span class="pmk-sr-t"></span></button><button type="button" class="pmk-sunset" title="' + tr("clk_sunset") + '" aria-label="' + tr("clk_sunset") + '"><span class="pmk-sunset-glyph">' + SUNSET_GLYPH() + '</span> <span class="pmk-ss-t"></span></button></div>' +
         '</div>';
       body.appendChild(wrap);
@@ -44092,8 +44088,8 @@ async def localfont(name):
         wrap.querySelector(".pmk-pt").textContent = z(Math.floor(secs / 60)) + ":" + z(secs % 60);
         var sg = wrap.querySelector(".pmk-sunset-glyph"); if (sg) sg.textContent = SUNSET_GLYPH(); // keep phase-correct if the date jumps while open
       }
-      // ── time-of-day chooser ── slider picks an Edmonton hour; Jump writes ?time=HH:00 and
-      // re-runs the auto day/night against it; ↻ clears the override back to the real clock.
+      // ── time-of-day chooser ── dragging the slider writes ?time=HH:00 LIVE and re-runs the
+      // auto day/night against it, so the sky turns in real time; ↻ clears the override back to the real clock.
       function setTimeParam(str) { // mirrors calSetDateParam: set/clear ?time= in place, keep the colon readable
         try {
           var url = new URL(location.href);
@@ -44115,8 +44111,7 @@ async def localfont(name):
       function nowHour() { var ov = timeOv(); return ov != null ? Math.floor(ov / 60) : Math.floor((tzMins("America/Edmonton") || 0) / 60); }
       function updLabel() { tval.textContent = z(+slider.value) + ":00"; var sm = sunMins(); wrap.querySelector(".pmk-sr-t").textContent = fmtMins(sm.sr); wrap.querySelector(".pmk-ss-t").textContent = fmtMins(sm.ss); }
       slider.value = nowHour(); updLabel();
-      slider.addEventListener("input", updLabel);
-      wrap.querySelector(".pmk-jump").addEventListener("click", function () { setTimeParam(z(+slider.value) + ":00"); applyTimeJump(); tick(); });
+      slider.addEventListener("input", function () { setTimeParam(z(+slider.value) + ":00"); applyTimeJump(); updLabel(); tick(); }); // live: the sky turns as you drag
       wrap.querySelector(".pmk-treset").addEventListener("click", function () { setTimeParam(null); applyTimeJump(); slider.value = nowHour(); updLabel(); tick(); });
       function jumpAndStepOut(mn) { // jump the clock, then put the phone away and step onto the balcony to watch the sky turn
         jumpToMins(mn);

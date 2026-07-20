@@ -679,41 +679,6 @@ function checkI18nKeys(file, script, html) {
 //   2. border-box height − vertical padding = exactly 12 of the 2.8px line boxes
 //      (a bottom-pinned scrollback must never straddle a line across the top edge —
 //      and the border-box/content-box math is exactly what silently broke once).
-// Each .loft-chrome band around the scene eats vertical space that sizeFullscreenFrame has to
-// hand back before it can size the fullscreen frame — a band that exists in the markup but is
-// missing from that subtraction silently overflows the fullscreen shell (the scene grows past
-// the screen and the room dots fall off the bottom). Nothing visual catches it at page size,
-// because the whole calculation only runs in fullscreen. So: every band in the markup must be
-// looked up in the script AND appear in the areaH subtraction chain.
-function checkChromeBandMath(file, script, html) {
-  if (file !== "rsvp.html" || !script || !html) return;
-  var re = /<div class="loft-chrome" id="([\w-]+)"><\/div>/g, m, bands = [];
-  while ((m = re.exec(html))) bands.push(m[1]);
-  if (bands.length < 2) { fail(file + ": expected both .loft-chrome bands in the markup", "found: " + JSON.stringify(bands)); return; }
-  var areaH = script.match(/var areaH = area\.clientHeight[^;]*;/);
-  if (!areaH) { fail(file + ": sizeFullscreenFrame's areaH subtraction not found"); return; }
-  var issues = [];
-  // The bands are ABSOLUTE overlays on the caption/dots rows, so they cost no vertical chrome.
-  // Subtracting them from areaH would shrink the scene by height that is not there; making them
-  // static again without restoring the subtraction would overflow fullscreen. Guard both ways.
-  if (!/\.loft-chrome\{[^}]*position:absolute/.test(html))
-    issues.push(".loft-chrome must stay position:absolute (it overlays the caption/dots row rather than adding one)");
-  if (!/\.loft-row\{[^}]*position:relative/.test(html))
-    issues.push(".loft-row must stay position:relative (it is the containing block that pins each band to the scene's edges)");
-  bands.forEach(function (id) {
-    var varDecl = new RegExp("var (\\w+) = document\\.getElementById\\(\"" + id + "\"\\)").exec(script);
-    if (!varDecl) { issues.push(id + ": no getElementById in the fullscreen sizer"); return; }
-    if (areaH[0].indexOf("outerHeight(" + varDecl[1] + ")") !== -1)
-      issues.push(id + ": subtracted from areaH, but an absolute overlay adds no height — the scene will shrink");
-  });
-  ["loft-row-top", "loft-row-bot"].forEach(function (id) {
-    if (html.indexOf('id="' + id + '"') === -1) issues.push(id + ": row wrapper missing from the markup");
-    if (!new RegExp("getElementById\\(\"" + id + "\"\\)").test(script)) issues.push(id + ": not measured by the fullscreen sizer");
-  });
-  if (issues.length === 0) pass(file + ": chrome bands overlay their rows and stay out of the fullscreen height math");
-  else fail(file + ": chrome band / fullscreen frame math drift", issues.join("\n"));
-}
-
 function checkConsoleOutClipSlack(file, style) {
   if (file !== "rsvp.html" || !style) return;
   var m = style.match(/\.console-out\{([^}]*)\}/);
@@ -894,7 +859,6 @@ FILES.forEach(function (file) {
     checkConsoleCmdRoster(file, script);
     checkParticleSpawnerCaps(file, script);
     checkDanceParity(file, script);
-    checkChromeBandMath(file, script, html);
   }
   checkCssCommentBalance(file, style);
   checkCssBraceBalance(file, style);

@@ -229,6 +229,14 @@ footer{margin-top:2.6rem}
 @media (max-width:759px){
   #hunt-fullscreen-area{padding:.3rem .4rem .45rem; border-radius:12px; margin:1.1rem auto 0}
   #hunt-fullscreen-area > .hunt-frame{margin:.35rem auto}
+  /* Portrait phones: reach back out through main's 1.25rem side padding so the scene gets
+     those pixels (the room is width-bound here), leaving a thin gutter so the shell still
+     reads as a shell. Prose keeps main's full padding — only the game breaks out.
+     :not(.is-fullscreen) because the fullscreen rule pins this box with position:fixed +
+     inset:0 + width:100%, which is over-constrained: a side margin would go on shifting it
+     sideways rather than being absorbed. Scoping it out here beats overriding it there,
+     where the fix would ride a selector list Firefox can drop. */
+  #hunt-fullscreen-area:not(.is-fullscreen){margin-left:-.95rem; margin-right:-.95rem}
 }
 .hunt-frame{display:flex; align-items:center; gap:.3rem; max-width:1140px; margin:1.5rem auto; position:relative}
 .hunt-viewport{
@@ -469,6 +477,30 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   #hunt-fullscreen-area.is-fullscreen .scene-caption, #hunt-fullscreen-area:fullscreen .scene-caption, #hunt-fullscreen-area:-webkit-full-screen .scene-caption{margin:0 0 .3rem; font-size:.95rem}
   #hunt-fullscreen-area.is-fullscreen .hunt-dots, #hunt-fullscreen-area:fullscreen .hunt-dots, #hunt-fullscreen-area:-webkit-full-screen .hunt-dots{margin-top:.3rem}
 }
+/* Landscape phones, fullscreen: HEIGHT is the binding term in sizeFullscreenFrame's
+   min(areaW - chrome, areaH * 2) — measured at 844x390 the height fit gives 619px against a
+   736px width fit — so every pixel the caption and dots rows cost comes straight off the
+   room's width. Each row is pulled to straddle the scene edge by half its own height
+   (setChromeOverlap sets the negative margin from the live measurement, since the height
+   moves with caption length and language; outerHeight() is margin-inclusive, so areaH then
+   subtracts exactly half of each on its own). Class-driven rather than a media query so the
+   gate lives in one place — and so this can't ride a selector list containing
+   :-webkit-full-screen, which Firefox drops wholesale. Two ids to out-specify #hunt-caption /
+   #hunt-dots' own plate backgrounds. */
+#hunt-fullscreen-area.chrome-overlap #hunt-caption,
+#hunt-fullscreen-area.chrome-overlap #hunt-dots{
+  position:relative; z-index:6;
+  /* the .loft-datenav pill idiom — translucent paper over blurred scene — so both rows stay
+     legible against sky that runs midday through aurora */
+  background:rgba(255,253,248,.9); border:1px solid rgba(69,58,49,.18);
+  -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px);
+  /* pointer-transparent so the half that covers the scene doesn't eat the strip's
+     background-tap (stopHintBlink, which dismisses the opening prompt on a tap ANYWHERE);
+     the rows' own controls take pointer events back below */
+  pointer-events:none;
+}
+#hunt-fullscreen-area.chrome-overlap #hunt-caption a,
+#hunt-fullscreen-area.chrome-overlap .hunt-dot{pointer-events:auto}
 .device-hint{display:none; text-align:center; font-size:.9rem; color:var(--soft); margin:.15rem 0 0; text-wrap:balance}
 .device-hint.show{display:block}
 .browser-issues-link{color:var(--wine); text-decoration:underline; text-underline-offset:2px}
@@ -25905,7 +25937,25 @@ function idealBrowser() {
     var s = getComputedStyle(el);
     return el.offsetHeight + (parseFloat(s.marginTop) || 0) + (parseFloat(s.marginBottom) || 0);
   }
+  // Pull the caption and dots rows to straddle the scene edge by half their own height, so
+  // the space they used to occupy outright goes to the room. Only where it converts: on a
+  // SHORT screen (landscape phone) height is the binding term in the fit below, so half a
+  // row is half a row of extra room width; on a tall screen width binds by ~5x and the freed
+  // pixels would be handed straight back. Measured per call, never hardcoded — the rows'
+  // heights move with caption length, language and dot count. outerHeight() is
+  // margin-inclusive, so once these negative margins are set areaH subtracts exactly half of
+  // each row on its own.
+  function setChromeOverlap() {
+    if (!caption || !dots) return;
+    var on = area.classList.contains("is-fullscreen") &&
+             window.matchMedia("(max-height:520px)").matches;
+    area.classList.toggle("chrome-overlap", on);
+    if (!on) { caption.style.marginBottom = ""; dots.style.marginTop = ""; return; }
+    caption.style.marginBottom = -(caption.offsetHeight / 2) + "px";
+    dots.style.marginTop = -(dots.offsetHeight / 2) + "px";
+  }
   function sizeFullscreenFrame() {
+    setChromeOverlap(); // before any measurement below — it changes what the rows cost
     // checks the class (not just isFullscreen()) so it also works from a synthetic
     // test that toggles .is-fullscreen without a real requestFullscreen() call --
     // headless Chrome denies that outside a trusted user gesture anyway; in real
@@ -26063,6 +26113,16 @@ function idealBrowser() {
   document.addEventListener("fullscreenchange", onFsChange);
   document.addEventListener("webkitfullscreenchange", onFsChange);
   window.addEventListener("resize", sizeFullscreenFrame); // orientation change / DevTools resize while fullscreen
+  // The overlap offset is half of each row's LIVE height, and the caption's height changes
+  // with every room hint, console caption() and language switch (CS lines wrap where EN
+  // doesn't). Observing the boxes catches all of those without threading a call through the
+  // dozens of setCaption sites. No feedback loop: the margins these callbacks set don't
+  // alter either row's content box.
+  if (window.ResizeObserver && caption && dots) {
+    var chromeRo = new ResizeObserver(function () { sizeFullscreenFrame(); });
+    chromeRo.observe(caption);
+    chromeRo.observe(dots);
+  }
   refreshLabel();
 })();
 (function(){

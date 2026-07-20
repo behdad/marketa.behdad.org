@@ -45156,9 +45156,9 @@ async def localfont(name):
             var im = document.createElement("img"); im.className = "pm-msg-img"; im.src = m.img; im.alt = msgBody(m); im.loading = "lazy"; bub.appendChild(im);
             if (m.share) { // the share-card postcard: tapping the IMAGE opens the postcard modal (not the row's act)
               im.classList.add("tappable"); im.setAttribute("role", "button"); im.setAttribute("tabindex", "0");
-              var openCard = function (e) { e.stopPropagation(); if (window.shareCard) window.shareCard(); };
+              var openCard = function (e) { e.stopPropagation(); if (window.shareCard) window.shareCard(m.shareOcc); };
               im.addEventListener("click", openCard);
-              im.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); if (window.shareCard) window.shareCard(); } });
+              im.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); if (window.shareCard) window.shareCard(m.shareOcc); } });
             }
             if (!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
               try { im.animate([{ opacity: 0, filter: "contrast(.7) brightness(1.4) saturate(.5)" }, { offset: .45, opacity: 1 }, { opacity: 1, filter: "none" }], { duration: 1100, easing: "ease-out" }); } catch (e) {} // opacity+filter only (no transform) — clear of the particle-transform guard
@@ -47822,16 +47822,25 @@ async def localfont(name):
     // Lazily rasterize the day's occasion share-card and hang it on a delivered message as a
     // tappable inline postcard (m.img + m.share). Never blocks delivery — the text is already in
     // the thread; if generation fails the message just stays image-less. If the messages app is
-    // open when the PNG lands, re-render so the postcard appears. (The occasion is whatever the
-    // loft's current date is → the birthday's card on a birthday, the holiday's card on a holiday.)
+    // open when the PNG lands, re-render so the postcard appears. The card reflects the MESSAGE's
+    // OWN occasion (parsed from its id: bd_<who> → that person's birthday; occ_/hol_<key> → that
+    // invite's occasion), NOT the loft's current date — so two birthday texts in one window each
+    // show the right person's card. The occasion is stashed on the message (m.shareOcc) so a tap
+    // on the thumbnail re-opens the matching modal card too.
+    function occForMessageId(id) {
+      if (id.indexOf("bd_") === 0) return window.__shareBirthdayOcc ? window.__shareBirthdayOcc(id.slice(3)) : null;
+      if (id.indexOf("occ_") === 0 || id.indexOf("hol_") === 0) return window.__shareOccForKey ? window.__shareOccForKey(id.replace(/^(occ_|hol_)/, "")) : null;
+      return null;
+    }
     function attachSharePostcard(id, tries) {
       if (!window.__shareCardDataURL) { // the rasterizer is wired later in this file — a load-time birthday edge-trigger (applySeasonDate → applyBirthdays) can run before it exists; retry until it's ready
         if ((tries || 0) < 40) setTimeout(function () { attachSharePostcard(id, (tries || 0) + 1); }, 100);
         return;
       }
-      window.__shareCardDataURL().then(function (url) {
+      var occ = occForMessageId(id);
+      window.__shareCardDataURL(occ).then(function (url) {
         var m = MESSAGES[id]; if (!m || !url) return;
-        m.img = url; m.share = true; // .share marks the img as the share-card (tap → shareCard modal)
+        m.img = url; m.share = true; m.shareOcc = occ || undefined; // .share marks the img as the share-card (tap → shareCard modal); .shareOcc re-renders the same per-text card in the modal
         if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages);
       }, function () {});
     }
@@ -66519,6 +66528,27 @@ function spawnDustMote(container) {
     var sk = calSeasonKey(s.m, s.d, s.y);
     return { kind: "season", key: sk, id: sk, label: shareT("season_" + sk) };
   }
+  // The same occasion object shareOccasion() returns, but built for a NAMED person/occasion so a
+  // per-text postcard can render for the person/holiday ITS message names — used by the birthday
+  // (bd_<who>) and occasion-invite (occ_/hol_) texts to override the loft's current-date occasion.
+  function shareBirthdayOcc(who) {
+    for (var i = 0; i < BIRTHDAYS.length; i++) {
+      var b = BIRTHDAYS[i];
+      if (b.who === who && !b.pending && b.m != null) return { kind: "birthday", row: b, name: b.name, id: b.who };
+    }
+    return null;
+  }
+  window.__shareBirthdayOcc = shareBirthdayOcc;
+  // Map a raw occasion / holiday key to a share occasion. Both wedding days (and the May-2 BBQ /
+  // Jul-11 brunch that sit inside a wedding window) render the wedding save-the-date, tagged with
+  // the leg so the date line resolves to the right city regardless of the loft's current date.
+  function shareOccForKey(key) {
+    if (!key) return null;
+    if (key === "wedding-edmonton" || key === "bbq") return { kind: "season", key: "wedding", id: "wedding", leg: "edmonton", label: shareT("season_wedding") };
+    if (key === "wedding-prague" || key === "prague-party") return { kind: "season", key: "wedding", id: "wedding", leg: "prague", label: shareT("season_wedding") };
+    return { kind: "season", key: key, id: key, label: shareT("season_" + key) };
+  }
+  window.__shareOccForKey = shareOccForKey;
   var SHARE_GREET_Y = 408; // baseline of the big occasion greeting (wine Fraunces)
   var SHARE_DATE_Y = 462;  // baseline of the exact-date line under the greeting (ink Source Serif)
   // The greeting shown for the day's occasion: a birthday wraps the person's name, every named
@@ -66553,7 +66583,8 @@ function spawnDustMote(container) {
     if (occ.kind === "season") {
       if (occ.key === "wedding") {
         var legs = (window.loft && window.loft.weddings) || ["2027-05-01 · Edmonton", "2027-07-10 · Prague"];
-        var mm = /(\d{4})-(\d{2})-(\d{2})/.exec((s.m <= 4) ? legs[0] : legs[1]);
+        var prague = (occ.leg === "prague") || (occ.leg == null && s.m > 4); // an explicit override leg wins; else the loft's month picks the nearer wedding
+        var mm = /(\d{4})-(\d{2})-(\d{2})/.exec(prague ? legs[1] : legs[0]);
         if (mm) return shareFmtDate(+mm[1], +mm[2] - 1, +mm[3]);
       }
       if (occ.key === "nowruz" || occ.key === "chaharshanbe" || occ.key === "sizdah") {
@@ -66626,10 +66657,13 @@ function spawnDustMote(container) {
     ctx.fillText("marketa.behdad.org/loft-day", 600, 578);
   }
   // Build → serialize → rasterize → canvas → text. Resolves { canvas, dataURL, occ }.
-  function shareRasterize() {
+  // occOverride (same shape shareOccasion() returns) renders the card for a NAMED person/
+  // occasion instead of the loft's current date, so a per-text postcard reflects the person
+  // its message names rather than whatever birthday/holiday the loft is on at rasterize time.
+  function shareRasterize(occOverride) {
     return new Promise(function (resolve, reject) {
       try {
-        var occ = shareOccasion(), lay = shareLayout(occ);
+        var occ = occOverride || shareOccasion(), lay = shareLayout(occ);
         var url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(shareCardSvg(occ, lay));
         var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
         var img = new Image();
@@ -66719,14 +66753,16 @@ function spawnDustMote(container) {
     });
     return overlay;
   }
-  // shareCard() — open the preview + generate the PNG; resolves to the PNG data-URL.
-  window.shareCard = function () {
+  // shareCard() — open the preview + generate the PNG; resolves to the PNG data-URL. An optional
+  // occOverride renders the card for a specific person/occasion (a per-text postcard tap passes
+  // the message's own occasion so the modal matches the thumbnail); no arg → the current occasion.
+  window.shareCard = function (occOverride) {
     var overlay = shareOpenModal();
     var img = overlay.querySelector(".sharecard-img");
     var dl = overlay.querySelector(".sharecard-dl");
     var mailBtn = overlay.querySelector(".sharecard-mail");
     var note = overlay.querySelector(".sharecard-note");
-    return shareRasterize().then(function (out) {
+    return shareRasterize(occOverride).then(function (out) {
       if (shareModalEl !== overlay) return out.dataURL; // dismissed mid-render
       if (img) img.src = out.dataURL;
       var fname = shareFileName(out.occ);
@@ -66752,8 +66788,8 @@ function spawnDustMote(container) {
   // Rasterize the day's occasion card and resolve JUST the PNG data-URL (no modal) — used by the
   // birthday / occasion invite texts to embed the postcard as a tappable inline image. Resolves
   // null on any failure so a caller can deliver the text regardless.
-  window.__shareCardDataURL = function () {
-    return shareRasterize().then(function (out) { return out.dataURL; }, function () { return null; });
+  window.__shareCardDataURL = function (occOverride) {
+    return shareRasterize(occOverride).then(function (out) { return out.dataURL; }, function () { return null; });
   };
   // On a day of significance — a friend's EXACT birthday, either wedding day, or a named turn of
   // the year (Nowruz / Čaháršanbe-Sûrî) — greet the visitor with the day's own save-the-date card,

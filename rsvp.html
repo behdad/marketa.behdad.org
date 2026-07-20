@@ -108,6 +108,13 @@ footer{margin-top:2.6rem}
   pointer-events:none; text-align:left;
 }
 .egg-bubble.show{opacity:1}
+/* white "who is this?" popup — the inverse roster: tapping a figure on the floor names them in a
+   roster-styled card (paper/ink, not the dark egg bubble) while everyone else freezes for 3s */
+.egg-bubble.who-pop{
+  background:var(--paper); color:var(--muted); border:1px solid var(--rule);
+  box-shadow:0 6px 22px rgba(69,58,49,.28); z-index:23; font-size:.84rem;
+}
+.egg-bubble.who-pop em{font-style:normal; font-weight:600; color:var(--ink)}
 /* ── ROSTER PANEL ("who's here") ──────────────────────────────────────────────
    An at-a-glance legend of everyone currently on the garden-party floor — a tidy
    overlay complementing the per-figure hover tooltips + the space-to-freeze inspect.
@@ -60271,6 +60278,48 @@ function spawnDustMote(container) {
       }
     }
     window.__spotlightGuest = spotlightGuests; // test/console hook
+
+    // ── INVERSE ROSTER ────────────────────────────────────────────────────────────
+    // Tapping a figure on the floor is the mirror of clicking a roster row: it names them in a
+    // white roster-styled popup for 3s AND singles them out (freezes everyone else, arrows the
+    // pick). The popup rides the guest's dance via a follow loop; it's an HTML overlay appended
+    // outside #loft-game-strip, so the UV blacklight never tints it.
+    var whoPopRaf = null;
+    function showWhoPop(anchor, html) {
+      var old = document.querySelector(".egg-bubble.who-pop"); if (old) { if (old._t) clearTimeout(old._t); old.remove(); }
+      if (whoPopRaf) { cancelAnimationFrame(whoPopRaf); whoPopRaf = null; }
+      var b = eggBubble(anchor, html, "top"); // reuse the bubble's positioning + markup support
+      b.classList.add("who-pop"); // ...but paint it white like the roster (see .egg-bubble.who-pop)
+      clearTimeout(b._t);
+      b._t = setTimeout(function () { dismissEggBubble(b); if (whoPopRaf) { cancelAnimationFrame(whoPopRaf); whoPopRaf = null; } }, 3000); // match the 3s spotlight flash
+      (function follow() { if (!b.parentNode) { whoPopRaf = null; return; } positionEggBubble(b, anchor, "top"); whoPopRaf = requestAnimationFrame(follow); })();
+    }
+    function guestInspect(el) {
+      var g = document.getElementById("garden-guests");
+      if (!g || !el) return;
+      for (var i = 0; i < ROSTER.length; i++) {
+        var r = ROSTER[i];
+        if (r.sel === "__dj" || r.sel.charAt(0) === "#") continue; // crew + chase runners keep their own handlers
+        var cand = g.querySelector(r.sel);
+        if (cand && (cand === el || cand.contains(el))) {
+          var name = r.pair ? "markéta & behdad" : r.name; // the hosts share one card, like their tooltip
+          var role = r.pair ? "" : tipText(r.roleKey);
+          spotlightGuests([r.sel]);
+          showWhoPop(el, "<em>" + name + "</em>" + (role ? " · " + role : ""));
+          return;
+        }
+      }
+    }
+    window.__guestInspect = guestInspect; // test/console hook
+    // delegated tap-to-inspect on the floor — covers the hosts + every figure (incl. ones absent
+    // from the flare-tap list), and rides through re-renders since it's bound to the container
+    var floor = document.getElementById("garden-guests");
+    if (floor) floor.addEventListener("click", function (e) {
+      if (!window.__gardenPartyOn) return; // only meaningful while the party's on
+      var node = e.target;
+      while (node && node !== floor && !(node.classList && node.classList.contains("guest"))) node = node.parentNode;
+      if (node && node !== floor) guestInspect(node);
+    });
 
     function ensureNodes() {
       var host = document.querySelector(".hunt-viewport");

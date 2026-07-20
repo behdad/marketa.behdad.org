@@ -1154,6 +1154,21 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    swinging the hand down onto the bar shaker (which sits to the right of the bottle row). Static
    transform on a node whose sway animation is stopped by .mixing → no one-shot/state clobber. */
 #kitchen-bartender.steadying #kitchen-bartender-shake{transform-box:fill-box; transform-origin:0% 100%; transform:rotate(67deg)}
+/* .phoning — the bored beat at the quiet NIGHT bar (party off): his shaker goes down and the phone
+   comes out. Same opacity idiom as .mixing above so it never fights the shaker's toss/stir
+   transforms, and the fade is a transition rather than an animation so there's no one-shot for the
+   party-only sway/groove state rules to swallow. The screen's own glow breathes on a slow loop —
+   the beat is short and only ever runs on a visible tab, so nothing accumulates behind it. */
+#kitchen-bartender-phone{opacity:0; transition:opacity .3s ease}
+#kitchen-bartender.phoning #kitchen-bartender-phone{opacity:1}
+#kitchen-bartender.phoning #kitchen-bartender-shaker{opacity:0}
+#kitchen-bartender-phoneglow{opacity:0.34}
+#kitchen-bartender.phoning #kitchen-bartender-phoneglow{animation:bartender-phoneglow 2.6s ease-in-out infinite}
+@keyframes bartender-phoneglow{0%,100%{opacity:0.26}50%{opacity:0.44}}
+@media (prefers-reduced-motion: reduce){
+  #kitchen-bartender-phone{transition:none}
+  #kitchen-bartender.phoning #kitchen-bartender-phoneglow{animation:none}
+}
 /* the bartender grooves to the party music: the whole figure bobs + sways to the beat while a
    party bed is actually SOUNDING (updateCuddlyGrooving toggles .grooving on the OUTER group,
    gated on party-on + __anyMusicPlaying — so a spacebar/transport pause stills him, and the calm
@@ -9418,6 +9433,14 @@ section{margin:1.9rem 0}
 <linearGradient id="kitchen-bar-front-grad" x1="0" y1="0" x2="0" y2="1">
 <stop offset="0" stop-color="#5a3d26"/><stop offset="1" stop-color="#3a2616"/>
 </linearGradient>
+<!-- the spill of Pouria's phone screen onto his cheek. A radial falloff, focus pulled toward the
+     phone: a flat ellipse at any opacity that reads on a dark bar also reads as a grey smudge
+     across his eye and beard, so the light has to fade out rather than end. -->
+<radialGradient id="kitchen-bartender-phoneglow-grad" cx="0.5" cy="0.5" r="0.5" fx="0.8" fy="0.42">
+<stop offset="0" stop-color="#dcecfa" stop-opacity="0.85"/>
+<stop offset="0.45" stop-color="#cfe2f2" stop-opacity="0.3"/>
+<stop offset="1" stop-color="#cfe2f2" stop-opacity="0"/>
+</radialGradient>
 <!-- bottle silhouettes, drawn via <use>: base at the use's (x,y), rising upward.
      Body + neck inherit the use's fill (the liquor colour); cap/label/glint fixed. -->
 <g id="kitchen-bar-bottleA">
@@ -9617,6 +9640,21 @@ section{margin:1.9rem 0}
 <rect x="328" y="177" width="16" height="8" rx="2" fill="#dfe3e7" stroke="#a7adb4" stroke-width="1"/>
 <rect x="331" y="171" width="10" height="7" rx="2" fill="#cfd4d9" stroke="#a7adb4" stroke-width="1"/>
 <rect x="330" y="186" width="3.4" height="12" fill="#eef1f4" opacity="0.6"/>
+</g>
+</g>
+<!-- his phone, for the bored beat at the quiet night bar: he sets the shaker down and watches
+     something on it. A SIBLING of #kitchen-bartender-shake, not a child — that group's sway and
+     .steadying pivots are fill-box percentages and an opacity:0 child still counts toward
+     getBBox, so nesting it here would silently move the shoulder pivot. Every coordinate stays
+     inside #kitchen-bartender's existing bbox (the hit rect below spans wider), so the groove
+     pivot is unchanged too. Glow first, so the phone body draws over its near edge. -->
+<g id="kitchen-bartender-phone" pointer-events="none">
+<ellipse id="kitchen-bartender-phoneglow" cx="314" cy="188" rx="15" ry="11" fill="url(#kitchen-bartender-phoneglow-grad)"/>
+<g transform="rotate(-20 332.5 199)">
+<rect x="326" y="177.5" width="13" height="23.5" rx="2.6" fill="#453a31" stroke="#2f2822" stroke-width="0.7"/>
+<rect x="327.6" y="180" width="9.8" height="18" rx="1.2" fill="#7f9ec0"/>
+<rect x="327.6" y="180" width="9.8" height="6.4" rx="1.2" fill="#cfe2f2" opacity="0.7"/>
+<circle cx="332.5" cy="199.4" r="0.9" fill="#6f6153"/>
 </g>
 </g>
 <!-- transparent hit target over the bartender's visible upper body (head + torso + raised arm +
@@ -34330,8 +34368,10 @@ function gameTapsNear(a, b) {
       // skip the idle toss while he's making a drink (mixing) — an idle flourish mid-make is the same
       // "wrong motion during a make" bug — and while he's mid-stir, so it can't swallow the stir
       // animation on the shared shaker node (the documented one-shot-vs-state cascade guard).
-      // The party stays lively (a toss every cycle); the calm NIGHT bar only flairs occasionally.
+      // The party stays lively (a toss every cycle); the calm NIGHT bar only flairs occasionally,
+      // and never while he's on his phone — the shaker's set down, so tossing it would be a ghost.
       if (barUpNow() && document.visibilityState !== "hidden" && !bartenderReduce() && !bartenderMixing && !bartenderStirring &&
+          !(window.__bartenderPhoning && window.__bartenderPhoning()) &&
           (window.__gardenPartyOn || Math.random() < 0.16)) tossShaker();
       setTimeout(autoFlare, 9000 + Math.random() * 3000); // ~10s, jittered so it's not metronomic
     })();
@@ -34691,6 +34731,7 @@ function gameTapsNear(a, b) {
   function startMake(row) {
     if (making || !row) return false;
     making = true;
+    endBored(); // an order is an order: phone away, shaker back, before a drop is poured
     if (window.__retireHint) window.__retireHint("hint_cocktail"); // loose-brick hint: retire once a drink's been mixed
     if (window.__actPing) window.__actPing("drink"); // second act: the drink you skipped this morning — that's the bar beat done (P1)
     if (window.__bartenderMixing) window.__bartenderMixing(true); // stop his idle sway for the whole make
@@ -34787,6 +34828,55 @@ function gameTapsNear(a, b) {
     return null;
   }
 
+  // ---- the bored beat: Pouria checks his phone at the quiet night bar ---------------------
+  // No party to work and nobody ordering, so every 20-40s of quiet he sets the shaker down, pulls
+  // out his phone, snorts at whatever he's watching, and puts it away again. NIGHT bar only: the
+  // party bar has him mixing all evening, and by day the bar isn't up at all. The scheduling rides
+  // the 500ms ambientPoll below rather than a timer of its own — one live timer for the whole
+  // module, so a room change or a party start has nothing of its own to leak.
+  var boredBartender = document.getElementById("kitchen-bartender");
+  var BORED_MIN_MS = 20000, BORED_SPAN_MS = 20000;
+  var phoning = false, boredTimers = [], nextBoredAt = 0;
+  function boredRoll() { return Date.now() + BORED_MIN_MS + Math.random() * BORED_SPAN_MS; }
+  function boredAfter(ms, fn) { var id = setTimeout(fn, ms); boredTimers.push(id); return id; }
+  function clearBoredTimers() { for (var i = 0; i < boredTimers.length; i++) clearTimeout(boredTimers[i]); boredTimers = []; }
+  // Re-checked at every fire point, never only where the beat was rolled: the room, the party and
+  // the player's own mix can all flip between the roll and the beat — and between the beat's start
+  // and each giggle inside it.
+  function boredOk() {
+    return !window.__gardenPartyOn && kitchenNight() && barPresent()
+        && !making && !reduced() && !dragging() && !flairBusy()
+        && !(window.phone && window.phone())
+        && !(window.__userMixing && window.__userMixing());
+  }
+  function endBored() {
+    clearBoredTimers();
+    phoning = false;
+    if (boredBartender) boredBartender.classList.remove("phoning");
+    nextBoredAt = boredRoll();
+  }
+  // The crickets rule: an autonomous timer must not sound on a visible-but-UNFOCUSED tab —
+  // getSfxCtx()'s hidden gate doesn't cover that, and its resume() would undo the blur suspend.
+  // hasFocus() is therefore checked HERE, in the callback, not where the giggle was scheduled.
+  function boredGiggle() {
+    if (!phoning || !boredOk()) return;
+    if (document.hidden || !document.hasFocus()) return;
+    playGiggleSound("kitchen-bartender", "adult");
+  }
+  function startBored() {
+    if (phoning || !boredOk()) return false;
+    phoning = true;
+    if (boredBartender) boredBartender.classList.add("phoning");
+    boredAfter(900, boredGiggle);                                                                   // he gets to the funny bit
+    boredAfter(2300 + Math.random() * 800, function () { if (Math.random() < 0.6) boredGiggle(); }); // and sometimes back into it
+    boredAfter(4600 + Math.random() * 1800, endBored);                                              // phone away, shaker back up
+    return true;
+  }
+  nextBoredAt = boredRoll();
+  window.__bartenderPhoneAway = endBored;                     // real bar work (a player dose, an ordered drink) puts it away at once
+  window.__bartenderPhoning = function () { return phoning; }; // his idle flair skips its toss while the shaker's down
+  window.__bartenderBored = startBored;                       // test hook: skips the 20-40s wait, keeps the whole fire-time gate; returns whether it fired
+
   // ---- ambient loop: one self-rescheduling poll timer (mirrors the bartender's autoFlare) ----
   // It never piles up (a single live timer) and self-gates every tick: it only starts a make
   // when the party's on, you're at the bar, the tab's visible, motion's allowed, the bartender
@@ -34801,10 +34891,15 @@ function gameTapsNear(a, b) {
     // While the pocket phone is up, he finishes the current drink (making stays true) but takes NO
     // new order until you put the phone away — the bar quiets behind the modal instead of mixing on.
     if (!making && window.__gardenPartyOn && barPresent() && !reduced() && !dragging() && !flairBusy() && Date.now() >= cooldownUntil && !(window.phone && window.phone()) && !(window.__userMixing && window.__userMixing())) startMake(randomRow());
+    // and the night bar's bored beat, on the same clock: a beat whose conditions broke under it
+    // (party lit, you walked out, a drink started) ends within the tick; otherwise the quiet runs
+    // down and he pulls his phone out. A gate that refuses just re-rolls the quiet.
+    if (phoning && !boredOk()) endBored();
+    else if (!phoning && Date.now() >= nextBoredAt && !startBored()) nextBoredAt = boredRoll();
     pollTimer = setTimeout(ambientPoll, 500);
   }
   ambientPoll();
-  document.addEventListener("visibilitychange", function () { if (document.hidden) abort(); }); // hidden → stop now, don't wait for the poll
+  document.addEventListener("visibilitychange", function () { if (document.hidden) { abort(); endBored(); } }); // hidden → stop now, don't wait for the poll
 
   // console hook (the actual window.cocktail(...) command lives in the console-toys region)
   window.__makeCocktail = function (name, preferNight) {
@@ -35059,6 +35154,7 @@ function gameTapsNear(a, b) {
     if (window.__retireHint) window.__retireHint("hint_cocktail");
     picked.push(ing);
     setUserMixing(true); // from the first dose: pause the ambient auto-make from starting a NEW drink (an in-flight one still finishes) until this build is served
+    if (window.__bartenderPhoneAway) window.__bartenderPhoneAway(); // caught him on his phone at the quiet bar → he pockets it and gets to work
     markBartender(true); // from the first dose: hide his in-hand shaker + lower his hand onto the bar shaker he's tending
     station.style.opacity = "1";
     shakerWrap.style.opacity = "1";
@@ -53245,18 +53341,30 @@ function spawnHearts(svg, cx, cy) {
     })(i);
   }
 }
-function playGiggleSound(panId) {
+// The two voices the giggle synth can wear. f0 is the pitch arc across the run (one entry per
+// pulse), step stretches the spacing between pulses, f1/f2 are the vocal-tract formants, breath
+// is the highpass under each pulse's whisper of noise. "kid" is the default — every child in the
+// loft. "adult" is Pouria's lower, slower chuckle behind the bar: a grown man's longer tract
+// drops the formants far less than it drops the pitch, so the two scale independently rather than
+// riding one pitch-shift factor (which would just sound like a slowed-down child).
+var GIGGLE_AT = [0.00, 0.085, 0.165, 0.255, 0.345];
+var GIGGLE_VOICES = {
+  kid:   { f0: [360, 395, 420, 390, 350], step: 1,    f1: 430, f2: 2400, f2level: 0.35, breath: 2500, level: 0.9,  amp: 0.055 },
+  adult: { f0: [172, 190, 202, 186, 164], step: 1.36, f1: 340, f2: 1780, f2level: 0.5,  breath: 1700, level: 0.95, amp: 0.062 }
+};
+function playGiggleSound(panId, voice) {
   try {
     var ctx = getSfxCtx();
     if (!ctx) return;
     var t = ctx.currentTime;
+    var v = GIGGLE_VOICES[voice] || GIGGLE_VOICES.kid;
 
     // A giggle is a rapid run of voiced, breathy "he" pulses — not a melody.
-    // One shared vocal-tract filter (two "ee"-ish formants) shapes every
-    // pulse; the pitch arcs up then back down across the run, each pulse
-    // dips within itself, and the timing is slightly uneven.
+    // One shared vocal-tract filter (two formants) shapes every pulse; the
+    // pitch arcs up then back down across the run, each pulse dips within
+    // itself, and the timing is slightly uneven.
     var master = ctx.createGain();
-    master.gain.value = 0.9;
+    master.gain.value = v.level;
     master.connect(pannedOut(ctx, panId == null ? "cuddly-marketa-head" : panId));
     function formant(freq, q, level) {
       var bp = ctx.createBiquadFilter();
@@ -53269,16 +53377,10 @@ function playGiggleSound(panId) {
       g.connect(master);
       return bp;
     }
-    var f1 = formant(430, 5, 1.0);
-    var f2 = formant(2400, 7, 0.35);
+    var f1 = formant(v.f1, 5, 1.0);
+    var f2 = formant(v.f2, 7, v.f2level);
 
-    var pulses = [
-      { at: 0.00, f0: 360 },
-      { at: 0.085, f0: 395 },
-      { at: 0.165, f0: 420 },
-      { at: 0.255, f0: 390 },
-      { at: 0.345, f0: 350 }
-    ];
+    var pulses = v.f0.map(function (f0, i) { return { at: GIGGLE_AT[i] * v.step, f0: f0 }; });
     pulses.forEach(function (p) {
       var start = t + p.at + (Math.random() - 0.5) * 0.012;
       var osc = ctx.createOscillator();
@@ -53287,7 +53389,7 @@ function playGiggleSound(panId) {
       osc.frequency.exponentialRampToValueAtTime(p.f0 * 0.82, start + 0.07);
       var g = ctx.createGain();
       g.gain.setValueAtTime(0.0001, start);
-      g.gain.exponentialRampToValueAtTime(0.055, start + 0.012);
+      g.gain.exponentialRampToValueAtTime(v.amp, start + 0.012);
       g.gain.exponentialRampToValueAtTime(0.0001, start + 0.075);
       osc.connect(g);
       g.connect(f1);
@@ -53304,7 +53406,7 @@ function playGiggleSound(panId) {
       noise.buffer = nBuf;
       var hp = ctx.createBiquadFilter();
       hp.type = "highpass";
-      hp.frequency.value = 2500;
+      hp.frequency.value = v.breath;
       var nG = ctx.createGain();
       nG.gain.setValueAtTime(0.0001, start);
       nG.gain.exponentialRampToValueAtTime(0.012, start + 0.01);
@@ -65401,6 +65503,7 @@ function spawnDustMote(container) {
     if (window.__resetKitchenPans) window.__resetKitchenPans();
     if (window.__resetBarBottles) window.__resetBarBottles(); // fresh game: put any toppled bottles back + zero their click counts
     if (window.__resetMixer) window.__resetMixer();            // fresh game: shaker empty, glass gone, station hidden
+    if (window.__bartenderPhoneAway) window.__bartenderPhoneAway(); // fresh game: phone pocketed, his shaker back in hand
     if (window.__resetStools) window.__resetStools();          // fresh game: stools back to default x
     if (window.__resetKitchenRoach) window.__resetKitchenRoach(); // fresh game: hide/stop the cabinet cockroach
     Object.keys(plantSpots).forEach(function (id) {

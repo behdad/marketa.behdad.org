@@ -56285,12 +56285,15 @@ function spawnDustMote(container) {
       if (stageIndex > 0) goToStage(STAGES[stageIndex - 1]);
     } else if (e.key === "Tab") {
       e.preventDefault();
-      // Tab cycles the dance-floor "moments"/flares (each self-lights the party + heads to the
-      // garden); the final step just sends a random party text instead of a moment.
+      // Tab runs a RANDOM dance-floor "moment"/flare each press (shuffle-bag: play through the set
+      // in a random order, no immediate repeats, reshuffle when the bag empties — a fixed order is
+      // boring). Each moment self-lights the party + heads to the garden; "__randomText" just texts.
       var TAB_MOMENTS = ["firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift", "__randomText"];
-      var ti = (window.__tabMomentIdx || 0) % TAB_MOMENTS.length;
-      window.__tabMomentIdx = ti + 1;
-      var tm = TAB_MOMENTS[ti];
+      if (!window.__tabBag || !window.__tabBag.length) {
+        window.__tabBag = TAB_MOMENTS.slice();
+        for (var bi = window.__tabBag.length - 1; bi > 0; bi--) { var bj = (Math.random() * (bi + 1)) | 0, bt = window.__tabBag[bi]; window.__tabBag[bi] = window.__tabBag[bj]; window.__tabBag[bj] = bt; }
+      }
+      var tm = window.__tabBag.shift();
       if (tm === "__randomText") {
         var TXT = [["Ali", "<em>Habibi</em>s, best night of my life! 🎉"], ["Goli", "this set is UNREAL 🔥"], ["Spencer", "someone bring me a drink 🍸"], ["Bahareh", "kids are finally asleep 😴"], ["Farhang", "who's ready for a speech 🎤"]];
         var tp = TXT[(Math.random() * TXT.length) | 0];
@@ -63105,7 +63108,11 @@ function spawnDustMote(container) {
     r.push(beat(function () { if (window.__startAlbumSnaps) window.__startAlbumSnaps(); apCall(window.chase); }, 3000)); // Aspen shoots; godkids race
     r.push(beat(apVarySeason, 3000));                                     // change the season under the party
     r.push(beat(function () { apCall(window.jukebox); }, 3000));           // spin a fresh track
-    r.push(beat(function () { apCall(window.firstdance); }, 3600));        // the hosts' first dance — a long linger
+    // a RANDOM handful of party "moments" in a fresh order each loop (fixed order is boring on
+    // rewatch) — shuffle the set + play the first few, generous dwell so each plays out before the next
+    var MOMENTS = [window.firstdance, window.slowdance, window.toasts, window.groupphoto, window.sparklers, window.cake, window.bouquet, window.chairlift].filter(Boolean);
+    for (var mi = MOMENTS.length - 1; mi > 0; mi--) { var mj = (Math.random() * (mi + 1)) | 0, mt = MOMENTS[mi]; MOMENTS[mi] = MOMENTS[mj]; MOMENTS[mj] = mt; }
+    MOMENTS.slice(0, 3).forEach(function (fn) { r.push(beat(function () { apCall(fn); }, 18000)); });
     return r;
   }
 

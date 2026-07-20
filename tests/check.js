@@ -779,6 +779,29 @@ function checkParticleSpawnerCaps(file, script) {
   });
 }
 
+// The fire festivals' leap rig lives in TWO separate closures — the kid scheduler and the
+// couple's — and each carries its own copy of fireFest()/hisFire(), because a closure can't
+// reach into the other. Which culture's fire is lit therefore has two answers, and if they
+// ever disagree you get a festival where the kids leap and the couple doesn't (or nothing
+// does): no error, no visual clue, and it only shows on a date nobody previews. There is no
+// other coverage for either festival, so pin the two bodies byte-identical.
+function checkFireFestParity(file, script) {
+  if (file !== "rsvp.html" || !script) return;
+  var re = /function fireFest\(\)\s*\{[\s\S]*?\n  \}/g, found = [], m;
+  while ((m = re.exec(script)) !== null) found.push(m[0]);
+  if (found.length !== 2) {
+    fail(file + ": expected exactly 2 fireFest() definitions (kid scheduler + couple), found " + found.length,
+      "both leap closures need their own copy; if you unified them, retire this check deliberately");
+    return;
+  }
+  if (found[0] === found[1]) {
+    pass(file + ": the two fireFest() bodies are byte-identical (kid scheduler + couple leap agree)");
+  } else {
+    fail(file + ": the two fireFest() bodies have DRIFTED — one fire festival will half-fire",
+      "a: " + JSON.stringify(found[0]) + "\nb: " + JSON.stringify(found[1]));
+  }
+}
+
 // The garden party's dances are synth beds with a KNOWN bpm each (DANCE_BPM, driving the
 // tempo-sync retuneDancers + the console beat() helper) and an explicit mood each (DANCE_MOOD,
 // driving the per-song amplitude keyframe swap). Both maps MUST cover exactly the set of dance
@@ -859,6 +882,7 @@ FILES.forEach(function (file) {
     checkConsoleCmdRoster(file, script);
     checkParticleSpawnerCaps(file, script);
     checkDanceParity(file, script);
+    checkFireFestParity(file, script);
   }
   checkCssCommentBalance(file, style);
   checkCssBraceBalance(file, style);

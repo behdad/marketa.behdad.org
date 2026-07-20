@@ -46100,6 +46100,10 @@ async def localfont(name):
       // full-figure garden art + its OWN coordinate normalization (she's drawn small + front-left,
       // centre x≈37, feet ≈y337 in garden coords; scaled up to stand at guest height — see below).
       aspen: ["#garden-photographer"],
+      // The off-duty DJ, photographed on his balcony smoke break. Whichever of the two is not
+      // spinning is the one out there, and both resolve to the same standing art (#bh-dj) — the
+      // face that shows is picked from the live figure, see albumFigureClone.
+      sina: ["#bh-dj"], danesh: ["#bh-dj"],
       // The godkids: NOT garden .g-* figures — clone their standing art from the CUDDLY-NOOK figures
       // (#cuddly-*), the cleanest full standing poses (the #garden-kid-* chase runners are wrapped in
       // scale/flip/bob transforms that would double-transform). A "#..." selector routes
@@ -46118,8 +46122,8 @@ async def localfont(name):
     // #loft-game-strip, which the polaroid renders outside of, and albumRasterize serializes to PNG
     // without the stylesheet at all. Index-match the clone against its source (cloneNode preserves
     // order): drop what isn't worn today, and bake the rest visible inline so it survives both.
-    function albumAdornSync(srcEl, cloneEl) {
-      var q = ".bd-adorn,.wd-adorn";
+    function albumAdornSync(srcEl, cloneEl, q) {
+      q = q || ".bd-adorn,.wd-adorn";
       var a = srcEl.querySelectorAll(q), b = cloneEl.querySelectorAll(q);
       for (var i = 0; i < b.length && i < a.length; i++) {
         var cs = getComputedStyle(a[i]);
@@ -46127,11 +46131,10 @@ async def localfont(name):
           if (b[i].parentNode) b[i].parentNode.removeChild(b[i]);
           continue;
         }
-        b[i].setAttribute("class", (b[i].getAttribute("class") || "").replace(/\b[bw]d-adorn\b/g, "").trim());
-        b[i].setAttribute("style", "opacity:1;visibility:visible");
+        b[i].setAttribute("style", "display:inline;opacity:1;visibility:visible"); // inline beats any scoped rule
       }
     }
-    function albumFigureClone(sel) {
+    function albumFigureClone(sel, key) {
       // The godkids come from the CUDDLY NOOK, not the garden: a "#cuddly-*" selector clones the
       // innermost art group (-peek) and normalizes it into the shared guest coordinate frame (centred
       // x≈0, feet ≈y332). The nook art is drawn centred at x≈66 with feet ≈y305, and Robin/Navid
@@ -46160,6 +46163,26 @@ async def localfont(name):
         pwrap.setAttribute("transform", "translate(0 332) scale(" + ak + ") translate(-37 -337)");
         pwrap.appendChild(pg);
         return pwrap;
+      }
+      // The off-duty DJ: his standing figure lives on the BALCONY, and the art inside #bh-dj is
+      // already drawn in the shared guest frame (centre x≈0, feet ≈y332) — the group's own transform
+      // is nothing but its deck placement, so the inner .bh-idle art clones straight across with no
+      // normalization. The two faces stack in one group, so keep the one this RECORD names: a
+      // keepsake shows whoever was out that night, not whoever happens to be off duty at re-render.
+      if (sel === "#bh-dj") {
+        var dsrc = document.querySelector("#bh-dj .bh-idle");
+        if (!dsrc) return null;
+        var dg = dsrc.cloneNode(true);
+        var keep = ".bh-dj-" + (key === "sina" ? "sina" : "danesh");
+        var faces = dg.querySelectorAll(".bh-dj-sina,.bh-dj-danesh");
+        for (var f = 0; f < faces.length; f++) {
+          if (faces[f].matches(keep)) faces[f].setAttribute("style", "display:inline"); // inline beats the scoped rule
+          else if (faces[f].parentNode) faces[f].parentNode.removeChild(faces[f]);
+        }
+        albumAdornSync(dsrc, dg);
+        dg.removeAttribute("class"); dg.removeAttribute("style"); dg.removeAttribute("id"); // shed the idle sway
+        var dids = dg.querySelectorAll("[id]"); for (var d = 0; d < dids.length; d++) dids[d].removeAttribute("id");
+        return dg;
       }
       if (sel.charAt(0) === "#") {
         var pk = document.querySelector(sel + "-peek");
@@ -46380,7 +46403,7 @@ async def localfont(name):
         var sels = ALBUM_FIG_SEL[p.key];
         if (!sels) return;
         var isHost = p.grp === "hosts" || p.key === "hosts"; // seeded shots use albumPerson (grp:"") — match the key too
-        sels.forEach(function (sel) { var g = albumFigureClone(sel); if (!g) return; var mb = measureBox(g); (isHost ? hostClones : otherClones).push({ g: g, key: p.key, halfW: mb.halfW, top: mb.top }); });
+        sels.forEach(function (sel) { var g = albumFigureClone(sel, p.key); if (!g) return; var mb = measureBox(g); (isHost ? hostClones : otherClones).push({ g: g, key: p.key, halfW: mb.halfW, top: mb.top }); });
       });
       if (measSvg.parentNode) measSvg.parentNode.removeChild(measSvg);
       // Fallback: if the live scene isn't mounted (nothing to clone), fill the floor with one plain
@@ -63825,10 +63848,16 @@ function spawnDustMote(container) {
     here.forEach(function (p) {
       var key = ALBUM_HOST_KEYS[p.key] ? "hosts" : p.key;
       if (seen[key]) return;
-      var info = window.__rosterPersonInfo && window.__rosterPersonInfo(key);
-      if (!info || !info.name) return; // no cast entry → nothing to name or draw; skip rather than guess
+      var info = (window.__rosterPersonInfo && window.__rosterPersonInfo(key)) || null;
+      // The cast table is the naming authority WHERE IT HAS AN ENTRY — that's what gives the couple
+      // the album's lowercase house styling. Where it doesn't, keep the row the room itself
+      // published rather than dropping the person: the off-duty DJ is rostered as the live "dj"
+      // slot, never under the face that is actually out, so dropping him meant a deck holding him
+      // alone produced no photo at all.
+      var name = (info && info.name) || p.name;
+      if (!name) return;
       seen[key] = 1;
-      out.push({ key: info.key, grp: info.grp, name: info.name, roleKey: info.roleKey });
+      out.push({ key: key, grp: info ? info.grp : "", name: name, roleKey: info ? info.roleKey : (p.roleKey || "") });
     });
     return out;
   };
@@ -71735,12 +71764,19 @@ function spawnDustMote(container) {
     // caller that stands people on a floor line (Aspen's photo lineup) would get cut-off
     // floating heads, so it asks for { crew: false }. The DJ is keyed by whichever face is out.
     var WHO_CREW = { aspen: 1, pouria: 1, sina: 1, danesh: 1 };
+    // ...but crew is a job, not a person: the OFF-DUTY DJ out on the balcony is on a smoke break,
+    // drawn there as a full standing figure like any other guest, so he's a subject like any other.
+    // Aspen stays excluded everywhere — she's the one holding the camera.
+    var WHO_OFF_DUTY = { balcony: { sina: 1, danesh: 1 } };
+    function whoWorkingHere(key, room) {
+      return !!WHO_CREW[key] && !(WHO_OFF_DUTY[room] && WHO_OFF_DUTY[room][key]);
+    }
     window.__whoIsHere = function (room, opts) {
       room = room || window.currentStageName || "kitchen";
       if (WHO_ROOMS.indexOf(room) < 0) return [];
       try {
         var list = occupantsOf(room);
-        if (opts && opts.crew === false) list = list.filter(function (p) { return !WHO_CREW[p.key]; });
+        if (opts && opts.crew === false) list = list.filter(function (p) { return !whoWorkingHere(p.key, room); });
         return list;
       } catch (e) { return []; }
     };

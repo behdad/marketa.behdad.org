@@ -153,7 +153,10 @@ const SUBJECTS = [
     ['nook-kids',       room(904, 'cuddly',  [['irene', 'Irene'], ['robin', 'Robin'], ['navid', 'Navid']])],
     ['office-pair',     room(905, 'office',  [['ali', 'Ali'], ['goli', 'Goli']])],
     ['deck-solo',       room(906, 'balcony', [['lauren', 'Lauren']])],
-    ['deck-crowd',      room(907, 'balcony', [['ali', 'Ali'], ['bahareh', 'Bahareh'], ['jay', 'Jay'], ['lauren', 'Lauren']])]
+    ['deck-crowd',      room(907, 'balcony', [['ali', 'Ali'], ['bahareh', 'Bahareh'], ['jay', 'Jay'], ['lauren', 'Lauren']])],
+    // the off-duty DJ alone on the deck: a lone smoker, and the shape that produced no photo at all
+    ['deck-dj-danesh',  room(908, 'balcony', [['danesh', 'Danesh']])],
+    ['deck-dj-sina',    room(909, 'balcony', [['sina', 'Sina']])]
   ];
   console.log('=== room shots / mixed heights (all modes) ===');
   for (const [name, rec] of ROOM_CASES) {

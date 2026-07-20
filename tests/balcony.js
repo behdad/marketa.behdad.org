@@ -193,18 +193,25 @@ function spawnSteamWisps(target, cx, cy, s, a, b, c, op) { spawnCalls.push({ cx:
 var hoverWired = [];
 function hoverTooltip(el, htmlFn) { hoverWired.push({ el: el, htmlFn: htmlFn }); }
 function tipText(key) { return "TIP:" + key; }
+// Stand-ins for the page's dict-driven person lines, shaped like the real ones (a wrapped span
+// when the key exists, "" when it doesn't). REL deliberately has no dj entry: the DJs are crew
+// with no rel_ string, so a card for them must still compose cleanly.
+var REL = { farhang: "REL:farhang", bahareh: "REL:bahareh", marketa: "REL:marketa" };
+var FUN = { farhang: "FUN:farhang", bahareh: "FUN:bahareh", marketa: "FUN:marketa", sina: "FUN:sina", danesh: "FUN:danesh" };
+function relLine(key) { var t = REL[String(key).toLowerCase()]; return t ? '<span class="tip-rel">' + t + "</span>" : ""; }
+function funFact(key) { var t = FUN[String(key).toLowerCase()]; return t ? '<span class="tip-fun">' + t + "</span>" : ""; }
 
 // ── run the IIFE in a scoped function with our shims bound as locals ──────────
 // We wrap the sliced body so that bare identifiers (strip, spawnSteamWisps,
 // hoverTooltip, tipText, document, window) resolve to our shims, and `window`
 // property assignments land on our win object.
 var runner = new Function(
-  "window", "document", "strip", "spawnSteamWisps", "hoverTooltip", "tipText",
+  "window", "document", "strip", "spawnSteamWisps", "hoverTooltip", "tipText", "relLine", "funFact",
   "requestAnimationFrame", "cancelAnimationFrame", "setTimeout", "clearTimeout", "getComputedStyle", "matchMedia",
   "(function balconyHangout() {" + body + "})();"
 );
 runner(
-  win, doc, strip, spawnSteamWisps, hoverTooltip, tipText,
+  win, doc, strip, spawnSteamWisps, hoverTooltip, tipText, relLine, funFact,
   win.requestAnimationFrame, win.cancelAnimationFrame,
   function () { return 0; }, function () {}, // setTimeout/clearTimeout — no ambient timers needed for logic
   function () { return { opacity: "1", display: "" }; },
@@ -381,7 +388,51 @@ console.log("balcony-hangout controller (Node DOM-shim):");
   ok("no figure ever holds two drinks, and no smoker ever holds one", !smokerDrinkSeen);
 })();
 
-// ── 5. TEARDOWN: nothing stranded after hide ─────────────────────────────────
+// ── 5. NAME CARDS: the deck names people as fully as every other room ─────────
+// Tapping a figure pops the shared white card (window.__whoPop). It must carry the same
+// name · role · relationship · fun-fact the garden/cuddly/bar cast get — not a bare
+// "name · role" — and must read the RIGHT key: the roster's `name` is the one-room
+// exclusion key (bh-patricia-son wears Bahareh), and the DJ slot resolves to whoever's off duty.
+(function () {
+  ["bahareh", "patricia", "lauren", "farhang", "alireza", "behdad", "marketa"].forEach(function (n) { setArrived(n, false); });
+  win.__barCoupleNowValue = null;
+  activate();
+  var popped = null;
+  win.__whoPop = function (el, html) { popped = html; };
+  function tapCard(id) {
+    popped = null;
+    var fns = byId[id]._listeners.click || [];
+    fns.forEach(function (fn) { fn({ stopPropagation: function () {} }); });
+    return popped;
+  }
+  var card = tapCard("bh-farhang");
+  ok("a deck figure's card carries name · role", /<em>Farhang<\/em> · TIP:role_mc/.test(card || ""), card);
+  ok("a deck figure's card carries the relationship line", /tip-rel">REL:farhang/.test(card || ""), card);
+  ok("a deck figure's card carries the fun fact", /tip-fun">FUN:farhang/.test(card || ""), card);
+
+  // bh-patricia-son wears Bahareh: the visible name and BOTH lookups must be hers, never "patricia-son"
+  card = tapCard("bh-patricia-son");
+  ok("a re-skinned figure shows the face's name, not its slot id", /<em>Bahareh<\/em>/.test(card || "") && !/patricia-son/i.test(card || ""), card);
+  ok("a re-skinned figure looks its lines up by the face's key", /REL:bahareh/.test(card || "") && /FUN:bahareh/.test(card || ""), card);
+
+  // the DJ slot is live: the card names whoever is OFF duty and uses that name as the key
+  win.__djB = true; // Danesh spins → Sina's out here
+  card = tapCard("bh-dj");
+  ok("the DJ card names the off-duty DJ (Sina)", /<em>Sina<\/em> · TIP:role_dj/.test(card || ""), card);
+  ok("the DJ card looks its fun fact up by that live name", /FUN:sina/.test(card || ""), card);
+  win.__djB = false; // Sina spins → Danesh's out here
+  card = tapCard("bh-dj");
+  ok("the DJ card follows a booth swap (Danesh)", /<em>Danesh<\/em>/.test(card || "") && /FUN:danesh/.test(card || ""), card);
+  // crew have no rel_ string — the card must simply omit that line, not print an empty span
+  ok("a person with no relationship string gets no rel line", !/tip-rel/.test(card || ""), card);
+
+  // markéta's key is accent-free ("marketa") while her label keeps the accent
+  card = tapCard("bh-marketa");
+  ok("an accented label still resolves its lines", /<em>markéta<\/em>/.test(card || "") && /REL:marketa/.test(card || "") && /FUN:marketa/.test(card || ""), card);
+  delete win.__whoPop;
+})();
+
+// ── 6. TEARDOWN: nothing stranded after hide ─────────────────────────────────
 (function () {
   ["bahareh", "patricia", "lauren", "farhang", "alireza", "behdad", "marketa"].forEach(function (n) { setArrived(n, false); });
   win.__barCoupleNowValue = null;

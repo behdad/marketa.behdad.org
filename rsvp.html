@@ -26058,12 +26058,18 @@ function funFact(key) {
 // `html` may be a function, resolved at hover time instead of at wiring time: the wiring runs once
 // at load, so a tooltip whose text depends on live state (the visitor's language, or which season
 // is dressing a shared prop) would otherwise be frozen at whatever it read on load.
+// Touch has no hover, so a LONG PRESS (the touch block at the end) opens the same bubble — without
+// it every one of these tooltips is unreachable on iOS, where all browsers are WebKit.
 function hoverTooltip(el, html, placement, yOffset, xOffset, posEl) {
   if (!el) return;
   var bubble = null, followRaf = null, showTimer = null;
   var at = posEl || el;
   function follow() {
     if (!bubble) return;
+    // eggBubble self-dismisses after 5s, and any other bubble opening removes this one. The mouse
+    // path always gets a mouseleave to stop the loop; a long press has no such exit, so without
+    // this the rAF would spin forever on a detached node (the accumulation bug class).
+    if (!bubble.isConnected) { clearTip(); return; }
     positionEggBubble(bubble, at, placement, yOffset, xOffset);
     followRaf = requestAnimationFrame(follow);
   }
@@ -26072,19 +26078,53 @@ function hoverTooltip(el, html, placement, yOffset, xOffset, posEl) {
     if (followRaf) { cancelAnimationFrame(followRaf); followRaf = null; }
     if (bubble) { dismissEggBubble(bubble); bubble = null; }
   }
+  function showTip() {
+    if (followRaf) { cancelAnimationFrame(followRaf); followRaf = null; }
+    bubble = eggBubble(at, typeof html === "function" ? html() : html, placement, yOffset, xOffset);
+    followRaf = requestAnimationFrame(follow);
+  }
   el.addEventListener("mouseenter", function () {
     clearTimeout(showTimer);
     // a short dwell before showing, so tooltips don't pop the instant the cursor grazes past
-    showTimer = setTimeout(function () {
-      showTimer = null;
-      bubble = eggBubble(at, typeof html === "function" ? html() : html, placement, yOffset, xOffset);
-      followRaf = requestAnimationFrame(follow);
-    }, 450);
+    showTimer = setTimeout(function () { showTimer = null; showTip(); }, 450);
   });
   el.addEventListener("mouseleave", clearTip);
   // a click/tap means they're interacting (e.g. powering the machine on), not lingering —
   // cancel the pending tooltip and dismiss any shown one so it doesn't pop over the action
   el.addEventListener("mousedown", clearTip);
+  // ── long press = hover, for touch ────────────────────────────────────────────────────────
+  // Hold one finger still on the prop and the same bubble opens; it dismisses the way every egg
+  // bubble does (its own 5s timer, or a tap away via the document handler below — and a later tap
+  // on the prop itself, whose compat mousedown reaches clearTip). Nothing here preventDefaults
+  // touchstart/touchmove, so object drags and the strip's non-passive touchmove pan-guard still
+  // work; bailing on a second finger leaves the two-finger context-menu tap alone.
+  var PRESS_MS = 350, PRESS_SLOP = 10; // hold, and the drift that reads as a drag instead of a press
+  var pressTimer = null, pressX = 0, pressY = 0, pressShown = false;
+  function cancelPress() { clearTimeout(pressTimer); pressTimer = null; }
+  el.addEventListener("touchstart", function (e) {
+    cancelPress(); pressShown = false;
+    if (e.touches.length !== 1) return;
+    pressX = e.touches[0].clientX; pressY = e.touches[0].clientY;
+    pressTimer = setTimeout(function () { pressTimer = null; pressShown = true; showTip(); }, PRESS_MS);
+  }, { passive: true });
+  el.addEventListener("touchmove", function (e) {
+    if (!pressTimer && !pressShown) return;
+    var t = e.touches[0];
+    if (!t) return;
+    if (Math.abs(t.clientX - pressX) > PRESS_SLOP || Math.abs(t.clientY - pressY) > PRESS_SLOP) {
+      cancelPress(); pressShown = false; clearTip(); // dragging or panning, not asking what this is
+    }
+  }, { passive: true });
+  el.addEventListener("touchend", function (e) {
+    cancelPress();
+    if (!pressShown) return; // a short tap: let it through, so the prop's own action still fires
+    pressShown = false;
+    // the press already answered: kill the compat mousedown/click so the action doesn't ALSO fire
+    // (every hoverTooltip target acts on click — none of them act on pointerdown, which this
+    // could not suppress since pointer events precede touchend)
+    e.preventDefault();
+  }, { passive: false });
+  el.addEventListener("touchcancel", function () { cancelPress(); pressShown = false; clearTip(); }, { passive: true });
 }
 document.addEventListener("click", function (e) {
   var b = document.querySelector(".egg-bubble");
@@ -66754,7 +66794,7 @@ function spawnDustMote(container) {
     // The couple (bh-behdad/bh-marketa) only join on the ~20% couple-out roll; the off-duty DJ
     // (bh-dj) shows one of two CSS-gated faces (resolveDj). Everyone else is a candidate every
     // showing — a random SUBSET, order + spacing is rolled fresh each genuine appearance.
-    // `label`/`role` name the figure in the shared white popup (hover + click-to-reveal); the DJ
+    // `label`/`role` name the figure in the shared white popup (click-to-reveal); the DJ
     // names itself live (Sina/Danesh, whichever is off-duty). +30% bigger than the authored scale,
     // laid out below with a touch more lane room + wider lanes so the fuller figures don't crowd.
     var UP = 1.43; // enlarge all balcony people (~43% over the authored scale)
@@ -66775,10 +66815,19 @@ function spawnDustMote(container) {
     // the DJ's live name — whichever of Sina/Danesh is NOT spinning is the one out here smoking
     function djName() { return window.__djB ? "Sina" : "Danesh"; } // Danesh spins → Sina's off-duty
     function figLabel(r) { return r.dj ? djName() : r.label; }
+    // the rel_/fun_ dictionary key for a figure — NOT r.name for the DJ, whose roster entry is the
+    // slot ("dj") rather than whoever's filling it tonight. Same projection __balconyHangoutNow
+    // publishes as its `key`, so the deck's cards and the room roster read from the same string.
+    function figKey(r) { return r.dj ? djName().toLowerCase() : r.name; }
     function figTip(r) {
       var name = figLabel(r);
       var role = (typeof tipText === "function") ? tipText(r.role) : r.role;
-      return "<em>" + name + "</em> · " + role;
+      var key = figKey(r);
+      // the same relationship + fun-fact lines the garden/cuddly/bar/call cast get, so Farhang is
+      // a triathlete out here too; both degrade to "" for anyone with no such string (the DJs).
+      var rel = (typeof relLine === "function") ? relLine(key) : "";
+      var fun = (typeof funFact === "function") ? funFact(key) : "";
+      return "<em>" + name + "</em> · " + role + rel + fun;
     }
     // a bit FATTER: the figures get a touch more horizontal scale than vertical, so they read
     // fuller/rounder without growing taller (feet stay pinned on the deck line). Applied as the
@@ -66910,10 +66959,7 @@ function spawnDustMote(container) {
       smokerPool.forEach(function (r) { var g = document.getElementById(r.id); if (g) g.style.display = ""; });
       placeLane(shuffle(smokerPool.slice()), SMOKER_LANE);
       // publish the smokers now on the deck (dj → the off-duty face's real name, for the hooks)
-      shownSmokerNames = smokerPool.map(function (r) {
-        if (!r.dj) return r.name;
-        return window.__djB ? "sina" : "danesh"; // Danesh spins → Sina's out here (mirrors resolveDj)
-      });
+      shownSmokerNames = smokerPool.map(figKey);
     }
     // who's smoking on the balcony right now → array of names, or null when nobody's out. The
     // reciprocal of __barCoupleNow: the bar/floor read this to keep their own rosters exclusive.
@@ -66935,7 +66981,7 @@ function spawnDustMote(container) {
         if (!g || g.style.display === "none") return;
         var nm = figLabel(r);
         if (!nm) return;
-        out.push({ key: r.dj ? nm.toLowerCase() : r.name, name: nm, roleKey: r.role, el: g, couple: !!r.couple });
+        out.push({ key: figKey(r), name: nm, roleKey: r.role, el: g, couple: !!r.couple });
       });
       return out;
     };
@@ -66949,10 +66995,12 @@ function spawnDustMote(container) {
       });
       return out;
     };
-    // ── name popups: each figure names itself on hover (shared tooltip) + click (the shared white
-    // name-card __whoPop, same as the garden/cuddly cast). The tip HTML is a live function so the
-    // off-duty DJ names whoever's actually out (Sina/Danesh). Pointer events are CSS-gated to
-    // #balcony-hangout.on, so this only reacts while the crowd's shown. Wired once at load. ──
+    // ── name popups: each figure names itself on click, in the shared white name-card __whoPop —
+    // same card, and now the same name · role · relationship · fun-fact text, as the garden/cuddly
+    // cast (people are click-only; props keep hover). The tip HTML is a live function so the
+    // off-duty DJ names whoever's actually out (Sina/Danesh) and the lines follow a language
+    // switch. Pointer events are CSS-gated to #balcony-hangout.on, so this only reacts while the
+    // crowd's shown. Wired once at load. ──
     ROSTER.forEach(function (r) {
       var g = document.getElementById(r.id);
       if (!g) return;
@@ -67141,8 +67189,13 @@ function spawnDustMote(container) {
       }, 2000 + Math.random() * 800);
     })();
     window.__balconyServeNow = serveOne; // console/test hook: force one serve
-    // name popup: hover tooltip + click white card, like the deck crowd / bar couples
-    var hamidTip = function () { return "<em>Hamid</em> · " + ((typeof tipText === "function") ? tipText("role_godson_a") : "grillmaster"); };
+    // name popup: click white card, like the deck crowd — and the same relationship + fun-fact
+    // lines they carry, so the man at the grill is as fully named as the people watching him
+    var hamidTip = function () {
+      return "<em>Hamid</em> · " + ((typeof tipText === "function") ? tipText("role_godson_a") : "grillmaster") +
+        ((typeof relLine === "function") ? relLine("Hamid") : "") +
+        ((typeof funFact === "function") ? funFact("Hamid") : "");
+    };
     el.addEventListener("click", function (e) { e.stopPropagation(); if (window.__whoPop) window.__whoPop(el, hamidTip()); }); // people are click-only (props keep hover)
     document.addEventListener("visibilitychange", update);
     window.addEventListener("blur", update);

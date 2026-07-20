@@ -56538,23 +56538,25 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
   var laptop = document.getElementById("office-laptop");
   var call = document.getElementById("laptop-call");
   if (!laptop || !call) return;
-  var wanted = false, timer = null, sawConnected = false;
+  var wanted = false, timer = null, sawConnected = false, armTimer = null;
+  var ARM_MS = 30000; // a call that never connects must not leave the arm standing for the NEXT one
   // Gate off DOM truth: the Prague scene must be the live one and the call actually connected.
   // NOT room- or focus-gated — once the family is gathered they stay gathered while the line is
   // up, so stepping out to the garden and back keeps the shot; it's a static scene, so a hidden
   // or unfocused tab costs nothing to leave standing.
   function connected() { return laptop.classList.contains("connected") && !laptop.classList.contains("lueb"); }
   function clearTimer() { if (timer) { clearTimeout(timer); timer = null; } }
+  function clearArm() { if (armTimer) { clearTimeout(armTimer); armTimer = null; } }
   function widen() { timer = null; if (wanted && connected()) call.classList.add("gathering"); }
   function update() {
     if (wanted && connected()) {
-      sawConnected = true;
+      sawConnected = true; clearArm(); // they answered — the arm has done its job
       if (!call.classList.contains("gathering") && !timer) timer = setTimeout(widen, 1300); // a beat to take in the three at home first
       return;
     }
     clearTimer();
     call.classList.remove("gathering");
-    if (sawConnected) { sawConnected = false; wanted = false; observe(false); } // the line dropped: disarm, so the next casual call stays the intimate three
+    if (sawConnected) { sawConnected = false; wanted = false; clearArm(); observe(false); } // the line dropped: disarm, so the next casual call stays the intimate three
   }
   // Watching the laptop's own class is what keeps this module out of the shared call code:
   // startCall/endCall need no hook, the observer sees .connected arrive and leave. It runs
@@ -56570,8 +56572,9 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
   // ringing → the observer picks it up the moment the family answers.
   window.__pragueGathering = function (on) {
     wanted = on !== false;
+    clearArm();
     if (!wanted) { sawConnected = false; observe(false); }
-    else observe(true);
+    else { observe(true); armTimer = setTimeout(function () { armTimer = null; if (!sawConnected) window.__pragueGathering(false); }, ARM_MS); } // nobody ever picked up: drop the arm rather than let it ride to the next call
     update();
     return wanted;
   };

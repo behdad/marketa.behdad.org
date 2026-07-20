@@ -2990,6 +2990,7 @@ html.is-webkit .dock-app:hover .dock-tile{transform:none; box-shadow:inset 0 0 0
 .ed-btn{flex:none; width:4px; height:4px; display:flex; align-items:center; justify-content:center; background:#1d2622; border:0.3px solid #2b3a3a; border-radius:0.8px; color:#8fd070; font:inherit; font-size:3px; line-height:1; padding:0; cursor:pointer} /* same keycap metrics as .ed-side-btn so the whole toolbar reads as one even set */
 .ed-btn:hover{background:#26332b}
 .ed-btn-run{color:#a7e08a; font-size:2.5px} /* the solid ▶ triangle reads heavier than the outline arrows, so nudge it a hair smaller to optically match */
+.ed-btn-run.ed-btn-stop{color:#e39191} /* ■ stop state while a script is looping (repeat()) */
 .ed-ta{grid-row:2; grid-column:1; min-height:0; resize:none; background:#0d130e; border:0.3px solid #202b2b; border-radius:0.8px; outline:none; color:#cfe3cf; font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.4; padding:0.6px 1px; white-space:pre; overflow:auto; scrollbar-width:none; caret-color:#8fd070}
 .ed-ta::placeholder{color:#5f7a5f}
 .ed-ta::-webkit-scrollbar{display:none}
@@ -36742,6 +36743,8 @@ var ABANDONED_CALL_MS = 30000;
     say: "say(\"text\") — print a line to both consoles, always (ignores echo's on/off gate)",
     scripts: "scripts() — list the scripts you've saved in the editor app",
     run: "run(\"name\") — run a saved editor script by name (in quotes); the whole script runs as one async block, so `await sleep(...)` between steps sequences",
+    repeat: "repeat(\"name\") — run a saved script on a LOOP (repeat() loops the current editor buffer); ends on Esc, the editor's ■ stop button, stop(), or a game reset. A script error ends the loop; it pauses while the tab is hidden",
+    stop: "stop() — stop a repeating script (same as repeat(false) / Esc / the editor's ■ button)",
     edit: "edit(\"name\") — open the editor app; with a name in quotes, load that script (or start a fresh one under that name); edit() opens a blank new script",
     confetti: "confetti() — a shower of confetti in the room you're in",
     fireworks: "fireworks() — a burst of fireworks over the room you're in; on the balcony at night it's the full sky FINALE",
@@ -36812,7 +36815,7 @@ var ABANDONED_CALL_MS = 30000;
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · sharecard() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora() · twilight() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · sharecard() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora() · twilight() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · repeat(\"name\")/stop() · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
@@ -37067,7 +37070,7 @@ var ABANDONED_CALL_MS = 30000;
     "clock", "time", "sharecard", "projector", "storm", "dance", "jukebox", "dj", "firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift", "cocktail", "lang", "caption", "candle",
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "aurora", "twilight", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood", "kidsAsleep",
     "phone", "album", "message", "madla", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
-    "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "edit",
+    "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "repeat", "stop", "edit",
     "confetti", "fireworks", "lanterns", "cat", "irene", "visitors", "mouses", "piano", "classic", "kitten", "ukelele", "audio", "music",
     "guitar", "ukulele", "beat", "eclipse", "hb", "loft", "ls", "pwd", "whoami", "sudo",
     "date", "man", "love", "kitty", "exit", "speech", "fishu", "volume", "volumebutton", "openurl", "beans", "couples", "officefolks"
@@ -37436,9 +37439,51 @@ var ABANDONED_CALL_MS = 30000;
     if (name == null || String(name).trim() === "") return "run(\"name\") — which one? " + scriptsListStr();
     var key = String(name), scr = readScripts();
     if (!Object.prototype.hasOwnProperty.call(scr, key)) return "no script named \"" + key + "\". " + scriptsListStr();
+    edStopRepeat(); // a one-shot run supersedes any active loop
     edRunCode(key, scr[key]);
     return "▶ running " + key + "…";
   };
+  // repeat("name") / repeat() → run a script on a loop until Esc (or stop()/reset). A compile or
+  // runtime error ends the loop (never spins on a broken script); it also pauses while the tab is
+  // hidden so nothing piles up (the timer-accumulation bug class).
+  var edRepeatOn = false, edRepeatToken = 0;
+  function edUpdateRunBtn() { // the ▶ Run button becomes a ■ Stop button while a script is looping
+    if (!edRunBtn) return;
+    edRunBtn.innerHTML = edRepeatOn ? "&#9632;" : "&#9654;";
+    edRunBtn.title = edRepeatOn ? "Stop" : "Run";
+    edRunBtn.classList.toggle("ed-btn-stop", edRepeatOn);
+  }
+  function edStopRepeat() { var was = edRepeatOn; edRepeatOn = false; edRepeatToken++; edUpdateRunBtn(); return was; }
+  window.__stopRepeat = edStopRepeat; // reset/other hooks end the loop through here
+  function edLoopStep(tok, name, code) {
+    if (tok !== edRepeatToken || !edRepeatOn) return;
+    if (document.hidden) { setTimeout(function () { edLoopStep(tok, name, code); }, 1000); return; } // don't stack runs in a backgrounded tab
+    var p;
+    try { p = window.eval("(async function(){\n" + code + "\n})()"); }
+    catch (e) { surfaceScriptError(name, e); edStopRepeat(); return; }
+    var again = function () { if (tok === edRepeatToken && edRepeatOn) setTimeout(function () { edLoopStep(tok, name, code); }, 300); };
+    if (p && typeof p.then === "function") p.then(again, function (err) { surfaceScriptError(name, err); edStopRepeat(); });
+    else again();
+  }
+  window.stop = function () { return edStopRepeat() ? "⏹ stopped the repeating script." : "nothing is repeating."; };
+  window.repeat = function (name) {
+    if (name === false) return window.stop();
+    edStopRepeat();
+    var key, code;
+    if (name == null || String(name).trim() === "") {
+      if (edCode && edCode.value.trim()) { key = (edName && edName.value.trim()) || "(editor)"; code = edCode.value; } // no arg → loop the current buffer
+      else return "repeat(\"name\") — which script? " + scriptsListStr();
+    } else {
+      key = String(name); var scr = readScripts();
+      if (!Object.prototype.hasOwnProperty.call(scr, key)) return "no script named \"" + key + "\". " + scriptsListStr();
+      code = scr[key];
+    }
+    var tok = ++edRepeatToken; edRepeatOn = true;
+    edUpdateRunBtn();
+    edLoopStep(tok, key, code);
+    return "🔁 repeating " + key + " — Esc, the ■ button, or stop() to end.";
+  };
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && edRepeatOn) edStopRepeat(); }, true); // Esc ends a repeating script (doesn't preventDefault — Esc still does its usual job)
   window.edit = function (name) {
     // hand the screen from whichever console is up to the editor
     if (window.__closeMonitorConsole) window.__closeMonitorConsole();
@@ -37697,7 +37742,7 @@ var ABANDONED_CALL_MS = 30000;
     edWrap.addEventListener("click", function (e) { e.stopPropagation(); });
     edWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
-  if (edRunBtn) edRunBtn.addEventListener("click", function (e) { e.stopPropagation(); edRunCurrent(); });
+  if (edRunBtn) edRunBtn.addEventListener("click", function (e) { e.stopPropagation(); if (edRepeatOn) { edStopRepeat(); } else { edRunCurrent(); } });
   if (edDlBtn) edDlBtn.addEventListener("click", function (e) { e.stopPropagation(); edDownload(); playLaptopClickSound("office-monitor"); });
   if (edNewBtn) edNewBtn.addEventListener("click", function (e) { e.stopPropagation(); edNew(); });
   if (edDelBtn) edDelBtn.addEventListener("click", function (e) { e.stopPropagation(); edDelete(); playLaptopClickSound("office-monitor"); });
@@ -37705,9 +37750,11 @@ var ABANDONED_CALL_MS = 30000;
   function edEmail() {
     if (!edCode || !window.__mailCompose) return;
     var d = T[document.documentElement.lang] || T.en;
-    var name = (edName && edName.value.trim()) || "script.js";
-    var body = (d.ed_email_intro || "") + "\n\n// " + name + "\n\n" + edCode.value;
-    window.__mailCompose(d.ed_email_subject || "Look what I built!", body); // device-aware: desktop→Gmail, mobile→native mail
+    var name = (edName && edName.value.trim()) || "";
+    var base = d.ed_email_subject || "Look what I built!";
+    var subject = name ? base.replace(/[!.\s]+$/, "") + ": " + name : base; // "Look what I built: Ali's BD"
+    var body = (d.ed_email_intro || "") + "\n\n// " + (name || "script.js") + "\n\n" + edCode.value;
+    window.__mailCompose(subject, body); // device-aware: desktop→Gmail, mobile→native mail
   }
   if (edEmailBtn) edEmailBtn.addEventListener("click", function (e) { e.stopPropagation(); edEmail(); playLaptopClickSound("office-monitor"); });
   if (edOpenBtn && edFileInput) edOpenBtn.addEventListener("click", function (e) { e.stopPropagation(); try { edFileInput.value = ""; edFileInput.click(); } catch (err) {} });
@@ -63835,6 +63882,7 @@ function spawnDustMote(container) {
 
   function resetHunt() {
     window.__pragueCalled = false;
+    if (window.__stopRepeat) window.__stopRepeat(); // a fresh game ends any looping editor script
     clearCuddlySmoke(); // clear any lingering joint haze
     if (window.__stowCat) window.__stowCat(); // cat back in the chest, wherever it had wandered
     if (window.__resetCuddlyCabinet) window.__resetCuddlyCabinet(); // fresh game: cabinet shut, mouse back in the box + re-armed for its one dash

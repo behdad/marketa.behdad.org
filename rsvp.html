@@ -4141,7 +4141,6 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .pm-msg-x{margin-left:auto; flex:0 0 auto; align-self:flex-start; background:none; border:none; color:var(--soft); font-size:12px; line-height:1; padding:2px 5px; cursor:pointer; opacity:.45; border-radius:6px; transition:opacity .15s ease, color .15s ease} /* dismiss one text */
 .pm-msg-x:hover, .pm-msg-x:focus-visible{opacity:1; color:var(--wine); outline:none}
 .pm-msg-from{font-size:10px; font-weight:600; color:var(--muted)}
-.pm-msg-time{font-size:9.5px; color:var(--muted); opacity:.7}
 .pm-msg-bubble{background:var(--paper); border:1px solid var(--rule); border-radius:13px 13px 13px 3px; padding:7px 11px; font-size:13px; line-height:1.4; color:var(--ink); max-width:86%; overflow-wrap:anywhere}
 .pm-msg-text{display:block}
 .pm-msg-img{display:block; margin-top:7px; width:150px; max-width:100%; height:auto; border-radius:9px; border:1px solid var(--rule)}
@@ -43245,7 +43244,6 @@ async def localfont(name):
           var head = document.createElement("div"); head.className = "pm-msg-head";
           var from = document.createElement("span"); from.className = "pm-msg-from"; from.textContent = msgFrom(m);
           head.appendChild(from);
-          if (m.time) { var tm = document.createElement("span"); tm.className = "pm-msg-time"; tm.textContent = m.time; head.appendChild(tm); }
           var xb = document.createElement("button"); xb.type = "button"; xb.className = "pm-msg-x"; xb.textContent = "✕"; xb.setAttribute("aria-label", tr("install_dismiss")); // dismiss THIS text from the thread
           xb.addEventListener("click", function (e) { e.stopPropagation(); dismissMessage(id); });
           head.appendChild(xb);
@@ -44241,15 +44239,15 @@ async def localfont(name):
     // live via tr(), so a language flip re-renders); cleared only on a kill (__resetPhoneApps).
     var messagesThread = [], messagesRead = {}, messagesArrivedAt = {}, msgNewTimer = null; // messagesRead[id] set once a message is tapped — unread (bold) until then; messagesArrivedAt[id] = wall-clock ms of live delivery (drives the "New" divider); msgNewTimer re-renders to retire the divider once the freshest text ages past 30s
     var MESSAGES = { // each fires from its beat/trigger via window.__deliverPhoneMessage (actTwo sequencer + the DJ swap); listed in arc order so 'g' steps through them in sequence
-      dusk:   { fromKey: "msg_bahareh_from", bodyKey: "msg_dusk_body",   time: "19:40", act: "eclipse" },      // act_b0 → tap: balcony + eclipse
-      pouria: { fromKey: "msg_pouria_from",  bodyKey: "msg_pouria_body", time: "21:20", act: "room:kitchen" }, // act_p1 → the bar
-      group:  { fromKey: "msg_admin_from",   bodyKey: "msg_group_body",  time: "22:30", act: "room:garden" },  // act_p2 → the dance floor
-      danesh: { fromKey: "msg_danesh_from",  bodyKey: "msg_danesh_body", time: "23:15", act: "roster" },  // DJ Danesh gassing up the crowd → tap: open the "who's here" roster
-      album:  { fromKey: "msg_irene_from",   bodyKey: "msg_album_body",  time: "00:25", img: "art/msg-selfie.jpg", act: "app:photobooth" }, // act_p3 → the photobooth
-      irene_games: { fromKey: "msg_irene_from", bodyKey: "msg_irene_games_body", time: "00:40", act: "games" }, // → the office computer
-      piano:  { fromKey: "msg_mb_from",      bodyKey: "msg_piano_body",  time: "02:10", act: "room:cuddly" },  // act_w1 → the nook piano
-      dawn:   { fromKey: "msg_bahareh_from", bodyKey: "msg_dawn_body",   time: "04:55", act: "room:balcony" }, // act_w2 → the balcony
-      mb:     { fromKey: "msg_mb_from",      bodyKey: "msg_mb_body",     time: "09:30", act: "rsvp" },         // rsvp_exit → the RSVP
+      dusk:   { fromKey: "msg_bahareh_from", bodyKey: "msg_dusk_body", act: "eclipse" },      // act_b0 → tap: balcony + eclipse
+      pouria: { fromKey: "msg_pouria_from",  bodyKey: "msg_pouria_body", act: "room:kitchen" }, // act_p1 → the bar
+      group:  { fromKey: "msg_admin_from",   bodyKey: "msg_group_body", act: "room:garden" },  // act_p2 → the dance floor
+      danesh: { fromKey: "msg_danesh_from",  bodyKey: "msg_danesh_body", act: "roster" },  // DJ Danesh gassing up the crowd → tap: open the "who's here" roster
+      album:  { fromKey: "msg_irene_from",   bodyKey: "msg_album_body", img: "art/msg-selfie.jpg", act: "app:photobooth" }, // act_p3 → the photobooth
+      irene_games: { fromKey: "msg_irene_from", bodyKey: "msg_irene_games_body", act: "games" }, // → the office computer
+      piano:  { fromKey: "msg_mb_from",      bodyKey: "msg_piano_body", act: "room:cuddly" },  // act_w1 → the nook piano
+      dawn:   { fromKey: "msg_bahareh_from", bodyKey: "msg_dawn_body", act: "room:balcony" }, // act_w2 → the balcony
+      mb:     { fromKey: "msg_mb_from",      bodyKey: "msg_mb_body", act: "rsvp" },         // rsvp_exit → the RSVP
       // app-cue pool — dripped at random during the party (not beat-driven); no fixed time (a
       // group chat doesn't stamp every line, and random arrival order shouldn't jumble the clock)
       cue_cocktails: { fromKey: "msg_pouria_from",  bodyKey: "cue_cocktails_body", act: "app:cocktails" }, // → cocktails menu
@@ -45664,8 +45662,7 @@ async def localfont(name):
       var t = (text == null) ? "" : String(text);
       if (!s || !t) return 'usage: message("sender name", "your message")';
       var mid = "custom_" + (++customMsgSeq);
-      var d = new Date(), mm = d.getMinutes();
-      MESSAGES[mid] = { from: s, body: t, time: d.getHours() + ":" + (mm < 10 ? "0" + mm : mm), act: act || undefined }; // literal from/body (no dict keys), stamped now; an optional act makes a tap deep-link (else it just opens the app)
+      MESSAGES[mid] = { from: s, body: t, act: act || undefined }; // literal from/body (no dict keys); an optional act makes a tap deep-link (else it just opens the app). No timestamp — the loft has no game clock to honour.
       window.__deliverPhoneMessage(mid);
       return "📱 " + s + ": " + t;
     };

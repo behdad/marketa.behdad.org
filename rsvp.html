@@ -37253,8 +37253,9 @@ var ABANDONED_CALL_MS = 30000;
     temp: "temp() — the indoor + outdoor thermometer reading",
     weather: "weather() — the real current weather in both wedding cities (Edmonton · Prague)",
     sharecard: "sharecard() — compose a shareable save-the-date card from the loft's own art (the crossed caps, the names, both wedding dates) badged with the CURRENT occasion — the season, or a friend's birthday with their little portrait — and open a preview with Download + Share buttons (a PNG). reflects any time-travel / season / birthday you've set",
-    clock: "clock() (or time()) — the real current time + date",
-    time: "time — alias for clock; try `help clock`",
+    clock: "clock() — the real current time + date, readable (🕐 HH:MM · weekday)",
+    time: "time() — the loft's current time as {hours, minutes}; time(\"HH:MM\") or time(hours,minutes) SETS it (the ?time= override, driving day/night)",
+    timestamp: "timestamp() — the fully-resolved current loft moment: {year, month, day, hours, minutes, iso}",
     projector: "projector(\"channel\") — switch the cuddly-room projector by name in quotes, e.g. projector(\"nightsky\"), or a number 1–5. channels: \"fireplace\" · \"workout\" · \"nightsky\" · \"aquarium\" · \"totoro\" · \"none\" (off). projector() returns the current channel {n, name}",
     storm: "storm(true) — a DRY thunderstorm over the balcony: lightning + thunder, NO rain (steps out to the balcony; works DAY or night — it does NOT force dusk). Add rain(true) for the downpour — rain(true)+storm(true) is a classic thunderstorm. Set the sky yourself with day()/night(). storm(false) clears the lightning; storm() reports whether it's storming. Weather levers are independent — see rain(), overcast(), day()/night()",
     rain: "rain(true) — falling rain over the balcony (drops in the sky + streaks down every window + a rain hiss), day or night; rain(false) clears it; rain() reports whether it's raining. Independent of storm() — rain alone is a plain shower, rain(true)+storm(true) is a thunderstorm",
@@ -37360,7 +37361,7 @@ var ABANDONED_CALL_MS = 30000;
     pwd: "pwd — print the working directory",
     whoami: "whoami — who you are here",
     sudo: "sudo <cmd> — nice try",
-    date: "date — prints our two wedding dates + the loft's current day. date(\"YYYY-MM-DD\") TIME-TRAVELS the loft to that day: the seasonal decor, any birthday that day, and both countdowns all jump to it (same as clicking a day in the Calendar app, on the office monitor or the pocket phone). date() with no arg just prints",
+    date: "date() — the loft's current day as {year, month, day}. date(\"YYYY-MM-DD\") or date(year,month,day) TIME-TRAVELS the loft there: seasonal decor, any birthday that day, and both countdowns jump to it (same as clicking a day in the Calendar app)",
     echo: "echo <text> — say it back",
     man: "man <topic> — a manual page (try `man love`)",
     love: "love [--patient] [--kind] [--no-jealousy] someone — love, as advertised",
@@ -37663,7 +37664,7 @@ var ABANDONED_CALL_MS = 30000;
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "repeat", "stop", "edit",
     "confetti", "fireworks", "lanterns", "cat", "irene", "visitors", "mouses", "piano", "classic", "kitten", "ukelele", "audio", "music",
     "guitar", "ukulele", "beat", "eclipse", "hb", "loft", "ls", "pwd", "whoami", "sudo",
-    "date", "man", "love", "kitty", "exit", "speech", "fishu", "volume", "volumebutton", "openurl", "mailto", "beans", "couples", "officefolks"
+    "date", "timestamp", "man", "love", "kitty", "exit", "speech", "fishu", "volume", "volumebutton", "openurl", "mailto", "beans", "couples", "officefolks"
   ];
   // Barewords / unix gags that are NOT functions — completing them must not append "(".
   var CONSOLE_CMDS_BARE = { help: 1, clear: 1, quit: 1, exit: 1, loft: 1, hb: 1, ls: 1, pwd: 1, whoami: 1, sudo: 1, date: 1, man: 1, love: 1, killall: 1, service: 1 };
@@ -66153,21 +66154,22 @@ function spawnDustMote(container) {
     container.appendChild(root);
   };
   // console: date("YYYY-MM-DD") time-travels the loft; date() prints the weddings + the loft day
-  window.date = function (str) {
-    var loc = calLoc();
-    if (arguments.length === 0 || str == null || str === "") {
-      var n = window.__now ? window.__now() : new Date(), cur;
-      try { cur = n.toLocaleDateString(loc, { weekday: "long", year: "numeric", month: "long", day: "numeric" }); } catch (e) { cur = n.toDateString(); }
-      var w = window.loft ? window.loft.weddings.join(" · ") : "";
-      return (w ? w + " — " : "") + "loft: " + cur;
-    }
-    var mm = /^\s*(\d{4})-(\d{1,2})-(\d{1,2})\s*$/.exec(String(str));
-    if (!mm) return "date(\"YYYY-MM-DD\") — time-travel the loft to a day; date() prints the weddings + the loft's day";
-    var y = +mm[1], mo = +mm[2] - 1, d = +mm[3], dt = new Date(y, mo, d, 12);
-    if (isNaN(dt.getTime()) || dt.getMonth() !== mo || dt.getDate() !== d) return "not a real date — try date(\"2027-05-01\").";
-    jumpToDate(y, mo, d); calView = { y: y, m: mo }; calRerenderOpen();
-    var out; try { out = dt.toLocaleDateString(loc, { weekday: "long", year: "numeric", month: "long", day: "numeric" }); } catch (e) { out = dt.toDateString(); }
-    return "🕰️ " + out;
+  // date() → the loft's day as {year, month (1–12), day}; date(y,m,d) OR date("YYYY-MM-DD") → time-travel there.
+  window.date = function (a, mo, d) {
+    var n = window.__now ? window.__now() : new Date();
+    if (arguments.length === 0) return { year: n.getFullYear(), month: n.getMonth() + 1, day: n.getDate() };
+    var y, m0, dd;
+    if (typeof a === "string") {
+      var mm = /^\s*(\d{4})-(\d{1,2})-(\d{1,2})\s*$/.exec(a);
+      if (!mm) return "date(\"YYYY-MM-DD\") or date(year,month,day) — set the loft's day; date() returns {year,month,day}";
+      y = +mm[1]; m0 = +mm[2] - 1; dd = +mm[3];
+    } else if (typeof a === "number" && arguments.length >= 3) {
+      y = a; m0 = mo - 1; dd = d; // month is 1-indexed for the caller
+    } else return "date(\"YYYY-MM-DD\") or date(year,month,day) — set the loft's day; date() returns {year,month,day}";
+    var dt = new Date(y, m0, dd, 12);
+    if (isNaN(dt.getTime()) || dt.getMonth() !== m0 || dt.getDate() !== dd) return "not a real date — try date(2027,5,1) or date(\"2027-05-01\").";
+    jumpToDate(y, m0, dd); calView = { y: y, m: m0 }; calRerenderOpen();
+    return { year: y, month: m0 + 1, day: dd };
   };
   // the on-screen current-date pill: an unobtrusive viewport-corner readout of the loft's day
   // (window.__now — reflects any jump); a click raises the pocket calendar over the current room
@@ -69707,8 +69709,7 @@ function spawnDustMote(container) {
         em.textContent = p.name;
         li.appendChild(em);
         li.appendChild(document.createTextNode(p.role ? " · " + p.role : ""));
-        if (p.rel) li.insertAdjacentHTML("beforeend", p.rel); // relationship on its own italic .tip-rel line (HTML, may carry <em>)
-        if (p.fun) li.insertAdjacentHTML("beforeend", p.fun); // fun-fact on its own dim .tip-fun line (may carry <em>, so HTML not text)
+        // roster stays short: just name · role (the relationship + fun-fact live on the click who-pop, not here)
         if (p.sels) { // clickable → single this guest out on the floor
           li.className = "roster-pick";
           li.setAttribute("role", "button");
@@ -70167,7 +70168,31 @@ function spawnDustMote(container) {
     catch (e) { when = d.toDateString(); }
     return face + " " + p2(d.getHours()) + ":" + p2(d.getMinutes()) + " · " + when;
   };
-  window.time = window.clock; // alias — clock() or time(), whichever comes to mind
+  // time() → the loft's time as {hours, minutes}; time(h,m) OR time("HH:MM") → set it (?time= override). clock() prints the readable real time.
+  window.time = function (a, m) {
+    var mins = window.__loftMinsNow ? window.__loftMinsNow() : (function () { var d = new Date(); return d.getHours() * 60 + d.getMinutes(); })();
+    mins = Math.floor(((mins % 1440) + 1440) % 1440);
+    if (arguments.length === 0) return { hours: Math.floor(mins / 60), minutes: mins % 60 };
+    var h, mm;
+    if (typeof a === "string") {
+      var t = /^\s*(\d{1,2}):(\d{1,2})\s*$/.exec(a);
+      if (!t) return "time(\"HH:MM\") or time(hours,minutes) — set the loft's time; time() returns {hours,minutes}";
+      h = +t[1]; mm = +t[2];
+    } else if (typeof a === "number") {
+      h = a; mm = (arguments.length >= 2 && typeof m === "number") ? m : 0;
+    } else return "time(\"HH:MM\") or time(hours,minutes) — set the loft's time; time() returns {hours,minutes}";
+    h = Math.max(0, Math.min(23, h | 0)); mm = Math.max(0, Math.min(59, mm | 0));
+    if (window.__setLoftTime) window.__setLoftTime(h * 60 + mm);
+    return { hours: h, minutes: mm };
+  };
+  // timestamp() → the fully-resolved current loft moment {year,month,day,hours,minutes,iso}
+  window.timestamp = function () {
+    var n = window.__now ? window.__now() : new Date();
+    var mins = window.__loftMinsNow ? Math.floor(((window.__loftMinsNow() % 1440) + 1440) % 1440) : (n.getHours() * 60 + n.getMinutes());
+    var h = Math.floor(mins / 60), mm = mins % 60, p2 = function (x) { return (x < 10 ? "0" : "") + x; };
+    return { year: n.getFullYear(), month: n.getMonth() + 1, day: n.getDate(), hours: h, minutes: mm,
+      iso: n.getFullYear() + "-" + p2(n.getMonth() + 1) + "-" + p2(n.getDate()) + " " + p2(h) + ":" + p2(mm) };
+  };
 
   // switch the projector to the night-sky piano channel, optionally choosing a specific piece
   window.piano = function (piece) {

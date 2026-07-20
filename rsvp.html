@@ -48268,7 +48268,11 @@ async def localfont(name):
         return;
       }
       if (act === "bbq") { // behdad: pan to the balcony, light the smoker, and summon Hamid the grillmaster to tend it (during the party)
-        if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
+        // The May-2 cookout is a DAYTIME balcony affair with the party deliberately off, so tapping
+        // this text there must not spin the loft up into a night party. __balconyBBQOn is set only
+        // by the BBQ-day setup, and the night-party drip that sends this text has the party lit
+        // already — so the ignition below stays reachable exactly where it was meant to be.
+        if (!window.__gardenPartyOn && !window.__balconyBBQOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
         if (window.goToStage) window.goToStage("balcony");
         setTimeout(function () {
           if (window.__startBBQ) window.__startBBQ();
@@ -70407,6 +70411,10 @@ function spawnDustMote(container) {
       if (window.goToStage) window.goToStage("balcony");
       setTimeout(function () {
         if (occKey() !== "bbq" || gated()) return;
+        // The cookout is the whole happening: wind down a party still running from the wedding the
+        // night before (or one lit by hand) so May 2 is the deck alone. We're on the balcony by now,
+        // so this is the instant teardown, not the garden walk-out.
+        if (window.party && window.party()) window.party(false);
         if (window.__setDayNight) window.__setDayNight(false);              // a daytime cookout, not the wedding night
         if (window.__startBBQ) window.__startBBQ();                         // lid up + fire on
         if (window.__setBalconyBBQCrowd) window.__setBalconyBBQCrowd(true); // the deck crowd out — party OFF
@@ -70432,6 +70440,7 @@ function spawnDustMote(container) {
         // + banner down (the rest rides the standard day/season/reset path), and drop the latch so
         // the new occasion is (re)applied below.
         if (lastKey === "bbq" && window.__setBalconyBBQCrowd) window.__setBalconyBBQCrowd(false);
+        if (lastKey === "bbq" && window.resetSmoker) window.resetSmoker(); // ...and the cookout's grill goes cold, so Hamid isn't still tending it the next day
         clearOccasionBanner();
         lastKey = null;
       }

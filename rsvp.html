@@ -5654,7 +5654,15 @@ body.bd-baka .bd-crown-baka{opacity:1; visibility:visible}
 #loft-game-strip.meal-martin #cuddly-meal-martin,
 #loft-game-strip.meal-yalda #cuddly-meal-yalda,
 #loft-game-strip.meal-xmas #cuddly-meal-xmas{display:inline}
-/* the Divan is the one thing on the table that takes a tap (a fāl), so it opts back in to the
+/* The dishes take a tap (the day's article); the SLAB under them must not, so the opt-in rides
+   the setting rather than #cuddly-table — SVG hit-tests per shape, so only the food itself
+   catches a click and the daybed, blankets and leg eggs behind the table stay clickable.
+   The nudge rocks the whole setting, the Divan on it included, the way a real table would. */
+#cuddly-table-setting{pointer-events:auto; cursor:pointer; transform-box:fill-box; transform-origin:50% 100%}
+#cuddly-table-setting.jostled{animation:cuddly-meal-jostle .5s ease-in-out}
+@keyframes cuddly-meal-jostle{0%,100%{transform:rotate(0)}25%{transform:rotate(-1.5deg)}60%{transform:rotate(1.1deg)}}
+@media (prefers-reduced-motion: reduce){#cuddly-table-setting.jostled{animation:none}}
+/* the Divan is the one thing on the table that takes a tap of its OWN (a fāl), so it opts back in to the
    pointer events the table wrapper turns off for the furniture */
 #cuddly-yalda-hafez{pointer-events:auto; cursor:pointer}
 #cuddly-yalda-hafez-book{transform-box:fill-box; transform-origin:50% 100%}
@@ -23428,6 +23436,15 @@ var T = {
     tip_chaharshanbe: "<em>Chaharshanbe Suri</em> (<bdi>چهارشنبه‌سوری</bdi>), the fire you leap",
     tip_sizdah: "<em>Sizdah Bedar</em> (<bdi>سیزده‌بدر</bdi>), nowruz's thirteenth day, spent outdoors",
     tip_fal: "the <em>Divan</em> of Hafez (<bdi>دیوان حافظ</bdi>) — open it for a <em>fāl</em>",
+    // One line per dinner on the low table, each naming the day and then what is actually drawn on
+    // it. These are hover tooltips, so they go through innerHTML and <em> renders — unlike the
+    // season names (textContent), the calendar's title attribute or the share card's canvas text,
+    // where the same markup would come out as literal characters. <bdi> wraps ONLY the Persian.
+    tip_meal_nowruz: "<em>sabzi polo ba mahi</em> (<bdi>سبزی‌پلو با ماهی</bdi>), herb rice and fish for the new year",
+    tip_meal_stedry: "<em>Štědrý večer</em> — fried carp and potato salad",
+    tip_meal_xmas: "Christmas dinner — a roast bird and cranberry, and not a fish in sight",
+    tip_meal_martin: "<em>svatý Martin</em> — goose, red cabbage, dumplings, and that year's <em>svatomartinské víno</em>",
+    tip_meal_yalda: "<em>Shab-e Yalda</em> (<bdi>شب یلدا</bdi>) — watermelon, pomegranate and <em>ajil</em> for the longest night",
     // The knot is the reason this day is on a wedding site at all, and the visual can't say it:
     // one line on the tie, then never again. The second sentence is the whole joke — leave it dry.
     sizdah_wish: "Knotting the sabzeh is a wish for a wedding. It worked.",
@@ -24222,6 +24239,11 @@ var T = {
     tip_chaharshanbe: "<em>Čaháršanbe surí</em> (<bdi>چهارشنبه‌سوری</bdi>), oheň, který se přeskakuje",
     tip_sizdah: "<em>Sizdah Bedar</em> (<bdi>سیزده‌بدر</bdi>), třináctý den nourúzu, strávený v přírodě",
     tip_fal: "<em>Díván</em> Háfizův (<bdi>دیوان حافظ</bdi>) — otevři jej pro <em>fál</em>",
+    tip_meal_nowruz: "<em>sabzi polo ba mahi</em> (<bdi>سبزی‌پلو با ماهی</bdi>), bylinková rýže s rybou na nový rok",
+    tip_meal_stedry: "<em>Štědrý večer</em> — smažený kapr a bramborový salát",
+    tip_meal_xmas: "Vánoční oběd — pečený krocan a brusinky, ani jedna ryba",
+    tip_meal_martin: "<em>svatý Martin</em> — husa, červené zelí, karlovarský knedlík a letošní <em>svatomartinské víno</em>",
+    tip_meal_yalda: "<em>Šab-e jalda</em> (<bdi>شب یلدا</bdi>) — meloun, granátové jablko a <em>ajil</em> na nejdelší noc",
     sizdah_wish: "Zauzlovat sabzeh znamená přát si svatbu. Zabralo to.",
     fal_intro: "Otevřeš Díván namátkou. Háfiz odpovídá:",
     fal_lines: [
@@ -52076,6 +52098,64 @@ async def localfont(name):
   // The day is over (or the preview moved on): untie, so the next Apr 1 is a fresh wish.
   window.__untieSabzeh = function () { knot.classList.remove("tied"); };
 })();
+// The low table's dinner, and what day it belongs to. Five meals ride this one setting and each
+// is a feast most guests have never heard of, so it takes the same gesture the fire and the
+// haft-sin cloth do: a single click nudges the table, a double click opens the day's article in
+// the pocket phone. Read at click time, never wired once, so both a language switch and a date
+// change land. The Divan sitting on the same table stops both events itself — its own dblclick
+// goes to Hafez, which is the more specific answer than "Yalda".
+(function () {
+  var setting = document.getElementById("cuddly-table-setting");
+  if (!setting) return;
+  var MEAL_KEYS = ["nowruz", "stedry", "xmas", "martin", "yalda"];
+  // Czech titles come from Wikipedia's own langlinks, not from our transliteration.
+  var MEAL_WIKI = {
+    en: {
+      nowruz: "https://en.m.wikipedia.org/wiki/Nowruz",
+      stedry: "https://en.m.wikipedia.org/wiki/Christmas_Eve",
+      xmas: "https://en.m.wikipedia.org/wiki/Christmas",
+      martin: "https://en.m.wikipedia.org/wiki/St._Martin's_Day",
+      yalda: "https://en.m.wikipedia.org/wiki/Yalda_Night"
+    },
+    cs: {
+      nowruz: "https://cs.m.wikipedia.org/wiki/Nourúz",
+      stedry: "https://cs.m.wikipedia.org/wiki/Štědrý_den",
+      xmas: "https://cs.m.wikipedia.org/wiki/Vánoce",
+      martin: "https://cs.m.wikipedia.org/wiki/Oslavy_svátku_svatého_Martina_v_Evropě",
+      yalda: "https://cs.m.wikipedia.org/wiki/Jaldá"
+    }
+  };
+  function curLang() { return document.documentElement.lang === "cs" ? "cs" : "en"; }
+  function curMeal() { // which dinner is laid — the strip's own meal- class, so it can't disagree with the dishes on screen
+    var strip = document.getElementById("loft-game-strip");
+    if (!strip) return null;
+    for (var i = 0; i < MEAL_KEYS.length; i += 1) if (strip.classList.contains("meal-" + MEAL_KEYS[i])) return MEAL_KEYS[i];
+    return null;
+  }
+  // Names the dinner on hover, the way the haft-sin cloth names the spread — resolved per hover, so
+  // it follows both the day and the language. Off a meal day the table is visibility:hidden and
+  // takes no pointer events at all, so there is nothing to hover.
+  hoverTooltip(setting, function () { var m = curMeal(); return m ? tipText("tip_meal_" + m) : ""; }, "top");
+  var MEAL_DBL_MS = 280, jostleTimer = null;
+  setting.addEventListener("animationend", function (e) { if (e.animationName === "cuddly-meal-jostle") setting.classList.remove("jostled"); });
+  setting.addEventListener("click", function (e) {
+    e.stopPropagation();
+    playGlassClinkSound(1, "cuddly-table"); // answers instantly, so the tap never reads dead while the double-click window runs
+    clearTimeout(jostleTimer);
+    jostleTimer = setTimeout(function () {
+      jostleTimer = null;
+      setting.classList.remove("jostled"); // a re-tap mid-rock restarts it rather than being swallowed
+      requestAnimationFrame(function () { requestAnimationFrame(function () { setting.classList.add("jostled"); }); });
+    }, MEAL_DBL_MS);
+  });
+  setting.addEventListener("dblclick", function (e) {
+    e.stopPropagation();
+    clearTimeout(jostleTimer); jostleTimer = null; // the nudge was never what this click wanted
+    var meal = curMeal();
+    var url = meal && MEAL_WIKI[curLang()][meal];
+    if (url && window.__showUrlInPhone) window.__showUrlInPhone(url);
+  });
+})();
 // فال حافظ — the Yalda-night custom: you open the Divan at random, and the couplet your thumb
 // lands on is the answer. The Persian originals are the source text (not translated copy), so
 // they live here; T.fal_lines carries the EN/CS renderings, index-aligned. The draw avoids
@@ -52114,9 +52194,29 @@ async def localfont(name):
     if (anchor) eggBubble(anchor, falHtml(i), "top");
     return i;
   }
+  // Czech Wikipedia has no article on the Divan itself (checked via langlinks), so CS readers get
+  // Hafez the poet — the nearest thing it has. Both events stop here: the Divan sits inside
+  // #cuddly-table-setting, whose own handlers would otherwise nudge the table under it and answer
+  // a double click with the day's article instead of this more specific one.
+  var HAFEZ_WIKI = {
+    en: "https://en.m.wikipedia.org/wiki/The_Divân_of_Hafez",
+    cs: "https://cs.m.wikipedia.org/wiki/Chvádže_Šamsuddín_Muhammad_Háfiz"
+  };
   if (hafez) {
     hoverTooltip(hafez, function () { return tipText("tip_fal"); }, "top");
-    hafez.addEventListener("click", function (e) { e.stopPropagation(); consult(hafez); });
+    // The fāl waits out the double-click window the way the fire's summon does, so looking Hafez
+    // up doesn't also drop a couplet bubble over the phone.
+    var FAL_DBL_MS = 280, falTimer = null;
+    hafez.addEventListener("click", function (e) {
+      e.stopPropagation();
+      clearTimeout(falTimer);
+      falTimer = setTimeout(function () { falTimer = null; consult(hafez); }, FAL_DBL_MS);
+    });
+    hafez.addEventListener("dblclick", function (e) {
+      e.stopPropagation();
+      clearTimeout(falTimer); falTimer = null; // the fāl was never what this click wanted
+      if (window.__showUrlInPhone) window.__showUrlInPhone(HAFEZ_WIKI[document.documentElement.lang === "cs" ? "cs" : "en"]);
+    });
   }
   // fal() — take a fāl from the console, wherever you are and whatever the date. On Yalda in the
   // nook the Divan itself flips; otherwise the couplet just prints.
@@ -67641,12 +67741,14 @@ function spawnDustMote(container) {
   // still dresses the day's real decor around the hat (Dec 7 lands Irene's cone on the
   // holiday tree, both at once, which is the honest answer).
   // ── Persian (Solar Hijri) occasion dates, computed LIVE and ASTRONOMICALLY from the Gregorian year ──
-  // The official Iranian calendar is observational, not arithmetic: Farvardin 1 (Nowruz) is the day the
-  // northward (March) equinox is reckoned to fall on at Iran's reference meridian (52.5°E, i.e. Iran
-  // Standard Time = a fixed UTC+3:30 — Iran abolished DST in 2022). We take the day, in Iran Standard
-  // Time, on which the astronomical equinox instant lands; this reproduces the official/observed date
-  // (e.g. Nowruz 2027 = March 20, which the 33-year jalaali-js arithmetic wrongly rounded to March 21
-  // — the equinox is 2027-03-20 20:24 UTC = 23:54 Iran time, so it is observed on March 20 in Iran).
+  // The official Iranian calendar is observational, not arithmetic: Farvardin 1 (Nowruz) is fixed by
+  // the northward (March) equinox at Iran's reference meridian (52.5°E, i.e. Iran Standard Time = a
+  // fixed UTC+3:30 — Iran abolished DST in 2022), under the TRUE-NOON rule. The equinox day is Nowruz
+  // when the instant falls at or before true (apparent) solar noon there; past it, the NEXT day is.
+  // True noon, not 12:00 on the clock: the equation of time swings a sundial ±15 min off mean time,
+  // and in March it runs ~7½ min slow, so true noon at 52.5°E is around 12:07:30 Iran time. That
+  // margin decides real years — the 2027 equinox is 2027-03-20 20:24 UTC = 23:54 Iran time, hours
+  // past true noon, so Nowruz 2027 is Sunday March 21 (and Sizdah Bedar Friday April 2).
   // Sizdah Bedar is the 13th day of the year (Nowruz + 12); Chaharshanbe Suri is the eve (Tuesday
   // night) of the last Wednesday before Nowruz. All three drift year to year, so every date test
   // derives them from the year in play rather than a fixed Mar/Apr day. The equinox instant comes from
@@ -67693,9 +67795,36 @@ function spawnDustMote(container) {
   }
   window.__yaldaOf = yaldaOf;
   function isYalda(m, d, y) { return pSameDay(yaldaOf(y), m, d); }
-  function nowruzOf(gYear) { // Farvardin 1: the Iran-Standard-Time (UTC+3:30) day the March equinox lands on
-    var iran = new Date(marchEquinoxDate(gYear).getTime() + 3.5 * 3600000);
-    return new Date(iran.getUTCFullYear(), iran.getUTCMonth(), iran.getUTCDate(), 12);
+  // The equation of time (apparent minus mean solar time, in minutes) at a UTC instant — Meeus ch. 25
+  // low-accuracy solar position feeding the ch. 28 formula. Only Nowruz needs it, but it is what makes
+  // "true noon" true: without it the rule is drawn ~7½ min early in March and the day comes out wrong
+  // whenever the equinox lands inside that gap.
+  function equationOfTime(ms) {
+    var D2R = Math.PI / 180;
+    var T = (ms / 86400000 + 2440587.5 - 2451545.0) / 36525;
+    var L0 = 280.46646 + 36000.76983 * T + 0.0003032 * T * T;      // geometric mean longitude
+    var M = (357.52911 + 35999.05029 * T - 0.0001537 * T * T) * D2R; // mean anomaly
+    var C = (1.914602 - 0.004817 * T - 0.000014 * T * T) * Math.sin(M)
+          + (0.019993 - 0.000101 * T) * Math.sin(2 * M) + 0.000289 * Math.sin(3 * M); // equation of the centre
+    var Om = (125.04 - 1934.136 * T) * D2R;
+    var lam = (L0 + C - 0.00569 - 0.00478 * Math.sin(Om)) * D2R;   // apparent longitude
+    var e0 = 23 + (26 + (21.448 - 46.8150 * T - 0.00059 * T * T + 0.001813 * T * T * T) / 60) / 60;
+    var eps = (e0 + 0.00256 * Math.cos(Om)) * D2R;
+    var ra = Math.atan2(Math.cos(eps) * Math.sin(lam), Math.cos(lam)) / D2R; // apparent right ascension
+    var E = L0 - 0.0057183 - ra - 0.00478 * Math.sin(Om) * Math.cos(eps);
+    return (((E + 180) % 360 + 360) % 360 - 180) * 4; // folded to ±180°, degrees → minutes of time
+  }
+  var IRAN_MERIDIAN_MS = 52.5 / 15 * 3600000; // 52.5°E as an hour angle: Iran Standard Time's own meridian
+  function iranTrueNoon(y, mo, da) { // UTC instant of true solar noon at 52.5°E on that Iran-local day
+    var meanNoon = Date.UTC(y, mo, da, 12) - IRAN_MERIDIAN_MS;
+    return meanNoon - equationOfTime(meanNoon) * 60000;
+  }
+  function nowruzOf(gYear) { // Farvardin 1: the equinox day at 52.5°E, or the next if it falls past true noon
+    var eq = marchEquinoxDate(gYear);
+    var iran = new Date(eq.getTime() + 3.5 * 3600000);
+    var y = iran.getUTCFullYear(), mo = iran.getUTCMonth(), da = iran.getUTCDate();
+    if (eq.getTime() > iranTrueNoon(y, mo, da)) da += 1; // Date rolls the month/year for us
+    return new Date(y, mo, da, 12);
   }
   window.__nowruzOf = nowruzOf;
   var _persianCache = {};

@@ -7038,6 +7038,10 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
    #stage-balcony; the shared rAF loop (gardenAurora) drives both curtain groups. The
    .aurora-force / .aurora-hide test overrides ride on #stage-balcony too. Balcony/garden
    share their day/night + storm state, so both light up (and both hide in a storm) together. */
+#balcony-twilight{opacity:0; transition:opacity 1.4s ease; mix-blend-mode:screen}
+#stage-balcony.twilight #balcony-twilight{opacity:0.85}
+#stage-balcony.storming #balcony-twilight{opacity:0; transition:opacity .8s ease}
+@media (prefers-reduced-motion: reduce){#balcony-twilight{transition:none}}
 #balcony-aurora{opacity:0; transition:opacity 1.2s ease; mix-blend-mode:screen}
 #stage-balcony.dusk #balcony-aurora{opacity:0.9}
 #stage-balcony.dusk.storming #balcony-aurora{opacity:0; transition:opacity .8s ease}
@@ -20644,6 +20648,21 @@ section{margin:1.9rem 0}
      different window than the garden. The shared loop runs ONLY while EITHER aurora is shown
      (its room ∧ dusk ∧ ¬storm ∧ ¬trip) and the tab is visible+focused; reduced motion: one
      still frame. -->
+<!-- Twilight wash: a soft warm-to-purple gradient over the open sky, faded in by the auto
+     day/night clock during the ~40-min windows around Edmonton's sunrise & sunset (the
+     .twilight class on #stage-balcony). Screen-blended so it warms the day sky and glows
+     over the night one; purely a class-toggled tint (no timers/particles). -->
+<g id="balcony-twilight" clip-path="url(#balcony-sky-clip)" pointer-events="none" aria-hidden="true">
+<defs>
+<linearGradient id="balcony-twilight-grad" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#3a2b6b" stop-opacity="0.12"/>
+<stop offset="0.46" stop-color="#8a5aa8" stop-opacity="0.46"/>
+<stop offset="0.78" stop-color="#e08a5a" stop-opacity="0.66"/>
+<stop offset="1" stop-color="#ffce8f" stop-opacity="0.82"/>
+</linearGradient>
+</defs>
+<rect x="418" y="0" width="180" height="118" fill="url(#balcony-twilight-grad)"/>
+</g>
 <g id="balcony-aurora" clip-path="url(#balcony-sky-clip)" pointer-events="none" aria-hidden="true">
 <defs>
 <!-- vertical falloff per curtain: bright green at the base, fading up through teal to a faint
@@ -46953,7 +46972,7 @@ async def localfont(name):
   var stageBalcony = document.getElementById("stage-balcony");
   if (duskSun && stageBalcony) {
     // clicking the sun flips the balcony to evening and lights the lamps
-    function toggleDusk() {
+    function toggleDusk(silent) {
       var dusk = stageBalcony.classList.toggle("dusk");
       ["stage-garden", "stage-kitchen", "stage-cuddly", "stage-office"].forEach(function (id) {
         var st = document.getElementById(id);
@@ -46966,9 +46985,10 @@ async def localfont(name):
       if (window.__updateGrowlightForNight) window.__updateGrowlightForNight(); // grow light off at night
       if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(); // birds quiet down at dusk
       if (window.startOfficeCrane) window.startOfficeCrane(); // construction resumes in daylight (no-op at night / off-office)
-      // warm rise into dawn, gentle settle into dusk — but autoDayNight also flips dusk in a
-      // visible-but-UNFOCUSED window (covered on X11), so skip the one-shot there (crickets/crane rule)
-      if (document.hasFocus()) playDayNightChime(dusk, "balcony-sun");
+      // warm rise into dawn, gentle settle into dusk — a chime marks a deliberate flip. An
+      // autonomous auto-clock flip passes silent (no unprompted chime), and the crickets/crane
+      // rule skips it in a visible-but-UNFOCUSED window (covered on X11) too.
+      if (!silent && document.hasFocus()) playDayNightChime(dusk, "balcony-sun");
       var wallLampEl = document.getElementById("balcony-walllamp");
       if (dusk) {
         if (window.__rollPrecip) window.__rollPrecip(); // one toss per nightfall: this night is snow OR rain, never both
@@ -46989,7 +47009,7 @@ async def localfont(name):
       else if (window.__updateGardenAurora) window.__updateGardenAurora();
       if (window.__actPing) window.__actPing("daynight"); // second act: nightfall settles B0, daybreak settles W2
     }
-    window.__autoToggleDusk = toggleDusk;
+    window.__autoToggleDusk = toggleDusk; // the garden light switch flips day/night through this (then stops the auto cycle itself)
     // force day/night to a target state (the garden party lights up the night; its light
     // switch brings the day back). a no-op when already there.
     window.__setDayNight = function (wantNight) {
@@ -47018,7 +47038,7 @@ async def localfont(name):
     });
     window.resetBalconyDusk = function () {
       if (window.__clearBalconyEclipse) window.__clearBalconyEclipse(); // cancel any in-flight eclipse + its self-clear timer
-      stageBalcony.classList.remove("dusk");
+      stageBalcony.classList.remove("dusk", "twilight");
       ["stage-garden", "stage-kitchen", "stage-cuddly", "stage-office"].forEach(function (id) {
         var st = document.getElementById(id);
         if (st) st.classList.remove("dusk");
@@ -47034,6 +47054,55 @@ async def localfont(name):
       if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // day forced back → retract any disco-ball peek
       if (window.__updateGardenAurora) window.__updateGardenAurora(); // day forced back → aurora off
     };
+    // ── AUTOMATIC day/night: the loft's DEFAULT sky follows Edmonton's real clock ─────────
+    // Before Edmonton's sunrise or after its sunset → night; daytime → day, with a ~40-min
+    // warm/purple twilight wash over the balcony sky around each crossing. This is ONLY the
+    // default: it steps aside exactly like the real-weather default (a season/birthday
+    // preview, a ?date= jump, a drug trip, or the attract kiosk — read live), yields to the
+    // garden party's forced night, and a manual flip (the sun, the 'd' key, the D-pad)
+    // latches it off until a reset. Gated visible+focused (the crickets rule: an autonomous
+    // timer that flips the scene) so a backgrounded/blurred tab never flips on its own — which
+    // also keeps every headless test on the untouched daytime baseline.
+    var autoStopped = false, autoTimer = null;
+    var TWI_MIN = 40; // half-width of each dawn/dusk twilight window, minutes
+    function edmMinutes() {
+      if (typeof window.__edmNowMins === "function") return window.__edmNowMins(); // test hook: fake the clock
+      try {
+        var d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Edmonton" }));
+        return d.getHours() * 60 + d.getMinutes();
+      } catch (e) { var n = new Date(); return n.getHours() * 60 + n.getMinutes(); }
+    }
+    function sunTimes() {
+      var s = window.__edmSun; // {sr,ss} in Edmonton local minutes-of-day once the feed lands
+      return {
+        sr: (s && typeof s.sr === "number") ? s.sr : 7 * 60,  // offline fallback: dawn 07:00
+        ss: (s && typeof s.ss === "number") ? s.ss : 20 * 60  // offline fallback: dusk 20:00
+      };
+    }
+    // mirrors the weather feed's realWxOverridden(): the auto default stands aside while any
+    // deliberate time/scene override is held (season/birthday preview, ?date=, trip, kiosk)
+    function autoOverridden() {
+      if (window.__tripActive) return true;
+      if (window.__autoplayOn && window.__autoplayOn()) return true;
+      if (window.__previewActive && window.__previewActive()) return true;
+      try { if (/(?:^|[#&?])date=\d{4}-\d{2}-\d{2}/.test((location.search || "") + (location.hash || ""))) return true; } catch (e) {}
+      return false;
+    }
+    function applyAutoDayNight() {
+      if (document.hidden || !document.hasFocus()) return; // crickets rule + never in a headless/backgrounded tab
+      if (autoStopped || window.__gardenPartyOn || autoOverridden()) { stageBalcony.classList.remove("twilight"); return; }
+      var t = sunTimes(), now = edmMinutes();
+      var wantNight = now < t.sr || now >= t.ss;
+      if (stageBalcony.classList.contains("dusk") !== wantNight) toggleDusk(true); // silent: an unprompted flip shouldn't chime
+      stageBalcony.classList.toggle("twilight", Math.min(Math.abs(now - t.sr), Math.abs(now - t.ss)) <= TWI_MIN);
+    }
+    window.__applyAutoDayNight = applyAutoDayNight; // the weather fetch re-applies once real sunrise/sunset land; also a test hook
+    window.__stopAutoDayNight = function () { autoStopped = true; clearTimeout(autoTimer); stageBalcony.classList.remove("twilight"); };
+    window.__startAutoDayNight = function () { autoStopped = false; applyAutoDayNight(); };
+    function autoTick() { applyAutoDayNight(); autoTimer = setTimeout(autoTick, 180000); } // slow self-reschedule (~3 min) catches the dawn/dusk crossing; > every test's virtual-time budget
+    autoTimer = setTimeout(autoTick, 1500); // first pass after the rest of the loft's IIFEs register their __update hooks
+    document.addEventListener("visibilitychange", applyAutoDayNight);
+    window.addEventListener("focus", applyAutoDayNight);
     // click the night sky (not the moon) to wish on a shooting star; by day on Canada Day the
     // same rect calls in the Hornets instead — the two are dusk-exclusive, so neither shadows
     // the other, and off-season the daytime sky stays inert
@@ -47699,6 +47768,7 @@ async def localfont(name):
   window.__realWxPrague = null; // {code} for Prague, same lifecycle as __realWx
   window.__realPragueC = null; // real Prague temperature, or null
   window.__realDaily = null; // [{time,code,max,min} per city, request order]; daily[0] = each city's local today
+  window.__edmSun = null; // {sr,ss}: Edmonton's today sunrise/sunset in local minutes-of-day, once the daily feed lands (drives the auto day/night default)
   window.__realWxMode = null; // Edmonton's mapped current look: "clear"|"overcast"|"rain"|"storm"|"snow", null until a fetch lands
   window.__realWxRainy = function () {
     // WMO: 51-67 drizzle/rain (incl. freezing), 80-82 showers, 95+ thunderstorm
@@ -47819,7 +47889,7 @@ async def localfont(name):
   function fetchWx() {
     try {
       if (!window.fetch) return;
-      window.fetch("https://api.open-meteo.com/v1/forecast?latitude=53.5461,50.0755&longitude=-113.4937,14.4378&current=weather_code,temperature_2m&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=4&timezone=auto")
+      window.fetch("https://api.open-meteo.com/v1/forecast?latitude=53.5461,50.0755&longitude=-113.4937,14.4378&current=weather_code,temperature_2m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&forecast_days=4&timezone=auto")
         .then(function (r) { return r && r.ok ? r.json() : null; })
         .then(function (j) {
           // comma-listed coords -> an array of per-city results, request order
@@ -47838,6 +47908,17 @@ async def localfont(name):
           }
           var de = j && dailyOf(j[0]), dp = j && dailyOf(j[1]);
           if (de || dp) window.__realDaily = [de, dp];
+          // Edmonton's today sunrise/sunset (timezone=auto → local ISO like "…T05:47"), kept as
+          // minutes-of-day for the auto day/night default; re-apply it the moment it lands.
+          function sunOf(o) {
+            var d = o && o.daily;
+            if (!d || !d.sunrise || !d.sunset) return null;
+            function mins(s) { var m = /T(\d{2}):(\d{2})/.exec(s || ""); return m ? (+m[1] * 60 + +m[2]) : null; }
+            var sr = mins(d.sunrise[0]), ss = mins(d.sunset[0]);
+            return (sr != null && ss != null) ? { sr: sr, ss: ss } : null;
+          }
+          var es = j && sunOf(j[0]);
+          if (es) { window.__edmSun = es; if (window.__applyAutoDayNight) window.__applyAutoDayNight(); }
           applyCurrent();
         })
         .catch(function () {});
@@ -62145,22 +62226,6 @@ function spawnDustMote(container) {
     }
     setTimeout(tick, 1500 + Math.random() * 1600);
   })();
-  // Auto day/night: night after ~1 min of day, then flip every ~2 min — but
-  // only while the balcony's on-screen, and a manual sun/moon click stops it.
-  (function autoDayNight() {
-    var timer = null, stopped = false;
-    function tick() {
-      if (stopped) return;
-      if (stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden" && window.__autoToggleDusk) {
-        window.__autoToggleDusk();
-        timer = setTimeout(tick, 120000);
-      } else {
-        timer = setTimeout(tick, 6000); // wait until the balcony is being watched, then flip
-      }
-    }
-    window.__stopAutoDayNight = function () { stopped = true; clearTimeout(timer); };
-    timer = setTimeout(tick, 60000);
-  })();
   // Leave the balcony door open with the smoker going and the smoke seeps into
   // the cuddly nook — the couple coughs (only felt while you're in that room).
   (function scheduleSmokeIntrusion() {
@@ -63693,6 +63758,7 @@ function spawnDustMote(container) {
     if (window.__cuddlyProjector && window.__cuddlyProjector.channel() !== "fire") window.__cuddlyProjector.set("fire");
     window.__musicPaused = false; // clear any spacebar pause state
     maxUnlocked = 0;
+    if (window.__startAutoDayNight) window.__startAutoDayNight(); // a fresh game resumes the real-time day/night default (the cinematic re-freezes right after)
     goToStage("kitchen");
     if (window.__showHuntIntro) window.__showHuntIntro(); // a fresh reset re-opens on the blinking intro prompt (matches load)
   }
@@ -65387,8 +65453,8 @@ function spawnDustMote(container) {
     stopHintBlink(); // the show owns the caption — end any attract-blink first (Watch is off-strip)
     if (watchBtn) { watchBtn.classList.remove("nudge"); watchBtn.hidden = true; }
     if (skipBtn) skipBtn.hidden = false;
-    if (window.__stopAutoDayNight) window.__stopAutoDayNight(); // freeze the background sky
     resetHunt(); // clean slate: day, kitchen, re-armed balcony finale (deterministic dusk flip later)
+    if (window.__stopAutoDayNight) window.__stopAutoDayNight(); // freeze the background sky (after resetHunt, which would otherwise re-arm the auto clock)
     primeCinematicAudio(); // unlock the song inside this gesture so the later garden beat can play it
 
     // The show is NOT stopped by stray input — only the explicit skip/take-over

@@ -100,6 +100,11 @@ var RESET_DIFF_ALLOW = [
   "#stage-kitchen -storming",
   "#stage-office +storming",
   "#stage-office -storming",
+  // Same real-weather feed, plain-overcast look: a grey Edmonton day dims the sky via
+  // .climate-overcast on the strip (no rain). Same lifecycle as .storming above — it can
+  // land between snapshot and diff and a reset must not clear the real sky.
+  "#loft-game-strip +climate-overcast",
+  "#loft-game-strip -climate-overcast",
   // Known reset gap: __updateGrowlightForNight() turns the grow light off at
   // dusk, but resetHunt()/resetBalconyDusk() clears dusk without re-running it,
   // so a reset from nighttime leaves the grow light dark in daytime. Self-heals
@@ -384,6 +389,12 @@ var PROBE_HARNESS = [
   "  function nearestId(n) { while (n && n.nodeType === 1) { if (n.id) return n.id; n = n.parentNode; } return '?'; }",
   "  async function run() {",
   "    var strip = document.getElementById('loft-game-strip');",
+  // The auto day/night default follows Edmonton's real clock, so it would flip the loft to
+  // night when the suite runs after dark and invert the manual-dusk probes. Pin the clock to
+  // noon (deterministic day, same spirit as seedRandom) so dusk stays a manual-only toggle
+  // here; the real-time logic is exercised in the feature's own fake-clock verification.
+  "    window.__edmNowMins = function () { return 720; };",
+  "    if (window.__applyAutoDayNight) window.__applyAutoDayNight();",
   "    await sleep(900);",
   "    // load-time class snapshot of every element under the strip (element",
   "    // identity, not index — probes spawn/remove particle nodes)",

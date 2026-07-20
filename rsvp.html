@@ -26003,7 +26003,7 @@ var KID_BIRTH_YEARS = { irene: 2016, hannah: 2016, robin: 2017, navid: 2018, eli
 function kidAge(name) {
   var y = KID_BIRTH_YEARS[String(name || "").toLowerCase()];
   if (!y) return null;
-  var age = new Date().getFullYear() - y;
+  var age = ((window.__now ? window.__now() : new Date()).getFullYear()) - y; // the loft's pretend year, so time-travel ages the kids like it dresses the rooms
   return age < 0 ? null : age;
 }
 function kidAgeLine(name) {
@@ -26020,6 +26020,7 @@ function syncTehranCakeAge() {
   var el = document.getElementById("tehran-cake-age");
   if (el) el.textContent = kidAge("hannah");
 }
+window.__syncTehranCakeAge = syncTehranCakeAge; // re-run on every date change; at load alone the number would freeze on the year the page opened
 syncTehranCakeAge();
 // a live "· <relationship>" line appended to a person's popup (whose partner/kid they are, or who
 // their kids are) — dict-driven (rel_<key>) so it follows a language switch. The key is normalised
@@ -68808,6 +68809,7 @@ function spawnDustMote(container) {
   function applyBirthdays(s) {
     var strip = document.getElementById("loft-game-strip");
     if (!strip) return;
+    if (window.__syncTehranCakeAge) window.__syncTehranCakeAge(); // the cake's age rides the loft year, which this call is already tracking
     var thrAny = false;
     BIRTHDAYS.forEach(function (b) {
       var on = inBirthdayWindow(b, s.m, s.d);

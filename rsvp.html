@@ -49007,6 +49007,10 @@ async def localfont(name):
     window.__catchUpDayNight = catchUpDayNight;
     window.__stopAutoDayNight = function () { autoStopped = true; clearTimeout(crossTimer); crossTimer = null; if (!twilightForced) stageBalcony.classList.remove("twilight"); }; // disarm: the forced-day intro, the scripted cinematic, a fresh game
     window.__startAutoDayNight = function () { autoStopped = false; twilightForced = false; applyAutoDayNight(true); }; // arm + force the clock's verdict now (kitchen-solve / ?time= set / pill reset), so day/night lands even if the window isn't focused; applyAutoDayNight arms the crossing
+    // the game reset, once the auto loop is already stopped: drop the invisible carry-over state
+    // a re-arm would otherwise inherit — a stale segNight makes the next crossing check see "no
+    // change" and leave the scene wrongly day/night, and twilightForced keeps the loop hands-off.
+    window.__resetDayNightState = function () { segNight = null; twilightForced = false; stageBalcony.classList.remove("twilight"); };
     // force the twilight wash on/off (the twilight() console command); a forced wash is left
     // alone by the auto loop until it's cleared or a reset runs __startAutoDayNight.
     window.__setTwilight = function (on) {
@@ -65870,6 +65874,12 @@ function spawnDustMote(container) {
   function resetHunt() {
     window.__pragueCalled = false;
     if (window.__stopDaylapse) window.__stopDaylapse(); // a fresh game ends any running time-lapse (no stranded synthetic clock)
+    // …and lands on the REAL current Edmonton moment: ?date=/?time= out of the URL (the only
+    // override that would survive a reload), previews nulled, every date-derived system re-dressed.
+    // MUST follow __stopDaylapse, which re-applies the date its lapse started on. The rest of the
+    // teardown below then runs against the real date, not the abandoned one.
+    if (window.__calResetDateTime) window.__calResetDateTime();
+    if (window.__calResetView) window.__calResetView(); // an open calendar (phone/monitor) off the pretend month too
     if (window.__stopRepeat) window.__stopRepeat(); // a fresh game ends any looping editor script
     clearCuddlySmoke(); // clear any lingering joint haze
     if (window.__stowCat) window.__stowCat(); // cat back in the chest, wherever it had wandered
@@ -66006,6 +66016,8 @@ function spawnDustMote(container) {
     if (window.__resetPhoneApps) window.__resetPhoneApps(); // restore any "Uninstall"ed phone apps
     if (window.resetBalconyDusk) window.resetBalconyDusk();
     if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle(); // cancel any in-flight storm + drop its .storming on every stage (real-weather's own .storming re-applies within a tick if it's genuinely raining out)
+    if (window.__setBalconyOvercast) window.__setBalconyOvercast(false); // the storm cycle's clearAll deliberately spares overcast(), so a console grey-wash needs its own drop
+    if (window.__setAurora) window.__setAurora(); // no arg: drop any aurora force/hide back to the natural roll
     Array.prototype.forEach.call(document.querySelectorAll("#balcony-door.open, #cuddly-balcony-door.open, .witchy-door.open, .kitchen-cabinet-door.open"), function (d) { d.classList.remove("open"); }); // every openable door back shut: the balcony door (both views), the chest moon/sun + passthrough doors, and the kitchen cabinets
     if (window.__stopMozzies) window.__stopMozzies(); // clear any dusk mosquitoes on the extinguisher reset
     if (window.__clearTipsy) window.__clearTipsy();
@@ -66024,6 +66036,7 @@ function spawnDustMote(container) {
     window.__musicPaused = false; // clear any spacebar pause state
     maxUnlocked = 0;
     if (window.__stopAutoDayNight) window.__stopAutoDayNight(); // a fresh game returns to the forced-DAY intro kitchen; auto day/night re-arms when the kitchen is solved again
+    if (window.__resetDayNightState) window.__resetDayNightState(); // after the stop, so nothing re-stamps: forget the held segment verdict + any twilight() force
     goToStage("kitchen");
     if (window.__showHuntIntro) window.__showHuntIntro(); // a fresh reset re-opens on the blinking intro prompt (matches load)
   }
@@ -66821,6 +66834,9 @@ function spawnDustMote(container) {
     var pb = document.querySelector(".calx-phone");
     if (pb && pb.parentNode) window.__calendarRender(pb.parentNode, "phone");
   }
+  // game reset only: forget the browsed month so the grid re-seeds from the real date. NOT folded
+  // into calResetToday — calStepSignificant sets calView and then jumps through it.
+  window.__calResetView = function () { calView = null; calRerenderOpen(); };
   var CAL_AMBIENT = { summer: 1, winter: 1, spring: 1, smoky: 1, autumn: 1 }; // plain weather days: a day-click just jumps (no festivity to summon)
   // time-travel the loft to a day, re-render the grid (selecting it), then summon that date's
   // festivities: a birthday (most specific) reveals/calls that person; an occasion (wedding /

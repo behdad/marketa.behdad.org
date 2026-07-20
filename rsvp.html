@@ -1400,6 +1400,33 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 @keyframes guest-sway{0%{transform:rotate(-3.5deg) translateX(-1px)} 50%{transform:rotate(3.5deg) translateX(1px)} 100%{transform:rotate(-3.5deg) translateX(-1px)}}
 @keyframes guest-arm-l{0%{transform:rotate(10deg)} 50%{transform:rotate(-26deg)} 100%{transform:rotate(10deg)}}
 @keyframes guest-arm-r{0%{transform:rotate(-10deg)} 50%{transform:rotate(28deg)} 100%{transform:rotate(-10deg)}}
+/* ── PER-SONG DANCE MOOD (amplitude-only) ─────────────────────────────────────
+   applyPartyDanceMode mirrors the active dance's mood onto #garden-guests[data-mood]
+   (DANCE_MOOD: persian→chill, disco/techno/horah→groovy, polka/bhangra/swing/salsa→hype,
+   waltz→elegant). These swap the shared .guest-sway/.guest-arm-* base keyframes for a
+   bigger-/gentler-/smoother-amplitude variant — SAME shape + tempo (retuneDancers sets the
+   duration), just how far the bodies throw. groovy is the base (no override → falls through).
+   Specificity: .guests-in + [data-mood] beats the base (.guests-in only) and stays BELOW the
+   per-guest .g-* sway/move overrides (Jay, the hosts' signatures keep theirs), and later in
+   source so it wins cleanly over the base. Held still under reduced motion: the base
+   .guest-sway/.guest-arm-* wrappers are already frozen by the reduced-motion block above
+   (which sets them to none), and swapping only the animation-name can't revive a frozen
+   wrapper, so no extra reduced-motion entry is needed for these variants. */
+#garden-guests.guests-in[data-mood="hype"] .guest-sway{animation-name:guest-sway-hype}
+#garden-guests.guests-in[data-mood="hype"] .guest-arm-l{animation-name:guest-arm-l-hype}
+#garden-guests.guests-in[data-mood="hype"] .guest-arm-r{animation-name:guest-arm-r-hype}
+#garden-guests.guests-in[data-mood="chill"] .guest-sway{animation-name:guest-sway-chill}
+#garden-guests.guests-in[data-mood="chill"] .guest-arm-l{animation-name:guest-arm-l-chill}
+#garden-guests.guests-in[data-mood="chill"] .guest-arm-r{animation-name:guest-arm-r-chill}
+#garden-guests.guests-in[data-mood="elegant"] .guest-sway{animation-name:guest-sway-elegant}
+@keyframes guest-sway-hype{0%{transform:rotate(-5deg) translateX(-2px)} 50%{transform:rotate(5deg) translateX(2px)} 100%{transform:rotate(-5deg) translateX(-2px)}}
+@keyframes guest-arm-l-hype{0%{transform:rotate(14deg)} 50%{transform:rotate(-38deg)} 100%{transform:rotate(14deg)}}
+@keyframes guest-arm-r-hype{0%{transform:rotate(-14deg)} 50%{transform:rotate(40deg)} 100%{transform:rotate(-14deg)}}
+@keyframes guest-sway-chill{0%{transform:rotate(-2.2deg) translateX(-.6px)} 50%{transform:rotate(2.2deg) translateX(.6px)} 100%{transform:rotate(-2.2deg) translateX(-.6px)}}
+@keyframes guest-arm-l-chill{0%{transform:rotate(6deg)} 50%{transform:rotate(-16deg)} 100%{transform:rotate(6deg)}}
+@keyframes guest-arm-r-chill{0%{transform:rotate(-6deg)} 50%{transform:rotate(17deg)} 100%{transform:rotate(-6deg)}}
+/* elegant: a smoother, more even glide (gentle sway, arms stay on the base reach) */
+@keyframes guest-sway-elegant{0%{transform:rotate(-2.8deg) translateX(-1px)} 50%{transform:rotate(2.8deg) translateX(1px)} 100%{transform:rotate(-2.8deg) translateX(-1px)}}
 @keyframes guest-ali-bounce{0%,46%{transform:translateY(0) scaleY(1)} 56%{transform:translateY(0) scaleY(.93)} 70%{transform:translateY(-20px) scaleY(1.06)} 84%{transform:translateY(0) scaleY(.97)} 92%,100%{transform:translateY(0) scaleY(1)}}
 @keyframes guest-goli-vogue{0%,20%{transform:scaleX(1)} 40%{transform:scaleX(.1)} 55%{transform:scaleX(-1)} 70%{transform:scaleX(-.1)} 88%,100%{transform:scaleX(1)}}
 @keyframes guest-spencer-party{0%{transform:translateY(0) rotate(-2deg)} 25%{transform:translateY(-6px) rotate(2deg)} 50%{transform:translateY(-13px) rotate(-2deg)} 60%{transform:translateY(-9px) scaleY(1.04) rotate(2deg)} 75%{transform:translateY(-4px) rotate(-1deg)} 100%{transform:translateY(0) rotate(-2deg)}}
@@ -1602,6 +1629,12 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   #garden-guests.guests-in .guest-sway,
   #garden-guests.guests-in .guest-arm-l,
   #garden-guests.guests-in .guest-arm-r,
+  /* the per-song MOOD amplitude variants out-specify the plain .guest-sway/.guest-arm-* rule
+     above (they add [data-mood]), so hold them still here too — matched specificity, later
+     in source. Otherwise a reduced-motion visitor's sway animation-name would revive. */
+  #garden-guests.guests-in[data-mood] .guest-sway,
+  #garden-guests.guests-in[data-mood] .guest-arm-l,
+  #garden-guests.guests-in[data-mood] .guest-arm-r,
   #garden-guests.guests-in .g-ali .guest-move,
   #garden-guests.guests-in .g-goli .guest-move,
   #garden-guests.guests-in .g-spencer .guest-move,
@@ -54680,6 +54713,70 @@ function spawnDustMote(container) {
   // want-gate, so the incoming fades in as the outgoing fades out over the same 1.8s) and
   // reflects the new dance onto the dancers.
   window.__partyDance = "techno"; // active dance id; a freshly-lit party opens on PARTY_DANCE_ORDER[0] (fully shuffled at load)
+  // ── TEMPO SYNC ──────────────────────────────────────────────────────────────
+  // Each garden-party "song" is a synth dance bed with a KNOWN bpm — no beat detection.
+  // Shared with the console `beat()` helper via window.__danceBpm (single source of truth).
+  // A 1.12 relaxation factor slows every synced move a touch (folded in here rather than
+  // editing the ~84 CSS duration literals). Half-time above ~143bpm (period<0.42s) so the
+  // fastest beds (salsa 190 / swing 180 / waltz 162) don't look frantic.
+  var DANCE_BPM = { techno: 126, waltz: 162, disco: 120, swing: 180, salsa: 190, bhangra: 140, persian: 110, polka: 130, horah: 146 };
+  window.__DANCE_BPM = DANCE_BPM; // exposed so the console `beat()` reads ONE map, not a duplicate
+  window.__danceBpm = function (id) { return DANCE_BPM[id]; };
+  var DANCE_RELAX = 1.12;
+  function dancePeriod(id) { // seconds per synced beat for a given dance (relaxed + half-timed)
+    var bpm = DANCE_BPM[id];
+    if (!bpm) return 0;
+    var period = (60 / bpm) * DANCE_RELAX;
+    if (period < 0.42) period *= 2; // half-time the frantic beds
+    return period;
+  }
+  // Per-dance MOOD (explicit, NOT auto-bucketed from bpm — waltz reads elegant despite its
+  // high bpm). Drives an amplitude-only keyframe swap on the shared guest wrappers via
+  // #garden-guests[data-mood]. hype = bigger sway/reach, chill = gentler, elegant = smoother.
+  var DANCE_MOOD = { persian: "chill", disco: "groovy", techno: "groovy", horah: "groovy", polka: "hype", bhangra: "hype", swing: "hype", salsa: "hype", waltz: "elegant" };
+  window.__DANCE_MOOD = DANCE_MOOD;
+  // Retune the SHARED guest wrappers (.guest-sway ≈ 2 beats, .guest-arm-* ≈ 2 beats) to the
+  // active dance's tempo, phase-locked to ONE shared epoch so every dancer hits together.
+  // Modeled on setGroove: set inline animationDuration, force a reflow to restart cleanly,
+  // then seek into phase via a negative animationDelay. Per-guest .guest-move moves are left
+  // on their authored durations (heterogeneous beat counts — retuning them cleanly would need
+  // per-guest bookkeeping; the shared sway/arms carry the tempo read). GUARDS: a strict no-op
+  // under reduced motion, transport pause, or a space-freeze — a reflow/duration re-set would
+  // resurrect an animation the freeze paused. Only ever called on an actual dance switch.
+  function retuneDancers(id) {
+    var g = document.getElementById("garden-guests");
+    if (!g || !g.classList.contains("guests-in")) return; // nobody on the floor → nothing to retune
+    if (reducedMotionGuests()) return;                      // reduced motion: media query already killed the anims
+    if (window.__musicPaused) return;                       // transport paused → don't restart a stilled anim
+    var strip = document.getElementById("loft-game-strip");
+    if (strip && strip.classList.contains("dance-frozen")) return; // space-freeze / first-dance: hold the pause
+    var period = dancePeriod(id);
+    if (!period) return;
+    if (!window.__partyBeatEpoch) window.__partyBeatEpoch = performance.now();
+    var phase = (((performance.now() - window.__partyBeatEpoch) / 1000) % period + period) % period;
+    var dur = period * 2; // sway + arms both ride ~2 beats
+    var sels = [".guest-sway", ".guest-arm-l", ".guest-arm-r"];
+    sels.forEach(function (sel) {
+      var els = g.querySelectorAll(sel);
+      for (var i = 0; i < els.length; i++) {
+        var el = els[i];
+        // preserve the per-guest CSS stagger (Goli -.41s / Spencer -.2s keep their two
+        // out-of-phase wrappers) by ADDING it to the phase-lock offset. Read + cache the
+        // BASE delay from the stylesheet the first time we touch this el (before we set any
+        // inline delay, which would otherwise mask the CSS value). Cached in a data attr so
+        // later retunes re-add the same authored stagger. A plain wrapper's base is 0 → all
+        // locked to the one epoch. `stagger` is negative (a CSS lead), so subtract it back in.
+        var stagger = el.getAttribute("data-basedelay");
+        if (stagger == null) { stagger = parseFloat(getComputedStyle(el).animationDelay) || 0; el.setAttribute("data-basedelay", stagger); }
+        else stagger = parseFloat(stagger) || 0;
+        el.style.animationDuration = dur.toFixed(3) + "s";
+        void el.getBoundingClientRect(); // reflow → restart the anim in-phase
+        // total lead = phase (epoch lock) − stagger (the authored CSS lead), wrapped into [0,dur)
+        el.style.animationDelay = (-(((phase - stagger) % dur + dur) % dur)).toFixed(3) + "s";
+      }
+    });
+  }
+  window.__retuneDancers = retuneDancers;
   var WALTZ_PERIOD_MS = 15000;
   var waltzAltTimer = null;
   var PARTY_DANCE_ORDER = null; // built lazily at first alternation-setup: ["techno", ...shuffle(rest)]
@@ -54703,6 +54800,13 @@ function spawnDustMote(container) {
     pd.classList.toggle("couple-mode", formation === "couple");
     pd.classList.toggle("circle-mode", formation === "circle");
     pd.classList.toggle("waltz-mode", on && id === "waltz"); // legacy class kept so existing waltz CSS still keys on it
+    // reflect the dance's MOOD onto the named-guest layer so the amplitude keyframe swap
+    // picks up (bigger for hype, gentler for chill, smoother for elegant); cleared party-off
+    var gg = document.getElementById("garden-guests");
+    if (gg) { if (on && DANCE_MOOD[id]) gg.setAttribute("data-mood", DANCE_MOOD[id]); else gg.removeAttribute("data-mood"); }
+    // TEMPO SYNC: retune the shared guest wrappers to the active dance's bpm, phase-locked.
+    // No-op when off / reduced motion / paused / space-frozen (retuneDancers guards them all).
+    if (on) retuneDancers(id);
   }
   function applyDjBooth() { // reflect the active DJ (A default / B = the friend cameo) onto the booth
     var booth = document.getElementById("garden-djbooth");
@@ -55023,6 +55127,7 @@ function spawnDustMote(container) {
     rebalanceFloor(g, [entry]);
     for (var i = 0; i < entry.sels.length; i++) walkFigureIn(g, entry.sels[i], entry.homes[i]);
     syncCrowdClear(); // the crowd just grew — re-check whether the generics should fan out/fade (≥4 guests)
+    if (window.__gardenPartyOn && window.__partyDance) retuneDancers(window.__partyDance); // tempo-lock the newly-arrived figure's wrappers into phase with the rest
   }
   // ── REVOLVING DOOR ──────────────────────────────────────────────────────────
   // The floor holds at most GUEST_CAP guest UNITS (a couple/family/solo = one unit) at a time; the
@@ -55134,6 +55239,7 @@ function spawnDustMote(container) {
     g.classList.remove("guests-arriving"); void g.getBBox; g.classList.add("guests-arriving"); // restart the one-shot wing-slide cleanly on a re-arm
     startHostSolo(); // the hosts are on the floor — begin their solo⇄together cycle
     syncCrowdClear(); // fan the generic dancers out to the edges/back so they don't overlap the named crowd
+    if (window.__gardenPartyOn && window.__partyDance) retuneDancers(window.__partyDance); // tempo-lock the just-activated wrappers
   }
   function beginTrickle() { // GRADUAL arrival: open small (hosts only), then walk the duos in one per beat
     var g = document.getElementById("garden-guests");
@@ -55143,6 +55249,7 @@ function spawnDustMote(container) {
     arrivalOrder = jitterArrivals(); // fresh light shuffle of the fill order for this party
     startHostSolo();
     syncCrowdClear();
+    if (window.__gardenPartyOn && window.__partyDance) retuneDancers(window.__partyDance); // tempo-lock the just-activated wrappers
     armTrickle(3200 + Math.random() * 2000); // the first duo strolls in a few seconds after the party lights, then ~one every 5s
   }
   function updateGardenGuests() {
@@ -55153,6 +55260,7 @@ function spawnDustMote(container) {
         if (window.__syncMousesVisitingClass) window.__syncMousesVisitingClass();
         g.classList.add("guests-in");
         startHostSolo(); syncCrowdClear();
+        if (window.__gardenPartyOn && window.__partyDance) retuneDancers(window.__partyDance); // re-tempo-lock on garden re-entry
         if (g.classList.contains("trickle") && !everyoneArrived(g)) armTrickle(2000 + Math.random() * 2000); // pick the trickle back up on return
         else g.classList.remove("trickle");
         return;
@@ -55246,7 +55354,7 @@ function spawnDustMote(container) {
     if (!entry) entry = ARRIVALS[Math.floor(Math.random() * ARRIVALS.length)]; // no/unknown id → a random duo
     if (!guestsWanted()) return null; // party dark / not in the garden / tab hidden — nothing to arrive onto
     guestsArrived = true;
-    if (!g.classList.contains("guests-in")) { g.classList.add("guests-in", "trickle"); startHostSolo(); syncCrowdClear(); if (window.__syncMousesVisitingClass) window.__syncMousesVisitingClass(); }
+    if (!g.classList.contains("guests-in")) { g.classList.add("guests-in", "trickle"); startHostSolo(); syncCrowdClear(); if (window.__syncMousesVisitingClass) window.__syncMousesVisitingClass(); if (window.__gardenPartyOn && window.__partyDance) retuneDancers(window.__partyDance); }
     // re-enter tastefully: drop the members' .arrived so the walk restarts from the gate
     for (var s = 0; s < entry.sels.length; s++) { var el = g.querySelector(entry.sels[s]); if (el) el.classList.remove("arrived"); }
     arriveEntry(entry);
@@ -56166,6 +56274,7 @@ function spawnDustMote(container) {
       startWaltzAlternation(); // build the shuffled rotation + begin the ~15s alternation (idempotent under storm-clicks)
       if (freshParty) {
         window.__partyDance = PARTY_DANCE_ORDER[0]; // a freshly-lit party opens on the first shuffled dance (storm-safe: don't reset mid-party)
+        window.__partyBeatEpoch = performance.now(); // fresh phase clock: every dancer phase-locks off this one epoch (retuneDancers seeds it lazily too)
         window.__djB = Math.random() < 0.5; // shuffled start: 50/50 which friend spins first (Math.random ok in-app)
         window.__djSwapCount = 0;            // reset the swap counter so the first DJ gets a full ~3-dance set
         applyDjBooth();                      // storm-safe: only re-randomizes on a genuinely fresh party (waltzAltTimer was null)
@@ -61491,11 +61600,12 @@ function spawnDustMote(container) {
   // beat() — ms until the next musical beat, so `await sleep(beat())` stays in time with the
   // music. Phase-locked to the concert songs' real audio clock; for a party dance it's the beat
   // period from the dance's tempo; ~500ms (120 BPM) if nothing's playing.
-  var DANCE_BPM = { techno: 126, waltz: 162, disco: 120, swing: 180, salsa: 190, bhangra: 140, persian: 110, polka: 130, horah: 146 };
   window.beat = function () {
     var ms = window.__songBeatMs ? window.__songBeatMs() : 0; // phase-aware, concert songs
     if (ms > 0) return Math.round(ms);
-    if (window.__gardenPartyOn && window.__partyDance && DANCE_BPM[window.__partyDance]) return Math.round(60000 / DANCE_BPM[window.__partyDance]);
+    // ONE bpm map, owned by the party-dance registry (window.__danceBpm); no duplicate here.
+    var bpm = (window.__gardenPartyOn && window.__partyDance && window.__danceBpm) ? window.__danceBpm(window.__partyDance) : 0;
+    if (bpm) return Math.round(60000 / bpm);
     return 500; // nothing playing → a neutral 120 BPM
   };
 

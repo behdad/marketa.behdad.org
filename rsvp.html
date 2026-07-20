@@ -4321,6 +4321,10 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .phone-incall.connected .pic-video [data-lid="tehran-string-lights"] .tehran-light{animation:tehran-twinkle 1.5s ease-in-out infinite}
 .phone-incall.connected .pic-video [data-lid="tehran-candle"].out .tehran-flame{opacity:0; animation:none !important}
 .phone-incall.connected .pic-video [data-lid="tehran-candle"].out [data-lid="tehran-candle-glow"]{opacity:0}
+/* California's two ambient extras — the monitor's own rules are #monitor-family-anchored and
+   can't reach the clone, but both nodes carry a matching class */
+.phone-incall.connected .pic-video .cali-sun-glow{animation:cali-sun-breathe 4s ease-in-out infinite}
+.phone-incall.connected .pic-video .cali-plant{animation:cali-plant-sway 3.6s ease-in-out infinite}
 .phone-incall.connected .pic-video [data-lid="laptop-lueb-girl"].singing .lueb-smile,
 .phone-incall.connected .pic-video [data-lid="laptop-lueb-boy"].singing .lueb-smile{opacity:0}
 /* transform-box/origin must be mirrored inline here (as the prague-sway rules above do): the
@@ -4385,6 +4389,8 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
   .phone-incall.connected .pic-video [data-lid="madla-figure"],
   .phone-incall.connected .pic-video [data-lid="madla-eyes"].blinking,
   .phone-incall.connected .pic-video [data-lid="madla-mouth"].murmuring{animation:none !important}
+  .phone-incall.connected .pic-video .cali-plant{animation:none !important}
+  .phone-incall.connected .pic-video .cali-sun-glow{animation:none !important; opacity:.7}
   .phone-incall.connected .pic-self [data-lid="marketa-self-mouth"].murmuring{animation:none !important}
   .phone-incall .pic-self.saying .couple-self-mouth, .phone-incall .pic-self.saying [data-lid="marketa-self-mouth"]{animation:none !important}
   .call-self.saying .couple-self-mouth{animation:none !important}
@@ -45263,7 +45269,7 @@ async def localfont(name):
     // Madla is an incoming PHONE call: while she's live, block every external (monitor/laptop)
     // call the same way an outgoing phone call does — so all three predicates also report true
     // when callee === "madla" (there's no #laptop-madla-* toggle to gate on, she's phone-only).
-    window.__familyCallLive = function () { return !!((origFamily && origFamily()) || callee === "tehran" || callee === "madla"); };
+    window.__familyCallLive = function () { return !!((origFamily && origFamily()) || callee === "tehran" || callee === "california" || callee === "madla"); }; // Tehran + California are the two the monitor's family app dials
     window.__pragueCallLive = function () { return !!((origPrague && origPrague()) || callee === "prague" || callee === "madla"); };
     window.__luebeckCallLive = function () { return !!((origLueb && origLueb()) || callee === "lueb" || callee === "madla"); };
     function anyExternalCall() { return !!((origFamily && origFamily()) || (origPrague && origPrague()) || (origLueb && origLueb())); }
@@ -45277,6 +45283,13 @@ async def localfont(name):
         art: '<svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M2.5 21V11l2.2-3.2L6.9 11v10zm14.6 0V11l2.2-3.2L21.5 11v10z"/><path d="M8 21v-8h8v8z"/><path d="M10.6 13V6.4L12 2.6l1.4 3.8V13z"/></svg>' },
       lueb:   { placeKey: "laptop_lplace", famKey: "dial_fam_lueb", scene: "laptop-lueb-scene", vb: "388 164 58 34", flavor: "tehran", pitch: 1.0, av: "#4a6b94", initial: "L",
         art: '<svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path fill-rule="evenodd" d="M2 21v-8.6a3.2 3.2 0 0 1 6.4 0v2.4h7.2v-2.4a3.2 3.2 0 0 1 6.4 0V21h-7.5v-3.7a1.7 1.7 0 0 0-3.4 0V21H2z"/><path d="M1.3 12.6 5.2 6.9 9.1 12.6zm13.6 0 3.9-5.7 3.9 5.7z"/></svg>' },
+      // California — Patricia + Patricia’s son & Patricia’s daughter, the same living room the office monitor dials, on
+      // the same self-contained coord box as Tehran. Its figures wear the shared .tehran-eyes /
+      // .tehran-mouth / .tehran-wave-arm gesture classes, so the phone's "tehran" life branch
+      // brings them alive unchanged. Avatar: the Golden Gate, the one landmark that still reads
+      // as a shape at 22px (a palm goes spindly) and keeps the row a set of skylines.
+      california: { placeKey: "california_place", famKey: "dial_fam_california", scene: "monitor-california-scene", vb: "254 154 124 42", flavor: "tehran", pitch: 1.15, av: "#1fa5a0", initial: "C",
+        art: '<svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M2 14.4h20v1.9H2z"/><path d="M5.9 3.6h2.3v12h-2.3zM15.8 3.6h2.3v12h-2.3z"/><path d="M8.2 4.3q3.8 7.4 7.6 0v2.1q-3.8 6.6-7.6 0z"/><path d="M1.4 9.6Q3.4 4.6 5.9 4.3v2Q4 6.9 2.6 10.4z"/><path d="M22.6 9.6Q20.6 4.6 18.1 4.3v2q1.9.6 3.3 4.1z"/></svg>' },
       // Madla — Markéta's sister, a doctor in Germany. INCOMING-ONLY: she is deliberately
       // absent from CITY_ORDER + the dialer, so nobody can dial HER; the entry exists purely
       // for the incoming-call machinery (scene / crop / ambient flavor / goodbye pitch). Her
@@ -45285,7 +45298,9 @@ async def localfont(name):
       madla:  { placeKey: "madla_place", famKey: "madla_fam", scene: "madla-call-scene", vb: "366 144 40 44", flavor: "tehran", pitch: 1.18, av: "#3f8f86", initial: "M",
         art: '<svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M11 2h2v3h-2z"/><path d="M9 4.5a3 3 0 0 0 6 0"/><path fill-rule="evenodd" d="M8 4.5A4 4 0 0 0 16 4.5h1.4v4.1a5.4 5.4 0 0 1-10.8 0V4.5H8zm4 9.7a4.3 4.3 0 0 0 3.2-1.4v1.9a3.2 3.2 0 0 0 6.4 0h-1.6a1.6 1.6 0 0 1-3.2 0v-3.5A5.4 5.4 0 0 1 8.8 12.8 4.3 4.3 0 0 0 12 14.2z"/><circle cx="20.8" cy="12.9" r="2.1"/></svg>' }
     };
-    var CITY_ORDER = ["tehran", "prague", "lueb"]; // Madla is intentionally NOT here — she's incoming-only, never dialable
+    // dialable contacts, his side then hers. Madla is intentionally NOT here — she's
+    // incoming-only, never dialable.
+    var CITY_ORDER = ["tehran", "california", "prague", "lueb"];
     var WEDDING_URL = "https://marketa.behdad.org";
     // the pocket browser's fixed tabs mirror the monitor's BROWSER_TABS exactly — the same
     // proven-frameable URLs (the loft tab frames rsvp.html, NOT the bare root, which refuses
@@ -46209,9 +46224,10 @@ async def localfont(name):
           phLifeTimer(nod, (2.5 + Math.random() * 4) * 1000);
           phTap(phQ('[data-lid="laptop-prague-grandma"]'), function () { phFire(phQ('[data-lid="laptop-prague-grandma-nod"]'), "nodding", 1250); });
         }
-      } else if (fam === "tehran") {
-        // the birthday family blinks (and sometimes flashes a wider smile) at random — the
-        // clone lost the figure ids but keeps the .tehran-eyes / .tehran-mouth leaf classes
+      } else if (fam === "tehran" || fam === "california") {
+        // the family blinks (and sometimes flashes a wider smile) at random — the clone lost the
+        // figure ids but keeps the .tehran-eyes / .tehran-mouth leaf classes, which California's
+        // scene shares with Tehran's (the party hat + candle taps below simply find nothing there)
         var blink = phLoop(function () {
           var eyes = phQA(".tehran-eyes"); if (!eyes.length) return;
           var e = eyes[(Math.random() * eyes.length) | 0];

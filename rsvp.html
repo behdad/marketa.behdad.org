@@ -66761,13 +66761,16 @@ function spawnDustMote(container) {
   // #garden-photographer, strip every id so nothing collides, hang the static placement on the
   // wrapper and let the camera group carry the animation).
   //
-  // The ROUNDS timer is the same self-rescheduling, party-gated idiom as the garden flash: one
-  // timer, started on party-on and cleared on party-off, that STOPS rather than reschedules once
-  // the party ends. It only actually shoots while the room is on screen AND the tab is visible
-  // AND focused (crickets rule) — and the ambient shot is LIGHT ONLY, silent, so no autonomous
-  // shutter can ever leak into an unfocused window. The garden is skipped: it has its own
-  // auto-snap + photo-moment machinery already. Nothing is spawned (the figures and their blooms
-  // are persistent nodes), so nothing can pile up.
+  // She shoots on two triggers: ARRIVAL (you walk into a room during the party — she's a beat
+  // behind you with the camera up) and then ROUNDS every ~22-40s for as long as you stay. The
+  // rounds timer is the same self-rescheduling, party-gated idiom as the garden flash: one timer,
+  // started on party-on and cleared on party-off, that STOPS rather than reschedules once the
+  // party ends; an arrival re-phases it so the two can't fire on top of each other. Both only
+  // actually shoot while the room is on screen AND the tab is visible AND focused (crickets rule)
+  // — and the ambient shot is LIGHT ONLY, silent, so no autonomous shutter can ever leak into an
+  // unfocused window. The garden is skipped: it has its own auto-snap + photo-moment machinery
+  // already. Nothing is spawned (the figures and their blooms are persistent nodes), so nothing
+  // can pile up.
   (function roomPhotographers() {
     var svgNS = "http://www.w3.org/2000/svg";
     var src = document.getElementById("garden-photographer");
@@ -66836,10 +66839,16 @@ function spawnDustMote(container) {
       });
     });
     function attended() { return !document.hidden && document.hasFocus(); }
+    var lastWhere = ""; // the (room, party-on) pair update() last saw — an ARRIVAL is a change in it
     function update() { // she's out wherever the party is, in whichever of her three rooms is on screen
       Object.keys(mounted).forEach(function (room) {
         mounted[room].g.classList.toggle("showing", !!window.__gardenPartyOn && window.currentStageName === room);
       });
+      var where = window.currentStageName + "|" + !!window.__gardenPartyOn;
+      if (where === lastWhere) return; // a blur/focus/visibility re-run is not an arrival
+      lastWhere = where;
+      if (window.__gardenPartyOn && window.currentStageName !== "garden") armArrival();
+      else if (arriveTimer) { clearTimeout(arriveTimer); arriveTimer = null; }
     }
     window.__updateRoomPhotogs = update;
     // Fire one shot in `room` (or the room you're in): the camera raise + flash, plus the keepsake.
@@ -66852,16 +66861,38 @@ function spawnDustMote(container) {
       if (!silent && typeof playCameraShutterSound === "function") playCameraShutterSound();
       return (window.__albumAddRoom && window.__albumAddRoom(room)) || null;
     };
-    var roundTimer = null;
+    var roundTimer = null, arriveTimer = null;
+    // One ambient frame of the room on screen. The GARDEN is skipped here and only here: it runs
+    // its own flash + photo-moment + album-snap timers all party long, so a pass from this side
+    // would double-fire both the flash and the keepsake.
+    function shootHere() {
+      var room = window.currentStageName;
+      if (!window.__gardenPartyOn || room === "garden" || !attended()) return;
+      window.__photogSnap(room, true);                            // silent: an ambient flash, never an autonomous shutter
+    }
+    function armRound() { if (roundTimer) clearTimeout(roundTimer); roundTimer = setTimeout(roundTick, 22000 + Math.random() * 18000); }
     function roundTick() {
       roundTimer = null;
       if (!window.__gardenPartyOn) return;                        // party over — stop, don't reschedule
-      var room = window.currentStageName;
-      if (room !== "garden" && attended() && !window.__musicPaused) window.__photogSnap(room, true); // silent: an ambient flash, never an autonomous shutter
-      roundTimer = setTimeout(roundTick, 26000 + Math.random() * 18000);
+      shootHere();
+      armRound();
+    }
+    // She FOLLOWS you in. Without this the only shot in a room came from the global round timer,
+    // which could land half a minute after you arrived and be gone before you did — the room read
+    // as one she never works. The beat before the shot is load-bearing: the room's own figures
+    // (bar couple, nook kids, office pair, deck crowd) are put out by goToStage and FADE in, and
+    // __roomOccupants reads painted opacity, so a shot on the arrival frame finds the room empty
+    // and files nothing.
+    function armArrival() {
+      if (arriveTimer) clearTimeout(arriveTimer);
+      arriveTimer = setTimeout(function () {
+        arriveTimer = null;
+        shootHere();
+        armRound();                                               // re-phase, so the next round is a full interval after THIS frame
+      }, 2600 + Math.random() * 900);
     }
     window.__startPhotogRounds = function () { if (!roundTimer && window.__gardenPartyOn) roundTimer = setTimeout(roundTick, 9000 + Math.random() * 7000); };
-    window.__stopPhotogRounds = function () { if (roundTimer) { clearTimeout(roundTimer); roundTimer = null; } };
+    window.__stopPhotogRounds = function () { if (roundTimer) { clearTimeout(roundTimer); roundTimer = null; } if (arriveTimer) { clearTimeout(arriveTimer); arriveTimer = null; } };
     window.__resetRoomPhotogs = function () { window.__stopPhotogRounds(); Object.keys(mounted).forEach(function (room) { mounted[room].g.classList.remove("showing"); mounted[room].bloom.classList.remove("flashing"); if (mounted[room].cam) mounted[room].cam.classList.remove("aiming"); }); };
     document.addEventListener("visibilitychange", update);
     window.addEventListener("blur", update);

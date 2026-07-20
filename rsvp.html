@@ -44515,6 +44515,8 @@ async def localfont(name):
     var messagesThread = [], messagesRead = {}, messagesArrivedAt = {}, msgNewTimer = null; // messagesRead[id] set once a message is tapped — unread (bold) until then; messagesArrivedAt[id] = wall-clock ms of live delivery (drives the "New" divider); msgNewTimer re-renders to retire the divider once the freshest text ages past 30s
     // the shared "are you home?" opener pool — every friend duo draws from all of these, plus its own flavored line (below)
     var VISIT_GENERIC = ["msg_visit_body_a", "msg_visit_body_b", "msg_visit_body_c", "msg_visit_body_d", "msg_visit_body_e", "msg_visit_body_f", "msg_visit_body_g", "msg_visit_body_h", "msg_visit_body_i"];
+    // the wedding coordinators — any of them can send a moment announcement ("cake's out!", "group photo!" …)
+    var MOMENT_SENDERS = ["msg_bahareh_from", "msg_madla_from", "msg_athena_from"];
     var MESSAGES = { // each fires from its beat/trigger via window.__deliverPhoneMessage (actTwo sequencer + the DJ swap); listed in arc order so 'g' steps through them in sequence
       dusk:   { fromKey: "msg_bahareh_from", bodyKey: "msg_dusk_body", act: "eclipse" },      // act_b0 → tap: balcony + eclipse
       pouria: { fromKey: "msg_pouria_from",  bodyKey: "msg_pouria_body", act: "room:kitchen" }, // act_p1 → the bar
@@ -44534,11 +44536,11 @@ async def localfont(name):
       invaders:      { fromKey: "msg_behdad_from",  bodyKey: "msg_invaders_body",  act: "invaders" },      // behdad tasks Irene → the office; taps to LAUNCH the chair alien-arcade
       flair:         { fromKey: "msg_pouria_from",  bodyKey: "msg_flair_body",     act: "flair" },         // Pouria bored → taps to LAUNCH Flair-Catch at the bar
       smores:        { fromKey: "msg_bahareh_from", bodyKey: "msg_smores_body",    act: "smores" },        // Bahareh, after dark → taps: balcony + light the bonfire for s'mores
-      firstdance:    { fromKey: "msg_athena_from", bodyKey: "msg_firstdance_body", act: "firstdance" },    // Athena → taps: the garden party + the hosts' first dance
-      slowdance:     { fromKey: "msg_madla_from", bodyKey: "msg_slowdance_body", act: "slowdance" },       // Madla → taps: the garden party + a slow-song lull (the whole floor pairs off)
-      cake:          { fromKey: "msg_bahareh_from", bodyKey: "msg_cake_body",      act: "cake" },         // Bahareh → taps: the garden party + the cake cutting
-      bouquet:       { fromKey: "msg_pouria_from",  bodyKey: "msg_bouquet_body",   act: "bouquet" },      // Pouria → taps: the garden party + the bouquet toss
-      chairlift:     { fromKey: "msg_ali_from",     bodyKey: "msg_chairlift_body", act: "chairlift" },    // Ali → taps: the garden party + the chair-lift hora
+      firstdance:    { fromKeys: MOMENT_SENDERS, bodyKey: "msg_firstdance_body", act: "firstdance" },    // a coordinator → taps: the garden party + the hosts' first dance
+      slowdance:     { fromKeys: MOMENT_SENDERS, bodyKey: "msg_slowdance_body", act: "slowdance" },       // a coordinator → taps: the garden party + a slow-song lull (the whole floor pairs off)
+      cake:          { fromKeys: MOMENT_SENDERS, bodyKey: "msg_cake_body",      act: "cake" },         // a coordinator → taps: the garden party + the cake cutting
+      bouquet:       { fromKeys: MOMENT_SENDERS, bodyKey: "msg_bouquet_body",   act: "bouquet" },      // a coordinator → taps: the garden party + the bouquet toss
+      chairlift:     { fromKeys: MOMENT_SENDERS, bodyKey: "msg_chairlift_body", act: "chairlift" },    // a coordinator → taps: the garden party + the chair-lift hora
       jukebox:       { fromKey: "msg_sina_from",     bodyKey: "msg_jukebox_body",   act: "jukebox" },       // DJ Sina: requests open → taps: the DJ-booth song picker
       album_full:    { fromKey: "msg_aspen_from",    bodyKey: "msg_albumfull_body", act: "app:album" },     // Aspen, once the album hits ≥5 shots → taps: the phone album (not in a drip pool — count-triggered)
       bbq:           { fromKey: "msg_behdad_from",  bodyKey: "msg_bbq_body",       act: "bbq" },           // behdad → taps: balcony + open the smoker lid + light it
@@ -44566,9 +44568,9 @@ async def localfont(name):
       alireza_vitamin: { fromKey: "msg_alireza_from", bodyKey: "msg_alireza_vitamin_body", act: "magicbox" }, // Alireza → the magic box (trip); date-locks behind the padlock the first time
       // garden-moment triggers — tap the text to run the scripted beat (each hook lights the party +
       // heads to the garden + summons the crowd if needed, then plays; see runMsgAction below)
-      toasts:        { fromKey: "msg_ali_from",     bodyKey: "msg_toasts_body",     act: "toasts" },     // Ali the best man calls the toast sequence (Ali then Farhang)
-      groupphoto:    { fromKey: "msg_aspen_from",   bodyKey: "msg_groupphoto_body", act: "groupphoto" }, // Aspen gathers everyone for the whole-crowd shot → lands in the album
-      sparklers:     { fromKey: "msg_bahareh_from", bodyKey: "msg_sparklers_body",  act: "sparklers" }   // Bahareh calls the sparkler send-off tunnel
+      toasts:        { fromKeys: MOMENT_SENDERS, bodyKey: "msg_toasts_body",     act: "toasts" },     // a coordinator calls the toast sequence (Ali then Farhang give them)
+      groupphoto:    { fromKeys: MOMENT_SENDERS, bodyKey: "msg_groupphoto_body", act: "groupphoto" }, // a coordinator gathers everyone for the whole-crowd shot → lands in the album
+      sparklers:     { fromKeys: MOMENT_SENDERS, bodyKey: "msg_sparklers_body",  act: "sparklers" }   // a coordinator calls the sparkler send-off tunnel
     };
     var CUE_POOL = ["cue_cocktails", "cue_calendar", "storm", "invaders", "flair", "smores", "sina_helpers", "firstdance", "slowdance", "cake", "bouquet", "chairlift", "jukebox", "hamid_verse", "pouria_farhang", "ali_love", "alireza_vitamin", "fireworks", "lanterns", "toasts", "groupphoto", "sparklers"]; // the random party (night) drip (shuffled: each drip picks a random un-sent one); smores is night-only + sina_helpers only while Sina's off the decks — see cueRemaining(); hamid_verse chains its 2nd stanza via m.next; toasts/groupphoto/sparklers/cake/bouquet/chairlift are scripted garden beats
     var DAY_POOL = ["bbq", "cue_mail"]; // the DAYTIME drip — texts that belong to daylight hours (no party); dripped by scheduleDayDrip(). Bahareh's "did you check the mail?" belongs to the day.
@@ -45928,6 +45930,7 @@ async def localfont(name):
       // line at delivery and freeze it into bodyKey, so it varies per delivery but stays stable
       // across language flips + live re-renders (renderers read m.bodyKey each time).
       if (m.bodyKeys && !m.bodyKey) m.bodyKey = m.bodyKeys[Math.floor(Math.random() * m.bodyKeys.length)];
+      if (m.fromKeys && !m.fromKey) m.fromKey = m.fromKeys[Math.floor(Math.random() * m.fromKeys.length)]; // freeze one sender per delivery (moment texts rotate among the coordinators)
       messagesThread.push(id);
       messagesArrivedAt[id] = Date.now();
       trimMessageThread();

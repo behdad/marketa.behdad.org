@@ -3195,8 +3195,12 @@ html.is-webkit .dock-app:hover .dock-tile{transform:none; box-shadow:inset 0 0 0
 .dock-tile > *{grid-area:1/1; min-width:0}
 .dock-glyph{font-family:sans-serif; line-height:1; color:#f8f5ec; display:flex; align-items:center; justify-content:center} /* flex-centres the icon/glyph within the stretched grid cell */
 .cal-tile{border-radius:3px; overflow:hidden; display:flex; flex-direction:column}
-.cal-tile-head{flex:none; height:3.4px; background:#c14b3e; color:#fffdf8; font-family:Arial,"Helvetica Neue",sans-serif; font-size:2.4px; line-height:1.4; padding-top:0.55px; display:flex; align-items:center; justify-content:center; letter-spacing:0.1px; font-weight:600} /* Arial pinned: generic sans-serif resolves to metric-DIFFERENT fonts per OS (DejaVu vs Helvetica), which see-sawed this label's optical centering between Linux and Mac */ /* line-height must cover the font's ascent+descent (~1.36em): at line-height:1 the negative half-leading pushed the ink above the band and the tile's overflow clipped it */
-.cal-tile-day{flex:1; display:flex; align-items:center; justify-content:center; color:#453a31; font-size:5.4px; font-weight:600}
+.cal-tile-head{flex:none; height:4.4px; background:#c14b3e; color:#fffdf8; font-family:Arial,"Helvetica Neue",sans-serif; font-size:2.4px; line-height:1.4; padding-top:1.2px; display:flex; align-items:center; justify-content:center; letter-spacing:0.1px; font-weight:600} /* Arial pinned: generic sans-serif resolves to metric-DIFFERENT fonts per OS (DejaVu vs Helvetica), which see-sawed this label's optical centering between Linux and Mac */ /* taller band + padding-top drops the month clear of the tile's overflow clip: at the old 3.4px height the line box filled the band edge-to-edge and the capital tops shaved off */
+.cal-tile-day{flex:1; display:flex; align-items:center; justify-content:center; color:#453a31; font-size:5.4px; font-weight:600; padding-bottom:1px} /* padding-bottom biases the day number up toward the band, balancing the taller red head */
+/* pocket-phone home icon reuses the same cal-tile, sized up to the 46px tile */
+.pat-ico .cal-tile{width:100%; height:100%; border-radius:13px}
+.pat-ico .cal-tile-head{height:14px; font-size:9px; padding-top:3px; letter-spacing:0.4px}
+.pat-ico .cal-tile-day{font-size:24px; padding-bottom:3px}
 .dock-cam-wrap{border-radius:3px; overflow:hidden; background:#000; display:none}
 .dock-app-photobooth.live .dock-cam-wrap{display:block}
 .dock-cam{width:100%; height:100%; object-fit:cover; transform:scaleX(-1); display:block}
@@ -39499,8 +39503,12 @@ var ABANDONED_CALL_MS = 30000;
           var loc = document.documentElement.lang === "cs" ? "cs-CZ" : "en-US";
           var mon = "";
           try { mon = now.toLocaleString(loc, { month: "short" }).replace(/\.$/, ""); } catch (e) { mon = String(now.getMonth() + 1) + "."; }
-          calHead.textContent = mon;
-          calDay.textContent = String(now.getDate());
+          var day = String(now.getDate());
+          // paints EVERY cal-tile on the page by class — the office-dock tile AND the pocket-phone home icon
+          var heads = document.querySelectorAll(".cal-tile-head");
+          for (var i = 0; i < heads.length; i++) heads[i].textContent = mon;
+          var days = document.querySelectorAll(".cal-tile-day");
+          for (var j = 0; j < days.length; j++) days[j].textContent = day;
         };
         window.__paintCalTile();
       }
@@ -46771,11 +46779,18 @@ async def localfont(name):
         tile.id = "phone-app-" + app.id;     // stable handle back to the app (mirror of the desktop dock's monitor-dock-<id>)
         tile.setAttribute("data-app-id", app.id);
         tile.setAttribute("data-slot", slotIndex);
-        var ico = app.icon
-          ? '<svg viewBox="0 0 12 12" aria-hidden="true"><use href="#dicon-' + app.icon + '"/></svg>'
-          : app.glyph;
-        tile.innerHTML = '<span class="pat-ico" style="background:' + app.tile + '">' + ico + '</span>' +
-          '<span class="pat-label">' + tr(app.labelKey) + '</span>';
+        if (app.id === "calendar") {
+          // a LIVE icon like the office dock: red month band + today's day number, painted by __paintCalTile
+          tile.innerHTML = '<span class="pat-ico" style="background:#fffdf8">' +
+            '<span class="cal-tile"><span class="cal-tile-head"></span><span class="cal-tile-day"></span></span>' +
+            '</span><span class="pat-label">' + tr(app.labelKey) + '</span>';
+        } else {
+          var ico = app.icon
+            ? '<svg viewBox="0 0 12 12" aria-hidden="true"><use href="#dicon-' + app.icon + '"/></svg>'
+            : app.glyph;
+          tile.innerHTML = '<span class="pat-ico" style="background:' + app.tile + '">' + ico + '</span>' +
+            '<span class="pat-label">' + tr(app.labelKey) + '</span>';
+        }
         // A tap opens; a drag (past the movement threshold) moves the icon to another
         // slot. phSuppressClick eats the click that trails a real drag's pointerup.
         tile.addEventListener("click", function () { if (phSuppressClick) { phSuppressClick = false; return; } launchApp(app); });
@@ -46786,6 +46801,7 @@ async def localfont(name):
         grid.appendChild(tile);
       });
       home.appendChild(grid);
+      if (window.__paintCalTile) window.__paintCalTile(); // fill the live calendar home-icon with the current loft month + day
     }
     // ── home-icon drag-drop (pointer + touch) ────────────────────────────────────
     // Pick up an icon, drag it over another slot, drop → the two slots SWAP (dropping

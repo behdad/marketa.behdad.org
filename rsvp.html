@@ -62450,9 +62450,14 @@ function spawnDustMote(container) {
       dragStartOffset = { x: blanketOffsets[id].x, y: blanketOffsets[id].y };
       el.style.transition = "none";
       // a blanket paints over the couple while it's dragged across them (SVG has
-      // no z-index; last-painted wins) — move it to the end of its group first,
-      // before capturing the pointer so the DOM move can't drop the capture
-      if (el.parentNode) el.parentNode.appendChild(el);
+      // no z-index; last-painted wins) — bring it forward before capturing the pointer
+      // (the DOM move mustn't drop the capture), but keep it BEHIND the visitors layer so
+      // a moved blanket never buries a cuddly-puddly guest.
+      if (el.parentNode) {
+        var vLayer = document.getElementById("cuddly-visitors-layer");
+        if (vLayer && vLayer.parentNode === el.parentNode) el.parentNode.insertBefore(el, vLayer);
+        else el.parentNode.appendChild(el);
+      }
       try { el.setPointerCapture(e.pointerId); } catch (err) {}
     });
     el.addEventListener("pointermove", function (e) {

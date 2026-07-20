@@ -65585,6 +65585,11 @@ function spawnDustMote(container) {
       aurora: !!(au && parseFloat(getComputedStyle(au).opacity) > 0.1)
     };
   }
+  // Which room backdrops PAINT the weather (albumPhotoSvg): the deck is outdoors, and the office
+  // card frames its window. The bar and the nook are interior walls, so rain/storm/overcast can't
+  // show in those frames — counting it would re-open a room that has not visibly changed, filing a
+  // second identical card every time the forecast flips.
+  var ALBUM_WX_ROOMS = { balcony: 1, office: 1 }; // held in step with the renderer by check.js
   // ── WHO IS IN ROOM X RIGHT NOW ────────────────────────────────────────────────
   // Aspen's photo view of the ONE occupancy accessor, window.__whoIsHere(room) — which already
   // reads each room's own published truth rather than inventing a parallel roster. Keeping this
@@ -65772,8 +65777,11 @@ function spawnDustMote(container) {
     if (!people.length) return null;
     var sky = albumSkyState(room);
     // The room's LIGHT is part of the shot's identity: the same pair at the bar in daylight and
-    // again after dark are two different photographs, so both are worth keeping.
-    var sig = "room:" + room + ":" + (sky.night ? "n" : "d") + (sky.wx ? "/" + sky.wx : "") + ":" +
+    // again after dark are two different photographs, so both are worth keeping. The weather only
+    // counts where the keepsake can show it (ALBUM_WX_ROOMS) — otherwise it splits one photograph
+    // into several identical ones.
+    var sig = "room:" + room + ":" + (sky.night ? "n" : "d") +
+              (ALBUM_WX_ROOMS[room] && sky.wx ? "/" + sky.wx : "") + ":" +
               people.map(function (p) { return p.key; }).sort().join(",");
     if (albumTaken[sig]) return null;
     albumTaken[sig] = 1;

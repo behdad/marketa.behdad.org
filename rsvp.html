@@ -7853,8 +7853,11 @@ section{margin:1.9rem 0}
 #balcony-hangout .bh-fig{cursor:pointer}
 #balcony-hangout.on .bh-fig{pointer-events:auto}
 /* the moved ashtray perch fades in only during smoking time */
-#balcony-ashtray-perch{transition:opacity .5s ease}
+#balcony-ashtray-perch{transition:opacity .5s ease; transform-box:fill-box; transform-origin:center}
 #balcony-ashtray-perch.up{opacity:1 !important}
+#balcony-ashtray-perch.up{cursor:pointer}
+#balcony-ashtray-perch.spinning{animation:ashtray-spin 1s ease-in-out}
+@media (prefers-reduced-motion: reduce){#balcony-ashtray-perch.spinning{animation:none}}
 /* Reduced motion: everyone stands still, no drags, no ember pulse (JS also skips smoke). */
 @media (prefers-reduced-motion: reduce){
   #balcony-hangout .bh-idle, #balcony-hangout .bh-arm-gesture, #balcony-hangout .bh-toke-arm, #balcony-hangout .bh-ember{animation:none}
@@ -61161,7 +61164,7 @@ function spawnDustMote(container) {
     // `label`/`role` name the figure in the shared white popup (hover + click-to-reveal); the DJ
     // names itself live (Sina/Danesh, whichever is off-duty). +30% bigger than the authored scale,
     // laid out below with a touch more lane room + wider lanes so the fuller figures don't crowd.
-    var UP = 1.30; // enlarge all balcony people by ~30%
+    var UP = 1.43; // enlarge all balcony people (~43% over the authored scale)
     var ROSTER = [
       // crowd (left lane)
       { id: "bh-patricia-son",     name: "bahareh",  smoker: false, s: 0.74 * UP, by: 326, label: "Bahareh",   role: "role_sister" },
@@ -61187,7 +61190,7 @@ function spawnDustMote(container) {
     // a bit FATTER: the figures get a touch more horizontal scale than vertical, so they read
     // fuller/rounder without growing taller (feet stay pinned on the deck line). Applied as the
     // x of a non-uniform scale in placeLane (scale(s*FAT, s)).
-    var FAT = 1.12;
+    var FAT = 1.232;
     // the two lanes (feet-x extents in local balcony view-box coords). The crowd stays left of
     // the grill; the smokers stay right of the firepit and below the open sky. Kept a hair inside
     // the deck edges so the +30%/fatter figures don't clip the railing or the grill at max jitter.
@@ -61339,12 +61342,25 @@ function spawnDustMote(container) {
         if (window.__whoPop) window.__whoPop(g, tip());
       });
     });
+    // the perched ashtray stays clickable while it's up: tap/Enter spins it and flicks a puff of
+    // ash, same as the deck ashtray (which is hidden during smoking, so the perch takes over).
+    if (perch) {
+      var spinPerch = function () {
+        perch.classList.remove("spinning");
+        requestAnimationFrame(function () { requestAnimationFrame(function () { perch.classList.add("spinning"); }); });
+        if (typeof playAshtraySpinSound === "function") playAshtraySpinSound("balcony-ashtray-perch");
+        if (typeof spawnGrindParticles === "function") spawnGrindParticles(perch, 388, 162, "#a8a49c"); // ash into the perch's own group, local coords
+      };
+      perch.addEventListener("click", function (e) { e.stopPropagation(); if (perch.classList.contains("up")) spinPerch(); });
+      perch.addEventListener("keydown", function (e) { if ((e.key === "Enter" || e.key === " ") && perch.classList.contains("up")) { e.preventDefault(); spinPerch(); } });
+      perch.addEventListener("animationend", function () { perch.classList.remove("spinning"); });
+    }
     var shownOnce = false;
     function show() {
       if (!shownOnce) { rollCouple(); shownOnce = true; layout(); } // fresh roll of faces/order/spacing
       resolveDj();
       hangout.classList.add("on");
-      if (perch) { perch.classList.add("up"); perch.style.opacity = "1"; }
+      if (perch) { perch.classList.add("up", "hunt-hit"); perch.style.opacity = "1"; perch.style.pointerEvents = "auto"; perch.setAttribute("tabindex", "0"); perch.setAttribute("role", "button"); perch.removeAttribute("aria-hidden"); }
       if (tableAshtray) tableAshtray.style.display = "none"; // the deck ashtray has moved up onto the firebox
     }
     function hide() {
@@ -61354,7 +61370,7 @@ function spawnDustMote(container) {
       // clear every held drink so none strands into the next (freshly-rolled) appearance
       var drinks = hangout.querySelectorAll(".bh-drink.on");
       for (var i = 0; i < drinks.length; i++) drinks[i].classList.remove("on");
-      if (perch) { perch.classList.remove("up"); perch.style.opacity = "0"; }
+      if (perch) { perch.classList.remove("up", "spinning", "hunt-hit"); perch.style.opacity = "0"; perch.style.pointerEvents = "none"; perch.removeAttribute("tabindex"); perch.removeAttribute("role"); perch.setAttribute("aria-hidden", "true"); }
       if (tableAshtray) tableAshtray.style.display = ""; // it's back on the table
       // drain nothing by hand — in-flight wisps self-finish; just stop counting them as ours
     }

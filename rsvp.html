@@ -3508,12 +3508,14 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .loft-timenav{position:absolute; right:3px; bottom:3px; z-index:6; display:flex; align-items:stretch; gap:0; max-width:60%; background:rgba(255,253,248,.82); border:1px solid rgba(69,58,49,.18); border-radius:11px; -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); overflow:hidden} /* ONE unified pill: 🕐 time · ▶/⏸ time-lapse · ↺ reset */
 .loft-timepill{font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:transparent; border:none; padding:4px 9px; cursor:pointer; user-select:none; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .loft-timepill:hover{background:rgba(142,58,74,.10)}
-.loft-timepill::before{content:"🕐 "; }
 .loft-timestep{flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:transparent; border:none; border-left:1px solid rgba(69,58,49,.16); padding:4px 7px; cursor:pointer; user-select:none}
 .loft-timestep:hover{background:rgba(142,58,74,.14)}
 .loft-timestep.lapsing{color:var(--wine,#8e3a4a)} /* lit while the time-lapse runs */
 .hunt-viewport:fullscreen .loft-timenav{bottom:8px; right:8px}
 @media (max-width:520px){ .loft-timenav{right:3px; bottom:3px} .loft-timepill,.loft-timestep{font-size:10px} .loft-timepill{padding:3px 8px} .loft-timestep{padding:3px 6px} }
+/* a very subtle top-left chevron hinting at the drop-down console; clicking it pulls the console down */
+.loft-console-hint{position:absolute; top:2px; left:3px; z-index:6; display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; padding:0; font-size:12px; line-height:1; color:var(--ink,#453a31); background:transparent; border:none; border-radius:5px; cursor:pointer; opacity:.18; transition:opacity .15s, background .15s}
+.loft-console-hint:hover,.loft-console-hint:focus-visible{opacity:.85; background:rgba(142,58,74,.10)}
 /* weather app: the couple's two cities side by side (current + 3-day) over the screen */
 #monitor-weather{opacity:0; pointer-events:none; transition:opacity .25s ease}
 #office-monitor.show-weather #monitor-weather{opacity:1; pointer-events:auto}
@@ -23075,6 +23077,9 @@ var T = {
     datenav_prev: "Jump to the previous day of significance",
     datenav_next: "Jump to the next day of significance",
     datenav_reset: "Reset date & time to now",
+    datenav_reset_date: "Reset the date to today",
+    datenav_reset_time: "Reset the clock to now",
+    console_hint: "Open the drop-down console",
     app_weather: "weather",
     cal_title: "Our weddings · 2027",
     cal_edmonton: "Edmonton",
@@ -23816,6 +23821,9 @@ var T = {
     datenav_prev: "Přejít na předchozí významný den",
     datenav_next: "Přejít na další významný den",
     datenav_reset: "Vrátit datum a čas na teď",
+    datenav_reset_date: "Vrátit datum na dnešek",
+    datenav_reset_time: "Vrátit čas na teď",
+    console_hint: "Otevřít rozbalovací konzoli",
     app_weather: "počasí",
     cal_title: "Naše svatby · 2027",
     cal_edmonton: "Edmonton",
@@ -37926,6 +37934,16 @@ var ABANDONED_CALL_MS = 30000;
       if ((e.key === "Escape" || e.key === "Esc") && dtOpen()) { closeDropTerm(); e.stopPropagation(); e.preventDefault(); }
     }, true);
   }
+  (function () { // a very subtle top-left chevron: a discoverable hint that pulls the drop-down console down
+    var vp = document.querySelector(".hunt-viewport");
+    if (!vp || document.getElementById("loft-console-hint")) return;
+    var b = document.createElement("button");
+    b.type = "button"; b.id = "loft-console-hint"; b.className = "loft-console-hint"; b.textContent = "▾";
+    b.setAttribute("data-aria-i", "console_hint"); b.setAttribute("data-title-i", "console_hint");
+    b.setAttribute("aria-label", consoleT("console_hint")); b.title = consoleT("console_hint");
+    b.addEventListener("click", function (e) { e.stopPropagation(); toggleDropTerm(); });
+    vp.appendChild(b);
+  })();
   // ── EDITOR APP ───────────────────────────────────────────────────────────────────
   // A tiny local-script editor, sibling to the console: write JS, name it, save it. The
   // saved scripts live in localStorage["deskScripts"] as a JSON { name: code } map — they
@@ -44914,14 +44932,14 @@ async def localfont(name):
           '<div class="pmk-cd his"><span class="pmk-city">' + tr("cal_edmonton") + '</span><span class="pmk-time2 pmk-e-t"></span><span class="pmk-sub pmk-e-cd"></span></div>' +
           '<div class="pmk-cd hers"><span class="pmk-city">' + tr("cal_prague") + '</span><span class="pmk-time2 pmk-p-t"></span><span class="pmk-sub pmk-p-cd"></span></div>' +
         '</div>' +
-        '<div class="pmk-play">' + tr("clk_playtime") + ' <b class="pmk-pt"></b></div>' +
         '<div class="pmk-time-ctl">' +
           '<label class="pmk-tl">' + tr("clk_jump_label") + '</label>' +
           '<div class="pmk-trow"><input type="range" class="pmk-slider" min="0" max="47" step="1" aria-label="' + tr("clk_jump_label") + '"><span class="pmk-tval"></span></div>' +
           '<div class="pmk-trow2"><button type="button" class="pmk-treset" title="' + tr("clk_reset") + '" aria-label="' + tr("clk_reset") + '">↻</button></div>' +
           '<div class="pmk-trow3"><button type="button" class="pmk-sunrise" title="' + tr("clk_sunrise") + '" aria-label="' + tr("clk_sunrise") + '">☀ <span class="pmk-sr-t"></span></button><button type="button" class="pmk-sunset" title="' + tr("clk_sunset") + '" aria-label="' + tr("clk_sunset") + '"><span class="pmk-sunset-glyph">' + SUNSET_GLYPH() + '</span> <span class="pmk-ss-t"></span></button></div>' +
           '<div class="pmk-trow4"><button type="button" class="pmk-timelapse"></button></div>' +
-        '</div>';
+        '</div>' +
+        '<div class="pmk-play">' + tr("clk_playtime") + ' <b class="pmk-pt"></b></div>';
       body.appendChild(wrap);
       var z = function (n) { return (n < 10 ? "0" : "") + n; };
       var EDM = +new Date(2027, 4, 1), PRG = +new Date(2027, 6, 10);
@@ -48098,6 +48116,7 @@ async def localfont(name):
       }
       if (e.key === "Escape" || e.key === "Esc") {
         e.preventDefault(); e.stopPropagation();
+        if (document.getElementById("sharecard-modal") && window.__shareCloseModal) { window.__shareCloseModal(); return; } // the postcard modal (tapped from a message image) owns Esc first — close it, don't navigate the phone back under it
         if (phMenuOpen()) { phCloseMenu(); return; } // an open app-icon menu owns Esc (matches the desktop .mon-ctx), doesn't navigate the phone back
         if (currentApp === "album" && shell && shell.querySelector(".pm-album-detail") && window.__albumCloseDetail) { window.__albumCloseDetail(); return; } // an open polaroid detail owns Esc first
         navBack();
@@ -66158,6 +66177,17 @@ function spawnDustMote(container) {
     if (window.__refreshTimePill) window.__refreshTimePill();
   }
   window.__calResetDateTime = calResetDateTime;
+  // the TIME pill's ↺: clear ONLY ?time= (keep any ?date=), snap the clock back to the real hour,
+  // and re-apply day/night from it — mirrors the phone Clock's ↻ (setTimeParam(null)).
+  function calResetTimeOnly() {
+    calClearTimeParam();
+    if (window.__reanchorTimeOverride) window.__reanchorTimeOverride();
+    if (window.__applyAutoDayNight) window.__applyAutoDayNight(true);
+    if (window.__paintPhoneStatusClock) window.__paintPhoneStatusClock();
+    if (window.__paintBalconyPhoneClock) window.__paintBalconyPhoneClock();
+    if (window.refreshDeskClock) window.refreshDeskClock();
+    if (window.__refreshTimePill) window.__refreshTimePill();
+  }
   var calView = null; // {y, m} the displayed month
   function calEnsureView() { if (!calView) { var n = window.__now ? window.__now() : new Date(); calView = { y: n.getFullYear(), m: n.getMonth() }; } }
   function calSameYMD(dt, y, m, d) { return dt && dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === d; }
@@ -66405,8 +66435,12 @@ function spawnDustMote(container) {
       if (window.__openPhoneAppHere) window.__openPhoneAppHere("calendar");
       else if (window.phone) window.phone("calendar");
     });
+    var reset = document.createElement("button"); // ↺ — clear ?date=, snap back to the real day (sits between the date and ⏩)
+    reset.type = "button"; reset.id = "loft-datereset"; reset.className = "loft-datestep"; reset.textContent = "↺";
+    reset.addEventListener("click", function (e) { e.stopPropagation(); calResetToday(); });
+    reset.addEventListener("keydown", swallowKeys);
     var next = mkStep("loft-datenext", "⏩", 1);
-    nav.appendChild(prev); nav.appendChild(pill); nav.appendChild(next);
+    nav.appendChild(prev); nav.appendChild(pill); nav.appendChild(reset); nav.appendChild(next);
     vp.appendChild(nav);
   }
   window.__refreshDatePill = function () {
@@ -66420,6 +66454,8 @@ function spawnDustMote(container) {
     var prev = document.getElementById("loft-dateprev"), next = document.getElementById("loft-datenext");
     if (prev) { prev.title = calStr("datenav_prev"); prev.setAttribute("aria-label", calStr("datenav_prev")); }
     if (next) { next.title = calStr("datenav_next"); next.setAttribute("aria-label", calStr("datenav_next")); }
+    var dreset = document.getElementById("loft-datereset");
+    if (dreset) { var drk = calStr("datenav_reset_date"); dreset.title = drk; dreset.setAttribute("aria-label", drk); dreset.style.display = /[?#&]date=\d{4}-\d{2}-\d{2}/.test(location.href) ? "" : "none"; } // only offered when a ?date= override is in play
   };
   // sibling TIME pill, mirrored to the bottom-right: the loft's Edmonton wall-clock, showing the
   // advancing ?time= override when one is set (else real Edmonton time); a click opens the Clock app
@@ -66438,11 +66474,11 @@ function spawnDustMote(container) {
     lapse.type = "button"; lapse.id = "loft-timelapse-btn"; lapse.className = "loft-timestep";
     lapse.addEventListener("click", function (e) { e.stopPropagation(); if (window.timelapse) window.timelapse(!window.__lapseActive); if (window.__refreshTimePill) window.__refreshTimePill(); });
     lapse.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") e.stopPropagation(); });
-    var reset = document.createElement("button"); // ↺ — clear ?date= + ?time=, snap back to the real day + clock (day/night re-applies from it)
+    var reset = document.createElement("button"); // ↺ — clear ?time=, snap back to the real clock (day/night re-applies from it); sits between the time and ▶/⏸
     reset.type = "button"; reset.id = "loft-timereset"; reset.className = "loft-timestep"; reset.textContent = "↺";
-    reset.addEventListener("click", function (e) { e.stopPropagation(); calResetDateTime(); });
+    reset.addEventListener("click", function (e) { e.stopPropagation(); calResetTimeOnly(); });
     reset.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") e.stopPropagation(); });
-    nav.appendChild(pill); nav.appendChild(lapse); nav.appendChild(reset);
+    nav.appendChild(pill); nav.appendChild(reset); nav.appendChild(lapse);
     vp.appendChild(nav);
   }
   window.__refreshTimePill = function () {
@@ -66453,17 +66489,19 @@ function spawnDustMote(container) {
       try { txt = new Date().toLocaleTimeString("en-GB", { timeZone: "America/Edmonton", hour: "2-digit", minute: "2-digit", hour12: false }); }
       catch (e) { var d = new Date(), z = function (n) { return (n < 10 ? "0" : "") + n; }; txt = z(d.getHours()) + ":" + z(d.getMinutes()); }
     }
-    pill.textContent = txt;
+    var face = "", hm = /^(\d{1,2}):(\d{2})/.exec(txt); // the clock-face emoji nearest the shown time (🕐–🕛 on the hour, 🕜–🕧 on the half)
+    if (hm) { var h12 = (+hm[1]) % 12; if (h12 === 0) h12 = 12; face = String.fromCodePoint(((+hm[2]) >= 30 ? 0x1F55C : 0x1F550) + (h12 - 1)) + " "; }
+    pill.textContent = face + txt;
     pill.title = calStr("app_clock");
     pill.setAttribute("aria-label", calStr("app_clock"));
     var lapse = document.getElementById("loft-timelapse-btn");
     if (lapse) { var on = !!window.__lapseActive; lapse.textContent = on ? "⏸" : "▶"; lapse.classList.toggle("lapsing", on); var lk = calStr(on ? "clk_timelapse_stop" : "clk_timelapse"); lapse.title = lk; lapse.setAttribute("aria-label", lk); }
     var reset = document.getElementById("loft-timereset");
-    if (reset) { var rk = calStr("datenav_reset"); reset.title = rk; reset.setAttribute("aria-label", rk); }
+    if (reset) { var rk = calStr("datenav_reset_time"); reset.title = rk; reset.setAttribute("aria-label", rk); reset.style.display = /[?#&]time=\d/.test(location.href) ? "" : "none"; } // only offered when a ?time= override is in play
   };
   calMakePill(); calMakeTimePill();
   window.__refreshDatePill(); window.__refreshTimePill();
-  setInterval(window.__refreshTimePill, 15000); // text-only, hidden-tab safe; advances the pill while ?time= ticks
+  setInterval(function () { if (window.__refreshTimePill) window.__refreshTimePill(); if (window.__paintCalTile) window.__paintCalTile(); }, 15000); // text-only, hidden-tab safe; advances the pill while ?time= ticks and keeps the dock calendar tile on the current loft day
   // a small transient pill naming the season just picked — lives in the viewport so
   // fullscreen keeps it; one element, retimed on every press, nothing accumulates
   var seasonToastEl = null, seasonToastTimer = null;
@@ -66691,7 +66729,7 @@ function spawnDustMote(container) {
     if (!shareModalEl) return;
     var m = shareModalEl; shareModalEl = null;
     if (m.__url) { try { URL.revokeObjectURL(m.__url); } catch (e) {} }
-    document.removeEventListener("keydown", shareEsc, true);
+    window.removeEventListener("keydown", shareEsc, true);
     m.classList.remove("show");
     setTimeout(function () { if (m.parentNode) m.remove(); }, 260);
   }
@@ -66713,7 +66751,7 @@ function spawnDustMote(container) {
     (document.fullscreenElement || document.body).appendChild(overlay);
     shareModalEl = overlay;
     requestAnimationFrame(function () { overlay.classList.add("show"); });
-    document.addEventListener("keydown", shareEsc, true);
+    window.addEventListener("keydown", shareEsc, true);
     overlay.addEventListener("click", function (e) {
       if (e.target === overlay || (e.target.closest && e.target.closest(".sharecard-x"))) shareCloseModal();
     });

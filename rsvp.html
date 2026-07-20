@@ -61019,23 +61019,22 @@ function spawnDustMote(container) {
       timer = null;
       if (!shouldRun()) { clearCurrent(); return; } // gate closed while waiting → stay empty (re-armed by __updateOfficeHangout)
       var prev = current;
-      // most of the time the office sits empty; a couple only slips in occasionally
-      var visit = Math.random() < 0.45;
+      // the office should usually have a pair chatting; only a short empty beat now and then
+      var visit = Math.random() < 0.85;
       var next = visit ? pickCouple(prev) : null;
       if (!next) {
         clearCurrent();
-        timer = setTimeout(swap, 22000 + Math.random() * 26000); // long quiet stretch, then maybe someone drifts in
+        timer = setTimeout(swap, 8000 + Math.random() * 8000); // a brief quiet stretch, then someone drifts back in
         return;
       }
       show(next);
-      timer = setTimeout(swap, 26000 + Math.random() * 22000); // this couple hangs out ~26-48s, then drifts off
+      timer = setTimeout(swap, 26000 + Math.random() * 22000); // this pair hangs out ~26-48s, then rotates
     }
     function schedule() {
       if (timer) return; // one timer only — idempotent under storm-clicks
       if (!shouldRun()) return;
-      // don't pop a couple in the instant you walk in — the office reads as quiet first; a
-      // couple may drift in after a beat (swap rolls the occasional visit).
-      timer = setTimeout(swap, 8000 + Math.random() * 12000);
+      if (!current) { var first = pickCouple(null); if (first) show(first); } // bring a pair on promptly so the office feels occupied when you walk in
+      timer = setTimeout(swap, current ? (26000 + Math.random() * 22000) : (3000 + Math.random() * 4000));
     }
     // start/stop entry point — pinged on party toggle (setGardenParty), room change (goToStage),
     // and visibility/focus flips. Re-arms when the gate turns true, tears down when false.

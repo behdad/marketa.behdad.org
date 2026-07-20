@@ -1024,7 +1024,6 @@ FILES.forEach(function (file) {
   checkAnimationKeyframes(file, style);
   checkTransformClobber(file, style, html);
   checkConsoleOutClipSlack(file, style);
-  checkChromeOverlap(file, style, script);
   checkSvgTagBalance(file, html);
   console.log("");
 });

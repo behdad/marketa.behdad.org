@@ -757,7 +757,8 @@ function checkParticleSpawnerCaps(file, script) {
   var GUARDED = [
     { fn: "spawnSteamWisps", cls: "steam-wisp" },
     { fn: "spawnMusicNotes", cls: "music-note" },
-    { fn: "spawnHearts", cls: "heart-particle" }
+    { fn: "spawnHearts", cls: "heart-particle" },
+    { fn: "spawnSkyMeteor", cls: "sky-meteor" }
   ];
   GUARDED.forEach(function (g) {
     var start = script.indexOf("function " + g.fn + "(");

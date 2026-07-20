@@ -72245,12 +72245,17 @@ function spawnDustMote(container) {
       }
       return !!el;
     }
-    function whoFromIds(ids, anchorSel, out) { // a hook that publishes bare ids → directory rows
+    function whoFromIds(ids, anchorSel, out, memberSel) { // a hook that publishes bare ids → directory rows
       if (!ids) return;
-      (Array.isArray(ids) ? ids : [ids]).forEach(function (id) {
+      var host = anchorSel ? document.querySelector(anchorSel) : null;
+      // A couple publishes its two ids in the same order as its two person subgroups, so each row
+      // anchors on its OWN figure — otherwise both rows point at the pair's midpoint, which the
+      // arrow and the left-to-right sort would both read as one spot.
+      var figs = (host && memberSel) ? host.querySelectorAll(memberSel) : null;
+      (Array.isArray(ids) ? ids : [ids]).forEach(function (id, i) {
         var d = WHO_DIR[id];
         if (!d) return;
-        out.push({ key: id, name: d.name, roleKey: d.roleKey, el: anchorSel ? document.querySelector(anchorSel) : null, sels: null });
+        out.push({ key: id, name: d.name, roleKey: d.roleKey, el: (figs && figs[i]) || host, sels: null });
       });
     }
     function whoHook(fn) { try { return typeof fn === "function" ? (fn() || []) : []; } catch (e) { return []; } }
@@ -72280,9 +72285,9 @@ function spawnDustMote(container) {
           });
         });
       } else if (room === "kitchen") {
-        whoFromIds(whoHook(window.__barCoupleNow), "#kitchen-bar-couples .bar-couple.present", out);
+        whoFromIds(whoHook(window.__barCoupleNow), "#kitchen-bar-couples .bar-couple.present", out, ".bc-person");
       } else if (room === "office") {
-        whoFromIds(whoHook(window.__officeCoupleNow), "#office-hangout .of-couple.present", out);
+        whoFromIds(whoHook(window.__officeCoupleNow), "#office-hangout .of-couple.present", out, ".of-person");
       } else if (room === "balcony") {
         whoRows(whoHook(window.__balconyHangoutNow), out);
         whoFromIds(whoHook(window.__balconyGrillmasterNow), "#balcony-grillmaster", out);
@@ -72404,7 +72409,26 @@ function spawnDustMote(container) {
         spotlightTimer = setTimeout(clearSpotlight, 3000); // flash for 3s
       }
     }
+    // Point at ONE figure in any room. The garden floor has a crowd to freeze around the pick
+    // (spotlightGuests, above); everywhere else there's just the person, so this is the plain
+    // arrow half of the same mechanism — which is what the other four rooms get.
+    // The arrow is appended INTO the figure's own group: getBBox() is that group's local box and
+    // a child shares exactly that coordinate system, so the arrow needs no screen-space maths and
+    // rides whatever the figure does — the deck crowd's per-showing jitter, a cameo walking in.
+    // It also means a figure that leaves (or fades out) while its card is up takes the arrow with
+    // it, rather than stranding it over empty floor; the 3s timer clears it either way.
+    function spotlightFigure(el) {
+      if (!el) return;
+      clearSpotlight(); // one pick at a time, same as the garden
+      var bb = null;
+      try { bb = el.getBBox(); } catch (e) { return; }
+      if (!bb || !bb.height) return; // nothing drawn to point at (hidden, or a cameo mid-fade)
+      el.appendChild(makeSpotArrow(bb.x + bb.width / 2, bb.y - 3));
+      if (open && smallScreen()) panel.classList.add("spot-hide");
+      spotlightTimer = setTimeout(clearSpotlight, 3000);
+    }
     window.__spotlightGuest = spotlightGuests; // test/console hook
+    window.__spotlightFigure = spotlightFigure; // test/console hook — the any-room arrow
     window.__clearGuestSpotlight = clearSpotlight; // let the transport freeze drop a live spotlight so it can't linger past a pause/resume
 
     // ── INVERSE ROSTER ────────────────────────────────────────────────────────────
@@ -72507,10 +72531,12 @@ function spawnDustMote(container) {
       return "<em>" + p.name + "</em>" + (p.roleKey ? " · " + tipText(p.roleKey) : "") +
         kidAgeLine(p.name) + relLine(p.key) + funFact(p.key);
     }
-    // A row's tap: on the garden floor it still singles the guest out (arrow + freeze the rest),
-    // and everywhere there's a figure to point at it also pops that person's white name card.
+    // A row's tap: on the garden floor it singles the guest out (arrow + freeze the rest); in
+    // every other room there's no crowd to freeze, so the pick just gets the arrow. Either way
+    // it also pops that person's white name card.
     function pickRow(p) {
       if (p.sels) spotlightGuests(p.sels);
+      else spotlightFigure(p.el);
       // deferred a tick: the card is anchored on the FIGURE, but the click that asked for it is on
       // the roster row, so the global egg-bubble dismisser (a document click listener that drops
       // any bubble whose anchor doesn't contain the target) would kill it on the way up.
@@ -72519,9 +72545,38 @@ function spawnDustMote(container) {
     // Rebuild only when the room, the language, or the set of people actually changed — the
     // availability poll calls this every 1.5s under an open panel, and blindly re-rendering
     // would drop row focus/hover mid-interaction.
-    var lastSig = null;
+    var lastSig = null, lastOrder = null;
     function rosterSig(room, people) {
       return room + "|" + document.documentElement.lang + "|" + people.map(function (p) { return p.key; }).join(",");
+    }
+    // The panel reads as a map of the room: whoever stands furthest LEFT in the scene is the
+    // first row. Screen-space rects are the only measure comparable across these figures — they
+    // sit in differently transformed groups (the strip's room pan, each figure's own
+    // translate/scale), so a local getBBox() x means nothing between two of them, while
+    // getBoundingClientRect() has already folded in every ancestor transform. Kept here on the
+    // display side rather than in __whoIsHere, so Aspen's photo lineup doesn't inherit a sort it
+    // has no use for. Rows with nothing to measure (no figure node, or a zero-size box mid-fade)
+    // hold their incoming order at the END rather than jumping to the left edge.
+    function orderLeftToRight(people) {
+      return people.map(function (p, i) {
+        var x = null;
+        if (p.el) { try { var r = p.el.getBoundingClientRect(); if (r.width || r.height) x = r.left + r.width / 2; } catch (e) {} }
+        return { p: p, i: i, x: x };
+      }).sort(function (a, b) {
+        if (a.x === null && b.x === null) return a.i - b.i;
+        if (a.x === null) return 1;
+        if (b.x === null) return -1;
+        return (a.x - b.x) || (a.i - b.i); // index tiebreak: overlapping figures can't flicker order between renders
+      }).map(function (e) { return e.p; });
+    }
+    // The order the panel is SHOWING. Sorted only when the room, the language or the set of
+    // people actually changes — these figures never stop moving (guests dance, the deck crowd is
+    // re-jittered each showing), so sorting on every read would shuffle rows under the reader's
+    // cursor and let a hook read disagree with the rows on screen.
+    function orderedPeople(room, people) {
+      var sig = rosterSig(room, people);
+      if (sig !== lastSig || !lastOrder) { lastSig = sig; lastOrder = orderLeftToRight(people); }
+      return lastOrder;
     }
     // Build the list of people in the room ON SCREEN into the panel. `force` rebuilds regardless
     // of the signature (a fresh open, a language flip).
@@ -72529,9 +72584,9 @@ function spawnDustMote(container) {
       if (!panel) return;
       var room = window.currentStageName || "kitchen";
       var people = window.__whoIsHere(room);
-      var sig = rosterSig(room, people);
-      if (!force && sig === lastSig) return;
-      lastSig = sig;
+      var changed = rosterSig(room, people) !== lastSig;
+      people = orderedPeople(room, people); // caches the order (and the signature) for this population
+      if (!force && !changed) return;
       // drop everything except the persistent close button
       var close = panel.querySelector(".roster-close");
       panel.innerHTML = "";
@@ -72613,7 +72668,8 @@ function spawnDustMote(container) {
     };
     window.__rosterOpen = function () { return open; }; // test read hook
     window.__rosterList = function (room) { // test hook: the names in a room (default: the room on screen), in panel order
-      return window.__whoIsHere(room).map(function (p) { return p.name; });
+      room = room || window.currentStageName || "kitchen";
+      return orderedPeople(room, window.__whoIsHere(room)).map(function (p) { return p.name; });
     };
     // The cast's ONE name/role table, addressable by key whether or not the person is on the
     // floor — so the other rooms' occupant lists (__roomOccupants) never re-type a name. The

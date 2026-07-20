@@ -68663,7 +68663,7 @@ function spawnDustMote(container) {
   // Per-room dwell budget. The garden's numbers are deliberately the largest in the table and
   // apSelfCheck enforces that; tune the party's length HERE, not by adding beats to a builder.
   var ROOM_SPEC = {
-    kitchen: { budgetMs: 26000, maxBeats: 9, weight: 1, anchor: "kitchen-lamarzocco" },
+    kitchen: { budgetMs: 26000, maxBeats: 10, weight: 1, anchor: "kitchen-lamarzocco" },
     garden: { budgetMs: 96000, maxBeats: 18, weight: 3, anchor: "garden-guitar" },
     cuddly: { budgetMs: 30000, maxBeats: 10, weight: 1, anchor: "cuddly-octopus" },
     office: { budgetMs: 52000, maxBeats: 15, weight: 1, anchor: "office-pc-desk-trio" },
@@ -68731,13 +68731,36 @@ function spawnDustMote(container) {
     if (!id || typeof window.cursorTo !== "function") return;
     if (!cursorPointFor(id)) { apTapMisses++; return; } // renamed/absent hit-target — count it, don't guess
     try { window.cursorTo(id); } catch (e) {}
+    apCursorArm();
   }
   function apGhostClick(id) {
     if (!id || typeof window.ghostClick !== "function") return;
     if (!cursorPointFor(id)) { apTapMisses++; return; }
     try { window.ghostClick(id); } catch (e) {} // fire-and-forget: the beat's own `wait` owns pacing
+    apCursorArm();
   }
-  function apCursorGone() { try { cursorTeardown(); } catch (e) {} }
+  function apCursorGone() { apCursorRest(); try { cursorTeardown(); } catch (e) {} }
+
+  // ── the pointer's ATTENTION SPAN ── the dot is the show's visible HAND, and a hand that isn't
+  // pointing at anything must leave. Two rules, because either alone leaves a hole:
+  //   • a beat that pans the camera itself and taps nothing withdraws it AT ONCE — otherwise the
+  //     dot hangs at a stale viewport point while the scene slides underneath it, which is the
+  //     garden MOMENTS' 14s-a-piece stretch and reads as a frozen artifact, not a pointer;
+  //   • any other untapped stretch fades it after AUTOPLAY_CURSOR_IDLE_MS. That covers whatever a
+  //     future scene stops tapping, which is why the timer exists as well as the rule above.
+  // The threshold is wider than the longest gap between two tapped beats (office/balcony run
+  // ~2000+1800ms, ×1.35 under reduced motion), so a real pointing run never blinks mid-sequence.
+  // ONE slot, cleared by every stop — the machine adds no second timer to leak.
+  var AUTOPLAY_CURSOR_IDLE_MS = 6000;
+  var apCursorIdleTimer = null;
+  function apCursorArm() { // a tap just landed: keep the dot up, restart its countdown
+    if (apCursorIdleTimer) clearTimeout(apCursorIdleTimer);
+    apCursorIdleTimer = setTimeout(function () { apCursorIdleTimer = null; cursorHide(); }, AUTOPLAY_CURSOR_IDLE_MS);
+  }
+  function apCursorRest() { // nothing to point at: withdraw now, and leave no countdown behind
+    if (apCursorIdleTimer) { clearTimeout(apCursorIdleTimer); apCursorIdleTimer = null; }
+    cursorHide();
+  }
 
   // ── driving a room's SOLVE ── advance one step via the same __*DoNext walker Enter uses.
   // Returns FALSE when the room had nothing left to solve, which collapses the rest of the
@@ -68765,6 +68788,15 @@ function spawnDustMote(container) {
     try { if (window.__applySeasonSilent) window.__applySeasonSilent(s); else if (window.season) window.season(s); } catch (e) {}
   }
 
+  // ── panels the show OPENS and must CLOSE ── a UI PANEL is not scenic state: left up it covers
+  // every room the show visits next, and a human pressing Take-over inherits it. So panels are
+  // closed at every SCENE boundary as well as on stop — a scene truncated by its budget between
+  // the beat that opens one and the beat that closes it can't strand it either.
+  var AP_PANELS = {
+    roster: function () { if (window.__toggleRoster) window.__toggleRoster(false); }
+  };
+  function apClosePanels() { for (var k in AP_PANELS) if (AP_PANELS.hasOwnProperty(k)) { try { AP_PANELS[k](); } catch (e) {} } }
+
   // ── teardown inventory ── the AUTONOMOUS state autoplay switches on, and how to switch it off.
   // Recorded as it happens (apOwn) and released in stopAutoplay. Deliberately NOT in this table:
   // the party, day/night and any app left open — a human taking the wheel should inherit the loft
@@ -68779,6 +68811,7 @@ function spawnDustMote(container) {
   function apRelease() {
     for (var k in apOwned) if (apOwned.hasOwnProperty(k) && AP_TEARDOWN[k]) { try { AP_TEARDOWN[k](); } catch (e) {} }
     apOwned = {};
+    apClosePanels(); // unconditional: a panel is never "inherited", however it came to be open
   }
 
   // ── beat ── every field is optional but `wait`. `room` is where the beat must run; the DIRECTOR
@@ -68839,6 +68872,13 @@ function spawnDustMote(container) {
   // the room's signature toys. Verbs are preferred over private internals and synthesized clicks
   // throughout: they self-precondition and narrate themselves in the caption.
 
+  // Is the espresso machine lit? Read from its own state class, the way apMonitorInteract reads the
+  // monitor apps — there's no console verb for "is it on", and lamaz() only toggles.
+  function apKitchenPowered() {
+    var m = document.getElementById("kitchen-lamarzocco");
+    return !!(m && m.classList.contains("powered-on"));
+  }
+
   // KITCHEN — pull a shot, then flip day ⇄ bar.
   function apSceneKitchen() {
     var r = [], i;
@@ -68846,7 +68886,13 @@ function spawnDustMote(container) {
       for (i = 0; i < 4; i++) r.push(apBeat({ fn: function () { return apDriveRoomSolve("kitchen"); }, wait: 1800, chain: "solve", room: "kitchen" }));
       return r;
     }
-    r.push(apBeat({ fn: function () { apVerb("lamaz"); }, wait: 2200, tap: "kitchen-lamarzocco", room: "kitchen" }));
+    // lamaz() is the power TOGGLE, so it is fired ONLY when the machine is actually dark — blind, it
+    // would switch the machine off on the next visit and rebuff every step after it. Its wait
+    // covers the warm-up. The knock-out and the grind complete a cycle the beat list used to skip:
+    // a spent puck blocks the next shot, and with nothing ground there is nothing to tamp.
+    r.push(apBeat({ fn: function () { if (!apKitchenPowered()) apVerb("lamaz"); }, wait: 2800, tap: "kitchen-lamarzocco", room: "kitchen" }));
+    r.push(apBeat({ fn: function () { apVerb("knockbox"); }, wait: 1800, tap: "kitchen-knockbox", room: "kitchen" }));
+    r.push(apBeat({ fn: function () { apVerb("elmaz"); }, wait: 2200, tap: "kitchen-grinder", room: "kitchen" }));
     r.push(apBeat({ fn: function () { apVerb("tamper"); }, wait: 2000, tap: "kitchen-tamper", room: "kitchen" }));
     r.push(apBeat({ fn: function () { apVerb("brew"); }, wait: 2600, tap: "kitchen-portafilter", room: "kitchen" }));
     r.push(apBeat({ fn: function () { apVerb("sip"); }, wait: 2200, tap: "kitchen-shotcup", room: "kitchen" }));
@@ -68867,14 +68913,17 @@ function spawnDustMote(container) {
       return r;
     }
     r.push(apBeat({ fn: function () { if (window.party && !window.party()) window.party(true); }, wait: 2800, tap: "garden-guitar", room: "garden" }));
-    r.push(apBeat({ fn: function () { apVerb("guests"); }, wait: 3000, room: "garden", selfNav: true }));   // guests() pans itself
-    r.push(apBeat({ fn: function () { apVerb("dance", "random"); }, wait: 2600, room: "garden" }));
-    r.push(apBeat({ fn: function () { apVerb("roster"); }, wait: 3200, room: "garden" }));
-    r.push(apBeat({ fn: function () { apCall(window.__spotlightGuest); }, wait: 3000, room: "garden" }));
+    r.push(apBeat({ fn: function () { apVerb("guests", true); }, wait: 3000, room: "garden", selfNav: true }));   // guests() pans itself
+    r.push(apBeat({ fn: function () { apVerb("dance", Math.random()); }, wait: 2600, tap: "garden-djbooth", room: "garden" }));
+    // EXPLICIT booleans, never the bare flip: a bare roster() is a toggle, so alternate garden
+    // visits would leave the name list up over the rest of the show (and over a take-over). The
+    // next beat closes it, exactly as the Trailer's who's-who pair does; apClosePanels is the net.
+    r.push(apBeat({ fn: function () { apVerb("roster", true); }, wait: 3200, room: "garden" }));
+    r.push(apBeat({ fn: function () { apVerb("roster", false); apCall(window.__spotlightGuest); }, wait: 3000, room: "garden" }));
     r.push(apBeat({ fn: function () { apCall(window.__spotlightGuest); }, wait: 3000, room: "garden" }));
     r.push(apBeat({ fn: function () { apOwn("albumsnaps"); apCall(window.__startAlbumSnaps); apVerb("chase"); }, wait: 3000, room: "garden", selfNav: true }));
     r.push(apBeat({ fn: apVarySeason, wait: 3000, room: "garden", flourish: true, every: 3 }));
-    r.push(apBeat({ fn: function () { apVerb("jukebox"); }, wait: 3000, room: "garden" }));
+    r.push(apBeat({ fn: function () { apVerb("jukebox", Math.random()); }, wait: 3000, tap: "garden-djbooth", room: "garden" })); // bare jukebox() only PRINTS the menu
     var MOMENTS = ["firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift"];
     apPickSome(MOMENTS, 3).forEach(function (name) {
       r.push(apBeat({ fn: function () { apVerb(name); }, wait: 14000, room: "garden", selfNav: true })); // these verbs pan + precondition themselves
@@ -68889,10 +68938,15 @@ function spawnDustMote(container) {
       for (i = 0; i < 4; i++) r.push(apBeat({ fn: function () { return apDriveRoomSolve("cuddly"); }, wait: 1800, chain: "solve", room: "cuddly" }));
       return r;
     }
-    r.push(apBeat({ fn: function () { apVerb("projector", "random"); }, wait: 2800, tap: "cuddly-wallscreen", room: "cuddly" }));
+    // Math.random(), not the string "random": these verbs read a 0..1 FRACTION (fracToIndex) and
+    // bounce anything else back as their help text — "random" picked no channel at all.
+    r.push(apBeat({ fn: function () { apVerb("projector", Math.random()); }, wait: 2800, tap: "cuddly-wallscreen", room: "cuddly" }));
     r.push(apBeat({ fn: function () { apVerb("octi"); }, wait: 2400, tap: "cuddly-octopus", room: "cuddly", selfNav: true }));
-    r.push(apBeat({ fn: function () { apVerb("piratebox"); }, wait: 2600, tap: "cuddly-trunk", room: "cuddly" }));
-    r.push(apBeat({ fn: function () { apVerb("projector", "random"); }, wait: 2800, tap: "cuddly-wallscreen", room: "cuddly" }));
+    // explicit booleans both ways: a bare piratebox() is a toggle, so the trunk's state would
+    // alternate between visits and the pair reads as one gag — Octi hops in, then back out.
+    r.push(apBeat({ fn: function () { apVerb("piratebox", true); }, wait: 2600, tap: "cuddly-trunk", room: "cuddly" }));
+    r.push(apBeat({ fn: function () { apVerb("piratebox", false); }, wait: 2600, tap: "cuddly-trunk", room: "cuddly" }));
+    r.push(apBeat({ fn: function () { apVerb("projector", Math.random()); }, wait: 2800, tap: "cuddly-wallscreen", room: "cuddly" }));
     return r;
   }
 
@@ -69083,6 +69137,7 @@ function spawnDustMote(container) {
     for (var guard = 0; guard < 64; guard++) {
       if (!apScene || apSceneIdx >= apScene.beats.length) {
         if (apStack) { apScene = apStack.scene; apSceneIdx = apStack.idx; apStack = null; continue; }
+        apClosePanels(); // a finished scene never hands a panel to the next room
         apScene = apNextScene(); apSceneIdx = 0;
         if (!apScene || !apScene.beats.length) { apScene = null; return AUTOPLAY_BEAT_MS; }
       }
@@ -69091,6 +69146,7 @@ function spawnDustMote(container) {
       apStepCount++;
       if (b.click) apGhostClick(b.click);
       else if (b.tap) apTap(b.tap);
+      else if (b.selfNav) apCursorRest(); // it moves the camera and points at nothing — the hand leaves first
       var res = b.fn ? apCall(b.fn) : undefined;
       if (b.chain && res === false) apScene.dropped[b.chain] = 1;
       if (b.act === "phone" && b.arg !== "album") apAlbumClear(); // leaving the album: reset its search

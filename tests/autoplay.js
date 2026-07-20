@@ -19,8 +19,12 @@
 //      routine has MORE beats and MORE total dwell time than kitchen and cuddly (the party
 //      lingers longest), and that the OFFICE (monitor) and BALCONY (phone) routines each OPEN
 //      SEVERAL apps (spy on window.computer/window.phone calls while those routines run).
-//   4. GHOST CURSOR — while a routine with a tapped beat runs, the cinematic ghost cursor
-//      (#cine-cursor.visible) appears; a takeover tears it down (no stranded dot).
+//   4. GHOST CURSOR + PANELS — while a routine with a tapped beat runs, the cinematic ghost cursor
+//      (#cine-cursor.visible) appears; a takeover tears it down (no stranded dot). A panel the show
+//      opens (the who's-here roster) must be closed by the take-over, by the next scene boundary
+//      while it keeps running, and by autoplay(false) — opened by the TEST so none of the three can
+//      pass vacuously. A sampler running across ALL phases also asserts the dot never sits visible
+//      and motionless longer than its idle span (the frozen-pointer defect).
 //   5. HANDLE A NOTIFICATION — deliver a phone text mid-run (__deliverPhoneMessage) with an
 //      action that pans to a KNOWN room; assert the machine OPENS + CLEARS it (no longer the top
 //      unread) and ACTS on it (the room changes to the message's target). It's an interrupt.
@@ -57,7 +61,19 @@ var HARNESS = [
   "  function setFocus(f){ _focus=f; window.dispatchEvent(new Event(f?'focus':'blur')); }",
   "  function nodeCount(){ return document.getElementsByTagName('*').length; }",
   "  function roomsSeen(seen){ var r=window.currentStageName; if(r) seen[r]=1; }",
-  "  var report={errors:[],fresh:false,phase1:{},phase2:{},phase3:{},phase4:{},phase5:{},phase6:{},phase7:{}};",
+  "  var report={errors:[],fresh:false,phase1:{},phase2:{},phase3:{},phase4:{},phase5:{},phase6:{},phase7:{},cursor:{}};",
+  // A background sampler for the whole run, so the ghost cursor's WORST case is measured over
+  // every phase instead of at one convenient instant. A "frozen" sample is the dot visible at the
+  // very same viewport point as the sample before it — which is what a viewer sees as a stuck
+  // artifact while a self-navigating beat slides the scene underneath the pointer.
+  "  var _cur={frozen:0,run:0,worst:0,lastPos:null,samples:0,visible:0};",
+  "  setInterval(function(){",
+  "    var c=document.getElementById('cine-cursor');",
+  "    var vis=!!(c&&c.classList.contains('visible')); var pos=vis?(c.style.transform||'?'):null;",
+  "    _cur.samples++; if(vis)_cur.visible++;",
+  "    if(vis&&pos&&pos===_cur.lastPos){ _cur.run++; if(_cur.run>_cur.worst)_cur.worst=_cur.run; } else _cur.run=0;",
+  "    _cur.lastPos=pos;",
+  "  },250);",
   "  async function run(){",
   // assertFresh: prove the loaded page carries the NEW routine-sequencer code, not a stale build.
   "    report.fresh = (typeof window.__autoplayRoutineBeats==='function' && typeof window.__autoplayRoutineLen==='function' && typeof window.__latestUnreadMessage==='function' && typeof window.__maxUnlocked==='function'",
@@ -118,11 +134,27 @@ var HARNESS = [
   "    var cursorSeen=false;",
   "    for (var c=0;c<20 && !cursorSeen;c++){ await sleep(400); var cc=document.getElementById('cine-cursor'); if(cc && cc.classList.contains('visible')) cursorSeen=true; }",
   "    report.phase4.cursorSeen = cursorSeen;",
+  // A PANEL the show opens must never be inherited. Opened by hand HERE (the office routine never
+  // opens one) so the assertion can't pass vacuously — the old build left the garden's who's-who
+  // list up across rooms, across scenes and straight through the □ Take-over button.
+  "    window.__toggleRoster(true); await sleep(150);",
+  "    report.phase4.rosterOpenBeforeTakeover = window.__rosterOpen();",
   "    if (window.__autoplayTakeover) window.__autoplayTakeover(); await sleep(300);",
+  "    report.phase4.rosterClosedAfterTakeover = !window.__rosterOpen();",
   "    var cc2=document.getElementById('cine-cursor');",
   "    report.phase4.cursorGoneAfterTakeover = !cc2;",
 "    report.phase4.ripplesAfterTakeover = document.querySelectorAll('.cine-ripple').length;",
 "    report.phase4.tapMisses = window.__autoplayTapMisses(); report.phase4.verbMisses = window.__autoplayVerbMisses();",             // torn down: element removed
+  // …and the show CLOSES one on its own while it keeps running: drive beats with no waits and count
+  // how many it takes. The old build never closed the roster at all, so this could only ever hang.
+  "    window.autoplay(true); await sleep(400);",
+  "    window.__toggleRoster(true);",
+  "    var stepsToClose=-1;",
+  "    for (var pz=1; pz<=40 && stepsToClose<0; pz++){ window.__autoplayForceStep(); if(!window.__rosterOpen()) stepsToClose=pz; }",
+  "    report.phase4.rosterStepsToClose = stepsToClose;",
+  "    window.autoplay(false); await sleep(200);",
+  "    window.autoplay(true); await sleep(200); window.__toggleRoster(true); window.autoplay(false); await sleep(200);",
+  "    report.phase4.rosterClosedAfterStop = !window.__rosterOpen();",
   // ── Phase 5: notification interrupt ──
   "    window.autoplay(true); await sleep(400);",
   "    window.goToStage('garden'); await sleep(400);",
@@ -172,6 +204,7 @@ var HARNESS = [
   "    if (document.body.click) document.body.click();",
   "    await sleep(1400);",
   "    report.phase7.stillOffAfterClick = !window.__autoplayOn();",
+  "    report.cursor = { samples:_cur.samples, visible:_cur.visible, worstFrozenMs:_cur.worst*250 };",
   "  }",
   "  window.addEventListener('load',function(){ setTimeout(function(){ run().catch(function(e){window.__errs.push('harness:'+String(e&&e.stack||e));}).then(function(){if(!report.errors.length)report.errors=window.__errs;document.getElementById('__report').textContent=JSON.stringify(report);}); },400); });",
   "})();",
@@ -236,6 +269,18 @@ if (!r) {
   // the old build let both rot silently (every authored tap was dead metadata for months).
   if (p4.tapMisses === 0 && p4.verbMisses === 0) pass("every authored tap id and verb resolved (no dead beat metadata)");
   else fail("dead tap ids / renamed verbs in the scene library", "tapMisses=" + p4.tapMisses + " verbMisses=" + p4.verbMisses);
+  // PANELS ARE NEVER INHERITED. The who's-who roster was opened by a bare toggle and closed by
+  // nothing: it stayed up across rooms, across scenes and through the □ Take-over button, so a
+  // human inherited a loft with the name list pinned over it. All three exits are asserted, and
+  // the roster is opened BY THE TEST first so none of them can pass vacuously.
+  if (p4.rosterOpenBeforeTakeover && p4.rosterClosedAfterTakeover)
+    pass("a panel open during the show is CLOSED by the take-over (nothing stranded for the human)");
+  else fail("takeover must close the who's-here roster", JSON.stringify(p4));
+  if (p4.rosterStepsToClose > 0)
+    pass("…the running show closes one itself within " + p4.rosterStepsToClose + " beat(s) (scene-boundary net)");
+  else fail("a panel must not survive a scene boundary", "never closed across 40 forced beats: " + JSON.stringify(p4));
+  if (p4.rosterClosedAfterStop) pass("…and autoplay(false) leaves no panel open either");
+  else fail("stopping autoplay must close the roster", JSON.stringify(p4));
   // Phase 5 — notification interrupt
   if (p5.deliveredUnread === "invaders") pass("a phone notification was delivered mid-run (unread)");
   else fail("notification delivery", JSON.stringify(p5));
@@ -265,6 +310,14 @@ if (!r) {
   else fail("a deliberate stop must clear idle-resume", JSON.stringify(p7));
   if (p7.stillOffAfterClick) pass("a plain click does NOT stop or revive autoplay (kiosk-safe)");
   else fail("a plain click must not toggle autoplay", JSON.stringify(p7));
+  // THE POINTER NEVER FREEZES. Sampled across every phase: the dot must not sit visible at one
+  // fixed viewport point for longer than its idle span. The garden's MOMENTS pan the camera
+  // themselves, so a dot left up there hangs over a sliding scene for ~14s a beat — the longest,
+  // most-watched stretch of the show. 9s is the 6s idle fade plus slack for the sampler.
+  var cur = r.cursor || {};
+  if (cur.samples > 0 && cur.worstFrozenMs <= 9000)
+    pass("the ghost cursor never freezes in place (worst motionless-and-visible stretch " + cur.worstFrozenMs + "ms over " + cur.samples + " samples)");
+  else fail("the cursor must retire when the show stops pointing", JSON.stringify(cur));
   // Errors
   if (r.errors.length === 0) pass("no uncaught JS errors across the entire run");
   else fail("no uncaught JS errors", r.errors.slice(0, 12).join("\n"));

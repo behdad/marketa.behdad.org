@@ -30907,7 +30907,7 @@ document.addEventListener("click", function (e) {
     // crickets rule (attended) AND daytime AND !meal-on. A text can arrive from ANY room (you're not
     // required to be in the nook to get it); it only WAITS in the app if unattended — the visit itself
     // is day+meal-gated again at tap time by __cuddlyVisit. Pick an undelivered duo, avoiding the last one.
-    if (!document.hidden && document.hasFocus() && isDay() && !mealOn()) {
+    if (!document.hidden && document.hasFocus() && isDay() && !mealOn() && (!window.__gameStarted || window.__gameStarted())) { // ...and not over the attract prompt; the duo stays undelivered, so the next attempt re-rolls it
       var rem = undelivered();
       if (rem.length && window.__deliverPhoneMessage) {
         var pick = null, guard = 0; // draw the next duo from the shuffled rotation, skipping any already texted
@@ -44410,6 +44410,7 @@ async def localfont(name):
     }
     setInterval(function () {
       if (document.visibilityState === "hidden" || !document.hasFocus()) return; // no ghost buzz/chime in a backgrounded OR merely unfocused tab (a one-shot, so it needs the focus check the beds have)
+      if (window.__gameStarted && !window.__gameStarted()) return; // nor over the untouched attract prompt — the interval keeps polling, so it resumes on the next beat
       if ((window.currentStageIndex || 0) !== 4) return;    // only while you're out on the balcony
       if (phone.classList.contains("phone-opened")) return; // opened once → it stays quiet
       phoneNotify();
@@ -48393,6 +48394,14 @@ async def localfont(name):
     // once the thread gets busy (20+), space autonomous drips out progressively so texts don't pile up
     function msgDripSlowFactor() { return unreadCount() >= 4 ? 2.5 : 1; } // 4+ unread piling up → space new texts way out
     function autonomousMsgOk() { return unreadCount() < 8; } // 8 unread → hold all autonomous texts until the user reads some
+    // Nothing may notify a player still looking at the "CLICK ME!" invitation — a text sliding in
+    // over the untouched attract prompt reads as a bug, not an invitation. Every AUTONOMOUS channel
+    // in this IIFE checks this at FIRE time (not schedule time), so dismissing the prompt takes
+    // effect immediately. User-initiated sends (message(), the 'n' nudge, the test hooks) skip it.
+    // Strict about a MISSING hook: __gameStarted is installed near the end of this script, and the
+    // load-time birthday announcement reaches here before that — "not installed yet" means the
+    // player certainly hasn't started, so it must hold, not fire.
+    function playerStarted() { return !!window.__gameStarted && window.__gameStarted(); }
     window.__deliverPhoneMessage = function (id) {
       if (!MESSAGES[id] || messagesThread.indexOf(id) !== -1) return; // unknown, or already received (fire once)
       var m = MESSAGES[id];
@@ -48445,10 +48454,24 @@ async def localfont(name):
     }
     var BD_TEMPLATES = ["bd_msg_a", "bd_msg_b", "bd_msg_c", "bd_msg_d"];
     var BD_MB_PEOPLE = { jay: 1, spencer: 1, madla: 1, robert: 1, elisabeth: 1, felix: 1, daniel: 1, marie: 1, baka: 1 }; // Markéta's friends + Czech family
+    // A birthday window opens ONCE per session (the applyBirthdays edge), often at load — and it's
+    // the whole reason someone visits on the day, so an attract-time announcement is HELD rather
+    // than dropped or re-rolled: it goes out on "loft:gamestart". Bounded by construction — one
+    // slot per person, deduped, and the edge that queues it can't re-fire while the window stays open.
+    var bdHeld = [];
+    window.addEventListener("loft:gamestart", function () {
+      var q = bdHeld; bdHeld = [];
+      q.forEach(function (p) { window.__deliverBirthdayText(p.who, p.name); });
+    });
     window.__deliverBirthdayText = function (who, name) {
       if (!who || !name) return;
       var id = "bd_" + who;
       if (messagesThread.indexOf(id) !== -1) return; // already sent this session — fire once
+      if (!playerStarted()) {
+        for (var h = 0; h < bdHeld.length; h++) if (bdHeld[h].who === who) return;
+        bdHeld.push({ who: who, name: name });
+        return;
+      }
       var mb = who === "marketa" ? false : (who === "behdad" || BD_MB_PEOPLE[who]); // a partner's own birthday is announced by the OTHER partner
       MESSAGES[id] = { fromKey: mb ? "msg_marketa_from" : "msg_behdad_from", bodyKey: BD_TEMPLATES[Math.floor(Math.random() * BD_TEMPLATES.length)], bdName: name, act: "bd:" + who }; // tapping the text summons the birthday person (runMsgAction "bd:")
       window.__deliverPhoneMessage(id);
@@ -48524,7 +48547,7 @@ async def localfont(name):
       if (cueTimer || !window.__gardenPartyOn || !cuePending().length) return;
       cueTimer = setTimeout(function () {
         cueTimer = null;
-        if (window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic && autonomousMsgOk()) {
+        if (window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic && playerStarted() && autonomousMsgOk()) {
           var rem = cueRemaining();
           if (rem.length) window.__deliverPhoneMessage(rem[Math.floor(Math.random() * rem.length)]); // a random un-sent cue
         }
@@ -48545,7 +48568,7 @@ async def localfont(name):
       if (dayTimer || !dayPending().length) return;
       dayTimer = setTimeout(function () {
         dayTimer = null;
-        if (isDayNow() && !window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic && autonomousMsgOk()) {
+        if (isDayNow() && !window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic && playerStarted() && autonomousMsgOk()) {
           var rem = dayRemaining();
           if (rem.length) window.__deliverPhoneMessage(rem[Math.floor(Math.random() * rem.length)]);
         }
@@ -48664,7 +48687,7 @@ async def localfont(name):
       if (madlaTimer) return;
       madlaTimer = setTimeout(function () {
         madlaTimer = null;
-        if (isDayNow() && (!window.__gameStarted || window.__gameStarted()) && !window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic && !callee && !anyExternalCall() && !isOpen() && !callRingUp() && autonomousMsgOk()) {
+        if (isDayNow() && playerStarted() && !window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic && !callee && !anyExternalCall() && !isOpen() && !callRingUp() && autonomousMsgOk()) {
           ringMadla();
         }
         scheduleMadla(); // keep polling — she calls again another day (another window) if this one's skipped
@@ -59514,6 +59537,30 @@ function spawnDustMote(container) {
   var maxUnlocked = 0;
   var captionKey = "kitchen";
   var huntIntroShowing = false; // the blinking "wandering without aim" opening prompt owns the caption until the first tap
+  // The prompt is armed at the very END of this script, but date-driven notifications (the birthday
+  // announcement, via applyBirthdays) fire EARLIER in the same parse — so the window before the
+  // prompt exists must read as "not started", or a load-time text slides in over it. introPending
+  // covers exactly that gap; showHuntIntro settles it either way (armed, or declined mid-cinematic).
+  var introPending = true;
+  function attractOver() { return !huntIntroShowing && !introPending; }
+  // Leaving attract is the one moment every held-back notification channel needs to hear about. A
+  // window event rather than a callback registry: those channels live in IIFEs that run EARLIER in
+  // this file than this one, so an event lets them subscribe regardless of source order. Fired on a
+  // short delay so the room's first real instruction lands before any notification, through a single
+  // latched timer so a burst of room changes can't queue more than one flush.
+  var introFlushT = null;
+  function releaseAttract() {
+    if (!attractOver() || introFlushT) return;
+    introFlushT = setTimeout(function () {
+      introFlushT = null;
+      window.dispatchEvent(new CustomEvent("loft:gamestart"));
+    }, 1500);
+  }
+  function endHuntIntro() {
+    if (!huntIntroShowing) return;
+    huntIntroShowing = false;
+    releaseAttract();
+  }
   var dotsWrap = document.getElementById("hunt-dots");
   var dots = [];
   if (dotsWrap) {
@@ -59731,7 +59778,7 @@ function spawnDustMote(container) {
     strip.classList.toggle("viewing-office", name === "office"); // WebKit paints the monitor's foreignObjects even at opacity:0 and lets them escape the strip clip, leaking into whichever room is on screen; the CSS gate below hides them whenever the office isn't the viewed room
     window.currentStageIndex = idx;
     window.currentStageName = name; // room-truth for gates that live outside this IIFE (e.g. the fractal-flame loop)
-    huntIntroShowing = false; // a room change ends the opening prompt, so the new room's caption shows
+    endHuntIntro(); // a room change ends the opening prompt, so the new room's caption shows (and the held notification channels wake)
     if (window.__removeClickMe) window.__removeClickMe(); // ...and takes the melting invitation with it
     setCaption(name);
     if (name === "garden" && window.__gardenPartyOn && window.__refreshGardenCaption) window.__refreshGardenCaption();
@@ -68919,23 +68966,27 @@ function spawnDustMote(container) {
     strip.removeEventListener("pointerdown", stopHintBlink);
     strip.removeEventListener("click", stopHintBlink);
     if (huntIntroShowing) { // hand the opening prompt off to the real first instruction
-      huntIntroShowing = false;
+      endHuntIntro();
       setCaption("kitchen"); // (a room change would already have cleared the prompt; at rest we're in the kitchen)
       updateKitchenInvite(); // ...and now the espresso-machine invite arrow may appear
     }
   }
   window.__stopHintBlink = stopHintBlink; // the cinematic (Watch is outside the strip) settles it too
   // Has the player actually taken hold of the loft? False while the opening "CLICK ME!" invitation
-  // still owns the scene — cleared by the first strip tap, any real key, or a room change. The
-  // autonomous phone ring reads this so nobody gets called before they've started playing.
-  window.__gameStarted = function () { return !huntIntroShowing; };
+  // still owns the scene — cleared by the first strip tap, any real key, or a room change. EVERY
+  // autonomous notification channel reads this (phone texts + their toasts, the notify buzz, the
+  // incoming ring, the date-driven birthday/occasion invites) so nothing pings a player who hasn't
+  // started; the channels that would otherwise lose a beat wait for the "loft:gamestart" event.
+  window.__gameStarted = function () { return attractOver(); };
   // Open (and re-open on reset) on a blinking "wandering without aim" invitation; the first strip
   // tap (or the grace timeout) hands it off to the real first instruction via stopHintBlink. The
   // espresso-machine invite arrow stays hidden through the prompt. Skipped mid-cinematic (the show
   // owns the caption). Re-arming listeners is idempotent — an identical listener never doubles up.
   function showHuntIntro() {
-    if (window.__cinematic) return;
+    introPending = false; // settled either way — armed just below, or declined for the cinematic
+    if (window.__cinematic) { releaseAttract(); return; } // no prompt to wait on: whatever was held goes out
     huntIntroShowing = true;
+    if (introFlushT) { clearTimeout(introFlushT); introFlushT = null; } // a reset back into attract cancels a flush still in flight
     captionKey = "intro";
     caption.innerHTML = huntText("intro");
     caption.classList.add("hint-blink");
@@ -70565,7 +70616,10 @@ function spawnDustMote(container) {
     var OCC_BODY = { "wedding-edmonton": "occ_invite_wed_edm", "bbq": "occ_invite_bbq", "wedding-prague": "occ_invite_wed_prg", "prague-party": "occ_invite_brunch" };
     var HOLIDAY_SENDER = { nowruz: "msg_behdad_from", chaharshanbe: "msg_behdad_from", carodejnice: "msg_marketa_from", spooky: "msg_irene_from" }; // Iranian → Behdad · Czech → Markéta · Halloween/spooky → Irene; shared/other default to Behdad
     function deliverDateInvite() {
-      if (gated()) return; // crickets + autoplay/trip: no autonomous buzz now — a later focus/entry retries
+      // crickets + autoplay/trip + the untouched attract prompt: no autonomous buzz now. Nothing is
+      // lost — a later focus/visibility/first-entry/gamestart ping retries, and the localStorage
+      // latch below is only written once the invite actually goes out.
+      if (gated() || (window.__gameStarted && !window.__gameStarted())) return;
       if (!window.__deliverOccasionText) return;
       var n = window.__now ? window.__now() : new Date();
       var raw = rawOccKey(); // wedding-edmonton / wedding-prague / prague-party / bbq / bd:… / null
@@ -70584,6 +70638,7 @@ function spawnDustMote(container) {
     }
     window.__deliverDateInvite = deliverDateInvite; // test/console hook
     window.addEventListener("focus", deliverDateInvite);
+    window.addEventListener("loft:gamestart", deliverDateInvite); // the attract prompt held it back — the day's invite goes out the moment play begins
     document.addEventListener("visibilitychange", function () { if (!document.hidden) deliverDateInvite(); });
     window.__retryDateOccasion = deliverDateInvite; // goToStage pings this on the first step past the intro — the invite drips, the scene does NOT
     setTimeout(deliverDateInvite, 1400); // a moment after load, once the game's settled
@@ -71991,7 +72046,7 @@ function spawnDustMote(container) {
       wakeTimer = setTimeout(function tick() {
         wakeTimer = null;
         if (!window.__kidsAsleep) return;
-        if (document.hidden || !document.hasFocus()) { wakeTimer = setTimeout(tick, 6000); return; } // crickets rule: don't wake into a hidden/blurred tab — re-check shortly
+        if (document.hidden || !document.hasFocus() || (window.__gameStarted && !window.__gameStarted())) { wakeTimer = setTimeout(tick, 6000); return; } // crickets rule: don't wake into a hidden/blurred tab, or over the untouched attract prompt — re-check shortly
         wake(true);
       }, 60000 + Math.random() * 60000); // ~60–120s
     }

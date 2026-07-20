@@ -64959,18 +64959,30 @@ function spawnDustMote(container) {
   function captureAlbumShot() {        // build + store one intimate-portrait snapshot from the live floor
     var present = (window.__rosterPresence && window.__rosterPresence()) || [];
     var hosts = null; present.forEach(function (p) { if (p.key === "hosts") hosts = p; });
-    var subjects = albumSubjects(present);
-    var subject = null;
-    if (subjects.length) {
-      // NEVER shoot a group we've already got (by people-signature — covers seeds + live shots); if
-      // every present group is already in the album, take no photo at all (keeps the album duplicate-free)
-      var pool = subjects.filter(function (s) { return !albumTaken[shotSig(s.members)]; });
-      if (!pool.length) return null;
-      subject = pool[Math.floor(Math.random() * pool.length)];
-      albumLastSubject = subject.id;
+    // Room-scoped, and the SAME key the store below writes: a BBQ balcony hosts-shot isn't dedup'd
+    // against the garden one. The pool used to filter on the BARE signature while the store was
+    // room-scoped, so the two disagreed — a group shot in the garden blocked its own balcony shot,
+    // and a balcony candidate could clear the filter and then fail the store test, burning the
+    // whole capture. One key, used by both.
+    var roomTag = window.currentStageName === "balcony" ? "@balcony" : "";
+    function sigFor(s) { return (s ? shotSig(s.members) : "") + roomTag; }
+    // Aspen takes up to FIVE looks before lowering the camera. One was not enough, because
+    // albumSubjects() RE-ROLLS on every call — the godkids shot carries a random 1-3 of the trio,
+    // the family shot likewise — so a combination we already have on the first roll can come back
+    // as a fresh one on the next. Retrying the roll is what finds it. Never shoot a group we
+    // already own (by people-signature, covering seeds and live shots both), but don't let a single
+    // unlucky roll end the attempt: coming back empty opens the album on exactly what was in it
+    // before, which reads as a broken shutter rather than as a full album.
+    var subject = null, subjects = [];
+    for (var attempt = 0; attempt < 5 && !subject; attempt++) {
+      subjects = albumSubjects(present);
+      var pool = subjects.filter(function (s) { return !albumTaken[sigFor(s)]; });
+      if (pool.length) subject = pool[Math.floor(Math.random() * pool.length)];
     }
+    if (!subject && subjects.length) return null; // five looks and every group present is already in the album
+    if (subject) albumLastSubject = subject.id;
     var subjectId = subject ? subject.id : ""; // "" = the hosts alone
-    var sig = (subject ? shotSig(subject.members) : "") + (window.currentStageName === "balcony" ? "@balcony" : ""); // room-scoped: a BBQ balcony hosts-shot isn't dedup'd against the garden hosts-shot
+    var sig = sigFor(subject);
     if (albumTaken[sig]) return null; // already have this exact group (incl. the hosts-alone shot) — don't duplicate
     albumTaken[sig] = 1;
     // people = the hosts (always, if present) + the chosen subject's members — the intimate portrait.

@@ -65729,8 +65729,20 @@ function spawnDustMote(container) {
     var svgNS = "http://www.w3.org/2000/svg";
     var src = document.getElementById("garden-photographer");
     if (!src) return;
-    // where she stands in each room, in that stage's own view-box coords: [centre-x, feet-y, scale]
-    var SPOTS = { kitchen: [615, 336, 1.10], cuddly: [618, 344, 1.15], office: [430, 337, 1.15] };
+    // Her source art's own anchors: bbox centre x≈37, feet ≈y337 (see #garden-photographer).
+    var FIG_CX = 37, FIG_FOOT = 337;
+    // Where she stands in each room, in that stage's own view-box coords, and which way she faces.
+    // `flip` mirrors her about her own centre so she shoots LEFTWARD, across the room instead of
+    // out of it. In the bar that puts her on the right, centred on the wooden pillar (#kitchen-post
+    // spans x600–648) and standing against it — so her feet take the BACK floor line the pillar and
+    // the cooler share (y320, which also keeps them clear of the .loft-datenav HUD pill over y321+),
+    // not the grooving couples' front line at y338. Scaled just under the couples' height for the
+    // same reason: she's a step further back than they are.
+    var SPOTS = {
+      kitchen: { x: 624, y: 320, s: 1.15, flip: true },
+      cuddly:  { x: 618, y: 344, s: 1.15, flip: true },
+      office:  { x: 430, y: 337, s: 1.15, flip: false }
+    };
     var mounted = {};
     Object.keys(SPOTS).forEach(function (room) {
       var stage = document.getElementById("stage-" + room);
@@ -65744,13 +65756,25 @@ function spawnDustMote(container) {
       bloom.setAttribute("class", "rp-bloom");
       bloom.setAttribute("cx", "51"); bloom.setAttribute("cy", "256.6"); bloom.setAttribute("r", "7"); bloom.setAttribute("fill", "#fffdf5");
       (cam || fig).appendChild(bloom); // inside the camera group, so the flash rides the raise
-      var s = SPOTS[room][2];
+      var cfg = SPOTS[room], s = cfg.s;
       var g = document.createElementNS(svgNS, "g");
       g.setAttribute("id", room + "-photographer");
       g.setAttribute("class", "room-photog");
-      g.setAttribute("transform", "translate(" + (SPOTS[room][0] - 37 * s).toFixed(2) + "," + (SPOTS[room][1] - 337 * s).toFixed(2) + ") scale(" + s + ")"); // static placement on the wrapper; the camera animates inside it
+      g.setAttribute("transform", "translate(" + (cfg.x - FIG_CX * s).toFixed(2) + "," + (cfg.y - FIG_FOOT * s).toFixed(2) + ") scale(" + s + ")"); // static placement on the wrapper; the camera animates inside it
       g.setAttribute("role", "button");
-      g.appendChild(fig);
+      // The mirror gets its OWN wrapper, distinct from the placement group above it, the figure
+      // below it and the camera group deeper still — a CSS transform animation replaces an
+      // element's transform attribute for its duration, so the camera-raise would fling a node
+      // that carried both. Everything inside (the camera, its flash bloom) inherits the mirror,
+      // which is exactly what aims the lens leftward.
+      if (cfg.flip) {
+        var flipG = document.createElementNS(svgNS, "g");
+        flipG.setAttribute("transform", "translate(" + (FIG_CX * 2) + ",0) scale(-1,1)"); // mirror about her own centre-x
+        flipG.appendChild(fig);
+        g.appendChild(flipG);
+      } else {
+        g.appendChild(fig);
+      }
       stage.appendChild(g);
       bloom.addEventListener("animationend", function () { bloom.classList.remove("flashing"); });
       if (cam) cam.addEventListener("animationend", function () { cam.classList.remove("aiming"); });

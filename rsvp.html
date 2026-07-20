@@ -66245,31 +66245,35 @@ function spawnDustMote(container) {
   // grid to that event's month + selects its day (calGoToDate). Same event targets as the
   // console/phone (gcalUrl/downloadCalendarIcs via __phoneGcalUrl/__phoneWeddingIcs). De-layered
   // HTML so it survives the office-monitor foreignObject scale.
-  function calCard(spec, container, surface) {
+  function calCard(spec, container, surface) { // one CITY card holding both of that city's event rows
     var card = document.createElement("div"); card.className = "calx-card " + spec.cls;
-    card.setAttribute("role", "button"); card.tabIndex = 0;
     var city = document.createElement("div"); city.className = "calx-card-city"; city.textContent = calStr(spec.titleKey); card.appendChild(city);
-    var row = document.createElement("div"); row.className = "calx-card-row";
-    var txt = document.createElement("div"); txt.className = "calx-card-txt";
-    var when = document.createElement("div"); when.className = "calx-card-when"; when.textContent = calStr(spec.when); txt.appendChild(when);
-    var what = document.createElement("div"); what.className = "calx-card-what"; what.textContent = calStr(spec.what); txt.appendChild(what);
-    row.appendChild(txt);
-    var g = document.createElement("button"); g.type = "button"; g.className = "calx-gcal"; g.textContent = calStr("cal_gcal");
-    g.addEventListener("click", function (e) { e.stopPropagation(); if (window.__phoneGcalUrl) { try { window.open(window.__phoneGcalUrl(spec.ev), "_blank"); } catch (err) {} } });
-    row.appendChild(g);
-    card.appendChild(row);
-    function go() { calGoToDate(spec.y, spec.mo, spec.d, container, surface); }
-    card.addEventListener("click", go);
-    card.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+    spec.rows.forEach(function (rw) {
+      var row = document.createElement("div"); row.className = "calx-card-row"; row.setAttribute("role", "button"); row.tabIndex = 0;
+      var txt = document.createElement("div"); txt.className = "calx-card-txt";
+      var when = document.createElement("div"); when.className = "calx-card-when"; when.textContent = calStr(rw.when); txt.appendChild(when);
+      var what = document.createElement("div"); what.className = "calx-card-what"; what.textContent = calStr(rw.what); txt.appendChild(what);
+      row.appendChild(txt);
+      var g = document.createElement("button"); g.type = "button"; g.className = "calx-gcal"; g.textContent = calStr("cal_gcal");
+      g.addEventListener("click", function (e) { e.stopPropagation(); if (window.__phoneGcalUrl) { try { window.open(window.__phoneGcalUrl(rw.ev), "_blank"); } catch (err) {} } });
+      row.appendChild(g);
+      function go() { calGoToDate(rw.y, rw.mo, rw.d, container, surface); } // tapping a row jumps the grid + summons that day
+      row.addEventListener("click", go);
+      row.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+      card.appendChild(row);
+    });
     return card;
   }
   function calBuildCards(container, surface) {
     var wrap = document.createElement("div"); wrap.className = "calx-cards";
-    [ { titleKey: "occ_banner_wed_edm", cls: "calx-card-e", when: "cal_e_d1", what: "cal_e_d1_what", ev: "e1", y: 2027, mo: 4, d: 1 },
-      { titleKey: "occ_banner_bbq",     cls: "calx-card-e", when: "cal_e_d2", what: "cal_e_d2_what", ev: "e2", y: 2027, mo: 4, d: 2 },
-      { titleKey: "occ_banner_wed_prg", cls: "calx-card-p", when: "cal_p_d1", what: "cal_p_d1_what", ev: "p1", y: 2027, mo: 6, d: 10 },
-      { titleKey: "occ_banner_brunch",  cls: "calx-card-p", when: "cal_p_d2", what: "cal_p_d2_what", ev: "p2", y: 2027, mo: 6, d: 11 }
-    ].forEach(function (spec) { wrap.appendChild(calCard(spec, container, surface)); });
+    wrap.appendChild(calCard({ titleKey: "cal_edmonton", cls: "calx-card-e", rows: [
+      { when: "cal_e_d1", what: "cal_e_d1_what", ev: "e1", y: 2027, mo: 4, d: 1 },
+      { when: "cal_e_d2", what: "cal_e_d2_what", ev: "e2", y: 2027, mo: 4, d: 2 }
+    ] }, container, surface));
+    wrap.appendChild(calCard({ titleKey: "cal_prague", cls: "calx-card-p", rows: [
+      { when: "cal_p_d1", what: "cal_p_d1_what", ev: "p1", y: 2027, mo: 6, d: 10 },
+      { when: "cal_p_d2", what: "cal_p_d2_what", ev: "p2", y: 2027, mo: 6, d: 11 }
+    ] }, container, surface));
     var ics = document.createElement("button"); ics.type = "button"; ics.className = "calx-ics"; ics.textContent = calStr("cal_download");
     ics.addEventListener("click", function (e) { e.stopPropagation(); if (window.__phoneWeddingIcs) window.__phoneWeddingIcs(); });
     wrap.appendChild(ics);

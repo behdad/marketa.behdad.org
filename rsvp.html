@@ -22318,6 +22318,7 @@ var T = {
     gm_toast_ali_2: "may it always be a party. 🥂",
     gm_toast_farhang_1: "One wedding wasn't enough,",
     gm_toast_farhang_2: "so — twice to love! 💞",
+    mom_firstdance: "First Dance", mom_slowdance: "Slow Dance", mom_toasts: "Toasts", mom_groupphoto: "Group Photo", mom_sparklers: "Sparkler Send-off", mom_cake: "Cake Cutting", mom_bouquet: "Bouquet Toss", mom_chairlift: "Chair-lift Hora",
     // "are you home?" body POOL — __deliverPhoneMessage picks one per delivery (see MESSAGES visit_*).
     // Three shared generic openers + one flavored line per texter:
     msg_visit_body_a: "are you home? 🏠",
@@ -22920,6 +22921,7 @@ var T = {
     gm_toast_ali_2: "ať je to navždy oslava. 🥂",
     gm_toast_farhang_1: "Jedna svatba nestačila,",
     gm_toast_farhang_2: "tak — dvakrát na lásku! 💞",
+    mom_firstdance: "První tanec", mom_slowdance: "Pomalý tanec", mom_toasts: "Přípitky", mom_groupphoto: "Společné foto", mom_sparklers: "Prskavky na rozloučenou", mom_cake: "Krájení dortu", mom_bouquet: "Házení kytice", mom_chairlift: "Tanec na židli (hora)",
     // POOL textů „jste doma?" — __deliverPhoneMessage vybere jeden při doručení (viz MESSAGES visit_*).
     // Tři obecné úvodní hlášky + jedna okořeněná pro každého textera:
     msg_visit_body_a: "jste doma? 🏠",
@@ -39912,15 +39914,35 @@ async def localfont(name):
     return "";
   };
   var npToastEl = null, npToastTimer = null, lastNP = null;
-  function nowPlayingToast(label) { // one retimed element, mirrors seasonToast — nothing accumulates
+  function nowPlayingToast(label, prefix) { // one retimed element, mirrors seasonToast — nothing accumulates
     var vp = document.querySelector(".hunt-viewport");
     if (!vp) return;
     if (!npToastEl) { npToastEl = document.createElement("div"); npToastEl.className = "season-toast np-toast"; vp.appendChild(npToastEl); }
-    npToastEl.textContent = "♪ " + label;
+    npToastEl.textContent = (prefix == null ? "♪ " : prefix) + label;
     npToastEl.classList.add("show");
     clearTimeout(npToastTimer);
     npToastTimer = setTimeout(function () { npToastEl.classList.remove("show"); }, 2500);
   }
+  // a party MOMENT names itself in the same bottom toast (now-playing style), lower party scene
+  window.__announceMoment = function (name) { if (name) nowPlayingToast(name, "✦ "); };
+  // wrap the window moment fns so ANY trigger (phone text, Tab, autonomous, console, dbl-tap via
+  // window.*) names the moment when it STARTS (arg===false is a stop → no announce). Load-guarded so
+  // every moment fn is defined first; idempotent (__momWrapped).
+  (function () {
+    var MOM = { firstdance: "mom_firstdance", slowdance: "mom_slowdance", toasts: "mom_toasts", groupphoto: "mom_groupphoto", sparklers: "mom_sparklers", cake: "mom_cake", bouquet: "mom_bouquet", chairlift: "mom_chairlift" };
+    function wrap() {
+      Object.keys(MOM).forEach(function (k) {
+        var orig = window[k];
+        if (typeof orig !== "function" || orig.__momWrapped) return;
+        var w = function (arg) {
+          if (arg !== false && window.__announceMoment && typeof tipText === "function") window.__announceMoment(tipText(MOM[k]));
+          return orig.apply(this, arguments);
+        };
+        w.__momWrapped = true; window[k] = w;
+      });
+    }
+    if (document.readyState === "complete") wrap(); else window.addEventListener("load", wrap);
+  })();
   window.__announceNowPlaying = function () { // toast only on a real change (dedup covers pause/resume, reveals, room hops)
     var label = window.__nowPlayingLabel ? window.__nowPlayingLabel() : "";
     if (label === lastNP) return;

@@ -59120,6 +59120,25 @@ function spawnDustMote(container) {
     window.toasts = function (arg) { return stageAndRun(function () { return startToasts(); }, "🥂 Ali raises a glass, then Farhang — the crowd clinks all around.", "the floor's dark — run party(true) first.", endToasts, arg); };
     window.groupphoto = function (arg) { return stageAndRun(function () { return startGroupPhoto(); }, "📸 everyone gathers, Aspen fires the flash — the group photo's in your album.", "the floor's dark — run party(true) first.", endGroupPhoto, arg); };
     window.sparklers = function (arg) { return stageAndRun(function () { return startSparklers(); }, "✨ the guests raise sparklers into a tunnel — the couple stand through it.", "the floor's dark — run party(true) first.", endSparklers, arg); };
+    // Autonomous moments: every so often a party "moment" fires on its own while you're watching the
+    // garden during the party (the phone-text + Tab triggers still work too). One self-rescheduling
+    // timer, crickets-gated, skips if a moment's already running so they never stomp each other; a
+    // random pick each time. Nothing accumulates in a hidden/unfocused tab.
+    (function autoMoments() {
+      var MOMS = ["firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift"];
+      var BUSY = ["gm-toasting", "gm-group-photo", "gm-sparklers", "cake-cutting", "bouquet-wind", "chair-lift", "first-dance", "slow-dance"];
+      var t = null;
+      function want() { return !!window.__gardenPartyOn && window.currentStageName === "garden" && !document.hidden && document.hasFocus(); }
+      function busy() { var g = document.getElementById("garden-guests"); if (!g) return true; for (var i = 0; i < BUSY.length; i++) if (g.classList.contains(BUSY[i])) return true; return false; }
+      function tick() {
+        t = setTimeout(function () {
+          t = null;
+          if (want() && !busy()) { var m = MOMS[(Math.random() * MOMS.length) | 0]; if (typeof window[m] === "function") window[m](); }
+          tick();
+        }, 75000 + Math.random() * 75000); // ~75–150s between autonomous moments
+      }
+      tick();
+    })();
   })();
   // ── PARTY MODE disco pools (garden) — STEPPED, not tweened. A continuous CSS/WAAPI sweep
   // of these big screen-blended ellipses repaints every frame and visibly FLICKERED on

@@ -991,6 +991,13 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 @keyframes garden-flash-pop{0%{opacity:0; transform:scale(.35)}16%{opacity:.95; transform:scale(1)}100%{opacity:0; transform:scale(1.25)}}
 @keyframes garden-flash-wash{0%{opacity:0}14%{opacity:.10}100%{opacity:0}}
 @media (prefers-reduced-motion: reduce){#garden-flash-bloom.flashing, #garden-flash-wash.flashing{animation:none}}
+/* Aspen comes out onto the deck to shoot the May-2 BBQ (a cloned photographer figure, JS-managed).
+   Shown only while .showing (BBQ crowd out + balcony in view); tap her → flash + shutter + album. */
+#balcony-photographer{opacity:0; pointer-events:none; transition:opacity .6s ease; cursor:pointer}
+#balcony-photographer.showing{opacity:1; pointer-events:auto}
+#balcony-flash-bloom{opacity:0; transform-box:fill-box; transform-origin:center; mix-blend-mode:screen}
+#balcony-flash-bloom.flashing{animation:garden-flash-pop .5s ease-out}
+@media (prefers-reduced-motion: reduce){#balcony-flash-bloom.flashing{animation:none}}
 /* ── GARDEN KIDS' CHASE ──────────────────────────────────────────────────────
    The three godkids (Irene · Robin · Navid) occasionally dart across the garden
    during the party, chasing each other and giggling — a playful ambient touch on
@@ -30101,6 +30108,32 @@ document.addEventListener("click", function (e) {
   navid.addEventListener("animationend", function (e) { if (e.animationName === "irene-giggle") navid.classList.remove("navid-giggling"); });
   navid.addEventListener("pointerdown", function () { giggle(); });
 })();
+// Birthday hat/crown on the cuddly-VISIT figures too. The same #loft-game-strip.bd-<who> CSS that
+// lights a person's garden/nook birthday adornment reaches ANY .bd-hat-<who> / .bd-crown-<who>
+// node, so give each visitor its own, planted on its head (the visitors share the guests' normalized
+// frame: head ≈y186, hair-top ≈y168). It paints only when the visitor is showing (its ancestor
+// .cuddly-visitor is opacity-gated) AND that person's bd class is lit — so a visiting birthday
+// person (e.g. Jay in the Spencer+Jay "are you home?" drop-in) wears the hat wherever they appear.
+(function visitorBirthdayHats() {
+  var CROWN = { elisabeth: 1, felix: 1, madla: 1, robert: 1 }; // these four wear a little crown; everyone else a cone (mirrors the CSS split above)
+  var CONE = '<polygon points="0,146 -7,169 7,169" fill="#f0cf5a" stroke="#cba32c" stroke-width="0.9"/>' +
+    '<path d="M -4.6 162 L 4.6 162 M -2.9 155 L 2.9 155" stroke="#fffdf8" stroke-width="1" opacity=".85"/>' +
+    '<ellipse cx="0" cy="169" rx="7.4" ry="1.7" fill="#cba32c"/>' +
+    '<polygon points="0,142 0.9,144.4 3.3,145.3 0.9,146.2 0,148.6 -0.9,146.2 -3.3,145.3 -0.9,144.4" fill="#fff3c4"/>';
+  var CROWN_SVG = '<path d="M-7 172 L-7 169 L-3.1 163 L0 158 L3.1 163 L7 169 L7 172 Q0 173.5 -7 172 Z" fill="#f2c14e" stroke="#d19a2c" stroke-width="0.9" stroke-linejoin="round"/>' +
+    '<circle cx="-3.8" cy="168.6" r="1" fill="#e8a8b8"/><circle cx="0" cy="161.4" r="1.1" fill="#7fbf6a"/><circle cx="3.8" cy="168.6" r="1" fill="#7f9ec0"/>';
+  var vis = document.querySelectorAll("#cuddly-visitors-layer .cuddly-visitor");
+  for (var i = 0; i < vis.length; i++) {
+    var g = vis[i], who = g.id.replace("cuddly-vis-", "");
+    var peek = g.querySelector(".cuddly-visitor-peek");
+    var art = peek && peek.querySelector("g"); // the innermost translate/scale art group (shared normalized frame)
+    if (!art) continue;
+    var hat = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    hat.setAttribute("class", CROWN[who] ? ("bd-adorn bd-crown-" + who) : ("bd-adorn bd-hat-" + who));
+    hat.innerHTML = CROWN[who] ? CROWN_SVG : CONE;
+    art.appendChild(hat);
+  }
+})();
 // Adult friend-duo drop-ins (the cuddly nook) — the GROWN-UP analogue of Irene & the godkids.
 // Each friend DUO first TEXTS an "are you home?"-style message on the pocket phone (see the
 // MESSAGES `visit:*` entries + the autonomous drip below); tapping that text pans to the nook and
@@ -37128,7 +37161,7 @@ var ABANDONED_CALL_MS = 30000;
     toasts: "toasts() — the toast sequence: Ali the best man raises a glass with a warm line, then Farhang the MC, the crowd answering with clinks + flares. ~11s. lights the party + heads to the garden + summons the crowd if needed. toasts(false) ends it early",
     groupphoto: "groupphoto() — the group photo: the whole crowd + hosts gather + face front, Aspen fires a big flash, and the whole-crowd shot lands in your phone album. a brief freeze + flash. lights the party + heads to the garden + summons the crowd if needed",
     sparklers: "sparklers() — the sparkler send-off: the guests form two flanking lines holding sparklers (bright sparkle particles) into a tunnel while the couple stand through it, ~12s. lights the party + heads to the garden + summons the crowd if needed. sparklers(false) ends it early",
-    cake: "cake() — the cake cutting: a tiered cake wheels out centre-floor, Behdad & Markéta lean in to cut the first slice together while the crowd cheers (~9s). lights the party + heads to the garden + crashes the crowd first if needed. cake(false) ends it early",
+    cake: "cake() — the WEDDING cake cutting: a tiered cake wheels out centre-floor, Behdad & Markéta lean in to cut the first slice together while the crowd cheers (~9s). lights the party + heads to the garden + crashes the crowd first if needed. cake(false) ends it early. cake(\"ali\") — a BIRTHDAY cake for a named person: a garden-floor guest gets the garden party + a candled cake with them dancing between the hosts; a Tehran/Prague call-family person (e.g. cake(\"hannah\")) gets their video call brought up with its birthday cake. cake(\"list\") prints the names",
     bouquet: "bouquet() — the bouquet toss: Markéta winds up and throws a bouquet that arcs high over the crowd, and a RANDOM guest leaps to catch it (different each time). lights the party + heads to the garden + crashes the crowd first if needed. bouquet(false) ends it early",
     chairlift: "chairlift() — the chair-lift hora: the crowd hoists Behdad & Markéta up on chairs and rings around bouncing (Persian/Jewish tradition), then lowers them (~12s). lights the party + heads to the garden + crashes the crowd first if needed. chairlift(false) ends it early",
     cocktail: "cocktail(\"negroni\") — Pouria mixes that real drink from the bar's menu (partial name ok); cocktail() makes the featured signature drink. lights the party + steps behind the bar first if it's dark. he also mixes on his own while you watch the bar. alias: drink()",
@@ -45120,15 +45153,31 @@ async def localfont(name):
       function jit(a) { return (rnd() * 2 - 1) * a; } // a random value in ±a
       var ground = ALBUM_SEASON_TINT[rec.season] || ALBUM_SEASON_TINT[""];
       var sky = "#f3ecd8";
-      add("rect", { x: 0, y: 0, width: W, height: H, fill: sky });
-      // soft coloured party-light pools washing the wall — pinks, blues, gold, wine (a lively, lit
-      // room, not a flat cream backdrop). Low opacity so the figures still read on top.
-      [[32,28,"#d9a6a6",17],[170,24,"#7f9ec0",19],[100,16,"#f5c542",14],[58,60,"#c68e95",21],[150,64,"#8bb0d8",19],[18,84,"#f0c27a",16],[186,96,"#e88aa8",17]]
-        .forEach(function (L) { add("circle", { cx: L[0] + jit(13), cy: L[1] + jit(7), r: (L[3] * (0.82 + rnd() * 0.42)).toFixed(1), fill: L[2], opacity: (0.12 + rnd() * 0.1).toFixed(3) }); });
-      add("rect", { x: 0, y: H * 0.56, width: W, height: H * 0.44, fill: ground }); // the floor/garden band
-      // a scatter of confetti flecks (jittered per-photo so no two shots share the same fleck pattern)
-      [[40,42,"#d9a6a6"],[132,36,"#7f9ec0"],[76,50,"#f5c542"],[158,48,"#8e3a4a"],[110,40,"#7fbf6a"],[26,54,"#e88aa8"],[178,58,"#f5c542"]]
-        .forEach(function (k) { var cx = k[0] + jit(11), cy = k[1] + jit(7); add("rect", { x: cx, y: cy, width: 3.4, height: 3.4, rx: 0.6, fill: k[2], opacity: "0.85", transform: "rotate(" + jit(48).toFixed(0) + " " + (cx + 1.7) + " " + (cy + 1.7) + ")" }); });
+      if (rec.room === "balcony") {
+        // a BALCONY cookout backdrop (shots taken during the May-2 BBQ): a warm afternoon sky
+        // (violet under UV), a low sun, a distant skyline, and a wood deck with a railing — NOT the
+        // dance-floor's party-light pools + confetti. A chill daytime cookout reads as its own place.
+        var skyLo = rec.uv ? "#4a3a63" : "#f6d9a6", skyHi = rec.uv ? "#3a2c52" : "#f3c98a";
+        add("rect", { x: 0, y: 0, width: W, height: H, fill: skyLo });
+        add("rect", { x: 0, y: 0, width: W, height: H * 0.42, fill: skyHi });
+        add("circle", { cx: 158 + jit(10), cy: 30 + jit(6), r: 15, fill: rec.uv ? "#7a6a9a" : "#ffe9b0", opacity: "0.55" }); // low sun / glow
+        var hz = H * 0.5;
+        add("rect", { x: 0, y: hz - 12, width: W, height: 12, fill: rec.uv ? "#2e2440" : "#c9a87a", opacity: "0.45" }); // distant skyline haze
+        add("rect", { x: 0, y: hz, width: W, height: H - hz, fill: rec.uv ? "#3a3040" : "#9a6f45" });                    // the wood deck
+        for (var pp = 0; pp < 5; pp++) add("line", { x1: 0, y1: hz + 9 + pp * 8, x2: W, y2: hz + 9 + pp * 8, stroke: rec.uv ? "#2c2436" : "#7d5a38", "stroke-width": "0.6", opacity: "0.5" });
+        add("rect", { x: 0, y: hz - 2, width: W, height: 3, fill: rec.uv ? "#241d33" : "#6b4e30" });                     // the deck railing rail
+        for (var rr = 12; rr < W; rr += 22) add("rect", { x: rr, y: hz - 2, width: 2, height: 12, fill: rec.uv ? "#241d33" : "#6b4e30", opacity: "0.7" }); // railing balusters
+      } else {
+        add("rect", { x: 0, y: 0, width: W, height: H, fill: sky });
+        // soft coloured party-light pools washing the wall — pinks, blues, gold, wine (a lively, lit
+        // room, not a flat cream backdrop). Low opacity so the figures still read on top.
+        [[32,28,"#d9a6a6",17],[170,24,"#7f9ec0",19],[100,16,"#f5c542",14],[58,60,"#c68e95",21],[150,64,"#8bb0d8",19],[18,84,"#f0c27a",16],[186,96,"#e88aa8",17]]
+          .forEach(function (L) { add("circle", { cx: L[0] + jit(13), cy: L[1] + jit(7), r: (L[3] * (0.82 + rnd() * 0.42)).toFixed(1), fill: L[2], opacity: (0.12 + rnd() * 0.1).toFixed(3) }); });
+        add("rect", { x: 0, y: H * 0.56, width: W, height: H * 0.44, fill: ground }); // the floor/garden band
+        // a scatter of confetti flecks (jittered per-photo so no two shots share the same fleck pattern)
+        [[40,42,"#d9a6a6"],[132,36,"#7f9ec0"],[76,50,"#f5c542"],[158,48,"#8e3a4a"],[110,40,"#7fbf6a"],[26,54,"#e88aa8"],[178,58,"#f5c542"]]
+          .forEach(function (k) { var cx = k[0] + jit(11), cy = k[1] + jit(7); add("rect", { x: cx, y: cy, width: 3.4, height: 3.4, rx: 0.6, fill: k[2], opacity: "0.85", transform: "rotate(" + jit(48).toFixed(0) + " " + (cx + 1.7) + " " + (cy + 1.7) + ")" }); });
+      }
       // top motif: a faceted disco ball throwing a couple of glints (dance shot), else a quiet ∞ mark
       if (rec.dance) {
         add("line", { x1: W / 2, y1: 0, x2: W / 2, y2: 8.5, stroke: "#9aa0a8", "stroke-width": "1" });
@@ -47977,6 +48026,26 @@ async def localfont(name):
       return ((tovChosen + elapsed) % 1440 + 1440) % 1440;
     }
     window.__timeOverrideMins = timeOverrideMins; // read by the phone Clock chooser + the hashchange re-apply + every on-screen clock
+    window.__loftMinsNow = edmMinutes; // the loft's live Edmonton wall-clock minutes (override-aware) — read by the time-gated occasions (e.g. the May-2 BBQ window)
+    // Set the loft clock to a chosen wall-clock time (?time=HH:MM), re-anchor its advance + re-run
+    // the sky — the same path the phone Clock chooser drives, exposed so a time-gated happening
+    // (the BBQ needs daylight-cookout hours) can jump the loft into its window on a deliberate summon.
+    window.__setLoftTime = function (mins) {
+      try {
+        var mn = ((Math.floor(mins) % 1440) + 1440) % 1440, hh = Math.floor(mn / 60), mm = mn % 60;
+        var s = (hh < 10 ? "0" : "") + hh + ":" + (mm < 10 ? "0" : "") + mm;
+        var url = new URL(location.href);
+        url.searchParams.set("time", s);
+        history.replaceState(null, "", url.toString().replace(/(time=\d{1,2})%3[Aa](\d{1,2})/, "$1:$2"));
+      } catch (e) {}
+      if (window.__reanchorTimeOverride) window.__reanchorTimeOverride();
+      if (window.__startAutoDayNight) window.__startAutoDayNight();
+      if (window.__applyAutoDayNight) window.__applyAutoDayNight();
+      if (window.__refreshTimePill) window.__refreshTimePill();
+      if (window.__paintPhoneStatusClock) window.__paintPhoneStatusClock();
+      if (window.__paintBalconyPhoneClock) window.__paintBalconyPhoneClock();
+      if (window.refreshDeskClock) window.refreshDeskClock();
+    };
     window.__reanchorTimeOverride = function () { tovLastRaw = null; }; // force the next read to re-anchor to the current ?time= (an explicit slider/sunrise/sunset write, even to the same hour)
     window.__ovClock = function () { // "HH:MM" of the advancing ?time= override, or null when on the real clock — the on-screen clocks all defer to this
       var ov = timeOverrideMins(); if (ov == null) return null;
@@ -48054,6 +48123,7 @@ async def localfont(name):
       if (window.__refreshTimePill) window.__refreshTimePill();
       applyAutoDayNight(); // day/night + twilight follow the advancing time
       if (window.__applyRealWx) window.__applyRealWx(); // and the real-weather ambiance re-evaluates against the new day/night
+      if (window.__applyDateOccasion) window.__applyDateOccasion(); // a TIME-gated happening (the May-2 BBQ's 16:00–22:00 window) lights/clears as the advancing clock crosses its edge (latched → cheap no-op otherwise)
     }
     setInterval(timeAdvanceTick, 15000);
     // click the night sky (not the moon) to wish on a shooting star; by day on Canada Day the
@@ -58622,6 +58692,7 @@ function spawnDustMote(container) {
     var prevMax = maxUnlocked;
     if (idx > maxUnlocked) maxUnlocked = idx;
     if (prevMax === 0 && maxUnlocked >= 1 && !window.__cinematic && window.__startAutoDayNight) window.__startAutoDayNight(); // kitchen solved (frontier steps off room 1) → the loft's sky now tracks real/selected time; the forced-day intro is over (the scripted show drives its own sky, so not during it)
+    if (prevMax === 0 && maxUnlocked >= 1 && window.__retryDateOccasion) window.__retryDateOccasion(); // ...and the loft's now in play → retry a date-driven occasion that the load-time arm couldn't take over (fresh ?date=<birthday>/BBQ throws its scene on the first entry past the intro)
     if (window.__monitorZoomOut) window.__monitorZoomOut(); // the zoomed-up monitor never travels between rooms
     strip.style.transform = "translateX(-" + (idx * 20) + "%)";
     strip.classList.toggle("viewing-office", name === "office"); // WebKit paints the monitor's foreignObjects even at opacity:0 and lets them escape the strip clip, leaking into whichever room is on screen; the CSS gate below hides them whenever the office isn't the viewed room
@@ -58650,6 +58721,7 @@ function spawnDustMote(container) {
     if (name !== "balcony" && window.__resetBalconyCouple) window.__resetBalconyCouple(); // ...nor do the two of them
     if (window.__updateBalconyHangout) window.__updateBalconyHangout(); // party crowd + smokers step onto the deck on entry (self-gates on balcony + party); clear on leaving
     if (window.__updateBalconyGrillmaster) window.__updateBalconyGrillmaster(); // Hamid the grillmaster shows near a lit BBQ on entry (self-gates on balcony + party + smoking); clear on leaving
+    if (window.__updateBalconyPhotog) window.__updateBalconyPhotog(); // Aspen shoots the BBQ on the deck on entry (self-gates on balcony + BBQ crowd); clear on leaving
     if (name !== "balcony" && window.__snowmanOn && window.__setSnowman) window.__setSnowman(false); // ...and the winter snowman melts away when you leave the deck
     if (name !== "balcony" && window.__leafpileOn && window.__setLeafpile) window.__setLeafpile(false); // ...same for the autumn leaf pile,
     if (name !== "balcony" && window.__blossomPlayOn && window.__setBlossomPlay) window.__setBlossomPlay(false); // ...the spring blossom toss,
@@ -61268,15 +61340,17 @@ function spawnDustMote(container) {
     window.__endCakeCutting = endCakeCutting;
 
     // ── BIRTHDAY CAKE CUTTING ───────────────────────────────────────────────────────
-    // A garden birthday cuts a SMALLER, candled single-tier cake (#garden-bd-cake): the
-    // birthday person(s) stand BEHIND it, so the cake node is positioned at their floor slot
-    // and .bd-cutter marks each of them (a slight lean over the candles). Modelled on the
-    // wedding cake above, but the cutters are the birthday people rather than the hosts.
-    var bdCakeTimer = null, bdCakeAnchor = null, bdCutters = [];
+    // A garden birthday cuts a SMALLER, candled single-tier cake (#garden-bd-cake) DANCED to the
+    // centre between the hosts: the birthday person(s) glide between Behdad & Markéta (a single
+    // centres; two flank it), the cake sits at that centre, and .bd-cutter marks each of them (a
+    // slight lean over the candles). Modelled on the wedding cake above, but the cutters are the
+    // birthday people. The move rides the balance system's --balance-x (the CSS `translate`
+    // property, distinct from the authored `transform` attribute → no animation clobber); each
+    // cutter's prior nudge is saved and restored on end so they glide back to their floor spot.
+    var bdCakeTimer = null, bdCakeAnchor = null, bdCutters = [], bdSaved = [];
     function bdGardenFigs() { return window.__bdGardenFigures || {}; }
-    function floorX(node) { // the guest's centre x within #garden-guests (item 0 is always the floor translate)
-      try { var t = node.transform.baseVal; return t.numberOfItems ? t.getItem(0).matrix.e : 0; } catch (e) { return 0; }
-    }
+    function authoredX(node) { var m = /translate\(\s*([-\d.]+)/.exec(node.getAttribute("transform") || ""); return m ? (parseFloat(m[1]) || 0) : 0; } // the figure's fixed floor slot (transform attr)
+    function figCenterX(node) { return authoredX(node) + (parseFloat(node.style.getPropertyValue("--balance-x")) || 0); } // its live on-floor centre = slot + balance nudge
     function bdWhoList(who) {
       // the garden-figure birthday people to stand behind the cake: an explicit who/list, else
       // every garden-figure person whose bd-<who> class is currently lit (covers a shared birthday).
@@ -61294,6 +61368,12 @@ function spawnDustMote(container) {
       group.classList.remove("bd-cake-cutting");
       for (var i = 0; i < bdCutters.length; i++) if (bdCutters[i]) bdCutters[i].classList.remove("bd-cutter");
       bdCutters = [];
+      // glide each cutter back to the floor spot it held before we danced it to the centre
+      for (var s = 0; s < bdSaved.length; s++) {
+        var it = bdSaved[s]; if (!it || !it.el) continue;
+        if (it.bx) it.el.style.setProperty("--balance-x", it.bx); else it.el.style.removeProperty("--balance-x");
+      }
+      bdSaved = [];
       var ck = document.getElementById("garden-bd-cake");
       if (ck && bdCakeAnchor && bdCakeAnchor.parentNode === group) group.insertBefore(ck, bdCakeAnchor);
       bdCakeAnchor = null;
@@ -61304,14 +61384,18 @@ function spawnDustMote(container) {
       if (!list.length) return false;               // no garden birthday to celebrate right now
       if (window.__bdCakeOn) return true;           // idempotent (storm-safe)
       window.__bdCakeOn = true;
-      // position the cake at the average floor-x of the birthday people + mark each a cutter
-      var sum = 0, n = 0; bdCutters = [];
-      list.forEach(function (w) {
+      // the cake goes to the centre BETWEEN the hosts; the birthday person(s) dance there with it
+      var hb = group.querySelector(".g-behdad"), hm = group.querySelector(".g-marketa");
+      var cx = (hb && hm) ? (figCenterX(hb) + figCenterX(hm)) / 2 : 328; // hosts sit at ~300 & ~356 → centre ~328
+      var GAP = 42; // two birthday people flank the centre by this much each side
+      bdCutters = []; bdSaved = [];
+      list.forEach(function (w, i) {
         var g = group.querySelector(".g-" + w); if (!g) return;
-        sum += floorX(g); n++;
         g.classList.add("bd-cutter"); bdCutters.push(g);
+        bdSaved.push({ el: g, bx: g.style.getPropertyValue("--balance-x") }); // remember their spot to restore on end
+        var target = (list.length > 1) ? (cx + (i === 0 ? -GAP : GAP)) : cx; // single centres; shared-day pair flanks
+        g.style.setProperty("--balance-x", (target - authoredX(g)).toFixed(1) + "px"); // glide them between the hosts (CSS translate; no transform clobber)
       });
-      var cx = n ? sum / n : 328;
       var pos = document.getElementById("garden-bd-cake-pos");
       if (pos) pos.setAttribute("transform", "translate(" + cx.toFixed(1) + ",0)"); // static position on the wrapper (never animated)
       group.classList.add("bd-cake-cutting");       // cake fades up, candles flicker, knife cuts (CSS)
@@ -62167,7 +62251,7 @@ function spawnDustMote(container) {
       albumLastSubject = subject.id;
     }
     var subjectId = subject ? subject.id : ""; // "" = the hosts alone
-    var sig = subject ? shotSig(subject.members) : ""; // "" = the couple by themselves
+    var sig = (subject ? shotSig(subject.members) : "") + (window.currentStageName === "balcony" ? "@balcony" : ""); // room-scoped: a BBQ balcony hosts-shot isn't dedup'd against the garden hosts-shot
     if (albumTaken[sig]) return null; // already have this exact group (incl. the hosts-alone shot) — don't duplicate
     albumTaken[sig] = 1;
     // people = the hosts (always, if present) + the chosen subject's members — the intimate portrait.
@@ -62182,7 +62266,8 @@ function spawnDustMote(container) {
       subjectId: subjectId,
       dance: window.__partyDance || "",
       season: albumSeasonName(),
-      uv: albumUvOn()
+      uv: albumUvOn(),
+      room: window.currentStageName === "balcony" ? "balcony" : "" // a BBQ/balcony snap renders on the balcony backdrop, not the garden
     };
     albumShots.push(rec);
     if (albumShots.length > ALBUM_CAP) {
@@ -62217,7 +62302,7 @@ function spawnDustMote(container) {
     present.forEach(function (p) { if (p.key !== "hosts" && p.grp !== "crew") people.push({ key: p.key, grp: p.grp, name: p.name, roleKey: p.roleKey }); });
     // drop any prior live group-photo so a re-shoot replaces it (never stack whole-crowd cards)
     albumShots = albumShots.filter(function (s) { return s.subjectId !== "group-photo"; });
-    var rec = { id: ++albumSeq, t: Date.now(), people: people, subjectId: "group-photo", groupPhoto: true, dance: window.__partyDance || "", season: albumSeasonName(), uv: albumUvOn() };
+    var rec = { id: ++albumSeq, t: Date.now(), people: people, subjectId: "group-photo", groupPhoto: true, dance: window.__partyDance || "", season: albumSeasonName(), uv: albumUvOn(), room: window.currentStageName === "balcony" ? "balcony" : "" };
     albumShots.push(rec);
     if (albumShots.length > ALBUM_CAP) { var dropped = albumShots.length - ALBUM_CAP; albumShots.splice(0, dropped); try { console.info("[album] capped at " + ALBUM_CAP + " shots — dropped " + dropped + " oldest"); } catch (e) {} }
     if (window.__albumRefresh) window.__albumRefresh(); // a big deliberate shot: refresh the open album so it shows at once
@@ -63646,8 +63731,9 @@ function spawnDustMote(container) {
     // The single re-gate: called on party on/off (setGardenParty tail) and room change (goToStage).
     function update() { if (onScreen()) show(); else hide(); }
     window.__updateBalconyHangout = update;
-    window.__setBalconyBBQCrowd = function (on) { bbqCrowdOn = !!on; update(); }; // BBQ-day cookout: crowd out in daytime, party OFF
-    window.__resetBalconyHangout = function () { bbqCrowdOn = false; hide(); }; // global reset (room-leave uses update()/hide() directly, keeping the BBQ flag)
+    window.__setBalconyBBQCrowd = function (on) { bbqCrowdOn = !!on; window.__balconyBBQOn = !!on; update(); if (window.__updateBalconyPhotog) window.__updateBalconyPhotog(); }; // BBQ-day cookout: crowd out in daytime, party OFF; Aspen comes to shoot it
+    window.__resetBalconyHangout = function () { bbqCrowdOn = false; window.__balconyBBQOn = false; hide(); if (window.__updateBalconyPhotog) window.__updateBalconyPhotog(); }; // global reset (room-leave uses update()/hide() directly, keeping the BBQ flag)
+    window.__balconyBBQCrowdOn = function () { return bbqCrowdOn; }; // read by the balcony photographer's gate
     // ── the smoke spawner: one self-rescheduling timer, re-gated every fire ──────────────
     var smokeTimer = null;
     function puffOnce() {
@@ -63792,6 +63878,61 @@ function spawnDustMote(container) {
     // name popup: hover tooltip + click white card, like the deck crowd / bar couples
     var hamidTip = function () { return "<em>Hamid</em> · " + ((typeof tipText === "function") ? tipText("role_godson_a") : "grillmaster"); };
     el.addEventListener("click", function (e) { e.stopPropagation(); if (window.__whoPop) window.__whoPop(el, hamidTip()); }); // people are click-only (props keep hover)
+    document.addEventListener("visibilitychange", update);
+    window.addEventListener("blur", update);
+    window.addEventListener("focus", update);
+    update();
+  })();
+  // ── BALCONY PHOTOGRAPHER (Aspen at the BBQ) ──────────────────────────────────────────────
+  // During the May-2 cookout Aspen comes out onto the deck to shoot — the SAME photographer cameo
+  // as the garden party, reused by cloning her figure onto the balcony. Shown only while the BBQ
+  // crowd is out and the balcony's in view; she pops an ambient flash (light only, crickets-gated)
+  // and, tapped, fires a flash + shutter and drops a keepsake into the album (recorded room:"balcony"
+  // → it renders on the balcony backdrop). Cleared on room-leave / BBQ-off / reset. No new audio ctx
+  // (reuses playCameraShutterSound). The static position rides the wrapper; nothing animates its
+  // transform, so no transform-attr-vs-animation clash.
+  (function balconyPhotographer() {
+    var svgNS = "http://www.w3.org/2000/svg";
+    var stage = document.getElementById("stage-balcony");
+    var src = document.getElementById("garden-photographer");
+    if (!stage || !src) return;
+    var fig = src.cloneNode(true);         // reuse Aspen's real art
+    fig.removeAttribute("id");
+    var ob = fig.querySelector("#garden-flash-bloom"); if (ob && ob.parentNode) ob.parentNode.removeChild(ob); // our own bloom below
+    var cids = fig.querySelectorAll("[id]"); for (var i = 0; i < cids.length; i++) cids[i].removeAttribute("id"); // no dup ids
+    var g = document.createElementNS(svgNS, "g");
+    g.setAttribute("id", "balcony-photographer");
+    g.setAttribute("transform", "translate(6,-92) scale(1.28)"); // front-left on the deck, sized to the +43% crowd
+    g.setAttribute("role", "button");
+    g.setAttribute("tabindex", "-1");
+    var bloom = document.createElementNS(svgNS, "circle"); // flash over the camera lens (same art-local spot as the garden bloom)
+    bloom.setAttribute("id", "balcony-flash-bloom"); bloom.setAttribute("cx", "51"); bloom.setAttribute("cy", "256.6"); bloom.setAttribute("r", "7"); bloom.setAttribute("fill", "#fffdf5");
+    g.appendChild(fig); g.appendChild(bloom);
+    stage.appendChild(g);
+    bloom.addEventListener("animationend", function () { bloom.classList.remove("flashing"); });
+    function attended() { return !document.hidden && document.hasFocus(); }
+    function shouldShow() { return window.currentStageName === "balcony" && !!window.__balconyBBQOn; }
+    function fireFlash() { bloom.classList.remove("flashing"); void bloom.getBoundingClientRect(); bloom.classList.add("flashing"); }
+    var flashTimer = null;
+    function flashTick() {
+      flashTimer = null;
+      if (!shouldShow()) return;                 // BBQ over / left the deck → stop, don't reschedule
+      if (attended()) fireFlash();               // light only; crickets rule (skip while hidden/unfocused)
+      flashTimer = setTimeout(flashTick, 4000 + Math.random() * 3500);
+    }
+    function startFlash() { if (!flashTimer) flashTimer = setTimeout(flashTick, 2500 + Math.random() * 2500); }
+    function stopFlash() { if (flashTimer) { clearTimeout(flashTimer); flashTimer = null; } bloom.classList.remove("flashing"); }
+    function update() { var on = shouldShow(); g.classList.toggle("showing", on); if (on) startFlash(); else stopFlash(); }
+    window.__updateBalconyPhotog = update;
+    window.__resetBalconyPhotog = function () { g.classList.remove("showing"); stopFlash(); }; // extinguisher reset
+    g.addEventListener("click", function (e) {   // tap her → a photo NOW (flash + shutter + album keepsake, balcony backdrop)
+      if (!shouldShow()) return;
+      e.stopPropagation();
+      fireFlash();
+      if (typeof playCameraShutterSound === "function") playCameraShutterSound(); // a click implies focus
+      if (window.__albumAdd) window.__albumAdd(); // captures room:"balcony" → the balcony backdrop
+      setTimeout(function () { if (window.__openPhoneAppHere) window.__openPhoneAppHere("album"); }, 260);
+    });
     document.addEventListener("visibilitychange", update);
     window.addEventListener("blur", update);
     window.addEventListener("focus", update);
@@ -65300,11 +65441,16 @@ function spawnDustMote(container) {
       if (window.goToStage) window.goToStage("cuddly");
       return;
     }
-    // Everyone else — garden adults + crew: the garden floor (default), the two DJ decks
-    // (Sina/Danesh), or Pouria's kitchen bar. When the party is ON they take their usual spot.
-    // When it's OFF a birthday reveal must NEVER light the party — instead it summons them to the
-    // cuddly-puddly via their CUDDLY_DUOS lead (a couple/family arrives together). Anyone with no
-    // cuddly duo (Farhang, Pouria, Sina, Danesh, Lauren) falls back to a party-safe pan to the nook.
+    // A garden-FIGURE adult birthday ALWAYS throws the garden party + cuts a candled cake, with the
+    // birthday person(s) dancing between the hosts — on ANY trigger (the date, 'b', birthday()).
+    // __bdCakeCut lights the party (if dark), heads to the garden, summons the crowd, then cuts. The
+    // hosts are handled above; the kids and the Tehran/Prague call families returned earlier — so
+    // this is Ali/Goli/Jay/Spencer/Farhang/Bahareh/Alireza/Mahzad/Hamid/Athena/Patricia/Madla/Robert.
+    if (BD_GARDEN_FIG[b.who] && window.__bdCakeCut) { window.__bdCakeCut(b.who); return; }
+    // Everyone else — the DJ decks (Sina/Danesh) or Pouria's kitchen bar (no floor figure). When the
+    // party is ON they take their usual spot. When it's OFF a birthday reveal must NEVER light the
+    // party — instead it summons them to the cuddly-puddly via their CUDDLY_DUOS lead. Anyone with no
+    // cuddly duo (Pouria, Sina, Danesh, Lauren) falls back to a party-safe pan to the nook.
     if (window.__gardenPartyOn) {
       if (window.goToStage) window.goToStage(v === "bar" ? "kitchen" : "garden");
       if (v !== "bar" && window.__summonGuests) window.__summonGuests(); // crash the whole floor so this guest is actually present
@@ -65499,7 +65645,7 @@ function spawnDustMote(container) {
   function calSummonFestivity(mo, d) {
     var bds = CAL_BD_BY_DAY[mo + "-" + d];
     if (bds && bds.length && window.__birthdayGoto && window.__birthdayGoto(bds[0].who)) return true; // birthday outranks the season
-    var oc = window.__dateOccasion && window.__dateOccasion();
+    var oc = (window.__isOccasionDate && window.__isOccasionDate()) || (window.__dateOccasion && window.__dateOccasion()); // time-gate-agnostic: a deliberate May-2 click summons the BBQ even outside its 4–10pm window (force then jumps the clock in)
     if (oc && oc.indexOf("bd:") !== 0) {
       if (window.__applyDateOccasion) window.__applyDateOccasion(true); // force past the latch so a deliberate (re-)click always re-summons
       return true;
@@ -68658,16 +68804,40 @@ function spawnDustMote(container) {
       var n = window.__now ? window.__now() : new Date();
       return window.__bdGardenOnDay ? window.__bdGardenOnDay(n.getMonth(), n.getDate()) : [];
     }
-    function occKey() {
+    // the BBQ is a DAYTIME cookout: it only runs while the loft's Edmonton clock reads 16:00–22:00.
+    // Outside that window May 2 is an ordinary day. (A deliberate summon jumps the clock in — armTimeGate.)
+    function bbqTimeOk() {
+      var mins = window.__loftMinsNow ? window.__loftMinsNow() : null;
+      if (mins == null) { try { var d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Edmonton" })); mins = d.getHours() * 60 + d.getMinutes(); } catch (e) { var n = new Date(); mins = n.getHours() * 60 + n.getMinutes(); } }
+      return mins >= 16 * 60 && mins < 22 * 60; // 4pm–10pm
+    }
+    // the occasion for the loft's date IGNORING any time-of-day gate (May 2 is always "bbq" here).
+    // occKey() layers the BBQ's 16:00–22:00 window on top; the calendar/date-pill use THIS raw form
+    // to decide a deliberate summon (then apply(true) arms the time gate), so clicking the BBQ card
+    // at noon still lands the cookout instead of falling through to a plain-weather day.
+    function rawOccKey() {
       var n = window.__now ? window.__now() : new Date();
       var m = n.getMonth(), d = n.getDate();
       if (m === 4 && d === 1) return "wedding-edmonton"; // May 1 — the Edmonton wedding day
       if (m === 6 && d === 10) return "wedding-prague";  // Jul 10 — the Prague wedding day
-      if (m === 6 && d === 11) return "prague-party";    // Jul 11 — the Prague garden brunch (call-to-Prague-with-family placeholder)
-      if (m === 4 && d === 2) return "bbq";              // May 2 — the morning-after cookout
+      if (m === 6 && d === 11) return "prague-party";    // Jul 11 — the Prague garden brunch
+      if (m === 4 && d === 2) return "bbq";              // May 2 — the cookout (any hour; occKey adds the time window)
       var bd = bdGardenToday();
       if (bd.length) return "bd:" + bd.slice().sort().join("+"); // a garden birthday (or two, on a shared day)
       return null;
+    }
+    function occKey() {
+      var raw = rawOccKey();
+      if (raw === "bbq" && !bbqTimeOk()) return null; // May 2 is an ordinary day outside the 16:00–22:00 cookout window
+      return raw;
+    }
+    window.__isOccasionDate = rawOccKey; // the calendar/date-pill read this (time-gate-agnostic) to force-summon a happening
+    // a deliberate summon (calendar/day click, date-pill nav, cake()) of a TIME-gated happening jumps
+    // the loft clock into its window so occKey() lights it — otherwise clicking the BBQ card at, say,
+    // noon would jump to May 2 but the time-gate would suppress the scene and nothing would happen.
+    function armTimeGate() {
+      var n = window.__now ? window.__now() : new Date();
+      if (n.getMonth() === 4 && n.getDate() === 2 && !bbqTimeOk() && window.__setLoftTime) window.__setLoftTime(18 * 60); // May 2 BBQ needs daylight-cookout hours → 18:00
     }
     window.__dateOccasion = occKey; // test/console hook
     function gated() {
@@ -68703,6 +68873,24 @@ function spawnDustMote(container) {
     function setupWedding() {
       if (window.party && !window.party()) window.party(true); // full party: garden, dancing, blacklight, night
     }
+    // The two Prague days (Jul 10 wedding / Jul 11 garden brunch) are a FAMILY gathering in the
+    // garden with the Prague relatives joining by video call — "jump to the Prague call, family all
+    // gathered in the garden." So: light the party, walk in the FAMILY duos only (not the friend
+    // cast), place the Prague call, and settle the view on the garden. Every hook is guarded.
+    var PRAGUE_FAMILY = ["madla", "family", "hamid", "baharak", "bahareh"]; // Markéta's + Behdad's family ARRIVALS ids (friends — ali/spencer/alireza/farhang — left out)
+    function setupPrague() {
+      if (window.party && !window.party()) window.party(true); // a festive family garden party
+      if (window.goToStage) window.goToStage("garden");
+      setTimeout(function () {
+        if (gated()) return;
+        // gather the FAMILY on the floor (weighted away from the friend cast)
+        PRAGUE_FAMILY.forEach(function (id) { if (window.__duoArrive) window.__duoArrive(id); });
+        // bring up the Prague video call so the Prague-side relatives join remotely (office laptop —
+        // it stays live in the background while we hold on the family gathered in the garden)
+        if (!(window.__pragueCallLive && window.__pragueCallLive()) && window.__laptopCall) window.__laptopCall("prague");
+        if (window.goToStage) window.goToStage("garden"); // __laptopCall zooms the office; pull the view back to the garden family
+      }, window.currentStageName === "garden" ? 80 : 780);
+    }
     function setupBirthday(list) {
       if (window.party && !window.party()) window.party(true); // a festive garden party for the birthday
       if (window.__bdCakeCut) window.__bdCakeCut(list);        // the birthday person(s) behind a candled cake, cutting it
@@ -68723,30 +68911,45 @@ function spawnDustMote(container) {
         }, 520);
       }, window.currentStageName === "balcony" ? 80 : 780);
     }
+    // lastKey = the occasion currently SET UP (null = none). It's latched only AFTER a setup
+    // actually runs, so a gated attempt (a just-loaded, not-yet-focused tab; the intro not yet
+    // past) never latches — a later focus / first-entry / date-tick RETRIES it. This is what makes
+    // a fresh ?date=<garden birthday> load reliably throw the party+cake once the loft's in play.
     var lastKey = null;
     function apply(force) {
+      if (force) armTimeGate(); // a deliberate summon jumps a time-gated happening's clock into its window BEFORE occKey reads it
       var key = occKey();
-      if (key === lastKey && !force) return; // already handled this occasion (guards the ~4s re-apply + repeat hashchanges)
       if (key !== lastKey) {
-        // leaving an occasion: drop the one flag our setups own + the banner; the rest of the
-        // teardown is the standard day/season/reset path (leaving ?date= or a reset restores normal behavior)
+        // the occasion changed (or cleared) since the one we set up: tear the old one's owned flag
+        // + banner down (the rest rides the standard day/season/reset path), and drop the latch so
+        // the new occasion is (re)applied below.
         if (lastKey === "bbq" && window.__setBalconyBBQCrowd) window.__setBalconyBBQCrowd(false);
         clearOccasionBanner();
-        lastKey = key;
+        lastKey = null;
       }
-      if (!key || gated()) return;
+      if (!key) return;                         // no occasion today
+      if (key === lastKey && !force) return;    // already set up (and not a forced re-run)
+      if (gated()) return;                      // can't take over now — leave UNLATCHED so a focus/entry/date-tick retries
       // let the room slide / scene settle first, then re-check the gate + date before taking over.
       // A forced apply is a deliberate day-click (focus implied), so it lands fast; the autonomous
       // load/hashchange path keeps the longer settle beat.
       setTimeout(function () {
-        if (occKey() !== key || gated()) return;
+        if (occKey() !== key || gated()) return; // still can't → stays unlatched, a later trigger retries
+        lastKey = key;                           // latch only once we actually set the scene up
         if (key === "bbq") setupBBQ();
+        else if (key === "wedding-prague" || key === "prague-party") setupPrague();
         else if (key.indexOf("bd:") === 0) setupBirthday(key.slice(3).split("+"));
         else setupWedding();
         showOccasionBanner(key);
       }, force ? 80 : 900);
     }
     window.__applyDateOccasion = apply; // pinged on every date change (calRefreshDeps + hashchange); a truthy arg forces past the latch
+    // Retry an unhandled occasion the moment the tab is focused/shown or the loft enters play — a
+    // fresh load lands unfocused/on the intro, so the 1200ms arm below is often gated; these catch
+    // it up without re-forcing an already-set scene (apply is a cheap no-op once latched).
+    window.addEventListener("focus", function () { apply(); });
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) apply(); });
+    window.__retryDateOccasion = function () { apply(); }; // goToStage pings this on the first step past the intro
     setTimeout(apply, 1200); // arm at load, once the game has settled (deferred so the scene is up first)
   })();
 
@@ -69268,12 +69471,26 @@ function spawnDustMote(container) {
       return true;
     };
   }
-  window.cake = cbhMoment(
+  var weddingCake = cbhMoment(
     function () { return window.__startCakeCutting && window.__startCakeCutting(); },
     function () { return window.__endCakeCutting && window.__endCakeCutting(); },
     null, null,
     "🍰 the cake wheels out — Behdad & Markéta cut the first slice together, the crowd cheers.",
     "the cake's cleared away — the party rolls on.");
+  // cake() (or cake(false)/cake(true)) is the WEDDING cake, unchanged. cake("<name>") throws a
+  // BIRTHDAY cake for that person by reusing the birthday router: a garden-floor guest gets the
+  // garden party + a candled cake danced to the centre between the hosts (+ their bd-<who> hat); a
+  // Tehran/Prague call-family person gets their video call brought up with its birthday cake (the
+  // call scene's seat-of-honour cake is bd-<who>-gated). cake("list") prints the callable names.
+  window.cake = function (arg) {
+    if (arg == null || arg === "" || arg === true || arg === false) return weddingCake(arg);
+    var key = String(arg).toLowerCase().trim();
+    if (key === "list" || key === "?") return window.birthday ? window.birthday("list") : "";
+    if (!window.birthday) return "";
+    var res = window.birthday(key); // routes to the right venue + lights bd-<who> for the cake/hat
+    if (typeof res === "string" && res.indexOf("🎂") === 0) return "🎂 a birthday cake for " + res.slice(2).trim() + "!";
+    return res; // "no birthday by that name…" passthrough
+  };
   window.bouquet = cbhMoment(
     function () { return window.__startBouquetToss && window.__startBouquetToss(); },
     function () { return window.__endBouquetToss && window.__endBouquetToss(); },

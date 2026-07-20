@@ -32,10 +32,11 @@ var HARNESS = [
   "    if (window.__setGardenParty) window.__setGardenParty(true, true); await sleep(150);",
   "    var ret = window.birthday('ali'); await sleep(200);",
   "    report.steps.ali = { ret: ret, bdAli: hasCls('bd-ali'), holiday: hasCls('season-holiday'), party: !!window.__gardenPartyOn, room: window.currentStageName, hatVisible: vis('.bd-hat-ali') };",
-  "    // Goli with the party OFF: routed to the cuddly-puddly via Ali's duo, party stays DARK (a reveal never lights the party)",
-  "    if (window.__setGardenParty) window.__setGardenParty(false, true); await sleep(200);",
-  "    window.birthday('goli'); await sleep(250);",
-  "    report.steps.goli = { bd: hasCls('bd-goli'), room: window.currentStageName, party: !!window.__gardenPartyOn, aliShowing: !!(document.getElementById('cuddly-vis-ali')||{classList:{contains:function(){return false;}}}).classList.contains('showing') };",
+  // Historical dateless-guest birthday detail removed.
+  "    // garden party + cuts a candled cake with her dancing between the hosts (the new garden-birthday behavior).",
+  "    if (window.__setGardenParty) window.__setGardenParty(false, true); await sleep(300);",
+  "    window.birthday('goli'); await sleep(1400);",
+  "    report.steps.goli = { bd: hasCls('bd-goli'), room: window.currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, cutter: !!(document.querySelector('#garden-guests .g-goli')||{classList:{contains:function(){return false;}}}).classList.contains('bd-cutter') };",
   "    // Elisabeth — a Czech-family CROWN kid",
   "    window.birthday('elisabeth'); await sleep(200);",
   "    report.steps.elisabeth = { bd: hasCls('bd-elisabeth'), crownVisible: vis('.bd-crown-elisabeth'), plainHat: (document.querySelector('.bd-hat-elisabeth')?'exists':'none') };",
@@ -77,7 +78,7 @@ else {
   if (s.first && s.first.crownVisible === "visible") pass("Markéta's crown becomes visible"); else fail("Markéta crown visible", JSON.stringify(s.first && s.first.crownVisible));
   // Historical dateless-guest birthday detail removed.
   if (s.ali && s.ali.party && s.ali.room === "garden" && s.ali.hatVisible === "visible") pass("party-ON garden stop pans to the garden floor, hat visible"); else fail("Ali garden reveal", JSON.stringify(s.ali));
-  if (s.goli && s.goli.bd && s.goli.room === "cuddly" && s.goli.party === false && s.goli.aliShowing) pass("party-OFF adult reveal (Goli) visits the cuddly via Ali's duo, party stays dark"); else fail("Goli cuddly reveal (party off, not lit)", JSON.stringify(s.goli));
+  if (s.goli && s.goli.bd && s.goli.room === "garden" && s.goli.party === true && s.goli.cakeOn && s.goli.cutter) pass("party-OFF garden-adult reveal (Goli) THROWS the party + cake, dancing between the hosts"); else fail("Goli garden birthday party+cake", JSON.stringify(s.goli));
   if (s.elisabeth && s.elisabeth.bd && s.elisabeth.crownVisible === "visible" && s.elisabeth.plainHat === "none") pass("Elisabeth wears a CROWN (bd-crown, no bd-hat)"); else fail("Elisabeth crown", JSON.stringify(s.elisabeth));
   if (s.ashraf && s.ashraf.bd && s.ashraf.room === "office") pass("Ashraf (Tehran call) pans to the office + shows her hat class"); else fail("Ashraf tehran reveal", JSON.stringify(s.ashraf));
   if (s.hannah && s.hannah.bd && s.hannah.room === "office") pass("Hannah (Tehran family now) routes to the office, not the cuddly"); else fail("Hannah tehran reveal", JSON.stringify(s.hannah));

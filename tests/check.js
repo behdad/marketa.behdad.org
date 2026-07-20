@@ -778,6 +778,54 @@ function checkParticleSpawnerCaps(file, script) {
   });
 }
 
+// The garden party's dances are synth beds with a KNOWN bpm each (DANCE_BPM, driving the
+// tempo-sync retuneDancers + the console beat() helper) and an explicit mood each (DANCE_MOOD,
+// driving the per-song amplitude keyframe swap). Both maps MUST cover exactly the set of dance
+// ids registered on window.__partyDances (same spirit as the EN/CS + CONSOLE_CMDS parity checks):
+// a dance added to the registry without a bpm would fall back to 500ms/no-retune and its guests
+// would drift off-tempo; one without a mood would silently lose its amplitude character. A bpm/mood
+// key with no registered dance is dead weight that hides a rename. Fails loudly naming the drift.
+function checkDanceParity(file, script) {
+  if (file !== "rsvp.html" || !script) return;
+  function mapKeys(name) {
+    var m = script.match(new RegExp("var " + name + " = \\{([^}]*)\\}"));
+    if (!m) return null;
+    return (m[1].match(/([A-Za-z_$][\w$]*)\s*:/g) || []).map(function (s) { return s.replace(/\s*:$/, ""); });
+  }
+  var bpm = mapKeys("DANCE_BPM");
+  var mood = mapKeys("DANCE_MOOD");
+  if (!bpm) { fail(file + ": DANCE_BPM map not found for dance-parity check"); return; }
+  if (!mood) { fail(file + ": DANCE_MOOD map not found for dance-parity check"); return; }
+  // registered dance ids: every window.__partyDances.push({ id: "<id>", ... })
+  var ids = [];
+  var pre = /__partyDances[^;]*\.push\(\{\s*id:\s*"([^"]+)"/g, pm;
+  while ((pm = pre.exec(script))) ids.push(pm[1]);
+  if (!ids.length) { fail(file + ": no __partyDances.push({id:...}) registrations found for dance-parity check"); return; }
+  var idSet = new Set(ids);
+  function diff(mapName, keys) {
+    var keySet = new Set(keys);
+    var missing = ids.filter(function (k) { return !keySet.has(k); });   // registered dance with no entry
+    var extra = keys.filter(function (k) { return !idSet.has(k); });     // entry for no registered dance
+    if (missing.length === 0 && extra.length === 0) {
+      pass(file + ": " + mapName + " covers exactly the registered dance ids (" + keys.length + ")");
+    } else {
+      fail(file + ": " + mapName + " out of sync with the registered dances (window.__partyDances)",
+        (missing.length ? "dances missing a " + mapName + " entry: " + missing.join(", ") + "\n" : "") +
+        (extra.length ? mapName + " entr(ies) for no registered dance: " + extra.join(", ") : ""));
+    }
+  }
+  diff("DANCE_BPM", bpm);
+  diff("DANCE_MOOD", mood);
+  // every mood value must map to an amplitude-keyframe variant OR be the base "groovy" fallback
+  var moodVals = {};
+  var mvm = script.match(/var DANCE_MOOD = \{([^}]*)\}/);
+  if (mvm) (mvm[1].match(/:\s*"([^"]+)"/g) || []).forEach(function (s) { moodVals[s.replace(/:\s*"|"/g, "")] = true; });
+  var known = { hype: 1, chill: 1, elegant: 1, groovy: 1 };
+  var unknownMoods = Object.keys(moodVals).filter(function (v) { return !known[v]; });
+  if (unknownMoods.length === 0) pass(file + ": all DANCE_MOOD values are known moods (hype/chill/elegant/groovy)");
+  else fail(file + ": DANCE_MOOD has value(s) with no amplitude-keyframe handling", unknownMoods.join(", "));
+}
+
 // A leftover git merge marker in CSS/HTML slips past `node --check` (which only sees
 // the inline <script>) and the other structural checks — one reached production once.
 // Precise forms only, so decorative "====" comment rules don't false-positive.
@@ -809,6 +857,7 @@ FILES.forEach(function (file) {
     checkI18nKeys(file, script, html);
     checkConsoleCmdRoster(file, script);
     checkParticleSpawnerCaps(file, script);
+    checkDanceParity(file, script);
   }
   checkCssCommentBalance(file, style);
   checkCssBraceBalance(file, style);

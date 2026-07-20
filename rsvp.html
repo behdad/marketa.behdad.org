@@ -7867,6 +7867,21 @@ section{margin:1.9rem 0}
    animation) so no CSS transform ever clobbers the positioning transform. */
 #balcony-grillmaster{opacity:0; visibility:hidden; transition:opacity .5s ease}
 #balcony-grillmaster.on{opacity:1; visibility:visible; pointer-events:auto; cursor:pointer}
+/* Serving gesture: the spatula-arm wrapper swings up to the grill and back down. The swing
+   rides #balcony-grill-arm, a wrapper with NO static transform (its pivot lives on
+   transform-box/-origin, not a transform attribute) and distinct from the outer
+   translate()/scale() positioning group, so the animation never clobbers a placement
+   transform. The one-shot class is cleared on animationend. */
+#balcony-grill-arm{transform-box:fill-box; transform-origin:0% 0%}
+#balcony-grill-arm.serving{animation:grill-serve-swing 1.1s ease-in-out}
+@keyframes grill-serve-swing{0%{transform:rotate(0deg)} 34%{transform:rotate(-58deg)} 58%{transform:rotate(-58deg)} 100%{transform:rotate(0deg)}}
+/* A single persistent plated-food node: opacity toggles per serve, so nothing is ever
+   spawned/accumulated — the food pops onto the plate, holds, then clears (replenished,
+   ready to serve again). */
+#balcony-grill-plate .grill-food{opacity:0; transform-box:fill-box; transform-origin:center bottom}
+#balcony-grill-plate.plated .grill-food{animation:grill-food-plate 2.6s ease}
+@keyframes grill-food-plate{0%{opacity:0; transform:translateY(-6px) scale(0.5)} 14%{opacity:1; transform:translateY(0) scale(1)} 78%{opacity:1; transform:translateY(0) scale(1)} 100%{opacity:0; transform:translateY(-3px) scale(0.9)}}
+@media (prefers-reduced-motion: reduce){#balcony-grill-arm.serving{animation:none} #balcony-grill-plate.plated .grill-food{animation:none}}
 /* ═══ BALCONY HANGOUT (party-only guests on the deck; some smoking on the right) ═══════
    Shown only while #balcony-hangout carries .on (the controller sets it on party+balcony).
    All idle motion is CSS keyframes on inner wrappers of PERSISTENT figure nodes — nothing
@@ -21125,9 +21140,20 @@ section{margin:1.9rem 0}
 <g id="balcony-grillmaster" aria-hidden="true" pointer-events="none">
 <g transform="translate(346,320) scale(1.85)">
 <use href="#bcart-hamidathena-p1" xlink:href="#bcart-hamidathena-p1"/>
+<g id="balcony-grill-arm">
 <g stroke-linecap="round">
 <line x1="13" y1="-42" x2="27" y2="-32" stroke="#6a5140" stroke-width="1.4"/>
 <rect x="25" y="-34.5" width="7" height="5" rx="1" fill="#c4c4c4" stroke="#8a8a8a" stroke-width="0.7"/>
+</g>
+</g>
+<g id="balcony-grill-plate">
+<ellipse cx="17" cy="-5" rx="7" ry="2.2" fill="#e8e4da" stroke="#b9b2a2" stroke-width="0.7"/>
+<ellipse cx="17" cy="-5.6" rx="4.6" ry="1.3" fill="#f5f2ea"/>
+<g class="grill-food">
+<ellipse cx="17" cy="-6.4" rx="3.4" ry="1.5" fill="#d9a15a"/>
+<rect x="13.8" y="-6.2" width="6.4" height="1.6" rx="0.7" fill="#6b4630"/>
+<ellipse cx="17" cy="-4.6" rx="3.4" ry="1.1" fill="#e6b46a"/>
+</g>
 </g>
 </g>
 </g>
@@ -62078,6 +62104,35 @@ function spawnDustMote(container) {
         loop();
       }, 20000 + Math.random() * 16000);
     })();
+    // SERVING: while Hamid is actually on-screen at a hot BBQ, he SOMETIMES plates a cooked
+    // item — the spatula arm swings up to the grill and back, then a burger pops onto the plate
+    // beside him and clears (replenished). "Food ready" = a browned burger on the grill
+    // (.smoker-burger.done, the smoker's ≥300° cook flag). Every gate is re-checked at fire time
+    // (crickets rule); a single persistent food node (opacity toggled) → nothing accumulates.
+    var armEl = document.getElementById("balcony-grill-arm");
+    var plateEl = document.getElementById("balcony-grill-plate");
+    function foodReady() { return !!document.querySelector("#balcony-smoker .smoker-burger.done:not(.served)"); }
+    if (armEl) armEl.addEventListener("animationend", function (e) { if (e.animationName === "grill-serve-swing") armEl.classList.remove("serving"); });
+    if (plateEl) plateEl.addEventListener("animationend", function (e) { if (e.animationName === "grill-food-plate") plateEl.classList.remove("plated"); });
+    function serveOne() {
+      if (!armEl || !plateEl) return;
+      armEl.classList.remove("serving");
+      void armEl.getBoundingClientRect(); // restart the one-shot swing
+      armEl.classList.add("serving");
+      setTimeout(function () { // plate the item as the arm swings back down
+        if (!(shown && attended() && inRoom() && !elsewhere() && foodReady())) return;
+        plateEl.classList.remove("plated");
+        void plateEl.getBoundingClientRect();
+        plateEl.classList.add("plated");
+      }, 460);
+    }
+    (function serveLoop() {
+      setTimeout(function () {
+        if (shown && attended() && inRoom() && !elsewhere() && foodReady() && Math.random() < 0.55) serveOne();
+        serveLoop();
+      }, 9000 + Math.random() * 9000);
+    })();
+    window.__balconyServeNow = serveOne; // console/test hook: force one serve
     // name popup: hover tooltip + click white card, like the deck crowd / bar couples
     if (typeof hoverTooltip === "function") {
       var tip = function () { return "<em>Hamid</em> · " + ((typeof tipText === "function") ? tipText("role_godson_a") : "grillmaster"); };

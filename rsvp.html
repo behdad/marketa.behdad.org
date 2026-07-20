@@ -8022,6 +8022,9 @@ section{margin:1.9rem 0}
    ready to serve again). */
 #balcony-grill-plate .grill-food{opacity:0; transform-box:fill-box; transform-origin:center bottom}
 #balcony-grill-plate.plated .grill-food{animation:grill-food-plate 2.6s ease}
+#balcony-grill-plate .gf-tofu{display:none}
+#balcony-grill-plate.serve-tofu .gf-burger{display:none}
+#balcony-grill-plate.serve-tofu .gf-tofu{display:block}
 @keyframes grill-food-plate{0%{opacity:0; transform:translateY(-6px) scale(0.5)} 14%{opacity:1; transform:translateY(0) scale(1)} 78%{opacity:1; transform:translateY(0) scale(1)} 100%{opacity:0; transform:translateY(-3px) scale(0.9)}}
 @media (prefers-reduced-motion: reduce){#balcony-grill-arm.serving{animation:none} #balcony-grill-plate.plated .grill-food{animation:none}}
 /* ═══ BALCONY HANGOUT (party-only guests on the deck; some smoking on the right) ═══════
@@ -21263,13 +21266,20 @@ section{margin:1.9rem 0}
 <rect x="25" y="-34.5" width="7" height="5" rx="1" fill="#c4c4c4" stroke="#8a8a8a" stroke-width="0.7"/>
 </g>
 </g>
-<g id="balcony-grill-plate">
+<g id="balcony-grill-plate" transform="translate(-42,-55)">
 <ellipse cx="17" cy="-5" rx="7" ry="2.2" fill="#e8e4da" stroke="#b9b2a2" stroke-width="0.7"/>
 <ellipse cx="17" cy="-5.6" rx="4.6" ry="1.3" fill="#f5f2ea"/>
 <g class="grill-food">
+<g class="gf-burger">
 <ellipse cx="17" cy="-6.4" rx="3.4" ry="1.5" fill="#d9a15a"/>
 <rect x="13.8" y="-6.2" width="6.4" height="1.6" rx="0.7" fill="#6b4630"/>
 <ellipse cx="17" cy="-4.6" rx="3.4" ry="1.1" fill="#e6b46a"/>
+</g>
+<g class="gf-tofu">
+<rect x="13.7" y="-6.4" width="2.8" height="2.8" rx="0.8" fill="#c99a5a" stroke="#9a6f3a" stroke-width="0.5"/>
+<rect x="16.9" y="-6.1" width="2.8" height="2.8" rx="0.8" fill="#e6c98a" stroke="#c9a95a" stroke-width="0.5"/>
+<rect x="15.4" y="-8.5" width="2.6" height="2.6" rx="0.8" fill="#e6c98a" stroke="#c9a95a" stroke-width="0.5"/>
+</g>
 </g>
 </g>
 </g>
@@ -42641,7 +42651,7 @@ async def localfont(name):
   var smokerFirebox = document.getElementById("balcony-smoker-firebox");
   var smokerLid = document.getElementById("balcony-smoker-lid");
   if (smoker && smokerFirebox && smokerLid) {
-    var smoking = false, lidOpen = false, fireOn = false;
+    var smoking = false, lidOpen = false, fireOn = false, firstLightDone = false;
     var sizzleTimer = null, tempTimer = null, temp = 0;
     var burgers = smoker.querySelectorAll(".smoker-burger");
     var tempEl = document.getElementById("balcony-smoker-temp");
@@ -42726,6 +42736,7 @@ async def localfont(name):
       if (smoking) {
         seedSmoke(); // top up the plume (it keeps going through the cool-down)
         // cooking starts from tempTick once the grill reaches 300°, not the instant it's lit
+        if (!firstLightDone) { firstLightDone = true; if (!lidOpen) toggleLid(); } // first light lifts the lid so the food's on show
       }
       if (smoking && window.__gardenPartyOn && window.__forceBalconyGrillmaster) window.__forceBalconyGrillmaster(); // opening the BBQ during the party summons Hamid to the grill (guaranteed, not the ~50% roll)
       else if (window.__updateBalconyGrillmaster) window.__updateBalconyGrillmaster(); // else just re-gate
@@ -42766,6 +42777,15 @@ async def localfont(name):
     burgers.forEach(function (b) {
       b.addEventListener("click", function (e) { serveBurger(b, e); });
     });
+    // Grillmaster hook: serve one genuinely-cooked item off the grill (vanishing it), reporting
+    // whether it was tofu so the plate can show the matching food. Null when nothing's ready.
+    window.__balconyServeReadyBurger = function () {
+      var b = document.querySelector("#balcony-smoker .smoker-burger.done:not(.served)");
+      if (!b) return null;
+      var isTofu = !!b.querySelector(".grill-tofu");
+      serveBurger(b, null);
+      return isTofu ? "tofu" : "burger";
+    };
     // Fire up the BBQ on demand (Behdad's "let's start the BBQ" text): lid up + fire on, idempotent.
     window.__startBBQ = function () {
       if (!smoker.classList.contains("open")) toggleLid();
@@ -42781,6 +42801,7 @@ async def localfont(name):
       updateTemp();
       smoking = false;
       lidOpen = false;
+      firstLightDone = false;
       smoker.classList.remove("smoking", "open");
       burgers.forEach(function (b) { b.classList.remove("served", "done"); b.style.transition = ""; });
       if (window.__updateBalconyGrillmaster) window.__updateBalconyGrillmaster(); // a cold BBQ has no grillmaster
@@ -62643,7 +62664,7 @@ function spawnDustMote(container) {
     // (crickets rule); a single persistent food node (opacity toggled) → nothing accumulates.
     var armEl = document.getElementById("balcony-grill-arm");
     var plateEl = document.getElementById("balcony-grill-plate");
-    function foodReady() { return !!document.querySelector("#balcony-smoker .smoker-burger.done:not(.served)"); }
+    function foodReady() { return smoker.classList.contains("open") && !!document.querySelector("#balcony-smoker .smoker-burger.done:not(.served)"); }
     if (armEl) armEl.addEventListener("animationend", function (e) { if (e.animationName === "grill-serve-swing") armEl.classList.remove("serving"); });
     if (plateEl) plateEl.addEventListener("animationend", function (e) { if (e.animationName === "grill-food-plate") plateEl.classList.remove("plated"); });
     function serveOne() {
@@ -62653,6 +62674,9 @@ function spawnDustMote(container) {
       armEl.classList.add("serving");
       setTimeout(function () { // plate the item as the arm swings back down
         if (!(shown && attended() && inRoom() && !elsewhere() && foodReady())) return;
+        var kind = window.__balconyServeReadyBurger && window.__balconyServeReadyBurger(); // consume a real grate item (it vanishes)
+        if (!kind) return; // nothing actually served → don't plate
+        plateEl.classList.toggle("serve-tofu", kind === "tofu");
         plateEl.classList.remove("plated");
         void plateEl.getBoundingClientRect();
         plateEl.classList.add("plated");

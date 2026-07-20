@@ -4093,6 +4093,8 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .pm-msg-search.has-q .pm-ms-x{display:flex}
 .pm-msg-list{display:flex; flex-direction:column; gap:12px} /* the rows, so the sticky title + search bar sit outside the filter rebuild */
 .pm-msg-nomatch{margin:auto; color:var(--muted); font-size:12px; text-align:center}
+.pm-msg-new-divider{display:flex; align-items:center; gap:8px; margin:2px 0 -2px; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--wine)}
+.pm-msg-new-divider::before,.pm-msg-new-divider::after{content:""; flex:1; height:1px; background:var(--wine); opacity:.4}
 .pm-msg-empty{margin:auto; color:var(--muted); font-size:12px; text-align:center}
 .pm-msg-row{display:flex; flex-direction:column; align-items:flex-start; gap:2px; max-width:100%; cursor:pointer} /* tap → its place/app */
 .pm-msg-row:hover .pm-msg-bubble, .pm-msg-row:focus-visible .pm-msg-bubble{border-color:var(--soft)}
@@ -22186,6 +22188,7 @@ var T = {
     msg_empty: "No messages yet.",
     msg_search_placeholder: "search messages…", // filters the thread by sender name + message text
     msg_search_none: "no messages match that search.",
+    msg_new_divider: "New",
     msg_pouria_from: "Pouria",
     msg_pouria_body: "bar's open again 🍸 get down here",
     msg_group_from: "Wedding crew",
@@ -22790,6 +22793,7 @@ var T = {
     msg_empty: "Zatím žádné zprávy.",
     msg_search_placeholder: "hledat zprávy…", // filtruje vlákno podle jména odesílatele + textu zprávy
     msg_search_none: "žádné zprávy neodpovídají hledání.",
+    msg_new_divider: "Nové",
     msg_pouria_from: "Pouria",
     msg_pouria_body: "bar zase otevřel 🍸 padej sem",
     msg_group_from: "Svatební parta",
@@ -43119,14 +43123,21 @@ async def localfont(name):
           var q = msgFold((input.value || "").trim());
           search.classList.toggle("has-q", !!q);
           list.textContent = "";
-          var shown = 0;
+          var shown = 0, now = Date.now(), dividerPlaced = false, soonestExpiry = Infinity;
           messagesThread.forEach(function (id) {
             var m = MESSAGES[id]; if (!m) return;
             if (!msgMatches(m, q)) return;
+            var age = messagesArrivedAt[id] ? (now - messagesArrivedAt[id]) : Infinity, isNew = age < 30000;
+            if (isNew) {
+              soonestExpiry = Math.min(soonestExpiry, 30000 - age);
+              if (!dividerPlaced) { var div = document.createElement("div"); div.className = "pm-msg-new-divider"; div.textContent = tr("msg_new_divider"); list.appendChild(div); dividerPlaced = true; }
+            }
             var row = buildRow(id);
             if (row) { list.appendChild(row); shown++; }
           });
           nomatch.style.display = shown ? "none" : "";
+          if (msgNewTimer) { clearTimeout(msgNewTimer); msgNewTimer = null; }
+          if (soonestExpiry !== Infinity) msgNewTimer = setTimeout(function () { msgNewTimer = null; if (isOpen() && currentApp === "messages") applyFilter(); }, soonestExpiry + 50); // retire the "New" label once the freshest text ages out, while the app stays open
         }
         input.addEventListener("input", applyFilter);
         clr.addEventListener("click", function () { input.value = ""; applyFilter(); input.focus(); });
@@ -44085,7 +44096,7 @@ async def localfont(name):
     // messages — a read-only chat thread of in-character texts that arrive on the Act-2 beats.
     // messagesThread holds the received message IDS in arrival order (renderMessages reads the copy
     // live via tr(), so a language flip re-renders); cleared only on a kill (__resetPhoneApps).
-    var messagesThread = [], messagesRead = {}; // messagesRead[id] set once a message is tapped — unread (bold) until then
+    var messagesThread = [], messagesRead = {}, messagesArrivedAt = {}, msgNewTimer = null; // messagesRead[id] set once a message is tapped — unread (bold) until then; messagesArrivedAt[id] = wall-clock ms of live delivery (drives the "New" divider); msgNewTimer re-renders to retire the divider once the freshest text ages past 30s
     var MESSAGES = { // each fires from its beat/trigger via window.__deliverPhoneMessage (actTwo sequencer + the DJ swap); listed in arc order so 'g' steps through them in sequence
       dusk:   { fromKey: "msg_bahareh_from", bodyKey: "msg_dusk_body",   time: "19:40", act: "eclipse" },      // act_b0 → tap: balcony + eclipse
       pouria: { fromKey: "msg_pouria_from",  bodyKey: "msg_pouria_body", time: "21:20", act: "room:kitchen" }, // act_p1 → the bar
@@ -45316,7 +45327,7 @@ async def localfont(name):
     }
     window.__openPhoneModal = open;
     window.__closePhoneModal = function (silent) { close(silent); };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; messagesThread = []; messagesRead = {}; Object.keys(MESSAGES).forEach(function (k) { if (MESSAGES[k].bodyKeys) MESSAGES[k].bodyKey = null; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__stopDayDrip) window.__stopDayDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks, and the flashlight (intent forgotten + beam/torch off)
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; messagesThread = []; messagesRead = {}; messagesArrivedAt = {}; Object.keys(MESSAGES).forEach(function (k) { if (MESSAGES[k].bodyKeys) MESSAGES[k].bodyKey = null; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__stopDayDrip) window.__stopDayDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks, and the flashlight (intent forgotten + beam/torch off)
     // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
     // open(true) is the cinematic lock-skip path (same as __showCocktailInPhone), so a console
     // launch never stalls on the passcode. Matches by app id (case-insensitive) or its localized
@@ -45481,8 +45492,10 @@ async def localfont(name):
       // across language flips + live re-renders (renderers read m.bodyKey each time).
       if (m.bodyKeys && !m.bodyKey) m.bodyKey = m.bodyKeys[Math.floor(Math.random() * m.bodyKeys.length)];
       messagesThread.push(id);
-      if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages); // live-refresh if the thread's already open
-      showMessageThumb(id);
+      messagesArrivedAt[id] = Date.now();
+      var msgAppShowing = isOpen() && currentApp === "messages";
+      if (msgAppShowing) openApp("messages", "app_messages", renderMessages); // live-refresh (scrolls to newest) if the thread's already open — no toast needed, they're looking at it
+      else showMessageThumb(id);
       updateMsgBadge();
       if (m.next && MESSAGES[m.next]) setTimeout(function () { window.__deliverPhoneMessage(m.next); }, m.nextDelay || 4200); // chained followup text (e.g. Hamid's 2nd stanza lands a few seconds after the 1st)
     };

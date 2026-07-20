@@ -22159,7 +22159,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 
 <footer>
   <div class="foot-inner">
-    <p class="contact"><span data-i="contact">Questions? Write to us:</span> <a href="mailto:marketa@behdad.org">marketa@behdad.org</a></p>
+    <p class="contact"><span data-i="contact">Questions? Write to us:</span> <a href="mailto:marketa@behdad.org" onclick="if(window.__mailCompose){window.__mailCompose('','');return false;}">marketa@behdad.org</a></p>
     <a href="https://marketajakesova.ca" data-href-i="marketa_url" target="_blank" rel="noopener">markéta</a> <span class="inf p">∞</span> <a href="https://behdad.org" target="_blank" rel="noopener">behdad</a>
   </div>
   <div class="strip" aria-hidden="true"><span class="sp"></span><span class="sb"></span></div>
@@ -37610,8 +37610,7 @@ var ABANDONED_CALL_MS = 30000;
         mailDiv("btn-vc", replyBtn, mailT("mail_reply_btn")); // label wrapped so it optically centres (see .btn-vc)
         replyBtn.addEventListener("click", function (e) {
           e.stopPropagation();
-          try { window.open("https://mail.google.com/mail/?view=cm&fs=1&to=marketa@behdad.org&su=" +
-            encodeURIComponent(mailT("mail_reply_subject")) + "&body=" + encodeURIComponent(mailT("mail_reply_body")), "_blank"); } catch (err) {}
+          if (window.__mailCompose) window.__mailCompose(mailT("mail_reply_subject"), mailT("mail_reply_body"));
         });
       }
       mailDiv("mail-head-from", head, mailT("mail_from_" + mailOpenMsg.id));
@@ -37625,8 +37624,7 @@ var ABANDONED_CALL_MS = 30000;
       mailDiv("btn-vc", composeBtn, mailT("mail_compose")); // label wrapped so it optically centres (see .btn-vc)
       composeBtn.addEventListener("click", function (e) {
         e.stopPropagation();
-        try { window.open("https://mail.google.com/mail/?view=cm&fs=1&to=marketa@behdad.org&su=" +
-          encodeURIComponent(mailT("mail_compose_subject")), "_blank"); } catch (err) {}
+        if (window.__mailCompose) window.__mailCompose(mailT("mail_compose_subject"), "");
       });
       var list = mailDiv("mail-list", mailWrap);
       MAILS.forEach(function (m) {
@@ -38531,7 +38529,7 @@ var ABANDONED_CALL_MS = 30000;
     } catch (e) {}
   }
   function tattooGmail() { try { window.open("https://mail.google.com/mail/?view=cm&fs=1&to=marketa@behdad.org&su=" + encodeURIComponent(tattooT("tt_email_subject")) + "&body=" + encodeURIComponent(tattooT("tt_email_body")), "_blank"); } catch (e) {} }
-  function tattooMailto() { try { window.location.href = "mailto:marketa@behdad.org?subject=" + encodeURIComponent(tattooT("tt_email_subject")) + "&body=" + encodeURIComponent(tattooT("tt_email_body")); } catch (e) {} }
+  function tattooMailto() { if (window.__mailCompose) window.__mailCompose(tattooT("tt_email_subject"), tattooT("tt_email_body")); } // device-aware: desktop→Gmail, mobile→native mail
   function tattooClipboardSupported() { try { return !!(navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== "undefined"); } catch (e) { return false; } }
   // Copy the design PNG to the clipboard — accepts a blob OR a blob promise so the write
   // can be issued inside a fresh gesture (promise-valued ClipboardItem keeps the activation).
@@ -42008,10 +42006,7 @@ async def localfont(name):
     try { window.open("https://mail.google.com/mail/?view=cm&fs=1&to=marketa@behdad.org&su=" +
       encodeURIComponent(pbText("pb_email_subject")) + "&body=" + encodeURIComponent(pbText("pb_email_body")), "_blank", "noopener"); } catch (e) {}
   }
-  function openMailto() {
-    try { window.location.href = "mailto:marketa@behdad.org?subject=" +
-      encodeURIComponent(pbText("pb_email_subject")) + "&body=" + encodeURIComponent(pbText("pb_email_body")); } catch (e) {}
-  }
+  function openMailto() { if (window.__mailCompose) window.__mailCompose(pbText("pb_email_subject"), pbText("pb_email_body")); } // device-aware: desktop→Gmail, mobile→native mail
   // ── the polaroid dialog ── the booth's ONE popup: a centered fixed overlay showing the
   // composed polaroid big, with Download / Gmail / Email / Retake / Cancel. Retake goes
   // back to live + countdown; Cancel/✕/backdrop-tap go back to the live view (camera
@@ -45216,8 +45211,7 @@ async def localfont(name):
       });
       mail.addEventListener("click", function () {
         if (!pad.value.trim()) return;
-        try { window.location.href = "mailto:marketa@behdad.org?subject=" +
-          encodeURIComponent(tr("notes_email_subject")) + "&body=" + encodeURIComponent(noteBody()); } catch (e) {}
+        if (window.__mailCompose) window.__mailCompose(tr("notes_email_subject"), noteBody()); // device-aware: desktop→Gmail, mobile→native mail
       });
       sync();
     }
@@ -45688,9 +45682,7 @@ async def localfont(name):
       });
     }
     function mailCompose(subjKey, bodyKey) {
-      var url = "https://mail.google.com/mail/?view=cm&fs=1&to=marketa@behdad.org&su=" + encodeURIComponent(tr(subjKey));
-      if (bodyKey) url += "&body=" + encodeURIComponent(tr(bodyKey));
-      try { window.open(url, "_blank"); } catch (e) {}
+      if (window.__mailCompose) window.__mailCompose(tr(subjKey), bodyKey ? tr(bodyKey) : ""); // device-aware: desktop→Gmail, mobile→native mail
     }
     function renderMailList(body) {
       body.scrollTop = 0;
@@ -69036,7 +69028,18 @@ function spawnDustMote(container) {
     var sb = rsvpSubjectBody();
     try { window.location.href = "mailto:marketa@behdad.org?subject=" + sb.subject + "&body=" + sb.body; } catch (e) {}
   }
-  window.__openRsvpMail = openRsvpMailto; // native mail client, pre-filled with the RSVP template (same source as the out-of-game RSVP buttons)
+  // Device-aware composer for every GENERIC "email us" click: desktop has no reliable mailto:
+  // handler set up here, and Gmail-web wants a login on phones — so desktop → Gmail web composer,
+  // mobile → the native mail app. Explicitly-labelled "Gmail" buttons keep their fixed flavour.
+  window.__mailCompose = function (subject, body) {
+    var to = "marketa@behdad.org", su = encodeURIComponent(subject || ""), bd = encodeURIComponent(body || "");
+    var mobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "") || (("ontouchstart" in window) && Math.min(screen.width || 9999, screen.height || 9999) < 820);
+    try {
+      if (mobile) window.location.href = "mailto:" + to + "?subject=" + su + "&body=" + bd;
+      else window.open("https://mail.google.com/mail/?view=cm&fs=1&to=" + to + "&su=" + su + "&body=" + bd, "_blank");
+    } catch (e) {}
+  };
+  window.__openRsvpMail = function () { var l = document.documentElement.lang, d = T[l] || T.en; window.__mailCompose(d.rsvp_email_subject, d.rsvp_email_body); }; // device-aware (desktop→Gmail web, mobile→native mail); the two explicit out-of-game buttons keep their fixed flavour
   window.__openRsvpGmail = openRsvpGmail;
   if (gmailBtn) gmailBtn.addEventListener("click", openRsvpGmail);
   if (mailBtn) mailBtn.addEventListener("click", openRsvpMailto);

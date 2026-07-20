@@ -59,6 +59,13 @@ allowed exception, owner-confirmed.)
   the in-scene D-pad). They assert each surface shows the right items, suppresses the native
   menu where it should, dismisses on Esc/away, and (for the dock/phone) that a "Kill" resets
   the app. Both use the same one-shot headless runner as play.js.
+- **Run `node tests/album-axis.mjs` after changes touching a room's album backdrop or the
+  room-shot signature** (`albumPhotoSvg`'s per-room branches, `ALBUM_SKY_SIG`). It rasterises
+  each room card in all 8 day/night × weather states and asserts the signature separates two
+  states *exactly when* the frames differ materially — catching both duplicate keepsakes and
+  suppressed ones. `check.js` cannot do this job: text can see that a branch reads `isNight`,
+  not that it only shifts the wall one shade (which is how the bar came to file the same
+  photograph twice, twice). It prints its own threshold margin — mind it if you retint a room.
 - **The check script doesn't replace manual verification** for anything visual or
   interactive: rendering with headless
   `google-chrome --headless --disable-gpu --window-size=W,H --screenshot=out.png` and

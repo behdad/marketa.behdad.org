@@ -926,30 +926,40 @@ function checkDanceParity(file, script) {
   else fail(file + ": DANCE_MOOD has value(s) with no amplitude-keyframe handling", unknownMoods.join(", "));
 }
 
-// Aspen's room shots de-dupe on room + light + lineup, and the light half of that
-// signature may only carry what the polaroid actually paints. albumPhotoSvg draws the
-// weather in the two rooms with a sky in frame (the deck, the office window) and nowhere
-// else, so a weather change indoors leaves the photograph identical — including it in the
-// signature filed a second, indistinguishable card each time the real forecast flipped.
-// ALBUM_WX_ROOMS lives in the capture closure and the renderer in another, so nothing but
-// this holds them together: assert the listed rooms are exactly the branches using `wx`.
-function checkAlbumWxRooms(file, script) {
+// Aspen's room shots de-dupe on room + light + lineup, and ALBUM_SKY_SIG decides how much
+// of the light each room's card is allowed to carry. It lives in the capture closure and
+// albumPhotoSvg in another, so this is the only thing holding them together textually:
+// every room branch of the renderer must have a projection and vice versa, and a room whose
+// branch never reads an axis must not key on it (that direction is sound from source alone,
+// and it is the one that filed a duplicate bar card on every forecast flip).
+// Whether an axis a branch DOES read changes the picture *materially* cannot be judged from
+// text -- the bar reads isNight and only shifts one shade deeper -- so tests/album-axis.mjs
+// rasterises the frames and asserts that, both ways round.
+function checkAlbumSkySig(file, script) {
   if (file !== "rsvp.html" || !script) return;
-  var decl = script.match(/var ALBUM_WX_ROOMS = \{([^}]*)\}/);
-  if (!decl) { fail(file + ": ALBUM_WX_ROOMS not found (room-shot signature's weather gate)"); return; }
-  var listed = (decl[1].match(/(\w+)\s*:/g) || []).map(function (s) { return s.replace(/\s*:/, ""); }).sort();
-  // each `rec.room === "x"` branch of albumPhotoSvg, up to the next branch or the shared tail
+  var decl = script.match(/var ALBUM_SKY_SIG = \{([\s\S]*?)\n  \};/);
+  if (!decl) { fail(file + ": ALBUM_SKY_SIG not found (the room-shot signature's light projection)"); return; }
+  var proj = {}, pm, pre = /(\w+):\s*function\s*\([^)]*\)\s*\{([^}]*)\}/g;
+  while ((pm = pre.exec(decl[1])) !== null) proj[pm[1]] = pm[2];
   var body = script.match(/function albumPhotoSvg\(rec\)\s*\{[\s\S]*?\n      \/\/ top motif/);
   if (!body) { fail(file + ": could not locate albumPhotoSvg's room branches"); return; }
-  var re = /rec\.room === "(\w+)"\)\s*\{([\s\S]*?)(?=\n      \} else)/g, m, paints = [];
-  while ((m = re.exec(body[0])) !== null) if (/\bwx\b/.test(m[2])) paints.push(m[1]);
-  paints.sort();
-  if (paints.join(",") === listed.join(",")) {
-    pass(file + ": ALBUM_WX_ROOMS matches the room backdrops that paint weather (" + listed.join(", ") + ")");
-  } else {
-    fail(file + ": ALBUM_WX_ROOMS has drifted from albumPhotoSvg — room shots will over- or under-de-dupe",
-      "listed: " + (listed.join(", ") || "(none)") + "\npaints wx: " + (paints.join(", ") || "(none)"));
+  var branch = {}, m, re = /rec\.room === "(\w+)"\)\s*\{([\s\S]*?)(?=\n      \} else)/g;
+  while ((m = re.exec(body[0])) !== null) branch[m[1]] = m[2];
+  var rooms = Object.keys(branch).sort(), listed = Object.keys(proj).sort();
+  if (rooms.join(",") !== listed.join(",")) {
+    fail(file + ": ALBUM_SKY_SIG and albumPhotoSvg disagree on which rooms have a backdrop",
+      "projected: " + (listed.join(", ") || "(none)") + "\nrendered:  " + (rooms.join(", ") || "(none)"));
+    return;
   }
+  var bad = [];
+  rooms.forEach(function (r) {
+    [["wx", /\bwx\b/, /\bs\.wx\b/], ["night", /\bisNight\b/, /\bs\.night\b/]].forEach(function (ax) {
+      if (!ax[1].test(branch[r]) && ax[2].test(proj[r]))
+        bad.push(r + " keys on " + ax[0] + ", which its backdrop never draws");
+    });
+  });
+  if (bad.length) fail(file + ": ALBUM_SKY_SIG splits room shots on light the card cannot show - duplicate cards", bad.join("\n"));
+  else pass(file + ": ALBUM_SKY_SIG keys only on light each room's backdrop actually draws (" + rooms.join(", ") + ")");
 }
 
 // A leftover git merge marker in CSS/HTML slips past `node --check` (which only sees
@@ -1036,7 +1046,7 @@ FILES.forEach(function (file) {
     checkFireFestParity(file, script);
     checkSeasonRosters(file, script);
     checkTapHaloGuards(file, script);
-    checkAlbumWxRooms(file, script);
+    checkAlbumSkySig(file, script);
   }
   checkCssCommentBalance(file, style);
   checkCssBraceBalance(file, style);

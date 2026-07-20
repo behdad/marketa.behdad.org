@@ -1363,10 +1363,10 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 /* arrival: each crasher slides in from the wings (Ali from screen-left, Goli from the
    right) and rises into frame. One-shot, cleared on animationend by JS; when at rest the
    wrapper is neutral so the dance reads from centre. */
-#garden-guests.guests-arriving .g-ali .guest-arrival{animation:guest-arrive-l 1.5s cubic-bezier(.22,1,.36,1) both}
-#garden-guests.guests-arriving .g-goli .guest-arrival{animation:guest-arrive-r 1.5s cubic-bezier(.22,1,.36,1) both; animation-delay:.18s}
-#garden-guests.guests-arriving .g-spencer .guest-arrival{animation:guest-arrive-c 1.5s cubic-bezier(.22,1,.36,1) both; animation-delay:.36s} /* the giant strides in behind, a touch later */
-#garden-guests.guests-arriving .g-jay .guest-arrival{animation:guest-arrive-c 1.5s cubic-bezier(.22,1,.36,1) both; animation-delay:.52s} /* the officiator glides in beside Spencer, last */
+#garden-guests.guests-arriving .g-ali .guest-arrival{animation:guest-arrive-l 1.9s cubic-bezier(.22,1,.36,1) both}
+#garden-guests.guests-arriving .g-goli .guest-arrival{animation:guest-arrive-r 1.9s cubic-bezier(.22,1,.36,1) both; animation-delay:.18s}
+#garden-guests.guests-arriving .g-spencer .guest-arrival{animation:guest-arrive-c 1.9s cubic-bezier(.22,1,.36,1) both; animation-delay:.36s} /* the giant strides in behind, a touch later */
+#garden-guests.guests-arriving .g-jay .guest-arrival{animation:guest-arrive-c 1.9s cubic-bezier(.22,1,.36,1) both; animation-delay:.52s} /* the officiator glides in beside Spencer, last */
 @keyframes guest-arrive-l{0%{transform:translateX(-46px) translateY(10px); opacity:0} 60%{opacity:1} 100%{transform:translateX(0) translateY(0); opacity:1}}
 @keyframes guest-arrive-r{0%{transform:translateX(46px) translateY(10px); opacity:0} 60%{opacity:1} 100%{transform:translateX(0) translateY(0); opacity:1}}
 @keyframes guest-arrive-c{0%{transform:translateY(24px) scale(.9); opacity:0} 60%{opacity:1} 100%{transform:translateY(0) scale(1); opacity:1}}
@@ -1658,7 +1658,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    the other. --walk-x defaults to 0 so a stray class add is a harmless no-op. */
 /* generic: ANY named guest that's mid-walk rides the gate-walk (covers every arrival incl. the
    Lübeck + Hamid/Athena figures, and any future guest — no per-name list to keep in sync) */
-#garden-guests.duo-walking .guest.walking .guest-walk{animation:guest-gate-walk 2.9s cubic-bezier(.33,0,.5,1) both}
+#garden-guests.duo-walking .guest.walking .guest-walk{animation:guest-gate-walk 3.6s cubic-bezier(.33,0,.5,1) both}
 /* the partner steps in a beat behind so they don't march in lockstep (the two family kids
    trail their mom a touch, staggered so all three don't stride in together) */
 #garden-guests.duo-walking .g-goli.walking .guest-walk,
@@ -1688,7 +1688,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 /* ── REVOLVING DOOR: a guest strolls back OUT to the gate, then drops .arrived (→ hidden), making
    room for another to walk in. Same per-figure --walk-x distance, played in reverse + fading out.
    Standalone (no .duo-walking dep) one-shot .leaving; JS drops .arrived+.leaving on animationend. */
-#garden-guests .guest.leaving .guest-walk{animation:guest-gate-leave 2.6s cubic-bezier(.4,0,.55,1) both}
+#garden-guests .guest.leaving .guest-walk{animation:guest-gate-leave 3.2s cubic-bezier(.4,0,.55,1) both}
 @keyframes guest-gate-leave{
   0%{transform:translate3d(0,0,0); opacity:1}
   18%{transform:translate3d(calc(var(--walk-x,0) * .14),-3px,0)}
@@ -43549,7 +43549,7 @@ async def localfont(name):
     // "while watching"). Guarded so a storm of toggles can't double-fire, and a toggle back ON
     // mid-stroll cleanly cancels it and resumes the party.
     var partyWindDownTimer = null;
-    var WINDDOWN_MS = 1900; // ~the guest-gate-leave stroll (2s CSS) — keep the party + UV lit this long
+    var WINDDOWN_MS = 3100; // ~the guest-gate-leave stroll (3.2s CSS) — keep the party + UV lit this long
     function clearWindDown() { if (partyWindDownTimer) { clearTimeout(partyWindDownTimer); partyWindDownTimer = null; } }
     // Should turning the party OFF walk the guests out first (vs. the instant snap teardown)? Only
     // when the user is actually WATCHING the garden and there's a lit party with guests on the floor
@@ -54853,8 +54853,12 @@ function spawnDustMote(container) {
   // read as showing up a beat after the party starts, but re-entering the garden mid-party
   // just shows them already-arrived (no re-slide). Reduced motion holds a static pose (CSS).
   var guestArriveTimer = null, guestsArrived = false;
-  function guestsWanted() { // on the floor when: party lit, in the garden, tab visible (dance itself self-stills under reduced-motion via CSS)
-    return !!window.__gardenPartyOn && stageIndex === STAGES.indexOf("garden") && document.visibilityState !== "hidden";
+  function guestsWanted() { // on the floor when: party lit + in the garden. NOT gated on tab visibility/focus:
+    // the party keeps running unattended (owner: guests should keep arriving/leaving even when the window
+    // is unfocused or hidden — the BBQ-kiosk case). Safe here because arrivals are silent CSS class
+    // toggles, not spawned/particle effects — nothing accumulates in a hidden tab (crickets rule still
+    // guards every SOUND + WAAPI spawner elsewhere). Paused CSS walks just resume + settle on return.
+    return !!window.__gardenPartyOn && stageIndex === STAGES.indexOf("garden");
   }
   function clearGuestArriveTimer() { if (guestArriveTimer) { clearTimeout(guestArriveTimer); guestArriveTimer = null; } }
   // Mirror the "named crowd is on the floor" signal (#garden-guests.guests-in) onto the
@@ -55061,9 +55065,9 @@ function spawnDustMote(container) {
     leaving.forEach(function (u) { leaveEntry(u); });
     var incoming = shuffleArr(waiting.slice()).slice(0, Math.min(leaving.length, waiting.length));
     setTimeout(function () { // let a gap open at the gate before the next lot stroll in
-      if (!guestsWanted() || document.hidden || !document.hasFocus()) return; // don't arrive into a hidden tab
+      if (!guestsWanted()) return; // party still wants a floor? (visibility/focus no longer gate — the party runs on unattended, see guestsWanted)
       incoming.forEach(function (u) { arriveEntry(u); noteArrival(u); });
-    }, 2600);
+    }, 3000);
   }
   // the full roster this party (the duos + the solo, plus the mouses only if they're visiting)
   function fullArrivals() {
@@ -55095,7 +55099,7 @@ function spawnDustMote(container) {
       trickleTimer = null;
       var g = document.getElementById("garden-guests");
       if (!g) return;
-      if (!guestsWanted() || document.hidden || !document.hasFocus()) { armTrickle(1400); return; } // paused (hidden/unfocused/off-floor) — hold, don't advance; re-check soon
+      if (!guestsWanted()) { armTrickle(1400); return; } // off the floor / party off — hold, don't advance; re-check soon (visibility/focus no longer pause it — the party runs on unattended)
       if (window.__syncMousesVisitingClass) window.__syncMousesVisitingClass(); // in case the visiting roll flipped
       var list = fullArrivals();
       var present = presentUnits(g, list), waiting = waitingUnits(g, list);

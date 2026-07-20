@@ -27,7 +27,8 @@ var HARNESS = [
   "    // first 'b' → the ring leader, Markéta (Jan 20)",
   "    pressB(false); await sleep(150);",
   "    report.steps.first = { bdMarketa: hasCls('bd-marketa'), toast: toastText(), sd: window.__seasonDate && window.__seasonDate() };",
-  "    report.steps.first.crownVisible = vis('.bd-hat-marketa');",
+  "    report.steps.first.crownVisible = vis('.bd-crown-marketa');",
+  "    report.steps.first.plainHat = (document.querySelector('.bd-hat-marketa') ? vis('.bd-hat-marketa') : 'none');",
   "    // console jump to Ali (holiday decor) with the party ON — a garden stop: garden floor",
   "    if (window.__setGardenParty) window.__setGardenParty(true, true); await sleep(150);",
   "    var ret = window.birthday('ali'); await sleep(200);",
@@ -75,7 +76,7 @@ else {
   if (s.first && s.first.bdMarketa) pass("first 'b' press leads with Markéta (bd-marketa set)"); else fail("first 'b' → Markéta", JSON.stringify(s.first));
   if (s.first && s.first.sd && s.first.sd.m === 0 && s.first.sd.d === 20) pass("Markéta's stop time-travels to Jan 20"); else fail("Markéta date = Jan 20", JSON.stringify(s.first && s.first.sd));
   if (s.first && /Mark/.test(s.first.toast)) pass("birthday toast names the person (" + (s.first && s.first.toast) + ")"); else fail("toast names the person", JSON.stringify(s.first && s.first.toast));
-  if (s.first && s.first.crownVisible === "visible") pass("Markéta's crown becomes visible"); else fail("Markéta crown visible", JSON.stringify(s.first && s.first.crownVisible));
+  if (s.first && s.first.crownVisible === "visible" && s.first.plainHat === "none") pass("Markéta wears a CROWN (bd-crown, no bd-hat)"); else fail("Markéta crown visible / no hat", JSON.stringify(s.first && { crown: s.first.crownVisible, hat: s.first.plainHat }));
   // Historical dateless-guest birthday detail removed.
   if (s.ali && s.ali.party && s.ali.room === "garden" && s.ali.hatVisible === "visible") pass("party-ON garden stop pans to the garden floor, hat visible"); else fail("Ali garden reveal", JSON.stringify(s.ali));
   if (s.goli && s.goli.bd && s.goli.room === "garden" && s.goli.party === true && s.goli.cakeOn && s.goli.cutter) pass("party-OFF garden-adult reveal (Goli) THROWS the party + cake, dancing between the hosts"); else fail("Goli garden birthday party+cake", JSON.stringify(s.goli));

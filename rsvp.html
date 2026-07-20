@@ -3595,6 +3595,16 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .loft-timestep.lapsing{color:var(--wine,#8e3a4a)} /* lit while the time-lapse runs */
 .hunt-viewport:fullscreen .loft-timenav{bottom:8px; right:8px}
 @media (max-width:520px){ .loft-timenav{right:3px; bottom:3px} .loft-timepill,.loft-timestep{font-size:10px} .loft-timepill{padding:3px 8px} .loft-timestep{padding:3px 6px} }
+/* the outdoor thermometer's temperature control — the same pill shape as the date/time navs
+   (a readout between two steppers, ↺ only while an override holds), but anchored over the
+   thermometer in the scene instead of parked in a viewport corner: position:fixed and appended
+   to the fullscreen host, the way eggBubble reaches the top layer. */
+.loft-tempnav{position:fixed; z-index:21; display:flex; align-items:stretch; gap:0; background:rgba(255,253,248,.94); border:1px solid rgba(69,58,49,.18); border-radius:11px; -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); overflow:hidden; box-shadow:0 4px 14px rgba(0,0,0,.22)}
+.loft-temppill{font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:transparent; border:none; border-left:1px solid rgba(69,58,49,.16); border-right:1px solid rgba(69,58,49,.16); padding:4px 9px; user-select:none; white-space:nowrap; display:inline-flex; align-items:center}
+.loft-temppill.overridden{color:var(--wine,#8e3a4a)} /* lit while a set temperature is holding, same cue as the time-lapse step */
+.loft-tempstep{flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:transparent; border:none; padding:4px 8px; cursor:pointer; user-select:none}
+.loft-tempstep:hover{background:rgba(142,58,74,.14)}
+@media (max-width:520px){ .loft-temppill,.loft-tempstep{font-size:10px} .loft-temppill{padding:3px 8px} .loft-tempstep{padding:3px 7px} }
 /* a very subtle top-left chevron hinting at the drop-down console; clicking it pulls the console down */
 /* the console's pull-tab: a round plate in the scene's top-left whose triangle is both the state
    and the switch — ▼ to pull the console down, turned ▲ to send it back up. The glyph rotates
@@ -20536,8 +20546,9 @@ section{margin:1.9rem 0}
 <ellipse id="balcony-lights-groundglow" cx="620" cy="306" rx="42" ry="8" fill="#e8c98a" fill-opacity="0.35"/>
 <rect x="58" y="52" width="86" height="212" fill="#0a0806"/>
 <!-- outdoor thermometer on the wall left of the front door: red-column tube + a small
-     readout, both driven by the shared loftTemperature model -->
-<g id="balcony-thermometer" aria-hidden="true" transform="translate(-3,-5)">
+     readout, both driven by the shared loftTemperature model — and a click raises that
+     model's little set-the-temperature pill (see loftTemperature's popup) -->
+<g id="balcony-thermometer" class="hunt-hit" aria-hidden="true" transform="translate(-3,-5)">
 <rect x="35" y="108" width="18" height="62" rx="3" fill="#f4efe4" stroke="#b8ac96" stroke-width="1"/>
 <circle cx="44" cy="111.8" r="0.8" fill="#b8ac96"/>
 <line x1="44" y1="114" x2="44" y2="150" stroke="#ddd6c4" stroke-width="2.6" stroke-linecap="round"/>
@@ -23728,6 +23739,7 @@ var T = {
     fern_legend: "Fern. They say it flowers one midnight a year — tonight, if you believe the story — and whoever finds the flower comes into luck.",
     fern_found: "The fern flower. You were standing here at midnight on the one night it opens. That's the whole trick, and it's supposed to be luck.",
     tip_cokecooler: "the vintage <em>Coca-Cola</em> cooler — really theirs, really rolls",
+    tip_thermometer: "the outdoor thermometer — tap it to set the temperature yourself",
     role_bestman: "best man", role_maid: "man of honor", role_officiant: "officiant", role_fashion: "fashionista", role_mc: "MC", role_business: "businesswoman", role_photographer: "photographer", role_niece: "Behdad's niece", role_godson: "Behdad's godson", role_godson_a: "grillmaster", role_sister: "Behdad's sister", role_sisterinlaw: "Behdad's sister-in-law", role_nephew: "Behdad's nephew", role_msister: "Markéta's sister", role_travelbuddy_m: "travel buddy", role_travelbuddy_f: "travel buddy",
     age_forms: ["{n} years old now!", "{n} years old already!", "{n} now!", "already {n}! 🎂"],
     role_bdad: "Behdad's dad", role_bmom: "Behdad's mom", role_bril: "Behdad's brother-in-law",
@@ -24093,6 +24105,10 @@ var T = {
     datenav_reset: "Reset date & time to now",
     datenav_reset_date: "Reset the date to today",
     datenav_reset_time: "Reset the clock to now",
+    tempnav_read: "The temperature outside",
+    tempnav_down: "Colder",
+    tempnav_up: "Warmer",
+    tempnav_reset: "Hand the temperature back to Edmonton’s real weather",
     console_hint: "Open the drop-down console",
     console_hint_close: "Close the drop-down console",
     app_weather: "weather",
@@ -24539,6 +24555,7 @@ var T = {
     fern_legend: "Kapradí. Prý kvete jednu půlnoc do roka — dnes v noci, jestli té pověsti věříš — a kdo ten květ najde, má štěstí.",
     fern_found: "Květ kapradí. Stál jsi tady o půlnoci té jediné noci, kdy se otevírá. V tom to celé je — a prý to nosí štěstí.",
     tip_cokecooler: "starý pojízdný chladicí box <em>Coca-Cola</em> — fakt jejich, fakt jezdí",
+    tip_thermometer: "venkovní teploměr — klepnutím si teplotu nastavíš sám",
     role_bestman: "svědek", role_maid: "svědek", role_officiant: "oddávající", role_fashion: "módní ikona", role_mc: "moderátor", role_business: "podnikatelka", role_photographer: "fotografka", role_niece: "Behdadova neteř", role_godson: "Behdadův kmotřenec", role_godson_a: "grilmistr", role_sister: "Behdadova sestra", role_sisterinlaw: "Behdadova švagrová", role_nephew: "Behdadův synovec", role_msister: "Markétina sestra", role_travelbuddy_m: "parťák na cesty", role_travelbuddy_f: "parťačka na cesty",
     age_forms: ["už {n}!", "teď už {n}!", "už {n}! 🎂", "{n}! 🎂"],
     role_bdad: "Behdadův táta", role_bmom: "Behdadova máma", role_bril: "Behdadův švagr",
@@ -24891,6 +24908,10 @@ var T = {
     datenav_reset: "Vrátit datum a čas na teď",
     datenav_reset_date: "Vrátit datum na dnešek",
     datenav_reset_time: "Vrátit čas na teď",
+    tempnav_read: "Teplota venku",
+    tempnav_down: "Chladněji",
+    tempnav_up: "Tepleji",
+    tempnav_reset: "Vrátit teplotu skutečnému počasí v Edmontonu",
     console_hint: "Otevřít rozbalovací konzoli",
     console_hint_close: "Zavřít rozbalovací konzoli",
     app_weather: "počasí",
@@ -39095,7 +39116,7 @@ var ABANDONED_CALL_MS = 30000;
     birthday: "birthday(\"name\") — wear a friend or family member's party hat (or crown) and pan to where they are, e.g. birthday(\"ali\"). time-travels the loft to their birthday, so the day's real season dresses around the hat. birthday() with no arg advances to the next in the ring (same as the 'b' key; Shift+B walks it back); birthday(\"list\") prints everyone. Markéta's Czech family (Markéta, Madla, Robert, Elisabeth, Felix) get crowns; everyone else a cone. call-only family (Ashraf/Mohsen in Tehran, Daniel/Marie/Baka in Prague) show their headwear on the video call",
     play: "play() — resume the music if it's paused",
     pause: "pause() — pause the music if something's playing",
-    temp: "temp() — the indoor + outdoor thermometer reading",
+    temp: "temp() — the indoor + outdoor thermometer reading. temp(-25) SETS the outside temperature in °C (-40…40) and the loft's whole outdoor model follows it; temp(false) hands it back to Edmonton's real weather. Clicking the outdoor thermometer on the balcony wall opens the same control, in 5° steps",
     weather: "weather() — the real current weather in both wedding cities (Edmonton · Prague)",
     sharecard: "sharecard() — compose a shareable save-the-date card from the loft's own art (the crossed caps, the names, both wedding dates) badged with the CURRENT occasion — the season, or a friend's birthday with their little portrait — and open a preview with Download + Share buttons (a PNG). reflects any time-travel / season / birthday you've set",
     clock: "clock() — the real current time + date, readable (🕐 HH:MM · weekday)",
@@ -51729,7 +51750,10 @@ async def localfont(name):
   // trip pins the gauge at 40.
   var OUT_DAY = 16, OUT_NIGHT = 5, STORM_OUT = -4, STORM_IN = -1;
   var IN_BASE = 22, NIGHT_SETBACK = -3, SUN_GAIN = 3, AC_COOL = -4, TRIP_TARGET = 40; // molly pins the gauge
-  var HARD_MIN = -20, HARD_MAX = 40;
+  // -40 is Edmonton's real winter floor (and where °C and °F meet), not a display convenience:
+  // the old -20 truncated genuine cold CYEG readings, and it sits exactly on the sun-dog
+  // threshold, so a set -25 would have shown as -20 on the tube.
+  var HARD_MIN = -40, HARD_MAX = 40;
   // slow random walks so the numbers feel alive instead of pinned to constants
   var wanderOut = 0, wanderIn = 0;
   function wander(w, amp) {
@@ -51740,14 +51764,21 @@ async def localfont(name):
     var el = document.getElementById(stageId);
     return !!(el && el.classList.contains("dusk"));
   }
+  // A temperature set by hand — from the thermometer's popup or temp(-25). Sits ABOVE both
+  // the real Edmonton reading and the simulated fallback in outdoorAir below.
+  var tempOverride = null;
   function outdoorAir() {
     // The ambient outdoor AIR temperature, shared by BOTH readouts so indoor and
-    // outdoor agree. Real Edmonton ANCHORS it when a fetch has populated it; otherwise
-    // the simulated early-May day/night model is the offline/headless fallback. In-game
-    // dusk cools it a few degrees and the game storm drops it further — these are real
-    // changes to the outside air, so they live here (the indoor base tracks THIS value,
-    // and gates its own night-setback below to avoid double-cooling at dusk). Returned
-    // unrounded/unclamped; callers finish those.
+    // outdoor agree. A hand-set temperature wins outright; else real Edmonton ANCHORS it
+    // when a fetch has populated it; otherwise the simulated early-May day/night model is
+    // the offline/headless fallback. In-game dusk cools it a few degrees and the game storm
+    // drops it further — these are real changes to the outside air, so they live here (the
+    // indoor base tracks THIS value, and gates its own night-setback below to avoid
+    // double-cooling at dusk). Returned unrounded/unclamped; callers finish those.
+    // A set temperature deliberately skips the dusk/storm terms: those DERIVE an air
+    // temperature from the model, and there is nothing left to derive once you've pinned
+    // one — you asked for -25 outside, so the tube reads -25 whatever the sky is doing.
+    if (typeof tempOverride === "number") return tempOverride;
     if (typeof window.__realOutdoorC === "number") {
       var r = window.__realOutdoorC;
       if (isDusk("stage-balcony")) r -= 4;
@@ -51826,6 +51857,107 @@ async def localfont(name):
   };
   window.__gardenThermoSet = function () { return window.__loftTempSet()[0]; };
   window.__loftTempSet();
+
+  // ── the thermometer as a temperature CONTROL ───────────────────────────────────────────
+  // Pin / clear the outside temperature. Held in memory, NOT in the URL the way ?date= and
+  // ?time= are: those are shareable time-travel that the whole scene, the share card and
+  // realWxOverridden() all derive from, while this is one dial on one subsystem — and a
+  // bookmarked ?temp= surviving reload would have the loft quietly misreporting Edmonton's
+  // real weather forever after. Nothing here navigates, so an in-memory value already
+  // persists across rooms; ↺, temp(false) and resetHunt are the ways out.
+  window.__outdoorTempOverride = function () { return tempOverride; };
+  window.__outdoorTempC = function () { return outdoorTarget(); }; // exactly the number on the tube — what any consumer of "how cold is it out" should read
+  window.__setOutdoorTemp = function (v) {
+    if (v == null || v === false) tempOverride = null;
+    else {
+      v = Math.round(Number(v));
+      if (!isFinite(v)) return null;
+      tempOverride = Math.max(HARD_MIN, Math.min(HARD_MAX, v));
+    }
+    window.__loftTempSet(); // snap, rather than let the 1°-per-1.2s drift crawl there
+    paintTempPop();
+    return tempOverride;
+  };
+  window.__tempLimits = function () { return { min: HARD_MIN, max: HARD_MAX, step: TEMP_STEP }; };
+
+  // Coarse on purpose: the popup is for getting somewhere fast (a real Edmonton +18 down to a
+  // sun-dog -25 is nine taps), and temp(-23) from the console sets an exact value.
+  var TEMP_STEP = 5;
+  var tempPop = null;
+  var thermo = document.getElementById("balcony-thermometer");
+  function tempStr(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
+  function paintTempPop() {
+    if (!tempPop) return;
+    var read = tempPop.querySelector(".loft-temppill");
+    var reset = tempPop.querySelector(".loft-tempreset");
+    var on = typeof tempOverride === "number";
+    read.textContent = "🌡 " + shownOut + " °C";
+    read.classList.toggle("overridden", on);
+    read.title = tempStr("tempnav_read");
+    reset.style.display = on ? "" : "none"; // only offered while a set temperature is in play, same as the date/time pills' ↺
+    [["loft-tempdown", "tempnav_down"], ["loft-tempup", "tempnav_up"], ["loft-tempreset", "tempnav_reset"]].forEach(function (p) {
+      var b = tempPop.querySelector("." + p[0]);
+      if (b) { b.title = tempStr(p[1]); b.setAttribute("aria-label", tempStr(p[1])); }
+    });
+  }
+  // Always land on a round multiple of the step in the direction you pressed, so repeated taps
+  // walk …, -15, -20, -25, … however odd the real reading it started from.
+  function tempStepBy(dir) {
+    var base = (typeof tempOverride === "number") ? tempOverride : outdoorTarget();
+    var next = dir < 0 ? (Math.ceil(base / TEMP_STEP) - 1) * TEMP_STEP
+                       : (Math.floor(base / TEMP_STEP) + 1) * TEMP_STEP;
+    window.__setOutdoorTemp(next);
+  }
+  // Below the thermometer, not above it: the console's ▼ pull-tab is pinned to the viewport's
+  // top-left and the thermometer hangs high on the wall, so a "top" placement runs under the tab
+  // (which sits in the viewport's own stacking context, well above a body-level popup) at narrow
+  // widths. eggBubble's default flips up by itself if the bottom ever runs out of room.
+  function placeTempPop() { if (tempPop && thermo) positionEggBubble(tempPop, thermo); }
+  function closeTempPop() { if (tempPop) { tempPop.remove(); tempPop = null; } }
+  function openTempPop() {
+    if (tempPop || !thermo) return;
+    var nav = document.createElement("div");
+    nav.className = "loft-tempnav";
+    function swallowKeys(e) { e.stopPropagation(); } // a focused step must not leak keys to the game shortcuts, same as the date pill's steps
+    function mkStep(cls, glyph, fn) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "loft-tempstep " + cls; b.textContent = glyph;
+      b.addEventListener("click", function (e) { e.stopPropagation(); fn(); });
+      b.addEventListener("keydown", swallowKeys);
+      return b;
+    }
+    var read = document.createElement("span");
+    read.className = "loft-temppill";
+    nav.appendChild(mkStep("loft-tempdown", "−", function () { tempStepBy(-1); }));
+    nav.appendChild(read);
+    nav.appendChild(mkStep("loft-tempreset", "↺", function () { window.__setOutdoorTemp(null); }));
+    nav.appendChild(mkStep("loft-tempup", "+", function () { tempStepBy(1); }));
+    // the fullscreen host, or a fixed-position panel renders behind the top layer — same as eggBubble
+    var fsHost = document.fullscreenElement || document.webkitFullscreenElement ||
+                 document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
+    fsHost.appendChild(nav);
+    tempPop = nav;
+    placeTempPop();
+    paintTempPop();
+  }
+  window.__closeTempPop = closeTempPop;   // goToStage + resetHunt close it
+  window.__toggleTempPop = function () { if (tempPop) closeTempPop(); else openTempPop(); };
+  if (thermo) {
+    thermo.addEventListener("click", function (e) { e.stopPropagation(); window.__toggleTempPop(); });
+    hoverTooltip(thermo, function () { return tipText("tip_thermometer"); }, "top");
+  }
+  document.addEventListener("click", function (e) {
+    if (!tempPop || tempPop.contains(e.target)) return;
+    if (thermo && (e.target === thermo || thermo.contains(e.target))) return; // the thermometer's own handler toggles
+    closeTempPop();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (!tempPop || (e.key !== "Escape" && e.key !== "Esc")) return;
+    e.stopPropagation(); // Escape closes the popup WITHOUT also stopping the music, same as the shortcuts card
+    closeTempPop();
+  }, true);
+  window.addEventListener("resize", placeTempPop);
+
   setInterval(function () {
     wanderOut = wander(wanderOut, 1.5);
     wanderIn = wander(wanderIn, 0.7);
@@ -51834,6 +51966,7 @@ async def localfont(name):
     else if (shownIn > ti) paintIndoor(--shownIn);
     if (shownOut < to) paintOutdoor(++shownOut);
     else if (shownOut > to) paintOutdoor(--shownOut);
+    paintTempPop(); // the open popup tracks the tube (real weather drifting, a room's dusk)
   }, 1200);
 })();
 (function () {
@@ -61746,6 +61879,7 @@ function spawnDustMote(container) {
     if (name !== "office" && window.__headphoneModeOn && window.__headphoneModeOn() && window.__setHeadphoneMode) window.__setHeadphoneMode(false); // leaving the desk takes the cans off — lifts the office party-duck and hands the song's pan back to the room
     if (name !== "office" && window.__closeOfficePhotobooth) window.__closeOfficePhotobooth(); // leaving the office stops the photobooth camera
     if (name !== "office" && window.__closeMonitorFamily) window.__closeMonitorFamily(true); // ...hangs up the family call (and its self-view camera)
+    if (window.__closeTempPop) window.__closeTempPop(); // the thermometer's popup belongs to the balcony wall it points at (the SET temperature stays)
     if (window.__closePhoneModal) window.__closePhoneModal(true); // leaving the balcony (or the extinguisher reset) closes the pocket phone, tearing down its call/board
     if (name !== "garden" && window.__closeDjPicker) window.__closeDjPicker(); // leaving the garden tears down the request-a-song picker
     if (name !== "office" && window.__pauseMonitorVideo) window.__pauseMonitorVideo(); // ...and pauses the home movie (the app view stays for the return)
@@ -68285,6 +68419,8 @@ function spawnDustMote(container) {
     // teardown below then runs against the real date, not the abandoned one.
     if (window.__calResetDateTime) window.__calResetDateTime();
     if (window.__calResetView) window.__calResetView(); // an open calendar (phone/monitor) off the pretend month too
+    if (window.__setOutdoorTemp) window.__setOutdoorTemp(null); // ...and the weather back to Edmonton's real reading
+    if (window.__closeTempPop) window.__closeTempPop();
     if (window.__stopRepeat) window.__stopRepeat(); // a fresh game ends any looping editor script
     clearCuddlySmoke(); // clear any lingering joint haze
     if (window.__stowCat) window.__stowCat(); // cat back in the chest, wherever it had wandered
@@ -74534,11 +74670,20 @@ function spawnDustMote(container) {
     return "nothing to resume — start a track first.";
   };
 
-  window.temp = function () {
+  window.temp = function (v) {
     if (!window.__loftTempSet) return "the thermometer isn't ready yet.";
+    if (arguments.length && window.__setOutdoorTemp) {
+      var clearing = (v === false || v == null);
+      if (window.__setOutdoorTemp(clearing ? null : v) == null && !clearing) {
+        var lim = window.__tempLimits();
+        return "temp(-25) sets the outside temperature in °C (" + lim.min + "…" + lim.max + "); temp(false) hands it back to Edmonton's real weather.";
+      }
+    }
     var t = window.__loftTempSet();
     if (!t || isNaN(t[0]) || isNaN(t[1])) return "the readout isn't ready yet.";
-    return "🌡 inside " + Math.round(t[0]) + "°C · outside " + Math.round(t[1]) + "°C";
+    var set = window.__outdoorTempOverride && window.__outdoorTempOverride();
+    return "🌡 inside " + Math.round(t[0]) + "°C · outside " + Math.round(t[1]) + "°C" +
+      (typeof set === "number" ? " (set by hand — temp(false) hands it back to the real weather)" : "");
   };
 
   window.weather = function () { // real current weather in both wedding cities (from the one Open-Meteo fetch on load)

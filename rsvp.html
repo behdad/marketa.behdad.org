@@ -28702,8 +28702,21 @@ document.addEventListener("click", function (e) {
   // windows (both watch the same sky). Starts true so the very first night a visitor reaches is
   // a likely showing; the console force bypasses it.
   var auroraTonight = true;
-  function rollAurora() { auroraTonight = Math.random() < (window.__gardenPartyOn ? 0.30 : 0.72); }
+  // The northern lights favor CLEAR COLD nights: a cold night (a genuinely cold real Edmonton
+  // reading when a fetch has landed, OR a deep-winter/snowy pretend-date) pushes the odds toward
+  // near-certain, while a clear WARM night keeps the old odds. The clear-night requirement and
+  // the party-dampening both still hold (this only raises the base the roll is drawn against).
+  function coldNight() {
+    if (typeof window.__realOutdoorC === "number" && window.__realOutdoorC <= 0) return true; // a real freezing reading
+    return !!(window.__snowySeason && window.__snowySeason());                                // else the season's own cold months
+  }
+  function rollAurora() {
+    var base = window.__gardenPartyOn ? 0.30 : 0.72;
+    if (coldNight()) base = window.__gardenPartyOn ? 0.55 : 0.97; // clear cold night: the lights nearly always dance
+    auroraTonight = Math.random() < base;
+  }
   window.__rollGardenAurora = function () { rollAurora(); if (window.__updateGardenAurora) window.__updateGardenAurora(); };
+  window.__auroraColdNight = coldNight; // test hook: the clear-cold-night boost predicate
   // shimmer(sh, t, ph): a stop's live opacity = base + slow twin sines
   function shimmer(base, t, ph) {
     return Math.max(0, base[0] + base[1] * Math.sin(t * 0.21 + ph) + base[2] * Math.sin(t * 0.37 + ph * 1.7));
@@ -48924,6 +48937,7 @@ async def localfont(name):
     if (gardenChanged && window.__updateGardenAurora) window.__updateGardenAurora(); // real rain outside also hides the aurora
     var strip = document.getElementById("loft-game-strip");
     if (strip) strip.classList.toggle("climate-overcast", overcast); // a plain grey day dims the sky, no rain
+    if (window.__catWeatherReact) window.__catWeatherReact(); // the loose cat ducks in from rain / basks on a clear day
   }
   window.__applyRealWx = applyRealWx; // the advancing-time tick re-evaluates the ambiance in step with day/night
   window.__applyBalconyWeather = applyRealWx; // the storm cycle + console layer setters re-apply through the same merge
@@ -67571,6 +67585,7 @@ function spawnDustMote(container) {
   var BALCONY_FINAL_LEAP_AT = 3;
   var balconyRailPerches = 0;
   var catGoneForever = false;
+  var wxSheltering = false; // true while rain/storm has driven the cat off the balcony to its chest/nook
   function setNapping(on) {                // toggles the chair-nap look; no-op off the chair perch
     if (!breathe) return;
     if (on) breathe.classList.remove("stretching"); // a stale stretch would out-cascade the nap's breathing loop
@@ -67612,6 +67627,11 @@ function spawnDustMote(container) {
     var s = document.getElementById("stage-" + catRoom);
     return !!(s && s.classList.contains("dusk"));
   }
+  // Weather ties (BUILD 1). wxRaining: the precip layers are up (rain, or a wet/dry storm) — the
+  // cat ducks inside. wxClearDay: a bright, dry, daytime sky (no cloud/precip on any layer) — the
+  // cat suns itself on the balcony rail. Both read live so a sky change retimes the very next cycle.
+  function wxRaining() { return !!(window.__wxRain || window.__wxStorm); }
+  function wxClearDay() { return !isNight() && !(window.__skyCloudy && window.__skyCloudy()); }
   function laserOn() { return !!(window.laser && window.laser()); } // the console laser dot is out — stay chase-ready, don't nap through it
   function baseFeet() {                    // the roam-neutral floor position of the cat's feet
     // Read the LIVE base offset from #witchy-chest-cat-pos rather than the ROOMS table:
@@ -67686,7 +67706,10 @@ function spawnDustMote(container) {
     // plain {x,y} sit perches convert — the office desk/chair naps keep their own weighting and
     // their drag-follow hooks stay unconfused — and never while the laser's out, so a chase is
     // never napped through. isNight/laserOn are read live.
-    if (!isNap && !isSwipe && !isStare && typeof chosen === "object" && !isNight() && !laserOn() && Math.random() < 0.6) isNap = true;
+    // On a CLEAR DAY the cat basks: an ordinary balcony-rail sit almost always curls into a
+    // sun-nap (weather tie-in) — otherwise the usual drowsy-daylight ~60% conversion applies.
+    var napChance = (catRoom === "balcony" && wxClearDay()) ? 0.92 : 0.6;
+    if (!isNap && !isSwipe && !isStare && typeof chosen === "object" && !isNight() && !laserOn() && Math.random() < napChance) isNap = true;
     var perch = typeof chosen === "function" ? chosen() : chosen; // resolve live-geometry perches
     if (!perch) { scheduleJump(); return; }           // couldn't resolve a surface — skip this cycle
     var b = baseFeet();
@@ -68066,6 +68089,7 @@ function spawnDustMote(container) {
   // it repeatedly for the same room is a no-op and never restarts the pace or dupes a cat.
   window.__homeCat = function (room, instant) {
     if (!walk.classList.contains("out")) return; // still in the bag
+    if (room === "balcony" && wxRaining()) { wxSheltering = true; room = catHomeBase(); } // no roaming the wet railing — stay in
     if (!eligible(room)) room = catHomeBase(); // contained: retreat to the party nook or the garden chest
     var dest = eligible(room) ? room : "garden"; // where the cat will physically be
     var changed = dest !== catRoom;
@@ -68420,6 +68444,21 @@ function spawnDustMote(container) {
   scheduleJump(); // self-gating loop: acts only while the loose cat is on the viewed room
   idleFidget();   // self-gating idle-fidget loop (ear twitch / occasional groom); same gates
   scheduleAntic(); // self-gating naughty-antic loop (zoomies / knock-a-cup / bat-yarn / steal); same gates
+  // BUILD 1 — WEATHER-REACTIVE CAT. Driven by applyRealWx (the 1s weather poll AND every layer-flag
+  // change), so the cat reacts within a beat of the sky turning. Rain/storm drives a balcony cat off
+  // the wet railing back to its chest/nook via __homeCat — kept loose (no full stow to undo), so it
+  // just rejoins the player's room once the sky dries. Only a loose, still-here cat reacts; a cat
+  // stowed by the extinguisher (no .out) is left alone. The clear-day sun-nap bias lives in startJump.
+  function catWeatherReact() {
+    if (!walk.classList.contains("out") || catGoneForever) return;
+    if (wxRaining()) {
+      if (catRoom === "balcony") { wxSheltering = true; window.__homeCat(catHomeBase()); } // duck in off the wet rail
+    } else if (wxSheltering) {
+      wxSheltering = false;
+      if (window.currentStageName) window.__homeCat(window.currentStageName); // dried up — back out with the player
+    }
+  }
+  window.__catWeatherReact = catWeatherReact;
 })();
 (function () {
   // The console's laser() command: a red dot loose in the CURRENTLY VIEWED room.

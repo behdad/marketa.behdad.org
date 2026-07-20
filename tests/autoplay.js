@@ -27,8 +27,13 @@
 //   6. PAUSE / no-accumulate — while running, hide the tab: the beat counter STOPS growing while
 //      hidden and the DOM node count stays bounded across a long hidden spell. Unhiding resumes.
 //      An UNFOCUSED-but-visible tab pauses the same way (blur path).
-//   7. TAKEOVER — __autoplayTakeover exits (keeps idle-resume), then autoplay(false) stops it for
-//      good, and a plain synthetic CLICK afterwards does NOT re-arm / re-start it.
+//   7. TAKEOVER — __autoplayTakeover exits (keeps idle-resume) and the kiosk drifts back on its
+//      own; then autoplay(false) stops it for good, no drift-back, and a plain synthetic CLICK
+//      afterwards does NOT re-arm / re-start it.
+// A SECOND, short page load then runs the whole machine under prefers-reduced-motion:reduce (the
+// director drops its `flourish` beats and stretches its waits there, so the branch is real code,
+// not just the cursor helpers snapping): it must still travel and still show the cursor, and must
+// spawn ZERO ripples.
 // Fails on any uncaught JS error across the whole run.
 //
 // Usage: node tests/autoplay.js
@@ -263,6 +268,52 @@ if (!r) {
   // Errors
   if (r.errors.length === 0) pass("no uncaught JS errors across the entire run");
   else fail("no uncaught JS errors", r.errors.slice(0, 12).join("\n"));
+}
+
+// ── reduced motion ── a second, short load with prefers-reduced-motion:reduce forced.
+var RM = [
+  "<pre id=\"__report\" style=\"position:fixed;left:-9999px\">pending</pre>",
+  "<script>",
+  "(function () {",
+  "  function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}",
+  "  var report={errors:[],fresh:false,rooms:0,cursorSeen:false,ripples:0,steps:0,invariants:null};",
+  "  async function run(){",
+  "    report.fresh = (typeof window.__autoplayInvariants==='function');",
+  "    if (!window.autoplay || !report.fresh) { report.errors=window.__errs.concat(['director API missing (stale page?)']); return; }",
+  "    report.invariants = window.__autoplayInvariants();",
+  "    window.goToStage('office'); await sleep(300);",
+  "    window.autoplay(true);",
+  "    var seen={}, maxRipples=0;",
+  "    for (var i=0;i<26;i++){ await sleep(500);",
+  "      if (window.currentStageName) seen[window.currentStageName]=1;",
+  "      var cc=document.getElementById('cine-cursor'); if(cc && cc.classList.contains('visible')) report.cursorSeen=true;",
+  "      maxRipples=Math.max(maxRipples, document.querySelectorAll('.cine-ripple').length); }",
+  "    report.rooms=Object.keys(seen).length; report.ripples=maxRipples; report.steps=window.__autoplaySteps();",
+  "    window.autoplay(false); await sleep(300);",
+  "  }",
+  "  window.addEventListener('load',function(){ setTimeout(function(){ run().catch(function(e){window.__errs.push('harness:'+String(e&&e.stack||e));}).then(function(){if(!report.errors.length)report.errors=window.__errs;document.getElementById('__report').textContent=JSON.stringify(report);}); },400); });",
+  "})();",
+  "</script>"
+].join("\n");
+
+console.log("");
+console.log("rsvp.html autoplay under prefers-reduced-motion:reduce:");
+var rm = lib.runPageSync("rsvp.html", RM, 45000, { patchRaf: true, forceReduce: true });
+if (!rm || !rm.fresh) {
+  fail("reduced-motion run reported (page error before load, or budget too small)", JSON.stringify(rm));
+} else {
+  if (rm.invariants && rm.invariants.ok) pass("plan-time invariants still hold on the reduced-motion profile");
+  else fail("invariants must hold under reduced motion too", JSON.stringify(rm.invariants));
+  if (rm.steps >= 3) pass("the machine still runs under reduced motion (" + rm.steps + " beats)");
+  else fail("reduced motion must not stall the machine", JSON.stringify(rm));
+  if (rm.rooms >= 2) pass("it still travels under reduced motion (" + rm.rooms + " distinct rooms)");
+  else fail("it must still travel under reduced motion", JSON.stringify(rm));
+  if (rm.cursorSeen) pass("the ghost cursor still shows under reduced motion (it snaps instead of gliding)");
+  else fail("the cursor must still appear under reduced motion", JSON.stringify(rm));
+  if (rm.ripples === 0) pass("NO tap ripples are spawned under reduced motion");
+  else fail("reduced motion must spawn no ripples", "saw " + rm.ripples);
+  if (rm.errors.length === 0) pass("no uncaught JS errors in the reduced-motion run");
+  else fail("no uncaught JS errors (reduced motion)", rm.errors.slice(0, 8).join("\n"));
 }
 
 console.log("");

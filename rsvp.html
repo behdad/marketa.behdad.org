@@ -34593,7 +34593,7 @@ function gameTapsNear(a, b) {
     // drink only when you tap the bartender (window.__makeCocktailHere) — never on its own.
     // While the pocket phone is up, he finishes the current drink (making stays true) but takes NO
     // new order until you put the phone away — the bar quiets behind the modal instead of mixing on.
-    if (!making && window.__gardenPartyOn && barPresent() && !reduced() && !dragging() && !flairBusy() && Date.now() >= cooldownUntil && !(window.phone && window.phone())) startMake(randomRow());
+    if (!making && window.__gardenPartyOn && barPresent() && !reduced() && !dragging() && !flairBusy() && Date.now() >= cooldownUntil && !(window.phone && window.phone()) && !(window.__userMixing && window.__userMixing())) startMake(randomRow());
     pollTimer = setTimeout(ambientPoll, 500);
   }
   ambientPoll();
@@ -34805,7 +34805,14 @@ function gameTapsNear(a, b) {
   S("line", { x1: CX - 7, y1: 256, x2: CX + 7, y2: 256, stroke: "#cdd8da", "stroke-width": 1.8 }, glassWrap); // foot
 
   // ---- state + timers --------------------------------------------------------------------
-  var picked = [], busy = false, weMarkedMixing = false, timers = [];
+  var picked = [], busy = false, weMarkedMixing = false, timers = [], userMixing = false, abandonTimer = null;
+  var USER_MIX_ABANDON_MS = 20000; // safety: a build left unfinished (never shaken, or you wandered off) clears itself so the ambient loop can't stay paused forever
+  window.__userMixing = function () { return userMixing; }; // the ambient auto-make checks this and holds off starting a NEW drink while you're building one
+  function setUserMixing(on) { // (re)arm the flag; each dose / the shake keeps it alive, so the abandon timer only fires on a genuinely stalled build
+    userMixing = on;
+    clearTimeout(abandonTimer); abandonTimer = null;
+    if (on) abandonTimer = setTimeout(resetMix, USER_MIX_ABANDON_MS);
+  }
   function at(ms, fn) { var id = setTimeout(fn, ms); timers.push(id); return id; }
   function clearTimers() { for (var i = 0; i < timers.length; i++) clearTimeout(timers[i]); timers = []; }
   function setFill(level, color) {
@@ -34831,6 +34838,7 @@ function gameTapsNear(a, b) {
     if (bartenderEl) bartenderEl.classList.remove("steadying"); // arm back up to his idle at-the-ready sway
     if (weMarkedMixing && window.__bartenderMixing) window.__bartenderMixing(false);
     weMarkedMixing = false;
+    userMixing = false; clearTimeout(abandonTimer); abandonTimer = null; // build's over (served / reset / hidden / abandoned) → let the ambient auto-make resume
   }
   window.__resetMixer = resetMix; // resetHunt (game reset) calls this so nothing's left mid-mix
 
@@ -34843,6 +34851,7 @@ function gameTapsNear(a, b) {
     if (!ing || busy || !present() || flairBusy() || picked.length >= MAXP) return false;
     if (window.__retireHint) window.__retireHint("hint_cocktail");
     picked.push(ing);
+    setUserMixing(true); // from the first dose: pause the ambient auto-make from starting a NEW drink (an in-flight one still finishes) until this build is served
     markBartender(true); // from the first dose: hide his in-hand shaker + lower his hand onto the bar shaker he's tending
     station.style.opacity = "1";
     shakerWrap.style.opacity = "1";
@@ -34858,6 +34867,7 @@ function gameTapsNear(a, b) {
   function shakeAndServe() {
     if (busy || !picked.length || !present() || flairBusy()) return false;
     busy = true;
+    setUserMixing(true); // keep the ambient auto-make held off across the whole shake→pour→serve (resetMix clears it when the drink lands)
     shakerWrap.classList.remove("ready");
     if (window.__actPing) window.__actPing("drink"); // the drink beat — same as watching Pouria mix one
     var name = drinkName(picked.map(function (p) { return p.key; }));

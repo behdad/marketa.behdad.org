@@ -70325,6 +70325,11 @@ function spawnDustMote(container) {
   // CUDDLY_DUOS lead instead of lighting the party (a birthday reveal must NEVER start it). This
   // maps each person to the duo id that brings them in (a couple/family arrives together). People
   // with no cuddly duo (Pouria, Sina, Danesh) fall through to a party-safe default.
+  // The Lübeck ADULTS (Markéta's sister Madla + Robert): on a no-party birthday they join their
+  // kids (Elisabeth/Felix, who already go to the nook) in the cuddly-puddly via the "madla" duo,
+  // rather than force-lighting the party. Party ON → the normal garden cake. Other garden couples
+  // (Ali/Goli, Spencer/Jay…) keep their always-party reveal — this is only the family-with-kids case.
+  var LUBECK_ADULT = { madla: 1, robert: 1 };
   var BD_CUDDLY_DUO = {
     ali: "ali", goli: "ali",
     spencer: "spencer", jay: "spencer",
@@ -70427,7 +70432,12 @@ function spawnDustMote(container) {
     // __bdCakeCut lights the party (if dark), heads to the garden, summons the crowd, then cuts. The
     // hosts are handled above; the kids and the Tehran/Prague call families returned earlier — so
     // this is Ali/Goli/Jay/Spencer/Farhang/Lauren/Bahareh/Alireza/Mahzad/Hamid/Athena/Patricia/Madla/Robert.
-    if (BD_GARDEN_FIG[b.who] && window.__bdCakeCut) { window.__bdCakeCut(b.who); return; }
+    // ...but ONLY when the party is already on (a birthday reveal must never LIGHT the party — the
+    // stated principle below). Party off + a cuddly family/duo → fall through to the cuddly visit,
+    // so the Lübeck family (Madla/Robert with their kids) is summoned to the nook like the kids are,
+    // not left as a floating crown over an unpopulated floor. Duo-less garden figures (Farhang/Lauren)
+    // keep the old behaviour — they have no nook alternative.
+    if (BD_GARDEN_FIG[b.who] && window.__bdCakeCut && (window.__gardenPartyOn || !LUBECK_ADULT[b.who])) { window.__bdCakeCut(b.who); return; }
     // Everyone else — the DJ decks (Sina/Danesh) or Pouria's kitchen bar (no floor figure). When the
     // party is ON they take their usual spot. When it's OFF a birthday reveal must NEVER light the
     // party — instead it summons them to the cuddly-puddly via their CUDDLY_DUOS lead. Anyone with no

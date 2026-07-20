@@ -4321,6 +4321,10 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .phone-incall.connected .pic-video [data-lid="tehran-string-lights"] .tehran-light{animation:tehran-twinkle 1.5s ease-in-out infinite}
 .phone-incall.connected .pic-video [data-lid="tehran-candle"].out .tehran-flame{opacity:0; animation:none !important}
 .phone-incall.connected .pic-video [data-lid="tehran-candle"].out [data-lid="tehran-candle-glow"]{opacity:0}
+/* California's two ambient extras — the monitor's own rules are #monitor-family-anchored and
+   can't reach the clone, but both nodes carry a matching class */
+.phone-incall.connected .pic-video .cali-sun-glow{animation:cali-sun-breathe 4s ease-in-out infinite}
+.phone-incall.connected .pic-video .cali-plant{animation:cali-plant-sway 3.6s ease-in-out infinite}
 .phone-incall.connected .pic-video [data-lid="laptop-lueb-girl"].singing .lueb-smile,
 .phone-incall.connected .pic-video [data-lid="laptop-lueb-boy"].singing .lueb-smile{opacity:0}
 /* transform-box/origin must be mirrored inline here (as the prague-sway rules above do): the
@@ -4385,6 +4389,8 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
   .phone-incall.connected .pic-video [data-lid="madla-figure"],
   .phone-incall.connected .pic-video [data-lid="madla-eyes"].blinking,
   .phone-incall.connected .pic-video [data-lid="madla-mouth"].murmuring{animation:none !important}
+  .phone-incall.connected .pic-video .cali-plant{animation:none !important}
+  .phone-incall.connected .pic-video .cali-sun-glow{animation:none !important; opacity:.7}
   .phone-incall.connected .pic-self [data-lid="marketa-self-mouth"].murmuring{animation:none !important}
   .phone-incall .pic-self.saying .couple-self-mouth, .phone-incall .pic-self.saying [data-lid="marketa-self-mouth"]{animation:none !important}
   .call-self.saying .couple-self-mouth{animation:none !important}
@@ -7416,15 +7422,46 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 .smoke-tint{opacity:calc(var(--smoke,0) * var(--smoke-max,.55)); transition:opacity .9s ease}
 .smoke-sun{opacity:calc(var(--smoke,0) * var(--smoke-max,.9)); transition:opacity .9s ease}
 .dusk .smoke-tint{opacity:0}
-/* A plain grey OVERCAST day (Edmonton's real weather, code 2/3/45/48, when nothing overrides):
-   .climate-overcast lays a soft cool wash over each outdoor sky and slips the sun disc behind it.
-   Daylight-only — .dusk cuts the wash, and the storming rain look is a separate, exclusive mode. */
+/* A plain grey OVERCAST day. This is the loft's BASE cloud state, not a fourth exclusive mode:
+   .climate-overcast is worn for Edmonton's real cloud/fog (code 2/3/45/48), for the console
+   lever, AND underneath rain/storm — a rainy sky is an overcast sky with precip on top, so the
+   grey base is shared and .storming/.raining only add their darker panes, streaks and lightning.
+   Daylight-only: .dusk cuts every wash below, leaving the night cascade untouched.
+   Three cues, roughly in order of how much each sells it:
+     1. --glare-fade:0 (below) — every .smoke-rays/.smoke-glare goes out: the window light
+        shafts, the warm pools they cast on the floors, the sun halos and rim glares. Direct
+        sun is what casts a hard shadow, so putting the shafts out IS the softened-shadow cue,
+        and riding the smoke system's own variable stops haze and cloud fighting over the
+        same elements.
+     2. .overcast-tint — a cool grey wash per sky/window pane (whole-scene outdoors).
+     3. the sun disc goes behind the deck entirely, leaving .overcast-glow: a diffuse bright
+        patch where it would have been. The view is north-facing, so what has to carry the day
+        is the quality of the light, not the loss of a disc.
+   .overcast-room is a faint cool wash over an interior's whole wall/floor — the flat, cool,
+   low-contrast indoor light of a grey day, which a window tint alone can't reach. */
 .overcast-tint{opacity:0; transition:opacity 1.1s ease}
 #loft-game-strip.climate-overcast .overcast-tint{opacity:var(--overcast-max,.34)}
-.dusk .overcast-tint{opacity:0}
+.overcast-room{opacity:0; transition:opacity 1.1s ease}
+#loft-game-strip.climate-overcast .overcast-room{opacity:var(--overcast-max,.13)}
+.overcast-glow{opacity:0; transition:opacity 1.1s ease}
+#loft-game-strip.climate-overcast .overcast-glow{opacity:var(--overcast-max,.55)}
+/* The daylight-only gate. It has to carry the strip id too: a bare `.dusk .overcast-tint`
+   (0,2,0) loses to the id-qualified rule above (1,2,0) no matter where it sits in source, so
+   the wash would paint straight through the night cascade — grey daylight over a dark scene. */
+#loft-game-strip.climate-overcast .dusk .overcast-tint,
+#loft-game-strip.climate-overcast .dusk .overcast-room,
+#loft-game-strip.climate-overcast .dusk .overcast-glow{opacity:0}
 #loft-game-strip.climate-overcast #balcony-sun-disc,
 #loft-game-strip.climate-overcast #office-sun,
-#loft-game-strip.climate-overcast #garden-window-sun{opacity:.28; transition:opacity 1.1s ease}
+#loft-game-strip.climate-overcast #garden-window-sun{opacity:0; transition:opacity 1.1s ease}
+/* a sun you can't see can't be the day/night toggle — the same treatment .storming already gives them */
+#loft-game-strip.climate-overcast #garden-window-sun,
+#loft-game-strip.climate-overcast #garden-sun-hit,
+#loft-game-strip.climate-overcast #office-sun{pointer-events:none}
+/* cast light and cast shade are direct-sun furniture, so they leave with the sun — the .dusk
+   rules further down do exactly this at night, and cloud is the same argument by day */
+#loft-game-strip.climate-overcast #balcony-building-beam,
+#loft-game-strip.climate-overcast #balcony-jacket-shade{opacity:0; transition:opacity .9s ease}
 /* Haze scatters direct light, so the rays go as the smoke comes in: the disc flattens to a
    featureless orange coin and the window shafts stop reading as beams. Rides plain opacity,
    so each room's id-qualified .dusk rule still out-specifies it and wins at night. Elements
@@ -7435,6 +7472,10 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
    a linear fade left the rays half-lit right through smoke season, since --smoke is a random
    .5–1 roll that never actually reaches 1. Keep the two rules below on the same curve. */
 #loft-game-strip{--glare-fade:calc(1 - var(--smoke,0) * 2)}
+/* A cloud deck scatters direct light as completely as heavy haze does, so overcast lands on
+   the same variable rather than a parallel one: one curve, one set of consumers, and the two
+   can never disagree about how lit an element is. */
+#loft-game-strip.climate-overcast{--glare-fade:0}
 .smoke-rays{opacity:var(--glare-fade,1); transition:opacity .9s ease}
 /* The same physics for a sun's own glare furniture — the soft halo bloom and the bright
    rim on the window suns. Each carries its clear-air opacity as --glare so one rule serves
@@ -7703,8 +7744,13 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 /* the daytime sun hides at dusk (moon takes over) and under overcast/storm clouds */
 #stage-office.dusk #office-sun{opacity:0}
 #stage-office.storming #office-sun{opacity:0}
-/* stars + moon are hidden by overcast/storm clouds */
-#stage-office.dusk.storming #office-stars, #stage-office.dusk.storming #office-moon, #stage-kitchen.dusk.storming #kitchen-stars{opacity:0}
+/* stars + moon are hidden by overcast/storm clouds — same two-class verdict as the balcony/garden sky */
+#stage-office.dusk.storming #office-stars, #stage-office.dusk.storming #office-moon, #stage-kitchen.dusk.storming #kitchen-stars,
+#loft-game-strip.climate-overcast #stage-office.dusk #office-stars,
+#loft-game-strip.climate-overcast #stage-office.dusk #office-moon,
+#loft-game-strip.climate-overcast #stage-kitchen.dusk #kitchen-stars{opacity:0}
+/* an unseeable moon can't be the night-to-day toggle either */
+#loft-game-strip.climate-overcast #office-moon, #loft-game-strip.climate-overcast #garden-moon{pointer-events:none}
 /* clicking a sun or moon toggles day/night. Only the currently-VISIBLE body is hittable:
    the day sun is live by day (never at dusk/storm), the night moon only at dusk (not in a
    storm that hides it), so a click always lands on the one you can see and falls through to
@@ -7762,9 +7808,15 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
    window.__moonPhase() (see __applyMoonPhases), so the disc shows the real lunar
    phase for the loft's date. The double-click blood-moon eclipse is its own override. */
 #balcony-moon-glow{opacity:0.6}
-/* shared sky: a storm hides the moon + stars (overcast) in BOTH windows at once */
+/* shared sky: a cloud deck hides the moon + stars in BOTH windows at once. Keyed off BOTH
+   .storming and .climate-overcast, since plain cloud with no precip hides a night sky exactly
+   as well as a storm does — the aurora is already gated on the same verdict via __skyCloudy(). */
 #stage-balcony.dusk.storming #balcony-moon, #stage-balcony.dusk.storming #balcony-stars,
-#stage-garden.dusk.storming #garden-moon, #stage-garden.dusk.storming #garden-stars{opacity:0; transition:opacity .8s ease}
+#stage-garden.dusk.storming #garden-moon, #stage-garden.dusk.storming #garden-stars,
+#loft-game-strip.climate-overcast #stage-balcony.dusk #balcony-moon,
+#loft-game-strip.climate-overcast #stage-balcony.dusk #balcony-stars,
+#loft-game-strip.climate-overcast #stage-garden.dusk #garden-moon,
+#loft-game-strip.climate-overcast #stage-garden.dusk #garden-stars{opacity:0; transition:opacity .8s ease}
 /* ...and the storm shows through the garden window too (#stage-garden gets .storming
    from the storm lifecycle's setStorming — same as the moon/stars rule above — and from
    the realWeather poll when it's actually raining in Edmonton): sky + frosted panes tint
@@ -9015,6 +9067,16 @@ section{margin:1.9rem 0}
 <circle cx="659" cy="34" r="0.8" opacity="0.9" class="twinkle"/><circle cx="672" cy="52" r="0.7" opacity="0.75" class="twinkle t3"/><circle cx="661" cy="88" r="0.75" opacity="0.8" class="twinkle t2"/><circle cx="670" cy="96" r="0.7" opacity="0.6" class="twinkle"/>
 </g>
 <rect class="smoke-tint" x="653" y="21" width="26" height="178" fill="#b0a89c" pointer-events="none" aria-hidden="true"/>
+<!-- the shared diffuse bright patch a cloud deck leaves where the sun is: one gradient for
+     every outdoor sky (see .overcast-glow), defined at its first use -->
+<defs>
+<radialGradient id="overcast-glow-grad">
+<stop offset="0" stop-color="#fdfcf7" stop-opacity="0.95"/>
+<stop offset="0.45" stop-color="#eef0f2" stop-opacity="0.5"/>
+<stop offset="1" stop-color="#dfe3e6" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<rect class="overcast-tint" x="653" y="21" width="26" height="178" fill="#8b95a1" pointer-events="none" aria-hidden="true"/>
 <rect id="kitchen-window-flash" class="window-storm-flash" x="653" y="21" width="26" height="178"/>
 <line x1="666" y1="20" x2="666" y2="200" stroke="#2d2d2d" stroke-width="2" pointer-events="none"/>
 <line x1="652" y1="110" x2="680" y2="110" stroke="#2d2d2d" stroke-width="2" pointer-events="none"/>
@@ -10475,6 +10537,7 @@ section{margin:1.9rem 0}
 <polygon points="654,106 670,106 640,320 560,320" fill="#fff4cf" opacity="0.06"/>
 </g>
 <rect x="0" y="0" width="680" height="340" fill="#f7d98a" opacity="0.1" pointer-events="none"/>
+<rect class="overcast-room" x="0" y="0" width="680" height="340" fill="#8b95a1" pointer-events="none" aria-hidden="true"/>
 <rect id="kitchen-dusk" x="0" y="0" width="680" height="340" fill="#141830" opacity="0" pointer-events="none"/>
 </g>
 <g id="stage-garden" transform="translate(680,0)">
@@ -10623,6 +10686,9 @@ section{margin:1.9rem 0}
 </g>
 <rect class="smoke-tint" x="104" y="20" width="424" height="272" fill="#b0a89c" pointer-events="none" aria-hidden="true"/>
 <rect class="overcast-tint" x="104" y="20" width="424" height="272" fill="#8b95a1" pointer-events="none" aria-hidden="true"/>
+<!-- overcast: the disc is gone, this pale patch is all that's left of where it was. Drawn in
+     the sun's own spot and before the blind, so a lowered blind covers it exactly as it does the sun. -->
+<circle class="overcast-glow" cx="462" cy="67" r="40" fill="url(#overcast-glow-grad)" pointer-events="none" aria-hidden="true"/>
 <!-- a daytime sun tucked in the top-right pane, hidden behind the blind until it's raised -->
 <g id="garden-window-sun" aria-hidden="true">
 <circle class="smoke-glare" style="--glare:.35" cx="462" cy="67" r="21" fill="#ffe6a0" opacity="0.35"/>
@@ -11981,6 +12047,7 @@ section{margin:1.9rem 0}
 </g>
 </g>
 <rect id="garden-light-overlay" x="0" y="0" width="680" height="340" fill="#f7d98a" opacity="0" pointer-events="none"/>
+<rect class="overcast-room" x="0" y="0" width="680" height="340" fill="#8b95a1" pointer-events="none" aria-hidden="true"/>
 <rect id="garden-dusk" x="0" y="0" width="680" height="340" fill="#141830" opacity="0" pointer-events="none"/>
 <!-- a little inchworm caterpillar that only shows at night, inching along the open
      floorboards in front of the bench (ambient butterflies are gated to daytime). its
@@ -15593,6 +15660,7 @@ section{margin:1.9rem 0}
 <g id="cuddly-balcony-doorframe" aria-hidden="true">
 <rect x="654" y="48" width="26" height="190" fill="#cfe0ea"/>
 <rect class="smoke-tint" x="654" y="48" width="26" height="190" fill="#b0a89c" pointer-events="none"/>
+<rect class="overcast-tint" x="654" y="48" width="26" height="190" fill="#8b95a1" pointer-events="none" aria-hidden="true"/>
 <rect x="648" y="40" width="6" height="210" fill="#141414"/>
 <rect x="648" y="40" width="32" height="8" fill="#141414"/>
 <rect x="648" y="242" width="32" height="8" fill="#1c1c1c"/>
@@ -15601,6 +15669,7 @@ section{margin:1.9rem 0}
 <rect x="654" y="48" width="26" height="194" fill="#141414" stroke="#000000" stroke-width="1.5"/>
 <rect x="658" y="56" width="18" height="86" fill="#b8c8d4" stroke="#3a3a3a" stroke-width="2"/>
 <rect class="smoke-tint" x="658" y="56" width="18" height="86" fill="#b0a89c" pointer-events="none" aria-hidden="true"/>
+<rect class="overcast-tint" x="658" y="56" width="18" height="86" fill="#8b95a1" pointer-events="none" aria-hidden="true"/>
 <line x1="667" y1="56" x2="667" y2="142" stroke="#3a3a3a" stroke-width="1.5"/>
 <rect x="658" y="150" width="18" height="84" fill="none" stroke="#333333" stroke-width="2"/>
 <circle cx="660" cy="150" r="2.6" fill="#8a8578"/>
@@ -15947,6 +16016,7 @@ section{margin:1.9rem 0}
 </g>
 </g>
 <rect x="0" y="0" width="680" height="340" fill="#e8935a" opacity="0.1" pointer-events="none"/>
+<rect class="overcast-room" x="0" y="0" width="680" height="340" fill="#8b95a1" pointer-events="none" aria-hidden="true"/>
 <!-- joint smoke: an accumulating haze (denser toward the ceiling) whose opacity JS
      drives up with each toke and lets decay slowly back to clear (bumpCuddlySmoke) -->
 <linearGradient id="cuddly-smoke-grad" x1="0" y1="0" x2="0" y2="1">
@@ -17425,6 +17495,9 @@ section{margin:1.9rem 0}
      toggles that window's light on/off. See the office-buildings handler below. -->
 </g>
 <rect class="smoke-tint" x="70" y="40" width="160" height="150" fill="#b0a89c" pointer-events="none" aria-hidden="true"/>
+<rect class="overcast-tint" x="70" y="40" width="160" height="150" fill="#8b95a1" pointer-events="none" aria-hidden="true"/>
+<!-- overcast: all that's left of the sun, sized to sit inside the sky patch above the skyline -->
+<circle class="overcast-glow" cx="160" cy="60" r="26" fill="url(#overcast-glow-grad)" pointer-events="none" aria-hidden="true"/>
 <!-- the sun (day) and moon (dusk) share the same patch of open sky above the skyline;
      only one shows at a time, and both hide under overcast/storm clouds -->
 <g id="office-sun" aria-hidden="true">
@@ -17515,6 +17588,9 @@ section{margin:1.9rem 0}
 <rect x="434" y="64" width="192" height="192" fill="url(#sg-backlight)"/>
 <!-- gentler ceiling than the sky panes: this is coloured glass, not the sky itself -->
 <rect class="smoke-tint" style="--smoke-max:.3" x="434" y="64" width="192" height="192" fill="#cf8348" pointer-events="none" aria-hidden="true"/>
+<!-- stained glass only glows with something behind it: a low ceiling here, since the leading
+     and jewels should still read — it's the backlight that dies, not the window -->
+<rect class="overcast-tint" style="--overcast-max:.22" x="434" y="64" width="192" height="192" fill="#8b95a1" pointer-events="none" aria-hidden="true"/>
 <!-- leaded cames: radiating rays + the glass-edge frame -->
 <path d="M530 160 L530 64 M530 160 L626 64 M530 160 L626 160 M530 160 L626 256 M530 160 L530 256 M530 160 L434 256 M530 160 L434 160 M530 160 L434 64" stroke="#26221f" stroke-width="3" fill="none"/>
 <rect x="434" y="64" width="192" height="192" fill="none" stroke="#26221f" stroke-width="5"/>
@@ -20172,6 +20248,7 @@ section{margin:1.9rem 0}
 <rect id="office-dim-overlay" x="0" y="0" width="680" height="340" fill="#1a1510" opacity="0" mask="url(#office-spotlight-mask)"/>
 <rect id="office-lamp-dim" x="0" y="0" width="680" height="340" fill="#1a1510" opacity="0" pointer-events="none"/>
 <rect x="0" y="0" width="680" height="340" fill="#3a5a7a" opacity="0.08" pointer-events="none"/>
+<rect class="overcast-room" x="0" y="0" width="680" height="340" fill="#8b95a1" pointer-events="none" aria-hidden="true"/>
 <rect id="office-dusk" x="0" y="0" width="680" height="340" fill="#141830" opacity="0" pointer-events="none"/>
 <!-- Topmost office layer: JS-spawned alien saucers + chair projectiles for the
      hidden drag-the-chair arcade. Always empty at rest; hard-cleared on teardown. -->
@@ -21830,6 +21907,9 @@ section{margin:1.9rem 0}
      one pane; drawn under the sun so only the sun's own orange disc tints the sun -->
 <rect class="smoke-tint" style="--smoke-max:.42" x="0" y="0" width="680" height="340" fill="#b0a89c" pointer-events="none" aria-hidden="true"/>
 <rect class="overcast-tint" x="0" y="0" width="680" height="340" fill="#8b95a1" pointer-events="none" aria-hidden="true"/>
+<!-- overcast: the disc is behind the deck, and this soft patch is the only place the sky is
+     brighter. Clipped to the open sky so it can't bleed onto the brick or the skyline. -->
+<circle class="overcast-glow" clip-path="url(#balcony-sky-clip)" cx="510" cy="50" r="48" fill="url(#overcast-glow-grad)" pointer-events="none" aria-hidden="true"/>
 <g id="balcony-sun" class="hunt-hit">
 <rect x="484" y="24" width="52" height="52" fill="transparent"/>
 <g id="balcony-sun-disc">
@@ -38917,7 +38997,7 @@ var ABANDONED_CALL_MS = 30000;
     album: "album() — open the pocket-phone wedding album: Aspen's captured party polaroids, newest first. she snaps one every photo-moment (the ~15s freeze) and whenever you tap her at the garden party; each is an intimate portrait — the couple + one guest (or a guest couple). She also works the OTHER rooms during the party (see snap()), and those cards show that room and exactly who was in it. album() also echoes the photo count",
     snap: "snap() — Aspen photographs the room you're in RIGHT NOW: she lifts the camera, the flash pops, the shutter goes, and a keepsake of exactly whoever is in that room lands in your phone album — on that room's own backdrop. snap(\"office\")/snap(\"kitchen\")/snap(\"cuddly\")/snap(\"balcony\")/snap(\"garden\") heads there first so you can watch her take it. Lights the party if it's dark (she only works the party). She takes these on her own rounds too, every ~26-44s, in whichever room you're standing in",
     madla: "madla() — Markéta's sister (a doctor in Germany, bored on a night shift) rings your phone: a pulsing call card drops top-centre for 15s (tap to answer → pan to the cuddly room, then the video call; ignore it to miss the call). madla(true) answers straight away. she's incoming-only — you can't dial her back",
-    saturday: "saturday() — Markéta's parents and Báka ring from Prague for the standing Saturday call: the same call card, tap to answer (or the × to let it go). saturday(true) answers straight away. left alone it comes on its own, once per Saturday in the loft, between 08:00 and 14:00 here — their Saturday evening; date(\"YYYY-MM-DD\") a Saturday and clock(9) to see it",
+    saturday: "saturday() — Markéta's parents ring from Prague for the standing Saturday call: the same call card, tap to answer (or the × to let it go). saturday(true) answers straight away. left alone it comes on its own, once per Saturday in the loft, between 08:00 and 14:00 here — their Saturday evening; date(\"YYYY-MM-DD\") a Saturday and clock(9) to see it",
     sound: [
       "sound(\"id\"[, …args]) — play a loft sound effect by id, e.g. sound(\"gong\"). sound() lists every id; sound(\"prefix\") lists the ids starting with that prefix — try sound(\"cat\") · sound(\"phone\").",
       "EVERY sound takes an optional panId — a scene element id (e.g. \"office-monitor\", \"balcony-phone\") or a -1..1 number (left..right, 0 = center). it defaults to that sound's own on-screen source, so a bare sound(\"grind\") already plays from the grinder; sound(\"grind\", 0.9) hard-pans it right, sound(\"grind\", \"balcony-phone\") pans it to another object. a hidden/offscreen source centers.",
@@ -45429,7 +45509,7 @@ async def localfont(name):
     // Madla is an incoming PHONE call: while she's live, block every external (monitor/laptop)
     // call the same way an outgoing phone call does — so all three predicates also report true
     // when callee === "madla" (there's no #laptop-madla-* toggle to gate on, she's phone-only).
-    window.__familyCallLive = function () { return !!((origFamily && origFamily()) || callee === "tehran" || callee === "madla"); };
+    window.__familyCallLive = function () { return !!((origFamily && origFamily()) || callee === "tehran" || callee === "california" || callee === "madla"); }; // Tehran + California are the two the monitor's family app dials
     window.__pragueCallLive = function () { return !!((origPrague && origPrague()) || callee === "prague" || callee === "madla"); };
     window.__luebeckCallLive = function () { return !!((origLueb && origLueb()) || callee === "lueb" || callee === "madla"); };
     function anyExternalCall() { return !!((origFamily && origFamily()) || (origPrague && origPrague()) || (origLueb && origLueb())); }
@@ -45443,6 +45523,13 @@ async def localfont(name):
         art: '<svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M2.5 21V11l2.2-3.2L6.9 11v10zm14.6 0V11l2.2-3.2L21.5 11v10z"/><path d="M8 21v-8h8v8z"/><path d="M10.6 13V6.4L12 2.6l1.4 3.8V13z"/></svg>' },
       lueb:   { placeKey: "laptop_lplace", famKey: "dial_fam_lueb", scene: "laptop-lueb-scene", vb: "388 164 58 34", flavor: "tehran", pitch: 1.0, av: "#4a6b94", initial: "L",
         art: '<svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path fill-rule="evenodd" d="M2 21v-8.6a3.2 3.2 0 0 1 6.4 0v2.4h7.2v-2.4a3.2 3.2 0 0 1 6.4 0V21h-7.5v-3.7a1.7 1.7 0 0 0-3.4 0V21H2z"/><path d="M1.3 12.6 5.2 6.9 9.1 12.6zm13.6 0 3.9-5.7 3.9 5.7z"/></svg>' },
+      // California — Patricia + Patricia’s son & Patricia’s daughter, the same living room the office monitor dials, on
+      // the same self-contained coord box as Tehran. Its figures wear the shared .tehran-eyes /
+      // .tehran-mouth / .tehran-wave-arm gesture classes, so the phone's "tehran" life branch
+      // brings them alive unchanged. Avatar: the Golden Gate, the one landmark that still reads
+      // as a shape at 22px (a palm goes spindly) and keeps the row a set of skylines.
+      california: { placeKey: "california_place", famKey: "dial_fam_california", scene: "monitor-california-scene", vb: "254 154 124 42", flavor: "tehran", pitch: 1.15, av: "#1fa5a0", initial: "C",
+        art: '<svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M2 14.4h20v1.9H2z"/><path d="M5.9 3.6h2.3v12h-2.3zM15.8 3.6h2.3v12h-2.3z"/><path d="M8.2 4.3q3.8 7.4 7.6 0v2.1q-3.8 6.6-7.6 0z"/><path d="M1.4 9.6Q3.4 4.6 5.9 4.3v2Q4 6.9 2.6 10.4z"/><path d="M22.6 9.6Q20.6 4.6 18.1 4.3v2q1.9.6 3.3 4.1z"/></svg>' },
       // Madla — Markéta's sister, a doctor in Germany. INCOMING-ONLY: she is deliberately
       // absent from CITY_ORDER + the dialer, so nobody can dial HER; the entry exists purely
       // for the incoming-call machinery (scene / crop / ambient flavor / goodbye pitch). Her
@@ -45451,7 +45538,9 @@ async def localfont(name):
       madla:  { placeKey: "madla_place", famKey: "madla_fam", scene: "madla-call-scene", vb: "366 144 40 44", flavor: "tehran", pitch: 1.18, av: "#3f8f86", initial: "M",
         art: '<svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M11 2h2v3h-2z"/><path d="M9 4.5a3 3 0 0 0 6 0"/><path fill-rule="evenodd" d="M8 4.5A4 4 0 0 0 16 4.5h1.4v4.1a5.4 5.4 0 0 1-10.8 0V4.5H8zm4 9.7a4.3 4.3 0 0 0 3.2-1.4v1.9a3.2 3.2 0 0 0 6.4 0h-1.6a1.6 1.6 0 0 1-3.2 0v-3.5A5.4 5.4 0 0 1 8.8 12.8 4.3 4.3 0 0 0 12 14.2z"/><circle cx="20.8" cy="12.9" r="2.1"/></svg>' }
     };
-    var CITY_ORDER = ["tehran", "prague", "lueb"]; // Madla is intentionally NOT here — she's incoming-only, never dialable
+    // dialable contacts, his side then hers. Madla is intentionally NOT here — she's
+    // incoming-only, never dialable.
+    var CITY_ORDER = ["tehran", "california", "prague", "lueb"];
     var WEDDING_URL = "https://marketa.behdad.org";
     // the pocket browser's fixed tabs mirror the monitor's BROWSER_TABS exactly — the same
     // proven-frameable URLs (the loft tab frames rsvp.html, NOT the bare root, which refuses
@@ -45520,6 +45609,10 @@ async def localfont(name):
     var dressupOn = {};             // dress-up: map of accessory-id → true for every chip currently ON
     var flashWasOn = false;         // flashlight INTENT mirror of flashOn — the beam now stays lit across a normal leave/close (a real flashlight doesn't switch off when you leave the app), so this just tracks the last state; a Kill/loft-reset clears it and douses the beam.
     var callee = null, callConnected = false, callStatusKey = "", callHangingUp = false, callTimers = [];
+    // Did THIS call ring in (openIncall) or did we dial it (startCall)? Both incoming callers
+    // are Markéta's own family phoning HER, so the self-view is Markéta alone (Behdad isn't in
+    // shot); a dialled call is the couple's shared phone. Cleared in dropCall with the rest.
+    var callIncoming = false;
     var quizStep = 0, quizTally = null, quizResult = null; // "which guest are you?" quiz — restarts fresh on each open (its own open handler calls quizReset)
     // Home-screen layout is a fixed grid of SLOTS (like a real phone): an array of
     // app-ids by slot position, with `null` holes for empty / "Uninstall"ed gaps.
@@ -46123,6 +46216,28 @@ async def localfont(name):
       svg.appendChild(g);
       return svg;
     }
+    // The standing Saturday call is her PARENTS ringing in — Báka isn't on it. Recast a fresh
+    // Prague clone for that call: drop the grandmother, then close the two-shot up so the pair
+    // aren't left standing either side of her empty spot. Clone-only, so the office laptop's own
+    // call, the dialer's outgoing Prague call and the garden gathering's <use> of her are all
+    // untouched. The nudge rides a WRAPPER <g>: prague-sway animates the figure's own transform
+    // and would replace a transform set on it directly.
+    var SAT_CLOSE_IN = 5; // user units each parent steps toward the middle (~half the gap she left)
+    function pragueSaturdayCast(scene) {
+      var gran = scene.querySelector('[data-lid="laptop-prague-grandma"]');
+      if (!gran) return;
+      gran.parentNode.removeChild(gran);
+      function nudge(el, dx) {
+        if (!el || !el.parentNode) return;
+        var w = document.createElementNS(SVGNS, "g");
+        w.setAttribute("transform", "translate(" + dx + ",0)");
+        el.parentNode.insertBefore(w, el);
+        w.appendChild(el);
+      }
+      nudge(scene.querySelector('[data-lid="laptop-prague-father"]'), SAT_CLOSE_IN);
+      nudge(scene.querySelector(".cheer-glass"), SAT_CLOSE_IN); // his toast glass is a sibling prop, not part of him — it has to travel with his hand
+      nudge(scene.querySelector('[data-lid="laptop-prague-mother"]'), -SAT_CLOSE_IN);
+    }
     function refreshCallText() {
       if (!callee || !shell) return;
       var st = shell.querySelector(".pic-status");
@@ -46132,7 +46247,7 @@ async def localfont(name):
     function startCall(city) {
       if (callee || anyExternalCall()) return; // one call at a time (this phone or the monitor/laptop)
       callee = city;
-      callConnected = false; callHangingUp = false;
+      callConnected = false; callHangingUp = false; callIncoming = false;
       selectedCity = city;
       var cfg = CITIES[city];
       var ic = shell.querySelector(".phone-incall");
@@ -46140,7 +46255,7 @@ async def localfont(name):
       var v = ic.querySelector(".pic-video"); v.innerHTML = "";
       var scene = cloneScene(cfg.scene, cfg.vb); if (scene) v.appendChild(scene);
       var self = ic.querySelector(".pic-self"); self.innerHTML = "";
-      var sv = cloneScene(city === "madla" ? "phone-marketa-self" : "phone-couple-self", "354 181 22 13"); if (sv) self.appendChild(sv); // Madla's call is Markéta's alone (her sister) → Markéta-only self-view; the family calls are the couple's shared phone → the pair
+      var sv = cloneScene("phone-couple-self", "354 181 22 13"); if (sv) self.appendChild(sv); // a call THEY placed rides the couple's shared phone → the pair
       callStatusKey = "laptop_calling";
       refreshCallText();
       showScreen("incall");
@@ -46238,7 +46353,7 @@ async def localfont(name):
       stopCallAmbient();
       phoneLifeStop(); // belt-and-braces: every teardown path (mid-ring drop, leaving the balcony) lands clean
       var was = callee;
-      callee = null; callConnected = false; callStatusKey = "";
+      callee = null; callConnected = false; callStatusKey = ""; callIncoming = false;
       if (shell) {
         var ic = shell.querySelector(".phone-incall");
         if (ic) {
@@ -46252,26 +46367,28 @@ async def localfont(name):
       // entry to return to (she's incoming-only), so drop to the home launcher instead.
       if (was && !silent && !closing && isOpen()) { if (was === "madla") showHome(); else openDialer(); }
     }
-    // ── INCOMING call (Madla only) ─────────────────────────────────────────────────────
-    // The existing calls are OUTGOING (startCall — you dial from the dialer). Madla's is the one
-    // INCOMING path: openIncall opens the phone straight into the incall view already ringing (a
-    // couple of ring cycles), then auto-answers → connectCall. Same teardown as any call (clearing
-    // timers, ambient, life driver, murmur). Auto-hangs up ~30s after connect; the red button or
-    // leaving the room / closing the phone tears it down early. Not dialable — reachable only via
-    // the incoming ring (the daytime schedule) or the madla() console hook.
+    // ── INCOMING calls ─────────────────────────────────────────────────────────────────
+    // The dialer's calls are OUTGOING (startCall). The ring card's are INCOMING: openIncall opens
+    // the phone straight into the incall view already ringing (a couple of ring cycles), then
+    // auto-answers → connectCall. Same teardown as any call (clearing timers, ambient, life
+    // driver, murmur). Auto-hangs up ~30s after connect; the red button or leaving the room /
+    // closing the phone tears it down early. Two callers ring in: Madla, and Prague's standing
+    // Saturday call. Both are Markéta's own family, so the self-view is her alone.
     var MADLA_CALL_MS = 30000; // ~30s of sisterly murmur, then she has to get back to her rounds
     function openIncall(city) {
       if (callee || anyExternalCall()) return; // one call at a time (this phone or the monitor/laptop)
       if (!shell) build();
       callee = city;
-      callConnected = false; callHangingUp = false;
+      callConnected = false; callHangingUp = false; callIncoming = true;
       var cfg = CITIES[city];
       var ic = shell.querySelector(".phone-incall");
       ic.classList.remove("connected");
       var v = ic.querySelector(".pic-video"); v.innerHTML = "";
-      var scene = cloneScene(cfg.scene, cfg.vb); if (scene) v.appendChild(scene);
+      var scene = cloneScene(cfg.scene, cfg.vb);
+      if (scene && city === "prague") pragueSaturdayCast(scene);
+      if (scene) v.appendChild(scene);
       var self = ic.querySelector(".pic-self"); self.innerHTML = "";
-      var sv = cloneScene(city === "madla" ? "phone-marketa-self" : "phone-couple-self", "354 181 22 13"); if (sv) self.appendChild(sv); // Madla's call → Markéta-only self-view; family calls → the couple's shared phone
+      var sv = cloneScene("phone-marketa-self", "354 181 22 13"); if (sv) self.appendChild(sv); // they're ringing HER → Markéta-only self-view
       callStatusKey = "call_incoming"; // "Incoming call" while it rings, then the place once connected
       refreshCallText();
       showScreen("incall");
@@ -46318,11 +46435,11 @@ async def localfont(name):
         if (!window.__callFigLabel || !window.__callFigLabel(lid)) return; // props/sub-parts have no label → skip
         el.addEventListener("click", function () { if (window.__whoPop) window.__whoPop(el, window.__callFigLabel(lid), el.closest && el.closest(".pic-video")); }); // anchor the card at the phone call surface's lower-left, clear of the birthday hat / cheer overlay
       })(figs[i]);
-      // the tiny self-view thumbnail — the couple (or Markéta alone on her sister's call)
+      // the tiny self-view thumbnail — the couple on a call they placed, Markéta alone on one that rang in
       var self = shell && shell.querySelector(".phone-incall .pic-self");
       var selfRoot = self && self.querySelector("[data-lid]");
       if (selfRoot) {
-        var selfHtml = callee === "madla" ? "<em>markéta</em>" : "<em>markéta &amp; behdad</em>";
+        var selfHtml = callIncoming ? "<em>markéta</em>" : "<em>markéta &amp; behdad</em>";
         selfRoot.addEventListener("click", function () { if (window.__whoPop) window.__whoPop(selfRoot, selfHtml); });
       }
     }
@@ -46336,17 +46453,21 @@ async def localfont(name):
         // the father winks, the grandmother nods, the mother produces a little flower — the same
         // one-shot classes the laptop's __startPragueLife fires, at the same random cadences
         var wink = phLoop(function () { phFire(phQ('[data-lid="laptop-prague-father-wink"]'), "winking", 640); }, 5, 7);
-        var nod = phLoop(function () { phFire(phQ('[data-lid="laptop-prague-grandma-nod"]'), "nodding", 1250); }, 6, 7);
         var bloom = phLoop(function () { phFire(phQ('[data-lid="laptop-prague-mother-flower"]'), "blooming", 4400); }, 12, 10);
         phLifeTimer(wink, (1.5 + Math.random() * 3) * 1000);
-        phLifeTimer(nod, (2.5 + Math.random() * 4) * 1000);
         phLifeTimer(bloom, (4 + Math.random() * 5) * 1000);
         phTap(phQ('[data-lid="laptop-prague-father"]'), function () { phFire(phQ('[data-lid="laptop-prague-father-wink"]'), "winking", 640); });
-        phTap(phQ('[data-lid="laptop-prague-grandma"]'), function () { phFire(phQ('[data-lid="laptop-prague-grandma-nod"]'), "nodding", 1250); });
         phTap(phQ('[data-lid="laptop-prague-mother"]'), function () { phFire(phQ('[data-lid="laptop-prague-mother-flower"]'), "blooming", 4400); });
-      } else if (fam === "tehran") {
-        // the birthday family blinks (and sometimes flashes a wider smile) at random — the
-        // clone lost the figure ids but keeps the .tehran-eyes / .tehran-mouth leaf classes
+        // the grandmother's nod only where she IS: the Saturday call's clone is her parents alone
+        if (phQ('[data-lid="laptop-prague-grandma-nod"]')) {
+          var nod = phLoop(function () { phFire(phQ('[data-lid="laptop-prague-grandma-nod"]'), "nodding", 1250); }, 6, 7);
+          phLifeTimer(nod, (2.5 + Math.random() * 4) * 1000);
+          phTap(phQ('[data-lid="laptop-prague-grandma"]'), function () { phFire(phQ('[data-lid="laptop-prague-grandma-nod"]'), "nodding", 1250); });
+        }
+      } else if (fam === "tehran" || fam === "california") {
+        // the family blinks (and sometimes flashes a wider smile) at random — the clone lost the
+        // figure ids but keeps the .tehran-eyes / .tehran-mouth leaf classes, which California's
+        // scene shares with Tehran's (the party hat + candle taps below simply find nothing there)
         var blink = phLoop(function () {
           var eyes = phQA(".tehran-eyes"); if (!eyes.length) return;
           var e = eyes[(Math.random() * eyes.length) | 0];
@@ -49747,7 +49868,7 @@ async def localfont(name):
     // ANSWERS: pan to the cuddly room first, then bring up the phone straight into the incall
     // (already ringing → connects). Ignored for 15s = a missed call: it fades, no action.
     // Two callers ring in on this one card — Madla whenever she's bored on a night shift, and
-    // Markéta's parents + Báka on their standing Saturday. Only the name, the caption and which
+    // Markéta's parents on their standing Saturday. Only the name, the caption and which
     // family comes up differ; card, answer path and teardown are shared.
     var RING_CALLERS = {
       madla:  { fromKey: "madla_fam",    subKey: "call_incoming" },
@@ -49859,11 +49980,11 @@ async def localfont(name):
     scheduleMadla(); // arm at load
 
     // ── Saturday: Markéta's family calls ────────────────────────────────────────────────
-    // Her parents and Báka ring from Prague every Saturday, the way they actually do. Prague is
-    // 8h ahead of Edmonton all year (both sides shift for DST together), so an Edmonton late
-    // morning is their Saturday evening — the hour a Czech family sits down to a video call, and
-    // nowhere near waking Báka. The loft's own wall clock decides (__loftMinsNow, override-aware),
-    // so a ?time= jump or the time-lapse walks into and out of the window like a real morning.
+    // Her parents ring from Prague every Saturday, the way they actually do (Báka isn't on the
+    // weekly call). Prague is 8h ahead of Edmonton all year (both sides shift for DST together),
+    // so an Edmonton late morning is their Saturday evening — the hour a Czech family sits down
+    // to a video call. The loft's own wall clock decides (__loftMinsNow, override-aware), so a
+    // ?time= jump or the time-lapse walks into and out of the window like a real morning.
     var SAT_FROM_MIN = 8 * 60, SAT_TO_MIN = 14 * 60; // Edmonton 08:00–14:00 = Prague 16:00–22:00
     // Which Saturdays have already rung, keyed by the LOFT's pretend date. A set, not a
     // "last Saturday" — the player can hop between Saturdays in any order, and a Saturday
@@ -51078,10 +51199,12 @@ async def localfont(name):
   // console (rain() / storm() / overcast()) and each also driven by the real-weather combo below:
   //   RAIN     — falling precip particles + pane streaks + rain hiss
   //   STORM    — lightning flashes + thunder (DRY-CAPABLE: runs with or without rain)
-  //   OVERCAST — grey daytime sky wash (.climate-overcast)
+  //   OVERCAST — the flat grey daylight of a cloud deck (.climate-overcast)
   // .storming (the cloudy precip/lightning sky look: hidden stars/sun, greyed panes) is now driven
   // by rain OR storm; .raining (pane streaks) by rain alone; so a dry storm gets the dark cloudy
-  // sky + lightning but no streaks/drops. __balconyStorm stays as a compat alias = "a GAME
+  // sky + lightning but no streaks/drops. OVERCAST is the odd one out: its own lever is independent,
+  // but .climate-overcast is stamped for rain/storm/snow TOO, since every one of them arrives under
+  // a cloud deck — it's the base state the other two sit on, not a mode they exclude. __balconyStorm stays as a compat alias = "a GAME
   // rain/lightning storm is running" for the wind/glyph/windchime consumers that just want "is it
   // stormy out" (never the rain-particle or lightning gate — those read the precise layer flags).
   window.__wxRain = false;
@@ -51329,6 +51452,12 @@ async def localfont(name):
     var storm = !!window.__wxStorm || mode === "storm"; // lightning fires on any real thunderstorm, wet or dry
     var overcast = !!window.__wxOvercast || mode === "overcast";
     var storming = rain || storm;              // .storming = a cloudy precip/lightning sky (rain OR dry storm)
+    // Overcast is the BASE cloud state every other sky is built on, not a fourth exclusive mode:
+    // rain, a storm and snow all arrive under the same flat grey deck, and then add their own
+    // precip/lightning on top. So the grey wash + the killed sun glare are shared, and a daytime
+    // downpour can't come with a bright yellow sun over it. (The album's sky readout tests
+    // .raining/.storming BEFORE .climate-overcast, so a rainy day still records as rain.)
+    var clouded = overcast || storming || mode === "snow";
     window.__balconyStorm = !!(window.__wxRain || window.__wxStorm); // compat alias: a GAME storm is running
     ["stage-garden", "stage-balcony", "stage-kitchen", "stage-office"].forEach(function (id) {
       var st = document.getElementById(id);
@@ -51338,7 +51467,7 @@ async def localfont(name):
     });
     if (window.__updateGardenAurora) window.__updateGardenAurora(); // the aurora's heartbeat: cloud AND darkness both move with no class to key an edge off (real weather turning, the clock advancing), so re-gate every tick — it self-gates on hidden/focus and start() is idempotent
     var strip = document.getElementById("loft-game-strip");
-    if (strip) strip.classList.toggle("climate-overcast", overcast); // a plain grey day dims the sky, no rain
+    if (strip) strip.classList.toggle("climate-overcast", clouded); // the flat grey daylight under any cloud deck
     if (window.__catWeatherReact) window.__catWeatherReact(); // the loose cat ducks in from rain / basks on a clear day
   }
   window.__applyRealWx = applyRealWx; // the advancing-time tick re-evaluates the ambiance in step with day/night
@@ -74730,10 +74859,10 @@ function spawnDustMote(container) {
   };
   window.saturday = function (arg) {
     if (arg === true) {
-      if (window.__answerPrague) { window.__answerPrague(); return "📞 answering Prague — máma, táta and Báka, on the Saturday call."; }
+      if (window.__answerPrague) { window.__answerPrague(); return "📞 answering Prague — máma and táta, on the Saturday call."; }
       return "the call hook isn't ready yet.";
     }
-    if (window.__pragueRing && window.__pragueRing()) return "📞 Prague's calling — máma, táta and Báka, ringing top-centre. Tap to answer (or ignore for 15s to miss it).";
+    if (window.__pragueRing && window.__pragueRing()) return "📞 Prague's calling — máma and táta, ringing top-centre. Tap to answer (or ignore for 15s to miss it).";
     return "📞 can't ring right now — a call's already up, the phone's open, or they're already ringing.";
   };
 

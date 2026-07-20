@@ -6762,9 +6762,11 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 .hunt-viewport.device-zoomed #loft-game-strip.uv-mode #cuddly-wallscreen #cuddly-stars,
 .hunt-viewport.device-zoomed #loft-game-strip.uv-mode #cuddly-wallscreen #cuddly-workout,
 .hunt-viewport.device-zoomed #loft-game-strip.uv-mode #cuddly-wallscreen #cuddly-totoro{filter:none}
-/* The balcony bonfire is a real fire — un-wash it under the party blacklight (brightness at 1
-   so it doesn't over-blow; same affine-inverse hue/sat as the projector fire). */
-#loft-game-strip.uv-mode .sn-bonfire{filter:contrast(.769) hue-rotate(-220deg) saturate(.385) brightness(2)}
+/* No un-wash for the balcony bonfire (the s'mores/festival fire): the blacklight doesn't reach the
+   deck at all — the strip's uv filter is forced to none while the balcony is the viewed room, since
+   it's OUTSIDE — so an affine-inverse here had no root filter to cancel and simply applied itself,
+   hue-rotating and double-brightening a fire that was already reading true. Same for anything else
+   that lives on the deck; the projector fire's un-wash below stays, because the nook IS lit. */
 /* Fluorescence under the blacklight. Source colours are picked so the ROOT filter above
    (esp. hue-rotate 220°) lands them on the intended on-screen glow; drop-shadow colours
    are likewise pre-filter source values. All scoped to .uv-mode → inert when it's off. */
@@ -6774,8 +6776,7 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 #loft-game-strip.uv-mode #kitchen-waterbottle-liquid{fill:#1ab2ff; opacity:1; filter:drop-shadow(0 0 2.5px #1ab2ff)} /* drink/tonic → green-yellow */
 #loft-game-strip.uv-mode #kitchen-cups .kitchen-cup-wiggle rect{fill:#f7a01f; filter:drop-shadow(0 0 2px #f7a01f)} /* white ceramic → blue-white (not the hit-target rect) */
 #loft-game-strip.uv-mode .garden-mirror-glass{fill:#f500f5} /* glass → uranium green */
-#loft-game-strip.uv-mode #office-broken-glass,
-#loft-game-strip.uv-mode #balcony-wineglass{filter:drop-shadow(0 0 4px #f500f5)} /* glassware → uranium-green halo */
+#loft-game-strip.uv-mode #office-broken-glass{filter:drop-shadow(0 0 4px #f500f5)} /* glassware → uranium-green halo. Balcony glassware is deliberately absent: no blacklight reaches the deck, so a fluorescence glow out there would be a halo with no lamp to cause it. */
 #loft-game-strip.uv-mode #garden-mask-face{fill:#f7a01f} /* glazed ceramic face → blue-white */
 #loft-game-strip.uv-mode #garden-mask{filter:drop-shadow(0 0 4px #f7a01f)} /* + a blue-white halo */
 #loft-game-strip.uv-mode #office-skull-teeth{stroke:#00f5a3; stroke-width:2.2; filter:drop-shadow(0 0 2.5px #00f5a3)} /* the red teeth glow bright */
@@ -49666,6 +49667,13 @@ async def localfont(name):
     // gated on party-on + attended + not-cinematic (an unattended fire skips but keeps trying).
     // Armed by setGardenParty(on) via __startCueDrip; stops on party-off / reset / pool empty.
     var cueTimer = null;
+    // The FIRST cue of a party comes fast, the rest drip. Lighting the party is the start of the
+    // second act, and a full drip-interval of silence right there is the point a player is most
+    // likely to decide nothing more is going to happen and stop. One text early says "this thing is
+    // still talking to you"; the leisurely cadence resumes immediately after. Stays armed until a
+    // cue actually reaches an ATTENDING player — a fire that's gated out (tab hidden/unfocused,
+    // cinematic, attract prompt untouched) hasn't been seen, so it shouldn't spend the fast slot.
+    var cueFirstOfParty = true;
     var SUN_NEAR_MIN = 45; // a text lands "near" sunrise/sunset within this many minutes either side
     function edmNowMins() { // current Edmonton minutes-of-day — mirrors edmMinutes() (a different IIFE), driven by the ?time= override / test hook / real clock
       if (typeof window.__edmNowMins === "function") return window.__edmNowMins();
@@ -49697,13 +49705,17 @@ async def localfont(name):
       cueTimer = setTimeout(function () {
         cueTimer = null;
         if (window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic && playerStarted() && autonomousMsgOk()) {
+          cueFirstOfParty = false; // an attending player got their look-in; back to the slow cadence
           var rem = cueRemaining();
           if (rem.length) window.__deliverPhoneMessage(rem[Math.floor(Math.random() * rem.length)]); // a random un-sent cue
         }
         scheduleCueDrip(); // keep dripping while the party's on and cues remain
-      }, (30000 + Math.floor(Math.random() * 27500)) * msgDripSlowFactor()); // ~30–57s apart → varied arrival times, stretched once the thread is busy
+        // the opener is NOT stretched by msgDripSlowFactor: a busy thread is exactly the case where
+        // the player is already reading, and the point of the fast first one is to catch them.
+      }, cueFirstOfParty ? (3000 + Math.floor(Math.random() * 3000))
+                         : (14000 + Math.floor(Math.random() * 12000)) * msgDripSlowFactor()); // ~3–6s to open, then ~14–26s apart, stretched once the thread is busy
     }
-    window.__startCueDrip = function () { scheduleCueDrip(); };
+    window.__startCueDrip = function () { cueFirstOfParty = true; scheduleCueDrip(); }; // each party gets its own opener
     window.__stopCueDrip = function () { if (cueTimer) { clearTimeout(cueTimer); cueTimer = null; } };
     // ── DAYTIME ambient drip ── a pool SEPARATE from the night-party cues: texts for the daylight
     // hours, dripped at random while it's day, attended, and NO party is on. Armed at load; it keeps
@@ -63338,8 +63350,12 @@ function spawnDustMote(container) {
       if (!waiting.length) { if (everyoneArrived(g)) g.classList.remove("trickle"); return; } // whole roster fits → full floor, stop
       if (presentGuestFigures(g) < GUEST_CAP) { // FILL: walk in the next waiting unit (jittered list order) — cap is a FIGURE count (guests, excl. hosts), so a couple counts as 2
         arriveEntry(waiting[0]); noteArrival(waiting[0]);
-        var nearCap = presentGuestFigures(g) + 2 >= GUEST_CAP; // ~a couple away from full → ease to the slow rotation cadence
-        armTrickle(nearCap ? (16000 + Math.random() * 9000) : (4500 + Math.random() * 1000)); // ~5s while filling, then ease to rotation cadence
+        var nearCap = presentGuestFigures(g) + 2 >= GUEST_CAP; // ~a couple away from full → ease off the fill cadence
+        // The ease used to drop straight to the ROTATION cadence, which stalled the floor at six for
+        // 16-25s — long enough to read as "that's everyone", right when the party should still feel
+        // like it's growing. Slow down into the last couple instead of stopping dead; the steady
+        // rotation below keeps its own leisurely pace once the floor is actually full.
+        armTrickle(nearCap ? (6000 + Math.random() * 3000) : (2800 + Math.random() * 900)); // ~3s while filling, ~6-9s for the last couple
         return;
       }
       rotateGuests(g, present, waiting); // ROTATION: swap 1–2 out for 1–2 in
@@ -63377,7 +63393,7 @@ function spawnDustMote(container) {
     startHostSolo();
     syncCrowdClear();
     if (window.__gardenPartyOn && window.__partyDance) retuneDancers(window.__partyDance); // tempo-lock the just-activated wrappers
-    armTrickle(3200 + Math.random() * 2000); // the first duo strolls in a few seconds after the party lights, then ~one every 5s
+    armTrickle(1600 + Math.random() * 1200); // the first duo strolls in a beat after the party lights, then ~one every 3s
   }
   function updateGardenGuests() {
     var g = document.getElementById("garden-guests");
@@ -64947,13 +64963,10 @@ function spawnDustMote(container) {
       var asp = null; present.forEach(function (p) { if (p.key === "aspen") asp = p; });
       if (asp) subs.push({ id: "aspen", members: [{ key: "aspen", grp: "crew", name: asp.name || "Aspen", roleKey: asp.roleKey }] });
     }
-    // Whistler. No extra gate and no rarity roll: __whistlerOut() is already the narrow condition
-    // (a garden party, with Farhang and/or Lauren arrived), and the album de-dups by people-
-    // signature, so he is offered while he's out and lands exactly once per album either way.
-    // roleKey stays "" like the godkids' — "Whistler" over a photo of a dog explains itself.
-    if (window.__whistlerOut && window.__whistlerOut()) {
-      subs.push({ id: "whistler", members: [{ key: "whistler", grp: "dog", name: "Whistler", roleKey: "" }] });
-    }
+    // NB Whistler is deliberately NOT offered here. This is the GARDEN's portrait path, and the dog
+    // is only ever in the cuddly nook or on the balcony — a garden card with him in it would be a
+    // photograph of somebody who isn't in the room. He rides the ROOM-shot path instead, via
+    // occupantsOf()/addWhistler(), which puts him in the card for the room he's actually standing in.
     return subs;
   }
   function captureAlbumShot() {        // build + store one intimate-portrait snapshot from the live floor
@@ -64973,10 +64986,21 @@ function spawnDustMote(container) {
     // already own (by people-signature, covering seeds and live shots both), but don't let a single
     // unlucky roll end the attempt: coming back empty opens the album on exactly what was in it
     // before, which reads as a broken shutter rather than as a full album.
+    // The exact lineup is never shot twice — that's the people-signature key, and it always applies.
+    // The RETRY needs one extra guard. The group subjects carry a random subset under a STABLE id
+    // (the godkids shot is 1-3 of the trio, the family shot likewise), so "irene,robin" and
+    // "irene,navid,robin" are different signatures for what a human reads as the same photograph.
+    // A first roll landing on one of those is fine and gives the kids variety over a long session;
+    // what isn't fine is RE-ROLLING to escape a taken signature, because that specifically hunts
+    // down another subset of a subject already in the album. So: first look takes any fresh lineup,
+    // the re-looks skip subjects that already have a card.
     var subject = null, subjects = [];
     for (var attempt = 0; attempt < 5 && !subject; attempt++) {
       subjects = albumSubjects(present);
-      var pool = subjects.filter(function (s) { return !albumTaken[sigFor(s)]; });
+      var pool = subjects.filter(function (s) {
+        if (albumTaken[sigFor(s)]) return false;
+        return attempt === 0 || !albumTaken["subj:" + s.id + roomTag]; // re-looks don't hunt new subsets of an already-shot subject
+      });
       if (pool.length) subject = pool[Math.floor(Math.random() * pool.length)];
     }
     if (!subject && subjects.length) return null; // five looks and every group present is already in the album
@@ -64985,6 +65009,7 @@ function spawnDustMote(container) {
     var sig = sigFor(subject);
     if (albumTaken[sig]) return null; // already have this exact group (incl. the hosts-alone shot) — don't duplicate
     albumTaken[sig] = 1;
+    if (subject) albumTaken["subj:" + subject.id + roomTag] = 1; // ...and never a second card of the same subject under a different subset
     // people = the hosts (always, if present) + the chosen subject's members — the intimate portrait.
     var people = [];
     if (hosts) people.push({ key: hosts.key, grp: hosts.grp, name: hosts.name, roleKey: hosts.roleKey });
@@ -72459,7 +72484,7 @@ function spawnDustMote(container) {
   var IDX = { cuddly: 2, balcony: 4 };
   var ROOMS = {
     cuddly:  { stage: "stage-cuddly",  x: 210, y: 337 }, // floor left of the daybed, clear of the couple/octopus (mirrors the cat's nook band)
-    balcony: { stage: "stage-balcony", x: 336, y: 347 }  // the deck apron, clear of the table/lounger
+    balcony: { stage: "stage-balcony", x: 336, y: 337 }  // the deck apron, clear of the table/lounger
   };
   var out = false;       // is Whistler currently shown?
   var dogRoom = null;    // "cuddly" | "balcony" while out, else null
@@ -72676,6 +72701,7 @@ function spawnDustMote(container) {
   };
   window.whistler = window.dog; // his name, same command
   window.__whistlerOut = function () { return out; }; // test hook: is Whistler shown?
+  window.__whistlerRoom = function () { return out ? dogRoom : null; }; // which room he's actually standing in — the album asks, so a room shot can include him
 })();
 (function () {
   // Console espresso commands — each fires one kitchen act by dispatching the same click the
@@ -73274,6 +73300,14 @@ function spawnDustMote(container) {
     function whoRows(rows, out) { // a hook that publishes display-ready rows
       rows.forEach(function (r) { if (r && r.name) out.push({ key: r.key, name: r.name, roleKey: r.roleKey, el: r.el || null, sels: null }); });
     }
+    // Whistler counts as somebody in the room. He is re-parented between the nook and the deck, so
+    // he's only ever in ONE of them — ask him which, rather than assuming. sels stays null: he has
+    // no .g-* garden figure to point an arrow at, same as the chase runners. His album figure comes
+    // from ALBUM_FIG_SEL["whistler"].
+    function addWhistler(room, out) {
+      if (!window.__whistlerRoom || window.__whistlerRoom() !== room) return;
+      out.push({ key: "whistler", name: "Whistler", roleKey: "", el: document.getElementById("cuddly-dog"), sels: null });
+    }
     function occupantsOf(room) {
       var out = [];
       if (room === "garden") {
@@ -73303,9 +73337,11 @@ function spawnDustMote(container) {
       } else if (room === "balcony") {
         whoRows(whoHook(window.__balconyHangoutNow), out);
         whoFromIds(whoHook(window.__balconyGrillmasterNow), "#balcony-grillmaster", out);
+        addWhistler(room, out);
       } else if (room === "cuddly") {
         whoRows(whoHook(window.__cuddlyVisitorsNow), out);
         whoRows(whoHook(window.__kidGamesNow), out);
+        addWhistler(room, out);
       }
       (WHO_CAMEOS[room] || []).forEach(function (c) {
         if (whoRendered(document.getElementById(c.id))) out.push({ key: c.key, name: c.name, roleKey: c.roleKey, el: document.getElementById(c.id), sels: null });

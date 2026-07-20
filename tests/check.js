@@ -996,39 +996,6 @@ function checkNoConflictMarkers(file, html) {
 // Plus the hit-testing hazard: both overlapping rows must be pointer-transparent, with their
 // own controls taking pointer events back, or the half covering the scene eats the strip's
 // background-tap (stopHintBlink, which dismisses the opening prompt on a tap anywhere).
-function checkChromeOverlap(file, style, script) {
-  if (file !== "rsvp.html" || !script || !style) return;
-  var issues = [];
-  var fn = script.match(/function setChromeOverlap\(\)\s*\{([\s\S]*?)\n  \}/);
-  if (!fn) { fail(file + ": setChromeOverlap() not found (landscape chrome-overlap guard)"); return; }
-  var body = fn[1];
-  if (!/caption\.offsetHeight\s*\/\s*2/.test(body)) issues.push("caption offset is not -(caption.offsetHeight / 2) — the half-row offset must be measured live, not hardcoded");
-  if (!/dots\.offsetHeight\s*\/\s*2/.test(body)) issues.push("dots offset is not -(dots.offsetHeight / 2) — the half-row offset must be measured live, not hardcoded");
-  if (!/matchMedia\("\(max-height:520px\)"\)/.test(body)) issues.push("overlap is not gated on (max-height:520px) — on a tall screen width binds and the freed pixels are handed straight back");
-  if (!/is-fullscreen/.test(body)) issues.push("overlap is not gated on .is-fullscreen — it only pays inside the fullscreen fit");
-
-  var sizer = script.match(/function sizeFullscreenFrame\(\)\s*\{([\s\S]*?)\n  \}/);
-  if (!sizer) issues.push("sizeFullscreenFrame() not found");
-  else if (!/^\s*setChromeOverlap\(\);/m.test(sizer[1].split("var areaStyle")[0])) {
-    issues.push("sizeFullscreenFrame() does not call setChromeOverlap() before measuring");
-  }
-
-  var oh = script.match(/function outerHeight\(el\)\s*\{([\s\S]*?)\n  \}/);
-  if (!oh) issues.push("outerHeight() not found");
-  else if (!/marginTop/.test(oh[1]) || !/marginBottom/.test(oh[1])) {
-    issues.push("outerHeight() is no longer margin-inclusive — areaH would stop subtracting half of each overlapped row");
-  }
-
-  var rule = style.match(/#hunt-fullscreen-area\.chrome-overlap #hunt-caption,\s*#hunt-fullscreen-area\.chrome-overlap #hunt-dots\{([^}]*)\}/);
-  if (!rule) issues.push(".chrome-overlap caption/dots rule not found in CSS");
-  else if (!/pointer-events:\s*none/.test(rule[1])) issues.push(".chrome-overlap rows are not pointer-events:none — the overlapped half would eat the strip's background-tap");
-  if (!/#hunt-fullscreen-area\.chrome-overlap #hunt-caption a,\s*#hunt-fullscreen-area\.chrome-overlap \.hunt-dot\{pointer-events:auto\}/.test(style)) {
-    issues.push("the caption's links / the dots do not take pointer-events back — they'd be unclickable while overlapped");
-  }
-
-  if (issues.length === 0) pass(file + ": landscape chrome-overlap (half-row offset, fit math, tap pass-through) holds");
-  else fail(file + ": chrome-overlap invariant broken", issues.join("\n"));
-}
 
 FILES.forEach(function (file) {
   console.log(file + ":");

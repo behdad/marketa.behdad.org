@@ -237,6 +237,26 @@ function checkAnimationClassCleanup(file, style, script, html) {
   }
 }
 
+// The phone tap-halo fallback fires an object whose art the tap never touched, so the ONE
+// thing keeping it honest is that it stands down whenever the tap reached any .hunt-hit at
+// all — drop that guard and a halo starts overriding direct hits on whatever is drawn over
+// it. Same reason it must stay on `click`: binding it to pointerdown would swallow the press
+// that starts a blanket/bottle/desk drag. Neither is visible to play.js, which runs at
+// desktop width where no halo exists.
+function checkTapHaloGuards(file, script) {
+  if (!/haloTargetAt/.test(script)) return; // page has no halo fallback
+  var handler = script.match(/strip\.addEventListener\(\s*"click"[\s\S]{0,400}?haloTargetAt[\s\S]{0,200}?\}\);/);
+  if (!handler) {
+    fail(file + ": tap-halo fallback is not on a strip click listener (a pointerdown binding would swallow drag presses)");
+    return;
+  }
+  if (!/closest\(["']\.hunt-hit["']\)\s*\)\s*return/.test(handler[0])) {
+    fail(file + ": tap-halo click fallback lost its .hunt-hit early-return (halos would override direct hits)");
+    return;
+  }
+  pass(file + ": tap-halo fallback is click-bound and defers to any direct .hunt-hit hit");
+}
+
 // A CSS `animation: NAME ...` whose NAME has no matching `@keyframes NAME` silently
 // does nothing — a class of bug that bites on renames (rename the rule but not the
 // keyframes, or a plain typo). Bit the butterfly groove work (distinct groove keyframe
@@ -940,6 +960,7 @@ FILES.forEach(function (file) {
     checkDanceParity(file, script);
     checkFireFestParity(file, script);
     checkSeasonRosters(file, script);
+    checkTapHaloGuards(file, script);
   }
   checkCssCommentBalance(file, style);
   checkCssBraceBalance(file, style);

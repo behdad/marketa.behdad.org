@@ -3412,11 +3412,14 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .hunt-viewport:fullscreen .occasion-banner{top:14px}
 @media (max-width:520px){ .occasion-banner{font-size:11px; padding:4px 11px; top:6px} }
 /* on-screen current-date pill in the viewport corner (clicking it opens the phone calendar) */
-.loft-datepill{position:absolute; left:8px; bottom:8px; z-index:6; font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:rgba(255,253,248,.82); border:1px solid rgba(69,58,49,.18); border-radius:11px; padding:4px 9px; cursor:pointer; -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); user-select:none; max-width:46%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.loft-datenav{position:absolute; left:8px; bottom:8px; z-index:6; display:flex; align-items:stretch; gap:4px; max-width:62%}
+.loft-datepill{font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:rgba(255,253,248,.82); border:1px solid rgba(69,58,49,.18); border-radius:11px; padding:4px 9px; cursor:pointer; -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); user-select:none; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .loft-datepill:hover{background:rgba(255,253,248,.96); border-color:rgba(142,58,74,.5)}
 .loft-datepill::before{content:"📅 "; }
-.hunt-viewport:fullscreen .loft-datepill{bottom:14px; left:14px}
-@media (max-width:520px){ .loft-datepill{font-size:10px; padding:3px 7px; left:6px; bottom:6px} }
+.loft-datestep{flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:rgba(255,253,248,.82); border:1px solid rgba(69,58,49,.18); border-radius:11px; padding:4px 6px; cursor:pointer; -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); user-select:none}
+.loft-datestep:hover{background:rgba(255,253,248,.96); border-color:rgba(142,58,74,.5)}
+.hunt-viewport:fullscreen .loft-datenav{bottom:14px; left:14px}
+@media (max-width:520px){ .loft-datenav{left:6px; bottom:6px} .loft-datepill,.loft-datestep{font-size:10px; padding:3px 7px} }
 /* the loft's Edmonton wall-clock, mirroring the date pill to the bottom-RIGHT; a click opens the Clock app */
 .loft-timepill{position:absolute; right:8px; bottom:8px; z-index:6; font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:rgba(255,253,248,.82); border:1px solid rgba(69,58,49,.18); border-radius:11px; padding:4px 9px; cursor:pointer; -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); user-select:none; max-width:46%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .loft-timepill:hover{background:rgba(255,253,248,.96); border-color:rgba(142,58,74,.5)}
@@ -22825,6 +22828,8 @@ var T = {
     app_video: "video",
     video_absent: "the film isn’t loaded yet — come back soon",
     app_calendar: "calendar",
+    datenav_prev: "Jump to the previous day of significance",
+    datenav_next: "Jump to the next day of significance",
     app_weather: "weather",
     cal_title: "Our weddings · 2027",
     cal_edmonton: "Edmonton",
@@ -23543,6 +23548,8 @@ var T = {
     app_video: "video",
     video_absent: "film ještě není nahraný — vraťte se brzy",
     app_calendar: "kalendář",
+    datenav_prev: "Přejít na předchozí významný den",
+    datenav_next: "Přejít na další významný den",
     app_weather: "počasí",
     cal_title: "Naše svatby · 2027",
     cal_edmonton: "Edmonton",
@@ -65171,21 +65178,66 @@ function spawnDustMote(container) {
   // decor + pans to its room; a plain weather day is just the jump. Shared by the grid day-cells
   // and the event cards. On the phone, a summoned festivity dismisses the modal so the room pan
   // lands in full view; a plain jump keeps the calendar open for browsing.
+  // summon the festivities for an already-jumped day: a birthday (most specific) reveals/calls
+  // that person; else an occasion (wedding / bbq / prague-party) runs its latched happening; else
+  // a named-holiday season dresses the decor + pans to its room; a plain weather day summons
+  // nothing. Returns whether anything was summoned. Shared by the grid day-click and the pill's
+  // fast-forward / rewind step buttons.
+  function calSummonFestivity(mo, d) {
+    var bds = CAL_BD_BY_DAY[mo + "-" + d];
+    if (bds && bds.length && window.__birthdayGoto && window.__birthdayGoto(bds[0].who)) return true; // birthday outranks the season
+    var oc = window.__dateOccasion && window.__dateOccasion();
+    if (oc && oc.indexOf("bd:") !== 0) {
+      if (window.__applyDateOccasion) window.__applyDateOccasion(true); // force past the latch so a deliberate (re-)click always re-summons
+      return true;
+    }
+    var sk = calSeasonKey(mo, d);
+    if (!CAL_AMBIENT[sk] && window.season) { window.season(sk); return true; }
+    return false;
+  }
   function calGoToDate(y, mo, d, container, surface) {
     jumpToDate(y, mo, d);
     calView = { y: y, m: mo };
     window.__calendarRender(container, surface);
-    var bds = CAL_BD_BY_DAY[mo + "-" + d];
-    var summoned = false;
-    if (bds && bds.length && window.__birthdayGoto && window.__birthdayGoto(bds[0].who)) summoned = true; // birthday outranks the season
-    else {
-      var oc = window.__dateOccasion && window.__dateOccasion();
-      if (oc && oc.indexOf("bd:") !== 0) {
-        if (window.__applyDateOccasion) window.__applyDateOccasion(true); // force past the latch so a deliberate (re-)click always re-summons
-        summoned = true;
-      } else { var sk = calSeasonKey(mo, d); if (!CAL_AMBIENT[sk] && window.season) { window.season(sk); summoned = true; } }
-    }
+    var summoned = calSummonFestivity(mo, d);
     if (surface === "phone" && summoned && window.__closePhoneModal) window.__closePhoneModal(true);
+  }
+  // the distinct "days of significance" the date pill's ⏪/⏩ step between: every dated birthday
+  // (recurs yearly) plus every occasion / named-holiday anchor day (CAL_OCC's month0-day keys —
+  // the four wedding-weekend events and the tinted holidays). Deduped by day; routing on landing
+  // is the same calSummonFestivity the calendar day-click uses.
+  function calSignificantAnchors() {
+    var seen = {}, out = [];
+    function add(mo, d) { var k = mo + "-" + d; if (!seen[k]) { seen[k] = 1; out.push({ mo: mo, d: d }); } }
+    BIRTHDAYS.forEach(function (b) { if (!b.pending && b.m != null) add(b.m, b.d); });
+    for (var k in CAL_OCC) { var p = k.split("-"); add(+p[0], +p[1]); }
+    return out;
+  }
+  // nearest significant day strictly after (dir>0) / before (dir<0) the given date, within a
+  // one-year horizon (each anchor's this-year occurrence, bumped a year when it's on the wrong
+  // side, so birthdays/holidays wrap naturally around New Year).
+  function calNearestSignificant(from, dir) {
+    var base = new Date(from.getFullYear(), from.getMonth(), from.getDate(), 12).getTime();
+    var anchors = calSignificantAnchors(), best = null;
+    anchors.forEach(function (a) {
+      var y = from.getFullYear(), t = new Date(y, a.mo, a.d, 12).getTime();
+      if (dir > 0) { if (t <= base) t = new Date(y + 1, a.mo, a.d, 12).getTime(); }
+      else { if (t >= base) t = new Date(y - 1, a.mo, a.d, 12).getTime(); }
+      if (best === null || (dir > 0 ? t < best : t > best)) best = t;
+    });
+    return best === null ? null : new Date(best);
+  }
+  // pill fast-forward (dir>0) / rewind (dir<0): jump the loft to the next/previous significant
+  // day, re-render any open calendar (selecting it), and summon that day's happening.
+  function calStepSignificant(dir) {
+    var now = window.__now ? window.__now() : new Date();
+    var t = calNearestSignificant(now, dir);
+    if (!t) return;
+    var y = t.getFullYear(), mo = t.getMonth(), d = t.getDate();
+    jumpToDate(y, mo, d);
+    calView = { y: y, m: mo };
+    calRerenderOpen();
+    calSummonFestivity(mo, d);
   }
   // the four wedding-weekend occasions as compact, clickable date cards (Edmonton in his wine,
   // Prague in her blue): 💍 Edmonton Wedding · 🍖 BBQ Day · 💍 Prague Wedding · 🍳 Garden Brunch,
@@ -65331,6 +65383,16 @@ function spawnDustMote(container) {
   function calMakePill() {
     var vp = document.querySelector(".hunt-viewport");
     if (!vp || document.getElementById("loft-datepill")) return;
+    var nav = document.createElement("div"); nav.className = "loft-datenav";
+    function swallowKeys(e) { e.stopPropagation(); } // a focused step button must not leak keys to the game shortcuts (Enter/Space still activate it — that's a default action, not propagation)
+    function mkStep(id, glyph, dir) {
+      var b = document.createElement("button");
+      b.type = "button"; b.id = id; b.className = "loft-datestep"; b.textContent = glyph;
+      b.addEventListener("click", function (e) { e.stopPropagation(); calStepSignificant(dir); });
+      b.addEventListener("keydown", swallowKeys);
+      return b;
+    }
+    var prev = mkStep("loft-dateprev", "⏪", -1);
     var pill = document.createElement("button");
     pill.type = "button"; pill.id = "loft-datepill"; pill.className = "loft-datepill";
     pill.addEventListener("click", function (e) {
@@ -65338,7 +65400,9 @@ function spawnDustMote(container) {
       if (window.__openPhoneAppHere) window.__openPhoneAppHere("calendar");
       else if (window.phone) window.phone("calendar");
     });
-    vp.appendChild(pill);
+    var next = mkStep("loft-datenext", "⏩", 1);
+    nav.appendChild(prev); nav.appendChild(pill); nav.appendChild(next);
+    vp.appendChild(nav);
   }
   window.__refreshDatePill = function () {
     var pill = document.getElementById("loft-datepill");
@@ -65348,6 +65412,9 @@ function spawnDustMote(container) {
     pill.textContent = txt;
     pill.title = calStr("app_calendar");
     pill.setAttribute("aria-label", calStr("app_calendar"));
+    var prev = document.getElementById("loft-dateprev"), next = document.getElementById("loft-datenext");
+    if (prev) { prev.title = calStr("datenav_prev"); prev.setAttribute("aria-label", calStr("datenav_prev")); }
+    if (next) { next.title = calStr("datenav_next"); next.setAttribute("aria-label", calStr("datenav_next")); }
   };
   // sibling TIME pill, mirrored to the bottom-right: the loft's Edmonton wall-clock, showing the
   // advancing ?time= override when one is set (else real Edmonton time); a click opens the Clock app

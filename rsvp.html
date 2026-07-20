@@ -185,6 +185,12 @@ footer{margin-top:2.6rem}
 /* keep the arrow TRUE RED under the party blacklight (affine-inverse of the uv-mode strip filter,
    on the path since WebKit no-ops a filter on a <g>), so it doesn't turn greenish */
 #loft-game-strip.uv-mode .guest-spot-arrow path{filter:contrast(.769) hue-rotate(-220deg) saturate(.385) brightness(2) drop-shadow(0 1px 1px rgba(69,58,49,.35))}
+/* ...but the HOSTS already un-wash themselves under the blacklight (see the .g-behdad/.g-marketa
+   rule below), so an arrow parented inside a host gets that un-wash AND its own affine-inverse =
+   double-corrected → green. Drop the arrow's own inverse there and let it ride the host un-wash
+   (reads ~true red). Gated on :not(.dance-frozen) to match exactly when the host un-wash is live. */
+#loft-game-strip.uv-mode:not(.dance-frozen) #garden-guests .g-behdad .guest-spot-arrow path,
+#loft-game-strip.uv-mode:not(.dance-frozen) #garden-guests .g-marketa .guest-spot-arrow path{filter:drop-shadow(0 1px 1px rgba(69,58,49,.35))}
 @keyframes guest-spot-bob{0%,100%{translate:0 0}50%{translate:0 -6px}} /* the translate PROPERTY composes with any transform attr */
 @media (prefers-reduced-motion: reduce){.guest-spot-arrow{animation:none}}
 .hunt-title{font-family:"Fraunces",serif; font-weight:700; font-size:1.1rem; text-align:center; letter-spacing:.02em; color:var(--wine); margin:.6rem 0 0; opacity:0}
@@ -42635,17 +42641,17 @@ async def localfont(name):
         msgThumbEl.type = "button";
         msgThumbEl.className = "msg-thumb";
         msgThumbEl.innerHTML = '<span class="msg-thumb-ico">💬</span><span class="msg-thumb-txt"><span class="msg-thumb-from"></span><span class="msg-thumb-body"></span></span><span class="msg-thumb-x" role="button" tabindex="0">✕</span>';
-        msgThumbEl.addEventListener("click", function () { hideMessageThumb(); open(true); openApp("messages", "app_messages", renderMessages); }); // tap the toast → ALWAYS open the messages app; a message's own action lives inside the thread
+        msgThumbEl.addEventListener("click", function () { if (curThumbId) runMsgAction(curThumbId); else { hideMessageThumb(); open(true); openApp("messages", "app_messages", renderMessages); } }); // tap the toast BODY → DO the message's task (its deep-link action), like a real phone notification; the left icon opens the app instead
         var thumbX = msgThumbEl.querySelector(".msg-thumb-x"); // a dismiss ✕ — swat the notification away without opening the app
         if (thumbX) {
           thumbX.setAttribute("aria-label", tr("install_dismiss"));
           thumbX.addEventListener("click", function (e) { e.stopPropagation(); hideMessageThumb(); });
           thumbX.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); hideMessageThumb(); } });
         }
-        var thumbIco = msgThumbEl.querySelector(".msg-thumb-ico"); // tap the LEFT ICON → just DO the message's task (its action), don't open the app
+        var thumbIco = msgThumbEl.querySelector(".msg-thumb-ico"); // tap the LEFT ICON/LOGO → open the messages app (browse the thread); the toast body does the task
         if (thumbIco) {
           thumbIco.style.cursor = "pointer";
-          thumbIco.addEventListener("click", function (e) { e.stopPropagation(); if (curThumbId) runMsgAction(curThumbId); else hideMessageThumb(); });
+          thumbIco.addEventListener("click", function (e) { e.stopPropagation(); hideMessageThumb(); open(true); openApp("messages", "app_messages", renderMessages); });
         }
       }
       if (msgThumbEl.parentNode !== host) host.appendChild(msgThumbEl);

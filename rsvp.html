@@ -58020,7 +58020,7 @@ function spawnDustMote(container) {
     if (!el) return;
     var walk = el.querySelector(".guest-walk");
     if (!walk) { el.classList.add("arrived"); return; }
-    if (reducedMotionGuests() || document.hidden) { el.classList.add("arrived"); return; } // reduced motion OR hidden tab: appear in place (a hidden tab pauses the walk animation, so animate-in would strand — pop in instantly, matching the instant walk-OUT below so the revolving door stays balanced)
+    if (reducedMotionGuests() || document.hidden || stageIndex !== STAGES.indexOf("garden")) { el.classList.add("arrived"); return; } // reduced motion / hidden tab / viewing ANOTHER room: appear in place — the walk animation would be off-screen or paused (stranding the one-shot), so pop in instantly. This lets the party grow in the background and stay balanced.
     walk.style.setProperty("--walk-x", walkDistFor(sel, home) + "px"); // walk from the gate to this figure's balanced SLOT (not its raw home)
     g.classList.add("duo-walking");
     el.classList.add("arrived");
@@ -58113,7 +58113,7 @@ function spawnDustMote(container) {
       trickleTimer = null;
       var g = document.getElementById("garden-guests");
       if (!g) return;
-      if (!guestsWanted()) { armTrickle(1400); return; } // off the floor / party off — hold, don't advance; re-check soon (visibility/focus no longer pause it — the party runs on unattended)
+      if (!window.__gardenPartyOn) { armTrickle(1400); return; } // party off — hold. NOTE: no longer gated on being IN the garden — the fill keeps going in the BACKGROUND while you're in another room (off-screen arrivals are instant, see walkFigureIn), so the party GROWS and is bigger when you return
       if (window.__syncMousesVisitingClass) window.__syncMousesVisitingClass(); // in case the visiting roll flipped
       var list = fullArrivals();
       var present = presentUnits(g, list), waiting = waitingUnits(g, list);
@@ -58177,12 +58177,20 @@ function spawnDustMote(container) {
       // first time this party: open small, then trickle everyone in over ~1–2 min
       guestsArrived = true;
       beginTrickle();
+    } else if (window.__gardenPartyOn && guestsArrived) {
+      // Left the garden but the party's STILL ON → keep FILLING in the background (off-screen
+      // arrivals are instant, see walkFigureIn) so the party GROWS while you're in another room and
+      // is bigger when you return. Just hide the visible dance/arrival animation.
+      stopHostSolo();
+      g.classList.remove("guests-in", "guests-arriving", "duo-walking");
+      if (g.classList.contains("trickle") && !everyoneArrived(g)) armTrickle(2500 + Math.random() * 2500); // keep the background fill going
+      syncCrowdClear();
     } else {
       clearGuestArriveTimer();
-      clearTrickleTimer(); // off the floor → pause the trickle (kept .arrived state; nothing spawned to pile up)
-      stopHostSolo(); // off the floor → stop the hosts' solo cycle + drop its class
-      g.classList.remove("guests-in", "guests-arriving", "duo-walking"); // off the floor → drop all dance/arrival animation (nothing strands)
-      syncCrowdClear(); // guests gone → the generic dancers glide back to their normal spots
+      clearTrickleTimer(); // party off → stop the trickle (kept .arrived state; nothing spawned to pile up)
+      stopHostSolo();
+      g.classList.remove("guests-in", "guests-arriving", "duo-walking");
+      syncCrowdClear();
     }
   }
   window.__updateGardenGuests = updateGardenGuests;
@@ -59109,25 +59117,6 @@ function spawnDustMote(container) {
     window.toasts = function (arg) { return stageAndRun(function () { return startToasts(); }, "🥂 Ali raises a glass, then Farhang — the crowd clinks all around.", "the floor's dark — run party(true) first.", endToasts, arg); };
     window.groupphoto = function (arg) { return stageAndRun(function () { return startGroupPhoto(); }, "📸 everyone gathers, Aspen fires the flash — the group photo's in your album.", "the floor's dark — run party(true) first.", endGroupPhoto, arg); };
     window.sparklers = function (arg) { return stageAndRun(function () { return startSparklers(); }, "✨ the guests raise sparklers into a tunnel — the couple stand through it.", "the floor's dark — run party(true) first.", endSparklers, arg); };
-    // Autonomous moments: every so often a party "moment" fires on its own while you're watching the
-    // garden during the party (owner: they should trigger by themselves). One self-rescheduling timer,
-    // crickets-gated, skips if a moment's already running so they never stomp each other; a random pick
-    // each time (fixed order is boring). Nothing accumulates in a hidden/unfocused tab.
-    (function autoMoments() {
-      var MOMS = ["firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift"];
-      var BUSY = ["gm-toasting", "gm-group-photo", "gm-sparklers", "cake-cutting", "bouquet-wind", "chair-lift", "first-dance", "slow-dance"];
-      var t = null;
-      function want() { return !!window.__gardenPartyOn && window.currentStageName === "garden" && !document.hidden && document.hasFocus(); }
-      function busy() { var g = document.getElementById("garden-guests"); if (!g) return true; for (var i = 0; i < BUSY.length; i++) if (g.classList.contains(BUSY[i])) return true; return false; }
-      function tick() {
-        t = setTimeout(function () {
-          t = null;
-          if (want() && !busy()) { var m = MOMS[(Math.random() * MOMS.length) | 0]; if (typeof window[m] === "function") window[m](); }
-          tick();
-        }, 75000 + Math.random() * 75000); // ~75–150s between autonomous moments
-      }
-      tick();
-    })();
   })();
   // ── PARTY MODE disco pools (garden) — STEPPED, not tweened. A continuous CSS/WAAPI sweep
   // of these big screen-blended ellipses repaints every frame and visibly FLICKERED on

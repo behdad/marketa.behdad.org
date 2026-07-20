@@ -7736,6 +7736,47 @@ section{margin:1.9rem 0}
   #balcony-hangout .bh-idle, #balcony-hangout .bh-arm-gesture, #balcony-hangout .bh-toke-arm, #balcony-hangout .bh-ember{animation:none}
   #balcony-hangout{transition:none}
 }
+/* ═══ OFFICE HANGOUT COUPLE ═══════════════════════════════════════════════════
+   Shown only while #office-hangout carries .on (the controller sets it on party+office).
+   All idle motion is CSS keyframes on inner .of-idle wrappers of PERSISTENT figure nodes —
+   nothing is spawned. Each couple + person is positioned by its OWN static wrapper transform;
+   the idle chat-sway rides a DISTINCT inner wrapper so a CSS-transform animation never clobbers
+   the positioning transform (the transform-attr-vs-CSS-animation bug class). */
+#office-hangout{opacity:0; visibility:hidden; transition:opacity .6s ease}
+#office-hangout.on{opacity:1; visibility:visible}
+/* exactly one couple is .present at a time (the controller rotates them) */
+#office-hangout .of-couple{display:none}
+#office-hangout .of-couple.present{display:inline}
+/* drinks: a couple carries .of-beer OR .of-flute (rolled per showing); default hidden so a
+   couple with no drink-class shows empty hands. Each person's glass sits in one <g class="of-drink"> */
+#office-hangout .of-glass-beer, #office-hangout .of-glass-flute{display:none}
+#office-hangout .of-couple.of-beer .of-glass-beer{display:inline}
+#office-hangout .of-couple.of-flute .of-glass-flute{display:inline}
+/* a couple can also carry .of-drink-p1-only / .of-drink-p2-only — only that person holds a drink */
+#office-hangout .of-couple.of-drink-p1-only .of-drink-p2 .of-glass-beer,
+#office-hangout .of-couple.of-drink-p1-only .of-drink-p2 .of-glass-flute,
+#office-hangout .of-couple.of-drink-p2-only .of-drink-p1 .of-glass-beer,
+#office-hangout .of-couple.of-drink-p2-only .of-drink-p1 .of-glass-flute{display:none}
+/* gentle idle: a slow weight-shift chat-sway on each figure's inner wrapper, out of phase */
+#office-hangout .of-idle{transform-box:fill-box; transform-origin:center bottom}
+#office-hangout.on .of-couple.present .of-idle-a{animation:of-sway-a 4.6s ease-in-out infinite}
+#office-hangout.on .of-couple.present .of-idle-b{animation:of-sway-b 5.2s ease-in-out infinite}
+@keyframes of-sway-a{0%,100%{transform:rotate(-1deg) translateY(0)}50%{transform:rotate(1.1deg) translateY(-0.7px)}}
+@keyframes of-sway-b{0%,100%{transform:rotate(0.9deg) translateY(-0.5px)}50%{transform:rotate(-1.1deg) translateY(0)}}
+/* the raised drink/gesture forearm bobs gently, as if talking — pivots on its own box.
+   Rides the arm wrapper, distinct from the .of-idle torso sway (no clobber). */
+#office-hangout .of-arm-gesture, #office-hangout .of-arm-gesture-l{transform-box:fill-box}
+#office-hangout .of-arm-gesture{transform-origin:left bottom}
+#office-hangout .of-arm-gesture-l{transform-origin:right bottom}
+#office-hangout.on .of-couple.present .of-arm-gesture{animation:of-gesture 3.4s ease-in-out infinite}
+#office-hangout.on .of-couple.present .of-arm-gesture-l{animation:of-gesture-l 3.8s ease-in-out .5s infinite}
+@keyframes of-gesture{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(5deg)}}
+@keyframes of-gesture-l{0%,100%{transform:rotate(3deg)}50%{transform:rotate(-5deg)}}
+/* Reduced motion: they stand still, drinks in hand — no chat-sway, no gesture bob. */
+@media (prefers-reduced-motion: reduce){
+  #office-hangout .of-idle, #office-hangout .of-arm-gesture, #office-hangout .of-arm-gesture-l{animation:none}
+  #office-hangout{transition:none}
+}
 #loft-game-strip.season-pride .sn-pride{display:inline}
 #loft-game-strip.season-nowruz .sn-nowruz{display:inline}
 /* Sizdah Bedar (Apr 1) — nowruz's thirteenth and last day, so it rides ALONGSIDE the haft-sin's
@@ -18161,6 +18202,213 @@ section{margin:1.9rem 0}
 <circle cx="309" cy="334" r="4" fill="#3a2a22"/>
 <circle cx="263" cy="338" r="4" fill="#3a2a22"/>
 <circle cx="293" cy="338" r="4" fill="#3a2a22"/>
+</g>
+<!-- ═══ OFFICE HANGOUT COUPLE ═══════════════════════════════════════════════════
+     During the garden party the office is a quiet spot, and SOMETIMES a named cast
+     couple (never the hosts, never anyone on the dance floor / at the bar / on the
+     balcony — see the officeHangout() IIFE for the one-room rule) slips in here to
+     hang out and chat, drinks in hand. One couple at a time, rotated occasionally by
+     a self-rescheduling timer; drinks (beer / champagne flute) rolled per showing.
+     Placed in the clear floor RIGHT of the desk (x≈500, feet at floor y≈303) — clears
+     the desk (x150-480), chair, monitor, laptop, lamp and every interactive element.
+     Positioning lives on the outer wrappers; the gentle idle chat-sway rides a DISTINCT
+     inner .of-idle wrapper so a CSS-transform animation never clobbers the static
+     positioning transform (the transform-attr-vs-CSS-animation bug class). Nothing is
+     spawned — pure CSS idle on persistent native-SVG shapes (WebKit-safe: no
+     foreignObject, no group-level SVG filters). Reduced motion: they stand still with drinks. -->
+<g id="office-hangout" aria-hidden="true" pointer-events="none">
+  <!-- shared drink templates are inlined per person below; a couple carries .of-beer or
+       .of-flute (rolled per showing) and each person carries .of-drink-p1/.of-drink-p2 so
+       the right glass shows in the right hand. -->
+  <g class="of-couple of-aligoli" transform="translate(500,303) scale(0.8)" style="display:none">
+    <g class="of-person of-p1" transform="translate(-12,0)"><g class="of-idle of-idle-a">
+      <ellipse cx="0" cy="1" rx="10" ry="2.2" fill="#000" opacity="0.15"/>
+      <path fill="#f4f2ea" d="M -5 -26 L -6 -1 L -3 -1 L -2.4 -26 Z M 5 -26 L 6 -1 L 3 -1 L 2.4 -26 Z"/>
+      <path fill="#efe8d4" d="M -7 -1 L -2.4 -1 L -2.4 2 L -8 2 Z M 7 -1 L 2.4 -1 L 2.4 2 L 8 2 Z"/>
+      <path class="of-arm-l" fill="#d09155" d="M -7 -56 C -12 -52 -14 -46 -14 -41 L -11 -41 C -11 -46 -9 -51 -6 -54 Z"/>
+      <path fill="#d9a6a6" d="M -8 -57 C -9 -48 -7 -38 -6 -30 L 6 -30 C 7 -38 9 -48 8 -57 C 3 -61 -3 -61 -8 -57 Z"/>
+      <circle cx="-3" cy="-46" r="0.8" fill="#c68e95"/><circle cx="3" cy="-42" r="0.8" fill="#c68e95"/><circle cx="0" cy="-52" r="0.8" fill="#c68e95"/>
+      <path fill="#ff3b52" d="M -6 -32 L 6 -32 L 5 -24 L -5 -24 Z"/>
+      <path fill="#6b675e" d="M -4 -62 C -4 -55 -2 -49 0 -46 C 2 -49 4 -55 4 -62 Z"/>
+      <circle cx="0" cy="-66" r="6" fill="#d09155"/>
+      <rect x="-5" y="-68" width="10" height="2.6" rx="1.2" fill="#f3ecda"/>
+      <path fill="#7a3a2a" d="M -6.5 -70 C -5 -74 5 -74 6.5 -70 C 3 -71.5 -3 -71.5 -6.5 -70 Z"/><rect x="-7" y="-70.4" width="14" height="1.6" rx="0.8" fill="#6a3122"/>
+      <g class="of-arm-r of-arm-gesture"><path fill="#d09155" d="M 6 -55 C 10 -53 13 -49 14 -44 L 11 -44 C 10 -48 8 -51 5 -53 Z"/><g class="of-drink of-drink-p1"><g class="of-glass-beer"><rect x="12" y="-50" width="4" height="9" rx="1" fill="#7a4a1a"/><rect x="13" y="-52" width="2" height="3" fill="#7a4a1a"/><rect x="12.4" y="-48" width="3.2" height="4" rx="0.6" fill="#c98a2a" opacity="0.85"/></g><g class="of-glass-flute"><path d="M 12.6 -50 L 15.4 -50 L 14.6 -45 L 13.4 -45 Z" fill="#eaf3f7" opacity="0.7"/><ellipse cx="14" cy="-49.6" rx="1.4" ry="0.5" fill="#f6e7a8"/><rect x="13.6" y="-45" width="0.8" height="4" fill="#d8d2c2"/><ellipse cx="14" cy="-41" rx="1.8" ry="0.5" fill="#d8d2c2"/></g></g></g>
+    </g></g>
+    <g class="of-person of-p2" transform="translate(12,0)"><g class="of-idle of-idle-b">
+      <ellipse cx="0" cy="1" rx="9.5" ry="2.1" fill="#000" opacity="0.15"/>
+      <path fill="#f4f2ea" d="M -4.5 -26 L -5.6 -1 L -2.5 -1 L -1.8 -26 Z M 4.5 -26 L 5.6 -1 L 2.5 -1 L 1.8 -26 Z"/>
+      <rect x="-6" y="-20" width="3" height="10" fill="#ff3b52" opacity="0.8"/><rect x="3" y="-20" width="3" height="10" fill="#ff3b52" opacity="0.8"/>
+      <path fill="#d6d9de" d="M -6 -1 L -1.8 -1 L -1.8 2 L -7 2 Z M 6 -1 L 1.8 -1 L 1.8 2 L 7 2 Z"/>
+      <path class="of-arm-r" fill="#e6b48c" d="M 7 -55 C 11 -51 13 -46 14 -41 L 11 -41 C 10 -46 8 -50 6 -53 Z"/>
+      <path fill="#ff3b52" d="M -6 -30 L 6 -30 L 5 -22 L -5 -22 Z"/>
+      <path fill="#f6f2e8" d="M -9 -58 L 9 -58 L 8 -30 L -8 -30 Z"/>
+      <path fill="#ffffff" d="M -9 -58 L -6 -58 L -7 -52 L -10 -53 Z M 9 -58 L 6 -58 L 7 -52 L 10 -53 Z"/>
+      <path fill="#ff3fa0" d="M -3 -60 L 3 -60 L 3 -58.6 L -3 -58.6 Z"/>
+      <circle cx="0" cy="-64" r="5.8" fill="#e6b48c"/>
+      <path fill="#f7eed6" d="M -6.4 -66 C -7 -70 -6 -73 0 -74 C 6 -73 7 -70 6.4 -66 C 6.6 -62 6 -59.5 5 -58 L 3.5 -60 C 4 -63 3.5 -66 0 -66 C -3.5 -66 -4 -63 -3.5 -60 L -5 -58 C -6 -59.5 -6.6 -62 -6.4 -66 Z"/>
+      <g class="of-arm-l of-arm-gesture-l"><path fill="#e6b48c" d="M -7 -54 C -11 -50 -13 -45 -14 -40 L -11 -40 C -10 -45 -8 -49 -6 -52 Z"/><g class="of-drink of-drink-p2"><g class="of-glass-beer"><rect x="-16" y="-49" width="4" height="9" rx="1" fill="#7a4a1a"/><rect x="-15" y="-51" width="2" height="3" fill="#7a4a1a"/><rect x="-15.6" y="-47" width="3.2" height="4" rx="0.6" fill="#c98a2a" opacity="0.85"/></g><g class="of-glass-flute"><path d="M -15.4 -49 L -12.6 -49 L -13.4 -44 L -14.6 -44 Z" fill="#eaf3f7" opacity="0.7"/><ellipse cx="-14" cy="-48.6" rx="1.4" ry="0.5" fill="#f6e7a8"/><rect x="-14.4" y="-44" width="0.8" height="4" fill="#d8d2c2"/><ellipse cx="-14" cy="-40" rx="1.8" ry="0.5" fill="#d8d2c2"/></g></g></g>
+    </g></g>
+  </g>
+  <g class="of-couple of-spencerjay" transform="translate(500,303) scale(0.8)" style="display:none">
+    <g class="of-person of-p1" transform="translate(-13,-2)"><g class="of-idle of-idle-a">
+      <ellipse cx="0" cy="3" rx="10.5" ry="2.2" fill="#000" opacity="0.15"/>
+      <path fill="#2b2a2e" d="M -5 -26 L -6 -1 L -3 -1 L -2.4 -26 Z M 5 -26 L 6 -1 L 3 -1 L 2.4 -26 Z"/>
+      <path fill="#1f1e22" d="M -7 -1 L -2.4 -1 L -2.4 2 L -8 2 Z M 7 -1 L 2.4 -1 L 2.4 2 L 8 2 Z"/>
+      <path fill="#d8bd86" d="M -6 -34 L 6 -34 L 5.5 -26 L -5.5 -26 Z"/>
+      <path class="of-arm-l" fill="#d99c62" d="M -8 -60 C -12 -56 -14 -50 -15 -44 L -12 -44 C -11 -50 -9 -55 -6 -58 Z"/>
+      <path fill="#6e4a33" d="M -9 -61 C -10 -51 -8 -41 -7 -34 L 7 -34 C 8 -41 10 -51 9 -61 C 3 -65 -3 -65 -9 -61 Z"/>
+      <circle cx="0" cy="-70" r="6.2" fill="#d99c62"/>
+      <path fill="#2a211a" d="M -6.4 -72 C -6.6 -77 -5 -80 0 -80 C 5 -80 6.6 -77 6.4 -72 C 3 -74 -3 -74 -6.4 -72 Z"/>
+      <rect x="-5.5" y="-72" width="11" height="2.4" rx="1.1" fill="#211f22"/><circle cx="-2.8" cy="-70.8" r="1.6" fill="#a9c6d6"/><circle cx="2.8" cy="-70.8" r="1.6" fill="#a9c6d6"/>
+      <g class="of-arm-r of-arm-gesture"><path fill="#d99c62" d="M 6 -59 C 10 -56 13 -51 14 -46 L 11 -46 C 10 -51 8 -55 5 -57 Z"/><g class="of-drink of-drink-p1"><g class="of-glass-beer"><rect x="12" y="-52" width="4" height="9" rx="1" fill="#3f6b2a"/><rect x="13" y="-54" width="2" height="3" fill="#3f6b2a"/><rect x="12.4" y="-50" width="3.2" height="4" rx="0.6" fill="#7db34a" opacity="0.8"/></g><g class="of-glass-flute"><path d="M 12.6 -52 L 15.4 -52 L 14.6 -47 L 13.4 -47 Z" fill="#eaf3f7" opacity="0.7"/><ellipse cx="14" cy="-51.6" rx="1.4" ry="0.5" fill="#f6e7a8"/><rect x="13.6" y="-47" width="0.8" height="4" fill="#d8d2c2"/><ellipse cx="14" cy="-43" rx="1.8" ry="0.5" fill="#d8d2c2"/></g></g></g>
+    </g></g>
+    <g class="of-person of-p2" transform="translate(13,0)"><g class="of-idle of-idle-b">
+      <ellipse cx="0" cy="1" rx="9.5" ry="2.1" fill="#000" opacity="0.15"/>
+      <ellipse cx="0" cy="-70" rx="8" ry="3.4" fill="none" stroke="#fff6d8" stroke-width="1" opacity="0.5"/>
+      <path fill="#2f3340" d="M -5 -26 L -6 -1 L -3 -1 L -2.4 -26 Z M 5 -26 L 6 -1 L 3 -1 L 2.4 -26 Z"/>
+      <path fill="#211f22" d="M -7 -1 L -2.4 -1 L -2.4 2 L -8 2 Z M 7 -1 L 2.4 -1 L 2.4 2 L 8 2 Z"/>
+      <path class="of-arm-r" fill="#e0a86e" d="M 7 -56 C 11 -53 14 -49 15 -44 L 12 -44 C 11 -49 9 -53 6 -55 Z"/>
+      <path fill="#28303e" d="M -8 -57 C -9 -48 -7 -38 -6 -30 L 6 -30 C 7 -38 9 -48 8 -57 C 3 -61 -3 -61 -8 -57 Z"/>
+      <rect x="-0.5" y="-58" width="1" height="26" fill="#151a22"/>
+      <path fill="#5a3f28" d="M -6.5 -64 C -8 -60 -8 -50 -6 -42 L -3.5 -43 C -5 -50 -4.5 -58 -3 -62 L 3 -62 C 4.5 -58 5 -50 3.5 -43 L 6 -42 C 8 -50 8 -60 6.5 -64 C 4 -68 -4 -68 -6.5 -64 Z"/>
+      <circle cx="0" cy="-62" r="5.6" fill="#e0a86e"/>
+      <path fill="#5a3f28" d="M -4.6 -60 C -4.6 -53 -2.4 -47 0 -44 C 2.4 -47 4.6 -53 4.6 -60 C 2 -58 -2 -58 -4.6 -60 Z"/>
+      <path fill="#5a3f28" d="M -6 -66 C -6 -70 6 -70 6 -66 C 3 -67.5 -3 -67.5 -6 -66 Z"/>
+      <g class="of-arm-l"><path fill="#e0a86e" d="M -7 -55 C -11 -51 -13 -46 -14 -41 L -11 -41 C -10 -46 -8 -50 -6 -53 Z"/><g class="of-drink of-drink-p2"><g class="of-glass-beer"><rect x="-16" y="-50" width="4" height="9" rx="1" fill="#7a4a1a"/><rect x="-15" y="-52" width="2" height="3" fill="#7a4a1a"/><rect x="-15.6" y="-48" width="3.2" height="4" rx="0.6" fill="#c98a2a" opacity="0.85"/></g><g class="of-glass-flute"><path d="M -15.4 -50 L -12.6 -50 L -13.4 -45 L -14.6 -45 Z" fill="#eaf3f7" opacity="0.7"/><ellipse cx="-14" cy="-49.6" rx="1.4" ry="0.5" fill="#f6e7a8"/><rect x="-14.4" y="-45" width="0.8" height="4" fill="#d8d2c2"/><ellipse cx="-14" cy="-41" rx="1.8" ry="0.5" fill="#d8d2c2"/></g></g></g>
+    </g></g>
+  </g>
+  <g class="of-couple of-farhanglauren" transform="translate(500,303) scale(0.8)" style="display:none">
+    <g class="of-person of-p1" transform="translate(-12,0)"><g class="of-idle of-idle-a">
+      <ellipse cx="0" cy="1" rx="10" ry="2.2" fill="#000" opacity="0.15"/>
+      <path fill="#25262b" d="M -5 -30 L -6 -1 L -3 -1 L -2.4 -30 Z M 5 -30 L 6 -1 L 3 -1 L 2.4 -30 Z"/>
+      <path fill="#151519" d="M -7 -1 L -2.4 -1 L -2.4 2 L -8 2 Z M 7 -1 L 2.4 -1 L 2.4 2 L 8 2 Z"/>
+      <path class="of-arm-l" fill="#1c1d22" d="M -8 -58 C -12 -54 -14 -48 -15 -43 L -12 -43 C -11 -48 -9 -53 -6 -56 Z"/>
+      <path fill="#1c1d22" d="M -8 -59 C -9 -50 -7 -40 -6 -30 L 6 -30 C 7 -40 9 -50 8 -59 C 3 -63 -3 -63 -8 -59 Z"/>
+      <path fill="#f8f5ec" d="M -2.4 -60 L 2.4 -60 L 1.6 -32 L -1.6 -32 Z"/>
+      <path fill="#101015" d="M -2.4 -57 L 0 -55.5 L 2.4 -57 L 1.4 -54.5 L 0 -53.5 L -1.4 -54.5 Z"/>
+      <circle cx="0" cy="-68" r="6" fill="#cf9457"/>
+      <path fill="#2a221c" d="M -6.4 -70 C -6.6 -75 -5 -78 0 -78 C 5 -78 6.6 -75 6.4 -70 C 3 -72 -3 -72 -6.4 -70 Z"/>
+      <g class="of-arm-r of-arm-gesture"><path fill="#1c1d22" d="M 6 -57 C 10 -54 13 -49 14 -44 L 11 -44 C 10 -49 8 -53 5 -55 Z"/><g class="of-drink of-drink-p1"><g class="of-glass-beer"><rect x="12" y="-50" width="4" height="9" rx="1" fill="#7a4a1a"/><rect x="13" y="-52" width="2" height="3" fill="#7a4a1a"/><rect x="12.4" y="-48" width="3.2" height="4" rx="0.6" fill="#c98a2a" opacity="0.85"/></g><g class="of-glass-flute"><path d="M 12.6 -50 L 15.4 -50 L 14.6 -45 L 13.4 -45 Z" fill="#eaf3f7" opacity="0.7"/><ellipse cx="14" cy="-49.6" rx="1.4" ry="0.5" fill="#f6e7a8"/><rect x="13.6" y="-45" width="0.8" height="4" fill="#d8d2c2"/><ellipse cx="14" cy="-41" rx="1.8" ry="0.5" fill="#d8d2c2"/></g></g></g>
+    </g></g>
+    <g class="of-person of-p2" transform="translate(12,0)"><g class="of-idle of-idle-b">
+      <ellipse cx="0" cy="1" rx="9.5" ry="2.1" fill="#000" opacity="0.15"/>
+      <path fill="#f3d8b6" d="M -3.5 -22 L -4 -1 L -1.5 -1 L -1.5 -22 Z M 3.5 -22 L 4 -1 L 1.5 -1 L 1.5 -22 Z"/>
+      <path fill="#efe7d6" d="M -5 -1 L -1 -1 L -1 2 L -5.5 2 Z M 5 -1 L 1 -1 L 1 2 L 5.5 2 Z"/>
+      <path class="of-arm-r" fill="#f6d7b4" d="M 7 -55 C 11 -51 13 -46 14 -41 L 11 -41 C 10 -46 8 -50 6 -53 Z"/>
+      <path fill="#faf6ec" d="M -7 -57 C -8 -48 -6.5 -40 -6 -36 C -8 -30 -10 -24 -11 -18 L 11 -18 C 10 -24 8 -30 6 -36 C 6.5 -40 8 -48 7 -57 C 3 -60 -3 -60 -7 -57 Z"/>
+      <path fill="#efe9db" d="M -11 -18 L 11 -18 L 10.4 -20.4 L -10.4 -20.4 Z"/>
+      <circle cx="0" cy="-64" r="5.8" fill="#f6d7b4"/>
+      <path fill="#d98a4e" d="M -6.6 -66 C -8 -62 -8 -53 -6 -45 L -3.5 -46 C -5 -53 -4.5 -60 -3 -63 L 3 -63 C 4.5 -60 5 -53 3.5 -46 L 6 -45 C 8 -53 8 -62 6.6 -66 C 4 -70 -4 -70 -6.6 -66 Z"/>
+      <g class="of-arm-l of-arm-gesture-l"><path fill="#f6d7b4" d="M -7 -54 C -11 -50 -13 -45 -14 -40 L -11 -40 C -10 -45 -8 -49 -6 -52 Z"/><g class="of-drink of-drink-p2"><g class="of-glass-beer"><rect x="-16" y="-49" width="4" height="9" rx="1" fill="#7a4a1a"/><rect x="-15" y="-51" width="2" height="3" fill="#7a4a1a"/><rect x="-15.6" y="-47" width="3.2" height="4" rx="0.6" fill="#c98a2a" opacity="0.85"/></g><g class="of-glass-flute"><path d="M -15.4 -49 L -12.6 -49 L -13.4 -44 L -14.6 -44 Z" fill="#eaf3f7" opacity="0.7"/><ellipse cx="-14" cy="-48.6" rx="1.4" ry="0.5" fill="#f6e7a8"/><rect x="-14.4" y="-44" width="0.8" height="4" fill="#d8d2c2"/><ellipse cx="-14" cy="-40" rx="1.8" ry="0.5" fill="#d8d2c2"/></g></g></g>
+    </g></g>
+  </g>
+  <g class="of-couple of-alirezamahzad" transform="translate(500,303) scale(0.78)" style="display:none">
+    <g class="of-person of-p1" transform="translate(-12,0)"><g class="of-idle of-idle-a">
+      <ellipse cx="0" cy="1" rx="10" ry="2.2" fill="#000" opacity="0.15"/>
+      <path fill="#3a3f4a" d="M -5.5 -28 L -6.4 -1 L -3 -1 L -2.6 -28 Z M 5.5 -28 L 6.4 -1 L 3 -1 L 2.6 -28 Z"/>
+      <path fill="#f2efe6" d="M -7 -1 L -2.6 -1 L -2.6 2 L -8 2 Z M 7 -1 L 2.6 -1 L 2.6 2 L 8 2 Z"/>
+      <path class="of-arm-l" fill="#e2ae76" d="M -8 -57 C -12 -53 -14 -47 -15 -42 L -12 -42 C -11 -47 -9 -52 -6 -55 Z"/>
+      <path fill="#a7c94e" d="M -8 -58 C -9 -49 -7 -39 -6 -30 L 6 -30 C 7 -39 9 -49 8 -58 C 3 -62 -3 -62 -8 -58 Z"/>
+      <circle cx="0" cy="-67" r="6" fill="#e2ae76"/>
+      <path fill="#2a221c" d="M -6.6 -69 C -7 -75 -5 -79 0 -79 C 5 -79 7 -75 6.6 -69 C 6.8 -66 6 -64 5 -63 L 4 -66 C 4.5 -70 3 -73 0 -73 C -3 -73 -4.5 -70 -4 -66 L -5 -63 C -6 -64 -6.8 -66 -6.6 -69 Z"/>
+      <rect x="-5.4" y="-69" width="10.8" height="2.2" rx="1" fill="#2a231c"/><circle cx="-2.7" cy="-67.9" r="1.5" fill="#a9c6d6" opacity="0.6"/><circle cx="2.7" cy="-67.9" r="1.5" fill="#a9c6d6" opacity="0.6"/>
+      <g class="of-arm-r of-arm-gesture"><path fill="#e2ae76" d="M 6 -56 C 10 -53 13 -48 14 -43 L 11 -43 C 10 -48 8 -52 5 -54 Z"/><g class="of-drink of-drink-p1"><g class="of-glass-beer"><rect x="12" y="-49" width="4" height="9" rx="1" fill="#7a4a1a"/><rect x="13" y="-51" width="2" height="3" fill="#7a4a1a"/><rect x="12.4" y="-47" width="3.2" height="4" rx="0.6" fill="#c98a2a" opacity="0.85"/></g><g class="of-glass-flute"><path d="M 12.6 -49 L 15.4 -49 L 14.6 -44 L 13.4 -44 Z" fill="#eaf3f7" opacity="0.7"/><ellipse cx="14" cy="-48.6" rx="1.4" ry="0.5" fill="#f6e7a8"/><rect x="13.6" y="-44" width="0.8" height="4" fill="#d8d2c2"/><ellipse cx="14" cy="-40" rx="1.8" ry="0.5" fill="#d8d2c2"/></g></g></g>
+    </g></g>
+    <g class="of-person of-p2" transform="translate(12,0)"><g class="of-idle of-idle-b">
+      <ellipse cx="0" cy="1" rx="9.5" ry="2.1" fill="#000" opacity="0.15"/>
+      <path fill="#f0d2ac" d="M -3.6 -22 L -4 -1 L -1.5 -1 L -1.6 -22 Z M 3.6 -22 L 4 -1 L 1.5 -1 L 1.6 -22 Z"/>
+      <path fill="#26242a" d="M -6 -36 C -8 -30 -9 -24 -10 -18 L 10 -18 C 9 -24 8 -30 6 -36 Z"/>
+      <path fill="#1c1a1f" d="M -10 -18 L 10 -18 L 9.4 -20 L -9.4 -20 Z"/>
+      <path class="of-arm-r" fill="#f2d3ad" d="M 7 -55 C 11 -51 13 -46 14 -41 L 11 -41 C 10 -46 8 -50 6 -53 Z"/>
+      <path fill="#f6f3ea" d="M -7 -57 C -8 -49 -6.5 -41 -6 -36 L 6 -36 C 6.5 -41 8 -49 7 -57 C 3 -60 -3 -60 -7 -57 Z"/>
+      <circle cx="0" cy="-64" r="5.8" fill="#f2d3ad"/>
+      <path fill="#2b231d" d="M -6.4 -66 C -7 -70 -6 -73 0 -74 C 6 -73 7 -70 6.4 -66 C 6.6 -62 6 -59 4.6 -57 L 3.4 -60 C 4 -63 3.4 -66 0 -66 C -3.4 -66 -4 -63 -3.4 -60 L -4.6 -57 C -6 -59 -6.6 -62 -6.4 -66 Z"/>
+      <circle cx="-6" cy="-62" r="0.9" fill="#e8c14a"/><circle cx="6" cy="-62" r="0.9" fill="#e8c14a"/>
+      <g class="of-arm-l of-arm-gesture-l"><path fill="#f2d3ad" d="M -7 -54 C -11 -50 -13 -45 -14 -40 L -11 -40 C -10 -45 -8 -49 -6 -52 Z"/><g class="of-drink of-drink-p2"><g class="of-glass-beer"><rect x="-16" y="-49" width="4" height="9" rx="1" fill="#3f6b2a"/><rect x="-15" y="-51" width="2" height="3" fill="#3f6b2a"/><rect x="-15.6" y="-47" width="3.2" height="4" rx="0.6" fill="#7db34a" opacity="0.8"/></g><g class="of-glass-flute"><path d="M -15.4 -49 L -12.6 -49 L -13.4 -44 L -14.6 -44 Z" fill="#eaf3f7" opacity="0.7"/><ellipse cx="-14" cy="-48.6" rx="1.4" ry="0.5" fill="#f6e7a8"/><rect x="-14.4" y="-44" width="0.8" height="4" fill="#d8d2c2"/><ellipse cx="-14" cy="-40" rx="1.8" ry="0.5" fill="#d8d2c2"/></g></g></g>
+    </g></g>
+  </g>
+  <g class="of-couple of-hamidathena" transform="translate(500,303) scale(0.78)" style="display:none">
+    <g class="of-person of-p1" transform="translate(-12,0)"><g class="of-idle of-idle-a">
+      <ellipse cx="0" cy="1" rx="10" ry="2.2" fill="#000" opacity="0.15"/>
+      <path fill="#33404f" d="M -5.5 -28 L -6.4 -1 L -3 -1 L -2.6 -28 Z M 5.5 -28 L 6.4 -1 L 3 -1 L 2.6 -28 Z"/>
+      <path fill="#f2efe6" d="M -7 -1 L -2.6 -1 L -2.6 2 L -8 2 Z M 7 -1 L 2.6 -1 L 2.6 2 L 8 2 Z"/>
+      <path class="of-arm-l" fill="#cf9457" d="M -8 -57 C -12 -53 -14 -47 -15 -42 L -12 -42 C -11 -47 -9 -52 -6 -55 Z"/>
+      <path fill="#f4c518" d="M -8 -58 C -9 -49 -7 -39 -6 -30 L 6 -30 C 7 -39 9 -49 8 -58 C 3 -62 -3 -62 -8 -58 Z"/>
+      <path fill="#d8a80c" d="M -3 -58 L 3 -58 L 2.2 -55.6 L -2.2 -55.6 Z"/>
+      <circle cx="0" cy="-67" r="6" fill="#cf9457"/>
+      <path fill="#241a12" d="M -6.4 -69 C -7 -74 -6 -77 0 -78 C 6 -77 7 -74 6.4 -69 C 6.6 -65 6 -62.5 5 -61 L 3.6 -64 C 4.2 -68 3 -71 0 -71 C -3 -71 -4.2 -68 -3.6 -64 L -5 -61 C -6 -62.5 -6.6 -65 -6.4 -69 Z"/>
+      <rect x="-5.4" y="-69" width="10.8" height="2.2" rx="1" fill="#15130f"/><circle cx="-2.7" cy="-67.9" r="1.5" fill="#a9c6d6" opacity="0.6"/><circle cx="2.7" cy="-67.9" r="1.5" fill="#a9c6d6" opacity="0.6"/>
+      <g class="of-arm-r of-arm-gesture"><path fill="#cf9457" d="M 6 -56 C 10 -53 13 -48 14 -43 L 11 -43 C 10 -48 8 -52 5 -54 Z"/><g class="of-drink of-drink-p1"><g class="of-glass-beer"><rect x="12" y="-49" width="4" height="9" rx="1" fill="#7a4a1a"/><rect x="13" y="-51" width="2" height="3" fill="#7a4a1a"/><rect x="12.4" y="-47" width="3.2" height="4" rx="0.6" fill="#c98a2a" opacity="0.85"/></g><g class="of-glass-flute"><path d="M 12.6 -49 L 15.4 -49 L 14.6 -44 L 13.4 -44 Z" fill="#eaf3f7" opacity="0.7"/><ellipse cx="14" cy="-48.6" rx="1.4" ry="0.5" fill="#f6e7a8"/><rect x="13.6" y="-44" width="0.8" height="4" fill="#d8d2c2"/><ellipse cx="14" cy="-40" rx="1.8" ry="0.5" fill="#d8d2c2"/></g></g></g>
+    </g></g>
+    <g class="of-person of-p2" transform="translate(12,0)"><g class="of-idle of-idle-b">
+      <ellipse cx="0" cy="1" rx="9.5" ry="2.1" fill="#000" opacity="0.15"/>
+      <path fill="#e6c199" d="M -3.6 -22 L -4 -1 L -1.5 -1 L -1.6 -22 Z M 3.6 -22 L 4 -1 L 1.5 -1 L 1.6 -22 Z"/>
+      <path fill="#c78a5e" d="M -5 -1 L -1 -1 L -1 2 L -5.5 2 Z M 5 -1 L 1 -1 L 1 2 L 5.5 2 Z"/>
+      <path fill="#b5623e" d="M -6 -36 C -8 -30 -9 -24 -10 -18 L 10 -18 C 9 -24 8 -30 6 -36 Z"/>
+      <path fill="#a5583a" d="M -10 -18 L 10 -18 L 9.4 -20 L -9.4 -20 Z"/>
+      <path class="of-arm-r" fill="#e6b98a" d="M 7 -55 C 11 -51 13 -46 14 -41 L 11 -41 C 10 -46 8 -50 6 -53 Z"/>
+      <path fill="#e9e0cd" d="M -7 -57 C -8 -49 -6.5 -41 -6 -36 L 6 -36 C 6.5 -41 8 -49 7 -57 C 3 -60 -3 -60 -7 -57 Z"/>
+      <rect x="-0.5" y="-57" width="1" height="21" fill="#dcd2bd"/>
+      <circle cx="0" cy="-64" r="5.8" fill="#e6b98a"/>
+      <circle cx="-3" cy="-73" r="2.6" fill="#221913"/><circle cx="3" cy="-73" r="2.6" fill="#221913"/><circle cx="0" cy="-75" r="2.8" fill="#221913"/>
+      <path fill="#221913" d="M -5.4 -67 C -5 -70 5 -70 5.4 -67 C 3 -68.5 -3 -68.5 -5.4 -67 Z"/>
+      <circle cx="-6" cy="-61" r="1" fill="#f0b8c4"/><circle cx="6" cy="-61" r="1" fill="#f0b8c4"/>
+      <g class="of-arm-l of-arm-gesture-l"><path fill="#e6b98a" d="M -7 -54 C -11 -50 -13 -45 -14 -40 L -11 -40 C -10 -45 -8 -49 -6 -52 Z"/><g class="of-drink of-drink-p2"><g class="of-glass-beer"><rect x="-16" y="-49" width="4" height="9" rx="1" fill="#7a4a1a"/><rect x="-15" y="-51" width="2" height="3" fill="#7a4a1a"/><rect x="-15.6" y="-47" width="3.2" height="4" rx="0.6" fill="#c98a2a" opacity="0.85"/></g><g class="of-glass-flute"><path d="M -15.4 -49 L -12.6 -49 L -13.4 -44 L -14.6 -44 Z" fill="#eaf3f7" opacity="0.7"/><ellipse cx="-14" cy="-48.6" rx="1.4" ry="0.5" fill="#f6e7a8"/><rect x="-14.4" y="-44" width="0.8" height="4" fill="#d8d2c2"/><ellipse cx="-14" cy="-40" rx="1.8" ry="0.5" fill="#d8d2c2"/></g></g></g>
+    </g></g>
+  </g>
+  <g class="of-couple of-baharakpayman" transform="translate(500,303) scale(0.8)" style="display:none">
+    <g class="of-person of-p1" transform="translate(-12,0)"><g class="of-idle of-idle-a">
+      <ellipse cx="0" cy="1" rx="10" ry="2.2" fill="#000" opacity="0.15"/>
+      <path fill="#c9d9c4" d="M -5 -28 L -6 -1 L -3 -1 L -2.4 -28 Z M 5 -28 L 6 -1 L 3 -1 L 2.4 -28 Z"/>
+      <path fill="#d7e0cf" d="M -7 -1 L -2.4 -1 L -2.4 2 L -8 2 Z M 7 -1 L 2.4 -1 L 2.4 2 L 8 2 Z"/>
+      <path class="of-arm-l" fill="#f4d2ac" d="M -7 -56 C -11 -52 -13 -46 -14 -41 L -11 -41 C -10 -46 -8 -51 -6 -54 Z"/>
+      <path fill="#b8ddc0" d="M -8 -57 C -9 -48 -7 -38 -6 -30 L 6 -30 C 7 -38 9 -48 8 -57 C 3 -61 -3 -61 -8 -57 Z"/>
+      <path fill="#f4f6ee" d="M -1.4 -58 L 1.4 -58 L 0.8 -32 L -0.8 -32 Z"/>
+      <circle cx="0" cy="-66" r="6" fill="#f4d2ac"/>
+      <path fill="#5a3f28" d="M -6.6 -68 C -8 -64 -8 -54 -6 -46 L -3.5 -47 C -5 -54 -4.5 -62 -3 -65 L 3 -65 C 4.5 -62 5 -54 3.5 -47 L 6 -46 C 8 -54 8 -64 6.6 -68 C 4 -72 -4 -72 -6.6 -68 Z"/>
+      <path fill="#d8b477" d="M -6.4 -56 C -5.8 -52 -4.6 -48 -3.6 -46.4 L -3 -47 C -4 -49 -4.8 -52 -5 -55 Z M 6.4 -56 C 5.8 -52 4.6 -48 3.6 -46.4 L 3 -47 C 4 -49 4.8 -52 5 -55 Z" opacity="0.85"/>
+      <g class="of-arm-r of-arm-gesture"><path fill="#f4d2ac" d="M 6 -55 C 10 -52 13 -47 14 -42 L 11 -42 C 10 -47 8 -51 5 -53 Z"/><g class="of-drink of-drink-p1"><g class="of-glass-beer"><rect x="12" y="-48" width="4" height="9" rx="1" fill="#7a4a1a"/><rect x="13" y="-50" width="2" height="3" fill="#7a4a1a"/><rect x="12.4" y="-46" width="3.2" height="4" rx="0.6" fill="#c98a2a" opacity="0.85"/></g><g class="of-glass-flute"><path d="M 12.6 -48 L 15.4 -48 L 14.6 -43 L 13.4 -43 Z" fill="#eaf3f7" opacity="0.7"/><ellipse cx="14" cy="-47.6" rx="1.4" ry="0.5" fill="#f6e7a8"/><rect x="13.6" y="-43" width="0.8" height="4" fill="#d8d2c2"/><ellipse cx="14" cy="-39" rx="1.8" ry="0.5" fill="#d8d2c2"/></g></g></g>
+    </g></g>
+    <g class="of-person of-p2" transform="translate(12,0)"><g class="of-idle of-idle-b">
+      <ellipse cx="0" cy="1" rx="9.5" ry="2.1" fill="#000" opacity="0.15"/>
+      <path fill="#33353d" d="M -5 -26 L -6 -1 L -3 -1 L -2.4 -26 Z M 5 -26 L 6 -1 L 3 -1 L 2.4 -26 Z"/>
+      <path fill="#26272c" d="M -7 -1 L -2.4 -1 L -2.4 2 L -8 2 Z M 7 -1 L 2.4 -1 L 2.4 2 L 8 2 Z"/>
+      <path class="of-arm-r" fill="#f0c99e" d="M 7 -55 C 11 -51 13 -46 14 -41 L 11 -41 C 10 -46 8 -50 6 -53 Z"/>
+      <path fill="#22232a" d="M -8 -56 C -9 -47 -7 -37 -6 -30 L 6 -30 C 7 -37 9 -47 8 -56 C 3 -60 -3 -60 -8 -56 Z"/>
+      <circle cx="0" cy="-45" r="2.4" fill="none" stroke="#8f9199" stroke-width="0.8"/><line x1="-2.4" y1="-45" x2="2.4" y2="-45" stroke="#8f9199" stroke-width="0.8"/><line x1="0" y1="-47.4" x2="0" y2="-42.6" stroke="#8f9199" stroke-width="0.8"/>
+      <circle cx="0" cy="-64" r="5.8" fill="#f0c99e"/>
+      <path fill="#8f8d8a" d="M -6 -66 C -6 -70 -4 -72.4 0 -72.6 C -1.5 -71 -2 -68.6 -1.8 -67 C -3.4 -67.4 -5 -66.8 -6 -66 Z"/>
+      <path fill="#8f8d8a" d="M 6 -66 C 6 -70 4 -72.4 0 -72.6 C 1.5 -71 2 -68.6 1.8 -67 C 3.4 -67.4 5 -66.8 6 -66 Z" opacity="0.9"/>
+      <g class="of-arm-l of-arm-gesture-l"><path fill="#f0c99e" d="M -7 -54 C -11 -50 -13 -45 -14 -40 L -11 -40 C -10 -45 -8 -49 -6 -52 Z"/><g class="of-drink of-drink-p2"><g class="of-glass-beer"><rect x="-16" y="-49" width="4" height="9" rx="1" fill="#7a4a1a"/><rect x="-15" y="-51" width="2" height="3" fill="#7a4a1a"/><rect x="-15.6" y="-47" width="3.2" height="4" rx="0.6" fill="#c98a2a" opacity="0.85"/></g><g class="of-glass-flute"><path d="M -15.4 -49 L -12.6 -49 L -13.4 -44 L -14.6 -44 Z" fill="#eaf3f7" opacity="0.7"/><ellipse cx="-14" cy="-48.6" rx="1.4" ry="0.5" fill="#f6e7a8"/><rect x="-14.4" y="-44" width="0.8" height="4" fill="#d8d2c2"/><ellipse cx="-14" cy="-40" rx="1.8" ry="0.5" fill="#d8d2c2"/></g></g></g>
+    </g></g>
+  </g>
+  <g class="of-couple of-madlarobert" transform="translate(500,303) scale(0.8)" style="display:none">
+    <g class="of-person of-p1" transform="translate(-12,0)"><g class="of-idle of-idle-a">
+      <ellipse cx="0" cy="1" rx="9.5" ry="2.1" fill="#000" opacity="0.15"/>
+      <path fill="#f0d4b0" d="M -3.5 -22 L -4 -1 L -1.5 -1 L -1.5 -22 Z M 3.5 -22 L 4 -1 L 1.5 -1 L 1.5 -22 Z"/>
+      <path fill="#e8d4bc" d="M -5 -1 L -1 -1 L -1 2 L -5.5 2 Z M 5 -1 L 1 -1 L 1 2 L 5.5 2 Z"/>
+      <path class="of-arm-l" fill="#f2cfa6" d="M -7 -56 C -11 -52 -13 -46 -14 -41 L -11 -41 C -10 -46 -8 -51 -6 -54 Z"/>
+      <path fill="#f7f2e6" d="M -7 -57 C -8 -48 -6.5 -40 -6 -36 C -8 -30 -10 -24 -11 -18 L 11 -18 C 10 -24 8 -30 6 -36 C 6.5 -40 8 -48 7 -57 C 3 -60 -3 -60 -7 -57 Z"/>
+      <path fill="#e6ddca" d="M -6 -30 L 6 -30 L 5.6 -31.6 L -5.6 -31.6 Z M -8 -24 L 8 -24 L 7.6 -25.6 L -7.6 -25.6 Z" opacity="0.85"/>
+      <circle cx="0" cy="-64" r="5.8" fill="#f2cfa6"/>
+      <path fill="#4a3423" d="M -6.6 -66 C -8 -62 -8 -52 -6 -44 L -3.5 -45 C -5 -52 -4.5 -60 -3 -63 L 3 -63 C 4.5 -60 5 -52 3.5 -45 L 6 -44 C 8 -52 8 -62 6.6 -66 C 4 -70 -4 -70 -6.6 -66 Z"/>
+      <g class="of-arm-r of-arm-gesture"><path fill="#f2cfa6" d="M 6 -55 C 10 -52 13 -47 14 -42 L 11 -42 C 10 -47 8 -51 5 -53 Z"/><g class="of-drink of-drink-p1"><g class="of-glass-beer"><rect x="12" y="-48" width="4" height="9" rx="1" fill="#7a4a1a"/><rect x="13" y="-50" width="2" height="3" fill="#7a4a1a"/><rect x="12.4" y="-46" width="3.2" height="4" rx="0.6" fill="#c98a2a" opacity="0.85"/></g><g class="of-glass-flute"><path d="M 12.6 -48 L 15.4 -48 L 14.6 -43 L 13.4 -43 Z" fill="#eaf3f7" opacity="0.7"/><ellipse cx="14" cy="-47.6" rx="1.4" ry="0.5" fill="#f6e7a8"/><rect x="13.6" y="-43" width="0.8" height="4" fill="#d8d2c2"/><ellipse cx="14" cy="-39" rx="1.8" ry="0.5" fill="#d8d2c2"/></g></g></g>
+    </g></g>
+    <g class="of-person of-p2" transform="translate(12,0)"><g class="of-idle of-idle-b">
+      <ellipse cx="0" cy="1" rx="9.5" ry="2.1" fill="#000" opacity="0.15"/>
+      <path fill="#2b2c33" d="M -5 -28 L -6 -1 L -3 -1 L -2.4 -28 Z M 5 -28 L 6 -1 L 3 -1 L 2.4 -28 Z"/>
+      <path fill="#3a2a20" d="M -7 -1 L -2.4 -1 L -2.4 2 L -8 2 Z M 7 -1 L 2.4 -1 L 2.4 2 L 8 2 Z"/>
+      <path class="of-arm-r" fill="#eab787" d="M 7 -58 C 11 -54 13 -48 14 -43 L 11 -43 C 10 -48 8 -53 6 -56 Z"/>
+      <path fill="#f8f5ec" d="M -8 -59 C -9 -50 -7 -40 -6 -30 L 6 -30 C 7 -40 9 -50 8 -59 C 3 -63 -3 -63 -8 -59 Z"/>
+      <path fill="#2a2f3c" d="M -6 -56 C -7 -48 -6 -40 -5.4 -30 L 5.4 -30 C 6 -40 7 -48 6 -56 C 3 -58 -3 -58 -6 -56 Z"/>
+      <path fill="#f8f5ec" d="M -6 -56 L 0 -49 L 6 -56 L 6 -52 L 0 -46 L -6 -52 Z"/>
+      <path fill="#3a5f9e" d="M -1.2 -50 L 1.2 -50 L 0.8 -34 L -0.8 -34 Z"/>
+      <circle cx="0" cy="-68" r="6" fill="#eab787"/>
+      <path fill="#3d2c1d" d="M -6.4 -70 C -6.8 -75 -5 -78.4 0 -78.6 C 5 -78.4 6.8 -75 6.4 -70 C 3 -72 -3 -72 -6.4 -70 Z M -3 -78 L -1.6 -80.4 L -0.6 -78.2 Z M 1 -78.4 L 2.4 -80.6 L 3.2 -78 Z"/>
+      <g class="of-arm-l of-arm-gesture-l"><path fill="#eab787" d="M -7 -56 C -11 -52 -13 -47 -14 -42 L -11 -42 C -10 -47 -8 -51 -6 -54 Z"/><g class="of-drink of-drink-p2"><g class="of-glass-beer"><rect x="-16" y="-50" width="4" height="9" rx="1" fill="#7a4a1a"/><rect x="-15" y="-52" width="2" height="3" fill="#7a4a1a"/><rect x="-15.6" y="-48" width="3.2" height="4" rx="0.6" fill="#c98a2a" opacity="0.85"/></g><g class="of-glass-flute"><path d="M -15.4 -50 L -12.6 -50 L -13.4 -45 L -14.6 -45 Z" fill="#eaf3f7" opacity="0.7"/><ellipse cx="-14" cy="-49.6" rx="1.4" ry="0.5" fill="#f6e7a8"/><rect x="-14.4" y="-45" width="0.8" height="4" fill="#d8d2c2"/><ellipse cx="-14" cy="-41" rx="1.8" ry="0.5" fill="#d8d2c2"/></g></g></g>
+    </g></g>
+  </g>
 </g>
 <mask id="office-spotlight-mask">
 <rect x="0" y="0" width="680" height="340" fill="#ffffff"/>
@@ -35085,6 +35333,7 @@ var ABANDONED_CALL_MS = 30000;
     sparklers: "sparklers() — the sparkler send-off: the guests form two flanking lines holding sparklers (bright sparkle particles) into a tunnel while the couple stand through it, ~12s. lights the party + heads to the garden + summons the crowd if needed. sparklers(false) ends it early",
     cocktail: "cocktail(\"negroni\") — Pouria mixes that real drink from the bar's menu (partial name ok); cocktail() makes the featured signature drink. lights the party + steps behind the bar first if it's dark. he also mixes on his own while you watch the bar. alias: drink()",
     couples: "couples(true) — bring a random named guest couple to groove at the bar now; couples(\"madla\") forces a specific couple (by member or couple name); couples(false) clears them; couples() reports who's there. a couple rotates through on its own most of the party (needs it lit + the kitchen on screen), skipping anyone already dancing in the garden.",
+    officefolks: "officefolks(true) — a named cast couple slips into the quiet office to hang out, drinks in hand; officefolks(\"madla\") forces a specific couple (by member or couple name); officefolks(false) clears them; officefolks() reports who's there. a couple drifts in occasionally on its own during the party (needs the office on screen), skipping anyone already dancing in the garden, at the bar, or on the balcony.",
     lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
     caption: "caption(\"text\"[, {blink:ms, hold:ms}]) — overwrite the hint line above the scene and return the previous line; caption() reads it. blink pulses the line to catch the eye; hold restores the previous line after that long. also caption(text, blinkMs, holdMs). a room change or hint reclaims it",
     volume: "volume(v) — master volume over ALL the loft's audio (sound effects, songs, and every music bed), on a 0–1 scale (0 = mute, 1 = full, out-of-range clamps); returns the OLD level so it's restorable. volume() reports the current level. session-only — a reload resets to 1",
@@ -35194,7 +35443,7 @@ var ABANDONED_CALL_MS = 30000;
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · couples() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
@@ -35448,7 +35697,7 @@ var ABANDONED_CALL_MS = 30000;
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "edit",
     "confetti", "fireworks", "lanterns", "cat", "irene", "visitors", "mouses", "piano", "classic", "kitten", "ukelele", "audio", "music",
     "guitar", "ukulele", "beat", "eclipse", "hb", "loft", "ls", "pwd", "whoami", "sudo",
-    "date", "man", "love", "kitty", "exit", "speech", "fishu", "volume", "volumebutton", "openurl", "beans", "couples"
+    "date", "man", "love", "kitty", "exit", "speech", "fishu", "volume", "volumebutton", "openurl", "beans", "couples", "officefolks"
   ];
   // Barewords / unix gags that are NOT functions — completing them must not append "(".
   var CONSOLE_CMDS_BARE = { help: 1, clear: 1, quit: 1, exit: 1, loft: 1, hb: 1, ls: 1, pwd: 1, whoami: 1, sudo: 1, date: 1, man: 1, love: 1, killall: 1, service: 1 };
@@ -55594,6 +55843,7 @@ function spawnDustMote(container) {
     if (window.__updateKettleHum) window.__updateKettleHum(name === "kitchen", ROOM_FADE); // kettle hum only in the kitchen
     if (window.__updateKitchenRoach) window.__updateKitchenRoach(); // freeze the counter roach off-kitchen, resume it on return (reads window.currentStageName)
     if (window.__updateBarGroovers) window.__updateBarGroovers(); // bar's grooving couples rotate only while the kitchen's the room you're in (party on) — arm on entry, tear down on leave
+    if (window.__updateOfficeHangout) window.__updateOfficeHangout(); // an occasional cast couple hangs out in the office (party on) only while the office is the room you're in — arm on entry, tear down on leave
     if (window.__updateRoosterEgg) window.__updateRoosterEgg(); // the rooster only lays its golden egg while the garden is the room you're in
     if (window.__updateFireSound) window.__updateFireSound(name === "cuddly", ROOM_FADE); // fire crackle only in the cuddly nook
     if (window.__updateAquaSound) window.__updateAquaSound(name === "cuddly", ROOM_FADE); // aquarium bed only in the cuddly nook
@@ -59020,6 +59270,7 @@ function spawnDustMote(container) {
     if (on && window.__actPing) window.__actPing("party");
     updateCallCheer(); // party on/off → the far-away call families cheer along (or settle back down)
     if (window.__updateBalconyHangout) window.__updateBalconyHangout(); // party on → the deck crowd + smokers step out (self-gates on being ON the balcony); party off → they clear
+    if (window.__updateOfficeHangout) window.__updateOfficeHangout(); // party on → the office may draw an occasional hangout couple (self-gates on being IN the office); party off → they clear
   }
   window.__setGardenParty = setGardenParty;
   // Tap a party dancer -> that dancer does a celebratory flare (hop + twirl + pop). The
@@ -59893,6 +60144,184 @@ function spawnDustMote(container) {
     window.addEventListener("focus", update);
     update(); // initial state (usually hidden — party's off at load)
   })();
+  // ── OFFICE HANGOUT COUPLE ──────────────────────────────────────────────────────────────
+  // During the garden party the office is a quiet spot, so SOMETIMES a named cast couple
+  // slips in to hang out and chat, drinks in hand. Modeled on barGroovers() (occasional
+  // rotation + the one-room exclusion rule + a console hook) and balconyHangout() (crickets
+  // gate + reduced-motion + a reset hook). One couple at a time; the couple, whether they
+  // hold drinks, and which drink (beer / champagne flute) are rolled per showing.
+  //
+  // ONE-ROOM RULE ("who's not anywhere else"): a couple is eligible only if NEITHER member
+  // is currently on the garden dance floor (#garden-guests .g-<name> .arrived, not .leaving),
+  // at the BAR (window.__barCoupleNow()), OR smoking on the BALCONY (window.__balconySmokerNow?.()).
+  // All three cross-agent reads feature-detect + catch throws + degrade gracefully. We PUBLISH
+  // window.__officeCoupleNow() → the member ids in the office (or null) so the floor/bar/balcony
+  // agents can reciprocally exclude these people from their own rosters.
+  //
+  // Gates (crickets rule + room/party truth), re-checked at fire time so a timer landing after
+  // party-off / a room change / a tab hide/blur is a no-op:
+  //   party on ∧ viewing the office ∧ ¬document.hidden ∧ document.hasFocus()
+  // Idempotent under storm-clicks (one timer only). Torn down on party-off / room-leave / reset
+  // via __updateOfficeHangout(), which clears .present + cancels the timer when the gate is false
+  // and re-arms when it turns true. Nothing is spawned (pure CSS idle on persistent nodes), so
+  // teardown strands nothing. Reduced motion: they stand still with drinks (CSS @media).
+  (function officeHangout() {
+    var layer = document.getElementById("office-hangout");
+    if (!layer) return;
+    // each couple: its .of-<key> class suffix + the two members' garden .g-<name> keys
+    var COUPLES = [
+      { cls: "of-aligoli",      members: ["ali", "goli"] },
+      { cls: "of-spencerjay",    members: ["spencer", "jay"] },
+      { cls: "of-farhanglauren", members: ["farhang", "lauren"] },
+      { cls: "of-alirezamahzad", members: ["alireza", "mahzad"] },
+      { cls: "of-hamidathena",   members: ["hamid", "athena"] },
+      { cls: "of-baharakpayman", members: ["baharak", "payman"] },
+      { cls: "of-madlarobert",   members: ["madla", "robert"] }
+    ];
+    var guests = document.getElementById("garden-guests");
+    var timer = null;
+    var current = null; // the COUPLES entry currently .present, or null
+    function attended() { return !document.hidden && document.hasFocus(); }
+    function shouldRun() {
+      return !!window.__gardenPartyOn && window.currentStageName === "office" && attended();
+    }
+    // is this person on the garden dance floor right now? (revolving-door presence)
+    function onFloor(name) {
+      if (!guests) return false;
+      var el = guests.querySelector(".g-" + name);
+      return !!(el && el.classList.contains("arrived") && !el.classList.contains("leaving"));
+    }
+    // is this person grooving at the bar right now? (cross-agent hook; degrade gracefully)
+    function atBar(name) {
+      try {
+        if (typeof window.__barCoupleNow === "function") {
+          var who = window.__barCoupleNow();
+          if (!who) return false;
+          if (Array.isArray(who)) return who.indexOf(name) !== -1;
+          return who === name;
+        }
+      } catch (e) {}
+      return false;
+    }
+    // is this person smoking on the balcony right now? (optional cross-agent hook)
+    function onBalcony(name) {
+      try {
+        if (typeof window.__balconySmokerNow === "function") {
+          var who = window.__balconySmokerNow();
+          if (!who) return false;
+          if (Array.isArray(who)) return who.indexOf(name) !== -1;
+          return who === name;
+        }
+      } catch (e) {}
+      return false;
+    }
+    function eligible(c) {
+      for (var i = 0; i < c.members.length; i++) {
+        if (onFloor(c.members[i]) || atBar(c.members[i]) || onBalcony(c.members[i])) return false;
+      }
+      return true;
+    }
+    // roll drinks for a showing: ~70% they hold drinks; if so pick beer/flute + whether one
+    // or both carry one. Applied as classes on the couple's own <g> (CSS shows the glasses).
+    function rollDrinks(el) {
+      el.classList.remove("of-beer", "of-flute", "of-drink-p1-only", "of-drink-p2-only");
+      if (Math.random() < 0.30) return; // sometimes they're just chatting, empty-handed
+      el.classList.add(Math.random() < 0.5 ? "of-beer" : "of-flute");
+      var who = Math.random();
+      if (who < 0.25) el.classList.add("of-drink-p1-only");
+      else if (who < 0.5) el.classList.add("of-drink-p2-only");
+      // else both hold one (default)
+    }
+    function clearCurrent() {
+      if (current) {
+        var el = layer.querySelector("." + current.cls);
+        if (el) el.classList.remove("present", "of-beer", "of-flute", "of-drink-p1-only", "of-drink-p2-only");
+        current = null;
+      }
+    }
+    function stop() {
+      if (timer) { clearTimeout(timer); timer = null; }
+      clearCurrent();
+    }
+    // pick a random ELIGIBLE couple other than the one just shown; null if none free
+    function pickCouple(avoid) {
+      var pool = COUPLES.filter(function (c) { return c !== avoid && eligible(c); });
+      if (!pool.length) pool = COUPLES.filter(eligible); // allow repeat if that's all that's free
+      if (!pool.length) return null;
+      return pool[(Math.random() * pool.length) | 0];
+    }
+    function show(c) {
+      clearCurrent();
+      var el = layer.querySelector("." + c.cls);
+      if (!el) return false;
+      rollDrinks(el); // fresh drink roll per showing
+      el.classList.add("present");
+      current = c;
+      return true;
+    }
+    // swap: retire the current couple, occasionally bring on a fresh eligible one (this is a
+    // QUIET room — most windows the office is empty; a couple only drifts in now and then),
+    // then reschedule. Long empty beats between the occasional visit.
+    function swap() {
+      timer = null;
+      if (!shouldRun()) { clearCurrent(); return; } // gate closed while waiting → stay empty (re-armed by __updateOfficeHangout)
+      var prev = current;
+      // most of the time the office sits empty; a couple only slips in occasionally
+      var visit = Math.random() < 0.45;
+      var next = visit ? pickCouple(prev) : null;
+      if (!next) {
+        clearCurrent();
+        timer = setTimeout(swap, 22000 + Math.random() * 26000); // long quiet stretch, then maybe someone drifts in
+        return;
+      }
+      show(next);
+      timer = setTimeout(swap, 26000 + Math.random() * 22000); // this couple hangs out ~26-48s, then drifts off
+    }
+    function schedule() {
+      if (timer) return; // one timer only — idempotent under storm-clicks
+      if (!shouldRun()) return;
+      // don't pop a couple in the instant you walk in — the office reads as quiet first; a
+      // couple may drift in after a beat (swap rolls the occasional visit).
+      timer = setTimeout(swap, 8000 + Math.random() * 12000);
+    }
+    // start/stop entry point — pinged on party toggle (setGardenParty), room change (goToStage),
+    // and visibility/focus flips. Re-arms when the gate turns true, tears down when false.
+    window.__updateOfficeHangout = function () {
+      if (shouldRun()) schedule();
+      else stop();
+    };
+    window.__resetOfficeHangout = stop; // goToStage leave-office + global reset
+    // who's in the office right now → array of member ids, or null. Lets the floor/bar/balcony
+    // agents reciprocally exclude these people from their own rosters (the mutual-exclusion pass).
+    window.__officeCoupleNow = function () {
+      return current ? current.members.slice() : null;
+    };
+    // console/test hook: officefolks(true) brings an eligible couple in NOW (skips the wait);
+    // officefolks("madla"/"madlarobert") forces that specific couple (ignores eligibility — for a
+    // demo/screenshot); officefolks(false) clears + disarms; officefolks() re-evaluates the gate.
+    // Returns the member ids now in the office (or null).
+    window.officefolks = function (arg) {
+      if (arg === false) { stop(); return null; }
+      if (typeof arg === "string") {
+        if (timer) { clearTimeout(timer); timer = null; }
+        var key = arg.replace(/^of-/, "");
+        var c = COUPLES.filter(function (x) { return x.cls === "of-" + key || x.members.indexOf(key) !== -1; })[0];
+        if (c) { show(c); timer = setTimeout(swap, 26000); }
+        return window.__officeCoupleNow();
+      }
+      if (arg === true) {
+        if (timer) { clearTimeout(timer); timer = null; }
+        var next = pickCouple(current);
+        if (next) { show(next); timer = setTimeout(swap, 26000); }
+        return window.__officeCoupleNow();
+      }
+      window.__updateOfficeHangout();
+      return window.__officeCoupleNow();
+    };
+    document.addEventListener("visibilitychange", function () { window.__updateOfficeHangout(); });
+    window.addEventListener("focus", function () { window.__updateOfficeHangout(); });
+    window.addEventListener("blur", function () { window.__updateOfficeHangout(); });
+  })();
   var instrumentSpots = {
     "garden-guitar": { x: 746, y: 270, audioId: "guitar-song-audio" },
     "garden-ukulele": { x: 735, y: 140, audioId: "ukulele-song-audio" }
@@ -60735,6 +61164,7 @@ function spawnDustMote(container) {
     if (window.__resetBalconyIrene) window.__resetBalconyIrene(); // ...and her bonfire leap
     if (window.__resetBalconyCouple) window.__resetBalconyCouple(); // ...and theirs
     if (window.__resetBalconyHangout) window.__resetBalconyHangout(); // ...and the deck-party smokers/crowd
+    if (window.__resetOfficeHangout) window.__resetOfficeHangout(); // ...and the office hangout couple
     if (window.__setSnowman) window.__setSnowman(false); // ...and take the winter snowman + its kids down
     if (window.__setLeafpile) window.__setLeafpile(false); // ...and the autumn leaf pile,
     if (window.__setBlossomPlay) window.__setBlossomPlay(false); // ...the spring blossom toss,

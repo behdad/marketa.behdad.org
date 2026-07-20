@@ -191,6 +191,39 @@ const SUBJECTS = [
   }
   await eval1(`document.getElementById('loft-game-strip').classList.remove('bd-spencer','bd-jay')`);
 
+  // ── OCCUPANCY, not just rendering ──────────────────────────────────────────────────────────
+  // The room-shot cases above build synthetic records, so they never exercise the accessor that
+  // decides WHO is in a room — and that accessor is exactly what regressed: a deck holding only the
+  // off-duty DJ came back empty, so __albumAddRoom returned null and no photo was taken at all.
+  // Drive the real DOM state and assert the accessor, not the compositor.
+  console.log('=== balcony occupancy (who Aspen can photograph) ===');
+  const deckCase = (label, ids, cls, expectNonEmpty) => `(function(){
+    var h=document.getElementById('balcony-hangout');
+    h.classList.add('on'); h.classList.remove('couple-out','dj-off-sina','dj-off-danesh');
+    ${cls ? `h.classList.add(${JSON.stringify(cls)});` : ''}
+    ['bh-patricia-son','bh-patricia-daughter','bh-elisabeth','bh-mahzad','bh-jay','bh-farhang','bh-alireza','bh-dj','bh-behdad','bh-marketa']
+      .forEach(function(i){var g=document.getElementById(i); if(g) g.style.display='none';});
+    ${JSON.stringify(ids)}.forEach(function(i){var g=document.getElementById(i); if(g) g.style.display='';});
+    var occ=(window.__roomOccupants&&window.__roomOccupants('balcony'))||[];
+    return JSON.stringify({keys:occ.map(function(p){return p.key;}), ok: (occ.length>0)===${expectNonEmpty},
+      aspen: occ.some(function(p){return p.key==='aspen';})});})()`;
+  const DECK = [
+    ['empty deck → no photo',        [],                          null,           false],
+    ['lone smoker Farhang',          ['bh-farhang'],              null,           true],
+    ['lone smoker: off-duty DJ',     ['bh-dj'],                   'dj-off-sina',  true],
+    ['lone non-smoker Jay',          ['bh-jay'],                  null,           true],
+    ['smoker + crowd',               ['bh-farhang', 'bh-jay'],    null,           true],
+    ['the couple alone (→ hosts)',   ['bh-behdad', 'bh-marketa'], 'couple-out',   true]
+  ];
+  let anyOccFail = false;
+  for (const [label, ids, cls, want] of DECK) {
+    const r = JSON.parse(await eval1(deckCase(label, ids, cls, want)));
+    // Aspen is behind the lens: she must never be listed as a subject of her own photograph.
+    if (!r.ok || r.aspen) { anyOccFail = true; console.log('  FAIL', label, JSON.stringify(r)); }
+    else console.log('  ' + label.padEnd(30), '[' + r.keys.join(',') + ']');
+  }
+  await eval1(`(function(){var h=document.getElementById('balcony-hangout'); if(h) h.classList.remove('on','couple-out','dj-off-sina','dj-off-danesh');})()`);
+
   // Forced-mode pass: prove EACH mode is overlap-free at every group size.
   console.log('=== forced modes (overlap audit) ===');
   for (const mode of ['closeup', 'tworow', 'line']) {
@@ -217,8 +250,9 @@ const SUBJECTS = [
   console.log('stability(shoot-family):', stab);
   console.log(anyBadOverlap ? '*** OVERLAPS DETECTED ***' : 'no collisions detected');
   console.log(anyTopClip ? '*** HEADS CLIPPED OFF THE TOP OF THE FRAME ***' : 'no top-clipping detected');
+  console.log(anyOccFail ? '*** BALCONY OCCUPANCY WRONG ***' : 'balcony occupancy ok');
 
   ws.close(); chrome.kill('SIGKILL');
   try { fs.rmSync(PROFILE, { recursive: true, force: true }); } catch {}
-  process.exit(anyBadOverlap || anyTopClip ? 1 : 0);
+  process.exit(anyBadOverlap || anyTopClip || anyOccFail ? 1 : 0);
 })().catch(e => { console.error(e); chrome.kill('SIGKILL'); process.exit(1); });

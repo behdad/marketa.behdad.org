@@ -49158,10 +49158,10 @@ async def localfont(name):
     }
     var BD_TEMPLATES = ["bd_msg_a", "bd_msg_b", "bd_msg_c", "bd_msg_d"];
     var BD_MB_PEOPLE = { jay: 1, spencer: 1, madla: 1, robert: 1, elisabeth: 1, felix: 1, daniel: 1, marie: 1, baka: 1 }; // Markéta's friends + Czech family
-    // A birthday window opens ONCE per session (the applyBirthdays edge), often at load — and it's
-    // the whole reason someone visits on the day, so an attract-time announcement is HELD rather
-    // than dropped or re-rolled: it goes out on "loft:gamestart". Bounded by construction — one
-    // slot per person, deduped, and the edge that queues it can't re-fire while the window stays open.
+    // A birthday announces ONCE per session (the applyBirthdays anchor-day latch), often at load —
+    // and it's the whole reason someone visits on the day, so an attract-time announcement is HELD
+    // rather than dropped or re-rolled: it goes out on "loft:gamestart". Bounded by construction —
+    // one slot per person, deduped, and the latch that queues it can't re-fire while the day holds.
     var bdHeld = [];
     window.addEventListener("loft:gamestart", function () {
       var q = bdHeld; bdHeld = [];
@@ -67549,11 +67549,15 @@ function spawnDustMote(container) {
   // `type` ("hat" cone, or "crown" for Markéta's Czech family: Markéta, Madla, Robert,
   // Elisabeth, Felix), and a `venue` naming where they wear it (garden floor, the kitchen bar,
   // the garden decks, or the Tehran video call). The window (before/after days) is what the
-  // real calendar reads; the 'b'/console path lands the date exactly on `d` so the hat shows.
+  // real calendar reads for the DECOR; the announcement text goes out on `m`/`d` itself, the
+  // person's actual birthday (see applyBirthdays) — a wide window dresses the loft early, it
+  // never wishes anyone a happy birthday early. The 'b'/console path lands the date exactly on
+  // `d`, so it shows the hat and fires the text together.
   // Behdad's and Danesh's celebration windows are deliberately asymmetric custom ranges;
   // don't "fix" them back to ±3. Same-day birthdays (Bahareh & Ashraf on
-  // Oct 7, Athena & Robin on Nov 7) both light up — the window match handles it gracefully, and
-  // so does the overlap where Danesh's long window closes on Lauren's own Sep 16.
+  // Oct 7, Athena & Robin on Nov 7) both light up AND both announce — the rows are independent.
+  // Danesh's long window still closes on Lauren's own Sep 16, but only she announces there:
+  // his text went out on Aug 28, the day the row names.
   var BIRTHDAYS = [
     { who: "farhang",   m: 0,  d: 11, before: 1, after: 1, name: "Farhang",   type: "hat",   venue: "garden" }, // Jan 8–14
     { who: "sina",      m: 0,  d: 15, before: 1, after: 1, name: "Sina",      type: "hat",   venue: "dj-sina" }, // Jan 12–18
@@ -67594,7 +67598,7 @@ function spawnDustMote(container) {
     if (diff > 182) diff -= 365; else if (diff < -182) diff += 365;
     return diff >= -b.before && diff <= b.after;
   }
-  var bdActive = {}; // who-id → true while its window is currently active; the off→on edge fires the one announcement text per activation
+  var bdActive = {}; // who-id → true while the loft is ON that person's birthday; latched so the day's repeated applies fire the one announcement text once
   function applyBirthdays(s) {
     var strip = document.getElementById("loft-game-strip");
     if (!strip) return;
@@ -67610,9 +67614,14 @@ function spawnDustMote(container) {
         document.body.classList.toggle("bd-" + b.who, on);
         if (on && b.venue === "tehran") thrAny = true;
       }
-      if (on) {
-        if (!bdActive[b.who] && window.__deliverBirthdayText) { bdActive[b.who] = true; window.__deliverBirthdayText(b.who, b.name); } // edge-triggered; the deliverer's own messagesThread dedup is the real once-per-session guard
-      } else if (bdActive[b.who]) { bdActive[b.who] = false; } // window closed → re-arm the edge
+      // The decor window and the announcement day are two different things, the same split the
+      // occasions use. The hat/crown/cake ride the WHOLE window — several are deliberately
+      // asymmetric (Markéta's birthday week and two custom celebration windows) — but "happy birthday" belongs on the birthday
+      // itself, not on the day the window happens to open a week earlier.
+      var anchor = !b.pending && b.m != null && s.m === b.m && s.d === b.d;
+      if (anchor) {
+        if (!bdActive[b.who] && window.__deliverBirthdayText) { bdActive[b.who] = true; window.__deliverBirthdayText(b.who, b.name); } // latched against the day's repeated applies; the deliverer's own messagesThread dedup is the real once-per-session guard
+      } else if (bdActive[b.who]) { bdActive[b.who] = false; } // the day has passed → re-arm
     });
     document.body.classList.toggle("thr-bd", thrAny); // any of the Tehran family → the cake comes out
   }
@@ -68115,7 +68124,7 @@ function spawnDustMote(container) {
     "3-30":  { icon: "🧹", sk: "season_carodejnice" },
     "4-1":   { icon: "💍", sk: "season_wedding", city: "cal_edmonton" },
     "4-2":   { icon: "🍖", sk: "cal_bbq", city: "cal_edmonton" },
-    "5-15":  { icon: "🏳️‍🌈", sk: "season_pride" },
+    "5-28":  { icon: "🏳️‍🌈", sk: "season_pride" }, // Jun 28 — Stonewall, the reason Pride is in June; the decor still runs the whole month
     "6-1":   { icon: "🍁", sk: "season_canada" },
     "6-10":  { icon: "💍", sk: "season_wedding", city: "cal_prague" },
     "6-11":  { icon: "🍳", sk: "cal_brunch", city: "cal_prague" },

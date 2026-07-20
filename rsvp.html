@@ -29234,14 +29234,19 @@ document.addEventListener("click", function (e) {
     var f = window.__auroraForecast;
     return (f && typeof f.kp === "number" && f.kp > 0) ? f.kp : null;
   }
-  function kpSource() { return forcedKp != null ? "pinned" : (forecastKp() != null ? "live NOAA forecast" : "rolled for tonight"); }
-  // The index the display is aiming at. A SUMMONED aurora with no pinned Kp is floored into
-  // storm territory — aurora(true) and the cinematic's closing sky are a promise of a show,
-  // not a weather report.
+  var SUMMON_KP = 5.5; // the floor a summoned aurora is lifted to: aurora(true) and the cinematic's closing sky are a promise of a show, not a weather report
+  function naturalKp() { return forecastKp() != null ? forecastKp() : rolledKp; }
+  // where the index came from — "summoned" only when the floor is genuinely what's driving,
+  // so a real storm on a summoned night still reports its true origin
+  function kpSource() {
+    if (forcedKp != null) return "pinned";
+    if (auroraForced() && naturalKp() < SUMMON_KP) return "summoned";
+    return forecastKp() != null ? "live NOAA forecast" : "rolled for tonight";
+  }
+  // the index the display is aiming at
   function auroraTargetKp() {
-    var kp = forcedKp != null ? forcedKp : (forecastKp() != null ? forecastKp() : rolledKp);
-    if (forcedKp == null && auroraForced()) kp = Math.max(kp, 5.5);
-    return kp;
+    if (forcedKp != null) return forcedKp;
+    return auroraForced() ? Math.max(naturalKp(), SUMMON_KP) : naturalKp();
   }
   // The northern lights favor CLEAR COLD nights: a cold night (a genuinely cold real Edmonton
   // reading when a fetch has landed, OR a deep-winter/snowy pretend-date) pushes the odds toward
@@ -29461,13 +29466,13 @@ document.addEventListener("click", function (e) {
       if (targets[k].stage.classList.contains("dusk")) atDusk = true;
     }
     var showing = auroraVisible(), why;
-    if (showing) why = forcedOn ? "summoned" : "clear, dark and active";
+    if (showing) why = forcedOn ? ("you called them up" + (dark <= 0 ? " — the real sky tonight is too light for them" : "")) : "clear, dark and active";
     else if (targets[0].stage.classList.contains("aurora-hide")) why = "forced off";
     else if (cloudy) why = "too cloudy — you cannot see them through cloud";
     else if (tripping()) why = "a trip owns the sky";
     else if (!inRoom) why = "no night sky in view — try the garden or the balcony";
-    else if (!atDusk) why = "it's daytime";
-    else if (dark <= 0) why = "too light — the sun is only " + dep.toFixed(0) + "° below the horizon";
+    else if (!atDusk) why = "the loft is still on a day sky";
+    else if (dark <= 0) why = "too light — they need real darkness";
     else if (!auroraTonight) why = "a quiet sky tonight, the lights stayed home";
     else why = "Kp " + kp.toFixed(1) + " is too faint to register";
     return { showing: showing, kp: kp, source: kpSource(), forced: forcedOn, cloudy: cloudy,

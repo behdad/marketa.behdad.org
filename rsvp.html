@@ -3178,8 +3178,11 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .tattoo-credit{flex:none; width:100%; text-align:center; font-size:2px; color:#716455; padding:0 3px 0.6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .tattoo-new{display:flex; align-items:center; justify-content:center; width:100%; aspect-ratio:1/1; box-sizing:border-box; border-radius:1px; background:#f7efe9; border:0.4px dashed #c68e95; color:#c68e95; font-size:5px; line-height:1}
 .tattoo-cell:hover .tattoo-new{background:#faf3ef}
-.tattoo-preview{flex:1; display:flex; align-items:center; justify-content:center; min-height:0; padding:2px; overflow:hidden}
-.tattoo-preview img{max-width:100%; max-height:100%; object-fit:contain; border-radius:1px; background:#fff; box-shadow:0 0.5px 2px rgba(0,0,0,0.25)}
+.tattoo-preview{flex:1; display:grid; grid-template:1fr/1fr; place-items:center; min-height:0; padding:2px; overflow:hidden} /* explicit 1fr track (grid-stack, not position:absolute) so the artist overlay survives the monitor's scaled foreignObject — WebKit bug 23113 — and stays inside the card instead of overflowing to the intrinsic image height */
+.tattoo-preview img{grid-area:1/1; max-width:100%; max-height:100%; object-fit:contain; border-radius:1px; background:#fff; box-shadow:0 0.5px 2px rgba(0,0,0,0.25)}
+.tattoo-preview .tattoo-artist{grid-area:1/1; justify-self:end; align-self:end; margin:0 0.5px 0.5px 0; line-height:0}
+.tattoo-artist-svg{display:block; height:11px; width:auto; overflow:visible} /* no filter/transform/opacity — this SVG is a descendant of the monitor's scaled foreignObject, and a RenderLayer there vanishes in WebKit (bug 23113) */
+.tattoo-artist-svg.tattoo-artist-duo{height:12px}
 .tattoo-actions{flex:none; display:flex; justify-content:center; padding:1px 3px 2px}
 .tattoo-btn{display:inline-flex; align-items:center; justify-content:center; gap:0.8px; cursor:pointer; background:#c68e95; color:#fffdf8; border-radius:2.5px; padding:1.2px 4px; font-size:2.7px; line-height:1; box-shadow:inset 0 0.4px 0 rgba(255,255,255,0.3)}
 .tattoo-btn:hover{background:#b87b83}
@@ -37905,6 +37908,61 @@ var ABANDONED_CALL_MS = 30000;
       if (img.complete && img.naturalWidth) go(); else img.addEventListener("load", go, { once: true });
     });
   }
+  // The real young artists behind each design, as tiny recognizable head-and-shoulders —
+  // colours/hair/hats lifted from their full figures elsewhere in the file so a mini Irene
+  // reads as Irene. Emitted as a native nested <svg> (paints everywhere, no RenderLayer to
+  // trip WebKit's foreignObject-under-scale bug) tucked into the design card's lower-right.
+  var TATTOO_ARTIST_ART = {
+    Irene:     { skin: "#dca878", hair: "#241d1a", hairStyle: "long",  top: "#dcd9d2" },
+    Robin:     { skin: "#dca878", hair: "#33261c", hairStyle: "short", top: "#63456e" },
+    Hannah:    { skin: "#f0d0aa", hair: "#3a281a", hairStyle: "long",  top: "#f8f4ea", topStroke: "#dcb98c" },
+    Elisabeth: { skin: "#e8bd97", hair: "#7a4a2e", hairStyle: "short", top: "#3f8f8a", crown: "#f2c14e" }
+  };
+  function tattooPortrait(c) {
+    var s = "";
+    s += '<path d="M1.5 24 C1.5 17 5.5 15 10 15 C14.5 15 18.5 17 18.5 24 Z" fill="' + c.top + '"' + (c.topStroke ? ' stroke="' + c.topStroke + '" stroke-width="0.5"' : "") + '/>';
+    s += '<rect x="8.2" y="12.4" width="3.6" height="3.6" fill="' + c.skin + '"/>';
+    s += '<circle cx="10" cy="8.8" r="5.6" fill="' + c.skin + '"/>';
+    if (c.beard) s += '<path d="M4.7 9 C4.7 15 15.3 15 15.3 9 C15.3 13 12.6 14.6 10 14.6 C7.4 14.6 4.7 13 4.7 9 Z" fill="' + c.beard + '"/>';
+    if (c.cap) {
+      if (c.hair) s += '<path d="M4.3 9 C4 12 4.4 13.6 5 14.6 L6.3 14 C5.5 12.6 5.3 10.6 5.5 9 Z M15.7 9 C16 12 15.6 13.6 15 14.6 L13.7 14 C14.5 12.6 14.7 10.6 14.5 9 Z" fill="' + c.hair + '"/>';
+      if (c.cap === "flat") {
+        s += '<path d="M4.4 9 L1.4 9.7 C0.8 9.85 0.85 9.05 1.5 8.9 L4.7 8.35 Z" fill="' + c.capShade + '"/>';
+        s += '<path d="M3.8 8.6 C3.8 4 16.2 4 16.2 8.3 C16.2 8.85 15.6 9.1 15 9.1 L4.4 9.1 C4 9.1 3.8 8.9 3.8 8.6 Z" fill="' + c.cap2 + '"/>';
+      } else {
+        s += '<path d="M4.4 9.1 L1.6 9.9 C1 10.05 1 9.25 1.7 9.1 L4.8 8.65 Z" fill="' + c.capShade + '"/>';
+        s += '<path d="M3.6 8.8 C2.6 3 17.4 3 16.4 8.8 C16.4 9.05 16 9.15 15.6 9.15 L4.4 9.15 C4 9.15 3.6 9.05 3.6 8.8 Z" fill="' + c.cap2 + '"/>';
+        s += '<circle cx="10" cy="4" r="1" fill="' + c.capShade + '"/>';
+      }
+    } else if (c.hairStyle === "long") {
+      s += '<path d="M3.6 9.5 C3 3 17 3 16.4 9.5 L16.4 15.5 L14 15.5 C15.2 10.5 14 5 10 5 C6 5 4.8 10.5 6 15.5 L3.6 15.5 Z" fill="' + c.hair + '"/>';
+    } else {
+      s += '<path d="M4 9 C3.6 3.2 16.4 3.2 16 9 C15 6.6 12.5 5.6 10 5.6 C7.5 5.6 5 6.6 4 9 Z" fill="' + c.hair + '"/>';
+    }
+    if (c.glasses) s += '<g fill="none" stroke="#3a2f28" stroke-width="0.7"><circle cx="7.7" cy="9" r="1.8"/><circle cx="12.3" cy="9" r="1.8"/><path d="M9.5 9 L10.5 9"/></g>';
+    else s += '<circle cx="8" cy="9" r="0.65" fill="#2a221c"/><circle cx="12" cy="9" r="0.65" fill="#2a221c"/>';
+    if (c.crown) s += '<path d="M5.5 5 L6.6 2.6 L8.3 4.6 L10 2 L11.7 4.6 L13.4 2.6 L14.5 5 Z" fill="' + c.crown + '" stroke="#c99a2e" stroke-width="0.3"/>';
+    return s;
+  }
+  function tattooArtistMarkup(artist) {
+    if (artist === "m & b") {
+      var mk = tattooPortrait({ skin: "#f2cfae", top: "#7f9ec0", hair: "#4a6b94", cap: "baker", cap2: "#4a6b94", capShade: "#3c587c", glasses: true });
+      var bh = tattooPortrait({ skin: "#e6b489", top: "#c68e95", hair: "#3a2b22", cap: "flat", cap2: "#d9a6a6", capShade: "#c79598", beard: "#3a2b22", glasses: true });
+      return '<svg class="tattoo-artist-svg tattoo-artist-duo" viewBox="0 0 40 24" xmlns="http://www.w3.org/2000/svg"><g transform="translate(0.5)">' + mk + '</g><g transform="translate(19.5)">' + bh + '</g></svg>';
+    }
+    var c = TATTOO_ARTIST_ART[artist];
+    if (!c) return null;
+    return '<svg class="tattoo-artist-svg" viewBox="0 0 20 24" xmlns="http://www.w3.org/2000/svg">' + tattooPortrait(c) + '</svg>';
+  }
+  function tattooArtistFigure(artist) {
+    var svg = tattooArtistMarkup(artist);
+    if (!svg) return null;
+    var holder = document.createElement("div");
+    holder.className = "tattoo-artist";
+    holder.setAttribute("aria-hidden", "true");
+    holder.innerHTML = svg;
+    return holder;
+  }
   function renderTattoo() {
     if (!tattooWrap) return;
     tattooWrap.innerHTML = "";
@@ -37938,6 +37996,8 @@ var ABANDONED_CALL_MS = 30000;
     var img = document.createElement("img");
     img.alt = tattooT("tt_design_" + tattooDesign); img.src = "art/tattoo/" + tattooDesign + ".jpg";
     prev.appendChild(img);
+    var fig = tattooArtistFigure(TATTOO_ARTISTS[tattooDesign]);
+    if (fig) prev.appendChild(fig);
     tattooDiv("tattoo-credit", tattooWrap, tattooT("tt_by") + " " + TATTOO_ARTISTS[tattooDesign]);
     // premade designs are the artists' work — no "send to us" here (only the paint canvas offers it)
   }

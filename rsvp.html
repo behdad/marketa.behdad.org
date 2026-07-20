@@ -4519,10 +4519,12 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 /* unread-count badge — a red circle (white number) at the new-notification's top-left corner */
 .msg-badge{position:absolute; top:6px; left:max(10px, calc(50% - 190px)); z-index:61; min-width:30px; height:30px; padding:0 6px; box-sizing:border-box; border:2px solid #fffdf8; border-radius:15px; background:#d33a34; color:#fff; font:700 17px/26px "Source Serif 4",system-ui,sans-serif; text-align:center; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.34); display:none}
 .msg-badge.show{display:block}
-/* incoming-call ring card (Madla) — a sibling of .msg-thumb: drops from the top-centre of the
+/* incoming-call ring card (Madla; Markéta's parents on a Saturday) — a sibling of .msg-thumb: drops from the top-centre of the
    loft, pulses, and rings for ~15s. Tap anywhere on it to answer. The green answer glyph on the
-   right reads as the "pick up" affordance; the wine phone glyph on the left is the caller icon. */
-.call-ring{position:absolute; top:14px; left:50%; z-index:62; transform:translateX(-50%) translateY(-30px); display:flex; align-items:center; gap:10px; max-width:min(360px,92vw); padding:9px 12px; border:none; cursor:pointer; text-align:left; font:inherit; color:var(--ink); background:var(--paper); border-radius:16px; box-shadow:0 6px 22px rgba(0,0,0,.28), inset 0 0 0 1px var(--rule); opacity:0; pointer-events:none; transition:opacity .3s ease, transform .3s cubic-bezier(.34,1.4,.6,1)}
+   right reads as the "pick up" affordance; the wine phone glyph on the left is the caller icon.
+   The width cap is 92% of the SCENE, not of the window: a long caller name would otherwise grow
+   the card past the viewport's clip and cut the answer button off on a phone. */
+.call-ring{position:absolute; top:14px; left:50%; z-index:62; transform:translateX(-50%) translateY(-30px); display:flex; align-items:center; gap:10px; max-width:min(360px,92%); padding:9px 12px; border:none; cursor:pointer; text-align:left; font:inherit; color:var(--ink); background:var(--paper); border-radius:16px; box-shadow:0 6px 22px rgba(0,0,0,.28), inset 0 0 0 1px var(--rule); opacity:0; pointer-events:none; transition:opacity .3s ease, transform .3s cubic-bezier(.34,1.4,.6,1)}
 .call-ring.show{opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; animation:call-ring-glow 1.1s ease-in-out infinite}
 .call-ring-ico{flex:none; width:38px; height:38px; border-radius:50%; background:#8e3a4a; color:#fff; display:flex; align-items:center; justify-content:center}
 .call-ring-ico svg{width:21px; height:21px; animation:call-ring-shake 1.1s ease-in-out infinite}
@@ -22818,6 +22820,7 @@ var T = {
     call_incoming: "Incoming video call…",
     madla_fam: "Madla",
     madla_place: "night shift, Germany",
+    sat_call_sub: "Saturday, same as always", // the standing weekly call from Prague — the card's caption where Madla's says "Incoming video call…"
     laptop_sweet1: "What’s new:",
     laptop_sweet2: "the rest of",
     laptop_sweet3: "our lives ♥",
@@ -23566,6 +23569,7 @@ var T = {
     call_incoming: "Příchozí videohovor…",
     madla_fam: "Madla",
     madla_place: "noční služba, Německo",
+    sat_call_sub: "Sobota, jako vždycky",
     laptop_sweet1: "Novinky:",
     laptop_sweet2: "zbytek našich",
     laptop_sweet3: "životů ♥",
@@ -37458,6 +37462,7 @@ var ABANDONED_CALL_MS = 30000;
     phone: "phone(true) — bring up the pocket phone; phone(false) puts it away; phone() reports whether it's up. phone(\"cocktails\")/phone(\"weather\") open that phone app (skips the lockscreen); a bad name lists them",
     album: "album() — open the pocket-phone wedding album: Aspen's captured party polaroids, newest first. she snaps one every photo-moment (the ~15s freeze) and whenever you tap her at the garden party; each is an intimate portrait — the couple + one guest (or a guest couple). album() also echoes the photo count",
     madla: "madla() — Markéta's sister (a doctor in Germany, bored on a night shift) rings your phone: a pulsing call card drops top-centre for 15s (tap to answer → pan to the cuddly room, then the video call; ignore it to miss the call). madla(true) answers straight away. she's incoming-only — you can't dial her back",
+    saturday: "saturday() — Markéta's parents and Báka ring from Prague for the standing Saturday call: the same call card, tap to answer (or the × to let it go). saturday(true) answers straight away. left alone it comes on its own, once per Saturday in the loft, between 08:00 and 14:00 here — their Saturday evening; date(\"YYYY-MM-DD\") a Saturday and clock(9) to see it",
     sound: [
       "sound(\"id\"[, …args]) — play a loft sound effect by id, e.g. sound(\"gong\"). sound() lists every id; sound(\"prefix\") lists the ids starting with that prefix — try sound(\"cat\") · sound(\"phone\").",
       "EVERY sound takes an optional panId — a scene element id (e.g. \"office-monitor\", \"balcony-phone\") or a -1..1 number (left..right, 0 = center). it defaults to that sound's own on-screen source, so a bare sound(\"grind\") already plays from the grinder; sound(\"grind\", 0.9) hard-pans it right, sound(\"grind\", \"balcony-phone\") pans it to another object. a hidden/offscreen source centers.",
@@ -37823,7 +37828,7 @@ var ABANDONED_CALL_MS = 30000;
     "goto", "rooms", "daylight", "night", "day", "season", "birthday", "play", "pause", "temp", "weather",
     "clock", "time", "sharecard", "projector", "storm", "rain", "overcast", "dance", "jukebox", "dj", "firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift", "cocktail", "mixer", "lang", "caption", "candle",
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "aurora", "twilight", "timelapse", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood", "kidsAsleep",
-    "phone", "album", "message", "madla", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
+    "phone", "album", "message", "madla", "saturday", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "repeat", "stop", "edit",
     "confetti", "fireworks", "lanterns", "cat", "dog", "whistler", "lamaz", "elmaz", "tamper", "brew", "sip", "knockbox", "irene", "visitors", "mouses", "piano", "classic", "kitten", "ukelele", "audio", "music",
     "guitar", "ukulele", "beat", "eclipse", "hb", "loft", "ls", "pwd", "whoami", "sudo",
@@ -47629,7 +47634,7 @@ async def localfont(name):
     }
     window.__openPhoneModal = open;
     window.__closePhoneModal = function (silent) { close(silent); };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; messagesThread = []; messagesRead = {}; messagesArrivedAt = {}; Object.keys(MESSAGES).forEach(function (k) { if (MESSAGES[k].bodyKeys) MESSAGES[k].bodyKey = null; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__stopDayDrip) window.__stopDayDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks, and the flashlight (intent forgotten + beam/torch off)
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; messagesThread = []; messagesRead = {}; messagesArrivedAt = {}; Object.keys(MESSAGES).forEach(function (k) { if (MESSAGES[k].bodyKeys) MESSAGES[k].bodyKey = null; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__stopDayDrip) window.__stopDayDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks, and the flashlight (intent forgotten + beam/torch off)
     // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
     // open(true) is the cinematic lock-skip path (same as __showCocktailInPhone), so a console
     // launch never stalls on the passcode. Matches by app id (case-insensitive) or its localized
@@ -47992,12 +47997,22 @@ async def localfont(name):
     window.__stopDayDrip = function () { if (dayTimer) { clearTimeout(dayTimer); dayTimer = null; } };
     scheduleDayDrip(); // arm at load — the first daytime text drips a while into normal play
 
-    // ── Madla's INCOMING video call ─────────────────────────────────────────────────────
+    // ── INCOMING video calls ────────────────────────────────────────────────────────────
     // A pulsing phone-ringing card drops from the top-centre of the LOFT for ~15s (a sibling of
     // the message-thumb toast, anchored in .hunt-viewport so it rides fullscreen). It rings once
     // per second while it's up (crickets rule → no ring into a hidden/blurred tab). Tapping it
-    // ANSWERS: pan to the cuddly room first, then bring up the phone straight into Madla's incall
+    // ANSWERS: pan to the cuddly room first, then bring up the phone straight into the incall
     // (already ringing → connects). Ignored for 15s = a missed call: it fades, no action.
+    // Two callers ring in on this one card — Madla whenever she's bored on a night shift, and
+    // Markéta's parents + Báka on their standing Saturday. Only the name, the caption and which
+    // family comes up differ; card, answer path and teardown are shared.
+    var RING_CALLERS = {
+      madla:  { fromKey: "madla_fam",    subKey: "call_incoming" },
+      // The card's name column is narrow on a phone, so the Saturday call goes by the place —
+      // the same label the call itself shows once it connects. Who's on it is the caption's job.
+      prague: { fromKey: "laptop_place", subKey: "sat_call_sub" }
+    };
+    var callRingWho = "madla";
     var callRingEl = null, callRingHideT = null, callRingT = [];
     function clearCallRingTimers() { callRingT.forEach(clearTimeout); callRingT = []; }
     function hideCallRing() {
@@ -48006,17 +48021,23 @@ async def localfont(name):
       if (callRingEl) callRingEl.classList.remove("show");
     }
     function callRingUp() { return !!(callRingEl && callRingEl.classList.contains("show")); }
-    function answerMadla() {
+    // Answers whoever the card is currently showing — read at click time, so the one listener
+    // bound to the card serves every caller.
+    function answerRing() {
+      var who = callRingWho;
       hideCallRing();
       if (callee || anyExternalCall()) return; // a call already up (raced the ring) → let it be
       if (window.goToStage) window.goToStage("cuddly"); // pan to the cuddly room first, then the phone
       setTimeout(function () {
         if (window.__openPhoneModal) window.__openPhoneModal(true); // launcher, skip the lockscreen (this is a live incoming call, not a cold open)
-        openIncall("madla");
+        openIncall(who);
       }, 620); // let the room slide settle before the phone overlays it
     }
-    function showCallRing() {
-      if (document.hidden || !document.hasFocus()) return; // unattended → she'd call back; no ghost ring
+    function answerMadla() { callRingWho = "madla"; answerRing(); }
+    function answerPrague() { callRingWho = "prague"; answerRing(); }
+    function showCallRing(who) {
+      callRingWho = RING_CALLERS[who] ? who : "madla";
+      if (document.hidden || !document.hasFocus()) return; // unattended → they'd call back; no ghost ring
       if (callRingUp() || callee || anyExternalCall() || isOpen()) return; // don't ring over a live call or an open phone
       var host = document.querySelector(".hunt-viewport") || document.body;
       if (!callRingEl) {
@@ -48027,16 +48048,17 @@ async def localfont(name):
           '<span class="call-ring-txt"><span class="call-ring-from"></span><span class="call-ring-sub"></span></span>' +
           '<span class="call-ring-x" role="button" tabindex="0"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 L6 18 M6 6 L18 18" stroke="#fff" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg></span>' +
           '<span class="call-ring-answer"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M6.6 2.5 C5.4 2.5 4.3 3.3 4 4.6 C3.2 8.1 4.3 12.4 7.4 16 C10.5 19.6 14.6 21.6 18.1 21.5 C19.4 21.4 20.4 20.4 20.6 19.1 L20.9 17 C21 16.2 20.6 15.4 19.9 15.1 L16.7 13.8 C16 13.5 15.2 13.7 14.7 14.3 L13.9 15.3 C12.1 14.4 10.5 13 9.4 11 L10.5 10.3 C11.2 9.9 11.5 9.1 11.3 8.3 L10.5 5 C10.3 4.2 9.6 3.7 8.8 3.7 Z"/></svg></span>';
-        callRingEl.addEventListener("click", answerMadla);
+        callRingEl.addEventListener("click", answerRing);
         var declineBtn = callRingEl.querySelector(".call-ring-x"); // dismiss the call without answering (stops the card's answer click)
         declineBtn.setAttribute("aria-label", tr("install_dismiss"));
         declineBtn.addEventListener("click", function (e) { e.stopPropagation(); hideCallRing(); });
         declineBtn.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); e.preventDefault(); hideCallRing(); } });
       }
       if (callRingEl.parentNode !== host) host.appendChild(callRingEl);
-      callRingEl.querySelector(".call-ring-from").textContent = tr("madla_fam");   // "Madla"
-      callRingEl.querySelector(".call-ring-sub").textContent = tr("call_incoming"); // "Incoming video call…"
-      callRingEl.setAttribute("aria-label", tr("call_incoming") + " — " + tr("madla_fam"));
+      var ringCfg = RING_CALLERS[callRingWho];
+      callRingEl.querySelector(".call-ring-from").textContent = tr(ringCfg.fromKey);
+      callRingEl.querySelector(".call-ring-sub").textContent = tr(ringCfg.subKey);
+      callRingEl.setAttribute("aria-label", tr("call_incoming") + " — " + tr(ringCfg.fromKey)); // the caption can be flavour; the label always says what the card IS
       callRingEl.classList.remove("show"); void callRingEl.offsetWidth; // restart the drop/pulse
       callRingEl.classList.add("show");
       playPhoneRingSound("balcony-phone");
@@ -48052,15 +48074,18 @@ async def localfont(name):
       callRingHideT = setTimeout(hideCallRing, 15000); // 15s unanswered → missed call, fade away
     }
     window.__hideCallRing = hideCallRing;
-    // trigger the incoming ring (used by the daytime schedule + the madla() console hook). Refuses
-    // while a call's already live or the phone's open (she'd just get a busy tone).
-    function ringMadla() {
+    // trigger an incoming ring (used by both schedules + the madla()/saturday() console hooks).
+    // Refuses while a call's already live or the phone's open (they'd just get a busy tone).
+    function ringCall(who) {
       if (callee || anyExternalCall() || isOpen() || callRingUp()) return false;
-      showCallRing();
+      showCallRing(who);
       return callRingUp();
     }
+    function ringMadla() { return ringCall("madla"); }
     window.__madlaRing = ringMadla;   // console/test hook: fire the incoming ring on demand
     window.__answerMadla = answerMadla; // test hook: answer as if the ring were tapped
+    window.__pragueRing = function () { return ringCall("prague"); };
+    window.__answerPrague = answerPrague;
     // Poking the cuddly outlet "schedules" Madla — she rings in day OR night, but never during the
     // party (she's not interrupting the dancing). Ignored if a call/ring is already up.
     window.__madlaFromOutlet = function () {
@@ -48086,6 +48111,69 @@ async def localfont(name):
     window.__startMadla = function () { scheduleMadla(); };
     window.__stopMadla = function () { if (madlaTimer) { clearTimeout(madlaTimer); madlaTimer = null; } };
     scheduleMadla(); // arm at load
+
+    // ── Saturday: Markéta's family calls ────────────────────────────────────────────────
+    // Her parents and Báka ring from Prague every Saturday, the way they actually do. Prague is
+    // 8h ahead of Edmonton all year (both sides shift for DST together), so an Edmonton late
+    // morning is their Saturday evening — the hour a Czech family sits down to a video call, and
+    // nowhere near waking Báka. The loft's own wall clock decides (__loftMinsNow, override-aware),
+    // so a ?time= jump or the time-lapse walks into and out of the window like a real morning.
+    var SAT_FROM_MIN = 8 * 60, SAT_TO_MIN = 14 * 60; // Edmonton 08:00–14:00 = Prague 16:00–22:00
+    // Which Saturdays have already rung, keyed by the LOFT's pretend date. A set, not a
+    // "last Saturday" — the player can hop between Saturdays in any order, and a Saturday
+    // already spent must stay spent however they come back to it (including a reload).
+    var SAT_STORE = "loftSatCalls";
+    var satRungMem = null; // also the whole store when localStorage is unavailable (private mode)
+    function satRung() {
+      if (satRungMem) return satRungMem;
+      satRungMem = {};
+      try {
+        var raw = localStorage.getItem(SAT_STORE);
+        if (raw) JSON.parse(raw).forEach(function (k) { satRungMem[k] = 1; });
+      } catch (e) {}
+      return satRungMem;
+    }
+    function satMarkRung(key) {
+      var m = satRung(); m[key] = 1;
+      try { localStorage.setItem(SAT_STORE, JSON.stringify(Object.keys(m).slice(-60))); } catch (e) {} // capped: a long time-travelling session shouldn't grow the store without bound
+    }
+    function satZ(n) { return (n < 10 ? "0" : "") + n; }
+    // The loft's day, but only if it's a Saturday there — null otherwise, which is also the gate.
+    function satKeyNow() {
+      var n = window.__now ? window.__now() : new Date();
+      if (n.getDay() !== 6) return null;
+      return n.getFullYear() + "-" + satZ(n.getMonth() + 1) + "-" + satZ(n.getDate());
+    }
+    function satHourOk() {
+      var mins = window.__loftMinsNow ? window.__loftMinsNow() : null;
+      return mins != null && mins >= SAT_FROM_MIN && mins < SAT_TO_MIN;
+    }
+    // Nobody gets called before they've started playing: a phone ringing over the untouched
+    // "CLICK ME!" invitation reads as a bug. __gameStarted is the shared flag; the invitation's
+    // own presence in the DOM is the same answer wherever that flag isn't defined.
+    function playerStarted() {
+      if (typeof window.__gameStarted === "function") return window.__gameStarted();
+      return !document.getElementById("click-me-overlay");
+    }
+    var satTimer = null;
+    function scheduleSatCall() {
+      if (satTimer) return; // one self-rescheduling timer, never two
+      satTimer = setTimeout(function () {
+        satTimer = null;
+        // EVERY gate re-read here, not at schedule time: the date, the clock, the room and the
+        // game can all have moved under a timer that was armed a minute ago.
+        var key = satKeyNow();
+        if (key && !satRung()[key] && satHourOk() && playerStarted() &&
+            !window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic &&
+            !callee && !anyExternalCall() && !isOpen() && !callRingUp() && ringCall("prague")) {
+          satMarkRung(key); // only once the card is actually up — a refused ring leaves the Saturday still owed
+        }
+        scheduleSatCall(); // always re-armed: a new Saturday (or a jump into one) is picked up on the next poll
+      }, 20000 + Math.floor(Math.random() * 25000)); // ~20–45s between polls
+    }
+    window.__startSatCall = function () { scheduleSatCall(); };
+    window.__stopSatCall = function () { if (satTimer) { clearTimeout(satTimer); satTimer = null; } };
+    scheduleSatCall(); // arm at load
     window.refreshPhoneText = function () {
       if (!modal || !shell) return;
       applyNavLabels();
@@ -71276,6 +71364,14 @@ function spawnDustMote(container) {
     }
     if (window.__madlaRing && window.__madlaRing()) return "📞 Madla's calling — that's her ringing top-centre. Tap to answer (or ignore for 15s to miss it).";
     return "📞 can't ring right now — a call's already up, the phone's open, or she's already ringing.";
+  };
+  window.saturday = function (arg) {
+    if (arg === true) {
+      if (window.__answerPrague) { window.__answerPrague(); return "📞 answering Prague — máma, táta and Báka, on the Saturday call."; }
+      return "the call hook isn't ready yet.";
+    }
+    if (window.__pragueRing && window.__pragueRing()) return "📞 Prague's calling — máma, táta and Báka, ringing top-centre. Tap to answer (or ignore for 15s to miss it).";
+    return "📞 can't ring right now — a call's already up, the phone's open, or they're already ringing.";
   };
 
   window.laptop = function (arg) {

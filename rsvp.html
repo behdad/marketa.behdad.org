@@ -37354,6 +37354,7 @@ var ABANDONED_CALL_MS = 30000;
   // Surface a script error: to the console scrollback if it's the console that's open (the
   // run("name") path), otherwise to the page console (the editor's own Run button).
   function surfaceScriptError(name, err) {
+    if (err && err.__scriptStop) return; // a deliberate stop() abort, not a real error — stay quiet
     var msg = "✗ " + name + ": " + (err && err.message ? err.message : String(err));
     if (monitor.classList.contains("show-console")) consolePrint(msg, "console-err");
     else if (window.console && console.error) console.error("[run] " + name + ":", err);
@@ -37453,7 +37454,7 @@ var ABANDONED_CALL_MS = 30000;
     edRunBtn.title = edRepeatOn ? "Stop" : "Run";
     edRunBtn.classList.toggle("ed-btn-stop", edRepeatOn);
   }
-  function edStopRepeat() { var was = edRepeatOn; edRepeatOn = false; edRepeatToken++; edUpdateRunBtn(); return was; }
+  function edStopRepeat() { var was = edRepeatOn; edRepeatOn = false; edRepeatToken++; window.__scriptAbortN = (window.__scriptAbortN | 0) + 1; edUpdateRunBtn(); return was; } // also aborts any in-flight one-shot script at its next await sleep()
   window.__stopRepeat = edStopRepeat; // reset/other hooks end the loop through here
   function edLoopStep(tok, name, code) {
     if (tok !== edRepeatToken || !edRepeatOn) return;
@@ -37465,7 +37466,7 @@ var ABANDONED_CALL_MS = 30000;
     if (p && typeof p.then === "function") p.then(again, function (err) { surfaceScriptError(name, err); edStopRepeat(); });
     else again();
   }
-  window.stop = function () { return edStopRepeat() ? "⏹ stopped the repeating script." : "nothing is repeating."; };
+  window.stop = function () { var wasRepeat = edStopRepeat(); return wasRepeat ? "⏹ stopped the repeating script." : "⏹ stopped."; }; // always aborts any running script (repeat or one-shot) at its next await
   window.repeat = function (name) {
     if (name === false) return window.stop();
     edStopRepeat();
@@ -69199,7 +69200,14 @@ function spawnDustMote(container) {
   };
   window.sleep = function (ms) { // await sleep(ms) — pause a script; resolves after the delay (default 1000ms)
     ms = (typeof ms === "number" && ms >= 0) ? ms : 1000;
-    return new Promise(function (r) { setTimeout(function () { r("💤 " + ms + "ms"); }, ms); });
+    var start = window.__scriptAbortN | 0; // stop() bumps this → the script ends at its next await sleep()
+    return new Promise(function (resolve, reject) {
+      if ((window.__scriptAbortN | 0) !== start) return reject({ __scriptStop: true });
+      setTimeout(function () {
+        if ((window.__scriptAbortN | 0) !== start) reject({ __scriptStop: true }); // aborted mid-wait
+        else resolve("💤 " + ms + "ms");
+      }, ms);
+    });
   };
 
   // A self-contained celebratory burst into the room you're viewing (stage-local coords:

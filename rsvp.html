@@ -16253,10 +16253,6 @@ section{margin:1.9rem 0}
 <ellipse cx="-4.6" cy="253.4" rx="1.4" ry="0.9" fill="#e8a898" opacity="0.5"/>
 <ellipse cx="4.6" cy="253.4" rx="1.4" ry="0.9" fill="#e8a898" opacity="0.5"/>
 <path d="M -2.6 254.4 C -1 256.2 1 256.2 2.6 254.4" fill="none" stroke="#c07a6a" stroke-width="1.2" stroke-linecap="round"/>
-<g>
-<path d="M -5 242 L -5 233 L -1.5 238 L 0 231 L 1.5 238 L 5 233 L 5 242 Z" fill="#f2c14e" stroke="#d19a2c" stroke-width="0.8"/>
-<circle cx="-5" cy="232.4" r="1.1" fill="#e8a8b8"/><circle cx="0" cy="230.2" r="1.1" fill="#7fbf6a"/><circle cx="5" cy="232.4" r="1.1" fill="#7f9ec0"/>
-</g>
 <path fill="#37877f" d="M -8 264 C -11 272 -12 282 -11.4 290 L -8.2 290 C -8 282 -7 274 -4 268 Z"/>
 <circle cx="-9.9" cy="290.5" r="2" fill="#e8bd97"/>
 <path fill="#37877f" d="M 8 264 C 11 272 12 282 11.4 290 L 8.2 290 C 8 282 7 274 4 268 Z"/>
@@ -30352,14 +30348,28 @@ document.addEventListener("click", function (e) {
     '<polygon points="0,142 0.9,144.4 3.3,145.3 0.9,146.2 0,148.6 -0.9,146.2 -3.3,145.3 -0.9,144.4" fill="#fff3c4"/>';
   var CROWN_SVG = '<path d="M-7 172 L-7 169 L-3.1 163 L0 158 L3.1 163 L7 169 L7 172 Q0 173.5 -7 172 Z" fill="#f2c14e" stroke="#d19a2c" stroke-width="0.9" stroke-linejoin="round"/>' +
     '<circle cx="-3.8" cy="168.6" r="1" fill="#e8a8b8"/><circle cx="0" cy="161.4" r="1.1" fill="#7fbf6a"/><circle cx="3.8" cy="168.6" r="1" fill="#7f9ec0"/>';
+  // The CONE/CROWN art is drawn around a reference head centred at y186 (hair-top ≈y168).
+  // Visitors DON'T share one head height: adults sit ~186–206, the kids (Patricia’s son/Patricia’s daughter/Elisabeth/
+  // Felix/Hannah) ride much lower (~250–278), so a fixed-coordinate adornment floated far above
+  // the small ones. Find each figure's own head (the biggest on-axis skin circle) and shift the
+  // adornment down by the difference, so every hat/crown lands the same short distance above its
+  // wearer's crown. Static translate only (.bd-adorn carries no transform animation).
+  var HEAD_REF = 186;
   var vis = document.querySelectorAll("#cuddly-visitors-layer .cuddly-visitor");
   for (var i = 0; i < vis.length; i++) {
     var g = vis[i], who = g.id.replace("cuddly-vis-", "");
     var peek = g.querySelector(".cuddly-visitor-peek");
     var art = peek && peek.querySelector("g"); // the innermost translate/scale art group (shared normalized frame)
     if (!art) continue;
+    var circles = art.querySelectorAll("circle"), headCy = HEAD_REF, biggest = -1;
+    for (var c = 0; c < circles.length; c++) {
+      var cc = circles[c], r = parseFloat(cc.getAttribute("r")) || 0, cx = parseFloat(cc.getAttribute("cx")) || 0;
+      if (r >= 5 && r <= 12 && Math.abs(cx) < 3 && r > biggest) { biggest = r; headCy = parseFloat(cc.getAttribute("cy")) || HEAD_REF; }
+    }
     var hat = document.createElementNS("http://www.w3.org/2000/svg", "g");
     hat.setAttribute("class", CROWN[who] ? ("bd-adorn bd-crown-" + who) : ("bd-adorn bd-hat-" + who));
+    var dy = headCy - HEAD_REF;
+    if (dy) hat.setAttribute("transform", "translate(0 " + dy.toFixed(1) + ")");
     hat.innerHTML = CROWN[who] ? CROWN_SVG : CONE;
     art.appendChild(hat);
   }

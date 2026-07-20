@@ -7762,6 +7762,71 @@ section{margin:1.9rem 0}
 #balcony-sabzeh-knot.tied{opacity:1; animation:sn-sabzeh-tie .45s ease-out}
 @keyframes sn-sabzeh-tie{0%{opacity:0; transform:scale(1.6) rotate(-14deg)} 55%{opacity:1} 100%{opacity:1; transform:scale(1) rotate(0)}}
 @media (prefers-reduced-motion: reduce){#balcony-sabzeh-knot.tied{animation:none}}
+/* ═══ GARDEN MOMENTS: TOASTS · GROUP PHOTO · SPARKLER SEND-OFF ═════════════════════
+   Three scripted garden beats (wireGardenMoments2 IIFE + console toasts()/groupphoto()/
+   sparklers()). Each is a one-shot class on #garden-guests, self-clearing + torn down on
+   party-off / room-leave / reset (via the wrapped __gardenMomentsTeardown). All poses ride
+   on NEW dedicated wrappers/elements (never the .guest group that carries a position
+   transform attribute). Reduced motion holds a static pose — no swings, no particle flight. */
+/* ── TOASTS ── the two toasters (Ali the best man, Farhang the MC) lift a glass; their speech
+   bubbles pop in turn, and the crowd answers. Each bubble is its OWN element (a plain <g> with
+   no static transform), so animating it can't clobber a positioned node. Bubbles pivot on their
+   own local anchor (WebKit: fill-box is honoured on <g>/<circle> — only <text> is the exception,
+   and the bubble text sits inside a scaled <g>, unscaled itself). */
+#gm-toast-ali-bubble, #gm-toast-farhang-bubble{opacity:0; pointer-events:none; transform-box:fill-box; transform-origin:center bottom}
+#garden-guests.gm-toasting.gm-toast-p1 #gm-toast-ali-bubble{animation:gm-bubble-pop 4.2s ease-out both}
+#garden-guests.gm-toasting.gm-toast-p2 #gm-toast-farhang-bubble{animation:gm-bubble-pop 4.6s ease-out both}
+@keyframes gm-bubble-pop{0%{opacity:0; transform:scale(.5) translateY(6px)} 8%{opacity:1; transform:scale(1.06) translateY(0)} 14%{transform:scale(1)} 86%{opacity:1; transform:scale(1)} 100%{opacity:0; transform:scale(.9) translateY(-4px)}}
+/* the toaster's raised glass-arm: a one-shot lift on a DEDICATED wrapper inside the toaster's art
+   (the .gm-glass-<name> groups are appended by JS into each guest's own .guest-react group so the
+   glass rides local coords + the existing dance). Pivot at the shoulder so the glass arcs up. */
+#garden-guests .gm-glass{opacity:0; transform-box:fill-box; transform-origin:center bottom}
+#garden-guests.gm-toasting.gm-toast-p1 .g-ali .gm-glass,
+#garden-guests.gm-toasting.gm-toast-p2 .g-farhang .gm-glass{opacity:1; animation:gm-glass-raise 2.6s ease-in-out both}
+@keyframes gm-glass-raise{0%{transform:translateY(6px) rotate(-6deg)} 22%{transform:translateY(-9px) rotate(4deg)} 46%{transform:translateY(-7px) rotate(-2deg)} 100%{transform:translateY(-8px) rotate(2deg)}}
+/* the crowd's answering clink: a quick up-nudge one-shot added to a guest's own .guest-move wrapper
+   (which carries no static transform, so animating transform can't clobber a positioned node) and
+   removed on animationend so it can replay. Only fires while .gm-toasting is set. */
+#garden-guests.gm-toasting .guest-move.gm-clinking{animation:gm-clink 900ms ease-in-out}
+@keyframes gm-clink{0%{transform:translateY(0)} 30%{transform:translateY(-7px)} 60%{transform:translateY(-2px)} 100%{transform:translateY(0)}}
+/* ── GROUP PHOTO ── the crowd holds still + faces front while Aspen fires the flash. A pose class
+   pauses every guest's dance (scoped to .gm-group-photo so it never leaks) and un-leans them. */
+#garden-guests.gm-group-photo .guest-sway,
+#garden-guests.gm-group-photo .guest-move,
+#garden-guests.gm-group-photo .guest-arm-l,
+#garden-guests.gm-group-photo .guest-arm-r,
+#garden-guests.gm-group-photo .guest-orbit{animation-play-state:paused !important}
+/* a brief "say cheese" gather cue: a tiny settle so the freeze reads as intentional, not a stall */
+#garden-guests.gm-group-photo.gm-gp-settle .guest-react{animation:gm-gp-settle 620ms ease-out}
+@keyframes gm-gp-settle{0%{transform:scale(1)} 45%{transform:scale(1.015)} 100%{transform:scale(1)}}
+/* ── SPARKLER SEND-OFF ── the crowd holds two flanking lines (paused) and the hosts stand centre;
+   bright sparkle particles are JS-spawned into #garden-guests (self-cleaning + capped). */
+#garden-guests.gm-sparklers .guest-sway,
+#garden-guests.gm-sparklers .guest-move,
+#garden-guests.gm-sparklers .guest-arm-l,
+#garden-guests.gm-sparklers .guest-arm-r,
+#garden-guests.gm-sparklers .guest-orbit{animation-play-state:paused !important}
+/* the hosts alone keep a gentle sway as they stand in the tunnel (id-qualified, AFTER the pause
+   rule so it wins the cascade — the "one-shot vs id-state" specificity rule, applied here to keep
+   the couple alive while everyone else holds the line). */
+#garden-guests.gm-sparklers.gm-sp-hosts .g-behdad .guest-move,
+#garden-guests.gm-sparklers.gm-sp-hosts .g-marketa .guest-move{animation-play-state:running !important}
+/* a JS-spawned sparkle: a tiny bright four-point star that flickers + drifts up, then removes
+   itself on animationend. Pivots on its OWN centre via translate/scale in the transform (text is
+   avoided entirely — these are <path> stars, WebKit-safe). Capped + cleared-stale before each
+   spawn AND the spawner is focus/visibility gated, so nothing accumulates in a hidden tab. */
+.gm-spark{transform-box:fill-box; transform-origin:center; mix-blend-mode:screen; pointer-events:none}
+.gm-spark.gm-spark-go{animation:gm-spark-flicker var(--gm-spark-dur,1100ms) ease-out forwards}
+@keyframes gm-spark-flicker{0%{opacity:0; transform:translate(0,0) scale(.2) rotate(0)} 12%{opacity:1; transform:translate(calc(var(--gm-spark-dx,0) * .18),-3px) scale(1.05) rotate(35deg)} 40%{opacity:.9; transform:translate(calc(var(--gm-spark-dx,0) * .5),-11px) scale(.8) rotate(90deg)} 70%{opacity:.6} 100%{opacity:0; transform:translate(var(--gm-spark-dx,0),-26px) scale(.15) rotate(160deg)}}
+@media (prefers-reduced-motion: reduce){
+  #garden-guests.gm-toasting.gm-toast-p1 #gm-toast-ali-bubble,
+  #garden-guests.gm-toasting.gm-toast-p2 #gm-toast-farhang-bubble{animation:none; opacity:1}
+  #garden-guests.gm-toasting.gm-toast-p1 .g-ali .gm-glass,
+  #garden-guests.gm-toasting.gm-toast-p2 .g-farhang .gm-glass{animation:none; opacity:1; transform:translateY(-8px)}
+  #garden-guests.gm-toasting .guest-move.gm-clinking{animation:none}
+  #garden-guests.gm-group-photo.gm-gp-settle .guest-react{animation:none}
+  .gm-spark.gm-spark-go{animation:none; opacity:.9} /* a static glow, no flight */
+}
 </style>
 </head>
 <body>
@@ -12455,6 +12520,22 @@ section{margin:1.9rem 0}
 <!-- a rounded speech bubble above Farhang's head with a small tail pointing down at him -->
 <path d="M 452 128 Q 452 120 460 120 L 526 120 Q 534 120 534 128 L 534 148 Q 534 156 526 156 L 500 156 L 494 166 L 490 156 L 460 156 Q 452 156 452 148 Z" fill="#fffdf8" stroke="#8e3a4a" stroke-width="1.4"/>
 <text x="493" y="142" text-anchor="middle" font-family="'Source Serif 4', Georgia, serif" font-size="12" font-weight="600" fill="#8e3a4a">🥂</text>
+</g>
+<!-- ═══ TOAST SEQUENCE bubbles (toasts() / __startToasts()) ═════════════════════════
+     A scripted best-man→MC toast run distinct from the old single Farhang tap-toast above.
+     Two dedicated speech bubbles (Ali the best man at garden-local x256, Farhang the MC at
+     x490), each shown by the .gm-toasting + .gm-toast-p1/-p2 classes on #garden-guests and
+     hidden at rest (opacity:0). Text is set from the T dict by JS (bilingual), so nothing is
+     baked here. Garden-local coords, direct children of #garden-guests; they paint above the
+     guests. The raised-glass poses (.gm-glass) are appended by JS into each toaster's own
+     .guest-react so they ride local coords + the live dance. -->
+<g id="gm-toast-ali-bubble" pointer-events="none" aria-hidden="true">
+<path d="M 214 118 Q 214 108 224 108 L 294 108 Q 304 108 304 118 L 304 144 Q 304 154 294 154 L 264 154 L 256 166 L 250 154 L 224 154 Q 214 154 214 144 Z" fill="#fffdf8" stroke="#8e3a4a" stroke-width="1.4"/>
+<text id="gm-toast-ali-text" x="259" y="126" text-anchor="middle" font-family="'Source Serif 4', Georgia, serif" font-size="8.6" font-weight="600" fill="#8e3a4a"></text>
+</g>
+<g id="gm-toast-farhang-bubble" pointer-events="none" aria-hidden="true">
+<path d="M 446 118 Q 446 108 456 108 L 534 108 Q 544 108 544 118 L 544 144 Q 544 154 534 154 L 500 154 L 494 166 L 488 154 L 456 154 Q 446 154 446 144 Z" fill="#fffdf8" stroke="#8e3a4a" stroke-width="1.4"/>
+<text id="gm-toast-farhang-text" x="495" y="126" text-anchor="middle" font-family="'Source Serif 4', Georgia, serif" font-size="8.6" font-weight="600" fill="#8e3a4a"></text>
 </g>
 </g>
 <!-- a small party guest at the front-left edge, camera raised to catch the night. Static
@@ -21039,6 +21120,7 @@ var T = {
     album_empty_sub: "Aspen's still shooting — throw the party and she'll fill your roll.",
     album_cap_with: "with", // "markéta & behdad · with Ali & Goli"
     album_cap_and: "&",     // joins a couple in a caption: "Ali & Goli"
+    album_cap_group: "the group photo · everyone 🎉", // the whole-crowd keepsake from groupphoto()
     album_search_ph: "search photos…", // the album search-bar placeholder — filters by who's in each shot
     album_search_aria: "search photos by who's in them",
     album_search_clear: "clear search",
@@ -21206,6 +21288,16 @@ var T = {
     msg_pouria_farhang_body: "Farhang, <em>chetori chaghal?</em>", // Pouria ribbing Farhang in the group chat (romanized Persian, as the owner wrote it)
     msg_ali_love_body: "<em>Habibi</em>s, I love you all!", // Ali's random warm group text
     msg_alireza_vitamin_body: "Vitamin time? 💊",
+    // ── garden-moment triggers (toasts / group photo / sparkler send-off) — tap the text to run it
+    msg_toasts_body: "🥂 speech time! grab a glass — Ali & Farhang want to say a few words",
+    msg_groupphoto_body: "📸 everyone in for the group photo! gather round 🤗",
+    msg_sparklers_body: "✨ sparklers out front for the send-off — form the tunnel!",
+    // the scripted toast bubbles (short warm lines, shown over each toaster's head). Two-line each
+    // (split on \n by the renderer). Ali the best man, then Farhang the MC.
+    gm_toast_ali_1: "To the two of you —",
+    gm_toast_ali_2: "may it always be a party. 🥂",
+    gm_toast_farhang_1: "One wedding wasn't enough,",
+    gm_toast_farhang_2: "so — twice to love! 💞",
     // "are you home?" body POOL — __deliverPhoneMessage picks one per delivery (see MESSAGES visit_*).
     // Three shared generic openers + one flavored line per texter:
     msg_visit_body_a: "are you home? 🏠",
@@ -21625,6 +21717,7 @@ var T = {
     album_empty_title: "zatím žádné fotky",
     album_cap_with: "s", // "markéta & behdad · s Ali & Goli"
     album_cap_and: "&",  // spojuje pár v popisku: "Ali & Goli"
+    album_cap_group: "společné foto · všichni 🎉", // celoskupinová památka z groupphoto()
     album_empty_sub: "Aspen ještě fotí — uspořádej párty a rolička se zaplní.",
     album_search_ph: "hledat fotky…", // placeholder vyhledávání v albu — filtruje podle toho, kdo je na snímku
     album_search_aria: "hledat fotky podle toho, kdo je na nich",
@@ -21793,6 +21886,15 @@ var T = {
     msg_pouria_farhang_body: "Farhang, <em>chetori chaghal?</em>", // Pouria popichuje Farhanga ve skupinovém chatu (přepis perštiny)
     msg_ali_love_body: "<em>Habibi</em>s, I love you all!", // Aliho náhodná vřelá zpráva do skupiny
     msg_alireza_vitamin_body: "Čas na vitamíny? 💊",
+    // ── spouštěče zahradních momentů (přípitky / společné foto / rozloučení s prskavkami) — klepni na text
+    msg_toasts_body: "🥂 čas na přípitek! vezmi si skleničku — Ali a Farhang chtějí říct pár slov",
+    msg_groupphoto_body: "📸 všichni na společné foto! pojďte k sobě 🤗",
+    msg_sparklers_body: "✨ prskavky dopředu na rozloučení — udělejte tunel!",
+    // scénář přípitků (krátké vřelé věty nad hlavou přípitečníka), po dvou řádcích. Nejdřív svědek Ali, pak MC Farhang.
+    gm_toast_ali_1: "Na vás dva —",
+    gm_toast_ali_2: "ať je to navždy oslava. 🥂",
+    gm_toast_farhang_1: "Jedna svatba nestačila,",
+    gm_toast_farhang_2: "tak — dvakrát na lásku! 💞",
     // POOL textů „jste doma?" — __deliverPhoneMessage vybere jeden při doručení (viz MESSAGES visit_*).
     // Tři obecné úvodní hlášky + jedna okořeněná pro každého textera:
     msg_visit_body_a: "jste doma? 🏠",
@@ -34592,6 +34694,9 @@ var ABANDONED_CALL_MS = 30000;
     dj: "dj(\"sina\"|\"danesh\") — who spins at the party (or 1–2, or random()); dj() returns the current DJ {n, name}. sina wears the cap, danesh the afro",
     firstdance: "firstdance() — the hosts' first dance: the crowd rings the floor + pauses, the UV blacklight drops, and Behdad & Markéta sway centre-floor alone under a soft spotlight for ~13s, then everyone resumes. lights the party + heads to the garden + crashes the crowd first if needed. firstdance(false) ends it early",
     slowdance: "slowdance() — a slow-song lull: the WHOLE floor pairs off (the couples sway together in a close hold, the generic dancers pair too), the UV blacklight softens to a warm golden wash, and everyone sways slowly for ~24s, then the party rolls back on. lights the party + heads to the garden + crashes the crowd first if needed. slowdance(false) ends it early",
+    toasts: "toasts() — the toast sequence: Ali the best man raises a glass with a warm line, then Farhang the MC, the crowd answering with clinks + flares. ~11s. lights the party + heads to the garden + summons the crowd if needed. toasts(false) ends it early",
+    groupphoto: "groupphoto() — the group photo: the whole crowd + hosts gather + face front, Aspen fires a big flash, and the whole-crowd shot lands in your phone album. a brief freeze + flash. lights the party + heads to the garden + summons the crowd if needed",
+    sparklers: "sparklers() — the sparkler send-off: the guests form two flanking lines holding sparklers (bright sparkle particles) into a tunnel while the couple stand through it, ~12s. lights the party + heads to the garden + summons the crowd if needed. sparklers(false) ends it early",
     cocktail: "cocktail(\"negroni\") — Pouria mixes that real drink from the bar's menu (partial name ok); cocktail() makes the featured signature drink. lights the party + steps behind the bar first if it's dark. he also mixes on his own while you watch the bar. alias: drink()",
     lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
     caption: "caption(\"text\"[, {blink:ms, hold:ms}]) — overwrite the hint line above the scene and return the previous line; caption() reads it. blink pulses the line to catch the eye; hold restores the previous line after that long. also caption(text, blinkMs, holdMs). a room change or hint reclaims it",
@@ -34702,7 +34807,7 @@ var ABANDONED_CALL_MS = 30000;
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
@@ -34950,7 +35055,7 @@ var ABANDONED_CALL_MS = 30000;
   var CONSOLE_CMDS = [
     "help", "clear", "laser", "party", "chase", "guests", "aligoli", "arrive", "roster", "reset", "autoplay", "quit", "blacklight", "uv", "trip", "room",
     "goto", "rooms", "daylight", "night", "day", "season", "play", "pause", "temp", "weather",
-    "clock", "time", "projector", "storm", "dance", "jukebox", "dj", "firstdance", "slowdance", "cocktail", "lang", "caption", "candle",
+    "clock", "time", "projector", "storm", "dance", "jukebox", "dj", "firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cocktail", "lang", "caption", "candle",
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "aurora", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood",
     "phone", "album", "message", "madla", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "edit",
@@ -41925,6 +42030,7 @@ async def localfont(name):
     // drops the "with" clause. e.g. "markéta & behdad · with Ali & Goli · Techno · 00:42".
     function albumCaption(rec) {
       var host = rec.people[0] ? rec.people[0].name : "markéta & behdad";
+      if (rec.subjectId === "group-photo") return { line: host + " · " + tr("album_cap_group"), time: "" }; // the whole-crowd keepsake — too many to name; a warm summary line
       var others = rec.people.slice(1).map(function (p) { return p.name; }).filter(Boolean);
       var parts = [host];
       if (others.length) {
@@ -42876,9 +42982,14 @@ async def localfont(name):
       hamid_verse2:  { fromKey: "msg_hamid_from",   bodyKey: "msg_hamid_verse2_body" }, // followup-only (not in any drip pool)
       pouria_farhang: { fromKey: "msg_pouria_from",  bodyKey: "msg_pouria_farhang_body" }, // Pouria ribs Farhang in the group chat — random party drip, no act (tap opens the app)
       ali_love:      { fromKey: "msg_ali_from",     bodyKey: "msg_ali_love_body" }, // Ali's random love-you-all group text
-      alireza_vitamin: { fromKey: "msg_alireza_from", bodyKey: "msg_alireza_vitamin_body", act: "magicbox" } // Alireza → the magic box (trip); date-locks behind the padlock the first time
+      alireza_vitamin: { fromKey: "msg_alireza_from", bodyKey: "msg_alireza_vitamin_body", act: "magicbox" }, // Alireza → the magic box (trip); date-locks behind the padlock the first time
+      // garden-moment triggers — tap the text to run the scripted beat (each hook lights the party +
+      // heads to the garden + summons the crowd if needed, then plays; see runMsgAction below)
+      toasts:        { fromKey: "msg_ali_from",     bodyKey: "msg_toasts_body",     act: "toasts" },     // Ali the best man calls the toast sequence (Ali then Farhang)
+      groupphoto:    { fromKey: "msg_aspen_from",   bodyKey: "msg_groupphoto_body", act: "groupphoto" }, // Aspen gathers everyone for the whole-crowd shot → lands in the album
+      sparklers:     { fromKey: "msg_bahareh_from", bodyKey: "msg_sparklers_body",  act: "sparklers" }   // Bahareh calls the sparkler send-off tunnel
     };
-    var CUE_POOL = ["cue_cocktails", "cue_calendar", "storm", "invaders", "flair", "smores", "sina_helpers", "firstdance", "slowdance", "jukebox", "hamid_verse", "pouria_farhang", "ali_love", "alireza_vitamin", "fireworks", "lanterns"]; // the random party (night) drip (shuffled: each drip picks a random un-sent one); smores is night-only + sina_helpers only while Sina's off the decks — see cueRemaining(); hamid_verse chains its 2nd stanza via m.next
+    var CUE_POOL = ["cue_cocktails", "cue_calendar", "storm", "invaders", "flair", "smores", "sina_helpers", "firstdance", "slowdance", "jukebox", "hamid_verse", "pouria_farhang", "ali_love", "alireza_vitamin", "fireworks", "lanterns", "toasts", "groupphoto", "sparklers"]; // the random party (night) drip (shuffled: each drip picks a random un-sent one); smores is night-only + sina_helpers only while Sina's off the decks — see cueRemaining(); hamid_verse chains its 2nd stanza via m.next; toasts/groupphoto/sparklers are the scripted garden beats
     var DAY_POOL = ["bbq", "cue_mail"]; // the DAYTIME drip — texts that belong to daylight hours (no party); dripped by scheduleDayDrip(). Bahareh's "did you check the mail?" belongs to the day.
     // Phone photobooth result state — session-scoped, same model as notesDraft/cardsIndex:
     // a captured polaroid (frame canvas + chosen look/frame) survives a normal close/reopen
@@ -44118,6 +44229,9 @@ async def localfont(name):
       if (act === "smores") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__setSmores) window.__setSmores(true); }, 760); return; } // pan to the balcony, then light the bonfire
       if (act === "firstdance") { if (window.firstdance) window.firstdance(); return; } // firstdance() lights the party + heads to the garden + rings the crowd + runs the hosts' first dance
       if (act === "slowdance") { if (window.slowdance) window.slowdance(); return; } // slowdance() lights the party + heads to the garden + pairs the whole floor off for a warm, slow-song lull
+      if (act === "toasts") { if (window.toasts) window.toasts(); return; } // toasts() lights the party + heads to the garden + runs the best-man → MC toast sequence
+      if (act === "groupphoto") { if (window.groupphoto) window.groupphoto(); return; } // groupphoto() gathers the crowd, fires Aspen's flash, drops the whole-crowd shot into the album
+      if (act === "sparklers") { if (window.sparklers) window.sparklers(); return; } // sparklers() forms the two-line tunnel + the couple stand through it
       if (act === "roster") { if (window.roster) window.roster(true); return; } // Danesh's shout-out → ALWAYS open the roster (don't toggle it shut if it's already up); lights the party + heads to the garden
       if (act === "jukebox") { // "requests are open" → the DJ-booth song picker
         if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
@@ -57525,6 +57639,270 @@ function spawnDustMote(container) {
       group.classList.remove("toasting");
     };
   })();
+  // ══ GARDEN MOMENTS 2 — TOASTS · GROUP PHOTO · SPARKLER SEND-OFF ═════════════════════
+  // Three MORE scripted garden beats, built as a SEPARATE self-contained IIFE (additive; it does
+  // not touch firstDance()/farhangToast above). Each: a one-shot class on #garden-guests, gated on
+  // party-lit + crowd-on-floor, idempotent/storm-safe, self-clearing + torn down on party-off /
+  // room-leave / reset (it WRAPS the existing __gardenMomentsTeardown so nothing strands), and
+  // reduced-motion aware (static poses, no particle flight). Console: toasts() / groupphoto() /
+  // sparklers(); phone-text hooks: MESSAGES toasts/groupphoto/sparklers → runMsgAction.
+  (function wireGardenMoments2() {
+    var group = document.getElementById("garden-guests");
+    if (!group) return;
+    var svgNS = "http://www.w3.org/2000/svg";
+    function onFloor() { return group.classList.contains("guests-in"); }
+    function reducedMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+    function tr(key) { // pull a bilingual line from the T dict for the current language (falls back to EN)
+      try { var l = (document.documentElement.lang && T[document.documentElement.lang]) ? document.documentElement.lang : "en"; return (T[l] && T[l][key] != null) ? T[l][key] : (T.en[key] != null ? T.en[key] : ""); } catch (e) { return ""; }
+    }
+    // — a soft, focus-gated two-note clink through the SHARED sfx context (no new AudioContext),
+    //   panned to a garden x (0..680 → -1..1). Crickets rule: silent while hidden/unfocused.
+    function playToastClink(px) {
+      if (document.hidden || !document.hasFocus()) return; // crickets rule (autonomous one-shot)
+      try {
+        var ctx = getSfxCtx(); if (!ctx) return;
+        var pan = Math.max(-1, Math.min(1, ((px == null ? 340 : px) - 340) / 340));
+        var t = ctx.currentTime, out = pannedOut(ctx, pan);
+        function ping(f, dt, gpk) {
+          var osc = ctx.createOscillator(); osc.type = "sine"; osc.frequency.setValueAtTime(f, t + dt);
+          var g = ctx.createGain();
+          g.gain.setValueAtTime(0.0001, t + dt);
+          g.gain.exponentialRampToValueAtTime(gpk, t + dt + 0.006);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.5);
+          osc.connect(g); g.connect(out); osc.start(t + dt); osc.stop(t + dt + 0.55);
+        }
+        ping(2100, 0, 0.05); ping(3150, 0.008, 0.035); ping(1550, 0.09, 0.03); // two flutes meeting + an after-ring
+      } catch (e) {}
+    }
+    // — a soft warm crowd "cheer" swell (a filtered noise puff), focus-gated + shared-ctx routed.
+    function playCrowdCheer() {
+      if (document.hidden || !document.hasFocus()) return; // crickets rule
+      try {
+        var ctx = getSfxCtx(); if (!ctx) return;
+        var t = ctx.currentTime, out = pannedOut(ctx, 0);
+        var len = Math.floor(ctx.sampleRate * 0.9);
+        var buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+        for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len); // decaying noise
+        var src = ctx.createBufferSource(); src.buffer = buf;
+        var bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 850; bp.Q.value = 0.7;
+        var g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.06, t + 0.12); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.85);
+        src.connect(bp); bp.connect(g); g.connect(out); src.start(t); src.stop(t + 0.9);
+      } catch (e) {}
+    }
+
+    // ── TOASTS ── best man Ali → MC Farhang, each raises a glass with a two-line speech bubble; the
+    //    crowd answers with clinks (up-nudges + sound). The bubble text is set from T (bilingual).
+    var GLASS_D = "M -1 -18 L 4 -18 L 3 -8 C 2.7 -5.6 1.6 -4 1 -4 C 0.4 -4 -0.7 -5.6 -1 -8 Z"; // a tiny flute, drawn at the raised hand
+    function ensureGlass(sel) { // append a static-position glass into a toaster's .guest-react once (opacity via CSS)
+      var g = group.querySelector(sel + " .guest-react"); if (!g) return null;
+      var existing = g.querySelector(".gm-glass"); if (existing) return existing;
+      var wrap = document.createElementNS(svgNS, "g");
+      wrap.setAttribute("class", "gm-glass"); wrap.setAttribute("pointer-events", "none");
+      // hang the flute up by the raised (screen-right) hand: the arm reaches to ~x22,y193 in local coords
+      wrap.setAttribute("transform", "translate(22 210)");
+      var flute = document.createElementNS(svgNS, "path");
+      flute.setAttribute("d", GLASS_D); flute.setAttribute("fill", "#f6e7a8"); flute.setAttribute("stroke", "#d8c074"); flute.setAttribute("stroke-width", "0.5");
+      var stem = document.createElementNS(svgNS, "rect");
+      stem.setAttribute("x", "1"); stem.setAttribute("y", "-8"); stem.setAttribute("width", "1"); stem.setAttribute("height", "7"); stem.setAttribute("fill", "#e7d489");
+      wrap.appendChild(flute); wrap.appendChild(stem);
+      g.appendChild(wrap);
+      return wrap;
+    }
+    function setBubbleText(textId, k1, k2) { // fill a bubble's two tspan lines from the dict
+      var t = document.getElementById(textId); if (!t) return;
+      while (t.firstChild) t.removeChild(t.firstChild);
+      [tr(k1), tr(k2)].forEach(function (line, i) {
+        var ts = document.createElementNS(svgNS, "tspan");
+        ts.setAttribute("x", t.getAttribute("x")); ts.setAttribute("dy", i === 0 ? "0" : "11");
+        ts.textContent = line; t.appendChild(ts);
+      });
+    }
+    var CLINKERS = [".g-goli", ".g-jay", ".g-spencer", ".g-lauren", ".g-bahareh", ".g-alireza", ".g-mahzad"]; // the crowd that answers a toast
+    function crowdClink() {
+      if (!onFloor()) return;
+      CLINKERS.forEach(function (sel) {
+        var mv = group.querySelector(sel + " .guest-move"); if (!mv) return;
+        mv.classList.remove("gm-clinking"); void mv.getBBox; mv.classList.add("gm-clinking"); // restart the one-shot cleanly
+      });
+      playCrowdCheer();
+    }
+    // clear each crowd-clink one-shot on animationend (delegated) so it can replay
+    group.addEventListener("animationend", function (e) {
+      if (e.target && e.target.classList && e.target.classList.contains("gm-clinking")) e.target.classList.remove("gm-clinking");
+    });
+    var toastTimers = [], toastOn = false;
+    function clearToastTimers() { toastTimers.forEach(clearTimeout); toastTimers = []; }
+    function endToasts() {
+      clearToastTimers(); toastOn = false; window.__toastsOn = false;
+      group.classList.remove("gm-toasting", "gm-toast-p1", "gm-toast-p2");
+    }
+    function startToasts() {
+      if (!onFloor()) return false;      // inert off the floor — nothing to leak
+      if (toastOn) return true;          // idempotent / storm-safe
+      toastOn = true; window.__toastsOn = true;
+      ensureGlass(".g-ali"); ensureGlass(".g-farhang");
+      setBubbleText("gm-toast-ali-text", "gm_toast_ali_1", "gm_toast_ali_2");
+      setBubbleText("gm-toast-farhang-text", "gm_toast_farhang_1", "gm_toast_farhang_2");
+      var rm = reducedMotion();
+      group.classList.add("gm-toasting");
+      // Phase 1 — Ali the best man
+      group.classList.remove("gm-toast-p2"); group.classList.add("gm-toast-p1");
+      playToastClink(256); // Ali's spot
+      toastTimers.push(setTimeout(function () { if (toastOn) crowdClink(); }, rm ? 0 : 900));
+      // Phase 2 — Farhang the MC (after Ali's beat)
+      var p2at = rm ? 1400 : 4600;
+      toastTimers.push(setTimeout(function () {
+        if (!toastOn || !onFloor()) return;
+        group.classList.remove("gm-toast-p1"); void group.getBBox; group.classList.add("gm-toast-p2");
+        playToastClink(490); // Farhang's spot
+        toastTimers.push(setTimeout(function () { if (toastOn) crowdClink(); }, rm ? 0 : 900));
+      }, p2at));
+      // end
+      toastTimers.push(setTimeout(endToasts, rm ? 3200 : 9600));
+      return true;
+    }
+    window.__startToasts = startToasts;
+    window.__endToasts = endToasts;
+
+    // ── GROUP PHOTO ── the whole crowd + hosts gather + face front (.gm-group-photo pauses their
+    //    dance), Aspen fires the big flash, and a distinct WHOLE-CROWD keepsake lands in the album.
+    var groupPhotoTimers = [], groupPhotoOn = false;
+    function clearGroupPhotoTimers() { groupPhotoTimers.forEach(clearTimeout); groupPhotoTimers = []; }
+    function endGroupPhoto() {
+      clearGroupPhotoTimers(); groupPhotoOn = false; window.__groupPhotoOn = false;
+      group.classList.remove("gm-group-photo", "gm-gp-settle");
+    }
+    function startGroupPhoto() {
+      if (!onFloor()) return false;
+      if (groupPhotoOn) return true; // idempotent
+      groupPhotoOn = true; window.__groupPhotoOn = true;
+      var rm = reducedMotion();
+      group.classList.add("gm-group-photo");
+      group.classList.remove("gm-gp-settle"); void group.getBBox; group.classList.add("gm-gp-settle"); // the "say cheese" settle
+      // the flash + the keepsake land a beat in (everyone's gathered); silent auto-flash reuse + a shutter sound
+      groupPhotoTimers.push(setTimeout(function () {
+        if (!groupPhotoOn) return;
+        if (typeof fireGardenFlash === "function") fireGardenFlash();
+        if (typeof playCameraShutterSound === "function" && !document.hidden && document.hasFocus()) playCameraShutterSound(51); // Aspen's spot (front-left)
+        if (window.__albumAddGroupPhoto) window.__albumAddGroupPhoto(); // the distinct whole-crowd keepsake
+      }, rm ? 200 : 1100));
+      groupPhotoTimers.push(setTimeout(endGroupPhoto, rm ? 1400 : 2600)); // a brief freeze
+      return true;
+    }
+    window.__startGroupPhoto = startGroupPhoto;
+    window.__endGroupPhoto = endGroupPhoto;
+
+    // ── SPARKLER SEND-OFF ── the crowd holds two flanking lines (.gm-sparklers pauses them, the
+    //    hosts alone keep swaying), and bright sparkle particles are spawned along the two lines to
+    //    make a lit tunnel. Particles SELF-CLEAN on their own animationend AND are capped + cleared-
+    //    stale before each spawn; the spawner is gated on !hidden && hasFocus so NOTHING accumulates
+    //    in a hidden/unfocused tab (the documented particle-accumulation bug class).
+    var SPARK_STAR = "M0 -5 L1.1 -1.1 L5 0 L1.1 1.1 L0 5 L-1.1 1.1 L-5 0 L-1.1 -1.1 Z";
+    var SPARK_COLORS = ["#fff6d0", "#ffe08a", "#fffdf5", "#ffd86b", "#fff0b0"];
+    // two lines of sparkler x-positions (garden-local coords), flanking the centre aisle the couple
+    // stand in (hosts at x300/356). Left line + right line; y near shoulder/hand height (~200-250).
+    var SPARK_LEFT = [60, 100, 150, 200, 256];   // matches guest x's on the left
+    var SPARK_RIGHT = [378, 434, 490, 540, 578];  // guest x's on the right
+    var SPARK_CAP = 40;               // never more than ~40 live sparks — cap, don't grow unbounded
+    var sparkTimer = null, sparklersOn = false, sparkTimers2 = [];
+    function liveSparks() { return group.querySelectorAll(".gm-spark"); }
+    function spawnSpark() {
+      if (!sparklersOn) return;
+      // cap: drop the oldest before adding, so a slow/hidden tab can't pile them up
+      var live = liveSparks();
+      if (live.length >= SPARK_CAP) { for (var i = 0; i <= live.length - SPARK_CAP; i++) if (live[i] && live[i].parentNode) live[i].parentNode.removeChild(live[i]); }
+      var onLeft = Math.random() < 0.5;
+      var xs = onLeft ? SPARK_LEFT : SPARK_RIGHT;
+      var bx = xs[Math.floor(Math.random() * xs.length)] + (Math.random() * 10 - 5);
+      var by = 198 + Math.random() * 46; // shoulder → hand height
+      var s = document.createElementNS(svgNS, "path");
+      s.setAttribute("class", "gm-spark");
+      s.setAttribute("d", SPARK_STAR);
+      s.setAttribute("fill", SPARK_COLORS[Math.floor(Math.random() * SPARK_COLORS.length)]);
+      // pivot on the spark's OWN (x,y) in view-box coords (transform-box already fill-box; this places it)
+      var scl = (0.5 + Math.random() * 0.7).toFixed(2);
+      s.setAttribute("transform", "translate(" + bx.toFixed(1) + " " + by.toFixed(1) + ") scale(" + scl + ")");
+      s.style.setProperty("--gm-spark-dx", ((Math.random() * 2 - 1) * 10).toFixed(1) + "px");
+      s.style.setProperty("--gm-spark-dur", (900 + Math.random() * 500).toFixed(0) + "ms");
+      s.addEventListener("animationend", function () { s.classList.remove("gm-spark-go"); if (s.parentNode) s.parentNode.removeChild(s); }); // SELF-CLEAN (drop the one-shot class, then the node)
+      group.appendChild(s);
+      // kick the flicker on the next frame so the animation runs
+      requestAnimationFrame(function () { s.classList.add("gm-spark-go"); });
+    }
+    function sparkTick() {
+      sparkTimer = null;
+      if (!sparklersOn) return;                                  // ended — stop, don't reschedule
+      if (!document.hidden && document.hasFocus() && !reducedMotion()) { spawnSpark(); spawnSpark(); } // gated: nothing spawns in a hidden/unfocused tab
+      sparkTimer = setTimeout(sparkTick, 90 + Math.random() * 70); // a steady bright shower
+    }
+    function clearSparks() { var live = liveSparks(); for (var i = 0; i < live.length; i++) if (live[i].parentNode) live[i].parentNode.removeChild(live[i]); }
+    function endSparklers() {
+      if (sparkTimer) { clearTimeout(sparkTimer); sparkTimer = null; }
+      sparkTimers2.forEach(clearTimeout); sparkTimers2 = [];
+      sparklersOn = false; window.__sparklersOn = false;
+      group.classList.remove("gm-sparklers", "gm-sp-hosts");
+      clearSparks();
+    }
+    function startSparklers() {
+      if (!onFloor()) return false;
+      if (sparklersOn) return true; // idempotent
+      sparklersOn = true; window.__sparklersOn = true;
+      group.classList.add("gm-sparklers", "gm-sp-hosts"); // two lines hold; the couple keep swaying
+      if (reducedMotion()) {
+        // static pose + a few still glows, no flight (a couple of sparks per line, left at rest)
+        for (var q = 0; q < 6; q++) spawnSparkStatic(q);
+      } else {
+        sparkTick();
+      }
+      sparkTimers2.push(setTimeout(endSparklers, reducedMotion() ? 9000 : 12000));
+      return true;
+    }
+    function spawnSparkStatic(i) { // reduced-motion: place a still glow, no animation
+      var xs = (i % 2 === 0) ? SPARK_LEFT : SPARK_RIGHT;
+      var bx = xs[Math.floor(i / 2) % xs.length], by = 210;
+      var s = document.createElementNS(svgNS, "path");
+      s.setAttribute("class", "gm-spark gm-spark-go");
+      s.setAttribute("d", SPARK_STAR); s.setAttribute("fill", "#ffe08a");
+      s.setAttribute("transform", "translate(" + bx + " " + by + ") scale(0.9)");
+      group.appendChild(s);
+    }
+    window.__startSparklerSendoff = startSparklers;
+    window.__endSparklerSendoff = endSparklers;
+
+    // ── teardown WRAP: chain onto the existing __gardenMomentsTeardown (party-off / room-leave /
+    //    reset all route through it) so all three moments end cleanly + nothing strands. Additive —
+    //    we call the prior teardown first, then our own.
+    var priorTeardown = window.__gardenMomentsTeardown;
+    window.__gardenMomentsTeardown = function () {
+      if (typeof priorTeardown === "function") { try { priorTeardown(); } catch (e) {} }
+      endToasts(); endGroupPhoto(); endSparklers();
+    };
+    // a tab going hidden while a moment runs off the floor (shouldn't happen, but belt-and-braces):
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) return; // returning is fine; the spark spawner self-gates
+      if ((window.__toastsOn || window.__groupPhotoOn || window.__sparklersOn) && !onFloor()) window.__gardenMomentsTeardown();
+    });
+
+    // ── console commands ── each lights the party + heads to the garden + summons the crowd if
+    //    needed, then plays. Mirror the firstdance() shape. (arg===false ends the moment early.)
+    function stageAndRun(runHook, echoOk, echoNo, endHook, arg) {
+      if (arg === false) { if (endHook) endHook(); if (window.echo) window.echo("the moment winds down — the party rolls on."); return true; }
+      if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
+      if (window.goToStage) window.goToStage("garden");
+      setTimeout(function () {
+        if (window.__guestsIn && !window.__guestsIn() && window.__summonGuests) window.__summonGuests();
+        setTimeout(function () {
+          var ok = runHook();
+          if (window.echo) window.echo(ok ? echoOk : echoNo);
+        }, 140);
+      }, 60);
+      return true;
+    }
+    window.toasts = function (arg) { return stageAndRun(function () { return startToasts(); }, "🥂 Ali raises a glass, then Farhang — the crowd clinks all around.", "the floor's dark — run party(true) first.", endToasts, arg); };
+    window.groupphoto = function (arg) { return stageAndRun(function () { return startGroupPhoto(); }, "📸 everyone gathers, Aspen fires the flash — the group photo's in your album.", "the floor's dark — run party(true) first.", endGroupPhoto, arg); };
+    window.sparklers = function (arg) { return stageAndRun(function () { return startSparklers(); }, "✨ the guests raise sparklers into a tunnel — the couple stand through it.", "the floor's dark — run party(true) first.", endSparklers, arg); };
+  })();
   // ── PARTY MODE disco pools (garden) — STEPPED, not tweened. A continuous CSS/WAAPI sweep
   // of these big screen-blended ellipses repaints every frame and visibly FLICKERED on
   // mobile. Instead ONE self-rescheduling stepper JUMPS each pool to a fresh spot ~once a
@@ -57860,6 +58238,27 @@ function spawnDustMote(container) {
   window.__albumCaptureMoment = function () { if (!albumMomentSnapped) { albumMomentSnapped = true; captureAlbumShot(); } };
   window.__albumMomentReset = function () { albumMomentSnapped = false; };
   window.__albumAdd = captureAlbumShot;                 // test hook: snap one now, return the record
+  // A distinct GROUP PHOTO keepsake — the WHOLE crowd (hosts + everyone on the floor, crew aside),
+  // not the intimate 3–4-figure portrait captureAlbumShot builds. Fired by the groupphoto() moment
+  // (Aspen gathers everyone + flash). Marked subjectId:"group-photo" so the album caption + search
+  // read it as the group shot; the whole-crowd lineup renders via the existing line/two-row layout.
+  // Only one live group-photo is kept at a time (a re-shoot replaces the prior), so it can't stack.
+  window.__albumAddGroupPhoto = function () {
+    var present = (window.__rosterPresence && window.__rosterPresence()) || [];
+    var hosts = null; present.forEach(function (p) { if (p.key === "hosts") hosts = p; });
+    var people = [];
+    if (hosts) people.push({ key: hosts.key, grp: hosts.grp, name: hosts.name, roleKey: hosts.roleKey });
+    else people.push({ key: "hosts", grp: "hosts", name: "markéta & behdad", roleKey: "role_hosts" });
+    // everyone else present, minus the working crew (DJ, photographer) — they're behind the scenes
+    present.forEach(function (p) { if (p.key !== "hosts" && p.grp !== "crew") people.push({ key: p.key, grp: p.grp, name: p.name, roleKey: p.roleKey }); });
+    // drop any prior live group-photo so a re-shoot replaces it (never stack whole-crowd cards)
+    albumShots = albumShots.filter(function (s) { return s.subjectId !== "group-photo"; });
+    var rec = { id: ++albumSeq, t: Date.now(), people: people, subjectId: "group-photo", groupPhoto: true, dance: window.__partyDance || "", season: albumSeasonName(), uv: albumUvOn() };
+    albumShots.push(rec);
+    if (albumShots.length > ALBUM_CAP) { var dropped = albumShots.length - ALBUM_CAP; albumShots.splice(0, dropped); try { console.info("[album] capped at " + ALBUM_CAP + " shots — dropped " + dropped + " oldest"); } catch (e) {} }
+    if (window.__albumRefresh) window.__albumRefresh(); // a big deliberate shot: refresh the open album so it shows at once
+    return rec;
+  };
   window.__albumList = function () { return albumShots.slice().reverse(); }; // test hook: newest-first copy
   // Pre-populate the album with a few PRE-WEDDING PHOTOSHOOT keepsakes (a garden shoot before the
   // day): the couple alone, with the mouses, and with the godkids. Seeded at load + re-seeded on

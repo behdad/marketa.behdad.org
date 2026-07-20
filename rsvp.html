@@ -122,17 +122,24 @@ footer{margin-top:2.6rem}
 .tip-fun{display:block; margin-top:.2em; font-size:.92em; color:var(--muted)}
 .tip-fun em{font-weight:700}
 /* ── ROSTER PANEL ("who's here") ──────────────────────────────────────────────
-   An at-a-glance legend of everyone currently on the garden-party floor — a tidy
-   overlay complementing the per-figure hover tooltips + the space-to-freeze inspect.
-   Toggled by the corner button, the 'h' key, __toggleRoster(), or roster(). Only
-   meaningful while the party's lit. HTML overlay (not SVG), lives inside .hunt-viewport
-   so it rides along into fullscreen; pointer-events only on the panel itself. */
-/* A WIDE, SHORT banner across the TOP (over the sky) rather than a tall side column — so the
-   legend never sits on top of the guests it names (a guest under a side panel couldn't be seen
-   when you clicked to arrow them). Names flow into as many ~8.5rem columns as the width allows. */
+   An at-a-glance list of everyone in the room ON SCREEN right now — a tidy overlay
+   complementing the per-figure name cards. Toggled by the corner button, the 'h'/'w'
+   keys, __toggleRoster(), or roster(); it renders from window.__whoIsHere(). HTML
+   overlay (not SVG), lives inside .hunt-viewport so it rides along into fullscreen;
+   pointer-events only on the panel itself. */
+/* A WIDE, SHORT banner across the TOP rather than a tall side column — so the list never sits
+   on top of the people it names (a guest under a side panel couldn't be seen when you clicked
+   to arrow them). Names flow into as many ~15rem columns as the width allows. */
 .roster-panel{
-  position:absolute; z-index:22; top:10px; left:10px; right:10px; box-sizing:border-box;
-  max-height:min(85%, 560px); overflow:auto;
+  /* top:24px clears the console arrowhead hint (top:2px, 18px tall) in the corner beneath it —
+     the panel out-stacks it, and the roster is offered in every room now, so a lower banner is
+     the difference between the hint being reachable and being permanently buried. */
+  position:absolute; z-index:22; top:24px; left:10px; right:10px; box-sizing:border-box;
+  /* height is capped against the BOTTOM of the viewport, not a percentage of it: the scene box is
+     only ~130px tall at phone width, where any percentage tall enough to be useful runs straight
+     over the date/time pills. 52px = the 24px top offset + the pill strip's height and margin. A
+     roster too long for what's left scrolls (overflow below) rather than growing into them. */
+  max-height:min(calc(100% - 52px), 560px); overflow:auto;
   background:var(--paper); color:var(--ink); border:1px solid var(--rule); border-radius:10px;
   box-shadow:0 6px 22px rgba(69,58,49,.28); padding:.6rem .85rem .7rem;
   font-family:"Source Serif 4",Georgia,serif; text-align:left;
@@ -22880,6 +22887,7 @@ var T = {
     fun_pouria: "the Café Pamenar guy", fun_irene: "learning Python already", fun_robin: "loves dinosaurs", fun_navid: "loves legos",
     fun_elisabeth: "good climber", fun_felix: "likes sports", fun_patricia_son: "loves the <em>Lada</em>", fun_patricia_daughter: "mesmerizing eyes", fun_hannah: "the gymnast",
     roster_title: "who's here?", roster_empty: "The floor's empty — throw the party first.", roster_pick_hint: "tap to point them out on the floor", // "who's here?" roster overlay
+    roster_none: "Nobody's in this room right now.", roster_name_hint: "tap for their card", // per-room roster: the quiet room, and the hint on a row that pops a name card
     tip_chaharshanbe: "<em>Chaharshanbe Suri</em> (<bdi>چهارشنبه‌سوری</bdi>), the fire you leap",
     tip_sizdah: "<em>Sizdah Bedar</em> (<bdi>سیزده‌بدر</bdi>), nowruz's thirteenth day, spent outdoors",
     // The knot is the reason this day is on a wedding site at all, and the visual can't say it:
@@ -23454,7 +23462,7 @@ var T = {
     kbd_space: "play / pause the music or video",
     kbd_esc: "go back",
     kbd_f: "fullscreen",
-    kbd_watch: "who’s here? (party roster)",
+    kbd_watch: "who’s here? (roster for this room)",
     kbd_tab: "random party moment (cake, toast, sparklers…)",
     kbd_autoplay: "autoplay (loops on its own)",
     autoplay_badge: "auto",
@@ -23630,6 +23638,7 @@ var T = {
     fun_pouria: "ten z Café Pamenar", fun_irene: "už se učí Python", fun_robin: "miluje dinosaury", fun_navid: "miluje lego",
     fun_elisabeth: "dobrá lezkyně", fun_felix: "má rád sport", fun_patricia_son: "miluje <em>Ladu</em>", fun_patricia_daughter: "okouzlující oči", fun_hannah: "gymnastka",
     roster_title: "kdo je tady?", roster_empty: "Parket je prázdný — nejdřív rozjeď párty.", roster_pick_hint: "klepnutím ho ukážeš na parketu", // roster překryv „kdo je tady?“
+    roster_none: "V téhle místnosti teď nikdo není.", roster_name_hint: "klepnutím zobrazíš kartu", // roster po místnostech: prázdná místnost a nápověda u řádku, který otevře kartu
     tip_chaharshanbe: "<em>Čaháršanbe surí</em> (<bdi>چهارشنبه‌سوری</bdi>), oheň, který se přeskakuje",
     tip_sizdah: "<em>Sizdah Bedar</em> (<bdi>سیزده‌بدر</bdi>), třináctý den nourúzu, strávený v přírodě",
     sizdah_wish: "Zauzlovat sabzeh znamená přát si svatbu. Zabralo to.",
@@ -24197,7 +24206,7 @@ var T = {
     kbd_space: "přehrát / pozastavit hudbu nebo video",
     kbd_esc: "jít zpět",
     kbd_f: "celá obrazovka",
-    kbd_watch: "kdo je tady? (soupiska párty)",
+    kbd_watch: "kdo je tady? (soupiska téhle místnosti)",
     kbd_tab: "náhodný moment párty (dort, přípitek, prskavky…)",
     kbd_autoplay: "autoplay (běží samo dokola)",
     autoplay_badge: "auto",
@@ -30789,6 +30798,20 @@ document.addEventListener("click", function (e) {
   window.__cuddlyVisitorText = function (id) { if (CUDDLY_DUOS[id] && window.__deliverPhoneMessage) { window.__deliverPhoneMessage("visit_" + id); return true; } return false; };
   window.__cuddlyVisit = function (id, forced) { return visit(id, forced); };
   window.__cuddlyVisitorDuos = function () { return DUO_IDS.slice(); };
+  // The duo in the nook right now, display-ready for the shared per-room roster
+  // (window.__whoIsHere). Bahareh's half rides Irene's OWN cameo (no .cuddly-visitor node of her
+  // own), so Irene is rostered by that figure, not from here.
+  window.__cuddlyVisitorsNow = function () {
+    if (!activeDuo || !CUDDLY_DUOS[activeDuo]) return [];
+    var out = [];
+    CUDDLY_DUOS[activeDuo].members.forEach(function (m) {
+      if (m.el === "irene") return;
+      var g = groups[m.el];
+      if (!g || !g.classList.contains("showing")) return;
+      out.push({ key: m.name.toLowerCase(), name: m.name, roleKey: m.role, el: g });
+    });
+    return out;
+  };
   // Double-click the nook's ROOF (the pale ceiling strip along the very top — NOT the brick wall)
   // → a duo drops by unannounced. The daytime + no-meal rules are enforced inside visit(). Fresh duo each time.
   (function () {
@@ -30924,6 +30947,16 @@ document.addEventListener("click", function (e) {
   }
   window.__updateKidGames = apply;
   window.__kidGamesReshuffle = function () { var kg = document.getElementById("cuddly-kidgames"); if (kg) randomize(kg); }; // test/console hook
+  // The six kids seated in the nook games right now, display-ready for the shared per-room
+  // roster (window.__whoIsHere) — empty unless the scene is actually .playing.
+  window.__kidGamesNow = function () {
+    var kg = document.getElementById("cuddly-kidgames");
+    if (!kg || !kg.classList.contains("playing")) return [];
+    return NAMES.map(function (cls) {
+      var who = KID_WHO[cls];
+      return { key: who.name.toLowerCase(), name: who.name, roleKey: who.role, el: kg.querySelector("." + cls) };
+    });
+  };
   // ONE-ROOM gate helper: is this named kid currently seated in a game group AND is the games
   // scene playing? The cuddly-nook cameo scheduler (Irene/Robin/Navid) consults this so a kid
   // can't be in a game AND wander in as a random cameo at the same instant. Case-insensitive on
@@ -37662,7 +37695,7 @@ var ABANDONED_CALL_MS = 30000;
     guests: "guests(true) — the three VIP guests crash the party and steal the show, dancing dead-centre floor: Ali (best man, long grey beard), Goli (Ali's fashionista girlfriend, platinum bob) & Spencer (Markéta's man-of-honor, the giant of the group). lights the party + heads to the garden first if needed. guests(false) sends them off (party rolls on); guests() reports whether they're on the floor. they also arrive on their own a beat after the party lights. aligoli() is an alias",
     aligoli: "aligoli — alias for guests; try `help guests`",
     arrive: "arrive(\"ali\"|\"spencer\"|\"alireza\"|\"farhang\"|\"bahareh\") — a duo (or the single Bahareh) STROLLS IN through the garden gate onto the dance floor, an entrance moment. arrive() walks in a random duo. lights the party + heads to the garden first if needed. the duos also trickle in on their own, one per beat, as the party fills up. (ali = Ali & Goli, spencer = Spencer & Jay, alireza = Alireza & Mahzad, farhang = Farhang & Lauren, bahareh = Bahareh solo)",
-    roster: "roster() — toggle the \"who's here?\" panel: an at-a-glance legend of everyone on the garden-party floor right now (name · role), reflecting who's actually present. click a name to spotlight them — everyone ELSE freezes while the pick keeps dancing, with an arrow over them, for 3s (works for the DJ + photographer too). roster(true) opens it, roster(false) closes it; lights the party + heads to the garden first if it's dark. the 'h' key does the same",
+    roster: "roster() — toggle the \"who's here?\" panel: a live at-a-glance list of everyone in the room you're LOOKING AT right now (name · role), kids included — the dance floor, the bar couple + Pouria, the nook's residents/visitors/playing kids, the office pair, the deck crowd + Hamid at the grill. it tracks arrivals and departures while it's open. click a name for their card; on the garden floor it also spotlights them — everyone ELSE freezes while the pick keeps dancing, with an arrow over them, for 3s (works for the DJ + photographer too). roster(true) opens it, roster(false) closes it. the 'h' and 'w' keys do the same. window.__whoIsHere(\"office\") returns the same list for any room",
     reset: "reset() — restart the whole loft from the top (no confirmation — you typed it)",
     autoplay: "autoplay(true) — ATTRACT MODE for the wedding BBQ screen: the loft drives itself, forever, as CHAINED ROUTINES — each room gets a little authored story (its solve, then its signature toys) with unhurried pauses between beats, and a visible ghost cursor glides to what it's 'clicking' so you can follow along. It TAKES OVER FROM WHEREVER THE GAME IS (never resets to the kitchen). The GARDEN PARTY lingers longest (party on → guests + dancing → who's-who → spotlight → Aspen's album → season change → first dance/jukebox); the office monitor and pocket phone actually PLAY WITH several apps in turn (Minesweeper, Life, Mail, weather, calendar / messages, album search, cocktails…). Rooms are shuffled so a long BBQ never repeats, and phone notifications INTERRUPT to be opened + acted on, then the flow resumes. This is NOT the fixed Trailer reel (that's the ▷ Trailer button). autoplay(false) stops it for good; autoplay() toggles. It does NOT stop on stray clicks/keys (click to go fullscreen without killing it) — only the □ Take over control, autoplay(false), or the 'a' key stop it; pauses cleanly when the tab is hidden or unfocused. Open the page with ?autoplay in the URL to boot straight into it",
     quit: "quit (or exit) — shut the console down (refresh, back to the desktop)",
@@ -47994,7 +48027,12 @@ async def localfont(name):
       if (act === "cake") { if (window.cake) window.cake(); return; } // cake() lights the party + heads to the garden + runs the cake cutting
       if (act === "bouquet") { if (window.bouquet) window.bouquet(); return; } // bouquet() lights the party + heads to the garden + runs the bouquet toss
       if (act === "chairlift") { if (window.chairlift) window.chairlift(); return; } // chairlift() lights the party + heads to the garden + runs the chair-lift hora
-      if (act === "roster") { if (window.roster) window.roster(true); return; } // Danesh's shout-out → ALWAYS open the roster (don't toggle it shut if it's already up); lights the party + heads to the garden
+      if (act === "roster") { // Danesh's shout-out is about the DANCE FLOOR, so light the party + head to the garden before opening (the panel itself now rosters whatever room it's in)
+        if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
+        if (window.goToStage && window.currentStageName !== "garden") window.goToStage("garden");
+        setTimeout(function () { if (window.roster) window.roster(true); }, window.currentStageName === "garden" ? 0 : 60); // let a room change settle
+        return;
+      }
       if (act === "jukebox") { // "requests are open" → the DJ-booth song picker
         if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
         if (window.goToStage) window.goToStage("garden");
@@ -59448,7 +59486,7 @@ function spawnDustMote(container) {
     if (window.__updateProjectorPans) window.__updateProjectorPans(); // all four projector-music beds pan to the new room from the shared table
     if (window.__updatePartyRoom) window.__updatePartyRoom(); // party is garden-sourced: pan + faintness per room
     if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // re-evaluate the eased blacklight for the new room (keeps it toned down if it already eased this UV session — no intense re-flash on room change)
-    if (window.__syncRosterAvail) window.__syncRosterAvail(); // leaving the garden closes the "who's who?" roster (it's a garden-floor legend)
+    if (window.__syncRosterAvail) window.__syncRosterAvail(); // an open "who's here?" roster re-lists for the room just entered (no 1.5s poll lag)
     if (window.__updateWind) window.__updateWind(ROOM_FADE); // wind bed (balcony, + through the cuddly door) fades out over the room change too
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(name === "garden"); // birdsong only in the garden, and only by day
     if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // after-dark disco-ball peek re-arms on entering the garden at night, retracts on leaving (reads window.currentStageName)
@@ -59684,8 +59722,8 @@ function spawnDustMote(container) {
       if (window.blacklight) window.blacklight(!window.blacklight()); // toggle the UV / blacklight wash (same as uv()/blacklight())
     } else if (e.key === "w" || e.key === "W") {
       e.preventDefault();
-      // 'w' → toggle the "who's here?" roster (lights the party + heads to the garden if needed). The
-      // Trailer is started from its button, not a key.
+      // 'w' → toggle the "who's here?" roster for the room on screen. The Trailer is started from
+      // its button, not a key.
       if (window.roster) window.roster();
     } else if (e.key === "a" || e.key === "A") {
       e.preventDefault();
@@ -64388,6 +64426,22 @@ function spawnDustMote(container) {
     window.__balconySmokerNow = function () {
       if (!hangout.classList.contains("on")) return null;
       return shownSmokerNames.length ? shownSmokerNames.slice() : null;
+    };
+    // Everyone actually standing on the deck right now (crowd + smokers), display-ready for the
+    // shared per-room roster (window.__whoIsHere). NB `r.name` is the one-room EXCLUSION key and
+    // is deliberately not the face on screen (bh-patricia-son wears Bahareh, bh-patricia-daughter wears Patricia) —
+    // the visible name is figLabel(r), and the off-duty DJ names himself live.
+    window.__balconyHangoutNow = function () {
+      if (!hangout.classList.contains("on")) return [];
+      var out = [];
+      ROSTER.forEach(function (r) {
+        var g = document.getElementById(r.id);
+        if (!g || g.style.display === "none") return;
+        var nm = figLabel(r);
+        if (!nm) return;
+        out.push({ key: r.dj ? nm.toLowerCase() : r.name, name: nm, roleKey: r.role, el: g });
+      });
+      return out;
     };
     // ── name popups: each figure names itself on hover (shared tooltip) + click (the shared white
     // name-card __whoPop, same as the garden/cuddly cast). The tip HTML is a live function so the
@@ -70264,13 +70318,14 @@ function spawnDustMote(container) {
   };
 
   // ── ROSTER OVERLAY ("who's here") ────────────────────────────────────────────
-  // A tidy legend of everyone currently on the garden-party floor — name · role, the
-  // exact pairs the hover tooltips use. Complements the per-figure tooltips + the
-  // space-to-freeze inspect: no need to hover each cameo one by one. Live — it reads
-  // the scene at open/toggle time (and re-renders on a language flip while open), so it
-  // reflects who's actually present right now (skips hidden/away/off-with-kids figures,
-  // includes the mouses only while they're visiting). Toggled by the corner button, the
-  // 'h' key ("who's here"), window.__toggleRoster() (test hook), or roster().
+  // A tidy list of everyone in the room ON SCREEN — name · role, the exact pairs the name
+  // cards use. Every room has one: the dance floor, the bar, the nook, the office, the deck.
+  // Live in both directions — it renders from window.__whoIsHere() (defined below) and
+  // re-checks on a 1.5s poll while open, so arrivals and departures land under it, not only
+  // on room entry. Toggled by the corner button, the 'h'/'w' keys, window.__toggleRoster()
+  // (test hook), or roster().
+  // This closure also owns the GARDEN's presence rules (present()/djName() below) — the floor
+  // is one of the five sources __whoIsHere reads, not a special case of the panel.
   (function () {
     // The data table: .g-NAME selector → { name literal, roleKey }. Same names+roles as the
     // tooltips wired near hoverTooltip(...). Ordered hosts → wedding party → travel/friends →
@@ -70351,6 +70406,131 @@ function spawnDustMote(container) {
       var danesh = !!(b && b.classList.contains("dj-b"));
       return danesh ? "Danesh" : "Sina";
     }
+
+    // ── WHO IS HERE — the canonical per-room occupancy accessor ────────────────────────────
+    // window.__whoIsHere(room) → the people in THAT room right now, in reading order:
+    //   [{ key, name, roleKey, room, el, sels }]
+    //     key     canonical lowercase person id — also the relLine()/funFact() lookup key
+    //     name    display name, already resolved (the off-duty DJ names whoever's off tonight)
+    //     roleKey a T dictionary KEY, not resolved text, so a consumer stays language-live
+    //     el      that figure's live node (the __whoPop anchor), or null
+    //     sels    garden-floor selector(s) the row can spotlight, else null
+    // room defaults to the room on screen; an unknown room gives [].
+    // It never decides occupancy itself: each room's controller already knows who it put there,
+    // so this reads their published hooks (__barCoupleNow / __officeCoupleNow /
+    // __balconyHangoutNow / __balconyGrillmasterNow / __cuddlyVisitorsNow / __kidGamesNow) and,
+    // for the standalone cameo figures no rotation owns, whether the figure is painted — which
+    // is exactly the state its own system publishes. One notion of presence, nothing to drift.
+    var WHO_ROOMS = ["kitchen", "garden", "cuddly", "office", "balcony"];
+    // name/role directory for the hooks that publish BARE member ids (the bar + office couples,
+    // the grillmaster). Every such id is already a floor-ROSTER key, so the floor's own table is
+    // the directory — no second name table to fall out of sync.
+    var WHO_DIR = {};
+    ROSTER.forEach(function (r) { if (r.name && !r.pair) WHO_DIR[r.key] = { name: r.name, roleKey: r.roleKey }; });
+    // A LIST capitalises the couple like every other name in it; their own figure-tap cards keep
+    // the site's lowercase styling, so the balcony's `label` can't just be taken as-is.
+    var WHO_HOSTS = { marketa: "Markéta", behdad: "Behdad" };
+    // Standalone cameo figures: nobody rotates them, so "is this node painted" IS their owner's
+    // published state (each system shows/hides exactly this group).
+    var WHO_CAMEOS = {
+      kitchen: [{ key: "pouria", name: "Pouria", roleKey: "role_bartender", id: "kitchen-bartender" }],
+      garden: [],
+      cuddly: [
+        { key: "marketa", name: "Markéta", roleKey: "role_bride", id: "cuddly-marketa" }, // the residents, home unless they're off at the party
+        { key: "behdad",  name: "Behdad",  roleKey: "role_groom", id: "cuddly-behdad" },
+        { key: "irene",   name: "Irene",   roleKey: "role_niece",  id: "cuddly-irene" },  // the drop-in kid cameos + the totoro co-watch
+        { key: "robin",   name: "Robin",   roleKey: "role_godson", id: "cuddly-robin" },
+        { key: "navid",   name: "Navid",   roleKey: "role_godson", id: "cuddly-navid" }
+      ],
+      office: [],
+      balcony: [
+        { key: "aspen",   name: "Aspen",   roleKey: "role_photographer", id: "balcony-photographer" }, // BBQ-day shooter
+        { key: "irene",   name: "Irene",   roleKey: "role_niece",  id: "balcony-smores-irene" },       // s'mores round the bonfire
+        { key: "robin",   name: "Robin",   roleKey: "role_godson", id: "balcony-smores-robin" },
+        { key: "navid",   name: "Navid",   roleKey: "role_godson", id: "balcony-smores-navid" },
+        { key: "irene",   name: "Irene",   roleKey: "role_niece",  id: "balcony-irene" },              // the Chaharshanbe fire-leapers
+        { key: "robin",   name: "Robin",   roleKey: "role_godson", id: "chaharshanbe-robin" },
+        { key: "navid",   name: "Navid",   roleKey: "role_godson", id: "chaharshanbe-navid" },
+        { key: "marketa", name: "Markéta", roleKey: "role_bride",  id: "balcony-couple" },             // they leap it together, one group
+        { key: "behdad",  name: "Behdad",  roleKey: "role_groom",  id: "balcony-couple" }
+      ]
+    };
+    // Painted right now? The node's own box AND every ancestor gate up to the strip — most cameos
+    // are shown by a LAYER fading (#kitchen-bar, #cuddly-couple.at-party, #balcony-hangout.on),
+    // not by a class on the figure itself.
+    function whoRendered(el) {
+      var n = el;
+      while (n && n.nodeType === 1) {
+        var cs = getComputedStyle(n);
+        if (cs.display === "none" || cs.visibility === "hidden" || parseFloat(cs.opacity) === 0) return false;
+        if (n.id === "loft-game-strip") break;
+        n = n.parentNode;
+      }
+      return !!el;
+    }
+    function whoFromIds(ids, anchorSel, out) { // a hook that publishes bare ids → directory rows
+      if (!ids) return;
+      (Array.isArray(ids) ? ids : [ids]).forEach(function (id) {
+        var d = WHO_DIR[id];
+        if (!d) return;
+        out.push({ key: id, name: d.name, roleKey: d.roleKey, el: anchorSel ? document.querySelector(anchorSel) : null, sels: null });
+      });
+    }
+    function whoHook(fn) { try { return typeof fn === "function" ? (fn() || []) : []; } catch (e) { return []; } }
+    function whoRows(rows, out) { // a hook that publishes display-ready rows
+      rows.forEach(function (r) { if (r && r.name) out.push({ key: r.key, name: r.name, roleKey: r.roleKey, el: r.el || null, sels: null }); });
+    }
+    function occupantsOf(room) {
+      var out = [];
+      if (room === "garden") {
+        ["hosts", "guests", "crew", "kids"].forEach(function (grp) { // same reading order the panel has always used
+          ROSTER.forEach(function (r) {
+            if (r.grp !== grp || !present(r.sel)) return;
+            if (r.pair) { // the couple share one ROSTER line but stand as two figures — bride first
+              out.push({ key: "marketa", name: "Markéta", roleKey: "role_bride", el: document.querySelector("#garden-guests .g-marketa"), sels: [".g-marketa"] });
+              out.push({ key: "behdad",  name: "Behdad",  roleKey: "role_groom", el: document.querySelector("#garden-guests .g-behdad"),  sels: [".g-behdad"] });
+              return;
+            }
+            var dj = r.sel === "__dj";
+            var pickable = r.sel.charAt(0) === "." || dj || r.sel === "#garden-photog-hit"; // chase runners have no standing figure to arrow
+            out.push({
+              key: dj ? djName().toLowerCase() : (r.relKey || r.key),
+              name: dj ? djName() : r.name,
+              roleKey: r.roleKey,
+              el: document.querySelector(dj ? "#garden-djbooth" : (r.sel.charAt(0) === "." ? "#garden-guests " + r.sel : r.sel)),
+              sels: pickable ? [r.sel] : null
+            });
+          });
+        });
+      } else if (room === "kitchen") {
+        whoFromIds(whoHook(window.__barCoupleNow), "#kitchen-bar-couples .bar-couple.present", out);
+      } else if (room === "office") {
+        whoFromIds(whoHook(window.__officeCoupleNow), "#office-hangout .of-couple.present", out);
+      } else if (room === "balcony") {
+        whoRows(whoHook(window.__balconyHangoutNow), out);
+        whoFromIds(whoHook(window.__balconyGrillmasterNow), "#balcony-grillmaster", out);
+      } else if (room === "cuddly") {
+        whoRows(whoHook(window.__cuddlyVisitorsNow), out);
+        whoRows(whoHook(window.__kidGamesNow), out);
+      }
+      (WHO_CAMEOS[room] || []).forEach(function (c) {
+        if (whoRendered(document.getElementById(c.id))) out.push({ key: c.key, name: c.name, roleKey: c.roleKey, el: document.getElementById(c.id), sels: null });
+      });
+      var seen = {}, uniq = []; // the owners are mutually exclusive, but a person may never be listed twice
+      out.forEach(function (p) {
+        if (!p || !p.name || seen[p.key]) return;
+        seen[p.key] = 1;
+        if (WHO_HOSTS[p.key]) p.name = WHO_HOSTS[p.key];
+        p.room = room;
+        uniq.push(p);
+      });
+      return uniq;
+    }
+    window.__whoIsHere = function (room) {
+      room = room || window.currentStageName || "kitchen";
+      if (WHO_ROOMS.indexOf(room) < 0) return [];
+      try { return occupantsOf(room); } catch (e) { return []; }
+    };
 
     var panel = null, toggleBtn = null, open = false;
 
@@ -70534,43 +70714,52 @@ function spawnDustMote(container) {
       return host;
     }
 
-    // Build the list of present people, grouped, into the panel. Rebuilt each open + on a
-    // language flip while open, so names/roles + presence are always current.
-    function render() {
+    // The card a roster row pops: the same name · role · age · relationship · fun-fact line the
+    // figure's own tap gives, so both routes to a person read identically.
+    function rosterCard(p) {
+      return "<em>" + p.name + "</em>" + (p.roleKey ? " · " + tipText(p.roleKey) : "") +
+        kidAgeLine(p.name) + relLine(p.key) + funFact(p.key);
+    }
+    // A row's tap: on the garden floor it still singles the guest out (arrow + freeze the rest),
+    // and everywhere there's a figure to point at it also pops that person's white name card.
+    function pickRow(p) {
+      if (p.sels) spotlightGuests(p.sels);
+      // deferred a tick: the card is anchored on the FIGURE, but the click that asked for it is on
+      // the roster row, so the global egg-bubble dismisser (a document click listener that drops
+      // any bubble whose anchor doesn't contain the target) would kill it on the way up.
+      if (p.el) setTimeout(function () { showWhoPop(p.el, rosterCard(p)); }, 0);
+    }
+    // Rebuild only when the room, the language, or the set of people actually changed — the
+    // availability poll calls this every 1.5s under an open panel, and blindly re-rendering
+    // would drop row focus/hover mid-interaction.
+    var lastSig = null;
+    function rosterSig(room, people) {
+      return room + "|" + document.documentElement.lang + "|" + people.map(function (p) { return p.key; }).join(",");
+    }
+    // Build the list of people in the room ON SCREEN into the panel. `force` rebuilds regardless
+    // of the signature (a fresh open, a language flip).
+    function render(force) {
       if (!panel) return;
+      var room = window.currentStageName || "kitchen";
+      var people = window.__whoIsHere(room);
+      var sig = rosterSig(room, people);
+      if (!force && sig === lastSig) return;
+      lastSig = sig;
       // drop everything except the persistent close button
       var close = panel.querySelector(".roster-close");
       panel.innerHTML = "";
       if (close) panel.appendChild(close);
       // no visible header — the list speaks for itself + saves vertical space (aria-label covers a11y)
-
-      // flat list in group order (hosts → guests → crew → kids); the CSS flows it into columns so a
-      // long roster stays a short banner rather than a tall side column that covers the floor
-      var order = ["hosts", "guests", "crew", "kids"], people = [];
-      order.forEach(function (grp) {
-        ROSTER.forEach(function (r) {
-          if (r.grp !== grp || !present(r.sel)) return;
-          if (grp === "hosts") { // split the couple into two rows — the BRIDE first, then the groom — each singling out their own figure
-            people.push({ name: "Markéta", role: tipText("role_bride"), sels: [".g-marketa"], rel: relLine("marketa"), fun: funFact("marketa") });
-            people.push({ name: "Behdad",  role: tipText("role_groom"), sels: [".g-behdad"], rel: relLine("behdad"), fun: funFact("behdad") });
-            return;
-          }
-          var nm = r.name || (r.sel === "__dj" ? djName() : "");
-          // which garden figure(s)/crew a row can single out: any ".g-*" guest is itself; the DJ +
-          // photographer (crew) get an arrow over their booth / their figure and freeze the crowd
-          // around them (they don't dance). Kids with a non-".g-"/non-crew sel (#garden-kid-*) aren't pickable.
-          var sels = (r.sel.charAt(0) === "." ? [r.sel]
-                   : ((r.sel === "__dj" || r.sel === "#garden-photog-hit") ? [r.sel] : null));
-          people.push({ name: nm, role: tipText(r.roleKey), sels: sels, rel: relLine(r.relKey || r.key), fun: funFact(r.relKey || r.key) });
-        });
-      });
       if (!people.length) {
         var empty = document.createElement("p");
         empty.className = "roster-empty";
-        empty.textContent = tipText("roster_empty");
+        // a dark garden is a nudge ("throw the party first"); every other quiet room just says so
+        empty.textContent = tipText(room === "garden" && !window.__gardenPartyOn ? "roster_empty" : "roster_none");
         panel.appendChild(empty);
         return;
       }
+      // flat list; the CSS flows it into columns so a long roster stays a short banner rather than
+      // a tall side column that covers the room it's naming
       var ul = document.createElement("ul");
       ul.className = "roster-list";
       people.forEach(function (p) {
@@ -70578,15 +70767,16 @@ function spawnDustMote(container) {
         var em = document.createElement("em");
         em.textContent = p.name;
         li.appendChild(em);
-        li.appendChild(document.createTextNode(p.role ? " · " + p.role : ""));
+        var role = p.roleKey ? tipText(p.roleKey) : "";
+        li.appendChild(document.createTextNode(role ? " · " + role : ""));
         // roster stays short: just name · role (the relationship + fun-fact live on the click who-pop, not here)
-        if (p.sels) { // clickable → single this guest out on the floor
+        if (p.sels || p.el) {
           li.className = "roster-pick";
           li.setAttribute("role", "button");
           li.setAttribute("tabindex", "0");
-          li.setAttribute("title", tipText("roster_pick_hint"));
-          li.addEventListener("click", function () { spotlightGuests(p.sels); });
-          li.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); spotlightGuests(p.sels); } });
+          li.setAttribute("title", tipText(p.sels ? "roster_pick_hint" : "roster_name_hint"));
+          li.addEventListener("click", function () { pickRow(p); });
+          li.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickRow(p); } });
         }
         ul.appendChild(li);
       });
@@ -70598,7 +70788,7 @@ function spawnDustMote(container) {
       open = !!v;
       if (open) {
         if (window.__closeDjPicker) window.__closeDjPicker(); // roster + jukebox are mutually exclusive
-        render();
+        render(true);
         panel.hidden = false;
         // let display flip before the opacity/transform transition
         requestAnimationFrame(function () { if (panel) panel.classList.add("show"); });
@@ -70612,21 +70802,19 @@ function spawnDustMote(container) {
     }
     function toggle() { setOpen(!open); }
 
-    // The corner chip is only offered while the party's lit AND we're in the garden (the roster is
-    // a legend of the garden floor — meaningless anywhere else). Poll the party/room state cheaply
-    // and reflect it; also close a stale-open panel if the party ends OR we leave the garden.
-    function inGarden() { return window.currentStageName === "garden"; }
+    // The corner chip is offered in EVERY room — each one has its own live roster now, and an
+    // empty room says so rather than hiding the affordance. Poll cheaply so an open panel tracks
+    // arrivals and departures (a couple rotating out of the bar, the deck crowd stepping in, the
+    // kids sitting down to a game) instead of only refreshing on room entry.
     function syncAvailability() {
       if (!ensureNodes()) return;
-      var on = !!window.__gardenPartyOn && inGarden();
       toggleBtn.textContent = tipText("roster_title");
       toggleBtn.setAttribute("aria-label", tipText("roster_title"));
       toggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
-      toggleBtn.classList.toggle("avail", on);
-      if (!on && open) setOpen(false); // party ended OR navigated away from the garden → close the panel
+      toggleBtn.classList.add("avail");
       if (open) render(); // keep the open panel live (presence can change under it)
     }
-    window.__syncRosterAvail = syncAvailability; // goToStage pings this so leaving the garden closes the panel at once (no 1.5s poll lag)
+    window.__syncRosterAvail = syncAvailability; // goToStage pings this so the panel re-lists for the new room at once (no 1.5s poll lag)
 
     // Test hook + programmatic toggle. Lights nothing on its own — just shows/hides the panel.
     window.__toggleRoster = function (force) {
@@ -70637,10 +70825,8 @@ function spawnDustMote(container) {
       return open;
     };
     window.__rosterOpen = function () { return open; }; // test read hook
-    window.__rosterList = function () { // test hook: the present names, in panel order
-      var out = [];
-      ROSTER.forEach(function (r) { if (present(r.sel)) out.push(r.name || (r.sel === "__dj" ? djName() : "")); });
-      return out;
+    window.__rosterList = function (room) { // test hook: the names in a room (default: the room on screen), in panel order
+      return window.__whoIsHere(room).map(function (p) { return p.name; });
     };
     // Structured presence, shared with the wedding-album capture so both read the SAME floor.
     // Returns [{ key, grp, name, roleKey }] for everyone present right now, in panel order.
@@ -70653,16 +70839,14 @@ function spawnDustMote(container) {
       return out;
     };
 
-    // roster() — console command. roster(true) opens the "who's here" panel, roster(false)
-    // closes it, roster() toggles + lists who's currently on the floor. Heads to the garden +
-    // lights the party first if it's dark (there's nobody to list otherwise).
+    // roster() — console command. roster(true) opens the "who's here" panel for the room on
+    // screen, roster(false) closes it, roster() toggles + lists who's in this room. Takes the
+    // room as it finds it: every room has a roster, so there's nothing to light or navigate to.
     window.roster = function (arg) {
-      if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
-      if (window.goToStage && window.currentStageName !== "garden") window.goToStage("garden");
       var want = (arg === undefined) ? !open : !!arg;
-      setTimeout(function () { window.__toggleRoster(want); }, window.currentStageName === "garden" ? 0 : 60); // let a room change settle
+      window.__toggleRoster(want);
       var names = window.__rosterList();
-      if (window.echo) window.echo(want ? ("📋 who's here: " + (names.length ? names.join(", ") : "(nobody yet — the floor's filling)")) : "📋 roster closed.");
+      if (window.echo) window.echo(want ? ("📋 who's here: " + (names.length ? names.join(", ") : "(nobody in this room right now)")) : "📋 roster closed.");
       return want;
     };
 
@@ -70679,7 +70863,7 @@ function spawnDustMote(container) {
     // Re-render on a language flip if the panel's open (roles are live-language); refresh the
     // chip label either way. setLang() calls window.refreshRoster at the end (same idiom as the
     // other refreshXxxText hooks), so hang the language refresh off that.
-    window.refreshRoster = function () { syncAvailability(); if (open) render(); };
+    window.refreshRoster = function () { syncAvailability(); if (open) render(true); }; // a language flip must rebuild even when the same people are listed
     document.addEventListener("DOMContentLoaded", syncAvailability);
     ensureNodes(); syncAvailability();
     setInterval(syncAvailability, 1500); // cheap: reflect party on/off + presence drift under an open panel

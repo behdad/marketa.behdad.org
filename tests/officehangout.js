@@ -45,8 +45,10 @@ function makeClassList(el) {
   };
 }
 function El(classes) {
-  var el = { _classes: (classes || "").split(/\s+/).filter(Boolean), _children: [] };
+  var el = { _classes: (classes || "").split(/\s+/).filter(Boolean), _children: [], _on: {} };
   el.classList = makeClassList(el);
+  el.addEventListener = function (t, fn) { (el._on[t] = el._on[t] || []).push(fn); }; // the couples carry a click → name-card handler
+
   el.querySelector = function (sel) {
     // supports ".cls" over descendants (used: layer.querySelector("." + cls))
     var want = sel.replace(/^\./, "");
@@ -172,10 +174,11 @@ for (var r = 0; r < 200; r++) {
 var distinct = Object.keys(seen).length;
 ok(distinct >= 3, "rotation surfaces multiple distinct couples over time (" + distinct + " seen: " + Object.keys(seen).join(",") + ")");
 
-// 5) one-room exclusion: put several couples' members on the floor/bar/balcony; the office must
-//    never show any excluded person.
+// 5) one-room exclusion: the office excludes the BAR and the BALCONY, but deliberately NOT the
+//    garden dance floor — the floor is off-screen while you're in the office, and floor(8)+bar+
+//    balcony would consume all 7 couples and leave the office permanently empty (see eligible()).
 sandbox.officefolks(false);
-// Ali+Goli on the garden floor:
+// Ali+Goli on the garden floor — still eligible for the office:
 gardenGuests.querySelector(".g-ali").classList.add("arrived");
 gardenGuests.querySelector(".g-goli").classList.add("arrived");
 // Spencer+Jay at the bar:
@@ -183,15 +186,19 @@ sandbox.__barCoupleNow = function () { return ["spencer", "jay"]; };
 // Farhang+Lauren on the balcony:
 sandbox.__balconySmokerNow = function () { return ["farhang", "lauren"]; };
 sandbox.__updateOfficeHangout();
-var violated = false, sawSomeone = false;
-var EXCLUDED = { ali:1, goli:1, spencer:1, jay:1, farhang:1, lauren:1 };
+var violated = false, sawSomeone = false, sawFloorPair = false;
+var EXCLUDED = { spencer:1, jay:1, farhang:1, lauren:1 };
 for (var q = 0; q < 300; q++) {
   advance(60000);
   var m = sandbox.__officeCoupleNow();
-  if (m) { sawSomeone = true; for (var mi = 0; mi < m.length; mi++) if (EXCLUDED[m[mi]]) violated = true; }
+  if (m) {
+    sawSomeone = true;
+    for (var mi = 0; mi < m.length; mi++) { if (EXCLUDED[m[mi]]) violated = true; if (m[mi] === "ali") sawFloorPair = true; }
+  }
 }
-ok(!violated, "one-room rule holds: office never shows anyone on the floor / at the bar / on the balcony");
+ok(!violated, "one-room rule holds: office never shows anyone at the bar / on the balcony");
 ok(sawSomeone, "one-room rule still lets eligible couples in (didn't just go permanently empty)");
+ok(sawFloorPair, "the garden floor is NOT an office exclusion (a dancing couple can still drift in)");
 
 // forcing an eligible-only pick honors exclusion (officefolks(true) skips excluded)
 sandbox.officefolks(false);

@@ -22505,6 +22505,10 @@ var T = {
     occ_banner_wed_prg: "💍 Prague Wedding",
     occ_banner_bbq: "🍖 BBQ Day",
     occ_banner_brunch: "🍳 Garden Brunch",
+    occ_invite_wed_edm: "it's our Edmonton wedding day! 💍 come celebrate with us",
+    occ_invite_wed_prg: "it's our Prague wedding day! 💍 come celebrate with us",
+    occ_invite_bbq: "cookout on the balcony today 🍖 come by for the BBQ!",
+    occ_invite_brunch: "garden brunch in Prague today 🍳 come join the family!",
     season_canada: "🍁 canada day",
     season_summer: "☀ summer",
     season_autumn: "🍂 autumn",
@@ -23246,6 +23250,10 @@ var T = {
     occ_banner_wed_prg: "💍 Svatba v Praze",
     occ_banner_bbq: "🍖 Den grilování",
     occ_banner_brunch: "🍳 Zahradní brunch",
+    occ_invite_wed_edm: "dnes je naše svatba v Edmontonu! 💍 přijď to s námi oslavit",
+    occ_invite_wed_prg: "dnes je naše svatba v Praze! 💍 přijď to s námi oslavit",
+    occ_invite_bbq: "dnes grilujeme na balkoně 🍖 přijď na BBQ!",
+    occ_invite_brunch: "dnes zahradní brunch v Praze 🍳 přijď za rodinou!",
     season_canada: "🍁 den Kanady",
     season_summer: "☀ léto",
     season_autumn: "🍂 podzim",
@@ -34913,7 +34921,7 @@ var ABANDONED_CALL_MS = 30000;
     // Exposed so the device-zoom Esc/Backspace handler can hang up a laptop call as its "close the
     // app" step (first Esc ends the call, the next backs the zoom out — like any other monitor app).
     window.__laptopCallLive = inCall;
-    window.__endLaptopCall = function () { endCall(); };
+    window.__endLaptopCall = function (silent) { if (silent) endLaptopUpdate(); else endCall(); }; // silent: drop the line at once (no goodbye/tone) so a competing call can take the one-at-a-time lock immediately
     // After the laptop's been open and untouched a while, the bouncing-caps "DVD
     // logo" screensaver takes over. Any click wakes it back to the normal
     // TextEdit face.
@@ -47413,6 +47421,8 @@ async def localfont(name):
       if (act.indexOf("pc:") === 0) { close(true); if (window.__openMonitorApp) window.__openMonitorApp(act.slice(3)); return; } // → an app on the office PC monitor (not the pocket phone) — e.g. the cue pointing at "the office speakers"
       if (act.indexOf("bd:") === 0) { close(true); if (window.__birthdayGoto) window.__birthdayGoto(act.slice(3)); return; } // → summon the birthday person: time-travel to their date + reveal them at their venue (garden/bar/dj/tehran-call/prague-call)
       close(true); // the rest leave the phone for somewhere in the loft
+      if (act === "occ") { if (window.__applyDateOccasion) window.__applyDateOccasion(true); return; } // special-day invite → force the latched happening (wedding party / BBQ / Prague brunch)
+      if (act.indexOf("season:") === 0) { if (window.season) window.season(act.slice(7)); return; } // holiday invite → dress the decor + pan to its room
       if (act === "eclipse") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__runBalconyEclipse) window.__runBalconyEclipse(); }, 760); return; } // pan first, then darken the sky
       if (act === "storm") { if (window.storm) window.storm(true); if (window.rain) window.rain(true); return; } // Bahareh's warning → a CLASSIC thunderstorm (lightning + rain); storm()/rain() pan to the balcony + set dusk themselves
       if (act === "invaders") { if (window.goToStage) window.goToStage("office"); setTimeout(function () { if (window.__startArcade) window.__startArcade(); }, 720); return; } // pan to the office, then launch the chair alien-arcade
@@ -47584,6 +47594,15 @@ async def localfont(name):
       if (messagesThread.indexOf(id) !== -1) return; // already sent this session — fire once
       var mb = who === "marketa" ? false : (who === "behdad" || BD_MB_PEOPLE[who]); // a partner's own birthday is announced by the OTHER partner
       MESSAGES[id] = { fromKey: mb ? "msg_marketa_from" : "msg_behdad_from", bodyKey: BD_TEMPLATES[Math.floor(Math.random() * BD_TEMPLATES.length)], bdName: name, act: "bd:" + who }; // tapping the text summons the birthday person (runMsgAction "bd:")
+      window.__deliverPhoneMessage(id);
+    };
+    // ── special-day INVITE text ── on a wedding/bbq/brunch occasion or a named holiday, the host texts
+    // an invite a moment after load (the dateOccasions orchestrator picks sender + body + tap-action).
+    // Tapping it runs the deliberate routing (apply(true) / season(sk)). Fires once per session
+    // (messagesThread dedup) — the caller adds a localStorage latch for once-per-(occasion,day).
+    window.__deliverOccasionText = function (id, fromKey, bodyKey, act) {
+      if (!id || messagesThread.indexOf(id) !== -1) return;
+      MESSAGES[id] = { fromKey: fromKey, bodyKey: bodyKey, act: act };
       window.__deliverPhoneMessage(id);
     };
     // message("Sender", "your text") — deliver an AD-HOC text: a notification toast (when the tab's
@@ -65426,8 +65445,12 @@ function spawnDustMote(container) {
       bdOfficeReveal(function () {
         if (window.__familyCallLive && window.__familyCallLive()) {
           if (window.__monitorZoomIn) window.__monitorZoomIn();
-        } else if (window.__openMonitorApp) {
-          window.__openMonitorApp("tehran");
+        } else {
+          // a live laptop call (Prague/Lübeck) holds the one-at-a-time lock, so openFamilyCall would
+          // bail and strand the monitor on the caps desktop — drop it silently first so the birthday's
+          // Tehran call actually lands
+          if (window.__laptopCallLive && window.__laptopCallLive() && window.__endLaptopCall) window.__endLaptopCall(true);
+          if (window.__openMonitorApp) window.__openMonitorApp("tehran");
         }
       });
       return;
@@ -65438,8 +65461,11 @@ function spawnDustMote(container) {
       // lid (call live, or ended-but-still-open) never re-zooms on its own — pull the view up to the
       // laptop unconditionally afterwards, which also covers a lid open but backed out of zoom.
       bdOfficeReveal(function () {
-        if (!(window.__pragueCallLive && window.__pragueCallLive()) && window.__laptopCall) {
-          window.__laptopCall("prague"); // opens the lid (zooming in) and dials Prague
+        if (!(window.__pragueCallLive && window.__pragueCallLive())) {
+          // a live monitor Tehran call holds the one-at-a-time lock, so startCall would bail and leave
+          // the laptop stranded — drop it silently first so the birthday's Prague call actually lands
+          if (window.__familyCallLive && window.__familyCallLive() && window.__closeMonitorFamily) window.__closeMonitorFamily(true);
+          if (window.__laptopCall) window.__laptopCall("prague"); // opens the lid (zooming in) and dials Prague
         }
         if (window.__laptopZoomIn) window.__laptopZoomIn();
       });
@@ -65588,6 +65614,7 @@ function spawnDustMote(container) {
     if (m === 7) return d <= 20 ? "smoky" : "summer";   // August wildfire ramp, then summer
     return "summer";                                    // June / July / early September gaps
   }
+  window.__calSeasonKey = calSeasonKey; // the date-invite orchestrator reads this to name the day's named holiday
   function calOverrideDate() { // the time-travelled day, if a ?date=/#date= override is live
     try {
       var s = (location.search || "") + (location.hash || "");
@@ -68938,6 +68965,7 @@ function spawnDustMote(container) {
         lastKey = null;
       }
       if (!key) return;                         // no occasion today
+      if (!force) return;                       // owner: the SCENE never auto-summons (load/focus/date-tick) — the loft loads playable; an invite TEXT (deliverDateInvite) activates it. Autonomous pings only tear the old one down (above).
       if (key === lastKey && !force) return;    // already set up (and not a forced re-run)
       if (gated()) return;                      // can't take over now — leave UNLATCHED so a focus/entry/date-tick retries
       // let the room slide / scene settle first, then re-check the gate + date before taking over.
@@ -68957,10 +68985,40 @@ function spawnDustMote(container) {
     // Retry an unhandled occasion the moment the tab is focused/shown or the loft enters play — a
     // fresh load lands unfocused/on the intro, so the 1200ms arm below is often gated; these catch
     // it up without re-forcing an already-set scene (apply is a cheap no-op once latched).
-    window.addEventListener("focus", function () { apply(); });
-    document.addEventListener("visibilitychange", function () { if (!document.hidden) apply(); });
-    window.__retryDateOccasion = function () { apply(); }; // goToStage pings this on the first step past the intro
-    setTimeout(apply, 1200); // arm at load, once the game has settled (deferred so the scene is up first)
+    // The occasion SCENE never auto-summons anymore (owner: load the loft playable). Instead, on a
+    // special day, an invite TEXT drips into Messages a moment after load — tapping it runs the same
+    // deliberate routing (apply(true) for wedding/bbq/brunch; season(sk) for a holiday). A birthday
+    // exact-day is invited by the couple's own sender-routed bd_<who> text (applyBirthdays → the tap
+    // reveals them / throws the party+cake), so it's not re-issued here. Crickets-gated + once per
+    // (occasion, day) via localStorage; re-tried on focus/visibility/first-entry so an unfocused or
+    // still-in-intro load still delivers once attended.
+    var PLAIN_SEASON = { winter: 1, spring: 1, summer: 1, smoky: 1, autumn: 1 }; // ordinary weather — no invite
+    var OCC_SENDER = { "wedding-edmonton": "msg_behdad_from", "bbq": "msg_behdad_from", "wedding-prague": "msg_marketa_from", "prague-party": "msg_marketa_from" }; // Edmonton side → Behdad · Prague side → Markéta
+    var OCC_BODY = { "wedding-edmonton": "occ_invite_wed_edm", "bbq": "occ_invite_bbq", "wedding-prague": "occ_invite_wed_prg", "prague-party": "occ_invite_brunch" };
+    var HOLIDAY_SENDER = { nowruz: "msg_behdad_from", chaharshanbe: "msg_behdad_from", carodejnice: "msg_marketa_from", spooky: "msg_irene_from" }; // Iranian → Behdad · Czech → Markéta · Halloween/spooky → Irene; shared/other default to Behdad
+    function deliverDateInvite() {
+      if (gated()) return; // crickets + autoplay/trip: no autonomous buzz now — a later focus/entry retries
+      if (!window.__deliverOccasionText) return;
+      var n = window.__now ? window.__now() : new Date();
+      var raw = rawOccKey(); // wedding-edmonton / wedding-prague / prague-party / bbq / bd:… / null
+      var invite = null;
+      if (raw && raw.indexOf("bd:") !== 0) {
+        invite = { id: "occ_" + raw, from: OCC_SENDER[raw], body: OCC_BODY[raw], act: "occ" };
+      } else if (!raw) { // no birthday/occasion → a NAMED holiday? (ordinary seasons + the wedding-week tint get none)
+        var sk = window.__calSeasonKey && window.__calSeasonKey(n.getMonth(), n.getDate());
+        if (sk && !PLAIN_SEASON[sk] && sk !== "wedding") invite = { id: "hol_" + sk, from: HOLIDAY_SENDER[sk] || "msg_behdad_from", body: "share_greet_" + sk, act: "season:" + sk };
+      }
+      if (!invite || !invite.from || !invite.body) return; // a birthday exact-day is invited by its own bd_<who> text, not here
+      var latch = "dateInvite:" + invite.id + ":" + n.getMonth() + "-" + n.getDate();
+      try { if (localStorage.getItem(latch)) return; } catch (e) {}
+      window.__deliverOccasionText(invite.id, invite.from, invite.body, invite.act);
+      try { localStorage.setItem(latch, "1"); } catch (e) {}
+    }
+    window.__deliverDateInvite = deliverDateInvite; // test/console hook
+    window.addEventListener("focus", deliverDateInvite);
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) deliverDateInvite(); });
+    window.__retryDateOccasion = deliverDateInvite; // goToStage pings this on the first step past the intro — the invite drips, the scene does NOT
+    setTimeout(deliverDateInvite, 1400); // a moment after load, once the game's settled
   })();
 
   // chase() — send the godkids (Irene, Robin & Navid) darting across the garden right now.

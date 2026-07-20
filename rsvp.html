@@ -65797,6 +65797,17 @@ function spawnDustMote(container) {
   function reducedMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
+  // Day/night is signalled by the `dusk` class the sun toggle stamps on EVERY stage at once
+  // ("night is night everywhere"), so the cat's own room stage is a reliable read. By DAY the
+  // cat is drowsy — naps more between shorter prowls; by NIGHT it's frisky — roams more and
+  // gets up to antics more often. The routine below reads this live each cycle, so a day/night
+  // flip retimes the very next one. Party containment, stow/reset, and the balcony final-leap
+  // all sit outside this and keep priority.
+  function isNight() {
+    var s = document.getElementById("stage-" + catRoom);
+    return !!(s && s.classList.contains("dusk"));
+  }
+  function laserOn() { return !!(window.laser && window.laser()); } // the console laser dot is out — stay chase-ready, don't nap through it
   function baseFeet() {                    // the roam-neutral floor position of the cat's feet
     // Read the LIVE base offset from #witchy-chest-cat-pos rather than the ROOMS table:
     // a freshly-emerged cat still carries the chest's native translate(-46,0) until a
@@ -65814,7 +65825,11 @@ function spawnDustMote(container) {
   }
   function scheduleJump() {
     clearTimeout(jumpTimer);
-    jumpTimer = setTimeout(runJumpCycle, 3300 + Math.random() * 3400); // every ~3.3–6.7s
+    // NIGHT: longer floor prowls between hops (roams more). DAY: settle onto a perch sooner
+    // (naps more, roams less). Read live so a day/night flip retimes the very next cycle.
+    var night = isNight();
+    var base = night ? 5200 : 2600, span = night ? 4200 : 2800; // night ~5.2–9.4s, day ~2.6–5.4s
+    jumpTimer = setTimeout(runJumpCycle, base + Math.random() * span);
   }
   function canJumpNow() {
     return walk.classList.contains("out") && !jumping && !reducedMotion() &&
@@ -65860,6 +65875,13 @@ function spawnDustMote(container) {
     var isStare = chosen === roosterStarePerch;    // the rooster: a normal-length sit spent locked onto the figurine
     if (chosen === ladybugPouncePerch) { startBugPounce(); return; } // a lunge-and-miss, its own arc (below)
     if (chosen === pulleyPouncePerch) { startPulleyPounce(); return; } // spring-and-swat the pulley (below)
+    // DAY ROUTINE: by daylight the cat is drowsy — an ordinary floor-level sit often curls into
+    // a nap in its cozy spot (eyes shut, slow breaths, a wake-up stretch on the hop down, all via
+    // the existing isNap path + longer sit duration). At night it stays alert and just sits. Only
+    // plain {x,y} sit perches convert — the office desk/chair naps keep their own weighting and
+    // their drag-follow hooks stay unconfused — and never while the laser's out, so a chase is
+    // never napped through. isNight/laserOn are read live.
+    if (!isNap && !isSwipe && !isStare && typeof chosen === "object" && !isNight() && !laserOn() && Math.random() < 0.6) isNap = true;
     var perch = typeof chosen === "function" ? chosen() : chosen; // resolve live-geometry perches
     if (!perch) { scheduleJump(); return; }           // couldn't resolve a surface — skip this cycle
     var b = baseFeet();
@@ -66569,7 +66591,11 @@ function spawnDustMote(container) {
   }
   function anticTick() {
     if (canAnticNow()) fireAntic();
-    anticTimer = setTimeout(anticTick, 9000 + Math.random() * 9000); // ~9–18s, jittered, sparse so it reads as mischief not a metronome
+    // NIGHT: antics fire more often (frisky). DAY: sparser (calm). Read live each tick, jittered
+    // so it reads as mischief not a metronome.
+    var night = isNight();
+    var base = night ? 5000 : 12000, span = night ? 6000 : 9000; // night ~5–11s, day ~12–21s
+    anticTimer = setTimeout(anticTick, base + Math.random() * span);
   }
   window.__catAntic = function () { if (!canAnticNow()) return false; fireAntic(); return true; }; // user-triggered mischief (the 'k' key when the cat's out)
   function scheduleAntic() {

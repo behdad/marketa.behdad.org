@@ -3772,23 +3772,35 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 @keyframes tehran-smoke-puff{0%{opacity:0; transform:translateY(1px) scale(.6)} 25%{opacity:.5} 100%{opacity:0; transform:translateY(-6px) scale(1.7)}}
 #tehran-candle.out #tehran-smoke{animation:tehran-smoke-puff 1s ease-out forwards}
 /* Tehran call — dynamic birthday seat of honour behind the cake. Whoever has an active
-   birthday takes the centre seat; the rest sit/stand around. Keyed on the SAME
-   #loft-game-strip.bd-<who> signal the party hats ride, so seating never drifts from the
-   birthday axis. Default guest of honour is Hannah (the 10-yr-old). The scene is native SVG
-   (no foreignObject / RenderLayer), so these visibility toggles paint correctly under the
-   office monitor's scale AND in the id→data-lid phone-call clone (the clone keeps the classes
-   and #loft-game-strip is its ancestor too, so the .bd-<who> selectors reach it). */
+   birthday takes the centre seat; the rest sit/stand around. Default guest of honour is Hannah
+   (the 10-yr-old). The scene is native SVG (no foreignObject / RenderLayer), so these visibility
+   toggles paint correctly under the office monitor's scale AND in the id→data-lid phone-call
+   clone (the clone keeps the classes; only the ids become data-lid).
+   These hang off BODY classes, not the #loft-game-strip.bd-<who> ones the in-scene hats ride:
+   the pocket phone re-renders this same scene into a modal mounted on <body>, OUTSIDE the strip,
+   so a strip-scoped selector reaches the office copy and silently misses the phone's. One
+   body.thr-bd-<who> per Tehran-venue person, plus a plain body.thr-bd for "any of them" — see
+   applyBirthdays, which derives both from the row's own `venue` so the set can't drift. */
 .thr-hon{visibility:hidden}
 .thr-hon-hannah{visibility:visible}
 .thr-att-hannah{visibility:hidden}
-#loft-game-strip.bd-payman .thr-hon-hannah, #loft-game-strip.bd-baharak .thr-hon-hannah,
-#loft-game-strip.bd-ashraf .thr-hon-hannah, #loft-game-strip.bd-mohsen .thr-hon-hannah{visibility:hidden}
-#loft-game-strip.bd-payman .thr-hon-payman, #loft-game-strip.bd-baharak .thr-hon-baharak,
-#loft-game-strip.bd-ashraf .thr-hon-ashraf, #loft-game-strip.bd-mohsen .thr-hon-mohsen{visibility:visible}
-#loft-game-strip.bd-payman .thr-att-hannah, #loft-game-strip.bd-baharak .thr-att-hannah,
-#loft-game-strip.bd-ashraf .thr-att-hannah, #loft-game-strip.bd-mohsen .thr-att-hannah{visibility:visible}
-#loft-game-strip.bd-payman .thr-att-payman, #loft-game-strip.bd-baharak .thr-att-baharak,
-#loft-game-strip.bd-ashraf .thr-att-ashraf, #loft-game-strip.bd-mohsen .thr-att-mohsen{visibility:hidden}
+body.thr-bd-payman .thr-hon-hannah, body.thr-bd-baharak .thr-hon-hannah,
+body.thr-bd-ashraf .thr-hon-hannah, body.thr-bd-mohsen .thr-hon-hannah{visibility:hidden}
+body.thr-bd-payman .thr-hon-payman, body.thr-bd-baharak .thr-hon-baharak,
+body.thr-bd-ashraf .thr-hon-ashraf, body.thr-bd-mohsen .thr-hon-mohsen{visibility:visible}
+body.thr-bd-payman .thr-att-hannah, body.thr-bd-baharak .thr-att-hannah,
+body.thr-bd-ashraf .thr-att-hannah, body.thr-bd-mohsen .thr-att-hannah{visibility:visible}
+body.thr-bd-payman .thr-att-payman, body.thr-bd-baharak .thr-att-baharak,
+body.thr-bd-ashraf .thr-att-ashraf, body.thr-bd-mohsen .thr-att-mohsen{visibility:hidden}
+/* The cake and its candle are the birthday ITSELF, not room decor, so they show only while one
+   of the Tehran family's own birthday windows is open — the same signal the honour seat above
+   rides. Any other day the family is simply at home and the low table carries popcorn and a
+   spare hat. The gold "10" is Hannah's age, so it rides HER birthday alone and the adults get a
+   plain drip cake. */
+.thr-bd-only{visibility:hidden}
+body.thr-bd .thr-bd-only{visibility:visible}
+.thr-cake-age{visibility:hidden}
+body.thr-bd-hannah .thr-cake-age{visibility:visible}
 /* CALIFORNIA scene liveliness (its figures reuse the .tehran-eyes / .tehran-mouth /
    .tehran-wave-arm gesture classes above, so the blink/smile/wave rules already cover
    them). Extras: the sunny window's warm glow breathes, and the hanging plant sways. */
@@ -18039,6 +18051,9 @@ section{margin:1.9rem 0}
 <g id="tehran-table">
 <rect x="296.5" y="186.8" width="41" height="9.2" rx="1.5" fill="#b5d17e"/>
 <path d="M297.5 190.4 L336.5 190.4" stroke="#9dbb64" stroke-width="0.4" fill="none"/>
+<!-- the pale-green drip cake, its candle and the gold age: out only on an actual Tehran-family
+     birthday (.thr-bd-only — see the CSS), so an ordinary call finds a bare table -->
+<g id="tehran-cake" class="thr-bd-only">
 <rect x="310.5" y="181" width="11" height="5.8" rx="1" fill="#e9f2d9"/>
 <path d="M310.5 182.6 q0.9 1.5 1.8 0 q0.9 1.8 1.8 0 q0.9 1.4 1.8 0 q0.9 1.9 1.8 0 q0.9 1.4 1.8 0 q0.9 1.8 1.8 0 L321.5 181 L310.5 181 Z" fill="#cfe4b0"/>
 <!-- a single birthday candle standing on the cake, its flame flickering while the call's live -->
@@ -18061,7 +18076,8 @@ section{margin:1.9rem 0}
 <circle cx="315.75" cy="171.3" r="0.34" fill="#e6e0d8"/>
 </g>
 </g>
-<text id="tehran-cake-age" x="316" y="186" text-anchor="middle" font-size="3" fill="#c9a227" style="font-family:sans-serif; font-weight:700">10</text>
+<text id="tehran-cake-age" class="thr-cake-age" x="316" y="186" text-anchor="middle" font-size="3" fill="#c9a227" style="font-family:sans-serif; font-weight:700">10</text>
+</g>
 <rect x="300.3" y="183.4" width="5" height="3.4" rx="0.6" fill="#d9b87c"/>
 <path d="M301.3 183.4 L301.3 186.8 M302.8 183.4 L302.8 186.8 M304.3 183.4 L304.3 186.8" stroke="#c2a061" stroke-width="0.3" fill="none"/>
 <circle cx="301.4" cy="182.9" r="0.6" fill="#fbf6e8"/>
@@ -39925,7 +39941,7 @@ var ABANDONED_CALL_MS = 30000;
     if (candle) candle.classList.remove("out"); // a fresh Tehran call = a new, freshly-lit birthday candle
     playPhoneVoiceSound("office-monitor", cfg.pitch); // the family picks up ("alo?" / "¡bueno!")
     startCallAmbient(cfg.flavor); // the warm indoor murmur while the call lasts
-    if (cfg.melody && window.__startTehranMelody) window.__startTehranMelody(); // the birthday song on their end (Tehran only)
+    if (cfg.melody && window.__tehranBdOn && window.__tehranBdOn() && window.__startTehranMelody) window.__startTehranMelody(); // the birthday song on their end — Tehran only, and only when one of them actually has a birthday
     if (window.__updateCallCheer) window.__updateCallCheer(); // if the party's lit, the call family cheers along
   }
   // place a call to a chosen callee: drop the picker, ring, then connect. Shared by the
@@ -44683,7 +44699,7 @@ async def localfont(name):
       phoneLifeStart(callee); // sway / winks / blinks / candle+lights — no-ops the random gestures under reduced motion
       if (callee === "prague" && window.__startPragueMelody) window.__startPragueMelody(); // the family's music player drifting in
       if (callee === "lueb" && window.__startLuebSinging) window.__startLuebSinging();       // the two kids serenade
-      if (callee === "tehran" && window.__startTehranMelody) window.__startTehranMelody();   // "tavallod" on their end
+      if (callee === "tehran" && window.__tehranBdOn && window.__tehranBdOn() && window.__startTehranMelody) window.__startTehranMelody(); // "tavallod" on their end, only on one of their birthdays
       if (callee === "madla") startMadlaMurmur();                                            // the two sisters murmur back and forth
       if (window.__updateCallCheer) window.__updateCallCheer(); // if the party's lit, the far-away family cheers along
     }
@@ -48071,13 +48087,16 @@ async def localfont(name):
     // ring during attended daytime play (day, no party, visible+focused, not cinematic, no call
     // already up). Kept to a single timer (no pile-up); armed at load and re-armed on the phone
     // reset (like the day drip). She's a night-shift doctor in Germany calling into a Canadian
-    // afternoon — so it lands only while it's DAY here.
+    // afternoon — so it lands only while it's DAY here. It also waits for the player to actually
+    // start (__gameStarted): a phone ringing over the untouched "CLICK ME!" invitation reads as a
+    // bug, not an invitation. Nothing is lost by waiting — the timer re-arms either way, so a
+    // skipped attempt just means she tries again a couple of minutes later.
     var madlaTimer = null;
     function scheduleMadla() {
       if (madlaTimer) return;
       madlaTimer = setTimeout(function () {
         madlaTimer = null;
-        if (isDayNow() && !window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic && !callee && !anyExternalCall() && !isOpen() && !callRingUp() && autonomousMsgOk()) {
+        if (isDayNow() && (!window.__gameStarted || window.__gameStarted()) && !window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic && !callee && !anyExternalCall() && !isOpen() && !callRingUp() && autonomousMsgOk()) {
           ringMadla();
         }
         scheduleMadla(); // keep polling — she calls again another day (another window) if this one's skipped
@@ -56678,15 +56697,18 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
     hat.classList.add("wiggling");
     setTimeout(function () { hat.classList.remove("wiggling"); }, 760);
   });
-  // Which Tehran-room figure is the birthday person behind the cake — read off the SAME
-  // #loft-game-strip.bd-<who> signal the honour seat is keyed on, so the candle always belongs to
-  // whoever's birthday is active. Default: Hannah (the birthday girl) when no Tehran bday is on.
+  // Which Tehran-room figure is the birthday person behind the cake, so the candle always belongs
+  // to whoever's birthday is active — null when none of them has one, which is also when the CSS
+  // takes the cake and candle away, so there is nothing left to tap.
   var THR_BD_FIG = { payman: "tehran-hon-payman", baharak: "tehran-hon-baharak", ashraf: "tehran-hon-ashraf", mohsen: "tehran-hon-mohsen", hannah: "tehran-fig-girl" };
   function tehranBdFig() {
     var s = document.getElementById("loft-game-strip");
     if (s) for (var who in THR_BD_FIG) if (THR_BD_FIG.hasOwnProperty(who) && s.classList.contains("bd-" + who)) return THR_BD_FIG[who];
-    return "tehran-fig-girl"; // default guest of honour
+    return null; // nobody in the Tehran room has a birthday today
   }
+  // Is one of the Tehran family's birthday windows open? Reads the very class the cake + candle
+  // are gated on, so the "tavallod" the family sings on connect can never disagree with them.
+  window.__tehranBdOn = function () { return document.body.classList.contains("thr-bd"); };
   // tap the birthday candle → blow it out (flame + glow fade, a wisp of smoke rises). Stays out
   // for the rest of the call; a fresh connect re-lights it (see connect/dropFamilyCall's .out
   // reset). A bare click covers taps too (taps synthesize clicks, same as the hat/figures);
@@ -56698,7 +56720,8 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
     e.stopPropagation();
     if (!familyG.classList.contains("connected")) return; // only a live, lit candle blows out
     candle.classList.add("out");
-    poke(tehranBdFig(), true, true);
+    var fig = tehranBdFig();
+    if (fig) poke(fig, true, true);
   });
 })();
 // Hanging up: two quick descending tones, the mirror image of playPhoneRingSound's
@@ -65591,7 +65614,8 @@ function spawnDustMote(container) {
   // real calendar reads; the 'b'/console path lands the date exactly on `d` so the hat shows.
   // Behdad's and Danesh's celebration windows are deliberately asymmetric custom ranges;
   // don't "fix" them back to ±3. Same-day birthdays (Bahareh & Ashraf on
-  // Oct 7, Athena & Robin on Nov 7) both light up — the window match handles it gracefully.
+  // Oct 7, Athena & Robin on Nov 7) both light up — the window match handles it gracefully, and
+  // so does the overlap where Danesh's long window closes on Lauren's own Sep 16.
   var BIRTHDAYS = [
     { who: "farhang",   m: 0,  d: 11, before: 1, after: 1, name: "Farhang",   type: "hat",   venue: "garden" }, // Jan 8–14
     { who: "sina",      m: 0,  d: 15, before: 1, after: 1, name: "Sina",      type: "hat",   venue: "dj-sina" }, // Jan 12–18
@@ -65613,6 +65637,7 @@ function spawnDustMote(container) {
     { who: "danesh",    m: 7,  d: 28, before: 0, after: 19, name: "Danesh",   type: "hat",   venue: "dj-danesh" }, // Aug 28 – Sep 16; custom asymmetric decor window
     { who: "baka",      m: 8,  d: 8,  before: 1, after: 1, name: "Baka",      type: "crown", venue: "prague" }, // Sep 5–11 (Markéta's grandmother — Prague call only)
     { who: "baharak",   m: 8,  d: 10, before: 1, after: 1, name: "Baharak",   type: "hat",   venue: "tehran" }, // Sep 7–13 (Behdad's sister — Tehran call only)
+    { who: "lauren",    m: 8,  d: 16, before: 1, after: 1, name: "Lauren",    type: "hat",   venue: "garden" }, // Sep 15–17 (Farhang's partner; the last day of Danesh's window falls on hers)
     { who: "behdad",    m: 8,  d: 27, before: 6, after: 0, name: "Behdad",    type: "hat",   venue: "garden" }, // Sept 21–27
     { who: "bahareh",   m: 9,  d: 7,  before: 1, after: 1, name: "Bahareh",   type: "hat",   venue: "garden" }, // Oct 4–10 (shares Oct 7 with Ashraf)
     { who: "ashraf",    m: 9,  d: 7,  before: 1, after: 1, name: "Ashraf",    type: "hat",   venue: "tehran" }, // Oct 4–10 (Behdad's mom — Tehran call only; shares Oct 7 with Bahareh)
@@ -65622,10 +65647,6 @@ function spawnDustMote(container) {
     { who: "spencer",   m: 10, d: 22, before: 1, after: 1, name: "Spencer",   type: "hat",   venue: "garden" }, // Nov 19–25
     { who: "patricia",  m: 11, d: 1,  before: 1, after: 1, name: "Patricia",  type: "hat",   venue: "garden" }, // Nov 28 – Dec 4
     { who: "irene",     m: 11, d: 7,  before: 1, after: 1, name: "Irene",     type: "hat",   venue: "garden" }, // Dec 4–10
-    // Lauren (Farhang's +one) — TODO: real date pending from the owner. Fill m/d and drop
-    // `pending` to add her to the 'b' rotation + the real-calendar overlay. Her hat art is
-    // already drawn on .g-lauren; only the date is missing.
-    { who: "lauren",    m: null, d: null, before: 1, after: 1, name: "Lauren", type: "hat",  venue: "garden", pending: true }
   ];
   // Day arithmetic in a common year, wrapped at the half-year, so a window that straddles
   // New Year's needs no special case. A pending row (no date yet) never matches.
@@ -65639,13 +65660,18 @@ function spawnDustMote(container) {
   function applyBirthdays(s) {
     var strip = document.getElementById("loft-game-strip");
     if (!strip) return;
+    var thrAny = false;
     BIRTHDAYS.forEach(function (b) {
       var on = inBirthdayWindow(b, s.m, s.d);
       strip.classList.toggle("bd-" + b.who, on);
+      // The Tehran video-call scene is ALSO re-rendered into the pocket phone's modal, which
+      // hangs off <body> outside the strip — so its seating/cake rules read these body classes.
+      if (b.venue === "tehran") { document.body.classList.toggle("thr-bd-" + b.who, on); if (on) thrAny = true; }
       if (on) {
         if (!bdActive[b.who] && window.__deliverBirthdayText) { bdActive[b.who] = true; window.__deliverBirthdayText(b.who, b.name); } // edge-triggered; the deliverer's own messagesThread dedup is the real once-per-session guard
       } else if (bdActive[b.who]) { bdActive[b.who] = false; } // window closed → re-arm the edge
     });
+    document.body.classList.toggle("thr-bd", thrAny);
   }
   // The gifts, out on the two nights they're opened and not a day longer: Štědrý večer (the
   // 24th, when Ježíšek brings them) and Christmas morning (the 25th). An overlay for the same
@@ -65817,8 +65843,8 @@ function spawnDustMote(container) {
   });
   window.__seasonStep = function (dir) { var n = SEASON_CYCLE.length; applySeasonPreview(SEASON_CYCLE[(SEASON_CYCLE.indexOf(seasonPreview) + (dir || 1) + n) % n]); return seasonPreview; }; // console season() with no arg advances the ring (like the 's' key)
   // ── the birthday axis: the 'b' key + birthday() console command ────────────
-  // Its OWN ring, independent of the seasons: the datable people (Lauren's date is pending,
-  // so she sits out) in calendar order, ROTATED to lead with Markéta (Jan 20). Each stop
+  // Its OWN ring, independent of the seasons: every datable person in calendar order, ROTATED to
+  // lead with Markéta (Jan 20). Each stop
   // time-travels the loft to that person's date (bdPreview → the day's real decor dresses
   // around the hat), reveals them wearing it at their venue, and toasts the name.
   var BD_ORDER = BIRTHDAYS.filter(function (b) { return !b.pending && b.m != null; })
@@ -65840,7 +65866,7 @@ function spawnDustMote(container) {
   // Garden adults + crew, when the party is OFF, are summoned to the cuddly-puddly via their
   // CUDDLY_DUOS lead instead of lighting the party (a birthday reveal must NEVER start it). This
   // maps each person to the duo id that brings them in (a couple/family arrives together). People
-  // with no cuddly duo (Farhang, Pouria, Sina, Danesh, Lauren) fall through to a party-safe default.
+  // with no cuddly duo (Pouria, Sina, Danesh) fall through to a party-safe default.
   var BD_CUDDLY_DUO = {
     ali: "ali", goli: "ali",
     spencer: "spencer", jay: "spencer",
@@ -65854,7 +65880,7 @@ function spawnDustMote(container) {
   // garden reveal cuts them a candled birthday cake, standing behind it. The DJ-deck / kitchen-bar
   // birthdays (Sina, Danesh, Pouria) have no floor figure, so they get the party but no cake.
   var BD_GARDEN_FIG = {
-    farhang: 1, marketa: 1, jay: 1, alireza: 1, robert: 1, madla: 1, hamid: 1, behdad: 1,
+    farhang: 1, lauren: 1, marketa: 1, jay: 1, alireza: 1, robert: 1, madla: 1, hamid: 1, behdad: 1,
     bahareh: 1, mahzad: 1, athena: 1, spencer: 1, patricia: 1, goli: 1, ali: 1
   };
   window.__bdGardenFigures = BD_GARDEN_FIG; // shared with the garden cake IIFE + the date-occasion orchestrator
@@ -65942,12 +65968,12 @@ function spawnDustMote(container) {
     // birthday person(s) dancing between the hosts — on ANY trigger (the date, 'b', birthday()).
     // __bdCakeCut lights the party (if dark), heads to the garden, summons the crowd, then cuts. The
     // hosts are handled above; the kids and the Tehran/Prague call families returned earlier — so
-    // this is Ali/Goli/Jay/Spencer/Farhang/Bahareh/Alireza/Mahzad/Hamid/Athena/Patricia/Madla/Robert.
+    // this is Ali/Goli/Jay/Spencer/Farhang/Lauren/Bahareh/Alireza/Mahzad/Hamid/Athena/Patricia/Madla/Robert.
     if (BD_GARDEN_FIG[b.who] && window.__bdCakeCut) { window.__bdCakeCut(b.who); return; }
     // Everyone else — the DJ decks (Sina/Danesh) or Pouria's kitchen bar (no floor figure). When the
     // party is ON they take their usual spot. When it's OFF a birthday reveal must NEVER light the
     // party — instead it summons them to the cuddly-puddly via their CUDDLY_DUOS lead. Anyone with no
-    // cuddly duo (Pouria, Sina, Danesh, Lauren) falls back to a party-safe pan to the nook.
+    // cuddly duo (Pouria, Sina, Danesh) falls back to a party-safe pan to the nook.
     if (window.__gardenPartyOn) {
       if (window.goToStage) window.goToStage(v === "bar" ? "kitchen" : "garden");
       if (v !== "bar" && window.__summonGuests) window.__summonGuests(); // crash the whole floor so this guest is actually present
@@ -68239,6 +68265,10 @@ function spawnDustMote(container) {
     }
   }
   window.__stopHintBlink = stopHintBlink; // the cinematic (Watch is outside the strip) settles it too
+  // Has the player actually taken hold of the loft? False while the opening "CLICK ME!" invitation
+  // still owns the scene — cleared by the first strip tap, any real key, or a room change. The
+  // autonomous phone ring reads this so nobody gets called before they've started playing.
+  window.__gameStarted = function () { return !huntIntroShowing; };
   // Open (and re-open on reset) on a blinking "wandering without aim" invitation; the first strip
   // tap (or the grace timeout) hands it off to the real first instruction via stopHintBlink. The
   // espresso-machine invite arrow stays hidden through the prompt. Skipped mid-cinematic (the show

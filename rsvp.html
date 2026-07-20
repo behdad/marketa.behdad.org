@@ -66741,7 +66741,7 @@ function spawnDustMote(container) {
     // The couple (bh-behdad/bh-marketa) only join on the ~20% couple-out roll; the off-duty DJ
     // (bh-dj) shows one of two CSS-gated faces (resolveDj). Everyone else is a candidate every
     // showing — a random SUBSET, order + spacing is rolled fresh each genuine appearance.
-    // `label`/`role` name the figure in the shared white popup (hover + click-to-reveal); the DJ
+    // `label`/`role` name the figure in the shared white popup (click-to-reveal); the DJ
     // names itself live (Sina/Danesh, whichever is off-duty). +30% bigger than the authored scale,
     // laid out below with a touch more lane room + wider lanes so the fuller figures don't crowd.
     var UP = 1.43; // enlarge all balcony people (~43% over the authored scale)
@@ -66762,10 +66762,19 @@ function spawnDustMote(container) {
     // the DJ's live name — whichever of Sina/Danesh is NOT spinning is the one out here smoking
     function djName() { return window.__djB ? "Sina" : "Danesh"; } // Danesh spins → Sina's off-duty
     function figLabel(r) { return r.dj ? djName() : r.label; }
+    // the rel_/fun_ dictionary key for a figure — NOT r.name for the DJ, whose roster entry is the
+    // slot ("dj") rather than whoever's filling it tonight. Same projection __balconyHangoutNow
+    // publishes as its `key`, so the deck's cards and the room roster read from the same string.
+    function figKey(r) { return r.dj ? djName().toLowerCase() : r.name; }
     function figTip(r) {
       var name = figLabel(r);
       var role = (typeof tipText === "function") ? tipText(r.role) : r.role;
-      return "<em>" + name + "</em> · " + role;
+      var key = figKey(r);
+      // the same relationship + fun-fact lines the garden/cuddly/bar/call cast get, so Farhang is
+      // a triathlete out here too; both degrade to "" for anyone with no such string (the DJs).
+      var rel = (typeof relLine === "function") ? relLine(key) : "";
+      var fun = (typeof funFact === "function") ? funFact(key) : "";
+      return "<em>" + name + "</em> · " + role + rel + fun;
     }
     // a bit FATTER: the figures get a touch more horizontal scale than vertical, so they read
     // fuller/rounder without growing taller (feet stay pinned on the deck line). Applied as the
@@ -66897,10 +66906,7 @@ function spawnDustMote(container) {
       smokerPool.forEach(function (r) { var g = document.getElementById(r.id); if (g) g.style.display = ""; });
       placeLane(shuffle(smokerPool.slice()), SMOKER_LANE);
       // publish the smokers now on the deck (dj → the off-duty face's real name, for the hooks)
-      shownSmokerNames = smokerPool.map(function (r) {
-        if (!r.dj) return r.name;
-        return window.__djB ? "sina" : "danesh"; // Danesh spins → Sina's out here (mirrors resolveDj)
-      });
+      shownSmokerNames = smokerPool.map(figKey);
     }
     // who's smoking on the balcony right now → array of names, or null when nobody's out. The
     // reciprocal of __barCoupleNow: the bar/floor read this to keep their own rosters exclusive.
@@ -66922,7 +66928,7 @@ function spawnDustMote(container) {
         if (!g || g.style.display === "none") return;
         var nm = figLabel(r);
         if (!nm) return;
-        out.push({ key: r.dj ? nm.toLowerCase() : r.name, name: nm, roleKey: r.role, el: g, couple: !!r.couple });
+        out.push({ key: figKey(r), name: nm, roleKey: r.role, el: g, couple: !!r.couple });
       });
       return out;
     };
@@ -66936,10 +66942,12 @@ function spawnDustMote(container) {
       });
       return out;
     };
-    // ── name popups: each figure names itself on hover (shared tooltip) + click (the shared white
-    // name-card __whoPop, same as the garden/cuddly cast). The tip HTML is a live function so the
-    // off-duty DJ names whoever's actually out (Sina/Danesh). Pointer events are CSS-gated to
-    // #balcony-hangout.on, so this only reacts while the crowd's shown. Wired once at load. ──
+    // ── name popups: each figure names itself on click, in the shared white name-card __whoPop —
+    // same card, and now the same name · role · relationship · fun-fact text, as the garden/cuddly
+    // cast (people are click-only; props keep hover). The tip HTML is a live function so the
+    // off-duty DJ names whoever's actually out (Sina/Danesh) and the lines follow a language
+    // switch. Pointer events are CSS-gated to #balcony-hangout.on, so this only reacts while the
+    // crowd's shown. Wired once at load. ──
     ROSTER.forEach(function (r) {
       var g = document.getElementById(r.id);
       if (!g) return;
@@ -67128,8 +67136,13 @@ function spawnDustMote(container) {
       }, 2000 + Math.random() * 800);
     })();
     window.__balconyServeNow = serveOne; // console/test hook: force one serve
-    // name popup: hover tooltip + click white card, like the deck crowd / bar couples
-    var hamidTip = function () { return "<em>Hamid</em> · " + ((typeof tipText === "function") ? tipText("role_godson_a") : "grillmaster"); };
+    // name popup: click white card, like the deck crowd — and the same relationship + fun-fact
+    // lines they carry, so the man at the grill is as fully named as the people watching him
+    var hamidTip = function () {
+      return "<em>Hamid</em> · " + ((typeof tipText === "function") ? tipText("role_godson_a") : "grillmaster") +
+        ((typeof relLine === "function") ? relLine("Hamid") : "") +
+        ((typeof funFact === "function") ? funFact("Hamid") : "");
+    };
     el.addEventListener("click", function (e) { e.stopPropagation(); if (window.__whoPop) window.__whoPop(el, hamidTip()); }); // people are click-only (props keep hover)
     document.addEventListener("visibilitychange", update);
     window.addEventListener("blur", update);

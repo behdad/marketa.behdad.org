@@ -1136,6 +1136,13 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    glass-side make animation (pour / swizzle / garnish), not by his hands. opacity only, so it
    never fights the shaker's own toss/stir transforms; it returns to 1 the moment .mixing clears. */
 #kitchen-bartender.mixing #kitchen-bartender-shaker{opacity:0}
+/* while the PLAYER doses their own shaker on the bar, Pouria lowers his raised arm and rests his
+   hand on it (steadying it) instead of holding his own aloft — the player-mixer co-sets .mixing
+   (so his in-hand shaker is already hidden by the rule above) and .steadying. This pivots the arm
+   wrapper at the SHOULDER, which for this group's fill-box is its bottom-left corner (0% 100%),
+   swinging the hand down onto the bar shaker (which sits to the right of the bottle row). Static
+   transform on a node whose sway animation is stopped by .mixing → no one-shot/state clobber. */
+#kitchen-bartender.steadying #kitchen-bartender-shake{transform-box:fill-box; transform-origin:0% 100%; transform:rotate(67deg)}
 /* the bartender grooves to the party music: the whole figure bobs + sways to the beat while a
    party bed is actually SOUNDING (updateCuddlyGrooving toggles .grooving on the OUTER group,
    gated on party-on + __anyMusicPlaying — so a spacebar/transport pause stills him, and the calm
@@ -34597,6 +34604,7 @@ function gameTapsNear(a, b) {
   var SVGNS = "http://www.w3.org/2000/svg";
   var bar = document.getElementById("kitchen-bar");
   if (!bar) return; // no bar in this DOM → dormant (mixer() still replies gracefully)
+  var bartenderEl = document.getElementById("kitchen-bartender"); // for the .steadying (hand-down-on-the-bar-shaker) pose
 
   function S(tag, attrs, parent) {
     var e = document.createElementNS(SVGNS, tag);
@@ -34641,7 +34649,7 @@ function gameTapsNear(a, b) {
   }
 
   var MAXP = 4;                       // shaker holds up to four doses
-  var CX = 288, BASE = 255;           // the station sits at Pouria's end of the bartop
+  var CX = 344, BASE = 255;           // the shaker + served coupe sit to the RIGHT of the bottle row (258–318), clear of it
   var FILL_X = CX - 8, FILL_W = 16, FILL_BOT = 253, FILL_RANGE = 18; // shaker interior for the fill rect
 
   // ---- build the static nodes (once) -----------------------------------------------------
@@ -34690,7 +34698,7 @@ function gameTapsNear(a, b) {
   }
   function markBartender(on) { // he sets his hand-shaker down to make YOUR drink — but never fight an in-flight ambient make
     if (window.__ambientMaking && window.__ambientMaking()) return;
-    if (window.__bartenderMixing) { window.__bartenderMixing(on); weMarkedMixing = on; }
+    if (window.__bartenderMixing) { window.__bartenderMixing(on); weMarkedMixing = on; if (bartenderEl) bartenderEl.classList.toggle("steadying", on); } // .mixing hides his in-hand shaker; .steadying drops his hand onto the bar shaker
   }
   function resetMix() {
     clearTimers();
@@ -34703,6 +34711,7 @@ function gameTapsNear(a, b) {
     glassWrap.style.opacity = "0"; glFill.setAttribute("opacity", "0");
     stream.setAttribute("opacity", "0");
     station.style.opacity = "0";
+    if (bartenderEl) bartenderEl.classList.remove("steadying"); // arm back up to his idle at-the-ready sway
     if (weMarkedMixing && window.__bartenderMixing) window.__bartenderMixing(false);
     weMarkedMixing = false;
   }
@@ -34717,6 +34726,7 @@ function gameTapsNear(a, b) {
     if (!ing || busy || !present() || flairBusy() || picked.length >= MAXP) return false;
     if (window.__retireHint) window.__retireHint("hint_cocktail");
     picked.push(ing);
+    markBartender(true); // from the first dose: hide his in-hand shaker + lower his hand onto the bar shaker he's tending
     station.style.opacity = "1";
     shakerWrap.style.opacity = "1";
     shakerWrap.classList.add("ready");     // now tappable to shake

@@ -7773,7 +7773,8 @@ section{margin:1.9rem 0}
 @keyframes sn-leaf-settle{0%,100%{rotate:-4deg}50%{rotate:4deg}}
 @media (prefers-reduced-motion: reduce){.sn-fallen-leaf{animation:none}}
 /* ── spring ────────────────────────────────────────────────────────────────────
-   Mid-April (Apr 2–29): between Sizdah Bedar (Apr 1) and Čarodějnice (Apr 30), just
+   Mid-April (Apr 2–29): between Sizdah Bedar (the computed thirteenth day of Nowruz) and
+   Čarodějnice (Apr 30), just
    before wedding week. The garden greenery flushes a fresh, brighter green and a few
    pale-pink blossom clusters open on the branches (.sn-spring overlay). Blossom petals
    also drift down past the garden window and across the balcony deck: the same self-
@@ -8248,7 +8249,7 @@ section{margin:1.9rem 0}
 }
 #loft-game-strip.season-pride .sn-pride{display:inline}
 #loft-game-strip.season-nowruz .sn-nowruz{display:inline}
-/* Sizdah Bedar (Apr 1) — nowruz's thirteenth and last day, so it rides ALONGSIDE the haft-sin's
+/* Sizdah Bedar — nowruz's thirteenth and last day (computed, Nowruz + 12), so it rides ALONGSIDE the haft-sin's
    own class rather than replacing it: the spread stays laid out, only the sabzeh leaves. It goes
    out to the balcony (bigger, and outdoors, which is the whole point of the day), and the office
    dish AND its tap zone go with it — the zone is a separate node from the art it covers, so both
@@ -19947,7 +19948,7 @@ section{margin:1.9rem 0}
 </g>
 <rect id="balcony-jack-hit" class="sn-prop-hit" x="544" y="258" width="52" height="50" fill="transparent"/>
 </g>
-<!-- Sizdah Bedar (Apr 1), the thirteenth and last day of Nowruz: the sabzeh has sat on the
+<!-- Sizdah Bedar, the thirteenth and last day of Nowruz (computed, Nowruz + 12): the sabzeh has sat on the
      haft-sin soaking up the household's bad luck, and today it's carried OUT — so the office
      dish is gone and this is where it went, out on the deck in a shallow wooden bowl, ×3.2 and
      outdoors. Three layers, each animating a property no sibling touches: the placement wrapper
@@ -20024,7 +20025,7 @@ section{margin:1.9rem 0}
 <rect id="balcony-besom-hit" class="sn-prop-hit" x="514" y="228" width="30" height="80" fill="transparent"/>
 <rect id="balcony-doll-hit" class="sn-prop-hit" x="603" y="268" width="34" height="38" fill="transparent"/>
 </g>
-<!-- Chaharshanbe Suri (Mar 16–19): the SAME fire, dressed Persian instead of Czech — his
+<!-- Chaharshanbe Suri (the eve of the last Wednesday before Nowruz, computed): the SAME fire, dressed Persian instead of Czech — his
      half of the pair (Čarodějnice is hers; both are a spring fire you jump to burn off the
      old year). Legible subset of the festival's kit: brushwood bundles waiting their turn on
      the left (the tradition is seven small piles; two read at this size), and on the right the
@@ -65121,6 +65122,90 @@ function spawnDustMote(container) {
   // preview never carries a hat — but a birthday stop, being "pretend it's this date" too,
   // still dresses the day's real decor around the hat (Dec 7 lands Irene's cone on the
   // holiday tree, both at once, which is the honest answer).
+  // ── Persian (Jalali) occasion dates, computed LIVE from the Gregorian year ──
+  // Standard jalaali-js arithmetic (the 33-year leap cycle), no astronomy, no network. Nowruz is
+  // Farvardin 1 (toGregorian(jYear,1,1), with jYear = gYear − 621); Sizdah Bedar is the 13th day of
+  // the year (Nowruz + 12); Chaharshanbe Suri is the eve (the Tuesday night) of the last Wednesday
+  // before Nowruz. All three drift year to year, so every date test derives them from the year in
+  // play rather than a fixed Mar/Apr day.
+  function jDiv(a, b) { return ~~(a / b); }
+  function jMod(a, b) { return a - ~~(a / b) * b; }
+  function jG2d(gy, gm, gd) { // Gregorian → Julian Day Number
+    var d = jDiv((gy + jDiv(gm - 8, 6) + 100100) * 1461, 4) + jDiv(153 * jMod(gm + 9, 12) + 2, 5) + gd - 34840408;
+    return d - jDiv(jDiv(gy + 100100 + jDiv(gm - 8, 6), 100) * 3, 4) + 752;
+  }
+  function jD2g(jdn) { // Julian Day Number → Gregorian {gy, gm, gd}
+    var j = 4 * jdn + 139361631;
+    j = j + jDiv(jDiv(4 * jdn + 183187720, 146097) * 3, 4) * 4 - 3908;
+    var i = jDiv(jMod(j, 1461), 4) * 5 + 308;
+    var gd = jDiv(jMod(i, 153), 5) + 1;
+    var gm = jMod(jDiv(i, 153), 12) + 1;
+    var gy = jDiv(j, 1461) - 100100 + jDiv(8 - gm, 6);
+    return { gy: gy, gm: gm, gd: gd };
+  }
+  function jalCal(jy) { // → {gy, march}: the Gregorian year + the March day Farvardin 1 lands on
+    var breaks = [-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178];
+    var bl = breaks.length, gy = jy + 621, leapJ = -14, jp = breaks[0], jm, jump, leapG, march, n, i;
+    for (i = 1; i < bl; i += 1) {
+      jm = breaks[i]; jump = jm - jp;
+      if (jy < jm) break;
+      leapJ = leapJ + jDiv(jump, 33) * 8 + jDiv(jMod(jump, 33), 4);
+      jp = jm;
+    }
+    n = jy - jp;
+    leapJ = leapJ + jDiv(n, 33) * 8 + jDiv(jMod(n, 33) + 3, 4);
+    if (jMod(jump, 33) === 4 && jump - n === 4) leapJ += 1;
+    leapG = jDiv(gy, 4) - jDiv((jDiv(gy, 100) + 1) * 3, 4) - 150;
+    march = 20 + leapJ - leapG;
+    return { gy: gy, march: march };
+  }
+  function jToGregorian(jy, jm, jd) { // Jalali → Gregorian {gy, gm, gd}
+    var r = jalCal(jy);
+    var jdn = jG2d(r.gy, 3, r.march) + (jm - 1) * 31 - jDiv(jm, 7) * (jm - 7) + jd - 1;
+    return jD2g(jdn);
+  }
+  function nowruzOf(gYear) { // Farvardin 1 of the Persian year that opens in this Gregorian spring
+    var g = jToGregorian(gYear - 621, 1, 1);
+    return new Date(g.gy, g.gm - 1, g.gd, 12);
+  }
+  window.__nowruzOf = nowruzOf;
+  var _persianCache = {};
+  function persianOcc(gYear) { // {nowruz, sizdah, chaharshanbe} Dates for the given Gregorian year
+    if (_persianCache[gYear]) return _persianCache[gYear];
+    var nowruz = nowruzOf(gYear);
+    var sizdah = new Date(nowruz.getFullYear(), nowruz.getMonth(), nowruz.getDate() + 12, 12); // the 13th day of the year
+    var w = new Date(nowruz.getFullYear(), nowruz.getMonth(), nowruz.getDate() - 1, 12);
+    while (w.getDay() !== 3) w.setDate(w.getDate() - 1); // the last Wednesday strictly before Nowruz (3 = Wednesday)
+    var chaharshanbe = new Date(w.getFullYear(), w.getMonth(), w.getDate() - 1, 12); // its eve, the Tuesday night fire
+    return (_persianCache[gYear] = { nowruz: nowruz, sizdah: sizdah, chaharshanbe: chaharshanbe });
+  }
+  window.__persianOcc = persianOcc;
+  function pSameDay(dt, m, d) { return dt.getMonth() === m && dt.getDate() === d; }
+  function isNowruz(m, d, y) { return pSameDay(persianOcc(y).nowruz, m, d); }              // the new-year turn (a single day)
+  function isSizdah(m, d, y) { return pSameDay(persianOcc(y).sizdah, m, d); }
+  function isChaharshanbe(m, d, y) { return pSameDay(persianOcc(y).chaharshanbe, m, d); }
+  // The two decor windows: the fire festival dresses from Chaharshanbe up to (not including) Nowruz,
+  // then the haft-sin holds from Nowruz through Sizdah (its thirteenth and last day) — contiguous,
+  // so one hands straight off to the next.
+  function persianDecorFor(m, d, y) {
+    var p = persianOcc(y), cur = Date.UTC(y, m, d);
+    var nz = Date.UTC(p.nowruz.getFullYear(), p.nowruz.getMonth(), p.nowruz.getDate());
+    var sz = Date.UTC(p.sizdah.getFullYear(), p.sizdah.getMonth(), p.sizdah.getDate());
+    var ch = Date.UTC(p.chaharshanbe.getFullYear(), p.chaharshanbe.getMonth(), p.chaharshanbe.getDate());
+    if (cur >= ch && cur < nz) return "chaharshanbe";
+    if (cur >= nz && cur <= sz) return "nowruz";
+    return null;
+  }
+  function persianCalOcc(m, d, y) { // the calendar-grid icon + hover label for a Persian occasion day
+    if (isChaharshanbe(m, d, y)) return { icon: "🔥", sk: "season_chaharshanbe" };
+    if (isNowruz(m, d, y)) return { icon: "🌱", sk: "season_nowruz" };
+    if (isSizdah(m, d, y)) return { icon: "🌿", sk: "season_sizdah" };
+    return null;
+  }
+  function curCalYear() { return (window.__now ? window.__now() : new Date()).getFullYear(); }
+  window.__isNowruz = function (m, d, y) { return isNowruz(m, d, y == null ? curCalYear() : y); };
+  window.__isSizdah = function (m, d, y) { return isSizdah(m, d, y == null ? curCalYear() : y); };
+  window.__isChaharshanbe = function (m, d, y) { return isChaharshanbe(m, d, y == null ? curCalYear() : y); };
   var SEASON_PREVIEW_DATE = { // [month 0-11, day]
     spooky:  [9, 31],  // Halloween
     stedry:  [11, 24], // Štědrý večer: carp on the table, gifts under the tree
@@ -65129,9 +65214,9 @@ function spawnDustMote(container) {
     wedding: [4, 1],   // May 1: the Edmonton wedding — ribbon + fireworks sky
     winter:  [0, 15],  // deep January: snow, no dressing
     valentines: [1, 7], // mid-February: hearts in the nook
-    chaharshanbe: [2, 17], // Mar 17: چهارشنبه‌سوری — the fire you jump over to burn off the old year, Čarodějnice's Persian twin
-    nowruz:  [2, 20],  // Mar 20: Persian new year — haft-sin out AND the dinner on the table
-    sizdah:  [3, 1],   // Apr 1: سیزده‌بدر — nowruz's thirteenth day, and its last: the sabzeh goes outdoors
+    chaharshanbe: true, // چهارشنبه‌سوری — the fire you jump over to burn off the old year; the day drifts, so seasonDate() computes it (persianOcc)
+    nowruz:  true,     // نوروز — Persian new year (haft-sin out AND the dinner on the table); computed live from the year
+    sizdah:  true,     // سیزده‌بدر — nowruz's thirteenth day, and its last: the sabzeh goes outdoors; computed live from the year
     spring:  [3, 15],  // mid-April: blossom petals adrift, the greenery flushed fresh green — between Sizdah and Čarodějnice, just before wedding week
     carodejnice: [3, 30], // Apr 30: Pálení čarodějnic — inside wedding week, so the ribbon stacks
     pride:   [5, 15],  // mid-June: the mast flag in the office corner
@@ -65143,23 +65228,32 @@ function spawnDustMote(container) {
   var seasonPreview = null; // null = the real calendar
   var bdPreview = null; // {m,d}: the birthday axis ('b' key / birthday()) time-travels here, its own axis
   function seasonDate() {
-    if (bdPreview) return { m: bdPreview.m, d: bdPreview.d }; // a birthday stop wins: the day's real decor dresses around the hat
-    var p = seasonPreview && SEASON_PREVIEW_DATE[seasonPreview];
-    if (p) return { m: p[0], d: p[1] };
+    var y = (window.__now ? window.__now() : new Date()).getFullYear(); // the year the previews resolve into (honours ?date=/#date=)
+    if (bdPreview) return { m: bdPreview.m, d: bdPreview.d, y: y }; // a birthday stop wins: the day's real decor dresses around the hat
+    if (seasonPreview) {
+      // the three Persian occasions drift year to year → resolve them to THIS year's computed day
+      if (seasonPreview === "nowruz" || seasonPreview === "sizdah" || seasonPreview === "chaharshanbe") {
+        var pd = persianOcc(y)[seasonPreview];
+        return { m: pd.getMonth(), d: pd.getDate(), y: y };
+      }
+      var p = SEASON_PREVIEW_DATE[seasonPreview];
+      if (p) return { m: p[0], d: p[1], y: y };
+    }
     var n = window.__now ? window.__now() : new Date(); // __now honours the ?date=/#date= preview, so it drives the seasons too
-    return { m: n.getMonth(), d: n.getDate() };
+    return { m: n.getMonth(), d: n.getDate(), y: n.getFullYear() };
   }
   window.__seasonDate = seasonDate; // the snow + fireworks controllers read the same pretend-date
   window.__previewActive = function () { return !!(seasonPreview || bdPreview); }; // real-weather default steps aside while a season/birthday preview is held
-  function decorForDate(m, d) {
+  function decorForDate(m, d, y) {
+    if (y == null) y = curCalYear();
     if (m === 3 && d === 30) return "carodejnice";         // Apr 30 only — the night itself
     if (m === 11 || (m === 0 && d <= 6)) return "holiday"; // Dec 1 – Jan 6
     if (m === 8 && d >= 15) return "autumn";               // Sep 15–30: leaves turning, before Halloween takes October
     if (m === 9 || (m === 10 && d <= 3)) return "spooky";  // Oct 1 – Nov 3
     if (m === 1 && d <= 14) return "valentines";           // Feb 1 – 14
-    if (m === 2 && d >= 16 && d <= 19) return "chaharshanbe";         // Mar 16–19: an approximate fixed window for a date that really drifts (the eve of the last Wednesday before Nowruz), and it hands straight off to the haft-sin
-    if ((m === 2 && d >= 20) || (m === 3 && d <= 1)) return "nowruz"; // Mar 20 – Apr 1
-    if (m === 3 && d >= 2 && d <= 29) return "spring";     // Apr 2 – 29: blossom + fresh green, between Sizdah (Apr 1) and Čarodějnice (Apr 30)
+    var pk = persianDecorFor(m, d, y); // the Chaharshanbe→Nowruz→Sizdah run, computed for the year (drifts); checked before spring so a late Sizdah (up to ~Apr 2) still wins Apr 2
+    if (pk) return pk;
+    if (m === 3 && d >= 2 && d <= 29) return "spring";     // Apr 2 – 29: blossom + fresh green, between Sizdah and Čarodějnice (unless the computed Nowruz run still holds early April)
     if (m === 5) return "pride";                           // all of June
     if ((m === 5 && d === 30) || (m === 6 && d <= 4)) return "canada"; // Jun 30 – Jul 4
     return null;
@@ -65252,7 +65346,7 @@ function spawnDustMote(container) {
   // Each row is one dinner: `on` decides the day, `what` names the class the dishes will hang
   // off (#cuddly-table-setting) when they're built. Nowruz's window is decorForDate's own.
   var MEALS = [
-    { what: "nowruz", on: function (m, d) { return m === 2 && d >= 19 && d <= 21; } },               // Mar 19–21 only: sabzi polo ba mahi at the turn of the year. The rest of nowruz is just the haft-sin, and Sizdah Bedar (Apr 1) is spent OUTDOORS
+    { what: "nowruz", on: function (m, d, y) { var nz = persianOcc(y).nowruz, diff = (Date.UTC(y, m, d) - Date.UTC(nz.getFullYear(), nz.getMonth(), nz.getDate())) / 864e5; return diff >= -1 && diff <= 1; } }, // Nowruz ±1 day: sabzi polo ba mahi at the turn of the year (drifts). The rest of nowruz is just the haft-sin, and Sizdah Bedar is spent OUTDOORS
     { what: "stedry", on: function (m, d) { return m === 11 && d === 24; } },                        // Dec 24: fried carp + potato salad
     { what: "xmas",   on: function (m, d) { return m === 11 && d === 25; } }                         // Dec 25: turkey
   ];
@@ -65263,7 +65357,7 @@ function spawnDustMote(container) {
     if (!strip) return;
     var any = false;
     MEALS.forEach(function (meal) {
-      var on = !!meal.on(s.m, s.d);
+      var on = !!meal.on(s.m, s.d, s.y);
       strip.classList.toggle("meal-" + meal.what, on);
       if (on) any = true;
     });
@@ -65315,7 +65409,7 @@ function spawnDustMote(container) {
   };
   function applySeasonDate() {
     var s = seasonDate();
-    window.__setSeason(decorForDate(s.m, s.d));
+    window.__setSeason(decorForDate(s.m, s.d, s.y));
     applyBirthdays(s); // an overlay: it rides whatever __setSeason just dressed the loft in
     applyMeals(s);     // same deal: the low table comes out for the dinners, inside or outside a season
     if (window.__applyWeddingDay) window.__applyWeddingDay(); // the wedding is a season too — refresh before the sky reads it
@@ -65331,7 +65425,7 @@ function spawnDustMote(container) {
       // Winter is the climate the toque is for, minus the weeks that dress for something of
       // their own: February and March are snowy too, but there the hearts and the haft-sin
       // speak first, and a decor season stays one look.
-      var wintry = !!(window.__snowySeason && window.__snowySeason()) && !decorForDate(s.m, s.d);
+      var wintry = !!(window.__snowySeason && window.__snowySeason()) && !decorForDate(s.m, s.d, s.y);
       strip.classList.toggle("climate-winter", wintry);
       // The snowman is a winter thing: if the season just moved OUT of a snowy climate, melt it
       // (it can only be built while __snowySeason() holds, so this is the matching teardown). Gated
@@ -65348,12 +65442,13 @@ function spawnDustMote(container) {
       if (window.__sprinklerOn && !(window.__summerSeason && window.__summerSeason()) && window.__setSprinkler) window.__setSprinkler(false);
       // New Year's: the night of, and the morning after. Holiday dressing stays up through both.
       strip.classList.toggle("season-newyear", (s.m === 11 && s.d === 31) || (s.m === 0 && s.d === 1));
-      // Sizdah Bedar is Nowruz's LAST day, so it's an overlay on the haft-sin's own dressing the
-      // same way the birthdays overlay theirs — one day inside a season, not a season. Untying on
-      // every day that ISN'T it (rather than on the way in) keeps the knot through a real Apr 1
-      // visit: applySeasonDate runs again ~4s in when the air-quality data lands, and a tie
-      // cleared on arrival would be cleared right back out from under the visitor.
-      var sizdah = s.m === 3 && s.d === 1;
+      // Sizdah Bedar is Nowruz's LAST day (the 13th), so it's an overlay on the haft-sin's own
+      // dressing the same way the birthdays overlay theirs — one day inside a season, not a season.
+      // Its date drifts, so it's computed (Nowruz + 12) rather than fixed. Untying on every day that
+      // ISN'T it (rather than on the way in) keeps the knot through a real Sizdah visit: applySeasonDate
+      // runs again ~4s in when the air-quality data lands, and a tie cleared on arrival would be
+      // cleared right back out from under the visitor.
+      var sizdah = isSizdah(s.m, s.d, s.y);
       strip.classList.toggle("sizdah", sizdah);
       if (!sizdah && window.__untieSabzeh) window.__untieSabzeh();
     }
@@ -65622,9 +65717,7 @@ function spawnDustMote(container) {
   };
   var CAL_OCC = { // "month0-day" → occasion icon + the season T key that names it on hover
     "1-14":  { icon: "💗", sk: "season_valentines" },
-    "2-17":  { icon: "🔥", sk: "season_chaharshanbe" },
-    "2-20":  { icon: "🌱", sk: "season_nowruz" },
-    "3-1":   { icon: "🌿", sk: "season_sizdah" },
+    // Chaharshanbe Suri / Nowruz / Sizdah Bedar drift year to year → stamped per render year via persianCalOcc(), not here
     "3-30":  { icon: "🧹", sk: "season_carodejnice" },
     "4-1":   { icon: "💍", sk: "season_wedding", city: "cal_edmonton" },
     "4-2":   { icon: "🍖", sk: "cal_bbq", city: "cal_edmonton" },
@@ -65643,8 +65736,9 @@ function spawnDustMote(container) {
   function calStr(key) { var l = calLang(); return T[l][key] || T.en[key] || ""; }
   function calLoc() { return document.documentElement.lang === "cs" ? "cs-CZ" : "en-US"; }
   function calBdLabel(name) { var l = calLang(); return (T[l].bd_toast_a || T.en.bd_toast_a) + name + (T[l].bd_toast_b || T.en.bd_toast_b); }
-  function calSeasonKey(m, d) { // every day gets exactly one season, for the cell tint
-    var decor = decorForDate(m, d);
+  function calSeasonKey(m, d, y) { // every day gets exactly one season, for the cell tint
+    if (y == null) y = curCalYear();
+    var decor = decorForDate(m, d, y);
     if (decor === "carodejnice") return "carodejnice";
     if (decor === "holiday") {
       if (m === 11 && d === 24) return "stedry";
@@ -65724,7 +65818,8 @@ function spawnDustMote(container) {
   // a named-holiday season dresses the decor + pans to its room; a plain weather day summons
   // nothing. Returns whether anything was summoned. Shared by the grid day-click and the pill's
   // fast-forward / rewind step buttons.
-  function calSummonFestivity(mo, d) {
+  function calSummonFestivity(mo, d, y) {
+    if (y == null) y = curCalYear();
     var bds = CAL_BD_BY_DAY[mo + "-" + d];
     if (bds && bds.length && window.__birthdayGoto && window.__birthdayGoto(bds[0].who)) return true; // birthday outranks the season
     var oc = (window.__isOccasionDate && window.__isOccasionDate()) || (window.__dateOccasion && window.__dateOccasion()); // time-gate-agnostic: a deliberate May-2 click summons the BBQ even outside its 4–10pm window (force then jumps the clock in)
@@ -65732,7 +65827,7 @@ function spawnDustMote(container) {
       if (window.__applyDateOccasion) window.__applyDateOccasion(true); // force past the latch so a deliberate (re-)click always re-summons
       return true;
     }
-    var sk = calSeasonKey(mo, d);
+    var sk = calSeasonKey(mo, d, y);
     if (!CAL_AMBIENT[sk] && window.season) { window.season(sk); return true; }
     return false;
   }
@@ -65740,7 +65835,7 @@ function spawnDustMote(container) {
     jumpToDate(y, mo, d);
     calView = { y: y, m: mo };
     window.__calendarRender(container, surface);
-    var summoned = calSummonFestivity(mo, d);
+    var summoned = calSummonFestivity(mo, d, y);
     if (surface === "phone" && summoned && window.__closePhoneModal) window.__closePhoneModal(true);
   }
   // the distinct "days of significance" the date pill's ⏪/⏩ step between: every dated birthday
@@ -65752,6 +65847,8 @@ function spawnDustMote(container) {
     function add(mo, d) { var k = mo + "-" + d; if (!seen[k]) { seen[k] = 1; out.push({ mo: mo, d: d }); } }
     BIRTHDAYS.forEach(function (b) { if (!b.pending && b.m != null) add(b.m, b.d); });
     for (var k in CAL_OCC) { var p = k.split("-"); add(+p[0], +p[1]); }
+    var po = persianOcc(curCalYear()); // the drifting Persian days, at this year's positions (calNearestSignificant re-derives per from-year within ±1 day)
+    [po.chaharshanbe, po.nowruz, po.sizdah].forEach(function (dt) { add(dt.getMonth(), dt.getDate()); });
     return out;
   }
   // nearest significant day strictly after (dir>0) / before (dir<0) the given date, within a
@@ -65778,7 +65875,7 @@ function spawnDustMote(container) {
     jumpToDate(y, mo, d);
     calView = { y: y, m: mo };
     calRerenderOpen();
-    calSummonFestivity(mo, d);
+    calSummonFestivity(mo, d, y);
   }
   // the four wedding-weekend occasions as compact, clickable date cards (Edmonton in his wine,
   // Prague in her blue): 💍 Edmonton Wedding · 🍖 BBQ Day · 💍 Prague Wedding · 🍳 Garden Brunch,
@@ -65867,9 +65964,9 @@ function spawnDustMote(container) {
     for (var d = 1; d <= daysIn; d++) {
       (function (day) {
         var cell = document.createElement("button"); cell.type = "button"; cell.className = "calx-day";
-        cell.style.background = CAL_TINT[calSeasonKey(m, day)] || CAL_TINT._;
+        cell.style.background = CAL_TINT[calSeasonKey(m, day, y)] || CAL_TINT._;
         var icons = [], titles = [], busts = [];
-        var occ = CAL_OCC[m + "-" + day];
+        var occ = CAL_OCC[m + "-" + day] || persianCalOcc(m, day, y); // the Persian occasions drift, so they're computed for the render year rather than keyed by a fixed day
         if (occ) { icons.push(occ.icon); titles.push(calStr(occ.sk) + (occ.city ? (" · " + calStr(occ.city)) : "")); }
         (CAL_BD_BY_DAY[m + "-" + day] || []).forEach(function (b) {
           // a tiny recognizable portrait of the birthday person stands in for the generic 🎉/👑
@@ -66046,7 +66143,7 @@ function spawnDustMote(container) {
       if (!bd || (b.m === s.m && b.d === s.d)) bd = b; // an exact-day match outranks a merely-in-window one
     });
     if (bd) return { kind: "birthday", row: bd, name: bd.name, id: bd.who };
-    var sk = calSeasonKey(s.m, s.d);
+    var sk = calSeasonKey(s.m, s.d, s.y);
     return { kind: "season", key: sk, id: sk, label: shareT("season_" + sk) };
   }
   var SHARE_GREET_Y = 408; // baseline of the big occasion greeting (wine Fraunces)
@@ -66062,8 +66159,8 @@ function spawnDustMote(container) {
   }
   // Point occasions land on a fixed calendar day; span occasions (pride, generic holiday season)
   // and the wedding windows resolve elsewhere. [month 0-11, day].
-  var SHARE_OCC_DATE = {
-    valentines: [1, 14], chaharshanbe: [2, 17], nowruz: [2, 20], carodejnice: [3, 30],
+  var SHARE_OCC_DATE = { // chaharshanbe/nowruz/sizdah drift → computed in shareOccDate (persianOcc), not fixed here
+    valentines: [1, 14], carodejnice: [3, 30],
     canada: [6, 1], spooky: [9, 31], stedry: [11, 24], xmas: [11, 25], newyear: [11, 31]
   };
   function shareFmtDate(y, m0, d) {
@@ -66085,6 +66182,10 @@ function spawnDustMote(container) {
         var legs = (window.loft && window.loft.weddings) || ["2027-05-01 · Edmonton", "2027-07-10 · Prague"];
         var mm = /(\d{4})-(\d{2})-(\d{2})/.exec((s.m <= 4) ? legs[0] : legs[1]);
         if (mm) return shareFmtDate(+mm[1], +mm[2] - 1, +mm[3]);
+      }
+      if (occ.key === "nowruz" || occ.key === "chaharshanbe" || occ.key === "sizdah") {
+        var pd = persianOcc(y)[occ.key]; // the drifting Persian day, at this year's position
+        return shareFmtDate(pd.getFullYear(), pd.getMonth(), pd.getDate());
       }
       var pt = SHARE_OCC_DATE[occ.key];
       return shareFmtDate(y, pt ? pt[0] : s.m, pt ? pt[1] : s.d);
@@ -66293,7 +66394,7 @@ function spawnDustMote(container) {
     if (!id) {
       // any NAMED occasion the card can badge (canada day, nowruz, xmas, new year, spooky,
       // valentines, pride, chaharshanbe, both wedding windows, …) — but NOT an ordinary season.
-      var sk = calSeasonKey(s.m, s.d);
+      var sk = calSeasonKey(s.m, s.d, s.y);
       if (sk && !SHARE_PLAIN_SEASONS[sk]) id = "occ-" + sk;
     }
     if (!id) return;

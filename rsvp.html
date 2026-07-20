@@ -4081,6 +4081,18 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 /* the chat-room name — the whole app is one conversation, "Wedding crowd". Sticky so it stays
    put as the thread scrolls; bleeds out over the app-body padding to the phone-screen edges. */
 .pm-msg-title{position:sticky; top:-6px; z-index:2; margin:-6px -16px 6px; padding:12px 16px 9px; background:var(--cream); border-bottom:1px solid var(--rule); font-family:"Fraunces",serif; font-size:18px; font-weight:700; color:var(--ink)}
+/* messages search: a small round search field under the title, live-filters the thread by
+   sender name + message text. Same styling as the album search bar so it feels native. */
+.pm-msg-search{position:relative; align-self:stretch; display:flex; align-items:center; margin:-4px 4px 2px}
+.pm-msg-search input{flex:1; width:100%; box-sizing:border-box; padding:8px 30px 8px 12px; border:1px solid var(--rule); border-radius:16px; background:var(--paper); color:var(--ink); font-family:"Source Serif 4",serif; font-size:13px; line-height:1.2; -webkit-appearance:none; appearance:none}
+.pm-msg-search input::placeholder{color:var(--muted)}
+.pm-msg-search input:focus{outline:none; border-color:var(--wine); box-shadow:0 0 0 2px rgba(142,58,74,.18)}
+.pm-msg-search input::-webkit-search-cancel-button{-webkit-appearance:none; appearance:none} /* hide native ✕; we draw our own so it matches the theme */
+.pm-msg-search .pm-ms-x{position:absolute; right:5px; top:50%; transform:translateY(-50%); width:22px; height:22px; border:none; border-radius:50%; background:transparent; color:var(--muted); font-size:14px; line-height:1; cursor:pointer; display:none; align-items:center; justify-content:center; padding:0}
+.pm-msg-search .pm-ms-x:hover,.pm-msg-search .pm-ms-x:focus-visible{color:var(--wine); outline:none}
+.pm-msg-search.has-q .pm-ms-x{display:flex}
+.pm-msg-list{display:flex; flex-direction:column; gap:12px} /* the rows, so the sticky title + search bar sit outside the filter rebuild */
+.pm-msg-nomatch{margin:auto; color:var(--muted); font-size:12px; text-align:center}
 .pm-msg-empty{margin:auto; color:var(--muted); font-size:12px; text-align:center}
 .pm-msg-row{display:flex; flex-direction:column; align-items:flex-start; gap:2px; max-width:100%; cursor:pointer} /* tap → its place/app */
 .pm-msg-row:hover .pm-msg-bubble, .pm-msg-row:focus-visible .pm-msg-bubble{border-color:var(--soft)}
@@ -22082,6 +22094,8 @@ var T = {
     cur_amount: "amount",
     cur_offline: "· offline rate",
     msg_empty: "No messages yet.",
+    msg_search_placeholder: "search messages…", // filters the thread by sender name + message text
+    msg_search_none: "no messages match that search.",
     msg_pouria_from: "Pouria",
     msg_pouria_body: "bar's open again 🍸 get down here",
     msg_group_from: "Wedding crew",
@@ -22683,6 +22697,8 @@ var T = {
     cur_amount: "částka",
     cur_offline: "· kurz offline",
     msg_empty: "Zatím žádné zprávy.",
+    msg_search_placeholder: "hledat zprávy…", // filtruje vlákno podle jména odesílatele + textu zprávy
+    msg_search_none: "žádné zprávy neodpovídají hledání.",
     msg_pouria_from: "Pouria",
     msg_pouria_body: "bar zase otevřel 🍸 padej sem",
     msg_group_from: "Svatební parta",
@@ -42900,6 +42916,16 @@ async def localfont(name):
     // OR as literal strings (from/body) for ad-hoc ones delivered via the message() console API.
     function msgFrom(m) { return (m && m.from != null) ? m.from : tr(m.fromKey); }
     function msgBody(m) { return (m && m.body != null) ? m.body : tr(m.bodyKey); }
+    // case- + accent-insensitive fold for the search box: lower-case, strip combining marks
+    // (é→e, ř→r) so "rene" finds "Irène" and a bare "marketa" finds "markéta".
+    function msgFold(s) { var l = String(s == null ? "" : s).toLowerCase(); return l.normalize ? l.normalize("NFD").replace(/[̀-ͯ]/g, "") : l; }
+    // does message m match query q (already folded)? matches sender name OR body text (tags stripped)
+    function msgMatches(m, q) {
+      if (!q) return true;
+      var body = String(msgBody(m) || "").replace(/<[^>]+>/g, ""); // drop authored <em> etc. → match the visible text (Irene's "da<em>eeee</em>" reads as "daeeee")
+      return msgFold(msgFrom(m) + " \n " + body).indexOf(q) !== -1;
+    }
+    window.__msgMatches = msgMatches; window.__msgFold = msgFold; // test hooks
     // remove ONE text from the thread (its per-row ✕). Drops it + its read-mark, refreshes the
     // badge, and live-re-renders the open thread.
     function dismissMessage(id) {
@@ -42923,8 +42949,38 @@ async def localfont(name):
         empty.textContent = tr("msg_empty");
         wrap.appendChild(empty);
       } else {
-        messagesThread.forEach(function (id) {
-          var m = MESSAGES[id]; if (!m) return;
+        // ── search bar ── a real <input type="search"> that live-filters the thread by sender
+        // name + message text (same look/behavior as the album search). Global keydown guards
+        // bail on INPUT targets, so typing here never fires game hotkeys.
+        var search = document.createElement("div");
+        search.className = "pm-msg-search";
+        var input = document.createElement("input");
+        input.type = "search";
+        input.className = "pm-ms-input";
+        input.setAttribute("placeholder", tr("msg_search_placeholder"));
+        input.setAttribute("aria-label", tr("msg_search_placeholder"));
+        input.setAttribute("autocomplete", "off");
+        input.setAttribute("autocorrect", "off");
+        input.setAttribute("spellcheck", "false");
+        var clr = document.createElement("button");
+        clr.type = "button";
+        clr.className = "pm-ms-x";
+        clr.setAttribute("aria-label", tr("album_search_clear"));
+        clr.textContent = "✕";
+        search.appendChild(input);
+        search.appendChild(clr);
+        wrap.appendChild(search);
+        // the rows live in their own list container so the search bar stays put while filtering
+        var list = document.createElement("div");
+        list.className = "pm-msg-list";
+        wrap.appendChild(list);
+        var nomatch = document.createElement("div");
+        nomatch.className = "pm-msg-nomatch";
+        nomatch.style.display = "none";
+        nomatch.textContent = tr("msg_search_none");
+        wrap.appendChild(nomatch);
+        function buildRow(id) {
+          var m = MESSAGES[id]; if (!m) return null;
           var row = document.createElement("div"); row.className = "pm-msg-row" + (messagesRead[id] ? "" : " unread"); // unread (bold) until tapped
           row.setAttribute("role", "button"); row.setAttribute("tabindex", "0");
           var head = document.createElement("div"); head.className = "pm-msg-head";
@@ -42945,8 +43001,24 @@ async def localfont(name):
           row.appendChild(head); row.appendChild(bub);
           row.addEventListener("click", function () { runMsgAction(id); }); // tap a message → its place/app (and mark it read)
           row.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); runMsgAction(id); } });
-          wrap.appendChild(row);
-        });
+          return row;
+        }
+        function applyFilter() {
+          var q = msgFold((input.value || "").trim());
+          search.classList.toggle("has-q", !!q);
+          list.textContent = "";
+          var shown = 0;
+          messagesThread.forEach(function (id) {
+            var m = MESSAGES[id]; if (!m) return;
+            if (!msgMatches(m, q)) return;
+            var row = buildRow(id);
+            if (row) { list.appendChild(row); shown++; }
+          });
+          nomatch.style.display = shown ? "none" : "";
+        }
+        input.addEventListener("input", applyFilter);
+        clr.addEventListener("click", function () { input.value = ""; applyFilter(); input.focus(); });
+        applyFilter();
       }
       body.appendChild(wrap);
       // conversation → scroll to the newest (bottom). A single sync set runs mid open-animation

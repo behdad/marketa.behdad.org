@@ -251,31 +251,23 @@ var showing = new El("g"); showing.setAttribute("class", "cuddly-visitor showing
 api.apply();
 ok(!kg.classList.contains("playing"), "a visiting duo (.cuddly-visitor.showing) → kids clear");
 
-/* ══ TEST 4: hover tooltip (dark bubble) on each kid, in ADDITION to the click card ═══════ */
-console.log("\nTest 4 — each kid gets a hover tooltip naming the right kid (plus the click card):");
-// rebuild a clean scene so the load-time hover wiring runs once against fresh nodes
+/* ══ TEST 4: the kids are CLICK-ONLY — no hover tooltip (people popups are click-only) ═══════ */
+console.log("\nTest 4 — the kids are named by TAP only (no hover tooltip on people):");
+// rebuild a clean scene so the load-time wiring runs once against fresh nodes
 hoverCalls.length = 0; whoPopCalls.length = 0;
 buildScene();
 coupleEl = new El("g"); coupleEl.setAttribute("class", "at-party");
 visEl = new El("g");
 docShim.getElementById = function (id) { if (id === "loft-game-strip") return strip; if (id === "cuddly-kidgames") return kg; if (id === "cuddly-couple") return coupleEl; if (id === "cuddly-visitors-layer") return visEl; return null; };
 winShim.__gardenPartyOn = true;
-var api4 = runIIFE(); // wiring happens at IIFE run (load) — one hoverTooltip per .kg-rock
-ok(hoverCalls.length === NAMES.length, "hoverTooltip wired onto all six kids (got " + hoverCalls.length + ")");
-NAMES.forEach(function (n) {
-  var rock = kg.querySelector("." + n);
-  var call = hoverCalls.filter(function (c) { return c.el === rock; })[0];
-  var e = expect[n];
-  var want = "<em>" + e[0] + "</em> · " + tipText(e[1]);
-  ok(call && call.text === want, n + " hover tooltip → \"" + (call ? call.text : "(none)") + "\"");
-  ok(call && call.placement === "top", n + " hover tooltip uses the \"top\" dark-bubble placement");
-});
-// the click name-card path must STILL work alongside the hover
+var api4 = runIIFE(); // wiring happens at IIFE run (load) — the kids get a click handler, no hover
+ok(hoverCalls.length === 0, "no hover tooltip wired onto the kids — people are click-only (got " + hoverCalls.length + ")");
+// the click name-card path is the sole naming path now
 api4.apply();
 whoPopCalls.length = 0;
 kg.querySelector(".kg-irene").querySelector(".kg-tilt")._fireClick();
 ok(whoPopCalls.length === 1 && whoPopCalls[0].html === "<em>Irene</em> · " + tipText("role_niece"),
-   "click name-card still pops alongside the hover tooltip (both wired)");
+   "click name-card pops (the only naming path now that hover is gone)");
 
 /* ══ TEST 5: ONE-ROOM gate — a kid in a game group is excluded from the random cameo ═════ */
 console.log("\nTest 5 — __kidInGamesNow gates the cuddly cameo (one kid, one room):");

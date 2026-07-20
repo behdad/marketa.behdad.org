@@ -29955,18 +29955,6 @@ document.addEventListener("click", function (e) {
       if (!who || !window.__whoPop) return;
       window.__whoPop(rock, "<em>" + who.name + "</em> · " + tipText(who.role) + kidAgeLine(who.name) + relLine(who.name) + funFact(who.name));
     });
-    // Hover tooltip (dark bubble), in ADDITION to the click name-card — same treatment as the
-    // dance-floor guests: hover = dark bubble, click = white card, both naming the right kid.
-    // Wired once per .kg-rock at load; pointer-events flip to auto only while .playing (CSS), so
-    // the tooltip can never fire on the ambient decor. htmlFn re-reads KID_WHO each show so the
-    // role text follows the current language. (hoverTooltip has its own ~450ms dwell + mousedown
-    // cancel, so it won't fight the tap popup.)
-    for (var n = 0; n < NAMES.length; n++) {
-      (function (cls) {
-        var rock = kg.querySelector("." + cls), who = KID_WHO[cls];
-        if (rock && who) hoverTooltip(rock, function () { return "<em>" + who.name + "</em> · " + tipText(who.role) + kidAgeLine(who.name) + relLine(who.name) + funFact(who.name); }, "top");
-      })(NAMES[n]);
-    }
   })();
   // each kid fades with the wrapper opacity while hidden; on re-show re-evaluate (party may have
   // ended, a duo may have arrived) rather than blindly re-seating
@@ -31692,20 +31680,17 @@ function gameTapsNear(a, b) {
   }
 })();
 (function () {
-  // The cast name themselves on hover, same as Octi and Fishu — italic marks a proper name (the
-  // roman labels next door name generic objects: Tamper, Knock box). The couple ride the site's
-  // lowercase wordmark convention; the friends are plain proper names. Each is gated by its own
-  // scene's pointer-events, so a name only surfaces while that character is actually present:
-  // Irene until she's .showing, Pouria until the bar is up, the DJs until the party is lit (and
-  // only whichever of the two is currently spinning — the other is display:none).
-  // In the cuddly nook, hovering names a visitor AND tapping pops the same name in a static white
-  // roster-style card (the inverse roster, mirrored from the party floor — owner request). No
-  // freeze-others here: the nook has no dance crowd to pause, so it's just the name card.
-  function nameTip(id, html, placement, yOffset, xOffset, posElId) {
+  // The cast name themselves on TAP — italic marks a proper name (the roman labels next door name
+  // generic objects: Tamper, Knock box). The couple ride the site's lowercase wordmark convention;
+  // the friends are plain proper names. Each is gated by its own scene's pointer-events, so a name
+  // only surfaces while that character is actually present.
+  // In the cuddly nook, tapping a visitor pops their name in a static white roster-style card (the
+  // inverse roster, mirrored from the party floor — owner request). No freeze-others here: the nook
+  // has no dance crowd to pause, so it's just the name card. (People are click-only — the tap card
+  // carries name·role·age·relation·fact and lingers ~10s; the old hover bubble is kept for props.)
+  function nameTip(id, html) {
     var el = document.getElementById(id); if (!el) return;
-    var posEl = posElId ? document.getElementById(posElId) : undefined;
-    hoverTooltip(el, html, placement, yOffset, xOffset, posEl);
-    el.addEventListener("click", function () { if (window.__whoPop) window.__whoPop(el, typeof html === "function" ? html() : html); }); // anchor on el (not posEl) so the global egg-bubble dismisser sees the click inside the anchor and keeps it up
+    el.addEventListener("click", function () { if (window.__whoPop) window.__whoPop(el, typeof html === "function" ? html() : html); }); // anchor on el so the global egg-bubble dismisser sees the click inside the anchor and keeps it up
   }
   nameTip("cuddly-behdad", function () { return "<em>behdad</em>" + relLine("behdad") + funFact("behdad"); }, "top", 12, 0, "cuddly-behdad-head"); // +y: his head rides ~10u higher than hers, so match her sit
   nameTip("cuddly-marketa", function () { return "<em>markéta</em>" + relLine("marketa") + funFact("marketa"); }, "top");
@@ -31737,42 +31722,21 @@ function gameTapsNear(a, b) {
   hoverTooltip(document.getElementById("chaharshanbe-robin"), "<em>Robin</em>", "top"); // his turn at the fire; a proper name, same in both languages (like Irene, hardcoded — not in T)
   hoverTooltip(document.getElementById("chaharshanbe-navid"), "<em>Navid</em>", "top"); // his turn at the fire; a proper name, same in both languages (like Irene, hardcoded — not in T)
   hoverTooltip(document.getElementById("balcony-couple"), "<em>markéta &amp; behdad</em>", "top"); // one name for one composition — they're over it together or not at all
-  // the VIP party crashers — named while they're on the floor (their .guest pointer-events gate)
-  var gAli = document.querySelector(".g-ali"); if (gAli) hoverTooltip(gAli, function () { return "<em>Ali</em> · " + tipText("role_bestman") + relLine("Ali") + funFact("Ali"); }, "top");
-  var gGoli = document.querySelector(".g-goli"); if (gGoli) hoverTooltip(gGoli, function () { return "<em>Goli</em> · " + tipText("role_fashion") + relLine("Goli") + funFact("Goli"); }, "top");
-  var gSpencer = document.querySelector(".g-spencer"); if (gSpencer) hoverTooltip(gSpencer, function () { return "<em>Spencer</em> · " + tipText("role_maid") + relLine("Spencer") + funFact("Spencer"); }, "top");
-  var gJay = document.querySelector(".g-jay"); if (gJay) hoverTooltip(gJay, function () { return "<em>Jay</em> · " + tipText("role_officiant") + relLine("Jay") + funFact("Jay"); }, "top");
-  var gBehdad = document.querySelector(".g-behdad"); if (gBehdad) hoverTooltip(gBehdad, function () { return "<em>behdad</em> · " + tipText("role_groom") + relLine("behdad") + funFact("behdad"); }, "top"); // each host names themselves at the party (matches the tap popup)
-  var gMarketa = document.querySelector(".g-marketa"); if (gMarketa) hoverTooltip(gMarketa, function () { return "<em>markéta</em> · " + tipText("role_bride") + relLine("markéta") + funFact("markéta"); }, "top");
-  var gAlireza = document.querySelector(".g-alireza"); if (gAlireza) hoverTooltip(gAlireza, function () { return "<em>Alireza</em> · " + tipText("role_travelbuddy_m") + relLine("Alireza") + funFact("Alireza"); }, "top");
-  var gMahzad = document.querySelector(".g-mahzad"); if (gMahzad) hoverTooltip(gMahzad, function () { return "<em>Mahzad</em> · " + tipText("role_travelbuddy_f") + relLine("Mahzad") + funFact("Mahzad"); }, "top");
-  var gFarhang = document.querySelector(".g-farhang"); if (gFarhang) hoverTooltip(gFarhang, function () { return "<em>Farhang</em> · " + tipText("role_mc") + relLine("Farhang") + funFact("Farhang"); }, "top");
-  var gLauren = document.querySelector(".g-lauren"); if (gLauren) hoverTooltip(gLauren, function () { return "<em>Lauren</em> · " + tipText("role_business") + relLine("Lauren") + funFact("Lauren"); }, "top");
-  var gAspen = document.getElementById("garden-photog-hit"); if (gAspen) hoverTooltip(gAspen, function () { return "<em>Aspen</em> · " + tipText("role_photographer") + relLine("Aspen") + funFact("Aspen"); }, "top"); // the party photographer
-  var gBahareh = document.querySelector(".g-bahareh"); if (gBahareh) hoverTooltip(gBahareh, function () { return "<em>Bahareh</em> · " + tipText("role_sister") + relLine("Bahareh") + funFact("Bahareh"); }, "top"); // Behdad's sister & Irene's mom, at the party
-  var gElisabeth = document.querySelector(".g-elisabeth"); if (gElisabeth) hoverTooltip(gElisabeth, function () { return "<em>Elisabeth</em> · " + tipText("role_mniece") + kidAgeLine("Elisabeth") + relLine("Elisabeth") + funFact("Elisabeth"); }, "top"); // one of "the mouses" — Markéta's niece, at the party
-  var gFelix = document.querySelector(".g-felix"); if (gFelix) hoverTooltip(gFelix, function () { return "<em>Felix</em> · " + tipText("role_mnephew") + kidAgeLine("Felix") + relLine("Felix") + funFact("Felix"); }, "top"); // one of "the mouses" — Markéta's nephew, at the party
-  // Behdad's brother's family at the party — Patricia (sister-in-law) + Patricia’s son & Patricia’s daughter (nephew/niece)
-  var gPatricia = document.querySelector(".g-patricia"); if (gPatricia) hoverTooltip(gPatricia, function () { return "<em>Patricia</em> · " + tipText("role_sisterinlaw") + relLine("Patricia") + funFact("Patricia"); }, "top");
-  var gPatriciaSon = document.querySelector(".g-patricia-son"); if (gPatriciaSon) hoverTooltip(gPatriciaSon, function () { return "<em>Patricia’s son</em> · " + tipText("role_nephew") + kidAgeLine("Patricia’s son") + relLine("Patricia’s son") + funFact("Patricia’s son"); }, "top");
-  var gPatriciaDaughter = document.querySelector(".g-patricia-daughter"); if (gPatriciaDaughter) hoverTooltip(gPatriciaDaughter, function () { return "<em>Patricia’s daughter</em> · " + tipText("role_niece") + kidAgeLine("Patricia’s daughter") + relLine("Patricia’s daughter") + funFact("Patricia’s daughter"); }, "top");
-  // Markéta's sister's family (Lübeck) at the party — Madla + Robert; and Behdad's godson Hamid + Athena
-  var gMadla = document.querySelector(".g-madla"); if (gMadla) hoverTooltip(gMadla, function () { return "<em>Madla</em> · " + tipText("role_msister") + relLine("Madla") + funFact("Madla"); }, "top");
-  var gRobert = document.querySelector(".g-robert"); if (gRobert) hoverTooltip(gRobert, function () { return "<em>Robert</em> · " + tipText("role_msisspouse") + relLine("Robert") + funFact("Robert"); }, "top");
-  var gHamid = document.querySelector(".g-hamid"); if (gHamid) hoverTooltip(gHamid, function () { return "<em>Hamid</em> · " + tipText("role_godson_a") + relLine("Hamid") + funFact("Hamid"); }, "top");
-  var gAthena = document.querySelector(".g-athena"); if (gAthena) hoverTooltip(gAthena, function () { return "<em>Athena</em> · " + tipText("role_qa") + relLine("Athena") + funFact("Athena"); }, "top");
-  var gBaharak = document.querySelector(".g-baharak"); if (gBaharak) hoverTooltip(gBaharak, function () { return "<em>Baharak</em> · " + tipText("role_sister") + relLine("Baharak") + funFact("Baharak"); }, "top"); // Behdad's Tehran sister (Hannah's mom) — a different sister from Bahareh
-  var gPayman = document.querySelector(".g-payman"); if (gPayman) hoverTooltip(gPayman, function () { return "<em>Payman</em> · " + tipText("role_bril") + relLine("Payman") + funFact("Payman"); }, "top"); // Baharak's husband, Behdad's brother-in-law
-  var gHannah = document.querySelector(".g-hannah"); if (gHannah) hoverTooltip(gHannah, function () { return "<em>Hannah</em> · " + tipText("role_niece") + kidAgeLine("Hannah") + relLine("Hannah") + funFact("Hannah"); }, "top"); // their daughter, Behdad's niece & Irene's cousin
-  // ── the garden CHASE runners — named on hover too (small + moving, but the owner wants them).
-  // pointer-events are gated to .chasing in CSS, so a name only surfaces while a runner is actually
-  // crossing. hoverTooltip re-reads the anchor bbox every frame, so the bubble rides the dash.
-  hoverTooltip(document.getElementById("garden-kid-irene"), function () { return "<em>Irene</em> · " + tipText("role_niece") + kidAgeLine("Irene") + relLine("Irene") + funFact("Irene"); }, "top");
-  hoverTooltip(document.getElementById("garden-kid-robin"), function () { return "<em>Robin</em> · " + tipText("role_godson") + kidAgeLine("Robin") + relLine("Robin") + funFact("Robin"); }, "top");
-  hoverTooltip(document.getElementById("garden-kid-navid"), function () { return "<em>Navid</em> · " + tipText("role_godson") + kidAgeLine("Navid") + relLine("Navid") + funFact("Navid"); }, "top");
-  hoverTooltip(document.getElementById("garden-kid-elisabeth"), function () { return "<em>Elisabeth</em> · " + tipText("role_mniece") + kidAgeLine("Elisabeth") + relLine("Elisabeth") + funFact("Elisabeth"); }, "top"); // one of "the mouses" — Markéta's niece
-  hoverTooltip(document.getElementById("garden-kid-felix"), function () { return "<em>Felix</em> · " + tipText("role_mnephew") + kidAgeLine("Felix") + relLine("Felix") + funFact("Felix"); }, "top"); // one of "the mouses" — Markéta's nephew
-  hoverTooltip(document.getElementById("garden-kid-bahareh"), function () { return "<em>Bahareh</em> · " + tipText("role_sister") + relLine("Bahareh") + funFact("Bahareh"); }, "top"); // Irene's mom, herding the kids
+  // The party-floor cast — hosts, guests, the mouses, and the visiting families — are named by TAP:
+  // the delegated guestInspect on #garden-guests pops the white name-card for any .guest figure, so
+  // the standalone per-figure hovers are gone (the click card carries name·role·age·relation·fact).
+  var gAspen = document.getElementById("garden-photog-hit"); if (gAspen) hoverTooltip(gAspen, function () { return "<em>Aspen</em> · " + tipText("role_photographer") + relLine("Aspen") + funFact("Aspen"); }, "top"); // the photographer is crew (not a .guest → not covered by guestInspect), so she keeps her hover name
+  // ── the garden CHASE runners — named on TAP (small + moving, but the owner wants them nameable).
+  // pointer-events are gated to .chasing in CSS, so a tap only lands while a runner is actually
+  // crossing; it pops the same white name-card the floor guests get (no .g-* figure → not in the
+  // guestInspect roster, so each carries its own click→__whoPop).
+  function chaseName(id, htmlFn) { var el = document.getElementById(id); if (el) el.addEventListener("click", function () { if (window.__whoPop) window.__whoPop(el, htmlFn()); }); }
+  chaseName("garden-kid-irene", function () { return "<em>Irene</em> · " + tipText("role_niece") + kidAgeLine("Irene") + relLine("Irene") + funFact("Irene"); });
+  chaseName("garden-kid-robin", function () { return "<em>Robin</em> · " + tipText("role_godson") + kidAgeLine("Robin") + relLine("Robin") + funFact("Robin"); });
+  chaseName("garden-kid-navid", function () { return "<em>Navid</em> · " + tipText("role_godson") + kidAgeLine("Navid") + relLine("Navid") + funFact("Navid"); });
+  chaseName("garden-kid-elisabeth", function () { return "<em>Elisabeth</em> · " + tipText("role_mniece") + kidAgeLine("Elisabeth") + relLine("Elisabeth") + funFact("Elisabeth"); }); // one of "the mouses" — Markéta's niece
+  chaseName("garden-kid-felix", function () { return "<em>Felix</em> · " + tipText("role_mnephew") + kidAgeLine("Felix") + relLine("Felix") + funFact("Felix"); }); // one of "the mouses" — Markéta's nephew
+  chaseName("garden-kid-bahareh", function () { return "<em>Bahareh</em> · " + tipText("role_sister") + relLine("Bahareh") + funFact("Bahareh"); }); // Irene's mom, herding the kids
   hoverTooltip(document.getElementById("kitchen-bartender-hit"), "<em>Pouria</em>", "top");
   hoverTooltip(document.getElementById("garden-dj-a"), "<em>DJ Sina</em>", "top");
   hoverTooltip(document.getElementById("garden-dj-b"), "<em>DJ Danesh</em>", "top", 14); // +14: his afro makes the group bbox ~14px taller than Sina's, so nudge the tip down to sit level with Sina's
@@ -31824,7 +31788,6 @@ function gameTapsNear(a, b) {
   function callSurface(el) { return (el && el.closest) ? el.closest(CALL_SURFACE_SEL) : null; }
   Object.keys(CALL_FIGS).forEach(function (lid) {
     var el = document.getElementById(lid); if (!el) return;
-    hoverTooltip(el, function () { return figHtml(lid); }, "top");
     el.addEventListener("click", function () { if (window.__whoPop) window.__whoPop(el, figHtml(lid), callSurface(el)); }); // tap → white card at the call surface's lower-left (no stopPropagation, so the global dismisser's contains-check keeps it up)
   });
 })();
@@ -43647,7 +43610,6 @@ async def localfont(name):
       for (var i = 0; i < figs.length; i++) (function (el) {
         var lid = el.getAttribute("data-lid");
         if (!window.__callFigLabel || !window.__callFigLabel(lid)) return; // props/sub-parts have no label → skip
-        hoverTooltip(el, function () { return window.__callFigLabel(lid); }, "top");
         el.addEventListener("click", function () { if (window.__whoPop) window.__whoPop(el, window.__callFigLabel(lid), el.closest && el.closest(".pic-video")); }); // anchor the card at the phone call surface's lower-left, clear of the birthday hat / cheer overlay
       })(figs[i]);
       // the tiny self-view thumbnail — the couple (or Markéta alone on her sister's call)
@@ -43655,7 +43617,6 @@ async def localfont(name):
       var selfRoot = self && self.querySelector("[data-lid]");
       if (selfRoot) {
         var selfHtml = callee === "madla" ? "<em>markéta</em>" : "<em>markéta &amp; behdad</em>";
-        hoverTooltip(selfRoot, selfHtml, "top");
         selfRoot.addEventListener("click", function () { if (window.__whoPop) window.__whoPop(selfRoot, selfHtml); });
       }
     }

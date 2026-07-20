@@ -20585,6 +20585,7 @@ var T = {
     np: {
       techno: "Techno", waltz: "Waltz", disco: "Disco", swing: "Swing", salsa: "Salsa",
       bhangra: "Bhangra", persian: "Persian", polka: "Polka", horah: "Horah",
+      bulgar: "Klezmer bulgar", dupak: "Czech folk dance", cumbia: "Cumbia",
       workout: "Workout beat", totoro: "Woodland rain", aqua: "Aquarium ambient"
     },
     dj_pick_title: "request a song", // the DJ-booth style picker's heading
@@ -21166,6 +21167,7 @@ var T = {
     np: {
       techno: "Techno", waltz: "Valčík", disco: "Disco", swing: "Swing", salsa: "Salsa",
       bhangra: "Bhangra", persian: "Perský", polka: "Polka", horah: "Hora",
+      bulgar: "Klezmer bulgar", dupak: "Dupák", cumbia: "Cumbia",
       workout: "Rytmus na cvičení", totoro: "Lesní déšť", aqua: "Zvuky akvária"
     },
     dj_pick_title: "vyber si písničku", // the DJ-booth style picker's heading
@@ -25043,6 +25045,421 @@ document.addEventListener("click", function (e) {
   (window.__partyDances = window.__partyDances || []).push({ id: "horah", formation: "circle", update: window.__updateHorahMusic });
 })();
 (function () {
+  // ── KLEZMER BULGAR BED — the garden party's OTHER klezmer dance, distinct from the horah/
+  // freylekhs (which is D freygish, 2/4, oom-pah). This is a bulgar: ORIGINAL composition (mine,
+  // not derived from any existing/copyrighted bulgar), G freygish / Phrygian-dominant
+  // [G Ab B C D Eb F] with the augmented 2nd Ab→B, in the bulgar's signature asymmetric
+  // 8/8 lilt (3+3+2 groupings across a bar) at ~150 BPM — LONG-short bass answered by an off-
+  // beat chuff, over a reedy clarinet lead that leans on the aug-2nd with klezmer "krekhts" sob
+  // grace-notes (a quick upper flick before the beat). Same look-ahead scheduler / fade-and-close
+  // teardown / garden+dance want-gate as the waltz & horah beds. Centered; app-volume master.
+  var bgCtx = null, bgTimer = null, bgStep = 0, bgNextTime = 0, bgSuspended = false;
+  var BG8 = 0.20;                                                 // eighth-note, seconds (~150 BPM in 8/8 groupings)
+  var BG_BASS = 98.00, BG_CHORD = 392.00, BG_LEAD = 784.00;      // G2 bass / G4 chord / G5 lead
+  var BG_SCALE = [0, 1, 4, 5, 7, 8, 10];                         // G freygish (Phrygian dominant): root b2 3 4 5 b6 b7
+  var BG_BROOT = [0, 0, 3, 3, 4, 4, 0, 0];                        // per-bar bass root scale-degree: G G C C D D G G
+  // bulgar 8/8 accent map: beats fall on 8ths 0,3,6 (3+3+2). 2=heavy bass, 1=chuff, 0=rest.
+  var BG_ACC = [2, 0, 0, 1, 0, 0, 2, 0];
+  var BG_MEL = [
+    0, 1, 2, 1, 0, null, 4, 3,      // bar1: G Ab B Ab G . D C  (aug-2nd hook Ab→B)
+    2, 3, 4, 5, 4, 3, 2, null,      // bar2: B C D Eb D C B .
+    4, 5, 6, 5, 4, null, 2, 1,      // bar3: D Eb F Eb D . B Ab
+    0, 1, 2, null, 1, 0, null, null,// bar4: G Ab B . Ab G . .
+    2, 4, 5, 4, 2, null, 4, 2,      // bar5: B D Eb D B . D B
+    1, 2, 4, 2, 1, 0, null, 1,      // bar6: Ab B D B Ab G . Ab
+    2, 1, 0, 1, 2, null, 4, 3,      // bar7: B Ab G Ab B . D C
+    0, null, 0, 1, 0, null, null, null // bar8: G . G Ab G . . .
+  ];
+  function bgFreq(base, deg) { var oct = Math.floor(deg / 7), s = BG_SCALE[((deg % 7) + 7) % 7]; return base * Math.pow(2, (s + 12 * oct) / 12); }
+  function bgSemi(base, n) { return base * Math.pow(2, n / 12); }
+  function bgVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
+  function bgWant() { return !!window.__gardenPartyOn && window.__partyDance === "bulgar"; }
+  function bgOom(ctx, t, freq) {                                  // heavy bass on the grouping downbeats
+    var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
+    var sub = ctx.createOscillator(); sub.type = "sine"; sub.frequency.value = freq;
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 620; lp.Q.value = 0.7;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+    o.connect(lp); sub.connect(lp); lp.connect(g); g.connect(ctx._bus);
+    o.start(t); o.stop(t + 0.22); sub.start(t); sub.stop(t + 0.22);
+  }
+  function bgChuff(ctx, t, freqs) {                               // off-beat chord chuff
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2400; lp.Q.value = 0.6;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+    lp.connect(g); g.connect(ctx._bus);
+    freqs.forEach(function (f) { var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = f; o.connect(lp); o.start(t); o.stop(t + 0.16); });
+  }
+  function bgClar(ctx, t, freq, dur, gain, krekhts) {             // reedy klezmer lead; krekhts = a quick upper sob-flick before the note
+    var o = ctx.createOscillator(); o.type = "sawtooth"; o.frequency.value = krekhts ? freq * Math.pow(2, 2 / 12) : freq;
+    if (krekhts) { o.frequency.setValueAtTime(freq * Math.pow(2, 2 / 12), t); o.frequency.exponentialRampToValueAtTime(freq, t + Math.min(0.05, dur * 0.3)); }
+    var lfo = ctx.createOscillator(); lfo.type = "sine"; lfo.frequency.value = 5.8;
+    var lg = ctx.createGain(); lg.gain.value = freq * 0.008; lfo.connect(lg); lg.connect(o.frequency);
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 3200; lp.Q.value = 1.1;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + 0.007);
+    g.gain.setValueAtTime(gain, t + dur * 0.5);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(lp); lp.connect(g); g.connect(ctx._bus);
+    o.start(t); o.stop(t + dur + 0.02); lfo.start(t); lfo.stop(t + dur + 0.02);
+  }
+  function bgSchedStep(ctx, step, t) {
+    var inBar = step % 8, bar = (step / 8) | 0, rs = BG_SCALE[BG_BROOT[bar]]; // bar bass root, absolute semitone
+    var acc = BG_ACC[inBar];
+    if (acc === 2) bgOom(ctx, t, bgSemi(BG_BASS, rs));           // heavy bass on 3+3+2 downbeats
+    else if (acc === 1) bgChuff(ctx, t, [0, 4, 7].map(function (iv) { return bgSemi(BG_CHORD, rs + iv); })); // major-triad chuff
+    var m = BG_MEL[step];
+    if (m !== null && m !== undefined) bgClar(ctx, t, bgFreq(BG_LEAD, m), BG8 * 1.4, 0.1, (step % 4) === 0); // krekhts sob on grouping heads
+  }
+  function bgSchedule() {
+    bgTimer = setTimeout(function () {
+      bgTimer = null;
+      var ctx = bgCtx; if (!ctx) return;
+      try {
+        var horizon = ctx.currentTime + 1.2, guard = 0;
+        while (bgNextTime < horizon && guard++ < 200) {
+          bgSchedStep(ctx, bgStep, bgNextTime);
+          bgNextTime += BG8;
+          bgStep = (bgStep + 1) % 64;                            // 8-bar loop of 8/8
+        }
+      } catch (e) {}
+      bgSchedule();
+    }, 200);
+  }
+  function bgStart(fadeIn) {
+    try {
+      bgStop();
+      window.__musicPaused = false; bgSuspended = false;
+      bgCtx = audioBed();                                         // klezmer bulgar bed
+      if (!bgCtx) return;
+      try { var pr = bgCtx.resume && bgCtx.resume(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
+      var now = bgCtx.currentTime;
+      var bus = bgCtx.createGain(); bus.gain.value = 1.0;
+      var comp = bgCtx.createDynamicsCompressor();
+      comp.threshold.value = -14; comp.knee.value = 24; comp.ratio.value = 3;
+      comp.attack.value = 0.004; comp.release.value = 0.25;
+      var master = bgCtx.createGain();
+      master.gain.setValueAtTime(0.0001, now);
+      master.gain.linearRampToValueAtTime(bgVol(), now + (fadeIn || 0.4));
+      var out = pannedOut(bgCtx, 0);
+      bus.connect(comp); comp.connect(master); var bassLift = partyBassLift(master.context); master.connect(bassLift); bassLift.connect(out);
+      bgCtx._bus = bus; bgCtx._masterGain = master;
+      bgStep = 0; bgNextTime = now + 0.12;
+      var vb = document.getElementById("hunt-volume-btn"); if (vb) vb.classList.add("shown");
+      if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+      bgSchedule();
+    } catch (e) {}
+  }
+  function bgStop(fadeSecs) {
+    var f = (typeof fadeSecs === "number") ? fadeSecs : 0.3;
+    if (bgTimer) { clearTimeout(bgTimer); bgTimer = null; }
+    if (bgCtx) {
+      var ctx = bgCtx, master = bgCtx._masterGain;
+      bgCtx = null;
+      try { if (master) { var t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
+      setTimeout(function () { try { ctx.close(); } catch (e) {} }, f * 1000 + 100);
+    }
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+  }
+  window.__pauseBulgarMusic = function (paused) {
+    if (!bgCtx) return false;
+    bgSuspended = !!paused;
+    try { if (paused) bgCtx.suspend(); else bgCtx.resume(); } catch (e) {}
+    return true;
+  };
+  window.__bulgarPlaying = function () { return !!bgCtx && !bgSuspended; };
+  window.__applyBulgarMusicVolume = function (tc) {
+    if (bgCtx && bgCtx._masterGain) { try { bgCtx._masterGain.gain.setTargetAtTime(bgVol(), bgCtx.currentTime, tc || 0.05); } catch (e) {} }
+  };
+  window.__updateBulgarMusic = function (fadeSecs) {
+    var want = bgWant();
+    if (want && !bgCtx) bgStart(fadeSecs);
+    else if (!want && bgCtx) bgStop(fadeSecs);
+  };
+  document.addEventListener("visibilitychange", function () { window.__updateBulgarMusic(); });
+  // Register this bed as the "bulgar" party dance (circle formation — the klezmer bulgar dances in a ring). Own delimited line (merge-safe).
+  (window.__partyDances = window.__partyDances || []).push({ id: "bulgar", formation: "circle", update: window.__updateBulgarMusic });
+})();
+(function () {
+  // ── CZECH / MORAVIAN FOLK BED (DUPÁK) — a lively stamping folk dance for Markéta's side.
+  // ORIGINAL composition (mine, not derived from any existing/copyrighted folk tune): D major,
+  // 2/4, ~140 BPM, with the stamping "dupák" character — a heavy stamped downbeat, an off-beat
+  // accordion-bellows chord, and a village-fiddle lead (sawtooth-through-lowpass with a lively
+  // vibrato and quick grace ornaments). Diatonic I–V–IV–I feel (D A G D), a rustic drone fifth
+  // under the bass. Distinct from the existing polka (which is faster oom-pah in a different key).
+  // Same look-ahead scheduler / fade-and-close teardown / garden+dance want-gate as the horah bed.
+  var duCtx = null, duTimer = null, duStep = 0, duNextTime = 0, duSuspended = false;
+  var DU8 = 0.214;                                               // eighth-note, seconds (~140 BPM, 2/4, 4 eighths/bar)
+  var DU_BASS = 73.42, DU_CHORD = 293.66, DU_LEAD = 587.33;     // D2 bass / D4 chord / D5 lead
+  var DU_ROOT = [0, 0, 7, 7, 5, 5, 0, 0];                        // per-bar root semis from D: D D A A G G D D
+  var DU_CH = [[0,4,7],[0,4,7],[0,4,7],[0,4,7],[0,4,7],[0,4,7],[0,4,7],[0,4,7]]; // all major triads (I V IV I)
+  var DU_MEL = [
+    0, 2, 4, 5,        // bar1: D  E  F# G
+    7, 5, 4, 2,        // bar2: A  G  F# E
+    9, 7, 5, 4,        // bar3: B  A  G  F#  (over A)
+    5, 4, 2, 0,        // bar4: G  F# E  D
+    7, 9, 11, 9,       // bar5: A  B  C# B
+    7, 5, 4, 5,        // bar6: A  G  F# G   (over G)
+    4, 5, 7, 4,        // bar7: F# G  A  F#
+    2, 0, 0, null      // bar8: E  D  D  .
+  ];
+  function duSemi(base, n) { return base * Math.pow(2, n / 12); }
+  function duVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
+  function duWant() { return !!window.__gardenPartyOn && window.__partyDance === "dupak"; }
+  function duStamp(ctx, t, freq) {                                // stamped bass downbeat + a rustic drone fifth
+    var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
+    var fifth = ctx.createOscillator(); fifth.type = "sine"; fifth.frequency.value = freq * Math.pow(2, 7 / 12);
+    var sub = ctx.createOscillator(); sub.type = "sine"; sub.frequency.value = freq;
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 700; lp.Q.value = 0.8;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.008); // fast attack = a "stamp"
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
+    o.connect(lp); fifth.connect(lp); sub.connect(lp); lp.connect(g); g.connect(ctx._bus);
+    o.start(t); o.stop(t + 0.26); fifth.start(t); fifth.stop(t + 0.26); sub.start(t); sub.stop(t + 0.26);
+  }
+  function duBellows(ctx, t, freqs) {                             // off-beat accordion-bellows chord (sustained-ish, soft attack)
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2200; lp.Q.value = 0.5;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.12, t + 0.03); // bellows swell
+    g.gain.setValueAtTime(0.12, t + 0.14);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
+    lp.connect(g); g.connect(ctx._bus);
+    freqs.forEach(function (f) { var o = ctx.createOscillator(); o.type = "sawtooth"; o.frequency.value = f; o.connect(lp); o.start(t); o.stop(t + 0.26); });
+  }
+  function duFiddle(ctx, t, freq, dur, gain) {                    // village-fiddle lead: sawtooth + lowpass + lively vibrato
+    var o = ctx.createOscillator(); o.type = "sawtooth"; o.frequency.value = freq;
+    var lfo = ctx.createOscillator(); lfo.type = "sine"; lfo.frequency.value = 6.2;
+    var lg = ctx.createGain(); lg.gain.value = freq * 0.009; lfo.connect(lg); lg.connect(o.frequency);
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 3400; lp.Q.value = 0.9;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + 0.01);
+    g.gain.setValueAtTime(gain, t + dur * 0.55);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(lp); lp.connect(g); g.connect(ctx._bus);
+    o.start(t); o.stop(t + dur + 0.02); lfo.start(t); lfo.stop(t + dur + 0.02);
+  }
+  function duSchedStep(ctx, step, t) {
+    var inBar = step % 4, bar = (step / 4) | 0, rs = DU_ROOT[bar];
+    if (inBar === 0 || inBar === 2) duStamp(ctx, t, duSemi(DU_BASS, rs)); // stamped bass on both beats
+    if (inBar === 1 || inBar === 3) duBellows(ctx, t, DU_CH[bar].map(function (iv) { return duSemi(DU_CHORD, rs + iv); })); // off-beat bellows
+    var m = DU_MEL[step];
+    if (m !== null && m !== undefined) duFiddle(ctx, t, duSemi(DU_LEAD, m), DU8 * 1.3, 0.1);
+  }
+  function duSchedule() {
+    duTimer = setTimeout(function () {
+      duTimer = null;
+      var ctx = duCtx; if (!ctx) return;
+      try {
+        var horizon = ctx.currentTime + 1.2, guard = 0;
+        while (duNextTime < horizon && guard++ < 200) {
+          duSchedStep(ctx, duStep, duNextTime);
+          duNextTime += DU8;
+          duStep = (duStep + 1) % 32;                            // 8-bar loop (2/4)
+        }
+      } catch (e) {}
+      duSchedule();
+    }, 200);
+  }
+  function duStart(fadeIn) {
+    try {
+      duStop();
+      window.__musicPaused = false; duSuspended = false;
+      duCtx = audioBed();                                         // Czech/Moravian dupák bed
+      if (!duCtx) return;
+      try { var pr = duCtx.resume && duCtx.resume(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
+      var now = duCtx.currentTime;
+      var bus = duCtx.createGain(); bus.gain.value = 1.0;
+      var comp = duCtx.createDynamicsCompressor();
+      comp.threshold.value = -14; comp.knee.value = 24; comp.ratio.value = 3;
+      comp.attack.value = 0.004; comp.release.value = 0.25;
+      var master = duCtx.createGain();
+      master.gain.setValueAtTime(0.0001, now);
+      master.gain.linearRampToValueAtTime(duVol(), now + (fadeIn || 0.4));
+      var out = pannedOut(duCtx, 0);
+      bus.connect(comp); comp.connect(master); var bassLift = partyBassLift(master.context); master.connect(bassLift); bassLift.connect(out);
+      duCtx._bus = bus; duCtx._masterGain = master;
+      duStep = 0; duNextTime = now + 0.12;
+      var vb = document.getElementById("hunt-volume-btn"); if (vb) vb.classList.add("shown");
+      if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+      duSchedule();
+    } catch (e) {}
+  }
+  function duStop(fadeSecs) {
+    var f = (typeof fadeSecs === "number") ? fadeSecs : 0.3;
+    if (duTimer) { clearTimeout(duTimer); duTimer = null; }
+    if (duCtx) {
+      var ctx = duCtx, master = duCtx._masterGain;
+      duCtx = null;
+      try { if (master) { var t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
+      setTimeout(function () { try { ctx.close(); } catch (e) {} }, f * 1000 + 100);
+    }
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+  }
+  window.__pauseDupakMusic = function (paused) {
+    if (!duCtx) return false;
+    duSuspended = !!paused;
+    try { if (paused) duCtx.suspend(); else duCtx.resume(); } catch (e) {}
+    return true;
+  };
+  window.__dupakPlaying = function () { return !!duCtx && !duSuspended; };
+  window.__applyDupakMusicVolume = function (tc) {
+    if (duCtx && duCtx._masterGain) { try { duCtx._masterGain.gain.setTargetAtTime(duVol(), duCtx.currentTime, tc || 0.05); } catch (e) {} }
+  };
+  window.__updateDupakMusic = function (fadeSecs) {
+    var want = duWant();
+    if (want && !duCtx) duStart(fadeSecs);
+    else if (!want && duCtx) duStop(fadeSecs);
+  };
+  document.addEventListener("visibilitychange", function () { window.__updateDupakMusic(); });
+  // Register this bed as the "dupak" party dance (coupled — sousedská/dupák dances in pairs). Own delimited line (merge-safe).
+  (window.__partyDances = window.__partyDances || []).push({ id: "dupak", formation: "couple", update: window.__updateDupakMusic });
+})();
+(function () {
+  // ── CUMBIA BED — a warm latin garden-party dance. ORIGINAL composition (mine, not derived
+  // from any existing/copyrighted cumbia): A minor, ~95 BPM, 4/4, the cumbia's signature laid-
+  // back groove — a steady güira (shaker) rasp on the off-beats, a warm tumbao bass on beats 1
+  // & the "and" of 2 & 3, a soft accordion/organ chord bed, and a bright plucked melody. Diatonic
+  // Am–Dm–E–Am vamp. Warmer & slower than salsa (which is 190 BPM), a distinct latin flavor.
+  // Same look-ahead scheduler / fade-and-close teardown / garden+dance want-gate as the horah bed.
+  var cuCtx = null, cuTimer = null, cuStep = 0, cuNextTime = 0, cuSuspended = false;
+  var CUBPM = 95, CU16 = (60 / CUBPM) / 4;                       // sixteenth-note, seconds
+  var CU_ROOT = [0, 5, 7, 0];                                    // per-bar roots semis from A: A D E A (Am Dm E Am)
+  var CU_CH = [[0,3,7],[0,3,7],[0,4,7],[0,3,7]];                 // Am, Dm, E(maj — dominant), Am
+  var CU_BASS = 55.00, CU_CHORD = 220.00, CU_LEAD = 440.00;    // A1 bass / A3 chord / A4 lead
+  // tumbao bass rhythm, one bar of 16ths (1 = pluck). Cumbia lilt: beat 1, the "and" of 2, beat 3, the "and" of 3.
+  var CU_BASS_PAT = [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,1,0];
+  // güira shaker: a rasp on every off-16th (the characteristic chka-chka) — subtle noise burst.
+  var CU_GUIRA_PAT = [0,1,0,1, 0,1,0,1, 0,1,0,1, 0,1,0,1];
+  // bright plucked melody, offset from the bar root (null = rest), one bar of 16ths.
+  var CU_MEL_PAT = [
+    0,null,3,null, 7,null,null,5, 3,null,null,0, null,2,null,null,
+    5,null,7,null, 10,null,7,null, 5,null,3,null, 2,null,0,null,
+    7,null,5,null, 3,null,null,7, 5,null,3,null, 2,null,null,null,
+    0,null,3,null, 5,null,3,null, 0,null,null,2, null,0,null,null
+  ];
+  function cuSemi(base, n) { return base * Math.pow(2, n / 12); }
+  function cuVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
+  function cuWant() { return !!window.__gardenPartyOn && window.__partyDance === "cumbia"; }
+  function cuBass(ctx, t, freq) {                                 // warm round tumbao bass
+    var o = ctx.createOscillator(); o.type = "sine"; o.frequency.value = freq;
+    var tri = ctx.createOscillator(); tri.type = "triangle"; tri.frequency.value = freq;
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 500; lp.Q.value = 0.7;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.45, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    o.connect(lp); tri.connect(lp); lp.connect(g); g.connect(ctx._bus);
+    o.start(t); o.stop(t + 0.32); tri.start(t); tri.stop(t + 0.32);
+  }
+  function cuGuira(ctx, t) {                                      // güira rasp: a short filtered noise burst
+    var buf = ctx.createBuffer(1, 900, ctx.sampleRate || 44100);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+    var src = ctx.createBufferSource(); src.buffer = buf;
+    var hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 5000; hp.Q.value = 0.5;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+    src.connect(hp); hp.connect(g); g.connect(ctx._bus);
+    src.start(t); src.stop(t + 0.06);
+  }
+  function cuChord(ctx, t, freqs) {                               // soft accordion/organ chord bed
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1900; lp.Q.value = 0.5;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.08, t + 0.025);
+    g.gain.setValueAtTime(0.08, t + 0.22);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+    lp.connect(g); g.connect(ctx._bus);
+    freqs.forEach(function (f) { var o = ctx.createOscillator(); o.type = "sawtooth"; o.frequency.value = f; o.connect(lp); o.start(t); o.stop(t + 0.42); });
+  }
+  function cuPluck(ctx, t, freq, dur, gain) {                     // bright plucked lead melody
+    var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 3000; lp.Q.value = 0.8;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(lp); lp.connect(g); g.connect(ctx._bus);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  function cuSchedStep(ctx, step, t) {
+    var inBar = step % 16, bar = (step / 16) | 0, rs = CU_ROOT[bar];
+    if (CU_BASS_PAT[inBar]) cuBass(ctx, t, cuSemi(CU_BASS, rs));
+    if (CU_GUIRA_PAT[inBar]) cuGuira(ctx, t);
+    if (inBar === 4 || inBar === 12) cuChord(ctx, t, CU_CH[bar].map(function (iv) { return cuSemi(CU_CHORD, rs + iv); })); // chord bed on the back-beats
+    var m = CU_MEL_PAT[step];
+    if (m !== null && m !== undefined) cuPluck(ctx, t, cuSemi(CU_LEAD, m), CU16 * 2.2, 0.09);
+  }
+  function cuSchedule() {
+    cuTimer = setTimeout(function () {
+      cuTimer = null;
+      var ctx = cuCtx; if (!ctx) return;
+      try {
+        var horizon = ctx.currentTime + 1.2, guard = 0;
+        while (cuNextTime < horizon && guard++ < 300) {
+          cuSchedStep(ctx, cuStep, cuNextTime);
+          cuNextTime += CU16;
+          cuStep = (cuStep + 1) % 64;                            // 4-bar loop of 16ths
+        }
+      } catch (e) {}
+      cuSchedule();
+    }, 200);
+  }
+  function cuStart(fadeIn) {
+    try {
+      cuStop();
+      window.__musicPaused = false; cuSuspended = false;
+      cuCtx = audioBed();                                         // cumbia bed
+      if (!cuCtx) return;
+      try { var pr = cuCtx.resume && cuCtx.resume(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
+      var now = cuCtx.currentTime;
+      var bus = cuCtx.createGain(); bus.gain.value = 1.0;
+      var comp = cuCtx.createDynamicsCompressor();
+      comp.threshold.value = -14; comp.knee.value = 24; comp.ratio.value = 3;
+      comp.attack.value = 0.004; comp.release.value = 0.25;
+      var master = cuCtx.createGain();
+      master.gain.setValueAtTime(0.0001, now);
+      master.gain.linearRampToValueAtTime(cuVol(), now + (fadeIn || 0.4));
+      var out = pannedOut(cuCtx, 0);
+      bus.connect(comp); comp.connect(master); var bassLift = partyBassLift(master.context); master.connect(bassLift); bassLift.connect(out);
+      cuCtx._bus = bus; cuCtx._masterGain = master;
+      cuStep = 0; cuNextTime = now + 0.12;
+      var vb = document.getElementById("hunt-volume-btn"); if (vb) vb.classList.add("shown");
+      if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+      cuSchedule();
+    } catch (e) {}
+  }
+  function cuStop(fadeSecs) {
+    var f = (typeof fadeSecs === "number") ? fadeSecs : 0.3;
+    if (cuTimer) { clearTimeout(cuTimer); cuTimer = null; }
+    if (cuCtx) {
+      var ctx = cuCtx, master = cuCtx._masterGain;
+      cuCtx = null;
+      try { if (master) { var t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
+      setTimeout(function () { try { ctx.close(); } catch (e) {} }, f * 1000 + 100);
+    }
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+  }
+  window.__pauseCumbiaMusic = function (paused) {
+    if (!cuCtx) return false;
+    cuSuspended = !!paused;
+    try { if (paused) cuCtx.suspend(); else cuCtx.resume(); } catch (e) {}
+    return true;
+  };
+  window.__cumbiaPlaying = function () { return !!cuCtx && !cuSuspended; };
+  window.__applyCumbiaMusicVolume = function (tc) {
+    if (cuCtx && cuCtx._masterGain) { try { cuCtx._masterGain.gain.setTargetAtTime(cuVol(), cuCtx.currentTime, tc || 0.05); } catch (e) {} }
+  };
+  window.__updateCumbiaMusic = function (fadeSecs) {
+    var want = cuWant();
+    if (want && !cuCtx) cuStart(fadeSecs);
+    else if (!want && cuCtx) cuStop(fadeSecs);
+  };
+  document.addEventListener("visibilitychange", function () { window.__updateCumbiaMusic(); });
+  // Register this bed as the "cumbia" party dance (coupled — cumbia dances in pairs). Own delimited line (merge-safe).
+  (window.__partyDances = window.__partyDances || []).push({ id: "cumbia", formation: "couple", update: window.__updateCumbiaMusic });
+})();
+(function () {
   // Ambient garden birdsong: sparse gentle chirps during the day, gated off at dusk
   // (mirrors #garden-birds itself fading out then) and outside the garden room —
   // same self-rescheduling setTimeout spawner as the cuddly fireplace's crackle pops
@@ -25531,7 +25948,7 @@ document.addEventListener("click", function (e) {
     var duck = (!!window.__projMusicActive && window.currentStageName === "cuddly") ||
                (!!window.__headphonesOn && window.currentStageName === "office");
     window.__partyDuck = duck ? 0.15 : 1;
-    ["__applyPartyMusicVolume", "__applyWaltzMusicVolume", "__applyDiscoMusicVolume", "__applySwingMusicVolume", "__applySalsaMusicVolume", "__applyBhangraMusicVolume", "__applyPersianMusicVolume", "__applyPolkaMusicVolume", "__applyHorahMusicVolume"].forEach(function (fn) { if (window[fn]) window[fn](0.4); }); // 0.4s time-constant → ~1s fade up/down
+    ["__applyPartyMusicVolume", "__applyWaltzMusicVolume", "__applyDiscoMusicVolume", "__applySwingMusicVolume", "__applySalsaMusicVolume", "__applyBhangraMusicVolume", "__applyPersianMusicVolume", "__applyPolkaMusicVolume", "__applyHorahMusicVolume", "__applyBulgarMusicVolume", "__applyDupakMusicVolume", "__applyCumbiaMusicVolume"].forEach(function (fn) { if (window[fn]) window[fn](0.4); }); // 0.4s time-constant → ~1s fade up/down
   };
   var chanObj = { fire: fire, workout: svgChan, aqua: svgChan, totoro: svgChan, stars: svgChan, off: off };
   var current = "fire"; // the projector always opens on the fire channel (tapping still cycles within the session)
@@ -33233,8 +33650,8 @@ var ABANDONED_CALL_MS = 30000;
     time: "time — alias for clock; try `help clock`",
     projector: "projector(\"channel\") — switch the cuddly-room projector by name in quotes, e.g. projector(\"nightsky\"), or a number 1–5. channels: \"fireplace\" · \"workout\" · \"nightsky\" · \"aquarium\" · \"totoro\" · \"none\" (off). projector() returns the current channel {n, name}",
     storm: "storm(true) — roll a thunderstorm in over the balcony; storm(false) clears it; storm() reports whether it's storming",
-    dance: "dance(\"name\") — cue a garden-party dance by name in quotes, e.g. dance(\"salsa\"), or 1–9, or dance(random()); dance() returns the current dance {n, name}; dance(\"next\") skips ahead (run party(true) first). dances: \"techno\" · \"waltz\" · \"disco\" · \"swing\" · \"salsa\" · \"bhangra\" · \"persian\" · \"polka\" · \"horah\"",
-    jukebox: "jukebox(\"salsa\") — request a garden-party style, the console twin of tapping the DJ booth (same styles as dance(); also 1–9 or random()). jukebox() lists them with the current one starred. throws a DJ scratch + re-arms the auto-rotation. run party(true) first",
+    dance: "dance(\"name\") — cue a garden-party dance by name in quotes, e.g. dance(\"salsa\"), or 1–12, or dance(random()); dance() returns the current dance {n, name}; dance(\"next\") skips ahead (run party(true) first). dances: \"techno\" · \"waltz\" · \"disco\" · \"swing\" · \"salsa\" · \"bhangra\" · \"persian\" · \"polka\" · \"horah\" · \"bulgar\" · \"dupak\" · \"cumbia\"",
+    jukebox: "jukebox(\"salsa\") — request a garden-party style, the console twin of tapping the DJ booth (same styles as dance(); also 1–12 or random()). jukebox() lists them with the current one starred. throws a DJ scratch + re-arms the auto-rotation. run party(true) first",
     dj: "dj(\"sina\"|\"danesh\") — who spins at the party (or 1–2, or random()); dj() returns the current DJ {n, name}. sina wears the cap, danesh the afro",
     firstdance: "firstdance() — the hosts' first dance: the crowd rings the floor + pauses, the UV blacklight drops, and Behdad & Markéta sway centre-floor alone under a soft spotlight for ~13s, then everyone resumes. lights the party + heads to the garden + crashes the crowd first if needed. firstdance(false) ends it early",
     cocktail: "cocktail(\"negroni\") — Pouria mixes that real drink from the bar's menu (partial name ok); cocktail() makes the featured signature drink. lights the party + steps behind the bar first if it's dark. he also mixes on his own while you watch the bar. alias: drink()",
@@ -37190,6 +37607,27 @@ async def localfont(name):
       pause: function () { if (window.__pauseHorahMusic) window.__pauseHorahMusic(true); },
       resume: function () { return !!(window.__pauseHorahMusic && window.__pauseHorahMusic(false)); }
     });
+    list.push({ // garden-party klezmer bulgar bed (one of the rotating dances); pause+resume like the others
+      id: "bulgar",
+      isPlaying: function () { return !!(window.__bulgarPlaying && window.__bulgarPlaying()); },
+      valid: function () { return !!(window.__gardenPartyOn && window.__partyDance === "bulgar"); },
+      pause: function () { if (window.__pauseBulgarMusic) window.__pauseBulgarMusic(true); },
+      resume: function () { return !!(window.__pauseBulgarMusic && window.__pauseBulgarMusic(false)); }
+    });
+    list.push({ // garden-party Czech/Moravian dupák bed (one of the rotating dances); pause+resume like the others
+      id: "dupak",
+      isPlaying: function () { return !!(window.__dupakPlaying && window.__dupakPlaying()); },
+      valid: function () { return !!(window.__gardenPartyOn && window.__partyDance === "dupak"); },
+      pause: function () { if (window.__pauseDupakMusic) window.__pauseDupakMusic(true); },
+      resume: function () { return !!(window.__pauseDupakMusic && window.__pauseDupakMusic(false)); }
+    });
+    list.push({ // garden-party cumbia bed (one of the rotating dances); pause+resume like the others
+      id: "cumbia",
+      isPlaying: function () { return !!(window.__cumbiaPlaying && window.__cumbiaPlaying()); },
+      valid: function () { return !!(window.__gardenPartyOn && window.__partyDance === "cumbia"); },
+      pause: function () { if (window.__pauseCumbiaMusic) window.__pauseCumbiaMusic(true); },
+      resume: function () { return !!(window.__pauseCumbiaMusic && window.__pauseCumbiaMusic(false)); }
+    });
     list.push({
       id: "workout",
       isPlaying: function () { return !!(window.__workoutPlaying && window.__workoutPlaying()); },
@@ -37595,6 +38033,9 @@ async def localfont(name):
     if (window.__applyPersianMusicVolume) window.__applyPersianMusicVolume(); // the garden-party persian bed follows it too
     if (window.__applyPolkaMusicVolume) window.__applyPolkaMusicVolume(); // the garden-party polka bed follows it too
     if (window.__applyHorahMusicVolume) window.__applyHorahMusicVolume(); // the garden-party horah bed follows it too
+    if (window.__applyBulgarMusicVolume) window.__applyBulgarMusicVolume(); // the garden-party klezmer bulgar bed follows it too
+    if (window.__applyDupakMusicVolume) window.__applyDupakMusicVolume(); // the garden-party Czech dupák bed follows it too
+    if (window.__applyCumbiaMusicVolume) window.__applyCumbiaMusicVolume(); // the garden-party cumbia bed follows it too
     if (window.__applyWorkoutVolume) window.__applyWorkoutVolume(); // the workout bed follows it too
   };
   // Push the current volIdx step everywhere: live songs/beds, the on-screen icon, and
@@ -49023,8 +49464,8 @@ function pannedOut(ctx, elIdOrPan) {
   p.connect(ctx.destination);
   return p;
 }
-// Garden-party low-end lift: a low-shelf that adds weight below ~120 Hz to the 9 synth
-// dance beds (techno/waltz/disco/swing/salsa/bhangra/persian/polka/horah). Spliced in
+// Garden-party low-end lift: a low-shelf that adds weight below ~120 Hz to the synth
+// dance beds (techno/waltz/disco/swing/salsa/bhangra/persian/polka/horah/bulgar/dupak/cumbia). Spliced in
 // AFTER each bed's master gain — i.e. post-compressor, so the boost isn't swallowed by
 // the bed's own peak compressor (pre-comp it would just make the comp duck the mids on
 // every kick) — and before pannedOut. +6 dB @ 120 Hz was measured (OfflineAudioContext
@@ -54802,7 +55243,7 @@ function spawnDustMote(container) {
   // A 1.12 relaxation factor slows every synced move a touch (folded in here rather than
   // editing the ~84 CSS duration literals). Half-time above ~143bpm (period<0.42s) so the
   // fastest beds (salsa 190 / swing 180 / waltz 162) don't look frantic.
-  var DANCE_BPM = { techno: 126, waltz: 162, disco: 120, swing: 180, salsa: 190, bhangra: 140, persian: 110, polka: 130, horah: 146 };
+  var DANCE_BPM = { techno: 126, waltz: 162, disco: 120, swing: 180, salsa: 190, bhangra: 140, persian: 110, polka: 130, horah: 146, bulgar: 150, dupak: 140, cumbia: 95 };
   window.__DANCE_BPM = DANCE_BPM; // exposed so the console `beat()` reads ONE map, not a duplicate
   window.__danceBpm = function (id) { return DANCE_BPM[id]; };
   var DANCE_RELAX = 1.12;
@@ -54816,7 +55257,7 @@ function spawnDustMote(container) {
   // Per-dance MOOD (explicit, NOT auto-bucketed from bpm — waltz reads elegant despite its
   // high bpm). Drives an amplitude-only keyframe swap on the shared guest wrappers via
   // #garden-guests[data-mood]. hype = bigger sway/reach, chill = gentler, elegant = smoother.
-  var DANCE_MOOD = { persian: "chill", disco: "groovy", techno: "groovy", horah: "groovy", polka: "hype", bhangra: "hype", swing: "hype", salsa: "hype", waltz: "elegant" };
+  var DANCE_MOOD = { persian: "chill", disco: "groovy", techno: "groovy", horah: "groovy", polka: "hype", bhangra: "hype", swing: "hype", salsa: "hype", waltz: "elegant", bulgar: "hype", dupak: "hype", cumbia: "groovy" };
   window.__DANCE_MOOD = DANCE_MOOD;
   // Retune the SHARED guest wrappers (.guest-sway ≈ 2 beats, .guest-arm-* ≈ 2 beats) to the
   // active dance's tempo, phase-locked to ONE shared epoch so every dancer hits together.

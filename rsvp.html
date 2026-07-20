@@ -21857,6 +21857,7 @@ window.__setUvParty = function (on) { // the balcony switch
   }
   function arcadeLit() { var o = document.getElementById("stage-office"); return !!(o && o.classList.contains("arcade")); }
   function applyEase(t) {
+    if (window.currentStageName === "balcony") { strip.style.filter = "none"; return; } // the balcony's OUTSIDE — no blacklight out there (inline "none" beats the .uv-mode class filter; re-evaluated on room change)
     var s = t * t * (3 - 2 * t); // smoothstep — calmer than linear
     var b = B0 + (B1 - B0) * s, sa = S0 + (S1 - S0) * s, h = H0 + (H1 - H0) * s, c = C0 + (C1 - C0) * s;
     strip.style.filter = "brightness(" + b.toFixed(3) + ") saturate(" + sa.toFixed(3) + ") hue-rotate(" + h.toFixed(1) + "deg) contrast(" + c.toFixed(3) + ")";
@@ -21912,6 +21913,8 @@ window.__setUvParty = function (on) { // the balcony switch
     rafId = window.requestAnimationFrame(step);
   }
   function evaluate() {
+    if (window.currentStageName === "balcony") { strip.style.filter = gateOpen() ? "none" : ""; return; } // OUTSIDE: never blacklit (inline "none" overrides the .uv-mode class filter; re-evaluated on room change)
+    if (strip.style.filter === "none") strip.style.filter = ""; // clear a balcony-left "none" so the .uv-mode class re-applies immediately on return to an indoor party room
     if (gateOpen()) {
       // Already toned down once (this UV session)? Keep it toned down immediately — no fresh
       // linger, no intense re-flash — no matter which room we entered or a breather off→on flicker.
@@ -29088,6 +29091,7 @@ function gameTapsNear(a, b) {
     });
     // one shared scratch path: the same function the autonomous timer fires, minus the focus gate
     if (window.__djScratchNow) window.__djScratchNow(true);
+    if (window.__openDjPicker) window.__openDjPicker(); // tapping the DJ also opens the jukebox request dialog
   });
   // Double-click the DJ to kill the party — the counterpart to the mirror/mask dblclick that
   // starts it. The dblclick also fires two clicks first (a headbang on the way out is fine);
@@ -29293,6 +29297,7 @@ function gameTapsNear(a, b) {
 
   function openPicker() {
     if (!window.__gardenPartyOn || window.currentStageName !== "garden") return;
+    if (window.__toggleRoster) window.__toggleRoster(false); // jukebox + roster are mutually exclusive
     build(); // rebuild each open so labels track the current language + the highlight is fresh
     open = true;
     picker.classList.add("open"); // the pop-in plays off .open .dj-pick-panel (skipped under reduced motion via the media query)
@@ -58955,7 +58960,8 @@ function spawnDustMote(container) {
     }
     var b = apRoutine[apBeatIdx++];
     apStepCount++;
-    if (b.tap) apCursorTap(b.tap);              // glide the ghost cursor + ripple a tap, so viewers can follow
+    // (ghost cursor removed from autoplay — it was unreliable in the reactive/live context; the
+    // scripted Trailer keeps its cursor.)
     apCall(b.fn);
     return b.wait == null ? AUTOPLAY_BEAT_MS : b.wait;
   }
@@ -58966,7 +58972,7 @@ function spawnDustMote(container) {
   function apTick() {
     apStepTimer = null;
     if (!apOn) return;
-    if (apAttended()) { var next = apRunBeat(); apStepTimer = setTimeout(apTick, next); }
+    if (apAttended()) { var next = apRunBeat(); apStepTimer = setTimeout(apTick, Math.round(next * 1.3)); } // 30% slower — a calmer pace
     else { cursorHide(); apStepTimer = setTimeout(apTick, AUTOPLAY_TICK_MS); } // paused: idle, cursor away, nothing accumulates
   }
   function apArmDriver(delay) {
@@ -60362,6 +60368,7 @@ function spawnDustMote(container) {
       if (!ensureNodes()) return;
       open = !!v;
       if (open) {
+        if (window.__closeDjPicker) window.__closeDjPicker(); // roster + jukebox are mutually exclusive
         render();
         panel.hidden = false;
         // let display flip before the opacity/transform transition

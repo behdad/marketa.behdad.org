@@ -42653,7 +42653,7 @@ async def localfont(name):
   var smokerFirebox = document.getElementById("balcony-smoker-firebox");
   var smokerLid = document.getElementById("balcony-smoker-lid");
   if (smoker && smokerFirebox && smokerLid) {
-    var smoking = false, lidOpen = false, fireOn = false, firstLightDone = false;
+    var smoking = false, lidOpen = false, fireOn = false, firstLightDone = false, firstLidDone = false;
     var sizzleTimer = null, tempTimer = null, temp = 0;
     var burgers = smoker.querySelectorAll(".smoker-burger");
     var tempEl = document.getElementById("balcony-smoker-temp");
@@ -42740,7 +42740,7 @@ async def localfont(name):
         // cooking starts from tempTick once the grill reaches 300°, not the instant it's lit
         if (!firstLightDone) { firstLightDone = true; if (!lidOpen) toggleLid(); } // first light lifts the lid so the food's on show
       }
-      if (smoking && window.__gardenPartyOn && window.__forceBalconyGrillmaster) window.__forceBalconyGrillmaster(); // opening the BBQ during the party summons Hamid to the grill (guaranteed, not the ~50% roll)
+      if (smoking && window.__forceBalconyGrillmaster) window.__forceBalconyGrillmaster(); // lighting the BBQ (day, night, or party) summons Hamid to tend it (guaranteed, not the ~50% roll)
       else if (window.__updateBalconyGrillmaster) window.__updateBalconyGrillmaster(); // else just re-gate
     }
     function toggleLid() {
@@ -42748,6 +42748,7 @@ async def localfont(name):
       smoker.classList.toggle("open", lidOpen);
       playMetalClinkSound(lidOpen ? 0.7 : 0.55, "balcony-smoker-lid");
       if (lidOpen) spawnSteamWisps(strip, 3176, 170, 0.7);
+      if (lidOpen && !firstLidDone) { firstLidDone = true; if (!smoking) toggleFire(); } // first lid-open also fires up the BBQ
     }
     smokerFirebox.addEventListener("click", toggleFire);
     smokerFirebox.addEventListener("keydown", function (e) {
@@ -42804,6 +42805,7 @@ async def localfont(name):
       smoking = false;
       lidOpen = false;
       firstLightDone = false;
+      firstLidDone = false;
       smoker.classList.remove("smoking", "open");
       burgers.forEach(function (b) { b.classList.remove("served", "done"); b.style.transition = ""; });
       if (window.__updateBalconyGrillmaster) window.__updateBalconyGrillmaster(); // a cold BBQ has no grillmaster
@@ -61625,8 +61627,7 @@ function spawnDustMote(container) {
       if (!el) return;
       var nm = c.members.map(function (m) { return m.charAt(0).toUpperCase() + m.slice(1); });
       var html = "<em>" + nm[0] + "</em> &amp; <em>" + nm[1] + "</em>";
-      if (typeof hoverTooltip === "function") hoverTooltip(el, html, "top");
-      el.addEventListener("click", function (e) { if (e) e.stopPropagation(); if (window.__whoPop) window.__whoPop(el, html); });
+      el.addEventListener("click", function (e) { if (e) e.stopPropagation(); if (window.__whoPop) window.__whoPop(el, html); }); // people are click-only (props keep hover)
     });
     function attended() { return !document.hidden && document.hasFocus(); }
     function shouldRun() {
@@ -62516,8 +62517,7 @@ function spawnDustMote(container) {
       var g = document.getElementById(r.id);
       if (!g) return;
       var tip = function () { return figTip(r); };
-      if (typeof hoverTooltip === "function") hoverTooltip(g, tip, "top");
-      g.addEventListener("click", function (e) {
+      g.addEventListener("click", function (e) { // people are click-only (props keep hover)
         e.stopPropagation();
         if (window.__whoPop) window.__whoPop(g, tip());
       });
@@ -62623,7 +62623,7 @@ function spawnDustMote(container) {
     var shown = false;   // is he actually painted right now?
     function attended() { return !document.hidden && document.hasFocus(); }
     function inRoom() {
-      return window.currentStageName === "balcony" && !!window.__gardenPartyOn && smoker.classList.contains("smoking");
+      return window.currentStageName === "balcony" && smoker.classList.contains("smoking");
     }
     function onFloor(name) {
       if (!guests) return false;
@@ -62700,11 +62700,8 @@ function spawnDustMote(container) {
     })();
     window.__balconyServeNow = serveOne; // console/test hook: force one serve
     // name popup: hover tooltip + click white card, like the deck crowd / bar couples
-    if (typeof hoverTooltip === "function") {
-      var tip = function () { return "<em>Hamid</em> · " + ((typeof tipText === "function") ? tipText("role_godson_a") : "grillmaster"); };
-      hoverTooltip(el, tip, "top");
-      el.addEventListener("click", function (e) { e.stopPropagation(); if (window.__whoPop) window.__whoPop(el, tip()); });
-    }
+    var hamidTip = function () { return "<em>Hamid</em> · " + ((typeof tipText === "function") ? tipText("role_godson_a") : "grillmaster"); };
+    el.addEventListener("click", function (e) { e.stopPropagation(); if (window.__whoPop) window.__whoPop(el, hamidTip()); }); // people are click-only (props keep hover)
     document.addEventListener("visibilitychange", update);
     window.addEventListener("blur", update);
     window.addEventListener("focus", update);
@@ -62753,8 +62750,7 @@ function spawnDustMote(container) {
       if (!el) return;
       var nm = c.members.map(function (m) { return m.charAt(0).toUpperCase() + m.slice(1); });
       var html = "<em>" + nm[0] + "</em> &amp; <em>" + nm[1] + "</em>";
-      if (typeof hoverTooltip === "function") hoverTooltip(el, html, "top");
-      el.addEventListener("click", function (e) { if (e) e.stopPropagation(); if (window.__whoPop) window.__whoPop(el, html); });
+      el.addEventListener("click", function (e) { if (e) e.stopPropagation(); if (window.__whoPop) window.__whoPop(el, html); }); // people are click-only (props keep hover)
     });
     function attended() { return !document.hidden && document.hasFocus(); }
     function shouldRun() {

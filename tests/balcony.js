@@ -90,6 +90,8 @@ El.prototype._sync = function () {
 };
 El.prototype.setAttribute = function (k, v) { this._attrs[k] = String(v); };
 El.prototype.getAttribute = function (k) { return this._attrs[k] === undefined ? null : this._attrs[k]; };
+El.prototype.removeAttribute = function (k) { delete this._attrs[k]; };
+El.prototype.hasAttribute = function (k) { return this._attrs[k] !== undefined; };
 El.prototype.appendChild = function (c) { c.parentNode = this; this.children.push(c); return c; };
 El.prototype.addEventListener = function (t, fn) { (this._listeners[t] = this._listeners[t] || []).push(fn); };
 El.prototype.getBoundingClientRect = function () { return { left: 0, top: 0, width: 1, height: 1, right: 1, bottom: 1 }; };
@@ -329,10 +331,17 @@ console.log("balcony-hangout controller (Node DOM-shim):");
   }).sort();
   ok("__balconySmokerNow() lists exactly the shown smokers (dj resolved live)",
     JSON.stringify(who.slice().sort()) === JSON.stringify(expected));
-  // DJ resolves live: flip __djB and re-show → the dj name flips
-  win.__djB = true; leave(); activate();
-  var who2 = win.__balconySmokerNow();
-  var djFace = who2.indexOf("sina") !== -1 ? "sina" : (who2.indexOf("danesh") !== -1 ? "danesh" : null);
+  // DJ resolves live: flip __djB and re-show → the dj name flips. The shown smoker subset is
+  // random, so re-roll until the DJ figure is actually on the deck before reading its live name.
+  win.__djB = true;
+  var who2 = null, djFace = null;
+  for (var djTry = 0; djTry < 200; djTry++) {
+    leave(); activate();
+    if (shownIds().indexOf("bh-dj") === -1) continue; // DJ not out this showing → re-roll
+    who2 = win.__balconySmokerNow();
+    djFace = who2.indexOf("sina") !== -1 ? "sina" : (who2.indexOf("danesh") !== -1 ? "danesh" : null);
+    break;
+  }
   ok("DJ smoker names the OFF-duty DJ live (±__djB) → " + djFace, djFace === "sina");
   win.__djB = false;
   // the excluded (floor) smoker never appears in the roster either

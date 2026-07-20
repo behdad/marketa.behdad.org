@@ -23938,6 +23938,7 @@ window.addEventListener("hashchange", function () {
   if (window.__refreshDatePill) window.__refreshDatePill();
   if (window.__applyMoonPhases) window.__applyMoonPhases();
   if (window.__updateSkyFireworks) window.__updateSkyFireworks(window.currentStageName);
+  if (window.__applyDateOccasion) window.__applyDateOccasion(); // wedding-day full party / May-2 BBQ scene (latched: no-op unless the occasion changed)
   // a #time= flip re-runs the auto day/night against the chosen hour (re-enabling auto in
   // case a manual flip had latched it off); without a time override, just re-apply the live loop
   if (window.__timeOverrideMins && window.__timeOverrideMins() != null) {
@@ -62498,6 +62499,11 @@ function spawnDustMote(container) {
     var perchSmoke = document.getElementById("balcony-ashtray-smoke");
     var tableAshtray = document.getElementById("balcony-ashtray");
     if (!hangout) return;
+    // BBQ day (May 2): the deck crowd comes out in DAYTIME with the party OFF (a chill cookout).
+    // This flag is the one non-party way onScreen() lets them out; it persists across room-leaves
+    // (hide() keeps it) so returning to the balcony re-shows them — cleared on date-change-away
+    // and on global reset (see __setBalconyBBQCrowd / __resetBalconyHangout).
+    var bbqCrowdOn = false;
     var BX = 2720; // #stage-balcony sits at x=2720 in the shared strip; local balcony x + BX = strip x
     // ── The deck roster ─────────────────────────────────────────────────────────────────
     // Every hangout figure. `name` is its garden .g-<name> / bar-couple member key (for the
@@ -62549,7 +62555,7 @@ function spawnDustMote(container) {
     var CROWD_LANE = { lo: 88, hi: 288 };
     var SMOKER_LANE = { lo: 508, hi: 648 };
     function reduceMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
-    function onScreen() { return window.currentStageName === "balcony" && !!window.__gardenPartyOn; }
+    function onScreen() { return window.currentStageName === "balcony" && (!!window.__gardenPartyOn || bbqCrowdOn); }
     // the smoke may only puff when the room is actually being watched AND focused (crickets rule)
     function smokeOk() { return onScreen() && !document.hidden && document.hasFocus() && !reduceMotion(); }
     function coupleOut() { return hangout.classList.contains("couple-out"); }
@@ -62728,7 +62734,8 @@ function spawnDustMote(container) {
     // The single re-gate: called on party on/off (setGardenParty tail) and room change (goToStage).
     function update() { if (onScreen()) show(); else hide(); }
     window.__updateBalconyHangout = update;
-    window.__resetBalconyHangout = hide; // goToStage leave-balcony + global reset
+    window.__setBalconyBBQCrowd = function (on) { bbqCrowdOn = !!on; update(); }; // BBQ-day cookout: crowd out in daytime, party OFF
+    window.__resetBalconyHangout = function () { bbqCrowdOn = false; hide(); }; // global reset (room-leave uses update()/hide() directly, keeping the BBQ flag)
     // ── the smoke spawner: one self-rescheduling timer, re-gated every fire ──────────────
     var smokeTimer = null;
     function puffOnce() {
@@ -64517,6 +64524,7 @@ function spawnDustMote(container) {
     if (window.__paintCalTile) window.__paintCalTile();
     if (window.refreshWeddingText) window.refreshWeddingText();
     if (window.__refreshDatePill) window.__refreshDatePill();
+    if (window.__applyDateOccasion) window.__applyDateOccasion(); // wedding-day full party / May-2 BBQ scene (latched: no-op unless the occasion changed)
   }
   function jumpToDate(y, mo, d) {
     calSetDateParam(y + "-" + calZ(mo + 1) + "-" + calZ(d));
@@ -67561,6 +67569,68 @@ function spawnDustMote(container) {
     narrate(on, "🎉 party on — blacklight, confetti, a beat. dance.", "party over — the garden settles.");
     return prev;
   };
+
+  // ── date-driven occasion scenes ─────────────────────────────────────────────────────────
+  // The wedding days throw the FULL party; the day AFTER the Edmonton wedding (May 2) is "BBQ
+  // day" — a chill DAYTIME cookout on the balcony (party off, deck crowd out, smoker lit, Hamid
+  // serving). Reads the same pretend-date as the decor (window.__now, honours ?date=/#date=),
+  // fires shortly after load AND on every date change (calendar jump/reset + hashchange), and
+  // only ONCE per genuine occasion — a latch guards the ~4s air-quality re-apply and repeated
+  // hashchanges. It's an autonomous scene takeover, so the crickets rule + the autoplay/trip
+  // gates apply (a hidden/unfocused/kiosk/tripping tab is left alone). It sets a scene up once
+  // and never re-forces it, so a manual choice made afterwards stands (party(true) is a no-op if
+  // the party's already on; the BBQ setup isn't re-run for the same day).
+  (function dateOccasions() {
+    function occKey() {
+      var n = window.__now ? window.__now() : new Date();
+      var m = n.getMonth(), d = n.getDate();
+      if (m === 4 && d === 1) return "wedding-edmonton"; // May 1 — the Edmonton wedding day
+      if (m === 6 && d === 10) return "wedding-prague";  // Jul 10 — the Prague wedding day
+      if (m === 4 && d === 2) return "bbq";              // May 2 — the morning-after cookout
+      return null;
+    }
+    window.__dateOccasion = occKey; // test/console hook
+    function gated() {
+      return document.hidden || !document.hasFocus() ||
+             (window.__autoplayOn && window.__autoplayOn()) || !!window.__tripActive;
+    }
+    function setupWedding() {
+      if (window.party && !window.party()) window.party(true); // full party: garden, dancing, blacklight, night
+    }
+    function setupBBQ() {
+      if (window.goToStage) window.goToStage("balcony");
+      setTimeout(function () {
+        if (occKey() !== "bbq" || gated()) return;
+        if (window.__setDayNight) window.__setDayNight(false);              // a daytime cookout, not the wedding night
+        if (window.__startBBQ) window.__startBBQ();                         // lid up + fire on
+        if (window.__setBalconyBBQCrowd) window.__setBalconyBBQCrowd(true); // the deck crowd out — party OFF
+        setTimeout(function () {
+          if (occKey() !== "bbq" || gated()) return;
+          if (window.__forceBalconyGrillmaster) window.__forceBalconyGrillmaster(); // Hamid masters + serves the grill
+          // behdad texts "let's start the BBQ" — once per BBQ-day (dedup on the thread)
+          if (window.__phoneMessageReceived && !window.__phoneMessageReceived("bbq") && window.__deliverPhoneMessage)
+            window.__deliverPhoneMessage("bbq");
+        }, 520);
+      }, window.currentStageName === "balcony" ? 80 : 780);
+    }
+    var lastKey = null;
+    function apply() {
+      var key = occKey();
+      if (key === lastKey) return; // already handled this occasion (guards the ~4s re-apply + repeat hashchanges)
+      // leaving an occasion: drop the one flag our setups own; the rest of the teardown is the
+      // standard day/season/reset path (leaving ?date= or a reset restores normal behavior)
+      if (lastKey === "bbq" && window.__setBalconyBBQCrowd) window.__setBalconyBBQCrowd(false);
+      lastKey = key;
+      if (!key || gated()) return;
+      // let the room slide / scene settle first, then re-check the gate + date before taking over
+      setTimeout(function () {
+        if (occKey() !== key || gated()) return;
+        if (key === "bbq") setupBBQ(); else setupWedding();
+      }, 900);
+    }
+    window.__applyDateOccasion = apply; // pinged on every date change (calRefreshDeps + hashchange)
+    setTimeout(apply, 1200); // arm at load, once the game has settled (deferred so the scene is up first)
+  })();
 
   // chase() — send the godkids (Irene, Robin & Navid) darting across the garden right now.
   // Lights the party + heads to the garden if needed, then forces a chase (skips the ambient

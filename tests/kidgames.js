@@ -118,6 +118,8 @@ var winShim = {
 function tipText(key) { return T_EN[key] || ""; }
 // kid popups append a live age line via the global kidAgeLine(); stub it here (defined outside the sliced IIFE)
 function kidAgeLine() { return ""; }
+// kid popups also append a relationship line via the global relLine(); stub it here (defined outside the sliced IIFE)
+function relLine() { return ""; }
 
 /* hoverTooltip stub: record (element, htmlFn, placement) so we can assert the dark-bubble wiring
    without a browser. The real one attaches mouseenter/leave; here we capture the html-producing fn
@@ -142,9 +144,9 @@ ok(/window\.__updateKidGames\s*=\s*apply/.test(iife), "sliced the real __updateK
 
 /* run it inside a Function with our shims in scope */
 function runIIFE() {
-  var fn = new Function("document", "window", "tipText", "hoverTooltip", "kidAgeLine",
+  var fn = new Function("document", "window", "tipText", "hoverTooltip", "kidAgeLine", "relLine",
     iife + "\nreturn { apply: window.__updateKidGames, reshuffle: window.__kidGamesReshuffle, inGame: window.__kidInGamesNow };");
-  return fn(docShim, winShim, tipText, hoverTooltip, kidAgeLine);
+  return fn(docShim, winShim, tipText, hoverTooltip, kidAgeLine, relLine);
 }
 
 /* ══ TEST 1: name-card taps ═════════════════════════════════════════════════ */

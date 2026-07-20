@@ -4337,6 +4337,8 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .pm-msg-unread input{accent-color:var(--wine); cursor:pointer; margin:0}
 .pm-msg-new-divider{display:flex; align-items:center; gap:8px; margin:2px 0 -2px; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--wine)}
 .pm-msg-new-divider::before,.pm-msg-new-divider::after{content:""; flex:1; height:1px; background:var(--wine); opacity:.4}
+.pm-msg-old-divider{color:var(--muted)} /* the boundary below the fresh block, above the older texts */
+.pm-msg-old-divider::before,.pm-msg-old-divider::after{background:var(--muted)}
 .pm-msg-empty{margin:auto; color:var(--muted); font-size:12px; text-align:center}
 .pm-msg-row{display:flex; flex-direction:column; align-items:flex-start; gap:2px; max-width:100%; cursor:pointer} /* tap → its place/app */
 .pm-msg-row:hover .pm-msg-bubble, .pm-msg-row:focus-visible .pm-msg-bubble{border-color:var(--soft)}
@@ -22883,6 +22885,7 @@ var T = {
     msg_search_placeholder: "search messages…", // filters the thread by sender name + message text
     msg_search_none: "no messages match that search.",
     msg_new_divider: "New",
+    msg_earlier_divider: "Earlier",
     msg_unread_only: "unread only",
     msg_pouria_from: "Pouria",
     msg_pouria_body: "bar's open again 🍸 get down here",
@@ -23588,6 +23591,7 @@ var T = {
     msg_search_placeholder: "hledat zprávy…", // filtruje vlákno podle jména odesílatele + textu zprávy
     msg_search_none: "žádné zprávy neodpovídají hledání.",
     msg_new_divider: "Nové",
+    msg_earlier_divider: "Starší",
     msg_unread_only: "jen nepřečtené",
     msg_pouria_from: "Pouria",
     msg_pouria_body: "bar zase otevřel 🍸 padej sem",
@@ -44352,7 +44356,7 @@ async def localfont(name):
     }
     // ── messages ── a read-only chat thread: the in-character texts that land on the Act-2 beats
     // (Pouria, the group chat, the album, markéta & behdad). Received-only bubbles, newest at the
-    // bottom; rendered from messagesThread (ids) so a language flip re-reads the copy live.
+    // TOP (reverse order, scrolled to top); rendered from messagesThread (ids) so a language flip re-reads the copy live.
     // a message's sender/body come from the dict (fromKey/bodyKey) for the authored story texts,
     // OR as literal strings (from/body) for ad-hoc ones delivered via the message() console API.
     function msgFrom(m) { return (m && m.from != null) ? m.from : tr(m.fromKey); }
@@ -44460,15 +44464,17 @@ async def localfont(name):
           var q = msgFold((input.value || "").trim());
           search.classList.toggle("has-q", !!q);
           list.textContent = "";
-          var shown = 0, now = Date.now(), dividerPlaced = false, soonestExpiry = Infinity;
-          messagesThread.forEach(function (id) {
+          var shown = 0, now = Date.now(), newDivPlaced = false, oldDivPlaced = false, soonestExpiry = Infinity;
+          messagesThread.slice().reverse().forEach(function (id) { // NEWEST FIRST — the freshest text sits at the top, under the always-visible search + unread-only controls
             var m = MESSAGES[id]; if (!m) return;
             if (!msgMatches(m, q)) return;
             if (unreadChk.checked && messagesRead[id]) return; // "unread only" hides read texts
             var age = messagesArrivedAt[id] ? (now - messagesArrivedAt[id]) : Infinity, isNew = age < 30000;
             if (isNew) {
               soonestExpiry = Math.min(soonestExpiry, 30000 - age);
-              if (!dividerPlaced) { var div = document.createElement("div"); div.className = "pm-msg-new-divider"; div.textContent = tr("msg_new_divider"); list.appendChild(div); dividerPlaced = true; }
+              if (!newDivPlaced) { var nd = document.createElement("div"); nd.className = "pm-msg-new-divider"; nd.textContent = tr("msg_new_divider"); list.appendChild(nd); newDivPlaced = true; } // "New" heads the fresh block at the top
+            } else if (newDivPlaced && !oldDivPlaced) { // first older text after the fresh block → mark the boundary
+              var od = document.createElement("div"); od.className = "pm-msg-new-divider pm-msg-old-divider"; od.textContent = tr("msg_earlier_divider"); list.appendChild(od); oldDivPlaced = true;
             }
             var row = buildRow(id);
             if (row) { list.appendChild(row); shown++; }
@@ -44483,13 +44489,12 @@ async def localfont(name):
         applyFilter();
       }
       body.appendChild(wrap);
-      // conversation → scroll to the newest (bottom). A single sync set runs mid open-animation
-      // when the body still measures zero height, so it never sticks — re-assert after layout
-      // (double-rAF) and once more past the ~220ms open transition.
-      var toBottom = function () { body.scrollTop = body.scrollHeight; };
-      toBottom();
-      requestAnimationFrame(function () { requestAnimationFrame(toBottom); });
-      setTimeout(toBottom, 300);
+      // newest-first → scroll to the TOP so the freshest text + the search / unread-only controls
+      // are always in view. Re-assert after layout (double-rAF) and past the ~220ms open transition.
+      var toTop = function () { body.scrollTop = 0; };
+      toTop();
+      requestAnimationFrame(function () { requestAnimationFrame(toTop); });
+      setTimeout(toTop, 300);
     }
     // ── WEDDING ALBUM app ── Aspen's captured party polaroids, newest-first. Each shot is a
     // STATE snapshot (window.__albumList() — who was present, dance, season, UV, time), rendered

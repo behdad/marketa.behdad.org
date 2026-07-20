@@ -3366,13 +3366,13 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .calx-mon .calx-card-what{font-size:2.4px}
 .calx-mon .calx-gcal{font-size:2.4px; border-radius:1px; padding:0.5px 1.2px}
 .calx-mon .calx-ics{border:none; background:var(--wine); color:#fff; font-size:2.5px; border-radius:1.4px; padding:0.8px}
-.calx-mon .calx-cal{flex:1 1 auto; min-width:0; display:grid; grid-template-rows:auto 1fr; gap:0.8px}
+.calx-mon .calx-cal{flex:1 1 auto; min-width:0; min-height:0; display:grid; grid-template-rows:auto 1fr; gap:0.8px}
 .calx-mon .calx-head{gap:1px; margin:0}
 .calx-mon .calx-title{font-size:3px}
 .calx-mon .calx-nav,.calx-mon .calx-today{border-radius:1px; border-width:0.3px; padding:0.4px 1.4px; font-size:2.6px}
-.calx-mon .calx-grid{gap:0.5px; grid-auto-rows:8px} /* fixed row track → uniform week-rows regardless of icon/portrait */
+.calx-mon .calx-grid{gap:0.5px; height:100%; min-height:0} /* rows sized in JS (auto header + N equal week-rows) so the whole month fits the screen without clipping */
 .calx-mon .calx-wd{font-size:2.4px}
-.calx-mon .calx-day{border-radius:0.6px; border-width:0.3px; padding:0.3px 0.5px; height:8px}
+.calx-mon .calx-day{border-radius:0.6px; border-width:0.3px; padding:0.3px 0.5px; min-height:0}
 .calx-mon .calx-num{font-size:2.6px}
 .calx-mon .calx-mk{font-size:2.5px}
 .calx-mon .calx-bust{width:4.4px; height:5px}
@@ -18129,7 +18129,7 @@ section{margin:1.9rem 0}
 <foreignObject x="255" y="154.6" width="116" height="40.8">
 <div xmlns="http://www.w3.org/1999/xhtml" id="monitor-cal-body" class="calx-host"></div>
 </foreignObject>
-<g id="monitor-cal-close" transform="translate(76.0,29.3) scale(0.8)">
+<g id="monitor-cal-close" transform="translate(76.0,35.0) scale(0.8)">
 <rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
 <rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#c68e95" stroke="#a8747c" stroke-width="0.5"/>
 <rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
@@ -64415,6 +64415,10 @@ function spawnDustMote(container) {
     }
     var firstDow = (new Date(y, m, 1).getDay() + 6) % 7; // Monday = 0
     var daysIn = new Date(y, m + 1, 0).getDate();        // 0th of next month = last of this (leap-year safe)
+    if (surface === "monitor") { // fit the whole month in the fixed monitor screen: weekday header (auto) + N equal-height week rows, N = 4..6 so a short month uses taller cells and a 6-week month still clears the bottom
+      var weeks = Math.ceil((firstDow + daysIn) / 7);
+      grid.style.gridTemplateRows = "auto repeat(" + weeks + ", 1fr)";
+    }
     for (var p = 0; p < firstDow; p++) { var pad = document.createElement("div"); pad.className = "calx-day calx-pad"; grid.appendChild(pad); }
     for (var d = 1; d <= daysIn; d++) {
       (function (day) {

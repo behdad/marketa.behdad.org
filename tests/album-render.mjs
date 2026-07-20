@@ -95,7 +95,13 @@ const SUBJECTS = [
       document.body.appendChild(host);
       var sr=svg.getBoundingClientRect();
       var wraps=[].slice.call(svg.children).filter(function(c){return c.tagName==='g'&&c.getAttribute('transform')&&c.querySelector('*');});
+      // Measure PEOPLE, not the set dressing they carry: the bartender's clone brings a slab of bar
+      // counter (.alb-scenery), which is meant to run behind his neighbours — measuring it would
+      // report a collision with everyone in the room. The app's own measureBox hides it the same way.
+      var scen=svg.querySelectorAll('.alb-scenery');
+      for(var si=0;si<scen.length;si++) scen[si].setAttribute('display','none');
       var figs=wraps.map(function(w){var r=w.getBoundingClientRect();return {l:r.left-sr.left,r:r.right-sr.left,t:r.top-sr.top,b:r.bottom-sr.top,w:r.width,h:r.height};});
+      for(var sj=0;sj<scen.length;sj++) scen[sj].removeAttribute('display'); // back on for the screenshot
       // overlaps: a real collision needs BOTH a big horizontal-interval overlap AND the two figures
       // sharing the same vertical band (same row). Two-row formations deliberately overlap front/back
       // horizontally; those have offset verticals, so we require >55% vertical overlap of the shorter
@@ -162,7 +168,12 @@ const SUBJECTS = [
     // figure tops drive the vertical fit, and one very short top is exactly what skews it). Always
     // WITH the couple — captureAlbumShot anchors every portrait on the hosts, and occupantsOf reads
     // the people ROSTER, so a dog-alone card is a shape the app cannot produce and isn't tested.
-    ['nook-dog',        room(910, 'cuddly',  [['hosts', 'markéta & behdad'], ['whistler', 'Whistler']])]
+    ['nook-dog',        room(910, 'cuddly',  [['hosts', 'markéta & behdad'], ['whistler', 'Whistler']])],
+    // Pouria: the one subject who isn't standing on the floor line at all. His art stops at the
+    // apron, so his clone lands on its own slab of bar counter — alone behind the bar, and with
+    // drinkers on the near side of it.
+    ['bar-pouria',      room(911, 'kitchen', [['pouria', 'Pouria']])],
+    ['bar-pouria-pair', room(912, 'kitchen', [['spencer', 'Spencer'], ['jay', 'Jay'], ['pouria', 'Pouria']])]
   ];
   console.log('=== room shots / mixed heights (all modes) ===');
   for (const [name, rec] of ROOM_CASES) {
@@ -229,6 +240,23 @@ const SUBJECTS = [
     else console.log('  ' + label.padEnd(30), '[' + r.keys.join(',') + ']');
   }
   await eval1(`(function(){var h=document.getElementById('balcony-hangout'); if(h) h.classList.remove('on','couple-out','dj-off-sina','dj-off-danesh');})()`);
+
+  // ...and the bar. The bartender is crew — excluded from photo lineups everywhere BUT his own
+  // room, where the counter he stands behind is what makes the shot work. Assert both halves.
+  console.log('=== bar occupancy (the bartender is a subject in the kitchen only) ===');
+  await eval1(`document.getElementById('loft-game-strip').classList.add('party-on')`);
+  await sleep(900); // the bar fades in on a .5s opacity transition, and an occupant only counts once rendered
+  const barOcc = JSON.parse(await eval1(`(function(){
+    function keys(r){return ((window.__whoIsHere&&window.__whoIsHere(r,{crew:false}))||[]).map(function(p){return p.key;});}
+    var rec = window.__albumAddRoom && window.__albumAddRoom('kitchen');
+    return JSON.stringify({kitchen:keys('kitchen'), elsewhere:['garden','balcony','cuddly','office'].map(keys),
+      shot: rec ? rec.people.map(function(p){return p.key;}) : null});})()`));
+  const barIn = barOcc.kitchen.indexOf('pouria') >= 0;
+  const barOut = barOcc.elsewhere.every(ks => ks.indexOf('pouria') < 0);
+  const barShot = !!(barOcc.shot && barOcc.shot.indexOf('pouria') >= 0);
+  if (!barIn || !barOut || !barShot) { anyOccFail = true; console.log('  FAIL', JSON.stringify(barOcc)); }
+  else console.log('  bartender photographable at the bar [' + barOcc.kitchen.join(',') + '], nowhere else');
+  await eval1(`document.getElementById('loft-game-strip').classList.remove('party-on')`);
 
   // Forced-mode pass: prove EACH mode is overlap-free at every group size.
   console.log('=== forced modes (overlap audit) ===');

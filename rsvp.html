@@ -35993,6 +35993,7 @@ var ABANDONED_CALL_MS = 30000;
     window.__monitorShorted = true;
     if (pcTower && pcTower.classList.contains("on")) { pcTower.classList.remove("on"); if (window.__updatePcFan) window.__updatePcFan(); }
     updateScreen();                    // gated → clears the boot and keeps it dark
+    shutdownMonitorApps();             // losing power mid-session is still a shutdown: nothing survives to the next boot
     monitor.classList.add("shorted");  // wet sheen + a brief electric flicker (CSS)
     if (wasLive) playSparkSound("office-monitor"); // a zap, only if it actually shorted something live
     clearTimeout(monitorShortTimer);
@@ -42543,7 +42544,12 @@ async def localfont(name):
     if (on && !monitor.classList.contains("here")) swap(true);
     else if (!on && monitor.classList.contains("here")) swap(false);
     else updateScreen();
-    if (!on && window.__stopLaptopInvite) window.__stopLaptopInvite(); // off also drops the laptop nudge
+    if (!on) {
+      // powering off is a real shutdown, not a blank screen: the swap/updateScreen above only
+      // closed the apps, so drop every one of them to first-run state — the next boot is clean
+      shutdownMonitorApps();
+      if (window.__stopLaptopInvite) window.__stopLaptopInvite(); // off also drops the laptop nudge
+    }
   }
   if (pcTower) {
     pcTower.addEventListener("click", onPcToggled);
@@ -43316,21 +43322,28 @@ async def localfont(name):
     }
   }
   window.resetMonitorAppState = resetMonitorAppState; // the desktop-dock + in-app Kill menus and the loft reset all call it
-  window.resetOfficeMonitor = function () {
-    pbFxIndex = 0; pbBaseFrame = null; // the loft reset is a kill: drop the retained look + captured photo (closePhotobooth keeps them now)
-    closePhotobooth(); // a reset must never leave the camera running
-    if (window.__clearMonitorShort) window.__clearMonitorShort(); // dry out any sprinkler short so a reset can power the PC on again
-    clearBoot(); // powers the screen dark and closes every app (console/REPL/VM console included)
-    // a full reset also clears every regular app's retained session state (photobooth already
-    // handled above; the self-hosted hosts' sessions are reset just below)
+  // Every app the PC is running, dropped to its first-run state — the shared teardown behind a
+  // power-off and the loft reset. clearBoot() only CLOSES apps: their retained session state and
+  // DOOM's loaded runtime survive it, so a real shutdown runs this on top, reusing the very same
+  // per-app Kill paths the dock's right-click menu offers. Run it AFTER clearBoot; stopSaver()
+  // goes last because several of the resets arm a fresh saver countdown on their way out.
+  function shutdownMonitorApps() {
+    pbFxIndex = 0; pbBaseFrame = null; // a kill drops the retained look + captured photo (closePhotobooth keeps them)
+    closePhotobooth(); // never leave the camera running
     ["life", "mines", "mail", "tattoo", "editor", "video", "music", "weather", "calendar", "family"].forEach(resetMonitorAppState);
-    // ...but clearBoot only CLOSES the consoles; their scrollback + welcome state live in
-    // their own IIFEs, so clear each session too — a reopened console then greets fresh
-    // (the Pyodide/v86 runtimes stay loaded; only the visible session resets)
+    // the consoles' scrollback + welcome state live in their own IIFEs, so clear each session
+    // too — a reopened console then greets fresh (the Pyodide/v86 runtimes stay loaded)
     if (window.__resetMonitorTermSession) window.__resetMonitorTermSession();
     if (window.__resetMonitorPySession) window.__resetMonitorPySession();
     if (window.__resetMonitorLinuxSession) window.__resetMonitorLinuxSession();
-    if (window.__resetDropTerm) window.__resetDropTerm(); // the drop-down Quake terminal too: wipe + re-arm its welcome + close
+    if (doomLoadState) destroyDoom(); // closeDoom only pauses with RAM intact; a shutdown cold-boots the next game
+    stopSaver();
+  }
+  window.resetOfficeMonitor = function () {
+    if (window.__clearMonitorShort) window.__clearMonitorShort(); // dry out any sprinkler short so a reset can power the PC on again
+    clearBoot(); // powers the screen dark and closes every app (console/REPL/VM console included)
+    shutdownMonitorApps();
+    if (window.__resetDropTerm) window.__resetDropTerm(); // page-level Quake terminal — not a PC app, so only the full reset wipes it
 
     pendingBootSite = null; // reset never boots to a sign's page
     monitor.classList.add("here");

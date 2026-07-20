@@ -5682,7 +5682,15 @@ body.bd-baka .bd-crown-baka{opacity:1; visibility:visible}
 #loft-game-strip.meal-martin #cuddly-meal-martin,
 #loft-game-strip.meal-yalda #cuddly-meal-yalda,
 #loft-game-strip.meal-xmas #cuddly-meal-xmas{display:inline}
-/* the Divan is the one thing on the table that takes a tap (a fāl), so it opts back in to the
+/* The dishes take a tap (the day's article); the SLAB under them must not, so the opt-in rides
+   the setting rather than #cuddly-table — SVG hit-tests per shape, so only the food itself
+   catches a click and the daybed, blankets and leg eggs behind the table stay clickable.
+   The nudge rocks the whole setting, the Divan on it included, the way a real table would. */
+#cuddly-table-setting{pointer-events:auto; cursor:pointer; transform-box:fill-box; transform-origin:50% 100%}
+#cuddly-table-setting.jostled{animation:cuddly-meal-jostle .5s ease-in-out}
+@keyframes cuddly-meal-jostle{0%,100%{transform:rotate(0)}25%{transform:rotate(-1.5deg)}60%{transform:rotate(1.1deg)}}
+@media (prefers-reduced-motion: reduce){#cuddly-table-setting.jostled{animation:none}}
+/* the Divan is the one thing on the table that takes a tap of its OWN (a fāl), so it opts back in to the
    pointer events the table wrapper turns off for the furniture */
 #cuddly-yalda-hafez{pointer-events:auto; cursor:pointer}
 #cuddly-yalda-hafez-book{transform-box:fill-box; transform-origin:50% 100%}
@@ -51995,6 +52003,60 @@ async def localfont(name):
   // The day is over (or the preview moved on): untie, so the next Apr 1 is a fresh wish.
   window.__untieSabzeh = function () { knot.classList.remove("tied"); };
 })();
+// The low table's dinner, and what day it belongs to. Five meals ride this one setting and each
+// is a feast most guests have never heard of, so it takes the same gesture the fire and the
+// haft-sin cloth do: a single click nudges the table, a double click opens the day's article in
+// the pocket phone. Read at click time, never wired once, so both a language switch and a date
+// change land. The Divan sitting on the same table stops both events itself — its own dblclick
+// goes to Hafez, which is the more specific answer than "Yalda".
+(function () {
+  var setting = document.getElementById("cuddly-table-setting");
+  if (!setting) return;
+  var MEAL_KEYS = ["nowruz", "stedry", "xmas", "martin", "yalda"];
+  // Czech titles come from Wikipedia's own langlinks, not from our transliteration.
+  var MEAL_WIKI = {
+    en: {
+      nowruz: "https://en.m.wikipedia.org/wiki/Nowruz",
+      stedry: "https://en.m.wikipedia.org/wiki/Christmas_Eve",
+      xmas: "https://en.m.wikipedia.org/wiki/Christmas",
+      martin: "https://en.m.wikipedia.org/wiki/St._Martin's_Day",
+      yalda: "https://en.m.wikipedia.org/wiki/Yalda_Night"
+    },
+    cs: {
+      nowruz: "https://cs.m.wikipedia.org/wiki/Nourúz",
+      stedry: "https://cs.m.wikipedia.org/wiki/Štědrý_den",
+      xmas: "https://cs.m.wikipedia.org/wiki/Vánoce",
+      martin: "https://cs.m.wikipedia.org/wiki/Oslavy_svátku_svatého_Martina_v_Evropě",
+      yalda: "https://cs.m.wikipedia.org/wiki/Jaldá"
+    }
+  };
+  function curLang() { return document.documentElement.lang === "cs" ? "cs" : "en"; }
+  function curMeal() { // which dinner is laid — the strip's own meal- class, so it can't disagree with the dishes on screen
+    var strip = document.getElementById("loft-game-strip");
+    if (!strip) return null;
+    for (var i = 0; i < MEAL_KEYS.length; i += 1) if (strip.classList.contains("meal-" + MEAL_KEYS[i])) return MEAL_KEYS[i];
+    return null;
+  }
+  var MEAL_DBL_MS = 280, jostleTimer = null;
+  setting.addEventListener("animationend", function (e) { if (e.animationName === "cuddly-meal-jostle") setting.classList.remove("jostled"); });
+  setting.addEventListener("click", function (e) {
+    e.stopPropagation();
+    playGlassClinkSound(1, "cuddly-table"); // answers instantly, so the tap never reads dead while the double-click window runs
+    clearTimeout(jostleTimer);
+    jostleTimer = setTimeout(function () {
+      jostleTimer = null;
+      setting.classList.remove("jostled"); // a re-tap mid-rock restarts it rather than being swallowed
+      requestAnimationFrame(function () { requestAnimationFrame(function () { setting.classList.add("jostled"); }); });
+    }, MEAL_DBL_MS);
+  });
+  setting.addEventListener("dblclick", function (e) {
+    e.stopPropagation();
+    clearTimeout(jostleTimer); jostleTimer = null; // the nudge was never what this click wanted
+    var meal = curMeal();
+    var url = meal && MEAL_WIKI[curLang()][meal];
+    if (url && window.__showUrlInPhone) window.__showUrlInPhone(url);
+  });
+})();
 // فال حافظ — the Yalda-night custom: you open the Divan at random, and the couplet your thumb
 // lands on is the answer. The Persian originals are the source text (not translated copy), so
 // they live here; T.fal_lines carries the EN/CS renderings, index-aligned. The draw avoids
@@ -52033,9 +52095,29 @@ async def localfont(name):
     if (anchor) eggBubble(anchor, falHtml(i), "top");
     return i;
   }
+  // Czech Wikipedia has no article on the Divan itself (checked via langlinks), so CS readers get
+  // Hafez the poet — the nearest thing it has. Both events stop here: the Divan sits inside
+  // #cuddly-table-setting, whose own handlers would otherwise nudge the table under it and answer
+  // a double click with the day's article instead of this more specific one.
+  var HAFEZ_WIKI = {
+    en: "https://en.m.wikipedia.org/wiki/The_Divân_of_Hafez",
+    cs: "https://cs.m.wikipedia.org/wiki/Chvádže_Šamsuddín_Muhammad_Háfiz"
+  };
   if (hafez) {
     hoverTooltip(hafez, function () { return tipText("tip_fal"); }, "top");
-    hafez.addEventListener("click", function (e) { e.stopPropagation(); consult(hafez); });
+    // The fāl waits out the double-click window the way the fire's summon does, so looking Hafez
+    // up doesn't also drop a couplet bubble over the phone.
+    var FAL_DBL_MS = 280, falTimer = null;
+    hafez.addEventListener("click", function (e) {
+      e.stopPropagation();
+      clearTimeout(falTimer);
+      falTimer = setTimeout(function () { falTimer = null; consult(hafez); }, FAL_DBL_MS);
+    });
+    hafez.addEventListener("dblclick", function (e) {
+      e.stopPropagation();
+      clearTimeout(falTimer); falTimer = null; // the fāl was never what this click wanted
+      if (window.__showUrlInPhone) window.__showUrlInPhone(HAFEZ_WIKI[document.documentElement.lang === "cs" ? "cs" : "en"]);
+    });
   }
   // fal() — take a fāl from the console, wherever you are and whatever the date. On Yalda in the
   // nook the Divan itself flips; otherwise the couplet just prints.

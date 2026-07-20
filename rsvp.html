@@ -1009,6 +1009,23 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #balcony-flash-bloom{opacity:0; transform-box:fill-box; transform-origin:center; mix-blend-mode:screen}
 #balcony-flash-bloom.flashing{animation:garden-flash-pop .5s ease-out}
 @media (prefers-reduced-motion: reduce){#balcony-flash-bloom.flashing{animation:none}}
+/* ── ASPEN WORKS THE WHOLE LOFT ──────────────────────────────────────────────
+   She shoots every room during the party, not just the garden: the roomPhotographers
+   IIFE clones her figure into the kitchen/cuddly/office stages (the garden keeps the
+   original, the balcony its own BBQ clone) and shows the clone with .showing. Class-
+   based, never id-based, so one rule serves every copy. */
+.room-photog{opacity:0; pointer-events:none; transition:opacity .6s ease; cursor:pointer}
+.room-photog.showing{opacity:1; pointer-events:auto}
+.rp-bloom{opacity:0; transform-box:fill-box; transform-origin:center; mix-blend-mode:screen}
+.rp-bloom.flashing{animation:garden-flash-pop .5s ease-out}
+/* the camera RAISE that precedes each shot. It rides .photog-cam — a node distinct from
+   the #garden-photographer wrapper (which carries an infinite id-based sway that would
+   otherwise out-specify this one-shot) and distinct from the wrapper's static transform
+   attribute, so neither can clobber it. Cleared on animationend. */
+.photog-cam{transform-box:fill-box; transform-origin:0% 100%}
+.photog-cam.aiming{animation:photog-aim .95s ease-in-out}
+@keyframes photog-aim{0%,100%{transform:none}20%,74%{transform:translate(-1px,-3.5px) rotate(-8deg)}}
+@media (prefers-reduced-motion: reduce){.rp-bloom.flashing, .photog-cam.aiming{animation:none}}
 /* ── GARDEN KIDS' CHASE ──────────────────────────────────────────────────────
    The three godkids (Irene · Robin · Navid) occasionally dart across the garden
    during the party, chasing each other and giggling — a playful ambient touch on
@@ -1073,6 +1090,10 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    below is what actually fades individual couples in/out. Kept off entirely party-off
    (base #kitchen-bar-couples rule) so nothing shows outside the party. */
 #loft-game-strip.party-on #stage-kitchen > #kitchen-bar-couples{opacity:1}
+/* ...and Aspen, working the bar with her camera — also a direct child group of the stage,
+   so the same `> g` fade would swallow her. Whitelisted under BOTH bar modes. */
+#loft-game-strip.party-on #stage-kitchen > .room-photog.showing,
+#stage-kitchen.dusk > .room-photog.showing{opacity:1; pointer-events:auto}
 /* ── NIGHT BAR ───────────────────────────────────────────────────────────────
    The bar also comes up at NIGHT (kitchen at dusk, party or not): a live-but-calm
    cocktail bar rather than the loud party one. Same espresso→bar swap as above, but
@@ -14110,7 +14131,7 @@ section{margin:1.9rem 0}
 <path d="M18.5 270 q-1.5 -18 11.5 -18 q13 0 11.5 18 q-2 -5 -4.5 -6 q0.5 7 -1 14 q-1.5 -8 -2 -14 q-5.5 -2.5 -11 0 q-0.5 6 -2 14 q-2.5 -7 -3.5 -8 z" fill="#2e2620"/>
 <circle cx="22" cy="268" r="1.7" fill="#d3a679"/>
 <path d="M36 289 L41 287 L50 270 L45 268 Z" fill="#6b6152"/>
-<g id="garden-photog-cam">
+<g id="garden-photog-cam" class="photog-cam"><!-- the class (not the id) survives the per-room figure clones, so every Aspen raises the same camera -->
 <rect x="37" y="258" width="17" height="13" rx="2" fill="#241f1c"/>
 <rect x="39" y="255" width="6" height="4" rx="1" fill="#2b2521"/>
 <circle cx="48" cy="264.5" r="4" fill="#15120f"/>
@@ -23422,6 +23443,13 @@ var T = {
     album_cap_with: "with", // "markéta & behdad · with Ali & Goli"
     album_cap_and: "&",     // joins a couple in a caption: "Ali & Goli"
     album_cap_group: "the group photo · everyone 🎉", // the whole-crowd keepsake from groupphoto()
+    // ROOM SHOTS — Aspen works the whole loft, so a card headed by the room it was taken in:
+    // "the bar · Ali & Goli". Also what the album search matches such a card on.
+    album_room_kitchen: "the bar",
+    album_room_garden: "the garden",
+    album_room_cuddly: "the cuddly-puddly",
+    album_room_office: "the office",
+    album_room_balcony: "the balcony",
     album_search_ph: "search photos…", // the album search-bar placeholder — filters by who's in each shot
     album_search_aria: "search photos by who's in them",
     album_search_clear: "clear search",
@@ -24179,6 +24207,13 @@ var T = {
     album_cap_and: "&",  // spojuje pár v popisku: "Ali & Goli"
     album_cap_group: "společné foto · všichni 🎉", // celoskupinová památka z groupphoto()
     album_empty_sub: "Aspen ještě fotí — rozjeď párty a album se ti zaplní.",
+    // FOTKY PODLE MÍSTNOSTI — Aspen fotí celý loft, takže kartu uvádí místnost, kde vznikla:
+    // „u baru · Ali & Goli“. Podle toho se taková karta i vyhledává v albu.
+    album_room_kitchen: "u baru",
+    album_room_garden: "v zahradě",
+    album_room_cuddly: "v cuddly-puddly", // vlastní jméno koutku, česky se nepřekládá (viz msg_piano_body)
+    album_room_office: "v pracovně",
+    album_room_balcony: "na balkoně",
     album_search_ph: "hledat fotky…", // placeholder vyhledávání v albu — filtruje podle toho, kdo je na snímku
     album_search_aria: "hledat fotky podle toho, kdo je na nich",
     album_search_clear: "vymazat hledání",
@@ -38161,7 +38196,8 @@ var ABANDONED_CALL_MS = 30000;
     beans: "beans() — coffee beans left in the grinder hopper (0..22); beans(n) sets the level (fresh heap to match) and returns the previous count",
     servefood: "servefood() — serve a cooked burger (opens the lid if needed); servefood(random()) picks a random ready one. returns true if one was served",
     phone: "phone(true) — bring up the pocket phone; phone(false) puts it away; phone() reports whether it's up. phone(\"cocktails\")/phone(\"weather\") open that phone app (skips the lockscreen); a bad name lists them",
-    album: "album() — open the pocket-phone wedding album: Aspen's captured party polaroids, newest first. she snaps one every photo-moment (the ~15s freeze) and whenever you tap her at the garden party; each is an intimate portrait — the couple + one guest (or a guest couple). album() also echoes the photo count",
+    album: "album() — open the pocket-phone wedding album: Aspen's captured party polaroids, newest first. she snaps one every photo-moment (the ~15s freeze) and whenever you tap her at the garden party; each is an intimate portrait — the couple + one guest (or a guest couple). She also works the OTHER rooms during the party (see snap()), and those cards show that room and exactly who was in it. album() also echoes the photo count",
+    snap: "snap() — Aspen photographs the room you're in RIGHT NOW: she lifts the camera, the flash pops, the shutter goes, and a keepsake of exactly whoever is in that room lands in your phone album — on that room's own backdrop. snap(\"office\")/snap(\"kitchen\")/snap(\"cuddly\")/snap(\"balcony\")/snap(\"garden\") heads there first so you can watch her take it. Lights the party if it's dark (she only works the party). She takes these on her own rounds too, every ~26-44s, in whichever room you're standing in",
     madla: "madla() — Markéta's sister (a doctor in Germany, bored on a night shift) rings your phone: a pulsing call card drops top-centre for 15s (tap to answer → pan to the cuddly room, then the video call; ignore it to miss the call). madla(true) answers straight away. she's incoming-only — you can't dial her back",
     saturday: "saturday() — Markéta's parents and Báka ring from Prague for the standing Saturday call: the same call card, tap to answer (or the × to let it go). saturday(true) answers straight away. left alone it comes on its own, once per Saturday in the loft, between 08:00 and 14:00 here — their Saturday evening; date(\"YYYY-MM-DD\") a Saturday and clock(9) to see it",
     sound: [
@@ -38278,7 +38314,7 @@ var ABANDONED_CALL_MS = 30000;
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · mixer() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · meteors() · storm()/rain()/overcast() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · sharecard() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora() · twilight() · timelapse() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · octi() · piratebox()/chest() · scripts() · run(\"name\") · repeat(\"name\")/stop() · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · mailto() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · mixer() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · meteors() · storm()/rain()/overcast() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · sharecard() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora() · twilight() · timelapse() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · snap() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · octi() · piratebox()/chest() · scripts() · run(\"name\") · repeat(\"name\")/stop() · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · mailto() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
@@ -38532,7 +38568,7 @@ var ABANDONED_CALL_MS = 30000;
     "goto", "rooms", "daylight", "night", "day", "season", "meteors", "birthday", "play", "pause", "temp", "weather",
     "clock", "time", "sharecard", "projector", "storm", "rain", "overcast", "dance", "jukebox", "dj", "firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift", "cocktail", "mixer", "lang", "caption", "candle",
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "aurora", "twilight", "timelapse", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood", "kidsAsleep",
-    "phone", "album", "message", "madla", "saturday", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
+    "phone", "album", "snap", "message", "madla", "saturday", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "repeat", "stop", "edit",
     "confetti", "fireworks", "lanterns", "cat", "dog", "whistler", "octi", "piratebox", "chest", "lamaz", "elmaz", "tamper", "brew", "sip", "knockbox", "irene", "visitors", "mouses", "piano", "classic", "kitten", "ukelele", "audio", "music",
     "guitar", "ukulele", "beat", "eclipse", "hb", "loft", "ls", "pwd", "whoami", "sudo",
@@ -46026,6 +46062,14 @@ async def localfont(name):
     // record after the hosts (a couple → "Ali & Goli", an individual → "Bahareh"); hosts alone
     // drops the "with" clause. e.g. "markéta & behdad · with Ali & Goli · Techno · 00:42".
     function albumCaption(rec) {
+      // A ROOM SHOT has no host anchor — it's whoever was in that room — so it captions itself
+      // "<the room> · Ali & Goli" instead of "markéta & behdad · with …".
+      if (rec.roomShot) {
+        var who = (rec.people || []).map(function (p) { return p.name; }).filter(Boolean);
+        var joined = who.length <= 1 ? (who[0] || "")
+          : who.slice(0, -1).join(", ") + " " + tr("album_cap_and") + " " + who[who.length - 1];
+        return { line: tr("album_room_" + rec.room) + (joined ? " · " + joined : ""), time: "" };
+      }
       var host = rec.people[0] ? rec.people[0].name : "markéta & behdad";
       if (rec.subjectId === "group-photo") return { line: host + " · " + tr("album_cap_group"), time: "" }; // the whole-crowd keepsake — too many to name; a warm summary line
       var others = rec.people.slice(1).map(function (p) { return p.name; }).filter(Boolean);
@@ -46143,20 +46187,104 @@ async def localfont(name):
       function jit(a) { return (rnd() * 2 - 1) * a; } // a random value in ±a
       var ground = ALBUM_SEASON_TINT[rec.season] || ALBUM_SEASON_TINT[""];
       var sky = "#f3ecd8";
+      // The room's LIGHT as recorded at capture (see albumSkyState). Records taken before this
+      // existed — the seeded pre-wedding photoshoot — simply read as a calm clear day.
+      var lit = rec.sky || { night: false, wx: "", aurora: false };
+      var isNight = !!lit.night, wx = lit.wx || "";
       if (rec.room === "balcony") {
-        // a BALCONY cookout backdrop (shots taken during the May-2 BBQ): a warm afternoon sky
-        // (violet under UV), a low sun, a distant skyline, and a wood deck with a railing — NOT the
-        // dance-floor's party-light pools + confetti. A chill daytime cookout reads as its own place.
-        var skyLo = rec.uv ? "#4a3a63" : "#f6d9a6", skyHi = rec.uv ? "#3a2c52" : "#f3c98a";
+        // THE BALCONY, exactly as it stood: the deck is the loft's most changeable surface, so the
+        // sky above it follows the real one — a warm afternoon by day, a deep star-lit blue (plus
+        // the moon, and the aurora if it was actually out) by night, greyed and streaked under
+        // rain/storm, flattened under overcast. Violet throughout under the blacklight.
+        var skyLo, skyHi;
+        if (rec.uv) { skyLo = "#4a3a63"; skyHi = "#3a2c52"; }
+        else if (isNight) { skyLo = wx ? "#2b3040" : "#2c3b63"; skyHi = wx ? "#1e2230" : "#141d3a"; }
+        else if (wx === "overcast") { skyLo = "#c2c2bc"; skyHi = "#a8a8a2"; }
+        else if (wx) { skyLo = "#9aa0a6"; skyHi = "#767d86"; }
+        else { skyLo = "#f6d9a6"; skyHi = "#f3c98a"; }
         add("rect", { x: 0, y: 0, width: W, height: H, fill: skyLo });
         add("rect", { x: 0, y: 0, width: W, height: H * 0.42, fill: skyHi });
-        add("circle", { cx: 158 + jit(10), cy: 30 + jit(6), r: 15, fill: rec.uv ? "#7a6a9a" : "#ffe9b0", opacity: "0.55" }); // low sun / glow
+        if (isNight && !rec.uv && !wx) {                                                            // a clear night: stars, then the moon
+          for (var stn = 0; stn < 22; stn++) add("circle", { cx: (rnd() * W).toFixed(1), cy: (rnd() * H * 0.44).toFixed(1), r: (0.5 + rnd() * 0.7).toFixed(2), fill: "#fffdf5", opacity: (0.4 + rnd() * 0.5).toFixed(2) });
+          if (lit.aurora) ["#5fd8a8", "#7fb0e0", "#a88fd8"].forEach(function (ac, ai) {              // the aurora, only when it was genuinely out
+            add("path", { d: "M0 " + (16 + ai * 7) + " Q50 " + (5 + ai * 8) + " 100 " + (18 + ai * 6) + " T200 " + (10 + ai * 8), fill: "none", stroke: ac, "stroke-width": (5 - ai).toFixed(1), opacity: (0.34 - ai * 0.07).toFixed(2), "stroke-linecap": "round" });
+          });
+        }
+        add("circle", { cx: 158 + jit(10), cy: 30 + jit(6), r: isNight ? 9 : 15, fill: rec.uv ? "#7a6a9a" : (isNight ? "#eae4c8" : "#ffe9b0"), opacity: wx ? "0.25" : "0.55" }); // the low sun, or the moon
         var hz = H * 0.5;
-        add("rect", { x: 0, y: hz - 12, width: W, height: 12, fill: rec.uv ? "#2e2440" : "#c9a87a", opacity: "0.45" }); // distant skyline haze
-        add("rect", { x: 0, y: hz, width: W, height: H - hz, fill: rec.uv ? "#3a3040" : "#9a6f45" });                    // the wood deck
-        for (var pp = 0; pp < 5; pp++) add("line", { x1: 0, y1: hz + 9 + pp * 8, x2: W, y2: hz + 9 + pp * 8, stroke: rec.uv ? "#2c2436" : "#7d5a38", "stroke-width": "0.6", opacity: "0.5" });
-        add("rect", { x: 0, y: hz - 2, width: W, height: 3, fill: rec.uv ? "#241d33" : "#6b4e30" });                     // the deck railing rail
-        for (var rr = 12; rr < W; rr += 22) add("rect", { x: rr, y: hz - 2, width: 2, height: 12, fill: rec.uv ? "#241d33" : "#6b4e30", opacity: "0.7" }); // railing balusters
+        var deck = rec.uv ? "#3a3040" : (isNight ? "#4e3a26" : "#9a6f45");
+        var rail = rec.uv ? "#241d33" : (isNight ? "#33251a" : "#6b4e30");
+        add("rect", { x: 0, y: hz - 12, width: W, height: 12, fill: rec.uv ? "#2e2440" : (isNight ? "#1a2138" : "#c9a87a"), opacity: "0.45" }); // distant skyline haze
+        add("rect", { x: 0, y: hz, width: W, height: H - hz, fill: deck });                                             // the wood deck
+        for (var pp = 0; pp < 5; pp++) add("line", { x1: 0, y1: hz + 9 + pp * 8, x2: W, y2: hz + 9 + pp * 8, stroke: rec.uv ? "#2c2436" : (isNight ? "#241a12" : "#7d5a38"), "stroke-width": "0.6", opacity: "0.5" });
+        add("rect", { x: 0, y: hz - 2, width: W, height: 3, fill: rail });                                              // the deck railing rail
+        for (var rr = 12; rr < W; rr += 22) add("rect", { x: rr, y: hz - 2, width: 2, height: 12, fill: rail, opacity: "0.7" }); // railing balusters
+        if (wx === "storm") add("path", { d: "M58 6 L52 26 L60 26 L54 46 L72 20 L63 20 L70 6 Z", fill: "#f6e7a8", opacity: "0.8" }); // a bolt over the skyline
+        if (wx === "rain" || wx === "storm") for (var dr = 0; dr < 26; dr++) {                                          // slanting rain across the whole frame
+          var rx = rnd() * W, ry = rnd() * (H - 20);
+          add("line", { x1: rx.toFixed(1), y1: ry.toFixed(1), x2: (rx - 3).toFixed(1), y2: (ry + 9).toFixed(1), stroke: "#dce6f2", "stroke-width": "0.7", opacity: "0.5" });
+        }
+      } else if (rec.room === "kitchen") {
+        // THE BAR (the kitchen wears its party face): the deep blue back wall, the lit back-bar
+        // shelf unit stacked with bottles, the "hydration station" neon glow above it, and the
+        // dark counter running across the foot of the frame. Colours quoted from the real art.
+        // The bar comes up for the party at any hour, so it takes the room's actual light: a deeper
+        // midnight blue after dark, a lighter one while it's still daylight outside.
+        var kWall = rec.uv ? "#2a2140" : (isNight ? "#26365a" : "#3c4d72"), kUnit = rec.uv ? "#221a36" : (isNight ? "#1c2a4a" : "#2a395f");
+        add("rect", { x: 0, y: 0, width: W, height: H, fill: kWall });
+        for (var kb = 10; kb < H; kb += 13) add("line", { x1: 0, y1: kb, x2: W, y2: kb, stroke: "#ffffff", "stroke-width": "0.5", opacity: "0.05" }); // brick courses
+        add("ellipse", { cx: 96 + jit(9), cy: 12, rx: 62, ry: 9, fill: rec.uv ? "#8fd8ff" : "#7fe6b0", opacity: "0.22" });   // the neon's spill
+        add("rect", { x: 46, y: 10, width: 104, height: 2, rx: 1, fill: rec.uv ? "#bfe8ff" : "#9ff2c4", opacity: "0.75" });  // the neon tube itself
+        add("rect", { x: 12, y: 24, width: W - 24, height: 62, rx: 3, fill: kUnit, stroke: rec.uv ? "#5a4a86" : "#4d64a0", "stroke-width": "1" }); // the back-bar shelf unit
+        var kBot = ["#8e3a4a", "#b8863c", "#7f9ec0", "#5d7d4e", "#c98a3a", "#6d4b63", "#d9a6a6", "#4a6b94"];
+        for (var kr = 0; kr < 3; kr++) {                                                       // three shelves of bottles
+          var ky = 30 + kr * 20;
+          add("line", { x1: 15, y1: ky + 16, x2: W - 15, y2: ky + 16, stroke: rec.uv ? "#6a58a0" : "#5b74b4", "stroke-width": "1" });
+          for (var kx = 20; kx < W - 22; kx += 16) add("rect", { x: kx + jit(1.6), y: ky + 3, width: 5, height: 13, rx: 1.6, fill: kBot[(kx + kr * 3) % kBot.length], opacity: "0.88" });
+        }
+        add("rect", { x: 0, y: H - 42, width: W, height: 42, fill: rec.uv ? "#171126" : "#1a1b26" });                        // the bar counter
+        add("rect", { x: 0, y: H - 42, width: W, height: 3, fill: rec.uv ? "#4a3a72" : "#3d4560" });                         // its lit front edge
+      } else if (rec.room === "cuddly") {
+        // THE CUDDLY-PUDDLY NOOK: the warm terracotta brick wall, the wall screen glowing with its
+        // fire channel, and the long tan daybed the whole room is built around.
+        var cWall = rec.uv ? "#4a2f4a" : (isNight ? "#6b4331" : "#a96b4b"), cMort = rec.uv ? "#3a243a" : (isNight ? "#553425" : "#8a5236");
+        add("rect", { x: 0, y: 0, width: W, height: H, fill: cWall });
+        for (var cb = 9; cb < H; cb += 12) add("line", { x1: 0, y1: cb, x2: W, y2: cb, stroke: cMort, "stroke-width": "1.4", opacity: "0.85" }); // brick courses
+        // the wall screen, kept off-centre so the frame's centred ∞/disco motif never reads as its
+        // hanging cord, with the fire channel up: a dark hearth band and two flames licking off it
+        add("rect", { x: 16, y: 16, width: 62, height: 40, rx: 3, fill: "#241d17", stroke: "#4a3a2e", "stroke-width": "2.4" });
+        add("rect", { x: 20, y: 46, width: 54, height: 8, fill: "#5a3a22" });                                                  // the log bed
+        add("path", { d: "M47 47 q-9 -9 -3 -18 q3 6 7 4 q4 8 -4 14 z", fill: "#e0762a" });
+        add("path", { d: "M47 47 q-5 -6 -1 -11 q2 4 4 2 q2 5 -3 9 z", fill: "#ffd88a" });
+        add("path", { d: "M32 47 q-6 -6 -2 -12 q2 4 5 3 q3 5 -3 9 z", fill: "#e0762a", opacity: "0.85" });
+        add("rect", { x: 0, y: H - 34, width: W, height: 34, fill: rec.uv ? "#3a2c46" : "#8a6a4a" });                          // the nook floor
+        add("rect", { x: 8, y: H - 62, width: W - 16, height: 20, rx: 5, fill: rec.uv ? "#6a4470" : "#c07a4a", stroke: "#8f4520", "stroke-width": "1.4" }); // the daybed seat
+        for (var cc = 16; cc < W - 24; cc += 34) add("rect", { x: cc, y: H - 76, width: 26, height: 16, rx: 4, fill: rec.uv ? "#7a5080" : "#cf8a5c", stroke: "#8f4520", "stroke-width": "1" }); // its back cushions
+      } else if (rec.room === "office") {
+        // THE OFFICE: brick on the left, the pale wall on the right, the black standing desk with
+        // its wide monitor, and the stained-glass butterfly window that lights the room.
+        var oBrick = rec.uv ? "#4a2b3a" : (isNight ? "#6b3c2c" : "#a35d43"), oPale = rec.uv ? "#3f3a52" : (isNight ? "#8a8880" : "#c9c6bf");
+        add("rect", { x: 0, y: 0, width: W, height: H, fill: oBrick });
+        add("rect", { x: 112, y: 0, width: W - 112, height: H, fill: oPale });
+        for (var ob = 9; ob < H; ob += 12) add("line", { x1: 0, y1: ob, x2: 112, y2: ob, stroke: rec.uv ? "#38202c" : "#874a38", "stroke-width": "1.4", opacity: "0.85" });
+        add("rect", { x: 138, y: 14, width: 48, height: 46, rx: 2, fill: "#5a4326", stroke: "#c9a35c", "stroke-width": "2" }); // the stained-glass frame
+        ["#2f7bb0", "#2f8a5a", "#e3b52f", "#d06f26", "#a8305a", "#4a3a6b"].forEach(function (sg, si) {                          // its rainbow wing panes
+          add("rect", { x: 141 + (si % 3) * 15, y: 17 + Math.floor(si / 3) * 21, width: 13, height: 19, rx: 1.5, fill: sg, opacity: rec.uv ? "0.55" : "0.9" });
+        });
+        // the window looks out on whatever's actually out there: a moonlit skyline after dark, a
+        // pale daytime sky before it, greyed out under rain/storm/overcast
+        add("rect", { x: 26, y: 22, width: 74, height: 40, rx: 2, fill: rec.uv ? "#241d33" : (isNight ? "#2b2f3a" : (wx ? "#9aa2ab" : "#bcd4e8")), stroke: "#8a8578", "stroke-width": "1.4" });
+        if (isNight && !wx) add("circle", { cx: 88, cy: 33, r: 4.5, fill: "#e8e2c8", opacity: "0.75" });                        // its moon
+        if (wx === "rain" || wx === "storm") for (var ow = 0; ow < 9; ow++) {                                                   // rain streaking the pane
+          var wxr = 30 + rnd() * 66, wyr = 25 + rnd() * 32;
+          add("line", { x1: wxr.toFixed(1), y1: wyr.toFixed(1), x2: (wxr - 2).toFixed(1), y2: (wyr + 6).toFixed(1), stroke: "#dce6f2", "stroke-width": "0.6", opacity: "0.55" });
+        }
+        add("rect", { x: 0, y: H - 30, width: W, height: 30, fill: rec.uv ? "#3a2c46" : "#b98a52" });                           // the wood floor
+        for (var op = 0; op < 3; op++) add("line", { x1: 0, y1: H - 22 + op * 8, x2: W, y2: H - 22 + op * 8, stroke: rec.uv ? "#2c2137" : "#9a7040", "stroke-width": "0.7", opacity: "0.6" });
+        add("rect", { x: 18, y: H - 58, width: W - 36, height: 5, rx: 1, fill: "#1f1f1f" });                                     // the desk top
+        add("rect", { x: 34, y: H - 53, width: 4, height: 24, fill: "#1f1f1f" });                                                // ...and its legs
+        add("rect", { x: W - 42, y: H - 53, width: 4, height: 24, fill: "#1f1f1f" });
+        add("rect", { x: 62, y: H - 84, width: 76, height: 26, rx: 2, fill: "#15161a", stroke: "#3a3a3f", "stroke-width": "1" }); // the ultrawide monitor
       } else {
         add("rect", { x: 0, y: 0, width: W, height: H, fill: sky });
         // soft coloured party-light pools washing the wall — pinks, blues, gold, wine (a lively, lit
@@ -46168,8 +46296,10 @@ async def localfont(name):
         [[40,42,"#d9a6a6"],[132,36,"#7f9ec0"],[76,50,"#f5c542"],[158,48,"#8e3a4a"],[110,40,"#7fbf6a"],[26,54,"#e88aa8"],[178,58,"#f5c542"]]
           .forEach(function (k) { var cx = k[0] + jit(11), cy = k[1] + jit(7); add("rect", { x: cx, y: cy, width: 3.4, height: 3.4, rx: 0.6, fill: k[2], opacity: "0.85", transform: "rotate(" + jit(48).toFixed(0) + " " + (cx + 1.7) + " " + (cy + 1.7) + ")" }); });
       }
-      // top motif: a faceted disco ball throwing a couple of glints (dance shot), else a quiet ∞ mark
-      if (rec.dance) {
+      // top motif: a faceted disco ball throwing a couple of glints (dance shot), else a quiet ∞ mark.
+      // A ROOM SHOT gets the ∞ regardless — the mirror ball hangs over the dance floor, not over the
+      // bar, the nook or the office.
+      if (rec.dance && !rec.roomShot) {
         add("line", { x1: W / 2, y1: 0, x2: W / 2, y2: 8.5, stroke: "#9aa0a8", "stroke-width": "1" });
         add("circle", { cx: W / 2, cy: 17, r: 8.5, fill: "#c9cdd6" });
         add("path", { d: "M" + (W / 2 - 8.5) + " 17 h17 M" + (W / 2) + " 8.5 v17 M" + (W / 2 - 6) + " 11 L" + (W / 2 + 6) + " 23 M" + (W / 2 + 6) + " 11 L" + (W / 2 - 6) + " 23", stroke: "#a7adb6", "stroke-width": "0.5", fill: "none", opacity: "0.7" });
@@ -46275,11 +46405,13 @@ async def localfont(name):
       if (mode === "closeup") {
         // Intimate photo-booth crop: just the hosts (+ at most ONE nearest guest), blown up large so the
         // faces fill the upper frame; feet fall well below the bottom edge — heads high, warm and close.
-        var pick = hostClones.slice();
-        if (otherClones.length && total >= 3) pick.push(otherClones[0]); // one guest leans into a closeup, no more
-        // re-order hosts-centred within the pick (one guest sits to a side of the couple)
-        var others2 = pick.filter(function (e) { return hostClones.indexOf(e) < 0; });
-        var ord = hostClones.concat(others2);
+        // A ROOM SHOT carries no hosts, so its own first figures anchor the crop instead — without
+        // this the pick would come out empty and the polaroid would render blank.
+        var anchors = hostClones.length ? hostClones : otherClones.slice(0, Math.min(2, otherClones.length));
+        var rest = otherClones.filter(function (e) { return anchors.indexOf(e) < 0; });
+        var pick = anchors.slice();
+        if (rest.length && total >= 3) pick.push(rest[0]); // one guest leans into a closeup, no more
+        var ord = pick;                                    // anchors centred, the leaning guest to a side
         var big = (pick.length <= 2 ? 1.15 : 0.98) * BIG;         // very large — this is the "lean-in" shot
         var row = layoutRow(ord, usableW, big);
         // Crop so head-tops land high (~y30): fy = headTop + fullHeight·scale. Feet fall below the frame.
@@ -46360,7 +46492,8 @@ async def localfont(name):
     function albumRecMatches(rec, q) {
       if (!q) return true;
       var hay = (rec.people || []).map(function (p) { return p && p.name ? p.name : ""; });
-      hay.push("markéta & behdad"); // the hosts are always in frame — searchable by name even if people[0] renders differently
+      if (!rec.roomShot) hay.push("markéta & behdad"); // the hosts anchor every portrait — searchable by name even if people[0] renders differently. A room shot only holds whoever was in the room, so it must NOT claim them.
+      if (rec.roomShot) hay.push(tr("album_room_" + rec.room)); // …but it IS searchable by its room, in either language
       if (rec.subjectId) hay.push(String(rec.subjectId).replace(/[-_]/g, " ")); // "shoot-godkids" → "shoot godkids"
       return hay.join(" \n ").toLowerCase().indexOf(q) !== -1;
     }
@@ -60084,7 +60217,8 @@ function spawnDustMote(container) {
     if (name !== "balcony" && window.__resetBalconyCouple) window.__resetBalconyCouple(); // ...nor do the two of them
     if (window.__updateBalconyHangout) window.__updateBalconyHangout(); // party crowd + smokers step onto the deck on entry (self-gates on balcony + party); clear on leaving
     if (window.__updateBalconyGrillmaster) window.__updateBalconyGrillmaster(); // Hamid the grillmaster shows near a lit BBQ on entry (self-gates on balcony + party + smoking); clear on leaving
-    if (window.__updateBalconyPhotog) window.__updateBalconyPhotog(); // Aspen shoots the BBQ on the deck on entry (self-gates on balcony + BBQ crowd); clear on leaving
+    if (window.__updateBalconyPhotog) window.__updateBalconyPhotog(); // Aspen shoots the BBQ (and the party's smokers) on the deck on entry (self-gates on balcony); clear on leaving
+    if (window.__updateRoomPhotogs) window.__updateRoomPhotogs(); // ...and she works the kitchen/nook/office too, wherever the party's on and you are
     if (name !== "balcony" && window.__snowmanOn && window.__setSnowman) window.__setSnowman(false); // ...and the winter snowman melts away when you leave the deck
     if (name !== "balcony" && window.__leafpileOn && window.__setLeafpile) window.__setLeafpile(false); // ...same for the autumn leaf pile,
     if (name !== "balcony" && window.__blossomPlayOn && window.__setBlossomPlay) window.__setBlossomPlay(false); // ...the spring blossom toss,
@@ -63427,14 +63561,19 @@ function spawnDustMote(container) {
   function fireGardenFlash() {
     var bloom = document.getElementById("garden-flash-bloom");
     var wash = document.getElementById("garden-flash-wash");
+    var cam = document.getElementById("garden-photog-cam");
+    if (cam) { cam.classList.remove("aiming"); void cam.getBoundingClientRect(); cam.classList.add("aiming"); } // she lifts the camera to her eye before each pop
     if (bloom) { bloom.classList.remove("flashing"); void bloom.getBBox; bloom.classList.add("flashing"); }
     if (wash) { wash.classList.remove("flashing"); wash.classList.add("flashing"); }
   }
+  window.__gardenFlashNow = fireGardenFlash; // the roving-photographer module fires the garden's own bloom through this
   (function () { // clear each one-shot .flashing on animationend so the class can be re-added next pop
     ["garden-flash-bloom", "garden-flash-wash"].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.addEventListener("animationend", function () { el.classList.remove("flashing"); });
     });
+    var cam = document.getElementById("garden-photog-cam"); // ...and the camera-raise one-shot with them
+    if (cam) cam.addEventListener("animationend", function () { cam.classList.remove("aiming"); });
   })();
   (function () { // click her to take a photo: a flash NOW + a shutter sound (the ambient auto-flash stays silent)
     var photog = document.getElementById("garden-photographer");
@@ -63578,6 +63717,49 @@ function spawnDustMote(container) {
     return "";
   }
   function albumUvOn() { var s = document.getElementById("loft-game-strip"); return !!(s && s.classList.contains("uv-mode")); }
+  // The room's LIGHT at the moment of the shot. A photo has to show the room as it actually was —
+  // the loft's sky follows Edmonton's real sunrise/sunset, so a balcony shot at 23:00 must not
+  // come back a sunny afternoon. Read off the same classes the scenes themselves are lit by
+  // (.dusk = night, applied to every stage by the sun toggle; .raining/.storming per stage;
+  // .climate-overcast on the strip) plus the aurora's own live opacity.
+  function albumSkyState(room) {
+    var st = document.getElementById("stage-" + (room || window.currentStageName || "garden"));
+    var strip = document.getElementById("loft-game-strip");
+    var wx = "";
+    if (st && st.classList.contains("raining")) wx = "rain";
+    else if (st && st.classList.contains("storming")) wx = "storm";
+    else if (strip && strip.classList.contains("climate-overcast")) wx = "overcast";
+    var au = document.getElementById("balcony-aurora");
+    return {
+      night: !!(st && st.classList.contains("dusk")),
+      wx: wx,
+      aurora: !!(au && parseFloat(getComputedStyle(au).opacity) > 0.1)
+    };
+  }
+  // ── WHO IS IN ROOM X RIGHT NOW ────────────────────────────────────────────────
+  // Aspen's photo view of the ONE occupancy accessor, window.__whoIsHere(room) — which already
+  // reads each room's own published truth rather than inventing a parallel roster. Keeping this
+  // a projection is the point: a second walk of the same rooms is exactly how a photo caption
+  // and the roster panel end up naming different people. Two deliberate differences, both this
+  // caller's needs and not the panel's:
+  //   • { crew: false } — the crew are bust-only art and can't stand in a feet-on-the-line shot.
+  //   • the couple's two figures collapse to the single "hosts" key the album's shot-builder
+  //     anchors on, and each row's name/grp is re-read from the cast table (__rosterPersonInfo)
+  //     so captions keep the album's own lowercase house styling, not the panel's capitalisation.
+  var ALBUM_HOST_KEYS = { marketa: 1, behdad: 1, hosts: 1 };
+  window.__roomOccupants = function (room) {
+    var here = (window.__whoIsHere && window.__whoIsHere(room || window.currentStageName || "garden", { crew: false })) || [];
+    var out = [], seen = {};
+    here.forEach(function (p) {
+      var key = ALBUM_HOST_KEYS[p.key] ? "hosts" : p.key;
+      if (seen[key]) return;
+      var info = window.__rosterPersonInfo && window.__rosterPersonInfo(key);
+      if (!info || !info.name) return; // no cast entry → nothing to name or draw; skip rather than guess
+      seen[key] = 1;
+      out.push({ key: info.key, grp: info.grp, name: info.name, roleKey: info.roleKey });
+    });
+    return out;
+  };
   // Build the list of candidate "other subjects" from who's present (excluding the hosts): each is a
   // {id, members:[{key,name,roleKey}]} — a couple (2 members, both present) or an individual (1).
   function albumSubjects(present) {
@@ -63672,7 +63854,8 @@ function spawnDustMote(container) {
       dance: window.__partyDance || "",
       season: albumSeasonName(),
       uv: albumUvOn(),
-      room: window.currentStageName === "balcony" ? "balcony" : "" // a BBQ/balcony snap renders on the balcony backdrop, not the garden
+      room: window.currentStageName === "balcony" ? "balcony" : "", // a BBQ/balcony snap renders on the balcony backdrop, not the garden
+      sky: albumSkyState(window.currentStageName)
     };
     albumShots.push(rec);
     if (albumShots.length > ALBUM_CAP) {
@@ -63692,6 +63875,37 @@ function spawnDustMote(container) {
   window.__albumCaptureMoment = function () { if (!albumMomentSnapped) { albumMomentSnapped = true; captureAlbumShot(); } };
   window.__albumMomentReset = function () { albumMomentSnapped = false; };
   window.__albumAdd = captureAlbumShot;                 // test hook: snap one now, return the record
+  // ── A ROOM SHOT ── the keepsake Aspen takes AWAY from the dance floor. Where the garden's
+  // portraits are always the couple + one rotating subject, a room shot is simply everyone who
+  // is in THAT room at that moment (__roomOccupants) against THAT room's backdrop — so the
+  // kitchen card shows the pair at the bar, the nook card the kids on the floor, and nobody who
+  // isn't there. No occupants → no photo (an empty room is not worth a card, and fabricating
+  // one would be the phantom-guest bug). De-duped per room+lineup, so standing in one room
+  // doesn't fill the roll with the same card.
+  window.__albumAddRoom = function (room) {
+    room = room || window.currentStageName || "garden";
+    if (room === "garden") return captureAlbumShot();   // the garden keeps its intimate-portrait path
+    var people = (window.__roomOccupants && window.__roomOccupants(room)) || [];
+    if (!people.length) return null;
+    var sky = albumSkyState(room);
+    // The room's LIGHT is part of the shot's identity: the same pair at the bar in daylight and
+    // again after dark are two different photographs, so both are worth keeping.
+    var sig = "room:" + room + ":" + (sky.night ? "n" : "d") + (sky.wx ? "/" + sky.wx : "") + ":" +
+              people.map(function (p) { return p.key; }).sort().join(",");
+    if (albumTaken[sig]) return null;
+    albumTaken[sig] = 1;
+    var rec = {
+      id: ++albumSeq, t: Date.now(), people: people, subjectId: sig, roomShot: true,
+      dance: window.__partyDance || "", season: albumSeasonName(), uv: albumUvOn(), room: room, sky: sky
+    };
+    albumShots.push(rec);
+    if (albumShots.length > ALBUM_CAP) {
+      var dropped = albumShots.length - ALBUM_CAP;
+      albumShots.splice(0, dropped);
+      try { console.info("[album] capped at " + ALBUM_CAP + " shots — dropped " + dropped + " oldest"); } catch (e) {}
+    }
+    return rec;
+  };
   // A distinct GROUP PHOTO keepsake — the WHOLE crowd (hosts + everyone on the floor, crew aside),
   // not the intimate 3–4-figure portrait captureAlbumShot builds. Fired by the groupphoto() moment
   // (Aspen gathers everyone + flash). Marked subjectId:"group-photo" so the album caption + search
@@ -63707,7 +63921,7 @@ function spawnDustMote(container) {
     present.forEach(function (p) { if (p.key !== "hosts" && p.grp !== "crew") people.push({ key: p.key, grp: p.grp, name: p.name, roleKey: p.roleKey }); });
     // drop any prior live group-photo so a re-shoot replaces it (never stack whole-crowd cards)
     albumShots = albumShots.filter(function (s) { return s.subjectId !== "group-photo"; });
-    var rec = { id: ++albumSeq, t: Date.now(), people: people, subjectId: "group-photo", groupPhoto: true, dance: window.__partyDance || "", season: albumSeasonName(), uv: albumUvOn(), room: window.currentStageName === "balcony" ? "balcony" : "" };
+    var rec = { id: ++albumSeq, t: Date.now(), people: people, subjectId: "group-photo", groupPhoto: true, dance: window.__partyDance || "", season: albumSeasonName(), uv: albumUvOn(), room: window.currentStageName === "balcony" ? "balcony" : "", sky: albumSkyState(window.currentStageName) };
     albumShots.push(rec);
     if (albumShots.length > ALBUM_CAP) { var dropped = albumShots.length - ALBUM_CAP; albumShots.splice(0, dropped); try { console.info("[album] capped at " + ALBUM_CAP + " shots — dropped " + dropped + " oldest"); } catch (e) {} }
     if (window.__albumRefresh) window.__albumRefresh(); // a big deliberate shot: refresh the open album so it shows at once
@@ -64018,6 +64232,8 @@ function spawnDustMote(container) {
       startGardenFlash(); // begin the front-left guest's occasional soft camera flash (idempotent; self-gates on gardenPartyActive)
       if (window.__startPhotoMoment) window.__startPhotoMoment(); // schedule the occasional ~15s photo-freeze moments
       if (window.__startAlbumSnaps) window.__startAlbumSnaps(); // Aspen grabs album keepsakes often (~14-22s), no freeze
+      if (window.__startPhotogRounds) window.__startPhotogRounds(); // ...and she works the OTHER rooms too — one shot per round, wherever you are
+      if (window.__updateRoomPhotogs) window.__updateRoomPhotogs();
       startGardenChaseDriver(); // begin the godkids' occasional garden chase (idempotent; self-gates on gardenPartyActive + not-busy)
       updateGardenGuests(); // arm Ali + Goli's arrival (they crash the floor a beat after the party lights; self-gates on garden + visible)
       if (partyDancers) { // the colorful dancers rise in the garden and hold for the party
@@ -64055,6 +64271,8 @@ function spawnDustMote(container) {
       stopGardenFlash();               // party over — kill the camera-flash timer + drop any in-flight flash
       if (window.__stopPhotoMoment) window.__stopPhotoMoment(); // party over — end any photo-freeze + its timer
       if (window.__stopAlbumSnaps) window.__stopAlbumSnaps(); // party over — stop Aspen's auto-snaps
+      if (window.__stopPhotogRounds) window.__stopPhotogRounds(); // ...and her rounds of the other rooms
+      if (window.__updateRoomPhotogs) window.__updateRoomPhotogs(); // she packs up wherever she was standing
       stopGardenChase();               // party over — kill the chase timer + reset every runner
       resetGuestsArrival();            // party over — clear Ali + Goli and forget the arrival latch (next party re-crashes with a fresh slide)
       if (partyDancers) {
@@ -65102,10 +65320,12 @@ function spawnDustMote(container) {
       if (!hangout.classList.contains("on")) return null;
       return shownSmokerNames.length ? shownSmokerNames.slice() : null;
     };
-    // Everyone actually standing on the deck right now (crowd + smokers), display-ready for the
-    // shared per-room roster (window.__whoIsHere). NB `r.name` is the one-room EXCLUSION key and
-    // is deliberately not the face on screen (bh-patricia-son wears Bahareh, bh-patricia-daughter wears Patricia) —
-    // the visible name is figLabel(r), and the off-duty DJ names himself live.
+    // EVERYONE actually standing on the deck right now (crowd + smokers), display-ready for the
+    // shared per-room roster (window.__whoIsHere) and the source Aspen's balcony photo is built
+    // from. Read straight off the DOM (a figure hidden by layout() carries display:none), so it
+    // can't drift from what's drawn. NB `r.name` is the one-room EXCLUSION key and is
+    // deliberately not the face on screen (bh-patricia-son wears Bahareh, bh-patricia-daughter wears Patricia) — the
+    // visible name is figLabel(r), and the off-duty DJ names himself live. Empty when it's clear.
     window.__balconyHangoutNow = function () {
       if (!hangout.classList.contains("on")) return [];
       var out = [];
@@ -65114,7 +65334,17 @@ function spawnDustMote(container) {
         if (!g || g.style.display === "none") return;
         var nm = figLabel(r);
         if (!nm) return;
-        out.push({ key: r.dj ? nm.toLowerCase() : r.name, name: nm, roleKey: r.role, el: g });
+        out.push({ key: r.dj ? nm.toLowerCase() : r.name, name: nm, roleKey: r.role, el: g, couple: !!r.couple });
+      });
+      return out;
+    };
+    // The same deck as bare cast keys — a projection over the roster above, never a second walk
+    // of ROSTER. The couple's two figures collapse to the single "hosts" key.
+    window.__balconyPeopleNow = function () {
+      var out = [];
+      window.__balconyHangoutNow().forEach(function (p) {
+        var key = p.couple ? "hosts" : p.key;
+        if (out.indexOf(key) === -1) out.push(key);
       });
       return out;
     };
@@ -65342,12 +65572,17 @@ function spawnDustMote(container) {
     g.setAttribute("tabindex", "-1");
     var bloom = document.createElementNS(svgNS, "circle"); // flash over the camera lens (same art-local spot as the garden bloom)
     bloom.setAttribute("id", "balcony-flash-bloom"); bloom.setAttribute("cx", "51"); bloom.setAttribute("cy", "256.6"); bloom.setAttribute("r", "7"); bloom.setAttribute("fill", "#fffdf5");
-    g.appendChild(fig); g.appendChild(bloom);
+    var bcam = fig.querySelector(".photog-cam"); // the class survives the id-stripping above
+    g.appendChild(fig); (bcam || g).appendChild(bloom); // the bloom rides the camera, so it travels with the raise
     stage.appendChild(g);
     bloom.addEventListener("animationend", function () { bloom.classList.remove("flashing"); });
+    if (bcam) bcam.addEventListener("animationend", function () { bcam.classList.remove("aiming"); });
     function attended() { return !document.hidden && document.hasFocus(); }
-    function shouldShow() { return window.currentStageName === "balcony" && !!window.__balconyBBQOn; }
-    function fireFlash() { bloom.classList.remove("flashing"); void bloom.getBoundingClientRect(); bloom.classList.add("flashing"); }
+    // She's on the deck for the daytime BBQ AND for the party's smoking crowd — either way there
+    // are people out here to shoot.
+    function shouldShow() { return window.currentStageName === "balcony" && (!!window.__balconyBBQOn || !!window.__gardenPartyOn); }
+    function raiseCam() { if (!bcam) return; bcam.classList.remove("aiming"); void bcam.getBoundingClientRect(); bcam.classList.add("aiming"); }
+    function fireFlash() { raiseCam(); bloom.classList.remove("flashing"); void bloom.getBoundingClientRect(); bloom.classList.add("flashing"); }
     var flashTimer = null;
     function flashTick() {
       flashTimer = null;
@@ -65359,15 +65594,107 @@ function spawnDustMote(container) {
     function stopFlash() { if (flashTimer) { clearTimeout(flashTimer); flashTimer = null; } bloom.classList.remove("flashing"); }
     function update() { var on = shouldShow(); g.classList.toggle("showing", on); if (on) startFlash(); else stopFlash(); }
     window.__updateBalconyPhotog = update;
+    window.__balconyPhotogFlash = fireFlash;    // the roving-rounds timer fires her ambient shot from here
     window.__resetBalconyPhotog = function () { g.classList.remove("showing"); stopFlash(); }; // extinguisher reset
     g.addEventListener("click", function (e) {   // tap her → a photo NOW (flash + shutter + album keepsake, balcony backdrop)
       if (!shouldShow()) return;
       e.stopPropagation();
       fireFlash();
       if (typeof playCameraShutterSound === "function") playCameraShutterSound(); // a click implies focus
-      if (window.__albumAdd) window.__albumAdd(); // captures room:"balcony" → the balcony backdrop
+      if (window.__albumAddRoom) window.__albumAddRoom("balcony"); // exactly who's on the deck, on the deck's backdrop
       setTimeout(function () { if (window.__openPhoneAppHere) window.__openPhoneAppHere("album"); }, 260);
     });
+    document.addEventListener("visibilitychange", update);
+    window.addEventListener("blur", update);
+    window.addEventListener("focus", update);
+    update();
+  })();
+  // ── ASPEN'S ROUNDS (kitchen · cuddly · office) ─────────────────────────────────────────
+  // She's the wedding photographer, so she works the WHOLE loft, not just the dance floor:
+  // wherever the party has spilled to, she's there with the camera. The garden keeps its own
+  // original figure and the balcony its BBQ clone; this mounts a third, fourth and fifth Aspen
+  // into the other three rooms, built exactly the way balconyPhotographer builds hers (clone
+  // #garden-photographer, strip every id so nothing collides, hang the static placement on the
+  // wrapper and let the camera group carry the animation).
+  //
+  // The ROUNDS timer is the same self-rescheduling, party-gated idiom as the garden flash: one
+  // timer, started on party-on and cleared on party-off, that STOPS rather than reschedules once
+  // the party ends. It only actually shoots while the room is on screen AND the tab is visible
+  // AND focused (crickets rule) — and the ambient shot is LIGHT ONLY, silent, so no autonomous
+  // shutter can ever leak into an unfocused window. The garden is skipped: it has its own
+  // auto-snap + photo-moment machinery already. Nothing is spawned (the figures and their blooms
+  // are persistent nodes), so nothing can pile up.
+  (function roomPhotographers() {
+    var svgNS = "http://www.w3.org/2000/svg";
+    var src = document.getElementById("garden-photographer");
+    if (!src) return;
+    // where she stands in each room, in that stage's own view-box coords: [centre-x, feet-y, scale]
+    var SPOTS = { kitchen: [615, 336, 1.10], cuddly: [618, 344, 1.15], office: [430, 337, 1.15] };
+    var mounted = {};
+    Object.keys(SPOTS).forEach(function (room) {
+      var stage = document.getElementById("stage-" + room);
+      if (!stage) return;
+      var fig = src.cloneNode(true);
+      fig.removeAttribute("id");
+      var oldBloom = fig.querySelector("#garden-flash-bloom"); if (oldBloom && oldBloom.parentNode) oldBloom.parentNode.removeChild(oldBloom); // this room gets its own
+      var ids = fig.querySelectorAll("[id]"); for (var i = 0; i < ids.length; i++) ids[i].removeAttribute("id");
+      var cam = fig.querySelector(".photog-cam"); // survives the id strip — it's a class
+      var bloom = document.createElementNS(svgNS, "circle");
+      bloom.setAttribute("class", "rp-bloom");
+      bloom.setAttribute("cx", "51"); bloom.setAttribute("cy", "256.6"); bloom.setAttribute("r", "7"); bloom.setAttribute("fill", "#fffdf5");
+      (cam || fig).appendChild(bloom); // inside the camera group, so the flash rides the raise
+      var s = SPOTS[room][2];
+      var g = document.createElementNS(svgNS, "g");
+      g.setAttribute("id", room + "-photographer");
+      g.setAttribute("class", "room-photog");
+      g.setAttribute("transform", "translate(" + (SPOTS[room][0] - 37 * s).toFixed(2) + "," + (SPOTS[room][1] - 337 * s).toFixed(2) + ") scale(" + s + ")"); // static placement on the wrapper; the camera animates inside it
+      g.setAttribute("role", "button");
+      g.appendChild(fig);
+      stage.appendChild(g);
+      bloom.addEventListener("animationend", function () { bloom.classList.remove("flashing"); });
+      if (cam) cam.addEventListener("animationend", function () { cam.classList.remove("aiming"); });
+      var entry = mounted[room] = { g: g, cam: cam, bloom: bloom };
+      entry.flash = function () {
+        if (cam) { cam.classList.remove("aiming"); void cam.getBoundingClientRect(); cam.classList.add("aiming"); }
+        bloom.classList.remove("flashing"); void bloom.getBoundingClientRect(); bloom.classList.add("flashing");
+      };
+      g.addEventListener("click", function (e) { // tap her → a shot of THIS room, now
+        if (!g.classList.contains("showing")) return;
+        e.stopPropagation();
+        entry.flash();
+        if (typeof playCameraShutterSound === "function") playCameraShutterSound(); // a click implies focus
+        if (window.__albumAddRoom) window.__albumAddRoom(room);
+        setTimeout(function () { if (window.__openPhoneAppHere) window.__openPhoneAppHere("album"); }, 260);
+      });
+    });
+    function attended() { return !document.hidden && document.hasFocus(); }
+    function update() { // she's out wherever the party is, in whichever of her three rooms is on screen
+      Object.keys(mounted).forEach(function (room) {
+        mounted[room].g.classList.toggle("showing", !!window.__gardenPartyOn && window.currentStageName === room);
+      });
+    }
+    window.__updateRoomPhotogs = update;
+    // Fire one shot in `room` (or the room you're in): the camera raise + flash, plus the keepsake.
+    // `silent` leaves the shutter off — that's the ambient rounds path.
+    window.__photogSnap = function (room, silent) {
+      room = room || window.currentStageName || "garden";
+      if (room === "garden") { if (window.__gardenFlashNow) window.__gardenFlashNow(); }
+      else if (room === "balcony") { if (window.__balconyPhotogFlash) window.__balconyPhotogFlash(); }
+      else if (mounted[room]) mounted[room].flash();
+      if (!silent && typeof playCameraShutterSound === "function") playCameraShutterSound();
+      return (window.__albumAddRoom && window.__albumAddRoom(room)) || null;
+    };
+    var roundTimer = null;
+    function roundTick() {
+      roundTimer = null;
+      if (!window.__gardenPartyOn) return;                        // party over — stop, don't reschedule
+      var room = window.currentStageName;
+      if (room !== "garden" && attended() && !window.__musicPaused) window.__photogSnap(room, true); // silent: an ambient flash, never an autonomous shutter
+      roundTimer = setTimeout(roundTick, 26000 + Math.random() * 18000);
+    }
+    window.__startPhotogRounds = function () { if (!roundTimer && window.__gardenPartyOn) roundTimer = setTimeout(roundTick, 9000 + Math.random() * 7000); };
+    window.__stopPhotogRounds = function () { if (roundTimer) { clearTimeout(roundTimer); roundTimer = null; } };
+    window.__resetRoomPhotogs = function () { window.__stopPhotogRounds(); Object.keys(mounted).forEach(function (room) { mounted[room].g.classList.remove("showing"); mounted[room].bloom.classList.remove("flashing"); if (mounted[room].cam) mounted[room].cam.classList.remove("aiming"); }); };
     document.addEventListener("visibilitychange", update);
     window.addEventListener("blur", update);
     window.addEventListener("focus", update);
@@ -66420,6 +66747,7 @@ function spawnDustMote(container) {
     if (window.__resetBalconyHangout) window.__resetBalconyHangout(); // ...and the deck-party smokers/crowd
     if (window.__resetBalconyGrillmaster) window.__resetBalconyGrillmaster(); // ...and Hamid at the BBQ
     if (window.__resetOfficeHangout) window.__resetOfficeHangout(); // ...and the office hangout couple
+    if (window.__resetRoomPhotogs) window.__resetRoomPhotogs(); // ...and Aspen packs up her rounds of the kitchen/nook/office
     if (window.__setSnowman) window.__setSnowman(false); // ...and take the winter snowman + its kids down
     if (window.__setLeafpile) window.__setLeafpile(false); // ...and the autumn leaf pile,
     if (window.__setBlossomPlay) window.__setBlossomPlay(false); // ...the spring blossom toss,
@@ -71330,10 +71658,19 @@ function spawnDustMote(container) {
       });
       return uniq;
     }
-    window.__whoIsHere = function (room) {
+    // Bust-only crew: Aspen is behind the lens, and the DJ + bartender Pouria are drawn as
+    // behind-the-counter busts with no torso or legs. The roster panel lists them happily; a
+    // caller that stands people on a floor line (Aspen's photo lineup) would get cut-off
+    // floating heads, so it asks for { crew: false }. The DJ is keyed by whichever face is out.
+    var WHO_CREW = { aspen: 1, pouria: 1, sina: 1, danesh: 1 };
+    window.__whoIsHere = function (room, opts) {
       room = room || window.currentStageName || "kitchen";
       if (WHO_ROOMS.indexOf(room) < 0) return [];
-      try { return occupantsOf(room); } catch (e) { return []; }
+      try {
+        var list = occupantsOf(room);
+        if (opts && opts.crew === false) list = list.filter(function (p) { return !WHO_CREW[p.key]; });
+        return list;
+      } catch (e) { return []; }
     };
 
     var panel = null, toggleBtn = null, open = false;
@@ -71631,6 +71968,20 @@ function spawnDustMote(container) {
     window.__rosterOpen = function () { return open; }; // test read hook
     window.__rosterList = function (room) { // test hook: the names in a room (default: the room on screen), in panel order
       return window.__whoIsHere(room).map(function (p) { return p.name; });
+    };
+    // The cast's ONE name/role table, addressable by key whether or not the person is on the
+    // floor — so the other rooms' occupant lists (__roomOccupants) never re-type a name. The
+    // three godkids are rostered here under their chase-runner keys (cirene/crobin/cnavid);
+    // alias the bare names they're known by everywhere else (cuddly cameos, game kids, album).
+    var PERSON_ALIAS = { irene: "cirene", robin: "crobin", navid: "cnavid" };
+    window.__rosterPersonInfo = function (key) {
+      var want = PERSON_ALIAS[key] || key;
+      for (var i = 0; i < ROSTER.length; i++) {
+        if (ROSTER[i].key !== want) continue;
+        var r = ROSTER[i];
+        return { key: key, grp: r.grp, name: r.name || (r.sel === "__dj" ? djName() : ""), roleKey: r.roleKey };
+      }
+      return null;
     };
     // Structured presence, shared with the wedding-album capture so both read the SAME floor.
     // Returns [{ key, grp, name, roleKey }] for everyone present right now, in panel order.
@@ -72561,6 +72912,23 @@ function spawnDustMote(container) {
     var shots = (window.__albumList && window.__albumList()) || [];
     if (window.echo) window.echo(shots.length ? ("📸 the wedding album: " + shots.length + " photo" + (shots.length === 1 ? "" : "s") + " — newest first.") : "📸 the wedding album is empty — throw the party and let Aspen shoot.");
     return shots.length;
+  };
+
+  // snap() — Aspen takes a photo of the room you're standing in RIGHT NOW: camera up, flash,
+  // shutter, and a keepsake of exactly whoever's in there. snap("office") shoots that room
+  // instead (heading there first so you can watch her do it). Lights the party if it's dark —
+  // she only works the party — and echoes who ended up in frame.
+  window.snap = function (room) {
+    if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
+    var want = typeof room === "string" ? room : (window.currentStageName || "garden");
+    if (window.goToStage && window.currentStageName !== want) window.goToStage(want);
+    var fire = function () {
+      var rec = window.__photogSnap ? window.__photogSnap(want) : null;
+      var who = rec ? (rec.people || []).map(function (p) { return p.name; }).filter(Boolean) : [];
+      if (window.echo) window.echo(rec ? ("📸 " + who.join(", ") + " — straight into the album.") : "📸 Aspen lifts the camera… nobody's in here (or she's already got this exact shot).");
+    };
+    if (window.currentStageName === want) fire(); else setTimeout(fire, 760); // let the room slide settle so you see the flash land
+    return want;
   };
 
   // Madla — Markéta's sister, a doctor in Germany, calling on her night shift. INCOMING-ONLY:

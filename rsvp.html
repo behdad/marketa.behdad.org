@@ -3469,7 +3469,8 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .calx-cards{display:flex; flex-direction:column}
 .calx-card{background:#fffdf8; border:1px solid #e8dfcc; display:flex; flex-direction:column; cursor:pointer}
 .calx-card:hover{border-color:#8e3a4a}
-.calx-card-city{font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.calx-card-head{display:flex; align-items:center; justify-content:space-between; gap:6px; min-width:0} /* city name left, that city's .ics chip right */
+.calx-card-city{font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0}
 .calx-card-e .calx-card-city{color:#8e3a4a}
 .calx-card-p .calx-card-city{color:#4a6b94}
 .calx-card-row{display:flex; align-items:center; justify-content:space-between; min-width:0}
@@ -3509,8 +3510,7 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .calx-phone .calx-card-when{font-size:12px}
 .calx-phone .calx-card-what{font-size:11px}
 .calx-phone .calx-gcal{font-size:12px; border-radius:8px; padding:3px 10px}
-.calx-phone .calx-ics{width:100%; padding:5px; border-radius:10px; background:var(--wine); color:#fff; border:none; font-size:12.5px; margin-top:1px}
-.calx-phone .calx-ics:hover{filter:brightness(1.06)}
+.calx-phone .calx-ics{flex:none; padding:1px 7px; border-radius:7px; font-size:10.5px} /* sized to ride the city title's own line box, so the chip adds no row height */
 .calx-phone .calx-cal{display:flex; flex-direction:column; gap:4px}
 .calx-phone .calx-head{gap:3px}
 .calx-phone .calx-title{font-size:12.5px; width:0} /* width:0 + flex:1 1 auto → the label takes all the LEFTOVER row space but contributes nothing to the head's min-content, so no month name can widen the phone */
@@ -3533,7 +3533,7 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .calx-mon .calx-card-when{font-size:1.9px; line-height:1}
 .calx-mon .calx-card-what{font-size:1.7px; line-height:1}
 .calx-mon .calx-gcal{font-size:1.7px; border-radius:1px; padding:0.3px 1px}
-.calx-mon .calx-ics{border:none; background:var(--wine); color:#fff; font-size:1.9px; border-radius:1.4px; padding:0.5px}
+.calx-mon .calx-ics{flex:none; border-width:0.3px; border-radius:0.8px; font-size:1.6px; padding:0 0.7px}
 .calx-mon .calx-cal{flex:1 1 auto; min-width:0; min-height:0; display:grid; grid-template-rows:auto 1fr; gap:0.4px}
 .calx-mon .calx-head{gap:0.8px; margin:0}
 .calx-mon .calx-title{font-size:2.7px}
@@ -4289,7 +4289,7 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .phone-app{flex-direction:column}
 .phone-app-head{display:none} /* app title header removed — the app content + status bar are context enough, and it reclaims ~40px for short screens */
 .phone-app-head .pah-title{font-family:"Fraunces",serif; font-size:15px; color:var(--ink)}
-.phone-app-body{flex:1; min-height:0; overflow-y:auto; padding:12px 14px}
+.phone-app-body{flex:1; min-height:0; overflow-y:auto; padding:12px 14px; scrollbar-gutter:stable} /* the gutter is reserved whether or not a scrollbar is showing: an app whose content grows past the screen (a 6-week month in Calendar) must not shift the layout under it */
 /* dialer */
 .dial-lead{font-size:12px; color:var(--muted); margin:0 2px 12px}
 .dial-contact{display:flex; align-items:center; gap:11px; width:100%; text-align:left; background:var(--paper); border:1px solid var(--rule); border-radius:14px; padding:5px 12px; margin-bottom:5px; cursor:pointer; font:inherit}
@@ -23638,6 +23638,8 @@ var T = {
     cal_e_d1_what: "wedding & party", cal_e_d2_what: "bbq at the loft",
     cal_p_d1_what: "garden party", cal_p_d2_what: "garden brunch",
     cal_download: "Download .ics",
+    cal_dl_e: "Download the Edmonton dates (.ics)",
+    cal_dl_p: "Download the Prague dates (.ics)",
     cal_today: "today",
     cal_gcal: "GCal",
     cal_ics_e1: "markéta ∞ behdad — Edmonton wedding",
@@ -24414,6 +24416,8 @@ var T = {
     cal_e_d1_what: "svatba & oslava", cal_e_d2_what: "grilování v loftu",
     cal_p_d1_what: "zahradní oslava", cal_p_d2_what: "zahradní brunch",
     cal_download: "Stáhnout .ics",
+    cal_dl_e: "Stáhnout termíny v Edmontonu (.ics)",
+    cal_dl_p: "Stáhnout termíny v Praze (.ics)",
     cal_today: "dnes",
     cal_gcal: "GCal",
     cal_ics_e1: "markéta ∞ behdad — svatba v Edmontonu",
@@ -41321,34 +41325,46 @@ var ABANDONED_CALL_MS = 30000;
     scheduleSaver();
   }
   window.__closeMonitorCalendar = closeCalendar; // other monitor apps clear the calendar before taking the screen
-  window.__phoneWeddingIcs = function () { downloadCalendarIcs(); }; // pocket Calendar's .ics button (fns hoisted below)
+  window.__phoneWeddingIcs = function (city) { downloadCalendarIcs(city); }; // each city card's .ics chip (fns hoisted below); no city = both cities
   window.__phoneGcalUrl = function (city) { return gcalUrl(city); }; // pocket Calendar's per-city GCal links
   // The four events, local wall-clock times in each city's own IANA zone. The .ics
-  // carries VTIMEZONE definitions (with DST rules) for both zones so the TZID
-  // references resolve in every client.
+  // carries VTIMEZONE definitions (with DST rules) for the zones it actually uses so the
+  // TZID references resolve in every client. `city` groups them for the per-city download.
   var CAL_EVENTS = [
-    { uid: "edmonton-day1", tz: "America/Edmonton", start: "20270501T160000", end: "20270502T040000", sumKey: "cal_ics_e1", locKey: "cal_edmonton" },
-    { uid: "edmonton-day2", tz: "America/Edmonton", start: "20270502T160000", end: "20270502T220000", sumKey: "cal_ics_e2", locKey: "cal_edmonton" },
-    { uid: "prague-day1", tz: "Europe/Prague", start: "20270710T150000", end: "20270711T030000", sumKey: "cal_ics_p1", locKey: "cal_prague" },
-    { uid: "prague-day2", tz: "Europe/Prague", start: "20270711T110000", end: "20270711T150000", sumKey: "cal_ics_p2", locKey: "cal_prague" }
+    { uid: "edmonton-day1", city: "e", tz: "America/Edmonton", start: "20270501T160000", end: "20270502T040000", sumKey: "cal_ics_e1", locKey: "cal_edmonton" },
+    { uid: "edmonton-day2", city: "e", tz: "America/Edmonton", start: "20270502T160000", end: "20270502T220000", sumKey: "cal_ics_e2", locKey: "cal_edmonton" },
+    { uid: "prague-day1", city: "p", tz: "Europe/Prague", start: "20270710T150000", end: "20270711T030000", sumKey: "cal_ics_p1", locKey: "cal_prague" },
+    { uid: "prague-day2", city: "p", tz: "Europe/Prague", start: "20270711T110000", end: "20270711T150000", sumKey: "cal_ics_p2", locKey: "cal_prague" }
   ];
-  function icsEscape(s) { return String(s).replace(/\\/g, "\\\\").replace(/[,;]/g, function (m) { return "\\" + m; }); }
-  function buildWeddingIcs() {
-    var d = new Date(), z = function (n) { return (n < 10 ? "0" : "") + n; };
-    var stamp = d.getUTCFullYear() + z(d.getUTCMonth() + 1) + z(d.getUTCDate()) + "T" +
-      z(d.getUTCHours()) + z(d.getUTCMinutes()) + z(d.getUTCSeconds()) + "Z";
-    var lines = [
-      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//marketa.behdad.org//weddings//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+  var CAL_VTZ = {
+    "America/Edmonton": [
       "BEGIN:VTIMEZONE", "TZID:America/Edmonton",
       "BEGIN:DAYLIGHT", "TZOFFSETFROM:-0700", "TZOFFSETTO:-0600", "TZNAME:MDT", "DTSTART:19700308T020000", "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU", "END:DAYLIGHT",
       "BEGIN:STANDARD", "TZOFFSETFROM:-0600", "TZOFFSETTO:-0700", "TZNAME:MST", "DTSTART:19701101T020000", "RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU", "END:STANDARD",
-      "END:VTIMEZONE",
+      "END:VTIMEZONE"
+    ],
+    "Europe/Prague": [
       "BEGIN:VTIMEZONE", "TZID:Europe/Prague",
       "BEGIN:DAYLIGHT", "TZOFFSETFROM:+0100", "TZOFFSETTO:+0200", "TZNAME:CEST", "DTSTART:19700329T020000", "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU", "END:DAYLIGHT",
       "BEGIN:STANDARD", "TZOFFSETFROM:+0200", "TZOFFSETTO:+0100", "TZNAME:CET", "DTSTART:19701025T030000", "RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU", "END:STANDARD",
       "END:VTIMEZONE"
+    ]
+  };
+  var CAL_ICS_FILE = { e: "marketa-behdad-edmonton.ics", p: "marketa-behdad-prague.ics" };
+  function icsEscape(s) { return String(s).replace(/\\/g, "\\\\").replace(/[,;]/g, function (m) { return "\\" + m; }); }
+  // city "e"/"p" narrows the file to that city's two days; no city = all four.
+  function buildWeddingIcs(city) {
+    var d = new Date(), z = function (n) { return (n < 10 ? "0" : "") + n; };
+    var stamp = d.getUTCFullYear() + z(d.getUTCMonth() + 1) + z(d.getUTCDate()) + "T" +
+      z(d.getUTCHours()) + z(d.getUTCMinutes()) + z(d.getUTCSeconds()) + "Z";
+    var events = CAL_EVENTS.filter(function (ev) { return !city || ev.city === city; });
+    var lines = [
+      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//marketa.behdad.org//weddings//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"
     ];
-    CAL_EVENTS.forEach(function (ev) {
+    Object.keys(CAL_VTZ).forEach(function (tz) { // only the zones this file's events reference
+      if (events.some(function (ev) { return ev.tz === tz; })) lines = lines.concat(CAL_VTZ[tz]);
+    });
+    events.forEach(function (ev) {
       lines.push(
         "BEGIN:VEVENT",
         "UID:" + ev.uid + "@marketa.behdad.org",
@@ -41363,14 +41379,14 @@ var ABANDONED_CALL_MS = 30000;
     lines.push("END:VCALENDAR");
     return lines.join("\r\n") + "\r\n";
   }
-  function downloadCalendarIcs() {
+  function downloadCalendarIcs(city) {
     // same blob-anchor pattern as downloadPhoto
     try {
-      var blob = new Blob([buildWeddingIcs()], { type: "text/calendar;charset=utf-8" });
+      var blob = new Blob([buildWeddingIcs(city)], { type: "text/calendar;charset=utf-8" });
       var url = URL.createObjectURL(blob);
       var a = document.createElement("a");
       a.href = url;
-      a.download = "marketa-behdad-weddings.ics";
+      a.download = CAL_ICS_FILE[city] || "marketa-behdad-weddings.ics";
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -68425,7 +68441,16 @@ function spawnDustMote(container) {
   // HTML so it survives the office-monitor foreignObject scale.
   function calCard(spec, container, surface) { // one CITY card holding both of that city's event rows
     var card = document.createElement("div"); card.className = "calx-card " + spec.cls;
-    var city = document.createElement("div"); city.className = "calx-card-city"; city.textContent = calStr(spec.titleKey); card.appendChild(city);
+    // city name + that city's own .ics, top-right: someone coming only to Prague gets
+    // only the Prague dates. Riding the title line costs no vertical space, which is what
+    // lets a 6-week month clear the pocket screen without the pane scrolling.
+    var head = document.createElement("div"); head.className = "calx-card-head";
+    var city = document.createElement("div"); city.className = "calx-card-city"; city.textContent = calStr(spec.titleKey); head.appendChild(city);
+    var dl = document.createElement("button"); dl.type = "button"; dl.className = "calx-ics"; dl.textContent = calStr("cal_download");
+    dl.setAttribute("aria-label", calStr(spec.dlKey)); dl.title = calStr(spec.dlKey);
+    dl.addEventListener("click", function (e) { e.stopPropagation(); if (window.__phoneWeddingIcs) window.__phoneWeddingIcs(spec.icsCity); });
+    head.appendChild(dl);
+    card.appendChild(head);
     spec.rows.forEach(function (rw) {
       var row = document.createElement("div"); row.className = "calx-card-row"; row.setAttribute("role", "button"); row.tabIndex = 0;
       var txt = document.createElement("div"); txt.className = "calx-card-txt";
@@ -68444,17 +68469,14 @@ function spawnDustMote(container) {
   }
   function calBuildCards(container, surface) {
     var wrap = document.createElement("div"); wrap.className = "calx-cards";
-    wrap.appendChild(calCard({ titleKey: "cal_edmonton", cls: "calx-card-e", rows: [
+    wrap.appendChild(calCard({ titleKey: "cal_edmonton", cls: "calx-card-e", icsCity: "e", dlKey: "cal_dl_e", rows: [
       { when: "cal_e_d1", what: "cal_e_d1_what", ev: "e1", y: 2027, mo: 4, d: 1 },
       { when: "cal_e_d2", what: "cal_e_d2_what", ev: "e2", y: 2027, mo: 4, d: 2 }
     ] }, container, surface));
-    wrap.appendChild(calCard({ titleKey: "cal_prague", cls: "calx-card-p", rows: [
+    wrap.appendChild(calCard({ titleKey: "cal_prague", cls: "calx-card-p", icsCity: "p", dlKey: "cal_dl_p", rows: [
       { when: "cal_p_d1", what: "cal_p_d1_what", ev: "p1", y: 2027, mo: 6, d: 10 },
       { when: "cal_p_d2", what: "cal_p_d2_what", ev: "p2", y: 2027, mo: 6, d: 11 }
     ] }, container, surface));
-    var ics = document.createElement("button"); ics.type = "button"; ics.className = "calx-ics"; ics.textContent = calStr("cal_download");
-    ics.addEventListener("click", function (e) { e.stopPropagation(); if (window.__phoneWeddingIcs) window.__phoneWeddingIcs(); });
-    wrap.appendChild(ics);
     return wrap;
   }
   window.__calendarRender = function (container, surface) {

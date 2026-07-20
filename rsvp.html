@@ -59924,6 +59924,10 @@ function spawnDustMote(container) {
     // landing at a RANDOM guest each run, who leaps (their signature flare) to catch it. The
     // bouquet node self-removes on onfinish (one node, capped — nothing accumulates).
     var bouquetOn = false, bouquetTimers = [];
+    var bouquetStrip = document.getElementById("loft-game-strip");
+    var HAND = { x: 356, y: 196 };                 // Markéta's raised hand (garden-local)
+    // aim state (interactive toss): a cursor-tracking bouquet + the listeners that drive it
+    var aiming = false, aimBouquet = null, aimMove = null, aimDown = null;
     // candidate catchers (guests present on the floor, excluding the hosts); one is picked per run
     var CATCHERS = [
       { sel: ".g-goli", flare: "goli-flare" }, { sel: ".g-lauren", flare: "lauren-flare" },
@@ -59937,8 +59941,14 @@ function spawnDustMote(container) {
       for (var i = 0; i < stale.length; i++) stale[i].parentNode && stale[i].parentNode.removeChild(stale[i]);
     }
     function clearBouquetTimers() { bouquetTimers.forEach(clearTimeout); bouquetTimers.length = 0; }
+    function teardownAim() { // drop the cursor-tracking listeners so nothing leaks past the moment
+      if (aimMove) { if (bouquetStrip) bouquetStrip.removeEventListener("pointermove", aimMove); aimMove = null; }
+      if (aimDown) { if (bouquetStrip) bouquetStrip.removeEventListener("pointerdown", aimDown); aimDown = null; }
+      aiming = false; aimBouquet = null;
+    }
     function endBouquetToss() {
       bouquetOn = false; window.__bouquetOn = false;
+      teardownAim();
       clearBouquetTimers();
       clearBouquetNode();
       group.classList.remove("bouquet-wind");
@@ -59964,15 +59974,58 @@ function spawnDustMote(container) {
         '<circle cx="-2" cy="-1" r="1.2" fill="#fff2cf"/><circle cx="2" cy="0" r="1.1" fill="#fff2cf"/>';
       return g;
     }
-    function startBouquetToss() {
-      if (!onFloor()) return false;
-      if (bouquetOn) return true;                   // idempotent (storm-safe)
-      bouquetOn = true; window.__bouquetOn = true;
-      clearBouquetNode();                           // drop any stray node first (cap → nothing piles)
-      // pick a random present catcher (fall back to Goli if the pick isn't on the floor)
+    // garden-guests-local point for a client (pointer) coordinate. garden-guests carries no live
+    // CSS transform of its own, so its getScreenCTM is reliable (the caveat is live-transformed
+    // nodes); reading it while no flight is in progress also sidesteps the virtual-time staleness.
+    function bouquetLocalXY(e) {
+      if (!bouquetStrip || !group.getScreenCTM || !bouquetStrip.createSVGPoint) return null;
+      try {
+        var m = group.getScreenCTM(); if (!m) return null;
+        var pt = bouquetStrip.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+        var p = pt.matrixTransform(m.inverse());
+        return { x: p.x, y: p.y };
+      } catch (err) { return null; }
+    }
+    // the present catcher whose head sits nearest the landing point (squared distance is enough)
+    function nearestCatcher(target) {
+      var best = null, bd = Infinity;
+      CATCHERS.forEach(function (c) {
+        if (!group.querySelector(c.sel)) return;
+        var p = guestHeadXY(c.sel); if (!p) return;
+        var dx = p.x - target.x, dy = p.y - target.y, d = dx * dx + dy * dy;
+        if (d < bd) { bd = d; best = c; }
+      });
+      return best;
+    }
+    // the shared high-arc flight + linger + fade, on the bouquet node itself (the WAAPI keyframes
+    // fully drive its transform for the whole flight, so there's no static transform to clobber).
+    function flyBouquet(b, from, to, catcher) {
+      var apexX = (from.x + to.x) / 2;
+      var apexY = Math.min(from.y, to.y) - 96;      // sail high over the crowd
+      var frames = [
+        { transform: "translate(" + from.x + "px," + from.y + "px) rotate(0deg)", opacity: 1, offset: 0 },
+        { transform: "translate(" + apexX + "px," + apexY + "px) rotate(220deg)", opacity: 1, offset: 0.5 },
+        { transform: "translate(" + to.x + "px," + to.y + "px) rotate(430deg)", opacity: 1, offset: 1 }
+      ];
+      var anim;
+      try { anim = b.animate(frames, { duration: 1150, easing: "cubic-bezier(.4,0,.5,1)", fill: "forwards" }); } catch (e) { anim = null; }
+      function land() {
+        if (onFloor() && catcher) { flareOne(catcher.sel, catcher.flare); playCheerSfx(); cheerCrowd([catcher.sel, ".g-behdad", ".g-marketa"]); }
+        // let the bouquet linger a beat in the catcher's hands, then fade + remove
+        bouquetTimers.push(setTimeout(function () {
+          try {
+            var fade = b.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 500, fill: "forwards" });
+            fade.onfinish = function () { if (b.parentNode) b.parentNode.removeChild(b); endBouquetToss(); };
+            if (!fade || !fade.onfinish) { if (b.parentNode) b.parentNode.removeChild(b); endBouquetToss(); }
+          } catch (e2) { if (b.parentNode) b.parentNode.removeChild(b); endBouquetToss(); }
+        }, 700));
+      }
+      if (anim) anim.onfinish = land; else { b.setAttribute("transform", "translate(" + to.x + "," + to.y + ")"); land(); }
+    }
+    // AUTO toss (reduced motion / autoplay kiosk — no cursor to aim): a random present catcher
+    function autoToss() {
       var pool = CATCHERS.filter(function (c) { return group.querySelector(c.sel); });
       var pick = pool.length ? pool[Math.floor(Math.random() * pool.length)] : CATCHERS[0];
-      var from = { x: 356, y: 196 };                // Markéta's raised hand
       var to = guestHeadXY(pick.sel) || { x: 120, y: 200 };
       to = { x: to.x, y: to.y - 6 };                // land just above the catcher's head
       group.classList.add("bouquet-wind");          // Markéta cocks her arm (CSS one-shot)
@@ -59983,36 +60036,65 @@ function spawnDustMote(container) {
           if (onFloor()) { flareOne(pick.sel, pick.flare); playCheerSfx(); }
           endBouquetToss();
         }, 260));
-        return true;
+        return;
       }
-      // after the wind-up, the bouquet flies (a high arc) from Markéta to the catcher
       bouquetTimers.push(setTimeout(function () {
         if (!onFloor()) { endBouquetToss(); return; }
         var b = makeBouquet();
-        b.setAttribute("transform", "translate(" + from.x + "," + from.y + ")");
+        b.setAttribute("transform", "translate(" + HAND.x + "," + HAND.y + ")");
         group.appendChild(b);
-        var apexX = (from.x + to.x) / 2;
-        var apexY = Math.min(from.y, to.y) - 96;    // sail high over the crowd
-        var frames = [
-          { transform: "translate(" + from.x + "px," + from.y + "px) rotate(0deg)", opacity: 1, offset: 0 },
-          { transform: "translate(" + apexX + "px," + apexY + "px) rotate(220deg)", opacity: 1, offset: 0.5 },
-          { transform: "translate(" + to.x + "px," + to.y + "px) rotate(430deg)", opacity: 1, offset: 1 }
-        ];
-        var anim;
-        try { anim = b.animate(frames, { duration: 1150, easing: "cubic-bezier(.4,0,.5,1)", fill: "forwards" }); } catch (e) { anim = null; }
-        function land() {
-          if (onFloor()) { flareOne(pick.sel, pick.flare); playCheerSfx(); cheerCrowd([pick.sel, ".g-behdad", ".g-marketa"]); }
-          // let the bouquet linger a beat in the catcher's hands, then fade + remove
-          bouquetTimers.push(setTimeout(function () {
-            try {
-              var fade = b.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 500, fill: "forwards" });
-              fade.onfinish = function () { if (b.parentNode) b.parentNode.removeChild(b); endBouquetToss(); };
-              if (!fade || !fade.onfinish) { if (b.parentNode) b.parentNode.removeChild(b); endBouquetToss(); }
-            } catch (e2) { if (b.parentNode) b.parentNode.removeChild(b); endBouquetToss(); }
-          }, 700));
-        }
-        if (anim) anim.onfinish = land; else { b.setAttribute("transform", "translate(" + to.x + "," + to.y + ")"); land(); }
+        flyBouquet(b, HAND, to, pick);
       }, 380));
+    }
+    // release the aimed bouquet: arc from Markéta's hand to the aimed point; nearest guest catches
+    function throwBouquet(target) {
+      var b = aimBouquet;
+      teardownAim();                                // stop tracking the cursor; drop listeners
+      if (!b) return;
+      if (!onFloor()) { endBouquetToss(); return; }
+      b.classList.remove("cbh-bouquet-aim");
+      var to = { x: target.x, y: target.y };
+      var catcher = nearestCatcher(to);
+      b.setAttribute("transform", "translate(" + HAND.x + "," + HAND.y + ")"); // snap back to the hand to launch
+      group.classList.add("bouquet-wind");          // Markéta cocks her arm (CSS one-shot)
+      bouquetTimers.push(setTimeout(function () { group.classList.remove("bouquet-wind"); }, 520));
+      bouquetTimers.push(setTimeout(function () {   // a beat of wind-up before release reads
+        if (!onFloor()) { endBouquetToss(); return; }
+        flyBouquet(b, HAND, to, catcher);
+      }, 180));
+    }
+    // INTERACTIVE aim: a bouquet that tracks the cursor over the garden; a click/tap throws it
+    function startAim() {
+      var b = makeBouquet();
+      b.classList.add("cbh-bouquet-aim");
+      b.setAttribute("transform", "translate(" + HAND.x + "," + HAND.y + ")");
+      group.appendChild(b);
+      aimBouquet = b; aiming = true;
+      aimMove = function (e) {
+        if (!aiming || !aimBouquet) return;
+        var p = bouquetLocalXY(e); if (!p) return;
+        aimBouquet.setAttribute("transform", "translate(" + p.x + "," + p.y + ")");
+      };
+      aimDown = function (e) {
+        if (!aiming || !aimBouquet) return;
+        var p = bouquetLocalXY(e); if (!p) return;
+        if (e.preventDefault) e.preventDefault();
+        throwBouquet(p);
+      };
+      if (bouquetStrip) {
+        bouquetStrip.addEventListener("pointermove", aimMove);
+        bouquetStrip.addEventListener("pointerdown", aimDown);
+      }
+    }
+    function startBouquetToss() {
+      if (!onFloor()) return false;
+      if (bouquetOn) return true;                   // idempotent (storm-safe)
+      bouquetOn = true; window.__bouquetOn = true;
+      clearBouquetNode();                           // drop any stray node first (cap → nothing piles)
+      // reduced motion or the autoplay kiosk (no cursor) fall back to the classic auto-toss;
+      // everyone else aims the bouquet by hand
+      var auto = reducedMotion() || (window.__autoplayOn && window.__autoplayOn());
+      if (auto) autoToss(); else startAim();
       return true;
     }
     window.__bouquetOn = false;
@@ -67168,7 +67250,7 @@ function spawnDustMote(container) {
     function () { return window.__startBouquetToss && window.__startBouquetToss(); },
     function () { return window.__endBouquetToss && window.__endBouquetToss(); },
     null, null,
-    "💐 Markéta winds up and tosses — the bouquet sails over the crowd and somebody LEAPS to catch it!",
+    "💐 Bouquet toss! Aim it — the bouquet tracks your cursor; click (or tap) to send it sailing, and whoever's nearest LEAPS to catch it. (auto-tosses under reduced-motion / autoplay.)",
     "the bouquet toss winds down — the party rolls on.");
   window.chairlift = cbhMoment(
     function () { return window.__startChairLift && window.__startChairLift(); },

@@ -11,10 +11,11 @@
 // is rendered in all 8 night x wx states with an identical lineup and seed, rasterised through a
 // canvas, and compared pixel-by-pixel.
 //
-// PEAK, not mean, is the discriminator: adding a whole person to the bar changes only ~28% of
-// pixels but peaks at 207, while day-vs-night at the bar changes 42% of them and peaks at 23 —
-// a uniform tint over the same drawing. Measured spread across every pair the app produces:
-// rejected 23, weakest kept 43 (the nook's brick), everything else >= 71.
+// The measure is the PEAK per-channel delta anywhere in frame, not the mean and not the share of
+// pixels touched: day-vs-night at the bar moves 42% of the pixels but no single channel by more
+// than 24/255, a uniform tint over one drawing, while adding a whole person to the same shot moves
+// fewer pixels and peaks at 207. Every run prints the margin either side of MATERIAL_PEAK — as
+// shipped, the loudest merged pair is 24 and the quietest separated one 61.
 //
 // uv (blacklight) and the balcony aurora are deliberately NOT enumerated: they render but are
 // absent from the signature, which is the opposite failure (suppression, not duplication) and is
@@ -28,7 +29,7 @@ import path from 'path';
 import { spawn } from 'child_process';
 
 const REPO = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const MATERIAL_PEAK = 35; // a channel delta this large somewhere in frame = a different photograph
+const MATERIAL_PEAK = 30; // a channel delta this large somewhere in frame = a different photograph
 
 // __albumPhotoSvg + __albumSkySig are permanent test hooks in rsvp.html; the page is loaded as-is.
 const SRC = path.join(REPO, 'rsvp.html');
@@ -63,6 +64,9 @@ for (const night of [false, true]) for (const wx of WX) STATES.push({ night, wx,
 const label = s => (s.night ? 'night' : 'day') + '/' + (s.wx || 'clear');
 
 let failures = 0;
+// the run's tightest calls, printed at the end: this test lives or dies by MATERIAL_PEAK sitting
+// in clear air between them, and rasterisation can shift a few counts between Chrome builds
+let tightestKept = { peak: Infinity, what: '(none)' }, tightestMerged = { peak: -1, what: '(none)' };
 const pass = m => console.log('  ✓ ' + m);
 const fail = (m, d) => { failures++; console.log('  ✗ ' + m); if (d) console.log('      ' + d); };
 
@@ -137,6 +141,8 @@ const fail = (m, d) => { failures++; console.log('  ✗ ' + m); if (d) console.l
         return JSON.stringify({pct:+(100*changed/n).toFixed(1),max:max});})()`));
       const same = sigs[i] === sigs[j];
       const pair = label(STATES[i]) + ' vs ' + label(STATES[j]);
+      if (same && d.max > tightestMerged.peak) tightestMerged = { peak: d.max, what: room + ' ' + pair };
+      if (!same && d.max < tightestKept.peak) tightestKept = { peak: d.max, what: room + ' ' + pair };
       if (same && d.max >= MATERIAL_PEAK)
         fail(room + ': ' + pair + ' share a signature but render as different photographs — one is being suppressed',
           'peak channel delta ' + d.max + ' (>= ' + MATERIAL_PEAK + '), ' + d.pct + '% of pixels differ');
@@ -150,6 +156,9 @@ const fail = (m, d) => { failures++; console.log('  ✗ ' + m); if (d) console.l
   }
 
   ws.close(); cleanup();
-  console.log(failures ? '\n' + failures + ' axis check(s) failed.' : '\nAll album-axis assertions passed.');
+  console.log('\nmargin around MATERIAL_PEAK=' + MATERIAL_PEAK +
+    ':  loudest merged pair ' + tightestMerged.peak + ' (' + tightestMerged.what + ')' +
+    '   quietest separated pair ' + tightestKept.peak + ' (' + tightestKept.what + ')');
+  console.log(failures ? '\n' + failures + ' axis check(s) failed.' : 'All album-axis assertions passed.');
   process.exit(failures ? 1 : 0);
 })().catch(e => { console.error('ERR', e); cleanup(); process.exit(1); });

@@ -28493,6 +28493,7 @@ document.addEventListener("click", function (e) {
     window.__updateGardenAurora();
     return shouldRun();
   };
+  window.__auroraShowing = function () { return shouldRun(); }; // pure status query (no override side-effect), for aurora() with no arg
   window.__gardenAuroraRaf = function () { return raf; }; // test hook: 0 when the loop is stopped
   document.addEventListener("visibilitychange", function () { window.__updateGardenAurora(); });
   window.addEventListener("focus", function () { window.__updateGardenAurora(); });
@@ -36589,6 +36590,7 @@ var ABANDONED_CALL_MS = 30000;
     fullscreen: "fullscreen(true) — fill the screen with the loft; fullscreen(false) leaves; fullscreen() reports whether it's on",
     rainbow: "rainbow() — arc a rainbow over the balcony",
     aurora: "aurora(true) — the northern lights over the garden window (steps into the garden, falls to a clear dusk first); aurora(false) fades them; aurora() reports whether they're showing. They also appear on their own on most clear garden nights (esp. with the UV party off), never during a storm",
+    twilight: "twilight(true) — the warm dawn/dusk sky-wash over the balcony (steps out to the balcony); twilight(false) clears it; twilight() reports its state. It also appears on its own within 40 min of Edmonton's real sunrise/sunset",
     smoker: "smoker(true) — fire up the balcony smoker, low and slow; smoker(false) shuts it down; smoker() reports whether it's on (bbq is an alias)",
     bbq: "bbq(true) — start the whole BBQ (lid up + coals lit); bbq(false) shuts it down; bbq() reports whether it's smoking. For just the firebox or just the lid, see smoker / smokerlid",
     smokerlid: "smokerlid(true) — raise the smoker lid; smokerlid(false) lowers it; smokerlid() reports whether it's open",
@@ -36704,7 +36706,7 @@ var ABANDONED_CALL_MS = 30000;
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · sharecard() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · storm() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · sharecard() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora() · twilight() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · cat() · scripts() · run(\"name\") · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
@@ -36957,7 +36959,7 @@ var ABANDONED_CALL_MS = 30000;
     "help", "clear", "laser", "party", "chase", "guests", "aligoli", "arrive", "roster", "reset", "autoplay", "quit", "blacklight", "uv", "trip", "room",
     "goto", "rooms", "daylight", "night", "day", "season", "birthday", "play", "pause", "temp", "weather",
     "clock", "time", "sharecard", "projector", "storm", "dance", "jukebox", "dj", "firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift", "cocktail", "lang", "caption", "candle",
-    "butterfly", "water", "countdown", "fullscreen", "rainbow", "aurora", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood", "kidsAsleep",
+    "butterfly", "water", "countdown", "fullscreen", "rainbow", "aurora", "twilight", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "servefood", "kidsAsleep",
     "phone", "album", "message", "madla", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "edit",
     "confetti", "fireworks", "lanterns", "cat", "irene", "visitors", "mouses", "piano", "classic", "kitten", "ukelele", "audio", "music",
@@ -47084,7 +47086,7 @@ async def localfont(name):
     // latches it off until a reset. Gated visible+focused (the crickets rule: an autonomous
     // timer that flips the scene) so a backgrounded/blurred tab never flips on its own — which
     // also keeps every headless test on the untouched daytime baseline.
-    var autoStopped = false, autoTimer = null;
+    var autoStopped = false, autoTimer = null, twilightForced = false;
     var TWI_MIN = 40; // half-width of each dawn/dusk twilight window, minutes
     function edmMinutes() {
       if (typeof window.__edmNowMins === "function") return window.__edmNowMins(); // test hook: fake the clock
@@ -47111,15 +47113,23 @@ async def localfont(name):
     }
     function applyAutoDayNight() {
       if (document.hidden || !document.hasFocus()) return; // crickets rule + never in a headless/backgrounded tab
-      if (autoStopped || window.__gardenPartyOn || autoOverridden()) { stageBalcony.classList.remove("twilight"); return; }
+      if (autoStopped || window.__gardenPartyOn || autoOverridden()) { if (!twilightForced) stageBalcony.classList.remove("twilight"); return; }
       var t = sunTimes(), now = edmMinutes();
       var wantNight = now < t.sr || now >= t.ss;
       if (stageBalcony.classList.contains("dusk") !== wantNight) toggleDusk(true); // silent: an unprompted flip shouldn't chime
-      stageBalcony.classList.toggle("twilight", Math.min(Math.abs(now - t.sr), Math.abs(now - t.ss)) <= TWI_MIN);
+      if (!twilightForced) stageBalcony.classList.toggle("twilight", Math.min(Math.abs(now - t.sr), Math.abs(now - t.ss)) <= TWI_MIN);
     }
     window.__applyAutoDayNight = applyAutoDayNight; // the weather fetch re-applies once real sunrise/sunset land; also a test hook
-    window.__stopAutoDayNight = function () { autoStopped = true; clearTimeout(autoTimer); stageBalcony.classList.remove("twilight"); };
-    window.__startAutoDayNight = function () { autoStopped = false; applyAutoDayNight(); };
+    window.__stopAutoDayNight = function () { autoStopped = true; clearTimeout(autoTimer); if (!twilightForced) stageBalcony.classList.remove("twilight"); };
+    window.__startAutoDayNight = function () { autoStopped = false; twilightForced = false; applyAutoDayNight(); };
+    // force the twilight wash on/off (the twilight() console command); a forced wash is left
+    // alone by the auto loop until it's cleared or a reset runs __startAutoDayNight.
+    window.__setTwilight = function (on) {
+      if (arguments.length === 0) return stageBalcony.classList.contains("twilight");
+      twilightForced = !!on;
+      stageBalcony.classList.toggle("twilight", !!on);
+      return !!on;
+    };
     function autoTick() { applyAutoDayNight(); autoTimer = setTimeout(autoTick, 180000); } // slow self-reschedule (~3 min) catches the dawn/dusk crossing; > every test's virtual-time budget
     autoTimer = setTimeout(autoTick, 1500); // first pass after the rest of the loft's IIFEs register their __update hooks
     document.addEventListener("visibilitychange", applyAutoDayNight);
@@ -68135,7 +68145,10 @@ function spawnDustMote(container) {
   // its rAF loop are driven by __setAurora / __updateGardenAurora (the .aurora-force class).
   window.aurora = function (arg) {
     if (!window.__setAurora) return false;
-    if (arguments.length === 0) return window.__setAurora(); // no arg → is the aurora showing right now?
+    if (arguments.length === 0) { // no arg → status (pure, no override change)
+      var s = window.__auroraShowing ? window.__auroraShowing() : false;
+      return s ? "🌌 the northern lights are showing." : "🌌 no aurora right now — aurora(true) to summon them (or wait for a clear night).";
+    }
     var on = !!arg;
     if (!on) { var r = window.__setAurora(false); narrate(r, "", "🌌 the northern lights fade out."); return r; }
     if (window.goToStage) window.goToStage("garden");     // the aurora hangs in the garden window
@@ -68144,6 +68157,20 @@ function spawnDustMote(container) {
     var shown = window.__setAurora(true);
     narrate(shown, "🌌 the northern lights ripple over the garden.", "🌌 the northern lights are drifting somewhere overhead.");
     return shown;
+  };
+
+  // twilight() → status · twilight(true/false) → force the warm dawn/dusk sky-wash on the
+  // balcony on/off. Auto-appears within 40 min of Edmonton's real sunrise/sunset; this summons it.
+  window.twilight = function (arg) {
+    if (!window.__setTwilight) return false;
+    if (arguments.length === 0) {
+      return window.__setTwilight() ? "🌅 twilight is glowing over the balcony." : "🌅 no twilight right now — it auto-appears within 40 min of Edmonton's sunrise/sunset. twilight(true) to summon it.";
+    }
+    var on = !!arg;
+    if (on && window.goToStage) window.goToStage("balcony"); // the wash is over the balcony sky
+    var r = window.__setTwilight(on);
+    narrate(on, "🌅 twilight settles over the balcony.", "🌅 twilight fades.");
+    return r;
   };
 
   window.dance = function (name) {

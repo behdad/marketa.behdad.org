@@ -8152,7 +8152,8 @@ section{margin:1.9rem 0}
 /* The worn wreaths are the couple's alone and only on their own night: they live INSIDE the
    two head groups (so they ride each head's tilt) and the overlay class is what reveals them. */
 /* The bloom: closed by default, open only in the midnight window of the night it belongs to.
-   Both classes required — .svatojanska is the date, .fern-hour is the clock. */
+   .fern-hour already carries both halves of that verdict (the Jun 23→24 crossing, not just the
+   clock); .svatojanska is kept in the selector so the decor and the bloom can't disagree. */
 #garden-fern-flower{opacity:0; transition:opacity 2.2s ease}
 #loft-game-strip.svatojanska.fern-hour #garden-fern-flower{opacity:1}
 @media (prefers-reduced-motion: reduce){#garden-fern-flower{transition:none}}
@@ -50266,7 +50267,12 @@ async def localfont(name):
     // / 18 ≈ 0.73 on the solstice itself. Which is the real thing: at this latitude midsummer
     // never reaches astronomical night at all, so the loft's sky doesn't either. Weeks, not a day.
     function nightDepth() {
-      var g = window.__sunGeom ? window.__sunGeom() : null;
+      // Read the pretend-date the rest of the preview path runs on. __sunGeom's own default is
+      // __now(), which honours ?date=/#date= but is blind to season()/the 's' key — so on that
+      // path the solstice sky stayed ordinary, and previewing an ordinary season from a real June
+      // date washed one out that shouldn't be. Declination is a day's property, so noon is enough.
+      var s = window.__seasonDate ? window.__seasonDate() : null;
+      var g = window.__sunGeom ? window.__sunGeom(s ? new Date(s.y, s.m, s.d, 12) : null) : null;
       if (!g) return 1; // no model, no change: the flat night the scene shipped with
       return Math.max(0, Math.min(1, ((90 - g.lat) - g.decl) / 18));
     }
@@ -50279,17 +50285,26 @@ async def localfont(name):
     }
     window.__stampNightDepth = stampNightDepth;
     stampNightDepth();
-    // The fern flowers at midnight and only at midnight — the legend is specific about it. This is
-    // the loft's own wall clock (override-aware, so ?time= and the time-lapse move it), read the
-    // same way the May-2 BBQ window is. A class toggle spawns nothing and allocates nothing, so
-    // the poll is hidden-tab safe for the same reason the desk clock's repaint is; the CSS pairs
-    // it with .svatojanska, so it means nothing on any other night.
+    // The fern flowers at midnight and only at midnight — the legend is specific about it, and it
+    // means ONE midnight: the one that ends Svatojánská noc (Jun 23) and opens sv. Jan's day
+    // (Jun 24). The clock alone can't say that. .svatojanska spans both days, so a pure 23:50–00:10
+    // class would also open on Jun 23's small hours (that's the Jun 22→23 midnight) and Jun 24's
+    // late evening (the Jun 25 one) — four windows a year instead of one. So the DAY is half the
+    // test: the eve owns the minutes before midnight, the feast owns the minutes after.
+    // The day comes from seasonDate(), the same pretend-date .svatojanska itself is toggled from,
+    // so a season preview and ?date= both land it. The clock is the loft's own wall clock
+    // (override-aware, so ?time= and the time-lapse move it), read the way the May-2 BBQ window is.
+    // A class toggle spawns nothing and allocates nothing, so the poll is hidden-tab safe for the
+    // same reason the desk clock's repaint is.
     var FERN_FROM = 23 * 60 + 50, FERN_TO = 10; // 23:50 → 00:10, across the midnight it belongs to
     function stampFernHour() {
       var strip = document.getElementById("loft-game-strip");
       if (!strip) return;
+      var s = window.__seasonDate ? window.__seasonDate() : null;
       var mins = edmMinutes();
-      strip.classList.toggle("fern-hour", mins >= FERN_FROM || mins < FERN_TO);
+      var eve = !!s && s.m === 5 && s.d === 23 && mins >= FERN_FROM;  // Jun 23, on the near side of midnight
+      var feast = !!s && s.m === 5 && s.d === 24 && mins < FERN_TO;   // Jun 24, on the far side of the same midnight
+      strip.classList.toggle("fern-hour", eve || feast);
     }
     window.__stampFernHour = stampFernHour;
     stampFernHour();

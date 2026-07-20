@@ -165,8 +165,8 @@ footer{margin-top:2.6rem}
 .roster-toggle{
   position:absolute; z-index:21; top:12px; right:12px;
   border:1px solid rgba(120,60,70,.3); background:var(--paper); color:var(--wine);
-  font-family:"Source Serif 4",Georgia,serif; font-size:.78rem; font-weight:600;
-  padding:.28rem .6rem; border-radius:999px; cursor:pointer; opacity:0; pointer-events:none;
+  font-family:"Source Serif 4",Georgia,serif; font-size:11px; font-weight:600;
+  padding:4px 9px; border-radius:11px; cursor:pointer; opacity:0; pointer-events:none;
   box-shadow:0 3px 10px rgba(69,58,49,.18); transition:opacity .3s ease;
 }
 .roster-toggle.avail{opacity:.92; pointer-events:auto}
@@ -7059,7 +7059,7 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
    share their day/night + storm state, so both light up (and both hide in a storm) together. */
 #balcony-twilight{opacity:0; transition:opacity 1.4s ease; mix-blend-mode:screen}
 #stage-balcony.twilight #balcony-twilight{opacity:0.85}
-#stage-balcony.storming #balcony-twilight{opacity:0; transition:opacity .8s ease}
+#stage-balcony.storming.twilight #balcony-twilight{opacity:0.6} /* dawn/dusk glow still reads through weather, just muted */
 @media (prefers-reduced-motion: reduce){#balcony-twilight{transition:none}}
 #balcony-aurora{opacity:0; transition:opacity 1.2s ease; mix-blend-mode:screen}
 #stage-balcony.dusk #balcony-aurora{opacity:0.9}
@@ -20673,10 +20673,10 @@ section{margin:1.9rem 0}
 <g id="balcony-twilight" clip-path="url(#balcony-sky-clip)" pointer-events="none" aria-hidden="true">
 <defs>
 <linearGradient id="balcony-twilight-grad" x1="0" y1="0" x2="0" y2="1">
-<stop offset="0" stop-color="#3a2b6b" stop-opacity="0.12"/>
-<stop offset="0.46" stop-color="#8a5aa8" stop-opacity="0.46"/>
-<stop offset="0.78" stop-color="#e08a5a" stop-opacity="0.66"/>
-<stop offset="1" stop-color="#ffce8f" stop-opacity="0.82"/>
+<stop offset="0" stop-color="#6a3f86" stop-opacity="0.16"/>
+<stop offset="0.42" stop-color="#c76a9c" stop-opacity="0.52"/>
+<stop offset="0.74" stop-color="#f0895f" stop-opacity="0.7"/>
+<stop offset="1" stop-color="#ffd39a" stop-opacity="0.86"/>
 </linearGradient>
 </defs>
 <rect x="418" y="0" width="180" height="118" fill="url(#balcony-twilight-grad)"/>
@@ -44156,7 +44156,7 @@ async def localfont(name):
         '<div class="pmk-play">' + tr("clk_playtime") + ' <b class="pmk-pt"></b></div>' +
         '<div class="pmk-time-ctl">' +
           '<label class="pmk-tl">' + tr("clk_jump_label") + '</label>' +
-          '<div class="pmk-trow"><input type="range" class="pmk-slider" min="0" max="23" step="1" aria-label="' + tr("clk_jump_label") + '"><span class="pmk-tval"></span></div>' +
+          '<div class="pmk-trow"><input type="range" class="pmk-slider" min="0" max="47" step="1" aria-label="' + tr("clk_jump_label") + '"><span class="pmk-tval"></span></div>' +
           '<div class="pmk-trow2"><button type="button" class="pmk-treset" title="' + tr("clk_reset") + '" aria-label="' + tr("clk_reset") + '">↻</button></div>' +
           '<div class="pmk-trow3"><button type="button" class="pmk-sunrise" title="' + tr("clk_sunrise") + '" aria-label="' + tr("clk_sunrise") + '">☀ <span class="pmk-sr-t"></span></button><button type="button" class="pmk-sunset" title="' + tr("clk_sunset") + '" aria-label="' + tr("clk_sunset") + '"><span class="pmk-sunset-glyph">' + SUNSET_GLYPH() + '</span> <span class="pmk-ss-t"></span></button></div>' +
         '</div>';
@@ -44212,13 +44212,14 @@ async def localfont(name):
         if (window.__refreshTimePill) window.__refreshTimePill();
       }
       function sunMins() { var s = window.__edmSun; return { sr: (s && typeof s.sr === "number") ? s.sr : 7 * 60, ss: (s && typeof s.ss === "number") ? s.ss : 20 * 60 }; } // mirrors sunTimes() incl. the offline defaults
-      function jumpToMins(mn) { setTimeParam(fmtMins(((mn % 1440) + 1440) % 1440)); applyTimeJump(); slider.value = nowHour(); updLabel(); tick(); }
       var slider = wrap.querySelector(".pmk-slider"), tval = wrap.querySelector(".pmk-tval");
-      function nowHour() { var ov = timeOv(); return ov != null ? Math.floor(ov / 60) : Math.floor((tzMins("America/Edmonton") || 0) / 60); }
-      function updLabel() { tval.textContent = z(+slider.value) + ":00"; var sm = sunMins(); wrap.querySelector(".pmk-sr-t").textContent = fmtMins(sm.sr); wrap.querySelector(".pmk-ss-t").textContent = fmtMins(sm.ss); }
-      slider.value = nowHour(); updLabel();
-      slider.addEventListener("input", function () { setTimeParam(z(+slider.value) + ":00"); applyTimeJump(); updLabel(); tick(); }); // live: the sky turns as you drag
-      wrap.querySelector(".pmk-treset").addEventListener("click", function () { setTimeParam(null); applyTimeJump(); slider.value = nowHour(); updLabel(); tick(); });
+      function slMins(v) { v = +v; return (Math.floor(v / 2) * 60) + (v % 2 ? 30 : 0); } // slider unit → minutes (0–47 half-hours)
+      function nowHalf() { var ov = timeOv(); var mn = ov != null ? ov : (tzMins("America/Edmonton") || 0); return Math.min(47, Math.round(mn / 30)); }
+      function jumpToMins(mn) { setTimeParam(fmtMins(((mn % 1440) + 1440) % 1440)); applyTimeJump(); slider.value = nowHalf(); updLabel(); tick(); }
+      function updLabel() { tval.textContent = fmtMins(slMins(+slider.value)); var sm = sunMins(); wrap.querySelector(".pmk-sr-t").textContent = fmtMins(sm.sr); wrap.querySelector(".pmk-ss-t").textContent = fmtMins(sm.ss); }
+      slider.value = nowHalf(); updLabel();
+      slider.addEventListener("input", function () { setTimeParam(fmtMins(slMins(+slider.value))); applyTimeJump(); updLabel(); tick(); }); // live: the sky turns as you drag (half-hour steps)
+      wrap.querySelector(".pmk-treset").addEventListener("click", function () { setTimeParam(null); applyTimeJump(); slider.value = nowHalf(); updLabel(); tick(); });
       function jumpAndStepOut(mn) { // jump the clock, then put the phone away and step onto the balcony to watch the sky turn
         jumpToMins(mn);
         if (window.__closePhoneModal) window.__closePhoneModal(true);

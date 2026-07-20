@@ -65151,51 +65151,42 @@ function spawnDustMote(container) {
   // preview never carries a hat — but a birthday stop, being "pretend it's this date" too,
   // still dresses the day's real decor around the hat (Dec 7 lands Irene's cone on the
   // holiday tree, both at once, which is the honest answer).
-  // ── Persian (Jalali) occasion dates, computed LIVE from the Gregorian year ──
-  // Standard jalaali-js arithmetic (the 33-year leap cycle), no astronomy, no network. Nowruz is
-  // Farvardin 1 (toGregorian(jYear,1,1), with jYear = gYear − 621); Sizdah Bedar is the 13th day of
-  // the year (Nowruz + 12); Chaharshanbe Suri is the eve (the Tuesday night) of the last Wednesday
-  // before Nowruz. All three drift year to year, so every date test derives them from the year in
-  // play rather than a fixed Mar/Apr day.
-  function jDiv(a, b) { return ~~(a / b); }
-  function jMod(a, b) { return a - ~~(a / b) * b; }
-  function jG2d(gy, gm, gd) { // Gregorian → Julian Day Number
-    var d = jDiv((gy + jDiv(gm - 8, 6) + 100100) * 1461, 4) + jDiv(153 * jMod(gm + 9, 12) + 2, 5) + gd - 34840408;
-    return d - jDiv(jDiv(gy + 100100 + jDiv(gm - 8, 6), 100) * 3, 4) + 752;
+  // ── Persian (Solar Hijri) occasion dates, computed LIVE and ASTRONOMICALLY from the Gregorian year ──
+  // The official Iranian calendar is observational, not arithmetic: Farvardin 1 (Nowruz) is the day the
+  // northward (March) equinox is reckoned to fall on at Iran's reference meridian (52.5°E, i.e. Iran
+  // Standard Time = a fixed UTC+3:30 — Iran abolished DST in 2022). We take the day, in Iran Standard
+  // Time, on which the astronomical equinox instant lands; this reproduces the official/observed date
+  // (e.g. Nowruz 2027 = March 20, which the 33-year jalaali-js arithmetic wrongly rounded to March 21
+  // — the equinox is 2027-03-20 20:24 UTC = 23:54 Iran time, so it is observed on March 20 in Iran).
+  // Sizdah Bedar is the 13th day of the year (Nowruz + 12); Chaharshanbe Suri is the eve (Tuesday
+  // night) of the last Wednesday before Nowruz. All three drift year to year, so every date test
+  // derives them from the year in play rather than a fixed Mar/Apr day. The equinox instant comes from
+  // Meeus, Astronomical Algorithms ch. 27: the mean-equinox JDE polynomial plus its 24-term periodic S
+  // correction, then Dynamical Time → Universal Time via ΔT — minute-accurate, pure math, no network.
+  var EQ_TERMS = [ // A, B(deg), C(deg) for S = Σ A·cos(B + C·T), Meeus table 27.C
+    [485, 324.96, 1934.136], [203, 337.23, 32964.467], [199, 342.08, 20.186], [182, 27.85, 445267.112],
+    [156, 73.14, 45036.886], [136, 171.52, 22518.443], [77, 222.54, 65928.934], [74, 296.72, 3034.906],
+    [70, 243.58, 9037.513], [58, 119.81, 33718.147], [52, 297.17, 150.678], [50, 21.02, 2281.226],
+    [45, 247.54, 29929.562], [44, 325.15, 31555.956], [29, 60.93, 4443.417], [18, 155.12, 67555.328],
+    [17, 288.79, 4562.452], [16, 198.04, 62894.029], [14, 199.76, 31436.921], [12, 95.39, 14577.848],
+    [12, 287.11, 31931.756], [12, 320.81, 34777.259], [9, 227.73, 1222.114], [8, 15.45, 16859.074]
+  ];
+  function marchEquinoxDate(gYear) { // UTC Date of the northward (March) equinox instant
+    var Y = (gYear - 2000) / 1000, D2R = Math.PI / 180;
+    var jde0 = 2451623.80984 + 365242.37404 * Y + 0.05169 * Y * Y - 0.00411 * Y * Y * Y - 0.00057 * Y * Y * Y * Y;
+    var T = (jde0 - 2451545.0) / 36525;
+    var W = 35999.373 * T - 2.47;
+    var dl = 1 + 0.0334 * Math.cos(W * D2R) + 0.0007 * Math.cos(2 * W * D2R);
+    var S = 0, i;
+    for (i = 0; i < EQ_TERMS.length; i += 1) S += EQ_TERMS[i][0] * Math.cos((EQ_TERMS[i][1] + EQ_TERMS[i][2] * T) * D2R);
+    var jde = jde0 + (0.00001 * S) / dl; // Julian Ephemeris Day, in Dynamical Time (TD)
+    var t = gYear - 2000, dT = 62.92 + 0.32217 * t + 0.005589 * t * t; // ΔT seconds (Espenak–Meeus, era-appropriate)
+    var jdUT = jde - dT / 86400;
+    return new Date((jdUT - 2440587.5) * 86400000); // JD → Unix ms (UTC)
   }
-  function jD2g(jdn) { // Julian Day Number → Gregorian {gy, gm, gd}
-    var j = 4 * jdn + 139361631;
-    j = j + jDiv(jDiv(4 * jdn + 183187720, 146097) * 3, 4) * 4 - 3908;
-    var i = jDiv(jMod(j, 1461), 4) * 5 + 308;
-    var gd = jDiv(jMod(i, 153), 5) + 1;
-    var gm = jMod(jDiv(i, 153), 12) + 1;
-    var gy = jDiv(j, 1461) - 100100 + jDiv(8 - gm, 6);
-    return { gy: gy, gm: gm, gd: gd };
-  }
-  function jalCal(jy) { // → {gy, march}: the Gregorian year + the March day Farvardin 1 lands on
-    var breaks = [-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178];
-    var bl = breaks.length, gy = jy + 621, leapJ = -14, jp = breaks[0], jm, jump, leapG, march, n, i;
-    for (i = 1; i < bl; i += 1) {
-      jm = breaks[i]; jump = jm - jp;
-      if (jy < jm) break;
-      leapJ = leapJ + jDiv(jump, 33) * 8 + jDiv(jMod(jump, 33), 4);
-      jp = jm;
-    }
-    n = jy - jp;
-    leapJ = leapJ + jDiv(n, 33) * 8 + jDiv(jMod(n, 33) + 3, 4);
-    if (jMod(jump, 33) === 4 && jump - n === 4) leapJ += 1;
-    leapG = jDiv(gy, 4) - jDiv((jDiv(gy, 100) + 1) * 3, 4) - 150;
-    march = 20 + leapJ - leapG;
-    return { gy: gy, march: march };
-  }
-  function jToGregorian(jy, jm, jd) { // Jalali → Gregorian {gy, gm, gd}
-    var r = jalCal(jy);
-    var jdn = jG2d(r.gy, 3, r.march) + (jm - 1) * 31 - jDiv(jm, 7) * (jm - 7) + jd - 1;
-    return jD2g(jdn);
-  }
-  function nowruzOf(gYear) { // Farvardin 1 of the Persian year that opens in this Gregorian spring
-    var g = jToGregorian(gYear - 621, 1, 1);
-    return new Date(g.gy, g.gm - 1, g.gd, 12);
+  function nowruzOf(gYear) { // Farvardin 1: the Iran-Standard-Time (UTC+3:30) day the March equinox lands on
+    var iran = new Date(marchEquinoxDate(gYear).getTime() + 3.5 * 3600000);
+    return new Date(iran.getUTCFullYear(), iran.getUTCMonth(), iran.getUTCDate(), 12);
   }
   window.__nowruzOf = nowruzOf;
   var _persianCache = {};

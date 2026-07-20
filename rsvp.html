@@ -1875,6 +1875,17 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #loft-game-strip.dance-frozen.first-dance #garden-guests .g-behdad *,
 #loft-game-strip.dance-frozen.first-dance #garden-guests .g-marketa,
 #loft-game-strip.dance-frozen.first-dance #garden-guests .g-marketa *{animation-play-state:running !important}
+/* ── FIRST-DANCE WAIST-HOLD EMBRACE ──────────────────────────────────────────
+   During the hosts' first dance the two sway alone, holding each other's waist: each
+   host's INNER arm wraps around the partner (Behdad reaches RIGHT toward Markéta with his
+   right arm; Markéta reaches LEFT toward Behdad with her left arm). The arms pivot at the
+   shoulder (transform-origin set on .guest-arm-* above). We halt the inner arm's swing (its
+   looping anim is cancelled) and rotate it down-and-across into an embrace; the outer arms
+   keep their gentle sway (they still un-pause above). Scoped to the first-dance freeze only,
+   so it reverts the instant the moment ends. The rotate: property (not a transform attribute)
+   is safe — these arms carry no static transform="" attribute (they're bare paths). */
+#loft-game-strip.dance-frozen.first-dance #garden-guests .g-behdad .guest-arm-r{animation:none !important; rotate:112deg; translate:7px 6px}
+#loft-game-strip.dance-frozen.first-dance #garden-guests .g-marketa .guest-arm-l{animation:none !important; rotate:-112deg; translate:-7px 6px}
 /* a soft warm spotlight glow pooled centre-floor under the hosts, only during the first dance.
    A persistent hidden ellipse (opacity:0 at rest → nothing to pile up); positions via cx/cy so
    writing no transform ever clobbers a position. Sits BEHIND the hosts (earlier in source). */
@@ -20583,7 +20594,7 @@ var T = {
     // now-playing toast labels — dances + the three projector ambient beds (piano pieces and
     // loft-song titles are proper names, kept hardcoded in JS)
     np: {
-      techno: "Techno", waltz: "Waltz", disco: "Disco", swing: "Swing", salsa: "Salsa",
+      techno: "Techno", waltz: "Waltz", tango: "Tango", disco: "Disco", swing: "Swing", salsa: "Salsa",
       bhangra: "Bhangra", persian: "Persian", polka: "Polka", horah: "Horah",
       workout: "Workout beat", totoro: "Woodland rain", aqua: "Aquarium ambient"
     },
@@ -21164,7 +21175,7 @@ var T = {
     kbd_t: "další trip",
     // now-playing toast labels (viz EN np)
     np: {
-      techno: "Techno", waltz: "Valčík", disco: "Disco", swing: "Swing", salsa: "Salsa",
+      techno: "Techno", waltz: "Valčík", tango: "Tango", disco: "Disco", swing: "Swing", salsa: "Salsa",
       bhangra: "Bhangra", persian: "Perský", polka: "Polka", horah: "Hora",
       workout: "Rytmus na cvičení", totoro: "Lesní déšť", aqua: "Zvuky akvária"
     },
@@ -23933,6 +23944,232 @@ document.addEventListener("click", function (e) {
   (window.__partyDances = window.__partyDances || []).push({ id: "waltz", formation: "couple", update: window.__updateWaltzMusic });
 })();
 (function () {
+  // ── TANGO BED — the HOSTS' FIRST-DANCE music. An ORIGINAL Argentine-flavoured tango (my own
+  // composition, not derived from any existing/copyrighted tango): A minor, 4/4, 120 BPM, the
+  // dramatic "marcato in 4" feel with a habanera 3-3-2 accent inside the bar. A staccato walking
+  // bass that stalks up and down the harmonic-minor scale on the strong beats; sharp bandoneon-
+  // like chord STABS (sawtooth through a resonant lowpass, fast decay) on the marcato/off-accents
+  // for the reedy accordion bite; and a soulful legato LEAD with vibrato and the signature tango
+  // glissando (a portamento slide between notes via frequency.exponentialRampToValueAtTime). A
+  // 16-bar phrase over a minor progression (Am–Am–Dm–E7 | Am–F–Dm–E7 …) that builds and resolves
+  // home. Built EXACTLY like the waltz bed above — look-ahead scheduler on the ctx clock, bails
+  // the instant the ctx is nulled, same fade-and-close teardown — and garden-gated the same way,
+  // but RESERVED for the FIRST DANCE (excluded from the auto-rotation pool; still reachable via
+  // dance("tango")/the jukebox and the firstDance() moment). Centered, master follows the volume
+  // button. Integrated into the AudioTransport as the "tango" source.
+  var tangoCtx = null, tangoTimer = null, tangoStep = 0, tangoNextTime = 0;
+  var tangoSuspended = false;
+  var TBPM = 120, TSEC8 = (60 / TBPM) / 2;                       // an eighth-note, seconds (4/4, quarter = beat)
+  var T_BASS = 110.00, T_CHORD = 220.00, T_LEAD = 440.00;       // A2 bass / A3 chord / A4 lead registers (A minor)
+  // bar roots (semitones from A): the 16-bar drama. Am Am Dm E7 | Am F Dm E7 | Am Am Dm E7 | F E7 Am Am
+  var T_ROOT = [0,0,5,7, 0,-4,5,7, 0,0,5,7, -4,7,0,0];
+  // chord voicings per bar (intervals over the root). Am/Dm minor triads, E7 dom7, F major.
+  var T_CH = [
+    [0,3,7],[0,3,7],[0,3,7],[0,4,7,10],
+    [0,3,7],[0,4,7],[0,3,7],[0,4,7,10],
+    [0,3,7],[0,3,7],[0,3,7],[0,4,7,10],
+    [0,4,7],[0,4,7,10],[0,3,7],[0,3,7]
+  ];
+  // WALKING BASS — 8 eighths/bar, semitones over the bar root (null = a staccato rest for space).
+  // Stalks the harmonic-minor scale, stepping up on the strong beats then dropping back — the
+  // prowling tango bass line. One row of 8 per bar, 16 bars.
+  var T_BASS_PAT = [
+    0,null,7,null, 0,null,3,null,      // Am: root, 5th, back to root, 3rd
+    0,null,7,null, 0,null,3,null,      // Am
+    0,null,7,null, 0,null,5,null,      // Dm (rooted via T_ROOT): root, 5th, root, up
+    0,null,7,null, 6,null,7,null,      // E7: root, 5th, leading-tone climb
+    0,null,7,null, 0,null,3,null,      // Am
+    0,null,7,null, 0,null,4,null,      // F
+    0,null,7,null, 0,null,5,null,      // Dm
+    0,null,7,null, 6,null,7,null,      // E7
+    0,null,7,null, 0,null,3,null,      // Am
+    0,null,7,null, 0,null,3,null,      // Am
+    0,null,7,null, 0,null,5,null,      // Dm
+    0,null,7,null, 6,null,7,null,      // E7
+    0,null,7,null, 0,null,4,null,      // F
+    0,null,7,null, 6,null,7,null,      // E7
+    0,null,7,null, 12,null,7,null,     // Am: root, 5th, octave, 5th — the turn home
+    0,null,0,null, 0,null,null,null    // Am: hammered tonic, then a breath
+  ];
+  // CHORD-STAB rhythm — the habanera / tango 3-3-2 marcato inside the bar (1 = fire a stab).
+  // Eighths: | X . . X . . X . |  (beats land on 1, the "and-of-2", and 4) — the classic tango pulse.
+  var T_STAB_PAT = [1,0,0,1, 0,0,1,0];
+  // LEAD melody — one value per eighth over 16 bars (semitone over A4 = T_LEAD, null = rest).
+  // A soulful, breathing line: sighs down, rises across the phrase, and resolves home. A negative
+  // sentinel of -100+n marks a note that SLIDES (portamento) from the previous sounding pitch —
+  // the signature tango glissando (decoded in tSchedStep).
+  var T_MEL = [
+    12,null,null,null, 10,null,7,null,        // bar1  A  G  E  (a sighing descent)
+    null,null,null,null, null,null,null,null, // bar2  (bandoneon/bass breathe)
+    5,null,7,null, 8,null,10,null,            // bar3  Dm: F  G  Ab G# rising
+    -89,null,null,null, 7,null,null,null,     // bar4  E7: slide up to B(11), then G# — resolve tension
+    12,null,15,null, 14,null,12,null,         // bar5  A  C  B  A  (the tune blooms)
+    -87,null,null,null, 8,null,7,null,        // bar6  F: slide up to C(13), fall Ab G
+    5,null,7,null, 8,null,10,null,            // bar7  Dm: F G Ab climb again
+    11,null,null,null, 7,null,null,null,      // bar8  E7: B held, then G# (half-cadence)
+    12,null,null,null, 10,null,7,null,        // bar9  A G E (restate the theme)
+    null,null,null,null, null,null,null,null, // bar10 breathe
+    5,null,7,null, 9,null,12,null,            // bar11 Dm: F G A C rising
+    -84,null,14,null, 11,null,null,null,      // bar12 E7: slide up to high C#(16), B — dramatic peak
+    17,null,15,null, 12,null,10,null,         // bar13 F: high F Eb C A — the descent begins
+    11,null,null,null, 8,null,7,null,         // bar14 E7: B, then Ab G — pull home
+    12,null,10,null, 8,null,7,null,           // bar15 A G Ab G — winding down
+    -100,null,null,null, 0,null,null,null     // bar16 slide down and land soft on the tonic A
+  ];
+  function tSemi(base, n) { return base * Math.pow(2, n / 12); }
+  function tangoVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
+  function tangoMusicWant() { return !!window.__gardenPartyOn && window.__partyDance === "tango"; }
+  function tBass(ctx, t, freq) {                                 // a short, staccato, PROWLING bass note
+    var saw = ctx.createOscillator(); saw.type = "sawtooth"; saw.frequency.value = freq;
+    var sub = ctx.createOscillator(); sub.type = "sine"; sub.frequency.value = freq;
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 700; lp.Q.value = 1.0;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.5, t + 0.012);         // sharp attack — the marcato bite
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);        // staccato: cut short for the walking feel
+    saw.connect(lp); sub.connect(lp); lp.connect(g); g.connect(ctx._bus);
+    saw.start(t); saw.stop(t + 0.24); sub.start(t); sub.stop(t + 0.24);
+  }
+  function tStab(ctx, t, freqs, accent) {                        // the bandoneon marcato STAB — reedy accordion bite
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass";
+    lp.frequency.setValueAtTime(3200, t);
+    lp.frequency.exponentialRampToValueAtTime(900, t + 0.12);    // a fast filter drop — the reed's "chuff"
+    lp.Q.value = 4.5;                                            // some resonance for the accordion nasality
+    var g = ctx.createGain();
+    var pk = accent ? 0.14 : 0.09;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(pk, t + 0.01);           // hard attack
+    g.gain.exponentialRampToValueAtTime(0.0001, t + (accent ? 0.26 : 0.18)); // fast decay — staccato
+    lp.connect(g); g.connect(ctx._bus);
+    freqs.forEach(function (f) {
+      var o = ctx.createOscillator(); o.type = "sawtooth"; o.frequency.value = f;
+      var o2 = ctx.createOscillator(); o2.type = "square"; o2.frequency.value = f; // a square layer for reedy edge
+      var g2 = ctx.createGain(); g2.gain.value = 0.4; o2.connect(g2);
+      o.connect(lp); g2.connect(lp);
+      o.start(t); o.stop(t + 0.3); o2.start(t); o2.stop(t + 0.3);
+    });
+  }
+  function tLead(ctx, t, freq, dur, gain, fromFreq) {            // the singing tango melody, expressive vibrato + optional slide
+    var o = ctx.createOscillator(); o.type = "sawtooth";
+    if (fromFreq) {                                              // portamento glissando — slide from the previous pitch
+      o.frequency.setValueAtTime(fromFreq, t);
+      o.frequency.exponentialRampToValueAtTime(freq, t + Math.min(dur * 0.45, 0.22));
+    } else {
+      o.frequency.value = freq;
+    }
+    var lfo = ctx.createOscillator(); lfo.type = "sine"; lfo.frequency.value = 6.0; // a warmer, wider tango vibrato
+    var lfoG = ctx.createGain(); lfoG.gain.value = freq * 0.011;
+    lfo.connect(lfoG); lfoG.connect(o.frequency);
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2600; lp.Q.value = 1.2; // rounds the saw into a reedy bandoneon voice
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.05);         // a legato swell in, not a pluck
+    g.gain.setValueAtTime(gain, t + dur * 0.6);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(lp); lp.connect(g); g.connect(ctx._bus);
+    o.start(t); o.stop(t + dur + 0.02); lfo.start(t); lfo.stop(t + dur + 0.02);
+  }
+  var tLastLeadFreq = null;                                      // remembered sounding pitch, for the slide sentinel
+  function tSchedStep(ctx, step, t) {
+    var inBar = step % 8, bar = (step / 8) | 0;
+    var root = T_ROOT[bar];
+    // walking bass on its pattern
+    var b = T_BASS_PAT[step];
+    if (b !== null && b !== undefined) tBass(ctx, t, tSemi(T_BASS, root + b));
+    // bandoneon chord stabs on the 3-3-2 marcato
+    if (T_STAB_PAT[inBar]) {
+      var accent = (inBar === 0);                                // beat 1 is the strongest marcato
+      tStab(ctx, t, T_CH[bar].map(function (iv) { return tSemi(T_CHORD, root + iv); }), accent);
+    }
+    // the soulful lead
+    var m = T_MEL[step];
+    if (m !== null && m !== undefined) {
+      var slide = false, note = m;
+      if (m <= -80) { slide = true; note = m + 100; }           // -100+n sentinel → slide into this pitch
+      var freq = tSemi(T_LEAD, note);
+      var dur = TSEC8 * 3.4;                                     // legato — notes overlap/breathe
+      var from = (slide && tLastLeadFreq) ? tLastLeadFreq : 0;
+      tLead(ctx, t, freq, dur, 0.13, from);
+      tLastLeadFreq = freq;
+    }
+  }
+  function scheduleTango() {
+    tangoTimer = setTimeout(function () {
+      tangoTimer = null;
+      var ctx = tangoCtx;
+      if (!ctx) return;                                          // stopped meanwhile
+      try {
+        var horizon = ctx.currentTime + 1.2, guard = 0;
+        while (tangoNextTime < horizon && guard++ < 200) {
+          tSchedStep(ctx, tangoStep, tangoNextTime);
+          tangoNextTime += TSEC8;
+          tangoStep = (tangoStep + 1) % 128;                     // 16-bar loop (8 eighths × 16)
+        }
+      } catch (e) {}
+      scheduleTango();
+    }, 200);
+  }
+  function startTangoMusic(fadeIn) {
+    try {
+      stopTangoMusic();
+      window.__musicPaused = false;
+      tangoSuspended = false;
+      tangoCtx = audioBed();
+      if (!tangoCtx) return;
+      try { var p = tangoCtx.resume && tangoCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+      var now = tangoCtx.currentTime;
+      var bus = tangoCtx.createGain(); bus.gain.value = 1.0;
+      var comp = tangoCtx.createDynamicsCompressor();
+      comp.threshold.value = -14; comp.knee.value = 24; comp.ratio.value = 3;
+      comp.attack.value = 0.004; comp.release.value = 0.25;
+      var master = tangoCtx.createGain();
+      master.gain.setValueAtTime(0.0001, now);
+      master.gain.linearRampToValueAtTime(tangoVol(), now + (fadeIn || 0.4)); // fade in over the crossfade length
+      var out = pannedOut(tangoCtx, 0);                          // centered — a whole-garden first dance
+      bus.connect(comp); comp.connect(master); var bassLift = partyBassLift(master.context); master.connect(bassLift); bassLift.connect(out); // +low-end weight below ~120 Hz
+      tangoCtx._bus = bus;
+      tangoCtx._masterGain = master;
+      tangoStep = 0;
+      tLastLeadFreq = null;
+      tangoNextTime = now + 0.12;
+      var vb = document.getElementById("hunt-volume-btn"); if (vb) vb.classList.add("shown");
+      if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+      scheduleTango();
+    } catch (e) {}
+  }
+  function stopTangoMusic(fadeSecs) {
+    var f = (typeof fadeSecs === "number") ? fadeSecs : 0.3;
+    if (tangoTimer) { clearTimeout(tangoTimer); tangoTimer = null; }
+    if (tangoCtx) {
+      var ctx = tangoCtx, master = tangoCtx._masterGain;
+      tangoCtx = null;                                           // null first so a racing scheduleTango bails
+      try { if (master) { var t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
+      setTimeout(function () { try { ctx.close(); } catch (e) {} }, f * 1000 + 100);
+    }
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+  }
+  window.__pauseTangoMusic = function (paused) {                 // unified space-bar / transport control
+    if (!tangoCtx) return false;
+    tangoSuspended = !!paused;
+    try { if (paused) tangoCtx.suspend(); else tangoCtx.resume(); } catch (e) {}
+    return true;
+  };
+  window.__tangoPlaying = function () { return !!tangoCtx && !tangoSuspended; };
+  window.__tangoMusicWant = tangoMusicWant;
+  window.__applyTangoMusicVolume = function (tc) {
+    if (tangoCtx && tangoCtx._masterGain) { try { tangoCtx._masterGain.gain.setTargetAtTime(tangoVol(), tangoCtx.currentTime, tc || 0.05); } catch (e) {} }
+  };
+  window.__updateTangoMusic = function (fadeSecs) {
+    var want = tangoMusicWant();
+    if (want && !tangoCtx) startTangoMusic(fadeSecs);
+    else if (!want && tangoCtx) stopTangoMusic(fadeSecs);
+  };
+  document.addEventListener("visibilitychange", function () { window.__updateTangoMusic(); });
+  // Register this bed as the "tango" party dance (coupled formation). Lazy-init, same as waltz.
+  // NOTE: excluded from the auto-rotation pool in startWaltzAlternation — reserved for the first dance.
+  (window.__partyDances = window.__partyDances || []).push({ id: "tango", formation: "couple", update: window.__updateTangoMusic });
+})();
+(function () {
   // ── DISCO BED — a garden-party dance bed. An ORIGINAL four-on-the-floor disco (my own
   // composition, not derived from any existing/copyrighted track): A minor, ~120 BPM, a thumpy
   // kick on every beat, an off-beat open hi-hat, a classic octave-jumping bass, a backbeat clap,
@@ -25531,7 +25768,7 @@ document.addEventListener("click", function (e) {
     var duck = (!!window.__projMusicActive && window.currentStageName === "cuddly") ||
                (!!window.__headphonesOn && window.currentStageName === "office");
     window.__partyDuck = duck ? 0.15 : 1;
-    ["__applyPartyMusicVolume", "__applyWaltzMusicVolume", "__applyDiscoMusicVolume", "__applySwingMusicVolume", "__applySalsaMusicVolume", "__applyBhangraMusicVolume", "__applyPersianMusicVolume", "__applyPolkaMusicVolume", "__applyHorahMusicVolume"].forEach(function (fn) { if (window[fn]) window[fn](0.4); }); // 0.4s time-constant → ~1s fade up/down
+    ["__applyPartyMusicVolume", "__applyWaltzMusicVolume", "__applyTangoMusicVolume", "__applyDiscoMusicVolume", "__applySwingMusicVolume", "__applySalsaMusicVolume", "__applyBhangraMusicVolume", "__applyPersianMusicVolume", "__applyPolkaMusicVolume", "__applyHorahMusicVolume"].forEach(function (fn) { if (window[fn]) window[fn](0.4); }); // 0.4s time-constant → ~1s fade up/down
   };
   var chanObj = { fire: fire, workout: svgChan, aqua: svgChan, totoro: svgChan, stars: svgChan, off: off };
   var current = "fire"; // the projector always opens on the fire channel (tapping still cycles within the session)
@@ -37189,6 +37426,13 @@ async def localfont(name):
       pause: function () { if (window.__pauseHorahMusic) window.__pauseHorahMusic(true); },
       resume: function () { return !!(window.__pauseHorahMusic && window.__pauseHorahMusic(false)); }
     });
+    list.push({ // garden-party tango bed — the hosts' first-dance music; space / play-pause / OS media keys pause+resume it
+      id: "tango",
+      isPlaying: function () { return !!(window.__tangoPlaying && window.__tangoPlaying()); },
+      valid: function () { return !!(window.__gardenPartyOn && window.__partyDance === "tango"); },
+      pause: function () { if (window.__pauseTangoMusic) window.__pauseTangoMusic(true); },
+      resume: function () { return !!(window.__pauseTangoMusic && window.__pauseTangoMusic(false)); }
+    });
     list.push({
       id: "workout",
       isPlaying: function () { return !!(window.__workoutPlaying && window.__workoutPlaying()); },
@@ -37587,6 +37831,7 @@ async def localfont(name):
     if (window.__applyAquaMelodyVolume) window.__applyAquaMelodyVolume(); // the aquarium melody bed follows it too
     if (window.__applyPartyMusicVolume) window.__applyPartyMusicVolume(); // the techno party bed follows it too
     if (window.__applyWaltzMusicVolume) window.__applyWaltzMusicVolume(); // the garden-party waltz bed follows it too
+    if (window.__applyTangoMusicVolume) window.__applyTangoMusicVolume(); // the garden-party tango bed (first dance) follows it too
     if (window.__applyDiscoMusicVolume) window.__applyDiscoMusicVolume(); // the garden-party disco bed follows it too
     if (window.__applySwingMusicVolume) window.__applySwingMusicVolume(); // the garden-party swing bed follows it too
     if (window.__applySalsaMusicVolume) window.__applySalsaMusicVolume(); // the garden-party salsa bed follows it too
@@ -54801,7 +55046,7 @@ function spawnDustMote(container) {
   // A 1.12 relaxation factor slows every synced move a touch (folded in here rather than
   // editing the ~84 CSS duration literals). Half-time above ~143bpm (period<0.42s) so the
   // fastest beds (salsa 190 / swing 180 / waltz 162) don't look frantic.
-  var DANCE_BPM = { techno: 126, waltz: 162, disco: 120, swing: 180, salsa: 190, bhangra: 140, persian: 110, polka: 130, horah: 146 };
+  var DANCE_BPM = { techno: 126, waltz: 162, disco: 120, swing: 180, salsa: 190, bhangra: 140, persian: 110, polka: 130, horah: 146, tango: 120 };
   window.__DANCE_BPM = DANCE_BPM; // exposed so the console `beat()` reads ONE map, not a duplicate
   window.__danceBpm = function (id) { return DANCE_BPM[id]; };
   var DANCE_RELAX = 1.12;
@@ -54815,7 +55060,7 @@ function spawnDustMote(container) {
   // Per-dance MOOD (explicit, NOT auto-bucketed from bpm — waltz reads elegant despite its
   // high bpm). Drives an amplitude-only keyframe swap on the shared guest wrappers via
   // #garden-guests[data-mood]. hype = bigger sway/reach, chill = gentler, elegant = smoother.
-  var DANCE_MOOD = { persian: "chill", disco: "groovy", techno: "groovy", horah: "groovy", polka: "hype", bhangra: "hype", swing: "hype", salsa: "hype", waltz: "elegant" };
+  var DANCE_MOOD = { persian: "chill", disco: "groovy", techno: "groovy", horah: "groovy", polka: "hype", bhangra: "hype", swing: "hype", salsa: "hype", waltz: "elegant", tango: "elegant" };
   window.__DANCE_MOOD = DANCE_MOOD;
   // Retune the SHARED guest wrappers (.guest-sway ≈ 2 beats, .guest-arm-* ≈ 2 beats) to the
   // active dance's tempo, phase-locked to ONE shared epoch so every dancer hits together.
@@ -54935,7 +55180,9 @@ function spawnDustMote(container) {
   function flipPartyMode() {
     waltzAltTimer = null;
     if (!window.__gardenPartyOn) return; // party ended — stop, don't reschedule
-    if (!window.__musicPaused) advanceDance();
+    // don't advance the rotation while the hosts' FIRST DANCE holds the floor on the reserved
+    // tango bed — it would crossfade tango away mid-dance. endFirstDance restores the rotation.
+    if (!window.__musicPaused && !window.__firstDanceOn) advanceDance();
     waltzAltTimer = setTimeout(flipPartyMode, WALTZ_PERIOD_MS);
   }
   window.__nextPartyDance = function () { // manual skip: jump to the next dance now, then keep auto-alternating
@@ -54964,7 +55211,9 @@ function spawnDustMote(container) {
   function startWaltzAlternation() { // idempotent — setGardenParty(true) is storm-called by play.js
     if (!PARTY_DANCE_ORDER) { // build the rotation once: every dance Fisher-Yates shuffled (fully random first dance)
       var all = [], d = window.__partyDances || [];
-      for (var i = 0; i < d.length; i++) all.push(d[i].id);
+      // "tango" is RESERVED for the hosts' first dance — never in the auto-rotation shuffle (but
+      // still reachable via dance("tango") / the jukebox / firstDance()). Everything else rotates.
+      for (var i = 0; i < d.length; i++) if (d[i].id !== "tango") all.push(d[i].id);
       for (var j = all.length - 1; j > 0; j--) { var k = (Math.random() * (j + 1)) | 0, t = all[j]; all[j] = all[k]; all[k] = t; }
       PARTY_DANCE_ORDER = window.PARTY_DANCE_ORDER = all.length ? all : ["techno"];
     }
@@ -55391,6 +55640,37 @@ function spawnDustMote(container) {
     return true;
   };
   window.__dismissGuests = function () { guestsArrived = false; clearGardenGuests(); }; // send them off without ending the party
+  // TRIM the floor back down to GUEST_CAP figures — walk the excess units OUT the gate (same
+  // stroll the revolving door uses), newest-first so the just-summoned first-dance overflow
+  // leaves and the settled ring stays. After the hosts' first dance packs the WHOLE roster in
+  // (see firstDance → __summonGuests), this actively thins it back to a normal ~8-figure floor
+  // within a stroll or two rather than waiting many slow ~20s rotations, then the normal
+  // revolving door takes over. Respects the hidden-tab / reduced-motion instant paths inside
+  // leaveEntry (they just drop .arrived with no walk). Idempotent + harmless when at/under cap.
+  window.__trimFloorToCap = function () {
+    var g = document.getElementById("garden-guests");
+    if (!g) return 0;
+    var present = presentUnits(g, fullArrivals());
+    // count FIGURES present (a couple = 2), and how many figures we're over the cap by.
+    var over = presentGuestFigures(g) - GUEST_CAP;
+    if (over <= 0) return 0;
+    // prefer to evict the most-recently-arrived units first (the first-dance summon overflow),
+    // so the earlier-settled ring is the one that stays. recentArrivals holds the newest keys.
+    var order = present.slice().sort(function (a, b) {
+      return recentArrivals.indexOf(unitKey(b)) - recentArrivals.indexOf(unitKey(a)); // newest (higher index) first
+    });
+    var walked = 0;
+    for (var i = 0; i < order.length && over > 0; i++) {
+      leaveEntry(order[i]);                 // strolls out from its slot; rebalanceFloor closes the gap
+      over -= order[i].sels.length;         // a couple frees 2 figures
+      walked++;
+    }
+    // hand the floor back to the normal revolving door: re-arm the fill/rotation driver so it
+    // tops the ring back up to the cap (if the trim overshot by evicting a couple) and keeps
+    // the ~20s rotation going. .trickle keeps the just-departed (now waiting) units hidden.
+    if (walked) { g.classList.add("trickle"); armTrickle(3500 + Math.random() * 1500); }
+    return walked;
+  };
   // GRACEFUL WIND-DOWN — walk EVERY present guest UNIT out the gate at once (same stroll the
   // revolving door uses), so a party turned off "while watching" empties the floor gently instead
   // of snapping everyone away. Stops the fill/rotation/host-solo timers first so nobody strolls
@@ -55681,22 +55961,42 @@ function spawnDustMote(container) {
     // window.__firstDanceOn is the boolean STATE flag (read by __syncDanceFreeze to key the freeze
     // + UV drop + spotlight); window.__firstDance() is the callable test hook that starts it.
     var firstDanceTimer = null;
+    var firstDancePrevDance = null; // the dance the rotation was on before the first dance took over (restored after)
     function endFirstDance() {
       if (firstDanceTimer) { clearTimeout(firstDanceTimer); firstDanceTimer = null; }
+      var wasOn = window.__firstDanceOn;
       window.__firstDanceOn = false;
       group.classList.remove("first-dance");
+      // restore the pre-first-dance dance (crossfades the tango bed back out to whatever was
+      // playing). Only if we actually switched and the party's still lit — a party-off teardown
+      // will have cleared __partyDance itself. Guarded/idempotent (storm-safe).
+      if (wasOn && firstDancePrevDance && window.__gardenPartyOn && window.__partyDance === "tango" && window.__setPartyDance) {
+        window.__setPartyDance(firstDancePrevDance); // crossfade tango → the previous dance, re-arm the rotation clock
+      }
+      firstDancePrevDance = null;
       if (window.__syncDanceFreeze) window.__syncDanceFreeze(); // drops .dance-frozen + .first-dance on the strip → UV restored to the switch's intent
       if (window.__updateUvBreather) window.__updateUvBreather(); // hand the blacklight back to the breather/switch cleanly
+      // the first dance packed the WHOLE roster onto the floor; actively thin it back to the
+      // ~8-figure cap now (the overflow strolls out newest-first), then the revolving door settles it.
+      if (wasOn && window.__gardenPartyOn && onFloor() && window.__trimFloorToCap) window.__trimFloorToCap();
     }
     window.__endFirstDance = endFirstDance;
     function firstDance() {
       if (!onFloor()) return false; // only meaningful with the crowd on the floor
       if (window.__firstDanceOn) return true; // already running — idempotent (storm-safe)
       window.__firstDanceOn = true;
+      // bring the WHOLE roster onto the floor so the full crowd rings the couple for their first
+      // dance (temporarily over GUEST_CAP; endFirstDance trims it back). __summonGuests crashes
+      // everyone in at once (fillAllNow → rebalanceFloor spreads them evenly across the band).
+      if (window.__summonGuests) window.__summonGuests();
+      // remember the current dance, then switch to the reserved TANGO bed for the first dance
+      // (crossfades the beds via the want-gates, glides the dancers into the couple formation).
+      firstDancePrevDance = window.__partyDance || null;
+      if (window.__setPartyDance) window.__setPartyDance("tango"); // crossfade to tango; endFirstDance restores firstDancePrevDance
       group.classList.add("first-dance"); // rings the crowd out + spotlight on (CSS)
       if (window.__syncDanceFreeze) window.__syncDanceFreeze(); // freeze the crowd + drop the UV via the tested path; the two hosts alone keep swaying (CSS)
       if (window.__updateUvBreather) window.__updateUvBreather(); // pause the UV breather while the freeze holds the blacklight off
-      firstDanceTimer = setTimeout(endFirstDance, reducedMotion() ? 9000 : 13000); // hold ~13s (a shorter beat under reduced motion)
+      firstDanceTimer = setTimeout(endFirstDance, reducedMotion() ? 10000 : 18000); // hold ~18s so a full tango phrase plays (a shorter beat under reduced motion)
       return true;
     }
     window.__firstDanceOn = false; // state default (read by __syncDanceFreeze)

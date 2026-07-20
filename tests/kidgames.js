@@ -116,6 +116,8 @@ var winShim = {
   __whoPop: function (anchor, html) { whoPopCalls.push({ anchor: anchor, html: html }); }
 };
 function tipText(key) { return T_EN[key] || ""; }
+// kid popups append a live age line via the global kidAgeLine(); stub it here (defined outside the sliced IIFE)
+function kidAgeLine() { return ""; }
 
 /* hoverTooltip stub: record (element, htmlFn, placement) so we can assert the dark-bubble wiring
    without a browser. The real one attaches mouseenter/leave; here we capture the html-producing fn
@@ -140,9 +142,9 @@ ok(/window\.__updateKidGames\s*=\s*apply/.test(iife), "sliced the real __updateK
 
 /* run it inside a Function with our shims in scope */
 function runIIFE() {
-  var fn = new Function("document", "window", "tipText", "hoverTooltip",
+  var fn = new Function("document", "window", "tipText", "hoverTooltip", "kidAgeLine",
     iife + "\nreturn { apply: window.__updateKidGames, reshuffle: window.__kidGamesReshuffle, inGame: window.__kidInGamesNow };");
-  return fn(docShim, winShim, tipText, hoverTooltip);
+  return fn(docShim, winShim, tipText, hoverTooltip, kidAgeLine);
 }
 
 /* ══ TEST 1: name-card taps ═════════════════════════════════════════════════ */

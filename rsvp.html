@@ -45628,6 +45628,17 @@ async def localfont(name):
     // the freshest still-unread message id (newest arrival first) — autoplay uses this to
     // decide which notification to open+act-on when a text pops during attract mode.
     window.__latestUnreadMessage = function () { for (var i = messagesThread.length - 1; i >= 0; i--) if (!messagesRead[messagesThread[i]]) return messagesThread[i]; return null; };
+    var MSG_CAP = 30; // the thread holds at most 30 texts; past that the oldest falls off, one per new arrival
+    function trimMessageThread() {
+      while (messagesThread.length > MSG_CAP) {
+        var old = messagesThread.shift();
+        delete messagesRead[old];
+        delete messagesArrivedAt[old];
+        if (/^custom_/.test(old)) delete MESSAGES[old]; // drop ad-hoc ones for good; authored ids stay in MESSAGES so a later drip can still resurface them
+      }
+    }
+    // once the thread gets busy (20+), space autonomous drips out progressively so texts don't pile up
+    function msgDripSlowFactor() { return messagesThread.length >= 20 ? (2 + (messagesThread.length - 20) * 0.2) : 1; }
     window.__deliverPhoneMessage = function (id) {
       if (!MESSAGES[id] || messagesThread.indexOf(id) !== -1) return; // unknown, or already received (fire once)
       var m = MESSAGES[id];
@@ -45637,6 +45648,7 @@ async def localfont(name):
       if (m.bodyKeys && !m.bodyKey) m.bodyKey = m.bodyKeys[Math.floor(Math.random() * m.bodyKeys.length)];
       messagesThread.push(id);
       messagesArrivedAt[id] = Date.now();
+      trimMessageThread();
       var msgAppShowing = isOpen() && currentApp === "messages";
       if (msgAppShowing) openApp("messages", "app_messages", renderMessages); // live-refresh (scrolls to newest) if the thread's already open — no toast needed, they're looking at it
       else showMessageThumb(id);
@@ -45695,7 +45707,7 @@ async def localfont(name):
           if (rem.length) window.__deliverPhoneMessage(rem[Math.floor(Math.random() * rem.length)]); // a random un-sent cue
         }
         scheduleCueDrip(); // keep dripping while the party's on and cues remain
-      }, 24000 + Math.floor(Math.random() * 22000)); // ~24–46s apart → varied arrival times
+      }, (24000 + Math.floor(Math.random() * 22000)) * msgDripSlowFactor()); // ~24–46s apart → varied arrival times, stretched once the thread is busy
     }
     window.__startCueDrip = function () { scheduleCueDrip(); };
     window.__stopCueDrip = function () { if (cueTimer) { clearTimeout(cueTimer); cueTimer = null; } };
@@ -45715,7 +45727,7 @@ async def localfont(name):
           if (rem.length) window.__deliverPhoneMessage(rem[Math.floor(Math.random() * rem.length)]);
         }
         scheduleDayDrip(); // keep polling until the daytime pool is exhausted
-      }, 45000 + Math.floor(Math.random() * 45000)); // ~45–90s apart
+      }, (45000 + Math.floor(Math.random() * 45000)) * msgDripSlowFactor()); // ~45–90s apart, stretched once the thread is busy
     }
     window.__startDayDrip = function () { scheduleDayDrip(); };
     window.__stopDayDrip = function () { if (dayTimer) { clearTimeout(dayTimer); dayTimer = null; } };

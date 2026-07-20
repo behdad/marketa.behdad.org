@@ -587,6 +587,18 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 @media (prefers-reduced-motion: reduce){#autoplay-badge .ap-dot{animation:none; opacity:.8}}
 .hunt-hit{cursor:pointer}
 .hunt-hit:focus, .hunt-hit:focus-visible{outline:none}
+/* Tap acknowledgement. A finger gets no hover, so a tap on an object whose reaction is
+   subtle, delayed or state-gated reads as "the game ignored me". A brief dip confirms the
+   hit landed. OPACITY, never a transform (a transform animation replaces the element's
+   transform attribute for its duration, and most of these objects are positioned by one)
+   and never a CSS filter function (a no-op on SVG containers in WebKit). Deliberately low
+   specificity and early in source so ANY object with a reaction animation of its own wins
+   the cascade — the JS also declines to add the class when the element is already
+   animating, so this only ever fills the silence. Named .tap-blink, not .tapped: that one
+   is taken by the instrument bump above. */
+@keyframes hunt-tap-blink{0%{opacity:1}45%{opacity:.4}100%{opacity:1}}
+.tap-blink{animation:hunt-tap-blink .14s ease-out}
+@media (prefers-reduced-motion: reduce){.tap-blink{animation:none}}
 /* the game strip is a mouse/touch playground — no focus rings on any of its art */
 #loft-game-strip :focus, #loft-game-strip :focus-visible{outline:none}
 #kitchen-lamarzocco.done, #kitchen-grinder.done, #kitchen-portafilter.done{opacity:.55}
@@ -76672,6 +76684,264 @@ function spawnDustMote(container) {
   strip.addEventListener("touchmove", function (e) {
     if (e.target.closest && e.target.closest(DRAG_SEL)) e.preventDefault();
   }, { passive: false });
+  // Tap acknowledgement, delegated so it covers both a direct hit and a halo's
+  // re-dispatched click. Runs on the bubble phase, AFTER the object's own handler, so the
+  // computed animation-name read below already reflects any reaction that handler started:
+  // an object that reacted on its own is left alone and only a silent tap gets the blink.
+  // The timer is the belt to animationend's braces — under prefers-reduced-motion the rule
+  // resolves to animation:none and no animationend ever fires.
+  strip.addEventListener("click", function (e) {
+    var el = e.target && e.target.closest && e.target.closest(".hunt-hit");
+    if (!el || el.classList.contains("tap-blink")) return;
+    var anim = "";
+    try { anim = getComputedStyle(el).animationName; } catch (err) { return; }
+    if (anim && anim !== "none") return;
+    el.classList.add("tap-blink");
+    var drop = function () { el.classList.remove("tap-blink"); };
+    el.addEventListener("animationend", drop, { once: true });
+    setTimeout(drop, 400);
+  });
+
+  // ── TAP HALOS ──────────────────────────────────────────────────────────────────────
+  // A room is one viewport wide, so on a 390px phone 680 SVG units render into ~265 CSS px
+  // — an object drawn 20 units across lands at ~8px on screen, well under a fingertip. Most
+  // of the loft is in that state, and several of them are REQUIRED solve steps: the espresso
+  // shot cup renders 8x7px with the invite arrow pointing straight at it.
+  //
+  // Rather than redraw the art at phone scale, each undersized object gets a halo: a
+  // finger-sized box around it that catches taps which missed the object itself.
+  //
+  // The halos are geometry, not nodes. Parking transparent rects UNDER the art is the
+  // tempting version and it does not work: SVG has no z-index, so a layer added as the
+  // stage's first child paints first and the room's own opaque background — the very next
+  // sibling — covers every halo in the room. Measured, all 22 kitchen halos hit-tested 0
+  // out of 9 sample points. Putting the layer on TOP instead trades that for a worse bug,
+  // since a transparent rect over a draggable would swallow the pointerdown that starts
+  // the drag.
+  //
+  // So no node is in the hit path at all. Each room keeps a list of boxes, and one click
+  // listener on the strip acts ONLY when the tap reached no .hunt-hit whatsoever — a
+  // direct hit on any object wins by construction, and because nothing here touches
+  // pointerdown, drags are untouched too.
+  var TAP_TARGET_PX = 28;   // comfortable on-screen edge (WCAG 2.2 AA asks 24)
+  var HALO_MIN_PAD = 1.5;   // SVG units of growth below which a halo isn't worth keeping
+  var HALO_GUARD = 0.5;     // SVG units a halo stops SHORT of a neighbour's centre, so the two never tie
+  var haloRooms = {};       // room name → boxes in stage-local units, best candidate LAST
+  // The steps a player MUST hit to finish a room. These win every halo-overlap contest: an
+  // ornament staying small is a missed bonus find, a solve step staying small is a dead end.
+  // Blankets are drag-solved (excluded with the rest of DRAG_SEL) and the laptop call tile
+  // lives on the laptop's own screen, not in the scene.
+  var SOLVE_REQUIRED = {
+    kitchen: ["kitchen-lamarzocco", "kitchen-grinder", "kitchen-tamper", "kitchen-portafilter", "kitchen-shotcup", "kitchen-knockbox"],
+    garden: ["garden-monstera", "garden-ukulele", "garden-candle-1", "garden-candle-2"],
+    cuddly: ["cuddly-octopus", "cuddly-balcony-door"],
+    office: ["office-laptop", "office-lamp", "office-pendant", "office-stainedglass"],
+    balcony: []
+  };
+
+  function haloUsable(el) {
+    // Both a build-time filter and the click-time re-check: room state (party mode, a
+    // zoomed device, a season swap) switches whole groups off long after a halo was sized.
+    var cs;
+    try { cs = getComputedStyle(el); } catch (e) { return false; }
+    if (cs.display === "none" || cs.visibility === "hidden" || cs.pointerEvents === "none") return false;
+    if (parseFloat(cs.opacity) < 0.05) return false;
+    var p = el.parentNode;
+    while (p && p.nodeType === 1 && p !== strip) {
+      try {
+        var pcs = getComputedStyle(p);
+        if (pcs.display === "none" || pcs.visibility === "hidden" || parseFloat(pcs.opacity) < 0.05) return false;
+      } catch (e) { return false; }
+      p = p.parentNode;
+    }
+    return true;
+  }
+
+  // Element-local bbox → stage-local axis-aligned box, resolved entirely inside SVG user
+  // space. Deliberately NOT via getScreenCTM: WebKit drops an ancestor's CSS transform from
+  // it, and the strip carries one for both room navigation and the device zoom, so screen
+  // coords would be wrong on exactly the phones this feature exists for.
+  function haloStageBox(stage, el) {
+    var bb, sm, em;
+    try { bb = el.getBBox(); } catch (e) { return null; }
+    if (!bb || !bb.width || !bb.height) return null;
+    try { sm = stage.getCTM(); em = el.getCTM(); } catch (e) { return null; }
+    if (!sm || !em) return null;
+    var m = sm.inverse().multiply(em);
+    var xs = [], ys = [];
+    [[bb.x, bb.y], [bb.x + bb.width, bb.y], [bb.x, bb.y + bb.height], [bb.x + bb.width, bb.y + bb.height]]
+      .forEach(function (pt) {
+        xs.push(m.a * pt[0] + m.c * pt[1] + m.e);
+        ys.push(m.b * pt[0] + m.d * pt[1] + m.f);
+      });
+    var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs);
+    var y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+    return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, hx: (x1 - x0) / 2, hy: (y1 - y0) / 2 };
+  }
+
+  // How far `a` may grow before its halo would cover the point `b` is centred on. Growth is a
+  // single scalar applied to both axes, and staying clear on EITHER axis is enough, so the
+  // allowance is the larger of the two per-axis slacks.
+  function haloRoom(a, b) {
+    return Math.max(Math.abs(a.box.cx - b.box.cx) - a.box.hx,
+                    Math.abs(a.box.cy - b.box.cy) - a.box.hy) - HALO_GUARD;
+  }
+
+  function buildStageHalos(stage, room, unitPx) {
+    haloRooms[room] = [];
+    if (!unitPx) return 0;
+
+    var want = TAP_TARGET_PX / unitPx; // comfortable edge, in SVG units
+    var required = SOLVE_REQUIRED[room] || [];
+    var items = [];
+    [].slice.call(stage.querySelectorAll(".hunt-hit")).forEach(function (el) {
+      if (el.classList.contains("wall-brick")) return;   // 21 of them, incidental by design — halos would carpet the walls
+      if (el.closest(DRAG_SEL)) return;                  // a drag needs the real object under the finger; a re-dispatched click can't drag one
+      if (!haloUsable(el)) return;
+      var box = haloStageBox(stage, el);
+      if (!box) return;
+      var t = { el: el, box: box, pad: 0, req: required.indexOf(el.id) >= 0 };
+      t.needX = Math.max(0, (want - box.hx * 2) / 2);
+      t.needY = Math.max(0, (want - box.hy * 2) / 2);
+      t.need = Math.max(t.needX, t.needY);
+      if (t.need > 0) items.push(t);                     // objects already at a comfortable size need no halo
+    });
+
+    // Growth budget. The obvious rule — shrink overlapping halos to the midpoint between the
+    // two objects — turns out to size almost nothing here: measured on a 390px phone, nearly
+    // every solve step's nearest neighbour sits at a NEGATIVE bounding-box gap, because these
+    // objects are stacked rather than spaced (the portafilter rests on the machine, the lamp
+    // stands over the laptop). Splitting a negative gap zeroes every pad and the shot cup
+    // keeps its 8x7px target.
+    //
+    // What actually needs protecting is narrower than "no overlap". A halo lies UNDER all of
+    // the art, so overlapping a neighbour's drawing is harmless — the drawing still wins the
+    // tap. The only tap a halo can take from a neighbour is one on shared bare background, so
+    // the rule is: a halo may grow until it would cover the point another object is CENTRED
+    // on. That keeps each object's own middle sacred while letting halos reach across the
+    // stacked art around them, and it's a per-object cap, so no chain of neighbours can
+    // collapse it. Whatever background is still contested goes to whoever needs it most:
+    // halos paint neediest-last, required steps after ornaments, and last sibling wins.
+    // Only objects that actually GET a halo constrain each other: one already big enough to
+    // skip a halo defends its own middle with its own paint, so shrinking a neighbour against
+    // it would cost target size and buy nothing. Required steps are measured against each
+    // other alone — an ornament must never be the reason a solve step stays untappable, and a
+    // solve step reaching over an ornament's margin still leaves that ornament's own art on
+    // top and tappable.
+    var reqItems = items.filter(function (t) { return t.req; });
+    items.forEach(function (t) {
+      var against = t.req ? reqItems : items;
+      var cap = t.need;
+      against.forEach(function (o) { if (o !== t) cap = Math.min(cap, haloRoom(t, o)); });
+      t.pad = Math.max(0, cap);
+    });
+    items.sort(function (a, b) { return (Number(a.req) - Number(b.req)) || (a.need - b.need); });
+
+    var made = 0;
+    items.forEach(function (t) {
+      if (t.pad < HALO_MIN_PAD) return;
+      var gx = Math.min(t.needX, t.pad), gy = Math.min(t.needY, t.pad);
+      var x0 = Math.max(0, t.box.cx - t.box.hx - gx), x1 = Math.min(680, t.box.cx + t.box.hx + gx);
+      var y0 = Math.max(0, t.box.cy - t.box.hy - gy), y1 = Math.min(340, t.box.cy + t.box.hy + gy);
+      if (x1 - x0 <= 0 || y1 - y0 <= 0) return;
+      // Growing evenly on all four sides is only as generous as the CLOSEST neighbour allows,
+      // which leaves an object wedged against one neighbour (the balcony door beside the
+      // octopus) short even though the other side is wide open. So spend what the even pass
+      // couldn't: push each side out on its own until it reaches the target edge, the stage
+      // edge, or the first neighbouring centre actually in line with this side — widening one
+      // side can only capture centres within the perpendicular span, so this stays exact.
+      var against = t.req ? reqItems : items;
+      // `c`/`p` name the axis being pushed and the one across it. A neighbour only blocks a
+      // side if its centre lies within the side's perpendicular span — otherwise widening
+      // here can never reach it.
+      function pushHi(edge, c, p, perpLo, perpHi, limit) {
+        against.forEach(function (o) {
+          if (o === t || o.box[p] <= perpLo || o.box[p] >= perpHi) return;
+          if (o.box[c] >= edge) limit = Math.min(limit, o.box[c] - HALO_GUARD);
+        });
+        return Math.max(edge, limit);
+      }
+      function pushLo(edge, c, p, perpLo, perpHi, limit) {
+        against.forEach(function (o) {
+          if (o === t || o.box[p] <= perpLo || o.box[p] >= perpHi) return;
+          if (o.box[c] <= edge) limit = Math.max(limit, o.box[c] + HALO_GUARD);
+        });
+        return Math.min(edge, limit);
+      }
+      if (x1 - x0 < want) {
+        x1 = pushHi(x1, "cx", "cy", y0, y1, Math.min(680, x0 + want));
+        x0 = pushLo(x0, "cx", "cy", y0, y1, Math.max(0, x1 - want));
+      }
+      if (y1 - y0 < want) {
+        y1 = pushHi(y1, "cy", "cx", x0, x1, Math.min(340, y0 + want));
+        y0 = pushLo(y0, "cy", "cx", x0, x1, Math.max(0, y1 - want));
+      }
+      haloRooms[room].push({ el: t.el, x0: x0, y0: y0, x1: x1, y1: y1 });
+      made++;
+    });
+    return made;
+  }
+
+  // Screen point → the object whose halo owns it, or null. The strip's own bounding rect
+  // carries every CSS transform on it (the room slide, the device zoom), so mapping through
+  // that rect into viewBox units is exact for the translate+scale it uses — and unlike
+  // getScreenCTM it stays right on WebKit, which drops an ancestor's CSS transform.
+  function haloTargetAt(clientX, clientY) {
+    var r = strip.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    var vb = (strip.getAttribute("viewBox") || "").split(/[\s,]+/);
+    var vbW = parseFloat(vb[2]) || 3400, vbH = parseFloat(vb[3]) || 340;
+    var lx = (clientX - r.left) / r.width * vbW, ly = (clientY - r.top) / r.height * vbH;
+    var idx = Math.floor(lx / 680);
+    var room = Object.keys(SOLVE_REQUIRED)[idx];
+    var boxes = room && haloRooms[room];
+    if (!boxes || !boxes.length) return null;
+    var sx = lx - idx * 680, sy = ly;
+    // Back to front: the build ordered these worst-target-last, so the first match walking
+    // backwards is the object with the strongest claim on a contested patch of background.
+    for (var i = boxes.length - 1; i >= 0; i--) {
+      var b = boxes[i];
+      if (sx >= b.x0 && sx <= b.x1 && sy >= b.y0 && sy <= b.y1 && b.el.isConnected && haloUsable(b.el)) return b.el;
+    }
+    return null;
+  }
+
+  strip.addEventListener("click", function (e) {
+    if (e.target.closest && e.target.closest(".hunt-hit")) return; // a real object took the tap — never second-guess it
+    var el = haloTargetAt(e.clientX, e.clientY);
+    if (el) el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: e.clientX, clientY: e.clientY }));
+  });
+
+  // Phones only: at >=760px a room is wide enough that every object is already a fine mouse
+  // target. Rebuilding with no halos clears the map, so crossing back to desktop leaves none.
+  function rebuildTapHalos() {
+    var vp = document.querySelector(".hunt-viewport");
+    var narrow = window.matchMedia("(max-width:759px)").matches;
+    // One room spans the viewport, so this is the live SVG-unit-to-CSS-px scale. Read off the
+    // viewport (a plain, untransformed div) rather than the strip, which is scaled during a
+    // device zoom and would size halos against a transient magnification.
+    var unitPx = (narrow && vp) ? vp.getBoundingClientRect().width / 680 : 0;
+    var total = 0;
+    Object.keys(SOLVE_REQUIRED).forEach(function (room) {
+      var stage = document.getElementById("stage-" + room);
+      if (stage) total += buildStageHalos(stage, room, unitPx);
+    });
+    return total;
+  }
+  window.__rebuildTapHalos = rebuildTapHalos;
+  // Halos are geometry, not nodes, so these two are the only way to see them.
+  window.__haloRegions = function () { return haloRooms; };
+  window.__haloTargetAt = haloTargetAt;
+
+  var haloT = null;
+  function scheduleHalos() { clearTimeout(haloT); haloT = setTimeout(rebuildTapHalos, 150); }
+  // fullscreenchange as well as resize: entering the fullscreen scene changes the room's
+  // scale — and so every halo's correct size — without necessarily firing a resize.
+  window.addEventListener("resize", scheduleHalos);
+  window.addEventListener("orientationchange", scheduleHalos);
+  document.addEventListener("fullscreenchange", scheduleHalos);
+  document.addEventListener("webkitfullscreenchange", scheduleHalos);
+  scheduleHalos();
 })();
 (function () {
   // Touch devices have no right-click, so every .mon-ctx / .console-ctx context menu (monitor

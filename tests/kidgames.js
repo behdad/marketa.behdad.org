@@ -73,7 +73,13 @@ function buildScene() {
   strip = new El("svg"); strip.setAttribute("id", "loft-game-strip");
   kg = new El("g"); kg.setAttribute("id", "cuddly-kidgames");
   strip.appendChild(kg);
-  // six kids FIRST: outer <g transform> > <g class="kg-rock kg-name"> > <g class="kg-tilt">
+  // the two contact pools FIRST, in document order — randomize() re-pools [0] under the meal-day
+  // huddle and drops [1], so their order (not just their presence) is load-bearing
+  [[152, 86], [470, 82]].forEach(function (s) {
+    var sh = new El("ellipse"); sh.setAttribute("class", "kg-shadow");
+    sh.setAttribute("cx", s[0]); sh.setAttribute("cy", 337); sh.setAttribute("rx", s[1]); kg.appendChild(sh);
+  });
+  // six kids next: outer <g transform> > <g class="kg-rock kg-name"> > <g class="kg-tilt">
   var basePos = { "kg-robin": [108,300], "kg-navid": [160,296], "kg-elisabeth": [196,302], "kg-irene": [426,300], "kg-felix": [478,304], "kg-hannah": [514,300] };
   NAMES.forEach(function (n) {
     var outer = new El("g"); outer.setAttribute("transform", "translate(" + basePos[n][0] + "," + basePos[n][1] + ")");
@@ -147,7 +153,7 @@ ok(/window\.__updateKidGames\s*=\s*apply/.test(iife), "sliced the real __updateK
 /* run it inside a Function with our shims in scope */
 function runIIFE() {
   var fn = new Function("document", "window", "tipText", "hoverTooltip", "kidAgeLine", "relLine", "funFact",
-    iife + "\nreturn { apply: window.__updateKidGames, reshuffle: window.__kidGamesReshuffle, inGame: window.__kidInGamesNow };");
+    iife + "\nreturn { apply: window.__updateKidGames, reshuffle: window.__kidGamesReshuffle, inGame: window.__kidInGamesNow, now: window.__kidGamesNow };");
   return fn(docShim, winShim, tipText, hoverTooltip, kidAgeLine, relLine, funFact);
 }
 
@@ -301,6 +307,70 @@ var blocksIdx = kgMarkup.indexOf('class="kg-blocks"');
 ok(lastKidIdx > 0, "found the last kid in the group markup");
 ok(boardIdx > lastKidIdx, "the board prop is AFTER every kid in document order (paints on top)");
 ok(blocksIdx > lastKidIdx, "the blocks prop is AFTER every kid in document order (paints on top)");
+
+/* ══ TEST 7: meal days — the kids still play, in ONE huddle on the left, clear of the food ═══
+   The nook's low table (out only on meal days) occupies x388–532 with its shadow, its dishes
+   x398–517. The kids used to be cleared off the floor entirely on those days; now they gather
+   into a single left cluster instead, so everything they own must stay left of the table. */
+console.log("\nTest 7 — meal days: kids still play, one left huddle, nothing on the food table:");
+var TABLE_LEFT = 388, CRATE_RIGHT = 56;
+var KID_HALF = 32; // widest kid half-extent in view-box units: 21 body + an 11-unit reach arm
+var PROP_HALF = 30; // the board is the wider prop: ±30 about its own origin
+function xOf(el) { return +/translate\((-?\d+),/.exec(el.getAttribute("transform"))[1]; }
+function propsOn() { return [".kg-board", ".kg-blocks"].filter(function (c) { return !kg.querySelector(c).classList.contains("kg-off"); }); }
+function shadowsOn() { return kg.querySelectorAll(".kg-shadow").filter(function (s) { return !s.classList.contains("kg-off"); }); }
+function kidXs() { return NAMES.map(function (n) { return xOf(kg.querySelector("." + n).parentNode); }); }
+
+buildScene();
+coupleEl = new El("g"); coupleEl.setAttribute("class", "at-party");
+visEl = new El("g");
+docShim.getElementById = function (id) { if (id === "loft-game-strip") return strip; if (id === "cuddly-kidgames") return kg; if (id === "cuddly-couple") return coupleEl; if (id === "cuddly-visitors-layer") return visEl; return null; };
+winShim.__gardenPartyOn = true;
+var api7 = runIIFE();
+strip.classList.add("meal-on");
+api7.apply();
+ok(kg.classList.contains("playing"), "a meal on the low table no longer clears the kids — still .playing");
+ok(api7.now && api7.now().length === 6, "__kidGamesNow() still lists all six on a meal day (roster + Aspen's photos read it)");
+["Irene", "Robin", "Navid"].forEach(function (nm) { ok(api7.inGame(nm) === true, nm + " still reads in-game on a meal day (one-room rule holds)"); });
+
+// 40 re-rolls of the meal layout: ONE prop, ONE pool, and every piece left of the table
+var mealWorstRight = -1e9, mealWorstLeft = 1e9, mealPropCounts = {}, onePropEachRoll = true, onePoolEachRoll = true;
+for (var mr = 0; mr < 40; mr++) {
+  kg.classList.remove("playing");
+  api7.apply(); // OFF→ON with meal-on → the huddle
+  var po = propsOn();
+  if (po.length !== 1) onePropEachRoll = false; else mealPropCounts[po[0]] = true;
+  if (shadowsOn().length !== 1) onePoolEachRoll = false;
+  kidXs().forEach(function (x) {
+    if (x + KID_HALF > mealWorstRight) mealWorstRight = x + KID_HALF;
+    if (x - KID_HALF < mealWorstLeft) mealWorstLeft = x - KID_HALF;
+  });
+  var pv = kg.querySelector(po[0]);
+  if (pv && xOf(pv) + PROP_HALF > mealWorstRight) mealWorstRight = xOf(pv) + PROP_HALF;
+}
+ok(onePropEachRoll, "every meal-day roll shows exactly ONE prop (the other is .kg-off)");
+ok(onePoolEachRoll, "every meal-day roll shows exactly ONE contact pool (the other is .kg-off)");
+ok(Object.keys(mealPropCounts).length === 2, "both props take their turn as the huddle's game across rolls (coin-flip works)");
+ok(mealWorstRight < TABLE_LEFT, "nothing reaches the low table: worst right edge " + mealWorstRight + " < " + TABLE_LEFT);
+ok(mealWorstLeft > CRATE_RIGHT, "nothing overlaps the crate: worst left edge " + mealWorstLeft + " > " + CRATE_RIGHT);
+ok(kidXs().every(function (x) { return x < 340; }), "all six kids sit in the LEFT half of the nook (one cluster, not two)");
+
+// the meal starting / ending under a scene already .playing must re-lay the floor, not strand it
+strip.classList.remove("meal-on");
+api7.apply();
+ok(kg.classList.contains("playing"), "meal ends while you're standing there → kids stay");
+ok(propsOn().length === 2, "meal ends → both props are back out");
+ok(shadowsOn().length === 2, "meal ends → both contact pools are back out");
+ok(kidXs().some(function (x) { return x > TABLE_LEFT; }), "meal ends → the kids spread back into TWO clusters (someone is right of x" + TABLE_LEFT + ")");
+strip.classList.add("meal-on");
+api7.apply();
+ok(kidXs().every(function (x) { return x < 340; }), "meal starts while you're standing there → they re-gather into the one left huddle");
+ok(propsOn().length === 1, "meal starts → back to a single prop");
+// ...and a plain re-eval on an unchanged meal day still must NOT re-roll
+var mealSnap = kidXs().join(",");
+api7.apply();
+ok(kidXs().join(",") === mealSnap, "a re-eval on an unchanged meal day does NOT re-roll the huddle");
+strip.classList.remove("meal-on");
 
 console.log("\n" + (fails ? ("FAILED: " + fails + " assertion(s), " + passes + " passed") : ("All " + passes + " assertions passed.")));
 process.exit(fails ? 1 : 0);

@@ -5200,6 +5200,9 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 #cuddly-kidgames{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .55s ease}
 #cuddly-kidgames.playing{opacity:1; visibility:visible; pointer-events:auto} /* tappable only while playing → each kid pops their white name card (delegated on #cuddly-kidgames); ambient decor otherwise */
 #cuddly-kidgames.playing .kg-rock{cursor:pointer}
+/* The meal-day huddle (see randomize()) needs only ONE prop and ONE contact pool; the spare of
+   each is dropped here rather than parked off to the side, where it would graze the food table. */
+#cuddly-kidgames .kg-off{display:none}
 /* Kids asleep (window.__setKidsAsleep): the game-kids themselves clear out but the scene stays
    .playing so their PROPS (board, blocks, shadows) remain on the nook floor — only the seated
    figures leave. visibility:hidden (not display) keeps them un-tappable and layout-stable. */
@@ -16908,8 +16911,9 @@ section{margin:1.9rem 0}
 </g>
 <!-- ══ KIDS PLAYING GAMES IN THE NOOK during the party ══════════════════════════
      Owner: when the party's on and the nook is otherwise empty (hosts off at the garden,
-     no duo visiting, no meal), most of the kids who aren't on the dance floor sit on the
-     open front floor playing games in two little groups. Fully additive: dedicated seated
+     no duo visiting), most of the kids who aren't on the dance floor sit on the open front
+     floor playing games in two little groups — or in ONE huddle on the left, on the days the
+     low table is out with a meal on it. Fully additive: dedicated seated
      kid figures with their OWN ids (never the cameo/duo/totoro nodes), shown/hidden as one
      unit by the __updateKidGames IIFE via .playing on this wrapper. Persistent CSS on
      persistent nodes → nothing spawned, nothing accumulates. Each kid's static floor
@@ -16917,7 +16921,8 @@ section{margin:1.9rem 0}
      distinct INNER wrapper (no transform attr) so the animation can't clobber the position
      (the transform-attr-vs-CSS-animation rule). pointer-events:none — purely ambient. -->
 <g id="cuddly-kidgames" aria-hidden="true"><!-- pointer-events flipped to auto by CSS only while .playing → tappable name cards; ambient decor (events:none via #cuddly-kidgames base rule) otherwise -->
-  <!-- soft contact shadows under the two seated clusters -->
+  <!-- soft contact shadows, one per seated cluster; randomize() re-pools the first under the
+       single meal-day huddle and drops the second (.kg-off), so document order matters here -->
   <ellipse class="kg-shadow" cx="152" cy="337" rx="86" ry="8" fill="#000" opacity="0.10"/>
   <ellipse class="kg-shadow" cx="470" cy="337" rx="82" ry="8" fill="#000" opacity="0.10"/>
 
@@ -31607,22 +31612,22 @@ document.addEventListener("click", function (e) {
   });
 })();
 // Kids playing games in the nook during the party. Owner: when the party's on and the nook is
-// otherwise EMPTY — hosts off at the garden (couple .at-party), no adult friend-duo visiting, no
-// meal on the low table, and the totoro co-watch isn't seating kids on that same floor — MOST of
-// the kids who aren't on the dance floor sit down there in two little groups and play games
-// (Group A: a board game with a tumbling die — Robin, Navid, Elisabeth; Group B: building blocks —
-// Irene, Felix, Hannah). The whole scene is CSS on ONE persistent group (#cuddly-kidgames), shown
-// by adding .playing — nothing is spawned, so nothing can accumulate. The controller is a pure
-// class toggle re-evaluated on every relevant trigger (party on/off, room change, presence, meal,
-// duo visit/leave, totoro on/off) plus a tab-show recheck; no autonomous timer of its own → the
+// otherwise EMPTY — hosts off at the garden (couple .at-party), no adult friend-duo visiting, and
+// the totoro co-watch isn't seating kids on that same floor — MOST of the kids who aren't on the
+// dance floor sit down there in two little groups and play games (Group A: a board game with a
+// tumbling die — Robin, Navid, Elisabeth; Group B: building blocks — Irene, Felix, Hannah). On the
+// days the low table is out with a meal on it they still play, gathered into ONE huddle on the left
+// so the food keeps its floor — see MEAL_SLOTS. The whole scene is CSS on ONE persistent
+// group (#cuddly-kidgames), shown by adding .playing — nothing is spawned, so nothing can
+// accumulate. The controller is a pure class + attribute pass, re-evaluated on every relevant
+// trigger (party on/off, room change, presence, meal on/off, duo visit/leave, totoro on/off)
+// plus a tab-show recheck; no autonomous timer of its own → the
 // crickets rule doesn't apply (no sound, no unattended work), and state.js stays green (idle loops
 // only run while .playing, dropped the instant it's removed; a reset lands party-off → .playing off).
 (function () {
   function want() {
     if (window.currentStageName !== "cuddly") return false; // only decorate the nook while it's on screen
     if (!window.__gardenPartyOn) return false;               // owner: only during the party
-    var strip = document.getElementById("loft-game-strip");
-    if (strip && strip.classList.contains("meal-on")) return false; // owner: no nook activity while food is served
     var couple = document.getElementById("cuddly-couple");
     if (!couple || !couple.classList.contains("at-party")) return false; // hosts must be OFF at the garden (nook empty of adults)
     // don't fight the adult friend-duo drop-in: if a duo is visiting the nook, no playing kids
@@ -31632,6 +31637,7 @@ document.addEventListener("click", function (e) {
     if (window.__totoroWatchActive) return false;
     return true;
   }
+  function mealOn() { var s = document.getElementById("loft-game-strip"); return !!(s && s.classList.contains("meal-on")); }
   // ── Who's who: each seated game-kid is a SPECIFIC guest, so a tap pops the white roster-style
   //    name card (window.__whoPop) — same "<em>Name</em> · role" line as the nook cameos and the
   //    dance-floor guests. The map is keyed by the kid's .kg-<name> class; the delegated handler
@@ -31658,31 +31664,65 @@ document.addEventListener("click", function (e) {
     [426, 300], [478, 304], [514, 300]
   ];
   var LEFT_PROP = [152, 330], RIGHT_PROP = [470, 328]; // base positions of the two game-prop groups
+  var SHADOWS = [[152, 86], [470, 82]];                // [cx,rx] of the two clusters' contact pools
+  // ── MEAL-DAY variant: one huddle on the LEFT ────────────────────────────────────────────────
+  //    On the days the low table is out (.meal-on) it owns the right of the nook — slab+step+
+  //    shadow x388–532, dishes x398–517 — so a right cluster would sit in the food. The kids
+  //    don't leave (they used to); they gather into a single huddle well clear of it: a shallow
+  //    arc opening toward the viewer (the middle pair furthest back, the outer pair nearest) with
+  //    ONE prop set down at its focus and one contact pool, the spares dropped via .kg-off. The
+  //    arc is as deep as the floor band allows — feet below ~348 clip on the room's bottom edge.
+  //    Rightmost kid x275 +32 (a reach arm) +4 jitter ≈ 311 stays clear of the table at 388 — and
+  //    of the centred now-playing toast, which lands at x315; leftmost x105 −22 −4 clears the
+  //    crate, which ends at x56.
+  var MEAL_SLOTS = [ [105, 306], [139, 297], [173, 288], [207, 288], [241, 297], [275, 306] ];
+  var MEAL_PROP = [190, 326], MEAL_SHADOW = [190, 108]; // prop y set so its floor contact (~337) lands at the huddle's mean foot depth — it reads as the middle of the ring, not its back edge
   function jit(n) { return Math.round((Math.random() * 2 - 1) * n); } // ±n integer jitter
   function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
-  function randomize(kg) {
-    // shuffle which kid sits in which slot, then jitter each
+  function randomize(kg, meal) {
+    // shuffle which kid sits in which slot, then jitter each (gentler on the meal arc, which reads
+    // as a curve — a big y jitter would break it)
+    var slots = meal ? MEAL_SLOTS : SLOTS;
     var order = shuffle(NAMES.slice());
     for (var i = 0; i < order.length; i++) {
       var rock = kg.querySelector("." + order[i]);
       if (!rock) continue;
       var outer = rock.parentNode; // the outer <g> that carries the placement transform attr
-      var s = SLOTS[i];
-      outer.setAttribute("transform", "translate(" + (s[0] + jit(5)) + "," + (s[1] + jit(4)) + ")");
+      var s = slots[i];
+      outer.setAttribute("transform", "translate(" + (s[0] + jit(meal ? 4 : 5)) + "," + (s[1] + jit(meal ? 2 : 4)) + ")");
     }
-    // coin-flip which cluster gets the board vs. the blocks (props + their contact shadows swap sides)
-    var swap = Math.random() < 0.5;
     var board = kg.querySelector(".kg-board"), blocks = kg.querySelector(".kg-blocks");
+    var shadows = kg.querySelectorAll(".kg-shadow");
+    // coin-flip which game is out: on a normal day it decides which cluster gets the board vs. the
+    // blocks (props + their contact shadows swap sides), on a meal day which single prop is played
+    var swap = Math.random() < 0.5;
+    if (meal) {
+      var keep = swap ? blocks : board, drop = swap ? board : blocks;
+      if (keep) { keep.setAttribute("transform", "translate(" + MEAL_PROP[0] + "," + MEAL_PROP[1] + ")"); keep.classList.remove("kg-off"); }
+      if (drop) drop.classList.add("kg-off");
+      if (shadows[0]) { shadows[0].setAttribute("cx", MEAL_SHADOW[0]); shadows[0].setAttribute("rx", MEAL_SHADOW[1]); shadows[0].classList.remove("kg-off"); }
+      if (shadows[1]) shadows[1].classList.add("kg-off");
+      return;
+    }
     var lp = swap ? RIGHT_PROP : LEFT_PROP, rp = swap ? LEFT_PROP : RIGHT_PROP;
-    if (board)  board.setAttribute("transform",  "translate(" + lp[0] + "," + lp[1] + ")");
-    if (blocks) blocks.setAttribute("transform", "translate(" + rp[0] + "," + rp[1] + ")");
+    if (board)  { board.setAttribute("transform",  "translate(" + lp[0] + "," + lp[1] + ")"); board.classList.remove("kg-off"); }
+    if (blocks) { blocks.setAttribute("transform", "translate(" + rp[0] + "," + rp[1] + ")"); blocks.classList.remove("kg-off"); }
+    for (var j = 0; j < shadows.length && j < SHADOWS.length; j++) {
+      shadows[j].setAttribute("cx", SHADOWS[j][0]);
+      shadows[j].setAttribute("rx", SHADOWS[j][1]);
+      shadows[j].classList.remove("kg-off");
+    }
   }
+  var laidOutForMeal = false; // which layout the floor currently holds — a meal that starts or ends
+                              // while you're standing there has to re-lay it, not strand the old one
   function apply() {
     var kg = document.getElementById("cuddly-kidgames");
     if (!kg) return;
-    var on = want(), was = kg.classList.contains("playing");
+    var on = want(), was = kg.classList.contains("playing"), meal = on && mealOn();
+    // re-roll on a fresh OFF→ON showing, or when the meal comes/goes under a scene already playing
+    if (on && (!was || meal !== laidOutForMeal)) randomize(kg, meal);
+    laidOutForMeal = meal;
     if (on && !was) {
-      randomize(kg); // re-roll the scene only on a fresh OFF→ON showing (not every re-eval)
       // ONE-ROOM rule (the other half): as the seated kids appear, clear any cuddly-nook cameo of
       // one of the same kids that happens to be mid-visit, so Irene/Robin/Navid can't be both seated
       // AND cameo'ing at once. Their scheduler already refuses to START a cameo for a kid in a game
@@ -31694,7 +31734,7 @@ document.addEventListener("click", function (e) {
     kg.classList.toggle("playing", on); // pure class flip → idempotent + storm-safe; nothing to strand
   }
   window.__updateKidGames = apply;
-  window.__kidGamesReshuffle = function () { var kg = document.getElementById("cuddly-kidgames"); if (kg) randomize(kg); }; // test/console hook
+  window.__kidGamesReshuffle = function () { var kg = document.getElementById("cuddly-kidgames"); if (kg) randomize(kg, mealOn()); }; // test/console hook
   // The six kids seated in the nook games right now, display-ready for the shared per-room
   // roster (window.__whoIsHere) — empty unless the scene is actually .playing.
   window.__kidGamesNow = function () {
@@ -67926,7 +67966,7 @@ function spawnDustMote(container) {
       if (on) any = true;
     });
     strip.classList.toggle("meal-on", any);
-    if (window.__updateKidGames) window.__updateKidGames(); // a meal takes the nook floor → clear the game-kids (and restore them off a meal day)
+    if (window.__updateKidGames) window.__updateKidGames(); // a meal takes the right of the nook floor → the game-kids re-gather into one left huddle (and spread back out off a meal day)
   }
   window.__isNewYearSky = function () { var s = seasonDate(); return (s.m === 11 && s.d >= 24) || (s.m === 0 && s.d === 1); }; // Dec 24 – Jan 1
   // Same window decorForDate dresses for, so the sky can never disagree with the bulbs.

@@ -44818,8 +44818,8 @@ async def localfont(name):
       groupphoto:    { fromKeys: MOMENT_SENDERS, bodyKey: "msg_groupphoto_body", act: "groupphoto" }, // a coordinator gathers everyone for the whole-crowd shot → lands in the album
       sparklers:     { fromKeys: MOMENT_SENDERS, bodyKey: "msg_sparklers_body",  act: "sparklers" }   // a coordinator calls the sparkler send-off tunnel
     };
-    var CUE_POOL = ["cue_cocktails", "cue_calendar", "storm", "invaders", "flair", "smores", "sina_helpers", "firstdance", "slowdance", "cake", "bouquet", "chairlift", "jukebox", "hamid_verse", "pouria_farhang", "ali_love", "alireza_vitamin", "fireworks", "lanterns", "toasts", "groupphoto", "sparklers"]; // the random party (night) drip (shuffled: each drip picks a random un-sent one); smores is night-only + sina_helpers only while Sina's off the decks — see cueRemaining(); hamid_verse chains its 2nd stanza via m.next; toasts/groupphoto/sparklers/cake/bouquet/chairlift are scripted garden beats
-    var DAY_POOL = ["bbq", "cue_mail"]; // the DAYTIME drip — texts that belong to daylight hours (no party); dripped by scheduleDayDrip(). Bahareh's "did you check the mail?" belongs to the day.
+    var CUE_POOL = ["cue_cocktails", "cue_calendar", "storm", "invaders", "flair", "smores", "sina_helpers", "firstdance", "slowdance", "cake", "bouquet", "chairlift", "jukebox", "hamid_verse", "pouria_farhang", "ali_love", "alireza_vitamin", "fireworks", "lanterns", "toasts", "groupphoto", "sparklers", "bbq"]; // the random party (night) drip (shuffled: each drip picks a random un-sent one); smores is night-only + sina_helpers only while Sina's off the decks — see cueRemaining(); hamid_verse chains its 2nd stanza via m.next; toasts/groupphoto/sparklers/cake/bouquet/chairlift are scripted garden beats
+    var DAY_POOL = ["cue_mail"]; // the DAYTIME drip — texts that belong to daylight hours (no party); dripped by scheduleDayDrip(). Bahareh's "did you check the mail?" belongs to the day. (behdad's BBQ text moved to the party CUE_POOL.)
     // Phone photobooth result state — session-scoped, same model as notesDraft/cardsIndex:
     // a captured polaroid (frame canvas + chosen look/frame) survives a normal close/reopen
     // (renderPhotobooth seeds its locals from these and commits them back in teardown), and is
@@ -46071,7 +46071,15 @@ async def localfont(name):
         setTimeout(function () { if (window.__openDjPicker) window.__openDjPicker(); }, window.currentStageName === "garden" ? 80 : 700);
         return;
       }
-      if (act === "bbq") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__startBBQ) window.__startBBQ(); }, 760); return; } // pan to the balcony, then open + light the smoker
+      if (act === "bbq") { // behdad: pan to the balcony, light the smoker, and summon Hamid the grillmaster to tend it (during the party)
+        if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
+        if (window.goToStage) window.goToStage("balcony");
+        setTimeout(function () {
+          if (window.__startBBQ) window.__startBBQ();
+          setTimeout(function () { if (window.__forceBalconyGrillmaster) window.__forceBalconyGrillmaster(); }, 400); // Hamid steps up to the grill once it's lit
+        }, 760);
+        return;
+      }
       if (act === "fireworks") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__setDayNight) window.__setDayNight(true); if (window.__startFireworks) window.__startFireworks(); }, 760); return; } // pan to the balcony, set night, then run the fireworks finale
       if (act === "lanterns") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__setDayNight) window.__setDayNight(true); if (window.__releaseLanterns) window.__releaseLanterns(); }, 760); return; } // pan to the balcony, set night, then release wish-lanterns
       if (act === "magicbox") { if (window.goToStage) window.goToStage("garden"); setTimeout(function () { if (window.__drugsboxTap) window.__drugsboxTap(); }, 760); return; } // pan to the garden, then tap the magic box (date lock the first time)
@@ -61962,6 +61970,7 @@ function spawnDustMote(container) {
       paint();
     }
     window.__updateBalconyGrillmaster = update;
+    window.__forceBalconyGrillmaster = function () { visited = true; present = true; paint(); }; // behdad's "let's start the BBQ" text summons Hamid to tend it (bypasses the ~50% roll)
     window.__resetBalconyGrillmaster = function () { visited = false; present = false; paint(); };
     // a slow self-rescheduling timer: over a long balcony stay Hamid steps to/from the grill so
     // he's not a fixture. Re-gated every fire (crickets rule); a no-op while off the balcony.

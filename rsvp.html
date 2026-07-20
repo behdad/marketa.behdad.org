@@ -22600,6 +22600,12 @@ var T = {
     cue_mail_body: "did you check the mail? 💌 there's a letter for you",
     msg_storm_body: "there's a storm coming! ⛈️",
     msg_behdad_from: "behdad",
+    msg_marketa_from: "markéta",
+    // birthday-announcement text variations; {name} is filled from the BIRTHDAYS row at delivery
+    bd_msg_a: "Happy birthday, {name}! 🎂",
+    bd_msg_b: "it's {name}'s birthday!! 🥳",
+    bd_msg_c: "big day for {name} today 🎂🎈",
+    bd_msg_d: "Happy birthday {name}! 🎉🎈",
     msg_sina_from: "Sina",
     msg_invaders_body: "Irene, did you see the invaders in the office? 👾",
     msg_flair_body: "I need a break 🍸",
@@ -23207,6 +23213,12 @@ var T = {
     cue_mail_body: "koukl(a) jsi do pošty? 💌 máš tam dopis",
     msg_storm_body: "blíží se bouřka! ⛈️",
     msg_behdad_from: "behdad",
+    msg_marketa_from: "markéta",
+    // varianty narozeninových přání; {name} se doplní z řádku BIRTHDAYS při doručení
+    bd_msg_a: "Všechno nejlepší, {name}! 🎂",
+    bd_msg_b: "{name} má dnes narozeniny!! 🥳",
+    bd_msg_c: "velký den pro {name} 🎂🎈",
+    bd_msg_d: "Všechno nejlepší k narozeninám, {name}! 🎉🎈",
     msg_sina_from: "Sina",
     msg_invaders_body: "Irene, viděla jsi v pracovně vetřelce? 👾",
     msg_flair_body: "Potřebuju pauzu 🍸",
@@ -43708,7 +43720,12 @@ async def localfont(name):
     // a message's sender/body come from the dict (fromKey/bodyKey) for the authored story texts,
     // OR as literal strings (from/body) for ad-hoc ones delivered via the message() console API.
     function msgFrom(m) { return (m && m.from != null) ? m.from : tr(m.fromKey); }
-    function msgBody(m) { return (m && m.body != null) ? m.body : tr(m.bodyKey); }
+    function msgBody(m) {
+      if (m && m.body != null) return m.body;
+      var s = tr(m.bodyKey);
+      if (m && m.bdName != null) s = s.replace("{name}", m.bdName); // birthday texts fill {name} from the person's display name, re-substituted on every language flip
+      return s;
+    }
     // case- + accent-insensitive fold for the search box: lower-case, strip combining marks
     // (é→e, ř→r) so "rene" finds "Irène" and a bare "marketa" finds "markéta".
     function msgFold(s) { var l = String(s == null ? "" : s).toLowerCase(); return l.normalize ? l.normalize("NFD").replace(/[̀-ͯ]/g, "") : l; }
@@ -46217,6 +46234,24 @@ async def localfont(name):
       else showMessageThumb(id);
       updateMsgBadge();
       if (m.next && MESSAGES[m.next]) setTimeout(function () { window.__deliverPhoneMessage(m.next); }, m.nextDelay || 4200); // chained followup text (e.g. Hamid's 2nd stanza lands a few seconds after the 1st)
+    };
+    // ── birthday-announcement texts ── when a guest's birthday window opens (the 'b'/console axis
+    // or the real calendar, via applyBirthdays), the couple texts a "Happy Birthday" line. MARKÉTA
+    // announces for her own people (her friends Jay & Spencer + her family) and for Behdad; BEHDAD
+    // announces for everyone else + for Markéta. The <name> is dropped into a random template
+    // variation (frozen at delivery, re-substituted on language flips). Fired once per person per
+    // session — messagesThread dedups the "bd_<who>" id, so re-renders / the ~4s air-quality
+    // re-apply / repeated 'b' presses can't double-send. Unattended delivery is silent (the thumb
+    // + notify buzz self-gate on the crickets rule inside showMessageThumb).
+    var BD_TEMPLATES = ["bd_msg_a", "bd_msg_b", "bd_msg_c", "bd_msg_d"];
+    var BD_MB_PEOPLE = { jay: 1, spencer: 1, madla: 1, robert: 1, elisabeth: 1, felix: 1, daniel: 1, marie: 1, baka: 1 }; // Markéta's friends + Czech family
+    window.__deliverBirthdayText = function (who, name) {
+      if (!who || !name) return;
+      var id = "bd_" + who;
+      if (messagesThread.indexOf(id) !== -1) return; // already sent this session — fire once
+      var mb = who === "marketa" ? false : (who === "behdad" || BD_MB_PEOPLE[who]); // a partner's own birthday is announced by the OTHER partner
+      MESSAGES[id] = { fromKey: mb ? "msg_marketa_from" : "msg_behdad_from", bodyKey: BD_TEMPLATES[Math.floor(Math.random() * BD_TEMPLATES.length)], bdName: name };
+      window.__deliverPhoneMessage(id);
     };
     // message("Sender", "your text") — deliver an AD-HOC text: a notification toast (when the tab's
     // attended) AND a bubble in the messages app, from an arbitrary sender with arbitrary body.
@@ -63207,10 +63242,17 @@ function spawnDustMote(container) {
     if (diff > 182) diff -= 365; else if (diff < -182) diff += 365;
     return diff >= -b.before && diff <= b.after;
   }
+  var bdActive = {}; // who-id → true while its window is currently active; the off→on edge fires the one announcement text per activation
   function applyBirthdays(s) {
     var strip = document.getElementById("loft-game-strip");
     if (!strip) return;
-    BIRTHDAYS.forEach(function (b) { strip.classList.toggle("bd-" + b.who, inBirthdayWindow(b, s.m, s.d)); });
+    BIRTHDAYS.forEach(function (b) {
+      var on = inBirthdayWindow(b, s.m, s.d);
+      strip.classList.toggle("bd-" + b.who, on);
+      if (on) {
+        if (!bdActive[b.who] && window.__deliverBirthdayText) { bdActive[b.who] = true; window.__deliverBirthdayText(b.who, b.name); } // edge-triggered; the deliverer's own messagesThread dedup is the real once-per-session guard
+      } else if (bdActive[b.who]) { bdActive[b.who] = false; } // window closed → re-arm the edge
+    });
   }
   // The gifts, out on the two nights they're opened and not a day longer: Štědrý večer (the
   // 24th, when Ježíšek brings them) and Christmas morning (the 25th). An overlay for the same

@@ -75,11 +75,13 @@ const SUBJECTS = [
   const eval1 = expr => send('Runtime.evaluate', { expression: expr, returnByValue: true }).then(r => r.result.value);
 
   // renderer: builds host, returns {mode, figs:[{l,r,t,b,w,h}], overlaps:[...]}
+  // `sub` is either a seeded subjectId (looked up in __albumList) or a `{...}` record literal, so the
+  // same measurement path covers ROOM shots, which have no seeded record to find.
   async function renderAndMeasure(sub, forceMode) {
+    const recExpr = sub.trim()[0] === '{' ? sub : `(window.__albumList().find(function(r){return r.subjectId===${JSON.stringify(sub)};}))`;
     const expr = `(function(){
       window.__albumForceMode = ${forceMode ? JSON.stringify(forceMode) : 'null'};
-      var list = window.__albumList();
-      var rec = list.find(function(r){return r.subjectId==='${sub}';});
+      var rec = ${recExpr};
       if(!rec){return 'NO-REC';}
       var host = document.getElementById('__albtest');
       if(host) host.remove();
@@ -116,8 +118,14 @@ const SUBJECTS = [
     return JSON.parse(v);
   }
 
+  // A head off the TOP of the frame is the one defect that ruins a photograph, and the composition's
+  // vertical fit is driven by measured figure tops — so every render is asserted against it. Feet may
+  // leave the bottom (closeup crops them on purpose); faces may never leave the top.
+  const TOP_CLIP = -1; // px slack for rounding at the 400x300 render size
+  function topClipped(m) { return (m.figs || []).filter(f => f.t < TOP_CLIP); }
+  let anyBadOverlap = false, anyTopClip = false;
+
   console.log('=== seeded (natural) modes ===');
-  let anyBadOverlap = false;
   for (const sub of SUBJECTS) {
     const m = await renderAndMeasure(sub);
     await sleep(150);
@@ -125,10 +133,60 @@ const SUBJECTS = [
     fs.writeFileSync(path.join(OUT, sub + '.png'), Buffer.from(shot.data, 'base64'));
     // off-frame check: any figure whose horizontal extent leaves the 0..400 frame by >8px
     const off = (m.figs || []).some(f => f.l < -8 || f.r > 408);
+    const clip = topClipped(m);
     if (m.overlaps && m.overlaps.length) anyBadOverlap = true;
+    if (clip.length) anyTopClip = true;
     console.log(sub.padEnd(18), (m.mode || '?').padEnd(8), 'n=' + m.n,
-      'overlaps=' + JSON.stringify(m.overlaps || []), off ? 'OFF-FRAME!' : '');
+      'overlaps=' + JSON.stringify(m.overlaps || []), off ? 'OFF-FRAME!' : '',
+      clip.length ? 'TOP-CLIPPED! tops=' + JSON.stringify(clip.map(f => f.t)) : '');
   }
+
+  // ROOM shots + mixed-height groups. These are the shapes the seeded portraits never cover: a shot
+  // with NO hosts to anchor on, an arms-up dancer, an adult beside a much shorter kid, and a lone
+  // subject. The bar pair rendered decapitated before the composition measured figure tops.
+  const room = (id, r, people) => `{id:${id},t:Date.now(),roomShot:true,room:${JSON.stringify(r)},dance:'',season:'',uv:false,` +
+    `sky:{night:true,wx:''},subjectId:'room:${r}:t${id}',people:[${people.map(p => `{key:${JSON.stringify(p[0])},grp:'',name:${JSON.stringify(p[1])},roleKey:''}`).join(',')}]}`;
+  const ROOM_CASES = [
+    ['bar-pair',        room(901, 'kitchen', [['spencer', 'Spencer'], ['jay', 'Jay']])],
+    ['bar-solo',        room(902, 'kitchen', [['spencer', 'Spencer']])],
+    ['nook-adult-kid',  room(903, 'cuddly',  [['spencer', 'Spencer'], ['irene', 'Irene']])],
+    ['nook-kids',       room(904, 'cuddly',  [['irene', 'Irene'], ['robin', 'Robin'], ['navid', 'Navid']])],
+    ['office-pair',     room(905, 'office',  [['ali', 'Ali'], ['goli', 'Goli']])],
+    ['deck-solo',       room(906, 'balcony', [['lauren', 'Lauren']])],
+    ['deck-crowd',      room(907, 'balcony', [['ali', 'Ali'], ['bahareh', 'Bahareh'], ['jay', 'Jay'], ['lauren', 'Lauren']])]
+  ];
+  console.log('=== room shots / mixed heights (all modes) ===');
+  for (const [name, rec] of ROOM_CASES) {
+    for (const mode of ['closeup', 'tworow', 'line']) {
+      const m = await renderAndMeasure(rec, mode);
+      if (m.err || !m.figs) { console.log('  ERR', name, mode, JSON.stringify(m)); anyTopClip = true; continue; }
+      if (!m.n) { console.log('  EMPTY!', name, mode); anyTopClip = true; continue; } // a photo with nobody in it is a failure
+      const clip = topClipped(m);
+      const bad = (m.overlaps || []).filter(o => o.frac > 0.40);
+      if (clip.length) { anyTopClip = true; console.log('  TOP-CLIPPED!', name, mode, JSON.stringify(clip.map(f => f.t))); }
+      if (bad.length) { anyBadOverlap = true; console.log('  COLLISION', name, mode, JSON.stringify(bad)); }
+      await sleep(100);
+      const shot = await send('Page.captureScreenshot', { clip: { x: 0, y: 0, width: 400, height: 300, scale: 1 }, format: 'png' });
+      fs.writeFileSync(path.join(OUT, 'room-' + name + '-' + mode + '.png'), Buffer.from(shot.data, 'base64'));
+    }
+    console.log('  ' + name.padEnd(16) + ' ok');
+  }
+
+  // ...and again with a BIRTHDAY HAT worn: the hat is real geometry above the head, so it must be
+  // both drawn and given headroom. Driven the way the app drives it (the strip's own bd- class).
+  console.log('=== birthday hat (headroom + actually drawn) ===');
+  await eval1(`document.getElementById('loft-game-strip').classList.add('bd-spencer','bd-jay')`);
+  await sleep(300);
+  for (const mode of ['closeup', 'tworow', 'line']) {
+    const m = await renderAndMeasure(ROOM_CASES[0][1], mode);
+    const clip = topClipped(m);
+    if (clip.length) { anyTopClip = true; console.log('  TOP-CLIPPED!', 'bd-hat', mode, JSON.stringify(clip.map(f => f.t))); }
+    await sleep(100);
+    const shot = await send('Page.captureScreenshot', { clip: { x: 0, y: 0, width: 400, height: 300, scale: 1 }, format: 'png' });
+    fs.writeFileSync(path.join(OUT, 'bdhat-' + mode + '.png'), Buffer.from(shot.data, 'base64'));
+    console.log('  bd-hat ' + mode.padEnd(8) + ' tops=' + JSON.stringify((m.figs || []).map(f => f.t)));
+  }
+  await eval1(`document.getElementById('loft-game-strip').classList.remove('bd-spencer','bd-jay')`);
 
   // Forced-mode pass: prove EACH mode is overlap-free at every group size.
   console.log('=== forced modes (overlap audit) ===');
@@ -136,7 +194,9 @@ const SUBJECTS = [
     for (const sub of SUBJECTS) {
       const m = await renderAndMeasure(sub, mode);
       const bad = (m.overlaps || []).filter(o => o.frac > 0.40); // >40% interval overlap = collision
+      const clip = topClipped(m);
       if (bad.length) { anyBadOverlap = true; console.log('  COLLISION', mode, sub, JSON.stringify(bad)); }
+      if (clip.length) { anyTopClip = true; console.log('  TOP-CLIPPED!', mode, sub, JSON.stringify(clip.map(f => f.t))); }
       if (process.env.MODE) {
         await sleep(100);
         const shot = await send('Page.captureScreenshot', { clip: { x: 0, y: 0, width: 400, height: 300, scale: 1 }, format: 'png' });
@@ -153,8 +213,9 @@ const SUBJECTS = [
     return a===b ? 'STABLE' : 'UNSTABLE';})()`);
   console.log('stability(shoot-family):', stab);
   console.log(anyBadOverlap ? '*** OVERLAPS DETECTED ***' : 'no collisions detected');
+  console.log(anyTopClip ? '*** HEADS CLIPPED OFF THE TOP OF THE FRAME ***' : 'no top-clipping detected');
 
   ws.close(); chrome.kill('SIGKILL');
   try { fs.rmSync(PROFILE, { recursive: true, force: true }); } catch {}
-  process.exit(0);
+  process.exit(anyBadOverlap || anyTopClip ? 1 : 0);
 })().catch(e => { console.error(e); chrome.kill('SIGKILL'); process.exit(1); });

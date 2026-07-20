@@ -23721,6 +23721,7 @@ function setUvMode(on) {
   var strip = document.getElementById("loft-game-strip");
   if (strip) strip.classList.toggle("uv-mode", !!on);
   if (!on && window.__endBehdadWake) window.__endBehdadWake(); // party over: clear any lingering wake
+  if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // start the on↔off cross-fade at once, not on the next poll
 }
 // The blacklight is driven solely by the balcony party switch (persistent,
 // #balcony-partyswitch) — also togglable with the 'p' key (see the party keydown below).
@@ -23749,38 +23750,57 @@ window.__setUvParty = function (on) { // the balcony switch
   var viewport = document.querySelector(".hunt-viewport");
   var LINGER_MS = 8000; // settle-in before the light starts to ease
   var RAMP_MS = 3500;    // ease-down duration
+  var FADE_MS = 1200;    // on↔off cross-fade duration — the blacklight rises/falls gently (the switch/'p'/blacklight()/uv() toggle and the party breather)
   var reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   // Strip-filter endpoints: full uv (t=0, matches the .uv-mode CSS exactly) -> a softer, still
   // cool-blue wash (t=1). Tuned to keep some ambiance rather than go neutral daylight.
   var B0 = 0.5, S0 = 2.6, H0 = 220, C0 = 1.3;
   var B1 = 0.8, S1 = 1.55, H1 = 205, C1 = 1.1; // eased endpoint: lift brightness + drop saturation for a softer light, but keep the hue near the blacklight's blue (not the green that a big hue swing gives)
+  // Identity filter (UV fully off) — the on↔off fade cross-fades between this and the UV target.
+  var BN = 1, SN = 1, HN = 0, CN = 1;
   var lingerTimer = 0, rafId = 0, easing = false, rampStart = 0;
+  // On↔off cross-fade level: 1 = full UV on, 0 = fully off (identity → hand back to CSS). It LAGS
+  // the .uv-mode class so a toggle/breather flip rises/falls gently instead of snapping. A snap
+  // context (trip/zoom/freeze/arcade/balcony) forces an instant hand-off to CSS, bypassing the fade.
+  var uvLevel = 0, fadeRaf = 0, fadeStart = 0, fadeFrom = 0, fadeTo = 0;
   // Persistent "already toned down" latch. Once the light has eased in ANY room (including the
   // garden party) it STAYS eased across room changes — we don't re-flash intense on every enter.
   // It's re-armed only when the blacklight is raised fresh (party start / u-key / blacklight()),
   // via window.__resetUvEase below; a breather off→on flicker does NOT reset it (see the breather).
   var eased = false;
   function nowMs() { return (window.performance && performance.now) ? performance.now() : Date.now(); }
-  function gateOpen() {
-    // ANY room now (the garden party eases too, once), whenever the UV is on — party or not
-    // (the 'u' key / blacklight()/uv() can raise it with no party).
-    return strip.classList.contains("uv-mode")
-      && !strip.classList.contains("dance-frozen") // a space-freeze / first dance drops the UV entirely (CSS filter:none) — don't override it with an inline eased filter
-      && !window.__tripActive
-      && !(viewport && viewport.classList.contains("device-zoomed"))
-      && !arcadeLit(); // the office invaders game undoes the UV (drops it entirely) — don't ease, hand off to the CSS filter:none
-  }
   function arcadeLit() { var o = document.getElementById("stage-office"); return !!(o && o.classList.contains("arcade")); }
-  function applyEase(t) {
-    if (window.currentStageName === "balcony") { strip.style.filter = "none"; return; } // the balcony's OUTSIDE — no blacklight out there (inline "none" beats the .uv-mode class filter; re-evaluated on room change)
+  // A context that drops the blacklight ENTIRELY via a CSS filter:none override (device-zoom, trip,
+  // dance-freeze, arcade) — an inline eased/faded filter must never fight it, so we snap and hand
+  // back to the CSS. Balcony is handled separately (it's outside, its own inline "none").
+  function snapContext() {
+    return strip.classList.contains("dance-frozen")
+      || !!window.__tripActive
+      || !!(viewport && viewport.classList.contains("device-zoomed"))
+      || arcadeLit();
+  }
+  // Is the blacklight wanted ON (its class is set and no snap context is overriding it)? The fade
+  // ramps uvLevel toward 1 when true, toward 0 when false. Off-balcony only (balcony forces none).
+  function uvWanted() { return strip.classList.contains("uv-mode") && !snapContext(); }
+  // gateOpen = the fade has a non-zero UV level to paint (class on, or still fading out). While
+  // true we own strip.style.filter; at level 0 with the class off we hand back to CSS.
+  function gateOpen() { return uvWanted() || uvLevel > 0; }
+  function lingerParams() { // the UV target the fade rises TO — full uv, or the softer eased wash
+    var t = eased ? 1 : (easing ? Math.min(1, (nowMs() - rampStart) / RAMP_MS) : 0);
     var s = t * t * (3 - 2 * t); // smoothstep — calmer than linear
-    var b = B0 + (B1 - B0) * s, sa = S0 + (S1 - S0) * s, h = H0 + (H1 - H0) * s, c = C0 + (C1 - C0) * s;
+    return { b: B0 + (B1 - B0) * s, sa: S0 + (S1 - S0) * s, h: H0 + (H1 - H0) * s, c: C0 + (C1 - C0) * s };
+  }
+  function paint() { // write the current filter: identity ↔ UV-target cross-faded by uvLevel
+    if (window.currentStageName === "balcony") { strip.style.filter = "none"; return; } // the balcony's OUTSIDE — no blacklight out there (inline "none" beats the .uv-mode class filter; re-evaluated on room change)
+    if (uvLevel <= 0) { clearInline(); return; } // fully off → hand back to CSS (class is off, so no wash)
+    var p = lingerParams(), u = uvLevel * uvLevel * (3 - 2 * uvLevel); // smoothstep the on/off blend too
+    var b = BN + (p.b - BN) * u, sa = SN + (p.sa - SN) * u, h = HN + (p.h - HN) * u, c = CN + (p.c - CN) * u;
     strip.style.filter = "brightness(" + b.toFixed(3) + ") saturate(" + sa.toFixed(3) + ") hue-rotate(" + h.toFixed(1) + "deg) contrast(" + c.toFixed(3) + ")";
     // The make-glass counter-filter is the exact affine inverse (reverse order) of the CURRENT
     // strip filter, so the cocktail he's mixing always reads its true colours no matter how far
-    // we've eased — at t=0 this reproduces the shipping #kitchen-bar-make CSS rule exactly. Only
-    // meaningful in the kitchen (that's the only room the make-glass shows in), so it's a no-op
-    // elsewhere — the element lives in the strip full-time, but we don't touch it off-kitchen.
+    // we've eased or faded — at full uv this reproduces the shipping #kitchen-bar-make CSS rule
+    // exactly. Only meaningful in the kitchen (that's the only room the make-glass shows in), so
+    // it's a no-op elsewhere — the element lives in the strip full-time, but we don't touch it off-kitchen.
     var inv = "contrast(" + (1 / c).toFixed(3) + ") hue-rotate(" + (-h).toFixed(1) + "deg) saturate(" + (1 / sa).toFixed(3) + ") brightness(" + (1 / b).toFixed(3) + ")";
     var mk = document.getElementById("kitchen-bar-make");
     if (mk) mk.style.filter = window.currentStageName === "kitchen"
@@ -23806,37 +23826,72 @@ window.__setUvParty = function (on) { // the balcony switch
   function stop() {
     if (lingerTimer) { clearTimeout(lingerTimer); lingerTimer = 0; }
     if (rafId) { window.cancelAnimationFrame(rafId); rafId = 0; }
+    if (fadeRaf) { window.cancelAnimationFrame(fadeRaf); fadeRaf = 0; }
     easing = false;
+    uvLevel = 0;
     clearInline();
   }
-  function step() {
+  function step() { // the linger ease (full uv → soft) — drives the target the fade rises to
     rafId = 0;
-    if (!gateOpen()) { stop(); return; } // trip started / light off mid-ramp -> snap back
+    if (!uvWanted()) { return; } // light off / snap context mid-ramp -> evaluate() handles the fade-out
     var e = Math.min(1, (nowMs() - rampStart) / RAMP_MS);
-    applyEase(e);
+    paint();
     if (e < 1) rafId = window.requestAnimationFrame(step);
-    else eased = true; // reached the soft endpoint — latch it so it persists across room changes
+    else { easing = false; eased = true; } // reached the soft endpoint — latch it so it persists across room changes
   }
   function startRamp() {
     lingerTimer = 0;
-    if (!gateOpen()) { clearInline(); return; }
+    if (!uvWanted()) { return; }
     easing = true;
     eased = true; // latch the moment we commit to easing — so a garden UV BREATHER flipping the light
     // off/on mid-ramp (or a room change) returns to the SOFT level, never re-flashing full intense
-    if (reduce) { applyEase(1); return; } // calm mode: settle straight to the softer light, no ramp
+    if (reduce) { easing = false; paint(); return; } // calm mode: settle straight to the softer light, no ramp
     rampStart = nowMs();
     rafId = window.requestAnimationFrame(step);
   }
+  function fadeStep() { // the on↔off cross-fade — ramps uvLevel toward the wanted state
+    fadeRaf = 0;
+    if (window.currentStageName === "balcony" || snapContext()) { evaluate(); return; } // a snap context / balcony grabbed the strip mid-fade — hand to CSS/none, drop the fade
+    var f = Math.min(1, (nowMs() - fadeStart) / FADE_MS);
+    uvLevel = fadeFrom + (fadeTo - fadeFrom) * f;
+    paint();
+    if (f < 1) fadeRaf = window.requestAnimationFrame(fadeStep);
+    else { uvLevel = fadeTo; paint(); }
+  }
+  function fadeTo_(target) { // begin (or redirect) the on/off cross-fade toward target (0 or 1)
+    if (fadeRaf) { window.cancelAnimationFrame(fadeRaf); fadeRaf = 0; }
+    fadeTo = target;
+    if (reduce) { uvLevel = target; paint(); return; } // calm mode: snap the on/off level, no fade
+    fadeFrom = uvLevel; fadeStart = nowMs();
+    fadeRaf = window.requestAnimationFrame(fadeStep);
+  }
   function evaluate() {
-    if (window.currentStageName === "balcony") { strip.style.filter = gateOpen() ? "none" : ""; return; } // OUTSIDE: never blacklit (inline "none" overrides the .uv-mode class filter; re-evaluated on room change)
-    if (strip.style.filter === "none") strip.style.filter = ""; // clear a balcony-left "none" so the .uv-mode class re-applies immediately on return to an indoor party room
-    if (gateOpen()) {
-      // Already toned down once (this UV session)? Keep it toned down immediately — no fresh
-      // linger, no intense re-flash — no matter which room we entered or a breather off→on flicker.
-      if (eased) { if (!rafId) applyEase(1); return; }
-      if (!easing && !lingerTimer && !rafId) lingerTimer = setTimeout(startRamp, LINGER_MS);
-    } else if (lingerTimer || rafId || easing || strip.style.filter) {
+    if (window.currentStageName === "balcony") { // OUTSIDE: never blacklit; snap, no fade
+      if (lingerTimer) { clearTimeout(lingerTimer); lingerTimer = 0; }
+      if (rafId) { window.cancelAnimationFrame(rafId); rafId = 0; }
+      if (fadeRaf) { window.cancelAnimationFrame(fadeRaf); fadeRaf = 0; }
+      easing = false; uvLevel = uvWanted() ? 1 : 0;
+      strip.style.filter = "none"; // inline "none" overrides the .uv-mode class filter; re-evaluated on room change
+      return;
+    }
+    if (strip.style.filter === "none") strip.style.filter = ""; // clear a balcony-left "none" so the fade/CSS re-applies on return to an indoor room
+    if (snapContext()) { // trip/zoom/freeze/arcade grabbed the strip: hand to CSS filter:none instantly, no eased/faded inline filter fighting it
       stop();
+      return;
+    }
+    if (uvWanted()) {
+      if (fadeTo !== 1 || (uvLevel < 1 && !fadeRaf)) fadeTo_(1); // rise gently to full UV
+      // Already toned down once (this UV session)? Keep the linger target at soft — no fresh linger,
+      // no intense re-flash — no matter which room we entered or a breather off→on flicker.
+      if (eased) { easing = false; }
+      else if (!easing && !lingerTimer && !rafId) lingerTimer = setTimeout(startRamp, LINGER_MS);
+      if (!fadeRaf && !rafId) paint(); // keep the filter current (room change / breather while settled)
+    } else if (uvLevel > 0 || fadeRaf) { // class off (or gate closed) but still lit → fade OUT gently, then hand back to CSS
+      if (lingerTimer) { clearTimeout(lingerTimer); lingerTimer = 0; }
+      if (rafId) { window.cancelAnimationFrame(rafId); rafId = 0; easing = false; }
+      if (fadeTo !== 0) fadeTo_(0);
+    } else if (strip.style.filter) {
+      clearInline();
     }
   }
   // Re-arm a fresh intense→ease cycle. Called when the blacklight is raised anew (party start /
@@ -66881,6 +66936,7 @@ function spawnDustMote(container) {
     var on = !!arg; // blacklight(true) → on; blacklight(false) → off; returns the previous state
     if (on && !prev && window.__resetUvEase) window.__resetUvEase(); // a fresh raise flashes intense then eases
     strip.classList.toggle("uv-mode", on);
+    if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // begin the on↔off cross-fade at once
     narrate(on, "🟣 blacklight on — everything fluoresces.", "blacklight off — the lights come up.");
     return prev;
   };

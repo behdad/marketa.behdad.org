@@ -60954,7 +60954,7 @@ function spawnDustMote(container) {
       });
       // ── crowd: a random subset (1–all) of the eligible non-smokers, shuffled + spaced ──
       var crowdPool = ROSTER.filter(function (r) { return !r.smoker && !elsewhere(r.name); });
-      var crowdCount = crowdPool.length ? (1 + ((Math.random() * crowdPool.length) | 0)) : 0;
+      var crowdCount = (Math.random() * (crowdPool.length + 1)) | 0; // 0..all — sometimes an empty crowd (just smokers), sometimes a full deck
       var crowd = shuffle(crowdPool.slice()).slice(0, crowdCount);
       crowd.forEach(function (r) { var g = document.getElementById(r.id); if (g) g.style.display = ""; });
       placeLane(shuffle(crowd.slice()), CROWD_LANE);
@@ -60984,6 +60984,12 @@ function spawnDustMote(container) {
         if (elsewhere(r.name)) return false;          // one-room rule (dj name never matches → kept)
         return true;
       });
+      // vary the smoker headcount too: show a random subset (1..all) of the steady smokers; keep the
+      // host couple as a pair (they're already gated by coupleOut). So the deck's total count varies.
+      var steadySm = smokerPool.filter(function (r) { return !r.couple; });
+      var coupleSm = smokerPool.filter(function (r) { return r.couple; });
+      if (steadySm.length) steadySm = shuffle(steadySm.slice()).slice(0, 1 + ((Math.random() * steadySm.length) | 0));
+      smokerPool = steadySm.concat(coupleSm);
       smokerPool.forEach(function (r) { var g = document.getElementById(r.id); if (g) g.style.display = ""; });
       placeLane(shuffle(smokerPool.slice()), SMOKER_LANE);
       // publish the smokers now on the deck (dj → the off-duty face's real name, for the hooks)

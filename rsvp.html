@@ -44520,7 +44520,7 @@ async def localfont(name):
     var MESSAGES = { // each fires from its beat/trigger via window.__deliverPhoneMessage (actTwo sequencer + the DJ swap); listed in arc order so 'g' steps through them in sequence
       dusk:   { fromKey: "msg_bahareh_from", bodyKey: "msg_dusk_body", act: "eclipse" },      // act_b0 → tap: balcony + eclipse
       pouria: { fromKey: "msg_pouria_from",  bodyKey: "msg_pouria_body", act: "room:kitchen" }, // act_p1 → the bar
-      group:  { fromKey: "msg_admin_from",   bodyKey: "msg_group_body", act: "room:garden" },  // act_p2 → the dance floor
+      group:  { fromKey: "msg_athena_from",  bodyKey: "msg_group_body", act: "room:garden" },  // Athena (the boss) rounds everyone onto the dance floor
       danesh: { fromKey: "msg_danesh_from",  bodyKey: "msg_danesh_body", act: "roster" },  // DJ Danesh gassing up the crowd → tap: open the "who's here" roster
       album:  { fromKey: "msg_irene_from",   bodyKey: "msg_album_body", img: "art/msg-selfie.jpg", act: "app:photobooth" }, // act_p3 → the photobooth
       irene_games: { fromKey: "msg_irene_from", bodyKey: "msg_irene_games_body", act: "games" }, // → the office computer
@@ -45834,7 +45834,15 @@ async def localfont(name):
       if (act === "games") { if (window.goToStage) window.goToStage("office"); setTimeout(function () { if (window.computer && !window.computer()) window.computer(true); else if (window.__toggleMonitorZoom) window.__toggleMonitorZoom(); }, 420); return; }
       // friend-duo "are you home?" → answering pans to the cuddly nook and brings that PAIR in to
       // visit (the #cuddly-visitors mechanism). Suppressed on meal days by __cuddlyVisit's own gate.
-      if (act.indexOf("visit:") === 0) { if (window.goToStage) window.goToStage("cuddly"); var duo = act.slice(6); setTimeout(function () { if (window.__cuddlyVisit) window.__cuddlyVisit(duo); }, 760); return; } // pan first, then the pair walks in
+      if (act.indexOf("visit:") === 0) { // pan to the cuddly-puddly, then the pair walks in
+        var duo = act.slice(6);
+        var wasParty = !!window.__gardenPartyOn;
+        if (wasParty) { if (window.__setPartyMode) window.__setPartyMode(false); else if (window.__setGardenParty) window.__setGardenParty(false); } // guests only drop by during the day → wind the party down first
+        if (window.__setDayNight) window.__setDayNight(false); // restore day so the day-gated visit lands
+        if (window.goToStage) window.goToStage("cuddly");
+        setTimeout(function () { if (window.__cuddlyVisit) window.__cuddlyVisit(duo); }, wasParty ? 1100 : 760); // let the wind-down + day restore settle before the day-gated visit
+        return;
+      }
       if (act === "bar") { if (window.goToStage) window.goToStage("kitchen"); setTimeout(function () { if ((!window.__barUpNow || !window.__barUpNow()) && window.__setDayNight) window.__setDayNight(true); }, 300); return; } // "bring me a drink" → pan to the kitchen bar, raising it if the party/night bar isn't already up
       if (act.indexOf("room:") === 0 && window.goToStage) window.goToStage(act.slice(5));
     }
@@ -45991,7 +45999,7 @@ async def localfont(name):
           if (rem.length) window.__deliverPhoneMessage(rem[Math.floor(Math.random() * rem.length)]); // a random un-sent cue
         }
         scheduleCueDrip(); // keep dripping while the party's on and cues remain
-      }, (24000 + Math.floor(Math.random() * 22000)) * msgDripSlowFactor()); // ~24–46s apart → varied arrival times, stretched once the thread is busy
+      }, (30000 + Math.floor(Math.random() * 27500)) * msgDripSlowFactor()); // ~30–57s apart → varied arrival times, stretched once the thread is busy
     }
     window.__startCueDrip = function () { scheduleCueDrip(); };
     window.__stopCueDrip = function () { if (cueTimer) { clearTimeout(cueTimer); cueTimer = null; } };
@@ -46011,7 +46019,7 @@ async def localfont(name):
           if (rem.length) window.__deliverPhoneMessage(rem[Math.floor(Math.random() * rem.length)]);
         }
         scheduleDayDrip(); // keep polling until the daytime pool is exhausted
-      }, (45000 + Math.floor(Math.random() * 45000)) * msgDripSlowFactor()); // ~45–90s apart, stretched once the thread is busy
+      }, (56250 + Math.floor(Math.random() * 56250)) * msgDripSlowFactor()); // ~56–112s apart, stretched once the thread is busy
     }
     window.__startDayDrip = function () { scheduleDayDrip(); };
     window.__stopDayDrip = function () { if (dayTimer) { clearTimeout(dayTimer); dayTimer = null; } };
@@ -51364,6 +51372,10 @@ function bumpTripTolerance() {
 function startTripVariant(variant, noCard) {
   var strip = document.getElementById("loft-game-strip");
   if (!strip) return;
+  if (window.__gardenPartyOn && (variant === "ketamine" || variant === "iboga")) { // ketamine + iboga are heavy — they sit out the garden party; a lighter trip stands in
+    var lightTrips = ["shrooms", "acid", "froggies", "dmt", "molly"];
+    variant = lightTrips[Math.floor(Math.random() * lightTrips.length)];
+  }
   clearTimeout(tripEndTimer); // an interrupting trip cancels the outgoing one's end/comedown before its own is armed below
   clearPriorTripEffects();    // and drains its deferred effect timers + poll-driven effects
   currentTripVariant = variant;

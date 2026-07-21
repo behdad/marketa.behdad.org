@@ -590,12 +590,25 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 /* the hint line sits on a recessed cream plate inside the burgundy shell — a "label
    screen" — so its soft/wine text and dotted links keep their on-cream contrast */
 #hunt-caption{
-  width:fit-content; max-width:calc(100% - 5.2rem); margin:0 auto;
+  position:relative; width:fit-content; max-width:calc(100% - 5.2rem); margin:0 auto;
   min-height:0; line-height:1.2;
   background:var(--paper); border-radius:10px; padding:.24rem .9rem;
   box-shadow:inset 0 1px 2px rgba(69,58,49,.1), 0 1px 2px rgba(50,18,24,.15);
 }
 @media (max-width:759px){ #hunt-caption{max-width:calc(100% - 4.4rem)} }
+/* First-play handoff: before pointing into the scene, point back up at the caption so players
+   learn where each next clue will appear. The two pseudo-elements form one compact red arrow. */
+#hunt-caption.intro-guide{color:var(--wine); z-index:3}
+#hunt-caption.intro-guide::before{
+  content:""; position:absolute; pointer-events:none; left:50%; top:calc(100% + .2rem);
+  width:40px; height:48px;
+  /* Exact espresso-arrow silhouette, rotated upward: same red fill, black 2px outline and joins. */
+  background:center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-2 -2 30 36'%3E%3Cpath d='M17 32L9 32L9 19L0 19L13 0L26 19L17 19Z' fill='%23c0392b' stroke='%231f1f1f' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E");
+  filter:drop-shadow(0 1px 1px rgba(69,58,49,.35));
+  animation:caption-guide-bob .8s ease-in-out infinite;
+}
+@keyframes caption-guide-bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,4px)}}
+@media (prefers-reduced-motion: reduce){#hunt-caption.intro-guide::before{animation:none}}
 .scene-caption a{color:var(--wine); text-decoration:none; border-bottom:1px dotted var(--wine); display:inline-block; font-style:normal}
 .scene-caption.rsvp-nudge{animation:rsvp-nudge-float 2.4s ease-in-out infinite}
 @keyframes rsvp-nudge-float{
@@ -24632,6 +24645,7 @@ var T = {
       kitchen_warming_up: "Let it warm up first.",
       kitchen_bar: "Bar's open — watch <em>Pouria</em> mix a drink. Or order one. 🍸",
       kitchen_bar_night: "Bar is open. Ask <em>Pouria</em> for a drink… 🍸",
+      intro_guide: "Your next clue appears here. Or just explore.",
       flair_hint: "Catch the garnishes — dodge the wasp! 🍋",
       arcade_hint: "Move to blast the invaders! 👾",
       garden: "Water a plant, play music, light candles.",
@@ -25451,6 +25465,7 @@ var T = {
       kitchen_warming_up: "Nejdřív ho nech zahřát.",
       kitchen_bar: "Bar je otevřený — sleduj, jak <em>Pouria</em> míchá drink. Nebo si nějaký objednej. 🍸",
       kitchen_bar_night: "Bar je otevřený. Řekni si <em>Pouriovi</em> o drink… 🍸",
+      intro_guide: "Tady se objeví další nápověda. Nebo se jen tak toulej.",
       flair_hint: "Chytej ozdoby — vyhni se vosě! 🍋",
       arcade_hint: "Pohybuj se a sestřel vetřelce! 👾",
       garden: "Zalij kytku, zahraj, zapal svíčky.",
@@ -63074,6 +63089,7 @@ function spawnDustMote(container) {
   var maxUnlocked = 0;
   var captionKey = "kitchen";
   var huntIntroShowing = false; // the blinking "wandering without aim" opening prompt owns the caption until the first tap
+  var openingGuideShowing = false, openingGuideTimer = null, openingGuideArmTimer = null; // then briefly teach where the live instruction line is before pointing into the scene
   // The prompt is armed at the very END of this script, but date-driven notifications (the birthday
   // announcement, via applyBirthdays) fire EARLIER in the same parse — so the window before the
   // prompt exists must read as "not started", or a load-time text slides in over it. introPending
@@ -63150,7 +63166,7 @@ function spawnDustMote(container) {
     // own captions; every other caller is a no-op until the show ends/cancels. Only
     // showRsvpNudge stays unguarded, so the finale's graceful RSVP landing still lands.
     if (window.__cinematic && !force) return;
-    if (huntIntroShowing && !force) return; // the opening prompt holds the caption until the first tap clears it
+    if ((huntIntroShowing || openingGuideShowing) && !force) return; // opening prompt/guide owns the caption until its handoff completes
     captionKey = key;
     caption.classList.remove("rsvp-nudge");
     // innerHTML, not textContent: caption copy carries markup — <em> round the cast's names, the
@@ -63350,6 +63366,7 @@ function spawnDustMote(container) {
     parkAfterSlide(idx, fromIdx); // everything but this room parks once the slide settles (phones only; see .stage-far)
     if (window.__rearmSkyMeteors) window.__rearmSkyMeteors(); // stepping out under a shower: the sky is going by the time you've arrived (no-op on an ordinary night)
     endHuntIntro(); // a room change ends the opening prompt, so the new room's caption shows (and the held notification channels wake)
+    clearOpeningGuide(); // ...and skips the eight-second caption tutorial if the player has already moved on
     if (window.__removeClickMe) window.__removeClickMe(); // ...and takes the melting invitation with it
     setCaption(name);
     if (name === "garden" && window.__gardenPartyOn && window.__refreshGardenCaption) window.__refreshGardenCaption();
@@ -63897,7 +63914,7 @@ function spawnDustMote(container) {
   }
   function updateKitchenInvite() {
     var next = null;
-    if (!huntIntroShowing && kitchenRounds < KITCHEN_HINT_ROUNDS) { // no invite arrow during the opening prompt
+    if (!huntIntroShowing && !openingGuideShowing && kitchenRounds < KITCHEN_HINT_ROUNDS) { // no object arrow until the intro has taught the caption line
       if (!kitchenPowered) next = "kitchen-lamarzocco";
       else if (!kitchenWarmedUp) next = null; // warming up — nothing's actionable yet
       else if (portafilterSpent) next = "kitchen-knockbox";
@@ -73739,8 +73756,41 @@ function spawnDustMote(container) {
   window.__removeClickMe = removeClickMe; // room-change / reset paths reach the teardown too
 
   var hintBlinkTimer = null;
+  function dismissOpeningGuide() { finishOpeningGuide(); }
+  function clearOpeningGuide() {
+    if (openingGuideTimer) { clearTimeout(openingGuideTimer); openingGuideTimer = null; }
+    if (openingGuideArmTimer) { clearTimeout(openingGuideArmTimer); openingGuideArmTimer = null; }
+    strip.removeEventListener("pointerdown", dismissOpeningGuide);
+    openingGuideShowing = false;
+    caption.classList.remove("intro-guide");
+  }
+  function finishOpeningGuide() {
+    if (!openingGuideShowing) return;
+    clearOpeningGuide();
+    if (window.__cinematic || window.currentStageName !== "kitchen") return;
+    setCaption(kitchenPowered ? kitchenCurrentCaption() : "kitchen");
+    updateKitchenInvite();
+  }
+  function showOpeningGuide() {
+    clearOpeningGuide();
+    if (window.__cinematic || window.currentStageName !== "kitchen") return;
+    openingGuideShowing = true;
+    captionKey = "intro_guide";
+    caption.innerHTML = huntText("intro_guide");
+    caption.classList.add("intro-guide");
+    updateKitchenInvite();
+    openingGuideTimer = setTimeout(finishOpeningGuide, 8000); // outlast the browser's first-fullscreen "Press Esc" notice
+    // Arm after the initiating pointerdown has fully returned. The click that entered the game must
+    // reveal the guide, not instantly consume it; the NEXT scene click dismisses before its action.
+    openingGuideArmTimer = setTimeout(function () {
+      openingGuideArmTimer = null;
+      if (openingGuideShowing) strip.addEventListener("pointerdown", dismissOpeningGuide);
+    }, 0);
+  }
+  window.__openingGuideShowing = function () { return openingGuideShowing; }; // regression/test hook
+  window.__finishOpeningGuide = finishOpeningGuide;
   // the grace timeout only CALMS the pulse — the "wandering without aim" line and the melting
-  // CLICK ME both stay put until a real tap (stopHintBlink) hands off to the first instruction
+  // CLICK ME both stay put until a real tap (stopHintBlink) hands off to the caption guide
   function calmIntroBlink() {
     if (hintBlinkTimer) { clearTimeout(hintBlinkTimer); hintBlinkTimer = null; }
     caption.classList.remove("hint-blink");
@@ -73752,10 +73802,9 @@ function spawnDustMote(container) {
     // 6s grace timeout and only goes on an actual tap (clickMeDismiss) or a room change (__removeClickMe).
     strip.removeEventListener("pointerdown", stopHintBlink);
     strip.removeEventListener("click", stopHintBlink);
-    if (huntIntroShowing) { // hand the opening prompt off to the real first instruction
+    if (huntIntroShowing) { // hand the opening prompt off to the brief caption-location guide
       endHuntIntro();
-      setCaption("kitchen"); // (a room change would already have cleared the prompt; at rest we're in the kitchen)
-      updateKitchenInvite(); // ...and now the espresso-machine invite arrow may appear
+      showOpeningGuide(); // first teach where instructions live; the espresso-machine arrow follows eight seconds later
     }
   }
   window.__stopHintBlink = stopHintBlink; // the cinematic (Watch is outside the strip) settles it too
@@ -73775,17 +73824,19 @@ function spawnDustMote(container) {
   function endAttract() {
     introPending = false;
     huntIntroShowing = false;
+    clearOpeningGuide();
     calmIntroBlink();
     removeClickMe();
     releaseAttract();
   }
   window.__endAttract = endAttract;
   // Open (and re-open on reset) on a blinking "wandering without aim" invitation; the first strip
-  // tap (or the grace timeout) hands it off to the real first instruction via stopHintBlink. The
-  // espresso-machine invite arrow stays hidden through the prompt. Skipped mid-cinematic (the show
+  // tap hands it off to the caption guide via stopHintBlink, then the real first instruction. The
+  // espresso-machine invite arrow stays hidden through both intro steps. Skipped mid-cinematic (the show
   // owns the caption). Re-arming listeners is idempotent — an identical listener never doubles up.
   function showHuntIntro() {
     introPending = false; // settled either way — armed just below, or declined for the cinematic
+    clearOpeningGuide();
     if (window.__cinematic) { releaseAttract(); return; } // no prompt to wait on: whatever was held goes out
     huntIntroShowing = true;
     if (introFlushT) { clearTimeout(introFlushT); introFlushT = null; } // a reset back into attract cancels a flush still in flight

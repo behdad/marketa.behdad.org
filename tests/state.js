@@ -52,6 +52,8 @@
 //      particles and does not spawn replacements while another window is fullscreen.
 //    - phase-one messages: ordinary texts stay out of the solve, while one-shot
 //      occasion texts are held and released when the first party starts phase two.
+//    - opening guide: the first scene click points at the caption before the
+//      normal kitchen instruction and espresso-machine arrow take over.
 //
 // Honest headless limits: the media clock doesn't advance under
 // --virtual-time-budget, so "unpaused" is asserted, not audible progress —
@@ -455,6 +457,24 @@ var PROBE_HARNESS = [
   "    snap.set(strip, strip.getAttribute('class') || '');",
   "    strip.querySelectorAll('*').forEach(function (e) { snap.set(e, e.getAttribute('class') || ''); });",
   "",
+  "    // The first click teaches the caption location before any object-level cue. Keep this after",
+  "    // the load snapshot: resetHunt intentionally restores the untouched intro state captured above.",
+  "    strip.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, cancelable: true }));",
+  "    ok('opening guide: first scene click points to the caption', !!(window.__openingGuideShowing && window.__openingGuideShowing()) && has('hunt-caption', 'intro-guide'));",
+  "    ok('opening guide: espresso-machine cue waits', !has('kitchen-lamarzocco', 'invite-pulse'));",
+  "    await sleep(30);",
+  "    strip.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, cancelable: true }));",
+  "    ok('opening guide: next scene click dismisses without waiting', !(window.__openingGuideShowing && window.__openingGuideShowing()) && has('kitchen-lamarzocco', 'invite-pulse'));",
+  "    if (window.__showHuntIntro) window.__showHuntIntro();",
+  "    strip.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, cancelable: true }));",
+  "    ok('opening guide: reset path re-arms the timed guide', !!(window.__openingGuideShowing && window.__openingGuideShowing()));",
+  "    await sleep(5200);",
+  "    ok('opening guide: caption remains after fullscreen browser chrome clears', !!(window.__openingGuideShowing && window.__openingGuideShowing()) && has('hunt-caption', 'intro-guide'));",
+  "    await sleep(3000);",
+  "    ok('opening guide: caption tutorial outlasts fullscreen chrome, then ends', !(window.__openingGuideShowing && window.__openingGuideShowing()) && !has('hunt-caption', 'intro-guide'));",
+  "    ok('opening guide: normal kitchen instruction returns', window.__captionKey && window.__captionKey() === 'kitchen', 'caption=' + (window.__captionKey && window.__captionKey()));",
+  "    ok('opening guide: espresso-machine cue follows the caption tutorial', has('kitchen-lamarzocco', 'invite-pulse'));",
+  "",
   "    // instrument -> cross-room grooving",
   "    var uke = el('garden-ukulele'), song = el('ukulele-song-audio');",
   "    ok('probe setup: ukulele + song elements exist', uke && song);",
@@ -836,7 +856,7 @@ function fail(msg, detail) {
   var jobs = {};
   if (!ONLY || "cascade".indexOf(ONLY) === 0) jobs.cascade = lib.runPage("rsvp.html", CASCADE_HARNESS, 9000, CHROME_OPTS);
   if (!ONLY || "gates".indexOf(ONLY) === 0) jobs.gates = lib.runPage("rsvp.html", GATES_HARNESS, 12000, CHROME_OPTS);
-  if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 17000, CHROME_OPTS);
+  if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 26000, CHROME_OPTS); // includes the real eight-second opening-guide handoff
   if (!ONLY || "fullscreen".indexOf(ONLY) === 0) jobs.fullscreen = lib.runPage("rsvp.html", LOFT_FULLSCREEN_HARNESS, 7000, Object.assign({}, CHROME_OPTS, { urlSuffix: "#play" }));
   if (!ONLY || "persian".indexOf(ONLY) === 0) jobs.persian = lib.runPage("rsvp.html", PERSIAN_HARNESS, 9000, CHROME_OPTS);
   if (!ONLY || "meals".indexOf(ONLY) === 0) jobs.meals = lib.runPage("rsvp.html", MEALS_HARNESS, 12000, CHROME_OPTS);

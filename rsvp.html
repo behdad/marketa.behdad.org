@@ -3703,9 +3703,13 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 @media (max-width:520px){ .occasion-banner{font-size:11px; padding:4px 11px; top:6px} }
 /* on-screen current-date pill in the viewport corner (clicking it opens the phone calendar) */
 .loft-datenav{position:absolute; left:3px; bottom:3px; z-index:6; display:flex; align-items:stretch; gap:0; max-width:62%; background:rgba(255,253,248,.97); border:1px solid rgba(69,58,49,.18); border-radius:11px; overflow:hidden} /* ONE unified pill holding ⏪ · date · ⏩ */
-.loft-datepill{font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:transparent; border:none; border-left:1px solid rgba(69,58,49,.16); border-right:1px solid rgba(69,58,49,.16); padding:4px 9px; cursor:pointer; user-select:none; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis} /* the date segment, divided from the ⏪/⏩ steps */
+.loft-datepill{display:flex; align-items:center; gap:5px; font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:transparent; border:none; border-left:1px solid rgba(69,58,49,.16); border-right:1px solid rgba(69,58,49,.16); padding:4px 9px; cursor:pointer; user-select:none; min-width:0; overflow:hidden} /* the date segment, divided from the ⏪/⏩ steps; leads with the live cal-tile widget */
 .loft-datepill:hover{background:rgba(142,58,74,.10)}
-.loft-datepill::before{content:"📅 "; }
+.loft-datepill-txt{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0}
+/* the LIVE mini calendar (red month band + today's day), replacing the fixed 📅 emoji — painted by __paintCalTile like the dock + phone icons */
+.loft-datepill .cal-tile{width:16px; height:16px; flex:0 0 auto; border-radius:3px; box-shadow:inset 0 0 0 0.5px rgba(69,58,49,.22)}
+.loft-datepill .cal-tile-head{height:6px; font-size:3.4px; padding-top:1.5px}
+.loft-datepill .cal-tile-day{font-size:8px; line-height:1; padding-bottom:2.4px}
 .loft-datestep{flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:transparent; border:none; padding:4px 7px; cursor:pointer; user-select:none}
 .loft-datestep:hover{background:rgba(142,58,74,.14)}
 .hunt-viewport:fullscreen .loft-datenav{bottom:8px; left:8px}
@@ -71190,6 +71194,12 @@ function spawnDustMote(container) {
     var prev = mkStep("loft-dateprev", "⏪", -1);
     var pill = document.createElement("button");
     pill.type = "button"; pill.id = "loft-datepill"; pill.className = "loft-datepill";
+    var tile = document.createElement("span"); tile.className = "cal-tile"; // the live mini-calendar widget; __paintCalTile fills its month+day
+    var tHead = document.createElement("span"); tHead.className = "cal-tile-head";
+    var tDay = document.createElement("span"); tDay.className = "cal-tile-day";
+    tile.appendChild(tHead); tile.appendChild(tDay);
+    var pillTxt = document.createElement("span"); pillTxt.id = "loft-datepill-txt"; pillTxt.className = "loft-datepill-txt"; // date text, kept in its own node so a refresh never wipes the widget
+    pill.appendChild(tile); pill.appendChild(pillTxt);
     pill.addEventListener("click", function (e) {
       e.stopPropagation();
       if (window.__openPhoneAppHere) window.__openPhoneAppHere("calendar");
@@ -71208,7 +71218,9 @@ function spawnDustMote(container) {
     if (!pill) return;
     var n = window.__now ? window.__now() : new Date(), txt;
     try { txt = n.toLocaleDateString(calLoc(), { weekday: "short", month: "short", day: "numeric" }).replace(/\.$/, ""); } catch (e) { txt = (n.getMonth() + 1) + "/" + n.getDate(); }
-    pill.textContent = txt;
+    var pillTxt = document.getElementById("loft-datepill-txt");
+    if (pillTxt) pillTxt.textContent = txt; else pill.textContent = txt;
+    if (window.__paintCalTile) window.__paintCalTile(); // fill the pill's live mini-calendar with the current loft month + day
     pill.title = calStr("app_calendar");
     pill.setAttribute("aria-label", calStr("app_calendar"));
     var prev = document.getElementById("loft-dateprev"), next = document.getElementById("loft-datenext");

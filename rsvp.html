@@ -26098,6 +26098,9 @@ function setLang(l) {
   if (window.refreshLifeText) window.refreshLifeText();
   if (window.refreshRoster) window.refreshRoster();
 }
+// The Who's Here panel is defined later in the script. Population controllers use this small
+// feature-detected read so their autonomous arrivals/departures pause while somebody is reading it.
+function rosterHoldsOccupants() { return !!(window.__rosterOpen && window.__rosterOpen()); }
 (function () {
   var btns = document.querySelectorAll(".langs button");
   for (var i = 0; i < btns.length; i++) {
@@ -32005,11 +32008,13 @@ document.addEventListener("click", function (e) {
     var linger = applied === "irene-roam" ? 6000                              // her walk-across is ~6.8s
       : (step === 2 && firstWasRoam) ? (2600 + Math.random() * 1200)          // trim action 2 after a long roam
       : (3200 + Math.random() * 1500);                                        // two-action pacing (~8–11s total)
-    hideTimer = setTimeout(function () {
+    function finishStep() {
+      if (rosterHoldsOccupants()) { hideTimer = setTimeout(finishStep, 1000); return; }
       hideTimer = null;
       if (step === 1) transition();
       else leave();
-    }, linger);
+    }
+    hideTimer = setTimeout(finishStep, linger);
   }
   function transition() {
     var next = pickBehavior(); // excludes lastBeh (= action 1), so action 2 always differs
@@ -32025,7 +32030,11 @@ document.addEventListener("click", function (e) {
       clearCatPlay();
       clearOctiReact();
       if (fadeTimer) clearTimeout(fadeTimer);
-      fadeTimer = setTimeout(function () { fadeTimer = null; dropPose(); runStep(next, 2); }, 620);
+      function finishTransition() {
+        if (rosterHoldsOccupants()) { fadeTimer = setTimeout(finishTransition, 1000); return; }
+        fadeTimer = null; dropPose(); runStep(next, 2);
+      }
+      fadeTimer = setTimeout(finishTransition, 620);
     } else {
       runStep(next, 2);
     }
@@ -32037,6 +32046,7 @@ document.addEventListener("click", function (e) {
   function inGame(name) { return !!(window.__kidInGamesNow && window.__kidInGamesNow(name)); }
   function tick() {
     showTimer = null;
+    if (rosterHoldsOccupants()) { schedule(); return; }
     if (onScreen() && !irene.classList.contains("showing") && !robinShowing() && !navidShowing()) {
       // Build the eligible cameo set, dropping any kid currently seated in a game (one-room rule).
       // When the games are playing all three are seated → the set is empty → skip this tick (no
@@ -32108,7 +32118,7 @@ document.addEventListener("click", function (e) {
     if (on) { applyPose("irene-totoro"); }   // no runStep → no linger timer → she stays put
     else { leave(); schedule(); }            // fade out, re-arm the auto-appearance scheduler
   };
-  document.addEventListener("visibilitychange", function () { if (document.hidden) leave(); });
+  document.addEventListener("visibilitychange", function () { if (document.hidden && !rosterHoldsOccupants()) leave(); });
   // Tap/click Irene (only while she's showing) → a playful wobble + a light giggle, plus a
   // boop to a fresh random pose that also resets her visit so she lingers longer. The wobble
   // is a one-shot `.giggling` class driving the rotate-property wiggle on the
@@ -32354,7 +32364,11 @@ document.addEventListener("click", function (e) {
     var applied = applyPose(beh);
     var linger = applied === "robin-roam" ? 6000 : (3200 + Math.random() * 1500); // his walk-across is ~6.8s
     if (hideTimer) clearTimeout(hideTimer);
-    hideTimer = setTimeout(function () { hideTimer = null; leave(); }, linger);
+    function finishVisit() {
+      if (rosterHoldsOccupants()) { hideTimer = setTimeout(finishVisit, 1000); return; }
+      hideTimer = null; leave();
+    }
+    hideTimer = setTimeout(finishVisit, linger);
   }
   // called BY Irene's shared scheduler when it rolls Robin (she's already guaranteed not showing).
   window.__robinAppear = function (forced) {
@@ -32390,7 +32404,7 @@ document.addEventListener("click", function (e) {
     robin.classList.remove("showing");
     dropPose();
   };
-  document.addEventListener("visibilitychange", function () { if (document.hidden) leave(); });
+  document.addEventListener("visibilitychange", function () { if (document.hidden && !rosterHoldsOccupants()) leave(); });
   // Tap Robin (while showing) → a light wobble + a boy giggle, and his exit is pushed out a little.
   var lastGiggleSound = 0;
   function giggle() {
@@ -32542,7 +32556,11 @@ document.addEventListener("click", function (e) {
     var applied = applyPose(beh);
     var linger = applied === "navid-roam" ? 6000 : (3200 + Math.random() * 1500); // his walk-across is ~6.8s
     if (hideTimer) clearTimeout(hideTimer);
-    hideTimer = setTimeout(function () { hideTimer = null; leave(); }, linger);
+    function finishVisit() {
+      if (rosterHoldsOccupants()) { hideTimer = setTimeout(finishVisit, 1000); return; }
+      hideTimer = null; leave();
+    }
+    hideTimer = setTimeout(finishVisit, linger);
   }
   // called BY Irene's shared scheduler when it rolls Navid (the others are already guaranteed not showing).
   window.__navidAppear = function (forced) {
@@ -32578,7 +32596,7 @@ document.addEventListener("click", function (e) {
     navid.classList.remove("showing");
     dropPose();
   };
-  document.addEventListener("visibilitychange", function () { if (document.hidden) leave(); });
+  document.addEventListener("visibilitychange", function () { if (document.hidden && !rosterHoldsOccupants()) leave(); });
   // Tap Navid (while showing) → a light wobble + a boy giggle, and his exit is pushed out a little.
   var lastGiggleSound = 0;
   function giggle() {
@@ -32851,6 +32869,7 @@ document.addEventListener("click", function (e) {
     return true;
   }
   function leave() {
+    if (activeDuo && rosterHoldsOccupants()) { clearTimers(); hideTimer = setTimeout(leave, 1000); return; }
     clearTimers();
     var id = activeDuo;
     activeDuo = null;
@@ -32900,7 +32919,7 @@ document.addEventListener("click", function (e) {
     g.addEventListener("animationend", function (e) { if (e.animationName === "irene-giggle") g.classList.remove("vis-waving"); });
     g.addEventListener("pointerdown", function () { tapReact(g); });
   });
-  document.addEventListener("visibilitychange", function () { if (document.hidden) reset(); });
+  document.addEventListener("visibilitychange", function () { if (document.hidden && !rosterHoldsOccupants()) reset(); });
   // ── Autonomous "are you home?" text delivery ───────────────────────────────
   // A self-rescheduling timer occasionally delivers ONE duo's text, picking a duo whose message
   // hasn't been received yet (and avoiding the just-used one). Gated on the crickets rule
@@ -33187,7 +33206,11 @@ window.__setSmores = function (on) {
     if (irene) irene.classList.add("showing");
     if (robin) robin.classList.toggle("showing", boyIsRobin);
     if (navid) navid.classList.toggle("showing", !boyIsRobin);
-    __smoresTimer = setTimeout(function () { __smoresTimer = null; if (window.__setSmores) window.__setSmores(false); }, 30000); // the fire + kids wrap up ~30s after lighting (a re-tap re-rolls the kids and restarts this)
+    function finishSmores() {
+      if (rosterHoldsOccupants()) { __smoresTimer = setTimeout(finishSmores, 1000); return; }
+      __smoresTimer = null; if (window.__setSmores) window.__setSmores(false);
+    }
+    __smoresTimer = setTimeout(finishSmores, 30000); // the fire + kids wrap up ~30s after lighting (a re-tap re-rolls the kids and restarts this)
   } else {
     if (irene) irene.classList.remove("showing");
     if (robin) robin.classList.remove("showing");
@@ -53920,9 +53943,13 @@ async def localfont(name):
     el.addEventListener("animationend", function (e) {
       if (e.animationName !== animName) return;
       if (!(document.hidden || !document.hasFocus())) playGiggleSound(el.id);
-      el.classList.remove("showing"); // fade the kid out from the landing pose...
-      if (clearTimer) clearTimeout(clearTimer);
-      clearTimer = setTimeout(function () { clearTimer = null; el.classList.remove("leaping"); }, 460); // ...and only drop the arc once invisible, so the landing can't snap back to the takeoff spot
+      function finishLanding() {
+        if (rosterHoldsOccupants()) { clearTimer = setTimeout(finishLanding, 1000); return; }
+        el.classList.remove("showing"); // fade the kid out from the landing pose...
+        if (clearTimer) clearTimeout(clearTimer);
+        clearTimer = setTimeout(function () { clearTimer = null; el.classList.remove("leaping"); }, 460); // ...and only drop the arc once invisible, so the landing can't snap back to the takeoff spot
+      }
+      finishLanding();
     });
   }
   landKid(irene, "balcony-irene-leap");
@@ -53931,7 +53958,7 @@ async def localfont(name):
   // Autonomous loop: ONE self-rescheduling timer that starts at most ONE Irene, never a spawner —
   // there is nothing to pile up in a backgrounded tab, and a hidden/off-room/wrong-season tick is
   // simply a no-op that reschedules.
-  function tick() { showTimer = null; leap(false); schedule(); }
+  function tick() { showTimer = null; if (!rosterHoldsOccupants()) leap(false); schedule(); }
   function schedule() {
     if (showTimer) clearTimeout(showTimer);
     showTimer = setTimeout(tick, 5000 + Math.random() * 4000);
@@ -53962,7 +53989,7 @@ async def localfont(name):
   window.__balconyIreneAt = function (frac) { holdKidAt(irene, "balcony-irene-jump", 1.5, frac); };
   window.__balconyRobinAt = function (frac) { if (robin) holdKidAt(robin, "chaharshanbe-robin-jump", 1.2, frac); };
   window.__balconyNavidAt = function (frac) { if (navid) holdKidAt(navid, "chaharshanbe-navid-jump", 1.2, frac); };
-  document.addEventListener("visibilitychange", function () { if (document.hidden) window.__resetBalconyIrene(); });
+  document.addEventListener("visibilitychange", function () { if (document.hidden && !rosterHoldsOccupants()) window.__resetBalconyIrene(); });
   schedule();
 })();
 // SADEH's two verbs, in their own closure so nothing here can reach the leap rig above. Neither
@@ -54132,9 +54159,13 @@ async def localfont(name):
   couple.addEventListener("animationend", function (e) {
     if (e.animationName !== "balcony-couple-leap") return;
     if (!(document.hidden || !document.hasFocus())) playSatisfiedExhaleSound("balcony-couple");
-    couple.classList.remove("showing"); // fade them out from the landing pose...
-    if (clearTimer) clearTimeout(clearTimer);
-    clearTimer = setTimeout(function () { clearTimer = null; couple.classList.remove("leaping"); }, 460); // ...and only drop the arc once they're invisible, so the landing can't snap back to the takeoff spot
+    function finishLanding() {
+      if (rosterHoldsOccupants()) { clearTimer = setTimeout(finishLanding, 1000); return; }
+      couple.classList.remove("showing"); // fade them out from the landing pose...
+      if (clearTimer) clearTimeout(clearTimer);
+      clearTimer = setTimeout(function () { clearTimer = null; couple.classList.remove("leaping"); }, 460); // ...and only drop the arc once they're invisible, so the landing can't snap back to the takeoff spot
+    }
+    finishLanding();
   });
   // Autonomous loop: ONE self-rescheduling timer that starts at most ONE leap, never a spawner —
   // there is nothing to pile up in a backgrounded tab, and a hidden/off-room/wrong-season tick is
@@ -54166,7 +54197,7 @@ async def localfont(name):
     var a = jump && jump.getAnimations && jump.getAnimations()[0];
     if (a) { a.pause(); a.currentTime = Math.min(1699, 1700 * frac); } // never exactly 1700: that would finish it, and a finish is a landing
   };
-  document.addEventListener("visibilitychange", function () { if (document.hidden) window.__resetBalconyCouple(); });
+  document.addEventListener("visibilitychange", function () { if (document.hidden && !rosterHoldsOccupants()) window.__resetBalconyCouple(); });
   schedule();
 })();
 // The balcony jack-o'-lantern's tap. It answers twice over, because it's two things at once: a
@@ -64934,6 +64965,7 @@ function spawnDustMote(container) {
   function flipPartyMode() {
     waltzAltTimer = null;
     if (!window.__gardenPartyOn) return; // party ended — stop, don't reschedule
+    if (rosterHoldsOccupants()) { waltzAltTimer = setTimeout(flipPartyMode, 1000); return; }
     // don't advance the rotation while the hosts' FIRST DANCE holds the floor on the reserved
     // tango bed — it would crossfade tango away mid-dance. endFirstDance restores the rotation.
     if (!window.__musicPaused && !window.__firstDanceOn) advanceDance();
@@ -65101,6 +65133,7 @@ function spawnDustMote(container) {
       hostSoloTimer = null;
       var g = document.getElementById("garden-guests");
       if (!g || !g.classList.contains("guests-in") || !guestsWanted()) { if (g) g.classList.remove("hosts-solo"); return; } // off the floor → stop cycling (clear any leftover)
+      if (rosterHoldsOccupants()) { armHostSolo(1000); return; }
       g.classList.toggle("hosts-solo"); // flip: together → solo → together …
       // solo stints run a touch shorter than the together stretches
       armHostSolo(g.classList.contains("hosts-solo") ? 5000 + Math.random() * 3000 : 8000 + Math.random() * 5000);
@@ -65252,6 +65285,11 @@ function spawnDustMote(container) {
     for (var i = 0; i < entry.sels.length; i++) walkFigureOut(g, entry.sels[i], entry.homes[i]); // strolls out from its current slot (still in slotXBySel)
     rebalanceFloor(g); // the remaining present guests glide to close the gap (the leaver already has .leaving → excluded)
   }
+  function bringRotatedGuests(incoming) {
+    if (rosterHoldsOccupants()) { setTimeout(function () { bringRotatedGuests(incoming); }, 1000); return; }
+    if (!guestsWanted()) return;
+    incoming.forEach(function (u) { arriveEntry(u); noteArrival(u); });
+  }
   // one rotation beat: send 1–2 present units out, then (after a gap) walk the same number of waiting
   // units in. Prefer not to evict someone who only just arrived.
   function rotateGuests(g, present, waiting) {
@@ -65263,7 +65301,7 @@ function spawnDustMote(container) {
     var incoming = shuffleArr(waiting.slice()).slice(0, Math.min(leaving.length, waiting.length));
     setTimeout(function () { // let a gap open at the gate before the next lot stroll in
       if (!guestsWanted()) return; // party still wants a floor? (visibility/focus no longer gate — the party runs on unattended, see guestsWanted)
-      incoming.forEach(function (u) { arriveEntry(u); noteArrival(u); });
+      bringRotatedGuests(incoming);
     }, 3000);
   }
   // the full roster this party (the duos + the solo, plus the mouses only if they're visiting)
@@ -65297,6 +65335,7 @@ function spawnDustMote(container) {
       var g = document.getElementById("garden-guests");
       if (!g) return;
       if (!window.__gardenPartyOn) { armTrickle(1400); return; } // party off — hold. NOTE: no longer gated on being IN the garden — the fill keeps going in the BACKGROUND while you're in another room (off-screen arrivals are instant, see walkFigureIn), so the party GROWS and is bigger when you return
+      if (rosterHoldsOccupants()) { armTrickle(1000); return; }
       if (window.__syncMousesVisitingClass) window.__syncMousesVisitingClass(); // in case the visiting roll flipped
       var list = fullArrivals();
       var present = presentUnits(g, list), waiting = waitingUnits(g, list);
@@ -67199,11 +67238,15 @@ function spawnDustMote(container) {
       if (!run) return;
       run.addEventListener("animationend", function (e) {
         if (e.animationName !== "gk-cross-l" && e.animationName !== "gk-cross-r") return; // ignore the leg/arm pump loops
-        clearGardenKid(el);
-        // the whole chase is done once no runner is still crossing
-        var anyLeft = GARDEN_RUNNERS.some(function (n) { var k = gardenKidEl(n); return k && k.classList.contains("chasing"); });
-        if (!anyLeft) { gardenChaseRunning = false; showRealCat(true); } // chase over → the real cat can roam again
-        syncKidsParty(); // this runner just finished crossing → Bahareh / the mouse returns to the party (if not otherwise busy)
+        function finishRunner() {
+          if (rosterHoldsOccupants()) { setTimeout(finishRunner, 1000); return; }
+          clearGardenKid(el);
+          // the whole chase is done once no runner is still crossing
+          var anyLeft = GARDEN_RUNNERS.some(function (n) { var k = gardenKidEl(n); return k && k.classList.contains("chasing"); });
+          if (!anyLeft) { gardenChaseRunning = false; showRealCat(true); } // chase over → the real cat can roam again
+          syncKidsParty(); // this runner just finished crossing → Bahareh / the mouse returns to the party (if not otherwise busy)
+        }
+        finishRunner();
       });
     });
   })();
@@ -67290,7 +67333,7 @@ function spawnDustMote(container) {
   function gardenChaseTick() {
     gardenChaseTimer = null;
     if (!window.__gardenPartyOn) return;         // party ended — stop, don't reschedule
-    startGardenChase(false);                     // self-gates on visible/focused/in-garden/not-busy/motion
+    if (!rosterHoldsOccupants()) startGardenChase(false); // self-gates on visible/focused/in-garden/not-busy/motion
     gardenChaseTimer = setTimeout(gardenChaseTick, 9000 + Math.random() * 9000); // ~9–18s, jittered (never metronomic)
   }
   function startGardenChaseDriver() {
@@ -67303,7 +67346,7 @@ function spawnDustMote(container) {
   window.__updateGardenChase = function () {    // goToStage pings this: leaving the garden clears any in-flight run
     if (!window.__gardenPartyOn || window.currentStageName !== "garden") clearGardenChase();
   };
-  document.addEventListener("visibilitychange", function () { if (document.hidden) clearGardenChase(); }); // a hidden tab drops any in-flight run (no pile-up); the driver re-launches on return
+  document.addEventListener("visibilitychange", function () { if (document.hidden && !rosterHoldsOccupants()) clearGardenChase(); }); // a hidden tab drops any in-flight run (no pile-up); the driver re-launches on return
   // The garden party itself: whisk to the garden (user click only), light the disco
   // overlay, start the confetti, and drive the garden groovers. Idempotent — safe for
   // play.js's rapid switch-storming (repeated true/false). Torn down on switch-off, the
@@ -67580,6 +67623,7 @@ function spawnDustMote(container) {
     // free, take a short empty beat), then reschedule. High frequency: mostly no gap.
     function swap() {
       timer = null;
+      if (rosterHoldsOccupants() && window.currentStageName === "kitchen") { timer = setTimeout(swap, 1000); return; }
       if (!shouldRun()) { clearCurrent(); return; } // gate closed while waiting → stay empty (re-armed by __updateBarGroovers)
       var prev = current;
       var next = pickCouple(prev);
@@ -67605,6 +67649,7 @@ function spawnDustMote(container) {
     // start/stop entry point — pinged on party toggle (setGardenParty), room change (goToStage),
     // and visibility/focus flips. Re-arms when the gate turns true, tears down when false.
     window.__updateBarGroovers = function () {
+      if (rosterHoldsOccupants() && window.currentStageName === "kitchen") return;
       if (shouldRun()) schedule();
       else stop();
     };
@@ -68632,6 +68677,7 @@ function spawnDustMote(container) {
     // reciprocal of the other Now hooks: the bar/floor/office read this to keep Hamid one-roomed
     window.__balconyGrillmasterNow = function () { return shown ? ["hamid"] : null; };
     function update() {
+      if (rosterHoldsOccupants() && window.currentStageName === "balcony") return;
       if (inRoom()) { if (!visited) { visited = true; present = Math.random() < 0.5; } } // roll once per genuine visit (a blur must not reshuffle)
       else { visited = false; }
       paint();
@@ -68643,7 +68689,7 @@ function spawnDustMote(container) {
     // he's not a fixture. Re-gated every fire (crickets rule); a no-op while off the balcony.
     (function loop() {
       setTimeout(function () {
-        if (inRoom() && attended()) { if (!elsewhere()) present = Math.random() < 0.5; paint(); }
+        if (!rosterHoldsOccupants() && inRoom() && attended()) { if (!elsewhere()) present = Math.random() < 0.5; paint(); }
         loop();
       }, 20000 + Math.random() * 16000);
     })();
@@ -69033,6 +69079,7 @@ function spawnDustMote(container) {
     // then reschedule. Long empty beats between the occasional visit.
     function swap() {
       timer = null;
+      if (rosterHoldsOccupants() && window.currentStageName === "office") { timer = setTimeout(swap, 1000); return; }
       if (!shouldRun()) { clearCurrent(); return; } // gate closed while waiting → stay empty (re-armed by __updateOfficeHangout)
       var prev = current;
       // the office should usually have a pair chatting; only a short empty beat now and then
@@ -69055,6 +69102,7 @@ function spawnDustMote(container) {
     // start/stop entry point — pinged on party toggle (setGardenParty), room change (goToStage),
     // and visibility/focus flips. Re-arms when the gate turns true, tears down when false.
     window.__updateOfficeHangout = function () {
+      if (rosterHoldsOccupants() && window.currentStageName === "office") return;
       if (shouldRun()) schedule();
       else stop();
     };

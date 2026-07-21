@@ -3753,11 +3753,13 @@ body:has(#stage-kitchen.flair-on, #stage-office.arcade) .loft-tempnav{ display:n
 .loft-tempstep{flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:transparent; border:none; padding:4px 8px; cursor:pointer; user-select:none}
 .loft-tempstep:hover{background:rgba(142,58,74,.14)}
 @media (max-width:520px){ .loft-temppill,.loft-tempstep{font-size:10px} .loft-temppill{padding:3px 8px} .loft-tempstep{padding:3px 7px} }
-/* a very subtle top-left chevron hinting at the drop-down console; clicking it pulls the console down */
-/* the console's pull-tab: a round plate in the scene's top-left whose triangle is both the state
+/* The console's pull-tab stays out of ordinary play until someone has actually explored a console:
+   typing in the monitor's JS console or using backtick reveals it for the rest of this page load. */
+/* The pull-tab is a round plate in the scene's top-left whose triangle is both the state
    and the switch — ▼ to pull the console down, turned ▲ to send it back up. The glyph rotates
    inside the plate (the plate stays a circle), so it reads as one triangle turning, not two marks. */
-.loft-console-hint{position:absolute; top:3px; left:3px; z-index:61; display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; padding:0; font-size:11px; line-height:1; color:var(--ink,#453a31); background:rgba(255,253,248,.97); border:1px solid rgba(69,58,49,.18); border-radius:50%; cursor:pointer; transition:background .15s, color .15s}
+.loft-console-hint{position:absolute; top:3px; left:3px; z-index:61; display:none; align-items:center; justify-content:center; width:22px; height:22px; padding:0; font-size:11px; line-height:1; color:var(--ink,#453a31); background:rgba(255,253,248,.97); border:1px solid rgba(69,58,49,.18); border-radius:50%; cursor:pointer; transition:background .15s, color .15s}
+.loft-console-hint.discovered{display:inline-flex}
 .loft-console-hint:hover,.loft-console-hint:focus-visible{background:var(--ink,#453a31); color:#f8f5ec}
 .loft-console-hint .ct-mark{display:block; transition:transform .22s cubic-bezier(.4,.9,.3,1)}
 .loft-console-hint.open .ct-mark{transform:rotate(180deg)}
@@ -26786,6 +26788,11 @@ function idealBrowser() {
       ["<kbd>r</kbd>", "kbd_r"],
       ["<kbd>?</kbd>", "kbd_qm"]
     ];
+    // Backtick is an easter-egg path, not a feature to advertise. Add it to the help card
+    // only after this player has already found either console route on their own.
+    if (!(window.__consoleTabDiscovered && window.__consoleTabDiscovered())) {
+      ROWS = ROWS.filter(function (row) { return row[1] !== "kbd_console"; });
+    }
     // split into two balanced columns (left gets the extra row when the count is odd);
     // each column is its own key/description grid so chips line up within it.
     var half = Math.ceil(ROWS.length / 2);
@@ -40566,6 +40573,11 @@ var ABANDONED_CALL_MS = 30000;
     consolePrint(matches.join("  "), "console-dim");           // bash-style: list the candidates
   }
   if (consoleIn) {
+    // Autoplay also fills and submits this input during its office vignette, so only a real
+    // user edit unlocks the scene-level console tab. Once unlocked it stays for this page load.
+    consoleIn.addEventListener("input", function (e) {
+      if (e.isTrusted && consoleIn.value) revealConsoleTab();
+    });
     consoleIn.addEventListener("keydown", function (e) {
       e.stopPropagation(); // game shortcuts don't fire while typing
       if (e.key === "Tab") { e.preventDefault(); consoleTabComplete(); return; } // complete the command; focus stays in the shell
@@ -40594,6 +40606,7 @@ var ABANDONED_CALL_MS = 30000;
   var dtOut   = document.getElementById("dropterm-out");
   var dtIn    = document.getElementById("dropterm-in");
   var dtHist = [], dtHistIdx = 0, dtWelcomed = false;
+  var consoleTabDiscovered = false;
   var dtCtx = {
     out: dtOut, hist: dtHist, isMonitor: false,
     setHistIdx: function (n) { dtHistIdx = n; },
@@ -40601,6 +40614,11 @@ var ABANDONED_CALL_MS = 30000;
     onQuit: function () { closeDropTerm(); }
   };
   function dtOpen() { return !!(dtPanel && dtPanel.classList.contains("open")); }
+  function revealConsoleTab() {
+    consoleTabDiscovered = true;
+    var tab = document.getElementById("loft-console-hint");
+    if (tab) tab.classList.add("discovered");
+  }
   function openDropTerm() {
     if (!dtPanel || dtOpen()) return;
     dtPanel.classList.add("open");
@@ -40640,6 +40658,8 @@ var ABANDONED_CALL_MS = 30000;
   window.__toggleDropTerm = toggleDropTerm;   // the backtick key calls this
   window.__closeDropTerm = closeDropTerm;     // Esc / other closers
   window.__dropTermOpen = dtOpen;
+  window.__revealConsoleTab = revealConsoleTab;
+  window.__consoleTabDiscovered = function () { return consoleTabDiscovered; };
   if (dtIn) {
     dtIn.addEventListener("keydown", function (e) {
       e.stopPropagation(); // game shortcuts don't fire while typing here
@@ -40670,6 +40690,7 @@ var ABANDONED_CALL_MS = 30000;
     b.innerHTML = '<span class="ct-mark" aria-hidden="true">▼</span>'; // one glyph, rotated by CSS — the same triangle turning, not two swapped marks
     b.addEventListener("click", function (e) { e.stopPropagation(); toggleDropTerm(); });
     vp.appendChild(b);
+    if (consoleTabDiscovered) b.classList.add("discovered");
     syncConsoleTab(); // ▶ closed / ▼ open, plus the matching label
   })();
   // ── EDITOR APP ───────────────────────────────────────────────────────────────────
@@ -63617,6 +63638,7 @@ function spawnDustMote(container) {
       // Quake-style console) — it no longer whisks to the office. The in-world office monitor
       // console is still reachable by clicking the monitor; this is a separate, lighter shell
       // that reuses the same command interpreter (consoleRun). See __toggleDropTerm.
+      if (window.__revealConsoleTab) window.__revealConsoleTab();
       if (window.__toggleDropTerm) window.__toggleDropTerm();
     } else if (e.key === "d" || e.key === "D") {
       e.preventDefault();

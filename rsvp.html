@@ -71148,6 +71148,16 @@ function spawnDustMote(container) {
       history.replaceState(null, "", url.toString());
     } catch (e) {}
   }
+  function calRefreshOverrideNavs() {
+    var show = false;
+    try {
+      var url = new URL(location.href);
+      show = url.searchParams.has("date") || url.searchParams.has("time") || /(?:^|[#&])(?:date|time)=/.test(url.hash || "");
+    } catch (e) {}
+    var dateNav = document.querySelector(".loft-datenav"), timeNav = document.getElementById("loft-timenav");
+    if (dateNav) dateNav.style.display = show ? "" : "none";
+    if (timeNav) timeNav.style.display = show ? "" : "none";
+  }
   function calRefreshDeps() {
     applySeasonDate(); // decor + birthday hats + wedding-day + smoke + new-year sky all read the date
     if (window.refreshLaptopClock) window.refreshLaptopClock();
@@ -71618,6 +71628,7 @@ function spawnDustMote(container) {
     if (next) { next.title = calStr("datenav_next"); next.setAttribute("aria-label", calStr("datenav_next")); }
     var dreset = document.getElementById("loft-datereset");
     if (dreset) { var drk = calStr("datenav_reset_date"); dreset.title = drk; dreset.setAttribute("aria-label", drk); dreset.style.display = /[?#&]date=\d{4}-\d{2}-\d{2}/.test(location.href) ? "" : "none"; } // only offered when a ?date= override is in play
+    calRefreshOverrideNavs();
   };
   // sibling TIME pill, mirrored to the bottom-right: the loft's Edmonton wall-clock, showing the
   // advancing ?time= override when one is set (else real Edmonton time); a click opens the Clock app
@@ -71660,6 +71671,7 @@ function spawnDustMote(container) {
     if (lapse) { var on = !!window.__lapseActive; lapse.textContent = on ? "⏸" : "▶"; lapse.classList.toggle("lapsing", on); var lk = calStr(on ? "clk_timelapse_stop" : "clk_timelapse"); lapse.title = lk; lapse.setAttribute("aria-label", lk); }
     var reset = document.getElementById("loft-timereset");
     if (reset) { var rk = calStr("datenav_reset_time"); reset.title = rk; reset.setAttribute("aria-label", rk); reset.style.display = /[?#&]time=\d/.test(location.href) ? "" : "none"; } // only offered when a ?time= override is in play
+    calRefreshOverrideNavs();
   };
   calMakePill(); calMakeTimePill();
   window.__refreshDatePill(); window.__refreshTimePill();

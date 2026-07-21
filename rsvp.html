@@ -56,6 +56,7 @@
   --cream:#f8f5ec; --paper:#fffdf8; --ink:#453a31; --muted:#716455; --soft:#7d6e5d;
   --pink:#d9a6a6; --pink-deep:#c68e95; --blue:#7f9ec0; --blue-deep:#4a6b94;
   --wine:#8e3a4a; --rule:#e8dfcc;
+  --espresso-arrow-up:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-2 -2 30 36'%3E%3Cpath d='M17 32L9 32L9 19L0 19L13 0L26 19L17 19Z' fill='%23c0392b' stroke='%231f1f1f' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E");
   --hand-font:"Caveat","Bradley Hand","Segoe Script",cursive; /* handwriting for the notes app post-its — one-line swap */
 }
 *{box-sizing:border-box}
@@ -609,7 +610,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   content:""; position:absolute; pointer-events:none; left:50%; top:calc(100% + .2rem);
   width:40px; height:48px;
   /* Exact espresso-arrow silhouette, rotated upward: same red fill, black 2px outline and joins. */
-  background:center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-2 -2 30 36'%3E%3Cpath d='M17 32L9 32L9 19L0 19L13 0L26 19L17 19Z' fill='%23c0392b' stroke='%231f1f1f' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background:center / contain no-repeat var(--espresso-arrow-up);
   filter:drop-shadow(0 1px 1px rgba(69,58,49,.35));
   animation:caption-guide-bob .8s ease-in-out infinite;
 }
@@ -4795,8 +4796,17 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .pm-album-detail .pm-ad-btn{border:none; border-radius:14px; background:var(--wine); color:#fff; font:inherit; font-size:14px; padding:10px 14px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 3px 10px rgba(142,58,74,.3)}
 .pm-album-detail .pm-ad-btn:active{transform:scale(.96)}
 /* unread-count badge — a red circle (white number) at the new-notification's top-left corner */
-.msg-badge{position:absolute; top:6px; left:max(10px, calc(50% - 190px)); z-index:61; min-width:30px; height:30px; padding:0 6px; box-sizing:border-box; border:2px solid #fffdf8; border-radius:15px; background:#d33a34; color:#fff; font:700 17px/26px "Source Serif 4",system-ui,sans-serif; text-align:center; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.34); display:none}
+.msg-badge{position:absolute; top:6px; left:max(4px, calc(50% - 254px)); z-index:61; min-width:30px; height:30px; padding:0 6px; box-sizing:border-box; border:2px solid #fffdf8; border-radius:15px; background:#d33a34; color:#fff; font:700 17px/26px "Source Serif 4",system-ui,sans-serif; text-align:center; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.34); display:none}
 .msg-badge.show{display:block}
+/* First unread only: teach the badge in place, without stealing the main scene caption. The
+   shared custom property is the exact espresso arrow used by the opening-caption guide. */
+.msg-badge.coached{animation:msg-badge-coach-pulse .9s ease-in-out infinite}
+.msg-badge-coach{position:absolute; top:94px; left:max(4px, calc(50% - 254px)); z-index:62; width:max-content; max-width:calc(100% - 8px); padding:7px 10px; border-radius:7px; background:var(--ink); color:var(--paper); box-shadow:0 3px 10px rgba(0,0,0,.28); font:600 13px/1.25 "Source Serif 4",serif; overflow-wrap:anywhere; pointer-events:none; opacity:0; transform:translateY(-3px); transition:opacity .2s ease, transform .2s ease}
+.msg-badge-coach.show{opacity:1; transform:translateY(0)}
+.msg-badge-coach::before{content:""; position:absolute; left:-5px; bottom:calc(100% + 3px); width:40px; height:48px; background:center / contain no-repeat var(--espresso-arrow-up); filter:drop-shadow(0 1px 1px rgba(69,58,49,.35)); animation:msg-badge-arrow-bob .8s ease-in-out infinite}
+@keyframes msg-badge-coach-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.14); box-shadow:0 3px 12px rgba(192,57,43,.55)}}
+@keyframes msg-badge-arrow-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
+@media (prefers-reduced-motion: reduce){.msg-badge.coached,.msg-badge-coach::before{animation:none} .msg-badge-coach{transition:none}}
 /* incoming-call ring card (Madla; Markéta's parents on a Saturday) — a sibling of .msg-thumb: drops from the top-centre of the
    loft, pulses, and rings for ~15s. Tap anywhere on it to answer. The green answer glyph on the
    right reads as the "pick up" affordance; the wine phone glyph on the left is the caller icon.
@@ -25056,6 +25066,7 @@ var T = {
     msg_new_divider: "New",
     msg_earlier_divider: "Earlier",
     msg_unread_only: "unread only",
+    msg_badge_coach: "New message. Tap to read.",
     msg_compose_aria: "write a note to the couple",
     msg_compose_subject: "a note from the loft 💌",
     msg_pouria_from: "Pouria",
@@ -25872,6 +25883,7 @@ var T = {
     msg_new_divider: "Nové",
     msg_earlier_divider: "Starší",
     msg_unread_only: "jen nepřečtené",
+    msg_badge_coach: "Nová zpráva. Klepni a přečti si ji.",
     msg_compose_aria: "napsat vzkaz páru",
     msg_compose_subject: "vzkaz z loftu 💌",
     msg_pouria_from: "Pouria",
@@ -50820,6 +50832,7 @@ async def localfont(name):
     // opens that phone app in the current scene; the rest close the phone and go there in the loft.
     function runMsgAction(id) {
       hideMessageThumb();
+      hideMsgBadgeCoach();
       if (id) { messagesRead[id] = true; updateMsgBadge(); } // tapping marks the message read (unread = bold until then)
       var m = id && MESSAGES[id], act = m && m.act;
       if (!act) { open(true); openApp("messages", "app_messages", renderMessages); return; }
@@ -50892,13 +50905,17 @@ async def localfont(name):
     window.__runMsgAction = runMsgAction; // test hook
     var msgThumbEl = null, msgThumbT = null, curThumbId = null;
     function hideMessageThumb() {
+      var wasShowing = !!(msgThumbEl && msgThumbEl.classList.contains("show"));
       if (msgThumbT) { clearTimeout(msgThumbT); msgThumbT = null; }
       if (msgThumbEl) msgThumbEl.classList.remove("show");
+      if (wasShowing) scheduleMsgBadgeCoach(); // teach the persistent unread bubble three seconds after the preview is gone
     }
     function showMessageThumb(id) {
       if (document.hidden || !document.hasFocus()) return; // unattended → the text waits in the app; no ghost thumbnail/buzz
       if (isOpen()) return; // phone's already up → no notification toast over it (the text lands in the thread; the app live-refreshes)
       var m = MESSAGES[id]; if (!m) return;
+      cancelMsgBadgeCoachDelay();
+      hideMsgBadgeCoach(); // never stack the coach over a newer live notification preview
       curThumbId = id; // the icon-tap "do the task" shortcut acts on this message
       // anchor to the scene (.hunt-viewport) so the card drops down from the top of the LOFT, not
       // the page — it's inside #hunt-fullscreen-area, so it rides fullscreen too; the viewport's
@@ -50939,19 +50956,50 @@ async def localfont(name):
     // ── unread-count badge ── a small red circle with a white count, at the notification's
     // top-left corner (top-centre, a bit left). Shows while any message is unread; tap opens the
     // thread (doesn't mark anything read). Kept in sync on every deliver / read / reset.
-    var msgBadgeEl = null;
+    var msgBadgeEl = null, msgBadgeCoachEl = null, msgBadgeCoachT = null, msgBadgeCoachDelayT = null, msgBadgeCoachSeen = false;
     function unreadCount() { var n = 0; for (var i = 0; i < messagesThread.length; i++) if (!messagesRead[messagesThread[i]]) n++; return n; }
+    function cancelMsgBadgeCoachDelay() {
+      if (msgBadgeCoachDelayT) { clearTimeout(msgBadgeCoachDelayT); msgBadgeCoachDelayT = null; }
+    }
+    function hideMsgBadgeCoach() {
+      if (msgBadgeCoachT) { clearTimeout(msgBadgeCoachT); msgBadgeCoachT = null; }
+      if (msgBadgeCoachEl) msgBadgeCoachEl.classList.remove("show");
+      if (msgBadgeEl) msgBadgeEl.classList.remove("coached");
+    }
+    function showMsgBadgeCoach(host) {
+      if (msgBadgeCoachSeen || document.hidden || !document.hasFocus() || window.__cinematic || (window.__autoplayOn && window.__autoplayOn())) return;
+      msgBadgeCoachSeen = true;
+      if (!msgBadgeCoachEl) {
+        msgBadgeCoachEl = document.createElement("div");
+        msgBadgeCoachEl.className = "msg-badge-coach";
+        msgBadgeCoachEl.setAttribute("data-i", "msg_badge_coach");
+      }
+      msgBadgeCoachEl.textContent = tr("msg_badge_coach");
+      if (msgBadgeCoachEl.parentNode !== host) host.appendChild(msgBadgeCoachEl);
+      msgBadgeCoachEl.classList.remove("show"); void msgBadgeCoachEl.offsetWidth;
+      msgBadgeCoachEl.classList.add("show");
+      if (msgBadgeEl) msgBadgeEl.classList.add("coached");
+      msgBadgeCoachT = setTimeout(hideMsgBadgeCoach, 8000);
+    }
+    function maybeShowMsgBadgeCoach() {
+      if (!msgBadgeCoachSeen && unreadCount() > 0 && !isOpen() && (!msgThumbEl || !msgThumbEl.classList.contains("show"))) showMsgBadgeCoach(document.querySelector(".hunt-viewport") || document.body);
+    }
+    function scheduleMsgBadgeCoach() {
+      if (msgBadgeCoachSeen) return;
+      cancelMsgBadgeCoachDelay();
+      msgBadgeCoachDelayT = setTimeout(function () { msgBadgeCoachDelayT = null; maybeShowMsgBadgeCoach(); }, 3000);
+    }
     function updateMsgBadge() {
       var n = unreadCount(), host = document.querySelector(".hunt-viewport") || document.body;
       if (!msgBadgeEl) {
         msgBadgeEl = document.createElement("button");
         msgBadgeEl.type = "button";
         msgBadgeEl.className = "msg-badge";
-        msgBadgeEl.addEventListener("click", function () { open(true); openApp("messages", "app_messages", renderMessages); });
+        msgBadgeEl.addEventListener("click", function () { hideMsgBadgeCoach(); open(true); openApp("messages", "app_messages", renderMessages); });
       }
       if (msgBadgeEl.parentNode !== host) host.appendChild(msgBadgeEl);
-      if (n > 0 && !isOpen()) { msgBadgeEl.textContent = n >= 8 ? "∞" : String(n); msgBadgeEl.setAttribute("aria-label", n + " unread — " + tr("app_messages")); msgBadgeEl.classList.add("show"); } // the real count until the 8 cap, then the couple's signature ∞ ("too many to count"); hidden while the phone's open
-      else msgBadgeEl.classList.remove("show");
+      if (n > 0 && !isOpen()) { msgBadgeEl.textContent = n >= 8 ? "∞" : String(n); msgBadgeEl.setAttribute("aria-label", n + " unread — " + tr("app_messages")); msgBadgeEl.classList.add("show"); if (!msgThumbEl || !msgThumbEl.classList.contains("show")) scheduleMsgBadgeCoach(); } // the real count until the 8 cap, then the couple's signature ∞ ("too many to count"); hidden while the phone's open; coach waits until three seconds after the preview is gone
+      else { msgBadgeEl.classList.remove("show"); hideMsgBadgeCoach(); }
       // the balcony scene's in-world phone shows the same outstanding-unread count on its red badge
       var balBadge = document.getElementById("balcony-phone-badge");
       if (balBadge) {
@@ -50961,6 +51009,8 @@ async def localfont(name):
       }
     }
     window.__updateMsgBadge = updateMsgBadge;
+    window.addEventListener("focus", scheduleMsgBadgeCoach);
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) scheduleMsgBadgeCoach(); });
     // the freshest still-unread message id (newest arrival first) — autoplay uses this to
     // decide which notification to open+act-on when a text pops during attract mode.
     window.__latestUnreadMessage = function () { for (var i = messagesThread.length - 1; i >= 0; i--) if (!messagesRead[messagesThread[i]]) return messagesThread[i]; return null; };

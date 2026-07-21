@@ -52,6 +52,7 @@
 //      particles and does not spawn replacements while another window is fullscreen.
 //    - phase-one messages: ordinary texts stay out of the solve, while one-shot
 //      occasion texts are held and released when the first party starts phase two.
+//      The first attended unread badge also carries the one-time message coach mark.
 //    - opening guide: the first scene click points at the caption before the
 //      normal kitchen instruction and espresso-machine arrow take over.
 //
@@ -607,10 +608,29 @@ var PROBE_HARNESS = [
   "    if (window.__deliverOccasionText) window.__deliverOccasionText('occ_phase_gate_test', 'msg_behdad_from', 'cue_mail_body', 'app:mail');",
   "    ok('messages: recurring text does not arrive during phase one', !(window.__phoneMessageReceived && window.__phoneMessageReceived('cue_mail')));",
   "    ok('messages: one-shot occasion text does not arrive during phase one', !(window.__phoneMessageReceived && window.__phoneMessageReceived('occ_phase_gate_test')));",
+  "    var realMessageFocus = document.hasFocus; document.hasFocus = function () { return true; };",
   "    if (window.__setGardenParty) window.__setGardenParty(true, false);",
+  "    await sleep(40);",
   "    ok('messages: first party starts phase two', !!window.__secondRound);",
   "    ok('messages: held occasion text arrives when phase two starts', !!(window.__phoneMessageReceived && window.__phoneMessageReceived('occ_phase_gate_test')));",
   "    ok('messages: stale recurring phase-one attempt is not flushed', !(window.__phoneMessageReceived && window.__phoneMessageReceived('cue_mail')));",
+  "    var msgCoach = document.querySelector('.msg-badge-coach'), msgBadge = document.querySelector('.msg-badge');",
+  "    ok('messages: coach stays out of the live notification popup', !msgCoach || !msgCoach.classList.contains('show'));",
+  "    if (window.__hideMessageThumb) window.__hideMessageThumb();",
+  "    await sleep(2800);",
+  "    msgCoach = document.querySelector('.msg-badge-coach');",
+  "    ok('messages: coach still waits three seconds after the popup leaves', !msgCoach || !msgCoach.classList.contains('show'));",
+  "    await sleep(300);",
+  "    msgCoach = document.querySelector('.msg-badge-coach');",
+  "    ok('messages: unread badge teaches the control three seconds after popup dismissal', !!msgCoach && msgCoach.classList.contains('show') && !!msgBadge && msgBadge.classList.contains('coached'));",
+  "    ok('messages: coach uses the shared espresso arrow', !!msgCoach && getComputedStyle(msgCoach, '::before').backgroundImage.indexOf('data:image/svg+xml') !== -1);",
+  "    if (msgBadge) msgBadge.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
+  "    await sleep(40);",
+  "    ok('messages: opening the unread bubble dismisses its coach', !!msgCoach && !msgCoach.classList.contains('show') && !!msgBadge && !msgBadge.classList.contains('coached'));",
+  "    if (window.__closePhoneModal) window.__closePhoneModal(true);",
+  "    await sleep(260);",
+  "    ok('messages: later appearances do not repeat the coach', !!msgBadge && msgBadge.classList.contains('show') && !!msgCoach && !msgCoach.classList.contains('show'));",
+  "    document.hasFocus = realMessageFocus;",
   "    if (window.__setGardenParty) window.__setGardenParty(false, false);",
   "    window.__secondRound = false; if (window.__resetPhoneApps) window.__resetPhoneApps();",
   "",
@@ -878,7 +898,7 @@ function fail(msg, detail) {
   var jobs = {};
   if (!ONLY || "cascade".indexOf(ONLY) === 0) jobs.cascade = lib.runPage("rsvp.html", CASCADE_HARNESS, 9000, CHROME_OPTS);
   if (!ONLY || "gates".indexOf(ONLY) === 0) jobs.gates = lib.runPage("rsvp.html", GATES_HARNESS, 12000, CHROME_OPTS);
-  if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 26000, CHROME_OPTS); // includes the real eight-second opening-guide handoff
+  if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 30000, CHROME_OPTS); // includes the real eight-second opening guide + three-second message-coach delay
   if (!ONLY || "fullscreen".indexOf(ONLY) === 0) jobs.fullscreen = lib.runPage("rsvp.html", LOFT_FULLSCREEN_HARNESS, 7000, Object.assign({}, CHROME_OPTS, { urlSuffix: "#play" }));
   if (!ONLY || "persian".indexOf(ONLY) === 0) jobs.persian = lib.runPage("rsvp.html", PERSIAN_HARNESS, 9000, CHROME_OPTS);
   if (!ONLY || "meals".indexOf(ONLY) === 0) jobs.meals = lib.runPage("rsvp.html", MEALS_HARNESS, 12000, CHROME_OPTS);

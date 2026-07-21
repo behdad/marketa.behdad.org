@@ -34892,9 +34892,12 @@ function gameTapsNear(a, b) {
   // inverse roster, mirrored from the party floor — owner request). No freeze-others here: the nook
   // has no dance crowd to pause, so it's just the name card. (People are click-only — the tap card
   // carries name·role·age·relation·fact and lingers ~10s; the old hover bubble is kept for props.)
-  function nameTip(id, html) {
+  function nameTip(id, html, shouldOpen) {
     var el = document.getElementById(id); if (!el) return;
-    el.addEventListener("click", function () { if (window.__whoPop) window.__whoPop(el, typeof html === "function" ? html() : html); }); // anchor on el so the global egg-bubble dismisser sees the click inside the anchor and keeps it up
+    el.addEventListener("click", function () {
+      if (typeof shouldOpen === "function" && !shouldOpen()) return;
+      if (window.__whoPop) window.__whoPop(el, typeof html === "function" ? html() : html);
+    }); // anchor on el so the global egg-bubble dismisser sees the click inside the anchor and keeps it up
   }
   nameTip("cuddly-behdad", function () { return "<em>behdad</em>" + relLine("behdad") + funFact("behdad"); }, "top", 12, 0, "cuddly-behdad-head"); // +y: his head rides ~10u higher than hers, so match her sit
   nameTip("cuddly-marketa", function () { return "<em>markéta</em>" + relLine("marketa") + funFact("marketa"); }, "top");
@@ -34943,7 +34946,7 @@ function gameTapsNear(a, b) {
   chaseName("garden-kid-elisabeth", function () { return "<em>Elisabeth</em> · " + tipText("role_mniece") + kidAgeLine("Elisabeth") + relLine("Elisabeth") + funFact("Elisabeth"); }); // one of "the mouses" — Markéta's niece
   chaseName("garden-kid-felix", function () { return "<em>Felix</em> · " + tipText("role_mnephew") + kidAgeLine("Felix") + relLine("Felix") + funFact("Felix"); }); // one of "the mouses" — Markéta's nephew
   chaseName("garden-kid-bahareh", function () { return "<em>Bahareh</em> · " + tipText("role_sister") + relLine("Bahareh") + funFact("Bahareh"); }); // Irene's mom, herding the kids
-  nameTip("kitchen-bartender-hit", function () { return "<em>Pouria</em> · " + tipText("role_bartender") + relLine("Pouria") + funFact("Pouria"); }); // click pops his card alongside the separate toss/make/Flair-Catch handler
+  nameTip("kitchen-bartender-hit", function () { return "<em>Pouria</em> · " + tipText("role_bartender") + relLine("Pouria") + funFact("Pouria"); }, function () { return !(window.__flairState && window.__flairState().active); }); // keep his card out of the paddle game; otherwise clicks still identify him
   nameTip("garden-dj-a", function () { return "<em>DJ " + (window.__djB ? "Sina" : "Danesh") + "</em> · " + tipText("role_dj") + funFact((window.__djB ? "Sina" : "Danesh").toLowerCase()); }); // names whoever's on duty (djName lives in another IIFE; mirror its __djB logic)
   nameTip("garden-dj-b", function () { return "<em>DJ " + (window.__djB ? "Sina" : "Danesh") + "</em> · " + tipText("role_dj") + funFact((window.__djB ? "Sina" : "Danesh").toLowerCase()); });
   // ...and two of the garden's props, roman — they're labels, not names. "Magic box" is deliberate:
@@ -36399,6 +36402,7 @@ function gameTapsNear(a, b) {
       }
       bartenderHit.addEventListener("pointerup", onBartenderPointerUp);
       bartenderHit.addEventListener("pointercancel", onBartenderPointerUp);
+      bartenderHit.addEventListener("lostpointercapture", onBartenderPointerUp); // capture can be revoked without up/cancel; never leave game tracking blocked by a stale drag
       // While Flair-Catch runs the shaker keeps following the cursor even after the button is
       // released — a hold-free paddle — until game over. Same seamless-with-drag mapping the
       // chair arcade uses: reuse the last grab's anchor (relative, no jump), force transition
@@ -36674,6 +36678,10 @@ function gameTapsNear(a, b) {
       if (flairRaf) { cancelAnimationFrame(flairRaf); flairRaf = null; }
       var wasActive = flairActive, finalScore = flairScore;
       flairActive = false;
+      if (barDragging) {
+        barDragging = false;
+        if (bartenderHit) bartenderHit.classList.remove("grabbing");
+      }
       if (wasActive && finalScore > flairHigh()) flairSetHigh(finalScore); // bank the high on any teardown
       flairClearLayer();                    // hard-clear — never trust per-particle onfinish for teardown
       flairItems.length = 0;

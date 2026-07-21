@@ -46510,7 +46510,8 @@ async def localfont(name):
   // .phone-shell (.booting / .pm-home / .pm-app / .pm-incall). Every close path — ✕, Esc,
   // backdrop, room-leave (goToStage), the extinguisher reset (ends in goToStage), and a
   // hidden tab — funnels through close(), which hangs up any call, stops the ambient bed,
-  // and restores the re-placed Mines board to the monitor.
+  // and restores the re-placed Mines board to the monitor. (The hidden-tab close is skipped
+  // right after an in-shell tap, so an in-app link opening a new browser tab leaves the phone up.)
   (function () {
     var SVGNS = "http://www.w3.org/2000/svg";
     function tr(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
@@ -46610,6 +46611,7 @@ async def localfont(name):
     var clockTimer = null;          // clock app's 1s tick (time + both countdowns + playtime)
     var photoboothCleanup = null;   // booth teardown: stop the stream, clear timers, revoke URLs
     var flashOn = false, flashTrack = null; // flashlight state (balcony beam + screen glow; flashTrack = the real camera-LED torch, used only when camera access is already granted)
+    var phLastTapAt = 0;            // wall-clock of the last tap inside the shell — the hidden-tab auto-close skips when one just landed (an in-app link opening a new tab flips us to hidden, but must NOT tear the phone down)
     var sessionStart = Date.now();  // "in the loft for" playtime origin — set at script load
     var selectedCity = null;
     var cardsIndex = 0;             // phrasebook deck position — session-scoped: persists across a normal close/reopen (resume); zeroed only on a kill (uninstallApp / __resetPhoneApps)
@@ -46756,6 +46758,13 @@ async def localfont(name):
         makeHandle(shell.querySelector(".phone-statusbar"));
         makeHandle(shell.querySelector(".phone-nav"));
       })();
+      // An in-app link (GCal / Gmail / HN / browser / the wedding-site brand) opens a "_blank"
+      // tab, which flips THIS tab to hidden — the visibilitychange handler at the module's tail
+      // would otherwise close the phone out from under the returning user. Stamp every in-shell
+      // tap (capture phase, so no child's stopPropagation can hide it) so that close can tell a
+      // just-opened external tab from a genuine background switch. Backdrop taps are on `modal`,
+      // not `shell`, so an away-tap deliberately does NOT stamp (it's a real close).
+      shell.addEventListener("click", function () { phLastTapAt = Date.now(); }, true);
       // backdrop tap (outside the shell) closes
       modal.addEventListener("click", function (e) { if (e.target === modal) close(); });
       shell.addEventListener("click", function (e) { e.stopPropagation(); ["psb-wifi-wrap", "psb-batt-wrap"].forEach(function (c) { var w = modal.querySelector("." + c); if (w) w.classList.remove("show"); }); });
@@ -51202,7 +51211,13 @@ async def localfont(name):
       // button-activation keys Enter/Space/Tab — those stay native / handled by the shell listener)
       if (/^Arrow/.test(e.key) || /^[0-9]$/.test(e.key) || "`dDqQrRsSfF?".indexOf(e.key) >= 0) e.stopPropagation();
     }, true);
-    document.addEventListener("visibilitychange", function () { if (document.hidden) { close(true); hideCallRing(); } });
+    // A hidden tab tears the phone down (hangs up any call, stops the ambient bed, kills the live
+    // photobooth camera / flashlight torch / browser iframe — all via close()→leaveCurrentApp).
+    // But skip that teardown when the hide was caused by an in-app link opening a new tab (a shell
+    // tap landed <400ms ago) — else the phone vanishes while the user is on the tab they just
+    // opened. 400ms comfortably covers the real click→hidden latency (tens of ms) while keeping the
+    // window that skips a live-camera/torch/iframe teardown as small as possible.
+    document.addEventListener("visibilitychange", function () { if (document.hidden) { if (Date.now() - phLastTapAt > 400) close(true); hideCallRing(); } });
     window.addEventListener("blur", function () { hideCallRing(); }); // a window that loses focus drops the ring (she'd call back) — no ring left silently pulsing over an unfocused tab
   })();
   var lights = document.getElementById("balcony-lights");

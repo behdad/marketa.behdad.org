@@ -63083,6 +63083,17 @@ function spawnDustMote(container) {
     if (nextBtn) nextBtn.classList.toggle("locked", stageIndex >= maxUnlocked);
     updateDots();
   }
+  function unlockThrough(idx) {
+    var prevMax = maxUnlocked;
+    if (idx > maxUnlocked) maxUnlocked = Math.min(idx, STAGES.length - 1);
+    if (prevMax === 0 && maxUnlocked >= 1 && !window.__cinematic && window.__startAutoDayNight) window.__startAutoDayNight(); // leaving the intro frontier hands the loft sky back to real/selected time
+    if (prevMax === 0 && maxUnlocked >= 1 && window.__retryDateOccasion) window.__retryDateOccasion(); // a date occasion blocked by the intro may take over now
+  }
+  window.__unlockAllRooms = function () {
+    unlockThrough(STAGES.length - 1);
+    updateNav();
+    return maxUnlocked;
+  };
   updateDots();
   function setCaption(key, force) {
     // While the "Watch the loft" cinematic runs it OWNS the caption: the scripted
@@ -63282,10 +63293,7 @@ function spawnDustMote(container) {
     if (idx === -1) return;
     var fromIdx = stageIndex;
     stageIndex = idx;
-    var prevMax = maxUnlocked;
-    if (idx > maxUnlocked) maxUnlocked = idx;
-    if (prevMax === 0 && maxUnlocked >= 1 && !window.__cinematic && window.__startAutoDayNight) window.__startAutoDayNight(); // kitchen solved (frontier steps off room 1) → the loft's sky now tracks real/selected time; the forced-day intro is over (the scripted show drives its own sky, so not during it)
-    if (prevMax === 0 && maxUnlocked >= 1 && window.__retryDateOccasion) window.__retryDateOccasion(); // ...and the loft's now in play → retry a date-driven occasion that the load-time arm couldn't take over (fresh ?date=<birthday>/BBQ throws its scene on the first entry past the intro)
+    unlockThrough(idx);
     if (window.__monitorZoomOut) window.__monitorZoomOut(); // the zoomed-up monitor never travels between rooms
     if (window.__clearSkyMeteors) window.__clearSkyMeteors(); // ...nor does a shower's streaks: the sky you left keeps none of them
     strip.style.transform = "translateX(-" + (idx * 20) + "%)";
@@ -67376,9 +67384,13 @@ function spawnDustMote(container) {
     on = !!on;
     window.__gardenPartyOn = on;
     // First party of the session = we're officially in the "second round": reveal the who's-here
-    // roster from here on. Latched — party-off never clears it (only resetHunt does). Every party
-    // entry point routes through here, so any way the party lights flips this the same way.
-    if (on && !window.__secondRound) { window.__secondRound = true; if (window.__syncRosterAvail) window.__syncRosterAvail(); }
+    // roster and unlock every room from here on. Latched — party-off never clears it (only resetHunt
+    // does). Every party entry point routes through here, so any way the party lights agrees.
+    if (on && !window.__secondRound) {
+      window.__secondRound = true;
+      if (window.__unlockAllRooms) window.__unlockAllRooms();
+      if (window.__syncRosterAvail) window.__syncRosterAvail();
+    }
     if (on) { if (window.__startCueDrip) window.__startCueDrip(); } else if (window.__stopCueDrip) window.__stopCueDrip(); // drip the app-cue phone texts only while the party's lit
     if (!on && window.__setSmores) window.__setSmores(false); // the party's out → put the s'mores bonfire out too (unless a fire-festival season keeps its own)
     if (!on && window.__stopBalconySky) window.__stopBalconySky(); // ...and any fireworks finale / wish-lanterns in flight
@@ -75577,16 +75589,20 @@ function spawnDustMote(container) {
     // Standalone cameo figures: nobody rotates them, so "is this node painted" IS their owner's
     // published state (each system shows/hides exactly this group).
     var WHO_CAMEOS = {
-      kitchen: [{ key: "pouria", name: "Pouria", roleKey: "role_bartender", id: "kitchen-bartender" }],
+      kitchen: [
+        { key: "pouria", name: "Pouria", roleKey: "role_bartender", id: "kitchen-bartender" },
+        { key: "aspen", name: "Aspen", roleKey: "role_photographer", id: "kitchen-photographer" }
+      ],
       garden: [],
       cuddly: [
         { key: "marketa", name: "Markéta", roleKey: "role_bride", id: "cuddly-marketa" }, // the residents, home unless they're off at the party
         { key: "behdad",  name: "Behdad",  roleKey: "role_groom", id: "cuddly-behdad" },
+        { key: "aspen",   name: "Aspen",   roleKey: "role_photographer", id: "cuddly-photographer" },
         { key: "irene",   name: "Irene",   roleKey: "role_niece",  id: "cuddly-irene" },  // the drop-in kid cameos + the totoro co-watch
         { key: "robin",   name: "Robin",   roleKey: "role_godson", id: "cuddly-robin" },
         { key: "navid",   name: "Navid",   roleKey: "role_godson", id: "cuddly-navid" }
       ],
-      office: [],
+      office: [{ key: "aspen", name: "Aspen", roleKey: "role_photographer", id: "office-photographer" }],
       balcony: [
         { key: "aspen",   name: "Aspen",   roleKey: "role_photographer", id: "balcony-photographer" }, // BBQ-day shooter
         { key: "irene",   name: "Irene",   roleKey: "role_niece",  id: "balcony-smores-irene" },       // s'mores round the bonfire

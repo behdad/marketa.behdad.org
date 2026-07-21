@@ -46,6 +46,8 @@
 //    - fullscreen return: a click-driven tab handoff that forces the game out of
 //      fullscreen is restored by the first click after return; an explicit exit
 //      remains exited.
+//    - phone/fullscreen transition: entering or leaving fullscreen does not let a
+//      browser visibility blip dismiss the open pocket phone.
 //
 // Honest headless limits: the media clock doesn't advance under
 // --virtual-time-budget, so "unpaused" is asserted, not audible progress —
@@ -598,6 +600,22 @@ var PROBE_HARNESS = [
   "      window.__toggleFullscreen();",
   "      document.body.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
   "      ok('fullscreen: explicit exit is not undone by the next click', !fsArea.classList.contains('is-fullscreen'));",
+  "",
+  "      window.__openPhoneAppHere('calendar');",
+  "      await sleep(80);",
+  "      window.__toggleFullscreen();",
+  "      fakeHidden = true; document.dispatchEvent(new Event('visibilitychange'));",
+  "      fakeHidden = false; document.dispatchEvent(new Event('visibilitychange'));",
+  "      await sleep(80);",
+  "      var fsPhone = document.querySelector('.phone-backdrop.show');",
+  "      ok('fullscreen: entering keeps the phone open in the fullscreen host', !!fsPhone && fsPhone.parentNode === fsArea);",
+  "      window.__toggleFullscreen();",
+  "      fakeHidden = true; document.dispatchEvent(new Event('visibilitychange'));",
+  "      fakeHidden = false; document.dispatchEvent(new Event('visibilitychange'));",
+  "      await sleep(80);",
+  "      fsPhone = document.querySelector('.phone-backdrop.show');",
+  "      ok('fullscreen: leaving keeps the phone open in the page host', !!fsPhone && fsPhone.parentNode === document.body);",
+  "      if (window.__closePhoneModal) window.__closePhoneModal(true);",
   "    }",
   "  }",
   "  window.addEventListener('load', function () {",
@@ -605,6 +623,31 @@ var PROBE_HARNESS = [
   "      run().catch(function (e) { window.__errs.push('harness: ' + String(e && e.stack || e)); }).then(finish);",
   "    }, 200);",
   "  });",
+  "})();",
+  "</script>"
+].join("\n");
+
+// ── game-only first-click fullscreen harness ────────────────────────────────
+// Loaded with #play so the same early game-only condition used by /loft-day is active.
+var LOFT_FULLSCREEN_HARNESS = [
+  '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
+  "<script>",
+  "(function () {",
+  "  var report = { errors: [], asserts: [] };",
+  "  function ok(label, cond) { report.asserts.push({ label: label, ok: !!cond }); }",
+  "  function filled() { var a = document.getElementById('hunt-fullscreen-area'); return !!(a && a.classList.contains('is-fullscreen')); }",
+  "  window.addEventListener('load', function () { setTimeout(function () {",
+  "    var game = document.getElementById('loft-game-strip');",
+  "    ok('loft fullscreen setup: game-only mode is active', !document.documentElement.classList.contains('revealed'));",
+  "    ok('loft fullscreen setup: game starts outside fullscreen', !filled());",
+  "    document.body.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
+  "    ok('loft fullscreen: an outside click does not consume the game trigger', !filled());",
+  "    if (game) game.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
+  "    ok('loft fullscreen: first game click enters fullscreen', filled());",
+  "    if (game) game.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
+  "    ok('loft fullscreen: later game clicks do not toggle fullscreen back off', filled());",
+  "    report.errors = window.__errs; document.getElementById('__report').textContent = JSON.stringify(report);",
+  "  }, 300); });",
   "})();",
   "</script>"
 ].join("\n");
@@ -731,10 +774,11 @@ function fail(msg, detail) {
   if (!ONLY || "cascade".indexOf(ONLY) === 0) jobs.cascade = lib.runPage("rsvp.html", CASCADE_HARNESS, 9000, CHROME_OPTS);
   if (!ONLY || "gates".indexOf(ONLY) === 0) jobs.gates = lib.runPage("rsvp.html", GATES_HARNESS, 12000, CHROME_OPTS);
   if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 17000, CHROME_OPTS);
+  if (!ONLY || "fullscreen".indexOf(ONLY) === 0) jobs.fullscreen = lib.runPage("rsvp.html", LOFT_FULLSCREEN_HARNESS, 7000, Object.assign({}, CHROME_OPTS, { urlSuffix: "#play" }));
   if (!ONLY || "persian".indexOf(ONLY) === 0) jobs.persian = lib.runPage("rsvp.html", PERSIAN_HARNESS, 9000, CHROME_OPTS);
   if (!ONLY || "meals".indexOf(ONLY) === 0) jobs.meals = lib.runPage("rsvp.html", MEALS_HARNESS, 12000, CHROME_OPTS);
   if (!Object.keys(jobs).length) {
-    fail("unknown --only value: " + ONLY + " (use cascade|gates|probes|persian|meals)");
+    fail("unknown --only value: " + ONLY + " (use cascade|gates|probes|fullscreen|persian|meals)");
   }
   var names = Object.keys(jobs);
   var results = {};
@@ -792,6 +836,17 @@ function fail(msg, detail) {
       var diff = p.resetDiff.filter(function (d) { return RESET_DIFF_ALLOW.indexOf(d) === -1; });
       if (diff.length === 0) pass("reset: strip class-state matches the load snapshot (no stranded classes)");
       else fail("reset: stranded class-state diffs vs load snapshot", diff.slice(0, 25).join("\n") + (diff.length > 25 ? "\n... and " + (diff.length - 25) + " more" : ""));
+    }
+  }
+
+  if (results.fullscreen !== undefined) {
+    var f = results.fullscreen;
+    if (!f) {
+      fail("loft fullscreen harness reported (page error before load, or budget too small)");
+    } else {
+      if (f.errors.length) fail("loft fullscreen: no uncaught JS errors", f.errors.slice(0, 12).join("\n"));
+      else pass("loft fullscreen: no uncaught JS errors");
+      f.asserts.forEach(function (a) { if (a.ok) pass(a.label); else fail(a.label); });
     }
   }
 

@@ -54,7 +54,7 @@ function hook(opts) {
   ].join("\n");
 }
 
-function chromeCmd(scratch, budgetMs, extraFlags) {
+function chromeCmd(scratch, budgetMs, extraFlags, urlSuffix) {
   // --mute-audio: the playthrough click-storms every interactive element and state.js
   // starts beds/dances/songs, so the game's Web Audio actually SOUNDS. --headless=new
   // routes audio to the default output device (and state.js forces
@@ -63,7 +63,7 @@ function chromeCmd(scratch, budgetMs, extraFlags) {
   // the DOM/report — they never assert on audible output — so muting is free.
   return (process.env.CHROME_BIN || "google-chrome") + " --headless=new --disable-gpu --mute-audio --window-size=1100,900 " +
     (extraFlags ? extraFlags + " " : "") +
-    "--virtual-time-budget=" + budgetMs + " --dump-dom " + JSON.stringify("file://" + scratch);
+    "--virtual-time-budget=" + budgetMs + " --dump-dom " + JSON.stringify("file://" + scratch + (urlSuffix || ""));
 }
 
 function makeScratch(file, harness, hookHtml) {
@@ -89,7 +89,7 @@ function runPageSync(file, harness, budgetMs, opts) {
   var scratch = makeScratch(file, harness, hook(opts));
   var dom;
   try {
-    dom = child.execSync(chromeCmd(scratch, budgetMs, opts.chromeFlags), {
+    dom = child.execSync(chromeCmd(scratch, budgetMs, opts.chromeFlags, opts.urlSuffix), {
       stdio: ["ignore", "pipe", "pipe"],
       maxBuffer: 64 * 1024 * 1024,
       timeout: budgetMs + 30000
@@ -105,7 +105,7 @@ function runPage(file, harness, budgetMs, opts) {
   opts = opts || {};
   var scratch = makeScratch(file, harness, hook(opts));
   return new Promise(function (resolve, reject) {
-    child.exec(chromeCmd(scratch, budgetMs, opts.chromeFlags), {
+    child.exec(chromeCmd(scratch, budgetMs, opts.chromeFlags, opts.urlSuffix), {
       maxBuffer: 64 * 1024 * 1024,
       timeout: budgetMs + 30000
     }, function (err, stdout) {

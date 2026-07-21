@@ -26533,7 +26533,11 @@ function idealBrowser() {
   }
   window.refreshFullscreenLabel = refreshLabel; // re-run by setLang() on every language switch
   window.__sizeFullscreenFrame = sizeFullscreenFrame; // test hook: isFullscreen() checks the real Fullscreen API, which headless test scripts that only toggle .is-fullscreen can't trigger
+  function beginPhoneFsTransition() {
+    if (window.__phoneBeginFullscreenTransition) window.__phoneBeginFullscreenTransition();
+  }
   function enterFs() {
+    beginPhoneFsTransition();
     // Class-fill first — this alone fills the viewport and works on mobile regardless of
     // the Fullscreen API; refreshLabel() flips the glyph to ✕ and sizes the room to fill.
     manualFs = true;
@@ -26550,6 +26554,7 @@ function idealBrowser() {
     }
   }
   function exitFsFull() {
+    beginPhoneFsTransition();
     clearFsReturn();
     manualFs = false;
     area.classList.remove("is-fullscreen");
@@ -26560,6 +26565,7 @@ function idealBrowser() {
       } catch (err) {}
     }
     refreshLabel();
+    if (window.__phoneFinishFullscreenTransition) window.__phoneFinishFullscreenTransition();
   }
   function toggleFs() {
     var wp = document.querySelector(".egg-bubble.who-pop"); // the persona card is positioned once at tap time, so a fullscreen resize would strand it — dismiss it on 'f'
@@ -26623,6 +26629,7 @@ function idealBrowser() {
       }, 0);
     }
     refreshLabel();
+    if (window.__phoneFinishFullscreenTransition) window.__phoneFinishFullscreenTransition();
   }
   document.addEventListener("fullscreenchange", onFsChange);
   document.addEventListener("webkitfullscreenchange", onFsChange);
@@ -26646,11 +26653,13 @@ function idealBrowser() {
 })();
 (function(){
   // requestFullscreen needs a user gesture (no auto-fullscreen on load). When launched
-  // as the installed PWA, take the FIRST tap as that gesture and enter fullscreen once.
-  // Normal browser tabs are left alone (they have the ⛶ button + the mobile hint).
+  // as the installed PWA, take its first tap; directly in game-only Loft Day mode, take
+  // the first tap on the game. Both enter fullscreen once; the full RSVP page is left alone.
   function isPWA(){ try { return (window.matchMedia && (matchMedia("(display-mode: standalone)").matches || matchMedia("(display-mode: fullscreen)").matches)) || navigator.standalone === true; } catch(e){ return false; } }
-  if(!isPWA()) return;
+  var pwa=isPWA(), loftOnly=!document.documentElement.classList.contains("revealed");
+  if(!pwa && !loftOnly) return;
   function firstTap(e){
+    if(loftOnly && !pwa && !(e && e.target && e.target.closest && e.target.closest("#hunt-fullscreen-area"))) return;
     document.removeEventListener("click", firstTap, true);
     var area=document.querySelector("#hunt-fullscreen-area"), b=document.getElementById("hunt-fullscreen-btn");
     if(!b || (area && area.classList.contains("is-fullscreen"))) return;
@@ -46699,6 +46708,7 @@ async def localfont(name):
     var photoboothCleanup = null;   // booth teardown: stop the stream, clear timers, revoke URLs
     var flashOn = false, flashTrack = null; // flashlight state (balcony beam + screen glow; flashTrack = the real camera-LED torch, used only when camera access is already granted)
     var phExternalLaunchPending = false, phExternalLaunchBlurred = false, phExternalLaunchTimer = null; // an explicit out-of-phone launch owns the next hide; unrelated backgrounding still tears the phone down
+    var phFullscreenTransitionUntil = 0; // entering/leaving real fullscreen may briefly report hidden; never interpret that browser transition as a phone dismissal
     var sessionStart = Date.now();  // "in the loft for" playtime origin — set at script load
     var selectedCity = null;
     var cardsIndex = 0;             // phrasebook deck position — session-scoped: persists across a normal close/reopen (resume); zeroed only on a kill (uninstallApp / __resetPhoneApps)
@@ -46728,6 +46738,15 @@ async def localfont(name):
 
     function isOpen() { return !!(modal && modal.parentNode); }
     function reduced() { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } }
+    function phoneFullscreenHost() {
+      return document.fullscreenElement || document.webkitFullscreenElement ||
+             document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
+    }
+    function seatPhoneInFullscreenHost() {
+      if (!modal || closing || !modal.classList.contains("show")) return;
+      var host = phoneFullscreenHost();
+      if (modal.parentNode !== host) host.appendChild(modal);
+    }
     function clearExternalLaunch() {
       phExternalLaunchPending = false;
       phExternalLaunchBlurred = false;
@@ -50600,8 +50619,7 @@ async def localfont(name):
       build();
       closing = false;
       if (shell) shell.style.translate = ""; // a fresh open re-centres the phone (drops any prior drag offset)
-      var fsHost = document.fullscreenElement || document.webkitFullscreenElement ||
-                   document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
+      var fsHost = phoneFullscreenHost();
       if (modal.parentNode !== fsHost) fsHost.appendChild(modal);
       requestAnimationFrame(function () { if (modal) modal.classList.add("show"); });
       startStatusClock();
@@ -50626,6 +50644,7 @@ async def localfont(name):
     function close(silent) {
       if (!modal) return;
       closing = true;
+      phFullscreenTransitionUntil = 0;
       clearExternalLaunch();
       phCloseMenu(); // never orphan an open app-icon menu when the phone goes away
       phCancelDrag(); // abort any in-flight icon drag (drop the ghost + window listeners)
@@ -50646,6 +50665,17 @@ async def localfont(name):
     window.__closePhoneModal = function (silent) { close(silent); };
     window.__armPhoneExternalLaunch = armExternalLaunch;
     window.__openPhoneExternal = openExternal;
+    window.__phoneBeginFullscreenTransition = function () {
+      if (isOpen() && modal.classList.contains("show")) phFullscreenTransitionUntil = Date.now() + 2000;
+    };
+    window.__phoneFinishFullscreenTransition = function () {
+      if (!modal || closing || !modal.classList.contains("show")) return;
+      if (Date.now() <= phFullscreenTransitionUntil) phFullscreenTransitionUntil = Date.now() + 500;
+      seatPhoneInFullscreenHost();
+      requestAnimationFrame(seatPhoneInFullscreenHost);
+      setTimeout(seatPhoneInFullscreenHost, 80);
+      setTimeout(seatPhoneInFullscreenHost, 240);
+    };
     window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messagesArrivedAt = {}; Object.keys(MESSAGES).forEach(function (k) { if (MESSAGES[k].bodyKeys) MESSAGES[k].bodyKey = null; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__stopDayDrip) window.__stopDayDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks, and the flashlight (intent forgotten + beam/torch off)
     // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
     // open(true) is the cinematic lock-skip path (same as __showCocktailInPhone), so a console
@@ -50686,9 +50716,7 @@ async def localfont(name):
     // on <body> behind the overlay. No-op while closed (modal absent from the DOM).
     window.__reparentPhoneToFsHost = function () {
       if (!modal || !modal.parentNode) return;
-      var fsHost = document.fullscreenElement || document.webkitFullscreenElement ||
-                   document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
-      if (modal.parentNode !== fsHost) fsHost.appendChild(modal);
+      seatPhoneInFullscreenHost();
     };
     window.__cineShowPhone = function () { open(true); }; // cinematic: open to the launcher, no lock, booted untouched
     // ── new-message thumbnail (top-centre, ~7s, pulsating) + delivery ──────────────────────
@@ -51320,6 +51348,7 @@ async def localfont(name):
     // the user left it so it is still there when they return from GCal, Gmail, HN, or the browser.
     document.addEventListener("visibilitychange", function () {
       if (!document.hidden) return;
+      if (Date.now() <= phFullscreenTransitionUntil) { hideCallRing(); return; }
       if (phExternalLaunchPending) clearExternalLaunch();
       else close(true);
       hideCallRing();

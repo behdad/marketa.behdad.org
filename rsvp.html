@@ -63351,8 +63351,9 @@ function spawnDustMote(container) {
     } else if (e.key === "w" || e.key === "W") {
       e.preventDefault();
       // 'w' → toggle the "who's here?" roster for the room on screen. The Trailer is started from
-      // its button, not a key.
-      if (window.roster) window.roster();
+      // its button, not a key. No-op in the first round (before a party has lit this session) — the
+      // roster is sealed then, so the key does nothing rather than flashing an empty panel.
+      if (window.roster && window.__secondRound) window.roster();
     } else if (e.key === "a" || e.key === "A") {
       e.preventDefault();
       // 'a' → toggle autoplay (attract mode): the self-driving BBQ loop. Nothing else exits it —
@@ -64542,6 +64543,10 @@ function spawnDustMote(container) {
   var GARDEN_CONFETTI = 20;
   var CONFETTI_COLORS = ["#f500f5", "#00f5a3", "#1ab2ff", "#f7a01f", "#e070ff", "#ffffff"];
   window.__gardenPartyOn = false;
+  // "Second round" latches true the first time a party lights this session (see setGardenParty)
+  // and stays on until resetHunt. It gates the who's-here roster: before the first party there's
+  // no one worth listing, so the chip stays sealed rather than opening a confusing empty panel.
+  window.__secondRound = false;
   function gardenPartyActive() {
     return window.__gardenPartyOn && stageIndex === STAGES.indexOf("garden") &&
       document.visibilityState !== "hidden" &&
@@ -67126,6 +67131,10 @@ function spawnDustMote(container) {
   function setGardenParty(on, userInitiated) {
     on = !!on;
     window.__gardenPartyOn = on;
+    // First party of the session = we're officially in the "second round": reveal the who's-here
+    // roster from here on. Latched — party-off never clears it (only resetHunt does). Every party
+    // entry point routes through here, so any way the party lights flips this the same way.
+    if (on && !window.__secondRound) { window.__secondRound = true; if (window.__syncRosterAvail) window.__syncRosterAvail(); }
     if (on) { if (window.__startCueDrip) window.__startCueDrip(); } else if (window.__stopCueDrip) window.__stopCueDrip(); // drip the app-cue phone texts only while the party's lit
     if (!on && window.__setSmores) window.__setSmores(false); // the party's out → put the s'mores bonfire out too (unless a fire-festival season keeps its own)
     if (!on && window.__stopBalconySky) window.__stopBalconySky(); // ...and any fireworks finale / wish-lanterns in flight
@@ -69662,8 +69671,9 @@ function spawnDustMote(container) {
 
   function resetHunt() {
     window.__pragueCalled = false;
+    window.__secondRound = false;                              // back to the "first round" — reseal the who's-here roster until a party lights again
     if (window.__closeDropTerm) window.__closeDropTerm();      // a fresh game starts with no panel up…
-    if (window.__toggleRoster) window.__toggleRoster(false);   // …including the who's-here list
+    if (window.__toggleRoster) window.__toggleRoster(false);   // …including the who's-here list (its syncAvailability re-hides the chip now the flag's cleared just above)
     if (window.__stopDaylapse) window.__stopDaylapse(); // a fresh game ends any running time-lapse (no stranded synthetic clock)
     // …and lands on the REAL current Edmonton moment: ?date=/?time= out of the URL (the only
     // override that would survive a reload), previews nulled, every date-derived system re-dressed.
@@ -75781,6 +75791,7 @@ function spawnDustMote(container) {
 
     function setOpen(v) {
       if (!ensureNodes()) return;
+      if (v && !window.__secondRound) return; // first round (no party yet this session): refuse to open — an empty/early roster only confuses. This is the sole choke point, so it covers the h/w keys, roster(true), __toggleRoster(true) and the autoplay/cinematic beats alike. Closing (v=false) is always allowed.
       open = !!v;
       if (open) {
         if (window.__closeDjPicker) window.__closeDjPicker(); // roster + jukebox are mutually exclusive
@@ -75798,8 +75809,11 @@ function spawnDustMote(container) {
     }
     function toggle() { setOpen(!open); }
 
-    // The corner chip is offered in EVERY room — each one has its own live roster now, and an
-    // empty room says so rather than hiding the affordance. Poll cheaply so an open panel tracks
+    // The corner chip is offered in EVERY room ONCE we're in the "second round" (a party has lit
+    // this session — see window.__secondRound) — each one has its own live roster then, and an
+    // empty room says so rather than hiding the affordance. In the first round the chip stays
+    // hidden entirely, so a player can't open a confusing empty roster before anyone's arrived.
+    // Poll cheaply so an open panel tracks
     // arrivals and departures (a couple rotating out of the bar, the deck crowd stepping in, the
     // kids sitting down to a game) instead of only refreshing on room entry.
     // Writes to the chip ONLY when a value actually changed. This runs on a 1.5s poll forever, in
@@ -75818,7 +75832,12 @@ function spawnDustMote(container) {
       }
       var expanded = open ? "true" : "false";
       if (expanded !== chipExpanded) { chipExpanded = expanded; toggleBtn.setAttribute("aria-expanded", expanded); }
-      if (!toggleBtn.classList.contains("avail")) toggleBtn.classList.add("avail");
+      if (window.__secondRound) {
+        if (!toggleBtn.classList.contains("avail")) toggleBtn.classList.add("avail");
+      } else {
+        if (toggleBtn.classList.contains("avail")) toggleBtn.classList.remove("avail");
+        if (open) { setOpen(false); return; } // reset dropped us back to the first round — never strand an open panel
+      }
       if (open) render(); // keep the open panel live (presence can change under it)
     }
     window.__syncRosterAvail = syncAvailability; // goToStage pings this so the panel re-lists for the new room at once (no 1.5s poll lag)

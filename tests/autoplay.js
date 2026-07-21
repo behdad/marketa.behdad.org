@@ -139,6 +139,7 @@ var HARNESS = [
   // A PANEL the show opens must never be inherited. Opened by hand HERE (the office routine never
   // opens one) so the assertion can't pass vacuously — the old build left the garden's who's-who
   // list up across rooms, across scenes and straight through the □ Take-over button.
+  "    window.__secondRound = true;", // the who's-here roster only opens in the "second round" (after a party has lit) — put the test there so this hand-open isn't a no-op
   "    window.__toggleRoster(true); await sleep(150);",
   "    report.phase4.rosterOpenBeforeTakeover = window.__rosterOpen();",
   "    if (window.__autoplayTakeover) window.__autoplayTakeover(); await sleep(300);",
@@ -209,13 +210,14 @@ var HARNESS = [
   // only ever run out the loop. It goes LAST: forcing beats back-to-back also fires the garden's
   // MOMENTS, whose own delayed phone texts would otherwise displace phase 5's notification.
   "    window.autoplay(true); await sleep(400);",
+  "    window.__secondRound = true;", // second-round gate: the roster only opens once a party's lit this session
   "    window.__toggleRoster(true);",
   "    var stepsToClose=-1;",
   "    for (var pz=1; pz<=40 && stepsToClose<0; pz++){ window.__autoplayForceStep(); if(!window.__rosterOpen()) stepsToClose=pz; }",
   "    report.phase8 = { rosterStepsToClose: stepsToClose };",
   "    window.autoplay(false); await sleep(200);",
   // …and a deliberate stop closes one opened while the show was already running.
-  "    window.autoplay(true); await sleep(200); window.__toggleRoster(true); window.autoplay(false); await sleep(200);",
+  "    window.autoplay(true); await sleep(200); window.__secondRound = true; window.__toggleRoster(true); window.autoplay(false); await sleep(200);",
   "    report.phase8.rosterClosedAfterStop = !window.__rosterOpen();",
   "    report.cursor = { samples:_cur.samples, visible:_cur.visible, worstFrozenMs:_cur.worst*250 };",
   "  }",

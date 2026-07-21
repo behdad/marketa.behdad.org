@@ -43,6 +43,9 @@
 //    - phone external launch: a GCal click keeps the pocket phone open when its
 //      new tab hides this page after a delay, while a later unrelated hide still
 //      performs the normal phone teardown.
+//    - fullscreen return: a click-driven tab handoff that forces the game out of
+//      fullscreen is restored by the first click after return; an explicit exit
+//      remains exited.
 //
 // Honest headless limits: the media clock doesn't advance under
 // --virtual-time-budget, so "unpaused" is asserted, not audible progress —
@@ -573,6 +576,28 @@ var PROBE_HARNESS = [
   "      fakeHidden = true; document.dispatchEvent(new Event('visibilitychange'));",
   "      await sleep(300);",
   "      ok('phone: unrelated backgrounding still closes the phone', !document.querySelector('.phone-backdrop.show'));",
+  "      fakeHidden = false; document.dispatchEvent(new Event('visibilitychange'));",
+  "    }",
+  "",
+  "    // Fullscreen APIs require a trusted gesture in production; the page's class-fill lets",
+  "    // this headless probe exercise the return state machine without pretending an untrusted",
+  "    // synthetic event received a real browser fullscreen grant.",
+  "    var fsArea = document.getElementById('hunt-fullscreen-area');",
+  "    ok('fullscreen setup: toggle hook + area exist', !!fsArea && typeof window.__toggleFullscreen === 'function');",
+  "    if (fsArea && window.__toggleFullscreen) {",
+  "      if (!fsArea.classList.contains('is-fullscreen')) window.__toggleFullscreen();",
+  "      ok('fullscreen setup: game enters the fullscreen fill', fsArea.classList.contains('is-fullscreen'));",
+  "      document.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
+  "      window.dispatchEvent(new Event('blur'));",
+  "      fakeHidden = true; document.dispatchEvent(new Event('visibilitychange'));",
+  "      document.dispatchEvent(new Event('fullscreenchange'));", // browser drops its real fullscreen during the handoff
+  "      ok('fullscreen: tab handoff releases the stale fullscreen fill', !fsArea.classList.contains('is-fullscreen'));",
+  "      fakeHidden = false; document.dispatchEvent(new Event('visibilitychange'));",
+  "      document.body.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
+  "      ok('fullscreen: first click after return restores fullscreen', fsArea.classList.contains('is-fullscreen'));",
+  "      window.__toggleFullscreen();",
+  "      document.body.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
+  "      ok('fullscreen: explicit exit is not undone by the next click', !fsArea.classList.contains('is-fullscreen'));",
   "    }",
   "  }",
   "  window.addEventListener('load', function () {",

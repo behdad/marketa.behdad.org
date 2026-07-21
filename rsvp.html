@@ -26391,11 +26391,25 @@ function idealBrowser() {
   // from the real API state so the fullscreenchange handler can tell an Esc/back exit of
   // real fullscreen (which must also drop the class-fill) from a request we never made.
   var manualFs = false;
+  var resumeFsOnClick = false, fsOutboundUntil = 0;
   function isFullscreen() {
     return (document.fullscreenElement || document.webkitFullscreenElement) === area;
   }
   function isFilled() { return area.classList.contains("is-fullscreen"); }
   function lang() { return T[document.documentElement.lang] ? document.documentElement.lang : "en"; }
+  function clearFsReturn() { resumeFsOnClick = false; fsOutboundUntil = 0; }
+  function armFsOutbound(ms) {
+    if (!isFilled() && !isFullscreen()) return;
+    fsOutboundUntil = Math.max(fsOutboundUntil, Date.now() + (ms || 2500));
+  }
+  // Explicit external-launch helpers (the pocket phone uses this) get a longer handoff
+  // window than the generic click correlation below. A blur/hidden event must still confirm
+  // that the page actually lost the foreground before fullscreen is restored on return.
+  window.__armFullscreenReturn = function () { armFsOutbound(10000); };
+  function noteFullscreenBackground() {
+    if (isFilled() || isFullscreen() || Date.now() <= fsOutboundUntil) resumeFsOnClick = true;
+    fsOutboundUntil = 0;
+  }
   // Measures the actual space available in fullscreen (area's content box minus the
   // caption/dots, which are flex:0 0 auto and keep their natural size) and sets the
   // frame's width/height as explicit px, rather than deriving them through CSS
@@ -26536,6 +26550,7 @@ function idealBrowser() {
     }
   }
   function exitFsFull() {
+    clearFsReturn();
     manualFs = false;
     area.classList.remove("is-fullscreen");
     if (isFullscreen() && exitFs) { // leave real fullscreen too, if a genuine grant is in effect
@@ -26553,6 +26568,21 @@ function idealBrowser() {
   }
   window.__toggleFullscreen = toggleFs; // surfaces so the open phone (which handles its own 'f') can drive it
   btn.addEventListener("click", function (e) { e.stopPropagation(); toggleFs(); });
+  // A new tab/app can force the browser out of the Fullscreen API. Correlate the foreground
+  // loss with the click that caused it, then spend the first click after return as the trusted
+  // gesture needed to request fullscreen again. Capture phase restores it before the clicked
+  // game control runs. The fullscreen button remains an explicit toggle and handles itself.
+  document.addEventListener("click", function (e) {
+    var onFsButton = e.target && e.target.closest && e.target.closest("#hunt-fullscreen-btn");
+    if (onFsButton) { if (resumeFsOnClick) clearFsReturn(); return; }
+    if (resumeFsOnClick && !document.hidden) {
+      clearFsReturn();
+      enterFs();
+    }
+    armFsOutbound(2500);
+  }, true);
+  window.addEventListener("blur", noteFullscreenBackground);
+  document.addEventListener("visibilitychange", function () { if (document.hidden) noteFullscreenBackground(); });
   // 'f' toggles fullscreen from anywhere (a keydown is a trusted gesture, so the
   // requestFullscreen call is allowed); ignored while typing or with a modifier held.
   document.addEventListener("keydown", function (e) {
@@ -26579,11 +26609,18 @@ function idealBrowser() {
   // that the user is relying on.
   function onFsChange() {
     if (isFullscreen()) {
+      clearFsReturn();
       manualFs = true;
       area.classList.add("is-fullscreen");
     } else if (manualFs) {
       manualFs = false;
       area.classList.remove("is-fullscreen");
+      // A focused, visible exit is Escape/back (or another element taking fullscreen), not
+      // a tab handoff. Defer one task so a blur ordered just after fullscreenchange can claim
+      // the return before this cleanup runs.
+      if (!document.hidden && document.hasFocus()) setTimeout(function () {
+        if (!document.hidden && document.hasFocus() && !resumeFsOnClick) fsOutboundUntil = 0;
+      }, 0);
     }
     refreshLabel();
   }
@@ -46698,6 +46735,7 @@ async def localfont(name):
     }
     function armExternalLaunch() {
       if (!isOpen()) return;
+      if (window.__armFullscreenReturn) window.__armFullscreenReturn();
       clearExternalLaunch();
       phExternalLaunchPending = true;
       // A foreground tab/app normally blurs this window immediately. Keep a short fallback for

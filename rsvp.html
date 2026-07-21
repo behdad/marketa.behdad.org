@@ -26879,8 +26879,14 @@ function hoverTooltip(el, html, placement, yOffset, xOffset, posEl) {
     if (bubble) { dismissEggBubble(bubble); bubble = null; }
   }
   function showTip() {
+    // A CLICKED bubble (a who-pop persona card, or an egg-bubble opened by a tap) is intentional and
+    // lingers — a transient HOVER / long-press tooltip must NOT clobber it. Only a hover bubble (marked
+    // _hover) may be replaced by the next hover. So bail if the bubble currently shown wasn't a hover.
+    var shown = document.querySelector(".egg-bubble");
+    if (shown && !shown._hover) return;
     if (followRaf) { cancelAnimationFrame(followRaf); followRaf = null; }
     bubble = eggBubble(at, typeof html === "function" ? html() : html, placement, yOffset, xOffset);
+    if (bubble) bubble._hover = true;
     followRaf = requestAnimationFrame(follow);
   }
   el.addEventListener("mouseenter", function () {

@@ -56384,6 +56384,7 @@ function spawnCrystalSparkle() {
   function reducedMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
+  function attended() { return !document.hidden && document.hasFocus(); }
   function mk(host, tag, attrs) {
     var e = document.createElementNS(SVGNS, tag);
     for (var k in attrs) e.setAttribute(k, attrs[k]);
@@ -56394,7 +56395,7 @@ function spawnCrystalSparkle() {
   // one chrysanthemum burst centred at (cx,cy); s scales size (balcony ~1, garden ~0.55).
   // static=true draws a frozen burst (reduced motion) with no animation.
   function fwBurst(host, cx, cy, s, color, isStatic) {
-    if (!host) return;
+    if (!host || (!isStatic && !attended())) return;
     color = color || FW_COLORS[(Math.random() * FW_COLORS.length) | 0];
     // soft flash bloom at the core
     var flash = mk(host, "circle", { cx: cx, cy: cy, r: (7 * s).toFixed(1), fill: "#fff8e0", opacity: isStatic ? 0.35 : 0.9 });
@@ -56444,10 +56445,10 @@ function spawnCrystalSparkle() {
       })();
     }
   }
-  // a rocket rises from below into (cx,cy), then bursts on the trail's onfinish (which
-  // pauses with the frames in a hidden tab, so the burst can't fire while backgrounded)
+  // a rocket rises from below into (cx,cy), then bursts on the trail's onfinish. Re-gate there too:
+  // another fullscreen window can pause frames without changing this document's visibility state.
   function fwLaunch(host, cx, cy, s) {
-    if (!host) return;
+    if (!host || !attended()) return;
     var color = FW_COLORS[(Math.random() * FW_COLORS.length) | 0];
     var startY = cy + (60 + Math.random() * 34) * s;
     var trail = mk(host, "circle", { cx: cx, cy: startY, r: (1.6 * s).toFixed(1), fill: "#ffe9a8" });
@@ -56462,7 +56463,7 @@ function spawnCrystalSparkle() {
     // so re-check at the moment of the burst, not just at launch.
     rise.onfinish = function () {
       trail.remove();
-      if (!fwActive() || host !== fwHost) return;
+      if (!fwActive() || host !== fwHost || !attended()) return;
       fwBurst(host, cx, cy, s, color, false);
     };
   }
@@ -56487,10 +56488,20 @@ function spawnCrystalSparkle() {
     return !!(fwSeason() && fwHost && fwHost.isConnected &&
       (fwRoom === "balcony" || fwRoom === "garden") && window.currentStageName === fwRoom);
   }
+  function removeParticle(node) {
+    if (!node) return;
+    // Removing a node does not reliably cancel its paused WAAPI animation. Cancel first so an
+    // unfocused window cannot retain hundreds of detached animation effects until it returns.
+    if (node.getAnimations) {
+      var anims = node.getAnimations();
+      for (var i = 0; i < anims.length; i++) try { anims[i].cancel(); } catch (e) {}
+    }
+    node.remove();
+  }
   function clearParticles(host) {
     if (!host) return;
     var ps = host.querySelectorAll(".fw-particle");
-    for (var i = 0; i < ps.length; i++) ps[i].remove();
+    for (var i = 0; i < ps.length; i++) removeParticle(ps[i]);
   }
   function fwStop() {
     if (fwTimer) { clearTimeout(fwTimer); fwTimer = null; }
@@ -56501,18 +56512,19 @@ function spawnCrystalSparkle() {
     fwTimer = null;
     if (!fwActive()) { fwStop(); return; }
     var host = fwHost, f = FIELDS[fwRoom];
-    // Hidden-tab safety: skip spawning while hidden (nothing accumulates), but keep the
-    // pacing timer alive so volleys resume on return; cap stale particles each time so a
-    // paused onfinish that never fired can't pile up.
-    if (document.visibilityState !== "hidden") {
+    // Hidden/unfocused safety: a different fullscreen window can leave visibilityState "visible"
+    // while browser animation frames are throttled. Keep pacing, but spawn only when attended.
+    if (attended()) {
       var live = host.querySelectorAll(".fw-particle");
-      if (live.length > 220) for (var c = 0; c < live.length - 220; c++) live[c].remove();
+      if (live.length > 160) {
+        for (var c = 0; c < live.length - 160; c++) removeParticle(live[c]);
+      }
       var rockets = 1 + ((Math.random() * 2) | 0); // 1–2 per volley
       for (var i = 0; i < rockets; i++) {
         var cx = f.box[0] + Math.random() * f.box[2];
         var cy = f.box[1] + Math.random() * f.box[3];
         var jitter = f.s * (0.85 + Math.random() * 0.35);
-        (function (x, y, s) { setTimeout(function () { if (fwActive()) fwLaunch(host, x, y, s); }, i * 220); })(cx, cy, jitter);
+        (function (x, y, s) { setTimeout(function () { if (fwActive() && attended()) fwLaunch(host, x, y, s); }, i * 220); })(cx, cy, jitter);
       }
     }
     fwTimer = setTimeout(volley, 1500 + Math.random() * 1500);
@@ -56532,6 +56544,9 @@ function spawnCrystalSparkle() {
     }
     volley();
   };
+  function clearUnattendedParticles() { if (!attended() && fwHost) clearParticles(fwHost); }
+  document.addEventListener("visibilitychange", clearUnattendedParticles);
+  window.addEventListener("blur", clearUnattendedParticles);
   window.addEventListener("pagehide", fwStop);
 })();
 // ── balcony night-sky celebrations: a fireworks FINALE + a wish-lantern release ──────────────
@@ -56567,12 +56582,22 @@ function spawnCrystalSparkle() {
   function capParticles(host, cls, cap) {
     if (!host) return;
     var live = host.querySelectorAll("." + cls);
-    for (var i = 0; i < live.length - cap; i++) live[i].remove();
+    for (var i = 0; i < live.length - cap; i++) removeParticle(live[i]);
+  }
+  function removeParticle(node) {
+    if (!node) return;
+    var nodes = [node], descendants = node.querySelectorAll ? node.querySelectorAll("*") : [];
+    for (var d = 0; d < descendants.length; d++) nodes.push(descendants[d]);
+    for (var n = 0; n < nodes.length; n++) if (nodes[n].getAnimations) {
+      var anims = nodes[n].getAnimations();
+      for (var i = 0; i < anims.length; i++) try { anims[i].cancel(); } catch (e) {}
+    }
+    if (node.parentNode) node.remove();
   }
   function clearParticles(host, cls) {
     if (!host) return;
     var ps = host.querySelectorAll("." + cls);
-    for (var i = 0; i < ps.length; i++) ps[i].remove();
+    for (var i = 0; i < ps.length; i++) removeParticle(ps[i]);
   }
 
   // ══ FIREWORKS FINALE ═══════════════════════════════════════════════════════════════════════
@@ -56585,7 +56610,7 @@ function spawnCrystalSparkle() {
   var fwTimer = null, fwEndAt = 0;
   function fwHost() { return document.getElementById(FW_HOST_ID); }
   function fwBurst(host, cx, cy, s, color, isStatic) {
-    if (!host) return;
+    if (!host || (!isStatic && !attended())) return;
     color = color || FW_COLORS[(Math.random() * FW_COLORS.length) | 0];
     var flash = mk(host, "bfw-particle", "circle", { cx: cx, cy: cy, r: (7 * s).toFixed(1), fill: "#fff8e0", opacity: isStatic ? 0.35 : 0.9 });
     if (!isStatic && flash.animate) {
@@ -56627,7 +56652,7 @@ function spawnCrystalSparkle() {
     if (attended()) playFireworkBoom(s, cx);
   }
   function fwLaunch(host, cx, cy, s) {
-    if (!host) return;
+    if (!host || !attended()) return;
     var color = FW_COLORS[(Math.random() * FW_COLORS.length) | 0];
     var startY = cy + (66 + Math.random() * 40) * s;
     var trail = mk(host, "bfw-particle", "circle", { cx: cx, cy: startY, r: (1.6 * s).toFixed(1), fill: "#ffe9a8" });
@@ -56792,6 +56817,9 @@ function spawnCrystalSparkle() {
 
   // ── shared teardown ── room-leave / party-off / night-off / reset all call this
   window.__stopBalconySky = function () { fwStop(); lantStop(); };
+  function clearUnattendedFireworks() { if (!attended()) clearParticles(fwHost(), "bfw-particle"); }
+  document.addEventListener("visibilitychange", clearUnattendedFireworks);
+  window.addEventListener("blur", clearUnattendedFireworks);
   window.addEventListener("pagehide", function () { fwStop(); lantStop(); });
   // Occasionally auto-launch a fireworks burst or a lantern release on their own while you're on the
   // balcony during a night party — one self-rescheduling timer, crickets-gated so a hidden/unfocused

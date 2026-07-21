@@ -48,6 +48,8 @@
 //      remains exited.
 //    - phone/fullscreen transition: entering or leaving fullscreen does not let a
 //      browser visibility blip dismiss the open pocket phone.
+//    - fireworks: a visible-but-unfocused page clears live wedding-day sky
+//      particles and does not spawn replacements while another window is fullscreen.
 //
 // Honest headless limits: the media clock doesn't advance under
 // --virtual-time-budget, so "unpaused" is asserted, not audible progress —
@@ -552,6 +554,29 @@ var PROBE_HARNESS = [
   "    await sleep(300);", // rAF-double re-add is 2 patched-rAF ticks (~32ms); the one-shot may finish AND be removed in here — the mutation is the signal
   "    obs.disconnect();",
   "    ok('liveness: pans still react to a click (class mutation seen)', mutated);",
+  "",
+  "    // Hold WAAPI effects open so particle counts are deterministic, then reproduce the exact",
+  "    // failure mode: the browser remains visibilityState=visible while another fullscreen window",
+  "    // owns focus. Blur must cancel/remove the live shells and the pacing timer must stay empty.",
+  "    var realHasFocus = document.hasFocus, fakeFocus = true, realSvgAnimate = SVGElement.prototype.animate, realGetAnimations = Element.prototype.getAnimations;",
+  "    var cancelledFireworkAnimations = 0;",
+  "    document.hasFocus = function () { return fakeFocus; };",
+  "    SVGElement.prototype.animate = function () { return { onfinish: null, cancel: function () {} }; };",
+  "    Element.prototype.getAnimations = function () { return [{ cancel: function () { cancelledFireworkAnimations++; } }]; };",
+  "    var oldWeddingDay = window.__isWeddingDay; window.__isWeddingDay = true;",
+  "    if (window.goToStage) window.goToStage('balcony');",
+  "    if (window.__updateSkyFireworks) window.__updateSkyFireworks('balcony');",
+  "    await sleep(40);",
+  "    var ambientFireworks = document.querySelectorAll('#balcony-fireworks .fw-particle').length;",
+  "    ok('fireworks setup: attended wedding sky launches particles', ambientFireworks > 0, 'particles=' + ambientFireworks);",
+  "    fakeFocus = false; window.dispatchEvent(new Event('blur'));",
+  "    ok('fireworks: visible-but-unfocused blur clears live particles', document.querySelectorAll('#balcony-fireworks .fw-particle').length === 0);",
+  "    ok('fireworks: clearing also cancels paused WAAPI effects', cancelledFireworkAnimations >= ambientFireworks, 'cancelled=' + cancelledFireworkAnimations + ', particles=' + ambientFireworks);",
+  "    await sleep(3200);",
+  "    ok('fireworks: ambient timer spawns nothing while visible but unfocused', document.querySelectorAll('#balcony-fireworks .fw-particle').length === 0);",
+  "    fakeFocus = true; window.__isWeddingDay = oldWeddingDay;",
+  "    if (window.__updateSkyFireworks) window.__updateSkyFireworks('kitchen');",
+  "    SVGElement.prototype.animate = realSvgAnimate; Element.prototype.getAnimations = realGetAnimations; document.hasFocus = realHasFocus;",
   "",
   "    // An external phone launch may not hide this tab immediately (app handoff / chooser /",
   "    // slow tab focus). Simulate a hide after the old 400ms grace and verify that the explicit",

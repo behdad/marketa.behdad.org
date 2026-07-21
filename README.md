@@ -49,7 +49,7 @@ them casually.
 With thanks to the people who helped shape this:
 
 - **Markéta** — co-design
-- **Kasra**, **Garret** & **Mahzad** — testing
+- **Kasra**, **Garret**, **Mahzad**, & **Ali** — testing
 
 ## A note for visitors
 

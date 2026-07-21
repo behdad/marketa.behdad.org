@@ -25152,7 +25152,7 @@ var T = {
     kbd_esc: "go back",
     kbd_f: "fullscreen",
     kbd_watch: "who’s here? (roster for this room)",
-    kbd_tab: "random party moment (cake, toast, sparklers…)",
+    kbd_tab: "send a random text",
     kbd_autoplay: "autoplay (loops on its own)",
     autoplay_badge: "auto",
     kbd_party: "throw the garden party",
@@ -25966,7 +25966,7 @@ var T = {
     kbd_esc: "jít zpět",
     kbd_f: "celá obrazovka",
     kbd_watch: "kdo je tady? (soupiska téhle místnosti)",
-    kbd_tab: "náhodný moment párty (dort, přípitek, prskavky…)",
+    kbd_tab: "poslat náhodnou zprávu",
     kbd_autoplay: "autoplay (běží samo dokola)",
     autoplay_badge: "auto",
     kbd_party: "spustit zahradní večírek",
@@ -44503,8 +44503,8 @@ async def localfont(name):
   }
   // a party MOMENT names itself in the same bottom toast (now-playing style), lower party scene
   window.__announceMoment = function (name) { if (name) nowPlayingToast(name, "✦ "); };
-  // wrap the window moment fns so ANY trigger (phone text, Tab, autonomous, console, dbl-tap via
-  // window.*) names the moment when it STARTS (arg===false is a stop → no announce). Load-guarded so
+  // Wrap the shared moment functions so a message action, console command, or scripted show names
+  // the moment when it STARTS (arg===false is a stop → no announce). Load-guarded so
   // every moment fn is defined first; idempotent (__momWrapped).
   (function () {
     var MOM = { firstdance: "mom_firstdance", slowdance: "mom_slowdance", toasts: "mom_toasts", groupphoto: "mom_groupphoto", sparklers: "mom_sparklers", cake: "mom_cake", bouquet: "mom_bouquet", chairlift: "mom_chairlift" };
@@ -49371,6 +49371,7 @@ async def localfont(name):
     };
     var CUE_POOL = ["cue_cocktails", "cue_calendar", "storm", "invaders", "flair", "smores", "sina_helpers", "firstdance", "slowdance", "cake", "bouquet", "chairlift", "jukebox", "hamid_verse", "pouria_farhang", "ali_love", "alireza_vitamin", "fireworks", "lanterns", "toasts", "groupphoto", "sparklers", "bbq", "kids_asleep", "sunset", "sunrise"]; // the random party (night) drip (shuffled: each drip picks a random un-sent one); smores is night-only + sina_helpers only while Sina's off the decks — see cueRemaining(); hamid_verse chains its 2nd stanza via m.next; toasts/groupphoto/sparklers/cake/bouquet/chairlift are scripted garden beats
     var DAY_POOL = ["cue_mail", "sunset"]; // the DAYTIME drip — texts that belong to daylight hours (no party); dripped by scheduleDayDrip(). Bahareh's "did you check the mail?" belongs to the day. (behdad's BBQ text moved to the party CUE_POOL.) sunset also lives here so it can drip near dusk even with no party — gated by nearSunset().
+    var TAB_CALM_POOL = DAY_POOL.concat(["visit_ali", "visit_spencer", "visit_alireza", "visit_bahareh", "visit_patricia", "visit_madla", "visit_hamid", "visit_baharak", "visit_farhang"]); // no party: quiet app/day cues + friends asking whether the couple is home
     // Phone photobooth result state — session-scoped, same model as notesDraft/cardsIndex:
     // a captured polaroid (frame canvas + chosen look/frame) survives a normal close/reopen
     // (renderPhotobooth seeds its locals from these and commits them back in teardown), and is
@@ -51061,10 +51062,10 @@ async def localfont(name):
     function nearSunset() { return Math.abs(edmNowMins() - sunMoM().ss) <= SUN_NEAR_MIN; }
     function nearSunrise() { return Math.abs(edmNowMins() - sunMoM().sr) <= SUN_NEAR_MIN; }
     function cuePending() { var out = []; for (var i = 0; i < CUE_POOL.length; i++) if (messagesThread.indexOf(CUE_POOL[i]) === -1) out.push(CUE_POOL[i]); return out; } // un-sent cues (keeps the drip alive across time/state gates so a gated-out one stays reachable)
-    function cueRemaining() {
+    function partyTabChoices(onlyUnsent) {
       var b = document.getElementById("stage-balcony"), night = !!(b && b.classList.contains("dusk"));
       var out = [];
-      var pend = cuePending();
+      var pend = onlyUnsent ? cuePending() : CUE_POOL;
       for (var i = 0; i < pend.length; i++) {
         var id = pend[i];
         if (id === "smores" && !night) continue; // s'mores round the fire is an after-dark thing
@@ -51075,6 +51076,35 @@ async def localfont(name):
       }
       return out;
     }
+    function cueRemaining() { return partyTabChoices(true); }
+    var tabTextSeq = 0;
+    function calmTabChoices(onlyUnsent) {
+      return TAB_CALM_POOL.filter(function (id) {
+        if (id === "sunset" && !nearSunset()) return false;
+        return !onlyUnsent || messagesThread.indexOf(id) === -1;
+      });
+    }
+    function cloneTabMessage(sourceId) {
+      var src = MESSAGES[sourceId], id = "custom_tab_" + (++tabTextSeq), copy = {};
+      if (!src) return null;
+      if (src.fromKeys) copy.fromKeys = src.fromKeys.slice(); else copy.fromKey = src.fromKey;
+      if (src.bodyKeys) copy.bodyKeys = src.bodyKeys.slice(); else copy.bodyKey = src.bodyKey;
+      if (src.act) copy.act = src.act;
+      if (src.next) { copy.next = src.next; copy.nextDelay = src.nextDelay; }
+      MESSAGES[id] = copy;
+      window.__deliverPhoneMessage(id);
+      return id;
+    }
+    window.__deliverRandomContextText = function () {
+      var party = !!window.__gardenPartyOn;
+      var choices = party ? cueRemaining() : calmTabChoices(true);
+      if (!choices.length) choices = party ? partyTabChoices(false) : calmTabChoices(false);
+      if (!choices.length) return null;
+      var id = choices[Math.floor(Math.random() * choices.length)];
+      if (messagesThread.indexOf(id) !== -1) return cloneTabMessage(id);
+      window.__deliverPhoneMessage(id);
+      return id;
+    };
     function scheduleCueDrip() {
       if (cueTimer || !window.__gardenPartyOn || !cuePending().length) return;
       cueOpenerArmed = cueFirstOfParty && !cueKioskPace();
@@ -63475,20 +63505,9 @@ function spawnDustMote(container) {
       if (stageIndex > 0) goToStage(STAGES[stageIndex - 1]);
     } else if (e.key === "Tab") {
       e.preventDefault();
-      // Tab runs a RANDOM dance-floor "moment"/flare each press (shuffle-bag: play through the set
-      // in a random order, no immediate repeats, reshuffle when the bag empties — a fixed order is
-      // boring). Each moment self-lights the party + heads to the garden; "__randomText" just texts.
-      var TAB_MOMENTS = ["firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift", "__randomText", "__randomText", "__randomText"]; // text shows up ~1 in 4 presses (was 1 in 9)
-      if (!window.__tabBag || !window.__tabBag.length) {
-        window.__tabBag = TAB_MOMENTS.slice();
-        for (var bi = window.__tabBag.length - 1; bi > 0; bi--) { var bj = (Math.random() * (bi + 1)) | 0, bt = window.__tabBag[bi]; window.__tabBag[bi] = window.__tabBag[bj]; window.__tabBag[bj] = bt; }
-      }
-      var tm = window.__tabBag.shift();
-      if (tm === "__randomText") {
-        var TXT = [["Ali", "<em>Habibi</em>s, best night of my life! 🎉"], ["Goli", "dis DJ set is UNREAL 🔥"], ["Spencer", "someone bring me a drink 🍸", "bar"], ["Alireza", "who's at the bar? get me one too 🍹", "bar"], ["Farhang", "who's ready for a speech 🎤", "toasts"]];
-        var tp = TXT[(Math.random() * TXT.length) | 0];
-        if (window.message) window.message(tp[0], tp[1], tp[2]);
-      } else if (typeof window[tm] === "function") { window[tm](); }
+      // Tab delivers a context-appropriate text only: party cues while the party is lit,
+      // calm/day/visitor texts otherwise. Attached actions remain inert until that text is clicked.
+      if (window.__deliverRandomContextText) window.__deliverRandomContextText();
     } else if (e.key === "`") {
       e.preventDefault();
       // Backtick toggles the scene-agnostic DROP-DOWN terminal over the CURRENT room (a
@@ -65653,7 +65672,7 @@ function spawnDustMote(container) {
   // nothing to pile up in a hidden tab), self-clearing, teardown-safe (cleared on party-off /
   // room-leave / reset with the rest of the crowd).
   //
-  //  TOAST  — tapping Farhang (the MC) or __farhangToast() raises his champagne flute, pops a
+  //  TOAST  — __farhangToast() raises Farhang's champagne flute, pops a
   //           speech bubble ("To the happy couple! 🥂"), plays a soft glass clink (SFX-context
   //           routed + crickets-gated, though a tap implies focus), and the nearby guests answer
   //           with their own signature flares. One-shot .toasting class on #garden-guests, cleared
@@ -66400,12 +66419,11 @@ function spawnDustMote(container) {
     }
     window.__startToasts = startToasts;
     window.__endToasts = endToasts;
-    // Double-click the best man (Ali) or the MC (Farhang) on the floor to raise the toast sequence.
+    // A deliberate double-click on either speaker still raises the toast sequence directly.
     ["g-ali", "g-farhang"].forEach(function (cls) {
       var fig = document.querySelector("." + cls);
       if (fig) fig.addEventListener("dblclick", function (e) { if (e) e.stopPropagation(); if (window.__gardenPartyOn) startToasts(); });
     });
-
     // ── GROUP PHOTO ── the whole crowd + hosts gather + face front (.gm-group-photo pauses their
     //    dance), Aspen fires the big flash, and a distinct WHOLE-CROWD keepsake lands in the album.
     var groupPhotoTimers = [], groupPhotoOn = false;
@@ -66545,25 +66563,6 @@ function spawnDustMote(container) {
     window.toasts = function (arg) { return stageAndRun(function () { return startToasts(); }, "🥂 Ali raises a glass, then Farhang — the crowd clinks all around.", "the floor's dark — run party(true) first.", endToasts, arg); };
     window.groupphoto = function (arg) { return stageAndRun(function () { return startGroupPhoto(); }, "📸 everyone gathers, Aspen fires the flash — the group photo's in your album.", "the floor's dark — run party(true) first.", endGroupPhoto, arg); };
     window.sparklers = function (arg) { return stageAndRun(function () { return startSparklers(); }, "✨ the guests raise sparklers into a tunnel — the couple stand through it.", "the floor's dark — run party(true) first.", endSparklers, arg); };
-    // Autonomous moments: every so often a party "moment" fires on its own while you're watching the
-    // garden during the party (the phone-text + Tab triggers still work too). One self-rescheduling
-    // timer, crickets-gated, skips if a moment's already running so they never stomp each other; a
-    // random pick each time. Nothing accumulates in a hidden/unfocused tab.
-    (function autoMoments() {
-      var MOMS = ["firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift"];
-      var BUSY = ["gm-toasting", "gm-group-photo", "gm-sparklers", "cake-cutting", "bouquet-wind", "chair-lift", "first-dance", "slow-dance"];
-      var t = null;
-      function want() { return !!window.__gardenPartyOn && window.currentStageName === "garden" && !document.hidden && document.hasFocus(); }
-      function busy() { var g = document.getElementById("garden-guests"); if (!g) return true; for (var i = 0; i < BUSY.length; i++) if (g.classList.contains(BUSY[i])) return true; return false; }
-      function tick() {
-        t = setTimeout(function () {
-          t = null;
-          if (want() && !busy()) { var m = MOMS[(Math.random() * MOMS.length) | 0]; if (typeof window[m] === "function") window[m](); }
-          tick();
-        }, 75000 + Math.random() * 75000); // ~75–150s between autonomous moments
-      }
-      tick();
-    })();
   })();
   // ── PARTY MODE disco pools (garden) — STEPPED, not tweened. A continuous CSS/WAAPI sweep
   // of these big screen-blended ellipses repaints every frame and visibly FLICKERED on

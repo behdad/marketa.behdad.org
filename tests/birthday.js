@@ -50,6 +50,11 @@ var HARNESS = [
   "    window.birthday('madla'); await sleep(800);",
   "    var gm=document.querySelector('.g-madla');",
   "    report.steps.madla = { party: !!window.__gardenPartyOn, room: window.currentStageName, cutter: !!(gm&&gm.classList.contains('bd-cutter')), arrived: !!(gm&&gm.classList.contains('arrived')), figVis: gm?getComputedStyle(gm).visibility:'(absent)', crownVis: vis('.bd-crown-madla') };",
+  "    // and she must HOLD at the cake: a floor-wide rebalance (any later arrival triggers one) must not",
+  "    // glide the cutter off to a slot — rebalanceFloor skips .bd-cutter, so her --balance-x is unchanged.",
+  "    var bxBefore = gm ? gm.style.getPropertyValue('--balance-x') : '';",
+  "    if (window.__summonGuests) window.__summonGuests(); await sleep(350);",
+  "    report.steps.madlaHold = { bxWas: bxBefore, bxNow: gm?gm.style.getPropertyValue('--balance-x'):'', balanceSame: !!(gm && bxBefore && gm.style.getPropertyValue('--balance-x')===bxBefore), leaving: !!(gm&&gm.classList.contains('leaving')), stillCutter: !!(gm&&gm.classList.contains('bd-cutter')), stillVis: gm?getComputedStyle(gm).visibility:'(absent)' };",
   "    // Goli is a GARDEN-figure adult who ALSO has a nook figure (the Ali+Goli duo). Per",
   "    // the owner's routing rule, with the party OFF her birthday brings her to the CUDDLY nook (NOT a",
   "    // party): the same instant the hat turns on, her nook figure is shown under it (the hard rule —",
@@ -101,6 +106,7 @@ else {
   if (s.ali && s.ali.party && s.ali.room === "garden" && s.ali.hatVisible === "visible") pass("party-ON garden stop pans to the garden floor, hat visible"); else fail("Ali garden reveal", JSON.stringify(s.ali));
   if (s.madlaPre && s.madlaPre.guestsIn && s.madlaPre.madlaHidden === "hidden") pass("bug precondition set: floor populated (guests-in) with Madla still hidden off-floor"); else fail("Madla precondition (guests-in + madla hidden)", JSON.stringify(s.madlaPre));
   if (s.madla && s.madla.party && s.madla.room === "garden" && s.madla.cutter && s.madla.arrived && s.madla.figVis === "visible" && s.madla.crownVis === "visible") pass("populated-floor birthday (Madla): startBdCakeCutting FORCE-arrives the figure — visible under its crown (no floating crown)"); else fail("Madla populated-floor regression (arrived+visible under crown)", JSON.stringify(s.madla));
+  if (s.madlaHold && s.madlaHold.balanceSame && !s.madlaHold.leaving && s.madlaHold.stillCutter && s.madlaHold.stillVis === "visible") pass("Madla HOLDS at the cake through a rebalance — the cutter isn't glided off to a slot/corner"); else fail("Madla holds at cake through rebalance (no drift to corner)", JSON.stringify(s.madlaHold));
   if (s.goli && s.goli.bd && s.goli.room === "cuddly" && s.goli.party === false && !s.goli.cakeOn && s.goli.figShown && s.goli.hatVisible === "visible") pass("party-OFF garden-adult reveal (Goli) brings her to the NOOK — figure shown AND hat on it (no floating adornment)"); else fail("Goli nook reveal + hat-on-figure", JSON.stringify(s.goli));
   if (s.elisabeth && s.elisabeth.bd && s.elisabeth.crownVisible === "visible" && s.elisabeth.plainHat === "none") pass("Elisabeth wears a CROWN (bd-crown, no bd-hat)"); else fail("Elisabeth crown", JSON.stringify(s.elisabeth));
   if (s.ashraf && s.ashraf.bd && s.ashraf.room === "office") pass("Ashraf (Tehran call) pans to the office + shows her hat class"); else fail("Ashraf tehran reveal", JSON.stringify(s.ashraf));

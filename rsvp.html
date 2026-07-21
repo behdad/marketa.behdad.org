@@ -64945,7 +64945,11 @@ function spawnDustMote(container) {
     // members in left→right order (units sorted by their leftmost home; members keep unit order)
     units.sort(function (a, b) { return Math.min.apply(null, a.homes) - Math.min.apply(null, b.homes); });
     var members = [];
-    units.forEach(function (u) { for (var i = 0; i < u.sels.length; i++) members.push({ sel: u.sels[i], home: u.homes[i] }); });
+    units.forEach(function (u) { for (var i = 0; i < u.sels.length; i++) {
+      var mel = g.querySelector(u.sels[i]);
+      if (mel && mel.classList.contains("bd-cutter")) continue; // a birthday cutter is HELD at the cake centre by startBdCakeCutting — leave its --balance-x alone so a mid-cake arrival/rotation can't glide it off to a slot (which read as "Madla walks to the corner right after reaching the cake")
+      members.push({ sel: u.sels[i], home: u.homes[i] });
+    } });
     var n = members.length;
     if (!n) return;
     for (var i = 0; i < n; i++) {
@@ -65001,6 +65005,7 @@ function spawnDustMote(container) {
   function unitKey(u) { return u.id || u.sels[0]; }
   function unitIsPresent(g, u) { var el = g.querySelector(u.sels[0]); return !!(el && el.classList.contains("arrived") && !el.classList.contains("leaving")); }
   function unitIsWaiting(g, u) { var el = g.querySelector(u.sels[0]); return !!(el && !el.classList.contains("arrived")); }
+  function unitHasCutter(g, u) { for (var i = 0; i < u.sels.length; i++) { var el = g.querySelector(u.sels[i]); if (el && el.classList.contains("bd-cutter")) return true; } return false; } // a unit currently cutting its birthday cake — never rotate it out mid-cut
   function presentUnits(g, list) { return list.filter(function (u) { return unitIsPresent(g, u); }); }
   function waitingUnits(g, list) { return list.filter(function (u) { return unitIsWaiting(g, u); }); }
   function noteArrival(u) { recentArrivals.push(unitKey(u)); while (recentArrivals.length > 3) recentArrivals.shift(); }
@@ -65025,8 +65030,8 @@ function spawnDustMote(container) {
   // units in. Prefer not to evict someone who only just arrived.
   function rotateGuests(g, present, waiting) {
     var k = (Math.random() < 0.35 ? 2 : 1);
-    var evictable = present.filter(function (u) { return recentArrivals.indexOf(unitKey(u)) < 0; });
-    if (evictable.length < k) evictable = present.slice();
+    var evictable = present.filter(function (u) { return recentArrivals.indexOf(unitKey(u)) < 0 && !unitHasCutter(g, u); });
+    if (evictable.length < k) evictable = present.filter(function (u) { return !unitHasCutter(g, u); }); // never send the birthday cutter out the gate mid-cake
     var leaving = shuffleArr(evictable).slice(0, Math.min(k, evictable.length));
     leaving.forEach(function (u) { leaveEntry(u); });
     var incoming = shuffleArr(waiting.slice()).slice(0, Math.min(leaving.length, waiting.length));

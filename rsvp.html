@@ -41649,10 +41649,23 @@ var ABANDONED_CALL_MS = 30000;
   };
   // Esc's app layer: ends the live call or closes whichever app owns the screen.
   // Returns true if it consumed the press (checked before the zoom backs out).
-  window.__closeTopMonitorApp = function () {
+  window.__closeTopMonitorApp = function (stepBack) {
     if (monitor.classList.contains("show-family") && window.__closeMonitorFamily) { window.__closeMonitorFamily(); return true; }
-    if (monitor.classList.contains("photobooth")) { if (window.__closeOfficePhotobooth) window.__closeOfficePhotobooth(); return true; }
-    var apps = [["show-video", closeVideoApp], ["show-mail", closeMailApp], ["show-mines", closeMinesApp], ["show-tattoo", closeTattooApp], ["show-life", closeLifeApp], ["show-console", closeConsole], ["show-editor", closeEditor], ["show-doom", closeDoom], ["show-browser", closeBrowser]];
+    if (monitor.classList.contains("photobooth")) {
+      if (stepBack && window.__backOfficePhotobooth && window.__backOfficePhotobooth()) return true;
+      if (window.__closeOfficePhotobooth) window.__closeOfficePhotobooth();
+      return true;
+    }
+    if (monitor.classList.contains("pb-confirm") || monitor.classList.contains("pb-error")) {
+      if (window.__closeOfficePhotobooth) window.__closeOfficePhotobooth();
+      return true;
+    }
+    // Mail and tattoo already expose layered close behavior through their bezel ✕. Keyboard
+    // back uses that same path; programmatic teardown/Kill calls without stepBack still close fully.
+    if (monitor.classList.contains("show-mail")) { closeMailApp(!!stepBack); return true; }
+    if (monitor.classList.contains("show-tattoo")) { closeTattooApp(!!stepBack); return true; }
+    if (monitor.classList.contains("show-calendar") && stepBack && window.__calendarBack && window.__calendarBack()) return true;
+    var apps = [["show-video", closeVideoApp], ["show-mines", closeMinesApp], ["show-life", closeLifeApp], ["show-console", closeConsole], ["show-editor", closeEditor], ["show-doom", closeDoom], ["show-browser", closeBrowser]];
     for (var i = 0; i < apps.length; i++) if (monitor.classList.contains(apps[i][0])) { apps[i][1](); return true; }
     if (monitor.classList.contains("show-calendar") && window.__closeMonitorCalendar) { window.__closeMonitorCalendar(); return true; }
     if (monitor.classList.contains("show-weather") && window.__closeMonitorWeather) { window.__closeMonitorWeather(); return true; }
@@ -45550,6 +45563,11 @@ async def localfont(name):
     clearTimeout(pbPickHintTimer);
     monitor.classList.remove("picking", "pick-hint");
   }
+  window.__backOfficePhotobooth = function () {
+    if (!pbCapturing && !pbPicking) return false;
+    cancelCapture();
+    return true;
+  };
   function runCountdownCapture() {
     if (!pbActive || !pbVideo || pbCapturing) return;
     if (!pbVideo.videoWidth || !pbVideo.videoHeight) return; // no frame yet
@@ -46216,7 +46234,7 @@ async def localfont(name):
     if (document.querySelector(".pb-dialog-backdrop")) return; // dialogs own Esc while up
     if (document.querySelector(".mon-ctx") || document.querySelector(".console-ctx.show")) return; // an open right-click menu owns Esc (its own handler closes it)
     // first Esc closes/ends whatever app or call owns the screen, the next backs the zoom out
-    if (window.__closeTopMonitorApp && window.currentStageName === "office" && window.__closeTopMonitorApp()) {
+    if (window.__closeTopMonitorApp && window.currentStageName === "office" && window.__closeTopMonitorApp(true)) {
       var t0 = e.target;
       if (t0 && t0.blur && (/^(INPUT|TEXTAREA|SELECT)$/.test(t0.tagName) || t0.isContentEditable)) t0.blur();
       e.stopPropagation();
@@ -71195,6 +71213,12 @@ function spawnDustMote(container) {
     var pb = document.querySelector(".calx-phone");
     if (pb && pb.parentNode) window.__calendarRender(pb.parentNode, "phone");
   }
+  window.__calendarBack = function () {
+    if (!calSearchOn) return false;
+    window.__calExitSearch();
+    calRerenderOpen();
+    return true;
+  };
   // game reset only: forget the browsed month so the grid re-seeds from the real date. NOT folded
   // into calResetToday — calStepSignificant sets calView and then jumps through it.
   window.__calResetView = function () { calView = null; calRerenderOpen(); };

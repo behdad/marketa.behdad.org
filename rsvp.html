@@ -46708,6 +46708,7 @@ async def localfont(name):
     var photoboothCleanup = null;   // booth teardown: stop the stream, clear timers, revoke URLs
     var flashOn = false, flashTrack = null; // flashlight state (balcony beam + screen glow; flashTrack = the real camera-LED torch, used only when camera access is already granted)
     var phExternalLaunchPending = false, phExternalLaunchBlurred = false, phExternalLaunchTimer = null; // an explicit out-of-phone launch owns the next hide; unrelated backgrounding still tears the phone down
+    var phHiddenCloseTimer = null; // brief fullscreen visibility blips get one settle window before hidden-tab teardown
     var phFullscreenTransitionUntil = 0; // entering/leaving real fullscreen may briefly report hidden; never interpret that browser transition as a phone dismissal
     var sessionStart = Date.now();  // "in the loft for" playtime origin — set at script load
     var selectedCity = null;
@@ -46751,6 +46752,9 @@ async def localfont(name):
       phExternalLaunchPending = false;
       phExternalLaunchBlurred = false;
       if (phExternalLaunchTimer) { clearTimeout(phExternalLaunchTimer); phExternalLaunchTimer = null; }
+    }
+    function cancelHiddenPhoneClose() {
+      if (phHiddenCloseTimer) { clearTimeout(phHiddenCloseTimer); phHiddenCloseTimer = null; }
     }
     function armExternalLaunch() {
       if (!isOpen()) return;
@@ -46934,18 +46938,6 @@ async def localfont(name):
         });
       })();
       hookBattery();
-      // game hotkeys stay live while the phone is up (it's an overlay, not a modal that owns the
-      // keyboard); the game keydown handlers already bail when a phone text field is focused, so
-      // typing in search/notes is unaffected. 'f' (fullscreen) is driven directly here — the phone
-      // reparents into the fullscreen host so it stays visible either way.
-      shell.addEventListener("keydown", function (e) {
-        if ((e.key === "f" || e.key === "F") && !e.ctrlKey && !e.metaKey && !e.altKey) {
-          var tg = e.target;
-          if (tg && (/^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName) || tg.isContentEditable)) return; // typing in a phone field
-          e.preventDefault(); e.stopPropagation(); // this shell is the sole 'f' handler while the phone's up (no double-toggle)
-          if (window.__toggleFullscreen) window.__toggleFullscreen();
-        }
-      });
       // Lockscreen right-click: while the phone is locked (.booting) the boot overlay is
       // the event target (not an app tile), so a right-click would surface the native
       // browser menu. Eat it and offer a single "Unlock" item instead. Gated on .booting
@@ -50645,6 +50637,7 @@ async def localfont(name):
       if (!modal) return;
       closing = true;
       phFullscreenTransitionUntil = 0;
+      cancelHiddenPhoneClose();
       clearExternalLaunch();
       phCloseMenu(); // never orphan an open app-icon menu when the phone goes away
       phCancelDrag(); // abort any in-flight icon drag (drop the ghost + window listeners)
@@ -51319,6 +51312,13 @@ async def localfont(name):
     // (same reasoning as the shortcuts card). in-call → hang up, app → home, home → close.
     window.addEventListener("keydown", function (e) {
       if (!isOpen()) return;
+      if ((e.key === "f" || e.key === "F") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        var ft = e.target;
+        if (ft && (/^(INPUT|TEXTAREA|SELECT)$/.test(ft.tagName) || ft.isContentEditable)) return;
+        e.preventDefault(); e.stopImmediatePropagation();
+        if (window.__toggleFullscreen) window.__toggleFullscreen();
+        return;
+      }
       // while the math lockscreen is up, the physical number row / Backspace / Enter
       // drive the passcode entry. we're on window-capture — ahead of the game's
       // document/bubble digit hotkeys (room-nav, trips) — so stopImmediatePropagation
@@ -51340,17 +51340,22 @@ async def localfont(name):
       }
       // safety net if focus ever left the shell: keep room hotkeys off the game (never the
       // button-activation keys Enter/Space/Tab — those stay native / handled by the shell listener)
-      if (/^Arrow/.test(e.key) || /^[0-9]$/.test(e.key) || "`dDqQrRsSfF?".indexOf(e.key) >= 0) e.stopPropagation();
+      if (/^Arrow/.test(e.key) || /^[0-9]$/.test(e.key) || "`dDqQrRsS?".indexOf(e.key) >= 0) e.stopPropagation();
     }, true);
     // A hidden tab tears the phone down (hangs up any call, stops the ambient bed, kills the live
     // photobooth camera / flashlight torch / browser iframe — all via close()→leaveCurrentApp).
     // But an explicit in-phone external launch owns one resulting hide: keep the phone exactly as
     // the user left it so it is still there when they return from GCal, Gmail, HN, or the browser.
     document.addEventListener("visibilitychange", function () {
-      if (!document.hidden) return;
+      if (!document.hidden) { cancelHiddenPhoneClose(); return; }
+      cancelHiddenPhoneClose();
+      if (!isOpen()) { hideCallRing(); return; }
       if (Date.now() <= phFullscreenTransitionUntil) { hideCallRing(); return; }
       if (phExternalLaunchPending) clearExternalLaunch();
-      else close(true);
+      else phHiddenCloseTimer = setTimeout(function () {
+        phHiddenCloseTimer = null;
+        if (document.hidden && Date.now() > phFullscreenTransitionUntil) close(true);
+      }, 750);
       hideCallRing();
     });
     window.addEventListener("blur", function () {

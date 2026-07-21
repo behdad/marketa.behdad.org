@@ -49325,6 +49325,7 @@ async def localfont(name):
     // messagesThread holds the received message IDS in arrival order (renderMessages reads the copy
     // live via tr(), so a language flip re-renders); cleared only on a kill (__resetPhoneApps).
     var messagesThread = [], messagesRead = {}, messagesArrivedAt = {}, msgNewTimer = null; // messagesRead[id] set once a message is tapped — unread (bold) until then; messagesArrivedAt[id] = wall-clock ms of live delivery (drives the "New" divider); msgNewTimer re-renders to retire the divider once the freshest text ages past 30s
+    var phaseTwoHeldMessages = []; // one-shot birthday/occasion texts requested during the solve are held; recurring drips simply retry later
     var msgUnreadOnly = false, albumSearchQ = ""; // sticky UI filters (Messages "unread only", Photos search) — session-scoped like messagesRead: survive a close/reopen, cleared on a kill / __resetPhoneApps
     // the shared "are you home?" opener pool — every friend duo draws from all of these, plus its own flavored line (below)
     var VISIT_GENERIC = ["msg_visit_body_a", "msg_visit_body_b", "msg_visit_body_c", "msg_visit_body_d", "msg_visit_body_e", "msg_visit_body_f", "msg_visit_body_g", "msg_visit_body_h", "msg_visit_body_i"];
@@ -50726,7 +50727,7 @@ async def localfont(name):
       setTimeout(seatPhoneInFullscreenHost, 80);
       setTimeout(seatPhoneInFullscreenHost, 240);
     };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messagesArrivedAt = {}; Object.keys(MESSAGES).forEach(function (k) { if (MESSAGES[k].bodyKeys) MESSAGES[k].bodyKey = null; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__stopDayDrip) window.__stopDayDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks, and the flashlight (intent forgotten + beam/torch off)
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messagesArrivedAt = {}; phaseTwoHeldMessages = []; Object.keys(MESSAGES).forEach(function (k) { if (MESSAGES[k].bodyKeys) MESSAGES[k].bodyKey = null; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__stopDayDrip) window.__stopDayDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks, and the flashlight (intent forgotten + beam/torch off)
     // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
     // open(true) is the cinematic lock-skip path (same as __showCocktailInPhone), so a console
     // launch never stalls on the passcode. Matches by app id (case-insensitive) or its localized
@@ -50941,8 +50942,18 @@ async def localfont(name):
     // load-time birthday announcement reaches here before that — "not installed yet" means the
     // player certainly hasn't started, so it must hold, not fire.
     function playerStarted() { return !!window.__gameStarted && window.__gameStarted(); }
+    function holdForPhaseTwo(id) {
+      // Birthday/occasion producers latch after one attempt, so preserve those. Day, visitor and
+      // party drips are recurring and should retry in their proper phase-two context instead.
+      if (!/^(bd_|occ_|hol_)/.test(id)) return;
+      if (phaseTwoHeldMessages.indexOf(id) === -1) phaseTwoHeldMessages.push(id);
+    }
     window.__deliverPhoneMessage = function (id) {
-      if (!MESSAGES[id] || messagesThread.indexOf(id) !== -1) return; // unknown, or already received (fire once)
+      if (!MESSAGES[id] || messagesThread.indexOf(id) !== -1) return false; // unknown, or already received (fire once)
+      // Phase one belongs entirely to solving the loft. This shared boundary covers autonomous
+      // drips, date announcements, console/test sends and chained followups without source-by-source
+      // exceptions, so no notification or unread badge can distract from the solve.
+      if (!window.__secondRound) { holdForPhaseTwo(id); return false; }
       var m = MESSAGES[id];
       // varied copy: entries with a bodyKeys POOL (the friend-duo "are you home?" texts) pick ONE
       // line at delivery and freeze it into bodyKey, so it varies per delivery but stays stable
@@ -50957,6 +50968,14 @@ async def localfont(name):
       else showMessageThumb(id);
       updateMsgBadge();
       if (m.next && MESSAGES[m.next]) setTimeout(function () { window.__deliverPhoneMessage(m.next); }, m.nextDelay || 4200); // chained followup text (e.g. Hamid's 2nd stanza lands a few seconds after the 1st)
+      return true;
+    };
+    window.__flushHeldPhoneMessages = function () {
+      if (!window.__secondRound || !phaseTwoHeldMessages.length) return 0;
+      var held = phaseTwoHeldMessages; phaseTwoHeldMessages = [];
+      var delivered = 0;
+      held.forEach(function (id) { if (window.__deliverPhoneMessage(id)) delivered++; });
+      return delivered;
     };
     // ── birthday-announcement texts ── when a guest's birthday window opens (the 'b'/console axis
     // or the real calendar, via applyBirthdays), the couple texts a "Happy Birthday" line. MARKÉTA
@@ -67418,6 +67437,7 @@ function spawnDustMote(container) {
       window.__secondRound = true;
       if (window.__unlockAllRooms) window.__unlockAllRooms();
       if (window.__syncRosterAvail) window.__syncRosterAvail();
+      if (window.__flushHeldPhoneMessages) window.__flushHeldPhoneMessages(); // date-specific texts held during the solve now land together in the inbox
     }
     if (on) { if (window.__startCueDrip) window.__startCueDrip(); } else if (window.__stopCueDrip) window.__stopCueDrip(); // drip the app-cue phone texts only while the party's lit
     if (!on && window.__setSmores) window.__setSmores(false); // the party's out → put the s'mores bonfire out too (unless a fire-festival season keeps its own)

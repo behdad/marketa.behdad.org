@@ -50,6 +50,8 @@
 //      browser visibility blip dismiss the open pocket phone.
 //    - fireworks: a visible-but-unfocused page clears live wedding-day sky
 //      particles and does not spawn replacements while another window is fullscreen.
+//    - phase-one messages: ordinary texts stay out of the solve, while one-shot
+//      occasion texts are held and released when the first party starts phase two.
 //
 // Honest headless limits: the media clock doesn't advance under
 // --virtual-time-budget, so "unpaused" is asserted, not audible progress —
@@ -554,6 +556,21 @@ var PROBE_HARNESS = [
   "    await sleep(300);", // rAF-double re-add is 2 patched-rAF ticks (~32ms); the one-shot may finish AND be removed in here — the mutation is the signal
   "    obs.disconnect();",
   "    ok('liveness: pans still react to a click (class mutation seen)', mutated);",
+  "",
+  "    // The first round is the solve, with no incoming texts. Recurring messages should be dropped",
+  "    // so their own schedulers can retry in context; one-shot occasion messages must be held because",
+  "    // their date latch will not call again. Starting the first party flushes only that held mail.",
+  "    ok('messages setup: extinguisher reset returned to phase one', !window.__secondRound);",
+  "    if (window.__deliverPhoneMessage) window.__deliverPhoneMessage('cue_mail');",
+  "    if (window.__deliverOccasionText) window.__deliverOccasionText('occ_phase_gate_test', 'msg_behdad_from', 'cue_mail_body', 'app:mail');",
+  "    ok('messages: recurring text does not arrive during phase one', !(window.__phoneMessageReceived && window.__phoneMessageReceived('cue_mail')));",
+  "    ok('messages: one-shot occasion text does not arrive during phase one', !(window.__phoneMessageReceived && window.__phoneMessageReceived('occ_phase_gate_test')));",
+  "    if (window.__setGardenParty) window.__setGardenParty(true, false);",
+  "    ok('messages: first party starts phase two', !!window.__secondRound);",
+  "    ok('messages: held occasion text arrives when phase two starts', !!(window.__phoneMessageReceived && window.__phoneMessageReceived('occ_phase_gate_test')));",
+  "    ok('messages: stale recurring phase-one attempt is not flushed', !(window.__phoneMessageReceived && window.__phoneMessageReceived('cue_mail')));",
+  "    if (window.__setGardenParty) window.__setGardenParty(false, false);",
+  "    window.__secondRound = false; if (window.__resetPhoneApps) window.__resetPhoneApps();",
   "",
   "    // Hold WAAPI effects open so particle counts are deterministic, then reproduce the exact",
   "    // failure mode: the browser remains visibilityState=visible while another fullscreen window",

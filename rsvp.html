@@ -46661,7 +46661,7 @@ async def localfont(name):
     var clockTimer = null;          // clock app's 1s tick (time + both countdowns + playtime)
     var photoboothCleanup = null;   // booth teardown: stop the stream, clear timers, revoke URLs
     var flashOn = false, flashTrack = null; // flashlight state (balcony beam + screen glow; flashTrack = the real camera-LED torch, used only when camera access is already granted)
-    var phLastTapAt = 0;            // wall-clock of the last tap inside the shell — the hidden-tab auto-close skips when one just landed (an in-app link opening a new tab flips us to hidden, but must NOT tear the phone down)
+    var phExternalLaunchPending = false, phExternalLaunchBlurred = false, phExternalLaunchTimer = null; // an explicit out-of-phone launch owns the next hide; unrelated backgrounding still tears the phone down
     var sessionStart = Date.now();  // "in the loft for" playtime origin — set at script load
     var selectedCity = null;
     var cardsIndex = 0;             // phrasebook deck position — session-scoped: persists across a normal close/reopen (resume); zeroed only on a kill (uninstallApp / __resetPhoneApps)
@@ -46691,6 +46691,25 @@ async def localfont(name):
 
     function isOpen() { return !!(modal && modal.parentNode); }
     function reduced() { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } }
+    function clearExternalLaunch() {
+      phExternalLaunchPending = false;
+      phExternalLaunchBlurred = false;
+      if (phExternalLaunchTimer) { clearTimeout(phExternalLaunchTimer); phExternalLaunchTimer = null; }
+    }
+    function armExternalLaunch() {
+      if (!isOpen()) return;
+      clearExternalLaunch();
+      phExternalLaunchPending = true;
+      // A foreground tab/app normally blurs this window immediately. Keep a short fallback for
+      // browsers that report visibility without blur; a background-tab popup must not suppress a
+      // later, unrelated tab switch indefinitely.
+      phExternalLaunchTimer = setTimeout(function () { if (!phExternalLaunchBlurred) clearExternalLaunch(); }, 2000);
+    }
+    function openExternal(url) {
+      armExternalLaunch();
+      try { return window.open(url, "_blank"); }
+      catch (e) { clearExternalLaunch(); return null; }
+    }
 
     // ── static chrome ──────────────────────────────────────────────────────────
     var STATUSBAR =
@@ -46808,13 +46827,6 @@ async def localfont(name):
         makeHandle(shell.querySelector(".phone-statusbar"));
         makeHandle(shell.querySelector(".phone-nav"));
       })();
-      // An in-app link (GCal / Gmail / HN / browser / the wedding-site brand) opens a "_blank"
-      // tab, which flips THIS tab to hidden — the visibilitychange handler at the module's tail
-      // would otherwise close the phone out from under the returning user. Stamp every in-shell
-      // tap (capture phase, so no child's stopPropagation can hide it) so that close can tell a
-      // just-opened external tab from a genuine background switch. Backdrop taps are on `modal`,
-      // not `shell`, so an away-tap deliberately does NOT stamp (it's a real close).
-      shell.addEventListener("click", function () { phLastTapAt = Date.now(); }, true);
       // backdrop tap (outside the shell) closes
       modal.addEventListener("click", function (e) { if (e.target === modal) close(); });
       shell.addEventListener("click", function (e) { e.stopPropagation(); ["psb-wifi-wrap", "psb-batt-wrap"].forEach(function (c) { var w = modal.querySelector("." + c); if (w) w.classList.remove("show"); }); });
@@ -46834,7 +46846,7 @@ async def localfont(name):
       });
       (function () {
         var brand = modal.querySelector(".psb-brand");
-        function openSite(e) { e.stopPropagation(); try { window.open(WEDDING_URL, "_blank"); } catch (_) {} }
+        function openSite(e) { e.stopPropagation(); openExternal(WEDDING_URL); }
         brand.addEventListener("click", openSite);
         brand.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openSite(e); } });
       })();
@@ -47124,7 +47136,7 @@ async def localfont(name):
     }
     function launchApp(app) { // shared by an icon tap and the menu's "Open" item
       if (app.open) app.open();
-      else if (app.link) { try { window.open(app.link, "_blank"); } catch (e) {} }
+      else if (app.link) openExternal(app.link);
     }
     // drop an app's retained session state back to fresh (phrasebook deck, notes draft, booth
     // polaroid, currency amount/codes, calculator display, dress-up outfit, flashlight intent,
@@ -49172,7 +49184,7 @@ async def localfont(name):
                 var meta = row.querySelector(".pmh-meta");
                 meta.innerHTML = '<b>' + (it.score || 0) + '</b> ' + tr("hn_points") + ' · ' + (it.descendants || 0) + ' ' + tr("hn_comments") + ' · ' + tr("hn_by") + ' ';
                 meta.appendChild(document.createTextNode(it.by || "—"));
-                row.addEventListener("click", function () { try { window.open(url, "_blank"); } catch (e) {} });
+                row.addEventListener("click", function () { openExternal(url); });
                 wrap.appendChild(row);
               });
             });
@@ -49338,8 +49350,8 @@ async def localfont(name):
       function noteBody() { return tr("notes_email_intro") + "\n\n" + pad.value.trim(); }
       gmail.addEventListener("click", function () {
         if (!pad.value.trim()) return;
-        try { window.open("https://mail.google.com/mail/?view=cm&fs=1&to=marketa@behdad.org&su=" +
-          encodeURIComponent(tr("notes_email_subject")) + "&body=" + encodeURIComponent(noteBody()), "_blank"); } catch (e) {}
+        openExternal("https://mail.google.com/mail/?view=cm&fs=1&to=marketa@behdad.org&su=" +
+          encodeURIComponent(tr("notes_email_subject")) + "&body=" + encodeURIComponent(noteBody()));
       });
       mail.addEventListener("click", function () {
         if (!pad.value.trim()) return;
@@ -50453,7 +50465,7 @@ async def localfont(name):
         tabEls[tab.id] = el;
         tabsBar.appendChild(el);
       });
-      openTab.addEventListener("click", function () { try { window.open(currentUrl, "_blank"); } catch (e) {} });
+      openTab.addEventListener("click", function () { openExternal(currentUrl); });
 
       wrap.appendChild(tabsBar);
       wrap.appendChild(bar);
@@ -50576,6 +50588,7 @@ async def localfont(name):
     function close(silent) {
       if (!modal) return;
       closing = true;
+      clearExternalLaunch();
       phCloseMenu(); // never orphan an open app-icon menu when the phone goes away
       phCancelDrag(); // abort any in-flight icon drag (drop the ghost + window listeners)
       if (lockShakeT) { clearTimeout(lockShakeT); lockShakeT = null; }
@@ -50593,6 +50606,8 @@ async def localfont(name):
     }
     window.__openPhoneModal = open;
     window.__closePhoneModal = function (silent) { close(silent); };
+    window.__armPhoneExternalLaunch = armExternalLaunch;
+    window.__openPhoneExternal = openExternal;
     window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messagesArrivedAt = {}; Object.keys(MESSAGES).forEach(function (k) { if (MESSAGES[k].bodyKeys) MESSAGES[k].bodyKey = null; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__stopDayDrip) window.__stopDayDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks, and the flashlight (intent forgotten + beam/torch off)
     // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
     // open(true) is the cinematic lock-skip path (same as __showCocktailInPhone), so a console
@@ -50614,7 +50629,7 @@ async def localfont(name):
       if (window.goToStage) window.goToStage("balcony"); // the pocket phone lives on the balcony
       open(true);                                        // open (or re-seat) the phone at the launcher, skipping the first-open math lock
       if (app.open) app.open();
-      else if (app.link) { try { window.open(app.link, "_blank"); } catch (e) {} }
+      else if (app.link) openExternal(app.link);
       return "📱 " + app.id + " — open on the phone.";
     };
     // Same as __openPhoneApp but WITHOUT the balcony jump — raise the phone over whatever room
@@ -50625,7 +50640,7 @@ async def localfont(name):
       if (!app) return false;
       open(true); // in-place launcher open, first-open math lock skipped
       if (app.open) app.open();
-      else if (app.link) { try { window.open(app.link, "_blank"); } catch (e) {} }
+      else if (app.link) openExternal(app.link);
       return true;
     };
     // Keep an open phone riding the current fullscreen host (same choice open() makes), so a
@@ -51263,12 +51278,22 @@ async def localfont(name):
     }, true);
     // A hidden tab tears the phone down (hangs up any call, stops the ambient bed, kills the live
     // photobooth camera / flashlight torch / browser iframe — all via close()→leaveCurrentApp).
-    // But skip that teardown when the hide was caused by an in-app link opening a new tab (a shell
-    // tap landed <400ms ago) — else the phone vanishes while the user is on the tab they just
-    // opened. 400ms comfortably covers the real click→hidden latency (tens of ms) while keeping the
-    // window that skips a live-camera/torch/iframe teardown as small as possible.
-    document.addEventListener("visibilitychange", function () { if (document.hidden) { if (Date.now() - phLastTapAt > 400) close(true); hideCallRing(); } });
-    window.addEventListener("blur", function () { hideCallRing(); }); // a window that loses focus drops the ring (she'd call back) — no ring left silently pulsing over an unfocused tab
+    // But an explicit in-phone external launch owns one resulting hide: keep the phone exactly as
+    // the user left it so it is still there when they return from GCal, Gmail, HN, or the browser.
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) return;
+      if (phExternalLaunchPending) clearExternalLaunch();
+      else close(true);
+      hideCallRing();
+    });
+    window.addEventListener("blur", function () {
+      if (phExternalLaunchPending) {
+        phExternalLaunchBlurred = true;
+        if (phExternalLaunchTimer) { clearTimeout(phExternalLaunchTimer); phExternalLaunchTimer = null; }
+      }
+      hideCallRing();
+    }); // a window that loses focus drops the ring (she'd call back) — no ring left silently pulsing over an unfocused tab
+    window.addEventListener("focus", function () { if (phExternalLaunchPending) clearExternalLaunch(); });
   })();
   var lights = document.getElementById("balcony-lights");
   if (lights) {
@@ -71197,7 +71222,13 @@ function spawnDustMote(container) {
       var what = document.createElement("div"); what.className = "calx-card-what"; what.textContent = calStr(rw.what); txt.appendChild(what);
       row.appendChild(txt);
       var g = document.createElement("button"); g.type = "button"; g.className = "calx-gcal"; g.textContent = calStr("cal_gcal");
-      g.addEventListener("click", function (e) { e.stopPropagation(); if (window.__phoneGcalUrl) { try { window.open(window.__phoneGcalUrl(rw.ev), "_blank"); } catch (err) {} } });
+      g.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (!window.__phoneGcalUrl) return;
+        var url = window.__phoneGcalUrl(rw.ev);
+        if (surface === "phone" && window.__openPhoneExternal) window.__openPhoneExternal(url);
+        else { try { window.open(url, "_blank"); } catch (err) {} }
+      });
       row.appendChild(g);
       function go() { calGoToDate(rw.y, rw.mo, rw.d, container, surface); } // tapping a row jumps the grid + summons that day
       row.addEventListener("click", go);
@@ -77646,6 +77677,7 @@ function spawnDustMote(container) {
     var cc = mailAddrs(opts.cc), bcc = mailAddrs(opts.bcc);
     var su = encodeURIComponent(subject || ""), bd = encodeURIComponent(body || "");
     var mobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "") || (("ontouchstart" in window) && Math.min(screen.width || 9999, screen.height || 9999) < 820);
+    if (window.__armPhoneExternalLaunch) window.__armPhoneExternalLaunch();
     try {
       if (mobile) {
         var q = "subject=" + su + "&body=" + bd + (cc ? "&cc=" + encodeURIComponent(cc) : "") + (bcc ? "&bcc=" + encodeURIComponent(bcc) : "");

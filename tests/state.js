@@ -40,6 +40,9 @@
 //    - liveness: after all that chaos, goToStage("kitchen") still lands
 //      (currentStageIndex === 0) and a known element (the pans) still visibly
 //      reacts to a click (class mutation observed).
+//    - phone external launch: a GCal click keeps the pocket phone open when its
+//      new tab hides this page after a delay, while a later unrelated hide still
+//      performs the normal phone teardown.
 //
 // Honest headless limits: the media clock doesn't advance under
 // --virtual-time-budget, so "unpaused" is asserted, not audible progress —
@@ -544,6 +547,33 @@ var PROBE_HARNESS = [
   "    await sleep(300);", // rAF-double re-add is 2 patched-rAF ticks (~32ms); the one-shot may finish AND be removed in here — the mutation is the signal
   "    obs.disconnect();",
   "    ok('liveness: pans still react to a click (class mutation seen)', mutated);",
+  "",
+  "    // An external phone launch may not hide this tab immediately (app handoff / chooser /",
+  "    // slow tab focus). Simulate a hide after the old 400ms grace and verify that the explicit",
+  "    // launch survives exactly that hide, while ordinary backgrounding still closes the phone.",
+  "    var fakeHidden = false, visibilityOverridden = true;",
+  "    try {",
+  "      Object.defineProperty(document, 'hidden', { configurable: true, get: function () { return fakeHidden; } });",
+  "      Object.defineProperty(document, 'visibilityState', { configurable: true, get: function () { return fakeHidden ? 'hidden' : 'visible'; } });",
+  "    } catch (e) { visibilityOverridden = false; }",
+  "    ok('phone setup: document visibility can be simulated', visibilityOverridden);",
+  "    if (visibilityOverridden && window.__openPhoneAppHere) {",
+  "      window.__openPhoneAppHere('calendar');",
+  "      await sleep(120);",
+  "      var gcal = document.querySelector('.phone-shell .calx-gcal');",
+  "      ok('phone setup: calendar opens with a GCal action', !!gcal);",
+  "      var openedBefore = window.__opened || 0;",
+  "      if (gcal) gcal.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
+  "      await sleep(700);", // deliberately beyond the removed 400ms tap heuristic
+  "      fakeHidden = true; document.dispatchEvent(new Event('visibilitychange'));",
+  "      await sleep(80);",
+  "      ok('phone: GCal launches an external tab', (window.__opened || 0) === openedBefore + 1);",
+  "      ok('phone: delayed GCal tab hide keeps the phone open', !!document.querySelector('.phone-backdrop.show'));",
+  "      fakeHidden = false; document.dispatchEvent(new Event('visibilitychange'));",
+  "      fakeHidden = true; document.dispatchEvent(new Event('visibilitychange'));",
+  "      await sleep(300);",
+  "      ok('phone: unrelated backgrounding still closes the phone', !document.querySelector('.phone-backdrop.show'));",
+  "    }",
   "  }",
   "  window.addEventListener('load', function () {",
   "    setTimeout(function () {",

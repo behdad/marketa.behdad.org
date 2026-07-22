@@ -55,6 +55,7 @@ const cases = [
   ["minigame.start", { game: "flair-catch" }],
   ["minigame.stop", {}],
   ["video.pause", {}],
+  ["trip.next", {}],
   ["scene.activity.start", { activity: "rainbow" }],
   ["weather.scene.set", { mode: "thunderstorm" }],
   ["sky.effect.set", { effect: "aurora" }],

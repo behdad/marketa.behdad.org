@@ -687,6 +687,7 @@ families are:
 | `coffee.make` | End an active party, restore daylight, and take the player to the kitchen/bar espresso machine |
 | `photo.take` | Capture through the available in-game photo flow |
 | `fishu.speak` | Run the Fishu interaction |
+| `trip.next` | Start the next shuffled magic-box trip, equivalent to using the box |
 | `trip.start` | `{ variant }`; availability depends on phase, visibility, active-trip, and party state |
 | `projector.set` | `{ mode: "off" | "stars" | "workout" | "totoro" | "aqua" }` |
 | `weather.scene.set` | `{ mode: "clear" | "rain" | "thunderstorm" | "overcast" }` |

@@ -210,7 +210,7 @@ const fullActionList = [
   "coffee.make", "daylight.set", "fishu.speak", "minigame.start", "minigame.stop", "music.pause", "music.play", "music.previous",
   "music.skip", "music.track.play", "party.dance.request", "party.dj.set", "party.extend", "party.moment.start",
   "party.music.next", "party.set", "photo.take", "projector.set", "room.go", "roster.set", "scene.activity.start",
-  "trip.start", "video.pause", "not.real",
+  "trip.next", "trip.start", "video.pause", "not.real",
 ];
 actionCase = await normalizedPrivateReply(
   JSON.stringify({ text: "Tap below to start the acid trip.", action: { id: "trip.start", args: { variant: "acid" } } }),
@@ -249,7 +249,7 @@ actionCase = await normalizedPrivateReply(
 );
 check(actionCase.reply.action === null, "a canonical action is discarded when the browser did not advertise it as currently available", actionCase);
 
-for (const id of ["music.previous", "daylight.set", "party.music.next", "party.set", "party.extend", "bbq.set", "coffee.make", "photo.take", "trip.start", "call.hangup", "minigame.stop", "video.pause"]) {
+for (const id of ["music.previous", "daylight.set", "party.music.next", "party.set", "party.extend", "bbq.set", "coffee.make", "photo.take", "trip.next", "trip.start", "call.hangup", "minigame.stop", "video.pause"]) {
   const args = id === "daylight.set" || id === "party.set" || id === "bbq.set" ? { on: true } : id === "trip.start" ? { variant: "molly" } : {};
   actionCase = await normalizedPrivateReply(
     JSON.stringify({ text: "Doing that.", action: { id, args } }),
@@ -312,6 +312,46 @@ const groupVideoResponse = await worker.fetch(makeRequest("/chat", {
 }), makeEnv());
 const groupVideoReply = JSON.parse((await groupVideoResponse.json()).reply);
 check(groupVideoReply.sender === "Charlie" && groupVideoReply.text === "Tap this to pause the video." && groupVideoReply.action?.id === "video.pause", "Wedding crew corrects wrong-language model copy and offers the video pause as a tap action", groupVideoReply);
+
+actionCase = await normalizedPrivateReply(
+  JSON.stringify({ text: "I don't have a verified location for vitamins at The Loft.", action: null }),
+  { phase: 2, trip: { active: false, variant: null }, actions_available: ["trip.next"] },
+  "where can I find vitamins?",
+);
+check(actionCase.reply.text === "“Vitamins” means the contents of the magic box in garden/party." && actionCase.reply.action === null, "Charlie grounds a vitamin-location question in the garden magic box", actionCase);
+
+actionCase = await normalizedPrivateReply(
+  JSON.stringify({ text: "Which vitamins?", action: null }),
+  { phase: 2, trip: { active: false, variant: null }, actions_available: ["trip.next"] },
+  "let's have vitamins",
+);
+check(actionCase.reply.text === "Vitamin time—hold on to something soft." && actionCase.reply.action?.id === "trip.next", "a generic vitamin request deterministically starts the next magic-box trip", actionCase);
+
+openAIReply = JSON.stringify({ sender: "Athena", text: "Ask me about wedding supplies.", reply_to_id: null, action: null });
+const groupVitaminLocationResponse = await worker.fetch(makeRequest("/chat", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    mode: "group_chat", message: "where are the vitamins?", turnstile_token: "group-vitamin-location-token",
+    context: { phase: 2, trip: { active: false, variant: null }, actions_available: ["trip.next"] },
+    group_chat: { cast: [{ name: "Athena", role: "wedding boss" }, { name: "Charlie", role: "wedding assistant" }] },
+  }),
+}), makeEnv());
+const groupVitaminLocationReply = JSON.parse((await groupVitaminLocationResponse.json()).reply);
+check(groupVitaminLocationReply.sender === "Charlie" && /magic box in garden\/party/.test(groupVitaminLocationReply.text) && groupVitaminLocationReply.action === null, "Wedding crew gives the same grounded vitamin location without an unnecessary action", groupVitaminLocationReply);
+
+openAIReply = JSON.stringify({ sender: "Athena", text: "Maybe later.", reply_to_id: null, action: null });
+const groupVitaminRequestResponse = await worker.fetch(makeRequest("/chat", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    mode: "group_chat", message: "let's have vitamins", turnstile_token: "group-vitamin-request-token",
+    context: { phase: 2, trip: { active: false, variant: null }, actions_available: ["trip.next"] },
+    group_chat: { cast: [{ name: "Athena", role: "wedding boss" }, { name: "Charlie", role: "wedding assistant" }] },
+  }),
+}), makeEnv());
+const groupVitaminRequestReply = JSON.parse((await groupVitaminRequestResponse.json()).reply);
+check(groupVitaminRequestReply.sender === "Charlie" && /tap this/i.test(groupVitaminRequestReply.text) && groupVitaminRequestReply.action?.id === "trip.next", "Wedding crew offers a generic vitamin request as the next-trip tap action", groupVitaminRequestReply);
 
 actionCase = await normalizedPrivateReply(
   JSON.stringify({ text: "The party is winding down.", action: null }),

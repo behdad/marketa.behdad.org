@@ -39,6 +39,7 @@ const ACTION_SPECS = Object.freeze({
   "coffee.make": Object.freeze({}),
   "photo.take": Object.freeze({}),
   "fishu.speak": Object.freeze({}),
+  "trip.next": Object.freeze({}),
   "trip.start": Object.freeze({ variant: new Set(["shrooms", "acid", "froggies", "dmt", "molly", "ketamine", "iboga"]) }),
   "party.dance.request": Object.freeze({ style: new Set(["slow", "fast", "techno", "waltz", "tango", "disco", "swing", "salsa", "bhangra", "persian", "polka", "horah", "bulgar", "dupak", "cumbia"]) }),
   "party.dj.set": Object.freeze({ dj: new Set(["sina", "danesh"]) }),
@@ -88,7 +89,7 @@ The loft has five rooms: kitchen/bar, garden/party, cuddly-puddly, office, and b
 
 Fishu is the flying pufferfish in cuddly-puddly. A short message consisting only of Fishu's name or a spelling/diacritic variant such as "Phishu!", "fisu", or "Fišü" is a direct invocation of the fishu.speak action and may run automatically.
 
-The magic box's authored trips are shrooms, acid, froggies, DMT, molly, ketamine, and iboga. Their accepted aliases are mushrooms/mushroom, LSD, froggie/frog/5meo, MDMA, k/ket, and ibogaine. Polite questions such as "can we do some acid?", "could we try shrooms?", and "how about molly?" are direct trip requests, not factual questions. When trip.start is available, you MUST attach the corresponding trip.start action; never merely tell the user to tap the physical box or say a suggestion exists without attaching it. Never interpret ordinary travel language as a trip request. Ketamine and iboga are unavailable while a party is active; say so rather than substituting another trip.
+The magic box is in garden/party, and "vitamins" is in-game slang for its contents. A location question such as "where are the vitamins?" asks where the magic box is; a direct request such as "let's have vitamins" means the next shuffled magic-box trip and must use trip.next when available. The magic box's authored trips are shrooms, acid, froggies, DMT, molly, ketamine, and iboga. Their accepted aliases are mushrooms/mushroom, LSD, froggie/frog/5meo, MDMA, k/ket, and ibogaine. Polite questions such as "can we do some acid?", "could we try shrooms?", and "how about molly?" are direct named-trip requests, not factual questions. When trip.start is available, you MUST attach the corresponding trip.start action; never merely tell the user to tap the physical box or say a suggestion exists without attaching it. Never interpret ordinary travel language as a trip request. Ketamine and iboga are unavailable while a party is active; say so rather than substituting another trip.
 
 weather.scene.set changes only the authored weather visible around the loft; it does not alter or claim to alter the real Edmonton or Prague forecast. sky.effect.set controls only the authored aurora or twilight scene. Use either action only for a direct request to change the scene, never for a question about current conditions, and never invent date/time overrides or arbitrary weather values.
 
@@ -120,7 +121,7 @@ Current game state.environment.indoor_temperature.temperature_c is exactly the l
 
 Fishu is the flying pufferfish in cuddly-puddly. A short message consisting only of Fishu's name or a spelling/diacritic variant such as "Phishu!", "fisu", or "Fišü" is a direct invocation of the fishu.speak action and may run automatically. Never claim or guess that today is anyone's birthday or another special event unless current game state.active_occasion explicitly identifies it; a calendar date or a cast relationship is not evidence.
 
-The magic box's authored trips are shrooms, acid, froggies, DMT, molly, ketamine, and iboga. Their accepted aliases are mushrooms/mushroom, LSD, froggie/frog/5meo, MDMA, k/ket, and ibogaine. Polite questions such as "can we do some acid?", "could we try shrooms?", and "how about molly?" are direct trip requests, not factual questions. When trip.start is available, you MUST attach the corresponding trip.start suggestion; never merely tell the visitor to tap the physical box or say a suggestion exists without attaching it. Never interpret ordinary travel language as a trip request. Ketamine and iboga are unavailable while a party is active; say so rather than substituting another trip.
+The magic box is in garden/party, and "vitamins" is in-game slang for its contents. A location question such as "where are the vitamins?" asks where the magic box is; a direct request such as "let's have vitamins" means the next shuffled magic-box trip and must suggest trip.next when available. The magic box's authored trips are shrooms, acid, froggies, DMT, molly, ketamine, and iboga. Their accepted aliases are mushrooms/mushroom, LSD, froggie/frog/5meo, MDMA, k/ket, and ibogaine. Polite questions such as "can we do some acid?", "could we try shrooms?", and "how about molly?" are direct named-trip requests, not factual questions. When trip.start is available, you MUST attach the corresponding trip.start suggestion; never merely tell the visitor to tap the physical box or say a suggestion exists without attaching it. Never interpret ordinary travel language as a trip request. Ketamine and iboga are unavailable while a party is active; say so rather than substituting another trip.
 
 weather.scene.set changes only the authored weather visible around the loft; it does not alter or claim to alter the real Edmonton or Prague forecast. sky.effect.set controls only the authored aurora or twilight scene. Suggest either action only for a direct request to change the scene, never for a question about current conditions, and never invent date/time overrides or arbitrary weather values.
 
@@ -199,6 +200,19 @@ function tripRequestIntent(value) {
         folded === `trip on ${alias}` || folded === `${alias} please`) return variant;
   }
   return null;
+}
+
+function vitaminIntent(value) {
+  const original = cleanText(value, MAX_MESSAGE_CHARS);
+  const folded = original.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
+  const mentions = /\bvitamins?\b/.test(folded) || /ویتامین/.test(original);
+  if (!mentions) return null;
+  const question = /\b(where|what|which|find|located|location)\b/.test(folded) || /\b(kde|co)\b/.test(folded) || /کجا|چیست|چیه/.test(original);
+  if (question) return "location";
+  const request = /^(vitamins?|vitamins? time|time for vitamins?|lets (have|take|do) (some )?vitamins?|can we (have|take|do) (some )?vitamins?|could we (have|take|do) (some )?vitamins?|(?:i want|we need|have|take) (some )?vitamins?|give (me|us) (some )?vitamins?|vitamins? please)$/.test(folded) ||
+    /^(vitaminy|cas na vitaminy|dej(te)? (mi|nam) vitaminy|muzeme si dat vitaminy)$/.test(folded) ||
+    /ویتامین.*(بخور|بگیریم|میخوام|می‌خوام|وقتشه)/.test(original);
+  return request ? "request" : null;
 }
 
 function cleanHistory(value) {
@@ -744,6 +758,33 @@ function tripReplyText(message, context, variant, reason, groupMode) {
   return groupMode ? `${label} time—tap this and hold on to something soft.` : `${label} time—hold on to something soft.`;
 }
 
+function vitaminReplyText(message, context, intent, reason, groupMode) {
+  const persian = /[\u0600-\u06ff]/.test(message);
+  const folded = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
+  const czech = /\b(kde|co|vitaminy|cas|dej|muzeme)\b/.test(folded);
+  if (intent === "location") {
+    if (persian) return "«ویتامین‌ها» همان محتویات جعبهٔ جادویی در اتاق باغ/مهمانی هستند.";
+    if (czech) return "„Vitamíny“ jsou obsah magic boxu v místnosti garden/party.";
+    return "“Vitamins” means the contents of the magic box in garden/party.";
+  }
+  if (persian) {
+    if (reason === "active") return "یکی یکی—اول بگذار این یکی تمام شود.";
+    if (reason === "phase") return "جعبهٔ جادویی در مرحلهٔ دوم باز می‌شود.";
+    if (reason === "unavailable") return "جعبهٔ جادویی الان آماده نیست.";
+    return groupMode ? "وقت ویتامین است—برای سفر بعدی اینجا بزن." : "وقت ویتامین است—یک چیز نرم را بگیر.";
+  }
+  if (czech) {
+    if (reason === "active") return "Pěkně popořadě—nejdřív nech tenhle trip doznít.";
+    if (reason === "phase") return "Magic box se otevře ve druhé fázi hry.";
+    if (reason === "unavailable") return "Magic box teď není připravený.";
+    return groupMode ? "Čas na vitamíny—klepni sem pro další trip." : "Čas na vitamíny—chyť se něčeho měkkého.";
+  }
+  if (reason === "active") return "One at a time—let this one wear off first.";
+  if (reason === "phase") return "The magic box opens in phase 2.";
+  if (reason === "unavailable") return "The magic box isn’t ready right now.";
+  return groupMode ? "Vitamin time—tap this for the next trip." : "Vitamin time—hold on to something soft.";
+}
+
 function applyDeterministicInvocation(normalizedReply, payload) {
   const parsed = JSON.parse(normalizedReply);
   if (indoorTemperatureRequest(payload.message)) {
@@ -755,6 +796,15 @@ function applyDeterministicInvocation(normalizedReply, payload) {
     const available = payload.context.actions_available.includes("video.pause");
     parsed.action = available ? { id: "video.pause", args: {} } : null;
     parsed.text = videoPauseReplyText(payload.message, available, payload.mode === "group_chat");
+    if (payload.mode === "group_chat") parsed.sender = "Charlie";
+  }
+  const vitamins = vitaminIntent(payload.message);
+  if (vitamins) {
+    const active = payload.context.trip && payload.context.trip.active;
+    const available = payload.context.actions_available.includes("trip.next");
+    const reason = vitamins === "location" ? null : active ? "active" : payload.context.phase !== 2 ? "phase" : available ? null : "unavailable";
+    parsed.action = vitamins === "request" && !reason ? { id: "trip.next", args: {} } : null;
+    parsed.text = vitaminReplyText(payload.message, payload.context, vitamins, reason, payload.mode === "group_chat");
     if (payload.mode === "group_chat") parsed.sender = "Charlie";
   }
   if (isFishuInvocation(payload.message) && payload.context.actions_available.includes("fishu.speak")) {

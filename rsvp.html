@@ -41280,6 +41280,15 @@ var ABANDONED_CALL_MS = 30000;
         }, moving ? 760 : 0);
       });
     } });
+    register({ id: "trip.next", kind: "action", risk: "scene", available: function () {
+      return !!window.__secondRound && !window.__tripActive && document.visibilityState !== "hidden" && typeof window.__nextTrip === "function";
+    }, run: function () {
+      if (window.goToStage) window.goToStage("garden");
+      window.__nextTrip();
+      var state = window.__tripState ? window.__tripState() : { active: !!window.__tripActive, variant: null };
+      if (!state.active || !state.variant) throw new Error("The next magic-box trip did not start.");
+      return { active: true, variant: state.variant, room: window.currentStageName || null };
+    } });
     register({ id: "trip.start", kind: "action", risk: "scene", args: { variant: { type: "string", enum: TRIPS, required: true } }, available: function (args) {
       if (!window.__secondRound || window.__tripActive || document.visibilityState === "hidden") return false;
       return !window.__gardenPartyOn || (args.variant !== "ketamine" && args.variant !== "iboga");

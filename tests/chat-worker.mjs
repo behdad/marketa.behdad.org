@@ -195,7 +195,7 @@ actionCase = await normalizedPrivateReply(
 );
 check(actionCase.reply.action === null, "a canonical action is discarded when the browser did not advertise it as currently available", actionCase);
 
-for (const id of ["music.previous", "party.set", "bbq.set", "photo.take"]) {
+for (const id of ["music.previous", "party.set", "bbq.set", "coffee.make", "photo.take"]) {
   const args = id === "party.set" || id === "bbq.set" ? { on: true } : {};
   actionCase = await normalizedPrivateReply(
     JSON.stringify({ text: "Doing that.", action: { id, args } }),

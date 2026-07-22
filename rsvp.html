@@ -40714,6 +40714,15 @@ var ABANDONED_CALL_MS = 30000;
     register({ id: "music.track.play", kind: "action", risk: "ambient", args: { track: { type: "string", enum: Object.keys(TRACKS), required: true } }, run: function (args) { if (window.__playSongAt) window.__playSongAt(TRACKS[args.track]); return { track: args.track }; } });
     register({ id: "party.set", kind: "action", risk: "ambient", args: { on: { type: "boolean", required: true } }, run: function (args) { if (window.party) window.party(args.on); return { on: !!window.__gardenPartyOn }; } });
     register({ id: "bbq.set", kind: "action", risk: "ambient", args: { on: { type: "boolean", required: true } }, run: function (args) { if (window.bbq) window.bbq(args.on); return { on: !!(window.bbq && window.bbq()) }; } });
+    register({ id: "coffee.make", kind: "action", risk: "ambient", run: function () {
+      if (window.__gardenPartyOn) {
+        if (window.__setPartyMode) window.__setPartyMode(false, true);
+        else if (window.__setGardenParty) window.__setGardenParty(false, true);
+      }
+      if (window.__setDayNight) window.__setDayNight(false);
+      if (window.goToStage) window.goToStage("kitchen");
+      return { room: "kitchen", daylight: true, party: false };
+    } });
     register({ id: "photo.take", kind: "action", risk: "ambient", available: function () { return !!window.__gardenPartyOn && typeof window.__photogSnap === "function"; }, run: function () {
       var room = window.currentStageName || "garden";
       var rec = window.__photogSnap(room, false, true);
@@ -54416,7 +54425,7 @@ async def localfont(name):
       if (window.__setUvParty) window.__setUvParty(false);
       if (window.__setGardenParty) window.__setGardenParty(false, true);
     }
-    function setPartyMode(on) {
+    function setPartyMode(on, immediate) {
       on = !!on;
       partyswitch.classList.toggle("on", on);
       if (on) {
@@ -54431,6 +54440,7 @@ async def localfont(name):
         return;
       }
       // Turning OFF.
+      if (immediate) { clearWindDown(); teardownPartyNow(); return; }
       if (partyWindDownTimer) return; // a graceful wind-down is already in flight — storm-safe no-op
       if (shouldWindDownGracefully()) {
         // Walk everyone out but KEEP the party + blacklight lit for the stroll; tear down after.

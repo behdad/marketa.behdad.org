@@ -375,6 +375,19 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   .hunt-right, .hunt-left{width:1.9rem}
   .hunt-fullscreen-btn{width:1.7rem; height:1.7rem; font-size:.9rem}
 }
+/* Coarse pointers need a little more landing room than the compact mouse chrome. These are
+   stable box sizes (not overlapping invisible halos), so adjacent media controls and room dots
+   never compete for the same tap while the scene is in use. */
+@media (max-width:759px), (pointer:coarse){
+  .hunt-right, .hunt-left{width:2.15rem}
+  .hunt-nav{width:2.15rem; height:2.15rem}
+  .hunt-fullscreen-btn{width:2rem; height:2rem}
+  #hunt-restart-btn, #hunt-fullscreen-btn{width:2.25rem; height:2.25rem}
+  #hunt-dots .hunt-dot{width:2rem; height:2rem}
+  /* Centre Next in the clear rail above the three media buttons instead of letting their
+     enlarged boxes overlap it. Previous has the unobstructed left rail and stays centred. */
+  #hunt-next{position:absolute; top:calc((100% - 6.7rem)/2); transform:translateY(-50%)}
+}
 /* the cinematic's ghost cursor: a cream dot with a wine ring that glides between the
    show's tap targets, plus a one-shot ripple ring at each click. Both live inside
    .hunt-viewport (inside #hunt-fullscreen-area, so fullscreen keeps them; positions are
@@ -24937,6 +24950,12 @@ var T = {
     restart_aria: "Restart the game",
     skip_piece_aria: "Next",
     volume_aria: "Music volume",
+    rooms_aria: "Rooms",
+    room_kitchen: "Kitchen",
+    room_garden: "Garden",
+    room_cuddly: "Cuddly-puddly",
+    room_office: "Office",
+    room_balcony: "Balcony",
     restart_confirm: "Restart the loft from the beginning? You'll lose your progress.",
     caps_aria: "A pink flat cap and a blue baker boy cap, crossed",
     laptop_date: "July 10",
@@ -25805,6 +25824,12 @@ var T = {
     restart_aria: "Spustit hru znovu",
     skip_piece_aria: "Další",
     volume_aria: "Hlasitost hudby",
+    rooms_aria: "Místnosti",
+    room_kitchen: "Kuchyň",
+    room_garden: "Zahrada",
+    room_cuddly: "Cuddly-puddly",
+    room_office: "Pracovna",
+    room_balcony: "Balkon",
     restart_confirm: "Restartovat loft od začátku? Přijdeš o svůj postup.",
     caps_aria: "Růžová bekovka a modrá osmidílná bekovka, zkřížené",
     laptop_date: "10. 7.",
@@ -26551,6 +26576,7 @@ function setLang(l) {
   if (window.refreshLifeText) window.refreshLifeText();
   if (window.refreshRoster) window.refreshRoster();
   if (window.__refreshOccasionBanner) window.__refreshOccasionBanner();
+  if (window.refreshRoomDots) window.refreshRoomDots();
 }
 // The Who's Here panel is defined later in the script. Population controllers use this small
 // feature-detected read so their autonomous arrivals/departures pause while somebody is reading it.
@@ -48637,7 +48663,7 @@ async def localfont(name):
     };
 
     var modal = null, shell = null, booted = false, closing = false;
-    var lockA = 0, lockB = 0, lockAnswer = null, lockEntry = "", lockShakeT = null; // math passcode lockscreen (first open per visit)
+    var lockA = 0, lockB = 0, lockAnswer = null, lockEntry = "", lockFailures = 0, lockShakeT = null; // math passcode lockscreen (first open per visit)
     var statusClock = null, currentApp = null, currentTitleKey = "", directCloseApp = null;
     var messageAppReturn = null; // a message action can deep-link to another phone app; Back returns to the thread first
     var battMgr = null, battHooked = false;
@@ -48936,8 +48962,10 @@ async def localfont(name):
     function lockSubmit() {
       if (lockAnswer === null) return;
       if (lockEntry === String(lockAnswer)) { unlock(); return; }
+      lockFailures += 1;
       lockEntry = "";
       paintLock();
+      if (lockFailures >= 3) { unlock(); return; }
       if (reduced()) return;
       var l = shell.querySelector(".pb-lock");
       if (!l) return;
@@ -48949,6 +48977,7 @@ async def localfont(name):
     }
     function unlock() {
       if (lockShakeT) { clearTimeout(lockShakeT); lockShakeT = null; }
+      lockFailures = 0;
       booted = true;
       renderHome();
       showScreen("home");        // clears .booting, hiding the lock field
@@ -50198,6 +50227,69 @@ async def localfont(name):
         row.addEventListener("contextmenu", function (e) {
           e.preventDefault(); e.stopPropagation(); openMessageMenu(id, e.clientX, e.clientY, applyFilter, function () { selectReply(id); });
         });
+        // A conventional one-finger hold exposes the same menu on touch/pen devices. Keep the
+        // gesture passive until the timer wins so an ordinary drag still scrolls Messages; any
+        // movement, scroll, second pointer, or cancellation abandons the hold.
+        (function () {
+          var hold = null, heldPointerId = null, suppressClick = false, suppressClickT = null;
+          function clearHold() {
+            if (!hold) return;
+            clearTimeout(hold.timer);
+            document.removeEventListener("pointermove", onMove, true);
+            document.removeEventListener("pointerup", onEnd, true);
+            document.removeEventListener("pointercancel", onEnd, true);
+            document.removeEventListener("pointerdown", onOtherPointer, true);
+            window.removeEventListener("scroll", clearHold, true);
+            hold = null;
+          }
+          function onMove(e) {
+            if (!hold || e.pointerId !== hold.pointerId) return;
+            if (Math.abs(e.clientX - hold.x) > 10 || Math.abs(e.clientY - hold.y) > 10) clearHold();
+          }
+          function onEnd(e) { if (hold && e.pointerId === hold.pointerId) clearHold(); }
+          function onOtherPointer(e) { if (hold && e.pointerId !== hold.pointerId) clearHold(); }
+          function clearAfterHold() {
+            document.removeEventListener("pointerup", onAfterHoldEnd, true);
+            document.removeEventListener("pointercancel", onAfterHoldEnd, true);
+            heldPointerId = null;
+          }
+          function onAfterHoldEnd(e) {
+            if (e.pointerId !== heldPointerId) return;
+            clearAfterHold();
+            if (e.type === "pointercancel") { suppressClick = false; return; }
+            if (suppressClickT) clearTimeout(suppressClickT);
+            // Native touch clicks follow pointerup immediately. The short tail only protects that
+            // synthesized click; it cannot consume a later deliberate tap on the row.
+            suppressClickT = setTimeout(function () { suppressClick = false; suppressClickT = null; }, 800);
+          }
+          row.addEventListener("pointerdown", function (e) {
+            if (e.pointerType === "mouse" || e.button !== 0 || !e.isPrimary) return;
+            clearHold();
+            hold = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, timer: null };
+            hold.timer = setTimeout(function () {
+              var x = hold && hold.x, y = hold && hold.y;
+              heldPointerId = hold && hold.pointerId;
+              clearHold();
+              suppressClick = true;
+              if (suppressClickT) clearTimeout(suppressClickT);
+              document.addEventListener("pointerup", onAfterHoldEnd, true);
+              document.addEventListener("pointercancel", onAfterHoldEnd, true);
+              openMessageMenu(id, x, y, applyFilter, function () { selectReply(id); });
+            }, 550);
+            document.addEventListener("pointermove", onMove, true);
+            document.addEventListener("pointerup", onEnd, true);
+            document.addEventListener("pointercancel", onEnd, true);
+            document.addEventListener("pointerdown", onOtherPointer, true);
+            window.addEventListener("scroll", clearHold, true);
+          });
+          row.addEventListener("click", function (e) {
+            if (!suppressClick) return;
+            suppressClick = false;
+            clearAfterHold();
+            if (suppressClickT) { clearTimeout(suppressClickT); suppressClickT = null; }
+            e.preventDefault(); e.stopImmediatePropagation();
+          }, true);
+        })();
         return row;
       }
       function applyFilter() {
@@ -65642,13 +65734,16 @@ function spawnDustMote(container) {
   }
   var dotsWrap = document.getElementById("hunt-dots");
   var dots = [];
+  function roomDotLabel(name) {
+    var l = document.documentElement.lang;
+    return (T[l] && T[l]["room_" + name]) || T.en["room_" + name] || name;
+  }
   if (dotsWrap) {
     STAGES.forEach(function (name, i) {
       var d = document.createElement("button");
       d.type = "button";
       d.className = "hunt-dot";
       d.setAttribute("role", "tab");
-      d.setAttribute("aria-label", "Room " + (i + 1));
       d.addEventListener("click", function () {
         if (i <= maxUnlocked) goToStage(STAGES[i]);
       });
@@ -65661,12 +65756,19 @@ function spawnDustMote(container) {
     });
   }
   function updateDots() {
+    var l = document.documentElement.lang;
+    if (dotsWrap) dotsWrap.setAttribute("aria-label", (T[l] && T[l].rooms_aria) || T.en.rooms_aria);
     for (var i = 0; i < dots.length; i++) {
+      var label = roomDotLabel(STAGES[i]);
       dots[i].classList.toggle("active", i === stageIndex);
       dots[i].classList.toggle("locked", i > maxUnlocked);
+      dots[i].setAttribute("aria-label", label);
+      dots[i].setAttribute("title", label);
       dots[i].setAttribute("aria-selected", i === stageIndex ? "true" : "false");
+      dots[i].setAttribute("aria-disabled", i > maxUnlocked ? "true" : "false");
     }
   }
+  window.refreshRoomDots = updateDots;
   function updateNav() {
     if (prevBtn) prevBtn.disabled = stageIndex <= 0;
     if (nextBtn) nextBtn.classList.toggle("locked", stageIndex >= maxUnlocked);

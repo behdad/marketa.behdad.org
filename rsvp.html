@@ -44280,7 +44280,9 @@ var ABANDONED_CALL_MS = 30000;
       var parsedAnswer = parseChatAnswer(rawAnswer, message.mode === "group_chat");
       var answer = parsedAnswer.raw;
       if (!parsedAnswer.text) throw new Error("empty chat response");
-      performChatAction(parsedAnswer.action, message.mode === "group_chat" ? "messages-chat" : "charlie-chat");
+      // Charlie's own Chat app acts immediately. In the wedding thread, an action is only a
+      // suggestion attached to the incoming reply; the visitor must press its arrow explicitly.
+      if (message.mode !== "group_chat") performChatAction(parsedAnswer.action, "charlie-chat");
       var historyAnswer = parsedAnswer.text;
       if (typeof message.replyDisplay === "function") {
         try { historyAnswer = String(message.replyDisplay(answer) || answer); } catch (_error) {}
@@ -49643,7 +49645,10 @@ async def localfont(name):
       var sender = data && typeof data.sender === "string" ? data.sender.trim() : (target ? msgFrom(target) : "Charlie");
       var text = data && typeof data.text === "string" ? data.text.trim() : raw;
       var replyToId = data && typeof data.reply_to_id === "string" ? data.reply_to_id.trim().slice(0, 80) : null;
-      return { sender: (sender || "Charlie").slice(0, 48), text: text.slice(0, 700), replyToId: replyToId };
+      var action = data && data.action && typeof data.action === "object" && !Array.isArray(data.action) &&
+        typeof data.action.id === "string" && data.action.args && typeof data.action.args === "object" && !Array.isArray(data.action.args)
+        ? { id: data.action.id, args: data.action.args } : null;
+      return { sender: (sender || "Charlie").slice(0, 48), text: text.slice(0, 700), replyToId: replyToId, action: action };
     }
     function deliverCrewReply(id, answer, target) {
       var parsed = parseCrewReply(answer, target);
@@ -49652,7 +49657,7 @@ async def localfont(name):
       if (!quoted && target) {
         for (var ti = messagesThread.length - 1; ti >= 0; ti--) if (MESSAGES[messagesThread[ti]] === target) { quoted = messagesThread[ti]; break; }
       }
-      MESSAGES[id] = { from: parsed.sender, body: parsed.text, generated: true, replyTo: quoted };
+      MESSAGES[id] = { from: parsed.sender, body: parsed.text, generated: true, replyTo: quoted, chatAction: parsed.action };
       messagesThread.push(id); messagesArrivedAt[id] = Date.now(); trimMessageThread();
       if (isOpen() && currentApp === "messages") { messagesRead[id] = true; openApp("messages", "app_messages", renderMessages); }
       else { delete messagesRead[id]; showMessageThumb(id); }
@@ -49747,7 +49752,7 @@ async def localfont(name):
           }
         }
         var line = document.createElement("div"); line.className = "pm-msg-line"; line.appendChild(bub);
-        if (!m.outgoing && m.act) {
+        if (!m.outgoing && (m.act || m.chatAction)) {
           var actBtn = document.createElement("button"); actBtn.type = "button"; actBtn.className = "pm-msg-act";
           actBtn.setAttribute("aria-label", tr("mon_ctx_open")); actBtn.setAttribute("title", tr("mon_ctx_open"));
           actBtn.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -52628,7 +52633,19 @@ async def localfont(name):
       hideMessageThumb();
       hideMsgBadgeCoach();
       if (id) { messagesRead[id] = true; updateMsgBadge(); } // tapping marks the message read (unread = bold until then)
-      var m = id && MESSAGES[id], act = m && m.act;
+      var m = id && MESSAGES[id], act = m && m.act, chatAction = m && m.chatAction;
+      if (chatAction) {
+        if (!window.loft || !window.loft.api || typeof window.loft.api.perform !== "function") return;
+        var args = chatAction.args || {};
+        var phoneTarget = chatAction.id === "app.open" && args.app !== "messages" ? phoneAppByName(args.app) : null;
+        var returnDirectly = directCloseApp === "messages";
+        if (!phoneTarget) close(true); // room, scene, and monitor actions need the loft visible before they run
+        window.loft.api.perform(chatAction.id, args, { source: "messages-chat" }).then(function (result) {
+          // Opening a phone app resets its prior navigation state, so install this only afterward.
+          if (phoneTarget && result && result.ok && currentApp === phoneTarget.id) messageAppReturn = { launched: phoneTarget.id, directClose: returnDirectly };
+        }, function () {});
+        return;
+      }
       if (!act) { open(true); openApp("messages", "app_messages", renderMessages); return; }
       if (act.indexOf("app:") === 0) {
         var returnDirect = directCloseApp === "messages";

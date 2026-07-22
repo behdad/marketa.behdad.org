@@ -4883,6 +4883,8 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 /* unread-count badge — a red circle (white number) at the new-notification's top-left corner */
 .msg-badge{position:absolute; top:6px; left:max(4px, calc(50% - 254px)); z-index:61; min-width:30px; height:30px; padding:0 6px; box-sizing:border-box; border:2px solid #fffdf8; border-radius:15px; background:#d33a34; color:#fff; font:700 17px/26px "Source Serif 4",system-ui,sans-serif; text-align:center; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.34); display:none}
 .msg-badge.show{display:block}
+.msg-badge.idle{padding:0;background:#6d8ba3;box-shadow:0 2px 6px rgba(0,0,0,.24)}
+.msg-badge-idle-icon{display:block;width:17px;height:17px;margin:4.5px auto}
 /* First unread only: teach the badge in place, without stealing the main scene caption. The
    shared custom property is the exact espresso arrow used by the opening-caption guide. */
 .msg-badge.coached{animation:msg-badge-coach-pulse .9s ease-in-out infinite}
@@ -51798,9 +51800,9 @@ async def localfont(name):
       msgThumbT = setTimeout(hideMessageThumb, 7000);
     }
     window.__hideMessageThumb = hideMessageThumb;
-    // ── unread-count badge ── a small red circle with a white count, at the notification's
-    // top-left corner (top-centre, a bit left). Shows while any message is unread; tap opens the
-    // thread (doesn't mark anything read). Kept in sync on every deliver / read / reset.
+    // ── messages shortcut / unread-count badge ── a small red count while messages are unread,
+    // then a quiet blue chat icon once the thread is caught up. It appears only after the first
+    // message and stays hidden while the phone itself is open; tapping always opens the thread.
     var msgBadgeEl = null, msgBadgeCoachEl = null, msgBadgeCoachT = null, msgBadgeCoachDelayT = null, msgBadgeCoachSeen = false;
     function unreadCount() { var n = 0; for (var i = 0; i < messagesThread.length; i++) if (!messagesRead[messagesThread[i]]) n++; return n; }
     function cancelMsgBadgeCoachDelay() {
@@ -51843,8 +51845,21 @@ async def localfont(name):
         msgBadgeEl.addEventListener("click", function () { hideMsgBadgeCoach(); open(true); openApp("messages", "app_messages", renderMessages); });
       }
       if (msgBadgeEl.parentNode !== host) host.appendChild(msgBadgeEl);
-      if (n > 0 && !isOpen()) { msgBadgeEl.textContent = n >= 8 ? "∞" : String(n); msgBadgeEl.setAttribute("aria-label", n + " unread — " + tr("app_messages")); msgBadgeEl.classList.add("show"); if (!msgThumbEl || !msgThumbEl.classList.contains("show")) scheduleMsgBadgeCoach(); } // the real count until the 8 cap, then the couple's signature ∞ ("too many to count"); hidden while the phone's open; coach waits until three seconds after the preview is gone
-      else { msgBadgeEl.classList.remove("show"); hideMsgBadgeCoach(); }
+      if (n > 0 && !isOpen()) {
+        msgBadgeEl.classList.remove("idle");
+        msgBadgeEl.textContent = n >= 8 ? "∞" : String(n);
+        msgBadgeEl.setAttribute("aria-label", n + " unread — " + tr("app_messages"));
+        msgBadgeEl.classList.add("show");
+        if (!msgThumbEl || !msgThumbEl.classList.contains("show")) scheduleMsgBadgeCoach();
+      } else if (messagesThread.length > 0 && !isOpen()) {
+        msgBadgeEl.classList.add("idle", "show");
+        msgBadgeEl.innerHTML = '<svg class="msg-badge-idle-icon" viewBox="0 0 12 12" aria-hidden="true"><use href="#dicon-chat"></use></svg>';
+        msgBadgeEl.setAttribute("aria-label", tr("app_messages"));
+        hideMsgBadgeCoach();
+      } else {
+        msgBadgeEl.classList.remove("idle", "show");
+        hideMsgBadgeCoach();
+      }
       // the balcony scene's in-world phone shows the same outstanding-unread count on its red badge
       var balBadge = document.getElementById("balcony-phone-badge");
       if (balBadge) {

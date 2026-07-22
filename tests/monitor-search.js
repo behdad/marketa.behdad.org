@@ -19,7 +19,8 @@ var HARNESS = [
   ' key("x");key("y");S("appGuard",window.__monitorDockSearch());if(window.__closeTopMonitorApp)window.__closeTopMonitorApp();mon.classList.add("show-caps");await sleep(20);',
   ' setLang("cs");await sleep(20);S("beforeCzech",{zoom:window.__monitorZoomed&&window.__monitorZoomed(),classes:mon.getAttribute("class"),visibility:getComputedStyle(document.getElementById("monitor-desktop-dock")).visibility});["k","o","n"].forEach(key);S("czech",window.__monitorDockSearch());document.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true}));S("pointer",window.__monitorDockSearch());',
   ' if(window.__openPhoneModal)window.__openPhoneModal(true);await sleep(30);["x","y"].forEach(key);S("phoneGuard",window.__monitorDockSearch());if(window.phone)window.phone(false);await sleep(30);',
-  ' var oldId=window.__openMonitorApp("family");var phoneId=window.__openMonitorApp("phone");await sleep(30);S("phoneName",{tile:!!document.getElementById("monitor-dock-phone"),oldTile:!!document.getElementById("monitor-dock-family"),label:document.querySelector("#monitor-dock-phone .dock-label").textContent,oldRejected:Array.isArray(oldId),opened:mon.classList.contains("show-family"),result:phoneId});',
+  ' var oldFamily=window.__openMonitorApp("family"),oldPhone=window.__openMonitorApp("phone"),callId=window.__openMonitorApp("call");await sleep(30);S("callName",{tile:!!document.getElementById("monitor-dock-call"),oldPhoneTile:!!document.getElementById("monitor-dock-phone"),oldFamilyTile:!!document.getElementById("monitor-dock-family"),label:document.querySelector("#monitor-dock-call .dock-label").textContent,oldRejected:Array.isArray(oldFamily)&&Array.isArray(oldPhone),opened:mon.classList.contains("show-family"),result:callId});',
+  ' if(window.__closeTopMonitorApp)window.__closeTopMonitorApp();var oldPocket=window.phone("phone"),newPocket=window.phone("call");await sleep(40);var ph=document.querySelector(".phone-shell");S("pocketCall",{oldRejected:Array.isArray(oldPocket),opened:!!document.querySelector(".phone-backdrop.show")&&ph&&ph.classList.contains("pm-app"),title:ph&&ph.querySelector(".pah-title")&&ph.querySelector(".pah-title").textContent,result:newPocket});if(window.phone)window.phone(false);',
   '}',
   '})();</script>'
 ].join("\n");
@@ -42,7 +43,8 @@ check(!s.appGuard.query, "typing inside an open monitor app does not start deskt
 check(s.czech.query === "kon" && s.czech.match === "console", "matching includes the current localized app label", { state: s.czech, before: s.beforeCzech });
 check(!s.pointer.query && !s.pointer.match, "a pointer gesture dismisses the transient search", s.pointer);
 check(!s.phoneGuard.query, "the phone never inherits monitor search", s.phoneGuard);
-check(s.phoneName.tile && !s.phoneName.oldTile && s.phoneName.label === "telefon" && s.phoneName.oldRejected && s.phoneName.opened && /phone/.test(s.phoneName.result || ""), "the monitor calling app and command are named phone, without a family alias", s.phoneName);
+check(s.callName.tile && !s.callName.oldPhoneTile && !s.callName.oldFamilyTile && s.callName.label === "volání" && s.callName.oldRejected && s.callName.opened && /call/.test(s.callName.result || ""), "the monitor calling app and command are named call, without phone/family aliases", s.callName);
+check(s.pocketCall.oldRejected && s.pocketCall.opened && s.pocketCall.title === "kontakty" && /call/.test(s.pocketCall.result || ""), "the pocket calling app and phone command are also named call", s.pocketCall);
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

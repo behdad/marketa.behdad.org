@@ -25120,6 +25120,7 @@ var T = {
     console_hint: "Open the drop-down console",
     console_hint_close: "Close the drop-down console",
     app_chat: "chat",
+    app_call: "call",
     chat_welcome: "Hi! I’m Charlie, your wedding assistant. I know this loft and how it works. Ask me anything.",
     chat_placeholder: "Ask about the loft…",
     chat_send: "Send message",
@@ -25946,6 +25947,7 @@ var T = {
     console_hint: "Otevřít rozbalovací konzoli",
     console_hint_close: "Zavřít rozbalovací konzoli",
     app_chat: "chat",
+    app_call: "volání",
     chat_welcome: "Ahoj! Jsem Charlie, tvůj svatební průvodce. Znám tenhle loft a vím, jak to tu funguje. Zeptej se mě na cokoli.",
     chat_placeholder: "Zeptej se na loft…",
     chat_send: "Odeslat zprávu",
@@ -39974,7 +39976,7 @@ var ABANDONED_CALL_MS = 30000;
       if (wc) wc.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     } },
     { id: "video", icon: "video", labelKey: "app_video", glyph: "▶", tile: "#57a05a", glyphSize: "4.8", open: function () { openVideoApp(); } },
-    { id: "phone", icon: "phone", labelKey: "app_phone", glyph: "📞", tile: "#2f948c", glyphSize: "5.2", open: function () { openFamilyCall(pendingMonitorCallee); pendingMonitorCallee = null; } },
+    { id: "call", icon: "phone", labelKey: "app_call", glyph: "📞", tile: "#2f948c", glyphSize: "5.2", open: function () { openFamilyCall(pendingMonitorCallee); pendingMonitorCallee = null; } },
     { id: "chat", icon: "chat", labelKey: "app_chat", glyph: "✦", tile: "#4a72b8", glyphSize: "5.2", open: function () { openChat(); } },
     { id: "mail", icon: "mail", labelKey: "app_mail", glyph: "✉️", tile: "#7b5aa6", glyphSize: "5.2", open: function () { openMailApp(); } },
     { id: "calendar", labelKey: "app_calendar", glyph: "📅", tile: "#c68e95", glyphSize: "5.2", open: function () { openCalendar(); } },
@@ -46000,11 +46002,11 @@ async def localfont(name):
   }
   window.__openMonitorApp = function (name) {
     if (!pcTower) return "no computer here.";
-    // "phone" (the dock app's id) opens the app on its two-contact PICKER, same as tapping
+    // "call" (the dock app's id) opens the app on its two-contact PICKER, same as tapping
     // the dock; "california"/"tehran" deep-link straight to that callee's call.
     var q = String(name == null ? "" : name).toLowerCase().trim();
     var app;
-    if (q === "california" || q === "tehran") { pendingMonitorCallee = q; app = monitorAppByName("phone"); }
+    if (q === "california" || q === "tehran") { pendingMonitorCallee = q; app = monitorAppByName("call"); }
     else app = monitorAppByName(name);
     if (!app) return DESKTOP_APPS.map(function (a) { return a.id; }); // a bad name → the list of app ids to pick from
     if (window.goToStage) window.goToStage("office"); // the monitor lives in the office — bring it on screen
@@ -47595,7 +47597,7 @@ async def localfont(name):
     // (mines + quiz) sitting after the couple's-extras pair, so play lands at the bottom.
     var PHONE_APPS = [
       // comms & planning
-      { id: "phone", labelKey: "app_phone", icon: "phone", tile: "#8e3a4a", open: function () { openDialer(); } },
+      { id: "call", labelKey: "app_call", icon: "phone", tile: "#8e3a4a", open: function () { openDialer(); } },
       { id: "messages", labelKey: "app_messages", icon: null, glyph: "💬", tile: "#6d8ba3", open: function () { openApp("messages", "app_messages", renderMessages); } },
       { id: "mail", labelKey: "app_mail", icon: "mail", tile: "#4a6b94", open: function () { openApp("mail", "app_mail", function (b) { renderMailList(b); }); } },
       { id: "calendar", labelKey: "app_calendar", icon: null, glyph: "📅", tile: "#c68e95", open: function () { openApp("calendar", "app_calendar", renderCalendar); } },
@@ -48202,7 +48204,7 @@ async def localfont(name):
     }
 
     // ── dialer + call ──────────────────────────────────────────────────────────
-    function openDialer() { openApp("phone", "phone_dialer_title", renderDialer); }
+    function openDialer() { openApp("call", "phone_dialer_title", renderDialer); }
     function renderDialer(body) {
       if (!selectedCity) selectedCity = CITY_ORDER[0]; // one-tap ready
       CITY_ORDER.forEach(function (city) {
@@ -52352,7 +52354,7 @@ async def localfont(name):
       if (shell.classList.contains("pm-home")) { renderHome(); return; }
       if (shell.classList.contains("pm-app")) {
         // rebuild the open app in the new language (mines is the board itself — leave it)
-        if (currentApp === "phone") openDialer();
+        if (currentApp === "call") openDialer();
         else if (currentApp === "music") openApp("music", "app_music", renderMusic);
         else if (currentApp === "weather") openApp("weather", "app_weather", renderWeather);
         else if (currentApp === "calendar") openApp("calendar", "app_calendar", renderCalendar);

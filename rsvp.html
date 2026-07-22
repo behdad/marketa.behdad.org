@@ -3350,6 +3350,9 @@ html.is-webkit .dock-app:hover .dock-tile{transform:none; box-shadow:inset 0 0 0
 .ed-ai-panel{display:none; position:absolute; z-index:4; left:25px; right:2px; bottom:5px; max-height:16px; overflow:auto; scrollbar-width:none; box-sizing:border-box; padding:1px; border:.3px solid #54745b; border-radius:.8px; background:#101914; color:#d8eed5; font:1.8px/1.35 ui-monospace,Menlo,monospace; white-space:pre-wrap; box-shadow:0 .5px 2px #000b}
 .ed-ai-panel.open{display:block}
 .ed-ai-panel::-webkit-scrollbar{display:none}
+.ed-ai-diff{margin:.6px 0;padding:.6px .8px;border:.2px solid #2b4735;border-radius:.4px;background:#0b120f;white-space:pre-wrap}
+.ed-ai-diff-title{color:#a7e08a;margin-bottom:.3px}
+.ed-ai-diff-old{color:#e59a9a}.ed-ai-diff-new{color:#a7e08a}
 .ed-ai-close{float:right; margin:0 0 .5px 1px; padding:0 .6px; border:0; background:none; color:#a7e08a; font:inherit; line-height:1; cursor:pointer}
 .ed-ta::placeholder{color:#5f7a5f}
 .ed-ta::selection{background:#587c60; color:#fffdf8}
@@ -25282,7 +25285,7 @@ var T = {
     app_album: "album",
     // the album app (Aspen's captured party polaroids)
     album_empty_title: "no photos yet",
-    album_empty_sub: "Aspen's still shooting — throw the party and she'll fill your roll.",
+    album_empty_sub: "Aspen hasn't captured one yet — wander around and she'll fill your roll.",
     album_cap_with: "with", // "markéta & behdad · with Ali & Goli"
     album_cap_and: "&",     // joins a couple in a caption: "Ali & Goli"
     album_cap_group: "the group photo · everyone 🎉", // the whole-crowd keepsake from groupphoto()
@@ -25506,7 +25509,7 @@ var T = {
     clk_timelapse_stop: "■ Stop the day",
     cur_amount: "amount",
     cur_offline: "· offline rate",
-    msg_empty: "No messages yet.",
+    msg_empty: "No messages yet — the wedding crew will write here as the day unfolds.",
     msg_search_placeholder: "search messages…", // filters the thread by sender name + message text
     msg_search_none: "no messages match that search.",
     msg_new_divider: "New",
@@ -26197,7 +26200,7 @@ var T = {
     album_cap_selfie: "selfie z fotokoutku",
     album_remove: "odstranit fotku",
     album_compact: "kompaktní mřížka",
-    album_empty_sub: "Aspen ještě fotí — rozjeď párty a album se ti zaplní.",
+    album_empty_sub: "Aspen zatím nic nevyfotila — projdi se po loftu a album se začne plnit.",
     // FOTKY PODLE MÍSTNOSTI — Aspen fotí celý loft, takže kartu uvádí místnost, kde vznikla:
     // „u baru · Ali & Goli“. Podle toho se taková karta i vyhledává v albu.
     album_room_kitchen: "u baru",
@@ -26415,7 +26418,7 @@ var T = {
     clk_timelapse_stop: "■ Zastavit den",
     cur_amount: "částka",
     cur_offline: "· kurz offline",
-    msg_empty: "Zatím žádné zprávy.",
+    msg_empty: "Zatím žádné zprávy — svatební parta sem během dne napíše.",
     msg_search_placeholder: "hledat zprávy…", // filtruje vlákno podle jména odesílatele + textu zprávy
     msg_search_none: "žádné zprávy neodpovídají hledání.",
     msg_new_divider: "Nové",
@@ -41857,6 +41860,16 @@ var ABANDONED_CALL_MS = 30000;
       consolePrint(window.message(crewText), "console-dim");
       return;
     }
+    var sessionM = c.match(/^session(?:\((?:\s*(["']?)(export|import)\1\s*)\))?$/i);
+    if (sessionM) {
+      var sessionOp = (sessionM[2] || "export").toLowerCase();
+      if (sessionOp === "export") {
+        consolePrint(window.loftSessionExport ? window.loftSessionExport() : "session export unavailable", "console-dim");
+      } else {
+        consolePrint("usage: loftSessionImport(json) — paste an export token into the console", "console-dim");
+      }
+      return;
+    }
     if (/^laser(\(\))?$/.test(c)) {
       if (window.__laserPointer) window.__laserPointer();
       consolePrint(consoleT("console_laser"), "console-dim");
@@ -42365,6 +42378,12 @@ var ABANDONED_CALL_MS = 30000;
   function writeScripts(o) {
     try { localStorage.setItem("deskScripts", JSON.stringify(o)); } catch (e) {}
   }
+  var ED_DRAFT_KEY = "deskEditorDraft", edDraftTimer = null;
+  function readEditorDraft() { try { var raw = localStorage.getItem(ED_DRAFT_KEY), d = raw ? JSON.parse(raw) : null; return d && typeof d === "object" ? d : null; } catch (e) { return null; } }
+  function writeEditorDraft() { if (!edName || !edCode) return; try { localStorage.setItem(ED_DRAFT_KEY, JSON.stringify({ name: edName.value || "", code: edCode.value || "", saved_at: Date.now() })); } catch (e) {} }
+  function clearEditorDraft() { try { localStorage.removeItem(ED_DRAFT_KEY); } catch (e) {} }
+  function edScheduleDraft() { clearTimeout(edDraftTimer); edDraftTimer = setTimeout(function () { edDraftTimer = null; writeEditorDraft(); }, 120); }
+  function edFlushDraft() { clearTimeout(edDraftTimer); edDraftTimer = null; writeEditorDraft(); }
   function scriptNames() { return Object.keys(readScripts()).sort(); }
   function scriptsListStr() {
     var names = scriptNames();
@@ -42398,12 +42417,14 @@ var ABANDONED_CALL_MS = 30000;
     if (edName) edName.value = name;
     if (edCode) edCode.value = has ? scr[name] : ""; // unknown name = a fresh file pre-named
     edLastSavedName = has ? name : null;
+    clearEditorDraft();
     edRefreshPicker(has ? name : null);
   }
   function edNew() {
     if (edName) edName.value = "";
     if (edCode) edCode.value = "";
     edLastSavedName = null;
+    clearEditorDraft();
     edRefreshPicker(null);
     if (edName) { try { edName.focus(); } catch (e) {} }
   }
@@ -42416,6 +42437,7 @@ var ABANDONED_CALL_MS = 30000;
     writeScripts(scr);
     edName.value = name; // reflect the trimmed name back
     edLastSavedName = name;
+    clearEditorDraft();
     edRefreshPicker(name);
   }
   // Write the buffer to deskScripts, dropping a stale prior-name entry on rename so a
@@ -42427,6 +42449,7 @@ var ABANDONED_CALL_MS = 30000;
     if (prev && prev !== name && Object.prototype.hasOwnProperty.call(scr, prev)) delete scr[prev];
     scr[name] = code;
     writeScripts(scr);
+    clearEditorDraft();
     edLastSavedName = name;
   }
   // Debounced autosave, fired by typing in the code buffer OR renaming in the filename
@@ -42479,6 +42502,7 @@ var ABANDONED_CALL_MS = 30000;
     if (known) { delete scr[name]; writeScripts(scr); }
     edName.value = ""; if (edCode) edCode.value = "";
     edLastSavedName = null;
+    clearEditorDraft();
     edRefreshPicker(null);
   }
   // Duplicate the current buffer under a NEW name (prompted, defaulting to "<name> copy").
@@ -42545,15 +42569,16 @@ var ABANDONED_CALL_MS = 30000;
     edAiEdits = Array.isArray(data.edits) ? data.edits.filter(function (x) { return x && Number.isFinite(+x.start) && Number.isFinite(+x.end) && typeof x.text === "string"; }).map(function (x) { return { start: Math.max(0, +x.start), end: Math.max(0, +x.end), text: x.text }; }) : null;
     if (edAiEdits && edAiEdits.length) {
       var editTitle = document.createElement("div"); editTitle.textContent = edAiEdits.length + " proposed edit" + (edAiEdits.length === 1 ? "" : "s") + ":"; edAiPanel.appendChild(editTitle);
-      edAiEdits.forEach(function (edit, i) { var ep = document.createElement("pre"); ep.textContent = "#" + (i + 1) + " [" + edit.start + "–" + edit.end + "]\n" + edit.text; ep.style.margin = "1px 0"; edAiPanel.appendChild(ep); });
+      var diffTitle = document.createElement("div"); diffTitle.className = "ed-ai-diff-title"; diffTitle.textContent = "Preview"; edAiPanel.appendChild(diffTitle);
+      edAiEdits.forEach(function (edit, i) { var ep = document.createElement("pre"); ep.className = "ed-ai-diff"; var oldText = edAiSourceCode.slice(edit.start, edit.end); var lines = ["#" + (i + 1) + " [" + edit.start + "–" + edit.end + "]"]; lines.push(oldText ? "- " + oldText.replace(/\n/g, "\n- ") : "- (nothing)"); lines.push(edit.text ? "+ " + edit.text.replace(/\n/g, "\n+ ") : "+ (deleted)"); ep.textContent = lines.join("\n"); edAiPanel.appendChild(ep); });
       var applyEdits = document.createElement("button"); applyEdits.className = "ed-ai-btn"; applyEdits.type = "button"; applyEdits.textContent = "apply edits";
-      applyEdits.addEventListener("click", function (e) { e.stopPropagation(); if (!edCode || edCode.value !== edAiSourceCode) { edAiSetStatus("Code changed — request again", false); return; } var out = edCode.value; var sorted = edAiEdits.slice().sort(function (a, b) { return b.start - a.start; }); for (var j = 0; j < sorted.length; j++) { var q = sorted[j]; if (q.start > q.end || q.end > out.length) { edAiSetStatus("Edit range invalid", false); return; } out = out.slice(0, q.start) + q.text + out.slice(q.end); } edCode.value = out; edScheduleAutoSave(); edAiClosePanel(); edAiSetStatus("Applied " + sorted.length + " edits", true); try { edCode.focus(); } catch (_) {} });
+      applyEdits.addEventListener("click", function (e) { e.stopPropagation(); if (!edCode || edCode.value !== edAiSourceCode) { edAiSetStatus("Code changed — request again", false); return; } var out = edCode.value; var sorted = edAiEdits.slice().sort(function (a, b) { return b.start - a.start; }); for (var j = 0; j < sorted.length; j++) { var q = sorted[j]; if (q.start > q.end || q.end > out.length) { edAiSetStatus("Edit range invalid", false); return; } out = out.slice(0, q.start) + q.text + out.slice(q.end); } edCode.value = out; edScheduleAutoSave(); edScheduleDraft(); edAiClosePanel(); edAiSetStatus("Applied " + sorted.length + " edits", true); try { edCode.focus(); } catch (_) {} });
       edAiPanel.appendChild(applyEdits);
     }
     if (edAiSuggestion) {
       var pre = document.createElement("pre"); pre.textContent = edAiSuggestion; pre.style.margin = "1px 0"; edAiPanel.appendChild(pre);
       var apply = document.createElement("button"); apply.className = "ed-ai-btn"; apply.type = "button"; apply.textContent = edAiReplace ? (edAiStart === edAiEnd ? "replace script" : "replace selection") : "insert at cursor";
-      apply.addEventListener("click", function (e) { e.stopPropagation(); if (!edAiSuggestion || !edCode) return; if (edCode.value !== edAiSourceCode) { edAiSetStatus("Code changed — request again", false); return; } var a = edAiStart, b = edAiEnd; if (edAiReplace && a === b) { a = 0; b = edCode.value.length; } edCode.value = edAiReplace ? edCode.value.slice(0, a) + edAiSuggestion + edCode.value.slice(b) : edCode.value.slice(0, a) + edAiSuggestion + edCode.value.slice(a); edScheduleAutoSave(); edAiClosePanel(); edAiSetStatus("Applied", true); try { edCode.focus(); edCode.setSelectionRange(a + edAiSuggestion.length, a + edAiSuggestion.length); } catch (_) {} });
+      apply.addEventListener("click", function (e) { e.stopPropagation(); if (!edAiSuggestion || !edCode) return; if (edCode.value !== edAiSourceCode) { edAiSetStatus("Code changed — request again", false); return; } var a = edAiStart, b = edAiEnd; if (edAiReplace && a === b) { a = 0; b = edCode.value.length; } edCode.value = edAiReplace ? edCode.value.slice(0, a) + edAiSuggestion + edCode.value.slice(b) : edCode.value.slice(0, a) + edAiSuggestion + edCode.value.slice(a); edScheduleAutoSave(); edScheduleDraft(); edAiClosePanel(); edAiSetStatus("Applied", true); try { edCode.focus(); edCode.setSelectionRange(a + edAiSuggestion.length, a + edAiSuggestion.length); } catch (_) {} });
       edAiPanel.appendChild(apply);
       var copy = document.createElement("button"); copy.className = "ed-ai-btn"; copy.type = "button"; copy.textContent = "copy";
       copy.addEventListener("click", function (e) { e.stopPropagation(); try { navigator.clipboard.writeText(edAiSuggestion); edAiSetStatus("Copied", true); } catch (_) {} }); edAiPanel.appendChild(copy);
@@ -42623,7 +42648,11 @@ var ABANDONED_CALL_MS = 30000;
     edRefreshPicker(edName && edName.value.trim() ? edName.value.trim() : null);
     // seed (+ focus) in a tick so it runs AFTER any synchronous edLoad/edNew from edit() — it then
     // sees the final buffer state and only fills a genuinely blank first-visit slate.
-    if (edCode) setTimeout(function () { edMaybeSeedStarter(); try { edCode.focus({ preventScroll: true }); } catch (e) {} }, 60);
+    if (edCode) setTimeout(function () {
+      var draft = readEditorDraft();
+      if (draft && edCode.value === "" && !(edName.value || "").trim() && (draft.code || draft.name)) { edName.value = String(draft.name || ""); edCode.value = String(draft.code || ""); edLastSavedName = null; edRefreshPicker(null); }
+      edMaybeSeedStarter(); try { edCode.focus({ preventScroll: true }); } catch (e) {}
+    }, 60);
     playLaptopClickSound("office-monitor");
   }
   window.__setMonitorEditorDraft = function (code, name) {
@@ -42631,6 +42660,7 @@ var ABANDONED_CALL_MS = 30000;
     if (edName) edName.value = String(name || "chat-draft");
     edCode.value = String(code || "");
     edLastSavedName = null;
+    edScheduleDraft();
     edRefreshPicker(null);
     try { edCode.focus({ preventScroll: true }); edCode.setSelectionRange(0, 0); } catch (e) {}
     return true;
@@ -42639,6 +42669,7 @@ var ABANDONED_CALL_MS = 30000;
     if (!monitor.classList.contains("show-editor")) return;
     if (typeof edAcHide === "function") edAcHide(); // drop any open autocomplete popup with the app
     edFlushAutoSave(); // commit any pending debounced save before the app tears down (Esc is faster than the debounce)
+    edFlushDraft();
     monitor.classList.remove("show-editor");
     if (edCode) { try { edCode.blur(); } catch (e) {} }
     if (edName) { try { edName.blur(); } catch (e) {} }
@@ -42724,8 +42755,8 @@ var ABANDONED_CALL_MS = 30000;
   if (edAskBtn) edAskBtn.addEventListener("click", function (e) { e.stopPropagation(); var q = edAskInput && edAskInput.value.trim(); if (!q) { if (edAskInput) edAskInput.focus(); return; } edAiRequest("ask", q); });
   if (edAskInput) edAskInput.addEventListener("keydown", function (e) { e.stopPropagation(); if (e.key === "Enter") { e.preventDefault(); if (edAskBtn) edAskBtn.click(); } });
   [edAskBtn, edExplainBtn, edFixBtn, edCompleteBtn].forEach(function (button) { if (button) button.addEventListener("mousedown", function (e) { e.preventDefault(); }); });
-  if (edCode) edCode.addEventListener("input", function () { edScheduleAutoSave(); });
-  if (edName) edName.addEventListener("input", function () { edScheduleAutoSave(); }); // rename persists too (Save is gone)
+  if (edCode) edCode.addEventListener("input", function () { edScheduleAutoSave(); edScheduleDraft(); });
+  if (edName) edName.addEventListener("input", function () { edScheduleAutoSave(); edScheduleDraft(); }); // rename persists too (Save is gone)
   // ── editor autocomplete ──────────────────────────────────────────────────────────
   // A caret-anchored popup that completes loft console command NAMES as you type in the code
   // buffer, each row showing the command + its (dimmed, truncated) help line. Reads the SAME
@@ -78331,6 +78362,29 @@ function spawnDustMote(container) {
   window.__saveLoftCheckpoint = saveCheckpoint;
   window.__clearLoftCheckpoint = clearCheckpoint;
   window.__loadLoftCheckpoint = loadCheckpoint;
+
+  // Portable handoff for a long playthrough. Deliberately export only puzzle/progress state:
+  // messages, photos, scripts, and other personal or bulky stores never leave this browser.
+  var LOFT_SESSION_VERSION = 1;
+  function loftSessionExport() {
+    var saved = loadCheckpoint() || checkpointPayload();
+    return JSON.stringify({
+      kind: "loft-session", version: LOFT_SESSION_VERSION, savedAt: Date.now(),
+      progress: saved.progress || {}, puzzle: saved.puzzle || {}
+    });
+  }
+  function loftSessionImport(raw) {
+    var data;
+    try { data = typeof raw === "string" ? JSON.parse(raw) : raw; } catch (_error) { return false; }
+    if (!data || data.kind !== "loft-session" || data.version !== LOFT_SESSION_VERSION || !data.progress || !data.puzzle) return false;
+    if (STAGES.indexOf(data.progress.room) === -1) return false;
+    var saved = { version: LOFT_CHECKPOINT_VERSION, savedAt: Date.now(), progress: data.progress, puzzle: data.puzzle, phone: null, album: null };
+    try { localStorage.setItem(LOFT_CHECKPOINT_KEY, JSON.stringify(saved)); } catch (_error2) {}
+    applyCheckpoint(saved);
+    return true;
+  }
+  window.loftSessionExport = loftSessionExport;
+  window.loftSessionImport = loftSessionImport;
 
   function recoveryAge(savedAt) {
     var mins = Math.max(0, Math.floor((Date.now() - (+savedAt || Date.now())) / 60000)), key = "recovery_just_now", n = 0;

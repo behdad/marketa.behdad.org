@@ -604,7 +604,7 @@ while the browser is hidden. As with the console, do not import or run untrusted
 
 `loft.api` is the supported programmatic facade for integrations and tests. It
 uses named queries and allowlisted actions, validates arguments, reports current
-availability, and emits events for successful state-changing API actions. Prefer
+availability, and emits events for durable state transitions. Prefer
 it to console helper aliases when writing external automation.
 
 ```js
@@ -692,15 +692,18 @@ families are:
 | `sky.effect.set` | `{ effect: "none" | "aurora" | "twilight" }` |
 | `call.incoming.trigger` | `{ caller: "madla" | "prague" }` |
 | `call.video.start` | `{ contact: "prague" | "lubeck" }` |
+| `call.hangup` | End the active or incoming call |
 | `bar.cocktail.make` | `{ drink }` using a discovered cocktail slug |
 | `bar.mixer.start` | `{ recipe: "negroni" | "yale" }` |
 | `minigame.start` | `{ game: "invaders" | "flair-catch" }` |
+| `minigame.stop` | End the active minigame |
+| `album.remove` | `{ id }`; remove one Album record by its numeric id |
 | `scene.activity.start` | `{ activity: "kids-chase" | "butterfly" | "rainbow" }` |
 
 The optional action `source` is diagnostic text, not authority. The API still
-validates and gates every action. Subscriptions report successful state-changing
-actions performed through this API, not arbitrary player clicks, animation
-frames, or sound effects.
+validates and gates every action. Subscriptions report semantic transitions from
+typed actions, direct player controls, and tracked autonomous systems. They do
+not report animation frames, minigame score ticks, or sound effects.
 
 ## Troubleshooting
 
@@ -793,6 +796,7 @@ node tests/phone-lock.js
 node tests/mobile-controls.js
 node tests/party-lifecycle.js
 node tests/status-api.js
+node tests/api-state-events.js
 node tests/message-context.js
 node tests/message-resilience.js
 node tests/message-typed-actions.js

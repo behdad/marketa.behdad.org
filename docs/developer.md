@@ -75,9 +75,12 @@ visibility condition changes. This keeps declaration order loose, but it also me
 usually needs to notify several existing controllers.
 
 `loft.api` has a registry of typed queries and actions. It validates argument shapes and enum values,
-reports capability/availability information, and emits `loft:statechange` after an API action changes
-state. Its `stateVersion` covers changes made through the API; it is not a complete revision counter
-for every direct click, timer, or internal mutation.
+reports capability/availability information, and emits `loft:statechange` after a semantic state
+transition. `stateVersion` advances for typed actions and for direct mutations owned by rooms,
+daylight, party/BBQ, Messages, apps, calls, music/transport, projector, weather/forecasts, minigame
+lifecycle, and Album storage. Composite typed actions coalesce their synchronous owner mutations
+into one revision. Visual-only animation frames, minigame score ticks, and every incidental closure
+field are deliberately not revisions.
 
 Language is another shared state axis. User-facing copy lives in the `T.en` and `T.cs` dictionaries,
 with static fallback text where needed. Any English copy change must be mirrored in Czech.
@@ -422,7 +425,8 @@ For programmatic integrations, prefer:
   `room.occupants`, `people.locations`, `party.status`, `audio.status`, `calendar.events`,
   `weather.cities`, `album.list`, and `trip.status`;
 - `loft.api.perform(id, args)` for validated actions;
-- `loft.api.subscribe(fn)` or the `loft:statechange` event for API-originated state changes.
+- `loft.api.subscribe(fn)` or the `loft:statechange` event for semantic state changes from typed
+  actions, direct UI/console use, and tracked autonomous transitions.
 
 The many `window.__...State`, `__...Now`, `__advance...`, and `__reset...` functions are targeted
 debug/test hooks. They are often the fastest way to inspect a controller, but callers outside this
@@ -507,7 +511,8 @@ This guide intentionally omits host access, credential values, and exact deploym
 - Keep Worker and client typed action definitions aligned and deny arbitrary execution at both
   boundaries.
 - Keep private Chat auto-actions distinct from Messages tap-to-run suggestions.
-- Do not treat `loft.api.stateVersion` as a universal state revision.
+- Do not advance `loft.api.stateVersion` for animation frames or incidental counters; wire new
+  durable query state through its central owner and emit one semantic revision.
 - Do not expose a new tracked internal file without checking `.htaccess` coverage.
 
 ## Debug entry points

@@ -47,6 +47,7 @@ const ACTION_SPECS = Object.freeze({
   "party.moment.start": Object.freeze({ moment: new Set(["first-dance", "slow-dance", "toasts", "group-photo", "sparklers", "cake", "bouquet-toss", "chair-lift"]) }),
   "call.incoming.trigger": Object.freeze({ caller: new Set(["madla", "prague"]) }),
   "call.video.start": Object.freeze({ contact: new Set(["prague", "lubeck"]) }),
+  "call.hangup": Object.freeze({}),
   "bar.cocktail.make": Object.freeze({ drink: new Set([
     "orange-cookie", "blue-kamikaze", "caesar", "campari-gin-tonic", "campari-spritz", "dirty-martini",
     "lavender-black", "long-beach-iced-tea", "manhattan", "margarita", "mexican-mule", "miami-beach",
@@ -55,6 +56,7 @@ const ACTION_SPECS = Object.freeze({
   ]) }),
   "bar.mixer.start": Object.freeze({ recipe: new Set(["negroni", "yale"]) }),
   "minigame.start": Object.freeze({ game: new Set(["invaders", "flair-catch"]) }),
+  "minigame.stop": Object.freeze({}),
   "scene.activity.start": Object.freeze({ activity: new Set(["kids-chase", "butterfly", "rainbow"]) }),
 });
 
@@ -95,7 +97,7 @@ While a party is active, a direct request to keep it going, continue it, or canc
 When no party is active, a direct request such as "party", "start the party", or "let's party" should use party.set with on:true. Never describe a last song, wind-down, dance floor, or active party when current game state.party is false.
 A direct request such as "night time", "make it night", "day time", or "bring back daylight" should use daylight.set with on:false for night and on:true for day. If the requested state already matches current game state.daylight, say so instead of requesting an action.
 
-For an explicit request, party.moment.start can begin one of the authored wedding moments; call.incoming.trigger can make Madla or Prague ring in; call.video.start places a laptop call to Prague or Lübeck; bar.cocktail.make asks Pouria to prepare one real menu drink; bar.mixer.start begins the hands-on Negroni or Yale mixer; minigame.start launches Invaders or Flair-Catch; and scene.activity.start begins the kids' chase, stained-glass butterfly, or balcony rainbow. Use the exact enum value from the catalog. A polite modal question such as "can we do the toasts?" is a request; a factual question such as "what are the toasts?" is not. Do not turn a mere mention or factual discussion into an action.
+For an explicit request, party.moment.start can begin one of the authored wedding moments; call.incoming.trigger can make Madla or Prague ring in; call.video.start places a laptop call to Prague or Lübeck; call.hangup ends the current ringing or live call; bar.cocktail.make asks Pouria to prepare one real menu drink; bar.mixer.start begins the hands-on Negroni or Yale mixer; minigame.start launches Invaders or Flair-Catch; minigame.stop ends the active minigame; and scene.activity.start begins the kids' chase, stained-glass butterfly, or balcony rainbow. Use the exact enum value from the catalog. A polite modal question such as "can we do the toasts?" is a request; a factual question such as "what are the toasts?" is not. Do not turn a mere mention or factual discussion into an action.
 
 Never claim or guess that today is anyone's birthday or another special event unless current game state.active_occasion explicitly identifies it. The date by itself is not evidence of an occasion.
 
@@ -127,7 +129,7 @@ While a party is active, a direct request to keep it going, continue it, or canc
 When no party is active, a direct request such as "party", "start the party", or "party more" should suggest party.set with on:true. Never describe a last song, wind-down, dance floor, or active party when current game state.party is false.
 A direct request such as "night time", "make it night", "day time", or "bring back daylight" should be answered by Charlie with daylight.set: on:false for night and on:true for day. If the requested state already matches current game state.daylight, Charlie should simply say so without an action.
 
-For an explicit request, party.moment.start can suggest one authored wedding moment; call.incoming.trigger can make Madla or Prague ring in; call.video.start places a laptop call to Prague or Lübeck; bar.cocktail.make asks Pouria to prepare one real menu drink; bar.mixer.start begins the hands-on Negroni or Yale mixer; minigame.start launches Invaders or Flair-Catch; and scene.activity.start begins the kids' chase, stained-glass butterfly, or balcony rainbow. Use the exact enum value from the catalog. Pouria should answer cocktail, mixer, or Flair-Catch requests; Behdad should answer Invaders requests when available. A polite modal question such as "can we do the toasts?" is a request; a factual question such as "what are the toasts?" is not. Do not attach an action to a mere mention, joke, or factual discussion.
+For an explicit request, party.moment.start can suggest one authored wedding moment; call.incoming.trigger can make Madla or Prague ring in; call.video.start places a laptop call to Prague or Lübeck; call.hangup ends the current ringing or live call; bar.cocktail.make asks Pouria to prepare one real menu drink; bar.mixer.start begins the hands-on Negroni or Yale mixer; minigame.start launches Invaders or Flair-Catch; minigame.stop ends the active minigame; and scene.activity.start begins the kids' chase, stained-glass butterfly, or balcony rainbow. Use the exact enum value from the catalog. Pouria should answer cocktail, mixer, or Flair-Catch requests; Behdad should answer Invaders requests when available. A polite modal question such as "can we do the toasts?" is a request; a factual question such as "what are the toasts?" is not. Do not attach an action to a mere mention, joke, or factual discussion.
 
 Reply in the language and script of the visitor's latest message. Be warm, playful, and specific, but keep the message to at most two short sentences. Let humor follow the supplied character details instead of making everyone sound alike; Behdad especially enjoys dad jokes and puns. A natural callback may quote one supplied recent message, including one earlier in the thread, but do not force a joke or a callback. Always spell Markéta's name with the accent.
 

@@ -32268,6 +32268,7 @@ document.addEventListener("click", function (e) {
     if (window.__updateTotoroMelody) window.__updateTotoroMelody(); // woodland melody follows the totoro channel
     if (window.__updateTotoroWatch) window.__updateTotoroWatch(); // Irene & Robin sit to watch when totoro comes on (and leave when it goes off)
     if (reduceMotion) renderStill(); else start();
+    if (prev !== current && window.__loftStateChanged) window.__loftStateChanged("media.projector", { mode: current }, "internal");
   }
 
   if (chanObj[current].init) chanObj[current].init();
@@ -34429,6 +34430,7 @@ function gameTapsNear(a, b) {
       spawnAlien(180, -18); spawnAlien(430, -52); // a couple already on the way in
       arcadeLastT = 0;
       arcadeRaf = requestAnimationFrame(arcadeFrame);
+      if (window.__loftStateChanged) window.__loftStateChanged("minigame.change", { game: "invaders", active: true }, "ui");
     }
 
     function arcadeFlourish(n, gameOver, newBest) {
@@ -34481,6 +34483,7 @@ function gameTapsNear(a, b) {
         else if (window.restoreStageHint) window.restoreStageHint("office");
       }
       if (wasActive && gameOver) arcadeFlourish(finalScore, true, newBest); // "game over ·×N" when a saucer gets through; leaving the room ends it silently
+      if (wasActive && window.__loftStateChanged) window.__loftStateChanged("minigame.change", { game: "invaders", active: false, score: finalScore }, "ui");
     }
 
     // tear down if the tab hides or the window loses focus mid-game (pointerup may never come)
@@ -34510,7 +34513,7 @@ function gameTapsNear(a, b) {
     };
     window.__arcadeStop = stopArcade;
     window.__startArcade = startArcade; // a phone message ("did you see the invaders?") can kick off the office arcade
-    window.__arcadeState = function () { return { active: arcadeActive, raf: arcadeRaf, aliens: arcadeAliens.length, shots: arcadeShots.length }; };
+    window.__arcadeState = function () { return { active: arcadeActive, raf: arcadeRaf, aliens: arcadeAliens.length, shots: arcadeShots.length, score: arcadeScore, high: arcadeHigh() }; };
 
     // ── cinematic autopilot ──────────────────────────────────────────────────
     // The guided tour can't perform a real chair drag, so this arms the arcade and steers
@@ -37257,6 +37260,7 @@ function gameTapsNear(a, b) {
       flairBuildHud();
       flairLastT = 0;
       flairRaf = requestAnimationFrame(flairFrame);
+      if (window.__loftStateChanged) window.__loftStateChanged("minigame.change", { game: "flair-catch", active: true }, "ui");
     }
 
     // every FLAIR_MILESTONE catches: a bright chime (panned to the bartender) + a gold shockwave ring
@@ -37312,6 +37316,7 @@ function gameTapsNear(a, b) {
       bartender.style.transition = ""; // restore the smooth glide once the paddle game's over
       if (wasActive && window.restoreStageHint) window.restoreStageHint("kitchen"); // put the room/bar hint back
       if (wasActive && gameOver) flairFlourish(finalScore); // three misses → "last call"; leaving/hiding ends it silently
+      if (wasActive && window.__loftStateChanged) window.__loftStateChanged("minigame.change", { game: "flair-catch", active: false, score: finalScore }, "ui");
     }
     window.stopFlairCatch = stopFlairCatch;
 
@@ -38422,6 +38427,10 @@ var ABANDONED_CALL_MS = 30000;
     function inCall() {
       return laptop.classList.contains("calling") || laptop.classList.contains("connecting") || laptop.classList.contains("connected");
     }
+    window.__laptopCallState = function () {
+      var status = laptop.classList.contains("connected") ? "connected" : laptop.classList.contains("connecting") ? "connecting" : laptop.classList.contains("calling") ? "calling" : null;
+      return { active: !!status, status: status, contact: status ? (callCallee === "lueb" ? "lubeck" : "prague") : null };
+    };
     function anyCall() { return inCall() || !!(window.__familyCallLive && window.__familyCallLive()) || !!window.__phoneCallFamily; } // a live pocket-phone call counts too, so the laptop/monitor can't start one over it (they share the per-family audio modules)
     // the monitor's Tehran call checks both of these before starting
     window.__pragueCallLive = function () { return inCall() && callCallee === "prague"; };
@@ -39322,6 +39331,27 @@ var ABANDONED_CALL_MS = 30000;
     .map(function (id) { return document.getElementById(id); })
     .filter(Boolean);
   var selectedSongAudio = null; // most recently started track, including while paused mid-song
+  function loftSongState() {
+    var active = null, playing = false;
+    for (var i = 0; i < songAudios.length; i++) {
+      var audio = songAudios[i];
+      if (!audio || audio.ended) continue;
+      if (!audio.paused) { active = audio.id; playing = true; break; }
+      if (!active && audio.currentTime > 0) active = audio.id;
+    }
+    if (!active && selectedSongAudio && !selectedSongAudio.ended && selectedSongAudio.currentTime > 0) active = selectedSongAudio.id;
+    return { track: active, playing: playing, transport_paused: !!window.__musicPaused };
+  }
+  var lastLoftSongState = JSON.stringify(loftSongState());
+  function syncLoftSongState(reason, source) {
+    var state = loftSongState(), signature = JSON.stringify(state);
+    if (signature === lastLoftSongState) return false;
+    lastLoftSongState = signature;
+    state.reason = reason || "playback";
+    if (window.__loftStateChanged) window.__loftStateChanged("media.music", state, source || "ui");
+    return true;
+  }
+  window.__syncLoftMusicState = syncLoftSongState;
   // three real recordings: Markéta's card song plus the two birthday loft performances
   var SONG_INFO = {
     "tumbala-song-audio": "♪ Tumbalalaika — Markéta Jakešová",
@@ -40209,8 +40239,10 @@ var ABANDONED_CALL_MS = 30000;
     }
   }
   songAudios.forEach(function (a) {
-    a.addEventListener("play", function () { selectedSongAudio = a; updateNowPlaying(); });
-    a.addEventListener("pause", updateNowPlaying);
+    a.addEventListener("play", function () { selectedSongAudio = a; updateNowPlaying(); syncLoftSongState("playback"); });
+    a.addEventListener("pause", function () { updateNowPlaying(); syncLoftSongState("playback"); });
+    // Auto-advance owns the final ended state below. Reporting here would briefly publish
+    // "stopped" and then "playing next" as two revisions for one semantic transition.
     a.addEventListener("ended", updateNowPlaying);
     // keep the pocket phone's Music screen in sync on auto-advance / monitor-driven changes,
     // and resync the rail play/pause button + name the track in the now-playing toast
@@ -40238,6 +40270,7 @@ var ABANDONED_CALL_MS = 30000;
       if (window.__captureSongAudio) window.__captureSongAudio(next);
       var p = next.play();
       if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (auto-advance) for " + next.id + ":", e); });
+      syncLoftSongState("track");
     } catch (e) {}
   }
   window.__playSongAt = playSongAt; // shared with the monitor's prev/next transport buttons
@@ -40253,6 +40286,7 @@ var ABANDONED_CALL_MS = 30000;
   window.__phoneMusicToggle = function () {
     if (window.__phoneMusicPlaying()) {
       songAudios.forEach(function (a) { if (a && !a.paused) a.pause(); });
+      syncLoftSongState("pause");
       return false;
     }
     var resume = selectedSongAudio ? songAudios.indexOf(selectedSongAudio) : -1;
@@ -40261,6 +40295,7 @@ var ABANDONED_CALL_MS = 30000;
       if (resume < 0 && songAudios[i] && songAudios[i].currentTime > 0 && !songAudios[i].ended) { resume = i; break; }
     }
     playSongAt(resume >= 0 ? resume : Math.floor(Math.random() * songAudios.length));
+    syncLoftSongState("play");
     return true;
   };
   window.__phoneMusicTitle = function () {
@@ -40863,7 +40898,7 @@ var ABANDONED_CALL_MS = 30000;
       return copy(detail);
     }
     var api = {
-      version: 2,
+      version: 3,
       get stateVersion() { return stateVersion; },
       capabilities: function (options) {
         options = options || {};
@@ -40899,7 +40934,7 @@ var ABANDONED_CALL_MS = 30000;
           try { return def.run(checked.value, options); }
           finally { activeAction = previousAction; }
         }).then(function (value) {
-          var changed = !(value && value.changed === false);
+          var changed = stateVersion !== beforeVersion || !(value && value.changed === false);
           if (changed && stateVersion === beforeVersion) recordChange(id, checked.value, options.source || "api");
           return result(true, "completed", { changed: changed, value: value && Object.prototype.hasOwnProperty.call(value, "value") ? value.value : value });
         }, function (error) { return fail("FAILED", String(error && error.message || error)); });
@@ -40981,7 +41016,7 @@ var ABANDONED_CALL_MS = 30000;
       var arcade = window.__arcadeState ? window.__arcadeState() : {}, flair = window.__flairState ? window.__flairState() : {};
       return {
         active: arcade.active ? "invaders" : flair.active ? "flair-catch" : null,
-        invaders: { active: !!arcade.active, aliens: Number(arcade.aliens) || 0, shots: Number(arcade.shots) || 0 },
+        invaders: { active: !!arcade.active, aliens: Number(arcade.aliens) || 0, shots: Number(arcade.shots) || 0, score: Number(arcade.score) || 0, high_score: Number(arcade.high) || 0 },
         flair_catch: { active: !!flair.active, score: Number(flair.score) || 0, misses: Number(flair.miss) || 0, high_score: Number(flair.high) || 0 }
       };
     }
@@ -40989,8 +41024,42 @@ var ABANDONED_CALL_MS = 30000;
       var phone = phoneState(), laptop = document.getElementById("office-laptop"), monitor = document.getElementById("office-monitor"), family = document.getElementById("monitor-family");
       var laptopStatus = laptop && laptop.classList.contains("connected") ? "connected" : laptop && laptop.classList.contains("connecting") ? "connecting" : laptop && laptop.classList.contains("calling") ? "calling" : null;
       var monitorStatus = monitor && monitor.classList.contains("show-family") ? (family && family.classList.contains("connected") ? "connected" : family && family.classList.contains("picking") ? "dialer" : "calling") : null;
-      return { busy: callBusy(), incoming: !!document.querySelector(".call-ring.show"), phone: phone.call || null, laptop: laptopStatus, monitor: monitorStatus };
+      return {
+        busy: callBusy(), incoming: !!document.querySelector(".call-ring.show"), phone: phone.call || null,
+        laptop: window.__laptopCallState ? window.__laptopCallState() : { active: !!laptopStatus, status: laptopStatus, contact: null },
+        monitor: window.__familyCallState ? window.__familyCallState() : { active: !!monitorStatus, status: monitorStatus, contact: null }
+      };
     }
+    function currentAppState() { var phone = phoneState(); return { monitor: monitorAppState(), phone: phone.open ? (phone.app || "home") : null, phone_open: !!phone.open }; }
+    var lastCallSignature = JSON.stringify(callState()), lastAppSignature = JSON.stringify(currentAppState()), observedCallNodes = [], callSyncTimer = null;
+    function syncCallState(reason, source) {
+      var state = callState(), signature = JSON.stringify(state);
+      if (signature === lastCallSignature) return false;
+      lastCallSignature = signature;
+      state.reason = reason || "lifecycle";
+      recordChange("calls.changed", state, source || "internal");
+      return true;
+    }
+    function syncAppState(reason, source) {
+      var state = currentAppState(), signature = JSON.stringify(state);
+      if (signature === lastAppSignature) return false;
+      lastAppSignature = signature;
+      state.reason = reason || "navigation";
+      recordChange("apps.changed", state, source || "internal");
+      return true;
+    }
+    function observeCallNode(node) {
+      if (!node || observedCallNodes.indexOf(node) >= 0 || typeof MutationObserver === "undefined") return;
+      observedCallNodes.push(node);
+      new MutationObserver(function () {
+        clearTimeout(callSyncTimer);
+        callSyncTimer = setTimeout(function () { callSyncTimer = null; syncCallState("lifecycle", "autonomous"); syncAppState("navigation", "internal"); }, 0);
+      }).observe(node, { attributes: true, attributeFilter: ["class"] });
+    }
+    window.__syncLoftCallState = syncCallState;
+    window.__syncLoftAppState = syncAppState;
+    window.__observeLoftCallNode = observeCallNode;
+    ["office-laptop", "office-monitor", "monitor-family"].forEach(function (id) { observeCallNode(document.getElementById(id)); });
     function gameBusyState() {
       var reasons = [], games = minigameState(), calls = callState();
       if (games.active) reasons.push(games.active);
@@ -41123,17 +41192,23 @@ var ABANDONED_CALL_MS = 30000;
 
     register({ id: "room.go", kind: "action", risk: "ambient", args: { room: { type: "string", enum: ROOMS, required: true } }, available: function (args) { var max = window.__maxUnlocked ? window.__maxUnlocked() : window.currentStageIndex || 0; return ROOMS.indexOf(args.room) <= max; }, run: function (args) { var before = window.currentStageName; if (window.goToStage) window.goToStage(args.room); return { changed: before !== window.currentStageName, room: args.room }; } });
     register({ id: "app.open", kind: "action", risk: "ambient", args: { app: { type: "string", enum: ["chat", "weather", "calendar", "messages", "mail", "call", "music", "album", "tattoo", "photos"].concat(PHONE_APPS.filter(function (app) { return ["messages", "album"].indexOf(app) < 0; })), required: true } }, run: function (args) {
+      var beforeApp = currentAppState(), beforeState = JSON.stringify(beforeApp);
       var phoneApps = {}; PHONE_APPS.forEach(function (app) { phoneApps[app] = app; });
-      if (phoneApps[args.app] && window.__openPhoneAppHere) return { app: args.app, device: "phone", result: window.__openPhoneAppHere(phoneApps[args.app]) };
+      if (phoneApps[args.app] && beforeApp.phone_open && beforeApp.phone === args.app) return { changed: false, app: args.app, device: "phone", result: true };
+      if (phoneApps[args.app] && window.__openPhoneAppHere) { var phoneResult = window.__openPhoneAppHere(phoneApps[args.app]); syncAppState("opened", "ui"); return { changed: beforeState !== JSON.stringify(currentAppState()), app: args.app, device: "phone", result: phoneResult }; }
       if (args.app === "weather") {
         if (window.goToStage) window.goToStage("office");
         if (window.computer && !window.computer()) window.computer(true);
         if (window.__monitorZoomIn) window.__monitorZoomIn();
         if (window.__openMonitorWeather) window.__openMonitorWeather();
-        return { app: "weather", device: "monitor" };
+        syncAppState("opened", "ui");
+        return { changed: beforeState !== JSON.stringify(currentAppState()), app: "weather", device: "monitor" };
       }
       var monitorApp = args.app === "photos" ? "photobooth" : args.app;
-      return { app: args.app, device: "monitor", result: window.__openMonitorApp ? window.__openMonitorApp(monitorApp) : false };
+      if (beforeApp.monitor === monitorApp) return { changed: false, app: args.app, device: "monitor", result: true };
+      var monitorResult = window.__openMonitorApp ? window.__openMonitorApp(monitorApp) : false;
+      syncAppState("opened", "ui");
+      return { changed: beforeState !== JSON.stringify(currentAppState()), app: args.app, device: "monitor", result: monitorResult };
     } });
     register({ id: "message.send", kind: "action", risk: "external", description: "Send a bounded message as the visitor to the wedding thread.", args: { text: { type: "string", required: true, minLength: 1, maxLength: 500 } }, available: function () { return typeof window.__sendCrewMessage === "function"; }, run: function (args) {
       var text = args.text.trim();
@@ -41147,8 +41222,8 @@ var ABANDONED_CALL_MS = 30000;
       return { changed: before !== after, level: after };
     } });
     register({ id: "roster.set", kind: "action", risk: "ambient", args: { open: { type: "boolean", required: true } }, available: function () { return !!window.__secondRound; }, run: function (args) { return { open: window.roster ? window.roster(args.open) : false }; } });
-    register({ id: "music.play", kind: "action", risk: "ambient", run: function () { if (!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()) && window.__phoneMusicToggle) window.__phoneMusicToggle(); return { playing: !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()) }; } });
-    register({ id: "music.pause", kind: "action", risk: "ambient", run: function () { if (window.__phoneMusicPlaying && window.__phoneMusicPlaying() && window.__phoneMusicToggle) window.__phoneMusicToggle(); return { playing: !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()) }; } });
+    register({ id: "music.play", kind: "action", risk: "ambient", run: function () { var before = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()); if (!before && window.__phoneMusicToggle) window.__phoneMusicToggle(); var after = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()); return { changed: before !== after, playing: after }; } });
+    register({ id: "music.pause", kind: "action", risk: "ambient", run: function () { var before = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()); if (before && window.__phoneMusicToggle) window.__phoneMusicToggle(); var after = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()); return { changed: before !== after, playing: after }; } });
     register({ id: "music.skip", kind: "action", risk: "ambient", available: function () { return !window.__gardenPartyOn; }, run: function () { if (window.__phoneMusicSkip) window.__phoneMusicSkip(1); return { track: window.__phoneMusicId ? window.__phoneMusicId() : null }; } });
     register({ id: "music.previous", kind: "action", risk: "ambient", run: function () { if (window.__phoneMusicSkip) window.__phoneMusicSkip(-1); return { track: window.__phoneMusicId ? window.__phoneMusicId() : null }; } });
     register({ id: "music.track.play", kind: "action", risk: "ambient", args: { track: { type: "string", enum: Object.keys(TRACKS), required: true } }, run: function (args) { if (window.__playSongAt) window.__playSongAt(TRACKS[args.track]); return { track: args.track }; } });
@@ -41174,7 +41249,7 @@ var ABANDONED_CALL_MS = 30000;
       var extended = !!(window.__extendPartyLifecycle && window.__extendPartyLifecycle());
       return { changed: extended, extended: extended, on: !!window.__gardenPartyOn };
     } });
-    register({ id: "bbq.set", kind: "action", risk: "ambient", args: { on: { type: "boolean", required: true } }, run: function (args) { if (window.bbq) window.bbq(args.on); return { on: !!(window.bbq && window.bbq()) }; } });
+    register({ id: "bbq.set", kind: "action", risk: "ambient", args: { on: { type: "boolean", required: true } }, run: function (args) { var before = !!(window.bbq && window.bbq()); if (window.bbq) window.bbq(args.on); var after = !!(window.bbq && window.bbq()); return { changed: before !== after, on: after }; } });
     register({ id: "coffee.make", kind: "action", risk: "ambient", run: function () {
       if (window.__gardenPartyOn) {
         if (window.__setPartyMode) window.__setPartyMode(false, true);
@@ -41187,7 +41262,7 @@ var ABANDONED_CALL_MS = 30000;
     register({ id: "photo.take", kind: "action", risk: "ambient", available: function () { return !!window.__gardenPartyOn && typeof window.__photogSnap === "function"; }, run: function () {
       var room = window.currentStageName || "garden";
       var rec = window.__photogSnap(room, false, true);
-      return { taken: true, room: room, photo_id: rec && rec.id || null };
+      return { changed: !!rec, taken: !!rec, room: room, photo_id: rec && rec.id || null };
     } });
     register({ id: "fishu.speak", kind: "action", risk: "ambient", run: function () {
       var moving = window.currentStageName !== "cuddly";
@@ -41217,8 +41292,8 @@ var ABANDONED_CALL_MS = 30000;
       else if (window.__requestDance) window.__requestDance(args.style);
       return { style: args.style, dance: window.__partyDance || null };
     } });
-    register({ id: "party.dj.set", kind: "action", risk: "ambient", args: { dj: { type: "string", enum: ["sina", "danesh"], required: true } }, available: function () { return !!window.__gardenPartyOn; }, run: function (args) { if (window.dj) window.dj(args.dj); return { dj: window.__djB ? "danesh" : "sina" }; } });
-    register({ id: "projector.set", kind: "action", risk: "ambient", args: { mode: { type: "string", enum: ["off", "stars", "workout", "totoro", "aqua"], required: true } }, run: function (args) { if (window.goToStage) window.goToStage("cuddly"); if (window.__cuddlyProjector) window.__cuddlyProjector.set(args.mode); return { mode: args.mode }; } });
+    register({ id: "party.dj.set", kind: "action", risk: "ambient", args: { dj: { type: "string", enum: ["sina", "danesh"], required: true } }, available: function () { return !!window.__gardenPartyOn; }, run: function (args) { var before = window.__djB ? "danesh" : "sina"; if (window.dj) window.dj(args.dj); var after = window.__djB ? "danesh" : "sina"; return { changed: before !== after, dj: after }; } });
+    register({ id: "projector.set", kind: "action", risk: "ambient", args: { mode: { type: "string", enum: ["off", "stars", "workout", "totoro", "aqua"], required: true } }, run: function (args) { var beforeRoom = window.currentStageName, before = window.__cuddlyProjector && window.__cuddlyProjector.channel ? window.__cuddlyProjector.channel() : null; if (window.goToStage) window.goToStage("cuddly"); if (window.__cuddlyProjector) window.__cuddlyProjector.set(args.mode); var after = window.__cuddlyProjector && window.__cuddlyProjector.channel ? window.__cuddlyProjector.channel() : null; return { changed: before !== after || beforeRoom !== window.currentStageName, mode: after }; } });
     register({ id: "weather.scene.set", kind: "action", risk: "ambient", args: { mode: { type: "string", enum: ["clear", "rain", "thunderstorm", "overcast"], required: true } }, run: function (args) {
       var rain = args.mode === "rain" || args.mode === "thunderstorm", storm = args.mode === "thunderstorm", overcast = args.mode === "overcast";
       if (typeof window.rain === "function") window.rain(rain);
@@ -41240,6 +41315,7 @@ var ABANDONED_CALL_MS = 30000;
     register({ id: "call.incoming.trigger", kind: "action", risk: "scene", args: { caller: { type: "string", enum: ["madla", "prague"], required: true } }, available: function () { return !callBusy() && typeof window.__madlaRing === "function" && typeof window.__pragueRing === "function"; }, run: function (args) {
       if (phoneState().open && window.__closePhoneModal) window.__closePhoneModal(true);
       var rang = args.caller === "madla" ? window.__madlaRing() : window.__pragueRing();
+      if (rang) syncCallState("incoming", "ui");
       return { changed: !!rang, caller: args.caller, ringing: !!rang };
     } });
     register({ id: "call.video.start", kind: "action", risk: "scene", args: { contact: { type: "string", enum: ["prague", "lubeck"], required: true } }, available: function () {
@@ -41248,7 +41324,18 @@ var ABANDONED_CALL_MS = 30000;
     }, run: function (args) {
       if (window.goToStage) window.goToStage("office");
       var live = window.__laptopCall(args.contact === "lubeck" ? "lueb" : "prague");
+      if (live) syncCallState("outgoing", "ui");
       return { changed: !!live, contact: args.contact, calling: !!live };
+    } });
+    register({ id: "call.hangup", kind: "action", risk: "ambient", available: callBusy, run: function () {
+      var before = callBusy();
+      if (document.querySelector(".call-ring.show") && window.__hideCallRing) window.__hideCallRing();
+      if (phoneState().call && window.__hangupPhoneCall) window.__hangupPhoneCall();
+      if (window.__laptopCallLive && window.__laptopCallLive() && window.__endLaptopCall) window.__endLaptopCall();
+      if (window.__familyCallLive && window.__familyCallLive() && window.__closeMonitorFamily) window.__closeMonitorFamily();
+      syncCallState("hangup", "ui");
+      var after = callBusy();
+      return { changed: before && !after, scheduled: before && after };
     } });
     register({ id: "bar.cocktail.make", kind: "action", risk: "scene", args: { drink: { type: "string", enum: Object.keys(COCKTAILS), required: true } }, available: bartenderAvailable, run: function (args) {
       if (typeof window.__makeCocktail !== "function") throw new Error("The bar is not ready.");
@@ -41274,6 +41361,17 @@ var ABANDONED_CALL_MS = 30000;
         window.__startFlairCatch();
       }
       return { game: args.game, started: true };
+    } });
+    register({ id: "minigame.stop", kind: "action", risk: "ambient", available: minigameRunning, run: function () {
+      var before = minigameState(), game = before.active;
+      if (game === "invaders" && window.__arcadeStop) window.__arcadeStop();
+      else if (game === "flair-catch" && window.__flairStop) window.__flairStop();
+      var after = minigameState();
+      return { changed: before.active !== after.active, game: game, active: after.active };
+    } });
+    register({ id: "album.remove", kind: "action", risk: "destructive", args: { id: { type: "integer", min: 1, required: true } }, available: function () { return typeof window.__albumRemove === "function"; }, run: function (args) {
+      var removed = window.__albumRemove(args.id);
+      return { changed: !!removed, removed: !!removed, id: args.id };
     } });
     register({ id: "scene.activity.start", kind: "action", risk: "scene", args: { activity: { type: "string", enum: ["kids-chase", "butterfly", "rainbow"], required: true } }, available: function () { return !!window.__secondRound; }, run: function (args) {
       var fn = args.activity === "kids-chase" ? window.chase : args.activity === "butterfly" ? window.butterfly : window.rainbow;
@@ -44070,6 +44168,10 @@ var ABANDONED_CALL_MS = 30000;
   function clearFamilyTimers() { familyTimers.forEach(clearTimeout); familyTimers = []; }
   function familyLive() { return monitor.classList.contains("show-family"); }
   window.__familyCallLive = familyLive; // the laptop's calls check this before starting
+  window.__familyCallState = function () {
+    var status = !familyLive() ? null : familyG && familyG.classList.contains("connected") ? "connected" : familyG && familyG.classList.contains("picking") ? "dialer" : "calling";
+    return { active: !!status, status: status, contact: status && status !== "dialer" ? currentCallee : null };
+  };
   function familyT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
   function setFamilyStatus(key) {
     familyStatusKey = key;
@@ -46502,6 +46604,7 @@ async def localfont(name):
     if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // re-sync groovers (incl. the bartender's party groove) to the new play/pause state
     if (window.__syncDanceFreeze) window.__syncDanceFreeze(); // pause-during-party also FREEZES the dancing so tooltips can be read
+    if (window.__syncLoftMusicState) window.__syncLoftMusicState("transport", "ui");
   }
   // Freeze all party dancing while the music is paused DURING the garden party (owner: a space-bar
   // pause should still the crowd so you can hover the tooltips and check who's who). Tied to the
@@ -48472,6 +48575,12 @@ async def localfont(name):
     var sizzleTimer = null, tempTimer = null, temp = 0;
     var burgers = smoker.querySelectorAll(".smoker-burger");
     var tempEl = document.getElementById("balcony-smoker-temp");
+    function bbqState() { return { on: !!smoking, open: !!lidOpen, temperature: temp }; }
+    function reportBBQ(before, source) {
+      var after = bbqState();
+      if (before.on === after.on && before.open === after.open) return;
+      if (window.__loftStateChanged) window.__loftStateChanged("bbq.change", after, source || "ui");
+    }
     function updateTemp() { if (tempEl) tempEl.textContent = temp > 0 ? temp + "°" : ""; }
     // Heats quickly to 400 but cools slowly (stays warm a while), and always
     // steps from the current temp — so a quick off/on resumes, not back to 50.
@@ -48551,25 +48660,29 @@ async def localfont(name):
       }
       burgers.forEach(cookBurger);
     }
-    function toggleFire() {
+    function toggleFire(silentReport) {
+      var before = bbqState();
       smoking = !smoking;
       smoker.classList.toggle("smoking", smoking);
       setFire(smoking); // heats up, or starts the slow cool-down
       if (smoking) {
         seedSmoke(); // top up the plume (it keeps going through the cool-down)
         // cooking starts from tempTick once the grill reaches 300°, not the instant it's lit
-        if (!firstLightDone) { firstLightDone = true; if (!lidOpen) toggleLid(); } // first light lifts the lid so the food's on show
+        if (!firstLightDone) { firstLightDone = true; if (!lidOpen) toggleLid(true); } // first light lifts the lid so the food's on show
       }
       if (smoking && window.__forceBalconyGrillmaster) window.__forceBalconyGrillmaster(); // lighting the BBQ (day, night, or party) summons Hamid to tend it (guaranteed, not the ~50% roll)
       else if (window.__updateBalconyGrillmaster) window.__updateBalconyGrillmaster(); // else just re-gate
       if (window.__syncPartyBBQ) window.__syncPartyBBQ(); // party + hot smoker owns the natural room split, independent of day/night
+      if (silentReport !== true) reportBBQ(before, "ui");
     }
-    function toggleLid() {
+    function toggleLid(silentReport) {
+      var before = bbqState();
       lidOpen = !lidOpen;
       smoker.classList.toggle("open", lidOpen);
       playMetalClinkSound(lidOpen ? 0.7 : 0.55, "balcony-smoker-lid");
       if (lidOpen) spawnSteamWisps(strip, 3176, 170, 0.7);
-      if (lidOpen && !firstLidDone) { firstLidDone = true; if (!smoking) toggleFire(); } // first lid-open also fires up the BBQ
+      if (lidOpen && !firstLidDone) { firstLidDone = true; if (!smoking) toggleFire(true); } // first lid-open also fires up the BBQ
+      if (silentReport !== true) reportBBQ(before, "ui");
     }
     smokerFirebox.addEventListener("click", toggleFire);
     smokerFirebox.addEventListener("keydown", function (e) {
@@ -48611,11 +48724,20 @@ async def localfont(name):
       return isTofu ? "tofu" : "burger";
     };
     // Fire up the BBQ on demand (Behdad's "let's start the BBQ" text): lid up + fire on, idempotent.
-    window.__startBBQ = function () {
-      if (!smoker.classList.contains("open")) toggleLid();
-      if (!smoker.classList.contains("smoking")) toggleFire();
+    window.__startBBQ = function (source) {
+      var before = bbqState();
+      if (!smoker.classList.contains("open")) toggleLid(true);
+      if (!smoker.classList.contains("smoking")) toggleFire(true);
+      reportBBQ(before, source || "internal");
+    };
+    window.__stopBBQ = function (source) {
+      var before = bbqState();
+      if (smoker.classList.contains("smoking")) toggleFire(true);
+      if (smoker.classList.contains("open")) toggleLid(true);
+      reportBBQ(before, source || "internal");
     };
     window.resetSmoker = function () {
+      var before = bbqState();
       if (sizzleTimer) clearInterval(sizzleTimer);
       if (tempTimer) clearInterval(tempTimer);
       sizzleTimer = null;
@@ -48631,6 +48753,7 @@ async def localfont(name):
       burgers.forEach(function (b) { b.classList.remove("served", "done"); b.style.transition = ""; });
       if (window.__updateBalconyGrillmaster) window.__updateBalconyGrillmaster(); // a cold BBQ has no grillmaster
       if (window.__syncPartyBBQ) window.__syncPartyBBQ();
+      reportBBQ(before, "internal");
     };
   }
   var lighter = document.getElementById("balcony-lighter");
@@ -49051,6 +49174,7 @@ async def localfont(name):
           '</div>' +
         '</div>';
       shell = modal.querySelector(".phone-shell");
+      if (window.__observeLoftCallNode) window.__observeLoftCallNode(shell);
       (function () { // "m ∞ b" reception — fewer bars the farther your timezone sits from Edmonton (by tz offset only)
         var lvl = 4;
         try {
@@ -49224,6 +49348,7 @@ async def localfont(name):
     function showScreen(name) {
       shell.classList.remove("pm-home", "pm-app", "pm-recents", "pm-incall", "booting");
       shell.classList.add(name === "home" ? "pm-home" : name === "app" ? "pm-app" : name === "recents" ? "pm-recents" : "pm-incall");
+      if (window.__syncLoftAppState) window.__syncLoftAppState("navigation", "ui");
     }
     function leaveCurrentApp() {
       if (currentApp === "mines" && window.__phoneUnmountMines) window.__phoneUnmountMines();
@@ -49734,6 +49859,7 @@ async def localfont(name):
       if (callee || anyExternalCall()) return; // one call at a time (this phone or the monitor/laptop)
       callee = city;
       callConnected = false; callHangingUp = false; callIncoming = false;
+      if (window.__syncLoftCallState) window.__syncLoftCallState("outgoing", "ui");
       selectedCity = city;
       var cfg = CITIES[city];
       var ic = shell.querySelector(".phone-incall");
@@ -49756,6 +49882,7 @@ async def localfont(name):
     function connectCall() {
       if (!callee) return;
       callConnected = true;
+      if (window.__syncLoftCallState) window.__syncLoftCallState("connected", "autonomous");
       var ic = shell.querySelector(".phone-incall");
       if (ic) ic.classList.add("connected");
       refreshCallText();
@@ -49827,19 +49954,20 @@ async def localfont(name):
         playILoveYouSound("balcony-phone", CITIES[callee].pitch); // that city's pitched goodbye
         var selfEl = shell && shell.querySelector(".phone-incall .pic-self");
         if (selfEl) { selfEl.classList.add("saying"); setTimeout(function () { selfEl.classList.remove("saying"); }, 1500); } // their mouths move as they whisper "I love you"
-        setTimeout(function () { callHangingUp = false; dropCall(false); }, 1500);
+        setTimeout(function () { callHangingUp = false; dropCall(false, false, auto ? "autonomous" : "ui"); }, 1500);
       } else {
-        dropCall(false, quiet); // mid-ring, or nobody there to hear it: no goodbye
+        dropCall(false, quiet, auto ? "autonomous" : "ui"); // mid-ring, or nobody there to hear it: no goodbye
       }
     }
     // silent = the phone itself is going away (no tone, no dialer); quiet = an ordinary
     // hang-up nobody's around to hear, so only the tone goes
-    function dropCall(silent, quiet) {
+    function dropCall(silent, quiet, source) {
       clearCallTimers();
       stopCallAmbient();
       phoneLifeStop(); // belt-and-braces: every teardown path (mid-ring drop, leaving the balcony) lands clean
       var was = callee;
       callee = null; callConnected = false; callStatusKey = ""; callIncoming = false;
+      if (window.__syncLoftCallState) window.__syncLoftCallState("ended", source || (silent ? "internal" : "ui"));
       if (shell) {
         var ic = shell.querySelector(".phone-incall");
         if (ic) {
@@ -49866,6 +49994,7 @@ async def localfont(name):
       if (!shell) build();
       callee = city;
       callConnected = false; callHangingUp = false; callIncoming = true;
+      if (window.__syncLoftCallState) window.__syncLoftCallState("answered", "ui");
       var cfg = CITIES[city];
       var ic = shell.querySelector(".phone-incall");
       ic.classList.remove("connected");
@@ -49888,6 +50017,7 @@ async def localfont(name):
         callTimers.push(setTimeout(function () { hangup(true); }, MADLA_CALL_MS)); // ~30s then auto-hangup
       }, 2600));
     }
+    window.__hangupPhoneCall = hangup;
 
     // ── phone-call visual liveliness ─────────────────────────────────────────────────
     // Each family is rendered as a CLONE of the office scene (cloneScene, ids kept as
@@ -50320,7 +50450,8 @@ async def localfont(name):
       };
     };
     window.__chatPhoneState = function () {
-      return { open: isOpen(), app: currentApp || null, call: callee ? { person_or_place: callee, connected: !!callConnected, incoming: !!callIncoming } : null };
+      var surface = shell && shell.classList.contains("pm-incall") ? "call" : shell && shell.classList.contains("pm-recents") ? "recents" : currentApp || null;
+      return { open: isOpen(), app: surface, call: callee ? { person_or_place: callee, connected: !!callConnected, incoming: !!callIncoming } : null };
     };
     function groupChatRecentMessages() {
       return messagesThread.slice(-12).map(function (id) {
@@ -53458,6 +53589,7 @@ async def localfont(name):
         if (shell) shell.focus();
       }
       updateMsgBadge(); // phone open → drop the unread badge (it must not float over the phone)
+      if (window.__syncLoftAppState) window.__syncLoftAppState("opened", "ui");
     }
     function close(silent) {
       if (!modal) return;
@@ -53480,7 +53612,7 @@ async def localfont(name):
       if (modal.parentNode) {
         modal.classList.remove("show");
         var m = modal;
-        setTimeout(function () { if (m.parentNode && !modal.classList.contains("show")) m.parentNode.removeChild(m); updateMsgBadge(); }, 220); // phone gone → restore the unread badge
+        setTimeout(function () { if (m.parentNode && !modal.classList.contains("show")) m.parentNode.removeChild(m); updateMsgBadge(); if (window.__syncLoftAppState) window.__syncLoftAppState("closed", "ui"); }, 220); // phone gone → restore the unread badge
       }
     }
     window.__openPhoneModal = open;
@@ -54247,6 +54379,7 @@ async def localfont(name):
         declineBtn.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); e.preventDefault(); hideCallRing(); } });
       }
       if (callRingEl.parentNode !== host) host.appendChild(callRingEl);
+      if (window.__observeLoftCallNode) window.__observeLoftCallNode(callRingEl);
       var ringCfg = RING_CALLERS[callRingWho];
       callRingEl.querySelector(".call-ring-from").textContent = tr(ringCfg.fromKey);
       callRingEl.querySelector(".call-ring-sub").textContent = tr(ringCfg.subKey);
@@ -55723,6 +55856,15 @@ async def localfont(name):
   var modelCur = [null, null]; // per-city {code,temp} from Open-Meteo, request order
   var metarCur = [null, null]; // per-city {code,temp,at} decoded from METAR, same order
   var METAR_FRESH_MS = 90 * 60000;
+  var lastPublishedWeather = JSON.stringify({ edm: null, prg: null, ec: null, pc: null, daily: null });
+  function reportPublishedWeather() {
+    var snapshot = { edm: window.__realWx, prg: window.__realWxPrague, ec: window.__realOutdoorC, pc: window.__realPragueC, daily: window.__realDaily };
+    var signature;
+    try { signature = JSON.stringify(snapshot); } catch (_error) { return; }
+    if (signature === lastPublishedWeather) return;
+    lastPublishedWeather = signature;
+    if (window.__loftStateChanged) window.__loftStateChanged("weather.forecast", { cities: ["edmonton", "prague"] }, "autonomous");
+  }
   function applyCurrent() {
     for (var i = 0; i < 2; i++) {
       var obs = metarCur[i], mod = modelCur[i];
@@ -55749,6 +55891,7 @@ async def localfont(name):
     }
     if (window.refreshWeatherText) window.refreshWeatherText(); // monitor weather app
     if (window.__refreshPhoneWeather) window.__refreshPhoneWeather(); // open pocket weather app, without touching other apps
+    reportPublishedWeather();
   }
   // one raw METAR line -> {code (synthetic WMO for __wmoGlyph/__realWxRainy), temp, at}.
   // Only the report body is read (everything before RMK); phenomenon priority rides the
@@ -68472,6 +68615,7 @@ function spawnDustMote(container) {
     window.__djSwapCount = 0;
     applyDjBooth();
     announceDj();
+    if (window.__loftStateChanged) window.__loftStateChanged("party.dj", { dj: window.__djB ? "danesh" : "sina" }, "ui");
   };
   function advanceDance() { // advance to the next dance in the rotation, crossfade the beds, glide the dancers
     var order = PARTY_DANCE_ORDER || ["techno"];
@@ -68488,6 +68632,7 @@ function spawnDustMote(container) {
     // flipPartyMode) makes manual skips count too. Piggybacks the rotation — no new timer.
     window.__djSwapCount = (window.__djSwapCount || 0) + 1;
     if (window.__djSwapCount % 3 === 0) { window.__djB = !window.__djB; applyDjBooth(); announceDj(); }
+    if (window.__loftStateChanged) window.__loftStateChanged("party.dance", { dance: window.__partyDance, dj: window.__djB ? "danesh" : "sina" }, "autonomous");
   }
   function flipPartyMode() {
     waltzAltTimer = null;
@@ -68519,6 +68664,7 @@ function spawnDustMote(container) {
     // swap counter alone (a manual set isn't a rotation "advance")
     if (waltzAltTimer) { clearTimeout(waltzAltTimer); waltzAltTimer = null; }
     startWaltzAlternation();
+    if (window.__loftStateChanged) window.__loftStateChanged("party.dance", { dance: window.__partyDance, dj: window.__djB ? "danesh" : "sina" }, "ui");
     return true;
   };
   function startWaltzAlternation() { // idempotent — setGardenParty(true) is storm-called by play.js
@@ -70438,6 +70584,15 @@ function spawnDustMote(container) {
   var albumSeq = 0;                   // monotonic id so the app can key/track cards
   var albumLastSubject = "";          // the last shot's subject-id, so we don't shoot the same subject twice running
   var albumTaken = {};                // every group already photographed (by people-signature) — NEVER shoot the same group twice
+  function reportAlbumChange(reason, rec, source) {
+    if (!window.__loftStateChanged) return;
+    window.__loftStateChanged("album.changed", {
+      reason: reason,
+      id: rec && rec.id != null ? rec.id : null,
+      kind: rec && rec.selfie ? "selfie" : rec && rec.groupPhoto ? "group" : rec && rec.roomShot ? "room" : "portrait",
+      total: albumShots.length
+    }, source || "ui");
+  }
   function shotSig(members) { return (members || []).map(function (m) { return m.key; }).sort().join(","); } // canonical key for a group (host-anchored, so hosts excluded)
   function revokeAlbumRecord(rec) {
     if (!rec || !rec.selfieUrl || typeof URL === "undefined" || !URL.revokeObjectURL) return;
@@ -70700,6 +70855,7 @@ function spawnDustMote(container) {
     };
     albumShots.push(rec);
     trimAlbumShots();
+    reportAlbumChange("added", rec, force ? "ui" : "autonomous");
     // NOTE: deliberately DON'T live-refresh the open album on a new capture — the re-render made the
     // grid jump while you were browsing. New photos simply appear the next time the app is opened.
     // once the album's built up a few keepsakes, Aspen nudges you to take a look (once, at ≥5)
@@ -70739,6 +70895,7 @@ function spawnDustMote(container) {
     };
     albumShots.push(rec);
     trimAlbumShots();
+    reportAlbumChange("added", rec, force ? "ui" : "autonomous");
     return rec;
   };
   // A distinct GROUP PHOTO keepsake — the WHOLE crowd (hosts + everyone on the floor, crew aside),
@@ -70759,6 +70916,7 @@ function spawnDustMote(container) {
     var rec = { id: ++albumSeq, t: Date.now(), people: people, subjectId: "group-photo", groupPhoto: true, dance: window.__partyDance || "", season: albumSeasonName(), uv: albumUvOn(), room: window.currentStageName === "balcony" ? "balcony" : "", sky: albumSkyState(window.currentStageName) };
     albumShots.push(rec);
     trimAlbumShots();
+    reportAlbumChange("added", rec, "ui");
     if (window.__albumRefresh) window.__albumRefresh(); // a big deliberate shot: refresh the open album so it shows at once
     return rec;
   };
@@ -70775,6 +70933,7 @@ function spawnDustMote(container) {
       existing.filter = String(options.filter || "none").slice(0, 80);
       existing.frame = String(options.frame || "none").slice(0, 24);
       if (window.__albumRefresh) window.__albumRefresh();
+      reportAlbumChange("updated", existing, "ui");
       return existing;
     }
     var selfies = albumShots.filter(function (shot) { return shot.selfie; });
@@ -70790,13 +70949,16 @@ function spawnDustMote(container) {
     };
     albumShots.push(rec); trimAlbumShots();
     if (window.__albumRefresh) window.__albumRefresh();
+    reportAlbumChange("added", rec, "ui");
     return rec;
   };
   window.__albumRemove = function (id) {
     for (var i = 0; i < albumShots.length; i++) {
       if (String(albumShots[i].id) !== String(id)) continue;
-      revokeAlbumRecord(albumShots[i]); albumShots.splice(i, 1); rebuildAlbumTaken();
+      var removed = albumShots[i];
+      revokeAlbumRecord(removed); albumShots.splice(i, 1); rebuildAlbumTaken();
       if (window.__albumRefresh) window.__albumRefresh();
+      reportAlbumChange("removed", removed, "ui");
       return true;
     }
     return false;
@@ -70858,7 +71020,7 @@ function spawnDustMote(container) {
     });
     if (window.__albumRefresh) window.__albumRefresh();
   }
-  window.__albumClear = function () { albumShots.forEach(revokeAlbumRecord); albumShots = []; albumSeq = 0; albumMomentSnapped = false; albumLastSubject = ""; albumTaken = {}; seedAlbum(); if (window.__albumRefresh) window.__albumRefresh(); }; // loft reset drops the live roll but re-seeds the photoshoot
+  window.__albumClear = function () { var changed = albumShots.some(function (shot) { return shot && !shot.shoot; }); albumShots.forEach(revokeAlbumRecord); albumShots = []; albumSeq = 0; albumMomentSnapped = false; albumLastSubject = ""; albumTaken = {}; seedAlbum(); if (window.__albumRefresh) window.__albumRefresh(); if (changed) reportAlbumChange("reset", null, "internal"); }; // loft reset drops the live roll but re-seeds the photoshoot
   seedAlbum(); // seed on load
   // ── PARTY MODE kids' chase (garden) — Irene, Robin & Navid always make up the core;
   // Elisabeth, Felix, Patricia’s son and Patricia’s daughter may join after their own family reaches the party.
@@ -71884,37 +72046,53 @@ function spawnDustMote(container) {
       if (window.__applyBalconyWeather) window.__applyBalconyWeather();
       else if (window.__updateGardenAurora) window.__updateGardenAurora();
     }
+    function weatherLayers() { return { rain: !!window.__wxRain, storm: !!window.__wxStorm, overcast: !!window.__wxOvercast }; }
+    function reportWeatherLayers(before, source) {
+      var after = weatherLayers();
+      if (before.rain === after.rain && before.storm === after.storm && before.overcast === after.overcast) return;
+      if (window.__loftStateChanged) window.__loftStateChanged("environment.weather", after, source || "internal");
+    }
     // set the three layers independently. RAIN drives the falling drops (seeded here); the LIGHTNING
     // layer is driven by the continuous thunder scheduler (which reads __wxStorm); OVERCAST is the
     // grey daytime wash. Each is a pure toggle so they compose (rain+storm = a classic thunderstorm,
     // storm alone = a dry lightning storm).
-    window.__setBalconyRain = function (on) {
+    window.__setBalconyRain = function (on, source) {
+      var before = weatherLayers();
       window.__wxRain = !!on;
       apply();
       if (on) topUpDrops(); // fill the sky, counting whatever's still falling
+      reportWeatherLayers(before, source);
       return !!window.__wxRain;
     };
-    window.__setBalconyStormLayer = function (on) {
+    window.__setBalconyStormLayer = function (on, source) {
+      var before = weatherLayers();
       window.__wxStorm = !!on; // the scheduler flashes/rumbles while this is set on a dusk balcony
       apply();
+      reportWeatherLayers(before, source);
       return !!window.__wxStorm;
     };
-    window.__setBalconyOvercast = function (on) {
+    window.__setBalconyOvercast = function (on, source) {
+      var before = weatherLayers();
       window.__wxOvercast = !!on;
       apply();
+      reportWeatherLayers(before, source);
       return !!window.__wxOvercast;
     };
     function clearAll() {
+      var before = weatherLayers();
       timers.forEach(clearTimeout);
       timers = [];
       window.__wxRain = false;   // drops stop replenishing -> rain fades in ~1s
       window.__wxStorm = false;  // lightning scheduler goes quiet
       apply();
+      reportWeatherLayers(before, "autonomous");
     }
     function endStorm() {
+      var before = weatherLayers();
       window.__wxRain = false;
       window.__wxStorm = false;
       apply();
+      reportWeatherLayers(before, "autonomous");
       timers.push(setTimeout(startStorm, 165000 + Math.random() * 135000)); // next storm in ~2.75-5 min
     }
     function startStorm() {
@@ -71924,11 +72102,13 @@ function spawnDustMote(container) {
       // resume the moment the show ends.
       if (window.__cinematic) { timers.push(setTimeout(startStorm, 8000)); return; }
       if (!isDuskBalcony()) { clearAll(); return; }
+      var before = weatherLayers();
       var wet = Math.random() < 0.7; // roll each storm: mostly a classic downpour+lightning, sometimes a DRY lightning storm
       window.__wxRain = wet;     // wet roll → rain drops + streaks; dry roll → lightning only
       window.__wxStorm = true;   // the continuous thunder scheduler picks up the flashes/rumble either way
       apply();
       if (wet) topUpDrops(); // fill the sky, counting whatever's still falling from the last storm
+      reportWeatherLayers(before, "autonomous");
       timers.push(setTimeout(endStorm, 14000 + Math.random() * 8000)); // this storm lasts ~14-22s, then passes
     }
     window.__startBalconyStormCycle = function () {
@@ -80722,6 +80902,7 @@ function spawnDustMote(container) {
     if (window.__applySfxMaster) window.__applySfxMaster();       // scale the SFX master gain
     if (window.__reapplyMusicLevels) window.__reapplyMusicLevels(); // re-push to live songs + beds
     if (window.echo) window.echo("🔊 master volume " + Math.round(nv * 100) + "%");
+    if (prev !== nv && window.__loftStateChanged) window.__loftStateChanged("audio.volume", { level: nv }, "ui");
     return prev; // the OLD level, so it's restorable
   };
 
@@ -81015,9 +81196,9 @@ function spawnDustMote(container) {
     var prev = !!window.__wxStorm;
     if (arguments.length === 0 || !window.__setBalconyStormLayer) return prev; // no arg → is the lightning storm on?
     var on = !!arg; // storm(true) → dry lightning storm on; storm(false) → off; returns the previous state
-    if (!on) { window.__setBalconyStormLayer(false); narrate(false, "", "🌤 the lightning passes — the storm quiets."); return prev; }
+    if (!on) { window.__setBalconyStormLayer(false, "ui"); narrate(false, "", "🌤 the lightning passes — the storm quiets."); return prev; }
     if (window.goToStage) window.goToStage("balcony"); // storms roll over the balcony (day or night — day/night is rain()/day()'s business, not storm's)
-    window.__setBalconyStormLayer(true);
+    window.__setBalconyStormLayer(true, "ui");
     narrate(true, "⛈ a dry thunderstorm cracks over the balcony — lightning + thunder, no rain (works day or night; add rain(true) for the downpour, day()/night() to set the sky).", "");
     return prev;
   };
@@ -81025,9 +81206,9 @@ function spawnDustMote(container) {
     var prev = !!window.__wxRain;
     if (arguments.length === 0 || !window.__setBalconyRain) return prev; // no arg → is it raining?
     var on = !!arg; // rain(true) → precip on; rain(false) → off; returns the previous state
-    if (!on) { window.__setBalconyRain(false); narrate(false, "", "🌤 the rain lets up."); return prev; }
+    if (!on) { window.__setBalconyRain(false, "ui"); narrate(false, "", "🌤 the rain lets up."); return prev; }
     if (window.goToStage) window.goToStage("balcony"); // the rain sweeps the balcony sky (+ shows through every window)
-    window.__setBalconyRain(true); // falls day or night; pair with storm(true) for a classic thunderstorm
+    window.__setBalconyRain(true, "ui"); // falls day or night; pair with storm(true) for a classic thunderstorm
     narrate(true, "🌧 rain sweeps in over the balcony.", "");
     return prev;
   };
@@ -81037,7 +81218,7 @@ function spawnDustMote(container) {
     var on = !!arg; // overcast(true) → grey cloud wash on; overcast(false) → off; returns the previous state
     if (on && window.goToStage) window.goToStage("balcony");
     if (on && window.__setDayNight) window.__setDayNight(false); // the grey wash reads against daylight
-    window.__setBalconyOvercast(on);
+    window.__setBalconyOvercast(on, "ui");
     narrate(on, "☁ a grey overcast settles over the loft.", "☀ the overcast clears.");
     return prev;
   };
@@ -81050,6 +81231,14 @@ function spawnDustMote(container) {
   //   aurora(0–9)   → pin that Kp and summon it: ~2 is a faint smudge low in the north, 5 a
   //                   real display, 7+ a storm reaching up the sky with its red crown
   // The paint + its rAF loop are driven by __setAurora / __setAuroraKp / __updateGardenAurora.
+  function consoleSkyState() {
+    var au = window.__auroraStatus ? window.__auroraStatus() : null;
+    return { aurora: au ? { showing: !!au.showing, kp: Number(au.kp) || 0, why: au.why || "" } : null, twilight: !!(window.__setTwilight && window.__setTwilight()) };
+  }
+  function reportConsoleSky(before) {
+    var after = consoleSkyState();
+    if (JSON.stringify(before) !== JSON.stringify(after) && window.__loftStateChanged) window.__loftStateChanged("environment.sky", after, "ui");
+  }
   window.aurora = function (arg) {
     if (!window.__setAurora) return false;
     if (arguments.length === 0 || arg == null) { // no arg → status (pure, no override change)
@@ -81060,21 +81249,23 @@ function spawnDustMote(container) {
         st.depression.toFixed(0) + "° below the horizon, sky " + (st.cloudy ? "clouded over" : "clear") + "." +
         (st.showing ? "" : " aurora(true) to summon them, or aurora(7) for a storm.");
     }
+    var beforeSky = consoleSkyState();
     var kp = typeof arg === "number" ? arg : null;
     if (kp != null && (!isFinite(kp) || kp < 0 || kp > 9)) return "🌌 the planetary Kp index runs 0–9 — aurora(2) is a faint smudge, aurora(5) a real display, aurora(8) a storm.";
-    if (kp == null && !arg) { var r = window.__setAurora(false); narrate(r, "", "🌌 the northern lights fade out."); return r; }
+    if (kp == null && !arg) { var r = window.__setAurora(false); narrate(r, "", "🌌 the northern lights fade out."); reportConsoleSky(beforeSky); return r; }
     if (window.goToStage) window.goToStage("garden");     // the aurora hangs in the garden window
     if (window.__forceBalconyStorm) window.__forceBalconyStorm(false); // a clear night — no rain/lightning over the aurora
     if (window.__setBalconyOvercast) window.__setBalconyOvercast(false); // …and no grey overcast either
     if (window.__setDayNight) window.__setDayNight(true); // the lights need the night sky
     if (window.__setAuroraKp) window.__setAuroraKp(kp);   // a bare aurora(true) hands the index back to the sky (which floors a summoned one into storm territory)
     var shown = window.__setAurora(true);
-    if (kp == null) { narrate(shown, "🌌 the northern lights ripple over the garden.", "🌌 the northern lights are drifting somewhere overhead."); return shown; }
+    if (kp == null) { narrate(shown, "🌌 the northern lights ripple over the garden.", "🌌 the northern lights are drifting somewhere overhead."); reportConsoleSky(beforeSky); return shown; }
     var look = kp >= 7 ? "a full storm — curtains climbing the sky under a red crown"
       : kp >= 4.5 ? "a real display, folding and drifting"
       : kp >= 2 ? "a faint green smudge low in the north"
       : "barely a glow on the horizon";
     narrate(shown, "🌌 Kp " + kp + " over the loft — " + look + ".", "🌌 Kp " + kp + " — " + look + ", somewhere overhead.");
+    reportConsoleSky(beforeSky);
     return shown;
   };
 
@@ -81094,10 +81285,12 @@ function spawnDustMote(container) {
         (s ? ", from about " + Math.round(s.naut) + " min either side of one today" : "") +
         ". twilight(true) to summon it.";
     }
+    var beforeSky = consoleSkyState();
     var on = !!arg;
     if (on && window.goToStage) window.goToStage("balcony"); // the wash is over the balcony sky
     var r = window.__setTwilight(on);
     narrate(on, "🌅 twilight settles over the balcony.", "🌅 twilight fades.");
+    reportConsoleSky(beforeSky);
     return r;
   };
 
@@ -81278,6 +81471,7 @@ function spawnDustMote(container) {
       var booth = document.getElementById("garden-djbooth");
       if (booth) booth.classList.toggle("dj-b", want);
       window.__djSwapCount = 0; // a manual swap → the next auto every-3 swap is a full set out
+      if (window.__loftStateChanged) window.__loftStateChanged("party.dj", { dj: DJ_NAMES[idx] }, "ui");
     }
     return "🎧 " + DJ_NAMES[idx] + " takes the decks.";
   };
@@ -81352,12 +81546,8 @@ function spawnDustMote(container) {
     var prev = !!(s && s.classList.contains("smoking"));
     if (arguments.length === 0 || !s) return prev;
     if (window.goToStage) window.goToStage("balcony");
-    if (arg) { if (window.__startBBQ) window.__startBBQ(); }
-    else {
-      var fb = document.getElementById("balcony-smoker-firebox"), lid = document.getElementById("balcony-smoker-lid");
-      if (s.classList.contains("smoking") && fb) fb.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      if (s.classList.contains("open") && lid) lid.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    }
+    if (arg) { if (window.__startBBQ) window.__startBBQ("ui"); }
+    else if (window.__stopBBQ) window.__stopBBQ("ui");
     narrate(!!arg, "🍔 BBQ's on — lid up, coals lit.", "🍔 BBQ's out.");
     return prev;
   };

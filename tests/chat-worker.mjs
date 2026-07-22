@@ -206,8 +206,8 @@ let actionCase = await normalizedPrivateReply(
 check(actionCase.status === 200 && actionCase.reply.action?.id === "app.open" && actionCase.reply.action?.args?.app === "messages", "a valid currently available Charlie action is returned", actionCase);
 
 const fullActionList = [
-  "app.open", "bar.cocktail.make", "bar.mixer.start", "bbq.set", "call.incoming.trigger", "call.video.start",
-  "coffee.make", "daylight.set", "fishu.speak", "minigame.start", "music.pause", "music.play", "music.previous",
+  "app.open", "bar.cocktail.make", "bar.mixer.start", "bbq.set", "call.hangup", "call.incoming.trigger", "call.video.start",
+  "coffee.make", "daylight.set", "fishu.speak", "minigame.start", "minigame.stop", "music.pause", "music.play", "music.previous",
   "music.skip", "music.track.play", "party.dance.request", "party.dj.set", "party.extend", "party.moment.start",
   "party.music.next", "party.set", "photo.take", "projector.set", "room.go", "roster.set", "scene.activity.start",
   "trip.start", "not.real",
@@ -249,7 +249,7 @@ actionCase = await normalizedPrivateReply(
 );
 check(actionCase.reply.action === null, "a canonical action is discarded when the browser did not advertise it as currently available", actionCase);
 
-for (const id of ["music.previous", "daylight.set", "party.music.next", "party.set", "party.extend", "bbq.set", "coffee.make", "photo.take", "trip.start"]) {
+for (const id of ["music.previous", "daylight.set", "party.music.next", "party.set", "party.extend", "bbq.set", "coffee.make", "photo.take", "trip.start", "call.hangup", "minigame.stop"]) {
   const args = id === "daylight.set" || id === "party.set" || id === "bbq.set" ? { on: true } : id === "trip.start" ? { variant: "molly" } : {};
   actionCase = await normalizedPrivateReply(
     JSON.stringify({ text: "Doing that.", action: { id, args } }),

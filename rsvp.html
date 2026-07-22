@@ -4838,6 +4838,8 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .pm-msg-line{display:flex; align-items:flex-end; gap:5px; width:100%; min-width:0}
 .pm-msg-row.outgoing .pm-msg-line{justify-content:flex-end}
 .pm-msg-bubble{background:var(--paper); border:1px solid var(--rule); border-radius:13px 13px 13px 3px; padding:5px 10px 6px; font-size:12.5px; line-height:1.34; color:var(--ink); max-width:88%; overflow-wrap:anywhere}
+.pm-msg-bubble.actionable{cursor:pointer; border-color:rgba(151,58,79,.42)}
+.pm-msg-bubble.actionable:hover,.pm-msg-bubble.actionable:focus-visible{border-color:var(--wine); outline:2px solid rgba(142,58,74,.18); outline-offset:1px}
 .pm-msg-act{flex:none; width:28px; height:28px; padding:0; border:0; border-radius:50%; background:var(--wine); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(142,58,74,.28)}
 .pm-msg-act:hover,.pm-msg-act:focus-visible{background:#743143; outline:2px solid rgba(142,58,74,.25); outline-offset:1px}
 .pm-msg-act svg{width:15px; height:15px}
@@ -49762,6 +49764,12 @@ async def localfont(name):
         }
         var line = document.createElement("div"); line.className = "pm-msg-line"; line.appendChild(bub);
         if (!m.outgoing && (m.act || m.chatAction)) {
+          if (m.chatAction) {
+            bub.classList.add("actionable"); bub.setAttribute("role", "button"); bub.setAttribute("tabindex", "0");
+            bub.setAttribute("aria-label", tr("mon_ctx_open"));
+            bub.addEventListener("click", function (e) { e.stopPropagation(); runMsgAction(id); });
+            bub.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); runMsgAction(id); } });
+          }
           var actBtn = document.createElement("button"); actBtn.type = "button"; actBtn.className = "pm-msg-act";
           actBtn.setAttribute("aria-label", tr("mon_ctx_open")); actBtn.setAttribute("title", tr("mon_ctx_open"));
           actBtn.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';

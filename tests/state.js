@@ -599,6 +599,8 @@ var PROBE_HARNESS = [
   "    ok('console discovery: pull-tab starts hidden', !!consoleTab && getComputedStyle(consoleTab).display === 'none');",
   "    if (window.__openKbdHelp) window.__openKbdHelp();",
   "    ok('console discovery: shortcut card does not advertise backtick', ![].some.call(document.querySelectorAll('.kbd-keys kbd'), function (k) { return k.textContent === '`'; }));",
+  "    var manualLink = document.querySelector('.kbd-manual');",
+  "    ok('keyboard shortcuts: game manual opens externally', !!manualLink && manualLink.target === '_blank' && /docs\\/game-manual\\.md$/.test(manualLink.href));",
   "    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));",
   "    if (monitorConsoleIn) { monitorConsoleIn.value = 'loft'; monitorConsoleIn.dispatchEvent(new Event('input', { bubbles: true })); }",
   "    ok('console discovery: scripted monitor input does not reveal the pull-tab', !!consoleTab && !has('loft-console-hint', 'discovered') && getComputedStyle(consoleTab).display === 'none');",

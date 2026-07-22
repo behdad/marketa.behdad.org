@@ -28,7 +28,7 @@ var HARNESS = [
   // ── Part 1: Enter alone walks every room's solve and reaches the balcony ──
   "    window.goToStage('kitchen');await sleep(300);",
   "    report.reached.kitchen=await pressUntil(0,25,1500);report.after0=window.currentStageIndex;", // espresso: power/warmup/grind/tamp/brew/sip
-  "    window.goToStage('garden');report.reached.garden=await pressUntil(1,12,700);report.after1=window.currentStageIndex;",
+  "    window.goToStage('garden');var gg=document.getElementById('garden-guitar'),gu=document.getElementById('garden-ukulele'),gc=0,uc=0;if(gg)gg.addEventListener('click',function(){gc++;});if(gu)gu.addEventListener('click',function(){uc++;});enter();await sleep(700);enter();await sleep(700);report.gardenEnterGuitar=(gc===1&&uc===0);report.reached.garden=2+await pressUntil(1,10,700);report.after1=window.currentStageIndex;",
   "    window.goToStage('cuddly');report.reached.cuddly=await pressUntil(2,12,900);report.after2=window.currentStageIndex;",
   "    window.goToStage('office');await sleep(400);report.reached.office=await pressUntil(3,25,1500);await sleep(2500);report.after3=window.currentStageIndex;",
   "    report.solvedFinalIdx=window.currentStageIndex;",
@@ -54,6 +54,8 @@ if (!r) {
 } else {
   if (r.solvedFinalIdx === 4) pass("Enter alone walks every room's solve and reaches the balcony");
   else fail("Enter walks the whole game to the balcony", "stage progression: " + JSON.stringify({ after0: r.after0, after1: r.after1, after2: r.after2, after3: r.after3, reached: r.reached }));
+  if (r.gardenEnterGuitar) pass("garden music step: Enter clicks the guitar, not the ukulele");
+  else fail("garden music step: Enter clicks the guitar, not the ukulele");
   if (r.toggles.kitchenDayNight) pass("solved kitchen: Enter toggles day/night (kitchen ⇄ bar)");
   else fail("solved kitchen: Enter toggles day/night");
   if (r.toggles.gardenParty) pass("solved garden: Enter toggles the party");

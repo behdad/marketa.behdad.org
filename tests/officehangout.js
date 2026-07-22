@@ -108,6 +108,7 @@ sandbox.document = documentShim;
 sandbox.addEventListener = function (t, fn) { (listeners[t] = listeners[t] || []).push(fn); };
 sandbox.setTimeout = setTimeoutShim;
 sandbox.clearTimeout = clearTimeoutShim;
+sandbox.rosterHoldsOccupants = function () { return false; }; // the extracted controller normally reads the page-global roster gate
 
 // evaluate the extracted IIFE in the sandbox
 var vm = require("vm");

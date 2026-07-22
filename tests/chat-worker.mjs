@@ -230,6 +230,20 @@ actionCase = await normalizedPrivateReply(
 );
 check(actionCase.reply.action === null, "Fishu is never forced when the browser did not advertise the action", actionCase);
 
+actionCase = await normalizedPrivateReply(
+  JSON.stringify({ text: "The party is winding down.", action: null }),
+  { party: false, actions_available: ["party.set"] },
+  "party",
+);
+check(actionCase.reply.action?.id === "party.set" && actionCase.reply.action.args.on === true && !/winding|last song/i.test(actionCase.reply.text), "a direct party request cannot hallucinate a wind-down while the party is off", actionCase);
+
+actionCase = await normalizedPrivateReply(
+  JSON.stringify({ text: "When would you like it?", action: null }),
+  { party: false, actions_available: ["party.set"] },
+  "when is the party?",
+);
+check(actionCase.reply.action === null, "an informational party question is not converted into an action", actionCase);
+
 openAIReply = JSON.stringify({ sender: "Danesh", text: "Here you go.", reply_to_id: "reply_user_1", action: { id: "party.dance.request", args: { style: "slow" } } });
 const groupResponse = await worker.fetch(makeRequest("/chat", {
   method: "POST",
@@ -264,6 +278,36 @@ check(/"reactions":\["👍"\]/.test(groupCapture.body.instructions) && /"reactio
 check(/Wedding crew group chat/.test(groupCapture.body.instructions) && /"party_elapsed_seconds":222/.test(groupCapture.body.instructions) && /skip capitalization or punctuation/.test(groupCapture.body.instructions) && /Pouria is the working bartender and remains sober/.test(groupCapture.body.instructions) && /"current_dj":"Danesh"/.test(groupCapture.body.instructions) && /"playtime":\{"seconds":3723,"display":"1h 2m"\}/.test(groupCapture.body.instructions) && /"name":"Markéta"/.test(groupCapture.body.instructions) && /"kitchen":\["Pouria"\]/.test(groupCapture.body.instructions) && !/attic/.test(groupCapture.body.instructions), "the separate group persona receives elapsed-party tone guidance, playtime, current DJ, all-room locations, and sanitized cast context");
 check(/"id":"washrooms","location":"by the entrance"/.test(groupCapture.body.instructions) && /physical directions/.test(groupCapture.body.instructions), "the crew responder receives verified venue facts and the no-invented-directions rule");
 check(!/^You are Charlie/.test(groupCapture.body.instructions) && /Music, dance, track, and DJ actions/.test(groupCapture.body.instructions) && /dad jokes and puns/.test(groupCapture.body.instructions), "group mode is distinct from Charlie, assigns music actions to DJs, and grounds humor in cast details");
+
+openAIReply = JSON.stringify({ sender: "Danesh", text: "It’s the last song, so make it count.", reply_to_id: null, action: null });
+const partyOffResponse = await worker.fetch(makeRequest("/chat", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    mode: "group_chat",
+    message: "who wants to party more?",
+    turnstile_token: "party-off-token",
+    context: { room: "office", phase: 2, party: false, actions_available: ["party.set"] },
+    group_chat: { current_dj: "Danesh", cast: [{ name: "Danesh", role: "DJ" }, { name: "Athena", role: "wedding boss" }] },
+  }),
+}), makeEnv());
+const partyOffReply = JSON.parse((await partyOffResponse.json()).reply);
+check(partyOffReply.sender === "Danesh" && partyOffReply.action?.id === "party.set" && partyOffReply.action.args.on === true && !/last song|winding down/i.test(partyOffReply.text), "crew chat grounds a party-more request in the actual off state", partyOffReply);
+
+openAIReply = JSON.stringify({ sender: "Danesh", text: "One more round.", reply_to_id: null, action: { id: "party.set", args: { on: true } } });
+const partyOnResponse = await worker.fetch(makeRequest("/chat", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    mode: "group_chat",
+    message: "keep the party going",
+    turnstile_token: "party-on-token",
+    context: { room: "garden", phase: 2, party: true, actions_available: ["party.extend", "party.set"] },
+    group_chat: { current_dj: "Danesh", cast: [{ name: "Danesh", role: "DJ" }] },
+  }),
+}), makeEnv());
+const partyOnReply = JSON.parse((await partyOnResponse.json()).reply);
+check(partyOnReply.action?.id === "party.extend", "crew chat converts an active-party continuation request to the explicit extension action", partyOnReply);
 
 openAIReply = JSON.stringify({ sender: "Danesh", text: "Next one coming up.", reply_to_id: null, action: { id: "music.skip", args: {} } });
 const djNextResponse = await worker.fetch(makeRequest("/chat", {

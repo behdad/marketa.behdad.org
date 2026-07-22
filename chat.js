@@ -67,6 +67,7 @@ Fishu is the flying pufferfish in cuddly-puddly. A short message consisting only
 A direct request to make or get coffee should use coffee.make. It ends an active party, restores daylight, and takes the player to the kitchen/bar espresso machine; do not claim the coffee itself has already been made.
 
 While a party is active, a direct request to keep it going, continue it, or cancel its ending should use party.extend, not party.set. It cancels an accepted or in-progress finale and grants another full attended party interval.
+When no party is active, a direct request such as "party", "start the party", or "let's party" should use party.set with on:true. Never describe a last song, wind-down, dance floor, or active party when current game state.party is false.
 
 Never claim or guess that today is anyone's birthday or another special event unless current game state.active_occasion explicitly identifies it. The date by itself is not evidence of an occasion.
 
@@ -89,6 +90,7 @@ Fishu is the flying pufferfish in cuddly-puddly. A short message consisting only
 A direct request to make or get coffee should suggest coffee.make. Tell the visitor the action will take them to the kitchen/bar espresso machine; do not say the coffee is already made.
 
 While a party is active, a direct request to keep it going, continue it, or cancel its ending should suggest party.extend, not party.set. Answer as Athena or the current DJ when possible; the visitor must tap the suggestion before anything changes.
+When no party is active, a direct request such as "party", "start the party", or "party more" should suggest party.set with on:true. Never describe a last song, wind-down, dance floor, or active party when current game state.party is false.
 
 Reply in the language and script of the visitor's latest message. Be warm, playful, and specific, but keep the message to at most two short sentences. Let humor follow the supplied character details instead of making everyone sound alike; Behdad especially enjoys dad jokes and puns. A natural callback may quote one supplied recent message, including one earlier in the thread, but do not force a joke or a callback. Always spell Markéta's name with the accent.
 
@@ -491,10 +493,47 @@ function normalizeGroupReply(reply, groupChat, context) {
   return JSON.stringify({ sender, text: text.slice(0, 700), reply_to_id: replyToId, action });
 }
 
+function partyRequestIntent(value) {
+  const original = cleanText(value, MAX_MESSAGE_CHARS);
+  const folded = original.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().replace(/[’']/g, "").replace(/\s+/g, " ").trim();
+  const persian = /[\u0600-\u06ff]/.test(original);
+  const hasParty = /\bparty\b/.test(folded) || original.includes("مهمانی");
+  if (!hasParty || /\b(when|where|what time|how long|kdy|kde|v kolik)\b/.test(folded) || /چه زمانی|کجا/.test(original)) return null;
+  if ((persian && /ادامه|بیشتر|دوباره|تمام نکن/.test(original)) || /\b(keep|continue|more|another|again|dont stop|cancel the end|jeste|pokrac|nezastav|znovu)\b/.test(folded)) return "continue";
+  if (/^(party|party please|lets party)$/.test(folded) || /\b(start|begin|throw|have|launch|zapni|spust|zacni|rozjed)\b.*\bparty\b/.test(folded) || (persian && (/شروع/.test(original) || original.trim() === "مهمانی"))) return "start";
+  return null;
+}
+
+function partyReplyText(message, context, extending) {
+  if (/[\u0600-\u06ff]/.test(message)) return extending
+    ? "یک دور دیگر—اینجا بزن تا مهمانی ادامه پیدا کند. 🎉"
+    : "بزن بریم—اینجا بزن تا مهمانی را شروع کنیم. 🎉";
+  const folded = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
+  const czech = context.site_language === "cs" || /\b(jeste|pokrac|nezastav|znovu|zapni|spust|zacni|rozjed)\b/.test(folded);
+  if (czech) return extending
+    ? "Ještě jedno kolo—klepni sem a jedeme dál. 🎉"
+    : "Jdeme na to—klepni sem a párty zase rozjedeme. 🎉";
+  return extending
+    ? "One more round—tap this and we’ll keep it going. 🎉"
+    : "Let’s get it started—tap this and I’ll bring the party back. 🎉";
+}
+
 function applyDeterministicInvocation(normalizedReply, payload) {
-  if (!isFishuInvocation(payload.message) || !payload.context.actions_available.includes("fishu.speak")) return normalizedReply;
   const parsed = JSON.parse(normalizedReply);
-  parsed.action = { id: "fishu.speak", args: {} };
+  if (isFishuInvocation(payload.message) && payload.context.actions_available.includes("fishu.speak")) {
+    parsed.action = { id: "fishu.speak", args: {} };
+  }
+  const partyIntent = partyRequestIntent(payload.message);
+  const actionId = payload.context.party ? "party.extend" : "party.set";
+  if (partyIntent && payload.context.actions_available.includes(actionId)) {
+    parsed.action = actionId === "party.extend" ? { id: actionId, args: {} } : { id: actionId, args: { on: true } };
+    parsed.text = partyReplyText(payload.message, payload.context, actionId === "party.extend");
+    if (payload.mode === "group_chat") {
+      const castNames = new Set(payload.group_chat.cast.filter((person) => person.can_message !== false).map((person) => person.name));
+      if (payload.group_chat.current_dj && castNames.has(payload.group_chat.current_dj)) parsed.sender = payload.group_chat.current_dj;
+      else if (castNames.has("Athena")) parsed.sender = "Athena";
+    }
+  }
   return JSON.stringify(parsed);
 }
 

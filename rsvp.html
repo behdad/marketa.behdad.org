@@ -3867,6 +3867,8 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 .chat-msg.user{align-self:flex-end; background:#8e3a4a; color:#fffdf8}
 .chat-state{align-self:flex-start; color:#716455; font-style:italic; padding:0.5px 1.8px}
 .chat-state.error{color:#8e3a4a; font-style:normal}
+.chat-retry{margin-left:1.5px; padding:.5px 1.4px; border:.3px solid currentColor; border-radius:1.5px; background:#fffdf8; color:#8e3a4a; font:700 2.3px/1.2 Arial,"Helvetica Neue",sans-serif; cursor:pointer}
+.chat-retry:hover,.chat-retry:focus-visible{background:#f1e6dc; outline:none}
 .chat-compose{flex:none; height:7.8px; box-sizing:border-box; display:flex; align-items:center; gap:1px; padding:1.1px 2px 1.4px; background:#fffdf8; border-top:0.3px solid #d6ddda}
 .chat-input{flex:1; min-width:0; height:5.1px; box-sizing:border-box; border:0.3px solid #bdc8c4; border-radius:1.8px; outline:none; background:#f8f5ec; color:#453a31; padding:0.6px 1.7px; font:2.55px/1.2 Arial,"Helvetica Neue",sans-serif; caret-color:#8e3a4a}
 .chat-input:focus{border-color:#5f8580; background:#fffdf8}
@@ -4869,6 +4871,9 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .pm-msg-bubble.actionable{cursor:pointer; border-color:rgba(151,58,79,.42)}
 .pm-msg-bubble.actionable:hover,.pm-msg-bubble.actionable:focus-visible{border-color:var(--wine); outline:2px solid rgba(142,58,74,.18); outline-offset:1px}
 .pm-msg-action-error{display:block; margin-top:4px; color:var(--wine); font-size:10px; line-height:1.25}
+.pm-msg-request-error{display:flex; align-items:center; justify-content:flex-end; gap:6px; margin-top:3px; padding:0 4px; color:var(--wine); font-size:10px; line-height:1.25}
+.pm-msg-retry{padding:3px 7px; border:1px solid currentColor; border-radius:10px; background:var(--paper); color:var(--wine); font:600 10px/1.2 "Source Serif 4",serif; cursor:pointer}
+.pm-msg-retry:hover,.pm-msg-retry:focus-visible{background:#f1e6dc; outline:2px solid rgba(142,58,74,.18); outline-offset:1px}
 .pm-msg-act{flex:none; width:28px; height:28px; padding:0; border:0; border-radius:50%; background:var(--wine); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(142,58,74,.28)}
 .pm-msg-act:hover,.pm-msg-act:focus-visible{background:#743143; outline:2px solid rgba(142,58,74,.25); outline-offset:1px}
 .pm-msg-act svg{width:15px; height:15px}
@@ -25263,6 +25268,7 @@ var T = {
     chat_thinking: "Thinking…",
     chat_unavailable: "Chat isn’t connected yet.",
     chat_error: "Something went wrong. Try again.",
+    chat_retry: "Retry",
     chat_action_failed: "I couldn’t do that right now. Try again.",
     app_weather: "weather",
     cal_edmonton: "Edmonton",
@@ -26133,6 +26139,7 @@ var T = {
     chat_thinking: "Přemýšlím…",
     chat_unavailable: "Chat zatím není připojený.",
     chat_error: "Něco se pokazilo. Zkus to znovu.",
+    chat_retry: "Zkusit znovu",
     chat_action_failed: "Teď se mi to nepodařilo. Zkus to znovu.",
     app_weather: "počasí",
     cal_edmonton: "Edmonton",
@@ -33466,7 +33473,8 @@ document.addEventListener("click", function (e) {
         do { pick = nextInRotation(); guard++; } while (rem.indexOf(pick) < 0 && guard < visitQueue.length * 2);
         if (rem.indexOf(pick) < 0) pick = rem[0];
         lastDripId = pick;
-        window.__deliverPhoneMessage("visit_" + pick);
+        if (window.__deliverAutonomousPhoneMessage) window.__deliverAutonomousPhoneMessage("visit_" + pick);
+        else window.__deliverPhoneMessage("visit_" + pick);
       }
     }
     schedule();
@@ -44255,7 +44263,7 @@ var ABANDONED_CALL_MS = 30000;
   var CHAT_TURNSTILE_CACHE_MS = 4 * 60 * 1000; // tokens expire at 5m; keep a full minute of safety
   window.__monitorChatEndpoint = CHAT_PROXY_URL;
   window.__monitorChatTurnstileSitekey = CHAT_TURNSTILE_SITEKEY;
-  var chatHistory = [], chatQueue = [], chatActiveMessage = null;
+  var chatHistory = [], chatQueue = [], chatActiveMessage = null, chatRetryMessage = null;
   var chatEverOpened = false;
   var chatPending = false, chatError = "", chatRequestSeq = 0, chatAbort = null;
   var chatTurnstileApiPromise = null, chatTurnstileHost = null, chatTurnstileWidget = null;
@@ -44409,7 +44417,16 @@ var ABANDONED_CALL_MS = 30000;
     chatAdd("chat-msg assistant", chatT("chat_welcome"));
     chatHistory.forEach(function (m) { chatAdd("chat-msg " + m.role, m.text); });
     if (chatPending && chatActiveMessage && !chatActiveMessage.silent) chatAdd("chat-state", chatT("chat_thinking"));
-    else if (chatError) chatAdd("chat-state error", chatError);
+    else if (chatError) {
+      var errorState = chatAdd("chat-state error", chatError);
+      if (chatRetryMessage) {
+        var retry = document.createElement("button");
+        retry.type = "button"; retry.className = "chat-retry"; retry.textContent = chatT("chat_retry");
+        retry.setAttribute("aria-label", chatT("chat_retry"));
+        retry.addEventListener("click", retryFailedChat);
+        errorState.appendChild(retry);
+      }
+    }
     chatInput.placeholder = chatT("chat_placeholder");
     chatInput.setAttribute("aria-label", chatT("chat_placeholder"));
     chatSend.setAttribute("title", chatT("chat_send"));
@@ -44619,7 +44636,9 @@ var ABANDONED_CALL_MS = 30000;
     var challenge = window.__monitorChatTurnstile;
     if (typeof transport !== "function" || typeof challenge !== "function") {
       var unavailable = new Error(chatT("chat_unavailable"));
-      chatQueue.splice(0).forEach(function (message) { settleChatMessage(message, unavailable); });
+      var unavailableMessages = chatQueue.splice(0);
+      unavailableMessages.forEach(function (message) { settleChatMessage(message, unavailable); });
+      for (var ui = unavailableMessages.length - 1; ui >= 0; ui--) if (!unavailableMessages[ui].silent) { chatRetryMessage = unavailableMessages[ui]; break; }
       chatError = unavailable.message; renderChat(); return;
     }
     var message = chatQueue.shift();
@@ -44627,7 +44646,8 @@ var ABANDONED_CALL_MS = 30000;
     chatPending = true;
     var seq = ++chatRequestSeq;
     var messageIndex = chatHistory.indexOf(message);
-    var priorHistory = messageIndex < 0 ? [] : chatHistory.slice(0, messageIndex);
+    var priorHistory = message.retryHistory || (messageIndex < 0 ? [] : chatHistory.slice(0, messageIndex));
+    message.retryHistory = priorHistory;
     var expired = false, deadline;
     renderChat();
     var work = Promise.resolve().then(function () { return challenge(); }).then(function (token) {
@@ -44671,7 +44691,8 @@ var ABANDONED_CALL_MS = 30000;
           if (at < 0) chatHistory.push({ role: "assistant", text: historyAnswer });
           else chatHistory.splice(at + 1, 0, { role: "assistant", text: historyAnswer });
         }
-        chatPending = false; chatActiveMessage = null; chatError = "";
+        chatPending = false; chatActiveMessage = null;
+        if (!message.silent) { chatError = ""; chatRetryMessage = null; }
         trimChatHistory(); renderChat();
         settleChatMessage(message, null, message.mode === "group_chat" ? answer : historyAnswer);
         if (monitor.classList.contains("show-chat")) chatInput.focus();
@@ -44681,7 +44702,8 @@ var ABANDONED_CALL_MS = 30000;
       clearTimeout(deadline);
       if (seq !== chatRequestSeq) return;
       var failure = new Error(chatT("chat_error"));
-      chatPending = false; chatActiveMessage = null; chatError = message.silent ? "" : failure.message;
+      chatPending = false; chatActiveMessage = null;
+      if (!message.silent) { chatError = failure.message; chatRetryMessage = message; }
       settleChatMessage(message, failure);
       trimChatHistory(); renderChat(); pumpChatQueue();
     });
@@ -44693,13 +44715,23 @@ var ABANDONED_CALL_MS = 30000;
     var prompt = String(options.prompt == null ? text : options.prompt).trim() || text;
     var resolveMessage, rejectMessage;
     var completion = new Promise(function (resolve, reject) { resolveMessage = resolve; rejectMessage = reject; });
-    var message = { role: "user", text: text, prompt: prompt, mode: options.mode, groupChat: options.groupChat, replyDisplay: options.replyDisplay, silent: !!options.silent, resolve: resolveMessage, reject: rejectMessage, settled: false };
-    if (!message.silent) chatHistory.push(message);
+    var message = { role: "user", text: text, prompt: prompt, mode: options.mode, groupChat: options.groupChat, replyDisplay: options.replyDisplay, silent: !!options.silent, retryHistory: options.retryHistory || null, resolve: resolveMessage, reject: rejectMessage, settled: false };
+    if (!message.silent && !options.omitHistory) chatHistory.push(message);
     chatQueue.push(message);
-    chatError = "";
+    if (!message.silent) { chatError = ""; chatRetryMessage = null; }
     renderChat();
     pumpChatQueue();
     return completion;
+  }
+  function retryFailedChat() {
+    if (!chatRetryMessage || chatPending) return;
+    var failed = chatRetryMessage;
+    chatRetryMessage = null; chatError = "";
+    askChat(failed.text, {
+      prompt: failed.prompt, mode: failed.mode, groupChat: failed.groupChat,
+      replyDisplay: failed.replyDisplay, silent: failed.silent,
+      retryHistory: failed.retryHistory, omitHistory: true
+    }).catch(function () {});
   }
   function submitChat() {
     if (!chatInput) return;
@@ -44748,7 +44780,7 @@ var ABANDONED_CALL_MS = 30000;
     cancelled.forEach(function (message) { settleChatMessage(message, new Error("chat request cancelled")); });
     cancelChatTurnstile();
     if (chatAbort) { try { chatAbort.abort(); } catch (e) {} chatAbort = null; }
-    chatPending = false; chatError = ""; chatHistory = []; chatQueue = []; chatActiveMessage = null;
+    chatPending = false; chatError = ""; chatHistory = []; chatQueue = []; chatActiveMessage = null; chatRetryMessage = null;
     if (chatInput) chatInput.value = "";
     renderChat();
   }
@@ -50103,6 +50135,31 @@ async def localfont(name):
       else { delete messagesRead[id]; showMessageThumb(id); }
       updateMsgBadge();
     }
+    function repaintMessages() {
+      if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages);
+    }
+    function markCrewReplyFailed(userId) {
+      var userMessage = MESSAGES[userId];
+      if (!userMessage || !userMessage.outgoing) return;
+      userMessage.crewReplyFailed = true;
+      repaintMessages();
+    }
+    function requestCrewReply(userId, responseId, text, targetId) {
+      var userMessage = MESSAGES[userId];
+      if (!userMessage || MESSAGES[responseId]) return;
+      delete userMessage.crewReplyFailed;
+      repaintMessages();
+      var target = targetId && MESSAGES[targetId];
+      var ask = window.__monitorGroupChatAsk;
+      if (typeof ask !== "function") { markCrewReplyFailed(userId); return; }
+      Promise.resolve(ask(text, groupChatContext(target, targetId), function (answer) {
+        var parsed = parseCrewReply(answer, target); return parsed.sender + ": " + parsed.text;
+      })).then(function (answer) {
+        if (!MESSAGES[userId] || messagesThread.indexOf(userId) === -1) return;
+        delete userMessage.crewReplyFailed;
+        deliverCrewReply(responseId, answer, target);
+      }, function () { markCrewReplyFailed(userId); });
+    }
     function sendCrewMessage(text, targetId) {
       text = String(text == null ? "" : text).trim();
       if (!text) return false;
@@ -50111,16 +50168,13 @@ async def localfont(name):
       MESSAGES[userId] = {
         fromKey: "msg_you_from", body: text, outgoing: true,
         replyTo: target ? targetId : null,
-        replyFrom: target ? msgFrom(target) : "", replyBody: target ? plainMessageText(target) : ""
+        replyFrom: target ? msgFrom(target) : "", replyBody: target ? plainMessageText(target) : "",
+        crewResponseId: responseId, crewTargetId: target ? targetId : null
       };
       messagesThread.push(userId); messagesRead[userId] = true; messagesArrivedAt[userId] = Date.now();
       trimMessageThread();
       if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages);
-      var ask = window.__monitorGroupChatAsk;
-      if (typeof ask !== "function") return true; // visitor message remains; the group reply simply never arrives
-      Promise.resolve(ask(text, groupChatContext(target, targetId), function (answer) {
-        var parsed = parseCrewReply(answer, target); return parsed.sender + ": " + parsed.text;
-      })).then(function (answer) { deliverCrewReply(responseId, answer, target); }, function () {});
+      requestCrewReply(userId, responseId, text, targetId);
       return true;
     }
     window.__sendCrewMessage = sendCrewMessage; // focused-test/console hook
@@ -50209,6 +50263,17 @@ async def localfont(name):
           line.appendChild(actBtn);
         }
         row.appendChild(head); row.appendChild(line);
+        if (m.outgoing && m.crewReplyFailed) {
+          var requestError = document.createElement("div"); requestError.className = "pm-msg-request-error";
+          var requestErrorText = document.createElement("span"); requestErrorText.textContent = tr("chat_error"); requestError.appendChild(requestErrorText);
+          var retryReply = document.createElement("button"); retryReply.type = "button"; retryReply.className = "pm-msg-retry"; retryReply.textContent = tr("chat_retry");
+          retryReply.setAttribute("aria-label", tr("chat_retry"));
+          retryReply.addEventListener("click", function (e) {
+            e.preventDefault(); e.stopPropagation();
+            requestCrewReply(id, m.crewResponseId, plainMessageText(m), m.crewTargetId);
+          });
+          requestError.appendChild(retryReply); row.appendChild(requestError);
+        }
         var reactions = messageReactions[id] || [];
         if (reactions.length) {
           var reactionList = document.createElement("div"); reactionList.className = "pm-msg-reactions"; reactionList.setAttribute("aria-label", tr("msg_react"));
@@ -51648,6 +51713,7 @@ async def localfont(name):
     // Messages is a chronological group chat: authored incoming ids plus session-local visitor /
     // generated crew-reply ids. Authored copy remains language-live; literal replies stay as written.
     var messagesThread = [], messagesRead = {}, messageReactions = {}, messagesArrivedAt = {}, msgNewTimer = null, msgOpenTarget = null; // read/reaction state is session-only; messagesArrivedAt drives the "New" divider; msgOpenTarget is consumed when a notification opens one exact row
+    var deferredAutonomousMessages = [], deferredAutonomousTimer = null;
     var charlieIntroTimer = null, charlieIntroOffered = false; // one quiet, delayed introduction per page session; never part of a random pool
     var phaseTwoHeldMessages = []; // one-shot birthday/occasion texts requested during the solve are held; recurring drips simply retry later
     var msgUnreadOnly = false, msgSearchQ = "", msgDraft = "", msgReplyTarget = null, msgReplySeq = 0, albumSearchQ = ""; // sticky message composer/filter state + Photos search; survive close/reopen, clear on reset
@@ -53100,6 +53166,12 @@ async def localfont(name):
       setTimeout(seatPhoneInFullscreenHost, 240);
     };
     window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messagesArrivedAt = {}; phaseTwoHeldMessages = []; Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks/reactions, and the flashlight (intent forgotten + beam/torch off)
+    var resetPhoneAppsBase = window.__resetPhoneApps;
+    window.__resetPhoneApps = function () {
+      deferredAutonomousMessages = [];
+      if (deferredAutonomousTimer) { clearTimeout(deferredAutonomousTimer); deferredAutonomousTimer = null; }
+      return resetPhoneAppsBase();
+    };
     // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
     // open(true) is the cinematic lock-skip path (same as __showCocktailInPhone), so a console
     // launch never stalls on the passcode. Matches by app id (case-insensitive) or its localized
@@ -53415,16 +53487,35 @@ async def localfont(name):
     // the freshest still-unread message id (newest arrival first) — autoplay uses this to
     // decide which notification to open+act-on when a text pops during attract mode.
     window.__latestUnreadMessage = function () { for (var i = messagesThread.length - 1; i >= 0; i--) if (!messagesRead[messagesThread[i]]) return messagesThread[i]; return null; };
-    var MSG_CAP = 30; // the thread holds at most 30 texts; past that the oldest falls off, one per new arrival
+    var MSG_CAP = 40; // retain more context while keeping the session thread strictly bounded
+    function dropMessageAt(index) {
+      var old = messagesThread.splice(index, 1)[0];
+      if (!old) return;
+      delete messagesRead[old];
+      delete messageReactions[old];
+      delete messagesArrivedAt[old];
+      if (/^(custom_|reply_)/.test(old)) delete MESSAGES[old];
+    }
     function trimMessageThread() {
       while (messagesThread.length > MSG_CAP) {
-        var old = messagesThread.shift();
-        delete messagesRead[old];
-        delete messageReactions[old];
-        delete messagesArrivedAt[old];
-        if (/^(custom_|reply_)/.test(old)) delete MESSAGES[old]; // drop session-local copy for good; authored ids remain available to later drips
+        // Authored ambient chatter is replaceable; a visitor question and its generated answer are
+        // not. Prefer the oldest authored row even when it arrived after a conversation started.
+        var authoredAt = -1;
+        for (var i = 0; i < messagesThread.length; i++) if (!/^reply_(?:user|ai)_/.test(messagesThread[i])) { authoredAt = i; break; }
+        if (authoredAt !== -1) { dropMessageAt(authoredAt); continue; }
+        // A conversation-only thread can still grow forever. Evict its oldest complete turn as a
+        // unit so the cap never leaves an orphaned visitor question or AI answer behind.
+        var first = messagesThread[0], pair = /^reply_(?:user|ai)_(.+)$/.exec(first);
+        if (pair) {
+          var mateUser = messagesThread.indexOf("reply_user_" + pair[1]);
+          var mateAi = messagesThread.indexOf("reply_ai_" + pair[1]);
+          if (mateUser !== -1 && mateAi !== -1) {
+            dropMessageAt(Math.max(mateUser, mateAi)); dropMessageAt(Math.min(mateUser, mateAi));
+          } else dropMessageAt(0);
+        } else dropMessageAt(0);
       }
     }
+    window.__phoneMessageThread = function () { return messagesThread.slice(); };
     // once the thread gets busy (20+), space autonomous drips out progressively so texts don't pile up
     function msgDripSlowFactor() { return unreadCount() >= 4 ? 2.5 : 1; } // 4+ unread piling up → space new texts way out
     function autonomousMsgOk() { return unreadCount() < 8; } // 8 unread → hold all autonomous texts until the user reads some
@@ -53478,10 +53569,42 @@ async def localfont(name):
       if (msgAppShowing) openApp("messages", "app_messages", renderMessages); // live-refresh (scrolls to newest) if the thread's already open — no toast needed, they're looking at it
       else showMessageThumb(id);
       updateMsgBadge();
-      if (m.next && MESSAGES[m.next]) setTimeout(function () { window.__deliverPhoneMessage(m.next); }, m.nextDelay || 4200); // chained followup text (e.g. Hamid's 2nd stanza lands a few seconds after the 1st)
+      if (m.next && MESSAGES[m.next]) setTimeout(function () { window.__deliverAutonomousPhoneMessage(m.next); }, m.nextDelay || 4200); // chained followup text (e.g. Hamid's 2nd stanza lands a few seconds after the 1st)
       if (id !== "charlie") scheduleCharlieIntro(); // Charlie follows a real text; she is never the first notification
       return true;
     };
+    function majorMessageMomentActive() {
+      return !!(window.__firstDanceOn || window.__slowDanceOn || window.__toastsOn || window.__groupPhotoOn ||
+        window.__sparklersOn || window.__cakeOn || window.__bouquetOn || window.__chairLiftOn);
+    }
+    function scheduleDeferredAutonomousMessages(delay) {
+      if (deferredAutonomousTimer || !deferredAutonomousMessages.length) return;
+      deferredAutonomousTimer = setTimeout(function () {
+        deferredAutonomousTimer = null;
+        drainDeferredAutonomousMessages();
+      }, delay == null ? 1000 : delay);
+    }
+    function drainDeferredAutonomousMessages() {
+      if (!deferredAutonomousMessages.length) return 0;
+      if (majorMessageMomentActive()) { scheduleDeferredAutonomousMessages(1000); return 0; }
+      if (document.hidden || !document.hasFocus() || window.__cinematic || !playerStarted() || !autonomousMsgOk()) {
+        scheduleDeferredAutonomousMessages(1000); return 0;
+      }
+      var id = deferredAutonomousMessages.shift();
+      var delivered = messagesThread.indexOf(id) === -1 && window.__deliverPhoneMessage(id) ? 1 : 0;
+      if (deferredAutonomousMessages.length) scheduleDeferredAutonomousMessages(4200);
+      return delivered;
+    }
+    window.__deliverAutonomousPhoneMessage = function (id) {
+      if (!MESSAGES[id] || messagesThread.indexOf(id) !== -1) return false;
+      if (!window.__secondRound) return window.__deliverPhoneMessage(id);
+      if (!majorMessageMomentActive()) return window.__deliverPhoneMessage(id);
+      if (deferredAutonomousMessages.indexOf(id) === -1) deferredAutonomousMessages.push(id);
+      scheduleDeferredAutonomousMessages(1000);
+      return true;
+    };
+    window.__flushDeferredPhoneMessages = drainDeferredAutonomousMessages;
+    window.__deferredPhoneMessages = function () { return deferredAutonomousMessages.slice(); };
     window.__flushHeldPhoneMessages = function () {
       if (!window.__secondRound || !phaseTwoHeldMessages.length) return 0;
       var held = phaseTwoHeldMessages; phaseTwoHeldMessages = [];
@@ -53574,7 +53697,7 @@ async def localfont(name):
     }
     function deliverCharlieIntro() {
       if (!window.__secondRound || !charlieIntroEligible()) return false;
-      var delivered = window.__deliverPhoneMessage("charlie");
+      var delivered = window.__deliverAutonomousPhoneMessage("charlie");
       return delivered;
     }
     function scheduleCharlieIntro() {
@@ -53696,7 +53819,7 @@ async def localfont(name):
         if (window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic && playerStarted() && autonomousMsgOk()) {
           cueFirstOfParty = false; // an attending player got their look-in; back to the slow cadence
           var rem = cueRemaining();
-          if (rem.length) window.__deliverPhoneMessage(rem[Math.floor(Math.random() * rem.length)]); // a random un-sent cue
+          if (rem.length) window.__deliverAutonomousPhoneMessage(rem[Math.floor(Math.random() * rem.length)]); // a random un-sent cue
         }
         scheduleCueDrip(); // keep dripping while the party's on and cues remain
         // the opener is NOT stretched by msgDripSlowFactor: a busy thread is exactly the case where
@@ -53721,7 +53844,7 @@ async def localfont(name):
         dayTimer = null;
         if (isDayNow() && !window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic && playerStarted() && autonomousMsgOk()) {
           var rem = dayRemaining();
-          if (rem.length) window.__deliverPhoneMessage(rem[Math.floor(Math.random() * rem.length)]);
+          if (rem.length) window.__deliverAutonomousPhoneMessage(rem[Math.floor(Math.random() * rem.length)]);
         }
         scheduleDayDrip(); // keep polling until the daytime pool is exhausted
       }, (56250 + Math.floor(Math.random() * 56250)) * msgDripSlowFactor()); // ~56–112s apart, stretched once the thread is busy
@@ -67213,7 +67336,7 @@ function spawnDustMote(container) {
       if (window.__bbqDateNow && window.__bbqDateNow()) return false; // open cookouts skip formal reception moments
       finaleTextOffered = true;
       var id = Math.random() < 0.5 ? "lastdance" : (window.__djB ? "lastsong_danesh" : "lastsong_sina");
-      return !!window.__deliverPhoneMessage(id);
+      return !!(window.__deliverAutonomousPhoneMessage && window.__deliverAutonomousPhoneMessage(id));
     }
     function finish(reason) {
       if (!window.__gardenPartyOn || finishing) return false;
@@ -67240,7 +67363,7 @@ function spawnDustMote(container) {
       if (!force && (document.hidden || (document.hasFocus && !document.hasFocus()) || window.__cinematic)) { scheduleInvite(30000); return false; }
       if (!force && Math.random() >= 0.32) return false;
       var id = Math.random() < 0.5 ? "party_again_behdad" : "party_again_marketa";
-      return !!(window.__deliverPhoneMessage && window.__deliverPhoneMessage(id));
+      return !!(window.__deliverAutonomousPhoneMessage && window.__deliverAutonomousPhoneMessage(id));
     }
     function scheduleInvite(delay) {
       clearInvite();
@@ -68000,7 +68123,7 @@ function spawnDustMote(container) {
     if (window.__actPing) setTimeout(function () { if (window.__gardenPartyOn) window.__actPing("dj"); }, 4600);
     // when the decks pass to Sina, Danesh is off — he texts the host from the sidelines. Delayed
     // so it doesn't land on the "DJ Sina takes over" caption; fires once (dedup'd in the deliverer).
-    if (!window.__djB && window.__deliverPhoneMessage) setTimeout(function () { if (window.__gardenPartyOn && window.__deliverPhoneMessage) window.__deliverPhoneMessage("danesh"); }, 5200);
+    if (!window.__djB && window.__deliverAutonomousPhoneMessage) setTimeout(function () { if (window.__gardenPartyOn && window.__deliverAutonomousPhoneMessage) window.__deliverAutonomousPhoneMessage("danesh"); }, 5200);
   }
   // Manual DJ swap — double-tapping the decks hands the booth to the other friend. Flips the
   // active DJ, reflects it onto the booth, hypes the incoming one, and zeroes the every-3-dances
@@ -80774,7 +80897,7 @@ function spawnDustMote(container) {
     function wake(deliverText) {
       if (!window.__kidsAsleep) return;
       apply(false);
-      if (deliverText && window.__deliverPhoneMessage) window.__deliverPhoneMessage("kids_loose"); // announce it from a random mom
+      if (deliverText && window.__deliverAutonomousPhoneMessage) window.__deliverAutonomousPhoneMessage("kids_loose"); // announce it from a random mom
     }
     window.__setKidsAsleep = apply;
     window.__wakeKids = function () { wake(false); };
@@ -81942,7 +82065,7 @@ function spawnDustMote(container) {
         pendingMsgIds.push(mid);
         msgTimers.push(setTimeout(function () {
           var at = pendingMsgIds.indexOf(mid); if (at !== -1) pendingMsgIds.splice(at, 1);
-          if (armed && !window.__cinematic && window.__deliverPhoneMessage) window.__deliverPhoneMessage(mid);
+          if (armed && !window.__cinematic && window.__deliverAutonomousPhoneMessage) window.__deliverAutonomousPhoneMessage(mid);
         }, MSG_DELAY_MS + i * MSG_STAGGER_MS)); // dedup'd inside; thumbnail gated on attended; extras staggered
       });
     }

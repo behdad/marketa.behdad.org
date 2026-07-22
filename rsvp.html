@@ -41758,6 +41758,31 @@ var ABANDONED_CALL_MS = 30000;
     exit: "exit — spoiler: you can't"
   };
 
+  // Public, read-only API reference for contextual assistants. Keep this derived from the same
+  // capability registry and console help used by the in-game tools so signatures cannot drift.
+  // It contains no private DOM ids, secrets, or executable code; Chat receives it only when a
+  // visitor's question is clearly about scripting/API usage.
+  window.__chatApiManifest = function () {
+    var typed = [];
+    try {
+      if (window.loft && window.loft.api && typeof window.loft.api.capabilities === "function") {
+        typed = window.loft.api.capabilities().map(function (entry) {
+          return {
+            id: entry.id,
+            kind: entry.kind,
+            risk: entry.risk || "read",
+            description: entry.description || "",
+            args: entry.args || {},
+            available: !!entry.available
+          };
+        });
+      }
+    } catch (_error) {}
+    var globals = {};
+    Object.keys(CONSOLE_HELP).forEach(function (name) { globals[name] = CONSOLE_HELP[name]; });
+    return { version: "loft-api-3", typed: typed, globals: globals };
+  };
+
   // The one shared command interpreter. Both terminals call it: the monitor console with no
   // ctx (defaults below → its own out/history/clear/quit), the drop-down passing its own
   // surface via ctx {out, hist, onClear, onQuit, isMonitor:false}. ctx.out is installed as
@@ -44908,6 +44933,10 @@ var ABANDONED_CALL_MS = 30000;
     if (/(apps?|applications?|programs?|on the phone|on the computer|aplikac|programy|برنامه)/.test(q) && window.__chatAppCatalog) apps.catalog = window.__chatAppCatalog();
     return apps;
   }
+  function chatNeedsApiManifest(message) {
+    var q = chatFold(message);
+    return /(?:loft\s*\.\s*api|api\b|script|javascript|\bjs\b|editor|console|python|linux|function|signature|command|syntax|code|sleep\s*\(|party\s*\(|dance\s*\(|trip\s*\(|room\s*\(|daylight\s*\(|night\s*\(|music\s*\(|caption\s*\()/i.test(q);
+  }
   window.__chatContext = function (message) {
     var now = window.__now ? window.__now() : new Date();
     var rooms = ["kitchen", "garden", "cuddly", "office", "balcony"];
@@ -44946,6 +44975,10 @@ var ABANDONED_CALL_MS = 30000;
       meteor_shower: typeof window.__meteorShowerNow === "function" ? window.__meteorShowerNow() : null,
       indoor_temperature: typeof window.__indoorTempState === "function" ? window.__indoorTempState() : null
     };
+    var scriptingApi = null;
+    if (chatNeedsApiManifest(message) && typeof window.__chatApiManifest === "function") {
+      try { scriptingApi = window.__chatApiManifest(); } catch (_error) { scriptingApi = null; }
+    }
     return {
       site_language: document.documentElement.lang || "en",
       room: window.currentStageName || null,
@@ -44982,7 +45015,8 @@ var ABANDONED_CALL_MS = 30000;
         },
         phone: window.__chatPhoneState ? window.__chatPhoneState() : null
       },
-      apps: chatRetrievedKnowledge(message)
+      apps: chatRetrievedKnowledge(message),
+      scripting_api: scriptingApi
     };
   };
   function chatPayload(text, history) {

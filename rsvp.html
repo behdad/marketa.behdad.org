@@ -9288,7 +9288,7 @@ section{margin:1.9rem 0}
   #garden-guests.chair-lift #garden-chair-teeter-b,#garden-guests.chair-lift #garden-chair-teeter-m{animation:none}
   #garden-guests.chair-lift .guest:not(.g-behdad):not(.g-marketa) .guest-move{animation:none !important}
 }
-/* ══ PHONE PERFORMANCE ═══════════════════════════════════════════════════════
+/* ══ SCENE PERFORMANCE ════════════════════════════════════════════════════════
    Measured at 390px with the party lit and the floor full: ~500 CSS animations
    run CONCURRENTLY across the strip, and a full style-recalc + Layout + Paint
    runs EVERY frame (~11% of wall time in style recalc alone, and that in
@@ -9296,42 +9296,24 @@ section{margin:1.9rem 0}
    compositor layer, so every transform animation in the scene is a MAIN-THREAD
    animation: style + layout + paint per frame, not a cheap composited
    transform. A main thread that busy is what leaves anything drawn over the
-   scene tearing on a phone. The blocks below cut the concurrent count on small
-   screens only. Desktop is deliberately untouched, and none of this substitutes
-   for prefers-reduced-motion, which stays a separate and stronger contract: it
-   sets animation:none, these only pause or thin. ═════════════════════════════ */
+   scene tearing on a phone and makes whole-strip desktop zooms flicker. The room
+   parking below therefore applies everywhere; the dance-floor thinning remains
+   phone-only. None of this substitutes for prefers-reduced-motion, which stays a
+   separate and stronger contract: it sets animation:none, these only pause/thin. ═ */
 /* ── rooms you are not looking at hold still ──────────────────────────────────
    goToStage pans the strip exactly one room width at a time, so a room two or
    more steps from the viewed one is entirely off-screen — standing in the
    garden that is the office and the balcony, ~125 animations nobody can see.
-   Paused rather than animation:none so nothing is torn down: a one-shot caught
-   mid-flight resumes and still fires its animationend (and whatever class
-   removal hangs off it) when you walk back in. animation-play-state does not
-   touch WAAPI animations, so the ambient particle spawners keep their onfinish
-   cleanup and none of them accumulate while a room is parked. */
-/* Gated on the INPUT first, the viewport second. Width alone can't do this job — a handset
-   turned sideways is ~844x390, past any sane width line but still a phone, and landscape is
-   how you actually settle in to watch the party; pointer:coarse catches phones and tablets in
-   both orientations and leaves a merely short desktop window alone.
-   pointer:coarse and NOT the tempting inverse of this file's (hover:hover) and (pointer:fine)
-   desktop test: a device with no pointer at all reports `hover:none` + `pointer:none`, so
-   `(hover:none)` is TRUE there — that phrasing fires on anything that hasn't said what it has,
-   headless Chrome included, which quietly took desktop down the phone path in testing.
-   pointer:coarse only ever matches a device that has actually declared a coarse pointer.
-   The two size terms are the belt to that braces: they keep the rule reachable on a device
-   that reports no pointer at all, and they are what headless can actually exercise, so the
-   phone path stays testable (max-height:520px is the same mobile-landscape line the
-   fullscreen chrome trims on). A merely short desktop window matching too is accepted. */
-@media (pointer: coarse), (max-width:759px), (max-height:520px){
-  #loft-game-strip .stage-far, #loft-game-strip .stage-far *{animation-play-state:paused !important}
-  /* ...and take them out of the RASTER, not just the animation loop. Pausing stops the work a
-     room generates; it does not stop the room being painted. The strip is 500% wide, so in
-     FULLSCREEN — where the room fills ~920px instead of ~265 — that is several thousand pixels
-     of SVG re-rasterised on every frame something else animates. .stage-far is >=2 rooms away
-     and cannot be on screen even mid-pan (goToStage pans exactly one room), so hiding it is
-     invisible. visibility (not display) keeps geometry stable, so nothing re-lays out on return. */
-  #loft-game-strip .stage-far{visibility:hidden}
-}
+   Once phase 2 unlocks the high-animation party state, JS pauses only
+   CSSAnimation objects rather than matching every descendant with a permanent
+   universal CSS selector. A one-shot caught mid-flight therefore resumes and
+   still fires animationend when you walk back in, while script-made WAAPI
+   particles keep running to their onfinish cleanup and cannot accumulate. */
+/* ...and take parked rooms out of the raster. During a slide JS keeps every room between the
+   origin and destination unparked, so even a direct kitchen→balcony jump has no blank middle;
+   only after transform transitionend does the destination become the sole visible stage.
+   visibility (not display) keeps the five-room geometry stable. */
+#loft-game-strip .stage-far{visibility:hidden}
 /* ── the dance floor keeps two moving parts per figure, not five ──────────────
    Every dancer stacks .guest-orbit (the do-si-do travel) + .guest-move (their
    own signature step) + .guest-sway (body rock) + .guest-arm-l + .guest-arm-r.
@@ -38188,11 +38170,12 @@ var ABANDONED_CALL_MS = 30000;
     // After the laptop's been open and untouched a while, the bouncing-caps "DVD
     // logo" screensaver takes over. Any click wakes it back to the normal
     // TextEdit face.
-    var laptopSaverTimer = null, laptopSaverRaf = null;
+    var laptopSaverTimer = null, laptopSaverRaf = null, laptopSaverMotion = null, laptopSaverStep = null;
     function stopLaptopSaver() {
       clearTimeout(laptopSaverTimer);
       laptopSaverTimer = null;
-      if (laptopSaverRaf) { cancelAnimationFrame(laptopSaverRaf); laptopSaverRaf = null; }
+      if (laptopSaverRaf != null) { cancelAnimationFrame(laptopSaverRaf); laptopSaverRaf = null; }
+      laptopSaverMotion = null; laptopSaverStep = null;
       laptop.classList.remove("show-saver");
     }
     function scheduleLaptopSaver(ms) {
@@ -38207,26 +38190,48 @@ var ABANDONED_CALL_MS = 30000;
     }
     // Classic "DVD logo" bounce physics, confined to the laptop's inner screen
     // rect (x:388..446, y:164..198).
+    function laptopSaverCanRun() {
+      return laptop.classList.contains("show-saver") && window.currentStageName === "office" &&
+        !document.hidden && document.hasFocus();
+    }
+    function syncLaptopSaverLoop() {
+      if (laptopReduce || !laptopSaverStep) return;
+      if (!laptopSaverCanRun()) {
+        if (laptopSaverRaf != null) cancelAnimationFrame(laptopSaverRaf);
+        laptopSaverRaf = null;
+      } else if (laptopSaverRaf == null) {
+        laptopSaverMotion.last = null;
+        laptopSaverRaf = requestAnimationFrame(laptopSaverStep);
+      }
+    }
     function startLaptopCapsSaver() {
       var el = document.getElementById("laptop-saver-caps");
       if (!el) return;
       if (laptopReduce) { el.setAttribute("transform", "translate(405.1,173.9) scale(0.14)"); return; }
-      var px = 405, py = 174, vx = 0.018, vy = 0.014, last = null;
-      function step(t) {
-        if (last === null) last = t;
-        var dt = Math.min(t - last, 50);
-        last = t;
-        px += vx * dt;
-        py += vy * dt;
-        if (px <= 387.2) { px = 387.2; vx = Math.abs(vx); }
-        if (px >= 423) { px = 423; vx = -Math.abs(vx); }
-        if (py <= 163.9) { py = 163.9; vy = Math.abs(vy); }
-        if (py >= 183.8) { py = 183.8; vy = -Math.abs(vy); }
-        el.setAttribute("transform", "translate(" + px.toFixed(1) + "," + py.toFixed(1) + ") scale(0.14)");
-        laptopSaverRaf = requestAnimationFrame(step);
-      }
-      laptopSaverRaf = requestAnimationFrame(step);
+      if (!laptopSaverMotion) laptopSaverMotion = { px: 405, py: 174, vx: 0.018, vy: 0.014, last: null };
+      laptopSaverStep = function (t) {
+        laptopSaverRaf = null;
+        if (!laptopSaverCanRun()) return;
+        var m = laptopSaverMotion;
+        if (m.last === null) m.last = t;
+        var dt = Math.min(t - m.last, 50);
+        m.last = t;
+        m.px += m.vx * dt;
+        m.py += m.vy * dt;
+        if (m.px <= 387.2) { m.px = 387.2; m.vx = Math.abs(m.vx); }
+        if (m.px >= 423) { m.px = 423; m.vx = -Math.abs(m.vx); }
+        if (m.py <= 163.9) { m.py = 163.9; m.vy = Math.abs(m.vy); }
+        if (m.py >= 183.8) { m.py = 183.8; m.vy = -Math.abs(m.vy); }
+        el.setAttribute("transform", "translate(" + m.px.toFixed(1) + "," + m.py.toFixed(1) + ") scale(0.14)");
+        laptopSaverRaf = requestAnimationFrame(laptopSaverStep);
+      };
+      syncLaptopSaverLoop();
     }
+    window.__syncLaptopSaverLoop = syncLaptopSaverLoop;
+    window.__laptopSaverLoopRunning = function () { return laptopSaverRaf != null; };
+    document.addEventListener("visibilitychange", syncLaptopSaverLoop);
+    window.addEventListener("focus", syncLaptopSaverLoop);
+    window.addEventListener("blur", syncLaptopSaverLoop);
     // The monitor's boot ends by inviting the (closed, idle) laptop to pulse; any
     // interaction with the laptop clears the invite.
     function stopLaptopInvite() { laptop.classList.remove("inviting"); }
@@ -38779,13 +38784,13 @@ var ABANDONED_CALL_MS = 30000;
   var pendingMonitorCallee = null;
   // After the caps site idles a while, a live Julia-set fractal screensaver takes
   // over ("electric sheep" nod). Any click on the monitor wakes it.
-  var saverTimer = null, saverRaf = null;
+  var saverTimer = null, saverRaf = null, monFractalState = null, monFractalFrame = null;
   var saverCameFrom = "desktop"; // which screen the saver took over (see startSaver/wake)
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   function stopSaver() {
     clearTimeout(saverTimer);
     saverTimer = null;
-    if (saverRaf) { cancelAnimationFrame(saverRaf); saverRaf = null; }
+    stopFractalSaver(true);
     monitor.classList.remove("show-saver");
   }
   function scheduleSaver(ms) {
@@ -38908,23 +38913,45 @@ var ABANDONED_CALL_MS = 30000;
     monFractalImg.setAttribute("href", url);
     monFractalImg.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", url); // older WebKit builds still key off xlink:href
   }
+  function monitorSaverCanRun() {
+    return monitor.classList.contains("show-saver") && window.currentStageName === "office" &&
+      !document.hidden && document.hasFocus();
+  }
+  function stopFractalSaver(resetState) {
+    if (saverRaf != null) cancelAnimationFrame(saverRaf);
+    saverRaf = null;
+    if (resetState) { monFractalState = null; monFractalFrame = null; }
+  }
+  function syncMonitorSaverLoop() {
+    if (reduceMotion || !monFractalFrame) return;
+    if (!monitorSaverCanRun()) stopFractalSaver(false);
+    else if (saverRaf == null) saverRaf = requestAnimationFrame(monFractalFrame);
+  }
   function startFractalSaver() {
     var canvas = getMonFractalCanvas();
-    var R = 0.7885, theta = Math.random() * 6.283, hueBase = Math.random();
-    if (reduceMotion) { renderJulia(canvas, R * Math.cos(theta), R * Math.sin(theta), 90, 1.3, hueBase, false, fractalBeatKick()); blitMonFractal(); return; }
-    var lastDraw = 0;
-    function frame(t) {
-      if (t - lastDraw >= 60) { // ~16fps: plenty for a slow morph — the canvas carries 4x the pixels now
-        lastDraw = t;
-        theta += 0.02;              // shape morphs (full c-orbit ~ every 14s)
-        hueBase = (hueBase + 0.003) % 1; // colour drifts through the spectrum ~ every 15s
-        renderJulia(canvas, R * Math.cos(theta), R * Math.sin(theta), 90, 1.3, hueBase, false, fractalBeatKick());
+    var R = 0.7885;
+    if (!monFractalState) monFractalState = { theta: Math.random() * 6.283, hueBase: Math.random(), lastDraw: 0 };
+    if (reduceMotion) { renderJulia(canvas, R * Math.cos(monFractalState.theta), R * Math.sin(monFractalState.theta), 90, 1.3, monFractalState.hueBase, false, fractalBeatKick()); blitMonFractal(); return; }
+    monFractalFrame = function (t) {
+      saverRaf = null;
+      if (!monitorSaverCanRun()) return;
+      var state = monFractalState;
+      if (t - state.lastDraw >= 60) { // ~16fps: plenty for a slow morph — the canvas carries 4x the pixels now
+        state.lastDraw = t;
+        state.theta += 0.02;              // shape morphs (full c-orbit ~ every 14s)
+        state.hueBase = (state.hueBase + 0.003) % 1; // colour drifts through the spectrum ~ every 15s
+        renderJulia(canvas, R * Math.cos(state.theta), R * Math.sin(state.theta), 90, 1.3, state.hueBase, false, fractalBeatKick());
         blitMonFractal();
       }
-      saverRaf = requestAnimationFrame(frame);
-    }
-    saverRaf = requestAnimationFrame(frame);
+      saverRaf = requestAnimationFrame(monFractalFrame);
+    };
+    syncMonitorSaverLoop();
   }
+  window.__syncMonitorSaverLoop = syncMonitorSaverLoop;
+  window.__monitorSaverLoopRunning = function () { return saverRaf != null; };
+  document.addEventListener("visibilitychange", syncMonitorSaverLoop);
+  window.addEventListener("focus", syncMonitorSaverLoop);
+  window.addEventListener("blur", syncMonitorSaverLoop);
   function clearBoot() {
     closeConsole(); // blurs the REPL input too — an invisible focused input eats every keyboard shortcut
     closeLinux(); // stops the VM's CPU too — no emulation behind a dark screen
@@ -39096,7 +39123,7 @@ var ABANDONED_CALL_MS = 30000;
   // eqAudioEl: the audio element the shared equalizer loop is currently driving (set
   // by startEq, cleared by stopEq) — also read by fractalBeatKick, above, to pulse the
   // screensaver fractal's brightness on the beat while a song plays underneath it.
-  var eqRAF = null, eqAudioCtx = null, eqCtxFailed = false, eqAudioEl = null;
+  var eqRAF = null, eqFrame = null, eqAudioCtx = null, eqCtxFailed = false, eqAudioEl = null;
   var eqBassShelf = null, eqMuffleFilter = null, eqMasterGain = null, eqCompressor = null, eqPanner = null, eqAnalyser = null;
   // Song level authority: once a song is captured into the pipeline its .volume is inert on
   // WebKit (createMediaElementSource bypasses it) — route the level to the in-graph gain then;
@@ -39331,9 +39358,12 @@ var ABANDONED_CALL_MS = 30000;
   // window.__songBeatKick() (the BPM-phase-locked envelope also used by e.g. the
   // balcony string lights) only on platforms with no live analyser wired.
   var headphoneBeatRAF = null, headphoneBeatData = null;
+  function headphoneBeatWant() {
+    return headphoneModeOn && window.currentStageName === "office" && !document.hidden && document.hasFocus();
+  }
   function headphoneBeatFrame() {
     headphoneBeatRAF = null;
-    if (!headphoneModeOn) return; // stopped -- __setHeadphoneMode(true) restarts it
+    if (!headphoneBeatWant()) return; // stopped -- room/focus sync or __setHeadphoneMode(true) restarts it
     var cups = document.getElementById("office-headphones-cups");
     if (!cups) return;
     var kick = 0;
@@ -39354,10 +39384,21 @@ var ABANDONED_CALL_MS = 30000;
     headphoneBeatRAF = requestAnimationFrame(headphoneBeatFrame);
   }
   function ensureHeadphoneBeat() {
-    if (headphoneBeatRAF != null) return;
+    if (headphoneBeatRAF != null || !headphoneBeatWant()) return;
     if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     headphoneBeatRAF = requestAnimationFrame(headphoneBeatFrame);
   }
+  function syncHeadphoneBeatLoop() {
+    if (!headphoneBeatWant()) {
+      if (headphoneBeatRAF != null) cancelAnimationFrame(headphoneBeatRAF);
+      headphoneBeatRAF = null;
+    } else ensureHeadphoneBeat();
+  }
+  window.__syncHeadphoneBeatLoop = syncHeadphoneBeatLoop;
+  window.__headphoneBeatLoopRunning = function () { return headphoneBeatRAF != null; };
+  document.addEventListener("visibilitychange", syncHeadphoneBeatLoop);
+  window.addEventListener("focus", syncHeadphoneBeatLoop);
+  window.addEventListener("blur", syncHeadphoneBeatLoop);
   // "Headphone mode": bass boost + muffle + pan to the on-screen headphones, ramped
   // smoothly via setTargetAtTime (never a hard switch, so there's no click). A safe
   // no-op if the audio graph never confirmed running — headphone mode then just
@@ -39587,6 +39628,7 @@ var ABANDONED_CALL_MS = 30000;
   };
   function stopEq() {
     if (eqRAF) { cancelAnimationFrame(eqRAF); eqRAF = null; }
+    eqFrame = null;
     // let the bars visibly fall to zero instead of freezing at whatever height they
     // were mid-song -- driveBars sets .style.transform directly every frame with no
     // CSS transition (so live updates stay instant, not laggy), so without this the
@@ -39728,12 +39770,36 @@ var ABANDONED_CALL_MS = 30000;
       }
     }
     function frame() {
+      eqRAF = null;
+      if (!eqVisualWant()) return;
       if (analyser && data) analyser.getByteFrequencyData(data); // one read/frame, shared by both bar groups
       sets.forEach(function (bars, si) { driveBars(bars, bandsBySet && bandsBySet[si]); });
       eqRAF = requestAnimationFrame(frame);
     }
-    frame();
+    eqFrame = frame;
+    syncEqVisualLoop();
   }
+  var EQ_OCCLUDING_CLASSES = ["photobooth", "show-console", "show-mail", "show-mines", "show-video", "show-family", "show-calendar", "show-weather", "show-chat", "show-python", "show-linux", "show-doom", "show-editor", "show-tattoo", "show-life", "show-browser"];
+  function eqVisualWant() {
+    if (!eqFrame || !eqAudioEl || window.currentStageName !== "office" || document.hidden || !document.hasFocus() ||
+        !monitor.classList.contains("here") || !monitor.classList.contains("screen-on")) return false;
+    if (monitor.classList.contains("show-nowplaying") || monitor.classList.contains("show-saver")) return true;
+    if (!monitor.classList.contains("show-caps")) return false;
+    for (var i = 0; i < EQ_OCCLUDING_CLASSES.length; i++) if (monitor.classList.contains(EQ_OCCLUDING_CLASSES[i])) return false;
+    return true; // caps desktop: the music dock tile's mini-EQ is visible
+  }
+  function syncEqVisualLoop() {
+    if (!eqVisualWant()) {
+      if (eqRAF) cancelAnimationFrame(eqRAF);
+      eqRAF = null;
+    } else if (!eqRAF) eqRAF = requestAnimationFrame(eqFrame);
+  }
+  window.__syncMonitorEqLoop = syncEqVisualLoop;
+  window.__monitorEqLoopRunning = function () { return !!eqRAF; };
+  if (window.MutationObserver) new MutationObserver(syncEqVisualLoop).observe(monitor, { attributes: true, attributeFilter: ["class"] });
+  document.addEventListener("visibilitychange", syncEqVisualLoop);
+  window.addEventListener("focus", syncEqVisualLoop);
+  window.addEventListener("blur", syncEqVisualLoop);
   function restartMarquee() {
     // toggling the CSS animation off/on (with a forced reflow in between) restarts it from
     // its 0% keyframe — getBoundingClientRect forces the reflow (SVG <g> has no offsetWidth)
@@ -47074,6 +47140,7 @@ async def localfont(name):
   var laptop = document.getElementById("office-laptop");
   if (!strip || !vp || !monitor) return;
   var zoomEl = null; // the device the view is zoomed onto (null = zoomed out)
+  var lastZoomPose = "", refitRaf = 0, refitRetryTimer = null, zoomOutTimer = null;
   // Android flickers horrendously while animating the big scaled-SVG transform, so on a
   // coarse pointer (touch) the zoom SNAPS instead of gliding — desktop keeps the glide.
   var coarseZoom = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
@@ -47098,24 +47165,36 @@ async def localfont(name):
     var uy = ((r.top + r.bottom) / 2 - sr.top) / sr.height * 340;
     var s = Math.min(680 / (r.width / sr.width * 3400 + t.padX * 2), 340 / (r.height / sr.height * 340 + t.padY * 2), t.maxS);
     var tx = ux / 3400 * (v.width * 5), ty = uy / 340 * v.height; // strip lays out at 500% viewport width
+    var origin = tx + "px " + ty + "px";
+    var transform = "translate(" + (v.width / 2 - tx) + "px, " + (v.height / 2 - ty) + "px) scale(" + s + ")";
+    var pose = origin + "|" + transform;
+    if (pose === lastZoomPose && strip.style.transformOrigin === origin && strip.style.transform === transform) return false;
     if (coarseZoom) strip.style.transition = "none"; // snap on touch — no animated repaint to flicker
-    strip.style.transformOrigin = tx + "px " + ty + "px";
-    strip.style.transform = "translate(" + (v.width / 2 - tx) + "px, " + (v.height / 2 - ty) + "px) scale(" + s + ")";
+    strip.style.transformOrigin = origin;
+    strip.style.transform = transform;
+    lastZoomPose = pose;
     if (coarseZoom) { strip.getBoundingClientRect(); strip.style.transition = ""; } // reflow commits the snap, then restore the glide for room slides
+    return true;
   }
   function zoomIn(el) {
     if (window.currentStageName !== "office") return;
     var t = targetFor(el);
     if (!t || !t.el || !t.when()) return;
+    if (zoomOutTimer) { clearTimeout(zoomOutTimer); zoomOutTimer = null; }
     zoomEl = el;
+    lastZoomPose = "";
     vp.classList.add("device-zoomed");
     el.classList.add("dev-zoomed"); // reveals THIS device's bezel ✕ (a child of its group)
     apply();
   }
   function zoomOut() {
     if (!zoomEl) return;
+    if (refitRaf) { cancelAnimationFrame(refitRaf); refitRaf = 0; }
+    if (refitRetryTimer) { clearTimeout(refitRetryTimer); refitRetryTimer = null; }
+    if (zoomOutTimer) { clearTimeout(zoomOutTimer); zoomOutTimer = null; }
     zoomEl.classList.remove("dev-zoomed");
     zoomEl = null;
+    lastZoomPose = "";
     vp.classList.remove("device-zoomed");
     if (coarseZoom) { // touch: snap straight back to the room view, no glide (Android flicker)
       strip.style.transition = "none";
@@ -47131,11 +47210,37 @@ async def localfont(name):
     var idx = window.currentStageIndex || 0;
     var r = vp.getBoundingClientRect();
     strip.style.transform = "translate(" + (-idx * r.width) + "px, 0px) scale(1)";
-    setTimeout(function () {
+    zoomOutTimer = setTimeout(function () {
+      zoomOutTimer = null;
       if (zoomEl) return; // re-zoomed mid-glide: its transform owns the strip now
       strip.style.transformOrigin = "";
       strip.style.transform = "translateX(-" + ((window.currentStageIndex || 0) * 20) + "%)";
     }, 760);
+  }
+  // A room slide and a device-zoom glide both own the same strip transform. Collapse any
+  // active (or still-settling) device zoom to the current room in one unanimated commit
+  // before goToStage starts its pan; otherwise the new translate interpolates around the
+  // old device origin and the whole monitor/room flashes sideways for a frame.
+  function prepareRoomPan() {
+    var hadZoom = !!zoomEl || !!zoomOutTimer || vp.classList.contains("device-zoomed") || !!strip.style.transformOrigin;
+    if (!hadZoom) return false;
+    if (refitRaf) { cancelAnimationFrame(refitRaf); refitRaf = 0; }
+    if (refitRetryTimer) { clearTimeout(refitRetryTimer); refitRetryTimer = null; }
+    if (zoomOutTimer) { clearTimeout(zoomOutTimer); zoomOutTimer = null; }
+    if (suppressTimer) { clearTimeout(suppressTimer); suppressTimer = null; }
+    suppressZoomClick = false;
+    if (zoomEl) zoomEl.classList.remove("dev-zoomed");
+    if (monitor) monitor.classList.remove("dev-zoomed");
+    if (laptop) laptop.classList.remove("dev-zoomed");
+    zoomEl = null; lastZoomPose = "";
+    vp.classList.remove("device-zoomed");
+    var prevTransition = strip.style.transition;
+    strip.style.transition = "none";
+    strip.style.transformOrigin = "";
+    strip.style.transform = "translateX(-" + ((window.currentStageIndex || 0) * 20) + "%)";
+    strip.getBoundingClientRect();
+    strip.style.transition = prevTransition;
+    return true;
   }
   // re-fit the zoom whenever the box it frames may have moved or resized under us — a
   // resize, or entering/leaving fullscreen (which resizes the frame but never re-ran
@@ -47151,14 +47256,23 @@ async def localfont(name):
     // the same origin-snap.
     var prevT = strip.style.transition;
     strip.style.transition = "none";
-    apply();
-    void strip.offsetWidth; // commit the un-transitioned pose before the glide is restored
+    var changed = apply();
+    if (changed) void strip.offsetWidth; // commit the un-transitioned pose before the glide is restored
     strip.style.transition = prevT;
   }
-  window.addEventListener("resize", refitZoom);
-  document.addEventListener("fullscreenchange", function () { if (zoomEl) { requestAnimationFrame(refitZoom); setTimeout(refitZoom, 80); } });
-  document.addEventListener("webkitfullscreenchange", function () { if (zoomEl) { requestAnimationFrame(refitZoom); setTimeout(refitZoom, 80); } });
+  function scheduleRefitZoom(withRetry) {
+    if (!zoomEl) return;
+    if (!refitRaf) refitRaf = requestAnimationFrame(function () { refitRaf = 0; refitZoom(); });
+    if (withRetry) {
+      clearTimeout(refitRetryTimer);
+      refitRetryTimer = setTimeout(function () { refitRetryTimer = null; scheduleRefitZoom(false); }, 120);
+    }
+  }
+  window.addEventListener("resize", function () { scheduleRefitZoom(false); });
+  document.addEventListener("fullscreenchange", function () { scheduleRefitZoom(true); });
+  document.addEventListener("webkitfullscreenchange", function () { scheduleRefitZoom(true); });
   window.__refitZoom = refitZoom;
+  window.__prepareRoomPan = prepareRoomPan;
   window.__monitorZoomIn = function () { zoomIn(monitor); };
   window.__monitorZoomOut = zoomOut;
   window.__toggleMonitorZoom = function () { if (zoomEl === monitor) zoomOut(); else zoomIn(monitor); }; // 'Enter' in the office toggles the monitor zoom
@@ -47238,8 +47352,6 @@ async def localfont(name):
     e.stopPropagation();
     zoomOut();
   }, true);
-  window.addEventListener("resize", function () { if (zoomEl) apply(); });
-  document.addEventListener("fullscreenchange", function () { if (zoomEl) setTimeout(apply, 60); }); // measure after the box settles
 })();
 (function () {
   var marketa = document.getElementById("cuddly-marketa");
@@ -48051,6 +48163,15 @@ async def localfont(name):
       if (shell) shell.focus();
     }
     function openApp(id, titleKey, builder) {
+      // A live Messages repaint (an incoming crew reply, language switch, etc.) rebuilds
+      // the app body. Remember which of its two text fields owned the keyboard so that
+      // repaint does not unexpectedly throw the user from search back into composing.
+      var refocusClass = "";
+      var oldFocus = document.activeElement;
+      if (currentApp === id && id === "messages" && oldFocus && shell.contains(oldFocus)) {
+        if (oldFocus.classList.contains("pm-ms-input")) refocusClass = ".pm-ms-input";
+        else if (oldFocus.classList.contains("pm-msg-input")) refocusClass = ".pm-msg-input";
+      }
       leaveCurrentApp();
       currentApp = id;
       currentTitleKey = titleKey;
@@ -48060,7 +48181,16 @@ async def localfont(name):
       body.innerHTML = "";
       builder(body);
       showScreen("app");
-      if (shell) shell.focus();
+      if (id === "messages") {
+        // Messages behaves like a chat: a fresh open is ready to type immediately.
+        // The timeout runs after the phone's screen-class change has made the field visible.
+        setTimeout(function () {
+          if (!isOpen() || currentApp !== "messages") return;
+          var field = body.querySelector(refocusClass || ".pm-msg-input");
+          if (!field) return;
+          try { field.focus({ preventScroll: true }); } catch (_error) { field.focus(); }
+        }, 0);
+      } else if (shell) shell.focus();
     }
     function renderHome() {
       var home = shell.querySelector(".phone-home");
@@ -52627,6 +52757,14 @@ async def localfont(name):
         if (document.getElementById("sharecard-modal") && window.__shareCloseModal) { window.__shareCloseModal(); return; } // the postcard modal (tapped from a message image) owns Esc first — close it, don't navigate the phone back under it
         if (phMenuOpen()) { phCloseMenu(); return; } // an open app-icon menu owns Esc (matches the desktop .mon-ctx), doesn't navigate the phone back
         if (currentApp === "album" && shell && shell.querySelector(".pm-album-detail") && window.__albumCloseDetail) { window.__albumCloseDetail(); return; } // an open polaroid detail owns Esc first
+        // First Esc leaves any phone text/search field but keeps the app open. A second
+        // Esc then performs the normal app -> home navigation. Drafts remain intact.
+        var focused = document.activeElement;
+        if (focused && shell && shell.contains(focused) && (/^(INPUT|TEXTAREA|SELECT)$/.test(focused.tagName) || focused.isContentEditable)) {
+          if (focused.blur) focused.blur();
+          try { shell.focus({ preventScroll: true }); } catch (_error) { shell.focus(); }
+          return;
+        }
         navBack();
         return;
       }
@@ -64509,27 +64647,110 @@ function spawnDustMote(container) {
     }
   }
   window.restoreStageHint = restoreStageHint; // games (Flair Catch, chair arcade) call this to put the room hint back
-  // Flag the rooms a given pan leaves fully off-screen. One room width per step, so
-  // anything two or more steps out cannot be on screen at any viewport; the neighbours
-  // stay live because they genuinely bleed into the edges on a narrow phone. The CSS
-  // that reads .stage-far is phone-gated, so this is a no-op class on desktop.
-  // Park EVERY room but the one you're in. The neighbours were kept live because they can bleed
-  // a sliver into the edges mid-pan — so `keep` holds the room being left alive for the length of
-  // the slide, and a timer parks it once the strip has settled. Only ever one room animating at
-  // rest, two while travelling, instead of three.
+  // Park EVERY room but the one being viewed, on every device. During a direct multi-room pan,
+  // every traversed stage must stay visible: CSS transform interpolation crosses their actual
+  // geometry, so keeping only origin+destination produces blank intermediate frames.
   var STRIP_SLIDE_MS = 720; // #loft-game-strip's .7s room slide (ROOM_SLIDE_MS is declared far later in the file)
-  var parkTimer = null;
-  function markFarRooms(idx, keep) {
+  var parkTimer = null, parkEndHandler = null, parkGeneration = 0;
+  var pausedStageAnimations = {};
+  var queuedAnimationPauses = new Set(), animationPauseRaf = null;
+  function stageAnimationParkingActive() { return !!window.__secondRound; }
+  function isCssAnimation(animation) { return animation && typeof animation.animationName === "string"; }
+  function pauseStageAnimations(stage, allAnimations) {
+    if (!stage) return;
+    var held = pausedStageAnimations[stage.id] || (pausedStageAnimations[stage.id] = new Set());
+    var animations;
+    if (allAnimations) {
+      animations = allAnimations.filter(function (animation) {
+        var target = animation && animation.effect && animation.effect.target;
+        return !!(target && target.nodeType && stage.contains(target)); // pseudo-element effects are not DOM Nodes; visibility still suppresses their paint
+      });
+    } else if (stage.getAnimations) {
+      try { animations = stage.getAnimations({ subtree: true }); } catch (_error) { animations = []; }
+    } else animations = [];
+    for (var i = 0; i < animations.length; i++) {
+      var animation = animations[i];
+      if (!isCssAnimation(animation) || animation.playState === "paused" || animation.playState === "finished" || animation.playState === "idle") continue;
+      try { animation.pause(); held.add(animation); } catch (_error) {}
+    }
+  }
+  function resumeStageAnimations(stage) {
+    var held = stage && pausedStageAnimations[stage.id];
+    if (!held) return;
+    held.forEach(function (animation) {
+      try { if (animation.playState === "paused") animation.play(); } catch (_error) {}
+    });
+    held.clear();
+  }
+  function setStageParked(stage, parked) {
+    if (!stage) return;
+    if (stage.classList.contains("stage-far") === parked) return;
+    stage.classList.toggle("stage-far", parked);
+    if (parked && stageAnimationParkingActive()) queueStageAnimationPause(stage);
+    else { queuedAnimationPauses.delete(stage); resumeStageAnimations(stage); }
+  }
+  function queueStageAnimationPause(stage) {
+    queuedAnimationPauses.add(stage);
+    if (animationPauseRaf) return;
+    animationPauseRaf = requestAnimationFrame(function () {
+      animationPauseRaf = null;
+      var allAnimations = null;
+      // One document animation snapshot is substantially cheaper than asking each of
+      // the four parked SVG subtrees to recalculate independently on the same frame.
+      if (document.getAnimations) { try { allAnimations = document.getAnimations(); } catch (_error) {} }
+      queuedAnimationPauses.forEach(function (parkedStage) {
+        if (parkedStage.classList.contains("stage-far")) pauseStageAnimations(parkedStage, allAnimations);
+      });
+      queuedAnimationPauses.clear();
+    });
+  }
+  // CSS animations can be introduced after a room is already parked (party starts, a
+  // special day lands, etc.). Batch their animationstart events into the same one-scan pass.
+  strip.addEventListener("animationstart", function (e) {
+    if (!stageAnimationParkingActive()) return;
+    var target = e.target && e.target.closest ? e.target.closest(".stage-far") : null;
+    if (!target) return;
+    queueStageAnimationPause(target);
+  }, true);
+  function markFarRooms(idx, from) {
+    var lo = from == null ? idx : Math.min(idx, from);
+    var hi = from == null ? idx : Math.max(idx, from);
     for (var i = 0; i < STAGES.length; i++) {
       var g = document.getElementById("stage-" + STAGES[i]);
-      if (g) g.classList.toggle("stage-far", i !== idx && i !== keep);
+      setStageParked(g, i < lo || i > hi);
     }
   }
   function parkAfterSlide(idx, from) {
-    markFarRooms(idx, from);            // the room we're leaving stays live while it slides out
+    var gen = ++parkGeneration;
+    markFarRooms(idx, from);
     clearTimeout(parkTimer);
-    parkTimer = setTimeout(function () { markFarRooms(idx); }, STRIP_SLIDE_MS + 80);
+    if (parkEndHandler) strip.removeEventListener("transitionend", parkEndHandler);
+    function finishPark(e) {
+      if (e && (e.target !== strip || e.propertyName !== "transform")) return;
+      if (gen !== parkGeneration) return;
+      clearTimeout(parkTimer); parkTimer = null;
+      if (parkEndHandler) strip.removeEventListener("transitionend", parkEndHandler);
+      parkEndHandler = null;
+      markFarRooms(idx);
+    }
+    if (idx === from || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) { finishPark(); return; }
+    parkEndHandler = finishPark;
+    strip.addEventListener("transitionend", parkEndHandler);
+    parkTimer = setTimeout(finishPark, STRIP_SLIDE_MS + 140); // transitioncancel/browser timing fallback
   }
+  window.__stageParkingState = function () {
+    return STAGES.map(function (name) {
+      var stage = document.getElementById("stage-" + name), held = stage && pausedStageAnimations[stage.id];
+      return { room: name, parked: !!(stage && stage.classList.contains("stage-far")), paused_css_animations: held ? held.size : 0 };
+    });
+  };
+  window.__refreshStageAnimationParking = function () {
+    if (!stageAnimationParkingActive()) return;
+    for (var i = 0; i < STAGES.length; i++) {
+      var stage = document.getElementById("stage-" + STAGES[i]);
+      if (stage && stage.classList.contains("stage-far")) queueStageAnimationPause(stage);
+    }
+  };
   markFarRooms(0); // the loft opens in the kitchen and nothing pans on load, so park the far rooms now
   function goToStage(name) {
     var idx = STAGES.indexOf(name);
@@ -64537,14 +64758,19 @@ function spawnDustMote(container) {
     var fromIdx = stageIndex;
     stageIndex = idx;
     unlockThrough(idx);
-    if (window.__monitorZoomOut) window.__monitorZoomOut(); // the zoomed-up monitor never travels between rooms
+    if (window.__prepareRoomPan) window.__prepareRoomPan(); // collapse device zoom before the strip's room-pan transform takes ownership
+    else if (window.__monitorZoomOut) window.__monitorZoomOut();
     if (window.__clearSkyMeteors) window.__clearSkyMeteors(); // ...nor does a shower's streaks: the sky you left keeps none of them
     if (window.__clearRoomFireworks) window.__clearRoomFireworks(); // one-shot garden fireworks never ride into another room
     strip.style.transform = "translateX(-" + (idx * 20) + "%)";
     strip.classList.toggle("viewing-office", name === "office"); // WebKit paints the monitor's foreignObjects even at opacity:0 and lets them escape the strip clip, leaking into whichever room is on screen; the CSS gate below hides them whenever the office isn't the viewed room
     window.currentStageIndex = idx;
     window.currentStageName = name; // room-truth for gates that live outside this IIFE (e.g. the fractal-flame loop)
-    parkAfterSlide(idx, fromIdx); // everything but this room parks once the slide settles (phones only; see .stage-far)
+    parkAfterSlide(idx, fromIdx); // traversed rooms stay live through the pan; only the destination remains afterwards
+    if (window.__syncLaptopSaverLoop) window.__syncLaptopSaverLoop(); // off-room device canvases/DOM loops hold their exact frame until the office returns
+    if (window.__syncMonitorSaverLoop) window.__syncMonitorSaverLoop();
+    if (window.__syncMonitorEqLoop) window.__syncMonitorEqLoop();
+    if (window.__syncHeadphoneBeatLoop) window.__syncHeadphoneBeatLoop();
     if (window.__rearmSkyMeteors) window.__rearmSkyMeteors(); // stepping out under a shower: the sky is going by the time you've arrived (no-op on an ordinary night)
     endHuntIntro(); // a room change ends the opening prompt, so the new room's caption shows (and the held notification channels wake)
     clearOpeningGuide(); // ...and skips the eight-second caption tutorial if the player has already moved on
@@ -64750,6 +64976,36 @@ function spawnDustMote(container) {
   // — mon-ctx/desktop/laptop/phone/D-pad — or .console-ctx).
   document.addEventListener("contextmenu", function (e) {
     if (e.target && e.target.closest && e.target.closest(".mon-ctx, .console-ctx")) e.preventDefault();
+  }, true);
+  // `/` is the familiar in-app search shortcut. Only the app currently owning a
+  // visible surface participates: an open phone takes priority; otherwise the
+  // monitor calendar may claim it. Calendar builds its field only after search
+  // mode is entered, so the shortcut also presses that app's search toggle.
+  function focusActiveAppSearch() {
+    var host = document.querySelector(".phone-backdrop.show .phone-app-body");
+    if (!host) {
+      var mon = document.getElementById("office-monitor");
+      if (window.currentStageName === "office" && mon && mon.classList.contains("show-calendar")) host = document.getElementById("monitor-cal-body");
+    }
+    if (!host) return false;
+    var input = host.querySelector('input[type="search"]');
+    if (input) {
+      try { input.focus({ preventScroll: true }); } catch (_error) { input.focus(); }
+      if (input.select) input.select();
+      return true;
+    }
+    var toggle = host.querySelector(".calx-search-btn");
+    if (!toggle) return false;
+    toggle.click(); // __calendarRender focuses the newly-created field after rebuilding
+    return true;
+  }
+  window.__focusActiveAppSearch = focusActiveAppSearch;
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || e.isComposing) return;
+    var t = e.target;
+    if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return; // a literal slash while writing remains a slash; Esc first leaves the field
+    if (!focusActiveAppSearch()) return;
+    e.preventDefault(); e.stopPropagation();
   }, true);
   // Keyboard room nav: →/Tab forward, ← back. At a locked frontier a second forward within
   // 600ms unlocks it (mirrors the arrow/dot double-click-to-unlock). ` whisks to the office
@@ -68905,6 +69161,7 @@ function spawnDustMote(container) {
     if (window.__updateOfficeHangout) window.__updateOfficeHangout(); // party on → the office may draw an occasional hangout couple (self-gates on being IN the office); party off → they clear
     if (window.__syncPartyBBQ) window.__syncPartyBBQ(); // a smoker lit before the party starts the same split; party-off clears it
     if (on && window.__offerDayPartyBBQ) window.__offerDayPartyBBQ(); // programmatic daytime parties get the same early Behdad prompt
+    if (on && window.__refreshStageAnimationParking) window.__refreshStageAnimationParking(); // pause every newly-busy off-room CSS timeline in one batched animation snapshot
   }
   window.__setGardenParty = setGardenParty;
   // Tap a party dancer -> that dancer does a celebratory flare (hop + twirl + pop). The

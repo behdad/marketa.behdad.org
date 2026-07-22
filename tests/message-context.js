@@ -15,6 +15,9 @@ var HARNESS = [
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},300);});',
   'async function run(){',
   ' window.__secondRound=true;window.__deliverPhoneMessage("cue_mail");if(window.__hideMessageThumb)window.__hideMessageThumb();window.phone("messages");await sleep(100);',
+  ' S("keyboard_open",{active:document.activeElement&&document.activeElement.className,app:!!document.querySelector(".phone-shell.pm-app")});',
+  ' document.activeElement.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));await sleep(10);S("keyboard_escape",{active:document.activeElement&&document.activeElement.className,app:!!document.querySelector(".phone-shell.pm-app")});',
+  ' document.activeElement.dispatchEvent(new KeyboardEvent("keydown",{key:"/",bubbles:true,cancelable:true}));await sleep(10);S("keyboard_search",{active:document.activeElement&&document.activeElement.className,selected:document.activeElement&&document.activeElement.selectionStart===0});',
   ' var row=document.querySelector(".pm-msg-row[data-message-id=cue_mail]");var prevented=context(row);S("unread_menu",{prevented:prevented,labels:menuLabels(),unread:row.classList.contains("unread"),app:document.querySelector(".pah-title").textContent});',
   ' menuButtons()[1].click();await sleep(20);row=document.querySelector(".pm-msg-row[data-message-id=cue_mail]");S("marked_read",{unread:row.classList.contains("unread"),latest:window.__latestUnreadMessage(),app:document.querySelector(".pah-title").textContent});',
   ' context(row);S("read_menu",{labels:menuLabels()});menuButtons()[1].click();await sleep(20);row=document.querySelector(".pm-msg-row[data-message-id=cue_mail]");S("marked_unread",{unread:row.classList.contains("unread"),latest:window.__latestUnreadMessage()});',
@@ -23,6 +26,7 @@ var HARNESS = [
   ' composer.value="Save me a dance!";composer.dispatchEvent(new Event("input",{bubbles:true}));document.querySelector(".pm-msg-form").dispatchEvent(new Event("submit",{bubbles:true,cancelable:true}));await sleep(30);var ids=[].slice.call(document.querySelectorAll(".pm-msg-row")).map(function(x){return x.getAttribute("data-message-id");});var liveInput=document.querySelector(".pm-msg-input");S("waiting",{ids:ids,pending:!!document.querySelector(".pm-msg-row.pending"),thinking:/Charlie is thinking/i.test(document.querySelector(".pm-messages").textContent),inputEnabled:!!liveInput&&!liveInput.disabled,asked:asked,privateHistory:window.__monitorChatHistory&&window.__monitorChatHistory()});',
   ' aiResolve(JSON.stringify({sender:"Bahareh",text:"Of course. I saved you one!",action:null}));await sleep(40);ids=[].slice.call(document.querySelectorAll(".pm-msg-row")).map(function(x){return x.getAttribute("data-message-id");});var outgoing=document.querySelector(".pm-msg-row.outgoing"),crew=document.querySelector(".pm-msg-row[data-message-id=reply_ai_1]");S("answered",{ids:ids,outgoing:outgoing&&outgoing.querySelector(".pm-msg-text").textContent,quote:outgoing&&outgoing.querySelector(".pm-msg-quote").textContent,sender:crew&&crew.querySelector(".pm-msg-from").textContent,crew:crew&&crew.querySelector(".pm-msg-text").textContent,pending:!!document.querySelector(".pm-msg-row.pending")});',
   ' document.documentElement.lang="cs";if(window.refreshPhoneText)window.refreshPhoneText();await sleep(20);row=document.querySelector(".pm-msg-row[data-message-id=cue_mail]");context(row);S("czech",{labels:menuLabels(),placeholder:document.querySelector(".pm-msg-input").getAttribute("placeholder")});',
+  ' if(window.__hideMessageReadMenu)window.__hideMessageReadMenu();window.phone("calendar");await sleep(40);var shell=document.querySelector(".phone-shell");shell.dispatchEvent(new KeyboardEvent("keydown",{key:"/",bubbles:true,cancelable:true}));await sleep(30);S("calendar_search",{active:document.activeElement&&document.activeElement.className,on:!!document.querySelector(".calx-search-btn.is-on")});',
   '}',
   '})();</script>'
 ].join("\n");
@@ -38,6 +42,9 @@ var r = lib.runPageSync("rsvp.html", HARNESS, 4000, { patchRaf: true });
 if (!r) { console.log("  \u2717 harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
+check(s.keyboard_open.active === "pm-msg-input" && s.keyboard_open.app, "Messages opens with the composer focused", s.keyboard_open);
+check(/phone-shell/.test(s.keyboard_escape.active) && s.keyboard_escape.app, "first Escape blurs the composer without leaving Messages", s.keyboard_escape);
+check(s.keyboard_search.active === "pm-ms-input" && s.keyboard_search.selected, "/ focuses and selects the Messages search field after leaving the composer", s.keyboard_search);
 check(s.unread_menu.prevented && s.unread_menu.unread && s.unread_menu.labels.join("|") === "Reply…|Mark as read.", "an unread row offers Reply and Mark as read", s.unread_menu);
 check(!s.marked_read.unread && s.marked_read.latest === null && /messages/i.test(s.marked_read.app), "marking read updates state without opening the message", s.marked_read);
 check(s.read_menu.labels.join("|") === "Reply…|Mark as unread.", "a read row offers Reply and Mark as unread", s.read_menu);
@@ -49,6 +56,7 @@ check(s.waiting.asked && s.waiting.asked.group.cast.some(function(p){return p.na
 check(Array.isArray(s.waiting.privateHistory) && s.waiting.privateHistory.length === 0, "the wedding-thread exchange stays out of Charlie's private chat history", s.waiting.privateHistory);
 check(s.answered.ids.join(",") === "cue_mail,reply_user_1,reply_ai_1" && s.answered.outgoing === "Save me a dance!" && /Bahareh:/.test(s.answered.quote) && s.answered.sender === "Bahareh" && /saved you one/.test(s.answered.crew) && !s.answered.pending, "the asynchronous crew answer arrives as an ordinary chronological message", s.answered);
 check(s.czech.labels.join("|") === "Odpov\u011bd\u011bt…|Ozna\u010dit jako nep\u0159e\u010dten\u00e9." && /svatebn\u00ed part\u011b/.test(s.czech.placeholder), "context actions and composer follow the Czech UI language", s.czech);
+check(s.calendar_search.active === "calx-search-input" && s.calendar_search.on, "/ enters and focuses Calendar search even before its field exists", s.calendar_search);
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

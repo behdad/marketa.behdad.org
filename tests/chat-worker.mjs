@@ -4,7 +4,9 @@
 import fs from "node:fs/promises";
 
 const source = await fs.readFile(new URL("../chat.js", import.meta.url), "utf8");
-const moduleUrl = `data:text/javascript;base64,${Buffer.from(source).toString("base64")}`;
+const knowledge = JSON.parse(await fs.readFile(new URL("../chat-knowledge.json", import.meta.url), "utf8"));
+const bundledSource = source.replace('import CHAT_KNOWLEDGE from "./chat-knowledge.json";', `const CHAT_KNOWLEDGE = ${JSON.stringify(knowledge)};`);
+const moduleUrl = `data:text/javascript;base64,${Buffer.from(bundledSource).toString("base64")}`;
 const worker = (await import(moduleUrl)).default;
 const ORIGIN = "https://marketa.behdad.org";
 const originalFetch = globalThis.fetch;
@@ -110,6 +112,7 @@ check(captured.body.model === "gpt-5.6-luna" && captured.body.reasoning.effort =
 check(captured.body.input.length === 3 && captured.body.input[0].role === "user" && captured.body.input[2].content === "Kde je party?", "valid history and the latest message are forwarded in order", captured.body.input);
 check(/latest message/.test(captured.body.instructions) && /\"room\":\"garden\"/.test(captured.body.instructions), "language rule and sanitized game context reach the developer instructions");
 check(/You are Charlie/.test(captured.body.instructions) && /Always spell Markéta/.test(captured.body.instructions) && /kitchen\/bar/.test(captured.body.instructions) && /cuddly-puddly/.test(captured.body.instructions), "Charlie's identity and official names reach the chatbot instructions");
+check(/Verified knowledge/.test(captured.body.instructions) && /"id":"washrooms","location":"by the entrance"/.test(captured.body.instructions) && /"id":"prague_brunch","date":"2027-07-11"/.test(captured.body.instructions), "verified venue and wedding knowledge reaches Charlie");
 check(/^[a-f0-9]{64}$/.test(captured.body.safety_identifier), "OpenAI receives a stable privacy-preserving safety identifier");
 check(!source.includes("test-key"), "the Worker source contains no API key");
 
@@ -143,6 +146,7 @@ const groupCapture = captures.at(-1);
 check(groupResponse.status === 200 && groupReply.sender === "Danesh" && groupReply.text === "Here you go." && groupReply.action === null, "group replies are normalized to a cast sender and actions remain disabled", groupResult);
 check(groupCapture.body.input.length === 1 && groupCapture.body.input[0].content === "DJ, slow song please.", "group mode does not forward Charlie's private history", groupCapture.body.input);
 check(/Wedding crew group chat/.test(groupCapture.body.instructions) && /"current_dj":"Danesh"/.test(groupCapture.body.instructions) && /"name":"Markéta"/.test(groupCapture.body.instructions) && /"kitchen":\["Pouria"\]/.test(groupCapture.body.instructions) && !/attic/.test(groupCapture.body.instructions), "the separate group persona receives current DJ, all-room locations, and sanitized cast context");
+check(/"id":"washrooms","location":"by the entrance"/.test(groupCapture.body.instructions) && /physical directions/.test(groupCapture.body.instructions), "the crew responder receives verified venue facts and the no-invented-directions rule");
 check(!/^You are Charlie/.test(groupCapture.body.instructions) && /action value must be null/.test(groupCapture.body.instructions), "group mode is distinct from Charlie and cannot request game actions yet");
 
 turnstileSuccess = false;

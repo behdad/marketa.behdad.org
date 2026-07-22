@@ -48243,6 +48243,7 @@ async def localfont(name):
     var modal = null, shell = null, booted = false, closing = false;
     var lockA = 0, lockB = 0, lockAnswer = null, lockEntry = "", lockShakeT = null; // math passcode lockscreen (first open per visit)
     var statusClock = null, currentApp = null, currentTitleKey = "", directCloseApp = null;
+    var messageAppReturn = null; // a message action can deep-link to another phone app; Back returns to the thread first
     var battMgr = null, battHooked = false;
     var phoneBrowserCleanup = null; // teardown for the in-phone browser (ResizeObserver + frame unload)
     var phoneBrowserPending = null; // a URL __showUrlInPhone wants opened instead of the default tab; renderPhoneBrowser consumes it
@@ -48578,6 +48579,7 @@ async def localfont(name):
       currentApp = null;
     }
     function showHome() {
+      messageAppReturn = null;
       directCloseApp = null;
       leaveCurrentApp();
       renderHome();
@@ -52437,6 +52439,13 @@ async def localfont(name):
           var body = shell.querySelector(".phone-app-body");
           if (body) { cocktailView = "gallery"; cocktailSel = -1; body.scrollTop = 0; body.innerHTML = ""; renderCocktailGallery(body); return; }
         }
+        if (messageAppReturn && messageAppReturn.launched === currentApp) {
+          var closeMessagesDirectly = messageAppReturn.directClose;
+          messageAppReturn = null;
+          openApp("messages", "app_messages", renderMessages);
+          directCloseApp = closeMessagesDirectly ? "messages" : null;
+          return;
+        }
         showHome(); return;
       }
       close();
@@ -52519,6 +52528,7 @@ async def localfont(name):
       phCancelDrag(); // abort any in-flight icon drag (drop the ghost + window listeners)
       if (lockShakeT) { clearTimeout(lockShakeT); lockShakeT = null; }
       if (callee) dropCall(true); // silent teardown of any live call + ambient
+      messageAppReturn = null;
       directCloseApp = null;
       leaveCurrentApp();           // restore the re-placed Mines board to the monitor
       stopStatusClock();
@@ -52602,7 +52612,16 @@ async def localfont(name):
       if (id) { messagesRead[id] = true; updateMsgBadge(); } // tapping marks the message read (unread = bold until then)
       var m = id && MESSAGES[id], act = m && m.act;
       if (!act) { open(true); openApp("messages", "app_messages", renderMessages); return; }
-      if (act.indexOf("app:") === 0) { open(true); var app = phoneAppByName(act.slice(4)); if (app && app.open) app.open(); else openApp("messages", "app_messages", renderMessages); return; }
+      if (act.indexOf("app:") === 0) {
+        var returnDirect = directCloseApp === "messages";
+        open(true);
+        var app = phoneAppByName(act.slice(4));
+        if (app && app.open) {
+          app.open();
+          messageAppReturn = { launched: app.id, directClose: returnDirect };
+        } else openApp("messages", "app_messages", renderMessages);
+        return;
+      }
       if (act.indexOf("pc:") === 0) { close(true); if (window.__openMonitorApp) window.__openMonitorApp(act.slice(3)); return; } // → an app on the office PC monitor (not the pocket phone) — e.g. the cue pointing at "the office speakers"
       if (act.indexOf("bd:") === 0) { close(true); if (window.__birthdayGoto) window.__birthdayGoto(act.slice(3)); return; } // → summon the birthday person: time-travel to their date + reveal them at their venue (garden/bar/dj/tehran-call/prague-call)
       close(true); // the rest leave the phone for somewhere in the loft

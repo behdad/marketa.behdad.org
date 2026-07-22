@@ -1060,8 +1060,8 @@ function normalizeEditorReply(reply, editor) {
   let validEdits = rawEdits.length <= MAX_EDITOR_EDITS;
   if (validEdits) {
     for (const item of rawEdits) {
-      const start = Number(item && item.start);
-      const end = Number(item && item.end);
+      const start = item && item.start;
+      const end = item && item.end;
       const text = item && typeof item.text === "string" ? item.text : null;
       const integer = Number.isInteger(start) && Number.isInteger(end);
       const bounded = integer && start >= 0 && end >= start && end <= code.length;

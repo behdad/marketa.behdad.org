@@ -34,6 +34,8 @@ check(outOfBounds.edits.length === 0, "out-of-bounds edits are rejected", outOfB
 
 const malformed = parse({ text: "bad", edits: [{ start: 0, end: 0, text: "x" }, { start: "later", end: 1, text: "y" }] }, { code });
 check(malformed.edits.length === 0, "malformed edit entries invalidate the batch", malformed.edits);
+const coerced = parse({ text: "bad", edits: [{ start: "0", end: 0, text: "x" }] }, { code });
+check(coerced.edits.length === 0, "string offsets are not coerced into edits", coerced.edits);
 
 const legacy = parse({ text: "replace this", suggestion: "party(true);", replace: true }, { code });
 check(legacy.suggestion === "party(true);" && legacy.replace === true && Array.isArray(legacy.edits) && legacy.edits.length === 0, "legacy suggestion/replace replies remain compatible", legacy);

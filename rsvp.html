@@ -3339,6 +3339,8 @@ html.is-webkit .dock-app:hover .dock-tile{transform:none; box-shadow:inset 0 0 0
 .ed-btn-run.ed-btn-stop{color:#e39191} /* ■ stop state while a script is looping (repeat()) */
 .ed-ta{grid-row:2; grid-column:1; min-height:0; resize:none; background:#0d130e; border:0.3px solid #202b2b; border-radius:0.8px; outline:none; color:#cfe3cf; font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.4; padding:0.6px 1px; white-space:pre; overflow:auto; scrollbar-width:none; caret-color:#8fd070}
 .ed-ai-tools{grid-row:3; grid-column:1; display:flex; align-items:center; gap:.5px; min-height:4px; padding:0 1px}
+.ed-ai-ask{min-width:0; flex:1; height:3.5px; padding:0 .8px; border:.3px solid #2b3a3a; border-radius:.7px; background:#111b17; color:#d8eed5; font:1.7px/3px ui-monospace,Menlo,monospace}
+.ed-ai-ask::placeholder{color:#789478}
 .ed-ai-label{flex:none; color:#789478; font:1.7px/3px ui-monospace,Menlo,monospace}
 .ed-ai-btn{flex:none; height:3.5px; padding:0 .8px; border:.3px solid #2b3a3a; border-radius:.7px; background:#1d2622; color:#a7e08a; font:1.8px/3px ui-monospace,Menlo,monospace; cursor:pointer}
 .ed-ai-btn:hover,.ed-ai-btn:focus-visible{background:#294234; outline:none}
@@ -19397,7 +19399,7 @@ section{margin:1.9rem 0}
 <input id="monitor-ed-file" type="file" accept=".js,.txt,text/javascript" style="display:none"/>
 </div>
 <textarea id="monitor-ed-code" class="ed-ta" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="// a script — e.g. party(true); await sleep(400); dance(&quot;salsa&quot;)"></textarea>
-<div class="ed-ai-tools"><span class="ed-ai-label">AI:</span><button id="monitor-ed-explain" class="ed-ai-btn" type="button" title="Explain selected code">?</button><button id="monitor-ed-fix" class="ed-ai-btn" type="button" title="Suggest a fix">fix</button><button id="monitor-ed-complete" class="ed-ai-btn" type="button" title="Suggest the next code">next</button><span id="monitor-ed-ai-status" class="ed-ai-status">AI ready</span></div>
+<div class="ed-ai-tools"><span class="ed-ai-label">AI:</span><input id="monitor-ed-ask" class="ed-ai-ask" type="text" placeholder="describe a change…" autocomplete="off" spellcheck="true"/><button id="monitor-ed-ask-btn" class="ed-ai-btn" type="button" title="Ask AI about this script">ask</button><button id="monitor-ed-explain" class="ed-ai-btn" type="button" title="Explain selected code">?</button><button id="monitor-ed-fix" class="ed-ai-btn" type="button" title="Suggest a fix">fix</button><button id="monitor-ed-complete" class="ed-ai-btn" type="button" title="Suggest the next code">next</button><span id="monitor-ed-ai-status" class="ed-ai-status">AI ready</span></div>
 <div id="monitor-ed-ai-panel" class="ed-ai-panel" role="status"></div>
 </div>
 </div>
@@ -42353,6 +42355,8 @@ var ABANDONED_CALL_MS = 30000;
   var edExplainBtn = document.getElementById("monitor-ed-explain");
   var edFixBtn = document.getElementById("monitor-ed-fix");
   var edCompleteBtn = document.getElementById("monitor-ed-complete");
+  var edAskInput = document.getElementById("monitor-ed-ask");
+  var edAskBtn = document.getElementById("monitor-ed-ask-btn");
   var edAiStatus = document.getElementById("monitor-ed-ai-status");
   var edAiPanel = document.getElementById("monitor-ed-ai-panel");
   function readScripts() {
@@ -42523,13 +42527,13 @@ var ABANDONED_CALL_MS = 30000;
   // Editor assistance is deliberately separate from Chat's conversation queue. It sends only
   // bounded code/context to the same verified Worker and renders a review panel; Apply is always
   // an explicit user click and never runs the returned text.
-  var edAiBusy = false, edAiSuggestion = "", edAiReplace = false, edAiStart = 0, edAiEnd = 0, edAiSourceCode = "";
+  var edAiBusy = false, edAiSuggestion = "", edAiReplace = false, edAiEdits = null, edAiStart = 0, edAiEnd = 0, edAiSourceCode = "";
   function edAiSetStatus(text, ready) {
     if (!edAiStatus) return;
     edAiStatus.textContent = text;
     edAiStatus.classList.toggle("ready", !!ready);
   }
-  function edAiClosePanel() { if (edAiPanel) { edAiPanel.classList.remove("open"); edAiPanel.textContent = ""; } edAiSuggestion = ""; }
+  function edAiClosePanel() { if (edAiPanel) { edAiPanel.classList.remove("open"); edAiPanel.textContent = ""; } edAiSuggestion = ""; edAiEdits = null; }
   function edAiRender(data) {
     if (!edAiPanel) return;
     edAiPanel.textContent = "";
@@ -42538,6 +42542,14 @@ var ABANDONED_CALL_MS = 30000;
     edAiPanel.appendChild(close);
     var note = document.createElement("div"); note.textContent = data.text || "No review returned."; edAiPanel.appendChild(note);
     edAiSuggestion = String(data.suggestion || ""); edAiReplace = data.replace === true;
+    edAiEdits = Array.isArray(data.edits) ? data.edits.filter(function (x) { return x && Number.isFinite(+x.start) && Number.isFinite(+x.end) && typeof x.text === "string"; }).map(function (x) { return { start: Math.max(0, +x.start), end: Math.max(0, +x.end), text: x.text }; }) : null;
+    if (edAiEdits && edAiEdits.length) {
+      var editTitle = document.createElement("div"); editTitle.textContent = edAiEdits.length + " proposed edit" + (edAiEdits.length === 1 ? "" : "s") + ":"; edAiPanel.appendChild(editTitle);
+      edAiEdits.forEach(function (edit, i) { var ep = document.createElement("pre"); ep.textContent = "#" + (i + 1) + " [" + edit.start + "–" + edit.end + "]\n" + edit.text; ep.style.margin = "1px 0"; edAiPanel.appendChild(ep); });
+      var applyEdits = document.createElement("button"); applyEdits.className = "ed-ai-btn"; applyEdits.type = "button"; applyEdits.textContent = "apply edits";
+      applyEdits.addEventListener("click", function (e) { e.stopPropagation(); if (!edCode || edCode.value !== edAiSourceCode) { edAiSetStatus("Code changed — request again", false); return; } var out = edCode.value; var sorted = edAiEdits.slice().sort(function (a, b) { return b.start - a.start; }); for (var j = 0; j < sorted.length; j++) { var q = sorted[j]; if (q.start > q.end || q.end > out.length) { edAiSetStatus("Edit range invalid", false); return; } out = out.slice(0, q.start) + q.text + out.slice(q.end); } edCode.value = out; edScheduleAutoSave(); edAiClosePanel(); edAiSetStatus("Applied " + sorted.length + " edits", true); try { edCode.focus(); } catch (_) {} });
+      edAiPanel.appendChild(applyEdits);
+    }
     if (edAiSuggestion) {
       var pre = document.createElement("pre"); pre.textContent = edAiSuggestion; pre.style.margin = "1px 0"; edAiPanel.appendChild(pre);
       var apply = document.createElement("button"); apply.className = "ed-ai-btn"; apply.type = "button"; apply.textContent = edAiReplace ? (edAiStart === edAiEnd ? "replace script" : "replace selection") : "insert at cursor";
@@ -42548,20 +42560,20 @@ var ABANDONED_CALL_MS = 30000;
     }
     edAiPanel.classList.add("open"); edAiSetStatus("Review suggestion", true);
   }
-  function edAiRequest(operation) {
+  function edAiRequest(operation, userRequest) {
     if (edAiBusy || !edCode) return;
     var challenge = window.__monitorChatTurnstile;
     var transport = window.fetch, endpoint = window.__monitorChatEndpoint || "https://marketa.behdad.org/chat";
     if (typeof challenge !== "function" || typeof transport !== "function") { edAiSetStatus("AI unavailable", false); return; }
-    edAiBusy = true; [edExplainBtn, edFixBtn, edCompleteBtn].forEach(function (b) { if (b) b.disabled = true; }); edAiClosePanel(); edAiSetStatus("Thinking…", false);
+    edAiBusy = true; [edAskBtn, edExplainBtn, edFixBtn, edCompleteBtn].forEach(function (b) { if (b) b.disabled = true; }); edAiClosePanel(); edAiSetStatus("Thinking…", false);
     var a = edCode.selectionStart || 0, b = edCode.selectionEnd || a;
     edAiStart = a; edAiEnd = b; edAiSourceCode = edCode.value;
     var context = typeof window.__chatContext === "function" ? window.__chatContext("Script Editor " + operation) : { scripting_api: null };
     Promise.resolve(challenge()).then(function (token) {
-      return transport(endpoint, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ message: "Review this script using the requested operation.", mode: "editor_assist", turnstile_token: token, context: context, editor: { operation: operation, code: edCode.value, selected: edCode.value.slice(a, b), cursor: a, error: window.__lastEditorError || "" } }) });
+      return transport(endpoint, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ message: userRequest || "Review this script using the requested operation.", mode: "editor_assist", turnstile_token: token, context: context, editor: { operation: operation, request: userRequest || "", code: edCode.value, selected: edCode.value.slice(a, b), selection_start: a, selection_end: b, cursor: a, error: window.__lastEditorError || "" } }) });
     }).then(function (response) { if (!response.ok) throw new Error("AI " + response.status); return response.json(); }).then(function (body) {
       var raw = body && (body.reply || body.text || ""), data; try { data = typeof raw === "string" ? JSON.parse(raw) : raw; } catch (_) { data = { text: String(raw), suggestion: "" }; } edAiRender(data || {});
-    }).catch(function (error) { edAiSetStatus(error && error.message === "AI 403" ? "Verify again" : "AI unavailable", false); }).finally(function () { edAiBusy = false; [edExplainBtn, edFixBtn, edCompleteBtn].forEach(function (button) { if (button) button.disabled = false; }); });
+    }).catch(function (error) { edAiSetStatus(error && error.message === "AI 403" ? "Verify again" : "AI unavailable", false); }).finally(function () { edAiBusy = false; [edAskBtn, edExplainBtn, edFixBtn, edCompleteBtn].forEach(function (button) { if (button) button.disabled = false; }); });
   }
   // download the current buffer as a .js file (Blob + a synthetic <a download> click)
   function edDownload() {
@@ -42709,7 +42721,9 @@ var ABANDONED_CALL_MS = 30000;
   if (edExplainBtn) edExplainBtn.addEventListener("click", function (e) { e.stopPropagation(); edAiRequest("explain"); });
   if (edFixBtn) edFixBtn.addEventListener("click", function (e) { e.stopPropagation(); edAiRequest("fix"); });
   if (edCompleteBtn) edCompleteBtn.addEventListener("click", function (e) { e.stopPropagation(); edAiRequest("complete"); });
-  [edExplainBtn, edFixBtn, edCompleteBtn].forEach(function (button) { if (button) button.addEventListener("mousedown", function (e) { e.preventDefault(); }); });
+  if (edAskBtn) edAskBtn.addEventListener("click", function (e) { e.stopPropagation(); var q = edAskInput && edAskInput.value.trim(); if (!q) { if (edAskInput) edAskInput.focus(); return; } edAiRequest("ask", q); });
+  if (edAskInput) edAskInput.addEventListener("keydown", function (e) { e.stopPropagation(); if (e.key === "Enter") { e.preventDefault(); if (edAskBtn) edAskBtn.click(); } });
+  [edAskBtn, edExplainBtn, edFixBtn, edCompleteBtn].forEach(function (button) { if (button) button.addEventListener("mousedown", function (e) { e.preventDefault(); }); });
   if (edCode) edCode.addEventListener("input", function () { edScheduleAutoSave(); });
   if (edName) edName.addEventListener("input", function () { edScheduleAutoSave(); }); // rename persists too (Save is gone)
   // ── editor autocomplete ──────────────────────────────────────────────────────────

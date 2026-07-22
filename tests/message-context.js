@@ -31,6 +31,7 @@ var HARNESS = [
   ' aiResolve(JSON.stringify({sender:"Bahareh",text:"Of course. I saved you one!",action:null}));await sleep(40);ids=[].slice.call(document.querySelectorAll(".pm-msg-row")).map(function(x){return x.getAttribute("data-message-id");});var outgoing=document.querySelector(".pm-msg-row.outgoing"),crew=document.querySelector(".pm-msg-row[data-message-id=reply_ai_1]");S("answered",{ids:ids,outgoing:outgoing&&outgoing.querySelector(".pm-msg-text").textContent,quote:outgoing&&outgoing.querySelector(".pm-msg-quote").textContent,sender:crew&&crew.querySelector(".pm-msg-from").textContent,crew:crew&&crew.querySelector(".pm-msg-text").textContent,pending:!!document.querySelector(".pm-msg-row.pending")});',
   ' document.documentElement.lang="cs";if(window.refreshPhoneText)window.refreshPhoneText();await sleep(20);row=document.querySelector(".pm-msg-row[data-message-id=cue_mail]");context(row);S("czech",{labels:menuLabels(),placeholder:document.querySelector(".pm-msg-input").getAttribute("placeholder")});',
   ' if(window.__hideMessageReadMenu)window.__hideMessageReadMenu();window.phone("calendar");await sleep(40);var shell=document.querySelector(".phone-shell");shell.dispatchEvent(new KeyboardEvent("keydown",{key:"/",bubbles:true,cancelable:true}));await sleep(30);S("calendar_search",{active:document.activeElement&&document.activeElement.className,on:!!document.querySelector(".calx-search-btn.is-on")});',
+  ' if(window.__closePhoneModal)window.__closePhoneModal(true);await sleep(260);document.body.dispatchEvent(new KeyboardEvent("keydown",{key:"z",bubbles:true,cancelable:true}));await sleep(40);S("z_open",{messages:!!document.querySelector(".phone-backdrop.show .pm-messages")});shell=document.querySelector(".phone-shell");if(shell)shell.focus();shell.dispatchEvent(new KeyboardEvent("keydown",{key:"z",bubbles:true,cancelable:true}));await sleep(260);S("z_close",{phone:!!document.querySelector(".phone-backdrop.show")});',
   '}',
   '})();</script>'
 ].join("\n");
@@ -66,6 +67,7 @@ check(Array.isArray(s.waiting.privateHistory) && s.waiting.privateHistory.length
 check(s.answered.ids.join(",") === "invaders,cue_mail,reply_user_1,reply_ai_1" && s.answered.outgoing === "Save me a dance!" && /Bahareh:/.test(s.answered.quote) && s.answered.sender === "Bahareh" && /saved you one/.test(s.answered.crew) && !s.answered.pending, "the asynchronous crew answer arrives as an ordinary chronological message", s.answered);
 check(s.czech.labels.join("|") === "Odpov\u011bd\u011bt…|Ozna\u010dit jako nep\u0159e\u010dten\u00e9." && /svatebn\u00ed part\u011b/.test(s.czech.placeholder), "context actions and composer follow the Czech UI language", s.czech);
 check(s.calendar_search.active === "calx-search-input" && s.calendar_search.on, "/ enters and focuses Calendar search even before its field exists", s.calendar_search);
+check(s.z_open.messages && !s.z_close.phone, "Z toggles the Messages overlay when no text field owns the key", {open:s.z_open,close:s.z_close});
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

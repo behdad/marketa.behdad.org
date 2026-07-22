@@ -1822,7 +1822,8 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    scene. A separate class keeps this attendance state independent from a short chase handoff. */
 #garden-guests .g-robin.off-at-games, #garden-guests .g-navid.off-at-games,
 #garden-guests .g-irene.off-at-games, #garden-guests .g-elisabeth.off-at-games,
-#garden-guests .g-felix.off-at-games, #garden-guests .g-hannah.off-at-games{opacity:0 !important; pointer-events:none !important; transition:opacity .5s ease}
+#garden-guests .g-felix.off-at-games, #garden-guests .g-hannah.off-at-games,
+#garden-guests .g-patricia-son.off-at-games, #garden-guests .g-patricia-daughter.off-at-games{opacity:0 !important; pointer-events:none !important; transition:opacity .5s ease}
 /* May-2 BBQ split: these adults have stepped out to the balcony. Keep their garden
    geometry measurable for floor balancing while showing exactly one copy of each person. */
 #garden-guests .guest.off-at-bbq{opacity:0 !important; pointer-events:none !important; transition:opacity .5s ease}
@@ -25445,6 +25446,7 @@ var T = {
     kbd_s: "season change",
     kbd_n: "next track (dance / piano piece / song)",
     kbd_g: "next phone message",
+    kbd_z: "open / close messages",
     kbd_t: "next trip",
     // now-playing toast labels — dances + the three projector ambient beds (piano pieces and
     // loft-song titles are proper names, kept hardcoded in JS)
@@ -26282,6 +26284,7 @@ var T = {
     kbd_s: "změna sezóny",
     kbd_n: "další skladba (tanec / klavírní skladba / píseň)",
     kbd_g: "další zpráva v telefonu",
+    kbd_z: "otevřít / zavřít zprávy",
     kbd_t: "další trip",
     // now-playing toast labels (viz EN np)
     np: {
@@ -27053,6 +27056,7 @@ function idealBrowser() {
       ["<kbd>Space</kbd>", "kbd_space"],
       ["<kbd>n</kbd>", "kbd_n"],
       ["<kbd>g</kbd>", "kbd_g"],
+      ["<kbd>z</kbd>", "kbd_z"],
       ["<kbd>←</kbd> / <kbd>→</kbd>", "kbd_arrows"],
       ["<kbd>Shift</kbd>+<kbd>←</kbd> / <kbd>→</kbd>", "kbd_shift_arrows"],
       ["<kbd>Shift</kbd>+<kbd>↑</kbd> / <kbd>↓</kbd>", "kbd_shift_updown"],
@@ -52084,7 +52088,7 @@ async def localfont(name):
       if (act === "storm") { if (window.storm) window.storm(true); if (window.rain) window.rain(true); return; } // Bahareh's warning → a CLASSIC thunderstorm (lightning + rain); storm()/rain() pan to the balcony + set dusk themselves
       if (act === "invaders") { if (window.goToStage) window.goToStage("office"); setTimeout(function () { if (window.__startArcade) window.__startArcade(); }, 720); return; } // pan to the office, then launch the chair alien-arcade
       if (act === "smores") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__setSmores) window.__setSmores(true); }, 760); return; } // pan to the balcony, then light the bonfire
-      if (act === "kidsleep") { if (window.__setKidsAsleep) window.__setKidsAsleep(true); return; } // every kid in the loft goes to sleep — stays in the current room
+      if (act === "kidsleep") { window.__kidsLateParty = true; if (window.__setKidsAsleep) window.__setKidsAsleep(true); if (window.__setPartyKidFormation) window.__setPartyKidFormation("play"); return; } // after the mom's announcement they sleep, then only rejoin the dance floor occasionally for the rest of this party
       if (act === "kidwake") { if (window.__wakeKids) window.__wakeKids(); return; } // the kids are up again (idempotent — already awake by the auto-wake)
       if (act === "firstdance") { if (window.firstdance) window.firstdance(); return; } // firstdance() lights the party + heads to the garden + rings the crowd + runs the hosts' first dance
       if (act === "slowdance") { if (window.slowdance) window.slowdance(); return; } // slowdance() lights the party + heads to the garden + pairs the whole floor off for a warm, slow-song lull
@@ -52149,6 +52153,11 @@ async def localfont(name):
       directCloseApp = "messages"; // scene notification/badge is a deep link: Back/Esc dismisses the phone instead of exposing its launcher
     }
     window.__openMessagesAt = openMessagesAt;
+    window.__togglePhoneMessages = function () {
+      if (isOpen() && currentApp === "messages") { close(); return false; }
+      openMessagesAt(null);
+      return true;
+    };
     var msgThumbEl = null, msgThumbT = null, curThumbId = null;
     function hideMessageThumb() {
       var wasShowing = !!(msgThumbEl && msgThumbEl.classList.contains("show"));
@@ -65089,7 +65098,7 @@ function spawnDustMote(container) {
   // Keyboard room nav: →/Tab forward, ← back. At a locked frontier a second forward within
   // 600ms unlocks it (mirrors the arrow/dot double-click-to-unlock). ` whisks to the office
   // console. d/↑/↓ flip day↔night, 1-5 jump to a room, m/l/c summon the monitor/laptop/
-  // cellphone, k toggles the kitten, r resets, n next track, t a trip. Backspace
+  // cellphone, z toggles Messages, k toggles the kitten, r resets, n next track, t a trip. Backspace
   // mirrors Escape ("go back") — see the alias below. Ignored while typing / with a modifier.
   // (Tab is repurposed here — the game strip has no tab targets — but form fields still get it
   // via the typing guard below.)
@@ -65153,6 +65162,9 @@ function spawnDustMote(container) {
       // fire the extinguisher (hiss + powder + wipe, then reset) rather than a bare reset
       if (window.__activateExtinguisher) window.__activateExtinguisher();
       else resetHunt();
+    } else if (e.key === "z" || e.key === "Z") {
+      e.preventDefault();
+      if (window.__togglePhoneMessages) window.__togglePhoneMessages();
     } else if (e.key === "c" || e.key === "C") {
       e.preventDefault();
       // 'c' → the cellphone. If it's up, put it away; otherwise bring it up IN THE CURRENT ROOM
@@ -68891,6 +68903,7 @@ function spawnDustMote(container) {
   // uses the same --balance-x translate channel as the floor balancer, never the figures' static
   // transform attributes. One self-rescheduling timer owns the state and pauses under the roster.
   var partyKidFormationTimer = null;
+  var PARTY_FLOOR_KIDS = PARTY_KIDS.concat(["hannah"]); // every standing child; late-party play sends the whole group off the floor
   var PARTY_KID_HOME = { irene: 552, robin: 260, navid: 410 };
   function partyFigureX(el) {
     if (!el) return null;
@@ -68908,10 +68921,12 @@ function spawnDustMote(container) {
   }
   function setGodsonsAtGames(on) {
     var sentToGames = !!on || !!window.__bbqSplitOn;
-    ["robin", "navid"].forEach(function (name) {
+    var allKidsOff = !!window.__bbqSplitOn || (!!on && !!window.__kidsLateParty);
+    PARTY_FLOOR_KIDS.forEach(function (name) {
       var el = document.querySelector("#garden-guests .g-" + name);
-      if (el) el.classList.toggle("off-at-games", sentToGames);
-      if (sentToGames) clearGardenKid(gardenKidEl(name)); // never leave a runner crossing after he heads to the nook
+      var kidSent = sentToGames && (allKidsOff || name === "robin" || name === "navid");
+      if (el) el.classList.toggle("off-at-games", kidSent);
+      if (kidSent) clearGardenKid(gardenKidEl(name)); // never leave a runner crossing after heading off the floor
     });
     if (sentToGames) syncPartyChildren();
   }
@@ -68944,18 +68959,30 @@ function spawnDustMote(container) {
     partyKidFormationTimer = null;
     if (!window.__gardenPartyOn) return;
     if (rosterHoldsOccupants()) { partyKidFormationTimer = setTimeout(partyKidFormationTick, 1000); return; }
+    if (window.__kidsAsleep && window.__kidsLateParty) {
+      applyPartyKidFormation("play");
+      partyKidFormationTimer = setTimeout(partyKidFormationTick, 5000);
+      return;
+    }
     // Two weighted "play" tickets make the boys spend a meaningful part of the party in the
     // cuddly-room games. Never repeat the same state, so they still return for happy dance turns.
     var modes = ["free", "family", "godsons", "play", "play"];
     var g = document.getElementById("garden-guests"), old = g && g.getAttribute("data-kid-formation");
     var next;
-    do { next = modes[Math.floor(Math.random() * modes.length)]; } while (next === old);
+    if (window.__kidsLateParty) {
+      var danceModes = ["free", "family", "godsons"];
+      if (old === "play" || Math.random() >= 0.8) {
+        do { next = danceModes[Math.floor(Math.random() * danceModes.length)]; } while (next === old);
+      } else next = "play";
+    } else {
+      do { next = modes[Math.floor(Math.random() * modes.length)]; } while (next === old);
+    }
     applyPartyKidFormation(next);
-    partyKidFormationTimer = setTimeout(partyKidFormationTick, next === "play" ? 14000 + Math.random() * 6000 : 9000 + Math.random() * 5000);
+    partyKidFormationTimer = setTimeout(partyKidFormationTick, window.__kidsLateParty ? (next === "play" ? 24000 + Math.random() * 12000 : 5000 + Math.random() * 3000) : (next === "play" ? 14000 + Math.random() * 6000 : 9000 + Math.random() * 5000));
   }
   function startPartyKidFormation() {
     if (partyKidFormationTimer) return;
-    applyPartyKidFormation("godsons");
+    applyPartyKidFormation(window.__kidsLateParty ? "play" : "godsons");
     partyKidFormationTimer = setTimeout(partyKidFormationTick, 7000 + Math.random() * 4000);
   }
   function stopPartyKidFormation() {
@@ -69206,6 +69233,7 @@ function spawnDustMote(container) {
       if (window.__updateRoomPhotogs) window.__updateRoomPhotogs(); // she packs up wherever she was standing
       stopGardenChase();               // party over — kill the chase timer + reset every runner
       stopPartyKidFormation();         // party over — clear the godkids' standing formation timer/offsets
+      window.__kidsLateParty = false;  // a sleep announcement only thins the floor for the party in which it arrived
       resetGuestsArrival();            // party over — clear Ali + Goli and forget the arrival latch (next party re-crashes with a fresh slide)
       if (partyDancers) {
         partyDancers.classList.remove("party-dancing");

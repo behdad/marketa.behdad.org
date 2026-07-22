@@ -23,7 +23,7 @@ const PUBLIC_MAIL_IDS = new Set(["lore", "rsvp", "spam"]);
 
 const ACTION_SPECS = Object.freeze({
   "room.go": Object.freeze({ room: new Set(["kitchen", "garden", "cuddly", "office", "balcony"]) }),
-  "app.open": Object.freeze({ app: new Set(["chat", "weather", "calendar", "messages", "mail", "call", "music", "album", "tattoo", "photos", "notes", "cocktails"]) }),
+  "app.open": Object.freeze({ app: new Set(["chat", "weather", "calendar", "messages", "mail", "call", "music", "album", "tattoo", "photos", "photobooth", "hn", "clock", "calculator", "currency", "notes", "cards", "flashlight", "browser", "cocktails", "dressup", "mines", "quiz"]) }),
   "roster.set": Object.freeze({ open: "boolean" }),
   "music.play": Object.freeze({}),
   "music.pause": Object.freeze({}),

@@ -3988,6 +3988,18 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #click-me-overlay{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:6; pointer-events:none; opacity:0; transition:opacity .5s ease; transform:translateY(-5%)}
 #click-me-overlay.show{opacity:1}
 .click-me-word{font-family:"Climate Crisis",Impact,sans-serif; color:#b17880; -webkit-text-stroke:1px rgba(142,58,74,.4); font-size:clamp(2.4rem,9.5vw,6rem); line-height:.9; letter-spacing:.5px; white-space:nowrap; text-align:center; text-shadow:0 2px 18px rgba(248,245,236,.98),0 0 14px rgba(248,245,236,.96),0 0 5px rgba(248,245,236,1); font-variation-settings:"YEAR" 1979}
+/* A valid checkpoint replaces CLICK ME with a compact decision gate over the saved room.
+   It is a real modal surface: the scene stays recognizable underneath, but cannot receive a
+   stray tap before Continue or Start over has established which state owns the page. */
+#loft-recovery-gate{position:absolute; inset:0; z-index:9; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.55rem; padding:1rem; box-sizing:border-box; color:var(--ink); background:rgba(248,245,236,.78); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); text-align:center}
+.loft-recovery-title{font-size:clamp(1rem,2.4vw,1.5rem); font-weight:700; line-height:1.15}
+.loft-recovery-meta{font-size:clamp(.72rem,1.5vw,.92rem); color:var(--muted); line-height:1.25}
+.loft-recovery-actions{display:flex; gap:.55rem; align-items:center; justify-content:center; margin-top:.2rem}
+.loft-recovery-btn{min-height:2.35rem; padding:.45rem .85rem; border:1.5px solid var(--wine); border-radius:6px; background:var(--paper); color:var(--wine); font:inherit; font-size:clamp(.72rem,1.5vw,.9rem); cursor:pointer; box-shadow:0 2px 7px rgba(69,58,49,.14)}
+.loft-recovery-btn.primary{background:var(--wine); color:var(--paper)}
+.loft-recovery-btn.selected,.loft-recovery-btn:focus-visible{outline:3px solid rgba(155,55,76,.28); outline-offset:2px}
+@media (max-width:759px){#loft-recovery-gate{gap:.4rem; padding:.55rem}.loft-recovery-btn{min-height:2.2rem; padding:.38rem .65rem}}
+@media (prefers-reduced-motion:reduce){#loft-recovery-gate{backdrop-filter:none; -webkit-backdrop-filter:none}}
 /* fullscreen fills the screen with the scene, so the melting invitation scales up to match it */
 /* fullscreen scales to fill the screen, but "CLICK ME!" is a wide nowrap display face — size it
    by the SMALLER of width/height (min(vw,vh)) so it fits landscape phones (short height binds) and
@@ -4514,9 +4526,10 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .psb-batt-pop .pbp-pct{font-weight:600}
 .psb-batt-wrap.show .psb-batt-pop{display:inline-flex}
 .phone-stage{flex:1; min-height:0; position:relative; display:flex; flex-direction:column}
-.phone-home, .phone-app, .phone-incall{display:none; flex:1; min-height:0}
+.phone-home, .phone-app, .phone-recents, .phone-incall{display:none; flex:1; min-height:0}
 .phone-shell.pm-home .phone-home{display:flex}
 .phone-shell.pm-app .phone-app{display:flex}
+.phone-shell.pm-recents .phone-recents{display:flex}
 .phone-shell.pm-incall .phone-incall{display:flex}
 .phone-shell.pm-incall .phone-statusbar{background:#12100c; color:#eee; border-color:#000}
 .phone-nav{
@@ -4547,6 +4560,15 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
    min-height of its own. 63px ≈ the natural single-line tile height (46 icon +
    5 gap + one label line); labels are single-line in both EN and CS. */
 .phone-home-grid{display:grid; grid-template-columns:repeat(4,1fr); grid-auto-rows:63px; gap:16px 4px; position:relative; z-index:1}
+.phone-recents{flex-direction:column; gap:10px; overflow-y:auto; padding:18px 14px; background:var(--cream)}
+.phone-recents-title{font-family:"Fraunces",serif; font-size:20px; color:var(--ink); margin:0 0 2px}
+.phone-recents-list{display:flex; flex-direction:column; gap:8px}
+.phone-recent-app{display:flex; align-items:center; gap:12px; width:100%; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); cursor:pointer; font:inherit; text-align:left}
+.phone-recent-app:hover,.phone-recent-app:focus-visible{border-color:var(--wine); outline:none; background:#fff}
+.phone-recent-app .pra-ico{width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex:none; font-size:22px; box-shadow:0 2px 5px rgba(0,0,0,.15)}
+.phone-recent-app .pra-ico svg{width:27px; height:27px; display:block}
+.phone-recent-app .pra-label{font-family:"Fraunces",serif; font-size:15px}
+.phone-recents-empty{margin:auto; color:var(--muted); font-size:13px; text-align:center}
 /* empty / uninstalled slot: a blank gap that still hit-tests as a drop target (stretched to the fixed row height) */
 .phone-slot-empty{border-radius:13px}
 /* drop target highlight while dragging an icon over another slot */
@@ -24994,6 +25016,14 @@ var T = {
     hunt: {
       intro: "Practice the art of aimless wandering.",
       clickme: "CLICK ME!", // the melting Climate-Crisis invitation overlaid on the scene during the intro prompt (uppercase keeps the font subset small)
+      recovery_title: "Welcome back",
+      recovery_meta: "Continue from {room} · {age}",
+      recovery_continue: "▶ Continue",
+      recovery_restart: "↻ Start over",
+      recovery_just_now: "just now",
+      recovery_minutes: "{n} min ago",
+      recovery_hours: "{n} hr ago",
+      recovery_days: "{n} d ago",
       df_doom_quip: "kill -9 — flawless victory.", // caption under the on-screen FATALITY melt (DOOM kill)
       df_linux_q1: "First they ignore you…", // BSOD caption beat 1 (Linux kill)
       df_linux_q2: "…then you win.", // BSOD caption beat 2 (Linux kill)
@@ -25659,6 +25689,8 @@ var T = {
     phone_nav_back: "Back",
     phone_nav_home: "Home",
     phone_nav_recents: "Recent apps",
+    phone_recents_title: "Recent apps",
+    phone_recents_empty: "No recently opened apps.",
     phone_lock_title: "Unlock",
     phone_lock_del: "Delete",
     phone_lock_ok: "Unlock",
@@ -25869,6 +25901,14 @@ var T = {
     hunt: {
       intro: "Cvičte se v umění bezcílného toulání.",
       clickme: "KLIKNI!", // ASCII-only (no Ě) so it reuses the same small Climate-Crisis subset as CLICK ME!
+      recovery_title: "Vítej zpátky",
+      recovery_meta: "Pokračovat od {room} · {age}",
+      recovery_continue: "▶ Pokračovat",
+      recovery_restart: "↻ Začít znovu",
+      recovery_just_now: "právě teď",
+      recovery_minutes: "před {n} min",
+      recovery_hours: "před {n} h",
+      recovery_days: "před {n} d",
       df_doom_quip: "kill -9 — dokonalé vítězství.", // caption under the on-screen FATALITY melt (DOOM kill)
       df_linux_q1: "Nejdřív si tě nevšímají…", // BSOD caption beat 1 (Linux kill)
       df_linux_q2: "…a pak vyhraješ.", // BSOD caption beat 2 (Linux kill)
@@ -26528,6 +26568,8 @@ var T = {
     phone_nav_back: "Zpět",
     phone_nav_home: "Domů",
     phone_nav_recents: "Nedávné aplikace",
+    phone_recents_title: "Nedávné aplikace",
+    phone_recents_empty: "Žádné nedávno otevřené aplikace.",
     phone_lock_title: "Odemknout",
     phone_lock_del: "Smazat",
     phone_lock_ok: "Odemknout",
@@ -27237,6 +27279,8 @@ function idealBrowser() {
     // ordered by prominence: room navigation + media controls first, then the fun
     // features (trips, day/night), then the subtle/utility cluster last — garden party,
     // season change, reset, and the help list itself.
+    // Keep this canonical shortcut list in sync with the user-facing copy in
+    // docs/game-manual.md whenever a binding is added, removed, or renamed.
     var ROWS = [
       ["<kbd>f</kbd>", "kbd_f"],
       ["<kbd>w</kbd>", "kbd_watch"],
@@ -40745,7 +40789,7 @@ var ABANDONED_CALL_MS = 30000;
   // clicks arbitrary ids, opens arbitrary URLs, or calls a function by a model-supplied name.
   (function initLoftApi() {
     if (window.loft.api) return;
-    var definitions = Object.create(null), listeners = [], stateVersion = 0;
+    var definitions = Object.create(null), listeners = [], stateVersion = 0, activeAction = null;
     function copy(value) {
       if (value === undefined) return null;
       try { return JSON.parse(JSON.stringify(value)); } catch (_error) { return null; }
@@ -40765,8 +40809,14 @@ var ABANDONED_CALL_MS = 30000;
       for (var j = 0; j < allowed.length; j++) {
         var key = allowed[j], rule = schema[key], value = args[key];
         if (value === undefined) { if (rule.required) return { error: fail("INVALID_ARGUMENT", "Missing argument: " + key) }; continue; }
-        if (rule.type && typeof value !== rule.type) return { error: fail("INVALID_ARGUMENT", "Invalid " + key + ".") };
+        if (rule.type === "integer") {
+          if (typeof value !== "number" || !isFinite(value) || Math.floor(value) !== value) return { error: fail("INVALID_ARGUMENT", "Invalid " + key + ".") };
+        } else if (rule.type === "number") {
+          if (typeof value !== "number" || !isFinite(value)) return { error: fail("INVALID_ARGUMENT", "Invalid " + key + ".") };
+        } else if (rule.type && typeof value !== rule.type) return { error: fail("INVALID_ARGUMENT", "Invalid " + key + ".") };
         if (rule.enum && rule.enum.indexOf(value) < 0) return { error: fail("INVALID_ARGUMENT", "Unsupported " + key + ".") };
+        if (typeof value === "number" && ((rule.min != null && value < rule.min) || (rule.max != null && value > rule.max))) return { error: fail("INVALID_ARGUMENT", "Out-of-range " + key + ".") };
+        if (typeof value === "string" && ((rule.minLength != null && value.length < rule.minLength) || (rule.maxLength != null && value.length > rule.maxLength))) return { error: fail("INVALID_ARGUMENT", "Invalid length for " + key + ".") };
         clean[key] = value;
       }
       return { value: clean };
@@ -40778,16 +40828,47 @@ var ABANDONED_CALL_MS = 30000;
     }
     function manifest(def) {
       var args = {};
-      Object.keys(def.args || {}).forEach(function (key) { args[key] = { type: def.args[key].type, required: !!def.args[key].required, enum: def.args[key].enum ? def.args[key].enum.slice() : undefined }; });
-      return { id: def.id, kind: def.kind, risk: def.risk || "read", args: args, available: available(def, {}) };
+      Object.keys(def.args || {}).forEach(function (key) {
+        var rule = def.args[key];
+        args[key] = { type: rule.type, required: !!rule.required };
+        if (rule.enum) args[key].enum = rule.enum.slice();
+        if (rule.min != null) args[key].min = rule.min;
+        if (rule.max != null) args[key].max = rule.max;
+        if (rule.minLength != null) args[key].minLength = rule.minLength;
+        if (rule.maxLength != null) args[key].maxLength = rule.maxLength;
+      });
+      return { id: def.id, kind: def.kind, risk: def.risk || "read", description: def.description || "", args: args, available: available(def, {}) };
+    }
+    function recordChange(id, args, source) {
+      var action = activeAction;
+      if (action && action.detail) return copy(action.detail);
+      stateVersion++;
+      var detail = {
+        id: action ? action.id : id,
+        args: copy(action ? action.args : (args || {})),
+        source: String(action ? action.source : (source || "internal")).slice(0, 32),
+        stateVersion: stateVersion
+      };
+      if (action) action.detail = copy(detail);
+      try { window.dispatchEvent(new CustomEvent("loft:statechange", { detail: detail })); } catch (_error) {}
+      listeners.slice().forEach(function (listener) { try { listener(copy(detail)); } catch (_error) {} });
+      return copy(detail);
     }
     var api = {
-      version: 1,
+      version: 2,
+      get stateVersion() { return stateVersion; },
       capabilities: function (options) {
         options = options || {};
         return Object.keys(definitions).sort().map(function (id) { return definitions[id]; }).filter(function (def) {
           return (!options.kind || def.kind === options.kind) && (!options.available || available(def, {}));
         }).map(manifest);
+      },
+      describe: function (id, args) {
+        var def = definitions[id];
+        if (!def) return fail("UNKNOWN_CAPABILITY", "Unknown capability.");
+        var checked = validate(def, args); if (checked.error) return checked.error;
+        var info = manifest(def); info.available = available(def, checked.value); info.args_checked = copy(checked.value);
+        return result(true, "completed", { changed: false, value: info });
       },
       query: function (id, args) {
         var def = definitions[id];
@@ -40803,15 +40884,16 @@ var ABANDONED_CALL_MS = 30000;
         var checked = validate(def, args); if (checked.error) return Promise.resolve(checked.error);
         if (!available(def, checked.value)) return Promise.resolve(fail("NOT_AVAILABLE", "Action is not available in the current game state."));
         options = options || {};
-        return Promise.resolve().then(function () { return def.run(checked.value, options); }).then(function (value) {
-          var changed = !(value && value.changed === false); if (changed) stateVersion++;
-          var completed = result(true, "completed", { changed: changed, value: value && Object.prototype.hasOwnProperty.call(value, "value") ? value.value : value });
-          if (changed) {
-            var detail = { id: id, args: copy(checked.value), source: String(options.source || "api").slice(0, 32), stateVersion: stateVersion };
-            try { window.dispatchEvent(new CustomEvent("loft:statechange", { detail: detail })); } catch (_error) {}
-            listeners.slice().forEach(function (listener) { try { listener(copy(detail)); } catch (_error) {} });
-          }
-          return completed;
+        var beforeVersion = stateVersion;
+        return Promise.resolve().then(function () {
+          var previousAction = activeAction;
+          activeAction = { id: id, args: copy(checked.value), source: String(options.source || "api").slice(0, 32), detail: null };
+          try { return def.run(checked.value, options); }
+          finally { activeAction = previousAction; }
+        }).then(function (value) {
+          var changed = !(value && value.changed === false);
+          if (changed && stateVersion === beforeVersion) recordChange(id, checked.value, options.source || "api");
+          return result(true, "completed", { changed: changed, value: value && Object.prototype.hasOwnProperty.call(value, "value") ? value.value : value });
         }, function (error) { return fail("FAILED", String(error && error.message || error)); });
       },
       subscribe: function (listener) {
@@ -40822,8 +40904,19 @@ var ABANDONED_CALL_MS = 30000;
     };
     window.loft.api = api;
     window.__registerLoftCapability = register;
+    // Central state owners call this after a real mutation. During api.perform() the active typed
+    // action supplies the public event id/source, preventing duplicate versions and leaking no
+    // private helper names; direct UI/console changes retain a small semantic internal id.
+    window.__loftStateChanged = function (id, args, source) { return recordChange(id, args, source); };
 
     var ROOMS = ["kitchen", "garden", "cuddly", "office", "balcony"];
+    var PERSON_IDS = [
+      "marketa", "behdad", "ali", "goli", "spencer", "jay", "farhang", "lauren", "alireza", "mahzad",
+      "bahareh", "baharak", "payman", "patricia", "madla", "robert", "hamid", "athena", "ashraf", "mohsen",
+      "daniel", "marie", "baka", "sina", "danesh", "aspen", "pouria", "irene", "robin", "navid",
+      "elisabeth", "felix", "patricia-son", "patricia-daughter", "hannah", "danbern", "oritshimoni", "charlie"
+    ];
+    var PHONE_APPS = ["messages", "album", "photobooth", "hn", "clock", "calculator", "currency", "notes", "cards", "flashlight", "browser", "cocktails", "dressup", "mines", "quiz"];
     var TRACKS = { tumbala: 0, danbern: 1, orit: 2 };
     var DANCES = ["slow", "fast", "techno", "waltz", "tango", "disco", "swing", "salsa", "bhangra", "persian", "polka", "horah", "bulgar", "dupak", "cumbia"];
     var TRIPS = ["shrooms", "acid", "froggies", "dmt", "molly", "ketamine", "iboga"];
@@ -40901,26 +40994,79 @@ var ABANDONED_CALL_MS = 30000;
       if (window.__bartenderDragging && window.__bartenderDragging()) reasons.push("bartender-drag");
       return { busy: reasons.length > 0, reasons: reasons };
     }
+    function personProfiles() {
+      var profiles = window.__chatPeopleKnowledge ? window.__chatPeopleKnowledge() : [];
+      return profiles.map(function (person, index) {
+        var value = copy(person) || {};
+        if (!value.id) value.id = PERSON_IDS[index] || null;
+        return value;
+      }).filter(function (person) { return !!person.id; });
+    }
+    function attendanceState() {
+      var locations = peopleLocations(), present = [], seen = {};
+      ROOMS.forEach(function (room) {
+        locations[room].forEach(function (person) {
+          var id = person.key || person.name;
+          if (id && !seen[id]) { seen[id] = true; present.push(id); }
+        });
+      });
+      return { current_room: window.currentStageName || null, current_room_people: locations[window.currentStageName] || [], locations: locations, present_ids: present, kids_asleep: !!window.__kidsAsleep };
+    }
+    function mediaState() {
+      var projector = window.__cuddlyProjector && window.__cuddlyProjector.channel ? window.__cuddlyProjector.channel() : null;
+      return {
+        music: window.__phoneMusicSnapshot ? window.__phoneMusicSnapshot() : null,
+        party_dance: window.__partyDance || null,
+        projector: projector,
+        master_volume: typeof window.__audioMaster === "number" ? window.__audioMaster : 1
+      };
+    }
+    function appsState() {
+      var phone = phoneState();
+      return {
+        current: { monitor: monitorAppState(), phone: phone.open ? (phone.app || "home") : null, phone_open: !!phone.open },
+        catalog: window.__chatAppCatalog ? window.__chatAppCatalog() : { monitor: window.__chatMonitorApps ? window.__chatMonitorApps() : [], phone: [] }
+      };
+    }
+    function calendarUpcoming(limit) {
+      var calendar = window.__chatCalendarKnowledge ? window.__chatCalendarKnowledge() : { weddings: [], upcoming: [] };
+      return { weddings: (calendar.weddings || []).slice(0, 4), upcoming: (calendar.upcoming || []).slice(0, limit) };
+    }
+    function gameStatus() {
+      var max = window.__maxUnlocked ? window.__maxUnlocked() : window.currentStageIndex || 0;
+      return {
+        phase: window.__secondRound ? 2 : 1,
+        room: window.currentStageName || null,
+        unlocked_rooms: ROOMS.slice(0, Math.max(0, Math.min(ROOMS.length - 1, max)) + 1),
+        busy: gameBusyState(),
+        party: !!window.__gardenPartyOn,
+        session: window.__loftPlaytime ? window.__loftPlaytime() : null
+      };
+    }
     function environmentState() {
-      var context = window.__chatContext ? window.__chatContext() : {}, env = context.environment || {};
-      var smoker = document.getElementById("balcony-smoker"), bbqOn = !!((window.__partyBBQOn && window.__partyBBQOn()) || (smoker && smoker.classList.contains("smoking")));
+      var strip = document.getElementById("loft-game-strip"), balcony = document.getElementById("stage-balcony"), smoker = document.getElementById("balcony-smoker");
+      var bbqOn = !!((window.__partyBBQOn && window.__partyBBQOn()) || (smoker && smoker.classList.contains("smoking")));
       return {
         room: window.currentStageName || null,
-        daylight: context.daylight !== false,
+        daylight: !(balcony && balcony.classList.contains("dusk")),
         party: !!window.__gardenPartyOn,
         bbq: bbqOn,
-        uv: !!env.uv,
+        uv: !!(strip && strip.classList.contains("uv-mode")),
         rain: !!window.__wxRain,
         storm: !!window.__wxStorm,
         overcast: !!window.__wxOvercast,
-        eclipse: env.eclipse || null,
-        aurora: env.aurora || null,
-        moon: env.moon || null,
+        eclipse: balcony && balcony.classList.contains("solar-eclipse") ? "solar" : balcony && balcony.classList.contains("lunar-eclipse") ? "lunar" : null,
+        aurora: window.__auroraStatus ? window.__auroraStatus() : null,
+        moon: window.__moonPhase ? window.__moonPhase() : null,
+        meteor_shower: window.__meteorShowerNow ? window.__meteorShowerNow() : null,
         indoor_temperature: window.__indoorTempState ? window.__indoorTempState() : null,
         outdoor_temperature_c: window.__outdoorTempC ? window.__outdoorTempC() : null
       };
     }
+    register({ id: "api.info", kind: "query", description: "API version and current state revision.", run: function () { return { version: api.version, stateVersion: api.stateVersion }; } });
+    register({ id: "api.capabilities", kind: "query", description: "Discover registered typed queries and actions.", args: { kind: { type: "string", enum: ["query", "action"] }, available: { type: "boolean" } }, run: function (args) { return api.capabilities(args); } });
     register({ id: "game.snapshot", kind: "query", run: function () { return window.__chatContext ? window.__chatContext() : {}; } });
+    register({ id: "game.status", kind: "query", description: "Bounded overview of progress, room, activity and session.", run: gameStatus });
     register({ id: "game.progress", kind: "query", run: function () {
       var max = window.__maxUnlocked ? window.__maxUnlocked() : window.currentStageIndex || 0;
       return { phase: window.__secondRound ? 2 : 1, current_room: window.currentStageName || null, unlocked_rooms: ROOMS.slice(0, Math.max(0, Math.min(ROOMS.length - 1, max)) + 1), solved_rooms: ROOMS.slice(0, Math.max(0, Math.min(ROOMS.length, max))) };
@@ -40933,29 +41079,43 @@ var ABANDONED_CALL_MS = 30000;
     } });
     register({ id: "room.occupants", kind: "query", args: { room: { type: "string", enum: ROOMS } }, run: function (args) { var room = args.room || window.currentStageName; return peopleLocations()[room] || []; } });
     register({ id: "people.locations", kind: "query", run: peopleLocations });
+    register({ id: "person.list", kind: "query", description: "List public wedding-cast profiles with stable ids.", run: personProfiles });
+    register({ id: "person.get", kind: "query", description: "Read one public wedding-cast profile.", args: { person: { type: "string", enum: PERSON_IDS, required: true } }, run: function (args) {
+      var profiles = personProfiles();
+      for (var i = 0; i < profiles.length; i++) if (profiles[i].id === args.person) return profiles[i];
+      return null;
+    } });
+    register({ id: "attendance.status", kind: "query", description: "Current public room attendance.", run: attendanceState });
     register({ id: "party.status", kind: "query", run: function () { return { on: !!window.__gardenPartyOn, dance: window.__partyDance || null, dj: window.__djB ? "danesh" : "sina", bbq: !!(window.__partyBBQOn && window.__partyBBQOn()) }; } });
     register({ id: "bbq.status", kind: "query", run: function () {
       var smoker = document.getElementById("balcony-smoker");
       var smoking = !!(smoker && smoker.classList.contains("smoking"));
       return { on: smoking || !!(window.__partyBBQOn && window.__partyBBQOn()), smoking: smoking, open: !!(smoker && smoker.classList.contains("open")), party_split: !!window.__bbqPartySessionOn };
     } });
-    register({ id: "audio.status", kind: "query", run: function () { return { playing: !!(window.__anyMusicPlaying && window.__anyMusicPlaying()), paused: !!window.__musicPaused, track: window.__phoneMusicId ? window.__phoneMusicId() : null, title: window.__phoneMusicTitle ? window.__phoneMusicTitle() : null }; } });
+    register({ id: "audio.status", kind: "query", run: function () { return { playing: !!(window.__anyMusicPlaying && window.__anyMusicPlaying()), paused: !!window.__musicPaused, track: window.__phoneMusicId ? window.__phoneMusicId() : null, title: window.__phoneMusicTitle ? window.__phoneMusicTitle() : null, master_volume: typeof window.__audioMaster === "number" ? window.__audioMaster : 1 }; } });
+    register({ id: "media.status", kind: "query", description: "Combined music, dance, projector and volume state.", run: mediaState });
     register({ id: "projector.status", kind: "query", run: function () { var mode = window.__cuddlyProjector && window.__cuddlyProjector.channel ? window.__cuddlyProjector.channel() : null; return { mode: mode, on: !!mode && mode !== "off", room: "cuddly" }; } });
     register({ id: "app.current", kind: "query", run: function () { var phone = phoneState(); return { monitor: monitorAppState(), phone: phone.open ? (phone.app || "home") : null, phone_open: !!phone.open }; } });
     register({ id: "apps.list", kind: "query", run: function () { return window.__chatAppCatalog ? window.__chatAppCatalog() : { monitor: window.__chatMonitorApps ? window.__chatMonitorApps() : [], phone: [] }; } });
+    register({ id: "apps.status", kind: "query", description: "Current device apps and their public catalogs.", run: appsState });
     register({ id: "calls.status", kind: "query", run: callState });
     register({ id: "messages.summary", kind: "query", run: function () { return window.__chatMessagesSummary ? window.__chatMessagesSummary() : { total: 0, unread: 0, recent: [] }; } });
+    register({ id: "messages.recent", kind: "query", description: "Recent wedding-thread messages, newest last.", args: { limit: { type: "integer", min: 1, max: 12 } }, run: function (args) {
+      var messages = window.__chatMessagesKnowledge ? window.__chatMessagesKnowledge() : [];
+      return messages.slice(-Math.min(12, args.limit || 12));
+    } });
     register({ id: "minigames.status", kind: "query", run: minigameState });
     register({ id: "scene.environment", kind: "query", run: environmentState });
     register({ id: "calendar.events", kind: "query", run: function () { return window.__chatCalendarKnowledge ? window.__chatCalendarKnowledge() : {}; } });
+    register({ id: "calendar.upcoming", kind: "query", description: "Upcoming public occasions, capped at twenty.", args: { limit: { type: "integer", min: 1, max: 20 } }, run: function (args) { return calendarUpcoming(args.limit || 10); } });
     register({ id: "weather.cities", kind: "query", run: function () { var c = window.__chatContext ? window.__chatContext() : {}; return c.weather || {}; } });
     register({ id: "album.list", kind: "query", run: function () { return chatAlbumKnowledge(); } });
     register({ id: "tattoos.catalog", kind: "query", run: function () { return window.__chatTattooKnowledge ? window.__chatTattooKnowledge() : []; } });
     register({ id: "trip.status", kind: "query", run: function () { return window.__tripState ? window.__tripState() : { active: !!window.__tripActive, variant: null }; } });
 
-    register({ id: "room.go", kind: "action", risk: "ambient", args: { room: { type: "string", enum: ROOMS, required: true } }, available: function (args) { var max = window.__maxUnlocked ? window.__maxUnlocked() : window.currentStageIndex || 0; return ROOMS.indexOf(args.room) <= max; }, run: function (args) { if (window.goToStage) window.goToStage(args.room); return { room: args.room }; } });
-    register({ id: "app.open", kind: "action", risk: "ambient", args: { app: { type: "string", enum: ["chat", "weather", "calendar", "messages", "mail", "call", "music", "album", "tattoo", "photos", "notes", "cocktails"], required: true } }, run: function (args) {
-      var phoneApps = { messages: "messages", album: "album", notes: "notes", cocktails: "cocktails" };
+    register({ id: "room.go", kind: "action", risk: "ambient", args: { room: { type: "string", enum: ROOMS, required: true } }, available: function (args) { var max = window.__maxUnlocked ? window.__maxUnlocked() : window.currentStageIndex || 0; return ROOMS.indexOf(args.room) <= max; }, run: function (args) { var before = window.currentStageName; if (window.goToStage) window.goToStage(args.room); return { changed: before !== window.currentStageName, room: args.room }; } });
+    register({ id: "app.open", kind: "action", risk: "ambient", args: { app: { type: "string", enum: ["chat", "weather", "calendar", "messages", "mail", "call", "music", "album", "tattoo", "photos"].concat(PHONE_APPS.filter(function (app) { return ["messages", "album"].indexOf(app) < 0; })), required: true } }, run: function (args) {
+      var phoneApps = {}; PHONE_APPS.forEach(function (app) { phoneApps[app] = app; });
       if (phoneApps[args.app] && window.__openPhoneAppHere) return { app: args.app, device: "phone", result: window.__openPhoneAppHere(phoneApps[args.app]) };
       if (args.app === "weather") {
         if (window.goToStage) window.goToStage("office");
@@ -40966,6 +41126,17 @@ var ABANDONED_CALL_MS = 30000;
       }
       var monitorApp = args.app === "photos" ? "photobooth" : args.app;
       return { app: args.app, device: "monitor", result: window.__openMonitorApp ? window.__openMonitorApp(monitorApp) : false };
+    } });
+    register({ id: "message.send", kind: "action", risk: "external", description: "Send a bounded message as the visitor to the wedding thread.", args: { text: { type: "string", required: true, minLength: 1, maxLength: 500 } }, available: function () { return typeof window.__sendCrewMessage === "function"; }, run: function (args) {
+      var text = args.text.trim();
+      if (!text || !window.__sendCrewMessage(text)) throw new Error("The message could not be sent.");
+      return { accepted: true, text: text };
+    } });
+    register({ id: "volume.set", kind: "action", risk: "ambient", description: "Set master audio volume from zero to one.", args: { level: { type: "number", required: true, min: 0, max: 1 } }, available: function () { return typeof window.volume === "function"; }, run: function (args) {
+      var before = typeof window.__audioMaster === "number" ? window.__audioMaster : 1;
+      window.volume(args.level);
+      var after = typeof window.__audioMaster === "number" ? window.__audioMaster : args.level;
+      return { changed: before !== after, level: after };
     } });
     register({ id: "roster.set", kind: "action", risk: "ambient", args: { open: { type: "boolean", required: true } }, available: function () { return !!window.__secondRound; }, run: function (args) { return { open: window.roster ? window.roster(args.open) : false }; } });
     register({ id: "music.play", kind: "action", risk: "ambient", run: function () { if (!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()) && window.__phoneMusicToggle) window.__phoneMusicToggle(); return { playing: !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()) }; } });
@@ -40984,7 +41155,13 @@ var ABANDONED_CALL_MS = 30000;
       var changed = !!(window.__nextPartyDance && window.__nextPartyDance());
       return { changed: changed, dance: window.__partyDance || null };
     } });
-    register({ id: "party.set", kind: "action", risk: "ambient", args: { on: { type: "boolean", required: true } }, run: function (args) { if (window.party) window.party(args.on); return { on: !!window.__gardenPartyOn }; } });
+    register({ id: "party.set", kind: "action", risk: "ambient", args: { on: { type: "boolean", required: true } }, run: function (args) {
+      var before = !!window.__gardenPartyOn;
+      if (window.__setPartyMode) window.__setPartyMode(args.on, true);
+      else if (window.party) window.party(args.on);
+      var after = !!window.__gardenPartyOn;
+      return { changed: before !== after, on: after };
+    } });
     register({ id: "party.extend", kind: "action", risk: "ambient", available: function () { return !!window.__gardenPartyOn; }, run: function () {
       var extended = !!(window.__extendPartyLifecycle && window.__extendPartyLifecycle());
       return { changed: extended, extended: extended, on: !!window.__gardenPartyOn };
@@ -41097,6 +41274,15 @@ var ABANDONED_CALL_MS = 30000;
       return { activity: args.activity, started: true };
     } });
   })();
+  window.capabilities = function (kind) {
+    if (!window.loft || !window.loft.api) return [];
+    if (kind != null && kind !== "query" && kind !== "action") throw new Error('kind must be "query" or "action"');
+    return window.loft.api.capabilities(kind ? { kind: kind } : {});
+  };
+  window.loftstatus = function () {
+    var result = window.loft && window.loft.api ? window.loft.api.query("game.status") : null;
+    return result && result.ok ? result.value : result;
+  };
   function consoleT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
   var consoleLastCmd = "";
   function updateConsoleTile() {
@@ -41217,6 +41403,8 @@ var ABANDONED_CALL_MS = 30000;
   // copy to drift. tests/check.js parity-checks these keys against the CONSOLE_CMDS roster.
   var CONSOLE_HELP = {
     help: "help [command] — this list, or details for one command",
+    capabilities: "capabilities() — list the typed loft API; capabilities(\"query\") or capabilities(\"action\") filters it",
+    loftstatus: "loftstatus() — bounded live game status from loft.api",
     clear: "clear — wipe the scrollback",
     shortcuts: "shortcuts() — pop up the keyboard-shortcuts card (the one the '?' key shows); call it again to close it. returns whether the card ended up open",
     keyboard: "keyboard(…) — alias for shortcuts(…), by the other name",
@@ -41448,7 +41636,7 @@ var ABANDONED_CALL_MS = 30000;
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: /chat your question · /message your message · help · clear · shortcuts()/keyboard() · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · mixer() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · meteors() · storm()/rain()/overcast() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · sharecard() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora()/aurora(kp) · aurora() · twilight() · timelapse() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · gong() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · snap() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · fal() · cat() · octi() · piratebox()/chest() · scripts() · run(\"name\") · repeat(\"name\")/stop() · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · mailto() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: /chat your question · /message your message · help · capabilities()/loftstatus() · clear · shortcuts()/keyboard() · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · mixer() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · meteors() · storm()/rain()/overcast() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · sharecard() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora()/aurora(kp) · aurora() · twilight() · timelapse() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · gong() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · snap() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · fal() · cat() · octi() · piratebox()/chest() · scripts() · run(\"name\") · repeat(\"name\")/stop() · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · mailto() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
@@ -41707,7 +41895,7 @@ var ABANDONED_CALL_MS = 30000;
   // list drifts from those keys, which is how it "stays in sync". Only the first token (the
   // command name) is completed; args / inside-parens are out of scope.
   var CONSOLE_CMDS = [
-    "help", "clear", "shortcuts", "keyboard", "laser", "party", "chase", "guests", "aligoli", "arrive", "roster", "reset", "autoplay", "quit", "blacklight", "uv", "trip", "room",
+    "help", "capabilities", "loftstatus", "clear", "shortcuts", "keyboard", "laser", "party", "chase", "guests", "aligoli", "arrive", "roster", "reset", "autoplay", "quit", "blacklight", "uv", "trip", "room",
     "goto", "rooms", "daylight", "night", "day", "season", "meteors", "birthday", "play", "pause", "temp", "weather",
     "clock", "time", "sharecard", "projector", "storm", "rain", "overcast", "dance", "jukebox", "dj", "firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift", "cocktail", "mixer", "lang", "caption", "candle",
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "aurora", "twilight", "timelapse", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "gong", "servefood", "kidsAsleep",
@@ -44518,12 +44706,15 @@ var ABANDONED_CALL_MS = 30000;
       if (window.loft && window.loft.api) actions = window.loft.api.capabilities({ kind: "action", available: true }).map(function (capability) { return capability.id; });
     } catch (_error) {}
     var people = window.__chatPeopleState ? window.__chatPeopleState() : null;
-    var media = {
+    var mediaQuery = window.loft && window.loft.api ? window.loft.api.query("media.status") : null;
+    var environmentQuery = window.loft && window.loft.api ? window.loft.api.query("scene.environment") : null;
+    var media = mediaQuery && mediaQuery.ok ? mediaQuery.value : {
       music: window.__phoneMusicSnapshot ? window.__phoneMusicSnapshot() : null,
       party_dance: window.__partyDance || null,
-      projector: window.__cuddlyProjector && window.__cuddlyProjector.channel ? window.__cuddlyProjector.channel() : null
+      projector: window.__cuddlyProjector && window.__cuddlyProjector.channel ? window.__cuddlyProjector.channel() : null,
+      master_volume: typeof window.__audioMaster === "number" ? window.__audioMaster : 1
     };
-    var environment = {
+    var environment = environmentQuery && environmentQuery.ok ? environmentQuery.value : {
       uv: !!(strip && strip.classList.contains("uv-mode")),
       eclipse: balcony && balcony.classList.contains("solar-eclipse") ? "solar" : balcony && balcony.classList.contains("lunar-eclipse") ? "lunar" : null,
       rain: !!window.__wxRain,
@@ -48700,6 +48891,7 @@ async def localfont(name):
     var modal = null, shell = null, booted = false, closing = false;
     var lockA = 0, lockB = 0, lockAnswer = null, lockEntry = "", lockFailures = 0, lockShakeT = null; // math passcode lockscreen (first open per visit)
     var statusClock = null, currentApp = null, currentTitleKey = "", directCloseApp = null;
+    var recentApps = [], recentsReturnApp = null;
     var messageAppReturn = null; // a message action can deep-link to another phone app; Back returns to the thread first
     var battMgr = null, battHooked = false;
     var phoneBrowserCleanup = null; // teardown for the in-phone browser (ResizeObserver + frame unload)
@@ -48843,6 +49035,7 @@ async def localfont(name):
             '<div class="phone-stage">' +
               '<div class="phone-home"></div>' +
               '<div class="phone-app"><div class="phone-app-head"><span class="pah-title"></span></div><div class="phone-app-body"></div></div>' +
+              '<div class="phone-recents"></div>' +
               INCALL +
             '</div>' +
             NAV +
@@ -48899,7 +49092,7 @@ async def localfont(name):
       modal.querySelector(".phone-close").addEventListener("click", function (e) { e.stopPropagation(); close(); });
       modal.querySelector(".pnav-back").addEventListener("click", navBack);
       modal.querySelector(".pnav-home").addEventListener("click", navHome);
-      modal.querySelector(".pnav-recents").addEventListener("click", navHome); // recents lands on the launcher (no task switcher on this pocket OS)
+      modal.querySelector(".pnav-recents").addEventListener("click", navRecents);
       modal.querySelector(".pic-hangup").addEventListener("click", function (e) { e.stopPropagation(); hangup(); });
       modal.querySelector(".pb-keys").addEventListener("click", function (e) {
         var b = e.target.closest("button[data-k]");
@@ -49021,8 +49214,8 @@ async def localfont(name):
 
     // ── screens ──────────────────────────────────────────────────────────────
     function showScreen(name) {
-      shell.classList.remove("pm-home", "pm-app", "pm-incall", "booting");
-      shell.classList.add(name === "home" ? "pm-home" : name === "app" ? "pm-app" : "pm-incall");
+      shell.classList.remove("pm-home", "pm-app", "pm-recents", "pm-incall", "booting");
+      shell.classList.add(name === "home" ? "pm-home" : name === "app" ? "pm-app" : name === "recents" ? "pm-recents" : "pm-incall");
     }
     function leaveCurrentApp() {
       if (currentApp === "mines" && window.__phoneUnmountMines) window.__phoneUnmountMines();
@@ -49039,6 +49232,7 @@ async def localfont(name):
       currentApp = null;
     }
     function showHome() {
+      recentsReturnApp = null;
       messageAppReturn = null;
       directCloseApp = null;
       leaveCurrentApp();
@@ -49060,6 +49254,7 @@ async def localfont(name):
       leaveCurrentApp();
       if (!keepDirectClose) directCloseApp = null;
       currentApp = id;
+      noteRecentApp(id);
       currentTitleKey = titleKey;
       shell.querySelector(".pah-title").textContent = tr(titleKey);
       var body = shell.querySelector(".phone-app-body");
@@ -49078,6 +49273,48 @@ async def localfont(name):
           try { field.focus({ preventScroll: true }); } catch (_error) { field.focus(); }
         }, 0);
       } else if (shell) shell.focus();
+    }
+    function noteRecentApp(id) {
+      if (!id || !phoneAppById(id)) return;
+      recentApps = recentApps.filter(function (recentId) { return recentId !== id; });
+      recentApps.unshift(id);
+      if (recentApps.length > 6) recentApps.length = 6;
+    }
+    function renderRecents() {
+      var host = shell.querySelector(".phone-recents");
+      host.innerHTML = '<h2 class="phone-recents-title">' + tr("phone_recents_title") + '</h2>';
+      var installed = ensurePhoneSlots();
+      var apps = recentApps.map(phoneAppById).filter(function (app) { return app && installed.indexOf(app.id) !== -1; });
+      if (!apps.length) {
+        host.innerHTML += '<div class="phone-recents-empty">' + tr("phone_recents_empty") + '</div>';
+        return;
+      }
+      var list = document.createElement("div");
+      list.className = "phone-recents-list";
+      apps.forEach(function (app) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "phone-recent-app";
+        var icon = app.icon
+          ? '<svg viewBox="0 0 12 12" aria-hidden="true"><use href="#dicon-' + app.icon + '"/></svg>'
+          : app.glyph;
+        button.innerHTML = '<span class="pra-ico" style="background:' + app.tile + '">' + icon + '</span>' +
+          '<span class="pra-label">' + tr(app.labelKey) + '</span>';
+        button.addEventListener("click", function () { recentsReturnApp = null; launchApp(app); });
+        list.appendChild(button);
+      });
+      host.appendChild(list);
+    }
+    function showRecents() {
+      recentsReturnApp = currentApp ? phoneAppById(currentApp) : recentsReturnApp;
+      messageAppReturn = null;
+      directCloseApp = null;
+      leaveCurrentApp();
+      renderRecents();
+      showScreen("recents");
+      var first = shell.querySelector(".phone-recent-app");
+      if (first) first.focus();
+      else shell.focus();
     }
     function renderHome() {
       var home = shell.querySelector(".phone-home");
@@ -49984,6 +50221,7 @@ async def localfont(name):
       if (/^reply_/.test(id)) delete MESSAGES[id];
       if (window.__updateMsgBadge) window.__updateMsgBadge();
       if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages);
+      if (i >= 0 && window.__loftStateChanged) window.__loftStateChanged("messages.changed", { reason: "dismissed", id: id }, "ui");
     }
     window.__dismissMessage = dismissMessage; // test hook
     function plainMessageText(m) { return String(msgBody(m) || "").replace(/<[^>]+>/g, ""); }
@@ -50031,6 +50269,7 @@ async def localfont(name):
     function groupChatCast() {
       return GROUP_CHAT_CAST.map(function (person) {
         return {
+          id: person.key,
           name: person.name,
           role: person.role || groupChatPlain(T.en[person.roleKey]),
           relationship: groupChatPlain(T.en["rel_" + person.key]),
@@ -50138,6 +50377,7 @@ async def localfont(name):
       if (isOpen() && currentApp === "messages") { messagesRead[id] = true; openApp("messages", "app_messages", renderMessages); }
       else { delete messagesRead[id]; showMessageThumb(id); }
       updateMsgBadge();
+      if (window.__loftStateChanged) window.__loftStateChanged("messages.changed", { reason: "reply", id: id }, "autonomous");
     }
     function repaintMessages() {
       if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages);
@@ -50178,6 +50418,7 @@ async def localfont(name):
       messagesThread.push(userId); messagesRead[userId] = true; messagesArrivedAt[userId] = Date.now();
       trimMessageThread();
       if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages);
+      if (window.__loftStateChanged) window.__loftStateChanged("messages.changed", { reason: "sent", id: userId }, "ui");
       requestCrewReply(userId, responseId, text, targetId);
       return true;
     }
@@ -51806,6 +52047,69 @@ async def localfont(name):
     var CUE_POOL = ["cue_cocktails", "cue_calendar", "storm", "invaders", "flair", "smores", "sina_helpers", "firstdance", "slowdance", "cake", "bouquet", "chairlift", "jukebox", "hamid_verse", "pouria_farhang", "ali_love", "aspen_banter", "athena_banter", "pouria_banter", "farhang_banter", "irene_banter", "hannah_banter", "alireza_vitamin", "fireworks", "lanterns", "toasts", "groupphoto", "sparklers", "bbq", "kids_asleep", "sunset", "sunrise"]; // the random party (night) drip (shuffled: each drip picks a random un-sent one); the two kid lines are rare single slots; Aspen's line chains Behdad's quoted dad joke; action-free banter adds personality without moving the player
     var DAY_POOL = ["cue_mail", "sunset"]; // the DAYTIME drip — texts that belong to daylight hours (no party); dripped by scheduleDayDrip(). Bahareh's "did you check the mail?" belongs to the day. (behdad's BBQ text moved to the party CUE_POOL.) sunset also lives here so it can drip near dusk even with no party — gated by nearSunset().
     var TAB_CALM_POOL = DAY_POOL.concat(["visit_ali", "visit_spencer", "visit_alireza", "visit_bahareh", "visit_patricia", "visit_madla", "visit_hamid", "visit_baharak", "visit_farhang"]); // no party: quiet app/day cues + friends asking whether the couple is home
+    // Durable checkpoint adapter. Authored rows keep their dictionary-backed identity; generated
+    // visitor/crew replies carry their bounded literal payload. Runtime-only timers, an open app,
+    // search focus and in-flight AI work deliberately do not cross a reload.
+    window.__checkpointPhoneCapture = function () {
+      return {
+        notesDraft: notesDraft,
+        msgDraft: msgDraft,
+        msgReplySeq: msgReplySeq,
+        phoneSlots: (phoneSlots || phoneDefaultSlots()).slice(),
+        mailRead: Object.assign({}, mailRead),
+        rows: messagesThread.map(function (id) {
+          var m = MESSAGES[id] || {};
+          return {
+            id: id,
+            read: !!messagesRead[id],
+            reactions: (messageReactions[id] || []).slice(0, 8),
+            arrivedAt: +messagesArrivedAt[id] || 0,
+            message: {
+              fromKey: m.fromKey || null, bodyKey: m.bodyKey || null,
+              from: m.from != null ? String(m.from).slice(0, 120) : null,
+              body: m.body != null ? String(m.body).slice(0, 1200) : null,
+              outgoing: !!m.outgoing, replyTo: m.replyTo || null,
+              act: m.act || null, apiAction: m.apiAction || null, chatAction: m.chatAction || null,
+              bdName: m.bdName || null
+            }
+          };
+        }).slice(-40)
+      };
+    };
+    window.__checkpointPhoneRestore = function (state) {
+      if (!state || typeof state !== "object") return false;
+      notesDraft = typeof state.notesDraft === "string" ? state.notesDraft.slice(0, 10000) : "";
+      msgDraft = typeof state.msgDraft === "string" ? state.msgDraft.slice(0, 500) : "";
+      msgReplySeq = Math.max(0, Math.min(9999, parseInt(state.msgReplySeq, 10) || 0));
+      if (Array.isArray(state.phoneSlots)) {
+        var allowed = phoneDefaultSlots().concat(["chat"]), seenSlots = {};
+        phoneSlots = state.phoneSlots.filter(function (id) {
+          return allowed.indexOf(id) !== -1 && !seenSlots[id] && (seenSlots[id] = true);
+        }).slice(0, allowed.length);
+        allowed.forEach(function (id) { if (!seenSlots[id]) phoneSlots.push(id); });
+      }
+      mailRead = state.mailRead && typeof state.mailRead === "object" ? Object.assign({}, state.mailRead) : {};
+      messagesThread = []; messagesRead = {}; messageReactions = {}; messagesArrivedAt = {};
+      (Array.isArray(state.rows) ? state.rows : []).slice(-40).forEach(function (row) {
+        if (!row || typeof row.id !== "string") return;
+        var id = row.id.slice(0, 120), saved = row.message || {}, m = MESSAGES[id];
+        if (!m && /^reply_(?:user|ai)_/.test(id)) m = MESSAGES[id] = {};
+        if (!m) return;
+        ["fromKey", "bodyKey", "replyTo", "act", "bdName"].forEach(function (key) { if (saved[key] != null) m[key] = saved[key]; });
+        if (saved.from != null) m.from = String(saved.from).slice(0, 120);
+        if (saved.body != null) m.body = String(saved.body).slice(0, 1200);
+        m.outgoing = !!saved.outgoing;
+        if (saved.apiAction && typeof saved.apiAction === "object") m.apiAction = saved.apiAction;
+        if (saved.chatAction && typeof saved.chatAction === "object") m.chatAction = saved.chatAction;
+        messagesThread.push(id);
+        messagesRead[id] = !!row.read;
+        messageReactions[id] = Array.isArray(row.reactions) ? row.reactions.slice(0, 8) : [];
+        messagesArrivedAt[id] = +row.arrivedAt || 0;
+      });
+      charlieIntroOffered = messagesThread.indexOf("charlie") !== -1;
+      if (window.__updateMsgBadge) window.__updateMsgBadge();
+      return true;
+    };
     // Phone photobooth result state — session-scoped, same model as notesDraft/cardsIndex:
     // a captured polaroid (frame canvas + chosen look/frame) survives a normal close/reopen
     // (renderPhotobooth seeds its locals from these and commits them back in teardown), and is
@@ -53045,6 +53349,12 @@ async def localfont(name):
     // ── nav / open / close ──────────────────────────────────────────────────────
     function navBack() {
       if (shell.classList.contains("pm-incall")) { hangup(); return; }
+      if (shell.classList.contains("pm-recents")) {
+        var backTo = recentsReturnApp;
+        recentsReturnApp = null;
+        if (backTo) launchApp(backTo); else showHome();
+        return;
+      }
       if (shell.classList.contains("pm-app")) {
         if (directCloseApp && directCloseApp === currentApp) { close(); return; }
         // in-app back first: the cocktails detail view steps back to the bar menu, not out to home
@@ -53066,6 +53376,16 @@ async def localfont(name):
     function navHome() {
       if (shell.classList.contains("pm-incall")) { hangup(); return; } // can't background a live call — hang up first
       showHome();
+    }
+    function navRecents() {
+      if (shell.classList.contains("pm-incall")) return; // keep a live call in the foreground
+      if (shell.classList.contains("pm-recents")) {
+        var backTo = recentsReturnApp;
+        recentsReturnApp = null;
+        if (backTo) launchApp(backTo); else showHome();
+        return;
+      }
+      showRecents();
     }
     function paintClock() {
       if (!shell) return;
@@ -53143,6 +53463,7 @@ async def localfont(name):
       if (callee) dropCall(true); // silent teardown of any live call + ambient
       messageAppReturn = null;
       directCloseApp = null;
+      recentsReturnApp = null;
       leaveCurrentApp();           // restore the re-placed Mines board to the monitor
       stopStatusClock();
       window.__weatherDuck = 1; // phone closed: weather ambience back to full
@@ -53172,6 +53493,8 @@ async def localfont(name):
     window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messagesArrivedAt = {}; phaseTwoHeldMessages = []; Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks/reactions, and the flashlight (intent forgotten + beam/torch off)
     var resetPhoneAppsBase = window.__resetPhoneApps;
     window.__resetPhoneApps = function () {
+      recentApps = [];
+      recentsReturnApp = null;
       deferredAutonomousMessages = [];
       if (deferredAutonomousTimer) { clearTimeout(deferredAutonomousTimer); deferredAutonomousTimer = null; }
       return resetPhoneAppsBase();
@@ -53573,6 +53896,7 @@ async def localfont(name):
       if (msgAppShowing) openApp("messages", "app_messages", renderMessages); // live-refresh (scrolls to newest) if the thread's already open — no toast needed, they're looking at it
       else showMessageThumb(id);
       updateMsgBadge();
+      if (window.__loftStateChanged) window.__loftStateChanged("messages.changed", { reason: "received", id: id }, "autonomous");
       if (m.next && MESSAGES[m.next]) setTimeout(function () { window.__deliverAutonomousPhoneMessage(m.next); }, m.nextDelay || 4200); // chained followup text (e.g. Hamid's 2nd stanza lands a few seconds after the 1st)
       if (id !== "charlie") scheduleCharlieIntro(); // Charlie follows a real text; she is never the first notification
       return true;
@@ -54043,6 +54367,7 @@ async def localfont(name):
       if (shell.classList.contains("booting")) { paintLock(); return; } // lockscreen labels are language-driven
       if (shell.classList.contains("pm-incall")) { refreshCallText(); return; }
       if (shell.classList.contains("pm-home")) { renderHome(); return; }
+      if (shell.classList.contains("pm-recents")) { renderRecents(); return; }
       if (shell.classList.contains("pm-app")) {
         // rebuild the open app in the new language (mines is the board itself — leave it)
         if (currentApp === "call") openDialer();
@@ -54260,6 +54585,7 @@ async def localfont(name):
       else if (window.__updateGardenAurora) window.__updateGardenAurora();
       if (window.__actPing) window.__actPing("daynight"); // second act: nightfall settles B0, daybreak settles W2
       if (!dusk && window.__offerDayPartyBBQ) window.__offerDayPartyBBQ(); // daybreak offers a cookout; later nightfall never cancels one already started
+      if (window.__loftStateChanged) window.__loftStateChanged("environment.daylight", { daylight: !dusk }, silent ? "clock" : "ui");
     }
     window.__autoToggleDusk = toggleDusk; // the garden light switch flips day/night through this (then stops the auto cycle itself)
     // force day/night to a target state (the garden party lights up the night; its light
@@ -66302,6 +66628,7 @@ function spawnDustMote(container) {
     strip.classList.toggle("viewing-office", name === "office"); // WebKit paints the monitor's foreignObjects even at opacity:0 and lets them escape the strip clip, leaking into whichever room is on screen; the CSS gate below hides them whenever the office isn't the viewed room
     window.currentStageIndex = idx;
     window.currentStageName = name; // room-truth for gates that live outside this IIFE (e.g. the fractal-flame loop)
+    if (fromIdx !== idx && window.__loftStateChanged) window.__loftStateChanged("room.change", { room: name }, "ui");
     parkAfterSlide(idx, fromIdx); // traversed rooms stay live through the pan; only the destination remains afterwards
     if (window.__syncLaptopSaverLoop) window.__syncLaptopSaverLoop(); // off-room device canvases/DOM loops hold their exact frame until the office returns
     if (window.__syncMonitorSaverLoop) window.__syncMonitorSaverLoop();
@@ -70467,6 +70794,33 @@ function spawnDustMote(container) {
     return false;
   };
   window.__albumList = function () { return albumShots.slice().reverse(); }; // test hook: newest-first copy
+  // Semantic Aspen/group/room photographs are compact JSON records and survive recovery.
+  // Camera selfies are Blob-backed visitor pixels; those stay session-only rather than inflating
+  // localStorage or retaining camera material beyond the current page lifetime.
+  window.__checkpointAlbumCapture = function () {
+    return albumShots.filter(function (shot) { return shot && !shot.selfie; }).map(function (shot) {
+      var copy = {};
+      ["id", "t", "subjectId", "dance", "season", "uv", "shoot", "groupPhoto", "roomShot", "room", "cameraStation"].forEach(function (key) {
+        if (shot[key] != null) copy[key] = shot[key];
+      });
+      copy.people = Array.isArray(shot.people) ? shot.people.map(function (person) {
+        return { key: person.key || "", grp: person.grp || "", name: person.name || "", roleKey: person.roleKey || "" };
+      }).slice(0, 12) : [];
+      if (shot.sky && typeof shot.sky === "object") copy.sky = { night: !!shot.sky.night, wx: shot.sky.wx || "", aurora: !!shot.sky.aurora };
+      return copy;
+    }).slice(-ALBUM_CAP);
+  };
+  window.__checkpointAlbumRestore = function (records) {
+    if (!Array.isArray(records)) return false;
+    albumShots.forEach(revokeAlbumRecord);
+    albumShots = records.slice(-ALBUM_CAP).filter(function (rec) { return rec && typeof rec === "object" && !rec.selfie; });
+    albumSeq = albumShots.reduce(function (max, rec) { return Math.max(max, parseInt(rec.id, 10) || 0); }, 0);
+    albumLastSubject = albumShots.length ? (albumShots[albumShots.length - 1].subjectId || "") : "";
+    rebuildAlbumTaken();
+    seedAlbum();
+    if (window.__albumRefresh) window.__albumRefresh();
+    return true;
+  };
   // Pre-populate the album with a few PRE-WEDDING PHOTOSHOOT keepsakes (a garden shoot before the
   // day): the couple alone, with the mouses, and with the godkids. Seeded at load + re-seeded on
   // reset — the OLDEST entries, so live party snaps stack above them. Calm daytime portraits:
@@ -70978,6 +71332,7 @@ function spawnDustMote(container) {
     if (window.__syncPartyBBQ) window.__syncPartyBBQ(); // a smoker lit before the party starts the same split; party-off clears it
     if (on && window.__offerDayPartyBBQ) window.__offerDayPartyBBQ(); // programmatic daytime parties get the same early Behdad prompt
     if (on && window.__refreshStageAnimationParking) window.__refreshStageAnimationParking(); // pause every newly-busy off-room CSS timeline in one batched animation snapshot
+    if (wasOn !== on && window.__loftStateChanged) window.__loftStateChanged("party.change", { on: on }, userInitiated ? "ui" : "internal");
   }
   window.__setGardenParty = setGardenParty;
   // Tap a party dancer -> that dancer does a celebratory flare (hop + twirl + pop). The
@@ -73595,6 +73950,7 @@ function spawnDustMote(container) {
   };
 
   function resetHunt() {
+    if (window.__clearLoftCheckpoint) window.__clearLoftCheckpoint(); // a deliberate restart must not offer the discarded run on the next load
     window.__pragueCalled = false;
     window.__secondRound = false;                              // back to the "first round" — reseal the who's-here roster until a party lights again
     if (window.__resetPartyExitHint) window.__resetPartyExitHint(); // the one-time attended party-exit cue belongs to this game session
@@ -77339,6 +77695,192 @@ function spawnDustMote(container) {
   // room change (goToStage), so the loop never outlives the prompt nor writes to a detached node
   // (which would surface as an uncaught error in play.js's click-storm). rAF pauses natively in a
   // hidden tab and this is a single self-driven node (not a setTimeout spawner), so no accumulation.
+  var LOFT_CHECKPOINT_KEY = "loftCheckpoint:v1";
+  var LOFT_CHECKPOINT_VERSION = 1;
+  var LOFT_CHECKPOINT_MAX_AGE = 90 * 24 * 60 * 60 * 1000;
+  var checkpointWriteTimer = null, recoveryGate = null, recoveryKeyHandler = null;
+  function checkpointClass(id, name) { var el = document.getElementById(id); return !!(el && el.classList.contains(name)); }
+  function checkpointToggle(id, name, on) { var el = document.getElementById(id); if (el) el.classList.toggle(name, !!on); }
+  function checkpointPuzzleState() {
+    return {
+      kitchen: {
+        powered: !!kitchenPowered, warmed: !!kitchenWarmedUp, ground: !!kitchenGround,
+        tamped: !!tamped, spent: !!portafilterSpent, rounds: kitchenRounds || 0,
+        portafilterPos: portafilterPos || "grouphead", portafilterDone: checkpointClass("kitchen-portafilter", "done"),
+        shotFilled: checkpointClass("kitchen-shotcup", "filled")
+      },
+      garden: {
+        water: !!gardenState.water, music: !!gardenState.music, candles: !!gardenState.candles,
+        done: Object.keys(plantSpots).concat(Object.keys(instrumentSpots)).filter(function (id) { return checkpointClass(id, "done"); }),
+        candle1: !!candlesLit["garden-candle-1"], candle2: !!candlesLit["garden-candle-2"]
+      },
+      cuddly: {
+        octopus: checkpointClass("cuddly-octopus", "played"), door: checkpointClass("cuddly-balcony-door", "open"),
+        blankets: ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"].filter(function (id) { return checkpointClass(id, "done"); })
+      },
+      office: {
+        prague: !!window.__pragueCalled, pc: !!window.__pcPlayed,
+        lamp: checkpointClass("office-lamp", "dimmed"), pendant: checkpointClass("office-pendant", "dimmed"),
+        glass: checkpointClass("office-stainedglass", "done")
+      }
+    };
+  }
+  function restoreCheckpointPuzzle(puzzle) {
+    puzzle = puzzle || {};
+    var k = puzzle.kitchen || {};
+    kitchenPowered = !!k.powered; kitchenWarmedUp = !!k.warmed; kitchenGround = !!k.ground;
+    tamped = !!k.tamped; portafilterSpent = !!k.spent; kitchenRounds = Math.max(0, Math.min(20, parseInt(k.rounds, 10) || 0));
+    portafilterPos = ["grouphead", "grinder", "tamper", "knockbox"].indexOf(k.portafilterPos) !== -1 ? k.portafilterPos : "grouphead";
+    if (lamarzocco) {
+      lamarzocco.classList.toggle("powered-on", kitchenPowered);
+      lamarzocco.classList.toggle("done", kitchenPowered && kitchenWarmedUp);
+      lamarzocco.classList.remove("warming-up");
+    }
+    ["kitchen-gauge-needle-1", "kitchen-gauge-needle-2"].forEach(function (id) { checkpointToggle(id, "zero", !kitchenPowered); });
+    if (grinder) grinder.classList.toggle("done", kitchenGround);
+    if (portafilter) {
+      portafilter.classList.toggle("done", !!k.portafilterDone);
+      portafilter.classList.toggle("has-grounds", kitchenGround);
+      portafilter.classList.toggle("grounds-flat", kitchenGround && tamped);
+      portafilter.classList.toggle("spent", portafilterSpent);
+    }
+    checkpointToggle("kitchen-shotcup", "filled", !!k.shotFilled);
+    if (portafilterFly) {
+      portafilterFly.classList.remove("at-grinder", "at-tamper", "at-knockbox");
+      if (portafilterPos === "grinder") portafilterFly.classList.add("at-grinder");
+      if (portafilterPos === "tamper") portafilterFly.classList.add("at-tamper");
+      if (portafilterPos === "knockbox") portafilterFly.classList.add("at-knockbox");
+    }
+
+    var g = puzzle.garden || {}, done = Array.isArray(g.done) ? g.done : [];
+    gardenState.water = !!g.water; gardenState.music = !!g.music; gardenState.candles = !!g.candles;
+    Object.keys(plantSpots).concat(Object.keys(instrumentSpots)).forEach(function (id) { checkpointToggle(id, "done", done.indexOf(id) !== -1); });
+    candlesLit["garden-candle-1"] = !!g.candle1; candlesLit["garden-candle-2"] = !!g.candle2;
+    ["garden-candle-1", "garden-candle-2"].forEach(function (id) {
+      checkpointToggle(id, "lit", !!candlesLit[id]); checkpointToggle(id, "done", !!candlesLit[id]);
+    });
+    checkpointToggle("stage-garden", "g-c1-lit", !!g.candle1); checkpointToggle("stage-garden", "g-c2-lit", !!g.candle2);
+
+    var c = puzzle.cuddly || {}, blankets = Array.isArray(c.blankets) ? c.blankets : [];
+    checkpointToggle("cuddly-octopus", "played", !!c.octopus); checkpointToggle("cuddly-balcony-door", "open", !!c.door);
+    ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"].forEach(function (id) { checkpointToggle(id, "done", blankets.indexOf(id) !== -1); });
+
+    var o = puzzle.office || {};
+    window.__pragueCalled = !!o.prague; window.__pcPlayed = !!o.pc;
+    checkpointToggle("office-lamp", "dimmed", !!o.lamp); checkpointToggle("office-pendant", "dimmed", !!o.pendant);
+    checkpointToggle("office-stainedglass", "done", !!o.glass);
+    if (window.__updateOfficeNudges) window.__updateOfficeNudges();
+    updateKitchenInvite();
+  }
+  function checkpointPayload() {
+    var balcony = document.getElementById("stage-balcony");
+    return {
+      version: LOFT_CHECKPOINT_VERSION, savedAt: Date.now(),
+      progress: {
+        room: window.currentStageName || "kitchen", maxUnlocked: maxUnlocked,
+        phase2: !!window.__secondRound, party: !!window.__gardenPartyOn,
+        daylight: !(balcony && balcony.classList.contains("dusk")),
+        bbq: !!(window.bbq && window.bbq())
+      },
+      puzzle: checkpointPuzzleState(),
+      phone: window.__checkpointPhoneCapture ? window.__checkpointPhoneCapture() : null,
+      album: window.__checkpointAlbumCapture ? window.__checkpointAlbumCapture() : null
+    };
+  }
+  function saveCheckpoint() {
+    if (!attractOver() || window.__cinematic || (window.__autoplayOn && window.__autoplayOn())) return false;
+    try { localStorage.setItem(LOFT_CHECKPOINT_KEY, JSON.stringify(checkpointPayload())); return true; } catch (_error) { return false; }
+  }
+  function scheduleCheckpoint() {
+    if (!attractOver()) return;
+    clearTimeout(checkpointWriteTimer);
+    checkpointWriteTimer = setTimeout(function () { checkpointWriteTimer = null; saveCheckpoint(); }, 350);
+  }
+  function clearCheckpoint() {
+    clearTimeout(checkpointWriteTimer); checkpointWriteTimer = null;
+    try { localStorage.removeItem(LOFT_CHECKPOINT_KEY); } catch (_error) {}
+  }
+  function loadCheckpoint() {
+    try {
+      var raw = localStorage.getItem(LOFT_CHECKPOINT_KEY), saved = raw ? JSON.parse(raw) : null;
+      if (!saved || saved.version !== LOFT_CHECKPOINT_VERSION || !saved.progress ||
+          STAGES.indexOf(saved.progress.room) === -1 || Date.now() - (+saved.savedAt || 0) > LOFT_CHECKPOINT_MAX_AGE) {
+        if (raw) clearCheckpoint();
+        return null;
+      }
+      return saved;
+    } catch (_error) { clearCheckpoint(); return null; }
+  }
+  window.__saveLoftCheckpoint = saveCheckpoint;
+  window.__clearLoftCheckpoint = clearCheckpoint;
+  window.__loadLoftCheckpoint = loadCheckpoint;
+
+  function recoveryAge(savedAt) {
+    var mins = Math.max(0, Math.floor((Date.now() - (+savedAt || Date.now())) / 60000)), key = "recovery_just_now", n = 0;
+    if (mins >= 1440) { key = "recovery_days"; n = Math.floor(mins / 1440); }
+    else if (mins >= 60) { key = "recovery_hours"; n = Math.floor(mins / 60); }
+    else if (mins >= 1) { key = "recovery_minutes"; n = mins; }
+    return huntText(key).replace("{n}", n);
+  }
+  function hideRecoveryGate() {
+    if (recoveryKeyHandler) document.removeEventListener("keydown", recoveryKeyHandler, true);
+    recoveryKeyHandler = null;
+    if (recoveryGate && recoveryGate.parentNode) recoveryGate.parentNode.removeChild(recoveryGate);
+    recoveryGate = null;
+  }
+  function applyCheckpoint(saved) {
+    hideRecoveryGate();
+    restoreCheckpointPuzzle(saved.puzzle);
+    var p = saved.progress || {}, savedMax = Math.max(0, Math.min(STAGES.length - 1, parseInt(p.maxUnlocked, 10) || 0));
+    maxUnlocked = 0; unlockThrough(savedMax);
+    window.__secondRound = !!p.phase2;
+    if (window.__secondRound) unlockThrough(STAGES.length - 1);
+    balconyIntroSeen = savedMax >= STAGES.length - 1;
+    if (window.__checkpointPhoneRestore && saved.phone) window.__checkpointPhoneRestore(saved.phone);
+    if (window.__checkpointAlbumRestore && saved.album) window.__checkpointAlbumRestore(saved.album);
+    if (p.party && window.__setGardenParty) window.__setGardenParty(true, false);
+    if (p.bbq && window.bbq) window.bbq(true);
+    if (window.__setDayNight) window.__setDayNight(!p.daylight);
+    goToStage(STAGES.indexOf(p.room) <= maxUnlocked ? p.room : STAGES[maxUnlocked]);
+    endAttract();
+    saveCheckpoint();
+  }
+  function showRecoveryGate(saved) {
+    var host = document.querySelector(".hunt-viewport");
+    if (!saved || !host) return false;
+    removeClickMe(); hideRecoveryGate();
+    var gate = document.createElement("div"); recoveryGate = gate;
+    gate.id = "loft-recovery-gate"; gate.setAttribute("role", "dialog"); gate.setAttribute("aria-modal", "true"); gate.setAttribute("aria-labelledby", "loft-recovery-title");
+    var title = document.createElement("div"); title.id = "loft-recovery-title"; title.className = "loft-recovery-title"; title.textContent = huntText("recovery_title");
+    var meta = document.createElement("div"); meta.className = "loft-recovery-meta";
+    meta.textContent = huntText("recovery_meta").replace("{room}", roomDotLabel(saved.progress.room)).replace("{age}", recoveryAge(saved.savedAt));
+    var actions = document.createElement("div"); actions.className = "loft-recovery-actions";
+    var continueBtn = document.createElement("button"); continueBtn.type = "button"; continueBtn.className = "loft-recovery-btn primary selected"; continueBtn.textContent = huntText("recovery_continue");
+    var restartBtn = document.createElement("button"); restartBtn.type = "button"; restartBtn.className = "loft-recovery-btn"; restartBtn.textContent = huntText("recovery_restart");
+    actions.appendChild(continueBtn); actions.appendChild(restartBtn); gate.appendChild(title); gate.appendChild(meta); gate.appendChild(actions); host.appendChild(gate);
+    var buttons = [continueBtn, restartBtn], selected = 0;
+    function select(index) { selected = (index + buttons.length) % buttons.length; buttons.forEach(function (b, i) { b.classList.toggle("selected", i === selected); }); buttons[selected].focus(); }
+    function choose(index) {
+      if (index === 0) { applyCheckpoint(saved); return; }
+      if (window.__confirmRestart && !window.__confirmRestart()) return;
+      hideRecoveryGate(); clearCheckpoint(); resetHunt();
+    }
+    continueBtn.addEventListener("click", function (e) { e.stopPropagation(); choose(0); });
+    restartBtn.addEventListener("click", function (e) { e.stopPropagation(); choose(1); });
+    gate.addEventListener("pointerdown", function (e) { e.stopPropagation(); });
+    recoveryKeyHandler = function (e) {
+      if (!recoveryGate) return;
+      if (["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown", "Enter", " "].indexOf(e.key) === -1) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") select(selected - 1);
+      else if (e.key === "ArrowRight" || e.key === "ArrowDown") select(selected + 1);
+      else choose(selected);
+    };
+    document.addEventListener("keydown", recoveryKeyHandler, true);
+    requestAnimationFrame(function () { if (recoveryGate) select(0); });
+    return true;
+  }
+
   var clickMeEl = null, clickMeWord = null, clickMeRaf = 0, clickMeStart = 0;
   var CLICKME_MELT_MS = 2500; // one direction; a full ping-pong is 2×
   var CLICKME_MELT_MAX_MS = 15000; // stop the rAF melt after 15s: an unclicked intro shouldn't churn variable-font instances forever. The invitation stays put (frozen at the reduced-motion mid-melt frame) until a real tap.
@@ -77501,8 +78043,11 @@ function spawnDustMote(container) {
     try { document.fonts.load("16px 'Climate Crisis'", "CLICK ME! KLIKNI!"); } catch (e) {}
   }
 
-  goToStage("kitchen"); // sets the initial room/caption before the intro prompt goes on
-  showHuntIntro();
+  window.addEventListener("loft:statechange", scheduleCheckpoint);
+  window.addEventListener("pagehide", function () { saveCheckpoint(); });
+  setInterval(function () { if (!document.hidden) saveCheckpoint(); }, 2500); // catches stable internal changes that do not publish a state event
+  goToStage("kitchen"); // sets the initial room/caption before either opening gate goes on
+  setTimeout(function () { if (!showRecoveryGate(loadCheckpoint())) showHuntIntro(); }, 0);
 })();
 (function () {
   // Once the chest cat is loose (.out), it FOLLOWS the player from room to room. There is

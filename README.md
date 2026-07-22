@@ -36,21 +36,6 @@ is served from this repo.
 - **[Developer guide](docs/developer.md)** — architecture, state, rendering, testing,
   deployment, and the main subsystem entry points.
 
-## Self-hosted runtimes
-
-The loft has a few playful corners that run real software, entirely self-hosted (no
-CDNs) so they keep working forever. Each lives in its own directory with a `BUILD.md`
-that documents exactly how the bundle was produced and where it came from:
-
-- [`pyodide/`](pyodide/BUILD.md) — CPython compiled to WebAssembly, plus a couple of
-  wheels.
-- [`linux/`](linux/BUILD.md) — a small in-browser Linux (v86) with a repacked disk image.
-- [`doom/`](doom/BUILD.md) — a WebAssembly build of Doom.
-- [`harfbuzzjs/`](harfbuzzjs/BUILD.md) — HarfBuzz (text shaping) compiled for the browser.
-
-These are pinned deliverables, not build outputs — please don't regenerate or "upgrade"
-them casually.
-
 ## Acknowledgments
 
 With thanks to the people who helped shape this:

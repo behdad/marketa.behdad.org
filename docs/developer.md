@@ -26,6 +26,19 @@ noted.
 The single-file constraint is architectural. Prefer adding a small controller beside the subsystem
 it coordinates over introducing a second runtime bundle or a new dependency.
 
+## Self-hosted runtimes
+
+The loft has several features that run real software entirely from this repository, without a CDN.
+Each runtime has a `BUILD.md` recording its provenance and build process:
+
+- [`pyodide/`](../pyodide/BUILD.md) contains CPython compiled to WebAssembly and the bundled wheels.
+- [`linux/`](../linux/BUILD.md) contains the v86 runtime and a repacked Linux disk image.
+- [`doom/`](../doom/BUILD.md) contains the WebAssembly build of Doom.
+- [`harfbuzzjs/`](../harfbuzzjs/BUILD.md) contains HarfBuzz compiled for the browser.
+
+These directories are pinned, versioned deliverables rather than generated build output. Do not
+regenerate or upgrade them casually. Preserve their self-hosted, zero-CDN operation.
+
 ## Game state model
 
 There is no central store. State is distributed across:

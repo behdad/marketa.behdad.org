@@ -27,6 +27,7 @@ const ACTION_SPECS = Object.freeze({
   "music.skip": Object.freeze({}),
   "music.previous": Object.freeze({}),
   "music.track.play": Object.freeze({ track: new Set(["tumbala", "danbern", "orit"]) }),
+  "party.music.next": Object.freeze({}),
   "party.set": Object.freeze({ on: "boolean" }),
   "bbq.set": Object.freeze({ on: "boolean" }),
   "coffee.make": Object.freeze({}),
@@ -86,7 +87,7 @@ A direct request to make or get coffee should suggest coffee.make. Tell the visi
 
 Reply in the language and script of the visitor's latest message. Be warm, playful, and specific, but keep the message to at most two short sentences. Let humor follow the supplied character details instead of making everyone sound alike; Behdad especially enjoys dad jokes and puns. A natural callback may quote one supplied recent message, including one earlier in the thread, but do not force a joke or a callback. Always spell Markéta's name with the accent.
 
-You may suggest at most one action, and only when the visitor's latest message directly asks for it and its ID appears in the current game state's actions_available array. The game will attach that suggestion to your incoming message and wait for the visitor to press it; unlike Charlie's private Chat app, Wedding crew messages never execute actions automatically. Music, dance, track, and DJ actions should be answered by the current DJ or another supplied cast member whose role identifies them as a DJ. A direct request addressed to Aspen to take a photo must be answered by Aspen with the photo.take action. Use Charlie for app, room, roster, or other interface help unless a supplied cast role clearly fits better. Never infer an action from a vague remark, never emit raw JavaScript or an action outside the supplied catalog, and never claim the action succeeded; the game decides whether to execute it.
+You may suggest at most one action, and only when the visitor's latest message directly asks for it and its ID appears in the current game state's actions_available array. The game will attach that suggestion to your incoming message and wait for the visitor to press it; unlike Charlie's private Chat app, Wedding crew messages never execute actions automatically. Music, dance, track, and DJ actions should be answered by the current DJ or another supplied cast member whose role identifies them as a DJ. During a party, a request to the DJ for the next song means party.music.next, never music.skip (which belongs to the separate guitar/ukulele song player). A direct request addressed to Aspen to take a photo must be answered by Aspen with the photo.take action. Use Charlie for app, room, roster, or other interface help unless a supplied cast role clearly fits better. Never infer an action from a vague remark, never emit raw JavaScript or an action outside the supplied catalog, and never claim the action succeeded; the game decides whether to execute it.
 
 Return only strict JSON with exactly this shape: {"sender":"Cast name","text":"Message","reply_to_id":null,"action":null} or {"sender":"Cast name","text":"Message","reply_to_id":"supplied-message-id","action":{"id":"allowlisted.id","args":{}}}. The sender must be a supplied cast name. reply_to_id must be null or exactly an id from reply_to or recent_messages. Use exactly the argument names and enum values in the supplied action catalog. Do not use a Markdown fence or add other text.`;
 
@@ -466,10 +467,14 @@ function normalizeGroupReply(reply, groupChat, context) {
   const structured = isExactObject(parsed, ["sender", "text", "reply_to_id", "action"]) && Boolean(canonicalRequestedSender) && Boolean(cleanText(parsed.text, 700));
   const text = (structured ? cleanText(parsed.text, 700) : cleanText(parsed && parsed.text, 700)) || raw;
   if (!text) throw new Error("OpenAI returned no group-chat text");
+  let requestedAction = structured ? parsed.action : null;
+  if (requestedAction?.id === "music.skip" && context.party && context.actions_available.includes("party.music.next")) {
+    requestedAction = { id: "party.music.next", args: {} };
+  }
   let action = structured
-    ? normalizeAction(parsed.action, context.actions_available)
+    ? normalizeAction(requestedAction, context.actions_available)
     : null;
-  if (action && (/^music\./.test(action.id) || action.id === "party.dance.request" || action.id === "party.dj.set")) {
+  if (action && (/^music\./.test(action.id) || action.id === "party.music.next" || action.id === "party.dance.request" || action.id === "party.dj.set")) {
     const castPerson = groupChat.cast.find((person) => person.name === sender);
     const isDj = sender === groupChat.current_dj || /\bdj\b/i.test((castPerson && castPerson.role) || "");
     if (!isDj) action = null;

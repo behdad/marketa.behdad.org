@@ -195,7 +195,7 @@ actionCase = await normalizedPrivateReply(
 );
 check(actionCase.reply.action === null, "a canonical action is discarded when the browser did not advertise it as currently available", actionCase);
 
-for (const id of ["music.previous", "party.set", "bbq.set", "coffee.make", "photo.take"]) {
+for (const id of ["music.previous", "party.music.next", "party.set", "bbq.set", "coffee.make", "photo.take"]) {
   const args = id === "party.set" || id === "bbq.set" ? { on: true } : {};
   actionCase = await normalizedPrivateReply(
     JSON.stringify({ text: "Doing that.", action: { id, args } }),
@@ -264,6 +264,21 @@ check(/"reactions":\["👍"\]/.test(groupCapture.body.instructions) && /"reactio
 check(/Wedding crew group chat/.test(groupCapture.body.instructions) && /"party_elapsed_seconds":222/.test(groupCapture.body.instructions) && /skip capitalization or punctuation/.test(groupCapture.body.instructions) && /Pouria is the working bartender and remains sober/.test(groupCapture.body.instructions) && /"current_dj":"Danesh"/.test(groupCapture.body.instructions) && /"playtime":\{"seconds":3723,"display":"1h 2m"\}/.test(groupCapture.body.instructions) && /"name":"Markéta"/.test(groupCapture.body.instructions) && /"kitchen":\["Pouria"\]/.test(groupCapture.body.instructions) && !/attic/.test(groupCapture.body.instructions), "the separate group persona receives elapsed-party tone guidance, playtime, current DJ, all-room locations, and sanitized cast context");
 check(/"id":"washrooms","location":"by the entrance"/.test(groupCapture.body.instructions) && /physical directions/.test(groupCapture.body.instructions), "the crew responder receives verified venue facts and the no-invented-directions rule");
 check(!/^You are Charlie/.test(groupCapture.body.instructions) && /Music, dance, track, and DJ actions/.test(groupCapture.body.instructions) && /dad jokes and puns/.test(groupCapture.body.instructions), "group mode is distinct from Charlie, assigns music actions to DJs, and grounds humor in cast details");
+
+openAIReply = JSON.stringify({ sender: "Danesh", text: "Next one coming up.", reply_to_id: null, action: { id: "music.skip", args: {} } });
+const djNextResponse = await worker.fetch(makeRequest("/chat", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    mode: "group_chat",
+    message: "DJ, next song please.",
+    turnstile_token: "dj-next-token",
+    context: { room: "garden", phase: 2, party: true, actions_available: ["party.music.next"] },
+    group_chat: { current_dj: "Danesh", cast: [{ name: "Danesh", role: "DJ" }] },
+  }),
+}), makeEnv());
+const djNextReply = JSON.parse((await djNextResponse.json()).reply);
+check(djNextReply.sender === "Danesh" && djNextReply.action?.id === "party.music.next", "a stale DJ music.skip response is normalized to the party-tune transport", djNextReply);
 
 openAIReply = JSON.stringify({ sender: "Aspen", text: "Hold still!", reply_to_id: null, action: { id: "photo.take", args: {} } });
 const aspenResponse = await worker.fetch(makeRequest("/chat", {

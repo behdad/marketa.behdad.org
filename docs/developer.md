@@ -39,6 +39,25 @@ Each runtime has a `BUILD.md` recording its provenance and build process:
 These directories are pinned, versioned deliverables rather than generated build output. Do not
 regenerate or upgrade them casually. Preserve their self-hosted, zero-CDN operation.
 
+### Google Fonts integration
+
+Google Fonts is the deliberate network exception to the self-hosted runtime policy. The page loads
+Fraunces, Source Serif 4, and a small Noto Serif subset through the normal Google Fonts stylesheets.
+The loft's font-programming tools also expose the Google Fonts Developer API at runtime:
+
+- The JavaScript and dropdown consoles provide `googlefonts(family, opts)`. It returns a
+  `Uint8Array` containing raw TTF bytes suitable for `hb.Face()` or `hbFont()`. `opts.weight` and
+  `opts.italic` select a variant, and `googlefonts.list(query)` lists or filters the catalog.
+- The Python app injects `async googlefonts(family, weight=None, italic=False)`. It returns Python
+  `bytes` suitable for `uharfbuzz.Face` or `fontTools.ttLib.TTFont`; its attached async
+  `googlefonts.list(query)` helper exposes the same catalog.
+
+Both helpers query `webfonts/v1` for a direct TTF URL rather than loading CSS or WOFF2. The browser
+API key is necessarily present in client code and must remain HTTP-referrer restricted in Google
+Cloud; it is an identifier for the public browser integration, not a server secret. These helpers
+require network access even though Pyodide, HarfBuzz, fontTools, Brotli, and the other runtimes are
+served locally.
+
 ## Game state model
 
 There is no central store. State is distributed across:

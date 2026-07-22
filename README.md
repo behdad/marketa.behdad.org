@@ -26,8 +26,7 @@ JavaScript, inline. The illustrations are inline SVG. There is no build step and
 nothing to compile — deploying is just a `git pull` into the web root, so whatever is
 committed is what's live.
 
-The two typefaces (Fraunces + Source Serif 4) come from Google Fonts; everything else
-is served from this repo.
+The interface typefaces, Fraunces and Source Serif 4, are loaded from Google Fonts.
 
 ## Documentation
 

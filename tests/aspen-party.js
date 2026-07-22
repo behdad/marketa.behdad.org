@@ -1,0 +1,104 @@
+#!/usr/bin/env node
+"use strict";
+
+// Focused Aspen party-photographer contract: authored stations, foot/body action split,
+// camera-framed album subjects, group-photo home position, and no scene-click bio popups.
+var fs = require("fs");
+var path = require("path");
+var lib = require("./lib");
+var html = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
+var failures = 0;
+function check(ok, message, detail) {
+  if (ok) console.log("  ✓ " + message);
+  else { failures++; console.log("  ✗ " + message + (detail == null ? "" : "\n    " + JSON.stringify(detail))); }
+}
+
+check(/var STATIONS = \[\s*\{ id: "front-left"[\s\S]*\{ id: "potstand"[\s\S]*\{ id: "peace-lily"[\s\S]*\{ id: "front-right"/.test(html),
+  "four authored Aspen stations stay in their intended order");
+check(/14000 \+ Math\.random\(\) \* 10000/.test(html) && /22000 \+ Math\.random\(\) \* 16000/.test(html),
+  "roaming keeps the 14–24s first / 22–38s subsequent cadence");
+check(!/window\.__moveGardenPhotographer\s*=/.test(html), "movement does not expand the public scripting API");
+check(!/nameTip\("garden-(?:photog-hit|dj-a|dj-b)"/.test(html),
+  "Aspen and DJ scene controls have no competing bio-card listeners");
+
+var harness = String.raw`<script>
+(function () {
+  var report = { errs: window.__errs, steps: {} };
+  function click(el) { el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })); }
+  window.goToStage("garden");
+  window.__setGardenParty(true, false);
+  if (window.__summonGuests) window.__summonGuests();
+  var stage = document.getElementById("stage-garden");
+  var foot = document.getElementById("garden-photog-move-hit");
+  var body = document.getElementById("garden-photog-hit");
+  var who = 0, photos = 0, opens = 0;
+  window.__whoPop = function () { who++; };
+  var realAdd = window.__albumAdd;
+  window.__albumAdd = function (force) { photos++; return realAdd(force); };
+  window.__openPhoneAppHere = function () { opens++; };
+
+  report.steps.initial = stage.getAttribute("data-photog-station");
+  click(foot);
+  report.steps.foot = { station: stage.getAttribute("data-photog-station"), photos: photos, opens: opens, who: who };
+  click(body);
+  report.steps.body = { station: stage.getAttribute("data-photog-station"), photos: photos, who: who };
+
+  var dj = document.getElementById("garden-dj-a");
+  click(dj);
+  report.steps.dj = { picker: document.getElementById("garden-djpicker").classList.contains("open"), who: who };
+  if (window.__closeDjPicker) window.__closeDjPicker();
+
+  click(foot); // potstand -> peace-lily: its frame is 75..370
+  window.__rosterPresence = function () { return [
+    { key: "hosts", grp: "hosts", name: "markéta & behdad", roleKey: "role_hosts" },
+    { key: "ali", grp: "guests", name: "Ali", roleKey: "role_bestman" },
+    { key: "goli", grp: "guests", name: "Goli", roleKey: "role_fashion" }
+  ]; };
+  window.__gardenRosterFrameX = function (key) { return { hosts: 325, ali: 190, goli: 520 }[key]; };
+  window.__albumClear();
+  for (var i = 0; i < 4; i++) realAdd(true);
+  var framed = window.__albumList().filter(function (shot) { return !shot.shoot; }).slice(0, 4);
+  report.steps.frame = {
+    station: stage.getAttribute("data-photog-station"),
+    stationMeta: framed.map(function (shot) { return shot.cameraStation; }),
+    people: framed.map(function (shot) { return shot.people.map(function (p) { return p.key; }); })
+  };
+
+  var started = window.__startGroupPhoto();
+  report.steps.groupStart = { started: started, station: stage.getAttribute("data-photog-station") };
+  setTimeout(function () {
+    var group = window.__albumList().filter(function (shot) { return shot.groupPhoto; })[0];
+    report.steps.groupShot = {
+      station: stage.getAttribute("data-photog-station"),
+      people: group ? group.people.map(function (p) { return p.key; }) : []
+    };
+    var pre = document.createElement("pre"); pre.id = "__report"; pre.textContent = JSON.stringify(report); document.body.appendChild(pre);
+  }, 1250);
+})();
+</script>`;
+
+var result = lib.runPageSync("rsvp.html", harness, 2600, {
+  forceMotion: true,
+  seedRandom: true,
+  patchRaf: true,
+  chromeFlags: "--autoplay-policy=no-user-gesture-required"
+});
+check(!!result, "focused browser harness completed", result);
+if (result) {
+  var s = result.steps;
+  check(s.initial === "front-left", "Aspen starts at the front-left station", s.initial);
+  check(s.foot.station === "potstand" && s.foot.photos === 0 && s.foot.opens === 0 && s.foot.who === 0,
+    "foot click advances Aspen without shutter, Album, or bio", s.foot);
+  check(s.body.station === "potstand" && s.body.photos === 1 && s.body.who === 0,
+    "body click takes exactly one photo without a bio popup", s.body);
+  check(s.dj.picker && s.dj.who === 0, "DJ head opens its picker without a bio popup", s.dj);
+  check(s.frame.station === "peace-lily" && s.frame.stationMeta.every(function (id) { return id === "peace-lily"; }),
+    "garden photos retain their camera-station metadata", s.frame);
+  check(s.frame.people.length === 4 && s.frame.people.every(function (keys) { return keys.indexOf("ali") !== -1 && keys.indexOf("goli") === -1; }),
+    "peace-lily frame includes the in-frame guest and excludes the off-camera guest", s.frame.people);
+  check(s.groupStart.started && s.groupStart.station === "front-left", "group photo moves Aspen home before gathering", s.groupStart);
+  check(s.groupShot.station === "front-left" && s.groupShot.people.indexOf("ali") !== -1 && s.groupShot.people.indexOf("goli") !== -1,
+    "group-photo keeps Aspen home and bypasses camera-zone filtering", s.groupShot);
+  check(!result.errs.length, "no runtime errors", result.errs);
+}
+process.exitCode = failures ? 1 : 0;

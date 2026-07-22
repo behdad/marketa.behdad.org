@@ -1006,10 +1006,15 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    reads as alive at the party rather than a frozen statue — pivots at her feet, party-gated like
    the disco ball (ambient, not beat-synced; she's shooting, not dancing). Group has no static
    transform attr, so animating it directly is clobber-safe. */
+#garden-photographer-position{transform-box:view-box; transform-origin:0 0; transition:transform 1.15s ease-in-out}
+#stage-garden[data-photog-station="front-left"] #garden-photographer-position{transform:translate(0,0)}
+#stage-garden[data-photog-station="potstand"] #garden-photographer-position{transform:translate(100px,0)}
+#stage-garden[data-photog-station="peace-lily"] #garden-photographer-position{transform:translate(455px,0) scaleX(-1)}
+#stage-garden[data-photog-station="front-right"] #garden-photographer-position{transform:translate(680px,0) scaleX(-1)}
 #garden-photographer{transform-box:fill-box; transform-origin:50% 100%}
 #stage-garden.garden-party #garden-photographer{animation:photog-sway 4.6s ease-in-out infinite}
 @keyframes photog-sway{0%,100%{transform:translateY(0) rotate(-1.2deg)} 40%{transform:translateY(-0.6px) rotate(1.3deg)} 72%{transform:translateY(-0.2px) rotate(-0.5deg)}}
-@media (prefers-reduced-motion: reduce){#stage-garden.garden-party #garden-photographer{animation:none}}
+@media (prefers-reduced-motion: reduce){#garden-photographer-position{transition:none} #stage-garden.garden-party #garden-photographer{animation:none}}
 /* ladybug tap reaction: a hop plus the two elytra flaring open at the head hinge,
    all on inner nodes so the wrapper's static translate survives (see the transform-
    clobber bug class). one-shot, returns to rest at 100% so nothing lingers. */
@@ -1095,6 +1100,8 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #garden-photographer{opacity:0; pointer-events:none; transition:opacity .6s ease}
 #stage-garden.garden-party #garden-photographer{opacity:1}
 #loft-game-strip.party-on #garden-photog-hit{pointer-events:auto; cursor:pointer} /* click her to take a photo (flash + shutter) while the party's on */
+#garden-photog-move-hit{pointer-events:none}
+#loft-game-strip.party-on #garden-photog-move-hit{pointer-events:auto; cursor:move}
 #garden-flash-bloom{opacity:0; transform-box:fill-box; transform-origin:center; mix-blend-mode:screen}
 #garden-flash-bloom.flashing{animation:garden-flash-pop .5s ease-out}
 #garden-flash-wash{opacity:0; mix-blend-mode:screen}
@@ -1102,6 +1109,13 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 @keyframes garden-flash-pop{0%{opacity:0; transform:scale(.35)}16%{opacity:.95; transform:scale(1)}100%{opacity:0; transform:scale(1.25)}}
 @keyframes garden-flash-wash{0%{opacity:0}14%{opacity:.10}100%{opacity:0}}
 @media (prefers-reduced-motion: reduce){#garden-flash-bloom.flashing, #garden-flash-wash.flashing{animation:none}}
+/* Aspen is painted after the party figures so she normally reads in the foreground. At her two
+   hiding stations, repaint only that station's existing plant above her: no second visible plant,
+   just honest leaf/pot occlusion over the translated photographer. */
+#garden-photographer-cover{pointer-events:none}
+#garden-photographer-cover .photog-cover{display:none}
+#stage-garden[data-photog-station="potstand"] #garden-photographer-cover .cover-potstand,
+#stage-garden[data-photog-station="peace-lily"] #garden-photographer-cover .cover-peace-lily{display:inline}
 /* Aspen comes out onto the deck to shoot the May-2 BBQ (a cloned photographer figure, JS-managed).
    Shown only while .showing (BBQ crowd out + balcony in view); tap her → flash + shutter + album. */
 #balcony-photographer{opacity:0; pointer-events:none; transition:opacity .6s ease; cursor:pointer}
@@ -11134,7 +11148,7 @@ section{margin:1.9rem 0}
 <rect class="overcast-room" x="0" y="0" width="680" height="340" fill="#8b95a1" pointer-events="none" aria-hidden="true"/>
 <rect id="kitchen-dusk" x="0" y="0" width="680" height="340" fill="#141830" opacity="0" pointer-events="none"/>
 </g>
-<g id="stage-garden" transform="translate(680,0)">
+<g id="stage-garden" transform="translate(680,0)" data-photog-station="front-left">
 
 <rect id="garden-wall" x="0" y="0" width="680" height="340" rx="0" fill="url(#gbrick)"/>
 <!-- subtle aged-brick imperfections: brick only shows in the two side columns here, so keep them there (non-interactive) -->
@@ -15068,6 +15082,7 @@ section{margin:1.9rem 0}
      aria-hidden partyfx and fades in with the party. Sits at garden-local x~18-60, feet ~y336
      — left of the leftmost dancer (x72), left of the candle flames (x88+), clear of the
      plants/DJ/couch on the right. -->
+<g id="garden-photographer-position">
 <g id="garden-photographer">
 <!-- transparent hit surface over the figure (click her to take a photo — flash + shutter) -->
 <rect id="garden-photog-hit" x="16" y="250" width="42" height="87" fill="transparent"/>
@@ -15095,6 +15110,13 @@ section{margin:1.9rem 0}
 <rect x="49.5" y="255.5" width="3" height="2.6" rx="0.6" fill="#9a9184"/>
 <circle id="garden-flash-bloom" cx="51" cy="256.6" r="7" fill="#fffdf5"/>
 </g>
+<!-- Her lower shoes are a separate control: move Aspen without firing the shutter/opening Album. -->
+<rect id="garden-photog-move-hit" x="16" y="317" width="27" height="21" rx="3" fill="transparent" role="button" aria-label="Move Aspen" tabindex="-1"/>
+</g>
+</g>
+<g id="garden-photographer-cover" aria-hidden="true" pointer-events="none">
+<use class="photog-cover cover-potstand" href="#garden-potstand-lift"/>
+<use class="photog-cover cover-peace-lily" href="#garden-peacelily-lift"/>
 </g>
 <!-- very faint scene-wide brighten that rides each flash (the optional wash); opacity peaks
      at .10 for a gentle blink, never a strobe. Opacity-only (no transform to clobber). -->
@@ -35418,7 +35440,8 @@ function gameTapsNear(a, b) {
   // The party-floor cast — hosts, guests, the mouses, and the visiting families — are named by TAP:
   // the delegated guestInspect on #garden-guests pops the white name-card for any .guest figure, so
   // the standalone per-figure hovers are gone (the click card carries name·role·age·relation·fact).
-  nameTip("garden-photog-hit", function () { return "<em>Aspen</em> · " + tipText("role_photographer") + relLine("Aspen") + funFact("Aspen"); }); // the photographer is crew (not a .guest → not covered by guestInspect); click pops her card alongside the separate photo-flash handler
+  // Aspen is working: her body takes a photo and her feet change her camera station. Neither click
+  // opens a bio card (the roster can still identify her without competing with those controls).
   // ── the garden CHASE runners — named on TAP (small + moving, but the owner wants them nameable).
   // pointer-events are gated to .chasing in CSS, so a tap only lands while a runner is actually
   // crossing; it pops the same white name-card the floor guests get (no .g-* figure → not in the
@@ -35433,8 +35456,8 @@ function gameTapsNear(a, b) {
   chaseName("garden-kid-patricia-daughter", function () { return "<em>Patricia’s daughter</em> · " + tipText("role_niece") + kidAgeLine("Patricia’s daughter") + relLine("Patricia’s daughter") + funFact("Patricia’s daughter"); });
   chaseName("garden-kid-bahareh", function () { return "<em>Bahareh</em> · " + tipText("role_sister") + relLine("Bahareh") + funFact("Bahareh"); }); // Irene's mom, herding the kids
   nameTip("kitchen-bartender-hit", function () { return "<em>Pouria</em> · " + tipText("role_bartender") + relLine("Pouria") + funFact("Pouria"); }, function () { return !(window.__flairState && window.__flairState().active); }); // keep his card out of the paddle game; otherwise clicks still identify him
-  nameTip("garden-dj-a", function () { return "<em>DJ " + (window.__djB ? "Sina" : "Danesh") + "</em> · " + tipText("role_dj") + funFact((window.__djB ? "Sina" : "Danesh").toLowerCase()); }); // names whoever's on duty (djName lives in another IIFE; mirror its __djB logic)
-  nameTip("garden-dj-b", function () { return "<em>DJ " + (window.__djB ? "Sina" : "Danesh") + "</em> · " + tipText("role_dj") + funFact((window.__djB ? "Sina" : "Danesh").toLowerCase()); });
+  // The DJ head/decks are working controls (jukebox/playback), not bio-card triggers. Who's Here
+  // still identifies whichever DJ is on duty and opens the same full card from the roster.
   // ...and two of the garden's props, roman — they're labels, not names. "Magic box" is deliberate:
   // the trips stay a discovery for the curious, and a tooltip announcing drugs to every passing
   // grandparent would give that away. The altar is swapped out for the DJ booth once the party's lit.
@@ -65948,6 +65971,7 @@ function spawnDustMote(container) {
     if (window.__updateBalconyGrillmaster) window.__updateBalconyGrillmaster(); // Hamid the grillmaster shows near a lit BBQ on entry (self-gates on balcony + party + smoking); clear on leaving
     if (window.__updateBalconyPhotog) window.__updateBalconyPhotog(); // Aspen shoots the BBQ (and the party's smokers) on the deck on entry (self-gates on balcony); clear on leaving
     if (window.__updateRoomPhotogs) window.__updateRoomPhotogs(); // ...and she works the kitchen/nook/office too, wherever the party's on and you are
+    if (window.__updateGardenPhotographer) window.__updateGardenPhotographer(); // the garden station clock exists only while Aspen is actually on screen
     if (name !== "balcony" && window.__snowmanOn && window.__setSnowman) window.__setSnowman(false); // ...and the winter snowman melts away when you leave the deck
     if (name !== "balcony" && window.__leafpileOn && window.__setLeafpile) window.__setLeafpile(false); // ...same for the autumn leaf pile,
     if (name !== "balcony" && window.__blossomPlayOn && window.__setBlossomPlay) window.__setBlossomPlay(false); // ...the spring blossom toss,
@@ -69307,11 +69331,15 @@ function spawnDustMote(container) {
       clearGroupPhotoTimers(); groupPhotoOn = false; window.__groupPhotoOn = false;
       group.classList.remove("gm-group-photo", "gm-gp-settle");
       if (window.__trimFloorToCap) window.__trimFloorToCap(); // the extra guests drift back off, down to capacity
+      var gardenStage = document.getElementById("stage-garden");
+      if (gardenStage) gardenStage.dispatchEvent(new CustomEvent("aspen-resume")); // release her station after the whole-crowd shutter
     }
     function startGroupPhoto() {
       if (!onFloor()) return false;
       if (groupPhotoOn) return true; // idempotent
       groupPhotoOn = true; window.__groupPhotoOn = true;
+      var gardenStage = document.getElementById("stage-garden");
+      if (gardenStage) gardenStage.dispatchEvent(new CustomEvent("aspen-home")); // establish the classic front-left angle before anyone gathers
       if (window.__summonGuests) window.__summonGuests(); // everyone crowds in for the whole-group shot (over the 8-cap)
       var rm = reducedMotion();
       group.classList.add("gm-group-photo");
@@ -69535,8 +69563,7 @@ function spawnDustMote(container) {
     var photog = document.getElementById("garden-photographer");
     if (!photog) return;
     photog.addEventListener("click", function (e) {
-      var hit = e.target && e.target.closest ? e.target.closest("#garden-photog-hit") : null;
-      if (!hit || !window.__gardenPartyOn) return;
+      if (!window.__gardenPartyOn) return;
       e.stopPropagation();
       fireGardenFlash();
       playCameraShutterSound();
@@ -69546,6 +69573,75 @@ function spawnDustMote(container) {
       // first. A short beat lets the shutter/flash read before the phone slides up.
       setTimeout(function () { if (window.__openPhoneAppHere) window.__openPhoneAppHere("album"); }, 260);
     });
+  })();
+  // Aspen works the garden from a few authored camera stations instead of standing at the same
+  // front-left mark all night. Each station owns the horizontal slice that its lens can plausibly
+  // frame; the album capture reads this same object, so movement and photo subjects cannot drift
+  // apart. One timeout is armed only while the active garden is visible and focused. Leaving the
+  // room/tab preserves her current station but cancels the clock; party-off/reset returns her home.
+  (function () {
+    var STATIONS = [
+      { id: "front-left", minX: 120, maxX: 610 },
+      { id: "potstand", minX: 175, maxX: 610 },
+      { id: "peace-lily", minX: 75, maxX: 370 },
+      { id: "front-right", minX: 70, maxX: 565 }
+    ];
+    var stationIndex = 0, roamTimer = null, groupHeld = false;
+    function stage() { return document.getElementById("stage-garden"); }
+    function active() { return !groupHeld && gardenPartyActive() && document.hasFocus(); }
+    function clearRoam() { if (roamTimer) { clearTimeout(roamTimer); roamTimer = null; } }
+    function applyStation(index) {
+      stationIndex = Math.max(0, Math.min(STATIONS.length - 1, index | 0));
+      var st = stage();
+      if (st) st.setAttribute("data-photog-station", STATIONS[stationIndex].id);
+      return STATIONS[stationIndex];
+    }
+    function schedule(first) {
+      clearRoam();
+      if (!active()) return;
+      roamTimer = setTimeout(roam, first ? (14000 + Math.random() * 10000) : (22000 + Math.random() * 16000));
+    }
+    function roam() {
+      roamTimer = null;
+      if (!active()) return;
+      var next = stationIndex;
+      while (next === stationIndex) next = Math.floor(Math.random() * STATIONS.length);
+      applyStation(next);
+      schedule(false);
+    }
+    window.__gardenPhotographerView = function () {
+      var s = STATIONS[stationIndex];
+      return { id: s.id, minX: s.minX, maxX: s.maxX };
+    };
+    function advance() {
+      var result = applyStation((stationIndex + 1) % STATIONS.length);
+      schedule(false);
+      return result;
+    }
+    function footEnabled() {
+      var foot = document.getElementById("garden-photog-move-hit");
+      if (foot) foot.setAttribute("tabindex", active() ? "0" : "-1");
+    }
+    var foot = document.getElementById("garden-photog-move-hit");
+    if (foot) {
+      foot.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); if (active()) advance(); });
+      foot.addEventListener("keydown", function (e) {
+        if ((e.key !== "Enter" && e.key !== " ") || !active()) return;
+        e.preventDefault(); e.stopPropagation(); advance();
+      });
+    }
+    var gardenStage = stage();
+    if (gardenStage) {
+      gardenStage.addEventListener("aspen-home", function () { groupHeld = true; clearRoam(); applyStation(0); footEnabled(); });
+      gardenStage.addEventListener("aspen-resume", function () { groupHeld = false; footEnabled(); schedule(false); });
+    }
+    window.__updateGardenPhotographer = function () { clearRoam(); footEnabled(); if (active()) schedule(true); };
+    window.__resetGardenPhotographer = function () { groupHeld = false; clearRoam(); applyStation(0); footEnabled(); };
+    document.addEventListener("visibilitychange", window.__updateGardenPhotographer);
+    window.addEventListener("focus", window.__updateGardenPhotographer);
+    window.addEventListener("blur", clearRoam);
+    applyStation(0);
+    footEnabled();
   })();
   function partyFrozen() { var s = document.getElementById("loft-game-strip"); return !!(s && s.classList.contains("dance-frozen")); }
   function gardenFlashTick() {
@@ -69799,17 +69895,16 @@ function spawnDustMote(container) {
       }
       subs.push({ id: "family", members: fmembers });
     }
-    // The godkids are eligible any time the party's on (they don't need to be on the garden floor —
-    // Aspen can grab the couple with them anytime). ONE candidate holding a rotating 1–3 of the trio,
-    // so it lands "sometimes" like anyone else and isn't always the full three; a stable id (just
-    // "godkids", not the shuffled subset) so the back-to-back de-dup treats every kids shot as the
-    // same subject and won't fire two running.
-    if (window.__gardenPartyOn) {
-      var shuffled = ALBUM_GODKIDS.slice();
+    // The godkids form one rotating group, but only from kids actually admitted by the current
+    // camera frame. They now have standing party figures, so synthesising all three regardless of
+    // position would put people behind Aspen into her photograph.
+    var visibleGodkids = ALBUM_GODKIDS.filter(function (kid) { return byKey[kid.key]; });
+    if (visibleGodkids.length) {
+      var shuffled = visibleGodkids.slice();
       for (var i = shuffled.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = t; }
       var n = 1 + Math.floor(Math.random() * shuffled.length); // 1..3 of them
       var pick = {}; shuffled.slice(0, n).forEach(function (kid) { pick[kid.key] = 1; }); // which of the trio made this shot
-      var kids = ALBUM_GODKIDS.filter(function (kid) { return pick[kid.key]; }) // back to canonical order (Irene, Robin, Navid) for a tidy caption + lineup
+      var kids = visibleGodkids.filter(function (kid) { return pick[kid.key]; }) // back to canonical order (Irene, Robin, Navid) for a tidy caption + lineup
                               .map(function (kid) { return { key: kid.key, grp: "kids", name: kid.name, roleKey: "" }; });
       subs.push({ id: "godkids", members: kids });
     }
@@ -69834,6 +69929,16 @@ function spawnDustMote(container) {
   }
   function captureAlbumShot(force) {  // build + store one intimate-portrait snapshot from the live floor
     var present = (window.__rosterPresence && window.__rosterPresence()) || [];
+    // At the garden, the camera station is part of the photograph: admit only live figures whose
+    // transformed centre is inside Aspen's authored horizontal frame. This happens BEFORE couple /
+    // family grouping, so a partner outside the lens becomes a solo rather than appearing by magic.
+    var cameraView = (window.currentStageName === "garden" && window.__gardenPhotographerView) ? window.__gardenPhotographerView() : null;
+    if (cameraView && window.__gardenRosterFrameX) {
+      present = present.filter(function (p) {
+        var x = window.__gardenRosterFrameX(p.key);
+        return x != null && x >= cameraView.minX && x <= cameraView.maxX;
+      });
+    }
     var hosts = null; present.forEach(function (p) { if (p.key === "hosts") hosts = p; });
     // Room-scoped, and the SAME key the store below writes: a BBQ balcony hosts-shot isn't dedup'd
     // against the garden one. The pool used to filter on the BARE signature while the store was
@@ -69888,6 +69993,7 @@ function spawnDustMote(container) {
       season: albumSeasonName(),
       uv: albumUvOn(),
       room: window.currentStageName === "balcony" ? "balcony" : "", // a BBQ/balcony snap renders on the balcony backdrop, not the garden
+      cameraStation: cameraView ? cameraView.id : "",
       sky: albumSkyState(window.currentStageName)
     };
     albumShots.push(rec);
@@ -70424,6 +70530,7 @@ function spawnDustMote(container) {
       if (window.__startAlbumSnaps) window.__startAlbumSnaps(); // Aspen grabs album keepsakes often (~14-22s), no freeze
       if (window.__startPhotogRounds) window.__startPhotogRounds(); // ...and she works the OTHER rooms too — one shot per round, wherever you are
       if (window.__updateRoomPhotogs) window.__updateRoomPhotogs();
+      if (window.__updateGardenPhotographer) window.__updateGardenPhotographer(); // occasionally choose another authored garden camera station
       startGardenChaseDriver(); // begin the godkids' occasional garden chase (idempotent; self-gates on gardenPartyActive + not-busy)
       startPartyKidFormation(); // rotate the three standing godkids through family/hosts groupings
       updateGardenGuests(); // arm Ali + Goli's arrival (they crash the floor a beat after the party lights; self-gates on garden + visible)
@@ -70465,6 +70572,7 @@ function spawnDustMote(container) {
       if (window.__stopAlbumSnaps) window.__stopAlbumSnaps(); // party over — stop Aspen's auto-snaps
       if (window.__stopPhotogRounds) window.__stopPhotogRounds(); // ...and her rounds of the other rooms
       if (window.__updateRoomPhotogs) window.__updateRoomPhotogs(); // she packs up wherever she was standing
+      if (window.__resetGardenPhotographer) window.__resetGardenPhotographer(); // ...and returns to her front-left home mark
       stopGardenChase();               // party over — kill the chase timer + reset every runner
       stopPartyKidFormation();         // party over — clear the godkids' standing formation timer/offsets
       window.__kidsLateParty = false;  // a sleep announcement only thins the floor for the party in which it arrived
@@ -79492,6 +79600,35 @@ function spawnDustMote(container) {
         out.push({ key: r.key, grp: r.grp, name: r.name || (r.sel === "__dj" ? djName() : ""), roleKey: r.roleKey });
       });
       return out;
+    };
+    // Aspen's garden lens needs live, transformed positions without duplicating the roster table.
+    // Map the actual painted figure (including a child runner handoff) through the garden wall's
+    // stable screen rect and return garden-local x in the scene's 0..680 coordinate system.
+    window.__gardenRosterFrameX = function (key) {
+      var entry = null;
+      for (var i = 0; i < ROSTER.length; i++) if (ROSTER[i].key === key) { entry = ROSTER[i]; break; }
+      if (!entry || entry.sel === "__dj" || entry.sel === "#garden-photog-hit") return null;
+      var els = [];
+      if (key === "hosts") {
+        var bd = document.querySelector("#garden-guests .g-behdad"), mk = document.querySelector("#garden-guests .g-marketa");
+        if (bd) els.push(bd); if (mk) els.push(mk);
+      } else {
+        var standing = document.querySelector("#garden-guests " + entry.sel) || document.querySelector(entry.sel);
+        var runner = entry.runSel && document.querySelector(entry.runSel);
+        if (runner && runner.classList.contains("chasing")) els.push(runner);
+        else if (standing) els.push(standing);
+      }
+      var wall = document.getElementById("garden-wall");
+      if (!els.length || !wall) return null;
+      var wr = wall.getBoundingClientRect();
+      if (!wr.width) return null;
+      var sum = 0, n = 0;
+      els.forEach(function (el) {
+        var cs = getComputedStyle(el), r = el.getBoundingClientRect();
+        if (cs.display === "none" || cs.visibility === "hidden" || parseFloat(cs.opacity) === 0 || !r.width) return;
+        sum += r.left + r.width / 2; n++;
+      });
+      return n ? ((sum / n - wr.left) / wr.width * 680) : null;
     };
 
     // roster() — console command. roster(true) opens the "who's here" panel for the room on

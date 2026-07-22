@@ -23,7 +23,7 @@ const PUBLIC_MAIL_IDS = new Set(["lore", "rsvp", "spam"]);
 
 const ACTION_SPECS = Object.freeze({
   "room.go": Object.freeze({ room: new Set(["kitchen", "garden", "cuddly", "office", "balcony"]) }),
-  "app.open": Object.freeze({ app: new Set(["chat", "weather", "calendar", "messages", "mail", "call", "music", "album", "tattoo", "photos", "photobooth", "hn", "clock", "calculator", "currency", "notes", "cards", "flashlight", "browser", "cocktails", "dressup", "mines", "quiz"]) }),
+  "app.open": Object.freeze({ app: new Set(["chrome", "video", "life", "doom", "console", "python", "linux", "chat", "weather", "calendar", "messages", "mail", "call", "music", "album", "tattoo", "photos", "photobooth", "hn", "clock", "calculator", "currency", "notes", "cards", "flashlight", "browser", "cocktails", "dressup", "mines", "quiz", "editor"]) }),
   "roster.set": Object.freeze({ open: "boolean" }),
   "music.play": Object.freeze({}),
   "music.pause": Object.freeze({}),
@@ -48,7 +48,7 @@ const ACTION_SPECS = Object.freeze({
   "sky.effect.set": Object.freeze({ effect: new Set(["none", "aurora", "twilight"]) }),
   "party.moment.start": Object.freeze({ moment: new Set(["first-dance", "slow-dance", "toasts", "group-photo", "sparklers", "cake", "bouquet-toss", "chair-lift"]) }),
   "call.incoming.trigger": Object.freeze({ caller: new Set(["madla", "prague"]) }),
-  "call.video.start": Object.freeze({ contact: new Set(["prague", "lubeck"]) }),
+  "call.video.start": Object.freeze({ contact: new Set(["tehran", "california", "prague", "lubeck"]) }),
   "call.hangup": Object.freeze({}),
   "bar.cocktail.make": Object.freeze({ drink: new Set([
     "orange-cookie", "blue-kamikaze", "caesar", "campari-gin-tonic", "campari-spritz", "dirty-martini",
@@ -87,6 +87,8 @@ Always spell Markéta's name with the accent, including when the user omits it.
 
 The loft has five rooms: kitchen/bar, garden/party, cuddly-puddly, office, and balcony. The internal room value \`kitchen\` means kitchen/bar, \`garden\` means garden/party, and \`cuddly\` means cuddly-puddly; always use those full room names when speaking to the player.
 
+Video-call destinations are bounded and explicit: Tehran is Daniel, Marie, and Báka; California is Patricia, Patricia’s son, and Patricia’s daughter; Prague is Markéta's parents' garden; and Lübeck is Madla, Robert, Elisabeth, and Felix. A direct request to call one of those people or families uses call.video.start with the matching destination (Madla therefore means Lübeck for an outgoing call). A request for someone to call the visitor, such as \"have Madla call me\" or \"make Madla ring\", uses call.incoming.trigger with caller:\"madla\" instead. Do not confuse an outgoing Lübeck call with an incoming Madla ring.
+
 Fishu is the flying pufferfish in cuddly-puddly. A short message consisting only of Fishu's name or a spelling/diacritic variant such as "Phishu!", "fisu", or "Fišü" is a direct invocation of the fishu.speak action and may run automatically.
 
 The magic box is in garden/party, and "vitamins" is in-game slang for its contents. A location question such as "where are the vitamins?" asks where the magic box is; a direct request such as "let's have vitamins" means the next shuffled magic-box trip and must use trip.next when available. The magic box's authored trips are shrooms, acid, froggies, DMT, molly, ketamine, and iboga. Their accepted aliases are mushrooms/mushroom, LSD, froggie/frog/5meo, MDMA, k/ket, and ibogaine. Polite questions such as "can we do some acid?", "could we try shrooms?", and "how about molly?" are direct named-trip requests, not factual questions. When trip.start is available, you MUST attach the corresponding trip.start action; never merely tell the user to tap the physical box or say a suggestion exists without attaching it. Never interpret ordinary travel language as a trip request. Ketamine and iboga are unavailable while a party is active; say so rather than substituting another trip.
@@ -95,11 +97,13 @@ weather.scene.set changes only the authored weather visible around the loft; it 
 
 A direct request to make or get coffee should use coffee.make. It ends an active party, restores daylight, and takes the player to the kitchen/bar espresso machine; do not claim the coffee itself has already been made.
 
+The office computer's Script Editor is the place for running or scheduling JavaScript. The Console, Python, and Linux apps are also available to advanced users; explain their purpose and open them when directly requested, but never execute arbitrary code from Chat. If the visitor asks you to run, schedule, loop, or delay a script, explain briefly that Chat cannot execute arbitrary JavaScript, point them to the computer's editor, and attach app.open with app:"editor" when that action is available. If they paste JavaScript into Chat, review it as text: explain errors, suggest corrections, and return a revised snippet when useful, but never execute it, claim it ran, or silently convert it into an action. Chat is a code-review and drafting space; the Script Editor is the execution space.
+
 While a party is active, a direct request to keep it going, continue it, or cancel its ending should use party.extend, not party.set. It cancels an accepted or in-progress finale and grants another full attended party interval.
 When no party is active, a direct request such as "party", "start the party", or "let's party" should use party.set with on:true. Never describe a last song, wind-down, dance floor, or active party when current game state.party is false.
 A direct request such as "night time", "make it night", "day time", or "bring back daylight" should use daylight.set with on:false for night and on:true for day. If the requested state already matches current game state.daylight, say so instead of requesting an action.
 
-For an explicit request, party.moment.start can begin one of the authored wedding moments; call.incoming.trigger can make Madla or Prague ring in; call.video.start places a laptop call to Prague or Lübeck; call.hangup ends the current ringing or live call; video.pause pauses Markéta's currently playing monitor film; bar.cocktail.make asks Pouria to prepare one real menu drink; bar.mixer.start begins the hands-on Negroni or Yale mixer; minigame.start launches Invaders or Flair-Catch; minigame.stop ends the active minigame; and scene.activity.start begins the kids' chase, stained-glass butterfly, or balcony rainbow. Never claim the video stopped unless you attach video.pause. Use the exact enum value from the catalog. A polite modal question such as "can we do the toasts?" is a request; a factual question such as "what are the toasts?" is not. Do not turn a mere mention or factual discussion into an action.
+For an explicit request, party.moment.start can begin one of the authored wedding moments; call.incoming.trigger can make Madla or Prague ring in; call.video.start places a call to Tehran, California, Prague, or Lübeck; call.hangup ends the current ringing or live call; video.pause pauses Markéta's currently playing monitor film; bar.cocktail.make asks Pouria to prepare one real menu drink; bar.mixer.start begins the hands-on Negroni or Yale mixer; minigame.start launches Invaders or Flair-Catch; minigame.stop ends the active minigame; and scene.activity.start begins the kids' chase, stained-glass butterfly, or balcony rainbow. Never claim the video stopped unless you attach video.pause. Use the exact enum value from the catalog. A polite modal question such as "can we do the toasts?" is a request; a factual question such as "what are the toasts?" is not. Do not turn a mere mention or factual discussion into an action.
 
 Never claim or guess that today is anyone's birthday or another special event unless current game state.active_occasion explicitly identifies it. The date by itself is not evidence of an occasion.
 
@@ -127,11 +131,13 @@ weather.scene.set changes only the authored weather visible around the loft; it 
 
 A direct request to make or get coffee should suggest coffee.make. Tell the visitor the action will take them to the kitchen/bar espresso machine; do not say the coffee is already made.
 
+The office computer's Script Editor is the place for running or scheduling JavaScript. The Console, Python, and Linux apps are also available to advanced users; Charlie can explain their purpose and open them when directly requested, but must never execute arbitrary code from Wedding crew. If the visitor asks Wedding crew to run, schedule, loop, or delay a script, Charlie should explain briefly that Chat cannot execute arbitrary JavaScript and point them to the computer's editor, suggesting app.open with app:"editor" when that action is available. If they paste JavaScript into Wedding crew, review it as text and suggest corrections, but never execute it, claim it ran, or silently turn it into an action. Chat is a code-review and drafting space; the Script Editor is the execution space.
+
 While a party is active, a direct request to keep it going, continue it, or cancel its ending should suggest party.extend, not party.set. Answer as Athena or the current DJ when possible; the visitor must tap the suggestion before anything changes.
 When no party is active, a direct request such as "party", "start the party", or "party more" should suggest party.set with on:true. Never describe a last song, wind-down, dance floor, or active party when current game state.party is false.
 A direct request such as "night time", "make it night", "day time", or "bring back daylight" should be answered by Charlie with daylight.set: on:false for night and on:true for day. If the requested state already matches current game state.daylight, Charlie should simply say so without an action.
 
-For an explicit request, party.moment.start can suggest one authored wedding moment; call.incoming.trigger can make Madla or Prague ring in; call.video.start places a laptop call to Prague or Lübeck; call.hangup ends the current ringing or live call; video.pause suggests pausing Markéta's currently playing monitor film; bar.cocktail.make asks Pouria to prepare one real menu drink; bar.mixer.start begins the hands-on Negroni or Yale mixer; minigame.start launches Invaders or Flair-Catch; minigame.stop ends the active minigame; and scene.activity.start begins the kids' chase, stained-glass butterfly, or balcony rainbow. Never claim the video stopped unless you attach video.pause; Wedding crew still waits for the visitor to tap it. Use the exact enum value from the catalog. Pouria should answer cocktail, mixer, or Flair-Catch requests; Behdad should answer Invaders requests when available. A polite modal question such as "can we do the toasts?" is a request; a factual question such as "what are the toasts?" is not. Do not attach an action to a mere mention, joke, or factual discussion.
+For an explicit request, party.moment.start can suggest one authored wedding moment; call.incoming.trigger can make Madla or Prague ring in; call.video.start places a call to Tehran, California, Prague, or Lübeck; call.hangup ends the current ringing or live call; video.pause suggests pausing Markéta's currently playing monitor film; bar.cocktail.make asks Pouria to prepare one real menu drink; bar.mixer.start begins the hands-on Negroni or Yale mixer; minigame.start launches Invaders or Flair-Catch; minigame.stop ends the active minigame; and scene.activity.start begins the kids' chase, stained-glass butterfly, or balcony rainbow. Never claim the video stopped unless you attach video.pause; Wedding crew still waits for the visitor to tap it. Use the exact enum value from the catalog. Pouria should answer cocktail, mixer, or Flair-Catch requests; Behdad should answer Invaders requests when available. A polite modal question such as "can we do the toasts?" is a request; a factual question such as "what are the toasts?" is not. Do not attach an action to a mere mention, joke, or factual discussion.
 
 Reply in the language and script of the visitor's latest message. Be warm, playful, and specific, but keep the message to at most two short sentences. Let humor follow the supplied character details instead of making everyone sound alike; Behdad especially enjoys dad jokes and puns. A natural callback may quote one supplied recent message, including one earlier in the thread, but do not force a joke or a callback. Always spell Markéta's name with the accent.
 
@@ -205,7 +211,7 @@ function tripRequestIntent(value) {
 function vitaminIntent(value) {
   const original = cleanText(value, MAX_MESSAGE_CHARS);
   const folded = original.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
-  const mentions = /\bvitamins?\b/.test(folded) || /ویتامین/.test(original);
+  const mentions = /\bvitamin(?:s|y)?\b/.test(folded) || /ویتامین/.test(original);
   if (!mentions) return null;
   const question = /\b(where|what|which|find|located|location)\b/.test(folded) || /\b(kde|co)\b/.test(folded) || /کجا|چیست|چیه/.test(original);
   if (question) return "location";
@@ -367,11 +373,25 @@ function cleanDevices(value) {
   const call = phone.call && typeof phone.call === "object" && !Array.isArray(phone.call) ? phone.call : null;
   return {
     monitor_app: cleanText(source.monitor_app, 32) || null,
+    call_destinations: cleanCallDestinations(source.call_destinations),
     phone: {
       open: Boolean(phone.open),
       app: cleanText(phone.app, 32) || null,
       call: call ? { person_or_place: cleanText(call.person_or_place, 40) || null, connected: Boolean(call.connected), incoming: Boolean(call.incoming) } : null,
     },
+  };
+}
+
+function cleanCallDestinations(value) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const names = (key) => Array.isArray(source[key])
+    ? source[key].slice(0, 8).map((name) => cleanText(name, 48)).filter(Boolean)
+    : [];
+  return {
+    tehran: names("tehran"),
+    california: names("california"),
+    prague: names("prague"),
+    lubeck: names("lubeck"),
   };
 }
 
@@ -656,6 +676,52 @@ function partyRequestIntent(value) {
   return null;
 }
 
+function scriptRequestIntent(value) {
+  const folded = cleanText(value, MAX_MESSAGE_CHARS)
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase();
+  // Treat the whole message as a coding request before inspecting embedded commands.
+  // This prevents "write a script ... start the party" from becoming party.set.
+  return /\b(script|javascript|js|code)\b/.test(folded) &&
+    /\b(write|make|create|fix|review|run|execute|schedule|delay|wait|loop|repeat|automate|script|code)\b/.test(folded);
+}
+
+function callRequestIntent(value) {
+  const original = cleanText(value, MAX_MESSAGE_CHARS);
+  const folded = original.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().replace(/[’']s\b/g, "").replace(/[’']/g, "").replace(/\s+/g, " ").trim();
+  const incoming = /\b(have|ask|make|let)\b.*\b(madla|prague|praha)\b.*\b(call|ring|phone)\b.*\b(me|us)\b/.test(folded) ||
+    /\b(madla|prague|praha)\b.*\b(call|ring)\b.*\b(me|us)\b/.test(folded) ||
+    /\b(call|ring)\b.*\b(madla|prague|praha)\b.*\b(me|us)\b/.test(folded);
+  if (incoming) {
+    const caller = /\b(prague|praha)\b/.test(folded) ? "prague" : "madla";
+    return { id: "call.incoming.trigger", args: { caller } };
+  }
+  if (!/\b(call|dial|video call|phone)\b/.test(folded)) return null;
+  const groups = [
+    { contact: "lubeck", names: ["madla", "robert", "elisabeth", "felix", "lubeck", "lubek", "lueb"] },
+    { contact: "prague", names: ["prague", "praha", "daniel", "marie", "baka", "parents", "mom", "dad"] },
+    { contact: "california", names: ["california", "patricia", "patricia-son", "patricia-daughter"] },
+    { contact: "tehran", names: ["tehran", "iran"] },
+  ];
+  for (const group of groups) {
+    if (group.names.some((name) => new RegExp(`\\b${name}\\b`).test(folded))) return { id: "call.video.start", args: { contact: group.contact } };
+  }
+  return null;
+}
+
+function scriptReplyText(message, groupMode) {
+  const folded = cleanText(message, MAX_MESSAGE_CHARS).toLocaleLowerCase();
+  const asksToRun = /\b(run|execute|schedule|delay|wait|loop|repeat|automate)\b/.test(folded);
+  if (asksToRun) {
+    return groupMode
+      ? "I can review or improve that script, but it must run in the office computer’s Script Editor—tap this to open it."
+      : "I can review or improve that script, but it must run in the office computer’s Script Editor. Tap this to open it.";
+  }
+  return groupMode
+    ? "Paste the script here and I’ll review or improve it; use the office computer’s Script Editor to run it."
+    : "Paste the script here and I’ll review or improve it; use the office computer’s Script Editor to run it.";
+}
+
 function partyReplyText(message, context, extending) {
   if (/[\u0600-\u06ff]/.test(message)) return extending
     ? "یک دور دیگر—اینجا بزن تا مهمانی ادامه پیدا کند. 🎉"
@@ -787,6 +853,25 @@ function vitaminReplyText(message, context, intent, reason, groupMode) {
 
 function applyDeterministicInvocation(normalizedReply, payload) {
   const parsed = JSON.parse(normalizedReply);
+  const scriptIntent = scriptRequestIntent(payload.message);
+  if (scriptIntent) {
+    const available = payload.context.actions_available.includes("app.open");
+    parsed.action = available ? { id: "app.open", args: { app: "editor" } } : null;
+    parsed.text = scriptReplyText(payload.message, payload.mode === "group_chat");
+    if (payload.mode === "group_chat") parsed.sender = "Charlie";
+    return JSON.stringify(parsed);
+  }
+  const callIntent = callRequestIntent(payload.message);
+  if (callIntent) {
+    const available = payload.context.actions_available.includes(callIntent.id);
+    parsed.action = available ? callIntent : null;
+    if (!available) {
+      parsed.text = callIntent.id === "call.incoming.trigger"
+        ? "That incoming call is not available right now."
+        : "That call destination is not available right now.";
+    }
+    if (payload.mode === "group_chat") parsed.sender = "Charlie";
+  }
   if (indoorTemperatureRequest(payload.message)) {
     parsed.action = null;
     parsed.text = indoorTemperatureReplyText(payload.message, payload.context);

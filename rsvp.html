@@ -1652,9 +1652,13 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    silhouettes, so their dance rotation belongs at the upper shoulder corner of each path. */
 #garden-guests .g-irene .guest-arm-l, #garden-guests .g-robin .guest-arm-l, #garden-guests .g-navid .guest-arm-l{transform-origin:right top}
 #garden-guests .g-irene .guest-arm-r, #garden-guests .g-robin .guest-arm-r, #garden-guests .g-navid .guest-arm-r{transform-origin:left top}
+@property --guest-arm-phase{syntax:"<number>";inherits:true;initial-value:0}
 #garden-guests.guests-in .guest-sway{animation:guest-sway .82s ease-in-out infinite}
-#garden-guests.guests-in .guest-arm-l{animation:guest-arm-l .82s ease-in-out infinite}
-#garden-guests.guests-in .guest-arm-r{animation:guest-arm-r .82s ease-in-out infinite}
+/* Generic arms inherit the phase from the body's sway instead of owning two more
+   animation timelines per guest. Signature figures and slow-dance overrides below
+   still install their own arm animations. */
+#garden-guests.guests-in .guest-arm-l{--guest-arm-mid:-8deg;--guest-arm-span:-18deg;animation:none;transform:rotate(calc(var(--guest-arm-mid) + (var(--guest-arm-span) * var(--guest-arm-phase))))}
+#garden-guests.guests-in .guest-arm-r{--guest-arm-mid:9deg;--guest-arm-span:19deg;animation:none;transform:rotate(calc(var(--guest-arm-mid) + (var(--guest-arm-span) * var(--guest-arm-phase))))}
 /* Ali's signature: a big long-armed reach-up-and-bounce; Goli's: a fashionista vogue pivot.
    It narrows enough to read as a turn but never approaches the paper-thin scaleX(0) edge. Staggered
    so they don't peak together. Both bigger than any md-* signature. */
@@ -1667,7 +1671,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #garden-guests.guests-in .g-spencer .guest-sway{animation-delay:-.2s}
 #garden-guests.guests-in .g-spencer .guest-arm-l,
 #garden-guests.guests-in .g-spencer .guest-arm-r{animation-delay:-.2s}
-@keyframes guest-sway{0%{transform:rotate(-3.5deg) translateX(-1px)} 50%{transform:rotate(3.5deg) translateX(1px)} 100%{transform:rotate(-3.5deg) translateX(-1px)}}
+@keyframes guest-sway{0%{--guest-arm-phase:-1;transform:rotate(-3.5deg) translateX(-1px)} 50%{--guest-arm-phase:1;transform:rotate(3.5deg) translateX(1px)} 100%{--guest-arm-phase:-1;transform:rotate(-3.5deg) translateX(-1px)}}
 @keyframes guest-arm-l{0%{transform:rotate(10deg)} 50%{transform:rotate(-26deg)} 100%{transform:rotate(10deg)}}
 @keyframes guest-arm-r{0%{transform:rotate(-10deg)} 50%{transform:rotate(28deg)} 100%{transform:rotate(-10deg)}}
 /* ── PER-SONG DANCE MOOD (amplitude-only) ─────────────────────────────────────
@@ -1675,28 +1679,25 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    (DANCE_MOOD: persian→chill, disco/techno/horah→groovy, polka/bhangra/swing/salsa→hype,
    waltz→elegant). These swap the shared .guest-sway/.guest-arm-* base keyframes for a
    bigger-/gentler-/smoother-amplitude variant — SAME shape + tempo (retuneDancers sets the
-   duration), just how far the bodies throw. groovy is the base (no override → falls through).
+   duration), just how far the bodies throw. The arms inherit that shared phase and use mood-
+   specific ranges below, so they no longer need separate animation timelines. groovy is the
+   base (no override → falls through).
    Specificity: .guests-in + [data-mood] beats the base (.guests-in only) and stays BELOW the
    per-guest .g-* sway/move overrides (Jay, the hosts' signatures keep theirs), and later in
    source so it wins cleanly over the base. Held still under reduced motion: the base
-   .guest-sway/.guest-arm-* wrappers are already frozen by the reduced-motion block above
-   (which sets them to none), and swapping only the animation-name can't revive a frozen
-   wrapper, so no extra reduced-motion entry is needed for these variants. */
+   .guest-sway wrapper is frozen by the reduced-motion block above, which also removes the
+   signature arm overrides, so inherited arm phase remains static. */
 #garden-guests.guests-in[data-mood="hype"] .guest-sway{animation-name:guest-sway-hype}
-#garden-guests.guests-in[data-mood="hype"] .guest-arm-l{animation-name:guest-arm-l-hype}
-#garden-guests.guests-in[data-mood="hype"] .guest-arm-r{animation-name:guest-arm-r-hype}
+#garden-guests.guests-in[data-mood="hype"] .guest-arm-l{--guest-arm-mid:-12deg;--guest-arm-span:-26deg;animation:none}
+#garden-guests.guests-in[data-mood="hype"] .guest-arm-r{--guest-arm-mid:13deg;--guest-arm-span:27deg;animation:none}
 #garden-guests.guests-in[data-mood="chill"] .guest-sway{animation-name:guest-sway-chill}
-#garden-guests.guests-in[data-mood="chill"] .guest-arm-l{animation-name:guest-arm-l-chill}
-#garden-guests.guests-in[data-mood="chill"] .guest-arm-r{animation-name:guest-arm-r-chill}
+#garden-guests.guests-in[data-mood="chill"] .guest-arm-l{--guest-arm-mid:-5deg;--guest-arm-span:-11deg;animation:none}
+#garden-guests.guests-in[data-mood="chill"] .guest-arm-r{--guest-arm-mid:5.5deg;--guest-arm-span:11.5deg;animation:none}
 #garden-guests.guests-in[data-mood="elegant"] .guest-sway{animation-name:guest-sway-elegant}
-@keyframes guest-sway-hype{0%{transform:rotate(-5deg) translateX(-2px)} 50%{transform:rotate(5deg) translateX(2px)} 100%{transform:rotate(-5deg) translateX(-2px)}}
-@keyframes guest-arm-l-hype{0%{transform:rotate(14deg)} 50%{transform:rotate(-38deg)} 100%{transform:rotate(14deg)}}
-@keyframes guest-arm-r-hype{0%{transform:rotate(-14deg)} 50%{transform:rotate(40deg)} 100%{transform:rotate(-14deg)}}
-@keyframes guest-sway-chill{0%{transform:rotate(-2.2deg) translateX(-.6px)} 50%{transform:rotate(2.2deg) translateX(.6px)} 100%{transform:rotate(-2.2deg) translateX(-.6px)}}
-@keyframes guest-arm-l-chill{0%{transform:rotate(6deg)} 50%{transform:rotate(-16deg)} 100%{transform:rotate(6deg)}}
-@keyframes guest-arm-r-chill{0%{transform:rotate(-6deg)} 50%{transform:rotate(17deg)} 100%{transform:rotate(-6deg)}}
+@keyframes guest-sway-hype{0%{--guest-arm-phase:-1;transform:rotate(-5deg) translateX(-2px)} 50%{--guest-arm-phase:1;transform:rotate(5deg) translateX(2px)} 100%{--guest-arm-phase:-1;transform:rotate(-5deg) translateX(-2px)}}
+@keyframes guest-sway-chill{0%{--guest-arm-phase:-1;transform:rotate(-2.2deg) translateX(-.6px)} 50%{--guest-arm-phase:1;transform:rotate(2.2deg) translateX(.6px)} 100%{--guest-arm-phase:-1;transform:rotate(-2.2deg) translateX(-.6px)}}
 /* elegant: a smoother, more even glide (gentle sway, arms stay on the base reach) */
-@keyframes guest-sway-elegant{0%{transform:rotate(-2.8deg) translateX(-1px)} 50%{transform:rotate(2.8deg) translateX(1px)} 100%{transform:rotate(-2.8deg) translateX(-1px)}}
+@keyframes guest-sway-elegant{0%{--guest-arm-phase:-1;transform:rotate(-2.8deg) translateX(-1px)} 50%{--guest-arm-phase:1;transform:rotate(2.8deg) translateX(1px)} 100%{--guest-arm-phase:-1;transform:rotate(-2.8deg) translateX(-1px)}}
 @keyframes guest-ali-bounce{0%,46%{transform:translateY(0) scaleY(1)} 56%{transform:translateY(0) scaleY(.93)} 70%{transform:translateY(-20px) scaleY(1.06)} 84%{transform:translateY(0) scaleY(.97)} 92%,100%{transform:translateY(0) scaleY(1)}}
 @keyframes guest-goli-vogue{0%,18%,88%,100%{transform:translate(0,0) rotate(-2deg) scaleX(1)} 38%{transform:translate(3px,-4px) rotate(-4deg) scaleX(.62)} 52%{transform:translate(0,-6px) rotate(2deg) scaleX(.45)} 68%{transform:translate(-3px,-3px) rotate(5deg) scaleX(.62)}}
 @keyframes guest-spencer-party{0%{transform:translateY(0) rotate(-2deg)} 25%{transform:translateY(-6px) rotate(2deg)} 50%{transform:translateY(-13px) rotate(-2deg)} 60%{transform:translateY(-9px) scaleY(1.04) rotate(2deg)} 75%{transform:translateY(-4px) rotate(-1deg)} 100%{transform:translateY(0) rotate(-2deg)}}
@@ -3860,7 +3861,7 @@ body:has(#stage-kitchen.flair-on, #stage-office.arcade) .loft-tempnav{ display:n
 #monitor-chat-close{cursor:pointer}
 #monitor-chat-close:hover .seg-hover{opacity:.55}
 .chat-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#eef1f0; color:#453a31; font-family:Arial,"Helvetica Neue",sans-serif; font-size:2.6px; line-height:1.28; overflow:hidden}
-.chat-bar{flex:none; height:6.2px; box-sizing:border-box; display:flex; align-items:center; gap:1.2px; padding:0.8px 8px 0.8px 2.5px; background:#315e58; color:#fffdf8}
+.chat-bar{flex:none; height:6.2px; box-sizing:border-box; display:flex; align-items:center; gap:1.2px; padding:0.8px 8px 0.8px 2.5px; background:#6f9db4; color:#fffdf8}
 .chat-bar-icon{width:4.5px; height:4.5px; display:block}
 .chat-bar-title{font-size:2.8px; font-weight:700; letter-spacing:0}
 .chat-log{flex:1; min-height:0; display:flex; flex-direction:column; gap:1px; overflow-y:auto; padding:2px 3px 1.5px; scrollbar-width:none; overscroll-behavior:contain}
@@ -4761,6 +4762,9 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .pm-quiz-q{font-family:"Fraunces",serif; font-size:17px; line-height:1.3; color:var(--ink); margin:0 0 14px}
 .pm-quiz-ans{display:block; width:100%; text-align:left; font:inherit; font-size:13px; cursor:pointer; background:var(--cream); color:var(--ink); border:1px solid var(--rule); border-radius:12px; padding:10px 12px; margin-bottom:9px; line-height:1.35}
 .pm-quiz-ans:hover{border-color:var(--wine); background:var(--paper)}
+.pm-quiz-ans.is-selected{border-color:var(--wine); background:var(--paper); box-shadow:inset 0 0 0 2px var(--wine)}
+.pm-quiz-actions{display:flex; gap:8px; margin-top:4px}
+.pm-quiz-actions .pm-btn{flex:1}
 .pm-quiz-result{text-align:center; padding-top:8px}
 .pm-quiz-portrait{height:100px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:10px}
 .pm-quiz-portrait .calx-bust{height:100%; width:auto}
@@ -20298,9 +20302,9 @@ section{margin:1.9rem 0}
 </foreignObject>
 <g id="monitor-chat-close" transform="translate(76.0,29.3) scale(0.8)">
 <rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
-<rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#4a72b8" stroke="#315280" stroke-width="0.5"/>
+<rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#6f9db4" stroke="#527d96" stroke-width="0.5"/>
 <rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
-<rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#2c446e" opacity="0"/>
+<rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#527d96" opacity="0"/>
 <path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round"/>
 </g>
 </g>
@@ -25358,6 +25362,27 @@ var T = {
     quiz_q5a2: "Endlessly curious",
     quiz_q5a3: "Competitive to the core",
     quiz_q5a4: "The creative one",
+    quiz_select_hint: "Choose any that fit — or choose none.",
+    quiz_none: "None of these",
+    quiz_continue: "Continue",
+    quiz_q6: "Who would you ask to solve a loft problem?",
+    quiz_q6a1: "Hamid — he can fix the grill and anything near it",
+    quiz_q6a2: "Patricia — she keeps the family cluster together",
+    quiz_q6a3: "Baharak or Payman — they know the Tehran crew",
+    quiz_q6a4: "Baka — she has the oldest stories",
+    quiz_q6a5: "Daniel or Marie — the Czech family encyclopaedia",
+    quiz_q7: "Pick the things that sound like you.",
+    quiz_q7a1: "A curious kid with a camera or a notebook",
+    quiz_q7a2: "A small person who would rather run or build",
+    quiz_q7a3: "A family storyteller",
+    quiz_q7a4: "A person who makes the room warmer",
+    quiz_q7a5: "A musician, listener, or quiet observer",
+    quiz_q8: "What would you bring to the party?",
+    quiz_q8a1: "A ridiculous pun or dad joke",
+    quiz_q8a2: "A camera and an eye for a good moment",
+    quiz_q8a3: "A guitar, piano, or song request",
+    quiz_q8a4: "A plan for keeping the kids happy",
+    quiz_q8a5: "A drink, snack, or warm welcome",
     console_welcome: "   loft console — real JavaScript, running right here in your page. try: help · ? keyboard shortcuts",
     console_laser: "bzzzt — red dot on the loose, shadowing your cursor. laser(false) calls it off. good luck, cat.",
     app_mail: "mail",
@@ -26241,6 +26266,27 @@ var T = {
     quiz_q5a2: "Nekonečně zvědavý(á)",
     quiz_q5a3: "Soutěživý(á) až do morku kostí",
     quiz_q5a4: "Kreativní duše",
+    quiz_select_hint: "Vyberte vše, co sedí — nebo nic.",
+    quiz_none: "Nic z toho",
+    quiz_continue: "Pokračovat",
+    quiz_q6: "Koho byste požádali o pomoc s problémem v loftu?",
+    quiz_q6a1: "Hamida — opraví gril i všechno kolem něj",
+    quiz_q6a2: "Patricii — drží rodinu pohromadě",
+    quiz_q6a3: "Baharak nebo Paymana — znají teheránskou část rodiny",
+    quiz_q6a4: "Baku — má nejstarší příběhy",
+    quiz_q6a5: "Daniela nebo Marii — českou rodinnou encyklopedii",
+    quiz_q7: "Vyberte, co vám zní podobně.",
+    quiz_q7a1: "Zvědavé dítě s foťákem nebo zápisníkem",
+    quiz_q7a2: "Malý člověk, který raději běhá nebo staví",
+    quiz_q7a3: "Rodinný vypravěč",
+    quiz_q7a4: "Člověk, který místnost zútulní",
+    quiz_q7a5: "Hudebník, posluchač nebo tichý pozorovatel",
+    quiz_q8: "Co byste přinesli na oslavu?",
+    quiz_q8a1: "Absurdní slovní hříčku nebo tátův vtip",
+    quiz_q8a2: "Foťák a cit pro dobrý okamžik",
+    quiz_q8a3: "Kytaru, piano nebo přání písničky",
+    quiz_q8a4: "Plán, jak zabavit děti",
+    quiz_q8a5: "Drink, něco k zakousnutí nebo vřelé přivítání",
     console_welcome: "   loftová konzole — opravdový JavaScript, běží přímo tady ve stránce. zkuste: help · ? klávesové zkratky",
     console_laser: "bzzzt — červená tečka je venku a sleduje kurzor. laser(false) ji odvolá. hodně štěstí, kočko.",
     app_mail: "pošta",
@@ -41192,12 +41238,13 @@ var ABANDONED_CALL_MS = 30000;
     register({ id: "trip.status", kind: "query", run: function () { return window.__tripState ? window.__tripState() : { active: !!window.__tripActive, variant: null }; } });
 
     register({ id: "room.go", kind: "action", risk: "ambient", args: { room: { type: "string", enum: ROOMS, required: true } }, available: function (args) { var max = window.__maxUnlocked ? window.__maxUnlocked() : window.currentStageIndex || 0; return ROOMS.indexOf(args.room) <= max; }, run: function (args) { var before = window.currentStageName; if (window.goToStage) window.goToStage(args.room); return { changed: before !== window.currentStageName, room: args.room }; } });
-    register({ id: "app.open", kind: "action", risk: "ambient", args: { app: { type: "string", enum: ["chat", "weather", "calendar", "messages", "mail", "call", "music", "album", "tattoo", "photos"].concat(PHONE_APPS.filter(function (app) { return ["messages", "album"].indexOf(app) < 0; })), required: true } }, run: function (args) {
+    register({ id: "app.open", kind: "action", risk: "ambient", args: { app: { type: "string", enum: ["chrome", "video", "life", "doom", "console", "python", "linux", "chat", "weather", "calendar", "messages", "mail", "call", "music", "album", "tattoo", "photos", "editor"].concat(PHONE_APPS.filter(function (app) { return ["messages", "album"].indexOf(app) < 0; })), required: true } }, run: function (args) {
+      var requestedApp = args.app === "photos" ? "album" : args.app;
       var beforeApp = currentAppState(), beforeState = JSON.stringify(beforeApp);
       var phoneApps = {}; PHONE_APPS.forEach(function (app) { phoneApps[app] = app; });
-      if (phoneApps[args.app] && beforeApp.phone_open && beforeApp.phone === args.app) return { changed: false, app: args.app, device: "phone", result: true };
-      if (phoneApps[args.app] && window.__openPhoneAppHere) { var phoneResult = window.__openPhoneAppHere(phoneApps[args.app]); syncAppState("opened", "ui"); return { changed: beforeState !== JSON.stringify(currentAppState()), app: args.app, device: "phone", result: phoneResult }; }
-      if (args.app === "weather") {
+      if (phoneApps[requestedApp] && beforeApp.phone_open && beforeApp.phone === requestedApp) return { changed: false, app: args.app, device: "phone", result: true };
+      if (phoneApps[requestedApp] && window.__openPhoneAppHere) { var phoneResult = window.__openPhoneAppHere(phoneApps[requestedApp]); syncAppState("opened", "ui"); return { changed: beforeState !== JSON.stringify(currentAppState()), app: args.app, device: "phone", result: phoneResult }; }
+      if (requestedApp === "weather") {
         if (window.goToStage) window.goToStage("office");
         if (window.computer && !window.computer()) window.computer(true);
         if (window.__monitorZoomIn) window.__monitorZoomIn();
@@ -41205,7 +41252,7 @@ var ABANDONED_CALL_MS = 30000;
         syncAppState("opened", "ui");
         return { changed: beforeState !== JSON.stringify(currentAppState()), app: "weather", device: "monitor" };
       }
-      var monitorApp = args.app === "photos" ? "photobooth" : args.app;
+      var monitorApp = requestedApp;
       if (beforeApp.monitor === monitorApp) return { changed: false, app: args.app, device: "monitor", result: true };
       var monitorResult = window.__openMonitorApp ? window.__openMonitorApp(monitorApp) : false;
       syncAppState("opened", "ui");
@@ -41332,12 +41379,17 @@ var ABANDONED_CALL_MS = 30000;
       if (rang) syncCallState("incoming", "ui");
       return { changed: !!rang, caller: args.caller, ringing: !!rang };
     } });
-    register({ id: "call.video.start", kind: "action", risk: "scene", args: { contact: { type: "string", enum: ["prague", "lubeck"], required: true } }, available: function () {
+    register({ id: "call.video.start", kind: "action", risk: "scene", args: { contact: { type: "string", enum: ["tehran", "california", "prague", "lubeck"], required: true } }, available: function () {
       var max = window.__maxUnlocked ? window.__maxUnlocked() : window.currentStageIndex || 0;
-      return max >= ROOMS.indexOf("office") && !callBusy() && typeof window.__laptopCall === "function";
+      return max >= ROOMS.indexOf("office") && !callBusy() && (typeof window.__laptopCall === "function" || typeof window.__openMonitorApp === "function");
     }, run: function (args) {
-      if (window.goToStage) window.goToStage("office");
-      var live = window.__laptopCall(args.contact === "lubeck" ? "lueb" : "prague");
+      var live;
+      if (args.contact === "tehran" || args.contact === "california") {
+        live = !!(window.__openMonitorApp && window.__openMonitorApp(args.contact));
+      } else {
+        if (window.goToStage) window.goToStage("office");
+        live = !!(window.__laptopCall && window.__laptopCall(args.contact === "lubeck" ? "lueb" : "prague"));
+      }
       if (live) syncCallState("outgoing", "ui");
       return { changed: !!live, contact: args.contact, calling: !!live };
     } });
@@ -44891,7 +44943,16 @@ var ABANDONED_CALL_MS = 30000;
       },
       people: people,
       media: media,
-      devices: { monitor_app: chatMonitorApp(), phone: window.__chatPhoneState ? window.__chatPhoneState() : null },
+      devices: {
+        monitor_app: chatMonitorApp(),
+        call_destinations: {
+          tehran: ["Daniel", "Marie", "Báka"],
+          california: ["Patricia", "Patricia’s son", "Patricia’s daughter"],
+          prague: ["Markéta's parents' garden"],
+          lubeck: ["Madla", "Robert", "Elisabeth", "Felix"]
+        },
+        phone: window.__chatPhoneState ? window.__chatPhoneState() : null
+      },
       apps: chatRetrievedKnowledge(message)
     };
   };
@@ -52743,11 +52804,33 @@ async def localfont(name):
         { k: "quiz_q5a1", who: ["bahareh", "behdad"] },
         { k: "quiz_q5a2", who: ["marketa", "athena", "spencer"] },
         { k: "quiz_q5a3", who: ["ali", "farhang"] },
-        { k: "quiz_q5a4", who: ["mahzad", "danesh", "aspen"] } ] }
+        { k: "quiz_q5a4", who: ["mahzad", "danesh", "aspen"] } ] },
+      { q: "quiz_q6", a: [
+        { k: "quiz_q6a1", who: ["hamid"] },
+        { k: "quiz_q6a2", who: ["patricia"] },
+        { k: "quiz_q6a3", who: ["baharak", "payman"] },
+        { k: "quiz_q6a4", who: ["baka"] },
+        { k: "quiz_q6a5", who: ["daniel", "marie"] } ] },
+      { q: "quiz_q7", multi: true, a: [
+        { k: "quiz_q7a1", who: ["elisabeth", "hannah", "irene"] },
+        { k: "quiz_q7a2", who: ["felix", "patricia-son", "patricia-daughter", "robin", "navid"] },
+        { k: "quiz_q7a3", who: ["baharak", "payman", "baka", "daniel", "marie"] },
+        { k: "quiz_q7a4", who: ["hamid", "patricia", "bahareh", "athena"] },
+        { k: "quiz_q7a5", who: ["madla", "robert", "oritshimoni", "danbern"] } ] },
+      { q: "quiz_q8", multi: true, a: [
+        { k: "quiz_q8a1", who: ["behdad", "farhang"] },
+        { k: "quiz_q8a2", who: ["aspen", "mahzad"] },
+        { k: "quiz_q8a3", who: ["madla", "robert", "danbern", "oritshimoni"] },
+        { k: "quiz_q8a4", who: ["bahareh", "irene", "hannah"] },
+        { k: "quiz_q8a5", who: ["pouria", "ali", "goli", "spencer", "jay", "lauren", "alireza", "sina", "danesh"] } ] }
     ];
     var QUIZ_NAMES = { marketa: "Markéta", behdad: "behdad" }; // display names; everyone else is the key title-cased
+    // Test/console introspection stays read-only: the quiz uses the same public roster ids as
+    // the people cards, so coverage checks cannot drift into a second private data source.
+    window.__quizQuestions = function () { return QUIZ_QUESTIONS.map(function (q) { return { q: q.q, multi: !!q.multi, a: q.a.map(function (a) { return { k: a.k, who: a.who.slice() }; }) }; }); };
     function quizName(w) { return QUIZ_NAMES[w] || (w.charAt(0).toUpperCase() + w.slice(1)); }
-    function quizReset() { quizStep = 0; quizTally = {}; quizResult = null; }
+    var quizSelections = [];
+    function quizReset() { quizStep = 0; quizTally = {}; quizResult = null; quizSelections = []; }
     function quizPick() {
       var best = -1, top = [];
       for (var w in quizTally) {
@@ -52802,19 +52885,49 @@ async def localfont(name):
       q.className = "pm-quiz-q";
       q.textContent = tr(Q.q);
       body.appendChild(q);
-      Q.a.forEach(function (ans) {
+      if (Q.multi) {
+        var hint = document.createElement("div");
+        hint.className = "pm-quiz-prog";
+        hint.textContent = tr("quiz_select_hint");
+        body.appendChild(hint);
+      }
+      function advanceQuiz(selected) {
+        (selected || []).forEach(function (ans) {
+          ans.who.forEach(function (w) { quizTally[w] = (quizTally[w] || 0) + 1; });
+        });
+        quizSelections = [];
+        quizStep++;
+        if (quizStep >= QUIZ_QUESTIONS.length) quizResult = quizPick();
+        rerenderQuiz();
+      }
+      Q.a.forEach(function (ans, idx) {
         var b = document.createElement("button");
         b.type = "button";
         b.className = "pm-quiz-ans";
         b.textContent = tr(ans.k);
+        if (Q.multi) b.setAttribute("aria-pressed", "false");
         b.addEventListener("click", function () {
-          ans.who.forEach(function (w) { quizTally[w] = (quizTally[w] || 0) + 1; });
-          quizStep++;
-          if (quizStep >= QUIZ_QUESTIONS.length) quizResult = quizPick();
-          rerenderQuiz();
+          if (!Q.multi) { advanceQuiz([ans]); return; }
+          var at = quizSelections.indexOf(idx);
+          if (at < 0) quizSelections.push(idx); else quizSelections.splice(at, 1);
+          b.classList.toggle("is-selected", at < 0);
+          b.setAttribute("aria-pressed", at < 0 ? "true" : "false");
         });
         body.appendChild(b);
       });
+      if (Q.multi) {
+        var actions = document.createElement("div");
+        actions.className = "pm-quiz-actions";
+        var none = document.createElement("button");
+        none.type = "button"; none.className = "pm-btn ghost"; none.textContent = tr("quiz_none");
+        none.addEventListener("click", function () { advanceQuiz([]); });
+        actions.appendChild(none);
+        var next = document.createElement("button");
+        next.type = "button"; next.className = "pm-btn"; next.textContent = tr("quiz_continue");
+        next.addEventListener("click", function () { advanceQuiz(quizSelections.map(function (i) { return Q.a[i]; })); });
+        actions.appendChild(next);
+        body.appendChild(actions);
+      }
     }
     function renderMailComposeForm(body, subjKey, bodyKey) {
       body.scrollTop = 0;

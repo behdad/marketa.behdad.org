@@ -230,7 +230,7 @@ The current phone apps are:
 
 | App | What it contains |
 | --- | --- |
-| **Call** | Calls to Tehran, California, Prague, and Lübeck; Madla is an incoming-call contact |
+| **Call** | Calls to Tehran, California, Prague, and Lübeck; outgoing Madla requests reach Lübeck, while “have Madla call me” triggers her incoming ring |
 | **Messages** | Wedding crew thread, search, unread filter, composer, replies, reactions, and explicit message actions |
 | **Mail** | Authored inbox messages plus compose and reply through the device's email client |
 | **Calendar** | Wedding events, calendar export, Google Calendar links, date/time controls, and search |
@@ -693,7 +693,7 @@ families are:
 | `weather.scene.set` | `{ mode: "clear" | "rain" | "thunderstorm" | "overcast" }` |
 | `sky.effect.set` | `{ effect: "none" | "aurora" | "twilight" }` |
 | `call.incoming.trigger` | `{ caller: "madla" | "prague" }` |
-| `call.video.start` | `{ contact: "prague" | "lubeck" }` |
+| `call.video.start` | `{ contact: "tehran" | "california" | "prague" | "lubeck" }` |
 | `call.hangup` | End the active or incoming call |
 | `bar.cocktail.make` | `{ drink }` using a discovered cocktail slug |
 | `bar.mixer.start` | `{ recipe: "negroni" | "yale" }` |

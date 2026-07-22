@@ -205,6 +205,27 @@ let actionCase = await normalizedPrivateReply(
 );
 check(actionCase.status === 200 && actionCase.reply.action?.id === "app.open" && actionCase.reply.action?.args?.app === "messages", "a valid currently available Charlie action is returned", actionCase);
 
+actionCase = await normalizedPrivateReply(
+  JSON.stringify({ text: "I can connect you with Madla's family.", action: null }),
+  { actions_available: ["call.video.start"] },
+  "call Madla",
+);
+check(actionCase.reply.action?.id === "call.video.start" && actionCase.reply.action.args.contact === "lubeck", "an outgoing Madla request resolves to the Lübeck family destination", actionCase);
+
+actionCase = await normalizedPrivateReply(
+  JSON.stringify({ text: "Madla can ring you.", action: null }),
+  { actions_available: ["call.incoming.trigger"] },
+  "have Madla call me",
+);
+check(actionCase.reply.action?.id === "call.incoming.trigger" && actionCase.reply.action.args.caller === "madla", "an incoming Madla request remains an incoming ring", actionCase);
+
+actionCase = await normalizedPrivateReply(
+  JSON.stringify({ text: "I can connect you with Patricia's family.", action: null }),
+  { actions_available: ["call.video.start"] },
+  "call Patricia",
+);
+check(actionCase.reply.action?.id === "call.video.start" && actionCase.reply.action.args.contact === "california", "named California family members resolve to California", actionCase);
+
 const fullActionList = [
   "app.open", "bar.cocktail.make", "bar.mixer.start", "bbq.set", "call.hangup", "call.incoming.trigger", "call.video.start",
   "coffee.make", "daylight.set", "fishu.speak", "minigame.start", "minigame.stop", "music.pause", "music.play", "music.previous",

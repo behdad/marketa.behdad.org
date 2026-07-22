@@ -44350,7 +44350,8 @@ var ABANDONED_CALL_MS = 30000;
       overcast: !!window.__wxOvercast,
       moon: typeof window.__moonPhase === "function" ? window.__moonPhase() : null,
       aurora: typeof window.__auroraStatus === "function" ? window.__auroraStatus() : null,
-      meteor_shower: typeof window.__meteorShowerNow === "function" ? window.__meteorShowerNow() : null
+      meteor_shower: typeof window.__meteorShowerNow === "function" ? window.__meteorShowerNow() : null,
+      indoor_temperature: typeof window.__indoorTempState === "function" ? window.__indoorTempState() : null
     };
     return {
       site_language: document.documentElement.lang || "en",
@@ -55236,16 +55237,18 @@ async def localfont(name):
   // furnace holds it at 22 (with a thermostat night-setback to 19); a hot day heats the
   // loft up so the base rises with the outside air instead. On top of the base: sun
   // through the raised blind adds a few degrees by day (no sun to let in after dark);
-  // the AC pulls it down; a storm leaks a little cold through the old windows; a molly
-  // trip pins the gauge at 40.
+  // the AC pulls it down; a crowded garden/party room warms it gradually; a storm leaks
+  // a little cold through the old windows; a molly trip pins the gauge at 40.
   var OUT_DAY = 16, OUT_NIGHT = 5, STORM_OUT = -4, STORM_IN = -1;
   var IN_BASE = 22, NIGHT_SETBACK = -3, SUN_GAIN = 3, AC_COOL = -4, TRIP_TARGET = 40; // molly pins the gauge
+  var PEOPLE_PER_DEGREE = 3, OCCUPANCY_GAIN_MAX = 10, OCCUPANCY_STEP = 0.25;
   // -40 is Edmonton's real winter floor (and where °C and °F meet), not a display convenience:
   // the old -20 truncated genuine cold CYEG readings, and it sits exactly on the sun-dog
   // threshold, so a set -25 would have shown as -20 on the tube.
   var HARD_MIN = -40, HARD_MAX = 40;
   // slow random walks so the numbers feel alive instead of pinned to constants
   var wanderOut = 0, wanderIn = 0;
+  var occupancyGain = 0;
   function wander(w, amp) {
     w += (Math.random() - 0.5) * 0.5;
     return Math.max(-amp, Math.min(amp, w));
@@ -55282,6 +55285,22 @@ async def localfont(name):
   function outdoorTarget() {
     return Math.round(Math.max(HARD_MIN, Math.min(HARD_MAX, outdoorAir())));
   }
+  function indoorOccupancy() {
+    // The mini-split serves the garden/party room, so use the exact same live roster that
+    // "who's here" and room photos trust. It appears later in the file; the first interval
+    // runs only after parsing has completed, while the initial paint safely starts at zero.
+    if (typeof window.__whoIsHere !== "function") return 0;
+    try { return Math.max(0, Math.min(40, window.__whoIsHere("garden").length)); }
+    catch (_error) { return 0; }
+  }
+  function occupancyTarget() {
+    return Math.min(OCCUPANCY_GAIN_MAX, Math.floor(indoorOccupancy() / PEOPLE_PER_DEGREE));
+  }
+  function easeOccupancy() {
+    var target = occupancyTarget();
+    if (occupancyGain < target) occupancyGain = Math.min(target, occupancyGain + OCCUPANCY_STEP);
+    else if (occupancyGain > target) occupancyGain = Math.max(target, occupancyGain - OCCUPANCY_STEP);
+  }
   function indoorTarget() {
     if (window.__tripActive) return TRIP_TARGET; // overshoots past everything
     var air = outdoorAir();
@@ -55301,7 +55320,7 @@ async def localfont(name):
     // storm leak stays on top; on a hot stormy day it double-counts a little with the
     // STORM_OUT already in `air`, but that's the asked-for draft-through-old-windows cue
     if (window.__balconyStorm) t += STORM_IN;
-    return Math.round(Math.max(HARD_MIN, Math.min(HARD_MAX, t + wanderIn)));
+    return Math.round(Math.max(HARD_MIN, Math.min(HARD_MAX, t + occupancyGain + wanderIn)));
   }
 
   function lerp(a, b, f) { return Math.round(a + (b - a) * f); }
@@ -55346,6 +55365,19 @@ async def localfont(name):
     return [shownIn, shownOut];
   };
   window.__gardenThermoSet = function () { return window.__loftTempSet()[0]; };
+  window.__indoorTempC = function () { return shownIn; }; // exactly what the mini-split LCD says
+  window.__indoorTempState = function () {
+    return {
+      temperature_c: shownIn,
+      room: "garden",
+      occupancy_count: indoorOccupancy(),
+      occupancy_gain_c: Number(occupancyGain.toFixed(1))
+    };
+  };
+  window.__resetIndoorTempModel = function () {
+    occupancyGain = 0;
+    return window.__loftTempSet();
+  };
   window.__loftTempSet();
 
   // ── the thermometer as a temperature CONTROL ───────────────────────────────────────────
@@ -55449,16 +55481,20 @@ async def localfont(name):
   }, true);
   window.addEventListener("resize", placeTempPop);
 
-  setInterval(function () {
+  function temperatureTick() {
     wanderOut = wander(wanderOut, 1.5);
     wanderIn = wander(wanderIn, 0.7);
+    easeOccupancy();
     var ti = indoorTarget(), to = outdoorTarget();
     if (shownIn < ti) paintIndoor(++shownIn);
     else if (shownIn > ti) paintIndoor(--shownIn);
     if (shownOut < to) paintOutdoor(++shownOut);
     else if (shownOut > to) paintOutdoor(--shownOut);
     paintTempPop(); // the open popup tracks the tube (real weather drifting, a room's dusk)
-  }, 1200);
+    return window.__indoorTempState();
+  }
+  window.__loftTempTick = temperatureTick; // deterministic thermal-mass test hook
+  setInterval(temperatureTick, 1200);
 })();
 (function sunDogs() {
   // Sun dogs (parhelia): the bright pair standing 22° either side of the sun, thrown by
@@ -73168,6 +73204,7 @@ function spawnDustMote(container) {
     if (partyswitch) partyswitch.classList.remove("on");
     if (window.resetRadio) window.resetRadio();
     if (window.resetAC) window.resetAC();
+    if (window.__resetIndoorTempModel) window.__resetIndoorTempModel(); // no party body heat survives a fresh game
     if (window.resetKettle) window.resetKettle();
     if (window.resetShotcup) window.resetShotcup();
     // wall screen back to the fireplace — silences whichever channel bed was live (night-sky

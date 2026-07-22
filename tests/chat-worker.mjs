@@ -115,7 +115,10 @@ const request = makeRequest("/chat", {
       daylight: false,
       date: "2027-07-10",
       time: "21:35",
-      environment: { uv: true, eclipse: "solar", rain: true, storm: false, overcast: true },
+      environment: {
+        uv: true, eclipse: "solar", rain: true, storm: false, overcast: true,
+        indoor_temperature: { temperature_c: 99, room: "private-room", occupancy_count: 999, occupancy_gain_c: 999, people: ["PRIVATE OCCUPANT"] },
+      },
       weather: {
         edmonton: { city: "spoofed", temperature_c: 21.6, code: 2, glyph: "⛅", forecast: [
           { date: "2027-07-11", code: 61, glyph: "🌧", high_c: 24.6, low_c: 12.4 },
@@ -170,6 +173,7 @@ check(/\"instructions\":\{\"kitchen\":\"Turn on the machine/.test(captured.body.
 check(/\"session\":\{\"seconds\":604800,\"display\":\"8 days and change that is too lo\"\}/.test(captured.body.instructions), "shared playtime is integer-clamped and its display is bounded", captured.body.instructions.match(/\"session\":\{[^}]+\}/)?.[0]);
 check(/\"currency\":\{\"base\":\"CAD\",\"live\":true,\"source\":\"Frankfurter\",\"updated_at\":\"2026-07-22T12:00:00Z\",\"rates\":\{\"CAD\":1,\"CZK\":15\.7,\"USD\":0\.73,\"EUR\":0\.63\}\}/.test(captured.body.instructions) && !/\"BTC\":99/.test(captured.body.instructions), "currency context keeps only positive finite CAD/CZK/USD/EUR rates and canonicalizes the base to CAD");
 check(sanitizedContext.daylight === false && sanitizedContext.date === "2027-07-10" && sanitizedContext.time === "21:35" && sanitizedContext.environment.eclipse === "solar" && sanitizedContext.environment.uv && sanitizedContext.environment.rain, "pretend date/time and bounded live day/eclipse/weather state reach the model", sanitizedContext.environment);
+check(sanitizedContext.environment.indoor_temperature.temperature_c === 50 && sanitizedContext.environment.indoor_temperature.room === "garden" && sanitizedContext.environment.indoor_temperature.occupancy_count === 40 && sanitizedContext.environment.indoor_temperature.occupancy_gain_c === 10 && !captured.body.instructions.includes("PRIVATE OCCUPANT"), "indoor temperature context is numerically bounded and never forwards occupant identities", sanitizedContext.environment.indoor_temperature);
 check(sanitizedContext.weather.edmonton.city === "Edmonton" && sanitizedContext.weather.edmonton.forecast.length === 3 && sanitizedContext.weather.prague.city === "Prague" && sanitizedContext.weather.prague.forecast.length === 1, "city identities are canonicalized and forecasts are capped at three days", sanitizedContext.weather);
 check(sanitizedContext.apps.mail.length === 1 && sanitizedContext.apps.mail[0].id === "lore" && !Object.hasOwn(sanitizedContext.apps.mail[0], "draft") && !captured.body.instructions.includes("PRIVATE MAIL DRAFT"), "Worker allowlists authored Mail ids and strips draft fields", sanitizedContext.apps.mail);
 check(sanitizedContext.apps.messages.length === 1 && sanitizedContext.apps.messages[0].reactions.length === 1 && sanitizedContext.apps.messages[0].reactions[0] === "❤️" && !captured.body.instructions.includes("PRIVATE MESSAGE DRAFT"), "Worker bounds Messages fields and reactions", sanitizedContext.apps.messages);
@@ -409,6 +413,13 @@ actionCase = await normalizedPrivateReply(
   "acid time",
 );
 check(actionCase.reply.action === null && /one at a time|wear off/i.test(actionCase.reply.text), "an active trip blocks a second deterministic request", actionCase);
+
+actionCase = await normalizedPrivateReply(
+  JSON.stringify({ text: "It is 12°C outside.", action: null }),
+  { site_language: "en", environment: { indoor_temperature: { temperature_c: 24, occupancy_count: 7, occupancy_gain_c: 2.1 } } },
+  "what is the temperature inside?",
+);
+check(actionCase.reply.action === null && actionCase.reply.text === "The mini-split reads 24°C inside.", "an indoor-temperature question deterministically relays the mini-split instead of outdoor weather", actionCase);
 
 openAIReply = JSON.stringify({ sender: "Danesh", text: "Maybe later.", reply_to_id: null, action: null });
 const groupTripResponse = await worker.fetch(makeRequest("/chat", {

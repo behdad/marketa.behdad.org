@@ -75,6 +75,8 @@ Use the verified knowledge JSON for stable venue and wedding facts, and the supp
 
 Current game state.current_hint is the instruction visible to the player now. Current game state.instructions is the complete localized catalog of possible instruction captions; use it as reference, but do not pretend a non-current caption is presently on screen.
 
+Current game state.environment.indoor_temperature.temperature_c is exactly the live indoor reading on the garden/party room's mini-split display. For questions about the temperature inside, indoors, or in the loft, report that value rather than Edmonton's outdoor weather. occupancy_count and occupancy_gain_c explain crowd warmth; do not expose or infer identities from them.
+
 Always spell Markéta's name with the accent, including when the user omits it.
 
 The loft has five rooms: kitchen/bar, garden/party, cuddly-puddly, office, and balcony. The internal room value \`kitchen\` means kitchen/bar, \`garden\` means garden/party, and \`cuddly\` means cuddly-puddly; always use those full room names when speaking to the player.
@@ -106,6 +108,8 @@ Respect verified knowledge and every supplied role, relationship, fun fact, note
 While a party is active, party_elapsed_seconds may gently affect adult guests' casual texting: as it rises, eligible adults may become a little warmer, sillier, more effusive, typo-prone, or emoji-happy. An occasional late-party text may skip capitalization or punctuation, or use them inconsistently; vary this naturally instead of applying it to every message, and keep everything readable. Never announce or diagnose intoxication, and never let it reduce factual or logistical accuracy. Children never use a drinking-influenced tone. Pouria is the working bartender and remains sober; the current DJ, Athena, Aspen, and Charlie also stay clear and useful while on duty. When no party is active, use everyone's ordinary tone.
 
 Current game state.current_hint is the instruction visible to the visitor now. Current game state.instructions is the complete localized catalog of possible instruction captions; use it only as reference, and do not present a non-current caption as current.
+
+Current game state.environment.indoor_temperature.temperature_c is exactly the live indoor reading on the garden/party room's mini-split display. For questions about the temperature inside, indoors, or in the loft, report that value rather than Edmonton's outdoor weather. occupancy_count and occupancy_gain_c explain crowd warmth; do not expose or infer identities from them.
 
 Fishu is the flying pufferfish in cuddly-puddly. A short message consisting only of Fishu's name or a spelling/diacritic variant such as "Phishu!", "fisu", or "Fišü" is a direct invocation of the fishu.speak action and may run automatically. Never claim or guess that today is anyone's birthday or another special event unless current game state.active_occasion explicitly identifies it; a calendar date or a cast relationship is not evidence.
 
@@ -313,6 +317,7 @@ function cleanEnvironment(value) {
   const moon = source.moon && typeof source.moon === "object" && !Array.isArray(source.moon) ? source.moon : {};
   const aurora = source.aurora && typeof source.aurora === "object" && !Array.isArray(source.aurora) ? source.aurora : {};
   const meteor = source.meteor_shower && typeof source.meteor_shower === "object" && !Array.isArray(source.meteor_shower) ? source.meteor_shower : null;
+  const indoor = source.indoor_temperature && typeof source.indoor_temperature === "object" && !Array.isArray(source.indoor_temperature) ? source.indoor_temperature : {};
   return {
     uv: Boolean(source.uv),
     eclipse: source.eclipse === "solar" || source.eclipse === "lunar" ? source.eclipse : null,
@@ -322,6 +327,12 @@ function cleanEnvironment(value) {
     moon: { name: cleanText(moon.name, 40) || null, emoji: cleanText(moon.emoji, 8) || null, illumination: cleanNumber(moon.illum, 0, 1, 3), waxing: Boolean(moon.waxing) },
     aurora: { showing: Boolean(aurora.showing), kp: cleanNumber(aurora.kp, 0, 9, 1), source: cleanText(aurora.source, 40) || null, cloudy: Boolean(aurora.cloudy), why: cleanText(aurora.why, 180) || null },
     meteor_shower: meteor ? { key: cleanText(meteor.key, 40) || null, month: cleanNumber(meteor.m, 0, 11, 0), day: cleanNumber(meteor.d, 1, 31, 0), nights: cleanNumber(meteor.nights, 1, 7, 0) } : null,
+    indoor_temperature: {
+      temperature_c: cleanNumber(indoor.temperature_c, -40, 50, 0),
+      room: "garden",
+      occupancy_count: cleanNumber(indoor.occupancy_count, 0, 40, 0),
+      occupancy_gain_c: cleanNumber(indoor.occupancy_gain_c, 0, 10, 1),
+    },
   };
 }
 
@@ -658,6 +669,29 @@ function daylightReplyText(message, context, wantDaylight, alreadyThere) {
   return wantDaylight ? "Tap this and I’ll bring daylight back. ☀️" : "Tap this and I’ll switch the loft to night. 🌙";
 }
 
+function indoorTemperatureRequest(value) {
+  const original = cleanText(value, MAX_MESSAGE_CHARS);
+  const folded = original.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().replace(/[’']/g, "").replace(/\s+/g, " ").trim();
+  if (/\b(outside|outdoor|edmonton|prague|forecast|venku|vnejsi)\b/.test(folded) || /بیرون|ادمونتون|پراگ|پیش.?بینی/.test(original)) return false;
+  return /\b(indoor|inside|in the loft|loft temperature|temperature in here|temperature indoors|how (hot|cold|warm) is it (in here|inside|indoors))\b/.test(folded) ||
+    /\b(teplota (uvnitr|v loftu)|kolik je (uvnitr|v loftu)|jak (teplo|chladno) je (uvnitr|v loftu))\b/.test(folded) ||
+    /دمای داخل|داخل چند درجه|هوای داخل/.test(original);
+}
+
+function indoorTemperatureReplyText(message, context) {
+  const indoor = context.environment && context.environment.indoor_temperature;
+  const value = indoor && indoor.temperature_c;
+  if (typeof value !== "number") {
+    if (/[\u0600-\u06ff]/.test(message)) return "نمایشگر دمای داخل هنوز آماده نیست.";
+    if (context.site_language === "cs") return "Vnitřní teploměr ještě není připravený.";
+    return "The indoor temperature display isn’t ready yet.";
+  }
+  if (/[\u0600-\u06ff]/.test(message)) return `نمایشگر کولر داخل ${value} درجهٔ سانتی‌گراد را نشان می‌دهد.`;
+  const folded = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
+  if (context.site_language === "cs" || /\b(teplota|uvnitr|v loftu|teplo|chladno)\b/.test(folded)) return `Displej klimatizace uvnitř ukazuje ${value} °C.`;
+  return `The mini-split reads ${value}°C inside.`;
+}
+
 function tripReplyText(message, context, variant, reason, groupMode) {
   const label = variant === "dmt" ? "DMT" : variant.charAt(0).toUpperCase() + variant.slice(1);
   const current = context.trip && context.trip.variant;
@@ -686,6 +720,11 @@ function tripReplyText(message, context, variant, reason, groupMode) {
 
 function applyDeterministicInvocation(normalizedReply, payload) {
   const parsed = JSON.parse(normalizedReply);
+  if (indoorTemperatureRequest(payload.message)) {
+    parsed.action = null;
+    parsed.text = indoorTemperatureReplyText(payload.message, payload.context);
+    if (payload.mode === "group_chat") parsed.sender = "Charlie";
+  }
   if (isFishuInvocation(payload.message) && payload.context.actions_available.includes("fishu.speak")) {
     parsed.action = { id: "fishu.speak", args: {} };
   }

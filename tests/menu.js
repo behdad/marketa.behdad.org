@@ -6,7 +6,7 @@
 // Two menus by design (kept split to avoid a double menu on the console apps):
 //   • .console-ctx — python/linux/console fold Kill (and, for the runtimes, Restart) into
 //     their existing copy/paste menu.
-//   • .mon-ctx — every other real app (mail, weather, mines, music, video, …) plus DOOM
+//   • .mon-ctx — every other real app (mail, chat, weather, mines, music, video, …) plus DOOM
 //     (a canvas, no copy/paste) gets this standalone menu. Kill delegates to
 //     __closeTopMonitorApp; Restart appears only for DOOM.
 // Kill on a self-hosted runtime (doom/python/linux) is DISABLED until the runtime is
@@ -35,7 +35,7 @@ var HARNESS = [
   "  function monRestart(){ var m=monMenu(); return m?m.querySelector('button.ctx-restart'):null; }",
   "  function monKillDisabled(){ var b=monKill(); return !!(b&&b.disabled); }",
   "  function mon(){ return document.getElementById('office-monitor'); }",
-  "  var APP_CLASSES=['show-caps','show-nowplaying','show-mail','show-mines','show-weather','show-calendar','show-video','show-tattoo','show-life','show-editor','show-browser','show-family','photobooth','show-python','show-linux','show-console','show-doom'];",
+  "  var APP_CLASSES=['show-caps','show-nowplaying','show-mail','show-mines','show-weather','show-chat','show-calendar','show-video','show-tattoo','show-life','show-editor','show-browser','show-family','photobooth','show-python','show-linux','show-console','show-doom'];",
   "  function showApp(cls){ var m=mon(); APP_CLASSES.forEach(function(c){m.classList.remove(c);}); m.classList.add('screen-on'); if(cls) m.classList.add(cls); window.currentStageName='office'; }",
   "  async function run(){",
   "    if (window.goToStage) window.goToStage('office');",
@@ -46,7 +46,7 @@ var HARNESS = [
   "    S('desktop_no_mon_menu', !monMenu());",
   "    S('desktop_no_cc_menu', !ccMenu());",
   // ---- NON-RUNTIME APPS (mon-ctx): Kill only, enabled, no Restart ----
-  "    var nonRt=['show-mail','show-weather','show-mines','show-nowplaying'];",
+  "    var nonRt=['show-mail','show-chat','show-weather','show-mines','show-nowplaying'];",
   "    var nonRtOk=true, nonRtDetail={};",
   "    for (var i=0;i<nonRt.length;i++){ var c=nonRt[i]; showApp(c); var prevented=ctxAt(mon()); var items=monItems(); var kill=monKill(); var ok = prevented===true && !!monMenu() && items.length===1 && /kill/i.test(items[0]||'') && !monRestart() && !!kill && kill.disabled===false; nonRtDetail[c]={prevented:prevented,items:items,hasRestart:!!monRestart(),killDisabled:kill?kill.disabled:'no-kill'}; if(!ok) nonRtOk=false; }",
   "    S('nonruntime_kill_only_enabled', nonRtOk); S('nonruntime_detail', nonRtDetail);",
@@ -214,7 +214,7 @@ var s = rep.steps;
 console.log("monitor right-click Kill/Restart menus + restart + fs button:");
 console.log(" desktop (no app open):");
 check("right-click on the bare monitor desktop eats the native menu, shows no custom menu", s.desktop_ctx_prevented === true && s.desktop_no_mon_menu === true && s.desktop_no_cc_menu === true, { prevented: s.desktop_ctx_prevented, mon: !s.desktop_no_mon_menu, cc: !s.desktop_no_cc_menu });
-console.log(" non-runtime apps (mail/weather/mines/music) — Kill only, enabled, no Restart:");
+console.log(" non-runtime apps (mail/chat/weather/mines/music) — Kill only, enabled, no Restart:");
 check("every sampled non-runtime app shows exactly an enabled Kill, no Restart", s.nonruntime_kill_only_enabled === true, s.nonruntime_detail);
 check("generalized Kill closes a non-runtime app (mail) + hides the menu", s.mail_kill_closed_app === true && s.mail_kill_hid_menu === true);
 check("browser menu shows only an enabled Kill, no Restart", Array.isArray(s.browser_items) && s.browser_items.length === 1 && /kill/i.test(s.browser_items[0] || "") && s.browser_kill_enabled === true && s.browser_has_restart === false, { items: s.browser_items, enabled: s.browser_kill_enabled, restart: s.browser_has_restart });

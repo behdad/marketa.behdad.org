@@ -17,14 +17,14 @@ var HARNESS = [
   ' var mon=document.getElementById("office-monitor"); mon.classList.add("here","screen-on","show-caps");',
   ' var chatTile=document.getElementById("monitor-dock-chat");',
   ' S("tiles",{chat:!!chatTile,weather:!!document.getElementById("monitor-dock-weather"),icon:chatTile&&chatTile.querySelector("use")&&chatTile.querySelector("use").getAttribute("href")});',
+  ' var challengeN=0, turnstileOptions=null; window.turnstile={render:function(_host,opts){turnstileOptions=opts;return "test-widget";},reset:function(){},execute:function(){var token="test-turnstile-token-"+(++challengeN);setTimeout(function(){turnstileOptions.callback(token);},0);}};',
   ' click(chatTile); await sleep(100);',
   ' var input=document.getElementById("monitor-chat-input"), form=document.getElementById("monitor-chat-form"), log=document.getElementById("monitor-chat-log");',
-  ' S("opened",{chat:mon.classList.contains("show-chat"),greeting:log.textContent,inputDir:input.getAttribute("dir"),endpoint:window.__monitorChatEndpoint,turnstileSitekey:window.__monitorChatTurnstileSitekey});',
-  ' var captured=[], releases=[], oldFetch=window.fetch, challengeN=0;',
-  ' window.__monitorChatTurnstile=function(){return Promise.resolve("test-turnstile-token-"+(++challengeN));};',
+  ' S("opened",{chat:mon.classList.contains("show-chat"),greeting:log.textContent,inputDir:input.getAttribute("dir"),endpoint:window.__monitorChatEndpoint,turnstileSitekey:window.__monitorChatTurnstileSitekey,prewarmChallenges:challengeN});',
+  ' var captured=[], releases=[], oldFetch=window.fetch;',
   ' window.fetch=function(url,opts){var n=captured.length;captured.push({url:String(url),method:opts&&opts.method,headers:opts&&opts.headers,body:opts&&opts.body});return new Promise(function(resolve){releases.push(function(){var replies=["سلام، من اینجا هستم.","دنبال می‌کنم.","You are in the office."];resolve(new Response(JSON.stringify({reply:replies[n]||"Done."}),{status:200,headers:{"Content-Type":"application/json"}}));});});};',
   ' input.value="سلام"; input.dispatchEvent(new Event("input",{bubbles:true})); form.dispatchEvent(new Event("submit",{bubbles:true,cancelable:true})); await sleep(30);',
-  ' S("pending",{thinking:/Thinking|Přemýšlím/.test(log.textContent),enabled:!input.disabled,captured:captured.length});',
+  ' S("pending",{thinking:/Thinking|Přemýšlím/.test(log.textContent),enabled:!input.disabled,captured:captured.length,challenges:challengeN});',
   ' input.value="ادامه بده"; input.dispatchEvent(new Event("input",{bubbles:true})); form.dispatchEvent(new Event("submit",{bubbles:true,cancelable:true})); await sleep(30);',
   ' S("followup",{shown:/ادامه بده/.test(log.textContent),requestsBeforeFirstReply:captured.length,inputEnabled:!input.disabled});',
   ' if(releases[0])releases.shift()(); await sleep(150); S("queuePump",{requests:captured.length}); if(releases[0])releases.shift()(); await sleep(150);',
@@ -55,9 +55,10 @@ var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(s.tiles.chat && !s.tiles.weather && s.tiles.icon === "#dicon-chat", "Chat replaces Weather in the desktop grid with its own icon", s.tiles);
 check(s.opened.chat && /I’m Charlie/.test(s.opened.greeting) && /know this loft/.test(s.opened.greeting) && s.opened.inputDir === "auto", "Chat opens with Charlie's welcome and direction-aware input", s.opened);
+check(s.opened.prewarmChallenges === 1, "opening Chat pre-warms one Turnstile token", s.opened);
 check(s.opened.endpoint === "https://marketa.behdad.org/chat", "Chat exposes the exact Cloudflare proxy endpoint", s.opened.endpoint);
 check(/^0x/.test(s.opened.turnstileSitekey || ""), "Chat exposes the public Turnstile site key", s.opened.turnstileSitekey);
-check(s.pending.thinking && s.pending.enabled && s.pending.captured === 1, "submitting shows a pending state while keeping the input enabled", s.pending);
+check(s.pending.thinking && s.pending.enabled && s.pending.captured === 1 && s.pending.challenges === 1, "the first message consumes the pre-warmed token without another challenge", s.pending);
 check(s.followup.shown && s.followup.inputEnabled && s.followup.requestsBeforeFirstReply === 1 && s.queuePump.requests === 2, "follow-ups queue in the UI and send in order after the active reply", { followup: s.followup, pump: s.queuePump });
 check(s.request.url === "https://marketa.behdad.org/chat" && s.request.method === "POST" && s.request.message === "سلام" && s.request.language === "auto", "Worker receives a JSON POST with the message and automatic-language contract", s.request);
 check(s.request.turnstileToken === "test-turnstile-token-1", "Chat attaches a fresh Turnstile token to the Worker request", s.request.turnstileToken);

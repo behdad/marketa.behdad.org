@@ -17,6 +17,9 @@ const MAX_TURNSTILE_TOKEN_CHARS = 2048;
 const TURNSTILE_TIMEOUT_MS = 10_000;
 const UPSTREAM_TIMEOUT_MS = 35_000;
 const CHAT_KNOWLEDGE_JSON = JSON.stringify(CHAT_KNOWLEDGE);
+const PUBLIC_MONITOR_APPS = new Set(["chrome", "music", "photobooth", "video", "call", "chat", "mail", "calendar", "tattoo", "mines", "life", "doom", "editor", "console", "python", "linux", "weather"]);
+const PUBLIC_PHONE_APPS = new Set(["call", "messages", "mail", "calendar", "album", "photobooth", "music", "hn", "weather", "clock", "calculator", "currency", "notes", "cards", "flashlight", "browser", "cocktails", "dressup", "mines", "quiz"]);
+const PUBLIC_MAIL_IDS = new Set(["lore", "rsvp", "spam"]);
 
 const ACTION_SPECS = Object.freeze({
   "room.go": Object.freeze({ room: new Set(["kitchen", "garden", "cuddly", "office", "balcony"]) }),
@@ -302,6 +305,28 @@ function cleanCalendarKnowledge(value) {
   return { weddings, upcoming };
 }
 
+function cleanReactions(value) {
+  const allowed = new Set(["👍", "❤️", "😂", "🎉", "🔥"]);
+  return Array.isArray(value) ? [...new Set(value.slice(0, 5).filter((reaction) => allowed.has(reaction)))] : [];
+}
+
+function cleanAppCatalog(value) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  function entries(items, allowed, phone) {
+    return Array.isArray(items) ? items.slice(0, 32).flatMap((item) => {
+      const app = item && typeof item === "object" ? item : {};
+      const id = cleanText(app.id, 40), label = cleanText(app.label, 80);
+      if (!allowed.has(id) || !label) return [];
+      if (phone) return [{ id, label, installed: Boolean(app.installed) }];
+      return [{ id, label, access: app.access === "toolbar" ? "toolbar" : "desktop" }];
+    }) : [];
+  }
+  return {
+    monitor: entries(source.monitor, PUBLIC_MONITOR_APPS, false),
+    phone: entries(source.phone, PUBLIC_PHONE_APPS, true),
+  };
+}
+
 function cleanAppKnowledge(value) {
   const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   const out = {};
@@ -324,6 +349,33 @@ function cleanAppKnowledge(value) {
     return [{ name, ingredients: Array.isArray(cocktail.ingredients) ? cocktail.ingredients.slice(0, 12).map((ingredient) => cleanText(ingredient, 100)).filter(Boolean) : [], instructions: cleanText(cocktail.instructions, 320) || null }];
   });
   if (source.currency) out.currency = cleanCurrency(source.currency);
+  if (Array.isArray(source.mail)) out.mail = source.mail.slice(0, PUBLIC_MAIL_IDS.size).flatMap((item) => {
+    const mail = item && typeof item === "object" ? item : {};
+    const id = cleanText(mail.id, 40), from = cleanText(mail.from, 100), subject = cleanText(mail.subject, 180), body = cleanText(mail.body, 700);
+    return PUBLIC_MAIL_IDS.has(id) && from && subject && body ? [{ id, from, subject, body }] : [];
+  });
+  if (Array.isArray(source.messages)) out.messages = source.messages.slice(-12).flatMap((item) => {
+    const message = item && typeof item === "object" ? item : {};
+    const id = cleanText(message.id, 80), sender = cleanText(message.sender, 48), text = cleanText(message.text, 500);
+    return id && sender && text ? [{ id, sender, text, outgoing: Boolean(message.outgoing), read: Boolean(message.read), reactions: cleanReactions(message.reactions) }] : [];
+  });
+  if (Array.isArray(source.phrasebook)) out.phrasebook = source.phrasebook.slice(0, 20).flatMap((item) => {
+    const phrase = item && typeof item === "object" ? item : {};
+    const english = cleanText(phrase.english, 180), czech = cleanText(phrase.czech, 180);
+    return english && czech ? [{ english, czech }] : [];
+  });
+  if (Array.isArray(source.contacts)) out.contacts = source.contacts.slice(0, MAX_GROUP_CAST_ITEMS).flatMap((item) => {
+    const person = item && typeof item === "object" ? item : {};
+    const name = cleanText(person.name, 48); if (!name) return [];
+    return [{
+      name,
+      role: cleanText(person.role, 100) || null,
+      relationship: cleanText(person.relationship, 160) || null,
+      fun_fact: cleanText(person.fun_fact, 160) || null,
+      notes: cleanText(person.notes, 180) || null,
+    }];
+  });
+  if (source.catalog) out.catalog = cleanAppCatalog(source.catalog);
   return out;
 }
 
@@ -337,10 +389,7 @@ function cleanGroupMessage(value) {
   const id = cleanText(source.id, 80);
   const sender = cleanText(source.sender, 48);
   const text = cleanText(source.text, 500);
-  const allowedReactions = new Set(["👍", "❤️", "😂", "🎉", "🔥"]);
-  const reactions = Array.isArray(source.reactions)
-    ? [...new Set(source.reactions.slice(0, 5).filter((reaction) => allowedReactions.has(reaction)))]
-    : [];
+  const reactions = cleanReactions(source.reactions);
   return sender && text ? { id: id || null, sender, text, reactions } : null;
 }
 

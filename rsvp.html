@@ -44202,7 +44202,12 @@ var ABANDONED_CALL_MS = 30000;
   function chatRetrievedKnowledge(message) {
     var q = chatFold(message), apps = {};
     var contacts = window.__chatPeopleKnowledge ? window.__chatPeopleKnowledge() : [];
-    var namedPerson = contacts.some(function (person) { return person && person.name && q.indexOf(chatFold(person.name)) !== -1; });
+    var qWords = " " + q.replace(/[^a-z0-9]+/g, " ").trim() + " ";
+    var namedContacts = contacts.filter(function (person) {
+      if (!person || !person.name) return false;
+      var nameWords = chatFold(person.name).replace(/[^a-z0-9]+/g, " ").trim();
+      return nameWords && qWords.indexOf(" " + nameWords + " ") !== -1;
+    });
     if (/(calendar|event|wedding|when|date|holiday|occasion|meteor|bbq|barbecue|cookout|brunch|kalend|svatb|kdy|datum|udalost|gril|تقویم|عروسی|تاریخ|کباب)/.test(q) && window.__chatCalendarKnowledge) apps.calendar = window.__chatCalendarKnowledge();
     if (/(photo|album|picture|aspen|fot|obraz|عکس)/.test(q)) apps.album = chatAlbumKnowledge();
     if (/(tattoo|ink|artist|design|tetov|خالکوب)/.test(q) && window.__chatTattooKnowledge) apps.tattoos = window.__chatTattooKnowledge();
@@ -44212,7 +44217,8 @@ var ABANDONED_CALL_MS = 30000;
     if (/(mail|email|inbox|letter|posta|dorucen|نامه|ایمیل)/.test(q) && window.__chatMailKnowledge) apps.mail = window.__chatMailKnowledge();
     if (/(messages?|texts?|thread|texted|said|zprav|rekl|پیام|گفت)/.test(q) && window.__chatMessagesKnowledge) apps.messages = window.__chatMessagesKnowledge();
     if (/(phrase|phrasebook|translate|translation|czech|cesk|preklad|fraz|عبارت|ترجمه|چک)/.test(q) && window.__chatPhrasebookKnowledge) apps.phrasebook = window.__chatPhrasebookKnowledge();
-    if (namedPerson || /(who is|who's|whose|guest|people|person|friend|family|relationship|fun fact|kdo je|host|rodin|vztah|zajimavost|مهمان|کیست|خانواده|رابطه)/.test(q)) apps.contacts = contacts;
+    if (namedContacts.length) apps.contacts = namedContacts;
+    else if (/(who is|who's|whose|guest|people|person|friend|family|relationship|fun fact|kdo je|host|rodin|vztah|zajimavost|مهمان|کیست|خانواده|رابطه)/.test(q)) apps.contacts = contacts;
     if (/(apps?|applications?|programs?|on the phone|on the computer|aplikac|programy|برنامه)/.test(q) && window.__chatAppCatalog) apps.catalog = window.__chatAppCatalog();
     return apps;
   }
@@ -48377,6 +48383,25 @@ async def localfont(name):
     ];
     var MAILS = [{ id: "lore" }, { id: "rsvp", reply: true }, { id: "spam" }]; // same ids/reply flags as the monitor inbox
     var mailRead = {};
+    window.__chatAppCatalog = function () {
+      var slots = ensurePhoneSlots();
+      return {
+        monitor: window.__chatMonitorApps ? window.__chatMonitorApps() : [],
+        phone: PHONE_APPS.map(function (app) {
+          return { id: app.id, label: tr(app.labelKey), installed: slots.indexOf(app.id) !== -1 };
+        })
+      };
+    };
+    window.__chatMailKnowledge = function () {
+      return MAILS.map(function (mail) {
+        return {
+          id: mail.id,
+          from: tr("mail_from_" + mail.id),
+          subject: tr("mail_subj_" + mail.id),
+          body: tr("mail_body_" + mail.id)
+        };
+      });
+    };
 
     var modal = null, shell = null, booted = false, closing = false;
     var lockA = 0, lockB = 0, lockAnswer = null, lockEntry = "", lockShakeT = null; // math passcode lockscreen (first open per visit)
@@ -49759,6 +49784,19 @@ async def localfont(name):
         return m ? { id: id, sender: msgFrom(m), text: plainMessageText(m), reactions: (messageReactions[id] || []).slice() } : null;
       }).filter(Boolean);
     }
+    window.__chatMessagesKnowledge = function () {
+      return messagesThread.slice(-12).map(function (id) {
+        var message = MESSAGES[id];
+        return message ? {
+          id: id,
+          sender: msgFrom(message),
+          text: plainMessageText(message),
+          outgoing: !!message.outgoing,
+          read: !!messagesRead[id],
+          reactions: (messageReactions[id] || []).slice()
+        } : null;
+      }).filter(Boolean);
+    };
     function groupChatContext(target, targetId) {
       return {
         reply_to: target ? { id: targetId || null, sender: msgFrom(target), text: plainMessageText(target), reactions: (messageReactions[targetId] || []).slice() } : null,
@@ -50947,6 +50985,9 @@ async def localfont(name):
       { en: "I like you", cs: "Mám tě rád(a)" },
       { en: "What would you like to drink?", cs: "Co si dáš k pití?" }
     ];
+    window.__chatPhrasebookKnowledge = function () {
+      return PHRASE_CARDS.map(function (card) { return { english: card.en, czech: card.cs }; });
+    };
     function renderCards(body) {
       if (cardsIndex >= PHRASE_CARDS.length) cardsIndex = 0;
       var wrap = document.createElement("div");

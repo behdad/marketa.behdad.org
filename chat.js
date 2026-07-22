@@ -38,6 +38,7 @@ const ACTION_SPECS = Object.freeze({
   "coffee.make": Object.freeze({}),
   "photo.take": Object.freeze({}),
   "fishu.speak": Object.freeze({}),
+  "trip.start": Object.freeze({ variant: new Set(["shrooms", "acid", "froggies", "dmt", "molly", "ketamine", "iboga"]) }),
   "party.dance.request": Object.freeze({ style: new Set(["slow", "fast", "techno", "waltz", "tango", "disco", "swing", "salsa", "bhangra", "persian", "polka", "horah", "bulgar", "dupak", "cumbia"]) }),
   "party.dj.set": Object.freeze({ dj: new Set(["sina", "danesh"]) }),
   "projector.set": Object.freeze({ mode: new Set(["off", "stars", "workout", "totoro", "aqua"]) }),
@@ -68,6 +69,8 @@ The loft has five rooms: kitchen/bar, garden/party, cuddly-puddly, office, and b
 
 Fishu is the flying pufferfish in cuddly-puddly. A short message consisting only of Fishu's name or a spelling/diacritic variant such as "Phishu!", "fisu", or "Fišü" is a direct invocation of the fishu.speak action and may run automatically.
 
+The magic box's authored trips are shrooms, acid, froggies, DMT, molly, ketamine, and iboga. Their accepted aliases are mushrooms/mushroom, LSD, froggie/frog/5meo, MDMA, k/ket, and ibogaine. An explicit request such as "molly time" may use trip.start only in phase 2 when that action is available. Never interpret ordinary travel language as a trip request. Ketamine and iboga are unavailable while a party is active; say so rather than substituting another trip.
+
 A direct request to make or get coffee should use coffee.make. It ends an active party, restores daylight, and takes the player to the kitchen/bar espresso machine; do not claim the coffee itself has already been made.
 
 While a party is active, a direct request to keep it going, continue it, or cancel its ending should use party.extend, not party.set. It cancels an accepted or in-progress finale and grants another full attended party interval.
@@ -91,6 +94,8 @@ While a party is active, party_elapsed_seconds may gently affect adult guests' c
 Current game state.current_hint is the instruction visible to the visitor now. Current game state.instructions is the complete localized catalog of possible instruction captions; use it only as reference, and do not present a non-current caption as current.
 
 Fishu is the flying pufferfish in cuddly-puddly. A short message consisting only of Fishu's name or a spelling/diacritic variant such as "Phishu!", "fisu", or "Fišü" is a direct invocation of the fishu.speak action and may run automatically. Never claim or guess that today is anyone's birthday or another special event unless current game state.active_occasion explicitly identifies it; a calendar date or a cast relationship is not evidence.
+
+The magic box's authored trips are shrooms, acid, froggies, DMT, molly, ketamine, and iboga. Their accepted aliases are mushrooms/mushroom, LSD, froggie/frog/5meo, MDMA, k/ket, and ibogaine. An explicit request such as "molly time" may suggest trip.start only in phase 2 when that action is available. Never interpret ordinary travel language as a trip request. Ketamine and iboga are unavailable while a party is active; say so rather than substituting another trip.
 
 A direct request to make or get coffee should suggest coffee.make. Tell the visitor the action will take them to the kitchen/bar espresso machine; do not say the coffee is already made.
 
@@ -136,6 +141,34 @@ function isFishuInvocation(value) {
     .toLowerCase()
     .replace(/[^a-z]/g, "");
   return folded === "fishu" || folded === "phishu" || folded === "fisu";
+}
+
+const TRIP_ALIASES = Object.freeze({
+  shrooms: "shrooms", mushrooms: "shrooms", mushroom: "shrooms",
+  acid: "acid", lsd: "acid",
+  froggies: "froggies", froggie: "froggies", frog: "froggies", "5meo": "froggies",
+  dmt: "dmt",
+  molly: "molly", mdma: "molly",
+  k: "ketamine", ket: "ketamine", ketamine: "ketamine",
+  iboga: "iboga", ibogaine: "iboga",
+});
+
+function tripRequestIntent(value) {
+  const folded = cleanText(value, MAX_MESSAGE_CHARS)
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[’']/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+  for (const [alias, variant] of Object.entries(TRIP_ALIASES)) {
+    if (folded === alias || folded === `${alias} time` || folded === `time for ${alias}` ||
+        folded === `start ${alias}` || folded === `start a ${alias} trip` ||
+        folded === `lets do ${alias}` || folded === `do ${alias}` || folded === `try ${alias}` ||
+        folded === `trip on ${alias}` || folded === `${alias} please`) return variant;
+  }
+  return null;
 }
 
 function cleanHistory(value) {
@@ -289,6 +322,13 @@ function cleanDevices(value) {
   };
 }
 
+function cleanTrip(value) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const variants = new Set(["shrooms", "acid", "froggies", "dmt", "molly", "ketamine", "iboga"]);
+  const variant = cleanText(source.variant, 16);
+  return { active: Boolean(source.active), variant: variants.has(variant) ? variant : null };
+}
+
 function cleanCalendarKnowledge(value) {
   const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   const weddings = Array.isArray(source.weddings) ? source.weddings.slice(0, 4).flatMap((item) => {
@@ -432,6 +472,7 @@ function cleanContext(value) {
     phase: source.phase === 2 ? 2 : 1,
     party: Boolean(source.party),
     party_elapsed_seconds: source.party ? cleanNumber(source.party_elapsed_seconds, 0, 86_400, 0) || 0 : 0,
+    trip: cleanTrip(source.trip),
     bbq: Boolean(source.bbq),
     daylight: Boolean(source.daylight),
     time: cleanText(source.time, 8) || null,
@@ -498,15 +539,21 @@ function normalizeAction(value, actionsAvailable) {
   return { id, args };
 }
 
+function actionFitsContext(action, context) {
+  if (!action) return null;
+  if (action.id === "trip.start" && context.party && (action.args.variant === "ketamine" || action.args.variant === "iboga")) return null;
+  return action;
+}
+
 function normalizeChatReply(reply, context) {
   const raw = cleanText(reply, 1_500);
   const parsed = parseModelObject(raw);
   const structured = isExactObject(parsed, ["text", "action"]) && Boolean(cleanText(parsed.text, 700));
   const text = (structured ? cleanText(parsed.text, 700) : "") || raw;
   if (!text) throw new Error("OpenAI returned no chat text");
-  const action = structured
+  const action = actionFitsContext(structured
     ? normalizeAction(parsed.action, context.actions_available)
-    : null;
+    : null, context);
   return JSON.stringify({ text: text.slice(0, 700), action });
 }
 
@@ -530,9 +577,9 @@ function normalizeGroupReply(reply, groupChat, context) {
   if (requestedAction?.id === "music.skip" && context.party && context.actions_available.includes("party.music.next")) {
     requestedAction = { id: "party.music.next", args: {} };
   }
-  let action = structured
+  let action = actionFitsContext(structured
     ? normalizeAction(requestedAction, context.actions_available)
-    : null;
+    : null, context);
   if (action && (/^music\./.test(action.id) || action.id === "party.music.next" || action.id === "party.dance.request" || action.id === "party.dj.set")) {
     const castPerson = groupChat.cast.find((person) => person.name === sender);
     const isDj = sender === groupChat.current_dj || /\bdj\b/i.test((castPerson && castPerson.role) || "");
@@ -594,6 +641,32 @@ function daylightReplyText(message, context, wantDaylight, alreadyThere) {
   return wantDaylight ? "Tap this and I’ll bring daylight back. ☀️" : "Tap this and I’ll switch the loft to night. 🌙";
 }
 
+function tripReplyText(message, context, variant, reason, groupMode) {
+  const label = variant === "dmt" ? "DMT" : variant.charAt(0).toUpperCase() + variant.slice(1);
+  const current = context.trip && context.trip.variant;
+  if (/[\u0600-\u06ff]/.test(message)) {
+    if (reason === "party") return `${label} در مهمانی در دسترس نیست—بعد از مهمانی امتحانش کن.`;
+    if (reason === "active") return `یکی یکی—اول بگذار ${current || "این یکی"} تمام شود.`;
+    if (reason === "phase") return "جعبهٔ جادویی در مرحلهٔ دوم باز می‌شود.";
+    if (reason === "unavailable") return "الان این سفر در دسترس نیست.";
+    return groupMode ? `وقت ${label} است—اینجا بزن و یک چیز نرم را بگیر.` : `وقت ${label} است—یک چیز نرم را بگیر.`;
+  }
+  const folded = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
+  const czech = context.site_language === "cs" || /\b(cas|zkus|spust|dej si)\b/.test(folded);
+  if (czech) {
+    if (reason === "party") return `${label} si během párty dává pauzu—zkus to, až párty skončí.`;
+    if (reason === "active") return `Pěkně popořadě—nejdřív nech ${current || "tenhle trip"} doznít.`;
+    if (reason === "phase") return "Magic box se otevře ve druhé fázi hry.";
+    if (reason === "unavailable") return "Tenhle trip teď není k dispozici.";
+    return groupMode ? `Je čas na ${label}—klepni sem a chyť se něčeho měkkého.` : `Je čas na ${label}—chyť se něčeho měkkého.`;
+  }
+  if (reason === "party") return `${label} sits this party out—try it after the party.`;
+  if (reason === "active") return `One at a time—let ${current || "this one"} wear off first.`;
+  if (reason === "phase") return "The magic box opens in phase 2.";
+  if (reason === "unavailable") return "That trip isn’t available right now.";
+  return groupMode ? `${label} time—tap this and hold on to something soft.` : `${label} time—hold on to something soft.`;
+}
+
 function applyDeterministicInvocation(normalizedReply, payload) {
   const parsed = JSON.parse(normalizedReply);
   if (isFishuInvocation(payload.message) && payload.context.actions_available.includes("fishu.speak")) {
@@ -615,6 +688,16 @@ function applyDeterministicInvocation(normalizedReply, payload) {
     const alreadyThere = payload.context.daylight === wantDaylight;
     parsed.action = alreadyThere ? null : { id: "daylight.set", args: { on: wantDaylight } };
     parsed.text = daylightReplyText(payload.message, payload.context, wantDaylight, alreadyThere);
+    if (payload.mode === "group_chat") parsed.sender = "Charlie";
+  }
+  const tripVariant = tripRequestIntent(payload.message);
+  if (tripVariant) {
+    const heavyParty = payload.context.party && (tripVariant === "ketamine" || tripVariant === "iboga");
+    const active = payload.context.trip && payload.context.trip.active;
+    const available = payload.context.actions_available.includes("trip.start");
+    const reason = heavyParty ? "party" : active ? "active" : payload.context.phase !== 2 ? "phase" : available ? null : "unavailable";
+    parsed.action = reason ? null : { id: "trip.start", args: { variant: tripVariant } };
+    parsed.text = tripReplyText(payload.message, payload.context, tripVariant, reason, payload.mode === "group_chat");
     if (payload.mode === "group_chat") parsed.sender = "Charlie";
   }
   return JSON.stringify(parsed);

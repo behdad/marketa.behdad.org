@@ -40743,6 +40743,7 @@ var ABANDONED_CALL_MS = 30000;
     var ROOMS = ["kitchen", "garden", "cuddly", "office", "balcony"];
     var TRACKS = { tumbala: 0, danbern: 1, orit: 2 };
     var DANCES = ["slow", "fast", "techno", "waltz", "tango", "disco", "swing", "salsa", "bhangra", "persian", "polka", "horah", "bulgar", "dupak", "cumbia"];
+    var TRIPS = ["shrooms", "acid", "froggies", "dmt", "molly", "ketamine", "iboga"];
     function peopleLocations() {
       var out = {};
       ROOMS.forEach(function (room) { out[room] = (window.__whoIsHere ? window.__whoIsHere(room) : []).map(function (person) { return { key: person.key || null, name: person.name || "", role: person.roleKey ? consoleT(person.roleKey) : null }; }); });
@@ -40758,6 +40759,7 @@ var ABANDONED_CALL_MS = 30000;
     register({ id: "weather.cities", kind: "query", run: function () { var c = window.__chatContext ? window.__chatContext() : {}; return c.weather || {}; } });
     register({ id: "album.list", kind: "query", run: function () { return chatAlbumKnowledge(); } });
     register({ id: "tattoos.catalog", kind: "query", run: function () { return window.__chatTattooKnowledge ? window.__chatTattooKnowledge() : []; } });
+    register({ id: "trip.status", kind: "query", run: function () { return window.__tripState ? window.__tripState() : { active: !!window.__tripActive, variant: null }; } });
 
     register({ id: "room.go", kind: "action", risk: "ambient", args: { room: { type: "string", enum: ROOMS, required: true } }, available: function (args) { var max = window.__maxUnlocked ? window.__maxUnlocked() : window.currentStageIndex || 0; return ROOMS.indexOf(args.room) <= max; }, run: function (args) { if (window.goToStage) window.goToStage(args.room); return { room: args.room }; } });
     register({ id: "app.open", kind: "action", risk: "ambient", args: { app: { type: "string", enum: ["chat", "weather", "calendar", "messages", "mail", "call", "music", "album", "tattoo", "photos", "notes", "cocktails"], required: true } }, run: function (args) {
@@ -40820,6 +40822,17 @@ var ABANDONED_CALL_MS = 30000;
           resolve({ changed: false, spoken: false, room: window.currentStageName });
         }, moving ? 760 : 0);
       });
+    } });
+    register({ id: "trip.start", kind: "action", risk: "scene", args: { variant: { type: "string", enum: TRIPS, required: true } }, available: function (args) {
+      if (!window.__secondRound || window.__tripActive || document.visibilityState === "hidden" || (document.hasFocus && !document.hasFocus())) return false;
+      return !window.__gardenPartyOn || (args.variant !== "ketamine" && args.variant !== "iboga");
+    }, run: function (args) {
+      if (window.__gardenPartyOn && (args.variant === "ketamine" || args.variant === "iboga")) throw new Error("That trip is unavailable during the party.");
+      if (typeof window.trip !== "function") throw new Error("The trip controls are not ready.");
+      var message = window.trip(args.variant);
+      var state = window.__tripState ? window.__tripState() : { active: !!window.__tripActive, variant: null };
+      if (!state.active || state.variant !== args.variant) throw new Error("The requested trip did not start.");
+      return { active: true, variant: state.variant, message: message };
     } });
     register({ id: "party.dance.request", kind: "action", risk: "ambient", args: { style: { type: "string", enum: DANCES, required: true } }, available: function () { return !!window.__gardenPartyOn; }, run: function (args) {
       if (args.style === "slow") { if (window.slowdance) window.slowdance(); }
@@ -44262,6 +44275,7 @@ var ABANDONED_CALL_MS = 30000;
       phase: window.__secondRound ? 2 : 1,
       party: !!window.__gardenPartyOn,
       party_elapsed_seconds: window.__gardenPartyOn && window.__partyStartedAt ? Math.max(0, Math.floor((Date.now() - window.__partyStartedAt) / 1000)) : 0,
+      trip: window.__tripState ? window.__tripState() : { active: !!window.__tripActive, variant: null },
       bbq: !!(window.__partyBBQOn && window.__partyBBQOn()),
       daylight: !(balcony && balcony.classList.contains("dusk")),
       time: String(Math.floor(mins / 60) % 24).padStart(2, "0") + ":" + String(mins % 60).padStart(2, "0"),
@@ -59798,6 +59812,9 @@ var TRIP_DURATIONS = { shrooms: 6000, acid: 3000, froggies: 5000, dmt: 6000, mol
 var tripActive = false;
 var tripEndTimer = null;
 var currentTripVariant = null;
+window.__tripState = function () {
+  return { active: tripActive, variant: currentTripVariant };
+};
 // Every deferred, per-trip effect (the ketamine ghost + its whisper, molly's heart bursts,
 // the mushroom UFO's fly-out) parks its setTimeout handle here so a trip that's torn down
 // early — e.g. a keyboard-initiated trip that interrupts the running one — can't leak its

@@ -230,8 +230,8 @@ actionCase = await normalizedPrivateReply(
 );
 check(actionCase.reply.action === null, "a canonical action is discarded when the browser did not advertise it as currently available", actionCase);
 
-for (const id of ["music.previous", "daylight.set", "party.music.next", "party.set", "party.extend", "bbq.set", "coffee.make", "photo.take"]) {
-  const args = id === "daylight.set" || id === "party.set" || id === "bbq.set" ? { on: true } : {};
+for (const id of ["music.previous", "daylight.set", "party.music.next", "party.set", "party.extend", "bbq.set", "coffee.make", "photo.take", "trip.start"]) {
+  const args = id === "daylight.set" || id === "party.set" || id === "bbq.set" ? { on: true } : id === "trip.start" ? { variant: "molly" } : {};
   actionCase = await normalizedPrivateReply(
     JSON.stringify({ text: "Doing that.", action: { id, args } }),
     { actions_available: [id] },
@@ -373,6 +373,56 @@ const alreadyNightResponse = await worker.fetch(makeRequest("/chat", {
 }), makeEnv());
 const alreadyNightReply = JSON.parse((await alreadyNightResponse.json()).reply);
 check(alreadyNightReply.sender === "Charlie" && alreadyNightReply.action === null && /already night/i.test(alreadyNightReply.text), "Charlie does not offer a redundant night action when the loft is already dark", alreadyNightReply);
+
+actionCase = await normalizedPrivateReply(
+  JSON.stringify({ text: "Maybe later.", action: null }),
+  { phase: 2, party: false, trip: { active: false, variant: null }, actions_available: ["trip.start"] },
+  "molly time",
+);
+check(actionCase.reply.action?.id === "trip.start" && actionCase.reply.action.args.variant === "molly" && !/tap/i.test(actionCase.reply.text), "an explicit private molly phrase deterministically starts the canonical trip without tap-only copy", actionCase);
+
+actionCase = await normalizedPrivateReply(
+  JSON.stringify({ text: "Maybe later.", action: null }),
+  { phase: 2, party: false, trip: { active: false, variant: null }, actions_available: ["trip.start"] },
+  "time for MDMA",
+);
+check(actionCase.reply.action?.args?.variant === "molly", "existing street-name aliases resolve to canonical trip variants", actionCase);
+
+actionCase = await normalizedPrivateReply(
+  JSON.stringify({ text: "Travel sounds lovely.", action: null }),
+  { phase: 2, party: false, trip: { active: false, variant: null }, actions_available: ["trip.start"] },
+  "trip to Prague",
+);
+check(actionCase.reply.action === null, "ordinary travel language is not mistaken for a magic-box trip", actionCase);
+
+actionCase = await normalizedPrivateReply(
+  JSON.stringify({ text: "Starting ketamine.", action: { id: "trip.start", args: { variant: "ketamine" } } }),
+  { phase: 2, party: true, trip: { active: false, variant: null }, actions_available: ["trip.start"] },
+  "ketamine time",
+);
+check(actionCase.reply.action === null && /party/i.test(actionCase.reply.text), "ketamine is explicitly refused during a party instead of being silently substituted", actionCase);
+
+actionCase = await normalizedPrivateReply(
+  JSON.stringify({ text: "Starting acid.", action: { id: "trip.start", args: { variant: "acid" } } }),
+  { phase: 2, party: false, trip: { active: true, variant: "shrooms" }, actions_available: [] },
+  "acid time",
+);
+check(actionCase.reply.action === null && /one at a time|wear off/i.test(actionCase.reply.text), "an active trip blocks a second deterministic request", actionCase);
+
+openAIReply = JSON.stringify({ sender: "Danesh", text: "Maybe later.", reply_to_id: null, action: null });
+const groupTripResponse = await worker.fetch(makeRequest("/chat", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    mode: "group_chat",
+    message: "molly time",
+    turnstile_token: "group-trip-token",
+    context: { phase: 2, party: false, trip: { active: false, variant: null }, actions_available: ["trip.start"] },
+    group_chat: { cast: [{ name: "Danesh", role: "DJ" }] },
+  }),
+}), makeEnv());
+const groupTripReply = JSON.parse((await groupTripResponse.json()).reply);
+check(groupTripReply.sender === "Charlie" && groupTripReply.action?.id === "trip.start" && groupTripReply.action.args.variant === "molly" && /tap/i.test(groupTripReply.text), "Wedding crew offers an explicit trip as a tap action instead of auto-executing it", groupTripReply);
 
 openAIReply = JSON.stringify({ sender: "Danesh", text: "Next one coming up.", reply_to_id: null, action: { id: "music.skip", args: {} } });
 const djNextResponse = await worker.fetch(makeRequest("/chat", {

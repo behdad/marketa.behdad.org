@@ -45118,6 +45118,12 @@ var ABANDONED_CALL_MS = 30000;
           chatActiveMessage && typeof window.__setMonitorEditorDraft === "function") {
         var prompt = String(chatActiveMessage.prompt || chatActiveMessage.text || "").toLocaleLowerCase();
         var wait = prompt.match(/\bwait\s+(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)\b/);
+        if (!wait) wait = prompt.match(/\b(?:in|after)\s+(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)\b/);
+        if (wait && /\bmadla\b/.test(prompt) && /\b(call|ring|phone)\b/.test(prompt)) {
+          var callMs = Math.max(0, Math.min(600000, Math.round(Number(wait[1]) * 1000)));
+          setTimeout(function () { window.__setMonitorEditorDraft("await sleep(" + callMs + ");\nmadla();", "madla-call-after-delay"); }, 90);
+          return result;
+        }
         if (wait && /\bparty\b/.test(prompt)) {
           var ms = Math.max(0, Math.min(600000, Math.round(Number(wait[1]) * 1000)));
           setTimeout(function () { window.__setMonitorEditorDraft("await sleep(" + ms + ");\nparty(true);", "party-after-delay"); }, 90);

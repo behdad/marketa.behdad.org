@@ -55,6 +55,9 @@
 //    - phase-one messages: ordinary texts stay out of the solve, while one-shot
 //      occasion texts are held and released when the first party starts phase two.
 //      The first attended unread badge also carries the one-time message coach mark.
+//    - garden wall switch: it keeps its day/night role in phase one, then becomes a
+//      day/party toggle once phase two has unlocked the party. Its delayed exit cue
+//      explains that the loft, phone, and computer remain explorable after the party.
 //    - opening guide: the first scene click points at the caption before the
 //      normal kitchen instruction and espresso-machine arrow take over.
 //
@@ -671,6 +674,13 @@ var PROBE_HARNESS = [
   "    // so their own schedulers can retry in context; one-shot occasion messages must be held because",
   "    // their date latch will not call again. Starting the first party flushes only that held mail.",
   "    ok('messages setup: extinguisher reset returned to phase one', !window.__secondRound);",
+  "    var gardenWallSwitch = el('garden-lightswitch');",
+  "    gardenWallSwitch.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
+  "    await sleep(40);",
+  "    ok('garden switch: phase one still flips day to night without starting the party', !window.__gardenPartyOn && el('stage-garden').classList.contains('dusk'));",
+  "    gardenWallSwitch.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
+  "    await sleep(40);",
+  "    ok('garden switch: phase one still flips night back to day', !window.__gardenPartyOn && !el('stage-garden').classList.contains('dusk'));",
   "    if (window.__deliverPhoneMessage) window.__deliverPhoneMessage('cue_mail');",
   "    if (window.__deliverOccasionText) window.__deliverOccasionText('occ_phase_gate_test', 'msg_behdad_from', 'cue_mail_body', 'app:mail');",
   "    ok('messages: recurring text does not arrive during phase one', !(window.__phoneMessageReceived && window.__phoneMessageReceived('cue_mail')));",
@@ -681,6 +691,16 @@ var PROBE_HARNESS = [
   "    ok('messages: first party starts phase two', !!window.__secondRound);",
   "    ok('messages: held occasion text arrives when phase two starts', !!(window.__phoneMessageReceived && window.__phoneMessageReceived('occ_phase_gate_test')));",
   "    ok('messages: stale recurring phase-one attempt is not flushed', !(window.__phoneMessageReceived && window.__phoneMessageReceived('cue_mail')));",
+  "    if (window.goToStage) window.goToStage('garden');",
+  "    ok('garden switch cue: deterministic reveal hook exists', typeof window.__showPartyExitHint === 'function' && window.__showPartyExitHint());",
+  "    ok('garden switch cue: caption says the party ends but exploration continues', window.__captionKey && window.__captionKey() === 'party_exit_hint' && /not the game/i.test(el('hunt-caption').textContent) && /phone and computer/i.test(el('hunt-caption').textContent));",
+  "    ok('garden switch cue: the wall switch pulses until used', gardenWallSwitch.classList.contains('invite-pulse'));",
+  "    gardenWallSwitch.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
+  "    await sleep(40);",
+  "    ok('garden switch: phase two turns the party off, restores day and retires its cue', !window.__gardenPartyOn && !el('stage-garden').classList.contains('dusk') && !gardenWallSwitch.classList.contains('invite-pulse'));",
+  "    gardenWallSwitch.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
+  "    await sleep(40);",
+  "    ok('garden switch: phase two turns the party back on without repeating the cue', !!window.__gardenPartyOn && el('stage-garden').classList.contains('dusk') && !gardenWallSwitch.classList.contains('invite-pulse'));",
   "    var msgCoach = document.querySelector('.msg-badge-coach'), msgBadge = document.querySelector('.msg-badge');",
   "    ok('messages: coach stays out of the live notification popup', !msgCoach || !msgCoach.classList.contains('show'));",
   "    if (window.__hideMessageThumb) window.__hideMessageThumb();",

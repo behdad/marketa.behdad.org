@@ -24799,6 +24799,7 @@ var T = {
       arcade_hint: "Move to blast the invaders! 👾",
       garden: "Water a plant, play music, light candles.",
       garden_party: "Party's on — dance like nobody's watering. 💃🌱",
+      party_exit_hint: "The wall switch ends the party, not the game — keep wandering, or explore the phone and computer.",
       farhang_toast: "To the happy couple! 🥂",
       first_dance_caption: "Their first dance — everyone else, hush. 💞",
       dj_sina: ["<em>DJ Sina</em> takes over the decks. 🎧", "<em>DJ Sina</em> grabs the ones and twos. 🎧"],
@@ -25620,6 +25621,7 @@ var T = {
       arcade_hint: "Pohybuj se a sestřel vetřelce! 👾",
       garden: "Zalij kytku, zahraj, zapal svíčky.",
       garden_party: "Párty jede — tanči, ať kytky počkají. 💃🌱",
+      party_exit_hint: "Vypínač na zdi ukončí párty, ne hru — toulej se dál nebo prozkoumej telefon a počítač.",
       farhang_toast: "Na šťastný pár! 🥂",
       first_dance_caption: "Jejich první tanec — ostatní, pšt. 💞",
       dj_sina: ["Za gramofony jde <em>DJ Sina</em>. 🎧", "<em>DJ Sina</em> bere desky do ruky. 🎧"],
@@ -64470,6 +64472,7 @@ function spawnDustMote(container) {
   // called on garden entry and whenever the party toggles (setGardenParty)
   window.__refreshGardenCaption = function () {
     if (window.currentStageName !== "garden" || window.__cinematic) return;
+    if (window.__partyExitHintActive && window.__partyExitHintActive()) { setCaption("party_exit_hint"); return; }
     // a live second-act beat is a more specific thing to say than "party's on" — it wins
     var beat = window.__actBeatHint ? window.__actBeatHint("garden") : null;
     if (beat) { setCaption(beat); return; }
@@ -64565,19 +64568,56 @@ function spawnDustMote(container) {
       }
     });
   })();
-  // garden wall light switch — flip the whole scene between day and night (so the
-  // night-time magic is reachable without hunting for the balcony sun/moon)
+  // Garden wall light switch: during the solve it flips day/night so the night-time
+  // magic is reachable without hunting for the balcony sun/moon. Once the first party
+  // unlocks phase two, it becomes the room's day/party switch instead.
   (function () {
     var sw = document.getElementById("garden-lightswitch");
     if (!sw) return;
     onActivate(sw, function () {
       if (window.__gardenPartyOn && window.__setPartyMode) { // party lit -> the switch kills it and brings the day back
+        if (window.__consumePartyExitHint) window.__consumePartyExitHint();
         window.__setPartyMode(false);
         if (window.__setDayNight) window.__setDayNight(false);
         return;
       }
+      if (window.__secondRound) {
+        if (window.__setPartyMode) window.__setPartyMode(true);
+        else if (window.__setGardenParty) window.__setGardenParty(true, true);
+        return;
+      }
       if (window.__autoToggleDusk) window.__autoToggleDusk(); // a temporary manual look — the crossing scheduler stays armed (the next real crossing still flips it)
     });
+  })();
+  // The party's exit stays diegetic: after 45 seconds of attended party time, point out
+  // the garden wall switch once. Hidden/unfocused time never advances the cue, and using
+  // the switch before it appears retires it because that player has already found the exit.
+  (function () {
+    var sw = document.getElementById("garden-lightswitch");
+    if (!sw) return;
+    var attendedSeconds = 0, timer = null, retired = false, active = false;
+    function stop() { if (timer) { clearInterval(timer); timer = null; } }
+    function paint() { sw.classList.toggle("invite-pulse", !!(active && window.__gardenPartyOn)); }
+    function show() {
+      if (retired || !window.__gardenPartyOn) return false;
+      retired = true; active = true; stop(); paint();
+      if (window.currentStageName === "garden" && window.__refreshGardenCaption) window.__refreshGardenCaption();
+      return true;
+    }
+    function tick() {
+      if (!window.__gardenPartyOn || document.hidden || (document.hasFocus && !document.hasFocus()) || window.__cinematic) return;
+      attendedSeconds += 1;
+      if (attendedSeconds >= 45) show();
+    }
+    window.__updatePartyExitHint = function () {
+      if (!window.__gardenPartyOn) { stop(); active = false; paint(); return; }
+      if (!retired && !timer) timer = setInterval(tick, 1000);
+      paint();
+    };
+    window.__partyExitHintActive = function () { return !!(active && window.__gardenPartyOn); };
+    window.__showPartyExitHint = show; // deterministic state-test hook
+    window.__consumePartyExitHint = function () { retired = true; active = false; stop(); paint(); };
+    window.__resetPartyExitHint = function () { attendedSeconds = 0; retired = false; active = false; stop(); paint(); };
   })();
   (function scheduleAmbientPlantSway() {
     var delay = 6000 + Math.random() * 8000;
@@ -67916,6 +67956,7 @@ function spawnDustMote(container) {
     if (window.__rollGardenAurora) window.__rollGardenAurora(); // the UV changes the odds — re-roll the aurora (much likelier with the party off)
     if (window.__homeCat && window.currentStageName) window.__homeCat(window.currentStageName); // party on → contain the loose cat to the nook; party off → let it roam again (never stows it)
     if (window.__updateWhistler) window.__updateWhistler(); // party on + Farhang/Lauren arrived → let Whistler out; party off → send him home
+    if (window.__updatePartyExitHint) window.__updatePartyExitHint(); // after a little attended partying, reveal the garden wall switch as the way back to day
     // Second act: THE hinge. Pinged from the tail — every ignition path (the balcony switch,
     // the garden light switch, the disco ball, the mask) funnels through here, and by now the
     // whisk's goToStage("garden") has already run and set its own caption, so the reveal line
@@ -70388,6 +70429,7 @@ function spawnDustMote(container) {
   function resetHunt() {
     window.__pragueCalled = false;
     window.__secondRound = false;                              // back to the "first round" — reseal the who's-here roster until a party lights again
+    if (window.__resetPartyExitHint) window.__resetPartyExitHint(); // the one-time attended party-exit cue belongs to this game session
     if (window.__closeDropTerm) window.__closeDropTerm();      // a fresh game starts with no panel up…
     if (window.__toggleRoster) window.__toggleRoster(false);   // …including the who's-here list (its syncAvailability re-hides the chip now the flag's cleared just above)
     if (window.__stopDaylapse) window.__stopDaylapse(); // a fresh game ends any running time-lapse (no stranded synthetic clock)

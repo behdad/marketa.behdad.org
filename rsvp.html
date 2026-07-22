@@ -43338,9 +43338,10 @@ var ABANDONED_CALL_MS = 30000;
   var CHAT_PROXY_URL = "https://marketa.behdad.org/chat";
   var CHAT_TURNSTILE_SITEKEY = "0x4AAAAAAD68jRzCuASVTetm";
   var CHAT_TURNSTILE_SCRIPT = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+  var CHAT_TOTAL_TIMEOUT_MS = 20000;
   window.__monitorChatEndpoint = CHAT_PROXY_URL;
   window.__monitorChatTurnstileSitekey = CHAT_TURNSTILE_SITEKEY;
-  var chatHistory = [];
+  var chatHistory = [], chatQueue = [], chatActiveMessage = null;
   var chatPending = false, chatError = "", chatRequestSeq = 0, chatAbort = null;
   var chatTurnstileApiPromise = null, chatTurnstileHost = null, chatTurnstileWidget = null;
   var chatTurnstileWait = null, chatTurnstileNeedsReset = false;
@@ -43372,9 +43373,7 @@ var ABANDONED_CALL_MS = 30000;
     chatTurnstileApiPromise = new Promise(function (resolve, reject) {
       var script = document.getElementById("loft-chat-turnstile-script");
       function ready() {
-        if (window.turnstile && typeof window.turnstile.ready === "function") {
-          window.turnstile.ready(function () { resolve(window.turnstile); });
-        } else if (window.turnstile && typeof window.turnstile.render === "function") resolve(window.turnstile);
+        if (window.turnstile && typeof window.turnstile.render === "function") resolve(window.turnstile);
         else reject(new Error("Turnstile unavailable"));
       }
       if (script) { script.addEventListener("load", ready, { once: true }); script.addEventListener("error", reject, { once: true }); return; }
@@ -43413,7 +43412,7 @@ var ABANDONED_CALL_MS = 30000;
         chatTurnstileWait = {
           resolve: resolve,
           reject: reject,
-          timer: setTimeout(function () { settleChatTurnstile(new Error("verification timed out")); }, 120000)
+          timer: setTimeout(function () { settleChatTurnstile(new Error("verification timed out")); }, CHAT_TOTAL_TIMEOUT_MS)
         };
         try {
           if (chatTurnstileNeedsReset) { api.reset(chatTurnstileWidget); chatTurnstileNeedsReset = false; }
@@ -43446,11 +43445,11 @@ var ABANDONED_CALL_MS = 30000;
     chatInput.setAttribute("aria-label", chatT("chat_placeholder"));
     chatSend.setAttribute("title", chatT("chat_send"));
     chatSend.setAttribute("aria-label", chatT("chat_send"));
-    chatInput.disabled = chatPending;
-    chatSend.disabled = chatPending || !chatInput.value.trim();
+    chatInput.disabled = false;
+    chatSend.disabled = !chatInput.value.trim();
     chatLog.scrollTop = chatLog.scrollHeight;
   }
-  function chatPayload(text) {
+  function chatPayload(text, history) {
     var now = window.__now ? window.__now() : new Date();
     var rooms = ["kitchen", "garden", "cuddly", "office", "balcony"];
     var maxUnlocked = typeof window.__maxUnlocked === "function" ? window.__maxUnlocked() : (window.currentStageIndex || 0);
@@ -43459,7 +43458,7 @@ var ABANDONED_CALL_MS = 30000;
     var hintKey = typeof window.__captionKey === "function" ? window.__captionKey() : null;
     return {
       message: text,
-      history: chatHistory.slice(0, -1).map(function (m) { return { role: m.role, text: m.text }; }),
+      history: history.map(function (m) { return { role: m.role, text: m.text }; }),
       language: "auto",
       context: {
         site_language: document.documentElement.lang || "en",
@@ -43498,7 +43497,7 @@ var ABANDONED_CALL_MS = 30000;
     window.__monitorChatTransport = function (payload) {
       chatAbort = typeof AbortController !== "undefined" ? new AbortController() : null;
       var abortForThisRequest = chatAbort;
-      var timeout = setTimeout(function () { if (abortForThisRequest) abortForThisRequest.abort(); }, 45000);
+      var timeout = setTimeout(function () { if (abortForThisRequest) abortForThisRequest.abort(); }, CHAT_TOTAL_TIMEOUT_MS);
       return window.fetch(CHAT_PROXY_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json, text/plain" },
@@ -43518,38 +43517,70 @@ var ABANDONED_CALL_MS = 30000;
       });
     };
   }
-  function submitChat() {
-    if (chatPending || !chatInput) return;
-    var text = chatInput.value.trim();
-    if (!text) return;
-    chatHistory.push({ role: "user", text: text });
-    if (chatHistory.length > 40) chatHistory = chatHistory.slice(-40);
-    chatInput.value = "";
-    chatError = "";
+  function trimChatHistory() {
+    if (!chatPending && !chatQueue.length && chatHistory.length > 40) chatHistory = chatHistory.slice(-40);
+  }
+  function pumpChatQueue() {
+    if (chatPending || !chatQueue.length) { renderChat(); return; }
     var transport = window.__monitorChatTransport;
     var challenge = window.__monitorChatTurnstile;
-    if (typeof transport !== "function" || typeof challenge !== "function") { chatError = chatT("chat_unavailable"); renderChat(); return; }
+    if (typeof transport !== "function" || typeof challenge !== "function") {
+      chatQueue = []; chatError = chatT("chat_unavailable"); renderChat(); return;
+    }
+    var message = chatQueue.shift();
+    chatActiveMessage = message;
     chatPending = true;
     var seq = ++chatRequestSeq;
+    var messageIndex = chatHistory.indexOf(message);
+    var priorHistory = messageIndex < 0 ? [] : chatHistory.slice(0, messageIndex);
+    var expired = false, deadline;
     renderChat();
-    Promise.resolve().then(function () { return challenge(); }).then(function (token) {
+    var work = Promise.resolve().then(function () { return challenge(); }).then(function (token) {
+      if (expired || seq !== chatRequestSeq) throw new Error("chat request cancelled");
       if (!token) throw new Error("verification failed");
-      var payload = chatPayload(text);
+      var payload = chatPayload(message.text, priorHistory);
       payload.turnstile_token = String(token);
       return transport(payload);
-    }).then(function (reply) {
+    });
+    var timed = new Promise(function (_resolve, reject) {
+      deadline = setTimeout(function () {
+        expired = true;
+        cancelChatTurnstile();
+        if (chatAbort) { try { chatAbort.abort(); } catch (_error) {} }
+        reject(new Error("chat request timed out"));
+      }, CHAT_TOTAL_TIMEOUT_MS);
+    });
+    Promise.race([work, timed]).then(function (reply) {
+      clearTimeout(deadline);
       if (seq !== chatRequestSeq) return;
       var answer = reply && typeof reply === "object" && reply.text != null ? reply.text : reply;
       answer = answer == null ? "" : String(answer).trim();
       if (!answer) throw new Error("empty chat response");
-      chatHistory.push({ role: "assistant", text: answer });
-      if (chatHistory.length > 40) chatHistory = chatHistory.slice(-40);
-      chatPending = false; chatError = ""; renderChat();
+      var at = chatHistory.indexOf(message);
+      if (at < 0) chatHistory.push({ role: "assistant", text: answer });
+      else chatHistory.splice(at + 1, 0, { role: "assistant", text: answer });
+      chatPending = false; chatActiveMessage = null; chatError = "";
+      trimChatHistory(); renderChat();
       if (monitor.classList.contains("show-chat")) chatInput.focus();
+      pumpChatQueue();
     }).catch(function () {
+      clearTimeout(deadline);
       if (seq !== chatRequestSeq) return;
-      chatPending = false; chatError = chatT("chat_error"); renderChat();
+      chatPending = false; chatActiveMessage = null; chatError = chatT("chat_error");
+      trimChatHistory(); renderChat(); pumpChatQueue();
     });
+  }
+  function submitChat() {
+    if (!chatInput) return;
+    var text = chatInput.value.trim();
+    if (!text) return;
+    var message = { role: "user", text: text };
+    chatHistory.push(message);
+    chatQueue.push(message);
+    chatInput.value = "";
+    chatError = "";
+    renderChat();
+    pumpChatQueue();
   }
   function openChat() {
     if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-chat")) return;
@@ -43571,7 +43602,7 @@ var ABANDONED_CALL_MS = 30000;
     chatRequestSeq++;
     cancelChatTurnstile();
     if (chatAbort) { try { chatAbort.abort(); } catch (e) {} chatAbort = null; }
-    chatPending = false; chatError = ""; chatHistory = [];
+    chatPending = false; chatError = ""; chatHistory = []; chatQueue = []; chatActiveMessage = null;
     if (chatInput) chatInput.value = "";
     renderChat();
   }

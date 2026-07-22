@@ -53,6 +53,8 @@ const cases = [
   ["bar.mixer.start", { recipe: "yale" }],
   ["minigame.start", { game: "flair-catch" }],
   ["scene.activity.start", { activity: "rainbow" }],
+  ["weather.scene.set", { mode: "thunderstorm" }],
+  ["sky.effect.set", { effect: "aurora" }],
 ];
 for (const [id, args] of cases) {
   const reply = await ask({ text: "On it.", action: { id, args } }, [id]);
@@ -63,9 +65,13 @@ let reply = await ask({ text: "No.", action: { id: "minigame.start", args: { gam
 check(reply.action === null, "an unlisted game is rejected", reply);
 reply = await ask({ text: "No.", action: { id: "bar.cocktail.make", args: { drink: "beer" } } }, ["bar.cocktail.make"]);
 check(reply.action === null, "a drink outside the authored menu is rejected", reply);
+reply = await ask({ text: "No.", action: { id: "weather.scene.set", args: { mode: "hail" } } }, ["weather.scene.set"]);
+check(reply.action === null, "an arbitrary weather value is rejected", reply);
+reply = await ask({ text: "No.", action: { id: "sky.effect.set", args: { effect: "solar-eclipse" } } }, ["sky.effect.set"]);
+check(reply.action === null, "an unlisted sky effect is rejected", reply);
 reply = await ask({ sender: "Pouria", text: "Tap this and I’ll mix it.", reply_to_id: null, action: { id: "bar.cocktail.make", args: { drink: "mojito" } } }, ["bar.cocktail.make"], "group_chat");
 check(reply.sender === "Pouria" && reply.action?.id === "bar.cocktail.make", "Wedding crew keeps the action as a suggestion for the Messages UI", reply);
-check(/party\.moment\.start/.test(capturedInstructions) && /call\.incoming\.trigger/.test(capturedInstructions) && /bar\.cocktail\.make/.test(capturedInstructions) && /minigame\.start/.test(capturedInstructions) && /can we do the toasts\?/.test(capturedInstructions) && /what are the toasts\?/.test(capturedInstructions) && /Do not attach an action to a mere mention/.test(capturedInstructions), "the model receives the bounded catalog and distinguishes polite requests from factual questions");
+check(/party\.moment\.start/.test(capturedInstructions) && /call\.incoming\.trigger/.test(capturedInstructions) && /bar\.cocktail\.make/.test(capturedInstructions) && /minigame\.start/.test(capturedInstructions) && /weather\.scene\.set/.test(capturedInstructions) && /sky\.effect\.set/.test(capturedInstructions) && /can we do the toasts\?/.test(capturedInstructions) && /what are the toasts\?/.test(capturedInstructions) && /Do not attach an action to a mere mention/.test(capturedInstructions) && /does not alter or claim to alter the real Edmonton or Prague forecast/.test(capturedInstructions), "the model receives the bounded catalog and distinguishes scene controls from factual weather questions");
 
 console.log("");
 if (failures) { console.log(`${failures} check(s) failed.`); process.exit(1); }

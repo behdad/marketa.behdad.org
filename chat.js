@@ -42,6 +42,8 @@ const ACTION_SPECS = Object.freeze({
   "party.dance.request": Object.freeze({ style: new Set(["slow", "fast", "techno", "waltz", "tango", "disco", "swing", "salsa", "bhangra", "persian", "polka", "horah", "bulgar", "dupak", "cumbia"]) }),
   "party.dj.set": Object.freeze({ dj: new Set(["sina", "danesh"]) }),
   "projector.set": Object.freeze({ mode: new Set(["off", "stars", "workout", "totoro", "aqua"]) }),
+  "weather.scene.set": Object.freeze({ mode: new Set(["clear", "rain", "thunderstorm", "overcast"]) }),
+  "sky.effect.set": Object.freeze({ effect: new Set(["none", "aurora", "twilight"]) }),
   "party.moment.start": Object.freeze({ moment: new Set(["first-dance", "slow-dance", "toasts", "group-photo", "sparklers", "cake", "bouquet-toss", "chair-lift"]) }),
   "call.incoming.trigger": Object.freeze({ caller: new Set(["madla", "prague"]) }),
   "call.video.start": Object.freeze({ contact: new Set(["prague", "lubeck"]) }),
@@ -85,6 +87,8 @@ Fishu is the flying pufferfish in cuddly-puddly. A short message consisting only
 
 The magic box's authored trips are shrooms, acid, froggies, DMT, molly, ketamine, and iboga. Their accepted aliases are mushrooms/mushroom, LSD, froggie/frog/5meo, MDMA, k/ket, and ibogaine. Polite questions such as "can we do some acid?", "could we try shrooms?", and "how about molly?" are direct trip requests, not factual questions. When trip.start is available, you MUST attach the corresponding trip.start action; never merely tell the user to tap the physical box or say a suggestion exists without attaching it. Never interpret ordinary travel language as a trip request. Ketamine and iboga are unavailable while a party is active; say so rather than substituting another trip.
 
+weather.scene.set changes only the authored weather visible around the loft; it does not alter or claim to alter the real Edmonton or Prague forecast. sky.effect.set controls only the authored aurora or twilight scene. Use either action only for a direct request to change the scene, never for a question about current conditions, and never invent date/time overrides or arbitrary weather values.
+
 A direct request to make or get coffee should use coffee.make. It ends an active party, restores daylight, and takes the player to the kitchen/bar espresso machine; do not claim the coffee itself has already been made.
 
 While a party is active, a direct request to keep it going, continue it, or cancel its ending should use party.extend, not party.set. It cancels an accepted or in-progress finale and grants another full attended party interval.
@@ -114,6 +118,8 @@ Current game state.environment.indoor_temperature.temperature_c is exactly the l
 Fishu is the flying pufferfish in cuddly-puddly. A short message consisting only of Fishu's name or a spelling/diacritic variant such as "Phishu!", "fisu", or "Fišü" is a direct invocation of the fishu.speak action and may run automatically. Never claim or guess that today is anyone's birthday or another special event unless current game state.active_occasion explicitly identifies it; a calendar date or a cast relationship is not evidence.
 
 The magic box's authored trips are shrooms, acid, froggies, DMT, molly, ketamine, and iboga. Their accepted aliases are mushrooms/mushroom, LSD, froggie/frog/5meo, MDMA, k/ket, and ibogaine. Polite questions such as "can we do some acid?", "could we try shrooms?", and "how about molly?" are direct trip requests, not factual questions. When trip.start is available, you MUST attach the corresponding trip.start suggestion; never merely tell the visitor to tap the physical box or say a suggestion exists without attaching it. Never interpret ordinary travel language as a trip request. Ketamine and iboga are unavailable while a party is active; say so rather than substituting another trip.
+
+weather.scene.set changes only the authored weather visible around the loft; it does not alter or claim to alter the real Edmonton or Prague forecast. sky.effect.set controls only the authored aurora or twilight scene. Suggest either action only for a direct request to change the scene, never for a question about current conditions, and never invent date/time overrides or arbitrary weather values.
 
 A direct request to make or get coffee should suggest coffee.make. Tell the visitor the action will take them to the kitchen/bar espresso machine; do not say the coffee is already made.
 

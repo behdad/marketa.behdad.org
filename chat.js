@@ -179,7 +179,8 @@ function tripRequestIntent(value) {
     .trim()
     .replace(/\s+/g, " ");
   for (const [alias, variant] of Object.entries(TRIP_ALIASES)) {
-    if (folded === alias || folded === `${alias} time` || folded === `time for ${alias}` ||
+    if (folded === alias || folded === `${alias} time` || folded === `${alias} time then` ||
+        folded === `${alias} time now` || folded === `${alias} time please` || folded === `time for ${alias}` ||
         folded === `start ${alias}` || folded === `start a ${alias} trip` ||
         folded === `lets do ${alias}` || folded === `do ${alias}` || folded === `try ${alias}` ||
         folded === `trip on ${alias}` || folded === `${alias} please`) return variant;

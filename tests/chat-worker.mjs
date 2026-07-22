@@ -415,7 +415,7 @@ const groupTripResponse = await worker.fetch(makeRequest("/chat", {
   headers: { "content-type": "application/json" },
   body: JSON.stringify({
     mode: "group_chat",
-    message: "molly time",
+    message: "molly time then!",
     turnstile_token: "group-trip-token",
     context: { phase: 2, party: false, trip: { active: false, variant: null }, actions_available: ["trip.start"] },
     group_chat: { cast: [{ name: "Danesh", role: "DJ" }] },
@@ -423,6 +423,13 @@ const groupTripResponse = await worker.fetch(makeRequest("/chat", {
 }), makeEnv());
 const groupTripReply = JSON.parse((await groupTripResponse.json()).reply);
 check(groupTripReply.sender === "Charlie" && groupTripReply.action?.id === "trip.start" && groupTripReply.action.args.variant === "molly" && /tap/i.test(groupTripReply.text), "Wedding crew offers an explicit trip as a tap action instead of auto-executing it", groupTripReply);
+
+actionCase = await normalizedPrivateReply(
+  JSON.stringify({ text: "A sparkling expression.", action: null }),
+  { phase: 2, party: false, trip: { active: false, variant: null }, actions_available: ["trip.start"] },
+  "holy molly!",
+);
+check(actionCase.reply.action === null, "an exclamation containing a trip name does not accidentally start one", actionCase);
 
 openAIReply = JSON.stringify({ sender: "Danesh", text: "Next one coming up.", reply_to_id: null, action: { id: "music.skip", args: {} } });
 const djNextResponse = await worker.fetch(makeRequest("/chat", {

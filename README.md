@@ -29,6 +29,13 @@ committed is what's live.
 The two typefaces (Fraunces + Source Serif 4) come from Google Fonts; everything else
 is served from this repo.
 
+## Documentation
+
+- **[Game manual](docs/game-manual.md)** — how to play, explore the rooms, use the apps,
+  and discover the loft's optional systems.
+- **[Developer guide](docs/developer.md)** — architecture, state, rendering, testing,
+  deployment, and the main subsystem entry points.
+
 ## Self-hosted runtimes
 
 The loft has a few playful corners that run real software, entirely self-hosted (no

@@ -147,7 +147,7 @@ examples. Do not add an uncapped interval-driven SVG/WAAPI emitter.
 
 ## Audio architecture
 
-`AUDIO.md` is the detailed authority. The core invariant is exactly one shared `AudioContext`,
+[audio.md](audio.md) is the detailed authority. The core invariant is exactly one shared `AudioContext`,
 created by `getAudioCtx()`. Safari has a low concurrent-context limit, so no feature may create and
 own an independent context.
 

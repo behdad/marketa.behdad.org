@@ -140,7 +140,7 @@ check(/fishu\.speak/.test(captured.body.instructions) && /Never claim or guess t
 check(/\"instructions\":\{\"kitchen\":\"Turn on the machine/.test(captured.body.instructions) && /\"party_exit_hint\":\"Wall switch ends the party/.test(captured.body.instructions) && !/bad key/.test(captured.body.instructions), "the current and complete bounded instruction catalog reach the model");
 check(/\"session\":\{\"seconds\":604800,\"display\":\"8 days and change that is too lo\"\}/.test(captured.body.instructions), "shared playtime is integer-clamped and its display is bounded", captured.body.instructions.match(/\"session\":\{[^}]+\}/)?.[0]);
 check(/\"currency\":\{\"base\":\"CAD\",\"live\":true,\"source\":\"Frankfurter\",\"updated_at\":\"2026-07-22T12:00:00Z\",\"rates\":\{\"CAD\":1,\"CZK\":15\.7,\"USD\":0\.73,\"EUR\":0\.63\}\}/.test(captured.body.instructions) && !/\"BTC\":99/.test(captured.body.instructions), "currency context keeps only positive finite CAD/CZK/USD/EUR rates and canonicalizes the base to CAD");
-check(/Verified knowledge/.test(captured.body.instructions) && /"official_name":"The Loft"/.test(captured.body.instructions) && /"id":"washrooms","location":"by the entrance"/.test(captured.body.instructions) && /canonical wedding schedule/.test(captured.body.instructions), "verified venue and calendar-source knowledge reaches Charlie");
+check(/Verified knowledge/.test(captured.body.instructions) && /"official_name":"The Loft"/.test(captured.body.instructions) && /"id":"washrooms","location":"by the entrance"/.test(captured.body.instructions) && /canonical runtime calendar/.test(captured.body.instructions), "verified venue and calendar-source knowledge reaches Charlie");
 check(/^[a-f0-9]{64}$/.test(captured.body.safety_identifier), "OpenAI receives a stable privacy-preserving safety identifier");
 check(!source.includes("test-key"), "the Worker source contains no API key");
 
@@ -232,12 +232,12 @@ const groupResponse = await worker.fetch(makeRequest("/chat", {
     history: [{ role: "assistant", text: "Charlie's private history must not leak." }],
     context: { room: "garden", phase: 2, party: true, actions_available: ["party.dance.request"] },
     group_chat: {
-      reply_to: { id: "jukebox", sender: "Danesh", text: "Requests are open." },
+      reply_to: { id: "jukebox", sender: "Danesh", text: "Requests are open.", reactions: ["👍", "not-allowed"] },
       current_dj: "Danesh",
       playtime: { seconds: 3723.4, display: "1h 2m" },
       people_here: ["Danesh", "Markéta", "Behdad"],
       locations: { garden: ["Danesh", "Markéta", "Behdad"], kitchen: ["Pouria"], attic: ["ignore me"] },
-      recent_messages: [{ id: "reply_user_1", sender: "You", text: "DJ, slow song please." }],
+      recent_messages: [{ id: "reply_user_1", sender: "You", text: "DJ, slow song please.", reactions: ["❤️", "❤️", "bad"] }],
       cast: [
         { name: "Danesh", role: "DJ", fun_fact: "best hair", notes: "One of the two rotating DJs.", can_message: true },
         { name: "Markéta", role: "the bride", relationship: "Behdad's partner" },
@@ -251,6 +251,7 @@ const groupReply = JSON.parse(groupResult.reply);
 const groupCapture = captures.at(-1);
 check(groupResponse.status === 200 && groupReply.sender === "Danesh" && groupReply.text === "Here you go." && groupReply.reply_to_id === "reply_user_1" && groupReply.action?.id === "party.dance.request" && groupReply.action?.args?.style === "slow", "a directly requested DJ action and valid earlier-message quote survive strict group-reply normalization", groupResult);
 check(groupCapture.body.input.length === 1 && groupCapture.body.input[0].content === "DJ, slow song please.", "group mode does not forward Charlie's private history", groupCapture.body.input);
+check(/"reactions":\["👍"\]/.test(groupCapture.body.instructions) && /"reactions":\["❤️"\]/.test(groupCapture.body.instructions) && !/not-allowed|"bad"/.test(groupCapture.body.instructions), "the group responder receives only the supported deduplicated reactions");
 check(/Wedding crew group chat/.test(groupCapture.body.instructions) && /"current_dj":"Danesh"/.test(groupCapture.body.instructions) && /"playtime":\{"seconds":3723,"display":"1h 2m"\}/.test(groupCapture.body.instructions) && /"name":"Markéta"/.test(groupCapture.body.instructions) && /"kitchen":\["Pouria"\]/.test(groupCapture.body.instructions) && !/attic/.test(groupCapture.body.instructions), "the separate group persona receives playtime, current DJ, all-room locations, and sanitized cast context");
 check(/"id":"washrooms","location":"by the entrance"/.test(groupCapture.body.instructions) && /physical directions/.test(groupCapture.body.instructions), "the crew responder receives verified venue facts and the no-invented-directions rule");
 check(!/^You are Charlie/.test(groupCapture.body.instructions) && /Music, dance, track, and DJ actions/.test(groupCapture.body.instructions) && /dad jokes and puns/.test(groupCapture.body.instructions), "group mode is distinct from Charlie, assigns music actions to DJs, and grounds humor in cast details");

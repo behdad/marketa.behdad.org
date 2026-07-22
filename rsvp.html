@@ -9199,8 +9199,9 @@ section{margin:1.9rem 0}
    itself on animationend. Pivots on its OWN centre via translate/scale in the transform (text is
    avoided entirely — these are <path> stars, WebKit-safe). Capped + cleared-stale before each
    spawn AND the spawner is focus/visibility gated, so nothing accumulates in a hidden tab. */
-.gm-spark{transform-box:fill-box; transform-origin:center; mix-blend-mode:screen; pointer-events:none}
-.gm-spark.gm-spark-go{animation:gm-spark-flicker var(--gm-spark-dur,1100ms) ease-out forwards}
+.gm-spark{mix-blend-mode:screen; pointer-events:none}
+.gm-spark-core{transform-box:fill-box; transform-origin:center}
+.gm-spark.gm-spark-go .gm-spark-core{animation:gm-spark-flicker var(--gm-spark-dur,1100ms) ease-out forwards}
 @keyframes gm-spark-flicker{0%{opacity:0; transform:translate(0,0) scale(.2) rotate(0)} 12%{opacity:1; transform:translate(calc(var(--gm-spark-dx,0) * .18),-3px) scale(1.05) rotate(35deg)} 40%{opacity:.9; transform:translate(calc(var(--gm-spark-dx,0) * .5),-11px) scale(.8) rotate(90deg)} 70%{opacity:.6} 100%{opacity:0; transform:translate(var(--gm-spark-dx,0),-26px) scale(.15) rotate(160deg)}}
 @media (prefers-reduced-motion: reduce){
   #garden-guests.gm-toasting.gm-toast-p1 #gm-toast-ali-bubble,
@@ -9209,7 +9210,7 @@ section{margin:1.9rem 0}
   #garden-guests.gm-toasting.gm-toast-p2 .g-farhang .gm-glass{animation:none; opacity:1; transform:translateY(-8px)}
   #garden-guests#garden-guests.gm-toasting .guest-move.gm-clinking{animation:none !important}
   #garden-guests.gm-group-photo.gm-gp-settle .guest-react{animation:none}
-  .gm-spark.gm-spark-go{animation:none; opacity:.9} /* a static glow, no flight */
+  .gm-spark.gm-spark-go .gm-spark-core{animation:none; opacity:.9} /* a static glow, no flight */
 }
 /* ══ GARDEN MOMENTS II — CAKE CUTTING · BOUQUET TOSS · CHAIR-LIFT HORA ═════════════
    Three scripted garden beats, modelled on the first dance (a one-shot state class on
@@ -40188,6 +40189,15 @@ var ABANDONED_CALL_MS = 30000;
     { id: "python", labelKey: "app_python", glyph: ">>>", tile: "#306998", color: "#ffd43b", mono: true, glyphSize: "3.5", open: function () { openPython(); } },
     { id: "linux", icon: "linux", labelKey: "app_linux", glyph: "🐧", tile: "#fdfbf6", glyphSize: "5.2", open: function () { openLinux(); } }
   ];
+  window.__chatMonitorApps = function () {
+    var dict = T[document.documentElement.lang] || T.en;
+    var apps = DESKTOP_APPS.map(function (app) {
+      return { id: app.id, label: dict[app.labelKey] || T.en[app.labelKey] || app.id, access: "desktop" };
+    });
+    // Weather deliberately has no desktop tile; Edmonton's menu-bar readout is its entry point.
+    apps.push({ id: "weather", label: dict.app_weather || T.en.app_weather || "weather", access: "toolbar" });
+    return apps;
+  };
   var dock = document.getElementById("monitor-desktop-dock");
   var dockGlyphEls = {}; // per-app glyph element, for tiles that show live state
   var dockCells = {};
@@ -44119,12 +44129,19 @@ var ABANDONED_CALL_MS = 30000;
   }
   function chatRetrievedKnowledge(message) {
     var q = chatFold(message), apps = {};
+    var contacts = window.__chatPeopleKnowledge ? window.__chatPeopleKnowledge() : [];
+    var namedPerson = contacts.some(function (person) { return person && person.name && q.indexOf(chatFold(person.name)) !== -1; });
     if (/(calendar|event|wedding|when|date|holiday|occasion|meteor|bbq|barbecue|cookout|brunch|kalend|svatb|kdy|datum|udalost|gril|تقویم|عروسی|تاریخ|کباب)/.test(q) && window.__chatCalendarKnowledge) apps.calendar = window.__chatCalendarKnowledge();
     if (/(photo|album|picture|aspen|fot|obraz|عکس)/.test(q)) apps.album = chatAlbumKnowledge();
     if (/(tattoo|ink|artist|design|tetov|خالکوب)/.test(q) && window.__chatTattooKnowledge) apps.tattoos = window.__chatTattooKnowledge();
     if (/(note|post-?it|love letter|poznam|یادداشت)/.test(q) && window.__chatAuthoredNotes) apps.notes = window.__chatAuthoredNotes();
     if (/(cocktail|drink|recipe|orange cookie|koktejl|napoj|recept|نوشیدنی|کوکتل|دستور)/.test(q) && window.__cocktailData) apps.cocktails = window.__cocktailData();
     if (/(currency|exchange|rate|cad|czk|usd|eur|mena|kurz|ارز|نرخ)/.test(q) && window.__currencyKnowledge) apps.currency = window.__currencyKnowledge();
+    if (/(mail|email|inbox|letter|posta|dorucen|نامه|ایمیل)/.test(q) && window.__chatMailKnowledge) apps.mail = window.__chatMailKnowledge();
+    if (/(messages?|texts?|thread|texted|said|zprav|rekl|پیام|گفت)/.test(q) && window.__chatMessagesKnowledge) apps.messages = window.__chatMessagesKnowledge();
+    if (/(phrase|phrasebook|translate|translation|czech|cesk|preklad|fraz|عبارت|ترجمه|چک)/.test(q) && window.__chatPhrasebookKnowledge) apps.phrasebook = window.__chatPhrasebookKnowledge();
+    if (namedPerson || /(who is|who's|whose|guest|people|person|friend|family|relationship|fun fact|kdo je|host|rodin|vztah|zajimavost|مهمان|کیست|خانواده|رابطه)/.test(q)) apps.contacts = contacts;
+    if (/(apps?|applications?|programs?|on the phone|on the computer|aplikac|programy|برنامه)/.test(q) && window.__chatAppCatalog) apps.catalog = window.__chatAppCatalog();
     return apps;
   }
   window.__chatContext = function (message) {
@@ -44168,7 +44185,7 @@ var ABANDONED_CALL_MS = 30000;
       party: !!window.__gardenPartyOn,
       party_elapsed_seconds: window.__gardenPartyOn && window.__partyStartedAt ? Math.max(0, Math.floor((Date.now() - window.__partyStartedAt) / 1000)) : 0,
       bbq: !!(window.__partyBBQOn && window.__partyBBQOn()),
-      daylight: !(stage && stage.classList.contains("dusk")),
+      daylight: !(balcony && balcony.classList.contains("dusk")),
       time: String(Math.floor(mins / 60) % 24).padStart(2, "0") + ":" + String(mins % 60).padStart(2, "0"),
       date: now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0"),
       active_occasion: typeof window.__isOccasionDate === "function" ? window.__isOccasionDate() : null,
@@ -68846,16 +68863,18 @@ function spawnDustMote(container) {
       var xs = onLeft ? SPARK_LEFT : SPARK_RIGHT;
       var bx = xs[Math.floor(Math.random() * xs.length)] + (Math.random() * 10 - 5);
       var by = 198 + Math.random() * 46; // shoulder → hand height
-      var s = document.createElementNS(svgNS, "path");
+      var s = document.createElementNS(svgNS, "g");
       s.setAttribute("class", "gm-spark");
-      s.setAttribute("d", SPARK_STAR);
-      s.setAttribute("fill", SPARK_COLORS[Math.floor(Math.random() * SPARK_COLORS.length)]);
-      // pivot on the spark's OWN (x,y) in view-box coords (transform-box already fill-box; this places it)
       var scl = (0.5 + Math.random() * 0.7).toFixed(2);
       s.setAttribute("transform", "translate(" + bx.toFixed(1) + " " + by.toFixed(1) + ") scale(" + scl + ")");
       s.style.setProperty("--gm-spark-dx", ((Math.random() * 2 - 1) * 10).toFixed(1) + "px");
       s.style.setProperty("--gm-spark-dur", (900 + Math.random() * 500).toFixed(0) + "ms");
-      s.addEventListener("animationend", function () { s.classList.remove("gm-spark-go"); if (s.parentNode) s.parentNode.removeChild(s); }); // SELF-CLEAN (drop the one-shot class, then the node)
+      var core = document.createElementNS(svgNS, "path");
+      core.setAttribute("class", "gm-spark-core");
+      core.setAttribute("d", SPARK_STAR);
+      core.setAttribute("fill", SPARK_COLORS[Math.floor(Math.random() * SPARK_COLORS.length)]);
+      core.addEventListener("animationend", function () { s.classList.remove("gm-spark-go"); if (s.parentNode) s.parentNode.removeChild(s); }); // SELF-CLEAN (drop the one-shot class, then the node)
+      s.appendChild(core);
       group.appendChild(s);
       // kick the flicker on the next frame so the animation runs
       requestAnimationFrame(function () { s.classList.add("gm-spark-go"); });
@@ -68891,10 +68910,13 @@ function spawnDustMote(container) {
     function spawnSparkStatic(i) { // reduced-motion: place a still glow, no animation
       var xs = (i % 2 === 0) ? SPARK_LEFT : SPARK_RIGHT;
       var bx = xs[Math.floor(i / 2) % xs.length], by = 210;
-      var s = document.createElementNS(svgNS, "path");
+      var s = document.createElementNS(svgNS, "g");
       s.setAttribute("class", "gm-spark gm-spark-go");
-      s.setAttribute("d", SPARK_STAR); s.setAttribute("fill", "#ffe08a");
       s.setAttribute("transform", "translate(" + bx + " " + by + ") scale(0.9)");
+      var core = document.createElementNS(svgNS, "path");
+      core.setAttribute("class", "gm-spark-core");
+      core.setAttribute("d", SPARK_STAR); core.setAttribute("fill", "#ffe08a");
+      s.appendChild(core);
       group.appendChild(s);
     }
     window.__startSparklerSendoff = startSparklers;

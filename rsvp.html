@@ -3251,6 +3251,7 @@ html.is-webkit .dock-app:hover .dock-tile{transform:none; box-shadow:inset 0 0 0
 #monitor-dock-search.active{opacity:1;visibility:visible}
 .desk-search-bg{fill:#fffdf8;stroke:#8e3a4a;stroke-width:.45}
 .desk-search-text{fill:#453a31;font-family:sans-serif;font-size:3px;letter-spacing:0}
+.desk-search-completion{fill:#9a9288}
 .desk-search-text.no-match{fill:#8e3a4a}
 .desk-bar-text{fill:#f8f5ec; font-family:sans-serif; font-size:3.2px; letter-spacing:0.2px}
 .desk-brand{cursor:pointer}
@@ -40006,7 +40007,7 @@ var ABANDONED_CALL_MS = 30000;
   var dockGlyphEls = {}; // per-app glyph element, for tiles that show live state
   var dockCells = {};
   var dockGrid = null, dockSearch = null, dockSearchText = null;
-  var dockSearchQuery = "", dockSearchBest = null;
+  var dockSearchQuery = "", dockSearchBest = null, dockSearchCompletion = "";
   var tileCamVideo = null, tileCamGroup = null;
   // stamped whenever a dock icon swaps the screen layer; the monitor's dblclick swap and
   // the photobooth's consent button both ignore inputs landing within this grace window,
@@ -40227,7 +40228,7 @@ var ABANDONED_CALL_MS = 30000;
     mkEl("rect", { x: 254.5, y: 154.4, width: 123, height: 4.7, rx: 1.1, "class": "desk-search-bg" }, dockSearch);
     var searchGlyph = mkEl("text", { x: 257, y: 157.9, "class": "desk-search-text", "aria-hidden": "true" }, dockSearch);
     searchGlyph.textContent = "⌕";
-    dockSearchText = mkEl("text", { x: 262, y: 157.9, "class": "desk-search-text" }, dockSearch);
+    dockSearchText = mkEl("text", { id: "monitor-dock-search-text", x: 262, y: 157.9, "class": "desk-search-text" }, dockSearch);
   }
   function normalizeDockSearch(value) {
     var s = String(value == null ? "" : value).toLocaleLowerCase();
@@ -40238,41 +40239,54 @@ var ABANDONED_CALL_MS = 30000;
     var lang = document.documentElement.lang;
     return (T[lang] && T[lang][app.labelKey]) || T.en[app.labelKey] || app.id;
   }
-  function dockMatchScore(app, query) {
+  function dockAppMatch(app, query) {
     var names = [app.id, dockAppLabel(app), (T.en && T.en[app.labelKey]) || ""];
-    var best = Infinity;
+    var best = Infinity, completion = "";
     for (var i = 0; i < names.length; i++) {
-      var name = normalizeDockSearch(names[i]);
+      var rawName = String(names[i] || ""), name = normalizeDockSearch(rawName), score = Infinity;
       if (!name) continue;
-      if (name === query) best = Math.min(best, i);
-      else if (name.indexOf(query) === 0) best = Math.min(best, 10 + name.length - query.length + i);
+      if (name === query) score = i;
+      else if (name.indexOf(query) === 0) score = 10 + name.length - query.length + i;
       else {
         var at = name.indexOf(query);
-        if (at >= 0) best = Math.min(best, 100 + at * 4 + name.length - query.length + i);
+        if (at >= 0) score = 100 + at * 4 + name.length - query.length + i;
+      }
+      if (score < best) {
+        best = score;
+        completion = name.indexOf(query) === 0 ? rawName.slice(query.length) : "";
       }
     }
-    return best;
+    return { score: best, completion: completion };
   }
   function paintDockSearch() {
     if (!dockGrid || !dockSearch || !dockSearchText) return;
     var query = normalizeDockSearch(dockSearchQuery), bestScore = Infinity;
-    dockSearchBest = null;
+    dockSearchBest = null; dockSearchCompletion = "";
     for (var i = 0; i < DESKTOP_APPS.length; i++) {
-      var app = DESKTOP_APPS[i], score = dockMatchScore(app, query);
+      var app = DESKTOP_APPS[i], match = dockAppMatch(app, query);
       var cell = dockCells[app.id];
       if (cell) cell.classList.remove("search-match");
-      if (query && score < bestScore) { bestScore = score; dockSearchBest = app; }
+      if (query && match.score < bestScore) { bestScore = match.score; dockSearchBest = app; dockSearchCompletion = match.completion; }
     }
     if (!query) { clearDockSearch(); return; }
     if (dockSearchBest && dockCells[dockSearchBest.id]) dockCells[dockSearchBest.id].classList.add("search-match");
     dockGrid.classList.add("searching");
     dockSearch.classList.add("active");
     dockSearchText.classList.toggle("no-match", !dockSearchBest);
-    dockSearchText.textContent = dockSearchQuery + (dockSearchBest ? "  ·  " + dockAppLabel(dockSearchBest) : "  ·  —");
+    dockSearchText.textContent = "";
+    var typed = document.createElementNS(SVGNS, "tspan");
+    typed.textContent = dockSearchQuery;
+    dockSearchText.appendChild(typed);
+    if (dockSearchBest && dockSearchCompletion) {
+      var completion = document.createElementNS(SVGNS, "tspan");
+      completion.setAttribute("class", "desk-search-completion");
+      completion.textContent = dockSearchCompletion;
+      dockSearchText.appendChild(completion);
+    }
   }
   function clearDockSearch() {
     var hadQuery = !!dockSearchQuery;
-    dockSearchQuery = ""; dockSearchBest = null;
+    dockSearchQuery = ""; dockSearchBest = null; dockSearchCompletion = "";
     if (dockGrid) dockGrid.classList.remove("searching");
     if (dockSearch) dockSearch.classList.remove("active");
     if (dockSearchText) { dockSearchText.textContent = ""; dockSearchText.classList.remove("no-match"); }
@@ -40304,7 +40318,7 @@ var ABANDONED_CALL_MS = 30000;
       e.preventDefault(); e.stopImmediatePropagation();
       dockSearchQuery = dockSearchQuery.slice(0, -1); paintDockSearch(); return;
     }
-    if (e.key === "Enter") {
+    if (e.key === "Enter" || e.key === "Tab") {
       if (!active) return;
       e.preventDefault(); e.stopImmediatePropagation();
       var app = dockSearchBest;
@@ -40328,7 +40342,7 @@ var ABANDONED_CALL_MS = 30000;
   // Search is a keyboard mode, not persistent desktop state. Any pointer gesture hands
   // control back immediately; a later return to the desktop always starts clean.
   document.addEventListener("pointerdown", function () { if (dockSearchQuery) clearDockSearch(); }, true);
-  window.__monitorDockSearch = function () { return { query: dockSearchQuery, match: dockSearchBest && dockSearchBest.id }; };
+  window.__monitorDockSearch = function () { return { query: dockSearchQuery, match: dockSearchBest && dockSearchBest.id, completion: dockSearchCompletion }; };
   // ── CONSOLE APP ─────────────────────────────────────────────────────────────────
   // A real (tiny) JavaScript REPL: input line + scrollback, evaluated with indirect
   // eval in global scope — exactly the blast radius of the visitor's own devtools

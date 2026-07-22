@@ -62,8 +62,17 @@ var harness = String.raw`<script>
   if (inviteId && window.__runMsgAction) window.__runMsgAction(inviteId);
   check("accepting the invitation deliberately restarts it", !!window.__gardenPartyOn);
 
+  window.__advancePartyLifecycle(150);
+  window.__schedulePartyFinale(5, "lastsong");
+  var extended = window.__extendPartyLifecycle && window.__extendPartyLifecycle();
+  var extendedState = window.__partyLifecycleState();
+  check("requesting more party cancels a pending finale and grants a fresh interval", extended && extendedState.attended === 0 && !extendedState.cue && extendedState.finaleAt === null && extendedState.finaleReason === null && window.__gardenPartyOn, extendedState);
+
   if (window.goToStage) window.goToStage("garden");
   if (window.__summonGuests) window.__summonGuests();
+  if (window.__finishPartyLifecycle) window.__finishPartyLifecycle("test");
+  var extendedWalkout = window.__extendPartyLifecycle && window.__extendPartyLifecycle();
+  check("requesting more party cancels an in-progress guest walk-out", extendedWalkout && window.__gardenPartyOn && !(window.__partyWindingDown && window.__partyWindingDown()) && window.__partyLifecycleState().attended === 0);
   var cakeStarted = window.__startCakeCutting && window.__startCakeCutting();
   if (window.__completeCakeCutting) window.__completeCakeCutting();
   check("natural cake completion starts the graceful early finale", cakeStarted && window.__partyWindingDown && window.__partyWindingDown());

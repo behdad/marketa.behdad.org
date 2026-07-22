@@ -40783,6 +40783,10 @@ var ABANDONED_CALL_MS = 30000;
       return { changed: changed, dance: window.__partyDance || null };
     } });
     register({ id: "party.set", kind: "action", risk: "ambient", args: { on: { type: "boolean", required: true } }, run: function (args) { if (window.party) window.party(args.on); return { on: !!window.__gardenPartyOn }; } });
+    register({ id: "party.extend", kind: "action", risk: "ambient", available: function () { return !!window.__gardenPartyOn; }, run: function () {
+      var extended = !!(window.__extendPartyLifecycle && window.__extendPartyLifecycle());
+      return { changed: extended, extended: extended, on: !!window.__gardenPartyOn };
+    } });
     register({ id: "bbq.set", kind: "action", risk: "ambient", args: { on: { type: "boolean", required: true } }, run: function (args) { if (window.bbq) window.bbq(args.on); return { on: !!(window.bbq && window.bbq()) }; } });
     register({ id: "coffee.make", kind: "action", risk: "ambient", run: function () {
       if (window.__gardenPartyOn) {
@@ -66734,6 +66738,18 @@ function spawnDustMote(container) {
     window.__schedulePartyFinale = function (seconds, reason) {
       if (!window.__gardenPartyOn || finishing) return false;
       finaleAt = attendedSeconds + Math.max(1, +seconds || 1); finaleReason = reason || "finale";
+      return true;
+    };
+    window.__extendPartyLifecycle = function () {
+      if (!window.__gardenPartyOn) return false;
+      // During the visible walk-out, setPartyMode(true) owns restoring the crowd and
+      // calls startFresh through __restartPartyLifecycle. Before that point, reset the
+      // attended clock and discard any accepted last-song/dance finale directly.
+      if (window.__partyWindingDown && window.__partyWindingDown()) {
+        if (window.__setPartyMode) window.__setPartyMode(true);
+        return !!window.__gardenPartyOn;
+      }
+      startFresh();
       return true;
     };
     window.__restartPartyLifecycle = startFresh; // toggling back on during the walk-out starts a fresh attended stint

@@ -41374,7 +41374,17 @@ var ABANDONED_CALL_MS = 30000;
       return { moment: args.moment, scheduled: true };
     } });
     register({ id: "call.incoming.trigger", kind: "action", risk: "scene", args: { caller: { type: "string", enum: ["madla", "prague"], required: true } }, available: function () { return !callBusy() && typeof window.__madlaRing === "function" && typeof window.__pragueRing === "function"; }, run: function (args) {
-      if (phoneState().open && window.__closePhoneModal) window.__closePhoneModal(true);
+      // The phone close animation leaves its modal mounted for 220ms. Queue the ring after
+      // that teardown; otherwise ringCall() correctly sees a busy phone and returns false.
+      if (phoneState().open && window.__closePhoneModal) {
+        window.__closePhoneModal(true);
+        setTimeout(function () {
+          if (callBusy()) return;
+          var delayedRang = args.caller === "madla" ? window.__madlaRing() : window.__pragueRing();
+          if (delayedRang) syncCallState("incoming", "ui");
+        }, 260);
+        return { changed: true, caller: args.caller, ringing: false, queued: true };
+      }
       var rang = args.caller === "madla" ? window.__madlaRing() : window.__pragueRing();
       if (rang) syncCallState("incoming", "ui");
       return { changed: !!rang, caller: args.caller, ringing: !!rang };

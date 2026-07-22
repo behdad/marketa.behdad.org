@@ -205,6 +205,20 @@ let actionCase = await normalizedPrivateReply(
 );
 check(actionCase.status === 200 && actionCase.reply.action?.id === "app.open" && actionCase.reply.action?.args?.app === "messages", "a valid currently available Charlie action is returned", actionCase);
 
+const fullActionList = [
+  "app.open", "bar.cocktail.make", "bar.mixer.start", "bbq.set", "call.incoming.trigger", "call.video.start",
+  "coffee.make", "daylight.set", "fishu.speak", "minigame.start", "music.pause", "music.play", "music.previous",
+  "music.skip", "music.track.play", "party.dance.request", "party.dj.set", "party.extend", "party.moment.start",
+  "party.music.next", "party.set", "photo.take", "projector.set", "room.go", "roster.set", "scene.activity.start",
+  "trip.start", "not.real",
+];
+actionCase = await normalizedPrivateReply(
+  JSON.stringify({ text: "Tap below to start the acid trip.", action: { id: "trip.start", args: { variant: "acid" } } }),
+  { phase: 2, party: false, trip: { active: false, variant: null }, actions_available: fullActionList },
+  "can we do some acid?",
+);
+check(actionCase.reply.action?.id === "trip.start" && actionCase.reply.action.args.variant === "acid" && captures.at(-1).body.instructions.includes('"trip.start"') && !captures.at(-1).body.instructions.includes('"not.real"'), "all canonical actions survive sanitization even when trip.start sorts after the former 24-item cap", actionCase);
+
 actionCase = await normalizedPrivateReply(
   JSON.stringify({ text: "No scripts.", action: { id: "javascript.eval", args: { code: "party()" } } }),
   { actions_available: ["javascript.eval"] },

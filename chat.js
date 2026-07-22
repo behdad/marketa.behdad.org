@@ -219,7 +219,8 @@ function cleanInstructions(value) {
 
 function cleanAvailableActions(value) {
   if (!Array.isArray(value)) return [];
-  return [...new Set(value.slice(0, 24).map((item) => cleanText(item, 64)).filter((id) => Object.hasOwn(ACTION_SPECS, id)))];
+  const advertised = new Set(value.map((item) => cleanText(item, 64)).filter(Boolean));
+  return Object.keys(ACTION_SPECS).filter((id) => advertised.has(id));
 }
 
 function cleanPlaytime(value) {

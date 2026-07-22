@@ -3244,6 +3244,14 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 /* ...but ANY transform still makes a RenderLayer → the hovered tile blinks out under the monitor
    g-scale on WebKit. Drop the scale there and give non-layer hover feedback via box-shadow instead. */
 html.is-webkit .dock-app:hover .dock-tile{transform:none; box-shadow:inset 0 0 0 0.4px rgba(0,0,0,0.18), 0 0 0 0.6px rgba(255,253,248,0.9)}
+.dock-grid.searching .dock-app{opacity:.28}
+.dock-grid.searching .dock-app.search-match{opacity:1}
+.dock-app.search-match .dock-tile{box-shadow:inset 0 0 0 .7px #8e3a4a,0 0 0 .7px rgba(255,253,248,.95)}
+#monitor-dock-search{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s ease}
+#monitor-dock-search.active{opacity:1;visibility:visible}
+.desk-search-bg{fill:#fffdf8;stroke:#8e3a4a;stroke-width:.45}
+.desk-search-text{fill:#453a31;font-family:sans-serif;font-size:3px;letter-spacing:0}
+.desk-search-text.no-match{fill:#8e3a4a}
 .desk-bar-text{fill:#f8f5ec; font-family:sans-serif; font-size:3.2px; letter-spacing:0.2px}
 .desk-brand{cursor:pointer}
 .desk-brand:hover .desk-bar-text{fill:#d9a6a6}
@@ -39984,6 +39992,9 @@ var ABANDONED_CALL_MS = 30000;
   ];
   var dock = document.getElementById("monitor-desktop-dock");
   var dockGlyphEls = {}; // per-app glyph element, for tiles that show live state
+  var dockCells = {};
+  var dockGrid = null, dockSearch = null, dockSearchText = null;
+  var dockSearchQuery = "", dockSearchBest = null;
   var tileCamVideo = null, tileCamGroup = null;
   // stamped whenever a dock icon swaps the screen layer; the monitor's dblclick swap and
   // the photobooth's consent button both ignore inputs landing within this grace window,
@@ -40078,7 +40089,7 @@ var ABANDONED_CALL_MS = 30000;
     // app grid: one foreignObject filling the screen below the menu bar; .dock-grid
     // lays the tiles out 4-across and grows a thin right scrollbar when they overflow
     var dockFo = mkEl("foreignObject", { x: 254, y: 160.5, width: 124, height: 35.5 }, dock);
-    var dockGrid = document.createElement("div");
+    dockGrid = document.createElement("div");
     dockGrid.className = "dock-grid";
     dockFo.appendChild(dockGrid);
     // grid scrolling stays in the grid — never pans the room or the page underneath
@@ -40088,6 +40099,7 @@ var ABANDONED_CALL_MS = 30000;
       var cell = document.createElement("div");
       cell.className = "dock-app dock-app-" + app.id;
       cell.id = "monitor-dock-" + app.id; // stable handle for the cinematic's ghost-cursor taps (dock tiles are otherwise class-only)
+      dockCells[app.id] = cell;
       var tile = document.createElement("div");
       tile.className = "dock-tile";
       tile.style.background = app.tile;
@@ -40192,11 +40204,104 @@ var ABANDONED_CALL_MS = 30000;
       var lang = document.documentElement.lang;
       label.textContent = (T[lang] && T[lang][app.labelKey]) || T.en[app.labelKey] || "";
       cell.appendChild(label);
-      cell.addEventListener("click", function (e) { e.stopPropagation(); appOpenTs = Date.now(); app.open(); });
+      cell.addEventListener("click", function (e) { e.stopPropagation(); clearDockSearch(); appOpenTs = Date.now(); app.open(); });
       cell.addEventListener("dblclick", function (e) { e.stopPropagation(); });
       dockGrid.appendChild(cell);
     });
+    // Typing while zoomed onto the bare desktop temporarily replaces the menu bar with
+    // an app finder. It is SVG text rather than a real input: the global capture handler
+    // owns the short query, so the field cannot steal focus from an app after it opens.
+    dockSearch = mkEl("g", { id: "monitor-dock-search" }, dock);
+    mkEl("rect", { x: 254.5, y: 154.4, width: 123, height: 4.7, rx: 1.1, "class": "desk-search-bg" }, dockSearch);
+    var searchGlyph = mkEl("text", { x: 257, y: 157.9, "class": "desk-search-text", "aria-hidden": "true" }, dockSearch);
+    searchGlyph.textContent = "⌕";
+    dockSearchText = mkEl("text", { x: 262, y: 157.9, "class": "desk-search-text" }, dockSearch);
   }
+  function normalizeDockSearch(value) {
+    var s = String(value == null ? "" : value).toLocaleLowerCase();
+    try { s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); } catch (e) {}
+    return s.trim();
+  }
+  function dockAppLabel(app) {
+    var lang = document.documentElement.lang;
+    return (T[lang] && T[lang][app.labelKey]) || T.en[app.labelKey] || app.id;
+  }
+  function dockMatchScore(app, query) {
+    var names = [app.id, dockAppLabel(app), (T.en && T.en[app.labelKey]) || ""];
+    var best = Infinity;
+    for (var i = 0; i < names.length; i++) {
+      var name = normalizeDockSearch(names[i]);
+      if (!name) continue;
+      if (name === query) best = Math.min(best, i);
+      else if (name.indexOf(query) === 0) best = Math.min(best, 10 + name.length - query.length + i);
+      else {
+        var at = name.indexOf(query);
+        if (at >= 0) best = Math.min(best, 100 + at * 4 + name.length - query.length + i);
+      }
+    }
+    return best;
+  }
+  function paintDockSearch() {
+    if (!dockGrid || !dockSearch || !dockSearchText) return;
+    var query = normalizeDockSearch(dockSearchQuery), bestScore = Infinity;
+    dockSearchBest = null;
+    for (var i = 0; i < DESKTOP_APPS.length; i++) {
+      var app = DESKTOP_APPS[i], score = dockMatchScore(app, query);
+      var cell = dockCells[app.id];
+      if (cell) cell.classList.remove("search-match");
+      if (query && score < bestScore) { bestScore = score; dockSearchBest = app; }
+    }
+    if (!query) { clearDockSearch(); return; }
+    if (dockSearchBest && dockCells[dockSearchBest.id]) dockCells[dockSearchBest.id].classList.add("search-match");
+    dockGrid.classList.add("searching");
+    dockSearch.classList.add("active");
+    dockSearchText.classList.toggle("no-match", !dockSearchBest);
+    dockSearchText.textContent = dockSearchQuery + (dockSearchBest ? "  ·  " + dockAppLabel(dockSearchBest) : "  ·  —");
+  }
+  function clearDockSearch() {
+    dockSearchQuery = ""; dockSearchBest = null;
+    if (dockGrid) dockGrid.classList.remove("searching");
+    if (dockSearch) dockSearch.classList.remove("active");
+    if (dockSearchText) { dockSearchText.textContent = ""; dockSearchText.classList.remove("no-match"); }
+    for (var id in dockCells) dockCells[id].classList.remove("search-match");
+  }
+  function dockSearchReady() {
+    if (!dock || !window.__monitorZoomed || !window.__monitorZoomed()) return false;
+    if (window.currentStageName !== "office" || !monitor.classList.contains("show-caps")) return false;
+    if (window.phone && window.phone()) return false;
+    try { return getComputedStyle(dock).visibility === "visible"; } catch (e) { return false; }
+  }
+  window.addEventListener("keydown", function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || e.isComposing) return;
+    var active = !!dockSearchQuery;
+    if (!active && !dockSearchReady()) return;
+    if (e.key === "Escape" || e.key === "Esc") {
+      if (!active) return;
+      e.preventDefault(); e.stopImmediatePropagation(); clearDockSearch(); return;
+    }
+    if (e.key === "Backspace") {
+      if (!active) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      dockSearchQuery = dockSearchQuery.slice(0, -1); paintDockSearch(); return;
+    }
+    if (e.key === "Enter") {
+      if (!active) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      var app = dockSearchBest;
+      clearDockSearch();
+      if (app) { appOpenTs = Date.now(); app.open(); }
+      return;
+    }
+    var isLetterOrDigit = e.key && e.key.length === 1 && (/\d/.test(e.key) || e.key.toLocaleLowerCase() !== e.key.toLocaleUpperCase());
+    if (!isLetterOrDigit || !dockSearchReady()) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    if (dockSearchQuery.length < 28) dockSearchQuery += e.key;
+    paintDockSearch();
+  }, true);
+  // Search is a keyboard mode, not persistent desktop state. Any pointer gesture hands
+  // control back immediately; a later return to the desktop always starts clean.
+  document.addEventListener("pointerdown", function () { if (dockSearchQuery) clearDockSearch(); }, true);
+  window.__monitorDockSearch = function () { return { query: dockSearchQuery, match: dockSearchBest && dockSearchBest.id }; };
   // ── CONSOLE APP ─────────────────────────────────────────────────────────────────
   // A real (tiny) JavaScript REPL: input line + scrollback, evaluated with indirect
   // eval in global scope — exactly the blast radius of the visitor's own devtools

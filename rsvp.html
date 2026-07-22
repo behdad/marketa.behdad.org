@@ -43582,6 +43582,19 @@ var ABANDONED_CALL_MS = 30000;
     renderChat();
     pumpChatQueue();
   }
+  function cancelQueuedChatMessages() {
+    var hasDraft = !!(chatInput && chatInput.value);
+    if (!hasDraft && !chatQueue.length) return false;
+    if (chatQueue.length) {
+      var queued = chatQueue.slice();
+      chatHistory = chatHistory.filter(function (message) { return queued.indexOf(message) < 0; });
+      chatQueue = [];
+    }
+    if (chatInput) chatInput.value = "";
+    chatError = "";
+    renderChat();
+    return true;
+  }
   function openChat() {
     if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-chat")) return;
     stopSaver();
@@ -43616,7 +43629,13 @@ var ABANDONED_CALL_MS = 30000;
   }
   if (chatInput) {
     chatInput.addEventListener("input", renderChat);
-    chatInput.addEventListener("keydown", function (e) { if (e.key !== "Escape") e.stopPropagation(); });
+    chatInput.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" || e.key === "Esc") {
+        if (cancelQueuedChatMessages()) { e.preventDefault(); e.stopPropagation(); }
+        return;
+      }
+      e.stopPropagation();
+    });
   }
   if (chatForm) chatForm.addEventListener("submit", function (e) { e.preventDefault(); e.stopPropagation(); submitChat(); });
   if (chatCloseBtn) {

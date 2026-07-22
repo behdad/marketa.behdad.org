@@ -49,8 +49,11 @@ assert(/consoleTabComplete\(dtIn\)/.test(html), "the drop-down Tab handler reuse
 
 // ── 3. The panel HTML + reset hook exist ────────────────────────────────────────────────
 assert(/<div id="dropterm"[\s\S]*?id="dropterm-out"[\s\S]*?id="dropterm-in"/.test(html), "drop-down panel HTML (#dropterm / -out / -in) is present in .hunt-viewport");
+assert(/id="dropterm-fps"[^>]*>FPS --</.test(html), "drop-down panel includes a top-corner FPS readout");
 assert(/#dropterm\{[\s\S]*?transform:translateY\(-102%\)/.test(html), "#dropterm slides in from the top (transform:translateY off-screen by default)");
 assert(/#dropterm\.open\{transform:translateY\(0\)/.test(html), "#dropterm.open slides down into view");
+assert(/function startDropTermFps\(\)[\s\S]*?elapsed >= 750/.test(html), "FPS readout uses a rolling requestAnimationFrame sample");
+assert(/function openDropTerm\(\)[\s\S]*?startDropTermFps\(\)/.test(html) && /function closeDropTerm\(\)[\s\S]*?stopDropTermFps\(\)/.test(html), "FPS sampling starts and stops with the drop-down panel");
 assert(/window\.__resetDropTerm/.test(html) && /if \(window\.__resetDropTerm\) window\.__resetDropTerm\(\);/.test(html), "the game reset wipes the drop-down session (__resetDropTerm wired into reset)");
 
 // ── 4. Functional: extract the REAL drop-down block + consolePrint and drive it ──────────
@@ -78,12 +81,14 @@ assert(/window\.__resetDropTerm/.test(html) && /if \(window\.__resetDropTerm\) w
   }
 
   var dropterm = new El("dropterm"); dropterm.classList = clsList(dropterm);
+  var dFps = new El("dropterm-fps");
   var dOut = new El("dropterm-out");
   var dIn = new El("dropterm-in");
   var monOut = new El("monitor-console-out"); // the monitor console's scrollback — must NOT receive the drop-down's output
 
-  var byId = { "dropterm": dropterm, "dropterm-out": dOut, "dropterm-in": dIn, "monitor-console-out": monOut };
+  var byId = { "dropterm": dropterm, "dropterm-fps": dFps, "dropterm-out": dOut, "dropterm-in": dIn, "monitor-console-out": monOut };
   var timers = [];
+  var rafs = {}, nextRaf = 1;
   var sandbox = {
     consoleOut: monOut,          // consolePrint's default target = the monitor console
     consoleHist: [],
@@ -93,7 +98,10 @@ assert(/window\.__resetDropTerm/.test(html) && /if \(window\.__resetDropTerm\) w
       addEventListener: function () {},
       createElement: function () { return new El(); }
     },
-    window: {},
+    window: {
+      requestAnimationFrame: function (fn) { var id = nextRaf++; rafs[id] = fn; return id; },
+      cancelAnimationFrame: function (id) { delete rafs[id]; }
+    },
     setTimeout: function (fn) { timers.push(fn); return 1; },
     getSelection: function () { return { isCollapsed: true }; },
     consoleT: function () { return "welcome to the loft console"; }
@@ -149,10 +157,17 @@ assert(/window\.__resetDropTerm/.test(html) && /if \(window\.__resetDropTerm\) w
   // (1) backtick toggle: open, then close
   win.__toggleDropTerm();
   assert(dropterm.classList.contains("open"), "backtick (toggle) OPENS the drop-down");
+  assert(win.__dropTermFpsRunning(), "opening starts the FPS sampler");
+  for (var frame = 1; frame <= 50; frame++) {
+    var ids = Object.keys(rafs), id = ids[0], fn = rafs[id]; delete rafs[id];
+    fn(frame * 16.67);
+  }
+  assert(/^FPS (59|60|61)$/.test(dFps._text), "the rolling sampler reports rendered-frame FPS", dFps._text);
   var welcomedInDrop = dOut.childNodes.length === 1 && dOut.childNodes[0]._text === "welcome to the loft console";
   assert(welcomedInDrop, "opening prints the welcome into the DROP-DOWN scrollback (not the monitor)", "monitor lines=" + monOut.childNodes.length);
   win.__toggleDropTerm();
   assert(!dropterm.classList.contains("open"), "backtick (toggle) again CLOSES the drop-down");
+  assert(!win.__dropTermFpsRunning() && Object.keys(rafs).length === 0, "closing cancels the FPS sampler");
 
   // (2) run a command through the shared interpreter via the drop-down input keydown
   win.__toggleDropTerm(); // open again

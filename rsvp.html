@@ -3396,8 +3396,13 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 /* the shadow rides .open only: parked at -102% it would still cast ~24px DOWN at z60, banding
    the top of the scene (and anything overlapping it) with a grey wash. */
 #dropterm.open{transform:translateY(0); pointer-events:auto; visibility:visible; transition:transform .22s cubic-bezier(.4,.9,.3,1); box-shadow:0 6px 18px rgba(0,0,0,.38)}
+#dropterm-fps{
+  position:absolute; top:7px; right:12px; z-index:1; pointer-events:none;
+  color:#9fb79f; font-size:11px; line-height:1; font-variant-numeric:tabular-nums;
+  letter-spacing:0; text-shadow:0 1px 1px #100d0a;
+}
 #dropterm #dropterm-out, html.is-webkit #dropterm #dropterm-out{
-  flex:1 1 auto; min-height:0; height:auto; padding:8px 12px 4px;
+  flex:1 1 auto; min-height:0; height:auto; padding:24px 12px 4px;
   overflow-y:auto; white-space:pre-wrap; word-break:break-word;
   display:block; justify-content:normal; /* undo the WebKit .console-out flex-end clamp (that's for the 12-line monitor scrollback, not this full-size pane) */
   scrollbar-width:thin; scrollbar-color:rgba(233,226,211,.4) transparent;
@@ -24414,6 +24419,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
          foreignObject caveats apply. It reuses the shared command interpreter — see
          consoleRun(line, ctx) / the DROP-DOWN TERMINAL block in the script. -->
     <div id="dropterm" aria-hidden="true" aria-label="Drop-down console">
+      <div id="dropterm-fps" aria-label="Rendered frames per second">FPS --</div>
       <div id="dropterm-out" class="console-out" role="log" aria-live="polite"></div>
       <div id="dropterm-row"><span class="console-ps" aria-hidden="true">&#10095;</span><input id="dropterm-in" class="console-in" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Console input"/></div>
     </div>
@@ -41185,7 +41191,9 @@ var ABANDONED_CALL_MS = 30000;
   var dtPanel = document.getElementById("dropterm");
   var dtOut   = document.getElementById("dropterm-out");
   var dtIn    = document.getElementById("dropterm-in");
+  var dtFps   = document.getElementById("dropterm-fps");
   var dtHist = [], dtHistIdx = 0, dtWelcomed = false;
+  var dtFpsRaf = null, dtFpsStarted = 0, dtFpsFrames = 0;
   var consoleTabDiscovered = false;
   var dtCtx = {
     out: dtOut, hist: dtHist, isMonitor: false,
@@ -41194,6 +41202,28 @@ var ABANDONED_CALL_MS = 30000;
     onQuit: function () { closeDropTerm(); }
   };
   function dtOpen() { return !!(dtPanel && dtPanel.classList.contains("open")); }
+  function stopDropTermFps() {
+    if (dtFpsRaf != null && window.cancelAnimationFrame) window.cancelAnimationFrame(dtFpsRaf);
+    dtFpsRaf = null; dtFpsStarted = 0; dtFpsFrames = 0;
+  }
+  function startDropTermFps() {
+    stopDropTermFps();
+    if (dtFps) dtFps.textContent = "FPS --";
+    if (!dtFps || !window.requestAnimationFrame || document.hidden || !dtOpen()) return;
+    function sample(now) {
+      dtFpsRaf = null;
+      if (!dtOpen() || document.hidden) return;
+      if (!dtFpsStarted) dtFpsStarted = now;
+      dtFpsFrames++;
+      var elapsed = now - dtFpsStarted;
+      if (elapsed >= 750) {
+        dtFps.textContent = "FPS " + Math.round(dtFpsFrames * 1000 / elapsed);
+        dtFpsStarted = now; dtFpsFrames = 0;
+      }
+      dtFpsRaf = window.requestAnimationFrame(sample);
+    }
+    dtFpsRaf = window.requestAnimationFrame(sample);
+  }
   function revealConsoleTab() {
     consoleTabDiscovered = true;
     var tab = document.getElementById("loft-console-hint");
@@ -41204,6 +41234,7 @@ var ABANDONED_CALL_MS = 30000;
     dtPanel.classList.add("open");
     dtPanel.setAttribute("aria-hidden", "false");
     if (!dtWelcomed) { dtWelcomed = true; var prev = activeConsoleOut; activeConsoleOut = dtOut; consolePrint(consoleT("console_welcome"), "console-dim"); activeConsoleOut = prev; }
+    startDropTermFps();
     if (dtIn) setTimeout(function () { try { dtIn.focus({ preventScroll: true }); } catch (e) {} }, 60);
     syncConsoleTab();
   }
@@ -41211,6 +41242,7 @@ var ABANDONED_CALL_MS = 30000;
     if (!dtPanel || !dtOpen()) return;
     dtPanel.classList.remove("open");
     dtPanel.setAttribute("aria-hidden", "true");
+    stopDropTermFps();
     if (dtIn) { try { dtIn.blur(); } catch (e) {} }
     syncConsoleTab();
   }
@@ -41238,8 +41270,13 @@ var ABANDONED_CALL_MS = 30000;
   window.__toggleDropTerm = toggleDropTerm;   // the backtick key calls this
   window.__closeDropTerm = closeDropTerm;     // Esc / other closers
   window.__dropTermOpen = dtOpen;
+  window.__dropTermFpsRunning = function () { return dtFpsRaf != null; };
   window.__revealConsoleTab = revealConsoleTab;
   window.__consoleTabDiscovered = function () { return consoleTabDiscovered; };
+  document.addEventListener("visibilitychange", function () {
+    if (!dtOpen()) return;
+    if (document.hidden) stopDropTermFps(); else startDropTermFps();
+  });
   if (dtIn) {
     dtIn.addEventListener("keydown", function (e) {
       e.stopPropagation(); // game shortcuts don't fire while typing here

@@ -4821,9 +4821,10 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .pm-msg-old-divider{color:var(--muted)} /* the boundary below the fresh block, above the older texts */
 .pm-msg-old-divider::before,.pm-msg-old-divider::after{background:var(--muted)}
 .pm-msg-empty{margin:auto; color:var(--muted); font-size:12px; text-align:center}
-.pm-msg-row{display:flex; flex-direction:column; align-items:flex-start; gap:1px; max-width:100%; cursor:pointer} /* tap → its place/app */
+.pm-msg-row{display:flex; flex-direction:column; align-items:flex-start; gap:1px; max-width:100%; cursor:default}
 .pm-msg-row:hover .pm-msg-bubble, .pm-msg-row:focus-visible .pm-msg-bubble{border-color:var(--soft)}
 .pm-msg-row:focus-visible{outline:none}
+.pm-msg-row.unread:not(.outgoing){cursor:pointer} /* the row itself only marks unread copy read */
 .pm-msg-row.unread .pm-msg-from{color:var(--ink)} /* unread: bolder sender + text until tapped */
 .pm-msg-row.unread .pm-msg-text{font-weight:600}
 .pm-msg-row.outgoing{align-items:flex-end; cursor:default}
@@ -4834,7 +4835,12 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .pm-msg-x{margin-left:auto; flex:0 0 auto; align-self:flex-start; background:none; border:none; color:var(--soft); font-size:12px; line-height:1; padding:2px 5px; cursor:pointer; opacity:.45; border-radius:6px; transition:opacity .15s ease, color .15s ease} /* dismiss one text */
 .pm-msg-x:hover, .pm-msg-x:focus-visible{opacity:1; color:var(--wine); outline:none}
 .pm-msg-from{font-size:10px; font-weight:600; color:var(--muted)}
+.pm-msg-line{display:flex; align-items:flex-end; gap:5px; width:100%; min-width:0}
+.pm-msg-row.outgoing .pm-msg-line{justify-content:flex-end}
 .pm-msg-bubble{background:var(--paper); border:1px solid var(--rule); border-radius:13px 13px 13px 3px; padding:5px 10px 6px; font-size:12.5px; line-height:1.34; color:var(--ink); max-width:88%; overflow-wrap:anywhere}
+.pm-msg-act{flex:none; width:28px; height:28px; padding:0; border:0; border-radius:50%; background:var(--wine); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(142,58,74,.28)}
+.pm-msg-act:hover,.pm-msg-act:focus-visible{background:#743143; outline:2px solid rgba(142,58,74,.25); outline-offset:1px}
+.pm-msg-act svg{width:15px; height:15px}
 .pm-msg-text{display:block}
 .pm-msg-quote{display:block; width:100%; margin:0 0 4px; padding:2px 5px; border:0; border-left:2px solid currentColor; border-radius:0; background:none; color:inherit; opacity:.72; font:inherit; font-size:10px; line-height:1.25; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer}
 .pm-msg-quote:hover,.pm-msg-quote:focus-visible{opacity:1; background:rgba(151,58,79,.08); outline:none}
@@ -49706,8 +49712,8 @@ async def localfont(name):
         var row = document.createElement("div");
         row.className = "pm-msg-row" + (messagesRead[id] ? "" : " unread") + (m.outgoing ? " outgoing" : "");
         row.setAttribute("data-message-id", id);
-        var interactive = !m.outgoing;
-        if (interactive) { row.setAttribute("role", "button"); row.setAttribute("tabindex", "0"); }
+        var readable = !m.outgoing && !messagesRead[id];
+        if (readable) { row.setAttribute("role", "button"); row.setAttribute("tabindex", "0"); }
         var head = document.createElement("div"); head.className = "pm-msg-head";
         var from = document.createElement("span"); from.className = "pm-msg-from"; from.textContent = msgFrom(m); head.appendChild(from);
         var xb = document.createElement("button"); xb.type = "button"; xb.className = "pm-msg-x"; xb.textContent = "✕"; xb.setAttribute("aria-label", tr("install_dismiss"));
@@ -49740,16 +49746,28 @@ async def localfont(name):
             try { im.animate([{ opacity: 0, filter: "contrast(.7) brightness(1.4) saturate(.5)" }, { offset: .45, opacity: 1 }, { opacity: 1, filter: "none" }], { duration: 1100, easing: "ease-out" }); } catch (e) {}
           }
         }
-        row.appendChild(head); row.appendChild(bub);
+        var line = document.createElement("div"); line.className = "pm-msg-line"; line.appendChild(bub);
+        if (!m.outgoing && m.act) {
+          var actBtn = document.createElement("button"); actBtn.type = "button"; actBtn.className = "pm-msg-act";
+          actBtn.setAttribute("aria-label", tr("mon_ctx_open")); actBtn.setAttribute("title", tr("mon_ctx_open"));
+          actBtn.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+          actBtn.addEventListener("click", function (e) { e.stopPropagation(); runMsgAction(id); });
+          line.appendChild(actBtn);
+        }
+        row.appendChild(head); row.appendChild(line);
         var reactions = messageReactions[id] || [];
         if (reactions.length) {
           var reactionList = document.createElement("div"); reactionList.className = "pm-msg-reactions"; reactionList.setAttribute("aria-label", tr("msg_react"));
           reactions.forEach(function (emoji) { var chip = document.createElement("span"); chip.className = "pm-msg-reaction"; chip.textContent = emoji; reactionList.appendChild(chip); });
           row.appendChild(reactionList);
         }
-        if (interactive) {
-          row.addEventListener("click", function () { runMsgAction(id); });
-          row.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); runMsgAction(id); } });
+        if (readable) {
+          function markRead() {
+            messagesRead[id] = true; updateMsgBadge(); row.classList.remove("unread");
+            row.removeAttribute("role"); row.removeAttribute("tabindex");
+          }
+          row.addEventListener("click", markRead);
+          row.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); markRead(); } });
         }
         row.addEventListener("contextmenu", function (e) {
           e.preventDefault(); e.stopPropagation(); openMessageMenu(id, e.clientX, e.clientY, applyFilter, function () { selectReply(id); });

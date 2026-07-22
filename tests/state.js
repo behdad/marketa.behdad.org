@@ -50,6 +50,8 @@
 //      browser visibility blip dismiss the open pocket phone.
 //    - fireworks: a visible-but-unfocused page clears live wedding-day sky
 //      particles and does not spawn replacements while another window is fullscreen.
+//    - special days: an exact event/holiday date gets a permanent localized viewport
+//      label without taking over the scene; the automatic event card waits for phase two.
 //    - phase-one messages: ordinary texts stay out of the solve, while one-shot
 //      occasion texts are held and released when the first party starts phase two.
 //      The first attended unread badge also carries the one-time message coach mark.
@@ -476,14 +478,36 @@ var PROBE_HARNESS = [
   "    ok('opening guide: normal kitchen instruction returns', window.__captionKey && window.__captionKey() === 'kitchen', 'caption=' + (window.__captionKey && window.__captionKey()));",
   "    ok('opening guide: espresso-machine cue follows the caption tutorial', has('kitchen-lamarzocco', 'invite-pulse'));",
   "",
-  "    // instrument -> cross-room grooving",
-  "    var uke = el('garden-ukulele'), song = el('ukulele-song-audio'), railPlay = el('hunt-playpause-btn');",
+  "    // instruments + shared three-song catalog -> cross-room grooving",
+  "    var guitar = el('garden-guitar'), tumbala = el('tumbala-song-audio');",
+  "    var uke = el('garden-ukulele'), oritSong = el('ukulele-song-audio'), danSong = el('guitar-song-audio'), song = oritSong;",
+  "    var railPlay = el('hunt-playpause-btn');",
   "    if (railPlay) railPlay.style.setProperty('transition', 'none', 'important');", // virtual-time Chrome can strand transitions at their starting value
   "    var quietPlayBg = railPlay && getComputedStyle(railPlay).backgroundColor;",
-  "    ok('probe setup: ukulele + song elements exist', uke && song);",
+  "    ok('probe setup: both instruments + all three song elements exist', guitar && uke && tumbala && oritSong && danSong);",
+  "    ok('music catalog: Tumbalalaika metadata is exposed to the shared players', window.__phoneMusicLabel && window.__phoneMusicLabel('tumbala-song-audio') === 'Tumbalalaika — Markéta Jakešová');",
+  "    ok('music catalog: Dan Bern metadata remains exposed', window.__phoneMusicLabel && window.__phoneMusicLabel('guitar-song-audio') === 'I Need You — Dan Bern');",
+  "    ok('music catalog: Orit Shimoni metadata remains exposed', window.__phoneMusicLabel && window.__phoneMusicLabel('ukulele-song-audio') === 'Strange & Beautiful Things — Orit Shimoni');",
+  "    if (window.__playSongAt) window.__playSongAt(0);",
+  "    await sleep(120);",
+  "    if (window.__phoneMusicSkip) window.__phoneMusicSkip(1);",
+  "    await sleep(700);",
+  "    ok('music catalog: shared phone/monitor transport advances Tumbalalaika to Dan', danSong && !danSong.paused && window.__phoneMusicId && window.__phoneMusicId() === 'guitar-song-audio');",
+  "    if (window.__phoneMusicSkip) window.__phoneMusicSkip(1);",
+  "    await sleep(700);",
+  "    ok('music catalog: shared phone/monitor transport advances Dan to Orit', oritSong && !oritSong.paused && window.__phoneMusicId && window.__phoneMusicId() === 'ukulele-song-audio');",
+  "    [tumbala, danSong, oritSong].forEach(function (a) { if (a) { a.pause(); a.currentTime = 0; } });",
+  "    click('garden-guitar');",
+  "    await sleep(450);",
+  "    ok('instrument: guitar tap starts only Tumbalalaika', tumbala && !tumbala.paused && danSong.paused && oritSong.paused);",
+  "    ok('instrument: guitar gains .playing sway for Tumbalalaika', has('garden-guitar', 'playing') && !has('garden-ukulele', 'playing'));",
+  "    ok('music catalog: shared player reports Tumbalalaika while guitar plays', window.__phoneMusicId && window.__phoneMusicId() === 'tumbala-song-audio');",
+  "    click('garden-guitar');",
+  "    await sleep(350);",
+  "    ok('instrument: second guitar tap stops Tumbalalaika', tumbala && tumbala.paused && !has('garden-guitar', 'playing'));",
   "    click('garden-ukulele');",
   "    await sleep(450);",
-  "    ok('instrument: song unpaused after ukulele tap', song && !song.paused, 'paused=' + (song && song.paused));",
+  "    ok('instrument: first ukulele start preserves Orit Shimoni', oritSong && !oritSong.paused && danSong.paused && tumbala.paused);",
   "    ok('instrument: ukulele gains .playing sway', has('garden-ukulele', 'playing'));",
   "    ok('music chrome: pause state turns burgundy', railPlay && !railPlay.classList.contains('paused') && getComputedStyle(railPlay).backgroundColor !== quietPlayBg);",
   "    GROOVERS.forEach(function (id) {",
@@ -491,12 +515,20 @@ var PROBE_HARNESS = [
   "    });",
   "    click('garden-ukulele');",
   "    await sleep(350);",
-  "    ok('instrument: second tap pauses the song', song && song.paused);",
+  "    ok('instrument: second ukulele tap pauses Orit', oritSong && oritSong.paused);",
   "    ok('instrument: .playing sway stops with the song', !has('garden-ukulele', 'playing'));",
   "    ok('music chrome: play state returns to its quiet style', railPlay && railPlay.classList.contains('paused') && getComputedStyle(railPlay).backgroundColor === quietPlayBg);",
   "    GROOVERS.forEach(function (id) {",
   "      ok('instrument: #' + id + ' stops grooving on pause', !has(id, 'grooving'));",
   "    });",
+  "    click('garden-ukulele');",
+  "    await sleep(450);",
+  "    ok('instrument: next ukulele start rotates to Dan Bern', danSong && !danSong.paused && oritSong.paused && tumbala.paused);",
+  "    ok('instrument: Dan Bern still drives ukulele sway, never guitar sway', has('garden-ukulele', 'playing') && !has('garden-guitar', 'playing'));",
+  "    ok('music catalog: shared player follows the rotated Dan track', window.__phoneMusicId && window.__phoneMusicId() === 'guitar-song-audio');",
+  "    click('garden-ukulele');",
+  "    await sleep(350);",
+  "    ok('instrument: second tap stops the rotated Dan track', danSong && danSong.paused && !has('garden-ukulele', 'playing'));",
   "",
   "    // dusk: night is night everywhere",
   "    click('balcony-sun');",
@@ -523,7 +555,7 @@ var PROBE_HARNESS = [
   "    if (window.__activateExtinguisher) window.__activateExtinguisher();",
   "    await sleep(2200);", // hiss + wipe (700ms) + resetHunt + generous settle for animationend cleanups
   "    ok('reset: dusk cleared on every stage', !STAGES.some(function (s) { return has(s, 'dusk'); }));",
-  "    var songs = ['guitar-song-audio', 'ukulele-song-audio'].map(el).filter(Boolean);",
+  "    var songs = ['tumbala-song-audio', 'guitar-song-audio', 'ukulele-song-audio'].map(el).filter(Boolean);",
   "    ok('reset: all songs paused', songs.every(function (a) { return a.paused; }));",
   "    ok('reset: back on the kitchen stage', window.currentStageIndex === 0, 'currentStageIndex=' + window.currentStageIndex);",
   "    ok('reset: wipe overlay released', !has('hunt-wipe', 'active'));",
@@ -608,6 +640,32 @@ var PROBE_HARNESS = [
   "    await sleep(300);", // rAF-double re-add is 2 patched-rAF ticks (~32ms); the one-shot may finish AND be removed in here — the mutation is the signal
   "    obs.disconnect();",
   "    ok('liveness: pans still react to a click (class mutation seen)', mutated);",
+  "",
+  "    // Special days announce themselves in the quiet permanent ribbon without taking over the",
+  "    // first-round scene. The richer automatic event card stays held until phase two begins.",
+  "    var originalOccUrl = location.href;",
+  "    history.replaceState(null, '', '?date=2031-07-11');",
+  "    if (window.__applySeasonDate) window.__applySeasonDate();",
+  "    if (window.__applyDateOccasion) window.__applyDateOccasion();",
+  "    var dayBanner = el('occasion-banner');",
+  "    ok('special day: Garden Brunch gets the permanent occasion ribbon', !!dayBanner && dayBanner.classList.contains('show') && /Garden Brunch/i.test(dayBanner.textContent));",
+  "    var fsArea = el('hunt-fullscreen-area'), guideCaption = el('hunt-caption');",
+  "    if (fsArea) fsArea.classList.add('chrome-overlap'); if (guideCaption) guideCaption.classList.add('intro-guide');",
+  "    ok('special day: opening-guide arrow layer stays above the permanent ribbon', !!dayBanner && parseInt(getComputedStyle(guideCaption).zIndex, 10) > parseInt(getComputedStyle(dayBanner).zIndex, 10));",
+  "    if (guideCaption) guideCaption.classList.remove('intro-guide'); if (fsArea) fsArea.classList.remove('chrome-overlap');",
+  "    ok('special day: the permanent ribbon does not activate or navigate the event scene', !window.__gardenPartyOn && window.currentStageIndex === 0, 'party=' + window.__gardenPartyOn + ' stage=' + window.currentStageIndex);",
+  "    history.replaceState(null, '', '?date=2031-10-31');",
+  "    if (window.__applySeasonDate) window.__applySeasonDate();",
+  "    if (window.__applyDateOccasion) window.__applyDateOccasion();",
+  "    dayBanner = el('occasion-banner');",
+  "    ok('special day: a named holiday reuses the permanent occasion ribbon', !!dayBanner && /spooky season/i.test(dayBanner.textContent));",
+  "    history.replaceState(null, '', '?date=2031-07-12');",
+  "    if (window.__applySeasonDate) window.__applySeasonDate();",
+  "    if (window.__applyDateOccasion) window.__applyDateOccasion();",
+  "    ok('special day: an ordinary date clears the occasion ribbon', !el('occasion-banner'));",
+  "    history.replaceState(null, '', originalOccUrl);",
+  "    if (window.__applySeasonDate) window.__applySeasonDate();",
+  "    if (window.__applyDateOccasion) window.__applyDateOccasion();",
   "",
   "    // The first round is the solve, with no incoming texts. Recurring messages should be dropped",
   "    // so their own schedulers can retry in context; one-shot occasion messages must be held because",
@@ -966,6 +1024,40 @@ var MEALS_HARNESS = [
   "</script>"
 ].join("\n");
 
+// ── special-day automatic card phase gate ───────────────────────────────────
+// This runs through the real loft-day alias because that route is the card's production owner;
+// the main probe harness stays on rsvp.html so game-only alias behavior cannot affect its tests.
+var SHARE_GATE_HARNESS = [
+  '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
+  "<script>",
+  "(function () {",
+  "  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }",
+  "  var report = { errors: [], asserts: [] };",
+  "  function finish() { report.errors = window.__errs; document.getElementById('__report').textContent = JSON.stringify(report); }",
+  "  function ok(l, c, d) { report.asserts.push({ label: l, ok: !!c, detail: c ? '' : String(d || '') }); }",
+  "  async function run() {",
+  "    await sleep(300);",
+  "    history.replaceState(null, '', '?date=2031-07-11');",
+  "    if (window.__applySeasonDate) window.__applySeasonDate();",
+  "    if (window.__applyDateOccasion) window.__applyDateOccasion();",
+  "    try { localStorage.removeItem('shareAutoShown:occ-wedding:2031-07-11'); } catch (e) {}",
+  "    var calls = 0; window.shareCard = function () { calls++; return Promise.resolve('test'); };",
+  "    if (window.__retryShareAutoShow) window.__retryShareAutoShow();",
+  "    ok('special day: automatic event card stays closed during phase one', calls === 0, 'calls=' + calls);",
+  "    if (window.__setGardenParty) window.__setGardenParty(true, false);",
+  "    await sleep(50);",
+  "    ok('special day: first party starts phase two for the event card', !!window.__secondRound);",
+  "    ok('special day: automatic event card releases at the phase-two boundary', calls === 1, 'calls=' + calls);",
+  "    if (window.__retryShareAutoShow) window.__retryShareAutoShow();",
+  "    await sleep(1000);",
+  "    ok('special day: automatic event card remains once-per-day after release', calls === 1, 'calls=' + calls);",
+  "    try { localStorage.removeItem('shareAutoShown:occ-wedding:2031-07-11'); } catch (e) {}",
+  "  }",
+  "  setTimeout(function () { run().catch(function (e) { window.__errs.push('harness: ' + String(e && e.stack || e)); }).then(finish); }, 200);",
+  "})();",
+  "</script>"
+].join("\n");
+
 // ── node-side driver ─────────────────────────────────────────────────────────
 var failures = 0;
 function pass(msg) { console.log("  ✓ " + msg); }
@@ -981,11 +1073,12 @@ function fail(msg, detail) {
   if (!ONLY || "cascade".indexOf(ONLY) === 0) jobs.cascade = lib.runPage("rsvp.html", CASCADE_HARNESS, 9000, CHROME_OPTS);
   if (!ONLY || "gates".indexOf(ONLY) === 0) jobs.gates = lib.runPage("rsvp.html", GATES_HARNESS, 12000, CHROME_OPTS);
   if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 30000, CHROME_OPTS); // includes the real eight-second opening guide + three-second message-coach delay
+  if (!ONLY || "sharegate".indexOf(ONLY) === 0) jobs.sharegate = lib.runPage("loft-day.html", SHARE_GATE_HARNESS, 5000, CHROME_OPTS);
   if (!ONLY || "fullscreen".indexOf(ONLY) === 0) jobs.fullscreen = lib.runPage("rsvp.html", LOFT_FULLSCREEN_HARNESS, 7000, Object.assign({}, CHROME_OPTS, { urlSuffix: "#play" }));
   if (!ONLY || "persian".indexOf(ONLY) === 0) jobs.persian = lib.runPage("rsvp.html", PERSIAN_HARNESS, 9000, CHROME_OPTS);
   if (!ONLY || "meals".indexOf(ONLY) === 0) jobs.meals = lib.runPage("rsvp.html", MEALS_HARNESS, 12000, CHROME_OPTS);
   if (!Object.keys(jobs).length) {
-    fail("unknown --only value: " + ONLY + " (use cascade|gates|probes|fullscreen|persian|meals)");
+    fail("unknown --only value: " + ONLY + " (use cascade|gates|probes|sharegate|fullscreen|persian|meals)");
   }
   var names = Object.keys(jobs);
   var results = {};
@@ -1043,6 +1136,17 @@ function fail(msg, detail) {
       var diff = p.resetDiff.filter(function (d) { return RESET_DIFF_ALLOW.indexOf(d) === -1; });
       if (diff.length === 0) pass("reset: strip class-state matches the load snapshot (no stranded classes)");
       else fail("reset: stranded class-state diffs vs load snapshot", diff.slice(0, 25).join("\n") + (diff.length > 25 ? "\n... and " + (diff.length - 25) + " more" : ""));
+    }
+  }
+
+  if (results.sharegate !== undefined) {
+    var sg = results.sharegate;
+    if (!sg) {
+      fail("special-day share gate harness reported (page error before load, or budget too small)");
+    } else {
+      if (sg.errors.length) fail("special-day share gate: no uncaught JS errors", sg.errors.slice(0, 12).join("\n"));
+      else pass("special-day share gate: no uncaught JS errors");
+      sg.asserts.forEach(function (a) { if (a.ok) pass(a.label); else fail(a.label, a.detail); });
     }
   }
 

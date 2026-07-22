@@ -69,7 +69,8 @@ function chromeCmd(scratch, budgetMs, extraFlags, urlSuffix) {
 function makeScratch(file, harness, hookHtml) {
   var html = fs.readFileSync(path.join(ROOT, file), "utf8");
   var patched = html.replace("<head>", "<head>" + hookHtml).replace("</body>", harness + "\n</body>");
-  var scratch = path.join(os.tmpdir(), "wedding-" + file.replace(/\W/g, "") + "-" + Date.now() + "-" + Math.random().toString(36).slice(2) + ".html");
+  // Keep hyphens so route-sensitive aliases such as loft-day can be exercised from a scratch copy.
+  var scratch = path.join(os.tmpdir(), "wedding-" + file.replace(/[^\w-]/g, "") + "-" + Date.now() + "-" + Math.random().toString(36).slice(2) + ".html");
   fs.writeFileSync(scratch, patched);
   return scratch;
 }

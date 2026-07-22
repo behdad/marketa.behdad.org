@@ -605,7 +605,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 @media (max-width:759px){ #hunt-caption{max-width:calc(100% - 4.4rem)} }
 /* First-play handoff: before pointing into the scene, point back up at the caption so players
    learn where each next clue will appear. The two pseudo-elements form one compact red arrow. */
-#hunt-caption.intro-guide{color:var(--wine); z-index:3}
+#hunt-caption.intro-guide{color:var(--wine); z-index:8} /* above the permanent occasion ribbon (7) */
 #hunt-caption.intro-guide::before{
   content:""; position:absolute; pointer-events:none; left:50%; top:calc(100% + .2rem);
   width:40px; height:48px;
@@ -9285,6 +9285,10 @@ section{margin:1.9rem 0}
     <button type="button" data-lang="cs" aria-pressed="false">CZ</button>
   </nav>
 
+  <audio id="tumbala-song-audio" preload="none">
+    <source src="art/tumbala.opus" type="audio/ogg; codecs=opus">
+    <source src="art/tumbala.mp3" type="audio/mpeg">
+  </audio>
   <audio id="guitar-song-audio" preload="none">
     <source src="art/i-need-you.opus" type="audio/ogg; codecs=opus">
     <source src="art/i-need-you.mp3" type="audio/mpeg">
@@ -14664,8 +14668,8 @@ section{margin:1.9rem 0}
 </g><!-- /guest-walk -->
 </g><!-- /g-hannah -->
 <!-- ═══ DAN BERN & ORIT SHIMONI — the two touring songwriters ══════════════════════
-     Real people, and the reason this room has music at all: the two songs the loft plays
-     are THEIR OWN live recordings, made here at Markéta's birthday. They're on the floor as
+     Real people, and the artists behind two songs in the loft's three-recording player:
+     THEIR OWN live performances, made here at Markéta's birthday. They're on the floor as
      guests like everyone else (same ARRIVALS unit, same revolving door, same roster + album),
      not as a stage act — the credit lives on their name cards. -->
 <!-- DAN BERN — lean and middle-aged, clean-shaven, lined angular face, warm tan skin, plain
@@ -24689,7 +24693,7 @@ var T = {
     fun_hamid: "Behdad's <em>adopted son</em>", fun_athena: "<em>Zebel-khan</em>",
     fun_ashraf: "also loves backgammon", fun_mohsen: "loves backgammon!", fun_daniel: "repairs churches", fun_marie: "engineer & psychologist",
     fun_baka: "likes watching sports", fun_sina: "best techno", fun_danesh: "best hair", fun_aspen: "best wedding photographer",
-    fun_pouria: "the Café Pamenar guy", fun_irene: "learning Python already", fun_robin: "loves dinosaurs", fun_navid: "loves legos",
+    fun_pouria: "collects hobbies", fun_irene: "learning Python already", fun_robin: "loves dinosaurs", fun_navid: "loves legos",
     fun_elisabeth: "good climber", fun_felix: "likes sports", fun_patricia_son: "loves the <em>Lada</em>", fun_patricia_daughter: "mesmerizing eyes", fun_hannah: "the gymnast",
     fun_danbern: "Irene grew up on his children’s albums", fun_oritshimoni: "travelling musician",
     roster_title: "who's here?", roster_empty: "The floor's empty — throw the party first.", roster_pick_hint: "tap to point them out on the floor", // "who's here?" roster overlay
@@ -25519,7 +25523,7 @@ var T = {
     fun_hamid: "Behdadův <em>adoptovaný syn</em>", fun_athena: "<em>Zebel-khan</em>",
     fun_ashraf: "taky miluje vrhcáby", fun_mohsen: "miluje vrhcáby!", fun_daniel: "opravuje kostely", fun_marie: "inženýrka a psycholožka",
     fun_baka: "ráda sleduje sport", fun_sina: "nejlepší techno", fun_danesh: "nejlepší vlasy", fun_aspen: "nejlepší svatební fotografka",
-    fun_pouria: "ten z Café Pamenar", fun_irene: "už se učí Python", fun_robin: "miluje dinosaury", fun_navid: "miluje lego",
+    fun_pouria: "sbírá koníčky", fun_irene: "už se učí Python", fun_robin: "miluje dinosaury", fun_navid: "miluje lego",
     fun_elisabeth: "dobrá lezkyně", fun_felix: "má rád sport", fun_patricia_son: "miluje <em>Ladu</em>", fun_patricia_daughter: "okouzlující oči", fun_hannah: "gymnastka",
     fun_danbern: "Irene vyrostla na jeho albech pro děti", fun_oritshimoni: "potulná hudebnice",
     roster_title: "kdo je tady?", roster_empty: "Parket je prázdný — nejdřív rozjeď párty.", roster_pick_hint: "klepnutím ho ukážeš na parketu", // roster překryv „kdo je tady?“
@@ -26259,6 +26263,7 @@ function setLang(l) {
   if (window.refreshTattooText) window.refreshTattooText();
   if (window.refreshLifeText) window.refreshLifeText();
   if (window.refreshRoster) window.refreshRoster();
+  if (window.__refreshOccasionBanner) window.__refreshOccasionBanner();
 }
 // The Who's Here panel is defined later in the script. Population controllers use this small
 // feature-detected read so their autonomous arrivals/departures pause while somebody is reading it.
@@ -33688,7 +33693,7 @@ function gameTapsNear(a, b) {
       // PC off → the headphones are a shortcut: boot straight into the music player,
       // song started inside this same gesture
       if (window.__bootToMusic && window.__bootToMusic()) return;
-      var ids = ["guitar-song-audio", "ukulele-song-audio"], playing = null;
+      var ids = ["tumbala-song-audio", "guitar-song-audio", "ukulele-song-audio"], playing = null;
       for (var i = 0; i < ids.length; i++) {
         var a = document.getElementById(ids[i]);
         if (a && !a.paused && !a.ended) { playing = a; break; }
@@ -38843,18 +38848,21 @@ var ABANDONED_CALL_MS = 30000;
   };
   // While a room song plays and the monitor's on a site, it flips to a
   // "now playing" equalizer; when the song stops it drops back to the site.
-  var songAudios = ["guitar-song-audio", "ukulele-song-audio"]
+  var songAudios = ["tumbala-song-audio", "guitar-song-audio", "ukulele-song-audio"]
     .map(function (id) { return document.getElementById(id); })
     .filter(Boolean);
-  // the actual artists' recordings from the loft concert for Markéta's birthday
+  var selectedSongAudio = null; // most recently started track, including while paused mid-song
+  // three real recordings: Markéta's card song plus the two birthday loft performances
   var SONG_INFO = {
+    "tumbala-song-audio": "♪ Tumbalalaika — Markéta Jakešová",
     "guitar-song-audio": "♪ I Need You — Dan Bern",
     "ukulele-song-audio": "♪ Strange & Beautiful Things — Orit Shimoni"
   };
   // measured tempos (see GROOVE_BPM) — used by the equalizer's tempo-synced fallback
-  var SONG_BPM = { "guitar-song-audio": 184.6, "ukulele-song-audio": 126.0 };
+  var SONG_BPM = { "tumbala-song-audio": 133.9, "guitar-song-audio": 184.6, "ukulele-song-audio": 126.0 };
   // while a song plays, the monitor "browses" the performing artist's own site
   var SONG_SITE = {
+    "tumbala-song-audio": "https://marketa.behdad.org/", // Markéta Jakešová — Tumbalalaika
     "guitar-song-audio": "https://danbern.com/",       // Dan Bern — I Need You
     "ukulele-song-audio": "https://oritshimoni.com/"   // Orit Shimoni — Strange & Beautiful Things
   };
@@ -38919,8 +38927,26 @@ var ABANDONED_CALL_MS = 30000;
   // a room/door acoustics change, a fade tick). 12ms de-zippers the click while staying well
   // under fadeSongTo's 40ms step cadence, so crossfades don't lag. Pre-capture / pipeline-off
   // still rides native .volume (already browser-smoothed).
-  function setSongLevel(a, v) { if (!a) return; v = Math.max(0, v); if (a._eqGain) { try { if (eqAudioCtx) a._eqGain.gain.setTargetAtTime(v, eqAudioCtx.currentTime, 0.012); else a._eqGain.gain.value = v; } catch (e) {} } else { try { a.volume = v; } catch (e) {} } }
-  function songLevel(a) { return a ? (a._eqGain ? a._eqGain.gain.value : a.volume) : 0; }
+  // Tumbalalaika measures about 8dB quieter than the other two recordings. Keep every
+  // caller/fade in the same logical 0..1 range and apply its makeup gain only at output.
+  var SONG_LEVEL_GAIN = { "tumbala-song-audio": 2.5 };
+  function songOutputLevel(a, v) { return Math.max(0, v) * (SONG_LEVEL_GAIN[a.id] || 1); }
+  function setSongLevel(a, v) {
+    if (!a) return;
+    v = Math.max(0, v);
+    a._songLogicalLevel = v;
+    var output = songOutputLevel(a, v);
+    if (a._eqGain) {
+      try { if (eqAudioCtx) a._eqGain.gain.setTargetAtTime(output, eqAudioCtx.currentTime, 0.012); else a._eqGain.gain.value = output; } catch (e) {}
+    } else {
+      try { a.volume = Math.min(1, output); } catch (e) {} // native element volume cannot exceed unity
+    }
+  }
+  function songLevel(a) {
+    if (!a) return 0;
+    if (typeof a._songLogicalLevel === "number") return a._songLogicalLevel;
+    return (a._eqGain ? a._eqGain.gain.value : a.volume) / (SONG_LEVEL_GAIN[a.id] || 1);
+  }
   window.__setSongLevel = setSongLevel; window.__songLevel = songLevel; // the cinematic/instrument IIFEs drive the same song elements
   // Stereo-width stage nodes (mid-side-style narrowing) -- see ensureAudioGraph for the
   // splitter/4-gain/merger wiring and __updateSongRoomWidth for what drives the gains.
@@ -38967,11 +38993,17 @@ var ABANDONED_CALL_MS = 30000;
       eqMuffleFilter = eqAudioCtx.createBiquadFilter();
       eqMuffleFilter.type = "lowpass";
       eqMuffleFilter.frequency.value = FLAT_LOWPASS_HZ;
+      // Tumbalalaika is a mono card recording. Force a speaker-interpreted stereo output
+      // here so the browser duplicates mono into L+R before the discrete width splitter;
+      // the Dan Bern and Orit Shimoni stereo recordings pass through unchanged.
+      eqMuffleFilter.channelCount = 2;
+      eqMuffleFilter.channelCountMode = "explicit";
+      eqMuffleFilter.channelInterpretation = "speakers";
       eqMasterGain = eqAudioCtx.createGain();
       eqMasterGain.gain.value = 1;
-      // Gentle loudness normalizer: the two recordings measure within ~0.7 LUFS of each
-      // other already (checked directly with ffmpeg's loudnorm filter), so this isn't
-      // fixing an audible track-to-track mismatch -- it's a safety margin against
+      // Gentle loudness normalizer: Dan and Orit measure within ~0.7 LUFS; the much quieter
+      // Tumbalalaika card recording gets its own makeup gain at setSongLevel above. This is
+      // primarily a safety margin against
       // headphone mode's +8dB bass shelf pushing a bass-heavy passage toward 0dBFS
       // (reported as clipping/distortion), plus it evens out the overall feel a bit
       // regardless. Mild settings (soft knee, 3:1 ratio) so it levels without an
@@ -39009,13 +39041,9 @@ var ABANDONED_CALL_MS = 30000;
       // Web Audio "width" node, so this is the standard split -> weighted 4-gain remix ->
       // merge construction. Room-driven via SONG_ROOM_WIDTH/__updateSongRoomWidth below;
       // at width=1 the four gains are exactly {1,1,0,0} (same-channel=1, cross-channel=0),
-      // an exact identity pass-through, so every room but office is provably untouched --
-      // for STEREO input. createChannelSplitter(2) is fixed to discrete interpretation, so
-      // a mono source would land only in "channel 0" (silence in "channel 1"), and width=1
-      // would then paste that silence into R' too: hard-left instead of centered. Confirmed
-      // (ffprobe) both actual songAudios files -- guitar-song-audio/I Need You and
-      // ukulele-song-audio/Strange & Beautiful Things -- are stereo, so this doesn't bite
-      // today; re-check with ffprobe before ever routing a mono file through this pipeline.
+      // an exact identity pass-through, so every room but office is provably untouched.
+      // createChannelSplitter(2) is fixed to discrete interpretation, hence the explicit
+      // speaker-mode stereo upmix on eqMuffleFilter above for the mono Tumbalalaika source.
       eqWidthSplitter = eqAudioCtx.createChannelSplitter(2);
       eqWidthMerger = eqAudioCtx.createChannelMerger(2);
       eqWidthL2L = eqAudioCtx.createGain(); eqWidthL2L.gain.value = 1;
@@ -39095,7 +39123,7 @@ var ABANDONED_CALL_MS = 30000;
             // element's .volume (confirmed on desktop Safari), so a captured song ignores the
             // volume button. Carry the level on an in-graph gain instead; .volume goes inert.
             var sg = ctx.createGain();
-            sg.gain.value = audioEl.volume;
+            sg.gain.value = songOutputLevel(audioEl, songLevel(audioEl));
             try { audioEl.volume = 1; } catch (e) {}
             src.connect(sg); sg.connect(eqBassShelf);
             audioEl._eqSource = src;      // hold refs so neither node is GC'd
@@ -39579,9 +39607,10 @@ var ABANDONED_CALL_MS = 30000;
     if (!("mediaSession" in navigator)) return;
     var ms = navigator.mediaSession;
     function currentAudio() {
-      var paused = null;
-      for (var i = 0; i < songAudios.length; i++) { var a = songAudios[i]; if (!a || a.ended) continue; if (!a.paused) return a; if (a.currentTime > 0) paused = a; }
-      return paused;
+      for (var i = 0; i < songAudios.length; i++) { var a = songAudios[i]; if (a && !a.ended && !a.paused) return a; }
+      if (selectedSongAudio && !selectedSongAudio.ended && selectedSongAudio.currentTime > 0) return selectedSongAudio;
+      for (var j = 0; j < songAudios.length; j++) { var paused = songAudios[j]; if (paused && !paused.ended && paused.currentTime > 0) return paused; }
+      return null;
     }
     function h(action, fn) { try { ms.setActionHandler(action, fn); } catch (e) {} }
     h("play", function () { var a = currentAudio() || songAudios[0]; if (a) { var p = a.play(); if (p && p.catch) p.catch(function () {}); } });
@@ -39601,9 +39630,10 @@ var ABANDONED_CALL_MS = 30000;
       var a = songAudios[i];
       if (!a || a.ended) continue;
       if (!a.paused) { playing = a; break; }
-      if (a.currentTime > 0) pausedMid = a; // paused part-way through — still the "current" song
+      if (a.currentTime > 0 && !pausedMid) pausedMid = a; // fallback if no explicit recent selection survives
     }
-    var current = playing || pausedMid;
+    var selectedPaused = selectedSongAudio && !selectedSongAudio.ended && selectedSongAudio.currentTime > 0 ? selectedSongAudio : null;
+    var current = playing || selectedPaused || pausedMid;
     monitor.classList.toggle("song-paused", !!current && !playing); // freezes the marquee scroll when paused
     // OS-level lock-screen/media-key state tracks actual audio playback, independent of
     // whether the monitor UI below is currently showing it (see comment above).
@@ -39670,7 +39700,7 @@ var ABANDONED_CALL_MS = 30000;
     }
   }
   songAudios.forEach(function (a) {
-    a.addEventListener("play", updateNowPlaying);
+    a.addEventListener("play", function () { selectedSongAudio = a; updateNowPlaying(); });
     a.addEventListener("pause", updateNowPlaying);
     a.addEventListener("ended", updateNowPlaying);
     // keep the pocket phone's Music screen in sync on auto-advance / monitor-driven changes,
@@ -39683,7 +39713,7 @@ var ABANDONED_CALL_MS = 30000;
     });
   });
   // Auto-advance: when a song finishes, the next one in the list starts on its own
-  // (wraps around — with 2 songs today that just means "the other one"). Runs
+  // (wraps around across the full three-song catalog). Runs
   // alongside the ended->updateNowPlaying listener above; playing the next track
   // fires its own "play" event, which re-shows the now-playing screen synchronously
   // (same tick, before the next paint), so there's no visible flicker in between.
@@ -39693,6 +39723,7 @@ var ABANDONED_CALL_MS = 30000;
     clearSongSnippet(); // a picked track (skip / console music()) isn't a passing poke
     if (window.__retireHint) window.__retireHint("hint_song"); // loose-brick hint: retire once a loft song has played
     try {
+      songAudios.forEach(function (audio) { if (audio !== next && !audio.paused) audio.pause(); });
       next.currentTime = 0;
       setSongLevel(next, window.__songVolume ? window.__songVolume() : 0.5);
       if (window.__captureSongAudio) window.__captureSongAudio(next);
@@ -39715,9 +39746,10 @@ var ABANDONED_CALL_MS = 30000;
       songAudios.forEach(function (a) { if (a && !a.paused) a.pause(); });
       return false;
     }
-    var resume = -1;
+    var resume = selectedSongAudio ? songAudios.indexOf(selectedSongAudio) : -1;
+    if (resume >= 0 && (selectedSongAudio.ended || selectedSongAudio.currentTime <= 0)) resume = -1;
     for (var i = 0; i < songAudios.length; i++) {
-      if (songAudios[i] && songAudios[i].currentTime > 0 && !songAudios[i].ended) { resume = i; break; }
+      if (resume < 0 && songAudios[i] && songAudios[i].currentTime > 0 && !songAudios[i].ended) { resume = i; break; }
     }
     playSongAt(resume >= 0 ? resume : Math.floor(Math.random() * songAudios.length));
     return true;
@@ -39725,16 +39757,16 @@ var ABANDONED_CALL_MS = 30000;
   window.__phoneMusicTitle = function () {
     for (var i = 0; i < songAudios.length; i++) {
       var a = songAudios[i];
-      if (a && !a.ended && (!a.paused || a.currentTime > 0)) return (SONG_INFO[a.id] || "").replace(/^\s*♪\s*/, "");
+      if (a && !a.ended && !a.paused) return (SONG_INFO[a.id] || "").replace(/^\s*♪\s*/, "");
     }
-    return "";
+    return selectedSongAudio && !selectedSongAudio.ended && selectedSongAudio.currentTime > 0 ? (SONG_INFO[selectedSongAudio.id] || "").replace(/^\s*♪\s*/, "") : "";
   };
   window.__phoneMusicId = function () { // id of the current (playing or paused-with-progress) track, else null
     for (var i = 0; i < songAudios.length; i++) {
       var a = songAudios[i];
-      if (a && !a.ended && (!a.paused || a.currentTime > 0)) return a.id;
+      if (a && !a.ended && !a.paused) return a.id;
     }
-    return null;
+    return selectedSongAudio && !selectedSongAudio.ended && selectedSongAudio.currentTime > 0 ? selectedSongAudio.id : null;
   };
   window.__phoneMusicLabel = function (id) { return (SONG_INFO[id] || "").replace(/^\s*♪\s*/, ""); };
   window.__phoneMusicSkip = function (dir) { // reuse the monitor's real skip: fade out + stop current, then play next
@@ -40362,9 +40394,9 @@ var ABANDONED_CALL_MS = 30000;
     kitten: "kitten — alias for cat; try `help cat`",
     ukelele: "ukelele — alias for ukulele; try `help ukulele`",
     audio: "audio() — the current audio source: \"music\" · \"piano\" · \"dance\" (or \"\"). audio(\"music\"|\"piano\"|\"dance\"|1–3|random()) switches to one; audio(true)/audio(false) resume/pause it",
-    music: "music(\"guitar\"|\"ukulele\") — play a garden concert song (or 1–2, or random()); music() returns the current one {n, name}. guitar()/ukulele() are aliases",
-    guitar: "guitar() — play the guitar concert song (alias for music(\"guitar\"))",
-    ukulele: "ukulele() — play the ukulele concert song (alias for music(\"ukulele\"))",
+    music: "music(\"tumbala\"|\"dan\"|\"orit\") — play one of the three recordings (or 1–3, or random()); music() returns the current one {n, name}",
+    guitar: "guitar() — tap the garden guitar: start/stop Tumbalalaika",
+    ukulele: "ukulele() — tap the garden ukulele: start/stop, alternating Orit Shimoni and Dan Bern",
     beat: "beat() — ms until the next musical beat, phase-locked to whatever's playing. try `await sleep(beat())` to move in time",
     eclipse: "eclipse() — a solar (day) or lunar (night) eclipse over the balcony",
     hb: "hb — the harfbuzzjs shaper (uharfbuzz-style); `help hb` prints a full shaping sequence",
@@ -40489,7 +40521,7 @@ var ABANDONED_CALL_MS = 30000;
         "  Garret · testing",
         "  Mahzad · testing",
         "  Ali · testing",
-        "made with love by behdad and Claude"
+        "made with love by behdad, Claude & Codex"
       ].forEach(function (line) { consolePrint(line, "console-dim"); });
       return;
     }
@@ -44808,19 +44840,24 @@ async def localfont(name):
       if (a && !a.paused) a.pause();
     }
   }, true);
-  // Prev/next transport: jumps to the other song in songAudios (wrapping both ways, for
-  // when a 3rd song joins someday). Mirrors the gesture-safe play pattern the garden
+  // Prev/next transport: jumps through songAudios, wrapping both ways. Mirrors the
+  // gesture-safe play pattern the garden
   // instrument clicks use (app-owned volume + analyser capture inside the click gesture)
   // — the audio's own play/pause listeners (above) repaint title/bars/pause-icon, so this
   // mostly just drives playback (it only reaches directly for the marquee restart, since
   // that needs to happen immediately rather than waiting on the next "play" event).
   function currentSongIndex() {
-    var idx = -1;
     for (var i = 0; i < songAudios.length; i++) {
       var a = songAudios[i];
-      if (a && !a.ended && (!a.paused || a.currentTime > 0)) { idx = i; if (!a.paused) break; }
+      if (a && !a.ended && !a.paused) return i;
     }
-    return idx;
+    var selectedIdx = songAudios.indexOf(selectedSongAudio);
+    if (selectedIdx >= 0 && !selectedSongAudio.ended && selectedSongAudio.currentTime > 0) return selectedIdx;
+    for (var j = 0; j < songAudios.length; j++) {
+      var paused = songAudios[j];
+      if (paused && !paused.ended && paused.currentTime > 0) return j;
+    }
+    return -1;
   }
   // Fade an <audio>'s element volume to a target over ms, then call done. Element
   // volume applies both to native playback and through createMediaElementSource, so
@@ -44847,6 +44884,7 @@ async def localfont(name):
   // The fade lands on a musical seam, so the points below are POSITIONS IN THE SONG (seconds),
   // not time since the tap — a tap resumes from wherever the song was, and the seam doesn't move.
   var SONG_FADE_AT = {
+    "tumbala-song-audio": [38], // Tumbalalaika — Markéta Jakešová (the recording falls silent here)
     "guitar-song-audio": [50],  // I Need You — Dan Bern
     "ukulele-song-audio": [45]  // Strange & Beautiful Things — Orit Shimoni
   };
@@ -44875,7 +44913,15 @@ async def localfont(name):
       if (snippetAudio !== a || a.paused) { snippetAudio = null; return; }
       snippetAudio = null; // cleared before the fade so its own pause event can't re-enter
       var appVol = window.__songVolume ? window.__songVolume() : 0.5;
-      fadeSongTo(a, 0, SNIPPET_FADE_MS, function () { try { a.pause(); setSongLevel(a, appVol); } catch (e) {} }); // fade, then pause + restore its level for the resume
+      fadeSongTo(a, 0, SNIPPET_FADE_MS, function () {
+        try {
+          a.pause();
+          // A seam at the recording's ending should make the next instrument tap start it
+          // cleanly, not resume a second of trailing silence and auto-advance.
+          if (isFinite(a.duration) && a.duration - a.currentTime < 3) a.currentTime = 0;
+          setSongLevel(a, appVol);
+        } catch (e) {}
+      }); // fade, then pause + restore its level for the resume
     }, snippetDelay(a));
   }
   window.__armSongSnippet = armSongSnippet;   // the garden instrument handler lives in another IIFE
@@ -44915,7 +44961,7 @@ async def localfont(name):
     if (idx < 0) return;
     var current = songAudios[idx];
     // prev restarts the CURRENT song (standard media-player convention) once you're a
-    // few seconds in, instead of always jumping back to the other track
+    // few seconds in, instead of always jumping back to the previous track
     if (dir < 0 && current.currentTime >= 3) { current.currentTime = 0; restartMarquee(); return; }
     if (songAudios.length < 2) return;
     var next = songAudios[(idx + dir + songAudios.length) % songAudios.length];
@@ -50208,8 +50254,22 @@ async def localfont(name):
       bd.textContent = tr("mail_body_" + m.id);
       body.appendChild(bd);
     }
-    // Hand-drawn flat-vector cover portraits, one per loft-concert track (modelled on
-    // photos of the two real artists) — the pocket player swaps them with the song.
+    // Hand-drawn flat-vector cover portraits, one per recording — the pocket player
+    // swaps them with the song and rasterizes them for OS media controls below.
+    var COVER_MARKETA =
+      '<svg viewBox="0 0 120 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' +
+      '<rect width="120" height="120" fill="#8f3948"/><circle cx="18" cy="18" r="26" fill="#bd5966" opacity="0.5"/><circle cx="105" cy="92" r="32" fill="#6e2836" opacity="0.5"/>' +
+      '<g fill="none" stroke="#f2d9b7" stroke-width="1.4" opacity="0.55"><path d="M12 80 q8 -10 16 0 q8 10 16 0"/><path d="M86 22 q7 -9 14 0 q7 9 14 0"/></g>' +
+      '<path d="M24 120 Q30 91 60 88 Q91 91 98 120 Z" fill="#789bc7"/><path d="M42 91 Q60 103 78 91 L83 120 L37 120 Z" fill="#91afd2"/>' +
+      '<rect x="54" y="79" width="13" height="15" rx="5" fill="#e5b892"/>' +
+      '<path d="M39 47 Q35 70 44 84 Q51 93 61 93 Q77 91 83 75 Q88 57 78 43 Q60 34 45 42 Z" fill="#edc6a4"/>' +
+      '<path d="M39 48 Q31 63 38 87 Q43 78 45 63 L48 46 Z M78 43 Q91 60 80 88 Q76 78 76 61 L72 44 Z" fill="#527faf"/>' +
+      '<path d="M39 45 Q48 33 64 34 Q78 34 85 44 Q70 40 56 43 Q47 47 39 45 Z" fill="#4b75a5"/>' +
+      '<path d="M37 42 Q48 27 65 29 Q79 30 84 42 Q69 36 53 40 Z" fill="#638fbe"/><path d="M36 44 Q60 37 86 44 L83 48 Q60 42 38 48 Z" fill="#4b75a5"/>' +
+      '<g fill="none" stroke="#39312c" stroke-width="2"><circle cx="51" cy="61" r="6"/><circle cx="70" cy="61" r="6"/><path d="M57 61 h7"/></g>' +
+      '<circle cx="52" cy="62" r="1.8" fill="#342b26"/><circle cx="69" cy="62" r="1.8" fill="#342b26"/>' +
+      '<path d="M58 67 q3 3 6 0" fill="none" stroke="#c28e6e" stroke-width="1.2"/><path d="M53 76 Q61 82 70 75 Q61 86 53 76 Z" fill="#8f3948"/><path d="M56 77 Q62 80 67 77" fill="none" stroke="#f6e9dc" stroke-width="1.4"/>' +
+      '</svg>';
     var COVER_DAN =
       '<svg viewBox="0 0 120 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' +
       '<rect width="120" height="120" fill="#d99a5b"/><circle cx="60" cy="52" r="58" fill="#e3ad6d" opacity="0.55"/>' +
@@ -50263,10 +50323,11 @@ async def localfont(name):
           img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(sized);
         } catch (e) {}
       }
-      rasterize("dan", COVER_DAN); rasterize("orit", COVER_ORIT);
+      rasterize("marketa", COVER_MARKETA); rasterize("dan", COVER_DAN); rasterize("orit", COVER_ORIT);
     })();
-    window.__songArtwork = function (id) { return COVER_ART_PNG[id === "ukulele-song-audio" ? "orit" : "dan"] || null; };
-    function musicCover(id) { return id === "ukulele-song-audio" ? COVER_ORIT : COVER_DAN; }
+    function coverKey(id) { return id === "tumbala-song-audio" ? "marketa" : (id === "ukulele-song-audio" ? "orit" : "dan"); }
+    window.__songArtwork = function (id) { return COVER_ART_PNG[coverKey(id)] || null; };
+    function musicCover(id) { return id === "tumbala-song-audio" ? COVER_MARKETA : (id === "ukulele-song-audio" ? COVER_ORIT : COVER_DAN); }
     function renderMusic(body) {
       var wrap = document.createElement("div");
       wrap.className = "pm-music";
@@ -50280,7 +50341,7 @@ async def localfont(name):
       function paint() {
         var playing = window.__phoneMusicPlaying && window.__phoneMusicPlaying();
         play.textContent = playing ? "⏸" : "▶";
-        var id = (window.__phoneMusicId && window.__phoneMusicId()) || "guitar-song-audio";
+        var id = (window.__phoneMusicId && window.__phoneMusicId()) || "tumbala-song-audio";
         art.innerHTML = musicCover(id);
         var title = (window.__phoneMusicTitle && window.__phoneMusicTitle());
         if (!title && window.__phoneMusicLabel) title = window.__phoneMusicLabel(id);
@@ -67760,6 +67821,7 @@ function spawnDustMote(container) {
       if (window.__unlockAllRooms) window.__unlockAllRooms();
       if (window.__syncRosterAvail) window.__syncRosterAvail();
       if (window.__flushHeldPhoneMessages) window.__flushHeldPhoneMessages(); // date-specific texts held during the solve now land together in the inbox
+      if (window.__retryShareAutoShow) window.__retryShareAutoShow(); // the special-day card waits for this same phase-two boundary
     }
     if (on) { if (window.__startCueDrip) window.__startCueDrip(); } else if (window.__stopCueDrip) window.__stopCueDrip(); // drip the app-cue phone texts only while the party's lit
     if (!on && window.__setSmores) window.__setSmores(false); // the party's out → put the s'mores bonfire out too (unless a fire-festival season keeps its own)
@@ -69523,9 +69585,43 @@ function spawnDustMote(container) {
     window.addEventListener("blur", function () { window.__updateOfficeHangout(); });
   })();
   var instrumentSpots = {
-    "garden-guitar": { x: 746, y: 270, audioId: "guitar-song-audio" },
-    "garden-ukulele": { x: 735, y: 140, audioId: "ukulele-song-audio" }
+    // The guitar is a direct Tumbalalaika toggle. The ukulele keeps the two birthday-
+    // concert performances together and advances to the other one after every fresh start.
+    "garden-guitar": { x: 746, y: 270, audioIds: ["tumbala-song-audio"], nextAudio: 0 },
+    "garden-ukulele": { x: 735, y: 140, audioIds: ["ukulele-song-audio", "guitar-song-audio"], nextAudio: 0 }
   };
+  function audiosForInstrument(spot) {
+    return (spot && spot.audioIds || []).map(function (audioId) { return document.getElementById(audioId); }).filter(Boolean);
+  }
+  function playingAudioForInstrument(spot) {
+    var audios = audiosForInstrument(spot);
+    for (var i = 0; i < audios.length; i++) if (!audios[i].paused && !audios[i].ended) return audios[i];
+    return null;
+  }
+  function playingInstrumentAudio() {
+    var ids = Object.keys(instrumentSpots);
+    for (var i = 0; i < ids.length; i++) {
+      var audio = playingAudioForInstrument(instrumentSpots[ids[i]]);
+      if (audio) return audio;
+    }
+    return null;
+  }
+  function instrumentForAudio(audio) {
+    var ids = Object.keys(instrumentSpots);
+    for (var i = 0; i < ids.length; i++) {
+      if (instrumentSpots[ids[i]].audioIds.indexOf(audio.id) !== -1) return { id: ids[i], spot: instrumentSpots[ids[i]] };
+    }
+    return null;
+  }
+  function allInstrumentAudios() {
+    var seen = {}, out = [];
+    Object.keys(instrumentSpots).forEach(function (id) {
+      audiosForInstrument(instrumentSpots[id]).forEach(function (audio) {
+        if (!seen[audio.id]) { seen[audio.id] = true; out.push(audio); }
+      });
+    });
+    return out;
+  }
   (function () { // tap the tensegrity table → the floating top sways in place
     var tng = document.getElementById("garden-tensegrity"), wob = document.getElementById("garden-tensegrity-wob");
     if (!tng || !wob) return;
@@ -69547,11 +69643,14 @@ function spawnDustMote(container) {
       if (e.animationName === "instrument-tap-bump") el.classList.remove("tapped");
     });
     onActivate(el, function () {
-      var audio = document.getElementById(spot.audioId);
-      if (audio && !audio.paused) {
-        audio.pause();
+      var playingHere = playingAudioForInstrument(spot);
+      if (playingHere) {
+        playingHere.pause();
         return;
       }
+      var choices = audiosForInstrument(spot);
+      var audio = choices.length ? choices[spot.nextAudio % choices.length] : null;
+      if (choices.length > 1) spot.nextAudio = (spot.nextAudio + 1) % choices.length;
       if (el) {
         el.classList.remove("tapped");
         requestAnimationFrame(function () {
@@ -69564,11 +69663,7 @@ function spawnDustMote(container) {
       var played = false;
       if (audio) {
         try {
-          Object.keys(instrumentSpots).forEach(function (otherId) {
-            if (otherId === id) return;
-            var other = document.getElementById(instrumentSpots[otherId].audioId);
-            if (other && !other.paused) other.pause();
-          });
+          allInstrumentAudios().forEach(function (other) { if (other !== audio && !other.paused) other.pause(); });
           if (audio.ended) audio.currentTime = 0;
           window.__setSongLevel(audio, window.__songVolume ? window.__songVolume() : 0.5); // app-owned level (monitor speaker button)
           // hook up the monitor equalizer's analyser here, inside the gesture,
@@ -69589,10 +69684,9 @@ function spawnDustMote(container) {
   });
   var cuddlyGrooveHeadIds = ["cuddly-behdad-head", "cuddly-marketa-head"];
   var cuddlyGrooveFootIds = ["cuddly-behdad-foot-1", "cuddly-behdad-foot-2", "cuddly-marketa-foot-1", "cuddly-marketa-foot-2"];
-  // Beat period derived from each song's actual measured tempo (guitar/i-need-you
-  // ~184.6bpm, ukulele/strange-and-beautiful-things ~126bpm). Above ~150bpm, animating
+  // Beat period derived from each recording's measured tempo. Above ~150bpm, animating
   // every single beat looks frantic, so fast songs groove at half-time instead.
-  var GROOVE_BPM = { "guitar-song-audio": 184.6, "ukulele-song-audio": 126.0 };
+  var GROOVE_BPM = { "tumbala-song-audio": 133.9, "guitar-song-audio": 184.6, "ukulele-song-audio": 126.0 };
   function grooveDurations(bpm) {
     var period = 60 / bpm;
     if (period < 0.4) period *= 2;
@@ -69603,12 +69697,7 @@ function spawnDustMote(container) {
   var BEHDAD_JOINT_MAX_PER_SONG = 3; // up to this many separate light-ups per continuous listen
   var behdadJointCount = 0; // reset to 0 each time music (re)starts from a stopped state
   function updateCuddlyGrooving() {
-    var playing = null;
-    Object.keys(instrumentSpots).some(function (id) {
-      var audio = document.getElementById(instrumentSpots[id].audioId);
-      if (audio && !audio.paused) { playing = audio; return true; }
-      return false;
-    });
+    var playing = playingInstrumentAudio();
     var anyPlaying = !!playing;
     // party on AND a party bed actually sounding (spacebar/transport pause stills it) — the
     // "party bed sounding" gate the bartender + office groovers use when no phase-lock song plays
@@ -69784,12 +69873,7 @@ function spawnDustMote(container) {
   // song's beat period + current phase (0→1), or null when nothing plays. The fire canvas
   // reads this each frame to pulse taller/brighter on the beat, then falls calm when silent.
   window.__cuddlyMusic = function () {
-    var playing = null;
-    Object.keys(instrumentSpots).some(function (id) {
-      var a = document.getElementById(instrumentSpots[id].audioId);
-      if (a && !a.paused) { playing = a; return true; }
-      return false;
-    });
+    var playing = playingInstrumentAudio();
     if (!playing) return null;
     var bpm = GROOVE_BPM[playing.id] || 126.0;
     var period = 60 / bpm; if (period < 0.4) period *= 2;
@@ -69945,18 +70029,12 @@ function spawnDustMote(container) {
   }
   var noteFlowTimer = null;
   function updateNoteFlow() {
-    var anyPlaying = Object.keys(instrumentSpots).some(function (id) {
-      var audio = document.getElementById(instrumentSpots[id].audioId);
-      return audio && !audio.paused;
-    });
+    var anyPlaying = !!playingInstrumentAudio();
     if (anyPlaying && !noteFlowTimer) {
       noteFlowTimer = setInterval(function () {
-        var spot = null;
-        Object.keys(instrumentSpots).some(function (id) {
-          var audio = document.getElementById(instrumentSpots[id].audioId);
-          if (audio && !audio.paused) { spot = instrumentSpots[id]; return true; }
-          return false;
-        });
+        var audio = playingInstrumentAudio();
+        var source = audio && instrumentForAudio(audio);
+        var spot = source && source.spot;
         if (spot && !document.hidden && document.hasFocus()) spawnMusicNotes(strip, spot.x, spot.y); // notes are decorative; songs play on while hidden but skip the spawn
       }, 900);
     } else if (!anyPlaying && noteFlowTimer) {
@@ -69966,14 +70044,11 @@ function spawnDustMote(container) {
   }
   function updateInstrumentSway() {
     Object.keys(instrumentSpots).forEach(function (id) {
-      var audio = document.getElementById(instrumentSpots[id].audioId);
       var el = document.getElementById(id);
-      if (el) el.classList.toggle("playing", !!(audio && !audio.paused));
+      if (el) el.classList.toggle("playing", !!playingAudioForInstrument(instrumentSpots[id]));
     });
   }
-  Object.keys(instrumentSpots).forEach(function (id) {
-    var audio = document.getElementById(instrumentSpots[id].audioId);
-    if (!audio) return;
+  allInstrumentAudios().forEach(function (audio) {
     audio.addEventListener("play", updateCuddlyGrooving);
     audio.addEventListener("pause", updateCuddlyGrooving);
     audio.addEventListener("ended", updateCuddlyGrooving);
@@ -69984,21 +70059,27 @@ function spawnDustMote(container) {
     audio.addEventListener("pause", updateNoteFlow);
     audio.addEventListener("ended", updateNoteFlow);
   });
-  // Each instrument's strings shimmer on the beat ONLY while ITS OWN song plays
-  // (the guitar to I Need You, the uke to Strange & Beautiful Things). Tempo
+  // Each instrument's strings shimmer on the beat only while one of its own songs plays.
+  // The ukulele follows either birthday-concert recording; the guitar follows Tumbalalaika. Tempo
   // comes from that song's real position via the same beat clock as the equalizer's
   // tempo-synced fallback (period = 60/bpm, half-time above ~150bpm; kick =
   // exp(-frac*5)) — not audio analysis. The shimmer transform lives on an inner
   // wrapper <g>, kept distinct from the instrument's own sway so the two never fight.
-  function wireInstrumentStrings(wrapId, audioId, bpm, cx) {
+  function wireInstrumentStrings(wrapId, audioIds, cx) {
     var stringsWrap = document.getElementById(wrapId);
-    var audio = document.getElementById(audioId);
-    if (!stringsWrap || !audio) return;
+    var audios = audioIds.map(function (audioId) { return document.getElementById(audioId); }).filter(Boolean);
+    if (!stringsWrap || !audios.length) return;
     var strRAF = null;
+    function playingAudio() {
+      for (var i = 0; i < audios.length; i++) if (!audios[i].paused && !audios[i].ended) return audios[i];
+      return null;
+    }
     function settle() { stringsWrap.removeAttribute("transform"); stringsWrap.style.opacity = ""; }
     function frame() {
       if (document.hidden) { strRAF = null; return; } // don't spin while backgrounded
-      if (audio.paused || audio.ended) { settle(); strRAF = null; return; }
+      var audio = playingAudio();
+      if (!audio) { settle(); strRAF = null; return; }
+      var bpm = GROOVE_BPM[audio.id] || 126.0;
       var period = 60 / bpm; if (period < 0.4) period *= 2; // half-time for fast songs
       var t = audio.currentTime, frac = (t % period) / period, kick = Math.exp(-frac * 5);
       // a quick side-to-side vibration of the whole string bundle, decaying each beat —
@@ -70009,13 +70090,15 @@ function spawnDustMote(container) {
       strRAF = requestAnimationFrame(frame);
     }
     function poke() { if (strRAF == null) strRAF = requestAnimationFrame(frame); }
-    audio.addEventListener("play", poke);
-    audio.addEventListener("pause", poke); // one more frame settles it back to static
-    audio.addEventListener("ended", poke);
+    audios.forEach(function (audio) {
+      audio.addEventListener("play", poke);
+      audio.addEventListener("pause", poke); // one more frame settles it back to static
+      audio.addEventListener("ended", poke);
+    });
     document.addEventListener("visibilitychange", function () { if (!document.hidden) poke(); });
   }
-  wireInstrumentStrings("garden-guitar-strings", "guitar-song-audio", 184.6, 73);
-  wireInstrumentStrings("garden-ukulele-strings", "ukulele-song-audio", 126.0, 55);
+  wireInstrumentStrings("garden-guitar-strings", instrumentSpots["garden-guitar"].audioIds, 73);
+  wireInstrumentStrings("garden-ukulele-strings", instrumentSpots["garden-ukulele"].audioIds, 55);
   var candleIds = ["garden-candle-1", "garden-candle-2"];
   var candlesLit = {};
   function setCandleLit(id, on) { // returns the PREVIOUS lit state
@@ -70400,9 +70483,9 @@ function spawnDustMote(container) {
     Object.keys(instrumentSpots).forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.classList.remove("done");
-      var audio = document.getElementById(instrumentSpots[id].audioId);
-      if (audio) { audio.pause(); audio.currentTime = 0; }
+      instrumentSpots[id].nextAudio = 0;
     });
+    allInstrumentAudios().forEach(function (audio) { audio.pause(); audio.currentTime = 0; });
     candleIds.forEach(function (id) {
       candlesLit[id] = false;
       var el = document.getElementById(id);
@@ -70465,7 +70548,7 @@ function spawnDustMote(container) {
     if (window.__clearTipsy) window.__clearTipsy();
     if (window.__setUvParty) window.__setUvParty(false); // drop out of the blacklight party
     if (window.__setGardenParty) window.__setGardenParty(false); // ...and tear the garden party down
-    if (window.__clearOccasionBanner) window.__clearOccasionBanner(); // ...and clear any occasion-day banner (wedding/bbq/brunch)
+    if (window.__refreshOccasionBanner) window.__refreshOccasionBanner(); // the date's permanent occasion label survives a game reset
     var partyswitch = document.getElementById("balcony-partyswitch");
     if (partyswitch) partyswitch.classList.remove("on");
     if (window.resetRadio) window.resetRadio();
@@ -71086,6 +71169,7 @@ function spawnDustMote(container) {
     if (window.__stampFernHour) window.__stampFernHour();      // ...and ?time= may have landed on midnight
     if (window.__updateSkyFireworks) window.__updateSkyFireworks(window.currentStageName); // new-year sky follows the preview
     if (window.__applyMoonPhases) window.__applyMoonPhases(); // the night-sky moons reshape to the date's real phase
+    if (window.__refreshOccasionBanner) window.__refreshOccasionBanner(); // a season/birthday preview renames or clears the permanent day label
     // a date that moves off (or between) shower nights drops the streaks still in the air, so
     // last night's shower can't trail into the new day
     var shk = (showerFor(s.m, s.d) || {}).key || null;
@@ -71498,6 +71582,27 @@ function spawnDustMote(container) {
   window.__isOccAnnounceDay = function (sk, m, d, y) { // "is today the day sk speaks?" — the invite orchestrator's gate
     var a = occAnnounceDay(sk, y);
     return !!a && a[0] === m && a[1] === d;
+  };
+  // One localized description for the permanent viewport ribbon. This lives beside the calendar
+  // tables so birthdays, drifting holidays and previews all resolve from their single source of truth.
+  window.__specialDayBannerInfo = function () {
+    var s = seasonDate();
+    var fixed = {
+      "4-1": "occ_banner_wed_edm",
+      "4-2": "occ_banner_bbq",
+      "6-10": "occ_banner_wed_prg",
+      "6-11": "occ_banner_brunch"
+    };
+    var fixedKey = fixed[s.m + "-" + s.d];
+    if (fixedKey) return { key: fixedKey };
+    var birthdays = CAL_BD_BY_DAY[s.m + "-" + s.d] || [];
+    if (birthdays.length) {
+      return { text: calBdLabel(birthdays.map(function (b) { return b.name; }).join(" & ")) };
+    }
+    var sk = calSeasonKey(s.m, s.d, s.y);
+    var announce = sk === "wedding" ? null : occAnnounceDay(sk, s.y);
+    if (announce && announce[0] === s.m && announce[1] === s.d) return { key: "season_" + sk };
+    return null;
   };
   // ── cuddly-nook wedding countdown banner ──────────────────────────────────────
   // A small hanging wall sign counting down to the NEAREST upcoming wedding (Edmonton
@@ -72448,10 +72553,12 @@ function spawnDustMote(container) {
       if (sk && !SHARE_PLAIN_SEASONS[sk]) id = "occ-" + sk;
     }
     if (!id) return;
+    if (!window.__secondRound) return; // phase one is for solving; setGardenParty retries this as phase two begins
     var mark = "shareAutoShown:" + id + ":" + shareLoftISO();
     try { if (localStorage.getItem(mark)) return; localStorage.setItem(mark, "1"); } catch (e) {}
     window.shareCard();
   }
+  window.__retryShareAutoShow = shareAutoShow;
   setTimeout(shareAutoShow, 1200); // let the scene settle before it opens
 
   var extinguisher = document.getElementById("kitchen-extinguisher");
@@ -72492,7 +72599,7 @@ function spawnDustMote(container) {
   // ── "Day in the Loft" cinematic ──────────────────────────────────────────
   // A hands-off autoplay: a leisurely, whimsy-rich walkthrough of all five rooms as
   // the day turns to night into the built-in balcony finale, then an encore — the
-  // record flips to the couple's other song, the blacklight comes on, and the show
+  // record flips to another song, the blacklight comes on, and the show
   // wanders the loft once more before the extinguisher resets it to a fresh morning.
   // Sequential cancellable timeline: pacing gaps are wall-clock beats, but every real
   // solve gate (the espresso warm-up, grind/tamp/brew, the Prague call connecting and
@@ -72816,12 +72923,12 @@ function spawnDustMote(container) {
   // sometimes others) block that late play(). Unlock the elements HERE, inside the trusted
   // Watch gesture, with a silent play→pause: after this the deferred play() is allowed.
   // volume=0 (NOT muted) so if a settle ever fails the instrument handler's own
-  // volume=0.45 reset self-heals it — muted would leave the song playing inaudibly. Guitar
-  // first: strict browsers unlock only the first media element per gesture, and guitar is
+  // volume=0.45 reset self-heals it — muted would leave the song playing inaudibly. Tumbalalaika
+  // first: strict browsers unlock only the first media element per gesture, and the guitar is
   // the walkthrough's song. No audible blip (volume 0), and the settle resets to a clean
   // paused/0 state so the later tap's play-toggle isn't fooled into pausing instead.
   function primeCinematicAudio() {
-    ["guitar-song-audio", "ukulele-song-audio"].forEach(function (id) {
+    ["tumbala-song-audio", "guitar-song-audio", "ukulele-song-audio"].forEach(function (id) {
       var a = document.getElementById(id);
       if (!a) return;
       try {
@@ -72879,7 +72986,7 @@ function spawnDustMote(container) {
   // player (hiding the dock, stalling every later app beat) — resetting currentTime to 0
   // clears "current", so the flip never fires.
   function cineHushSong() {
-    ["guitar-song-audio", "ukulele-song-audio"].forEach(function (id) {
+    ["tumbala-song-audio", "guitar-song-audio", "ukulele-song-audio"].forEach(function (id) {
       var a = document.getElementById(id);
       if (a && !a.paused) { try { a.pause(); a.currentTime = 0; } catch (e) {} }
     });
@@ -72889,7 +72996,7 @@ function spawnDustMote(container) {
   // now — cosmetic, and cleared at the extinguisher reset.
   function cineResumeSong() {
     if (!window.__cinematic) return;
-    var g = document.getElementById("guitar-song-audio");
+    var g = document.getElementById("tumbala-song-audio");
     if (!g || !g.paused) return;
     try {
       g.currentTime = 0;
@@ -73005,7 +73112,7 @@ function spawnDustMote(container) {
   // stopCinematic as a defensive UV-off backstop) are kept intact but currently dormant; a
   // future longer show could chain startEncore() again. stopCinematic already tears down every
   // bit of state they touch (UV, party, songs), so nothing here can strand if it's revived.
-  // After the finale it doesn't just stop: the record flips to the couple's OTHER song
+  // After the finale it doesn't just stop: the record flips to another song
   // (a monitor-skip-style crossfade), the balcony's blacklight switches on, and the show
   // scrolls straight to the garden, where the balcony switch's own party is thrown for a
   // held celebratory peak. Then it's back to the kitchen where the day began — the song
@@ -73024,7 +73131,7 @@ function spawnDustMote(container) {
   // The "in" half only runs if the show is still on, so a take-over mid-fade can never
   // start a song after the viewer has the wheel.
   function encoreSongSwap() {
-    var cur = document.getElementById("guitar-song-audio");
+    var cur = document.getElementById("tumbala-song-audio");
     var next = document.getElementById("ukulele-song-audio");
     if (!cur || !next || !window.__fadeSongTo) return;
     var appVol = window.__songVolume ? window.__songVolume() : 0.5;
@@ -75655,32 +75762,36 @@ function spawnDustMote(container) {
       return document.hidden || !document.hasFocus() ||
              (window.__autoplayOn && window.__autoplayOn()) || !!window.__tripActive;
     }
-    // a small viewport ribbon naming the active occasion (wedding/bbq/prague-party); birthdays get none
-    function occBannerKey(key) {
-      if (key === "wedding-edmonton") return "occ_banner_wed_edm";
-      if (key === "wedding-prague") return "occ_banner_wed_prg";
-      if (key === "bbq") return "occ_banner_bbq";
-      if (key === "prague-party") return "occ_banner_brunch";
-      return null;
-    }
-    function showOccasionBanner(key) {
-      var bk = occBannerKey(key);
-      if (!bk) return;
-      var vp = document.querySelector(".hunt-viewport");
-      if (!vp) return;
-      var b = document.getElementById("occasion-banner");
-      if (!b) { b = document.createElement("div"); b.id = "occasion-banner"; b.className = "occasion-banner"; vp.appendChild(b); }
-      var l = T[document.documentElement.lang] ? document.documentElement.lang : "en";
-      b.setAttribute("data-i", bk); // so a language toggle re-translates it live (setLang path)
-      b.innerHTML = (T[l] && T[l][bk]) || T.en[bk] || "";
-      b.getBoundingClientRect(); // reflow so the fade-in transition takes
-      b.classList.add("show");
+    // A permanent viewport ribbon names the loft's exact special day without activating its scene.
+    // Fixed event days reuse the existing labels; birthdays and holiday anchor days share the
+    // calendar's localized names. seasonDate() also makes the pro preview controls tell the truth.
+    function occasionBannerInfo() {
+      return window.__specialDayBannerInfo ? window.__specialDayBannerInfo() : null;
     }
     function clearOccasionBanner() {
       var b = document.getElementById("occasion-banner");
       if (b && b.parentNode) b.parentNode.removeChild(b);
     }
-    window.__clearOccasionBanner = clearOccasionBanner; // the extinguisher reset drops it (occasion happening is torn down)
+    function refreshOccasionBanner() {
+      var info = occasionBannerInfo();
+      if (!info) { clearOccasionBanner(); return; }
+      var vp = document.querySelector(".hunt-viewport");
+      if (!vp) return;
+      var b = document.getElementById("occasion-banner");
+      if (!b) { b = document.createElement("div"); b.id = "occasion-banner"; b.className = "occasion-banner"; vp.appendChild(b); }
+      if (info.key) {
+        var l = T[document.documentElement.lang] ? document.documentElement.lang : "en";
+        b.setAttribute("data-i", info.key);
+        b.innerHTML = (T[l] && T[l][info.key]) || T.en[info.key] || "";
+      } else {
+        b.removeAttribute("data-i");
+        b.textContent = info.text;
+      }
+      b.getBoundingClientRect(); // reflow so the fade-in transition takes
+      b.classList.add("show");
+    }
+    window.__clearOccasionBanner = clearOccasionBanner;
+    window.__refreshOccasionBanner = refreshOccasionBanner;
     function setupWedding() {
       if (window.party && !window.party()) window.party(true); // full party: garden, dancing, blacklight, night
     }
@@ -75739,14 +75850,14 @@ function spawnDustMote(container) {
     var lastKey = null;
     function apply(force) {
       if (force) armTimeGate(); // a deliberate summon jumps a time-gated happening's clock into its window BEFORE occKey reads it
+      refreshOccasionBanner(); // label the day now; only the optional scene below waits for a text/day click
       var key = occKey();
       if (key !== lastKey) {
         // the occasion changed (or cleared) since the one we set up: tear the old one's owned flag
-        // + banner down (the rest rides the standard day/season/reset path), and drop the latch so
-        // the new occasion is (re)applied below.
+        // down (the date-driven banner is independent), and drop the latch so the new occasion is
+        // (re)applied below.
         if (lastKey === "bbq" && window.__setBalconyBBQCrowd) window.__setBalconyBBQCrowd(false);
         if (lastKey === "bbq" && window.resetSmoker) window.resetSmoker(); // ...and the cookout's grill goes cold, so Hamid isn't still tending it the next day
-        clearOccasionBanner();
         lastKey = null;
       }
       if (!key) return;                         // no occasion today
@@ -75763,10 +75874,10 @@ function spawnDustMote(container) {
         else if (key === "wedding-prague" || key === "prague-party") setupPrague();
         else if (key.indexOf("bd:") === 0) setupBirthday(key.slice(3).split("+"));
         else setupWedding();
-        showOccasionBanner(key);
       }, force ? 80 : 900);
     }
     window.__applyDateOccasion = apply; // pinged on every date change (calRefreshDeps + hashchange); a truthy arg forces past the latch
+    refreshOccasionBanner();
     // Retry an unhandled occasion the moment the tab is focused/shown or the loft enters play — a
     // fresh load lands unfocused/on the intro, so the 1200ms arm below is often gated; these catch
     // it up without re-forcing an already-set scene (apply is a cheap no-op once latched).
@@ -77707,12 +77818,12 @@ function spawnDustMote(container) {
   window.no = function (name) { var fn = verbTarget(name); return fn ? fn(false) : "no what? e.g. no(\"party\") · no(\"smoker\") · no(\"laptop\") · no(\"blacklight\")"; };
 
   // ── audio sources ──────────────────────────────────────────────────────────
-  // music — the garden concert songs (the real loft-concert recordings). music() returns the
-  // current song as {n, name}; music("guitar"|"ukulele"|1|2|random()) plays one. guitar()/
-  // ukulele() are aliases. This is the "music" audio source (see audio()).
-  var MUSIC_NAMES = ["guitar", "ukulele"]; // index ↔ the songAudios order (guitar-song-audio, ukulele-song-audio)
+  // music — the three real recordings in the shared monitor/phone player. music() returns the
+  // current song as {n, name}; music("tumbala"|"dan"|"orit"|1|2|3|random()) plays one.
+  // guitar()/ukulele() instead poke the physical garden instruments, preserving their toggles.
+  var MUSIC_NAMES = ["tumbala", "dan", "orit"]; // index ↔ shared songAudios order
   function playingSongIdx() {
-    var ids = ["guitar-song-audio", "ukulele-song-audio"];
+    var ids = ["tumbala-song-audio", "guitar-song-audio", "ukulele-song-audio"];
     for (var i = 0; i < ids.length; i++) { var a = document.getElementById(ids[i]); if (a && !a.paused && !a.ended) return i; }
     return -1;
   }
@@ -77727,9 +77838,16 @@ function spawnDustMote(container) {
     if (window.__playSongAt) window.__playSongAt(idx);
     return "♪ " + MUSIC_NAMES[idx] + " — from the loft concert.";
   };
-  window.guitar = function () { return window.music("guitar"); };   // alias
-  window.ukulele = function () { return window.music("ukulele"); }; // alias
-  window.ukelele = window.ukulele;                                   // common misspelling, same command
+  function consoleInstrumentTap(id, label) {
+    if (window.goToStage) window.goToStage("garden");
+    var el = document.getElementById(id);
+    if (!el) return null;
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    return "♪ " + label;
+  }
+  window.guitar = function () { return consoleInstrumentTap("garden-guitar", "guitar — Tumbalalaika"); };
+  window.ukulele = function () { return consoleInstrumentTap("garden-ukulele", "ukulele — Orit / Dan rotation"); };
+  window.ukelele = window.ukulele; // common misspelling, same command
 
   // sound("<id>") — a dev-console toy: play any one of the loft's curated one-shot sound
   // effects by id (every SFX here maps to an existing play*Sound with safe defaults — no new

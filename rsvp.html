@@ -54208,6 +54208,7 @@ async def localfont(name):
     }
     window.__deliverAutonomousPhoneMessage = function (id) {
       if (!MESSAGES[id] || messagesThread.indexOf(id) !== -1) return false;
+      if (!partyTextAllowedToday(id)) return false;
       if (!window.__secondRound) return window.__deliverPhoneMessage(id);
       if (!majorMessageMomentActive()) return window.__deliverPhoneMessage(id);
       if (deferredAutonomousMessages.indexOf(id) === -1) deferredAutonomousMessages.push(id);
@@ -54369,7 +54370,12 @@ async def localfont(name):
     function nearSunrise() { return Math.abs(edmNowMins() - sunMoM().sr) <= SUN_NEAR_MIN; }
     function partyTextAllowedToday(id) {
       var openBBQ = !!(window.__bbqDateNow && window.__bbqDateNow());
-      return !(openBBQ && MOMENT_TEXT_IDS.indexOf(id) !== -1); // open cookouts are informal gatherings, not another wedding reception
+      if (openBBQ && MOMENT_TEXT_IDS.indexOf(id) !== -1) return false; // open cookouts are informal gatherings, not another wedding reception
+      // Let the party settle before a wedding-moment announcement appears. Ordinary party
+      // messages may arrive immediately; authored moments wait until the room has had 25s.
+      if (MOMENT_TEXT_IDS.indexOf(id) !== -1 && window.__gardenPartyOn && window.__partyStartedAt &&
+          Date.now() - window.__partyStartedAt < 25000) return false;
+      return true;
     }
     function cuePending() { var out = []; for (var i = 0; i < CUE_POOL.length; i++) if (messagesThread.indexOf(CUE_POOL[i]) === -1 && partyTextAllowedToday(CUE_POOL[i])) out.push(CUE_POOL[i]); return out; } // un-sent, date-appropriate cues (keeps the drip alive across time/state gates so a gated-out one stays reachable)
     function partyTabChoices(onlyUnsent) {

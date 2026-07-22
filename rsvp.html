@@ -24963,6 +24963,7 @@ var T = {
       garden: "Water a plant, play music, light candles.",
       garden_party: "Party's on — dance like nobody's watering. 💃🌱",
       party_exit_hint: "Wall switch ends the party, not the game. Loft and apps stay open.",
+      party_ended: "Party's over for now, not the game. Keep exploring; apps stay open.",
       farhang_toast: "To the happy couple! 🥂",
       first_dance_caption: "Their first dance — everyone else, hush. 💞",
       dj_sina: ["<em>DJ Sina</em> takes over the decks. 🎧", "<em>DJ Sina</em> grabs the ones and twos. 🎧"],
@@ -25398,6 +25399,10 @@ var T = {
     msg_storm_body: "there's a storm coming! ⛈️",
     msg_behdad_from: "behdad",
     msg_marketa_from: "markéta",
+    msg_partyagain_behdad_body: "who wants another round? the wall switch knows how 🎉",
+    msg_partyagain_marketa_body: "anyone up for one more dance? ✨",
+    msg_lastdance_body: "last dance, everyone — grab your person 💞",
+    msg_lastsong_body: "last song! make it count 🎧",
     // birthday-announcement text variations; {name} is filled from the BIRTHDAYS row at delivery
     bd_msg_a: "Happy birthday, {name}! 🎂",
     bd_msg_b: "it's {name}'s birthday!! 🥳",
@@ -25820,6 +25825,7 @@ var T = {
       garden: "Zalij kytku, zahraj, zapal svíčky.",
       garden_party: "Párty jede — tanči, ať kytky počkají. 💃🌱",
       party_exit_hint: "Vypínač ukončí párty, ne hru. Loft i aplikace zůstávají otevřené.",
+      party_ended: "Párty prozatím skončila, hra ne. Objevuj dál; aplikace zůstávají otevřené.",
       farhang_toast: "Na šťastný pár! 🥂",
       first_dance_caption: "Jejich první tanec — ostatní, pšt. 💞",
       dj_sina: ["Za gramofony jde <em>DJ Sina</em>. 🎧", "<em>DJ Sina</em> bere desky do ruky. 🎧"],
@@ -26251,6 +26257,10 @@ var T = {
     msg_storm_body: "blíží se bouřka! ⛈️",
     msg_behdad_from: "behdad",
     msg_marketa_from: "markéta",
+    msg_partyagain_behdad_body: "kdo chce další kolo? vypínač ví, jak na to 🎉",
+    msg_partyagain_marketa_body: "dá si někdo ještě jeden tanec? ✨",
+    msg_lastdance_body: "poslední tanec — chyťte si svého člověka 💞",
+    msg_lastsong_body: "poslední písnička! ať stojí za to 🎧",
     // varianty narozeninových přání; {name} se doplní z řádku BIRTHDAYS při doručení
     bd_msg_a: "Dnes slaví {name} — všechno nejlepší! 🎂",
     bd_msg_b: "{name} má dnes narozeniny!! 🥳",
@@ -51277,6 +51287,11 @@ async def localfont(name):
       smores:        { fromKey: "msg_bahareh_from", bodyKey: "msg_smores_body",    act: "smores" },        // Bahareh, after dark → taps: balcony + light the bonfire for s'mores
       kids_asleep:   { fromKeys: MOM_SENDERS, bodyKeys: ["msg_kidsasleep_body_a", "msg_kidsasleep_body_b"], arrival: "kidsleep" }, // informative state: delivery itself puts every kid to sleep; no action affordance
       kids_loose:    { fromKeys: MOM_SENDERS, bodyKeys: ["msg_kidsloose_body_a", "msg_kidsloose_body_b"],   arrival: "kidwake" },  // informative state: the auto-wake has already happened; direct/test delivery also wakes them
+      party_again_behdad: { fromKey: "msg_behdad_from", bodyKey: "msg_partyagain_behdad_body", act: "party" }, // rare post-party invitation; only a deliberate tap relights the party
+      party_again_marketa: { fromKey: "msg_marketa_from", bodyKey: "msg_partyagain_marketa_body", act: "party" },
+      lastdance:       { fromKey: "msg_athena_from", bodyKey: "msg_lastdance_body", act: "lastdance" }, // 2:30 close cue; tap runs a final slow dance, then winds down
+      lastsong_sina:   { fromKey: "msg_sina_from", bodyKey: "msg_lastsong_body", act: "lastsong" },
+      lastsong_danesh: { fromKey: "msg_danesh_from", bodyKey: "msg_lastsong_body", act: "lastsong" },
       firstdance:    { fromKeys: MOMENT_SENDERS, bodyKey: "msg_firstdance_body", act: "firstdance" },    // a coordinator → taps: the garden party + the hosts' first dance
       slowdance:     { fromKeys: MOMENT_SENDERS, bodyKey: "msg_slowdance_body", act: "slowdance" },       // a coordinator → taps: the garden party + a slow-song lull (the whole floor pairs off)
       cake:          { fromKeys: MOMENT_SENDERS, bodyKey: "msg_cake_body",      act: "cake" },         // a coordinator → taps: the garden party + the cake cutting
@@ -52786,6 +52801,20 @@ async def localfont(name):
       if (act === "storm") { if (window.storm) window.storm(true); if (window.rain) window.rain(true); return; } // Bahareh's warning → a CLASSIC thunderstorm (lightning + rain); storm()/rain() pan to the balcony + set dusk themselves
       if (act === "invaders") { if (window.goToStage) window.goToStage("office"); setTimeout(function () { if (window.__startArcade) window.__startArcade(); }, 720); return; } // pan to the office, then launch the chair alien-arcade
       if (act === "smores") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__setSmores) window.__setSmores(true); }, 760); return; } // pan to the balcony, then light the bonfire
+      if (act === "party") { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); return; } // a post-party invitation only restarts once the visitor accepts it
+      if (act === "lastdance") { // Athena's close cue: a final slow dance, then an attended-time wind-down
+        if (!window.__gardenPartyOn) return;
+        if (window.slowdance) window.slowdance();
+        if (window.__schedulePartyFinale) window.__schedulePartyFinale(24, "lastdance");
+        return;
+      }
+      if (act === "lastsong") { // the current DJ advances once, then the set closes after that dance's normal turn
+        if (!window.__gardenPartyOn) return;
+        if (window.goToStage) window.goToStage("garden");
+        if (window.__nextPartyDance) window.__nextPartyDance();
+        if (window.__schedulePartyFinale) window.__schedulePartyFinale(15, "lastsong");
+        return;
+      }
       if (act === "firstdance") { if (window.firstdance) window.firstdance(); return; } // firstdance() lights the party + heads to the garden + rings the crowd + runs the hosts' first dance
       if (act === "slowdance") { if (window.slowdance) window.slowdance(); return; } // slowdance() lights the party + heads to the garden + pairs the whole floor off for a warm, slow-song lull
       if (act === "toasts") { if (window.toasts) window.toasts(); return; } // toasts() lights the party + heads to the garden + runs the best-man → MC toast sequence
@@ -54551,8 +54580,10 @@ async def localfont(name):
       partyswitch.classList.toggle("on", on);
       if (on) {
         // Toggling back ON — cancel any pending graceful teardown and walk the leaving guests back in.
+        var wasWindingDown = !!partyWindDownTimer;
         clearWindDown();
         if (window.__cancelGuestsWalkOut) window.__cancelGuestsWalkOut();
+        if (wasWindingDown && window.__restartPartyLifecycle) window.__restartPartyLifecycle();
         var daytimeBBQ = !!window.__bbqDayPartyOn || !!(window.__bbqDateNow && window.__bbqDateNow());
         if (daytimeBBQ) window.__bbqDayPartyOn = true;
         if (window.__setUvParty) window.__setUvParty(!daytimeBBQ);
@@ -66607,35 +66638,114 @@ function spawnDustMote(container) {
       if (window.__autoToggleDusk) window.__autoToggleDusk(); // a temporary manual look — the crossing scheduler stays armed (the next real crossing still flips it)
     });
   })();
-  // The party's exit stays diegetic: after 45 seconds of attended party time, point out
-  // the garden wall switch once. Hidden/unfocused time never advances the cue, and using
-  // the switch before it appears retires it because that player has already found the exit.
+  // PARTY LIFECYCLE: the party stays the main event for three ATTENDED minutes. Hidden,
+  // unfocused and cinematic time does not count. At 2:30 the wall switch gets one quiet
+  // reminder; at 3:00 the existing graceful guest walk-out ends the party. The controller
+  // only owns pacing and copy — setGardenParty remains the one source of truth and tears down
+  // every visual/audio subsystem. A later, rare text can invite the player to deliberately
+  // relight the party; it never restarts on its own.
   (function () {
     var sw = document.getElementById("garden-lightswitch");
     if (!sw) return;
-    var attendedSeconds = 0, timer = null, retired = false, active = false;
+    var CLOSE_AT = 150, END_AT = 180;
+    var attendedSeconds = 0, timer = null, active = false, finishing = false;
+    var finaleAt = null, finaleReason = null, finaleTextOffered = false;
+    var suppressNextStop = false, inviteTimer = null;
     function stop() { if (timer) { clearInterval(timer); timer = null; } }
+    function clearInvite() { if (inviteTimer) { clearTimeout(inviteTimer); inviteTimer = null; } }
     function paint() { sw.classList.toggle("invite-pulse", !!(active && window.__gardenPartyOn)); }
-    function show() {
-      if (retired || !window.__gardenPartyOn) return false;
-      retired = true; active = true; stop(); paint();
+    function show(withFinaleText) {
+      if (active || !window.__gardenPartyOn) return false;
+      active = true; paint();
       if (window.currentStageName === "garden" && window.__refreshGardenCaption) window.__refreshGardenCaption();
+      if (withFinaleText) offerFinaleText();
       return true;
+    }
+    function offerFinaleText() {
+      if (finaleTextOffered || !window.__gardenPartyOn || !window.__deliverPhoneMessage) return false;
+      if (window.__bbqDateNow && window.__bbqDateNow()) return false; // open cookouts skip formal reception moments
+      finaleTextOffered = true;
+      var id = Math.random() < 0.5 ? "lastdance" : (window.__djB ? "lastsong_danesh" : "lastsong_sina");
+      return !!window.__deliverPhoneMessage(id);
+    }
+    function finish(reason) {
+      if (!window.__gardenPartyOn || finishing) return false;
+      finishing = reason || "timer";
+      stop();
+      if (window.__setPartyMode) window.__setPartyMode(false);
+      else if (window.__setGardenParty) window.__setGardenParty(false, true);
+      return true;
+    }
+    function advance(seconds) {
+      if (!window.__gardenPartyOn || finishing) return attendedSeconds;
+      attendedSeconds += Math.max(0, +seconds || 0);
+      if (attendedSeconds >= CLOSE_AT) show(true);
+      if (finaleAt != null && attendedSeconds >= finaleAt) { finish(finaleReason || "finale"); return attendedSeconds; }
+      if (attendedSeconds >= END_AT) finish("timer");
+      return attendedSeconds;
     }
     function tick() {
       if (!window.__gardenPartyOn || document.hidden || (document.hasFocus && !document.hasFocus()) || window.__cinematic) return;
-      attendedSeconds += 1;
-      if (attendedSeconds >= 45) show();
+      advance(1);
+    }
+    function offerAgain(force) {
+      if (window.__gardenPartyOn || !window.__secondRound) return false;
+      if (!force && (document.hidden || (document.hasFocus && !document.hasFocus()) || window.__cinematic)) { scheduleInvite(30000); return false; }
+      if (!force && Math.random() >= 0.32) return false;
+      var id = Math.random() < 0.5 ? "party_again_behdad" : "party_again_marketa";
+      return !!(window.__deliverPhoneMessage && window.__deliverPhoneMessage(id));
+    }
+    function scheduleInvite(delay) {
+      clearInvite();
+      inviteTimer = setTimeout(function () { inviteTimer = null; offerAgain(false); }, delay == null ? 120000 + Math.floor(Math.random() * 120000) : delay);
+    }
+    function startFresh() {
+      clearInvite(); stop();
+      attendedSeconds = 0; active = false; finishing = false; suppressNextStop = false;
+      finaleAt = null; finaleReason = null; finaleTextOffered = false;
+      paint(); timer = setInterval(tick, 1000);
+    }
+    function stopped() {
+      stop(); active = false; paint();
+      var suppress = suppressNextStop; suppressNextStop = false;
+      var ended = finishing; finishing = false;
+      finaleAt = null; finaleReason = null;
+      if (window.__partyActEnded) window.__partyActEnded();
+      if (!suppress && !window.__cinematic && !(window.__autoplayOn && window.__autoplayOn())) {
+        if (window.setCaption) window.setCaption("party_ended");
+        scheduleInvite();
+      }
+      return ended || "manual";
     }
     window.__updatePartyExitHint = function () {
       if (!window.__gardenPartyOn) { stop(); active = false; paint(); return; }
-      if (!retired && !timer) timer = setInterval(tick, 1000);
+      if (!timer && !finishing) timer = setInterval(tick, 1000);
       paint();
     };
     window.__partyExitHintActive = function () { return !!(active && window.__gardenPartyOn); };
-    window.__showPartyExitHint = show; // deterministic state-test hook
-    window.__consumePartyExitHint = function () { retired = true; active = false; stop(); paint(); };
-    window.__resetPartyExitHint = function () { attendedSeconds = 0; retired = false; active = false; stop(); paint(); };
+    window.__showPartyExitHint = function () { return show(false); }; // deterministic state-test hook (does not manufacture a phone cue)
+    window.__consumePartyExitHint = function () { active = false; paint(); };
+    window.__partyLifecycleChanged = function (on, wasOn) {
+      if (on && !wasOn) startFresh();
+      else if (!on && wasOn) stopped();
+      else window.__updatePartyExitHint();
+    };
+    window.__finishPartyLifecycle = finish;
+    window.__schedulePartyFinale = function (seconds, reason) {
+      if (!window.__gardenPartyOn || finishing) return false;
+      finaleAt = attendedSeconds + Math.max(1, +seconds || 1); finaleReason = reason || "finale";
+      return true;
+    };
+    window.__restartPartyLifecycle = startFresh; // toggling back on during the walk-out starts a fresh attended stint
+    window.__advancePartyLifecycle = advance;    // deterministic tests/console: no three-minute waits
+    window.__partyLifecycleTick = tick;           // deterministic attendance-gate test hook
+    window.__partyLifecycleState = function () { return { attended: attendedSeconds, cue: !!active, finishing: finishing || null, finaleAt: finaleAt, finaleReason: finaleReason, running: !!timer }; };
+    window.__offerPartyAgain = function () { return offerAgain(true); };
+    window.__resetPartyExitHint = function () {
+      suppressNextStop = true; attendedSeconds = 0; active = false; finishing = false;
+      finaleAt = null; finaleReason = null; finaleTextOffered = false;
+      stop(); clearInvite(); paint();
+    };
   })();
   (function scheduleAmbientPlantSway() {
     var delay = 6000 + Math.random() * 8000;
@@ -67328,10 +67438,10 @@ function spawnDustMote(container) {
     // Second act: watching the decks change hands IS the floor beat paying off, so it settles
     // P2 — but only after this hype line has had its 4.2s, or the next beat would stomp the
     // very moment it's rewarding. Caption-only either way, so the timer reaches no sound.
-    if (window.__actPing) setTimeout(function () { window.__actPing("dj"); }, 4600);
+    if (window.__actPing) setTimeout(function () { if (window.__gardenPartyOn) window.__actPing("dj"); }, 4600);
     // when the decks pass to Sina, Danesh is off — he texts the host from the sidelines. Delayed
     // so it doesn't land on the "DJ Sina takes over" caption; fires once (dedup'd in the deliverer).
-    if (!window.__djB && window.__deliverPhoneMessage) setTimeout(function () { if (window.__deliverPhoneMessage) window.__deliverPhoneMessage("danesh"); }, 5200);
+    if (!window.__djB && window.__deliverPhoneMessage) setTimeout(function () { if (window.__gardenPartyOn && window.__deliverPhoneMessage) window.__deliverPhoneMessage("danesh"); }, 5200);
   }
   // Manual DJ swap — double-tapping the decks hands the booth to the other friend. Flips the
   // active DJ, reflects it onto the booth, hypes the incoming one, and zeroes the every-3-dances
@@ -68376,14 +68486,18 @@ function spawnDustMote(container) {
 
     // ── CAKE CUTTING ──────────────────────────────────────────────────────────────
     var cakeTimer = null, cakeAnchor = null;
-    function endCakeCutting() {
+    function endCakeCutting(completed) {
       if (cakeTimer) { clearTimeout(cakeTimer); cakeTimer = null; }
+      var wasOn = !!window.__cakeOn;
       window.__cakeOn = false;
       group.classList.remove("cake-cutting");
       // restore the cake's DOM slot (moved to the front while cutting)
       var ck = document.getElementById("garden-cake");
       if (ck && cakeAnchor && cakeAnchor.parentNode === group) group.insertBefore(ck, cakeAnchor);
       cakeAnchor = null;
+      // A naturally completed wedding-cake beat is an authored early finale. Manual
+      // cake(false), room teardown and reset pass no completion flag and never end the party.
+      if (completed && wasOn && window.__gardenPartyOn && window.__finishPartyLifecycle) window.__finishPartyLifecycle("cake");
     }
     function startCakeCutting() {
       if (!onFloor()) return false;                 // only meaningful with the crowd on the floor
@@ -68396,12 +68510,13 @@ function spawnDustMote(container) {
       if (ck) { cakeAnchor = ck.nextSibling; group.appendChild(ck); }
       cheerCrowd([".g-behdad", ".g-marketa"]);      // the crowd flares (hosts are busy cutting)
       playCheerSfx();
-      cakeTimer = setTimeout(endCakeCutting, reducedMotion() ? 5000 : 9000);
+      cakeTimer = setTimeout(function () { endCakeCutting(true); }, reducedMotion() ? 5000 : 9000);
       return true;
     }
     window.__cakeOn = false;
     window.__startCakeCutting = startCakeCutting;
     window.__endCakeCutting = endCakeCutting;
+    window.__completeCakeCutting = function () { return endCakeCutting(true); }; // deterministic lifecycle test hook
 
     // ── BIRTHDAY CAKE CUTTING ───────────────────────────────────────────────────────
     // A garden birthday cuts a SMALLER, candled single-tier cake (#garden-bd-cake) DANCED to the
@@ -69022,8 +69137,10 @@ function spawnDustMote(container) {
       if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
       if (window.goToStage) window.goToStage("garden");
       setTimeout(function () {
+        if (!window.__gardenPartyOn) return; // party was switched off while the room pan settled
         if (window.__guestsIn && !window.__guestsIn() && window.__summonGuests) window.__summonGuests();
         setTimeout(function () {
+          if (!window.__gardenPartyOn) return; // never resurrect a moment after party teardown
           var ok = runHook();
           if (window.echo) window.echo(ok ? echoOk : echoNo);
         }, 140);
@@ -70078,7 +70195,7 @@ function spawnDustMote(container) {
     if (window.__rollGardenAurora) window.__rollGardenAurora(); // the UV changes the odds — re-roll the aurora (much likelier with the party off)
     if (window.__homeCat && window.currentStageName) window.__homeCat(window.currentStageName); // party on → contain the loose cat to the nook; party off → let it roam again (never stows it)
     if (window.__updateWhistler) window.__updateWhistler(); // party on + Farhang/Lauren arrived → let Whistler out; party off → send him home
-    if (window.__updatePartyExitHint) window.__updatePartyExitHint(); // after a little attended partying, reveal the garden wall switch as the way back to day
+    if (window.__partyLifecycleChanged) window.__partyLifecycleChanged(on, wasOn); // attended close cue + automatic wind-down; repeated idempotent sets never reset its clock
     // Second act: THE hinge. Pinged from the tail — every ignition path (the balcony switch,
     // the garden light switch, the disco ball, the mask) funnels through here, and by now the
     // whisk's goToStage("garden") has already run and set its own caption, so the reveal line
@@ -79121,8 +79238,10 @@ function spawnDustMote(container) {
     if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
     if (window.goToStage) window.goToStage("garden");
     setTimeout(function () { // let goToStage settle the room, then make sure the crowd's up before ringing them out
+      if (!window.__gardenPartyOn) return;
       if (window.__guestsIn && !window.__guestsIn() && window.__summonGuests) window.__summonGuests();
       setTimeout(function () {
+        if (!window.__gardenPartyOn) return;
         var ok = window.__firstDance && window.__firstDance();
         if (window.echo) window.echo(ok ? "💞 the floor clears — Behdad & Markéta take their first dance, everyone ringed around." : "the floor's dark — run party(true) first.");
       }, 120);
@@ -79138,8 +79257,10 @@ function spawnDustMote(container) {
       if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
       if (window.goToStage) window.goToStage("garden");
       setTimeout(function () {
+        if (!window.__gardenPartyOn) return;
         if (window.__guestsIn && !window.__guestsIn() && window.__summonGuests) window.__summonGuests();
         setTimeout(function () {
+          if (!window.__gardenPartyOn) return;
           var ok = startFn && startFn();
           if (window.echo) window.echo(ok ? okMsg : "the floor's dark — run party(true) first.");
         }, 120);
@@ -79189,8 +79310,10 @@ function spawnDustMote(container) {
     if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
     if (window.goToStage) window.goToStage("garden");
     setTimeout(function () { // let goToStage settle the room, then make sure the crowd's up before cutting
+      if (!window.__gardenPartyOn) return;
       if (window.__guestsIn && !window.__guestsIn() && window.__summonGuests) window.__summonGuests();
       setTimeout(function () {
+        if (!window.__gardenPartyOn) return;
         var ok = window.__startBdCakeCutting && window.__startBdCakeCutting(who);
         if (window.echo) window.echo(ok ? "🎂 happy birthday! the candles are lit — everyone gathers behind the cake." : "no garden birthday to celebrate right now.");
       }, 140);
@@ -79211,6 +79334,7 @@ function spawnDustMote(container) {
     if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
     if (window.goToStage) window.goToStage("garden");
     setTimeout(function () { // let goToStage settle the room, then make sure the crowd's up before pairing them off
+      if (!window.__gardenPartyOn) return;
       if (window.__guestsIn && !window.__guestsIn() && window.__summonGuests) window.__summonGuests();
       // OPTIONAL slow/romantic bed — purely feature-detected, never required (a concurrent agent may
       // add one). If a dedicated slow-bed hook exists, ask for it; otherwise the current bed just
@@ -79220,6 +79344,7 @@ function spawnDustMote(container) {
         else if (typeof window.__setSlowBed === "function") window.__setSlowBed(true);
       } catch (e) {}
       setTimeout(function () {
+        if (!window.__gardenPartyOn) return;
         var ok = window.__slowDance && window.__slowDance(true);
         if (window.echo) window.echo(ok ? "💞 the lights dim, the music slows — everyone pairs off and sways close." : "the floor's dark — run party(true) first.");
       }, 120);
@@ -81073,7 +81198,7 @@ function spawnDustMote(container) {
   //
   // Per-session, never localStorage: a ~10-minute experience, and a returning visitor who
   // knows the trick shouldn't have the surprise re-explained to them.
-  var armed = false, live = null, liveMs = 0, latched = {}, ticker = null, redirTimer = null;
+  var armed = false, live = null, liveMs = 0, latched = {}, ticker = null, redirTimer = null, revealTimer = null;
 
   function el(id) { return document.getElementById(id); }
   function isDusk() { var b = el("stage-balcony"); return !!(b && b.classList.contains("dusk")); }
@@ -81127,7 +81252,10 @@ function spawnDustMote(container) {
   }
   // beats that carry a phone text → the message id delivered (once) the moment the beat goes live
   var ACT_MSG = { act_b0: "dusk", act_p1: "pouria", act_p2: "group", act_p3: ["album", "irene_games"], act_w1: "piano", act_w2: "dawn", rsvp_exit: "mb" };
-  var MSG_DELAY_MS = 5000, MSG_STAGGER_MS = 4500, msgTimers = []; // text arrives ~5s AFTER its caption; a beat with several texts staggers the extras so they don't stack
+  var MSG_DELAY_MS = 5000, MSG_STAGGER_MS = 4500, msgTimers = [], pendingMsgIds = []; // text arrives ~5s AFTER its caption; ids make party-end retirement inspectable and deterministic
+  function clearMsgTimers() {
+    msgTimers.forEach(function (t) { clearTimeout(t); }); msgTimers = []; pendingMsgIds = [];
+  }
   function advance(quiet) {
     if (!armed) return;
     var next = null;
@@ -81138,7 +81266,11 @@ function spawnDustMote(container) {
     live = next; liveMs = 0;
     if (ACT_MSG[live]) { // the caption lands now; the phone text(s) follow ~5s later so they don't clash
       [].concat(ACT_MSG[live]).forEach(function (mid, i) {
-        msgTimers.push(setTimeout(function () { if (armed && !window.__cinematic && window.__deliverPhoneMessage) window.__deliverPhoneMessage(mid); }, MSG_DELAY_MS + i * MSG_STAGGER_MS)); // dedup'd inside; thumbnail gated on attended; extras staggered
+        pendingMsgIds.push(mid);
+        msgTimers.push(setTimeout(function () {
+          var at = pendingMsgIds.indexOf(mid); if (at !== -1) pendingMsgIds.splice(at, 1);
+          if (armed && !window.__cinematic && window.__deliverPhoneMessage) window.__deliverPhoneMessage(mid);
+        }, MSG_DELAY_MS + i * MSG_STAGGER_MS)); // dedup'd inside; thumbnail gated on attended; extras staggered
       });
     }
     var now = beat(live);
@@ -81182,7 +81314,9 @@ function spawnDustMote(container) {
       latched.party = true;
       if (window.setCaption) window.setCaption("act_b3");
       advance(true);
-      setTimeout(function () {
+      if (revealTimer) clearTimeout(revealTimer);
+      revealTimer = setTimeout(function () {
+        revealTimer = null;
         if (window.__captionKey && window.__captionKey() === "act_b3") speak(); // still ours? then hand over. Otherwise something better is already on screen.
       }, 5200);
       return;
@@ -81196,11 +81330,23 @@ function spawnDustMote(container) {
     if (!ticker) ticker = setInterval(tick, 1000);
     advance();
   };
+  // Party-off retires every queued reception beat before advancing into the quieter
+  // piano/dawn arc. In particular, no bar, DJ or photobooth text can land after teardown.
+  window.__partyActEnded = function () {
+    if (!armed) return;
+    clearMsgTimers();
+    if (revealTimer) { clearTimeout(revealTimer); revealTimer = null; }
+    latched.dusk = true; latched.wish = true; latched.party = true;
+    latched.drink = true; latched.dj = true; latched.booth = true;
+    advance(); // schedules only the wind-down piano beat when it has not already been reached
+  };
+  window.__actPendingMessages = function () { return pendingMsgIds.slice(); }; // focused lifecycle test hook
   window.__resetActTwo = function () { // the extinguisher: forget the whole arc, strand nothing
     armed = false; live = null; liveMs = 0; latched = {};
     if (ticker) { clearInterval(ticker); ticker = null; }
     if (redirTimer) { clearTimeout(redirTimer); redirTimer = null; }
-    msgTimers.forEach(function (t) { clearTimeout(t); }); msgTimers = []; // drop any phone text still waiting out its ~5s delay
+    if (revealTimer) { clearTimeout(revealTimer); revealTimer = null; }
+    clearMsgTimers(); // drop any phone text still waiting out its ~5s delay
     switchPulse(false);
   };
   window.__actBeat = function () { return live; }; // test hook

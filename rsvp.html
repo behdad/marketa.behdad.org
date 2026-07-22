@@ -43921,7 +43921,7 @@ var ABANDONED_CALL_MS = 30000;
   var chatEverOpened = false;
   var chatPending = false, chatError = "", chatRequestSeq = 0, chatAbort = null;
   var chatTurnstileApiPromise = null, chatTurnstileHost = null, chatTurnstileWidget = null;
-  var chatTurnstileWait = null, chatTurnstileNeedsReset = false;
+  var chatTurnstileWait = null;
   var chatTurnstilePreparedToken = null, chatTurnstilePreparedAt = 0, chatTurnstilePreparePromise = null;
   function chatTurnstileHostEl() {
     if (!chatTurnstileHost) {
@@ -43934,12 +43934,21 @@ var ABANDONED_CALL_MS = 30000;
     return chatTurnstileHost;
   }
   window.__reparentChatTurnstileToFsHost = function () { if (chatTurnstileHost) chatTurnstileHostEl(); };
+  function removeChatTurnstileWidget() {
+    if (chatTurnstileWidget != null && window.turnstile && typeof window.turnstile.remove === "function") {
+      try { window.turnstile.remove(chatTurnstileWidget); } catch (_error) {}
+    }
+    chatTurnstileWidget = null;
+    if (chatTurnstileHost) {
+      chatTurnstileHost.classList.remove("interactive");
+      chatTurnstileHost.replaceChildren();
+    }
+  }
   function settleChatTurnstile(error, token) {
     var wait = chatTurnstileWait;
     chatTurnstileWait = null;
-    chatTurnstileNeedsReset = true;
     if (error) { chatTurnstilePreparedToken = null; chatTurnstilePreparedAt = 0; }
-    if (chatTurnstileHost) chatTurnstileHost.classList.remove("interactive");
+    removeChatTurnstileWidget();
     if (!wait) return;
     clearTimeout(wait.timer);
     if (error) wait.reject(error); else wait.resolve(token);
@@ -43996,7 +44005,6 @@ var ABANDONED_CALL_MS = 30000;
           timer: setTimeout(function () { settleChatTurnstile(new Error("verification timed out")); }, CHAT_TOTAL_TIMEOUT_MS)
         };
         try {
-          if (chatTurnstileNeedsReset) { api.reset(chatTurnstileWidget); chatTurnstileNeedsReset = false; }
           host.classList.add("interactive"); // a managed checkbox may render without firing before-interactive-callback; its parent must already accept the click
           api.execute(chatTurnstileWidget);
         } catch (error) { settleChatTurnstile(error); }

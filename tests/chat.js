@@ -18,10 +18,10 @@ var HARNESS = [
   ' var mon=document.getElementById("office-monitor"); mon.classList.add("here","screen-on","show-caps");',
   ' var chatTile=document.getElementById("monitor-dock-chat");',
   ' S("tiles",{chat:!!chatTile,weather:!!document.getElementById("monitor-dock-weather"),icon:chatTile&&chatTile.querySelector("use")&&chatTile.querySelector("use").getAttribute("href")});',
-  ' var challengeN=0, turnstileOptions=null; window.turnstile={render:function(_host,opts){turnstileOptions=opts;return "test-widget";},reset:function(){},execute:function(){var token="test-turnstile-token-"+(++challengeN);setTimeout(function(){turnstileOptions.callback(token);},0);}};',
+  ' var challengeN=0,turnstileRemoveN=0,turnstileOptions=null; window.turnstile={render:function(host,opts){turnstileOptions=opts;var panel=document.createElement("div");panel.className="test-turnstile-panel";panel.textContent="Success!";host.appendChild(panel);return "test-widget";},remove:function(){turnstileRemoveN++;},execute:function(){var token="test-turnstile-token-"+(++challengeN);setTimeout(function(){turnstileOptions.callback(token);},0);}};',
   ' click(chatTile); await sleep(100);',
   ' var input=document.getElementById("monitor-chat-input"), form=document.getElementById("monitor-chat-form"), log=document.getElementById("monitor-chat-log");',
-  ' S("opened",{chat:mon.classList.contains("show-chat"),greeting:log.textContent,inputDir:input.getAttribute("dir"),endpoint:window.__monitorChatEndpoint,turnstileSitekey:window.__monitorChatTurnstileSitekey,prewarmChallenges:challengeN});',
+  ' S("opened",{chat:mon.classList.contains("show-chat"),greeting:log.textContent,inputDir:input.getAttribute("dir"),endpoint:window.__monitorChatEndpoint,turnstileSitekey:window.__monitorChatTurnstileSitekey,prewarmChallenges:challengeN,turnstileRemoved:turnstileRemoveN,turnstileEmpty:!document.querySelector("#loft-chat-turnstile .test-turnstile-panel")});',
   ' window.caption("A live custom clue.");',
   ' var fsArea=document.getElementById("hunt-fullscreen-area"),tsHost=document.getElementById("loft-chat-turnstile");fsArea.classList.add("is-fullscreen");window.__reparentChatTurnstileToFsHost();S("turnstileFullscreen",{parent:tsHost&&tsHost.parentNode&&tsHost.parentNode.id,centered:!!tsHost&&getComputedStyle(tsHost).top!=="auto"});fsArea.classList.remove("is-fullscreen");window.__reparentChatTurnstileToFsHost();',
   ' var captured=[], releases=[], oldFetch=window.fetch,actions=[];window.addEventListener("loft:statechange",function(e){actions.push(e.detail);});',
@@ -61,6 +61,7 @@ check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(s.tiles.chat && !s.tiles.weather && s.tiles.icon === "#dicon-chat", "Chat replaces Weather in the desktop grid with its own icon", s.tiles);
 check(s.opened.chat && /I’m Charlie/.test(s.opened.greeting) && /know this loft/.test(s.opened.greeting) && s.opened.inputDir === "auto", "Chat opens with Charlie's welcome and direction-aware input", s.opened);
 check(s.opened.prewarmChallenges === 1, "opening Chat pre-warms one Turnstile token", s.opened);
+check(s.opened.turnstileRemoved === 1 && s.opened.turnstileEmpty, "a completed Turnstile challenge removes its success panel immediately", s.opened);
 check(s.turnstileFullscreen.parent === "hunt-fullscreen-area" && s.turnstileFullscreen.centered, "the Turnstile host follows the game into fullscreen and stays viewport-centered", s.turnstileFullscreen);
 check(s.opened.endpoint === "https://marketa.behdad.org/chat", "Chat exposes the exact Cloudflare proxy endpoint", s.opened.endpoint);
 check(/^0x/.test(s.opened.turnstileSitekey || ""), "Chat exposes the public Turnstile site key", s.opened.turnstileSitekey);

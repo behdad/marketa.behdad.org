@@ -8,7 +8,8 @@ var path = require("path");
 var os = require("os");
 var child = require("child_process");
 
-var ROOT = path.join(__dirname, "..");
+// An alternate checkout lets focused probes compare the same harness against a baseline.
+var ROOT = process.env.WEDDING_TEST_ROOT ? path.resolve(process.env.WEDDING_TEST_ROOT) : path.join(__dirname, "..");
 
 // Head hook: error collectors, tab-open stub, link-navigation blocker. The rAF
 // patch is spliced in only for pages that need it (rsvp): native rAF never ticks
@@ -44,6 +45,8 @@ function hook(opts) {
     // NOT reduce, despite the older note — so it must be forced either way to be reliable).
     opts.forceReduce ? "(function () { var mm = window.matchMedia; window.matchMedia = function (q) { var r = mm ? mm.call(window, q) : { matches: false, media: q, addListener: function () {}, removeListener: function () {}, addEventListener: function () {}, removeEventListener: function () {} }; if (/prefers-reduced-motion/.test(q)) { try { Object.defineProperty(r, 'matches', { get: function () { return /reduce/.test(q); } }); } catch (e) {} } return r; }; })();" : "",
     opts.forceReduce ? "document.hasFocus = function () { return true; };" : "",
+    // Model a hybrid laptop whose primary pointer is fine but whose touchscreen is coarse.
+    opts.forceHybridPointer ? "(function () { var mm = window.matchMedia; window.matchMedia = function (q) { var r = mm ? mm.call(window, q) : { matches: false, media: q, addListener: function () {}, removeListener: function () {}, addEventListener: function () {}, removeEventListener: function () {} }; var forced = q === '(any-pointer: coarse)' ? true : (q === '(pointer: coarse)' ? false : null); if (forced !== null) { try { Object.defineProperty(r, 'matches', { configurable: true, get: function () { return forced; } }); } catch (e) {} } return r; }; })();" : "",
     opts.patchRaf ? "window.requestAnimationFrame = function (cb) { return setTimeout(function () { cb(performance.now()); }, 16); };" : "",
     opts.patchRaf ? "window.cancelAnimationFrame = function (id) { clearTimeout(id); };" : "",
     "document.addEventListener('click', function (e) {",

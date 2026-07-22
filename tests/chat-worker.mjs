@@ -195,8 +195,8 @@ actionCase = await normalizedPrivateReply(
 );
 check(actionCase.reply.action === null, "a canonical action is discarded when the browser did not advertise it as currently available", actionCase);
 
-for (const id of ["music.previous", "party.music.next", "party.set", "party.extend", "bbq.set", "coffee.make", "photo.take"]) {
-  const args = id === "party.set" || id === "bbq.set" ? { on: true } : {};
+for (const id of ["music.previous", "daylight.set", "party.music.next", "party.set", "party.extend", "bbq.set", "coffee.make", "photo.take"]) {
+  const args = id === "daylight.set" || id === "party.set" || id === "bbq.set" ? { on: true } : {};
   actionCase = await normalizedPrivateReply(
     JSON.stringify({ text: "Doing that.", action: { id, args } }),
     { actions_available: [id] },
@@ -308,6 +308,36 @@ const partyOnResponse = await worker.fetch(makeRequest("/chat", {
 }), makeEnv());
 const partyOnReply = JSON.parse((await partyOnResponse.json()).reply);
 check(partyOnReply.action?.id === "party.extend", "crew chat converts an active-party continuation request to the explicit extension action", partyOnReply);
+
+openAIReply = JSON.stringify({ sender: "Danesh", text: "Night vibes—and this last song is glowing.", reply_to_id: null, action: null });
+const nightResponse = await worker.fetch(makeRequest("/chat", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    mode: "group_chat",
+    message: "night time",
+    turnstile_token: "night-token",
+    context: { room: "office", phase: 2, party: false, daylight: true, actions_available: ["daylight.set"] },
+    group_chat: { current_dj: "Danesh", cast: [{ name: "Danesh", role: "DJ" }] },
+  }),
+}), makeEnv());
+const nightReply = JSON.parse((await nightResponse.json()).reply);
+check(nightReply.sender === "Charlie" && nightReply.action?.id === "daylight.set" && nightReply.action.args.on === false && !/last song|night vibes/i.test(nightReply.text), "a concise night request comes from Charlie with an actionable state change", nightReply);
+
+openAIReply = JSON.stringify({ sender: "Danesh", text: "Night again.", reply_to_id: null, action: { id: "daylight.set", args: { on: false } } });
+const alreadyNightResponse = await worker.fetch(makeRequest("/chat", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    mode: "group_chat",
+    message: "night time",
+    turnstile_token: "already-night-token",
+    context: { room: "office", phase: 2, party: false, daylight: false, actions_available: ["daylight.set"] },
+    group_chat: { current_dj: "Danesh", cast: [{ name: "Danesh", role: "DJ" }] },
+  }),
+}), makeEnv());
+const alreadyNightReply = JSON.parse((await alreadyNightResponse.json()).reply);
+check(alreadyNightReply.sender === "Charlie" && alreadyNightReply.action === null && /already night/i.test(alreadyNightReply.text), "Charlie does not offer a redundant night action when the loft is already dark", alreadyNightReply);
 
 openAIReply = JSON.stringify({ sender: "Danesh", text: "Next one coming up.", reply_to_id: null, action: { id: "music.skip", args: {} } });
 const djNextResponse = await worker.fetch(makeRequest("/chat", {

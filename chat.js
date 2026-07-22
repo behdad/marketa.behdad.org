@@ -27,6 +27,7 @@ const ACTION_SPECS = Object.freeze({
   "music.skip": Object.freeze({}),
   "music.previous": Object.freeze({}),
   "music.track.play": Object.freeze({ track: new Set(["tumbala", "danbern", "orit"]) }),
+  "daylight.set": Object.freeze({ on: "boolean" }),
   "party.music.next": Object.freeze({}),
   "party.set": Object.freeze({ on: "boolean" }),
   "party.extend": Object.freeze({}),
@@ -68,6 +69,7 @@ A direct request to make or get coffee should use coffee.make. It ends an active
 
 While a party is active, a direct request to keep it going, continue it, or cancel its ending should use party.extend, not party.set. It cancels an accepted or in-progress finale and grants another full attended party interval.
 When no party is active, a direct request such as "party", "start the party", or "let's party" should use party.set with on:true. Never describe a last song, wind-down, dance floor, or active party when current game state.party is false.
+A direct request such as "night time", "make it night", "day time", or "bring back daylight" should use daylight.set with on:false for night and on:true for day. If the requested state already matches current game state.daylight, say so instead of requesting an action.
 
 Never claim or guess that today is anyone's birthday or another special event unless current game state.active_occasion explicitly identifies it. The date by itself is not evidence of an occasion.
 
@@ -91,6 +93,7 @@ A direct request to make or get coffee should suggest coffee.make. Tell the visi
 
 While a party is active, a direct request to keep it going, continue it, or cancel its ending should suggest party.extend, not party.set. Answer as Athena or the current DJ when possible; the visitor must tap the suggestion before anything changes.
 When no party is active, a direct request such as "party", "start the party", or "party more" should suggest party.set with on:true. Never describe a last song, wind-down, dance floor, or active party when current game state.party is false.
+A direct request such as "night time", "make it night", "day time", or "bring back daylight" should be answered by Charlie with daylight.set: on:false for night and on:true for day. If the requested state already matches current game state.daylight, Charlie should simply say so without an action.
 
 Reply in the language and script of the visitor's latest message. Be warm, playful, and specific, but keep the message to at most two short sentences. Let humor follow the supplied character details instead of making everyone sound alike; Behdad especially enjoys dad jokes and puns. A natural callback may quote one supplied recent message, including one earlier in the thread, but do not force a joke or a callback. Always spell Markéta's name with the accent.
 
@@ -518,6 +521,30 @@ function partyReplyText(message, context, extending) {
     : "Let’s get it started—tap this and I’ll bring the party back. 🎉";
 }
 
+function daylightRequest(value) {
+  const original = cleanText(value, MAX_MESSAGE_CHARS);
+  const folded = original.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().replace(/[’']/g, "").replace(/\s+/g, " ").trim();
+  if (/\b(what time|when|how long|kolik je hodin|kdy)\b/.test(folded) || /چه زمانی|ساعت چند/.test(original)) return null;
+  if (/^(night|night time|nighttime|dusk|make it night|switch to night|noc|nocni rezim|udelat noc)$/.test(folded) || /^(شب|شب شود)$/.test(original.trim())) return false;
+  if (/^(day|day time|daytime|daylight|make it day|bring back daylight|switch to day|den|denni rezim|udelat den)$/.test(folded) || /^(روز|روز شود)$/.test(original.trim())) return true;
+  return null;
+}
+
+function daylightReplyText(message, context, wantDaylight, alreadyThere) {
+  if (/[\u0600-\u06ff]/.test(message)) {
+    if (alreadyThere) return wantDaylight ? "الان روز است. ☀️" : "الان شب است. 🌙";
+    return wantDaylight ? "اینجا بزن تا روز شود. ☀️" : "اینجا بزن تا شب شود. 🌙";
+  }
+  const folded = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
+  const czech = context.site_language === "cs" || /^(noc|nocni|udelat|den|denni)/.test(folded);
+  if (czech) {
+    if (alreadyThere) return wantDaylight ? "Už je den. ☀️" : "Už je noc. 🌙";
+    return wantDaylight ? "Klepni sem a vrátíme den. ☀️" : "Klepni sem a přepneme loft do noci. 🌙";
+  }
+  if (alreadyThere) return wantDaylight ? "It’s already daytime in the loft. ☀️" : "It’s already night in the loft. 🌙";
+  return wantDaylight ? "Tap this and I’ll bring daylight back. ☀️" : "Tap this and I’ll switch the loft to night. 🌙";
+}
+
 function applyDeterministicInvocation(normalizedReply, payload) {
   const parsed = JSON.parse(normalizedReply);
   if (isFishuInvocation(payload.message) && payload.context.actions_available.includes("fishu.speak")) {
@@ -533,6 +560,13 @@ function applyDeterministicInvocation(normalizedReply, payload) {
       if (payload.group_chat.current_dj && castNames.has(payload.group_chat.current_dj)) parsed.sender = payload.group_chat.current_dj;
       else if (castNames.has("Athena")) parsed.sender = "Athena";
     }
+  }
+  const wantDaylight = partyIntent ? null : daylightRequest(payload.message);
+  if (wantDaylight !== null && payload.context.actions_available.includes("daylight.set")) {
+    const alreadyThere = payload.context.daylight === wantDaylight;
+    parsed.action = alreadyThere ? null : { id: "daylight.set", args: { on: wantDaylight } };
+    parsed.text = daylightReplyText(payload.message, payload.context, wantDaylight, alreadyThere);
+    if (payload.mode === "group_chat") parsed.sender = "Charlie";
   }
   return JSON.stringify(parsed);
 }

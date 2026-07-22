@@ -567,6 +567,39 @@ shortcuts()            // print keyboard shortcuts
 the wedding crew thread. These slash commands are for the pro console, not
 ordinary JavaScript syntax.
 
+### Script Editor
+
+The monitor's **Editor** app is a small workspace for writing named JavaScript scripts that control
+the loft. A first-time blank editor includes a runnable example. Scripts use the same human-oriented
+commands as the console, and the editor accepts top-level `await`, so timed sequences can be written
+directly:
+
+```js
+caption("hello from the editor", { blink: 1000, hold: 2500 })
+await sleep(900)
+party(true)
+await sleep(1600)
+dance("salsa")
+```
+
+Naming a script enables autosave. Saved scripts are stored in this browser and survive reloads,
+game resets, and simulated computer reboots. The editor can also create, duplicate, delete, import,
+download, email, or run its current script.
+
+From either JavaScript console:
+
+```js
+scripts()          // list saved script names
+edit("welcome")   // open a named script in the Editor
+run("welcome")    // run it once
+repeat("welcome") // keep running it until stopped
+stop()             // stop a running or repeating script
+```
+
+The Editor's Run button executes the current buffer even before it has been named. While a script is
+repeating, the button becomes Stop; `Escape` and `stop()` also end the loop. Repeating scripts pause
+while the browser is hidden. As with the console, do not import or run untrusted code.
+
 ## Supported JavaScript status and action API
 
 `loft.api` is the supported programmatic facade for integrations and tests. It

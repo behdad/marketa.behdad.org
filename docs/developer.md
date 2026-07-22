@@ -24,7 +24,9 @@ noted.
   `.htaccess`; the static host otherwise serves files from the Git working tree.
 
 The single-file constraint is architectural. Prefer adding a small controller beside the subsystem
-it coordinates over introducing a second runtime bundle or a new dependency.
+it coordinates over introducing a second runtime bundle or a new dependency. The frontend is plain
+HTML, CSS, and vanilla JavaScript, with the room illustrations embedded as inline SVG. There is
+nothing to compile: committed page artifacts are served directly from the live Git checkout.
 
 ## Self-hosted runtimes
 

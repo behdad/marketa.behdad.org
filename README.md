@@ -11,22 +11,13 @@ part:
   an illustrated home you wander room by room. Little games are tucked inside (catch the
   garnishes at the bar, clear the invaders from the office chair…), there's a whole
   console DSL if you open the office monitor, and real self-hosted software runs in a few
-  corners — Python, a tiny Linux, Doom, a text shaper (see below). It's the good stuff.
+  corners — Python, a tiny Linux, Doom, a text shaper. It's the good stuff.
 - **Egg Hunt** — [`egg-hunt.html`](egg-hunt.html) — a quieter page with a scattering of
   little hidden things to find.
 
 New drops land every so often; each is kept as a frozen archive under its own name so
 older ones never disappear. `loft-day.html` and `egg-hunt.html` are just the current
 `rsvp.html` and `save-the-dates.html`.
-
-## How it's built
-
-Each page is a single, self-contained HTML file — plain HTML, CSS, and vanilla
-JavaScript, inline. The illustrations are inline SVG. There is no build step and
-nothing to compile — deploying is just a `git pull` into the web root, so whatever is
-committed is what's live.
-
-The interface typefaces, Fraunces and Source Serif 4, are loaded from Google Fonts.
 
 ## Documentation
 

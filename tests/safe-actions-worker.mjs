@@ -65,7 +65,7 @@ reply = await ask({ text: "No.", action: { id: "bar.cocktail.make", args: { drin
 check(reply.action === null, "a drink outside the authored menu is rejected", reply);
 reply = await ask({ sender: "Pouria", text: "Tap this and I’ll mix it.", reply_to_id: null, action: { id: "bar.cocktail.make", args: { drink: "mojito" } } }, ["bar.cocktail.make"], "group_chat");
 check(reply.sender === "Pouria" && reply.action?.id === "bar.cocktail.make", "Wedding crew keeps the action as a suggestion for the Messages UI", reply);
-check(/party\.moment\.start/.test(capturedInstructions) && /call\.incoming\.trigger/.test(capturedInstructions) && /bar\.cocktail\.make/.test(capturedInstructions) && /minigame\.start/.test(capturedInstructions) && /Do not attach an action to a mention/.test(capturedInstructions), "the model receives the bounded catalog and explicit-request rule");
+check(/party\.moment\.start/.test(capturedInstructions) && /call\.incoming\.trigger/.test(capturedInstructions) && /bar\.cocktail\.make/.test(capturedInstructions) && /minigame\.start/.test(capturedInstructions) && /can we do the toasts\?/.test(capturedInstructions) && /what are the toasts\?/.test(capturedInstructions) && /Do not attach an action to a mere mention/.test(capturedInstructions), "the model receives the bounded catalog and distinguishes polite requests from factual questions");
 
 console.log("");
 if (failures) { console.log(`${failures} check(s) failed.`); process.exit(1); }

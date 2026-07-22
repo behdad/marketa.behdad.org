@@ -3849,9 +3849,10 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 .chat-send:disabled{background:#bdc8c4; cursor:default}
 .chat-send svg{width:3.3px; height:3.3px; display:block}
 /* Managed Turnstile stays outside the scaled monitor SVG so an uncommon interactive
-   challenge remains readable. It receives pointer input only while Cloudflare shows it. */
-#loft-chat-turnstile{position:fixed; z-index:2147483646; top:max(56px,calc(env(safe-area-inset-top) + 12px)); left:50%; transform:translateX(-50%); pointer-events:none}
-#loft-chat-turnstile.interactive{pointer-events:auto}
+   challenge remains readable. Centre it below any browser fullscreen notice and let its
+   cross-origin iframe receive pointer input for the whole interactive window. */
+#loft-chat-turnstile{position:fixed; z-index:2147483646; top:50%; left:50%; transform:translate(-50%,-50%); min-width:300px; min-height:65px; pointer-events:none}
+#loft-chat-turnstile.interactive,#loft-chat-turnstile.interactive iframe{pointer-events:auto!important}
 /* The full forecast has no desktop tile now, but remains available from the live Edmonton
    readout in the menu bar. This keeps the useful detail without spending another app slot. */
 #monitor-weather{opacity:0; pointer-events:none; transition:opacity .25s ease}
@@ -24892,7 +24893,7 @@ var T = {
       arcade_hint: "Move to blast the invaders! 👾",
       garden: "Water a plant, play music, light candles.",
       garden_party: "Party's on — dance like nobody's watering. 💃🌱",
-      party_exit_hint: "The wall switch ends the party, not the game — keep wandering, or explore the phone and computer.",
+      party_exit_hint: "Wall switch ends the party, not the game. Loft and apps stay open.",
       farhang_toast: "To the happy couple! 🥂",
       first_dance_caption: "Their first dance — everyone else, hush. 💞",
       dj_sina: ["<em>DJ Sina</em> takes over the decks. 🎧", "<em>DJ Sina</em> grabs the ones and twos. 🎧"],
@@ -25299,6 +25300,7 @@ var T = {
     msg_earlier_divider: "Earlier",
     msg_unread_only: "unread only",
     msg_reply: "Reply…",
+    msg_copy: "Copy message",
     msg_replying_to: "Replying to {name}",
     msg_reply_cancel: "Cancel reply",
     msg_input_placeholder: "Message the wedding crew…",
@@ -25743,7 +25745,7 @@ var T = {
       arcade_hint: "Pohybuj se a sestřel vetřelce! 👾",
       garden: "Zalij kytku, zahraj, zapal svíčky.",
       garden_party: "Párty jede — tanči, ať kytky počkají. 💃🌱",
-      party_exit_hint: "Vypínač na zdi ukončí párty, ne hru — toulej se dál nebo prozkoumej telefon a počítač.",
+      party_exit_hint: "Vypínač ukončí párty, ne hru. Loft i aplikace zůstávají otevřené.",
       farhang_toast: "Na šťastný pár! 🥂",
       first_dance_caption: "Jejich první tanec — ostatní, pšt. 💞",
       dj_sina: ["Za gramofony jde <em>DJ Sina</em>. 🎧", "<em>DJ Sina</em> bere desky do ruky. 🎧"],
@@ -26146,6 +26148,7 @@ var T = {
     msg_earlier_divider: "Starší",
     msg_unread_only: "jen nepřečtené",
     msg_reply: "Odpovědět…",
+    msg_copy: "Kopírovat zprávu",
     msg_replying_to: "Odpovídáš {name}",
     msg_reply_cancel: "Zrušit odpověď",
     msg_input_placeholder: "Napsat svatební partě…",
@@ -26837,6 +26840,7 @@ function idealBrowser() {
     // the class-fill is a z-50 overlay), so an open phone must move with it or it vanishes
     // behind/outside the fullscreen layer. No-op when the phone is closed.
     if (window.__reparentPhoneToFsHost) window.__reparentPhoneToFsHost();
+    if (window.__reparentChatTurnstileToFsHost) window.__reparentChatTurnstileToFsHost();
     // Firefox (confirmed live: black padding around an undersized frame) fires
     // fullscreenchange before its own layout pass has caught up to the new fullscreen
     // viewport, so the immediate measurement above reads stale (pre-fullscreen)
@@ -35978,7 +35982,8 @@ function gameTapsNear(a, b) {
   window.__updateGardenDiscoPeek = function () {
     var gs = document.getElementById("stage-garden");
     if (!gs) return;
-    var wantPeek = window.currentStageName === "garden"  // only while standing in the garden
+    var wantPeek = !!window.__secondRound                 // the invitation belongs to phase 2
+      && window.currentStageName === "garden"            // only while standing in the garden
       && gs.classList.contains("dusk")                   // only after dark
       && !window.__gardenPartyOn;                        // only when no party is on
     if (wantPeek) {
@@ -35988,7 +35993,7 @@ function gameTapsNear(a, b) {
         peekTimer = null;
         var g = document.getElementById("stage-garden");
         // re-check at fire time — the player could have left, dusk lifted, or a party started
-        if (g && window.currentStageName === "garden" && g.classList.contains("dusk") && !window.__gardenPartyOn) g.classList.add("disco-peek");
+        if (g && window.__secondRound && window.currentStageName === "garden" && g.classList.contains("dusk") && !window.__gardenPartyOn) g.classList.add("disco-peek");
       }, 5000);
     } else {
       // left the garden, day returned, or party lit -> cancel any pending reveal and hide the
@@ -40653,6 +40658,11 @@ var ABANDONED_CALL_MS = 30000;
     register({ id: "music.pause", kind: "action", risk: "ambient", run: function () { if (window.__phoneMusicPlaying && window.__phoneMusicPlaying() && window.__phoneMusicToggle) window.__phoneMusicToggle(); return { playing: !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()) }; } });
     register({ id: "music.skip", kind: "action", risk: "ambient", run: function () { if (window.__phoneMusicSkip) window.__phoneMusicSkip(1); return { track: window.__phoneMusicId ? window.__phoneMusicId() : null }; } });
     register({ id: "music.track.play", kind: "action", risk: "ambient", args: { track: { type: "string", enum: Object.keys(TRACKS), required: true } }, run: function (args) { if (window.__playSongAt) window.__playSongAt(TRACKS[args.track]); return { track: args.track }; } });
+    register({ id: "fishu.speak", kind: "action", risk: "ambient", run: function () {
+      if (window.__speakFishu) return { spoken: window.__speakFishu() };
+      if (window.fishu) { window.fishu(); return { spoken: true }; }
+      return { changed: false, spoken: false };
+    } });
     register({ id: "party.dance.request", kind: "action", risk: "ambient", args: { style: { type: "string", enum: DANCES, required: true } }, available: function () { return !!window.__gardenPartyOn; }, run: function (args) {
       if (args.style === "slow") { if (window.slowdance) window.slowdance(); }
       else if (args.style === "fast") { if (window.__requestDance) window.__requestDance("techno"); }
@@ -43824,6 +43834,7 @@ var ABANDONED_CALL_MS = 30000;
     if (chatTurnstileHost.parentNode !== fsHost) fsHost.appendChild(chatTurnstileHost);
     return chatTurnstileHost;
   }
+  window.__reparentChatTurnstileToFsHost = function () { if (chatTurnstileHost) chatTurnstileHostEl(); };
   function settleChatTurnstile(error, token) {
     var wait = chatTurnstileWait;
     chatTurnstileWait = null;
@@ -43917,6 +43928,24 @@ var ABANDONED_CALL_MS = 30000;
     var d = T[document.documentElement.lang] || T.en;
     return d[key] || T.en[key] || key;
   }
+  function chatPlainInstruction(value) {
+    var values = Array.isArray(value) ? value : [value], out = [];
+    values.forEach(function (item) {
+      if (typeof item !== "string") return;
+      var el = document.createElement("div"); el.innerHTML = item;
+      out.push((el.textContent || "").trim());
+    });
+    return out.filter(Boolean).join(" / ");
+  }
+  function chatInstructionCatalog() {
+    var lang = T[document.documentElement.lang] ? document.documentElement.lang : "en";
+    var hunt = (T[lang] && T[lang].hunt) || T.en.hunt || {}, out = {};
+    Object.keys(hunt).forEach(function (key) {
+      var text = chatPlainInstruction(hunt[key]);
+      if (text) out[key] = text;
+    });
+    return out;
+  }
   function chatAdd(className, text) {
     var el = document.createElement("div");
     el.className = className;
@@ -43947,6 +43976,7 @@ var ABANDONED_CALL_MS = 30000;
     var mins = window.__loftMinsNow ? window.__loftMinsNow() : (now.getHours() * 60 + now.getMinutes());
     var stage = document.getElementById("stage-" + (window.currentStageName || "kitchen"));
     var hintKey = typeof window.__captionKey === "function" ? window.__captionKey() : null;
+    var instructions = chatInstructionCatalog();
     var actions = [];
     try {
       if (window.loft && window.loft.api) actions = window.loft.api.capabilities({ kind: "action", available: true }).map(function (capability) { return capability.id; });
@@ -43965,9 +43995,11 @@ var ABANDONED_CALL_MS = 30000;
         time: String(Math.floor(mins / 60) % 24).padStart(2, "0") + ":" + String(mins % 60).padStart(2, "0"),
         unlocked_rooms: rooms.slice(0, Math.max(0, Math.min(rooms.length - 1, maxUnlocked)) + 1),
         solved_rooms: rooms.slice(0, Math.max(0, Math.min(rooms.length, maxUnlocked))),
-        current_hint: hintKey ? chatT(hintKey) : null,
+        current_hint: hintKey ? (instructions[hintKey] || hintKey) : null,
         current_hint_key: hintKey,
+        instructions: instructions,
         date: now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0"),
+        active_occasion: typeof window.__isOccasionDate === "function" ? window.__isOccasionDate() : null,
         session: window.__loftPlaytime ? window.__loftPlaytime() : null,
         actions_available: actions
       }
@@ -48584,6 +48616,7 @@ async def localfont(name):
     var PH_UNINST_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 3.8 H9.2"/><path d="M4.6 3.8 V2.9 A0.5 0.5 0 0 1 5.1 2.4 H6.9 A0.5 0.5 0 0 1 7.4 2.9 V3.8"/><path d="M3.7 3.8 L4.1 9.2 A0.6 0.6 0 0 0 4.7 9.7 H7.3 A0.6 0.6 0 0 0 7.9 9.2 L8.3 3.8"/></svg>';
     var PH_READ_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><rect x="1.6" y="2.6" width="8.8" height="6.8" rx="1"/><path d="M2.1 3.4 L6 6.3 L9.9 3.4"/></svg>';
     var PH_REPLY_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3 L2 6 L5 9"/><path d="M2.4 6 H7.2 A2.8 2.8 0 0 1 10 8.8"/></svg>';
+    var PH_COPY_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"><rect x="4" y="3.5" width="5.2" height="6" rx=".8"/><path d="M3 8.5 H2.8 A.8.8 0 0 1 2 7.7 V2.8 A.8.8 0 0 1 2.8 2 H7 A.8.8 0 0 1 7.8 2.8 V3"/></svg>';
     function phCloseMenu() {
       if (phMenuEl && phMenuEl.parentNode) phMenuEl.parentNode.removeChild(phMenuEl);
       phMenuEl = null;
@@ -48600,6 +48633,10 @@ async def localfont(name):
       b.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); phCloseMenu(); if (fn) fn(); });
       return b;
     }
+    function phContextHost() {
+      return document.fullscreenElement || document.webkitFullscreenElement ||
+        document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
+    }
     function openPhoneAppMenu(app, x, y) {
       phCloseMenu();
       phMenuEl = document.createElement("div");
@@ -48608,9 +48645,9 @@ async def localfont(name):
       phMenuEl.appendChild(phMakeItem("ctx-stop", PH_STOP_ICO, tr("mon_ctx_stop"), function () { stopApp(app.id); })); // force-stop: clears the app's session state (icon stays)
       phMenuEl.appendChild(phMakeItem("ctx-uninstall ctx-kill", PH_UNINST_ICO, tr("mon_ctx_uninstall"), function () { uninstallApp(app.id); }));
       phMenuEl.style.visibility = "hidden";
-      // mount on <body> exactly like the desktop dock menu: .mon-ctx (z-index 60) clears the
-      // phone backdrop (z-index 41), and body is a clean fixed-positioning containing block
-      document.body.appendChild(phMenuEl);
+      // A real fullscreen element is its own browser top layer, so the fixed menu must live
+      // inside that host; .mon-ctx's z-index still clears the phone backdrop there.
+      phContextHost().appendChild(phMenuEl);
       var r = phMenuEl.getBoundingClientRect();
       phMenuEl.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 4)) + "px";
       phMenuEl.style.top = Math.max(4, Math.min(y, window.innerHeight - r.height - 4)) + "px";
@@ -48623,6 +48660,7 @@ async def localfont(name):
     function openMessageMenu(id, x, y, refresh, reply) {
       phCloseMenu();
       var isRead = !!messagesRead[id];
+      var message = MESSAGES[id];
       phMenuEl = document.createElement("div");
       phMenuEl.className = "mon-ctx phone-ctx message-read-ctx"; phMenuEl.setAttribute("role", "menu");
       phMenuEl.appendChild(phMakeItem("ctx-reply", PH_REPLY_ICO, tr("msg_reply"), function () {
@@ -48630,13 +48668,23 @@ async def localfont(name):
         updateMsgBadge();
         if (reply) reply(); else if (refresh) refresh();
       }));
-      phMenuEl.appendChild(phMakeItem("ctx-open", PH_READ_ICO, tr(isRead ? "msg_mark_unread" : "msg_mark_read"), function () {
-        if (isRead) delete messagesRead[id]; else messagesRead[id] = true;
-        updateMsgBadge();
-        if (refresh) refresh();
+      phMenuEl.appendChild(phMakeItem("ctx-copy", PH_COPY_ICO, tr("msg_copy"), function () {
+        var text = message ? plainMessageText(message) : "";
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(function () {});
+        else {
+          var ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select();
+          try { document.execCommand("copy"); } catch (_error) {} ta.remove();
+        }
       }));
+      if (message && !message.outgoing) {
+        phMenuEl.appendChild(phMakeItem("ctx-open", PH_READ_ICO, tr(isRead ? "msg_mark_unread" : "msg_mark_read"), function () {
+          if (isRead) delete messagesRead[id]; else messagesRead[id] = true;
+          updateMsgBadge();
+          if (refresh) refresh();
+        }));
+      }
       phMenuEl.style.visibility = "hidden";
-      document.body.appendChild(phMenuEl);
+      phContextHost().appendChild(phMenuEl);
       var r = phMenuEl.getBoundingClientRect();
       phMenuEl.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 4)) + "px";
       phMenuEl.style.top = Math.max(4, Math.min(y, window.innerHeight - r.height - 4)) + "px";
@@ -48656,7 +48704,7 @@ async def localfont(name):
       phMenuEl.className = "mon-ctx phone-ctx phone-lock-ctx"; phMenuEl.setAttribute("role", "menu");
       phMenuEl.appendChild(phMakeItem("ctx-open", PH_UNLOCK_ICO, tr("phone_lock_title"), function () { if (shell && shell.classList.contains("booting")) unlock(); }));
       phMenuEl.style.visibility = "hidden";
-      document.body.appendChild(phMenuEl);
+      phContextHost().appendChild(phMenuEl);
       var r = phMenuEl.getBoundingClientRect();
       phMenuEl.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 4)) + "px";
       phMenuEl.style.top = Math.max(4, Math.min(y, window.innerHeight - r.height - 4)) + "px";
@@ -49478,10 +49526,10 @@ async def localfont(name):
         if (interactive) {
           row.addEventListener("click", function () { runMsgAction(id); });
           row.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); runMsgAction(id); } });
-          row.addEventListener("contextmenu", function (e) {
-            e.preventDefault(); e.stopPropagation(); openMessageMenu(id, e.clientX, e.clientY, applyFilter, function () { selectReply(id); });
-          });
         }
+        row.addEventListener("contextmenu", function (e) {
+          e.preventDefault(); e.stopPropagation(); openMessageMenu(id, e.clientX, e.clientY, applyFilter, function () { selectReply(id); });
+        });
         return row;
       }
       function applyFilter() {
@@ -52381,6 +52429,7 @@ async def localfont(name):
       if (isOpen()) return; // phone's already up → no notification toast over it (the text lands in the thread; the app live-refreshes)
       var m = MESSAGES[id]; if (!m) return;
       cancelMsgBadgeCoachDelay();
+      if (msgBadgeCoachEl && msgBadgeCoachEl.classList.contains("show")) msgBadgeCoachSeen = false; // a popup that immediately covers the coach did not give the player a fair look; retry after this popup leaves
       hideMsgBadgeCoach(); // never stack the coach over a newer live notification preview
       curThumbId = id; // the whole notification opens and centres this exact message
       // anchor to the scene (.hunt-viewport) so the card drops down from the top of the LOFT, not
@@ -57068,6 +57117,12 @@ async def localfont(name):
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     sayFishu("fish fishu");
   });
+  window.__speakFishu = function (phrase) {
+    if (window.currentStageName === "office") puffOffice();
+    else if (window.currentStageName === "cuddly") puffCuddly();
+    sayFishu(phrase);
+    return true;
+  };
 })();
 var animateCapsSwap = (function () {
   var g1 = document.getElementById("cap-pink");

@@ -693,7 +693,7 @@ var PROBE_HARNESS = [
   "    ok('messages: stale recurring phase-one attempt is not flushed', !(window.__phoneMessageReceived && window.__phoneMessageReceived('cue_mail')));",
   "    if (window.goToStage) window.goToStage('garden');",
   "    ok('garden switch cue: deterministic reveal hook exists', typeof window.__showPartyExitHint === 'function' && window.__showPartyExitHint());",
-  "    ok('garden switch cue: caption says the party ends but exploration continues', window.__captionKey && window.__captionKey() === 'party_exit_hint' && /not the game/i.test(el('hunt-caption').textContent) && /phone and computer/i.test(el('hunt-caption').textContent));",
+  "    ok('garden switch cue: caption says the party ends but exploration continues', window.__captionKey && window.__captionKey() === 'party_exit_hint' && /not the game/i.test(el('hunt-caption').textContent) && /apps stay open/i.test(el('hunt-caption').textContent));",
   "    ok('garden switch cue: the wall switch pulses until used', gardenWallSwitch.classList.contains('invite-pulse'));",
   "    gardenWallSwitch.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
   "    await sleep(40);",
@@ -709,7 +709,16 @@ var PROBE_HARNESS = [
   "    ok('messages: coach still waits three seconds after the popup leaves', !msgCoach || !msgCoach.classList.contains('show'));",
   "    await sleep(300);",
   "    msgCoach = document.querySelector('.msg-badge-coach');",
-  "    ok('messages: unread badge teaches the control three seconds after popup dismissal', !!msgCoach && msgCoach.classList.contains('show') && !!msgBadge && msgBadge.classList.contains('coached'));",
+  "    if (document.querySelector('.msg-thumb.show')) {",
+  "      ok('messages: a newer popup postpones the badge coach', !msgCoach || !msgCoach.classList.contains('show'));",
+  "      if (window.__hideMessageThumb) window.__hideMessageThumb();",
+  "      await sleep(2800);",
+  "      msgCoach = document.querySelector('.msg-badge-coach');",
+  "      ok('messages: coach waits three seconds after the newer popup too', !msgCoach || !msgCoach.classList.contains('show'));",
+  "      await sleep(600);",
+  "      msgCoach = document.querySelector('.msg-badge-coach');",
+  "    }",
+  "    ok('messages: unread badge teaches the control three seconds after popup dismissal', !!msgCoach && msgCoach.classList.contains('show') && !!msgBadge && msgBadge.classList.contains('coached'), JSON.stringify({coach:!!msgCoach,show:!!msgCoach&&msgCoach.classList.contains('show'),badge:!!msgBadge,coached:!!msgBadge&&msgBadge.classList.contains('coached'),thumb:!!document.querySelector('.msg-thumb.show'),phone:!!document.querySelector('.phone-backdrop.show'),hidden:document.hidden,focus:document.hasFocus(),cinematic:!!window.__cinematic}));",
   "    ok('messages: coach uses the shared espresso arrow', !!msgCoach && getComputedStyle(msgCoach, '::before').backgroundImage.indexOf('data:image/svg+xml') !== -1);",
   "    if (msgBadge) msgBadge.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
   "    await sleep(40);",
@@ -1100,7 +1109,7 @@ function fail(msg, detail) {
   var jobs = {};
   if (!ONLY || "cascade".indexOf(ONLY) === 0) jobs.cascade = lib.runPage("rsvp.html", CASCADE_HARNESS, 9000, CHROME_OPTS);
   if (!ONLY || "gates".indexOf(ONLY) === 0) jobs.gates = lib.runPage("rsvp.html", GATES_HARNESS, 12000, CHROME_OPTS);
-  if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 30000, CHROME_OPTS); // includes the real eight-second opening guide + three-second message-coach delay
+  if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 35000, CHROME_OPTS); // includes the real eight-second opening guide + latest-popup-aware message-coach delay
   if (!ONLY || "sharegate".indexOf(ONLY) === 0) jobs.sharegate = lib.runPage("loft-day.html", SHARE_GATE_HARNESS, 5000, CHROME_OPTS);
   if (!ONLY || "fullscreen".indexOf(ONLY) === 0) jobs.fullscreen = lib.runPage("rsvp.html", LOFT_FULLSCREEN_HARNESS, 7000, Object.assign({}, CHROME_OPTS, { urlSuffix: "#play" }));
   if (!ONLY || "persian".indexOf(ONLY) === 0) jobs.persian = lib.runPage("rsvp.html", PERSIAN_HARNESS, 9000, CHROME_OPTS);

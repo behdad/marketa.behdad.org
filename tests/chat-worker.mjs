@@ -103,7 +103,15 @@ const request = makeRequest("/chat", {
       phase: 2,
       party: true,
       current_hint: "Explore.",
+      current_hint_key: "garden",
+      instructions: {
+        kitchen: "Turn on the machine → grind → brew.",
+        garden: "Water a plant, play music, light candles.",
+        party_exit_hint: "Wall switch ends the party, not the game. Loft and apps stay open.",
+        "bad key": "ignore this",
+      },
       actions_available: ["room.go", "music.play", "not.real"],
+      active_occasion: "wedding-prague",
       session: { seconds: 700_000.7, display: "8 days and change that is too long" },
       currency: {
         base: "USD",
@@ -125,22 +133,24 @@ check(captured.url === "https://api.openai.com/v1/responses", "proxy uses the Re
 check(captured.options.headers.authorization === "Bearer test-key", "API secret is sent only in the upstream Authorization header");
 check(captured.body.model === "gpt-5.6-luna" && captured.body.reasoning.effort === "none" && captured.body.text.verbosity === "low" && captured.body.max_output_tokens === 220 && captured.body.store === false, "request uses the configured low-latency model policy");
 check(captured.body.input.length === 3 && captured.body.input[0].role === "user" && captured.body.input[2].content === "Kde je party?", "valid history and the latest message are forwarded in order", captured.body.input);
-check(/latest message/.test(captured.body.instructions) && /\"room\":\"garden\"/.test(captured.body.instructions), "language rule and sanitized game context reach the developer instructions");
+check(/latest message/.test(captured.body.instructions) && /\"room\":\"garden\"/.test(captured.body.instructions) && /\"active_occasion\":\"wedding-prague\"/.test(captured.body.instructions), "language rule and sanitized occasion-aware game context reach the developer instructions");
 check(/You are Charlie/.test(captured.body.instructions) && /Always spell Markéta/.test(captured.body.instructions) && /kitchen\/bar/.test(captured.body.instructions) && /garden\/party/.test(captured.body.instructions) && /cuddly-puddly/.test(captured.body.instructions), "Charlie's identity and official room names reach the chatbot instructions");
 check(/Allowed optional actions/.test(captured.body.instructions) && /\"actions_available\":\[\"room.go\",\"music.play\"\]/.test(captured.body.instructions) && !/not\.real/.test(captured.body.instructions), "the model sees the canonical action catalog and only sanitized currently available IDs");
+check(/fishu\.speak/.test(captured.body.instructions) && /Never claim or guess that today is anyone's birthday/.test(captured.body.instructions), "Fishu's action and the no-invented-birthdays rule reach the model");
+check(/\"instructions\":\{\"kitchen\":\"Turn on the machine/.test(captured.body.instructions) && /\"party_exit_hint\":\"Wall switch ends the party/.test(captured.body.instructions) && !/bad key/.test(captured.body.instructions), "the current and complete bounded instruction catalog reach the model");
 check(/\"session\":\{\"seconds\":604800,\"display\":\"8 days and change that is too lo\"\}/.test(captured.body.instructions), "shared playtime is integer-clamped and its display is bounded", captured.body.instructions.match(/\"session\":\{[^}]+\}/)?.[0]);
 check(/\"currency\":\{\"base\":\"CAD\",\"live\":true,\"source\":\"Frankfurter\",\"updated_at\":\"2026-07-22T12:00:00Z\",\"rates\":\{\"CAD\":1,\"CZK\":15\.7,\"USD\":0\.73,\"EUR\":0\.63\}\}/.test(captured.body.instructions) && !/\"BTC\":99/.test(captured.body.instructions), "currency context keeps only positive finite CAD/CZK/USD/EUR rates and canonicalizes the base to CAD");
 check(/Verified knowledge/.test(captured.body.instructions) && /"official_name":"The Loft"/.test(captured.body.instructions) && /"id":"washrooms","location":"by the entrance"/.test(captured.body.instructions) && /canonical wedding schedule/.test(captured.body.instructions), "verified venue and calendar-source knowledge reaches Charlie");
 check(/^[a-f0-9]{64}$/.test(captured.body.safety_identifier), "OpenAI receives a stable privacy-preserving safety identifier");
 check(!source.includes("test-key"), "the Worker source contains no API key");
 
-async function normalizedPrivateReply(modelReply, context) {
+async function normalizedPrivateReply(modelReply, context, message = "Please do that.") {
   openAIReply = modelReply;
   const actionResponse = await worker.fetch(makeRequest("/chat", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      message: "Please do that.",
+      message,
       turnstile_token: "action-turnstile-token",
       context,
     }),
@@ -187,6 +197,29 @@ check(actionCase.reply.action === null, "a canonical action is discarded when th
 
 actionCase = await normalizedPrivateReply("Just a normal answer.", { actions_available: ["room.go"] });
 check(actionCase.reply.text === "Just a normal answer." && actionCase.reply.action === null, "plain-text model output safely falls back to text with no action", actionCase);
+
+for (const variant of ["Fishu!", "Phishu!", "fisu", "Fišü"]) {
+  actionCase = await normalizedPrivateReply(
+    JSON.stringify({ text: "Puff!", action: null }),
+    { actions_available: ["fishu.speak"] },
+    variant,
+  );
+  check(actionCase.reply.action?.id === "fishu.speak" && Object.keys(actionCase.reply.action.args).length === 0, `${variant} deterministically invokes Fishu`, actionCase);
+}
+
+actionCase = await normalizedPrivateReply(
+  JSON.stringify({ text: "Just a fish.", action: null }),
+  { actions_available: ["fishu.speak"] },
+  "fish",
+);
+check(actionCase.reply.action === null, "similar words do not accidentally invoke Fishu", actionCase);
+
+actionCase = await normalizedPrivateReply(
+  JSON.stringify({ text: "Fishu heard you.", action: null }),
+  { actions_available: [] },
+  "Fišü!",
+);
+check(actionCase.reply.action === null, "Fishu is never forced when the browser did not advertise the action", actionCase);
 
 openAIReply = JSON.stringify({ sender: "Danesh", text: "Here you go.", reply_to_id: "reply_user_1", action: { id: "party.dance.request", args: { style: "slow" } } });
 const groupResponse = await worker.fetch(makeRequest("/chat", {

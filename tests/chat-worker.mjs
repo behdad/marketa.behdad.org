@@ -210,7 +210,7 @@ const fullActionList = [
   "coffee.make", "daylight.set", "fishu.speak", "minigame.start", "minigame.stop", "music.pause", "music.play", "music.previous",
   "music.skip", "music.track.play", "party.dance.request", "party.dj.set", "party.extend", "party.moment.start",
   "party.music.next", "party.set", "photo.take", "projector.set", "room.go", "roster.set", "scene.activity.start",
-  "trip.start", "not.real",
+  "trip.start", "video.pause", "not.real",
 ];
 actionCase = await normalizedPrivateReply(
   JSON.stringify({ text: "Tap below to start the acid trip.", action: { id: "trip.start", args: { variant: "acid" } } }),
@@ -249,7 +249,7 @@ actionCase = await normalizedPrivateReply(
 );
 check(actionCase.reply.action === null, "a canonical action is discarded when the browser did not advertise it as currently available", actionCase);
 
-for (const id of ["music.previous", "daylight.set", "party.music.next", "party.set", "party.extend", "bbq.set", "coffee.make", "photo.take", "trip.start", "call.hangup", "minigame.stop"]) {
+for (const id of ["music.previous", "daylight.set", "party.music.next", "party.set", "party.extend", "bbq.set", "coffee.make", "photo.take", "trip.start", "call.hangup", "minigame.stop", "video.pause"]) {
   const args = id === "daylight.set" || id === "party.set" || id === "bbq.set" ? { on: true } : id === "trip.start" ? { variant: "molly" } : {};
   actionCase = await normalizedPrivateReply(
     JSON.stringify({ text: "Doing that.", action: { id, args } }),
@@ -283,6 +283,35 @@ actionCase = await normalizedPrivateReply(
   "Fišü!",
 );
 check(actionCase.reply.action === null, "Fishu is never forced when the browser did not advertise the action", actionCase);
+
+actionCase = await normalizedPrivateReply(
+  JSON.stringify({ text: "Видео остановлено.", action: null }),
+  { actions_available: ["video.pause"], media: { video: { open: true, playing: true } } },
+  "stop video",
+);
+check(actionCase.reply.text === "Pausing the video." && actionCase.reply.action?.id === "video.pause", "an English video request cannot inherit an unrelated language or falsely omit the pause action", actionCase);
+
+actionCase = await normalizedPrivateReply(
+  JSON.stringify({ text: "Видео остановлено.", action: { id: "video.pause", args: {} } }),
+  { actions_available: [], media: { video: { open: true, playing: false } } },
+  "stop video",
+);
+check(actionCase.reply.text === "The video isn’t playing." && actionCase.reply.action === null, "Charlie cannot claim a stopped video when pause is unavailable", actionCase);
+
+openAIReply = JSON.stringify({ sender: "Danesh", text: "Видео остановлено.", reply_to_id: null, action: null });
+const groupVideoResponse = await worker.fetch(makeRequest("/chat", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    mode: "group_chat",
+    message: "stop video",
+    turnstile_token: "group-video-token",
+    context: { actions_available: ["video.pause"], media: { video: { open: true, playing: true } } },
+    group_chat: { cast: [{ name: "Danesh", role: "DJ" }, { name: "Charlie", role: "wedding assistant" }] },
+  }),
+}), makeEnv());
+const groupVideoReply = JSON.parse((await groupVideoResponse.json()).reply);
+check(groupVideoReply.sender === "Charlie" && groupVideoReply.text === "Tap this to pause the video." && groupVideoReply.action?.id === "video.pause", "Wedding crew corrects wrong-language model copy and offers the video pause as a tap action", groupVideoReply);
 
 actionCase = await normalizedPrivateReply(
   JSON.stringify({ text: "The party is winding down.", action: null }),

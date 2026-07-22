@@ -400,6 +400,10 @@ The private Chat app automatically calls the validated action and reports the re
 auto-executes a returned action: it stores a suggestion and waits for a tap. Keep this behavioral
 difference when sharing queue, renderer, or retry code.
 
+Monitor film playback is exposed as `media.video` in `media.status`; `video.pause` is advertised only
+while the film is actually playing. Its direct controls and typed action share one semantic state
+transition, so assistants cannot truthfully report a pause without invoking the registered action.
+
 `chat-knowledge.json` should contain verified, stable facts and explicit unknowns. Live state belongs
 in client context. Exact birthdays and other private facts are deliberately excluded from model
 context. Do not add secrets, credentials, operational access details, or unverified logistics to the

@@ -54,6 +54,7 @@ const cases = [
   ["bar.mixer.start", { recipe: "yale" }],
   ["minigame.start", { game: "flair-catch" }],
   ["minigame.stop", {}],
+  ["video.pause", {}],
   ["scene.activity.start", { activity: "rainbow" }],
   ["weather.scene.set", { mode: "thunderstorm" }],
   ["sky.effect.set", { effect: "aurora" }],

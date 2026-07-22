@@ -41093,6 +41093,7 @@ var ABANDONED_CALL_MS = 30000;
       var projector = window.__cuddlyProjector && window.__cuddlyProjector.channel ? window.__cuddlyProjector.channel() : null;
       return {
         music: window.__phoneMusicSnapshot ? window.__phoneMusicSnapshot() : null,
+        video: { open: monitorAppState() === "video", playing: !!(window.__videoPlaying && window.__videoPlaying()) },
         party_dance: window.__partyDance || null,
         projector: projector,
         master_volume: typeof window.__audioMaster === "number" ? window.__audioMaster : 1
@@ -41170,7 +41171,7 @@ var ABANDONED_CALL_MS = 30000;
       return { on: smoking || !!(window.__partyBBQOn && window.__partyBBQOn()), smoking: smoking, open: !!(smoker && smoker.classList.contains("open")), party_split: !!window.__bbqPartySessionOn };
     } });
     register({ id: "audio.status", kind: "query", run: function () { return { playing: !!(window.__anyMusicPlaying && window.__anyMusicPlaying()), paused: !!window.__musicPaused, track: window.__phoneMusicId ? window.__phoneMusicId() : null, title: window.__phoneMusicTitle ? window.__phoneMusicTitle() : null, master_volume: typeof window.__audioMaster === "number" ? window.__audioMaster : 1 }; } });
-    register({ id: "media.status", kind: "query", description: "Combined music, dance, projector and volume state.", run: mediaState });
+    register({ id: "media.status", kind: "query", description: "Combined music, video, dance, projector and volume state.", run: mediaState });
     register({ id: "projector.status", kind: "query", run: function () { var mode = window.__cuddlyProjector && window.__cuddlyProjector.channel ? window.__cuddlyProjector.channel() : null; return { mode: mode, on: !!mode && mode !== "off", room: "cuddly" }; } });
     register({ id: "app.current", kind: "query", run: function () { var phone = phoneState(); return { monitor: monitorAppState(), phone: phone.open ? (phone.app || "home") : null, phone_open: !!phone.open }; } });
     register({ id: "apps.list", kind: "query", run: function () { return window.__chatAppCatalog ? window.__chatAppCatalog() : { monitor: window.__chatMonitorApps ? window.__chatMonitorApps() : [], phone: [] }; } });
@@ -41224,6 +41225,10 @@ var ABANDONED_CALL_MS = 30000;
     register({ id: "roster.set", kind: "action", risk: "ambient", args: { open: { type: "boolean", required: true } }, available: function () { return !!window.__secondRound; }, run: function (args) { return { open: window.roster ? window.roster(args.open) : false }; } });
     register({ id: "music.play", kind: "action", risk: "ambient", run: function () { var before = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()); if (!before && window.__phoneMusicToggle) window.__phoneMusicToggle(); var after = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()); return { changed: before !== after, playing: after }; } });
     register({ id: "music.pause", kind: "action", risk: "ambient", run: function () { var before = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()); if (before && window.__phoneMusicToggle) window.__phoneMusicToggle(); var after = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()); return { changed: before !== after, playing: after }; } });
+    register({ id: "video.pause", kind: "action", risk: "ambient", available: function () { return !!(window.__videoPlaying && window.__videoPlaying()); }, run: function () {
+      var changed = !!(window.__pauseMonitorVideo && window.__pauseMonitorVideo("ui"));
+      return { changed: changed, playing: !!(window.__videoPlaying && window.__videoPlaying()) };
+    } });
     register({ id: "music.skip", kind: "action", risk: "ambient", available: function () { return !window.__gardenPartyOn; }, run: function () { if (window.__phoneMusicSkip) window.__phoneMusicSkip(1); return { track: window.__phoneMusicId ? window.__phoneMusicId() : null }; } });
     register({ id: "music.previous", kind: "action", risk: "ambient", run: function () { if (window.__phoneMusicSkip) window.__phoneMusicSkip(-1); return { track: window.__phoneMusicId ? window.__phoneMusicId() : null }; } });
     register({ id: "music.track.play", kind: "action", risk: "ambient", args: { track: { type: "string", enum: Object.keys(TRACKS), required: true } }, run: function (args) { if (window.__playSongAt) window.__playSongAt(TRACKS[args.track]); return { track: args.track }; } });
@@ -43185,8 +43190,20 @@ var ABANDONED_CALL_MS = 30000;
   var vidWrap = document.getElementById("monitor-video-wrap");
   var vidCloseBtn = document.getElementById("monitor-video-close");
   var vidSrcSet = false;
-  function pauseVideoApp() {
+  var lastVideoPlaying = !!(vidEl && !vidEl.paused && !vidEl.ended);
+  function videoPlaying() { return !!(vidEl && !vidEl.paused && !vidEl.ended); }
+  function syncVideoPlayback(reason, source) {
+    var playing = videoPlaying();
+    if (playing === lastVideoPlaying) return false;
+    lastVideoPlaying = playing;
+    if (window.__loftStateChanged) window.__loftStateChanged("media.video", { playing: playing, reason: reason || "playback" }, source || "internal");
+    return true;
+  }
+  function pauseVideoApp(source) {
+    var before = videoPlaying();
     if (vidEl && !vidEl.paused) { try { vidEl.pause(); } catch (e) {} }
+    syncVideoPlayback("pause", source || "internal");
+    return before !== videoPlaying();
   }
   function openVideoApp() {
     if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-video")) return;
@@ -43208,6 +43225,8 @@ var ABANDONED_CALL_MS = 30000;
   window.__closeMonitorVideo = closeVideoApp; // other monitor apps close the film before taking the screen
   window.__pauseMonitorVideo = pauseVideoApp; // room-leave hook: pause playback without closing the app view
   window.__toggleMonitorVideo = toggleVideoApp; // the space key drives the film while its app is up
+  window.__videoPlaying = videoPlaying;
+  window.__syncLoftVideoState = syncVideoPlayback;
   // The global 'f' handler routes to the film's OWN fullscreen while its app is the live
   // foreground (mirrors the space-key gate: show-video + in the office).
   window.__videoAppShowing = function () {
@@ -43477,9 +43496,11 @@ var ABANDONED_CALL_MS = 30000;
     });
     vidEl.addEventListener("play", function () {
       vidWrap.classList.remove("paused");
+      syncVideoPlayback("play", "ui");
       try { if ("mediaSession" in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: "downtown dance", artist: "markéta" }); } catch (e) {}
     });
-    vidEl.addEventListener("pause", function () { vidWrap.classList.add("paused"); });
+    vidEl.addEventListener("pause", function () { vidWrap.classList.add("paused"); syncVideoPlayback("pause", "ui"); });
+    vidEl.addEventListener("ended", function () { vidWrap.classList.add("paused"); syncVideoPlayback("ended", "internal"); });
     // a song starting (spacebar, headphones, garden instruments…) takes the screen for the
     // player — close the film so it never keeps playing (or lingering) underneath
     songAudios.forEach(function (a) { if (a) a.addEventListener("play", closeVideoApp); });

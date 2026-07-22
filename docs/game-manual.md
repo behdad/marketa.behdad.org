@@ -674,6 +674,7 @@ families are:
 | `app.open` | `{ app }` from the API's allowlisted app subset |
 | `roster.set` | `{ open: true/false }` |
 | `music.play`, `music.pause`, `music.skip`, `music.previous` | Shared music transport; skip can be unavailable during party ownership |
+| `video.pause` | Pause Markéta's monitor film when it is playing |
 | `music.track.play` | `{ track: "tumbala" | "danbern" | "orit" }` |
 | `daylight.set` | `{ on: true/false }` |
 | `party.set` | `{ on: true/false }` |

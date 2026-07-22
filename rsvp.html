@@ -4840,6 +4840,7 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .pm-msg-bubble{background:var(--paper); border:1px solid var(--rule); border-radius:13px 13px 13px 3px; padding:5px 10px 6px; font-size:12.5px; line-height:1.34; color:var(--ink); max-width:88%; overflow-wrap:anywhere}
 .pm-msg-bubble.actionable{cursor:pointer; border-color:rgba(151,58,79,.42)}
 .pm-msg-bubble.actionable:hover,.pm-msg-bubble.actionable:focus-visible{border-color:var(--wine); outline:2px solid rgba(142,58,74,.18); outline-offset:1px}
+.pm-msg-action-error{display:block; margin-top:4px; color:var(--wine); font-size:10px; line-height:1.25}
 .pm-msg-act{flex:none; width:28px; height:28px; padding:0; border:0; border-radius:50%; background:var(--wine); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(142,58,74,.28)}
 .pm-msg-act:hover,.pm-msg-act:focus-visible{background:#743143; outline:2px solid rgba(142,58,74,.25); outline-offset:1px}
 .pm-msg-act svg{width:15px; height:15px}
@@ -25171,6 +25172,7 @@ var T = {
     chat_thinking: "Thinking…",
     chat_unavailable: "Chat isn’t connected yet.",
     chat_error: "Something went wrong. Try again.",
+    chat_action_failed: "I couldn’t do that right now. Try again.",
     app_weather: "weather",
     cal_edmonton: "Edmonton",
     cal_prague: "Prague",
@@ -26023,6 +26025,7 @@ var T = {
     chat_thinking: "Přemýšlím…",
     chat_unavailable: "Chat zatím není připojený.",
     chat_error: "Něco se pokazilo. Zkus to znovu.",
+    chat_action_failed: "Teď se mi to nepodařilo. Zkus to znovu.",
     app_weather: "počasí",
     cal_edmonton: "Edmonton",
     cal_prague: "Praha",
@@ -44238,9 +44241,10 @@ var ABANDONED_CALL_MS = 30000;
     return { text: text, action: action, raw: groupMode && data ? JSON.stringify(data) : text };
   }
   function performChatAction(action, source) {
-    if (!action || typeof action.id !== "string" || !action.args || typeof action.args !== "object" || Array.isArray(action.args)) return;
-    if (!window.loft || !window.loft.api || typeof window.loft.api.perform !== "function") return;
-    window.loft.api.perform(action.id, action.args, { source: source }).catch(function () {});
+    if (!action) return Promise.resolve(null);
+    if (typeof action.id !== "string" || (action.args != null && (typeof action.args !== "object" || Array.isArray(action.args)))) return Promise.resolve({ ok: false });
+    if (!window.loft || !window.loft.api || typeof window.loft.api.perform !== "function") return Promise.resolve({ ok: false });
+    return window.loft.api.perform(action.id, action.args || {}, { source: source }).catch(function () { return { ok: false }; });
   }
   // Default transport for the Cloudflare Worker. Tests or local experiments may replace this
   // function before sending; the UI contract above deliberately stays independent of fetch.
@@ -44322,21 +44326,24 @@ var ABANDONED_CALL_MS = 30000;
       if (!parsedAnswer.text) throw new Error("empty chat response");
       // Charlie's own Chat app acts immediately. In the wedding thread, an action is only a
       // suggestion attached to the incoming reply; the visitor must press its arrow explicitly.
-      if (message.mode !== "group_chat") performChatAction(parsedAnswer.action, "charlie-chat");
-      var historyAnswer = parsedAnswer.text;
-      if (typeof message.replyDisplay === "function") {
-        try { historyAnswer = String(message.replyDisplay(answer) || answer); } catch (_error) {}
-      }
-      if (!message.silent) {
-        var at = chatHistory.indexOf(message);
-        if (at < 0) chatHistory.push({ role: "assistant", text: historyAnswer });
-        else chatHistory.splice(at + 1, 0, { role: "assistant", text: historyAnswer });
-      }
-      chatPending = false; chatActiveMessage = null; chatError = "";
-      trimChatHistory(); renderChat();
-      settleChatMessage(message, null, answer);
-      if (monitor.classList.contains("show-chat")) chatInput.focus();
-      pumpChatQueue();
+      var actionWork = message.mode === "group_chat" ? Promise.resolve(null) : performChatAction(parsedAnswer.action, "charlie-chat");
+      return actionWork.then(function (actionResult) {
+        var actionFailed = actionResult && !actionResult.ok;
+        var historyAnswer = parsedAnswer.text + (actionFailed ? "\n" + chatT("chat_action_failed") : "");
+        if (typeof message.replyDisplay === "function") {
+          try { historyAnswer = String(message.replyDisplay(answer) || answer) + (actionFailed ? "\n" + chatT("chat_action_failed") : ""); } catch (_error) {}
+        }
+        if (!message.silent) {
+          var at = chatHistory.indexOf(message);
+          if (at < 0) chatHistory.push({ role: "assistant", text: historyAnswer });
+          else chatHistory.splice(at + 1, 0, { role: "assistant", text: historyAnswer });
+        }
+        chatPending = false; chatActiveMessage = null; chatError = "";
+        trimChatHistory(); renderChat();
+        settleChatMessage(message, null, message.mode === "group_chat" ? answer : historyAnswer);
+        if (monitor.classList.contains("show-chat")) chatInput.focus();
+        pumpChatQueue();
+      });
     }).catch(function () {
       clearTimeout(deadline);
       if (seq !== chatRequestSeq) return;
@@ -49686,8 +49693,8 @@ async def localfont(name):
       var text = data && typeof data.text === "string" ? data.text.trim() : raw;
       var replyToId = data && typeof data.reply_to_id === "string" ? data.reply_to_id.trim().slice(0, 80) : null;
       var action = data && data.action && typeof data.action === "object" && !Array.isArray(data.action) &&
-        typeof data.action.id === "string" && data.action.args && typeof data.action.args === "object" && !Array.isArray(data.action.args)
-        ? { id: data.action.id, args: data.action.args } : null;
+        typeof data.action.id === "string" && (data.action.args == null || (typeof data.action.args === "object" && !Array.isArray(data.action.args)))
+        ? { id: data.action.id, args: data.action.args || {} } : null;
       return { sender: (sender || "Charlie").slice(0, 48), text: text.slice(0, 700), replyToId: replyToId, action: action };
     }
     function deliverCrewReply(id, answer, target) {
@@ -49779,6 +49786,9 @@ async def localfont(name):
         var txt = document.createElement("span"); txt.className = "pm-msg-text";
         if (m.body != null) txt.textContent = msgBody(m); else txt.innerHTML = msgBody(m); // generated/visitor copy is literal; authored dictionary copy may carry <em>
         bub.appendChild(txt);
+        if (m.chatActionFailed) {
+          var actionError = document.createElement("span"); actionError.className = "pm-msg-action-error"; actionError.textContent = tr("chat_action_failed"); bub.appendChild(actionError);
+        }
         if (m.img) {
           var im = document.createElement("img"); im.className = "pm-msg-img"; im.src = m.img; im.alt = plainMessageText(m); im.loading = "lazy"; bub.appendChild(im);
           if (m.share) {
@@ -52685,11 +52695,20 @@ async def localfont(name):
         var args = chatAction.args || {};
         var phoneTarget = chatAction.id === "app.open" && args.app !== "messages" ? phoneAppByName(args.app) : null;
         var returnDirectly = directCloseApp === "messages";
-        if (!phoneTarget) close(true); // room, scene, and monitor actions need the loft visible before they run
+        delete m.chatActionFailed;
         window.loft.api.perform(chatAction.id, args, { source: "messages-chat" }).then(function (result) {
+          if (!result || !result.ok) {
+            m.chatActionFailed = true;
+            if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages);
+            return;
+          }
           // Opening a phone app resets its prior navigation state, so install this only afterward.
           if (phoneTarget && result && result.ok && currentApp === phoneTarget.id) messageAppReturn = { launched: phoneTarget.id, directClose: returnDirectly };
-        }, function () {});
+          else if (!phoneTarget && !(chatAction.id === "app.open" && args.app === "messages")) close(true);
+        }, function () {
+          m.chatActionFailed = true;
+          if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages);
+        });
         return;
       }
       if (!act) { open(true); openApp("messages", "app_messages", renderMessages); return; }

@@ -27,6 +27,7 @@ function makeRequest(path = "/chat", options = {}) {
 function makeEnv(rateSuccess = true) {
   return {
     OPENAI_API_KEY: "test-key",
+    TURNSTILE_SECRET: "test-turnstile-secret",
     OPENAI_MODEL: "gpt-5.6-luna",
     CHAT_RATE_LIMITER: { limit: async () => ({ success: rateSuccess }) },
   };
@@ -50,8 +51,30 @@ const limited = await worker.fetch(makeRequest("/chat", {
 }), makeEnv(false));
 check(limited.status === 429, "rate-limited visitors never reach OpenAI", limited.status);
 
+const unverified = await worker.fetch(makeRequest("/chat", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ message: "hello" }),
+}), makeEnv());
+check(unverified.status === 403, "messages without a Turnstile token are rejected", unverified.status);
+
 let captured;
+let capturedTurnstile;
+let openAICalls = 0;
+let turnstileSuccess = true;
 globalThis.fetch = async (url, options) => {
+  if (String(url) === "https://challenges.cloudflare.com/turnstile/v0/siteverify") {
+    capturedTurnstile = { options, body: new URLSearchParams(options.body) };
+    return new Response(JSON.stringify(turnstileSuccess ? {
+      success: true,
+      hostname: "marketa.behdad.org",
+      action: "loft-chat",
+    } : {
+      success: false,
+      "error-codes": ["invalid-input-response"],
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  }
+  openAICalls++;
   captured = { url: String(url), options, body: JSON.parse(options.body) };
   return new Response(JSON.stringify({ output_text: "Ahoj z loftu." }), {
     status: 200,
@@ -64,6 +87,7 @@ const request = makeRequest("/chat", {
   headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.8" },
   body: JSON.stringify({
     message: "Kde je party?",
+    turnstile_token: "test-turnstile-token",
     history: [
       { role: "user", text: "Ahoj" },
       { role: "assistant", text: "Ahoj!" },
@@ -76,6 +100,7 @@ const response = await worker.fetch(request, makeEnv());
 const result = await response.json();
 
 check(response.status === 200 && result.reply === "Ahoj z loftu.", "successful OpenAI text is returned as {reply}", { status: response.status, result });
+check(capturedTurnstile.body.get("secret") === "test-turnstile-secret" && capturedTurnstile.body.get("response") === "test-turnstile-token", "Worker verifies the browser token using its Turnstile secret");
 check(captured.url === "https://api.openai.com/v1/responses", "proxy uses the Responses API", captured.url);
 check(captured.options.headers.authorization === "Bearer test-key", "API secret is sent only in the upstream Authorization header");
 check(captured.body.model === "gpt-5.6-luna" && captured.body.reasoning.effort === "low" && captured.body.store === false, "request uses the configured low-latency model policy");
@@ -84,6 +109,15 @@ check(/latest message/.test(captured.body.instructions) && /\"room\":\"garden\"/
 check(/Always spell Markéta/.test(captured.body.instructions) && /cuddly-puddly/.test(captured.body.instructions), "official names reach the chatbot instructions");
 check(/^[a-f0-9]{64}$/.test(captured.body.safety_identifier), "OpenAI receives a stable privacy-preserving safety identifier");
 check(!source.includes("test-key"), "the Worker source contains no API key");
+
+turnstileSuccess = false;
+const callsBeforeRejection = openAICalls;
+const rejected = await worker.fetch(makeRequest("/chat", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ message: "hello", turnstile_token: "bad-token" }),
+}), makeEnv());
+check(rejected.status === 403 && openAICalls === callsBeforeRejection, "failed Turnstile verification never reaches OpenAI", { status: rejected.status, openAICalls });
 
 globalThis.fetch = originalFetch;
 

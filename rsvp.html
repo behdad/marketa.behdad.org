@@ -3833,6 +3833,10 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 .chat-send:hover:not(:disabled){background:#365b9d}
 .chat-send:disabled{background:#bdc8c4; cursor:default}
 .chat-send svg{width:3.3px; height:3.3px; display:block}
+/* Managed Turnstile stays outside the scaled monitor SVG so an uncommon interactive
+   challenge remains readable. It receives pointer input only while Cloudflare shows it. */
+#loft-chat-turnstile{position:fixed; z-index:2147483646; top:max(56px,calc(env(safe-area-inset-top) + 12px)); left:50%; transform:translateX(-50%); pointer-events:none}
+#loft-chat-turnstile.interactive{pointer-events:auto}
 /* The full forecast has no desktop tile now, but remains available from the live Edmonton
    readout in the menu bar. This keeps the useful detail without spending another app slot. */
 #monitor-weather{opacity:0; pointer-events:none; transition:opacity .25s ease}
@@ -43332,9 +43336,93 @@ var ABANDONED_CALL_MS = 30000;
   var chatSend = document.getElementById("monitor-chat-send");
   var chatCloseBtn = document.getElementById("monitor-chat-close");
   var CHAT_PROXY_URL = "https://marketa.behdad.org/chat";
+  var CHAT_TURNSTILE_SITEKEY = "0x4AAAAAAD68jRzCuASVTetm";
+  var CHAT_TURNSTILE_SCRIPT = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
   window.__monitorChatEndpoint = CHAT_PROXY_URL;
+  window.__monitorChatTurnstileSitekey = CHAT_TURNSTILE_SITEKEY;
   var chatHistory = [];
   var chatPending = false, chatError = "", chatRequestSeq = 0, chatAbort = null;
+  var chatTurnstileApiPromise = null, chatTurnstileHost = null, chatTurnstileWidget = null;
+  var chatTurnstileWait = null, chatTurnstileNeedsReset = false;
+  function chatTurnstileHostEl() {
+    if (!chatTurnstileHost) {
+      chatTurnstileHost = document.createElement("div");
+      chatTurnstileHost.id = "loft-chat-turnstile";
+    }
+    var fsHost = document.fullscreenElement || document.webkitFullscreenElement ||
+                 document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
+    if (chatTurnstileHost.parentNode !== fsHost) fsHost.appendChild(chatTurnstileHost);
+    return chatTurnstileHost;
+  }
+  function settleChatTurnstile(error, token) {
+    var wait = chatTurnstileWait;
+    chatTurnstileWait = null;
+    chatTurnstileNeedsReset = true;
+    if (chatTurnstileHost) chatTurnstileHost.classList.remove("interactive");
+    if (!wait) return;
+    clearTimeout(wait.timer);
+    if (error) wait.reject(error); else wait.resolve(token);
+  }
+  function cancelChatTurnstile() {
+    if (chatTurnstileWait) settleChatTurnstile(new Error("verification cancelled"));
+  }
+  function loadChatTurnstile() {
+    if (window.turnstile && typeof window.turnstile.render === "function") return Promise.resolve(window.turnstile);
+    if (chatTurnstileApiPromise) return chatTurnstileApiPromise;
+    chatTurnstileApiPromise = new Promise(function (resolve, reject) {
+      var script = document.getElementById("loft-chat-turnstile-script");
+      function ready() {
+        if (window.turnstile && typeof window.turnstile.ready === "function") {
+          window.turnstile.ready(function () { resolve(window.turnstile); });
+        } else if (window.turnstile && typeof window.turnstile.render === "function") resolve(window.turnstile);
+        else reject(new Error("Turnstile unavailable"));
+      }
+      if (script) { script.addEventListener("load", ready, { once: true }); script.addEventListener("error", reject, { once: true }); return; }
+      script = document.createElement("script");
+      script.id = "loft-chat-turnstile-script";
+      script.src = CHAT_TURNSTILE_SCRIPT;
+      script.async = true;
+      script.defer = true;
+      script.addEventListener("load", ready, { once: true });
+      script.addEventListener("error", function () { reject(new Error("Turnstile failed to load")); }, { once: true });
+      document.head.appendChild(script);
+    }).catch(function (error) { chatTurnstileApiPromise = null; throw error; });
+    return chatTurnstileApiPromise;
+  }
+  function requestChatTurnstileToken() {
+    return loadChatTurnstile().then(function (api) {
+      var host = chatTurnstileHostEl();
+      if (chatTurnstileWidget == null) {
+        chatTurnstileWidget = api.render(host, {
+          sitekey: CHAT_TURNSTILE_SITEKEY,
+          action: "loft-chat",
+          execution: "execute",
+          appearance: "interaction-only",
+          theme: "auto",
+          "response-field": false,
+          callback: function (token) { settleChatTurnstile(null, token); },
+          "error-callback": function () { settleChatTurnstile(new Error("verification failed")); return true; },
+          "expired-callback": function () { settleChatTurnstile(new Error("verification expired")); },
+          "timeout-callback": function () { settleChatTurnstile(new Error("verification timed out")); },
+          "before-interactive-callback": function () { host.classList.add("interactive"); },
+          "after-interactive-callback": function () { host.classList.remove("interactive"); }
+        });
+      }
+      if (chatTurnstileWait) settleChatTurnstile(new Error("verification superseded"));
+      return new Promise(function (resolve, reject) {
+        chatTurnstileWait = {
+          resolve: resolve,
+          reject: reject,
+          timer: setTimeout(function () { settleChatTurnstile(new Error("verification timed out")); }, 120000)
+        };
+        try {
+          if (chatTurnstileNeedsReset) { api.reset(chatTurnstileWidget); chatTurnstileNeedsReset = false; }
+          api.execute(chatTurnstileWidget);
+        } catch (error) { settleChatTurnstile(error); }
+      });
+    });
+  }
+  if (typeof window.__monitorChatTurnstile !== "function") window.__monitorChatTurnstile = requestChatTurnstileToken;
   function chatT(key) {
     var d = T[document.documentElement.lang] || T.en;
     return d[key] || T.en[key] || key;
@@ -43439,11 +43527,17 @@ var ABANDONED_CALL_MS = 30000;
     chatInput.value = "";
     chatError = "";
     var transport = window.__monitorChatTransport;
-    if (typeof transport !== "function") { chatError = chatT("chat_unavailable"); renderChat(); return; }
+    var challenge = window.__monitorChatTurnstile;
+    if (typeof transport !== "function" || typeof challenge !== "function") { chatError = chatT("chat_unavailable"); renderChat(); return; }
     chatPending = true;
     var seq = ++chatRequestSeq;
     renderChat();
-    Promise.resolve().then(function () { return transport(chatPayload(text)); }).then(function (reply) {
+    Promise.resolve().then(function () { return challenge(); }).then(function (token) {
+      if (!token) throw new Error("verification failed");
+      var payload = chatPayload(text);
+      payload.turnstile_token = String(token);
+      return transport(payload);
+    }).then(function (reply) {
       if (seq !== chatRequestSeq) return;
       var answer = reply && typeof reply === "object" && reply.text != null ? reply.text : reply;
       answer = answer == null ? "" : String(answer).trim();
@@ -43475,6 +43569,7 @@ var ABANDONED_CALL_MS = 30000;
   function resetChatApp() {
     closeChat();
     chatRequestSeq++;
+    cancelChatTurnstile();
     if (chatAbort) { try { chatAbort.abort(); } catch (e) {} chatAbort = null; }
     chatPending = false; chatError = ""; chatHistory = [];
     if (chatInput) chatInput.value = "";

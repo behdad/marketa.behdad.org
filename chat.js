@@ -2,10 +2,14 @@
 // The OpenAI key is a Worker secret named OPENAI_API_KEY; never put it in this file.
 
 const OPENAI_URL = "https://api.openai.com/v1/responses";
+const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+const TURNSTILE_ACTION = "loft-chat";
 const DEFAULT_MODEL = "gpt-5.6-luna";
 const MAX_BODY_CHARS = 32 * 1024;
 const MAX_MESSAGE_CHARS = 500;
 const MAX_HISTORY_ITEMS = 24;
+const MAX_TURNSTILE_TOKEN_CHARS = 2048;
+const TURNSTILE_TIMEOUT_MS = 10_000;
 const UPSTREAM_TIMEOUT_MS = 35_000;
 
 const ALLOWED_ORIGINS = new Set([
@@ -103,6 +107,41 @@ async function safetyIdentifier(request) {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+async function verifyTurnstile(request, env, token, expectedHostname) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TURNSTILE_TIMEOUT_MS);
+  try {
+    const body = new URLSearchParams({
+      secret: env.TURNSTILE_SECRET,
+      response: token,
+    });
+    const remoteIp = request.headers.get("cf-connecting-ip");
+    if (remoteIp) body.set("remoteip", remoteIp);
+
+    const response = await fetch(TURNSTILE_VERIFY_URL, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body,
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`Turnstile ${response.status}`);
+
+    const result = await response.json();
+    const valid = result && result.success === true &&
+      result.hostname === expectedHostname && result.action === TURNSTILE_ACTION;
+    if (!valid) {
+      console.warn("Turnstile rejected chat request", JSON.stringify({
+        hostname: cleanText(result && result.hostname, 120) || null,
+        action: cleanText(result && result.action, 80) || null,
+        codes: Array.isArray(result && result["error-codes"]) ? result["error-codes"].slice(0, 5) : [],
+      }));
+    }
+    return valid;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function callOpenAI(request, env, payload) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
@@ -161,7 +200,7 @@ export default {
     if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get("content-type") || "")) {
       return jsonResponse({ error: "expected JSON" }, 415, origin);
     }
-    if (!env.OPENAI_API_KEY) return jsonResponse({ error: "chat is not configured" }, 503, origin);
+    if (!env.OPENAI_API_KEY || !env.TURNSTILE_SECRET) return jsonResponse({ error: "chat is not configured" }, 503, origin);
 
     if (env.CHAT_RATE_LIMITER && typeof env.CHAT_RATE_LIMITER.limit === "function") {
       const actor = request.headers.get("cf-connecting-ip") || origin;
@@ -185,6 +224,19 @@ export default {
     const message = cleanText(body && body.message, MAX_MESSAGE_CHARS + 1);
     if (!message) return jsonResponse({ error: "message is required" }, 400, origin);
     if (message.length > MAX_MESSAGE_CHARS) return jsonResponse({ error: "message is too long" }, 400, origin);
+
+    const turnstileToken = cleanText(body && body.turnstile_token, MAX_TURNSTILE_TOKEN_CHARS + 1);
+    if (!turnstileToken || turnstileToken.length > MAX_TURNSTILE_TOKEN_CHARS) {
+      return jsonResponse({ error: "verification required" }, 403, origin);
+    }
+    try {
+      if (!await verifyTurnstile(request, env, turnstileToken, new URL(origin).hostname)) {
+        return jsonResponse({ error: "verification failed" }, 403, origin);
+      }
+    } catch (error) {
+      console.error("Turnstile verification unavailable", error && error.name === "AbortError" ? "timeout" : String(error));
+      return jsonResponse({ error: "verification unavailable" }, 503, origin);
+    }
 
     const payload = {
       message,

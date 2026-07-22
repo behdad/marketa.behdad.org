@@ -22,18 +22,21 @@ var HARNESS = [
   ' S("opened",{chat:mon.classList.contains("show-chat"),greeting:log.textContent,inputDir:input.getAttribute("dir"),endpoint:window.__monitorChatEndpoint,turnstileSitekey:window.__monitorChatTurnstileSitekey});',
   ' var captured=[], releases=[], oldFetch=window.fetch, challengeN=0;',
   ' window.__monitorChatTurnstile=function(){return Promise.resolve("test-turnstile-token-"+(++challengeN));};',
-  ' window.fetch=function(url,opts){var n=captured.length;captured.push({url:String(url),method:opts&&opts.method,headers:opts&&opts.headers,body:opts&&opts.body});return new Promise(function(resolve){releases.push(function(){var reply=n?"دنبال می‌کنم.":"سلام، من اینجا هستم.";resolve(new Response(JSON.stringify({reply:reply}),{status:200,headers:{"Content-Type":"application/json"}}));});});};',
+  ' window.fetch=function(url,opts){var n=captured.length;captured.push({url:String(url),method:opts&&opts.method,headers:opts&&opts.headers,body:opts&&opts.body});return new Promise(function(resolve){releases.push(function(){var replies=["سلام، من اینجا هستم.","دنبال می‌کنم.","You are in the office."];resolve(new Response(JSON.stringify({reply:replies[n]||"Done."}),{status:200,headers:{"Content-Type":"application/json"}}));});});};',
   ' input.value="سلام"; input.dispatchEvent(new Event("input",{bubbles:true})); form.dispatchEvent(new Event("submit",{bubbles:true,cancelable:true})); await sleep(30);',
   ' S("pending",{thinking:/Thinking|Přemýšlím/.test(log.textContent),enabled:!input.disabled,captured:captured.length});',
   ' input.value="ادامه بده"; input.dispatchEvent(new Event("input",{bubbles:true})); form.dispatchEvent(new Event("submit",{bubbles:true,cancelable:true})); await sleep(30);',
   ' S("followup",{shown:/ادامه بده/.test(log.textContent),requestsBeforeFirstReply:captured.length,inputEnabled:!input.disabled});',
-  ' if(releases[0])releases.shift()(); await sleep(150); S("queuePump",{requests:captured.length}); if(releases[0])releases.shift()(); await sleep(150); window.fetch=oldFetch;',
+  ' if(releases[0])releases.shift()(); await sleep(150); S("queuePump",{requests:captured.length}); if(releases[0])releases.shift()(); await sleep(150);',
   ' var first=captured[0], second=captured[1], payload=first?JSON.parse(first.body):null, payload2=second?JSON.parse(second.body):null, messages=log.querySelectorAll(".chat-msg"); var last=messages[messages.length-1];',
   ' S("request",{url:first&&first.url,method:first&&first.method,message:payload&&payload.message,language:payload&&payload.language,turnstileToken:payload&&payload.turnstile_token,context:payload&&payload.context,history:payload&&payload.history,secondHistory:payload2&&payload2.history});',
   ' S("persian",{text:last&&last.textContent,dir:last&&last.getAttribute("dir"),computed:last&&getComputedStyle(last).direction,history:window.__monitorChatHistory&&window.__monitorChatHistory(),fits:document.getElementById("monitor-chat-wrap").scrollWidth<=document.getElementById("monitor-chat-wrap").clientWidth});',
   ' click(document.getElementById("monitor-chat-close")); await sleep(30); mon.classList.add("show-caps"); click(chatTile); await sleep(60);',
   ' S("retained",{open:mon.classList.contains("show-chat"),reply:/سلام، من/.test(log.textContent)});',
   ' setLang("cs"); await sleep(30); S("czech",{title:document.querySelector(".chat-bar-title").textContent,greeting:log.querySelector(".chat-msg.assistant").textContent,reply:/سلام، من/.test(log.textContent)});',
+  ' window.__toggleDropTerm(); await sleep(30); var dtIn=document.getElementById("dropterm-in"), dtOut=document.getElementById("dropterm-out"); dtIn.value="/chat Which room am I in?"; dtIn.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true})); await sleep(30);',
+  ' S("consolePending",{thinking:/Charlie is thinking/.test(dtOut.textContent),requests:captured.length,inputEmpty:!dtIn.value}); if(releases[0])releases.shift()(); await sleep(150);',
+  ' var third=captured[2], payload3=third?JSON.parse(third.body):null; S("slashChat",{reply:/You are in the office/.test(dtOut.textContent),history:window.__monitorChatHistory&&window.__monitorChatHistory(),request:payload3,dir:dtOut.lastElementChild&&dtOut.lastElementChild.getAttribute("dir")}); window.__toggleDropTerm(); window.fetch=oldFetch;',
   ' if(window.resetMonitorAppState)window.resetMonitorAppState("chat"); await sleep(30); S("killed",{closed:!mon.classList.contains("show-chat"),history:window.__monitorChatHistory&&window.__monitorChatHistory().length});',
   ' mon.classList.add("show-caps"); click(document.getElementById("monitor-desk-weather")); await sleep(40); S("toolbarWeather",mon.classList.contains("show-weather")); if(window.__closeMonitorWeather)window.__closeMonitorWeather();',
   ' mon.classList.add("show-caps"); var weatherResult=window.__openMonitorApp&&window.__openMonitorApp("weather"); S("weatherHidden",{resultIsList:Array.isArray(weatherResult),open:mon.classList.contains("show-weather")});',
@@ -51,7 +54,7 @@ if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(s.tiles.chat && !s.tiles.weather && s.tiles.icon === "#dicon-chat", "Chat replaces Weather in the desktop grid with its own icon", s.tiles);
-check(s.opened.chat && /know this loft/.test(s.opened.greeting) && s.opened.inputDir === "auto", "Chat opens with its welcome and direction-aware input", s.opened);
+check(s.opened.chat && /I’m Charlie/.test(s.opened.greeting) && /know this loft/.test(s.opened.greeting) && s.opened.inputDir === "auto", "Chat opens with Charlie's welcome and direction-aware input", s.opened);
 check(s.opened.endpoint === "https://marketa.behdad.org/chat", "Chat exposes the exact Cloudflare proxy endpoint", s.opened.endpoint);
 check(/^0x/.test(s.opened.turnstileSitekey || ""), "Chat exposes the public Turnstile site key", s.opened.turnstileSitekey);
 check(s.pending.thinking && s.pending.enabled && s.pending.captured === 1, "submitting shows a pending state while keeping the input enabled", s.pending);
@@ -63,7 +66,9 @@ check(s.request.context && s.request.context.room === "office" && s.request.cont
 check(s.persian.text === "دنبال می‌کنم." && s.persian.dir === "auto" && s.persian.computed === "rtl" && s.persian.fits, "Persian response paints RTL without horizontal overflow", s.persian);
 check(s.persian.history.length === 4 && s.persian.history.map(function (m) { return m.role; }).join(",") === "user,assistant,user,assistant", "queued turns settle into conversational order", s.persian.history);
 check(s.retained.open && s.retained.reply, "ordinary close and reopen retains the conversation", s.retained);
-check(s.czech.title === "chat" && /Znám tenhle loft/.test(s.czech.greeting) && s.czech.reply, "site-language switch localizes chrome without altering the conversation", s.czech);
+check(s.czech.title === "chat" && /Jsem Charlie/.test(s.czech.greeting) && /Znám tenhle loft/.test(s.czech.greeting) && s.czech.reply, "site-language switch localizes Charlie's welcome without altering the conversation", s.czech);
+check(s.consolePending.thinking && s.consolePending.requests === 3 && s.consolePending.inputEmpty, "/chat starts Charlie from the drop-down console without blocking its prompt", s.consolePending);
+check(s.slashChat.reply && s.slashChat.dir === "auto" && s.slashChat.request.history.length === 4 && s.slashChat.history.length === 6, "/chat replies in the issuing console and shares the Chat app conversation", s.slashChat);
 check(s.killed.closed && s.killed.history === 0, "Kill closes Chat and clears retained conversation state", s.killed);
 check(s.toolbarWeather === true && s.weatherHidden.resultIsList && !s.weatherHidden.open, "Weather opens from Edmonton toolbar but not from the desktop/console app roster", { toolbar: s.toolbarWeather, hidden: s.weatherHidden });
 check(s.consoleChat.open && /chat/.test(s.consoleChat.result || ""), "computer(\"chat\") opens the new monitor app", s.consoleChat);

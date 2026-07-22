@@ -103,10 +103,10 @@ check(response.status === 200 && result.reply === "Ahoj z loftu.", "successful O
 check(capturedTurnstile.body.get("secret") === "test-turnstile-secret" && capturedTurnstile.body.get("response") === "test-turnstile-token", "Worker verifies the browser token using its Turnstile secret");
 check(captured.url === "https://api.openai.com/v1/responses", "proxy uses the Responses API", captured.url);
 check(captured.options.headers.authorization === "Bearer test-key", "API secret is sent only in the upstream Authorization header");
-check(captured.body.model === "gpt-5.6-luna" && captured.body.reasoning.effort === "low" && captured.body.store === false, "request uses the configured low-latency model policy");
+check(captured.body.model === "gpt-5.6-luna" && captured.body.reasoning.effort === "none" && captured.body.text.verbosity === "low" && captured.body.max_output_tokens === 220 && captured.body.store === false, "request uses the configured low-latency model policy");
 check(captured.body.input.length === 3 && captured.body.input[0].role === "user" && captured.body.input[2].content === "Kde je party?", "valid history and the latest message are forwarded in order", captured.body.input);
 check(/latest message/.test(captured.body.instructions) && /\"room\":\"garden\"/.test(captured.body.instructions), "language rule and sanitized game context reach the developer instructions");
-check(/Always spell Markéta/.test(captured.body.instructions) && /cuddly-puddly/.test(captured.body.instructions), "official names reach the chatbot instructions");
+check(/You are Charlie/.test(captured.body.instructions) && /Always spell Markéta/.test(captured.body.instructions) && /kitchen\/bar/.test(captured.body.instructions) && /cuddly-puddly/.test(captured.body.instructions), "Charlie's identity and official names reach the chatbot instructions");
 check(/^[a-f0-9]{64}$/.test(captured.body.safety_identifier), "OpenAI receives a stable privacy-preserving safety identifier");
 check(!source.includes("test-key"), "the Worker source contains no API key");
 

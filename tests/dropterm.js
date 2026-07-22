@@ -33,7 +33,7 @@ function assert(cond, label, detail) { if (cond) ok(label); else bad(label, deta
 (function () {
   // the DOCUMENT backtick handler toggles the drop-down; a separate one-liner on the console INPUT
   // closes it on backtick (Quake convention) — skip that and match the branch that reaches __toggleDropTerm.
-  var m = /else if \(e\.key === "`"\) \{[\s\S]{0,400}?__toggleDropTerm[\s\S]{0,120}?\n\s*\}/.exec(html);
+  var m = /else if \(e\.key === "`"\) \{[\s\S]{0,700}?__toggleDropTerm[\s\S]{0,120}?\n\s*\}/.exec(html);
   if (!m) { bad("backtick handler present", "no `e.key === \"`\"` branch reaches __toggleDropTerm"); return; }
   var body = m[0];
   assert(/__toggleDropTerm/.test(body), "backtick handler calls window.__toggleDropTerm");

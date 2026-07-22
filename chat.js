@@ -18,7 +18,7 @@ const ALLOWED_ORIGINS = new Set([
   "http://127.0.0.1:8000",
 ]);
 
-const BASE_INSTRUCTIONS = `You are Chat, the warm, observant in-world guide inside Markéta and Behdad's Loft Day wedding game.
+const BASE_INSTRUCTIONS = `You are Charlie, the warm, observant wedding assistant inside Markéta and Behdad's Loft Day wedding game.
 
 Reply in the language and script of the user's latest message. Be fluent and natural in Czech, English, and Persian, and follow any other language the user uses. If the message mixes languages, follow its dominant language.
 
@@ -154,11 +154,11 @@ async function callOpenAI(request, env, payload) {
       },
       body: JSON.stringify({
         model: env.OPENAI_MODEL || DEFAULT_MODEL,
-        reasoning: { effort: "low" },
+        reasoning: { effort: "none" },
         text: { verbosity: "low" },
         instructions: `${BASE_INSTRUCTIONS}\n\nCurrent game state (JSON data):\n${JSON.stringify(payload.context)}`,
         input: [...payload.history, { role: "user", content: payload.message }],
-        max_output_tokens: 350,
+        max_output_tokens: 220,
         store: false,
         safety_identifier: await safetyIdentifier(request),
       }),

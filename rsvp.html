@@ -25112,7 +25112,7 @@ var T = {
     console_hint: "Open the drop-down console",
     console_hint_close: "Close the drop-down console",
     app_chat: "chat",
-    chat_welcome: "Hi. I know this loft. Ask me anything.",
+    chat_welcome: "Hi! I’m Charlie, your wedding assistant. I know this loft and how it works. Ask me anything.",
     chat_placeholder: "Ask about the loft…",
     chat_send: "Send message",
     chat_thinking: "Thinking…",
@@ -25937,7 +25937,7 @@ var T = {
     console_hint: "Otevřít rozbalovací konzoli",
     console_hint_close: "Zavřít rozbalovací konzoli",
     app_chat: "chat",
-    chat_welcome: "Ahoj. Znám tenhle loft. Zeptej se mě na cokoli.",
+    chat_welcome: "Ahoj! Jsem Charlie, tvůj svatební průvodce. Znám tenhle loft a vím, jak to tu funguje. Zeptej se mě na cokoli.",
     chat_placeholder: "Zeptej se na loft…",
     chat_send: "Odeslat zprávu",
     chat_thinking: "Přemýšlím…",
@@ -40279,6 +40279,7 @@ var ABANDONED_CALL_MS = 30000;
     box.appendChild(d);
     while (box.childNodes.length > 150) box.removeChild(box.firstChild);
     box.scrollTop = box.scrollHeight;
+    return d;
   }
   // Side-channel so the console-toy commands (defined in another IIFE) can still show their
   // cute status line while returning a plain bool for scripting: they print here as a
@@ -40560,6 +40561,31 @@ var ABANDONED_CALL_MS = 30000;
     // re-points independently; see its .then below, which captures ctx.out.)
     var __capturedOut = activeConsoleOut;
     try {
+    // `/chat ...` is deliberately explicit: everything else remains real JavaScript. It
+    // shares Charlie's app history/queue, but leaves the reply in whichever console asked.
+    var chatM = c.match(/^\/chat(?:\s+([\s\S]*))?$/i);
+    if (chatM) {
+      var question = (chatM[1] || "").trim();
+      if (!question) { consolePrint("usage: /chat your question", "console-dim"); return; }
+      if (typeof window.__monitorChatAsk !== "function") { consolePrint("Charlie isn't connected yet.", "console-err"); return; }
+      var thinkingLine = consolePrint("Charlie is thinking…", "console-dim");
+      var settleConsoleChat = function (text, cls) {
+        var p = activeConsoleOut, line;
+        activeConsoleOut = __capturedOut;
+        if (thinkingLine && thinkingLine.parentNode === __capturedOut) {
+          line = thinkingLine; line.className = cls || ""; line.textContent = text;
+          __capturedOut.scrollTop = __capturedOut.scrollHeight;
+        } else line = consolePrint(text, cls);
+        if (line) line.setAttribute("dir", "auto");
+        activeConsoleOut = p;
+      };
+      Promise.resolve(window.__monitorChatAsk(question)).then(function (reply) {
+        settleConsoleChat(String(reply == null ? "" : reply));
+      }, function (error) {
+        settleConsoleChat(error && error.message ? error.message : String(error), "console-err");
+      });
+      return;
+    }
     if (/^laser(\(\))?$/.test(c)) {
       if (window.__laserPointer) window.__laserPointer();
       consolePrint(consoleT("console_laser"), "console-dim");
@@ -40573,12 +40599,16 @@ var ABANDONED_CALL_MS = 30000;
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: help · clear · shortcuts()/keyboard() · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · mixer() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · meteors() · storm()/rain()/overcast() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · sharecard() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora()/aurora(kp) · aurora() · twilight() · timelapse() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · snap() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · fal() · cat() · octi() · piratebox()/chest() · scripts() · run(\"name\") · repeat(\"name\")/stop() · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · mailto() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: /chat your question · help · clear · shortcuts()/keyboard() · quit · reset() · autoplay() · laser() · party() · chase() · guests()/aligoli() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · mixer() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · meteors() · storm()/rain()/overcast() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · sharecard() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora()/aurora(kp) · aurora() · twilight() · timelapse() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · snap() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · fal() · cat() · octi() · piratebox()/chest() · scripts() · run(\"name\") · repeat(\"name\")/stop() · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · mailto() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
       if (!topic) { consolePrint(CONSOLE_HELP_OVERVIEW, "console-dim"); return; }
       var key = topic.trim().toLowerCase().replace(/\(.*\)$/, "").replace(/^["']|["']$/g, "");
+      if (key === "chat" || key === "/chat") {
+        consolePrint("/chat your question — ask Charlie without leaving the console; replies share the Chat app's conversation", "console-dim");
+        return;
+      }
       if (key === "summon") { // the live roster: per-room pokeable-target counts + how to browse
         consolePrint(CONSOLE_HELP.summon, "console-dim");
         if (window.__summonRoster) consolePrint(window.__summonRoster(), "console-dim");
@@ -43520,12 +43550,19 @@ var ABANDONED_CALL_MS = 30000;
   function trimChatHistory() {
     if (!chatPending && !chatQueue.length && chatHistory.length > 40) chatHistory = chatHistory.slice(-40);
   }
+  function settleChatMessage(message, error, reply) {
+    if (!message || message.settled) return;
+    message.settled = true;
+    if (error) message.reject(error); else message.resolve(reply);
+  }
   function pumpChatQueue() {
     if (chatPending || !chatQueue.length) { renderChat(); return; }
     var transport = window.__monitorChatTransport;
     var challenge = window.__monitorChatTurnstile;
     if (typeof transport !== "function" || typeof challenge !== "function") {
-      chatQueue = []; chatError = chatT("chat_unavailable"); renderChat(); return;
+      var unavailable = new Error(chatT("chat_unavailable"));
+      chatQueue.splice(0).forEach(function (message) { settleChatMessage(message, unavailable); });
+      chatError = unavailable.message; renderChat(); return;
     }
     var message = chatQueue.shift();
     chatActiveMessage = message;
@@ -43561,32 +43598,44 @@ var ABANDONED_CALL_MS = 30000;
       else chatHistory.splice(at + 1, 0, { role: "assistant", text: answer });
       chatPending = false; chatActiveMessage = null; chatError = "";
       trimChatHistory(); renderChat();
+      settleChatMessage(message, null, answer);
       if (monitor.classList.contains("show-chat")) chatInput.focus();
       pumpChatQueue();
     }).catch(function () {
       clearTimeout(deadline);
       if (seq !== chatRequestSeq) return;
-      chatPending = false; chatActiveMessage = null; chatError = chatT("chat_error");
+      var failure = new Error(chatT("chat_error"));
+      chatPending = false; chatActiveMessage = null; chatError = failure.message;
+      settleChatMessage(message, failure);
       trimChatHistory(); renderChat(); pumpChatQueue();
     });
+  }
+  function askChat(text) {
+    text = String(text == null ? "" : text).trim();
+    if (!text) return Promise.reject(new Error("message is required"));
+    var resolveMessage, rejectMessage;
+    var completion = new Promise(function (resolve, reject) { resolveMessage = resolve; rejectMessage = reject; });
+    var message = { role: "user", text: text, resolve: resolveMessage, reject: rejectMessage, settled: false };
+    chatHistory.push(message);
+    chatQueue.push(message);
+    chatError = "";
+    renderChat();
+    pumpChatQueue();
+    return completion;
   }
   function submitChat() {
     if (!chatInput) return;
     var text = chatInput.value.trim();
     if (!text) return;
-    var message = { role: "user", text: text };
-    chatHistory.push(message);
-    chatQueue.push(message);
     chatInput.value = "";
-    chatError = "";
-    renderChat();
-    pumpChatQueue();
+    askChat(text).catch(function () {}); // the app paints its own error; console callers use the rejection
   }
   function cancelQueuedChatMessages() {
     var hasDraft = !!(chatInput && chatInput.value);
     if (!hasDraft && !chatQueue.length) return false;
     if (chatQueue.length) {
       var queued = chatQueue.slice();
+      queued.forEach(function (message) { settleChatMessage(message, new Error("chat request cancelled")); });
       chatHistory = chatHistory.filter(function (message) { return queued.indexOf(message) < 0; });
       chatQueue = [];
     }
@@ -43613,6 +43662,9 @@ var ABANDONED_CALL_MS = 30000;
   function resetChatApp() {
     closeChat();
     chatRequestSeq++;
+    var cancelled = chatQueue.slice();
+    if (chatActiveMessage) cancelled.unshift(chatActiveMessage);
+    cancelled.forEach(function (message) { settleChatMessage(message, new Error("chat request cancelled")); });
     cancelChatTurnstile();
     if (chatAbort) { try { chatAbort.abort(); } catch (e) {} chatAbort = null; }
     chatPending = false; chatError = ""; chatHistory = []; chatQueue = []; chatActiveMessage = null;
@@ -43621,6 +43673,7 @@ var ABANDONED_CALL_MS = 30000;
   }
   window.__closeMonitorChat = closeChat;
   window.__resetMonitorChat = resetChatApp;
+  window.__monitorChatAsk = askChat;
   window.__monitorChatHistory = function () { return chatHistory.map(function (m) { return { role: m.role, text: m.text }; }); };
   window.refreshChatText = renderChat;
   if (chatWrap) {

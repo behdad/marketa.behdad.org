@@ -18,7 +18,8 @@ var HARNESS = [
   ' ["c","o","n"].forEach(key);key("Enter");await sleep(30);S("launch",{console:mon.classList.contains("show-console"),state:window.__monitorDockSearch()});',
   ' key("x");key("y");S("appGuard",window.__monitorDockSearch());if(window.__closeTopMonitorApp)window.__closeTopMonitorApp();mon.classList.add("show-caps");await sleep(20);',
   ' setLang("cs");await sleep(20);S("beforeCzech",{zoom:window.__monitorZoomed&&window.__monitorZoomed(),classes:mon.getAttribute("class"),visibility:getComputedStyle(document.getElementById("monitor-desktop-dock")).visibility});["k","o","n"].forEach(key);S("czech",window.__monitorDockSearch());document.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true}));S("pointer",window.__monitorDockSearch());',
-  ' if(window.__openPhoneModal)window.__openPhoneModal(true);await sleep(30);["x","y"].forEach(key);S("phoneGuard",window.__monitorDockSearch());if(window.phone)window.phone(false);',
+  ' if(window.__openPhoneModal)window.__openPhoneModal(true);await sleep(30);["x","y"].forEach(key);S("phoneGuard",window.__monitorDockSearch());if(window.phone)window.phone(false);await sleep(30);',
+  ' var oldId=window.__openMonitorApp("family");var phoneId=window.__openMonitorApp("phone");await sleep(30);S("phoneName",{tile:!!document.getElementById("monitor-dock-phone"),oldTile:!!document.getElementById("monitor-dock-family"),label:document.querySelector("#monitor-dock-phone .dock-label").textContent,oldRejected:Array.isArray(oldId),opened:mon.classList.contains("show-family"),result:phoneId});',
   '}',
   '})();</script>'
 ].join("\n");
@@ -41,6 +42,7 @@ check(!s.appGuard.query, "typing inside an open monitor app does not start deskt
 check(s.czech.query === "kon" && s.czech.match === "console", "matching includes the current localized app label", { state: s.czech, before: s.beforeCzech });
 check(!s.pointer.query && !s.pointer.match, "a pointer gesture dismisses the transient search", s.pointer);
 check(!s.phoneGuard.query, "the phone never inherits monitor search", s.phoneGuard);
+check(s.phoneName.tile && !s.phoneName.oldTile && s.phoneName.label === "telefon" && s.phoneName.oldRejected && s.phoneName.opened && /phone/.test(s.phoneName.result || ""), "the monitor calling app and command are named phone, without a family alias", s.phoneName);
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

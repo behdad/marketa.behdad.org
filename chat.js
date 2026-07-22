@@ -7,7 +7,9 @@ const OPENAI_URL = "https://api.openai.com/v1/responses";
 const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 const TURNSTILE_ACTION = "loft-chat";
 const DEFAULT_MODEL = "gpt-5.6-luna";
-const MAX_BODY_CHARS = 32 * 1024;
+// Scripting questions include the generated public API manifest. Keep the request bounded, but
+// leave room for the complete typed/global reference plus a pasted editor buffer.
+const MAX_BODY_CHARS = 96 * 1024;
 const MAX_MESSAGE_CHARS = 500;
 const MAX_HISTORY_ITEMS = 24;
 const MAX_GROUP_CAST_ITEMS = 40;
@@ -162,6 +164,9 @@ Reply in the language and script of the visitor's latest message. Be warm, playf
 You may suggest at most one action, and only when the visitor's latest message directly asks for it and its ID appears in the current game state's actions_available array. The game will attach that suggestion to your incoming message and wait for the visitor to press it; unlike Charlie's private Chat app, Wedding crew messages never execute actions automatically. Music, dance, track, and DJ actions should be answered by the current DJ or another supplied cast member whose role identifies them as a DJ. During a party, a request to the DJ for the next song means party.music.next, never music.skip (which belongs to the separate guitar/ukulele song player). A direct request addressed to Aspen to take a photo must be answered by Aspen with the photo.take action. Use Charlie for app, room, roster, or other interface help unless a supplied cast role clearly fits better. Never infer an action from a vague remark, never emit raw JavaScript or an action outside the supplied catalog, and never claim the action succeeded; the game decides whether to execute it.
 
 Return only strict JSON with exactly this shape: {"sender":"Cast name","text":"Message","reply_to_id":null,"action":null} or {"sender":"Cast name","text":"Message","reply_to_id":"supplied-message-id","action":{"id":"allowlisted.id","args":{}}}. The sender must be a supplied cast name. reply_to_id must be null or exactly an id from reply_to or recent_messages. Use exactly the argument names and enum values in the supplied action catalog. Do not use a Markdown fence or add other text.`;
+
+const EDITOR_INSTRUCTIONS = `You are the Loft Script Editor assistant. Review JavaScript as text only; never execute it and never request a game action. The editor wraps code in an async function, so documented Loft globals such as await sleep(3000), party(true), room("garden"), daylight(true), dance("salsa"), trip("molly"), caption("text"), and loft.api.query/perform are valid. Use the supplied scripting_api as authoritative and do not invent signatures or private details.
+For explain, briefly explain the selected code or likely error. For fix, return a corrected complete script. For complete, return a short continuation from the cursor. Keep suggestions runnable and bounded. Return strict JSON only: {"text":"brief explanation","suggestion":"code or empty string","replace":true|false}. `suggestion` must contain code only, with no Markdown fences.`;
 
 function corsHeaders(origin) {
   return {
@@ -583,6 +588,7 @@ function cleanContext(value) {
     media: cleanMedia(source.media),
     devices: cleanDevices(source.devices),
     apps: cleanAppKnowledge(source.apps),
+    scripting_api: source.scripting_api && typeof source.scripting_api === "object" ? source.scripting_api : null,
   };
 }
 
@@ -991,7 +997,10 @@ async function callOpenAI(request, env, payload) {
   const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
   try {
     const groupMode = payload.mode === "group_chat";
-    const instructions = groupMode
+    const editorMode = payload.mode === "editor_assist";
+    const instructions = editorMode
+      ? `${EDITOR_INSTRUCTIONS}\n\nCurrent editor request (JSON data):\n${JSON.stringify(payload.editor || {})}\n\nLoft scripting API (JSON data):\n${JSON.stringify(payload.context && payload.context.scripting_api || {})}`
+      : groupMode
       ? `${GROUP_CHAT_INSTRUCTIONS}\n\n${ACTION_CATALOG}\n\nVerified knowledge (JSON data):\n${CHAT_KNOWLEDGE_JSON}\n\nCurrent game state (JSON data):\n${JSON.stringify(payload.context)}\n\nWedding-thread context (JSON data):\n${JSON.stringify(payload.group_chat)}`
       : `${BASE_INSTRUCTIONS}\n\n${ACTION_CATALOG}\n\nVerified knowledge (JSON data):\n${CHAT_KNOWLEDGE_JSON}\n\nCurrent game state (JSON data):\n${JSON.stringify(payload.context)}`;
     const response = await fetch(OPENAI_URL, {
@@ -1027,6 +1036,7 @@ async function callOpenAI(request, env, payload) {
     const data = await response.json();
     const reply = extractReply(data);
     if (!reply) throw new Error("OpenAI returned no text");
+    if (editorMode) return normalizeEditorReply(reply);
     const normalized = groupMode
       ? normalizeGroupReply(reply, payload.group_chat, payload.context)
       : normalizeChatReply(reply, payload.context);
@@ -1034,6 +1044,12 @@ async function callOpenAI(request, env, payload) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function normalizeEditorReply(reply) {
+  let parsed;
+  try { parsed = JSON.parse(String(reply).replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")); } catch (_error) { parsed = { text: cleanText(reply, 1200), suggestion: "", replace: false }; }
+  return JSON.stringify({ text: cleanText(parsed && parsed.text, 1200) || "I couldn't produce a useful review.", suggestion: cleanText(parsed && parsed.suggestion, 12000), replace: parsed && parsed.replace === true });
 }
 
 export default {
@@ -1089,13 +1105,20 @@ export default {
       return jsonResponse({ error: "verification unavailable" }, 503, origin);
     }
 
-    const mode = body && body.mode === "group_chat" ? "group_chat" : "chat";
+    const mode = body && body.mode === "group_chat" ? "group_chat" : body && body.mode === "editor_assist" ? "editor_assist" : "chat";
     const payload = {
       mode,
       message,
       history: mode === "group_chat" ? [] : cleanHistory(body.history),
       context: cleanContext(body.context),
       group_chat: mode === "group_chat" ? cleanGroupChat(body.group_chat) : null,
+      editor: mode === "editor_assist" ? {
+        operation: cleanText(body.editor && body.editor.operation, 24) || "explain",
+        code: cleanText(body.editor && body.editor.code, 14_000),
+        selected: cleanText(body.editor && body.editor.selected, 8_000),
+        cursor: cleanNumber(body.editor && body.editor.cursor, 0, 14_000, 0),
+        error: cleanText(body.editor && body.editor.error, 1_000),
+      } : null,
     };
 
     try {

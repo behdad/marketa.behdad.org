@@ -3329,7 +3329,7 @@ html.is-webkit .dock-app:hover .dock-tile{transform:none; box-shadow:inset 0 0 0
 .ed-item:hover{background:#1a2420}
 .ed-item.active{background:#264032; color:#a7e08a}
 .ed-empty{flex:none; font-size:1.8px; color:#5f7a5f; padding:0.6px 0.8px}
-.ed-main{flex:1; min-width:0; display:grid; grid-template-rows:auto minmax(0,1fr); gap:1px} /* grid (not flex+position:relative — that composited a RenderLayer that vanished under the monitor's scaled foreignObject, WebKit bug 23113). The autocomplete popup overlays via grid-area + JS margin offset instead of absolute left/top. */
+.ed-main{position:relative; flex:1; min-width:0; display:grid; grid-template-rows:auto minmax(0,1fr) auto; gap:1px} /* grid (not flex+position:relative — that composited a RenderLayer that vanished under the monitor's scaled foreignObject, WebKit bug 23113). The autocomplete popup overlays via grid-area + JS margin offset instead of absolute left/top. */
 .ed-top{grid-row:1; grid-column:1; display:flex; align-items:center; gap:0.6px; padding:0 8px 0 1px} /* right pad clears the shrunk close pill parked in the top-right corner */
 .ed-name{flex:1; min-width:0; background:#161c20; border:0.3px solid #2b3a3a; border-radius:0.8px; outline:none; color:#cfe3cf; font:inherit; font-size:2px; height:3.6px; line-height:3.6px; padding:0 0.8px}
 .ed-name::placeholder{color:#5f7a5f}
@@ -3338,6 +3338,14 @@ html.is-webkit .dock-app:hover .dock-tile{transform:none; box-shadow:inset 0 0 0
 .ed-btn-run{color:#a7e08a; font-size:2.5px} /* the solid ▶ triangle reads heavier than the outline arrows, so nudge it a hair smaller to optically match */
 .ed-btn-run.ed-btn-stop{color:#e39191} /* ■ stop state while a script is looping (repeat()) */
 .ed-ta{grid-row:2; grid-column:1; min-height:0; resize:none; background:#0d130e; border:0.3px solid #202b2b; border-radius:0.8px; outline:none; color:#cfe3cf; font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.4; padding:0.6px 1px; white-space:pre; overflow:auto; scrollbar-width:none; caret-color:#8fd070}
+.ed-ai-tools{grid-row:3; grid-column:1; display:flex; align-items:center; gap:.5px; min-height:4px; padding:0 1px}
+.ed-ai-btn{flex:none; height:3.5px; padding:0 .8px; border:.3px solid #2b3a3a; border-radius:.7px; background:#1d2622; color:#a7e08a; font:1.8px/3px ui-monospace,Menlo,monospace; cursor:pointer}
+.ed-ai-btn:hover,.ed-ai-btn:focus-visible{background:#294234; outline:none}
+.ed-ai-btn:disabled{opacity:.45; cursor:default}
+.ed-ai-status{min-width:0; flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#789478; font-size:1.7px; cursor:default}
+.ed-ai-status.ready{color:#cfe3cf; cursor:pointer}
+.ed-ai-panel{display:none; position:absolute; z-index:4; left:25px; right:2px; bottom:2px; max-height:17px; overflow:auto; box-sizing:border-box; padding:1px; border:.3px solid #54745b; border-radius:.8px; background:#101914; color:#d8eed5; font:1.8px/1.35 ui-monospace,Menlo,monospace; white-space:pre-wrap; box-shadow:0 .5px 2px #000b}
+.ed-ai-panel.open{display:block}
 .ed-ta::placeholder{color:#5f7a5f}
 .ed-ta::-webkit-scrollbar{display:none}
 .ed-wrap input, .ed-wrap textarea{user-select:text; -webkit-user-select:text}
@@ -19384,6 +19392,8 @@ section{margin:1.9rem 0}
 <input id="monitor-ed-file" type="file" accept=".js,.txt,text/javascript" style="display:none"/>
 </div>
 <textarea id="monitor-ed-code" class="ed-ta" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="// a script — e.g. party(true); await sleep(400); dance(&quot;salsa&quot;)"></textarea>
+<div class="ed-ai-tools"><button id="monitor-ed-explain" class="ed-ai-btn" type="button" title="Explain selected code">?</button><button id="monitor-ed-fix" class="ed-ai-btn" type="button" title="Suggest a fix">fix</button><button id="monitor-ed-complete" class="ed-ai-btn" type="button" title="Suggest the next code">next</button><span id="monitor-ed-ai-status" class="ed-ai-status">AI ready</span></div>
+<div id="monitor-ed-ai-panel" class="ed-ai-panel" role="status"></div>
 </div>
 </div>
 </foreignObject>
@@ -42335,6 +42345,11 @@ var ABANDONED_CALL_MS = 30000;
   var edOpenBtn = document.getElementById("monitor-ed-open");
   var edFileInput = document.getElementById("monitor-ed-file");
   var edCloseBtn = document.getElementById("monitor-ed-close");
+  var edExplainBtn = document.getElementById("monitor-ed-explain");
+  var edFixBtn = document.getElementById("monitor-ed-fix");
+  var edCompleteBtn = document.getElementById("monitor-ed-complete");
+  var edAiStatus = document.getElementById("monitor-ed-ai-status");
+  var edAiPanel = document.getElementById("monitor-ed-ai-panel");
   function readScripts() {
     try { var raw = localStorage.getItem("deskScripts"); var o = raw ? JSON.parse(raw) : null; return (o && typeof o === "object") ? o : {}; } catch (e) { return {}; }
   }
@@ -42475,6 +42490,7 @@ var ABANDONED_CALL_MS = 30000;
   function surfaceScriptError(name, err) {
     if (err && err.__scriptStop) return; // a deliberate stop() abort, not a real error — stay quiet
     var msg = "✗ " + name + ": " + (err && err.message ? err.message : String(err));
+    if (monitor.classList.contains("show-editor")) window.__lastEditorError = msg;
     if (monitor.classList.contains("show-console")) consolePrint(msg, "console-err");
     else if (window.console && console.error) console.error("[run] " + name + ":", err);
   }
@@ -42489,6 +42505,45 @@ var ABANDONED_CALL_MS = 30000;
   }
   function edRunCurrent() {
     edRunCode((edName && edName.value.trim()) || "(editor)", edCode ? edCode.value : "");
+  }
+  // Editor assistance is deliberately separate from Chat's conversation queue. It sends only
+  // bounded code/context to the same verified Worker and renders a review panel; Apply is always
+  // an explicit user click and never runs the returned text.
+  var edAiBusy = false, edAiSuggestion = "", edAiReplace = false;
+  function edAiSetStatus(text, ready) {
+    if (!edAiStatus) return;
+    edAiStatus.textContent = text;
+    edAiStatus.classList.toggle("ready", !!ready);
+  }
+  function edAiClosePanel() { if (edAiPanel) { edAiPanel.classList.remove("open"); edAiPanel.textContent = ""; } edAiSuggestion = ""; }
+  function edAiRender(data) {
+    if (!edAiPanel) return;
+    edAiPanel.textContent = "";
+    var note = document.createElement("div"); note.textContent = data.text || "No review returned."; edAiPanel.appendChild(note);
+    edAiSuggestion = String(data.suggestion || ""); edAiReplace = data.replace === true;
+    if (edAiSuggestion) {
+      var pre = document.createElement("pre"); pre.textContent = edAiSuggestion; pre.style.margin = "1px 0"; edAiPanel.appendChild(pre);
+      var apply = document.createElement("button"); apply.className = "ed-ai-btn"; apply.type = "button"; apply.textContent = edAiReplace ? "replace" : "insert";
+      apply.addEventListener("click", function (e) { e.stopPropagation(); if (!edAiSuggestion || !edCode) return; var a = edCode.selectionStart || 0, b = edCode.selectionEnd || a; edCode.value = edAiReplace ? edCode.value.slice(0, a) + edAiSuggestion + edCode.value.slice(b) : edCode.value.slice(0, a) + edAiSuggestion + edCode.value.slice(a); edScheduleAutoSave(); edAiClosePanel(); edAiSetStatus("Applied", true); try { edCode.focus(); } catch (_) {} });
+      edAiPanel.appendChild(apply);
+      var copy = document.createElement("button"); copy.className = "ed-ai-btn"; copy.type = "button"; copy.textContent = "copy";
+      copy.addEventListener("click", function (e) { e.stopPropagation(); try { navigator.clipboard.writeText(edAiSuggestion); edAiSetStatus("Copied", true); } catch (_) {} }); edAiPanel.appendChild(copy);
+    }
+    edAiPanel.classList.add("open"); edAiSetStatus("Review suggestion", true);
+  }
+  function edAiRequest(operation) {
+    if (edAiBusy || !edCode) return;
+    var challenge = window.__monitorChatTurnstile;
+    var transport = window.fetch, endpoint = window.__monitorChatEndpoint || "https://marketa.behdad.org/chat";
+    if (typeof challenge !== "function" || typeof transport !== "function") { edAiSetStatus("AI unavailable", false); return; }
+    edAiBusy = true; [edExplainBtn, edFixBtn, edCompleteBtn].forEach(function (b) { if (b) b.disabled = true; }); edAiClosePanel(); edAiSetStatus("Thinking…", false);
+    var a = edCode.selectionStart || 0, b = edCode.selectionEnd || a;
+    var context = typeof window.__chatContext === "function" ? window.__chatContext("Script Editor " + operation) : { scripting_api: null };
+    Promise.resolve(challenge()).then(function (token) {
+      return transport(endpoint, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ message: "Review this script using the requested operation.", mode: "editor_assist", turnstile_token: token, context: context, editor: { operation: operation, code: edCode.value, selected: edCode.value.slice(a, b), cursor: a, error: window.__lastEditorError || "" } }) });
+    }).then(function (response) { if (!response.ok) throw new Error("AI " + response.status); return response.json(); }).then(function (body) {
+      var raw = body && (body.reply || body.text || ""), data; try { data = typeof raw === "string" ? JSON.parse(raw) : raw; } catch (_) { data = { text: String(raw), suggestion: "" }; } edAiRender(data || {});
+    }).catch(function (error) { edAiSetStatus(error && error.message === "AI 403" ? "Verify again" : "AI unavailable", false); }).finally(function () { edAiBusy = false; [edExplainBtn, edFixBtn, edCompleteBtn].forEach(function (button) { if (button) button.disabled = false; }); });
   }
   // download the current buffer as a .js file (Blob + a synthetic <a download> click)
   function edDownload() {
@@ -42631,6 +42686,9 @@ var ABANDONED_CALL_MS = 30000;
   [edName, edCode, edFileInput].forEach(function (el) {
     if (el) el.addEventListener("keydown", function (e) { e.stopPropagation(); });
   });
+  if (edExplainBtn) edExplainBtn.addEventListener("click", function (e) { e.stopPropagation(); edAiRequest("explain"); });
+  if (edFixBtn) edFixBtn.addEventListener("click", function (e) { e.stopPropagation(); edAiRequest("fix"); });
+  if (edCompleteBtn) edCompleteBtn.addEventListener("click", function (e) { e.stopPropagation(); edAiRequest("complete"); });
   if (edCode) edCode.addEventListener("input", function () { edScheduleAutoSave(); });
   if (edName) edName.addEventListener("input", function () { edScheduleAutoSave(); }); // rename persists too (Save is gone)
   // ── editor autocomplete ──────────────────────────────────────────────────────────

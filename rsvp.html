@@ -43735,6 +43735,7 @@ var ABANDONED_CALL_MS = 30000;
         };
         try {
           if (chatTurnstileNeedsReset) { api.reset(chatTurnstileWidget); chatTurnstileNeedsReset = false; }
+          host.classList.add("interactive"); // a managed checkbox may render without firing before-interactive-callback; its parent must already accept the click
           api.execute(chatTurnstileWidget);
         } catch (error) { settleChatTurnstile(error); }
       });
@@ -47863,7 +47864,7 @@ async def localfont(name):
 
     var modal = null, shell = null, booted = false, closing = false;
     var lockA = 0, lockB = 0, lockAnswer = null, lockEntry = "", lockShakeT = null; // math passcode lockscreen (first open per visit)
-    var statusClock = null, currentApp = null, currentTitleKey = "";
+    var statusClock = null, currentApp = null, currentTitleKey = "", directCloseApp = null;
     var battMgr = null, battHooked = false;
     var phoneBrowserCleanup = null; // teardown for the in-phone browser (ResizeObserver + frame unload)
     var phoneBrowserPending = null; // a URL __showUrlInPhone wants opened instead of the default tab; renderPhoneBrowser consumes it
@@ -48194,6 +48195,7 @@ async def localfont(name):
       currentApp = null;
     }
     function showHome() {
+      directCloseApp = null;
       leaveCurrentApp();
       renderHome();
       showScreen("home");
@@ -48209,7 +48211,9 @@ async def localfont(name):
         if (oldFocus.classList.contains("pm-ms-input")) refocusClass = ".pm-ms-input";
         else if (oldFocus.classList.contains("pm-msg-input")) refocusClass = ".pm-msg-input";
       }
+      var keepDirectClose = currentApp === id && directCloseApp === id;
       leaveCurrentApp();
+      if (!keepDirectClose) directCloseApp = null;
       currentApp = id;
       currentTitleKey = titleKey;
       shell.querySelector(".pah-title").textContent = tr(titleKey);
@@ -49302,6 +49306,11 @@ async def localfont(name):
         if (soonestExpiry !== Infinity) msgNewTimer = setTimeout(function () { msgNewTimer = null; if (isOpen() && currentApp === "messages") applyFilter(); }, soonestExpiry + 50);
       }
       input.addEventListener("input", function () { msgSearchQ = input.value; applyFilter(); });
+      input.addEventListener("keydown", function (e) {
+        if (e.key !== "Backspace" || input.value) return;
+        e.preventDefault();
+        messageInput.focus();
+      });
       unreadChk.addEventListener("change", function () { msgUnreadOnly = unreadChk.checked; applyFilter(); });
       clr.addEventListener("click", function () { input.value = ""; msgSearchQ = ""; applyFilter(); input.focus(); });
 
@@ -49323,6 +49332,12 @@ async def localfont(name):
       }
       function paintSend() { send.disabled = !messageInput.value.trim(); }
       messageInput.addEventListener("input", function () { msgDraft = messageInput.value; paintSend(); });
+      messageInput.addEventListener("keydown", function (e) {
+        if (e.key !== "/" || messageInput.value) return;
+        e.preventDefault();
+        input.focus();
+        input.select();
+      });
       replyX.addEventListener("click", function () { msgReplyTarget = null; paintReplying(); messageInput.focus(); });
       form.addEventListener("submit", function (e) {
         e.preventDefault(); e.stopPropagation();
@@ -49331,9 +49346,20 @@ async def localfont(name):
       });
       paintReplying(); paintSend(); applyFilter();
       body.appendChild(wrap);
-      // Chronological chat opens on its newest message while the sticky controls remain visible.
+      // An ordinary app open lands at the bottom. A notification open names one row instead:
+      // centre that message without focusing it (the composer keeps keyboard focus, using
+      // preventScroll, and the visitor still has to tap the row deliberately to run its action).
+      var scrollTargetId = msgOpenTarget; msgOpenTarget = null;
       var toBottom = function () { body.scrollTop = body.scrollHeight; };
-      toBottom(); requestAnimationFrame(function () { requestAnimationFrame(toBottom); }); setTimeout(toBottom, 300);
+      var settleMessageScroll = function () {
+        if (!scrollTargetId) { toBottom(); return; }
+        var rows = list.querySelectorAll(".pm-msg-row"), target = null;
+        for (var i = 0; i < rows.length; i++) if (rows[i].getAttribute("data-message-id") === scrollTargetId) { target = rows[i]; break; }
+        if (!target) { toBottom(); return; }
+        var br = body.getBoundingClientRect(), rr = target.getBoundingClientRect();
+        body.scrollTop += rr.top - br.top - Math.max(0, (body.clientHeight - rr.height) / 2);
+      };
+      settleMessageScroll(); requestAnimationFrame(function () { requestAnimationFrame(settleMessageScroll); }); setTimeout(settleMessageScroll, 300);
     }
     // ── WEDDING ALBUM app ── Aspen's captured party polaroids, newest-first. Each shot is a
     // STATE snapshot (window.__albumList() — who was present, dance, season, UV, time), rendered
@@ -50567,7 +50593,7 @@ async def localfont(name):
     var notesDraft = ""; // the typed note — session-scoped: survives a language rebuild AND a normal close/reopen; cleared only on a kill (uninstallApp / __resetPhoneApps)
     // Messages is a chronological group chat: authored incoming ids plus session-local visitor /
     // generated crew-reply ids. Authored copy remains language-live; literal replies stay as written.
-    var messagesThread = [], messagesRead = {}, messagesArrivedAt = {}, msgNewTimer = null; // messagesRead[id] set once a message is tapped — unread (bold) until then; messagesArrivedAt[id] = wall-clock ms of live delivery (drives the "New" divider); msgNewTimer re-renders to retire the divider once the freshest text ages past 30s
+    var messagesThread = [], messagesRead = {}, messagesArrivedAt = {}, msgNewTimer = null, msgOpenTarget = null; // messagesRead[id] set once a message is tapped — unread (bold) until then; messagesArrivedAt[id] = wall-clock ms of live delivery (drives the "New" divider); msgOpenTarget is consumed by renderMessages when a notification opens one exact row
     var charlieIntroTimer = null, charlieIntroOffered = false; // one quiet, delayed introduction per page session; never part of a random pool
     var phaseTwoHeldMessages = []; // one-shot birthday/occasion texts requested during the solve are held; recurring drips simply retry later
     var msgUnreadOnly = false, msgSearchQ = "", msgDraft = "", msgReplyTarget = null, msgReplySeq = 0, albumSearchQ = ""; // sticky message composer/filter state + Photos search; survive close/reopen, clear on reset
@@ -51877,6 +51903,7 @@ async def localfont(name):
     function navBack() {
       if (shell.classList.contains("pm-incall")) { hangup(); return; }
       if (shell.classList.contains("pm-app")) {
+        if (directCloseApp && directCloseApp === currentApp) { close(); return; }
         // in-app back first: the cocktails detail view steps back to the bar menu, not out to home
         if (currentApp === "cocktails" && cocktailView === "detail") {
           var body = shell.querySelector(".phone-app-body");
@@ -51964,6 +51991,7 @@ async def localfont(name):
       phCancelDrag(); // abort any in-flight icon drag (drop the ghost + window listeners)
       if (lockShakeT) { clearTimeout(lockShakeT); lockShakeT = null; }
       if (callee) dropCall(true); // silent teardown of any live call + ambient
+      directCloseApp = null;
       leaveCurrentApp();           // restore the re-placed Mines board to the monitor
       stopStatusClock();
       window.__weatherDuck = 1; // phone closed: weather ambience back to full
@@ -52037,7 +52065,8 @@ async def localfont(name):
     // A text lands via window.__deliverPhoneMessage(id): appended to the thread (always), and —
     // if the tab's attended (crickets rule) — a small pulsating phone card slides in top-centre
     // for 7s, buzzing once; tapping it opens the phone straight into the messages app.
-    // Where a tapped message takes you (from the notification OR a thread bubble). "app:<id>"
+    // Where a tapped message ROW takes you. Notifications only open/position the thread;
+    // "app:<id>"
     // opens that phone app in the current scene; the rest close the phone and go there in the loft.
     function runMsgAction(id) {
       hideMessageThumb();
@@ -52110,6 +52139,16 @@ async def localfont(name):
       if (act.indexOf("room:") === 0 && window.goToStage) window.goToStage(act.slice(5));
     }
     window.__runMsgAction = runMsgAction; // test hook
+    function openMessagesAt(id) {
+      hideMessageThumb();
+      hideMsgBadgeCoach();
+      msgOpenTarget = id && MESSAGES[id] ? id : null;
+      if (msgOpenTarget) { msgUnreadOnly = false; msgSearchQ = ""; } // a retained filter must never hide the notification the visitor just opened
+      open(true);
+      openApp("messages", "app_messages", renderMessages);
+      directCloseApp = "messages"; // scene notification/badge is a deep link: Back/Esc dismisses the phone instead of exposing its launcher
+    }
+    window.__openMessagesAt = openMessagesAt;
     var msgThumbEl = null, msgThumbT = null, curThumbId = null;
     function hideMessageThumb() {
       var wasShowing = !!(msgThumbEl && msgThumbEl.classList.contains("show"));
@@ -52123,7 +52162,7 @@ async def localfont(name):
       var m = MESSAGES[id]; if (!m) return;
       cancelMsgBadgeCoachDelay();
       hideMsgBadgeCoach(); // never stack the coach over a newer live notification preview
-      curThumbId = id; // the icon-tap "do the task" shortcut acts on this message
+      curThumbId = id; // the whole notification opens and centres this exact message
       // anchor to the scene (.hunt-viewport) so the card drops down from the top of the LOFT, not
       // the page — it's inside #hunt-fullscreen-area, so it rides fullscreen too; the viewport's
       // overflow:hidden gives the clean "slides in from the top edge" clip.
@@ -52133,17 +52172,12 @@ async def localfont(name):
         msgThumbEl.type = "button";
         msgThumbEl.className = "msg-thumb";
         msgThumbEl.innerHTML = '<span class="msg-thumb-ico">💬</span><span class="msg-thumb-txt"><span class="msg-thumb-from"></span><span class="msg-thumb-body"></span></span><span class="msg-thumb-x" role="button" tabindex="0">✕</span>';
-        msgThumbEl.addEventListener("click", function () { if (curThumbId) runMsgAction(curThumbId); else { hideMessageThumb(); open(true); openApp("messages", "app_messages", renderMessages); } }); // tap the toast BODY → DO the message's task (its deep-link action), like a real phone notification; the left icon opens the app instead
+        msgThumbEl.addEventListener("click", function () { openMessagesAt(curThumbId); });
         var thumbX = msgThumbEl.querySelector(".msg-thumb-x"); // a dismiss ✕ — swat the notification away without opening the app
         if (thumbX) {
           thumbX.setAttribute("aria-label", tr("install_dismiss"));
           thumbX.addEventListener("click", function (e) { e.stopPropagation(); hideMessageThumb(); });
           thumbX.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); hideMessageThumb(); } });
-        }
-        var thumbIco = msgThumbEl.querySelector(".msg-thumb-ico"); // tap the LEFT ICON/LOGO → open the messages app (browse the thread); the toast body does the task
-        if (thumbIco) {
-          thumbIco.style.cursor = "pointer";
-          thumbIco.addEventListener("click", function (e) { e.stopPropagation(); hideMessageThumb(); open(true); openApp("messages", "app_messages", renderMessages); });
         }
       }
       if (msgThumbEl.parentNode !== host) host.appendChild(msgThumbEl);
@@ -52203,7 +52237,7 @@ async def localfont(name):
         msgBadgeEl = document.createElement("button");
         msgBadgeEl.type = "button";
         msgBadgeEl.className = "msg-badge";
-        msgBadgeEl.addEventListener("click", function () { hideMsgBadgeCoach(); open(true); openApp("messages", "app_messages", renderMessages); });
+        msgBadgeEl.addEventListener("click", function () { hideMsgBadgeCoach(); openMessagesAt(null); });
       }
       if (msgBadgeEl.parentNode !== host) host.appendChild(msgBadgeEl);
       if (n > 0 && !isOpen()) {
@@ -52794,6 +52828,7 @@ async def localfont(name):
         if (document.getElementById("sharecard-modal") && window.__shareCloseModal) { window.__shareCloseModal(); return; } // the postcard modal (tapped from a message image) owns Esc first — close it, don't navigate the phone back under it
         if (phMenuOpen()) { phCloseMenu(); return; } // an open app-icon menu owns Esc (matches the desktop .mon-ctx), doesn't navigate the phone back
         if (currentApp === "album" && shell && shell.querySelector(".pm-album-detail") && window.__albumCloseDetail) { window.__albumCloseDetail(); return; } // an open polaroid detail owns Esc first
+        if (directCloseApp && directCloseApp === currentApp) { close(); return; }
         // First Esc leaves any phone text/search field but keeps the app open. A second
         // Esc then performs the normal app -> home navigation. Drafts remain intact.
         var focused = document.activeElement;
@@ -52804,6 +52839,13 @@ async def localfont(name):
         }
         navBack();
         return;
+      }
+      if (e.key === "Backspace" && !e.ctrlKey && !e.metaKey && !e.altKey && directCloseApp && directCloseApp === currentApp) {
+        var backTarget = e.target;
+        if (backTarget && backTarget.classList && backTarget.classList.contains("pm-ms-input")) return; // empty search returns to the composer in its own field handler; a second Backspace closes
+        if (backTarget && (/^(INPUT|TEXTAREA)$/.test(backTarget.tagName) || backTarget.isContentEditable) && !backTarget.value && !backTarget.textContent) {
+          e.preventDefault(); e.stopImmediatePropagation(); close(); return;
+        }
       }
       // safety net if focus ever left the shell: keep room hotkeys off the game (never the
       // button-activation keys Enter/Space/Tab — those stay native / handled by the shell listener)

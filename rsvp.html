@@ -65701,6 +65701,7 @@ function spawnDustMote(container) {
   var parkTimer = null, parkEndHandler = null, parkGeneration = 0;
   var pausedStageAnimations = {};
   var queuedAnimationPauses = new Set(), animationPauseRaf = null;
+  var hiddenGardenAnimations = new Map(), hiddenGardenRaf = null;
   // Hidden rooms are parked from the opening frame, not only after the party begins.
   // Pausing preserves every animation's exact progress; entering the room resumes it.
   function stageAnimationParkingActive() { return true; }
@@ -65737,7 +65738,7 @@ function spawnDustMote(container) {
     var held = stage && pausedStageAnimations[stage.id];
     if (!held) return;
     held.forEach(function (animation) {
-      try { if (animation.playState === "paused") animation.play(); } catch (_error) {}
+      try { if (animation.playState === "paused" && !hiddenGardenAnimations.has(animation)) animation.play(); } catch (_error) {}
     });
     held.clear();
   }
@@ -65763,6 +65764,92 @@ function spawnDustMote(container) {
       queuedAnimationPauses.clear();
     });
   }
+  // Some active-garden nodes remain in the SVG for geometry and roster calculations while an
+  // opacity/display gate makes them persistently invisible. Pause only their infinite CSS
+  // timelines after the fade reaches zero, preserving their current phase for the next reveal.
+  // This is separate from room parking because the garden itself is still the active room.
+  // In particular, do not classify #garden-guests merely from its transient zero-opacity frame
+  // during a room-return fade: those dancers are about to paint and must keep moving.
+  function gardenNodePaintHidden(node) {
+    if (!node) return false;
+    var c = getComputedStyle(node);
+    return c.display === "none" || c.visibility === "hidden" || Number(c.opacity) <= 0.001;
+  }
+  function hiddenGardenRoots() {
+    var garden = document.getElementById("stage-garden"), guests = document.getElementById("garden-guests"), melt = document.getElementById("trip-melt-dancers"), roots = [];
+    function add(node) { if (node && gardenNodePaintHidden(node) && roots.indexOf(node) < 0) roots.push(node); }
+    if (melt) {
+      if (melt.classList.contains("crowd-clear")) add(melt);
+      add(melt.querySelector(".md-d2")); // permanently display:none, but its dance selectors still match
+    }
+    if (guests) {
+      if (!guests.classList.contains("mouses-visiting")) {
+        add(guests.querySelector(".g-elisabeth")); add(guests.querySelector(".g-felix"));
+      }
+      var away = guests.querySelectorAll(".guest.off-with-kids,.guest.off-at-games,.guest.off-at-bbq");
+      for (var i = 0; i < away.length; i++) add(away[i]);
+    }
+    if (garden && garden.classList.contains("garden-party")) {
+      add(document.getElementById("garden-mirror")); add(document.getElementById("garden-lamp"));
+    }
+    if (garden && (garden.classList.contains("dusk") || garden.classList.contains("storming"))) add(document.getElementById("garden-birds"));
+    return roots;
+  }
+  function targetInRoots(target, roots) {
+    for (var i = 0; i < roots.length; i++) if (target === roots[i] || roots[i].contains(target)) return true;
+    return false;
+  }
+  function refreshHiddenGardenAnimations() {
+    hiddenGardenRaf = null;
+    var garden = document.getElementById("stage-garden");
+    if (!garden || !garden.getAnimations) return;
+    var roots = hiddenGardenRoots(), stageHeld = pausedStageAnimations[garden.id];
+    hiddenGardenAnimations.forEach(function (resumeWanted, animation) {
+      var target = animation && animation.effect && animation.effect.target;
+      if (!target || !target.nodeType || !garden.contains(target) || animation.playState === "idle" || animation.playState === "finished") { hiddenGardenAnimations.delete(animation); return; }
+      if (targetInRoots(target, roots)) return;
+      hiddenGardenAnimations.delete(animation);
+      if (!resumeWanted || animation.playState !== "paused") return;
+      if (garden.classList.contains("stage-far")) {
+        if (stageHeld) stageHeld.add(animation); // transfer ownership to room parking until entry
+      } else {
+        try { animation.play(); } catch (_error) {}
+      }
+    });
+    var animations;
+    try { animations = garden.getAnimations({ subtree: true }); } catch (_error) { animations = []; }
+    for (var i = 0; i < animations.length; i++) {
+      var animation = animations[i], target = animation && animation.effect && animation.effect.target;
+      if (!target || !target.nodeType || !targetInRoots(target, roots) || !isAmbientCssAnimation(animation) || hiddenGardenAnimations.has(animation)) continue;
+      var resumeWanted = animation.playState === "running" || !!(stageHeld && stageHeld.has(animation));
+      hiddenGardenAnimations.set(animation, resumeWanted);
+      try { if (animation.playState === "running") animation.pause(); } catch (_error) {}
+    }
+  }
+  function queueHiddenGardenAnimationRefresh() {
+    if (hiddenGardenRaf) return;
+    hiddenGardenRaf = requestAnimationFrame(refreshHiddenGardenAnimations);
+  }
+  function gardenVisibilityStateNode(node) {
+    if (!node || node.nodeType !== 1) return false;
+    if (node.id === "stage-garden" || node.id === "garden-guests" || node.id === "trip-melt-dancers" || node.id === "garden-mirror" || node.id === "garden-lamp" || node.id === "garden-birds") return true;
+    return !!(node.classList && (node.classList.contains("guest") || node.classList.contains("md-d2")));
+  }
+  var gardenPerformanceStage = document.getElementById("stage-garden");
+  if (gardenPerformanceStage) {
+    new MutationObserver(function (records) {
+      for (var i = 0; i < records.length; i++) if (gardenVisibilityStateNode(records[i].target)) { queueHiddenGardenAnimationRefresh(); return; }
+    }).observe(gardenPerformanceStage, { attributes: true, subtree: true, attributeFilter: ["class"] });
+    gardenPerformanceStage.addEventListener("transitionend", function (e) {
+      if ((e.propertyName === "opacity" || e.propertyName === "visibility") && gardenVisibilityStateNode(e.target)) queueHiddenGardenAnimationRefresh();
+    }, true);
+    gardenPerformanceStage.addEventListener("animationstart", function (e) {
+      if (targetInRoots(e.target, hiddenGardenRoots())) queueHiddenGardenAnimationRefresh();
+    }, true);
+    queueHiddenGardenAnimationRefresh();
+  }
+  window.__refreshHiddenGardenAnimationParking = queueHiddenGardenAnimationRefresh;
+  window.__hiddenGardenAnimationParkingState = function () { return { held: hiddenGardenAnimations.size, roots: hiddenGardenRoots().map(function (node) { return node.id || node.getAttribute("class") || node.tagName; }) }; };
   // CSS animations can be introduced after a room is already parked (party starts, a
   // special day lands, etc.). Batch their animationstart events into the same one-scan pass.
   strip.addEventListener("animationstart", function (e) {

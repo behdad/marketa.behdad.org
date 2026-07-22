@@ -244,6 +244,9 @@ footer{margin-top:2.6rem}
   position:relative; flex:1 1 auto; min-width:0; overflow:hidden; border-radius:14px;
   box-shadow:0 3px 10px rgba(69,58,49,.15); background:#f8f5ec;
 }
+/* Mobile room swipes own only the horizontal axis. Vertical page scrolling and pinch zoom
+   remain native; draggable scene objects narrow this further with their existing `none`. */
+@media (any-pointer:coarse){.hunt-viewport{touch-action:pan-y pinch-zoom}}
 #hunt-wipe{
   position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none;
   transition:opacity .6s ease; z-index:5;
@@ -65727,6 +65730,104 @@ function spawnDustMote(container) {
       goToStage(STAGES[stageIndex + 1]);
     }
   });
+  // Conservative mobile room swipe: an inward one-finger swipe from the scene's
+  // left/right edge changes only between ALREADY-UNLOCKED rooms. Starting on a
+  // control, hunt target, device, or draggable always leaves input to that object.
+  (function () {
+    var viewport = document.querySelector(".hunt-viewport");
+    if (!viewport || !window.PointerEvent) return;
+    var EDGE_MIN = 48, EDGE_MAX = 76, EDGE_RATIO = 0.18;
+    var DIST_MIN = 58, DIST_MAX = 84, DIST_RATIO = 0.16;
+    var MAX_MS = 800, MAX_Y = 54, DOMINANCE = 1.6, COOLDOWN_MS = STRIP_SLIDE_MS + 80;
+    var activeTouches = new Set(), gesture = null, lastSwipeAt = 0;
+    // Known drags are explicit; the cursor/touch-action walk below is the
+    // backstop for future interactive objects that follow the local styles.
+    var BLOCK_START = [
+      "a", "button", "input", "textarea", "select", "label", "[contenteditable='true']",
+      "[role='button']", "[role='link']", "[tabindex]", ".hunt-hit", ".bezel-close",
+      "#office-monitor", "#office-laptop", "#laptop-call", "#office-chair", "#office-desk",
+      "#garden-bottles", "#kitchen-bartender-hit", "#kitchen-bar-stools", "#kitchen-bar-patrons",
+      ".cuddly-knife", "#cuddly-blanket", "#cuddly-yellowblanket", "#cuddly-lapblanket"
+    ].join(",");
+    function gameOwnsPointer() {
+      try { if (window.__flairState && window.__flairState().active) return true; } catch (_error) {}
+      try { if (window.__arcadeState && window.__arcadeState().active) return true; } catch (_error) {}
+      return false;
+    }
+    function sceneBlocked() {
+      if (window.__cinematic || window.__bouquetOn || gameOwnsPointer()) return true;
+      if (viewport.classList.contains("device-zoomed")) return true;
+      return !!document.querySelector(".phone-backdrop.show, .pb-dialog-backdrop, .kbd-backdrop, .roster-panel.show, .drop-term.show");
+    }
+    function blockedTarget(target, stage) {
+      if (!target || target.nodeType !== 1 || !stage.contains(target)) return true;
+      if (target.closest && target.closest(BLOCK_START)) return true;
+      for (var node = target; node && node !== stage; node = node.parentElement) {
+        try {
+          var cs = getComputedStyle(node), cursor = cs.cursor;
+          if (cursor === "pointer" || cursor === "grab" || cursor === "grabbing" || cursor === "crosshair" || cs.touchAction === "none") return true;
+        } catch (_error) { return true; }
+      }
+      return false;
+    }
+    function edgeFor(x, rect) {
+      var edge = Math.max(EDGE_MIN, Math.min(EDGE_MAX, rect.width * EDGE_RATIO));
+      if (x >= rect.left && x <= rect.left + edge) return "left";
+      if (x <= rect.right && x >= rect.right - edge) return "right";
+      return null;
+    }
+    function cancelGesture() { gesture = null; }
+    document.addEventListener("pointerdown", function (e) {
+      if (e.pointerType !== "touch") return;
+      activeTouches.add(e.pointerId);
+      if (activeTouches.size > 1) cancelGesture();
+    }, true);
+    function forgetTouch(e) { if (e.pointerType === "touch") activeTouches.delete(e.pointerId); }
+    document.addEventListener("pointerup", forgetTouch, true);
+    document.addEventListener("pointercancel", function (e) { forgetTouch(e); if (gesture && gesture.id === e.pointerId) cancelGesture(); }, true);
+    strip.addEventListener("pointerdown", function (e) {
+      if (e.pointerType !== "touch" || e.isPrimary === false || (e.button != null && e.button !== 0)) return;
+      if (activeTouches.size !== 1 || sceneBlocked() || Date.now() - lastSwipeAt < COOLDOWN_MS) return;
+      var stage = document.getElementById("stage-" + STAGES[stageIndex]);
+      var rect = viewport.getBoundingClientRect(), side = edgeFor(e.clientX, rect);
+      if (!side || blockedTarget(e.target, stage)) return;
+      gesture = { id: e.pointerId, x: e.clientX, y: e.clientY, at: Date.now(), side: side, rectWidth: rect.width };
+    });
+    strip.addEventListener("pointermove", function (e) {
+      if (!gesture || gesture.id !== e.pointerId) return;
+      var dx = e.clientX - gesture.x, dy = e.clientY - gesture.y;
+      if (Math.abs(dy) > 14 && Math.abs(dy) > Math.abs(dx) * 0.75) { cancelGesture(); return; }
+      if ((gesture.side === "left" && dx < -14) || (gesture.side === "right" && dx > 14)) { cancelGesture(); return; }
+      if (Math.abs(dx) > 14 && Math.abs(dx) > Math.abs(dy) * DOMINANCE) e.preventDefault();
+    }, { passive: false });
+    function suppressTrailingClick() {
+      function swallow(e) { e.preventDefault(); e.stopImmediatePropagation(); }
+      strip.addEventListener("click", swallow, true);
+      setTimeout(function () { strip.removeEventListener("click", swallow, true); }, 0);
+    }
+    strip.addEventListener("pointerup", function (e) {
+      if (!gesture || gesture.id !== e.pointerId) return;
+      var g = gesture; gesture = null;
+      var dx = e.clientX - g.x, dy = e.clientY - g.y, ax = Math.abs(dx), ay = Math.abs(dy);
+      var minDistance = Math.max(DIST_MIN, Math.min(DIST_MAX, g.rectWidth * DIST_RATIO));
+      var inward = (g.side === "left" && dx > 0) || (g.side === "right" && dx < 0);
+      if (!inward || Date.now() - g.at > MAX_MS || ax < minDistance || ay > MAX_Y || ax < ay * DOMINANCE || sceneBlocked()) return;
+      var destination = dx < 0 ? stageIndex + 1 : stageIndex - 1;
+      if (destination < 0 || destination > maxUnlocked || destination >= STAGES.length) return;
+      suppressTrailingClick();
+      lastSwipeAt = Date.now();
+      goToStage(STAGES[destination]);
+    });
+    strip.addEventListener("lostpointercapture", cancelGesture);
+    window.__roomSwipeState = function () {
+      return {
+        active: !!gesture, touches: activeTouches.size,
+        edge_px: Math.max(EDGE_MIN, Math.min(EDGE_MAX, viewport.getBoundingClientRect().width * EDGE_RATIO)),
+        distance_px: Math.max(DIST_MIN, Math.min(DIST_MAX, viewport.getBoundingClientRect().width * DIST_RATIO)),
+        max_ms: MAX_MS, max_y_px: MAX_Y, dominance: DOMINANCE
+      };
+    };
+  })();
   // ── scene right-click D-pad ─────────────────────────────────────────────────────────────
   // Right-clicking the general game scene (room backdrop / floor / walls / ordinary scene
   // objects — everything EXCEPT the surfaces that own their own right-click menu) pops a

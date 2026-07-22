@@ -29,6 +29,7 @@ var s = r.steps;
 function named(id) { return s.controls.filter(function(c){return c.id === id;})[0]; }
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(named("hunt-prev").w >= 34 && named("hunt-next").w >= 34, "room arrows have enlarged stable mobile targets", s.controls);
+check(Math.abs((named("hunt-prev").y + named("hunt-prev").h / 2) - (named("hunt-next").y + named("hunt-next").h / 2)) < 1, "room arrows share one vertical centerline", s.controls);
 check(named("hunt-restart-btn").w >= 36 && named("hunt-fullscreen-btn").w >= 36, "reset and fullscreen have enlarged stable mobile targets", s.controls);
 check(["hunt-volume-btn","hunt-playpause-btn","hunt-skip-btn"].every(function(id){var c=named(id);return c.w >= 32 && c.h >= 32;}), "all scene media controls have at least 32px mobile targets", s.controls);
 check(s.dots.length === 5 && s.dots.every(function(d){return d.w >= 32 && d.h >= 32;}), "every room dot has at least a 32px mobile target", s.dots);

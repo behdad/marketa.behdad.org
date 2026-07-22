@@ -40261,11 +40261,13 @@ var ABANDONED_CALL_MS = 30000;
     dockSearchText.textContent = dockSearchQuery + (dockSearchBest ? "  ·  " + dockAppLabel(dockSearchBest) : "  ·  —");
   }
   function clearDockSearch() {
+    var hadQuery = !!dockSearchQuery;
     dockSearchQuery = ""; dockSearchBest = null;
     if (dockGrid) dockGrid.classList.remove("searching");
     if (dockSearch) dockSearch.classList.remove("active");
     if (dockSearchText) { dockSearchText.textContent = ""; dockSearchText.classList.remove("no-match"); }
     for (var id in dockCells) dockCells[id].classList.remove("search-match");
+    if (hadQuery && monitor.classList.contains("screen-on") && monitor.classList.contains("show-caps") && !monitor.classList.contains("show-saver")) scheduleSaver();
   }
   function dockSearchReady() {
     if (!dock || !window.__monitorZoomed || !window.__monitorZoomed()) return false;
@@ -40273,10 +40275,16 @@ var ABANDONED_CALL_MS = 30000;
     if (window.phone && window.phone()) return false;
     try { return getComputedStyle(dock).visibility === "visible"; } catch (e) { return false; }
   }
+  function dockSearchWakeable() {
+    if (!dock || !window.__monitorZoomed || !window.__monitorZoomed()) return false;
+    if (window.currentStageName !== "office" || !monitor.classList.contains("screen-on") || !monitor.classList.contains("show-saver")) return false;
+    return !(window.phone && window.phone());
+  }
   window.addEventListener("keydown", function (e) {
     if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || e.isComposing) return;
     var active = !!dockSearchQuery;
-    if (!active && !dockSearchReady()) return;
+    var wakeable = !active && dockSearchWakeable();
+    if (!active && !wakeable && !dockSearchReady()) return;
     if (e.key === "Escape" || e.key === "Esc") {
       if (!active) return;
       e.preventDefault(); e.stopImmediatePropagation(); clearDockSearch(); return;
@@ -40295,8 +40303,15 @@ var ABANDONED_CALL_MS = 30000;
       return;
     }
     var isLetterOrDigit = e.key && e.key.length === 1 && (/\d/.test(e.key) || e.key.toLocaleLowerCase() !== e.key.toLocaleUpperCase());
-    if (!isLetterOrDigit || !dockSearchReady()) return;
+    if (!isLetterOrDigit) return;
+    if (wakeable) {
+      stopSaver();
+      monitor.classList.add("show-caps");
+      monitorUrl = CAPS_URL;
+    }
+    if (!dockSearchReady()) return;
     e.preventDefault(); e.stopImmediatePropagation();
+    stopSaver(); // a half-typed app name owns the screen; clearing/opening it re-arms idle.
     if (dockSearchQuery.length < 28) dockSearchQuery += e.key;
     paintDockSearch();
   }, true);

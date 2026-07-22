@@ -21,6 +21,7 @@ var HARNESS = [
   ' if(window.__openPhoneModal)window.__openPhoneModal(true);await sleep(30);["x","y"].forEach(key);S("phoneGuard",window.__monitorDockSearch());if(window.phone)window.phone(false);await sleep(30);',
   ' var oldFamily=window.__openMonitorApp("family"),oldPhone=window.__openMonitorApp("phone"),callId=window.__openMonitorApp("call");await sleep(30);S("callName",{tile:!!document.getElementById("monitor-dock-call"),oldPhoneTile:!!document.getElementById("monitor-dock-phone"),oldFamilyTile:!!document.getElementById("monitor-dock-family"),label:document.querySelector("#monitor-dock-call .dock-label").textContent,oldRejected:Array.isArray(oldFamily)&&Array.isArray(oldPhone),opened:mon.classList.contains("show-family"),result:callId});',
   ' if(window.__closeTopMonitorApp)window.__closeTopMonitorApp();var oldPocket=window.phone("phone"),newPocket=window.phone("call");await sleep(40);var ph=document.querySelector(".phone-shell");S("pocketCall",{oldRejected:Array.isArray(oldPocket),opened:!!document.querySelector(".phone-backdrop.show")&&ph&&ph.classList.contains("pm-app"),title:ph&&ph.querySelector(".pah-title")&&ph.querySelector(".pah-title").textContent,result:newPocket});if(window.phone)window.phone(false);',
+  ' await sleep(260);window.goToStage("office");mon.classList.add("here","screen-on","show-caps");window.__monitorZoomIn();await sleep(30);mon.classList.remove("show-caps");mon.classList.add("show-saver");key("c");await sleep(20);S("saverSearch",{state:window.__monitorDockSearch(),awake:mon.classList.contains("show-caps")&&!mon.classList.contains("show-saver"),phone:window.phone&&window.phone()});key("Escape");',
   '}',
   '})();</script>'
 ].join("\n");
@@ -45,6 +46,7 @@ check(!s.pointer.query && !s.pointer.match, "a pointer gesture dismisses the tra
 check(!s.phoneGuard.query, "the phone never inherits monitor search", s.phoneGuard);
 check(s.callName.tile && !s.callName.oldPhoneTile && !s.callName.oldFamilyTile && s.callName.label === "volání" && s.callName.oldRejected && s.callName.opened && /call/.test(s.callName.result || ""), "the monitor calling app and command are named call, without phone/family aliases", s.callName);
 check(s.pocketCall.oldRejected && s.pocketCall.opened && s.pocketCall.title === "kontakty" && /call/.test(s.pocketCall.result || ""), "the pocket calling app and phone command are also named call", s.pocketCall);
+check(s.saverSearch.state.query === "c" && s.saverSearch.awake && !s.saverSearch.phone, "typing wakes the screensaver into search without leaking c to the cellphone shortcut", s.saverSearch);
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

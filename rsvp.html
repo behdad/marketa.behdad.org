@@ -51181,8 +51181,8 @@ async def localfont(name):
       invaders:      { fromKey: "msg_behdad_from",  bodyKey: "msg_invaders_body",  act: "invaders" },      // behdad tasks Irene → the office; taps to LAUNCH the chair alien-arcade
       flair:         { fromKey: "msg_pouria_from",  bodyKey: "msg_flair_body",     act: "flair" },         // Pouria bored → taps to LAUNCH Flair-Catch at the bar
       smores:        { fromKey: "msg_bahareh_from", bodyKey: "msg_smores_body",    act: "smores" },        // Bahareh, after dark → taps: balcony + light the bonfire for s'mores
-      kids_asleep:   { fromKeys: MOM_SENDERS, bodyKeys: ["msg_kidsasleep_body_a", "msg_kidsasleep_body_b"], act: "kidsleep" }, // a mom → taps: every kid in the loft goes to sleep (cleared from every room; props stay)
-      kids_loose:    { fromKeys: MOM_SENDERS, bodyKeys: ["msg_kidsloose_body_a", "msg_kidsloose_body_b"],   act: "kidwake" },  // a mom → the kids woke; lands at auto-wake, taps to wake them (idempotent)
+      kids_asleep:   { fromKeys: MOM_SENDERS, bodyKeys: ["msg_kidsasleep_body_a", "msg_kidsasleep_body_b"], arrival: "kidsleep" }, // informative state: delivery itself puts every kid to sleep; no action affordance
+      kids_loose:    { fromKeys: MOM_SENDERS, bodyKeys: ["msg_kidsloose_body_a", "msg_kidsloose_body_b"],   arrival: "kidwake" },  // informative state: the auto-wake has already happened; direct/test delivery also wakes them
       firstdance:    { fromKeys: MOMENT_SENDERS, bodyKey: "msg_firstdance_body", act: "firstdance" },    // a coordinator → taps: the garden party + the hosts' first dance
       slowdance:     { fromKeys: MOMENT_SENDERS, bodyKey: "msg_slowdance_body", act: "slowdance" },       // a coordinator → taps: the garden party + a slow-song lull (the whole floor pairs off)
       cake:          { fromKeys: MOMENT_SENDERS, bodyKey: "msg_cake_body",      act: "cake" },         // a coordinator → taps: the garden party + the cake cutting
@@ -52683,8 +52683,6 @@ async def localfont(name):
       if (act === "storm") { if (window.storm) window.storm(true); if (window.rain) window.rain(true); return; } // Bahareh's warning → a CLASSIC thunderstorm (lightning + rain); storm()/rain() pan to the balcony + set dusk themselves
       if (act === "invaders") { if (window.goToStage) window.goToStage("office"); setTimeout(function () { if (window.__startArcade) window.__startArcade(); }, 720); return; } // pan to the office, then launch the chair alien-arcade
       if (act === "smores") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__setSmores) window.__setSmores(true); }, 760); return; } // pan to the balcony, then light the bonfire
-      if (act === "kidsleep") { window.__kidsLateParty = true; if (window.__setKidsAsleep) window.__setKidsAsleep(true); if (window.__setPartyKidFormation) window.__setPartyKidFormation("play"); return; } // after the mom's announcement they sleep, then only rejoin the dance floor occasionally for the rest of this party
-      if (act === "kidwake") { if (window.__wakeKids) window.__wakeKids(); return; } // the kids are up again (idempotent — already awake by the auto-wake)
       if (act === "firstdance") { if (window.firstdance) window.firstdance(); return; } // firstdance() lights the party + heads to the garden + rings the crowd + runs the hosts' first dance
       if (act === "slowdance") { if (window.slowdance) window.slowdance(); return; } // slowdance() lights the party + heads to the garden + pairs the whole floor off for a warm, slow-song lull
       if (act === "toasts") { if (window.toasts) window.toasts(); return; } // toasts() lights the party + heads to the garden + runs the best-man → MC toast sequence
@@ -52887,6 +52885,16 @@ async def localfont(name):
     // once the thread gets busy (20+), space autonomous drips out progressively so texts don't pile up
     function msgDripSlowFactor() { return unreadCount() >= 4 ? 2.5 : 1; } // 4+ unread piling up → space new texts way out
     function autonomousMsgOk() { return unreadCount() < 8; } // 8 unread → hold all autonomous texts until the user reads some
+    function applyMessageArrival(m) {
+      if (!m || !m.arrival) return;
+      if (m.arrival === "kidsleep") {
+        window.__kidsLateParty = true;
+        if (window.__setKidsAsleep) window.__setKidsAsleep(true);
+        if (window.__setPartyKidFormation) window.__setPartyKidFormation("play");
+      } else if (m.arrival === "kidwake") {
+        if (window.__wakeKids) window.__wakeKids();
+      }
+    }
     // Nothing may notify a player still looking at the "CLICK ME!" invitation — a text sliding in
     // over the untouched attract prompt reads as a bug, not an invitation. Every AUTONOMOUS channel
     // in this IIFE checks this at FIRE time (not schedule time), so dismissing the prompt takes
@@ -52914,6 +52922,7 @@ async def localfont(name):
       // across language flips + live re-renders (renderers read m.bodyKey each time).
       if (m.bodyKeys && !m.bodyKey) m.bodyKey = m.bodyKeys[Math.floor(Math.random() * m.bodyKeys.length)];
       if (m.fromKeys && !m.fromKey) m.fromKey = m.fromKeys[Math.floor(Math.random() * m.fromKeys.length)]; // freeze one sender per delivery (moment texts rotate among the coordinators)
+      applyMessageArrival(m); // state announcements describe what just happened; they never wait for a tap
       messagesThread.push(id);
       if (id === "charlie") charlieIntroOffered = true;
       messagesArrivedAt[id] = Date.now();
@@ -53114,6 +53123,7 @@ async def localfont(name):
       if (src.fromKeys) copy.fromKeys = src.fromKeys.slice(); else copy.fromKey = src.fromKey;
       if (src.bodyKeys) copy.bodyKeys = src.bodyKeys.slice(); else copy.bodyKey = src.bodyKey;
       if (src.act) copy.act = src.act;
+      if (src.arrival) copy.arrival = src.arrival;
       if (src.replyTo) copy.replyTo = src.replyTo;
       if (src.next) { copy.next = src.next; copy.nextDelay = src.nextDelay; }
       MESSAGES[id] = copy;

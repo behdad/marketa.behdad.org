@@ -34427,7 +34427,7 @@ function gameTapsNear(a, b) {
         if (window.resetCoffeeSequence) window.resetCoffeeSequence();
       }, 600);
       setTimeout(function () {
-        if (window.goToStage) window.goToStage("garden");
+        if (window.__finishSolveAdvance) window.__finishSolveAdvance("kitchen", "garden");
       }, 700);
     }
     shotcup.addEventListener("click", sipShotcup);
@@ -65528,6 +65528,19 @@ function spawnDustMote(container) {
     if (window.__updateSkyFireworks) window.__updateSkyFireworks(name); // wedding-day sky (balcony/garden), else stops
   }
   window.goToStage = goToStage;
+  // A solve animation may finish after the player has already navigated elsewhere. Its
+  // destination still unlocks, but the stale timer must not pull them out of their current room.
+  window.__unlockSolvedRoom = function (name) {
+    var toIdx = STAGES.indexOf(name);
+    if (toIdx === -1) return false;
+    unlockThrough(toIdx);
+    updateNav();
+    return true;
+  };
+  window.__finishSolveAdvance = function (from, to) {
+    if (STAGES[stageIndex] === from) goToStage(to);
+    else window.__unlockSolvedRoom(to);
+  };
   window.__maxUnlocked = function () { return maxUnlocked; }; // furthest room reached — autoplay reads it to know which rooms are solved
   if (prevBtn) prevBtn.addEventListener("click", function () {
     if (stageIndex > 0) goToStage(STAGES[stageIndex - 1]);
@@ -66298,7 +66311,7 @@ function spawnDustMote(container) {
     updateGardenHint();
     if (window.__cinematic) return; // the cinematic drives room changes itself
     if (gardenState.water && gardenState.music && gardenState.candles) {
-      setTimeout(function () { goToStage("cuddly"); }, 700);
+      setTimeout(function () { window.__finishSolveAdvance("garden", "cuddly"); }, 700);
     }
   }
   window.markGardenWatered = function () {
@@ -72334,7 +72347,10 @@ function spawnDustMote(container) {
         return;
       }
       el.classList.add("done");
-      setTimeout(function () { goToStage("office"); }, 700);
+      setTimeout(function () {
+        if (stageIndex === 2) goToStage("office");
+        else window.__unlockSolvedRoom("office");
+      }, 700);
     }
     var dragging = false, dragStartPt = null, dragStartOffset = { x: 0, y: 0 }, dragMoved = false;
     el.addEventListener("pointerdown", function (e) {
@@ -72449,7 +72465,10 @@ function spawnDustMote(container) {
     if (glass) glass.classList.add("done", "zoomed");
     if (officeDim) officeDim.style.opacity = "0.72";
     setCaption("complete");
-    setTimeout(function () { goToStage("balcony"); }, 2000);
+    setTimeout(function () {
+      if (stageIndex === 3) goToStage("balcony");
+      else window.__unlockSolvedRoom("balcony");
+    }, 2000);
     setTimeout(function () { if (officeDim) officeDim.style.opacity = "0"; }, 3000);
   });
 

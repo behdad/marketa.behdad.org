@@ -63,10 +63,11 @@ var RSVP_HARNESS = [
   "  function expect(id) { if (!document.getElementById(id)) report.missing.push(id); return id; }",
   "  async function solve() {",
   "    click(expect('kitchen-lamarzocco'));",
+  "    await sleep(2800);",                         // the espresso machine must finish warming before the grinder accepts input
   "    click(expect('kitchen-grinder'));",           // flies to the grinder (FLY_MS), then grinds (GRIND_MS)
   "    await sleep(2100);",
   "    click(expect('kitchen-tamper'));",            // tamps, then flies back to the grouphead (FLY_MS)
-  "    await sleep(900);",
+  "    await sleep(2100);",
   "    click(expect('kitchen-portafilter'));",
   "    await sleep(2700);",
   "    click(expect('kitchen-shotcup'));",
@@ -197,7 +198,7 @@ function fail(msg, detail) {
 }
 
 console.log("rsvp.html interaction playthrough:");
-var r = runPage("rsvp.html", RSVP_HARNESS, 40000, true);
+var r = runPage("rsvp.html", RSVP_HARNESS, 45000, true);
 if (!r) {
   fail("harness reported (page error before load, or budget too small)");
 } else {

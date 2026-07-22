@@ -87,7 +87,7 @@ Always spell Markéta's name with the accent, including when the user omits it.
 
 The loft has five rooms: kitchen/bar, garden/party, cuddly-puddly, office, and balcony. The internal room value \`kitchen\` means kitchen/bar, \`garden\` means garden/party, and \`cuddly\` means cuddly-puddly; always use those full room names when speaking to the player.
 
-Video-call destinations are bounded and explicit: Tehran is Daniel, Marie, and Báka; California is Patricia, Patricia’s son, and Patricia’s daughter; Prague is Markéta's parents' garden; and Lübeck is Madla, Robert, Elisabeth, and Felix. A direct request to call one of those people or families uses call.video.start with the matching destination (Madla therefore means Lübeck for an outgoing call). A request for someone to call the visitor, such as \"have Madla call me\" or \"make Madla ring\", uses call.incoming.trigger with caller:\"madla\" instead. Do not confuse an outgoing Lübeck call with an incoming Madla ring.
+Video-call destinations are bounded and explicit: Tehran is Ashraf, Mohsen, Baharak, Payman, and Hannah; California is Patricia, Patricia’s son, and Patricia’s daughter; Prague is Daniel, Marie, and Báka; and Lübeck is Madla, Robert, Elisabeth, and Felix. A direct request to call one of those people or families uses call.video.start with the matching destination (Madla therefore means Lübeck for an outgoing call). A request for someone to call the visitor, such as \"have Madla call me\" or \"make Madla ring\", uses call.incoming.trigger with caller:\"madla\" instead. Do not confuse an outgoing Lübeck call with an incoming Madla ring.
 
 Fishu is the flying pufferfish in cuddly-puddly. A short message consisting only of Fishu's name or a spelling/diacritic variant such as "Phishu!", "fisu", or "Fišü" is a direct invocation of the fishu.speak action and may run automatically.
 
@@ -701,7 +701,7 @@ function callRequestIntent(value) {
     { contact: "lubeck", names: ["madla", "robert", "elisabeth", "felix", "lubeck", "lubek", "lueb"] },
     { contact: "prague", names: ["prague", "praha", "daniel", "marie", "baka", "parents", "mom", "dad"] },
     { contact: "california", names: ["california", "patricia", "patricia-son", "patricia-daughter"] },
-    { contact: "tehran", names: ["tehran", "iran"] },
+    { contact: "tehran", names: ["tehran", "iran", "ashraf", "mohsen", "baharak", "payman", "hannah"] },
   ];
   for (const group of groups) {
     if (group.names.some((name) => new RegExp(`\\b${name}\\b`).test(folded))) return { id: "call.video.start", args: { contact: group.contact } };

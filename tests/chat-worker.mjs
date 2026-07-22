@@ -195,6 +195,15 @@ actionCase = await normalizedPrivateReply(
 );
 check(actionCase.reply.action === null, "a canonical action is discarded when the browser did not advertise it as currently available", actionCase);
 
+for (const id of ["music.previous", "party.set", "bbq.set", "photo.take"]) {
+  const args = id === "party.set" || id === "bbq.set" ? { on: true } : {};
+  actionCase = await normalizedPrivateReply(
+    JSON.stringify({ text: "Doing that.", action: { id, args } }),
+    { actions_available: [id] },
+  );
+  check(actionCase.reply.action?.id === id, `${id} survives the strict action allowlist`, actionCase);
+}
+
 actionCase = await normalizedPrivateReply("Just a normal answer.", { actions_available: ["room.go"] });
 check(actionCase.reply.text === "Just a normal answer." && actionCase.reply.action === null, "plain-text model output safely falls back to text with no action", actionCase);
 
@@ -230,7 +239,7 @@ const groupResponse = await worker.fetch(makeRequest("/chat", {
     message: "DJ, slow song please.",
     turnstile_token: "second-turnstile-token",
     history: [{ role: "assistant", text: "Charlie's private history must not leak." }],
-    context: { room: "garden", phase: 2, party: true, actions_available: ["party.dance.request"] },
+    context: { room: "garden", phase: 2, party: true, party_elapsed_seconds: 222.4, actions_available: ["party.dance.request"] },
     group_chat: {
       reply_to: { id: "jukebox", sender: "Danesh", text: "Requests are open.", reactions: ["👍", "not-allowed"] },
       current_dj: "Danesh",
@@ -252,9 +261,39 @@ const groupCapture = captures.at(-1);
 check(groupResponse.status === 200 && groupReply.sender === "Danesh" && groupReply.text === "Here you go." && groupReply.reply_to_id === "reply_user_1" && groupReply.action?.id === "party.dance.request" && groupReply.action?.args?.style === "slow", "a directly requested DJ action and valid earlier-message quote survive strict group-reply normalization", groupResult);
 check(groupCapture.body.input.length === 1 && groupCapture.body.input[0].content === "DJ, slow song please.", "group mode does not forward Charlie's private history", groupCapture.body.input);
 check(/"reactions":\["👍"\]/.test(groupCapture.body.instructions) && /"reactions":\["❤️"\]/.test(groupCapture.body.instructions) && !/not-allowed|"bad"/.test(groupCapture.body.instructions), "the group responder receives only the supported deduplicated reactions");
-check(/Wedding crew group chat/.test(groupCapture.body.instructions) && /"current_dj":"Danesh"/.test(groupCapture.body.instructions) && /"playtime":\{"seconds":3723,"display":"1h 2m"\}/.test(groupCapture.body.instructions) && /"name":"Markéta"/.test(groupCapture.body.instructions) && /"kitchen":\["Pouria"\]/.test(groupCapture.body.instructions) && !/attic/.test(groupCapture.body.instructions), "the separate group persona receives playtime, current DJ, all-room locations, and sanitized cast context");
+check(/Wedding crew group chat/.test(groupCapture.body.instructions) && /"party_elapsed_seconds":222/.test(groupCapture.body.instructions) && /skip capitalization or punctuation/.test(groupCapture.body.instructions) && /Pouria is the working bartender and remains sober/.test(groupCapture.body.instructions) && /"current_dj":"Danesh"/.test(groupCapture.body.instructions) && /"playtime":\{"seconds":3723,"display":"1h 2m"\}/.test(groupCapture.body.instructions) && /"name":"Markéta"/.test(groupCapture.body.instructions) && /"kitchen":\["Pouria"\]/.test(groupCapture.body.instructions) && !/attic/.test(groupCapture.body.instructions), "the separate group persona receives elapsed-party tone guidance, playtime, current DJ, all-room locations, and sanitized cast context");
 check(/"id":"washrooms","location":"by the entrance"/.test(groupCapture.body.instructions) && /physical directions/.test(groupCapture.body.instructions), "the crew responder receives verified venue facts and the no-invented-directions rule");
 check(!/^You are Charlie/.test(groupCapture.body.instructions) && /Music, dance, track, and DJ actions/.test(groupCapture.body.instructions) && /dad jokes and puns/.test(groupCapture.body.instructions), "group mode is distinct from Charlie, assigns music actions to DJs, and grounds humor in cast details");
+
+openAIReply = JSON.stringify({ sender: "Aspen", text: "Hold still!", reply_to_id: null, action: { id: "photo.take", args: {} } });
+const aspenResponse = await worker.fetch(makeRequest("/chat", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    mode: "group_chat",
+    message: "Aspen, take a photo please.",
+    turnstile_token: "aspen-token",
+    context: { room: "garden", phase: 2, party: true, actions_available: ["photo.take"] },
+    group_chat: { cast: [{ name: "Aspen", role: "photographer" }, { name: "Athena", role: "wedding boss" }] },
+  }),
+}), makeEnv());
+const aspenReply = JSON.parse((await aspenResponse.json()).reply);
+check(aspenReply.sender === "Aspen" && aspenReply.action?.id === "photo.take", "an explicit photo request may execute only as Aspen", aspenReply);
+
+openAIReply = JSON.stringify({ sender: "Athena", text: "Smile!", reply_to_id: null, action: { id: "photo.take", args: {} } });
+const fakeAspenResponse = await worker.fetch(makeRequest("/chat", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    mode: "group_chat",
+    message: "Aspen, take a photo please.",
+    turnstile_token: "fake-aspen-token",
+    context: { room: "garden", phase: 2, party: true, actions_available: ["photo.take"] },
+    group_chat: { cast: [{ name: "Aspen", role: "photographer" }, { name: "Athena", role: "wedding boss" }] },
+  }),
+}), makeEnv());
+const fakeAspenReply = JSON.parse((await fakeAspenResponse.json()).reply);
+check(fakeAspenReply.sender === "Athena" && fakeAspenReply.action === null, "a non-Aspen sender cannot smuggle through a photo action", fakeAspenReply);
 
 openAIReply = JSON.stringify({ sender: "Athena", text: "I will skip it.", reply_to_id: "invented-message", action: { id: "music.skip", args: {} } });
 const wrongRoleResponse = await worker.fetch(makeRequest("/chat", {

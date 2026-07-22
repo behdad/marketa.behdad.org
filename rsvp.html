@@ -42523,7 +42523,7 @@ var ABANDONED_CALL_MS = 30000;
   // Editor assistance is deliberately separate from Chat's conversation queue. It sends only
   // bounded code/context to the same verified Worker and renders a review panel; Apply is always
   // an explicit user click and never runs the returned text.
-  var edAiBusy = false, edAiSuggestion = "", edAiReplace = false, edAiStart = 0, edAiEnd = 0;
+  var edAiBusy = false, edAiSuggestion = "", edAiReplace = false, edAiStart = 0, edAiEnd = 0, edAiSourceCode = "";
   function edAiSetStatus(text, ready) {
     if (!edAiStatus) return;
     edAiStatus.textContent = text;
@@ -42540,8 +42540,8 @@ var ABANDONED_CALL_MS = 30000;
     edAiSuggestion = String(data.suggestion || ""); edAiReplace = data.replace === true;
     if (edAiSuggestion) {
       var pre = document.createElement("pre"); pre.textContent = edAiSuggestion; pre.style.margin = "1px 0"; edAiPanel.appendChild(pre);
-      var apply = document.createElement("button"); apply.className = "ed-ai-btn"; apply.type = "button"; apply.textContent = edAiReplace ? "replace" : "insert";
-      apply.addEventListener("click", function (e) { e.stopPropagation(); if (!edAiSuggestion || !edCode) return; var a = edAiStart, b = edAiEnd; if (edAiReplace && a === b) { a = 0; b = edCode.value.length; } edCode.value = edAiReplace ? edCode.value.slice(0, a) + edAiSuggestion + edCode.value.slice(b) : edCode.value.slice(0, a) + edAiSuggestion + edCode.value.slice(a); edScheduleAutoSave(); edAiClosePanel(); edAiSetStatus("Applied", true); try { edCode.focus(); edCode.setSelectionRange(a + edAiSuggestion.length, a + edAiSuggestion.length); } catch (_) {} });
+      var apply = document.createElement("button"); apply.className = "ed-ai-btn"; apply.type = "button"; apply.textContent = edAiReplace ? (edAiStart === edAiEnd ? "replace script" : "replace selection") : "insert at cursor";
+      apply.addEventListener("click", function (e) { e.stopPropagation(); if (!edAiSuggestion || !edCode) return; if (edCode.value !== edAiSourceCode) { edAiSetStatus("Code changed — request again", false); return; } var a = edAiStart, b = edAiEnd; if (edAiReplace && a === b) { a = 0; b = edCode.value.length; } edCode.value = edAiReplace ? edCode.value.slice(0, a) + edAiSuggestion + edCode.value.slice(b) : edCode.value.slice(0, a) + edAiSuggestion + edCode.value.slice(a); edScheduleAutoSave(); edAiClosePanel(); edAiSetStatus("Applied", true); try { edCode.focus(); edCode.setSelectionRange(a + edAiSuggestion.length, a + edAiSuggestion.length); } catch (_) {} });
       edAiPanel.appendChild(apply);
       var copy = document.createElement("button"); copy.className = "ed-ai-btn"; copy.type = "button"; copy.textContent = "copy";
       copy.addEventListener("click", function (e) { e.stopPropagation(); try { navigator.clipboard.writeText(edAiSuggestion); edAiSetStatus("Copied", true); } catch (_) {} }); edAiPanel.appendChild(copy);
@@ -42555,7 +42555,7 @@ var ABANDONED_CALL_MS = 30000;
     if (typeof challenge !== "function" || typeof transport !== "function") { edAiSetStatus("AI unavailable", false); return; }
     edAiBusy = true; [edExplainBtn, edFixBtn, edCompleteBtn].forEach(function (b) { if (b) b.disabled = true; }); edAiClosePanel(); edAiSetStatus("Thinking…", false);
     var a = edCode.selectionStart || 0, b = edCode.selectionEnd || a;
-    edAiStart = a; edAiEnd = b;
+    edAiStart = a; edAiEnd = b; edAiSourceCode = edCode.value;
     var context = typeof window.__chatContext === "function" ? window.__chatContext("Script Editor " + operation) : { scripting_api: null };
     Promise.resolve(challenge()).then(function (token) {
       return transport(endpoint, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ message: "Review this script using the requested operation.", mode: "editor_assist", turnstile_token: token, context: context, editor: { operation: operation, code: edCode.value, selected: edCode.value.slice(a, b), cursor: a, error: window.__lastEditorError || "" } }) });

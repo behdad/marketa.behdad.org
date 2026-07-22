@@ -4522,7 +4522,7 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .phone-app-tile.dragging{opacity:.32}
 .phone-drag-ghost{position:fixed; left:0; top:0; z-index:70; margin:0; width:62px; pointer-events:none; transform:translate(-50%,-50%) scale(1.12); opacity:.95; filter:drop-shadow(0 6px 12px rgba(0,0,0,.32))}
 /* touch-action:none keeps a touch-drag on an icon from panning the page (works here — an HTML overlay element, unlike the SVG scene children) */
-.phone-app-tile{display:flex; flex-direction:column; align-items:center; gap:5px; background:none; border:none; cursor:pointer; padding:0; font:inherit; touch-action:none}
+.phone-app-tile{display:flex; flex-direction:column; align-items:center; gap:5px; background:none; border:none; cursor:pointer; padding:0; font:inherit; touch-action:none; -webkit-user-select:none; user-select:none}
 .phone-app-tile .pat-ico{width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:26px; box-shadow:0 2px 5px rgba(0,0,0,.18)}
 .phone-app-tile .pat-ico svg{width:32px; height:32px; display:block}
 .phone-app-tile .pat-label{font-size:10.5px; color:var(--ink); text-align:center; line-height:1.1; max-width:62px}
@@ -34754,7 +34754,12 @@ function gameTapsNear(a, b) {
     var kettleSteaming = false;
     var kettleInterval = null;
     var kettleCtx = null, kettleSource = null, kettleGain = null;
-    function kettlePuff() { if (document.hidden || !document.hasFocus()) return; spawnSteamWisps(document.getElementById("loft-game-strip"), 79, 193, 0.55, -1); }
+    function kettlePuff() {
+      // The kettle may stay switched on while the player explores elsewhere. Preserve
+      // that state, but do not create invisible steam particles in a parked room.
+      if (document.hidden || !document.hasFocus() || window.currentStageName !== "kitchen") return;
+      spawnSteamWisps(document.getElementById("loft-game-strip"), 79, 193, 0.55, -1);
+    }
     function startKettleHum() {
       try {
         kettleCtx = audioBed();
@@ -48502,6 +48507,7 @@ async def localfont(name):
       phSuppressClick = false; // fresh press: clear any stale flag from a prior drag (advisor: reset at next pointerdown, not on a timer)
       phCancelDrag(); // abandon any half-live drag first
       phDrag = { tile: tile, fromSlot: fromSlot, app: app, startX: e.clientX, startY: e.clientY, active: false, pointerId: e.pointerId, ghost: null, target: null };
+      document.addEventListener("selectstart", phBlockDragSelection, true);
       window.addEventListener("pointermove", phOnDragMove, true);
       window.addEventListener("pointerup", phOnDragEnd, true);
       window.addEventListener("pointercancel", phOnDragEnd, true);
@@ -48512,6 +48518,9 @@ async def localfont(name):
       if (!phDrag.active) {
         if (Math.abs(dx) < PH_DRAG_THRESH && Math.abs(dy) < PH_DRAG_THRESH) return;
         phDrag.active = true;
+        // A desktop hold can begin a native selection before the drag crosses its
+        // threshold. Clear that transient range and own subsequent movement.
+        try { var sel = window.getSelection && window.getSelection(); if (sel) sel.removeAllRanges(); } catch (_error) {}
         phCloseMenu(); // no app menu hanging around mid-drag
         phDrag.tile.classList.add("dragging");
         var g = phDrag.tile.cloneNode(true);
@@ -48521,9 +48530,11 @@ async def localfont(name):
         document.body.appendChild(g);
         phDrag.ghost = g;
       }
+      if (phDrag.active) e.preventDefault();
       phMoveGhost(e);
       phHighlightTarget(e);
     }
+    function phBlockDragSelection(e) { if (phDrag) e.preventDefault(); }
     function phMoveGhost(e) {
       if (!phDrag || !phDrag.ghost) return;
       phDrag.ghost.style.left = e.clientX + "px";
@@ -48562,6 +48573,7 @@ async def localfont(name):
       }
     }
     function phTeardownDragListeners() {
+      document.removeEventListener("selectstart", phBlockDragSelection, true);
       window.removeEventListener("pointermove", phOnDragMove, true);
       window.removeEventListener("pointerup", phOnDragEnd, true);
       window.removeEventListener("pointercancel", phOnDragEnd, true);
@@ -48634,6 +48646,10 @@ async def localfont(name):
       return b;
     }
     function phContextHost() {
+      // The phone backdrop is already seated in the correct fullscreen top layer.
+      // Mounting the menu inside it also keeps the menu above the backdrop's z-index;
+      // as a sibling on the outer host, .mon-ctx's lower z-index made it invisible.
+      if (modal && modal.parentNode) return modal;
       return document.fullscreenElement || document.webkitFullscreenElement ||
         document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
     }
@@ -48645,8 +48661,7 @@ async def localfont(name):
       phMenuEl.appendChild(phMakeItem("ctx-stop", PH_STOP_ICO, tr("mon_ctx_stop"), function () { stopApp(app.id); })); // force-stop: clears the app's session state (icon stays)
       phMenuEl.appendChild(phMakeItem("ctx-uninstall ctx-kill", PH_UNINST_ICO, tr("mon_ctx_uninstall"), function () { uninstallApp(app.id); }));
       phMenuEl.style.visibility = "hidden";
-      // A real fullscreen element is its own browser top layer, so the fixed menu must live
-      // inside that host; .mon-ctx's z-index still clears the phone backdrop there.
+      // The menu lives inside the phone's own fullscreen-aware backdrop.
       phContextHost().appendChild(phMenuEl);
       var r = phMenuEl.getBoundingClientRect();
       phMenuEl.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 4)) + "px";
@@ -59872,6 +59887,12 @@ function stopTripBlooms() {
 }
 function tripBloomLoop(t) {
   if (!tripBloomItems) { tripBloomRaf = null; return; }
+  // The trip itself is loft-wide, but these five expensive Julia canvases belong only
+  // to the garden plants. Park the loop with the room and resume the same bloom state
+  // on return; stopTripBlooms still owns final cleanup if the trip ends elsewhere.
+  if (tripActive && (document.hidden || !document.hasFocus() || window.currentStageName !== "garden")) {
+    tripBloomRaf = null; tripBloomLastTs = 0; return;
+  }
   if (tripBloomReduceMotion()) { // static bloom just waits out the trip, then tears down
     if (!tripActive) { stopTripBlooms(); return; }
     tripBloomRaf = requestAnimationFrame(tripBloomLoop);
@@ -59916,6 +59937,18 @@ function tripBloomLoop(t) {
   if (allSettled) { stopTripBlooms(); return; }
   tripBloomRaf = requestAnimationFrame(tripBloomLoop);
 }
+window.__syncTripBloomLoop = function () {
+  if (!tripBloomItems) return;
+  if (!tripActive) { stopTripBlooms(); return; }
+  if (!document.hidden && document.hasFocus() && window.currentStageName === "garden" && !tripBloomRaf) {
+    tripBloomLastTs = 0;
+    tripBloomRaf = requestAnimationFrame(tripBloomLoop);
+  }
+};
+window.__tripBloomLoopRunning = function () { return !!tripBloomRaf; };
+document.addEventListener("visibilitychange", function () { if (!document.hidden) window.__syncTripBloomLoop(); });
+window.addEventListener("focus", function () { window.__syncTripBloomLoop(); });
+window.addEventListener("blur", function () { window.__syncTripBloomLoop(); });
 // One water bubble: a short sine that chirps up in pitch as the bubble
 // collapses. Clouds of these (plus a flow bed) are what read as water.
 function waterBubble(ctx, dest, start, f0, dur, level) {
@@ -65009,8 +65042,14 @@ function spawnDustMote(container) {
   var parkTimer = null, parkEndHandler = null, parkGeneration = 0;
   var pausedStageAnimations = {};
   var queuedAnimationPauses = new Set(), animationPauseRaf = null;
-  function stageAnimationParkingActive() { return !!window.__secondRound; }
+  // Hidden rooms are parked from the opening frame, not only after the party begins.
+  // Pausing preserves every animation's exact progress; entering the room resumes it.
+  function stageAnimationParkingActive() { return true; }
   function isCssAnimation(animation) { return animation && typeof animation.animationName === "string"; }
+  function isAmbientCssAnimation(animation) {
+    if (!isCssAnimation(animation) || !animation.effect || !animation.effect.getTiming) return false;
+    try { return animation.effect.getTiming().iterations === Infinity; } catch (_error) { return false; }
+  }
   function pauseStageAnimations(stage, allAnimations) {
     if (!stage) return;
     var held = pausedStageAnimations[stage.id] || (pausedStageAnimations[stage.id] = new Set());
@@ -65025,7 +65064,9 @@ function spawnDustMote(container) {
     } else animations = [];
     for (var i = 0; i < animations.length; i++) {
       var animation = animations[i];
-      if (!isCssAnimation(animation) || animation.playState === "paused" || animation.playState === "finished" || animation.playState === "idle") continue;
+      // Finite tap/entrance animations must finish even off-room: their animationend
+      // handlers remove transient classes. Only ambient infinite motion is parked.
+      if (!isAmbientCssAnimation(animation) || animation.playState === "paused" || animation.playState === "finished" || animation.playState === "idle") continue;
       try { animation.pause(); held.add(animation); } catch (_error) {}
     }
   }
@@ -65126,6 +65167,8 @@ function spawnDustMote(container) {
     if (window.__syncMonitorSaverLoop) window.__syncMonitorSaverLoop();
     if (window.__syncMonitorEqLoop) window.__syncMonitorEqLoop();
     if (window.__syncHeadphoneBeatLoop) window.__syncHeadphoneBeatLoop();
+    if (window.__syncInstrumentVisualLoops) window.__syncInstrumentVisualLoops(); // garden notes/string shimmer never run in parked rooms
+    if (window.__syncTripBloomLoop) window.__syncTripBloomLoop(); // garden-only fractal blooms pause without losing their trip state
     if (window.__rearmSkyMeteors) window.__rearmSkyMeteors(); // stepping out under a shower: the sky is going by the time you've arrived (no-op on an ordinary night)
     endHuntIntro(); // a room change ends the opening prompt, so the new room's caption shows (and the held notification channels wake)
     clearOpeningGuide(); // ...and skips the eight-second caption tutorial if the player has already moved on
@@ -71769,14 +71812,17 @@ function spawnDustMote(container) {
     });
   }
   var noteFlowTimer = null;
+  var instrumentStringLoops = [];
   function updateNoteFlow() {
-    var anyPlaying = !!playingInstrumentAudio();
+    // Songs remain audible throughout the loft. Their garden-only note particles do not.
+    var anyPlaying = !!playingInstrumentAudio() && window.currentStageName === "garden" &&
+      !document.hidden && document.hasFocus();
     if (anyPlaying && !noteFlowTimer) {
       noteFlowTimer = setInterval(function () {
         var audio = playingInstrumentAudio();
         var source = audio && instrumentForAudio(audio);
         var spot = source && source.spot;
-        if (spot && !document.hidden && document.hasFocus()) spawnMusicNotes(strip, spot.x, spot.y); // notes are decorative; songs play on while hidden but skip the spawn
+        if (spot && window.currentStageName === "garden" && !document.hidden && document.hasFocus()) spawnMusicNotes(strip, spot.x, spot.y);
       }, 900);
     } else if (!anyPlaying && noteFlowTimer) {
       clearInterval(noteFlowTimer);
@@ -71817,7 +71863,9 @@ function spawnDustMote(container) {
     }
     function settle() { stringsWrap.removeAttribute("transform"); stringsWrap.style.opacity = ""; }
     function frame() {
-      if (document.hidden) { strRAF = null; return; } // don't spin while backgrounded
+      // Keep the last authored transform while parked; resuming uses the live audio
+      // clock, so there is no catch-up burst and no state reset when the garden returns.
+      if (document.hidden || !document.hasFocus() || window.currentStageName !== "garden") { strRAF = null; return; }
       var audio = playingAudio();
       if (!audio) { settle(); strRAF = null; return; }
       var bpm = GROOVE_BPM[audio.id] || 126.0;
@@ -71830,7 +71878,10 @@ function spawnDustMote(container) {
       stringsWrap.style.opacity = (0.84 + kick * 0.16).toFixed(3); // brighten on the beat
       strRAF = requestAnimationFrame(frame);
     }
-    function poke() { if (strRAF == null) strRAF = requestAnimationFrame(frame); }
+    function poke() {
+      if (strRAF == null && !document.hidden && document.hasFocus() && window.currentStageName === "garden") strRAF = requestAnimationFrame(frame);
+    }
+    instrumentStringLoops.push({ sync: poke, running: function () { return strRAF != null; } });
     audios.forEach(function (audio) {
       audio.addEventListener("play", poke);
       audio.addEventListener("pause", poke); // one more frame settles it back to static
@@ -71840,6 +71891,18 @@ function spawnDustMote(container) {
   }
   wireInstrumentStrings("garden-guitar-strings", instrumentSpots["garden-guitar"].audioIds, 73);
   wireInstrumentStrings("garden-ukulele-strings", instrumentSpots["garden-ukulele"].audioIds, 55);
+  window.__syncInstrumentVisualLoops = function () {
+    updateNoteFlow();
+    for (var i = 0; i < instrumentStringLoops.length; i++) instrumentStringLoops[i].sync();
+  };
+  window.__instrumentVisualLoopState = function () {
+    var strings = 0;
+    for (var i = 0; i < instrumentStringLoops.length; i++) if (instrumentStringLoops[i].running()) strings++;
+    return { notes: !!noteFlowTimer, strings: strings };
+  };
+  document.addEventListener("visibilitychange", function () { window.__syncInstrumentVisualLoops(); });
+  window.addEventListener("focus", function () { window.__syncInstrumentVisualLoops(); });
+  window.addEventListener("blur", function () { window.__syncInstrumentVisualLoops(); });
   var candleIds = ["garden-candle-1", "garden-candle-2"];
   var candlesLit = {};
   function setCandleLit(id, on) { // returns the PREVIOUS lit state
@@ -80956,7 +81019,9 @@ function spawnDustMote(container) {
   var halo = document.getElementById("fishu-fire-halo");
   if (!ws || !body || !halo) return;
   setInterval(function () {
-    if (document.hidden || !ws.classList.contains("chan-fire")) { halo.style.opacity = "0"; return; } // warm halo only from the fire channel
+    // Avoid forced geometry reads for a hidden SVG. The halo is derived state and is
+    // recomputed from Fishu's preserved position as soon as the nook is visible again.
+    if (document.hidden || window.currentStageName !== "cuddly" || !ws.classList.contains("chan-fire")) { halo.style.opacity = "0"; return; }
     var f = ws.getBoundingClientRect();
     if (!f.width || f.right < 0 || f.left > window.innerWidth) { halo.style.opacity = "0"; return; }
     var b = body.getBoundingClientRect();

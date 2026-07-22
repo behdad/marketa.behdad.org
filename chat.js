@@ -16,6 +16,10 @@ const MAX_GROUP_CAST_ITEMS = 40;
 const MAX_GROUP_RECENT_ITEMS = 12;
 const MAX_GROUP_PEOPLE_ITEMS = 24;
 const MAX_TURNSTILE_TOKEN_CHARS = 2048;
+const MAX_EDITOR_CODE_CHARS = 14_000;
+const MAX_EDITOR_EDITS = 16;
+const MAX_EDITOR_EDIT_TEXT_CHARS = 4_000;
+const MAX_EDITOR_EDIT_TOTAL_CHARS = 12_000;
 const TURNSTILE_TIMEOUT_MS = 10_000;
 const UPSTREAM_TIMEOUT_MS = 35_000;
 const CHAT_KNOWLEDGE_JSON = JSON.stringify(CHAT_KNOWLEDGE);
@@ -166,7 +170,7 @@ You may suggest at most one action, and only when the visitor's latest message d
 Return only strict JSON with exactly this shape: {"sender":"Cast name","text":"Message","reply_to_id":null,"action":null} or {"sender":"Cast name","text":"Message","reply_to_id":"supplied-message-id","action":{"id":"allowlisted.id","args":{}}}. The sender must be a supplied cast name. reply_to_id must be null or exactly an id from reply_to or recent_messages. Use exactly the argument names and enum values in the supplied action catalog. Do not use a Markdown fence or add other text.`;
 
 const EDITOR_INSTRUCTIONS = `You are the Loft Script Editor assistant. Review JavaScript as text only; never execute it and never request a game action. The editor wraps code in an async function, so documented Loft globals such as await sleep(3000), party(true), room("garden"), daylight(true), dance("salsa"), trip("molly"), caption("text"), and loft.api.query/perform are valid. Use the supplied scripting_api as authoritative and do not invent signatures or private details.
-For explain, briefly explain the selected code or likely error. For fix, if selected code is non-empty, return only a corrected replacement for that selection (never the surrounding script); if nothing is selected, return a corrected complete script. For complete, return a short continuation from the cursor. Keep suggestions runnable and bounded. Return strict JSON only: {"text":"brief explanation","suggestion":"code or empty string","replace":true|false}. The suggestion field must contain code only, with no Markdown fences.`;
+For explain, briefly explain the selected code or likely error. For fix, if selected code is non-empty, return only a corrected replacement for that selection (never the surrounding script); if nothing is selected, return a corrected complete script. For complete, return a short continuation from the cursor. When a request needs changes at multiple locations, return an explicit edits array instead of guessing one insertion point: each edit is {"start":number,"end":number,"text":"code"}, using offsets into the complete code string. Edits must be non-overlapping, ordered by start, and include only the changed ranges. Keep suggestions runnable and bounded. Return strict JSON only: {"text":"brief explanation","suggestion":"code or empty string","replace":true|false,"edits":[{"start":0,"end":0,"text":"code"}]}. The suggestion field must contain code only, with no Markdown fences; use an empty edits array when edits are not needed.`;
 
 function corsHeaders(origin) {
   return {
@@ -1036,7 +1040,7 @@ async function callOpenAI(request, env, payload) {
     const data = await response.json();
     const reply = extractReply(data);
     if (!reply) throw new Error("OpenAI returned no text");
-    if (editorMode) return normalizeEditorReply(reply);
+    if (editorMode) return normalizeEditorReply(reply, payload.editor);
     const normalized = groupMode
       ? normalizeGroupReply(reply, payload.group_chat, payload.context)
       : normalizeChatReply(reply, payload.context);
@@ -1046,10 +1050,41 @@ async function callOpenAI(request, env, payload) {
   }
 }
 
-function normalizeEditorReply(reply) {
+function normalizeEditorReply(reply, editor) {
   let parsed;
   try { parsed = JSON.parse(String(reply).replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")); } catch (_error) { parsed = { text: cleanText(reply, 1200), suggestion: "", replace: false }; }
-  return JSON.stringify({ text: cleanText(parsed && parsed.text, 1200) || "I couldn't produce a useful review.", suggestion: cleanText(parsed && parsed.suggestion, 12000), replace: parsed && parsed.replace === true });
+  const code = cleanText(editor && editor.code, MAX_EDITOR_CODE_CHARS);
+  const rawEdits = parsed && Array.isArray(parsed.edits) ? parsed.edits : [];
+  let edits = [];
+  let editChars = 0;
+  let validEdits = rawEdits.length <= MAX_EDITOR_EDITS;
+  if (validEdits) {
+    for (const item of rawEdits) {
+      const start = Number(item && item.start);
+      const end = Number(item && item.end);
+      const text = item && typeof item.text === "string" ? item.text : null;
+      const integer = Number.isInteger(start) && Number.isInteger(end);
+      const bounded = integer && start >= 0 && end >= start && end <= code.length;
+      const sized = text !== null && text.length <= MAX_EDITOR_EDIT_TEXT_CHARS;
+      if (!bounded || !sized) { validEdits = false; break; }
+      editChars += text.length;
+      if (editChars > MAX_EDITOR_EDIT_TOTAL_CHARS) { validEdits = false; break; }
+      edits.push({ start, end, text });
+    }
+  }
+  if (validEdits) {
+    edits.sort((a, b) => a.start - b.start || a.end - b.end);
+    for (let i = 1; i < edits.length; i++) {
+      if (edits[i].start < edits[i - 1].end) { validEdits = false; break; }
+    }
+  }
+  if (!validEdits) edits = [];
+  return JSON.stringify({
+    text: cleanText(parsed && parsed.text, 1200) || "I couldn't produce a useful review.",
+    suggestion: cleanText(parsed && parsed.suggestion, 12000),
+    replace: parsed && parsed.replace === true,
+    edits,
+  });
 }
 
 export default {
@@ -1131,3 +1166,7 @@ export default {
     }
   },
 };
+
+// Kept as a named export for the contract tests; the Worker itself uses the
+// normalizer internally and does not expose it over HTTP.
+export { normalizeEditorReply };

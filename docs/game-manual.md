@@ -11,7 +11,9 @@ look useful, and keep wandering.
 When a saved session is available, the opening screen asks whether to continue
 or start over. Gameplay shortcuts remain disabled until that choice is made;
 use the buttons, arrow keys, `Enter`, or `Space` to choose. Trailer and Autoplay
-remain hidden until the recovery choice is complete.
+remain hidden until the recovery choice is complete. **Start over** acts
+immediately because the recovery choice itself is the confirmation; the in-game
+Restart control still asks before discarding active progress.
 
 ## Quick start
 

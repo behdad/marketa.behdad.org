@@ -23,6 +23,21 @@ var HARNESS = [
   '})();</script>'
 ].join("\n");
 
+var START_OVER_HARNESS = [
+  '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
+  '<script>(function(){',
+  'var saved={version:1,savedAt:Date.now()-120000,progress:{room:"office",maxUnlocked:4,phase2:true,party:false,daylight:true,bbq:false},puzzle:{},phone:null,album:null};',
+  'if(!sessionStorage.getItem("recovery-restart-seeded")){sessionStorage.setItem("recovery-restart-seeded","1");localStorage.setItem("loftCheckpoint:v1",JSON.stringify(saved));location.reload();return;}',
+  'var report={errors:[],steps:{}};',
+  'window.addEventListener("load",function(){setTimeout(function(){try{',
+  ' var confirmations=0;window.confirm=function(){confirmations++;return false;};',
+  ' var gate=document.getElementById("loft-recovery-gate"),buttons=gate&&gate.querySelectorAll(".loft-recovery-btn");',
+  ' if(buttons&&buttons[1])buttons[1].click();',
+  ' report.steps.startedOver={confirmations:confirmations,gate:!!document.getElementById("loft-recovery-gate"),save:!!localStorage.getItem("loftCheckpoint:v1"),room:window.currentStageName,phase2:!!window.__secondRound};',
+  '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},350);});',
+  '})();</script>'
+].join("\n");
+
 var failures = 0;
 function check(ok, msg, detail) {
   if (ok) console.log("  \u2713 " + msg);
@@ -41,6 +56,12 @@ check(s.blocked && s.blocked.gate && s.blocked.room === "kitchen" && !s.blocked.
 check(s.right && s.left, "arrow keys move between Start over and Continue", { right: s.right, left: s.left });
 check(!s.continued.gate && s.continued.room === "office" && s.continued.max === 4 && s.continued.phase2 && s.continued.started, "Enter continues into the restored unlocked game", s.continued);
 check(!s.continued.watchHidden && !s.continued.watchAria && s.continued.watchDisplay === "flex", "Trailer and Autoplay return after the recovery choice", s.continued);
+
+var restart = lib.runPageSync("rsvp.html", START_OVER_HARNESS, 1900, { patchRaf: true });
+check(!!restart && restart.errors.length === 0, "Start over harness has no uncaught page errors", restart && restart.errors);
+var startedOver = restart && restart.steps.startedOver;
+check(startedOver && startedOver.confirmations === 0 && !startedOver.gate && !startedOver.save && startedOver.room === "kitchen" && !startedOver.phase2,
+  "Start over is the confirmation: it resets immediately without a browser dialog", startedOver);
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

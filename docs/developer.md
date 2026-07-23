@@ -90,7 +90,9 @@ keyboard events before gameplay handlers run, while handling arrow/Enter/Space i
 browser-default `Tab` focus traversal available. Normal shortcuts become active only after Continue
 or Start over removes the gate. The controller also hides the entire `.watch-controls` row while
 mounted, then restores it from the shared gate teardown, so Trailer and Autoplay never compete with
-the saved-session decision.
+the saved-session decision. Start over clears the checkpoint directly because the recovery gate is
+already an explicit destructive choice; only the in-game Restart button/key uses
+`__confirmRestart()`.
 
 ### Trailer lifecycle
 

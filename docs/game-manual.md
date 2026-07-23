@@ -106,7 +106,8 @@ magic-box Calendar clue, and the scene date/time pills.
 Monitor and laptop zoom snaps between the room and screen. Animating the large
 scaled scene caused white repaint flicker in Chrome even when the room otherwise
 held 60 FPS, so device zoom deliberately does not glide. Room navigation still
-animates normally.
+animates normally. Monitor app icons only show hover feedback once the monitor is
+zoomed, matching when a click can launch the app.
 
 Triple-click or triple-tap the ceramic mask in the garden to open the drop-down
 console on a device without a hardware keyboard. The console's top corner shows

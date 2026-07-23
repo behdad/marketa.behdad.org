@@ -36257,12 +36257,22 @@ function gameTapsNear(a, b) {
   // overlap into mush. Timed, not class-based — under reduced motion the one-shots never fire an
   // animationend, so a class flag would latch on forever and kill the click for good.
   var BUSY_MS = 620; // the longer of the two one-shots (dj-scratch .62s, dj-headbang .55s)
-  var lastNudge = 0;
+  var lastNudge = 0, djClickCount = 0, djLastClick = 0;
   head.addEventListener("animationend", function () { head.classList.remove("bang"); });
   head.addEventListener("click", function (e) {
     if (e) e.stopPropagation();
-    if (!window.__gardenPartyOn) return; // only while the booth is lit (and clickable)
+    if (!window.__gardenPartyOn) { djClickCount = 0; return; } // only while the booth is lit (and clickable)
     var now = Date.now();
+    djClickCount = now - djLastClick <= 650 ? djClickCount + 1 : 1;
+    djLastClick = now;
+    // Three deliberate taps end the party. The picker sits fully left of the DJ, so opening it on
+    // the first tap cannot steal the remaining two taps on either mouse or touch.
+    if (djClickCount >= 3) {
+      djClickCount = 0;
+      if (window.__setPartyMode) window.__setPartyMode(false);
+      else if (window.__setGardenParty) window.__setGardenParty(false);
+      return;
+    }
     if (now - lastNudge < BUSY_MS) return;
     lastNudge = now;
     head.classList.remove("bang");
@@ -36271,17 +36281,6 @@ function gameTapsNear(a, b) {
     });
     // Tapping the DJ opens the jukebox; the scratch fires on song SELECTION (see requestDance).
     if (window.__openDjPicker) window.__openDjPicker();
-  });
-  // Double-click the DJ to kill the party — the counterpart to the mirror/mask dblclick that
-  // starts it. The dblclick also fires two clicks first (a headbang on the way out is fine);
-  // the stop fires only here. Guard on __gardenPartyOn so a stray dblclick with no party running
-  // is a no-op.
-  head.addEventListener("dblclick", function (e) {
-    if (e) e.stopPropagation();
-    if (!window.__gardenPartyOn) return; // only while the party is live
-    // route through the switch (UI + UV + garden all agree) — mirror of startGardenParty
-    if (window.__setPartyMode) window.__setPartyMode(false);
-    else if (window.__setGardenParty) window.__setGardenParty(false);
   });
 })();
 (function () {
@@ -36379,8 +36378,9 @@ function gameTapsNear(a, b) {
   if (!picker || !trigger || !gs2) return;
   var SVGNS = "http://www.w3.org/2000/svg";
   var built = false, open = false;
-  // panel geometry (garden view-box coords) — a neon slab to the LEFT of the booth
-  var PX = 496, PY = 40, PW = 150, ROW_H = 13, HEAD_H = 20, PAD = 6;
+  // Panel geometry (garden view-box coords): keep the slab fully left of the booth's x=560
+  // edge so an open picker never intercepts a follow-up tap on the DJ.
+  var PX = 402, PY = 40, PW = 150, ROW_H = 13, HEAD_H = 20, PAD = 6;
 
   function danceIds() { // the registered dances, in registration order (matches dance()/np keys)
     return (window.__partyDances || []).map(function (d) { return d.id; });
@@ -57943,13 +57943,13 @@ async def localfont(name):
   }
   var mask = document.getElementById("garden-mask");
   function hearts() { spawnHearts(strip, 1260, 92); playHeartsSound("garden-mask"); } // hearts rise from the mask
-  // The mirror keeps the hidden party toggle. The mask is the touch-friendly console door:
+  // The mirror keeps the hidden party start, but now requires three deliberate rapid clicks.
+  // The mask is the touch-friendly console door:
   // three rapid clicks open (never close) the drop-down terminal so its FPS meter is available
   // without a hardware keyboard. Count ourselves because synthesized touch clicks do not
   // consistently increment MouseEvent.detail across browsers.
-  function toggleGardenParty() {
-    if (window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(false); }
-    else if (window.__setGardenParty) window.__setGardenParty(true, true);
+  function startGardenParty() {
+    if (!window.__gardenPartyOn && window.__setGardenParty) window.__setGardenParty(true, true);
   }
   var maskClickCount = 0, maskLastClick = 0;
   function clickMask() {
@@ -57976,7 +57976,15 @@ async def localfont(name):
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); hearts(); shineMask(); }
     });
   }
-  if (mirror) mirror.addEventListener("dblclick", toggleGardenParty); // the glare (its single-click shine) already invites the second click
+  var mirrorClickCount = 0, mirrorLastClick = 0;
+  if (mirror) mirror.addEventListener("click", function () {
+    var now = Date.now();
+    mirrorClickCount = now - mirrorLastClick <= 650 ? mirrorClickCount + 1 : 1;
+    mirrorLastClick = now;
+    if (mirrorClickCount < 3) return;
+    mirrorClickCount = 0;
+    startGardenParty();
+  });
   var crystals = document.getElementById("garden-crystals");
   if (crystals) crystals.addEventListener("click", spawnCrystalSparkle); // quiet decorative glint, click-only (untracked bonus)
   var drugsBox = document.getElementById("garden-drugsbox");
@@ -76987,7 +76995,7 @@ function spawnDustMote(container) {
       // booth beats are grouped so the cursor stays at the decks: first an emphatic
       // headbang, then the OTHER DJ takes over (A beanie ↔ B afro — the couple's DJ
       // friend), so both are seen. The swap goes through window.dj() (flag flip + booth
-      // reflect), NOT a dblclick — dblclicking the DJ now STOPS the party. Then the cursor
+      // reflect), not through the DJ's hidden three-click party-stop gesture. Then the cursor
       // glides far-left to the photographer for a shutter-and-flash, and a manual skip drops
       // the NEXT groove (now-playing toast names each dance; dancers glow neon through the UV).
       [2400, function () { cineClick("garden-dj-headbang"); }], [0, cine("cine_dj")],

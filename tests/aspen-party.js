@@ -47,7 +47,12 @@ var harness = String.raw`<script>
 
   var dj = document.getElementById("garden-dj-a");
   click(dj);
-  report.steps.dj = { picker: document.getElementById("garden-djpicker").classList.contains("open"), who: who };
+  var djPanelBg = document.querySelector("#garden-djpicker .dj-pick-panel rect");
+  report.steps.dj = {
+    picker: document.getElementById("garden-djpicker").classList.contains("open"),
+    pickerRight: djPanelBg ? (+djPanelBg.getAttribute("x") + +djPanelBg.getAttribute("width")) : null,
+    who: who
+  };
   if (window.__closeDjPicker) window.__closeDjPicker();
 
   click(foot); // potstand -> peace-lily: its frame is 75..370
@@ -74,6 +79,16 @@ var harness = String.raw`<script>
       station: stage.getAttribute("data-photog-station"),
       people: group ? group.people.map(function (p) { return p.key; }) : []
     };
+    click(dj); click(dj);
+    report.steps.djTwo = { party: !!window.__gardenPartyOn };
+    click(dj);
+    report.steps.djThree = { party: !!window.__gardenPartyOn, winding: !!(window.__partyWindingDown && window.__partyWindingDown()) };
+    if (window.__setPartyMode) window.__setPartyMode(false, true);
+    var mirror = document.getElementById("garden-mirror");
+    click(mirror); click(mirror);
+    report.steps.mirrorTwo = { party: !!window.__gardenPartyOn };
+    click(mirror);
+    report.steps.mirrorThree = { party: !!window.__gardenPartyOn };
     var pre = document.createElement("pre"); pre.id = "__report"; pre.textContent = JSON.stringify(report); document.body.appendChild(pre);
   }, 1250);
 })();
@@ -93,7 +108,7 @@ if (result) {
     "foot click advances Aspen without shutter, Album, or bio", s.foot);
   check(s.body.station === "potstand" && s.body.photos === 1 && s.body.who === 0,
     "body click takes exactly one photo without a bio popup", s.body);
-  check(s.dj.picker && s.dj.who === 0, "DJ head opens its picker without a bio popup", s.dj);
+  check(s.dj.picker && s.dj.pickerRight < 560 && s.dj.who === 0, "DJ head opens its picker fully left of the booth without a bio popup", s.dj);
   check(s.frame.station === "peace-lily" && s.frame.stationMeta.every(function (id) { return id === "peace-lily"; }),
     "garden photos retain their camera-station metadata", s.frame);
   check(s.frame.people.length === 4 && s.frame.people.every(function (keys) { return keys.indexOf("ali") !== -1 && keys.indexOf("goli") === -1; }),
@@ -101,6 +116,8 @@ if (result) {
   check(s.groupStart.started && s.groupStart.station === "front-left", "group photo moves Aspen home before gathering", s.groupStart);
   check(s.groupShot.station === "front-left" && s.groupShot.people.indexOf("ali") !== -1 && s.groupShot.people.indexOf("goli") !== -1,
     "group-photo keeps Aspen home and bypasses camera-zone filtering", s.groupShot);
+  check(s.djTwo.party && s.djThree.party && s.djThree.winding, "two DJ taps keep the party running and the third starts its attended wind-down", { two: s.djTwo, three: s.djThree });
+  check(!s.mirrorTwo.party && s.mirrorThree.party, "two mirror taps keep the party off and the third starts it", { two: s.mirrorTwo, three: s.mirrorThree });
   check(!result.errs.length, "no runtime errors", result.errs);
 }
 process.exitCode = failures ? 1 : 0;

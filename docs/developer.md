@@ -564,6 +564,7 @@ Run focused tests for the changed surface. Important examples:
 - `tests/chat.js`, `tests/chat-context.js`, `tests/chat-worker.mjs`,
   `tests/safe-actions.js`, and `tests/safe-actions-worker.mjs` for assistant/action boundaries;
 - `tests/performance.js` and `tests/leak.js` for lifecycle regressions;
+- `tests/bar-layout.js` for the calm-night patrons, occupied stools, and hands-on mixer paint order;
 - `tests/album-axis.mjs`, `tests/album-render.mjs`, and `tests/album-ui.js` for photography;
 - `tests/weather.js`, `tests/birthday.js`, and `tests/bbq-days.js` for date/weather gates.
 

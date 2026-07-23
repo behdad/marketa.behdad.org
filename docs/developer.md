@@ -183,6 +183,9 @@ examples. Do not add an uncapped interval-driven SVG/WAAPI emitter.
   in both specificity and source order.
 - SVG children do not reliably honor `touch-action`; delegated, non-passive `touchmove` prevention
   on the strip is the established drag pattern.
+- The garden magic-box date lock keeps wheel selection and answer submission separate. Its engraved
+  date opens the shared in-place phone Calendar; only the full-width submit control compares the
+  selected wheels and starts the unlock sequence.
 - WebKit has additional `foreignObject`, replaced-element, text transform, filter, and opacity
   constraints documented in `CLAUDE.md` and `DEBUGGING.md`. Check those before changing monitor or
   phone composition.

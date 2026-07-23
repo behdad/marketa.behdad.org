@@ -761,8 +761,11 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #garden-boxlock{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .28s ease}
 #garden-boxlock.showing{opacity:1; visibility:visible; pointer-events:auto}
 .boxlock-hit{cursor:pointer}
+.boxlock-date-hit,.boxlock-submit{cursor:pointer}
 .boxlock-drum{transition:transform .16s cubic-bezier(.3,1.45,.6,1)}
 .boxlock-drum.snapping{transition:none} /* the 9→0 wrap: roll onto the clone digit, then jump back with no animation */
+#garden-boxlock-submit.denied{animation:boxlock-submit-denied .32s ease-in-out}
+@keyframes boxlock-submit-denied{0%,100%{opacity:1}50%{opacity:.35}}
 #garden-boxlock-shackle{transform-box:fill-box; transform-origin:100% 100%} /* the right leg's foot — the shackle lifts, then swings open around it */
 #garden-boxlock-shackle.popped{animation:boxlock-shackle-pop .55s cubic-bezier(.2,1.5,.4,1) forwards}
 @keyframes boxlock-shackle-pop{
@@ -773,6 +776,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 @media (prefers-reduced-motion: reduce){
   #garden-boxlock{transition:none}
   .boxlock-drum{transition:none}
+  #garden-boxlock-submit.denied{animation:none}
   #garden-boxlock-shackle.popped{animation:none; transform:translateY(-18px) rotate(24deg)}
 }
 #balcony-ashtray{transform-box:fill-box; transform-origin:center}
@@ -15184,7 +15188,8 @@ section{margin:1.9rem 0}
      so there is no MM-vs-DD ambiguity to trip up a Czech or a Canadian reader. Which month is
      engraved is rolled once per page load (see boxLockMonth) — a returning visitor gets the other
      wedding. Brute force is ~31 spins and that's fine: this is an honest object and a nudge to
-     read the save-the-date, not security. -->
+     read the save-the-date, not security. The engraved date opens the phone Calendar as the clue;
+     the wheels only choose digits, and the single brass bar submits the deliberate answer. -->
 <g id="garden-boxlock">
 <defs>
 <linearGradient id="garden-boxlock-body-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5e4834"/><stop offset="1" stop-color="#31231a"/></linearGradient>
@@ -15201,7 +15206,9 @@ section{margin:1.9rem 0}
 </g>
 <rect id="garden-boxlock-body" x="190" y="88" width="300" height="228" rx="24" fill="url(#garden-boxlock-body-grad)" stroke="#1e140e" stroke-width="2.5"/>
 <rect x="199" y="97" width="282" height="210" rx="18" fill="none" stroke="#7d6144" stroke-width="1.2" opacity="0.55"/>
-<text x="340" y="136" text-anchor="middle" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="31" font-weight="700" letter-spacing="1.5" fill="#e4cd97" opacity="0.92" pointer-events="none">2027-<tspan id="garden-boxlock-month">05</tspan>-</text>
+<text x="340" y="136" text-anchor="middle" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="31" font-weight="700" letter-spacing="1.5" fill="#e4cd97" opacity="0.92" pointer-events="none">2027-<tspan id="garden-boxlock-month">05</tspan>-??</text>
+<line x1="244" y1="145" x2="436" y2="145" stroke="#e4cd97" stroke-width="1.2" stroke-dasharray="3 4" opacity="0.65" pointer-events="none"/>
+<rect id="garden-boxlock-date-hit" class="boxlock-date-hit" x="222" y="103" width="236" height="48" fill="transparent"/>
 <rect x="222" y="160" width="110" height="120" rx="7" fill="#241a12" stroke="#12100c" stroke-width="1.6"/>
 <g clip-path="url(#garden-boxlock-clip-t)"><g id="garden-boxlock-drum-t" class="boxlock-drum">
 <text x="277" y="180" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="46" font-weight="700" fill="#f2e3bd">3</text>
@@ -15238,18 +15245,15 @@ section{margin:1.9rem 0}
 <line x1="222" y1="199" x2="332" y2="199"/><line x1="222" y1="241" x2="332" y2="241"/>
 <line x1="348" y1="199" x2="458" y2="199"/><line x1="348" y1="241" x2="458" y2="241"/>
 </g>
-<!-- knurled thumb tabs: the "push me" affordance. There's no hover on a phone and no focus ring
-     anywhere in the strip (scene items take no tabindex), so the hardware has to say it. -->
-<g pointer-events="none">
-<rect x="228" y="288" width="98" height="18" rx="6" fill="url(#garden-boxlock-brass-grad)" stroke="#6b5028" stroke-width="1"/>
-<rect x="354" y="288" width="98" height="18" rx="6" fill="url(#garden-boxlock-brass-grad)" stroke="#6b5028" stroke-width="1"/>
-<g stroke="#6b5028" stroke-width="1.4" opacity="0.7">
-<line x1="248" y1="291" x2="248" y2="303"/><line x1="264" y1="291" x2="264" y2="303"/><line x1="280" y1="291" x2="280" y2="303"/><line x1="296" y1="291" x2="296" y2="303"/><line x1="312" y1="291" x2="312" y2="303"/>
-<line x1="374" y1="291" x2="374" y2="303"/><line x1="390" y1="291" x2="390" y2="303"/><line x1="406" y1="291" x2="406" y2="303"/><line x1="422" y1="291" x2="422" y2="303"/><line x1="438" y1="291" x2="438" y2="303"/>
+<!-- Wheel taps choose digits. The single brass bar below is a separate, deliberate submit: a
+     correct number never opens merely because a wheel happened to pass through it. -->
+<rect id="garden-boxlock-hit-t" class="boxlock-hit" x="214" y="152" width="126" height="128" fill="transparent"/>
+<rect id="garden-boxlock-hit-u" class="boxlock-hit" x="340" y="152" width="126" height="128" fill="transparent"/>
+<g id="garden-boxlock-submit" class="boxlock-submit">
+<rect x="222" y="286" width="236" height="22" rx="6" fill="url(#garden-boxlock-brass-grad)" stroke="#6b5028" stroke-width="1.2"/>
+<text x="340" y="298" text-anchor="middle" dominant-baseline="central" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="13" font-weight="700" letter-spacing="1" fill="#31231a" pointer-events="none" data-i="boxlock_submit">UNLOCK</text>
+<rect x="214" y="282" width="252" height="32" fill="transparent"/>
 </g>
-</g>
-<rect id="garden-boxlock-hit-t" class="boxlock-hit" x="214" y="152" width="126" height="162" fill="transparent"/>
-<rect id="garden-boxlock-hit-u" class="boxlock-hit" x="340" y="152" width="126" height="162" fill="transparent"/>
 </g>
 
 <!-- ── The godkids' party chase ─────────────────────────────────────────────
@@ -25180,6 +25184,7 @@ var T = {
     boxlock_hint_1: "Two digits. It's the day of one of our weddings — it's in the calendar.",
     boxlock_hint_2_may: "May 1st, 2027. Edmonton. Go on.",
     boxlock_hint_2_jul: "July 10th, 2027. Prague. Go on.",
+    boxlock_submit: "UNLOCK",
     mol_caption: "we’ve got chemistry",
     mol_street_shrooms: "shrooms",
     mol_street_acid: "acid",
@@ -26062,6 +26067,7 @@ var T = {
     boxlock_hint_1: "Dvě číslice. Je to den jedné z našich svateb — je to v kalendáři.",
     boxlock_hint_2_may: "1. května 2027. Edmonton. Do toho.",
     boxlock_hint_2_jul: "10. července 2027. Praha. Do toho.",
+    boxlock_submit: "ODEMKNOUT",
     mol_caption: "máme chemii",
     mol_street_shrooms: "houbičky",
     mol_street_acid: "kyselina",
@@ -61218,8 +61224,9 @@ document.addEventListener("keydown", function (e) {
 // for the puzzle's shape. Everything here is POINTER-driven: scene items take no
 // tabindex/role/aria (tab-nav is disabled strip-wide), so a real <input> or a focusable
 // keypad is off the table. Tap-to-advance is the one gesture that behaves identically on
-// a phone (no hover, big targets) and a desktop, and needs no drag plumbing. There is no
-// submit button: the lock opens the instant the two wheels read the day, like a real one.
+// a phone (no hover, big targets) and a desktop, and needs no drag plumbing. The wheels only
+// choose digits; one full-width brass bar submits the answer so passing through it cannot solve
+// the lock by accident. The engraved partial date opens the phone Calendar as an explicit clue.
 (function () {
   var LOCK_DAY = { 5: [0, 1], 7: [1, 0] }; // May 1 (Edmonton) / July 10 (Prague), as [tens, units]
   var MOD = { t: 4, u: 10 };               // a real date lock's tens wheel only carries 0–3
@@ -61294,14 +61301,31 @@ document.addEventListener("keydown", function (e) {
     if (!p || !p.classList.contains("showing") || !boxLocked) return;
     advance(w);
     playBoxlockDetentSound();
-    var want = LOCK_DAY[boxLockMonth];
-    if (wheels.t === want[0] && wheels.u === want[1]) { unlock(true); return; }
     turns++;
     if (hints < HINT_AT.length && turns >= HINT_AT[hints]) hint(); // counted in turns, not seconds: deterministic, and an idle tab never trips it
   }
   ["t", "u"].forEach(function (w) {
     var hit = document.getElementById("garden-boxlock-hit-" + w);
     if (hit) hit.addEventListener("click", function () { tap(w); });
+  });
+  var submit = document.getElementById("garden-boxlock-submit");
+  if (submit) {
+    submit.addEventListener("animationend", function () { submit.classList.remove("denied"); });
+    submit.addEventListener("click", function () {
+      var p = panel();
+      if (!p || !p.classList.contains("showing") || !boxLocked) return;
+      var want = LOCK_DAY[boxLockMonth];
+      if (wheels.t === want[0] && wheels.u === want[1]) { unlock(true); return; }
+      playBoxlockDetentSound();
+      submit.classList.remove("denied"); void submit.getBoundingClientRect(); submit.classList.add("denied");
+    });
+  }
+  var dateHit = document.getElementById("garden-boxlock-date-hit");
+  if (dateHit) dateHit.addEventListener("click", function () {
+    var p = panel();
+    if (!p || !p.classList.contains("showing") || !boxLocked) return;
+    p.classList.remove("showing");
+    if (window.__openPhoneAppHere) window.__openPhoneAppHere("calendar");
   });
   var dim = document.getElementById("garden-boxlock-dim");
   if (dim) dim.addEventListener("click", function () { var p = panel(); if (p) p.classList.remove("showing"); }); // tap away to put the box down; the wheels keep their positions

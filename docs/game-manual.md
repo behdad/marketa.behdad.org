@@ -481,8 +481,11 @@ state remains visually quiet. `N` selects the next applicable track or scene.
 - **Game of Life and Doom:** Available on the monitor.
 - **Bouquet toss:** A party moment with its own aiming interaction.
 - **Magic box:** The garden's magic box contains a set of optional visual trips.
-  `T` cycles them; `Shift+1` through `Shift+7` selects directly. Some variants are
-  deliberately unavailable through typed actions while the party is active.
+  Its first click opens a two-digit wedding-date lock. The partial date at the top
+  opens the phone Calendar as a clue. Set both day wheels, then press the single
+  `Unlock` bar to check the answer; merely landing on the right digits does not open
+  it. `T` cycles trips and `Shift+1` through `Shift+7` selects directly. Some variants
+  are deliberately unavailable through typed actions while the party is active.
 
 ## Calendar, special days, weather, and sky
 

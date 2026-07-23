@@ -8,6 +8,10 @@ The first playthrough does not require a keyboard, a command console, or prior
 knowledge of adventure games. Follow the instruction line, click objects that
 look useful, and keep wandering.
 
+When a saved session is available, the opening screen asks whether to continue
+or start over. Gameplay shortcuts remain disabled until that choice is made;
+use the buttons, arrow keys, `Enter`, or `Space` to choose.
+
 ## Quick start
 
 1. Click or tap the game once to begin. In installed-app or game-only mode, this

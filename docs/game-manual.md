@@ -291,7 +291,7 @@ The current phone apps are:
 
 | App | What it contains |
 | --- | --- |
-| **Call** | Calls to Tehran, California, Prague, and Lübeck; Madla is an incoming-call contact |
+| **Call** | Calls to Tehran, California, Prague, and Lübeck; Madla is an incoming-call contact available only in phase 2 while the party is off |
 | **Messages** | Wedding crew thread, search, unread filter, composer, replies, reactions, and explicit message actions |
 | **Mail** | Authored inbox messages plus compose and reply through the device's email client |
 | **Calendar** | Wedding events, calendar export, Google Calendar links, date/time controls, and search |

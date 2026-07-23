@@ -41614,7 +41614,7 @@ var ABANDONED_CALL_MS = 30000;
     phone: "phone(true) — bring up the pocket phone; phone(false) puts it away; phone() reports whether it's up. phone(\"cocktails\")/phone(\"weather\") open that phone app (skips the lockscreen); a bad name lists them",
     album: "album() — open the pocket-phone wedding album: Aspen's captured party polaroids, newest first. she snaps one every photo-moment (the ~15s freeze) and whenever you tap her at the garden party; each is an intimate portrait — the couple + one guest (or a guest couple). She also works the OTHER rooms during the party (see snap()), and those cards show that room and exactly who was in it. album() also echoes the photo count",
     snap: "snap() — Aspen photographs the room you're in RIGHT NOW: she lifts the camera, the flash pops, the shutter goes, and a keepsake of exactly whoever is in that room lands in your phone album — on that room's own backdrop. snap(\"office\")/snap(\"kitchen\")/snap(\"cuddly\")/snap(\"balcony\")/snap(\"garden\") heads there first so you can watch her take it. Lights the party if it's dark (she only works the party). She takes these on her own rounds too, every ~26-44s, in whichever room you're standing in",
-    madla: "madla() — Markéta's sister (a doctor in Germany, bored on a night shift) rings your phone: a pulsing call card drops top-centre for 15s (tap to answer → pan to the cuddly room, then the video call; ignore it to miss the call). madla(true) answers straight away. she's incoming-only — you can't dial her back",
+    madla: "madla() — after phase 2, while the party is off, Markéta's sister (a doctor in Germany, bored on a night shift) rings your phone: a pulsing call card drops top-centre for 15s (tap to answer → pan to the cuddly room, then the video call; ignore it to miss the call). madla(true) answers straight away under the same gate. she's incoming-only — you can't dial her back",
     saturday: "saturday() — Markéta's parents ring from Prague for the standing Saturday call: the same call card, tap to answer (or the × to let it go). saturday(true) answers straight away. left alone it comes on its own, once per Saturday in the loft, between 08:00 and 14:00 here — their Saturday evening; date(\"YYYY-MM-DD\") a Saturday and clock(9) to see it",
     sound: [
       "sound(\"id\"[, …args]) — play a loft sound effect by id, e.g. sound(\"gong\"). sound() lists every id; sound(\"prefix\") lists the ids starting with that prefix — try sound(\"cat\") · sound(\"phone\").",
@@ -54438,14 +54438,20 @@ async def localfont(name):
     function answerRing() {
       var who = callRingWho;
       hideCallRing();
+      if (who === "madla" && !madlaAvailable()) return false;
       if (callee || anyExternalCall()) return; // a call already up (raced the ring) → let it be
       if (window.goToStage) window.goToStage("cuddly"); // pan to the cuddly room first, then the phone
       setTimeout(function () {
         if (window.__openPhoneModal) window.__openPhoneModal(true); // launcher, skip the lockscreen (this is a live incoming call, not a cold open)
         openIncall(who);
       }, 620); // let the room slide settle before the phone overlays it
+      return true;
     }
-    function answerMadla() { callRingWho = "madla"; answerRing(); }
+    function answerMadla() {
+      if (!madlaAvailable()) { if (callRingWho === "madla") hideCallRing(); return false; }
+      callRingWho = "madla";
+      return answerRing();
+    }
     function answerPrague() { callRingWho = "prague"; answerRing(); }
     function showCallRing(who) {
       callRingWho = RING_CALLERS[who] ? who : "madla";
@@ -54494,19 +54500,22 @@ async def localfont(name):
       showCallRing(who);
       return callRingUp();
     }
-    function ringMadla() { return ringCall("madla"); }
+    function madlaAvailable() {
+      return !!window.__secondRound && !window.__gardenPartyOn;
+    }
+    function ringMadla() { return madlaAvailable() && ringCall("madla"); }
+    window.__madlaAvailable = madlaAvailable;
     window.__madlaRing = ringMadla;   // console/test hook: fire the incoming ring on demand
     window.__answerMadla = answerMadla; // test hook: answer as if the ring were tapped
     window.__pragueRing = function () { return ringCall("prague"); };
     window.__answerPrague = answerPrague;
-    // Poking the cuddly outlet "schedules" Madla on demand, including during the party.
-    // The random daytime schedule below owns the party gate; this explicit trigger does not.
-    // Ignored only if a call/ring is already up or the phone is otherwise busy.
+    // Poking the cuddly outlet schedules Madla on demand, but shares the same phase-two +
+    // party-off gate as every other Madla entry point.
     window.__madlaFromOutlet = function () {
       return ringMadla();
     };
     // ── daytime schedule ── a single self-rescheduling timer that RARELY fires Madla's incoming
-    // ring during attended daytime play (day, no party, visible+focused, not cinematic, no call
+    // ring during attended phase-two daytime play (day, no party, visible+focused, not cinematic, no call
     // already up). Kept to a single timer (no pile-up); armed at load and re-armed on the phone
     // reset (like the day drip). She's a night-shift doctor in Germany calling into a Canadian
     // afternoon — so it lands only while it's DAY here. It also waits for the player to actually
@@ -54518,7 +54527,7 @@ async def localfont(name):
       if (madlaTimer) return;
       madlaTimer = setTimeout(function () {
         madlaTimer = null;
-        if (isDayNow() && playerStarted() && !window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic && !callee && !anyExternalCall() && !isOpen() && !callRingUp() && autonomousMsgOk()) {
+        if (isDayNow() && playerStarted() && madlaAvailable() && !document.hidden && document.hasFocus() && !window.__cinematic && !callee && !anyExternalCall() && !isOpen() && !callRingUp() && autonomousMsgOk()) {
           ringMadla();
         }
         scheduleMadla(); // keep polling — she calls again another day (another window) if this one's skipped
@@ -82322,8 +82331,9 @@ function spawnDustMote(container) {
   // hook just triggers the incoming ring the way the daytime schedule does. madla(true) answers
   // straight away (pan to the cuddly room + open into the connecting call); a bare madla() rings.
   window.madla = function (arg) {
+    if (!(window.__madlaAvailable && window.__madlaAvailable())) return "📞 Madla only calls during phase 2 while the party is off.";
     if (arg === true) {
-      if (window.__answerMadla) { window.__answerMadla(); return "📞 answering Madla — her night-shift call from Germany."; }
+      if (window.__answerMadla && window.__answerMadla()) return "📞 answering Madla — her night-shift call from Germany.";
       return "the call hook isn't ready yet.";
     }
     if (window.__madlaRing && window.__madlaRing()) return "📞 Madla's calling — that's her ringing top-centre. Tap to answer (or ignore for 15s to miss it).";

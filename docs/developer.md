@@ -362,6 +362,11 @@ photobooth output, and similar state. Kill, uninstall, or full reset must clear 
 retained state. Adding an app therefore requires an open path, a teardown path, Back semantics,
 context-menu behavior, and reset coverage.
 
+Madla's incoming call has one availability boundary, `__madlaAvailable()`: phase 2 must be latched
+and the party must be off. The random scheduler, cuddly outlet, console command, typed action, and
+answer hook all route through `__madlaRing`/`__answerMadla`, so no entry point may reproduce or
+bypass that condition.
+
 ## Dates, calendar, weather, and time
 
 `window.__now()` is the canonical calendar-date source for date-driven presentation. `?date=` (and

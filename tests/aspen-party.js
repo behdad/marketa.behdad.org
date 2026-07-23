@@ -20,9 +20,8 @@ check(/14000 \+ Math\.random\(\) \* 10000/.test(html) && /22000 \+ Math\.random\
 check(!/window\.__moveGardenPhotographer\s*=/.test(html), "movement does not expand the public scripting API");
 check(!/nameTip\("garden-(?:photog-hit|dj-a|dj-b)"/.test(html),
   "Aspen and DJ scene controls have no competing bio-card listeners");
-check(/class="photog-cover cover-potstand" href="#garden-potstand-planter"/.test(html) &&
-      !/class="photog-cover cover-potstand" href="#garden-potstand-lift"/.test(html),
-  "pot-stand hiding station repaints planter foliage without foreground tripod legs");
+check(!/garden-photographer-cover|class="photog-cover/.test(html),
+  "Aspen stays foregrounded without duplicated plant-cover subtrees");
 
 var harness = String.raw`<script>
 (function () {

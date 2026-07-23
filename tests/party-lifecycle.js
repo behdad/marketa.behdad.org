@@ -14,8 +14,14 @@ var harness = String.raw`<script>
   var focused = true;
   document.hasFocus = function () { return focused; };
 
+  var patrons = document.getElementById("kitchen-bar-patrons");
+  if (patrons) patrons.style.setProperty("transition", "none", "important");
+  if (window.__setDayNight) window.__setDayNight(false);
+  check("the unnamed regulars stay out of the daytime kitchen", patrons && getComputedStyle(patrons).opacity === "0");
   if (window.__setDayNight) window.__setDayNight(true);
+  check("the unnamed regulars appear in the calm night bar", patrons && getComputedStyle(patrons).opacity === "1");
   if (window.__setGardenParty) window.__setGardenParty(true, false);
+  check("the unnamed regulars leave when the night bar becomes a party", patrons && getComputedStyle(patrons).opacity === "0");
   check("party starts a fresh lifecycle", window.__partyLifecycleState && window.__partyLifecycleState().attended === 0 && window.__partyLifecycleState().running);
 
   focused = false;
@@ -37,6 +43,7 @@ var harness = String.raw`<script>
   if (window.goToStage) window.goToStage("kitchen");
   window.__advancePartyLifecycle(1);
   check("party ends automatically at 180 attended seconds", !window.__gardenPartyOn && window.__captionKey() === "party_ended" && /not the game/i.test(document.getElementById("hunt-caption").textContent));
+  check("the unnamed regulars return to the calm night bar after the party", patrons && getComputedStyle(patrons).opacity === "1");
 
   if (window.__setPartyMode) window.__setPartyMode(true, true);
   if (finaleId && window.__runMsgAction) window.__runMsgAction(finaleId);

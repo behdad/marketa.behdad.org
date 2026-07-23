@@ -319,6 +319,20 @@ view gets the first chance to step back, then the app closes to the desktop. A n
 retain app session state; the context-menu Kill path calls `resetMonitorAppState` and must clear it.
 Screensaver and expensive canvas/DOM loops are gated while an app owns the screen.
 
+The shared frame-health sampler exposes `__frameHealthState()` and marks sustained
+low delivery with `html.frame-rate-low`. It samples only while the document is
+visible and focused, requires two 1.2-second windows below 22 FPS to enter slow
+mode, and three windows at or above 42 FPS to recover. The desk-zoom controller
+uses that signal to snap its scaled-SVG transform while leaving room pans alone.
+The garden disco pools use the same state: healthy delivery runs their continuous
+CSS sweep, while low-frame mode replaces it with the existing roughly one-second
+JS position stepper. Asymmetric thresholds plus consecutive sampling windows keep
+the cost change itself from flapping the mode. The garden mask's rapid-click
+counter calls idempotent `__openDropTerm()` on its third click, giving touch-only
+devices access to the console FPS meter without making a double-click alter party
+state. `tests/performance.js` drives the sampler through `__frameHealthFeed(fps)` to
+verify both hysteresis directions without relying on headless timing.
+
 ### Pocket phone
 
 The phone is a lazily built HTML modal with launcher, app, and in-call screens. Search for

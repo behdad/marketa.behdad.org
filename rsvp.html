@@ -1091,20 +1091,16 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #garden-disco-ball{opacity:0; transition:opacity .6s ease}
 #stage-garden.garden-party #garden-disco-ball,
 #stage-garden.disco-peek #garden-disco-ball{opacity:1}
-/* roving colored light pools — screen-blended so they wash light over the room. DESKTOP keeps
-   the smooth continuous CSS sweep (below). MOBILE (<760px) instead drives position/opacity from
-   a JS STEPPER (see startDiscoStepper) that JUMPS each pool to a fresh spot ~once a second
-   (discrete, no transition): the continuous sweep repaints these big blended ellipses every
-   frame and visibly FLICKERS on mobile, so there the once-a-second hop reads as a beat-synced
-   rig with none of the flicker. The ellipses position via cx/cy (no transform attribute), so the
-   inline style.transform the stepper writes never clobbers one. */
+/* roving colored light pools — screen-blended so they wash light over the room. Healthy frame
+   delivery keeps the smooth continuous CSS sweep. Low-frame mode instead drives position/opacity
+   from a JS STEPPER (see startDiscoStepper) that JUMPS each pool to a fresh spot ~once a second
+   (discrete, no transition), avoiding a full blended repaint every frame. The ellipses position
+   via cx/cy (no transform attribute), so the inline transform never clobbers one. */
 .disco-pool{mix-blend-mode:screen; opacity:0; transform-box:fill-box; transform-origin:center}
-@media (hover: hover) and (pointer: fine){ /* real mouse (desktop): the original smooth sweep. Touch/coarse-pointer devices (phones, tablets — incl. landscape ≥760px) fall to the JS stepper, which is the one that doesn't flicker on mobile GPUs */
-  #stage-garden.garden-party .disco-pool{animation:disco-pool-sweep 7s ease-in-out infinite}
-  #stage-garden.garden-party .disco-pool.dp2{animation-duration:9s; animation-delay:-2.4s}
-  #stage-garden.garden-party .disco-pool.dp3{animation-duration:8s; animation-delay:-4.8s}
-  #stage-garden.garden-party .disco-pool.dp4{animation-duration:10s; animation-delay:-6.6s}
-}
+html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool{animation:disco-pool-sweep 7s ease-in-out infinite}
+html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp2{animation-duration:9s; animation-delay:-2.4s}
+html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp3{animation-duration:8s; animation-delay:-4.8s}
+html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-duration:10s; animation-delay:-6.6s}
 @keyframes disco-pool-sweep{
   0%{opacity:0; transform:translate(-46px,-14px) scale(0.8)}
   25%{opacity:.5}
@@ -42193,6 +42189,7 @@ var ABANDONED_CALL_MS = 30000;
     if (dtIn) dtIn.value = "";
     closeDropTerm();
   };
+  window.__openDropTerm = openDropTerm;       // idempotent scene/mobile entry points
   window.__toggleDropTerm = toggleDropTerm;   // the backtick key calls this
   window.__closeDropTerm = closeDropTerm;     // Esc / other closers
   window.__dropTermOpen = dtOpen;
@@ -48315,6 +48312,71 @@ async def localfont(name):
     paint();
   });
 })();
+// ── FRAME HEALTH ── Rendering cost depends more on the live scene, viewport pixels and
+// browser than on the input device. Sample delivered animation frames in broad windows,
+// with asymmetric hysteresis: sustained poor delivery opts expensive transitions out
+// quickly, while recovery must remain healthy long enough to avoid mode-flapping.
+(function () {
+  var SAMPLE_MS = 1200, LOW_FPS = 22, RECOVER_FPS = 42;
+  var LOW_WINDOWS = 2, RECOVER_WINDOWS = 3;
+  var raf = 0, started = 0, frames = 0, lowWindows = 0, recoverWindows = 0;
+  var slow = false, fps = null;
+  function usable() {
+    return !document.hidden && (!document.hasFocus || document.hasFocus());
+  }
+  function publish(next) {
+    if (slow === next) return;
+    slow = next;
+    document.documentElement.classList.toggle("frame-rate-low", slow);
+    window.dispatchEvent(new CustomEvent("framehealthchange", { detail: state() }));
+  }
+  function evaluate(value) {
+    fps = Math.max(0, Number(value) || 0);
+    if (fps < LOW_FPS) {
+      lowWindows++;
+      recoverWindows = 0;
+      if (lowWindows >= LOW_WINDOWS) publish(true);
+    } else if (fps >= RECOVER_FPS) {
+      recoverWindows++;
+      lowWindows = 0;
+      if (recoverWindows >= RECOVER_WINDOWS) publish(false);
+    } else {
+      lowWindows = 0;
+      recoverWindows = 0;
+    }
+    return state();
+  }
+  function state() {
+    return { slow: slow, fps: fps, lowWindows: lowWindows, recoverWindows: recoverWindows };
+  }
+  function resetWindow() { started = 0; frames = 0; }
+  function sample(now) {
+    if (!usable()) {
+      resetWindow();
+    } else {
+      if (!started) started = now;
+      frames++;
+      var elapsed = now - started;
+      if (elapsed >= SAMPLE_MS) {
+        evaluate(frames * 1000 / elapsed);
+        started = now;
+        frames = 0;
+      }
+    }
+    raf = requestAnimationFrame(sample);
+  }
+  function restart() {
+    resetWindow();
+    if (!raf && window.requestAnimationFrame) raf = requestAnimationFrame(sample);
+  }
+  document.addEventListener("visibilitychange", restart);
+  window.addEventListener("focus", restart);
+  window.addEventListener("blur", resetWindow);
+  window.__frameHealthState = state;
+  window.__frameHealthSlow = function () { return slow; };
+  window.__frameHealthFeed = evaluate; // deterministic performance regression tests
+  restart();
+})();
 // ── DESK ZOOM ── while an office device holds attention, the room view glides up to
 // it: the MONITOR (engaged by the PC booting or tapping the lit screen) and the LAPTOP
 // (engaged by tapping it — the Prague call happens zoomed). Released by tapping anywhere
@@ -48331,9 +48393,10 @@ async def localfont(name):
   if (!strip || !vp || !monitor) return;
   var zoomEl = null; // the device the view is zoomed onto (null = zoomed out)
   var lastZoomPose = "", refitRaf = 0, refitRetryTimer = null, zoomOutTimer = null;
-  // Android flickers horrendously while animating the big scaled-SVG transform, so on a
-  // device with any coarse pointer (touch) the zoom SNAPS instead of gliding.
-  var coarseZoom = !!(window.matchMedia && window.matchMedia("(any-pointer: coarse)").matches);
+  var reducedMotion = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+  function snapZoom() {
+    return !!((window.__frameHealthSlow && window.__frameHealthSlow()) || (reducedMotion && reducedMotion.matches));
+  }
   // box = the invisible screen-sized rect the zoom frames (the device groups' own
   // bboxes include stands/keyboards, which pulled the view down and out — the owner's
   // "not zoomed enough, not centered"); laptop zoom is lid-driven: only while open
@@ -48359,11 +48422,12 @@ async def localfont(name):
     var transform = "translate(" + (v.width / 2 - tx) + "px, " + (v.height / 2 - ty) + "px) scale(" + s + ")";
     var pose = origin + "|" + transform;
     if (pose === lastZoomPose && strip.style.transformOrigin === origin && strip.style.transform === transform) return false;
-    if (coarseZoom) strip.style.transition = "none"; // snap on touch — no animated repaint to flicker
+    var snap = snapZoom();
+    if (snap) strip.style.transition = "none"; // skip the large scaled-SVG repaint when frames are already struggling
     strip.style.transformOrigin = origin;
     strip.style.transform = transform;
     lastZoomPose = pose;
-    if (coarseZoom) { strip.getBoundingClientRect(); strip.style.transition = ""; } // reflow commits the snap, then restore the glide for room slides
+    if (snap) { strip.getBoundingClientRect(); strip.style.transition = ""; } // commit the snap, then restore the glide for room slides
     return true;
   }
   function zoomIn(el) {
@@ -48386,7 +48450,7 @@ async def localfont(name):
     zoomEl = null;
     lastZoomPose = "";
     vp.classList.remove("device-zoomed");
-    if (coarseZoom) { // touch: snap straight back to the room view, no glide (Android flicker)
+    if (snapZoom()) { // low frame delivery: snap straight back to the room view, no expensive scaled-SVG glide
       strip.style.transition = "none";
       strip.style.transformOrigin = "";
       strip.style.transform = "translateX(-" + ((window.currentStageIndex || 0) * 20) + "%)";
@@ -48461,6 +48525,15 @@ async def localfont(name):
   window.addEventListener("resize", function () { scheduleRefitZoom(false); });
   document.addEventListener("fullscreenchange", function () { scheduleRefitZoom(true); });
   document.addEventListener("webkitfullscreenchange", function () { scheduleRefitZoom(true); });
+  window.addEventListener("framehealthchange", function (e) {
+    if (!zoomEl || !e.detail || !e.detail.slow) return;
+    // If performance collapses during the glide, commit its already-authored end pose
+    // immediately instead of spending the rest of the transition repainting it.
+    var prevT = strip.style.transition;
+    strip.style.transition = "none";
+    void strip.offsetWidth;
+    strip.style.transition = prevT;
+  });
   window.__refitZoom = refitZoom;
   window.__prepareRoomPan = prepareRoomPan;
   window.__monitorZoomIn = function () { zoomIn(monitor); };
@@ -57909,15 +57982,24 @@ async def localfont(name):
   }
   var mask = document.getElementById("garden-mask");
   function hearts() { spawnHearts(strip, 1260, 92); playHeartsSound("garden-mask"); } // hearts rise from the mask
-  // Two hidden party TOGGLES: the mirror and the mask. A single click makes them SHINE (an
-  // invitation to click again — the mirror already glares; the mask gleams here); a DOUBLE-click
-  // toggles the garden party on/off (the DJ's head double-click and tapping the lit disco ball
-  // stop it too). Garden-only, no whole-loft UV blacklight (that stays exclusive to the balcony
-  // switch). Stop routes through __setPartyMode so however the party was lit — here OR the
-  // switch — it tears down cleanly.
+  // The mirror keeps the hidden party toggle. The mask is the touch-friendly console door:
+  // three rapid clicks open (never close) the drop-down terminal so its FPS meter is available
+  // without a hardware keyboard. Count ourselves because synthesized touch clicks do not
+  // consistently increment MouseEvent.detail across browsers.
   function toggleGardenParty() {
     if (window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(false); }
     else if (window.__setGardenParty) window.__setGardenParty(true, true);
+  }
+  var maskClickCount = 0, maskLastClick = 0;
+  function clickMask() {
+    var now = Date.now();
+    maskClickCount = now - maskLastClick <= 650 ? maskClickCount + 1 : 1;
+    maskLastClick = now;
+    hearts();
+    shineMask();
+    if (maskClickCount < 3) return;
+    maskClickCount = 0;
+    if (window.__openDropTerm) window.__openDropTerm();
   }
   var maskFace = document.getElementById("garden-mask-face");
   function shineMask() { // re-triggerable one-shot glow on the ceramic face (filter, so it never clobbers the bob's transform)
@@ -57927,8 +58009,7 @@ async def localfont(name):
   }
   if (maskFace) maskFace.addEventListener("animationend", function (e) { if (e.animationName === "mask-shine") maskFace.classList.remove("mask-shine"); });
   if (mask) {
-    mask.addEventListener("click", function () { hearts(); shineMask(); });
-    mask.addEventListener("dblclick", toggleGardenParty);
+    mask.addEventListener("click", clickMask);
     mask.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); hearts(); shineMask(); }
     });
@@ -70391,11 +70472,11 @@ function spawnDustMote(container) {
     window.groupphoto = function (arg) { return stageAndRun(function () { return startGroupPhoto(); }, "📸 everyone gathers, Aspen fires the flash — the group photo's in your album.", "the floor's dark — run party(true) first.", endGroupPhoto, arg); };
     window.sparklers = function (arg) { return stageAndRun(function () { return startSparklers(); }, "✨ the guests raise sparklers into a tunnel — the couple stand through it.", "the floor's dark — run party(true) first.", endSparklers, arg); };
   })();
-  // ── PARTY MODE disco pools (garden) — STEPPED, not tweened. A continuous CSS/WAAPI sweep
-  // of these big screen-blended ellipses repaints every frame and visibly FLICKERED on
-  // mobile. Instead ONE self-rescheduling stepper JUMPS each pool to a fresh spot ~once a
-  // second (discrete, no transition), which reads as a beat-synced lighting rig without the
-  // per-frame repaint. Same background-safety idiom as the confetti/rain seed loops: one
+  // ── PARTY MODE disco pools (garden) — low frame delivery uses discrete steps. A continuous
+  // sweep of these big screen-blended ellipses repaints every frame. When frame health drops,
+  // ONE self-rescheduling stepper JUMPS each pool to a fresh spot about once a second, which
+  // reads as a beat-synced lighting rig without the per-frame repaint. Same background-safety
+  // idiom as the confetti/rain seed loops: one
   // timer, started on party-on and cleared on party-off (idempotent under play.js's
   // storm-clicks), that only repositions while gardenPartyActive() — party lit, in the
   // garden, tab visible, motion allowed — so a hidden tab or reduced-motion holds still
@@ -70425,7 +70506,7 @@ function spawnDustMote(container) {
       pools[i].style.transition = ""; pools[i].style.transform = ""; pools[i].style.opacity = "";
     }
   }
-  function discoPoolsStepped() { return !(window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches); } // step on touch/coarse-pointer devices (phones/tablets, incl. landscape); a real mouse keeps the CSS sweep
+  function discoPoolsStepped() { return !!(window.__frameHealthSlow && window.__frameHealthSlow()); }
   function stepDiscoPools() {
     discoStepTimer = null;
     if (!window.__gardenPartyOn) return; // party ended — stop, don't reschedule
@@ -70439,13 +70520,11 @@ function spawnDustMote(container) {
     if (gardenPartyActive()) positionDiscoPools(); // light them at once (skipped under reduced-motion → CSS wash holds)
     discoStepTimer = setTimeout(stepDiscoPools, 900 + Math.random() * 220);
   }
-  if (window.matchMedia) { // if the device's pointer capability changes (rare), swap stepper ↔ CSS sweep
-    window.matchMedia("(hover: hover) and (pointer: fine)").addEventListener("change", function () {
-      if (!window.__gardenPartyOn) return;
-      stopDiscoStepper();  // clears inline styles (mouse → CSS sweep resumes) + stops any timer
-      startDiscoStepper(); // touch → restart the stepper; mouse → no-op
-    });
-  }
+  window.addEventListener("framehealthchange", function () {
+    if (!window.__gardenPartyOn) return;
+    stopDiscoStepper();  // clear the old mode's inline pose/timer
+    startDiscoStepper(); // low FPS starts steps; recovered FPS hands back to CSS
+  });
   function stopDiscoStepper() {
     if (discoStepTimer) { clearTimeout(discoStepTimer); discoStepTimer = null; }
     clearDiscoPools();

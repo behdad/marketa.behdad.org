@@ -99,6 +99,16 @@ from an app to the desktop, or from a zoomed computer to the room. When typing,
 the first `Escape` generally removes focus and preserves an unsent draft rather
 than closing the whole app.
 
+Monitor and laptop zoom normally glide between the room and screen. If the game
+detects sustained low frame delivery, device zoom snaps instead so the large
+scaled scene does not flicker through an expensive transition. It restores the
+glide only after frame delivery has remained healthy.
+
+Triple-click or triple-tap the ceramic mask in the garden to open the drop-down
+console on a device without a hardware keyboard. The console's top corner shows
+the current rendered FPS. Double-clicking the mask does not start or stop the
+party.
+
 `F` toggles fullscreen, except when the Video app owns that key for its player. If
 opening an external tab causes the browser to leave fullscreen, the first click
 after returning to the game restores fullscreen. An intentional fullscreen exit

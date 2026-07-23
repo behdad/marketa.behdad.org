@@ -27,6 +27,7 @@ var harness = String.raw`<script>
 (function () {
   var report = { errs: window.__errs, steps: {} };
   function click(el) { el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })); }
+  function dblclick(el) { el.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true })); }
   window.goToStage("garden");
   window.__setGardenParty(true, false);
   if (window.__summonGuests) window.__summonGuests();
@@ -52,6 +53,14 @@ var harness = String.raw`<script>
     picker: document.getElementById("garden-djpicker").classList.contains("open"),
     pickerRight: djPanelBg ? (+djPanelBg.getAttribute("x") + +djPanelBg.getAttribute("width")) : null,
     who: who
+  };
+  var danceBeforeDouble = window.__partyDance;
+  dblclick(dj);
+  report.steps.djDouble = {
+    before: danceBeforeDouble,
+    after: window.__partyDance,
+    picker: document.getElementById("garden-djpicker").classList.contains("open"),
+    party: !!window.__gardenPartyOn
   };
   if (window.__closeDjPicker) window.__closeDjPicker();
 
@@ -109,6 +118,7 @@ if (result) {
   check(s.body.station === "potstand" && s.body.photos === 1 && s.body.who === 0,
     "body click takes exactly one photo without a bio popup", s.body);
   check(s.dj.picker && s.dj.pickerRight < 560 && s.dj.who === 0, "DJ head opens its picker fully left of the booth without a bio popup", s.dj);
+  check(s.djDouble.before !== s.djDouble.after && !s.djDouble.picker && s.djDouble.party, "double-clicking the DJ advances the song and closes the picker without ending the party", s.djDouble);
   check(s.frame.station === "peace-lily" && s.frame.stationMeta.every(function (id) { return id === "peace-lily"; }),
     "garden photos retain their camera-station metadata", s.frame);
   check(s.frame.people.length === 4 && s.frame.people.every(function (keys) { return keys.indexOf("ali") !== -1 && keys.indexOf("goli") === -1; }),

@@ -409,6 +409,23 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   position:absolute; left:-16px; top:-16px; width:32px; height:32px; border-radius:50%;
   border:2px solid var(--wine); box-sizing:border-box; pointer-events:none; z-index:7; opacity:0;
 }
+/* Trailer playback is an authored reel, not a second navigation mode. Keep the frame's
+   fullscreen and audio controls available, but quiet the room controls so a stray tap cannot
+   pan away from the current shot. visibility preserves the frame geometry. Captions get one
+   restrained cut-in; reduced-motion keeps the same words with no movement. */
+#hunt-fullscreen-area.cinematic-running .hunt-nav,
+#hunt-fullscreen-area.cinematic-running #hunt-dots,
+#hunt-fullscreen-area.cinematic-running #hunt-restart-btn,
+#hunt-fullscreen-area.cinematic-running .roster-toggle{
+  visibility:hidden; pointer-events:none;
+}
+#hunt-caption.cine-caption{color:var(--ink)}
+#hunt-caption.cine-caption-in{animation:cine-caption-in .42s ease-out both}
+@keyframes cine-caption-in{
+  from{opacity:.25; transform:translateY(4px)}
+  to{opacity:1; transform:translateY(0)}
+}
+@media (prefers-reduced-motion: reduce){#hunt-caption.cine-caption-in{animation:none}}
 /* the cross-room song volume control, second in the side stack below the fullscreen
    button -- hidden (display:none, so it reserves no empty slot before then) until a song's
    actually played once, same as save-the-dates.html's loft volume button. Cycles the SAME
@@ -25135,17 +25152,17 @@ var T = {
       cine_flairgame: "Catch the garnishes — mind the wasp!",
       cine_dance: "…and the beat rolls on.",
       cine_encore_end: "And that's their day. Again tomorrow…",
-      // ── Trailer reel (the ▷ Trailer 1-minute guided tour) ──
-      cine_kitchen_night: "…and the loft glows at night.",
-      cine_guests: "Guests arrive, and the floor fills…",
-      cine_whoswho: "Everyone who's here…",
-      cine_spotlight: "…a spotlight for a friend.",
-      cine_album: "Aspen catches it for the album.",
-      cine_season: "The seasons turn over the party…",
-      cine_firstdance: "…and the first dance.",
-      cine_monitor: "At the desk — a note in the inbox.",
-      cine_aurora: "Dusk. The northern lights come out…",
-      cine_couple: "markéta &amp; behdad. See you there."
+      // ── Trailer reel: texture and atmosphere, never puzzle/finale solutions ──
+      cine_open: "Before the doors open, the loft hums quietly.",
+      cine_details: "Every room keeps a small surprise.",
+      cine_garden_texture: "Plants, strings, and just enough mischief.",
+      cine_room_rhythm: "Then the room finds its rhythm.",
+      cine_arrivals: "Soon, it is full of familiar faces.",
+      cine_quiet_corner: "There are quieter corners, too.",
+      cine_desk_play: "Work can wait. The desk has other ideas.",
+      cine_evening: "By evening, the city slows down.",
+      cine_invite: "Two cities. Two dates. Come for one, or both.",
+      cine_signoff: "markéta &amp; behdad. See you there."
     },
     ed_city: "Edmonton",
     ed_date1: "Sat, May 1 · 4pm–4am",
@@ -26020,17 +26037,17 @@ var T = {
       cine_flairgame: "Chytej ozdoby — pozor na vosu!",
       cine_dance: "…a rytmus jede dál.",
       cine_encore_end: "A to je jejich den. Zítra zas…",
-      // ── Trailer reel (the ▷ Trailer 1-minute guided tour) ──
-      cine_kitchen_night: "…a loft se v noci rozzáří.",
-      cine_guests: "Přicházejí hosté a parket se plní…",
-      cine_whoswho: "Všichni, kdo tu jsou…",
-      cine_spotlight: "…reflektor pro kamaráda.",
-      cine_album: "Aspen to zachytí do alba.",
-      cine_season: "Nad večírkem se střídají roční období…",
-      cine_firstdance: "…a první tanec.",
-      cine_monitor: "U stolu — vzkaz ve schránce.",
-      cine_aurora: "Soumrak. Vychází polární záře…",
-      cine_couple: "markéta &amp; behdad. Uvidíme se tam."
+      // ── Trailer: atmosféra a drobnosti, nikdy řešení hádanek ani finále ──
+      cine_open: "Než se otevřou dveře, loft si tiše pobrukuje.",
+      cine_details: "Každý pokoj skrývá malé překvapení.",
+      cine_garden_texture: "Kytky, struny a špetka neplechy.",
+      cine_room_rhythm: "A pak pokoj najde svůj rytmus.",
+      cine_arrivals: "Za chvíli je plný známých tváří.",
+      cine_quiet_corner: "Jsou tu i tišší kouty.",
+      cine_desk_play: "Práce počká. Stůl má jiné nápady.",
+      cine_evening: "K večeru město zpomalí.",
+      cine_invite: "Dvě města. Dvě data. Přijeďte na jedno, nebo na obě.",
+      cine_signoff: "markéta &amp; behdad. Uvidíme se tam."
     },
     ed_city: "Edmonton",
     ed_date1: "So 1. května · 16–4 h",
@@ -66946,7 +66963,10 @@ function spawnDustMote(container) {
     if (window.__updateGardenGuests) window.__updateGardenGuests(); // leaving the garden drops Ali + Goli; returning mid-party shows them already-arrived (no re-slide)
     if (name !== "kitchen" && window.__hideCocktailToast) window.__hideCocktailToast(); // the cocktail toast belongs to the kitchen bar — never let a still-showing one ride into the next room
     if (name !== "balcony" && window.__stopBalconySky) window.__stopBalconySky(); // leaving the deck tears down any fireworks finale / wish-lanterns in flight
-    if (name === "balcony") triggerBalconyFinale();
+    // Trailer visits the balcony as an atmospheric shot, not as the player's first arrival:
+    // do not arm its rain/rainbow/RSVP timers or burn the one-time finale flag. A later real
+    // entry still receives the complete finale. Autoplay is ordinary game state and keeps it.
+    if (name === "balcony" && !window.__cinematic) triggerBalconyFinale();
     if (window.__updateSkyFireworks) window.__updateSkyFireworks(name); // wedding-day sky (balcony/garden), else stops
   }
   window.goToStage = goToStage;
@@ -76424,25 +76444,19 @@ function spawnDustMote(container) {
     });
   }
 
-  // ── "Day in the Loft" cinematic ──────────────────────────────────────────
-  // A hands-off autoplay: a leisurely, whimsy-rich walkthrough of all five rooms as
-  // the day turns to night into the built-in balcony finale, then an encore — the
-  // record flips to another song, the blacklight comes on, and the show
-  // wanders the loft once more before the extinguisher resets it to a fresh morning.
-  // Sequential cancellable timeline: pacing gaps are wall-clock beats, but every real
-  // solve gate (the espresso warm-up, grind/tamp/brew, the Prague call connecting and
-  // dropping, the PC boot) is a waitFor() poll against the game's own state, so the
-  // show can never outrun the handlers it drives. Every timer — beats and poll ticks
-  // alike — lands in cinematicTimers, so cancel = clear them all (the finaleTimers
-  // idiom). A ghost cursor glides to each scripted tap and pulses a ripple there, so
-  // the viewer can see the show's hands.
+  // ── one-minute Trailer cinematic ───────────────────────────────────────────
+  // A fixed five-room reel built around texture, not solutions: small reactive objects,
+  // one short swell of social energy, then a quiet dusk invitation. It never demonstrates
+  // a solve order, app workflow, formal party moment, or balcony finale mechanism. Every
+  // pacing timer lands in cinematicTimers, so Take over cancels the authored timeline as
+  // one; a ghost cursor makes the handful of deliberately chosen interactions legible.
   // window.__cinematic gates the game's own auto-advances + the balcony storm so
   // they can't fight the scripted beats.
   var watchBtn = document.getElementById("watch-loft-btn");
   var skipBtn = document.getElementById("watch-skip-btn");
   var cinematicTimers = [];
   var cinematicTeardown = null;
-  var cineSeasonChanged = false; // the Trailer's own season preview flag: only revert on take-over if WE changed it
+  var cineKitchenCandleLit = false; // continuous visual owned by the reel; direct teardown avoids a cancel-time sound
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   // NB: named cineBeat, NOT beat — the autoplay section later in this SAME IIFE declares its own
   // function beat(fn, wait, tap, app) (a routine-builder, not a timer). Two function declarations
@@ -76645,6 +76659,18 @@ function spawnDustMote(container) {
     cinematicTimers.forEach(clearTimeout);
     cinematicTimers = [];
     cursorTeardown(); // the ghost cursor and any ripples vanish with the show
+    var cineFrame = document.getElementById("hunt-fullscreen-area");
+    if (cineFrame) cineFrame.classList.remove("cinematic-running");
+    if (caption) caption.classList.remove("cine-caption", "cine-caption-in");
+    // A Take over can land between the candle-on and candle-off beats. Clear the two
+    // rendering classes directly: dispatching another click here would make a stray sound.
+    if (cineKitchenCandleLit) {
+      var kc = document.getElementById("kitchen-candle");
+      var ks = document.getElementById("stage-kitchen");
+      if (kc) kc.classList.remove("lit");
+      if (ks) ks.classList.remove("k-candle-lit");
+      cineKitchenCandleLit = false;
+    }
     // the balcony finale runs on its OWN finaleTimers (rain/rainbow/fireworks + a delayed
     // showRsvpNudge). A mid-finale cancel must clear those too, or a late nudge would
     // stomp the room caption we're about to restore. Only reached while the show ran, so
@@ -76664,13 +76690,12 @@ function spawnDustMote(container) {
       if (pch === "stars" || pch === "workout" || pch === "totoro" || pch === "aqua") window.__cuddlyProjector.set("off");
     }
     if (window.__closePhoneModal) window.__closePhoneModal(true); // the phone beat's modal must never orphan over a take-over (idempotent)
-    // the Trailer's own beats: release the held balcony couple, clear the aurora override,
-    // close the who's-who panel, and revert the previewed season — all idempotent no-ops if the
-    // relevant beat never ran, so a take-over anywhere in the reel lands on a clean scene.
+    // Defensive cleanup for older/console-driven cinematic helpers. The current texture cut
+    // never opens these payoff states, but retaining the idempotent backstops keeps the public
+    // start/stop contract robust if a script invokes one while the reel owns the frame.
     if (window.__balconyCoupleAt) window.__balconyCoupleAt(null); // drop the mid-leap hold (no-op if not showing)
     if (window.__setAurora) window.__setAurora();                 // clear any aurora-force/hide override → natural
     if (window.__toggleRoster) window.__toggleRoster(false);      // shut the roster panel if the reel left it open
-    if (cineSeasonChanged && window.__applySeasonSilent) { window.__applySeasonSilent(null); cineSeasonChanged = false; } // revert ONLY the season the reel set (never a player's own)
     // the tour's two autopilot mini-games (office arcade, bar Flair-Catch) each run their own
     // rAF and would otherwise keep running after a take-over — stop them and restore the high
     // scores they never really earned. Both are idempotent no-ops if the demo wasn't engaged.
@@ -76725,212 +76750,126 @@ function spawnDustMote(container) {
   function waitFor(pred, timeoutMs) { return { wait: pred, timeout: timeoutMs }; }
   // the cursor hides over a room pan and re-appears at the next room's first tap
   function visit(name) { return function () { cursorHide(); goToStage(name); }; }
-  // a scheduled caption beat: forces our narration past the setCaption guard (still a
-  // no-op if the show was cancelled between scheduling and firing).
-  function cine(key) { return function () { if (window.__cinematic) setCaption(key, true); }; }
-  function mushroomTrip() { // the garden plants lift off their pots and bloom hue-cycling fractals
-    if (window.startTripVariant) window.startTripVariant("shrooms");
-    if (window.startTripBlooms) window.startTripBlooms();
-  }
-  // ── pocket-phone beat ──
-  // A little nod to the balcony phone's pocket OS, mirroring the office desktop tour: the
-  // ghost cursor "taps" the phone (ripple) and it opens straight to its launcher. We use
-  // the cinematic home-open (__cineShowPhone) rather than a real balcony-phone click so it
-  // skips the first-open math lock and doesn't flip the phone's `booted` flag — a real
-  // player still meets the puzzle. The modal is a full-viewport overlay, so it MUST be
-  // closed before the show moves on; stopCinematic also closes it on any take-over.
-  function cinePhoneOpen() {
+  // A scheduled caption beat forces narration past the setCaption guard and gives each
+  // authored line a restrained cut-in. Re-adding after layout reliably restarts the one-shot;
+  // reduced-motion disables the keyframes in CSS.
+  function paintCineCaption(key) {
     if (!window.__cinematic) return;
-    var p = cursorPointFor("balcony-phone");
-    if (p) cursorRipple(p.x, p.y);
-    if (window.__cineShowPhone) window.__cineShowPhone();
+    setCaption(key, true);
+    if (!caption) return;
+    caption.classList.add("cine-caption");
+    caption.classList.remove("cine-caption-in");
+    void caption.offsetWidth;
+    caption.classList.add("cine-caption-in");
   }
-  function cinePhoneClose() { if (window.__closePhoneModal) window.__closePhoneModal(true); } // silent teardown
-  // The couple's song is the show's best beat, but the garden-guitar tap that plays it
-  // lands ~20s after the Watch click — long outside the user gesture, so iOS/Safari (and
-  // sometimes others) block that late play(). Unlock the elements HERE, inside the trusted
-  // Watch gesture, with a silent play→pause: after this the deferred play() is allowed.
-  // volume=0 (NOT muted) so if a settle ever fails the instrument handler's own
-  // volume=0.45 reset self-heals it — muted would leave the song playing inaudibly. Tumbalalaika
-  // first: strict browsers unlock only the first media element per gesture, and the guitar is
-  // the walkthrough's song. No audible blip (volume 0), and the settle resets to a clean
-  // paused/0 state so the later tap's play-toggle isn't fooled into pausing instead.
+  function cine(key) { return function () { paintCineCaption(key); }; }
+  function cinePhoneClose() { if (window.__closePhoneModal) window.__closePhoneModal(true); } // dormant encore backstop
+  // The guitar enters well after the trusted Trailer click. Unlock its real recording here
+  // with a silent play→pause so WebKit permits the delayed garden beat. Prime only the track
+  // this cut actually uses: strict browsers may unlock just one media element per gesture.
+  // volume=0 (not muted) lets the instrument path restore its normal level later.
   function primeCinematicAudio() {
-    ["tumbala-song-audio", "guitar-song-audio", "ukulele-song-audio"].forEach(function (id) {
-      var a = document.getElementById(id);
-      if (!a) return;
-      try {
-        // Force silence before the unlock play(). On WebKit a.volume is inert once the song is
-        // captured (createMediaElementSource bypasses it), so a.volume=0 would let this "silent"
-        // play() resume the captured song at full _eqGain level — a loud blip. Zero the in-graph
-        // gain when captured; fall back to .volume before capture. Hard step is click-free here
-        // (the element is paused, nothing is sounding yet); the real play path resets the level.
-        if (a._eqGain) a._eqGain.gain.value = 0; else a.volume = 0;
-        var settle = function () { try { a.pause(); a.currentTime = 0; } catch (e) {} };
-        var p = a.play();
-        // settle either way (no unhandledrejection); a reject here means the unlock
-        // trick failed and the cinematic's deferred garden-tap play() may be blocked
-        if (p && p.then) p.then(settle, function (e) { console.warn("[song-audio] unlock play() rejected for " + id + ":", e); settle(); });
-        else settle();
-      } catch (e) {}
-    });
-    // The office chapter's film beat plays ~40s after the Watch click — the same late-play()
-    // autoplay problem as the songs. Unlock the <video> here inside the gesture (set its src,
-    // silent play→pause). preload="metadata" + the immediate pause keep this to a small
-    // buffer, not the whole file. Strict browsers unlock only the first media element per
-    // gesture (guitar wins), so on those the film may stay paused — the beat degrades to a
-    // held first frame, which is fine.
-    var v = document.getElementById("monitor-video-el");
-    if (v) {
-      try {
-        if (!v.src) v.src = "art/downtown-dance.mp4";
-        v.volume = 0;
-        var vsettle = function () { try { v.pause(); v.currentTime = 0; } catch (e) {} };
-        var vp = v.play();
-        if (vp && vp.then) vp.then(vsettle, function () { vsettle(); });
-        else vsettle();
-      } catch (e) {}
-    }
+    var a = document.getElementById("tumbala-song-audio");
+    if (!a) return;
+    try {
+      // WebKit's captured MediaElementSource bypasses a.volume, so zero the graph gain
+      // when available. The later instrument click restores the shared song level.
+      if (a._eqGain) a._eqGain.gain.value = 0; else a.volume = 0;
+      var settle = function () { try { a.pause(); a.currentTime = 0; } catch (e) {} };
+      var p = a.play();
+      if (p && p.then) p.then(settle, function (e) { console.warn("[song-audio] unlock play() rejected for " + a.id + ":", e); settle(); });
+      else settle();
+    } catch (e) {}
   }
-  // ── office desktop-tour helpers (the monitor's apps drive the office chapter) ──
-  // the monitor's app layer is class-gated on #office-monitor; read those classes to gate beats
-  function monitorShowing(key) {
-    var m = document.getElementById("office-monitor");
-    return !!(m && m.classList.contains("show-" + key));
-  }
-  function tehranConnected() {
-    var t = document.getElementById("monitor-family");
-    return !!(t && t.classList.contains("connected"));
-  }
-  // close whichever app owns the screen, from any view, back to the desktop (show-caps)
-  function cineCloseApp() { if (window.__closeTopMonitorApp) window.__closeTopMonitorApp(); }
-  function playCineFilm() {
-    if (!window.__cinematic) return;
-    var v = document.getElementById("monitor-video-el");
-    if (v && v.paused && window.__toggleMonitorVideo) window.__toggleMonitorVideo(); // the film takes the speakers; the song was hushed first
-  }
-  // Hush the day's song before the film so the monitor stays on the desktop: a song merely
-  // PAUSED mid-track still counts as "current" and flips the screen to the now-playing
-  // player (hiding the dock, stalling every later app beat) — resetting currentTime to 0
-  // clears "current", so the flip never fires.
+  // The garden song scores only that chapter. Reset to the beginning before the quiet-room
+  // cut so taking over later does not inherit a paused mid-track "current song".
   function cineHushSong() {
     ["tumbala-song-audio", "guitar-song-audio", "ukulele-song-audio"].forEach(function (id) {
       var a = document.getElementById(id);
       if (a && !a.paused) { try { a.pause(); a.currentTime = 0; } catch (e) {} }
     });
   }
-  // Bring the guitar song back for the finale/encore once the desk work is done. The play
-  // flips the monitor to the now-playing player, but that only lands during dim-lights/dusk
-  // now — cosmetic, and cleared at the extinguisher reset.
-  function cineResumeSong() {
-    if (!window.__cinematic) return;
-    var g = document.getElementById("tumbala-song-audio");
-    if (!g || !g.paused) return;
-    try {
-      g.currentTime = 0;
-      window.__setSongLevel(g, window.__songVolume ? window.__songVolume() : 0.5);
-      if (window.__captureSongAudio) window.__captureSongAudio(g);
-      var p = g.play(); if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] resume play() rejected:", e); });
-    } catch (e) {}
-  }
-  // Type loft.weddings into the real console input and submit it — the reply (the two
-  // wedding dates) prints to the scrollback. A synthetic keydown drives the REPL's own
-  // Enter handler; nothing cancels the show on keydown, so this passes straight through.
-  function cineTypeWeddings() {
-    if (!window.__cinematic) return;
-    var inp = document.getElementById("monitor-console-in");
-    if (!inp) return;
-    inp.value = "loft.weddings";
-    inp.dispatchEvent(new Event("input", { bubbles: true })); // repaint the caret mirror
-    inp.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-  }
-
-  // ── THE TRAILER — a curated ~60-second guided reel ────────────────────────
-  // NOT the old room-by-room full solve (that ran minutes). This is a highlights
-  // cut: a warm kitchen open, the GARDEN PARTY as the showpiece (the most time),
-  // a cosy cuddly beat, a glimpse of the office monitor, and a warm balcony close
-  // on the couple. It drives the game through the SAME public hooks the autoplay
-  // uses (party()/roster()/__spotlightGuest/firstdance/season/the toys), shows every
-  // scripted tap with the ghost cursor, and every delay lands in cinematicTimers so a
-  // take-over cancels the whole thing in one sweep. It deliberately SKIPS the espresso
-  // solve, the office desk apps beyond a peek, and the encore — curation over completeness.
-  // Beat gaps are tuned so the whole reel lands ~62s (tests/cine.js times it, 55-68s band).
+  // ── THE TRAILER — a curated ~61-second atmospheric reel ───────────────────
+  // Editorial rule: texture, not solutions. Each room gets one or two tactile details;
+  // the garden briefly fills with social energy, but the film never demonstrates how to
+  // unlock it or exposes roster, album, formal moments, apps, projector channels, weather
+  // reveals, or the balcony payoff. This is an invitation with rhythm, not a walkthrough.
   function cineParty(on) { // throw / drop the garden party the way the balcony switch does (UV + confetti)
     if (window.party && !!window.party() !== !!on) window.party(!!on);
   }
-  function cineSpotlight(sel) { if (window.__spotlightGuest) window.__spotlightGuest([sel]); } // single a guest out for 3s
-  function cineAlbumFlash() { if (window.__albumAdd) window.__albumAdd(); } // Aspen grabs one keepsake NOW (flash + album card)
-  function cineSeason(name) { if (window.__applySeasonSilent) { window.__applySeasonSilent(name); cineSeasonChanged = (name != null); } } // change the season, no toast; track so a take-over can revert only OUR change
+  function cineCandle(on) {
+    var candle = document.getElementById("kitchen-candle");
+    if (!candle) return;
+    if (candle.classList.contains("lit") !== !!on) cineClick("kitchen-candle");
+    cineKitchenCandleLit = !!on;
+  }
+  // Some texture hooks deliberately differ from their public click: the DJ click opens a
+  // full request menu, which is useful in play but too revealing in a trailer. Show the same
+  // cursor landing/ripple, then run only the one-shot scratch reaction.
+  function cineGesture(id, fn) {
+    var p = cursorPointFor(id);
+    if (p) { cursorPlace(p.x, p.y); cursorRipple(p.x, p.y); }
+    if (fn) fn();
+  }
   function runFullCinematic() {
-    setCaption("cine_coffee", true); // synchronous, so resetHunt's blocked caption never flashes stale
+    paintCineCaption("cine_open"); // synchronous, so resetHunt's blocked caption never flashes stale
     runSteps([
-      // ── KITCHEN — a quick warm establishing beat (~9s) ──
-      // Wake the espresso machine (spark + gauges swing), hold on the morning, then flip the
-      // window sun to night so the loft glows — and back to day — before heading to the garden.
-      // No full brew: this is a trailer, not the puzzle. The day/night flip works unsolved.
-      tapAt(1500, "kitchen-lamarzocco"),                 // power on: spark + gauges swing
-      [2200, null],                                      // hold on the warm morning kitchen
-      [0, function () { cursorGlideTo("kitchen-window-pane", 450); }],
-      [500, function () { if (window.__toggleDayNight) window.__toggleDayNight(); }], [0, cine("cine_kitchen_night")], // → night: the loft glows
-      [2200, function () { if (window.__toggleDayNight) window.__toggleDayNight(); }], // → back to day for the garden
-      [1400, visit("garden")], [0, cine("cine_water")],
-      // ── GARDEN PARTY — the showpiece (~28s), the heart of the reel ──
-      // Water a plant, put the couple's real song on, then light the whole party: blacklight,
-      // confetti, guests, the DJ, the who's-who roster, a spotlight, Aspen's album, a season
-      // change, and the first dance. Everything below drives the same hooks a player would.
-      tapAt(1900, "garden-monstera"),                    // a plant, watered (droplets + bounce)
-      tapAt(2200, "garden-guitar"), [0, cine("cine_song")], // the couple's real song → everything grooves
-      [1400, function () { cineParty(true); }], [0, cine("cine_party")], // UV blacklight + confetti + a beat
-      [2000, function () { if (window.__summonGuests) window.__summonGuests(); }], [0, cine("cine_guests")], // the floor fills
-      [2200, function () { cursorGlideTo("garden-dj-headbang", 450); }],
-      [500, function () { cineClick("garden-dj-headbang"); }], [0, cine("cine_dj")], // the DJ can't help himself
-      [2000, function () { if (window.__toggleRoster) window.__toggleRoster(true); }], [0, cine("cine_whoswho")], // who's here?
-      [2400, function () { if (window.__toggleRoster) window.__toggleRoster(false); cineSpotlight(".g-spencer"); }], [0, cine("cine_spotlight")], // close the panel, single a friend out (3s flash)
-      [2400, function () { cineAlbumFlash(); }], [0, cine("cine_album")], // Aspen catches it for the album (flash + card)
-      [2400, function () { cineSeason("spring"); }], [0, cine("cine_season")], // blossom drifts over the party
-      [3000, function () { if (window.__firstDance) window.__firstDance(); }], [0, cine("cine_firstdance")], // the crowd rings, the hosts sway alone
-      [3800, null],                                      // linger on the first dance — the emotional peak
-      // ── CUDDLY — a cosy beat (~8s) ──
-      // Leave the party (drop it cleanly), sway in the nook: Octi wobbles, then the wall
-      // projector shows the night sky (a soft piano bed) for a held cosy moment.
-      [1600, function () {
+      // ── KITCHEN (~9s): morning light, a candle, then the room-rattling gong. No espresso. ──
+      [1100, function () { cursorGlideTo("kitchen-candle", 450); }],
+      [500, function () { cineCandle(true); }],
+      [1600, cine("cine_details")],
+      tapAt(2000, "kitchen-gong"),
+      [2600, function () { cineCandle(false); }],
+      [1400, visit("garden")], [0, cine("cine_garden_texture")],
+
+      // ── GARDEN (~18s): curios and the real song, then one brief party swell. ──
+      // Party state arrives as a cinematic cut, never via its switch; the viewer sees a room
+      // become lively without being shown a solution or a formal-moment payoff.
+      tapAt(1500, "garden-tensegrity"),
+      tapAt(2000, "garden-guitar"),
+      [2100, function () { cineParty(true); }], [0, cine("cine_room_rhythm")],
+      [2400, function () { if (window.__summonGuests) window.__summonGuests(); }], [0, cine("cine_arrivals")],
+      [1950, function () { cursorGlideTo("garden-dj-decks", 450); }],
+      [450, function () { cineGesture("garden-dj-decks", function () { if (window.__djScratchNow) window.__djScratchNow(true); }); }],
+      tapAt(2100, "garden-mask"),
+      [2700, null],
+
+      // ── CUDDLY (~10s): soft, ordinary play. No Octi solve, trunk, door, or projector. ──
+      [1500, function () {
         cursorHide();
-        cineSeason(null);                                // revert the season before we leave the garden
-        cineParty(false);                                // drop the UV/confetti — the nook is quiet
+        cineParty(false);
+        cineHushSong();
         goToStage("cuddly");
-      }], [0, cine("cine_sway")],
-      tapAt(2100, "cuddly-octopus"),                     // Octi wobbles
-      [1700, function () { if (window.__cuddlyProjector) window.__cuddlyProjector.set("stars"); }], [0, cine("cine_piano")], // night sky on the wall
-      [2400, null],                                      // hold on the stars + piano
-      // ── OFFICE — a glimpse of the monitor (~8s) ──
-      // Power the projector off (restores the day's song; then hush it so the monitor lands on
-      // the desktop, not the now-playing player), boot the tower — the view zooms up to the
-      // screen — open Mail, and open the RSVP message: the whole point of the night, in the inbox.
-      [1800, function () {
+      }], [0, cine("cine_quiet_corner")],
+      tapAt(1700, "cuddly-pillow-2"),
+      tapAt(2000, "cuddly-panedge-hit"),
+      tapAt(2100, "cuddly-bolster"),
+      [2800, null],
+
+      // ── OFFICE (~10s): desk curios and the moving city, never a boot/app/call workflow. ──
+      [1500, function () {
         cursorHide();
         goToStage("office");
-        if (window.__cuddlyProjector) window.__cuddlyProjector.set("off"); // stop the piano bed; restores the day's song
-        cineHushSong();               // ...then hush it so the monitor shows the desktop, not the player
-      }], [0, cine("cine_office")],
-      tapAt(1400, "office-pc-desk-trio"),                // power the PC → the monitor boots + zooms in
-      waitFor(function () { return monitorShowing("caps"); }, 4500), // ~1s boot; wait for the desktop
-      tapAt(1300, "monitor-dock-mail"), [0, cine("cine_monitor")],
-      waitFor(function () { return monitorShowing("mail"); }, 1800),
-      tapAt(1500, "monitor-mail-row-rsvp"),              // open the RSVP message (the zoom is held)
-      [2600, null],                                      // read it — the note in the inbox
-      // ── BALCONY — a warm close on the couple (~9s) ──
-      // Pull the view back out of the screen, zoom done; hush any player, then to the balcony.
-      // Flip to dusk so the aurora comes out over the open night sky, and reveal the couple
-      // (held mid-leap over the bonfire — the one composition with both of them) for the close.
-      [1400, function () { cursorHide(); if (window.__monitorZoomOut) window.__monitorZoomOut(); cineHushSong(); }],
-      [1600, function () {
+      }], [0, cine("cine_desk_play")],
+      tapAt(1700, "office-wooden-head"),
+      tapAt(1900, "office-skull"),
+      tapAt(2200, "office-crane-hit"),
+      [2800, null],
+
+      // ── BALCONY (~14s): one dusk cut, a chime, the city, and the invitation. ──
+      // No forced aurora, held couple, fireworks, phone, or party switch: those remain discoveries.
+      [1700, function () {
+        cursorHide();
         goToStage("balcony");
-        if (window.__autoToggleDusk && !document.getElementById("stage-balcony").classList.contains("dusk")) window.__autoToggleDusk(); // → dusk: the aurora comes out
-        if (window.__setAurora) window.__setAurora(true); // make sure the northern lights show for the close
-      }], [0, cine("cine_aurora")],
-      [2400, function () { if (window.__balconyCoupleAt) window.__balconyCoupleAt(0.5); }], [0, cine("cine_couple")], // hold the couple mid-leap over the fire — markéta & behdad
-      [3200, function () { if (window.__balconyCoupleAt) window.__balconyCoupleAt(null); if (window.__setAurora) window.__setAurora(); if (window.__showRsvpNudge) window.__showRsvpNudge(); }], // release the couple, clear the aurora override, land on the RSVP nudge
-      [2200, function () { stopCinematic(); }]           // the reel ends: teardown clears the cursor, restores the room caption
+        var balcony = document.getElementById("stage-balcony");
+        if (window.__autoToggleDusk && balcony && !balcony.classList.contains("dusk")) window.__autoToggleDusk();
+      }], [0, cine("cine_evening")],
+      tapAt(2200, "balcony-windchime"),
+      tapAt(2100, "balcony-dustpan"),
+      [2600, cine("cine_invite")],
+      [0, function () { cursorGlideTo("balcony-cityview", 700); }],
+      [3000, function () { cursorHide(); paintCineCaption("cine_signoff"); }],
+      [3400, function () { stopCinematic(); }]
     ]);
   }
 
@@ -77057,50 +76996,41 @@ function spawnDustMote(container) {
   }
 
   function runReducedCinematic() {
-    // prefers-reduced-motion: the SAME curated arc as the full reel, but stiller and
-    // shorter (~30s). Instant room cuts (the strip transition is already none). It still
-    // hits the highlights — kitchen, the GARDEN PARTY (party on + guests + who's-who),
-    // the cuddly nook, the office RSVP, and a warm balcony close — but each is a held
-    // state, not a motion beat: party()/firstdance() honour reduced motion themselves (the
-    // hosts hold a pose, no spin), and the balcony ends on dusk + the RSVP nudge rather than
-    // the animated couple-leap (which is animation:none under reduced motion anyway).
-    var D = 1700;
-    // same dedicated narration as the full show; set forced (past the guard). goToStage's
-    // own room caption is a no-op while the show runs, so set ours after each cut.
-    setCaption("cine_coffee", true); // synchronous — no stale flash after resetHunt
-    // GARDEN PARTY — the showpiece, even stilled: put the song on, light the party, fill the
-    // floor, open who's-who, and hold the hosts' first dance (a pose under reduced motion).
+    // Same editorial arc as the full cut, compressed into held tableaux. Room transitions,
+    // cursor glides, and caption cut-ins have no motion under the media query; the brief party
+    // remains because it changes composition, while every spoiler-bearing payoff stays absent.
+    var D = 2200;
+    paintCineCaption("cine_open");
     cineBeat(D, function () {
-      goToStage("garden"); cineClick("garden-monstera");
-      cineClick("garden-guitar");                        // the couple's song
-      cineParty(true);                                   // UV + party (confetti stiffens under reduced motion)
-      setCaption("cine_party", true);
+      goToStage("garden");
+      cineClick("garden-tensegrity");
+      cineClick("garden-guitar");
+      cineParty(true);
+      paintCineCaption("cine_room_rhythm");
     });
-    cineBeat(D * 2, function () { if (window.__summonGuests) window.__summonGuests(); if (window.__toggleRoster) window.__toggleRoster(true); setCaption("cine_whoswho", true); });
-    cineBeat(D * 3, function () { if (window.__toggleRoster) window.__toggleRoster(false); if (window.__firstDance) window.__firstDance(); setCaption("cine_firstdance", true); });
-    // CUDDLY — the cosy nook, projector on the night sky (a colour change, held).
-    cineBeat(D * 4, function () { cineParty(false); goToStage("cuddly"); cineClick("cuddly-octopus"); if (window.__cuddlyProjector) window.__cuddlyProjector.set("stars"); setCaption("cine_sway", true); });
-    // OFFICE — the note in the inbox (lamps dim, a colour change, not motion).
+    cineBeat(D * 2, function () {
+      if (window.__summonGuests) window.__summonGuests();
+      paintCineCaption("cine_arrivals");
+    });
+    cineBeat(D * 3, function () {
+      cineParty(false); cineHushSong(); goToStage("cuddly");
+      cineClick("cuddly-pillow-2");
+      paintCineCaption("cine_quiet_corner");
+    });
+    cineBeat(D * 4, function () {
+      goToStage("office"); cineClick("office-wooden-head");
+      paintCineCaption("cine_desk_play");
+    });
     cineBeat(D * 5, function () {
-      goToStage("office");
-      if (window.__cuddlyProjector) window.__cuddlyProjector.set("off");
-      cineClick("office-lamp"); cineClick("office-pendant");
-      if (window.__autoToggleDusk) window.__autoToggleDusk();
-      setCaption("cine_monitor", true);
-    });
-    // BALCONY — dusk over the open sky, the aurora out, and the RSVP nudge to close.
-    cineBeat(D * 6, function () {
-      balconyIntroSeen = true; // suppress the one-time arrival flourish (fireworks etc.)
       goToStage("balcony");
-      if (window.__setAurora) window.__setAurora(true);
-      setCaption("cine_aurora", true);
+      var balcony = document.getElementById("stage-balcony");
+      if (window.__autoToggleDusk && balcony && !balcony.classList.contains("dusk")) window.__autoToggleDusk();
+      cineClick("balcony-windchime");
+      paintCineCaption("cine_evening");
     });
-    cineBeat(D * 6 + 900, function () { if (window.__setAurora) window.__setAurora(); showRsvpNudge(); setCaption("cine_couple", true); });
-    // This tour sets balconyIntroSeen itself (to suppress the flourish) and never fires
-    // triggerBalconyFinale — which is what normally schedules the second act's arm. Without
-    // this the reduced-motion viewer would be the one visitor left with no arc at all after
-    // the credits.
-    cineBeat(D * 7, function () { stopCinematic(); if (window.__armActTwo) window.__armActTwo(); });
+    cineBeat(D * 6, function () { paintCineCaption("cine_invite"); });
+    cineBeat(D * 7, function () { cursorHide(); paintCineCaption("cine_signoff"); });
+    cineBeat(D * 8, function () { stopCinematic(); });
   }
 
   function startCinematic() {
@@ -77109,7 +77039,9 @@ function spawnDustMote(container) {
     stopHintBlink(); // the show owns the caption — end any attract-blink first (Watch is off-strip)
     if (watchBtn) { watchBtn.classList.remove("nudge"); watchBtn.hidden = true; }
     if (skipBtn) skipBtn.hidden = false;
-    resetHunt(); // clean slate: day, kitchen, re-armed balcony finale (deterministic dusk flip later)
+    var cineFrame = document.getElementById("hunt-fullscreen-area");
+    if (cineFrame) cineFrame.classList.add("cinematic-running");
+    resetHunt(); // deterministic daylight kitchen; the fixed cut owns everything shown from here
     if (window.__stopAutoDayNight) window.__stopAutoDayNight(); // freeze the background sky: the scripted show drives its own day/night beats
     primeCinematicAudio(); // unlock the song inside this gesture so the later garden beat can play it
 

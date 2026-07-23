@@ -92,6 +92,27 @@ or Start over removes the gate. The controller also hides the entire `.watch-con
 mounted, then restores it from the shared gate teardown, so Trailer and Autoplay never compete with
 the saved-session decision.
 
+### Trailer lifecycle
+
+Search for `THE TRAILER`, `cinematicTimers`, `paintCineCaption`, and `stopCinematic`. Trailer is a
+fixed 59–60 second editorial timeline, separate from Autoplay's director. Its content contract is
+**texture, not solutions**: five room identities, small one-shot toys, the real guitar recording,
+and one short garden-party swell; no solve chain, roster/spotlight, album capture, formal moment,
+season preview, projector channel, monitor/phone workflow, forced aurora, or held balcony couple.
+`tests/cine.js` samples those negative invariants throughout playback, because a post-teardown
+snapshot alone cannot prove that a payoff was never shown.
+
+Starting Trailer sets `window.__cinematic`, resets to a deterministic daylight kitchen, primes only
+the deferred guitar recording inside the trusted click, and adds `.cinematic-running` to the frame.
+That presentation class visibility-hides room navigation and Restart without changing layout;
+fullscreen and audio controls remain usable. All authored pacing uses `cineBeat`/`runSteps`, while
+scene input is capture-swallowed so only synthetic reel taps reach the SVG. `stopCinematic` is the
+single cleanup path for natural completion, **Take over**, and hidden-tab abort: it clears timers,
+cursor/ripples, party/UV, defensive legacy payoff state, the trailer-owned kitchen candle, caption
+classes, and listeners. The reduced-motion branch uses the same room/editorial arc as held tableaux
+and completes in about 18 seconds. `goToStage` suppresses `triggerBalconyFinale` while
+`window.__cinematic` is true, preserving the one-time first-arrival payoff for actual play.
+
 ## Rooms, phases, and unlocking
 
 The five rooms are `kitchen`, `garden`, `cuddly`, `office`, and `balcony`. Search for `STAGES` and

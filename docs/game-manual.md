@@ -37,6 +37,20 @@ The five rooms are:
 Use the arrows at the sides of the scene or the five dots below it to change
 rooms. On mobile, use these controls rather than swiping across the scene.
 
+## Trailer
+
+**Trailer** plays a fixed, roughly one-minute preview of all five rooms. It is an
+atmospheric cut rather than a solution walkthrough: it shows small reactive details,
+the loft's real music, and a brief glimpse of the garden filling with guests, while
+leaving puzzle order, apps, formal party moments, and the balcony finale undisclosed.
+
+The ghost cursor identifies the few objects the reel touches. Room navigation and
+Restart are hidden during playback so they cannot interrupt a shot; fullscreen,
+volume, and **Take over** remain available. Taking over stops the reel immediately
+and leaves the current room ready to explore. Moving the tab into the background also
+ends the reel rather than letting its timing drift. With reduced motion enabled, the
+same five-room arc becomes a shorter sequence of still tableaux.
+
 ## How the game is organized
 
 ### Phase 1: the room trail

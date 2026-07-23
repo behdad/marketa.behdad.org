@@ -287,7 +287,9 @@ party-forced night. Focus/visibility catch-up handles a crossing missed while aw
 
 The shared calendar renderer serves monitor and phone views. Canonical wedding event definitions
 also generate calendar downloads and external calendar links. Birthday/occasion definitions and
-Persian dates are runtime code; avoid duplicating dates in another UI data source.
+Persian dates are runtime code; avoid duplicating dates in another UI data source. Wedding event
+cards update only the renderer's displayed month; grid days and search results own date activation
+and special-day scene dispatch.
 
 Weather is fetched client-side for Edmonton and Prague, with current conditions and multi-day data.
 The implementation also retrieves aviation observations, Edmonton air quality, and geomagnetic

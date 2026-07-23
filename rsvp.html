@@ -75565,7 +75565,7 @@ function spawnDustMote(container) {
   // bbq / prague-party) runs its happening via the latched __applyDateOccasion (a season()
   // preview would clobber the party with mere decor); otherwise a holiday season dresses the
   // decor + pans to its room; a plain weather day is just the jump. Shared by the grid day-cells
-  // and the event cards. On the phone, a summoned festivity dismisses the modal so the room pan
+  // and search results. On the phone, a summoned festivity dismisses the modal so the room pan
   // lands in full view; a plain jump keeps the calendar open for browsing.
   // summon the festivities for an already-jumped day: a birthday (most specific) reveals/calls
   // that person; else an occasion (wedding / bbq / prague-party) runs its latched happening; else
@@ -75594,6 +75594,12 @@ function spawnDustMote(container) {
     window.__calendarRender(container, surface);
     var summoned = calSummonFestivity(mo, d, y);
     if (surface === "phone" && summoned && window.__closePhoneModal) window.__closePhoneModal(true);
+  }
+  // Wedding cards are navigation aids, not date controls: reveal their month without changing
+  // the loft date, selecting a grid day, or summoning that day's festivities.
+  function calShowMonth(y, mo, container, surface) {
+    calView = { y: y, m: mo };
+    window.__calendarRender(container, surface);
   }
   // the distinct "days of significance" the date pill's ⏪/⏩ step between: every dated birthday
   // (recurs yearly) plus every occasion / named-holiday anchor day (CAL_OCC's month0-day keys —
@@ -75639,8 +75645,8 @@ function spawnDustMote(container) {
   window.__calStepSignificant = calStepSignificant; // Shift+←/→ hook (hunt-nav keydown handler): jump to the significant prev/next day, same as the ⏪/⏩ pill steps
   // the four wedding-weekend occasions as compact, clickable date cards (Edmonton in his wine,
   // Prague in her blue): 💍 Edmonton Wedding · 🍖 BBQ Day · 💍 Prague Wedding · 🍳 Garden Brunch,
-  // each carrying its own GCal link, plus a shared Download .ics. Clicking a card navigates the
-  // grid to that event's month + selects its day (calGoToDate). Same event targets as the
+  // each carrying its own GCal link, plus a shared Download .ics. Clicking a card reveals the
+  // grid month without selecting or activating its day. Same event targets as the
   // console/phone (gcalUrl/downloadCalendarIcs via __phoneGcalUrl/__phoneWeddingIcs). De-layered
   // HTML so it survives the office-monitor foreignObject scale.
   function calCard(spec, container, surface) { // one CITY card holding both of that city's event rows
@@ -75670,7 +75676,7 @@ function spawnDustMote(container) {
         else { try { window.open(url, "_blank"); } catch (err) {} }
       });
       row.appendChild(g);
-      function go() { calGoToDate(rw.y, rw.mo, rw.d, container, surface); } // tapping a row jumps the grid + summons that day
+      function go() { calShowMonth(rw.y, rw.mo, container, surface); }
       row.addEventListener("click", go);
       row.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
       card.appendChild(row);

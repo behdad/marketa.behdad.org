@@ -496,6 +496,10 @@ Current wedding events are:
 | Prague wedding | July 10, 2027, 3:00 PM to July 11, 3:00 AM, Prague time |
 | Prague garden brunch | July 11, 2027, 11:00 AM to 3:00 PM, Prague time |
 
+Selecting one of these four event cards in the phone or computer Calendar reveals
+its month without changing the loft date. Selecting a day in the calendar grid or
+its search results activates that date and any associated scene.
+
 Wedding-day invitations arrive through Messages and run only when explicitly
 opened. Prague dates prepare the family gathering and Prague call. Birthday and
 anniversary scenes can add greetings or cake, but private birthday dates are not

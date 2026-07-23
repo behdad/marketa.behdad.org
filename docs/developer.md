@@ -88,7 +88,9 @@ with static fallback text where needed. Any English copy change must be mirrored
 The checkpoint recovery gate is a modal state boundary. Its capture-phase key handler consumes all
 keyboard events before gameplay handlers run, while handling arrow/Enter/Space itself and leaving
 browser-default `Tab` focus traversal available. Normal shortcuts become active only after Continue
-or Start over removes the gate.
+or Start over removes the gate. The controller also hides the entire `.watch-controls` row while
+mounted, then restores it from the shared gate teardown, so Trailer and Autoplay never compete with
+the saved-session decision.
 
 ## Rooms, phases, and unlocking
 

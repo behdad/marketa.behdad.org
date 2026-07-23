@@ -99,6 +99,10 @@ from an app to the desktop, or from a zoomed computer to the room. When typing,
 the first `Escape` generally removes focus and preserves an unsent draft rather
 than closing the whole app.
 
+When a scene opens a phone app directly, `Escape` or `Backspace` closes the phone
+instead of exposing its launcher. This applies to Aspen's post-shutter Album, the
+magic-box Calendar clue, and the scene date/time pills.
+
 Monitor and laptop zoom snaps between the room and screen. Animating the large
 scaled scene caused white repaint flicker in Chrome even when the room otherwise
 held 60 FPS, so device zoom deliberately does not glide. Room navigation still

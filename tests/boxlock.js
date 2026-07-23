@@ -16,7 +16,7 @@ var HARNESS = [
   ' var lock=document.getElementById("garden-boxlock"),date=document.getElementById("garden-boxlock-date-hit"),submit=document.getElementById("garden-boxlock-submit");',
   ' S("shape",{date:date.previousElementSibling.previousElementSibling.textContent,submit:submit.querySelector("text").textContent,wheels:lock.querySelectorAll(".boxlock-hit").length,submits:lock.querySelectorAll(".boxlock-submit").length});',
   ' tap(date);await sleep(40);S("clue",{phone:!!document.querySelector(".calx-phone"),lock:lock.classList.contains("showing")});',
-  ' if(window.__closePhoneModal)window.__closePhoneModal(true);window.__drugsboxTap();',
+  ' var shell=document.querySelector(".phone-shell");if(shell){shell.focus();shell.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));}await sleep(260);S("clueBack",{phone:!!document.querySelector(".phone-backdrop.show")});window.__drugsboxTap();',
   ' tap(document.getElementById("garden-boxlock-hit-u"));S("selected",{locked:window.__drugsboxLocked(),unit:document.getElementById("garden-boxlock-drum-u").style.transform});',
   ' tap(submit);S("may",{locked:window.__drugsboxLocked(),popped:document.getElementById("garden-boxlock-shackle").classList.contains("popped")});',
   ' window.__resetDrugsbox();window.__setDrugsboxMonth(7);window.__drugsboxTap();tap(submit);S("wrong",{locked:window.__drugsboxLocked(),denied:submit.classList.contains("denied")});',
@@ -37,6 +37,7 @@ var s=r.steps;
 check(r.errors.length===0,"no uncaught page errors",r.errors);
 check(s.shape&&s.shape.date==="2027-05-??"&&s.shape.submit==="UNLOCK"&&s.shape.wheels===2&&s.shape.submits===1,"lock shows a partial date, two wheels, and one submit control",s.shape);
 check(s.clue&&s.clue.phone&&!s.clue.lock,"partial date opens the phone Calendar clue",s.clue);
+check(s.clueBack&&!s.clueBack.phone,"Escape closes the magic-box Calendar instead of exposing the launcher",s.clueBack);
 check(s.selected&&s.selected.locked&&/-40px/.test(s.selected.unit||""),"selecting the correct May digits does not auto-unlock",s.selected);
 check(s.may&&!s.may.locked&&s.may.popped,"submit unlocks a correct May 01 answer",s.may);
 check(s.wrong&&s.wrong.locked&&s.wrong.denied,"submit rejects an incorrect July answer",s.wrong);

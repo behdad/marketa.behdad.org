@@ -53745,12 +53745,13 @@ async def localfont(name):
     // Same as __openPhoneApp but WITHOUT the balcony jump — raise the phone over whatever room
     // you're in and land on the app. Used by the Aspen tap: she snaps a shot, then the phone
     // pops up on the album right where you're standing (the modal is scene-agnostic).
-    window.__openPhoneAppHere = function (name) {
+    window.__openPhoneAppHere = function (name, closeOnBack) {
       var app = phoneAppByName(name);
       if (!app) return false;
       open(true); // in-place launcher open, first-open math lock skipped
       if (app.open) app.open();
       else if (app.link) openExternal(app.link);
+      if (closeOnBack && currentApp === app.id) directCloseApp = app.id;
       return true;
     };
     // Keep an open phone riding the current fullscreen host (same choice open() makes), so a
@@ -61384,7 +61385,7 @@ document.addEventListener("keydown", function (e) {
     var p = panel();
     if (!p || !p.classList.contains("showing") || !boxLocked) return;
     p.classList.remove("showing");
-    if (window.__openPhoneAppHere) window.__openPhoneAppHere("calendar");
+    if (window.__openPhoneAppHere) window.__openPhoneAppHere("calendar", true);
   });
   var dim = document.getElementById("garden-boxlock-dim");
   if (dim) dim.addEventListener("click", function () { var p = panel(); if (p) p.classList.remove("showing"); }); // tap away to put the box down; the wheels keep their positions
@@ -70527,7 +70528,7 @@ function spawnDustMote(container) {
       // she's the photographer: tap her → the shot syncs to your phone. Raise the pocket phone on
       // the album app (scene-agnostic modal) so the just-taken portrait sits right on top, newest-
       // first. A short beat lets the shutter/flash read before the phone slides up.
-      setTimeout(function () { if (window.__openPhoneAppHere) window.__openPhoneAppHere("album"); }, 260);
+      setTimeout(function () { if (window.__openPhoneAppHere) window.__openPhoneAppHere("album", true); }, 260);
     });
   })();
   // Aspen works the garden from a few authored camera stations instead of standing at the same
@@ -73072,7 +73073,7 @@ function spawnDustMote(container) {
       fireFlash();
       if (typeof playCameraShutterSound === "function") playCameraShutterSound(); // a click implies focus
       if (window.__albumAddRoom) window.__albumAddRoom("balcony", true); // a deliberate tap always makes a fresh keepsake
-      setTimeout(function () { if (window.__openPhoneAppHere) window.__openPhoneAppHere("album"); }, 260);
+      setTimeout(function () { if (window.__openPhoneAppHere) window.__openPhoneAppHere("album", true); }, 260);
     });
     document.addEventListener("visibilitychange", update);
     window.addEventListener("blur", update);
@@ -73161,7 +73162,7 @@ function spawnDustMote(container) {
         entry.flash();
         if (typeof playCameraShutterSound === "function") playCameraShutterSound(); // a click implies focus
         if (window.__albumAddRoom) window.__albumAddRoom(room, true);
-        setTimeout(function () { if (window.__openPhoneAppHere) window.__openPhoneAppHere("album"); }, 260);
+        setTimeout(function () { if (window.__openPhoneAppHere) window.__openPhoneAppHere("album", true); }, 260);
       });
     });
     function attended() { return !document.hidden && document.hasFocus(); }
@@ -76025,7 +76026,7 @@ function spawnDustMote(container) {
     pill.appendChild(tile); pill.appendChild(pillTxt);
     pill.addEventListener("click", function (e) {
       e.stopPropagation();
-      if (window.__openPhoneAppHere) window.__openPhoneAppHere("calendar");
+      if (window.__openPhoneAppHere) window.__openPhoneAppHere("calendar", true);
       else if (window.phone) window.phone("calendar");
     });
     var reset = document.createElement("button"); // ↺ — clear ?date=, snap back to the real day (sits between the date and ⏩)
@@ -76063,7 +76064,7 @@ function spawnDustMote(container) {
     pill.type = "button"; pill.id = "loft-timepill"; pill.className = "loft-timepill";
     pill.addEventListener("click", function (e) {
       e.stopPropagation();
-      if (window.__openPhoneAppHere) window.__openPhoneAppHere("clock");
+      if (window.__openPhoneAppHere) window.__openPhoneAppHere("clock", true);
       else if (window.phone) window.phone("clock");
     });
     var lapse = document.createElement("button"); // play/pause the "a day in the loft" time-lapse

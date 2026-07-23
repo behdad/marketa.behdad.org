@@ -351,6 +351,9 @@ Back behavior depends on entry context:
 - an app launched from a Messages action returns to Messages;
 - a direct scene notification opens Messages as a deep link, so Back/Escape closes the phone rather
   than exposing the launcher;
+- scene-level deep links use `__openPhoneAppHere(app, true)` for direct-close behavior: Aspen's
+  post-shutter Album, the magic-box Calendar clue, and the date/time HUD pills. Ordinary app,
+  console, and phone-icon launches still return to the launcher;
 - an ordinary app returns to the phone home screen;
 - leaving the owning room closes the phone.
 

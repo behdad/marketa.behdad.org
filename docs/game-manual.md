@@ -145,6 +145,27 @@ Keyboard shortcuts are primarily a testing and power-user layer. They are not
 required for normal play. While a text field is active, ordinary typing keys are
 reserved for that field.
 
+### Autoplay watch mode
+
+Autoplay is the persistent watch mode beside Trailer. It takes over from the room
+and progress already on screen, then composes an ongoing show from short authored
+stories: coffee and bar rituals, live music, guests and wedding moments, projector
+and toy scenes, calls, computer and phone apps, photos, weather, the BBQ, and a few
+relays that travel through several rooms. Its choices vary while actively avoiding
+recent repeats and returning to rooms that have been away too long.
+
+Incoming phone messages and calls can interrupt a story. Autoplay handles the
+notification, follows its action, and resumes the interrupted sequence. It pauses
+without advancing while the tab is hidden or unfocused and uses a calmer motion
+profile when reduced motion is requested.
+
+Stray clicks and keys do not stop a kiosk show. Use **Take over** to return control
+temporarily; after a quiet interval the kiosk resumes. Press `A` or run
+`autoplay(false)` in the console to stop it deliberately. Opening the game with
+`?autoplay` starts the same persistent mode after initialization.
+If a saved-session choice is waiting, URL autoplay begins only after Continue or
+Start over resolves that screen.
+
 ## Room guide
 
 This section first describes each room without giving away its main solution.

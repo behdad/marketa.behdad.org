@@ -41554,7 +41554,7 @@ var ABANDONED_CALL_MS = 30000;
     arrive: "arrive(\"ali\"|\"spencer\"|\"alireza\"|\"farhang\"|\"bahareh\") — a duo (or the single Bahareh) STROLLS IN through the garden gate onto the dance floor, an entrance moment. arrive() walks in a random duo. lights the party + heads to the garden first if needed. the duos also trickle in on their own, one per beat, as the party fills up. (ali = Ali & Goli, spencer = Spencer & Jay, alireza = Alireza & Mahzad, farhang = Farhang & Lauren, bahareh = Bahareh solo)",
     roster: "roster() — toggle the \"who's here?\" panel: a live at-a-glance list of everyone in the room you're LOOKING AT right now (name · role), kids included — the dance floor, the bar couple + Pouria, the nook's residents/visitors/playing kids, the office pair, the deck crowd + Hamid at the grill. it tracks arrivals and departures while it's open. click a name for their card; on the garden floor it also spotlights them — everyone ELSE freezes while the pick keeps dancing, with an arrow over them, for 3s (works for the DJ + photographer too). roster(true) opens it, roster(false) closes it. the 'h' and 'w' keys do the same. window.__whoIsHere(\"office\") returns the same list for any room",
     reset: "reset() — restart the whole loft from the top (no confirmation — you typed it)",
-    autoplay: "autoplay(true) — ATTRACT MODE for the wedding BBQ screen: the loft drives itself, forever, as CHAINED ROUTINES — each room gets a little authored story (its solve, then its signature toys) with unhurried pauses between beats, and a visible ghost cursor glides to what it's 'clicking' so you can follow along. It TAKES OVER FROM WHEREVER THE GAME IS (never resets to the kitchen). The GARDEN PARTY lingers longest (party on → guests + dancing → who's-who → spotlight → Aspen's album → season change → first dance/jukebox); the office monitor and pocket phone actually PLAY WITH several apps in turn (Minesweeper, Life, Mail, weather, calendar / messages, album search, cocktails…). It opens every time with a short sweep through a few rooms (so you can see the loft has five), then settles into the room it took over in; after that a coverage ledger picks rooms so no room is ever skipped for long and none repeats back-to-back. Phone notifications INTERRUPT to be opened + acted on, then the interrupted scene RESUMES where it left off. This is NOT the fixed Trailer reel (that's the ▷ Trailer button). autoplay(false) or the 'a' key stop it for good; autoplay() toggles; the □ Take over control hands you the wheel but leaves the screen to drift back to attract after a quiet spell. It does NOT stop on stray clicks/keys (click to go fullscreen without killing it); pauses cleanly when the tab is hidden or unfocused, and honours prefers-reduced-motion. Open the page with ?autoplay in the URL to boot straight into it",
+    autoplay: "autoplay(true) — PERSISTENT ATTRACT MODE for the wedding BBQ screen: the loft composes an endless show from 30 short authored stories — espresso and bar rituals, music, arrivals, wedding moments, photos, projector/toy scenes, calls, computer and phone apps, weather, the BBQ, and cross-room relays. A seeded weighted Markov director moves between eight narrative moods; hard recent-history and coverage rules keep exact stories from repeating and bring back any room that's been away too long. A visible ghost cursor shows each interaction. It TAKES OVER FROM WHEREVER THE GAME IS (never resets to the kitchen), opens with a short room sweep, then plays the first full story where it found you. Phone notifications INTERRUPT to be opened + acted on, then the exact story/beat RESUMES. This is NOT the fixed Trailer reel (that's the ▷ Trailer button). autoplay(false) or the 'a' key stop it for good; autoplay() toggles; the □ Take over control hands you the wheel but leaves the screen to drift back to attract after a quiet spell. It does NOT stop on stray clicks/keys (click to go fullscreen without killing it); pauses cleanly when the tab is hidden or unfocused, and honours prefers-reduced-motion. Open with ?autoplay to boot straight into it",
     quit: "quit (or exit) — shut the console down (refresh, back to the desktop)",
     blacklight: "blacklight(true) — UV wash over the whole loft; blacklight(false) off; blacklight() reports whether it's on",
     uv: "uv — alias for blacklight; try `help blacklight`",
@@ -77083,13 +77083,15 @@ function spawnDustMote(container) {
   // that pop up during the party. It is NOT the scripted "Day in the Loft" cinematic
   // (that stays behind the Trailer button, a fixed kitchen→…→balcony reel).
   //
-  // THE MODEL is a scene graph, not a routine list:
-  //   BEAT  — { fn, wait, tap, click, room, chain, flourish, every }. `fn` is always a
-  //           public, user-shaped hook (a console verb, goToStage, a __*DoNext walker), so
-  //           every downstream hidden/unfocused gate is inherited rather than re-implemented.
-  //           `tap`/`click` drive the SHARED ghost cursor (window.cursorTo / ghostClick).
-  //   SCENE — a room's beats, normalized (§apNormalize) and capped by that room's budget.
-  //   PLAN  — one current scene plus a ONE-DEEP resume stack for notification interrupts.
+  // THE MODEL has three explicit layers:
+  //   BEAT     — one user-shaped interaction plus its dwell. `tap`/`click` drive the shared
+  //              ghost cursor; named verbs go through the same public hooks a player uses.
+  //   SEQUENCE — a short authored story (espresso ritual, call home, projector night, BBQ,
+  //              photo relay...). The catalog is deliberately broad instead of one monolithic
+  //              routine per room.
+  //   DIRECTOR — an explicit finite-state machine plus a weighted Markov transition between
+  //              sequence moods. A coverage ledger and recent-history exclusions constrain the
+  //              probabilistic choice, so variety cannot starve a room or repeat one gag forever.
   //
   // Three properties are structural here rather than emergent, because each one drifted once
   // it was left to whoever last edited a builder:
@@ -77127,7 +77129,9 @@ function spawnDustMote(container) {
   var AUTOPLAY_TICK_MS = 700;       // driver cadence while idling (paused) — cheap enough to sit for hours
   var AUTOPLAY_BEAT_MS = 2000;      // default pause after a beat when a scene doesn't specify one
   var AUTOPLAY_IDLE_RESUME_MS = 90000; // after a human takes over, drift back to autoplay after this idle
-  var STARVE_LIMIT = 4;             // < ROOM_RING.length, so every room provably plays within one cycle
+  var STARVE_LIMIT = 4;             // hard room fairness boundary (measured in selected sequences)
+  var SEQUENCE_RECENT_LIMIT = 5;    // an exact authored story cannot recur inside this window
+  var AP_TRACE_LIMIT = 24;          // bounded inspection history for tests / the developer console
   var ROOM_SETTLE_MS = 820;         // ROOM_SLIDE_MS (720) + slack: a nav beat's own wait, so the next
                                     // beat's tap measures a SETTLED room (the real reason taps looked flaky)
   // Per-room dwell budget. The garden's numbers are deliberately the largest in the table and
@@ -77140,6 +77144,7 @@ function spawnDustMote(container) {
     balcony: { budgetMs: 44000, maxBeats: 14, weight: 1, anchor: "balcony-phone" }
   };
   var apOn = false;              // is the attract loop armed?
+  var apWaitRecovery = false;    // ?autoplay waits behind the saved-session decision instead of playing under it
   var apIdleResume = false;      // should we drift BACK to autoplay after idle? (kiosk entry sets this)
   var apStepTimer = null;        // the single self-rescheduling driver
   var apIdleTimer = null;        // idle-resume countdown after a takeover
@@ -77158,6 +77163,45 @@ function spawnDustMote(container) {
   var apReduced = false;         // motion profile, sampled at start
   var apBadge = document.getElementById("autoplay-badge");
 
+  // Autoplay owns its RANDOMNESS. Game ambience can keep using Math.random(), but every director
+  // choice runs through this xorshift32 stream. A run is therefore reproducible by seed without
+  // monkeypatching global randomness (and without making the rest of the loft deterministic).
+  var apSeed = ((Date.now() ^ 0x6d2b79f5) >>> 0) || 1;
+  var apRng = apSeed, apRngCalls = 0;
+  function apSetSeed(seed) {
+    var n = typeof seed === "number" ? seed : 0;
+    if (typeof seed === "string") { for (var i = 0; i < seed.length; i++) n = ((n * 31) + seed.charCodeAt(i)) >>> 0; }
+    n = (n >>> 0) || 1; apSeed = n; apRng = n; apRngCalls = 0; return n;
+  }
+  function apRand() {
+    var x = apRng >>> 0;
+    x ^= x << 13; x ^= x >>> 17; x ^= x << 5;
+    apRng = x >>> 0; apRngCalls++; return apRng / 4294967296;
+  }
+
+  // Explicit machine states make pause/resume/interrupt ownership inspectable. Selection is
+  // synchronous but still appears in the trace, so a bad transition is observable rather than
+  // inferred from whatever apScene happens to contain.
+  var AP_MACHINE_EDGES = {
+    stopped: { starting: 1 }, takeover: { starting: 1, stopped: 1 },
+    starting: { overture: 1, stopped: 1, takeover: 1 },
+    overture: { selecting: 1, interrupt: 1, paused: 1, stopped: 1, takeover: 1 },
+    selecting: { sequence: 1, stopped: 1, takeover: 1 },
+    sequence: { selecting: 1, interrupt: 1, paused: 1, stopped: 1, takeover: 1 },
+    interrupt: { resuming: 1, selecting: 1, paused: 1, stopped: 1, takeover: 1 },
+    resuming: { overture: 1, sequence: 1, selecting: 1, stopped: 1, takeover: 1 },
+    paused: { overture: 1, sequence: 1, interrupt: 1, stopped: 1, takeover: 1 }
+  };
+  var apMachineState = "stopped", apPausedFrom = null, apTransitionErrors = 0, apStateTrace = [];
+  function apState(next, reason) {
+    if (next === apMachineState) return;
+    var from = apMachineState;
+    if (!(AP_MACHINE_EDGES[from] && AP_MACHINE_EDGES[from][next])) apTransitionErrors++;
+    apMachineState = next;
+    apStateTrace.push({ from: from, to: next, reason: reason || "", step: apStepCount });
+    if (apStateTrace.length > AP_TRACE_LIMIT) apStateTrace.shift();
+  }
+
   function apAttended() { return !document.hidden && document.hasFocus(); }
   function apShowBadge(on) { if (apBadge) apBadge.classList.toggle("show", !!on); }
   function apRoom() { return window.currentStageName || "kitchen"; }
@@ -77170,13 +77214,15 @@ function spawnDustMote(container) {
     if (typeof fn !== "function") { apVerbMisses++; return undefined; }
     try { return fn.apply(window, Array.prototype.slice.call(arguments, 1)); } catch (e) { return undefined; }
   }
-  function apShuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = (Math.random() * (i + 1)) | 0; var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function apShuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = (apRand() * (i + 1)) | 0; var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   function apPickSome(arr, n) { return apShuffle(arr).slice(0, n); }
 
   // goToStage has NO unlock gate — navigating to a locked room cheat-unlocks it (that's the
   // hunt-dot dblclick cheat). The director must never do that behind the player's back, so every
   // room it picks comes from here.
+  var apUnlockedOverride = null; // deterministic model preview can expose the full catalog safely
   function apUnlockedRooms() {
+    if (apUnlockedOverride) return apUnlockedOverride.slice();
     var maxU = (typeof window.__maxUnlocked === "function") ? window.__maxUnlocked() : (window.currentStageIndex || 0);
     return ROOM_RING.slice(0, Math.max(0, Math.min(ROOM_RING.length - 1, maxU)) + 1);
   }
@@ -77274,10 +77320,17 @@ function spawnDustMote(container) {
   var AP_TEARDOWN = {
     daylapse: function () { if (window.__stopDaylapse) window.__stopDaylapse(); },
     albumsnaps: function () { if (window.__stopAlbumSnaps) window.__stopAlbumSnaps(); },
-    season: function () { if (window.__applySeasonSilent) window.__applySeasonSilent(null); } // back to the real date
+    season: function () { if (window.__applySeasonSilent) window.__applySeasonSilent(null); }, // back to the real date
+    date: function () { try { calResetToday(); } catch (e) {} },
+    projector: function () { if (window.__cuddlyProjector) window.__cuddlyProjector.set("off"); },
+    bbq: function () { if (window.bbq) window.bbq(false); else if (window.smoker) window.smoker(false); },
+    seasonalplay: function () {
+      ["snowman", "leafpile", "blossomplay", "sprinkler", "smores"].forEach(function (n) { if (typeof window[n] === "function") window[n](false); });
+    }
   };
   var apOwned = {}; // keyed → bounded by the table's size, cannot grow
   function apOwn(key) { if (AP_TEARDOWN[key]) apOwned[key] = 1; }
+  function apDisown(key) { delete apOwned[key]; }
   function apRelease() {
     for (var k in apOwned) if (apOwned.hasOwnProperty(k) && AP_TEARDOWN[k]) { try { AP_TEARDOWN[k](); } catch (e) {} }
     apOwned = {};
@@ -77295,7 +77348,8 @@ function spawnDustMote(container) {
       fn: o.fn || null, wait: (o.wait == null ? AUTOPLAY_BEAT_MS : o.wait),
       tap: o.tap || null, click: o.click || null, room: o.room || null,
       selfNav: !!o.selfNav, flourish: !!o.flourish, chain: o.chain || null,
-      every: o.every || 0, act: o.act || null, arg: o.arg || null
+      every: o.every || 0, act: o.act || null, arg: o.arg || null,
+      verb: o.verb || null, label: o.label || null
     };
   }
   function apNavBeat(room, wait) {
@@ -77304,9 +77358,21 @@ function spawnDustMote(container) {
   function apAppBeat(kind, name, wait, tap) {
     return apBeat({
       fn: function () { apVerb(kind, name); }, wait: wait, tap: tap || null,
-      room: kind === "computer" ? "office" : "balcony", act: kind, arg: name
+      room: kind === "computer" ? "office" : "balcony", act: kind, arg: name,
+      verb: kind, label: kind + ":" + name
     });
   }
+  function apVerbBeat(name, args, o) {
+    o = o || {};
+    o.verb = name; o.label = o.label || name;
+    o.fn = function () {
+      var a = typeof args === "function" ? args() : (args || []);
+      if (!Array.isArray(a)) a = [a];
+      return apVerb.apply(null, [name].concat(a));
+    };
+    return apBeat(o);
+  }
+  function apClickBeat(id, o) { o = o || {}; o.click = id; o.label = o.label || ("click:" + id); return apBeat(o); }
 
   // ── apNormalize ── the plan-time transform: a pure function of (beats, room, from, profile).
   // This is where the invariants are ENFORCED rather than hoped for.
@@ -77384,7 +77450,7 @@ function spawnDustMote(container) {
     }
     r.push(apBeat({ fn: function () { if (window.party && !window.party()) window.party(true); }, wait: 2800, tap: "garden-guitar", room: "garden" }));
     r.push(apBeat({ fn: function () { apVerb("guests", true); }, wait: 3000, room: "garden", selfNav: true }));   // guests() pans itself
-    r.push(apBeat({ fn: function () { apVerb("dance", Math.random()); }, wait: 2600, tap: "garden-djbooth", room: "garden" }));
+    r.push(apBeat({ fn: function () { apVerb("dance", apRand()); }, wait: 2600, tap: "garden-djbooth", room: "garden", verb: "dance" }));
     // EXPLICIT booleans, never the bare flip: a bare roster() is a toggle, so alternate garden
     // visits would leave the name list up over the rest of the show (and over a take-over). The
     // next beat closes it, exactly as the Trailer's who's-who pair does; apClosePanels is the net.
@@ -77393,7 +77459,7 @@ function spawnDustMote(container) {
     r.push(apBeat({ fn: function () { apCall(window.__spotlightGuest); }, wait: 3000, room: "garden" }));
     r.push(apBeat({ fn: function () { apOwn("albumsnaps"); apCall(window.__startAlbumSnaps); apVerb("chase"); }, wait: 3000, room: "garden", selfNav: true }));
     r.push(apBeat({ fn: apVarySeason, wait: 3000, room: "garden", flourish: true, every: 3 }));
-    r.push(apBeat({ fn: function () { apVerb("jukebox", Math.random()); }, wait: 3000, tap: "garden-djbooth", room: "garden" })); // bare jukebox() only PRINTS the menu
+    r.push(apBeat({ fn: function () { apVerb("jukebox", apRand()); }, wait: 3000, tap: "garden-djbooth", room: "garden", verb: "jukebox" })); // bare jukebox() only PRINTS the menu
     var MOMENTS = ["firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift"];
     apPickSome(MOMENTS, 3).forEach(function (name) {
       r.push(apBeat({ fn: function () { apVerb(name); }, wait: 14000, room: "garden", selfNav: true })); // these verbs pan + precondition themselves
@@ -77410,13 +77476,13 @@ function spawnDustMote(container) {
     }
     // Math.random(), not the string "random": these verbs read a 0..1 FRACTION (fracToIndex) and
     // bounce anything else back as their help text — "random" picked no channel at all.
-    r.push(apBeat({ fn: function () { apVerb("projector", Math.random()); }, wait: 2800, tap: "cuddly-wallscreen", room: "cuddly" }));
+    r.push(apBeat({ fn: function () { apVerb("projector", apRand()); }, wait: 2800, tap: "cuddly-wallscreen", room: "cuddly", verb: "projector" }));
     r.push(apBeat({ fn: function () { apVerb("octi"); }, wait: 2400, tap: "cuddly-octopus", room: "cuddly", selfNav: true }));
     // explicit booleans both ways: a bare piratebox() is a toggle, so the trunk's state would
     // alternate between visits and the pair reads as one gag — Octi hops in, then back out.
     r.push(apBeat({ fn: function () { apVerb("piratebox", true); }, wait: 2600, tap: "cuddly-trunk", room: "cuddly" }));
     r.push(apBeat({ fn: function () { apVerb("piratebox", false); }, wait: 2600, tap: "cuddly-trunk", room: "cuddly" }));
-    r.push(apBeat({ fn: function () { apVerb("projector", Math.random()); }, wait: 2800, tap: "cuddly-wallscreen", room: "cuddly" }));
+    r.push(apBeat({ fn: function () { apVerb("projector", apRand()); }, wait: 2800, tap: "cuddly-wallscreen", room: "cuddly", verb: "projector" }));
     return r;
   }
 
@@ -77486,7 +77552,7 @@ function spawnDustMote(container) {
     if (!inp) return false;
     try {
       var pool = "aspenirenepouriadaneshsinadj";
-      inp.value = pool.charAt((Math.random() * pool.length) | 0);
+      inp.value = pool.charAt((apRand() * pool.length) | 0);
       inp.dispatchEvent(new Event("input", { bubbles: true }));
       apAlbumDirty = true;
     } catch (e) { return false; }
@@ -77499,36 +77565,348 @@ function spawnDustMote(container) {
     if (inp && inp.value) { try { inp.value = ""; inp.dispatchEvent(new Event("input", { bubbles: true })); } catch (e) {} }
   }
 
-  var SCENE_BUILDERS = {
+  var AP_SHOWCASE_BUILDERS = {
     kitchen: apSceneKitchen, garden: apSceneGarden, cuddly: apSceneCuddly,
     office: apSceneOffice, balcony: apSceneBalcony
   };
 
-  // ── coverage ledger ── replaces the old shuffle bag. Two HARD invariants: never the same room
-  // twice running, and any room unplayed for STARVE_LIMIT scenes wins outright — so with five rooms
-  // and a limit of 4 every room provably plays within one cycle, rather than probably.
+  // ── interaction mini-sequences ──────────────────────────────────────────────
+  // Each builder tells one legible little story. The five showcase builders above remain the
+  // frontier solve walks and the richest room samplers; the catalog below adds focused vignettes
+  // and cross-room relays. Keeping builders small is what lets a notification suspend and resume
+  // without returning minutes later to an action whose setup is no longer visible.
+  function apKitchenPercussion() { return [
+    apVerbBeat("day", [], { wait: 1200, room: "kitchen" }),
+    apClickBeat("kitchen-pans", { wait: 1600, room: "kitchen" }),
+    apClickBeat("kitchen-scoops", { wait: 1500, room: "kitchen" }),
+    apVerbBeat("gong", [], { wait: 2600, tap: "kitchen-gong", room: "kitchen" }),
+    apClickBeat("kitchen-cups", { wait: 1500, room: "kitchen" }),
+    apClickBeat("kitchen-scale", { wait: 1900, room: "kitchen" })
+  ]; }
+  function apKitchenNightBar() { return [
+    apVerbBeat("night", [], { wait: 2200, room: "kitchen" }),
+    apVerbBeat("mixer", function () { return [apRand()]; }, { wait: 4300, tap: "kitchen-bartender-hit", room: "kitchen" }),
+    apClickBeat("kitchen-bar-cooler", { wait: 2200, room: "kitchen" }),
+    apVerbBeat("cocktail", function () { return [apRand()]; }, { wait: 4400, tap: "kitchen-bartender-hit", room: "kitchen" }),
+    apClickBeat("kitchen-bar-glass-coupe", { wait: 1800, room: "kitchen" })
+  ]; }
+  function apKitchenSmallThings() { return [
+    apVerbBeat("day", [], { wait: 1200, room: "kitchen" }),
+    apClickBeat("kitchen-tongs", { wait: 1500, room: "kitchen" }),
+    apClickBeat("kitchen-steamwand", { wait: 1800, room: "kitchen" }),
+    apClickBeat("kitchen-plant", { wait: 1700, room: "kitchen" }),
+    apClickBeat("kitchen-window-pane", { wait: 1700, room: "kitchen" }),
+    apClickBeat("kitchen-kettle", { wait: 1800, room: "kitchen" })
+  ]; }
+
+  function apGardenLiveSet() { return [
+    apVerbBeat("party", [true], { wait: 2500, tap: "garden-guitar", room: "garden" }),
+    apVerbBeat("dj", function () { return [apRand()]; }, { wait: 1800, tap: "garden-djbooth", room: "garden" }),
+    apVerbBeat("music", function () { return [apRand()]; }, { wait: 3000, tap: "garden-guitar", room: "garden", selfNav: true }),
+    apVerbBeat("dance", function () { return [apRand()]; }, { wait: 2800, tap: "garden-djbooth", room: "garden" }),
+    apVerbBeat("ukulele", [], { wait: 3200, tap: "garden-ukulele", room: "garden", selfNav: true })
+  ]; }
+  function apGardenArrivals() { return [
+    apVerbBeat("party", [true], { wait: 2400, room: "garden" }),
+    apVerbBeat("guests", [true], { wait: 3000, room: "garden", selfNav: true }),
+    apVerbBeat("roster", [true], { wait: 3000, room: "garden" }),
+    apBeat({ fn: function () { apCall(window.__spotlightGuest); }, wait: 2600, room: "garden", label: "spotlight" }),
+    apBeat({ fn: function () { apCall(window.__spotlightGuest); }, wait: 2600, room: "garden", label: "spotlight" }),
+    apVerbBeat("roster", [false], { wait: 1800, room: "garden" })
+  ]; }
+  function apGardenCeremony() { return [
+    apVerbBeat("party", [true], { wait: 2200, room: "garden" }),
+    apVerbBeat("toasts", [], { wait: 8500, room: "garden", selfNav: true }),
+    apVerbBeat("firstdance", [], { wait: 10500, room: "garden", selfNav: true }),
+    apVerbBeat("sparklers", [], { wait: 8500, room: "garden", selfNav: true }),
+    apVerbBeat("cake", [], { wait: 7000, room: "garden", selfNav: true })
+  ]; }
+  function apGardenPhotoStory() { return [
+    apVerbBeat("party", [true], { wait: 2200, room: "garden" }),
+    apVerbBeat("snap", ["garden"], { wait: 3200, tap: "garden-photog-hit", room: "garden", selfNav: true }),
+    apVerbBeat("groupphoto", [], { wait: 9000, room: "garden", selfNav: true }),
+    apVerbBeat("snap", ["garden"], { wait: 3200, tap: "garden-photog-hit", room: "garden", selfNav: true }),
+    apAppBeat("phone", "album", 3000, "balcony-phone"),
+    apBeat({ fn: function () { apPhoneInteract("album"); }, wait: 2400, room: "balcony", label: "album-search" }),
+    apVerbBeat("phone", [false], { wait: 1600, room: "balcony" })
+  ]; }
+  function apGardenWeatherMagic() { return [
+    apVerbBeat("night", [], { wait: 2300, room: "garden" }),
+    apVerbBeat("aurora", [true], { wait: 4000, room: "garden" }),
+    apBeat({ fn: function () { apOwn("date"); apVerb("meteors", true); }, wait: 4200, room: "garden", selfNav: true, verb: "meteors", label: "meteor-shower" }),
+    apClickBeat("garden-window-pane-0", { wait: 1800, room: "garden" }),
+    apClickBeat("garden-ladybug", { wait: 1900, room: "garden" }),
+    apBeat({ fn: function () { apVerb("aurora", false); try { calResetToday(); } catch (e) {} apDisown("date"); }, wait: 1800, room: "garden", verb: "aurora", label: "sky-reset" })
+  ]; }
+
+  function apCuddlyProjectorNight() { return [
+    apBeat({ fn: function () { apOwn("projector"); apVerb("projector", "stars"); }, wait: 3000, tap: "cuddly-wallscreen", room: "cuddly", verb: "projector" }),
+    apVerbBeat("piano", function () { return [apRand()]; }, { wait: 3800, room: "cuddly", selfNav: true }),
+    apVerbBeat("octi", [], { wait: 2300, tap: "cuddly-octopus", room: "cuddly", selfNav: true }),
+    apClickBeat("cuddly-blanket", { wait: 1900, room: "cuddly" }),
+    apBeat({ fn: function () { apVerb("projector", false); apDisown("projector"); }, wait: 1800, tap: "cuddly-wallscreen", room: "cuddly", verb: "projector" })
+  ]; }
+  function apCuddlyScreenTour() { return [
+    apVerbBeat("projector", ["workout"], { wait: 3000, tap: "cuddly-wallscreen", room: "cuddly" }),
+    apVerbBeat("projector", ["totoro"], { wait: 3000, tap: "cuddly-wallscreen", room: "cuddly" }),
+    apVerbBeat("projector", ["aqua"], { wait: 3000, tap: "cuddly-wallscreen", room: "cuddly" }),
+    apClickBeat("cuddly-octopus", { wait: 2200, room: "cuddly" }),
+    apVerbBeat("projector", [false], { wait: 1700, tap: "cuddly-wallscreen", room: "cuddly" })
+  ]; }
+  function apCuddlyPirateCaper() { return [
+    apVerbBeat("octi", [], { wait: 2200, tap: "cuddly-octopus", room: "cuddly", selfNav: true }),
+    apVerbBeat("piratebox", [true], { wait: 2600, tap: "cuddly-trunk", room: "cuddly" }),
+    apClickBeat("cuddly-octopus", { wait: 2100, room: "cuddly" }),
+    apVerbBeat("piratebox", [false], { wait: 2500, tap: "cuddly-trunk", room: "cuddly" })
+  ]; }
+  function apCuddlySoftThings() { return [
+    apClickBeat("cuddly-blanket", { wait: 1900, room: "cuddly" }),
+    apClickBeat("cuddly-pillow-1", { wait: 1600, room: "cuddly" }),
+    apClickBeat("cuddly-pillow-2", { wait: 1600, room: "cuddly" }),
+    apClickBeat("cuddly-bolster", { wait: 1700, room: "cuddly" }),
+    apClickBeat("cuddly-yellowblanket", { wait: 2100, room: "cuddly" })
+  ]; }
+
+  function apOfficeArcade() { return [
+    apAppBeat("computer", "mines", 2200, "monitor-dock-mines"),
+    apBeat({ fn: function () { apMonitorInteract("mines"); }, wait: 1600, room: "office", label: "mines-poke" }),
+    apBeat({ fn: function () { apMonitorInteract("mines"); }, wait: 1600, room: "office", label: "mines-poke" }),
+    apAppBeat("computer", "life", 2100, "monitor-dock-life"),
+    apBeat({ fn: function () { apMonitorInteract("life"); }, wait: 1700, room: "office", label: "life-poke" }),
+    apBeat({ fn: function () { apMonitorInteract("life"); }, wait: 1900, room: "office", label: "life-poke" })
+  ]; }
+  function apOfficeCorrespondence() { return [
+    apAppBeat("computer", "mail", 2200, "monitor-dock-mail"),
+    apBeat({ fn: function () { apMonitorInteract("mail"); }, wait: 2400, room: "office", label: "mail-open" }),
+    apAppBeat("computer", "chat", 2200, "monitor-dock-chat"),
+    apBeat({ fn: function () { apMonitorInteract("chat"); }, wait: 1900, room: "office", label: "chat-focus" }),
+    apAppBeat("computer", "calendar", 2200, "monitor-dock-calendar"),
+    apBeat({ fn: function () { apMonitorInteract("calendar"); }, wait: 2100, room: "office", label: "calendar-page" })
+  ]; }
+  function apOfficeCalendarLife() { return [
+    apAppBeat("computer", "calendar", 2300, "monitor-dock-calendar"),
+    apBeat({ fn: function () { apMonitorInteract("calendar"); }, wait: 1900, room: "office", label: "calendar-page" }),
+    apBeat({ fn: function () { apMonitorInteract("calendar"); }, wait: 1900, room: "office", label: "calendar-page" }),
+    apAppBeat("computer", "life", 2200, "monitor-dock-life"),
+    apBeat({ fn: function () { apMonitorInteract("life"); }, wait: 1800, room: "office", label: "life-poke" }),
+    apClickBeat("office-butterfly", { wait: 2100, room: "office" })
+  ]; }
+  function apOfficeDeskToys() { return [
+    apClickBeat("office-typewriter", { wait: 1800, room: "office" }),
+    apClickBeat("office-spin-top", { wait: 1800, room: "office" }),
+    apVerbBeat("butterfly", [], { wait: 2200, tap: "office-butterfly", room: "office", selfNav: true }),
+    apClickBeat("office-crane-hit", { wait: 2100, room: "office" }),
+    apClickBeat("office-canada-flag-hit", { wait: 1700, room: "office" }),
+    apClickBeat("office-pride-flag-hit", { wait: 1700, room: "office" })
+  ]; }
+  function apOfficeFamilyCall() { return [
+    apVerbBeat("laptop", [true], { wait: 2300, tap: "office-laptop", room: "office", selfNav: true }),
+    apVerbBeat("laptop", function () { return [apRand() < 0.5 ? "prague" : "lubeck"]; }, { wait: 6200, tap: "office-laptop-screen", room: "office", selfNav: true }),
+    apClickBeat("office-webcam-hit", { wait: 1900, room: "office" }),
+    apVerbBeat("laptop", [false], { wait: 2200, tap: "office-laptop", room: "office", selfNav: true })
+  ]; }
+
+  function apBalconyBBQ() { return [
+    apBeat({ fn: function () { apOwn("bbq"); apVerb("smoker", true); }, wait: 2600, tap: "balcony-smoker-firebox", room: "balcony", verb: "smoker" }),
+    apVerbBeat("smokerlid", [false], { wait: 4200, tap: "balcony-smoker-lid", room: "balcony" }),
+    apClickBeat("balcony-windchime", { wait: 2200, room: "balcony" }),
+    apVerbBeat("smokerlid", [true], { wait: 2600, tap: "balcony-smoker-lid", room: "balcony" }),
+    apBeat({ fn: function () { apVerb("smoker", false); apDisown("bbq"); }, wait: 2200, tap: "balcony-smoker-firebox", room: "balcony", verb: "smoker" })
+  ]; }
+  function apBalconySky() { return [
+    apVerbBeat("night", [], { wait: 2400, room: "balcony" }),
+    apVerbBeat("aurora", [true], { wait: 3800, room: "garden", selfNav: true }),
+    apBeat({ fn: function () { apOwn("date"); apVerb("meteors", true); }, wait: 4200, room: "garden", selfNav: true, verb: "meteors", label: "meteor-shower" }),
+    apClickBeat("garden-window-pane-0", { wait: 2200, room: "garden" }),
+    apClickBeat("balcony-windchime", { wait: 2200, room: "balcony" }),
+    apBeat({ fn: function () { apVerb("aurora", false); try { calResetToday(); } catch (e) {} apDisown("date"); }, wait: 1800, room: "balcony", verb: "aurora", label: "sky-reset" })
+  ]; }
+  function apBalconyPhoneMusic() { return [
+    apAppBeat("phone", "music", 2400, "balcony-phone"),
+    apBeat({ fn: function () { apPoke([".pm-music .pmm-play"]); }, wait: 2400, room: "balcony", label: "phone-play" }),
+    apBeat({ fn: function () { apPoke([".pm-music .pmm-skip:last-child", ".pm-music .pmm-skip"]); }, wait: 2400, room: "balcony", label: "phone-next" }),
+    apAppBeat("phone", "messages", 2400, "balcony-phone"),
+    apBeat({ fn: function () { apPhoneInteract("messages"); }, wait: 2200, room: "balcony", label: "message-open" }),
+    apVerbBeat("phone", [false], { wait: 1700, room: "balcony" })
+  ]; }
+  function apBalconyAlbumCamera() { return [
+    apAppBeat("phone", "album", 2300, "balcony-phone"),
+    apBeat({ fn: function () { apPhoneInteract("album"); }, wait: 2300, room: "balcony", label: "album-search" }),
+    apBeat({ fn: function () { apPoke([".pm-album-shot"]); }, wait: 2300, room: "balcony", label: "album-photo" }),
+    apAppBeat("phone", "photobooth", 2600, "balcony-phone"),
+    apAppBeat("phone", "weather", 2300, "balcony-phone"),
+    apVerbBeat("phone", [false], { wait: 1700, room: "balcony" })
+  ]; }
+  function apBalconySeasonalPlay() {
+    var toys = ["snowman", "leafpile", "blossomplay", "sprinkler", "smores"];
+    var toy = toys[(apRand() * toys.length) | 0];
+    return [
+      apBeat({ fn: function () { apOwn("seasonalplay"); apVerb(toy, true); }, wait: 3600, room: "balcony", selfNav: true, verb: toy, label: toy + ":on" }),
+      apClickBeat("balcony-lounger", { wait: 2100, room: "balcony" }),
+      apClickBeat("balcony-windchime", { wait: 2100, room: "balcony" }),
+      apClickBeat("balcony-wineglass", { wait: 1900, room: "balcony" }),
+      apBeat({ fn: function () { apVerb(toy, false); apDisown("seasonalplay"); }, wait: 1800, room: "balcony", verb: toy, label: toy + ":off" })
+    ];
+  }
+
+  // Cross-room relays give the watch mode a little syntax beyond "visit room, leave room".
+  function apMusicRelay() { return [
+    apVerbBeat("music", function () { return [apRand()]; }, { wait: 3200, room: "garden", selfNav: true }),
+    apVerbBeat("ukulele", [], { wait: 2900, tap: "garden-ukulele", room: "garden", selfNav: true }),
+    apVerbBeat("projector", ["stars"], { wait: 3000, tap: "cuddly-wallscreen", room: "cuddly" }),
+    apVerbBeat("octi", [], { wait: 2200, tap: "cuddly-octopus", room: "cuddly", selfNav: true }),
+    apAppBeat("computer", "music", 2600, "monitor-dock-music"),
+    apVerbBeat("projector", [false], { wait: 1700, room: "cuddly" })
+  ]; }
+  function apPhotoRelay() { return [
+    apVerbBeat("party", [true], { wait: 2200, room: "garden" }),
+    apVerbBeat("snap", ["garden"], { wait: 3300, tap: "garden-photog-hit", room: "garden", selfNav: true }),
+    apVerbBeat("snap", ["office"], { wait: 3400, tap: "office-webcam-hit", room: "office", selfNav: true }),
+    apVerbBeat("snap", ["balcony"], { wait: 3400, tap: "balcony-phone", room: "balcony", selfNav: true }),
+    apAppBeat("phone", "album", 2600, "balcony-phone"),
+    apBeat({ fn: function () { apPhoneInteract("album"); }, wait: 2300, room: "balcony", label: "album-search" }),
+    apVerbBeat("phone", [false], { wait: 1600, room: "balcony" })
+  ]; }
+  function apLightsRelay() { return [
+    apVerbBeat("night", [], { wait: 2200, room: "kitchen" }),
+    apClickBeat("kitchen-candle", { wait: 1900, room: "kitchen" }),
+    apClickBeat("garden-lightswitch", { wait: 1900, room: "garden" }),
+    apClickBeat("cuddly-wallscreen", { wait: 2200, room: "cuddly" }),
+    apClickBeat("office-lamp", { wait: 1900, room: "office" }),
+    apClickBeat("balcony-walllamp", { wait: 2100, room: "balcony" })
+  ]; }
+
+  function apSeq(id, room, mood, weight, build, opts) {
+    opts = opts || {};
+    return { id: id, room: room, rooms: (opts.rooms || [room]).slice(), mood: mood,
+      weight: weight || 1, build: build, solved: !!opts.solved, frontier: !!opts.frontier,
+      crossRoom: !!opts.crossRoom, family: opts.family || id.split(".")[0] };
+  }
+  var AP_SEQUENCE_LIBRARY = [
+    apSeq("kitchen.espresso", "kitchen", "craft", 1.4, apSceneKitchen, { frontier: true, family: "espresso" }),
+    apSeq("kitchen.percussion", "kitchen", "playful", 1.0, apKitchenPercussion, { solved: true, family: "room-toys" }),
+    apSeq("kitchen.night-bar", "kitchen", "social", 1.2, apKitchenNightBar, { solved: true, family: "food-drink" }),
+    apSeq("kitchen.small-things", "kitchen", "wonder", 0.9, apKitchenSmallThings, { solved: true, family: "room-toys" }),
+
+    apSeq("garden.reception", "garden", "social", 1.6, apSceneGarden, { frontier: true, family: "party" }),
+    apSeq("garden.live-set", "garden", "music", 1.4, apGardenLiveSet, { solved: true, family: "music" }),
+    apSeq("garden.arrivals", "garden", "social", 1.2, apGardenArrivals, { solved: true, family: "guests" }),
+    apSeq("garden.ceremony", "garden", "romance", 1.3, apGardenCeremony, { solved: true, family: "moments" }),
+    apSeq("garden.photo-story", "garden", "wonder", 1.1, apGardenPhotoStory, { solved: true, rooms: ["garden", "balcony"], crossRoom: true, family: "photos" }),
+    apSeq("garden.weather-magic", "garden", "wonder", 0.9, apGardenWeatherMagic, { solved: true, family: "sky" }),
+
+    apSeq("cuddly.octi", "cuddly", "playful", 1.3, apSceneCuddly, { frontier: true, family: "octi" }),
+    apSeq("cuddly.projector-night", "cuddly", "rest", 1.2, apCuddlyProjectorNight, { solved: true, family: "projector" }),
+    apSeq("cuddly.screen-tour", "cuddly", "digital", 1.0, apCuddlyScreenTour, { solved: true, family: "projector" }),
+    apSeq("cuddly.pirate-caper", "cuddly", "playful", 1.1, apCuddlyPirateCaper, { solved: true, family: "octi" }),
+    apSeq("cuddly.soft-things", "cuddly", "rest", 0.9, apCuddlySoftThings, { solved: true, family: "room-toys" }),
+
+    apSeq("office.app-hop", "office", "digital", 1.5, apSceneOffice, { frontier: true, family: "apps" }),
+    apSeq("office.arcade", "office", "playful", 1.2, apOfficeArcade, { solved: true, family: "games" }),
+    apSeq("office.correspondence", "office", "digital", 1.1, apOfficeCorrespondence, { solved: true, family: "apps" }),
+    apSeq("office.calendar-life", "office", "craft", 1.0, apOfficeCalendarLife, { solved: true, family: "apps" }),
+    apSeq("office.desk-toys", "office", "playful", 1.0, apOfficeDeskToys, { solved: true, family: "room-toys" }),
+    apSeq("office.family-call", "office", "social", 1.1, apOfficeFamilyCall, { solved: true, family: "calls" }),
+
+    apSeq("balcony.phone-hop", "balcony", "digital", 1.5, apSceneBalcony, { frontier: true, family: "phone" }),
+    apSeq("balcony.bbq", "balcony", "craft", 1.3, apBalconyBBQ, { solved: true, family: "food-drink" }),
+    apSeq("balcony.sky", "balcony", "wonder", 1.1, apBalconySky, { solved: true, rooms: ["balcony", "garden"], crossRoom: true, family: "sky" }),
+    apSeq("balcony.phone-music", "balcony", "music", 1.1, apBalconyPhoneMusic, { solved: true, family: "phone" }),
+    apSeq("balcony.album-camera", "balcony", "digital", 1.0, apBalconyAlbumCamera, { solved: true, family: "photos" }),
+    apSeq("balcony.seasonal-play", "balcony", "playful", 1.0, apBalconySeasonalPlay, { solved: true, family: "kids" }),
+
+    apSeq("relay.music", "garden", "music", 0.9, apMusicRelay, { solved: true, rooms: ["garden", "cuddly", "office"], crossRoom: true, family: "relay" }),
+    apSeq("relay.photos", "garden", "wonder", 0.8, apPhotoRelay, { solved: true, rooms: ["garden", "office", "balcony"], crossRoom: true, family: "relay" }),
+    apSeq("relay.lights", "kitchen", "rest", 0.8, apLightsRelay, { solved: true, rooms: ROOM_RING, crossRoom: true, family: "relay" })
+  ];
+
+  // The Markov state is the tone of the last completed selection. Values are multipliers over the
+  // candidate's authored weight, not probabilities by themselves. This favours coherent arcs such
+  // as craft→social→music→romance→rest while leaving every mood reachable.
+  var AP_MOOD_TRANSITIONS = {
+    start:   { craft: 1.5, playful: 1.2, social: 1.2, romance: 0.8, wonder: 1.2, digital: 1.0, music: 1.1, rest: 0.8 },
+    craft:   { craft: 0.45, playful: 1.35, social: 1.45, romance: 0.9, wonder: 1.2, digital: 1.15, music: 1.2, rest: 0.9 },
+    playful: { craft: 1.1, playful: 0.5, social: 1.35, romance: 0.9, wonder: 1.4, digital: 1.15, music: 1.25, rest: 1.1 },
+    social:  { craft: 0.9, playful: 1.25, social: 0.5, romance: 1.5, wonder: 1.05, digital: 0.9, music: 1.45, rest: 1.1 },
+    romance: { craft: 0.8, playful: 0.95, social: 1.1, romance: 0.4, wonder: 1.45, digital: 0.7, music: 1.3, rest: 1.55 },
+    wonder:  { craft: 1.15, playful: 1.25, social: 1.0, romance: 1.15, wonder: 0.5, digital: 1.3, music: 1.05, rest: 1.2 },
+    digital: { craft: 1.25, playful: 1.4, social: 1.0, romance: 0.75, wonder: 1.25, digital: 0.45, music: 1.1, rest: 1.15 },
+    music:   { craft: 0.9, playful: 1.25, social: 1.4, romance: 1.5, wonder: 1.15, digital: 0.85, music: 0.4, rest: 1.35 },
+    rest:    { craft: 1.35, playful: 1.3, social: 1.1, romance: 1.0, wonder: 1.25, digital: 1.1, music: 1.2, rest: 0.45 }
+  };
+
+  // ── constrained Markov selector ─────────────────────────────────────────────
   var apVisits = {}, apSince = {}, apLastRoom = null, apCycleSeen = {};
-  function apPickRoom() {
-    var pool = apUnlockedRooms(), i;
-    var elig = pool.filter(function (r) { return r !== apLastRoom; });
-    if (!elig.length) elig = pool;
-    var starved = elig.filter(function (r) { return (apSince[r] || 0) >= STARVE_LIMIT; });
-    var pick = null;
-    if (starved.length) {
-      starved.sort(function (a, b) { return ((apSince[b] || 0) - (apSince[a] || 0)) || ((apVisits[a] || 0) - (apVisits[b] || 0)); });
-      pick = starved[0];
-    } else {
-      var tot = 0;
-      for (i = 0; i < elig.length; i++) tot += (ROOM_SPEC[elig[i]] || { weight: 1 }).weight;
-      var roll = Math.random() * tot;
-      for (i = 0; i < elig.length; i++) { roll -= (ROOM_SPEC[elig[i]] || { weight: 1 }).weight; if (roll <= 0) { pick = elig[i]; break; } }
-      if (!pick) pick = elig[elig.length - 1];
+  var apSequenceVisits = {}, apSequenceSince = {}, apRecentSequences = [];
+  var apMood = "start", apLastChoice = null, apChoiceTrace = [];
+  function apSequenceEligible(s, forcedRoom) {
+    var unlocked = apUnlockedRooms();
+    if (forcedRoom && s.room !== forcedRoom) return false;
+    for (var i = 0; i < s.rooms.length; i++) if (unlocked.indexOf(s.rooms[i]) === -1) return false;
+    var solved = apRoomSolved(s.room);
+    if (!solved && !s.frontier) return false;
+    if (solved && s.frontier) return true; // the frontier builder becomes its room's showcase
+    return !s.solved || solved;
+  }
+  function apMarkovWeight(from, to) {
+    var row = AP_MOOD_TRANSITIONS[from] || AP_MOOD_TRANSITIONS.start;
+    return row[to] == null ? 0.7 : row[to];
+  }
+  function apPickSequence(forcedRoom) {
+    var unlocked = apUnlockedRooms(), i, s;
+    var pool = AP_SEQUENCE_LIBRARY.filter(function (x) { return apSequenceEligible(x, forcedRoom); });
+    if (!pool.length) return null;
+
+    // A starved room is a hard constraint, not a score that luck can keep defeating.
+    var starvedRoom = null, starvedAge = STARVE_LIMIT - 1;
+    if (!forcedRoom) for (i = 0; i < unlocked.length; i++) if ((apSince[unlocked[i]] || 0) > starvedAge) { starvedAge = apSince[unlocked[i]] || 0; starvedRoom = unlocked[i]; }
+    if (starvedRoom) {
+      var due = pool.filter(function (x) { return x.rooms.indexOf(starvedRoom) !== -1; });
+      if (due.length) pool = due;
     }
-    for (i = 0; i < pool.length; i++) apSince[pool[i]] = (apSince[pool[i]] || 0) + 1;
-    apSince[pick] = 0; apVisits[pick] = (apVisits[pick] || 0) + 1; apLastRoom = pick;
-    apCycleSeen[pick] = 1;
-    if (Object.keys(apCycleSeen).length >= pool.length) { apLoopCount++; apCycleSeen = {}; }
-    return pick;
+
+    // Exact-story anti-repetition is also hard whenever another eligible story exists. Then avoid
+    // the same primary room back-to-back, unless fairness forced it or there is only one room yet.
+    var fresh = pool.filter(function (x) { return apRecentSequences.indexOf(x.id) === -1; });
+    if (fresh.length) pool = fresh;
+    if (!forcedRoom && !starvedRoom) {
+      var otherRoom = pool.filter(function (x) { return x.room !== apLastRoom; });
+      if (otherRoom.length) pool = otherRoom;
+    }
+
+    var scored = [], total = 0;
+    for (i = 0; i < pool.length; i++) {
+      s = pool[i];
+      var markov = apMarkovWeight(apMood, s.mood);
+      var roomAge = 0;
+      for (var j = 0; j < s.rooms.length; j++) roomAge = Math.max(roomAge, apSince[s.rooms[j]] || 0);
+      var roomFair = 1 + Math.min(2.2, roomAge * 0.22);
+      var seqFair = 1 + Math.min(1.8, (apSequenceSince[s.id] || 0) * 0.12);
+      var solveBoost = !apRoomSolved(s.room) && s.frontier ? 2.4 : 1;
+      var score = s.weight * markov * roomFair * seqFair * solveBoost;
+      total += score;
+      scored.push({ spec: s, score: score, base: s.weight, markov: markov, roomFair: roomFair, sequenceFair: seqFair, solveBoost: solveBoost });
+    }
+    var rawRoll = apRand(), roll = rawRoll * total, chosen = scored[scored.length - 1];
+    for (i = 0; i < scored.length; i++) { roll -= scored[i].score; if (roll <= 0) { chosen = scored[i]; break; } }
+    s = chosen.spec;
+
+    for (i = 0; i < unlocked.length; i++) apSince[unlocked[i]] = (apSince[unlocked[i]] || 0) + 1;
+    for (i = 0; i < AP_SEQUENCE_LIBRARY.length; i++) if (apSequenceEligible(AP_SEQUENCE_LIBRARY[i], null)) apSequenceSince[AP_SEQUENCE_LIBRARY[i].id] = (apSequenceSince[AP_SEQUENCE_LIBRARY[i].id] || 0) + 1;
+    for (i = 0; i < s.rooms.length; i++) { apSince[s.rooms[i]] = 0; apCycleSeen[s.rooms[i]] = 1; }
+    apSequenceSince[s.id] = 0; apSequenceVisits[s.id] = (apSequenceVisits[s.id] || 0) + 1;
+    apVisits[s.room] = (apVisits[s.room] || 0) + 1; apLastRoom = s.room;
+    apRecentSequences.push(s.id); if (apRecentSequences.length > SEQUENCE_RECENT_LIMIT) apRecentSequences.shift();
+    if (Object.keys(apCycleSeen).length >= unlocked.length) { apLoopCount++; apCycleSeen = {}; }
+
+    apLastChoice = { id: s.id, room: s.room, moodFrom: apMood, moodTo: s.mood,
+      roll: rawRoll, total: total, starvedRoom: starvedRoom,
+      candidates: scored.map(function (x) { return { id: x.spec.id, score: +x.score.toFixed(5), base: x.base,
+        markov: x.markov, roomFair: +x.roomFair.toFixed(2), sequenceFair: +x.sequenceFair.toFixed(2), solveBoost: x.solveBoost }; }) };
+    apMood = s.mood;
+    apChoiceTrace.push({ id: s.id, room: s.room, rooms: s.rooms.slice(), from: apLastChoice.moodFrom, to: s.mood, roll: +rawRoll.toFixed(6), starvedRoom: starvedRoom });
+    if (apChoiceTrace.length > AP_TRACE_LIMIT) apChoiceTrace.shift();
+    return s;
   }
 
   // ── THE OVERTURE ── how "it travels the loft" stops being an accident of scene lengths. Beat 0
@@ -77549,18 +77927,24 @@ function spawnDustMote(container) {
     return { room: home, kind: "overture", beats: b, dropped: {} };
   }
 
-  function apBuildScene(room) {
-    var build = SCENE_BUILDERS[room];
-    var raw = (build && build()) || [];
-    return { room: room, kind: "room", beats: apNormalize(raw, room, apRoom(), apReduced), dropped: {} };
+  function apBuildSequence(spec) {
+    if (!spec) return null;
+    var raw = (spec.build && spec.build()) || [];
+    return { id: spec.id, room: spec.room, rooms: spec.rooms.slice(), mood: spec.mood,
+      kind: "sequence", beats: apNormalize(raw, spec.room, apRoom(), apReduced), dropped: {} };
   }
   function apNextScene() {
-    if (apOverturePending) { apOverturePending = false; return apBuildOverture(); }
-    var room = apForcedRoom || apPickRoom();
+    if (apOverturePending) { apOverturePending = false; apState("overture", "opening sweep"); return apBuildOverture(); }
+    apState("selecting", "sequence complete");
+    var forced = apForcedRoom;
     apForcedRoom = null;
-    if (ROOM_RING.indexOf(room) === -1) room = "kitchen";
-    apLastRoom = room;
-    return apBuildScene(room);
+    var spec = apPickSequence(forced);
+    if (!spec) {
+      var room = forced || apUnlockedRooms()[0] || "kitchen";
+      spec = apSeq(room + ".fallback", room, "craft", 1, AP_SHOWCASE_BUILDERS[room] || apSceneKitchen, { frontier: true });
+    }
+    apState("sequence", "selected " + spec.id);
+    return apBuildSequence(spec);
   }
 
   // ── notifications ── EDGE-triggered. `.msg-badge.show` is a persistent unread COUNT, so reading
@@ -77582,7 +77966,7 @@ function spawnDustMote(container) {
   // An interrupt SUSPENDS the running scene onto a one-deep stack and resumes it afterwards — the
   // old build nulled the routine outright, so a text arriving mid-party destroyed the garden.
   function apPushInterrupt(ev) {
-    if (apScene && apScene.kind !== "interrupt" && apSceneIdx < apScene.beats.length) apStack = { scene: apScene, idx: apSceneIdx };
+    if (apScene && apScene.kind !== "interrupt" && apSceneIdx < apScene.beats.length) apStack = { scene: apScene, idx: apSceneIdx, state: apMachineState };
     var beats;
     if (ev.kind === "call") {
       beats = [apBeat({ fn: function () { var r = document.querySelector(".call-ring.show"); if (r) r.click(); }, wait: 2600 })];
@@ -77598,6 +77982,7 @@ function spawnDustMote(container) {
     }
     apScene = { room: "event", kind: "interrupt", beats: beats, dropped: {} };
     apSceneIdx = 0;
+    apState("interrupt", ev.kind + (ev.id ? ":" + ev.id : ""));
   }
 
   // ── SEQUENCER ── run exactly ONE beat, return the pause before the next.
@@ -77612,7 +77997,13 @@ function spawnDustMote(container) {
     if (ev) apPushInterrupt(ev);
     for (var guard = 0; guard < 64; guard++) {
       if (!apScene || apSceneIdx >= apScene.beats.length) {
-        if (apStack) { apScene = apStack.scene; apSceneIdx = apStack.idx; apStack = null; continue; }
+        if (apStack) {
+          var resume = apStack; apStack = null;
+          apState("resuming", "interrupt complete");
+          apScene = resume.scene; apSceneIdx = resume.idx;
+          apState(resume.state === "overture" ? "overture" : "sequence", "resume " + (apScene.id || apScene.kind));
+          continue;
+        }
         apClosePanels(); // a finished scene never hands a panel to the next room
         apScene = apNextScene(); apSceneIdx = 0;
         if (!apScene || !apScene.beats.length) { apScene = null; return AUTOPLAY_BEAT_MS; }
@@ -77639,7 +78030,12 @@ function spawnDustMote(container) {
     var g = apGen;
     apStepTimer = null;
     if (!apOn) return;
-    if (!apAttended()) { cursorHide(); apStepTimer = setTimeout(apTick, AUTOPLAY_TICK_MS); return; }
+    if (!apAttended()) {
+      cursorHide();
+      if (apMachineState !== "paused") { apPausedFrom = apMachineState; apState("paused", document.hidden ? "hidden" : "unfocused"); }
+      apStepTimer = setTimeout(apTick, AUTOPLAY_TICK_MS); return;
+    }
+    if (apMachineState === "paused") { var wake = apPausedFrom || "sequence"; apPausedFrom = null; apState(wake, "attended again"); }
     var next;
     apBusy = true;
     try { next = apRunBeat(); } finally { apBusy = false; }
@@ -77653,6 +78049,8 @@ function spawnDustMote(container) {
 
   function startAutoplay() {
     if (apOn) return;
+    if (recoveryGate) { apWaitRecovery = true; return; }
+    apWaitRecovery = false;
     // ENTERING AUTOPLAY *IS* THE GAME HAVING STARTED — the decision, stated once, here. The attract
     // prompt and the attract mode fight for the same screen, and an invitation to click is
     // meaningless when nobody is there to accept it. So the held-back notification channels are
@@ -77662,14 +78060,21 @@ function spawnDustMote(container) {
     endAttract();
     apGen++;
     apOn = true;
+    apState("starting", "autoplay on");
     apReduced = !!reduceMotion;
     apScene = null; apSceneIdx = 0; apStack = null; apOwned = {};
     apOverturePending = true; apForcedRoom = null;
     apSeasonBag = []; apCycleSeen = {}; apLastRoom = null;
+    apRecentSequences = []; apMood = "start"; apLastChoice = null; apChoiceTrace = [];
+    apSequenceSince = {}; apPausedFrom = null;
     apShowBadge(true);
+    if (watchBtn) { watchBtn.hidden = true; watchBtn.classList.remove("nudge"); }
+    if (apBtn) apBtn.hidden = true;
+    if (skipBtn) skipBtn.hidden = false;
     if (apIdleTimer) { clearTimeout(apIdleTimer); apIdleTimer = null; }
+    apState("overture", "ready");
     apArmDriver(400); // a short beat so any in-flight state settles, then the machine takes the wheel
-    if (window.echo) try { window.echo("▶ autoplay: the loft runs itself now — from right here. touch anything to take over."); } catch (e) {}
+    if (window.echo) try { window.echo("▶ autoplay: the loft runs itself now — from right here. use □ Take over to step in."); } catch (e) {}
   }
 
   // Stop the attract loop. keepIdleResume=true (a human takeover) leaves the idle-resume armed so
@@ -77677,14 +78082,19 @@ function spawnDustMote(container) {
   function stopAutoplay(keepIdleResume) {
     if (!apOn && !apIdleTimer && !apIdleResume) return;
     apGen++;
+    if (!keepIdleResume) apWaitRecovery = false;
     apOn = false;
+    apState(keepIdleResume ? "takeover" : "stopped", keepIdleResume ? "human takeover" : "autoplay off");
     apBusy = false;
     if (apStepTimer != null) { clearTimeout(apStepTimer); apStepTimer = null; }
     apShowBadge(false);
+    if (skipBtn) skipBtn.hidden = true;
+    if (watchBtn) watchBtn.hidden = false;
+    if (apBtn) apBtn.hidden = false;
     apCursorGone(); // the dot AND every ripple — no stranded pointer when the show stops
     apAlbumClear();
     apRelease();    // the autonomous state we switched on; scenic state is deliberately kept
-    apScene = null; apSceneIdx = 0; apStack = null; apOverturePending = false; apForcedRoom = null;
+    apScene = null; apSceneIdx = 0; apStack = null; apOverturePending = false; apForcedRoom = null; apPausedFrom = null;
     if (apIdleTimer) { clearTimeout(apIdleTimer); apIdleTimer = null; }
     if (keepIdleResume) { if (apIdleResume) apArmIdleResume(); }
     else apIdleResume = false;
@@ -77722,9 +78132,9 @@ function spawnDustMote(container) {
   window.autoplay = function (arg) {
     if (arguments.length === 0) {
       if (apOn) { stopAutoplay(false); return "⏹ autoplay off."; }
-      apIdleResume = true; startAutoplay(); return "▶ autoplay on — the loft drives itself from here, forever; touch anything to take over.";
+      apIdleResume = true; startAutoplay(); return "▶ autoplay on — the loft drives itself from here, forever; use □ Take over to step in.";
     }
-    if (arg) { apIdleResume = true; startAutoplay(); return "▶ autoplay on — the loft drives itself from here, forever; touch anything to take over."; }
+    if (arg) { apIdleResume = true; startAutoplay(); return "▶ autoplay on — the loft drives itself from here, forever; use □ Take over to step in."; }
     stopAutoplay(false); return "⏹ autoplay off.";
   };
   window.__autoplayOn = function () { return apOn; };  // read by six unrelated systems — never rename
@@ -77733,13 +78143,23 @@ function spawnDustMote(container) {
   window.__autoplayForceStep = function () { if (apOn) apRunBeat(); };
   window.__autoplayRoutineRoom = function () { return apScene ? apScene.room : null; };
   window.__autoplayRoutineLen = function () { return apScene ? apScene.beats.length : 0; };
+  window.__autoplaySequence = function () { return apScene && apScene.kind === "sequence" ? apScene.id : null; };
+  window.__autoplayForceSequence = function (id) {
+    if (!apOn) return false;
+    var spec = null;
+    for (var i = 0; i < AP_SEQUENCE_LIBRARY.length; i++) if (AP_SEQUENCE_LIBRARY[i].id === id) { spec = AP_SEQUENCE_LIBRARY[i]; break; }
+    if (!spec || !apSequenceEligible(spec, null)) return false;
+    apClosePanels(); apStack = null; apState("selecting", "forced sequence");
+    apScene = apBuildSequence(spec); apSceneIdx = 0; apState("sequence", "forced " + spec.id);
+    return true;
+  };
   // Build a room's scene through the FULL pipeline (builder → apNormalize) and report its shape
   // without running it, so a test can prove the garden dwells longest and that the monitor/phone
   // scenes really open several apps. `apps`/`appList` are DERIVED from the app-open beats' own
   // arguments — a tag can't claim an app the scene never opens. `from:null` forces the leading nav
   // beat in, so the shape doesn't depend on which room the reader happens to be standing in.
   window.__autoplayRoutineBeats = function (room) {
-    var build = SCENE_BUILDERS[room]; if (!build) return null;
+    var build = AP_SHOWCASE_BUILDERS[room]; if (!build) return null;
     var r = apNormalize(build() || [], room, null, apReducedOverride === null ? apReduced : apReducedOverride);
     var total = 0, taps = 0, apps = {};
     for (var i = 0; i < r.length; i++) {
@@ -77752,6 +78172,65 @@ function spawnDustMote(container) {
   window.__autoplayTapMisses = function () { return apTapMisses; };   // a tap id that wouldn't resolve
   window.__autoplayVerbMisses = function () { return apVerbMisses; }; // a beat naming a renamed verb
   window.__autoplayLastHandledMsg = function () { return apLastHandledMsg; };
+  window.__autoplaySeed = function (seed) {
+    if (arguments.length) return apSetSeed(seed);
+    return { seed: apSeed, state: apRng, calls: apRngCalls };
+  };
+  window.__autoplayMachine = function () {
+    return { state: apMachineState, pausedFrom: apPausedFrom, transitionErrors: apTransitionErrors,
+      trace: apStateTrace.slice(), scene: apScene ? { id: apScene.id || null, kind: apScene.kind, room: apScene.room, beat: apSceneIdx, beats: apScene.beats.length } : null };
+  };
+  window.__autoplayModel = function () {
+    return { seed: apSeed, rngState: apRng, rngCalls: apRngCalls, mood: apMood,
+      recent: apRecentSequences.slice(), roomSince: Object.assign({}, apSince),
+      sequenceSince: Object.assign({}, apSequenceSince), lastChoice: apLastChoice ? JSON.parse(JSON.stringify(apLastChoice)) : null,
+      trace: apChoiceTrace.slice(), transitions: JSON.parse(JSON.stringify(AP_MOOD_TRANSITIONS)) };
+  };
+
+  function apCatalogReport() {
+    var saveSeed = apSeed, saveRng = apRng, saveCalls = apRngCalls;
+    var saveSolved = apSolvedOverride, saveUnlocked = apUnlockedOverride, saveReduced = apReducedOverride;
+    apSolvedOverride = true; apUnlockedOverride = ROOM_RING.slice(); apReducedOverride = false;
+    var list = AP_SEQUENCE_LIBRARY.map(function (s) {
+      var raw = (s.build && s.build()) || [];
+      var beats = apNormalize(raw, s.room, null, false), total = 0, taps = 0, apps = {}, verbs = {};
+      beats.forEach(function (b) { total += b.wait || 0; if (b.tap || b.click) taps++; if (b.act && b.arg) apps[b.act + ":" + b.arg] = 1; if (b.verb) verbs[b.verb] = 1; });
+      return { id: s.id, room: s.room, rooms: s.rooms.slice(), mood: s.mood, family: s.family,
+        crossRoom: s.crossRoom, beats: beats.length, totalWait: total, taps: taps,
+        apps: Object.keys(apps), verbs: Object.keys(verbs) };
+    });
+    apSeed = saveSeed; apRng = saveRng; apRngCalls = saveCalls;
+    apSolvedOverride = saveSolved; apUnlockedOverride = saveUnlocked; apReducedOverride = saveReduced;
+    return list;
+  }
+  window.__autoplayCatalog = apCatalogReport;
+
+  // Pure model preview: build a full-solved selection trace without running one beat or altering
+  // the live director. This is the deterministic test seam and a useful console-level explanation
+  // of what a seed will do; the saved maps are restored by identity after the simulation.
+  window.__autoplayPlan = function (seed, count) {
+    var save = {
+      seed: apSeed, rng: apRng, calls: apRngCalls, solved: apSolvedOverride, unlocked: apUnlockedOverride,
+      visits: apVisits, since: apSince, lastRoom: apLastRoom, cycle: apCycleSeen, loops: apLoopCount,
+      seqVisits: apSequenceVisits, seqSince: apSequenceSince, recent: apRecentSequences,
+      mood: apMood, lastChoice: apLastChoice, trace: apChoiceTrace
+    };
+    apSetSeed(seed == null ? 1 : seed); apSolvedOverride = true; apUnlockedOverride = ROOM_RING.slice();
+    apVisits = {}; apSince = {}; apLastRoom = null; apCycleSeen = {}; apLoopCount = 0;
+    apSequenceVisits = {}; apSequenceSince = {}; apRecentSequences = []; apMood = "start"; apLastChoice = null; apChoiceTrace = [];
+    var n = Math.max(1, Math.min(200, parseInt(count, 10) || 24)), out = [], details = [];
+    for (var i = 0; i < n; i++) {
+      var spec = apPickSequence(null); if (!spec) break;
+      out.push({ id: spec.id, room: spec.room, rooms: spec.rooms.slice(), mood: spec.mood });
+      details.push(JSON.parse(JSON.stringify(apLastChoice)));
+    }
+    var result = { seed: apSeed, count: out.length, choices: out, trace: apChoiceTrace.slice(), details: details, loops: apLoopCount };
+    apSeed = save.seed; apRng = save.rng; apRngCalls = save.calls; apSolvedOverride = save.solved; apUnlockedOverride = save.unlocked;
+    apVisits = save.visits; apSince = save.since; apLastRoom = save.lastRoom; apCycleSeen = save.cycle; apLoopCount = save.loops;
+    apSequenceVisits = save.seqVisits; apSequenceSince = save.seqSince; apRecentSequences = save.recent;
+    apMood = save.mood; apLastChoice = save.lastChoice; apChoiceTrace = save.trace;
+    return result;
+  };
   // test-only: the 90s drift-back is unreachable inside a test budget, so let a harness shorten it.
   // Not a console command (no CONSOLE_CMDS/CONSOLE_HELP entry) — it's a seam, not a feature.
   window.__autoplayIdleMs = function (ms) { if (ms > 0) AUTOPLAY_IDLE_RESUME_MS = ms; return AUTOPLAY_IDLE_RESUME_MS; };
@@ -77762,13 +78241,32 @@ function spawnDustMote(container) {
   var apInvariants = null;
   function apSelfCheck() {
     var bad = [], i, r;
+    var rngSave = { seed: apSeed, rng: apRng, calls: apRngCalls };
     for (i = 0; i < ROOM_RING.length; i++) {
       r = ROOM_RING[i];
-      if (!SCENE_BUILDERS[r]) bad.push("no builder: " + r);
+      if (!AP_SHOWCASE_BUILDERS[r]) bad.push("no showcase builder: " + r);
       if (!ROOM_SPEC[r]) bad.push("no spec: " + r);
       else if (!document.getElementById(ROOM_SPEC[r].anchor)) bad.push("anchor missing: " + ROOM_SPEC[r].anchor);
     }
     if (STARVE_LIMIT >= ROOM_RING.length) bad.push("STARVE_LIMIT must be < room count");
+    if (AP_SEQUENCE_LIBRARY.length < 25) bad.push("sequence catalog must hold at least 25 authored stories");
+    var ids = {}, roomCounts = {}, crossCount = 0;
+    AP_SEQUENCE_LIBRARY.forEach(function (s) {
+      if (ids[s.id]) bad.push("duplicate sequence id: " + s.id); ids[s.id] = 1;
+      roomCounts[s.room] = (roomCounts[s.room] || 0) + 1;
+      if (s.crossRoom) crossCount++;
+      if (!s.build || typeof s.build !== "function") bad.push("sequence has no builder: " + s.id);
+      if (!AP_MOOD_TRANSITIONS[s.mood]) bad.push("sequence has unknown mood: " + s.id + " (" + s.mood + ")");
+      if (!s.rooms.length || s.rooms.indexOf(s.room) === -1) bad.push("sequence omits primary room: " + s.id);
+      s.rooms.forEach(function (room) { if (ROOM_RING.indexOf(room) === -1) bad.push("sequence has unknown room: " + s.id + " → " + room); });
+    });
+    ROOM_RING.forEach(function (room) { if ((roomCounts[room] || 0) < 4) bad.push("room needs >=4 sequence choices: " + room); });
+    if (crossCount < 3) bad.push("need >=3 cross-room relays");
+    Object.keys(AP_MOOD_TRANSITIONS).forEach(function (from) {
+      Object.keys(AP_MOOD_TRANSITIONS.start).forEach(function (to) {
+        if (!(AP_MOOD_TRANSITIONS[from][to] > 0)) bad.push("missing Markov edge: " + from + "→" + to);
+      });
+    });
     for (i = 0; i < ROOM_RING.length; i++) {
       r = ROOM_RING[i];
       if (r === "garden" || !ROOM_SPEC[r] || !ROOM_SPEC.garden) continue;
@@ -77797,7 +78295,42 @@ function spawnDustMote(container) {
         apSolvedOverride = null; apReducedOverride = null;
       });
     });
-    apInvariants = { ok: !bad.length, problems: bad };
+    // Every catalog entry remains a real multi-beat story in both motion profiles, and every
+    // cursor target resolves now. This catches a renamed SVG id before the runtime miss counter
+    // has to stumble into that particular probabilistic sequence.
+    apSolvedOverride = true; apUnlockedOverride = ROOM_RING.slice();
+    [false, true].forEach(function (reduced) {
+      AP_SEQUENCE_LIBRARY.forEach(function (s) {
+        try {
+          var raw = (s.build && s.build()) || [];
+          var plan = apNormalize(raw, s.room, null, reduced);
+          if (plan.length < 3) bad.push("sequence too short: " + s.id + " (reduced=" + reduced + ")");
+          plan.forEach(function (b) {
+            var id = b.tap || b.click;
+            if (id && !document.getElementById(id)) bad.push("missing sequence target: " + s.id + " → " + id);
+          });
+        } catch (e) { bad.push("sequence build threw: " + s.id + " (reduced=" + reduced + "): " + e); }
+      });
+    });
+    apSolvedOverride = null; apUnlockedOverride = null;
+
+    // The selection model itself is executable: same seed gives the same plan, a different seed
+    // changes it, exact stories respect the recent window, and no room crosses the hard drought.
+    try {
+      var p1 = window.__autoplayPlan(20270501, 60), p2 = window.__autoplayPlan(20270501, 60), p3 = window.__autoplayPlan(20270710, 60);
+      var a = p1.choices.map(function (x) { return x.id; }), b = p2.choices.map(function (x) { return x.id; }), c = p3.choices.map(function (x) { return x.id; });
+      if (a.join("|") !== b.join("|")) bad.push("same seed did not reproduce selection plan");
+      if (a.join("|") === c.join("|")) bad.push("different seeds produced identical selection plan");
+      for (i = 0; i < a.length; i++) for (var back = 1; back <= SEQUENCE_RECENT_LIMIT && i - back >= 0; back++) if (a[i] === a[i - back]) bad.push("recent sequence repeated: " + a[i]);
+      var drought = {}; ROOM_RING.forEach(function (room) { drought[room] = 0; });
+      p1.choices.forEach(function (x) {
+        ROOM_RING.forEach(function (room) { drought[room]++; });
+        x.rooms.forEach(function (room) { drought[room] = 0; });
+        ROOM_RING.forEach(function (room) { if (drought[room] > STARVE_LIMIT + 1) bad.push("room starved in seeded plan: " + room); });
+      });
+    } catch (e) { bad.push("seeded model preview threw: " + e); }
+    apSeed = rngSave.seed; apRng = rngSave.rng; apRngCalls = rngSave.calls;
+    apInvariants = { ok: !bad.length, problems: bad, sequences: AP_SEQUENCE_LIBRARY.length, crossRoom: crossCount };
     return apInvariants;
   }
   window.__autoplayInvariants = function () { return apInvariants || apSelfCheck(); };
@@ -77994,12 +78527,15 @@ function spawnDustMote(container) {
     return huntText(key).replace("{n}", n);
   }
   function hideRecoveryGate() {
+    var startWaitingAutoplay = apWaitRecovery;
+    apWaitRecovery = false;
     if (recoveryKeyHandler) document.removeEventListener("keydown", recoveryKeyHandler, true);
     recoveryKeyHandler = null;
     if (recoveryGate && recoveryGate.parentNode) recoveryGate.parentNode.removeChild(recoveryGate);
     recoveryGate = null;
     var watchControls = document.querySelector(".watch-controls");
     if (watchControls) { watchControls.hidden = false; watchControls.removeAttribute("aria-hidden"); }
+    if (startWaitingAutoplay) setTimeout(function () { if (!apOn) startAutoplay(); }, 0);
   }
   function applyCheckpoint(saved) {
     hideRecoveryGate();

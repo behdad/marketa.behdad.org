@@ -113,6 +113,42 @@ classes, and listeners. The reduced-motion branch uses the same room/editorial a
 and completes in about 18 seconds. `goToStage` suppresses `triggerBalconyFinale` while
 `window.__cinematic` is true, preserving the one-time first-arrival payoff for actual play.
 
+### Autoplay director
+
+Autoplay is a persistent kiosk director, separate from the fixed Trailer timeline. Search for
+`AUTOPLAY (attract mode)`, `AP_SEQUENCE_LIBRARY`, and `AP_MOOD_TRANSITIONS`. Its execution layer is
+still one self-rescheduling `setTimeout`; `apBusy` and `apGen` prevent duplicate or stale drivers.
+The planning layer has three explicit parts:
+
+- `apState` owns the finite-state machine: `starting`, `overture`, `selecting`, `sequence`,
+  `interrupt`, `resuming`, `paused`, `takeover`, and `stopped`. `AP_MACHINE_EDGES` makes illegal
+  transitions countable rather than implicit.
+- `AP_SEQUENCE_LIBRARY` holds 30 short authored stories across all rooms plus cross-room relays.
+  The five showcase builders also serve as first-play solve walkers; solved-room alternatives cover
+  apps, party moments, music, calls, toys, weather, photography, food, and the BBQ.
+- `apPickSequence` is a constrained weighted Markov choice over eight narrative moods. A candidate's
+  score combines its authored base weight, the prior-mood transition multiplier, room age, sequence
+  age, and a frontier-solve boost. Exact stories are excluded for five selections, immediate room
+  repeats are avoided when alternatives exist, and a room at the starvation boundary becomes a
+  hard selection constraint. Randomness comes only from the director's seeded xorshift32 stream;
+  never use `Math.random()` for a new autoplay choice.
+
+Notifications suspend the current `{scene, beat, state}` on the one-deep stack, run an interrupt,
+then cross the explicit `resuming` state before restoring the exact next beat. Hidden and merely
+unfocused tabs enter `paused` without consuming a beat. Takeover and deliberate stop are distinct:
+takeover retains the idle-return timer, while `autoplay(false)` clears it. `apOwned` remains the
+cleanup inventory for autonomous effects that cannot be inherited safely; panels and the ghost
+cursor are unconditionally removed at boundaries/stop.
+`apWaitRecovery` keeps `?autoplay` behind the checkpoint gate, then starts from the restored or reset
+state only after that modal decision has completed.
+
+Inspection and deterministic test hooks are `__autoplayMachine()`, `__autoplayModel()`,
+`__autoplayCatalog()`, `__autoplaySeed(seed)`, `__autoplayPlan(seed, count)`, and
+`__autoplayForceSequence(id)`. The plan preview saves and restores every live selector ledger, so it
+must remain side-effect free. `tests/autoplay.js` asserts seeded reproducibility and divergence,
+catalog breadth, score-factor visibility, anti-repetition, coverage bounds, FSM transitions,
+interrupt resume, pause behavior, cleanup, reduced motion, and the long-running kiosk contract.
+
 ## Rooms, phases, and unlocking
 
 The five rooms are `kitchen`, `garden`, `cuddly`, `office`, and `balcony`. Search for `STAGES` and
@@ -595,7 +631,7 @@ Use these search terms in `rsvp.html` rather than relying on line numbers:
 | Photographer/album | `__updateGardenPhotographer`, `albumPhotoSvg`, `__photoMomentNow` |
 | Weather | `api.open-meteo.com`, `__realOutdoorC`, `refreshWeatherText` |
 | Public console | `CONSOLE_HELP`, `CONSOLE_CMDS`, `window.volume` |
-| Autoplay/cinematic | `apParam`, `__autoplayOn`, `window.__cinematic` |
+| Autoplay/cinematic | `AP_SEQUENCE_LIBRARY`, `AP_MOOD_TRANSITIONS`, `__autoplayModel`, `apParam`, `window.__cinematic` |
 
 Worker-side searches in `chat.js`: `ACTION_SPECS`, `cleanContext`, `cleanGroupChat`,
 `verifyTurnstile`, `callOpenAI`, and `export default`. Stable assistant facts and policy live in

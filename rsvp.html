@@ -71527,6 +71527,16 @@ function spawnDustMote(container) {
     on = !!on;
     var wasOn = !!window.__gardenPartyOn;
     window.__gardenPartyOn = on;
+    // Party-off is the teardown boundary even when a cinematic, reset, lifecycle fallback,
+    // or console helper calls this setter directly instead of going through setPartyMode.
+    // Clear both the switch's persistent UV intent and its visible state before the breather
+    // evaluates; otherwise its one-second watchdog can restore .uv-mode after the party is gone.
+    if (!on) {
+      var partySwitch = document.getElementById("balcony-partyswitch");
+      if (partySwitch) partySwitch.classList.remove("on");
+      if (window.__setUvParty) window.__setUvParty(false);
+      else if (window.__setUvMode) window.__setUvMode(false);
+    }
     if (on && !wasOn) window.__partyStartedAt = Date.now();
     else if (!on) window.__partyStartedAt = null;
     // First party of the session = we're officially in the "second round": reveal the who's-here

@@ -20,6 +20,25 @@ var harness = String.raw`<script>
   check("the unnamed regulars stay out of the daytime kitchen", patrons && getComputedStyle(patrons).opacity === "0");
   if (window.__setDayNight) window.__setDayNight(true);
   check("the unnamed regulars appear in the calm night bar", patrons && getComputedStyle(patrons).opacity === "1");
+
+  // Exercise the lower-level teardown used by cinematics, reset, and compatibility fallbacks.
+  // It must own UV state too; otherwise the breather watchdog restores the magic-box glow.
+  if (window.__setGardenParty) window.__setGardenParty(true, false);
+  if (window.__setUvParty) window.__setUvParty(true);
+  var partySwitch = document.getElementById("balcony-partyswitch");
+  if (partySwitch) partySwitch.classList.add("on");
+  if (window.__gardenFlashNow) window.__gardenFlashNow();
+  if (window.__setGardenParty) window.__setGardenParty(false, true);
+  var strip = document.getElementById("loft-game-strip");
+  var breather = window.__uvBreatherState ? window.__uvBreatherState() : {};
+  var flashBloom = document.getElementById("garden-flash-bloom");
+  var flashWash = document.getElementById("garden-flash-wash");
+  var discoInline = Array.prototype.some.call(document.querySelectorAll("#garden-disco-pools .disco-pool"), function (pool) {
+    return !!(pool.style.transform || pool.style.opacity || pool.style.transition);
+  });
+  check("direct party teardown clears the blacklight and magic-box glow", !window.__gardenPartyOn && strip && !strip.classList.contains("uv-mode") && !breather.uvPartyIntent && !breather.running && (!partySwitch || !partySwitch.classList.contains("on")));
+  check("direct party teardown clears camera flashes and stepped spotlights", (!flashBloom || !flashBloom.classList.contains("flashing")) && (!flashWash || !flashWash.classList.contains("flashing")) && !discoInline);
+
   if (window.__setGardenParty) window.__setGardenParty(true, false);
   check("the unnamed regulars leave when the night bar becomes a party", patrons && getComputedStyle(patrons).opacity === "0");
   check("party starts a fresh lifecycle", window.__partyLifecycleState && window.__partyLifecycleState().attended === 0 && window.__partyLifecycleState().running);

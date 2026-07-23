@@ -194,6 +194,12 @@ seconds, then automatically winds down at 180 seconds unless an accepted finale 
 `party.extend` restarts the attended interval. A later autonomous invitation may offer to restart the
 party, but it does not restart by itself.
 
+The `setGardenParty(false)` branch is also the authoritative visual teardown boundary. It clears the
+balcony switch, persistent UV intent and `.uv-mode` before stopping the disco stepper, camera flash,
+photo moments, guest movement, and other party-only drivers. Callers may use `setPartyMode(false)` for
+the graceful walk-out, but lower-level cinematic/reset/fallback paths must still leave no blacklight
+or timer-owned party effect behind.
+
 ## Rendering and performance lifecycle
 
 The scene is inline SVG, with CSS animations, Web Animations API effects, SMIL where required for

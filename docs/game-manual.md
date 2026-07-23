@@ -470,7 +470,8 @@ also end the party gracefully. The wall switch ends it immediately.
 Ending the party does not reset progress or end the game. Rooms, phone and
 computer apps, music, minigames, and exploration remain available. A later
 invitation can restart the party. The supported `party.extend` action cancels a
-pending wind-down and starts a fresh attended interval.
+pending wind-down and starts a fresh attended interval. Party lighting, including
+the blacklight and magic-box glow, switches off with the party.
 
 ### Party moments
 

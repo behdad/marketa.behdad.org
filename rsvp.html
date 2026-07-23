@@ -48393,10 +48393,6 @@ async def localfont(name):
   if (!strip || !vp || !monitor) return;
   var zoomEl = null; // the device the view is zoomed onto (null = zoomed out)
   var lastZoomPose = "", refitRaf = 0, refitRetryTimer = null, zoomOutTimer = null;
-  var reducedMotion = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
-  function snapZoom() {
-    return !!((window.__frameHealthSlow && window.__frameHealthSlow()) || (reducedMotion && reducedMotion.matches));
-  }
   // box = the invisible screen-sized rect the zoom frames (the device groups' own
   // bboxes include stands/keyboards, which pulled the view down and out — the owner's
   // "not zoomed enough, not centered"); laptop zoom is lid-driven: only while open
@@ -48422,12 +48418,12 @@ async def localfont(name):
     var transform = "translate(" + (v.width / 2 - tx) + "px, " + (v.height / 2 - ty) + "px) scale(" + s + ")";
     var pose = origin + "|" + transform;
     if (pose === lastZoomPose && strip.style.transformOrigin === origin && strip.style.transform === transform) return false;
-    var snap = snapZoom();
-    if (snap) strip.style.transition = "none"; // skip the large scaled-SVG repaint when frames are already struggling
+    strip.style.transition = "none"; // Chrome can white-flash while interpolating this whole scaled SVG, even at 60 FPS
     strip.style.transformOrigin = origin;
     strip.style.transform = transform;
     lastZoomPose = pose;
-    if (snap) { strip.getBoundingClientRect(); strip.style.transition = ""; } // commit the snap, then restore the glide for room slides
+    strip.getBoundingClientRect();
+    strip.style.transition = ""; // commit the snap, then restore the glide for room slides
     return true;
   }
   function zoomIn(el) {
@@ -48450,26 +48446,11 @@ async def localfont(name):
     zoomEl = null;
     lastZoomPose = "";
     vp.classList.remove("device-zoomed");
-    if (snapZoom()) { // low frame delivery: snap straight back to the room view, no expensive scaled-SVG glide
-      strip.style.transition = "none";
-      strip.style.transformOrigin = "";
-      strip.style.transform = "translateX(-" + ((window.currentStageIndex || 0) * 20) + "%)";
-      strip.getBoundingClientRect();
-      strip.style.transition = "";
-      return;
-    }
-    // the origin must survive the glide out (scale interpolates about it; clearing it
-    // mid-transition snaps the start pose sideways) — drive the transition in px, which
-    // lands exactly where translateX(-idx*20%) does, then restore the canonical % form
-    var idx = window.currentStageIndex || 0;
-    var r = vp.getBoundingClientRect();
-    strip.style.transform = "translate(" + (-idx * r.width) + "px, 0px) scale(1)";
-    zoomOutTimer = setTimeout(function () {
-      zoomOutTimer = null;
-      if (zoomEl) return; // re-zoomed mid-glide: its transform owns the strip now
-      strip.style.transformOrigin = "";
-      strip.style.transform = "translateX(-" + ((window.currentStageIndex || 0) * 20) + "%)";
-    }, 760);
+    strip.style.transition = "none";
+    strip.style.transformOrigin = "";
+    strip.style.transform = "translateX(-" + ((window.currentStageIndex || 0) * 20) + "%)";
+    strip.getBoundingClientRect();
+    strip.style.transition = "";
   }
   // A room slide and a device-zoom glide both own the same strip transform. Collapse any
   // active (or still-settling) device zoom to the current room in one unanimated commit
@@ -48525,15 +48506,6 @@ async def localfont(name):
   window.addEventListener("resize", function () { scheduleRefitZoom(false); });
   document.addEventListener("fullscreenchange", function () { scheduleRefitZoom(true); });
   document.addEventListener("webkitfullscreenchange", function () { scheduleRefitZoom(true); });
-  window.addEventListener("framehealthchange", function (e) {
-    if (!zoomEl || !e.detail || !e.detail.slow) return;
-    // If performance collapses during the glide, commit its already-authored end pose
-    // immediately instead of spending the rest of the transition repainting it.
-    var prevT = strip.style.transition;
-    strip.style.transition = "none";
-    void strip.offsetWidth;
-    strip.style.transition = prevT;
-  });
   window.__refitZoom = refitZoom;
   window.__prepareRoomPan = prepareRoomPan;
   window.__monitorZoomIn = function () { zoomIn(monitor); };

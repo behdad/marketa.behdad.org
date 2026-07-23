@@ -109,8 +109,8 @@ console.log("  metrics: " + JSON.stringify({ cuddly: a.cuddly_channels, seasonPh
 var health = lib.runPageSync("rsvp.html", FRAME_HEALTH_HARNESS, 2500, { patchRaf: true, forceMotion: true, seedRandom: true });
 if (!health) { console.log("  \u2717 frame-health harness produced no report"); process.exit(1); }
 var h = health.steps.health;
-check(health.errors.length === 0 && !h.first.slow && h.second.slow && h.slowState.slow && h.slowTransitions === 0, "sustained low FPS makes device zoom snap without a transform transition", h);
-check(h.recovering.slow && !h.recovered.slow && h.healthyTransitions > 0, "healthy FPS must persist before animated device zoom recovers", h);
+check(health.errors.length === 0 && h.slowTransitions === 0 && h.healthyTransitions === 0, "device zoom never runs the whole-strip transform transition", h);
+check(!h.first.slow && h.second.slow && h.slowState.slow && h.recovering.slow && !h.recovered.slow, "frame-health mode enters and recovers with asymmetric hysteresis", h);
 check(h.healthyPoolAnimations > 0 && h.slowPool.animations === 0 && !!h.slowPool.inlineTransform && h.recoveredPool.animations > 0 && !h.recoveredPool.inlineTransform, "party spotlights switch between continuous sweep and low-FPS steps", h);
 console.log("  frame-health metric: " + JSON.stringify(h));
 

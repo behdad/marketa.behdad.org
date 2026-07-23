@@ -99,10 +99,10 @@ from an app to the desktop, or from a zoomed computer to the room. When typing,
 the first `Escape` generally removes focus and preserves an unsent draft rather
 than closing the whole app.
 
-Monitor and laptop zoom normally glide between the room and screen. If the game
-detects sustained low frame delivery, device zoom snaps instead so the large
-scaled scene does not flicker through an expensive transition. It restores the
-glide only after frame delivery has remained healthy.
+Monitor and laptop zoom snaps between the room and screen. Animating the large
+scaled scene caused white repaint flicker in Chrome even when the room otherwise
+held 60 FPS, so device zoom deliberately does not glide. Room navigation still
+animates normally.
 
 Triple-click or triple-tap the ceramic mask in the garden to open the drop-down
 console on a device without a hardware keyboard. The console's top corner shows

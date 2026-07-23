@@ -322,12 +322,18 @@ Screensaver and expensive canvas/DOM loops are gated while an app owns the scree
 The shared frame-health sampler exposes `__frameHealthState()` and marks sustained
 low delivery with `html.frame-rate-low`. It samples only while the document is
 visible and focused, requires two 1.2-second windows below 22 FPS to enter slow
-mode, and three windows at or above 42 FPS to recover. The desk-zoom controller
-uses that signal to snap its scaled-SVG transform while leaving room pans alone.
-The garden disco pools use the same state: healthy delivery runs their continuous
-CSS sweep, while low-frame mode replaces it with the existing roughly one-second
-JS position stepper. Asymmetric thresholds plus consecutive sampling windows keep
-the cost change itself from flapping the mode. The garden mask's rapid-click
+mode, and three windows at or above 42 FPS to recover. The garden disco pools use
+that state: healthy delivery runs their continuous CSS sweep, while low-frame mode
+replaces it with the existing roughly one-second JS position stepper. Asymmetric
+thresholds plus consecutive sampling windows keep the cost change itself from
+flapping the mode.
+
+Desk zoom is unconditionally transition-free. Testing on current Chrome and
+Chrome 138 showed that interpolating the whole scaled SVG could white-flash and
+temporarily reduce frame delivery even when the pre-transition scene held 60 FPS;
+reacting to the resulting dip cannot prevent that first bad transition. The zoom
+controller therefore commits both directions with `transition:none`, then restores
+the strip's transition for ordinary room pans. The garden mask's rapid-click
 counter calls idempotent `__openDropTerm()` on its third click, giving touch-only
 devices access to the console FPS meter without making a double-click alter party
 state. `tests/performance.js` drives the sampler through `__frameHealthFeed(fps)` to

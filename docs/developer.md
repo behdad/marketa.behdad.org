@@ -314,6 +314,11 @@ interactive trip entry calls `beginTrip`; `startTripVariant` remains the lower-l
 used by the trailer's deliberately non-gameplay bloom. `tripGeneration` invalidates stale end timers
 and double-rAF class additions when a trip is interrupted or reset.
 
+The canonical direct-selection order is laughing gas, shrooms, acid, froggies, DMT, molly,
+ketamine, then iboga (`Shift+1` through `Shift+8`). Keep that order aligned across the keyboard
+handler, `trip()` scripting API, typed `trip.start` schema, Worker action schema, translated
+shortcut copy, and lifecycle tests when adding or reordering a variant.
+
 ### Media transitions
 
 `setMusicPausedState` is the only writer of the shared transport-pause mirror and synchronizes its

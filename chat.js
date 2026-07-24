@@ -46,7 +46,7 @@ const ACTION_SPECS = Object.freeze({
   "photo.take": Object.freeze({}),
   "fishu.speak": Object.freeze({}),
   "trip.next": Object.freeze({}),
-  "trip.start": Object.freeze({ variant: new Set(["shrooms", "acid", "froggies", "dmt", "molly", "ketamine", "iboga"]) }),
+  "trip.start": Object.freeze({ variant: new Set(["nitrous", "shrooms", "acid", "froggies", "dmt", "molly", "ketamine", "iboga"]) }),
   "party.dance.request": Object.freeze({ style: new Set(["slow", "fast", "techno", "waltz", "tango", "disco", "swing", "salsa", "bhangra", "persian", "polka", "horah", "bulgar", "dupak", "cumbia"]) }),
   "party.dj.set": Object.freeze({ dj: new Set(["sina", "danesh"]) }),
   "projector.set": Object.freeze({ mode: new Set(["off", "stars", "workout", "totoro", "aqua"]) }),
@@ -108,7 +108,7 @@ Video-call destinations are bounded and explicit: Tehran is Ashraf, Mohsen, Baha
 
 Fishu is the flying pufferfish in cuddly-puddly. A short message consisting only of Fishu's name or a spelling/diacritic variant such as "Phishu!", "fisu", or "Fišü" is a direct invocation of the fishu.speak action and may run automatically.
 
-The magic box is in garden/party, and "vitamins" is in-game slang for its contents. A location question such as "where are the vitamins?" asks where the magic box is; a direct request such as "let's have vitamins" means the next shuffled magic-box trip and must use trip.next when available. The magic box's authored trips are shrooms, acid, froggies, DMT, molly, ketamine, and iboga. Their accepted aliases are mushrooms/mushroom, LSD, froggie/frog/5meo, MDMA, k/ket, and ibogaine. Polite questions such as "can we do some acid?", "could we try shrooms?", and "how about molly?" are direct named-trip requests, not factual questions. When trip.start is available, you MUST attach the corresponding trip.start action; never merely tell the user to tap the physical box or say a suggestion exists without attaching it. Never interpret ordinary travel language as a trip request. Ketamine and iboga are unavailable while a party is active; say so rather than substituting another trip.
+The magic box is in garden/party, and "vitamins" is in-game slang for its contents. A location question such as "where are the vitamins?" asks where the magic box is; a direct request such as "let's have vitamins" means the next shuffled magic-box trip and must use trip.next when available. The magic box's authored trips are nitrous, shrooms, acid, froggies, DMT, molly, ketamine, and iboga. Nitrous oxide's street name is "laughing gas". Accepted aliases include nitrous oxide/laughing gas/N2O, mushrooms/mushroom, LSD, froggie/frog/5meo, MDMA, k/ket, and ibogaine. Polite questions such as "can we do some laughing gas?", "can we do some acid?", "could we try shrooms?", and "how about molly?" are direct named-trip requests, not factual questions. When trip.start is available, you MUST attach the corresponding trip.start action; never merely tell the user to tap the physical box or say a suggestion exists without attaching it. Never interpret ordinary travel language as a trip request. Ketamine and iboga are unavailable while a party is active; say so rather than substituting another trip.
 
 weather.scene.set changes only the authored weather visible around the loft; it does not alter or claim to alter the real Edmonton or Prague forecast. sky.effect.set controls only the authored aurora or twilight scene. Use either action only for a direct request to change the scene, never for a question about current conditions, and never invent date/time overrides or arbitrary weather values.
 
@@ -149,7 +149,7 @@ Current game state.environment.indoor_temperature.temperature_c is exactly the l
 
 Fishu is the flying pufferfish in cuddly-puddly. A short message consisting only of Fishu's name or a spelling/diacritic variant such as "Phishu!", "fisu", or "Fišü" is a direct invocation of the fishu.speak action and may run automatically. Never claim or guess that today is anyone's birthday or another special event unless current game state.active_occasion explicitly identifies it; a calendar date or a cast relationship is not evidence.
 
-The magic box is in garden/party, and "vitamins" is in-game slang for its contents. A location question such as "where are the vitamins?" asks where the magic box is; a direct request such as "let's have vitamins" means the next shuffled magic-box trip and must suggest trip.next when available. The magic box's authored trips are shrooms, acid, froggies, DMT, molly, ketamine, and iboga. Their accepted aliases are mushrooms/mushroom, LSD, froggie/frog/5meo, MDMA, k/ket, and ibogaine. Polite questions such as "can we do some acid?", "could we try shrooms?", and "how about molly?" are direct named-trip requests, not factual questions. When trip.start is available, you MUST attach the corresponding trip.start suggestion; never merely tell the visitor to tap the physical box or say a suggestion exists without attaching it. Never interpret ordinary travel language as a trip request. Ketamine and iboga are unavailable while a party is active; say so rather than substituting another trip.
+The magic box is in garden/party, and "vitamins" is in-game slang for its contents. A location question such as "where are the vitamins?" asks where the magic box is; a direct request such as "let's have vitamins" means the next shuffled magic-box trip and must suggest trip.next when available. The magic box's authored trips are nitrous, shrooms, acid, froggies, DMT, molly, ketamine, and iboga. Nitrous oxide's street name is "laughing gas". Accepted aliases include nitrous oxide/laughing gas/N2O, mushrooms/mushroom, LSD, froggie/frog/5meo, MDMA, k/ket, and ibogaine. Polite questions such as "can we do some laughing gas?", "can we do some acid?", "could we try shrooms?", and "how about molly?" are direct named-trip requests, not factual questions. When trip.start is available, you MUST attach the corresponding trip.start suggestion; never merely tell the visitor to tap the physical box or say a suggestion exists without attaching it. Never interpret ordinary travel language as a trip request. Ketamine and iboga are unavailable while a party is active; say so rather than substituting another trip.
 
 weather.scene.set changes only the authored weather visible around the loft; it does not alter or claim to alter the real Edmonton or Prague forecast. sky.effect.set controls only the authored aurora or twilight scene. Suggest either action only for a direct request to change the scene, never for a question about current conditions, and never invent date/time overrides or arbitrary weather values.
 
@@ -209,6 +209,7 @@ function isFishuInvocation(value) {
 }
 
 const TRIP_ALIASES = Object.freeze({
+  nitrous: "nitrous", "nitrous oxide": "nitrous", "laughing gas": "nitrous", n2o: "nitrous",
   shrooms: "shrooms", mushrooms: "shrooms", mushroom: "shrooms",
   acid: "acid", lsd: "acid",
   froggies: "froggies", froggie: "froggies", frog: "froggies", "5meo": "froggies",
@@ -426,7 +427,7 @@ function cleanCallDestinations(value) {
 
 function cleanTrip(value) {
   const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
-  const variants = new Set(["shrooms", "acid", "froggies", "dmt", "molly", "ketamine", "iboga"]);
+  const variants = new Set(["nitrous", "shrooms", "acid", "froggies", "dmt", "molly", "ketamine", "iboga"]);
   const variant = cleanText(source.variant, 16);
   return { active: Boolean(source.active), variant: variants.has(variant) ? variant : null };
 }
@@ -829,7 +830,7 @@ function indoorTemperatureReplyText(message, context) {
 }
 
 function tripReplyText(message, context, variant, reason, groupMode) {
-  const label = variant === "dmt" ? "DMT" : variant.charAt(0).toUpperCase() + variant.slice(1);
+  const label = variant === "dmt" ? "DMT" : variant === "nitrous" ? "Laughing gas" : variant.charAt(0).toUpperCase() + variant.slice(1);
   const current = context.trip && context.trip.variant;
   if (/[\u0600-\u06ff]/.test(message)) {
     if (reason === "party") return `${label} در مهمانی در دسترس نیست—بعد از مهمانی امتحانش کن.`;

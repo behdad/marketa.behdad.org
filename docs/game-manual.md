@@ -168,7 +168,7 @@ Press `?` in the game for the live shortcut overlay. Current global shortcuts ar
 | `U` | Toggle ultraviolet party lighting |
 | `S` | Cycle the season |
 | `T` | Start the next magic-box trip |
-| `Shift+1` through `Shift+7` | Select a particular magic-box trip |
+| `Shift+1` through `Shift+8` | Select a particular magic-box trip |
 | `K` | Repeat the cat activity |
 | `R` | Reset the game after confirmation |
 | `` ` `` | Show or hide the dropdown JavaScript console |
@@ -621,7 +621,7 @@ state remains visually quiet. `N` selects the next applicable track or scene.
   Its first click opens a two-digit wedding-date lock. The partial date at the top
   opens the phone Calendar as a clue. Set both day wheels, then press the single
   `Unlock` bar to check the answer; merely landing on the right digits does not open
-  it. `T` cycles trips and `Shift+1` through `Shift+7` selects directly. Some variants
+  it. `T` cycles trips and `Shift+1` through `Shift+8` selects directly. Some variants
   are deliberately unavailable through typed actions while the party is active.
 
 ## Calendar, special days, weather, and sky

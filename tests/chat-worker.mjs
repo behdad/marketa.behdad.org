@@ -506,6 +506,13 @@ actionCase = await normalizedPrivateReply(
 check(actionCase.reply.action?.args?.variant === "molly", "existing street-name aliases resolve to canonical trip variants", actionCase);
 
 actionCase = await normalizedPrivateReply(
+  JSON.stringify({ text: "Maybe later.", action: null }),
+  { phase: 2, party: true, trip: { active: false, variant: null }, actions_available: ["trip.start"] },
+  "let's do laughing gas",
+);
+check(actionCase.reply.action?.id === "trip.start" && actionCase.reply.action.args.variant === "nitrous", "laughing gas resolves to nitrous and remains available during a party", actionCase);
+
+actionCase = await normalizedPrivateReply(
   JSON.stringify({ text: "Travel sounds lovely.", action: null }),
   { phase: 2, party: false, trip: { active: false, variant: null }, actions_available: ["trip.start"] },
   "trip to Prague",

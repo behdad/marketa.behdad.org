@@ -38396,6 +38396,19 @@ function gameTapsNear(a, b) {
 // gives up on its own this long after it's dialled. Wall-clock, not attended time — the
 // abandoned call is exactly the one that never accrues attended time. Tune freely.
 var ABANDONED_CALL_MS = 30000;
+// Cross-controller office solve milestones. Laptop call, monitor boot, Enter automation,
+// checkpoint restore and reset all route through this one owner instead of writing mirrors.
+function setOfficeProgress(kind, on) {
+  var prop = kind === "prague" ? "__pragueCalled" : kind === "pc" ? "__pcPlayed" : null;
+  if (!prop) return false;
+  var previous = !!window[prop];
+  window[prop] = !!on;
+  if (previous !== !!on && window.__updateOfficeNudges) window.__updateOfficeNudges();
+  return previous;
+}
+window.__setOfficeProgress = setOfficeProgress;
+setOfficeProgress("prague", false);
+setOfficeProgress("pc", false);
 (function () {
   // Clicking an office wall sign turns the computer on and boots it (Fedora → desktop),
   // landing the browser on that sign's page; if the monitor's already on and showing,
@@ -38588,8 +38601,7 @@ var ABANDONED_CALL_MS = 30000;
     // not when the ring starts. The room hint otherwise only re-checks on a light
     // toggle or a glass click, so set it here too.
     function markPragueCalled() {
-      if (window.__pragueCalled) return;
-      window.__pragueCalled = true; // satisfies the office finale's Call-Prague requirement
+      if (setOfficeProgress("prague", true)) return; // satisfies the office finale's Call-Prague requirement
       if (window.__retireHint) window.__retireHint("hint_prague"); // loose-brick hint: retire once Prague's been called
       // the caption advances only once the call is DISCONNECTED (see dropLine); while
       // the couple's still on screen, a gentle hang-up nudge after a few seconds
@@ -39049,7 +39061,14 @@ var ABANDONED_CALL_MS = 30000;
   // toggle (a separate IIFE) and the sprinkler trigger can both see/set it. See __shortOutMonitor +
   // the updateScreen gate.
   var monitorShortTimer = null, MONITOR_SHORT_MS = 4200;
-  if (typeof window.__monitorShorted === "undefined") window.__monitorShorted = false;
+  function setMonitorShorted(on) {
+    var previous = !!window.__monitorShorted;
+    window.__monitorShorted = !!on;
+    monitor.classList.toggle("shorted", !!on);
+    return previous;
+  }
+  window.__setMonitorShorted = setMonitorShorted;
+  setMonitorShorted(false);
   var CAPS_URL = "https://marketa.behdad.org/";
   var monitorUrl = CAPS_URL;
   // A wall sign (harfbuzz plaque / behdad.org tag) can ask the boot to finish on its own
@@ -39273,7 +39292,7 @@ var ABANDONED_CALL_MS = 30000;
       return;
     }
     if (!window.__pcPlayed) {
-      window.__pcPlayed = true; // the office sequence's "play with the computer" beat (the butterfly gates on it)
+      setOfficeProgress("pc", true); // the office sequence's "play with the computer" beat (the butterfly gates on it)
       if (window.__retireHint) { window.__retireHint("hint_tower"); window.__retireHint("hint_deeper"); } // loose-brick hints: retire both PC/monitor nudges once the tower's been woken
       // ...and powering on advances the office hint to the next step (the caption
       // system elsewhere only re-evaluates on lamp/call/entry events)
@@ -39327,21 +39346,19 @@ var ABANDONED_CALL_MS = 30000;
   // stays dark) and the PC-tower toggle (won't power up) for the duration.
   window.__shortOutMonitor = function () {
     var wasLive = monitor.classList.contains("screen-on");
-    window.__monitorShorted = true;
+    setMonitorShorted(true);
     if (pcTower && pcTower.classList.contains("on")) { pcTower.classList.remove("on"); if (window.__updatePcFan) window.__updatePcFan(); }
     updateScreen();                    // gated → clears the boot and keeps it dark
     shutdownMonitorApps();             // losing power mid-session is still a shutdown: nothing survives to the next boot
-    monitor.classList.add("shorted");  // wet sheen + a brief electric flicker (CSS)
     if (wasLive) playSparkSound("office-monitor"); // a zap, only if it actually shorted something live
     clearTimeout(monitorShortTimer);
     monitorShortTimer = setTimeout(function () {
-      window.__monitorShorted = false;
-      monitor.classList.remove("shorted");
+      setMonitorShorted(false);
       if (pcTower && pcTower.classList.contains("on")) updateScreen(); // dried out: light it now if the PC got switched on meanwhile
     }, MONITOR_SHORT_MS);
   };
   window.__clearMonitorShort = function () { // a full reset dries it instantly
-    clearTimeout(monitorShortTimer); window.__monitorShorted = false; if (monitor) monitor.classList.remove("shorted");
+    clearTimeout(monitorShortTimer); monitorShortTimer = null; setMonitorShorted(false);
   };
   // While a room song plays and the monitor's on a site, it flips to a
   // "now playing" equalizer; when the song stops it drops back to the site.
@@ -48283,9 +48300,8 @@ async def localfont(name):
     pendingBootSite = null; // reset never boots to a sign's page
     monitor.classList.add("here");
     typewriter.classList.add("away");
-    window.__pragueCalled = false; // a fresh game walks the office sequence again
-    window.__pcPlayed = false;
-    if (window.__updateOfficeNudges) window.__updateOfficeNudges();
+    setOfficeProgress("prague", false); // a fresh game walks the office sequence again
+    setOfficeProgress("pc", false);
   };
 })();
 // the REPLs' slim custom caret: an overlay lane on the input holds a hidden inline
@@ -66570,13 +66586,19 @@ function spawnDustMote(container) {
     if (nextBtn) nextBtn.classList.toggle("locked", stageIndex >= maxUnlocked);
     updateDots();
   }
-  function unlockThrough(idx) {
+  function setMaxUnlocked(idx, allowDecrease) {
     var prevMax = maxUnlocked;
-    if (idx > maxUnlocked) maxUnlocked = Math.min(idx, STAGES.length - 1);
+    var next = Math.max(0, Math.min(parseInt(idx, 10) || 0, STAGES.length - 1));
+    maxUnlocked = allowDecrease ? next : Math.max(maxUnlocked, next);
     if (prevMax === 0 && maxUnlocked >= 1 && !window.__cinematic && window.__startAutoDayNight) window.__startAutoDayNight(); // leaving the intro frontier hands the loft sky back to real/selected time
     if (prevMax === 0 && maxUnlocked >= 1 && window.__retryDateOccasion) window.__retryDateOccasion(); // a date occasion blocked by the intro may take over now
     if (maxUnlocked !== prevMax) updateNav(); // every unlock path, including cheats, immediately reflects its accessible adjacent rooms
+    return prevMax;
   }
+  function unlockThrough(idx) {
+    setMaxUnlocked(idx, false);
+  }
+  window.__setMaxUnlocked = function (idx) { return setMaxUnlocked(idx, true); };
   window.__unlockAllRooms = function () {
     unlockThrough(STAGES.length - 1);
     updateNav();
@@ -68664,7 +68686,22 @@ function spawnDustMote(container) {
   // "Second round" latches true the first time a party lights this session (see setGardenParty)
   // and stays on until resetHunt. It gates the who's-here roster: before the first party there's
   // no one worth listing, so the chip stays sealed rather than opening a confusing empty panel.
-  window.__secondRound = false;
+  function setSecondRound(on, options) {
+    options = options || {};
+    var previous = !!window.__secondRound;
+    window.__secondRound = !!on;
+    if (window.__secondRound) {
+      if (window.__unlockAllRooms) window.__unlockAllRooms();
+      if (!previous && options.releaseHeld !== false) {
+        if (window.__flushHeldPhoneMessages) window.__flushHeldPhoneMessages();
+        if (window.__retryShareAutoShow) window.__retryShareAutoShow();
+      }
+    }
+    if (window.__syncRosterAvail) window.__syncRosterAvail();
+    return previous;
+  }
+  window.__setSecondRound = setSecondRound;
+  setSecondRound(false, { releaseHeld: false });
   function gardenPartyActive() {
     return window.__gardenPartyOn && stageIndex === STAGES.indexOf("garden") &&
       document.visibilityState !== "hidden" &&
@@ -71589,13 +71626,7 @@ function spawnDustMote(container) {
     // First party of the session = we're officially in the "second round": reveal the who's-here
     // roster and unlock every room from here on. Latched — party-off never clears it (only resetHunt
     // does). Every party entry point routes through here, so any way the party lights agrees.
-    if (on && !window.__secondRound) {
-      window.__secondRound = true;
-      if (window.__unlockAllRooms) window.__unlockAllRooms();
-      if (window.__syncRosterAvail) window.__syncRosterAvail();
-      if (window.__flushHeldPhoneMessages) window.__flushHeldPhoneMessages(); // date-specific texts held during the solve now land together in the inbox
-      if (window.__retryShareAutoShow) window.__retryShareAutoShow(); // the special-day card waits for this same phase-two boundary
-    }
+    if (on && !window.__secondRound) setSecondRound(true); // unlock rooms, reveal roster, and release phase-two-held messages/cards
     if (on) { if (window.__startCueDrip) window.__startCueDrip(); } else if (window.__stopCueDrip) window.__stopCueDrip(); // drip the app-cue phone texts only while the party's lit
     if (!on && window.__setSmores) window.__setSmores(false); // the party's out → put the s'mores bonfire out too (unless a fire-festival season keeps its own)
     if (!on && window.__stopBalconySky) window.__stopBalconySky(); // ...and any fireworks finale / wish-lanterns in flight
@@ -74325,7 +74356,7 @@ function spawnDustMote(container) {
     // 3. Open the monitor: boot the PC (which sets __pcPlayed) if it's off, and zoom in.
     if (!window.__pcPlayed) {
       if (window.computer && !window.computer()) window.computer(true); // boots → sets __pcPlayed
-      else window.__pcPlayed = true; // already on (booted elsewhere) → mark the beat done so we don't loop
+      else setOfficeProgress("pc", true); // already on (booted elsewhere) → mark the beat done so we don't loop
       if (window.__monitorZoomIn && !(window.__monitorZoomed && window.__monitorZoomed())) window.__monitorZoomIn();
       return "office-monitor";
     }
@@ -74343,8 +74374,9 @@ function spawnDustMote(container) {
 
   function resetHunt() {
     if (window.__clearLoftCheckpoint) window.__clearLoftCheckpoint(); // a deliberate restart must not offer the discarded run on the next load
-    window.__pragueCalled = false;
-    window.__secondRound = false;                              // back to the "first round" — reseal the who's-here roster until a party lights again
+    setOfficeProgress("prague", false);
+    setOfficeProgress("pc", false);
+    if (window.__setSecondRound) window.__setSecondRound(false, { releaseHeld: false }); // back to phase one; reseal the roster until a party lights again
     if (window.__resetPartyExitHint) window.__resetPartyExitHint(); // the one-time attended party-exit cue belongs to this game session
     if (window.__closeDropTerm) window.__closeDropTerm();      // a fresh game starts with no panel up…
     if (window.__toggleRoster) window.__toggleRoster(false);   // …including the who's-here list (its syncAvailability re-hides the chip now the flag's cleared just above)
@@ -74518,7 +74550,7 @@ function spawnDustMote(container) {
     // piano, aquarium, workout, rainfall), since each follows its channel class
     if (window.__cuddlyProjector && window.__cuddlyProjector.channel() !== "fire") window.__cuddlyProjector.set("fire");
     window.__musicPaused = false; // clear any spacebar pause state
-    maxUnlocked = 0;
+    setMaxUnlocked(0, true);
     if (window.__stopAutoDayNight) window.__stopAutoDayNight(); // a fresh game returns to the forced-DAY intro kitchen; auto day/night re-arms when the kitchen is solved again
     if (window.__resetDayNightState) window.__resetDayNightState(); // after the stop, so nothing re-stamps: forget the held segment verdict + any twilight() force
     goToStage("kitchen");
@@ -78602,7 +78634,7 @@ function spawnDustMote(container) {
     ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"].forEach(function (id) { checkpointToggle(id, "done", blankets.indexOf(id) !== -1); });
 
     var o = puzzle.office || {};
-    window.__pragueCalled = !!o.prague; window.__pcPlayed = !!o.pc;
+    setOfficeProgress("prague", !!o.prague); setOfficeProgress("pc", !!o.pc);
     checkpointToggle("office-lamp", "dimmed", !!o.lamp); checkpointToggle("office-pendant", "dimmed", !!o.pendant);
     checkpointToggle("office-stainedglass", "done", !!o.glass);
     if (window.__updateOfficeNudges) window.__updateOfficeNudges();
@@ -78673,9 +78705,8 @@ function spawnDustMote(container) {
     hideRecoveryGate();
     restoreCheckpointPuzzle(saved.puzzle);
     var p = saved.progress || {}, savedMax = Math.max(0, Math.min(STAGES.length - 1, parseInt(p.maxUnlocked, 10) || 0));
-    maxUnlocked = 0; unlockThrough(savedMax);
-    window.__secondRound = !!p.phase2;
-    if (window.__secondRound) unlockThrough(STAGES.length - 1);
+    setMaxUnlocked(0, true); unlockThrough(savedMax);
+    setSecondRound(!!p.phase2, { releaseHeld: false });
     balconyIntroSeen = savedMax >= STAGES.length - 1;
     if (window.__checkpointPhoneRestore && saved.phone) window.__checkpointPhoneRestore(saved.phone);
     if (window.__checkpointAlbumRestore && saved.album) window.__checkpointAlbumRestore(saved.album);

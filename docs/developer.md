@@ -191,6 +191,15 @@ use exploration captions and rotating hints. `goToStage` is also the central roo
 collapses device zoom, tears down or pauses room-local effects, re-evaluates audio, people, weather,
 particles, photographer state, and phone/monitor ownership.
 
+### Progression transitions
+
+`setSecondRound` owns the phase-two latch, full-room unlock, roster availability and release of held
+phase-two messages/cards. Checkpoint restore passes `releaseHeld:false` because it restores the saved
+phone state separately. `setMaxUnlocked` owns the room frontier and navigation projection.
+`setOfficeProgress` owns the Prague-call and PC-played milestones across play, Enter automation,
+checkpoint restore and reset. `setMonitorShorted` owns both the wet-monitor flag and `.shorted`
+rendering class; drying and reset call the same transition.
+
 ### Party lifetime
 
 `setGardenParty` is the party source of truth. A separate controller, searchable as

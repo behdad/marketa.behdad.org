@@ -63,9 +63,10 @@ var HARNESS = [
   "    window.birthday('goli'); await sleep(700);",
   "    var pFig=document.getElementById('cuddly-vis-goli');",
   "    report.steps.goli = { bd: hasCls('bd-goli'), room: window.currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, figShown: !!(pFig && pFig.classList.contains('showing')), hatVisible: vis('#cuddly-vis-goli .bd-hat-goli') };",
-  "    // Elisabeth — a Czech-family CROWN kid",
+  "    // Elisabeth — a Czech-family CROWN kid. With the party off, her birthday routes to the",
+  "    // Lübeck laptop call, so verify the visible in-call crown rather than the hidden garden clone.",
   "    window.birthday('elisabeth'); await sleep(200);",
-  "    report.steps.elisabeth = { bd: hasCls('bd-elisabeth'), crownVisible: vis('.bd-crown-elisabeth'), plainHat: (document.querySelector('.bd-hat-elisabeth')?'exists':'none') };",
+  "    report.steps.elisabeth = { bd: hasCls('bd-elisabeth'), room: window.currentStageName, bodyBd: document.body.classList.contains('bd-elisabeth'), crownVisible: vis('#laptop-lueb-scene .bd-crown-elisabeth'), plainHat: (document.querySelector('.bd-hat-elisabeth')?'exists':'none') };",
   "    // NON-PARTY REMOTE-FAMILY calls: Madla's Lübeck family (crowns) rides the LAPTOP video call, and",
   "    // Behdad's California brother's family (hats) rides the MONITOR call — NOT the cuddly. The",
   "    // adornment lights on their figure INSIDE the call scene (body.bd-<who>). Party is off here (Goli).",
@@ -115,7 +116,7 @@ else {
   if (s.madla && s.madla.party && s.madla.room === "garden" && s.madla.cutter && s.madla.arrived && s.madla.figVis === "visible" && s.madla.crownVis === "visible") pass("populated-floor birthday (Madla): startBdCakeCutting FORCE-arrives the figure — visible under its crown (no floating crown)"); else fail("Madla populated-floor regression (arrived+visible under crown)", JSON.stringify(s.madla));
   if (s.madlaHold && s.madlaHold.balanceSame && !s.madlaHold.leaving && s.madlaHold.stillCutter && s.madlaHold.stillVis === "visible") pass("Madla HOLDS at the cake through a rebalance — the cutter isn't glided off to a slot/corner"); else fail("Madla holds at cake through rebalance (no drift to corner)", JSON.stringify(s.madlaHold));
   if (s.goli && s.goli.bd && s.goli.room === "cuddly" && s.goli.party === false && !s.goli.cakeOn && s.goli.figShown && s.goli.hatVisible === "visible") pass("party-OFF garden-adult reveal (Goli) brings her to the NOOK — figure shown AND hat on it (no floating adornment)"); else fail("Goli nook reveal + hat-on-figure", JSON.stringify(s.goli));
-  if (s.elisabeth && s.elisabeth.bd && s.elisabeth.crownVisible === "visible" && s.elisabeth.plainHat === "none") pass("Elisabeth wears a CROWN (bd-crown, no bd-hat)"); else fail("Elisabeth crown", JSON.stringify(s.elisabeth));
+  if (s.elisabeth && s.elisabeth.bd && s.elisabeth.room === "office" && s.elisabeth.bodyBd && s.elisabeth.crownVisible === "visible" && s.elisabeth.plainHat === "none") pass("non-party Elisabeth routes to the Lübeck call wearing her crown"); else fail("Elisabeth Lübeck-call crown", JSON.stringify(s.elisabeth));
   if (s.madlaCall && s.madlaCall.bd && s.madlaCall.room === "office" && s.madlaCall.bodyBd && s.madlaCall.crownVis === "visible") pass("non-party Madla (Lübeck) → LAPTOP call (office), her crown lit on the figure IN the call scene"); else fail("Madla lübeck-call crown", JSON.stringify(s.madlaCall));
   if (s.patriciaCall && s.patriciaCall.bd && s.patriciaCall.room === "office" && s.patriciaCall.bodyBd && s.patriciaCall.hatVis === "visible") pass("non-party Patricia (California) → MONITOR call (office), her hat lit on the figure IN the call scene"); else fail("Patricia california-call hat", JSON.stringify(s.patriciaCall));
   if (s.ashraf && s.ashraf.bd && s.ashraf.room === "office") pass("Ashraf (Tehran call) pans to the office + shows her hat class"); else fail("Ashraf tehran reveal", JSON.stringify(s.ashraf));

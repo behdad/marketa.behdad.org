@@ -49,7 +49,7 @@ var body = html.slice(open + 1, end); // the code between the outer function bra
 
 // sanity: the code under test is really in there (assertFresh spirit — don't test a stale slice)
 assert(/__balconySmokerNow/.test(body), "slice missing __balconySmokerNow — wrong region?");
-assert(/function layout\(\)/.test(body), "slice missing layout() — wrong region?");
+assert(/function layout\(preserve\)/.test(body), "slice missing layout(preserve) — wrong region?");
 assert(/function placeLane/.test(body), "slice missing placeLane() — wrong region?");
 
 // ── the roster the SVG actually declares (ids + which are smokers) ────────────
@@ -172,6 +172,7 @@ win.currentStageName = "kitchen";
 win.__djB = false;                 // false → Sina spins? our code: __djB=false → resolveDj marks dj-off-danesh; djName() returns Danesh. Keep consistent below.
 win.__barCoupleNow = function () { return win.__barCoupleNowValue || null; };
 win.__barCoupleNowValue = null;
+win.__partyGuestAttended = function () { return true; }; // current controller admits only arrived party guests
 win.requestAnimationFrame = function () { return 0; }; // never actually loops in this harness
 win.cancelAnimationFrame = function () {};
 win.addEventListener = function () {};
@@ -226,7 +227,7 @@ assert(typeof win.__resetBalconyHangout === "function", "__resetBalconyHangout n
 function shownIds() {
   return ALL.filter(function (id) {
     var el = byId[id];
-    return hangout.classList.contains("on") && el.style.display !== "none";
+    return hangout.classList.contains("on") && el.classList.contains("bh-present");
   });
 }
 function shownOrderX() {

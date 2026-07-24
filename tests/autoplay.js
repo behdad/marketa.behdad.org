@@ -50,6 +50,9 @@ var HARNESS = [
   "<script>",
   "(function () {",
   "  function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}",
+  // Autoplay may randomly open Chat. Keep this broad director test offline: the dedicated
+  // Chat test exercises the real Turnstile integration with its own deterministic stub.
+  "  window.turnstile={render:function(host,opts){this._opts=opts;return 'autoplay-test-widget';},remove:function(){},execute:function(){var o=this._opts;if(o&&o.callback)setTimeout(function(){o.callback('autoplay-test-token');},0);}};",
   // headless tabs are unfocused; autoplay gates on document.hasFocus() (the crickets rule),
   // so force it true, exactly like DEBUGGING.md recipe 2 does for focus-gated behaviour.
   "  var _focus=true; document.hasFocus=function(){return _focus;};",
@@ -396,6 +399,7 @@ var RM = [
   "<script>",
   "(function () {",
   "  function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}",
+  "  window.turnstile={render:function(host,opts){this._opts=opts;return 'autoplay-test-widget';},remove:function(){},execute:function(){var o=this._opts;if(o&&o.callback)setTimeout(function(){o.callback('autoplay-test-token');},0);}};",
   "  var report={errors:[],fresh:false,rooms:0,cursorSeen:false,ripples:0,steps:0,invariants:null};",
   "  async function run(){",
   "    report.fresh = (typeof window.__autoplayInvariants==='function');",

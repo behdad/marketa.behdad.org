@@ -20,6 +20,7 @@ var HARNESS = [
   ' window.__startTrip("acid");await sleep(3200);S("natural",{state:window.__tripState(),mirror:!!window.__tripActive,classes:classes()});',
   ' document.dispatchEvent(new KeyboardEvent("keydown",{code:"Digit1",shiftKey:true,bubbles:true}));await sleep(2100);S("firstHotkey",{state:window.__tripState(),classes:classes(),card:!!document.querySelector("#mol-card-nitrous.mol-show")});window.__stopTrip(true);',
   ' document.dispatchEvent(new KeyboardEvent("keydown",{code:"Digit8",shiftKey:true,bubbles:true}));await sleep(100);S("lastHotkey",{state:window.__tripState(),classes:classes()});window.__stopTrip(true);',
+  ' TRIP_DURATIONS.nitrous=500;document.getElementById("kitchen-whipper").dispatchEvent(new MouseEvent("click",{bubbles:true}));await sleep(200);S("whipperHiss",{state:window.__tripState(),squeezed:document.getElementById("kitchen-whipper").classList.contains("dispensing")});await sleep(900);S("whipper",{state:window.__tripState(),classes:classes(),card:!!document.querySelector("#mol-card-nitrous.mol-show")});window.__stopTrip(true);',
   ' var veil=document.getElementById("trip-tolerance-veil"),beforeVeil=veil&&veil.style.opacity;TRIP_DURATIONS.nitrous=80;window.__startTrip("nitrous");await sleep(150);S("neutral",{state:window.__tripState(),before:beforeVeil,after:veil&&veil.style.opacity});',
   '}',
   '})();</script>'
@@ -48,6 +49,10 @@ check(s.firstHotkey && s.firstHotkey.state.active && s.firstHotkey.state.variant
   "Shift+1 launches laughing gas and shows its molecule card", s.firstHotkey);
 check(s.lastHotkey && s.lastHotkey.state.active && s.lastHotkey.state.variant === "iboga" && s.lastHotkey.classes.join(",") === "iboga",
   "the former seven trips shift up intact, ending with iboga on Shift+8", s.lastHotkey);
+check(s.whipperHiss && !s.whipperHiss.state.active && s.whipperHiss.squeezed,
+  "the kitchen cream whipper squeezes and hisses before its trip", s.whipperHiss);
+check(s.whipper && s.whipper.state.active && s.whipper.state.variant === "nitrous" && s.whipper.classes.join(",") === "nitrous" && !s.whipper.card,
+  "the kitchen cream whipper then starts laughing gas without a molecule card", s.whipper);
 check(s.neutral && !s.neutral.state.active && s.neutral.before === s.neutral.after,
   "laughing gas ends without adding a gray tolerance veil", s.neutral);
 

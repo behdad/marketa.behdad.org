@@ -19,8 +19,8 @@ var expected = ["marketa","behdad","ali","goli","spencer","jay","farhang","laure
 check(!r.errors || !r.errors.length, "quiz page has no uncaught errors", r.errors);
 check(qs.length >= 8, "quiz has at least eight varied questions", qs.length);
 check(qs.every(function(q){return q.a.length >= 4 && q.a.every(function(a){return a.who.length > 0;});}), "every question has four or more non-empty answer options");
-check(qs.some(function(q){return q.multi;}), "quiz includes multi-select questions");
-check(qs.some(function(q){return q.multi && q.a.length >= 5;}), "a multi-select question offers five answer options");
+check(qs.length === 8 && qs.every(function(q){return q.multi === true;}), "all eight questions use the explicit multi-select mechanic");
+check(qs.every(function(q){return q.a.length >= 5;}), "every question offers at least five choices");
 check(expected.every(function(id){return ids.indexOf(id) >= 0;}), "all canonical participants, including every child, are quiz outcomes", expected.filter(function(id){return ids.indexOf(id)<0;}));
 check(qs.filter(function(q){return q.multi;}).every(function(q){return q.a.every(function(a){return Array.isArray(a.who);});}), "multi-select scoring targets are explicit participant arrays");
 console.log("");

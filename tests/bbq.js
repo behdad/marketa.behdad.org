@@ -78,6 +78,10 @@ var harness = String.raw`<script>
       check("Hamid wears the borrowed green-yellow jacket at the BBQ",
         strip.classList.contains("hamid-wearing-jacket") &&
         getComputedStyle(grillmaster).getPropertyValue("--hamid-top").trim() === "#c5c84c");
+      // Virtual-time Chrome can pin a timeout-triggered transition at its start value. Remove the
+      // transition for this cascade probe; AGENTS.md documents this exact headless artifact.
+      gardenJacket.style.setProperty("transition", "none", "important");
+      balconyJacket.style.setProperty("transition", "none", "important");
       check("both hanging jacket views fade away with Hamid",
         parseFloat(getComputedStyle(gardenJacket).opacity) < 1 && parseFloat(getComputedStyle(balconyJacket).opacity) < 1,
         getComputedStyle(gardenJacket).opacity + "/" + getComputedStyle(balconyJacket).opacity);
@@ -125,8 +129,8 @@ var harness = String.raw`<script>
 
       window.goToStage("cuddly");
       setTimeout(function () {
-        var kids = ["irene", "robin", "navid", "elisabeth", "felix", "hannah"];
-        check("six game kids are in the cuddly room", names("cuddly").filter(function (n) { return ["Irene","Robin","Navid","Elisabeth","Felix","Hannah"].indexOf(n) !== -1; }).length === 6, names("cuddly").join(","));
+        var kids = ["irene", "robin", "navid", "elisabeth", "felix", "patricia-son", "patricia-daughter", "hannah"];
+        check("all eight game kids are in the cuddly room", names("cuddly").filter(function (n) { return ["Irene","Robin","Navid","Elisabeth","Felix","Patricia’s son","Patricia’s daughter","Hannah"].indexOf(n) !== -1; }).length === 8, names("cuddly").join(","));
         check("game kids are off the garden floor", kids.every(function (n) { var el = document.querySelector("#garden-guests .g-" + n); return el && el.classList.contains("off-at-games"); }));
         var expectedOffFloor = moved.concat(window.__bbqSplitState().hostsOnBalcony ? ["behdad", "marketa", "hamid"] : ["hamid"]);
         check("selected adults and outside hosts are off the garden floor", expectedOffFloor.every(function (n) { var el = document.querySelector("#garden-guests .g-" + n); return el && el.classList.contains("off-at-bbq"); }));

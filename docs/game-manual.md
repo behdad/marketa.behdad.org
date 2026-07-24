@@ -367,6 +367,8 @@ name and relationship. The gallery stays compact. The Album and Photobooth share
 captured photo metadata, while live camera pixels remain local to the browser.
 During the party, Aspen follows people into the loft's rooms and deck. She does
 not enter, flash, or create an Album keepsake when a room has no subjects.
+The party itself may therefore continue while Aspen is absent from an empty
+garden; she returns as soon as somebody returns to the floor.
 
 ### Computer-only environments
 
@@ -451,9 +453,19 @@ day and night. After phase 2, it changes between daytime free play and the party
 During the party:
 
 - guests arrive and rotate among the five rooms as appropriate;
-- children may dance, play in Cuddly-puddly, or run through the party room;
-- the six children seated in Cuddly-puddly's game tableau leave the dance floor
-  for exactly as long as that tableau is visible;
+- all eight children share the same party inventory and may dance, play in
+  Cuddly-puddly, or run through the party room;
+- a child is more likely to dance while at least one represented parent is
+  dancing. Otherwise they usually take an available Cuddly-puddly seat; the
+  seated assignment persists while another room is on screen;
+- children assigned to Cuddly-puddly may make a brief run across the party room
+  and return to the same seat. Children currently dancing do not join that run;
+  occasionally all eight seated children run together;
+- s'mores and seasonal balcony play borrow children assigned to Cuddly-puddly;
+  a child dancing on the party floor does not simultaneously appear in the
+  balcony activity;
+- after a “kids are asleep” message, Cuddly-puddly clears. A child has only a
+  small chance to stay up dancing; the others remain asleep until the wake-up;
 - Bahareh may follow the running children;
 - party music becomes quieter when a projector, video, piano, or other foreground
   media experience is active;

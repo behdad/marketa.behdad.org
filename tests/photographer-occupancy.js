@@ -36,6 +36,25 @@ var harness = String.raw`<script>
 
     window.officefolks(false);
     check("Aspen leaves as soon as the office empties", !window.__roomHasPhotoSubjects("office") && !aspen.classList.contains("showing"));
+
+    window.goToStage("garden");
+    if (window.__summonGuests) window.__summonGuests();
+    var childKeys = { irene: 1, robin: 1, navid: 1, elisabeth: 1, felix: 1, "patricia-son": 1, "patricia-daughter": 1, hannah: 1 };
+    document.querySelectorAll("#garden-guests .guest").forEach(function (el) {
+      var cls = Array.prototype.find.call(el.classList, function (name) { return name.indexOf("g-") === 0; });
+      if (!childKeys[cls ? cls.slice(2) : ""]) el.classList.add("off-at-games");
+    });
+    window.__assignPartyKids(true);
+    var gardenStage = document.getElementById("stage-garden");
+    check("Aspen leaves when every garden subject is assigned elsewhere",
+      !window.__roomHasPhotoSubjects("garden") && gardenStage.classList.contains("photog-empty"));
+
+    var visitor = document.querySelector("#cuddly-visitors-layer .cuddly-visitor");
+    if (visitor) visitor.classList.add("showing");
+    window.__assignPartyKids(true);
+    check("Aspen returns when child allocation repopulates the garden",
+      window.__roomHasPhotoSubjects("garden") && !gardenStage.classList.contains("photog-empty"));
+    if (visitor) visitor.classList.remove("showing");
   } catch (error) {
     out.errors.push("setup: " + (error && error.stack || error));
   }

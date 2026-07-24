@@ -163,6 +163,11 @@ The five rooms are `kitchen`, `garden`, `cuddly`, `office`, and `balcony`. Searc
 `goToStage`. They are adjacent groups in one SVG strip; navigation translates the 500%-wide strip by
 20% per room.
 
+At rest, room parking keeps only the current SVG stage paintable. During a slide it reveals every
+traversed stage. Rapid navigation accumulates those revealed rooms across all in-flight retargets,
+because the strip may still be painting over an earlier leg; the final `transitionend` or timeout
+fallback parks everything except the latest destination.
+
 The normal first phase is a linear solve:
 
 1. Kitchen/bar espresso sequence.
@@ -358,15 +363,25 @@ for `ROSTER`, `__peopleManager`, `__whoIsHere`, `__roomOccupants`, and `__roster
   Markéta. Both `layoutBBQ()` and `applyBBQGardenSplit()` consume it. Each rotation and active-BBQ
   day/night change rerolls against a 0.75 daytime / 0.25 nighttime balcony probability, keeping
   their deck figures and garden exclusions atomic.
-- Children switch among free, family, godson, chase/game, and asleep states. Chase handoffs remove
-  standing duplicates; `off-in-nook` is owned only by the visible Cuddly game tableau and keeps
-  all six seated identities off the garden floor without disturbing the longer-lived
-  `off-at-games` formation state. Sleeping/waking can be both an authored state transition and a
-  message.
+- One eight-child inventory drives standing dancers, Cuddly seats, chase sprites, and sleep.
+  `assignPartyKids()` owns the persistent `off-at-games` / `off-asleep` assignment. A represented
+  parent on the live floor raises that child's dance chance from 0.25 to 0.70; after the sleep
+  message every Cuddly seat clears and the dance chance falls to 0.08. Chase handoffs remain a
+  temporary `off-with-kids` projection of a child whose persistent home is `off-at-games`; dancers
+  are excluded from the chase pool, and a full-pack roll can run all eight seated children. Keep
+  `PARTY_FLOOR_KIDS`, `KID_WHO`, runner SVG nodes, `ROSTER.runSel`, and the people manager in
+  parity when adding a child.
+- S'mores and seasonal balcony play use `__balconyBorrowedKids` as another temporary projection
+  from the persistent Cuddly assignment. Identity-specific s'mores art selects eligible godkids;
+  the seasonal two-slot art can represent any assigned children. `__balconyPlayKidsNow` publishes
+  the generic slots to the people manager, and teardown clears the borrowing without rerolling
+  unrelated dancers.
 - Aspen has garden stations and a photographer presence that can be cloned into other rooms/deck
   contexts. `__roomHasPhotoSubjects(room)` excludes working crew and gates her visible clone,
   camera/flash, shutter, and Album write together; an empty room must not show her or create a
-  keepsake. Automatic rounds and explicit `photo.take` use that same occupancy truth.
+  keepsake. Population controllers refresh photographer gates after assignment changes; the
+  garden can be empty during an active party, and Aspen returns with the first subject. Automatic
+  rounds and explicit `photo.take` use that same occupancy truth.
 
 When changing people data, verify all three representations: painted SVG figures, roster/chat
 metadata, and photo composition.

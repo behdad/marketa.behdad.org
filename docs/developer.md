@@ -223,6 +223,15 @@ interactive trip entry calls `beginTrip`; `startTripVariant` remains the lower-l
 used by the trailer's deliberately non-gameplay bloom. `tripGeneration` invalidates stale end timers
 and double-rAF class additions when a trip is interrupted or reset.
 
+### Media transitions
+
+`setMusicPausedState` is the only writer of the shared transport-pause mirror and synchronizes its
+play/pause UI and party dance-freeze projection. Individual song/projector/dance-bed controllers
+still own their AudioNode suspension and call the state transition after changing it.
+`setPartyDanceState` owns the active dance mirror, both SVG `data-dance` projections, formation,
+tempo retuning, flare cleanup and bed crossfade. Rotation, explicit selection, party start and party
+stop all use it.
+
 ## Rendering and performance lifecycle
 
 The scene is inline SVG, with CSS animations, Web Animations API effects, SMIL where required for

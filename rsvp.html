@@ -41217,7 +41217,14 @@ var ABANDONED_CALL_MS = 30000;
       var beforeApp = currentAppState(), beforeState = JSON.stringify(beforeApp);
       var phoneApps = {}; PHONE_APPS.forEach(function (app) { phoneApps[app] = app; });
       if (phoneApps[args.app] && beforeApp.phone_open && beforeApp.phone === args.app) return { changed: false, app: args.app, device: "phone", result: true };
-      if (phoneApps[args.app] && window.__openPhoneAppHere) { var phoneResult = window.__openPhoneAppHere(phoneApps[args.app]); syncAppState("opened", "ui"); return { changed: beforeState !== JSON.stringify(currentAppState()), app: args.app, device: "phone", result: phoneResult }; }
+      if (phoneApps[args.app] && window.__openPhoneAppHere) {
+        // A typed action is a direct launch, not navigation from the phone launcher.
+        // Message actions replace this close target with their explicit return-to-thread
+        // transition after perform() completes.
+        var phoneResult = window.__openPhoneAppHere(phoneApps[args.app], true);
+        syncAppState("opened", "ui");
+        return { changed: beforeState !== JSON.stringify(currentAppState()), app: args.app, device: "phone", result: phoneResult };
+      }
       if (args.app === "weather") {
         if (window.goToStage) window.goToStage("office");
         if (window.computer && !window.computer()) window.computer(true);
@@ -49121,9 +49128,24 @@ async def localfont(name):
 
     var modal = null, shell = null, booted = false, closing = false;
     var lockA = 0, lockB = 0, lockAnswer = null, lockEntry = "", lockFailures = 0, lockShakeT = null; // math passcode lockscreen (first open per visit)
-    var statusClock = null, currentApp = null, currentTitleKey = "", directCloseApp = null;
+    var statusClock = null, currentApp = null, currentTitleKey = "";
     var recentApps = [], recentsReturnApp = null;
-    var messageAppReturn = null; // a message action can deep-link to another phone app; Back returns to the thread first
+    // One owner for app-level Back/Escape. A launcher tap leaves this null (app -> home);
+    // direct scene/API/console launches use "close"; a Messages action uses "messages".
+    var phoneAppReturn = null;
+    function setPhoneAppReturn(mode, launched, closeMessagesAfter) {
+      if (!mode || !launched) { phoneAppReturn = null; return null; }
+      phoneAppReturn = {
+        mode: mode === "messages" ? "messages" : "close",
+        launched: launched,
+        closeMessagesAfter: !!closeMessagesAfter
+      };
+      return phoneAppReturn;
+    }
+    function phoneAppReturnsByClosing(id) {
+      return !!(phoneAppReturn && phoneAppReturn.mode === "close" &&
+        phoneAppReturn.launched === (id || currentApp));
+    }
     var battMgr = null, battHooked = false;
     var phoneBrowserCleanup = null; // teardown for the in-phone browser (ResizeObserver + frame unload)
     var phoneBrowserPending = null; // a URL __showUrlInPhone wants opened instead of the default tab; renderPhoneBrowser consumes it
@@ -49466,8 +49488,7 @@ async def localfont(name):
     }
     function showHome() {
       recentsReturnApp = null;
-      messageAppReturn = null;
-      directCloseApp = null;
+      setPhoneAppReturn(null);
       leaveCurrentApp();
       renderHome();
       showScreen("home");
@@ -49483,9 +49504,9 @@ async def localfont(name):
         if (oldFocus.classList.contains("pm-ms-input")) refocusClass = ".pm-ms-input";
         else if (oldFocus.classList.contains("pm-msg-input")) refocusClass = ".pm-msg-input";
       }
-      var keepDirectClose = currentApp === id && directCloseApp === id;
+      var keepReturn = currentApp === id && phoneAppReturn && phoneAppReturn.launched === id;
       leaveCurrentApp();
-      if (!keepDirectClose) directCloseApp = null;
+      if (!keepReturn) setPhoneAppReturn(null);
       currentApp = id;
       noteRecentApp(id);
       currentTitleKey = titleKey;
@@ -49540,8 +49561,7 @@ async def localfont(name):
     }
     function showRecents() {
       recentsReturnApp = currentApp ? phoneAppById(currentApp) : recentsReturnApp;
-      messageAppReturn = null;
-      directCloseApp = null;
+      setPhoneAppReturn(null);
       leaveCurrentApp();
       renderRecents();
       showScreen("recents");
@@ -53595,17 +53615,17 @@ async def localfont(name):
         return;
       }
       if (shell.classList.contains("pm-app")) {
-        if (directCloseApp && directCloseApp === currentApp) { close(); return; }
+        if (phoneAppReturnsByClosing()) { close(); return; }
         // in-app back first: the cocktails detail view steps back to the bar menu, not out to home
         if (currentApp === "cocktails" && cocktailView === "detail") {
           var body = shell.querySelector(".phone-app-body");
           if (body) { cocktailView = "gallery"; cocktailSel = -1; body.scrollTop = 0; body.innerHTML = ""; renderCocktailGallery(body); return; }
         }
-        if (messageAppReturn && messageAppReturn.launched === currentApp) {
-          var closeMessagesDirectly = messageAppReturn.directClose;
-          messageAppReturn = null;
+        if (phoneAppReturn && phoneAppReturn.mode === "messages" && phoneAppReturn.launched === currentApp) {
+          var closeMessagesDirectly = phoneAppReturn.closeMessagesAfter;
+          setPhoneAppReturn(null);
           openApp("messages", "app_messages", renderMessages);
-          directCloseApp = closeMessagesDirectly ? "messages" : null;
+          if (closeMessagesDirectly) setPhoneAppReturn("close", "messages");
           return;
         }
         showHome(); return;
@@ -53701,8 +53721,7 @@ async def localfont(name):
       phCancelDrag(); // abort any in-flight icon drag (drop the ghost + window listeners)
       if (lockShakeT) { clearTimeout(lockShakeT); lockShakeT = null; }
       if (callee) dropCall(true); // silent teardown of any live call + ambient
-      messageAppReturn = null;
-      directCloseApp = null;
+      setPhoneAppReturn(null);
       recentsReturnApp = null;
       leaveCurrentApp();           // restore the re-placed Mines board to the monitor
       stopStatusClock();
@@ -53771,7 +53790,7 @@ async def localfont(name):
       open(true); // in-place launcher open, first-open math lock skipped
       if (app.open) app.open();
       else if (app.link) openExternal(app.link);
-      if (closeOnBack && currentApp === app.id) directCloseApp = app.id;
+      if (closeOnBack && currentApp === app.id) setPhoneAppReturn("close", app.id);
       return true;
     };
     // Keep an open phone riding the current fullscreen host (same choice open() makes), so a
@@ -53821,12 +53840,12 @@ async def localfont(name):
       }
       var args = action.args || {};
       var phoneTarget = action.id === "app.open" && args.app !== "messages" ? phoneAppByName(args.app) : null;
-      var returnDirectly = directCloseApp === "messages";
+      var returnDirectly = phoneAppReturnsByClosing("messages");
       delete m.chatActionFailed;
       return window.loft.api.perform(action.id, args, { source: "messages-chat" }).then(function (result) {
         if (!result || !result.ok) { renderMsgActionFailure(m); return false; }
         // Opening a phone app resets its prior navigation state, so install this only afterward.
-        if (phoneTarget && currentApp === phoneTarget.id) messageAppReturn = { launched: phoneTarget.id, directClose: returnDirectly };
+        if (phoneTarget && currentApp === phoneTarget.id) setPhoneAppReturn("messages", phoneTarget.id, returnDirectly);
         else if (!phoneTarget && !(action.id === "app.open" && args.app === "messages")) close(true);
         return true;
       }, function () { renderMsgActionFailure(m); return false; });
@@ -53842,12 +53861,12 @@ async def localfont(name):
       if (typedAction) { runTypedMsgAction(m, typedAction); return; }
       if (!act) { open(true); openApp("messages", "app_messages", renderMessages); return; }
       if (act.indexOf("app:") === 0) {
-        var returnDirect = directCloseApp === "messages";
+        var returnDirect = phoneAppReturnsByClosing("messages");
         open(true);
         var app = phoneAppByName(act.slice(4));
         if (app && app.open) {
           app.open();
-          messageAppReturn = { launched: app.id, directClose: returnDirect };
+          setPhoneAppReturn("messages", app.id, returnDirect);
         } else openApp("messages", "app_messages", renderMessages);
         return;
       }
@@ -53926,7 +53945,7 @@ async def localfont(name):
       if (msgOpenTarget) { msgUnreadOnly = false; msgSearchQ = ""; } // a retained filter must never hide the notification the visitor just opened
       open(true);
       openApp("messages", "app_messages", renderMessages);
-      directCloseApp = "messages"; // scene notification/badge is a deep link: Back/Esc dismisses the phone instead of exposing its launcher
+      setPhoneAppReturn("close", "messages"); // scene notification/badge is a deep link: Back/Esc dismisses the phone instead of exposing its launcher
     }
     window.__openMessagesAt = openMessagesAt;
     window.__togglePhoneMessages = function () {
@@ -54686,7 +54705,7 @@ async def localfont(name):
         if (document.getElementById("sharecard-modal") && window.__shareCloseModal) { window.__shareCloseModal(); return; } // the postcard modal (tapped from a message image) owns Esc first — close it, don't navigate the phone back under it
         if (phMenuOpen()) { phCloseMenu(); return; } // an open app-icon menu owns Esc (matches the desktop .mon-ctx), doesn't navigate the phone back
         if (currentApp === "album" && shell && shell.querySelector(".pm-album-detail") && window.__albumCloseDetail) { window.__albumCloseDetail(); return; } // an open polaroid detail owns Esc first
-        if (directCloseApp && directCloseApp === currentApp) { close(); return; }
+        if (phoneAppReturnsByClosing()) { close(); return; }
         // First Esc leaves any phone text/search field but keeps the app open. A second
         // Esc then performs the normal app -> home navigation. Drafts remain intact.
         var focused = document.activeElement;
@@ -54698,7 +54717,7 @@ async def localfont(name):
         navBack();
         return;
       }
-      if (e.key === "Backspace" && !e.ctrlKey && !e.metaKey && !e.altKey && directCloseApp && directCloseApp === currentApp) {
+      if (e.key === "Backspace" && !e.ctrlKey && !e.metaKey && !e.altKey && phoneAppReturnsByClosing()) {
         var backTarget = e.target;
         if (backTarget && backTarget.classList && backTarget.classList.contains("pm-ms-input")) return; // empty search returns to the composer in its own field handler; a second Backspace closes
         if (backTarget && (/^(INPUT|TEXTAREA)$/.test(backTarget.tagName) || backTarget.isContentEditable) && !backTarget.value && !backTarget.textContent) {

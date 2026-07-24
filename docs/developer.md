@@ -350,8 +350,9 @@ verify both hysteresis directions without relying on headless timing.
 ### Pocket phone
 
 The phone is a lazily built HTML modal with launcher, app, and in-call screens. Search for
-`openApp`, `navBack`, `messageAppReturn`, and `directCloseApp`. Its first ordinary open can show the
-math lock; explicit/cinematic deep links may skip it.
+`openApp`, `navBack`, `phoneAppReturn`, and `setPhoneAppReturn`. Its first ordinary open can show the
+math lock; explicit/cinematic deep links may skip it. `setPhoneAppReturn` is the only owner of the
+app-level return transition: launcher, close phone, or return to Messages.
 
 Back behavior depends on entry context:
 
@@ -360,8 +361,10 @@ Back behavior depends on entry context:
 - a direct scene notification opens Messages as a deep link, so Back/Escape closes the phone rather
   than exposing the launcher;
 - scene-level deep links use `__openPhoneAppHere(app, true)` for direct-close behavior: Aspen's
-  post-shutter Album, the magic-box Calendar clue, and the date/time HUD pills. Ordinary app,
-  console, and phone-icon launches still return to the launcher;
+  post-shutter Album, the magic-box Calendar clue, and the date/time HUD pills;
+- typed `app.open` actions are direct too, so they close the phone on Back/Escape; a Messages action
+  replaces that target with an explicit return to its thread. Interactive `phone("app")` console
+  commands retain ordinary app-to-launcher navigation;
 - an ordinary app returns to the phone home screen;
 - leaving the owning room closes the phone.
 

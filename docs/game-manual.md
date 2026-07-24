@@ -539,7 +539,7 @@ conversation to establish the party first. Available moments include:
 - group photo;
 - sparklers;
 - cake cutting;
-- bouquet toss;
+- bouquet toss (a fictional, game-only event);
 - chair lift.
 
 Only one major moment runs at a time. Routine automatic texts wait until the
@@ -599,7 +599,8 @@ state remains visually quiet. `N` selects the next applicable track or scene.
   close control.
 - **Minesweeper:** Available on both phone and monitor.
 - **Game of Life and Doom:** Available on the monitor.
-- **Bouquet toss:** A party moment with its own aiming interaction.
+- **Bouquet toss:** A fictional, game-only party moment with its own aiming
+  interaction. No bouquet toss is planned for either real wedding celebration.
 - **Magic box:** The garden's magic box contains a set of optional visual trips.
   Its first click opens a two-digit wedding-date lock. The partial date at the top
   opens the phone Calendar as a clue. Set both day wheels, then press the single

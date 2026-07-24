@@ -457,6 +457,7 @@ var PROBE_HARNESS = [
   "    window.__edmNowMins = function () { return 720; };",
   "    if (window.__applyAutoDayNight) window.__applyAutoDayNight();",
   "    await sleep(900);",
+  "    ok('entry paint gate: full RSVP settles on the intro without remaining concealed', document.documentElement.classList.contains('loft-entry-ready') && !document.documentElement.classList.contains('loft-entry-pending') && !!el('click-me-overlay'));",
   "    // load-time class snapshot of every element under the strip (element",
   "    // identity, not index — probes spawn/remove particle nodes)",
   "    var snap = new Map();",

@@ -36,7 +36,7 @@ room navigation, dots, and media transport, retain Fullscreen plus the left util
 the one `.watch-controls` node into the shell's bottom row. Fresh entry's `#click-me-overlay`
 uses the same translucent scene veil as recovery and consumes its dismissing click, so that click
 cannot activate an SVG object underneath. The head script applies `.loft-entry-pending` before
-first paint in game-only mode; the checkpoint initializer constructs the chosen gate synchronously
+the game shell's first paint in both full RSVP and game-only modes; the checkpoint initializer constructs the chosen gate synchronously
 and `revealEntrySurface()` removes that concealment, preventing a kitchen/caption flash. Handing control to the player removes
 the entry class, reparents watch controls to their document owner, and restores normal controls.
 The prose device/browser detector and recommendation line were removed: their actions are now

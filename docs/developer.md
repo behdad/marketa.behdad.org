@@ -801,6 +801,9 @@ suspect.
 The frontend is served directly from a Git checkout behind Apache. HTML and the PWA manifest are
 configured to revalidate; large pinned runtimes and media have longer cache policies. Internal
 Markdown, tests, Worker source/configuration, and local secret files are explicitly blocked.
+Clean extensionless entry points are symlinks, and Apache does not infer the target HTML MIME type
+through them. The extensionless-file rule in `.htaccess` therefore forces `text/html`, compression,
+and revalidation for current and future clean routes; keep it when adding another drop alias.
 
 The chat backend is a separately deployed Cloudflare Worker routed only to `/chat`, with its model
 credential, Turnstile server secret, and rate-limit binding supplied by the platform. The frontend

@@ -36,6 +36,20 @@ RewriteRule ^tests/ - [F,L]
 # Clean extensionless URLs (/rsvp, /save-the-dates, /loft-day) are plain symlinks to the
 # .html files — the .htaccess rewrite trick doesn't work on this host (its -f file test
 # can't resolve the real serving path). Add a symlink per new drop: ln -s foo.html foo
+#
+# Apache does not inherit the target's MIME type through these extensionless symlinks.
+# Without an explicit type, mod_deflate's text/html rule below never sees them and the
+# large game entry point is sent uncompressed. Keep the aliases dynamic/revalidated,
+# but give them the same type, compression, and cache policy as their .html targets.
+<FilesMatch "^[^.]+$">
+  ForceType text/html
+  <IfModule mod_deflate.c>
+    SetOutputFilter DEFLATE
+  </IfModule>
+  <IfModule mod_headers.c>
+    Header set Cache-Control "no-cache"
+  </IfModule>
+</FilesMatch>
 
 # HTML must revalidate on every load — the site deploys continuously and a
 # heuristically-cached rsvp.html serves fixes minutes late. The PWA manifest too:

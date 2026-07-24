@@ -23,8 +23,8 @@ function check(ok, msg, detail) {
   else { failures++; console.log("  \u2717 " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
-console.log("rsvp.html mobile control targets:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 1600, { patchRaf: true, chromeFlags: "--window-size=500,844" });
+console.log("rsvp.html mobile landscape control targets:");
+var r = lib.runPageSync("rsvp.html", HARNESS, 1600, { patchRaf: true, chromeFlags: "--window-size=600,390" });
 if (!r) { console.log("  \u2717 harness produced no report"); process.exit(1); }
 var s = r.steps;
 function named(id) { return s.controls.filter(function(c){return c.id === id;})[0]; }

@@ -41,6 +41,13 @@ rather than the browser viewport. The head script applies `.loft-entry-pending` 
 the game shell's first paint in both full RSVP and game-only modes; the checkpoint initializer constructs the chosen gate synchronously
 and `revealEntrySurface()` removes that concealment, preventing a kitchen/caption flash. Handing control to the player removes
 the entry class, reparents watch controls to their document owner, and restores normal controls.
+At `max-width:600px` in portrait, `#portrait-orientation-gate` is the game shell's only
+visible child in both full RSVP and direct game modes. Its action enters the existing fullscreen
+state owner and chains `screen.orientation.lock("landscape")` after a native fullscreen grant;
+manual rotation clears the media query when that API is absent or denied.
+`__holdFullscreenFill()` / `__releaseFullscreenFill()` bracket the blocking restart confirmation:
+if Chrome revokes native fullscreen for the dialog, the installed/class fill remains active while
+ordinary Escape and explicit fullscreen-button exits still clear it.
 The prose device/browser detector and recommendation line were removed: their actions are now
 direct Fullscreen, audio, and Known issues controls.
 

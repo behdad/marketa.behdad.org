@@ -296,6 +296,7 @@ footer{margin-top:2.6rem}
   border:1px solid rgba(120,60,70,.24);
   box-shadow:0 5px 15px rgba(69,58,49,.15), inset 0 1px 0 rgba(255,255,255,.3), inset 0 -2px 5px rgba(120,58,68,.18);
 }
+#portrait-orientation-gate{display:none}
 #hunt-fullscreen-area > .hunt-frame{margin:.4rem auto}
 @media (max-width:759px){
   #hunt-fullscreen-area{padding:.3rem .4rem .45rem; border-radius:12px; margin:1.1rem auto 0}
@@ -8545,6 +8546,35 @@ section{margin:1.9rem 0}
 :root:not(.revealed) .parties,
 :root:not(.revealed) .rsvp-block,
 :root:not(.revealed) footer{display:none !important}
+/* A narrow portrait phone is not a playable 2:1 room. Present one deliberate orientation
+   gate in BOTH the embedded RSVP and direct game instead of shrinking the scene and caption
+   into an accidental miniature. Its action asks for fullscreen + landscape where the browser
+   permits orientation locking; rotating manually clears this media query immediately. */
+@media (max-width:600px) and (orientation:portrait){
+  #hunt-fullscreen-area > :not(#portrait-orientation-gate){display:none !important}
+  #hunt-fullscreen-area:not(.is-fullscreen){
+    width:min(100%,22rem); max-width:22rem; margin:1rem auto; padding:.55rem;
+  }
+  #portrait-orientation-gate{
+    display:flex; width:min(100%,22rem); min-height:6.5rem; margin:auto; padding:.85rem;
+    box-sizing:border-box; align-items:center; justify-content:space-between; gap:.8rem;
+    color:var(--ink); background:rgba(255,253,248,.86); border:1px solid rgba(69,58,49,.18);
+    border-radius:8px; box-shadow:0 2px 8px rgba(69,58,49,.12);
+  }
+  .portrait-orientation-copy{display:flex; min-width:0; flex-direction:column; gap:.18rem}
+  .portrait-orientation-copy strong{
+    color:var(--wine); font-family:"Fraunces","Source Serif 4",serif;
+    font-size:1.2rem; line-height:1.1;
+  }
+  .portrait-orientation-copy span{color:var(--muted); font-size:.86rem; line-height:1.25}
+  #portrait-landscape-btn{
+    flex:0 0 auto; display:flex; align-items:center; gap:.35rem; min-height:2.4rem;
+    padding:.45rem .65rem; border:1.5px solid var(--wine); border-radius:6px;
+    color:var(--paper); background:var(--wine); font:inherit; font-size:.82rem;
+    line-height:1.1; cursor:pointer;
+  }
+  #portrait-landscape-btn:hover,#portrait-landscape-btn:focus-visible{background:#7a2f3d}
+}
 /* ── seasonal dressing ──────────────────────────────────────────────────────
    A real-calendar date check at init sets at most one season class on the strip
    (via window.__setSeason): .season-holiday (Dec 1–Jan 6) or .season-spooky
@@ -9724,6 +9754,19 @@ section{margin:1.9rem 0}
   <hr>
 
   <div id="hunt-fullscreen-area">
+  <div id="portrait-orientation-gate" role="region" aria-labelledby="portrait-orientation-title">
+    <div class="portrait-orientation-copy">
+      <strong id="portrait-orientation-title" data-i="portrait_title">Rotate your phone</strong>
+      <span data-i="portrait_body">Loft Day plays in landscape.</span>
+    </div>
+    <button type="button" id="portrait-landscape-btn">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 12a9 9 0 1 0 3-6.7"/>
+        <path d="M3 4v8h8"/>
+      </svg>
+      <span data-i="portrait_action">Try landscape</span>
+    </button>
+  </div>
   <nav class="langs game-langs" aria-label="Language" data-aria-i="nav_lang_aria">
     <button type="button" data-lang="en" aria-pressed="true">EN</button><span class="sep" aria-hidden="true">|</span>
     <button type="button" data-lang="cs" aria-pressed="false">CZ</button>
@@ -25228,6 +25271,9 @@ var T = {
     nav_lang_aria: "Language",
     fullscreen_enter: "Enter fullscreen",
     fullscreen_exit: "Exit fullscreen",
+    portrait_title: "Rotate your phone",
+    portrait_body: "Loft Day plays in landscape.",
+    portrait_action: "Try landscape",
     feedback_aria: "Send feedback",
     bugs_aria: "Known issues",
     github_aria: "Source on GitHub",
@@ -26113,6 +26159,9 @@ var T = {
     nav_lang_aria: "Jazyk",
     fullscreen_enter: "Celá obrazovka",
     fullscreen_exit: "Ukončit celou obrazovku",
+    portrait_title: "Otočte telefon",
+    portrait_body: "Den v podkroví se hraje na šířku.",
+    portrait_action: "Zkusit na šířku",
     feedback_aria: "Poslat zpětnou vazbu",
     bugs_aria: "Známé chyby",
     github_aria: "Zdroj na GitHubu",
@@ -27108,6 +27157,7 @@ window.addEventListener("hashchange", function () {
   // not the whole page) rather than just the SVG viewport, so the prev/next arrows and
   // room-dot indicators stay usable in fullscreen too.
   var btn = document.getElementById("hunt-fullscreen-btn");
+  var portraitBtn = document.getElementById("portrait-landscape-btn");
   var area = document.getElementById("hunt-fullscreen-area");
   if (!btn || !area) return;
   // The real Fullscreen API is only a bonus layer here: the always-works mechanism is the
@@ -27119,7 +27169,7 @@ window.addEventListener("hashchange", function () {
   // Our own intent flag: true whenever the class-fill is meant to be on. Kept separate
   // from the real API state so the fullscreenchange handler can tell an Esc/back exit of
   // real fullscreen (which must also drop the class-fill) from a request we never made.
-  var manualFs = false;
+  var manualFs = false, portraitLockActive = false, preserveFillUntil = 0;
   var resumeFsOnClick = false, fsOutboundUntil = 0;
   function isFullscreen() {
     return (document.fullscreenElement || document.webkitFullscreenElement) === area;
@@ -27278,18 +27328,25 @@ window.addEventListener("hashchange", function () {
     // Then best-effort real fullscreen (hides the browser/status bar where supported).
     // A rejection on mobile / outside a trusted gesture is harmless — the class already
     // did the visible work.
+    var requestPromise = null;
     if (requestFs) {
       try {
-        var p = requestFs.call(area);
-        if (p && p.catch) p.catch(function () {});
+        requestPromise = requestFs.call(area);
+        if (requestPromise && requestPromise.catch) requestPromise.catch(function () {});
       } catch (err) {}
     }
+    return requestPromise;
   }
   function exitFsFull() {
     beginPhoneFsTransition();
     clearFsReturn();
+    preserveFillUntil = 0;
     manualFs = false;
     area.classList.remove("is-fullscreen");
+    if (portraitLockActive && screen.orientation && screen.orientation.unlock) {
+      try { screen.orientation.unlock(); } catch (_error) {}
+      portraitLockActive = false;
+    }
     if (isFullscreen() && exitFs) { // leave real fullscreen too, if a genuine grant is in effect
       try {
         var p = exitFs.call(document);
@@ -27305,7 +27362,34 @@ window.addEventListener("hashchange", function () {
     if (isFilled()) exitFsFull(); else enterFs();
   }
   window.__toggleFullscreen = toggleFs; // surfaces so the open phone (which handles its own 'f') can drive it
+  window.__holdFullscreenFill = function () {
+    if (!isFilled() && !isFullscreen()) return false;
+    preserveFillUntil = Date.now() + 30000; // covers however long the blocking confirm dialog remains open
+    manualFs = true;
+    area.classList.add("is-fullscreen");
+    return true;
+  };
+  window.__releaseFullscreenFill = function () {
+    if (preserveFillUntil) preserveFillUntil = Date.now() + 1500; // fullscreenchange can be queued just after confirm returns
+  };
   btn.addEventListener("click", function (e) { e.stopPropagation(); toggleFs(); });
+  if (portraitBtn) portraitBtn.addEventListener("click", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var fsRequest = isFilled() ? null : enterFs();
+    function lockLandscape() {
+      if (!screen.orientation || !screen.orientation.lock) return;
+      try {
+        var locked = screen.orientation.lock("landscape");
+        if (locked && locked.then) locked.then(function () { portraitLockActive = true; }).catch(function () {});
+        else portraitLockActive = true;
+      } catch (_error) {}
+    }
+    // Chromium requires a fullscreen grant before orientation.lock(); installed apps and
+    // engines without a promise can try the lock directly from this same user gesture.
+    if (fsRequest && fsRequest.then) fsRequest.then(lockLandscape).catch(lockLandscape);
+    else lockLandscape();
+  });
   // A new tab/app can force the browser out of the Fullscreen API. Correlate the foreground
   // loss with the click that caused it, then spend the first click after return as the trusted
   // gesture needed to request fullscreen again. Capture phase restores it before the clicked
@@ -27351,8 +27435,12 @@ window.addEventListener("hashchange", function () {
       manualFs = true;
       area.classList.add("is-fullscreen");
     } else if (manualFs) {
-      manualFs = false;
-      area.classList.remove("is-fullscreen");
+      if (Date.now() <= preserveFillUntil) {
+        area.classList.add("is-fullscreen");
+      } else {
+        manualFs = false;
+        area.classList.remove("is-fullscreen");
+      }
       // A focused, visible exit is Escape/back (or another element taking fullscreen), not
       // a tab handoff. Defer one task so a blur ordered just after fullscreenchange can claim
       // the return before this cleanup runs.
@@ -27395,7 +27483,7 @@ window.addEventListener("hashchange", function () {
     document.removeEventListener("click", firstTap, true);
     var area=document.querySelector("#hunt-fullscreen-area"), b=document.getElementById("hunt-fullscreen-btn");
     if(!b || (area && area.classList.contains("is-fullscreen"))) return;
-    if(e && e.target && e.target.closest && e.target.closest("#hunt-fullscreen-btn")) return; // the button handles itself
+    if(e && e.target && e.target.closest && e.target.closest("#hunt-fullscreen-btn,#portrait-landscape-btn")) return; // those buttons handle themselves
     b.click();
   }
   document.addEventListener("click", firstTap, true);
@@ -77264,7 +77352,10 @@ function spawnDustMote(container) {
     // fire-extinguisher in the scene stays immediate — grabbing it is deliberate.
     window.__confirmRestart = function () {
       var l = T[document.documentElement.lang] ? document.documentElement.lang : "en";
-      return window.confirm((T[l] && T[l].restart_confirm) || T.en.restart_confirm);
+      var held = window.__holdFullscreenFill && window.__holdFullscreenFill();
+      var accepted = window.confirm((T[l] && T[l].restart_confirm) || T.en.restart_confirm);
+      if (held && window.__releaseFullscreenFill) window.__releaseFullscreenFill();
+      return accepted;
     };
     var restartBtn = document.getElementById("hunt-restart-btn");
     if (restartBtn) restartBtn.addEventListener("click", function (e) {

@@ -5,7 +5,7 @@
 // Fresh/recovery entry carries identity, language and watch actions inside the shell.
 var lib = require("./lib");
 
-function run(width, height, standalone) {
+function run(width, height, standalone, fullPage) {
   var harness = String.raw`<script>
 (function () {
   var out = { checks: [], errors: [] };
@@ -34,10 +34,49 @@ function run(width, height, standalone) {
       check("browser mode never mounts the installed loading progress",
         window.__installedLoaderUsed === false && !document.getElementById("installed-load"));
     }
-    check("game-only removes every outer title/language/advice row",
-      !document.getElementById("hunt-title") &&
-      getComputedStyle(document.querySelector(".page-langs")).display === "none" &&
-      !document.getElementById("device-hint"));
+    if (${fullPage ? "true" : "false"}) {
+      check("full RSVP keeps its invitation chrome around the portrait game gate",
+        document.documentElement.classList.contains("revealed") &&
+        getComputedStyle(document.querySelector(".page-langs")).display === "flex");
+    } else {
+      check("game-only removes every outer title/language/advice row",
+        !document.getElementById("hunt-title") &&
+        getComputedStyle(document.querySelector(".page-langs")).display === "none" &&
+        !document.getElementById("device-hint"));
+    }
+    var portrait = matchMedia("(max-width:600px) and (orientation:portrait)").matches;
+    if (portrait) {
+      var gate = document.getElementById("portrait-orientation-gate");
+      var action = document.getElementById("portrait-landscape-btn");
+      check("portrait shows one intentional orientation banner",
+        gate && getComputedStyle(gate).display === "flex" &&
+        gate.getBoundingClientRect().width > 0 && gate.getBoundingClientRect().right <= innerWidth + 1);
+      check("portrait suppresses the caption, scene, game controls, and watch actions",
+        getComputedStyle(document.getElementById("hunt-caption")).display === "none" &&
+        getComputedStyle(document.querySelector(".hunt-frame")).display === "none" &&
+        getComputedStyle(document.querySelector(".game-langs")).display === "none" &&
+        getComputedStyle(document.querySelector(".watch-controls")).display === "none");
+      function exercisePortraitAction() {
+        action.click();
+        setTimeout(function () {
+          check("portrait action requests the fullscreen fill while keeping the gate",
+            document.getElementById("hunt-fullscreen-area").classList.contains("is-fullscreen") &&
+            getComputedStyle(gate).display === "flex" &&
+            getComputedStyle(document.querySelector(".hunt-frame")).display === "none");
+          report();
+        }, 100);
+      }
+      if (${standalone ? "true" : "false"}) {
+        setTimeout(function () {
+          check("installed loading progress completes and leaves no overlay",
+            window.__installedLoaderComplete === true && !document.getElementById("installed-load"));
+          exercisePortraitAction();
+        }, 2700);
+      } else {
+        exercisePortraitAction();
+      }
+      return;
+    }
     check("CLICK ME owns the shared entry chrome",
       document.getElementById("hunt-fullscreen-area").classList.contains("intro-active") &&
       document.documentElement.classList.contains("loft-entry-ready") &&
@@ -122,8 +161,9 @@ function run(width, height, standalone) {
 })();
 </script>`;
   return lib.runPageSync("rsvp.html", harness, 3200, {
-    urlSuffix: "#play",
+    urlSuffix: fullPage ? "" : "#play",
     forceStandalone: !!standalone,
+    patchRaf: true,
     chromeFlags: "--window-size=" + width + "," + height + " --force-device-scale-factor=1"
   });
 }
@@ -131,7 +171,8 @@ function run(width, height, standalone) {
 var reports = [
   { label: "wide", report: run(1800, 1000) },
   { label: "mobile", report: run(390, 844) },
-  { label: "installed", report: run(390, 844, true) }
+  { label: "installed", report: run(390, 844, true) },
+  { label: "RSVP portrait", report: run(390, 844, false, true) }
 ];
 var failed = false;
 reports.forEach(function (entry) {

@@ -69,6 +69,22 @@ var harness = String.raw`<script>
       var balconyAspen = document.getElementById("balcony-photographer");
       check("Hamid and Aspen stay on balcony", deck.indexOf("Hamid") !== -1 && deck.indexOf("Aspen") !== -1,
         deck.join(",") + " | Aspen=" + (balconyAspen ? balconyAspen.getAttribute("class") + "/" + getComputedStyle(balconyAspen).opacity : "missing"));
+      var strip = document.getElementById("loft-game-strip");
+      var grillmaster = document.getElementById("balcony-grillmaster");
+      var gardenJacket = document.getElementById("garden-jacket-inner");
+      var balconyJacket = document.getElementById("balcony-hallway-jacket-inner");
+      check("Hamid wears the borrowed green-yellow jacket at the BBQ",
+        strip.classList.contains("hamid-wearing-jacket") &&
+        getComputedStyle(grillmaster).getPropertyValue("--hamid-top").trim() === "#c5c84c");
+      check("both hanging jacket views fade away with Hamid",
+        parseFloat(getComputedStyle(gardenJacket).opacity) < 1 && parseFloat(getComputedStyle(balconyJacket).opacity) < 1,
+        getComputedStyle(gardenJacket).opacity + "/" + getComputedStyle(balconyJacket).opacity);
+      var persistentFigures = Array.from(document.querySelectorAll("#balcony-hangout .bh-fig"));
+      check("balcony people use ghost fades instead of display removal",
+        persistentFigures.every(function (g) {
+          var cs = getComputedStyle(g);
+          return cs.display !== "none" && cs.transitionProperty.indexOf("opacity") !== -1;
+        }));
       check("hosts are not published as smokers", (window.__balconySmokerNow() || []).indexOf("behdad") === -1 && (window.__balconySmokerNow() || []).indexOf("marketa") === -1);
       check("grill is lit", document.getElementById("balcony-smoker").classList.contains("smoking"));
       var plateBox = document.getElementById("balcony-grill-plate").getBoundingClientRect();
@@ -106,6 +122,7 @@ var harness = String.raw`<script>
           return !el || el.classList.contains("off-at-bbq");
         });
         check("split teardown clears BBQ-owned room assignments", !window.__bbqSplitOn && !bbqAssignedAfterTeardown.length, bbqAssignedAfterTeardown.join(","));
+        check("hanging jacket returns when Hamid leaves the BBQ", !document.getElementById("loft-game-strip").classList.contains("hamid-wearing-jacket"));
         var teardownAudit = window.__peopleManager.audit();
         check("teardown inventory has no cross-room duplicates", teardownAudit.ok, JSON.stringify(teardownAudit.duplicates));
         report();

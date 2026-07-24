@@ -349,6 +349,11 @@ for `ROSTER`, `__peopleManager`, `__whoIsHere`, `__roomOccupants`, and `__roster
 - Party entry/exit controllers move guests to and from the floor. CSS variables help balance crowd
   placement. Avoid rendering the same person in standing, dance, visitor, and kid-activity layers at
   the same time.
+- Persistent bar, office, balcony, and grillmaster figures use presence classes with opacity plus
+  delayed `visibility`, not `display`, so both arrival and departure can paint as fades. The balcony
+  layout preferentially retains eligible visible figures across a BBQ split change. Hamid's
+  grillmaster paint owns `#loft-game-strip.hamid-wearing-jacket`, which fades both views of the
+  shared hanging jacket while he is assigned to the BBQ.
 - Children switch among free, family, godson, chase/game, and asleep states. Chase handoffs remove
   standing duplicates; sleeping/waking can be both an authored state transition and a message.
 - Aspen has garden stations and a photographer presence that can be cloned into other rooms/deck

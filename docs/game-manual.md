@@ -499,7 +499,11 @@ The balcony smoker is interactive: open the firebox or lid, light it, allow it t
 heat, and cook or serve food. During a party, a lit smoker activates BBQ mode.
 Selected adults then split naturally between the balcony and garden/party while
 children may keep playing elsewhere. BBQ mode remains active across later
-day/night changes; extinguishing the smoker or ending the party ends it.
+day/night changes; extinguishing the smoker or ending the party ends it. People
+already on the balcony are retained where possible when the split changes, while
+arrivals and departures fade rather than popping in or out. Hamid tends the grill
+in Behdad's green-yellow jacket, so the matching jacket disappears from its hooks
+in the garden and balcony-door views until he leaves the BBQ.
 
 Three open-cookout dates use a daytime, no-UV party presentation:
 

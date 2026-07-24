@@ -901,6 +901,11 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 @keyframes cuddly-cd-pop{0%,100%{transform:scale(1) rotate(0)} 28%{transform:scale(1.11) rotate(-1.6deg)} 58%{transform:scale(1.05) rotate(1.1deg)} 82%{transform:scale(1.02) rotate(-.4deg)}}
 @media (prefers-reduced-motion: reduce){#cuddly-countdown-pop.pop{animation:none}}
 #garden-jacket-inner{transform-box:fill-box; transform-origin:top center}
+#garden-jacket-inner,#balcony-hallway-jacket-inner{opacity:1; transition:opacity .7s ease}
+#loft-game-strip.hamid-wearing-jacket #garden-jacket-inner,
+#loft-game-strip.hamid-wearing-jacket #balcony-hallway-jacket-inner{opacity:0}
+#loft-game-strip.hamid-wearing-jacket #garden-jacket,
+#loft-game-strip.hamid-wearing-jacket #balcony-hallway-jacket{pointer-events:none}
 .kitchen-pan-swing{transform-box:fill-box; transform-origin:50% 10%}
 #kitchen-pans.rattling .kitchen-pan-swing{animation:pan-swing .7s ease-in-out}
 #kitchen-pans.rattling .kitchen-pan-swing:nth-of-type(2){animation-delay:.03s}
@@ -6575,17 +6580,17 @@ body:has(#loft-game-strip.acid) #trip-acid-kaleido{animation:acid-kaleido 3s eas
 /* ── BAR GROOVING COUPLES (named cast cameos) ─────────────────────────────────
    A rotating NAMED guest couple grooves in the bar's left-front corner most of the party
    (SVG in #kitchen-bar-couples; the seated regulars #kitchen-bar-patrons are separate and
-   stay put). Every couple is pre-drawn + display:none; the barGroovers IIFE reveals exactly
-   ONE at a time by flipping .present on it (which un-hides it via display:inline and fades it
-   in). The groove rides inner wrappers only (.bc-sway rocks each body; .bc-arm-* swing the
+   stay put). Every couple is pre-drawn; the barGroovers IIFE reveals exactly ONE at a time by
+   flipping .present, while opacity + delayed visibility let both arrivals and departures fade.
+   The groove rides inner wrappers only (.bc-sway rocks each body; .bc-arm-* swing the
    arms), never the .bc-person / .bar-couple position transform attribute (the "CSS transform
    clobbers the transform attribute" bug class), and only runs on the .present couple so
    nothing animates or piles up otherwise. transform-box:fill-box pivots each part on its own
    box. Reduced motion: the couple still appears but holds a static pose (no sway/arm swing).
    The one-room rule (a person can't be at the bar AND on the garden floor) is enforced in JS,
    not CSS — the IIFE only picks a couple whose members aren't .arrived in #garden-guests. */
-#kitchen-bar-couples .bar-couple{display:none; opacity:0; transition:opacity 1.2s ease}
-#kitchen-bar-couples .bar-couple.present{display:inline; opacity:0.94; pointer-events:auto; cursor:pointer} /* the shown couple is hoverable/clickable for its name popup */
+#kitchen-bar-couples .bar-couple{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .8s ease,visibility 0s linear .8s}
+#kitchen-bar-couples .bar-couple.present{opacity:0.94; visibility:visible; pointer-events:auto; cursor:pointer; transition-delay:0s} /* the shown couple is hoverable/clickable for its name popup */
 #kitchen-bar-couples .bc-sway{transform-box:fill-box; transform-origin:center bottom}
 #kitchen-bar-couples .bc-arm-l{transform-box:fill-box; transform-origin:right bottom}
 #kitchen-bar-couples .bc-arm-r{transform-box:fill-box; transform-origin:left bottom}
@@ -8914,8 +8919,8 @@ section{margin:1.9rem 0}
    he isn't already on the garden floor / at the bar / in the office — the one-room rule).
    Reuses Hamid's recognizable bar-couple figure via <use>; a static pose (no idle
    animation) so no CSS transform ever clobbers the positioning transform. */
-#balcony-grillmaster{opacity:0; visibility:hidden; transition:opacity .5s ease}
-#balcony-grillmaster.on{opacity:1; visibility:visible; pointer-events:auto; cursor:pointer}
+#balcony-grillmaster{--hamid-top:#c5c84c; --hamid-top-dark:#95993a; --hamid-jacket-detail:1; opacity:0; visibility:hidden; transition:opacity .7s ease,visibility 0s linear .7s}
+#balcony-grillmaster.on{opacity:1; visibility:visible; pointer-events:auto; cursor:pointer; transition-delay:0s}
 /* Serving gesture: the spatula-arm wrapper swings up to the grill and back down. The swing
    rides #balcony-grill-arm, a wrapper with NO static transform (its pivot lives on
    transform-box/-origin, not a transform attribute) and distinct from the outer
@@ -8941,14 +8946,14 @@ section{margin:1.9rem 0}
    is positioned by its OWN wrapper transform; the idle animations ride a distinct inner
    wrapper (.bh-idle) so a CSS-transform animation never clobbers the positioning transform
    (the transform-attr-vs-CSS-animation bug class). */
-#balcony-hangout{opacity:0; visibility:hidden; transition:opacity .6s ease}
-#balcony-hangout.on{opacity:1; visibility:visible}
-/* the couple only step out ~20% of the time; the controller adds .couple-out when they do */
-#balcony-hangout .bh-host{display:none}
-#balcony-hangout.couple-out .bh-host{display:inline}
+#balcony-hangout{opacity:0; visibility:hidden; transition:opacity .6s ease,visibility 0s linear .6s}
+#balcony-hangout.on{opacity:1; visibility:visible; transition-delay:0s}
+/* Every persistent figure ghosts in/out. The controller's .bh-present is the single source
+   of visual and roster truth, including the couple's occasional appearance. */
+#balcony-hangout .bh-fig{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .8s ease,visibility 0s linear .8s}
+#balcony-hangout .bh-fig.bh-present{opacity:1; visibility:visible; transition-delay:0s}
 /* On BBQ day the hosts are part of the cookout, not the occasional smoking cameo. Their
    cigarette art disappears and the same raised forearm settles into a small chat gesture. */
-#balcony-hangout.bbq-day .bh-host{display:inline}
 #balcony-hangout.bbq-day .bh-host .bh-cig,
 #balcony-hangout.bbq-day .bh-host .bh-cig-filt,
 #balcony-hangout.bbq-day .bh-host .bh-ember{display:none}
@@ -9001,7 +9006,7 @@ section{margin:1.9rem 0}
    only while the crowd's shown — the parent #balcony-hangout stays pointer-events:none so it
    never blocks page scroll where nobody's drawn (only the painted figures hit-test). */
 #balcony-hangout .bh-fig{cursor:pointer}
-#balcony-hangout.on .bh-fig{pointer-events:auto}
+#balcony-hangout.on .bh-fig.bh-present{pointer-events:auto}
 /* the party ashtray perch fades in only during smoking time */
 #balcony-ashtray-perch{transition:opacity .5s ease; transform-box:fill-box; transform-origin:center}
 #balcony-ashtray-perch.up{opacity:1 !important}
@@ -9011,7 +9016,7 @@ section{margin:1.9rem 0}
 /* Reduced motion: everyone stands still, no drags, no ember pulse (JS also skips smoke). */
 @media (prefers-reduced-motion: reduce){
   #balcony-hangout .bh-idle, #balcony-hangout .bh-arm-gesture, #balcony-hangout .bh-toke-arm, #balcony-hangout .bh-ember{animation:none}
-  #balcony-hangout{transition:none}
+  #balcony-hangout,#balcony-hangout .bh-fig,#balcony-grillmaster,#garden-jacket-inner,#balcony-hallway-jacket-inner{transition:none}
 }
 /* ═══ OFFICE HANGOUT COUPLE ═══════════════════════════════════════════════════
    Shown only while #office-hangout carries .on (the controller sets it on party+office).
@@ -9019,11 +9024,11 @@ section{margin:1.9rem 0}
    nothing is spawned. Each couple + person is positioned by its OWN static wrapper transform;
    the idle chat-sway rides a DISTINCT inner wrapper so a CSS-transform animation never clobbers
    the positioning transform (the transform-attr-vs-CSS-animation bug class). */
-#office-hangout{opacity:0; visibility:hidden; transition:opacity .6s ease}
-#office-hangout.on{opacity:1; visibility:visible}
+#office-hangout{opacity:0; visibility:hidden; transition:opacity .6s ease,visibility 0s linear .6s}
+#office-hangout.on{opacity:1; visibility:visible; transition-delay:0s}
 /* exactly one couple is .present at a time (the controller rotates them) */
-#office-hangout .of-couple{display:none}
-#office-hangout .of-couple.present{display:inline; pointer-events:auto; cursor:pointer} /* the shown couple is hoverable/clickable for its name popup (like #kitchen-bar-couples .bar-couple.present) */
+#office-hangout .of-couple{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .8s ease,visibility 0s linear .8s}
+#office-hangout .of-couple.present{opacity:1; visibility:visible; pointer-events:auto; cursor:pointer; transition-delay:0s} /* the shown couple is hoverable/clickable for its name popup (like #kitchen-bar-couples .bar-couple.present) */
 /* drinks: a couple carries .of-beer OR .of-flute (rolled per showing); default hidden so a
    couple with no drink-class shows empty hands. Each person's glass sits in one <g class="of-drink"> */
 #office-hangout .of-glass-beer, #office-hangout .of-glass-flute{display:none}
@@ -9052,7 +9057,7 @@ section{margin:1.9rem 0}
 /* Reduced motion: they stand still, drinks in hand — no chat-sway, no gesture bob. */
 @media (prefers-reduced-motion: reduce){
   #office-hangout .of-idle, #office-hangout .of-arm-gesture, #office-hangout .of-arm-gesture-l{animation:none}
-  #office-hangout{transition:none}
+  #office-hangout,#office-hangout .of-couple{transition:none}
 }
 #loft-game-strip.season-pride .sn-pride{display:inline}
 #loft-game-strip.season-nowruz .sn-nowruz{display:inline}
@@ -11096,8 +11101,12 @@ section{margin:1.9rem 0}
       <path fill="#f2efe6" d="M -8 -1 L -2 -1 L -2 2 L -9 2 Z M 8 -1 L 2 -1 L 2 2 L 9 2 Z"/>
       <path class="bc-arm-l" fill="#cf9457" d="M -8 -57 C -13 -53 -16 -46 -17 -40 L -14 -40 C -13 -46 -11 -52 -7 -55 Z"/>
       <path class="bc-arm-r" fill="#cf9457" d="M 8 -57 C 13 -53 16 -46 17 -40 L 14 -40 C 13 -46 11 -52 7 -55 Z"/>
-      <path class="bc-top" fill="#f4c518" d="M -8 -58 C -9 -49 -7 -39 -6 -30 L 6 -30 C 7 -39 9 -49 8 -58 C 3 -62 -3 -62 -8 -58 Z"/>
-      <path fill="#d8a80c" d="M -3 -58 L 3 -58 L 2.2 -55.6 L -2.2 -55.6 Z"/>
+      <path class="bc-top" style="fill:var(--hamid-top,#f4c518)" d="M -8 -58 C -9 -49 -7 -39 -6 -30 L 6 -30 C 7 -39 9 -49 8 -58 C 3 -62 -3 -62 -8 -58 Z"/>
+      <path style="fill:var(--hamid-top-dark,#d8a80c)" d="M -3 -58 L 3 -58 L 2.2 -55.6 L -2.2 -55.6 Z"/>
+      <g class="hamid-jacket-detail" style="opacity:var(--hamid-jacket-detail,0)" fill="none" stroke="#858934" stroke-width=".65" stroke-linecap="round">
+        <path d="M -7.5 -56 L -2 -51 L 0 -55 L 2 -51 L 7.5 -56 M 0 -55 L 0 -31"/>
+        <path d="M -5 -41 h3 M 2 -41 h3"/>
+      </g>
       <circle class="bc-head" cx="0" cy="-67" r="6" fill="#cf9457"/>
       <path fill="#241a12" d="M -6.4 -69 C -7 -74 -6 -77 0 -78 C 6 -77 7 -74 6.4 -69 C 6.6 -65 6 -62.5 5 -61 L 3.6 -64 C 4.2 -68 3 -71 0 -71 C -3 -71 -4.2 -68 -3.6 -64 L -5 -61 C -6 -62.5 -6.6 -65 -6.4 -69 Z"/>
       <ellipse cx="-2.4" cy="-67" rx="0.7" ry="0.9" fill="#2a1d14"/><ellipse cx="2.4" cy="-67" rx="0.7" ry="0.9" fill="#2a1d14"/><!-- eyes -->
@@ -11488,26 +11497,26 @@ section{margin:1.9rem 0}
 <ellipse cx="18" cy="308" rx="20" ry="4" fill="#8a6244" opacity="0.3"/>
 <defs>
 <linearGradient id="garden-jacket-grad" x1="0" y1="0" x2="0.28" y2="1">
-<stop offset="0" stop-color="#f0e070"/>
-<stop offset="0.5" stop-color="#e6cf42"/>
-<stop offset="1" stop-color="#d2b82e"/>
+<stop offset="0" stop-color="#d9dc71"/>
+<stop offset="0.5" stop-color="#c5c84c"/>
+<stop offset="1" stop-color="#adb13b"/>
 </linearGradient>
 </defs>
 <g id="garden-jacket-inner">
-<path d="M8 146 Q8 138 18 138 Q28 138 28 146 L30 190 Q19 198 6 190 Z" fill="url(#garden-jacket-grad)" stroke="#c9b52f" stroke-width="1.5"/>
+<path d="M8 146 Q8 138 18 138 Q28 138 28 146 L30 190 Q19 198 6 190 Z" fill="url(#garden-jacket-grad)" stroke="#949837" stroke-width="1.5"/>
 <!-- right/underside shade gives the hanging fabric round depth instead of a flat cutout -->
 <path d="M6 190 Q19 198 30 190 L30 165 L15 146 Z" fill="#3a3020" opacity="0.2" pointer-events="none"/>
 <!-- left catch-light down the lit edge -->
-<path d="M8 147 Q6.5 168 8 189" fill="none" stroke="#f6ec95" stroke-width="1.5" opacity="0.55" stroke-linecap="round" pointer-events="none"/>
+<path d="M8 147 Q6.5 168 8 189" fill="none" stroke="#edf09a" stroke-width="1.5" opacity="0.55" stroke-linecap="round" pointer-events="none"/>
 <!-- folded collar meeting at the neckline -->
-<path d="M11 141 L18 150 L14 152 Z" fill="#d8c33f" stroke="#b8a52c" stroke-width="0.8"/>
-<path d="M25 141 L18 150 L22 152 Z" fill="#cdb735" stroke="#b8a52c" stroke-width="0.8"/>
+<path d="M11 141 L18 150 L14 152 Z" fill="#bec146" stroke="#929636" stroke-width="0.8"/>
+<path d="M25 141 L18 150 L22 152 Z" fill="#b2b63e" stroke="#929636" stroke-width="0.8"/>
 <!-- centre zip placket + pull tab -->
-<line x1="18" y1="150" x2="18" y2="195" stroke="#b8a52c" stroke-width="1"/>
-<rect x="17" y="151" width="2" height="3.2" rx="0.6" fill="#8a7a30"/>
-<path d="M8 154 Q18 158 29 154 M7 166 Q18 170 30 166 M7 178 Q18 182 30 178" fill="none" stroke="#c9b52f" stroke-width="1.5"/>
+<line x1="18" y1="150" x2="18" y2="195" stroke="#929636" stroke-width="1"/>
+<rect x="17" y="151" width="2" height="3.2" rx="0.6" fill="#74772f"/>
+<path d="M8 154 Q18 158 29 154 M7 166 Q18 170 30 166 M7 178 Q18 182 30 178" fill="none" stroke="#989c39" stroke-width="1.5"/>
 <g id="garden-jacket-pack">
-<rect x="10" y="160" width="8" height="11" rx="1" fill="#f4f0e4" stroke="#c9b52f" stroke-width="0.8"/>
+<rect x="10" y="160" width="8" height="11" rx="1" fill="#f4f0e4" stroke="#949837" stroke-width="0.8"/>
 <rect x="10" y="160" width="8" height="3" fill="#b03040"/>
 </g>
 </g>
@@ -21614,11 +21623,11 @@ section{margin:1.9rem 0}
      with the click-triggered .swaying/.swaying2/.swaying3 one-shot on -inner -->
 <g id="balcony-hallway-jacket-wind">
 <g id="balcony-hallway-jacket-inner">
-<path d="M8 146 Q8 138 18 138 Q28 138 28 146 L30 190 Q19 198 6 190 Z" fill="#e8d44a" stroke="#c9b52f" stroke-width="1.5"/>
-<path d="M8 154 Q18 158 29 154 M7 166 Q18 170 30 166 M7 178 Q18 182 30 178" fill="none" stroke="#c9b52f" stroke-width="1.5"/>
+<path d="M8 146 Q8 138 18 138 Q28 138 28 146 L30 190 Q19 198 6 190 Z" fill="#c5c84c" stroke="#949837" stroke-width="1.5"/>
+<path d="M8 154 Q18 158 29 154 M7 166 Q18 170 30 166 M7 178 Q18 182 30 178" fill="none" stroke="#989c39" stroke-width="1.5"/>
 <path id="balcony-jacket-shade" d="M6 190 Q19 198 30 190 L30 165 L14 145 Z" fill="#3a3020" fill-opacity="0.35"/>
 <g id="balcony-hallway-jacket-pack">
-<rect x="10" y="160" width="8" height="11" rx="1" fill="#f4f0e4" stroke="#c9b52f" stroke-width="0.8"/>
+<rect x="10" y="160" width="8" height="11" rx="1" fill="#f4f0e4" stroke="#949837" stroke-width="0.8"/>
 <rect x="10" y="160" width="8" height="3" fill="#b03040"/>
 </g>
 </g>
@@ -72784,20 +72793,31 @@ function spawnDustMote(container) {
     // the set of figures shown on THIS appearance — rolled fresh in layout(), read by the
     // smoke spawner + __balconySmokerNow. Names (not ids) for the smokers, for the hooks.
     var shownSmokerNames = [];
-    // roll a fresh crowd + smoker layout: which faces, their order, their spacing. Called only
-    // on a genuine fresh show (not on every re-gate), so the crowd doesn't reshuffle on a blur.
-    function layout() {
-      shownSmokerNames = [];
-      // hide everyone first; the picks below turn their own back on
+    function figurePresent(r) {
+      var g = document.getElementById(r.id);
+      return !!(g && g.classList.contains("bh-present"));
+    }
+    function showFigures(figs) {
+      var ids = {};
+      figs.forEach(function (r) { ids[r.id] = true; });
       ROSTER.forEach(function (r) {
         var g = document.getElementById(r.id);
-        if (g) g.style.display = "none";
+        if (g) g.classList.toggle("bh-present", !!ids[r.id]);
       });
+    }
+    function preferPresent(pool, count) {
+      var staying = shuffle(pool.filter(figurePresent));
+      var incoming = shuffle(pool.filter(function (r) { return !figurePresent(r); }));
+      return staying.concat(incoming).slice(0, count);
+    }
+    // roll a fresh crowd + smoker layout: which faces, their order, their spacing. Called only
+    // on a genuine fresh show (not on every re-gate), so the crowd doesn't reshuffle on a blur.
+    function layout(preserve) {
+      shownSmokerNames = [];
       // ── crowd: a random subset (1–all) of the eligible non-smokers, shuffled + spaced ──
       var crowdPool = ROSTER.filter(function (r) { return !r.smoker && !elsewhere(r.name); });
       var crowdCount = (Math.random() * (crowdPool.length + 1)) | 0; // 0..all — sometimes an empty crowd (just smokers), sometimes a full deck
-      var crowd = shuffle(crowdPool.slice()).slice(0, crowdCount);
-      crowd.forEach(function (r) { var g = document.getElementById(r.id); if (g) g.style.display = ""; });
+      var crowd = preserve ? preferPresent(crowdPool, crowdCount) : shuffle(crowdPool.slice()).slice(0, crowdCount);
       placeLane(shuffle(crowd.slice()), CROWD_LANE);
       // ── drinks: give SOME of the shown non-smokers a beer or a flute (varies each showing) ──
       // per-figure ~50% chance (rolled independently, so the fraction with a drink drifts ~40–60%
@@ -72811,7 +72831,7 @@ function spawnDustMote(container) {
         if (beer) beer.classList.remove("on");
         if (flute) flute.classList.remove("on");
         // only figures actually on the deck this showing are candidates
-        if (g.style.display === "none") return;
+        if (crowd.indexOf(r) === -1) return;
         if (Math.random() < 0.5) {
           var pick = Math.random() < 0.5 ? beer : flute;
           if (pick) pick.classList.add("on");
@@ -72829,9 +72849,12 @@ function spawnDustMote(container) {
       // host couple as a pair (they're already gated by coupleOut). So the deck's total count varies.
       var steadySm = smokerPool.filter(function (r) { return !r.couple; });
       var coupleSm = smokerPool.filter(function (r) { return r.couple; });
-      if (steadySm.length) steadySm = shuffle(steadySm.slice()).slice(0, 1 + ((Math.random() * steadySm.length) | 0));
+      if (steadySm.length) {
+        var steadyCount = 1 + ((Math.random() * steadySm.length) | 0);
+        steadySm = preserve ? preferPresent(steadySm, steadyCount) : shuffle(steadySm.slice()).slice(0, steadyCount);
+      }
       smokerPool = steadySm.concat(coupleSm);
-      smokerPool.forEach(function (r) { var g = document.getElementById(r.id); if (g) g.style.display = ""; });
+      showFigures(crowd.concat(smokerPool));
       placeLane(shuffle(smokerPool.slice()), SMOKER_LANE);
       // publish the smokers now on the deck (dj → the off-duty face's real name, for the hooks)
       shownSmokerNames = smokerPool.map(figKey);
@@ -72845,14 +72868,13 @@ function spawnDustMote(container) {
     // lane with their cigarette art suppressed by .bbq-day.
     function layoutBBQ() {
       shownSmokerNames = [];
-      ROSTER.forEach(function (r) { var g = document.getElementById(r.id); if (g) g.style.display = "none"; });
       var chosen = bbqSelected.map(rosterByName).filter(Boolean);
       var hosts = ROSTER.filter(function (r) { return !!r.couple; });
       var dj = rosterByName("dj");
       var social = chosen.filter(function (r) { return !r.smoker; }).concat(hosts);
       var smokers = chosen.filter(function (r) { return r.smoker; });
       if (dj) smokers.push(dj);
-      social.concat(smokers).forEach(function (r) { var g = document.getElementById(r.id); if (g) g.style.display = ""; });
+      showFigures(social.concat(smokers));
       placeLane(shuffle(social.slice()), { lo: 58, hi: 302 });
       placeLane(shuffle(smokers.slice()), SMOKER_LANE);
       social.forEach(function (r) {
@@ -72869,9 +72891,17 @@ function spawnDustMote(container) {
       return !!(g && g.classList.contains("arrived") && !g.classList.contains("leaving"));
     }
     function chooseInitialBBQGuests() {
-      var landed = shuffle(BBQ_CANDIDATES.filter(gardenArrived));
-      var rest = shuffle(BBQ_CANDIDATES.filter(function (name) { return landed.indexOf(name) === -1; }));
-      bbqSelected = landed.concat(rest).slice(0, 4);
+      var staying = BBQ_CANDIDATES.filter(function (name) {
+        var r = rosterByName(name);
+        return !!(r && figurePresent(r));
+      });
+      var landed = shuffle(BBQ_CANDIDATES.filter(function (name) {
+        return staying.indexOf(name) === -1 && gardenArrived(name);
+      }));
+      var rest = shuffle(BBQ_CANDIDATES.filter(function (name) {
+        return staying.indexOf(name) === -1 && landed.indexOf(name) === -1;
+      }));
+      bbqSelected = staying.concat(landed, rest).slice(0, 4);
     }
     function applyBBQGardenSplit(on) {
       BBQ_CANDIDATES.concat(["behdad", "marketa", "hamid"]).forEach(function (name) {
@@ -72930,7 +72960,7 @@ function spawnDustMote(container) {
     };
     // EVERYONE actually standing on the deck right now (crowd + smokers), display-ready for the
     // shared per-room roster (window.__whoIsHere) and the source Aspen's balcony photo is built
-    // from. Read straight off the DOM (a figure hidden by layout() carries display:none), so it
+    // from. Read straight off the DOM (a figure hidden by layout() lacks .bh-present), so it
     // can't drift from what's drawn. NB `r.name` is the one-room EXCLUSION key and is
     // deliberately not the face on screen (bh-patricia-son wears Bahareh, bh-patricia-daughter wears Patricia) — the
     // visible name is figLabel(r), and the off-duty DJ names himself live. Empty when it's clear.
@@ -72939,7 +72969,7 @@ function spawnDustMote(container) {
       var out = [];
       ROSTER.forEach(function (r) {
         var g = document.getElementById(r.id);
-        if (!g || g.style.display === "none") return;
+        if (!g || !g.classList.contains("bh-present")) return;
         var nm = figLabel(r);
         if (!nm) return;
         out.push({ key: figKey(r), name: nm, roleKey: r.role, el: g, couple: !!r.couple });
@@ -72984,11 +73014,12 @@ function spawnDustMote(container) {
       perch.addEventListener("keydown", function (e) { if ((e.key === "Enter" || e.key === " ") && perch.classList.contains("up")) { e.preventDefault(); spinPerch(); } });
       perch.addEventListener("animationend", function () { perch.classList.remove("spinning"); });
     }
-    var shownOnce = false;
+    var shownOnce = false, preserveNextLayout = false;
     function show() {
       if (!shownOnce) {
         if (bbqCrowdOn) layoutBBQ();
-        else { rollCouple(); layout(); }
+        else { rollCouple(); layout(preserveNextLayout); }
+        preserveNextLayout = false;
         shownOnce = true;
       } // fresh roll of faces/order/spacing
       resolveDj();
@@ -73022,6 +73053,7 @@ function spawnDustMote(container) {
       bbqCrowdOn = on;
       hangout.classList.toggle("bbq-day", on);
       hangout.classList.toggle("couple-out", on);
+      preserveNextLayout = true;
       shownOnce = false;
       if (on) {
         chooseInitialBBQGuests();
@@ -73054,7 +73086,7 @@ function spawnDustMote(container) {
         if (!r.smoker || !r.ember) return false;
         if (bbqCrowdOn && r.couple) return false; // the hosts are socializing today, not smoking
         var g = document.getElementById(r.id);
-        if (!g || g.style.display === "none") return false; // only figures actually on the deck
+        if (!g || !g.classList.contains("bh-present")) return false; // only figures actually on the deck
         return true;
       });
       if (!pool.length) return;
@@ -73132,6 +73164,8 @@ function spawnDustMote(container) {
     function paint() {
       var vis = present && inRoom() && attended() && !elsewhere();
       el.classList.toggle("on", vis);
+      var gameStrip = document.getElementById("loft-game-strip");
+      if (gameStrip) gameStrip.classList.toggle("hamid-wearing-jacket", !!window.__bbqSplitOn || vis);
       shown = vis;
     }
     // reciprocal of the other Now hooks: the bar/floor/office read this to keep Hamid one-roomed

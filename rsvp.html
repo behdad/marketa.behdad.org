@@ -36080,10 +36080,7 @@ function gameTapsNear(a, b) {
   function maybeTrip(variant) {
     if (tripActive) return; // one trip at a time — a tap mid-trip is just a croak/wobble
     if (Math.random() >= GARDEN_CRITTER_TRIP_CHANCE) return;
-    tripActive = true;
-    window.__tripActive = true; // mirror for the garden thermometer readout (see gardenThermo)
-    startTripVariant(variant, true);
-    if (variant === "shrooms") startTripBlooms();
+    beginTrip(variant, true);
   }
   var frog = document.getElementById("garden-frog");
   if (frog) {
@@ -60935,9 +60932,15 @@ var TRIP_DURATIONS = { shrooms: 6000, acid: 3000, froggies: 5000, dmt: 6000, mol
 var tripActive = false;
 var tripEndTimer = null;
 var currentTripVariant = null;
+var tripGeneration = 0;
 window.__tripState = function () {
   return { active: tripActive, variant: currentTripVariant };
 };
+function setTripActiveState(on) {
+  tripActive = !!on;
+  window.__tripActive = tripActive;
+  return tripActive;
+}
 // Every deferred, per-trip effect (the ketamine ghost + its whisper, molly's heart bursts,
 // the mushroom UFO's fly-out) parks its setTimeout handle here so a trip that's torn down
 // early — e.g. a keyboard-initiated trip that interrupts the running one — can't leak its
@@ -61190,13 +61193,18 @@ function startTripVariant(variant, noCard) {
   clearTimeout(tripEndTimer); // an interrupting trip cancels the outgoing one's end/comedown before its own is armed below
   clearPriorTripEffects();    // and drains its deferred effect timers + poll-driven effects
   currentTripVariant = variant;
+  var generation = ++tripGeneration;
   stopDmt(); // clear any leftover dmt elves/sparkles/warp before a new trip (dmt→other switch)
   showTripCreatures(variant);
   if (!noCard) showMoleculeCard(variant);
   else hideMoleculeCards();
   strip.classList.remove("shrooms", "acid", "froggies", "dmt", "molly", "ketamine", "iboga");
   requestAnimationFrame(function () {
-    requestAnimationFrame(function () { strip.classList.add(variant); if (window.__updateGardenAurora) window.__updateGardenAurora(); }); // a trip owns the window → aurora pauses
+    requestAnimationFrame(function () {
+      if (generation !== tripGeneration || currentTripVariant !== variant) return;
+      strip.classList.add(variant);
+      if (window.__updateGardenAurora) window.__updateGardenAurora(); // a trip owns the window → aurora pauses
+    });
   });
   playTripMelody(variant);
   if (variant === "iboga") {
@@ -61267,14 +61275,15 @@ function startTripVariant(variant, noCard) {
   }
   clearTimeout(tripEndTimer);
   tripEndTimer = setTimeout(function () {
+    if (generation !== tripGeneration || currentTripVariant !== variant) return;
+    tripEndTimer = null;
     strip.classList.remove(variant);
     if (window.__updateGardenAurora) window.__updateGardenAurora(); // trip over → aurora resumes if it's still garden-dusk
     if (variant === "iboga") stopIbogaSlideshow(); // the photos fade with the gray-out
     if (variant === "dmt") stopDmt(); // remove the elves, warp filter, and sparkles
     hideMoleculeCards(); // the molecule card leaves with the trip (safety net; it usually left earlier)
     hideTripCreaturesAfter(2000); // the trip creature lingers a beat, then fades
-    tripActive = false;
-    window.__tripActive = false; // mirror for the garden thermometer readout (see gardenThermo)
+    setTripActiveState(false);
     currentTripVariant = null;
     // the comedown lands as the trip wears off: each trip deepens the veil, except
     // molly (the kisses one), whose euphoria wipes the built-up comedown clean, and
@@ -61283,6 +61292,32 @@ function startTripVariant(variant, noCard) {
     else if (variant !== "iboga") bumpTripTolerance();
   }, TRIP_DURATIONS[variant] || 3000);
 }
+function beginTrip(variant, noCard) {
+  if (TRIP_VARIANTS.indexOf(variant) < 0) return false;
+  setTripActiveState(true);
+  startTripVariant(variant, noCard);
+  if (variant === "shrooms") startTripBlooms();
+  return true;
+}
+function stopTrip(resetToleranceToo) {
+  tripGeneration++; // invalidate queued double-rAF class adds and the current end callback
+  clearTimeout(tripEndTimer); tripEndTimer = null;
+  clearPriorTripEffects();
+  var strip = document.getElementById("loft-game-strip");
+  if (strip) strip.classList.remove("shrooms", "acid", "froggies", "dmt", "molly", "ketamine", "iboga");
+  stopDmt();
+  stopIbogaSlideshow();
+  hideMoleculeCards();
+  if (tripCreatureHideTimer) { clearTimeout(tripCreatureHideTimer); tripCreatureHideTimer = null; }
+  hideAllTripCreatures();
+  currentTripVariant = null;
+  setTripActiveState(false);
+  if (resetToleranceToo) resetTripTolerance();
+  if (window.__updateGardenAurora) window.__updateGardenAurora();
+  return true;
+}
+window.__startTrip = beginTrip;
+window.__stopTrip = stopTrip;
 function triggerRsvpTrip(e) {
   var strip = document.getElementById("loft-game-strip");
   if (!strip) return;
@@ -61306,13 +61341,9 @@ function triggerRsvpTrip(e) {
 // Shared by the drugs-box click and the 't' key.
 window.__nextTrip = function () {
   if (window.__unlockDrugsbox) window.__unlockDrugsbox(); // the 't' key skips the lock; leave the box open behind it rather than lying about the world
-  tripActive = true;
-  window.__tripActive = true; // mirror for the garden thermometer readout (see gardenThermo)
   var variant = TRIP_VARIANTS[tripVariantIndex % TRIP_VARIANTS.length];
   tripVariantIndex++;
-  startTripVariant(variant);
-  // fractal blooms only on the shrooms trip (the hue-rotating one)
-  if (variant === "shrooms") startTripBlooms();
+  beginTrip(variant);
 };
 // Shift+1..7 launches a SPECIFIC trip (canonical order: shrooms, acid, froggies,
 // dmt, molly, ketamine, iboga — the pre-shuffle TRIP_VARIANTS order). Unlike the drugs
@@ -61330,10 +61361,7 @@ document.addEventListener("keydown", function (e) {
   e.preventDefault();
   if (window.__unlockDrugsbox) window.__unlockDrugsbox(); // same as 't': the shortcut bypasses the lock, so the box shouldn't still be locked afterwards
   var variant = ["shrooms", "acid", "froggies", "dmt", "molly", "ketamine", "iboga"][+m[1] - 1];
-  tripActive = true;
-  window.__tripActive = true;
-  startTripVariant(variant);
-  if (variant === "shrooms") startTripBlooms();
+  beginTrip(variant);
 });
 // ── The magic box's rotary date lock ────────────────────────────────────────
 // They lock the box in real life, so the game locks it too — which turns the trips'
@@ -74424,10 +74452,7 @@ function spawnDustMote(container) {
     var gsReset = document.getElementById("stage-garden");
     if (gsReset) gsReset.classList.remove("g-c1-lit", "g-c2-lit");
     if (window.__resetDrugsbox) window.__resetDrugsbox(); // a fresh game re-locks the magic box (and re-rolls which wedding its lock asks about)
-    if (window.__resetTripCreatures) window.__resetTripCreatures();
-    if (window.__stopIbogaSlideshow) window.__stopIbogaSlideshow();
-    if (window.__resetDmt) window.__resetDmt();
-    if (window.__hideMoleculeCards) window.__hideMoleculeCards();
+    if (window.__stopTrip) window.__stopTrip(true); // one transition cancels the timer/rAF generation, flags, effects, creatures, cards and tolerance
     if (window.__clearCuddlyProjectorSlow) window.__clearCuddlyProjectorSlow(); // drop any stoned time-dilation on the projector
     if (window.__resetWineSips) window.__resetWineSips();
     ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"].forEach(function (id) {
@@ -81592,10 +81617,7 @@ function spawnDustMote(container) {
       variant = TRIP_VARIANTS[(Math.random() * TRIP_VARIANTS.length) | 0];
     }
     if (window.goToStage) window.goToStage("garden"); // trips play best in the garden — head there
-    tripActive = true;
-    window.__tripActive = true; // mirror for the garden thermometer readout (same as the drugs box / Shift+digit)
-    startTripVariant(variant);
-    if (variant === "shrooms") startTripBlooms();
+    beginTrip(variant);
     return "◑ " + variant + " — hold on to something soft. it wears off on its own.";
   };
 

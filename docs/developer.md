@@ -74,6 +74,12 @@ Controllers communicate by calling feature-detected hooks such as
 visibility condition changes. This keeps declaration order loose, but it also means a new state axis
 usually needs to notify several existing controllers.
 
+Cross-controller state must have one named transition owner (`set*`, or a paired `begin*`/`stop*`).
+UI, typed API, console, restore, reset, cinematic and autoplay paths call that owner instead of
+assigning its `window.__...` mirror or rendering classes directly. Private animation counters and
+closure-local timers remain local. When a transition schedules delayed work, its stop/reset path
+must cancel the handles or invalidate callbacks with a generation token.
+
 `loft.api` has a registry of typed queries and actions. It validates argument shapes and enum values,
 reports capability/availability information, and emits `loft:statechange` after a semantic state
 transition. `stateVersion` advances for typed actions and for direct mutations owned by rooms,
@@ -199,6 +205,14 @@ balcony switch, persistent UV intent and `.uv-mode` before stopping the disco st
 photo moments, guest movement, and other party-only drivers. Callers may use `setPartyMode(false)` for
 the graceful walk-out, but lower-level cinematic/reset/fallback paths must still leave no blacklight
 or timer-owned party effect behind.
+
+### Trip lifecycle
+
+`beginTrip` and `stopTrip` own the active flag and public mirror, current variant, strip classes,
+effect timers, creatures, molecule cards, bloom/slideshow loops and reset-time tolerance. Every
+interactive trip entry calls `beginTrip`; `startTripVariant` remains the lower-level visual primitive
+used by the trailer's deliberately non-gameplay bloom. `tripGeneration` invalidates stale end timers
+and double-rAF class additions when a trip is interrupted or reset.
 
 ## Rendering and performance lifecycle
 

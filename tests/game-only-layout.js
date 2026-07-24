@@ -24,6 +24,13 @@ function run(width, height, standalone) {
       check("installed mode hides browser and device warnings",
         document.documentElement.classList.contains("installed-app") &&
         getComputedStyle(document.getElementById("device-hint")).display === "none");
+      var loader = document.getElementById("installed-load");
+      check("installed mode shows its own loading progress",
+        window.__installedLoaderUsed === true && !!loader &&
+        Number(loader.querySelector('[role="progressbar"]').getAttribute("aria-valuenow")) >= 8);
+    } else {
+      check("browser mode never mounts the installed loading progress",
+        window.__installedLoaderUsed === false && !document.getElementById("installed-load"));
     }
     check("game-only title and language share the top row", Math.abs(title.top - langs.top) <= 3,
       title.top + "/" + langs.top);
@@ -62,6 +69,10 @@ function run(width, height, standalone) {
         setTimeout(function () {
           check("the public reset() API preserves enlarged page mode and returns to CLICK ME",
             window.__gameOnlyEntered() && !window.__gameStarted() && !!document.getElementById("click-me-overlay"));
+          if (${standalone ? "true" : "false"}) {
+            check("installed loading progress completes and leaves no overlay",
+              window.__installedLoaderComplete === true && !document.getElementById("installed-load"));
+          }
           report();
         }, 900);
       }, 900);

@@ -39,6 +39,11 @@ uses a larger height fit without setting `.is-fullscreen`. Direct web play never
 fullscreen; only an installed PWA may use its first interaction for that transition. The fullscreen
 button and `F` remain explicit. The synchronous mode bootstrap also adds `.installed-app` from the
 display-mode/navigator standalone signals, suppressing `.device-hint` before first paint in the PWA.
+Immediately inside `<body>`, `#installed-load` uses that already-set class to paint a standalone-only
+loading screen before the large game DOM parses. Its small inline controller localizes from the
+saved language/full `navigator.languages` list, advances an ARIA progressbar, completes after
+`DOMContentLoaded` with a minimum readable dwell, and removes the overlay. Browser mode removes the
+node synchronously and sets test hooks without painting it.
 
 The capture-phase room keyboard controller owns one `activateCurrentRoom()` transition used by
 `Enter` and by an otherwise-unconsumed top-level `Escape`. The existing Backspace alias dispatches

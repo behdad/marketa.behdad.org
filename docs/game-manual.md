@@ -27,7 +27,8 @@ ME** invitation inside that enlarged view.
    language selector, browser advice, Trailer, and Autoplay controls disappear
    so the scene can use nearly the full browser window. Use the fullscreen
    control or `F` for true fullscreen. An installed app may enter fullscreen on
-   its first interaction and omits the browser/device recommendation.
+   its first interaction, omits the browser/device recommendation, and shows
+   its own Loft Day loading progress while the game initializes.
    `Enter`, `Escape`, or `Backspace` dismisses **CLICK ME** without operating
    the room underneath it.
 2. Follow the instruction line above the scene. It is the authoritative current

@@ -73,6 +73,45 @@ body{
   margin:0; background:#f7f2e1; color:var(--ink); /* page bg: a warm yellow-cream, a touch yellower than --cream */
   font-family:"Source Serif 4", Georgia, serif; font-size:17px; line-height:1.7;
 }
+#installed-load{display:none}
+:root.installed-app #installed-load{
+  position:fixed; inset:0; z-index:10000; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:1.15rem;
+  padding:max(1.5rem,env(safe-area-inset-top)) max(1.5rem,env(safe-area-inset-right))
+    max(1.5rem,env(safe-area-inset-bottom)) max(1.5rem,env(safe-area-inset-left));
+  background:var(--cream); color:var(--ink); opacity:1;
+  transition:opacity .28s ease;
+}
+:root.installed-app #installed-load.done{opacity:0; pointer-events:none}
+.installed-load-icon{
+  display:block; width:84px; height:84px; object-fit:contain;
+  filter:drop-shadow(0 5px 9px rgba(69,58,49,.18));
+}
+.installed-load-title{
+  margin:0; color:var(--wine); font-family:"Fraunces","Source Serif 4",serif;
+  font-size:clamp(1.65rem,7vw,2.6rem); font-weight:700; line-height:1.1;
+}
+.installed-load-progress{width:min(72vw,380px)}
+.installed-load-status{
+  display:flex; align-items:baseline; justify-content:space-between; gap:1rem;
+  margin-bottom:.42rem; color:var(--muted); font-size:.88rem; line-height:1.25;
+}
+.installed-load-percent{min-width:3ch; color:var(--ink); font-variant-numeric:tabular-nums; text-align:right}
+.installed-load-track{
+  position:relative; height:12px; overflow:hidden; border:1.5px solid var(--wine);
+  border-radius:3px; background:var(--paper); box-shadow:0 3px 12px rgba(69,58,49,.16);
+}
+.installed-load-fill{
+  position:absolute; inset:0 auto 0 0; width:8%; background:var(--wine);
+  transition:width .16s linear;
+}
+.installed-load-fill::after{
+  content:""; position:absolute; top:0; right:0; width:5px; height:100%; background:var(--blue-deep);
+}
+@media (prefers-reduced-motion:reduce){
+  :root.installed-app #installed-load{transition:none}
+  .installed-load-fill{transition:none}
+}
 main{max-width:1140px; margin:0 auto; padding:1.25rem 1.25rem 0}
 a{color:var(--wine)}
 a:hover{text-decoration-thickness:2px}
@@ -9585,6 +9624,72 @@ section{margin:1.9rem 0}
 </style>
 </head>
 <body>
+<div id="installed-load" aria-live="polite" aria-label="Loading Loft Day">
+  <img class="installed-load-icon" src="art/espresso-apple-touch-icon.png" width="180" height="180" alt="">
+  <p class="installed-load-title" data-en="Loft Day" data-cs="Den v podkroví">Loft Day</p>
+  <div class="installed-load-progress">
+    <div class="installed-load-status">
+      <span class="installed-load-label" data-en="Loading the loft…" data-cs="Načítá se podkroví…">Loading the loft…</span>
+      <output class="installed-load-percent">8%</output>
+    </div>
+    <div class="installed-load-track" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100" aria-valuenow="8">
+      <span class="installed-load-fill"></span>
+    </div>
+  </div>
+</div>
+<script>
+  (function () {
+    var loader = document.getElementById("installed-load");
+    var installed = document.documentElement.classList.contains("installed-app");
+    window.__installedLoaderUsed = installed;
+    window.__installedLoaderComplete = !installed;
+    if (!installed) {
+      loader.remove();
+      return;
+    }
+
+    var lang = "en";
+    try {
+      var saved = localStorage.getItem("lang");
+      var languages = navigator.languages || [navigator.language || ""];
+      if (saved === "cs" || (!saved && languages.some(function (item) { return /^cs(?:-|$)/i.test(item); }))) lang = "cs";
+    } catch (_error) {}
+    loader.querySelectorAll("[data-" + lang + "]").forEach(function (node) {
+      node.textContent = node.getAttribute("data-" + lang);
+    });
+    loader.setAttribute("aria-label", lang === "cs" ? "Načítá se Den v podkroví" : "Loading Loft Day");
+
+    var track = loader.querySelector('[role="progressbar"]');
+    var fill = loader.querySelector(".installed-load-fill");
+    var percent = loader.querySelector(".installed-load-percent");
+    var started = performance.now();
+    var ready = false;
+    var value = 8;
+    function draw(next) {
+      value = Math.max(value, Math.min(100, Math.round(next)));
+      fill.style.width = value + "%";
+      percent.value = value + "%";
+      percent.textContent = value + "%";
+      track.setAttribute("aria-valuenow", String(value));
+    }
+    function finish() {
+      fill.style.transition = "none";
+      draw(100);
+      window.__installedLoaderComplete = true;
+      loader.classList.add("done");
+      setTimeout(function () { loader.remove(); }, 300);
+    }
+    function tick(now) {
+      var elapsed = now - started;
+      if (ready) draw(value + Math.max(3, (100 - value) * .3));
+      else draw(8 + 84 * (1 - Math.exp(-elapsed / 1500)));
+      if (ready && value >= 99 && elapsed >= 650) finish();
+      else requestAnimationFrame(tick);
+    }
+    addEventListener("DOMContentLoaded", function () { ready = true; }, { once:true });
+    requestAnimationFrame(tick);
+  })();
+</script>
 <main>
   <nav class="langs" aria-label="Language" data-aria-i="nav_lang_aria">
     <button type="button" data-lang="en" aria-pressed="true">EN</button><span class="sep" aria-hidden="true">|</span>

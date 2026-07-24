@@ -142,8 +142,17 @@ function run(width, height, standalone, fullPage) {
         getComputedStyle(document.getElementById("hunt-escape-btn")).visibility === "visible" &&
         getComputedStyle(document.getElementById("hunt-prev")).visibility === "visible" &&
         getComputedStyle(document.getElementById("hunt-dots")).display === "flex");
-      check("entered page mode enlarges or preserves the scene shell", enteredArea.width >= invitationWidth,
+      check("entered page mode stays at the entry size within its extra control allowance",
+        enteredArea.width >= invitationWidth - 16,
         invitationWidth + " -> " + enteredArea.width);
+      check("entered page mode does not make the browser page scroll",
+        enteredArea.top >= -1 && enteredArea.bottom <= innerHeight + 1 &&
+        document.documentElement.scrollHeight <= innerHeight + 1,
+        JSON.stringify({
+          innerHeight: innerHeight,
+          area: enteredArea,
+          scrollHeight: document.documentElement.scrollHeight
+        }));
       check("entered page mode remains outside true/class fullscreen",
         !document.getElementById("hunt-fullscreen-area").classList.contains("is-fullscreen"));
       window.__activateExtinguisher();

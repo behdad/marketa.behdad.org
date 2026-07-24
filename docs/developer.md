@@ -47,6 +47,9 @@ physical Escape key. Window-level phone/monitor closers and component menu/dialo
 first refusal; typing fields never fall through to a room action. CLICK ME is checked before
 `activateCurrentRoom()`: Enter/Escape, including the synthetic Backspace alias, dismisses the
 invitation and advances its caption handoff without touching the room underneath.
+`dispatchEscape()` is also the single entry point for the top-left back control on every
+layout. Restart is a distinct control below Fullscreen at top-right. Both are hidden
+with the other navigation controls during recovery and cinematics.
 
 ## Self-hosted runtimes
 

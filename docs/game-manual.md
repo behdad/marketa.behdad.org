@@ -175,6 +175,10 @@ Press `?` in the game for the live shortcut overlay. Current global shortcuts ar
 | `R` | Reset the game after confirmation |
 | `` ` `` | Show or hide the dropdown JavaScript console |
 
+The top-left back arrow supplies the same Escape/Backspace action on every layout,
+including touch devices without a hardware keyboard. Restart remains available as
+the button directly below Fullscreen at top-right.
+
 Keyboard shortcuts are primarily a testing and power-user layer. They are not
 required for normal play. While a text field is active, ordinary typing keys are
 reserved for that field.

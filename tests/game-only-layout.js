@@ -18,9 +18,11 @@ function run(width, height, standalone) {
   try {
     var area = document.getElementById("hunt-fullscreen-area").getBoundingClientRect();
     var watch = document.querySelector(".watch-controls").getBoundingClientRect();
-    var brand = document.querySelector(".intro-chrome-brand").getBoundingClientRect();
+    var brand = document.querySelector(".loft-entry-brand").getBoundingClientRect();
+    var clickWord = document.querySelector(".click-me-word").getBoundingClientRect();
     var langs = document.querySelector(".game-langs").getBoundingClientRect();
     var frame = document.querySelector(".hunt-frame").getBoundingClientRect();
+    var viewport = document.querySelector(".hunt-viewport").getBoundingClientRect();
     var utilityIds = ["hunt-feedback-btn","hunt-bugs-btn","hunt-github-btn"];
     if (${standalone ? "true" : "false"}) {
       check("installed mode is detected", document.documentElement.classList.contains("installed-app"));
@@ -33,18 +35,22 @@ function run(width, height, standalone) {
         window.__installedLoaderUsed === false && !document.getElementById("installed-load"));
     }
     check("game-only removes every outer title/language/advice row",
-      getComputedStyle(document.getElementById("hunt-title")).display === "none" &&
+      !document.getElementById("hunt-title") &&
       getComputedStyle(document.querySelector(".page-langs")).display === "none" &&
       !document.getElementById("device-hint"));
     check("CLICK ME owns the shared entry chrome",
       document.getElementById("hunt-fullscreen-area").classList.contains("intro-active") &&
+      document.documentElement.classList.contains("loft-entry-ready") &&
+      !document.documentElement.classList.contains("loft-entry-pending") &&
       brand.width > 0 && langs.width > 0 &&
+      getComputedStyle(document.getElementById("click-me-overlay")).pointerEvents === "auto" &&
+      getComputedStyle(document.getElementById("click-me-overlay")).backgroundColor !== "rgba(0, 0, 0, 0)" &&
       getComputedStyle(document.getElementById("hunt-escape-btn")).visibility === "hidden" &&
       getComputedStyle(document.getElementById("hunt-restart-btn")).visibility === "hidden");
-    check("entry title is centered and language occupies the upper-left",
-      Math.abs((brand.left + brand.width / 2) - (area.left + area.width / 2)) <= 2 &&
-      langs.left >= area.left && langs.top <= brand.bottom,
-      JSON.stringify({ area: area, brand: brand, langs: langs }));
+    check("entry title sits in the scene above CLICK ME and language occupies the upper-left",
+      Math.abs((brand.left + brand.width / 2) - (viewport.left + viewport.width / 2)) <= 2 &&
+      brand.bottom <= clickWord.top && langs.left >= area.left,
+      JSON.stringify({ area: area, viewport: viewport, brand: brand, clickWord: clickWord, langs: langs }));
     check("entry keeps left utility links and fullscreen available",
       utilityIds.every(function(id){var e=document.getElementById(id);return getComputedStyle(e).visibility==="visible"&&e.getBoundingClientRect().width>0;}) &&
       getComputedStyle(document.getElementById("hunt-fullscreen-btn")).visibility === "visible");
@@ -72,7 +78,7 @@ function run(width, height, standalone) {
       var enteredArea = document.getElementById("hunt-fullscreen-area").getBoundingClientRect();
       check("entering page mode hides all outer invitation chrome",
         !document.getElementById("hunt-fullscreen-area").classList.contains("intro-active") &&
-        getComputedStyle(document.querySelector(".intro-chrome-brand")).display === "none" &&
+        !document.querySelector(".loft-entry-brand") &&
         getComputedStyle(document.querySelector(".game-langs")).display === "none" &&
         getComputedStyle(document.querySelector(".watch-controls")).display === "none");
       check("entering restores normal game controls",

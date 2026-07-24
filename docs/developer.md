@@ -30,9 +30,14 @@ nothing to compile: committed page artifacts are served directly from the live G
 
 In direct `#play`/`loft-day` mode, `:root:not(.revealed)` removes all outer game chrome and raises
 the shell's desktop cap from 1080px to 1620px. Fresh CLICK ME adds `.intro-active`; checkpoint entry
-uses `.recovery-active`. Both show the in-shell Loft Day brand and `.game-langs`, hide Back/Restart,
+uses `.recovery-active`. Both show `.game-langs` in the chrome and a localized `.loft-entry-brand`
+inside the scene above CLICK ME or Welcome back, hide Back/Restart,
 room navigation, dots, and media transport, retain Fullscreen plus the left utility links, and dock
-the one `.watch-controls` node into the shell's bottom row. Handing control to the player removes
+the one `.watch-controls` node into the shell's bottom row. Fresh entry's `#click-me-overlay`
+uses the same translucent scene veil as recovery and consumes its dismissing click, so that click
+cannot activate an SVG object underneath. The head script applies `.loft-entry-pending` before
+first paint in game-only mode; the checkpoint initializer constructs the chosen gate synchronously
+and `revealEntrySurface()` removes that concealment, preventing a kitchen/caption flash. Handing control to the player removes
 the entry class, reparents watch controls to their document owner, and restores normal controls.
 The prose device/browser detector and recommendation line were removed: their actions are now
 direct Fullscreen, audio, and Known issues controls.

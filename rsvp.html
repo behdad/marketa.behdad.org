@@ -19,6 +19,10 @@
       var gameOnly = (location.hash || "").toLowerCase() === "#play" || /loft-day/i.test(location.pathname);
       var revealed = !gameOnly;
       document.documentElement.classList.toggle("revealed", revealed);
+      if (gameOnly && document.readyState === "loading" &&
+          !document.documentElement.classList.contains("loft-entry-ready")) {
+        document.documentElement.classList.add("loft-entry-pending");
+      }
       document.documentElement.classList.toggle("installed-app", installedApp());
       document.title = revealed ? "markéta & behdad — RSVP — Loft Day" : "Loft Day";
     }
@@ -130,7 +134,9 @@ h1 .amp{color:var(--wine); display:inline-block; min-width:1em; text-align:cente
   50%{transform:scale(1.16)}
 }
 @media (prefers-reduced-motion: reduce){.langs button{transition:none} .langs button.lang-switched{animation:none}}
-.intro-chrome-brand,.game-langs{display:none}
+.game-langs{display:none; gap:0}
+.game-langs button{padding-inline:.08rem}
+.game-langs .sep{color:var(--muted)}
 .caps{display:block; width:150px; margin:.9rem auto .2rem; transition:transform .3s ease}
 .caps:hover{transform:rotate(-4deg) scale(1.05)}
 @media (prefers-reduced-motion: reduce){.caps:hover{transform:none}}
@@ -276,8 +282,6 @@ footer{margin-top:2.6rem}
 #loft-game-strip.uv-mode:not(.dance-frozen) #garden-guests .g-marketa .guest-spot-arrow path{filter:drop-shadow(0 1px 1px rgba(69,58,49,.35))}
 @keyframes guest-spot-bob{0%,100%{translate:0 0}50%{translate:0 -6px}} /* the translate PROPERTY composes with any transform attr */
 @media (prefers-reduced-motion: reduce){.guest-spot-arrow{animation:none}}
-.hunt-title{font-family:"Fraunces",serif; font-weight:700; font-size:1.1rem; text-align:center; letter-spacing:.02em; color:var(--wine); margin:.6rem 0 0; opacity:0}
-.hunt-title.show{opacity:1; transition:opacity .5s ease}
 /* the whole game reads as one handheld device: a soft burgundy shell wrapping the hint
    caption, the prev/next controls + scene "screen", and the room-nav dots — binding them
    as one unit and drawing the eye to the instruction line. The caption and dots each sit
@@ -3062,14 +3066,14 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
   65%{transform:translate(0.6px,0.5px)}
 }
 @media (prefers-reduced-motion: reduce){#kitchen-grinder.grinding #kitchen-grinder-lid, #kitchen-grinder.lid-jiggle #kitchen-grinder-lid, .kitchen-bean-wobble{animation:none !important}}
-#site-h1.gong-shake, #hunt-title.gong-shake, #hunt-caption.gong-shake{animation:gong-text-shake .4s ease-in-out; transform-origin:center}
+#site-h1.gong-shake, #hunt-caption.gong-shake{animation:gong-text-shake .4s ease-in-out; transform-origin:center}
 @keyframes gong-text-shake{
   0%, 100%{transform:rotate(0)}
   25%{transform:rotate(-1deg)}
   50%{transform:rotate(0.8deg)}
   75%{transform:rotate(-0.4deg)}
 }
-@media (prefers-reduced-motion: reduce){#site-h1.gong-shake, #hunt-title.gong-shake{animation:none}}
+@media (prefers-reduced-motion: reduce){#site-h1.gong-shake{animation:none}}
 .kitchen-cup-wiggle{transform-box:fill-box; transform-origin:bottom center}
 #kitchen-cups.rattling .kitchen-cup-wiggle{animation:cups-wobble .4s ease-in-out}
 #kitchen-cups.rattling .kitchen-cup-wiggle:nth-of-type(2){animation-delay:.02s}
@@ -4059,13 +4063,18 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 .fatality-wrap{width:124px; height:42px; display:flex; align-items:center; justify-content:center; overflow:hidden}
 .fatality-word{font-family:"Climate Crisis",Impact,sans-serif; color:#e11414; font-size:12.5px; line-height:1; letter-spacing:.2px; white-space:nowrap; text-shadow:0 0 3px rgba(255,44,44,.55); font-variation-settings:"YEAR" 1979} /* YEAR animated inline 1979→2050 = the melt; this is the fallback */
 /* Intro "CLICK ME!" — a big melting invitation overlaid on the game scene while the opening
-   prompt shows. Lives inside .hunt-viewport (inset:0), pointer-events:none so a tap anywhere —
-   including on the word — falls through to the strip's stopHintBlink handler. YEAR is animated
-   inline (rAF ping-pong 1979↔2050) = the melt; no CSS animation (keeps check.js's keyframes
-   audit clean). Fades in via a transition (transitions aren't audited). */
-#click-me-overlay{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:6; pointer-events:none; opacity:0; transition:opacity .5s ease; transform:translateY(-5%)}
+   prompt shows. It is an interaction shield, matching the saved-game gate's translucent paper:
+   the first scene tap dismisses the invitation without reaching an object underneath. YEAR is
+   animated inline (rAF ping-pong 1979↔2050) = the melt; no CSS animation (keeps check.js's
+   keyframes audit clean). Fades in via a transition (transitions aren't audited). */
+#click-me-overlay{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.2rem; box-sizing:border-box; padding-bottom:5%; z-index:6; cursor:pointer; opacity:0; transition:opacity .5s ease; background:rgba(248,245,236,.78); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px)}
 #click-me-overlay.show{opacity:1}
-.click-me-word{font-family:"Climate Crisis",Impact,sans-serif; color:#b17880; -webkit-text-stroke:1px rgba(142,58,74,.4); font-size:clamp(2.4rem,9.5vw,6rem); line-height:.9; letter-spacing:.5px; white-space:nowrap; text-align:center; text-shadow:0 2px 18px rgba(248,245,236,.98),0 0 14px rgba(248,245,236,.96),0 0 5px rgba(248,245,236,1); font-variation-settings:"YEAR" 1979}
+.loft-entry-brand{
+  margin:0; color:var(--wine); font-family:"Fraunces","Source Serif 4",serif;
+  font-size:clamp(3.15rem,12vw,7.5rem); font-weight:700; line-height:1.05;
+  text-align:center; text-shadow:0 1px 10px var(--cream),0 0 5px var(--cream);
+}
+.click-me-word{padding-top:.45em; font-family:"Climate Crisis",Impact,sans-serif; color:#b17880; -webkit-text-stroke:1px rgba(142,58,74,.4); font-size:clamp(2rem,8vw,5rem); line-height:1; letter-spacing:.5px; white-space:nowrap; text-align:center; text-shadow:0 2px 18px rgba(248,245,236,.98),0 0 14px rgba(248,245,236,.96),0 0 5px rgba(248,245,236,1); font-variation-settings:"YEAR" 1979}
 /* CLICK ME and a valid checkpoint share one restrained entry chrome. The quiet utility
    links remain available on the left; room navigation and media transport do not. */
 #hunt-fullscreen-area:is(.intro-active,.recovery-active) :is(#hunt-escape-btn,#hunt-restart-btn,.hunt-nav,#hunt-side){
@@ -4076,11 +4085,6 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 }
 #hunt-fullscreen-area:is(.intro-active,.recovery-active) #hunt-dots{display:none}
 #hunt-fullscreen-area:is(.intro-active,.recovery-active) > .watch-controls{margin:.35rem 0 0; min-height:2rem}
-:root:not(.revealed) #hunt-fullscreen-area:is(.intro-active,.recovery-active) > .intro-chrome-brand{
-  display:block; flex:0 0 auto; height:2rem; margin:0 auto .05rem; color:var(--wine);
-  font-family:"Fraunces","Source Serif 4",serif; font-size:1.05rem; font-weight:700;
-  line-height:2rem; text-align:center; white-space:nowrap;
-}
 :root:not(.revealed) #hunt-fullscreen-area:is(.intro-active,.recovery-active) > .game-langs{
   position:absolute; z-index:11; top:.35rem; left:.45rem; display:flex;
   justify-content:flex-start; padding:0; line-height:1.2;
@@ -4089,6 +4093,13 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
    It is a real modal surface: the scene stays recognizable underneath, but cannot receive a
    stray tap before Continue or Start over has established which state owns the page. */
 #loft-recovery-gate{position:absolute; inset:0; z-index:9; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.55rem; padding:1rem; box-sizing:border-box; color:var(--ink); background:rgba(248,245,236,.78); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); text-align:center}
+#loft-recovery-gate .loft-entry-brand{margin-bottom:.05rem}
+@media (max-width:480px){
+  html[lang="cs"] .loft-entry-brand{font-size:2.4rem}
+  .click-me-word{font-size:1.5rem}
+  #loft-recovery-gate{gap:.2rem; padding:.35rem}
+  #loft-recovery-gate .loft-recovery-btn{min-height:2rem; padding:.3rem .65rem}
+}
 .loft-recovery-title{font-size:clamp(1rem,2.4vw,1.5rem); font-weight:700; line-height:1.15}
 .loft-recovery-actions{display:flex; gap:.55rem; align-items:center; justify-content:center; margin-top:.2rem}
 .loft-recovery-btn{min-height:2.35rem; padding:.45rem .85rem; border:1.5px solid var(--wine); border-radius:6px; background:var(--paper); color:var(--wine); font:inherit; font-size:clamp(.72rem,1.5vw,.9rem); cursor:pointer; box-shadow:0 2px 7px rgba(69,58,49,.14)}
@@ -8500,11 +8511,12 @@ section{margin:1.9rem 0}
 /* Full page by default (names, dates, RSVP, footer + the game). #play, or a /loft… path,
    strips to a self-contained game shell. Entry identity/actions live inside that shell;
    the RSVP page retains the outer title, language and browser advice. */
+:root:not(.revealed).loft-entry-pending #hunt-fullscreen-area{visibility:hidden}
 :root:not(.revealed) main{
   max-width:1710px;
 }
 :root:not(.revealed) main > audio{display:none}
-:root:not(.revealed) :is(.hunt-title,.page-langs),
+:root:not(.revealed) .page-langs,
 :root:not(.revealed) main > .watch-controls{display:none !important}
 :root:not(.revealed) #hunt-fullscreen-area:not(.is-fullscreen){
   width:100%;
@@ -8524,7 +8536,7 @@ section{margin:1.9rem 0}
    browser content area. This does not set .is-fullscreen or call the Fullscreen API. */
 :root:not(.revealed).loft-entered main{padding-top:.25rem}
 :root:not(.revealed).loft-entered #hunt-fullscreen-area:not(.intro-active):not(.recovery-active) >
-  :is(.intro-chrome-brand,.game-langs,.watch-controls){display:none !important}
+  :is(.game-langs,.watch-controls){display:none !important}
 :root:not(.revealed).loft-entered #hunt-fullscreen-area:not(.is-fullscreen){
   max-width:min(1620px, calc(200vh - 160px));
   margin:0 auto;
@@ -9715,9 +9727,7 @@ section{margin:1.9rem 0}
 
   <hr>
 
-  <p class="hunt-title" id="hunt-title" data-i="hunt_title">Loft Day</p>
   <div id="hunt-fullscreen-area">
-  <p class="intro-chrome-brand" data-i="hunt_title">Loft Day</p>
   <nav class="langs game-langs" aria-label="Language" data-aria-i="nav_lang_aria">
     <button type="button" data-lang="en" aria-pressed="true">EN</button><span class="sep" aria-hidden="true">|</span>
     <button type="button" data-lang="cs" aria-pressed="false">CZ</button>
@@ -27142,7 +27152,6 @@ window.addEventListener("hashchange", function () {
   var viewport = document.querySelector(".hunt-viewport");
   var caption = document.getElementById("hunt-caption");
   var dots = document.getElementById("hunt-dots");
-  var introBrand = area.querySelector(".intro-chrome-brand");
   var watchControls = document.querySelector(".watch-controls");
   var prevBtn = document.getElementById("hunt-prev");
   var rightCol = document.getElementById("hunt-right");
@@ -27187,7 +27196,7 @@ window.addEventListener("hashchange", function () {
     var padY = (parseFloat(areaStyle.paddingTop) || 0) + (parseFloat(areaStyle.paddingBottom) || 0);
     var areaW = area.clientWidth - padX;
     var areaH = area.clientHeight - padY - outerHeight(caption) - outerHeight(dots) -
-      outerHeight(introBrand) - (watchControls && watchControls.parentNode === area ? outerHeight(watchControls) : 0);
+      (watchControls && watchControls.parentNode === area ? outerHeight(watchControls) : 0);
     if (areaW <= 0 || areaH <= 0) return;
     var navW = prevBtn ? prevBtn.offsetWidth : 0;
     var rightW = rightCol ? rightCol.offsetWidth : navW; // right control column (arrow + button stack share one width)
@@ -27375,7 +27384,6 @@ window.addEventListener("hashchange", function () {
     });
     chromeRo.observe(caption);
     chromeRo.observe(dots);
-    if (introBrand) chromeRo.observe(introBrand);
     if (watchControls) chromeRo.observe(watchControls);
   }
   refreshLabel();
@@ -35434,7 +35442,7 @@ function gameTapsNear(a, b) {
       setTimeout(function () { playGongEchoSound(0.1); }, 5700);
       setTimeout(function () { rattleKitchen(false); }, 280);
       setTimeout(function () {
-        ["site-h1", "hunt-title", "hunt-caption"].forEach(function (id) {
+        ["site-h1", "hunt-caption"].forEach(function (id) {
           var el = document.getElementById(id);
           if (!el) return;
           el.classList.remove("gong-shake");
@@ -66902,6 +66910,10 @@ function spawnDustMote(container) {
     var dict = (T[l] && T[l].hunt) || T.en.hunt;
     return (dict && dict[key]) || "";
   }
+  function huntTitleText() {
+    var l = document.documentElement.lang;
+    return (T[l] && T[l].hunt_title) || T.en.hunt_title || "Loft Day";
+  }
   function onActivate(el, fn) {
     if (!el) return;
     el.addEventListener("click", fn);
@@ -79241,9 +79253,9 @@ function spawnDustMote(container) {
   // While the opening prompt shows, a big Climate-Crisis "CLICK ME!" (localized) melts over the
   // kitchen scene as a living invitation. The YEAR axis ping-pongs 1979↔2050 (~2.5s each way) via
   // rAF + inline font-variation-settings — no CSS animation, so check.js's keyframes audit stays
-  // clean. pointer-events:none (CSS) lets a tap on the word itself fall through to the strip's
-  // stopHintBlink handler. Torn down on the first tap / grace timeout (stopHintBlink) AND on any
-  // room change (goToStage), so the loop never outlives the prompt nor writes to a detached node
+  // clean. The overlay consumes the first click so no scene object underneath can receive it.
+  // Torn down on the first tap or any room change (goToStage), so the loop never outlives the
+  // prompt nor writes to a detached node
   // (which would surface as an uncaught error in play.js's click-storm). rAF pauses natively in a
   // hidden tab and this is a single self-driven node (not a setTimeout spawner), so no accumulation.
   var LOFT_CHECKPOINT_KEY = "loftCheckpoint:v1";
@@ -79461,11 +79473,12 @@ function spawnDustMote(container) {
     dockIntroWatchControls(recoveryArea);
     var gate = document.createElement("div"); recoveryGate = gate;
     gate.id = "loft-recovery-gate"; gate.setAttribute("role", "dialog"); gate.setAttribute("aria-modal", "true"); gate.setAttribute("aria-labelledby", "loft-recovery-title"); gate.setAttribute("aria-describedby", "hunt-caption");
+    var brand = document.createElement("p"); brand.className = "loft-entry-brand"; brand.setAttribute("data-i", "hunt_title"); brand.textContent = huntTitleText();
     var title = document.createElement("div"); title.id = "loft-recovery-title"; title.className = "loft-recovery-title"; title.textContent = huntText("recovery_title");
     var actions = document.createElement("div"); actions.className = "loft-recovery-actions";
     var continueBtn = document.createElement("button"); continueBtn.type = "button"; continueBtn.className = "loft-recovery-btn primary selected"; continueBtn.textContent = huntText("recovery_continue");
     var restartBtn = document.createElement("button"); restartBtn.type = "button"; restartBtn.className = "loft-recovery-btn"; restartBtn.textContent = huntText("recovery_restart");
-    actions.appendChild(continueBtn); actions.appendChild(restartBtn); gate.appendChild(title); gate.appendChild(actions); host.appendChild(gate);
+    actions.appendChild(continueBtn); actions.appendChild(restartBtn); gate.appendChild(brand); gate.appendChild(title); gate.appendChild(actions); host.appendChild(gate);
     showRecoveryCaption(saved);
     var buttons = [continueBtn, restartBtn], selected = 0;
     function select(index) { selected = (index + buttons.length) % buttons.length; buttons.forEach(function (b, i) { b.classList.toggle("selected", i === selected); }); buttons[selected].focus(); }
@@ -79490,6 +79503,7 @@ function spawnDustMote(container) {
     };
     document.addEventListener("keydown", recoveryKeyHandler, true);
     requestAnimationFrame(function () { if (recoveryGate) select(0); });
+    revealEntrySurface();
     return true;
   }
 
@@ -79499,7 +79513,15 @@ function spawnDustMote(container) {
   function clickMeReduceMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
-  function clickMeDismiss() { removeClickMe(); } // a real tap on the scene takes the invitation away
+  function revealEntrySurface() {
+    document.documentElement.classList.add("loft-entry-ready");
+    document.documentElement.classList.remove("loft-entry-pending");
+  }
+  function clickMeDismiss(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    removeClickMe();
+    stopHintBlink();
+  } // the overlay consumes the first scene tap before handing control to the room
   // ...and so does any real KEY interaction (Enter, the room-nav arrows, d, a letter…) — the melting
   // invitation shouldn't linger while a keyboard player is already driving. Ignore lone modifiers/Tab
   // and keystrokes aimed at a text field (console/editor input). Hands the opening prompt off just
@@ -79510,15 +79532,14 @@ function spawnDustMote(container) {
     var a = document.activeElement;
     if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
     clickMeDismiss();
-    stopHintBlink();
   }
   function removeClickMe() {
     if (clickMeRaf) { cancelAnimationFrame(clickMeRaf); clickMeRaf = 0; }
+    if (clickMeEl) clickMeEl.removeEventListener("click", clickMeDismiss);
     if (clickMeEl && clickMeEl.parentNode) clickMeEl.parentNode.removeChild(clickMeEl);
     clickMeEl = null; clickMeWord = null;
     // the invitation persists until an actual click/key, so its dismiss listeners are separate from
     // the caption's grace-timeout teardown — pull them here (covers tap, key, room-change, reset)
-    strip.removeEventListener("pointerdown", clickMeDismiss);
     document.removeEventListener("keydown", introKeyDismiss, true);
   }
   function clickMeStep() {
@@ -79537,15 +79558,22 @@ function spawnDustMote(container) {
     if (!host) return;
     clickMeEl = document.createElement("div");
     clickMeEl.id = "click-me-overlay";
-    clickMeEl.setAttribute("aria-hidden", "true");
+    clickMeEl.setAttribute("role", "button");
+    clickMeEl.setAttribute("aria-label", huntTitleText() + ". " + huntText("clickme"));
+    var brand = document.createElement("p");
+    brand.className = "loft-entry-brand";
+    brand.setAttribute("data-i", "hunt_title");
+    brand.textContent = huntTitleText();
     clickMeWord = document.createElement("span");
     clickMeWord.className = "click-me-word";
     clickMeWord.textContent = huntText("clickme");
+    clickMeEl.appendChild(brand);
     clickMeEl.appendChild(clickMeWord);
     host.appendChild(clickMeEl);
-    strip.addEventListener("pointerdown", clickMeDismiss); // stays until an actual tap — NOT the caption's 6s grace timeout
+    clickMeEl.addEventListener("click", clickMeDismiss); // stays until an actual tap — NOT the caption's 6s grace timeout
     document.addEventListener("keydown", introKeyDismiss, true); // ...or any real key press (removed in removeClickMe; stays armed past the 6s caption handoff since the invitation lingers)
-    requestAnimationFrame(function () { if (clickMeEl) clickMeEl.classList.add("show"); }); // fade in
+    if (document.documentElement.classList.contains("loft-entry-pending")) clickMeEl.classList.add("show");
+    else requestAnimationFrame(function () { if (clickMeEl) clickMeEl.classList.add("show"); }); // fade in on later resets
     if (clickMeReduceMotion()) return; // CSS pins a static mid-melt YEAR; no rAF
     clickMeStart = (window.performance && performance.now) ? performance.now() : Date.now();
     clickMeRaf = requestAnimationFrame(clickMeStep);
@@ -79652,6 +79680,7 @@ function spawnDustMote(container) {
     strip.addEventListener("click", stopHintBlink);
     if (hintBlinkTimer) clearTimeout(hintBlinkTimer);
     hintBlinkTimer = setTimeout(calmIntroBlink, 6000); // a handful of pulses, then rest — but the line + CLICK ME stay until a real tap
+    revealEntrySurface();
   }
   window.__showHuntIntro = showHuntIntro;
   // Warm the Climate Crisis woff2 now: display=block means the word renders INVISIBLE (not a
@@ -79665,7 +79694,7 @@ function spawnDustMote(container) {
   window.addEventListener("pagehide", function () { saveCheckpoint(); });
   setInterval(function () { if (!document.hidden) saveCheckpoint(); }, 2500); // catches stable internal changes that do not publish a state event
   goToStage("kitchen"); // sets the initial room/caption before either opening gate goes on
-  setTimeout(function () { if (!showRecoveryGate(loadCheckpoint())) showHuntIntro(); }, 0);
+  if (!showRecoveryGate(loadCheckpoint())) showHuntIntro();
 })();
 (function () {
   // Once the chest cat is loose (.out), it FOLLOWS the player from room to room. There is
@@ -84405,10 +84434,6 @@ function spawnDustMote(container) {
       }, 4500);
     });
   });
-})();
-(function () {
-  var title = document.getElementById("hunt-title");
-  if (title) title.classList.add("show");
 })();
 (function () {
   var strip = document.getElementById("loft-game-strip");

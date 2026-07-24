@@ -22,11 +22,11 @@ ME** invitation inside that enlarged view.
 
 ## Quick start
 
-1. Click or tap **CLICK ME** to begin. The entry screen also offers language,
-   Trailer, and Autoplay; normal game controls appear after entry. An installed
-   app first shows a loading screen and may enter fullscreen on its first tap.
-   `Enter`, `Escape`, or `Backspace` dismisses **CLICK ME** without operating
-   the room underneath it.
+1. Click or tap **CLICK ME** to begin. That first tap, `Enter`, `Escape`, or
+   `Backspace` only dismisses the entry; it never operates the room underneath.
+   The entry screen also offers language, Trailer, and Autoplay; normal game
+   controls appear after entry. An installed app first shows a loading screen
+   and may enter fullscreen on its first tap.
 2. Follow the instruction line above the scene. It is the authoritative current
    hint.
 3. Solve the highlighted activity in each room. The right room arrow unlocks as

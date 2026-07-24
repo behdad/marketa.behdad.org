@@ -455,8 +455,10 @@ During the party:
 - Bahareh may follow the running children;
 - party music becomes quieter when a projector, video, piano, or other foreground
   media experience is active;
-- opening **Who's here** freezes guest arrivals, departures, and room changes only
-  while the roster is open.
+- opening **Who's here** freezes guest arrivals, departures, and room changes and
+  pauses autonomous Messages delivery while the roster is open. Message previews
+  and both unread-count badges stay hidden; held texts resume at a paced interval
+  after the roster closes.
 
 ### Party ending
 
@@ -479,7 +481,9 @@ the blacklight and magic-box glow, switches off with the party.
 ### Party moments
 
 Formal moments do not start randomly. They start only from an explicit Messages
-action or the supported console/API action. Available moments include:
+action or the supported console/API action. Their autonomous Messages invitations
+are withheld for the first 45 seconds of attended party time, allowing ordinary
+conversation to establish the party first. Available moments include:
 
 - first dance;
 - slow dance;

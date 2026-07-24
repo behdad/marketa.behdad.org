@@ -94,6 +94,48 @@ var HARNESS = String.raw`<script>
     window.__firstDanceOn = false;
 
     if (window.__resetPhoneApps) window.__resetPhoneApps();
+    if (window.__closePhoneModal) window.__closePhoneModal(true);
+    await sleep(250);
+    window.__secondRound = true;
+    window.roster(true);
+    var rosterAutonomous = window.__deliverAutonomousPhoneMessage("cue_mail");
+    var rosterDirect = window.__deliverPhoneMessage("cue_calendar");
+    step("roster_hold", {
+      accepted: rosterAutonomous,
+      held: window.__deferredPhoneMessages().indexOf("cue_mail") !== -1,
+      autonomousDelivered: window.__phoneMessageReceived("cue_mail"),
+      direct: rosterDirect && window.__phoneMessageReceived("cue_calendar"),
+      thumb: !!document.querySelector(".msg-thumb.show"),
+      badge: !!document.querySelector(".msg-badge.show"),
+      balconyBadge: document.getElementById("balcony-phone-badge").style.display
+    });
+    window.roster(false);
+    window.__flushDeferredPhoneMessages();
+    step("roster_release", {
+      autonomousDelivered: window.__phoneMessageReceived("cue_mail"),
+      badge: !!document.querySelector(".msg-badge.show")
+    });
+
+    if (window.__resetPhoneApps) window.__resetPhoneApps();
+    window.__secondRound = true; window.__gardenPartyOn = true;
+    var attended = 0, realPartyLifecycleState = window.__partyLifecycleState;
+    window.__partyLifecycleState = function () { return { attended: attended }; };
+    var formalAccepted = window.__deliverAutonomousPhoneMessage("bouquet");
+    step("formal_early", {
+      accepted: formalAccepted,
+      ready: window.__formalMomentMessagesReady(),
+      held: window.__deferredPhoneMessages().indexOf("bouquet") !== -1,
+      delivered: window.__phoneMessageReceived("bouquet")
+    });
+    attended = 45;
+    window.__flushDeferredPhoneMessages();
+    step("formal_mature", {
+      ready: window.__formalMomentMessagesReady(),
+      delivered: window.__phoneMessageReceived("bouquet")
+    });
+    window.__partyLifecycleState = realPartyLifecycleState;
+
+    if (window.__resetPhoneApps) window.__resetPhoneApps();
     window.__secondRound = true;
     window.__monitorGroupChatAsk = function (text) { return Promise.resolve(JSON.stringify({ sender: "Charlie", text: "Reply to " + text, reply_to_id: null, action: null })); };
     for (var i = 1; i <= 23; i++) window.message("Question " + i);
@@ -136,6 +178,12 @@ check(s.messages_failed.attempts === 1 && s.messages_failed.outgoing === "Save m
 check(s.messages_retried.attempts === 2 && s.messages_retried.outgoing === 1 && s.messages_retried.answer === "I hear you now." && !s.messages_retried.error, "Messages Retry resolves the same exchange without duplicating the sent row", s.messages_retried);
 check(s.moment_delivery.gates.every(function (gate) { return gate.accepted && gate.held && !gate.delivered && gate.flushed; }), "all authored major moments defer and later release autonomous texts", s.moment_delivery.gates);
 check(s.moment_delivery.direct && s.moment_delivery.directReceived && !s.moment_delivery.directDeferred, "explicit message delivery stays immediate during a major moment", s.moment_delivery);
+check(s.roster_hold.accepted && s.roster_hold.held && !s.roster_hold.autonomousDelivered && s.roster_hold.direct && !s.roster_hold.thumb && !s.roster_hold.badge && s.roster_hold.balconyBadge === "none",
+  "Who's here holds autonomous arrivals and suppresses every message notification surface", s.roster_hold);
+check(s.roster_release.autonomousDelivered && s.roster_release.badge, "closing Who's here resumes the held queue and restores the unread badge", s.roster_release);
+check(s.formal_early.accepted && !s.formal_early.ready && s.formal_early.held && !s.formal_early.delivered,
+  "formal-moment texts wait through the party's opening stretch", s.formal_early);
+check(s.formal_mature.ready && s.formal_mature.delivered, "formal-moment texts release after 45 attended party seconds", s.formal_mature);
 check(s.retention.before === 40 && s.retention.after === 40 && s.retention.allConversation && s.retention.paired && s.retention.newestUser && s.retention.newestAi, "the bounded thread evicts authored chatter before complete visitor/AI turns", s.retention);
 
 console.log("");

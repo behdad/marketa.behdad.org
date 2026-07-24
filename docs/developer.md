@@ -479,7 +479,15 @@ Charlie discovery, party lifecycle prompts, and chained authored follow-ups. The
 - still add an unread row when appropriate, but buzz/show a scene notification only for an attended
   player.
 
-Wedding-moment messages are routed through `__deliverAutonomousPhoneMessage`. While first dance,
+`__deliverAutonomousPhoneMessage` is the single deferral boundary for those sources, including
+birthday and date/BBQ occasion producers. While the Who's Here roster is open, it queues autonomous
+messages without adding thread rows; the scene preview, floating unread launcher, and balcony-phone
+badge are also suppressed. Closing the roster resumes eligible queued messages at the normal paced
+drain, while explicit `__deliverPhoneMessage` calls remain immediate but visually quiet behind the
+roster.
+
+Wedding-moment messages are routed through the same boundary and remain ineligible until 45 seconds
+of attended party time from `__partyLifecycleState()`. While first dance,
 slow dance, toasts, group photo, sparklers, cake, bouquet toss, or chair lift owns attention, incoming
 autonomous texts queue instead of interrupting. The queue re-checks the gates and drains one item at
 a time, approximately 4.2 seconds apart, after the moment ends. Explicit/story delivery remains

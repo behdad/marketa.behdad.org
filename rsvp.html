@@ -54068,7 +54068,7 @@ async def localfont(name):
       if (msgBadgeEl) msgBadgeEl.classList.remove("coached");
     }
     function showMsgBadgeCoach(host) {
-      if (msgBadgeCoachSeen || document.hidden || !document.hasFocus() || window.__cinematic || (window.__autoplayOn && window.__autoplayOn())) return;
+      if (msgBadgeCoachSeen || rosterHoldsOccupants() || document.hidden || !document.hasFocus() || window.__cinematic || (window.__autoplayOn && window.__autoplayOn())) return;
       msgBadgeCoachSeen = true;
       if (!msgBadgeCoachEl) {
         msgBadgeCoachEl = document.createElement("div");
@@ -54083,7 +54083,7 @@ async def localfont(name):
       msgBadgeCoachT = setTimeout(hideMsgBadgeCoach, 8000);
     }
     function maybeShowMsgBadgeCoach() {
-      if (!msgBadgeCoachSeen && unreadCount() > 0 && !isOpen() && (!msgThumbEl || !msgThumbEl.classList.contains("show"))) showMsgBadgeCoach(document.querySelector(".hunt-viewport") || document.body);
+      if (!msgBadgeCoachSeen && !rosterHoldsOccupants() && unreadCount() > 0 && !isOpen() && (!msgThumbEl || !msgThumbEl.classList.contains("show"))) showMsgBadgeCoach(document.querySelector(".hunt-viewport") || document.body);
     }
     function scheduleMsgBadgeCoach() {
       if (msgBadgeCoachSeen) return;
@@ -54092,6 +54092,7 @@ async def localfont(name):
     }
     function updateMsgBadge() {
       var n = unreadCount(), host = document.querySelector(".hunt-viewport") || document.body;
+      var rosterOpen = rosterHoldsOccupants();
       if (!msgBadgeEl) {
         msgBadgeEl = document.createElement("button");
         msgBadgeEl.type = "button";
@@ -54099,13 +54100,13 @@ async def localfont(name):
         msgBadgeEl.addEventListener("click", function () { hideMsgBadgeCoach(); openMessagesAt(null); });
       }
       if (msgBadgeEl.parentNode !== host) host.appendChild(msgBadgeEl);
-      if (n > 0 && !isOpen()) {
+      if (n > 0 && !isOpen() && !rosterOpen) {
         msgBadgeEl.classList.remove("idle");
         msgBadgeEl.textContent = n >= 8 ? "∞" : String(n);
         msgBadgeEl.setAttribute("aria-label", n + " unread — " + tr("app_messages"));
         msgBadgeEl.classList.add("show");
         if (!msgThumbEl || !msgThumbEl.classList.contains("show")) scheduleMsgBadgeCoach();
-      } else if (messagesThread.length > 0 && !isOpen()) {
+      } else if (messagesThread.length > 0 && !isOpen() && !rosterOpen) {
         msgBadgeEl.classList.add("idle", "show");
         msgBadgeEl.innerHTML = '<svg class="msg-badge-idle-icon" viewBox="0 0 12 12" aria-hidden="true"><use href="#dicon-chat"></use></svg>';
         msgBadgeEl.setAttribute("aria-label", tr("app_messages"));
@@ -54119,7 +54120,7 @@ async def localfont(name):
       if (balBadge) {
         var bt = balBadge.querySelector("text");
         if (bt) bt.textContent = n >= 8 ? "∞" : String(n); // the real count until the 8 cap, then ∞
-        balBadge.style.display = (n > 0 && !isOpen()) ? "" : "none";
+        balBadge.style.display = (n > 0 && !isOpen() && !rosterOpen) ? "" : "none";
       }
     }
     window.__updateMsgBadge = updateMsgBadge;
@@ -54208,7 +54209,7 @@ async def localfont(name):
       trimMessageThread();
       var msgAppShowing = isOpen() && currentApp === "messages";
       if (msgAppShowing) openApp("messages", "app_messages", renderMessages); // live-refresh (scrolls to newest) if the thread's already open — no toast needed, they're looking at it
-      else showMessageThumb(id);
+      else if (!rosterHoldsOccupants()) showMessageThumb(id);
       updateMsgBadge();
       if (window.__loftStateChanged) window.__loftStateChanged("messages.changed", { reason: "received", id: id }, "autonomous");
       if (m.next && MESSAGES[m.next]) setTimeout(function () { window.__deliverAutonomousPhoneMessage(m.next); }, m.nextDelay || 4200); // chained followup text (e.g. Hamid's 2nd stanza lands a few seconds after the 1st)
@@ -54219,6 +54220,16 @@ async def localfont(name):
       return !!(window.__firstDanceOn || window.__slowDanceOn || window.__toastsOn || window.__groupPhotoOn ||
         window.__sparklersOn || window.__cakeOn || window.__bouquetOn || window.__chairLiftOn);
     }
+    var FORMAL_MOMENT_MIN_PARTY_SECONDS = 45;
+    function formalMomentMessageReady(id) {
+      if (MOMENT_TEXT_IDS.indexOf(id) === -1) return true;
+      if (!window.__gardenPartyOn) return false;
+      var state = window.__partyLifecycleState && window.__partyLifecycleState();
+      return !!state && state.attended >= FORMAL_MOMENT_MIN_PARTY_SECONDS;
+    }
+    function autonomousMessageDeferred(id) {
+      return majorMessageMomentActive() || rosterHoldsOccupants() || !formalMomentMessageReady(id);
+    }
     function scheduleDeferredAutonomousMessages(delay) {
       if (deferredAutonomousTimer || !deferredAutonomousMessages.length) return;
       deferredAutonomousTimer = setTimeout(function () {
@@ -54228,11 +54239,15 @@ async def localfont(name):
     }
     function drainDeferredAutonomousMessages() {
       if (!deferredAutonomousMessages.length) return 0;
-      if (majorMessageMomentActive()) { scheduleDeferredAutonomousMessages(1000); return 0; }
       if (document.hidden || !document.hasFocus() || window.__cinematic || !playerStarted() || !autonomousMsgOk()) {
         scheduleDeferredAutonomousMessages(1000); return 0;
       }
-      var id = deferredAutonomousMessages.shift();
+      var deliverAt = -1;
+      for (var i = 0; i < deferredAutonomousMessages.length; i++) {
+        if (!autonomousMessageDeferred(deferredAutonomousMessages[i])) { deliverAt = i; break; }
+      }
+      if (deliverAt === -1) { scheduleDeferredAutonomousMessages(1000); return 0; }
+      var id = deferredAutonomousMessages.splice(deliverAt, 1)[0];
       var delivered = messagesThread.indexOf(id) === -1 && window.__deliverPhoneMessage(id) ? 1 : 0;
       if (deferredAutonomousMessages.length) scheduleDeferredAutonomousMessages(4200);
       return delivered;
@@ -54240,13 +54255,18 @@ async def localfont(name):
     window.__deliverAutonomousPhoneMessage = function (id) {
       if (!MESSAGES[id] || messagesThread.indexOf(id) !== -1) return false;
       if (!window.__secondRound) return window.__deliverPhoneMessage(id);
-      if (!majorMessageMomentActive()) return window.__deliverPhoneMessage(id);
+      if (!autonomousMessageDeferred(id)) return window.__deliverPhoneMessage(id);
       if (deferredAutonomousMessages.indexOf(id) === -1) deferredAutonomousMessages.push(id);
       scheduleDeferredAutonomousMessages(1000);
       return true;
     };
     window.__flushDeferredPhoneMessages = drainDeferredAutonomousMessages;
     window.__deferredPhoneMessages = function () { return deferredAutonomousMessages.slice(); };
+    window.__formalMomentMessagesReady = function () { return formalMomentMessageReady("firstdance"); };
+    window.__autonomousMessageGateChanged = function () {
+      updateMsgBadge();
+      if (!rosterHoldsOccupants()) scheduleDeferredAutonomousMessages(500);
+    };
     window.__flushHeldPhoneMessages = function () {
       if (!window.__secondRound || !phaseTwoHeldMessages.length) return 0;
       var held = phaseTwoHeldMessages; phaseTwoHeldMessages = [];
@@ -54309,8 +54329,9 @@ async def localfont(name):
       }
       var mb = who === "marketa" ? false : (who === "behdad" || BD_MB_PEOPLE[who]); // a partner's own birthday is announced by the OTHER partner
       MESSAGES[id] = { fromKey: mb ? "msg_marketa_from" : "msg_behdad_from", bodyKey: BD_TEMPLATES[Math.floor(Math.random() * BD_TEMPLATES.length)], bdName: name, act: "bd:" + who }; // tapping the text summons the birthday person (runMsgAction "bd:")
-      window.__deliverPhoneMessage(id);
-      attachSharePostcard(id); // carry the birthday's save-the-date postcard as a tappable inline image
+      var accepted = window.__deliverAutonomousPhoneMessage(id);
+      if (accepted) attachSharePostcard(id); // carry the birthday's save-the-date postcard as a tappable inline image
+      return accepted;
     };
     // ── special-day INVITE text ── on a wedding/bbq/brunch occasion or a named holiday, the host texts
     // an invite a moment after load (the dateOccasions orchestrator picks sender + body + tap-action).
@@ -54319,8 +54340,9 @@ async def localfont(name):
     window.__deliverOccasionText = function (id, fromKey, bodyKey, act) {
       if (!id || messagesThread.indexOf(id) !== -1) return;
       MESSAGES[id] = { fromKey: fromKey, bodyKey: bodyKey, act: act };
-      window.__deliverPhoneMessage(id);
-      attachSharePostcard(id); // carry the occasion's save-the-date postcard as a tappable inline image
+      var accepted = window.__deliverAutonomousPhoneMessage(id);
+      if (accepted) attachSharePostcard(id); // carry the occasion's save-the-date postcard as a tappable inline image
+      return accepted;
     };
     // message("your text") — use the same path as the Messages composer: the bubble is from the
     // player, appears immediately, and a persona-aware crew reply may arrive asynchronously.
@@ -54409,7 +54431,7 @@ async def localfont(name):
       var pend = onlyUnsent ? cuePending() : CUE_POOL;
       for (var i = 0; i < pend.length; i++) {
         var id = pend[i];
-        if (!partyTextAllowedToday(id)) continue;
+        if (!partyTextAllowedToday(id) || !formalMomentMessageReady(id)) continue;
         if (id === "smores" && !night) continue; // s'mores round the fire is an after-dark thing
         if (id === "sunset" && !nearSunset()) continue; // only around the loft's actual sunset
         if (id === "sunrise" && !(window.__gardenPartyOn && nearSunrise())) continue; // the all-nighter beat: party still on AND near real sunrise
@@ -80593,8 +80615,8 @@ function spawnDustMote(container) {
         if (occKey() !== "bbq" || gated()) return;
         if (window.__fillGardenGuestCap) window.__fillGardenGuestCap();
         // Behdad texts "let's start the BBQ" — once per BBQ-day (dedup on the thread).
-        if (window.__phoneMessageReceived && !window.__phoneMessageReceived("bbq") && window.__deliverPhoneMessage)
-          window.__deliverPhoneMessage("bbq");
+        if (window.__phoneMessageReceived && !window.__phoneMessageReceived("bbq") && window.__deliverAutonomousPhoneMessage)
+          window.__deliverAutonomousPhoneMessage("bbq");
       }, 520);
     }
     // lastKey = the occasion currently SET UP (null = none). It's latched only AFTER a setup
@@ -80689,8 +80711,8 @@ function spawnDustMote(container) {
       // so every fresh page session queues it; the Messages thread itself deduplicates retries.
       if (!invite.direct) { try { if (localStorage.getItem(latch)) return; } catch (e) {} }
       var delivered = false;
-      if (invite.direct) delivered = window.__deliverPhoneMessage("bbq");
-      else { window.__deliverOccasionText(invite.id, invite.from, invite.body, invite.act); delivered = true; }
+      if (invite.direct) delivered = window.__deliverAutonomousPhoneMessage("bbq");
+      else delivered = !!window.__deliverOccasionText(invite.id, invite.from, invite.body, invite.act);
       if (delivered) { try { localStorage.setItem(latch, "1"); } catch (e) {} }
     }
     window.__deliverDateInvite = deliverDateInvite; // test/console hook
@@ -81462,6 +81484,7 @@ function spawnDustMote(container) {
         panel.hidden = true;
         if (toggleBtn) toggleBtn.classList.remove("roster-open");
       }
+      if (window.__autonomousMessageGateChanged) window.__autonomousMessageGateChanged();
     }
     function toggle() { setOpen(!open); }
 

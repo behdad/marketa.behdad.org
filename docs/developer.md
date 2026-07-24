@@ -569,11 +569,18 @@ cards update only the renderer's displayed month; grid days and search results o
 and special-day scene dispatch.
 
 Weather is fetched client-side for Edmonton and Prague, with current conditions and multi-day data.
+When `?date=` or `?time=` selects another Edmonton moment, the current Edmonton reading is replaced
+by Open-Meteo archive data. Past dates use their exact archive day; current or future dates use the
+median temperature and modal weather family from the five most recent matching calendar dates.
+The UI marks these reconstructed Edmonton readings with `≈`, and the approximation metadata is
+included in Charlie's context. Hour changes reuse cached hourly archive rows.
+
 The implementation also retrieves aviation observations, Edmonton air quality, and geomagnetic
-forecast data for scene effects. Search for `api.open-meteo.com`, `__realWx`, `__realOutdoorC`,
-`__realPragueC`, and `__realDaily`. Missing or failed network data falls back to the simulated scene
-model; UI and Charlie context must tolerate `null`. Console temperature overrides intentionally
-separate the simulated outdoor model from live readings until reset.
+forecast data for scene effects. Search for `api.open-meteo.com`, `archive-api.open-meteo.com`,
+`__realWx`, `__weatherApprox`, `__realOutdoorC`, `__realPragueC`, and `__realDaily`. Missing or
+failed network data falls back to the simulated scene model; UI and Charlie context must tolerate
+`null`. Console temperature overrides intentionally separate the simulated outdoor model from live
+or reconstructed readings until reset.
 
 ## Messages
 

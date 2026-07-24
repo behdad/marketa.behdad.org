@@ -17,7 +17,10 @@ var HARNESS = [
   ' people=[];var firstCool=window.__loftTempTick();for(var j=1;j<12;j++)window.__loftTempTick();var cool=window.__indoorTempState();',
   ' people=Array.from({length:9},function(_,i){return {key:"p"+i,name:"P"+i};});for(var k=0;k<8;k++)window.__loftTempTick();var beforeReset=window.__indoorTempState();window.__resetIndoorTempModel();var reset=window.__indoorTempState();',
   ' var context=window.__chatContext("what is the temperature inside?").environment.indoor_temperature;',
-  ' S("temperature",{base:base,first:first,warm:warm,firstCool:firstCool,cool:cool,beforeReset:beforeReset,reset:reset,context:context,lcd:document.getElementById("garden-thermo-text").textContent});',
+  ' var lcd=document.getElementById("garden-thermo-text").textContent;',
+  ' function columnAt(v){window.__setOutdoorTemp(v);var c=document.getElementById("balcony-thermo-column");return {value:v,y:+c.getAttribute("y"),height:+c.getAttribute("height")};}',
+  ' var tube={cold:columnAt(-40),belowOldFloor:columnAt(-20),mild:columnAt(0),hot:columnAt(40)};',
+  ' S("temperature",{base:base,first:first,warm:warm,firstCool:firstCool,cool:cool,beforeReset:beforeReset,reset:reset,context:context,lcd:lcd,tube:tube});',
   ' Math.random=oldRandom;window.__whoIsHere=oldWho;',
   '}',
   '})();</script>'
@@ -41,6 +44,9 @@ check(t.firstCool && t.firstCool.occupancy_gain_c === 2.8 && t.firstCool.tempera
 check(t.beforeReset && t.beforeReset.occupancy_gain_c > 0 && t.reset && t.reset.occupancy_gain_c === 0 && t.reset.temperature_c === 22, "a full model reset clears retained body heat", { before: t.beforeReset, after: t.reset });
 check(t.context && t.context.temperature_c === t.reset.temperature_c && t.context.room === "garden" && t.context.occupancy_count === 9 && !Object.prototype.hasOwnProperty.call(t.context, "people"), "chat context carries only the bounded live reading and aggregate occupancy", t.context);
 check(t.lcd === t.reset.temperature_c + "°C", "the chatbot reading is exactly the visible mini-split LCD", { lcd: t.lcd, context: t.context });
+check(t.tube && t.tube.cold.y === 148 && t.tube.belowOldFloor.y < t.tube.cold.y &&
+  t.tube.belowOldFloor.y > t.tube.mild.y && t.tube.hot.y === 114,
+  "the outdoor thermometer column uses the full -40…40°C range", t.tube);
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

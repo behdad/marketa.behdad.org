@@ -21903,7 +21903,8 @@ section{margin:1.9rem 0}
 <line x1="44" y1="114" x2="44" y2="150" stroke="#ddd6c4" stroke-width="2.6" stroke-linecap="round"/>
 <rect id="balcony-thermo-column" x="42.9" y="125.9" width="2.2" height="22.6" fill="#c0392b"/>
 <circle cx="44" cy="152.5" r="3.4" fill="#c0392b"/>
-<path d="M46.5 148 h2 M46.5 139.5 h4 M46.5 131 h2 M46.5 122.5 h2 M46.5 114 h2" stroke="#8a7f6a" stroke-width="0.7"/>
+<!-- -40, -20, 0, +20, +40: zero keeps the longer reference mark -->
+<path d="M46.5 148 h2 M46.5 139.5 h2 M46.5 131 h4 M46.5 122.5 h2 M46.5 114 h2" stroke="#8a7f6a" stroke-width="0.7"/>
 <text id="balcony-thermo-text" x="44" y="166" text-anchor="middle" font-family="'DejaVu Sans Mono', ui-monospace, monospace" font-size="4.8" font-weight="700" fill="#8fd070" pointer-events="none">16&#176;</text>
 </g>
 <g id="balcony-hallway-rack">
@@ -27222,6 +27223,7 @@ window.addEventListener("hashchange", function () {
   if (window.__paintBalconyPhoneClock) window.__paintBalconyPhoneClock();
   if (window.__paintPhoneStatusClock) window.__paintPhoneStatusClock();
   if (window.__applyMoonPhases) window.__applyMoonPhases();
+  if (window.__refreshPretendWeather) window.__refreshPretendWeather();
   if (window.__updateSkyFireworks) window.__updateSkyFireworks(window.currentStageName);
   if (window.__applyDateOccasion) window.__applyDateOccasion(); // wedding-day full party / May-2 BBQ scene (latched: no-op unless the occasion changed)
   // a #time= / #date= flip re-arms the crossing against the chosen clock and re-stamps only if a
@@ -40992,7 +40994,8 @@ setOfficeProgress("pc", false);
       var z = function (n) { return (n < 10 ? "0" : "") + n; };
       var ov = window.__ovClock && window.__ovClock(); // advancing ?time= override → the selected wall-clock, else the real clock
       deskClock.textContent = ov || (z(d.getHours()) + ":" + z(d.getMinutes()));
-      deskWeather.textContent = "Edmonton " + deskWeatherGlyph() + (window.__realOutdoorC != null ? " " + Math.round(window.__realOutdoorC) + "°" : "");
+      var approx = window.__weatherApprox && !window.__weatherApprox.loading ? "≈" : "";
+      deskWeather.textContent = "Edmonton " + deskWeatherGlyph() + (window.__realOutdoorC != null ? " " + approx + Math.round(window.__realOutdoorC) + "°" : "");
       // days to the Edmonton wedding (2027-05-01), then to each May 1 anniversary after
       // it — same fixed-date-first shape as the laptop's July 10 / Prague countdown.
       // The countdown reads the calendar DATE (window.__now, #date-overridable), not the
@@ -41017,7 +41020,8 @@ setOfficeProgress("pc", false);
     // gates. Still text-only, so it's just as hidden-tab safe as the clock repaint.
     setInterval(function () {
       var g = deskWeatherGlyph();
-      var wtxt = "Edmonton " + g + (window.__realOutdoorC != null ? " " + Math.round(window.__realOutdoorC) + "°" : "");
+      var approx = window.__weatherApprox && !window.__weatherApprox.loading ? "≈" : "";
+      var wtxt = "Edmonton " + g + (window.__realOutdoorC != null ? " " + approx + Math.round(window.__realOutdoorC) + "°" : "");
       if (deskWeather.textContent !== wtxt) deskWeather.textContent = wtxt;
     }, 1000);
     // app grid: one foreignObject filling the screen below the menu bar; .dock-grid
@@ -41319,7 +41323,7 @@ setOfficeProgress("pc", false);
       var e = window.__realOutdoorC, p = window.__realPragueC;
       if (typeof e !== "number" && typeof p !== "number") return cs ? "počasí se ještě načítá…" : "weather still loading…";
       function t(v) { return typeof v === "number" ? Math.round(v) + "°C" : "—"; }
-      return "Edmonton " + t(e) + " · " + (cs ? "Praha " : "Prague ") + t(p);
+      return "Edmonton " + (window.__weatherApprox && !window.__weatherApprox.loading ? "≈" : "") + t(e) + " · " + (cs ? "Praha " : "Prague ") + t(p);
     },
     get menu() {
       return window.__cocktailNames ? window.__cocktailNames().join(", ") : "";
@@ -42081,7 +42085,7 @@ setOfficeProgress("pc", false);
     play: "play() — resume the music if it's paused",
     pause: "pause() — pause the music if something's playing",
     temp: "temp() — the indoor + outdoor thermometer reading. temp(-25) SETS the outside temperature in °C (-40…40) and the loft's whole outdoor model follows it; temp(false) hands it back to Edmonton's real weather. Clicking the outdoor thermometer on the balcony wall opens the same control, in 5° steps. Take it to -20 or colder on a clear winter day and sun dogs (parhelia) come out beside the sun in the OFFICE window — the one window in the loft that doesn't look north",
-    weather: "weather() — the real current weather in both wedding cities (Edmonton · Prague)",
+    weather: "weather() — weather in both wedding cities (Edmonton · Prague); Edmonton uses a marked historical approximation on pretend dates/times",
     sharecard: "sharecard() — compose a shareable save-the-date card from the loft's own art (the crossed caps, the names, both wedding dates) badged with the CURRENT occasion — the season, or a friend's birthday with their little portrait — and open a preview with Download + Share buttons (a PNG). reflects any time-travel / season / birthday you've set",
     clock: "clock() — the real current time + date, readable (🕐 HH:MM · weekday)",
     time: "time() — the loft's current time as {hours, minutes}; time(\"HH:MM\") or time(hours,minutes) SETS it (the ?time= override, driving day/night)",
@@ -45438,13 +45442,15 @@ setOfficeProgress("pc", false);
     var text = String(value == null ? "" : value).toLowerCase();
     return text.normalize ? text.normalize("NFD").replace(/[̀-ͯ]/g, "") : text;
   }
-  function chatWeatherCity(name, weather, temperature, daily) {
+  function chatWeatherCity(name, weather, temperature, daily, approximation) {
     var forecast = [];
     for (var i = 1; i <= 3; i++) {
       if (!daily || !daily.time || !daily.time[i] || typeof daily.code[i] !== "number") continue;
       forecast.push({ date: daily.time[i], code: daily.code[i], glyph: window.__wmoGlyph ? window.__wmoGlyph(daily.code[i]) : null, high_c: daily.max[i], low_c: daily.min[i] });
     }
-    return { city: name, temperature_c: typeof temperature === "number" ? temperature : null, code: weather && typeof weather.code === "number" ? weather.code : null, glyph: weather && window.__wmoGlyph ? window.__wmoGlyph(weather.code) : null, forecast: forecast };
+    var out = { city: name, temperature_c: typeof temperature === "number" ? temperature : null, code: weather && typeof weather.code === "number" ? weather.code : null, glyph: weather && window.__wmoGlyph ? window.__wmoGlyph(weather.code) : null, forecast: forecast };
+    if (approximation && approximation.active) out.approximation = approximation;
+    return out;
   }
   function chatAlbumKnowledge() {
     var shots = window.__albumList ? window.__albumList() : [];
@@ -45561,7 +45567,7 @@ setOfficeProgress("pc", false);
       session: window.__loftPlaytime ? window.__loftPlaytime() : null,
       environment: environment,
       weather: {
-        edmonton: chatWeatherCity("Edmonton", window.__realWx, window.__realOutdoorC, window.__realDaily && window.__realDaily[0]),
+        edmonton: chatWeatherCity("Edmonton", window.__realWx, window.__realOutdoorC, window.__realDaily && window.__realDaily[0], window.__weatherApprox),
         prague: chatWeatherCity("Prague", window.__realWxPrague, window.__realPragueC, window.__realDaily && window.__realDaily[1])
       },
       people: people,
@@ -45882,7 +45888,8 @@ setOfficeProgress("pc", false);
     set("monitor-wx-city-p", calT("cal_prague"));
     [["e", window.__realWx, window.__realOutdoorC, 0], ["p", window.__realWxPrague, window.__realPragueC, 1]].forEach(function (c) {
       var suf = c[0], w = c[1], temp = c[2];
-      set("monitor-wx-t-" + suf, typeof temp === "number" ? Math.round(temp) + "°" : "—");
+      var approx = suf === "e" && window.__weatherApprox && !window.__weatherApprox.loading ? "≈" : "";
+      set("monitor-wx-t-" + suf, typeof temp === "number" ? approx + Math.round(temp) + "°" : "—");
       set("monitor-wx-g-" + suf, (w && window.__wmoGlyph) ? window.__wmoGlyph(w.code) : "");
       var d = window.__realDaily && window.__realDaily[c[3]];
       // daily index 0 is the city's own local today (timezone=auto), whose conditions the
@@ -45893,7 +45900,7 @@ setOfficeProgress("pc", false);
         if (ok) { try { day = new Date(d.time[k] + "T12:00:00").toLocaleString(loc, { weekday: "short" }).replace(/\.$/, "").slice(0, 2); } catch (e) {} }
         set("monitor-wx-" + suf + k + "d", day);
         set("monitor-wx-" + suf + k + "g", (ok && window.__wmoGlyph) ? window.__wmoGlyph(d.code[k]) : "");
-        set("monitor-wx-" + suf + k + "t", ok ? Math.round(d.max[k]) + "°/" + Math.round(d.min[k]) + "°" : "—");
+        set("monitor-wx-" + suf + k + "t", ok ? approx + Math.round(d.max[k]) + "°/" + Math.round(d.min[k]) + "°" : "—");
       }
     });
   };
@@ -50937,7 +50944,8 @@ async def localfont(name):
         var card = document.createElement("div");
         card.className = "wx-city " + c[0];
         var glyph = (c[2] && window.__wmoGlyph) ? window.__wmoGlyph(c[2].code) : "—";
-        var temp = (typeof c[3] === "number") ? Math.round(c[3]) + "°" : "—";
+        var approx = c[0] === "his" && window.__weatherApprox && !window.__weatherApprox.loading ? "≈" : "";
+        var temp = (typeof c[3] === "number") ? approx + Math.round(c[3]) + "°" : "—";
         var daily = window.__realDaily && window.__realDaily[c[4]];
         var forecast = "";
         for (var k = 1; k <= 3; k++) {
@@ -50945,7 +50953,7 @@ async def localfont(name):
           var day = "";
           if (ok) { try { day = new Date(daily.time[k] + "T12:00:00").toLocaleString(loc, { weekday: "short" }).replace(/\.$/, ""); } catch (e) {} }
           var dayGlyph = (ok && window.__wmoGlyph) ? window.__wmoGlyph(daily.code[k]) : "";
-          var range = ok ? Math.round(daily.max[k]) + "°/" + Math.round(daily.min[k]) + "°" : "—";
+          var range = ok ? approx + Math.round(daily.max[k]) + "°/" + Math.round(daily.min[k]) + "°" : "—";
           forecast += '<div class="wxc-day"><span class="wxc-weekday">' + day + '</span><span class="wxc-day-glyph">' + dayGlyph + '</span><span class="wxc-range">' + range + '</span></div>';
         }
         card.innerHTML =
@@ -51042,6 +51050,7 @@ async def localfont(name):
         if (window.__paintBalconyPhoneClock) window.__paintBalconyPhoneClock();
         if (window.refreshDeskClock) window.refreshDeskClock();
         if (window.__refreshTimePill) window.__refreshTimePill();
+        if (window.__refreshPretendWeather) window.__refreshPretendWeather();
       }
       function sunMins() { var s = window.__edmSun; return { sr: (s && typeof s.sr === "number") ? s.sr : 7 * 60, ss: (s && typeof s.ss === "number") ? s.ss : 20 * 60 }; } // mirrors sunTimes() incl. the offline defaults
       var slider = wrap.querySelector(".pmk-slider"), tval = wrap.querySelector(".pmk-tval");
@@ -55799,6 +55808,7 @@ async def localfont(name):
       if (window.__paintPhoneStatusClock) window.__paintPhoneStatusClock();
       if (window.__paintBalconyPhoneClock) window.__paintBalconyPhoneClock();
       if (window.refreshDeskClock) window.refreshDeskClock();
+      if (window.__refreshPretendWeather) window.__refreshPretendWeather();
     };
     window.__calStepTime = function (dir) { // Shift+↑/↓ hook: nudge the loft clock ±30 min, snapped to the half-hour grid, then re-run the sky (via __setLoftTime)
       var cur = window.__loftMinsNow ? window.__loftMinsNow() : 0;
@@ -56052,6 +56062,7 @@ async def localfont(name):
       if (window.__paintPhoneStatusClock) window.__paintPhoneStatusClock();
       if (window.refreshDeskClock) window.refreshDeskClock();
       if (window.__refreshTimePill) window.__refreshTimePill();
+      if (window.__applyPretendWeather) window.__applyPretendWeather();
       catchUpDayNight(); // day/night + twilight follow the advancing time (re-arms the crossing; the crossing timer does the actual flip)
       if (window.__applyRealWx) window.__applyRealWx(); // and the real-weather ambiance re-evaluates against the new day/night
       if (window.__applyDateOccasion) window.__applyDateOccasion(); // a TIME-gated happening (the May-2 BBQ's 16:00–22:00 window) lights/clears as the advancing clock crosses its edge (latched → cheap no-op otherwise)
@@ -56705,7 +56716,7 @@ async def localfont(name):
   }
 })();
 (function realWeather() {
-  // REAL Edmonton + Prague weather from two fetches on one 30-min cadence — Open-Meteo
+  // Edmonton + Prague weather from two fetches on one 30-min cadence — Open-Meteo
   // (free, keyless, CORS-open; one call, comma-listed coords, answers an array in
   // request order) for the model current + daily forecast, and the cities' airport
   // METARs (real observations, decoded below) which outrank the model current while
@@ -56724,11 +56735,11 @@ async def localfont(name):
   // the whole dusk-owned timer chain (there's no "start/end this storm now"), so real
   // rain drives the garden window's view + the glyph only.
   window.__realWx = null; // {code: WMO weather code} once a fetch lands (Edmonton)
-  window.__realOutdoorC = null; // real Edmonton temperature, or null -> simulated model
+  window.__realOutdoorC = null; // live or pretend-date Edmonton temperature, or null -> simulated model
   window.__realWxPrague = null; // {code} for Prague, same lifecycle as __realWx
   window.__realPragueC = null; // real Prague temperature, or null
-  window.__realDaily = null; // [{time,code,max,min} per city, request order]; daily[0] = each city's local today
-  window.__edmSun = null; // {sr,ss}: Edmonton's today sunrise/sunset in local minutes-of-day, once the daily feed lands (drives the auto day/night default)
+  window.__realDaily = null; // [{time,code,max,min} per city, request order]; Edmonton may reflect a pretend date
+  window.__edmSun = null; // {sr,ss}: Edmonton sunrise/sunset in local minutes-of-day for the effective date
   window.__realWxMode = null; // Edmonton's mapped current look: "clear"|"overcast"|"rain"|"storm"|"snow", null until a fetch lands
   window.__realStormWet = true; // rolled once each time the real sky turns thunderstorm: mostly WET (rain+lightning), sometimes DRY (lightning only). Meaningless unless mode==="storm".
   // The scene weather is three INDEPENDENT, composable layers, each separately forceable from the
@@ -56761,14 +56772,15 @@ async def localfont(name):
     if (c === 2 || c === 3 || c === 45 || c === 48) return "overcast"; // clouds/fog
     return "clear";                                                  // 0/1 clear/mainly clear
   }
-  // Real weather only ever supplies the DEFAULT look — any user override wins outright and real
-  // weather steps aside for as long as it's held: a season/birthday preview, a ?date= jump, a
-  // drug trip, or the attract-mode kiosk. Read live (per consumer tick), so nothing re-applies.
+  // Weather only ever supplies the DEFAULT look — any scene override wins outright. A URL
+  // date/time preview initially steps aside too, then its historical approximation becomes the
+  // effective Edmonton sky once the archive fetch lands. Read live (per consumer tick), so
+  // nothing re-applies over a trip, season/birthday preview, or the attract-mode kiosk.
   function realWxOverridden() {
     if (window.__tripActive) return true;
     if (window.__autoplayOn && window.__autoplayOn()) return true;
     if (window.__previewActive && window.__previewActive()) return true; // an 's' season or 'b' birthday preview
-    try { if (/(?:^|[#&?])date=\d{4}-\d{2}-\d{2}/.test((location.search || "") + (location.hash || ""))) return true; } catch (e) {}
+    if (pretendWeatherSelection()) return !pretendCur; // neutral while loading/failed; archive weather after it lands
     return false;
   }
   window.__realWxActive = function () { return realWxOverridden() ? null : window.__realWxMode; };
@@ -56813,10 +56825,219 @@ async def localfont(name):
   // everything at the consumer end (see the precedence note above).
   var modelCur = [null, null]; // per-city {code,temp} from Open-Meteo, request order
   var metarCur = [null, null]; // per-city {code,temp,at} decoded from METAR, same order
+  var liveDaily = [null, null], liveEdmSun = null;
+
+  // A selected URL date/time is not "today", so do not keep showing today's airport report.
+  // Past dates use their exact Open-Meteo archive day. Current/future dates use a five-year
+  // same-calendar-date ensemble: median temperatures and the modal broad WMO weather family.
+  // Fetch four days per sample so the existing three-day Edmonton forecast strip remains useful.
+  // Results are cached by archive target for the session; moving the pretend clock to another hour
+  // only reselects the already-loaded hourly arrays.
+  var pretendActive = false, pretendPending = false, pretendKey = null, pretendSamples = null;
+  var pretendCur = null, pretendDaily = null, pretendSun = null, pretendCache = {};
+  window.__weatherApprox = null;
+  function weatherZ(n) { return n < 10 ? "0" + n : String(n); }
+  function weatherIso(date) {
+    return date.getFullYear() + "-" + weatherZ(date.getMonth() + 1) + "-" + weatherZ(date.getDate());
+  }
+  function weatherDate(y, m, d) {
+    var out = new Date(y, m, d, 12, 0, 0, 0);
+    return out.getFullYear() === y && out.getMonth() === m && out.getDate() === d ? out : null;
+  }
+  function weatherAddDays(date, n) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate() + n, 12, 0, 0, 0);
+  }
+  function weatherMedian(values) {
+    values = values.filter(function (v) { return typeof v === "number" && isFinite(v); }).sort(function (a, b) { return a - b; });
+    if (!values.length) return null;
+    var mid = Math.floor(values.length / 2);
+    return values.length % 2 ? values[mid] : (values[mid - 1] + values[mid]) / 2;
+  }
+  function weatherCode(values) {
+    values = values.filter(function (v) { return typeof v === "number" && isFinite(v); });
+    if (!values.length) return null;
+    var families = {}, order = ["clear", "overcast", "rain", "snow", "storm"];
+    values.forEach(function (code) {
+      var family = realWxModeForCode(code) || "clear";
+      (families[family] || (families[family] = [])).push(code);
+    });
+    var best = order[0];
+    order.forEach(function (family) {
+      if ((families[family] || []).length > (families[best] || []).length) best = family;
+    });
+    var choices = (families[best] || values).sort(function (a, b) { return a - b; });
+    return choices[Math.floor(choices.length / 2)]; // keep a real WMO code, never an averaged fractional code
+  }
+  function weatherMins(iso) {
+    var m = /T(\d{2}):(\d{2})/.exec(iso || "");
+    return m ? (+m[1] * 60 + +m[2]) : null;
+  }
+  function pretendWeatherSelection() {
+    try {
+      var raw = (location.search || "") + (location.hash || "");
+      try { raw = decodeURIComponent(raw); } catch (_error) {}
+      var hasDate = /(?:^|[#&?])date=\d{4}-\d{2}-\d{2}/.test(raw);
+      var hasTime = /(?:^|[#&?])time=\d{1,2}(?::\d{1,2})?/.test(raw);
+      if (!hasDate && !hasTime) return null;
+      var date = window.__now ? window.__now() : new Date();
+      var mins = hasTime && window.__timeOverrideMins ? window.__timeOverrideMins() : null;
+      if (mins == null) {
+        var edm = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Edmonton" }));
+        mins = edm.getHours() * 60 + edm.getMinutes();
+      }
+      return { date: date, iso: weatherIso(date), hour: Math.floor(mins / 60) % 24, hasDate: hasDate, hasTime: hasTime };
+    } catch (_error2) { return null; }
+  }
+  function pretendArchiveSpec(selection) {
+    var edmNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Edmonton" }));
+    var cutoff = weatherAddDays(edmNow, -7); // ERA5-Land can lag about five days; leave two days' slack
+    if (selection.hasDate && selection.date < cutoff && selection.date.getFullYear() >= 1940) {
+      return { key: "exact:" + selection.iso, dates: [selection.date], source: "historical-exact" };
+    }
+    var dates = [], y = edmNow.getFullYear() - 1;
+    for (var tries = 0; tries < 15 && dates.length < 5; tries++, y--) {
+      var sample = weatherDate(y, selection.date.getMonth(), selection.date.getDate());
+      if (sample && sample.getFullYear() >= 1940) dates.push(sample);
+    }
+    return {
+      key: "ensemble:" + weatherZ(selection.date.getMonth() + 1) + "-" + weatherZ(selection.date.getDate()) + ":" +
+        dates.map(function (d) { return d.getFullYear(); }).join(","),
+      dates: dates,
+      source: "historical-ensemble"
+    };
+  }
+  function fetchPretendSample(date) {
+    var start = weatherIso(date), end = weatherIso(weatherAddDays(date, 3));
+    var url = "https://archive-api.open-meteo.com/v1/archive?latitude=53.5461&longitude=-113.4937" +
+      "&start_date=" + start + "&end_date=" + end +
+      "&hourly=temperature_2m,weather_code" +
+      "&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset" +
+      "&timezone=America%2FEdmonton";
+    return window.fetch(url).then(function (r) { return r && r.ok ? r.json() : null; })
+      .then(function (data) { return data ? { date: start, data: data } : null; })
+      .catch(function () { return null; });
+  }
+  function derivePretendWeather(samples, selection, source) {
+    var hourSuffix = "T" + weatherZ(selection.hour) + ":00";
+    var temps = [], codes = [], sunrise = [], sunset = [];
+    samples.forEach(function (sample) {
+      var h = sample.data && sample.data.hourly, idx = h && h.time ?
+        h.time.indexOf(sample.date + hourSuffix) : -1;
+      if (idx >= 0) {
+        temps.push(h.temperature_2m && h.temperature_2m[idx]);
+        codes.push(h.weather_code && h.weather_code[idx]);
+      }
+      var d = sample.data && sample.data.daily;
+      sunrise.push(d && d.sunrise && weatherMins(d.sunrise[0]));
+      sunset.push(d && d.sunset && weatherMins(d.sunset[0]));
+    });
+    var daily = { time: [], code: [], max: [], min: [] };
+    for (var offset = 0; offset < 4; offset++) {
+      var dayCodes = [], highs = [], lows = [];
+      samples.forEach(function (sample) {
+        var d = sample.data && sample.data.daily;
+        dayCodes.push(d && d.weather_code && d.weather_code[offset]);
+        highs.push(d && d.temperature_2m_max && d.temperature_2m_max[offset]);
+        lows.push(d && d.temperature_2m_min && d.temperature_2m_min[offset]);
+      });
+      daily.time.push(weatherIso(weatherAddDays(selection.date, offset)));
+      daily.code.push(weatherCode(dayCodes));
+      daily.max.push(weatherMedian(highs));
+      daily.min.push(weatherMedian(lows));
+    }
+    var temp = weatherMedian(temps), code = weatherCode(codes);
+    if (temp == null || code == null) return null;
+    return {
+      current: { temp: temp, code: code },
+      daily: daily,
+      sun: { sr: weatherMedian(sunrise), ss: weatherMedian(sunset) },
+      meta: {
+        active: true,
+        loading: false,
+        source: source,
+        target_date: selection.iso,
+        target_hour: weatherZ(selection.hour) + ":00",
+        sample_years: samples.map(function (sample) { return +sample.date.slice(0, 4); })
+      }
+    };
+  }
+  window.__deriveHistoricalWeather = derivePretendWeather; // pure aggregation hook for regression tests
+  function applyPretendSamples(selection, spec) {
+    var result = derivePretendWeather(pretendSamples || [], selection, spec.source);
+    if (!result) return false;
+    pretendCur = result.current;
+    pretendDaily = result.daily;
+    pretendSun = result.sun && result.sun.sr != null && result.sun.ss != null ? result.sun : null;
+    pretendPending = false;
+    window.__weatherApprox = result.meta;
+    applyCurrent();
+    if (window.__applyRealWx) window.__applyRealWx();
+    if (window.__loftTempSet) window.__loftTempSet();
+    if (window.refreshDeskClock) window.refreshDeskClock();
+    return true;
+  }
+  function clearPretendWeather() {
+    pretendActive = pretendPending = false;
+    pretendKey = null; pretendSamples = pretendCur = pretendDaily = pretendSun = null;
+    window.__weatherApprox = null;
+    window.__realWx = null; window.__realOutdoorC = null; window.__realWxMode = null;
+    applyCurrent();
+    if (window.__applyRealWx) window.__applyRealWx();
+    if (window.__loftTempSet) window.__loftTempSet();
+    if (window.refreshDeskClock) window.refreshDeskClock();
+  }
+  function refreshPretendWeather() {
+    var selection = pretendWeatherSelection();
+    if (!selection) { if (pretendActive) clearPretendWeather(); return Promise.resolve(null); }
+    var spec = pretendArchiveSpec(selection);
+    pretendActive = true;
+    if (pretendKey === spec.key && pretendSamples) {
+      applyPretendSamples(selection, spec);
+      return Promise.resolve(window.__weatherApprox);
+    }
+    pretendKey = spec.key; pretendSamples = pretendCur = pretendDaily = pretendSun = null;
+    pretendPending = true;
+    window.__weatherApprox = {
+      active: true, loading: true, source: spec.source, target_date: selection.iso,
+      target_hour: weatherZ(selection.hour) + ":00", sample_years: spec.dates.map(function (d) { return d.getFullYear(); })
+    };
+    applyCurrent(); // clear today's Edmonton reading while its historical replacement loads
+    var pending = pretendCache[spec.key];
+    if (!pending) {
+      pending = Promise.all(spec.dates.map(fetchPretendSample)).then(function (rows) {
+        return rows.filter(Boolean);
+      });
+      pretendCache[spec.key] = pending;
+    }
+    return pending.then(function (samples) {
+      var latest = pretendWeatherSelection(), latestSpec = latest && pretendArchiveSpec(latest);
+      if (!latest || !latestSpec || latestSpec.key !== spec.key || pretendKey !== spec.key) return null;
+      pretendSamples = samples;
+      if (applyPretendSamples(latest, latestSpec)) return window.__weatherApprox;
+      pretendPending = false;
+      window.__weatherApprox = {
+        active: true, loading: false, unavailable: true, source: spec.source,
+        target_date: latest.iso, target_hour: weatherZ(latest.hour) + ":00", sample_years: []
+      };
+      applyCurrent();
+      return window.__weatherApprox;
+    });
+  }
+  window.__refreshPretendWeather = refreshPretendWeather;
+  window.__applyPretendWeather = function () {
+    if (!pretendActive || !pretendSamples) return;
+    var selection = pretendWeatherSelection();
+    if (!selection) { clearPretendWeather(); return; }
+    var spec = pretendArchiveSpec(selection);
+    if (spec.key !== pretendKey) { refreshPretendWeather(); return; }
+    var hour = weatherZ(selection.hour) + ":00";
+    if (!window.__weatherApprox || window.__weatherApprox.target_date !== selection.iso ||
+        window.__weatherApprox.target_hour !== hour) applyPretendSamples(selection, spec);
+  };
   var METAR_FRESH_MS = 90 * 60000;
-  var lastPublishedWeather = JSON.stringify({ edm: null, prg: null, ec: null, pc: null, daily: null });
+  var lastPublishedWeather = JSON.stringify({ edm: null, prg: null, ec: null, pc: null, daily: null, approximation: null });
   function reportPublishedWeather() {
-    var snapshot = { edm: window.__realWx, prg: window.__realWxPrague, ec: window.__realOutdoorC, pc: window.__realPragueC, daily: window.__realDaily };
+    var snapshot = { edm: window.__realWx, prg: window.__realWxPrague, ec: window.__realOutdoorC, pc: window.__realPragueC, daily: window.__realDaily, approximation: window.__weatherApprox };
     var signature;
     try { signature = JSON.stringify(snapshot); } catch (_error) { return; }
     if (signature === lastPublishedWeather) return;
@@ -56824,6 +57045,8 @@ async def localfont(name):
     if (window.__loftStateChanged) window.__loftStateChanged("weather.forecast", { cities: ["edmonton", "prague"] }, "autonomous");
   }
   function applyCurrent() {
+    window.__realDaily = [pretendActive ? pretendDaily : liveDaily[0], liveDaily[1]];
+    window.__edmSun = pretendActive ? pretendSun : liveEdmSun;
     for (var i = 0; i < 2; i++) {
       var obs = metarCur[i], mod = modelCur[i];
       var fresh = !!obs && (Date.now() - obs.at) < METAR_FRESH_MS;
@@ -56831,10 +57054,17 @@ async def localfont(name):
       // rain 61 > fog 45 > cloud 3 > clear 0), so showing the WORSE of a fresh
       // station observation and the model nowcast catches a storm EITHER one sees —
       // the model catching a storm the (lagging) airport METAR missed, or vice versa.
-      var code = (fresh && mod) ? Math.max(obs.code, mod.code) : (fresh ? obs.code : (mod ? mod.code : null));
+      var code = (i === 0 && pretendActive) ? (pretendCur ? pretendCur.code : null)
+        : (fresh && mod) ? Math.max(obs.code, mod.code) : (fresh ? obs.code : (mod ? mod.code : null));
       // temperature is a real measurement: prefer the station's when fresh
-      var temp = (fresh && typeof obs.temp === "number") ? obs.temp : (mod ? mod.temp : null);
-      if (typeof code !== "number") continue;
+      var temp = (i === 0 && pretendActive) ? (pretendCur ? pretendCur.temp : null)
+        : (fresh && typeof obs.temp === "number") ? obs.temp : (mod ? mod.temp : null);
+      if (typeof code !== "number") {
+        if (i === 0 && pretendActive) {
+          window.__realWx = null; window.__realOutdoorC = null; window.__realWxMode = null;
+        }
+        continue;
+      }
       if (i === 0) {
         window.__realWx = { code: code };
         var wasStorm = window.__realWxMode === "storm";
@@ -56898,7 +57128,8 @@ async def localfont(name):
             return { time: d.time, code: d.weather_code, max: d.temperature_2m_max, min: d.temperature_2m_min };
           }
           var de = j && dailyOf(j[0]), dp = j && dailyOf(j[1]);
-          if (de || dp) window.__realDaily = [de, dp];
+          if (de) liveDaily[0] = de;
+          if (dp) liveDaily[1] = dp;
           // Edmonton's today sunrise/sunset (timezone=auto → local ISO like "…T05:47"), kept as
           // minutes-of-day for the auto day/night default; re-apply it the moment it lands.
           function sunOf(o) {
@@ -56909,7 +57140,7 @@ async def localfont(name):
             return (sr != null && ss != null) ? { sr: sr, ss: ss } : null;
           }
           var es = j && sunOf(j[0]);
-          if (es) { window.__edmSun = es; if (window.__catchUpDayNight) window.__catchUpDayNight(); } // real sunrise/sunset landed → re-arm the crossing against them (non-destructive: preserves a manual set)
+          if (es) { liveEdmSun = es; if (!pretendActive && window.__catchUpDayNight) window.__catchUpDayNight(); } // live sunrise/sunset landed → re-arm unless a pretend date owns Edmonton
           applyCurrent();
         })
         .catch(function () {});
@@ -56951,6 +57182,7 @@ async def localfont(name):
   }
   setTimeout(fetchSmoke, 4000); // once per load, off the load path — haze moves slower than weather
   setTimeout(fetchWx, 4000); // a few seconds after init, off the load path
+  setTimeout(refreshPretendWeather, 4200); // URL date/time preview: archive fetch beside, not ahead of, live weather
   setInterval(fetchWx, 15 * 60000); // fetch + set state only — nothing spawns, hidden-tab safe
   // The garden/balcony aurora follows the REAL space weather: NOAA SWPC's public planetary Kp
   // forecast (0–9, no key). rollAurora folds it in (auroraBase, exaggerated); the fetch only sets
@@ -57163,8 +57395,10 @@ async def localfont(name):
       outText.setAttribute("fill", ramp(v, -5, 10, 25));
     }
     if (outCol) {
-      // red column: -10..30 C maps to tube y148..114 (0.85px per degree)
-      var top = 148 - (Math.max(-10, Math.min(30, v)) + 10) * 0.85;
+      // The control accepts -40..40 C, so the entire supported range maps across the
+      // tube instead of making every Edmonton-cold reading below -10 look identical.
+      var top = 148 - (Math.max(HARD_MIN, Math.min(HARD_MAX, v)) - HARD_MIN) *
+        (34 / (HARD_MAX - HARD_MIN));
       outCol.setAttribute("y", top);
       outCol.setAttribute("height", 148 - top + 0.5);
     }
@@ -76164,7 +76398,8 @@ function spawnDustMote(container) {
       if (s.m + "/" + s.d !== smokeRollKey) rollSmoke();
       seasonal = ramp * smokeRoll;
     }
-    return Math.max(window.__realSmoke || 0, seasonal);
+    var live = window.__weatherApprox && window.__weatherApprox.active ? 0 : (window.__realSmoke || 0);
+    return Math.max(live, seasonal); // a pretend day never inherits today's actual Edmonton smoke
   }
   window.__smokeLevel = function () { return smokeLevelFor(seasonDate()); };
   window.__rollSmoke = function () { rollSmoke(); applySeasonDate(); }; // daybreak: a fresh day, a fresh haze
@@ -76778,6 +77013,7 @@ function spawnDustMote(container) {
   }
   function calRefreshDeps() {
     applySeasonDate(); // decor + birthday hats + wedding-day + smoke + new-year sky all read the date
+    if (window.__refreshPretendWeather) window.__refreshPretendWeather();
     if (window.refreshLaptopClock) window.refreshLaptopClock();
     if (window.refreshDeskClock) window.refreshDeskClock();
     if (window.__paintCalTile) window.__paintCalTile();
@@ -83081,15 +83317,16 @@ function spawnDustMote(container) {
     if (!t || isNaN(t[0]) || isNaN(t[1])) return "the readout isn't ready yet.";
     var set = window.__outdoorTempOverride && window.__outdoorTempOverride();
     return "🌡 inside " + Math.round(t[0]) + "°C · outside " + Math.round(t[1]) + "°C" +
-      (typeof set === "number" ? " (set by hand — temp(false) hands it back to the real weather)" : "");
+      (typeof set === "number" ? " (set by hand — temp(false) hands it back to the real weather)"
+        : (window.__weatherApprox && !window.__weatherApprox.loading ? " (historical approximation for the pretend date/time)" : ""));
   };
 
-  window.weather = function () { // real current weather in both wedding cities (from the one Open-Meteo fetch on load)
+  window.weather = function () { // live city weather, or Edmonton archive approximation while previewing another date/time
     var e = window.__realOutdoorC, p = window.__realPragueC;
     if (typeof e !== "number" && typeof p !== "number") return "weather's still loading… (it fetches once on load — try again in a moment)";
     function g(wx) { return (wx && window.__wmoGlyph) ? window.__wmoGlyph(wx.code) + " " : ""; }
     function t(v) { return typeof v === "number" ? Math.round(v) + "°C" : "—"; }
-    return "🌍 Edmonton " + g(window.__realWx) + t(e) + " · Prague " + g(window.__realWxPrague) + t(p);
+    return "🌍 Edmonton " + g(window.__realWx) + (window.__weatherApprox && !window.__weatherApprox.loading ? "≈" : "") + t(e) + " · Prague " + g(window.__realWxPrague) + t(p);
   };
 
   // friendly projector-channel names → internal channel ids (the wallscreen's own order is

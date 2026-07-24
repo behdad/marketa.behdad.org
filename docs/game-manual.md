@@ -662,7 +662,7 @@ visible or the browser is in the background.
 The Calendar and Clock apps provide friendly controls for simulated game time.
 Power users can also use the `?date=` and `?time=` URL parameters. The lower
 date/time overlay appears only when at least one of those parameters is present.
-Its `◀`/`▶` controls move one day at a time, while `⏪`/`⏩` jump between
+Its `◀`/`▶` controls move one day at a time, while `◀◀`/`▶▶` jump between
 significant dates; selecting the date or the top occasion banner opens Calendar.
 For a pretend Edmonton date or time, the game uses historical weather to
 approximate the selected moment. An `≈` before the Edmonton temperature marks a

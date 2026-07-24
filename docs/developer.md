@@ -355,7 +355,10 @@ for `ROSTER`, `__peopleManager`, `__whoIsHere`, `__roomOccupants`, and `__roster
   grillmaster paint owns `#loft-game-strip.hamid-wearing-jacket`, which fades both views of the
   shared hanging jacket while he is assigned to the BBQ.
 - Children switch among free, family, godson, chase/game, and asleep states. Chase handoffs remove
-  standing duplicates; sleeping/waking can be both an authored state transition and a message.
+  standing duplicates; `off-in-nook` is owned only by the visible Cuddly game tableau and keeps
+  all six seated identities off the garden floor without disturbing the longer-lived
+  `off-at-games` formation state. Sleeping/waking can be both an authored state transition and a
+  message.
 - Aspen has garden stations and a photographer presence that can be cloned into other rooms/deck
   contexts. `__roomHasPhotoSubjects(room)` excludes working crew and gates her visible clone,
   camera/flash, shutter, and Album write together; an empty room must not show her or create a

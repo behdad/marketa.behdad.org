@@ -1875,6 +1875,11 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
 #garden-guests .g-irene.off-at-games, #garden-guests .g-elisabeth.off-at-games,
 #garden-guests .g-felix.off-at-games, #garden-guests .g-hannah.off-at-games,
 #garden-guests .g-patricia-son.off-at-games, #garden-guests .g-patricia-daughter.off-at-games{opacity:0 !important; pointer-events:none !important; transition:opacity .5s ease}
+/* The visible Cuddly game tableau owns its six seated children independently from the party's
+   longer-lived formation state. This class is set only while that tableau is painted. */
+#garden-guests .g-irene.off-in-nook, #garden-guests .g-robin.off-in-nook,
+#garden-guests .g-navid.off-in-nook, #garden-guests .g-elisabeth.off-in-nook,
+#garden-guests .g-felix.off-in-nook, #garden-guests .g-hannah.off-in-nook{opacity:0 !important; pointer-events:none !important; transition:opacity .5s ease}
 /* May-2 BBQ split: these adults have stepped out to the balcony. Keep their garden
    geometry measurable for floor balancing while showing exactly one copy of each person. */
 #garden-guests .guest.off-at-bbq{opacity:0 !important; pointer-events:none !important; transition:opacity .5s ease}
@@ -33774,6 +33779,14 @@ setMusicPausedState(false);
       if (window.__resetNavid) window.__resetNavid();
     }
     kg.classList.toggle("playing", on); // pure class flip → idempotent + storm-safe; nothing to strand
+    // Move the same six identities off the garden floor for exactly as long as this painted
+    // tableau owns them. Keep this separate from .off-at-games: that class belongs to the
+    // longer party-formation / BBQ assignment and must survive a room visit unchanged.
+    NAMES.forEach(function (cls) {
+      var who = KID_WHO[cls], garden = document.getElementById("garden-guests");
+      var floor = who && garden && garden.querySelector(".g-" + who.name.toLowerCase());
+      if (floor) floor.classList.toggle("off-in-nook", on);
+    });
   }
   window.__updateKidGames = apply;
   window.__kidGamesReshuffle = function () { var kg = document.getElementById("cuddly-kidgames"); if (kg) randomize(kg, mealOn()); }; // test/console hook
@@ -66931,7 +66944,7 @@ function spawnDustMote(container) {
       if (!guests.classList.contains("mouses-visiting")) {
         add(guests.querySelector(".g-elisabeth")); add(guests.querySelector(".g-felix"));
       }
-      var away = guests.querySelectorAll(".guest.off-with-kids,.guest.off-at-games,.guest.off-at-bbq");
+      var away = guests.querySelectorAll(".guest.off-with-kids,.guest.off-at-games,.guest.off-in-nook,.guest.off-at-bbq");
       for (var i = 0; i < away.length; i++) add(away[i]);
     }
     if (garden && garden.classList.contains("garden-party")) {
@@ -69069,7 +69082,7 @@ function spawnDustMote(container) {
       var el = arr[i];
       if (el.classList.contains("g-behdad") || el.classList.contains("g-marketa")) continue; // hosts don't count
       if (el.classList.contains("off-with-kids")) continue; // stepped away (chase / cuddly nook)
-      if (el.classList.contains("off-at-games") || el.classList.contains("off-at-bbq")) continue; // May-2 split: physically in another room
+      if (el.classList.contains("off-at-games") || el.classList.contains("off-in-nook") || el.classList.contains("off-at-bbq")) continue; // physically in another room
       n++;
     }
     return n;
@@ -71415,7 +71428,7 @@ function spawnDustMote(container) {
     var g = document.getElementById("garden-guests");
     return GARDEN_KIDS.filter(function (name) {
       var floor = g && g.querySelector(".g-" + name);
-      return !(floor && floor.classList.contains("off-at-games"));
+      return !(floor && (floor.classList.contains("off-at-games") || floor.classList.contains("off-in-nook")));
     });
   }
   window.__gardenChaseEligible = function () { return coreKidRunners().concat(familyKidRunners()); };
@@ -71465,7 +71478,7 @@ function spawnDustMote(container) {
   }
   function visiblePartyFigure(sel) {
     var g = document.getElementById("garden-guests"), el = g && g.querySelector(sel);
-    return el && el.classList.contains("arrived") && !el.classList.contains("leaving") && !el.classList.contains("off-with-kids") && !el.classList.contains("off-at-games") && !el.classList.contains("off-at-bbq") ? el : null;
+    return el && el.classList.contains("arrived") && !el.classList.contains("leaving") && !el.classList.contains("off-with-kids") && !el.classList.contains("off-at-games") && !el.classList.contains("off-in-nook") && !el.classList.contains("off-at-bbq") ? el : null;
   }
   function setPartyKidX(name, x) {
     var el = document.querySelector("#garden-guests .g-" + name);
@@ -80852,7 +80865,7 @@ function spawnDustMote(container) {
       if (!g || !g.classList.contains("guests-in")) return false; // party lit + guests on the floor
       var el = document.querySelector("#garden-guests " + sel) || document.querySelector(sel);
       if (!el) return false;
-      if (el.classList.contains("off-at-games")) return false; // attendance changed now; don't wait out its opacity transition
+      if (el.classList.contains("off-at-games") || el.classList.contains("off-in-nook")) return false; // attendance changed now; don't wait out its opacity transition
       if (el.classList.contains("off-at-bbq")) return false;   // this adult is currently on the May-2 balcony roster
       if (el.classList.contains("off-with-kids")) {
         var runner = runSel && document.querySelector(runSel);

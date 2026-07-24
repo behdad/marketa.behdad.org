@@ -452,6 +452,8 @@ During the party:
 
 - guests arrive and rotate among the five rooms as appropriate;
 - children may dance, play in Cuddly-puddly, or run through the party room;
+- the six children seated in Cuddly-puddly's game tableau leave the dance floor
+  for exactly as long as that tableau is visible;
 - Bahareh may follow the running children;
 - party music becomes quieter when a projector, video, piano, or other foreground
   media experience is active;

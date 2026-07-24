@@ -17,8 +17,12 @@ Restart control still asks before discarding active progress.
 
 ## Quick start
 
-1. Click or tap the game once to begin. In installed-app or game-only mode, this
-   first interaction may also enter fullscreen.
+1. Click or tap the game once to begin. The browser version remains in its
+   enlarged page view; after the **CLICK ME** invitation clears, the title,
+   language selector, browser advice, Trailer, and Autoplay controls disappear
+   so the scene can use nearly the full browser window. Use the fullscreen
+   control or `F` for true fullscreen. An installed app may enter fullscreen on
+   its first interaction.
 2. Follow the instruction line above the scene. It is the authoritative current
    hint.
 3. Solve the highlighted activity in each room. The right room arrow unlocks as
@@ -368,7 +372,9 @@ captured photo metadata, while live camera pixels remain local to the browser.
 During the party, Aspen follows people into the loft's rooms and deck. She does
 not enter, flash, or create an Album keepsake when a room has no subjects.
 The party itself may therefore continue while Aspen is absent from an empty
-garden; she returns as soon as somebody returns to the floor.
+garden; she returns as soon as somebody returns to the floor. Her occasional
+whole-floor photo pose lasts about four seconds; ordinary Album captures do not
+freeze the dancing.
 
 ### Computer-only environments
 
@@ -400,6 +406,9 @@ A reply can quote an earlier message. Tapping the quote finds the original.
 Messages may include scene actions such as starting a party moment, visiting a
 room, or beginning an activity. These actions never run just because a
 notification or message is opened. The player must tap the action control.
+When changing game state makes an action permanently irrelevant, its action
+control expires and the row becomes read history. It no longer occupies an
+unread slot, while still-applicable messages remain actionable.
 
 When the player sends a free-form message, an AI wedding-crew reply can arrive
 asynchronously. There is no blocking "thinking" message, and the composer remains
@@ -453,11 +462,19 @@ day and night. After phase 2, it changes between daytime free play and the party
 During the party:
 
 - guests arrive and rotate among the five rooms as appropriate;
+- once a family arrives, its members remain party attendees even when the adults
+  rotate off the visible dance floor;
 - all eight children share the same party inventory and may dance, play in
   Cuddly-puddly, or run through the party room;
+- every attending child always has one persistent home: dancing,
+  Cuddly-puddly, or asleep. Short runs and balcony activities borrow a child
+  from that home rather than creating another copy;
 - a child is more likely to dance while at least one represented parent is
   dancing. Otherwise they usually take an available Cuddly-puddly seat; the
-  seated assignment persists while another room is on screen;
+  seated assignment persists while another room is on screen. Partial groups
+  are balanced across both game clusters, with the children randomized between
+  sides. While Cuddly-puddly is on screen, placement changes slow to roughly
+  every 30–45 seconds;
 - children assigned to Cuddly-puddly may make a brief run across the party room
   and return to the same seat. Children currently dancing do not join that run;
   occasionally all eight seated children run together;
@@ -467,29 +484,36 @@ During the party:
 - after a “kids are asleep” message, Cuddly-puddly clears. A child has only a
   small chance to stay up dancing; the others remain asleep until the wake-up;
 - Bahareh may follow the running children;
+- named guests occasionally perform their authored visual reactions on their
+  own while the player watches the garden;
+- the ordinary Irene, Robin, and Navid Cuddly-puddly cameos occur only while the
+  party is off. During a party, the shared child inventory owns their presence;
+- Totoro is the exception to ordinary party placement: while its projector
+  channel is playing, all eight children sit in Cuddly-puddly to watch, even if
+  they had been dancing or marked sleepy;
 - party music becomes quieter when a projector, video, piano, or other foreground
   media experience is active;
-- opening **Who's here** freezes guest arrivals, departures, and room changes and
-  pauses autonomous Messages delivery while the roster is open. Message previews
-  and both unread-count badges stay hidden; held texts resume at a paced interval
-  after the roster closes.
+- opening **Who's here** freezes guest arrivals, departures, room changes, and
+  the adults dancing on the party floor; the children keep dancing. Selecting
+  an adult briefly releases that person under the pointer, then returns the
+  adults to their frozen pose. The roster also pauses autonomous Messages
+  delivery; message previews and both unread-count badges stay hidden, and held
+  texts resume at a paced interval after the roster closes.
 
 ### Party ending
 
-The normal party interval is approximately three minutes of **attended** time.
-Time counts only while the game is visible, focused, and not occupied by a major
-cinematic moment. Background-tab time does not advance this timer.
+Elapsed time does not end the party. It continues while the player works in
+another window or leaves the game occluded. The attended clock still paces later
+messages and explicit finales, but it does not impose a deadline.
 
-At about 2 minutes 30 seconds, the wall switch is emphasized and a final-song or
-final-dance message may appear. At about 3 minutes, the party winds down
-automatically. Accepting a final-song or final-dance cue schedules an earlier
-graceful ending after its authored beat. Completing the wedding-cake sequence can
-also end the party gracefully. The wall switch ends it immediately.
+Accepting a final-song or final-dance cue schedules a graceful ending after its
+authored beat. Completing the wedding-cake sequence can also end the party
+gracefully. The wall switch ends it immediately.
 
 Ending the party does not reset progress or end the game. Rooms, phone and
 computer apps, music, minigames, and exploration remain available. A later
 invitation can restart the party. The supported `party.extend` action cancels a
-pending wind-down and starts a fresh attended interval. Party lighting, including
+pending authored wind-down. Party lighting, including
 the blacklight and magic-box glow, switches off with the party.
 
 ### Party moments

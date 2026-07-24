@@ -28,6 +28,14 @@ it coordinates over introducing a second runtime bundle or a new dependency. The
 HTML, CSS, and vanilla JavaScript, with the room illustrations embedded as inline SVG. There is
 nothing to compile: committed page artifacts are served directly from the live Git checkout.
 
+In direct `#play`/`loft-day` mode, `:root:not(.revealed)` turns `main` into a compact title/language
+grid and raises the game shell's desktop cap from 1080px to 1620px. The invitation-state height term
+reserves Trailer/Autoplay below the 2:1 scene. `setGameOnlyEntered()` adds `.loft-entered` after
+CLICK ME, Continue, Trailer, or Autoplay hands over control; that hides the outer page chrome and
+uses a larger height fit without setting `.is-fullscreen`. Direct web play never auto-enters true
+fullscreen; only an installed PWA may use its first interaction for that transition. The fullscreen
+button and `F` remain explicit.
+
 ## Self-hosted runtimes
 
 The loft has several features that run real software entirely from this repository, without a CDN.
@@ -209,10 +217,10 @@ rendering class; drying and reset call the same transition.
 
 `setGardenParty` is the party source of truth. A separate controller, searchable as
 `PARTY LIFECYCLE`, counts attended seconds only while the document is visible, focused, and outside a
-cinematic. It offers a quiet close cue and an authored last-dance/last-song text at 150 attended
-seconds, then automatically winds down at 180 seconds unless an accepted finale ends it sooner or
-`party.extend` restarts the attended interval. A later autonomous invitation may offer to restart the
-party, but it does not restart by itself.
+cinematic. Elapsed time never ends the party; it only paces later messages and explicit authored
+finales. An accepted last-dance/last-song action or cake completion can schedule a graceful ending,
+and `party.extend` cancels that pending finale. A later autonomous invitation may offer to restart a
+stopped party, but it does not restart by itself.
 
 The `setGardenParty(false)` branch is also the authoritative visual teardown boundary. It clears the
 balcony switch, persistent UV intent and `.uv-mode` before stopping the disco stepper, camera flash,
@@ -349,11 +357,17 @@ for `ROSTER`, `__peopleManager`, `__whoIsHere`, `__roomOccupants`, and `__roster
   The accessor itself remains instantaneous.
 - Display order is based on current left-to-right geometry, while preserving existing order and
   inserting newcomers to reduce churn.
-- Opening the roster can hold autonomous arrivals/departures. Check `rosterHoldsOccupants` before
-  adding another population timer.
+- Opening the roster holds autonomous arrivals/departures. In the garden it also adds
+  `.roster-freeze` to the stage, pausing the adult cast while the eight party children remain
+  animated; the existing row spotlight temporarily exempts `.spotlighted`. Check
+  `rosterHoldsOccupants` before adding another population timer.
 - Party entry/exit controllers move guests to and from the floor. CSS variables help balance crowd
   placement. Avoid rendering the same person in standing, dance, visitor, and kid-activity layers at
   the same time.
+- `attendedGuestNames` records lifetime attendance for one party run, independently of the
+  floor-only `.arrived` class. Adult rotation must not clear an attending child's `.arrived`;
+  `assignPartyKids()` then gives every attending child exactly one persistent dance/Cuddly/sleep
+  home. The ordinary Irene/Robin/Navid Cuddly cameo scheduler is party-off only.
 - Persistent bar, office, balcony, and grillmaster figures use presence classes with opacity plus
   delayed `visibility`, not `display`, so both arrival and departure can paint as fades. The balcony
   layout preferentially retains eligible visible figures across a BBQ split change. Hamid's
@@ -368,7 +382,12 @@ for `ROSTER`, `__peopleManager`, `__whoIsHere`, `__roomOccupants`, and `__roster
   parent on the live floor raises that child's dance chance from 0.25 to 0.70; after the sleep
   message every Cuddly seat clears and the dance chance falls to 0.08. Chase handoffs remain a
   temporary `off-with-kids` projection of a child whose persistent home is `off-at-games`; dancers
-  are excluded from the chase pool, and a full-pack roll can run all eight seated children. Keep
+  are excluded from the chase pool, and a full-pack roll can run all eight seated children. The
+  Cuddly layout balances partial assignments across its two clusters and randomizes identities
+  between sides instead of consuming the slot array left-to-right. `partyKidFormationTick()` keeps
+  its 9–14 second off-room cadence but uses 30–45 seconds while Cuddly is watched. During party Totoro,
+  `__totoroWatchActive` overrides eligibility/sleep and assigns all eight to the same persistent
+  Cuddly layer; outside a party the original three cameo figures own the co-watch. Keep
   `PARTY_FLOOR_KIDS`, `KID_WHO`, runner SVG nodes, `ROSTER.runSel`, and the people manager in
   parity when adding a child.
 - S'mores and seasonal balcony play use `__balconyBorrowedKids` as another temporary projection
@@ -381,7 +400,10 @@ for `ROSTER`, `__peopleManager`, `__whoIsHere`, `__roomOccupants`, and `__roster
   camera/flash, shutter, and Album write together; an empty room must not show her or create a
   keepsake. Population controllers refresh photographer gates after assignment changes; the
   garden can be empty during an active party, and Aspen returns with the first subject. Automatic
-  rounds and explicit `photo.take` use that same occupancy truth.
+  rounds and explicit `photo.take` use that same occupancy truth. The occasional dance freeze is
+  about 4.2 seconds; ordinary automatic captures do not freeze the floor.
+- Named-guest ambient flares use one self-rescheduling visual-only driver. It runs only while the
+  active garden party is visible, focused, and outside a major moment; it never owns sound.
 
 When changing people data, verify all three representations: painted SVG figures, roster/chat
 metadata, and photo composition.
@@ -517,9 +539,14 @@ outside this deferral queue, but still passes the shared phase and deduplication
 
 ### Thread behavior
 
-- Read state, reactions, arrival timestamps, filters, draft, and reply target are session-only.
+- Read state, reactions, action state, arrival timestamps, filters, draft, and reply target are
+  session/checkpoint state.
 - Opening a notification scrolls to its exact row but does not run that message's action. Opening or
   selecting the row marks it read; the separate action affordance performs the action.
+- `messageActionState` records one-shot completion or expiry. `setGardenParty` retires actions whose
+  context has permanently passed, marks those rows read, and removes their action affordance without
+  deleting the historical text. `unreadCount()` and `__latestUnreadMessage()` re-run the same expiry
+  pass so stale rows cannot hold the autonomous unread-pressure cap.
 - Reactions are lightweight per-message state and are included in group-chat context.
 - Replies carry a stable target/quote and support jumping back to the quoted row.
 - Visitor input is inserted immediately as a local outgoing row. The generated crew reply is queued

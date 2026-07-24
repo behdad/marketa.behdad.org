@@ -51,25 +51,19 @@ var harness = String.raw`<script>
   check("focused time counts", window.__partyLifecycleState().attended === 1);
 
   if (window.goToStage) window.goToStage("garden");
-  window.__advancePartyLifecycle(148);
-  check("close cue waits until 150 attended seconds", window.__gardenPartyOn && !window.__partyExitHintActive());
-  window.__advancePartyLifecycle(1);
-  check("close cue points to the wall switch at 150 seconds", window.__partyExitHintActive() && window.__captionKey() === "party_exit_hint" && document.getElementById("garden-lightswitch").classList.contains("invite-pulse"));
-  var finaleId = ["lastdance", "lastsong_sina", "lastsong_danesh"].filter(function (id) { return window.__phoneMessageReceived(id); })[0] || null;
-  check("close cue offers one authored final dance or song", !!finaleId, finaleId || "none");
-  window.__advancePartyLifecycle(29);
-  check("party remains live through 179 attended seconds", !!window.__gardenPartyOn);
+  window.__advancePartyLifecycle(149);
+  check("elapsed attended time does not manufacture a close cue", window.__gardenPartyOn && !window.__partyExitHintActive() && window.__partyLifecycleState().attended === 150);
+  window.__advancePartyLifecycle(30);
+  check("party remains live after 180 attended seconds", !!window.__gardenPartyOn && window.__partyLifecycleState().attended === 180);
   if (window.goToStage) window.goToStage("kitchen");
-  window.__advancePartyLifecycle(1);
-  check("party ends automatically at 180 attended seconds", !window.__gardenPartyOn && window.__captionKey() === "party_ended" && /not the game/i.test(document.getElementById("hunt-caption").textContent));
-  check("the unnamed regulars return to the calm night bar after the party", patrons && getComputedStyle(patrons).opacity === "1");
-
-  if (window.__setPartyMode) window.__setPartyMode(true, true);
+  var finaleId = "lastdance";
+  if (window.__deliverPhoneMessage) window.__deliverPhoneMessage(finaleId);
   if (finaleId && window.__runMsgAction) window.__runMsgAction(finaleId);
   var finaleState = window.__partyLifecycleState();
   check("accepting the final cue schedules an attended early ending", finaleState.finaleAt > finaleState.attended && (finaleState.finaleReason === "lastdance" || finaleState.finaleReason === "lastsong"), finaleState);
-  window.__advancePartyLifecycle(30);
-  check("the accepted final dance or song ends the party early", !window.__gardenPartyOn);
+  window.__advancePartyLifecycle(24);
+  check("the accepted final dance or song ends the party", !window.__gardenPartyOn);
+  check("the unnamed regulars return to the calm night bar after the party", patrons && getComputedStyle(patrons).opacity === "1");
 
   // Put Act Two on its first reception beat, then stop the party before its delayed
   // Pouria message lands. Party teardown may queue only the quieter piano wind-down.
@@ -108,8 +102,8 @@ var harness = String.raw`<script>
   document.documentElement.lang = "cs";
   if (window.__setGardenParty) window.__setGardenParty(true, false);
   if (window.goToStage) window.goToStage("kitchen");
-  window.__advancePartyLifecycle(180);
-  check("party-end copy is localized in Czech", !window.__gardenPartyOn && /hra ne/i.test(document.getElementById("hunt-caption").textContent) && /aplikace/i.test(document.getElementById("hunt-caption").textContent));
+  if (window.__setGardenParty) window.__setGardenParty(false, true);
+  check("manual party-end copy is localized in Czech", !window.__gardenPartyOn && /hra ne/i.test(document.getElementById("hunt-caption").textContent) && /aplikace/i.test(document.getElementById("hunt-caption").textContent));
   report();
 })();
 </script>`;

@@ -768,7 +768,7 @@ var PROBE_HARNESS = [
   "    var parents = ['madla', 'robert', 'patricia', 'baharak'].map(function (name) { return document.querySelector('#garden-guests .g-' + name); });",
   "    parents.forEach(function (parent) { if (parent) parent.classList.remove('arrived'); });",
   "    var gated = window.__gardenChaseEligible ? window.__gardenChaseEligible().slice().sort() : [];",
-  "    ok('party kids: family runners wait for their parents to arrive', gated.join('|') === coreKids.slice().sort().join('|'), 'eligible=' + gated.join(','));",
+  "    ok('party kids: family runners remain eligible after their parents rotate off the floor', gated.join('|') === allRunningKids.slice().sort().join('|'), 'eligible=' + gated.join(','));",
   "    parents.forEach(function (parent) { if (parent) parent.classList.add('arrived'); });",
   "    window.__mousesVisiting = false; if (window.__syncMousesVisitingClass) window.__syncMousesVisitingClass();",
   "    var withoutMouses = window.__gardenChaseEligible ? window.__gardenChaseEligible() : [];",
@@ -945,8 +945,8 @@ var PROBE_HARNESS = [
   "</script>"
 ].join("\n");
 
-// ── game-only first-click fullscreen harness ────────────────────────────────
-// Loaded with #play so the same early game-only condition used by /loft-day is active.
+// ── game-only explicit fullscreen harness ──────────────────────────────────
+// Loaded with #play so the same non-installed game-only condition used by /loft-day is active.
 var LOFT_FULLSCREEN_HARNESS = [
   '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
   "<script>",
@@ -959,11 +959,13 @@ var LOFT_FULLSCREEN_HARNESS = [
   "    ok('loft fullscreen setup: game-only mode is active', !document.documentElement.classList.contains('revealed'));",
   "    ok('loft fullscreen setup: game starts outside fullscreen', !filled());",
   "    document.body.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
-  "    ok('loft fullscreen: an outside click does not consume the game trigger', !filled());",
+  "    ok('loft fullscreen: an outside click leaves page mode active', !filled());",
   "    if (game) game.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
-  "    ok('loft fullscreen: first game click enters fullscreen', filled());",
-  "    if (game) game.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
-  "    ok('loft fullscreen: later game clicks do not toggle fullscreen back off', filled());",
+  "    ok('loft fullscreen: first game click stays in the enlarged page mode', !filled());",
+  "    ok('loft fullscreen: first game click clears the outer page chrome', window.__gameOnlyEntered && window.__gameOnlyEntered());",
+  "    var button = document.getElementById('hunt-fullscreen-btn');",
+  "    if (button) button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
+  "    ok('loft fullscreen: explicit fullscreen button still enters fullscreen', filled());",
   "    report.errors = window.__errs; document.getElementById('__report').textContent = JSON.stringify(report);",
   "  }, 300); });",
   "})();",

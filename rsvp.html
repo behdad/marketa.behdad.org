@@ -135,15 +135,14 @@ footer{margin-top:2.6rem}
    on top of the people it names (a guest under a side panel couldn't be seen when you clicked
    to arrow them). Names flow into as many ~15rem columns as the width allows. */
 .roster-panel{
-  /* top:24px clears the console arrowhead hint (top:2px, 18px tall) in the corner beneath it —
-     the panel out-stacks it, and the roster is offered in every room now, so a lower banner is
-     the difference between the hint being reachable and being permanently buried. */
-  position:absolute; z-index:22; top:24px; left:10px; right:10px; box-sizing:border-box;
+  /* Keep the roster against the scene's top edge. Opening it deliberately owns this band and hides
+     the corner toggle, so it need not reserve a second row for the console hint underneath. */
+  position:absolute; z-index:22; top:6px; left:10px; right:10px; box-sizing:border-box;
   /* height is capped against the BOTTOM of the viewport, not a percentage of it: the scene box is
      only ~130px tall at phone width, where any percentage tall enough to be useful runs straight
-     over the date/time pills. 52px = the 24px top offset + the pill strip's height and margin. A
+     over the date/time pills. 34px = the 6px top offset + the pill strip's height and margin. A
      roster too long for what's left scrolls (overflow below) rather than growing into them. */
-  max-height:min(calc(100% - 52px), 560px); overflow:auto;
+  max-height:min(calc(100% - 34px), 560px); overflow:auto;
   background:var(--paper); color:var(--ink); border:1px solid var(--rule); border-radius:10px;
   box-shadow:0 6px 22px rgba(69,58,49,.28); padding:.6rem .85rem .7rem;
   font-family:"Source Serif 4",Georgia,serif; text-align:left;
@@ -190,6 +189,26 @@ footer{margin-top:2.6rem}
 /* roster rows that map to a garden figure are clickable — tap to single that guest out on the floor */
 .roster-panel li.roster-pick{cursor:pointer; border-radius:5px; padding:.1rem .28rem; margin:0 -.28rem; transition:background .15s ease}
 .roster-panel li.roster-pick:hover,.roster-panel li.roster-pick:focus-visible{background:var(--rule); outline:none}
+/* The open garden roster is an intentional adult freeze-frame: occupancy is already held while the
+   player reads it, so the grown-ups hold still too. The eight party kids keep dancing; a picked
+   adult temporarily joins them. dance-frozen remains stronger when music/photo/first-dance state
+   independently pauses. */
+#stage-garden.roster-freeze #garden-guests,
+#stage-garden.roster-freeze #garden-guests *,
+#stage-garden.roster-freeze #trip-melt-dancers,
+#stage-garden.roster-freeze #trip-melt-dancers *,
+#stage-garden.roster-freeze #garden-djbooth,
+#stage-garden.roster-freeze #garden-djbooth *,
+#stage-garden.roster-freeze #garden-photographer,
+#stage-garden.roster-freeze #garden-photographer *{animation-play-state:paused !important}
+#loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-guests .guest:is(.g-irene,.g-robin,.g-navid,.g-elisabeth,.g-felix,.g-patricia-son,.g-patricia-daughter,.g-hannah),
+#loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-guests .guest:is(.g-irene,.g-robin,.g-navid,.g-elisabeth,.g-felix,.g-patricia-son,.g-patricia-daughter,.g-hannah) *{animation-play-state:running !important}
+#loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-guests .guest.spotlighted,
+#loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-guests .guest.spotlighted *,
+#loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-djbooth.spotlighted,
+#loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-djbooth.spotlighted *,
+#loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-photographer.spotlighted,
+#loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-photographer.spotlighted *{animation-play-state:running !important}
 /* SINGLED-OUT GUEST: for a few seconds, freeze EVERYONE ELSE while the picked one keeps dancing,
    and float a bobbing arrow above the pick. The .solo-spot flag on the container scopes the freeze;
    the .spotlighted pick is exempt so it dances on alone (the inverse of the old freeze-the-pick). */
@@ -5581,6 +5600,8 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 /* The meal-day huddle (see randomize()) needs only ONE prop and ONE contact pool; the spare of
    each is dropped here rather than parked off to the side, where it would graze the food table. */
 #cuddly-kidgames .kg-off{display:none}
+#cuddly-kidgames.watching-totoro .kg-board,
+#cuddly-kidgames.watching-totoro .kg-blocks{display:none} /* the screen owns their attention; no board game or blocks compete */
 #cuddly-kidgames .kg-rock{transform-box:fill-box; transform-origin:center bottom; transform:scale(1.25)} /* the gamer kids read 25% larger, scaled from their feet so they stay on the floor */
 /* gentle seated rock/tilt — each kid slightly out of phase so the group feels alive, not synced */
 .kg-tilt{transform-box:fill-box; transform-origin:50% 100%}
@@ -8420,6 +8441,45 @@ section{margin:1.9rem 0}
 /* Full page by default (names, dates, RSVP, footer + the game). #play, or a /loft… path
    (the loft-day alias), strips to just the Loft Day game + its title (and controls); the
    language toggle stays, everything else outside the game is hidden. */
+:root:not(.revealed) main{
+  /* Game-only is a compact symmetric shell: title centered, language right, then the hint and game
+     spanning all columns. Its desktop ceiling is 1.5x the full-page width; the game box below
+     applies the viewport-height fit so this wider main never forces a needlessly tall scene. */
+  max-width:1710px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:start;
+  column-gap:1rem;
+}
+:root:not(.revealed) main > audio{display:none}
+:root:not(.revealed) .hunt-title{
+  grid-column:2; grid-row:1; align-self:start;
+  text-align:center; margin:0; line-height:2rem;
+}
+:root:not(.revealed) .langs{
+  grid-column:3; grid-row:1;
+  align-self:center; justify-self:end; padding-top:0;
+}
+:root:not(.revealed) .device-hint{grid-column:1 / -1; grid-row:2}
+:root:not(.revealed) #hunt-fullscreen-area:not(.is-fullscreen){
+  grid-column:1 / -1; grid-row:3;
+  width:100%;
+  /* Before entry, reserve enough browser height for the title/hint and Trailer/Autoplay below the
+     2:1 scene. 1620px remains exactly 1.5x the former 1080px shell. */
+  max-width:min(1620px, calc(200vh - 440px));
+  margin:.55rem auto 0;
+}
+:root:not(.revealed) #hunt-fullscreen-area:not(.is-fullscreen) > .hunt-frame{max-width:none}
+/* Once CLICK ME (or the saved-session gate) has handed control to the player, the outer web-page
+   chrome has done its job. Hide it and let the same non-fullscreen shell use nearly the whole
+   browser content area. This does not set .is-fullscreen or call the Fullscreen API. */
+:root:not(.revealed).loft-entered main{padding-top:.25rem}
+:root:not(.revealed).loft-entered :is(.hunt-title,.langs,.device-hint,.watch-controls){display:none !important}
+:root:not(.revealed).loft-entered #hunt-fullscreen-area:not(.is-fullscreen){
+  grid-row:1;
+  max-width:min(1620px, calc(200vh - 160px));
+  margin:0 auto;
+}
 :root:not(.revealed) .caps,
 :root:not(.revealed) #site-h1,
 :root:not(.revealed) .ipa,
@@ -27263,13 +27323,12 @@ function idealBrowser() {
 })();
 (function(){
   // requestFullscreen needs a user gesture (no auto-fullscreen on load). When launched
-  // as the installed PWA, take its first tap; directly in game-only Loft Day mode, take
-  // the first tap on the game. Both enter fullscreen once; the full RSVP page is left alone.
+  // as the installed PWA, take its first tap. Direct game-only web pages now use the enlarged
+  // responsive shell and stay there until the player explicitly chooses fullscreen.
   function isPWA(){ try { return (window.matchMedia && (matchMedia("(display-mode: standalone)").matches || matchMedia("(display-mode: fullscreen)").matches)) || navigator.standalone === true; } catch(e){ return false; } }
-  var pwa=isPWA(), loftOnly=!document.documentElement.classList.contains("revealed");
-  if(!pwa && !loftOnly) return;
+  var pwa=isPWA();
+  if(!pwa) return;
   function firstTap(e){
-    if(loftOnly && !pwa && !(e && e.target && e.target.closest && e.target.closest("#hunt-fullscreen-area"))) return;
     document.removeEventListener("click", firstTap, true);
     var area=document.querySelector("#hunt-fullscreen-area"), b=document.getElementById("hunt-fullscreen-btn");
     if(!b || (area && area.classList.contains("is-fullscreen"))) return;
@@ -32353,7 +32412,7 @@ setMusicPausedState(false);
     if (window.__updateStarsSound) window.__updateStarsSound(); // Gnossienne follows the night-sky channel
     if (window.__actPing) window.__actPing("stars"); // second act: the night-sky channel IS the piano wind-down beat (W1)
     if (window.__updateTotoroMelody) window.__updateTotoroMelody(); // woodland melody follows the totoro channel
-    if (window.__updateTotoroWatch) window.__updateTotoroWatch(); // Irene & Robin sit to watch when totoro comes on (and leave when it goes off)
+    if (window.__updateTotoroWatch) window.__updateTotoroWatch(); // three cameos outside a party, or all eight party kids, follow Totoro
     if (reduceMotion) renderStill(); else start();
     if (prev !== current && window.__loftStateChanged) window.__loftStateChanged("media.projector", { mode: current }, "internal");
   }
@@ -32667,6 +32726,7 @@ setMusicPausedState(false);
   // lingered, transition() picks a DIFFERENT action 2 and plays it; when THAT lingers, she
   // leaves. step is 1 or 2.
   function show(forced) {
+    if (window.__gardenPartyOn) return; // party children are placed only by the shared dance/Cuddly/sleep inventory
     if (window.__kidsAsleep) return; // kids asleep → no nook cameo
     if (irene.classList.contains("showing")) return;
     if (window.__resetRobin) window.__resetRobin(); // mutual exclusion: Irene, Robin & Navid never show at once
@@ -32719,7 +32779,7 @@ setMusicPausedState(false);
   function tick() {
     showTimer = null;
     if (rosterHoldsOccupants()) { schedule(); return; }
-    if (onScreen() && !irene.classList.contains("showing") && !robinShowing() && !navidShowing()) {
+    if (!window.__gardenPartyOn && onScreen() && !irene.classList.contains("showing") && !robinShowing() && !navidShowing()) {
       // Build the eligible cameo set, dropping any kid currently seated in a game (one-room rule).
       // When the games are playing all three are seated → the set is empty → skip this tick (no
       // cameo, just reschedule) so the nook isn't crowded with two of the same child. firstDone
@@ -32874,6 +32934,7 @@ setMusicPausedState(false);
   // re-arm uses the baseline cadence rather than the short first-visit delay, then re-arm the
   // single timer fresh from now — she won't auto-pop right back on top of the summon.
   window.__ireneSummon = function () {
+    if (window.__gardenPartyOn) return; // ordinary cameos are daytime/party-off visits
     if (window.__totoroWatchActive) return; // don't break up the totoro co-watch (all three kids seated)
     if (window.__resetRobin) window.__resetRobin(); // mutual exclusion: a summon on top of a scheduler-spawned Robin
     if (window.__resetNavid) window.__resetNavid(); // ...or Navid
@@ -32895,6 +32956,7 @@ setMusicPausedState(false);
   // Robin ~1/4, Navid ~1/4, else Irene; each kid resets the other two so only one ever shows.
   var cuddlyWall = document.getElementById("cuddly-wall");
   if (cuddlyWall) cuddlyWall.addEventListener("dblclick", function () {
+    if (window.__gardenPartyOn) return;
     var r = Math.random();
     if (window.__robinAppear && r < 1 / 4) { if (window.__resetIrene) window.__resetIrene(); if (window.__resetNavid) window.__resetNavid(); window.__robinAppear(); }
     else if (window.__navidAppear && r < 1 / 2) { if (window.__resetIrene) window.__resetIrene(); if (window.__resetRobin) window.__resetRobin(); window.__navidAppear(); }
@@ -33044,6 +33106,7 @@ setMusicPausedState(false);
   }
   // called BY Irene's shared scheduler when it rolls Robin (she's already guaranteed not showing).
   window.__robinAppear = function (forced) {
+    if (window.__gardenPartyOn) return; // party placement belongs to the shared child inventory
     if (window.__kidsAsleep) return; // kids asleep → no nook cameo
     if (window.__totoroWatchActive) return; // during a totoro co-watch he's already seated — don't let the scheduler re-pose him
     if (robin.classList.contains("showing")) return;
@@ -33236,6 +33299,7 @@ setMusicPausedState(false);
   }
   // called BY Irene's shared scheduler when it rolls Navid (the others are already guaranteed not showing).
   window.__navidAppear = function (forced) {
+    if (window.__gardenPartyOn) return; // party placement belongs to the shared child inventory
     if (window.__kidsAsleep) return; // kids asleep → no nook cameo
     if (window.__totoroWatchActive) return; // during a totoro co-watch he's already seated — don't let the scheduler re-pose him
     if (navid.classList.contains("showing")) return;
@@ -33662,15 +33726,13 @@ setMusicPausedState(false);
   window.__cuddlyRoofSummon = function () { var pick = nextInRotation(); if (pick === activeDuo) pick = nextInRotation(); return visit(pick, false); }; // test/console hook
   schedule();
 })();
-// Totoro co-watch controller: whenever the projector's on the totoro channel AND we're in the
-// cuddly nook, Irene & Robin come sit on the floor together to watch it — they LOVE cartoons.
-// They stay for as long as totoro's playing and leave when it stops / the room changes. This is
-// the ONE case both cameos show at once (their normal mutual exclusion is bypassed via the
-// __ireneWatch/__robinWatch hooks). SKIPPED on meal days: the low food table takes that stretch
-// of floor (owner's rule). Driven by setChannel (channel changes) + goToStage (room changes);
-// re-seats them on tab re-show, since each kid's own visibilitychange handler fades them while hidden.
+// Totoro co-watch controller: outside a party the three core-kid cameos sit together. During a
+// party, Totoro borrows the shared Cuddly child layer instead and seats all eight children, so the
+// party inventory remains the only representation. SKIPPED on meal days: the low food table owns
+// that stretch of floor. Driven by channel, room, and party transitions.
 (function () {
   window.__totoroWatchActive = false;
+  var lastPartyMode = false;
   function want() {
     var ws = document.getElementById("cuddly-wallscreen");
     var strip = document.getElementById("loft-game-strip");
@@ -33680,16 +33742,19 @@ setMusicPausedState(false);
   }
   window.__updateTotoroWatch = function () {
     var on = want();
-    if (on === window.__totoroWatchActive) return;
+    var partyMode = !!window.__gardenPartyOn;
+    if (on === window.__totoroWatchActive && partyMode === lastPartyMode) return;
     window.__totoroWatchActive = on;
-    if (window.__ireneWatch) window.__ireneWatch(on);
-    if (window.__robinWatch) window.__robinWatch(on);
-    if (window.__navidWatch) window.__navidWatch(on);
+    lastPartyMode = partyMode;
+    var cameoWatch = on && !partyMode;
+    if (window.__ireneWatch) window.__ireneWatch(cameoWatch);
+    if (window.__robinWatch) window.__robinWatch(cameoWatch);
+    if (window.__navidWatch) window.__navidWatch(cameoWatch);
     if (window.__kidNookAvailabilityChanged) window.__kidNookAvailabilityChanged();
     else if (window.__updateKidGames) window.__updateKidGames(); // totoro co-watch owns/releases the same floor
   };
   document.addEventListener("visibilitychange", function () {
-    if (!document.hidden && window.__totoroWatchActive) { // each kid faded out while hidden — re-seat them
+    if (!document.hidden && window.__totoroWatchActive && !window.__gardenPartyOn) { // party mode uses the persistent eight-child layer
       if (window.__ireneWatch) window.__ireneWatch(true);
       if (window.__robinWatch) window.__robinWatch(true);
       if (window.__navidWatch) window.__navidWatch(true);
@@ -33697,10 +33762,10 @@ setMusicPausedState(false);
   });
 })();
 // Kids playing games in the nook during the party. Owner: when the party's on and the nook is
-// otherwise EMPTY — hosts off at the garden (couple .at-party), no adult friend-duo visiting, and
-// the totoro co-watch isn't seating kids on that same floor — the children assigned away from the
-// dance floor sit down there in two little groups and play games. All eight children have their own
-// persistent figure; the party allocator decides independently which ones are seated. On the
+// otherwise EMPTY — hosts off at the garden (couple .at-party) and no adult friend-duo visiting —
+// the children assigned away from the dance floor sit down there in two little groups and play
+// games. All eight children have their own persistent figure; the same layer becomes their audience
+// when Totoro overrides ordinary party placement. On the
 // days the low table is out with a meal on it they still play, gathered into ONE huddle on the left
 // so the food keeps its floor — see MEAL_SLOTS. The whole scene is CSS on ONE persistent
 // group (#cuddly-kidgames), shown by adding .playing — nothing is spawned, so nothing can
@@ -33715,11 +33780,10 @@ setMusicPausedState(false);
     if (!window.__gardenPartyOn) return false;               // owner: only during the party
     var couple = document.getElementById("cuddly-couple");
     if (!couple || !couple.classList.contains("at-party")) return false; // hosts must be OFF at the garden (nook empty of adults)
+    if (window.__totoroWatchActive) return true; // Totoro deliberately draws the whole eight-child inventory, even if adults are visiting
     // don't fight the adult friend-duo drop-in: if a duo is visiting the nook, no playing kids
     var vis = document.getElementById("cuddly-visitors-layer");
     if (vis && vis.querySelector(".cuddly-visitor.showing")) return false;
-    // ...and don't double up with the totoro co-watch, which seats kids on the same floor
-    if (window.__totoroWatchActive) return false;
     return !!assignedNames().length;
   }
   function mealOn() { var s = document.getElementById("loft-game-strip"); return !!(s && s.classList.contains("meal-on")); }
@@ -33742,6 +33806,7 @@ setMusicPausedState(false);
   function assignedNames() {
     var garden = document.getElementById("garden-guests");
     if (!garden) return NAMES.slice(); // DOM-shim/source tests have no party floor
+    if (window.__gardenPartyOn && window.__totoroWatchActive) return NAMES.slice();
     return NAMES.filter(function (cls) {
       var who = KID_WHO[cls], floor = garden.querySelector(".g-" + who.name.toLowerCase());
       return !!(floor && floor.classList.contains("off-at-games"));
@@ -33774,16 +33839,36 @@ setMusicPausedState(false);
   var MEAL_PROP = [190, 326], MEAL_SHADOW = [190, 108]; // prop y set so its floor contact (~337) lands at the huddle's mean foot depth — it reads as the middle of the ring, not its back edge
   function jit(n) { return Math.round((Math.random() * 2 - 1) * n); } // ±n integer jitter
   function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function centeredClusterSlots(slots) {
+    if (slots <= 0) return [];
+    if (slots === 1) return [Math.random() < 0.5 ? 1 : 2];
+    if (slots === 2) return [1, 2];
+    if (slots === 3) return Math.random() < 0.5 ? [0, 1, 2] : [1, 2, 3];
+    return [0, 1, 2, 3];
+  }
+  function balancedSlots(count, meal) {
+    if (!count) return [];
+    if (meal) {
+      if (count === 1) return [MEAL_SLOTS[Math.random() < 0.5 ? 3 : 4]];
+      var spread = [];
+      for (var i = 0; i < count; i++) spread.push(MEAL_SLOTS[Math.round(i * (MEAL_SLOTS.length - 1) / (count - 1))]);
+      return spread;
+    }
+    var leftCount = Math.ceil(count / 2), rightCount = Math.floor(count / 2);
+    if (count % 2 && Math.random() < 0.5) { leftCount = rightCount; rightCount++; }
+    var picked = centeredClusterSlots(leftCount).map(function (i) { return SLOTS[i]; });
+    return picked.concat(centeredClusterSlots(rightCount).map(function (i) { return SLOTS[i + 4]; }));
+  }
   function randomize(kg, meal) {
     // shuffle which kid sits in which slot, then jitter each (gentler on the meal arc, which reads
     // as a curve — a big y jitter would break it)
-    var slots = meal ? MEAL_SLOTS : SLOTS;
     var active = assignedNames();
     NAMES.forEach(function (cls) {
       var rock = kg.querySelector("." + cls);
       if (rock) rock.classList.toggle("kg-away", active.indexOf(cls) === -1);
     });
     var order = shuffle(active.slice());
+    var slots = shuffle(balancedSlots(order.length, meal));
     for (var i = 0; i < order.length; i++) {
       var rock = kg.querySelector("." + order[i]);
       if (!rock) continue;
@@ -33834,6 +33919,7 @@ setMusicPausedState(false);
       if (window.__resetNavid) window.__resetNavid();
     }
     kg.classList.toggle("playing", on); // pure class flip → idempotent + storm-safe; nothing to strand
+    kg.classList.toggle("watching-totoro", on && !!window.__totoroWatchActive);
   }
   window.__updateKidGames = apply;
   window.__kidGamesReshuffle = function () { var kg = document.getElementById("cuddly-kidgames"); if (kg) randomize(kg, mealOn()); }; // test/console hook
@@ -41733,9 +41819,9 @@ setOfficeProgress("pc", false);
     guests: "guests(true) — the three VIP guests crash the party and steal the show, dancing dead-centre floor: Ali (best man, long grey beard), Goli (Ali's fashionista girlfriend, platinum bob) & Spencer (Markéta's man-of-honor, the giant of the group). lights the party + heads to the garden first if needed. guests(false) sends them off (party rolls on); guests() reports whether they're on the floor. they also arrive on their own a beat after the party lights. aligoli() is an alias",
     aligoli: "aligoli — alias for guests; try `help guests`",
     arrive: "arrive(\"ali\"|\"spencer\"|\"alireza\"|\"farhang\"|\"bahareh\") — a duo (or the single Bahareh) STROLLS IN through the garden gate onto the dance floor, an entrance moment. arrive() walks in a random duo. lights the party + heads to the garden first if needed. the duos also trickle in on their own, one per beat, as the party fills up. (ali = Ali & Goli, spencer = Spencer & Jay, alireza = Alireza & Mahzad, farhang = Farhang & Lauren, bahareh = Bahareh solo)",
-    roster: "roster() — toggle the \"who's here?\" panel: a live at-a-glance list of everyone in the room you're LOOKING AT right now (name · role), kids included — the dance floor, the bar couple + Pouria, the nook's residents/visitors/playing kids, the office pair, the deck crowd + Hamid at the grill. it tracks arrivals and departures while it's open. click a name for their card; on the garden floor it also spotlights them — everyone ELSE freezes while the pick keeps dancing, with an arrow over them, for 3s (works for the DJ + photographer too). roster(true) opens it, roster(false) closes it. the 'h' and 'w' keys do the same. window.__whoIsHere(\"office\") returns the same list for any room",
+    roster: "roster() — toggle the \"who's here?\" panel: a live at-a-glance list of everyone in the room you're LOOKING AT right now (name · role), kids included — the dance floor, the bar couple + Pouria, the nook's residents/visitors/playing kids, the office pair, the deck crowd + Hamid at the grill. it holds arrivals and departures while open; on the garden floor the adults freeze while the kids keep dancing. click a name for their card and a 3s spotlight that releases that adult under an arrow (works for the DJ + photographer too). roster(true) opens it, roster(false) closes it. the 'h' and 'w' keys do the same. window.__whoIsHere(\"office\") returns the same list for any room",
     reset: "reset() — restart the whole loft from the top (no confirmation — you typed it)",
-    autoplay: "autoplay(true) — PERSISTENT ATTRACT MODE for the wedding BBQ screen: the loft composes an endless show from 30 short authored stories — espresso and bar rituals, music, arrivals, wedding moments, photos, projector/toy scenes, calls, computer and phone apps, weather, the BBQ, and cross-room relays. A seeded weighted Markov director moves between eight narrative moods; hard recent-history and coverage rules keep exact stories from repeating and bring back any room that's been away too long. A visible ghost cursor shows each interaction. It TAKES OVER FROM WHEREVER THE GAME IS (never resets to the kitchen), opens with a short room sweep, then plays the first full story where it found you. Phone notifications INTERRUPT to be opened + acted on, then the exact story/beat RESUMES. This is NOT the fixed Trailer reel (that's the ▷ Trailer button). autoplay(false) or the 'a' key stop it for good; autoplay() toggles; the □ Take over control hands you the wheel but leaves the screen to drift back to attract after a quiet spell. It does NOT stop on stray clicks/keys (click to go fullscreen without killing it); pauses cleanly when the tab is hidden or unfocused, and honours prefers-reduced-motion. Open with ?autoplay to boot straight into it",
+    autoplay: "autoplay(true) — PERSISTENT ATTRACT MODE for the wedding BBQ screen: the loft composes an endless show from 30 short authored stories — espresso and bar rituals, music, arrivals, wedding moments, photos, projector/toy scenes, calls, computer and phone apps, weather, the BBQ, and cross-room relays. A seeded weighted Markov director moves between eight narrative moods; hard recent-history and coverage rules keep exact stories from repeating and bring back any room that's been away too long. A visible ghost cursor shows each interaction. It TAKES OVER FROM WHEREVER THE GAME IS (never resets to the kitchen), opens with a short room sweep, then plays the first full story where it found you. Phone notifications INTERRUPT to be opened + acted on, then the exact story/beat RESUMES. This is NOT the fixed Trailer reel (that's the ▷ Trailer button). autoplay(false) or the 'a' key stop it for good; autoplay() toggles; the □ Take over control hands you the wheel but leaves the screen to drift back to attract after a quiet spell. It does NOT stop on stray clicks/keys; pauses cleanly when the tab is hidden or unfocused, and honours prefers-reduced-motion. Open with ?autoplay to boot straight into it",
     quit: "quit (or exit) — shut the console down (refresh, back to the desktop)",
     blacklight: "blacklight(true) — UV wash over the whole loft; blacklight(false) off; blacklight() reports whether it's on",
     uv: "uv — alias for blacklight; try `help blacklight`",
@@ -41803,7 +41889,7 @@ setOfficeProgress("pc", false);
     gong: "gong() — head to the kitchen and strike the gong: full ring, echoes, room rattle, and the same chance of knocking down a pan as a click",
     servefood: "servefood() — serve a cooked burger (opens the lid if needed); servefood(random()) picks a random ready one. returns true if one was served",
     phone: "phone(true) — bring up the pocket phone; phone(false) puts it away; phone() reports whether it's up. phone(\"cocktails\")/phone(\"weather\") open that phone app (skips the lockscreen); a bad name lists them",
-    album: "album() — open the pocket-phone wedding album: Aspen's captured party polaroids, newest first. she snaps one every photo-moment (the ~15s freeze) and whenever you tap her at the garden party; each is an intimate portrait — the couple + one guest (or a guest couple). She also works the OTHER rooms during the party (see snap()), and those cards show that room and exactly who was in it. album() also echoes the photo count",
+    album: "album() — open the pocket-phone wedding album: Aspen's captured party polaroids, newest first. she snaps one every short photo-pose moment and whenever you tap her at the garden party; each is an intimate portrait — the couple + one guest (or a guest couple). She also works the OTHER rooms during the party (see snap()), and those cards show that room and exactly who was in it. album() also echoes the photo count",
     snap: "snap() — Aspen photographs the room you're in RIGHT NOW: she lifts the camera, the flash pops, the shutter goes, and a keepsake of exactly whoever is in that room lands in your phone album — on that room's own backdrop. snap(\"office\")/snap(\"kitchen\")/snap(\"cuddly\")/snap(\"balcony\")/snap(\"garden\") heads there first so you can watch her take it. Lights the party if it's dark (she only works the party). She takes these on her own rounds too, every ~26-44s, in whichever room you're standing in",
     madla: "madla() — after phase 2, while the party is off, Markéta's sister (a doctor in Germany, bored on a night shift) rings your phone: a pulsing call card drops top-centre for 15s (tap to answer → pan to the cuddly room, then the video call; ignore it to miss the call). madla(true) answers straight away under the same gate. she's incoming-only — you can't dial her back",
     saturday: "saturday() — Markéta's parents ring from Prague for the standing Saturday call: the same call card, tap to answer (or the × to let it go). saturday(true) answers straight away. left alone it comes on its own, once per Saturday in the loft, between 08:00 and 14:00 here — their Saturday evening; date(\"YYYY-MM-DD\") a Saturday and clock(9) to see it",
@@ -46842,7 +46928,7 @@ async def localfont(name):
   window.__syncDanceFreeze = function () {
     var strip = document.getElementById("loft-game-strip");
     // frozen when, during the party, the music is paused (space-bar, to inspect), an autonomous
-    // ~15s photo-moment is running (__photoFreeze), OR the hosts' FIRST DANCE is on (__firstDanceOn
+    // short photo-pose moment is running (__photoFreeze), OR the hosts' FIRST DANCE is on (__firstDanceOn
     // — reuses this same freeze path so the tested UV-drop + host true-colour rules apply; the
     // hosts alone are then un-paused via the .first-dance CSS above).
     var frozen = !!window.__gardenPartyOn && (!!window.__musicPaused || !!window.__photoFreeze || !!window.__firstDanceOn);
@@ -50649,6 +50735,7 @@ async def localfont(name):
       if (msgReplyTarget === id) msgReplyTarget = null;
       delete messagesRead[id];
       delete messageReactions[id];
+      delete messageActionState[id];
       delete messagesArrivedAt[id];
       if (/^reply_/.test(id)) delete MESSAGES[id];
       if (window.__updateMsgBadge) window.__updateMsgBadge();
@@ -50859,6 +50946,7 @@ async def localfont(name):
     }
     window.__sendCrewMessage = sendCrewMessage; // focused-test/console hook
     function renderMessages(body) {
+      expireStaleMessageActions();
       var wrap = document.createElement("div");
       wrap.className = "pm-messages";
       var top = document.createElement("div");
@@ -50929,7 +51017,7 @@ async def localfont(name):
           }
         }
         var line = document.createElement("div"); line.className = "pm-msg-line"; line.appendChild(bub);
-        if (!m.outgoing && (m.act || m.apiAction || m.chatAction)) {
+        if (messageActionAvailable(id, m)) {
           if (m.chatAction) {
             bub.classList.add("actionable"); bub.setAttribute("role", "button"); bub.setAttribute("tabindex", "0");
             bub.setAttribute("aria-label", tr("mon_ctx_open"));
@@ -52392,7 +52480,7 @@ async def localfont(name):
     var notesDraft = ""; // the typed note — session-scoped: survives a language rebuild AND a normal close/reopen; cleared only on a kill (uninstallApp / __resetPhoneApps)
     // Messages is a chronological group chat: authored incoming ids plus session-local visitor /
     // generated crew-reply ids. Authored copy remains language-live; literal replies stay as written.
-    var messagesThread = [], messagesRead = {}, messageReactions = {}, messagesArrivedAt = {}, msgNewTimer = null, msgOpenTarget = null; // read/reaction state is session-only; messagesArrivedAt drives the "New" divider; msgOpenTarget is consumed when a notification opens one exact row
+    var messagesThread = [], messagesRead = {}, messageReactions = {}, messageActionState = {}, messagesArrivedAt = {}, msgNewTimer = null, msgOpenTarget = null; // read/reaction/action state is session-only; messagesArrivedAt drives the "New" divider; msgOpenTarget is consumed when a notification opens one exact row
     var deferredAutonomousMessages = [], deferredAutonomousTimer = null;
     var charlieIntroTimer = null, charlieIntroOffered = false; // one quiet, delayed introduction per page session; never part of a random pool
     var phaseTwoHeldMessages = []; // one-shot birthday/occasion texts requested during the solve are held; recurring drips simply retry later
@@ -52497,6 +52585,7 @@ async def localfont(name):
           return {
             id: id,
             read: !!messagesRead[id],
+            actionState: messageActionState[id] || null,
             reactions: (messageReactions[id] || []).slice(0, 8),
             arrivedAt: +messagesArrivedAt[id] || 0,
             message: {
@@ -52524,7 +52613,7 @@ async def localfont(name):
         allowed.forEach(function (id) { if (!seenSlots[id]) phoneSlots.push(id); });
       }
       mailRead = state.mailRead && typeof state.mailRead === "object" ? Object.assign({}, state.mailRead) : {};
-      messagesThread = []; messagesRead = {}; messageReactions = {}; messagesArrivedAt = {};
+      messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messagesArrivedAt = {};
       (Array.isArray(state.rows) ? state.rows : []).slice(-40).forEach(function (row) {
         if (!row || typeof row.id !== "string") return;
         var id = row.id.slice(0, 120), saved = row.message || {}, m = MESSAGES[id];
@@ -52538,6 +52627,7 @@ async def localfont(name):
         if (saved.chatAction && typeof saved.chatAction === "object") m.chatAction = saved.chatAction;
         messagesThread.push(id);
         messagesRead[id] = !!row.read;
+        if (row.actionState === "done" || row.actionState === "expired") messageActionState[id] = row.actionState;
         messageReactions[id] = Array.isArray(row.reactions) ? row.reactions.slice(0, 8) : [];
         messagesArrivedAt[id] = +row.arrivedAt || 0;
       });
@@ -53925,7 +54015,7 @@ async def localfont(name):
       setTimeout(seatPhoneInFullscreenHost, 80);
       setTimeout(seatPhoneInFullscreenHost, 240);
     };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messagesArrivedAt = {}; phaseTwoHeldMessages = []; Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks/reactions, and the flashlight (intent forgotten + beam/torch off)
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messagesArrivedAt = {}; phaseTwoHeldMessages = []; Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks/reactions, and the flashlight (intent forgotten + beam/torch off)
     var resetPhoneAppsBase = window.__resetPhoneApps;
     window.__resetPhoneApps = function () {
       recentApps = [];
@@ -54004,12 +54094,67 @@ async def localfont(name):
     function legacyTypedMsgAction(act) {
       return act && Object.prototype.hasOwnProperty.call(LEGACY_TYPED_MSG_ACTIONS, act) ? LEGACY_TYPED_MSG_ACTIONS[act] : null;
     }
+    var PARTY_BOUND_MESSAGE_ACTIONS = {
+      group: true, danesh: true, smores: true, lastdance: true,
+      lastsong_sina: true, lastsong_danesh: true, jukebox: true,
+      fireworks: true, lanterns: true
+    };
+    function messageHasAction(m) { return !!(m && !m.outgoing && (m.act || m.apiAction || m.chatAction)); }
+    function messageActionIsStale(id, m) {
+      if (!messageHasAction(m) || messageActionState[id]) return !!messageActionState[id];
+      var typed = m.chatAction || m.apiAction || legacyTypedMsgAction(m.act);
+      if ((typed && typed.id === "party.moment.start") || PARTY_BOUND_MESSAGE_ACTIONS[id]) return !window.__gardenPartyOn;
+      if (m.act === "party") return !!window.__gardenPartyOn;
+      return false;
+    }
+    function expireStaleMessageActions() {
+      var changed = false;
+      messagesThread.forEach(function (id) {
+        var m = MESSAGES[id];
+        if (!messageActionState[id] && messageActionIsStale(id, m)) {
+          messageActionState[id] = "expired";
+          messagesRead[id] = true;
+          changed = true;
+        }
+      });
+      return changed;
+    }
+    function messageActionAvailable(id, m) {
+      if (!messageHasAction(m)) return false;
+      if (!messageActionState[id] && messageActionIsStale(id, m)) {
+        messageActionState[id] = "expired";
+        messagesRead[id] = true;
+      }
+      return !messageActionState[id];
+    }
+    function consumeMessageAction(id) {
+      if (!id) return;
+      messageActionState[id] = "done";
+      messagesRead[id] = true;
+      updateMsgBadge();
+    }
+    function messageActionIsOneShot(m, action) {
+      return !!((action && action.id === "party.moment.start") ||
+        (m && (m.act === "lastdance" || m.act === "lastsong" || m.act === "party")));
+    }
+    window.__expireStaleMessageActions = function () {
+      var changed = expireStaleMessageActions();
+      if (changed) {
+        updateMsgBadge();
+        if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages);
+      }
+      return changed;
+    };
+    window.__messageActionState = function (id) {
+      expireStaleMessageActions();
+      return messageActionState[id] || null;
+    };
     function renderMsgActionFailure(m) {
       if (!m) return;
       m.chatActionFailed = true;
       if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages);
     }
-    function runTypedMsgAction(m, action) {
+    function runTypedMsgAction(id, m, action) {
       if (!window.loft || !window.loft.api || typeof window.loft.api.perform !== "function") {
         renderMsgActionFailure(m);
         return Promise.resolve(false);
@@ -54020,6 +54165,7 @@ async def localfont(name):
       delete m.chatActionFailed;
       return window.loft.api.perform(action.id, args, { source: "messages-chat" }).then(function (result) {
         if (!result || !result.ok) { renderMsgActionFailure(m); return false; }
+        if (messageActionIsOneShot(m, action)) consumeMessageAction(id);
         // Opening a phone app resets its prior navigation state, so install this only afterward.
         if (phoneTarget && currentApp === phoneTarget.id) setPhoneAppReturn("messages", phoneTarget.id, returnDirectly);
         else if (!phoneTarget && !(action.id === "app.open" && args.app === "messages")) close(true);
@@ -54033,9 +54179,11 @@ async def localfont(name):
       hideMsgBadgeCoach();
       if (id) { messagesRead[id] = true; updateMsgBadge(); } // tapping marks the message read (unread = bold until then)
       var m = id && MESSAGES[id], act = m && m.act;
+      if (m && messageHasAction(m) && !messageActionAvailable(id, m)) return false;
       var typedAction = m && (m.chatAction || m.apiAction || legacyTypedMsgAction(act));
-      if (typedAction) { runTypedMsgAction(m, typedAction); return; }
+      if (typedAction) { runTypedMsgAction(id, m, typedAction); return; }
       if (!act) { open(true); openApp("messages", "app_messages", renderMessages); return; }
+      if (messageActionIsOneShot(m, null)) consumeMessageAction(id);
       if (act.indexOf("app:") === 0) {
         var returnDirect = phoneAppReturnsByClosing("messages");
         open(true);
@@ -54180,7 +54328,7 @@ async def localfont(name):
     // then a quiet blue chat icon once the thread is caught up. It appears only after the first
     // message and stays hidden while the phone itself is open; tapping always opens the thread.
     var msgBadgeEl = null, msgBadgeCoachEl = null, msgBadgeCoachT = null, msgBadgeCoachDelayT = null, msgBadgeCoachSeen = false;
-    function unreadCount() { var n = 0; for (var i = 0; i < messagesThread.length; i++) if (!messagesRead[messagesThread[i]]) n++; return n; }
+    function unreadCount() { expireStaleMessageActions(); var n = 0; for (var i = 0; i < messagesThread.length; i++) if (!messagesRead[messagesThread[i]]) n++; return n; }
     function cancelMsgBadgeCoachDelay() {
       if (msgBadgeCoachDelayT) { clearTimeout(msgBadgeCoachDelayT); msgBadgeCoachDelayT = null; }
     }
@@ -54250,13 +54398,14 @@ async def localfont(name):
     document.addEventListener("visibilitychange", function () { if (!document.hidden) scheduleMsgBadgeCoach(); });
     // the freshest still-unread message id (newest arrival first) — autoplay uses this to
     // decide which notification to open+act-on when a text pops during attract mode.
-    window.__latestUnreadMessage = function () { for (var i = messagesThread.length - 1; i >= 0; i--) if (!messagesRead[messagesThread[i]]) return messagesThread[i]; return null; };
+    window.__latestUnreadMessage = function () { expireStaleMessageActions(); for (var i = messagesThread.length - 1; i >= 0; i--) if (!messagesRead[messagesThread[i]]) return messagesThread[i]; return null; };
     var MSG_CAP = 40; // retain more context while keeping the session thread strictly bounded
     function dropMessageAt(index) {
       var old = messagesThread.splice(index, 1)[0];
       if (!old) return;
       delete messagesRead[old];
       delete messageReactions[old];
+      delete messageActionState[old];
       delete messagesArrivedAt[old];
       if (/^(custom_|reply_)/.test(old)) delete MESSAGES[old];
     }
@@ -66712,6 +66861,14 @@ function spawnDustMote(container) {
   // covers exactly that gap; showHuntIntro settles it either way (armed, or declined mid-cinematic).
   var introPending = true;
   function attractOver() { return !huntIntroShowing && !introPending; }
+  function setGameOnlyEntered(on) {
+    var root = document.documentElement;
+    root.classList.toggle("loft-entered", !!on && !root.classList.contains("revealed"));
+    // A desk device may already be framed when Continue clears the recovery gate. Refit against
+    // the newly enlarged viewport on the next paint so its live geometry follows the shell.
+    requestAnimationFrame(function () { if (window.__refitZoom) window.__refitZoom(); });
+  }
+  window.__gameOnlyEntered = function () { return document.documentElement.classList.contains("loft-entered"); };
   // Leaving attract is the one moment every held-back notification channel needs to hear about. A
   // window event rather than a callback registry: those channels live in IIFEs that run EARLIER in
   // this file than this one, so an event lets them subscribe regardless of source order. Fired on a
@@ -66728,6 +66885,7 @@ function spawnDustMote(container) {
   function endHuntIntro() {
     if (!huntIntroShowing) return;
     huntIntroShowing = false;
+    setGameOnlyEntered(true);
     releaseAttract();
   }
   var dotsWrap = document.getElementById("hunt-dots");
@@ -67216,7 +67374,7 @@ function spawnDustMote(container) {
     if (name !== "cuddly" && window.__resetRobin) window.__resetRobin(); // ...nor does Robin's
     if (name !== "cuddly" && window.__resetNavid) window.__resetNavid(); // ...nor Navid's
     if (name !== "cuddly" && window.__resetCuddlyVisitors) window.__resetCuddlyVisitors(); // ...nor the adult friend-duo drop-ins
-    if (window.__updateTotoroWatch) window.__updateTotoroWatch(); // both kids come sit & watch when the totoro channel is up in the nook (and leave otherwise)
+    if (window.__updateTotoroWatch) window.__updateTotoroWatch(); // sync the party/off-party Totoro audience
     if (window.__updateKidGames) window.__updateKidGames(); // party + empty nook → the kids play games on the floor (and clear when you leave)
     if (name !== "balcony" && window.__resetBalconyIrene) window.__resetBalconyIrene(); // ...nor does her fire-festival self leave the balcony
     if (name !== "balcony" && window.__resetBalconyCouple) window.__resetBalconyCouple(); // ...nor do the two of them
@@ -68201,16 +68359,12 @@ function spawnDustMote(container) {
       if (window.__autoToggleDusk) window.__autoToggleDusk(); // a temporary manual look — the crossing scheduler stays armed (the next real crossing still flips it)
     });
   })();
-  // PARTY LIFECYCLE: the party stays the main event for three ATTENDED minutes. Hidden,
-  // unfocused and cinematic time does not count. At 2:30 the wall switch gets one quiet
-  // reminder; at 3:00 the existing graceful guest walk-out ends the party. The controller
-  // only owns pacing and copy — setGardenParty remains the one source of truth and tears down
-  // every visual/audio subsystem. A later, rare text can invite the player to deliberately
-  // relight the party; it never restarts on its own.
+  // PARTY LIFECYCLE: elapsed time never ends the party. The attended clock remains useful for
+  // pacing messages and explicit authored finales, but the wall switch/player owns the ordinary
+  // stop. An accepted last-song/finale can still schedule a bounded graceful wind-down.
   (function () {
     var sw = document.getElementById("garden-lightswitch");
     if (!sw) return;
-    var CLOSE_AT = 150, END_AT = 180;
     var attendedSeconds = 0, timer = null, active = false, finishing = false;
     var finaleAt = null, finaleReason = null, finaleTextOffered = false;
     var suppressNextStop = false, inviteTimer = null;
@@ -68242,9 +68396,7 @@ function spawnDustMote(container) {
     function advance(seconds) {
       if (!window.__gardenPartyOn || finishing) return attendedSeconds;
       attendedSeconds += Math.max(0, +seconds || 0);
-      if (attendedSeconds >= CLOSE_AT) show(true);
       if (finaleAt != null && attendedSeconds >= finaleAt) { finish(finaleReason || "finale"); return attendedSeconds; }
-      if (attendedSeconds >= END_AT) finish("timer");
       return attendedSeconds;
     }
     function tick() {
@@ -69177,6 +69329,10 @@ function spawnDustMote(container) {
   // read as showing up a beat after the party starts, but re-entering the garden mid-party
   // just shows them already-arrived (no re-slide). Reduced motion holds a static pose (CSS).
   var guestArriveTimer = null, guestsArrived = false;
+  // Joining the party is permanent for this party run; `.arrived` below means only "currently
+  // on the garden floor". Keeping those concepts separate lets an adult rotate to another room
+  // without making their children disappear from the shared party/Cuddly inventory.
+  var attendedGuestNames = new Set();
   function guestsWanted() { // on the floor when: party lit + in the garden. NOT gated on tab visibility/focus:
     // the party keeps running unattended (owner: guests should keep arriving/leaving even when the window
     // is unfocused or hidden — the BBQ-kiosk case). Safe here because arrivals are silent CSS class
@@ -69275,6 +69431,16 @@ function spawnDustMote(container) {
   var MOUSE_ARRIVALS = [ // the little ones — walk in last, only when they're visiting this session
     { sel: ".g-elisabeth", home: 578 }, { sel: ".g-felix", home: 636 }
   ];
+  var ARRIVAL_CHILD_NAMES = ["irene", "robin", "navid", "elisabeth", "felix", "patricia-son", "patricia-daughter", "hannah"];
+  function guestNameFromSel(sel) { return String(sel || "").replace(/^\.g-/, ""); }
+  function arrivalSelIsChild(sel) { return ARRIVAL_CHILD_NAMES.indexOf(guestNameFromSel(sel)) !== -1; }
+  function markEntryAttended(entry) {
+    (entry && entry.sels || []).forEach(function (sel) {
+      var name = guestNameFromSel(sel);
+      if (name) attendedGuestNames.add(name);
+    });
+  }
+  window.__partyGuestAttended = function (name) { return attendedGuestNames.has(String(name || "").toLowerCase()); };
   var trickleTimer = null;
   // ── DYNAMIC FLOOR BALANCE ────────────────────────────────────────────────────
   // Each present guest is nudged from its fixed home x to an evenly-spread SLOT so the floor reads
@@ -69338,6 +69504,7 @@ function spawnDustMote(container) {
   function walkFigureIn(g, sel, home) {
     var el = g.querySelector(sel);
     if (!el) return;
+    if (el.classList.contains("arrived")) return; // an arrived child keeps their party home while the adults' unit rotates back in
     var walk = el.querySelector(".guest-walk");
     if (!walk) { el.classList.add("arrived"); return; }
     if (reducedMotionGuests() || document.hidden || stageIndex !== STAGES.indexOf("garden")) { el.classList.add("arrived"); return; } // reduced motion / hidden tab / viewing ANOTHER room: appear in place — the walk animation would be off-screen or paused (stranding the one-shot), so pop in instantly. This lets the party grow in the background and stay balanced.
@@ -69352,6 +69519,7 @@ function spawnDustMote(container) {
   function arriveEntry(entry) {
     var g = document.getElementById("garden-guests");
     if (!g) return;
+    markEntryAttended(entry);
     rebalanceFloor(g, [entry]);
     for (var i = 0; i < entry.sels.length; i++) walkFigureIn(g, entry.sels[i], entry.homes[i]);
     syncCrowdClear(); // the crowd just grew — re-check whether the generics should fan out/fade (≥4 guests)
@@ -69387,7 +69555,13 @@ function spawnDustMote(container) {
   function leaveEntry(entry) {
     var g = document.getElementById("garden-guests");
     if (!g) return;
-    for (var i = 0; i < entry.sels.length; i++) walkFigureOut(g, entry.sels[i], entry.homes[i]); // strolls out from its current slot (still in slotXBySel)
+    for (var i = 0; i < entry.sels.length; i++) {
+      if (arrivalSelIsChild(entry.sels[i]) && attendedGuestNames.has(guestNameFromSel(entry.sels[i]))) {
+        clearBalance(g, entry.sels[i]); // children stay assigned to dance/Cuddly/sleep after their adults leave the visible floor
+        continue;
+      }
+      walkFigureOut(g, entry.sels[i], entry.homes[i]); // adults stroll out from their current slot (still in slotXBySel)
+    }
     rebalanceFloor(g); // the remaining present guests glide to close the gap (the leaver already has .leaving → excluded)
   }
   function bringRotatedGuests(incoming) {
@@ -69405,10 +69579,10 @@ function spawnDustMote(container) {
     var leaving = shuffleArr(evictable).slice(0, Math.min(k, evictable.length));
     leaving.forEach(function (u) { leaveEntry(u); });
     var incoming = shuffleArr(waiting.slice()).slice(0, Math.min(leaving.length, waiting.length));
-    setTimeout(function () { // let a gap open at the gate before the next lot stroll in
+    setTimeout(function () { // let a short, readable gap open before the next lot strolls in
       if (!guestsWanted()) return; // party still wants a floor? (visibility/focus no longer gate — the party runs on unattended, see guestsWanted)
       bringRotatedGuests(incoming);
-    }, 3000);
+    }, 1800);
   }
   // the full roster this party (the duos + the solo, plus the mouses only if they're visiting)
   function fullArrivals() {
@@ -69458,7 +69632,7 @@ function spawnDustMote(container) {
         return;
       }
       rotateGuests(g, present, waiting); // ROTATION: swap 1–2 out for 1–2 in
-      armTrickle(16000 + Math.random() * 9000); // ~16–25s between rotations
+      armTrickle(10000 + Math.random() * 6000); // ~10–16s between rotations; the floor visibly keeps changing
     }, ms);
   }
   function stopTrickle() { clearTrickleTimer(); var g = document.getElementById("garden-guests"); if (g) g.classList.remove("trickle"); }
@@ -69466,7 +69640,8 @@ function spawnDustMote(container) {
   // re-entry / reduced-motion catch-up). No walk — a full floor appears together.
   function fillAllNow(g) {
     stopTrickle();
-    var list = ARRIVALS.slice(); MOUSE_ARRIVALS.forEach(function (m) { list.push({ sels: [m.sel] }); });
+    var list = fullArrivals();
+    list.forEach(markEntryAttended);
     for (var i = 0; i < list.length; i++) for (var j = 0; j < list[i].sels.length; j++) {
       var el = g.querySelector(list[i].sels[j]); if (el) el.classList.add("arrived");
     }
@@ -69532,6 +69707,7 @@ function spawnDustMote(container) {
     var walkers = g.querySelectorAll(".guest.arrived, .guest.walking, .guest.leaving");
     for (var i = 0; i < walkers.length; i++) { walkers[i].classList.remove("arrived", "walking", "leaving"); }
     recentArrivals.length = 0;
+    attendedGuestNames.clear();
     var walks = g.querySelectorAll(".guest-walk");
     for (var k = 0; k < walks.length; k++) walks[k].style.removeProperty("--walk-x");
     slotXBySel = {}; // forget all slots
@@ -69588,7 +69764,7 @@ function spawnDustMote(container) {
     }
     startHostSolo();
     syncCrowdClear();
-    armTrickle(16000 + Math.random() * 9000);
+    armTrickle(10000 + Math.random() * 6000);
     return added;
   };
   window.__dismissGuests = function () { guestsArrived = false; clearGardenGuests(); }; // send them off without ending the party
@@ -69674,6 +69850,13 @@ function spawnDustMote(container) {
     for (var s = 0; s < entry.sels.length; s++) { var el = g.querySelector(entry.sels[s]); if (el) el.classList.remove("arrived"); }
     arriveEntry(entry);
     if (everyoneArrived(g)) g.classList.remove("trickle"); // manual arrivals can complete the floor
+    return entry.id;
+  };
+  window.__duoDepart = function (id) { // deterministic occupancy test hook: exercise the real rotation departure path
+    var entry = null;
+    for (var i = 0; i < ARRIVALS.length; i++) if (ARRIVALS[i].id === id) { entry = ARRIVALS[i]; break; }
+    if (!entry) return null;
+    leaveEntry(entry);
     return entry.id;
   };
   (function wireGuestArrivalCleanup() { // drop the one-shot .guests-arriving once the slide finishes (a re-arm re-adds it)
@@ -69798,14 +69981,16 @@ function spawnDustMote(container) {
         node.getBoundingClientRect(); // force reflow (SVG has no offsetWidth)
         node.classList.add(cls);
       }
-      function flare() {
+      function flare(silent) {
         if (!guestsOnFloor()) return; // inert off the floor — nothing to leak
         restart(react, cfg.flare);
         if (extra) restart(extra, cfg.extra);
         var now = Date.now();
-        if (now - lastFlareSound > 140) { lastFlareSound = now; playGuestFlareSfx(cfg.pan, cfg.sfx); }
+        if (!silent && now - lastFlareSound > 140) { lastFlareSound = now; playGuestFlareSfx(cfg.pan, cfg.sfx); }
       }
-      el.addEventListener("pointerdown", flare);
+      cfg.el = el;
+      cfg.flareNow = flare;
+      el.addEventListener("pointerdown", function () { flare(false); });
       // keyboard a11y: Enter/Space fire the flare when the guest is focused
       el.setAttribute("tabindex", "0");
       el.addEventListener("keydown", function (e) {
@@ -69838,6 +70023,38 @@ function spawnDustMote(container) {
         extra.classList.remove("halo-pulse");
       });
     });
+    // Named guests should feel alive without needing taps. This visual-only driver picks one
+    // currently painted floor guest every few seconds and reuses their authored signature flare.
+    // While the browser is unfocused it keeps a short retry armed, so looking back produces action
+    // promptly; it never plays autonomous SFX or spawns nodes.
+    var ambientFlareTimer = null;
+    function clearAmbientFlare() {
+      if (ambientFlareTimer) { clearTimeout(ambientFlareTimer); ambientFlareTimer = null; }
+    }
+    function scheduleAmbientFlare(delay) {
+      clearAmbientFlare();
+      if (!window.__gardenPartyOn) return;
+      ambientFlareTimer = setTimeout(ambientFlareTick, delay == null ? 2800 + Math.random() * 3200 : delay);
+    }
+    function ambientFlareTick() {
+      ambientFlareTimer = null;
+      if (!window.__gardenPartyOn) return;
+      var watched = window.currentStageName === "garden" && !document.hidden && document.hasFocus() &&
+        !window.__photoFreeze && !window.__firstDanceOn && !window.__musicPaused;
+      if (watched) {
+        var pool = GUESTS.filter(function (cfg) {
+          return cfg.el && cfg.el.classList.contains("arrived") && !cfg.el.classList.contains("leaving") &&
+            !cfg.el.classList.contains("off-at-games") && !cfg.el.classList.contains("off-asleep") &&
+            !cfg.el.classList.contains("off-at-bbq") && !cfg.el.classList.contains("off-with-kids");
+        });
+        if (pool.length) pool[(Math.random() * pool.length) | 0].flareNow(true);
+        scheduleAmbientFlare();
+      } else {
+        scheduleAmbientFlare(1200); // warm state keeps moving; react quickly when the room is watched again
+      }
+    }
+    window.__startGuestFlares = function () { scheduleAmbientFlare(1800 + Math.random() * 1800); };
+    window.__stopGuestFlares = clearAmbientFlare;
   })();
   // ── FARHANG'S TOAST + THE FIRST DANCE ────────────────────────────────────────
   // Two garden-party "moments", both class-driven on persistent nodes (nothing spawned →
@@ -70965,7 +71182,7 @@ function spawnDustMote(container) {
     if (wash) wash.classList.remove("flashing");
   }
   // ── AUTONOMOUS PHOTO-MOMENT ──────────────────────────────────────────────────
-  // Every once in a while the party FREEZES for ~15s of photography: the dancing holds still
+  // Every once in a while the party holds a short ~4s photography pose: the dancing holds still
   // (dance-frozen via __photoFreeze), the blacklight drops, and Aspen works the frozen crowd
   // with near-continuous flashes — then it resumes. Same self-rescheduling, party-gated,
   // crickets-safe idiom as the flash/chase: skips a round while unattended or while the visitor
@@ -70986,12 +71203,12 @@ function spawnDustMote(container) {
     setPartyMomentState("photoFreeze", true);
     if (window.__syncDanceFreeze) window.__syncDanceFreeze();
     if (window.__albumCaptureMoment) window.__albumCaptureMoment(); // one keepsake per photo-moment (not per flash)
-    photoFreezeTimer = setTimeout(endPhotoMoment, 15000); // ~15s of photography
+    photoFreezeTimer = setTimeout(endPhotoMoment, 4200); // enough for the camera raise + a readable pose, never a long stall
   }
   function schedulePhotoMoment() {
     if (photoFreezeTimer) { clearTimeout(photoFreezeTimer); photoFreezeTimer = null; }
     if (!window.__gardenPartyOn) return;
-    photoFreezeTimer = setTimeout(startPhotoMoment, 55000 + Math.random() * 65000); // ~55-120s between photo moments
+    photoFreezeTimer = setTimeout(startPhotoMoment, 45000 + Math.random() * 30000); // ~45-75s between short photo poses
   }
   window.__startPhotoMoment = schedulePhotoMoment;
   window.__stopPhotoMoment = function () {
@@ -71001,7 +71218,7 @@ function spawnDustMote(container) {
   window.__photoMomentNow = function () { if (photoFreezeTimer) { clearTimeout(photoFreezeTimer); photoFreezeTimer = null; } startPhotoMoment(); }; // console/test: trigger one now
   // ── ASPEN AUTO-SNAPS FOR THE ALBUM ─────────────────────────────────────────────
   // Aspen quietly grabs keepsakes for the album OFTEN — a shot every ~14-22s while the party's on,
-  // WITHOUT freezing the floor (the rare ~15s photo-moment freeze is a separate, bigger event).
+  // WITHOUT freezing the floor (the rare short photo-pose is a separate, bigger event).
   // Party-gated + crickets-safe (skips while hidden/unfocused, and while a freeze is already
   // snapping its own). The album's drop-oldest cap keeps it fresh; each shot flashes + rotates subject.
   var albumSnapTimer = null;
@@ -71538,10 +71755,8 @@ function spawnDustMote(container) {
     if (!g || !g.classList.contains("guests-in")) return [];
     return FAMILY_KIDS.filter(function (kid) {
       if (kid.visiting && !mousesVisiting()) return false;
-      var parent = g.querySelector(kid.parent);
       var floor = g.querySelector(".g-" + kid.name);
-      return !!(parent && parent.classList.contains("arrived") && !parent.classList.contains("leaving") &&
-        floor && floor.classList.contains("off-at-games"));
+      return !!(floor && kidAtParty(kid.name) && floor.classList.contains("off-at-games"));
     }).map(function (kid) { return kid.name; });
   }
   function coreKidRunners() {
@@ -71615,10 +71830,13 @@ function spawnDustMote(container) {
   function kidAtParty(name) {
     var garden = document.getElementById("garden-guests");
     var el = document.querySelector("#garden-guests .g-" + name);
-    if (!el || el.classList.contains("leaving")) return false;
+    if (!el) return false;
     // The three core godkids are resident floor figures, not members of an arrival unit.
     if (GARDEN_KIDS.indexOf(name) !== -1) return !!window.__gardenPartyOn;
-    if (!el.classList.contains("arrived")) return false;
+    // Family arrival is a lifetime attendance fact, not their current room. Once their unit has
+    // entered, its children remain in the dance/Cuddly/run inventory even while the adults rotate
+    // off the garden floor.
+    if (!window.__partyGuestAttended || !window.__partyGuestAttended(name)) return false;
     if ((name === "elisabeth" || name === "felix") && !mousesVisiting()) return false;
     return true;
   }
@@ -71644,12 +71862,14 @@ function spawnDustMote(container) {
     PARTY_FLOOR_KIDS.forEach(function (name) {
       var el = document.querySelector("#garden-guests .g-" + name);
       if (!el) return;
-      var here = kidAtParty(name);
+      var totoroWatch = !!window.__totoroWatchActive;
+      var here = totoroWatch || kidAtParty(name);
       var dance = here && !forceNook && !window.__bbqSplitOn && Math.random() < kidDanceChance(name);
       var sleeping = here && !!window.__kidsAsleep && !dance;
       var nook = here && !window.__kidsAsleep && !dance;
       if (forceNook || window.__bbqSplitOn) { nook = here && !window.__kidsAsleep; dance = false; sleeping = here && !!window.__kidsAsleep; }
-      if (!kidNookAvailable() && !sleeping) { nook = false; dance = here; }
+      if (totoroWatch) { nook = true; dance = false; sleeping = false; }
+      if (!totoroWatch && !kidNookAvailable() && !sleeping) { nook = false; dance = here; }
       // Balcony play is a temporary outing from Cuddly, so preserve that home assignment until
       // the moment tears down even if another nook owner appears during the short excursion.
       if (!window.__kidsAsleep && window.__balconyBorrowedKidNames && window.__balconyBorrowedKidNames().indexOf(name) !== -1) {
@@ -71715,7 +71935,9 @@ function spawnDustMote(container) {
     var next;
     do { next = modes[Math.floor(Math.random() * modes.length)]; } while (next === old);
     applyPartyKidFormation(next);
-    partyKidFormationTimer = setTimeout(partyKidFormationTick, 9000 + Math.random() * 5000);
+    var watchedNook = window.currentStageName === "cuddly";
+    partyKidFormationTimer = setTimeout(partyKidFormationTick,
+      watchedNook ? (30000 + Math.random() * 15000) : (9000 + Math.random() * 5000));
   }
   function startPartyKidFormation() {
     if (partyKidFormationTimer) return;
@@ -71891,6 +72113,12 @@ function spawnDustMote(container) {
     on = !!on;
     var wasOn = !!window.__gardenPartyOn;
     window.__gardenPartyOn = on;
+    if (window.__expireStaleMessageActions) window.__expireStaleMessageActions(); // retire context-bound arrows immediately; their text stays as read thread history
+    if (on && !wasOn && !window.__totoroWatchActive) {
+      if (window.__resetIrene) window.__resetIrene();
+      if (window.__resetRobin) window.__resetRobin();
+      if (window.__resetNavid) window.__resetNavid();
+    }
     // Party-off is the teardown boundary even when a cinematic, reset, lifecycle fallback,
     // or console helper calls this setter directly instead of going through setPartyMode.
     // Clear both the switch's persistent UV intent and its visible state before the breather
@@ -71908,6 +72136,7 @@ function spawnDustMote(container) {
     // does). Every party entry point routes through here, so any way the party lights agrees.
     if (on && !window.__secondRound) setSecondRound(true); // unlock rooms, reveal roster, and release phase-two-held messages/cards
     if (on) { if (window.__startCueDrip) window.__startCueDrip(); } else if (window.__stopCueDrip) window.__stopCueDrip(); // drip the app-cue phone texts only while the party's lit
+    if (on) { if (window.__startGuestFlares) window.__startGuestFlares(); } else if (window.__stopGuestFlares) window.__stopGuestFlares(); // frequent silent named-guest reactions while the garden is watched
     if (!on && window.__setSmores) window.__setSmores(false); // the party's out → put the s'mores bonfire out too (unless a fire-festival season keeps its own)
     if (!on && window.__stopBalconySky) window.__stopBalconySky(); // ...and any fireworks finale / wish-lanterns in flight
     if (window.__updateStarsSound) window.__updateStarsSound(); // stars/piano is cuddly-only during a party, whole-loft otherwise — re-gate on party start/stop
@@ -71932,7 +72161,7 @@ function spawnDustMote(container) {
       if (gardenPartyActive()) topUpConfetti(); // kick it off now; the seed loop keeps it topped
       startDiscoStepper(); // begin the once-a-second disco-pool hops (idempotent; self-gates on gardenPartyActive)
       startGardenFlash(); // begin the front-left guest's occasional soft camera flash (idempotent; self-gates on gardenPartyActive)
-      if (window.__startPhotoMoment) window.__startPhotoMoment(); // schedule the occasional ~15s photo-freeze moments
+      if (window.__startPhotoMoment) window.__startPhotoMoment(); // schedule the occasional short photo-pose moments
       if (window.__startAlbumSnaps) window.__startAlbumSnaps(); // Aspen grabs album keepsakes often (~14-22s), no freeze
       if (window.__startPhotogRounds) window.__startPhotogRounds(); // ...and she works the OTHER rooms too — one shot per round, wherever you are
       if (window.__updateRoomPhotogs) window.__updateRoomPhotogs();
@@ -71994,6 +72223,7 @@ function spawnDustMote(container) {
     updateAllPartyDances(); // start/stop every registered dance's bed with the party (each self-gates on its want)
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // start/stop the garden groovers (incl. the bartender's party groove)
     if (window.__updateCuddlyPresence) window.__updateCuddlyPresence(); // party on → the couple's off at the garden (hide both); party off → they're back in the nook
+    if (window.__updateTotoroWatch) window.__updateTotoroWatch(); // swap party-off three-cameo viewing for the party's full eight-child audience
     if (window.__updateKidGames) window.__updateKidGames(); // party on → the kids play games in the now-empty nook; party off → they clear
     if (window.__refreshKitchenBar) window.__refreshKitchenBar(); // party on/off swaps the kitchen bar↔espresso caption + arrows
     if (window.__updateBarGroovers) window.__updateBarGroovers(); // party on → arm the bar's occasional grooving couples; party off → send them off + disarm
@@ -72004,7 +72234,7 @@ function spawnDustMote(container) {
     if (window.__rollGardenAurora) window.__rollGardenAurora(); // the UV changes the odds — re-roll the aurora (much likelier with the party off)
     if (window.__homeCat && window.currentStageName) window.__homeCat(window.currentStageName); // party on → contain the loose cat to the nook; party off → let it roam again (never stows it)
     if (window.__updateWhistler) window.__updateWhistler(); // party on + Farhang/Lauren arrived → let Whistler out; party off → send him home
-    if (window.__partyLifecycleChanged) window.__partyLifecycleChanged(on, wasOn); // attended close cue + automatic wind-down; repeated idempotent sets never reset its clock
+    if (window.__partyLifecycleChanged) window.__partyLifecycleChanged(on, wasOn); // attended pacing + explicit finales; repeated idempotent sets never reset its clock
     // Second act: THE hinge. Pinged from the tail — every ignition path (the balcony switch,
     // the garden light switch, the disco ball, the mask) funnels through here, and by now the
     // whisk's goToStage("garden") has already run and set its own caption, so the reveal line
@@ -72128,6 +72358,7 @@ function spawnDustMote(container) {
     }
     function eligible(c) {
       for (var i = 0; i < c.members.length; i++) {
+        if (!window.__partyGuestAttended || !window.__partyGuestAttended(c.members[i])) return false;
         if (onFloor(c.members[i]) || onBalcony(c.members[i])) return false;
       }
       return true;
@@ -73024,7 +73255,9 @@ function spawnDustMote(container) {
     function layout(preserve) {
       shownSmokerNames = [];
       // ── crowd: a random subset (1–all) of the eligible non-smokers, shuffled + spaced ──
-      var crowdPool = ROSTER.filter(function (r) { return !r.smoker && !elsewhere(r.name); });
+      var crowdPool = ROSTER.filter(function (r) {
+        return !r.smoker && window.__partyGuestAttended && window.__partyGuestAttended(r.name) && !elsewhere(r.name);
+      });
       var crowdCount = (Math.random() * (crowdPool.length + 1)) | 0; // 0..all — sometimes an empty crowd (just smokers), sometimes a full deck
       var crowd = preserve ? preferPresent(crowdPool, crowdCount) : shuffle(crowdPool.slice()).slice(0, crowdCount);
       placeLane(shuffle(crowd.slice()), CROWD_LANE);
@@ -73051,6 +73284,7 @@ function spawnDustMote(container) {
       var smokerPool = ROSTER.filter(function (r) {
         if (!r.smoker) return false;
         if (r.couple && !coupleOut()) return false;   // couple only when the roll says so
+        if (!r.dj && !r.couple && (!window.__partyGuestAttended || !window.__partyGuestAttended(r.name))) return false;
         if (elsewhere(r.name)) return false;          // one-room rule (dj name never matches → kept)
         return true;
       });
@@ -73767,6 +74001,7 @@ function spawnDustMote(container) {
     }
     function eligible(c) {
       for (var i = 0; i < c.members.length; i++) {
+        if (!window.__partyGuestAttended || !window.__partyGuestAttended(c.members[i])) return false;
         // NOT excluded for being on the garden dance floor — the floor is off-screen while you're in
         // the office, and the floor(8)+bar+balcony would otherwise consume all 7 couples and leave
         // the office permanently EMPTY. Still exclude the bar/balcony so a couple isn't in two
@@ -79222,6 +79457,7 @@ function spawnDustMote(container) {
   function endAttract() {
     introPending = false;
     huntIntroShowing = false;
+    setGameOnlyEntered(true);
     clearOpeningGuide();
     calmIntroBlink();
     removeClickMe();
@@ -79234,6 +79470,7 @@ function spawnDustMote(container) {
   // owns the caption). Re-arming listeners is idempotent — an identical listener never doubles up.
   function showHuntIntro() {
     introPending = false; // settled either way — armed just below, or declined for the cinematic
+    setGameOnlyEntered(false);
     clearOpeningGuide();
     if (window.__cinematic) { releaseAttract(); return; } // no prompt to wait on: whatever was held goes out
     huntIntroShowing = true;
@@ -81331,6 +81568,8 @@ function spawnDustMote(container) {
         var lit = g.querySelectorAll(".guest.spotlighted");
         for (var i = 0; i < lit.length; i++) lit[i].classList.remove("spotlighted");
       }
+      var crewLit = document.querySelectorAll("#garden-djbooth.spotlighted, #garden-photographer.spotlighted");
+      for (var c = 0; c < crewLit.length; c++) crewLit[c].classList.remove("spotlighted");
       var tdC = document.getElementById("trip-melt-dancers"); if (tdC) tdC.classList.remove("solo-frozen"); // unfreeze the generic crowd
       // arrows live on the picked guest's group OR on the DJ booth / photographer group (crew) —
       // sweep the whole strip so a crew arrow doesn't strand outside #garden-guests
@@ -81375,6 +81614,7 @@ function spawnDustMote(container) {
           var host = document.getElementById(crew.host);
           if (!host) return;
           any = true;
+          host.classList.add("spotlighted");
           host.appendChild(makeSpotArrow(crew.cx, crew.tipY));
           return;
         }
@@ -81692,6 +81932,9 @@ function spawnDustMote(container) {
       if (!ensureNodes()) return;
       if (v && !window.__secondRound) return; // first round (no party yet this session): refuse to open — an empty/early roster only confuses. This is the sole choke point, so it covers the h/w keys, roster(true), __toggleRoster(true) and the autoplay/cinematic beats alike. Closing (v=false) is always allowed.
       open = !!v;
+      var garden = document.getElementById("stage-garden");
+      if (!open) clearSpotlight();
+      if (garden) garden.classList.toggle("roster-freeze", open && window.currentStageName === "garden" && !!window.__gardenPartyOn);
       if (open) {
         if (window.__closeDjPicker) window.__closeDjPicker(); // roster + jukebox are mutually exclusive
         render(true);
@@ -81724,6 +81967,8 @@ function spawnDustMote(container) {
     var chipLabel = null, chipExpanded = null;
     function syncAvailability() {
       if (!ensureNodes()) return;
+      var garden = document.getElementById("stage-garden");
+      if (garden) garden.classList.toggle("roster-freeze", open && window.currentStageName === "garden" && !!window.__gardenPartyOn);
       var label = tipText("roster_title");
       if (label !== chipLabel) {
         chipLabel = label;

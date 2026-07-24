@@ -15,8 +15,16 @@ var harness = String.raw`<script>
   try {
     var kids = ["irene", "robin", "navid", "elisabeth", "felix", "patricia-son", "patricia-daughter", "hannah"];
     window.__setGardenParty(true, false);
-    if (window.__summonGuests) window.__summonGuests();
+    if (window.__ireneSummon) window.__ireneSummon();
+    if (window.__robinAppear) window.__robinAppear();
+    if (window.__navidAppear) window.__navidAppear();
+    check("ordinary child cameos stay out while the party inventory is active",
+      ["irene", "robin", "navid"].every(function (name) {
+        return !document.getElementById("cuddly-" + name).classList.contains("showing");
+      }));
+    window.goToStage("garden");
     if (window.__syncMousesVisitingClass) { window.__mousesVisiting = true; window.__syncMousesVisitingClass(); }
+    if (window.__summonGuests) window.__summonGuests();
     kids.concat(["bahareh", "madla", "robert", "patricia", "baharak", "payman"]).forEach(function (name) {
       var figure = document.querySelector("#garden-guests .g-" + name);
       if (figure) { figure.classList.add("arrived"); figure.classList.remove("leaving", "off-at-bbq"); }
@@ -34,6 +42,35 @@ var harness = String.raw`<script>
     check("Cuddly can seat all eight named children", kids.every(function (name) { return gameNames.indexOf(name) !== -1; }), gameNames.join(","));
     check("the same eight children leave the garden floor", moved.length === kids.length, moved.join(","));
     check("no child duplicates across garden and Cuddly", audit.ok && !(audit.duplicates || []).some(function (d) { return kids.indexOf(d.key) !== -1; }), JSON.stringify(audit.duplicates));
+    var placement = window.__partyKidPlacement;
+    check("every attending child has exactly one persistent home",
+      placement.games.length + placement.dancing.length + placement.asleep.length === 8 &&
+      kids.every(function (name) {
+        return [placement.games, placement.dancing, placement.asleep].filter(function (group) { return group.indexOf(name) !== -1; }).length === 1;
+      }), JSON.stringify(placement));
+
+    window.goToStage("cuddly");
+    window.__cuddlyProjector.set("totoro");
+    window.__setKidsAsleep(true);
+    var totoroPlacement = window.__assignPartyKids(false);
+    window.__updateKidGames();
+    check("party Totoro seats all eight children and overrides dance or sleep",
+      window.__kidGamesNow().length === 8 && totoroPlacement.games.length === 8 &&
+      !totoroPlacement.dancing.length && !totoroPlacement.asleep.length &&
+      ["irene", "robin", "navid"].every(function (name) {
+        return !document.getElementById("cuddly-" + name).classList.contains("showing");
+      }), JSON.stringify(totoroPlacement));
+    window.__setKidsAsleep(false);
+    window.__cuddlyProjector.set("fire");
+
+    window.goToStage("garden");
+    window.__duoDepart("family");
+    window.__assignPartyKids(true);
+    check("children remain in the party inventory when their adults rotate off the floor",
+      ["patricia-son", "patricia-daughter"].every(function (name) {
+        var floor = document.querySelector("#garden-guests .g-" + name);
+        return window.__partyGuestAttended(name) && floor.classList.contains("arrived") && floor.classList.contains("off-at-games");
+      }));
 
     window.goToStage("garden");
     window.__updateKidGames();
@@ -97,6 +134,22 @@ var harness = String.raw`<script>
     check("s'mores children publish through the balcony inventory",
       smores.every(function (name) { return smoresNames.indexOf(name) !== -1; }), smoresNames.join(","));
     window.__setSmores(false);
+
+    window.goToStage("cuddly");
+    kids.forEach(function (name, index) {
+      var floor = document.querySelector("#garden-guests .g-" + name);
+      floor.classList.toggle("off-at-games", index < 5);
+      floor.classList.remove("off-asleep");
+    });
+    window.__updateKidGames();
+    var seatedX = kids.slice(0, 5).map(function (name) {
+      var rock = document.querySelector("#cuddly-kidgames .kg-" + name);
+      var match = rock && rock.parentNode.getAttribute("transform").match(/translate\(([-\d.]+)/);
+      return match ? +match[1] : -1;
+    });
+    var leftSeats = seatedX.filter(function (x) { return x < 340; }).length;
+    check("five Cuddly children balance across both game groups instead of filling left-to-right",
+      leftSeats === 2 || leftSeats === 3, seatedX.join(","));
   } catch (error) {
     out.errors.push("setup: " + (error && error.stack || error));
   }

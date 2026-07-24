@@ -135,6 +135,32 @@ var HARNESS = String.raw`<script>
     });
     window.__partyLifecycleState = realPartyLifecycleState;
 
+    window.__gardenPartyOn = false;
+    if (window.__resetPhoneApps) window.__resetPhoneApps();
+    window.__secondRound = true;
+    window.__gardenPartyOn = true;
+    window.__deliverPhoneMessage("firstdance");
+    window.__deliverPhoneMessage("cue_calendar");
+    if (window.__hideMessageThumb) window.__hideMessageThumb();
+    window.__openMessagesAt(null);
+    await sleep(40);
+    var staleBefore = window.__chatMessagesSummary();
+    var momentBefore = !!document.querySelector(".pm-msg-row[data-message-id=firstdance] .pm-msg-act");
+    window.__gardenPartyOn = false;
+    window.__expireStaleMessageActions();
+    await sleep(40);
+    var staleAfter = window.__chatMessagesSummary();
+    step("action_expiry", {
+      beforeUnread: staleBefore.unread,
+      afterUnread: staleAfter.unread,
+      state: window.__messageActionState("firstdance"),
+      retained: window.__phoneMessageThread().indexOf("firstdance") !== -1,
+      momentBefore: momentBefore,
+      momentAfter: !!document.querySelector(".pm-msg-row[data-message-id=firstdance] .pm-msg-act"),
+      calendarAfter: !!document.querySelector(".pm-msg-row[data-message-id=cue_calendar] .pm-msg-act"),
+      latest: window.__latestUnreadMessage()
+    });
+
     if (window.__resetPhoneApps) window.__resetPhoneApps();
     window.__secondRound = true;
     window.__monitorGroupChatAsk = function (text) { return Promise.resolve(JSON.stringify({ sender: "Charlie", text: "Reply to " + text, reply_to_id: null, action: null })); };
@@ -184,6 +210,10 @@ check(s.roster_release.autonomousDelivered && s.roster_release.badge, "closing W
 check(s.formal_early.accepted && !s.formal_early.ready && s.formal_early.held && !s.formal_early.delivered,
   "formal-moment texts wait through the party's opening stretch", s.formal_early);
 check(s.formal_mature.ready && s.formal_mature.delivered, "formal-moment texts release after 45 attended party seconds", s.formal_mature);
+check(s.action_expiry.beforeUnread === 2 && s.action_expiry.afterUnread === 1 && s.action_expiry.state === "expired" &&
+  s.action_expiry.retained && s.action_expiry.momentBefore && !s.action_expiry.momentAfter &&
+  s.action_expiry.calendarAfter && s.action_expiry.latest === "cue_calendar",
+  "party-bound actions expire into read history while still-applicable messages keep their action and unread slot", s.action_expiry);
 check(s.retention.before === 40 && s.retention.after === 40 && s.retention.allConversation && s.retention.paired && s.retention.newestUser && s.retention.newestAi, "the bounded thread evicts authored chatter before complete visitor/AI turns", s.retention);
 
 console.log("");

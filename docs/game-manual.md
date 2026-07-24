@@ -11,9 +11,10 @@ look useful, and keep wandering.
 When a saved session is available, the opening screen asks whether to continue
 or start over. Gameplay shortcuts remain disabled until that choice is made;
 use the buttons, arrow keys, `Enter`, or `Space` to choose. Trailer and Autoplay
-remain hidden until the recovery choice is complete. **Start over** acts
-immediately because the recovery choice itself is the confirmation; the in-game
-Restart control still asks before discarding active progress.
+remain available: Trailer preserves the unopened checkpoint, while Autoplay
+continues from it. **Start over** acts immediately because the recovery choice
+itself is the confirmation; the in-game Restart control still asks before
+discarding active progress.
 
 ## Quick start
 
@@ -415,6 +416,10 @@ asynchronously. There is no blocking "thinking" message, and the composer remain
 available for follow-ups. The responder is chosen from the relevant wedding crew
 when possible, rather than always speaking as Charlie. A failed response remains
 retryable without duplicating the player's message.
+
+After phase 2 begins and another message has arrived, Charlie sends one delayed
+introduction that also points out the general escape control: use `Escape` to
+leave a situation, or `Backspace` when browser fullscreen consumes `Escape`.
 
 The crew assistant receives a privacy-filtered, public game context. It may use
 relevant roles and relationships, the current room roster, game date and time,

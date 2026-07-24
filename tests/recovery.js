@@ -51,11 +51,11 @@ var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(s.gate.shown && !s.gate.clickMe && s.gate.primary, "a valid save replaces CLICK ME with Continue selected", s.gate);
 check(!!s.gate.meta && s.gate.meta.toLowerCase().indexOf("office") !== -1, "the recovery summary names the saved room", s.gate.meta);
-check(s.gate.watchHidden && s.gate.watchAria === "true" && s.gate.watchDisplay === "none", "Trailer and Autoplay are absent while recovery owns the opening", s.gate);
+check(!s.gate.watchHidden && s.gate.watchAria === null && s.gate.watchDisplay === "flex", "Trailer and Autoplay remain available beside the recovery choice", s.gate);
 check(s.blocked && s.blocked.gate && s.blocked.room === "kitchen" && !s.blocked.started && !s.blocked.party && !s.blocked.trip && !s.blocked.help && !s.blocked.console && s.blocked.save, "gameplay shortcuts stay inert until a recovery choice is made", s.blocked);
 check(s.right && s.left, "arrow keys move between Start over and Continue", { right: s.right, left: s.left });
 check(!s.continued.gate && s.continued.room === "office" && s.continued.max === 4 && s.continued.phase2 && s.continued.started, "Enter continues into the restored unlocked game", s.continued);
-check(!s.continued.watchHidden && !s.continued.watchAria && s.continued.watchDisplay === "flex", "Trailer and Autoplay return after the recovery choice", s.continued);
+check(!s.continued.watchHidden && !s.continued.watchAria && s.continued.watchDisplay === "flex", "Trailer and Autoplay remain available after the recovery choice", s.continued);
 
 var restart = lib.runPageSync("rsvp.html", START_OVER_HARNESS, 1900, { patchRaf: true });
 check(!!restart && restart.errors.length === 0, "Start over harness has no uncaught page errors", restart && restart.errors);

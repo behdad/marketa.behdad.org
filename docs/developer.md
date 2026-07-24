@@ -102,11 +102,11 @@ with static fallback text where needed. Any English copy change must be mirrored
 The checkpoint recovery gate is a modal state boundary. Its capture-phase key handler consumes all
 keyboard events before gameplay handlers run, while handling arrow/Enter/Space itself and leaving
 browser-default `Tab` focus traversal available. Normal shortcuts become active only after Continue
-or Start over removes the gate. The controller also hides the entire `.watch-controls` row while
-mounted, then restores it from the shared gate teardown, so Trailer and Autoplay never compete with
-the saved-session decision. Start over clears the checkpoint directly because the recovery gate is
-already an explicit destructive choice; only the in-game Restart button/key uses
-`__confirmRestart()`.
+or Start over removes the gate. Trailer and Autoplay remain visible beside the gate: recovery
+Autoplay applies the checkpoint before starting its director, while recovery Trailer holds and
+restores the unopened checkpoint around its deterministic reset. Start over clears the checkpoint
+directly because the recovery gate is already an explicit destructive choice; only the in-game
+Restart button/key uses `__confirmRestart()`.
 
 ### Trailer lifecycle
 

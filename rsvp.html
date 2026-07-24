@@ -25603,12 +25603,12 @@ var T = {
     msg_react: "React",
     msg_badge_coach: "New message. Tap to read.",
     msg_charlie_from: "Charlie",
-    msg_charlie_body_a: "Hi, Charlie here. I know this loft pretty well—ask me anything, or just come chat. 💬",
-    msg_charlie_body_b: "Need a clue, directions, or a little company? Message me. —Charlie 💬",
-    msg_charlie_body_c: "Hello from inside the computer. I’m Charlie; I know the loft, the people, and most of the secrets. 💬",
-    msg_charlie_body_d: "Looking for a way around, an answer, or an excuse to leave the dance floor? I’m around. —Charlie 💬",
-    msg_charlie_body_e: "I’m Charlie. Ask me about the wedding, the loft, or whatever just happened. 💬",
-    msg_charlie_body_f: "Psst. If this place gets confusing, I probably know what’s going on. Probably. —Charlie 💬",
+    msg_charlie_body_a: "Hi, Charlie here. I know this loft pretty well—ask me anything, or just come chat. 💬 Esc escapes a situation. In fullscreen, use Backspace.",
+    msg_charlie_body_b: "Need a clue, directions, or a little company? Message me. —Charlie 💬 Esc escapes a situation. In fullscreen, use Backspace.",
+    msg_charlie_body_c: "Hello from inside the computer. I’m Charlie; I know the loft, the people, and most of the secrets. 💬 Esc escapes a situation. In fullscreen, use Backspace.",
+    msg_charlie_body_d: "Looking for a way around, an answer, or an excuse to leave the dance floor? I’m around. —Charlie 💬 Esc escapes a situation. In fullscreen, use Backspace.",
+    msg_charlie_body_e: "I’m Charlie. Ask me about the wedding, the loft, or whatever just happened. 💬 Esc escapes a situation. In fullscreen, use Backspace.",
+    msg_charlie_body_f: "Psst. If this place gets confusing, I probably know what’s going on. Probably. —Charlie 💬 Esc escapes a situation. In fullscreen, use Backspace.",
     msg_pouria_from: "Pouria",
     msg_pouria_body: "bar's open again 🍸 get down here",
     msg_group_from: "Wedding crew",
@@ -26486,12 +26486,12 @@ var T = {
     msg_react: "Reakce",
     msg_badge_coach: "Nová zpráva. Klepni a přečti si ji.",
     msg_charlie_from: "Charlie",
-    msg_charlie_body_a: "Ahoj, tady Charlie. Tenhle loft znám docela dobře — zeptej se mě na cokoli nebo si přijď popovídat. 💬",
-    msg_charlie_body_b: "Potřebuješ nápovědu, navigaci nebo trochu společnosti? Napiš mi. —Charlie 💬",
-    msg_charlie_body_c: "Zdravím z počítače. Jsem Charlie; znám loft, jeho obyvatele i většinu tajemství. 💬",
-    msg_charlie_body_d: "Hledáš cestu, odpověď, nebo záminku zmizet z parketu? Jsem tu. —Charlie 💬",
-    msg_charlie_body_e: "Jsem Charlie. Zeptej se mě na svatbu, loft nebo na to, co se tu právě semlelo. 💬",
-    msg_charlie_body_f: "Psst. Když je tenhle loft trochu matoucí, nejspíš vím, co se děje. Nejspíš. —Charlie 💬",
+    msg_charlie_body_a: "Ahoj, tady Charlie. Tenhle loft znám docela dobře — zeptej se mě na cokoli nebo si přijď popovídat. 💬 Klávesou Esc unikneš z každé situace. V režimu celé obrazovky použij Backspace.",
+    msg_charlie_body_b: "Potřebuješ nápovědu, navigaci nebo trochu společnosti? Napiš mi. —Charlie 💬 Klávesou Esc unikneš z každé situace. V režimu celé obrazovky použij Backspace.",
+    msg_charlie_body_c: "Zdravím z počítače. Jsem Charlie; znám loft, jeho obyvatele i většinu tajemství. 💬 Klávesou Esc unikneš z každé situace. V režimu celé obrazovky použij Backspace.",
+    msg_charlie_body_d: "Hledáš cestu, odpověď, nebo záminku zmizet z parketu? Jsem tu. —Charlie 💬 Klávesou Esc unikneš z každé situace. V režimu celé obrazovky použij Backspace.",
+    msg_charlie_body_e: "Jsem Charlie. Zeptej se mě na svatbu, loft nebo na to, co se tu právě semlelo. 💬 Klávesou Esc unikneš z každé situace. V režimu celé obrazovky použij Backspace.",
+    msg_charlie_body_f: "Psst. Když je tenhle loft trochu matoucí, nejspíš vím, co se děje. Nejspíš. —Charlie 💬 Klávesou Esc unikneš z každé situace. V režimu celé obrazovky použij Backspace.",
     msg_pouria_from: "Pouria",
     msg_pouria_body: "bar je zase otevřený 🍸 padej sem",
     msg_group_from: "Svatební parta",
@@ -77447,6 +77447,16 @@ function spawnDustMote(container) {
       setCaption(here);
       restoreStageHint(here);
     }
+    // A Trailer launched from the recovery gate previews a deterministic fresh loft, but it must
+    // not destroy the unopened checkpoint. Its final beat can reset after stopCinematic returns,
+    // so restore on the next task, after that reset has had its turn.
+    if (cinematicRecoveryRaw) {
+      var heldCheckpoint = cinematicRecoveryRaw;
+      setTimeout(function () {
+        try { localStorage.setItem(LOFT_CHECKPOINT_KEY, heldCheckpoint); } catch (_error) {}
+        if (cinematicRecoveryRaw === heldCheckpoint) cinematicRecoveryRaw = null;
+      }, 0);
+    }
   }
 
   // ── timeline helpers ──
@@ -79087,6 +79097,7 @@ function spawnDustMote(container) {
     // audio anyway, and this keeps play.js's click-storm from launching it.
     watchBtn.addEventListener("click", function (e) {
       if (e && e.isTrusted === false) return;
+      if (recoveryGate && startRecoveryTrailer()) return;
       startCinematic();
     });
     // the Autoplay control right beside it: boots the hands-off attract loop (a trusted click
@@ -79094,6 +79105,7 @@ function spawnDustMote(container) {
     var apBtn = document.getElementById("watch-autoplay-btn");
     if (apBtn) apBtn.addEventListener("click", function (e) {
       if (e && e.isTrusted === false) return;
+      if (recoveryGate && startRecoveryAutoplay()) return;
       if (window.autoplay) window.autoplay(true);
     });
     // Idle nudge: after ~10s of no progress, gently float the Watch control so a
@@ -79137,7 +79149,8 @@ function spawnDustMote(container) {
   var LOFT_CHECKPOINT_KEY = "loftCheckpoint:v1";
   var LOFT_CHECKPOINT_VERSION = 1;
   var LOFT_CHECKPOINT_MAX_AGE = 90 * 24 * 60 * 60 * 1000;
-  var checkpointWriteTimer = null, recoveryGate = null, recoveryKeyHandler = null;
+  var checkpointWriteTimer = null, recoveryGate = null, recoverySaved = null, recoveryKeyHandler = null;
+  var cinematicRecoveryRaw = null;
   function checkpointClass(id, name) { var el = document.getElementById(id); return !!(el && el.classList.contains(name)); }
   function checkpointToggle(id, name, on) { var el = document.getElementById(id); if (el) el.classList.toggle(name, !!on); }
   function checkpointPuzzleState() {
@@ -79268,6 +79281,7 @@ function spawnDustMote(container) {
     recoveryKeyHandler = null;
     if (recoveryGate && recoveryGate.parentNode) recoveryGate.parentNode.removeChild(recoveryGate);
     recoveryGate = null;
+    recoverySaved = null;
     var watchControls = document.querySelector(".watch-controls");
     if (watchControls) { watchControls.hidden = false; watchControls.removeAttribute("aria-hidden"); }
     if (startWaitingAutoplay) setTimeout(function () { if (!apOn) startAutoplay(); }, 0);
@@ -79288,10 +79302,29 @@ function spawnDustMote(container) {
     endAttract();
     saveCheckpoint();
   }
+  function startRecoveryTrailer() {
+    if (!recoverySaved) return false;
+    try { cinematicRecoveryRaw = JSON.stringify(recoverySaved); } catch (_error) { cinematicRecoveryRaw = null; }
+    hideRecoveryGate();
+    startCinematic();
+    // startCinematic's deterministic reset clears normal progress. Reinstate the held checkpoint
+    // immediately; stopCinematic repeats this after the reel's optional final reset.
+    if (cinematicRecoveryRaw) {
+      try { localStorage.setItem(LOFT_CHECKPOINT_KEY, cinematicRecoveryRaw); } catch (_error) {}
+    }
+    return true;
+  }
+  function startRecoveryAutoplay() {
+    if (!recoverySaved) return false;
+    var saved = recoverySaved;
+    applyCheckpoint(saved); // Autoplay promises to take over from wherever the player left off.
+    if (window.autoplay) window.autoplay(true);
+    return true;
+  }
   function showRecoveryGate(saved) {
     var host = document.querySelector(".hunt-viewport");
     if (!saved || !host) return false;
-    removeClickMe(); hideRecoveryGate();
+    removeClickMe(); hideRecoveryGate(); recoverySaved = saved;
     var gate = document.createElement("div"); recoveryGate = gate;
     gate.id = "loft-recovery-gate"; gate.setAttribute("role", "dialog"); gate.setAttribute("aria-modal", "true"); gate.setAttribute("aria-labelledby", "loft-recovery-title");
     var title = document.createElement("div"); title.id = "loft-recovery-title"; title.className = "loft-recovery-title"; title.textContent = huntText("recovery_title");
@@ -79301,8 +79334,6 @@ function spawnDustMote(container) {
     var continueBtn = document.createElement("button"); continueBtn.type = "button"; continueBtn.className = "loft-recovery-btn primary selected"; continueBtn.textContent = huntText("recovery_continue");
     var restartBtn = document.createElement("button"); restartBtn.type = "button"; restartBtn.className = "loft-recovery-btn"; restartBtn.textContent = huntText("recovery_restart");
     actions.appendChild(continueBtn); actions.appendChild(restartBtn); gate.appendChild(title); gate.appendChild(meta); gate.appendChild(actions); host.appendChild(gate);
-    var watchControls = document.querySelector(".watch-controls");
-    if (watchControls) { watchControls.hidden = true; watchControls.setAttribute("aria-hidden", "true"); }
     var buttons = [continueBtn, restartBtn], selected = 0;
     function select(index) { selected = (index + buttons.length) % buttons.length; buttons.forEach(function (b, i) { b.classList.toggle("selected", i === selected); }); buttons[selected].focus(); }
     function choose(index) {

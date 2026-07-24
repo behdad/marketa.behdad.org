@@ -21,6 +21,8 @@ var HARNESS = [
   ' document.dispatchEvent(new KeyboardEvent("keydown",{code:"Digit1",shiftKey:true,bubbles:true}));await sleep(2100);S("firstHotkey",{state:window.__tripState(),classes:classes(),card:!!document.querySelector("#mol-card-nitrous.mol-show")});window.__stopTrip(true);',
   ' document.dispatchEvent(new KeyboardEvent("keydown",{code:"Digit8",shiftKey:true,bubbles:true}));await sleep(100);S("lastHotkey",{state:window.__tripState(),classes:classes()});window.__stopTrip(true);',
   ' TRIP_DURATIONS.nitrous=500;document.getElementById("kitchen-whipper").dispatchEvent(new MouseEvent("click",{bubbles:true}));await sleep(200);S("whipperHiss",{state:window.__tripState(),squeezed:document.getElementById("kitchen-whipper").classList.contains("dispensing")});await sleep(900);document.getElementById("kitchen-whipper").dispatchEvent(new MouseEvent("click",{bubbles:true}));S("whipper",{state:window.__tripState(),classes:classes(),card:!!document.querySelector("#mol-card-nitrous.mol-show"),bubble:!!document.querySelector(".egg-bubble")});window.__stopTrip(true);',
+  ' TRIP_DURATIONS.froggies=500;document.getElementById("garden-frog").dispatchEvent(new MouseEvent("click",{bubbles:true}));await sleep(100);S("frog",{state:window.__tripState(),classes:classes(),card:!!document.querySelector("#mol-card-froggies.mol-show")});window.__stopTrip(true);',
+  ' TRIP_DURATIONS.shrooms=500;document.getElementById("garden-mushroom").dispatchEvent(new MouseEvent("click",{bubbles:true}));await sleep(100);S("mushroom",{state:window.__tripState(),classes:classes(),card:!!document.querySelector("#mol-card-shrooms.mol-show")});window.__stopTrip(true);',
   ' var veil=document.getElementById("trip-tolerance-veil"),beforeVeil=veil&&veil.style.opacity;TRIP_DURATIONS.nitrous=80;window.__startTrip("nitrous");await sleep(150);S("neutral",{state:window.__tripState(),before:beforeVeil,after:veil&&veil.style.opacity});',
   '}',
   '})();</script>'
@@ -33,7 +35,7 @@ function check(ok, msg, detail) {
 }
 
 console.log("rsvp.html trip lifecycle:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 7200, { patchRaf: true });
+var result = lib.runPageSync("rsvp.html", HARNESS, 9000, { patchRaf: true });
 if (!result) { console.log("  \u2717 harness produced no report"); process.exit(1); }
 var s = result.steps || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
@@ -55,6 +57,10 @@ check(s.whipper && s.whipper.state.active && s.whipper.state.variant === "nitrou
   "the kitchen cream whipper then starts laughing gas without a molecule card", s.whipper);
 check(s.whipper && !s.whipper.bubble,
   "an uncarded cream-whipper request stays silent while a trip is active", s.whipper);
+check(s.frog && s.frog.state.active && s.frog.state.variant === "froggies" && s.frog.classes.join(",") === "froggies" && !s.frog.card,
+  "every frog tap starts its uncarded trip", s.frog);
+check(s.mushroom && s.mushroom.state.active && s.mushroom.state.variant === "shrooms" && s.mushroom.classes.join(",") === "shrooms" && !s.mushroom.card,
+  "every mushroom tap starts its uncarded trip", s.mushroom);
 check(s.neutral && !s.neutral.state.active && s.neutral.before === s.neutral.after,
   "laughing gas ends without adding a gray tolerance veil", s.neutral);
 

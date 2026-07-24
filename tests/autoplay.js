@@ -1,12 +1,10 @@
 #!/usr/bin/env node
-// Autoplay (attract-mode) test: the self-driving BBQ ROUTINE SEQUENCER.
+// Autoplay (attract-mode) test: the self-driving BBQ MARKOV DIRECTOR.
 //
-// Verifies the rearchitected autoplay — a CHAINED-ROUTINE loop (not one isolated action per
-// tick). Each "beat" of an authored routine runs a step with its own pause; a routine tells a
-// little story in a room before the next room is picked. It does NOT assert the choreography of
-// any one room (play.js / enter.js already exercise every solve); it asserts the machine's
-// contract. Same one-shot headless-Chrome runner as play.js (rAF->setTimeout patch, error
-// collectors).
+// Verifies the explicit FSM + seeded constrained-Markov planner over a broad catalog of authored
+// mini-sequences. It does NOT assert every vignette's choreography (play.js / enter.js exercise
+// the solve paths); it asserts deterministic planning, diversity/fairness, and the runtime kiosk
+// contract. Same one-shot headless-Chrome runner as play.js (rAF->setTimeout patch, errors).
 //
 // It runs in phases on one page load:
 //   1. TAKE OVER IN PLACE — put the game in a NON-kitchen room first (goToStage('office')),
@@ -63,7 +61,7 @@ var HARNESS = [
   "  function setFocus(f){ _focus=f; window.dispatchEvent(new Event(f?'focus':'blur')); }",
   "  function nodeCount(){ return document.getElementsByTagName('*').length; }",
   "  function roomsSeen(seen){ var r=window.currentStageName; if(r) seen[r]=1; }",
-  "  var report={errors:[],fresh:false,phase1:{},phase2:{},phase3:{},phase4:{},phase5:{},phase6:{},phase7:{},cursor:{}};",
+  "  var report={errors:[],fresh:false,model:{},phase1:{},phase2:{},phase3:{},phase4:{},phase5:{},phase6:{},phase7:{},cursor:{}};",
   // A background sampler for the whole run, so the ghost cursor's WORST case is measured over
   // every phase instead of at one convenient instant. A "frozen" sample is the dot visible at the
   // very same viewport point as the sample before it — which is what a viewer sees as a stuck
@@ -79,8 +77,17 @@ var HARNESS = [
   "  async function run(){",
   // assertFresh: prove the loaded page carries the NEW routine-sequencer code, not a stale build.
   "    report.fresh = (typeof window.__autoplayRoutineBeats==='function' && typeof window.__autoplayRoutineLen==='function' && typeof window.__latestUnreadMessage==='function' && typeof window.__maxUnlocked==='function'",
-"                    && typeof window.__autoplayInvariants==='function' && typeof window.__autoplayTapMisses==='function' && typeof window.__autoplayLastHandledMsg==='function' && typeof window.__autoplayIdleMs==='function');",
+"                    && typeof window.__autoplayInvariants==='function' && typeof window.__autoplayTapMisses==='function' && typeof window.__autoplayLastHandledMsg==='function' && typeof window.__autoplayIdleMs==='function'",
+"                    && typeof window.__autoplaySeed==='function' && typeof window.__autoplayPlan==='function' && typeof window.__autoplayCatalog==='function' && typeof window.__autoplayMachine==='function');",
   "    if (!window.autoplay || !window.__autoplayOn || !report.fresh) { report.errors=window.__errs.concat(['autoplay routine-sequencer API missing (stale page?)']); return; }",
+  // ── Model: pure seeded planning, broad authored catalog, hard diversity/fairness ──
+  "    var cat=window.__autoplayCatalog(), pa=window.__autoplayPlan(20270501,60), pb=window.__autoplayPlan(20270501,60), pc=window.__autoplayPlan(20270710,60);",
+  "    var aid=pa.choices.map(function(x){return x.id;}), bid=pb.choices.map(function(x){return x.id;}), cid=pc.choices.map(function(x){return x.id;});",
+  "    var exactRecent=true; for(var pi=0;pi<aid.length;pi++)for(var back=1;back<=5&&pi-back>=0;back++)if(aid[pi]===aid[pi-back])exactRecent=false;",
+  "    var drought={kitchen:0,garden:0,cuddly:0,office:0,balcony:0}, maxDrought=0; pa.choices.forEach(function(x){Object.keys(drought).forEach(function(room){drought[room]++;});x.rooms.forEach(function(room){drought[room]=0;});Object.keys(drought).forEach(function(room){maxDrought=Math.max(maxDrought,drought[room]);});});",
+  "    var roomCounts={}, moods={}, cross=0, minBeats=999, interactive=0, missingVerbs=[]; cat.forEach(function(s){roomCounts[s.room]=(roomCounts[s.room]||0)+1;moods[s.mood]=1;if(s.crossRoom)cross++;minBeats=Math.min(minBeats,s.beats);interactive+=s.taps+s.apps.length+s.verbs.length;s.verbs.forEach(function(v){if(typeof window[v]!=='function'&&missingVerbs.indexOf(v)<0)missingVerbs.push(v);});});",
+  "    var detail=pa.details&&pa.details[0], factors=!!(detail&&detail.candidates&&detail.candidates.length&&typeof detail.candidates[0].markov==='number'&&typeof detail.candidates[0].roomFair==='number'&&typeof detail.candidates[0].sequenceFair==='number');",
+  "    report.model={catalog:cat.length,roomCounts:roomCounts,moods:Object.keys(moods).length,cross:cross,minBeats:minBeats,interactive:interactive,missingVerbs:missingVerbs,sameSeed:aid.join('|')===bid.join('|'),differentSeed:aid.join('|')!==cid.join('|'),exactRecent:exactRecent,maxDrought:maxDrought,factors:factors,choices:aid.slice(0,12),invariants:window.__autoplayInvariants()};",
   // ── Phase 1: TAKE OVER IN PLACE + first routine is CHAINED ──
   "    window.goToStage('office'); await sleep(300);",
   "    report.phase1.startedRoom = window.currentStageName;",
@@ -89,8 +96,11 @@ var HARNESS = [
   "    report.phase1.on = window.__autoplayOn();",
   "    var badge=document.getElementById('autoplay-badge');",
   "    report.phase1.badgeShown = !!(badge && badge.classList.contains('show'));",
+  "    var launchTrailer=document.getElementById('watch-loft-btn'), launchAuto=document.getElementById('watch-autoplay-btn'), takeover=document.getElementById('watch-skip-btn');",
+  "    report.phase1.watchControls = { launchHidden:!!(launchTrailer&&launchTrailer.hidden&&launchAuto&&launchAuto.hidden), takeoverShown:!!(takeover&&!takeover.hidden) };",
   "    report.phase1.roomAfterStart = window.currentStageName;",   // must NOT be 'kitchen'
   "    report.phase1.firstRoutineLen = window.__autoplayRoutineLen();",
+  "    report.phase1.machine = window.__autoplayMachine();",
 "    report.invariants = window.__autoplayInvariants();", // a routine is running → multiple beats
   // ── Phase 2: drives multiple rooms + keeps stepping ──
   "    var seen={}; roomsSeen(seen);",
@@ -125,6 +135,7 @@ var HARNESS = [
   "    window.computer=function(a){ if(typeof a==='string'&&a!=='') pcApps[a]=1; return _pc.apply(window,arguments); };",
   "    window.goToStage('office'); await sleep(150);",
   "    window.autoplay(true); await sleep(150);",                  // first routine builds in the office (take-over-in-place)
+  "    if(window.__autoplayForceSequence) window.__autoplayForceSequence('office.app-hop');",
   "    for (var o=0;o<30 && Object.keys(pcApps).length<3;o++){ await sleep(700); }",
   "    report.phase3.monitorAppsLive = Object.keys(pcApps).length;",
   "    window.computer=_pc;",                                       // un-spy
@@ -133,6 +144,7 @@ var HARNESS = [
   "    window.autoplay(false); await sleep(150);",
   "    window.goToStage('office'); await sleep(150);",
   "    window.autoplay(true);",
+  "    if(window.__autoplayForceSequence) window.__autoplayForceSequence('office.desk-toys');",
   "    var cursorSeen=false;",
   "    for (var c=0;c<20 && !cursorSeen;c++){ await sleep(400); var cc=document.getElementById('cine-cursor'); if(cc && cc.classList.contains('visible')) cursorSeen=true; }",
   "    report.phase4.cursorSeen = cursorSeen;",
@@ -168,30 +180,38 @@ var HARNESS = [
   "    report.phase5.actedRoom = window.currentStageName;",
   "    report.phase5.landedOffice = landedOffice;",
 "    report.phase5.lastHandled = window.__autoplayLastHandledMsg();",
+  "    for(var settle=0;settle<5;settle++){hush();await sleep(700);}", // let the completed interrupt cross its explicit RESUMING state before inspecting the trace
+  "    report.phase5.machine = window.__autoplayMachine();",
   // ── Phase 6: hide → paused, no accumulation; resume; unfocused pauses too ──
   "    var stepsBeforeHide = window.__autoplaySteps();",
   "    var nodesBeforeHide = nodeCount();",
   "    setHidden(true);",
   "    await sleep(6000);",
   "    report.phase6.stepsWhileHidden = window.__autoplaySteps() - stepsBeforeHide;",
+  "    report.phase6.machineHidden = window.__autoplayMachine();",
   "    report.phase6.nodeGrowthWhileHidden = nodeCount() - nodesBeforeHide;",
   "    setHidden(false);",
   "    var stepsAtResume = window.__autoplaySteps();",
   "    await sleep(4000);",
   "    report.phase6.stepsAfterResume = window.__autoplaySteps() - stepsAtResume;",
+  "    report.phase6.machineResumed = window.__autoplayMachine();",
   "    setFocus(false);",
   "    var stepsBeforeBlur = window.__autoplaySteps();",
   "    await sleep(4000);",
   "    report.phase6.stepsWhileUnfocused = window.__autoplaySteps() - stepsBeforeBlur;",
+  "    report.phase6.machineBlurred = window.__autoplayMachine();",
   "    setFocus(true); await sleep(300);",
   // ── Phase 7: takeover / stop-for-good; a plain click must NOT revive it ──
   "    if (window.__autoplayTakeover) window.__autoplayTakeover();",
   "    await sleep(200);",
   "    report.phase7.offAfterTakeover = !window.__autoplayOn();",
+  "    report.phase7.takeoverState = window.__autoplayMachine().state;",
   "    window.autoplay(true); await sleep(700);",
   "    report.phase7.onAgain = window.__autoplayOn();",
   "    window.autoplay(false); await sleep(300);",
   "    report.phase7.offAfterStop = !window.__autoplayOn();",
+  "    report.phase7.stopState = window.__autoplayMachine().state;",
+  "    report.phase7.watchControlsRestored = !!(launchTrailer&&!launchTrailer.hidden&&launchAuto&&!launchAuto.hidden&&takeover&&takeover.hidden);",
 // the 90s drift-back, shortened so it fits the budget: a TAKEOVER keeps it armed…
 "    window.__autoplayIdleMs(1200);",
 "    window.autoplay(true); await sleep(500); window.__autoplayTakeover(); await sleep(200);",
@@ -230,14 +250,30 @@ var failures = 0;
 function pass(msg) { console.log("  ✓ " + msg); }
 function fail(msg, detail) { failures++; console.log("  ✗ " + msg); if (detail) console.log("      " + String(detail).split("\n").join("\n      ")); }
 
-console.log("rsvp.html autoplay (attract-mode routine sequencer):");
+console.log("rsvp.html autoplay (seeded Markov director):");
 var r = lib.runPageSync("rsvp.html", HARNESS, 155000, { patchRaf: true });
 if (!r) {
   fail("harness reported (page error before load, or budget too small)");
 } else {
-  var p1 = r.phase1 || {}, p2 = r.phase2 || {}, p3 = r.phase3 || {}, p4 = r.phase4 || {}, p5 = r.phase5 || {}, p6 = r.phase6 || {}, p7 = r.phase7 || {}, p8 = r.phase8 || {};
+  var model = r.model || {}, p1 = r.phase1 || {}, p2 = r.phase2 || {}, p3 = r.phase3 || {}, p4 = r.phase4 || {}, p5 = r.phase5 || {}, p6 = r.phase6 || {}, p7 = r.phase7 || {}, p8 = r.phase8 || {};
   if (r.fresh) pass("loaded page carries the new director API (assertFresh)");
   else fail("loaded page is stale — no director API", JSON.stringify(r).slice(0, 300));
+  if (model.catalog >= 25 && Object.keys(model.roomCounts || {}).length === 5 && Object.keys(model.roomCounts || {}).every(function (room) { return model.roomCounts[room] >= 4; }))
+    pass("catalog has " + model.catalog + " authored mini-sequences with >=4 choices per room");
+  else fail("catalog must be broad across every room", JSON.stringify(model));
+  if (model.cross >= 3 && model.moods >= 7 && model.minBeats >= 3 && model.interactive >= 80)
+    pass("catalog includes cross-room relays, " + model.moods + " moods and dense interaction chains (" + model.interactive + " authored actions)");
+  else fail("catalog breadth / interaction density", JSON.stringify(model));
+  if (model.sameSeed && model.differentSeed) pass("seeded planner is reproducible, while a different seed changes the show");
+  else fail("seed determinism/divergence", JSON.stringify(model));
+  if (model.exactRecent) pass("exact sequences never repeat inside the five-story recent window");
+  else fail("anti-repetition window", JSON.stringify(model.choices));
+  if (model.maxDrought <= 5) pass("coverage ledger bounds every room drought (max " + model.maxDrought + " selections)");
+  else fail("room fairness bound", JSON.stringify(model));
+  if (model.factors) pass("each probabilistic choice exposes Markov + room + sequence score factors");
+  else fail("weighted selection must be inspectable", JSON.stringify(model));
+  if (model.missingVerbs && model.missingVerbs.length === 0) pass("every named interaction in the sequence catalog resolves to a live game verb");
+  else fail("catalog contains missing interaction verbs", JSON.stringify(model.missingVerbs));
   // The director self-checks its own authored intent at parse: every room has a builder + a
   // budget, every signature tap id resolves, and the garden dwells longest in BOTH the solved and
   // unsolved branches. This is what makes "it drifted" a failing test rather than a bug report.
@@ -246,6 +282,8 @@ if (!r) {
   // Phase 1
   if (p1.on && p1.badgeShown) pass("autoplay(true) starts the loop and shows the 'auto' badge");
   else fail("autoplay(true) starts + badge", JSON.stringify(p1));
+  if (p1.watchControls && p1.watchControls.launchHidden && p1.watchControls.takeoverShown) pass("launch links yield to one visible Take over control while Autoplay runs");
+  else fail("Autoplay watch controls", JSON.stringify(p1.watchControls));
   // strict: the opening beat must run in the room the game is ALREADY in and navigate nowhere —
   // "not the kitchen" would also pass a machine that jumped straight to some other room.
   if (p1.startedRoom === "office" && p1.roomAfterStart === p1.startedRoom)
@@ -253,6 +291,9 @@ if (!r) {
   else fail("must take over in place, in the SAME room", JSON.stringify(p1));
   if (p1.firstRoutineLen >= 3) pass("the first routine is CHAINED (" + p1.firstRoutineLen + " beats — not one-and-jump)");
   else fail("routines must chain multiple beats", "first routine had only " + p1.firstRoutineLen + " beat(s): " + JSON.stringify(p1));
+  if (p1.machine && p1.machine.transitionErrors === 0 && ["overture", "sequence"].indexOf(p1.machine.state) !== -1)
+    pass("explicit FSM enters its overture/sequence state with no illegal transition");
+  else fail("FSM start transition", JSON.stringify(p1.machine));
   // Phase 2
   if (p2.steps >= 4) pass("it keeps acting — " + p2.steps + " beats over ~13s (advances + loops forever)");
   else fail("the machine must keep stepping", "only " + p2.steps + " beat(s): " + JSON.stringify(p2));
@@ -305,6 +346,10 @@ if (!r) {
   else fail("autoplay must open+clear the delivered notification itself", JSON.stringify(p5));
   if (p5.landedOffice) pass("the machine ACTED on the notification (its action panned us to the office)");
   else fail("autoplay must act on the notification (pan to office)", JSON.stringify(p5));
+  var st = (p5.machine && p5.machine.trace) || [];
+  if (st.some(function (x) { return x.to === "interrupt"; }) && st.some(function (x) { return x.to === "resuming"; }) && p5.machine.transitionErrors === 0)
+    pass("FSM records notification interrupt → resuming without an illegal edge");
+  else fail("interrupt/resume state transitions", JSON.stringify(p5.machine));
   // Phase 6 — pause / no accumulation
   if (p6.stepsWhileHidden === 0) pass("no beats run while hidden (paused, not ticking)");
   else fail("machine must pause while hidden", "advanced " + p6.stepsWhileHidden + " beat(s) while hidden");
@@ -314,11 +359,18 @@ if (!r) {
   else fail("the machine resumes on show", JSON.stringify(p6));
   if (p6.stepsWhileUnfocused === 0) pass("no beats run while visible-but-UNFOCUSED (crickets rule)");
   else fail("machine must pause while unfocused", "advanced " + p6.stepsWhileUnfocused + " beat(s) while unfocused");
+  if (p6.machineHidden && p6.machineHidden.state === "paused" && p6.machineResumed && p6.machineResumed.state !== "paused" && p6.machineBlurred && p6.machineBlurred.state === "paused")
+    pass("FSM exposes paused → resumed → paused across visibility and focus gates");
+  else fail("pause/resume FSM states", JSON.stringify({ hidden: p6.machineHidden, resumed: p6.machineResumed, blurred: p6.machineBlurred }));
   // Phase 7 — takeover / stop
   if (p7.offAfterTakeover) pass("__autoplayTakeover exits autoplay (hands over the wheel)");
   else fail("takeover must exit autoplay", JSON.stringify(p7));
   if (p7.onAgain && p7.offAfterStop) pass("autoplay(false) stops it for good");
   else fail("autoplay(false) must stop cleanly", JSON.stringify(p7));
+  if (p7.takeoverState === "takeover" && p7.stopState === "stopped") pass("FSM distinguishes takeover (idle-resume armed) from deliberate stop");
+  else fail("takeover/stop FSM states", JSON.stringify(p7));
+  if (p7.watchControlsRestored) pass("stopping restores Trailer + Autoplay and retires Take over");
+  else fail("watch controls must restore after stop", JSON.stringify(p7));
   if (p7.offAfterTakeover2 && p7.driftedBack) pass("after a TAKEOVER the kiosk drifts back to attract on its own");
   else fail("takeover must keep the idle drift-back armed", JSON.stringify(p7));
   if (p7.noDriftAfterStop) pass("…but autoplay(false) clears the drift-back for good");

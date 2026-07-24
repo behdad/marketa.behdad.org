@@ -57,13 +57,13 @@ var AUDIT_HARNESS = [
   '})();</script>'
 ].join("\n");
 
-var HYBRID_HARNESS = [
+var FRAME_HEALTH_HARNESS = [
   '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
   '<script>(function(){',
   'function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}',
   'var report={errors:[],steps:{}};',
-  'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("hybrid harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},250);});',
-  'async function run(){window.goToStage("office");await sleep(920);var strip=document.getElementById("loft-game-strip"),mon=document.getElementById("office-monitor");mon.classList.add("here","screen-on","show-caps");function transitions(){return strip.getAnimations().filter(function(a){return typeof a.transitionProperty==="string"&&a.transitionProperty==="transform"&&a.playState==="running";}).length;}var before=transitions();window.__monitorZoomIn();var immediate=transitions();await sleep(40);report.steps.zoom={zoomed:window.__monitorZoomed(),before:before,immediateTransformTransitions:immediate,after40ms:transitions()};}',
+  'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("frame-health harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},250);});',
+  'async function run(){window.goToStage("office");await sleep(920);var strip=document.getElementById("loft-game-strip"),mon=document.getElementById("office-monitor");mon.classList.add("here","screen-on","show-caps");function transitions(){return strip.getAnimations().filter(function(a){return typeof a.transitionProperty==="string"&&a.transitionProperty==="transform"&&a.playState==="running";}).length;}var first=window.__frameHealthFeed(6),second=window.__frameHealthFeed(6);window.__monitorZoomIn();var slowTransitions=transitions();var slowState=window.__frameHealthState();window.__monitorZoomOut();window.__frameHealthFeed(60);window.__frameHealthFeed(60);var recovering=window.__frameHealthState();window.__frameHealthFeed(60);var recovered=window.__frameHealthState();window.__monitorZoomIn();var healthyTransitions=transitions();window.__monitorZoomOut();window.goToStage("garden");await sleep(920);window.party(true);await sleep(80);var pool=document.querySelector("#garden-disco-pools .disco-pool");var healthyPoolAnimations=pool.getAnimations().filter(function(a){return a.playState==="running";}).length;window.__frameHealthFeed(6);window.__frameHealthFeed(6);await sleep(20);var slowPool={animations:pool.getAnimations().filter(function(a){return a.playState==="running";}).length,inlineTransform:pool.style.transform};window.__frameHealthFeed(60);window.__frameHealthFeed(60);window.__frameHealthFeed(60);await sleep(20);var recoveredPool={animations:pool.getAnimations().filter(function(a){return a.playState==="running";}).length,inlineTransform:pool.style.transform};report.steps.health={first:first,second:second,slowState:slowState,slowTransitions:slowTransitions,recovering:recovering,recovered:recovered,healthyTransitions:healthyTransitions,zoomed:window.__monitorZoomed(),healthyPoolAnimations:healthyPoolAnimations,slowPool:slowPool,recoveredPool:recoveredPool};}',
   '})();</script>'
 ].join("\n");
 
@@ -107,10 +107,13 @@ check(a.garden_hidden_parking.meltPaused === "paused" && a.garden_hidden_parking
 check(a.garden_hidden_parking.mousePaused === "paused" && a.garden_hidden_parking.mouseResumed === "running" && a.garden_hidden_parking.mouseSame && a.garden_hidden_parking.mouseAdvanced >= a.garden_hidden_parking.mouseHeld, "a non-visiting child holds and resumes its original animation phase", a.garden_hidden_parking);
 console.log("  metrics: " + JSON.stringify({ cuddly: a.cuddly_channels, seasonPhase: a.season_phase, gardenHeld: a.garden_held_growth, gardenHidden: a.garden_hidden_parking, officeRunning: a.office_running, balconyRunning: a.balcony_running, parkedVisibleDescendants: a.parked_descendants.visible }));
 
-var hybrid = lib.runPageSync("rsvp.html", HYBRID_HARNESS, 2500, { patchRaf: true, forceMotion: true, forceHybridPointer: true, seedRandom: true });
-if (!hybrid) { console.log("  \u2717 hybrid-pointer harness produced no report"); process.exit(1); }
-check(hybrid.errors.length === 0 && hybrid.steps.zoom.zoomed && hybrid.steps.zoom.immediateTransformTransitions === 0, "hybrid touchscreen monitor zoom snaps without a transform transition", hybrid.steps.zoom);
-console.log("  monitor zoom metric: " + JSON.stringify(hybrid.steps.zoom));
+var health = lib.runPageSync("rsvp.html", FRAME_HEALTH_HARNESS, 2500, { patchRaf: true, forceMotion: true, seedRandom: true });
+if (!health) { console.log("  \u2717 frame-health harness produced no report"); process.exit(1); }
+var h = health.steps.health;
+check(health.errors.length === 0 && h.slowTransitions === 0 && h.healthyTransitions === 0, "device zoom never runs the whole-strip transform transition", h);
+check(!h.first.slow && h.second.slow && h.slowState.slow && h.recovering.slow && !h.recovered.slow, "frame-health mode enters and recovers with asymmetric hysteresis", h);
+check(h.healthyPoolAnimations > 0 && h.slowPool.animations === 0 && !!h.slowPool.inlineTransform && h.recoveredPool.animations > 0 && !h.recoveredPool.inlineTransform, "party spotlights switch between continuous sweep and low-FPS steps", h);
+console.log("  frame-health metric: " + JSON.stringify(h));
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

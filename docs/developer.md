@@ -28,6 +28,75 @@ it coordinates over introducing a second runtime bundle or a new dependency. The
 HTML, CSS, and vanilla JavaScript, with the room illustrations embedded as inline SVG. There is
 nothing to compile: committed page artifacts are served directly from the live Git checkout.
 
+In direct `#play`/`loft-day` mode, `:root:not(.revealed)` removes all outer game chrome and lets
+the shell use the viewport width subject only to its 2:1 room-height fit. The game-only `main`
+has no page padding; the thin shell chrome is the only inset around the room. Fresh CLICK ME adds `.intro-active`; checkpoint entry
+uses `.recovery-active`. Both show `.game-langs` in the chrome and a localized `.loft-entry-brand`
+inside the scene above CLICK ME or Welcome back, hide Back/Restart,
+room navigation, dots, and media transport, retain Fullscreen plus the left utility links, and dock
+the one `.watch-controls` node into the shell's bottom row. Fresh entry's `#click-me-overlay`
+uses the same translucent scene veil as recovery and consumes its dismissing click, so that click
+cannot activate an SVG object underneath. `.hunt-viewport` is an inline-size container; the shared
+entry title, CLICK ME prompt, and gap use `cqi` units so their scale follows the rendered scene
+rather than the browser viewport. The head script applies `.loft-entry-pending` before
+the game shell's first paint in both full RSVP and game-only modes; the checkpoint initializer constructs the chosen gate synchronously
+and `revealEntrySurface()` removes that concealment, preventing a kitchen/caption flash. Handing control to the player removes
+the entry class, reparents watch controls to their document owner, and restores normal controls.
+At `max-width:600px` in portrait, `#portrait-orientation-gate` is the game shell's only
+visible child in both full RSVP and direct game modes. Its action enters the existing fullscreen
+state owner and chains `screen.orientation.lock("landscape")` after a native fullscreen grant;
+manual rotation clears the media query when that API is absent or denied.
+`__holdFullscreenFill()` / `__releaseFullscreenFill()` bracket the blocking restart confirmation:
+if Chrome revokes native fullscreen for the dialog, the installed/class fill remains active while
+ordinary Escape and explicit fullscreen-button exits still clear it.
+The prose device/browser detector and recommendation line were removed: their actions are now
+direct Fullscreen, audio, and Known issues controls.
+
+### Game chrome test matrix
+
+Changes to the shell, entry screens, controls, fullscreen behavior, or surrounding page layout
+must be checked in these four distinct presentations:
+
+1. **Full RSVP page:** load `rsvp.html` without `#play`. The invitation remains the document owner
+   around its embedded game. Check desktop and phone widths so game-only rules do not remove or
+   overlap the invitation header, language controls, sections, or footer.
+2. **Direct browser game:** load `rsvp.html#play` or `loft-day.html`. On desktop and landscape
+   mobile, check fresh CLICK ME, saved Continue/Start over, and active play. These states share the
+   edge-to-edge page fill but intentionally expose different controls and bottom rows.
+3. **Installed/standalone app:** repeat direct-game checks with `(display-mode: standalone)` on
+   desktop and mobile. Include the installed loading progress, first-interaction fullscreen,
+   restart/reset fullscreen preservation, and return from browser-owned dialogs or tabs.
+4. **Narrow portrait gate:** at `max-width:600px` in portrait, check both full RSVP and direct game,
+   installed and uninstalled where practical. Only the localized Loft Day/orientation banner may
+   remain in the shell; verify English and Czech fit, the action attempts landscape, and manual
+   rotation reveals the appropriate entry or play state without stale chrome.
+
+`tests/game-only-layout.js` covers the structural variants, while `tests/recovery.js` owns the
+saved-session transition. Still inspect real desktop and approximately 390px mobile renders:
+headless geometry does not prove that the chrome is visually balanced.
+
+`setGameOnlyEntered()` adds `.loft-entered` after CLICK ME, Continue, Trailer, or Autoplay hands
+over control; that uses a larger height fit without setting `.is-fullscreen`. Direct web play never
+auto-enters true fullscreen; only an installed PWA may use its first interaction for that
+transition. The fullscreen button and `F` remain explicit. The synchronous mode bootstrap also
+adds `.installed-app` from the display-mode/navigator standalone signals.
+Immediately inside `<body>`, `#installed-load` uses that already-set class to paint a standalone-only
+loading screen before the large game DOM parses. Its small inline controller localizes from the
+saved language/full `navigator.languages` list, advances an ARIA progressbar, completes after
+`DOMContentLoaded` with a minimum readable dwell, and removes the overlay. Browser mode removes the
+node synchronously and sets test hooks without painting it.
+
+The capture-phase room keyboard controller owns one `activateCurrentRoom()` transition used by
+`Enter` and by an otherwise-unconsumed top-level `Escape`. The existing Backspace alias dispatches
+a synthetic Escape, so it reaches the same transition even while browser fullscreen consumes the
+physical Escape key. Window-level phone/monitor closers and component menu/dialog handlers retain
+first refusal; typing fields never fall through to a room action. CLICK ME is checked before
+`activateCurrentRoom()`: Enter/Escape, including the synthetic Backspace alias, dismisses the
+invitation and advances its caption handoff without touching the room underneath.
+`dispatchEscape()` is also the single entry point for the top-left back control on every
+layout. Restart is a distinct control below Fullscreen at top-right. Both are hidden
+with the other navigation controls during recovery and cinematics.
+
 ## Self-hosted runtimes
 
 The loft has several features that run real software entirely from this repository, without a CDN.
@@ -74,6 +143,12 @@ Controllers communicate by calling feature-detected hooks such as
 visibility condition changes. This keeps declaration order loose, but it also means a new state axis
 usually needs to notify several existing controllers.
 
+Cross-controller state must have one named transition owner (`set*`, or a paired `begin*`/`stop*`).
+UI, typed API, console, restore, reset, cinematic and autoplay paths call that owner instead of
+assigning its `window.__...` mirror or rendering classes directly. Private animation counters and
+closure-local timers remain local. When a transition schedules delayed work, its stop/reset path
+must cancel the handles or invalidate callbacks with a generation token.
+
 `loft.api` has a registry of typed queries and actions. It validates argument shapes and enum values,
 reports capability/availability information, and emits `loft:statechange` after a semantic state
 transition. `stateVersion` advances for typed actions and for direct mutations owned by rooms,
@@ -85,11 +160,93 @@ field are deliberately not revisions.
 Language is another shared state axis. User-facing copy lives in the `T.en` and `T.cs` dictionaries,
 with static fallback text where needed. Any English copy change must be mirrored in Czech.
 
+The checkpoint recovery gate is a modal state boundary. Its capture-phase key handler consumes all
+keyboard events before gameplay handlers run, while handling arrow/Enter/Space itself and leaving
+browser-default `Tab` focus traversal available. Normal shortcuts become active only after Continue
+or Start over removes the gate. While it is present, the normal room instruction is replaced by the
+localized saved-room/age summary in `#hunt-caption`; the modal references that caption with
+`aria-describedby`, and removing the gate restores the live room caption. Trailer and Autoplay remain
+available in the shell's bottom row while the gate hides room navigation, media transport, Back,
+Restart, and the dots; the left utility links remain visible. Closing recovery reparents the watch
+controls to their document owner. Recovery
+Autoplay applies the checkpoint before starting its director, while recovery Trailer holds and
+restores the unopened checkpoint around its deterministic reset. Start over clears the checkpoint
+directly because the recovery gate is already an explicit destructive choice; only the in-game
+Restart button/key uses `__confirmRestart()`. Recovery Start over passes `enterPageMode` to
+`resetHunt()`: the fresh-load CLICK ME state remains unstarted and regains the shared entry chrome,
+while `.loft-entered` immediately enlarges its scene. The extinguisher snapshots whether game-only
+page mode was already entered before its delayed wipe, then passes the same option to `resetHunt()`;
+`R` and the public `reset()` console/API command use that extinguisher path. Thus an in-game reset
+re-arms CLICK ME without dropping the enlarged view. Cinematic/fresh-load resets omit the option and
+retain their own page-mode behavior.
+
+### Trailer lifecycle
+
+Search for `THE TRAILER`, `cinematicTimers`, `paintCineCaption`, and `stopCinematic`. Trailer is a
+fixed 59–60 second editorial timeline, separate from Autoplay's director. Its content contract is
+**texture, not solutions**: five room identities, small one-shot toys, the real guitar recording,
+and one short garden-party swell; no solve chain, roster/spotlight, album capture, formal moment,
+season preview, projector channel, monitor/phone workflow, forced aurora, or held balcony couple.
+`tests/cine.js` samples those negative invariants throughout playback, because a post-teardown
+snapshot alone cannot prove that a payoff was never shown.
+
+Starting Trailer sets `window.__cinematic`, resets to a deterministic daylight kitchen, primes only
+the deferred guitar recording inside the trusted click, and adds `.cinematic-running` to the frame.
+That presentation class visibility-hides room navigation and Restart without changing layout;
+fullscreen and audio controls remain usable. All authored pacing uses `cineBeat`/`runSteps`, while
+scene input is capture-swallowed so only synthetic reel taps reach the SVG. `stopCinematic` is the
+single cleanup path for natural completion, **Take over**, and hidden-tab abort: it clears timers,
+cursor/ripples, party/UV, defensive legacy payoff state, the trailer-owned kitchen candle, caption
+classes, and listeners. The reduced-motion branch uses the same room/editorial arc as held tableaux
+and completes in about 18 seconds. `goToStage` suppresses `triggerBalconyFinale` while
+`window.__cinematic` is true, preserving the one-time first-arrival payoff for actual play.
+
+### Autoplay director
+
+Autoplay is a persistent kiosk director, separate from the fixed Trailer timeline. Search for
+`AUTOPLAY (attract mode)`, `AP_SEQUENCE_LIBRARY`, and `AP_MOOD_TRANSITIONS`. Its execution layer is
+still one self-rescheduling `setTimeout`; `apBusy` and `apGen` prevent duplicate or stale drivers.
+The planning layer has three explicit parts:
+
+- `apState` owns the finite-state machine: `starting`, `overture`, `selecting`, `sequence`,
+  `interrupt`, `resuming`, `paused`, `takeover`, and `stopped`. `AP_MACHINE_EDGES` makes illegal
+  transitions countable rather than implicit.
+- `AP_SEQUENCE_LIBRARY` holds 30 short authored stories across all rooms plus cross-room relays.
+  The five showcase builders also serve as first-play solve walkers; solved-room alternatives cover
+  apps, party moments, music, calls, toys, weather, photography, food, and the BBQ.
+- `apPickSequence` is a constrained weighted Markov choice over eight narrative moods. A candidate's
+  score combines its authored base weight, the prior-mood transition multiplier, room age, sequence
+  age, and a frontier-solve boost. Exact stories are excluded for five selections, immediate room
+  repeats are avoided when alternatives exist, and a room at the starvation boundary becomes a
+  hard selection constraint. Randomness comes only from the director's seeded xorshift32 stream;
+  never use `Math.random()` for a new autoplay choice.
+
+Notifications suspend the current `{scene, beat, state}` on the one-deep stack, run an interrupt,
+then cross the explicit `resuming` state before restoring the exact next beat. Hidden and merely
+unfocused tabs enter `paused` without consuming a beat. Takeover and deliberate stop are distinct:
+takeover retains the idle-return timer, while `autoplay(false)` clears it. `apOwned` remains the
+cleanup inventory for autonomous effects that cannot be inherited safely; panels and the ghost
+cursor are unconditionally removed at boundaries/stop.
+`apWaitRecovery` keeps `?autoplay` behind the checkpoint gate, then starts from the restored or reset
+state only after that modal decision has completed.
+
+Inspection and deterministic test hooks are `__autoplayMachine()`, `__autoplayModel()`,
+`__autoplayCatalog()`, `__autoplaySeed(seed)`, `__autoplayPlan(seed, count)`, and
+`__autoplayForceSequence(id)`. The plan preview saves and restores every live selector ledger, so it
+must remain side-effect free. `tests/autoplay.js` asserts seeded reproducibility and divergence,
+catalog breadth, score-factor visibility, anti-repetition, coverage bounds, FSM transitions,
+interrupt resume, pause behavior, cleanup, reduced motion, and the long-running kiosk contract.
+
 ## Rooms, phases, and unlocking
 
 The five rooms are `kitchen`, `garden`, `cuddly`, `office`, and `balcony`. Search for `STAGES` and
 `goToStage`. They are adjacent groups in one SVG strip; navigation translates the 500%-wide strip by
 20% per room.
+
+At rest, room parking keeps only the current SVG stage paintable. During a slide it reveals every
+traversed stage. Rapid navigation accumulates those revealed rooms across all in-flight retargets,
+because the strip may still be painting over an earlier leg; the final `transitionend` or timeout
+fallback parks everything except the latest destination.
 
 The normal first phase is a linear solve:
 
@@ -119,14 +276,55 @@ use exploration captions and rotating hints. `goToStage` is also the central roo
 collapses device zoom, tears down or pauses room-local effects, re-evaluates audio, people, weather,
 particles, photographer state, and phone/monitor ownership.
 
+### Progression transitions
+
+`setSecondRound` owns the phase-two latch, full-room unlock, roster availability and release of held
+phase-two messages/cards. Checkpoint restore passes `releaseHeld:false` because it restores the saved
+phone state separately. `setMaxUnlocked` owns the room frontier and navigation projection.
+`setOfficeProgress` owns the Prague-call and PC-played milestones across play, Enter automation,
+checkpoint restore and reset. `setMonitorShorted` owns both the wet-monitor flag and `.shorted`
+rendering class; drying and reset call the same transition.
+
 ### Party lifetime
 
 `setGardenParty` is the party source of truth. A separate controller, searchable as
 `PARTY LIFECYCLE`, counts attended seconds only while the document is visible, focused, and outside a
-cinematic. It offers a quiet close cue and an authored last-dance/last-song text at 150 attended
-seconds, then automatically winds down at 180 seconds unless an accepted finale ends it sooner or
-`party.extend` restarts the attended interval. A later autonomous invitation may offer to restart the
-party, but it does not restart by itself.
+cinematic. Elapsed time never ends the party; it only paces later messages and explicit authored
+finales. An accepted last-dance/last-song action or cake completion can schedule a graceful ending,
+and `party.extend` cancels that pending finale. A later autonomous invitation may offer to restart a
+stopped party, but it does not restart by itself.
+
+The `setGardenParty(false)` branch is also the authoritative visual teardown boundary. It clears the
+balcony switch, persistent UV intent and `.uv-mode` before stopping the disco stepper, camera flash,
+photo moments, guest movement, and other party-only drivers. Callers may use `setPartyMode(false)` for
+the graceful walk-out, but lower-level cinematic/reset/fallback paths must still leave no blacklight
+or timer-owned party effect behind.
+
+### Trip lifecycle
+
+`beginTrip` and `stopTrip` own the active flag and public mirror, current variant, strip classes,
+effect timers, creatures, molecule cards, bloom/slideshow loops and reset-time tolerance. Every
+interactive trip entry calls `beginTrip`; `startTripVariant` remains the lower-level visual primitive
+used by the trailer's deliberately non-gameplay bloom. `tripGeneration` invalidates stale end timers
+and double-rAF class additions when a trip is interrupted or reset.
+
+### Media transitions
+
+`setMusicPausedState` is the only writer of the shared transport-pause mirror and synchronizes its
+play/pause UI and party dance-freeze projection. Individual song/projector/dance-bed controllers
+still own their AudioNode suspension and call the state transition after changing it.
+
+### Shared projections
+
+Cross-subsystem scalar projections have one named writer. `setBBQDayPartyState`,
+`setBBQPartySessionState`, and the balcony controller's `setBBQSplit` own the cookout flags;
+`setPhoneCallFamily` owns the pocket-call family mirror; `setPartyMomentState` owns the keyed
+wedding-moment flags. `tests/check.js` counts literal assignment sites for these, progression,
+trip, and media projections so a reset or alternate entry path cannot quietly become a second
+writer.
+`setPartyDanceState` owns the active dance mirror, both SVG `data-dance` projections, formation,
+tempo retuning, flare cleanup and bed crossfade. Rotation, explicit selection, party start and party
+stop all use it.
 
 ## Rendering and performance lifecycle
 
@@ -178,6 +376,9 @@ examples. Do not add an uncapped interval-driven SVG/WAAPI emitter.
   in both specificity and source order.
 - SVG children do not reliably honor `touch-action`; delegated, non-passive `touchmove` prevention
   on the strip is the established drag pattern.
+- The garden magic-box date lock keeps wheel selection and answer submission separate. Its engraved
+  date opens the shared in-place phone Calendar; only the full-width submit control compares the
+  selected wheels and starts the unlock sequence.
 - WebKit has additional `foreignObject`, replaced-element, text transform, filter, and opacity
   constraints documented in `CLAUDE.md` and `DEBUGGING.md`. Check those before changing monitor or
   phone composition.
@@ -215,25 +416,66 @@ the handle. Abruptly closing mid-ramp can pop. The recording pipeline has an own
 ## People, attendance, and photography
 
 The canonical cast/party definitions drive visual population, chat context, and the roster. Search
-for `ROSTER`, `__whoIsHere`, `__roomOccupants`, and `__rosterPresence`.
+for `ROSTER`, `__peopleManager`, `__whoIsHere`, `__roomOccupants`, and `__rosterPresence`.
 
-- `__whoIsHere(room, opts)` is the instantaneous occupancy accessor used by album photography and
-  other consumers. It composes hosts, crew, party guests, children, visitors, DJs, Aspen, and
-  room-specific cameos according to what is actually painted.
+- `__peopleManager` is the inventory boundary. Its `occupants(room, opts)` composes hosts, crew,
+  party guests, children, visitors, DJs, Aspen, and room-specific cameos according to what is
+  actually painted. `inventory()` returns all rooms plus a canonical key-to-room index,
+  `locate(key)` finds one person, and `audit()` reports cross-room duplicates.
+- `__whoIsHere(room, opts)` is the compatibility alias for `__peopleManager.occupants`; album,
+  roster, chat, and typed API consumers therefore share the same normalized records.
 - The Who's Here UI is phase-two-only. It polls cheaply and mutates only when occupancy changes.
   Arrivals appear immediately; departures have a short hysteresis to avoid flicker during movement.
   The accessor itself remains instantaneous.
 - Display order is based on current left-to-right geometry, while preserving existing order and
   inserting newcomers to reduce churn.
-- Opening the roster can hold autonomous arrivals/departures. Check `rosterHoldsOccupants` before
-  adding another population timer.
+- Opening the roster holds autonomous arrivals/departures. In the garden it also adds
+  `.roster-freeze` to the stage, pausing the adult cast while the eight party children remain
+  animated; the existing row spotlight temporarily exempts `.spotlighted`. Check
+  `rosterHoldsOccupants` before adding another population timer.
 - Party entry/exit controllers move guests to and from the floor. CSS variables help balance crowd
   placement. Avoid rendering the same person in standing, dance, visitor, and kid-activity layers at
   the same time.
-- Children switch among free, family, godson, chase/game, and asleep states. Chase handoffs remove
-  standing duplicates; sleeping/waking can be both an authored state transition and a message.
+- `attendedGuestNames` records lifetime attendance for one party run, independently of the
+  floor-only `.arrived` class. Adult rotation must not clear an attending child's `.arrived`;
+  `assignPartyKids()` then gives every attending child exactly one persistent dance/Cuddly/sleep
+  home. The ordinary Irene/Robin/Navid Cuddly cameo scheduler is party-off only.
+- Persistent bar, office, balcony, and grillmaster figures use presence classes with opacity plus
+  delayed `visibility`, not `display`, so both arrival and departure can paint as fades. The balcony
+  layout preferentially retains eligible visible figures across a BBQ split change. Hamid's
+  grillmaster paint owns `#loft-game-strip.hamid-wearing-jacket`, which fades both views of the
+  shared hanging jacket while he is assigned to the BBQ.
+- The BBQ controller's `bbqHostsOnBalcony` is the single paired-location state for Behdad and
+  Markéta. Both `layoutBBQ()` and `applyBBQGardenSplit()` consume it. Each rotation and active-BBQ
+  day/night change rerolls against a 0.75 daytime / 0.25 nighttime balcony probability, keeping
+  their deck figures and garden exclusions atomic.
+- One eight-child inventory drives standing dancers, Cuddly seats, chase sprites, and sleep.
+  `assignPartyKids()` owns the persistent `off-at-games` / `off-asleep` assignment. A represented
+  parent on the live floor raises that child's dance chance from 0.25 to 0.70; after the sleep
+  message every Cuddly seat clears and the dance chance falls to 0.08. Chase handoffs remain a
+  temporary `off-with-kids` projection of a child whose persistent home is `off-at-games`; dancers
+  are excluded from the chase pool, and a full-pack roll can run all eight seated children. The
+  Cuddly layout balances partial assignments across its two clusters and randomizes identities
+  between sides instead of consuming the slot array left-to-right. `partyKidFormationTick()` keeps
+  its 9–14 second off-room cadence but uses 30–45 seconds while Cuddly is watched. During party Totoro,
+  `__totoroWatchActive` overrides eligibility/sleep and assigns all eight to the same persistent
+  Cuddly layer; outside a party the original three cameo figures own the co-watch. Keep
+  `PARTY_FLOOR_KIDS`, `KID_WHO`, runner SVG nodes, `ROSTER.runSel`, and the people manager in
+  parity when adding a child.
+- S'mores and seasonal balcony play use `__balconyBorrowedKids` as another temporary projection
+  from the persistent Cuddly assignment. Identity-specific s'mores art selects eligible godkids;
+  the seasonal two-slot art can represent any assigned children. `__balconyPlayKidsNow` publishes
+  the generic slots to the people manager, and teardown clears the borrowing without rerolling
+  unrelated dancers.
 - Aspen has garden stations and a photographer presence that can be cloned into other rooms/deck
-  contexts. Automatic rounds and explicit `photo.take` use the same occupancy truth as album shots.
+  contexts. `__roomHasPhotoSubjects(room)` excludes working crew and gates her visible clone,
+  camera/flash, shutter, and Album write together; an empty room must not show her or create a
+  keepsake. Population controllers refresh photographer gates after assignment changes; the
+  garden can be empty during an active party, and Aspen returns with the first subject. Automatic
+  rounds and explicit `photo.take` use that same occupancy truth. The occasional dance freeze is
+  about 4.2 seconds; ordinary automatic captures do not freeze the floor.
+- Named-guest ambient flares use one self-rescheduling visual-only driver. It runs only while the
+  active garden party is visible, focused, and outside a major moment; it never owns sound.
 
 When changing people data, verify all three representations: painted SVG figures, roster/chat
 metadata, and photo composition.
@@ -252,11 +494,32 @@ view gets the first chance to step back, then the app closes to the desktop. A n
 retain app session state; the context-menu Kill path calls `resetMonitorAppState` and must clear it.
 Screensaver and expensive canvas/DOM loops are gated while an app owns the screen.
 
+The shared frame-health sampler exposes `__frameHealthState()` and marks sustained
+low delivery with `html.frame-rate-low`. It samples only while the document is
+visible and focused, requires two 1.2-second windows below 22 FPS to enter slow
+mode, and three windows at or above 42 FPS to recover. The garden disco pools use
+that state: healthy delivery runs their continuous CSS sweep, while low-frame mode
+replaces it with the existing roughly one-second JS position stepper. Asymmetric
+thresholds plus consecutive sampling windows keep the cost change itself from
+flapping the mode.
+
+Desk zoom is unconditionally transition-free. Testing on current Chrome and
+Chrome 138 showed that interpolating the whole scaled SVG could white-flash and
+temporarily reduce frame delivery even when the pre-transition scene held 60 FPS;
+reacting to the resulting dip cannot prevent that first bad transition. The zoom
+controller therefore commits both directions with `transition:none`, then restores
+the strip's transition for ordinary room pans. The garden mask's rapid-click
+counter calls idempotent `__openDropTerm()` on its third click, giving touch-only
+devices access to the console FPS meter without making a double-click alter party
+state. `tests/performance.js` drives the sampler through `__frameHealthFeed(fps)` to
+verify both hysteresis directions without relying on headless timing.
+
 ### Pocket phone
 
 The phone is a lazily built HTML modal with launcher, app, and in-call screens. Search for
-`openApp`, `navBack`, `messageAppReturn`, and `directCloseApp`. Its first ordinary open can show the
-math lock; explicit/cinematic deep links may skip it.
+`openApp`, `navBack`, `phoneAppReturn`, and `setPhoneAppReturn`. Its first ordinary open can show the
+math lock; explicit/cinematic deep links may skip it. `setPhoneAppReturn` is the only owner of the
+app-level return transition: launcher, close phone, or return to Messages.
 
 Back behavior depends on entry context:
 
@@ -264,6 +527,11 @@ Back behavior depends on entry context:
 - an app launched from a Messages action returns to Messages;
 - a direct scene notification opens Messages as a deep link, so Back/Escape closes the phone rather
   than exposing the launcher;
+- scene-level deep links use `__openPhoneAppHere(app, true)` for direct-close behavior: Aspen's
+  post-shutter Album, the magic-box Calendar clue, and the date/time HUD pills;
+- typed `app.open` actions are direct too, so they close the phone on Back/Escape; a Messages action
+  replaces that target with an explicit return to its thread. Interactive `phone("app")` console
+  commands retain ordinary app-to-launcher navigation;
 - an ordinary app returns to the phone home screen;
 - leaving the owning room closes the phone.
 
@@ -271,6 +539,11 @@ Some app data is session-sticky across close/reopen: drafts, filters, current ca
 photobooth output, and similar state. Kill, uninstall, or full reset must clear the app's documented
 retained state. Adding an app therefore requires an open path, a teardown path, Back semantics,
 context-menu behavior, and reset coverage.
+
+Madla's incoming call has one availability boundary, `__madlaAvailable()`: phase 2 must be latched
+and the party must be off. The random scheduler, cuddly outlet, console command, typed action, and
+answer hook all route through `__madlaRing`/`__answerMadla`, so no entry point may reproduce or
+bypass that condition.
 
 ## Dates, calendar, weather, and time
 
@@ -287,7 +560,9 @@ party-forced night. Focus/visibility catch-up handles a crossing missed while aw
 
 The shared calendar renderer serves monitor and phone views. Canonical wedding event definitions
 also generate calendar downloads and external calendar links. Birthday/occasion definitions and
-Persian dates are runtime code; avoid duplicating dates in another UI data source.
+Persian dates are runtime code; avoid duplicating dates in another UI data source. Wedding event
+cards update only the renderer's displayed month; grid days and search results own date activation
+and special-day scene dispatch.
 
 Weather is fetched client-side for Edmonton and Prague, with current conditions and multi-day data.
 The implementation also retrieves aviation observations, Edmonton air quality, and geomagnetic
@@ -320,7 +595,15 @@ Charlie discovery, party lifecycle prompts, and chained authored follow-ups. The
 - still add an unread row when appropriate, but buzz/show a scene notification only for an attended
   player.
 
-Wedding-moment messages are routed through `__deliverAutonomousPhoneMessage`. While first dance,
+`__deliverAutonomousPhoneMessage` is the single deferral boundary for those sources, including
+birthday and date/BBQ occasion producers. While the Who's Here roster is open, it queues autonomous
+messages without adding thread rows; the scene preview, floating unread launcher, and balcony-phone
+badge are also suppressed. Closing the roster resumes eligible queued messages at the normal paced
+drain, while explicit `__deliverPhoneMessage` calls remain immediate but visually quiet behind the
+roster.
+
+Wedding-moment messages are routed through the same boundary and remain ineligible until 45 seconds
+of attended party time from `__partyLifecycleState()`. While first dance,
 slow dance, toasts, group photo, sparklers, cake, bouquet toss, or chair lift owns attention, incoming
 autonomous texts queue instead of interrupting. The queue re-checks the gates and drains one item at
 a time, approximately 4.2 seconds apart, after the moment ends. Explicit/story delivery remains
@@ -328,9 +611,14 @@ outside this deferral queue, but still passes the shared phase and deduplication
 
 ### Thread behavior
 
-- Read state, reactions, arrival timestamps, filters, draft, and reply target are session-only.
+- Read state, reactions, action state, arrival timestamps, filters, draft, and reply target are
+  session/checkpoint state.
 - Opening a notification scrolls to its exact row but does not run that message's action. Opening or
   selecting the row marks it read; the separate action affordance performs the action.
+- `messageActionState` records one-shot completion or expiry. `setGardenParty` retires actions whose
+  context has permanently passed, marks those rows read, and removes their action affordance without
+  deleting the historical text. `unreadCount()` and `__latestUnreadMessage()` re-run the same expiry
+  pass so stale rows cannot hold the autonomous unread-pressure cap.
 - Reactions are lightweight per-message state and are included in group-chat context.
 - Replies carry a stable target/quote and support jumping back to the quoted row.
 - Visitor input is inserted immediately as a local outgoing row. The generated crew reply is queued
@@ -405,9 +693,11 @@ while the film is actually playing. Its direct controls and typed action share o
 transition, so assistants cannot truthfully report a pause without invoking the registered action.
 
 `chat-knowledge.json` should contain verified, stable facts and explicit unknowns. Live state belongs
-in client context. Exact birthdays and other private facts are deliberately excluded from model
-context. Do not add secrets, credentials, operational access details, or unverified logistics to the
-knowledge file.
+in client context. Its `loft.rooms` entries are Charlie's stable room/object guide: they distinguish
+recognizable objects, phase-specific additions, main guided interactions, and special controls
+without forwarding the SVG DOM. Exact birthdays and other private facts are deliberately excluded
+from model context. Do not add secrets, credentials, operational access details, or unverified
+logistics to the knowledge file.
 
 ## Console and public scripting
 
@@ -467,7 +757,9 @@ Run focused tests for the changed surface. Important examples:
 - `tests/chat.js`, `tests/chat-context.js`, `tests/chat-worker.mjs`,
   `tests/safe-actions.js`, and `tests/safe-actions-worker.mjs` for assistant/action boundaries;
 - `tests/performance.js` and `tests/leak.js` for lifecycle regressions;
-- `tests/album-axis.mjs`, `tests/album-render.mjs`, and `tests/album-ui.js` for photography;
+- `tests/bar-layout.js` for the calm-night patrons, occupied stools, and hands-on mixer paint order;
+- `tests/album-axis.mjs`, `tests/album-render.mjs`, `tests/album-ui.js`, and
+  `tests/photographer-occupancy.js` for photography;
 - `tests/weather.js`, `tests/birthday.js`, and `tests/bbq-days.js` for date/weather gates.
 
 `tests/lib.js` starts a fresh headless Chrome profile, loads a scratch page, injects narrow setup and
@@ -562,7 +854,7 @@ Use these search terms in `rsvp.html` rather than relying on line numbers:
 | Photographer/album | `__updateGardenPhotographer`, `albumPhotoSvg`, `__photoMomentNow` |
 | Weather | `api.open-meteo.com`, `__realOutdoorC`, `refreshWeatherText` |
 | Public console | `CONSOLE_HELP`, `CONSOLE_CMDS`, `window.volume` |
-| Autoplay/cinematic | `apParam`, `__autoplayOn`, `window.__cinematic` |
+| Autoplay/cinematic | `AP_SEQUENCE_LIBRARY`, `AP_MOOD_TRANSITIONS`, `__autoplayModel`, `apParam`, `window.__cinematic` |
 
 Worker-side searches in `chat.js`: `ACTION_SPECS`, `cleanContext`, `cleanGroupChat`,
 `verifyTurnstile`, `callOpenAI`, and `export default`. Stable assistant facts and policy live in

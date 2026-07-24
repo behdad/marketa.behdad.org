@@ -35,7 +35,9 @@ inside the scene above CLICK ME or Welcome back, hide Back/Restart,
 room navigation, dots, and media transport, retain Fullscreen plus the left utility links, and dock
 the one `.watch-controls` node into the shell's bottom row. Fresh entry's `#click-me-overlay`
 uses the same translucent scene veil as recovery and consumes its dismissing click, so that click
-cannot activate an SVG object underneath. The head script applies `.loft-entry-pending` before
+cannot activate an SVG object underneath. `.hunt-viewport` is an inline-size container; the shared
+entry title, CLICK ME prompt, and gap use `cqi` units so their scale follows the rendered scene
+rather than the browser viewport. The head script applies `.loft-entry-pending` before
 the game shell's first paint in both full RSVP and game-only modes; the checkpoint initializer constructs the chosen gate synchronously
 and `revealEntrySurface()` removes that concealment, preventing a kitchen/caption flash. Handing control to the player removes
 the entry class, reparents watch controls to their document owner, and restores normal controls.

@@ -51,6 +51,10 @@ function run(width, height, standalone) {
       Math.abs((brand.left + brand.width / 2) - (viewport.left + viewport.width / 2)) <= 2 &&
       brand.bottom <= clickWord.top && langs.left >= area.left,
       JSON.stringify({ area: area, viewport: viewport, brand: brand, clickWord: clickWord, langs: langs }));
+    check("entry typography scales from the scene rather than the browser viewport",
+      parseFloat(getComputedStyle(document.querySelector(".loft-entry-brand")).fontSize) <= viewport.width * .13 &&
+      parseFloat(getComputedStyle(document.querySelector(".click-me-word")).fontSize) <= viewport.width * .09,
+      JSON.stringify({ viewportWidth: viewport.width, brandFont: getComputedStyle(document.querySelector(".loft-entry-brand")).fontSize, clickFont: getComputedStyle(document.querySelector(".click-me-word")).fontSize }));
     check("entry keeps left utility links and fullscreen available",
       utilityIds.every(function(id){var e=document.getElementById(id);return getComputedStyle(e).visibility==="visible"&&e.getBoundingClientRect().width>0;}) &&
       getComputedStyle(document.getElementById("hunt-fullscreen-btn")).visibility === "visible");

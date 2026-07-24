@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Keyboard room-control test: Enter is "do the next thing in this room."
+// Keyboard room-control test: Enter is "do the next thing in this room"; an
+// unconsumed room-level Escape/Backspace uses the same action.
 //   - UNSOLVED room  -> Enter presses the next step of that room's solve sequence, so
 //     repeated Enter solves the room and moves on (kitchen espresso, garden water/music/
 //     candles, cuddly octopus/open-balcony-door/blanket, office call/hang-up/monitor/dismiss/
@@ -19,7 +20,8 @@ var HARNESS = [
   "<script>",
   "(function () {",
   "  function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}",
-  "  function enter(){ document.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true})); }",
+  "  function key(k){ document.dispatchEvent(new KeyboardEvent('keydown',{key:k,bubbles:true,cancelable:true})); }",
+  "  function enter(){ key('Enter'); }",
   "  function dusk(){var b=document.getElementById('stage-balcony');return !!(b&&b.classList.contains('dusk'));}",
   "  function proj(){var w=document.getElementById('cuddly-wallscreen');return w?(w.getAttribute('class')||''):null;}",
   "  var report={errors:[],reached:{},solvedFinalIdx:null,toggles:{}};",
@@ -33,7 +35,7 @@ var HARNESS = [
   "    window.goToStage('office');await sleep(400);report.reached.office=await pressUntil(3,25,1500);await sleep(2500);report.after3=window.currentStageIndex;",
   "    report.solvedFinalIdx=window.currentStageIndex;",
   // ── Part 2: in each now-solved room, Enter fires the toy toggle ──
-  "    window.goToStage('kitchen');await sleep(300);var d0=dusk();enter();await sleep(500);report.toggles.kitchenDayNight=(d0!==dusk());",
+  "    window.goToStage('kitchen');await sleep(300);var d0=dusk();enter();await sleep(500);var d1=dusk();key('Escape');await sleep(500);var d2=dusk();key('Backspace');await sleep(500);var d3=dusk();report.toggles.kitchenDayNight=(d0!==d1);report.toggles.escapeAliases=(d1!==d2&&d2!==d3);",
   "    window.goToStage('garden');await sleep(300);var p0=!!(window.party&&window.party());enter();await sleep(500);report.toggles.gardenParty=(p0!==!!(window.party&&window.party()));",
   "    window.goToStage('cuddly');await sleep(400);var c0=proj();enter();await sleep(600);var c1=proj();enter();await sleep(600);var c2=proj();report.toggles.cuddlyProjector=((c0!==c1)&&(c1!==c2));",
   "    window.goToStage('office');await sleep(400);var zs=[];for(var k=0;k<3;k++){enter();await sleep(500);zs.push(!!(window.__monitorZoomed&&window.__monitorZoomed()));}report.toggles.officeZoom=(zs.indexOf(true)>=0);", // a saver-wake may eat the first press; zoom must appear within 3
@@ -58,6 +60,8 @@ if (!r) {
   else fail("garden music step: Enter clicks the guitar, not the ukulele");
   if (r.toggles.kitchenDayNight) pass("solved kitchen: Enter toggles day/night (kitchen ⇄ bar)");
   else fail("solved kitchen: Enter toggles day/night");
+  if (r.toggles.escapeAliases) pass("room-level Escape and Backspace invoke the same action as Enter");
+  else fail("room-level Escape and Backspace invoke the same action as Enter");
   if (r.toggles.gardenParty) pass("solved garden: Enter toggles the party");
   else fail("solved garden: Enter toggles the party");
   if (r.toggles.cuddlyProjector) pass("solved cuddly: Enter cycles the projector channel");

@@ -106,6 +106,10 @@ from an app to the desktop, or from a zoomed computer to the room. When typing,
 the first `Escape` generally removes focus and preserves an unsent draft rather
 than closing the whole app.
 
+At room level, with no app, menu, dialog, or text field consuming the key,
+`Escape` and `Backspace` invoke the same main room action as `Enter`: they
+"escape the situation" by doing the next guided step or the solved room's toy.
+
 When the scene or API opens a phone app directly, `Escape` or `Backspace` closes
 the phone instead of exposing its launcher. This applies to
 Aspen's post-shutter Album, the magic-box Calendar clue, and the scene date/time
@@ -140,7 +144,7 @@ Press `?` in the game for the live shortcut overlay. Current global shortcuts ar
 | `Left` / `Right` | Previous or next room |
 | `1` through `5` | Go directly to a room, unlocking through it if needed |
 | `Enter` | Perform the current room's main action |
-| `Escape` / `Backspace` | Back, close, or remove text focus |
+| `Escape` / `Backspace` | Back or close; at room level, perform the main room action |
 | `M` | Open or close the main computer monitor |
 | `L` | Open or close the laptop |
 | `C` | Open or close the phone |
@@ -197,7 +201,8 @@ Exact solutions follow in the clearly marked spoiler section.
 
 ### Kitchen/bar
 
-The espresso station is the first guided activity. Later, the same room becomes
+The **La Maz** espresso machine and **El Maz** grinder form the first guided
+activity. Later, the same room becomes
 the bar, with Pouria, cocktail tools, a cocktail menu, and the Flair-Catch
 minigame. The unnamed seated regulars belong to the calm night bar; the active
 party bar instead uses the named guests who rotate through the room. The
@@ -248,8 +253,8 @@ changes day or night.
 
 ### Kitchen/bar solution
 
-1. Turn on the espresso machine and allow it to warm up.
-2. Use the grinder.
+1. Turn on La Maz and allow it to warm up.
+2. Run El Maz.
 3. Tamp the grounds.
 4. Attach the portafilter and brew.
 5. Drink the espresso.
@@ -431,9 +436,9 @@ details.
 ## Charlie
 
 Charlie is the private wedding assistant in the monitor's **Chat** app. Charlie
-knows the loft, game systems, public wedding information, and gameplay hints.
-Charlie replies in the language used by the player, including English, Czech,
-and Persian.
+knows the loft's recognizable objects and interactions room by room, game
+systems, public wedding information, and gameplay hints. Charlie replies in the
+language used by the player, including English, Czech, and Persian.
 
 The Chat app warms its anti-bot check when opened. Follow-up messages can be
 queued while a response is in progress. Conversation history survives closing
@@ -816,7 +821,7 @@ families are:
 | `party.dance.request` | `{ style }` from the discovered style enum |
 | `party.moment.start` | `{ moment }` from the discovered moment enum |
 | `bbq.set` | `{ on: true/false }` |
-| `coffee.make` | End an active party, restore daylight, and take the player to the kitchen/bar espresso machine |
+| `coffee.make` | End an active party, restore daylight, and take the player to La Maz in the kitchen/bar |
 | `photo.take` | Capture through the available in-game photo flow |
 | `fishu.speak` | Run the Fishu interaction |
 | `trip.next` | Start the next shuffled magic-box trip, equivalent to using the box |

@@ -181,6 +181,14 @@ check(sanitizedContext.apps.phrasebook.length === 1 && sanitizedContext.apps.phr
 check(sanitizedContext.apps.contacts.length === 1 && sanitizedContext.apps.contacts[0].fun_fact === "collects hobbies" && !Object.hasOwn(sanitizedContext.apps.contacts[0], "birthday"), "Worker strips non-public contact fields including birthdays", sanitizedContext.apps.contacts);
 check(sanitizedContext.apps.catalog.monitor.length === 1 && sanitizedContext.apps.catalog.monitor[0].id === "weather" && sanitizedContext.apps.catalog.phone.length === 1 && sanitizedContext.apps.catalog.phone[0].id === "notes" && !captured.body.instructions.includes("root-shell"), "Worker allowlists public monitor and phone app ids", sanitizedContext.apps.catalog);
 check(/Verified knowledge/.test(captured.body.instructions) && /"official_name":"The Loft"/.test(captured.body.instructions) && /"id":"washrooms","location":"by the entrance"/.test(captured.body.instructions) && /canonical runtime calendar/.test(captured.body.instructions), "verified venue and calendar-source knowledge reaches Charlie");
+check(/knowledge\.loft\.rooms is Charlie's room guide/.test(captured.body.instructions) &&
+  /"La Maz espresso machine"/.test(captured.body.instructions) &&
+  /"El Maz grinder"/.test(captured.body.instructions) &&
+  /"magic box"/.test(captured.body.instructions) &&
+  /"Fishu the flying pufferfish"/.test(captured.body.instructions) &&
+  /"stained-glass butterfly"/.test(captured.body.instructions) &&
+  /"covered grill\/smoker"/.test(captured.body.instructions),
+  "Charlie receives a concrete object and interaction guide for all five rooms");
 check(/^[a-f0-9]{64}$/.test(captured.body.safety_identifier), "OpenAI receives a stable privacy-preserving safety identifier");
 check(!source.includes("test-key"), "the Worker source contains no API key");
 

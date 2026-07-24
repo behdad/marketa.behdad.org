@@ -36,6 +36,12 @@ uses a larger height fit without setting `.is-fullscreen`. Direct web play never
 fullscreen; only an installed PWA may use its first interaction for that transition. The fullscreen
 button and `F` remain explicit.
 
+The capture-phase room keyboard controller owns one `activateCurrentRoom()` transition used by
+`Enter` and by an otherwise-unconsumed top-level `Escape`. The existing Backspace alias dispatches
+a synthetic Escape, so it reaches the same transition even while browser fullscreen consumes the
+physical Escape key. Window-level phone/monitor closers and component menu/dialog handlers retain
+first refusal; typing fields never fall through to a room action.
+
 ## Self-hosted runtimes
 
 The loft has several features that run real software entirely from this repository, without a CDN.
@@ -621,9 +627,11 @@ while the film is actually playing. Its direct controls and typed action share o
 transition, so assistants cannot truthfully report a pause without invoking the registered action.
 
 `chat-knowledge.json` should contain verified, stable facts and explicit unknowns. Live state belongs
-in client context. Exact birthdays and other private facts are deliberately excluded from model
-context. Do not add secrets, credentials, operational access details, or unverified logistics to the
-knowledge file.
+in client context. Its `loft.rooms` entries are Charlie's stable room/object guide: they distinguish
+recognizable objects, phase-specific additions, main guided interactions, and special controls
+without forwarding the SVG DOM. Exact birthdays and other private facts are deliberately excluded
+from model context. Do not add secrets, credentials, operational access details, or unverified
+logistics to the knowledge file.
 
 ## Console and public scripting
 

@@ -22,13 +22,9 @@ ME** invitation inside that enlarged view.
 
 ## Quick start
 
-1. Click or tap the game once to begin. The browser version remains in its
-   enlarged page view; after the **CLICK ME** invitation clears, the title,
-   language selector, browser advice, Trailer, and Autoplay controls disappear
-   so the scene can use nearly the full browser window. Use the fullscreen
-   control or `F` for true fullscreen. An installed app may enter fullscreen on
-   its first interaction, omits the browser/device recommendation, and shows
-   its own Loft Day loading progress while the game initializes.
+1. Click or tap **CLICK ME** to begin. The entry screen also offers language,
+   Trailer, and Autoplay; normal game controls appear after entry. An installed
+   app first shows a loading screen and may enter fullscreen on its first tap.
    `Enter`, `Escape`, or `Backspace` dismisses **CLICK ME** without operating
    the room underneath it.
 2. Follow the instruction line above the scene. It is the authoritative current

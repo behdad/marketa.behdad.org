@@ -28,17 +28,20 @@ it coordinates over introducing a second runtime bundle or a new dependency. The
 HTML, CSS, and vanilla JavaScript, with the room illustrations embedded as inline SVG. There is
 nothing to compile: committed page artifacts are served directly from the live Git checkout.
 
-In direct `#play`/`loft-day` mode, `:root:not(.revealed)` turns `main` into a compact title/language
-grid and raises the game shell's desktop cap from 1080px to 1620px. The invitation-state height term
-reserves Trailer/Autoplay in an explicit full-width grid row below the 2:1 scene. Short-landscape
-recovery uses a less conservative height reserve because those controls replace the dots inside the
-shell; installed recovery spends the warning row it omits on a larger scene too.
-`setGameOnlyEntered()` adds `.loft-entered` after
-CLICK ME, Continue, Trailer, or Autoplay hands over control; that hides the outer page chrome and
-uses a larger height fit without setting `.is-fullscreen`. Direct web play never auto-enters true
-fullscreen; only an installed PWA may use its first interaction for that transition. The fullscreen
-button and `F` remain explicit. The synchronous mode bootstrap also adds `.installed-app` from the
-display-mode/navigator standalone signals, suppressing `.device-hint` before first paint in the PWA.
+In direct `#play`/`loft-day` mode, `:root:not(.revealed)` removes all outer game chrome and raises
+the shell's desktop cap from 1080px to 1620px. Fresh CLICK ME adds `.intro-active`; checkpoint entry
+uses `.recovery-active`. Both show the in-shell Loft Day brand and `.game-langs`, hide Back/Restart,
+room navigation, dots, and media transport, retain Fullscreen plus the left utility links, and dock
+the one `.watch-controls` node into the shell's bottom row. Handing control to the player removes
+the entry class, reparents watch controls to their document owner, and restores normal controls.
+The prose device/browser detector and recommendation line were removed: their actions are now
+direct Fullscreen, audio, and Known issues controls.
+
+`setGameOnlyEntered()` adds `.loft-entered` after CLICK ME, Continue, Trailer, or Autoplay hands
+over control; that uses a larger height fit without setting `.is-fullscreen`. Direct web play never
+auto-enters true fullscreen; only an installed PWA may use its first interaction for that
+transition. The fullscreen button and `F` remain explicit. The synchronous mode bootstrap also
+adds `.installed-app` from the display-mode/navigator standalone signals.
 Immediately inside `<body>`, `#installed-load` uses that already-set class to paint a standalone-only
 loading screen before the large game DOM parses. Its small inline controller localizes from the
 saved language/full `navigator.languages` list, advances an ARIA progressbar, completes after
@@ -125,14 +128,15 @@ browser-default `Tab` focus traversal available. Normal shortcuts become active 
 or Start over removes the gate. While it is present, the normal room instruction is replaced by the
 localized saved-room/age summary in `#hunt-caption`; the modal references that caption with
 `aria-describedby`, and removing the gate restores the live room caption. Trailer and Autoplay remain
-available in the room-dot row while the gate hides both navigation rails, Restart, and the dots;
-closing recovery reparents the watch controls to their normal position below the shell. Recovery
+available in the shell's bottom row while the gate hides room navigation, media transport, Back,
+Restart, and the dots; the left utility links remain visible. Closing recovery reparents the watch
+controls to their document owner. Recovery
 Autoplay applies the checkpoint before starting its director, while recovery Trailer holds and
 restores the unopened checkpoint around its deterministic reset. Start over clears the checkpoint
 directly because the recovery gate is already an explicit destructive choice; only the in-game
 Restart button/key uses `__confirmRestart()`. Recovery Start over passes `enterPageMode` to
-`resetHunt()`: the fresh-load CLICK ME state remains unstarted, but `.loft-entered` immediately
-hides the outer page chrome and enlarges its scene. The extinguisher snapshots whether game-only
+`resetHunt()`: the fresh-load CLICK ME state remains unstarted and regains the shared entry chrome,
+while `.loft-entered` immediately enlarges its scene. The extinguisher snapshots whether game-only
 page mode was already entered before its delayed wipe, then passes the same option to `resetHunt()`;
 `R` and the public `reset()` console/API command use that extinguisher path. Thus an in-game reset
 re-arms CLICK ME without dropping the enlarged view. Cinematic/fresh-load resets omit the option and

@@ -130,6 +130,7 @@ h1 .amp{color:var(--wine); display:inline-block; min-width:1em; text-align:cente
   50%{transform:scale(1.16)}
 }
 @media (prefers-reduced-motion: reduce){.langs button{transition:none} .langs button.lang-switched{animation:none}}
+.intro-chrome-brand,.game-langs{display:none}
 .caps{display:block; width:150px; margin:.9rem auto .2rem; transition:transform .3s ease}
 .caps:hover{transform:rotate(-4deg) scale(1.05)}
 @media (prefers-reduced-motion: reduce){.caps:hover{transform:none}}
@@ -627,11 +628,6 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 /* The caption outranks the drop-down console (60) so the instruction line is never covered by
    it — but stays UNDER the pocket phone (65), which is a full modal and must cover the scene. */
 #hunt-fullscreen-area.chrome-overlap #hunt-caption{z-index:62}
-.device-hint{display:none; text-align:center; font-size:.9rem; color:var(--soft); margin:.15rem 0 0; text-wrap:balance}
-.device-hint.show{display:block}
-:root.installed-app .device-hint{display:none !important}
-.browser-issues-link{color:var(--wine); text-decoration:underline; text-underline-offset:2px}
-.browser-issues-link:hover{color:var(--ink)}
 .season-toast{position:absolute; left:50%; bottom:12px; background:rgba(69,58,49,.85); color:#f8f5ec; font-size:.85rem; padding:.3rem .9rem; border-radius:999px; opacity:0; transition:opacity .3s ease; pointer-events:none; z-index:6; white-space:nowrap;
   /* OWN COMPOSITING LAYER. This sits over a scene that animates continuously (the dance floor
      especially); without promotion the browser repaints it on every frame of that animation,
@@ -4070,13 +4066,29 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #click-me-overlay{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:6; pointer-events:none; opacity:0; transition:opacity .5s ease; transform:translateY(-5%)}
 #click-me-overlay.show{opacity:1}
 .click-me-word{font-family:"Climate Crisis",Impact,sans-serif; color:#b17880; -webkit-text-stroke:1px rgba(142,58,74,.4); font-size:clamp(2.4rem,9.5vw,6rem); line-height:.9; letter-spacing:.5px; white-space:nowrap; text-align:center; text-shadow:0 2px 18px rgba(248,245,236,.98),0 0 14px rgba(248,245,236,.96),0 0 5px rgba(248,245,236,1); font-variation-settings:"YEAR" 1979}
+/* CLICK ME and a valid checkpoint share one restrained entry chrome. The quiet utility
+   links remain available on the left; room navigation and media transport do not. */
+#hunt-fullscreen-area:is(.intro-active,.recovery-active) :is(#hunt-escape-btn,#hunt-restart-btn,.hunt-nav,#hunt-side){
+  visibility:hidden; pointer-events:none;
+}
+#hunt-fullscreen-area:is(.intro-active,.recovery-active) :is(#hunt-feedback-btn,#hunt-bugs-btn,#hunt-github-btn){
+  display:flex;
+}
+#hunt-fullscreen-area:is(.intro-active,.recovery-active) #hunt-dots{display:none}
+#hunt-fullscreen-area:is(.intro-active,.recovery-active) > .watch-controls{margin:.35rem 0 0; min-height:2rem}
+:root:not(.revealed) #hunt-fullscreen-area:is(.intro-active,.recovery-active) > .intro-chrome-brand{
+  display:block; flex:0 0 auto; height:2rem; margin:0 auto .05rem; color:var(--wine);
+  font-family:"Fraunces","Source Serif 4",serif; font-size:1.05rem; font-weight:700;
+  line-height:2rem; text-align:center; white-space:nowrap;
+}
+:root:not(.revealed) #hunt-fullscreen-area:is(.intro-active,.recovery-active) > .game-langs{
+  position:absolute; z-index:11; top:.35rem; left:.45rem; display:flex;
+  justify-content:flex-start; padding:0; line-height:1.2;
+}
 /* A valid checkpoint replaces CLICK ME with a compact decision gate over the saved room.
    It is a real modal surface: the scene stays recognizable underneath, but cannot receive a
    stray tap before Continue or Start over has established which state owns the page. */
 #loft-recovery-gate{position:absolute; inset:0; z-index:9; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.55rem; padding:1rem; box-sizing:border-box; color:var(--ink); background:rgba(248,245,236,.78); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); text-align:center}
-.recovery-active :is(#hunt-restart-btn,#hunt-escape-btn,.hunt-left,.hunt-right){visibility:hidden; pointer-events:none}
-.recovery-active #hunt-dots{display:none}
-.recovery-active > .watch-controls{margin:.35rem 0 0; min-height:2rem}
 .loft-recovery-title{font-size:clamp(1rem,2.4vw,1.5rem); font-weight:700; line-height:1.15}
 .loft-recovery-actions{display:flex; gap:.55rem; align-items:center; justify-content:center; margin-top:.2rem}
 .loft-recovery-btn{min-height:2.35rem; padding:.45rem .85rem; border:1.5px solid var(--wine); border-radius:6px; background:var(--paper); color:var(--wine); font:inherit; font-size:clamp(.72rem,1.5vw,.9rem); cursor:pointer; box-shadow:0 2px 7px rgba(69,58,49,.14)}
@@ -8485,59 +8497,35 @@ section{margin:1.9rem 0}
 @media (prefers-reduced-motion: reduce){
   .flight-plane{animation:none; transform:translateX(130px)}
 }
-/* Full page by default (names, dates, RSVP, footer + the game). #play, or a /loft… path
-   (the loft-day alias), strips to just the Loft Day game + its title (and controls); the
-   language toggle stays, everything else outside the game is hidden. */
+/* Full page by default (names, dates, RSVP, footer + the game). #play, or a /loft… path,
+   strips to a self-contained game shell. Entry identity/actions live inside that shell;
+   the RSVP page retains the outer title, language and browser advice. */
 :root:not(.revealed) main{
-  /* Game-only is a compact symmetric shell: title centered, language right, then the hint and game
-     spanning all columns. Its desktop ceiling is 1.5x the full-page width; the game box below
-     applies the viewport-height fit so this wider main never forces a needlessly tall scene. */
   max-width:1710px;
-  display:grid;
-  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
-  align-items:start;
-  column-gap:1rem;
 }
 :root:not(.revealed) main > audio{display:none}
-:root:not(.revealed) .hunt-title{
-  grid-column:2; grid-row:1; align-self:start;
-  text-align:center; margin:0; line-height:2rem;
-}
-:root:not(.revealed) .langs{
-  grid-column:3; grid-row:1;
-  align-self:center; justify-self:end; padding-top:0;
-}
-:root:not(.revealed) .device-hint{grid-column:1 / -1; grid-row:2}
+:root:not(.revealed) :is(.hunt-title,.page-langs),
+:root:not(.revealed) main > .watch-controls{display:none !important}
 :root:not(.revealed) #hunt-fullscreen-area:not(.is-fullscreen){
-  grid-column:1 / -1; grid-row:3;
   width:100%;
-  /* Before entry, reserve enough browser height for the title/hint and Trailer/Autoplay below the
-     2:1 scene. 1620px remains exactly 1.5x the former 1080px shell. */
-  max-width:min(1620px, calc(200vh - 440px));
-  margin:.55rem auto 0;
+  max-width:min(1620px, calc(200dvh - 180px));
+  margin:0 auto;
 }
-/* Short landscape recovery has less outer chrome than the fresh invitation: the watch controls
-   replace the dots inside the shell, and installed mode also omits the device/browser warning.
-   Spend those reclaimed rows on the scene instead of retaining the invitation's 440px reserve. */
+/* Short landscape entry spends almost the whole height on the shell while retaining its
+   identity/caption/watch rows. */
 @media (max-height:520px) and (orientation:landscape){
-  :root:not(.revealed) #hunt-fullscreen-area.recovery-active:not(.is-fullscreen){
-    max-width:min(calc(100vw - 2.5rem), calc(200dvh - 320px));
-  }
-  :root:not(.revealed).installed-app #hunt-fullscreen-area.recovery-active:not(.is-fullscreen){
+  :root:not(.revealed) #hunt-fullscreen-area:is(.intro-active,.recovery-active):not(.is-fullscreen){
     max-width:min(calc(100vw - 2.5rem), calc(200dvh - 220px));
   }
 }
 :root:not(.revealed) #hunt-fullscreen-area:not(.is-fullscreen) > .hunt-frame{max-width:none}
-:root:not(.revealed) .watch-controls{
-  grid-column:1 / -1; grid-row:4;
-}
 /* Once CLICK ME (or the saved-session gate) has handed control to the player, the outer web-page
    chrome has done its job. Hide it and let the same non-fullscreen shell use nearly the whole
    browser content area. This does not set .is-fullscreen or call the Fullscreen API. */
 :root:not(.revealed).loft-entered main{padding-top:.25rem}
-:root:not(.revealed).loft-entered :is(.hunt-title,.langs,.device-hint,.watch-controls){display:none !important}
+:root:not(.revealed).loft-entered #hunt-fullscreen-area:not(.intro-active):not(.recovery-active) >
+  :is(.intro-chrome-brand,.game-langs,.watch-controls){display:none !important}
 :root:not(.revealed).loft-entered #hunt-fullscreen-area:not(.is-fullscreen){
-  grid-row:1;
   max-width:min(1620px, calc(200vh - 160px));
   margin:0 auto;
 }
@@ -9691,7 +9679,7 @@ section{margin:1.9rem 0}
   })();
 </script>
 <main>
-  <nav class="langs" aria-label="Language" data-aria-i="nav_lang_aria">
+  <nav class="langs page-langs" aria-label="Language" data-aria-i="nav_lang_aria">
     <button type="button" data-lang="en" aria-pressed="true">EN</button><span class="sep" aria-hidden="true">|</span>
     <button type="button" data-lang="cs" aria-pressed="false">CZ</button>
   </nav>
@@ -9728,8 +9716,12 @@ section{margin:1.9rem 0}
   <hr>
 
   <p class="hunt-title" id="hunt-title" data-i="hunt_title">Loft Day</p>
-  <p class="device-hint" id="device-hint" data-i="device_hint"></p>
   <div id="hunt-fullscreen-area">
+  <p class="intro-chrome-brand" data-i="hunt_title">Loft Day</p>
+  <nav class="langs game-langs" aria-label="Language" data-aria-i="nav_lang_aria">
+    <button type="button" data-lang="en" aria-pressed="true">EN</button><span class="sep" aria-hidden="true">|</span>
+    <button type="button" data-lang="cs" aria-pressed="false">CZ</button>
+  </nav>
   <button type="button" id="hunt-escape-btn" class="hunt-fullscreen-btn" aria-label="Escape or go back" title="Escape or go back" data-aria-i="escape_aria" data-title-i="escape_aria">
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#f8f5ec" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M19 12H5"/>
@@ -25048,10 +25040,6 @@ var T = {
   en: {
     hunt_title: "Loft Day",
     tagline: "We’re getting married<br><strong>Will you be there?</strong>",
-    device_hint: "Best enjoyed on a bigger screen, in landscape, <button type=\"button\" class=\"fs-hint-link\">fullscreen</button>, headphones on.",
-    fs_hint: "Best enjoyed <button type=\"button\" class=\"fs-hint-link\">fullscreen</button>, headphones on.",
-    browser_ok: " <a class=\"browser-issues-link\" target=\"_blank\" rel=\"noopener noreferrer\">See known issues</a>.",
-    browser_warn: " Runs best in desktop Chrome — <a class=\"browser-issues-link\" target=\"_blank\" rel=\"noopener noreferrer\">see known issues on {b}</a>.",
     season_winter: "❄ winter",
     season_valentines: "💕 valentine's",
     season_carodejnice: "🔥 witches' night",
@@ -25964,10 +25952,6 @@ var T = {
   cs: {
     hunt_title: "Den v podkroví",
     tagline: "Budeme se brát<br><strong>Budete tam?</strong>",
-    device_hint: "Nejlíp na větší obrazovce, na šířku, <button type=\"button\" class=\"fs-hint-link\">celá obrazovka</button>, se sluchátky.",
-    fs_hint: "Nejlíp na <button type=\"button\" class=\"fs-hint-link\">celou obrazovku</button>, se sluchátky.",
-    browser_ok: " <a class=\"browser-issues-link\" target=\"_blank\" rel=\"noopener noreferrer\">Známé chyby</a>.",
-    browser_warn: " Nejlépe funguje v Chromu na počítači — <a class=\"browser-issues-link\" target=\"_blank\" rel=\"noopener noreferrer\">známé chyby v prohlížeči {b}</a>.",
     season_winter: "❄ zima",
     season_valentines: "💕 valentýn",
     season_carodejnice: "🔥 pálení čarodějnic",
@@ -26878,7 +26862,6 @@ function setLang(l) {
     btns[j].setAttribute("aria-pressed", String(btns[j].getAttribute("data-lang") === l));
   }
   try { localStorage.setItem("lang", l); } catch (e) {}
-  if (window.refreshBrowserNotice) window.refreshBrowserNotice();
   if (window.refreshHuntCaption) window.refreshHuntCaption();
   if (window.refreshLaptopClock) window.refreshLaptopClock();
   if (window.refreshDeskClock) window.refreshDeskClock();
@@ -27115,72 +27098,6 @@ window.addEventListener("hashchange", function () {
   if (window.__catchUpDayNight) window.__catchUpDayNight();
 });
 (function () {
-  var hint = document.getElementById("device-hint");
-  if (!hint) return;
-  // touch devices keep the laptop suggestion; fine pointers get the fullscreen +
-  // headphones tip. The initial data-i fill already ran, so this one is set by hand;
-  // swapping the attribute keeps future language toggles filling the right line.
-  var lang0 = T[document.documentElement.lang] ? document.documentElement.lang : "en";
-  // one line only: mobile (coarse pointer) gets the combined "bigger screen, landscape,
-  // fullscreen, headphones" advice; desktop gets just the fullscreen + headphones tip
-  var hintKey = (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ? "device_hint" : "fs_hint";
-  hint.setAttribute("data-i", hintKey);
-  hint.innerHTML = T[lang0][hintKey] || T.en[hintKey];
-  hint.classList.add("show");
-  // the hint's "fullscreen" word is a live trigger — delegated, so language toggles
-  // (which rebuild the innerHTML) can't shed the listener
-  hint.addEventListener("click", function (e) {
-    var b = e.target && e.target.closest && e.target.closest(".fs-hint-link");
-    if (!b) return;
-    var fsBtn = document.getElementById("hunt-fullscreen-btn");
-    if (fsBtn) fsBtn.click();
-  });
-})();
-// true only for real desktop Chromium (Chrome/Edge/Brave/Opera). Warn everyone else:
-// mobile/tablet OSes, iPad-posing-as-Mac, Chrome-on-iOS (WebKit), and non-Chromium desktop
-// (Safari/Firefox). Conservative — when a signal is missing we fall through to "ideal".
-function idealBrowser() {
-  var ua = navigator.userAgent || "";
-  var uad = navigator.userAgentData || null;
-  if (uad && uad.mobile === true) return false;
-  if (/Android/i.test(ua)) return false;
-  if (/iPhone|iPad|iPod|CriOS|FxiOS/i.test(ua)) return false;
-  if (/Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1) return false; // iPadOS reports as Mac
-  var chromium = false;
-  try { var brs = (uad && uad.brands) || []; for (var i = 0; i < brs.length; i++) if (/Chrom(e|ium)/i.test(brs[i].brand)) chromium = true; } catch (e) {}
-  if (!chromium && /Chrome\/[0-9]/.test(ua)) chromium = true; // Edge/Brave/Opera desktop carry this too — all fine
-  return chromium;
-}
-(function () {
-  var REPO = "https://github.com/behdad/marketa.behdad.org";
-  function issueTerm() {
-    var ua = navigator.userAgent || "";
-    if (/CriOS/i.test(ua)) return "Chrome iOS";
-    if (/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1)) return "iOS";
-    if (/Android/i.test(ua)) return "Android";
-    if (/Firefox|FxiOS/i.test(ua)) return "Firefox";
-    if (/Edg\//i.test(ua)) return "Edge";
-    if (/OPR\//i.test(ua)) return "Opera";
-    if (/Safari/i.test(ua) && !/Chrome\/[0-9]/.test(ua)) return "Safari";
-    return "Chrome";
-  }
-  // non-ideal browsers get the "runs best in desktop Chrome — see known issues on <browser>"
-  // tail appended to the device-hint line. setLang rebuilds that line from data-i, so it calls
-  // this again to re-append in the new language. The issue search matches the browser name in
-  // the issue TITLE only (in:title), so it lands on the relevant known-issue threads.
-  window.refreshBrowserNotice = function () {
-    var hint = document.getElementById("device-hint");
-    if (!hint) return;
-    if (hint.querySelector(".browser-issues-link")) return; // already appended for this render
-    var l = T[document.documentElement.lang] ? document.documentElement.lang : "en";
-    var ideal = idealBrowser(), term = issueTerm();
-    hint.insertAdjacentHTML("beforeend", ideal ? (T[l].browser_ok || T.en.browser_ok) : (T[l].browser_warn || T.en.browser_warn).replace("{b}", term));
-    var a = hint.querySelector(".browser-issues-link");
-    if (a) a.href = REPO + "/issues?q=" + encodeURIComponent(ideal ? "is:issue is:open" : "is:issue is:open in:title " + term);
-  };
-  window.refreshBrowserNotice();
-})();
-(function () {
   // Fullscreens #hunt-fullscreen-area (the nav-frame + viewport + room dots together,
   // not the whole page) rather than just the SVG viewport, so the prev/next arrows and
   // room-dot indicators stay usable in fullscreen too.
@@ -27225,6 +27142,8 @@ function idealBrowser() {
   var viewport = document.querySelector(".hunt-viewport");
   var caption = document.getElementById("hunt-caption");
   var dots = document.getElementById("hunt-dots");
+  var introBrand = area.querySelector(".intro-chrome-brand");
+  var watchControls = document.querySelector(".watch-controls");
   var prevBtn = document.getElementById("hunt-prev");
   var rightCol = document.getElementById("hunt-right");
   function outerHeight(el) {
@@ -27267,7 +27186,8 @@ function idealBrowser() {
     var padX = (parseFloat(areaStyle.paddingLeft) || 0) + (parseFloat(areaStyle.paddingRight) || 0);
     var padY = (parseFloat(areaStyle.paddingTop) || 0) + (parseFloat(areaStyle.paddingBottom) || 0);
     var areaW = area.clientWidth - padX;
-    var areaH = area.clientHeight - padY - outerHeight(caption) - outerHeight(dots);
+    var areaH = area.clientHeight - padY - outerHeight(caption) - outerHeight(dots) -
+      outerHeight(introBrand) - (watchControls && watchControls.parentNode === area ? outerHeight(watchControls) : 0);
     if (areaW <= 0 || areaH <= 0) return;
     var navW = prevBtn ? prevBtn.offsetWidth : 0;
     var rightW = rightCol ? rightCol.offsetWidth : navW; // right control column (arrow + button stack share one width)
@@ -27455,6 +27375,8 @@ function idealBrowser() {
     });
     chromeRo.observe(caption);
     chromeRo.observe(dots);
+    if (introBrand) chromeRo.observe(introBrand);
+    if (watchControls) chromeRo.observe(watchControls);
   }
   refreshLabel();
 })();
@@ -67007,6 +66929,11 @@ function spawnDustMote(container) {
     requestAnimationFrame(function () { if (window.__refitZoom) window.__refitZoom(); });
   }
   window.__gameOnlyEntered = function () { return document.documentElement.classList.contains("loft-entered"); };
+  function leaveIntroChrome() {
+    var area = document.getElementById("hunt-fullscreen-area");
+    if (area) area.classList.remove("intro-active");
+    restoreIntroWatchControls();
+  }
   // Leaving attract is the one moment every held-back notification channel needs to hear about. A
   // window event rather than a callback registry: those channels live in IIFEs that run EARLIER in
   // this file than this one, so an event lets them subscribe regardless of source order. Fired on a
@@ -67024,6 +66951,7 @@ function spawnDustMote(container) {
     if (!huntIntroShowing) return;
     huntIntroShowing = false;
     setGameOnlyEntered(true);
+    leaveIntroChrome();
     releaseAttract();
   }
   var dotsWrap = document.getElementById("hunt-dots");
@@ -79322,7 +79250,7 @@ function spawnDustMote(container) {
   var LOFT_CHECKPOINT_VERSION = 1;
   var LOFT_CHECKPOINT_MAX_AGE = 90 * 24 * 60 * 60 * 1000;
   var checkpointWriteTimer = null, recoveryGate = null, recoverySaved = null, recoveryKeyHandler = null;
-  var recoveryWatchParent = null, recoveryWatchNext = null;
+  var introWatchParent = null, introWatchNext = null;
   var cinematicRecoveryRaw = null;
   function checkpointClass(id, name) { var el = document.getElementById(id); return !!(el && el.classList.contains(name)); }
   function checkpointToggle(id, name, on) { var el = document.getElementById(id); if (el) el.classList.toggle(name, !!on); }
@@ -79454,19 +79382,20 @@ function spawnDustMote(container) {
     caption.classList.add("recovery-caption");
     caption.textContent = recoveryCaptionText(saved);
   }
-  function dockRecoveryWatchControls(area) {
+  function dockIntroWatchControls(area) {
     var controls = document.querySelector(".watch-controls");
     if (!area || !controls) return;
-    recoveryWatchParent = controls.parentNode;
-    recoveryWatchNext = controls.nextSibling;
+    if (controls.parentNode === area) return;
+    introWatchParent = controls.parentNode;
+    introWatchNext = controls.nextSibling;
     area.appendChild(controls);
   }
-  function restoreRecoveryWatchControls() {
+  function restoreIntroWatchControls() {
     var controls = document.querySelector(".watch-controls");
-    if (!controls || !recoveryWatchParent) return;
-    recoveryWatchParent.insertBefore(controls, recoveryWatchNext && recoveryWatchNext.parentNode === recoveryWatchParent ? recoveryWatchNext : null);
-    recoveryWatchParent = null;
-    recoveryWatchNext = null;
+    if (!controls || !introWatchParent) return;
+    introWatchParent.insertBefore(controls, introWatchNext && introWatchNext.parentNode === introWatchParent ? introWatchNext : null);
+    introWatchParent = null;
+    introWatchNext = null;
   }
   function hideRecoveryGate() {
     var startWaitingAutoplay = apWaitRecovery;
@@ -79479,7 +79408,7 @@ function spawnDustMote(container) {
     recoveryGate = null;
     recoverySaved = null;
     if (recoveryArea) recoveryArea.classList.remove("recovery-active");
-    restoreRecoveryWatchControls();
+    restoreIntroWatchControls();
     if (hadRecoveryGate) {
       caption.classList.remove("recovery-caption");
       window.refreshHuntCaption();
@@ -79529,7 +79458,7 @@ function spawnDustMote(container) {
     removeClickMe(); hideRecoveryGate(); recoverySaved = saved;
     var recoveryArea = document.getElementById("hunt-fullscreen-area");
     if (recoveryArea) recoveryArea.classList.add("recovery-active");
-    dockRecoveryWatchControls(recoveryArea);
+    dockIntroWatchControls(recoveryArea);
     var gate = document.createElement("div"); recoveryGate = gate;
     gate.id = "loft-recovery-gate"; gate.setAttribute("role", "dialog"); gate.setAttribute("aria-modal", "true"); gate.setAttribute("aria-labelledby", "loft-recovery-title"); gate.setAttribute("aria-describedby", "hunt-caption");
     var title = document.createElement("div"); title.id = "loft-recovery-title"; title.className = "loft-recovery-title"; title.textContent = huntText("recovery_title");
@@ -79696,6 +79625,7 @@ function spawnDustMote(container) {
     clearOpeningGuide();
     calmIntroBlink();
     removeClickMe();
+    leaveIntroChrome();
     releaseAttract();
   }
   window.__endAttract = endAttract;
@@ -79713,6 +79643,9 @@ function spawnDustMote(container) {
     captionKey = "intro";
     caption.innerHTML = huntText("intro");
     caption.classList.add("hint-blink");
+    var introArea = document.getElementById("hunt-fullscreen-area");
+    if (introArea) introArea.classList.add("intro-active");
+    dockIntroWatchControls(introArea);
     showClickMe(); // the melting "CLICK ME!" invitation, appears with the prompt
     updateKitchenInvite();
     strip.addEventListener("pointerdown", stopHintBlink);

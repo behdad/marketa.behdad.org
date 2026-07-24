@@ -12,7 +12,7 @@ var HARNESS = [
   'if(!sessionStorage.getItem("recovery-seeded")){sessionStorage.setItem("recovery-seeded","1");localStorage.setItem("loftCheckpoint:v1",JSON.stringify(saved));location.reload();return;}',
   'var report={errors:[],steps:{}};function S(k,v){report.steps[k]=v;}',
   'window.addEventListener("load",function(){setTimeout(function(){try{',
-  ' var gate=document.getElementById("loft-recovery-gate"),buttons=gate&&gate.querySelectorAll(".loft-recovery-btn"),watch=document.querySelector(".watch-controls"),caption=document.getElementById("hunt-caption"),area=document.getElementById("hunt-fullscreen-area");S("gate",{shown:!!gate,clickMe:!!document.getElementById("click-me-overlay"),primary:buttons&&buttons[0].classList.contains("selected"),summary:caption&&caption.textContent,duplicateMeta:!!(gate&&gate.querySelector(".loft-recovery-meta")),describedBy:gate&&gate.getAttribute("aria-describedby"),recoveryActive:area&&area.classList.contains("recovery-active"),restartVisibility:getComputedStyle(document.getElementById("hunt-restart-btn")).visibility,escapeVisibility:getComputedStyle(document.getElementById("hunt-escape-btn")).visibility,leftVisibility:getComputedStyle(document.getElementById("hunt-left")).visibility,rightVisibility:getComputedStyle(document.getElementById("hunt-right")).visibility,dotsDisplay:getComputedStyle(document.getElementById("hunt-dots")).display,fullscreenVisibility:getComputedStyle(document.getElementById("hunt-fullscreen-btn")).visibility,watchParent:watch&&watch.parentNode&&watch.parentNode.id,watchHidden:watch&&watch.hidden,watchAria:watch&&watch.getAttribute("aria-hidden"),watchDisplay:watch&&getComputedStyle(watch).display});',
+  ' var gate=document.getElementById("loft-recovery-gate"),buttons=gate&&gate.querySelectorAll(".loft-recovery-btn"),watch=document.querySelector(".watch-controls"),caption=document.getElementById("hunt-caption"),area=document.getElementById("hunt-fullscreen-area"),brand=document.querySelector(".intro-chrome-brand"),langs=document.querySelector(".game-langs");S("gate",{shown:!!gate,clickMe:!!document.getElementById("click-me-overlay"),primary:buttons&&buttons[0].classList.contains("selected"),summary:caption&&caption.textContent,duplicateMeta:!!(gate&&gate.querySelector(".loft-recovery-meta")),describedBy:gate&&gate.getAttribute("aria-describedby"),recoveryActive:area&&area.classList.contains("recovery-active"),restartVisibility:getComputedStyle(document.getElementById("hunt-restart-btn")).visibility,escapeVisibility:getComputedStyle(document.getElementById("hunt-escape-btn")).visibility,prevVisibility:getComputedStyle(document.getElementById("hunt-prev")).visibility,mediaVisibility:getComputedStyle(document.getElementById("hunt-side")).visibility,utilityVisibility:getComputedStyle(document.getElementById("hunt-github-btn")).visibility,brandDisplay:getComputedStyle(brand).display,langsDisplay:getComputedStyle(langs).display,dotsDisplay:getComputedStyle(document.getElementById("hunt-dots")).display,fullscreenVisibility:getComputedStyle(document.getElementById("hunt-fullscreen-btn")).visibility,watchParent:watch&&watch.parentNode&&watch.parentNode.id,watchHidden:watch&&watch.hidden,watchAria:watch&&watch.getAttribute("aria-hidden"),watchDisplay:watch&&getComputedStyle(watch).display});',
   ' function key(k,code,shift){document.dispatchEvent(new KeyboardEvent("keydown",{key:k,code:code||"",shiftKey:!!shift,bubbles:true,cancelable:true}));}',
   ' [ ["5","Digit5"], ["d","KeyD"], ["p","KeyP"], ["t","KeyT"], ["?","Slash",true], ["`","Backquote"], ["r","KeyR"], ["Tab","Tab"] ].forEach(function(x){key(x[0],x[1],x[2]);});',
   ' S("blocked",{gate:!!document.getElementById("loft-recovery-gate"),room:window.currentStageName,started:window.__gameStarted(),party:!!window.__gardenPartyOn,trip:!!window.__tripActive,help:!!document.querySelector(".kbd-backdrop"),console:document.getElementById("dropterm").classList.contains("open"),save:!!localStorage.getItem("loftCheckpoint:v1")});',
@@ -33,7 +33,7 @@ var START_OVER_HARNESS = [
   ' var confirmations=0;window.confirm=function(){confirmations++;return false;};',
   ' var gate=document.getElementById("loft-recovery-gate"),buttons=gate&&gate.querySelectorAll(".loft-recovery-btn");',
   ' if(buttons&&buttons[1])buttons[1].click();',
-  ' report.steps.startedOver={confirmations:confirmations,gate:!!document.getElementById("loft-recovery-gate"),save:!!localStorage.getItem("loftCheckpoint:v1"),room:window.currentStageName,phase2:!!window.__secondRound,started:window.__gameStarted(),entered:window.__gameOnlyEntered(),clickMe:!!document.getElementById("click-me-overlay"),caption:document.getElementById("hunt-caption").textContent};',
+  ' var area=document.getElementById("hunt-fullscreen-area"),watch=document.querySelector(".watch-controls");report.steps.startedOver={confirmations:confirmations,gate:!!document.getElementById("loft-recovery-gate"),save:!!localStorage.getItem("loftCheckpoint:v1"),room:window.currentStageName,phase2:!!window.__secondRound,started:window.__gameStarted(),entered:window.__gameOnlyEntered(),clickMe:!!document.getElementById("click-me-overlay"),introActive:area.classList.contains("intro-active"),watchParent:watch.parentNode&&watch.parentNode.id,langsDisplay:getComputedStyle(document.querySelector(".game-langs")).display,escapeVisibility:getComputedStyle(document.getElementById("hunt-escape-btn")).visibility,caption:document.getElementById("hunt-caption").textContent};',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},350);});',
   '})();</script>'
 ].join("\n");
@@ -45,13 +45,14 @@ function check(ok, msg, detail) {
 }
 
 console.log("rsvp.html checkpoint recovery:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 1900, { patchRaf: true });
+var r = lib.runPageSync("rsvp.html", HARNESS, 1900, { patchRaf: true, urlSuffix: "#play" });
 if (!r) { console.log("  \u2717 harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(s.gate.shown && !s.gate.clickMe && s.gate.primary, "a valid save replaces CLICK ME with Continue selected", s.gate);
 check(!!s.gate.summary && /^Saved Office · /.test(s.gate.summary) && !s.gate.duplicateMeta && s.gate.describedBy === "hunt-caption", "the caption alone carries the concise accessible recovery summary", s.gate);
-check(s.gate.recoveryActive && s.gate.restartVisibility === "hidden" && s.gate.escapeVisibility === "hidden" && s.gate.leftVisibility === "hidden" && s.gate.rightVisibility === "hidden" && s.gate.dotsDisplay === "none" && s.gate.fullscreenVisibility === "visible", "recovery hides inactive navigation but keeps fullscreen available", s.gate);
+check(s.gate.recoveryActive && s.gate.restartVisibility === "hidden" && s.gate.escapeVisibility === "hidden" && s.gate.prevVisibility === "hidden" && s.gate.mediaVisibility === "hidden" && s.gate.dotsDisplay === "none" && s.gate.fullscreenVisibility === "visible", "recovery hides inactive game controls but keeps fullscreen available", s.gate);
+check(s.gate.utilityVisibility === "visible" && s.gate.brandDisplay === "block" && s.gate.langsDisplay === "flex", "recovery keeps utilities, Loft Day, and language in its chrome", s.gate);
 check(s.gate.watchParent === "hunt-fullscreen-area" && s.gate.watchDisplay === "flex", "Trailer and Autoplay occupy the room-dot row during recovery", s.gate);
 check(!s.gate.watchHidden && s.gate.watchAria === null && s.gate.watchDisplay === "flex", "Trailer and Autoplay remain available beside the recovery choice", s.gate);
 check(s.blocked && s.blocked.gate && s.blocked.room === "kitchen" && !s.blocked.started && !s.blocked.party && !s.blocked.trip && !s.blocked.help && !s.blocked.console && s.blocked.save, "gameplay shortcuts stay inert until a recovery choice is made", s.blocked);
@@ -59,15 +60,15 @@ check(s.right && s.left, "arrow keys move between Start over and Continue", { ri
 check(!s.continued.gate && s.continued.room === "office" && s.continued.max === 4 && s.continued.phase2 && s.continued.started, "Enter continues into the restored unlocked game", s.continued);
 check(!s.continued.recoveryCaption && s.continued.caption.toLowerCase().indexOf("continue from") === -1, "continuing restores the room caption", s.continued);
 check(!s.continued.recoveryActive && s.continued.leftVisibility === "visible" && s.continued.rightVisibility === "visible" && s.continued.dotsDisplay === "flex", "continuing restores navigation", s.continued);
-check(s.continued.watchParent === "MAIN", "continuing returns Trailer and Autoplay below the shell", s.continued);
-check(!s.continued.watchHidden && !s.continued.watchAria && s.continued.watchDisplay === "flex", "Trailer and Autoplay remain available after the recovery choice", s.continued);
+check(s.continued.watchParent === "MAIN", "continuing returns Trailer and Autoplay to their document owner", s.continued);
+check(!s.continued.watchHidden && !s.continued.watchAria && s.continued.watchDisplay === "none", "game-only play hides Trailer and Autoplay after the recovery choice", s.continued);
 
 var restart = lib.runPageSync("rsvp.html", START_OVER_HARNESS, 1900, { patchRaf: true, urlSuffix: "#play" });
 check(!!restart && restart.errors.length === 0, "Start over harness has no uncaught page errors", restart && restart.errors);
 var startedOver = restart && restart.steps.startedOver;
 check(startedOver && startedOver.confirmations === 0 && !startedOver.gate && !startedOver.save && startedOver.room === "kitchen" && !startedOver.phase2,
   "Start over is the confirmation: it resets immediately without a browser dialog", startedOver);
-check(startedOver && !startedOver.started && startedOver.entered && startedOver.clickMe && !/La Maz/.test(startedOver.caption),
+check(startedOver && !startedOver.started && startedOver.entered && startedOver.clickMe && startedOver.introActive && startedOver.watchParent === "hunt-fullscreen-area" && startedOver.langsDisplay === "flex" && startedOver.escapeVisibility === "hidden" && !/La Maz/.test(startedOver.caption),
   "recovery Start over enlarges the page but preserves the clean CLICK ME introduction", startedOver);
 
 console.log("");

@@ -27615,8 +27615,18 @@ function setUvMode(on) {
 var uvPartyOn = false;
 // The May-2 cookout is a real party (music, dancers, roster, kids) held in daylight without
 // blacklight. Separately, any party becomes a BBQ session once its smoker is lit.
-window.__bbqDayPartyOn = false;
-window.__bbqPartySessionOn = false;
+function setBBQDayPartyState(on) {
+  window.__bbqDayPartyOn = !!on;
+  return window.__bbqDayPartyOn;
+}
+function setBBQPartySessionState(on) {
+  window.__bbqPartySessionOn = !!on;
+  return window.__bbqPartySessionOn;
+}
+window.__setBBQDayParty = setBBQDayPartyState;
+window.__setBBQPartySession = setBBQPartySessionState;
+setBBQDayPartyState(false);
+setBBQPartySessionState(false);
 window.__bbqDateNow = function () {
   var n = window.__now ? window.__now() : new Date();
   var m = n.getMonth(), d = n.getDate(), y = n.getFullYear();
@@ -27630,7 +27640,7 @@ window.__syncPartyBBQ = function () {
   var smoker = document.getElementById("balcony-smoker");
   var active = !!window.__gardenPartyOn && !!(smoker && smoker.classList.contains("smoking"));
   var was = !!window.__bbqPartySessionOn;
-  window.__bbqPartySessionOn = active;
+  setBBQPartySessionState(active);
   if (active) {
     if (!was && window.__fillGardenGuestCap) window.__fillGardenGuestCap();
     if (window.__startBBQSplit) window.__startBBQSplit();
@@ -41044,7 +41054,11 @@ setOfficeProgress("pc", false);
     }
     function peopleLocations() {
       var out = {};
-      ROOMS.forEach(function (room) { out[room] = (window.__whoIsHere ? window.__whoIsHere(room) : []).map(function (person) { return { key: person.key || null, name: person.name || "", role: person.roleKey ? consoleT(person.roleKey) : null }; }); });
+      var inventory = window.__peopleManager ? window.__peopleManager.inventory() : null;
+      ROOMS.forEach(function (room) {
+        var people = inventory ? inventory.rooms[room] : (window.__whoIsHere ? window.__whoIsHere(room) : []);
+        out[room] = people.map(function (person) { return { key: person.key || null, name: person.name || "", role: person.roleKey ? consoleT(person.roleKey) : null }; });
+      });
       return out;
     }
     function monitorAppState() {
@@ -50182,6 +50196,10 @@ async def localfont(name):
     function phLoop(run, min, span) { return function tick() { if (!phLifeActive) return; if (phLifeWant()) run(); phLifeTimer(tick, (min + Math.random() * span) * 1000); }; }
     function phQ(sel) { return phLifeRoot ? phLifeRoot.querySelector(sel) : null; }
     function phQA(sel) { return phLifeRoot ? phLifeRoot.querySelectorAll(sel) : []; }
+    function setPhoneCallFamily(family) {
+      window.__phoneCallFamily = family || null;
+      return window.__phoneCallFamily;
+    }
     function phTap(el, fn) { if (!el) return; el.style.cursor = "pointer"; el.addEventListener("click", function (e) { e.stopPropagation(); fn(); }); }
     // Name the id-stripped clone the same way the live office/laptop figures are named: a hover
     // tooltip + a tap-to-name white card, reusing __callFigLabel (the office block's single source
@@ -50205,7 +50223,7 @@ async def localfont(name):
     }
     function phoneLifeStart(fam) {
       phoneLifeStop();                 // clean slate (clears any prior timers / flag / melodies)
-      window.__phoneCallFamily = fam;  // re-assert (phoneLifeStop cleared it) so the audio modules stay gated on
+      setPhoneCallFamily(fam);         // re-assert (phoneLifeStop cleared it) so the audio modules stay gated on
       phLifeRoot = shell ? shell.querySelector(".phone-incall .pic-video") : null;
       if (!phLifeRoot) return;
       phLifeActive = true;
@@ -50269,7 +50287,7 @@ async def localfont(name):
       stopMadlaMurmur(); // silence Madla's sisters-murmur BEFORE phLifeRoot is nulled (mouth lookup needs it)
       phLifeRoot = null;
       phLifeTimers.forEach(clearTimeout); phLifeTimers = [];
-      window.__phoneCallFamily = null;
+      setPhoneCallFamily(null);
       if (window.__stopPragueMelody) window.__stopPragueMelody(); // all three are no-ops if not running
       if (window.__stopLuebSinging) window.__stopLuebSinging();
       if (window.__stopTehranMelody) window.__stopTehranMelody();
@@ -50573,11 +50591,13 @@ async def localfont(name):
     }
     function groupChatLocations() {
       var locations = {};
+      var inventory = window.__peopleManager ? window.__peopleManager.inventory() : null;
       ["kitchen", "garden", "cuddly", "office", "balcony"].forEach(function (room) {
-        if (typeof window.__whoIsHere !== "function") { locations[room] = []; return; }
+        if (!inventory && typeof window.__whoIsHere !== "function") { locations[room] = []; return; }
         try {
           var seen = {};
-          locations[room] = window.__whoIsHere(room).map(function (person) { return person && person.name; }).filter(function (name) {
+          var people = inventory ? inventory.rooms[room] : window.__whoIsHere(room);
+          locations[room] = people.map(function (person) { return person && person.name; }).filter(function (name) {
             if (!name || seen[name]) return false; seen[name] = true; return true;
           });
         } catch (_error) { locations[room] = []; }
@@ -55743,7 +55763,7 @@ async def localfont(name):
         if (window.__cancelGuestsWalkOut) window.__cancelGuestsWalkOut();
         if (wasWindingDown && window.__restartPartyLifecycle) window.__restartPartyLifecycle();
         var daytimeBBQ = !!window.__bbqDayPartyOn || !!(window.__bbqDateNow && window.__bbqDateNow());
-        if (daytimeBBQ) window.__bbqDayPartyOn = true;
+        if (daytimeBBQ) setBBQDayPartyState(true);
         if (window.__setUvParty) window.__setUvParty(!daytimeBBQ);
         if (window.__setGardenParty) window.__setGardenParty(true, true); // every party still drops into the garden; May 2's flag keeps that entrance in daylight
         if (daytimeBBQ && window.__setDayNight) window.__setDayNight(false);
@@ -69673,6 +69693,19 @@ function spawnDustMote(container) {
   //           true-colours the hosts; the two hosts alone keep swaying (CSS un-pause). After ~13s
   //           it eases everyone back. Reduced motion holds the hosts in a pose (the CSS keeps them
   //           paused under the freeze) — no spin. Fully torn down on party-off / room-leave / reset.
+  var PARTY_MOMENT_STATE = {
+    firstDance: "firstDanceOn", slowDance: "slowDanceOn", toasts: "toastsOn",
+    groupPhoto: "groupPhotoOn", sparklers: "sparklersOn", cake: "cakeOn",
+    bdCake: "bdCakeOn", bouquet: "bouquetOn", chairLift: "chairLiftOn",
+    photoFreeze: "photoFreeze"
+  };
+  function setPartyMomentState(name, on) {
+    var prop = PARTY_MOMENT_STATE[name];
+    if (!prop) return false;
+    window["__" + prop] = !!on;
+    return window["__" + prop];
+  }
+  window.__setPartyMomentState = setPartyMomentState;
   (function wireGardenMoments() {
     var group = document.getElementById("garden-guests");
     if (!group) return;
@@ -69742,7 +69775,7 @@ function spawnDustMote(container) {
     function endFirstDance() {
       if (firstDanceTimer) { clearTimeout(firstDanceTimer); firstDanceTimer = null; }
       var wasOn = window.__firstDanceOn;
-      window.__firstDanceOn = false;
+      setPartyMomentState("firstDance", false);
       group.classList.remove("first-dance");
       // restore the hosts to their original DOM slot (moved to the front for the solo dance)
       if (firstDanceHostsAnchor && firstDanceHostsAnchor.parentNode === group) {
@@ -69768,7 +69801,7 @@ function spawnDustMote(container) {
     function firstDance() {
       if (!onFloor()) return false; // only meaningful with the crowd on the floor
       if (window.__firstDanceOn) return true; // already running — idempotent (storm-safe)
-      window.__firstDanceOn = true;
+      setPartyMomentState("firstDance", true);
       // bring the WHOLE roster onto the floor so the full crowd rings the couple for their first
       // dance (temporarily over GUEST_CAP; endFirstDance trims it back). __summonGuests crashes
       // everyone in at once (fillAllNow → rebalanceFloor spreads them evenly across the band).
@@ -69789,7 +69822,7 @@ function spawnDustMote(container) {
       firstDanceTimer = setTimeout(endFirstDance, reducedMotion() ? 8000 : 13000); // canonical ~13s; reduced motion keeps the emotional beat without holding the pose as long
       return true;
     }
-    window.__firstDanceOn = false; // state default (read by __syncDanceFreeze)
+    setPartyMomentState("firstDance", false); // state default (read by __syncDanceFreeze)
     window.__firstDance = firstDance; // test/console hook — __firstDance() starts the moment
     // a party-off / room-leave / reset that clears the floor must also tear the moment down so
     // nothing strands (UV left off, crowd left ringed). Poll the floor state cheaply — same idiom
@@ -69806,7 +69839,7 @@ function spawnDustMote(container) {
     var stripEl = document.getElementById("loft-game-strip");
     function endSlowDance() {
       if (slowDanceTimer) { clearTimeout(slowDanceTimer); slowDanceTimer = null; }
-      window.__slowDanceOn = false;
+      setPartyMomentState("slowDance", false);
       group.classList.remove("slow-dance");
       if (meltEl) meltEl.classList.remove("slow-dance");
       if (stripEl) stripEl.classList.remove("slow-dance");
@@ -69818,7 +69851,7 @@ function spawnDustMote(container) {
       if (on === false) { endSlowDance(); return true; } // explicit stop
       if (!onFloor()) return false;                       // only meaningful with the crowd on the floor
       if (window.__slowDanceOn) return true;              // already running — idempotent (storm-safe)
-      window.__slowDanceOn = true;
+      setPartyMomentState("slowDance", true);
       if (window.__summonGuests) window.__summonGuests(); // fill the floor with the whole roster so plenty of couples sway together
       group.classList.add("slow-dance");                  // couples sway together (CSS)
       if (meltEl) meltEl.classList.add("slow-dance");     // the generic dancers pair + slow too
@@ -69829,7 +69862,7 @@ function spawnDustMote(container) {
       slowDanceTimer = setTimeout(endSlowDance, reducedMotion() ? 12000 : 24000);
       return true;
     }
-    window.__slowDanceOn = false;   // state default
+    setPartyMomentState("slowDance", false);   // state default
     window.__slowDance = slowDance; // test/console hook — __slowDance(true) starts, __slowDance(false) ends
     // a party-off / room-leave / reset that clears the floor must tear the lull down too (warm wash
     // left on, couples left paired). Poll the floor on tab-hide (same idiom as the first dance) and
@@ -69904,7 +69937,7 @@ function spawnDustMote(container) {
     function endCakeCutting(completed) {
       if (cakeTimer) { clearTimeout(cakeTimer); cakeTimer = null; }
       var wasOn = !!window.__cakeOn;
-      window.__cakeOn = false;
+      setPartyMomentState("cake", false);
       group.classList.remove("cake-cutting");
       // restore the cake's DOM slot (moved to the front while cutting)
       var ck = document.getElementById("garden-cake");
@@ -69917,7 +69950,7 @@ function spawnDustMote(container) {
     function startCakeCutting() {
       if (!onFloor()) return false;                 // only meaningful with the crowd on the floor
       if (window.__cakeOn) return true;             // idempotent (storm-safe)
-      window.__cakeOn = true;
+      setPartyMomentState("cake", true);
       group.classList.add("cake-cutting");          // cake fades up, hosts lean in, knife cuts (CSS)
       // the couple lean OVER the cake, so the cake must paint on top of them — move it to the end of
       // #garden-guests for the moment (the hosts may themselves be front-most from a first dance), restore on end
@@ -69928,7 +69961,7 @@ function spawnDustMote(container) {
       cakeTimer = setTimeout(function () { endCakeCutting(true); }, reducedMotion() ? 5000 : 9000);
       return true;
     }
-    window.__cakeOn = false;
+    setPartyMomentState("cake", false);
     window.__startCakeCutting = startCakeCutting;
     window.__endCakeCutting = endCakeCutting;
     window.__completeCakeCutting = function () { return endCakeCutting(true); }; // deterministic lifecycle test hook
@@ -69958,7 +69991,7 @@ function spawnDustMote(container) {
     }
     function endBdCakeCutting() {
       if (bdCakeTimer) { clearTimeout(bdCakeTimer); bdCakeTimer = null; }
-      window.__bdCakeOn = false;
+      setPartyMomentState("bdCake", false);
       group.classList.remove("bd-cake-cutting");
       var ckEl = document.getElementById("garden-bd-cake");
       if (ckEl) ckEl.classList.remove("blown"); // relight for the next cutting (flames fade back up)
@@ -69979,7 +70012,7 @@ function spawnDustMote(container) {
       var list = bdWhoList(who);
       if (!list.length) return false;               // no garden birthday to celebrate right now
       if (window.__bdCakeOn) return true;           // idempotent (storm-safe)
-      window.__bdCakeOn = true;
+      setPartyMomentState("bdCake", true);
       // the cake goes to the centre BETWEEN the hosts; the birthday person(s) dance there with it
       var hb = group.querySelector(".g-behdad"), hm = group.querySelector(".g-marketa");
       var cx = (hb && hm) ? (figCenterX(hb) + figCenterX(hm)) / 2 : 328; // hosts sit at ~300 & ~356 → centre ~328
@@ -70035,7 +70068,7 @@ function spawnDustMote(container) {
       if (!cake) return;
       cake.addEventListener("click", function () { if (window.__bdCakeOn) blowOutBdCandles(); });
     })();
-    window.__bdCakeOn = false;
+    setPartyMomentState("bdCake", false);
     window.__blowOutBdCandles = blowOutBdCandles;
     window.__startBdCakeCutting = startBdCakeCutting;
     window.__endBdCakeCutting = endBdCakeCutting;
@@ -70069,7 +70102,7 @@ function spawnDustMote(container) {
       aiming = false; aimBouquet = null;
     }
     function endBouquetToss() {
-      bouquetOn = false; window.__bouquetOn = false;
+      bouquetOn = false; setPartyMomentState("bouquet", false);
       teardownAim();
       clearBouquetTimers();
       clearBouquetNode();
@@ -70211,7 +70244,7 @@ function spawnDustMote(container) {
     function startBouquetToss() {
       if (!onFloor()) return false;
       if (bouquetOn) return true;                   // idempotent (storm-safe)
-      bouquetOn = true; window.__bouquetOn = true;
+      bouquetOn = true; setPartyMomentState("bouquet", true);
       clearBouquetNode();                           // drop any stray node first (cap → nothing piles)
       // reduced motion or the autoplay kiosk (no cursor) fall back to the classic auto-toss;
       // everyone else aims the bouquet by hand
@@ -70219,7 +70252,7 @@ function spawnDustMote(container) {
       if (auto) autoToss(); else startAim();
       return true;
     }
-    window.__bouquetOn = false;
+    setPartyMomentState("bouquet", false);
     window.__startBouquetToss = startBouquetToss;
     window.__endBouquetToss = endBouquetToss;
 
@@ -70227,13 +70260,13 @@ function spawnDustMote(container) {
     var chairTimer = null;
     function endChairLift() {
       if (chairTimer) { clearTimeout(chairTimer); chairTimer = null; }
-      window.__chairLiftOn = false;
+      setPartyMomentState("chairLift", false);
       group.classList.remove("chair-lift");         // hosts + chairs ease back down, ring relaxes (CSS)
     }
     function startChairLift() {
       if (!onFloor()) return false;
       if (window.__chairLiftOn) return true;        // idempotent (storm-safe)
-      window.__chairLiftOn = true;
+      setPartyMomentState("chairLift", true);
       group.classList.add("chair-lift");            // chairs fade up, hosts hoisted, crowd rings + bounces (CSS)
       // the crowd whoops as they hoist the couple — a first cheer now, another as they settle up
       cheerCrowd([".g-behdad", ".g-marketa"]);
@@ -70241,7 +70274,7 @@ function spawnDustMote(container) {
       chairTimer = setTimeout(endChairLift, reducedMotion() ? 6000 : 12000);
       return true;
     }
-    window.__chairLiftOn = false;
+    setPartyMomentState("chairLift", false);
     window.__startChairLift = startChairLift;
     window.__endChairLift = endChairLift;
 
@@ -70373,7 +70406,7 @@ function spawnDustMote(container) {
       if (f) f.removeAttribute("transform");
     }
     function endToasts() {
-      clearToastTimers(); toastOn = false; window.__toastsOn = false;
+      clearToastTimers(); toastOn = false; setPartyMomentState("toasts", false);
       group.classList.remove("gm-toasting", "gm-toast-p1", "gm-toast-p2");
       resetToastBubblePos();
     }
@@ -70384,7 +70417,7 @@ function spawnDustMote(container) {
       // in/out). If neither Ali nor Farhang is present, there's nothing to toast — no-op.
       var aliUp = toasterPresent(".g-ali"), farhangUp = toasterPresent(".g-farhang");
       if (!aliUp && !farhangUp) return false;
-      toastOn = true; window.__toastsOn = true;
+      toastOn = true; setPartyMomentState("toasts", true);
       ensureGlass(".g-ali"); ensureGlass(".g-farhang");
       setBubbleText("gm-toast-ali-text", "gm_toast_ali_1", "gm_toast_ali_2");
       setBubbleText("gm-toast-farhang-text", "gm_toast_farhang_1", "gm_toast_farhang_2");
@@ -70424,7 +70457,7 @@ function spawnDustMote(container) {
     var groupPhotoTimers = [], groupPhotoOn = false;
     function clearGroupPhotoTimers() { groupPhotoTimers.forEach(clearTimeout); groupPhotoTimers = []; }
     function endGroupPhoto() {
-      clearGroupPhotoTimers(); groupPhotoOn = false; window.__groupPhotoOn = false;
+      clearGroupPhotoTimers(); groupPhotoOn = false; setPartyMomentState("groupPhoto", false);
       group.classList.remove("gm-group-photo", "gm-gp-settle");
       if (window.__trimFloorToCap) window.__trimFloorToCap(); // the extra guests drift back off, down to capacity
       var gardenStage = document.getElementById("stage-garden");
@@ -70433,7 +70466,7 @@ function spawnDustMote(container) {
     function startGroupPhoto() {
       if (!onFloor()) return false;
       if (groupPhotoOn) return true; // idempotent
-      groupPhotoOn = true; window.__groupPhotoOn = true;
+      groupPhotoOn = true; setPartyMomentState("groupPhoto", true);
       var gardenStage = document.getElementById("stage-garden");
       if (gardenStage) gardenStage.dispatchEvent(new CustomEvent("aspen-home")); // establish the classic front-left angle before anyone gathers
       if (window.__summonGuests) window.__summonGuests(); // everyone crowds in for the whole-group shot (over the 8-cap)
@@ -70502,14 +70535,14 @@ function spawnDustMote(container) {
     function endSparklers() {
       if (sparkTimer) { clearTimeout(sparkTimer); sparkTimer = null; }
       sparkTimers2.forEach(clearTimeout); sparkTimers2 = [];
-      sparklersOn = false; window.__sparklersOn = false;
+      sparklersOn = false; setPartyMomentState("sparklers", false);
       group.classList.remove("gm-sparklers", "gm-sp-hosts");
       clearSparks();
     }
     function startSparklers() {
       if (!onFloor()) return false;
       if (sparklersOn) return true; // idempotent
-      sparklersOn = true; window.__sparklersOn = true;
+      sparklersOn = true; setPartyMomentState("sparklers", true);
       group.classList.add("gm-sparklers", "gm-sp-hosts"); // two lines hold; the couple keep swaying
       if (reducedMotion()) {
         // static pose + a few still glows, no flight (a couple of sparks per line, left at rest)
@@ -70772,7 +70805,7 @@ function spawnDustMote(container) {
   var photoFreezeTimer = null;
   function endPhotoMoment() {
     photoFreezeTimer = null;
-    window.__photoFreeze = false;
+    setPartyMomentState("photoFreeze", false);
     if (window.__albumMomentReset) window.__albumMomentReset(); // next freeze snaps a fresh keepsake
     if (window.__syncDanceFreeze) window.__syncDanceFreeze();
     schedulePhotoMoment();
@@ -70781,7 +70814,7 @@ function spawnDustMote(container) {
     photoFreezeTimer = null;
     if (!window.__gardenPartyOn) return;
     if (document.hidden || !document.hasFocus() || window.__musicPaused) { schedulePhotoMoment(); return; } // unattended, or the visitor's already frozen it → try later
-    window.__photoFreeze = true;
+    setPartyMomentState("photoFreeze", true);
     if (window.__syncDanceFreeze) window.__syncDanceFreeze();
     if (window.__albumCaptureMoment) window.__albumCaptureMoment(); // one keepsake per photo-moment (not per flash)
     photoFreezeTimer = setTimeout(endPhotoMoment, 15000); // ~15s of photography
@@ -70794,7 +70827,7 @@ function spawnDustMote(container) {
   window.__startPhotoMoment = schedulePhotoMoment;
   window.__stopPhotoMoment = function () {
     if (photoFreezeTimer) { clearTimeout(photoFreezeTimer); photoFreezeTimer = null; }
-    if (window.__photoFreeze) { window.__photoFreeze = false; if (window.__syncDanceFreeze) window.__syncDanceFreeze(); }
+    if (window.__photoFreeze) { setPartyMomentState("photoFreeze", false); if (window.__syncDanceFreeze) window.__syncDanceFreeze(); }
   };
   window.__photoMomentNow = function () { if (photoFreezeTimer) { clearTimeout(photoFreezeTimer); photoFreezeTimer = null; } startPhotoMoment(); }; // console/test: trigger one now
   // ── ASPEN AUTO-SNAPS FOR THE ALBUM ─────────────────────────────────────────────
@@ -72606,7 +72639,6 @@ function spawnDustMote(container) {
     // the roster dialog pauses that rotation and room-leaves preserve it.
     var bbqCrowdOn = false;
     var bbqSelected = [], bbqRotationTimer = null;
-    window.__bbqSplitOn = false;
     var BX = 2720; // #stage-balcony sits at x=2720 in the shared strip; local balcony x + BX = strip x
     // ── The deck roster ─────────────────────────────────────────────────────────────────
     // Every hangout figure. `name` is its garden .g-<name> / bar-couple member key (for the
@@ -72966,15 +72998,14 @@ function spawnDustMote(container) {
     window.__updateBalconyHangout = update;
     function setBBQSplit(on) {
       on = !!on;
+      window.__balconyBBQOn = on;
+      window.__bbqSplitOn = on;
       if (on === bbqCrowdOn && (!on || bbqSelected.length === 4)) {
-        window.__balconyBBQOn = on; window.__bbqSplitOn = on;
         hangout.classList.toggle("bbq-day", on);
         update(); return;
       }
       clearBBQRotation();
       bbqCrowdOn = on;
-      window.__balconyBBQOn = on;
-      window.__bbqSplitOn = on;
       hangout.classList.toggle("bbq-day", on);
       hangout.classList.toggle("couple-out", on);
       shownOnce = false;
@@ -72995,7 +73026,7 @@ function spawnDustMote(container) {
     window.__setBalconyBBQCrowd = setBBQSplit; // compatibility hook used by the occasion teardown
     window.__rotateBBQSplit = function () { return rotateBBQSplit(true); }; // deterministic test/console beat; still respects an open roster
     window.__bbqSplitState = function () { return { on: bbqCrowdOn, guests: bbqSelected.slice(), balconyHangout: bbqCrowdOn ? 7 : 0 }; };
-    window.__resetBalconyHangout = function () { setBBQSplit(false); window.__balconyBBQOn = false; window.__bbqSplitOn = false; hide(); if (window.__updateBalconyPhotog) window.__updateBalconyPhotog(); }; // global reset (room-leave uses update()/hide() directly, keeping the BBQ assignment)
+    window.__resetBalconyHangout = function () { setBBQSplit(false); hide(); if (window.__updateBalconyPhotog) window.__updateBalconyPhotog(); }; // global reset (room-leave uses update()/hide() directly, keeping the BBQ assignment)
     window.__balconyBBQCrowdOn = function () { return bbqCrowdOn; }; // read by the balcony photographer's gate
     // ── the smoke spawner: one self-rescheduling timer, re-gated every fire ──────────────
     var smokeTimer = null;
@@ -74513,8 +74544,8 @@ function spawnDustMote(container) {
     if (window.__resetCuddlyVisitors) window.__resetCuddlyVisitors(); // clear any adult friend-duo drop-in
     if (window.__resetBalconyIrene) window.__resetBalconyIrene(); // ...and her bonfire leap
     if (window.__resetBalconyCouple) window.__resetBalconyCouple(); // ...and theirs
-    window.__bbqDayPartyOn = false; // reset before party teardown so May-2 daylight rules cannot leak into the next run
-    window.__bbqPartySessionOn = false;
+    setBBQDayPartyState(false); // reset before party teardown so May-2 daylight rules cannot leak into the next run
+    setBBQPartySessionState(false);
     if (window.__resetBalconyHangout) window.__resetBalconyHangout(); // ...and the deck-party smokers/crowd
     if (window.__resetBalconyGrillmaster) window.__resetBalconyGrillmaster(); // ...and Hamid at the BBQ
     if (window.__resetOfficeHangout) window.__resetOfficeHangout(); // ...and the office hangout couple
@@ -80493,7 +80524,7 @@ function spawnDustMote(container) {
     function setupBBQ() {
       // The invitation itself starts the balcony scene. Until it is tapped, establish a normal-size
       // daylight garden party with no UV so the cookout has a clear before/after transition.
-      window.__bbqDayPartyOn = true;
+      setBBQDayPartyState(true);
       if (window.__setBalconyBBQCrowd) window.__setBalconyBBQCrowd(false);
       if (window.resetSmoker) window.resetSmoker();
       if (window.goToStage) window.goToStage("garden");
@@ -80523,7 +80554,7 @@ function spawnDustMote(container) {
       if (!(window.__bbqDateNow && window.__bbqDateNow()) && window.__bbqDayPartyOn) {
         if (window.__setBalconyBBQCrowd) window.__setBalconyBBQCrowd(false);
         if (window.resetSmoker) window.resetSmoker();
-        window.__bbqDayPartyOn = false;
+        setBBQDayPartyState(false);
         if (window.party && window.party()) window.party(false);
       }
       var key = occKey();
@@ -80534,7 +80565,7 @@ function spawnDustMote(container) {
         if (lastKey === "bbq" && window.__setBalconyBBQCrowd) window.__setBalconyBBQCrowd(false);
         if (lastKey === "bbq" && window.resetSmoker) window.resetSmoker(); // ...and the cookout's grill goes cold, so Hamid isn't still tending it the next day
         if (lastKey === "bbq") {
-          window.__bbqDayPartyOn = false;
+          setBBQDayPartyState(false);
           if (window.party && window.party()) window.party(false); // the date-owned daytime party ends with its occasion
         }
         lastKey = null;
@@ -80771,8 +80802,11 @@ function spawnDustMote(container) {
       return danesh ? "Danesh" : "Sina";
     }
 
-    // ── WHO IS HERE — the canonical per-room occupancy accessor ────────────────────────────
-    // window.__whoIsHere(room) → the people in THAT room right now, in reading order:
+    // ── PEOPLE MANAGER — canonical identity + per-room occupancy ───────────────────────────
+    // window.__peopleManager owns the public inventory assembled from the room controllers.
+    // Controllers still own their figures and transitions; consumers never interrogate those
+    // controllers directly. __whoIsHere remains the compatibility read through the manager.
+    // manager.occupants(room) → the people in THAT room right now, in reading order:
     //   [{ key, name, roleKey, room, el, sels }]
     //     key     canonical lowercase person id — also the relLine()/funFact() lookup key
     //     name    display name, already resolved (the off-duty DJ names whoever's off tonight)
@@ -80780,8 +80814,7 @@ function spawnDustMote(container) {
     //     el      that figure's live node (the __whoPop anchor), or null
     //     sels    garden-floor selector(s) the row can spotlight, else null
     // room defaults to the room on screen; an unknown room gives [].
-    // It never decides occupancy itself: each room's controller already knows who it put there,
-    // so this reads their published hooks (__barCoupleNow / __officeCoupleNow /
+    // The manager reads the published hooks (__barCoupleNow / __officeCoupleNow /
     // __balconyHangoutNow / __balconyGrillmasterNow / __cuddlyVisitorsNow / __kidGamesNow) and,
     // for the standalone cameo figures no rotation owns, whether the figure is painted — which
     // is exactly the state its own system publishes. One notion of presence, nothing to drift.
@@ -80865,7 +80898,7 @@ function spawnDustMote(container) {
       if (!window.__whistlerRoom || window.__whistlerRoom() !== room) return;
       out.push({ key: "whistler", name: "Whistler", roleKey: "", el: document.getElementById("cuddly-dog"), sels: null });
     }
-    function occupantsOf(room) {
+    function readRoomOccupants(room) {
       var out = [];
       if (room === "garden") {
         ["hosts", "guests", "crew", "kids"].forEach(function (grp) { // same reading order the panel has always used
@@ -80934,15 +80967,52 @@ function spawnDustMote(container) {
       if (WHO_OFF_DUTY[room] && WHO_OFF_DUTY[room][key]) return false;
       return !(WHO_BEHIND_BAR[room] && WHO_BEHIND_BAR[room][key]);
     }
-    window.__whoIsHere = function (room, opts) {
+    function managedOccupants(room, opts) {
       room = room || window.currentStageName || "kitchen";
       if (WHO_ROOMS.indexOf(room) < 0) return [];
       try {
-        var list = occupantsOf(room);
+        var list = readRoomOccupants(room);
         if (opts && opts.crew === false) list = list.filter(function (p) { return !whoWorkingHere(p.key, room); });
         return list;
       } catch (e) { return []; }
+    }
+    function peopleInventory(opts) {
+      var rooms = {}, locations = {}, duplicates = [];
+      // Preserve the established test/integration seam: an explicit replacement of
+      // __whoIsHere is a bounded occupancy provider. The normal alias points back to
+      // managedOccupants, so production reads stay on the manager's own room reader.
+      var reader = (window.__whoIsHere && window.__whoIsHere !== managedOccupants) ? window.__whoIsHere : managedOccupants;
+      WHO_ROOMS.forEach(function (room) {
+        rooms[room] = reader(room, opts) || [];
+        rooms[room].forEach(function (person) {
+          if (!locations[person.key]) locations[person.key] = [];
+          locations[person.key].push(room);
+        });
+      });
+      Object.keys(locations).forEach(function (key) {
+        if (locations[key].length > 1) duplicates.push({ key: key, rooms: locations[key].slice() });
+      });
+      return { rooms: rooms, locations: locations, duplicates: duplicates };
+    }
+    function peopleLocate(key, opts) {
+      key = String(key || "").toLowerCase();
+      var inventory = peopleInventory(opts), rooms = inventory.locations[key] || [];
+      return { key: key, rooms: rooms.slice(), people: rooms.map(function (room) {
+        return inventory.rooms[room].filter(function (person) { return person.key === key; })[0];
+      }).filter(Boolean) };
+    }
+    function peopleAudit(opts) {
+      var inventory = peopleInventory(opts);
+      return { ok: inventory.duplicates.length === 0, duplicates: inventory.duplicates };
+    }
+    window.__peopleManager = {
+      rooms: function () { return WHO_ROOMS.slice(); },
+      occupants: managedOccupants,
+      inventory: peopleInventory,
+      locate: peopleLocate,
+      audit: peopleAudit
     };
+    window.__whoIsHere = managedOccupants;
 
     var panel = null, toggleBtn = null, open = false;
 

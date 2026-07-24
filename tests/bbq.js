@@ -57,6 +57,9 @@ var harness = String.raw`<script>
       setTimeout(function () {
       var state = window.__bbqSplitState();
       var deck = names("balcony"), selected = state.guests.slice();
+      var peopleAudit = window.__peopleManager && window.__peopleManager.audit();
+      check("people manager is the occupancy authority", !!(window.__peopleManager && window.__peopleManager.occupants && window.__peopleManager.inventory && window.__peopleManager.locate));
+      check("BBQ split has no cross-room duplicates", !!peopleAudit && peopleAudit.ok, peopleAudit ? JSON.stringify(peopleAudit.duplicates) : "manager missing");
       check("invitation pans to balcony", window.currentStageName === "balcony", window.currentStageName);
       check("invitation starts split", state.on && window.__bbqSplitOn);
       check("exactly four adults rotate", selected.length === 4, selected.join(","));
@@ -98,9 +101,13 @@ var harness = String.raw`<script>
         check("game kids are off the garden floor", kids.every(function (n) { var el = document.querySelector("#garden-guests .g-" + n); return el && el.classList.contains("off-at-games"); }));
         check("selected adults and hosts are off the garden floor", moved.concat(["behdad", "marketa", "hamid"]).every(function (n) { var el = document.querySelector("#garden-guests .g-" + n); return el && el.classList.contains("off-at-bbq"); }));
         window.__setBalconyBBQCrowd(false);
-        check("split teardown clears all room assignments", !window.__bbqSplitOn && kids.concat(moved, ["behdad", "marketa", "hamid"]).every(function (n) {
-          var el = document.querySelector("#garden-guests .g-" + n); return el && !el.classList.contains("off-at-bbq") && !el.classList.contains("off-at-games");
-        }));
+        var bbqAssignedAfterTeardown = kids.concat(moved, ["behdad", "marketa", "hamid"]).filter(function (n) {
+          var el = document.querySelector("#garden-guests .g-" + n);
+          return !el || el.classList.contains("off-at-bbq");
+        });
+        check("split teardown clears BBQ-owned room assignments", !window.__bbqSplitOn && !bbqAssignedAfterTeardown.length, bbqAssignedAfterTeardown.join(","));
+        var teardownAudit = window.__peopleManager.audit();
+        check("teardown inventory has no cross-room duplicates", teardownAudit.ok, JSON.stringify(teardownAudit.duplicates));
         report();
         }, 250);
       }, 2200);

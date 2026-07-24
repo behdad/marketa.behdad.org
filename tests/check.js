@@ -966,6 +966,42 @@ function checkAlbumSkySig(file, script) {
   else pass(file + ": ALBUM_SKY_SIG keys only on light each room's backdrop actually draws (" + rooms.join(", ") + ")");
 }
 
+// Shared booleans are public projections consumed across distant subsystems. Each must have one
+// literal assignment site inside its named owner; a second write is almost always a teardown/reset
+// path bypassing lifecycle cleanup. Party moments deliberately share one keyed setter.
+function checkSharedStateOwners(file, script) {
+  if (file !== "rsvp.html" || !script) return;
+  var scalarOwners = {
+    tripActive: "setTripActiveState",
+    secondRound: "setSecondRound",
+    monitorShorted: "setMonitorShorted",
+    musicPaused: "setMusicPausedState",
+    partyDance: "setPartyDanceState",
+    bbqDayPartyOn: "setBBQDayPartyState",
+    bbqPartySessionOn: "setBBQPartySessionState",
+    bbqSplitOn: "setBBQSplit",
+    balconyBBQOn: "setBBQSplit",
+    phoneCallFamily: "setPhoneCallFamily"
+  };
+  var bad = [];
+  Object.keys(scalarOwners).forEach(function (prop) {
+    var writes = script.match(new RegExp("window\\.__" + prop + "\\s*=(?!=)", "g")) || [];
+    if (writes.length !== 1) bad.push("__" + prop + " has " + writes.length + " literal writers (owner: " + scalarOwners[prop] + ")");
+    if (script.indexOf("function " + scalarOwners[prop] + "(") === -1) bad.push(scalarOwners[prop] + " owner is missing");
+  });
+  var momentProps = ["firstDanceOn", "slowDanceOn", "toastsOn", "groupPhotoOn", "sparklersOn",
+    "cakeOn", "bdCakeOn", "bouquetOn", "chairLiftOn", "photoFreeze"];
+  momentProps.forEach(function (prop) {
+    var writes = script.match(new RegExp("window\\.__" + prop + "\\s*=(?!=)", "g")) || [];
+    if (writes.length) bad.push("__" + prop + " bypasses setPartyMomentState");
+  });
+  ["rooms", "occupants", "inventory", "locate", "audit"].forEach(function (method) {
+    if (script.indexOf(method + ":") === -1) bad.push("__peopleManager." + method + " is missing");
+  });
+  if (bad.length) fail(file + ": shared state has one named transition owner", bad.join("\n"));
+  else pass(file + ": shared state has one named transition owner (10 scalars, 10 party moments, people manager)");
+}
+
 // A leftover git merge marker in CSS/HTML slips past `node --check` (which only sees
 // the inline <script>) and the other structural checks — one reached production once.
 // Precise forms only, so decorative "====" comment rules don't false-positive.
@@ -1018,6 +1054,7 @@ FILES.forEach(function (file) {
     checkSeasonRosters(file, script);
     checkTapHaloGuards(file, script);
     checkAlbumSkySig(file, script);
+    checkSharedStateOwners(file, script);
   }
   checkCssCommentBalance(file, style);
   checkCssBraceBalance(file, style);

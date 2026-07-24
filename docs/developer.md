@@ -228,6 +228,15 @@ and double-rAF class additions when a trip is interrupted or reset.
 `setMusicPausedState` is the only writer of the shared transport-pause mirror and synchronizes its
 play/pause UI and party dance-freeze projection. Individual song/projector/dance-bed controllers
 still own their AudioNode suspension and call the state transition after changing it.
+
+### Shared projections
+
+Cross-subsystem scalar projections have one named writer. `setBBQDayPartyState`,
+`setBBQPartySessionState`, and the balcony controller's `setBBQSplit` own the cookout flags;
+`setPhoneCallFamily` owns the pocket-call family mirror; `setPartyMomentState` owns the keyed
+wedding-moment flags. `tests/check.js` counts literal assignment sites for these, progression,
+trip, and media projections so a reset or alternate entry path cannot quietly become a second
+writer.
 `setPartyDanceState` owns the active dance mirror, both SVG `data-dance` projections, formation,
 tempo retuning, flare cleanup and bed crossfade. Rotation, explicit selection, party start and party
 stop all use it.
@@ -322,11 +331,14 @@ the handle. Abruptly closing mid-ramp can pop. The recording pipeline has an own
 ## People, attendance, and photography
 
 The canonical cast/party definitions drive visual population, chat context, and the roster. Search
-for `ROSTER`, `__whoIsHere`, `__roomOccupants`, and `__rosterPresence`.
+for `ROSTER`, `__peopleManager`, `__whoIsHere`, `__roomOccupants`, and `__rosterPresence`.
 
-- `__whoIsHere(room, opts)` is the instantaneous occupancy accessor used by album photography and
-  other consumers. It composes hosts, crew, party guests, children, visitors, DJs, Aspen, and
-  room-specific cameos according to what is actually painted.
+- `__peopleManager` is the inventory boundary. Its `occupants(room, opts)` composes hosts, crew,
+  party guests, children, visitors, DJs, Aspen, and room-specific cameos according to what is
+  actually painted. `inventory()` returns all rooms plus a canonical key-to-room index,
+  `locate(key)` finds one person, and `audit()` reports cross-room duplicates.
+- `__whoIsHere(room, opts)` is the compatibility alias for `__peopleManager.occupants`; album,
+  roster, chat, and typed API consumers therefore share the same normalized records.
 - The Who's Here UI is phase-two-only. It polls cheaply and mutates only when occupancy changes.
   Arrivals appear immediately; departures have a short hysteresis to avoid flicker during movement.
   The accessor itself remains instantaneous.

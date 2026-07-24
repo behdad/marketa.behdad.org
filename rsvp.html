@@ -4,10 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <script>
-  // Full page (hero/dates/RSVP) by default. #play in the URL, or the /loft-day alias path,
-  // strips the scaffolding down to just the game (the Loft Day strip + its title). Flag
-  // <html> synchronously here so whichever mode paints has no flash of the other first. The
-  // title mirrors it: plain "Loft Day" in game-only, the full wordmark when scaffolding shows.
+  // Full page (hero/dates/RSVP) by default. The #play/#trailer/#autoplay entry family, or
+  // the /loft-day alias path, strips the scaffolding down to just the game (the Loft Day
+  // strip + its title). Flag <html> synchronously here so whichever mode paints has no
+  // flash of the other first. The title mirrors it: plain "Loft Day" in game-only, the
+  // full wordmark when scaffolding shows.
   (function () {
     function installedApp() {
       try {
@@ -16,7 +17,8 @@
       } catch (_error) { return false; }
     }
     function apply() {
-      var gameOnly = (location.hash || "").toLowerCase() === "#play" || /loft-day/i.test(location.pathname);
+      var gameOnly = /^#(?:play|trailer|autoplay)$/.test((location.hash || "").toLowerCase()) ||
+        /loft-day/i.test(location.pathname);
       var revealed = !gameOnly;
       document.documentElement.classList.toggle("revealed", revealed);
       if (document.readyState === "loading" &&
@@ -42062,7 +42064,7 @@ setOfficeProgress("pc", false);
     arrive: "arrive(\"ali\"|\"spencer\"|\"alireza\"|\"farhang\"|\"bahareh\") — a duo (or the single Bahareh) STROLLS IN through the garden gate onto the dance floor, an entrance moment. arrive() walks in a random duo. lights the party + heads to the garden first if needed. the duos also trickle in on their own, one per beat, as the party fills up. (ali = Ali & Goli, spencer = Spencer & Jay, alireza = Alireza & Mahzad, farhang = Farhang & Lauren, bahareh = Bahareh solo)",
     roster: "roster() — toggle the \"who's here?\" panel: a live at-a-glance list of everyone in the room you're LOOKING AT right now (name · role), kids included — the dance floor, the bar couple + Pouria, the nook's residents/visitors/playing kids, the office pair, the deck crowd + Hamid at the grill. it holds arrivals and departures while open; on the garden floor the adults freeze while the kids keep dancing. click a name for their card and a 3s spotlight that releases that adult under an arrow (works for the DJ + photographer too). roster(true) opens it, roster(false) closes it. the 'h' and 'w' keys do the same. window.__whoIsHere(\"office\") returns the same list for any room",
     reset: "reset() — restart the whole loft from the top (no confirmation — you typed it)",
-    autoplay: "autoplay(true) — PERSISTENT ATTRACT MODE for the wedding BBQ screen: the loft composes an endless show from 30 short authored stories — espresso and bar rituals, music, arrivals, wedding moments, photos, projector/toy scenes, calls, computer and phone apps, weather, the BBQ, and cross-room relays. A seeded weighted Markov director moves between eight narrative moods; hard recent-history and coverage rules keep exact stories from repeating and bring back any room that's been away too long. A visible ghost cursor shows each interaction. It TAKES OVER FROM WHEREVER THE GAME IS (never resets to the kitchen), opens with a short room sweep, then plays the first full story where it found you. Phone notifications INTERRUPT to be opened + acted on, then the exact story/beat RESUMES. This is NOT the fixed Trailer reel (that's the ▷ Trailer button). autoplay(false) or the 'a' key stop it for good; autoplay() toggles; the □ Take over control hands you the wheel but leaves the screen to drift back to attract after a quiet spell. It does NOT stop on stray clicks/keys; pauses cleanly when the tab is hidden or unfocused, and honours prefers-reduced-motion. Open with ?autoplay to boot straight into it",
+    autoplay: "autoplay(true) — PERSISTENT ATTRACT MODE for the wedding BBQ screen: the loft composes an endless show from 30 short authored stories — espresso and bar rituals, music, arrivals, wedding moments, photos, projector/toy scenes, calls, computer and phone apps, weather, the BBQ, and cross-room relays. A seeded weighted Markov director moves between eight narrative moods; hard recent-history and coverage rules keep exact stories from repeating and bring back any room that's been away too long. A visible ghost cursor shows each interaction. It TAKES OVER FROM WHEREVER THE GAME IS (never resets to the kitchen), opens with a short room sweep, then plays the first full story where it found you. Phone notifications INTERRUPT to be opened + acted on, then the exact story/beat RESUMES. This is NOT the fixed Trailer reel (that's the ▷ Trailer button). autoplay(false) or the 'a' key stop it for good; autoplay() toggles; the □ Take over control hands you the wheel but leaves the screen to drift back to attract after a quiet spell. It does NOT stop on stray clicks/keys; pauses cleanly when the tab is hidden or unfocused, and honours prefers-reduced-motion. Open with #autoplay to boot straight into it (?autoplay remains supported)",
     quit: "quit (or exit) — shut the console down (refresh, back to the desktop)",
     blacklight: "blacklight(true) — UV wash over the whole loft; blacklight(false) off; blacklight() reports whether it's on",
     uv: "uv — alias for blacklight; try `help blacklight`",
@@ -78415,7 +78417,7 @@ function spawnDustMote(container) {
     balcony: { budgetMs: 44000, maxBeats: 14, weight: 1, anchor: "balcony-phone" }
   };
   var apOn = false;              // is the attract loop armed?
-  var apWaitRecovery = false;    // ?autoplay waits behind the saved-session decision instead of playing under it
+  var apWaitRecovery = false;    // URL autoplay waits behind the saved-session decision instead of playing under it
   var apIdleResume = false;      // should we drift BACK to autoplay after idle? (kiosk entry sets this)
   var apStepTimer = null;        // the single self-rescheduling driver
   var apIdleTimer = null;        // idle-resume countdown after a takeover
@@ -79607,16 +79609,46 @@ function spawnDustMote(container) {
   window.__autoplayInvariants = function () { return apInvariants || apSelfCheck(); };
   apSelfCheck();
 
-  // ?autoplay URL param → kiosk boot: the owner opens one URL on the BBQ screen and walks away.
-  // Deferred a beat so the game's own load-time setup (intro prompt, first-visit laptop) settles
-  // first; idle-resume is on so an accidental touch still returns to attract.
-  try {
-    var apParam = new URLSearchParams(location.search).get("autoplay");
-    if (apParam !== null && apParam !== "0" && apParam !== "false") {
+  // Direct URL entries for unattended presentation. `#play` is deliberately neutral: it selects
+  // the game-only shell but starts nothing. `#trailer` starts the fixed reel, while `#autoplay`
+  // starts the persistent director. The old ?autoplay query remains a compatible alias.
+  //
+  // Defer initial launch so the normal intro/recovery setup below has settled. Autoplay then uses
+  // its existing recovery wait; Trailer uses the same checkpoint-preserving route as its button.
+  // Hash changes are useful when setting up a kiosk without reloading. Explicitly switching between
+  // the two running modes stops the old owner before handing over timers and the ghost cursor.
+  var lastUrlEntryMode = null;
+  function urlEntryMode() {
+    var hash = (location.hash || "").toLowerCase();
+    if (hash === "#trailer") return "trailer";
+    if (hash === "#autoplay") return "autoplay";
+    try {
+      var apParam = new URLSearchParams(location.search).get("autoplay");
+      if (apParam !== null && apParam !== "0" && apParam !== "false") return "autoplay";
+    } catch (e) {}
+    return null;
+  }
+  function launchUrlEntryMode() {
+    var mode = urlEntryMode();
+    if (!mode || mode === lastUrlEntryMode) return;
+    lastUrlEntryMode = mode;
+    if (mode === "autoplay") {
+      if (window.__cinematic) stopCinematic();
       apIdleResume = true;
-      setTimeout(function () { if (!apOn) startAutoplay(); }, 1500);
+      if (!apOn) startAutoplay();
+      return;
     }
-  } catch (e) {}
+    if (apOn) stopAutoplay(false);
+    if (recoveryGate && startRecoveryTrailer()) return;
+    startCinematic();
+  }
+  setTimeout(launchUrlEntryMode, 1500);
+  window.addEventListener("hashchange", function () {
+    var mode = urlEntryMode();
+    if (!mode) { lastUrlEntryMode = null; return; }
+    setTimeout(launchUrlEntryMode, 0);
+  });
+  window.__launchUrlEntryMode = launchUrlEntryMode; // focused URL-entry regression hook
 
   if (watchBtn) {
     // Only a trusted gesture starts the show: a synthetic click can't unlock song

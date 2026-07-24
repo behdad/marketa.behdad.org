@@ -60,9 +60,10 @@ must be checked in these four distinct presentations:
 1. **Full RSVP page:** load `rsvp.html` without `#play`. The invitation remains the document owner
    around its embedded game. Check desktop and phone widths so game-only rules do not remove or
    overlap the invitation header, language controls, sections, or footer.
-2. **Direct browser game:** load `rsvp.html#play` or `loft-day.html`. On desktop and landscape
-   mobile, check fresh CLICK ME, saved Continue/Start over, and active play. These states share the
-   edge-to-edge page fill but intentionally expose different controls and bottom rows.
+2. **Direct browser game:** load the `#play`, `#trailer`, or `#autoplay` entry, or the `loft-day`
+   route. On desktop and landscape mobile, check fresh CLICK ME, saved Continue/Start over, and
+   active play/presentation. These states share the edge-to-edge page fill but intentionally expose
+   different controls and bottom rows.
 3. **Installed/standalone app:** repeat direct-game checks with `(display-mode: standalone)` on
    desktop and mobile. Include the installed loading progress, first-interaction fullscreen,
    restart/reset fullscreen preservation, and return from browser-owned dialogs or tabs.
@@ -71,8 +72,9 @@ must be checked in these four distinct presentations:
    remain in the shell; verify English and Czech fit, the action attempts landscape, and manual
    rotation reveals the appropriate entry or play state without stale chrome.
 
-`tests/game-only-layout.js` covers the structural variants, while `tests/recovery.js` owns the
-saved-session transition. Still inspect real desktop and approximately 390px mobile renders:
+`tests/game-only-layout.js` covers the structural variants, `tests/recovery.js` owns the saved-session
+transition, and `tests/url-entry.js` checks neutral, Trailer, and Autoplay URL launch behavior with
+and without a checkpoint. Still inspect real desktop and approximately 390px mobile renders:
 headless geometry does not prove that the chrome is visually balanced.
 
 `setGameOnlyEntered()` adds `.loft-entered` after CLICK ME, Continue, Trailer, or Autoplay hands
@@ -227,8 +229,10 @@ unfocused tabs enter `paused` without consuming a beat. Takeover and deliberate 
 takeover retains the idle-return timer, while `autoplay(false)` clears it. `apOwned` remains the
 cleanup inventory for autonomous effects that cannot be inherited safely; panels and the ghost
 cursor are unconditionally removed at boundaries/stop.
-`apWaitRecovery` keeps `?autoplay` behind the checkpoint gate, then starts from the restored or reset
-state only after that modal decision has completed.
+`apWaitRecovery` keeps URL autoplay (`#autoplay`, plus the legacy `?autoplay` alias) behind the
+checkpoint gate, then starts from the restored or reset state only after that modal decision has
+completed. `#play` only selects the game shell; `#trailer` starts the fixed cinematic through its
+checkpoint-preserving entry path.
 
 Inspection and deterministic test hooks are `__autoplayMachine()`, `__autoplayModel()`,
 `__autoplayCatalog()`, `__autoplaySeed(seed)`, `__autoplayPlan(seed, count)`, and
@@ -751,6 +755,8 @@ Run focused tests for the changed surface. Important examples:
 - `tests/enter.js` for room-level Enter progression;
 - `tests/menu.js` and `tests/laptopmenu.js` for context menus/Kill behavior;
 - `tests/navigation.js` for room/device navigation;
+- `tests/url-entry.js`, `tests/recovery.js`, `tests/cine.js`, and `tests/autoplay.js` for direct
+  presentation entries and their recovery/lifecycle contracts;
 - `tests/party-lifecycle.js` for attended party timing and finales;
 - `tests/message-context.js`, `tests/message-launcher.js`, and
   `tests/message-resilience.js` for Messages behavior;

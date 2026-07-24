@@ -197,8 +197,15 @@ profile when reduced motion is requested.
 
 Stray clicks and keys do not stop a kiosk show. Use **Take over** to return control
 temporarily; after a quiet interval the kiosk resumes. Press `A` or run
-`autoplay(false)` in the console to stop it deliberately. Opening the game with
-`?autoplay` starts the same persistent mode after initialization.
+`autoplay(false)` in the console to stop it deliberately.
+
+The direct game entries have distinct purposes:
+
+- `#play` opens Loft Day without starting a presentation.
+- `#trailer` opens the game-only view and starts the fixed Trailer reel.
+- `#autoplay` opens the game-only view and starts persistent Autoplay.
+
+The older `?autoplay` URL remains an alias for `#autoplay`.
 If a saved-session choice is waiting, URL autoplay begins only after Continue or
 Start over resolves that screen.
 

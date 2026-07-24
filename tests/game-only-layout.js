@@ -34,6 +34,8 @@ function run(width, height) {
     }
     check("the invitation state keeps Trailer and Autoplay in view", watch.bottom <= innerHeight + 1,
       JSON.stringify({ innerHeight: innerHeight, watchBottom: watch.bottom, areaBottom: area.bottom }));
+    check("Trailer and Autoplay stay below the scene", watch.top >= area.bottom - 1,
+      JSON.stringify({ watchTop: watch.top, areaBottom: area.bottom }));
     var invitationWidth = area.width;
     window.__endAttract();
     setTimeout(function () {

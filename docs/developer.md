@@ -30,7 +30,7 @@ nothing to compile: committed page artifacts are served directly from the live G
 
 In direct `#play`/`loft-day` mode, `:root:not(.revealed)` turns `main` into a compact title/language
 grid and raises the game shell's desktop cap from 1080px to 1620px. The invitation-state height term
-reserves Trailer/Autoplay below the 2:1 scene. `setGameOnlyEntered()` adds `.loft-entered` after
+reserves Trailer/Autoplay in an explicit full-width grid row below the 2:1 scene. `setGameOnlyEntered()` adds `.loft-entered` after
 CLICK ME, Continue, Trailer, or Autoplay hands over control; that hides the outer page chrome and
 uses a larger height fit without setting `.is-fullscreen`. Direct web play never auto-enters true
 fullscreen; only an installed PWA may use its first interaction for that transition. The fullscreen

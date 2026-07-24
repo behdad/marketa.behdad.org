@@ -155,6 +155,25 @@ function run(width, height, standalone, fullPage) {
         }));
       check("entered page mode remains outside true/class fullscreen",
         !document.getElementById("hunt-fullscreen-area").classList.contains("is-fullscreen"));
+      if (${standalone ? "true" : "false"}) {
+        var installedWidth = enteredArea.width;
+        window.__toggleFullscreen();
+        check("installed desktop can enter its fullscreen fill",
+          document.getElementById("hunt-fullscreen-area").classList.contains("is-fullscreen"));
+        window.__toggleFullscreen();
+        var returnedArea = document.getElementById("hunt-fullscreen-area").getBoundingClientRect();
+        check("installed desktop restores the full non-fullscreen fit after exiting",
+          !document.getElementById("hunt-fullscreen-area").classList.contains("is-fullscreen") &&
+          returnedArea.width >= installedWidth - 1 &&
+          returnedArea.bottom <= innerHeight + 1 &&
+          document.documentElement.scrollHeight <= innerHeight + 1,
+          JSON.stringify({
+            before: enteredArea,
+            after: returnedArea,
+            innerHeight: innerHeight,
+            scrollHeight: document.documentElement.scrollHeight
+          }));
+      }
       window.__activateExtinguisher();
       setTimeout(function () {
         check("an in-game extinguisher reset preserves enlarged page mode and returns to CLICK ME",
@@ -173,7 +192,7 @@ function run(width, height, standalone, fullPage) {
               window.__installedLoaderComplete === true && !document.getElementById("installed-load"));
           }
           report();
-        }, 900);
+        }, ${standalone ? "1800" : "900"});
       }, 900);
     }, 40);
   } catch (error) {
@@ -183,7 +202,7 @@ function run(width, height, standalone, fullPage) {
   }, 100);
 })();
 </script>`;
-  return lib.runPageSync("rsvp.html", harness, 3200, {
+  return lib.runPageSync("rsvp.html", harness, standalone ? 4600 : 3200, {
     urlSuffix: fullPage ? "" : "#play",
     forceStandalone: !!standalone,
     patchRaf: true,
@@ -193,6 +212,9 @@ function run(width, height, standalone, fullPage) {
 
 var reports = [
   { label: "wide", report: run(1800, 1000) },
+  { label: "installed desktop", report: run(1800, 1000, true) },
+  { label: "landscape phone", report: run(844, 390) },
+  { label: "installed landscape phone", report: run(844, 390, true) },
   { label: "mobile", report: run(390, 844) },
   { label: "installed", report: run(390, 844, true) },
   { label: "RSVP portrait", report: run(390, 844, false, true) }

@@ -19,6 +19,10 @@
       var gameOnly = (location.hash || "").toLowerCase() === "#play" || /loft-day/i.test(location.pathname);
       var revealed = !gameOnly;
       document.documentElement.classList.toggle("revealed", revealed);
+      if (document.readyState === "loading" &&
+          !document.documentElement.classList.contains("loft-entry-ready")) {
+        document.documentElement.classList.add("loft-entry-pending");
+      }
       document.documentElement.classList.toggle("installed-app", installedApp());
       document.title = revealed ? "markéta & behdad — RSVP — Loft Day" : "Loft Day";
     }
@@ -130,6 +134,9 @@ h1 .amp{color:var(--wine); display:inline-block; min-width:1em; text-align:cente
   50%{transform:scale(1.16)}
 }
 @media (prefers-reduced-motion: reduce){.langs button{transition:none} .langs button.lang-switched{animation:none}}
+.game-langs{display:none; gap:0}
+.game-langs button{padding-inline:.08rem}
+.game-langs .sep{color:var(--muted)}
 .caps{display:block; width:150px; margin:.9rem auto .2rem; transition:transform .3s ease}
 .caps:hover{transform:rotate(-4deg) scale(1.05)}
 @media (prefers-reduced-motion: reduce){.caps:hover{transform:none}}
@@ -275,8 +282,6 @@ footer{margin-top:2.6rem}
 #loft-game-strip.uv-mode:not(.dance-frozen) #garden-guests .g-marketa .guest-spot-arrow path{filter:drop-shadow(0 1px 1px rgba(69,58,49,.35))}
 @keyframes guest-spot-bob{0%,100%{translate:0 0}50%{translate:0 -6px}} /* the translate PROPERTY composes with any transform attr */
 @media (prefers-reduced-motion: reduce){.guest-spot-arrow{animation:none}}
-.hunt-title{font-family:"Fraunces",serif; font-weight:700; font-size:1.1rem; text-align:center; letter-spacing:.02em; color:var(--wine); margin:.6rem 0 0; opacity:0}
-.hunt-title.show{opacity:1; transition:opacity .5s ease}
 /* the whole game reads as one handheld device: a soft burgundy shell wrapping the hint
    caption, the prev/next controls + scene "screen", and the room-nav dots — binding them
    as one unit and drawing the eye to the instruction line. The caption and dots each sit
@@ -291,6 +296,7 @@ footer{margin-top:2.6rem}
   border:1px solid rgba(120,60,70,.24);
   box-shadow:0 5px 15px rgba(69,58,49,.15), inset 0 1px 0 rgba(255,255,255,.3), inset 0 -2px 5px rgba(120,58,68,.18);
 }
+#portrait-orientation-gate{display:none}
 #hunt-fullscreen-area > .hunt-frame{margin:.4rem auto}
 @media (max-width:759px){
   #hunt-fullscreen-area{padding:.3rem .4rem .45rem; border-radius:12px; margin:1.1rem auto 0}
@@ -307,7 +313,7 @@ footer{margin-top:2.6rem}
 .hunt-frame{display:flex; align-items:center; gap:.3rem; max-width:1140px; margin:1.5rem auto; position:relative}
 .hunt-viewport{
   position:relative; flex:1 1 auto; min-width:0; overflow:hidden; border-radius:14px;
-  box-shadow:0 3px 10px rgba(69,58,49,.15); background:#f8f5ec;
+  box-shadow:0 3px 10px rgba(69,58,49,.15); background:#f8f5ec; container-type:inline-size;
 }
 #hunt-wipe{
   position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none;
@@ -627,11 +633,6 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 /* The caption outranks the drop-down console (60) so the instruction line is never covered by
    it — but stays UNDER the pocket phone (65), which is a full modal and must cover the scene. */
 #hunt-fullscreen-area.chrome-overlap #hunt-caption{z-index:62}
-.device-hint{display:none; text-align:center; font-size:.9rem; color:var(--soft); margin:.15rem 0 0; text-wrap:balance}
-.device-hint.show{display:block}
-:root.installed-app .device-hint{display:none !important}
-.browser-issues-link{color:var(--wine); text-decoration:underline; text-underline-offset:2px}
-.browser-issues-link:hover{color:var(--ink)}
 .season-toast{position:absolute; left:50%; bottom:12px; background:rgba(69,58,49,.85); color:#f8f5ec; font-size:.85rem; padding:.3rem .9rem; border-radius:999px; opacity:0; transition:opacity .3s ease; pointer-events:none; z-index:6; white-space:nowrap;
   /* OWN COMPOSITING LAYER. This sits over a scene that animates continuously (the dance floor
      especially); without promotion the browser repaints it on every frame of that animation,
@@ -3067,14 +3068,14 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
   65%{transform:translate(0.6px,0.5px)}
 }
 @media (prefers-reduced-motion: reduce){#kitchen-grinder.grinding #kitchen-grinder-lid, #kitchen-grinder.lid-jiggle #kitchen-grinder-lid, .kitchen-bean-wobble{animation:none !important}}
-#site-h1.gong-shake, #hunt-title.gong-shake, #hunt-caption.gong-shake{animation:gong-text-shake .4s ease-in-out; transform-origin:center}
+#site-h1.gong-shake, #hunt-caption.gong-shake{animation:gong-text-shake .4s ease-in-out; transform-origin:center}
 @keyframes gong-text-shake{
   0%, 100%{transform:rotate(0)}
   25%{transform:rotate(-1deg)}
   50%{transform:rotate(0.8deg)}
   75%{transform:rotate(-0.4deg)}
 }
-@media (prefers-reduced-motion: reduce){#site-h1.gong-shake, #hunt-title.gong-shake{animation:none}}
+@media (prefers-reduced-motion: reduce){#site-h1.gong-shake{animation:none}}
 .kitchen-cup-wiggle{transform-box:fill-box; transform-origin:bottom center}
 #kitchen-cups.rattling .kitchen-cup-wiggle{animation:cups-wobble .4s ease-in-out}
 #kitchen-cups.rattling .kitchen-cup-wiggle:nth-of-type(2){animation-delay:.02s}
@@ -4082,20 +4083,43 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 .fatality-wrap{width:124px; height:42px; display:flex; align-items:center; justify-content:center; overflow:hidden}
 .fatality-word{font-family:"Climate Crisis",Impact,sans-serif; color:#e11414; font-size:12.5px; line-height:1; letter-spacing:.2px; white-space:nowrap; text-shadow:0 0 3px rgba(255,44,44,.55); font-variation-settings:"YEAR" 1979} /* YEAR animated inline 1979→2050 = the melt; this is the fallback */
 /* Intro "CLICK ME!" — a big melting invitation overlaid on the game scene while the opening
-   prompt shows. Lives inside .hunt-viewport (inset:0), pointer-events:none so a tap anywhere —
-   including on the word — falls through to the strip's stopHintBlink handler. YEAR is animated
-   inline (rAF ping-pong 1979↔2050) = the melt; no CSS animation (keeps check.js's keyframes
-   audit clean). Fades in via a transition (transitions aren't audited). */
-#click-me-overlay{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:6; pointer-events:none; opacity:0; transition:opacity .5s ease; transform:translateY(-5%)}
+   prompt shows. It is an interaction shield, matching the saved-game gate's translucent paper:
+   the first scene tap dismisses the invitation without reaching an object underneath. YEAR is
+   animated inline (rAF ping-pong 1979↔2050) = the melt; no CSS animation (keeps check.js's
+   keyframes audit clean). Fades in via a transition (transitions aren't audited). */
+#click-me-overlay{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:clamp(.45rem,2cqi,1.2rem); box-sizing:border-box; padding-bottom:5%; z-index:6; cursor:pointer; opacity:0; transition:opacity .5s ease; background:rgba(248,245,236,.78); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px)}
 #click-me-overlay.show{opacity:1}
-.click-me-word{font-family:"Climate Crisis",Impact,sans-serif; color:#b17880; -webkit-text-stroke:1px rgba(142,58,74,.4); font-size:clamp(2.4rem,9.5vw,6rem); line-height:.9; letter-spacing:.5px; white-space:nowrap; text-align:center; text-shadow:0 2px 18px rgba(248,245,236,.98),0 0 14px rgba(248,245,236,.96),0 0 5px rgba(248,245,236,1); font-variation-settings:"YEAR" 1979}
+.loft-entry-brand{
+  margin:0; color:var(--wine); font-family:"Fraunces","Source Serif 4",serif;
+  font-size:clamp(1.8rem,8vw,7.5rem);
+  font-size:clamp(1.8rem,12cqi,7.5rem);
+  font-weight:700; line-height:1.05;
+  text-align:center; text-shadow:0 1px 10px var(--cream),0 0 5px var(--cream);
+}
+.click-me-word{padding-top:.45em; font-family:"Climate Crisis",Impact,sans-serif; color:#b17880; -webkit-text-stroke:1px rgba(142,58,74,.4); font-size:clamp(1.25rem,6vw,5rem); font-size:clamp(1.25rem,8cqi,5rem); line-height:1; letter-spacing:.5px; white-space:nowrap; text-align:center; text-shadow:0 2px 18px rgba(248,245,236,.98),0 0 14px rgba(248,245,236,.96),0 0 5px rgba(248,245,236,1); font-variation-settings:"YEAR" 1979}
+/* CLICK ME and a valid checkpoint share one restrained entry chrome. The quiet utility
+   links remain available on the left; room navigation and media transport do not. */
+#hunt-fullscreen-area:is(.intro-active,.recovery-active) :is(#hunt-escape-btn,#hunt-restart-btn,.hunt-nav,#hunt-side){
+  visibility:hidden; pointer-events:none;
+}
+#hunt-fullscreen-area:is(.intro-active,.recovery-active) :is(#hunt-feedback-btn,#hunt-bugs-btn,#hunt-github-btn){
+  display:flex;
+}
+#hunt-fullscreen-area:is(.intro-active,.recovery-active) #hunt-dots{display:none}
+#hunt-fullscreen-area:is(.intro-active,.recovery-active) > .watch-controls{margin:.35rem 0 0; min-height:2rem}
+:root:not(.revealed) #hunt-fullscreen-area:is(.intro-active,.recovery-active) > .game-langs{
+  position:absolute; z-index:11; top:.35rem; left:.45rem; display:flex;
+  justify-content:flex-start; padding:0; line-height:1.2;
+}
 /* A valid checkpoint replaces CLICK ME with a compact decision gate over the saved room.
    It is a real modal surface: the scene stays recognizable underneath, but cannot receive a
    stray tap before Continue or Start over has established which state owns the page. */
 #loft-recovery-gate{position:absolute; inset:0; z-index:9; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.55rem; padding:1rem; box-sizing:border-box; color:var(--ink); background:rgba(248,245,236,.78); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); text-align:center}
-.recovery-active :is(#hunt-restart-btn,#hunt-escape-btn,.hunt-left,.hunt-right){visibility:hidden; pointer-events:none}
-.recovery-active #hunt-dots{display:none}
-.recovery-active > .watch-controls{margin:.35rem 0 0; min-height:2rem}
+#loft-recovery-gate .loft-entry-brand{margin-bottom:.05rem}
+@media (max-width:480px){
+  #loft-recovery-gate{gap:.2rem; padding:.35rem}
+  #loft-recovery-gate .loft-recovery-btn{min-height:2rem; padding:.3rem .65rem}
+}
 .loft-recovery-title{font-size:clamp(1rem,2.4vw,1.5rem); font-weight:700; line-height:1.15}
 .loft-recovery-actions{display:flex; gap:.55rem; align-items:center; justify-content:center; margin-top:.2rem}
 .loft-recovery-btn{min-height:2.35rem; padding:.45rem .85rem; border:1.5px solid var(--wine); border-radius:6px; background:var(--paper); color:var(--wine); font:inherit; font-size:clamp(.72rem,1.5vw,.9rem); cursor:pointer; box-shadow:0 2px 7px rgba(69,58,49,.14)}
@@ -4110,10 +4134,6 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #hunt-fullscreen-area.is-fullscreen .click-me-word,
 #hunt-fullscreen-area:fullscreen .click-me-word,
 #hunt-fullscreen-area:-webkit-full-screen .click-me-word{font-size:clamp(1.6rem, min(9.5vw, 22vh), 10.5rem)}
-/* phones (in-scene): the desktop min overflows a narrow viewport — scale by vw so it fits with margin */
-@media (max-width:759px){
-  .click-me-word{font-size:clamp(1.4rem, 9vw, 3.4rem)}
-}
 @media (prefers-reduced-motion: reduce){.click-me-word{font-variation-settings:"YEAR" 2010} /* static mid-melt, no rAF */}
 .bsod-wrap{width:124px; height:42px; box-sizing:border-box; background:#0d63c4; color:#fff; padding:3.4px 5px; font-family:"Segoe UI",system-ui,Arial,sans-serif; overflow:hidden; display:flex; flex-direction:column; justify-content:center}
 .bsod-face{font-size:8px; line-height:1; font-weight:300; margin-bottom:1.4px}
@@ -8507,60 +8527,30 @@ section{margin:1.9rem 0}
 @media (prefers-reduced-motion: reduce){
   .flight-plane{animation:none; transform:translateX(130px)}
 }
-/* Full page by default (names, dates, RSVP, footer + the game). #play, or a /loft… path
-   (the loft-day alias), strips to just the Loft Day game + its title (and controls); the
-   language toggle stays, everything else outside the game is hidden. */
+/* Full page by default (names, dates, RSVP, footer + the game). #play, or a /loft… path,
+   strips to a self-contained game shell. Entry identity/actions live inside that shell;
+   the RSVP page retains the outer title, language and browser advice. */
+:root.loft-entry-pending #hunt-fullscreen-area{visibility:hidden}
 :root:not(.revealed) main{
-  /* Game-only is a compact symmetric shell: title centered, language right, then the hint and game
-     spanning all columns. Its desktop ceiling is 1.5x the full-page width; the game box below
-     applies the viewport-height fit so this wider main never forces a needlessly tall scene. */
-  max-width:1710px;
-  display:grid;
-  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
-  align-items:start;
-  column-gap:1rem;
+  max-width:none;
+  padding:0;
 }
 :root:not(.revealed) main > audio{display:none}
-:root:not(.revealed) .hunt-title{
-  grid-column:2; grid-row:1; align-self:start;
-  text-align:center; margin:0; line-height:2rem;
-}
-:root:not(.revealed) .langs{
-  grid-column:3; grid-row:1;
-  align-self:center; justify-self:end; padding-top:0;
-}
-:root:not(.revealed) .device-hint{grid-column:1 / -1; grid-row:2}
+:root:not(.revealed) .page-langs,
+:root:not(.revealed) main > .watch-controls{display:none !important}
 :root:not(.revealed) #hunt-fullscreen-area:not(.is-fullscreen){
-  grid-column:1 / -1; grid-row:3;
   width:100%;
-  /* Before entry, reserve enough browser height for the title/hint and Trailer/Autoplay below the
-     2:1 scene. 1620px remains exactly 1.5x the former 1080px shell. */
-  max-width:min(1620px, calc(200vh - 440px));
-  margin:.55rem auto 0;
-}
-/* Short landscape recovery has less outer chrome than the fresh invitation: the watch controls
-   replace the dots inside the shell, and installed mode also omits the device/browser warning.
-   Spend those reclaimed rows on the scene instead of retaining the invitation's 440px reserve. */
-@media (max-height:520px) and (orientation:landscape){
-  :root:not(.revealed) #hunt-fullscreen-area.recovery-active:not(.is-fullscreen){
-    max-width:min(calc(100vw - 2.5rem), calc(200dvh - 320px));
-  }
-  :root:not(.revealed).installed-app #hunt-fullscreen-area.recovery-active:not(.is-fullscreen){
-    max-width:min(calc(100vw - 2.5rem), calc(200dvh - 220px));
-  }
+  max-width:min(100vw, calc(200dvh - 80px));
+  margin:0 auto;
 }
 :root:not(.revealed) #hunt-fullscreen-area:not(.is-fullscreen) > .hunt-frame{max-width:none}
-:root:not(.revealed) .watch-controls{
-  grid-column:1 / -1; grid-row:4;
-}
 /* Once CLICK ME (or the saved-session gate) has handed control to the player, the outer web-page
    chrome has done its job. Hide it and let the same non-fullscreen shell use nearly the whole
    browser content area. This does not set .is-fullscreen or call the Fullscreen API. */
-:root:not(.revealed).loft-entered main{padding-top:.25rem}
-:root:not(.revealed).loft-entered :is(.hunt-title,.langs,.device-hint,.watch-controls){display:none !important}
-:root:not(.revealed).loft-entered #hunt-fullscreen-area:not(.is-fullscreen){
-  grid-row:1;
-  max-width:min(1620px, calc(200vh - 160px));
+:root:not(.revealed).loft-entered #hunt-fullscreen-area:not(.intro-active):not(.recovery-active) >
+  :is(.game-langs,.watch-controls){display:none !important}
+:root:not(.revealed).loft-entered #hunt-fullscreen-area:not(.is-fullscreen):not(.intro-active):not(.recovery-active){
+  max-width:min(100vw, calc(200vh - 90px));
   margin:0 auto;
 }
 :root:not(.revealed) .caps,
@@ -8571,6 +8561,39 @@ section{margin:1.9rem 0}
 :root:not(.revealed) .parties,
 :root:not(.revealed) .rsvp-block,
 :root:not(.revealed) footer{display:none !important}
+/* A narrow portrait phone is not a playable 2:1 room. Present one deliberate orientation
+   gate in BOTH the embedded RSVP and direct game instead of shrinking the scene and caption
+   into an accidental miniature. Its action asks for fullscreen + landscape where the browser
+   permits orientation locking; rotating manually clears this media query immediately. */
+@media (max-width:600px) and (orientation:portrait){
+  #hunt-fullscreen-area > :not(#portrait-orientation-gate){display:none !important}
+  #hunt-fullscreen-area:not(.is-fullscreen){
+    width:min(100%,22rem); max-width:22rem; margin:1rem auto; padding:.55rem;
+  }
+  #portrait-orientation-gate{
+    display:grid; width:min(100%,22rem); min-height:7.4rem; margin:auto; padding:.85rem;
+    box-sizing:border-box; grid-template-columns:minmax(0,1fr) auto; align-items:center;
+    column-gap:.8rem; row-gap:.55rem;
+    color:var(--ink); background:rgba(255,253,248,.86); border:1px solid rgba(69,58,49,.18);
+    border-radius:8px; box-shadow:0 2px 8px rgba(69,58,49,.12);
+  }
+  .portrait-orientation-brand{
+    grid-column:1/-1; color:var(--wine); font-family:"Fraunces","Source Serif 4",serif;
+    font-size:1.35rem; line-height:1.05;
+  }
+  .portrait-orientation-copy{display:flex; min-width:0; flex-direction:column; gap:.18rem}
+  .portrait-orientation-copy strong{
+    color:var(--ink); font-size:.98rem; line-height:1.1;
+  }
+  .portrait-orientation-copy span{color:var(--muted); font-size:.86rem; line-height:1.25}
+  #portrait-landscape-btn{
+    flex:0 0 auto; display:flex; align-items:center; gap:.35rem; min-height:2.4rem;
+    padding:.45rem .65rem; border:1.5px solid var(--wine); border-radius:6px;
+    color:var(--paper); background:var(--wine); font:inherit; font-size:.82rem;
+    line-height:1.1; cursor:pointer;
+  }
+  #portrait-landscape-btn:hover,#portrait-landscape-btn:focus-visible{background:#7a2f3d}
+}
 /* ── seasonal dressing ──────────────────────────────────────────────────────
    A real-calendar date check at init sets at most one season class on the strip
    (via window.__setSeason): .season-holiday (Dec 1–Jan 6) or .season-spooky
@@ -9713,7 +9736,7 @@ section{margin:1.9rem 0}
   })();
 </script>
 <main>
-  <nav class="langs" aria-label="Language" data-aria-i="nav_lang_aria">
+  <nav class="langs page-langs" aria-label="Language" data-aria-i="nav_lang_aria">
     <button type="button" data-lang="en" aria-pressed="true">EN</button><span class="sep" aria-hidden="true">|</span>
     <button type="button" data-lang="cs" aria-pressed="false">CZ</button>
   </nav>
@@ -9749,9 +9772,25 @@ section{margin:1.9rem 0}
 
   <hr>
 
-  <p class="hunt-title" id="hunt-title" data-i="hunt_title">Loft Day</p>
-  <p class="device-hint" id="device-hint" data-i="device_hint"></p>
   <div id="hunt-fullscreen-area">
+  <div id="portrait-orientation-gate" role="region" aria-labelledby="portrait-orientation-brand portrait-orientation-title">
+    <strong id="portrait-orientation-brand" class="portrait-orientation-brand" data-i="hunt_title">Loft Day</strong>
+    <div class="portrait-orientation-copy">
+      <strong id="portrait-orientation-title" data-i="portrait_title">Rotate your phone</strong>
+      <span data-i="portrait_body">Plays best in landscape, or on a bigger device.</span>
+    </div>
+    <button type="button" id="portrait-landscape-btn">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 12a9 9 0 1 0 3-6.7"/>
+        <path d="M3 4v8h8"/>
+      </svg>
+      <span data-i="portrait_action">Try landscape</span>
+    </button>
+  </div>
+  <nav class="langs game-langs" aria-label="Language" data-aria-i="nav_lang_aria">
+    <button type="button" data-lang="en" aria-pressed="true">EN</button><span class="sep" aria-hidden="true">|</span>
+    <button type="button" data-lang="cs" aria-pressed="false">CZ</button>
+  </nav>
   <button type="button" id="hunt-escape-btn" class="hunt-fullscreen-btn" aria-label="Escape or go back" title="Escape or go back" data-aria-i="escape_aria" data-title-i="escape_aria">
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#f8f5ec" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M19 12H5"/>
@@ -25072,10 +25111,6 @@ var T = {
   en: {
     hunt_title: "Loft Day",
     tagline: "We’re getting married<br><strong>Will you be there?</strong>",
-    device_hint: "Best enjoyed on a bigger screen, in landscape, <button type=\"button\" class=\"fs-hint-link\">fullscreen</button>, headphones on.",
-    fs_hint: "Best enjoyed <button type=\"button\" class=\"fs-hint-link\">fullscreen</button>, headphones on.",
-    browser_ok: " <a class=\"browser-issues-link\" target=\"_blank\" rel=\"noopener noreferrer\">See known issues</a>.",
-    browser_warn: " Runs best in desktop Chrome — <a class=\"browser-issues-link\" target=\"_blank\" rel=\"noopener noreferrer\">see known issues on {b}</a>.",
     season_winter: "❄ winter",
     season_valentines: "💕 valentine's",
     season_carodejnice: "🔥 witches' night",
@@ -25258,6 +25293,9 @@ var T = {
     nav_lang_aria: "Language",
     fullscreen_enter: "Enter fullscreen",
     fullscreen_exit: "Exit fullscreen",
+    portrait_title: "Rotate your phone",
+    portrait_body: "Plays best in landscape, or on a bigger device.",
+    portrait_action: "Try landscape",
     feedback_aria: "Send feedback",
     bugs_aria: "Known issues",
     github_aria: "Source on GitHub",
@@ -25319,7 +25357,7 @@ var T = {
       df_console_quip: "undefined is not a function.", // caption under the on-screen JS-console flatline (console kill); a literal JS error — same in both languages (code, not prose)
       df_browser_quip: "Aw, Snap! The tab gave up.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
       kitchen: "Turn on La Maz → run El Maz → brew.",
-      kitchen_grind: "Now run El Maz.",
+      kitchen_grind: "Now grind coffee.",
       kitchen_brew: "Now brew a shot.",
       kitchen_sip: "Go on, sip it. ☕",
       kitchen_need_power: "Turn the machine on first.",
@@ -26014,10 +26052,6 @@ var T = {
   cs: {
     hunt_title: "Den v podkroví",
     tagline: "Budeme se brát<br><strong>Budete tam?</strong>",
-    device_hint: "Nejlíp na větší obrazovce, na šířku, <button type=\"button\" class=\"fs-hint-link\">celá obrazovka</button>, se sluchátky.",
-    fs_hint: "Nejlíp na <button type=\"button\" class=\"fs-hint-link\">celou obrazovku</button>, se sluchátky.",
-    browser_ok: " <a class=\"browser-issues-link\" target=\"_blank\" rel=\"noopener noreferrer\">Známé chyby</a>.",
-    browser_warn: " Nejlépe funguje v Chromu na počítači — <a class=\"browser-issues-link\" target=\"_blank\" rel=\"noopener noreferrer\">známé chyby v prohlížeči {b}</a>.",
     season_winter: "❄ zima",
     season_valentines: "💕 valentýn",
     season_carodejnice: "🔥 pálení čarodějnic",
@@ -26173,6 +26207,9 @@ var T = {
     nav_lang_aria: "Jazyk",
     fullscreen_enter: "Celá obrazovka",
     fullscreen_exit: "Ukončit celou obrazovku",
+    portrait_title: "Otočte telefon",
+    portrait_body: "Nejlépe se hraje na šířku nebo na větším zařízení.",
+    portrait_action: "Zkusit na šířku",
     feedback_aria: "Poslat zpětnou vazbu",
     bugs_aria: "Známé chyby",
     github_aria: "Zdroj na GitHubu",
@@ -26234,7 +26271,7 @@ var T = {
       df_console_quip: "undefined is not a function.", // literal JS error string — same in both languages (a code token, not translated prose)
       df_browser_quip: "Ajaj! Panel to vzdal.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
       kitchen: "Zapni La Maz → spusť El Maz → uvař.",
-      kitchen_grind: "Teď spusť El Maz.",
+      kitchen_grind: "Teď umel kávu.",
       kitchen_brew: "Teď uvař espresso.",
       kitchen_sip: "Tak si ho usrkni. ☕",
       kitchen_need_power: "Nejdřív zapni kávovar.",
@@ -26954,7 +26991,6 @@ function setLang(l) {
     btns[j].setAttribute("aria-pressed", String(btns[j].getAttribute("data-lang") === l));
   }
   try { localStorage.setItem("lang", l); } catch (e) {}
-  if (window.refreshBrowserNotice) window.refreshBrowserNotice();
   if (window.refreshHuntCaption) window.refreshHuntCaption();
   if (window.refreshLaptopClock) window.refreshLaptopClock();
   if (window.refreshDeskClock) window.refreshDeskClock();
@@ -27191,76 +27227,11 @@ window.addEventListener("hashchange", function () {
   if (window.__catchUpDayNight) window.__catchUpDayNight();
 });
 (function () {
-  var hint = document.getElementById("device-hint");
-  if (!hint) return;
-  // touch devices keep the laptop suggestion; fine pointers get the fullscreen +
-  // headphones tip. The initial data-i fill already ran, so this one is set by hand;
-  // swapping the attribute keeps future language toggles filling the right line.
-  var lang0 = T[document.documentElement.lang] ? document.documentElement.lang : "en";
-  // one line only: mobile (coarse pointer) gets the combined "bigger screen, landscape,
-  // fullscreen, headphones" advice; desktop gets just the fullscreen + headphones tip
-  var hintKey = (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ? "device_hint" : "fs_hint";
-  hint.setAttribute("data-i", hintKey);
-  hint.innerHTML = T[lang0][hintKey] || T.en[hintKey];
-  hint.classList.add("show");
-  // the hint's "fullscreen" word is a live trigger — delegated, so language toggles
-  // (which rebuild the innerHTML) can't shed the listener
-  hint.addEventListener("click", function (e) {
-    var b = e.target && e.target.closest && e.target.closest(".fs-hint-link");
-    if (!b) return;
-    var fsBtn = document.getElementById("hunt-fullscreen-btn");
-    if (fsBtn) fsBtn.click();
-  });
-})();
-// true only for real desktop Chromium (Chrome/Edge/Brave/Opera). Warn everyone else:
-// mobile/tablet OSes, iPad-posing-as-Mac, Chrome-on-iOS (WebKit), and non-Chromium desktop
-// (Safari/Firefox). Conservative — when a signal is missing we fall through to "ideal".
-function idealBrowser() {
-  var ua = navigator.userAgent || "";
-  var uad = navigator.userAgentData || null;
-  if (uad && uad.mobile === true) return false;
-  if (/Android/i.test(ua)) return false;
-  if (/iPhone|iPad|iPod|CriOS|FxiOS/i.test(ua)) return false;
-  if (/Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1) return false; // iPadOS reports as Mac
-  var chromium = false;
-  try { var brs = (uad && uad.brands) || []; for (var i = 0; i < brs.length; i++) if (/Chrom(e|ium)/i.test(brs[i].brand)) chromium = true; } catch (e) {}
-  if (!chromium && /Chrome\/[0-9]/.test(ua)) chromium = true; // Edge/Brave/Opera desktop carry this too — all fine
-  return chromium;
-}
-(function () {
-  var REPO = "https://github.com/behdad/marketa.behdad.org";
-  function issueTerm() {
-    var ua = navigator.userAgent || "";
-    if (/CriOS/i.test(ua)) return "Chrome iOS";
-    if (/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1)) return "iOS";
-    if (/Android/i.test(ua)) return "Android";
-    if (/Firefox|FxiOS/i.test(ua)) return "Firefox";
-    if (/Edg\//i.test(ua)) return "Edge";
-    if (/OPR\//i.test(ua)) return "Opera";
-    if (/Safari/i.test(ua) && !/Chrome\/[0-9]/.test(ua)) return "Safari";
-    return "Chrome";
-  }
-  // non-ideal browsers get the "runs best in desktop Chrome — see known issues on <browser>"
-  // tail appended to the device-hint line. setLang rebuilds that line from data-i, so it calls
-  // this again to re-append in the new language. The issue search matches the browser name in
-  // the issue TITLE only (in:title), so it lands on the relevant known-issue threads.
-  window.refreshBrowserNotice = function () {
-    var hint = document.getElementById("device-hint");
-    if (!hint) return;
-    if (hint.querySelector(".browser-issues-link")) return; // already appended for this render
-    var l = T[document.documentElement.lang] ? document.documentElement.lang : "en";
-    var ideal = idealBrowser(), term = issueTerm();
-    hint.insertAdjacentHTML("beforeend", ideal ? (T[l].browser_ok || T.en.browser_ok) : (T[l].browser_warn || T.en.browser_warn).replace("{b}", term));
-    var a = hint.querySelector(".browser-issues-link");
-    if (a) a.href = REPO + "/issues?q=" + encodeURIComponent(ideal ? "is:issue is:open" : "is:issue is:open in:title " + term);
-  };
-  window.refreshBrowserNotice();
-})();
-(function () {
   // Fullscreens #hunt-fullscreen-area (the nav-frame + viewport + room dots together,
   // not the whole page) rather than just the SVG viewport, so the prev/next arrows and
   // room-dot indicators stay usable in fullscreen too.
   var btn = document.getElementById("hunt-fullscreen-btn");
+  var portraitBtn = document.getElementById("portrait-landscape-btn");
   var area = document.getElementById("hunt-fullscreen-area");
   if (!btn || !area) return;
   // The real Fullscreen API is only a bonus layer here: the always-works mechanism is the
@@ -27272,7 +27243,7 @@ function idealBrowser() {
   // Our own intent flag: true whenever the class-fill is meant to be on. Kept separate
   // from the real API state so the fullscreenchange handler can tell an Esc/back exit of
   // real fullscreen (which must also drop the class-fill) from a request we never made.
-  var manualFs = false;
+  var manualFs = false, portraitLockActive = false, preserveFillUntil = 0;
   var resumeFsOnClick = false, fsOutboundUntil = 0;
   function isFullscreen() {
     return (document.fullscreenElement || document.webkitFullscreenElement) === area;
@@ -27301,6 +27272,7 @@ function idealBrowser() {
   var viewport = document.querySelector(".hunt-viewport");
   var caption = document.getElementById("hunt-caption");
   var dots = document.getElementById("hunt-dots");
+  var watchControls = document.querySelector(".watch-controls");
   var prevBtn = document.getElementById("hunt-prev");
   var rightCol = document.getElementById("hunt-right");
   function outerHeight(el) {
@@ -27343,7 +27315,8 @@ function idealBrowser() {
     var padX = (parseFloat(areaStyle.paddingLeft) || 0) + (parseFloat(areaStyle.paddingRight) || 0);
     var padY = (parseFloat(areaStyle.paddingTop) || 0) + (parseFloat(areaStyle.paddingBottom) || 0);
     var areaW = area.clientWidth - padX;
-    var areaH = area.clientHeight - padY - outerHeight(caption) - outerHeight(dots);
+    var areaH = area.clientHeight - padY - outerHeight(caption) - outerHeight(dots) -
+      (watchControls && watchControls.parentNode === area ? outerHeight(watchControls) : 0);
     if (areaW <= 0 || areaH <= 0) return;
     var navW = prevBtn ? prevBtn.offsetWidth : 0;
     var rightW = rightCol ? rightCol.offsetWidth : navW; // right control column (arrow + button stack share one width)
@@ -27429,18 +27402,25 @@ function idealBrowser() {
     // Then best-effort real fullscreen (hides the browser/status bar where supported).
     // A rejection on mobile / outside a trusted gesture is harmless — the class already
     // did the visible work.
+    var requestPromise = null;
     if (requestFs) {
       try {
-        var p = requestFs.call(area);
-        if (p && p.catch) p.catch(function () {});
+        requestPromise = requestFs.call(area);
+        if (requestPromise && requestPromise.catch) requestPromise.catch(function () {});
       } catch (err) {}
     }
+    return requestPromise;
   }
   function exitFsFull() {
     beginPhoneFsTransition();
     clearFsReturn();
+    preserveFillUntil = 0;
     manualFs = false;
     area.classList.remove("is-fullscreen");
+    if (portraitLockActive && screen.orientation && screen.orientation.unlock) {
+      try { screen.orientation.unlock(); } catch (_error) {}
+      portraitLockActive = false;
+    }
     if (isFullscreen() && exitFs) { // leave real fullscreen too, if a genuine grant is in effect
       try {
         var p = exitFs.call(document);
@@ -27456,7 +27436,34 @@ function idealBrowser() {
     if (isFilled()) exitFsFull(); else enterFs();
   }
   window.__toggleFullscreen = toggleFs; // surfaces so the open phone (which handles its own 'f') can drive it
+  window.__holdFullscreenFill = function () {
+    if (!isFilled() && !isFullscreen()) return false;
+    preserveFillUntil = Date.now() + 30000; // covers however long the blocking confirm dialog remains open
+    manualFs = true;
+    area.classList.add("is-fullscreen");
+    return true;
+  };
+  window.__releaseFullscreenFill = function () {
+    if (preserveFillUntil) preserveFillUntil = Date.now() + 1500; // fullscreenchange can be queued just after confirm returns
+  };
   btn.addEventListener("click", function (e) { e.stopPropagation(); toggleFs(); });
+  if (portraitBtn) portraitBtn.addEventListener("click", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var fsRequest = isFilled() ? null : enterFs();
+    function lockLandscape() {
+      if (!screen.orientation || !screen.orientation.lock) return;
+      try {
+        var locked = screen.orientation.lock("landscape");
+        if (locked && locked.then) locked.then(function () { portraitLockActive = true; }).catch(function () {});
+        else portraitLockActive = true;
+      } catch (_error) {}
+    }
+    // Chromium requires a fullscreen grant before orientation.lock(); installed apps and
+    // engines without a promise can try the lock directly from this same user gesture.
+    if (fsRequest && fsRequest.then) fsRequest.then(lockLandscape).catch(lockLandscape);
+    else lockLandscape();
+  });
   // A new tab/app can force the browser out of the Fullscreen API. Correlate the foreground
   // loss with the click that caused it, then spend the first click after return as the trusted
   // gesture needed to request fullscreen again. Capture phase restores it before the clicked
@@ -27502,8 +27509,12 @@ function idealBrowser() {
       manualFs = true;
       area.classList.add("is-fullscreen");
     } else if (manualFs) {
-      manualFs = false;
-      area.classList.remove("is-fullscreen");
+      if (Date.now() <= preserveFillUntil) {
+        area.classList.add("is-fullscreen");
+      } else {
+        manualFs = false;
+        area.classList.remove("is-fullscreen");
+      }
       // A focused, visible exit is Escape/back (or another element taking fullscreen), not
       // a tab handoff. Defer one task so a blur ordered just after fullscreenchange can claim
       // the return before this cleanup runs.
@@ -27531,6 +27542,7 @@ function idealBrowser() {
     });
     chromeRo.observe(caption);
     chromeRo.observe(dots);
+    if (watchControls) chromeRo.observe(watchControls);
   }
   refreshLabel();
 })();
@@ -27545,7 +27557,7 @@ function idealBrowser() {
     document.removeEventListener("click", firstTap, true);
     var area=document.querySelector("#hunt-fullscreen-area"), b=document.getElementById("hunt-fullscreen-btn");
     if(!b || (area && area.classList.contains("is-fullscreen"))) return;
-    if(e && e.target && e.target.closest && e.target.closest("#hunt-fullscreen-btn")) return; // the button handles itself
+    if(e && e.target && e.target.closest && e.target.closest("#hunt-fullscreen-btn,#portrait-landscape-btn")) return; // those buttons handle themselves
     b.click();
   }
   document.addEventListener("click", firstTap, true);
@@ -35588,7 +35600,7 @@ function gameTapsNear(a, b) {
       setTimeout(function () { playGongEchoSound(0.1); }, 5700);
       setTimeout(function () { rattleKitchen(false); }, 280);
       setTimeout(function () {
-        ["site-h1", "hunt-title", "hunt-caption"].forEach(function (id) {
+        ["site-h1", "hunt-caption"].forEach(function (id) {
           var el = document.getElementById(id);
           if (!el) return;
           el.classList.remove("gong-shake");
@@ -67310,6 +67322,10 @@ function spawnDustMote(container) {
     var dict = (T[l] && T[l].hunt) || T.en.hunt;
     return (dict && dict[key]) || "";
   }
+  function huntTitleText() {
+    var l = document.documentElement.lang;
+    return (T[l] && T[l].hunt_title) || T.en.hunt_title || "Loft Day";
+  }
   function onActivate(el, fn) {
     if (!el) return;
     el.addEventListener("click", fn);
@@ -67337,6 +67353,11 @@ function spawnDustMote(container) {
     requestAnimationFrame(function () { if (window.__refitZoom) window.__refitZoom(); });
   }
   window.__gameOnlyEntered = function () { return document.documentElement.classList.contains("loft-entered"); };
+  function leaveIntroChrome() {
+    var area = document.getElementById("hunt-fullscreen-area");
+    if (area) area.classList.remove("intro-active");
+    restoreIntroWatchControls();
+  }
   // Leaving attract is the one moment every held-back notification channel needs to hear about. A
   // window event rather than a callback registry: those channels live in IIFEs that run EARLIER in
   // this file than this one, so an event lets them subscribe regardless of source order. Fired on a
@@ -67354,6 +67375,7 @@ function spawnDustMote(container) {
     if (!huntIntroShowing) return;
     huntIntroShowing = false;
     setGameOnlyEntered(true);
+    leaveIntroChrome();
     releaseAttract();
   }
   var dotsWrap = document.getElementById("hunt-dots");
@@ -77658,7 +77680,10 @@ function spawnDustMote(container) {
     // fire-extinguisher in the scene stays immediate — grabbing it is deliberate.
     window.__confirmRestart = function () {
       var l = T[document.documentElement.lang] ? document.documentElement.lang : "en";
-      return window.confirm((T[l] && T[l].restart_confirm) || T.en.restart_confirm);
+      var held = window.__holdFullscreenFill && window.__holdFullscreenFill();
+      var accepted = window.confirm((T[l] && T[l].restart_confirm) || T.en.restart_confirm);
+      if (held && window.__releaseFullscreenFill) window.__releaseFullscreenFill();
+      return accepted;
     };
     var restartBtn = document.getElementById("hunt-restart-btn");
     if (restartBtn) restartBtn.addEventListener("click", function (e) {
@@ -79643,16 +79668,16 @@ function spawnDustMote(container) {
   // While the opening prompt shows, a big Climate-Crisis "CLICK ME!" (localized) melts over the
   // kitchen scene as a living invitation. The YEAR axis ping-pongs 1979↔2050 (~2.5s each way) via
   // rAF + inline font-variation-settings — no CSS animation, so check.js's keyframes audit stays
-  // clean. pointer-events:none (CSS) lets a tap on the word itself fall through to the strip's
-  // stopHintBlink handler. Torn down on the first tap / grace timeout (stopHintBlink) AND on any
-  // room change (goToStage), so the loop never outlives the prompt nor writes to a detached node
+  // clean. The overlay consumes the first click so no scene object underneath can receive it.
+  // Torn down on the first tap or any room change (goToStage), so the loop never outlives the
+  // prompt nor writes to a detached node
   // (which would surface as an uncaught error in play.js's click-storm). rAF pauses natively in a
   // hidden tab and this is a single self-driven node (not a setTimeout spawner), so no accumulation.
   var LOFT_CHECKPOINT_KEY = "loftCheckpoint:v1";
   var LOFT_CHECKPOINT_VERSION = 1;
   var LOFT_CHECKPOINT_MAX_AGE = 90 * 24 * 60 * 60 * 1000;
   var checkpointWriteTimer = null, recoveryGate = null, recoverySaved = null, recoveryKeyHandler = null;
-  var recoveryWatchParent = null, recoveryWatchNext = null;
+  var introWatchParent = null, introWatchNext = null;
   var cinematicRecoveryRaw = null;
   function checkpointClass(id, name) { var el = document.getElementById(id); return !!(el && el.classList.contains(name)); }
   function checkpointToggle(id, name, on) { var el = document.getElementById(id); if (el) el.classList.toggle(name, !!on); }
@@ -79807,19 +79832,20 @@ function spawnDustMote(container) {
     caption.classList.add("recovery-caption");
     caption.textContent = recoveryCaptionText(saved);
   }
-  function dockRecoveryWatchControls(area) {
+  function dockIntroWatchControls(area) {
     var controls = document.querySelector(".watch-controls");
     if (!area || !controls) return;
-    recoveryWatchParent = controls.parentNode;
-    recoveryWatchNext = controls.nextSibling;
+    if (controls.parentNode === area) return;
+    introWatchParent = controls.parentNode;
+    introWatchNext = controls.nextSibling;
     area.appendChild(controls);
   }
-  function restoreRecoveryWatchControls() {
+  function restoreIntroWatchControls() {
     var controls = document.querySelector(".watch-controls");
-    if (!controls || !recoveryWatchParent) return;
-    recoveryWatchParent.insertBefore(controls, recoveryWatchNext && recoveryWatchNext.parentNode === recoveryWatchParent ? recoveryWatchNext : null);
-    recoveryWatchParent = null;
-    recoveryWatchNext = null;
+    if (!controls || !introWatchParent) return;
+    introWatchParent.insertBefore(controls, introWatchNext && introWatchNext.parentNode === introWatchParent ? introWatchNext : null);
+    introWatchParent = null;
+    introWatchNext = null;
   }
   function hideRecoveryGate() {
     var startWaitingAutoplay = apWaitRecovery;
@@ -79832,7 +79858,7 @@ function spawnDustMote(container) {
     recoveryGate = null;
     recoverySaved = null;
     if (recoveryArea) recoveryArea.classList.remove("recovery-active");
-    restoreRecoveryWatchControls();
+    restoreIntroWatchControls();
     if (hadRecoveryGate) {
       caption.classList.remove("recovery-caption");
       window.refreshHuntCaption();
@@ -79882,14 +79908,15 @@ function spawnDustMote(container) {
     removeClickMe(); hideRecoveryGate(); recoverySaved = saved;
     var recoveryArea = document.getElementById("hunt-fullscreen-area");
     if (recoveryArea) recoveryArea.classList.add("recovery-active");
-    dockRecoveryWatchControls(recoveryArea);
+    dockIntroWatchControls(recoveryArea);
     var gate = document.createElement("div"); recoveryGate = gate;
     gate.id = "loft-recovery-gate"; gate.setAttribute("role", "dialog"); gate.setAttribute("aria-modal", "true"); gate.setAttribute("aria-labelledby", "loft-recovery-title"); gate.setAttribute("aria-describedby", "hunt-caption");
+    var brand = document.createElement("p"); brand.className = "loft-entry-brand"; brand.setAttribute("data-i", "hunt_title"); brand.textContent = huntTitleText();
     var title = document.createElement("div"); title.id = "loft-recovery-title"; title.className = "loft-recovery-title"; title.textContent = huntText("recovery_title");
     var actions = document.createElement("div"); actions.className = "loft-recovery-actions";
     var continueBtn = document.createElement("button"); continueBtn.type = "button"; continueBtn.className = "loft-recovery-btn primary selected"; continueBtn.textContent = huntText("recovery_continue");
     var restartBtn = document.createElement("button"); restartBtn.type = "button"; restartBtn.className = "loft-recovery-btn"; restartBtn.textContent = huntText("recovery_restart");
-    actions.appendChild(continueBtn); actions.appendChild(restartBtn); gate.appendChild(title); gate.appendChild(actions); host.appendChild(gate);
+    actions.appendChild(continueBtn); actions.appendChild(restartBtn); gate.appendChild(brand); gate.appendChild(title); gate.appendChild(actions); host.appendChild(gate);
     showRecoveryCaption(saved);
     var buttons = [continueBtn, restartBtn], selected = 0;
     function select(index) { selected = (index + buttons.length) % buttons.length; buttons.forEach(function (b, i) { b.classList.toggle("selected", i === selected); }); buttons[selected].focus(); }
@@ -79914,6 +79941,7 @@ function spawnDustMote(container) {
     };
     document.addEventListener("keydown", recoveryKeyHandler, true);
     requestAnimationFrame(function () { if (recoveryGate) select(0); });
+    revealEntrySurface();
     return true;
   }
 
@@ -79923,7 +79951,15 @@ function spawnDustMote(container) {
   function clickMeReduceMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
-  function clickMeDismiss() { removeClickMe(); } // a real tap on the scene takes the invitation away
+  function revealEntrySurface() {
+    document.documentElement.classList.add("loft-entry-ready");
+    document.documentElement.classList.remove("loft-entry-pending");
+  }
+  function clickMeDismiss(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    removeClickMe();
+    stopHintBlink();
+  } // the overlay consumes the first scene tap before handing control to the room
   // ...and so does any real KEY interaction (Enter, the room-nav arrows, d, a letter…) — the melting
   // invitation shouldn't linger while a keyboard player is already driving. Ignore lone modifiers/Tab
   // and keystrokes aimed at a text field (console/editor input). Hands the opening prompt off just
@@ -79934,15 +79970,14 @@ function spawnDustMote(container) {
     var a = document.activeElement;
     if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
     clickMeDismiss();
-    stopHintBlink();
   }
   function removeClickMe() {
     if (clickMeRaf) { cancelAnimationFrame(clickMeRaf); clickMeRaf = 0; }
+    if (clickMeEl) clickMeEl.removeEventListener("click", clickMeDismiss);
     if (clickMeEl && clickMeEl.parentNode) clickMeEl.parentNode.removeChild(clickMeEl);
     clickMeEl = null; clickMeWord = null;
     // the invitation persists until an actual click/key, so its dismiss listeners are separate from
     // the caption's grace-timeout teardown — pull them here (covers tap, key, room-change, reset)
-    strip.removeEventListener("pointerdown", clickMeDismiss);
     document.removeEventListener("keydown", introKeyDismiss, true);
   }
   function clickMeStep() {
@@ -79961,15 +79996,22 @@ function spawnDustMote(container) {
     if (!host) return;
     clickMeEl = document.createElement("div");
     clickMeEl.id = "click-me-overlay";
-    clickMeEl.setAttribute("aria-hidden", "true");
+    clickMeEl.setAttribute("role", "button");
+    clickMeEl.setAttribute("aria-label", huntTitleText() + ". " + huntText("clickme"));
+    var brand = document.createElement("p");
+    brand.className = "loft-entry-brand";
+    brand.setAttribute("data-i", "hunt_title");
+    brand.textContent = huntTitleText();
     clickMeWord = document.createElement("span");
     clickMeWord.className = "click-me-word";
     clickMeWord.textContent = huntText("clickme");
+    clickMeEl.appendChild(brand);
     clickMeEl.appendChild(clickMeWord);
     host.appendChild(clickMeEl);
-    strip.addEventListener("pointerdown", clickMeDismiss); // stays until an actual tap — NOT the caption's 6s grace timeout
+    clickMeEl.addEventListener("click", clickMeDismiss); // stays until an actual tap — NOT the caption's 6s grace timeout
     document.addEventListener("keydown", introKeyDismiss, true); // ...or any real key press (removed in removeClickMe; stays armed past the 6s caption handoff since the invitation lingers)
-    requestAnimationFrame(function () { if (clickMeEl) clickMeEl.classList.add("show"); }); // fade in
+    if (document.documentElement.classList.contains("loft-entry-pending")) clickMeEl.classList.add("show");
+    else requestAnimationFrame(function () { if (clickMeEl) clickMeEl.classList.add("show"); }); // fade in on later resets
     if (clickMeReduceMotion()) return; // CSS pins a static mid-melt YEAR; no rAF
     clickMeStart = (window.performance && performance.now) ? performance.now() : Date.now();
     clickMeRaf = requestAnimationFrame(clickMeStep);
@@ -80049,6 +80091,7 @@ function spawnDustMote(container) {
     clearOpeningGuide();
     calmIntroBlink();
     removeClickMe();
+    leaveIntroChrome();
     releaseAttract();
   }
   window.__endAttract = endAttract;
@@ -80066,12 +80109,16 @@ function spawnDustMote(container) {
     captionKey = "intro";
     caption.innerHTML = huntText("intro");
     caption.classList.add("hint-blink");
+    var introArea = document.getElementById("hunt-fullscreen-area");
+    if (introArea) introArea.classList.add("intro-active");
+    dockIntroWatchControls(introArea);
     showClickMe(); // the melting "CLICK ME!" invitation, appears with the prompt
     updateKitchenInvite();
     strip.addEventListener("pointerdown", stopHintBlink);
     strip.addEventListener("click", stopHintBlink);
     if (hintBlinkTimer) clearTimeout(hintBlinkTimer);
     hintBlinkTimer = setTimeout(calmIntroBlink, 6000); // a handful of pulses, then rest — but the line + CLICK ME stay until a real tap
+    revealEntrySurface();
   }
   window.__showHuntIntro = showHuntIntro;
   // Warm the Climate Crisis woff2 now: display=block means the word renders INVISIBLE (not a
@@ -80085,7 +80132,7 @@ function spawnDustMote(container) {
   window.addEventListener("pagehide", function () { saveCheckpoint(); });
   setInterval(function () { if (!document.hidden) saveCheckpoint(); }, 2500); // catches stable internal changes that do not publish a state event
   goToStage("kitchen"); // sets the initial room/caption before either opening gate goes on
-  setTimeout(function () { if (!showRecoveryGate(loadCheckpoint())) showHuntIntro(); }, 0);
+  if (!showRecoveryGate(loadCheckpoint())) showHuntIntro();
 })();
 (function () {
   // Once the chest cat is loose (.out), it FOLLOWS the player from room to room. There is
@@ -84825,10 +84872,6 @@ function spawnDustMote(container) {
       }, 4500);
     });
   });
-})();
-(function () {
-  var title = document.getElementById("hunt-title");
-  if (title) title.classList.add("show");
 })();
 (function () {
   var strip = document.getElementById("loft-game-strip");

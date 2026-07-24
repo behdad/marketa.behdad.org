@@ -9,10 +9,10 @@ var HARNESS = [
   '<script>(function(){',
   'var report={errors:[],steps:{}};function rect(el){var r=el.getBoundingClientRect();return{id:el.id||"dot",x:r.left,y:r.top,w:r.width,h:r.height,right:r.right,bottom:r.bottom};}',
   'window.addEventListener("load",function(){setTimeout(function(){try{',
+  ' var machine=document.getElementById("kitchen-lamarzocco");document.getElementById("hunt-escape-btn").click();var escapeDismissedIntro=!document.getElementById("click-me-overlay")&&!(machine&&machine.classList.contains("powered-on"));',
   ' var ids=["hunt-prev","hunt-next","hunt-escape-btn","hunt-fullscreen-btn","hunt-restart-btn","hunt-volume-btn","hunt-playpause-btn","hunt-skip-btn"],controls=ids.map(function(id){return rect(document.getElementById(id));}),dots=[].slice.call(document.querySelectorAll(".hunt-dot")).map(rect),all=controls.concat(dots),overlaps=[];',
   ' for(var i=0;i<all.length;i++)for(var j=i+1;j<all.length;j++){var a=all[i],b=all[j];if(a.x<b.right&&a.right>b.x&&a.y<b.bottom&&a.bottom>b.y)overlaps.push(a.id+"/"+b.id);}',
-  ' report.steps={width:innerWidth,controls:controls,dots:dots,overlaps:overlaps};',
-  ' var machine=document.getElementById("kitchen-lamarzocco");document.getElementById("hunt-escape-btn").click();report.steps.escapeDismissedIntro=!document.getElementById("click-me-overlay")&&!(machine&&machine.classList.contains("powered-on"));',
+  ' report.steps={width:innerWidth,controls:controls,dots:dots,overlaps:overlaps,escapeDismissedIntro:escapeDismissedIntro};',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},300);});',
   '})();</script>'
 ].join("\n");
@@ -23,8 +23,8 @@ function check(ok, msg, detail) {
   else { failures++; console.log("  \u2717 " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
-console.log("rsvp.html mobile control targets:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 1600, { patchRaf: true, chromeFlags: "--window-size=500,844" });
+console.log("rsvp.html mobile landscape control targets:");
+var r = lib.runPageSync("rsvp.html", HARNESS, 1600, { patchRaf: true, chromeFlags: "--window-size=600,390" });
 if (!r) { console.log("  \u2717 harness produced no report"); process.exit(1); }
 var s = r.steps;
 function named(id) { return s.controls.filter(function(c){return c.id === id;})[0]; }

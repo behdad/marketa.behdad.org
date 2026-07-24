@@ -57,15 +57,40 @@ var harness = String.raw`<script>
       setTimeout(function () {
       var state = window.__bbqSplitState();
       var deck = names("balcony"), selected = state.guests.slice();
+      var peopleAudit = window.__peopleManager && window.__peopleManager.audit();
+      check("people manager is the occupancy authority", !!(window.__peopleManager && window.__peopleManager.occupants && window.__peopleManager.inventory && window.__peopleManager.locate));
+      check("BBQ split has no cross-room duplicates", !!peopleAudit && peopleAudit.ok, peopleAudit ? JSON.stringify(peopleAudit.duplicates) : "manager missing");
       check("invitation pans to balcony", window.currentStageName === "balcony", window.currentStageName);
       check("invitation starts split", state.on && window.__bbqSplitOn);
       check("exactly four adults rotate", selected.length === 4, selected.join(","));
-      check("seven hangout figures are on deck", window.__balconyHangoutNow().length === 7, window.__balconyHangoutNow().map(function (p) { return p.name; }).join(","));
-      check("balcony has nine people total", deck.length === 9, deck.join(","));
-      check("both hosts stay on balcony", deck.indexOf("Behdad") !== -1 && deck.indexOf("Markéta") !== -1, deck.join(","));
+      check("host pair changes the deck from five to seven figures", window.__balconyHangoutNow().length === (state.hostsOnBalcony ? 7 : 5), window.__balconyHangoutNow().map(function (p) { return p.name; }).join(","));
+      check("host pair changes total balcony occupancy together", deck.length === (state.hostsOnBalcony ? 9 : 7), deck.join(","));
+      check("both hosts share one BBQ location",
+        (deck.indexOf("Behdad") !== -1) === state.hostsOnBalcony && (deck.indexOf("Markéta") !== -1) === state.hostsOnBalcony, deck.join(","));
+      check("day BBQ weights the hosts 75% toward the balcony", window.__bbqHostBalconyChance() === 0.75);
       var balconyAspen = document.getElementById("balcony-photographer");
       check("Hamid and Aspen stay on balcony", deck.indexOf("Hamid") !== -1 && deck.indexOf("Aspen") !== -1,
         deck.join(",") + " | Aspen=" + (balconyAspen ? balconyAspen.getAttribute("class") + "/" + getComputedStyle(balconyAspen).opacity : "missing"));
+      var strip = document.getElementById("loft-game-strip");
+      var grillmaster = document.getElementById("balcony-grillmaster");
+      var gardenJacket = document.getElementById("garden-jacket-inner");
+      var balconyJacket = document.getElementById("balcony-hallway-jacket-inner");
+      check("Hamid wears the borrowed green-yellow jacket at the BBQ",
+        strip.classList.contains("hamid-wearing-jacket") &&
+        getComputedStyle(grillmaster).getPropertyValue("--hamid-top").trim() === "#c5c84c");
+      // Virtual-time Chrome can pin a timeout-triggered transition at its start value. Remove the
+      // transition for this cascade probe; AGENTS.md documents this exact headless artifact.
+      gardenJacket.style.setProperty("transition", "none", "important");
+      balconyJacket.style.setProperty("transition", "none", "important");
+      check("both hanging jacket views fade away with Hamid",
+        parseFloat(getComputedStyle(gardenJacket).opacity) < 1 && parseFloat(getComputedStyle(balconyJacket).opacity) < 1,
+        getComputedStyle(gardenJacket).opacity + "/" + getComputedStyle(balconyJacket).opacity);
+      var persistentFigures = Array.from(document.querySelectorAll("#balcony-hangout .bh-fig"));
+      check("balcony people use ghost fades instead of display removal",
+        persistentFigures.every(function (g) {
+          var cs = getComputedStyle(g);
+          return cs.display !== "none" && cs.transitionProperty.indexOf("opacity") !== -1;
+        }));
       check("hosts are not published as smokers", (window.__balconySmokerNow() || []).indexOf("behdad") === -1 && (window.__balconySmokerNow() || []).indexOf("marketa") === -1);
       check("grill is lit", document.getElementById("balcony-smoker").classList.contains("smoking"));
       var plateBox = document.getElementById("balcony-grill-plate").getBoundingClientRect();
@@ -81,6 +106,17 @@ var harness = String.raw`<script>
         [ashCx, ashCy, coveredBox.left, coveredBox.top, coveredBox.right, coveredBox.bottom, plateAshtrayOverlap].join(","));
       check("party ashtray paints behind BBQ guests", ashtrayBehindGuests);
       check("split remains daylight and non-UV", !balcony.classList.contains("dusk") && !document.getElementById("loft-game-strip").classList.contains("uv-mode"));
+      window.__setBBQHostsOnBalcony(false);
+      var behdadFloor = document.querySelector("#garden-guests .g-behdad");
+      var marketaFloor = document.querySelector("#garden-guests .g-marketa");
+      check("inside host assignment returns both hosts to the party floor",
+        !behdadFloor.classList.contains("off-at-bbq") && !marketaFloor.classList.contains("off-at-bbq") &&
+        names("balcony").indexOf("Behdad") === -1 && names("balcony").indexOf("Markéta") === -1);
+      window.__setDayNight(true);
+      check("night BBQ weights the hosts 75% toward inside", window.__bbqHostBalconyChance() === 0.25);
+      window.__setBBQHostsOnBalcony(true);
+      var hostsOutside = names("balcony");
+      check("outside host assignment moves both hosts off the party floor", hostsOutside.indexOf("Behdad") !== -1 && hostsOutside.indexOf("Markéta") !== -1 && names("garden").indexOf("Behdad") === -1, hostsOutside.join(","));
 
       window.roster(true);
       var held = window.__bbqSplitState().guests.slice();
@@ -93,14 +129,20 @@ var harness = String.raw`<script>
 
       window.goToStage("cuddly");
       setTimeout(function () {
-        var kids = ["irene", "robin", "navid", "elisabeth", "felix", "hannah"];
-        check("six game kids are in the cuddly room", names("cuddly").filter(function (n) { return ["Irene","Robin","Navid","Elisabeth","Felix","Hannah"].indexOf(n) !== -1; }).length === 6, names("cuddly").join(","));
+        var kids = ["irene", "robin", "navid", "elisabeth", "felix", "patricia-son", "patricia-daughter", "hannah"];
+        check("all eight game kids are in the cuddly room", names("cuddly").filter(function (n) { return ["Irene","Robin","Navid","Elisabeth","Felix","Patricia’s son","Patricia’s daughter","Hannah"].indexOf(n) !== -1; }).length === 8, names("cuddly").join(","));
         check("game kids are off the garden floor", kids.every(function (n) { var el = document.querySelector("#garden-guests .g-" + n); return el && el.classList.contains("off-at-games"); }));
-        check("selected adults and hosts are off the garden floor", moved.concat(["behdad", "marketa", "hamid"]).every(function (n) { var el = document.querySelector("#garden-guests .g-" + n); return el && el.classList.contains("off-at-bbq"); }));
+        var expectedOffFloor = moved.concat(window.__bbqSplitState().hostsOnBalcony ? ["behdad", "marketa", "hamid"] : ["hamid"]);
+        check("selected adults and outside hosts are off the garden floor", expectedOffFloor.every(function (n) { var el = document.querySelector("#garden-guests .g-" + n); return el && el.classList.contains("off-at-bbq"); }));
         window.__setBalconyBBQCrowd(false);
-        check("split teardown clears all room assignments", !window.__bbqSplitOn && kids.concat(moved, ["behdad", "marketa", "hamid"]).every(function (n) {
-          var el = document.querySelector("#garden-guests .g-" + n); return el && !el.classList.contains("off-at-bbq") && !el.classList.contains("off-at-games");
-        }));
+        var bbqAssignedAfterTeardown = kids.concat(moved, ["behdad", "marketa", "hamid"]).filter(function (n) {
+          var el = document.querySelector("#garden-guests .g-" + n);
+          return !el || el.classList.contains("off-at-bbq");
+        });
+        check("split teardown clears BBQ-owned room assignments", !window.__bbqSplitOn && !bbqAssignedAfterTeardown.length, bbqAssignedAfterTeardown.join(","));
+        check("hanging jacket returns when Hamid leaves the BBQ", !document.getElementById("loft-game-strip").classList.contains("hamid-wearing-jacket"));
+        var teardownAudit = window.__peopleManager.audit();
+        check("teardown inventory has no cross-room duplicates", teardownAudit.ok, JSON.stringify(teardownAudit.duplicates));
         report();
         }, 250);
       }, 2200);

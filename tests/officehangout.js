@@ -109,6 +109,7 @@ sandbox.addEventListener = function (t, fn) { (listeners[t] = listeners[t] || []
 sandbox.setTimeout = setTimeoutShim;
 sandbox.clearTimeout = clearTimeoutShim;
 sandbox.rosterHoldsOccupants = function () { return false; }; // the extracted controller normally reads the page-global roster gate
+sandbox.__partyGuestAttended = function () { return true; }; // every shim couple has already entered this party
 
 // evaluate the extracted IIFE in the sandbox
 var vm = require("vm");

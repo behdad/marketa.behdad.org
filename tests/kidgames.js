@@ -67,7 +67,7 @@ El.prototype._fireClick = function () {
 };
 
 /* ── build the shim scene (mirrors the real #cuddly-kidgames structure) ─────── */
-var NAMES = ["kg-robin", "kg-navid", "kg-elisabeth", "kg-irene", "kg-felix", "kg-hannah"];
+var NAMES = ["kg-robin", "kg-navid", "kg-elisabeth", "kg-irene", "kg-felix", "kg-hannah", "kg-patricia-son", "kg-patricia-daughter"];
 var strip, kg;
 function buildScene() {
   strip = new El("svg"); strip.setAttribute("id", "loft-game-strip");
@@ -79,8 +79,8 @@ function buildScene() {
     var sh = new El("ellipse"); sh.setAttribute("class", "kg-shadow");
     sh.setAttribute("cx", s[0]); sh.setAttribute("cy", 337); sh.setAttribute("rx", s[1]); kg.appendChild(sh);
   });
-  // six kids next: outer <g transform> > <g class="kg-rock kg-name"> > <g class="kg-tilt">
-  var basePos = { "kg-robin": [108,300], "kg-navid": [160,296], "kg-elisabeth": [196,302], "kg-irene": [426,300], "kg-felix": [478,304], "kg-hannah": [514,300] };
+  // eight kids next: outer <g transform> > <g class="kg-rock kg-name"> > <g class="kg-tilt">
+  var basePos = { "kg-robin": [84,304], "kg-navid": [128,296], "kg-elisabeth": [172,296], "kg-irene": [216,304], "kg-felix": [406,304], "kg-hannah": [450,296], "kg-patricia-son": [494,296], "kg-patricia-daughter": [538,304] };
   NAMES.forEach(function (n) {
     var outer = new El("g"); outer.setAttribute("transform", "translate(" + basePos[n][0] + "," + basePos[n][1] + ")");
     var rock = new El("g"); rock.setAttribute("class", "kg-rock " + n);
@@ -98,7 +98,7 @@ var T_EN = extractRoles(html);
 function extractRoles(src) {
   // pull the role_* map values from T.en so tipText resolves the real strings
   var out = {};
-  var keys = ["role_godson", "role_mniece", "role_niece", "role_mnephew"];
+  var keys = ["role_godson", "role_mniece", "role_niece", "role_mnephew", "role_nephew"];
   keys.forEach(function (k) {
     var m = new RegExp(k + ':\\s*"([^"]*)"').exec(src);
     if (m) out[k] = m[1];
@@ -170,7 +170,8 @@ ok(kg.classList.contains("playing"), "want() → .playing added when party on + 
 var expect = {
   "kg-robin": ["Robin", "role_godson"], "kg-navid": ["Navid", "role_godson"],
   "kg-elisabeth": ["Elisabeth", "role_mniece"], "kg-irene": ["Irene", "role_niece"],
-  "kg-felix": ["Felix", "role_mnephew"], "kg-hannah": ["Hannah", "role_niece"]
+  "kg-felix": ["Felix", "role_mnephew"], "kg-hannah": ["Hannah", "role_niece"],
+  "kg-patricia-son": ["Patricia’s son", "role_nephew"], "kg-patricia-daughter": ["Patricia’s daughter", "role_niece"]
 };
 NAMES.forEach(function (n) {
   whoPopCalls.length = 0;
@@ -236,7 +237,7 @@ var allInBox = NAMES.every(function (n) {
   var tr = kg.querySelector("." + n).parentNode.getAttribute("transform");
   var m = /translate\(([-\d]+),([-\d]+)\)/.exec(tr);
   var x = +m[1], y = +m[2];
-  return x > 90 && x < 530 && y > 285 && y < 315;
+  return x > 65 && x < 555 && y > 285 && y < 315;
 });
 ok(allInBox, "every kid stays inside the view-box floor band after jitter");
 // no re-roll on a re-eval that doesn't cross OFF→ON (tab re-show while already playing)
@@ -330,7 +331,7 @@ var api7 = runIIFE();
 strip.classList.add("meal-on");
 api7.apply();
 ok(kg.classList.contains("playing"), "a meal on the low table no longer clears the kids — still .playing");
-ok(api7.now && api7.now().length === 6, "__kidGamesNow() still lists all six on a meal day (roster + Aspen's photos read it)");
+ok(api7.now && api7.now().length === 8, "__kidGamesNow() lists all eight on a meal day (roster + Aspen's photos read it)");
 ["Irene", "Robin", "Navid"].forEach(function (nm) { ok(api7.inGame(nm) === true, nm + " still reads in-game on a meal day (one-room rule holds)"); });
 
 // 40 re-rolls of the meal layout: ONE prop, ONE pool, and every piece left of the table
@@ -353,7 +354,7 @@ ok(onePoolEachRoll, "every meal-day roll shows exactly ONE contact pool (the oth
 ok(Object.keys(mealPropCounts).length === 2, "both props take their turn as the huddle's game across rolls (coin-flip works)");
 ok(mealWorstRight < TABLE_LEFT, "nothing reaches the low table: worst right edge " + mealWorstRight + " < " + TABLE_LEFT);
 ok(mealWorstLeft > CRATE_RIGHT, "nothing overlaps the crate: worst left edge " + mealWorstLeft + " > " + CRATE_RIGHT);
-ok(kidXs().every(function (x) { return x < 340; }), "all six kids sit in the LEFT half of the nook (one cluster, not two)");
+ok(kidXs().every(function (x) { return x < 340; }), "all eight kids sit in the LEFT half of the nook (one cluster, not two)");
 
 // the meal starting / ending under a scene already .playing must re-lay the floor, not strand it
 strip.classList.remove("meal-on");

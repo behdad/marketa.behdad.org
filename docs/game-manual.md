@@ -8,10 +8,29 @@ The first playthrough does not require a keyboard, a command console, or prior
 knowledge of adventure games. Follow the instruction line, click objects that
 look useful, and keep wandering.
 
+When a saved session is available, the opening screen asks whether to continue
+or start over. The caption above the scene shows `Saved`, the saved room, and
+its age instead of showing a gameplay instruction. Room arrows, utility rails,
+Restart, and room dots stay hidden until that choice is made. Trailer and
+Autoplay occupy the dots' bottom row: Trailer preserves the unopened
+checkpoint, while Autoplay continues from it. Use the buttons, arrow keys,
+`Enter`, or `Space` to choose. **Start over** acts immediately because the
+recovery choice itself is the confirmation; the in-game Restart control still
+asks before discarding active progress. Both recovery choices enter the enlarged
+page mode immediately. **Start over** preserves the clean fresh-game **CLICK
+ME** invitation inside that enlarged view.
+
 ## Quick start
 
-1. Click or tap the game once to begin. In installed-app or game-only mode, this
-   first interaction may also enter fullscreen.
+1. Click or tap the game once to begin. The browser version remains in its
+   enlarged page view; after the **CLICK ME** invitation clears, the title,
+   language selector, browser advice, Trailer, and Autoplay controls disappear
+   so the scene can use nearly the full browser window. Use the fullscreen
+   control or `F` for true fullscreen. An installed app may enter fullscreen on
+   its first interaction, omits the browser/device recommendation, and shows
+   its own Loft Day loading progress while the game initializes.
+   `Enter`, `Escape`, or `Backspace` dismisses **CLICK ME** without operating
+   the room underneath it.
 2. Follow the instruction line above the scene. It is the authoritative current
    hint.
 3. Solve the highlighted activity in each room. The right room arrow unlocks as
@@ -31,6 +50,20 @@ The five rooms are:
 
 Use the arrows at the sides of the scene or the five dots below it to change
 rooms. On mobile, use these controls rather than swiping across the scene.
+
+## Trailer
+
+**Trailer** plays a fixed, roughly one-minute preview of all five rooms. It is an
+atmospheric cut rather than a solution walkthrough: it shows small reactive details,
+the loft's real music, and a brief glimpse of the garden filling with guests, while
+leaving puzzle order, apps, formal party moments, and the balcony finale undisclosed.
+
+The ghost cursor identifies the few objects the reel touches. Room navigation and
+Restart are hidden during playback so they cannot interrupt a shot; fullscreen,
+volume, and **Take over** remain available. Taking over stops the reel immediately
+and leaves the current room ready to explore. Moving the tab into the background also
+ends the reel rather than letting its timing drift. With reduced motion enabled, the
+same five-room arc becomes a shorter sequence of still tableaux.
 
 ## How the game is organized
 
@@ -80,6 +113,27 @@ from an app to the desktop, or from a zoomed computer to the room. When typing,
 the first `Escape` generally removes focus and preserves an unsent draft rather
 than closing the whole app.
 
+At room level, with no app, menu, dialog, or text field consuming the key,
+`Escape` and `Backspace` invoke the same main room action as `Enter`: they
+"escape the situation" by doing the next guided step or the solved room's toy.
+
+When the scene or API opens a phone app directly, `Escape` or `Backspace` closes
+the phone instead of exposing its launcher. This applies to
+Aspen's post-shutter Album, the magic-box Calendar clue, and the scene date/time
+pills. An app opened from a Messages action returns to that thread first.
+
+Monitor and laptop zoom snaps between the room and screen. Animating the large
+scaled scene caused white repaint flicker in Chrome even when the room otherwise
+held 60 FPS, so device zoom deliberately does not glide. Room navigation still
+animates normally. Monitor app icons only show hover feedback once the monitor is
+zoomed, matching when a click can launch the app.
+
+Triple-click or triple-tap the ceramic mask in the garden to open the drop-down
+console on a device without a hardware keyboard. This permanently reveals the
+console's top-left open/close button for the rest of the page visit. The console
+shows the current rendered FPS. Double-clicking the mask does not start or stop
+the party.
+
 `F` toggles fullscreen, except when the Video app owns that key for its player. If
 opening an external tab causes the browser to leave fullscreen, the first click
 after returning to the game restores fullscreen. An intentional fullscreen exit
@@ -97,7 +151,7 @@ Press `?` in the game for the live shortcut overlay. Current global shortcuts ar
 | `Left` / `Right` | Previous or next room |
 | `1` through `5` | Go directly to a room, unlocking through it if needed |
 | `Enter` | Perform the current room's main action |
-| `Escape` / `Backspace` | Back, close, or remove text focus |
+| `Escape` / `Backspace` | Back or close; at room level, perform the main room action |
 | `M` | Open or close the main computer monitor |
 | `L` | Open or close the laptop |
 | `C` | Open or close the phone |
@@ -122,9 +176,34 @@ Press `?` in the game for the live shortcut overlay. Current global shortcuts ar
 | `R` | Reset the game after confirmation |
 | `` ` `` | Show or hide the dropdown JavaScript console |
 
+The top-left back arrow supplies the same Escape/Backspace action on every layout,
+including touch devices without a hardware keyboard. Restart remains available as
+the button directly below Fullscreen at top-right.
+
 Keyboard shortcuts are primarily a testing and power-user layer. They are not
 required for normal play. While a text field is active, ordinary typing keys are
 reserved for that field.
+
+### Autoplay watch mode
+
+Autoplay is the persistent watch mode beside Trailer. It takes over from the room
+and progress already on screen, then composes an ongoing show from short authored
+stories: coffee and bar rituals, live music, guests and wedding moments, projector
+and toy scenes, calls, computer and phone apps, photos, weather, the BBQ, and a few
+relays that travel through several rooms. Its choices vary while actively avoiding
+recent repeats and returning to rooms that have been away too long.
+
+Incoming phone messages and calls can interrupt a story. Autoplay handles the
+notification, follows its action, and resumes the interrupted sequence. It pauses
+without advancing while the tab is hidden or unfocused and uses a calmer motion
+profile when reduced motion is requested.
+
+Stray clicks and keys do not stop a kiosk show. Use **Take over** to return control
+temporarily; after a quiet interval the kiosk resumes. Press `A` or run
+`autoplay(false)` in the console to stop it deliberately. Opening the game with
+`?autoplay` starts the same persistent mode after initialization.
+If a saved-session choice is waiting, URL autoplay begins only after Continue or
+Start over resolves that screen.
 
 ## Room guide
 
@@ -133,17 +212,23 @@ Exact solutions follow in the clearly marked spoiler section.
 
 ### Kitchen/bar
 
-The espresso station is the first guided activity. Later, the same room becomes
+The **La Maz** espresso machine and **El Maz** grinder form the first guided
+activity. Later, the same room becomes
 the bar, with Pouria, cocktail tools, a cocktail menu, and the Flair-Catch
-minigame. The kitchen/bar also contains personal details, props, and small repeat
-interactions that are not required for progression.
+minigame. The unnamed seated regulars belong to the calm night bar; the active
+party bar instead uses the named guests who rotate through the room. The
+kitchen/bar also contains personal details, props, and small repeat interactions
+that are not required for progression.
 
 ### Garden/party
 
 The garden activity combines plants, music, and candlelight. In phase 2 this room
 becomes the main party room. Its wall switch changes meaning after the party has
 been unlocked: in phase 1 it changes day and night; in phase 2 it changes between
-day and party.
+day and party. As a hidden alternative, three rapid taps on the mirror start the
+party and three rapid taps on the active DJ end it. A single DJ tap opens the
+song picker, which appears to the left of the booth; a double-click skips to the
+next song.
 
 The guitar always toggles **Tumbalalaika**, sung by Markéta Jakešová. The ukulele
 alternates between **I Need You** by Dan Bern and **Strange & Beautiful Things**
@@ -179,8 +264,8 @@ changes day or night.
 
 ### Kitchen/bar solution
 
-1. Turn on the espresso machine and allow it to warm up.
-2. Use the grinder.
+1. Turn on La Maz and allow it to warm up.
+2. Run El Maz.
 3. Tamp the grounds.
 4. Attach the portafilter and brew.
 5. Drink the espresso.
@@ -230,7 +315,7 @@ The current phone apps are:
 
 | App | What it contains |
 | --- | --- |
-| **Call** | Calls to Tehran, California, Prague, and Lübeck; outgoing Madla requests reach Lübeck, while “have Madla call me” triggers her incoming ring |
+| **Call** | Calls to Tehran, California, Prague, and Lübeck; outgoing Madla requests reach Lübeck, while “have Madla call me” triggers her incoming ring when available |
 | **Messages** | Wedding crew thread, search, unread filter, composer, replies, reactions, and explicit message actions |
 | **Mail** | Authored inbox messages plus compose and reply through the device's email client |
 | **Calendar** | Wedding events, calendar export, Google Calendar links, date/time controls, and search |
@@ -281,6 +366,10 @@ The main monitor desktop contains these app tiles:
 - Python
 - Linux
 
+While **Doom**, **Console**, **Python**, or **Linux** is open, right-click the
+app and choose **Kill** to terminate it with a gag display instead of closing it
+silently.
+
 Weather does not occupy a desktop tile. Click the Edmonton weather item in the
 computer's menu bar to open it.
 
@@ -297,6 +386,12 @@ app itself closes.
 The Tattoo detail view includes the design, artist portrait, and the artist's
 name and relationship. The gallery stays compact. The Album and Photobooth share
 captured photo metadata, while live camera pixels remain local to the browser.
+During the party, Aspen follows people into the loft's rooms and deck. She does
+not enter, flash, or create an Album keepsake when a room has no subjects.
+The party itself may therefore continue while Aspen is absent from an empty
+garden; she returns as soon as somebody returns to the floor. Her occasional
+whole-floor photo pose lasts about four seconds; ordinary Album captures do not
+freeze the dancing.
 
 ### Computer-only environments
 
@@ -328,12 +423,19 @@ A reply can quote an earlier message. Tapping the quote finds the original.
 Messages may include scene actions such as starting a party moment, visiting a
 room, or beginning an activity. These actions never run just because a
 notification or message is opened. The player must tap the action control.
+When changing game state makes an action permanently irrelevant, its action
+control expires and the row becomes read history. It no longer occupies an
+unread slot, while still-applicable messages remain actionable.
 
 When the player sends a free-form message, an AI wedding-crew reply can arrive
 asynchronously. There is no blocking "thinking" message, and the composer remains
 available for follow-ups. The responder is chosen from the relevant wedding crew
 when possible, rather than always speaking as Charlie. A failed response remains
 retryable without duplicating the player's message.
+
+After phase 2 begins and another message has arrived, Charlie sends one delayed
+introduction that also points out the general escape control: use `Escape` to
+leave a situation, or `Backspace` when browser fullscreen consumes `Escape`.
 
 The crew assistant receives a privacy-filtered, public game context. It may use
 relevant roles and relationships, the current room roster, game date and time,
@@ -345,9 +447,9 @@ details.
 ## Charlie
 
 Charlie is the private wedding assistant in the monitor's **Chat** app. Charlie
-knows the loft, game systems, public wedding information, and gameplay hints.
-Charlie replies in the language used by the player, including English, Czech,
-and Persian.
+knows the loft's recognizable objects and interactions room by room, game
+systems, public wedding information, and gameplay hints. Charlie replies in the
+language used by the player, including English, Czech, and Persian.
 
 The Chat app warms its anti-bot check when opened. Follow-up messages can be
 queued while a response is in progress. Conversation history survives closing
@@ -381,34 +483,66 @@ day and night. After phase 2, it changes between daytime free play and the party
 During the party:
 
 - guests arrive and rotate among the five rooms as appropriate;
-- children may dance, play in Cuddly-puddly, or run through the party room;
+- once a family arrives, its members remain party attendees even when the adults
+  rotate off the visible dance floor;
+- all eight children share the same party inventory and may dance, play in
+  Cuddly-puddly, or run through the party room;
+- every attending child always has one persistent home: dancing,
+  Cuddly-puddly, or asleep. Short runs and balcony activities borrow a child
+  from that home rather than creating another copy;
+- a child is more likely to dance while at least one represented parent is
+  dancing. Otherwise they usually take an available Cuddly-puddly seat; the
+  seated assignment persists while another room is on screen. Partial groups
+  are balanced across both game clusters, with the children randomized between
+  sides. While Cuddly-puddly is on screen, placement changes slow to roughly
+  every 30–45 seconds;
+- children assigned to Cuddly-puddly may make a brief run across the party room
+  and return to the same seat. Children currently dancing do not join that run;
+  occasionally all eight seated children run together;
+- s'mores and seasonal balcony play borrow children assigned to Cuddly-puddly;
+  a child dancing on the party floor does not simultaneously appear in the
+  balcony activity;
+- after a “kids are asleep” message, Cuddly-puddly clears. A child has only a
+  small chance to stay up dancing; the others remain asleep until the wake-up;
 - Bahareh may follow the running children;
+- named guests occasionally perform their authored visual reactions on their
+  own while the player watches the garden;
+- the ordinary Irene, Robin, and Navid Cuddly-puddly cameos occur only while the
+  party is off. During a party, the shared child inventory owns their presence;
+- Totoro is the exception to ordinary party placement: while its projector
+  channel is playing, all eight children sit in Cuddly-puddly to watch, even if
+  they had been dancing or marked sleepy;
 - party music becomes quieter when a projector, video, piano, or other foreground
   media experience is active;
-- opening **Who's here** freezes guest arrivals, departures, and room changes only
-  while the roster is open.
+- opening **Who's here** freezes guest arrivals, departures, room changes, and
+  the adults dancing on the party floor; the children keep dancing. Selecting
+  an adult briefly releases that person under the pointer, then returns the
+  adults to their frozen pose. The roster also pauses autonomous Messages
+  delivery; message previews and both unread-count badges stay hidden, and held
+  texts resume at a paced interval after the roster closes.
 
 ### Party ending
 
-The normal party interval is approximately three minutes of **attended** time.
-Time counts only while the game is visible, focused, and not occupied by a major
-cinematic moment. Background-tab time does not advance this timer.
+Elapsed time does not end the party. It continues while the player works in
+another window or leaves the game occluded. The attended clock still paces later
+messages and explicit finales, but it does not impose a deadline.
 
-At about 2 minutes 30 seconds, the wall switch is emphasized and a final-song or
-final-dance message may appear. At about 3 minutes, the party winds down
-automatically. Accepting a final-song or final-dance cue schedules an earlier
-graceful ending after its authored beat. Completing the wedding-cake sequence can
-also end the party gracefully. The wall switch ends it immediately.
+Accepting a final-song or final-dance cue schedules a graceful ending after its
+authored beat. Completing the wedding-cake sequence can also end the party
+gracefully. The wall switch ends it immediately.
 
 Ending the party does not reset progress or end the game. Rooms, phone and
 computer apps, music, minigames, and exploration remain available. A later
 invitation can restart the party. The supported `party.extend` action cancels a
-pending wind-down and starts a fresh attended interval.
+pending authored wind-down. Party lighting, including
+the blacklight and magic-box glow, switches off with the party.
 
 ### Party moments
 
 Formal moments do not start randomly. They start only from an explicit Messages
-action or the supported console/API action. Available moments include:
+action or the supported console/API action. Their autonomous Messages invitations
+are withheld for the first 45 seconds of attended party time, allowing ordinary
+conversation to establish the party first. Available moments include:
 
 - first dance;
 - slow dance;
@@ -416,7 +550,7 @@ action or the supported console/API action. Available moments include:
 - group photo;
 - sparklers;
 - cake cutting;
-- bouquet toss;
+- bouquet toss (a fictional, game-only event);
 - chair lift.
 
 Only one major moment runs at a time. Routine automatic texts wait until the
@@ -428,7 +562,14 @@ The balcony smoker is interactive: open the firebox or lid, light it, allow it t
 heat, and cook or serve food. During a party, a lit smoker activates BBQ mode.
 Selected adults then split naturally between the balcony and garden/party while
 children may keep playing elsewhere. BBQ mode remains active across later
-day/night changes; extinguishing the smoker or ending the party ends it.
+day/night changes; extinguishing the smoker or ending the party ends it. People
+already on the balcony are retained where possible when the split changes, while
+arrivals and departures fade rather than popping in or out. Hamid tends the grill
+in Behdad's green-yellow jacket, so the matching jacket disappears from its hooks
+in the garden and balcony-door views until he leaves the BBQ. Behdad and Markéta
+move as a pair between the party floor and balcony: daytime BBQ rotations place
+them outside about 75% of the time, while night BBQ rotations place them inside
+about 75% of the time.
 
 Three open-cookout dates use a daytime, no-UV party presentation:
 
@@ -469,10 +610,14 @@ state remains visually quiet. `N` selects the next applicable track or scene.
   close control.
 - **Minesweeper:** Available on both phone and monitor.
 - **Game of Life and Doom:** Available on the monitor.
-- **Bouquet toss:** A party moment with its own aiming interaction.
+- **Bouquet toss:** A fictional, game-only party moment with its own aiming
+  interaction. No bouquet toss is planned for either real wedding celebration.
 - **Magic box:** The garden's magic box contains a set of optional visual trips.
-  `T` cycles them; `Shift+1` through `Shift+7` selects directly. Some variants are
-  deliberately unavailable through typed actions while the party is active.
+  Its first click opens a two-digit wedding-date lock. The partial date at the top
+  opens the phone Calendar as a clue. Set both day wheels, then press the single
+  `Unlock` bar to check the answer; merely landing on the right digits does not open
+  it. `T` cycles trips and `Shift+1` through `Shift+7` selects directly. Some variants
+  are deliberately unavailable through typed actions while the party is active.
 
 ## Calendar, special days, weather, and sky
 
@@ -489,6 +634,10 @@ Current wedding events are:
 | Edmonton open BBQ | May 2, 2027, 4:00 PM to 10:00 PM, Edmonton time |
 | Prague wedding | July 10, 2027, 3:00 PM to July 11, 3:00 AM, Prague time |
 | Prague garden brunch | July 11, 2027, 11:00 AM to 3:00 PM, Prague time |
+
+Selecting one of these four event cards in the phone or computer Calendar reveals
+its month without changing the loft date. Selecting a day in the calendar grid or
+its search results activates that date and any associated scene.
 
 Wedding-day invitations arrive through Messages and run only when explicitly
 opened. Prague dates prepare the family gathering and Prague call. Birthday and
@@ -684,7 +833,7 @@ families are:
 | `party.dance.request` | `{ style }` from the discovered style enum |
 | `party.moment.start` | `{ moment }` from the discovered moment enum |
 | `bbq.set` | `{ on: true/false }` |
-| `coffee.make` | End an active party, restore daylight, and take the player to the kitchen/bar espresso machine |
+| `coffee.make` | End an active party, restore daylight, and take the player to La Maz in the kitchen/bar |
 | `photo.take` | Capture through the available in-game photo flow |
 | `fishu.speak` | Run the Fishu interaction |
 | `trip.next` | Start the next shuffled magic-box trip, equivalent to using the box |
@@ -765,7 +914,9 @@ not visible; a persistent off-room effect should be reported as a bug.
 
 Press `R` and confirm, or use the visible reset/extinguisher control. Reset clears
 progress and session-scoped UI state. It is intentionally more destructive than
-ending the party.
+ending the party. In game-only browser play, an in-game reset preserves the
+enlarged page view while returning the scene to the clean **CLICK ME**
+invitation. The console/API `reset()` command uses the same transition.
 
 ## Maintainer verification
 

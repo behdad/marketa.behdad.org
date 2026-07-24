@@ -28,8 +28,9 @@ it coordinates over introducing a second runtime bundle or a new dependency. The
 HTML, CSS, and vanilla JavaScript, with the room illustrations embedded as inline SVG. There is
 nothing to compile: committed page artifacts are served directly from the live Git checkout.
 
-In direct `#play`/`loft-day` mode, `:root:not(.revealed)` removes all outer game chrome and raises
-the shell's desktop cap from 1080px to 1620px. Fresh CLICK ME adds `.intro-active`; checkpoint entry
+In direct `#play`/`loft-day` mode, `:root:not(.revealed)` removes all outer game chrome and lets
+the shell use the viewport width subject only to its 2:1 room-height fit. The game-only `main`
+has no page padding; the thin shell chrome is the only inset around the room. Fresh CLICK ME adds `.intro-active`; checkpoint entry
 uses `.recovery-active`. Both show `.game-langs` in the chrome and a localized `.loft-entry-brand`
 inside the scene above CLICK ME or Welcome back, hide Back/Restart,
 room navigation, dots, and media transport, retain Fullscreen plus the left utility links, and dock
@@ -50,6 +51,29 @@ if Chrome revokes native fullscreen for the dialog, the installed/class fill rem
 ordinary Escape and explicit fullscreen-button exits still clear it.
 The prose device/browser detector and recommendation line were removed: their actions are now
 direct Fullscreen, audio, and Known issues controls.
+
+### Game chrome test matrix
+
+Changes to the shell, entry screens, controls, fullscreen behavior, or surrounding page layout
+must be checked in these four distinct presentations:
+
+1. **Full RSVP page:** load `rsvp.html` without `#play`. The invitation remains the document owner
+   around its embedded game. Check desktop and phone widths so game-only rules do not remove or
+   overlap the invitation header, language controls, sections, or footer.
+2. **Direct browser game:** load `rsvp.html#play` or `loft-day.html`. On desktop and landscape
+   mobile, check fresh CLICK ME, saved Continue/Start over, and active play. These states share the
+   edge-to-edge page fill but intentionally expose different controls and bottom rows.
+3. **Installed/standalone app:** repeat direct-game checks with `(display-mode: standalone)` on
+   desktop and mobile. Include the installed loading progress, first-interaction fullscreen,
+   restart/reset fullscreen preservation, and return from browser-owned dialogs or tabs.
+4. **Narrow portrait gate:** at `max-width:600px` in portrait, check both full RSVP and direct game,
+   installed and uninstalled where practical. Only the localized Loft Day/orientation banner may
+   remain in the shell; verify English and Czech fit, the action attempts landscape, and manual
+   rotation reveals the appropriate entry or play state without stale chrome.
+
+`tests/game-only-layout.js` covers the structural variants, while `tests/recovery.js` owns the
+saved-session transition. Still inspect real desktop and approximately 390px mobile renders:
+headless geometry does not prove that the chrome is visually balanced.
 
 `setGameOnlyEntered()` adds `.loft-entered` after CLICK ME, Continue, Trailer, or Autoplay hands
 over control; that uses a larger height fit without setting `.is-fullscreen`. Direct web play never

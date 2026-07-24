@@ -115,10 +115,12 @@ function run(width, height, standalone, fullPage) {
       }) && getComputedStyle(document.getElementById("hunt-dots")).display === "none");
     check("game-only shell stays inside the viewport width", area.left >= -1 && area.right <= innerWidth + 1,
       JSON.stringify({ innerWidth: innerWidth, left: area.left, right: area.right }));
-    check("game-only shell respects the 1620px ceiling", area.width <= 1621,
+    check("game-only shell stays within its width and height fit", area.width <= innerWidth + 1 &&
+      area.width <= (innerHeight * 2 - 79),
       JSON.stringify({ innerWidth: innerWidth, innerHeight: innerHeight, width: area.width }));
     if (innerWidth >= 1600 && innerHeight >= 900) {
-      check("a large browser grows the shell beyond the old 1080px cap", area.width > 1080,
+      check("a large browser uses the full available width instead of the old 1620px cap",
+        area.width > 1620 && area.width >= Math.min(innerWidth, innerHeight * 2 - 80) - 1,
         JSON.stringify({ innerWidth: innerWidth, innerHeight: innerHeight, width: area.width }));
     }
     check("the invitation state keeps Trailer and Autoplay in view", watch.bottom <= innerHeight + 1,

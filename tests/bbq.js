@@ -63,9 +63,11 @@ var harness = String.raw`<script>
       check("invitation pans to balcony", window.currentStageName === "balcony", window.currentStageName);
       check("invitation starts split", state.on && window.__bbqSplitOn);
       check("exactly four adults rotate", selected.length === 4, selected.join(","));
-      check("seven hangout figures are on deck", window.__balconyHangoutNow().length === 7, window.__balconyHangoutNow().map(function (p) { return p.name; }).join(","));
-      check("balcony has nine people total", deck.length === 9, deck.join(","));
-      check("both hosts stay on balcony", deck.indexOf("Behdad") !== -1 && deck.indexOf("Markéta") !== -1, deck.join(","));
+      check("host pair changes the deck from five to seven figures", window.__balconyHangoutNow().length === (state.hostsOnBalcony ? 7 : 5), window.__balconyHangoutNow().map(function (p) { return p.name; }).join(","));
+      check("host pair changes total balcony occupancy together", deck.length === (state.hostsOnBalcony ? 9 : 7), deck.join(","));
+      check("both hosts share one BBQ location",
+        (deck.indexOf("Behdad") !== -1) === state.hostsOnBalcony && (deck.indexOf("Markéta") !== -1) === state.hostsOnBalcony, deck.join(","));
+      check("day BBQ weights the hosts 75% toward the balcony", window.__bbqHostBalconyChance() === 0.75);
       var balconyAspen = document.getElementById("balcony-photographer");
       check("Hamid and Aspen stay on balcony", deck.indexOf("Hamid") !== -1 && deck.indexOf("Aspen") !== -1,
         deck.join(",") + " | Aspen=" + (balconyAspen ? balconyAspen.getAttribute("class") + "/" + getComputedStyle(balconyAspen).opacity : "missing"));
@@ -100,6 +102,17 @@ var harness = String.raw`<script>
         [ashCx, ashCy, coveredBox.left, coveredBox.top, coveredBox.right, coveredBox.bottom, plateAshtrayOverlap].join(","));
       check("party ashtray paints behind BBQ guests", ashtrayBehindGuests);
       check("split remains daylight and non-UV", !balcony.classList.contains("dusk") && !document.getElementById("loft-game-strip").classList.contains("uv-mode"));
+      window.__setBBQHostsOnBalcony(false);
+      var behdadFloor = document.querySelector("#garden-guests .g-behdad");
+      var marketaFloor = document.querySelector("#garden-guests .g-marketa");
+      check("inside host assignment returns both hosts to the party floor",
+        !behdadFloor.classList.contains("off-at-bbq") && !marketaFloor.classList.contains("off-at-bbq") &&
+        names("balcony").indexOf("Behdad") === -1 && names("balcony").indexOf("Markéta") === -1);
+      window.__setDayNight(true);
+      check("night BBQ weights the hosts 75% toward inside", window.__bbqHostBalconyChance() === 0.25);
+      window.__setBBQHostsOnBalcony(true);
+      var hostsOutside = names("balcony");
+      check("outside host assignment moves both hosts off the party floor", hostsOutside.indexOf("Behdad") !== -1 && hostsOutside.indexOf("Markéta") !== -1 && names("garden").indexOf("Behdad") === -1, hostsOutside.join(","));
 
       window.roster(true);
       var held = window.__bbqSplitState().guests.slice();
@@ -115,7 +128,8 @@ var harness = String.raw`<script>
         var kids = ["irene", "robin", "navid", "elisabeth", "felix", "hannah"];
         check("six game kids are in the cuddly room", names("cuddly").filter(function (n) { return ["Irene","Robin","Navid","Elisabeth","Felix","Hannah"].indexOf(n) !== -1; }).length === 6, names("cuddly").join(","));
         check("game kids are off the garden floor", kids.every(function (n) { var el = document.querySelector("#garden-guests .g-" + n); return el && el.classList.contains("off-at-games"); }));
-        check("selected adults and hosts are off the garden floor", moved.concat(["behdad", "marketa", "hamid"]).every(function (n) { var el = document.querySelector("#garden-guests .g-" + n); return el && el.classList.contains("off-at-bbq"); }));
+        var expectedOffFloor = moved.concat(window.__bbqSplitState().hostsOnBalcony ? ["behdad", "marketa", "hamid"] : ["hamid"]);
+        check("selected adults and outside hosts are off the garden floor", expectedOffFloor.every(function (n) { var el = document.querySelector("#garden-guests .g-" + n); return el && el.classList.contains("off-at-bbq"); }));
         window.__setBalconyBBQCrowd(false);
         var bbqAssignedAfterTeardown = kids.concat(moved, ["behdad", "marketa", "hamid"]).filter(function (n) {
           var el = document.querySelector("#garden-guests .g-" + n);

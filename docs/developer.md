@@ -354,6 +354,10 @@ for `ROSTER`, `__peopleManager`, `__whoIsHere`, `__roomOccupants`, and `__roster
   layout preferentially retains eligible visible figures across a BBQ split change. Hamid's
   grillmaster paint owns `#loft-game-strip.hamid-wearing-jacket`, which fades both views of the
   shared hanging jacket while he is assigned to the BBQ.
+- The BBQ controller's `bbqHostsOnBalcony` is the single paired-location state for Behdad and
+  Markéta. Both `layoutBBQ()` and `applyBBQGardenSplit()` consume it. Each rotation and active-BBQ
+  day/night change rerolls against a 0.75 daytime / 0.25 nighttime balcony probability, keeping
+  their deck figures and garden exclusions atomic.
 - Children switch among free, family, godson, chase/game, and asleep states. Chase handoffs remove
   standing duplicates; `off-in-nook` is owned only by the visible Cuddly game tableau and keeps
   all six seated identities off the garden floor without disturbing the longer-lived

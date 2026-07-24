@@ -54944,6 +54944,7 @@ async def localfont(name):
       else if (window.__updateGardenAurora) window.__updateGardenAurora();
       if (window.__actPing) window.__actPing("daynight"); // second act: nightfall settles B0, daybreak settles W2
       if (!dusk && window.__offerDayPartyBBQ) window.__offerDayPartyBBQ(); // daybreak offers a cookout; later nightfall never cancels one already started
+      if (window.__bbqDayNightChanged) window.__bbqDayNightChanged(); // active BBQ host pair follows the day/night indoor-outdoor weighting
       if (window.__loftStateChanged) window.__loftStateChanged("environment.daylight", { daylight: !dusk }, silent ? "clock" : "ui");
     }
     window.__autoToggleDusk = toggleDusk; // the garden light switch flips day/night through this (then stops the auto cycle itself)
@@ -72696,7 +72697,7 @@ function spawnDustMote(container) {
     // garden/balcony split. Four adults rotate through the deck while the two hosts stay here;
     // the roster dialog pauses that rotation and room-leaves preserve it.
     var bbqCrowdOn = false;
-    var bbqSelected = [], bbqRotationTimer = null;
+    var bbqSelected = [], bbqRotationTimer = null, bbqHostsOnBalcony = false;
     var BX = 2720; // #stage-balcony sits at x=2720 in the shared strip; local balcony x + BX = strip x
     // ── The deck roster ─────────────────────────────────────────────────────────────────
     // Every hangout figure. `name` is its garden .g-<name> / bar-couple member key (for the
@@ -72898,13 +72899,19 @@ function spawnDustMote(container) {
       for (var i = 0; i < ROSTER.length; i++) if (ROSTER[i].name === name) return ROSTER[i];
       return null;
     }
-    // BBQ layout is intentionally deterministic in headcount: four rotating adults, both hosts,
-    // and the off-duty DJ. Actual smokers keep the right lane; Behdad and Markéta join the social
-    // lane with their cigarette art suppressed by .bbq-day.
+    function bbqNight() {
+      var balcony = document.getElementById("stage-balcony");
+      return !!(balcony && balcony.classList.contains("dusk"));
+    }
+    function bbqHostBalconyChance() { return bbqNight() ? 0.25 : 0.75; }
+    function rollBBQHostLocation() { bbqHostsOnBalcony = Math.random() < bbqHostBalconyChance(); }
+    // BBQ layout keeps four rotating adults and the off-duty DJ outside. The hosts move as a pair:
+    // usually outside by day, usually back on the garden floor at night. Actual smokers keep the
+    // right lane; when the hosts are out, they join the social lane with cigarette art suppressed.
     function layoutBBQ() {
       shownSmokerNames = [];
       var chosen = bbqSelected.map(rosterByName).filter(Boolean);
-      var hosts = ROSTER.filter(function (r) { return !!r.couple; });
+      var hosts = bbqHostsOnBalcony ? ROSTER.filter(function (r) { return !!r.couple; }) : [];
       var dj = rosterByName("dj");
       var social = chosen.filter(function (r) { return !r.smoker; }).concat(hosts);
       var smokers = chosen.filter(function (r) { return r.smoker; });
@@ -72945,7 +72952,7 @@ function spawnDustMote(container) {
       var gameKids = ["irene", "robin", "navid", "elisabeth", "felix", "hannah"];
       gameKids.forEach(function (name) { var el = gardenFigure(name); if (el) el.classList.remove("off-at-games"); });
       if (on) {
-        bbqSelected.concat(["behdad", "marketa", "hamid"]).forEach(function (name) {
+        bbqSelected.concat(bbqHostsOnBalcony ? ["behdad", "marketa", "hamid"] : ["hamid"]).forEach(function (name) {
           var el = gardenFigure(name); if (el) el.classList.add("off-at-bbq");
         });
         gameKids.forEach(function (name) { var el = gardenFigure(name); if (el) el.classList.add("off-at-games"); });
@@ -72972,6 +72979,7 @@ function spawnDustMote(container) {
       if (!incoming.length) return false;
       var outAt = (Math.random() * bbqSelected.length) | 0;
       bbqSelected[outAt] = incoming[(Math.random() * incoming.length) | 0];
+      rollBBQHostLocation();
       refreshBBQRooms();
       if (hangout.classList.contains("on")) layoutBBQ();
       return true;
@@ -73092,6 +73100,7 @@ function spawnDustMote(container) {
       shownOnce = false;
       if (on) {
         chooseInitialBBQGuests();
+        rollBBQHostLocation();
         if (window.__clearGardenChase) window.__clearGardenChase();
         refreshBBQRooms();
         armBBQRotation(20000 + Math.random() * 10000);
@@ -73106,7 +73115,23 @@ function spawnDustMote(container) {
     window.__startBBQSplit = function () { setBBQSplit(true); };
     window.__setBalconyBBQCrowd = setBBQSplit; // compatibility hook used by the occasion teardown
     window.__rotateBBQSplit = function () { return rotateBBQSplit(true); }; // deterministic test/console beat; still respects an open roster
-    window.__bbqSplitState = function () { return { on: bbqCrowdOn, guests: bbqSelected.slice(), balconyHangout: bbqCrowdOn ? 7 : 0 }; };
+    window.__bbqSplitState = function () { return { on: bbqCrowdOn, guests: bbqSelected.slice(), hostsOnBalcony: bbqCrowdOn && bbqHostsOnBalcony, balconyHangout: bbqCrowdOn ? (bbqHostsOnBalcony ? 7 : 5) : 0 }; };
+    window.__bbqHostBalconyChance = bbqHostBalconyChance;
+    window.__setBBQHostsOnBalcony = function (on) {
+      if (!bbqCrowdOn) return false;
+      bbqHostsOnBalcony = !!on;
+      refreshBBQRooms();
+      if (hangout.classList.contains("on")) layoutBBQ();
+      if (window.__updateBalconyPhotog) window.__updateBalconyPhotog();
+      return bbqHostsOnBalcony;
+    };
+    window.__bbqDayNightChanged = function () {
+      if (!bbqCrowdOn) return;
+      rollBBQHostLocation();
+      refreshBBQRooms();
+      if (hangout.classList.contains("on")) layoutBBQ();
+      if (window.__updateBalconyPhotog) window.__updateBalconyPhotog();
+    };
     window.__resetBalconyHangout = function () { setBBQSplit(false); hide(); if (window.__updateBalconyPhotog) window.__updateBalconyPhotog(); }; // global reset (room-leave uses update()/hide() directly, keeping the BBQ assignment)
     window.__balconyBBQCrowdOn = function () { return bbqCrowdOn; }; // read by the balcony photographer's gate
     // ── the smoke spawner: one self-rescheduling timer, re-gated every fire ──────────────

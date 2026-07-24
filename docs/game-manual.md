@@ -509,7 +509,10 @@ day/night changes; extinguishing the smoker or ending the party ends it. People
 already on the balcony are retained where possible when the split changes, while
 arrivals and departures fade rather than popping in or out. Hamid tends the grill
 in Behdad's green-yellow jacket, so the matching jacket disappears from its hooks
-in the garden and balcony-door views until he leaves the BBQ.
+in the garden and balcony-door views until he leaves the BBQ. Behdad and Markéta
+move as a pair between the party floor and balcony: daytime BBQ rotations place
+them outside about 75% of the time, while night BBQ rotations place them inside
+about 75% of the time.
 
 Three open-cookout dates use a daytime, no-UV party presentation:
 
